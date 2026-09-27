@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace SnowGlobe.Core
@@ -185,6 +186,12 @@ namespace SnowGlobe.Core
         public static bool SealDefectsEnabled(int day) { return day >= 2; }
         public static bool CustomersHandleGlobes(int day) { return day >= 4; }
         public static bool SpecialOrdersEnabled(int day) { return day >= 4; }
+
+        /// <summary>
+        /// Word of mouth: walk-in rate grows 3% per day, capped at +60% (day 21). Keeps later
+        /// automation worth buying once the shop has outgrown hand production (see docs/BALANCE.md).
+        /// </summary>
+        public static float FootTrafficMultiplier(int day) { return Math.Min(1.6f, 1f + 0.03f * (day - 1)); }
 
         /// <summary>How many shoppers may be inside at once.</summary>
         public static int MaxCustomers(int day) { return day < 3 ? 1 : day < 5 ? 2 : 3; }

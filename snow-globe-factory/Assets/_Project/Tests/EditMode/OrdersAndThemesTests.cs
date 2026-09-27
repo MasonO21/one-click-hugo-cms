@@ -189,6 +189,14 @@ namespace SnowGlobe.Core.Tests
         }
 
         [Test]
+        public void FootTraffic_GrowsThenCaps()
+        {
+            Assert.AreEqual(1f, DayProgression.FootTrafficMultiplier(1), 0.0001f);
+            Assert.Greater(DayProgression.FootTrafficMultiplier(10), DayProgression.FootTrafficMultiplier(5));
+            Assert.AreEqual(1.6f, DayProgression.FootTrafficMultiplier(40), 0.0001f);
+        }
+
+        [Test]
         public void MoreShoppers_AsTheShopGrows()
         {
             Assert.AreEqual(1, DayProgression.MaxCustomers(1));

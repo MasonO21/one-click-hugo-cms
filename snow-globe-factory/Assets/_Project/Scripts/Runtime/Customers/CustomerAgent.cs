@@ -442,13 +442,15 @@ namespace SnowGlobe.Game
                     {
                         bool inHands = v == Handled;
                         float perception = inHands ? 1f : Perception(v, eye, 70f);
+                        // Haunted Manor's gloom hides twitches; Deep-Sea's clear water shows them.
+                        float themeVis = ThemeCatalog.Get(p.Theme).MovementVisibility;
                         if (perception > 0f)
                         {
                             if (inHands)
                             {
                                 // It moved while they were holding it. They drop it.
                                 _seenMovementAt[p.Id] = v.LastMovementTime;
-                                Witness(EvidenceType.GlobeMovement, Mathf.Clamp01(v.LastMovementIntensity * 1.5f + 0.3f), 1f, p.Id);
+                                Witness(EvidenceType.GlobeMovement, Mathf.Clamp01((v.LastMovementIntensity * 1.5f + 0.3f) * themeVis), 1f, p.Id);
                                 Root.Session.Production.ApplyDamage(p, 0.15f);
                                 Root.Audio.Play(Sfx.Thump, v.transform.position);
                                 Say("It MOVED in my hands!", 4f);
@@ -458,7 +460,7 @@ namespace SnowGlobe.Game
                             _seenMovementAt[p.Id] = v.LastMovementTime;
                             bool premium = v.Socket != null && v.Socket.GetComponent<ShelfSlot>() != null && v.Socket.GetComponent<ShelfSlot>().Index >= GameBalance.BaseShelfCapacity;
                             float attention = p.Definition.Special == SpecialBehavior.DrawsAttention ? 1.3f : 1f;
-                            Witness(EvidenceType.GlobeMovement, Mathf.Clamp01(v.LastMovementIntensity * attention) * (premium ? visMult : 1f), perception, p.Id);
+                            Witness(EvidenceType.GlobeMovement, Mathf.Clamp01(v.LastMovementIntensity * attention * themeVis) * (premium ? visMult : 1f), perception, p.Id);
                         }
                     }
                     // Eyes following them from a weakly sealed globe.

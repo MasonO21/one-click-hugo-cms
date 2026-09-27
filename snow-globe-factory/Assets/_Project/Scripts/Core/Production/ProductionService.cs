@@ -143,6 +143,8 @@ namespace SnowGlobe.Core
         {
             if (p == null || p.Stage != ProductStage.Decorated) return ActionResult.Fail("Decorate before fitting the dome.");
             if (!p.Location.IsStation(StationId.Sealer)) return ActionResult.Fail("Fit the dome at the sealing machine.");
+            // Medieval Castle: the tall towers fight the dome unless the assembly jig holds them.
+            if (p.Theme == ThemeId.MedievalCastle && !_state.OwnedUpgrades.Contains(UpgradeId.AssemblyJig)) alignment -= ThemeRules.CastleWithoutJigPenalty;
             p.DomeScore = MathUtil.Clamp01(alignment + Mods.DomeAlignAssist);
             p.Stage = ProductStage.Domed;
             return ActionResult.Ok(p.DomeScore > 0.8f ? "Dome seated perfectly." : "Dome seated. A little crooked.");
@@ -160,6 +162,8 @@ namespace SnowGlobe.Core
             if (p == null || p.Stage != ProductStage.Domed) return ActionResult.Fail("Fit the dome first.");
             if (!p.Location.IsStation(StationId.Sealer)) return ActionResult.Fail("Seal at the sealing machine.");
             if (!powerAvailable) return ActionResult.Fail("The sealer has no power.");
+            if (p.Theme == ThemeId.CelestialObservatory && !_state.OwnedUpgrades.Contains(UpgradeId.ImprovedSealer))
+                return ActionResult.Fail("Celestial star-dust leaks through a basic seal. Install the Improved Sealer.");
 
             bool defect = _state.Rng.Chance(SealDefectChance(p));
             p.SealIntegrity = defect

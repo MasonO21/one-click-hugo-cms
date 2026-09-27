@@ -10,14 +10,15 @@
 
 | Area | Status | Notes |
 |---|---|---|
-| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 84 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
+| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 89 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
 | Unity layer (greybox building, player, carrying, stations, customers, horror, HUD, audio) | 🟡 | Compiles against Unity 2021.3 reference assemblies (with Unity 6 renames mapped). **Never run in the editor.** Expect tuning and bug-fix work in Milestone 2 |
 | Input System package path | 🟡 | Written but not compiled (package not available outside Unity) |
 | Automation: auto-prep hopper, conveyor, packaging machine, breakdowns/repair, manual override, safe blocking | ✅ core · 🟡 scene | 10 core tests, including a randomized "no product ever lost" property test and a simulated day (16 globes vs ~5–6 by hand) |
 | Unity-side tests (JsonUtility round trip, figure build, play-mode smoke tests of boot/line/automation/save-load) | 🟡 | Written and type-checked; they run in Unity's Test Runner, not here |
 | Customers & orders: up to 3 shoppers with a counter queue, customers picking globes up (day 4+), special orders board, Woodland Cabin theme, store appeal | ✅ core · 🟡 scene | 12 core tests; a play-mode test covers order pickup |
 | Horror & roster: Screamer, Escape Artist, Watcher, Performer behaviours; security cameras; conveyor-grab and cabinet-shift events; supplier notes | ✅ core · 🟡 scene | 9 core tests; play-mode tests for the camera desk and the Escape Artist |
-| Bespoke scenery for Medieval/Haunted/Deep-Sea/Celestial themes | ⬜ | They reuse tinted winter pieces for now |
+| All six themes: bespoke scenery and fill (ash, sea water, star-dust) plus a production twist each | ✅ core · 🟡 scene | 4 core tests: Medieval needs the jig, Celestial needs the Improved Sealer, Haunted hides twitches (×0.6) and Deep-Sea shows them (×1.4) |
+| Economy balance pass | ✅ first pass | `tools/BalanceSim` runs 30 days of the real core with a scripted player. Report and tuning are in [`BALANCE.md`](BALANCE.md) |
 | Level rebuilt from the three concept paintings; minis restyled to the character reference | 🟡 | Procedural reconstruction (see §5a). Floor plan: `docs/floorplan.png` |
 | Real modelled art, animation, UI Toolkit, audio design | ⬜ | Everything is still built from primitives and synthesized sound |
 
@@ -192,7 +193,12 @@ Every machine wears 4% per item (6% when the building is over its power budget).
 * **Special orders (day 4+).** Each morning 1–2 orders are posted, with at most 3 open, each due 2 days later. An order names a theme, pose, three scenery pieces, a minimum quality tier, and optionally an archetype and inspection. The bonus is $15, plus $10 per quality tier, $10 for inspection and $10 for a specific archetype, times the theme's value. It's paid on top of the globe's normal price.
   * Pin an order at the board (E, or the Orders tab). The assembly card, and the theme mounted, then follow it.
   * Place the finished box on the counter's order-pickup spot. A match is paid immediately; a mismatch tells you exactly what's wrong.
-* **Themes.** Woodland Cabin (day 4, $300) sells at ×1.25. It has lighter snow and its own scenery (tall pine, log cabin, deer), and costs $3 extra per kit at mount. Later themes can already be unlocked and picked in the Themes tab. For now their scenery reuses tinted winter pieces.
+* **Themes.** Woodland Cabin (day 4, $300) sells at ×1.25. It has lighter snow and its own scenery (tall pine, log cabin, deer), and costs $3 extra per kit at mount. The later themes (M7) each have bespoke scenery and a twist:
+  * **Medieval Castle:** tower, banner, knight. It takes −0.25 dome alignment without the Assembly Jig.
+  * **Haunted Manor:** dead tree, manor with a lit window, ghost lantern, and grey ash fill. Customers notice movement ×0.6.
+  * **Deep-Sea Ruins:** column, coral, anchor, and translucent sea-water fill. Movement is noticed ×1.4.
+  * **Celestial Observatory:** telescope, observatory dome, comet, and glowing star-dust fill. It can't be sealed without the Improved Sealer.
+  * Prices and pacing are in §7 and `BALANCE.md`.
 
 ## 5d. Horror & roster (Milestone 5)
 
@@ -222,7 +228,7 @@ Every machine wears 4% per item (6% when the building is over its power budget).
 | **M4 Customers & orders** ✅ core · 🟡 scene | Store depth | Up to 3 customers (1 on days 1–2, 2 on days 3–4, 3 from day 5) with a counter queue; customers pick globes up for a closer look from day 4; special-order board with pinning, matching and pickup; Woodland Cabin theme (and a theme picker for later ones); store appeal | Orders always pay ≥ $15 over list (tested); suspicion readability with 3 customers still needs a playtest |
 | **M5 Horror & roster** ✅ core · 🟡 scene | Unease at scale | Screamer, Escape Artist, Watcher and Performer behaviours; Security Cameras upgrade (desk monitor, full-screen feeds, loose-character alerts); Conveyor Grab threat and Cabinet Shift atmospheric; supplier notes (8, days 2–12) | Needs playtests: players report "tense but fair" |
 | **M6 Art & audio** ⬜ | Identity | Real low-poly models, rigged minis (optional joint-based active ragdoll behind the same `MiniCharacterBody` API), lighting, sound design, UI Toolkit HUD | Vertical slice capture |
-| **M7 Content & balance** ⬜ | Longevity | Themes through Celestial Observatory, late-game economy, story milestones, performance and LOD, build pipeline | 2–3 h of progression, economy playable after story |
+| **M7 Content & balance** 🟡 | Longevity | **Done:** all six themes with bespoke scenery and production twists; headless balance sim and first tuning pass (word-of-mouth foot traffic, cheaper late themes; see `BALANCE.md`). **To do:** late-game money sinks (second assembly bench, shop expansions, scaling upkeep), story milestones, performance pass, build pipeline | 2–3 h of progression, economy playable after story. The sim currently says 5–6 h to unlock everything, so this is not met yet |
 
 ## 7. Initial economy and progression tables
 
@@ -267,10 +273,10 @@ Tiers: Flawed < 0.35 ≤ Standard < 0.65 ≤ Fine < 0.85 ≤ Exquisite.
 |---|---|---|---|---|---|
 | Winter Village | 1.0 | $0 | start | 0.60 | — |
 | Woodland Cabin | 1.25 | $3 | $300, day 4 | 0.45 | Pine must face front |
-| Medieval Castle | 1.6 | $6 | $900, day 7 | 0.55 | Tall scenery needs the jig |
-| Haunted Manor | 2.0 | $10 | $1800, day 10 | 0.35 | Dim; hides small movements |
-| Deep-Sea Ruins | 2.6 | $16 | $3500, day 14 | 0.80 | Liquid fill; leaks visible |
-| Celestial Observatory | 3.5 | $25 | $7000, day 18 | 0.30 | Needs premium sealer |
+| Medieval Castle | 1.6 | $6 | $900, day 7 | 0.55 | Tall scenery: dome fit −0.25 without the Assembly Jig ✅ |
+| Haunted Manor | 2.0 | $10 | $1600, day 10 | 0.35 | Dim: customers see movement at ×0.6 ✅ |
+| Deep-Sea Ruins | 2.6 | $16 | $3000, day 14 | 0.80 | Clear water: movement seen at ×1.4 ✅ |
+| Celestial Observatory | 3.5 | $25 | $5500, day 18 | 0.30 | Cannot be sealed without the Improved Sealer ✅ |
 
 **Upgrades** (✅ = has a working effect in the prototype)
 

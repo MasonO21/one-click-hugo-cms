@@ -129,19 +129,143 @@ namespace SnowGlobe.Game
                 int item = (code >> (spot * 2)) & 3;
                 float angle = (spot * 120f + 150f) * Mathf.Deg2Rad;
                 var root = Shapes.Empty("Spot" + spot, _scenery, new Vector3(Mathf.Sin(angle) * 0.1f, 0f, Mathf.Cos(angle) * 0.1f)).transform;
-                if (P.Theme == ThemeId.WoodlandCabin) Woodland(root, item);
-                else Winter(root, item, P.Theme == ThemeId.WinterVillage ? Color.white : ThemeTint(P.Theme));
+                switch (P.Theme)
+                {
+                    case ThemeId.WoodlandCabin: Woodland(root, item); break;
+                    case ThemeId.MedievalCastle: Medieval(root, item); break;
+                    case ThemeId.HauntedManor: Haunted(root, item); break;
+                    case ThemeId.DeepSeaRuins: DeepSea(root, item); break;
+                    case ThemeId.CelestialObservatory: Celestial(root, item); break;
+                    default: Winter(root, item, Color.white); break;
+                }
             }
+            _snow.GetComponent<Renderer>().sharedMaterial = FillMaterial(P.Theme);
         }
 
-        static Color ThemeTint(ThemeId theme)
+        /// <summary>The fill: snow, grey ash, sea water or glowing star-dust.</summary>
+        static Material FillMaterial(ThemeId theme)
         {
             switch (theme)
             {
-                case ThemeId.MedievalCastle: return new Color(0.7f, 0.7f, 0.75f);
-                case ThemeId.HauntedManor: return new Color(0.5f, 0.45f, 0.6f);
-                case ThemeId.DeepSeaRuins: return new Color(0.4f, 0.8f, 0.85f);
-                default: return new Color(0.75f, 0.7f, 1f);
+                case ThemeId.HauntedManor: return Shapes.Mat(new Color(0.55f, 0.55f, 0.6f));
+                case ThemeId.DeepSeaRuins: return Shapes.Mat(new Color(0.2f, 0.55f, 0.65f, 0.55f), 0f, true, 0.8f);
+                case ThemeId.CelestialObservatory: return Shapes.Mat(new Color(0.35f, 0.3f, 0.75f), 0.8f);
+                default: return Shapes.Mat(Palette.Snow);
+            }
+        }
+
+        /// <summary>Medieval Castle scenery: a crenellated tower, a banner on a pole, a tiny knight.</summary>
+        static void Medieval(Transform root, int item)
+        {
+            var stone = new Color(0.62f, 0.62f, 0.66f);
+            switch (item)
+            {
+                case 0:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Tower", root, new Vector3(0f, 0.045f, 0f), new Vector3(0.035f, 0.045f, 0.035f), stone, false);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float a = i * Mathf.PI * 0.5f;
+                        Shapes.Prim(PrimitiveType.Cube, "Merlon", root, new Vector3(Mathf.Sin(a) * 0.014f, 0.095f, Mathf.Cos(a) * 0.014f), Vector3.one * 0.008f, stone * 0.9f, false);
+                    }
+                    Shapes.Prim(PrimitiveType.Cube, "Door", root, new Vector3(0f, 0.01f, 0.017f), new Vector3(0.01f, 0.02f, 0.002f), Palette.Wood, false);
+                    break;
+                case 1:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Pole", root, new Vector3(0f, 0.045f, 0f), new Vector3(0.004f, 0.045f, 0.004f), Palette.Brass, false);
+                    Shapes.Prim(PrimitiveType.Cube, "Banner", root, new Vector3(0.013f, 0.07f, 0f), new Vector3(0.024f, 0.03f, 0.002f), Palette.StoreTrim, false);
+                    Shapes.Prim(PrimitiveType.Cube, "Crest", root, new Vector3(0.013f, 0.07f, 0.0015f), new Vector3(0.01f, 0.01f, 0.001f), Palette.Brass, false);
+                    break;
+                default:
+                    var armour = new Color(0.75f, 0.77f, 0.8f);
+                    Shapes.Prim(PrimitiveType.Capsule, "Body", root, new Vector3(0f, 0.022f, 0f), new Vector3(0.016f, 0.02f, 0.016f), armour, false);
+                    Shapes.Prim(PrimitiveType.Sphere, "Helm", root, new Vector3(0f, 0.05f, 0f), Vector3.one * 0.016f, armour * 0.9f, false);
+                    Shapes.Prim(PrimitiveType.Cube, "Plume", root, new Vector3(0f, 0.06f, -0.003f), new Vector3(0.003f, 0.008f, 0.01f), Palette.StoreTrim, false);
+                    Shapes.Prim(PrimitiveType.Cube, "Sword", root, new Vector3(0.012f, 0.03f, 0.006f), new Vector3(0.002f, 0.035f, 0.003f), Palette.Steel, false);
+                    break;
+            }
+        }
+
+        /// <summary>Haunted Manor scenery: a bare crooked tree, a dark gabled manor, a ghost-lit lantern.</summary>
+        static void Haunted(Transform root, int item)
+        {
+            var dead = new Color(0.22f, 0.2f, 0.2f);
+            switch (item)
+            {
+                case 0:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Trunk", root, new Vector3(0f, 0.03f, 0f), new Vector3(0.008f, 0.03f, 0.008f), dead, false);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        var branch = Shapes.Prim(PrimitiveType.Cylinder, "Branch", root, new Vector3((i - 1) * 0.008f, 0.055f + i * 0.008f, 0f), new Vector3(0.003f, 0.016f, 0.003f), dead, false);
+                        branch.transform.localRotation = Quaternion.Euler(0f, i * 60f, (i - 1) * 50f + 15f);
+                    }
+                    break;
+                case 1:
+                    var wall = new Color(0.25f, 0.23f, 0.3f);
+                    Shapes.Prim(PrimitiveType.Cube, "Manor", root, new Vector3(0f, 0.025f, 0f), new Vector3(0.05f, 0.05f, 0.035f), wall, false);
+                    var roof = Shapes.Prim(PrimitiveType.Cube, "Roof", root, new Vector3(0f, 0.058f, 0f), new Vector3(0.036f, 0.036f, 0.04f), new Color(0.12f, 0.1f, 0.14f), false);
+                    roof.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    var window = Shapes.Prim(PrimitiveType.Cube, "Window", root, new Vector3(0.01f, 0.032f, 0.018f), new Vector3(0.008f, 0.01f, 0.001f), new Color(0.6f, 1f, 0.6f), false);
+                    window.GetComponent<Renderer>().sharedMaterial = Shapes.Mat(new Color(0.6f, 1f, 0.6f), 1.5f);
+                    break;
+                default:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Post", root, new Vector3(0f, 0.03f, 0f), new Vector3(0.005f, 0.03f, 0.005f), new Color(0.1f, 0.1f, 0.1f), false);
+                    var flame = Shapes.Prim(PrimitiveType.Sphere, "GhostFlame", root, new Vector3(0f, 0.064f, 0f), Vector3.one * 0.013f, new Color(0.55f, 1f, 0.75f), false);
+                    flame.GetComponent<Renderer>().sharedMaterial = Shapes.Mat(new Color(0.55f, 1f, 0.75f), 2f);
+                    break;
+            }
+        }
+
+        /// <summary>Deep-Sea Ruins scenery: a broken column, branching coral, a rusty anchor.</summary>
+        static void DeepSea(Transform root, int item)
+        {
+            switch (item)
+            {
+                case 0:
+                    var marble = new Color(0.8f, 0.82f, 0.78f);
+                    Shapes.Prim(PrimitiveType.Cylinder, "Column", root, new Vector3(0f, 0.03f, 0f), new Vector3(0.018f, 0.03f, 0.018f), marble, false);
+                    Shapes.Prim(PrimitiveType.Cube, "Plinth", root, new Vector3(0f, 0.003f, 0f), new Vector3(0.026f, 0.006f, 0.026f), marble * 0.9f, false);
+                    var broken = Shapes.Prim(PrimitiveType.Cylinder, "Fallen", root, new Vector3(0.02f, 0.008f, 0.01f), new Vector3(0.016f, 0.012f, 0.016f), marble * 0.85f, false);
+                    broken.transform.localRotation = Quaternion.Euler(0f, 30f, 90f);
+                    break;
+                case 1:
+                    var coral = new Color(1f, 0.45f, 0.45f);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        var arm = Shapes.Prim(PrimitiveType.Capsule, "Coral", root, new Vector3((i - 1.5f) * 0.008f, 0.025f + (i % 2) * 0.006f, 0f), new Vector3(0.007f, 0.022f, 0.007f), coral, false);
+                        arm.transform.localRotation = Quaternion.Euler(0f, i * 45f, (i - 1.5f) * 18f);
+                    }
+                    break;
+                default:
+                    var rust = new Color(0.45f, 0.25f, 0.15f);
+                    Shapes.Prim(PrimitiveType.Cylinder, "Shank", root, new Vector3(0f, 0.035f, 0f), new Vector3(0.005f, 0.03f, 0.005f), rust, false);
+                    Shapes.Prim(PrimitiveType.Cube, "Stock", root, new Vector3(0f, 0.062f, 0f), new Vector3(0.028f, 0.004f, 0.004f), rust, false);
+                    var arms = Shapes.Prim(PrimitiveType.Cylinder, "Arms", root, new Vector3(0f, 0.008f, 0f), new Vector3(0.004f, 0.018f, 0.004f), rust, false);
+                    arms.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                    break;
+            }
+        }
+
+        /// <summary>Celestial Observatory scenery: a brass telescope, a domed observatory, a glowing comet.</summary>
+        static void Celestial(Transform root, int item)
+        {
+            switch (item)
+            {
+                case 0:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Tripod", root, new Vector3(0f, 0.018f, 0f), new Vector3(0.004f, 0.018f, 0.004f), Palette.Wood, false);
+                    var tube = Shapes.Prim(PrimitiveType.Cylinder, "Tube", root, new Vector3(0f, 0.045f, 0.006f), new Vector3(0.01f, 0.025f, 0.01f), Palette.Brass, false);
+                    tube.transform.localRotation = Quaternion.Euler(55f, 0f, 0f);
+                    break;
+                case 1:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Drum", root, new Vector3(0f, 0.015f, 0f), new Vector3(0.045f, 0.015f, 0.045f), Palette.Cream, false);
+                    Shapes.Prim(PrimitiveType.Sphere, "Dome", root, new Vector3(0f, 0.03f, 0f), new Vector3(0.045f, 0.04f, 0.045f), new Color(0.3f, 0.35f, 0.55f), false);
+                    Shapes.Prim(PrimitiveType.Cube, "Slit", root, new Vector3(0f, 0.04f, 0.012f), new Vector3(0.006f, 0.02f, 0.02f), new Color(0.05f, 0.05f, 0.1f), false);
+                    break;
+                default:
+                    var head = Shapes.Prim(PrimitiveType.Sphere, "Comet", root, new Vector3(0f, 0.06f, 0f), Vector3.one * 0.014f, new Color(1f, 0.95f, 0.7f), false);
+                    head.GetComponent<Renderer>().sharedMaterial = Shapes.Mat(new Color(1f, 0.95f, 0.7f), 2.5f);
+                    var tail = Shapes.Prim(PrimitiveType.Capsule, "Tail", root, new Vector3(-0.015f, 0.05f, 0f), new Vector3(0.008f, 0.02f, 0.008f), new Color(0.6f, 0.7f, 1f), false);
+                    tail.transform.localRotation = Quaternion.Euler(0f, 0f, 60f);
+                    tail.GetComponent<Renderer>().sharedMaterial = Shapes.Mat(new Color(0.6f, 0.7f, 1f), 1.2f);
+                    break;
             }
         }
 

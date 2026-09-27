@@ -26,6 +26,15 @@ namespace SnowGlobe.Core
         public string ProductionNote;
         /// <summary>The three scenery pieces offered at assembly (keys 1-3) for this theme.</summary>
         public string[] Scenery;
+        /// <summary>How noticeable a stasis twitch is inside this globe (dim Haunted = hidden, liquid Deep-Sea = obvious).</summary>
+        public float MovementVisibility = 1f;
+    }
+
+    /// <summary>Production twists that make each theme play differently, not just price differently.</summary>
+    public static class ThemeRules
+    {
+        /// <summary>Dome alignment lost on Medieval Castle globes without the Assembly Jig.</summary>
+        public const float CastleWithoutJigPenalty = 0.25f;
     }
 
     public static class ThemeCatalog
@@ -42,10 +51,10 @@ namespace SnowGlobe.Core
             {
                 new ThemeDefinition { Id = ThemeId.WinterVillage, Scenery = new[] { "Pine Tree", "Cottage", "Snowman" }, DisplayName = "Winter Village", ValueMultiplier = 1f, ExtraKitCost = 0, UnlockCost = 0, UnlockDay = 1, SnowTarget = 0.6f, ProductionNote = "Standard snow." },
                 new ThemeDefinition { Id = ThemeId.WoodlandCabin, Scenery = new[] { "Tall Pine", "Log Cabin", "Deer" }, DisplayName = "Woodland Cabin", ValueMultiplier = 1.25f, ExtraKitCost = 3, UnlockCost = 300, UnlockDay = 4, SnowTarget = 0.45f, ProductionNote = "Lighter snow; pine scenery must face the front." },
-                new ThemeDefinition { Id = ThemeId.MedievalCastle, Scenery = new[] { "Tower", "Banner", "Knight" }, DisplayName = "Medieval Castle", ValueMultiplier = 1.6f, ExtraKitCost = 6, UnlockCost = 900, UnlockDay = 7, SnowTarget = 0.55f, ProductionNote = "Tall scenery needs the assembly jig to seat the dome." },
-                new ThemeDefinition { Id = ThemeId.HauntedManor, Scenery = new[] { "Dead Tree", "Manor", "Lantern" }, DisplayName = "Haunted Manor", ValueMultiplier = 2f, ExtraKitCost = 10, UnlockCost = 1800, UnlockDay = 10, SnowTarget = 0.35f, ProductionNote = "Dim lighting hides small movements. Customers love it." },
-                new ThemeDefinition { Id = ThemeId.DeepSeaRuins, Scenery = new[] { "Column", "Coral", "Anchor" }, DisplayName = "Deep-Sea Ruins", ValueMultiplier = 2.6f, ExtraKitCost = 16, UnlockCost = 3500, UnlockDay = 14, SnowTarget = 0.8f, ProductionNote = "Liquid fill instead of snow; any seal leak is visible." },
-                new ThemeDefinition { Id = ThemeId.CelestialObservatory, Scenery = new[] { "Telescope", "Dome", "Comet" }, DisplayName = "Celestial Observatory", ValueMultiplier = 3.5f, ExtraKitCost = 25, UnlockCost = 7000, UnlockDay = 18, SnowTarget = 0.3f, ProductionNote = "Star-dust fill glows; requires the premium sealer." },
+                new ThemeDefinition { Id = ThemeId.MedievalCastle, Scenery = new[] { "Tower", "Banner", "Knight" }, DisplayName = "Medieval Castle", ValueMultiplier = 1.6f, ExtraKitCost = 6, UnlockCost = 900, UnlockDay = 7, SnowTarget = 0.55f, ProductionNote = "Tall towers fight the dome: -25% dome alignment without the Assembly Jig." },
+                new ThemeDefinition { Id = ThemeId.HauntedManor, Scenery = new[] { "Dead Tree", "Manor", "Lantern" }, DisplayName = "Haunted Manor", ValueMultiplier = 2f, ExtraKitCost = 10, UnlockCost = 1600, UnlockDay = 10, SnowTarget = 0.35f, MovementVisibility = 0.6f, ProductionNote = "Dim lighting hides small movements (twitches are 40% less noticeable). Customers love it." },
+                new ThemeDefinition { Id = ThemeId.DeepSeaRuins, Scenery = new[] { "Column", "Coral", "Anchor" }, DisplayName = "Deep-Sea Ruins", ValueMultiplier = 2.6f, ExtraKitCost = 16, UnlockCost = 3000, UnlockDay = 14, SnowTarget = 0.8f, MovementVisibility = 1.4f, ProductionNote = "Liquid fill instead of snow: every twitch sends up bubbles (40% more noticeable)." },
+                new ThemeDefinition { Id = ThemeId.CelestialObservatory, Scenery = new[] { "Telescope", "Dome", "Comet" }, DisplayName = "Celestial Observatory", ValueMultiplier = 3.5f, ExtraKitCost = 25, UnlockCost = 5500, UnlockDay = 18, SnowTarget = 0.3f, ProductionNote = "Star-dust fill glows; it can only be sealed with the Improved Sealer." },
             };
             var dict = new Dictionary<ThemeId, ThemeDefinition>();
             foreach (var d in list) dict[d.Id] = d;
