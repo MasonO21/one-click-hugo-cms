@@ -21,6 +21,7 @@ namespace SnowGlobe.Game
         {
             var o = Occupant;
             if (o == null) return "Preparation cradle — place an awake character here";
+            if (S.Automation.IsRunning(MachineId.AutoPrep, S.PowerAvailable)) return "Automated prep is working the cradle (switch to manual at its panel)";
             return "E: Inject Stillness Serum  (" + S.State.Inventory.SerumCharges + " charges left)";
         }
 
@@ -28,6 +29,7 @@ namespace SnowGlobe.Game
         {
             var o = Occupant;
             if (o == null || Busy) return;
+            if (S.Automation.IsRunning(MachineId.AutoPrep, S.PowerAvailable)) return;
             if (S.State.Inventory.SerumCharges <= 0) { Root.Toast("Out of serum charges. Buy more in the management menu (Tab).", true); return; }
             _needle = 0f;
             _misses = 0;
@@ -447,6 +449,7 @@ namespace SnowGlobe.Game
         {
             var o = Occupant;
             if (o == null) return "Packaging table — place a sealed globe here";
+            if (S.Automation.IsRunning(MachineId.PackagingMachine, S.PowerAvailable)) return "The packaging machine is boxing this (switch to manual at its panel)";
             return "E: Box it  (" + S.State.Inventory.PackagingBoxes + " boxes)";
         }
 
@@ -454,6 +457,7 @@ namespace SnowGlobe.Game
         {
             var o = Occupant;
             if (o == null || Busy) return;
+            if (S.Automation.IsRunning(MachineId.PackagingMachine, S.PowerAvailable)) return;
             if (S.State.Inventory.PackagingBoxes <= 0) { Root.Toast("Out of boxes. Buy more in the management menu (Tab).", true); return; }
             for (int i = 0; i < _sequence.Length; i++) _sequence[i] = Random.Range(0, 4);
             _index = 0;

@@ -10,10 +10,12 @@
 
 | Area | Status | Notes |
 |---|---|---|
-| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 53 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
+| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 63 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
 | Unity layer (greybox building, player, carrying, stations, customers, horror, HUD, audio) | 🟡 | Compiles against Unity 2021.3 reference assemblies (with Unity 6 renames mapped). **Never run in the editor.** Expect tuning and bug-fix work in Milestone 2 |
 | Input System package path | 🟡 | Written but not compiled (package not available outside Unity) |
-| Automation, multiple customers, special orders, more archetypes/themes | ⬜ | Data models exist for several; no scene objects yet |
+| Automation: auto-prep hopper, conveyor, packaging machine, breakdowns/repair, manual override, safe blocking | ✅ core · 🟡 scene | 10 core tests, including a randomized "no product ever lost" property test and a simulated day (16 globes vs ~5–6 by hand) |
+| Unity-side tests (JsonUtility round trip, figure build, play-mode smoke tests of boot/line/automation/save-load) | 🟡 | Written and type-checked; they run in Unity's Test Runner, not here |
+| Multiple customers, special orders, more archetypes/themes | ⬜ | Data models exist for several; no scene objects yet |
 | Level rebuilt from the three concept paintings; minis restyled to the character reference | 🟡 | Procedural reconstruction (see §5a). Floor plan: `docs/floorplan.png` |
 | Real modelled art, animation, UI Toolkit, audio design | ⬜ | Everything is still built from primitives and synthesized sound |
 
@@ -167,14 +169,26 @@ Gameplay changes that came with the map:
 
 **Character look** (from the character reference): ~30 cm elfin minis with a tall floppy felt hat and a dangling brass star, a chunky fringed scarf, a flared coat with brass buttons, knit cuffs and mittens held together in front, bloomers, knit socks, chunky boots, pale messy hair, pointed ears, big dark eyes with glints and rosy cheeks. About 40% wear the exact reference palette (navy/red/pale blond); the rest vary coat, scarf and hair colour. The Sleepy One has heavy half-closed lids. The hat segments and scarf tail are spring-driven, so they flop when a mini is carried, runs or twitches. Globes were enlarged (dome ⌀34 cm) to fit the hats.
 
+## 5b. Automation (Milestone 3)
+
+Each machine is an upgrade. Once installed it appears in the backroom with a control panel. On the panel, **E** switches between AUTOMATIC and MANUAL (the manual override), and **X** repairs a breakdown ($15) or services a worn machine ($5).
+
+| Machine | What it does | Blocks safely when… | Trade-off |
+|---|---|---|---|
+| Automated Prep ($1000) | Drop up to 3 awake characters in the hopper beside the cradle. It feeds them into the cradle one at a time and injects them (timing score 0.6) | a prepared character is still in the cradle, or serum runs out | +2 power, average serum window |
+| Short Conveyor ($250) | Pulls sealed globes off the sealer and carries them along the right wall to the packaging table (6 s, up to 3 spaced items) | the packaging table is occupied (the belt stops) | +1 power; Heavy globes can jam it (35%) |
+| Packaging Machine ($650) | Boxes whatever lands on the packaging table (4 s, packaging score capped at 0.7), then moves the box to a 4-slot output rack | boxes run out, or the rack is full (the box stays on the table, which in turn stops the belt) | Hand folding scores up to 1.0 |
+
+Every machine wears 4% per item (6% when the building is over its power budget). The chance of breaking grows as it wears. A broken or jammed machine just stops, and whatever it was holding stays put. Machines only ever move a product between explicit locations (hopper, cradle, belt, table, rack). `Product.Location` is still the single source of truth, so grabbing a globe off the belt simply takes it out of the machine's world.
+
 ## 6. Milestone roadmap
 
 | Milestone | Goal | Contents | Exit criteria |
 |---|---|---|---|
 | **M0 Foundations** ✅ | Rules engine | Core library + 53 tests | `dotnet test` green |
 | **M1 Greybox loop** 🟡 | Whole loop playable in placeholder form | Everything in §4 | Code complete, compiles. **Needs a first editor run** |
-| **M2 First playable** ⬜ | Make M1 actually fun and stable | Editor playtest, bug fixes, tune timings and physics, PlayMode smoke test (spawn → make → sell), Unity-side JsonUtility round-trip test, FPS check | §9 acceptance criteria all pass |
-| **M3 Automation** ⬜ | Supervisor role | Station input/output queues in Core; conveyors (Short Conveyor), Packaging Machine, Automated Prep; congestion, safe blocking, breakdowns, manual override; power budget UI; The Wiggler on day 3 | 10+ globes/day with automation, no product ever lost (property tests) |
+| **M2 First playable** 🟡 | Make M1 actually fun and stable | Done without an editor: PlayMode smoke tests (boot, cabinet → sale, automation, save/load), JsonUtility round-trip test, animation LOD for distant minis. **Still needs the editor:** run those tests, playtest, fix, tune timings/physics, FPS check | §9 acceptance criteria all pass |
+| **M3 Automation** ✅ core · 🟡 scene | Supervisor role | Automated Prep (hopper → cradle → inject), Short Conveyor (sealer → packaging, spacing, capacity, heavy jams), Packaging Machine (capped 0.7 score, 4-slot output rack); wear, breakdowns, repair/service; per-machine manual override panels; safe blocking everywhere; power draw already feeds power-failure odds; The Wiggler from day 3 | Met in simulation: 16 globes/day, no product lost across 25 randomized runs × 600 steps |
 | **M4 Customers & orders** ⬜ | Store depth | Multiple customers + queue; customers handling globes (day 4); special-order board; Woodland Cabin theme; store appeal | Orders pay back their extra work; suspicion stays readable with 3 customers |
 | **M5 Horror & roster** ⬜ | Unease at scale | Screamer, Escape Artist, Watcher behaviours; security cameras; conveyor-grab and "wrong room" events; supplier story notes | Director playtests: players report "tense but fair" |
 | **M6 Art & audio** ⬜ | Identity | Real low-poly models, rigged minis (optional joint-based active ragdoll behind the same `MiniCharacterBody` API), lighting, sound design, UI Toolkit HUD | Vertical slice capture |

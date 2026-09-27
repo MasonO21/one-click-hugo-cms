@@ -241,6 +241,17 @@ namespace SnowGlobe.Game
             transform.SetParent(null, true);
         }
 
+        /// <summary>Ride the conveyor: kinematic, parented to the belt, positioned by ConveyorView.</summary>
+        public void AttachToBelt(Transform belt)
+        {
+            Detach();
+            Mode = ViewMode.Socketed;
+            SetKinematic(true);
+            Body.useGravity = false;
+            transform.SetParent(belt, true);
+            UpdateFigureMode();
+        }
+
         public void BeginCarry()
         {
             Detach();

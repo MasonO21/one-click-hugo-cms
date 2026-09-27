@@ -5,8 +5,8 @@ Unity 6 · C# · Windows PC · keyboard + mouse.
 
 * **Design and implementation plan:** [`docs/DESIGN_PLAN.md`](docs/DESIGN_PLAN.md). It covers the concept, loop, design conflicts, architecture, roadmap, economy tables, risks and acceptance criteria.
 * **Map:** rebuilt from the concept paintings in [`docs/concept/`](docs/concept). A top-down plan is in [`docs/floorplan.png`](docs/floorplan.png).
-* **Status:** Milestone 1 (greybox loop) is code-complete.
-  * The simulation core is compiled and covered by 53 passing unit tests.
+* **Status:** Milestones 1 (greybox loop) and 3 (automation) are code-complete.
+  * The simulation core is compiled and covered by 63 passing unit tests.
   * The Unity layer compiles against Unity reference assemblies, **but it has not yet been run in the Unity editor.** Expect a round of fixes and tuning the first time it's opened (that is Milestone 2).
 
 ## Run it in Unity
@@ -40,6 +40,7 @@ Notes:
 | 1 / 2 / 3, A / D, arrows | Station choices (scenery, pose, fold sequence) |
 | Tab | Management: supplies, characters, upgrades, save/load, settings, help |
 | Esc | Pause / step away from a station |
+| E / X on a machine panel | Switch automatic ↔ manual / repair or service (automation upgrades) |
 | F5 / F9 | Save / load (saving only while the shop is closed) |
 
 ## The loop
@@ -56,13 +57,17 @@ Notes:
 ## Tests and checks (no Unity needed)
 
 ```bash
-dotnet test tools/CoreTests          # 53 NUnit tests for the engine-free simulation core (C# 9)
+dotnet test tools/CoreTests          # 63 NUnit tests for the engine-free simulation core (C# 9)
 tools/typecheck-unity.sh             # compile-only check of Core + Runtime against UnityEngine reference assemblies
 python3 tools/art/generate_art.py    # rebuild Resources/SnowGlobeArt textures from docs/concept (needs Pillow)
 python3 tools/art/floorplan.py       # redraw docs/floorplan.png
 ```
 
-The tests in `Assets/_Project/Tests/EditMode` also run in Unity's Test Runner (EditMode).
+In Unity's Test Runner:
+* **EditMode** runs the same core tests, plus `EditModeRuntime` (JsonUtility save round trip, figure build).
+* **PlayMode** runs smoke tests that boot the real scene and drive a character from a cabinet to a sale, run the auto-prep machine, and save/load.
+
+These Unity-side tests are type-checked here but have not been run.
 
 ## Layout
 

@@ -36,6 +36,12 @@ namespace SnowGlobe.Game
 
         public bool AnyModal { get { return _title || _menu || _paused || _summary || _briefing; } }
 
+        /// <summary>Closes every modal panel (used by tests and scripted flows).</summary>
+        public void CloseAllPanels()
+        {
+            _title = _menu = _paused = _summary = _briefing = false;
+        }
+
         public void ShowTitle(bool hasSave)
         {
             _title = true;
@@ -170,6 +176,8 @@ namespace SnowGlobe.Game
         {
             foreach (var l in Root.Level.Labels) Label(l.Position, l.Text, l.MaxDistance, new Color(1f, 0.95f, 0.85f));
             foreach (var st in Root.Level.Stations) Label(st.transform.position + Vector3.up * 1.35f, st.Status(), 4.5f, Color.white);
+            foreach (var panel in Root.Level.Panels)
+                if (panel.isActiveAndEnabled) Label(panel.transform.position + Vector3.up * 0.4f, panel.Status(), 4.5f, new Color(0.85f, 0.95f, 1f));
 
             foreach (var v in Root.Views.Values)
             {

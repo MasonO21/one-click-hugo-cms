@@ -176,6 +176,8 @@ namespace SnowGlobe.Game
             }
 
             foreach (var e in Session.Production.Tick(dt, Session.PowerFactor)) HandleProductionEvent(e);
+            foreach (var e in Session.Automation.Tick(dt, Session.PowerAvailable)) HandleAutomationEvent(e);
+            SyncMachineRigs();
             Session.Suspicion.Tick(dt);
 
             bool premium = Session.State.OwnedUpgrades.Contains(UpgradeId.PremiumDisplayCase);
@@ -225,6 +227,53 @@ namespace SnowGlobe.Game
                     EmitNoise(v.transform.position, e.Intensity * 0.8f, EvidenceType.StaffDoorNoise, -1);
                     break;
             }
+        }
+
+        void HandleAutomationEvent(AutomationEvent e)
+        {
+            ProductView v = null;
+            if (e.ProductId != 0) Views.TryGetValue(e.ProductId, out v);
+            string name = AutomationService.NameOf(e.Machine);
+            switch (e.Type)
+            {
+                case AutomationEventType.Moved:
+                    if (v != null) Replace(v);
+                    break;
+                case AutomationEventType.Completed:
+                    if (v != null) Audio.Play(e.Machine == MachineId.AutoPrep ? Sfx.Inject : e.Machine == MachineId.PackagingMachine ? Sfx.Chime : Sfx.Tap, v.transform.position, 0.6f);
+                    break;
+                case AutomationEventType.Blocked:
+                    Hud.Alert(name + ": " + e.Message);
+                    break;
+                case AutomationEventType.Breakdown:
+                case AutomationEventType.Jammed:
+                    Hud.Alert(e.Message);
+                    Audio.Play(Sfx.PowerDown, Player.transform.position, 0.5f, 1.4f);
+                    Player.AddShake(0.2f);
+                    break;
+            }
+        }
+
+        /// <summary>Automation rigs appear once their upgrade is installed.</summary>
+        void SyncMachineRigs()
+        {
+            var a = Session.Automation;
+            SetActive(Level.AutoPrepRig, a.Owns(MachineId.AutoPrep));
+            SetActive(Level.ConveyorRig, a.Owns(MachineId.Conveyor));
+            SetActive(Level.PackagerRig, a.Owns(MachineId.PackagingMachine));
+        }
+
+        static void SetActive(GameObject go, bool active)
+        {
+            if (go != null && go.activeSelf != active) go.SetActive(active);
+        }
+
+        /// <summary>Moves a view to wherever its product's location now says it is.</summary>
+        void Replace(ProductView v)
+        {
+            if (Interactor.Held == v) return;
+            v.Detach();
+            PlaceView(v);
         }
 
         public void EmitNoise(Vector3 position, float loudness, EvidenceType type, int sourceId)
@@ -279,6 +328,24 @@ namespace SnowGlobe.Game
                     var beside = socket.transform.position + socket.transform.right * 0.6f + Vector3.up * 0.1f;
                     v.PlaceFree(beside);
                     v.P.Location = ProductLocation.Floor(beside.x, beside.y, beside.z);
+                    return;
+                }
+                case LocationKind.Hopper:
+                    SyncMachineRigs();
+                    Level.PrepHopper.Place(v);
+                    return;
+                case LocationKind.Conveyor:
+                    SyncMachineRigs();
+                    Level.Conveyor.Attach(v);
+                    return;
+                case LocationKind.OutputShelf:
+                {
+                    SyncMachineRigs();
+                    var slot = loc.Index >= 0 && loc.Index < Level.OutputSlots.Length ? Level.OutputSlots[loc.Index] : null;
+                    if (slot != null && slot.Occupant == null) { slot.Place(v); return; }
+                    var near = Level.Packaging.Socket.transform.position + Vector3.right * 0.6f + Vector3.up * 0.1f;
+                    v.PlaceFree(near);
+                    v.P.Location = ProductLocation.Floor(near.x, near.y, near.z);
                     return;
                 }
                 case LocationKind.Floor:

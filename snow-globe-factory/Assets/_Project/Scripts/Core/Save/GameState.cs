@@ -26,6 +26,7 @@ namespace SnowGlobe.Core
         public List<ThemeId> UnlockedThemes = new List<ThemeId>();
         public List<PendingDelivery> Deliveries = new List<PendingDelivery>();
         public EventDirectorState Director = new EventDirectorState();
+        public AutomationState Automation = new AutomationState();
         public DeterministicRandom Rng = new DeterministicRandom(12345);
         public int EmergencyOrderDay;
         public int LifetimeGlobesSold;

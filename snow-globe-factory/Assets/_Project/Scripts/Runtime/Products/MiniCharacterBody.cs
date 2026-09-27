@@ -78,10 +78,24 @@ namespace SnowGlobe.Game
             if (_hatVel != null) for (int i = 0; i < _hatVel.Length; i++) _hatVel[i] += Random.insideUnitSphere * 600f * intensity;
         }
 
+        int _skipPhase;
+        float _skipped;
+
         void Update()
         {
             if (_hips == null) return;
-            float dt = Mathf.Min(Time.deltaTime, 0.05f);
+            // Animation LOD: distant minis update their springs less often (they still move, just cheaper).
+            _skipped += Time.deltaTime;
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                float dist = (cam.transform.position - transform.position).sqrMagnitude;
+                int interval = dist > 14f * 14f ? 6 : dist > 7f * 7f ? 2 : 1;
+                if (_skipPhase == 0) _skipPhase = 1 + (int)(Mathf.Abs(_seed) * 100f) % 6;
+                if (interval > 1 && (Time.frameCount + _skipPhase) % interval != 0) return;
+            }
+            float dt = Mathf.Min(_skipped, 0.05f);
+            _skipped = 0f;
             float t = Time.time + _seed;
             var targets = _targets;
             System.Array.Clear(targets, 0, targets.Length);

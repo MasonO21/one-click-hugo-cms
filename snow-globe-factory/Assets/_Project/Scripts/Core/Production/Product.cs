@@ -30,6 +30,9 @@ namespace SnowGlobe.Core
         Loose = 5,    // awake and wandering (escaped) — X/Y/Z is last known position
         Gone = 6,     // sold
         Hatch = 7,    // delivery hatch, awaiting pickup
+        Conveyor = 8, // on the short conveyor (X = progress 0..1 along the belt)
+        Hopper = 9,   // auto-prep intake queue (Index = FIFO order)
+        OutputShelf = 10, // packaging machine output rack (Index = slot)
     }
 
     public enum StationId
@@ -57,6 +60,9 @@ namespace SnowGlobe.Core
         public static ProductLocation Carried() { return new ProductLocation { Kind = LocationKind.Carried }; }
         public static ProductLocation Hatch() { return new ProductLocation { Kind = LocationKind.Hatch }; }
         public static ProductLocation Gone() { return new ProductLocation { Kind = LocationKind.Gone }; }
+        public static ProductLocation OnConveyor(float progress) { return new ProductLocation { Kind = LocationKind.Conveyor, X = progress }; }
+        public static ProductLocation InHopper(int order) { return new ProductLocation { Kind = LocationKind.Hopper, Index = order }; }
+        public static ProductLocation OnOutputShelf(int slot) { return new ProductLocation { Kind = LocationKind.OutputShelf, Index = slot }; }
 
         public bool IsStation(StationId station) { return Kind == LocationKind.Station && Index == (int)station; }
 

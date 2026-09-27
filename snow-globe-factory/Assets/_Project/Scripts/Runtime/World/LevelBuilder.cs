@@ -400,8 +400,9 @@ namespace SnowGlobe.Game
             // Carts with finished globes, packed boxes, a stool.
             Cart(new Vector3(2.8f, 0f, 21.4f), 0f, true);
             Cart(new Vector3(-2.8f, 0f, 21.4f), 0f, true);
-            for (int i = 0; i < 3; i++) B("PackedBox", new Vector3(6.4f, 0.3f + i * 0.6f, 17.4f - (i % 2) * 0.05f), new Vector3(0.6f, 0.6f, 0.6f), Palette.Cardboard);
-            Emissive(B("Tissue", new Vector3(6.4f, 1.81f, 17.4f), new Vector3(0.45f, 0.04f, 0.45f), WallCream, false), WallCream, 0.1f);
+            for (int i = 0; i < 3; i++) B("PackedBox", new Vector3(0.2f, 0.3f + i * 0.6f, 13.6f - (i % 2) * 0.05f), new Vector3(0.6f, 0.6f, 0.6f), Palette.Cardboard);
+            Emissive(B("Tissue", new Vector3(0.2f, 1.81f, 13.6f), new Vector3(0.45f, 0.04f, 0.45f), WallCream, false), WallCream, 0.1f);
+            BuildMachines(t);
             Stool(new Vector3(1.7f, 0f, 16.9f));
 
             // Lights: two pendants over the worktable, front and back fills.
@@ -411,6 +412,104 @@ namespace SnowGlobe.Game
             Pendant(new Vector3(0f, 3.6f, 14.6f), 0.7f, true, 0.7f, 6f, LightArea.Backroom, 0.03f);
             Pendant(new Vector3(-3.5f, 3.6f, 21.4f), 0.7f, true, 0.7f, 6f, LightArea.Backroom, 0.05f);
             _level.AddLabel(new Vector3(-4.6f, 2.95f, 13.4f), "Supplies (Tab to order)", 4f);
+        }
+
+        /// <summary>
+        /// Automation upgrades (Milestone 3). Each is a hidden rig that appears when bought:
+        /// auto-prep gantry + hopper by the cradle, a conveyor from the sealer to packaging along
+        /// the right wall, and a packaging press with a four-slot output rack.
+        /// </summary>
+        static void BuildMachines(Transform t)
+        {
+            var steel = Palette.Steel;
+
+            // --- Automated prep: gantry injector over the cradle, hopper basket beside it.
+            var prep = Shapes.Empty("AutoPrepRig", t, Vector3.zero);
+            _level.AutoPrepRig = prep;
+            var pr = prep.transform;
+            foreach (float z in new[] { 19.9f, 20.7f }) Metal(Shapes.Rod("GantryPost", pr, new Vector3(-6.75f, 0.9f, z), new Vector3(-6.75f, 1.85f, z), 0.03f, Palette.Brass));
+            Metal(Shapes.Rod("GantryBeam", pr, new Vector3(-6.75f, 1.85f, 20.3f), new Vector3(-6.2f, 1.85f, 20.3f), 0.03f, Palette.Brass));
+            Metal(Shapes.Rod("GantryCross", pr, new Vector3(-6.75f, 1.85f, 19.9f), new Vector3(-6.75f, 1.85f, 20.7f), 0.03f, Palette.Brass));
+            Emissive(Shapes.Prim(PrimitiveType.Cylinder, "Nozzle", pr, new Vector3(-6.2f, 1.7f, 20.3f), new Vector3(0.06f, 0.12f, 0.06f), Palette.Serum, false), Palette.Serum, 1.5f);
+            Shapes.Box("HopperStand", pr, new Vector3(-6.2f, 0.35f, 19.1f), new Vector3(0.8f, 0.7f, 0.7f), Palette.TealDark);
+            foreach (var w in new[] { new Vector4(-6.2f, 18.77f, 0.8f, 0.04f), new Vector4(-6.2f, 19.43f, 0.8f, 0.04f), new Vector4(-6.58f, 19.1f, 0.04f, 0.7f), new Vector4(-5.82f, 19.1f, 0.04f, 0.7f) })
+                Metal(Shapes.Box("HopperWall", pr, new Vector3(w.x, 0.8f, w.y), new Vector3(w.z, 0.2f, w.w), Palette.Brass, false));
+            var hopperGo = Shapes.Empty("PrepHopper", pr, new Vector3(-6.2f, 0.71f, 19.1f));
+            var hopper = hopperGo.AddComponent<SnapSocket>();
+            hopper.Label = "auto-prep hopper";
+            hopper.AllowMultiple = true;
+            hopper.Radius = 0.5f;
+            hopper.RoamHalfExtents = new Vector2(0.3f, 0.25f);
+            hopper.Accepts = v => v.P != null && GameRoot.I.Session.Automation.CanAddToHopper(v.P);
+            hopper.RejectReason = v => "The hopper takes up to " + AutomationService.HopperCapacity + " awake characters.";
+            hopper.Placed = v =>
+            {
+                if (v.P.Location.Kind == LocationKind.Hopper) return;
+                var r = GameRoot.I.Session.Automation.AddToHopper(v.P);
+                if (!string.IsNullOrEmpty(r.Message)) GameRoot.I.Toast(r.Message, !r.Success);
+            };
+            _level.PrepHopper = hopper;
+            Panel(pr, MachineId.AutoPrep, new Vector3(-6.92f, 1.35f, 19.1f), Vector3.right);
+
+            // --- Short conveyor along the right wall, sealer (z 19.6) down to packaging (z 15.8).
+            var conv = Shapes.Empty("ConveyorRig", t, Vector3.zero);
+            _level.ConveyorRig = conv;
+            var cr = conv.transform;
+            Shapes.Box("BeltFrame", cr, new Vector3(6.45f, 0.83f, 17.7f), new Vector3(0.5f, 0.12f, 3.9f), steel);
+            Shapes.Box("BeltSurface", cr, new Vector3(6.45f, 0.895f, 17.7f), new Vector3(0.44f, 0.01f, 3.8f), new Color(0.12f, 0.12f, 0.12f), false);
+            foreach (float z in new[] { 15.9f, 17.7f, 19.5f })
+                foreach (float x in new[] { 6.25f, 6.65f })
+                    Shapes.Box("BeltLeg", cr, new Vector3(x, 0.39f, z), new Vector3(0.05f, 0.78f, 0.05f), steel);
+            var beltGo = Shapes.Empty("Belt", cr, new Vector3(6.45f, 0.905f, 17.7f));
+            var belt = beltGo.AddComponent<ConveyorView>();
+            belt.StartLocal = new Vector3(0f, 0f, 1.85f);
+            belt.EndLocal = new Vector3(0f, 0f, -1.85f);
+            for (int i = 0; i < 8; i++)
+            {
+                float z = 19.6f - i * (3.8f / 7f);
+                belt.Rollers.Add(Metal(Shapes.Rod("Roller", cr, new Vector3(6.2f, 0.87f, z), new Vector3(6.7f, 0.87f, z), 0.03f, Palette.Brass)).transform);
+            }
+            _level.Conveyor = belt;
+            Panel(cr, MachineId.Conveyor, new Vector3(6.97f, 1.35f, 17.7f), Vector3.left);
+
+            // --- Packaging press over the table, output rack between the table and the front wall.
+            var pack = Shapes.Empty("PackagerRig", t, Vector3.zero);
+            _level.PackagerRig = pack;
+            var kr = pack.transform;
+            foreach (float z in new[] { 14.75f, 15.65f }) Metal(Shapes.Rod("PressPost", kr, new Vector3(6.4f, 0.9f, z), new Vector3(6.4f, 1.9f, z), 0.03f, Palette.Brass));
+            Metal(Shapes.Box("PressHead", kr, new Vector3(6.05f, 1.75f, 15.2f), new Vector3(0.7f, 0.25f, 0.95f), Palette.Brass, false));
+            Shapes.Box("RackFrame", kr, new Vector3(6.4f, 0.6f, 13.7f), new Vector3(0.5f, 0.04f, 1.1f), Palette.TealDark);
+            Shapes.Box("RackShelf", kr, new Vector3(6.4f, 1.15f, 13.7f), new Vector3(0.5f, 0.04f, 1.1f), Palette.TealDark);
+            foreach (float z in new[] { 13.18f, 14.22f }) Shapes.Box("RackPost", kr, new Vector3(6.4f, 0.75f, z), new Vector3(0.5f, 1.5f, 0.04f), Palette.TealDark);
+            for (int i = 0; i < AutomationService.OutputShelfCapacity; i++)
+            {
+                var slotGo = Shapes.Empty("OutputSlot" + i, kr, new Vector3(6.4f, i < 2 ? 0.62f : 1.17f, i % 2 == 0 ? 13.45f : 13.95f));
+                slotGo.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+                var sock = slotGo.AddComponent<SnapSocket>();
+                sock.Label = "output rack";
+                sock.Radius = 0.3f;
+                sock.Accepts = v => false;
+                sock.RejectReason = v => "Only the packaging machine fills the output rack.";
+                _level.OutputSlots[i] = sock;
+            }
+            Panel(kr, MachineId.PackagingMachine, new Vector3(6.97f, 1.35f, 14.45f), Vector3.left);
+
+            prep.SetActive(false);
+            conv.SetActive(false);
+            pack.SetActive(false);
+        }
+
+        static void Panel(Transform parent, MachineId machine, Vector3 pos, Vector3 facing)
+        {
+            var go = Shapes.Empty("Panel_" + machine, parent, pos);
+            go.transform.localRotation = Quaternion.LookRotation(facing);
+            Shapes.Box("PanelBox", go.transform, Vector3.zero, new Vector3(0.32f, 0.4f, 0.08f), Palette.TealDark);
+            var lamp = Shapes.Prim(PrimitiveType.Sphere, "PanelLamp", go.transform, new Vector3(0f, 0.1f, 0.05f), Vector3.one * 0.07f, Palette.Idle, false);
+            Metal(Shapes.Prim(PrimitiveType.Cylinder, "Lever", go.transform, new Vector3(0f, -0.08f, 0.06f), new Vector3(0.04f, 0.06f, 0.04f), Palette.Brass, false)).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            var panel = go.AddComponent<MachinePanel>();
+            panel.Machine = machine;
+            panel.Lamp = lamp.GetComponent<Renderer>();
+            _level.Panels.Add(panel);
         }
 
         static void DressWorktable(Transform table)

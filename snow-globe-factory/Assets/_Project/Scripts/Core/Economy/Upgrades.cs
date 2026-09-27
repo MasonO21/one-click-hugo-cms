@@ -119,7 +119,7 @@ namespace SnowGlobe.Core
                 new UpgradeDefinition
                 {
                     Id = UpgradeId.ShortConveyor, Name = "Short Conveyor", Cost = 250, Category = UpgradeCategory.Automation, UnlockDay = 3,
-                    Solves = "Walking every globe from the sealer to packaging.", Tradeoff = "Uses power; heavy characters can jam it.", PrototypeFunctional = false,
+                    Solves = "Walking every globe from the sealer to packaging.", Tradeoff = "Uses power; heavy characters can jam it.", PrototypeFunctional = true,
                     Apply = (ref UpgradeModifiers m) => { m.HasConveyor = true; m.PowerDraw += 1; },
                 },
                 new UpgradeDefinition
@@ -131,7 +131,7 @@ namespace SnowGlobe.Core
                 new UpgradeDefinition
                 {
                     Id = UpgradeId.PackagingMachine, Name = "Packaging Machine", Cost = 650, Category = UpgradeCategory.Automation, UnlockDay = 4,
-                    Solves = "Boxing every globe by hand.", Tradeoff = "Machine folds are only 'good' — hand folding scores higher.", PrototypeFunctional = false,
+                    Solves = "Boxing every globe by hand.", Tradeoff = "Machine folds are only 'good' — hand folding scores higher.", PrototypeFunctional = true,
                     Apply = (ref UpgradeModifiers m) => { m.AutoPackaging = true; m.PowerDraw += 1; m.MachineNoise += 0.1f; },
                 },
                 new UpgradeDefinition
@@ -143,7 +143,7 @@ namespace SnowGlobe.Core
                 new UpgradeDefinition
                 {
                     Id = UpgradeId.AutoPrepStation, Name = "Automated Preparation Station", Cost = 1000, Category = UpgradeCategory.Automation, UnlockDay = 5,
-                    Solves = "Hand-injecting every character.", Tradeoff = "Average timing only; heavy power draw.", PrototypeFunctional = false,
+                    Solves = "Hand-injecting every character.", Tradeoff = "Average timing only; heavy power draw.", PrototypeFunctional = true,
                     Apply = (ref UpgradeModifiers m) => { m.AutoPrep = true; m.PowerDraw += 2; m.MachineNoise += 0.2f; },
                 },
                 new UpgradeDefinition

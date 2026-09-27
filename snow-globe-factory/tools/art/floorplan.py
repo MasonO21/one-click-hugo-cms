@@ -66,6 +66,12 @@ box(-1.3, 13.75, 1.2, 0.7, WOOD, "supplies crate")
 for x in (-2.8, 2.8): box(x, 21.4, 1.0, 0.6, (120, 120, 120))
 box(4.4, 22.8, 2.4, 0.15, (60, 60, 60)); text(3.2, 22.1, "freight lift (sealed)")
 d.line((*P(-7, 23), *P(-5.2, 23)), fill=(90, 200, 120), width=6); text(-6.9, 22.2, "TO BASEMENT")
+# Automation (appears when bought)
+AUTO = (230, 190, 90)
+box(-6.2, 19.1, 0.8, 0.7, AUTO); text(-5.7, 18.75, "auto-prep hopper*")
+box(6.45, 17.7, 0.5, 3.9, AUTO); text(4.3, 17.5, "conveyor*")
+box(6.4, 13.7, 0.5, 1.1, AUTO); text(4.9, 13.9, "output rack*")
+box(0.2, 13.6, 0.6, 0.6, (190, 160, 120))
 # Basement
 box(-6.1, 23.7, 1.8, 1.4, (120, 140, 145)); text(-6.9, 23.5, "landing")
 for i in range(16): rect(-7, 24.4 + i * 0.5, -5.2, 24.9 + i * 0.5, (180, 150, 110))
@@ -89,7 +95,7 @@ d.text((lx, 20), "Little Lives — level plan", font=fb, fill=(0, 0, 0))
 lines = ["Top-down, 1 grid square = 1 m.", "Street at top; +Z runs into the", "building.", "",
          "red dots: customer browse points", "blue dots: path ring around display", "brass dots: display slots",
          "green lines: doors", "blue lines: windows (concept-art views)", "", "Stations 1-5 = the production line.",
-         "Basement is 4 m below the backroom,", "reached by the stairs behind the", "TO BASEMENT door."]
+         "Basement is 4 m below the backroom,", "reached by the stairs behind the", "TO BASEMENT door.", "", "* automation upgrades: hidden until", "  bought (Milestone 3)."]
 for i, l in enumerate(lines): d.text((lx, 55 + i * 18), l, font=f, fill=(30, 30, 30))
 for gx in range(X0, X1 + 1):
     d.line((*P(gx, Z0), *P(gx, Z1)), fill=(0, 0, 0, 30), width=1) if False else None

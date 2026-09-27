@@ -46,6 +46,12 @@ namespace SnowGlobe.Game
         public Door LiftGate;
         public BlinkLamp LiftLamp;
         public SnapSocket CounterSocket;
+        // Automation (Milestone 3): shown once the matching upgrade is installed.
+        public GameObject AutoPrepRig, ConveyorRig, PackagerRig;
+        public SnapSocket PrepHopper;
+        public ConveyorView Conveyor;
+        public SnapSocket[] OutputSlots = new SnapSocket[AutomationService.OutputShelfCapacity];
+        public readonly List<MachinePanel> Panels = new List<MachinePanel>();
         public Door FrontDoor;
         public Door StaffDoor;
         public Door BasementDoor;

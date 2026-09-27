@@ -25,6 +25,8 @@ namespace SnowGlobe.Core
             if (s.Deliveries == null) s.Deliveries = new List<PendingDelivery>();
             if (s.Store == null) s.Store = new StoreState();
             if (s.Director == null) s.Director = new EventDirectorState();
+            if (s.Automation == null) s.Automation = new AutomationState();
+            if (s.Automation.Machines == null) s.Automation.Machines = new List<MachineState>();
             if (s.Day == null) s.Day = new DayState();
             if (s.Day.Stats == null) s.Day.Stats = new DailyStats();
             if (s.Rng == null) s.Rng = new DeterministicRandom(12345);
@@ -112,6 +114,25 @@ namespace SnowGlobe.Core
                     log.Add("Recaptured " + p.CharacterName + " on load.");
                 }
                 if (p.IsSerumActive && p.SerumRemaining <= 0f) p.SerumRemaining = 1f;
+            }
+
+            // Automation locations: clamp belt progress, keep output-rack slots unique, keep hopper order ahead of the counter.
+            var usedSlots = new HashSet<int>();
+            foreach (var p in s.Products)
+            {
+                if (p.Location.Kind == LocationKind.Conveyor) p.Location.X = MathUtil.Clamp01(p.Location.X);
+                if (p.Location.Kind == LocationKind.Hopper && p.Location.Index >= s.Automation.NextHopperOrder) s.Automation.NextHopperOrder = p.Location.Index + 1;
+                if (p.Location.Kind != LocationKind.OutputShelf) continue;
+                if (p.Location.Index >= 0 && p.Location.Index < AutomationService.OutputShelfCapacity && usedSlots.Add(p.Location.Index)) continue;
+                int free = -1;
+                for (int i = 0; i < AutomationService.OutputShelfCapacity; i++) if (!usedSlots.Contains(i)) { free = i; break; }
+                if (free >= 0)
+                {
+                    usedSlots.Add(free);
+                    p.Location = ProductLocation.OnOutputShelf(free);
+                }
+                else p.Location = ProductLocation.At(StationId.Counter);
+                log.Add("Re-slotted output rack item " + p.Id + ".");
             }
             return log;
         }
