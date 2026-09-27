@@ -16,7 +16,7 @@ in `Assets/_Project/Resources/Models/`.
 | [Furniture Kit](https://kenney.nl/assets/furniture-kit) | `Furniture/` | Potted plants and cardboard boxes |
 | [Factory Kit](https://kenney.nl/assets/factory-kit) 3.0 | `Factory/` | Basement crates |
 
-Only the models the game uses are included. Import settings (legacy animation for characters, readable meshes) are
+Only a selection of each pack is included: the models above, plus a few (factory conveyors and machines, lights, the toy train) kept for the next art pass. Import settings (legacy animation for characters, readable meshes) are
 applied by `Scripts/Editor/ModelImportSettings.cs`, because the repo doesn't track `.meta` files.
 
 The miniature living characters inside the globes deliberately keep their own procedural look, which follows the
