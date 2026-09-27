@@ -14,6 +14,12 @@ namespace SnowGlobe.Core
         public const int DailyOperatingCost = 25;
         /// <summary>Nightly electricity per unit of machine power draw.</summary>
         public const int ElectricityPerPowerUnit = 6;
+        /// <summary>Nightly wage for the hired shop assistant.</summary>
+        public const int AssistantDailyWage = 45;
+        /// <summary>How long the assistant takes to ring up a waiting customer (the player is instant).</summary>
+        public const float AssistantServeSeconds = 5f;
+        /// <summary>The assistant's commission on every sale they ring up (serve customers yourself to keep it).</summary>
+        public const float AssistantCommission = 0.1f;
 
         // Emergency supply order (anti-bankruptcy valve).
         public const int EmergencyUnits = 2;

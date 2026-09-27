@@ -55,7 +55,7 @@ namespace SnowGlobe.BalanceSim
         {
             Upgrade(UpgradeId.PrepCradle), Upgrade(UpgradeId.BetterInjector), Upgrade(UpgradeId.AssemblyJig),
             Theme(ThemeId.WoodlandCabin), Upgrade(UpgradeId.ImprovedSealer), Upgrade(UpgradeId.ShortConveyor),
-            Theme(ThemeId.MedievalCastle), Upgrade(UpgradeId.PackagingMachine), Upgrade(UpgradeId.AutoPrepStation),
+            Theme(ThemeId.MedievalCastle), Upgrade(UpgradeId.PackagingMachine), Upgrade(UpgradeId.ShopAssistant), Upgrade(UpgradeId.AutoPrepStation),
             Upgrade(UpgradeId.PremiumDisplayCase), Theme(ThemeId.HauntedManor), Upgrade(UpgradeId.SealingPress),
             Theme(ThemeId.DeepSeaRuins), Upgrade(UpgradeId.WindowDisplay), Theme(ThemeId.CelestialObservatory),
             Upgrade(UpgradeId.RewiredFuseBox), Upgrade(UpgradeId.BasementSoundproofing), Upgrade(UpgradeId.SecurityCameras),
@@ -131,7 +131,8 @@ namespace SnowGlobe.BalanceSim
                 // --- Plan today's output and restock exactly that much.
                 float perGlobe = SecondsPerGlobe(st);
                 int expectedSales = expectedSalesToday;
-                float serveTime = expectedSales * ServeSeconds;
+                // A hired assistant works the till, so serving no longer eats into line time.
+                float serveTime = st.Modifiers.HasAssistant ? 0f : expectedSales * ServeSeconds;
                 int capacity = (int)((PreOpeningSeconds + OpenSeconds - serveTime) / perGlobe);
                 int toMake = Math.Max(0, Math.Min(capacity, expectedSales + 3 - backstock.Count));
                 int unitCost = GameBalance.GlobeKitCost + GameBalance.SerumChargeCost + GameBalance.PackagingCost + ThemeCatalog.Get(st.ActiveTheme).ExtraKitCost + 8;
@@ -216,7 +217,11 @@ namespace SnowGlobe.BalanceSim
                         if (rng.Chance(0.15f)) st.Exposure.OnCustomerLeft(SuspicionStage.Curious, false);
                     s.Store.Reserve(shelf, customerId);
                     ActionResult sale;
-                    if (s.Store.CompleteSale(shelf, customerId++, out sale) > 0) sold++;
+                    int price = s.Store.CompleteSale(shelf, customerId++, out sale);
+                    if (price <= 0) continue;
+                    sold++;
+                    // With an assistant hired, they work the till and take their commission.
+                    s.Store.PayAssistantCommission(price);
                 }
 
                 var summary = s.Days.CloseStore();

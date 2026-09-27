@@ -246,7 +246,10 @@ namespace SnowGlobe.Game
             var c = GameRoot.I.Customers.WaitingAtCounter;
             if (c == null) return "Checkout counter";
             var p = c.ChosenProduct;
-            return p == null ? "Checkout counter" : "E: Ring up " + p.CharacterName + " globe — $" + QualityModel.EstimateValue(p);
+            if (p == null) return "Checkout counter";
+            var assistant = GameRoot.I.Level.Assistant;
+            string help = assistant != null && assistant.isActiveAndEnabled && assistant.IsServing ? "  (your assistant is on it)" : "";
+            return "E: Ring up " + p.CharacterName + " globe — $" + QualityModel.EstimateValue(p) + help;
         }
 
         public void Interact(PlayerInteractor player)

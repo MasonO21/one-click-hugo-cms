@@ -65,10 +65,11 @@ namespace SnowGlobe.Core
             return wasBefore && D.ClockMinutes >= GameBalance.ClosingHourMinutes;
         }
 
-        /// <summary>Rent and heating, plus the electricity every installed machine draws.</summary>
+        /// <summary>Rent and heating, the electricity every installed machine draws, and staff wages.</summary>
         public static int OperatingCost(GameState s)
         {
-            return GameBalance.DailyOperatingCost + GameBalance.ElectricityPerPowerUnit * s.Modifiers.PowerDraw;
+            var m = s.Modifiers;
+            return GameBalance.DailyOperatingCost + GameBalance.ElectricityPerPowerUnit * m.PowerDraw + m.DailyWages;
         }
 
         public bool PastClosingTime { get { return D.ClockMinutes >= GameBalance.ClosingHourMinutes; } }

@@ -18,7 +18,7 @@
 | Customers & orders: up to 3 shoppers with a counter queue, customers picking globes up (day 4+), special orders board, Woodland Cabin theme, store appeal | ✅ core · 🟡 scene | 12 core tests; a play-mode test covers order pickup |
 | Horror & roster: Screamer, Escape Artist, Watcher, Performer behaviours; security cameras; conveyor-grab and cabinet-shift events; supplier notes | ✅ core · 🟡 scene | 9 core tests; play-mode tests for the camera desk and the Escape Artist |
 | All six themes: bespoke scenery and fill (ash, sea water, star-dust) plus a production twist each | ✅ core · 🟡 scene | 4 core tests: Medieval needs the jig, Celestial needs the Improved Sealer, Haunted hides twitches (×0.6) and Deep-Sea shows them (×1.4) |
-| Story (H.'s ledger) and late-game sinks: Sealing Press, Rewired Fuse Box, Window Display, electricity bills | ✅ core · 🟡 scene | 14 core tests. Five ledger chapters end in a choice (§5e). Globes for H. go down in the freight-lift crate |
+| Story (H.'s ledger) and late-game sinks: Sealing Press, Rewired Fuse Box, Window Display, Shop Assistant, electricity bills | ✅ core · 🟡 scene | 14 core tests. Five ledger chapters end in a choice (§5e). Globes for H. go down in the freight-lift crate |
 | Economy balance pass | ✅ second pass | `tools/BalanceSim` runs 30 days of the real core with a scripted player. Report and tuning are in [`BALANCE.md`](BALANCE.md) |
 | Level rebuilt from the three concept paintings; minis restyled to the character reference | 🟡 | Procedural reconstruction (see §5a). Floor plan: `docs/floorplan.png` |
 | Real modelled art, animation, UI Toolkit, audio design | ⬜ | Everything is still built from primitives and synthesized sound |
@@ -240,6 +240,7 @@ The story is a ledger of requests from H., the supplier. Each request arrives as
 * **Rewired Fuse Box** ($1200, day 10): power capacity 3 → 8. A fully automated line draws 9, so it still runs a little hot.
 * **Window Display** ($1600, day 15): a lit stand of globes in the shop window, and ×1.25 walk-ins.
 * **Electricity:** the nightly bill is $25 rent plus $6 per unit of power draw, so every machine has a running cost.
+* **Shop Assistant** ($800, day 12): someone in a red apron behind the counter who rings up the waiting customer after 5 s. Costs $45 a night plus a 10% commission on every sale they ring up, so serving people yourself still pays. They only work the till: talking round a suspicious customer is still the player's job. This fixes the late-game counter bottleneck (`BALANCE.md`).
 
 ## 6. Milestone roadmap
 
@@ -252,7 +253,7 @@ The story is a ledger of requests from H., the supplier. Each request arrives as
 | **M4 Customers & orders** ✅ core · 🟡 scene | Store depth | Up to 3 customers (1 on days 1–2, 2 on days 3–4, 3 from day 5) with a counter queue; customers pick globes up for a closer look from day 4; special-order board with pinning, matching and pickup; Woodland Cabin theme (and a theme picker for later ones); store appeal | Orders always pay ≥ $15 over list (tested); suspicion readability with 3 customers still needs a playtest |
 | **M5 Horror & roster** ✅ core · 🟡 scene | Unease at scale | Screamer, Escape Artist, Watcher and Performer behaviours; Security Cameras upgrade (desk monitor, full-screen feeds, loose-character alerts); Conveyor Grab threat and Cabinet Shift atmospheric; supplier notes (8, days 2–12) | Needs playtests: players report "tense but fair" |
 | **M6 Art & audio** ⬜ | Identity | Real low-poly models, rigged minis (optional joint-based active ragdoll behind the same `MiniCharacterBody` API), lighting, sound design, UI Toolkit HUD | Vertical slice capture |
-| **M7 Content & balance** 🟡 | Longevity | **Done:** all six themes with bespoke scenery and twists; H.'s ledger story with two endings (§5e); late-game sinks (Sealing Press, Fuse Box, Window Display, electricity); headless balance sim with two tuning passes (`BALANCE.md`). **To do:** shop assistant (the counter is the late bottleneck), endless-mode sinks, performance pass, build pipeline | Economy playable after the story: **met** in the core. 2–3 h of progression: **not met.** The sim reaches the ending on days 30–32 (about 5–6 h), so either accept that or scale prices by ~0.6 (a design call) |
+| **M7 Content & balance** 🟡 | Longevity | **Done:** all six themes with bespoke scenery and twists; H.'s ledger story with two endings (§5e); late-game sinks (Sealing Press, Fuse Box, Window Display, electricity); **Shop Assistant** (fixes the counter bottleneck, tested in-scene); headless balance sim with three tuning passes (`BALANCE.md`). **To do:** endless-mode sinks (cash now piles up at ~$3.8k/day after day 31), performance pass, build pipeline | Economy playable after the story: **met** in the core. 2–3 h of progression: **not met.** The sim reaches the ending on days 28–29 (about 5 h), so either accept that or scale prices by ~0.6 (a design call) |
 
 ## 7. Initial economy and progression tables
 
@@ -319,6 +320,7 @@ Tiers: Flawed < 0.35 ≤ Standard < 0.65 ≤ Fine < 0.85 ≤ Exquisite.
 | Rewired Fuse Box | $1200 | Handling | 10 | Power capacity +5 (3 → 8) | — | ✅ |
 | Sealing Press | $1800 | Automation | 12 | Fits and seals domes by itself (70% dome score) | +2 power, noise | ✅ |
 | Window Display | $1600 | Appeal | 15 | Walk-ins ×1.25 | People stare in after closing | ✅ |
+| Shop Assistant | $800 | Appeal | 12 | Rings up waiting customers (5 s each) | $45 a night + 10% of the sales they ring up | ✅ |
 
 Power capacity is 3 (8 with the Rewired Fuse Box). Going over it makes power failures more likely in the director's weighting, and machines wear 1.5× faster. A fully automated line draws 9.
 

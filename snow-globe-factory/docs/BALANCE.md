@@ -58,29 +58,29 @@ dotnet run -- 36 2024 ../../docs/x.md   # also writes the report to a file
 | 15 | $1263 | 4 | 4 | 0 | $396 | $182 | Medieval Castle |  |
 | 16 | $1666 | 6 | 6 | 0 | $575 | $172 | Medieval Castle |  |
 | 17 | $1616 | 8 | 8 | 0 | $858 | $908 | Medieval Castle | Packaging Machine |
-| 18 | $2212 | 7 | 6 | 1 | $829 | $233 | Medieval Castle |  |
-| 19 | $1742 | 7 | 6 | 1 | $757 | $1227 | Medieval Castle | Ledger: Machine Oil |
-| 20 | $2288 | 7 | 6 | 1 | $776 | $230 | Medieval Castle |  |
-| 21 | $1811 | 8 | 7 | 1 | $842 | $1319 | Medieval Castle | Automated Preparation Station |
-| 22 | $1697 | 10 | 10 | 0 | $980 | $1094 | Medieval Castle | Premium Display Case |
-| 23 | $2392 | 10 | 10 | 0 | $1014 | $319 | Medieval Castle |  |
-| 24 | $3160 | 10 | 9 | 1 | $1093 | $325 | Medieval Castle |  |
-| 25 | $2921 | 9 | 8 | 1 | $1733 | $1972 | Haunted Manor | Haunted Manor theme, Sent to H. |
-| 26 | $2471 | 15 | 15 | 0 | $1861 | $2311 | Haunted Manor | Sealing Press |
-| 27 | $3807 | 15 | 15 | 0 | $1859 | $523 | Haunted Manor |  |
-| 28 | $3129 | 15 | 14 | 1 | $2429 | $3107 | Deep-Sea Ruins | Deep-Sea Ruins theme |
-| 29 | $3056 | 13 | 12 | 1 | $2134 | $2207 | Deep-Sea Ruins | Window Display |
-| 30 | $4519 | 12 | 12 | 0 | $1929 | $466 | Deep-Sea Ruins |  |
-| 31 | $5895 | 12 | 12 | 0 | $1867 | $491 | Deep-Sea Ruins |  |
-| 32 | $3226 | 11 | 11 | 0 | $1790 | $4459 | Deep-Sea Ruins | Ledger: The Last Page |
-| 33 | $4510 | 11 | 10 | 1 | $1732 | $448 | Deep-Sea Ruins |  |
-| 34 | $5894 | 12 | 12 | 0 | $1838 | $454 | Deep-Sea Ruins |  |
-| 35 | $3409 | 12 | 11 | 1 | $2573 | $5058 | Celestial Observatory | Celestial Observatory theme |
-| 36 | $3817 | 12 | 12 | 0 | $2691 | $2283 | Celestial Observatory | Rewired Fuse Box, Basement Soundproofing |
+| 18 | $1697 | 13 | 12 | 1 | $1442 | $1361 | Medieval Castle | Shop Assistant |
+| 19 | $2517 | 13 | 12 | 1 | $1377 | $557 | Medieval Castle |  |
+| 20 | $2403 | 13 | 12 | 1 | $1447 | $1561 | Medieval Castle | Ledger: Machine Oil |
+| 21 | $2567 | 18 | 17 | 1 | $1920 | $1756 | Medieval Castle | Automated Preparation Station |
+| 22 | $2565 | 15 | 15 | 0 | $1527 | $1529 | Medieval Castle | Premium Display Case |
+| 23 | $2818 | 16 | 16 | 0 | $2681 | $2428 | Haunted Manor | Haunted Manor theme, Sent to H. |
+| 24 | $3037 | 26 | 25 | 1 | $3244 | $3025 | Haunted Manor | Sealing Press |
+| 25 | $5013 | 26 | 26 | 0 | $3222 | $1246 | Haunted Manor |  |
+| 26 | $3686 | 25 | 25 | 0 | $4199 | $5526 | Deep-Sea Ruins | Deep-Sea Ruins theme, Window Display |
+| 27 | $6367 | 26 | 25 | 1 | $4179 | $1498 | Deep-Sea Ruins |  |
+| 28 | $5095 | 26 | 25 | 1 | $4132 | $5404 | Deep-Sea Ruins | Ledger: The Last Page |
+| 29 | $8000 | 26 | 25 | 1 | $4327 | $1422 | Deep-Sea Ruins |  |
+| 30 | $5710 | 26 | 25 | 1 | $5705 | $7995 | Celestial Observatory | Celestial Observatory theme, Rewired Fuse Box, Basement Soundproofing |
+| 31 | $8723 | 26 | 26 | 0 | $5525 | $2512 | Celestial Observatory | Security Cameras |
+| 32 | $12589 | 26 | 25 | 1 | $5659 | $1793 | Celestial Observatory |  |
+| 33 | $16541 | 27 | 26 | 1 | $5763 | $1811 | Celestial Observatory |  |
+| 34 | $20412 | 26 | 26 | 0 | $5713 | $1842 | Celestial Observatory |  |
+| 35 | $24178 | 26 | 26 | 0 | $5569 | $1803 | Celestial Observatory |  |
+| 36 | $28027 | 26 | 26 | 0 | $5660 | $1811 | Celestial Observatory |  |
 
-Milestones: Day 2: Preparation Cradle · Day 2: Better Injector · Day 4: Assembly Jig · Day 7: Woodland Cabin theme · Day 9: ledger 'Dues' · Day 10: Improved Sealer · Day 11: Short Conveyor · Day 12: ledger 'A Sample' (globe) · Day 14: Medieval Castle theme · Day 17: Packaging Machine · Day 19: ledger 'Machine Oil' · Day 21: Automated Preparation Station · Day 22: Premium Display Case · Day 25: Haunted Manor theme · Day 25: ledger 'For the Window' (globe) · Day 26: Sealing Press · Day 28: Deep-Sea Ruins theme · Day 29: Window Display · Day 32: ledger 'The Last Page' · Day 35: Celestial Observatory theme · Day 36: Rewired Fuse Box · Day 36: Basement Soundproofing
+Milestones: Day 2: Preparation Cradle · Day 2: Better Injector · Day 4: Assembly Jig · Day 7: Woodland Cabin theme · Day 9: ledger 'Dues' · Day 10: Improved Sealer · Day 11: Short Conveyor · Day 12: ledger 'A Sample' (globe) · Day 14: Medieval Castle theme · Day 17: Packaging Machine · Day 18: Shop Assistant · Day 20: ledger 'Machine Oil' · Day 21: Automated Preparation Station · Day 22: Premium Display Case · Day 23: Haunted Manor theme · Day 23: ledger 'For the Window' (globe) · Day 24: Sealing Press · Day 26: Deep-Sea Ruins theme · Day 26: Window Display · Day 28: ledger 'The Last Page' · Day 30: Celestial Observatory theme · Day 30: Rewired Fuse Box · Day 30: Basement Soundproofing · Day 31: Security Cameras
 
-Exposure at the end: 0/100. Lifetime globes sold: 306.
+Exposure at the end: 0/100. Lifetime globes sold: 524.
 
 ### Milestone days across seeds
 
@@ -94,24 +94,26 @@ Exposure at the end: 0/100. Lifetime globes sold: 306.
 | Ledger: A Sample (Performer globe) | 12 | 12 | 12 | 12 |
 | Medieval Castle | 13 | 14 | 13 | 14 |
 | Packaging Machine | 15 | 17 | 15 | 16 |
-| Automated Prep | 19 | 21 | 19 | 21 |
-| Haunted Manor | 22 | 25 | 23 | 25 |
-| Ledger: For the Window (Haunted Watcher) | 22 | 25 | 23 | 25 |
-| Sealing Press | 24 | 26 | 24 | 26 |
-| Deep-Sea Ruins | 26 | 28 | 26 | 29 |
-| Window Display | 27 | 29 | 27 | 30 |
-| **Ledger: The Last Page ($4000, ending)** | **30** | **32** | **30** | **32** |
-| Celestial Observatory | 33 | 35 | 33 | 35 |
+| **Shop Assistant** | **18** | **18** | **19** | **20** |
+| Automated Prep | 20 | 21 | 20 | 22 |
+| Haunted Manor | 22 | 23 | 23 | 24 |
+| Ledger: For the Window (Haunted Watcher) | 22 | 23 | 23 | 24 |
+| Sealing Press | 23 | 24 | 24 | 25 |
+| Deep-Sea Ruins | 25 | 26 | 25 | 27 |
+| Window Display | 25 | 26 | 26 | 27 |
+| **Ledger: The Last Page ($4000, ending)** | **28** | **28** | **28** | **29** |
+| Celestial Observatory | 27 | 30 | 29 | 30 |
+| Lifetime globes sold by day 36 | 545 | 524 | 535 | 502 |
 
-A player working at the modelled pace reaches **the story's ending on days 30–32**, and has bought everything by
-days 34–36.
+A player working at the modelled pace reaches **the story's ending on days 28–29**, and has bought everything by
+about day 31. Before the Shop Assistant existed, it was days 30–32 and 34–36.
 
-At 8 real minutes of shop time per day, plus preparation and management, that's about 5–6 hours. That's longer than
-the 2–3 hour M7 target in the design plan. It's a design decision, not a bug. The options are:
+That's still about 5 hours of play, longer than the 2–3 hour M7 target in the design plan. It's a design decision,
+not a bug. The options are:
 
-* **Accept a 5–6 h campaign.** This is common for cosy management games, and the economy stays playable after the
+* **Accept a ~5 h campaign.** This is common for cosy management games, and the economy stays playable after the
   ending.
-* **Compress it.** Multiplying every price by about 0.6 would put the ending near day 20.
+* **Compress it.** Multiplying every price by about 0.6 would put the ending near day 18.
 
 This needs real play data first, because faster players will get there sooner.
 
@@ -135,7 +137,14 @@ This needs real play data first, because faster players will get there sooner.
    * **Electricity:** $6 per power unit a night, on top of the $25 rent. That's about $50–60 a night late in the game.
    * The new items' prices were cut once after the first run: Machine Oil $2000 → $1000, Last Page $6000 → $4000,
      Sealing Press $2400 → $1800 and Window Display $2200 → $1600.
-4. **Fixes to the sim's buying policy:**
+5. **Shop Assistant** (this pass). The counter was the late-game bottleneck (finding 3 below):
+   * A first version ($500 to hire, $45 a night) more than doubled lifetime sales, because serving took over half of
+     each open day.
+   * That's the intended effect (the plan wanted the player freed to run the line), so it stays strong, but it now
+     costs **$800** to hire, **$45 a night** and a **10% commission** on every sale the assistant rings up. Serving a
+     customer yourself keeps the full price, so there's still a reason to walk to the till.
+   * The sim hires them right after the Packaging Machine, on days 18–20.
+6. **Fixes to the sim's buying policy:**
    * Buying several things a morning with no saving rule meant cheap upgrades ate every theme budget.
    * Letting themes always come first starved automation.
    * An explicit shopping list with saving (above) behaves like a sensible player.
@@ -150,12 +159,12 @@ This needs real play data first, because faster players will get there sooner.
    * One ledger beat arrives every 3–5 days from day 8.
    * The two globe requests turn up exactly when the player has the right figure and theme. The Sample needs a
      Performer (day 6+). For the Window needs Haunted Manor plus a Watcher (day 12+).
-3. **The late game is now limited by the counter, not the line.**
-   * With every upgrade, the line could make about 20 globes a day. Serving ~40 walk-ins at the counter takes most of
-     the day, so the modelled player makes 11–13.
-   * **Next sink to add:** a **shop assistant** who works the till. It's a daily wage, and it frees the player to run
-     the line. That's the natural next upgrade.
-4. **Cash still piles up after everything is bought** (about $1.3k a day). Endless-mode sinks are still open:
+3. **The counter bottleneck is fixed by the Shop Assistant.**
+   * Before: with every upgrade, the line could make about 20 globes a day, but serving ~40 walk-ins took most of the
+     day, so the modelled player made 11–13.
+   * Now: once the assistant is hired, output climbs to 25–27 globes a day, limited by the line again.
+4. **Cash piles up badly after everything is bought.** With the assistant, that's about $3.8k a day from day 31, and
+   $26k–$34k by day 36. Endless-mode sinks are the next job:
    * shop expansions with more display slots;
    * rarer figures;
    * upkeep that scales with the roster.

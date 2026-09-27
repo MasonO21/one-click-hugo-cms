@@ -234,6 +234,41 @@ namespace SnowGlobe.Game.Tests
             Assert.Greater(s.State.Exposure.Value, exposure, "and the business exposure rises");
         }
 
+        // M7: the hired assistant appears behind the counter and rings up a waiting customer on their own.
+        [UnityTest]
+        public IEnumerator ShopAssistant_RingsUpTheWaitingCustomer()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var s = root.Session;
+            Assert.IsFalse(root.Level.Assistant.gameObject.activeSelf, "nobody behind the counter until hired");
+            s.State.Day.Day = 12;
+            s.State.Wallet.Cash = 2000;
+            Assert.IsTrue(s.Upgrades.Purchase(UpgradeId.ShopAssistant).Success);
+            yield return null;
+            Assert.IsTrue(root.Level.Assistant.gameObject.activeSelf, "hired: standing at the till");
+
+            var globe = MakeDisplayedGlobe(root);
+            var p = globe.P;
+            root.Player.Teleport(root.Level.PlayerSpawn.position, 0f); // the player stays away from the till
+            root.OpenShop();
+            root.Customers.SpawnNow();
+            Time.timeScale = 4f;
+            yield return WaitFor(() => root.Customers.WaitingAtCounter != null, 160f);
+            Time.timeScale = 1f;
+            Assert.IsNotNull(root.Customers.WaitingAtCounter, "customer chose the globe and queued");
+
+            int cash = s.State.Wallet.Cash;
+            float start = Time.time;
+            yield return WaitFor(() => p.Stage == ProductStage.Sold, GameBalance.AssistantServeSeconds + 2f);
+            Assert.AreEqual(ProductStage.Sold, p.Stage, "the assistant made the sale");
+            Assert.GreaterOrEqual(Time.time - start, GameBalance.AssistantServeSeconds - 0.3f, "at their own pace");
+            int fee = (int)System.Math.Round(p.SoldPrice * GameBalance.AssistantCommission);
+            Assert.Greater(fee, 0);
+            Assert.AreEqual(cash + p.SoldPrice - fee, s.State.Wallet.Cash, "paid, minus the assistant's cut");
+            Assert.IsFalse(root.Views.ContainsKey(p.Id));
+        }
+
         // §9.11: open, auto-close at 5 pm, summary with bills, next day with a checkpoint.
         [UnityTest]
         public IEnumerator DayLoop_AutoClosesAtFive_BillsAndCheckpointsTheNextDay()

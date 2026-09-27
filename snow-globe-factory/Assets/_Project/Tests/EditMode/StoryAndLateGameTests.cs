@@ -269,6 +269,39 @@ namespace SnowGlobe.Core.Tests
         }
 
         [Test]
+        public void ShopAssistant_UnlocksDay12_AndAddsTheirWageToEveryNightsBill()
+        {
+            var early = OnDay(11);
+            Assert.IsFalse(early.Upgrades.Purchase(UpgradeId.ShopAssistant).Success, "not hireable before day 12");
+
+            var s = OnDay(12);
+            int before = DayCycle.OperatingCost(s.State);
+            TestFlow.Ok(s.Upgrades.Purchase(UpgradeId.ShopAssistant));
+            Assert.IsTrue(s.State.Modifiers.HasAssistant);
+            Assert.AreEqual(before + GameBalance.AssistantDailyWage, DayCycle.OperatingCost(s.State));
+            Assert.AreEqual(0, s.State.Modifiers.PowerDraw, "people don't draw power");
+
+            TestFlow.Ok(s.Days.OpenStore());
+            int cash = s.State.Wallet.Cash;
+            var summary = s.Days.CloseStore();
+            Assert.AreEqual(before + GameBalance.AssistantDailyWage, summary.OperatingCost);
+            Assert.AreEqual(cash - summary.OperatingCost, s.State.Wallet.Cash);
+        }
+
+        [Test]
+        public void ShopAssistant_Commission_OnlyWhenHired_AndCountsAsAnExpense()
+        {
+            var s = OnDay(12);
+            Assert.AreEqual(0, s.Store.PayAssistantCommission(100), "no assistant, no cut");
+            TestFlow.Ok(s.Upgrades.Purchase(UpgradeId.ShopAssistant));
+            int cash = s.State.Wallet.Cash, expenses = s.State.Day.Stats.Expenses;
+            Assert.AreEqual(10, s.Store.PayAssistantCommission(100));
+            Assert.AreEqual(cash - 10, s.State.Wallet.Cash);
+            Assert.AreEqual(expenses + 10, s.State.Day.Stats.Expenses);
+            Assert.AreEqual(0, s.Store.PayAssistantCommission(0));
+        }
+
+        [Test]
         public void WindowDisplay_BringsMoreWalkIns()
         {
             var s = OnDay(20);

@@ -60,6 +60,8 @@ namespace SnowGlobe.Game
         public Door StaffDoor;
         public Door BasementDoor;
         public ServiceCounter Counter;
+        /// <summary>Behind the counter; active only while the Shop Assistant is hired.</summary>
+        public ShopAssistant Assistant;
         public OpenSign Sign;
         public Breaker Breaker;
         public Transform CustomerSpawn;

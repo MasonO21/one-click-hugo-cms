@@ -17,6 +17,7 @@ namespace SnowGlobe.Core
         SealingPress,
         RewiredFuseBox,
         WindowDisplay,
+        ShopAssistant,
     }
 
     public enum UpgradeCategory
@@ -52,6 +53,10 @@ namespace SnowGlobe.Core
         public int PowerCapacityBonus;
         /// <summary>Multiplies the walk-in rate (window display).</summary>
         public float FootTrafficMultiplier;
+        /// <summary>Someone else rings up customers at the counter.</summary>
+        public bool HasAssistant;
+        /// <summary>Staff wages added to the nightly bill.</summary>
+        public int DailyWages;
 
         public static UpgradeModifiers Default
         {
@@ -188,6 +193,14 @@ namespace SnowGlobe.Core
                     Solves = "Passers-by don't know how good your globes have become.", Tradeoff = "People press their faces to the glass after closing.", PrototypeFunctional = true,
                     Apply = (ref UpgradeModifiers m) => { m.FootTrafficMultiplier *= 1.25f; },
                 },
+                new UpgradeDefinition
+                {
+                    Id = UpgradeId.ShopAssistant, Name = "Shop Assistant", Cost = 800, Category = UpgradeCategory.StoreAppeal, UnlockDay = 12,
+                    Solves = "Ringing up every customer yourself keeps you off the line.",
+                    Tradeoff = "$" + GameBalance.AssistantDailyWage + " a night plus " + (int)(GameBalance.AssistantCommission * 100) + "% of every sale they ring up (serve people yourself to keep it). They only work the till: calming a suspicious customer is still your job. They never ask what's behind the staff door.",
+                    PrototypeFunctional = true,
+                    Apply = (ref UpgradeModifiers m) => { m.HasAssistant = true; m.DailyWages += GameBalance.AssistantDailyWage; },
+                },
             };
             var dict = new Dictionary<UpgradeId, UpgradeDefinition>();
             foreach (var d in list) dict[d.Id] = d;
@@ -213,7 +226,7 @@ namespace SnowGlobe.Core
             _state.Day.Stats.Expenses += def.Cost;
             _state.InvalidateModifiers();
             if (id == UpgradeId.PremiumDisplayCase) _state.Store.EnsureCapacity(_state.ShelfCapacity);
-            return ActionResult.Ok(def.Name + " installed.");
+            return ActionResult.Ok(def.Name + (id == UpgradeId.ShopAssistant ? " hired. They start at the till today." : " installed."));
         }
     }
 }

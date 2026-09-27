@@ -372,13 +372,15 @@ namespace SnowGlobe.Game
 
         public bool IsWaitingAtCounter { get { return State == CustomerState.Waiting && StillAvailable() && _spawner.QueueIndex(this) == 0; } }
 
-        public void CompletePurchase()
+        /// <param name="byAssistant">Rung up by the hired assistant, who takes a commission.</param>
+        public void CompletePurchase(bool byAssistant = false)
         {
             if (!IsWaitingAtCounter) return;
             var p = ChosenProduct;
             ActionResult r;
             int price = Root.Session.Store.CompleteSale(p, Id, out r);
-            Root.Toast(r.Message, !r.Success);
+            int fee = byAssistant ? Root.Session.Store.PayAssistantCommission(price) : 0;
+            Root.Toast(fee > 0 ? r.Message + " (Assistant's cut: $" + fee + ")" : r.Message, !r.Success);
             if (price <= 0) return;
             Root.Audio.Play(Sfx.Chime, transform.position);
             Root.OnProductSold(p);

@@ -300,6 +300,7 @@ namespace SnowGlobe.Game
             SetActive(Level.PackagerRig, a.Owns(MachineId.PackagingMachine));
             SetActive(Level.SealPressRig, a.Owns(MachineId.SealingPress));
             SetActive(Level.WindowDisplay, Session.State.OwnedUpgrades.Contains(UpgradeId.WindowDisplay));
+            SetActive(Level.Assistant.gameObject, Session.State.Modifiers.HasAssistant);
         }
 
         static void SetActive(GameObject go, bool active)

@@ -109,6 +109,16 @@ namespace SnowGlobe.Core
             return price;
         }
 
+        /// <summary>The assistant's cut of a sale they rang up. Charged straight away; returns the fee.</summary>
+        public int PayAssistantCommission(int price)
+        {
+            if (price <= 0 || !_state.Modifiers.HasAssistant) return 0;
+            int fee = (int)Math.Round(price * GameBalance.AssistantCommission);
+            _state.Wallet.ChargeBill(fee);
+            _state.Day.Stats.Expenses += fee;
+            return fee;
+        }
+
         /// <summary>
         /// Store appeal: well-stocked shelves draw more walk-ins. Multiplies the customer arrival
         /// rate: 0.7 with bare shelves, up to 1.3 with six or more globes on display.

@@ -305,6 +305,8 @@ namespace SnowGlobe.Game
             Metal(bell);
             _level.Counter = counterRoot.AddComponent<ServiceCounter>();
             _level.Counter.BellPoint = bell.transform;
+            // Staff side of the counter, by the register, facing the queue.
+            _level.Assistant = ShopAssistant.Build(r, new Vector3(-0.7f, 0f, 0.75f), 180f);
             var socketGo = Shapes.Empty("CounterSpot", r, new Vector3(0.2f, 1.04f, 0f));
             var socket = socketGo.AddComponent<SnapSocket>();
             socket.Label = "Counter";
