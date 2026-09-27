@@ -22,6 +22,17 @@ namespace SnowGlobe.Game
 
         public bool PowerOut { get; private set; }
         public DirectorEventId Pending { get { return _pending; } }
+        /// <summary>Seconds left before a telegraphed threat lands.</summary>
+        public float WarningRemaining { get { return _pending == DirectorEventId.None ? 0f : _warning; } }
+        /// <summary>The cabinet an escape attempt is scratching at, while it's being telegraphed.</summary>
+        public HoldingCell ScratchCell { get { return _scratchCell; } }
+
+        /// <summary>Starts a threat now, bypassing the director's odds (tests and debugging).</summary>
+        public void ForceThreat(DirectorEventId ev)
+        {
+            Root.Session.State.Director.ActiveThreat = ev;
+            Begin(ev);
+        }
 
         static GameRoot Root { get { return GameRoot.I; } }
 

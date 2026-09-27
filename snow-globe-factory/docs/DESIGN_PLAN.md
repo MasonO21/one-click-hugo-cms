@@ -361,13 +361,13 @@ Power capacity is 3 (8 with the Rewired Fuse Box). Going over it makes power fai
 | 1 | From a new game, a first-time player can make and sell one globe within ~5 minutes using only in-game prompts and the Day 1 briefing | 🟡 needs playtest |
 | 2 | A practised player completes a full cycle (pen → shelf) in 60–90 s; Cradle + Injector + Jig noticeably shorten or ease it | 🟡 needs playtest |
 | 3 | Money is exact: supplies are deducted when bought; a sale pays once; a globe cannot be sold twice or without being displayed and reserved | ✅ tests |
-| 4 | The serum warns at 15 s and expiry turns the character into a loose, catchable character; the kit is lost; the character still exists | ✅ core tests · 🟡 in-world |
+| 4 | The serum warns at 15 s and expiry turns the character into a loose, catchable character; the kit is lost; the character still exists | ✅ core tests · ✅ in-world (PlayMode `Serum_WarnsAt15s_…`) |
 | 5 | Suspicion rises only from perceivable evidence; a first small twitch reads as a "mechanical feature"; repeats escalate to Alarmed; an alarmed customer flees and raises exposure | ✅ core tests · 🟡 perception |
 | 6 | From day 2, a weak seal can make a displayed globe twitch in view of a customer (the basic movement suspicion event) | ✅ core tests · 🟡 in-world |
-| 7 | The escape event is telegraphed for ≥ 8 s, can be prevented by reaching the gate, and otherwise produces a recapturable loose character; the threat resolves on recapture | 🟡 |
+| 7 | The escape event is telegraphed for ≥ 8 s, can be prevented by reaching the gate, and otherwise produces a recapturable loose character; the threat resolves on recapture | ✅ in-world (PlayMode `Escape_…` ×2); fairness still needs a playtest |
 | 8 | At least three upgrades are purchasable while closed and have visible effects (Cradle, Injector, Jig; also Sealer, Soundproofing, Premium Case) | ✅ core tests · 🟡 in-world |
 | 9 | Save/load keeps day, cash, debt, inventory, upgrades and every product's id, name, stage, timers and location; no duplicates | ✅ tests (System.Text.Json) · ✅ JsonUtility round-trip passes in Unity |
 | 10 | No product ever disappears: occupied stations overflow beside themselves, invalid shelf links are repaired, sold products leave the world | ✅ tests · 🟡 in-world |
-| 11 | Day loop: open when ready, auto-close at 5 pm (or early), summary with bills, next day with a checkpoint | ✅ core tests · 🟡 UI |
-| 12 | Subtitles, camera-shake slider and reduced-flicker toggle work and persist | 🟡 |
+| 11 | Day loop: open when ready, auto-close at 5 pm (or early), summary with bills, next day with a checkpoint | ✅ core tests · ✅ in-world (PlayMode `DayLoop_…`) |
+| 12 | Subtitles, camera-shake slider and reduced-flicker toggle work and persist | ✅ persistence + reduced flicker verified in-world (PlayMode `Settings_…`) |
 | 13 | Holds 60 FPS on a mid-range PC with ≤ 20 products in the world | ✅ measured in the Unity 6 editor (RTX 3050, i5-10400F), 20 products with 12 loose: worst sampled frame 11.2 ms (~89 FPS) across all rooms; editor overhead included |

@@ -35,6 +35,8 @@ namespace SnowGlobe.Game
         static GameRoot Root { get { return GameRoot.I; } }
 
         public bool AnyModal { get { return _title || _menu || _paused || _summary || _briefing; } }
+        public bool SummaryShown { get { return _summary; } }
+        public bool BriefingShown { get { return _briefing; } }
 
         /// <summary>Closes every modal panel (used by tests and scripted flows).</summary>
         public void CloseAllPanels()
