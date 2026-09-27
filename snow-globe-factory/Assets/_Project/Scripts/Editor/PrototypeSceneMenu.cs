@@ -8,7 +8,7 @@ namespace SnowGlobe.EditorTools
 {
     public static class PrototypeSceneMenu
     {
-        const string ScenePath = "Assets/_Project/Scenes/SnowGlobePrototype.unity";
+        public const string ScenePath = "Assets/_Project/Scenes/SnowGlobePrototype.unity";
 
         [MenuItem("Snow Globe Factory/Create Prototype Scene")]
         public static void CreateScene()

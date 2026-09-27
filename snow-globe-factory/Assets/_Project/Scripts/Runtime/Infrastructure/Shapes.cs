@@ -20,10 +20,23 @@ namespace SnowGlobe.Game
             get
             {
                 if (_lit != null) return _lit;
-                _lit = UsingUrp ? Shader.Find("Universal Render Pipeline/Lit") : null;
+                _lit = UsingUrp ? TemplateShader("SG_Lit", "Universal Render Pipeline/Lit") : null;
                 if (_lit == null) _lit = Shader.Find("Standard");
                 return _lit;
             }
+        }
+
+        /// <summary>
+        /// Shader from a template material in Resources/SnowGlobeShaders. Players only contain shaders (and shader
+        /// variants) that some asset in the build uses, and every material here is made at runtime, so a bare
+        /// Shader.Find returns null in a standalone build. The templates (plain, emissive, transparent, unlit)
+        /// pull the shaders and the keyword variants the game uses into the build.
+        /// </summary>
+        static Shader TemplateShader(string template, string fallbackName)
+        {
+            var m = Template(template);
+            if (m != null && m.shader != null) return m.shader;
+            return Shader.Find(fallbackName);
         }
 
         public static Material Mat(Color color, float emission = 0f, bool transparent = false, float smoothness = 0.2f)
@@ -39,12 +52,31 @@ namespace SnowGlobe.Game
         /// <summary>Unshared material for objects whose colour animates (status lights, flicker).</summary>
         public static Material NewMat(Color color, float emission = 0f, bool transparent = false, float smoothness = 0.2f)
         {
-            var m = new Material(Lit);
+            // Clone a template when there is one: its keywords and blend state are exactly what URP set up on import,
+            // so the matching shader variant is guaranteed to be in a build (hand-set keywords can miss it).
+            // (No glowing glass exists, so there's no transparent + emissive template.)
+            var template = UsingUrp ? Template(transparent ? "SG_LitTransparent" : emission > 0f ? "SG_LitEmissive" : "SG_Lit") : null;
+            var m = template != null ? new Material(template) : new Material(Lit);
             SetColor(m, color);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smoothness);
             if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smoothness);
             if (emission > 0f) SetEmission(m, color * emission);
-            if (transparent) MakeTransparent(m);
+            else if (template != null && m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", Color.black);
+            if (transparent && template == null) MakeTransparent(m);
+            return m;
+        }
+
+        static readonly Dictionary<string, Material> Templates = new Dictionary<string, Material>();
+
+        /// <summary>A template material from Resources/SnowGlobeShaders, or null if it isn't there.</summary>
+        static Material Template(string name)
+        {
+            Material m;
+            if (!Templates.TryGetValue(name, out m))
+            {
+                m = Resources.Load<Material>("SnowGlobeShaders/" + name);
+                Templates[name] = m;
+            }
             return m;
         }
 
@@ -100,7 +132,7 @@ namespace SnowGlobe.Game
             get
             {
                 if (_unlit != null) return _unlit;
-                _unlit = UsingUrp ? Shader.Find("Universal Render Pipeline/Unlit") : null;
+                _unlit = UsingUrp ? TemplateShader("SG_Unlit", "Universal Render Pipeline/Unlit") : null;
                 if (_unlit == null) _unlit = Shader.Find("Unlit/Texture");
                 if (_unlit == null) _unlit = Lit;
                 return _unlit;
@@ -131,7 +163,8 @@ namespace SnowGlobe.Game
 
         public static Material NewTexMat(Texture2D tex, bool unlit = false)
         {
-            var m = new Material(unlit ? Unlit : Lit);
+            var template = UsingUrp ? Template(unlit ? "SG_Unlit" : "SG_Lit") : null;
+            var m = template != null ? new Material(template) : new Material(unlit ? Unlit : Lit);
             SetColor(m, Color.white);
             if (tex != null)
             {

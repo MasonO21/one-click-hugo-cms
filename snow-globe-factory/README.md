@@ -6,8 +6,8 @@ Unity 6 · C# · Windows PC · keyboard + mouse.
 * **Design and implementation plan:** [`docs/DESIGN_PLAN.md`](docs/DESIGN_PLAN.md). It covers the concept, loop, design conflicts, architecture, roadmap, economy tables, risks and acceptance criteria.
 * **Map:** rebuilt from the concept paintings in [`docs/concept/`](docs/concept). A top-down plan is in [`docs/floorplan.png`](docs/floorplan.png).
 * **Status:** Milestones 1 (greybox loop), 3 (automation), 4 (customers, orders, themes) and 5 (horror & roster) are code-complete. Milestone 7 (content & balance) is under way: all six themes, the supplier's ledger story with two endings, late-game upgrades, and an economy pass in [`docs/BALANCE.md`](docs/BALANCE.md).
-  * The simulation core is compiled and covered by 103 passing unit tests.
-  * The Unity layer compiles against Unity reference assemblies, **but it has not yet been run in the Unity editor.** Expect a round of fixes and tuning the first time it's opened (that is Milestone 2).
+  * Everything runs in Unity 6 (6000.6): 108 EditMode and 16 PlayMode tests pass in the editor, and a Windows build boots and passes its smoke test. The core alone also runs under .NET (`tools/CoreTests`).
+  * What's left for Milestone 2 is human playtesting: feel, pacing and whether the horror works.
 
 ## Run it in Unity
 
@@ -24,7 +24,24 @@ Notes:
 
 * Nothing needs importing. The building, characters, UI and audio are all generated at runtime from primitives and synthesized sound.
 * Input works with either the legacy Input Manager or the Input System package.
-* Materials use URP/Lit when a URP asset is active, and Standard otherwise. For a *player build* (not needed in the editor), add the shader in use to *Graphics → Always Included Shaders*.
+* Materials use URP/Lit when a URP asset is active, and Standard otherwise. With URP, runtime materials are cloned from the templates in `Assets/_Project/Resources/SnowGlobeShaders/`, which is what gets the shaders (and the transparent and emissive variants) into a player build.
+
+## Build a Windows player
+
+* **From the editor:** **Snow Globe Factory → Build Windows Player**. It writes `Builds/SnowGlobeFactory/SnowGlobeFactory.exe` in the project folder and builds only the Snow Globe scene, whatever else is in *Build Settings*.
+* **From a terminal** (with the editor closed):
+
+  ```
+  Unity.exe -batchmode -quit -projectPath <project> -executeMethod SnowGlobe.EditorTools.SnowGlobeBuild.BuildFromCommandLine [-buildOutput <path	o\game.exe>] [-development]
+  ```
+
+* **Smoke test a build:** run the game with `-smoketest`. It boots, starts a new game, opens the shop, runs for 10 seconds and quits with exit code 0 only if nothing logged an error. It saves to a temporary folder, never to your real saves. Add `-batchmode -nographics` to run it headless, or `-smokeshot <file.png>` to save a frame of the shop (handy for spotting missing shaders, which show up pink or opaque).
+
+  ```
+  SnowGlobeFactory.exe -batchmode -nographics -smoketest -logFile smoke.log
+  ```
+
+* A build uses the project's company and product name for its save folder, so in a project called "AURA PROJECT" it shares saves with the editor.
 
 ## Controls
 
