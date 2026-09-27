@@ -14,7 +14,8 @@
 | Unity layer (greybox building, player, carrying, stations, customers, horror, HUD, audio) | 🟡 | Compiles against Unity 2021.3 reference assemblies (with Unity 6 renames mapped). **Never run in the editor.** Expect tuning and bug-fix work in Milestone 2 |
 | Input System package path | 🟡 | Written but not compiled (package not available outside Unity) |
 | Automation, multiple customers, special orders, more archetypes/themes | ⬜ | Data models exist for several; no scene objects yet |
-| Real art, animation, UI Toolkit, audio design | ⬜ | Everything is procedural placeholder |
+| Level rebuilt from the three concept paintings; minis restyled to the character reference | 🟡 | Procedural reconstruction (see §5a). Floor plan: `docs/floorplan.png` |
+| Real modelled art, animation, UI Toolkit, audio design | ⬜ | Everything is still built from primitives and synthesized sound |
 
 ---
 
@@ -34,8 +35,8 @@ they go wrong.
 ```
  Basement            Backroom line                                   Storefront
  ┌────────┐   carry  ┌───────┐  ┌────────┐  ┌──────┐  ┌───────────┐  ┌──────────┐  carry  ┌──────┐  ┌─────────┐
- │ Pens / │ ───────► │Cradle │─►│Assembly│─►│Sealer│─►│Inspection?│─►│Packaging │ ──────► │Shelf │─►│ Counter │─► $$
- │ Hatch  │          │(serum)│  │pose/   │  │dome +│  │ (optional)│  │fold/tape │         │unbox │  │  sale   │
+ │Cabinets│ ───────► │Cradle │─►│Assembly│─►│Sealer│─►│Inspection?│─►│Packaging │ ──────► │Shelf │─►│ Counter │─► $$
+ │ + lift │          │(serum)│  │pose/   │  │dome +│  │ (optional)│  │fold/tape │         │unbox │  │  sale   │
  └────────┘          └───────┘  │scenery/│  │seal  │  └───────────┘  └──────────┘         └──────┘  └─────────┘
       ▲                         │snow    │  └──────┘                                            │
       │                         └────────┘       serum countdown runs Prepared→Domed            │
@@ -59,7 +60,7 @@ Main decisions the player makes:
 
 | # | Conflict | Resolution (implemented unless marked ⬜) |
 |---|---|---|
-| 1 | Chaotic physics vs precise factory work | Only *loose* characters are physics-driven: an upright torque plus hop locomotion, a stable approximation of an active ragdoll. Anything in a station, shelf or pen is kinematic. Releasing an item near a valid spot snaps it in. Minigames use keys and timing, not physics precision |
+| 1 | Chaotic physics vs precise factory work | Only *loose* characters are physics-driven: an upright torque plus hop locomotion, a stable approximation of an active ragdoll. Anything in a station, shelf or cabinet is kinematic. Releasing an item near a valid spot snaps it in. Minigames use keys and timing, not physics precision |
 | 2 | Cosy business pacing vs horror | The event director cycles **Calm → Unease → Emergency → Relief**, with cooldowns and a relief window. Day 1 has no threats. A director threat never stacks on top of a natural crisis |
 | 3 | Fair suspicion vs scary randomness | Suspicion only rises from evidence a customer could perceive: line of sight plus distance, or sound leaking through doors and soundproofing. **Atmospheric scares never create suspicion.** Threats always give warning signs first (6–8 s) |
 | 4 | Variety of minigames vs repetitive tedium | Each station interaction takes 3–8 s and uses a different verb (timing dial, rotate + pose, pick + hold-fill, swing-drop, mouse scan, key sequence). ⬜ Automation replaces any station at a capped "good" quality, so staying manual is a quality choice, not a chore |
@@ -71,7 +72,7 @@ Main decisions the player makes:
 | 10 | Unavoidable bankruptcy | Bills you can't pay become debt, not negative cash. An emergency supply order (2 full units, $40 of debt) is offered when you are broke and have nothing to sell. Debt is repaid from 50% of each sale |
 | 11 | Dark premise vs "no gore" | Serum and stasis are clearly fictional: a charge count, a countdown and an integrity number. There is no action that harms a character. A rejected globe returns its character, unharmed, to holding. The horror comes from atmosphere and implication |
 | 12 | "Tiny" vs readable and grabbable in first person | Characters are about 24 cm tall with big heads and eyes. Globes are about 30 cm. The camera near-clip is 3 cm |
-| 13 | "Basement beneath the backroom" vs simple greybox geometry | The basement is reached by a ramp behind the backroom, going 3 m down. It reads as "down" without holes in the floor |
+| 13 | "Basement beneath the backroom" vs simple greybox geometry | The basement is a tall vault behind and below the backroom, 4 m down by a flight of stairs. No holes in the floor are needed |
 | 14 | Upgrades "after closing" vs instant fixes | Upgrades can be bought only while closed. Supplies and characters can be ordered at any time |
 
 ## 4. Prototype scope (Milestone 1 — what the code in this folder covers)
@@ -79,7 +80,7 @@ Main decisions the player makes:
 In: one compact building (shop, backroom, basement); one archetype (**The Sleepy One**; others exist as data);
 one globe theme (Winter Village); manual prep/assembly/sealing/inspection/packaging; one customer at a time;
 movement-based suspicion from weak seals (from day 2); cash + purchasable upgrades (three core ones plus three more
-pure-modifier ones); save/load + morning checkpoint; one escape event (telegraphed pen break-out) and one malfunction
+pure-modifier ones); save/load + morning checkpoint; one escape event (telegraphed cabinet break-out) and one malfunction
 (power failure, scripted on day 5); subtitles, camera-shake slider, reduced-flicker toggle; procedural placeholder
 art and audio.
 
@@ -95,9 +96,9 @@ A single scene containing one `GameBootstrap` component. At runtime `LevelBuilde
 ```
 SnowGlobeFactory (GameBootstrap → GameRoot, HorrorDirectorRunner, Hud)
 ├── Level
-│   ├── Storefront   z 0..8   warm lights, 2 wall shelves (6 slots), premium case (4 slots, upgrade), counter + bell, OPEN sign, staff door
-│   ├── Backroom     z 8..16  Prep cradle, Assembly, Sealer, Inspection lamp, Packaging, supply shelf, basement door
-│   └── Basement     z 16..32 ramp, holding pens A/B (low walls + gates), delivery hatch crate, breaker, security desk
+│   ├── Storefront   z 0..10  arched window, glass door, lit wall shelves (6 slots), round display (+4 premium slots), counter + bell, OPEN sign, hallway to STAFF ONLY
+│   ├── Backroom     z 13..23 Prep cradle, Assembly worktable, Sealer, Inspection lamp, Packaging, supplies, sealed freight lift, basement door
+│   └── Basement     z 23..39 (y -4) stairs, glass cabinets A1–E5, freight lift + delivery crate, pillar, trays, crates, breaker, security desk
 ├── Audio (AudioKit: synthesized music box, bell, scratches, mumbles, hum…)
 ├── Player (CharacterController + PlayerController + PlayerInteractor, camera child)
 ├── Customers (CustomerSpawner → CustomerAgent*)
@@ -122,9 +123,9 @@ Assets/_Project/Scripts/
 ├── Runtime/  (asmdef SnowGlobe.Runtime → Core)                   ← presentation + input + physics
 │   ├── GameRoot.cs               composition root; ticks the session; maps sim events → sights/sounds
 │   ├── GameBootstrap.cs, SaveSystem.cs (JsonUtility)
-│   ├── World/                    LevelBuilder, Level anchors, SnapSocket, Door, pens, shelf slots, counter, sign, breaker, lights
+│   ├── World/                    LevelBuilder, Level anchors, SnapSocket, Door, holding cabinets, shelf slots, counter, sign, breaker, lights
 │   ├── Player/                   PlayerController (FPS), PlayerInteractor (look/grab/carry/place/route E-X-Q)
-│   ├── Products/                 ProductView (one per Product), MiniCharacterBody (procedural wobbly humanoid)
+│   ├── Products/                 ProductView (one per Product), FigureBuilder + MiniCharacterBody (felt-hat minis)
 │   ├── Stations/                 StationBase + five station minigames
 │   ├── Customers/                CustomerAgent (perception + shopping FSM), CustomerSpawner
 │   ├── Horror/                   HorrorDirectorRunner (stages director events)
@@ -146,6 +147,25 @@ Assets/_Project/Scripts/
 * **Deterministic randomness** (`DeterministicRandom`, whose state is saved). Seal defects, events and returns replay the same way after a load.
 * **Guarantees enforced and tested:** no double sale, no payment without a displayed and reserved globe, one globe per slot, no product
   lost on load, and no suspicion without perceived evidence.
+
+## 5a. Map and character art direction (from the concept art)
+
+The level is a procedural reconstruction of the three paintings in `docs/concept/`. Unity can't turn a 2D painting into a room, so `LevelBuilder` rebuilds each one: its layout, props, palette (teal and navy woodwork, brass, cream plaster, warm pools of light) and lettering. The window views, title card and all signage are textures made by `tools/art/generate_art.py`: crops of the paintings, plus plaques drawn to match their lettering.
+
+| Room | Concept | Built as |
+|---|---|---|
+| Storefront | `storefront.webp` | Tall arched window onto the snowy town (cropped from the painting), glass front door that opens with the shop, lit teal shelving on both walls with 6 playable slots, round three-tier display (premium upgrade adds 4 slots on its front arc), gift boxes, brass chandelier, blue rug, hallway to a STAFF ONLY door, and the globe with a hand pressed against the glass |
+| Backroom | `backroom.webp` | Long central worktable (Assembly) with domes, snow jar, tree trays and work order; brass-lamp desk (Inspection); snowy side window; GLASS DOMES/BASES/… crate; supply shelves of jars; sealed FREIGHT LIFT TO BASEMENT; SHIPMENTS clipboard; SMALL WORLDS BRIGHTER PEOPLE; snowflake banners; carts of finished globes |
+| Basement | `basement.webp` | 6.4 m teal vault with ribs and pipes; glass cabinet wall A1–E5 with a rolling ladder (rows 1–2 are the 10 usable holding cells, rows 3–5 are "long-term stock"); decorative cabinet bank; pillar sign SMALL LIVES BRIGHTER WORLDS; stairs up TO PRODUCTION; freight lift where deliveries arrive; miniature-room table; COATS/DRESSES/HATS/SCARVES trays; WINTER/EVERYDAY/HOLIDAY/ACCESSORIES crates; lanterns; breaker; security desk |
+
+Gameplay changes that came with the map:
+
+* **Holding** is now glass cabinets. E opens a cabinet's glass door, and a character can only be taken out or put back while it's open. Escape attempts are tapping on one cabinet's glass: reach it within 8 s to press it shut.
+* **Deliveries** arrive in the basement freight lift (call light blinks, gate must be opened).
+* **The front door** opens with the OPEN sign and closes after the last customer.
+* **Customers** walk around the round display using an 8-point waypoint ring.
+
+**Character look** (from the character reference): ~30 cm elfin minis with a tall floppy felt hat and a dangling brass star, a chunky fringed scarf, a flared coat with brass buttons, knit cuffs and mittens held together in front, bloomers, knit socks, chunky boots, pale messy hair, pointed ears, big dark eyes with glints and rosy cheeks. About 40% wear the exact reference palette (navy/red/pale blond); the rest vary coat, scarf and hair colour. The Sleepy One has heavy half-closed lids. The hat segments and scarf tail are spring-driven, so they flop when a mini is carried, runs or twitches. Globes were enlarged (dome ⌀34 cm) to fit the hats.
 
 ## 6. Milestone roadmap
 

@@ -4,6 +4,7 @@ A first-person snow globe shop hiding a creepy, increasingly automated business 
 Unity 6 · C# · Windows PC · keyboard + mouse.
 
 * **Design and implementation plan:** [`docs/DESIGN_PLAN.md`](docs/DESIGN_PLAN.md). It covers the concept, loop, design conflicts, architecture, roadmap, economy tables, risks and acceptance criteria.
+* **Map:** rebuilt from the concept paintings in [`docs/concept/`](docs/concept). A top-down plan is in [`docs/floorplan.png`](docs/floorplan.png).
 * **Status:** Milestone 1 (greybox loop) is code-complete.
   * The simulation core is compiled and covered by 53 passing unit tests.
   * The Unity layer compiles against Unity reference assemblies, **but it has not yet been run in the Unity editor.** Expect a round of fixes and tuning the first time it's opened (that is Milestone 2).
@@ -43,7 +44,7 @@ Notes:
 
 ## The loop
 
-1. Basement pen: carry an awake character up the ramp to the **Preparation Cradle**.
+1. Basement: open a glass cabinet (E), grab an awake character and carry them up the stairs to the **Preparation Cradle**.
 2. Time the (fictional) Stillness Serum injection. A countdown starts.
 3. **Assembly:** choose the pose and turn the figure to face front, pick scenery with 1–3, then hold E to pour snow into the green band.
 4. **Sealer:** drop the swinging dome when it's centred, then seal. Do this before the serum runs out.
@@ -57,6 +58,8 @@ Notes:
 ```bash
 dotnet test tools/CoreTests          # 53 NUnit tests for the engine-free simulation core (C# 9)
 tools/typecheck-unity.sh             # compile-only check of Core + Runtime against UnityEngine reference assemblies
+python3 tools/art/generate_art.py    # rebuild Resources/SnowGlobeArt textures from docs/concept (needs Pillow)
+python3 tools/art/floorplan.py       # redraw docs/floorplan.png
 ```
 
 The tests in `Assets/_Project/Tests/EditMode` also run in Unity's Test Runner (EditMode).

@@ -58,7 +58,9 @@ namespace SnowGlobe.Game
             // A fresh session renders behind the title screen; the player picks New / Continue.
             Session = GameSession.NewGame(seed);
             RebuildViews();
-            Player.Teleport(Level.PlayerSpawn.position, 0f);
+            Player.Teleport(Level.PlayerSpawn.position, Level.PlayerSpawnYaw);
+            Level.PremiumDecor.SetActive(true);
+            Level.PremiumCase.SetActive(false);
             Hud.ShowTitle(Saves.Exists(Saves.SavePath));
         }
 
@@ -103,9 +105,10 @@ namespace SnowGlobe.Game
             foreach (var line in log) Debug.Log("[SnowGlobe] Save repair: " + line);
             ClosingRequested = false;
             Horror.ResetState();
-            foreach (var pen in Level.Pens) pen.Gate.SetOpen(false);
+            CloseBasementDoors();
+            Level.FrontDoor.SetOpen(Session.State.Day.Phase == DayPhase.Open);
             RebuildViews();
-            if (resetPlayer) Player.Teleport(Level.PlayerSpawn.position, 0f);
+            if (resetPlayer) Player.Teleport(Level.PlayerSpawn.position, Level.PlayerSpawnYaw);
             if (Session.State.Day.Phase == DayPhase.AfterClosing) Hud.ShowSummary();
         }
 
@@ -113,7 +116,11 @@ namespace SnowGlobe.Game
         {
             var r = Session.Days.OpenStore();
             Toast(r.Message, !r.Success);
-            if (r.Success) Audio.Play(Sfx.Bell, Level.CustomerEntrance.position, 0.6f, 1.2f);
+            if (r.Success)
+            {
+                Audio.Play(Sfx.Bell, Level.CustomerEntrance.position, 0.6f, 1.2f);
+                Level.FrontDoor.SetOpen(true);
+            }
             ClosingRequested = false;
         }
 
@@ -128,6 +135,7 @@ namespace SnowGlobe.Game
         {
             ClosingRequested = false;
             var summary = Session.Days.CloseStore();
+            Level.FrontDoor.SetOpen(false);
             // Returned (refunded) globes come back to the counter.
             foreach (var p in Session.State.Products)
             {
@@ -140,7 +148,7 @@ namespace SnowGlobe.Game
         {
             var r = Session.Days.StartNextDay();
             if (!r.Success) { Toast(r.Message, true); return; }
-            foreach (var pen in Level.Pens) pen.Gate.SetOpen(false);
+            CloseBasementDoors();
             Saves.Save(Session.State, Saves.CheckpointPath);
             Hud.ShowBriefing("Day " + Session.State.Day.Day, DayProgression.Briefing(Session.State.Day.Day) + "\n\n(Checkpoint saved.)");
         }
@@ -161,15 +169,21 @@ namespace SnowGlobe.Game
             {
                 foreach (var p in arrived) SpawnView(p);
                 Audio.Play(Sfx.Knock, Level.Hatch.transform.position);
-                Hud.Alert(arrived.Count + " delivery at the basement hatch.");
-                Hud.Subtitle("", "*knock knock knock* (from the delivery hatch)");
+                Audio.Play(Sfx.Hum, Level.Hatch.transform.position, 0.6f, 0.7f);
+                Level.LiftLamp.Blink(20f);
+                Hud.Alert(arrived.Count + " delivery in the basement freight lift.");
+                Hud.Subtitle("", "*the freight lift grinds down... something knocks inside the crate*");
             }
 
             foreach (var e in Session.Production.Tick(dt, Session.PowerFactor)) HandleProductionEvent(e);
             Session.Suspicion.Tick(dt);
 
             bool premium = Session.State.OwnedUpgrades.Contains(UpgradeId.PremiumDisplayCase);
-            if (Level.PremiumCase.activeSelf != premium) Level.PremiumCase.SetActive(premium);
+            if (Level.PremiumCase.activeSelf != premium)
+            {
+                Level.PremiumCase.SetActive(premium);
+                Level.PremiumDecor.SetActive(!premium);
+            }
 
             if (GameInput.QuickSaveDown) SaveGame();
             if (GameInput.QuickLoadDown) LoadFrom(Saves.SavePath);
@@ -236,8 +250,21 @@ namespace SnowGlobe.Game
             switch (loc.Kind)
             {
                 case LocationKind.Holding:
-                    Level.Pens[Mathf.Clamp(loc.Index, 0, Level.Pens.Length - 1)].Socket.Place(v);
+                {
+                    // Keep the saved cabinet if it's free; otherwise the next free one; otherwise the lift crate.
+                    var cell = Level.FreeCell(loc.Index);
+                    if (cell != null)
+                    {
+                        v.P.Location = ProductLocation.Holding(cell.Index);
+                        cell.Socket.Place(v);
+                    }
+                    else
+                    {
+                        v.P.Location = ProductLocation.Hatch();
+                        Level.Hatch.Place(v);
+                    }
                     return;
+                }
                 case LocationKind.Hatch:
                     Level.Hatch.Place(v);
                     return;
@@ -286,6 +313,12 @@ namespace SnowGlobe.Game
             Views.Clear();
         }
 
+        void CloseBasementDoors()
+        {
+            foreach (var cell in Level.Cells) cell.Door.SetOpen(false);
+            Level.LiftGate.SetOpen(false);
+        }
+
         public void OnProductSold(Product p)
         {
             ProductView v;
@@ -299,11 +332,18 @@ namespace SnowGlobe.Game
 
         public void RejectToHolding(ProductView v)
         {
-            var r = Session.Production.RejectToHolding(v.P, 0);
+            var cell = Level.FreeCell();
+            var r = Session.Production.RejectToHolding(v.P, cell != null ? cell.Index : 0);
             Toast(r.Message, !r.Success);
             if (!r.Success) return;
             v.Detach();
-            Level.Pens[0].Socket.Place(v);
+            if (cell != null) cell.Socket.Place(v);
+            else
+            {
+                // Every cabinet is full: they wait in the lift crate instead.
+                v.P.Location = ProductLocation.Hatch();
+                Level.Hatch.Place(v);
+            }
             Audio.Play(Sfx.Squeak, v.transform.position, 0.5f);
         }
 

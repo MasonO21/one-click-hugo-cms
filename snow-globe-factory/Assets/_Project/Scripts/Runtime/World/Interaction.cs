@@ -30,6 +30,8 @@ namespace SnowGlobe.Game
         public float Radius = 0.45f;
         /// <summary>Holding pens take many characters; stations and shelf slots take one.</summary>
         public bool AllowMultiple;
+        /// <summary>Single-occupant socket whose occupant wanders inside it (holding cabinets).</summary>
+        public bool RoamInside;
         /// <summary>For multi sockets: the area occupants roam in (local XZ half-extents).</summary>
         public Vector2 RoamHalfExtents = new Vector2(0.5f, 0.5f);
         public Func<ProductView, bool> Accepts;

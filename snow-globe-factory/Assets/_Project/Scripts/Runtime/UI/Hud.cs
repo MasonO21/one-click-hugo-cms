@@ -308,8 +308,12 @@ namespace SnowGlobe.Game
 
         void DrawTitle()
         {
-            GUI.color = new Color(0.03f, 0.04f, 0.08f, 0.85f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+            var full = new Rect(0f, 0f, Screen.width, Screen.height);
+            var art = Shapes.Tex("title_storefront");
+            if (art != null) GUI.DrawTexture(full, art, ScaleMode.ScaleAndCrop);
+            GUI.color = new Color(0.03f, 0.04f, 0.08f, art != null ? 0.55f : 0.85f);
+            GUI.DrawTexture(Centered(620f, 420f), Texture2D.whiteTexture);
+            if (art == null) GUI.DrawTexture(full, Texture2D.whiteTexture);
             GUI.color = Color.white;
             var r = Centered(520f, 360f);
             GUILayout.BeginArea(r);

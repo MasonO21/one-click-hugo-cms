@@ -91,11 +91,14 @@ namespace SnowGlobe.Game
             SetState(CustomerState.Entering, level.CustomerEntrance.position);
         }
 
+        readonly List<Vector3> _waypoints = new List<Vector3>();
+
         void SetState(CustomerState s, Vector3 target, float timer = 0f)
         {
             State = s;
             _target = target;
             _timer = timer;
+            _level.PathAround(transform.position, target, _waypoints);
         }
 
         public void Say(string text, float seconds = 3.5f)
@@ -105,7 +108,7 @@ namespace SnowGlobe.Game
             Root.Hud.Subtitle("Customer", text);
         }
 
-        bool Arrived { get { var d = _target - transform.position; d.y = 0f; return d.magnitude < 0.15f; } }
+        bool Arrived { get { var d = _target - transform.position; d.y = 0f; return _waypoints.Count == 0 && d.magnitude < 0.15f; } }
 
         void Update()
         {
@@ -210,7 +213,7 @@ namespace SnowGlobe.Game
                 case CustomerState.Leaving:
                 case CustomerState.Fleeing:
                     if (Arrived && Vector3.Distance(_target, _level.CustomerSpawn.position) < 0.2f) Despawn();
-                    else if (Arrived) _target = _level.CustomerSpawn.position;
+                    else if (Arrived) SetState(State, _level.CustomerSpawn.position);
                     break;
             }
         }
@@ -218,9 +221,15 @@ namespace SnowGlobe.Game
         void Move(float dt)
         {
             if (State == CustomerState.Waiting || State == CustomerState.Deciding || State == CustomerState.Investigating && Arrived) return;
-            var to = _target - transform.position;
+            var goal = _waypoints.Count > 0 ? _waypoints[0] : _target;
+            var to = goal - transform.position;
             to.y = 0f;
             float speed = State == CustomerState.Fleeing ? FleeSpeed : WalkSpeed;
+            if (_waypoints.Count > 0 && to.magnitude < 0.2f)
+            {
+                _waypoints.RemoveAt(0);
+                return;
+            }
             if (to.magnitude < 0.05f) return;
             transform.position += Vector3.ClampMagnitude(to.normalized * speed * dt, to.magnitude);
             FaceTowards(transform.position + to, dt);
@@ -240,8 +249,8 @@ namespace SnowGlobe.Game
         {
             var pts = _level.BrowsePoints;
             var p = pts[Random.Range(0, pts.Length)].position;
-            // The premium case only draws customers once it exists.
-            if (p.z < 3.5f && Mathf.Abs(p.x) < 1f && !_level.PremiumCase.activeSelf) p = pts[Random.Range(0, 4)].position;
+            // The premium tier of the round display draws customers once it's stocked.
+            if (_level.PremiumCase.activeSelf && Random.value < 0.3f) p = _level.PremiumBrowse.position;
             SetState(CustomerState.Browsing, p, Random.Range(4f, 6.5f));
             if (Random.value < 0.35f) Say(BrowseLines[Random.Range(0, BrowseLines.Length)]);
         }

@@ -67,24 +67,25 @@ namespace SnowGlobe.Game
             Body.angularDamping = 2f;
 
             _charCol = gameObject.AddComponent<CapsuleCollider>();
-            _charCol.radius = 0.06f;
+            _charCol.radius = 0.07f;
             _charCol.height = MiniCharacterBody.Height;
             _charCol.center = new Vector3(0f, MiniCharacterBody.Height * 0.5f, 0f);
             _globeCol = gameObject.AddComponent<SphereCollider>();
-            _globeCol.radius = 0.15f;
-            _globeCol.center = new Vector3(0f, 0.15f, 0f);
+            _globeCol.radius = 0.19f;
+            _globeCol.center = new Vector3(0f, 0.19f, 0f);
 
             _globe = Shapes.Empty("Globe", transform, Vector3.zero).transform;
-            _base = Shapes.Prim(PrimitiveType.Cylinder, "Base", _globe, new Vector3(0f, 0.025f, 0f), new Vector3(0.26f, 0.025f, 0.26f), Palette.GlobeBase, false);
+            _base = Shapes.Prim(PrimitiveType.Cylinder, "Base", _globe, new Vector3(0f, 0.025f, 0f), new Vector3(0.33f, 0.025f, 0.33f), new Color(0.1f, 0.08f, 0.07f), false);
+            Shapes.Prim(PrimitiveType.Cylinder, "BrassBand", _base.transform, new Vector3(0f, 0.7f, 0f), new Vector3(1.03f, 0.3f, 1.03f), Palette.Brass, false).GetComponent<Renderer>().sharedMaterial = Shapes.Mat(Palette.Brass, 0f, false, 0.7f);
             _scenery = Shapes.Empty("Scenery", _globe, new Vector3(0f, 0.05f, 0f)).transform;
-            _snow = Shapes.Prim(PrimitiveType.Cylinder, "Snow", _globe, new Vector3(0f, 0.055f, 0f), new Vector3(0.24f, 0.006f, 0.24f), Palette.Snow, false);
-            _dome = Shapes.Prim(PrimitiveType.Sphere, "Dome", _globe, new Vector3(0f, 0.16f, 0f), new Vector3(0.27f, 0.25f, 0.27f), Palette.Glass, false);
+            _snow = Shapes.Prim(PrimitiveType.Cylinder, "Snow", _globe, new Vector3(0f, 0.055f, 0f), new Vector3(0.3f, 0.006f, 0.3f), Palette.Snow, false);
+            _dome = Shapes.Prim(PrimitiveType.Sphere, "Dome", _globe, new Vector3(0f, 0.21f, 0f), new Vector3(0.34f, 0.34f, 0.34f), Palette.Glass, false);
             _dome.GetComponent<Renderer>().sharedMaterial = Shapes.Mat(Palette.Glass, 0f, true, 0.9f);
-            _box = Shapes.Prim(PrimitiveType.Cube, "Box", transform, new Vector3(0f, 0.15f, 0f), new Vector3(0.3f, 0.3f, 0.3f), Palette.BoxColor, false);
+            _box = Shapes.Prim(PrimitiveType.Cube, "Box", transform, new Vector3(0f, 0.2f, 0f), new Vector3(0.38f, 0.4f, 0.38f), Palette.BoxColor, false);
             Shapes.Prim(PrimitiveType.Cube, "Ribbon", _box.transform, Vector3.zero, new Vector3(1.02f, 1.02f, 0.15f), new Color(0.95f, 0.85f, 0.3f), false);
 
             Figure = Shapes.Empty("Figure", transform, Vector3.zero).AddComponent<MiniCharacterBody>();
-            Figure.Build(p.Id * 7919 + (int)p.Archetype);
+            Figure.Build(p.Id * 7919 + (int)p.Archetype, p.Archetype);
             Refresh();
         }
 
@@ -102,14 +103,14 @@ namespace SnowGlobe.Game
             if (decorated)
             {
                 float fill = Mathf.Lerp(0.004f, 0.03f, P.SnowAmount);
-                _snow.transform.localScale = new Vector3(0.24f, fill, 0.24f);
+                _snow.transform.localScale = new Vector3(0.3f, fill, 0.3f);
                 _snow.transform.localPosition = new Vector3(0f, 0.05f + fill, 0f);
                 if (_shownDecoration != P.DecorationCode) BuildScenery(P.DecorationCode);
             }
             _dome.SetActive(stage >= ProductStage.Domed && !boxed);
             _box.SetActive(boxed);
             Figure.gameObject.SetActive(!boxed);
-            Figure.transform.localPosition = mounted ? new Vector3(0f, 0.05f, -0.02f) : Vector3.zero;
+            Figure.transform.localPosition = mounted ? new Vector3(0f, 0.05f, 0.01f) : Vector3.zero;
 
             _charCol.enabled = !mounted;
             _globeCol.enabled = mounted;
@@ -126,7 +127,7 @@ namespace SnowGlobe.Game
             {
                 int item = (code >> (spot * 2)) & 3;
                 float angle = (spot * 120f + 150f) * Mathf.Deg2Rad;
-                var root = Shapes.Empty("Spot" + spot, _scenery, new Vector3(Mathf.Sin(angle) * 0.085f, 0f, Mathf.Cos(angle) * 0.085f)).transform;
+                var root = Shapes.Empty("Spot" + spot, _scenery, new Vector3(Mathf.Sin(angle) * 0.1f, 0f, Mathf.Cos(angle) * 0.1f)).transform;
                 switch (item)
                 {
                     case 0:
@@ -212,7 +213,7 @@ namespace SnowGlobe.Game
             SetKinematic(true);
             Body.useGravity = false;
             transform.SetParent(socket.transform, true);
-            if (socket.AllowMultiple)
+            if (socket.AllowMultiple || socket.RoamInside)
             {
                 Mode = ViewMode.Roaming;
                 transform.position = socket.RandomRoamPoint();

@@ -69,28 +69,63 @@ namespace SnowGlobe.Game
         }
     }
 
-    /// <summary>Basement holding pen. Awake characters dropped over it are recaptured.</summary>
-    public sealed class HoldingPen : MonoBehaviour
+    /// <summary>
+    /// A glass-fronted holding cabinet in the basement wall (A1, B2, ...). One character each.
+    /// Open the glass door to take a character out or put one back.
+    /// </summary>
+    public sealed class HoldingCell : MonoBehaviour
     {
-        public int Room;
+        public int Index;
+        public string Label;
         public SnapSocket Socket;
-        public Door Gate;
+        public Door Door;
         public Transform ScratchPoint;
 
-        public void Setup(int room, SnapSocket socket, Door gate)
+        public ProductView Occupant { get { return Socket.Occupant; } }
+
+        public void Setup(int index, string label, SnapSocket socket, Door door)
         {
-            Room = room;
+            Index = index;
+            Label = label;
             Socket = socket;
-            Gate = gate;
-            Socket.Label = "Holding pen " + (room == 0 ? "A" : "B");
-            Socket.AllowMultiple = true;
-            Socket.Accepts = v => v.P != null && v.P.Stage == ProductStage.Unprepared;
-            Socket.RejectReason = v => "Only awake characters go back in the pens.";
+            Door = door;
+            ScratchPoint = door.transform;
+            Socket.Label = "cabinet " + label;
+            Socket.RoamInside = true;
+            Socket.Radius = 0.6f;
+            Socket.RoamHalfExtents = new Vector2(0.4f, 0.18f);
+            Socket.Accepts = v => v.P != null && v.P.Stage == ProductStage.Unprepared && Door.IsOpen;
+            Socket.RejectReason = v => !Door.IsOpen ? "Open cabinet " + Label + " first (E on the glass)." : "Only awake characters go back in the cabinets.";
             Socket.Placed = v =>
             {
-                if (v.P.Location.Kind != LocationKind.Holding || v.P.Location.Index != Room) GameRoot.I.Session.Production.Recapture(v.P, Room);
-                v.P.Location = ProductLocation.Holding(Room);
+                if (v.P.Location.Kind != LocationKind.Holding || v.P.Location.Index != Index) GameRoot.I.Session.Production.Recapture(v.P, Index);
+                v.P.Location = ProductLocation.Holding(Index);
             };
+        }
+    }
+
+    /// <summary>Small emissive indicator that can flash (freight lift arrival light).</summary>
+    public sealed class BlinkLamp : MonoBehaviour
+    {
+        public Color On = Palette.Busy;
+        public Color Off = new Color(0.25f, 0.1f, 0.05f);
+        Material _mat;
+        float _until;
+
+        void Awake()
+        {
+            _mat = Shapes.NewMat(Off, 1f);
+            GetComponent<Renderer>().sharedMaterial = _mat;
+        }
+
+        public void Blink(float seconds) { _until = Time.time + seconds; }
+
+        void Update()
+        {
+            bool lit = Time.time < _until && Mathf.Repeat(Time.time * 3f, 1f) > 0.4f;
+            Color c = lit ? On : Off;
+            Shapes.SetColor(_mat, c);
+            Shapes.SetEmission(_mat, c * (lit ? 2.5f : 0.5f));
         }
     }
 
@@ -157,15 +192,16 @@ namespace SnowGlobe.Game
         }
     }
 
-    /// <summary>The OPEN/CLOSED sign: the player decides when the day's trading starts and may close early.</summary>
+    /// <summary>The OPEN/CLOSED sign by the door: the player decides when trading starts and may close early.</summary>
     public sealed class OpenSign : MonoBehaviour, IInteractable
     {
         public Renderer Face;
         Material _mat;
+        bool _shownOpen = true;
 
         void Start()
         {
-            _mat = Shapes.NewMat(Palette.Bad, 1.2f);
+            _mat = Shapes.NewTexMat(Shapes.Tex("sign_closed"));
             if (Face != null) Face.sharedMaterial = _mat;
         }
 
@@ -193,9 +229,11 @@ namespace SnowGlobe.Game
         void Update()
         {
             if (_mat == null || GameRoot.I == null || GameRoot.I.Session == null) return;
-            Color c = GameRoot.I.Session.Days.IsOpen && !GameRoot.I.ClosingRequested ? Palette.Ok : Palette.Bad;
-            Shapes.SetColor(_mat, c);
-            Shapes.SetEmission(_mat, c * 1.2f);
+            bool open = GameRoot.I.Session.Days.IsOpen && !GameRoot.I.ClosingRequested;
+            if (open == _shownOpen) return;
+            _shownOpen = open;
+            var tex = Shapes.Tex(open ? "sign_open" : "sign_closed");
+            if (tex != null) _mat.mainTexture = tex;
         }
     }
 

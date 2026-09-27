@@ -41,7 +41,7 @@ namespace SnowGlobe.Core
             s.Store.EnsureCapacity(s.ShelfCapacity);
             for (int i = 0; i < GameBalance.StartingCharacters; i++)
             {
-                s.AddCharacter(ArchetypeId.SleepyOne, ProductLocation.Holding(i % 2));
+                s.AddCharacter(ArchetypeId.SleepyOne, ProductLocation.Holding(i * 2));
             }
             return s;
         }

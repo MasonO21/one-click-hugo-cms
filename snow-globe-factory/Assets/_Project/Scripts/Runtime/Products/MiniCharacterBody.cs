@@ -1,3 +1,4 @@
+using SnowGlobe.Core;
 using UnityEngine;
 
 namespace SnowGlobe.Game
@@ -19,7 +20,7 @@ namespace SnowGlobe.Game
     /// </summary>
     public sealed class MiniCharacterBody : MonoBehaviour
     {
-        public const float Height = 0.24f;
+        public const float Height = 0.3f;
         public static readonly string[] PoseNames = { "Joyful Wave", "Little Skater", "Caroler", "Snow Angel" };
 
         public FigureMode Mode = FigureMode.Idle;
@@ -29,7 +30,8 @@ namespace SnowGlobe.Game
         public bool HasLookTarget;
         public Vector3 LookTarget;
 
-        Transform _hips, _head, _armL, _armR, _legL, _legR, _pupilL, _pupilR;
+        FigureRig _rig;
+        Transform _hips, _head, _armL, _armR, _legL, _legR;
         readonly Vector3[] _ang = new Vector3[6];
         readonly Vector3[] _vel = new Vector3[6];
         float _seed;
@@ -38,49 +40,42 @@ namespace SnowGlobe.Game
 
         readonly Vector3[] _targets = new Vector3[6];
 
+        // Secondary motion: floppy hat segments + scarf tail, driven by how the body moves.
+        Quaternion[] _hatRest;
+        Vector3[] _hatAng, _hatVel;
+        Quaternion _tailRest;
+        Vector3 _tailAng, _tailVel;
+        Vector3 _lastPos;
+        Quaternion _lastRot;
+
         const int Hips = 0, Head = 1, ArmL = 2, ArmR = 3, LegL = 4, LegR = 5;
 
-        static readonly Color[] Skins = { new Color(0.98f, 0.83f, 0.7f), new Color(0.85f, 0.64f, 0.48f), new Color(0.6f, 0.42f, 0.3f), new Color(0.4f, 0.27f, 0.2f) };
-        static readonly Color[] Shirts = { new Color(0.2f, 0.45f, 0.8f), new Color(0.85f, 0.3f, 0.3f), new Color(0.3f, 0.65f, 0.35f), new Color(0.9f, 0.7f, 0.2f), new Color(0.55f, 0.35f, 0.7f) };
-
-        public void Build(int seed)
+        /// <summary>Builds the felt-hat / red-scarf miniature from the character reference.</summary>
+        public void Build(int seed, ArchetypeId archetype)
         {
-            var rng = new System.Random(seed);
             _seed = seed * 0.37f;
-            Color skin = Skins[rng.Next(Skins.Length)];
-            Color shirt = Shirts[rng.Next(Shirts.Length)];
-            Color pants = Color.Lerp(shirt, Color.black, 0.6f);
-
-            _hips = Shapes.Empty("Hips", transform, new Vector3(0f, 0.085f, 0f)).transform;
-            Shapes.Prim(PrimitiveType.Capsule, "Torso", _hips, new Vector3(0f, 0.045f, 0f), new Vector3(0.075f, 0.05f, 0.055f), shirt, false);
-            _head = Shapes.Empty("Head", _hips, new Vector3(0f, 0.12f, 0f)).transform;
-            Shapes.Prim(PrimitiveType.Sphere, "Skull", _head, new Vector3(0f, 0.03f, 0f), Vector3.one * 0.095f, skin, false);
-            _pupilL = Eye(_head, -0.02f);
-            _pupilR = Eye(_head, 0.02f);
-            _armL = Limb("ArmL", _hips, new Vector3(-0.048f, 0.08f, 0f), 0.034f, 0.02f, shirt);
-            _armR = Limb("ArmR", _hips, new Vector3(0.048f, 0.08f, 0f), 0.034f, 0.02f, shirt);
-            _legL = Limb("LegL", transform, new Vector3(-0.02f, 0.085f, 0f), 0.042f, 0.024f, pants);
-            _legR = Limb("LegR", transform, new Vector3(0.02f, 0.085f, 0f), 0.042f, 0.024f, pants);
-        }
-
-        Transform Eye(Transform head, float x)
-        {
-            var eye = Shapes.Prim(PrimitiveType.Sphere, "Eye", head, new Vector3(x, 0.04f, 0.038f), Vector3.one * 0.03f, Color.white, false).transform;
-            var pupil = Shapes.Prim(PrimitiveType.Sphere, "Pupil", eye, new Vector3(0f, 0f, 0.38f), Vector3.one * 0.45f, new Color(0.05f, 0.05f, 0.08f), false).transform;
-            return pupil;
-        }
-
-        static Transform Limb(string name, Transform parent, Vector3 pivot, float halfLen, float thick, Color c)
-        {
-            var p = Shapes.Empty(name, parent, pivot).transform;
-            Shapes.Prim(PrimitiveType.Capsule, name + "Mesh", p, new Vector3(0f, -halfLen, 0f), new Vector3(thick, halfLen, thick), c, false);
-            return p;
+            _rig = FigureBuilder.Build(transform, FigureStyle.ForSeed(seed, archetype), true);
+            _hips = _rig.Hips;
+            _head = _rig.Head;
+            _armL = _rig.ArmL;
+            _armR = _rig.ArmR;
+            _legL = _rig.LegL;
+            _legR = _rig.LegR;
+            int n = _rig.Hat.Length;
+            _hatRest = new Quaternion[n];
+            _hatAng = new Vector3[n];
+            _hatVel = new Vector3[n];
+            for (int i = 0; i < n; i++) _hatRest[i] = _rig.Hat[i].localRotation;
+            _tailRest = _rig.ScarfTail.localRotation;
+            _lastPos = transform.position;
+            _lastRot = transform.rotation;
         }
 
         /// <summary>Sudden jolt: the "did that one just move?" moment.</summary>
         public void Twitch(float intensity)
         {
             for (int i = 0; i < 6; i++) _vel[i] += Random.insideUnitSphere * 900f * intensity;
+            if (_hatVel != null) for (int i = 0; i < _hatVel.Length; i++) _hatVel[i] += Random.insideUnitSphere * 600f * intensity;
         }
 
         void Update()
@@ -95,8 +90,9 @@ namespace SnowGlobe.Game
             {
                 case FigureMode.Idle:
                     targets[Hips] = new Vector3(0f, 0f, Mathf.Sin(t * 1.3f) * 4f);
-                    targets[ArmL] = new Vector3(Mathf.Sin(t * 1.7f) * 8f, 0f, -12f);
-                    targets[ArmR] = new Vector3(Mathf.Sin(t * 1.5f + 1f) * 8f, 0f, 12f);
+                    // Reference pose: mittens held together in front, a little shy sway.
+                    targets[ArmL] = new Vector3(-38f + Mathf.Sin(t * 1.7f) * 5f, 0f, 18f);
+                    targets[ArmR] = new Vector3(-38f + Mathf.Sin(t * 1.5f + 1f) * 5f, 0f, -18f);
                     break;
                 case FigureMode.Walk:
                     float s = Mathf.Sin(t * 14f);
@@ -163,15 +159,44 @@ namespace SnowGlobe.Game
             _legL.localRotation = Quaternion.Euler(_ang[LegL]);
             _legR.localRotation = Quaternion.Euler(_ang[LegR]);
 
-            // Pupils drift toward the look target — eyes that follow you.
-            Vector3 pupilOffset = Vector3.zero;
+            // Irises drift toward the look target — eyes that follow you.
+            Vector3 irisOffset = Vector3.zero;
             if (HasLookTarget)
             {
                 var lp = _head.InverseTransformPoint(LookTarget).normalized;
-                pupilOffset = new Vector3(Mathf.Clamp(lp.x, -0.25f, 0.25f), Mathf.Clamp(lp.y, -0.2f, 0.2f), 0f);
+                irisOffset = new Vector3(Mathf.Clamp(lp.x, -1f, 1f) * 0.004f, Mathf.Clamp(lp.y, -1f, 1f) * 0.003f, 0f);
             }
-            _pupilL.localPosition = new Vector3(pupilOffset.x, pupilOffset.y, 0.38f);
-            _pupilR.localPosition = new Vector3(pupilOffset.x, pupilOffset.y, 0.38f);
+            _rig.IrisL.localPosition = _rig.IrisLBase + irisOffset;
+            _rig.IrisR.localPosition = _rig.IrisRBase + irisOffset;
+
+            UpdateSecondaryMotion(dt, t);
+        }
+
+        void UpdateSecondaryMotion(float dt, float t)
+        {
+            // Body velocity and turn rate in local space; the hat and scarf lag behind them.
+            var vel = transform.InverseTransformDirection((transform.position - _lastPos) / Mathf.Max(dt, 0.0001f));
+            float turn = Mathf.DeltaAngle(_lastRot.eulerAngles.y, transform.rotation.eulerAngles.y) / Mathf.Max(dt, 0.0001f);
+            _lastPos = transform.position;
+            _lastRot = transform.rotation;
+            var hipsAng = _ang[Hips];
+            bool stiff = Mode == FigureMode.Frozen || Mode == FigureMode.Posed;
+            var drive = new Vector3(Mathf.Clamp(vel.z * 25f, -40f, 40f) - hipsAng.x * 0.6f, 0f, Mathf.Clamp(-vel.x * 25f - turn * 0.05f, -40f, 40f) - hipsAng.z * 0.6f);
+            float idle = stiff ? 0f : Mathf.Sin(t * 1.1f) * 3f;
+            float k = stiff ? 300f : 90f, d = stiff ? 25f : 5f;
+            for (int i = 0; i < _hatAng.Length; i++)
+            {
+                var target = drive * (0.5f + i * 0.25f) + new Vector3(0f, 0f, idle);
+                _hatVel[i] += ((target - _hatAng[i]) * k - _hatVel[i] * d) * dt;
+                _hatAng[i] += _hatVel[i] * dt;
+                _rig.Hat[i].localRotation = _hatRest[i] * Quaternion.Euler(_hatAng[i]);
+            }
+            var tailTarget = new Vector3(drive.x * 1.2f + (Mode == FigureMode.Struggle ? Mathf.Sin(t * 13f) * 30f : 0f), 0f, drive.z);
+            _tailVel += ((tailTarget - _tailAng) * k - _tailVel * d) * dt;
+            _tailAng += _tailVel * dt;
+            _rig.ScarfTail.localRotation = _tailRest * Quaternion.Euler(_tailAng);
+            // The brass star always hangs toward the ground.
+            _rig.Star.rotation = Quaternion.Slerp(_rig.Star.rotation, Quaternion.Euler(0f, transform.eulerAngles.y, 0f), dt * 8f);
         }
 
         static void PoseTargets(int pose, Vector3[] t)

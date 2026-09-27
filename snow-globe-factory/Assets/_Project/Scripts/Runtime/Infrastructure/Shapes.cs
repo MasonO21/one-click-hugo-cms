@@ -89,6 +89,98 @@ namespace SnowGlobe.Game
             m.renderQueue = (int)RenderQueue.Transparent;
         }
 
+        // ---------------- textures and signage ----------------
+
+        static readonly Dictionary<string, Texture2D> TexCache = new Dictionary<string, Texture2D>();
+        static readonly Dictionary<string, Material> TexMatCache = new Dictionary<string, Material>();
+        static Shader _unlit;
+
+        static Shader Unlit
+        {
+            get
+            {
+                if (_unlit != null) return _unlit;
+                _unlit = UsingUrp ? Shader.Find("Universal Render Pipeline/Unlit") : null;
+                if (_unlit == null) _unlit = Shader.Find("Unlit/Texture");
+                if (_unlit == null) _unlit = Lit;
+                return _unlit;
+            }
+        }
+
+        /// <summary>Loads a generated texture from Resources/SnowGlobeArt (see tools/art/generate_art.py). Null if missing.</summary>
+        public static Texture2D Tex(string name)
+        {
+            Texture2D t;
+            if (TexCache.TryGetValue(name, out t)) return t;
+            t = Resources.Load<Texture2D>("SnowGlobeArt/" + name);
+            if (t == null) Debug.LogWarning("[SnowGlobe] Missing texture SnowGlobeArt/" + name);
+            TexCache[name] = t;
+            return t;
+        }
+
+        /// <summary>Shared textured material. Unlit is used for "views" (windows) that should glow regardless of room light.</summary>
+        public static Material TexMat(string texName, bool unlit = false)
+        {
+            string key = texName + (unlit ? "|u" : "|l");
+            Material m;
+            if (TexMatCache.TryGetValue(key, out m) && m != null) return m;
+            m = NewTexMat(Tex(texName), unlit);
+            TexMatCache[key] = m;
+            return m;
+        }
+
+        public static Material NewTexMat(Texture2D tex, bool unlit = false)
+        {
+            var m = new Material(unlit ? Unlit : Lit);
+            SetColor(m, Color.white);
+            if (tex != null)
+            {
+                m.mainTexture = tex;
+                if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex);
+                if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", tex);
+            }
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.15f);
+            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0.15f);
+            return m;
+        }
+
+        /// <summary>
+        /// A flat textured panel (sign, label, window view) whose readable face points along <paramref name="facing"/>.
+        /// </summary>
+        public static GameObject Sign(string name, Transform parent, Vector3 center, Vector3 facing, float width, float height, string texName, bool unlit = false)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            go.name = name;
+            var col = go.GetComponent<Collider>();
+            col.enabled = false;
+            Object.Destroy(col);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = center;
+            // The built-in quad is visible from its -Z side, so point -Z along "facing".
+            go.transform.localRotation = Quaternion.LookRotation(-facing.normalized, Vector3.up);
+            go.transform.localScale = new Vector3(width, height, 1f);
+            go.GetComponent<Renderer>().sharedMaterial = TexMat(texName, unlit);
+            return go;
+        }
+
+        /// <summary>A sign lying flat on a surface (paper on a desk), readable from <paramref name="readFrom"/>.</summary>
+        public static GameObject FlatSign(string name, Transform parent, Vector3 center, Vector3 readFrom, float width, float height, string texName)
+        {
+            var go = Sign(name, parent, center, Vector3.up, width, height, texName);
+            var fwd = new Vector3(-readFrom.x, 0f, -readFrom.z).normalized;
+            go.transform.localRotation = Quaternion.LookRotation(Vector3.down, fwd);
+            return go;
+        }
+
+        /// <summary>Cylinder spanning two local points (pipes, rails, ladder sides).</summary>
+        public static GameObject Rod(string name, Transform parent, Vector3 from, Vector3 to, float radius, Color color, bool collider = false)
+        {
+            var dir = to - from;
+            var go = Prim(PrimitiveType.Cylinder, name, parent, (from + to) * 0.5f, new Vector3(radius * 2f, dir.magnitude * 0.5f, radius * 2f), color, collider);
+            go.transform.localRotation = Quaternion.FromToRotation(Vector3.up, dir.normalized);
+            return go;
+        }
+
         public static GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 localPos, Vector3 scale, Color color, bool keepCollider = true)
         {
             var go = GameObject.CreatePrimitive(type);
@@ -157,6 +249,17 @@ namespace SnowGlobe.Game
         public static readonly Color GlobeBase = new Color(0.35f, 0.18f, 0.1f);
         public static readonly Color BoxColor = new Color(0.78f, 0.2f, 0.22f);
         public static readonly Color Serum = new Color(0.4f, 1f, 0.8f);
+        // Concept-art palette: teal/navy woodwork, brass, cream plaster, warm pools of light.
+        public static readonly Color Teal = new Color(0.2f, 0.33f, 0.36f);
+        public static readonly Color TealDark = new Color(0.12f, 0.2f, 0.23f);
+        public static readonly Color Navy = new Color(0.1f, 0.15f, 0.23f);
+        public static readonly Color Brass = new Color(0.78f, 0.6f, 0.32f);
+        public static readonly Color Cream = new Color(0.9f, 0.84f, 0.72f);
+        public static readonly Color WoodWarm = new Color(0.42f, 0.27f, 0.16f);
+        public static readonly Color RugBlue = new Color(0.24f, 0.33f, 0.44f);
+        public static readonly Color Slate = new Color(0.2f, 0.22f, 0.24f);
+        public static readonly Color Cardboard = new Color(0.72f, 0.6f, 0.44f);
+        public static readonly Color Foliage = new Color(0.22f, 0.36f, 0.22f);
         // UI status.
         public static readonly Color Ok = new Color(0.3f, 0.9f, 0.4f);
         public static readonly Color Busy = new Color(1f, 0.8f, 0.2f);

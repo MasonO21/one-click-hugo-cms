@@ -292,7 +292,7 @@ namespace SnowGlobe.Game
             if (_step == Step.Dome)
             {
                 _offset = Mathf.Sin(Time.time * 2.4f) * SwingRange;
-                if (DomeGhost != null) DomeGhost.localPosition = new Vector3(_offset, 0.45f, 0f);
+                if (DomeGhost != null) DomeGhost.localPosition = new Vector3(_offset, 0.6f, 0f);
                 if (GameInput.InteractDown)
                 {
                     float alignment = 1f - Mathf.Abs(_offset) / SwingRange;

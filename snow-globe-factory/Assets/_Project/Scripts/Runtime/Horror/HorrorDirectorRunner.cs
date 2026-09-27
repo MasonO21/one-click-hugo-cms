@@ -16,7 +16,7 @@ namespace SnowGlobe.Game
         float _tick;
         DirectorEventId _pending = DirectorEventId.None;
         float _warning;
-        HoldingPen _scratchPen;
+        HoldingCell _scratchCell;
         ProductView _escapee;
         float _nextScratch;
 
@@ -96,10 +96,8 @@ namespace SnowGlobe.Game
         void LookToCorner()
         {
             Root.SilentUntil = Time.time + 8f;
-            foreach (var pen in Root.Level.Pens)
-            {
-                foreach (var v in pen.Socket.Occupants) if (v != null) v.LookAt(Root.Level.DarkCorner.position, 8f);
-            }
+            // Every cabinet occupant turns to the same dark corner, at once, and goes quiet.
+            foreach (var cell in Root.Level.Cells) if (cell.Occupant != null) cell.Occupant.LookAt(Root.Level.DarkCorner.position, 8f);
             Root.Audio.Play(Sfx.Scratch, Root.Level.DarkCorner.position, 0.25f, 0.7f);
         }
 
@@ -127,12 +125,27 @@ namespace SnowGlobe.Game
 
         void Relocate()
         {
-            var from = Root.Level.Pens[0].Socket.Occupants.Count >= Root.Level.Pens[1].Socket.Occupants.Count ? Root.Level.Pens[0] : Root.Level.Pens[1];
-            var to = from == Root.Level.Pens[0] ? Root.Level.Pens[1] : Root.Level.Pens[0];
-            if (from.Socket.Occupants.Count == 0) return;
-            var v = from.Socket.Occupants[0];
+            // A character is suddenly in a different cabinet than the one you left it in.
+            var from = RandomOccupiedCell();
+            var to = Root.Level.FreeCell();
+            if (from == null || to == null) return;
+            var v = from.Occupant;
             v.Detach();
             to.Socket.Place(v);
+        }
+
+        HoldingCell RandomOccupiedCell()
+        {
+            int n = 0;
+            foreach (var c in Root.Level.Cells) if (c.Occupant != null) n++;
+            if (n == 0) return null;
+            int pick = Random.Range(0, n);
+            foreach (var c in Root.Level.Cells)
+            {
+                if (c.Occupant == null) continue;
+                if (pick-- == 0) return c;
+            }
+            return null;
         }
 
         // ---------------- threats (telegraphed) ----------------
@@ -147,9 +160,9 @@ namespace SnowGlobe.Game
             }
             else if (ev == DirectorEventId.EscapeAttempt)
             {
-                _scratchPen = Root.Level.Pens[0].Socket.Occupants.Count > 0 ? Root.Level.Pens[0] : Root.Level.Pens[1];
-                if (_scratchPen.Socket.Occupants.Count == 0) { Cancel(); return; }
-                Root.Hud.Alert("Scratching in " + _scratchPen.Socket.Label + "...");
+                _scratchCell = RandomOccupiedCell();
+                if (_scratchCell == null) { Cancel(); return; }
+                Root.Hud.Alert("Tapping on the glass of cabinet " + _scratchCell.Label + "...");
                 _nextScratch = 0f;
             }
         }
@@ -158,18 +171,18 @@ namespace SnowGlobe.Game
         {
             if (_pending == DirectorEventId.None) return;
             _warning -= dt;
-            if (_pending == DirectorEventId.EscapeAttempt && _scratchPen != null)
+            if (_pending == DirectorEventId.EscapeAttempt && _scratchCell != null)
             {
                 _nextScratch -= dt;
                 if (_nextScratch <= 0f)
                 {
                     _nextScratch = 1.4f;
-                    Root.Audio.Play(Sfx.Scratch, _scratchPen.ScratchPoint.position, 0.9f);
+                    Root.Audio.Play(Mathf.Repeat(Time.time, 2f) > 1f ? Sfx.Scratch : Sfx.Tap, _scratchCell.ScratchPoint.position, 0.9f);
                 }
                 // Getting there in time and checking the latch prevents the escape.
-                if (Vector3.Distance(Root.Player.transform.position, _scratchPen.ScratchPoint.position) < 2.2f)
+                if (Vector3.Distance(Root.Player.transform.position, _scratchCell.ScratchPoint.position) < 2.2f)
                 {
-                    Root.Toast("You jiggle the latch. It holds. Something inside goes very quiet.");
+                    Root.Toast("You press the cabinet door shut. The latch holds. Something inside goes very quiet.");
                     Cancel();
                     return;
                 }
@@ -184,7 +197,7 @@ namespace SnowGlobe.Game
         void Cancel()
         {
             _pending = DirectorEventId.None;
-            _scratchPen = null;
+            _scratchCell = null;
             foreach (var l in Root.Level.Lights) l.Warning = false;
             Root.Session.Director.ResolveThreat();
         }
@@ -222,18 +235,20 @@ namespace SnowGlobe.Game
 
         void Escape()
         {
-            var pen = _scratchPen;
-            _scratchPen = null;
-            if (pen == null || pen.Socket.Occupants.Count == 0) { Root.Session.Director.ResolveThreat(); return; }
-            pen.Gate.SetOpen(true);
-            var v = pen.Socket.Occupants[Random.Range(0, pen.Socket.Occupants.Count)];
-            var outside = pen.Gate.transform.position + new Vector3(0.4f, 0.1f, -0.4f);
+            var cell = _scratchCell;
+            _scratchCell = null;
+            if (cell == null || cell.Occupant == null) { Root.Session.Director.ResolveThreat(); return; }
+            cell.Door.SetOpen(true);
+            var v = cell.Occupant;
+            // They hop out of the cabinet and drop to the floor.
+            var outside = cell.Socket.transform.position + new Vector3(-0.55f, 0.1f, 0f);
             v.PlaceFree(outside);
+            v.Body.linearVelocity = new Vector3(-1.2f, 1.2f, Random.Range(-0.5f, 0.5f));
             var pos = v.transform.position;
             v.P.Location = ProductLocation.Loose(pos.x, pos.y, pos.z);
             _escapee = v;
             Root.Audio.Play(Sfx.Squeak, outside);
-            Root.Hud.Alert(v.P.CharacterName + " got out of " + pen.Socket.Label + "! Catch them before a customer sees.");
+            Root.Hud.Alert(v.P.CharacterName + " got out of cabinet " + cell.Label + "! Catch them before a customer sees.");
         }
 
         void UpdateActiveThreat()
@@ -252,7 +267,7 @@ namespace SnowGlobe.Game
         {
             StopAllCoroutines();
             _pending = DirectorEventId.None;
-            _scratchPen = null;
+            _scratchCell = null;
             _escapee = null;
             PowerOut = false;
             if (Root.Session != null) Root.Session.PowerFactor = 1f;
