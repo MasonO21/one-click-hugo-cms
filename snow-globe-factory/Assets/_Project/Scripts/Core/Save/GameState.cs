@@ -32,6 +32,7 @@ namespace SnowGlobe.Core
         public List<PendingDelivery> Deliveries = new List<PendingDelivery>();
         public EventDirectorState Director = new EventDirectorState();
         public AutomationState Automation = new AutomationState();
+        public StoryState Story = new StoryState();
         public DeterministicRandom Rng = new DeterministicRandom(12345);
         public int EmergencyOrderDay;
         public int LifetimeGlobesSold;

@@ -8,6 +8,7 @@ namespace SnowGlobe.Core
         AutoPrep = 0,
         Conveyor = 1,
         PackagingMachine = 2,
+        SealingPress = 3,
     }
 
     [Serializable]
@@ -70,6 +71,9 @@ namespace SnowGlobe.Core
         public const float AutoPrepTimingScore = 0.6f;
         public const float PackagingSeconds = 4f;
         public const float MachinePackagingScore = 0.7f;
+        public const float PressSeconds = 3f;
+        /// <summary>Dome alignment the press achieves (before the jig's assist).</summary>
+        public const float PressDomeScore = 0.7f;
         public const float WearPerItem = 0.04f;
         public const float HeavyJamChance = 0.35f;
         public const int RepairCost = 15;
@@ -94,6 +98,7 @@ namespace SnowGlobe.Core
             {
                 case MachineId.AutoPrep: return UpgradeId.AutoPrepStation;
                 case MachineId.Conveyor: return UpgradeId.ShortConveyor;
+                case MachineId.SealingPress: return UpgradeId.SealingPress;
                 default: return UpgradeId.PackagingMachine;
             }
         }
@@ -104,6 +109,7 @@ namespace SnowGlobe.Core
             {
                 case MachineId.AutoPrep: return "Automated Prep";
                 case MachineId.Conveyor: return "Conveyor";
+                case MachineId.SealingPress: return "Sealing Press";
                 default: return "Packaging Machine";
             }
         }
@@ -214,6 +220,7 @@ namespace SnowGlobe.Core
         {
             _events.Clear();
             TickAutoPrep(dt, powerAvailable);
+            TickSealingPress(dt, powerAvailable);
             TickConveyor(dt, powerAvailable);
             TickPackaging(dt, powerAvailable);
             return _events;
@@ -251,6 +258,31 @@ namespace SnowGlobe.Core
             var r = _production.Inject(inCradle, AutoPrepTimingScore);
             if (!r.Success) { Block(m, r.Message); return; }
             Emit(AutomationEventType.Completed, m.Id, inCradle.Id, r.Message);
+            Wear(m);
+        }
+
+        /// <summary>
+        /// The press lowers a dome onto a decorated base at the sealer, then seals it: two short
+        /// steps, each worth one wear. The player still builds every scene by hand.
+        /// </summary>
+        void TickSealingPress(float dt, bool power)
+        {
+            var m = Get(MachineId.SealingPress);
+            if (!IsRunning(MachineId.SealingPress, power)) return;
+            var p = At(StationId.Sealer);
+            if (p == null || (p.Stage != ProductStage.Decorated && p.Stage != ProductStage.Domed))
+            {
+                Unblock(m);
+                m.Progress = 0f;
+                return;
+            }
+            m.Progress += dt;
+            if (m.Progress < PressSeconds) return;
+            m.Progress = 0f;
+            var r = p.Stage == ProductStage.Decorated ? _production.FitDome(p, PressDomeScore) : _production.Seal(p, power);
+            if (!r.Success) { Block(m, r.Message); return; }
+            Unblock(m);
+            Emit(AutomationEventType.Completed, m.Id, p.Id, r.Message);
             Wear(m);
         }
 
@@ -358,7 +390,7 @@ namespace SnowGlobe.Core
         void Wear(MachineState m)
         {
             m.ItemsProcessed++;
-            float wear = WearPerItem * (_state.Modifiers.IsOverPowered ? 1.5f : 1f);
+            float wear = WearPerItem * (_state.Modifiers.IsOverPowered ? 1.5f : 1f) * StoryRules.WearMultiplier(_state);
             m.Condition = MathUtil.Clamp01(m.Condition - wear);
             float weakness = 1f - m.Condition;
             if (_state.Rng.Chance(weakness * weakness * 0.5f))

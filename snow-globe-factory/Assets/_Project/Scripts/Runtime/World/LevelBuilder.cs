@@ -97,6 +97,18 @@ namespace SnowGlobe.Game
             Plant(new Vector3(-4.9f, 0.41f, 0.2f), 0.35f);
             AddLight("WindowDaylight", new Vector3(-5.1f, 2.6f, 0.9f), new Color(0.75f, 0.85f, 1f), 0.7f, 5f, LightArea.Store, 0f);
 
+            // Window Display upgrade: a stepped stand of glowing globes facing the street (hidden until bought).
+            _level.WindowDisplay = Shapes.Empty("WindowDisplay", t, Vector3.zero);
+            var wd = _level.WindowDisplay.transform;
+            Shapes.Box("WindowStandLow", wd, new Vector3(-5.1f, 0.2f, 0.75f), new Vector3(1.8f, 0.4f, 0.45f), Palette.Teal);
+            Shapes.Box("WindowStandHigh", wd, new Vector3(-5.1f, 0.35f, 0.95f), new Vector3(1.2f, 0.7f, 0.25f), Palette.TealDark);
+            Metal(Shapes.Box("WindowStandTrim", wd, new Vector3(-5.1f, 0.41f, 0.53f), new Vector3(1.82f, 0.02f, 0.02f), Palette.Brass, false));
+            for (int i = 0; i < 3; i++) DecorGlobe(wd, new Vector3(-5.7f + i * 0.6f, 0.4f, 0.7f), 0.8f, 0f);
+            for (int i = 0; i < 2; i++) DecorGlobe(wd, new Vector3(-5.4f + i * 0.6f, 0.7f, 0.95f), 0.9f, 0f);
+            for (int i = 0; i < 9; i++)
+                Emissive(Shapes.Prim(PrimitiveType.Sphere, "FairyLight", wd, new Vector3(-6.3f + i * 0.3f, 3.3f - Mathf.Sin(i / 8f * Mathf.PI) * 0.25f, 0.12f), Vector3.one * 0.05f, Palette.WarmLight, false), Palette.WarmLight, 2f);
+            _level.WindowDisplay.SetActive(false);
+
             // Glass front door (opens when the shop opens), street beyond, shop name outside.
             _level.FrontDoor = MakeDoor(t, "FrontDoor", new Vector3(-2.9f, 0f, -0.02f), 0f, 1.6f, 2.6f, Palette.Teal, "front door", true);
             Shapes.Sign("StreetBackdrop", _static, new Vector3(-2.1f, 2.6f, -4.6f), Vector3.forward, 5.2f, 7.2f, "street_backdrop", true);
@@ -519,9 +531,19 @@ namespace SnowGlobe.Game
             }
             Panel(kr, MachineId.PackagingMachine, new Vector3(6.97f, 1.35f, 14.45f), Vector3.left);
 
+            // --- Sealing press: a brass ram over the sealing machine that seats and seals domes by itself.
+            var press = Shapes.Empty("SealPressRig", t, Vector3.zero);
+            _level.SealPressRig = press;
+            var sr = press.transform;
+            Metal(Shapes.Rod("PressColumn", sr, new Vector3(6.6f, 0f, 20.85f), new Vector3(6.6f, 2.35f, 20.85f), 0.05f, Palette.Brass));
+            Metal(Shapes.Box("PressArm", sr, new Vector3(6.25f, 2.35f, 20.5f), new Vector3(0.8f, 0.12f, 0.8f), Palette.Brass, false));
+            Shapes.Prim(PrimitiveType.Cylinder, "PressRam", sr, new Vector3(5.9f, 2.1f, 20.2f), new Vector3(0.22f, 0.16f, 0.22f), steel, false);
+            Panel(sr, MachineId.SealingPress, new Vector3(6.97f, 1.35f, 21.25f), Vector3.left);
+
             prep.SetActive(false);
             conv.SetActive(false);
             pack.SetActive(false);
+            press.SetActive(false);
         }
 
         static void Panel(Transform parent, MachineId machine, Vector3 pos, Vector3 facing)
@@ -695,8 +717,29 @@ namespace SnowGlobe.Game
             _level.Hatch.Label = "Delivery crate";
             _level.Hatch.AllowMultiple = true;
             _level.Hatch.RoamHalfExtents = new Vector2(0.5f, 0.3f);
-            _level.Hatch.Accepts = v => false;
-            _level.Hatch.RejectReason = v => "Deliveries only come in, never go out.";
+            // Normally one-way. When H.'s ledger asks for a globe, the matching box goes down in this crate.
+            _level.Hatch.Accepts = v =>
+            {
+                string why;
+                return v.P != null && v.P.Stage == ProductStage.Packaged && GameRoot.I.Session.Story.CanSend(v.P, out why);
+            };
+            _level.Hatch.RejectReason = v =>
+            {
+                string why;
+                GameRoot.I.Session.Story.CanSend(v.P, out why);
+                return why;
+            };
+            _level.Hatch.Placed = v =>
+            {
+                if (v.P == null || v.P.Stage != ProductStage.Packaged) return; // arrivals are placed here too
+                var root = GameRoot.I;
+                ActionResult result;
+                root.Session.Story.SendGlobe(v.P, out result);
+                root.Toast(result.Message, !result.Success);
+                if (!result.Success) return;
+                root.Audio.Play(Sfx.Hum, v.transform.position, 0.7f, 0.6f);
+                root.OnProductSold(v.P);
+            };
 
             // Gate: vertical bars that swing out into the basement.
             _level.LiftGate = MakeGate(t, new Vector3(-4.4f, F, 23.14f), 2.2f, 2.4f);

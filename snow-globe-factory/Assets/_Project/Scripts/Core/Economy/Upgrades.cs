@@ -14,6 +14,9 @@ namespace SnowGlobe.Core
         AutoPrepStation,
         PremiumDisplayCase,
         SecurityCameras, // appended: enum values are saved as ints
+        SealingPress,
+        RewiredFuseBox,
+        WindowDisplay,
     }
 
     public enum UpgradeCategory
@@ -45,6 +48,10 @@ namespace SnowGlobe.Core
         public bool AutoPackaging;
         public bool AutoPrep;
         public bool HasCameras;
+        public bool AutoSeal;
+        public int PowerCapacityBonus;
+        /// <summary>Multiplies the walk-in rate (window display).</summary>
+        public float FootTrafficMultiplier;
 
         public static UpgradeModifiers Default
         {
@@ -58,11 +65,14 @@ namespace SnowGlobe.Core
                     SealDefectMultiplier = 1f,
                     NoiseLeakMultiplier = 1f,
                     DisplayVisibilityMultiplier = 1f,
+                    FootTrafficMultiplier = 1f,
                 };
             }
         }
 
-        public bool IsOverPowered { get { return PowerDraw > GameBalance.BasePowerCapacity; } }
+        public int PowerCapacity { get { return GameBalance.BasePowerCapacity + PowerCapacityBonus; } }
+
+        public bool IsOverPowered { get { return PowerDraw > PowerCapacity; } }
     }
 
     public delegate void ModifierApplier(ref UpgradeModifiers m);
@@ -159,6 +169,24 @@ namespace SnowGlobe.Core
                     Id = UpgradeId.SecurityCameras, Name = "Security Cameras", Cost = 700, Category = UpgradeCategory.SecurityAndSecrecy, UnlockDay = 6,
                     Solves = "You can't watch the shop, the backroom and the basement at once.", Tradeoff = "Uses power. Sometimes the feeds show things you'd rather not see.", PrototypeFunctional = true,
                     Apply = (ref UpgradeModifiers m) => { m.HasCameras = true; m.PowerDraw += 1; },
+                },
+                new UpgradeDefinition
+                {
+                    Id = UpgradeId.SealingPress, Name = "Sealing Press", Cost = 1800, Category = UpgradeCategory.Automation, UnlockDay = 12,
+                    Solves = "Fitting and sealing every dome by hand is now the slowest step.", Tradeoff = "Machine domes are only 'good' (70%); heavy power draw.", PrototypeFunctional = true,
+                    Apply = (ref UpgradeModifiers m) => { m.AutoSeal = true; m.PowerDraw += 2; m.MachineNoise += 0.15f; },
+                },
+                new UpgradeDefinition
+                {
+                    Id = UpgradeId.RewiredFuseBox, Name = "Rewired Fuse Box", Cost = 1200, Category = UpgradeCategory.HandlingReliability, UnlockDay = 10,
+                    Solves = "Too many machines overload the building's wiring (power cuts, faster wear).", Tradeoff = "None, except what the electrician saw in the basement.", PrototypeFunctional = true,
+                    Apply = (ref UpgradeModifiers m) => { m.PowerCapacityBonus += 5; },
+                },
+                new UpgradeDefinition
+                {
+                    Id = UpgradeId.WindowDisplay, Name = "Window Display", Cost = 1600, Category = UpgradeCategory.StoreAppeal, UnlockDay = 15,
+                    Solves = "Passers-by don't know how good your globes have become.", Tradeoff = "People press their faces to the glass after closing.", PrototypeFunctional = true,
+                    Apply = (ref UpgradeModifiers m) => { m.FootTrafficMultiplier *= 1.25f; },
                 },
             };
             var dict = new Dictionary<UpgradeId, UpgradeDefinition>();

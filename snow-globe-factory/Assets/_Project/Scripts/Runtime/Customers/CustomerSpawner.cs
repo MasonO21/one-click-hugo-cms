@@ -88,8 +88,7 @@ namespace SnowGlobe.Game
             if (_timer > 0f) return;
             var exposure = root.Session.State.Exposure;
             // Rumours keep people away; well-stocked shelves draw them in (store appeal).
-            float rate = Mathf.Max(0.2f, exposure.ArrivalRateMultiplier) * root.Session.Store.AppealMultiplier()
-                         * DayProgression.FootTrafficMultiplier(root.Session.State.Day.Day);
+            float rate = Mathf.Max(0.2f, exposure.ArrivalRateMultiplier) * root.Session.Store.WalkInMultiplier();
             _timer = GameBalance.BaseCustomerIntervalSeconds / rate * Random.Range(0.6f, 1.4f);
             Spawn(exposure.CustomerAttentiveness);
         }

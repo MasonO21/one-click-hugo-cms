@@ -444,7 +444,7 @@ namespace SnowGlobe.Game
                 bool unlocked = def.UnlockDay <= s.State.Day.Day;
                 GUILayout.Label(def.DisplayName + " — sells ~$" + def.BaseSaleValue + (unlocked ? "\n<size=11>" + def.Description + "</size>" : "\n<size=11>Supplier offers these from day " + def.UnlockDay + ".</size>"), _label, GUILayout.Width(440f));
                 GUI.enabled = unlocked;
-                if (GUILayout.Button("Order $" + def.AcquisitionCost, GUILayout.Width(120f))) Root.Toast(s.Supply.OrderCharacter(def.Id).Message);
+                if (GUILayout.Button("Order $" + StoryRules.CharacterCost(s.State, def.Id), GUILayout.Width(120f))) Root.Toast(s.Supply.OrderCharacter(def.Id).Message);
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
             }
@@ -488,7 +488,8 @@ namespace SnowGlobe.Game
                 GUILayout.EndHorizontal();
             }
             var m = s.State.Modifiers;
-            GUILayout.Label("Power draw: " + m.PowerDraw + "/" + GameBalance.BasePowerCapacity + (m.IsOverPowered ? "  <color=#ff5544>(overloaded — power failures more likely)</color>" : ""), _label);
+            GUILayout.Label("Power draw: " + m.PowerDraw + "/" + m.PowerCapacity + (m.IsOverPowered ? "  <color=#ff5544>(overloaded — power failures more likely, machines wear faster)</color>" : "") +
+                            "   Nightly bills: $" + DayCycle.OperatingCost(s.State) + " (rent $" + GameBalance.DailyOperatingCost + " + electricity $" + GameBalance.ElectricityPerPowerUnit + " per power unit)", _label);
         }
 
         void DrawThemes()
@@ -547,10 +548,49 @@ namespace SnowGlobe.Game
 
         void DrawNotes()
         {
-            var notes = DayProgression.NotesReceived(Root.Session.State.Day.Day);
-            GUILayout.Label("Notes found in the supplier's crates.", _label);
+            var s = Root.Session;
+            DrawLedger(s);
+            GUILayout.Space(10f);
+            var notes = DayProgression.NotesReceived(s.State.Day.Day);
+            GUILayout.Label("<b>Notes found in the supplier's crates</b>", _label);
             if (notes.Count == 0) GUILayout.Label("<i>Nothing yet.</i>", _label);
             foreach (var n in notes) GUILayout.Label("<i>" + n + "</i>", _label);
+        }
+
+        /// <summary>H.'s ledger: the story's requests, the current one's action, and the final choice.</summary>
+        void DrawLedger(GameSession s)
+        {
+            var story = s.Story;
+            var log = story.Log();
+            if (log.Count == 0) return;
+            GUILayout.Label("<b>H.'s ledger</b>", _label);
+            foreach (var line in log) GUILayout.Label("<i>" + line + "</i>", _label);
+            var c = story.Current;
+            if (c == null || !story.RequestOpen) return;
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label("<b>Open request — " + c.Title + ":</b> " + StoryService.Describe(c), _label);
+            if (c.NeedsGlobe)
+            {
+                GUILayout.Label("Put the boxed globe in the freight-lift crate in the basement.", _label);
+            }
+            else if (story.IsFinal(c))
+            {
+                bool afford = s.State.Wallet.CanAfford(c.Payment);
+                GUI.enabled = afford;
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Pay $" + c.Payment + " and SIGN the page", GUILayout.Height(32f))) Root.Toast(story.Pay(LedgerEnding.Signed).Message);
+                if (GUILayout.Button("Pay $" + c.Payment + " and TEAR it out", GUILayout.Height(32f))) Root.Toast(story.Pay(LedgerEnding.Torn).Message);
+                GUILayout.EndHorizontal();
+                GUI.enabled = true;
+                if (!afford) GUILayout.Label("<color=#ffcc44>You need $" + c.Payment + ".</color>", _label);
+            }
+            else
+            {
+                GUI.enabled = s.State.Wallet.CanAfford(c.Payment);
+                if (GUILayout.Button("Leave $" + c.Payment + " in the crate", GUILayout.Height(30f))) Root.Toast(story.Pay().Message);
+                GUI.enabled = true;
+            }
+            GUILayout.EndVertical();
         }
 
         void DrawSaveLoad()
@@ -591,6 +631,8 @@ namespace SnowGlobe.Game
                 "3. Assembly: pose + face front, pick scenery (1-3), pour snow into the band.\n4. Sealer: drop the dome when centred, then seal (before the serum runs out!).\n" +
                 "5. Inspection (optional): scan under the lamp. Certified globes are worth +10%; X rejects a bad one.\n6. Packaging: follow the fold/tape keys.\n" +
                 "7. Carry the box to a shop shelf slot to unbox it. Ring up customers at the counter.\n\n" +
+                "<b>H.'s ledger</b>\nFrom day 8, red envelopes arrive in the morning crate. Answer them in Tab → Notes. " +
+                "When H. asks for a globe, put the box in the freight-lift crate in the basement.\n\n" +
                 "<b>Secrecy</b>\nCustomers only react to what they can see or hear. Close the staff door. Pull twitching globes off the shelf. " +
                 "Chat (E) to distract a curious customer — but nobody un-sees a tiny person running across the floor.", _label);
         }

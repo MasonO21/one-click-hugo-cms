@@ -5,8 +5,8 @@ Unity 6 · C# · Windows PC · keyboard + mouse.
 
 * **Design and implementation plan:** [`docs/DESIGN_PLAN.md`](docs/DESIGN_PLAN.md). It covers the concept, loop, design conflicts, architecture, roadmap, economy tables, risks and acceptance criteria.
 * **Map:** rebuilt from the concept paintings in [`docs/concept/`](docs/concept). A top-down plan is in [`docs/floorplan.png`](docs/floorplan.png).
-* **Status:** Milestones 1 (greybox loop), 3 (automation), 4 (customers, orders, themes) and 5 (horror & roster) are code-complete. Milestone 7 (content & balance) is under way: all six themes are in, and there's a first economy pass in [`docs/BALANCE.md`](docs/BALANCE.md).
-  * The simulation core is compiled and covered by 89 passing unit tests.
+* **Status:** Milestones 1 (greybox loop), 3 (automation), 4 (customers, orders, themes) and 5 (horror & roster) are code-complete. Milestone 7 (content & balance) is under way: all six themes, the supplier's ledger story with two endings, late-game upgrades, and an economy pass in [`docs/BALANCE.md`](docs/BALANCE.md).
+  * The simulation core is compiled and covered by 103 passing unit tests.
   * The Unity layer compiles against Unity reference assemblies, **but it has not yet been run in the Unity editor.** Expect a round of fixes and tuning the first time it's opened (that is Milestone 2).
 
 ## Run it in Unity
@@ -56,12 +56,13 @@ Notes:
 7. Carry the box to a shop shelf slot to unbox it. Flip the OPEN sign. Ring up customers at the counter.
 8. After closing: pay bills, buy upgrades and themes (Tab), then start the next day (a checkpoint is saved automatically).
 9. From day 4: pin special orders at the board by the counter. The assembly card follows the pinned order, and the finished box goes on the counter's order pickup spot.
+10. From day 8: red envelopes from "H." arrive in the morning crate. Answer them in Tab → Notes, and put any globe H. asks for in the freight-lift crate in the basement. The last page ends the story with a choice.
 
 ## Tests and checks (no Unity needed)
 
 ```bash
-dotnet test tools/CoreTests          # 89 NUnit tests for the engine-free simulation core (C# 9)
-dotnet run --project tools/BalanceSim -- 30 2024   # headless 30-day economy run with a scripted player
+dotnet test tools/CoreTests          # 103 NUnit tests for the engine-free simulation core (C# 9)
+dotnet run --project tools/BalanceSim -- 36 2024   # headless 36-day economy run with a scripted player
 tools/typecheck-unity.sh             # compile-only check of Core + Runtime against UnityEngine reference assemblies
 python3 tools/art/generate_art.py    # rebuild Resources/SnowGlobeArt textures from docs/concept (needs Pillow)
 python3 tools/art/floorplan.py       # redraw docs/floorplan.png

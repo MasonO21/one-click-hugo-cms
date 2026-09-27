@@ -18,6 +18,7 @@ namespace SnowGlobe.Core
         public AutomationService Automation { get; private set; }
         public OrderService Orders { get; private set; }
         public ThemeService Themes { get; private set; }
+        public StoryService Story { get; private set; }
         public EventDirector Director { get; private set; }
         public SuspicionRegistry Suspicion { get; private set; }
 
@@ -49,6 +50,7 @@ namespace SnowGlobe.Core
             Automation = new AutomationService(state, Production);
             Orders = new OrderService(state);
             Themes = new ThemeService(state);
+            Story = new StoryService(state);
             Suspicion = new SuspicionRegistry();
             PowerFactor = 1f;
             return log;

@@ -118,6 +118,12 @@ namespace SnowGlobe.Core
             return 0.7f + 0.6f * MathUtil.Clamp01(DisplayedCount() / 6f);
         }
 
+        /// <summary>Everything the shop controls about walk-ins: appeal, word of mouth, the window display.</summary>
+        public float WalkInMultiplier()
+        {
+            return AppealMultiplier() * DayProgression.FootTrafficMultiplier(_state.Day.Day) * _state.Modifiers.FootTrafficMultiplier;
+        }
+
         public int DisplayedCount()
         {
             int n = 0;

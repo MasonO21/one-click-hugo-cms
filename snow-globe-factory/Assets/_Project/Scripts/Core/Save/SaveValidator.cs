@@ -27,6 +27,21 @@ namespace SnowGlobe.Core
             if (s.Director == null) s.Director = new EventDirectorState();
             if (s.Automation == null) s.Automation = new AutomationState();
             if (s.Orders == null) s.Orders = new List<SpecialOrder>();
+            if (s.Story == null) s.Story = new StoryState();
+            if (s.Story.Chapter < 0) s.Story.Chapter = 0;
+            if (s.Story.Chapter > LedgerCatalog.Count) s.Story.Chapter = LedgerCatalog.Count;
+            if (s.Story.Ending < LedgerEnding.None || s.Story.Ending > LedgerEnding.Torn) s.Story.Ending = LedgerEnding.None;
+            if (s.Story.Chapter < LedgerCatalog.Count && s.Story.Ending != LedgerEnding.None)
+            {
+                s.Story.Ending = LedgerEnding.None;
+                log.Add("Ledger ending without a closed ledger; cleared.");
+            }
+            if (s.Story.Chapter == LedgerCatalog.Count && s.Story.Ending == LedgerEnding.None)
+            {
+                // The last page is paid and chosen in one step, so this can only be a damaged save. Signing is the default.
+                s.Story.Ending = LedgerEnding.Signed;
+                log.Add("Ledger closed without a choice; marked as signed.");
+            }
             if (!s.UnlockedThemes.Contains(s.ActiveTheme)) s.ActiveTheme = ThemeId.WinterVillage;
             foreach (var o in s.Orders) if (o.Id >= s.NextOrderId) s.NextOrderId = o.Id + 1;
             var pinned = s.PinnedOrderId == 0 ? null : s.Orders.Find(o => o.Id == s.PinnedOrderId);

@@ -65,6 +65,12 @@ namespace SnowGlobe.Core
             return wasBefore && D.ClockMinutes >= GameBalance.ClosingHourMinutes;
         }
 
+        /// <summary>Rent and heating, plus the electricity every installed machine draws.</summary>
+        public static int OperatingCost(GameState s)
+        {
+            return GameBalance.DailyOperatingCost + GameBalance.ElectricityPerPowerUnit * s.Modifiers.PowerDraw;
+        }
+
         public bool PastClosingTime { get { return D.ClockMinutes >= GameBalance.ClosingHourMinutes; } }
 
         /// <summary>Closes the shop (early or on time): charges operating costs and processes returns.</summary>
@@ -74,8 +80,9 @@ namespace SnowGlobe.Core
             if (D.Phase == DayPhase.AfterClosing) return Summarize(summary);
 
             D.Phase = DayPhase.AfterClosing;
-            _state.Wallet.ChargeBill(GameBalance.DailyOperatingCost);
-            summary.OperatingCost = GameBalance.DailyOperatingCost;
+            int bill = OperatingCost(_state);
+            _state.Wallet.ChargeBill(bill);
+            summary.OperatingCost = bill;
             ProcessReturns();
             summary.Verdict = _state.Exposure.EndOfDay();
             return Summarize(summary);
@@ -91,7 +98,7 @@ namespace SnowGlobe.Core
             s.CustomersLost = st.CustomersLost;
             s.KitsRuined = st.KitsRuined;
             s.Refunds = st.Refunds;
-            if (s.OperatingCost == 0 && D.Phase == DayPhase.AfterClosing) s.OperatingCost = GameBalance.DailyOperatingCost;
+            if (s.OperatingCost == 0 && D.Phase == DayPhase.AfterClosing) s.OperatingCost = OperatingCost(_state);
             s.Exposure = _state.Exposure.Value;
             s.ExposureLevel = _state.Exposure.Level;
             return s;

@@ -10,7 +10,7 @@
 
 | Area | Status | Notes |
 |---|---|---|
-| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 89 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
+| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 103 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
 | Unity layer (greybox building, player, carrying, stations, customers, horror, HUD, audio) | 🟡 | Compiles against Unity 2021.3 reference assemblies (with Unity 6 renames mapped). **Never run in the editor.** Expect tuning and bug-fix work in Milestone 2 |
 | Input System package path | 🟡 | Written but not compiled (package not available outside Unity) |
 | Automation: auto-prep hopper, conveyor, packaging machine, breakdowns/repair, manual override, safe blocking | ✅ core · 🟡 scene | 10 core tests, including a randomized "no product ever lost" property test and a simulated day (16 globes vs ~5–6 by hand) |
@@ -18,7 +18,8 @@
 | Customers & orders: up to 3 shoppers with a counter queue, customers picking globes up (day 4+), special orders board, Woodland Cabin theme, store appeal | ✅ core · 🟡 scene | 12 core tests; a play-mode test covers order pickup |
 | Horror & roster: Screamer, Escape Artist, Watcher, Performer behaviours; security cameras; conveyor-grab and cabinet-shift events; supplier notes | ✅ core · 🟡 scene | 9 core tests; play-mode tests for the camera desk and the Escape Artist |
 | All six themes: bespoke scenery and fill (ash, sea water, star-dust) plus a production twist each | ✅ core · 🟡 scene | 4 core tests: Medieval needs the jig, Celestial needs the Improved Sealer, Haunted hides twitches (×0.6) and Deep-Sea shows them (×1.4) |
-| Economy balance pass | ✅ first pass | `tools/BalanceSim` runs 30 days of the real core with a scripted player. Report and tuning are in [`BALANCE.md`](BALANCE.md) |
+| Story (H.'s ledger) and late-game sinks: Sealing Press, Rewired Fuse Box, Window Display, electricity bills | ✅ core · 🟡 scene | 14 core tests. Five ledger chapters end in a choice (§5e). Globes for H. go down in the freight-lift crate |
+| Economy balance pass | ✅ second pass | `tools/BalanceSim` runs 30 days of the real core with a scripted player. Report and tuning are in [`BALANCE.md`](BALANCE.md) |
 | Level rebuilt from the three concept paintings; minis restyled to the character reference | 🟡 | Procedural reconstruction (see §5a). Floor plan: `docs/floorplan.png` |
 | Real modelled art, animation, UI Toolkit, audio design | ⬜ | Everything is still built from primitives and synthesized sound |
 
@@ -217,6 +218,29 @@ Every machine wears 4% per item (6% when the building is over its power budget).
 * **Cabinet Shift** (atmospheric, day 6+). A character is in a different cabinet than the one you left it in.
 * **Supplier notes.** A note arrives in the crate on days 2, 3, 4, 5, 6, 8, 10 and 12. It's shown in the morning briefing and kept in the Notes tab, slowly revealing who "H." is.
 
+## 5e. H.'s ledger and the late game (Milestone 7)
+
+The story is a ledger of requests from H., the supplier. Each request arrives as a red envelope in the morning crate on its day, and stays open until it's answered. They come in order. Payment requests are money sinks with a lasting reward. Globe requests go down in the freight-lift crate: normally "deliveries only come in, never go out", but the crate takes a box that matches H.'s request, and H. pays a premium.
+
+| # | Day | Request | Reward |
+|---|---|---|---|
+| 1 | 8 | **Dues:** $400 | Preferred account: characters cost 15% less |
+| 2 | 12 | **A Sample:** a boxed Performer, Fine or better, any theme | H. pays 2× its value |
+| 3 | 16 | **Machine Oil:** $1000 ("it comes from the same place they do") | Machines wear half as fast |
+| 4 | 22 | **For the Window:** a Watcher in the Haunted Manor, inspected, Fine or better | H. pays 2.5× |
+| 5 | 28 | **The Last Page:** $4000, then a choice | **Sign:** you become H.'s partner. The notes arrive in your handwriting and characters cost 40% less. **Tear it out:** the town forgets its suspicions (exposure → 0), but characters cost 25% more |
+
+* **After the ending:** the economy keeps running and both endings change it, so the shop stays playable after the story (the M7 exit criterion).
+* **Where it lives:**
+  * The Notes tab shows the ledger (requests, replies and the open request, with its Pay / Sign / Tear buttons) above the crate notes.
+  * `StoryState` is saved, and the save validator keeps the chapter and ending consistent.
+
+**Late-game upgrades.** These address `BALANCE.md`'s finding that cash piled up with nothing to buy and output was capped by hand sealing.
+* **Sealing Press** ($1800, day 12, +2 power): a brass ram over the sealing machine. It seats the dome (70% alignment, plus the jig's assist) and seals, 3 s per step. It has a manual override panel like the other machines, and it refuses Celestial without the Improved Sealer (it waits, and the panel says why).
+* **Rewired Fuse Box** ($1200, day 10): power capacity 3 → 8. A fully automated line draws 9, so it still runs a little hot.
+* **Window Display** ($1600, day 15): a lit stand of globes in the shop window, and ×1.25 walk-ins.
+* **Electricity:** the nightly bill is $25 rent plus $6 per unit of power draw, so every machine has a running cost.
+
 ## 6. Milestone roadmap
 
 | Milestone | Goal | Contents | Exit criteria |
@@ -228,7 +252,7 @@ Every machine wears 4% per item (6% when the building is over its power budget).
 | **M4 Customers & orders** ✅ core · 🟡 scene | Store depth | Up to 3 customers (1 on days 1–2, 2 on days 3–4, 3 from day 5) with a counter queue; customers pick globes up for a closer look from day 4; special-order board with pinning, matching and pickup; Woodland Cabin theme (and a theme picker for later ones); store appeal | Orders always pay ≥ $15 over list (tested); suspicion readability with 3 customers still needs a playtest |
 | **M5 Horror & roster** ✅ core · 🟡 scene | Unease at scale | Screamer, Escape Artist, Watcher and Performer behaviours; Security Cameras upgrade (desk monitor, full-screen feeds, loose-character alerts); Conveyor Grab threat and Cabinet Shift atmospheric; supplier notes (8, days 2–12) | Needs playtests: players report "tense but fair" |
 | **M6 Art & audio** ⬜ | Identity | Real low-poly models, rigged minis (optional joint-based active ragdoll behind the same `MiniCharacterBody` API), lighting, sound design, UI Toolkit HUD | Vertical slice capture |
-| **M7 Content & balance** 🟡 | Longevity | **Done:** all six themes with bespoke scenery and production twists; headless balance sim and first tuning pass (word-of-mouth foot traffic, cheaper late themes; see `BALANCE.md`). **To do:** late-game money sinks (second assembly bench, shop expansions, scaling upkeep), story milestones, performance pass, build pipeline | 2–3 h of progression, economy playable after story. The sim currently says 5–6 h to unlock everything, so this is not met yet |
+| **M7 Content & balance** 🟡 | Longevity | **Done:** all six themes with bespoke scenery and twists; H.'s ledger story with two endings (§5e); late-game sinks (Sealing Press, Fuse Box, Window Display, electricity); headless balance sim with two tuning passes (`BALANCE.md`). **To do:** shop assistant (the counter is the late bottleneck), endless-mode sinks, performance pass, build pipeline | Economy playable after the story: **met** in the core. 2–3 h of progression: **not met.** The sim reaches the ending on days 30–32 (about 5–6 h), so either accept that or scale prices by ~0.6 (a design call) |
 
 ## 7. Initial economy and progression tables
 
@@ -246,7 +270,7 @@ values for tuning, not final balance.
 | **Production cost** | **$20** |
 | Sale price at quality 0.5 | $40 (`base × theme × (0.5 + quality) × 1.1 if certified`) |
 | Sale price range, sloppy → perfect | ~$24 → $60 ($66 certified) |
-| Daily operating cost | $25 |
+| Nightly bills | $25 rent + $6 per unit of machine power draw |
 | Starting cash / stock | $150; 3 characters, 3 kits, 4 serum, 3 boxes |
 
 Expected early day: about 4–6 hand-made globes in an 8-minute open period → ~$80–150 net. The first three
@@ -275,8 +299,8 @@ Tiers: Flawed < 0.35 ≤ Standard < 0.65 ≤ Fine < 0.85 ≤ Exquisite.
 | Woodland Cabin | 1.25 | $3 | $300, day 4 | 0.45 | Pine must face front |
 | Medieval Castle | 1.6 | $6 | $900, day 7 | 0.55 | Tall scenery: dome fit −0.25 without the Assembly Jig ✅ |
 | Haunted Manor | 2.0 | $10 | $1600, day 10 | 0.35 | Dim: customers see movement at ×0.6 ✅ |
-| Deep-Sea Ruins | 2.6 | $16 | $3000, day 14 | 0.80 | Clear water: movement seen at ×1.4 ✅ |
-| Celestial Observatory | 3.5 | $25 | $5500, day 18 | 0.30 | Cannot be sealed without the Improved Sealer ✅ |
+| Deep-Sea Ruins | 2.6 | $16 | $2500, day 14 | 0.80 | Clear water: movement seen at ×1.4 ✅ |
+| Celestial Observatory | 3.5 | $25 | $4500, day 18 | 0.30 | Cannot be sealed without the Improved Sealer ✅ |
 
 **Upgrades** (✅ = has a working effect in the prototype)
 
@@ -285,14 +309,18 @@ Tiers: Flawed < 0.35 ≤ Standard < 0.65 ≤ Fine < 0.85 ≤ Exquisite.
 | Preparation Cradle | $60 | Handling | 1 | Characters slip during injection; timing zone +60% | — | ✅ |
 | Better Injector | $100 | Handling | 1 | Serum window ×1.5 | — | ✅ |
 | Assembly Jig | $150 | Speed | 1 | Assembly ×0.6 time, dome alignment +0.15 | — | ✅ |
-| Short Conveyor | $250 | Automation | 3 | Walking globes sealer→packaging | +1 power; Heavy jams | ⬜ |
+| Short Conveyor | $250 | Automation | 3 | Walking globes sealer→packaging | +1 power; Heavy jams | ✅ |
 | Improved Sealer | $400 | Quality | 2 | Seal defects ×0.4 | +1 power, hum | ✅ |
 | Basement Soundproofing | $500 | Secrecy | 2 | Basement noise leak ×0.35 | You hear less too | ✅ |
-| Packaging Machine | $650 | Automation | 4 | Hand boxing | Capped "good" packaging score | ⬜ |
+| Packaging Machine | $650 | Automation | 4 | Hand boxing | Capped "good" packaging score | ✅ |
 | Premium Display Case | $800 | Storage | 3 | +4 slots; movement there ×0.5 visible | — | ✅ |
-| Automated Prep Station | $1000 | Automation | 5 | Hand injection | +2 power, average timing | ⬜ |
+| Automated Prep Station | $1000 | Automation | 5 | Hand injection | +2 power, average timing | ✅ |
+| Security Cameras | $700 | Secrecy | 6 | Watching three floors at once | +1 power; the feeds show things | ✅ |
+| Rewired Fuse Box | $1200 | Handling | 10 | Power capacity +5 (3 → 8) | — | ✅ |
+| Sealing Press | $1800 | Automation | 12 | Fits and seals domes by itself (70% dome score) | +2 power, noise | ✅ |
+| Window Display | $1600 | Appeal | 15 | Walk-ins ×1.25 | People stare in after closing | ✅ |
 
-Power capacity is 3. Going over it makes power failures more likely in the director's weighting.
+Power capacity is 3 (8 with the Rewired Fuse Box). Going over it makes power failures more likely in the director's weighting, and machines wear 1.5× faster. A fully automated line draws 9.
 
 **Day introductions**
 
@@ -301,7 +329,7 @@ Power capacity is 3. Going over it makes power failures more likely in the direc
 | 1 | Basic assembly and sales. No seal defects, no threats |
 | 2 | Seal defects can occur (minor movement); escape attempts possible; Improved Sealer and Soundproofing unlock |
 | 3 | The Wiggler; conveyor and premium case unlock |
-| 4 | ⬜ Customers handle globes; ⬜ special orders |
+| 4 | Customers handle globes; special orders |
 | 5 | Scripted power failure 90 game-minutes after opening |
 
 **Secrecy numbers**

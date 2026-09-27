@@ -12,6 +12,8 @@ namespace SnowGlobe.Core
         public const int SerumChargeCost = 2;
         public const int PackagingCost = 3;
         public const int DailyOperatingCost = 25;
+        /// <summary>Nightly electricity per unit of machine power draw.</summary>
+        public const int ElectricityPerPowerUnit = 6;
 
         // Emergency supply order (anti-bankruptcy valve).
         public const int EmergencyUnits = 2;

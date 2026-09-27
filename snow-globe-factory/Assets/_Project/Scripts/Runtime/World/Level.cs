@@ -49,7 +49,9 @@ namespace SnowGlobe.Game
         public OrderBoard OrderBoard;
         public SecurityDesk SecurityDesk;
         // Automation (Milestone 3): shown once the matching upgrade is installed.
-        public GameObject AutoPrepRig, ConveyorRig, PackagerRig;
+        public GameObject AutoPrepRig, ConveyorRig, PackagerRig, SealPressRig;
+        /// <summary>Window Display upgrade: a lit stand of globes facing the street.</summary>
+        public GameObject WindowDisplay;
         public SnapSocket PrepHopper;
         public ConveyorView Conveyor;
         public SnapSocket[] OutputSlots = new SnapSocket[AutomationService.OutputShelfCapacity];

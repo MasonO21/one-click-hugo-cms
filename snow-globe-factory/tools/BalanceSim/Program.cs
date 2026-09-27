@@ -20,13 +20,45 @@ namespace SnowGlobe.BalanceSim
         const float PreOpeningSeconds = 120f;
         const float ServeSeconds = 8f;
         const float Skill = 0.65f;
+        const int MaxPurchasesPerMorning = 3;
 
-        static readonly UpgradeId[] UpgradeOrder =
+        sealed class PlanItem
         {
-            UpgradeId.PrepCradle, UpgradeId.BetterInjector, UpgradeId.AssemblyJig, UpgradeId.ImprovedSealer,
-            UpgradeId.ShortConveyor, UpgradeId.PremiumDisplayCase, UpgradeId.PackagingMachine, UpgradeId.AutoPrepStation,
-            // Secrecy upgrades have no modelled payoff here (no suspicion model), so they come last.
-            UpgradeId.BasementSoundproofing, UpgradeId.SecurityCameras,
+            public string Name;
+            public int Cost;
+            public Func<GameSession, bool> Owned;
+            public Func<GameSession, int, bool> Available;
+            public Func<GameSession, ActionResult> Buy;
+        }
+
+        static PlanItem Upgrade(UpgradeId id)
+        {
+            var d = UpgradeCatalog.Get(id);
+            return new PlanItem { Name = d.Name, Cost = d.Cost, Owned = s => s.Upgrades.Owns(id), Available = (s, day) => d.UnlockDay <= day, Buy = s => s.Upgrades.Purchase(id) };
+        }
+
+        static PlanItem Theme(ThemeId id)
+        {
+            var d = ThemeCatalog.Get(id);
+            return new PlanItem
+            {
+                Name = d.DisplayName + " theme", Cost = d.UnlockCost, Owned = s => s.Themes.IsUnlocked(id), Buy = s => s.Themes.Unlock(id),
+                Available = (s, day) => d.UnlockDay <= day && (id != ThemeId.CelestialObservatory || s.Upgrades.Owns(UpgradeId.ImprovedSealer)),
+            };
+        }
+
+        /// <summary>
+        /// A sensible player's shopping list: handling fixes first, then themes and automation interleaved by payback.
+        /// Secrecy and wiring come last because this sim models no suspicion, power cuts or wear.
+        /// </summary>
+        static readonly PlanItem[] ShoppingPlan =
+        {
+            Upgrade(UpgradeId.PrepCradle), Upgrade(UpgradeId.BetterInjector), Upgrade(UpgradeId.AssemblyJig),
+            Theme(ThemeId.WoodlandCabin), Upgrade(UpgradeId.ImprovedSealer), Upgrade(UpgradeId.ShortConveyor),
+            Theme(ThemeId.MedievalCastle), Upgrade(UpgradeId.PackagingMachine), Upgrade(UpgradeId.AutoPrepStation),
+            Upgrade(UpgradeId.PremiumDisplayCase), Theme(ThemeId.HauntedManor), Upgrade(UpgradeId.SealingPress),
+            Theme(ThemeId.DeepSeaRuins), Upgrade(UpgradeId.WindowDisplay), Theme(ThemeId.CelestialObservatory),
+            Upgrade(UpgradeId.RewiredFuseBox), Upgrade(UpgradeId.BasementSoundproofing), Upgrade(UpgradeId.SecurityCameras),
         };
 
         public static int Main(string[] args)
@@ -47,6 +79,7 @@ namespace SnowGlobe.BalanceSim
             if (s.OwnedUpgrades.Contains(UpgradeId.AutoPrepStation)) t -= 14f;
             if (s.OwnedUpgrades.Contains(UpgradeId.ShortConveyor)) t -= 7f;
             if (s.OwnedUpgrades.Contains(UpgradeId.PackagingMachine)) t -= 10f;
+            if (s.OwnedUpgrades.Contains(UpgradeId.SealingPress)) t -= 10f;
             return t;
         }
 
@@ -70,23 +103,27 @@ namespace SnowGlobe.BalanceSim
                 }
                 var bought = new List<string>();
 
-                // --- Morning purchases. Keep enough cash to restock a full day; then the next theme
-                // (the biggest earner) competes with the next upgrade, one purchase per morning.
-                int expectedSalesToday = (int)(OpenSeconds / GameBalance.BaseCustomerIntervalSeconds * 1.2f * DayProgression.FootTrafficMultiplier(day) * (DayProgression.MaxCustomers(day) >= 2 ? 1.4f : 1f));
+                // --- Morning purchases. Keep enough cash to restock a full day. H.'s requests come first
+                // (they're the story, and the rewards pay back); then the next theme (the biggest earner)
+                // competes with the next upgrade. Up to three purchases a morning.
+                int expectedSalesToday = (int)(OpenSeconds / GameBalance.BaseCustomerIntervalSeconds * 1.2f * DayProgression.FootTrafficMultiplier(day) * st.Modifiers.FootTrafficMultiplier * (DayProgression.MaxCustomers(day) >= 2 ? 1.4f : 1f));
                 int reserve = Math.Min(25 * (expectedSalesToday + 3) + 25, 60 + 40 * day);
-                var nextTheme = ThemeCatalog.All.FirstOrDefault(th => !s.Themes.IsUnlocked(th.Id) && th.UnlockDay <= day
-                    && (th.Id != ThemeId.CelestialObservatory || s.Upgrades.Owns(UpgradeId.ImprovedSealer)));
-                var nextUpgrade = UpgradeOrder.Select(UpgradeCatalog.Get).FirstOrDefault(u => !s.Upgrades.Owns(u.Id) && u.UnlockDay <= day);
-                bool themeFirst = nextTheme != null && (nextUpgrade == null || nextTheme.UnlockCost <= nextUpgrade.Cost * 2 || s.Upgrades.Owns(UpgradeId.ShortConveyor));
-                if (themeFirst && st.Wallet.Cash >= nextTheme.UnlockCost + reserve && s.Themes.Unlock(nextTheme.Id).Success)
+                for (int purchase = 0; purchase < MaxPurchasesPerMorning; purchase++)
                 {
-                    bought.Add(nextTheme.DisplayName);
-                    milestones.Add("Day " + day + ": " + nextTheme.DisplayName + " theme");
-                }
-                else if (nextUpgrade != null && st.Wallet.Cash >= nextUpgrade.Cost + reserve && s.Upgrades.Purchase(nextUpgrade.Id).Success)
-                {
-                    bought.Add(nextUpgrade.Name);
-                    milestones.Add("Day " + day + ": " + nextUpgrade.Name);
+                    var ledger = s.Story.RequestOpen ? s.Story.Current : null;
+                    if (ledger != null && !ledger.NeedsGlobe && st.Wallet.Cash >= ledger.Payment + reserve)
+                    {
+                        s.Story.Pay(s.Story.IsFinal(ledger) ? LedgerEnding.Signed : LedgerEnding.None);
+                        bought.Add("Ledger: " + ledger.Title);
+                        milestones.Add("Day " + day + ": ledger '" + ledger.Title + "'");
+                        continue;
+                    }
+                    // The first item on the plan that's available today; save up for it if it's unaffordable.
+                    var next = ShoppingPlan.FirstOrDefault(item => !item.Owned(s) && item.Available(s, day));
+                    if (next == null || st.Wallet.Cash < next.Cost + reserve) break;
+                    if (!next.Buy(s).Success) break;
+                    bought.Add(next.Name);
+                    milestones.Add("Day " + day + ": " + next.Name);
                 }
                 var best = ThemeCatalog.All.Where(t => s.Themes.IsUnlocked(t.Id)).OrderByDescending(t => t.ValueMultiplier).First();
                 s.Themes.Select(best.Id);
@@ -110,6 +147,31 @@ namespace SnowGlobe.BalanceSim
                 TopUp(s, SupplyItem.SerumCharge, toMake - st.Inventory.SerumCharges);
                 TopUp(s, SupplyItem.PackagingBox, toMake - st.Inventory.PackagingBoxes);
                 if (s.Supply.CanRequestEmergencyOrder()) { s.Supply.RequestEmergencyOrder(); s.Supply.Tick(1f); bought.Add("EMERGENCY ORDER"); }
+
+                // --- H. wants a particular globe: build one for the lift crate (inspected), if the theme and figure are available.
+                var wanted = s.Story.RequestOpen ? s.Story.Current : null;
+                if (wanted != null && wanted.NeedsGlobe && (wanted.AnyTheme || s.Themes.IsUnlocked(wanted.Theme))
+                    && ArchetypeCatalog.Get(wanted.Archetype).UnlockDay <= day && s.Supply.OrderCharacter(wanted.Archetype).Success)
+                {
+                    s.Supply.Tick(SupplyService.CharacterDeliverySeconds + 1f);
+                    TopUp(s, SupplyItem.GlobeKit, 1 - st.Inventory.GlobeKits);
+                    TopUp(s, SupplyItem.SerumCharge, 1 - st.Inventory.SerumCharges);
+                    TopUp(s, SupplyItem.PackagingBox, 1 - st.Inventory.PackagingBoxes);
+                    if (!wanted.AnyTheme) s.Themes.Select(wanted.Theme);
+                    var figure = st.Products.First(p => p.Stage == ProductStage.Unprepared && p.Archetype == wanted.Archetype);
+                    var sample = Make(s, figure, rng, inspect: true);
+                    s.Themes.Select(best.Id);
+                    toMake = Math.Max(0, toMake - 1);
+                    string why;
+                    if (sample != null && s.Story.CanSend(sample, out why))
+                    {
+                        ActionResult sent;
+                        s.Story.SendGlobe(sample, out sent);
+                        milestones.Add("Day " + day + ": ledger '" + wanted.Title + "' (globe)");
+                        bought.Add("Sent to H.");
+                    }
+                    else if (sample != null) backstock.Add(sample);
+                }
 
                 // --- Special order: build the pinned one first (day 4+).
                 int ordersFilled = 0;
@@ -143,7 +205,7 @@ namespace SnowGlobe.BalanceSim
                 while (true)
                 {
                     Restock(s, backstock);
-                    float rate = Math.Max(0.2f, st.Exposure.ArrivalRateMultiplier) * s.Store.AppealMultiplier() * DayProgression.FootTrafficMultiplier(day);
+                    float rate = Math.Max(0.2f, st.Exposure.ArrivalRateMultiplier) * s.Store.WalkInMultiplier();
                     float concurrency = DayProgression.MaxCustomers(day) >= 2 ? 1.6f : 1f;
                     t += GameBalance.BaseCustomerIntervalSeconds / (rate * concurrency) * rng.Range(0.6f, 1.4f);
                     if (t > OpenSeconds) break;
@@ -176,7 +238,7 @@ namespace SnowGlobe.BalanceSim
         }
 
         /// <summary>Runs one character through the real production services at the player's skill level.</summary>
-        static Product Make(GameSession s, Product p, DeterministicRandom rng)
+        static Product Make(GameSession s, Product p, DeterministicRandom rng, bool inspect = false)
         {
             float jitter() => MathUtil.Clamp01(Skill + rng.Range(-0.2f, 0.2f));
             p.Location = ProductLocation.At(StationId.PrepCradle);
@@ -190,7 +252,7 @@ namespace SnowGlobe.BalanceSim
             p.Location = ProductLocation.At(StationId.Sealer);
             s.Production.FitDome(p, jitter());
             if (!s.Production.Seal(p, true).Success) return Abandon(s, p);
-            if (rng.Chance(0.5f))
+            if (inspect || rng.Chance(0.5f))
             {
                 p.Location = ProductLocation.At(StationId.Inspection);
                 s.Production.Inspect(p);

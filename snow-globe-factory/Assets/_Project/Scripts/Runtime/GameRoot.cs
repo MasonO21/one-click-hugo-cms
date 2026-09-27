@@ -175,6 +175,8 @@ namespace SnowGlobe.Game
             string orders = posted.Count > 0 ? "\n\n" + posted.Count + " new special order(s) on the board by the counter." : "";
             string note = DayProgression.SupplierNoteFor(Session.State.Day.Day);
             if (note != null) orders += "\n\nA note was tucked into this morning's crate:\n<i>" + note.Substring(note.IndexOf('—') + 2) + "</i>";
+            string ledger = Session.Story.MorningNote();
+            if (ledger != null) orders += "\n\n<i>" + ledger + "</i>\n(See Tab → Notes.)";
             Hud.ShowBriefing("Day " + Session.State.Day.Day, DayProgression.Briefing(Session.State.Day.Day) + orders + "\n\n(Checkpoint saved.)");
         }
 
@@ -275,7 +277,7 @@ namespace SnowGlobe.Game
                     if (v != null) Replace(v);
                     break;
                 case AutomationEventType.Completed:
-                    if (v != null) Audio.Play(e.Machine == MachineId.AutoPrep ? Sfx.Inject : e.Machine == MachineId.PackagingMachine ? Sfx.Chime : Sfx.Tap, v.transform.position, 0.6f);
+                    if (v != null) Audio.Play(e.Machine == MachineId.AutoPrep ? Sfx.Inject : e.Machine == MachineId.PackagingMachine ? Sfx.Chime : e.Machine == MachineId.SealingPress ? Sfx.Hum : Sfx.Tap, v.transform.position, 0.6f);
                     break;
                 case AutomationEventType.Blocked:
                     Hud.Alert(name + ": " + e.Message);
@@ -296,6 +298,8 @@ namespace SnowGlobe.Game
             SetActive(Level.AutoPrepRig, a.Owns(MachineId.AutoPrep));
             SetActive(Level.ConveyorRig, a.Owns(MachineId.Conveyor));
             SetActive(Level.PackagerRig, a.Owns(MachineId.PackagingMachine));
+            SetActive(Level.SealPressRig, a.Owns(MachineId.SealingPress));
+            SetActive(Level.WindowDisplay, Session.State.OwnedUpgrades.Contains(UpgradeId.WindowDisplay));
         }
 
         static void SetActive(GameObject go, bool active)

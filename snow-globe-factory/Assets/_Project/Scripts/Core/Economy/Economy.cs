@@ -112,9 +112,10 @@ namespace SnowGlobe.Core
         {
             var def = ArchetypeCatalog.Get(archetype);
             if (def.UnlockDay > _state.Day.Day) return ActionResult.Fail("The supplier won't send " + def.DisplayName + " until day " + def.UnlockDay + ".");
-            if (!_state.Wallet.TrySpend(def.AcquisitionCost)) return ActionResult.Fail("Not enough cash ($" + def.AcquisitionCost + ").");
+            int cost = StoryRules.CharacterCost(_state, archetype);
+            if (!_state.Wallet.TrySpend(cost)) return ActionResult.Fail("Not enough cash ($" + cost + ").");
             _state.Deliveries.Add(new PendingDelivery { Archetype = archetype, SecondsRemaining = CharacterDeliverySeconds });
-            _state.Day.Stats.Expenses += def.AcquisitionCost;
+            _state.Day.Stats.Expenses += cost;
             return ActionResult.Ok(def.DisplayName + " ordered. Something will knock on the hatch soon.");
         }
 
@@ -140,7 +141,7 @@ namespace SnowGlobe.Core
         /// </summary>
         public bool CanRequestEmergencyOrder()
         {
-            int unitCost = ArchetypeCatalog.Get(ArchetypeId.SleepyOne).AcquisitionCost + GameBalance.GlobeKitCost + GameBalance.SerumChargeCost + GameBalance.PackagingCost;
+            int unitCost = StoryRules.CharacterCost(_state, ArchetypeId.SleepyOne) + GameBalance.GlobeKitCost + GameBalance.SerumChargeCost + GameBalance.PackagingCost;
             if (_state.Wallet.Cash >= unitCost) return false;
             if (_state.EmergencyOrderDay == _state.Day.Day) return false;
             if (_state.Wallet.Debt + GameBalance.EmergencyUnits * GameBalance.EmergencyDebtPerUnit > GameBalance.MaxDebt) return false;

@@ -278,15 +278,18 @@ namespace SnowGlobe.Game
         {
             var o = Occupant;
             if (o == null) return "Sealing machine — place a decorated base here";
+            if (o.P.Stage >= ProductStage.Sealed) return "Sealed — take it to inspection or packaging";
             if (!S.PowerAvailable) return "The sealer is dead. Reset the breaker in the basement.";
+            if (S.Automation.IsRunning(MachineId.SealingPress, S.PowerAvailable)) return "The sealing press is working this (switch to manual at its panel)";
             return o.P.Stage == ProductStage.Decorated ? "E: Fit the dome" : "E: Activate stasis seal";
         }
 
         public override void Interact(PlayerInteractor player)
         {
             var o = Occupant;
-            if (o == null || Busy) return;
+            if (o == null || Busy || o.P.Stage >= ProductStage.Sealed) return;
             if (!S.PowerAvailable) { Root.Toast("No power.", true); return; }
+            if (S.Automation.IsRunning(MachineId.SealingPress, S.PowerAvailable)) return;
             _step = o.P.Stage == ProductStage.Decorated ? Step.Dome : Step.Seal;
             _progress = 0f;
             BeginMinigame(player);
