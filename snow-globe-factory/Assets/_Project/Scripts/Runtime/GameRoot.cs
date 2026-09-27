@@ -72,6 +72,7 @@ namespace SnowGlobe.Game
             Customers.transform.SetParent(transform, false);
             Customers.Init(Level);
             Horror = gameObject.AddComponent<HorrorDirectorRunner>();
+            gameObject.AddComponent<Atmosphere>().Init(Level, Player.Camera);
             Hud = gameObject.AddComponent<Hud>();
 
             // A fresh session renders behind the title screen; the player picks New / Continue.
