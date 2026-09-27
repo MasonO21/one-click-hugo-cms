@@ -151,9 +151,7 @@ namespace SnowGlobe.Game
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
             go.name = name;
-            var col = go.GetComponent<Collider>();
-            col.enabled = false;
-            Object.Destroy(col);
+            RemoveCollider(go);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = center;
             // The built-in quad is visible from its -Z side, so point -Z along "facing".
@@ -189,14 +187,19 @@ namespace SnowGlobe.Game
             go.transform.localPosition = localPos;
             go.transform.localScale = scale;
             go.GetComponent<Renderer>().sharedMaterial = Mat(color);
-            if (!keepCollider)
-            {
-                // Disable now: Destroy is deferred, and a live child collider would join a parent rigidbody for a frame.
-                var col = go.GetComponent<Collider>();
-                col.enabled = false;
-                Object.Destroy(col);
-            }
+            if (!keepCollider) RemoveCollider(go);
             return go;
+        }
+
+        /// <summary>Strips a primitive's built-in collider, in Play mode or while building in the editor.</summary>
+        static void RemoveCollider(GameObject go)
+        {
+            var col = go.GetComponent<Collider>();
+            // Disable now: Destroy is deferred, and a live child collider would join a parent rigidbody for a frame.
+            col.enabled = false;
+            // Destroy isn't allowed outside Play mode (edit-mode tests, editor scene building).
+            if (Application.isPlaying) Object.Destroy(col);
+            else Object.DestroyImmediate(col);
         }
 
         public static GameObject Box(string name, Transform parent, Vector3 center, Vector3 size, Color color, bool collider = true)

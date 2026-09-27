@@ -176,7 +176,8 @@ namespace SnowGlobe.Core.Tests
             Assert.AreEqual(1f, SnowScoring.Score(0.6f, 0.6f));
             Assert.AreEqual(1f, SnowScoring.Score(0.66f, 0.6f));
             Assert.Greater(SnowScoring.Score(0.8f, 0.6f), 0f);
-            Assert.AreEqual(0f, SnowScoring.Score(1f, 0.6f));
+            // Unity's Mono evaluates the boundary to ~6e-8 rather than exactly 0.
+            Assert.AreEqual(0f, SnowScoring.Score(1f, 0.6f), 1e-5f);
         }
 
         [Test]

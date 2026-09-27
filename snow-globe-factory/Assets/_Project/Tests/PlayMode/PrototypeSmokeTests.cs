@@ -28,9 +28,18 @@ namespace SnowGlobe.Game.Tests
             yield return null;
         }
 
+        [SetUp]
+        public void SetUp()
+        {
+            // StartNewGame writes a checkpoint; keep it away from the real save folder.
+            SaveSystem.DirectoryOverride = System.IO.Path.Combine(Application.temporaryCachePath, "SmokeTestSaves");
+            System.IO.Directory.CreateDirectory(SaveSystem.DirectoryOverride);
+        }
+
         [TearDown]
         public void TearDown()
         {
+            SaveSystem.DirectoryOverride = null;
             Time.timeScale = 1f;
             if (_boot != null) Object.Destroy(_boot);
             foreach (var v in Object.FindObjectsByType<ProductView>(FindObjectsSortMode.None)) Object.Destroy(v.gameObject);

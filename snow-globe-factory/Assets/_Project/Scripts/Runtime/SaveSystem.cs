@@ -12,9 +12,14 @@ namespace SnowGlobe.Game
     /// </summary>
     public sealed class SaveSystem : IGameStateSerializer
     {
-        public string SavePath { get { return Path.Combine(Application.persistentDataPath, "snowglobe_save.json"); } }
+        /// <summary>When set, saves go here instead of persistentDataPath (tests use it to keep the player's saves untouched).</summary>
+        public static string DirectoryOverride;
+
+        static string SaveDirectory { get { return DirectoryOverride ?? Application.persistentDataPath; } }
+
+        public string SavePath { get { return Path.Combine(SaveDirectory, "snowglobe_save.json"); } }
         /// <summary>Written automatically at the start of every day; used for closure recovery.</summary>
-        public string CheckpointPath { get { return Path.Combine(Application.persistentDataPath, "snowglobe_checkpoint.json"); } }
+        public string CheckpointPath { get { return Path.Combine(SaveDirectory, "snowglobe_checkpoint.json"); } }
 
         public string Serialize(GameState state) { return JsonUtility.ToJson(state, true); }
 
