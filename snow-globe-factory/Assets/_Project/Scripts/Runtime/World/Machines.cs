@@ -54,7 +54,7 @@ namespace SnowGlobe.Game
             }
             var m = S.Automation.Get(Machine);
             GameRoot.I.Toast(S.Automation.SetEnabled(Machine, !m.Enabled).Message);
-            GameRoot.I.Audio.Play(Sfx.Tap, transform.position);
+            GameRoot.I.Audio.Play(Sfx.Click, transform.position, 0.7f);
         }
 
         public string SecondaryPrompt(PlayerInteractor player)

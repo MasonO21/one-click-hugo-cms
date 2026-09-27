@@ -17,6 +17,20 @@ namespace SnowGlobe.Game
         Chime,
         Thump,
         Squeak,
+        // Recorded foley (Kenney CC0, Resources/Audio); each has several variants.
+        Footstep,
+        FootstepConcrete,
+        DoorOpen,
+        DoorClose,
+        Creak,
+        Latch,
+        Click,
+        Coins,
+        GlassClink,
+        SoftThud,
+        BoxBump,
+        Cloth,
+        PageFlip,
     }
 
     /// <summary>
@@ -28,6 +42,8 @@ namespace SnowGlobe.Game
         const int Rate = 44100;
 
         readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
+        readonly Dictionary<Sfx, AudioClip[]> _variants = new Dictionary<Sfx, AudioClip[]>();
+        float _creakTimer = 25f;
         AudioSource _music;
         AudioSource _ambience;
         float _musicDuck = 1f;
@@ -51,8 +67,50 @@ namespace SnowGlobe.Game
             _clips[Sfx.Tick] = Tone("tick", 0.05f, t => Mathf.Sin(t * 2f * Mathf.PI * 2000f) * Mathf.Exp(-t * 120f));
             _clips[Sfx.Thump] = Tone("thump", 0.3f, t => Mathf.Sin(t * 2f * Mathf.PI * (90f - 60f * t)) * Mathf.Exp(-t * 12f));
 
+            Recorded(Sfx.Footstep, Numbered("footstep_wood_", 5));
+            Recorded(Sfx.FootstepConcrete, Numbered("footstep_concrete_", 5));
+            Recorded(Sfx.DoorOpen, "doorOpen_1", "doorOpen_2");
+            Recorded(Sfx.DoorClose, "doorClose_1", "doorClose_2", "doorClose_3", "doorClose_4");
+            Recorded(Sfx.Creak, "creak1", "creak2", "creak3");
+            Recorded(Sfx.Latch, "metalLatch");
+            Recorded(Sfx.Click, "metalClick");
+            Recorded(Sfx.Coins, "handleCoins", "handleCoins2");
+            Recorded(Sfx.GlassClink, Numbered("impactGlass_light_", 5));
+            Recorded(Sfx.SoftThud, Numbered("impactSoft_medium_", 5));
+            Recorded(Sfx.BoxBump, Numbered("impactWood_light_", 5));
+            Recorded(Sfx.Cloth, "cloth1", "cloth2", "cloth3");
+            Recorded(Sfx.PageFlip, "bookFlip1", "bookFlip2");
+
             _music = MakeLoop("MusicBox", storeCenter, MusicBox(), 18f, Settings.MusicVolume);
             _ambience = MakeLoop("BasementAmbience", basementCenter, Tone("drone", 4f, t => (Mathf.Sin(t * 2f * Mathf.PI * 43f) * 0.3f + Noise() * 0.05f) * (0.7f + 0.3f * Mathf.Sin(t * 1.5f))), 14f, 0.35f);
+        }
+
+        static string[] Numbered(string prefix, int count)
+        {
+            var names = new string[count];
+            for (int i = 0; i < count; i++) names[i] = prefix + i.ToString("000");
+            return names;
+        }
+
+        /// <summary>Loads recorded variants from Resources/Audio; missing files are skipped (that sound is then silent).</summary>
+        void Recorded(Sfx sfx, params string[] names)
+        {
+            var list = new List<AudioClip>();
+            foreach (var n in names)
+            {
+                var c = Resources.Load<AudioClip>("Audio/" + n);
+                if (c != null) list.Add(c);
+            }
+            if (list.Count > 0) _variants[sfx] = list.ToArray();
+        }
+
+        AudioClip Pick(Sfx sfx, out bool recorded)
+        {
+            AudioClip[] v;
+            recorded = _variants.TryGetValue(sfx, out v);
+            if (recorded) return v[Random.Range(0, v.Length)];
+            AudioClip c;
+            return _clips.TryGetValue(sfx, out c) ? c : null;
         }
 
         AudioSource MakeLoop(string name, Vector3 pos, AudioClip clip, float maxDistance, float volume)
@@ -76,15 +134,36 @@ namespace SnowGlobe.Game
         {
             _musicDuck = Mathf.MoveTowards(_musicDuck, _musicDuckTarget, Time.deltaTime * 0.5f);
             if (_music != null) _music.volume = Settings.MusicVolume * _musicDuck;
+            AmbientCreaks();
         }
+
+        /// <summary>Now and then, somewhere in the dark behind you, the basement creaks. Atmosphere only: no customer can hear it.</summary>
+        void AmbientCreaks()
+        {
+            var root = GameRoot.I;
+            if (root == null || root.Player == null || Time.deltaTime <= 0f) return;
+            var pos = root.Player.transform.position;
+            if (root.Level.AreaOf(pos) != SnowGlobe.Core.PlayerArea.Basement) return;
+            _creakTimer -= Time.deltaTime;
+            if (_creakTimer > 0f) return;
+            _creakTimer = Random.Range(18f, 40f);
+            var behind = -root.Player.transform.forward * Random.Range(5f, 9f) + Random.insideUnitSphere * 2f;
+            behind.y = 1.5f;
+            Play(Sfx.Creak, pos + behind, 0.3f, Random.Range(0.75f, 0.95f));
+        }
+
+        /// <summary>True if the sound has a clip (synthesized or recorded).</summary>
+        public bool Has(Sfx sfx) { return _variants.ContainsKey(sfx) || _clips.ContainsKey(sfx); }
 
         /// <summary>Music dropout horror beat: the shop goes quiet and other sounds become audible.</summary>
         public void SetMusicDucked(bool ducked) { _musicDuckTarget = ducked ? 0f : 1f; }
 
         public void Play(Sfx sfx, Vector3 position, float volume = 1f, float pitch = 1f)
         {
-            AudioClip clip;
-            if (!_clips.TryGetValue(sfx, out clip)) return;
+            bool recorded;
+            var clip = Pick(sfx, out recorded);
+            if (clip == null) return;
+            if (recorded) pitch *= Random.Range(0.94f, 1.06f);
             var go = new GameObject("sfx_" + sfx);
             go.transform.position = position;
             var src = go.AddComponent<AudioSource>();
@@ -101,8 +180,9 @@ namespace SnowGlobe.Game
 
         public void Play2D(Sfx sfx, float volume = 1f)
         {
-            AudioClip clip;
-            if (!_clips.TryGetValue(sfx, out clip)) return;
+            bool recorded;
+            var clip = Pick(sfx, out recorded);
+            if (clip == null) return;
             var go = new GameObject("sfx2d_" + sfx);
             var src = go.AddComponent<AudioSource>();
             src.clip = clip;

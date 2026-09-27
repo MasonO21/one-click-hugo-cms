@@ -177,7 +177,12 @@ namespace SnowGlobe.Game
             _holdYaw = 0f;
             _holdPitch = 0f;
             Controller.SpeedMultiplier = v.P.Definition.Special == SpecialBehavior.HeavyLoad ? 0.7f : 1f;
-            root.Audio.Play(v.P.Stage == ProductStage.Unprepared ? Sfx.Squeak : Sfx.Tap, v.transform.position, 0.6f);
+            if (v.P.Stage == ProductStage.Unprepared)
+            {
+                root.Audio.Play(Sfx.Squeak, v.transform.position, 0.6f);
+                root.Audio.Play(Sfx.Cloth, v.transform.position, 0.5f);
+            }
+            else root.Audio.Play(v.P.Stage == ProductStage.Packaged ? Sfx.BoxBump : Sfx.GlassClink, v.transform.position, 0.3f);
         }
 
         public void Release()

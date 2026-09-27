@@ -291,6 +291,22 @@ namespace SnowGlobe.Game.Tests
             for (int i = 0; i < 10; i++) yield return null; // renders without errors
         }
 
+        // M6: every sound effect has audio, and the bundled models load (so neither silently falls back).
+        [UnityTest]
+        public IEnumerator Audio_And_Models_AllLoad()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            foreach (Sfx sfx in System.Enum.GetValues(typeof(Sfx)))
+                Assert.IsTrue(root.Audio.Has(sfx), "no audio for " + sfx);
+            foreach (var path in new[] { "Characters/character-female-a", "Holiday/tree-decorated", "Furniture/pottedPlant", "Factory/box-small" })
+                Assert.IsNotNull(Models.Prefab(path), "missing model " + path);
+            var c = root.Customers.SpawnNow();
+            yield return null;
+            Assert.IsNotNull(c.GetComponentInChildren<PersonModel>(), "customers use the character models");
+            Assert.IsNotNull(c.GetComponentInChildren<Animation>(), "with their animations");
+        }
+
         // §9.11: open, auto-close at 5 pm, summary with bills, next day with a checkpoint.
         [UnityTest]
         public IEnumerator DayLoop_AutoClosesAtFive_BillsAndCheckpointsTheNextDay()

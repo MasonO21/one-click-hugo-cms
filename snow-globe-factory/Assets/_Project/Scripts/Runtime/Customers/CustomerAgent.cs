@@ -57,6 +57,8 @@ namespace SnowGlobe.Game
         /// <summary>A displayed globe this customer has picked up for a closer look (day 4+).</summary>
         public ProductView Handled;
         PersonModel _look;
+        float _eyeHeight = 1.62f;
+        float _stepDistance;
         float _handleTimer;
         bool _handledThisStop;
         ThemeId _preferred;
@@ -82,7 +84,8 @@ namespace SnowGlobe.Game
 
             // Kenney's characters are chunky, big-headed people: 1.5 m tall with eyes about 1.25 m up.
             _look = PersonModel.Attach(transform, id, 1.5f);
-            Head = Shapes.Empty("Head", transform, new Vector3(0f, _look != null ? 1.25f : 1.62f, 0f)).transform;
+            _eyeHeight = _look != null ? 1.25f : 1.62f;
+            Head = Shapes.Empty("Head", transform, new Vector3(0f, _eyeHeight, 0f)).transform;
             if (_look == null)
             {
                 // Placeholder body if the character models are missing.
@@ -271,7 +274,13 @@ namespace SnowGlobe.Game
             transform.position += Vector3.ClampMagnitude(to.normalized * speed * dt, to.magnitude);
             FaceTowards(transform.position + to, dt);
             // Little bob so they don't glide.
-            Head.localPosition = new Vector3(0f, 1.62f + Mathf.Abs(Mathf.Sin(Time.time * 8f)) * 0.03f, 0f);
+            Head.localPosition = new Vector3(0f, _eyeHeight + Mathf.Abs(Mathf.Sin(Time.time * 8f)) * 0.03f, 0f);
+            _stepDistance += speed * dt;
+            if (_stepDistance > (State == CustomerState.Fleeing ? 0.9f : 0.6f))
+            {
+                _stepDistance = 0f;
+                Root.Audio.Play(Sfx.Footstep, transform.position, State == CustomerState.Fleeing ? 0.3f : 0.14f);
+            }
         }
 
         void FaceTowards(Vector3 point, float dt)
@@ -392,6 +401,7 @@ namespace SnowGlobe.Game
             Root.Toast(fee > 0 ? r.Message + " (Assistant's cut: $" + fee + ")" : r.Message, !r.Success);
             if (price <= 0) return;
             Root.Audio.Play(Sfx.Chime, transform.position);
+            Root.Audio.Play(Sfx.Coins, _level.Counter.transform.position, 0.6f);
             Root.OnProductSold(p);
             if (_look != null) _look.Gesture("interact-right");
             ChosenProduct = null;

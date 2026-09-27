@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SnowGlobe.Core;
 using UnityEngine;
 
 namespace SnowGlobe.Game
@@ -73,6 +74,12 @@ namespace SnowGlobe.Game
             if (AllowMultiple) { if (!Occupants.Contains(v)) Occupants.Add(v); }
             else Occupant = v;
             v.AttachTo(this);
+            if (GameRoot.I != null && v.P != null)
+            {
+                var st = v.P.Stage;
+                var sfx = st == ProductStage.Packaged ? Sfx.BoxBump : st >= ProductStage.Domed ? Sfx.GlassClink : Sfx.SoftThud;
+                GameRoot.I.Audio.Play(sfx, v.transform.position, sfx == Sfx.GlassClink ? 0.35f : 0.45f);
+            }
             if (Placed != null) Placed(v);
         }
 

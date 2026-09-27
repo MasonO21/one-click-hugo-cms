@@ -96,7 +96,12 @@ namespace SnowGlobe.Game
             bool lockedToStation = Root.Interactor.LockedStation != null;
             if (!_title && !_summary && !_briefing)
             {
-                if (GameInput.MenuDown && !lockedToStation) { _menu = !_menu; _paused = false; }
+                if (GameInput.MenuDown && !lockedToStation)
+                {
+                    _menu = !_menu;
+                    _paused = false;
+                    if (_menu) Root.Audio.Play2D(Sfx.PageFlip, 0.5f);
+                }
                 else if (GameInput.PauseDown && !lockedToStation)
                 {
                     if (_menu) _menu = false;

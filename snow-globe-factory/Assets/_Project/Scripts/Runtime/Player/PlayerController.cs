@@ -56,6 +56,20 @@ namespace SnowGlobe.Game
             _cc.enabled = true;
         }
 
+        float _stepDistance;
+
+        /// <summary>Wooden floorboards upstairs, concrete in the basement.</summary>
+        void Footsteps(float speed)
+        {
+            if (!_cc.isGrounded || speed < 0.5f || GameRoot.I == null) { _stepDistance = 0f; return; }
+            _stepDistance += speed * Time.deltaTime;
+            float stride = speed > WalkSpeed * 1.2f ? 0.95f : 0.7f;
+            if (_stepDistance < stride) return;
+            _stepDistance = 0f;
+            bool basement = transform.position.y < Level.BasementFloorY + 1.5f;
+            GameRoot.I.Audio.Play(basement ? Sfx.FootstepConcrete : Sfx.Footstep, transform.position, basement ? 0.35f : 0.28f);
+        }
+
         public void AddShake(float amount)
         {
             _shake = Mathf.Max(_shake, amount * Settings.CameraShake);
@@ -86,6 +100,7 @@ namespace SnowGlobe.Game
             _verticalVelocity += Physics.gravity.y * Time.deltaTime;
             move.y = _verticalVelocity;
             _cc.Move(move * Time.deltaTime);
+            Footsteps(new Vector3(move.x, 0f, move.z).magnitude);
 
             // Camera shake decays quickly; scaled by the accessibility setting.
             _shake = Mathf.MoveTowards(_shake, 0f, Time.deltaTime * 2f);

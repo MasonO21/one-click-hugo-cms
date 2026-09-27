@@ -15,7 +15,9 @@ namespace SnowGlobe.Game
         {
             if (IsOpen == open) return;
             IsOpen = open;
-            if (GameRoot.I != null) GameRoot.I.Audio.Play(Sfx.Thump, transform.position, 0.3f, open ? 1.3f : 0.9f);
+            if (GameRoot.I == null) return;
+            if (Label.StartsWith("cabinet")) GameRoot.I.Audio.Play(Sfx.Latch, transform.position, 0.45f, open ? 1.1f : 0.9f);
+            else GameRoot.I.Audio.Play(open ? Sfx.DoorOpen : Sfx.DoorClose, transform.position, 0.55f);
         }
 
         public string Prompt(PlayerInteractor player) { return (IsOpen ? "E: Close " : "E: Open ") + Label; }
