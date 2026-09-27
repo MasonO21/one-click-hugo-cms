@@ -56,6 +56,46 @@ namespace SnowGlobe.Core.Tests
             Assert.IsFalse(Showcase.CanShake(TestFlow.FirstHolding(s)), "only sealed globes");
         }
 
+        // ------------------------------------------------------------ biting
+
+        [Test]
+        public void Bite_OnlyAHeldCharacter_RemovesIt_AndUnsettlesTheRest()
+        {
+            var s = OnDay(3);
+            var p = TestFlow.FirstHolding(s);
+            Assert.IsFalse(s.Production.Bite(p).Success, "not while it's sitting in a cabinet");
+            p.Location = ProductLocation.Carried();
+            Assert.IsTrue(ProductionService.CanBite(p));
+            var others = s.State.Products.FindAll(o => o != p);
+            float stressBefore = others[0].Stress;
+            int count = s.State.Products.Count;
+
+            TestFlow.Ok(s.Production.Bite(p));
+            Assert.AreEqual(count - 1, s.State.Products.Count, "gone for good");
+            Assert.IsNull(s.State.Find(p.Id));
+            Assert.AreEqual(1, s.State.Day.Stats.CharactersEaten);
+            Assert.AreEqual(stressBefore + ProductionService.BiteStress, others[0].Stress, 1e-4f, "the others get restless");
+            Assert.IsFalse(s.Production.Bite(p).Success, "only once");
+        }
+
+        [Test]
+        public void Bite_NeverOnAGlobe()
+        {
+            var s = OnDay(3);
+            var g = Displayed(s);
+            g.Location = ProductLocation.Carried();
+            Assert.IsFalse(ProductionService.CanBite(g), "a mounted or sealed figure can't be bitten");
+        }
+
+        [Test]
+        public void WitnessingABite_AlarmsInstantly()
+        {
+            var sus = new CustomerSuspicion();
+            Assert.IsTrue(sus.Witness(EvidenceType.WitnessedBite, 1f, 1f, -1));
+            Assert.AreEqual(SuspicionStage.Alarmed, sus.Stage);
+            Assert.IsTrue(sus.SawUndeniable);
+        }
+
         // ------------------------------------------------------------ collectors
 
         [Test]

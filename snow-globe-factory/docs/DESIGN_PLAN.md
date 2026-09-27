@@ -76,7 +76,7 @@ Main decisions the player makes:
 | 8 | Saving a physics-heavy world | Saves are only allowed when the shop is closed and no emergency is running. A checkpoint is saved automatically every morning. `SaveValidator` repairs any inconsistency (carried → safe spot, escaped → recaptured, bad shelf links cleared) and never deletes a product |
 | 9 | Business closure fail state vs relaxed play | Closure needs exposure ≥ 90, at least 3 serious incidents, **and** a warning on an earlier day. Recovery reloads that morning's checkpoint |
 | 10 | Unavoidable bankruptcy | Bills you can't pay become debt, not negative cash. An emergency supply order (2 full units, $40 of debt) is offered when you are broke and have nothing to sell. Debt is repaid from 50% of each sale |
-| 11 | Dark premise vs "no gore" | Serum and stasis are clearly fictional: a charge count, a countdown and an integrity number. There is no action that harms a character. A rejected globe returns its character, unharmed, to holding. The horror comes from atmosphere and implication |
+| 11 | Dark premise vs "no gore" | Serum and stasis are clearly fictional: a charge count, a countdown and an integrity number. The one deliberate exception is the author's choice to let the player **bite a held character's head off** (§5f): it's bloodless and cartoonish, and it's a costly, witnessed act rather than a mechanic the game rewards. A rejected globe returns its character, unharmed, to holding. The horror comes from atmosphere and implication |
 | 12 | "Tiny" vs readable and grabbable in first person | Characters are about 24 cm tall with big heads and eyes. Globes are about 30 cm. The camera near-clip is 3 cm |
 | 13 | "Basement beneath the backroom" vs simple greybox geometry | The basement is a tall vault behind and below the backroom, 4 m down by a flight of stairs. No holes in the floor are needed |
 | 14 | Upgrades "after closing" vs instant fixes | Upgrades can be bought only while closed. Supplies and characters can be ordered at any time |
@@ -259,6 +259,13 @@ Three additions that give moment-to-moment choices, all built on existing system
   order, *no customer leaves unsettled*), shown in a HUD card under the status card, with a small cash reward each and a
   streak bonus for clearing all three. Kept small on purpose (see `BALANCE.md` tuning 7).
 
+**Bite the head off (B), added at the author's request.** While holding an awake or stilled character (never one on a
+globe), press **B**. It's bloodless and cartoonish: a crunch, the head flies to the camera and vanishes, and the limp
+body drops and fades. The character is gone for good (its value with it), and it's counted in the day summary. Every
+other waiting character gets more restless (+0.35 stress, so noisier through the staff door), and the basement figures
+all turn to stare and then go silent. A customer who sees it gets the new *WitnessedBite* evidence, which is always
+undeniable, alarms them instantly, and makes them flee. So it's a dark joke with a real price, not an exploit.
+
 ## 6. Milestone roadmap
 
 | Milestone | Goal | Contents | Exit criteria |
@@ -370,7 +377,7 @@ Power capacity is 3 (8 with the Rewired Fuse Box). Going over it makes power fai
 | **Perception fairness and cost** | Players must be able to explain every suspicion rise | Perception runs at 4 Hz per customer with LOS raycasts to candidates only. The core is unit-tested. ⬜ Debug overlay drawing each customer's vision cone and last evidence |
 | **Save consistency with a live physics world** | Duplicate or lost products break trust | Core state is authoritative. Saves happen only when closed and calm. A validator runs on load, and tests cover duplicates, carried, escaped and broken shelf links. M2: JsonUtility round-trip EditMode test |
 | **Automation throughput vs "no product ever disappears"** | Queues and conveyors create edge cases | ⬜ Model queues in Core first, with capacity and blocking, then add property-based tests (random operations → products conserved) before building any conveyor object |
-| **Tone** | The premise could tip into cruelty | Fictional devices, no harm verbs, rejection returns the character unharmed. Horror comes from implication and atmosphere. Review every new mechanic against this rule |
+| **Tone** | The premise could tip into cruelty | Fictional devices, one bloodless harm verb by the author's choice (biting, with heavy consequences), rejection returns the character unharmed. Horror comes from implication and atmosphere. Review every new mechanic against this rule |
 | **Unity 6 API drift** | Code was written without an editor | Type-checked against 2021.3 reference assemblies (`tools/typecheck-unity.sh`). First task of M2 is to open it in Unity 6 and fix anything that appears |
 | **Performance with many displayed figures** | Each figure animates six springs | Posed and Frozen figures are cheap. ⬜ Disable `MiniCharacterBody` updates off-screen and beyond 10 m |
 

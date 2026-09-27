@@ -380,6 +380,64 @@ namespace SnowGlobe.Game.Tests
             Assert.AreEqual((int)(retail * Collectors.Premium + 0.5f), p.SoldPrice, "at double the price");
         }
 
+        // Player's choice: biting a held character's head off in front of a customer.
+        [UnityTest]
+        public IEnumerator Bite_InFrontOfACustomer_RemovesTheCharacter_AndTheyFlee()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var s = root.Session;
+            var cell = root.Level.Cells.First(c => c.Occupant != null);
+            cell.Door.SetOpen(true);
+            var v = cell.Occupant;
+            var p = v.P;
+            root.Player.Teleport(root.Level.PlayerSpawn.position + Vector3.forward * 2f, 0f);
+            yield return null;
+            root.Interactor.Grab(v);
+            Assert.AreEqual(v, root.Interactor.Held);
+            Assert.IsTrue(ProductionService.CanBite(p));
+            // Held items glide to the hands; this one starts in a basement cabinet, so bring it up first.
+            var hands = root.Player.Camera.transform.position + root.Player.Camera.transform.forward * 0.5f;
+            v.Body.position = hands;
+            v.transform.position = hands;
+            for (int i = 0; i < 10; i++) yield return new WaitForFixedUpdate();
+            Assert.Less(Vector3.Distance(v.transform.position, root.Player.Camera.transform.position), 1.2f, "in the player's hands");
+
+            root.OpenShop();
+            var c = root.Customers.SpawnNow();
+            // Stand the customer in front of the player, looking at what they're holding (re-pinned in the bite's own
+            // frame, since their walking AI turns them back toward the door between frames).
+            System.Action pin = () =>
+            {
+                var cam = root.Player.Camera.transform;
+                var spot = cam.position + cam.forward * 1.6f;
+                spot.y = 0f;
+                c.transform.position = spot;
+                var look = v.transform.position - spot;
+                look.y = 0f;
+                c.transform.rotation = Quaternion.LookRotation(look);
+                Physics.SyncTransforms();
+            };
+            for (float t = 0f; t < 0.3f; t += Time.deltaTime) { pin(); yield return null; }
+            pin();
+            var eye = c.Head.position;
+            var to = v.transform.position + Vector3.up * 0.12f - eye;
+            RaycastHit hit;
+            string blocker = Physics.Raycast(eye, to.normalized, out hit, to.magnitude + 0.2f, ~0, QueryTriggerInteraction.Ignore) ? hit.collider.name + " at " + hit.distance.ToString("F2") : "nothing";
+            Assert.IsTrue(c.CanSee(v), "customer can see the held character: dist " + to.magnitude.ToString("F2") + ", angle " + Vector3.Angle(c.transform.forward, to).ToString("F0") + ", ray hits " + blocker + ", held at " + v.transform.position + ", eye " + eye + ", state " + c.State);
+            root.BiteHead(v);
+            yield return null;
+            Assert.IsNull(s.State.Find(p.Id), "gone from the business");
+            Assert.IsFalse(root.Views.ContainsKey(p.Id));
+            Assert.IsNull(root.Interactor.Held);
+            Assert.AreEqual(1, s.State.Day.Stats.CharactersEaten);
+            Assert.AreEqual(SuspicionStage.Alarmed, c.Suspicion.Stage, "the customer saw it");
+            yield return WaitFor(() => c == null || c.State == CustomerState.Fleeing, 2f);
+            Assert.IsTrue(c == null || c.State == CustomerState.Fleeing, "and runs");
+            yield return new WaitForSeconds(2.2f);
+            Assert.IsTrue(v == null, "the body is cleaned up");
+        }
+
         // §9.11: open, auto-close at 5 pm, summary with bills, next day with a checkpoint.
         [UnityTest]
         public IEnumerator DayLoop_AutoClosesAtFive_BillsAndCheckpointsTheNextDay()

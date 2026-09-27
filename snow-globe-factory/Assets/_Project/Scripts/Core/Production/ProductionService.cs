@@ -80,6 +80,31 @@ namespace SnowGlobe.Core
             return MathUtil.Clamp(w, 0.08f, 0.6f);
         }
 
+        public const float BiteStress = 0.35f;
+
+        /// <summary>Only a character in the player's hands, awake or stilled, and not yet mounted on a globe.</summary>
+        public static bool CanBite(Product p)
+        {
+            return p != null && p.Location.Kind == LocationKind.Carried && (p.Stage == ProductStage.Unprepared || p.Stage == ProductStage.Prepared);
+        }
+
+        /// <summary>
+        /// The player bites the character's head off (the player's choice; bloodless and cartoonish on screen). The character
+        /// is gone for good, the day counts it, and every other character still waiting in the building gets more
+        /// restless (noisier). Witnesses are handled by the view layer.
+        /// </summary>
+        public ActionResult Bite(Product p)
+        {
+            if (!CanBite(p)) return ActionResult.Fail("You can only do that to a character you're holding.");
+            _state.Products.Remove(p);
+            p.Location = ProductLocation.Gone();
+            _state.Day.Stats.CharactersEaten++;
+            _state.Day.Stats.Incidents++;
+            foreach (var other in _state.Products)
+                if (other.Stage <= ProductStage.Prepared) other.Stress = MathUtil.Clamp01(other.Stress + BiteStress);
+            return ActionResult.Ok("Crunch. " + p.CharacterName + " is gone.");
+        }
+
         public ActionResult Inject(Product p, float timingScore)
         {
             if (p == null) return ActionResult.Fail("Nobody in the cradle.");

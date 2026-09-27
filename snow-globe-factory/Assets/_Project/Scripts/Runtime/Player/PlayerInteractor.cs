@@ -68,6 +68,11 @@ namespace SnowGlobe.Game
             }
             if (GameInput.InteractDown && Focus != null) Focus.Interact(this);
             if (GameInput.SecondaryDown && SecondaryFocus != null) SecondaryFocus.SecondaryInteract(this);
+            if (GameInput.BiteDown && Held != null && ProductionService.CanBite(Held.P))
+            {
+                root.BiteHead(Held);
+                return;
+            }
             if (GameInput.ShakeDown)
             {
                 var target = Held != null ? Held : FocusProduct;
@@ -158,6 +163,7 @@ namespace SnowGlobe.Game
                     : "LMB: Drop" + (Held.P.Stage == ProductStage.Unprepared ? " (they WILL run)" : "");
                 CarryPrompt += "   ·   RMB+mouse: rotate   ·   F: look closely";
                 if (Showcase.CanShake(Held.P)) CarryPrompt += "   ·   G: shake";
+                if (ProductionService.CanBite(Held.P)) CarryPrompt += "   ·   B: bite its head off";
                 if (Held.P.IsSerumActive) CarryPrompt += "   ·   Q: re-dose serum";
             }
             else if (FocusProduct != null && FocusProduct.P != null)

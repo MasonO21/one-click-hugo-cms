@@ -499,6 +499,7 @@ namespace SnowGlobe.Game
             GUILayout.Label(
                 "Globes produced: " + s.GlobesProduced + "\nGlobes sold: " + s.GlobesSold + "\nCustomers lost: " + s.CustomersLost +
                 "\nKits ruined (woke up): " + s.KitsRuined +
+                (s.CharactersEaten > 0 ? "\nCharacters eaten: " + s.CharactersEaten : "") +
                 "\n\nRevenue: $" + s.Revenue + "\nPurchases: -$" + s.Expenses + "\nOperating cost: -$" + s.OperatingCost +
                 (s.Refunds > 0 ? "\nRefunds (returned globes): -$" + s.Refunds : "") + "\n<b>Net: $" + s.Net + "</b>" +
                 "\n\nBusiness exposure: " + Mathf.RoundToInt(s.Exposure) + "/100 (" + s.ExposureLevel + ")" +
@@ -792,7 +793,7 @@ namespace SnowGlobe.Game
         {
             GUILayout.Label(
                 "<b>Controls</b>\nWASD move · Shift walk faster · Mouse look\nLMB pick up / place (releasing near a valid spot snaps it in)\n" +
-                "E interact / station action · X secondary (reject, offer exchange)\nQ re-dose serum on a prepared character\nRMB + mouse rotate held item · F hold item close to inspect\n" +
+                "E interact / station action · X secondary (reject, offer exchange)\nQ re-dose serum on a prepared character\nRMB + mouse rotate held item · F hold item close to inspect\nG shake a sealed globe (showcase it; weak seals may move!) · B bite the head off a held character\n" +
                 "Tab management · Esc pause / step away from a station · F5 save · F9 load\n\n" +
                 "<b>The line</b>\n1. Basement pen → carry an awake character up to the Preparation Cradle.\n2. Cradle: time the injection (Stillness Serum starts a countdown).\n" +
                 "3. Assembly: pose + face front, pick scenery (1-3), pour snow into the band.\n4. Sealer: drop the dome when centred, then seal (before the serum runs out!).\n" +

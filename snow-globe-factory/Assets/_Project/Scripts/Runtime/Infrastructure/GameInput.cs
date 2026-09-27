@@ -40,6 +40,7 @@ namespace SnowGlobe.Game
         public static bool RotateHeld { get { return M != null && M.rightButton.isPressed; } }
         public static bool InspectHeld { get { return K != null && K.fKey.isPressed; } }
         public static bool ShakeDown { get { return K != null && K.gKey.wasPressedThisFrame; } }
+        public static bool BiteDown { get { return K != null && K.bKey.wasPressedThisFrame; } }
         public static bool MenuDown { get { return K != null && K.tabKey.wasPressedThisFrame; } }
         public static bool PauseDown { get { return K != null && K.escapeKey.wasPressedThisFrame; } }
         public static bool QuickSaveDown { get { return K != null && K.f5Key.wasPressedThisFrame; } }
@@ -99,6 +100,7 @@ namespace SnowGlobe.Game
         public static bool RotateHeld { get { return Input.GetMouseButton(1); } }
         public static bool InspectHeld { get { return Input.GetKey(KeyCode.F); } }
         public static bool ShakeDown { get { return Input.GetKeyDown(KeyCode.G); } }
+        public static bool BiteDown { get { return Input.GetKeyDown(KeyCode.B); } }
         public static bool MenuDown { get { return Input.GetKeyDown(KeyCode.Tab); } }
         public static bool PauseDown { get { return Input.GetKeyDown(KeyCode.Escape); } }
         public static bool QuickSaveDown { get { return Input.GetKeyDown(KeyCode.F5); } }

@@ -32,6 +32,7 @@ namespace SnowGlobe.Game
 
         FigureRig _rig;
         Transform _hips, _head, _armL, _armR, _legL, _legR;
+        public Transform HeadBone { get { return _head; } }
         readonly Vector3[] _ang = new Vector3[6];
         readonly Vector3[] _vel = new Vector3[6];
         float _seed;

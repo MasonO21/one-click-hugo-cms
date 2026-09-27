@@ -55,6 +55,7 @@ Notes:
 | RMB + mouse, scroll | Rotate the held item |
 | F | Hold the item close to look at it |
 | G | Shake a sealed globe (held or on the shelf): showcase it for a minute (+10% price, shoppers drawn to it). A weak seal may let the figure move! |
+| B | Bite the head off the character you're holding (bloodless; it's gone for good, the others get restless, and any customer who sees it flees) |
 | 1 / 2 / 3, A / D, arrows | Station choices (scenery, pose, fold sequence) |
 | Tab | Management: supplies, characters, upgrades, themes, orders, notes, save/load, settings, help |
 | Esc | Pause / step away from a station |

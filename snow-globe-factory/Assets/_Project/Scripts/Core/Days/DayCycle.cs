@@ -18,6 +18,7 @@ namespace SnowGlobe.Core
         public ExposureLevel ExposureLevel;
         public ClosureVerdict Verdict;
         public int GoalsDone, GoalsTotal, GoalBonus;
+        public int CharactersEaten;
         public int Net { get { return Revenue - Expenses - OperatingCost - Refunds; } }
     }
 
@@ -100,6 +101,7 @@ namespace SnowGlobe.Core
             s.GlobesProduced = st.GlobesProduced;
             s.CustomersLost = st.CustomersLost;
             s.KitsRuined = st.KitsRuined;
+            s.CharactersEaten = st.CharactersEaten;
             s.Refunds = st.Refunds;
             if (s.OperatingCost == 0 && D.Phase == DayPhase.AfterClosing) s.OperatingCost = OperatingCost(_state);
             s.Exposure = _state.Exposure.Value;

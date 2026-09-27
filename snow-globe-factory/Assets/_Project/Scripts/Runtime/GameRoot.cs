@@ -457,6 +457,73 @@ namespace SnowGlobe.Game
             foreach (var c in Customers.Active) if (c != null && c.CanSee(v)) c.Delight(v);
         }
 
+        /// <summary>
+        /// The player bites a held character's head off (their choice; bloodless on screen). The character is gone, any
+        /// customer who sees it is instantly alarmed, and down in the basement every figure turns to stare, then goes quiet.
+        /// </summary>
+        public void BiteHead(ProductView v)
+        {
+            var p = v.P;
+            var witnesses = new List<CustomerAgent>();
+            foreach (var c in Customers.Active) if (c != null && c.CanSee(v)) witnesses.Add(c);
+            var r = Session.Production.Bite(p);
+            if (!r.Success) { Toast(r.Message, true); return; }
+            Interactor.ClearHeld();
+            Views.Remove(p.Id);
+            StartCoroutine(BiteRoutine(v));
+            Audio.Play(Sfx.Squeak, v.transform.position, 0.7f, 1.4f);
+            Audio.Play(Sfx.SoftThud, v.transform.position, 0.9f, 0.6f);
+            Audio.Play(Sfx.BoxBump, v.transform.position, 0.6f, 0.5f);
+            Player.AddShake(0.35f);
+            foreach (var c in witnesses) c.WitnessBite();
+            foreach (var cell in Level.Cells) if (cell.Occupant != null) cell.Occupant.LookAt(Player.Camera.transform.position, 12f);
+            SilentUntil = Time.time + 20f;
+            Toast(r.Message + " Down in the basement, every figure turns to look at you.", true);
+        }
+
+        System.Collections.IEnumerator BiteRoutine(ProductView v)
+        {
+            var cam = Player.Camera.transform;
+            // A copy of the head flies to the player's mouth while the real one shrinks away (the rig keeps animating it).
+            var head = v.Figure != null ? v.Figure.HeadBone : null;
+            Transform flying = null;
+            if (head != null)
+            {
+                flying = Instantiate(head.gameObject, head.position, head.rotation).transform;
+                flying.localScale = head.lossyScale;
+                foreach (var mb in flying.GetComponentsInChildren<MonoBehaviour>()) Destroy(mb);
+                foreach (var col in flying.GetComponentsInChildren<Collider>()) Destroy(col);
+                head.localScale = Vector3.zero;
+            }
+            // The body goes limp: no more running about, it just drops.
+            var drop = v.transform.position;
+            v.PlaceFree(drop);
+            if (v.Figure != null) v.Figure.enabled = false;
+            v.enabled = false;
+            if (flying != null)
+            {
+                var start = flying.position;
+                var size = flying.localScale;
+                for (float t = 0f; t < 0.22f; t += Time.deltaTime)
+                {
+                    float k = t / 0.22f;
+                    flying.position = Vector3.Lerp(start, cam.position - cam.up * 0.05f + cam.forward * 0.08f, k);
+                    flying.localScale = size * (1f - k);
+                    yield return null;
+                }
+                Destroy(flying.gameObject);
+            }
+            yield return new WaitForSeconds(1.4f);
+            if (v == null) yield break;
+            var scale = v.transform.localScale;
+            for (float t = 0f; t < 0.4f && v != null; t += Time.deltaTime)
+            {
+                v.transform.localScale = scale * (1f - t / 0.4f);
+                yield return null;
+            }
+            if (v != null) Destroy(v.gameObject);
+        }
+
         public void OnProductSold(Product p)
         {
             ProductView v;

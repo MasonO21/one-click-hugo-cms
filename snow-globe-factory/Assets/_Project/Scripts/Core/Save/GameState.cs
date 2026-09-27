@@ -125,6 +125,7 @@ namespace SnowGlobe.Core
         public int Incidents;
         public int KitsRuined;
         public int Refunds;
+        public int CharactersEaten;
     }
 
     [Serializable]

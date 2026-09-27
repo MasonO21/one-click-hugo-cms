@@ -11,6 +11,7 @@ namespace SnowGlobe.Core
         EscapedCharacter = 3,
         StaffDoorNoise = 4,
         UnpreparedCarriedInPublic = 5,
+        WitnessedBite = 6, // appended: enum values are saved as ints
     }
 
     public sealed class EvidenceDefinition
@@ -27,7 +28,7 @@ namespace SnowGlobe.Core
 
     public static class EvidenceCatalog
     {
-        public const int TypeCount = 6;
+        public const int TypeCount = 7;
         static readonly EvidenceDefinition[] Definitions =
         {
             new EvidenceDefinition { Type = EvidenceType.GlobeMovement, BaseAmount = 14f, UndeniableIntensity = 0.7f, FirstReaction = "Ooh, is that one mechanical?", RepeatReaction = "That one moved. Again." },
@@ -36,6 +37,7 @@ namespace SnowGlobe.Core
             new EvidenceDefinition { Type = EvidenceType.EscapedCharacter, BaseAmount = 50f, AlwaysUndeniable = true, FirstReaction = "WHAT was that?!", RepeatReaction = "THERE'S ANOTHER ONE!" },
             new EvidenceDefinition { Type = EvidenceType.StaffDoorNoise, BaseAmount = 6f, UndeniableIntensity = 2f, FirstReaction = "Busy back there, huh?", RepeatReaction = "Is someone crying back there?" },
             new EvidenceDefinition { Type = EvidenceType.UnpreparedCarriedInPublic, BaseAmount = 45f, AlwaysUndeniable = true, FirstReaction = "Is that... squirming?", RepeatReaction = "It's ALIVE. You're carrying it!" },
+            new EvidenceDefinition { Type = EvidenceType.WitnessedBite, BaseAmount = 100f, AlwaysUndeniable = true, FirstReaction = "Did you just... BITE it?!", RepeatReaction = "You ATE ANOTHER ONE!" },
         };
 
         public static EvidenceDefinition Get(EvidenceType t) { return Definitions[(int)t]; }

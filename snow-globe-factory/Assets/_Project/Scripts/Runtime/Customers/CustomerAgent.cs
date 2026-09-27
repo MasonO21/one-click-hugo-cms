@@ -123,6 +123,12 @@ namespace SnowGlobe.Game
             _level.PathAround(transform.position, target, _waypoints);
         }
 
+        /// <summary>They saw the player bite a character's head off. Nothing will talk them round.</summary>
+        public void WitnessBite()
+        {
+            Witness(EvidenceType.WitnessedBite, 1f, 1f, -1);
+        }
+
         /// <summary>They watched the player shake a globe: a moment of delight, and a softer look at the shop.</summary>
         public void Delight(ProductView v)
         {
