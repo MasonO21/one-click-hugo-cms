@@ -241,6 +241,7 @@ namespace SnowGlobe.Core
             var rng = _state.Rng;
             foreach (var p in _state.Products)
             {
+                if (p.ShowcaseRemaining > 0f) p.ShowcaseRemaining -= dt;
                 if (p.IsSerumActive)
                 {
                     p.SerumRemaining -= dt;

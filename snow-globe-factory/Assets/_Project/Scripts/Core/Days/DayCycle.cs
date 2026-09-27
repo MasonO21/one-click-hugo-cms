@@ -17,6 +17,7 @@ namespace SnowGlobe.Core
         public float Exposure;
         public ExposureLevel ExposureLevel;
         public ClosureVerdict Verdict;
+        public int GoalsDone, GoalsTotal, GoalBonus;
         public int Net { get { return Revenue - Expenses - OperatingCost - Refunds; } }
     }
 
@@ -85,6 +86,7 @@ namespace SnowGlobe.Core
             _state.Wallet.ChargeBill(bill);
             summary.OperatingCost = bill;
             ProcessReturns();
+            GoalRules.EndOfDay(_state);
             summary.Verdict = _state.Exposure.EndOfDay();
             return Summarize(summary);
         }
@@ -102,6 +104,9 @@ namespace SnowGlobe.Core
             if (s.OperatingCost == 0 && D.Phase == DayPhase.AfterClosing) s.OperatingCost = OperatingCost(_state);
             s.Exposure = _state.Exposure.Value;
             s.ExposureLevel = _state.Exposure.Level;
+            s.GoalsDone = _state.Goals.LastDone;
+            s.GoalsTotal = _state.Goals.LastTotal;
+            s.GoalBonus = _state.Goals.LastBonus;
             return s;
         }
 
@@ -131,6 +136,7 @@ namespace SnowGlobe.Core
             D.ClockMinutes = GameBalance.OpeningHourMinutes;
             D.Stats = new DailyStats();
             D.ScriptedIncidentDone = false;
+            GoalRules.NewDay(_state);
             return ActionResult.Ok("Day " + D.Day + ". " + DayProgression.Briefing(D.Day));
         }
     }

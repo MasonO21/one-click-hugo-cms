@@ -202,6 +202,8 @@ namespace SnowGlobe.Core
             _state.Day.Stats.Revenue += paid;
             _state.Day.Stats.GlobesSold++;
             _state.LifetimeGlobesSold++;
+            GoalRules.OnSale(_state, p);
+            GoalRules.OnOrderFulfilled(_state);
             result = ActionResult.Ok("Order #" + o.Id + " delivered to " + o.Customer + ". Paid $" + paid + " (incl. $" + o.Bonus + " bonus).");
             return paid;
         }

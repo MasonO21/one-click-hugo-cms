@@ -99,7 +99,7 @@ namespace SnowGlobe.Core
         public static int RetailPrice(GameState s, Product p)
         {
             int value = QualityModel.EstimateValue(p);
-            return Math.Max(1, (int)(value * PriceMultiplierFor(s) + 0.5f));
+            return Math.Max(1, (int)(value * PriceMultiplierFor(s) * Showcase.PriceMultiplier(p) + 0.5f));
         }
     }
 }

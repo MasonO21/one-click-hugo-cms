@@ -90,24 +90,30 @@ namespace SnowGlobe.Game
             // Rumours keep people away; well-stocked shelves draw them in (store appeal).
             float rate = Mathf.Max(0.2f, exposure.ArrivalRateMultiplier) * root.Session.Store.WalkInMultiplier();
             _timer = GameBalance.BaseCustomerIntervalSeconds / rate * Random.Range(0.6f, 1.4f);
-            Spawn(exposure.CustomerAttentiveness);
+            var collector = Collectors.Roll(root.Session.State, root.Session.State.Rng);
+            var agent = Spawn(exposure.CustomerAttentiveness, collector);
+            if (collector != null)
+            {
+                root.Toast("A collector has come in, looking for " + collector.Describe() + ". They pay double.");
+                root.Audio.Play(Sfx.Bell, _level.CustomerEntrance.position, 0.5f, 0.8f);
+            }
         }
 
-        CustomerAgent Spawn(float attentiveness)
+        CustomerAgent Spawn(float attentiveness, CollectorRequest collector = null)
         {
             var go = new GameObject("Customer");
             go.transform.SetParent(transform, false);
             var agent = go.AddComponent<CustomerAgent>();
-            agent.Init(_nextId++, this, _level, attentiveness);
+            agent.Init(_nextId++, this, _level, attentiveness, collector);
             _active.Add(agent);
             GameRoot.I.Audio.Play(Sfx.Chime, _level.CustomerEntrance.position, 0.5f, 1.5f);
             return agent;
         }
 
         /// <summary>Brings a customer in right away, ignoring the arrival timer (tests and debugging).</summary>
-        public CustomerAgent SpawnNow()
+        public CustomerAgent SpawnNow(CollectorRequest collector = null)
         {
-            return Spawn(GameRoot.I.Session.State.Exposure.CustomerAttentiveness);
+            return Spawn(GameRoot.I.Session.State.Exposure.CustomerAttentiveness, collector);
         }
 
         public void Remove(CustomerAgent agent)

@@ -34,6 +34,7 @@ namespace SnowGlobe.Core
         public AutomationState Automation = new AutomationState();
         public StoryState Story = new StoryState();
         public ReputationState Reputation = new ReputationState();
+        public GoalState Goals = new GoalState();
         public DeterministicRandom Rng = new DeterministicRandom(12345);
         public int EmergencyOrderDay;
         public int LifetimeGlobesSold;
@@ -46,6 +47,7 @@ namespace SnowGlobe.Core
             var s = new GameState();
             s.Rng = new DeterministicRandom(seed);
             s.UnlockedThemes.Add(ThemeId.WinterVillage);
+            GoalRules.NewDay(s);
             s.Store.EnsureCapacity(s.ShelfCapacity);
             for (int i = 0; i < GameBalance.StartingCharacters; i++)
             {

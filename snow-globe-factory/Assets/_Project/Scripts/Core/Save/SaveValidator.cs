@@ -29,6 +29,13 @@ namespace SnowGlobe.Core
             if (s.Orders == null) s.Orders = new List<SpecialOrder>();
             if (s.Story == null) s.Story = new StoryState();
             if (s.Reputation == null) s.Reputation = new ReputationState();
+            if (s.Goals == null) s.Goals = new GoalState();
+            if (s.Goals.Today == null) s.Goals.Today = new List<DailyGoal>();
+            if (s.Goals.Day != s.Day.Day || s.Goals.Today.Count == 0)
+            {
+                log.Add("Daily goals missing or stale; generated for day " + s.Day.Day + ".");
+                GoalRules.NewDay(s, new DeterministicRandom(s.Rng.State ^ (uint)(s.Day.Day * 7919 + 1)));
+            }
             if (s.Reputation.RefitTier < 0 || s.Reputation.RefitTier > ReputationService.MaxRefitTier)
             {
                 log.Add("Refit tier " + s.Reputation.RefitTier + " out of range; clamped.");

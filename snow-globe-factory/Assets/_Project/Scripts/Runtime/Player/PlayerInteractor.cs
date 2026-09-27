@@ -68,6 +68,11 @@ namespace SnowGlobe.Game
             }
             if (GameInput.InteractDown && Focus != null) Focus.Interact(this);
             if (GameInput.SecondaryDown && SecondaryFocus != null) SecondaryFocus.SecondaryInteract(this);
+            if (GameInput.ShakeDown)
+            {
+                var target = Held != null ? Held : FocusProduct;
+                if (target != null && Showcase.CanShake(target.P)) root.ShakeGlobe(target);
+            }
             if (GameInput.RedoseDown)
             {
                 var target = Held != null ? Held : FocusProduct;
@@ -152,11 +157,13 @@ namespace SnowGlobe.Game
                     ? "LMB: Place on " + PlacementTarget.Label
                     : "LMB: Drop" + (Held.P.Stage == ProductStage.Unprepared ? " (they WILL run)" : "");
                 CarryPrompt += "   ·   RMB+mouse: rotate   ·   F: look closely";
+                if (Showcase.CanShake(Held.P)) CarryPrompt += "   ·   G: shake";
                 if (Held.P.IsSerumActive) CarryPrompt += "   ·   Q: re-dose serum";
             }
             else if (FocusProduct != null && FocusProduct.P != null)
             {
                 CarryPrompt = "LMB: Pick up " + FocusProduct.P.CharacterName + " (" + StationBase.StageName(FocusProduct.P.Stage) + ")";
+                if (Showcase.CanShake(FocusProduct.P)) CarryPrompt += "   ·   G: shake the snow";
                 if (FocusProduct.P.IsSerumActive) CarryPrompt += "   ·   Q: re-dose serum";
             }
             else CarryPrompt = "";

@@ -85,7 +85,8 @@ namespace SnowGlobe.Core
         }
 
         /// <summary>Completes a sale. Returns the price paid, or 0 if the sale is invalid.</summary>
-        public int CompleteSale(Product p, int customerId, out ActionResult result)
+        /// <param name="premium">Price multiplier on top of the retail price (collectors pay double).</param>
+        public int CompleteSale(Product p, int customerId, out ActionResult result, float premium = 1f)
         {
             int holder;
             if (p == null) { result = ActionResult.Fail("No product."); return 0; }
@@ -93,7 +94,7 @@ namespace SnowGlobe.Core
             if (p.Stage != ProductStage.Displayed) { result = ActionResult.Fail("Only displayed globes can be sold."); return 0; }
             if (!_reservations.TryGetValue(p.Id, out holder) || holder != customerId) { result = ActionResult.Fail("That customer hasn't chosen this globe."); return 0; }
 
-            int price = ReputationService.RetailPrice(_state, p);
+            int price = (int)(ReputationService.RetailPrice(_state, p) * premium + 0.5f);
             _reservations.Remove(p.Id);
             ClearSlotOf(p.Id);
             p.Stage = ProductStage.Sold;
@@ -105,6 +106,7 @@ namespace SnowGlobe.Core
             _state.Day.Stats.GlobesSold++;
             _state.Day.Stats.CustomersServed++;
             _state.LifetimeGlobesSold++;
+            GoalRules.OnSale(_state, p);
             result = ActionResult.Ok("Sold " + p.CharacterName + " for $" + price + ".");
             return price;
         }

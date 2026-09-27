@@ -25,7 +25,7 @@ namespace SnowGlobe.Game
         Sprite _round;
         RectTransform _root;
 
-        Text _dayLine, _clock, _cash, _stock, _making, _power, _exposureLabel;
+        Text _dayLine, _clock, _cash, _stock, _making, _power, _exposureLabel, _goals;
         Image _exposureFill;
         RectTransform _prompts, _alerts, _toasts, _subtitles;
         readonly List<GameObject> _pool = new List<GameObject>();
@@ -89,6 +89,17 @@ namespace SnowGlobe.Game
             var hint = Label(_root, "Hint", 16, new Color(1f, 1f, 1f, 0.55f), FontStyle.Normal, TextAnchor.UpperLeft);
             hint.text = "Tab  management      Esc  pause";
             hint.rectTransform.SetParent(card, false);
+
+            // Today's goals, under the status card.
+            var goalsCard = Panel("GoalsCard", _root, PanelBg);
+            Anchor(goalsCard, new Vector2(0f, 1f), new Vector2(24f, -312f), new Vector2(380f, 0f));
+            var gv = goalsCard.gameObject.AddComponent<VerticalLayoutGroup>();
+            gv.padding = new RectOffset(20, 20, 12, 12);
+            gv.childControlHeight = gv.childControlWidth = true;
+            gv.childForceExpandHeight = false;
+            goalsCard.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            _goals = Label(goalsCard, "Goals", 17, Cream, FontStyle.Normal, TextAnchor.UpperLeft);
+            _goals.lineSpacing = 1.15f;
 
             // Crosshair and prompts, centre.
             var dot = Panel("Crosshair", _root, new Color(1f, 1f, 1f, 0.85f));
@@ -228,6 +239,22 @@ namespace SnowGlobe.Game
             fill.anchorMax = new Vector2(Mathf.Max(0.02f, exposure), 1f);
             _exposureFill.enabled = exposure > 0.005f;
             _exposureFill.color = exposure < 0.5f ? Color.Lerp(Palette.Ok, Amber, exposure * 2f) : Color.Lerp(Amber, Red, (exposure - 0.5f) * 2f);
+
+            // The goals card sits just below the status card, whatever height that is this frame.
+            var card = (RectTransform)_cash.transform.parent;
+            var gc = (RectTransform)_goals.transform.parent;
+            gc.anchoredPosition = new Vector2(24f, -24f - card.rect.height - 12f);
+            var g = st.Goals;
+            string muted = "#" + ColorUtility.ToHtmlStringRGB(Muted), gold = "#" + ColorUtility.ToHtmlStringRGB(Gold);
+            var sb = new System.Text.StringBuilder("<b><color=" + gold + ">Today's goals</color></b>" + (g.Streak > 0 ? "   <size=15><color=" + muted + ">streak " + g.Streak + "</color></size>" : ""));
+            foreach (var goal in g.Today)
+            {
+                string mark = goal.Done ? "<color=#" + ColorUtility.ToHtmlStringRGB(Palette.Ok) + ">\u25CF</color>" : goal.Failed ? "<color=#" + ColorUtility.ToHtmlStringRGB(Red) + ">\u00D7</color>" : "<color=" + muted + ">\u25CB</color>";
+                string progress = goal.Target > 1 && !goal.Done ? "  " + goal.Progress + "/" + goal.Target : "";
+                string text = goal.Done || goal.Failed ? "<color=" + muted + ">" + goal.Describe() + "</color>" : goal.Describe();
+                sb.Append("\n" + mark + "  " + text + progress + "  <color=" + gold + ">$" + goal.Reward + "</color>");
+            }
+            Set(_goals, sb.ToString());
 
             int used = 0;
             // Prompts under the crosshair (hidden while a menu is open).

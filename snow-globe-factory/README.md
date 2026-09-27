@@ -54,6 +54,7 @@ Notes:
 | Q | Re-dose serum on a prepared character (held or looked at) |
 | RMB + mouse, scroll | Rotate the held item |
 | F | Hold the item close to look at it |
+| G | Shake a sealed globe (held or on the shelf): showcase it for a minute (+10% price, shoppers drawn to it). A weak seal may let the figure move! |
 | 1 / 2 / 3, A / D, arrows | Station choices (scenery, pose, fold sequence) |
 | Tab | Management: supplies, characters, upgrades, themes, orders, notes, save/load, settings, help |
 | Esc | Pause / step away from a station |

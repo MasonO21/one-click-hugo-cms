@@ -524,6 +524,56 @@ namespace SnowGlobe.Game
             UpdateFigureMode();
         }
 
+        /// <summary>Shaken: a burst of flakes swirls up inside the dome and drifts back down.</summary>
+        public void PlaySnowSwirl()
+        {
+            if (_globe != null && isActiveAndEnabled) StartCoroutine(SnowSwirl());
+        }
+
+        System.Collections.IEnumerator SnowSwirl()
+        {
+            const int count = 28;
+            var flakes = new Transform[count];
+            var from = new Vector3[count];
+            var peak = new Vector3[count];
+            var mat = Shapes.Mat(Palette.Snow, 0.3f);
+            for (int i = 0; i < count; i++)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Destroy(go.GetComponent<Collider>());
+                go.name = "Flake";
+                go.GetComponent<Renderer>().sharedMaterial = mat;
+                go.transform.SetParent(_globe, false);
+                go.transform.localScale = Vector3.one * Random.Range(0.006f, 0.011f);
+                var flat = Random.insideUnitCircle * 0.12f;
+                from[i] = new Vector3(flat.x, 0.065f, flat.y);
+                var up = Random.insideUnitSphere * 0.11f;
+                peak[i] = new Vector3(up.x, 0.23f + up.y, up.z);
+                go.transform.localPosition = from[i];
+                flakes[i] = go.transform;
+            }
+            // Up in a quick swirl, then a slow, swaying fall.
+            for (float t = 0f; t < 3.6f; t += Time.deltaTime)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    if (flakes[i] == null) continue;
+                    Vector3 p;
+                    if (t < 0.35f) p = Vector3.Lerp(from[i], peak[i], Mathf.SmoothStep(0f, 1f, t / 0.35f));
+                    else
+                    {
+                        float k = Mathf.Clamp01((t - 0.35f) / 3.2f);
+                        p = Vector3.Lerp(peak[i], new Vector3(peak[i].x * 0.6f, 0.065f, peak[i].z * 0.6f), k * k * (3f - 2f * k));
+                        p.x += Mathf.Sin(t * 3f + i) * 0.012f * (1f - k);
+                        p.z += Mathf.Cos(t * 2.3f + i * 1.7f) * 0.012f * (1f - k);
+                    }
+                    flakes[i].localPosition = p;
+                }
+                yield return null;
+            }
+            foreach (var f in flakes) if (f != null) Destroy(f.gameObject);
+        }
+
         /// <summary>A weak seal let the figure move: visible jolt that customers can witness.</summary>
         public void PlayStasisTwitch(float intensity)
         {

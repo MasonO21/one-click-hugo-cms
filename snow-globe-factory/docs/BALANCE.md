@@ -41,72 +41,73 @@ dotnet run -- 36 2024 ../../docs/x.md   # also writes the report to a file
 
 | Day | Cash (end) | Made | Sold | Orders | Revenue | Spent | Theme | Bought today |
 |---:|---:|---:|---:|---:|---:|---:|---|---|
-| 1 | $366 | 6 | 6 | 0 | $299 | $83 | Winter Village |  |
-| 2 | $319 | 5 | 5 | 0 | $258 | $305 | Winter Village | Preparation Cradle, Better Injector |
-| 3 | $420 | 4 | 4 | 0 | $215 | $114 | Winter Village |  |
-| 4 | $384 | 5 | 5 | 0 | $248 | $284 | Winter Village | Assembly Jig |
-| 5 | $584 | 6 | 5 | 1 | $334 | $134 | Winter Village |  |
-| 6 | $758 | 5 | 4 | 1 | $331 | $157 | Winter Village |  |
-| 7 | $772 | 6 | 5 | 1 | $469 | $455 | Woodland Cabin | Woodland Cabin theme |
-| 8 | $1058 | 6 | 6 | 0 | $458 | $172 | Woodland Cabin |  |
-| 9 | $892 | 5 | 5 | 0 | $395 | $561 | Woodland Cabin | Ledger: Dues |
-| 10 | $775 | 6 | 5 | 1 | $438 | $555 | Woodland Cabin | Improved Sealer |
-| 11 | $869 | 7 | 7 | 0 | $547 | $453 | Woodland Cabin | Short Conveyor |
-| 12 | $1343 | 6 | 6 | 0 | $689 | $215 | Woodland Cabin | Sent to H. |
-| 13 | $1666 | 6 | 5 | 1 | $490 | $167 | Woodland Cabin |  |
-| 14 | $1049 | 5 | 4 | 1 | $477 | $1094 | Medieval Castle | Medieval Castle theme |
-| 15 | $1263 | 4 | 4 | 0 | $396 | $182 | Medieval Castle |  |
-| 16 | $1666 | 6 | 6 | 0 | $575 | $172 | Medieval Castle |  |
-| 17 | $1616 | 8 | 8 | 0 | $858 | $908 | Medieval Castle | Packaging Machine |
-| 18 | $1697 | 13 | 12 | 1 | $1442 | $1361 | Medieval Castle | Shop Assistant |
-| 19 | $2517 | 13 | 12 | 1 | $1377 | $557 | Medieval Castle |  |
-| 20 | $2403 | 13 | 12 | 1 | $1447 | $1561 | Medieval Castle | Ledger: Machine Oil |
-| 21 | $2567 | 18 | 17 | 1 | $1920 | $1756 | Medieval Castle | Automated Preparation Station |
-| 22 | $2565 | 15 | 15 | 0 | $1527 | $1529 | Medieval Castle | Premium Display Case |
-| 23 | $2818 | 16 | 16 | 0 | $2681 | $2428 | Haunted Manor | Haunted Manor theme, Sent to H. |
-| 24 | $3037 | 26 | 25 | 1 | $3244 | $3025 | Haunted Manor | Sealing Press |
-| 25 | $5013 | 26 | 26 | 0 | $3222 | $1246 | Haunted Manor |  |
-| 26 | $3686 | 25 | 25 | 0 | $4199 | $5526 | Deep-Sea Ruins | Deep-Sea Ruins theme, Window Display |
-| 27 | $6367 | 26 | 25 | 1 | $4179 | $1498 | Deep-Sea Ruins |  |
-| 28 | $5095 | 26 | 25 | 1 | $4132 | $5404 | Deep-Sea Ruins | Ledger: The Last Page |
-| 29 | $8000 | 26 | 25 | 1 | $4327 | $1422 | Deep-Sea Ruins |  |
-| 30 | $5710 | 26 | 25 | 1 | $5705 | $7995 | Celestial Observatory | Celestial Observatory theme, Rewired Fuse Box, Basement Soundproofing |
-| 31 | $8723 | 26 | 26 | 0 | $5525 | $2512 | Celestial Observatory | Security Cameras |
-| 32 | $12589 | 26 | 25 | 1 | $5659 | $1793 | Celestial Observatory |  |
-| 33 | $16541 | 27 | 26 | 1 | $5763 | $1811 | Celestial Observatory |  |
-| 34 | $20412 | 26 | 26 | 0 | $5713 | $1842 | Celestial Observatory |  |
-| 35 | $24178 | 26 | 26 | 0 | $5569 | $1803 | Celestial Observatory |  |
-| 36 | $28027 | 26 | 26 | 0 | $5660 | $1811 | Celestial Observatory |  |
+| 1 | $384 | 6 | 6 | 0 | $299 | $83 | Winter Village |  |
+| 2 | $362 | 5 | 5 | 0 | $247 | $305 | Winter Village | Preparation Cradle, Better Injector |
+| 3 | $385 | 5 | 5 | 0 | $267 | $284 | Winter Village | Assembly Jig |
+| 4 | $630 | 6 | 5 | 1 | $325 | $134 | Winter Village |  |
+| 5 | $589 | 6 | 6 | 0 | $371 | $460 | Woodland Cabin | Woodland Cabin theme |
+| 6 | $921 | 5 | 4 | 1 | $434 | $169 | Woodland Cabin |  |
+| 7 | $815 | 6 | 6 | 0 | $423 | $561 | Woodland Cabin | Improved Sealer |
+| 8 | $843 | 6 | 5 | 1 | $519 | $573 | Woodland Cabin | Ledger: Dues |
+| 9 | $1043 | 7 | 7 | 0 | $579 | $453 | Woodland Cabin | Short Conveyor |
+| 10 | $1381 | 6 | 6 | 0 | $507 | $203 | Woodland Cabin |  |
+| 11 | $1819 | 7 | 6 | 1 | $567 | $188 | Woodland Cabin |  |
+| 12 | $1704 | 6 | 5 | 1 | $917 | $1136 | Medieval Castle | Medieval Castle theme, Sent to H. |
+| 13 | $1598 | 7 | 7 | 0 | $698 | $896 | Medieval Castle | Packaging Machine |
+| 14 | $1581 | 12 | 12 | 0 | $1269 | $1350 | Medieval Castle | Shop Assistant |
+| 15 | $2364 | 13 | 13 | 0 | $1294 | $554 | Medieval Castle |  |
+| 16 | $2172 | 12 | 12 | 0 | $1246 | $1561 | Medieval Castle | Ledger: Machine Oil |
+| 17 | $2374 | 18 | 17 | 1 | $1783 | $1727 | Medieval Castle | Automated Preparation Station |
+| 18 | $2553 | 16 | 16 | 0 | $1678 | $1542 | Medieval Castle | Premium Display Case |
+| 19 | $2124 | 16 | 16 | 0 | $1917 | $2412 | Haunted Manor | Haunted Manor theme |
+| 20 | $3595 | 17 | 16 | 1 | $2205 | $823 | Haunted Manor |  |
+| 21 | $3554 | 24 | 24 | 0 | $2887 | $3006 | Haunted Manor | Sealing Press |
+| 22 | $4415 | 25 | 24 | 1 | $4707 | $3963 | Deep-Sea Ruins | Deep-Sea Ruins theme, Sent to H. |
+| 23 | $5665 | 26 | 26 | 0 | $4268 | $3100 | Deep-Sea Ruins | Window Display |
+| 24 | $5008 | 25 | 24 | 1 | $5527 | $6259 | Celestial Observatory | Celestial Observatory theme |
+| 25 | $6383 | 25 | 25 | 0 | $5439 | $4271 | Celestial Observatory | Rewired Fuse Box, Basement Soundproofing, Security Cameras |
+| 26 | $7778 | 27 | 27 | 0 | $6271 | $4939 | Celestial Observatory | Refit 1 |
+| 27 | $6701 | 27 | 26 | 1 | $6702 | $7990 | Celestial Observatory | Refit 2 |
+| 28 | $7266 | 25 | 25 | 0 | $6327 | $5910 | Celestial Observatory | Ledger: The Last Page |
+| 29 | $12051 | 25 | 24 | 1 | $6465 | $1870 | Celestial Observatory |  |
+| 30 | $16693 | 26 | 25 | 1 | $6327 | $1860 | Celestial Observatory |  |
+| 31 | $9444 | 26 | 26 | 0 | $6547 | $13908 | Celestial Observatory | Refit 3 |
+| 32 | $14623 | 27 | 27 | 0 | $7112 | $1965 | Celestial Observatory |  |
+| 33 | $19663 | 25 | 24 | 1 | $6825 | $1925 | Celestial Observatory |  |
+| 34 | $24759 | 26 | 25 | 1 | $6744 | $1903 | Celestial Observatory |  |
+| 35 | $29935 | 27 | 27 | 0 | $6851 | $1939 | Celestial Observatory |  |
+| 36 | $11185 | 26 | 25 | 1 | $7064 | $25949 | Celestial Observatory | Refit 4 |
 
-Milestones: Day 2: Preparation Cradle · Day 2: Better Injector · Day 4: Assembly Jig · Day 7: Woodland Cabin theme · Day 9: ledger 'Dues' · Day 10: Improved Sealer · Day 11: Short Conveyor · Day 12: ledger 'A Sample' (globe) · Day 14: Medieval Castle theme · Day 17: Packaging Machine · Day 18: Shop Assistant · Day 20: ledger 'Machine Oil' · Day 21: Automated Preparation Station · Day 22: Premium Display Case · Day 23: Haunted Manor theme · Day 23: ledger 'For the Window' (globe) · Day 24: Sealing Press · Day 26: Deep-Sea Ruins theme · Day 26: Window Display · Day 28: ledger 'The Last Page' · Day 30: Celestial Observatory theme · Day 30: Rewired Fuse Box · Day 30: Basement Soundproofing · Day 31: Security Cameras
+Milestones: Day 2: Preparation Cradle · Day 2: Better Injector · Day 3: Assembly Jig · Day 5: Woodland Cabin theme · Day 7: Improved Sealer · Day 8: ledger 'Dues' · Day 9: Short Conveyor · Day 12: Medieval Castle theme · Day 12: ledger 'A Sample' (globe) · Day 13: Packaging Machine · Day 14: Shop Assistant · Day 16: ledger 'Machine Oil' · Day 17: Automated Preparation Station · Day 18: Premium Display Case · Day 19: Haunted Manor theme · Day 21: Sealing Press · Day 22: Deep-Sea Ruins theme · Day 22: ledger 'For the Window' (globe) · Day 23: Window Display · Day 24: Celestial Observatory theme · Day 25: Rewired Fuse Box · Day 25: Basement Soundproofing · Day 25: Security Cameras · Day 26: Refit 1 · Day 27: Refit 2 · Day 28: ledger 'The Last Page' · Day 31: Refit 3 · Day 36: Refit 4
 
-Exposure at the end: 0/100. Lifetime globes sold: 524.
+Exposure at the end: 0/100. Lifetime globes sold: 596.
 
 ### Milestone days across seeds
 
 | Purchase / story beat | Seed 11 | Seed 2024 | Seed 777 | Seed 5 |
 |---|---:|---:|---:|---:|
 | Preparation Cradle | 2 | 2 | 2 | 2 |
-| Assembly Jig | 3 | 4 | 3 | 4 |
-| Woodland Cabin | 6 | 7 | 6 | 6 |
-| Ledger: Dues ($400) | 8 | 9 | 8 | 8 |
-| Short Conveyor | 11 | 11 | 11 | 12 |
+| Assembly Jig | 3 | 3 | 3 | 3 |
+| Woodland Cabin | 5 | 5 | 6 | 5 |
+| Ledger: Dues ($400) | 9 | 8 | 10 | 8 |
+| Short Conveyor | 8 | 9 | 8 | 9 |
 | Ledger: A Sample (Performer globe) | 12 | 12 | 12 | 12 |
-| Medieval Castle | 13 | 14 | 13 | 14 |
-| Packaging Machine | 15 | 17 | 15 | 16 |
-| **Shop Assistant** | **18** | **18** | **19** | **20** |
-| Automated Prep | 20 | 21 | 20 | 22 |
-| Haunted Manor | 22 | 23 | 23 | 24 |
-| Ledger: For the Window (Haunted Watcher) | 22 | 23 | 23 | 24 |
-| Sealing Press | 23 | 24 | 24 | 25 |
-| Deep-Sea Ruins | 25 | 26 | 25 | 27 |
-| Window Display | 25 | 26 | 26 | 27 |
-| **Ledger: The Last Page ($4000, ending)** | **28** | **28** | **28** | **29** |
-| Celestial Observatory | 27 | 30 | 29 | 30 |
-| Lifetime globes sold by day 36 | 545 | 524 | 535 | 502 |
+| Medieval Castle | 11 | 12 | 12 | 11 |
+| Packaging Machine | 13 | 13 | 13 | 13 |
+| **Shop Assistant** | 14 | 14 | 14 | 15 |
+| Automated Prep | 15 | 17 | 17 | 17 |
+| Haunted Manor | 18 | 19 | 20 | 19 |
+| Ledger: For the Window (Haunted Watcher) | 22 | 22 | 22 | 22 |
+| Sealing Press | 20 | 21 | 21 | 21 |
+| Deep-Sea Ruins | 21 | 22 | 22 | 22 |
+| Window Display | 22 | 23 | 23 | 23 |
+| **Ledger: The Last Page ($4000, ending)** | 28 | 28 | 28 | 28 |
+| Celestial Observatory | 23 | 24 | 24 | 24 |
+| First boutique refit | 24 | 26 | 26 | 26 |
+| Lifetime globes sold by day 36 | 625 | 596 | 600 | 600 |
 
-A player working at the modelled pace reaches **the story's ending on days 28–29**, and has bought everything by
-about day 31. Before the Shop Assistant existed, it was days 30–32 and 34–36.
+A player working at the modelled pace reaches **the story's ending on day 28** (the ledger's own day gates set that), with
+the themes, the assistant and the first refit arriving days earlier than before the daily goals (next section).
 
 That's still about 5 hours of play, longer than the 2–3 hour M7 target in the design plan. It's a design decision,
 not a bug. The options are:
@@ -152,7 +153,16 @@ This needs real play data first, because faster players will get there sooner.
      exposure, so it never buys it; it's a pressure valve for a busy horror business in real play.
    * With 50-day runs, the sim buys refit 1 on days 30–32 and refit 5 on days 48–50. Cash on day 36 is now
      $8k–$18k instead of $26k–$34k, and it stays flat through day 50 while the refits soak it up.
-7. **Fixes to the sim's buying policy:**
+7. **Daily goals** (this pass). Three small goals a morning, each paying a little cash, plus a streak bonus for clearing
+   all three.
+   * The first tuning ($8–45 a goal, streak up to $100) doubled the early economy: Celestial on day 19 instead of 29.
+     Even small bonuses compound, because every purchase comes sooner and raises output.
+   * Now: $2–15 a goal at first (rising 10% a day) and a streak bonus of $3 a day up to $20. With goals switched off,
+     the sim reproduces the old milestones exactly, so the remaining change is the goals themselves: the assistant
+     arrives on days 14–15 (was 19), Celestial on 23–24 (was 29–30) and the first refit on 24–26 (was 31). The ending
+     stays on day 28.
+   * The sim clears every goal every day, which real players won't, so real play will sit between the two.
+8. **Fixes to the sim's buying policy:**
    * Buying several things a morning with no saving rule meant cheap upgrades ate every theme budget.
    * Letting themes always come first starved automation.
    * An explicit shopping list with saving (above) behaves like a sensible player.

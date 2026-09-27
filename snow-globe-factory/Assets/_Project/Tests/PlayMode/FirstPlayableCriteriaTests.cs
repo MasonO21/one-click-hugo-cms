@@ -244,6 +244,7 @@ namespace SnowGlobe.Game.Tests
             Assert.IsFalse(root.Level.Assistant.gameObject.activeSelf, "nobody behind the counter until hired");
             s.State.Day.Day = 12;
             s.State.Wallet.Cash = 2000;
+            s.State.Goals.Today.Clear(); // exact money: no daily-goal reward
             Assert.IsTrue(s.Upgrades.Purchase(UpgradeId.ShopAssistant).Success);
             yield return null;
             Assert.IsTrue(root.Level.Assistant.gameObject.activeSelf, "hired: standing at the till");
@@ -305,6 +306,78 @@ namespace SnowGlobe.Game.Tests
             yield return null;
             Assert.IsNotNull(c.GetComponentInChildren<PersonModel>(), "customers use the character models");
             Assert.IsNotNull(c.GetComponentInChildren<Animation>(), "with their animations");
+        }
+
+        // Fun pass: shaking a sound globe swirls snow, showcases it and charms a watching customer.
+        [UnityTest]
+        public IEnumerator Shake_SoundGlobe_SwirlsSnow_AndCharmsTheCustomer()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var globe = MakeDisplayedGlobe(root);
+            globe.P.SealIntegrity = 0.95f;
+            root.OpenShop();
+            var c = root.Customers.SpawnNow();
+            var toward = root.Level.StoreCenter - globe.transform.position;
+            toward.y = 0f;
+            toward.Normalize();
+            for (float t = 0f; t < 0.3f; t += Time.deltaTime) { Pin(c, globe, toward, true); yield return null; }
+            c.Suspicion.Value = 20f;
+
+            root.ShakeGlobe(globe);
+            yield return null;
+            Assert.Greater(globe.GetComponentsInChildren<Transform>().Count(t => t.name == "Flake"), 10, "snow swirls inside the dome");
+            Assert.Greater(globe.P.ShowcaseRemaining, 0f, "showcased");
+            Assert.Less(c.Suspicion.Value, 20f, "a charmed customer relaxes");
+            for (float t = 0f; t < 1f; t += Time.deltaTime) { Pin(c, globe, toward, true); yield return null; }
+            Assert.AreEqual(0, c.Suspicion.Sightings(EvidenceType.GlobeMovement), "a sound seal holds its figure still");
+            yield return new WaitForSeconds(3.2f);
+            Assert.AreEqual(0, globe.GetComponentsInChildren<Transform>().Count(t => t.name == "Flake"), "the snow settles and the flakes are cleaned up");
+        }
+
+        // Fun pass: shaking a weak globe in front of a customer makes the figure move, and they see it.
+        [UnityTest]
+        public IEnumerator Shake_WeakGlobe_MovesTheFigure_InFrontOfTheCustomer()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var globe = MakeDisplayedGlobe(root);
+            globe.P.SealIntegrity = 0.2f; // always twitches
+            root.OpenShop();
+            var c = root.Customers.SpawnNow();
+            var toward = root.Level.StoreCenter - globe.transform.position;
+            toward.y = 0f;
+            toward.Normalize();
+            for (float t = 0f; t < 0.3f; t += Time.deltaTime) { Pin(c, globe, toward, true); yield return null; }
+            root.ShakeGlobe(globe);
+            for (float t = 0f; t < 0.6f; t += Time.deltaTime) { Pin(c, globe, toward, true); yield return null; }
+            Assert.AreEqual(1, c.Suspicion.Sightings(EvidenceType.GlobeMovement), "they saw it move");
+        }
+
+        // Fun pass: a collector only buys what they came for, and pays double for it.
+        [UnityTest]
+        public IEnumerator Collector_BuysTheirMatch_AtDoublePrice()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var s = root.Session;
+            s.State.Day.Day = 12;
+            s.State.Goals.Today.Clear(); // exact money
+            s.State.Wallet.Cash = 2000;
+            Assert.IsTrue(s.Upgrades.Purchase(UpgradeId.ShopAssistant).Success);
+            var globe = MakeDisplayedGlobe(root);
+            var p = globe.P;
+            root.Player.Teleport(root.Level.PlayerSpawn.position, 0f);
+            root.OpenShop();
+            int retail = ReputationService.RetailPrice(s.State, p);
+            var c = root.Customers.SpawnNow(new CollectorRequest { ByArchetype = true, Archetype = p.Archetype });
+            Assert.IsNotNull(c.Collector);
+            Assert.Greater(c.Suspicion.Attentiveness, 1.5f, "collectors look closely");
+            Time.timeScale = 4f;
+            yield return WaitFor(() => p.Stage == ProductStage.Sold, 200f);
+            Time.timeScale = 1f;
+            Assert.AreEqual(ProductStage.Sold, p.Stage, "the collector bought it");
+            Assert.AreEqual((int)(retail * Collectors.Premium + 0.5f), p.SoldPrice, "at double the price");
         }
 
         // §9.11: open, auto-close at 5 pm, summary with bills, next day with a checkpoint.

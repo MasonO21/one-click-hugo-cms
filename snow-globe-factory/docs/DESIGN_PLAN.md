@@ -244,6 +244,21 @@ The story is a ledger of requests from H., the supplier. Each request arrives as
 * **Sponsor the winter fair** (day 20, endless): once a day, lowers business exposure by 20. Costs $1000, then $1000 more each time.
 * **Shop Assistant** ($800, day 12): someone in a red apron behind the counter who rings up the waiting customer after 5 s. Costs $45 a night plus a 10% commission on every sale they ring up, so serving people yourself still pays. They only work the till: talking round a suspicious customer is still the player's job. This fixes the late-game counter bottleneck (`BALANCE.md`).
 
+## 5f. Fun pass (after the plan)
+
+Three additions that give moment-to-moment choices, all built on existing systems:
+
+* **Shake the globe (G).** Any sealed globe, held or on the shelf. The snow swirls, the globe is *showcased* for 60 s
+  (+10% price, and shoppers prefer it), and customers who see it are charmed (a little less suspicious, an
+  "Ooh!"). But a seal under the defect threshold lets the figure move with the shake (50–100% chance as it weakens),
+  and any customer watching counts that as evidence. Inspection tells you which globes are safe to show off.
+* **Collectors (day 6+).** About 15% of walk-ins are collectors hunting a specific figure or theme. They buy only
+  that, pay **double**, and look 1.8× as closely as ordinary shoppers. They're announced with a toast and wear a gold
+  "Collector · wants …" label.
+* **Daily goals.** Three small goals each morning (sell N globes, sell a theme, sell inspected or Fine globes, fill an
+  order, *no customer leaves unsettled*), shown in a HUD card under the status card, with a small cash reward each and a
+  streak bonus for clearing all three. Kept small on purpose (see `BALANCE.md` tuning 7).
+
 ## 6. Milestone roadmap
 
 | Milestone | Goal | Contents | Exit criteria |
@@ -256,6 +271,7 @@ The story is a ledger of requests from H., the supplier. Each request arrives as
 | **M5 Horror & roster** ✅ core · 🟡 scene | Unease at scale | Screamer, Escape Artist, Watcher and Performer behaviours; Security Cameras upgrade (desk monitor, full-screen feeds, loose-character alerts); Conveyor Grab threat and Cabinet Shift atmospheric; supplier notes (8, days 2–12) | Needs playtests: players report "tense but fair" |
 | **M6 Art & audio** 🟡 | Identity | **Done (first pass):** CC0 low-poly models from Kenney (`docs/ASSET_CREDITS.md`): animated customers and shop assistant, Christmas tree and presents, wreath, stockings, nutcracker, window decor, plants, boxes and crates, and holiday models inside Winter and Woodland globes. `Models` helper keeps the primitives as a fallback. **Lighting pass:** `Atmosphere` blends a mood per area (shop warm and cosy, backroom neutral, basement cold, foggy and grainy; a blackout drags everything darker) with URP post-processing (tonemapping, bloom, grading, vignette, grain that respects reduced flicker), fog, and soft shadows from four key lamps; 1080p build 255–361 fps. **Sound pass:** CC0 foley (Kenney) with random variants and pitch: footsteps by floor for the player and customers, doors and cabinet latches, glass clinks and box bumps when things are set down, coins at the till, lever clicks, cloth rustles when grabbing a character, a page flip for the menu, and rare creaks behind you in the basement (atmosphere only). **HUD:** the always-on HUD (status card with exposure meter, crosshair and key-cap prompts, alert cards, toasts, subtitles) is uGUI built in code (`HudView`). uGUI rather than UI Toolkit, because a runtime UI Toolkit panel needs a theme asset and its shaders in the build, and the repo can't carry asset GUIDs without `.meta` files; uGUI's shader and font are built in. World labels no longer show through walls. Menus stay IMGUI but use a matching skin built in code (dark rounded panels, warm buttons, gold hover and selected tab, gold slider knob) and scale with screen height from a 1080p layout. **To do:** Meshy-generated hero models once the API key is set, rigged minis | Vertical slice capture |
 | **M7 Content & balance** 🟡 | Longevity | **Done:** all six themes with bespoke scenery and twists; H.'s ledger story with two endings (§5e); late-game sinks (Sealing Press, Fuse Box, Window Display, electricity); **Shop Assistant** (fixes the counter bottleneck, tested in-scene); headless balance sim with three tuning passes (`BALANCE.md`). **Endless-mode sinks:** five boutique refits (+6% prices each, visible in the shop) and a daily winter-fair sponsorship (−20 exposure), in Tab → Upgrades → Reputation. **Build pipeline:** Snow Globe Factory → Build Windows Player (or `-executeMethod SnowGlobe.EditorTools.SnowGlobeBuild.BuildFromCommandLine`), plus a `-smoketest` switch in the player; fixed shaders and variants missing from player builds. **Performance pass:** measured in a 1080p Windows build (RTX 3050, i5-10400F) with `-smoketest -smokestress` (20 products, 12 loose): 350–540 fps average in every area, worst frame 7.9 ms, so no optimization needed yet. Static geometry is already batched and distant minis animate less often | Economy playable after the story: **met** in the core. 2–3 h of progression: **not met.** The sim reaches the ending on days 28–29 (about 5 h), so either accept that or scale prices by ~0.6 (a design call) |
+| **Fun pass** ✅ | Moment-to-moment choices | Shake-to-showcase (with a weak-seal risk), collectors, daily goals (§5f) | Core + PlayMode tests; balance re-checked |
 
 ## 7. Initial economy and progression tables
 

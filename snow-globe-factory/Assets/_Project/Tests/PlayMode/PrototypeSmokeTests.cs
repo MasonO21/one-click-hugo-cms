@@ -118,6 +118,7 @@ namespace SnowGlobe.Game.Tests
             Assert.AreEqual(ProductStage.Displayed, p.Stage);
             yield return null;
 
+            s.State.Goals.Today.Clear(); // exact money: no daily-goal reward
             int cash = s.State.Wallet.Cash;
             Assert.IsTrue(s.Store.Reserve(p, 999).Success);
             ActionResult r;

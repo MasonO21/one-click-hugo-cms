@@ -56,6 +56,8 @@ namespace SnowGlobe.Game
         bool _reminded;
         /// <summary>A displayed globe this customer has picked up for a closer look (day 4+).</summary>
         public ProductView Handled;
+        /// <summary>Set for a collector: what they came for (they pay double for it, and look much more closely).</summary>
+        public CollectorRequest Collector;
         PersonModel _look;
         float _eyeHeight = 1.62f;
         float _stepDistance;
@@ -72,9 +74,11 @@ namespace SnowGlobe.Game
 
         static GameRoot Root { get { return GameRoot.I; } }
 
-        public void Init(int id, CustomerSpawner spawner, Level level, float attentiveness)
+        public void Init(int id, CustomerSpawner spawner, Level level, float attentiveness, CollectorRequest collector = null)
         {
             Id = id;
+            Collector = collector;
+            if (collector != null) attentiveness *= Collectors.Attentiveness;
             _spawner = spawner;
             _level = level;
             Suspicion = Root.Session.Suspicion.Register(id, attentiveness);
@@ -117,6 +121,16 @@ namespace SnowGlobe.Game
             _target = target;
             _timer = timer;
             _level.PathAround(transform.position, target, _waypoints);
+        }
+
+        /// <summary>They watched the player shake a globe: a moment of delight, and a softer look at the shop.</summary>
+        public void Delight(ProductView v)
+        {
+            if (State == CustomerState.Fleeing) return;
+            string[] lines = { "Ooh, look at it snow!", "Oh, that's lovely.", "Do that again!", "It's like a real little world." };
+            Say(lines[Random.Range(0, lines.Length)]);
+            if (Suspicion.Stage < SuspicionStage.Alarmed) Suspicion.Value = Mathf.Max(Suspicion.Floor, Suspicion.Value - 6f);
+            if (_look != null) _look.Gesture("emote-yes");
         }
 
         public void Say(string text, float seconds = 3.5f)
@@ -339,12 +353,14 @@ namespace SnowGlobe.Game
             {
                 if (v == null || v.P.Stage != ProductStage.Displayed || Root.Session.Store.IsReserved(v.P.Id)) continue;
                 if (v.P.Id == Suspicion.FocusSourceId) continue; // not the creepy one
-                int value = QualityModel.EstimateValue(v.P) + Random.Range(0, 15) + (v.P.Theme == _preferred ? 25 : 0);
+                if (Collector != null && !Collectors.Matches(Collector, v.P)) continue;
+                int value = QualityModel.EstimateValue(v.P) + Random.Range(0, 15) + (v.P.Theme == _preferred ? 25 : 0) + (v.P.ShowcaseRemaining > 0f ? 30 : 0);
                 if (value > bestValue) { bestValue = value; pick = v; }
             }
             if (pick == null)
             {
-                Say(Root.Session.Store.DisplayedCount() == 0 ? "Empty shelves? Oh well." : "Nothing for me today.");
+                Say(Collector != null ? "No " + Collector.Name + "? A pity. My collection will have to wait."
+                    : Root.Session.Store.DisplayedCount() == 0 ? "Empty shelves? Oh well." : "Nothing for me today.");
                 Root.Session.State.Day.Stats.CustomersLost++;
                 Leave();
                 return;
@@ -352,6 +368,12 @@ namespace SnowGlobe.Game
             var r = Root.Session.Store.Reserve(pick.P, Id);
             if (!r.Success) { Leave(); return; }
             ChosenProduct = pick.P;
+            if (Collector != null)
+            {
+                Say("At last! The " + Collector.Name + " for my collection.", 4f);
+                SetState(CustomerState.WalkingToCounter, _spawner.JoinQueue(this));
+                return;
+            }
             Say("I'll take the " + pick.P.CharacterName.Split('#')[0].Trim() + " one!");
             SetState(CustomerState.WalkingToCounter, _spawner.JoinQueue(this));
         }
@@ -396,7 +418,7 @@ namespace SnowGlobe.Game
             if (!IsWaitingAtCounter) return;
             var p = ChosenProduct;
             ActionResult r;
-            int price = Root.Session.Store.CompleteSale(p, Id, out r);
+            int price = Root.Session.Store.CompleteSale(p, Id, out r, Collector != null ? Collectors.Premium : 1f);
             int fee = byAssistant ? Root.Session.Store.PayAssistantCommission(price) : 0;
             Root.Toast(fee > 0 ? r.Message + " (Assistant's cut: $" + fee + ")" : r.Message, !r.Success);
             if (price <= 0) return;
@@ -429,6 +451,7 @@ namespace SnowGlobe.Game
         {
             CancelPurchase();
             Root.Session.State.Exposure.OnCustomerLeft(Suspicion.Stage, Suspicion.SawUndeniable);
+            if (Suspicion.Stage >= SuspicionStage.Investigating) GoalRules.OnUnsettledCustomer(Root.Session.State);
             if (Suspicion.Stage >= SuspicionStage.Investigating) Root.Hud.Alert("A customer left unsettled. Business exposure rose.");
             Root.Session.Suspicion.Remove(Id);
             Root.Session.Store.CancelAllReservations(Id);

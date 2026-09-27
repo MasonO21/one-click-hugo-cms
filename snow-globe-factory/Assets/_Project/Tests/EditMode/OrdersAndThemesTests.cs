@@ -88,6 +88,7 @@ namespace SnowGlobe.Core.Tests
         public void MatchingGlobe_FulfilsOnce_PayingPricePlusBonus()
         {
             var s = OnDay(4);
+            s.State.Goals.Today.Clear(); // exact-money test: no daily-goal rewards
             var o = s.Orders.OnNewDay()[0];
             o.MinTier = QualityTier.Standard;
             o.SpecificArchetype = false;

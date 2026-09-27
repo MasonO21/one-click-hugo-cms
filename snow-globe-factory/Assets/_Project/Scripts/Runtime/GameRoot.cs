@@ -216,6 +216,14 @@ namespace SnowGlobe.Game
                 Level.PremiumDecor.SetActive(!premium);
             }
 
+            var goalNews = GoalRules.Messages(Session.State);
+            if (goalNews.Count > 0)
+            {
+                foreach (var line in goalNews) Toast(line);
+                goalNews.Clear();
+                Audio.Play2D(Sfx.Coins, 0.5f);
+            }
+
             if (GameInput.QuickSaveDown) SaveGame();
             if (GameInput.QuickLoadDown) LoadFrom(Saves.SavePath);
         }
@@ -426,6 +434,27 @@ namespace SnowGlobe.Game
         {
             foreach (var cell in Level.Cells) cell.Door.SetOpen(false);
             Level.LiftGate.SetOpen(false);
+        }
+
+        /// <summary>
+        /// The player shook a globe: snow swirls, the globe is showcased for a minute, and customers who can see it are
+        /// charmed. A weak seal may let the figure move instead, which any watching customer will count as evidence.
+        /// </summary>
+        public void ShakeGlobe(ProductView v)
+        {
+            bool twitched;
+            var r = Showcase.Shake(Session.State, v.P, out twitched);
+            v.PlaySnowSwirl();
+            Audio.Play(Sfx.GlassClink, v.transform.position, 0.5f, 1.15f);
+            if (twitched)
+            {
+                v.PlayStasisTwitch(0.75f);
+                Toast(r.Message, true);
+                return;
+            }
+            Audio.Play(Sfx.Chime, v.transform.position, 0.25f, 1.6f);
+            Toast(r.Message);
+            foreach (var c in Customers.Active) if (c != null && c.CanSee(v)) c.Delight(v);
         }
 
         public void OnProductSold(Product p)

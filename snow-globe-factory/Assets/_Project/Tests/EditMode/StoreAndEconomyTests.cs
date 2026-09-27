@@ -167,6 +167,7 @@ namespace SnowGlobe.Core.Tests
             for (uint seed = 1; seed <= 20; seed++)
             {
                 var s = GameSession.NewGame(seed);
+                s.State.Goals.Today.Clear(); // exact-money test: no daily-goal rewards
                 s.State.Exposure.Value = 100f;
                 s.Days.OpenStore();
                 var p = TestFlow.RunToPackaged(s, 0.5f, inspect: false);

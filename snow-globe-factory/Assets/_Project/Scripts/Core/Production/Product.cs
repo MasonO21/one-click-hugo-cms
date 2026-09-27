@@ -104,6 +104,8 @@ namespace SnowGlobe.Core
         public float SealStrain;
         public bool Certified;
         public bool DefectRevealed;
+        /// <summary>Seconds left of a shake showcase (price bonus, shoppers drawn to it).</summary>
+        public float ShowcaseRemaining;
 
         public float Stress;
         public int SoldPrice;

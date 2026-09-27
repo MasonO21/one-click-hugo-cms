@@ -353,6 +353,7 @@ namespace SnowGlobe.Game
                     GUI.color = Color.white;
                 }
                 if (Time.time < c.SpeechUntil) Label(c.Head.position + Vector3.up * 0.75f, "\"" + c.Speech + "\"", 14f, Color.white, 240f);
+                if (c.Collector != null) Label(c.Head.position + Vector3.up * 1.05f, "Collector · wants " + c.Collector.Describe(), 16f, SkinGold, 260f);
             }
         }
 
@@ -500,7 +501,8 @@ namespace SnowGlobe.Game
                 "\nKits ruined (woke up): " + s.KitsRuined +
                 "\n\nRevenue: $" + s.Revenue + "\nPurchases: -$" + s.Expenses + "\nOperating cost: -$" + s.OperatingCost +
                 (s.Refunds > 0 ? "\nRefunds (returned globes): -$" + s.Refunds : "") + "\n<b>Net: $" + s.Net + "</b>" +
-                "\n\nBusiness exposure: " + Mathf.RoundToInt(s.Exposure) + "/100 (" + s.ExposureLevel + ")", _label);
+                "\n\nBusiness exposure: " + Mathf.RoundToInt(s.Exposure) + "/100 (" + s.ExposureLevel + ")" +
+                "\nDaily goals: " + s.GoalsDone + "/" + s.GoalsTotal + (s.GoalBonus > 0 ? "  (all done! " + Root.Session.State.Goals.Streak + "-day streak +$" + s.GoalBonus + ")" : ""), _label);
             if (s.Verdict == ClosureVerdict.Warning)
                 GUILayout.Label("<color=#ffaa33><b>WARNING:</b> an inspector has been asking questions. Another bad day and they'll shut you down.</color>", _label);
             GUILayout.FlexibleSpace();
