@@ -155,6 +155,85 @@ namespace SnowGlobe.Game.Tests
             Assert.AreEqual(cell, v.Socket != null ? v.Socket.GetComponentInParent<HoldingCell>() : null, "still in the same cabinet");
         }
 
+        /// <summary>Runs one character through the manual line onto shelf slot 0 and returns its view.</summary>
+        static ProductView MakeDisplayedGlobe(GameRoot root)
+        {
+            var s = root.Session;
+            var cell = root.Level.Cells.First(c => c.Occupant != null);
+            cell.Door.SetOpen(true);
+            var v = cell.Occupant;
+            var p = v.P;
+            v.BeginCarry(); root.Level.Prep.Socket.Place(v); s.Production.Inject(p, 1f);
+            v.BeginCarry(); root.Level.Assembly.Socket.Place(v); s.Production.Mount(p, 0, 1f);
+            s.Production.Decorate(p, 1f, GameBalance.SnowTarget);
+            v.BeginCarry(); root.Level.Sealer.Socket.Place(v); s.Production.FitDome(p, 1f); s.Production.Seal(p, true);
+            v.BeginCarry(); root.Level.Packaging.Socket.Place(v); s.Production.Package(p, 1f);
+            v.BeginCarry(); root.Level.ShelfSlots[0].Socket.Place(v);
+            Assert.AreEqual(ProductStage.Displayed, p.Stage);
+            cell.Door.SetOpen(false);
+            return v;
+        }
+
+        /// <summary>Holds a customer two metres in front of a globe, looking at it or away from it.</summary>
+        static void Pin(CustomerAgent c, ProductView globe, Vector3 toward, bool facing)
+        {
+            var at = globe.transform.position + toward * 2f;
+            at.y = 0f;
+            c.transform.position = at;
+            var look = globe.transform.position - at;
+            look.y = 0f;
+            c.transform.rotation = Quaternion.LookRotation(facing ? look : -look);
+        }
+
+        // §9.5 / §9.6: a twitch in view first reads as a mechanical feature, repeats escalate to Alarmed,
+        // the alarmed customer flees and raises exposure — and nothing is perceived when they aren't looking.
+        [UnityTest]
+        public IEnumerator Suspicion_TwitchInView_EscalatesToFlight_OnlyWhenSeen()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var s = root.Session;
+            var globe = MakeDisplayedGlobe(root);
+            root.Player.Teleport(root.Level.PlayerSpawn.position + Vector3.back * 0.5f, 0f);
+            root.OpenShop();
+            var c = root.Customers.SpawnNow();
+            var toward = root.Level.StoreCenter - globe.transform.position;
+            toward.y = 0f;
+            toward.Normalize();
+
+            // Looking away: a twitch behind their back isn't evidence.
+            for (float t = 0f; t < 0.6f; t += Time.deltaTime) { Pin(c, globe, toward, false); yield return null; }
+            globe.PlayStasisTwitch(0.9f);
+            // Stay turned away until the movement has settled (it counts as "still moving" for 0.8 s).
+            for (float t = 0f; t < 1.2f; t += Time.deltaTime) { Pin(c, globe, toward, false); yield return null; }
+            Assert.AreEqual(0, c.Suspicion.Sightings(EvidenceType.GlobeMovement), "not seen, not counted");
+            Assert.AreEqual(0f, c.Suspicion.Value, 0.01f);
+
+            // A small first twitch in view: a curiosity, not an alarm.
+            for (float t = 0f; t < 0.3f; t += Time.deltaTime) { Pin(c, globe, toward, true); yield return null; }
+            globe.PlayStasisTwitch(0.25f);
+            for (float t = 0f; t < 0.6f; t += Time.deltaTime) { Pin(c, globe, toward, true); yield return null; }
+            Assert.AreEqual(1, c.Suspicion.Sightings(EvidenceType.GlobeMovement));
+            Assert.AreEqual("Ooh, is that one mechanical?", c.Suspicion.LastReaction);
+            Assert.AreEqual(SuspicionStage.Comfortable, c.Suspicion.Stage);
+
+            // Clear, repeated movement escalates until they bolt.
+            float exposure = s.State.Exposure.Value;
+            for (int i = 0; i < 12 && c != null && c.State != CustomerState.Fleeing; i++)
+            {
+                globe.PlayStasisTwitch(0.9f);
+                for (float t = 0f; t < 0.6f && c.State != CustomerState.Fleeing; t += Time.deltaTime) { Pin(c, globe, toward, true); yield return null; }
+            }
+            Assert.IsNotNull(c);
+            Assert.AreEqual(SuspicionStage.Alarmed, c.Suspicion.Stage);
+            Assert.IsTrue(c.Suspicion.SawUndeniable);
+            Assert.AreEqual(CustomerState.Fleeing, c.State);
+
+            yield return WaitFor(() => root.Customers.Count == 0, 20f);
+            Assert.AreEqual(0, root.Customers.Count, "they leave the shop");
+            Assert.Greater(s.State.Exposure.Value, exposure, "and the business exposure rises");
+        }
+
         // §9.11: open, auto-close at 5 pm, summary with bills, next day with a checkpoint.
         [UnityTest]
         public IEnumerator DayLoop_AutoClosesAtFive_BillsAndCheckpointsTheNextDay()

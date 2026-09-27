@@ -93,7 +93,7 @@ namespace SnowGlobe.Game
             Spawn(exposure.CustomerAttentiveness);
         }
 
-        void Spawn(float attentiveness)
+        CustomerAgent Spawn(float attentiveness)
         {
             var go = new GameObject("Customer");
             go.transform.SetParent(transform, false);
@@ -101,6 +101,13 @@ namespace SnowGlobe.Game
             agent.Init(_nextId++, this, _level, attentiveness);
             _active.Add(agent);
             GameRoot.I.Audio.Play(Sfx.Chime, _level.CustomerEntrance.position, 0.5f, 1.5f);
+            return agent;
+        }
+
+        /// <summary>Brings a customer in right away, ignoring the arrival timer (tests and debugging).</summary>
+        public CustomerAgent SpawnNow()
+        {
+            return Spawn(GameRoot.I.Session.State.Exposure.CustomerAttentiveness);
         }
 
         public void Remove(CustomerAgent agent)

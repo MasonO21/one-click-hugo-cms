@@ -362,8 +362,8 @@ Power capacity is 3 (8 with the Rewired Fuse Box). Going over it makes power fai
 | 2 | A practised player completes a full cycle (pen → shelf) in 60–90 s; Cradle + Injector + Jig noticeably shorten or ease it | 🟡 needs playtest |
 | 3 | Money is exact: supplies are deducted when bought; a sale pays once; a globe cannot be sold twice or without being displayed and reserved | ✅ tests |
 | 4 | The serum warns at 15 s and expiry turns the character into a loose, catchable character; the kit is lost; the character still exists | ✅ core tests · ✅ in-world (PlayMode `Serum_WarnsAt15s_…`) |
-| 5 | Suspicion rises only from perceivable evidence; a first small twitch reads as a "mechanical feature"; repeats escalate to Alarmed; an alarmed customer flees and raises exposure | ✅ core tests · 🟡 perception |
-| 6 | From day 2, a weak seal can make a displayed globe twitch in view of a customer (the basic movement suspicion event) | ✅ core tests · 🟡 in-world |
+| 5 | Suspicion rises only from perceivable evidence; a first small twitch reads as a "mechanical feature"; repeats escalate to Alarmed; an alarmed customer flees and raises exposure | ✅ core tests · ✅ in-world (PlayMode `Suspicion_TwitchInView_…`: unseen twitches ignored, first twitch reads as mechanical, repeats → Alarmed → flees → exposure) |
+| 6 | From day 2, a weak seal can make a displayed globe twitch in view of a customer (the basic movement suspicion event) | ✅ core tests · ✅ in-world (same test drives the twitch a weak seal produces) |
 | 7 | The escape event is telegraphed for ≥ 8 s, can be prevented by reaching the gate, and otherwise produces a recapturable loose character; the threat resolves on recapture | ✅ in-world (PlayMode `Escape_…` ×2); fairness still needs a playtest |
 | 8 | At least three upgrades are purchasable while closed and have visible effects (Cradle, Injector, Jig; also Sealer, Soundproofing, Premium Case) | ✅ core tests · 🟡 in-world |
 | 9 | Save/load keeps day, cash, debt, inventory, upgrades and every product's id, name, stage, timers and location; no duplicates | ✅ tests (System.Text.Json) · ✅ JsonUtility round-trip passes in Unity |
