@@ -32,7 +32,7 @@ Notes:
 * **From a terminal** (with the editor closed):
 
   ```
-  Unity.exe -batchmode -quit -projectPath <project> -executeMethod SnowGlobe.EditorTools.SnowGlobeBuild.BuildFromCommandLine [-buildOutput <path	o\game.exe>] [-development]
+  Unity.exe -batchmode -quit -projectPath <project> -executeMethod SnowGlobe.EditorTools.SnowGlobeBuild.BuildFromCommandLine [-buildOutput <path/to/game.exe>] [-development]
   ```
 
 * **Smoke test a build:** run the game with `-smoketest`. It boots, starts a new game, opens the shop, runs for 10 seconds and quits with exit code 0 only if nothing logged an error. It saves to a temporary folder, never to your real saves. Add `-batchmode -nographics` to run it headless, or `-smokeshot <file.png>` to save a frame of the shop (handy for spotting missing shaders, which show up pink or opaque).
