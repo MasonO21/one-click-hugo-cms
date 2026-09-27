@@ -134,12 +134,13 @@ namespace SnowGlobe.Game
             BuildRoundDisplay(t);
             BuildCounter(t);
             BuildRefits(t);
+            BuildHolidayDecor();
 
             // Side table with lamp, plants, pictures, banner.
             B("LampTable", new Vector3(0.8f, 0.375f, 9.55f), new Vector3(0.9f, 0.75f, 0.5f), Palette.WoodWarm);
             TableLamp(new Vector3(0.8f, 0.75f, 9.55f), true);
             Plant(new Vector3(-6.5f, 0f, 8.9f), 1.3f);
-            Plant(new Vector3(6.4f, 0f, 0.6f), 1.1f);
+            if (!ChristmasTree(new Vector3(6.05f, 0f, 0.8f))) Plant(new Vector3(6.4f, 0f, 0.6f), 1.1f);
             Plant(new Vector3(2.1f, 0f, 9.6f), 0.9f);
             Picture(new Vector3(0.8f, 2.4f, 9.99f), Vector3.back, 0.7f, 0.7f, "painting_town");
             // Special orders board (day 4+): look at it and press E to pin an order.
@@ -373,6 +374,34 @@ namespace SnowGlobe.Game
             return go;
         }
 
+        /// <summary>A decorated tree with presents underneath, standing in a storefront corner. False if the models are missing.</summary>
+        static bool ChristmasTree(Vector3 floorPos)
+        {
+            if (Models.Place("Holiday/tree-decorated", _static, floorPos, 2.3f, 20f) == null) return false;
+            var col = B("TreeCollider", floorPos + Vector3.up * 1.1f, new Vector3(0.9f, 2.2f, 0.9f), Palette.Foliage);
+            col.GetComponent<Renderer>().enabled = false;
+            GiftBox(floorPos + new Vector3(-0.55f, 0f, 0.45f), 0.3f, Palette.StoreTrim);
+            GiftBox(floorPos + new Vector3(-0.2f, 0f, 0.7f), 0.22f, Palette.Teal);
+            GiftBox(floorPos + new Vector3(-0.75f, 0f, 0.05f), 0.25f, Palette.Cream);
+            return true;
+        }
+
+        /// <summary>Winter gift-shop touches from the holiday kit: wreath by the door, stockings on the counter, a nutcracker by the till.</summary>
+        static void BuildHolidayDecor()
+        {
+            // Wreath on the pier above the OPEN/CLOSED sign, facing into the shop.
+            Models.Place("Holiday/wreath-decorated", _static, new Vector3(-3.35f, 2.2f, 0.06f), 0.55f, 180f);
+            // Stockings hung along the front of the counter (the customers' side).
+            var counter = _level.Counter.transform;
+            for (int i = 0; i < 4; i++)
+                Models.Place(i % 2 == 0 ? "Holiday/sock-red" : "Holiday/sock-green", counter, new Vector3(-1.05f + i * 0.7f, 0.55f, -0.37f), 0.32f, 180f);
+            // A nutcracker standing guard at the end of the counter.
+            Models.Place("Holiday/nutcracker", counter, new Vector3(1.25f, 1.04f, 0.2f), 0.38f, 180f);
+            // Candy canes and a snowman on the window sill.
+            Models.Place("Holiday/snowman-hat", _static, new Vector3(-6.2f, 0.41f, 0.25f), 0.3f, 180f);
+            Models.Place("Holiday/candy-cane-red", _static, new Vector3(-3.95f, 0.41f, 0.2f), 0.25f, 150f);
+        }
+
         static void BuildCounter(Transform t)
         {
             var counterRoot = Shapes.Empty("Counter", t, new Vector3(-4f, 0f, 8.4f));
@@ -483,7 +512,7 @@ namespace SnowGlobe.Game
                 }
             }
             Crate(new Vector3(-1.3f, 0f, 13.75f), new Vector3(1.2f, 0.9f, 0.7f), "crate_backroom", Vector3.forward, 0.8f, 0.62f);
-            B("CrateSmall", new Vector3(-1.5f, 1.1f, 13.7f), new Vector3(0.6f, 0.4f, 0.5f), Palette.WoodWarm);
+            Models.Dress(B("CrateSmall", new Vector3(-1.5f, 1.1f, 13.7f), new Vector3(0.6f, 0.4f, 0.5f), Palette.WoodWarm), "Furniture/cardboardBoxOpen");
 
             // Stations, placed like the painting: long worktable in the middle, brass lamp desk front-left.
             _level.Prep = Station<PrepStation>(t, "Preparation Cradle", StationId.PrepCradle, new Vector3(-6.2f, 0f, 20.3f), 90f, new Vector3(1f, 0.9f, 0.9f), Vector3.zero);
@@ -520,7 +549,7 @@ namespace SnowGlobe.Game
             // Carts with finished globes, packed boxes, a stool.
             Cart(new Vector3(2.8f, 0f, 21.4f), 0f, true);
             Cart(new Vector3(-2.8f, 0f, 21.4f), 0f, true);
-            for (int i = 0; i < 3; i++) B("PackedBox", new Vector3(0.2f, 0.3f + i * 0.6f, 13.6f - (i % 2) * 0.05f), new Vector3(0.6f, 0.6f, 0.6f), Palette.Cardboard);
+            for (int i = 0; i < 3; i++) Models.Dress(B("PackedBox", new Vector3(0.2f, 0.3f + i * 0.6f, 13.6f - (i % 2) * 0.05f), new Vector3(0.6f, 0.6f, 0.6f), Palette.Cardboard), "Furniture/cardboardBoxClosed", i * 90f);
             Emissive(B("Tissue", new Vector3(0.2f, 1.81f, 13.6f), new Vector3(0.45f, 0.04f, 0.45f), WallCream, false), WallCream, 0.1f);
             BuildMachines(t);
             Stool(new Vector3(1.7f, 0f, 16.9f));
@@ -966,7 +995,7 @@ namespace SnowGlobe.Game
             foreach (var o in new[] { new Vector2(-1.1f, -0.48f), new Vector2(1.1f, -0.48f), new Vector2(-1.1f, 0.48f), new Vector2(1.1f, 0.48f) })
                 B("Leg", new Vector3(floor.x + o.x, floor.y + 0.43f, floor.z + o.y), new Vector3(0.08f, 0.86f, 0.08f), Palette.TealDark);
             B("LowerShelf", new Vector3(floor.x, floor.y + 0.25f, floor.z), new Vector3(2.3f, 0.04f, 1f), Palette.TealDark);
-            for (int i = 0; i < 4; i++) B("ShelfCrate", new Vector3(floor.x - 0.8f + i * 0.55f, floor.y + 0.42f, floor.z), new Vector3(0.45f, 0.3f, 0.6f), Palette.WoodWarm);
+            for (int i = 0; i < 4; i++) Models.Dress(B("ShelfCrate", new Vector3(floor.x - 0.8f + i * 0.55f, floor.y + 0.42f, floor.z), new Vector3(0.45f, 0.3f, 0.6f), Palette.WoodWarm), i % 2 == 0 ? "Factory/box-small" : "Factory/box-wide");
 
             var c = new Vector3(floor.x - 0.2f, top, floor.z);
             B("MiniRug", c + new Vector3(0f, 0.003f, 0f), new Vector3(0.7f, 0.006f, 0.45f), new Color(0.5f, 0.15f, 0.12f), false);
@@ -1123,7 +1152,8 @@ namespace SnowGlobe.Game
             Shapes.Prim(PrimitiveType.Cylinder, "Snow", root, new Vector3(0f, 0.058f, 0f), new Vector3(0.3f, 0.006f, 0.3f), Palette.Snow, false);
             int seed = _decorSeed++;
             FigureBuilder.Figurine(root, new Vector3(0f, 0.06f, 0f), 0f, 1f, seed);
-            if (seed % 3 == 0)
+            if (seed % 3 == 0 && Models.Place("Holiday/tree-snow-b", root, new Vector3(0.09f, 0.06f, -0.05f), 0.13f) != null) { }
+            else if (seed % 3 == 0)
                 Shapes.Prim(PrimitiveType.Sphere, "Tree", root, new Vector3(0.09f, 0.12f, -0.05f), new Vector3(0.05f, 0.11f, 0.05f), new Color(0.12f, 0.38f, 0.22f), false);
             else if (seed % 3 == 1)
             {
@@ -1169,8 +1199,12 @@ namespace SnowGlobe.Game
             Metal(Shapes.Prim(PrimitiveType.Cylinder, "JarLid", _static, pos + Vector3.up * 0.21f, new Vector3(0.15f, 0.015f, 0.15f), Palette.Brass, false));
         }
 
+        static readonly string[] Presents = { "present-a-cube", "present-b-cube", "present-a-rectangle", "present-b-round", "present-a-round", "present-b-rectangle" };
+
         static void GiftBox(Vector3 floorPos, float size, Color color)
         {
+            int pick = Mathf.Abs(Mathf.RoundToInt(floorPos.x * 11f + floorPos.z * 5f + floorPos.y * 3f)) % Presents.Length;
+            if (Models.Fit("Holiday/" + Presents[pick], _static, floorPos, new Vector3(size * 1.3f, size, size * 1.3f), pick * 37f) != null) return;
             B("GiftBox", floorPos + Vector3.up * size * 0.5f, new Vector3(size, size, size), color, false);
             Metal(B("Ribbon", floorPos + Vector3.up * size * 0.5f, new Vector3(size * 1.02f, size * 1.02f, size * 0.15f), Palette.Brass, false));
             Metal(B("Ribbon", floorPos + Vector3.up * size * 0.5f, new Vector3(size * 0.15f, size * 1.02f, size * 1.02f), Palette.Brass, false));
@@ -1178,6 +1212,8 @@ namespace SnowGlobe.Game
 
         static void Plant(Vector3 floorPos, float height)
         {
+            string model = height >= 0.8f ? "Furniture/pottedPlant" : "Furniture/plantSmall" + (1 + Mathf.Abs(Mathf.RoundToInt(floorPos.x * 7f + floorPos.z * 3f)) % 3);
+            if (Models.Place(model, _static, floorPos, height, floorPos.x * 40f) != null) return;
             Shapes.Prim(PrimitiveType.Cylinder, "Pot", _static, floorPos + Vector3.up * height * 0.12f, new Vector3(height * 0.3f, height * 0.12f, height * 0.3f), Palette.Teal, false);
             for (int i = 0; i < 4; i++)
             {

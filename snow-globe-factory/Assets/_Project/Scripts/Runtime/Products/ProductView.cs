@@ -271,6 +271,16 @@ namespace SnowGlobe.Game
 
         static void Winter(Transform root, int item, Color tint)
         {
+            // Untinted winter scenery uses the holiday models; tinted variants (other themes) keep the primitives.
+            if (tint == Color.white)
+            {
+                switch (item)
+                {
+                    case 0: if (Models.Place("Holiday/tree-snow-a", root, Vector3.zero, 0.1f) != null) return; break;
+                    case 2: if (Models.Place("Holiday/snowman-hat", root, Vector3.zero, 0.055f, 180f) != null) return; break;
+                    case 3: if (Models.Place("Holiday/lantern", root, Vector3.zero, 0.075f) != null) return; break;
+                }
+            }
             switch (item)
             {
                 case 0:
@@ -298,6 +308,8 @@ namespace SnowGlobe.Game
         static void Woodland(Transform root, int item)
         {
             var bark = new Color(0.33f, 0.22f, 0.13f);
+            if (item == 0 && Models.Place("Holiday/tree", root, Vector3.zero, 0.11f) != null) return;
+            if (item >= 2 && Models.Place("Holiday/reindeer", root, Vector3.zero, 0.06f, 180f) != null) return;
             switch (item)
             {
                 case 0:

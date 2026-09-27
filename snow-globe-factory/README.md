@@ -22,7 +22,7 @@ Unity 6 · C# · Windows PC · keyboard + mouse.
 
 Notes:
 
-* Nothing needs importing. The building, characters, UI and audio are all generated at runtime from primitives and synthesized sound.
+* Nothing needs importing by hand. The building, the miniature characters, UI and audio are generated at runtime; people and props use the CC0 Kenney models bundled in `Assets/_Project/Resources/Models` (credits: [`docs/ASSET_CREDITS.md`](docs/ASSET_CREDITS.md)), with primitive placeholders if a model is missing.
 * Input works with either the legacy Input Manager or the Input System package.
 * Materials use URP/Lit when a URP asset is active, and Standard otherwise. With URP, runtime materials are cloned from the templates in `Assets/_Project/Resources/SnowGlobeShaders/`, which is what gets the shaders (and the transparent and emissive variants) into a player build.
 

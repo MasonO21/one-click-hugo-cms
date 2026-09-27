@@ -56,6 +56,7 @@ namespace SnowGlobe.Game
         bool _reminded;
         /// <summary>A displayed globe this customer has picked up for a closer look (day 4+).</summary>
         public ProductView Handled;
+        PersonModel _look;
         float _handleTimer;
         bool _handledThisStop;
         ThemeId _preferred;
@@ -79,15 +80,21 @@ namespace SnowGlobe.Game
             _preferred = themes[Random.Range(0, themes.Count)];
             name = "Customer_" + id;
 
-            var rng = new System.Random(id * 31);
-            Color coat = Color.HSVToRGB((float)rng.NextDouble(), 0.45f, 0.7f);
-            Color skin = new[] { new Color(0.98f, 0.83f, 0.7f), new Color(0.8f, 0.6f, 0.45f), new Color(0.45f, 0.3f, 0.22f) }[rng.Next(3)];
-            Shapes.Prim(PrimitiveType.Capsule, "Body", transform, new Vector3(0f, 0.8f, 0f), new Vector3(0.55f, 0.8f, 0.45f), coat, false);
-            Shapes.Box("Scarf", transform, new Vector3(0f, 1.38f, 0f), new Vector3(0.4f, 0.1f, 0.35f), Palette.StoreTrim, false);
-            Head = Shapes.Empty("Head", transform, new Vector3(0f, 1.62f, 0f)).transform;
-            Shapes.Prim(PrimitiveType.Sphere, "Skull", Head, Vector3.zero, Vector3.one * 0.32f, skin, false);
-            Shapes.Prim(PrimitiveType.Sphere, "EyeL", Head, new Vector3(-0.06f, 0.03f, 0.14f), Vector3.one * 0.05f, Color.black, false);
-            Shapes.Prim(PrimitiveType.Sphere, "EyeR", Head, new Vector3(0.06f, 0.03f, 0.14f), Vector3.one * 0.05f, Color.black, false);
+            // Kenney's characters are chunky, big-headed people: 1.5 m tall with eyes about 1.25 m up.
+            _look = PersonModel.Attach(transform, id, 1.5f);
+            Head = Shapes.Empty("Head", transform, new Vector3(0f, _look != null ? 1.25f : 1.62f, 0f)).transform;
+            if (_look == null)
+            {
+                // Placeholder body if the character models are missing.
+                var rng = new System.Random(id * 31);
+                Color coat = Color.HSVToRGB((float)rng.NextDouble(), 0.45f, 0.7f);
+                Color skin = new[] { new Color(0.98f, 0.83f, 0.7f), new Color(0.8f, 0.6f, 0.45f), new Color(0.45f, 0.3f, 0.22f) }[rng.Next(3)];
+                Shapes.Prim(PrimitiveType.Capsule, "Body", transform, new Vector3(0f, 0.8f, 0f), new Vector3(0.55f, 0.8f, 0.45f), coat, false);
+                Shapes.Box("Scarf", transform, new Vector3(0f, 1.38f, 0f), new Vector3(0.4f, 0.1f, 0.35f), Palette.StoreTrim, false);
+                Shapes.Prim(PrimitiveType.Sphere, "Skull", Head, Vector3.zero, Vector3.one * 0.32f, skin, false);
+                Shapes.Prim(PrimitiveType.Sphere, "EyeL", Head, new Vector3(-0.06f, 0.03f, 0.14f), Vector3.one * 0.05f, Color.black, false);
+                Shapes.Prim(PrimitiveType.Sphere, "EyeR", Head, new Vector3(0.06f, 0.03f, 0.14f), Vector3.one * 0.05f, Color.black, false);
+            }
             var col = gameObject.AddComponent<CapsuleCollider>();
             col.height = 1.8f;
             col.radius = 0.3f;
@@ -137,6 +144,7 @@ namespace SnowGlobe.Game
                 CancelPurchase();
                 Say(Suspicion.SawUndeniable ? "It's ALIVE. They're all alive!" : "I... I have to go.", 4f);
                 Root.Audio.Play(Sfx.Squeak, Head.position, 0.6f, 0.5f);
+                if (_look != null) _look.Gesture("emote-no");
                 SetState(CustomerState.Fleeing, _level.CustomerEntrance.position);
                 return;
             }
@@ -344,6 +352,7 @@ namespace SnowGlobe.Game
             if (v.Socket == null || Root.Interactor.Held == v || Root.Customers.IsReservedByWaitingCustomer(v.P.Id)) return false;
             if (!Root.Session.Store.Reserve(v.P, Id).Success) return false;
             Handled = v;
+            if (_look != null) _look.Gesture("pick-up");
             _handleTimer = Random.Range(3f, 5f);
             State = CustomerState.Handling;
             Root.Audio.Play(Sfx.Tap, v.transform.position, 0.4f);
@@ -384,6 +393,7 @@ namespace SnowGlobe.Game
             if (price <= 0) return;
             Root.Audio.Play(Sfx.Chime, transform.position);
             Root.OnProductSold(p);
+            if (_look != null) _look.Gesture("interact-right");
             ChosenProduct = null;
             _bag = Shapes.Box("Bag", transform, new Vector3(0.35f, 0.9f, 0.1f), new Vector3(0.3f, 0.3f, 0.3f), Palette.BoxColor, false);
             Say(Suspicion.Stage >= SuspicionStage.Curious ? "Thanks... I guess." : "Thank you! Merry everything!");
