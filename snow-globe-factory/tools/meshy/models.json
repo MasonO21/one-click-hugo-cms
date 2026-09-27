@@ -1,0 +1,52 @@
+[
+  {
+    "name": "register",
+    "prompt": "Antique Victorian brass cash register with ornate engraved sides, round typewriter-style number keys, a pop-up price window on top and a small cash drawer.",
+    "texture": "Polished warm brass with dark engraving, cream key caps with black numbers, dark wood drawer front.",
+    "polycount": 6000,
+    "crop": [
+      -0.31,
+      0.35,
+      -0.285,
+      1,
+      -0.35,
+      0.35
+    ]
+  },
+  {
+    "name": "sealer",
+    "prompt": "Wall-mounted steampunk machine panel: a rectangular brass cabinet face with copper pipes, rivets, two valves and one big round pressure gauge.",
+    "texture": "Aged brass and copper with teal-green painted panels, cream gauge face with black needle.",
+    "polycount": 6000
+  },
+  {
+    "name": "chandelier",
+    "prompt": "Round Victorian brass ceiling chandelier with a hanging chain, one ring of eight curved arms each holding a candle-shaped bulb.",
+    "texture": "Warm gold brass, white candle sleeves, soft yellow bulbs.",
+    "polycount": 5000
+  },
+  {
+    "name": "crt_monitor",
+    "prompt": "Old 1990s beige CRT computer monitor, boxy and deep, with a slightly curved dark screen, sitting on a matching beige keyboard.",
+    "texture": "Yellowed beige plastic, dark grey-green screen, grey keys.",
+    "polycount": 4000
+  },
+  {
+    "name": "table_lamp",
+    "prompt": "Classic banker's desk lamp with a brass stand and a curved green glass shade.",
+    "texture": "Polished brass base and stem, deep emerald green glass shade.",
+    "polycount": 3000
+  },
+  {
+    "name": "stool",
+    "prompt": "Round wooden workshop stool with three splayed legs and a ring footrest.",
+    "texture": "Warm honey-coloured worn wood.",
+    "polycount": 2500
+  },
+  {
+    "name": "sconce",
+    "prompt": "Brass wall sconce: a small ornate backplate with one curved arm holding a frosted tulip glass shade.",
+    "texture": "Warm brass, frosted white glass shade.",
+    "polycount": 2500
+  }
+]

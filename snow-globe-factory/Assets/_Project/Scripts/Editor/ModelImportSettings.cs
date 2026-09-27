@@ -22,6 +22,8 @@ namespace SnowGlobe.EditorTools
             importer.importLights = false;
             // Props under the level's static root are combined with StaticBatchingUtility at runtime, which needs readable meshes.
             importer.isReadable = true;
+            // Meshy models get their texture at runtime (Models.ApplyMeshyTexture); skip the OBJ's own material.
+            if (assetPath.StartsWith(Root + "Meshy/")) importer.materialImportMode = ModelImporterMaterialImportMode.None;
         }
     }
 }

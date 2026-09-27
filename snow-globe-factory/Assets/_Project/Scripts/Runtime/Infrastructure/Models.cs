@@ -78,6 +78,7 @@ namespace SnowGlobe.Game
             var b = NativeBounds(path);
             var go = Object.Instantiate(prefab, parent, false);
             go.name = path.Substring(path.LastIndexOf('/') + 1);
+            if (path.StartsWith(MeshyFolder)) ApplyMeshyTexture(go, path);
             var rot = Quaternion.Euler(0f, yaw, 0f);
             // Keep the model's own root rotation (FBX exports often carry an axis fix) and turn it about the vertical.
             go.transform.localRotation = rot * prefab.transform.localRotation;
@@ -86,6 +87,31 @@ namespace SnowGlobe.Game
             var pivotOffset = new Vector3(b.center.x, b.min.y, b.center.z) * scale;
             go.transform.localPosition = localBottom - rot * pivotOffset;
             return go;
+        }
+
+        const string MeshyFolder = "Meshy/";
+        static readonly Dictionary<string, Material> MeshyMaterials = new Dictionary<string, Material>();
+
+        /// <summary>
+        /// Meshy models are stored as a bare OBJ plus a JPG of the same name (see Editor/MeshyModels.cs); pair them here with
+        /// a material cloned from the shader templates, so it survives shader stripping in builds.
+        /// </summary>
+        static void ApplyMeshyTexture(GameObject go, string path)
+        {
+            Material m;
+            if (!MeshyMaterials.TryGetValue(path, out m))
+            {
+                var tex = Resources.Load<Texture2D>("Models/" + path);
+                m = tex != null ? Shapes.NewTexMat(tex) : null;
+                MeshyMaterials[path] = m;
+            }
+            if (m == null) return;
+            foreach (var r in go.GetComponentsInChildren<Renderer>())
+            {
+                var mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++) mats[i] = m;
+                r.sharedMaterials = mats;
+            }
         }
 
         /// <summary>Renderer bounds of the model as imported (its own root rotation and scale), relative to its root position.</summary>

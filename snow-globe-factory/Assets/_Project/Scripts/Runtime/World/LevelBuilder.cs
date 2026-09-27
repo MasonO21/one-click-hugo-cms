@@ -408,7 +408,9 @@ namespace SnowGlobe.Game
             var r = counterRoot.transform;
             Shapes.Box("CounterBody", r, new Vector3(0f, 0.5f, 0f), new Vector3(2.8f, 1f, 0.7f), Palette.Teal);
             Metal(Shapes.Box("CounterTop", r, new Vector3(0f, 1.02f, 0f), new Vector3(2.9f, 0.04f, 0.8f), Palette.Brass));
-            Metal(Shapes.Box("Register", r, new Vector3(-1f, 1.17f, 0.1f), new Vector3(0.45f, 0.26f, 0.35f), Palette.Brass));
+            var register = Metal(Shapes.Box("Register", r, new Vector3(-1f, 1.17f, 0.1f), new Vector3(0.45f, 0.26f, 0.35f), Palette.Brass));
+            // Meshy hero model: keys face the staff side (+z).
+            if (Models.Place("Meshy/register", r, new Vector3(-1f, 1.04f, 0.1f), 0.42f) != null) register.GetComponent<Renderer>().enabled = false;
             var bell = Shapes.Prim(PrimitiveType.Sphere, "Bell", r, new Vector3(0.9f, 1.07f, -0.15f), new Vector3(0.12f, 0.08f, 0.12f), Palette.Brass);
             Metal(bell);
             _level.Counter = counterRoot.AddComponent<ServiceCounter>();
