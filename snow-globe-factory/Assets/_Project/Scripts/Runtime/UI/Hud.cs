@@ -9,20 +9,22 @@ namespace SnowGlobe.Game
     /// (station status, serum timers, customer suspicion); the corner panel only holds
     /// cash, day, supplies and exposure. Any modal panel pauses the game.
     /// </summary>
+    /// <summary>A timed HUD message (toast, alert or subtitle).</summary>
+    public struct HudLine
+    {
+        public string Text;
+        public float Until;
+        public bool Bad;
+    }
+
     public sealed class Hud : MonoBehaviour
     {
-        struct Line
-        {
-            public string Text;
-            public float Until;
-            public bool Bad;
-        }
 
         enum Tab { Supplies, Upgrades, Themes, Orders, Notes, SaveLoad, Settings, Help }
 
-        readonly List<Line> _toasts = new List<Line>();
-        readonly List<Line> _subtitles = new List<Line>();
-        readonly List<Line> _alerts = new List<Line>();
+        readonly List<HudLine> _toasts = new List<HudLine>();
+        readonly List<HudLine> _subtitles = new List<HudLine>();
+        readonly List<HudLine> _alerts = new List<HudLine>();
 
         bool _title, _menu, _paused, _summary, _briefing;
         bool _hasSave;
@@ -36,6 +38,20 @@ namespace SnowGlobe.Game
 
         public bool AnyModal { get { return _title || _menu || _paused || _summary || _briefing; } }
         public bool SummaryShown { get { return _summary; } }
+        public bool TitleShown { get { return _title; } }
+        public IReadOnlyList<HudLine> Toasts { get { return _toasts; } }
+        public IReadOnlyList<HudLine> Alerts { get { return _alerts; } }
+        public IReadOnlyList<HudLine> Subtitles { get { return _subtitles; } }
+
+        /// <summary>The uGUI HUD, when the UI package is available; otherwise the IMGUI fallback below draws everything.</summary>
+        MonoBehaviour _view;
+
+        void Start()
+        {
+#if SGF_UGUI
+            _view = HudView.Create(this);
+#endif
+        }
         public bool BriefingShown { get { return _briefing; } }
 
         /// <summary>Closes every modal panel (used by tests and scripted flows).</summary>
@@ -72,20 +88,20 @@ namespace SnowGlobe.Game
 
         public void Toast(string text, bool bad)
         {
-            _toasts.Add(new Line { Text = text, Until = Time.unscaledTime + 4f, Bad = bad });
+            _toasts.Add(new HudLine { Text = text, Until = Time.unscaledTime + 4f, Bad = bad });
             if (_toasts.Count > 4) _toasts.RemoveAt(0);
         }
 
         public void Subtitle(string speaker, string text)
         {
             if (!Settings.Subtitles || string.IsNullOrEmpty(text)) return;
-            _subtitles.Add(new Line { Text = string.IsNullOrEmpty(speaker) ? text : speaker + ": " + text, Until = Time.unscaledTime + 4.5f });
+            _subtitles.Add(new HudLine { Text = string.IsNullOrEmpty(speaker) ? text : speaker + ": " + text, Until = Time.unscaledTime + 4.5f });
             if (_subtitles.Count > 3) _subtitles.RemoveAt(0);
         }
 
         public void Alert(string text)
         {
-            _alerts.Add(new Line { Text = text, Until = Time.unscaledTime + 6f, Bad = true });
+            _alerts.Add(new HudLine { Text = text, Until = Time.unscaledTime + 6f, Bad = true });
             if (_alerts.Count > 4) _alerts.RemoveAt(0);
             if (Root != null && Root.Audio != null) Root.Audio.Play2D(Sfx.Tick, 0.5f);
         }
@@ -116,7 +132,7 @@ namespace SnowGlobe.Game
             Prune(_alerts);
         }
 
-        static void Prune(List<Line> lines)
+        static void Prune(List<HudLine> lines)
         {
             for (int i = lines.Count - 1; i >= 0; i--) if (lines[i].Until < Time.unscaledTime) lines.RemoveAt(i);
         }
@@ -140,10 +156,13 @@ namespace SnowGlobe.Game
             if (_title) { DrawTitle(); return; }
 
             DrawWorldLabels();
-            DrawCornerPanel();
-            DrawAlerts();
-            DrawPrompts();
-            DrawToastsAndSubtitles();
+            if (_view == null)
+            {
+                DrawCornerPanel();
+                DrawAlerts();
+                DrawPrompts();
+                DrawToastsAndSubtitles();
+            }
             var station = Root.Interactor.LockedStation;
             if (station != null) station.DrawGUI();
 
@@ -167,6 +186,7 @@ namespace SnowGlobe.Game
         {
             var cam = Root.Player.Camera.transform.position;
             if (Vector3.Distance(cam, world) > maxDist) return;
+            if (Hidden(cam, world)) return;
             Vector2 s;
             if (!ToScreen(world, out s)) return;
             var content = new GUIContent(text);
@@ -177,6 +197,18 @@ namespace SnowGlobe.Game
             GUI.color = color;
             GUI.Label(r, content, _small);
             GUI.color = Color.white;
+        }
+
+        /// <summary>Is a wall (or anything solid) between the camera and this label? Stops labels showing through walls.</summary>
+        static bool Hidden(Vector3 cam, Vector3 world)
+        {
+            var to = world - cam;
+            float d = to.magnitude;
+            if (d < 0.6f) return false;
+            // Stop short of the point so the labelled object itself doesn't count as a blocker.
+            RaycastHit hit;
+            if (!Physics.Raycast(cam, to / d, out hit, d - 0.5f, ~0, QueryTriggerInteraction.Ignore)) return false;
+            return hit.collider.GetComponentInParent<PlayerController>() == null;
         }
 
         void DrawWorldLabels()
