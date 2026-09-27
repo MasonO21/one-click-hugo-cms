@@ -169,6 +169,8 @@ namespace SnowGlobe.Game
             B("HallWallL", new Vector3(2.4f, 1.4f, 11.5f), new Vector3(0.2f, 2.8f, 3f), WallCream);
             B("HallWallR", new Vector3(5.1f, 1.4f, 11.5f), new Vector3(0.2f, 2.8f, 3f), WallCream);
             B("HallCeiling", new Vector3(3.75f, 2.85f, 11.5f), new Vector3(2.9f, 0.1f, 3f), WallCream);
+            // Solid floor bridging the storefront floor (ends z 10.1) and the backroom floor (starts z 13).
+            Glossy(B("HallFloor", new Vector3(3.75f, -0.05f, 11.55f), new Vector3(2.9f, 0.1f, 3.3f), Palette.WoodWarm), 0.45f);
             B("HallRunner", new Vector3(3.75f, 0.005f, 11.5f), new Vector3(1.4f, 0.01f, 2.8f), Palette.RugBlue, false);
             Pendant(new Vector3(3.75f, 2.8f, 11.4f), 0.5f, true, 0.6f, 4f, LightArea.Store, 0f);
             _level.StaffDoor = MakeDoor(t, "StaffDoor", new Vector3(2.75f, 0f, 13f), 0f, 2f, 2.3f, Palette.TealDark, "staff door", false);

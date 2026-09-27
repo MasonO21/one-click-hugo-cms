@@ -50,6 +50,27 @@ namespace SnowGlobe.Game.Tests
         }
 
         [UnityTest]
+        public IEnumerator EveryWalkway_HasFloorUnderfoot()
+        {
+            yield return Boot();
+            Physics.SyncTransforms();
+            // Storefront -> staff hallway -> backroom -> basement stairs landing, then across the basement.
+            var route = new System.Collections.Generic.List<Vector3>();
+            for (float z = 1f; z <= 9.5f; z += 0.5f) route.Add(new Vector3(3.75f, 0f, z));
+            for (float z = 9.5f; z <= 13.5f; z += 0.1f) route.Add(new Vector3(3.75f, 0f, z));
+            for (float z = 13.5f; z <= 22.5f; z += 0.5f) route.Add(new Vector3(0f, 0f, z));
+            for (float x = 0f; x >= -6f; x -= 0.5f) route.Add(new Vector3(x, 0f, 22.5f));
+            for (float z = 22.5f; z <= 24.3f; z += 0.1f) route.Add(new Vector3(-6.1f, 0f, z));
+            for (float z = 25f; z <= 38f; z += 0.5f) route.Add(new Vector3(-2f, Level.BasementFloorY, z));
+            foreach (var p in route)
+            {
+                // Furniture may be in the way; all that matters is a collider at floor height.
+                var hits = Physics.RaycastAll(p + Vector3.up * 1.5f, Vector3.down, 2f, ~0, QueryTriggerInteraction.Ignore);
+                Assert.IsTrue(hits.Any(h => Mathf.Abs(h.point.y - p.y) < 0.15f), "no floor under " + p);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator FullManualLine_FromCabinet_ToSale()
         {
             yield return Boot();
