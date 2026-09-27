@@ -35,7 +35,7 @@ Notes:
   Unity.exe -batchmode -quit -projectPath <project> -executeMethod SnowGlobe.EditorTools.SnowGlobeBuild.BuildFromCommandLine [-buildOutput <path/to/game.exe>] [-development]
   ```
 
-* **Smoke test a build:** run the game with `-smoketest`. It boots, starts a new game, opens the shop, runs for 10 seconds and quits with exit code 0 only if nothing logged an error. It saves to a temporary folder, never to your real saves. Add `-batchmode -nographics` to run it headless, or `-smokeshot <file.png>` to save a frame of the shop (handy for spotting missing shaders, which show up pink or opaque).
+* **Smoke test a build:** run the game with `-smoketest`. It boots, starts a new game, opens the shop, runs for 10 seconds and quits with exit code 0 only if nothing logged an error. It saves to a temporary folder, never to your real saves. Add `-batchmode -nographics` to run it headless, `-smokeshot <file.png>` to save a frame of the shop (handy for spotting missing shaders, which show up pink or opaque), or `-smokestress` to add 20 products (12 loose) and log frame times in each area.
 
   ```
   SnowGlobeFactory.exe -batchmode -nographics -smoketest -logFile smoke.log

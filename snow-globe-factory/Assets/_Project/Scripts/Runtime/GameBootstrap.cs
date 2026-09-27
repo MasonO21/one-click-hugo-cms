@@ -52,8 +52,34 @@ namespace SnowGlobe.Game
             float t = 0f;
             int frames = 0;
             while (t < 10f) { t += Time.unscaledDeltaTime; frames++; yield return null; }
-            // Optional -smokeshot <file.png>: a frame from the shop floor, to eyeball shaders in a real build.
             var args = System.Environment.GetCommandLineArgs();
+            // Optional -smokestress: the §9.13 performance check (20 products, 12 of them loose) in each area.
+            if (System.Array.IndexOf(args, "-smokestress") >= 0)
+            {
+                QualitySettings.vSyncCount = 0; // measure headroom, not the monitor's refresh rate
+                Application.targetFrameRate = -1;
+                var st = root.Session.State;
+                float by = Level.BasementFloorY;
+                for (int i = 0; i < 6; i++) root.SpawnView(st.AddCharacter(SnowGlobe.Core.ArchetypeId.SleepyOne, SnowGlobe.Core.ProductLocation.Loose(1.5f + i * 0.5f, 0.2f, 4f + (i % 2))));
+                for (int i = 0; i < 6; i++) root.SpawnView(st.AddCharacter(SnowGlobe.Core.ArchetypeId.SleepyOne, SnowGlobe.Core.ProductLocation.Loose(-4f + i * 0.6f, by + 0.2f, 30f + (i % 2))));
+                for (int i = 0; i < 5; i++) root.SpawnView(st.AddCharacter(SnowGlobe.Core.ArchetypeId.SleepyOne, SnowGlobe.Core.ProductLocation.Holding(0)));
+                var spots = new[] { root.Level.PlayerSpawn.position, new Vector3(3.75f, 0f, 8.5f), new Vector3(0f, 0f, 15f), new Vector3(-2f, by, 27f) };
+                var names = new[] { "shop", "hallway", "backroom", "basement" };
+                for (int s = 0; s < spots.Length; s++)
+                {
+                    root.Player.Teleport(spots[s], s == 0 ? root.Level.PlayerSpawnYaw : 0f);
+                    for (int i = 0; i < 60; i++) yield return null; // settle
+                    var times = new System.Collections.Generic.List<float>();
+                    for (float t2 = 0f; t2 < 3f; t2 += Time.unscaledDeltaTime) { times.Add(Time.unscaledDeltaTime * 1000f); yield return null; }
+                    times.Sort();
+                    float avg = 0f;
+                    foreach (var x in times) avg += x;
+                    avg /= times.Count;
+                    Debug.Log("[SnowGlobe] Perf " + names[s] + ": " + root.Views.Count + " products, avg " + avg.ToString("0.0") + " ms (" + (1000f / avg).ToString("0") +
+                              " fps), 99th pct " + times[(int)(times.Count * 0.99f)].ToString("0.0") + " ms, worst " + times[times.Count - 1].ToString("0.0") + " ms");
+                }
+            }
+            // Optional -smokeshot <file.png>: a frame from the shop floor, to eyeball shaders in a real build.
             int shot = System.Array.IndexOf(args, "-smokeshot");
             if (shot >= 0 && shot + 1 < args.Length)
             {
