@@ -15,6 +15,8 @@ namespace SnowGlobe.Core
         // Threats: real production/secrecy problems, always telegraphed first.
         PowerFailure = 5,
         EscapeAttempt = 6,
+        ConveyorGrab = 7,   // threat: something small grips the belt and won't let go
+        CabinetShift = 8,   // atmospheric: a character is in a different cabinet than you left it
     }
 
     public enum DirectorEventKind
@@ -53,6 +55,8 @@ namespace SnowGlobe.Core
         public bool OverPowered;
         /// <summary>A scripted threat the day plan wants now (e.g. Day 5 power failure), or None.</summary>
         public DirectorEventId ScriptedThreat;
+        /// <summary>Globes currently riding the conveyor.</summary>
+        public int ConveyorItems;
     }
 
     public sealed class DirectorEventDefinition
@@ -88,6 +92,11 @@ namespace SnowGlobe.Core
             new DirectorEventDefinition { Id = DirectorEventId.EscapeAttempt, Kind = DirectorEventKind.Threat, MinDay = 2, Weight = 2f, Cooldown = 300f, WarningSeconds = 8f,
                 WarningCue = "Scratching at a holding-room door.",
                 Condition = c => c.HoldingCharacters > 0 },
+            new DirectorEventDefinition { Id = DirectorEventId.ConveyorGrab, Kind = DirectorEventKind.Threat, MinDay = 3, Weight = 1.5f, Cooldown = 360f, WarningSeconds = 5f,
+                WarningCue = "The conveyor shudders. Something on it is holding on.",
+                Condition = c => c.ConveyorItems > 0 },
+            new DirectorEventDefinition { Id = DirectorEventId.CabinetShift, Kind = DirectorEventKind.Atmospheric, MinDay = 6, Weight = 1.5f, Cooldown = 240f,
+                Condition = c => c.HoldingCharacters > 0 && c.PlayerArea != PlayerArea.Basement },
         };
 
         public static DirectorEventDefinition Get(DirectorEventId id)

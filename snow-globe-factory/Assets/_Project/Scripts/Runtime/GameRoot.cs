@@ -28,6 +28,25 @@ namespace SnowGlobe.Game
         public float SilentUntil;
 
         uint _seed;
+        readonly CameraWatch _cameraWatch = new CameraWatch();
+
+        /// <summary>Hooks the view layer into core rules that need to know about the world (who can see what).</summary>
+        void WireSession()
+        {
+            Session.Production.IsObserved = IsObserved;
+        }
+
+        /// <summary>Is the player or any customer looking at this product right now?</summary>
+        bool IsObserved(Product p)
+        {
+            ProductView v;
+            if (!Views.TryGetValue(p.Id, out v) || v == null) return false;
+            var cam = Player.Camera.transform;
+            var to = v.transform.position - cam.position;
+            if (to.magnitude < 12f && Vector3.Dot(cam.forward, to.normalized) > 0.75f) return true;
+            foreach (var c in Customers.Active) if (c != null && c.CanSee(v)) return true;
+            return false;
+        }
 
         public void Boot(uint seed)
         {
@@ -57,6 +76,7 @@ namespace SnowGlobe.Game
 
             // A fresh session renders behind the title screen; the player picks New / Continue.
             Session = GameSession.NewGame(seed);
+            WireSession();
             RebuildViews();
             Player.Teleport(Level.PlayerSpawn.position, Level.PlayerSpawnYaw);
             Level.PremiumDecor.SetActive(true);
@@ -102,6 +122,7 @@ namespace SnowGlobe.Game
             Customers.DespawnAll();
             DestroyViews();
             var log = Session.Load(state);
+            WireSession();
             foreach (var line in log) Debug.Log("[SnowGlobe] Save repair: " + line);
             ClosingRequested = false;
             Horror.ResetState();
@@ -152,6 +173,8 @@ namespace SnowGlobe.Game
             var posted = Session.Orders.OnNewDay();
             Saves.Save(Session.State, Saves.CheckpointPath);
             string orders = posted.Count > 0 ? "\n\n" + posted.Count + " new special order(s) on the board by the counter." : "";
+            string note = DayProgression.SupplierNoteFor(Session.State.Day.Day);
+            if (note != null) orders += "\n\nA note was tucked into this morning's crate:\n<i>" + note.Substring(note.IndexOf('—') + 2) + "</i>";
             Hud.ShowBriefing("Day " + Session.State.Day.Day, DayProgression.Briefing(Session.State.Day.Day) + orders + "\n\n(Checkpoint saved.)");
         }
 
@@ -181,6 +204,7 @@ namespace SnowGlobe.Game
             foreach (var e in Session.Automation.Tick(dt, Session.PowerAvailable)) HandleAutomationEvent(e);
             SyncMachineRigs();
             Session.Suspicion.Tick(dt);
+            _cameraWatch.Tick(dt);
 
             bool premium = Session.State.OwnedUpgrades.Contains(UpgradeId.PremiumDisplayCase);
             if (Level.PremiumCase.activeSelf != premium)
@@ -223,6 +247,15 @@ namespace SnowGlobe.Game
                     Audio.Play(Sfx.Mumble, v.transform.position, 0.5f);
                     EmitNoise(v.transform.position, e.Intensity, EvidenceType.MuffledVoice, v.P.Id);
                     break;
+                case ProductionEventType.UnseenShift:
+                {
+                    // The Watcher turned to face you while nobody was looking. No sound, no witness.
+                    var toPlayer = Player.transform.position - v.transform.position;
+                    toPlayer.y = 0f;
+                    if (toPlayer.sqrMagnitude > 0.01f) v.transform.rotation = Quaternion.LookRotation(toPlayer);
+                    v.LookAt(Player.Camera.transform.position, 20f);
+                    break;
+                }
                 case ProductionEventType.HoldingNoise:
                     if (Time.time < SilentUntil) break;
                     Audio.Play(Sfx.Mumble, v.transform.position, 0.35f, Random.Range(0.8f, 1.3f));

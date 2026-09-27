@@ -18,7 +18,7 @@ namespace SnowGlobe.Game
             public bool Bad;
         }
 
-        enum Tab { Supplies, Upgrades, Themes, Orders, SaveLoad, Settings, Help }
+        enum Tab { Supplies, Upgrades, Themes, Orders, Notes, SaveLoad, Settings, Help }
 
         readonly List<Line> _toasts = new List<Line>();
         readonly List<Line> _subtitles = new List<Line>();
@@ -405,10 +405,10 @@ namespace SnowGlobe.Game
 
         void DrawMenu()
         {
-            var r = Centered(640f, 480f);
+            var r = Centered(720f, 500f);
             GUI.Box(r, "");
             GUILayout.BeginArea(new Rect(r.x + 14f, r.y + 10f, r.width - 28f, r.height - 20f));
-            _tab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Supplies", "Upgrades", "Themes", "Orders", "Save / Load", "Settings", "Help" });
+            _tab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Supplies", "Upgrades", "Themes", "Orders", "Notes", "Save / Load", "Settings", "Help" });
             GUILayout.Space(6f);
             _scroll = GUILayout.BeginScrollView(_scroll);
             switch (_tab)
@@ -416,6 +416,7 @@ namespace SnowGlobe.Game
                 case Tab.Supplies: DrawSupplies(); break;
                 case Tab.Themes: DrawThemes(); break;
                 case Tab.Orders: DrawOrders(); break;
+                case Tab.Notes: DrawNotes(); break;
                 case Tab.Upgrades: DrawUpgrades(); break;
                 case Tab.SaveLoad: DrawSaveLoad(); break;
                 case Tab.Settings: DrawSettings(); break;
@@ -542,6 +543,14 @@ namespace SnowGlobe.Game
                 GUILayout.EndHorizontal();
             }
             if (!any) GUILayout.Label("No open orders. New ones are posted each morning.", _label);
+        }
+
+        void DrawNotes()
+        {
+            var notes = DayProgression.NotesReceived(Root.Session.State.Day.Day);
+            GUILayout.Label("Notes found in the supplier's crates.", _label);
+            if (notes.Count == 0) GUILayout.Label("<i>Nothing yet.</i>", _label);
+            foreach (var n in notes) GUILayout.Label("<i>" + n + "</i>", _label);
         }
 
         void DrawSaveLoad()

@@ -13,6 +13,7 @@ namespace SnowGlobe.Core
         BasementSoundproofing,
         AutoPrepStation,
         PremiumDisplayCase,
+        SecurityCameras, // appended: enum values are saved as ints
     }
 
     public enum UpgradeCategory
@@ -43,6 +44,7 @@ namespace SnowGlobe.Core
         public bool HasConveyor;
         public bool AutoPackaging;
         public bool AutoPrep;
+        public bool HasCameras;
 
         public static UpgradeModifiers Default
         {
@@ -151,6 +153,12 @@ namespace SnowGlobe.Core
                     Id = UpgradeId.PremiumDisplayCase, Name = "Premium Display Case", Cost = 800, Category = UpgradeCategory.StorageCapacity, UnlockDay = 3,
                     Solves = "Too few shelf slots; fragile stock gets inspected up close.", Tradeoff = "Frosted glass lowers store appeal slightly.", PrototypeFunctional = true,
                     Apply = (ref UpgradeModifiers m) => { m.DisplayCapacityBonus += 4; m.DisplayVisibilityMultiplier *= 0.5f; },
+                },
+                new UpgradeDefinition
+                {
+                    Id = UpgradeId.SecurityCameras, Name = "Security Cameras", Cost = 700, Category = UpgradeCategory.SecurityAndSecrecy, UnlockDay = 6,
+                    Solves = "You can't watch the shop, the backroom and the basement at once.", Tradeoff = "Uses power. Sometimes the feeds show things you'd rather not see.", PrototypeFunctional = true,
+                    Apply = (ref UpgradeModifiers m) => { m.HasCameras = true; m.PowerDraw += 1; },
                 },
             };
             var dict = new Dictionary<UpgradeId, UpgradeDefinition>();

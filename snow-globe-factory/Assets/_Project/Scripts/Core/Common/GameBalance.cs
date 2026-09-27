@@ -56,6 +56,10 @@ namespace SnowGlobe.Core
         public const float RealSecondsPerGameMinute = 1f; // 8 game hours = 8 real minutes
         public const float BaseCustomerIntervalSeconds = 40f;
 
+        // Archetypes.
+        /// <summary>Seconds an Escape Artist needs an open cabinet / unwatched cradle before it bolts.</summary>
+        public const float EscapeArtistUnattendedSeconds = 6f;
+
         // Power.
         public const int BasePowerCapacity = 3;
     }

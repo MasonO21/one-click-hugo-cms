@@ -144,6 +144,44 @@ namespace SnowGlobe.Core
             return Briefings.TryGetValue(day, out text) ? text : "Business as usual. Mostly.";
         }
 
+        /// <summary>
+        /// Notes tucked into the supplier's crates. Together they slowly reveal who is sending the
+        /// shipments. Purely narrative; derived from the day, so nothing needs saving.
+        /// </summary>
+        public static readonly string[] SupplierNotes =
+        {
+            "Day 2 — 'Keep them warm. Keep them quiet. Payment on delivery, as agreed. — H.'",
+            "Day 3 — 'This batch wriggles. Mind your fingers, and theirs.'",
+            "Day 4 — 'Your customers ask about custom work? Wonderful. We can source to order.'",
+            "Day 5 — 'The lights. Did they flicker? They always flicker when a batch is homesick.'",
+            "Day 6 — 'We noticed you installed eyes downstairs. So did they.'",
+            "Day 8 — 'Some of them sing when the crate is closed. Do not open the crate to listen.'",
+            "Day 10 — 'You asked where they come from. You already know. Look at the little suitcases.'",
+            "Day 12 — 'The Watcher is our finest work. Never turn your back on the shelf you love.'",
+        };
+
+        static int NoteDay(int index)
+        {
+            var text = SupplierNotes[index];
+            int end = text.IndexOf(' ', 4);
+            return int.Parse(text.Substring(4, end - 4));
+        }
+
+        /// <summary>The note that arrives on this morning's crate, or null.</summary>
+        public static string SupplierNoteFor(int day)
+        {
+            for (int i = 0; i < SupplierNotes.Length; i++) if (NoteDay(i) == day) return SupplierNotes[i];
+            return null;
+        }
+
+        /// <summary>Every note received so far (for the Notes tab).</summary>
+        public static List<string> NotesReceived(int day)
+        {
+            var list = new List<string>();
+            for (int i = 0; i < SupplierNotes.Length; i++) if (NoteDay(i) <= day) list.Add(SupplierNotes[i]);
+            return list;
+        }
+
         public static bool SealDefectsEnabled(int day) { return day >= 2; }
         public static bool CustomersHandleGlobes(int day) { return day >= 4; }
         public static bool SpecialOrdersEnabled(int day) { return day >= 4; }

@@ -157,7 +157,8 @@ namespace SnowGlobe.Game
                         _handledThisStop = true;
                         if (Random.value < 0.35f && TryPickUp(_lookingAt)) break;
                     }
-                    _timer -= dt;
+                    // People linger over the Performer.
+                    _timer -= _lookingAt != null && _lookingAt.P.Definition.Special == SpecialBehavior.DrawsAttention ? dt * 0.6f : dt;
                     if (_timer > 0f) break;
                     if (Suspicion.Stage >= SuspicionStage.Investigating && FocusView() != null)
                     {
@@ -307,6 +308,7 @@ namespace SnowGlobe.Game
             {
                 if (v == null || v.P.Stage != ProductStage.Displayed) continue;
                 float d = Vector3.Distance(v.transform.position, Head.position);
+                if (v.P.Definition.Special == SpecialBehavior.DrawsAttention) d *= 0.6f; // the Performer pulls the eye
                 if (d < best) { best = d; _lookingAt = v; }
             }
             if (_lookingAt != null) FaceTowards(_lookingAt.transform.position, Time.deltaTime);
@@ -455,7 +457,8 @@ namespace SnowGlobe.Game
                             }
                             _seenMovementAt[p.Id] = v.LastMovementTime;
                             bool premium = v.Socket != null && v.Socket.GetComponent<ShelfSlot>() != null && v.Socket.GetComponent<ShelfSlot>().Index >= GameBalance.BaseShelfCapacity;
-                            Witness(EvidenceType.GlobeMovement, v.LastMovementIntensity * (premium ? visMult : 1f), perception, p.Id);
+                            float attention = p.Definition.Special == SpecialBehavior.DrawsAttention ? 1.3f : 1f;
+                            Witness(EvidenceType.GlobeMovement, Mathf.Clamp01(v.LastMovementIntensity * attention) * (premium ? visMult : 1f), perception, p.Id);
                         }
                     }
                     // Eyes following them from a weakly sealed globe.
@@ -486,6 +489,12 @@ namespace SnowGlobe.Game
             if (_lastEvidenceAt.TryGetValue(key, out last) && Time.time - last < seconds) return false;
             _lastEvidenceAt[key] = Time.time;
             return true;
+        }
+
+        /// <summary>Could this customer see the product right now? (Used to freeze the Watcher.)</summary>
+        public bool CanSee(ProductView v)
+        {
+            return v == Handled || Perception(v, Head.position, 70f) > 0f;
         }
 
         /// <summary>0 if not visible; otherwise 0..1 from distance and how directly they're looking.</summary>

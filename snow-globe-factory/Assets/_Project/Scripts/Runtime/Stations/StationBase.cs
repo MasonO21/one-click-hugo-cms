@@ -8,7 +8,7 @@ namespace SnowGlobe.Game
     /// interaction ("minigame") that produces a 0..1 score for the core ProductionService.
     /// While a minigame runs the player is locked to the station; Esc cancels safely.
     /// </summary>
-    public abstract class StationBase : MonoBehaviour, IInteractable, ISecondaryInteractable
+    public abstract class StationBase : MonoBehaviour, IInteractable, ISecondaryInteractable, IFocusMode
     {
         public StationId Id;
         public string Title;

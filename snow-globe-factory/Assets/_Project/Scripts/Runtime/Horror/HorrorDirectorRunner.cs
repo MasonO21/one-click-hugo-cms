@@ -50,6 +50,7 @@ namespace SnowGlobe.Game
                 CustomerWatchingShelves = Root.Customers.AnyoneWatchingShelves,
                 ActiveCrises = LooseCount(),
                 PlayerArea = Root.Level.AreaOf(Root.Player.transform.position),
+                ConveyorItems = Root.Session.Automation.IsRunning(MachineId.Conveyor, Root.Session.PowerAvailable) ? Root.Session.Automation.OnConveyor().Count : 0,
             };
             var ev = Root.Session.TickDirector(TickInterval, ctx);
             if (ev != DirectorEventId.None) Begin(ev);
@@ -71,7 +72,10 @@ namespace SnowGlobe.Game
                 case DirectorEventId.BasementLookToCorner: LookToCorner(); break;
                 case DirectorEventId.ShelfTapping: StartCoroutine(Tapping()); break;
                 case DirectorEventId.MusicDropout: StartCoroutine(MusicDropout()); break;
-                case DirectorEventId.WatcherRelocates: Relocate(); break;
+                case DirectorEventId.WatcherRelocates:
+                case DirectorEventId.CabinetShift:
+                    Relocate();
+                    break;
             }
         }
 
@@ -158,6 +162,11 @@ namespace SnowGlobe.Game
                 foreach (var l in Root.Level.Lights) l.Warning = true;
                 Root.Audio.Play(Sfx.Hum, Root.Level.Sealer.transform.position, 0.8f, 0.6f);
             }
+            else if (ev == DirectorEventId.ConveyorGrab)
+            {
+                Root.Audio.Play(Sfx.Hum, Root.Level.Conveyor.transform.position, 0.8f, 0.5f);
+                Root.Audio.Play(Sfx.Tap, Root.Level.Conveyor.transform.position, 0.8f);
+            }
             else if (ev == DirectorEventId.EscapeAttempt)
             {
                 _scratchCell = RandomOccupiedCell();
@@ -192,6 +201,7 @@ namespace SnowGlobe.Game
             _pending = DirectorEventId.None;
             if (ev == DirectorEventId.PowerFailure) CutPower();
             else if (ev == DirectorEventId.EscapeAttempt) Escape();
+            else if (ev == DirectorEventId.ConveyorGrab) GripBelt();
         }
 
         void Cancel()
@@ -251,8 +261,24 @@ namespace SnowGlobe.Game
             Root.Hud.Alert(v.P.CharacterName + " got out of cabinet " + cell.Label + "! Catch them before a customer sees.");
         }
 
+        /// <summary>A figure on the belt grabs the rail. Pry it loose at the conveyor panel, or wait it out.</summary>
+        void GripBelt()
+        {
+            var items = Root.Session.Automation.OnConveyor();
+            if (items.Count == 0) { Root.Session.Director.ResolveThreat(); return; }
+            Root.Session.Automation.GripConveyor(25f);
+            ProductView v;
+            if (Root.Views.TryGetValue(items[0].Id, out v) && v != null) v.LookAt(Root.Player.Camera.transform.position, 25f);
+            Root.Hud.Alert("The conveyor has stopped. Something on it is holding the rail — pry it loose at the conveyor panel (E).");
+        }
+
         void UpdateActiveThreat()
         {
+            if (Root.Session.Director.ActiveThreat == DirectorEventId.ConveyorGrab && _pending == DirectorEventId.None)
+            {
+                if (!Root.Session.Automation.ConveyorGripped) Root.Session.Director.ResolveThreat();
+                return;
+            }
             if (Root.Session.Director.ActiveThreat != DirectorEventId.EscapeAttempt || _pending != DirectorEventId.None) return;
             if (_escapee == null || !_escapee.IsEscaped)
             {

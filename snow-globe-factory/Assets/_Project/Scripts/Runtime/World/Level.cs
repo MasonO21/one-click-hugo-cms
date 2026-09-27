@@ -47,6 +47,7 @@ namespace SnowGlobe.Game
         public BlinkLamp LiftLamp;
         public SnapSocket CounterSocket;
         public OrderBoard OrderBoard;
+        public SecurityDesk SecurityDesk;
         // Automation (Milestone 3): shown once the matching upgrade is installed.
         public GameObject AutoPrepRig, ConveyorRig, PackagerRig;
         public SnapSocket PrepHopper;

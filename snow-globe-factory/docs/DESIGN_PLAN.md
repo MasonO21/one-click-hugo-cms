@@ -10,13 +10,14 @@
 
 | Area | Status | Notes |
 |---|---|---|
-| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 75 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
+| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 84 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
 | Unity layer (greybox building, player, carrying, stations, customers, horror, HUD, audio) | 🟡 | Compiles against Unity 2021.3 reference assemblies (with Unity 6 renames mapped). **Never run in the editor.** Expect tuning and bug-fix work in Milestone 2 |
 | Input System package path | 🟡 | Written but not compiled (package not available outside Unity) |
 | Automation: auto-prep hopper, conveyor, packaging machine, breakdowns/repair, manual override, safe blocking | ✅ core · 🟡 scene | 10 core tests, including a randomized "no product ever lost" property test and a simulated day (16 globes vs ~5–6 by hand) |
 | Unity-side tests (JsonUtility round trip, figure build, play-mode smoke tests of boot/line/automation/save-load) | 🟡 | Written and type-checked; they run in Unity's Test Runner, not here |
 | Customers & orders: up to 3 shoppers with a counter queue, customers picking globes up (day 4+), special orders board, Woodland Cabin theme, store appeal | ✅ core · 🟡 scene | 12 core tests; a play-mode test covers order pickup |
-| Later archetype behaviours (Screamer, Escape Artist, Watcher), later themes' bespoke scenery | ⬜ | Data exists; Milestone 5 |
+| Horror & roster: Screamer, Escape Artist, Watcher, Performer behaviours; security cameras; conveyor-grab and cabinet-shift events; supplier notes | ✅ core · 🟡 scene | 9 core tests; play-mode tests for the camera desk and the Escape Artist |
+| Bespoke scenery for Medieval/Haunted/Deep-Sea/Celestial themes | ⬜ | They reuse tinted winter pieces for now |
 | Level rebuilt from the three concept paintings; minis restyled to the character reference | 🟡 | Procedural reconstruction (see §5a). Floor plan: `docs/floorplan.png` |
 | Real modelled art, animation, UI Toolkit, audio design | ⬜ | Everything is still built from primitives and synthesized sound |
 
@@ -193,6 +194,23 @@ Every machine wears 4% per item (6% when the building is over its power budget).
   * Place the finished box on the counter's order-pickup spot. A match is paid immediately; a mismatch tells you exactly what's wrong.
 * **Themes.** Woodland Cabin (day 4, $300) sells at ×1.25. It has lighter snow and its own scenery (tall pine, log cabin, deer), and costs $3 extra per kit at mount. Later themes can already be unlocked and picked in the Themes tab. For now their scenery reuses tinted winter pieces.
 
+## 5d. Horror & roster (Milestone 5)
+
+| Archetype | Behaviour now in the game |
+|---|---|
+| The Sleepy One | Heavy half-closed lids; cheap and calm |
+| The Wiggler (day 3) | Squirms out of your grip while carried |
+| The Performer (day 6) | Poses score +0.2. Customers' eyes are drawn to it (they pick it to look at, and linger 1.7× longer). Its twitches are 30% more noticeable |
+| The Heavy One (day 7) | Slows you to 70% while carried; 35% chance to jam the conveyor |
+| The Screamer (day 8) | Stress (from carrying, bad injections) multiplies how often and how loudly it makes noise in holding. While carried it can let out a muffled scream that carries through the doors like any other noise |
+| The Escape Artist (day 10) | Left in an **open** cabinet, or alone in the prep cradle, with nobody within 3.5 m for 6 s, it bolts |
+| The Watcher (day 12) | Never moves while the player or any customer is looking. It is never caught twitching, so it produces no evidence. When unseen it silently turns to face you. In the cabinets it freezes and stares back the moment you look at it |
+
+* **Security Cameras** ($700, day 6, +1 power). The basement security desk monitor shows a live feed when you're near. Press E to sit and watch full-screen, cycling storefront, backroom and basement (A/D). Only the shown feed renders. While cameras are installed, any loose character triggers a "CAMERA: something small is loose in the BACKROOM" alert. Sometimes every figure in the cabinets turns to look into the basement lens.
+* **Conveyor Grab** (threat, day 3+, only with globes on the belt). After a 5 s shudder the belt stalls: a figure is gripping the rail. Pry it loose at the conveyor panel (E), or it lets go after 25 s. The belt blocks safely meanwhile.
+* **Cabinet Shift** (atmospheric, day 6+). A character is in a different cabinet than the one you left it in.
+* **Supplier notes.** A note arrives in the crate on days 2, 3, 4, 5, 6, 8, 10 and 12. It's shown in the morning briefing and kept in the Notes tab, slowly revealing who "H." is.
+
 ## 6. Milestone roadmap
 
 | Milestone | Goal | Contents | Exit criteria |
@@ -202,7 +220,7 @@ Every machine wears 4% per item (6% when the building is over its power budget).
 | **M2 First playable** 🟡 | Make M1 actually fun and stable | Done without an editor: PlayMode smoke tests (boot, cabinet → sale, automation, save/load), JsonUtility round-trip test, animation LOD for distant minis. **Still needs the editor:** run those tests, playtest, fix, tune timings/physics, FPS check | §9 acceptance criteria all pass |
 | **M3 Automation** ✅ core · 🟡 scene | Supervisor role | Automated Prep (hopper → cradle → inject), Short Conveyor (sealer → packaging, spacing, capacity, heavy jams), Packaging Machine (capped 0.7 score, 4-slot output rack); wear, breakdowns, repair/service; per-machine manual override panels; safe blocking everywhere; power draw already feeds power-failure odds; The Wiggler from day 3 | Met in simulation: 16 globes/day, no product lost across 25 randomized runs × 600 steps |
 | **M4 Customers & orders** ✅ core · 🟡 scene | Store depth | Up to 3 customers (1 on days 1–2, 2 on days 3–4, 3 from day 5) with a counter queue; customers pick globes up for a closer look from day 4; special-order board with pinning, matching and pickup; Woodland Cabin theme (and a theme picker for later ones); store appeal | Orders always pay ≥ $15 over list (tested); suspicion readability with 3 customers still needs a playtest |
-| **M5 Horror & roster** ⬜ | Unease at scale | Screamer, Escape Artist, Watcher behaviours; security cameras; conveyor-grab and "wrong room" events; supplier story notes | Director playtests: players report "tense but fair" |
+| **M5 Horror & roster** ✅ core · 🟡 scene | Unease at scale | Screamer, Escape Artist, Watcher and Performer behaviours; Security Cameras upgrade (desk monitor, full-screen feeds, loose-character alerts); Conveyor Grab threat and Cabinet Shift atmospheric; supplier notes (8, days 2–12) | Needs playtests: players report "tense but fair" |
 | **M6 Art & audio** ⬜ | Identity | Real low-poly models, rigged minis (optional joint-based active ragdoll behind the same `MiniCharacterBody` API), lighting, sound design, UI Toolkit HUD | Vertical slice capture |
 | **M7 Content & balance** ⬜ | Longevity | Themes through Celestial Observatory, late-game economy, story milestones, performance and LOD, build pipeline | 2–3 h of progression, economy playable after story |
 

@@ -176,6 +176,45 @@ namespace SnowGlobe.Game.Tests
         }
 
         [UnityTest]
+        public IEnumerator SecurityCameras_DeskShowsALiveFeed()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var s = root.Session;
+            s.State.Day.Day = 6;
+            s.State.Wallet.Cash = 5000;
+            Assert.IsTrue(s.Upgrades.Purchase(UpgradeId.SecurityCameras).Success);
+            root.Player.Teleport(root.Level.SecurityDesk.transform.position + Vector3.back * 1.2f + Vector3.up * 0.1f, 0f);
+            root.Level.SecurityDesk.Interact(root.Interactor);
+            yield return null;
+            yield return null;
+            Assert.AreEqual(root.Level.SecurityDesk, root.Interactor.LockedStation);
+            Assert.IsTrue(Object.FindObjectsByType<Camera>(FindObjectsSortMode.None).Count(c => c.targetTexture != null && c.enabled) == 1, "exactly one feed renders");
+            root.Level.SecurityDesk.CancelMinigame();
+            Assert.IsNull(root.Interactor.LockedStation);
+        }
+
+        [UnityTest]
+        public IEnumerator EscapeArtist_BoltsFromAnOpenUnwatchedCabinet()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var cell = root.Level.FreeCell();
+            var p = root.Session.State.AddCharacter(ArchetypeId.EscapeArtist, ProductLocation.Holding(cell.Index));
+            var v = root.SpawnView(p);
+            cell.Door.SetOpen(true);
+            root.Player.Teleport(root.Level.PlayerSpawn.position, 0f); // far away upstairs
+            float waited = 0f;
+            while (!v.IsEscaped && waited < GameBalance.EscapeArtistUnattendedSeconds + 3f)
+            {
+                waited += Time.deltaTime;
+                yield return null;
+            }
+            Assert.IsTrue(v.IsEscaped, "it took its chance");
+            Assert.AreEqual(LocationKind.Loose, p.Location.Kind);
+        }
+
+        [UnityTest]
         public IEnumerator SaveAndLoad_RebuildsTheSameWorld()
         {
             yield return Boot();

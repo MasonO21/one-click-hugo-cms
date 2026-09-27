@@ -619,10 +619,7 @@ namespace SnowGlobe.Game
             _level.AddLabel(new Vector3(-6.7f, -1.95f, 33f), "Breaker", 4f);
 
             // Security desk (cameras are a planned upgrade).
-            B("SecurityDesk", new Vector3(-3.9f, F + 0.375f, 37.4f), new Vector3(1.6f, 0.75f, 0.8f), Palette.WoodWarm);
-            B("DeadMonitor", new Vector3(-3.9f, F + 1f, 37.6f), new Vector3(0.6f, 0.45f, 0.1f), Color.black);
-            Lantern(new Vector3(-4.5f, F + 0.75f, 37.3f), false);
-            _level.AddLabel(new Vector3(-3.9f, F + 1.5f, 37.4f), "Security desk — cameras (planned)", 4f);
+            BuildSecurity(t);
 
             Cart(new Vector3(4.4f, F, 35.2f), 90f, false);
             Cart(new Vector3(-1.7f, F, 25.8f), 0f, true);
@@ -791,6 +788,48 @@ namespace SnowGlobe.Game
             B("BackCabPostEnd", new Vector3(6.25f, F + 1.9f, 23.45f), new Vector3(0.06f, 3.8f, 0.7f), Palette.TealDark);
             Emissive(B("BackCabBack", new Vector3(3.45f, F + 1.9f, 23.12f), new Vector3(5.2f, 3.8f, 0.03f), cream), new Color(1f, 0.8f, 0.55f), 0.15f);
             B("BackCabTop", new Vector3(3.45f, F + 3.85f, 23.45f), new Vector3(5.3f, 0.08f, 0.75f), Palette.TealDark);
+        }
+
+        /// <summary>Security desk with a live monitor, plus three hidden cameras (Security Cameras upgrade).</summary>
+        static void BuildSecurity(Transform t)
+        {
+            const float F = Level.BasementFloorY;
+            B("SecurityDeskBody", new Vector3(-3.9f, F + 0.375f, 37.4f), new Vector3(1.6f, 0.75f, 0.8f), Palette.WoodWarm);
+            Lantern(new Vector3(-4.5f, F + 0.75f, 37.3f), false);
+            var root = Shapes.Empty("SecurityDesk", t, new Vector3(-3.9f, F, 37.4f));
+            Shapes.Box("MonitorCase", root.transform, new Vector3(0.1f, 1.02f, 0.2f), new Vector3(0.62f, 0.45f, 0.14f), new Color(0.12f, 0.12f, 0.12f));
+            var screen = Shapes.Sign("MonitorScreen", root.transform, new Vector3(0.1f, 1.02f, 0.125f), Vector3.back, 0.54f, 0.34f, "label_snow");
+            Shapes.Box("Keyboard", root.transform, new Vector3(0.1f, 0.765f, -0.15f), new Vector3(0.4f, 0.03f, 0.15f), new Color(0.2f, 0.2f, 0.2f), false);
+
+            var props = Shapes.Empty("CameraProps", t, Vector3.zero);
+            var specs = new[]
+            {
+                new[] { new Vector3(6.6f, 3.5f, 0.4f), new Vector3(0f, 0.8f, 6f) },
+                new[] { new Vector3(6.6f, 3.3f, 13.4f), new Vector3(-2f, 0.6f, 19f) },
+                new[] { new Vector3(-6.6f, 2.1f, 38.6f), new Vector3(3f, -3.5f, 27f) },
+            };
+            var cams = new Camera[specs.Length];
+            for (int i = 0; i < specs.Length; i++)
+            {
+                var pos = specs[i][0];
+                var rot = Quaternion.LookRotation(specs[i][1] - pos);
+                var housing = Shapes.Empty("SecurityCam" + i, props.transform, pos).transform;
+                housing.rotation = rot;
+                Shapes.Box("Housing", housing, Vector3.zero, new Vector3(0.14f, 0.12f, 0.28f), new Color(0.85f, 0.85f, 0.82f), false);
+                Emissive(Shapes.Prim(PrimitiveType.Sphere, "Led", housing, new Vector3(0.05f, 0.05f, 0.14f), Vector3.one * 0.025f, Palette.Bad, false), Palette.Bad, 3f);
+                var camGo = Shapes.Empty("FeedCamera" + i, t, pos);
+                camGo.transform.rotation = rot;
+                var cam = camGo.AddComponent<Camera>();
+                cam.fieldOfView = 75f;
+                cam.nearClipPlane = 0.05f;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = Color.black;
+                cams[i] = cam;
+            }
+            props.SetActive(false);
+            _level.SecurityDesk = root.AddComponent<SecurityDesk>();
+            _level.SecurityDesk.Setup(screen.GetComponent<Renderer>(), props, cams, new[] { "Storefront", "Backroom", "Basement" });
+            _level.AddLabel(new Vector3(-3.9f, F + 1.5f, 37.4f), "Security desk", 4f);
         }
 
         static void BuildDioramaTable(Vector3 floor)

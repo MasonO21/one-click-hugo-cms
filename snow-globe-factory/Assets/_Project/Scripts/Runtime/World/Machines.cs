@@ -40,11 +40,18 @@ namespace SnowGlobe.Game
         public string Prompt(PlayerInteractor player)
         {
             var m = S.Automation.Get(Machine);
+            if (Machine == MachineId.Conveyor && S.Automation.ConveyorGripped) return "E: Pry the gripping figure off the rail";
             return "E: Switch " + AutomationService.NameOf(Machine) + " to " + (m.Enabled ? "MANUAL" : "AUTOMATIC");
         }
 
         public void Interact(PlayerInteractor player)
         {
+            if (Machine == MachineId.Conveyor && S.Automation.ConveyorGripped)
+            {
+                GameRoot.I.Toast(S.Automation.PryConveyor().Message);
+                GameRoot.I.Audio.Play(Sfx.Squeak, transform.position, 0.6f);
+                return;
+            }
             var m = S.Automation.Get(Machine);
             GameRoot.I.Toast(S.Automation.SetEnabled(Machine, !m.Enabled).Message);
             GameRoot.I.Audio.Play(Sfx.Tap, transform.position);

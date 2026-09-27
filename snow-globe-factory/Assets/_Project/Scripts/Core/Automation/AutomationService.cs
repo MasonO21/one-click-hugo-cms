@@ -24,6 +24,8 @@ namespace SnowGlobe.Core
         public int ItemsProcessed;
         /// <summary>Current reason the machine is waiting, "" when running freely. Used to report blockages once.</summary>
         public string BlockedReason = "";
+        /// <summary>Seconds left of a figure gripping the belt (ConveyorGrab threat). Belt stops meanwhile.</summary>
+        public float GripSeconds;
     }
 
     [Serializable]
@@ -252,10 +254,33 @@ namespace SnowGlobe.Core
             Wear(m);
         }
 
+        /// <summary>A figure on the belt grabs the rail: the belt stalls until pried loose or it lets go.</summary>
+        public void GripConveyor(float seconds)
+        {
+            Get(MachineId.Conveyor).GripSeconds = seconds;
+        }
+
+        public bool ConveyorGripped { get { return Get(MachineId.Conveyor).GripSeconds > 0f; } }
+
+        public ActionResult PryConveyor()
+        {
+            var m = Get(MachineId.Conveyor);
+            if (m.GripSeconds <= 0f) return ActionResult.Fail("Nothing is holding the belt.");
+            m.GripSeconds = 0f;
+            m.BlockedReason = "";
+            return ActionResult.Ok("You pry tiny fingers off the rail. The belt lurches on.");
+        }
+
         void TickConveyor(float dt, bool power)
         {
             var m = Get(MachineId.Conveyor);
             if (!IsRunning(MachineId.Conveyor, power)) return;
+            if (m.GripSeconds > 0f)
+            {
+                m.GripSeconds = Math.Max(0f, m.GripSeconds - dt);
+                if (m.GripSeconds > 0f) { Block(m, "Something on the belt is holding on."); return; }
+                Unblock(m);
+            }
             var items = OnConveyor();
 
             // Intake from the sealer once there's room at the start of the belt.

@@ -300,8 +300,58 @@ namespace SnowGlobe.Game
             UpdateFigureMode();
         }
 
+        float _screamTimer, _unattended;
+
+        /// <summary>The Screamer: the longer you carry it, the more likely a muffled scream carries through the walls.</summary>
+        void UpdateScream(GameRoot root)
+        {
+            if (root == null || P.Definition.Special != SpecialBehavior.MuffledNoise) return;
+            _screamTimer += Time.deltaTime;
+            if (_screamTimer < 1f) return;
+            _screamTimer = 0f;
+            root.Session.Production.Startle(P, 0.03f);
+            if (Random.value >= ProductionService.ScreamChancePerSecond(P)) return;
+            root.Audio.Play(Sfx.Mumble, transform.position, 1f, 1.5f);
+            root.Hud.Subtitle("", "(a muffled scream from the thing in your hands)");
+            root.EmitNoise(transform.position, 0.9f, EvidenceType.MuffledVoice, -1);
+            root.Player.AddShake(0.1f);
+        }
+
+        /// <summary>The Escape Artist: an open cabinet or an unwatched cradle is all the invitation it needs.</summary>
+        void UpdateEscapeArtist(GameRoot root, Transform cam)
+        {
+            if (root == null || cam == null) return;
+            bool opportunity = false;
+            Vector3 outward = Vector3.up;
+            if (Mode == ViewMode.Roaming && Socket != null)
+            {
+                var cell = Socket.GetComponent<HoldingCell>();
+                if (cell != null && cell.Door.IsOpen)
+                {
+                    opportunity = true;
+                    outward = new Vector3(-1f, 0f, 0f); // cabinets face the room along -X
+                }
+            }
+            else if (Mode == ViewMode.Socketed && Socket != null && Socket.GetComponentInParent<PrepStation>() != null)
+            {
+                opportunity = true;
+                outward = Socket.transform.forward;
+            }
+            bool unattended = Vector3.Distance(cam.position, transform.position) > 3.5f;
+            _unattended = opportunity && unattended ? _unattended + Time.deltaTime : 0f;
+            if (_unattended < GameBalance.EscapeArtistUnattendedSeconds) return;
+            _unattended = 0f;
+            var pos = transform.position + outward * 0.5f + Vector3.up * 0.1f;
+            PlaceFree(pos);
+            Body.linearVelocity = outward * 1.2f + Vector3.up;
+            P.Location = ProductLocation.Loose(pos.x, pos.y, pos.z);
+            root.Audio.Play(Sfx.Squeak, pos, 0.8f);
+            root.Hud.Alert(P.CharacterName + " (Escape Artist) slipped away while nobody was watching!");
+        }
+
         public void BeginCarry()
         {
+            if (GameRoot.I != null && GameRoot.I.Session != null && P.Stage == ProductStage.Unprepared) GameRoot.I.Session.Production.Startle(P, 0.15f);
             Detach();
             Mode = ViewMode.Carried;
             SetKinematic(false);
@@ -388,7 +438,12 @@ namespace SnowGlobe.Game
             }
 
             if (Mode == ViewMode.Roaming) UpdateRoaming(cam);
-            if (Mode == ViewMode.Carried && P.Stage == ProductStage.Unprepared) UpdateSlip(root);
+            if (Mode == ViewMode.Carried && P.Stage == ProductStage.Unprepared)
+            {
+                UpdateSlip(root);
+                UpdateScream(root);
+            }
+            if (P.Stage == ProductStage.Unprepared && P.Definition.Special == SpecialBehavior.SeeksExits) UpdateEscapeArtist(root, cam);
 
             _syncTimer -= Time.deltaTime;
             if (_syncTimer <= 0f)
@@ -402,6 +457,16 @@ namespace SnowGlobe.Game
         {
             // Holding-pen life: cheap kinematic wandering. They go quiet and still when you come close.
             bool playerClose = cam != null && Vector3.Distance(cam.position, transform.position) < 2.2f;
+            // The Watcher doesn't move while you look at it. At all.
+            bool watcherSeen = P.Definition.Special == SpecialBehavior.MovesUnobserved && cam != null
+                               && Vector3.Dot(cam.forward, (transform.position - cam.position).normalized) > 0.6f
+                               && Vector3.Distance(cam.position, transform.position) < 10f;
+            if (watcherSeen)
+            {
+                Figure.Mode = FigureMode.Frozen;
+                LookAt(cam.position, 0.5f);
+                return;
+            }
             if (playerClose)
             {
                 Figure.Mode = FigureMode.Idle;

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace SnowGlobe.Core
@@ -9,6 +10,7 @@ namespace SnowGlobe.Core
         StasisMovement, // sealed figure moved (weak/defective seal)
         StasisNoise,    // sealed figure made a sound
         HoldingNoise,   // basement character made a sound
+        UnseenShift,    // a Watcher changed position while nobody was looking (never witnessed)
     }
 
     public struct ProductionEvent
@@ -42,6 +44,26 @@ namespace SnowGlobe.Core
         readonly List<ProductionEvent> _events = new List<ProductionEvent>();
 
         public ProductionService(GameState state) { _state = state; }
+
+        /// <summary>
+        /// Set by the view layer: is anyone (player or customer) currently looking at this product?
+        /// The Watcher never moves while observed. Null = treat everything as unobserved.
+        /// </summary>
+        public Func<Product, bool> IsObserved;
+
+        /// <summary>Carrying, prodding or failed injections stress a character; Screamers get loud.</summary>
+        public void Startle(Product p, float amount)
+        {
+            if (p == null) return;
+            p.Stress = MathUtil.Clamp01(p.Stress + amount);
+        }
+
+        /// <summary>Chance per second that a stressed Screamer lets out a muffled scream while handled.</summary>
+        public static float ScreamChancePerSecond(Product p)
+        {
+            if (p == null || p.Definition.Special != SpecialBehavior.MuffledNoise) return 0f;
+            return 0.05f + 0.35f * p.Stress;
+        }
 
         UpgradeModifiers Mods { get { return _state.Modifiers; } }
 
@@ -100,6 +122,8 @@ namespace SnowGlobe.Core
             _state.Inventory.GlobeKits--;
             p.Stage = ProductStage.Mounted;
             p.PoseIndex = poseIndex;
+            // The Performer naturally holds an appealing pose.
+            if (p.Definition.Special == SpecialBehavior.DrawsAttention) poseScore += 0.2f;
             p.PoseScore = MathUtil.Clamp01(poseScore);
             return ActionResult.Ok("Posed on a base.");
         }
@@ -237,6 +261,15 @@ namespace SnowGlobe.Core
                     float weakness = 1f - p.EffectiveIntegrity;
                     float perMinute = weakness * weakness * GameBalance.StasisMovementRatePerMinute;
                     var def = p.Definition;
+                    if (def.Special == SpecialBehavior.MovesUnobserved)
+                    {
+                        // The Watcher: frozen under any gaze, restless the moment nobody looks.
+                        bool watched = IsObserved != null && IsObserved(p);
+                        float shiftPerMinute = 0.6f * (0.3f + weakness);
+                        if (!watched && p.Stage != ProductStage.Packaged && rng.Chance(shiftPerMinute * dt / 60f))
+                            _events.Add(new ProductionEvent { Type = ProductionEventType.UnseenShift, ProductId = p.Id, Intensity = 1f });
+                        continue;
+                    }
                     if (p.Stage != ProductStage.Packaged && rng.Chance(perMinute * def.MovementTendency * dt / 60f))
                     {
                         _events.Add(new ProductionEvent { Type = ProductionEventType.StasisMovement, ProductId = p.Id, Intensity = MathUtil.Clamp(weakness, 0.2f, 1f) });
@@ -251,9 +284,16 @@ namespace SnowGlobe.Core
                 if (p.Stage == ProductStage.Unprepared && p.Location.Kind == LocationKind.Holding)
                 {
                     float noisePerMinute = p.Definition.NoiseTendency * (0.3f + p.Stress);
+                    float loudness = p.Definition.NoiseTendency;
+                    if (p.Definition.Special == SpecialBehavior.MuffledNoise)
+                    {
+                        // The Screamer: stress multiplies both how often and how loudly.
+                        noisePerMinute *= 1f + 3f * p.Stress;
+                        loudness = MathUtil.Clamp01(loudness * (0.6f + p.Stress));
+                    }
                     if (rng.Chance(noisePerMinute * dt / 60f))
                     {
-                        _events.Add(new ProductionEvent { Type = ProductionEventType.HoldingNoise, ProductId = p.Id, Intensity = p.Definition.NoiseTendency });
+                        _events.Add(new ProductionEvent { Type = ProductionEventType.HoldingNoise, ProductId = p.Id, Intensity = loudness });
                     }
                     p.Stress = MathUtil.Clamp01(p.Stress - dt * 0.002f);
                 }

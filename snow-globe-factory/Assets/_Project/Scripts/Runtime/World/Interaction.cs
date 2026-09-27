@@ -11,6 +11,16 @@ namespace SnowGlobe.Game
         void Interact(PlayerInteractor player);
     }
 
+    /// <summary>
+    /// Something that takes over the player's controls for a while (a station minigame, the camera
+    /// monitor). Esc calls CancelMinigame; the HUD calls DrawGUI every frame while it's active.
+    /// </summary>
+    public interface IFocusMode
+    {
+        void CancelMinigame();
+        void DrawGUI();
+    }
+
     /// <summary>Optional X action (reject, offer exchange, ...).</summary>
     public interface ISecondaryInteractable
     {

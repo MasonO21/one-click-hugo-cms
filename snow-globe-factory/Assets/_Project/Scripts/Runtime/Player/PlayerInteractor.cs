@@ -17,7 +17,7 @@ namespace SnowGlobe.Game
         public IInteractable Focus { get; private set; }
         public ISecondaryInteractable SecondaryFocus { get; private set; }
         public ProductView FocusProduct { get; private set; }
-        public StationBase LockedStation { get; private set; }
+        public IFocusMode LockedStation { get; private set; }
         public SnapSocket PlacementTarget { get; private set; }
 
         public string PrimaryPrompt = "";
@@ -32,7 +32,7 @@ namespace SnowGlobe.Game
 
         Collider PlayerCollider { get { return Controller.GetComponent<CharacterController>(); } }
 
-        public void LockTo(StationBase station)
+        public void LockTo(IFocusMode station)
         {
             LockedStation = station;
             Controller.Locked = true;
