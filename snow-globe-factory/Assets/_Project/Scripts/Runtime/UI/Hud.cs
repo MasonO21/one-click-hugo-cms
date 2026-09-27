@@ -33,6 +33,11 @@ namespace SnowGlobe.Game
         string _briefingTitle = "", _briefingText = "";
         Vector2 _scroll;
         GUIStyle _label, _center, _big, _small, _box;
+        GUISkin _skin;
+        /// <summary>Menus are laid out on a 1080-high virtual screen and scaled up on bigger displays.</summary>
+        float _uiScale = 1f;
+        float VW { get { return Screen.width / _uiScale; } }
+        float VH { get { return Screen.height / _uiScale; } }
 
         static GameRoot Root { get { return GameRoot.I; } }
 
@@ -147,13 +152,84 @@ namespace SnowGlobe.Game
             _small = new GUIStyle(_center) { fontSize = 12 };
             _box = new GUIStyle(GUI.skin.box) { fontSize = 14, alignment = TextAnchor.UpperLeft, richText = true, wordWrap = true };
             _box.normal.textColor = Color.white;
+            BuildSkin();
+        }
+
+        static readonly Color SkinCream = new Color(1f, 0.96f, 0.9f);
+        static readonly Color SkinGold = new Color(0.96f, 0.8f, 0.45f);
+        static readonly Color SkinInk = new Color(0.12f, 0.09f, 0.07f);
+
+        /// <summary>Menu skin to match the uGUI HUD: dark rounded panels, warm buttons, gold for hover and the selected tab.</summary>
+        void BuildSkin()
+        {
+            _skin = Object.Instantiate(GUI.skin);
+            var panel = Rounded(new Color(0.08f, 0.07f, 0.065f, 0.95f), 12);
+            var button = Rounded(new Color(0.24f, 0.19f, 0.15f, 1f), 8);
+            var hover = Rounded(new Color(0.34f, 0.27f, 0.2f, 1f), 8);
+            var gold = Rounded(SkinGold, 8);
+            var track = Rounded(new Color(0f, 0f, 0f, 0.5f), 4);
+            var knob = Rounded(SkinGold, 8);
+
+            _skin.box.normal.background = panel;
+            _skin.box.border = new RectOffset(12, 12, 12, 12);
+            _skin.box.normal.textColor = SkinGold;
+            _skin.box.fontSize = 18;
+            _skin.box.fontStyle = FontStyle.Bold;
+            _skin.box.padding = new RectOffset(14, 14, 10, 10);
+
+            foreach (var b in new[] { _skin.button, _skin.toggle })
+            {
+                b.fontSize = 15;
+                b.normal.textColor = b.hover.textColor = SkinCream;
+                b.onNormal.textColor = b.onHover.textColor = b.active.textColor = b.onActive.textColor = SkinInk;
+            }
+            var btn = _skin.button;
+            btn.fontStyle = FontStyle.Bold;
+            btn.border = new RectOffset(8, 8, 8, 8);
+            btn.normal.background = button;
+            btn.hover.background = hover;
+            btn.active.background = btn.onNormal.background = btn.onHover.background = btn.onActive.background = gold;
+            btn.padding = new RectOffset(6, 6, 6, 6);
+
+            _skin.horizontalSlider.normal.background = track;
+            _skin.horizontalSlider.border = new RectOffset(4, 4, 4, 4);
+            _skin.horizontalSlider.fixedHeight = 8f;
+            _skin.horizontalSliderThumb.normal.background = _skin.horizontalSliderThumb.hover.background = _skin.horizontalSliderThumb.active.background = knob;
+            _skin.horizontalSliderThumb.fixedWidth = _skin.horizontalSliderThumb.fixedHeight = 16f;
+            _skin.horizontalSliderThumb.border = new RectOffset(8, 8, 8, 8);
+            _skin.verticalScrollbar.normal.background = track;
+            _skin.verticalScrollbar.fixedWidth = 8f;
+            _skin.verticalScrollbar.border = new RectOffset(4, 4, 4, 4);
+            _skin.verticalScrollbarThumb.normal.background = hover;
+            _skin.verticalScrollbarThumb.fixedWidth = 8f;
+            _skin.verticalScrollbarThumb.border = new RectOffset(4, 4, 4, 4);
+            _skin.label.normal.textColor = SkinCream;
+
+            _label.normal.textColor = _center.normal.textColor = _small.normal.textColor = SkinCream;
+            _big.normal.textColor = SkinGold;
+        }
+
+        static Texture2D Rounded(Color color, int radius)
+        {
+            int size = radius * 2 + 4;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.DontSave };
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, radius, size - radius), cy = Mathf.Clamp(y + 0.5f, radius, size - radius);
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(cx, cy));
+                    tex.SetPixel(x, y, new Color(color.r, color.g, color.b, color.a * Mathf.Clamp01(radius - d + 0.5f)));
+                }
+            tex.Apply();
+            return tex;
         }
 
         void OnGUI()
         {
             if (Root == null || Root.Session == null) return;
             Styles();
-            if (_title) { DrawTitle(); return; }
+            _uiScale = Mathf.Max(1f, Screen.height / 1080f);
+            if (_title) { Modal(DrawTitle); return; }
 
             DrawWorldLabels();
             if (_view == null)
@@ -164,12 +240,31 @@ namespace SnowGlobe.Game
                 DrawToastsAndSubtitles();
             }
             var station = Root.Interactor.LockedStation;
-            if (station != null) station.DrawGUI();
+            if (station != null)
+            {
+                // Station minigames lay out in screen pixels, so they get the skin but not the scaling.
+                var skin = GUI.skin;
+                GUI.skin = _skin;
+                station.DrawGUI();
+                GUI.skin = skin;
+            }
 
-            if (_summary) DrawSummary();
-            else if (_briefing) DrawBriefing();
-            else if (_menu) DrawMenu();
-            else if (_paused) DrawPause();
+            if (_summary) Modal(DrawSummary);
+            else if (_briefing) Modal(DrawBriefing);
+            else if (_menu) Modal(DrawMenu);
+            else if (_paused) Modal(DrawPause);
+        }
+
+        /// <summary>Draws a modal panel with the menu skin, scaled from a 1080-high layout.</summary>
+        void Modal(System.Action draw)
+        {
+            var skin = GUI.skin;
+            var matrix = GUI.matrix;
+            GUI.skin = _skin;
+            GUI.matrix = Matrix4x4.Scale(new Vector3(_uiScale, _uiScale, 1f));
+            draw();
+            GUI.matrix = matrix;
+            GUI.skin = skin;
         }
 
         // ------------------------------------------------------------ world-anchored info
@@ -353,11 +448,11 @@ namespace SnowGlobe.Game
 
         // ------------------------------------------------------------ modal panels
 
-        static Rect Centered(float w, float h) { return new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f, w, h); }
+        Rect Centered(float w, float h) { return new Rect((VW - w) * 0.5f, (VH - h) * 0.5f, w, h); }
 
         void DrawTitle()
         {
-            var full = new Rect(0f, 0f, Screen.width, Screen.height);
+            var full = new Rect(0f, 0f, VW, VH);
             var art = Shapes.Tex("title_storefront");
             if (art != null) GUI.DrawTexture(full, art, ScaleMode.ScaleAndCrop);
             GUI.color = new Color(0.03f, 0.04f, 0.08f, art != null ? 0.55f : 0.85f);
@@ -444,10 +539,10 @@ namespace SnowGlobe.Game
 
         void DrawMenu()
         {
-            var r = Centered(720f, 500f);
+            var r = Centered(900f, 620f);
             GUI.Box(r, "");
             GUILayout.BeginArea(new Rect(r.x + 14f, r.y + 10f, r.width - 28f, r.height - 20f));
-            _tab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Supplies", "Upgrades", "Themes", "Orders", "Notes", "Save / Load", "Settings", "Help" });
+            _tab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Supplies", "Upgrades", "Themes", "Orders", "Notes", "Saves", "Settings", "Help" });
             GUILayout.Space(6f);
             _scroll = GUILayout.BeginScrollView(_scroll);
             switch (_tab)
@@ -481,7 +576,7 @@ namespace SnowGlobe.Game
             {
                 GUILayout.BeginHorizontal();
                 bool unlocked = def.UnlockDay <= s.State.Day.Day;
-                GUILayout.Label(def.DisplayName + " — sells ~$" + def.BaseSaleValue + (unlocked ? "\n<size=11>" + def.Description + "</size>" : "\n<size=11>Supplier offers these from day " + def.UnlockDay + ".</size>"), _label, GUILayout.Width(440f));
+                GUILayout.Label(def.DisplayName + " — sells ~$" + def.BaseSaleValue + (unlocked ? "\n<size=11>" + def.Description + "</size>" : "\n<size=11>Supplier offers these from day " + def.UnlockDay + ".</size>"), _label, GUILayout.Width(620f));
                 GUI.enabled = unlocked;
                 if (GUILayout.Button("Order $" + StoryRules.CharacterCost(s.State, def.Id), GUILayout.Width(120f))) Root.Toast(s.Supply.OrderCharacter(def.Id).Message);
                 GUI.enabled = true;
@@ -514,7 +609,7 @@ namespace SnowGlobe.Game
             {
                 bool owned = s.Upgrades.Owns(def.Id);
                 GUILayout.BeginHorizontal(GUI.skin.box);
-                GUILayout.Label("<b>" + def.Name + "</b>  $" + def.Cost + "  <size=11>[" + def.Category + "]</size>\n<size=12>Solves: " + def.Solves + "\nTrade-off: " + def.Tradeoff + "</size>", _label, GUILayout.Width(440f));
+                GUILayout.Label("<b>" + def.Name + "</b>  $" + def.Cost + "  <size=11>[" + def.Category + "]</size>\n<size=12>Solves: " + def.Solves + "\nTrade-off: " + def.Tradeoff + "</size>", _label, GUILayout.Width(620f));
                 string status;
                 bool can = false;
                 if (owned) status = "Installed";
@@ -545,7 +640,7 @@ namespace SnowGlobe.Game
             string next = rep.RefitsMaxed ? "Every refit is done. The shop could not be grander."
                 : "Next: <b>" + ReputationService.RefitName(rep.RefitTier + 1) + "</b>  $" + rep.NextRefitCost;
             GUILayout.Label("<b>Boutique refit</b>  (tier " + rep.RefitTier + "/" + ReputationService.MaxRefitTier + ", prices +" + Mathf.RoundToInt((rep.PriceMultiplier - 1f) * 100f) + "%)\n<size=12>" + next +
-                            "\nEach refit adds " + Mathf.RoundToInt(ReputationService.RefitPriceBonus * 100f) + "% to every price. Each costs twice the last.</size>", _label, GUILayout.Width(440f));
+                            "\nEach refit adds " + Mathf.RoundToInt(ReputationService.RefitPriceBonus * 100f) + "% to every price. Each costs twice the last.</size>", _label, GUILayout.Width(620f));
             string status = rep.RefitsMaxed ? "Done" : day < ReputationService.RefitUnlockDay ? "Day " + ReputationService.RefitUnlockDay : "Refit";
             GUI.enabled = !rep.RefitsMaxed && day >= ReputationService.RefitUnlockDay && !open;
             if (GUILayout.Button(status, GUILayout.Width(120f), GUILayout.Height(44f))) Root.Toast(rep.BuyRefit().Message);
@@ -554,7 +649,7 @@ namespace SnowGlobe.Game
 
             GUILayout.BeginHorizontal(GUI.skin.box);
             GUILayout.Label("<b>Sponsor the winter fair</b>  $" + rep.NextFairCost + "\n<size=12>Your name on every lantern. Lowers business exposure by " + (int)ReputationService.FairExposureRelief +
-                            " (now " + Mathf.RoundToInt(s.State.Exposure.Value) + "). Once a day; costs $" + ReputationService.FairBaseCost + " more each time.</size>", _label, GUILayout.Width(440f));
+                            " (now " + Mathf.RoundToInt(s.State.Exposure.Value) + "). Once a day; costs $" + ReputationService.FairBaseCost + " more each time.</size>", _label, GUILayout.Width(620f));
             status = day < ReputationService.FairUnlockDay ? "Day " + ReputationService.FairUnlockDay : rep.SponsoredToday ? "Tomorrow" : "Sponsor";
             GUI.enabled = day >= ReputationService.FairUnlockDay && !rep.SponsoredToday;
             if (GUILayout.Button(status, GUILayout.Width(120f), GUILayout.Height(44f))) Root.Toast(rep.SponsorFair().Message);
@@ -573,7 +668,7 @@ namespace SnowGlobe.Game
                 GUILayout.BeginHorizontal(GUI.skin.box);
                 GUILayout.Label("<b>" + def.DisplayName + "</b>" + (active ? "  <color=#7fe07f>(making these)</color>" : "") +
                                 "\n<size=12>Value ×" + def.ValueMultiplier.ToString("0.##") + " · extra kit cost $" + def.ExtraKitCost + " · snow target " + Mathf.RoundToInt(def.SnowTarget * 100f) + "%" +
-                                "\nScenery: " + string.Join(", ", def.Scenery) + "\n" + def.ProductionNote + "</size>", _label, GUILayout.Width(440f));
+                                "\nScenery: " + string.Join(", ", def.Scenery) + "\n" + def.ProductionNote + "</size>", _label, GUILayout.Width(620f));
                 if (unlocked)
                 {
                     GUI.enabled = !active;
@@ -604,7 +699,7 @@ namespace SnowGlobe.Game
             {
                 any = true;
                 GUILayout.BeginHorizontal(GUI.skin.box);
-                GUILayout.Label(OrderService.Describe(o), _label, GUILayout.Width(440f));
+                GUILayout.Label(OrderService.Describe(o), _label, GUILayout.Width(620f));
                 bool isPinned = pinned != null && pinned.Id == o.Id;
                 if (GUILayout.Button(isPinned ? "Unpin" : "Pin", GUILayout.Width(120f), GUILayout.Height(44f)))
                 {
