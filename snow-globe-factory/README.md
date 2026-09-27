@@ -1,0 +1,75 @@
+# Little Lives: Snow Globe Factory (prototype)
+
+A first-person snow globe shop hiding a creepy, increasingly automated business built around living miniature people.
+Unity 6 · C# · Windows PC · keyboard + mouse.
+
+* **Design and implementation plan:** [`docs/DESIGN_PLAN.md`](docs/DESIGN_PLAN.md). It covers the concept, loop, design conflicts, architecture, roadmap, economy tables, risks and acceptance criteria.
+* **Status:** Milestone 1 (greybox loop) is code-complete.
+  * The simulation core is compiled and covered by 53 passing unit tests.
+  * The Unity layer compiles against Unity reference assemblies, **but it has not yet been run in the Unity editor.** Expect a round of fixes and tuning the first time it's opened (that is Milestone 2).
+
+## Run it in Unity
+
+**Option A (recommended)**
+
+1. In Unity Hub, create a new **Unity 6 (6000.0 LTS)** project from the **Universal 3D** template.
+2. Copy `Assets/_Project/` from this folder into the new project's `Assets/`.
+3. In the editor, choose **Snow Globe Factory → Create Prototype Scene**. This saves `Assets/_Project/Scenes/SnowGlobePrototype.unity`.
+4. Press **Play**.
+
+**Option B:** open this folder directly in Unity Hub (*Add → Add project from disk*) with any Unity 6000.0 editor. It uses the built-in render pipeline and legacy input. Then do steps 3–4 above.
+
+Notes:
+
+* Nothing needs importing. The building, characters, UI and audio are all generated at runtime from primitives and synthesized sound.
+* Input works with either the legacy Input Manager or the Input System package.
+* Materials use URP/Lit when a URP asset is active, and Standard otherwise. For a *player build* (not needed in the editor), add the shader in use to *Graphics → Always Included Shaders*.
+
+## Controls
+
+| Key | Action |
+|---|---|
+| WASD / mouse, Shift | Move / look, walk faster |
+| LMB | Pick up / place (releasing near a valid spot snaps it in) |
+| E | Interact / station action (hold E where prompted) |
+| X | Secondary action (reject a globe, offer an exchange) |
+| Q | Re-dose serum on a prepared character (held or looked at) |
+| RMB + mouse, scroll | Rotate the held item |
+| F | Hold the item close to look at it |
+| 1 / 2 / 3, A / D, arrows | Station choices (scenery, pose, fold sequence) |
+| Tab | Management: supplies, characters, upgrades, save/load, settings, help |
+| Esc | Pause / step away from a station |
+| F5 / F9 | Save / load (saving only while the shop is closed) |
+
+## The loop
+
+1. Basement pen: carry an awake character up the ramp to the **Preparation Cradle**.
+2. Time the (fictional) Stillness Serum injection. A countdown starts.
+3. **Assembly:** choose the pose and turn the figure to face front, pick scenery with 1–3, then hold E to pour snow into the green band.
+4. **Sealer:** drop the swinging dome when it's centred, then seal. Do this before the serum runs out.
+5. **Inspection** (optional): turn the globe under the lamp. It gets +10% value if certified, and X rejects a bad one.
+6. **Packaging:** follow the fold/tape keys.
+7. Carry the box to a shop shelf slot to unbox it. Flip the OPEN sign. Ring up customers at the counter.
+8. After closing: pay bills, buy upgrades, then start the next day (a checkpoint is saved automatically).
+
+## Tests and checks (no Unity needed)
+
+```bash
+dotnet test tools/CoreTests          # 53 NUnit tests for the engine-free simulation core (C# 9)
+tools/typecheck-unity.sh             # compile-only check of Core + Runtime against UnityEngine reference assemblies
+```
+
+The tests in `Assets/_Project/Tests/EditMode` also run in Unity's Test Runner (EditMode).
+
+## Layout
+
+```
+Assets/_Project/Scripts/Core      engine-free rules: products & states, economy, suspicion, director, days, saves
+Assets/_Project/Scripts/Runtime   Unity presentation: level builder, player, stations, customers, horror, HUD, audio
+Assets/_Project/Scripts/Editor    scene-creation menu
+Assets/_Project/Tests/EditMode    NUnit tests (shared by Unity and dotnet)
+tools/                            .NET projects for running tests / type-checks outside Unity
+docs/DESIGN_PLAN.md               the plan
+```
+
+Content note: the serum and stasis seals are fictional devices, shown only as charges, timers and integrity values. There is no gore and no way to harm a character. Rejected globes return their character to holding, unharmed.

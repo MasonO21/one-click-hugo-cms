@@ -1,0 +1,19 @@
+{
+    "name": "SnowGlobe.Editor",
+    "rootNamespace": "SnowGlobe.EditorTools",
+    "references": [
+        "SnowGlobe.Runtime",
+        "SnowGlobe.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,275 @@
+# Little Lives: Snow Globe Factory — Implementation Plan
+
+> Status legend used throughout: **✅ Implemented & verified** (compiled and covered by automated tests),
+> **🟡 Implemented, not yet run in Unity** (code written and type-checked against Unity reference
+> assemblies, but never executed in the editor), **⬜ Planned**.
+
+---
+
+## 0. Where things stand
+
+| Area | Status | Notes |
+|---|---|---|
+| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 53 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
+| Unity layer (greybox building, player, carrying, stations, customers, horror, HUD, audio) | 🟡 | Compiles against Unity 2021.3 reference assemblies (with Unity 6 renames mapped). **Never run in the editor.** Expect tuning and bug-fix work in Milestone 2 |
+| Input System package path | 🟡 | Written but not compiled (package not available outside Unity) |
+| Automation, multiple customers, special orders, more archetypes/themes | ⬜ | Data models exist for several; no scene objects yet |
+| Real art, animation, UI Toolkit, audio design | ⬜ | Everything is procedural placeholder |
+
+---
+
+## 1. The finished game in one paragraph
+
+*Little Lives: Snow Globe Factory* is a first-person shop-and-factory sim with a horror secret. Upstairs is a cosy
+winter gift shop with a music box playing. You sell hand-posed snow globes of tiny figures. The figures are
+alive. Every globe starts in the basement as a small, wobbly person who looks at you, and it goes through a line
+you build and run yourself: prepare, pose, decorate, seal, inspect, box, display, sell. Over days and
+weeks you automate the line, unlock pricier themes and stranger characters, and fight to keep the shop's
+secret from customers who notice twitching figures, muffled voices and things running across the floor.
+The horror is in the business itself, not in gore. Physics is goofy when things go right and unsettling when
+they go wrong.
+
+## 2. Core loop and main decisions
+
+```
+ Basement            Backroom line                                   Storefront
+ ┌────────┐   carry  ┌───────┐  ┌────────┐  ┌──────┐  ┌───────────┐  ┌──────────┐  carry  ┌──────┐  ┌─────────┐
+ │ Pens / │ ───────► │Cradle │─►│Assembly│─►│Sealer│─►│Inspection?│─►│Packaging │ ──────► │Shelf │─►│ Counter │─► $$
+ │ Hatch  │          │(serum)│  │pose/   │  │dome +│  │ (optional)│  │fold/tape │         │unbox │  │  sale   │
+ └────────┘          └───────┘  │scenery/│  │seal  │  └───────────┘  └──────────┘         └──────┘  └─────────┘
+      ▲                         │snow    │  └──────┘                                            │
+      │                         └────────┘       serum countdown runs Prepared→Domed            │
+      └──── reinvest: supplies, characters, upgrades ◄──────────────────────────────────────────┘
+```
+
+**Minute-to-minute:** carry a character upstairs, run 5 short station interactions before the Stillness
+Serum countdown ends, carry the box to a shelf, serve whoever rings the bell.
+**Day-to-day:** decide when to open, when to close early, what to buy, which upgrade to take.
+
+Main decisions the player makes:
+
+1. **Speed or quality.** Skilled station play raises quality and price. Rushing keeps the serum timer safe.
+2. **Inspect or skip.** Inspection costs time and gives a certified +10% price. It also reveals weak seals, and certified globes are never returned. Skipping saves time but risks a figure moving on the shelf.
+3. **Serve or produce.** A customer at the bell while a prepared character's serum is running out. Re-dose ($2), or let the customer wait?
+4. **Contain or cover up.** When a globe twitches in front of a customer: pull it off the shelf, chat to distract, offer an exchange, or hope they didn't see it.
+5. **What to buy.** A cheap reliability upgrade now, or save several days for a big automation purchase that uses more power (and so raises power-failure risk).
+6. **When to open.** Before opening, time is frozen and you can build stock. Once open, the clock runs. Closing early is safe but earns less.
+
+## 3. Design conflicts and how they're resolved
+
+| # | Conflict | Resolution (implemented unless marked ⬜) |
+|---|---|---|
+| 1 | Chaotic physics vs precise factory work | Only *loose* characters are physics-driven: an upright torque plus hop locomotion, a stable approximation of an active ragdoll. Anything in a station, shelf or pen is kinematic. Releasing an item near a valid spot snaps it in. Minigames use keys and timing, not physics precision |
+| 2 | Cosy business pacing vs horror | The event director cycles **Calm → Unease → Emergency → Relief**, with cooldowns and a relief window. Day 1 has no threats. A director threat never stacks on top of a natural crisis |
+| 3 | Fair suspicion vs scary randomness | Suspicion only rises from evidence a customer could perceive: line of sight plus distance, or sound leaking through doors and soundproofing. **Atmospheric scares never create suspicion.** Threats always give warning signs first (6–8 s) |
+| 4 | Variety of minigames vs repetitive tedium | Each station interaction takes 3–8 s and uses a different verb (timing dial, rotate + pose, pick + hold-fill, swing-drop, mouse scan, key sequence). ⬜ Automation replaces any station at a capped "good" quality, so staying manual is a quality choice, not a chore |
+| 5 | Serum timer pressure vs serving customers | A 60 s base window covers one practised cycle. Warnings come at 15 s (HUD, tick sound, trembling). A $2 re-dose works anywhere, and the prototype has one customer at a time |
+| 6 | Inspection that lowers price would never be used | Seal integrity affects **risk**, not price. Inspection gives +10% and protection from returns |
+| 7 | Pulling a suspicious globe should not be punished | Lifting a displayed globe puts it back in its own box, so no new box is used |
+| 8 | Saving a physics-heavy world | Saves are only allowed when the shop is closed and no emergency is running. A checkpoint is saved automatically every morning. `SaveValidator` repairs any inconsistency (carried → safe spot, escaped → recaptured, bad shelf links cleared) and never deletes a product |
+| 9 | Business closure fail state vs relaxed play | Closure needs exposure ≥ 90, at least 3 serious incidents, **and** a warning on an earlier day. Recovery reloads that morning's checkpoint |
+| 10 | Unavoidable bankruptcy | Bills you can't pay become debt, not negative cash. An emergency supply order (2 full units, $40 of debt) is offered when you are broke and have nothing to sell. Debt is repaid from 50% of each sale |
+| 11 | Dark premise vs "no gore" | Serum and stasis are clearly fictional: a charge count, a countdown and an integrity number. There is no action that harms a character. A rejected globe returns its character, unharmed, to holding. The horror comes from atmosphere and implication |
+| 12 | "Tiny" vs readable and grabbable in first person | Characters are about 24 cm tall with big heads and eyes. Globes are about 30 cm. The camera near-clip is 3 cm |
+| 13 | "Basement beneath the backroom" vs simple greybox geometry | The basement is reached by a ramp behind the backroom, going 3 m down. It reads as "down" without holes in the floor |
+| 14 | Upgrades "after closing" vs instant fixes | Upgrades can be bought only while closed. Supplies and characters can be ordered at any time |
+
+## 4. Prototype scope (Milestone 1 — what the code in this folder covers)
+
+In: one compact building (shop, backroom, basement); one archetype (**The Sleepy One**; others exist as data);
+one globe theme (Winter Village); manual prep/assembly/sealing/inspection/packaging; one customer at a time;
+movement-based suspicion from weak seals (from day 2); cash + purchasable upgrades (three core ones plus three more
+pure-modifier ones); save/load + morning checkpoint; one escape event (telegraphed pen break-out) and one malfunction
+(power failure, scripted on day 5); subtitles, camera-shake slider, reduced-flicker toggle; procedural placeholder
+art and audio.
+
+Out (deliberately): multiplayer, procedural buildings, employee AI, story campaign, conveyors/automation, multiple
+simultaneous customers, special orders, other themes, security cameras.
+
+## 5. Scene structure and software architecture
+
+### Scene
+
+A single scene containing one `GameBootstrap` component. At runtime `LevelBuilder` generates everything:
+
+```
+SnowGlobeFactory (GameBootstrap → GameRoot, HorrorDirectorRunner, Hud)
+├── Level
+│   ├── Storefront   z 0..8   warm lights, 2 wall shelves (6 slots), premium case (4 slots, upgrade), counter + bell, OPEN sign, staff door
+│   ├── Backroom     z 8..16  Prep cradle, Assembly, Sealer, Inspection lamp, Packaging, supply shelf, basement door
+│   └── Basement     z 16..32 ramp, holding pens A/B (low walls + gates), delivery hatch crate, breaker, security desk
+├── Audio (AudioKit: synthesized music box, bell, scratches, mumbles, hum…)
+├── Player (CharacterController + PlayerController + PlayerInteractor, camera child)
+├── Customers (CustomerSpawner → CustomerAgent*)
+└── Product_* (ProductView per living character / globe)
+```
+
+### Code layers
+
+```
+Assets/_Project/Scripts/
+├── Core/     (asmdef SnowGlobe.Core, noEngineReferences = true)  ← all rules, 100% unit-testable
+│   ├── GameSession.cs            facade wiring every service around one GameState
+│   ├── Common/                   DeterministicRandom (serializable), GameBalance (tuning), ActionResult
+│   ├── Characters/Archetypes.cs  7 archetypes: value, movement, noise, prep duration, special behaviour
+│   ├── Production/               Product + ProductStage state machine, ProductionService, QualityModel, Themes
+│   ├── Economy/                  Wallet (cash/debt), Inventory, SupplyService (+ emergency order), Upgrades
+│   ├── Store/StoreService.cs     display slots, reservations, sale (exactly-once payment)
+│   ├── Suspicion/                Evidence catalog, CustomerSuspicion (4 stages + floor), BusinessExposure
+│   ├── Events/EventDirector.cs   tension rhythm, cooldowns, atmospheric vs threat, scripted incidents
+│   ├── Days/DayCycle.cs          phases, clock, closing bills, returns, DayProgression
+│   └── Save/                     GameState (is the save file), SaveValidator (repair on load)
+├── Runtime/  (asmdef SnowGlobe.Runtime → Core)                   ← presentation + input + physics
+│   ├── GameRoot.cs               composition root; ticks the session; maps sim events → sights/sounds
+│   ├── GameBootstrap.cs, SaveSystem.cs (JsonUtility)
+│   ├── World/                    LevelBuilder, Level anchors, SnapSocket, Door, pens, shelf slots, counter, sign, breaker, lights
+│   ├── Player/                   PlayerController (FPS), PlayerInteractor (look/grab/carry/place/route E-X-Q)
+│   ├── Products/                 ProductView (one per Product), MiniCharacterBody (procedural wobbly humanoid)
+│   ├── Stations/                 StationBase + five station minigames
+│   ├── Customers/                CustomerAgent (perception + shopping FSM), CustomerSpawner
+│   ├── Horror/                   HorrorDirectorRunner (stages director events)
+│   ├── UI/Hud.cs                 IMGUI placeholder: world-anchored labels, menus, summary, settings
+│   └── Infrastructure/           GameInput (legacy + Input System), Settings, Shapes/Palette, AudioKit
+├── Editor/                       "Snow Globe Factory → Create Prototype Scene" menu
+└── ../Tests/EditMode/            NUnit tests (run in Unity Test Runner AND via `dotnet test`)
+```
+
+**Key rules of the architecture**
+
+* **One source of truth.** `GameState` holds every product, its stage, timers and location. Views only mirror it.
+  Every stage change goes through `ProductionService` or `StoreService`. Each checks that the transition is legal and returns an `ActionResult` whose message is shown to the player.
+* **Explicit product states**: `Unprepared → Prepared → Mounted → Decorated → Domed → Sealed → (Inspected) → Packaged → Displayed → Sold`.
+  The product's id *is* the character's identity, from the basement to the shopping bag.
+* **Locations are explicit** (`Holding(room)`, `Station(id)`, `Shelf(slot)`, `Floor(xyz)`, `Loose(xyz)`, `Hatch`, `Carried`, `Gone`),
+  so any saved state can be rebuilt without guessing.
+* **Upgrades are data.** Systems read an aggregated `UpgradeModifiers` struct, never upgrade ids.
+* **Deterministic randomness** (`DeterministicRandom`, whose state is saved). Seal defects, events and returns replay the same way after a load.
+* **Guarantees enforced and tested:** no double sale, no payment without a displayed and reserved globe, one globe per slot, no product
+  lost on load, and no suspicion without perceived evidence.
+
+## 6. Milestone roadmap
+
+| Milestone | Goal | Contents | Exit criteria |
+|---|---|---|---|
+| **M0 Foundations** ✅ | Rules engine | Core library + 53 tests | `dotnet test` green |
+| **M1 Greybox loop** 🟡 | Whole loop playable in placeholder form | Everything in §4 | Code complete, compiles. **Needs a first editor run** |
+| **M2 First playable** ⬜ | Make M1 actually fun and stable | Editor playtest, bug fixes, tune timings and physics, PlayMode smoke test (spawn → make → sell), Unity-side JsonUtility round-trip test, FPS check | §9 acceptance criteria all pass |
+| **M3 Automation** ⬜ | Supervisor role | Station input/output queues in Core; conveyors (Short Conveyor), Packaging Machine, Automated Prep; congestion, safe blocking, breakdowns, manual override; power budget UI; The Wiggler on day 3 | 10+ globes/day with automation, no product ever lost (property tests) |
+| **M4 Customers & orders** ⬜ | Store depth | Multiple customers + queue; customers handling globes (day 4); special-order board; Woodland Cabin theme; store appeal | Orders pay back their extra work; suspicion stays readable with 3 customers |
+| **M5 Horror & roster** ⬜ | Unease at scale | Screamer, Escape Artist, Watcher behaviours; security cameras; conveyor-grab and "wrong room" events; supplier story notes | Director playtests: players report "tense but fair" |
+| **M6 Art & audio** ⬜ | Identity | Real low-poly models, rigged minis (optional joint-based active ragdoll behind the same `MiniCharacterBody` API), lighting, sound design, UI Toolkit HUD | Vertical slice capture |
+| **M7 Content & balance** ⬜ | Longevity | Themes through Celestial Observatory, late-game economy, story milestones, performance and LOD, build pipeline | 2–3 h of progression, economy playable after story |
+
+## 7. Initial economy and progression tables
+
+All values live in `GameBalance`, `ArchetypeCatalog`, `ThemeCatalog` and `UpgradeCatalog`. They are starting
+values for tuning, not final balance.
+
+**Unit economics (Sleepy One, Winter Village)**
+
+| Item | Cost |
+|---|---|
+| Character | $8 |
+| Globe kit (base, scenery, snow, dome) | $7 |
+| Stillness Serum charge (fictional) | $2 (+$2 per re-dose) |
+| Packaging box | $3 |
+| **Production cost** | **$20** |
+| Sale price at quality 0.5 | $40 (`base × theme × (0.5 + quality) × 1.1 if certified`) |
+| Sale price range, sloppy → perfect | ~$24 → $60 ($66 certified) |
+| Daily operating cost | $25 |
+| Starting cash / stock | $150; 3 characters, 3 kits, 4 serum, 3 boxes |
+
+Expected early day: about 4–6 hand-made globes in an 8-minute open period → ~$80–150 net. The first three
+upgrades are affordable over days 1–3.
+
+**Quality** = 0.3·pose + 0.3·decoration + 0.2·snow + 0.1·dome + 0.1·packaging − 0.6·damage.
+Tiers: Flawed < 0.35 ≤ Standard < 0.65 ≤ Fine < 0.85 ≤ Exquisite.
+
+**Archetypes**
+
+| Archetype | Cost | Base value | Movement | Noise | Prep (s) | Serum × | Special | Day |
+|---|---|---|---|---|---|---|---|---|
+| The Sleepy One | $8 | $40 | 0.15 | 0.10 | 1.5 | 1.1 | — | 1 |
+| The Wiggler | $10 | $48 | 0.55 | 0.20 | 2.5 | 0.85 | Slips loose grips | 3 |
+| The Performer | $14 | $65 | 0.35 | 0.30 | 2.0 | 1.0 | Draws attention | 6 |
+| The Heavy One | $16 | $80 | 0.20 | 0.20 | 3.5 | 1.2 | Slows carrying, jams conveyors | 7 |
+| The Screamer | $12 | $55 | 0.30 | 0.85 | 2.0 | 0.9 | Muffled noise when stressed | 8 |
+| The Escape Artist | $15 | $70 | 0.60 | 0.20 | 2.5 | 0.75 | Seeks open doors | 10 |
+| The Watcher | $20 | $95 | 0.50 | 0.05 | 3.0 | 1.0 | Moves only when unobserved | 12 |
+
+**Themes**
+
+| Theme | Value × | Extra kit cost | Unlock | Snow target | Production twist |
+|---|---|---|---|---|---|
+| Winter Village | 1.0 | $0 | start | 0.60 | — |
+| Woodland Cabin | 1.25 | $3 | $300, day 4 | 0.45 | Pine must face front |
+| Medieval Castle | 1.6 | $6 | $900, day 7 | 0.55 | Tall scenery needs the jig |
+| Haunted Manor | 2.0 | $10 | $1800, day 10 | 0.35 | Dim; hides small movements |
+| Deep-Sea Ruins | 2.6 | $16 | $3500, day 14 | 0.80 | Liquid fill; leaks visible |
+| Celestial Observatory | 3.5 | $25 | $7000, day 18 | 0.30 | Needs premium sealer |
+
+**Upgrades** (✅ = has a working effect in the prototype)
+
+| Upgrade | Cost | Category | Day | Solves | Trade-off | Proto |
+|---|---|---|---|---|---|---|
+| Preparation Cradle | $60 | Handling | 1 | Characters slip during injection; timing zone +60% | — | ✅ |
+| Better Injector | $100 | Handling | 1 | Serum window ×1.5 | — | ✅ |
+| Assembly Jig | $150 | Speed | 1 | Assembly ×0.6 time, dome alignment +0.15 | — | ✅ |
+| Short Conveyor | $250 | Automation | 3 | Walking globes sealer→packaging | +1 power; Heavy jams | ⬜ |
+| Improved Sealer | $400 | Quality | 2 | Seal defects ×0.4 | +1 power, hum | ✅ |
+| Basement Soundproofing | $500 | Secrecy | 2 | Basement noise leak ×0.35 | You hear less too | ✅ |
+| Packaging Machine | $650 | Automation | 4 | Hand boxing | Capped "good" packaging score | ⬜ |
+| Premium Display Case | $800 | Storage | 3 | +4 slots; movement there ×0.5 visible | — | ✅ |
+| Automated Prep Station | $1000 | Automation | 5 | Hand injection | +2 power, average timing | ⬜ |
+
+Power capacity is 3. Going over it makes power failures more likely in the director's weighting.
+
+**Day introductions**
+
+| Day | New |
+|---|---|
+| 1 | Basic assembly and sales. No seal defects, no threats |
+| 2 | Seal defects can occur (minor movement); escape attempts possible; Improved Sealer and Soundproofing unlock |
+| 3 | The Wiggler; conveyor and premium case unlock |
+| 4 | ⬜ Customers handle globes; ⬜ special orders |
+| 5 | Scripted power failure 90 game-minutes after opening |
+
+**Secrecy numbers**
+
+* Customer stages: Comfortable < 25 ≤ Curious < 50 ≤ Investigating < 80 ≤ Alarmed. Decay is 0.6/s, but only while Comfortable or Curious, and never below the floor.
+* A first sighting of an evidence type counts ×0.5 (it reads as "is it mechanical?"). Repeats count ×1, ×1.5, … up to ×2.5.
+* Undeniable evidence (a loose character, an awake character carried in view, or repeated blatant movement) sets a floor at 90% of the current value.
+* Chat (distract) −20, with a 20 s cooldown. Removing the globe they're focused on −15. Exchange offer −25, once per customer. None of these goes below the floor, and none works on an Alarmed customer.
+* Exposure when a customer leaves: Curious +1, Investigating +4, Alarmed +12 (counts as a serious incident). +3 if they saw undeniable evidence. −8 per clean day.
+* Exposure effects: customer attentiveness ×(1 + E/100); arrival rate ×(1 − 0.4·E/100); from E ≥ 50, un-inspected defective globes may be returned for a refund.
+
+## 8. Highest technical risks and how to prototype them early
+
+| Risk | Why it matters | Early prototype / mitigation |
+|---|---|---|
+| **Active-ragdoll feel at 24 cm scale** | Tiny rigidbodies jitter and tunnel. A true joint ragdoll is expensive to tune | Implemented a stable approximation: spring-driven procedural limbs, one rigidbody with upright torque and hop locomotion. M2: a "20 loose minis" stress room, drop tests from shelf height, then tune torque, hop and damping. Fallback: kinematic scurry (already used beyond 15 m) |
+| **Carry and placement frustration** | The core verb | Soft velocity follow, collision with the player ignored while carried, snap sockets with generous radii, the placement target named in the prompt. M2: five-player hallway test, time to place a globe on each station |
+| **Perception fairness and cost** | Players must be able to explain every suspicion rise | Perception runs at 4 Hz per customer with LOS raycasts to candidates only. The core is unit-tested. ⬜ Debug overlay drawing each customer's vision cone and last evidence |
+| **Save consistency with a live physics world** | Duplicate or lost products break trust | Core state is authoritative. Saves happen only when closed and calm. A validator runs on load, and tests cover duplicates, carried, escaped and broken shelf links. M2: JsonUtility round-trip EditMode test |
+| **Automation throughput vs "no product ever disappears"** | Queues and conveyors create edge cases | ⬜ Model queues in Core first, with capacity and blocking, then add property-based tests (random operations → products conserved) before building any conveyor object |
+| **Tone** | The premise could tip into cruelty | Fictional devices, no harm verbs, rejection returns the character unharmed. Horror comes from implication and atmosphere. Review every new mechanic against this rule |
+| **Unity 6 API drift** | Code was written without an editor | Type-checked against 2021.3 reference assemblies (`tools/typecheck-unity.sh`). First task of M2 is to open it in Unity 6 and fix anything that appears |
+| **Performance with many displayed figures** | Each figure animates six springs | Posed and Frozen figures are cheap. ⬜ Disable `MiniCharacterBody` updates off-screen and beyond 10 m |
+
+## 9. Acceptance criteria — first playable build
+
+| # | Criterion | Status |
+|---|---|---|
+| 1 | From a new game, a first-time player can make and sell one globe within ~5 minutes using only in-game prompts and the Day 1 briefing | 🟡 needs playtest |
+| 2 | A practised player completes a full cycle (pen → shelf) in 60–90 s; Cradle + Injector + Jig noticeably shorten or ease it | 🟡 needs playtest |
+| 3 | Money is exact: supplies are deducted when bought; a sale pays once; a globe cannot be sold twice or without being displayed and reserved | ✅ tests |
+| 4 | The serum warns at 15 s and expiry turns the character into a loose, catchable character; the kit is lost; the character still exists | ✅ core tests · 🟡 in-world |
+| 5 | Suspicion rises only from perceivable evidence; a first small twitch reads as a "mechanical feature"; repeats escalate to Alarmed; an alarmed customer flees and raises exposure | ✅ core tests · 🟡 perception |
+| 6 | From day 2, a weak seal can make a displayed globe twitch in view of a customer (the basic movement suspicion event) | ✅ core tests · 🟡 in-world |
+| 7 | The escape event is telegraphed for ≥ 8 s, can be prevented by reaching the gate, and otherwise produces a recapturable loose character; the threat resolves on recapture | 🟡 |
+| 8 | At least three upgrades are purchasable while closed and have visible effects (Cradle, Injector, Jig; also Sealer, Soundproofing, Premium Case) | ✅ core tests · 🟡 in-world |
+| 9 | Save/load keeps day, cash, debt, inventory, upgrades and every product's id, name, stage, timers and location; no duplicates | ✅ tests (System.Text.Json) · 🟡 JsonUtility |
+| 10 | No product ever disappears: occupied stations overflow beside themselves, invalid shelf links are repaired, sold products leave the world | ✅ tests · 🟡 in-world |
+| 11 | Day loop: open when ready, auto-close at 5 pm (or early), summary with bills, next day with a checkpoint | ✅ core tests · 🟡 UI |
+| 12 | Subtitles, camera-shake slider and reduced-flicker toggle work and persist | 🟡 |
+| 13 | Holds 60 FPS on a mid-range PC with ≤ 20 products in the world | ⬜ unmeasured |
