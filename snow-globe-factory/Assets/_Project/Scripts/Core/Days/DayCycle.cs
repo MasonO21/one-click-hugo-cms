@@ -148,6 +148,9 @@ namespace SnowGlobe.Core
         public static bool CustomersHandleGlobes(int day) { return day >= 4; }
         public static bool SpecialOrdersEnabled(int day) { return day >= 4; }
 
+        /// <summary>How many shoppers may be inside at once.</summary>
+        public static int MaxCustomers(int day) { return day < 3 ? 1 : day < 5 ? 2 : 3; }
+
         /// <summary>Day 5 guarantees one power failure 90 game-minutes after opening.</summary>
         public static DirectorEventId ScriptedThreat(DayState day)
         {

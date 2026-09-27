@@ -46,6 +46,8 @@ circle(0, 5, 1.5, TEAL); circle(0, 5, 0.95, (60, 90, 100)); text(-0.9, 4.8, "rou
 for a in (-60, -20, 20, 60):
     r = math.radians(a); circle(math.sin(r) * 1.25, 5 - math.cos(r) * 1.25, 0.12, (240, 200, 80))
 text(1.6, 3.3, "premium slots 7-10 (upgrade)")
+box(-1.6, 9.9, 1.4, 0.1, (170, 130, 88)); text(-2.4, 9.35, "order board")
+for i in range(3): circle(-4, 7.4 - 0.8 * i, 0.12, (240, 160, 160))
 box(-4, 8.4, 2.8, 0.7, TEAL, None); text(-5.2, 8.9, "counter + bell"); circle(-4, 7.4, 0.2, (240, 120, 120)); text(-3.7, 7.2, "customer spot")
 box(-3.35, 0.05, 0.5, 0.1, (200, 60, 60)); text(-4.6, 0.5, "OPEN sign")
 for x, z in [(5.3, 2.4), (5.3, 5.2), (5.3, 8.0), (-5.3, 2.0), (-5.3, 4.0), (-5.3, 6.0), (0, 2.6)]: circle(x, z, 0.08, (240, 120, 120))

@@ -5,8 +5,8 @@ Unity 6 · C# · Windows PC · keyboard + mouse.
 
 * **Design and implementation plan:** [`docs/DESIGN_PLAN.md`](docs/DESIGN_PLAN.md). It covers the concept, loop, design conflicts, architecture, roadmap, economy tables, risks and acceptance criteria.
 * **Map:** rebuilt from the concept paintings in [`docs/concept/`](docs/concept). A top-down plan is in [`docs/floorplan.png`](docs/floorplan.png).
-* **Status:** Milestones 1 (greybox loop) and 3 (automation) are code-complete.
-  * The simulation core is compiled and covered by 63 passing unit tests.
+* **Status:** Milestones 1 (greybox loop), 3 (automation) and 4 (customers, orders, themes) are code-complete.
+  * The simulation core is compiled and covered by 75 passing unit tests.
   * The Unity layer compiles against Unity reference assemblies, **but it has not yet been run in the Unity editor.** Expect a round of fixes and tuning the first time it's opened (that is Milestone 2).
 
 ## Run it in Unity
@@ -38,9 +38,10 @@ Notes:
 | RMB + mouse, scroll | Rotate the held item |
 | F | Hold the item close to look at it |
 | 1 / 2 / 3, A / D, arrows | Station choices (scenery, pose, fold sequence) |
-| Tab | Management: supplies, characters, upgrades, save/load, settings, help |
+| Tab | Management: supplies, characters, upgrades, themes, orders, save/load, settings, help |
 | Esc | Pause / step away from a station |
 | E / X on a machine panel | Switch automatic ↔ manual / repair or service (automation upgrades) |
+| E / X at the order board | Pin the next special order / unpin (day 4+); deliver the box to the counter's pickup spot |
 | F5 / F9 | Save / load (saving only while the shop is closed) |
 
 ## The loop
@@ -52,12 +53,13 @@ Notes:
 5. **Inspection** (optional): turn the globe under the lamp. It gets +10% value if certified, and X rejects a bad one.
 6. **Packaging:** follow the fold/tape keys.
 7. Carry the box to a shop shelf slot to unbox it. Flip the OPEN sign. Ring up customers at the counter.
-8. After closing: pay bills, buy upgrades, then start the next day (a checkpoint is saved automatically).
+8. After closing: pay bills, buy upgrades and themes (Tab), then start the next day (a checkpoint is saved automatically).
+9. From day 4: pin special orders at the board by the counter. The assembly card follows the pinned order, and the finished box goes on the counter's order pickup spot.
 
 ## Tests and checks (no Unity needed)
 
 ```bash
-dotnet test tools/CoreTests          # 63 NUnit tests for the engine-free simulation core (C# 9)
+dotnet test tools/CoreTests          # 75 NUnit tests for the engine-free simulation core (C# 9)
 tools/typecheck-unity.sh             # compile-only check of Core + Runtime against UnityEngine reference assemblies
 python3 tools/art/generate_art.py    # rebuild Resources/SnowGlobeArt textures from docs/concept (needs Pillow)
 python3 tools/art/floorplan.py       # redraw docs/floorplan.png

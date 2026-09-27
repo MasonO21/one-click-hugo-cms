@@ -105,7 +105,7 @@ namespace SnowGlobe.Game
                 float fill = Mathf.Lerp(0.004f, 0.03f, P.SnowAmount);
                 _snow.transform.localScale = new Vector3(0.3f, fill, 0.3f);
                 _snow.transform.localPosition = new Vector3(0f, 0.05f + fill, 0f);
-                if (_shownDecoration != P.DecorationCode) BuildScenery(P.DecorationCode);
+                if (_shownDecoration != P.DecorationCode || _shownTheme != P.Theme) BuildScenery(P.DecorationCode);
             }
             _dome.SetActive(stage >= ProductStage.Domed && !boxed);
             _box.SetActive(boxed);
@@ -117,38 +117,86 @@ namespace SnowGlobe.Game
             UpdateFigureMode();
         }
 
-        public static readonly string[] SceneryNames = { "Pine Tree", "Cottage", "Snowman", "Lamp Post" };
+        ThemeId _shownTheme = (ThemeId)(-1);
 
         void BuildScenery(int code)
         {
             _shownDecoration = code;
+            _shownTheme = P.Theme;
             for (int i = _scenery.childCount - 1; i >= 0; i--) Destroy(_scenery.GetChild(i).gameObject);
             for (int spot = 0; spot < 3; spot++)
             {
                 int item = (code >> (spot * 2)) & 3;
                 float angle = (spot * 120f + 150f) * Mathf.Deg2Rad;
                 var root = Shapes.Empty("Spot" + spot, _scenery, new Vector3(Mathf.Sin(angle) * 0.1f, 0f, Mathf.Cos(angle) * 0.1f)).transform;
-                switch (item)
-                {
-                    case 0:
-                        Shapes.Prim(PrimitiveType.Cylinder, "Trunk", root, new Vector3(0f, 0.01f, 0f), new Vector3(0.012f, 0.01f, 0.012f), Palette.Wood, false);
-                        Shapes.Prim(PrimitiveType.Sphere, "Needles", root, new Vector3(0f, 0.05f, 0f), new Vector3(0.045f, 0.08f, 0.045f), new Color(0.12f, 0.4f, 0.2f), false);
-                        break;
-                    case 1:
-                        Shapes.Prim(PrimitiveType.Cube, "House", root, new Vector3(0f, 0.018f, 0f), new Vector3(0.04f, 0.036f, 0.035f), new Color(0.85f, 0.75f, 0.55f), false);
-                        var roof = Shapes.Prim(PrimitiveType.Cube, "Roof", root, new Vector3(0f, 0.042f, 0f), new Vector3(0.032f, 0.032f, 0.04f), Palette.StoreTrim, false);
-                        roof.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-                        break;
-                    case 2:
-                        Shapes.Prim(PrimitiveType.Sphere, "Bottom", root, new Vector3(0f, 0.015f, 0f), Vector3.one * 0.03f, Palette.Snow, false);
-                        Shapes.Prim(PrimitiveType.Sphere, "Top", root, new Vector3(0f, 0.04f, 0f), Vector3.one * 0.02f, Palette.Snow, false);
-                        break;
-                    default:
-                        Shapes.Prim(PrimitiveType.Cylinder, "Post", root, new Vector3(0f, 0.03f, 0f), new Vector3(0.006f, 0.03f, 0.006f), new Color(0.15f, 0.15f, 0.15f), false);
-                        var bulb = Shapes.Prim(PrimitiveType.Sphere, "Bulb", root, new Vector3(0f, 0.062f, 0f), Vector3.one * 0.012f, Palette.WarmLight, false);
-                        bulb.GetComponent<Renderer>().sharedMaterial = Shapes.Mat(Palette.WarmLight, 2f);
-                        break;
-                }
+                if (P.Theme == ThemeId.WoodlandCabin) Woodland(root, item);
+                else Winter(root, item, P.Theme == ThemeId.WinterVillage ? Color.white : ThemeTint(P.Theme));
+            }
+        }
+
+        static Color ThemeTint(ThemeId theme)
+        {
+            switch (theme)
+            {
+                case ThemeId.MedievalCastle: return new Color(0.7f, 0.7f, 0.75f);
+                case ThemeId.HauntedManor: return new Color(0.5f, 0.45f, 0.6f);
+                case ThemeId.DeepSeaRuins: return new Color(0.4f, 0.8f, 0.85f);
+                default: return new Color(0.75f, 0.7f, 1f);
+            }
+        }
+
+        static void Winter(Transform root, int item, Color tint)
+        {
+            switch (item)
+            {
+                case 0:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Trunk", root, new Vector3(0f, 0.01f, 0f), new Vector3(0.012f, 0.01f, 0.012f), Palette.Wood, false);
+                    Shapes.Prim(PrimitiveType.Sphere, "Needles", root, new Vector3(0f, 0.05f, 0f), new Vector3(0.045f, 0.08f, 0.045f), new Color(0.12f, 0.4f, 0.2f) * tint, false);
+                    break;
+                case 1:
+                    Shapes.Prim(PrimitiveType.Cube, "House", root, new Vector3(0f, 0.018f, 0f), new Vector3(0.04f, 0.036f, 0.035f), new Color(0.85f, 0.75f, 0.55f) * tint, false);
+                    var roof = Shapes.Prim(PrimitiveType.Cube, "Roof", root, new Vector3(0f, 0.042f, 0f), new Vector3(0.032f, 0.032f, 0.04f), Palette.StoreTrim * tint, false);
+                    roof.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    break;
+                case 2:
+                    Shapes.Prim(PrimitiveType.Sphere, "Bottom", root, new Vector3(0f, 0.015f, 0f), Vector3.one * 0.03f, Palette.Snow * tint, false);
+                    Shapes.Prim(PrimitiveType.Sphere, "Top", root, new Vector3(0f, 0.04f, 0f), Vector3.one * 0.02f, Palette.Snow * tint, false);
+                    break;
+                default:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Post", root, new Vector3(0f, 0.03f, 0f), new Vector3(0.006f, 0.03f, 0.006f), new Color(0.15f, 0.15f, 0.15f), false);
+                    var bulb = Shapes.Prim(PrimitiveType.Sphere, "Bulb", root, new Vector3(0f, 0.062f, 0f), Vector3.one * 0.012f, Palette.WarmLight, false);
+                    bulb.GetComponent<Renderer>().sharedMaterial = Shapes.Mat(Palette.WarmLight, 2f);
+                    break;
+            }
+        }
+
+        /// <summary>Woodland Cabin scenery: tall dark pine, log cabin, a little deer.</summary>
+        static void Woodland(Transform root, int item)
+        {
+            var bark = new Color(0.33f, 0.22f, 0.13f);
+            switch (item)
+            {
+                case 0:
+                    Shapes.Prim(PrimitiveType.Cylinder, "Trunk", root, new Vector3(0f, 0.015f, 0f), new Vector3(0.01f, 0.015f, 0.01f), bark, false);
+                    for (int i = 0; i < 3; i++)
+                        Shapes.Prim(PrimitiveType.Sphere, "Boughs", root, new Vector3(0f, 0.04f + i * 0.03f, 0f), new Vector3(0.05f - i * 0.013f, 0.04f, 0.05f - i * 0.013f), new Color(0.08f, 0.28f, 0.16f), false);
+                    break;
+                case 1:
+                    Shapes.Prim(PrimitiveType.Cube, "Cabin", root, new Vector3(0f, 0.018f, 0f), new Vector3(0.045f, 0.036f, 0.035f), bark * 1.3f, false);
+                    for (int i = 0; i < 3; i++)
+                        Shapes.Prim(PrimitiveType.Cube, "Log", root, new Vector3(0f, 0.006f + i * 0.012f, 0.018f), new Vector3(0.047f, 0.004f, 0.003f), bark * 0.8f, false);
+                    var roof = Shapes.Prim(PrimitiveType.Cube, "Roof", root, new Vector3(0f, 0.042f, 0f), new Vector3(0.034f, 0.034f, 0.042f), new Color(0.2f, 0.15f, 0.12f), false);
+                    roof.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    Shapes.Prim(PrimitiveType.Cube, "SnowCap", root, new Vector3(0f, 0.062f, 0f), new Vector3(0.01f, 0.004f, 0.044f), Palette.Snow, false);
+                    break;
+                default:
+                    var fur = new Color(0.55f, 0.36f, 0.2f);
+                    Shapes.Prim(PrimitiveType.Capsule, "Body", root, new Vector3(0f, 0.028f, 0f), new Vector3(0.016f, 0.014f, 0.016f), fur, false).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    Shapes.Prim(PrimitiveType.Sphere, "Head", root, new Vector3(0f, 0.048f, 0.018f), Vector3.one * 0.013f, fur, false);
+                    for (int i = 0; i < 4; i++)
+                        Shapes.Prim(PrimitiveType.Cylinder, "Leg", root, new Vector3(i < 2 ? -0.006f : 0.006f, 0.01f, i % 2 == 0 ? -0.01f : 0.01f), new Vector3(0.003f, 0.01f, 0.003f), fur * 0.8f, false);
+                    Shapes.Prim(PrimitiveType.Cube, "Antler", root, new Vector3(0f, 0.058f, 0.016f), new Vector3(0.018f, 0.002f, 0.002f), bark, false);
+                    break;
             }
         }
 
@@ -311,7 +359,7 @@ namespace SnowGlobe.Game
         void Update()
         {
             if (P == null) return;
-            if (P.Stage != _shown || (P.Stage >= ProductStage.Decorated && P.DecorationCode != _shownDecoration)) Refresh();
+            if (P.Stage != _shown || (P.Stage >= ProductStage.Decorated && (P.DecorationCode != _shownDecoration || P.Theme != _shownTheme))) Refresh();
             if (P.Stage == ProductStage.Sold) return;
             UpdateFigureMode();
 

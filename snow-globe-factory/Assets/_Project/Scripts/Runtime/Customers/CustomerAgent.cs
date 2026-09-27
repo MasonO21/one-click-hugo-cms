@@ -8,6 +8,7 @@ namespace SnowGlobe.Game
     {
         Entering,
         Browsing,
+        Handling,
         Investigating,
         Deciding,
         WalkingToCounter,
@@ -53,6 +54,11 @@ namespace SnowGlobe.Game
         float _perceptionTimer;
         bool _rangBell;
         bool _reminded;
+        /// <summary>A displayed globe this customer has picked up for a closer look (day 4+).</summary>
+        public ProductView Handled;
+        float _handleTimer;
+        bool _handledThisStop;
+        ThemeId _preferred;
         ProductView _lookingAt;
         GameObject _bag;
         readonly Dictionary<int, float> _seenMovementAt = new Dictionary<int, float>();
@@ -69,6 +75,8 @@ namespace SnowGlobe.Game
             _spawner = spawner;
             _level = level;
             Suspicion = Root.Session.Suspicion.Register(id, attentiveness);
+            var themes = Root.Session.State.UnlockedThemes;
+            _preferred = themes[Random.Range(0, themes.Count)];
             name = "Customer_" + id;
 
             var rng = new System.Random(id * 31);
@@ -144,6 +152,11 @@ namespace SnowGlobe.Game
                 case CustomerState.Browsing:
                     if (!Arrived) break;
                     LookAtNearestGlobe();
+                    if (!_handledThisStop && _lookingAt != null && DayProgression.CustomersHandleGlobes(Root.Session.State.Day.Day))
+                    {
+                        _handledThisStop = true;
+                        if (Random.value < 0.35f && TryPickUp(_lookingAt)) break;
+                    }
                     _timer -= dt;
                     if (_timer > 0f) break;
                     if (Suspicion.Stage >= SuspicionStage.Investigating && FocusView() != null)
@@ -153,6 +166,15 @@ namespace SnowGlobe.Game
                     }
                     if (--_browsesLeft > 0) NextBrowse();
                     else SetState(CustomerState.Deciding, transform.position);
+                    break;
+
+                case CustomerState.Handling:
+                    if (Handled == null || Handled.P == null || Handled.P.Stage != ProductStage.Displayed || Handled.Socket == null) { EndHandling(); break; }
+                    Handled.transform.localPosition = new Vector3(0f, 0.35f + Mathf.Sin(Time.time * 2f) * 0.01f, 0.28f);
+                    Handled.transform.localRotation = Quaternion.Euler(0f, Mathf.Sin(Time.time * 0.8f) * 35f, 0f);
+                    FaceTowards(Handled.transform.position, dt);
+                    _handleTimer -= dt;
+                    if (_handleTimer <= 0f) EndHandling();
                     break;
 
                 case CustomerState.Investigating:
@@ -181,25 +203,30 @@ namespace SnowGlobe.Game
                 case CustomerState.WalkingToCounter:
                     if (!StillAvailable()) { Say("Wait, where did it go?"); CancelPurchase(); NextBrowse(); break; }
                     if (!Arrived) break;
+                    if (State != CustomerState.Waiting && _patience <= 0f) _patience = PatienceSeconds;
                     State = CustomerState.Waiting;
-                    _patience = PatienceSeconds;
-                    if (!_rangBell)
+                    break;
+
+                case CustomerState.Waiting:
+                {
+                    // Shuffle forward as the queue moves.
+                    var spot = _spawner.QueueSpot(this);
+                    if ((spot - _target).sqrMagnitude > 0.01f) { SetState(CustomerState.WalkingToCounter, spot); break; }
+                    bool atFront = _spawner.QueueIndex(this) == 0;
+                    if (!_rangBell && atFront)
                     {
                         _rangBell = true;
                         Root.Audio.Play(Sfx.Bell, _level.Counter.BellPoint.position);
                         Root.Hud.Alert("Customer waiting at the counter!");
                     }
-                    break;
-
-                case CustomerState.Waiting:
                     FaceTowards(_level.Counter.transform.position + Vector3.forward, dt);
                     if (!StillAvailable()) { Say("Hey, I wanted that one!"); CancelPurchase(); Leave(); Root.Session.State.Day.Stats.CustomersLost++; break; }
                     _patience -= dt;
                     if (!_reminded && _patience < PatienceSeconds * 0.5f)
                     {
                         _reminded = true;
-                        Root.Audio.Play(Sfx.Bell, _level.Counter.BellPoint.position);
-                        Say("Hello? Anyone?");
+                        if (atFront) Root.Audio.Play(Sfx.Bell, _level.Counter.BellPoint.position);
+                        Say(atFront ? "Hello? Anyone?" : "Is this line even moving?");
                     }
                     if (_patience <= 0f)
                     {
@@ -209,6 +236,7 @@ namespace SnowGlobe.Game
                         Leave();
                     }
                     break;
+                }
 
                 case CustomerState.Leaving:
                 case CustomerState.Fleeing:
@@ -252,6 +280,7 @@ namespace SnowGlobe.Game
             // The premium tier of the round display draws customers once it's stocked.
             if (_level.PremiumCase.activeSelf && Random.value < 0.3f) p = _level.PremiumBrowse.position;
             SetState(CustomerState.Browsing, p, Random.Range(4f, 6.5f));
+            _handledThisStop = false;
             if (Random.value < 0.35f) Say(BrowseLines[Random.Range(0, BrowseLines.Length)]);
         }
 
@@ -291,7 +320,7 @@ namespace SnowGlobe.Game
             {
                 if (v == null || v.P.Stage != ProductStage.Displayed || Root.Session.Store.IsReserved(v.P.Id)) continue;
                 if (v.P.Id == Suspicion.FocusSourceId) continue; // not the creepy one
-                int value = QualityModel.EstimateValue(v.P) + Random.Range(0, 15);
+                int value = QualityModel.EstimateValue(v.P) + Random.Range(0, 15) + (v.P.Theme == _preferred ? 25 : 0);
                 if (value > bestValue) { bestValue = value; pick = v; }
             }
             if (pick == null)
@@ -305,7 +334,33 @@ namespace SnowGlobe.Game
             if (!r.Success) { Leave(); return; }
             ChosenProduct = pick.P;
             Say("I'll take the " + pick.P.CharacterName.Split('#')[0].Trim() + " one!");
-            SetState(CustomerState.WalkingToCounter, _level.CounterSpot.position);
+            SetState(CustomerState.WalkingToCounter, _spawner.JoinQueue(this));
+        }
+
+        bool TryPickUp(ProductView v)
+        {
+            if (v.Socket == null || Root.Interactor.Held == v || Root.Customers.IsReservedByWaitingCustomer(v.P.Id)) return false;
+            if (!Root.Session.Store.Reserve(v.P, Id).Success) return false;
+            Handled = v;
+            _handleTimer = Random.Range(3f, 5f);
+            State = CustomerState.Handling;
+            Root.Audio.Play(Sfx.Tap, v.transform.position, 0.4f);
+            if (Random.value < 0.5f) Say(v.P.Theme == _preferred ? "Oh, this is exactly my style." : "Let me get a closer look...");
+            return true;
+        }
+
+        /// <summary>Put the globe back where it was (it stays reserved only if they decided to buy it).</summary>
+        void EndHandling()
+        {
+            var v = Handled;
+            Handled = null;
+            if (v != null && v.Socket != null)
+            {
+                v.transform.localPosition = Vector3.zero;
+                v.transform.localRotation = Quaternion.identity;
+            }
+            if (v != null && v.P != null && (ChosenProduct == null || ChosenProduct.Id != v.P.Id)) Root.Session.Store.CancelReservation(v.P.Id, Id);
+            if (State == CustomerState.Handling) SetState(CustomerState.Browsing, transform.position, 1.5f);
         }
 
         bool StillAvailable()
@@ -313,7 +368,7 @@ namespace SnowGlobe.Game
             return ChosenProduct != null && ChosenProduct.Stage == ProductStage.Displayed && Root.Session.Store.IsReserved(ChosenProduct.Id);
         }
 
-        public bool IsWaitingAtCounter { get { return State == CustomerState.Waiting && StillAvailable(); } }
+        public bool IsWaitingAtCounter { get { return State == CustomerState.Waiting && StillAvailable() && _spawner.QueueIndex(this) == 0; } }
 
         public void CompletePurchase()
         {
@@ -333,12 +388,16 @@ namespace SnowGlobe.Game
 
         void CancelPurchase()
         {
+            if (Handled != null) EndHandling();
             if (ChosenProduct != null) Root.Session.Store.CancelReservation(ChosenProduct.Id, Id);
             ChosenProduct = null;
+            _spawner.LeaveQueue(this);
         }
 
         void Leave()
         {
+            if (Handled != null) EndHandling();
+            _spawner.LeaveQueue(this);
             SetState(CustomerState.Leaving, _level.CustomerEntrance.position);
         }
 
@@ -356,6 +415,7 @@ namespace SnowGlobe.Game
         /// <summary>Silent removal (loading a save): no exposure consequences.</summary>
         public void DespawnSilently()
         {
+            if (Handled != null) EndHandling();
             Root.Session.Suspicion.Remove(Id);
             Root.Session.Store.CancelAllReservations(Id);
             Destroy(gameObject);
@@ -378,9 +438,21 @@ namespace SnowGlobe.Game
                     float seenAt;
                     if (v.RecentlyMoved(0.8f) && (!_seenMovementAt.TryGetValue(p.Id, out seenAt) || seenAt < v.LastMovementTime))
                     {
-                        float perception = Perception(v, eye, 70f);
+                        bool inHands = v == Handled;
+                        float perception = inHands ? 1f : Perception(v, eye, 70f);
                         if (perception > 0f)
                         {
+                            if (inHands)
+                            {
+                                // It moved while they were holding it. They drop it.
+                                _seenMovementAt[p.Id] = v.LastMovementTime;
+                                Witness(EvidenceType.GlobeMovement, Mathf.Clamp01(v.LastMovementIntensity * 1.5f + 0.3f), 1f, p.Id);
+                                Root.Session.Production.ApplyDamage(p, 0.15f);
+                                Root.Audio.Play(Sfx.Thump, v.transform.position);
+                                Say("It MOVED in my hands!", 4f);
+                                EndHandling();
+                                continue;
+                            }
                             _seenMovementAt[p.Id] = v.LastMovementTime;
                             bool premium = v.Socket != null && v.Socket.GetComponent<ShelfSlot>() != null && v.Socket.GetComponent<ShelfSlot>().Index >= GameBalance.BaseShelfCapacity;
                             Witness(EvidenceType.GlobeMovement, v.LastMovementIntensity * (premium ? visMult : 1f), perception, p.Id);

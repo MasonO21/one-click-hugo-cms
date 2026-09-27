@@ -89,6 +89,14 @@ namespace SnowGlobe.Core
             if (p == null || p.Stage != ProductStage.Prepared) return ActionResult.Fail("Needs a prepared character.");
             if (!p.Location.IsStation(StationId.Assembly)) return ActionResult.Fail("Mount at the assembly station.");
             if (_state.Inventory.GlobeKits <= 0) return ActionResult.Fail("No globe kits left.");
+            var card = AssemblyCard.For(_state, p);
+            var theme = ThemeCatalog.Get(card.Theme);
+            if (theme.ExtraKitCost > 0)
+            {
+                if (!_state.Wallet.TrySpend(theme.ExtraKitCost)) return ActionResult.Fail(theme.DisplayName + " extras cost $" + theme.ExtraKitCost + ".");
+                _state.Day.Stats.Expenses += theme.ExtraKitCost;
+            }
+            p.Theme = card.Theme;
             _state.Inventory.GlobeKits--;
             p.Stage = ProductStage.Mounted;
             p.PoseIndex = poseIndex;

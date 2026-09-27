@@ -10,12 +10,13 @@
 
 | Area | Status | Notes |
 |---|---|---|
-| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 63 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
+| Simulation core (products, economy, suspicion, director, days, saves) | ✅ | Engine-free C#; 75 NUnit tests pass under .NET 8 with C# 9 (Unity 6's language level) |
 | Unity layer (greybox building, player, carrying, stations, customers, horror, HUD, audio) | 🟡 | Compiles against Unity 2021.3 reference assemblies (with Unity 6 renames mapped). **Never run in the editor.** Expect tuning and bug-fix work in Milestone 2 |
 | Input System package path | 🟡 | Written but not compiled (package not available outside Unity) |
 | Automation: auto-prep hopper, conveyor, packaging machine, breakdowns/repair, manual override, safe blocking | ✅ core · 🟡 scene | 10 core tests, including a randomized "no product ever lost" property test and a simulated day (16 globes vs ~5–6 by hand) |
 | Unity-side tests (JsonUtility round trip, figure build, play-mode smoke tests of boot/line/automation/save-load) | 🟡 | Written and type-checked; they run in Unity's Test Runner, not here |
-| Multiple customers, special orders, more archetypes/themes | ⬜ | Data models exist for several; no scene objects yet |
+| Customers & orders: up to 3 shoppers with a counter queue, customers picking globes up (day 4+), special orders board, Woodland Cabin theme, store appeal | ✅ core · 🟡 scene | 12 core tests; a play-mode test covers order pickup |
+| Later archetype behaviours (Screamer, Escape Artist, Watcher), later themes' bespoke scenery | ⬜ | Data exists; Milestone 5 |
 | Level rebuilt from the three concept paintings; minis restyled to the character reference | 🟡 | Procedural reconstruction (see §5a). Floor plan: `docs/floorplan.png` |
 | Real modelled art, animation, UI Toolkit, audio design | ⬜ | Everything is still built from primitives and synthesized sound |
 
@@ -181,6 +182,17 @@ Each machine is an upgrade. Once installed it appears in the backroom with a con
 
 Every machine wears 4% per item (6% when the building is over its power budget). The chance of breaking grows as it wears. A broken or jammed machine just stops, and whatever it was holding stays put. Machines only ever move a product between explicit locations (hopper, cradle, belt, table, rack). `Product.Location` is still the single source of truth, so grabbing a globe off the belt simply takes it out of the machine's world.
 
+## 5c. Customers, orders and themes (Milestone 4)
+
+* **Crowds and the queue.** The number of shoppers allowed inside grows with the business: 1 on days 1–2, 2 on days 3–4, 3 from day 5. Buyers line up behind the counter, and only the front one can be rung up. Everyone in line loses patience. Leaving the line counts as a lost sale.
+* **Store appeal.** Walk-ins arrive 0.7× as often with bare shelves and up to 1.3× with six or more globes on display, multiplied by the exposure penalty.
+* **Handling (day 4+).** A browsing customer may pick up the globe they're looking at for a few seconds. While it's in their hands, a stasis twitch is seen at full perception. They drop it (15% damage) and suspicion jumps. A handled globe is reserved, so neither you nor another shopper can take it.
+* **Theme preference.** Each shopper favours one unlocked theme and leans toward buying it.
+* **Special orders (day 4+).** Each morning 1–2 orders are posted, with at most 3 open, each due 2 days later. An order names a theme, pose, three scenery pieces, a minimum quality tier, and optionally an archetype and inspection. The bonus is $15, plus $10 per quality tier, $10 for inspection and $10 for a specific archetype, times the theme's value. It's paid on top of the globe's normal price.
+  * Pin an order at the board (E, or the Orders tab). The assembly card, and the theme mounted, then follow it.
+  * Place the finished box on the counter's order-pickup spot. A match is paid immediately; a mismatch tells you exactly what's wrong.
+* **Themes.** Woodland Cabin (day 4, $300) sells at ×1.25. It has lighter snow and its own scenery (tall pine, log cabin, deer), and costs $3 extra per kit at mount. Later themes can already be unlocked and picked in the Themes tab. For now their scenery reuses tinted winter pieces.
+
 ## 6. Milestone roadmap
 
 | Milestone | Goal | Contents | Exit criteria |
@@ -189,7 +201,7 @@ Every machine wears 4% per item (6% when the building is over its power budget).
 | **M1 Greybox loop** 🟡 | Whole loop playable in placeholder form | Everything in §4 | Code complete, compiles. **Needs a first editor run** |
 | **M2 First playable** 🟡 | Make M1 actually fun and stable | Done without an editor: PlayMode smoke tests (boot, cabinet → sale, automation, save/load), JsonUtility round-trip test, animation LOD for distant minis. **Still needs the editor:** run those tests, playtest, fix, tune timings/physics, FPS check | §9 acceptance criteria all pass |
 | **M3 Automation** ✅ core · 🟡 scene | Supervisor role | Automated Prep (hopper → cradle → inject), Short Conveyor (sealer → packaging, spacing, capacity, heavy jams), Packaging Machine (capped 0.7 score, 4-slot output rack); wear, breakdowns, repair/service; per-machine manual override panels; safe blocking everywhere; power draw already feeds power-failure odds; The Wiggler from day 3 | Met in simulation: 16 globes/day, no product lost across 25 randomized runs × 600 steps |
-| **M4 Customers & orders** ⬜ | Store depth | Multiple customers + queue; customers handling globes (day 4); special-order board; Woodland Cabin theme; store appeal | Orders pay back their extra work; suspicion stays readable with 3 customers |
+| **M4 Customers & orders** ✅ core · 🟡 scene | Store depth | Up to 3 customers (1 on days 1–2, 2 on days 3–4, 3 from day 5) with a counter queue; customers pick globes up for a closer look from day 4; special-order board with pinning, matching and pickup; Woodland Cabin theme (and a theme picker for later ones); store appeal | Orders always pay ≥ $15 over list (tested); suspicion readability with 3 customers still needs a playtest |
 | **M5 Horror & roster** ⬜ | Unease at scale | Screamer, Escape Artist, Watcher behaviours; security cameras; conveyor-grab and "wrong room" events; supplier story notes | Director playtests: players report "tense but fair" |
 | **M6 Art & audio** ⬜ | Identity | Real low-poly models, rigged minis (optional joint-based active ragdoll behind the same `MiniCharacterBody` API), lighting, sound design, UI Toolkit HUD | Vertical slice capture |
 | **M7 Content & balance** ⬜ | Longevity | Themes through Celestial Observatory, late-game economy, story milestones, performance and LOD, build pipeline | 2–3 h of progression, economy playable after story |

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SnowGlobe.Core;
 using UnityEngine;
 
@@ -169,6 +170,69 @@ namespace SnowGlobe.Game
             if (GameRoot.I == null || GameRoot.I.Session == null) return;
             bool available = Index < GameRoot.I.Session.State.ShelfCapacity;
             if (Socket.enabled != available) Socket.enabled = available;
+        }
+    }
+
+    /// <summary>
+    /// Special orders board (day 4+). E pins the next open order, and the assembly station's
+    /// card then follows it. Deliver the finished box to the counter's order pickup spot.
+    /// </summary>
+    public sealed class OrderBoard : MonoBehaviour, IInteractable, ISecondaryInteractable
+    {
+        int _cursor = -1;
+
+        static GameSession S { get { return GameRoot.I.Session; } }
+
+        List<SpecialOrder> OpenOrders()
+        {
+            var list = new List<SpecialOrder>();
+            foreach (var o in S.Orders.Open) list.Add(o);
+            return list;
+        }
+
+        public string Status()
+        {
+            if (!DayProgression.SpecialOrdersEnabled(S.State.Day.Day)) return "SPECIAL ORDERS\n(first orders arrive on day 4)";
+            var open = OpenOrders();
+            if (open.Count == 0) return "SPECIAL ORDERS\n(none right now — new ones each morning)";
+            string text = "SPECIAL ORDERS";
+            var pinned = S.Orders.PinnedOrder;
+            foreach (var o in open)
+            {
+                var theme = ThemeCatalog.Get(o.Theme);
+                text += "\n" + (pinned != null && pinned.Id == o.Id ? "> " : "  ") + "#" + o.Id + " " + theme.DisplayName + " · " + MiniCharacterBody.PoseNames[o.PoseIndex] +
+                        " · " + o.MinTier + "+" + (o.RequireCertified ? " · inspected" : "") + " · +$" + o.Bonus + " · due day " + o.DueDay;
+            }
+            return text;
+        }
+
+        public string Prompt(PlayerInteractor player)
+        {
+            var open = OpenOrders();
+            if (open.Count == 0) return "Special orders board";
+            return "E: Pin the next order (" + open.Count + " open)";
+        }
+
+        public void Interact(PlayerInteractor player)
+        {
+            var open = OpenOrders();
+            if (open.Count == 0) return;
+            _cursor = (_cursor + 1) % open.Count;
+            var r = S.Orders.Pin(open[_cursor].Id);
+            GameRoot.I.Toast(r.Message, !r.Success);
+            GameRoot.I.Hud.Subtitle("", OrderService.Describe(open[_cursor]));
+            GameRoot.I.Audio.Play(Sfx.Tap, transform.position);
+        }
+
+        public string SecondaryPrompt(PlayerInteractor player)
+        {
+            return S.Orders.PinnedOrder != null ? "X: Unpin the order (back to house cards)" : null;
+        }
+
+        public void SecondaryInteract(PlayerInteractor player)
+        {
+            S.Orders.Unpin();
+            GameRoot.I.Toast("Order unpinned.");
         }
     }
 

@@ -26,6 +26,11 @@ namespace SnowGlobe.Core
             if (s.Store == null) s.Store = new StoreState();
             if (s.Director == null) s.Director = new EventDirectorState();
             if (s.Automation == null) s.Automation = new AutomationState();
+            if (s.Orders == null) s.Orders = new List<SpecialOrder>();
+            if (!s.UnlockedThemes.Contains(s.ActiveTheme)) s.ActiveTheme = ThemeId.WinterVillage;
+            foreach (var o in s.Orders) if (o.Id >= s.NextOrderId) s.NextOrderId = o.Id + 1;
+            var pinned = s.PinnedOrderId == 0 ? null : s.Orders.Find(o => o.Id == s.PinnedOrderId);
+            if (pinned == null || pinned.State != OrderState.Open) s.PinnedOrderId = 0;
             if (s.Automation.Machines == null) s.Automation.Machines = new List<MachineState>();
             if (s.Day == null) s.Day = new DayState();
             if (s.Day.Stats == null) s.Day.Stats = new DailyStats();

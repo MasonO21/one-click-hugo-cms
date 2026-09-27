@@ -109,10 +109,18 @@ namespace SnowGlobe.Game
 
         protected override string RejectReason(Product p) { return "Assembly needs a prepared (still) character."; }
 
-        /// <summary>Deterministic "order card" per product so the requested look survives reloads.</summary>
-        public static int RequestedPose(Product p) { return (p.Id * 7 + 3) % MiniCharacterBody.PoseNames.Length; }
+        /// <summary>The card: a pinned special order if there is one, else a house card per product (see core AssemblyCard).</summary>
+        static AssemblyCard Card(Product p) { return AssemblyCard.For(S.State, p); }
 
-        public static int RequestedScenery(Product p, int spot) { return (p.Id * 5 + spot * 3 + 1) % 3; }
+        static int RequestedPose(Product p) { return Card(p).Pose; }
+
+        static int RequestedScenery(Product p, int spot) { return Card(p).SceneryAt(spot); }
+
+        /// <summary>Scenery names for this globe: its own theme once mounted, else the card's theme.</summary>
+        static string[] SceneryNames(Product p)
+        {
+            return ThemeCatalog.Get(p.Stage >= ProductStage.Mounted ? p.Theme : Card(p).Theme).Scenery;
+        }
 
         public override string Prompt(PlayerInteractor player)
         {
@@ -126,8 +134,10 @@ namespace SnowGlobe.Game
         {
             var o = Occupant;
             if (o == null) return base.Status();
-            string order = "Order card: " + MiniCharacterBody.PoseNames[RequestedPose(o.P)] + " · ";
-            for (int i = 0; i < 3; i++) order += ProductView.SceneryNames[RequestedScenery(o.P, i)] + (i < 2 ? ", " : "");
+            var card = Card(o.P);
+            string order = (card.FromOrder ? "SPECIAL ORDER #" + card.OrderId + ": " : "Order card: ") + ThemeCatalog.Get(card.Theme).DisplayName + " · " + MiniCharacterBody.PoseNames[card.Pose] + " · ";
+            var names = SceneryNames(o.P);
+            for (int i = 0; i < 3; i++) order += names[card.SceneryAt(i)] + (i < 2 ? ", " : "");
             return base.Status() + "\n" + order;
         }
 
@@ -234,8 +244,9 @@ namespace SnowGlobe.Game
                     Bar(new Rect(r.x + 20f, r.y + 80f, r.width - 40f, 20f), _settle / 1.2f, Palette.Busy);
                     break;
                 case Step.Scenery:
-                    GUI.Box(r, "Scenery spot " + (_spot + 1) + "/3 — card wants: " + ProductView.SceneryNames[RequestedScenery(o.P, _spot)]);
-                    GUI.Label(new Rect(r.x + 20f, r.y + 40f, r.width - 40f, 40f), "1: Pine Tree    2: Cottage    3: Snowman        (matches so far: " + _matches + ")");
+                    var names = SceneryNames(o.P);
+                    GUI.Box(r, "Scenery spot " + (_spot + 1) + "/3 — card wants: " + names[RequestedScenery(o.P, _spot)]);
+                    GUI.Label(new Rect(r.x + 20f, r.y + 40f, r.width - 40f, 40f), "1: " + names[0] + "    2: " + names[1] + "    3: " + names[2] + "        (matches so far: " + _matches + ")");
                     break;
                 default:
                     float target = ThemeCatalog.Get(o.P.Theme).SnowTarget;

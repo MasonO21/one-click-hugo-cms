@@ -130,6 +130,52 @@ namespace SnowGlobe.Game.Tests
         }
 
         [UnityTest]
+        public IEnumerator SpecialOrder_PinnedBuiltAndDelivered_AtTheCounter()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var s = root.Session;
+            s.State.Day.Day = 4;
+            var order = s.Orders.OnNewDay()[0];
+            order.MinTier = QualityTier.Standard;
+            order.RequireCertified = false;
+            order.SpecificArchetype = false;
+            Assert.IsTrue(s.Orders.Pin(order.Id).Success);
+
+            var cell = root.Level.Cells.First(c => c.Occupant != null);
+            cell.Door.SetOpen(true);
+            var v = cell.Occupant;
+            var p = v.P;
+            v.BeginCarry();
+            root.Level.Prep.Socket.Place(v);
+            s.Production.Inject(p, 1f);
+            v.BeginCarry();
+            root.Level.Assembly.Socket.Place(v);
+            var card = AssemblyCard.For(s.State, p);
+            Assert.IsTrue(card.FromOrder);
+            Assert.IsTrue(s.Production.Mount(p, card.Pose, 1f).Success);
+            p.DecorationCode = card.SceneryCode;
+            s.Production.Decorate(p, 1f, ThemeCatalog.Get(p.Theme).SnowTarget);
+            v.BeginCarry();
+            root.Level.Sealer.Socket.Place(v);
+            s.Production.FitDome(p, 1f);
+            s.Production.Seal(p, true);
+            v.BeginCarry();
+            root.Level.Packaging.Socket.Place(v);
+            s.Production.Package(p, 1f);
+            yield return null;
+
+            int cash = s.State.Wallet.Cash;
+            v.BeginCarry();
+            root.Level.CounterSocket.Place(v); // order pickup
+            yield return null;
+            Assert.AreEqual(OrderState.Fulfilled, order.State);
+            Assert.AreEqual(ProductStage.Sold, p.Stage);
+            Assert.Greater(s.State.Wallet.Cash, cash + order.Bonus - 1);
+            Assert.IsFalse(root.Views.ContainsKey(p.Id));
+        }
+
+        [UnityTest]
         public IEnumerator SaveAndLoad_RebuildsTheSameWorld()
         {
             yield return Boot();

@@ -18,7 +18,7 @@ namespace SnowGlobe.Game
             public bool Bad;
         }
 
-        enum Tab { Supplies, Upgrades, SaveLoad, Settings, Help }
+        enum Tab { Supplies, Upgrades, Themes, Orders, SaveLoad, Settings, Help }
 
         readonly List<Line> _toasts = new List<Line>();
         readonly List<Line> _subtitles = new List<Line>();
@@ -176,6 +176,7 @@ namespace SnowGlobe.Game
         {
             foreach (var l in Root.Level.Labels) Label(l.Position, l.Text, l.MaxDistance, new Color(1f, 0.95f, 0.85f));
             foreach (var st in Root.Level.Stations) Label(st.transform.position + Vector3.up * 1.35f, st.Status(), 4.5f, Color.white);
+            if (Root.Level.OrderBoard != null) Label(Root.Level.OrderBoard.transform.position + Vector3.up * 0.95f, Root.Level.OrderBoard.Status(), 5f, new Color(1f, 0.95f, 0.8f), 420f);
             foreach (var panel in Root.Level.Panels)
                 if (panel.isActiveAndEnabled) Label(panel.transform.position + Vector3.up * 0.4f, panel.Status(), 4.5f, new Color(0.85f, 0.95f, 1f));
 
@@ -232,8 +233,9 @@ namespace SnowGlobe.Game
                           "\n<b>$" + st.Wallet.Cash + "</b>" + (st.Wallet.Debt > 0 ? "  (owed $" + st.Wallet.Debt + ")" : "") +
                           "\nKits " + st.Inventory.GlobeKits + " · Serum " + st.Inventory.SerumCharges + " · Boxes " + st.Inventory.PackagingBoxes +
                           "\nHolding " + s.HoldingCount() + " · On display " + s.Store.DisplayedCount() + "/" + st.ShelfCapacity +
+                          "\nMaking: " + ThemeCatalog.Get(st.ActiveTheme).DisplayName + (s.Orders.PinnedOrder != null ? " · order #" + s.Orders.PinnedOrder.Id + " pinned" : "") +
                           (s.PowerAvailable ? "" : "\n<color=#ff5544><b>POWER OUT</b></color>");
-            var r = new Rect(12f, 12f, 290f, s.PowerAvailable ? 92f : 112f);
+            var r = new Rect(12f, 12f, 290f, s.PowerAvailable ? 112f : 132f);
             GUI.Box(r, text, _box);
             // Exposure meter.
             var bar = new Rect(12f, r.yMax + 4f, 290f, 16f);
@@ -406,12 +408,14 @@ namespace SnowGlobe.Game
             var r = Centered(640f, 480f);
             GUI.Box(r, "");
             GUILayout.BeginArea(new Rect(r.x + 14f, r.y + 10f, r.width - 28f, r.height - 20f));
-            _tab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Supplies", "Upgrades", "Save / Load", "Settings", "Help" });
+            _tab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Supplies", "Upgrades", "Themes", "Orders", "Save / Load", "Settings", "Help" });
             GUILayout.Space(6f);
             _scroll = GUILayout.BeginScrollView(_scroll);
             switch (_tab)
             {
                 case Tab.Supplies: DrawSupplies(); break;
+                case Tab.Themes: DrawThemes(); break;
+                case Tab.Orders: DrawOrders(); break;
                 case Tab.Upgrades: DrawUpgrades(); break;
                 case Tab.SaveLoad: DrawSaveLoad(); break;
                 case Tab.Settings: DrawSettings(); break;
@@ -484,6 +488,60 @@ namespace SnowGlobe.Game
             }
             var m = s.State.Modifiers;
             GUILayout.Label("Power draw: " + m.PowerDraw + "/" + GameBalance.BasePowerCapacity + (m.IsOverPowered ? "  <color=#ff5544>(overloaded — power failures more likely)</color>" : ""), _label);
+        }
+
+        void DrawThemes()
+        {
+            var s = Root.Session;
+            GUILayout.Label("The selected theme applies to the next globe mounted at the assembly table (a pinned special order overrides it). Cash: <b>$" + s.State.Wallet.Cash + "</b>", _label);
+            foreach (var def in ThemeCatalog.All)
+            {
+                bool unlocked = s.Themes.IsUnlocked(def.Id);
+                bool active = s.State.ActiveTheme == def.Id;
+                GUILayout.BeginHorizontal(GUI.skin.box);
+                GUILayout.Label("<b>" + def.DisplayName + "</b>" + (active ? "  <color=#7fe07f>(making these)</color>" : "") +
+                                "\n<size=12>Value ×" + def.ValueMultiplier.ToString("0.##") + " · extra kit cost $" + def.ExtraKitCost + " · snow target " + Mathf.RoundToInt(def.SnowTarget * 100f) + "%" +
+                                "\nScenery: " + string.Join(", ", def.Scenery) + "\n" + def.ProductionNote + "</size>", _label, GUILayout.Width(440f));
+                if (unlocked)
+                {
+                    GUI.enabled = !active;
+                    if (GUILayout.Button(active ? "Selected" : "Select", GUILayout.Width(120f), GUILayout.Height(44f))) Root.Toast(s.Themes.Select(def.Id).Message);
+                }
+                else
+                {
+                    GUI.enabled = def.UnlockDay <= s.State.Day.Day;
+                    if (GUILayout.Button(GUI.enabled ? "Unlock $" + def.UnlockCost : "Day " + def.UnlockDay, GUILayout.Width(120f), GUILayout.Height(44f))) Root.Toast(s.Themes.Unlock(def.Id).Message);
+                }
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
+            }
+        }
+
+        void DrawOrders()
+        {
+            var s = Root.Session;
+            if (!DayProgression.SpecialOrdersEnabled(s.State.Day.Day))
+            {
+                GUILayout.Label("Special orders start arriving on day 4. They pay the globe's price plus a bonus for matching exactly.", _label);
+                return;
+            }
+            GUILayout.Label("Pin an order: the assembly card (pose, scenery, theme) follows it. Box the globe and place it on the counter's order pickup spot.", _label);
+            var pinned = s.Orders.PinnedOrder;
+            bool any = false;
+            foreach (var o in s.Orders.Open)
+            {
+                any = true;
+                GUILayout.BeginHorizontal(GUI.skin.box);
+                GUILayout.Label(OrderService.Describe(o), _label, GUILayout.Width(440f));
+                bool isPinned = pinned != null && pinned.Id == o.Id;
+                if (GUILayout.Button(isPinned ? "Unpin" : "Pin", GUILayout.Width(120f), GUILayout.Height(44f)))
+                {
+                    if (isPinned) s.Orders.Unpin();
+                    else Root.Toast(s.Orders.Pin(o.Id).Message);
+                }
+                GUILayout.EndHorizontal();
+            }
+            if (!any) GUILayout.Label("No open orders. New ones are posted each morning.", _label);
         }
 
         void DrawSaveLoad()

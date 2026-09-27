@@ -141,6 +141,24 @@ def main():
         for row in range(1, 6):
             plaque("cell_" + col + str(row) + ".png", [col + str(row)], (128, 128), bg=BRASS, fg=(34, 26, 16), fnt_path=SERIF_BOLD, fnt_size=60)
 
+    # Special orders board: teal frame, cork, pinned paper slips.
+    board = Image.new("RGB", (512, 400), TEAL)
+    d = ImageDraw.Draw(board)
+    d.rectangle((14, 70, 497, 385), fill=(170, 130, 88))
+    for i in range(400):
+        x, y = (i * 97) % 480 + 16, (i * 53) % 310 + 72
+        d.point((x, y), fill=(140, 104, 66))
+    centered_lines(d, ["SPECIAL ORDERS"], (20, 12, 492, 64), SERIF_BOLD, 44, GOLD)
+    for k, (x, y, rot) in enumerate([(40, 95, -4), (190, 110, 3), (340, 92, -2), (110, 240, 2), (270, 250, -3)]):
+        slip = Image.new("RGBA", (130, 110), PAPER + (255,))
+        sd = ImageDraw.Draw(slip)
+        for line in range(5):
+            sd.line((12, 22 + line * 17, 118 - (line % 2) * 30, 22 + line * 17), fill=(120, 110, 95), width=2)
+        slip = slip.rotate(rot, expand=True)
+        board.paste(slip, (x, y), slip)
+        d.ellipse((x + 58, y + 2, x + 70, y + 14), fill=(170, 40, 40))
+    save(board, "order_board.png")
+
     # Snow jar label.
     plaque("label_snow.png", ["SNOW", "TYPE A"], (256, 256), bg=PAPER, fg=INK, fnt_path=SERIF, fnt_size=54, border=False)
 

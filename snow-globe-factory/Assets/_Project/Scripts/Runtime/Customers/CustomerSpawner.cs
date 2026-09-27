@@ -4,13 +4,15 @@ using UnityEngine;
 
 namespace SnowGlobe.Game
 {
-    /// <summary>Walk-in customers while the shop is open. The prototype allows one customer at a time.</summary>
+    /// <summary>Walk-in customers while the shop is open, plus the queue at the counter.</summary>
     public sealed class CustomerSpawner : MonoBehaviour
     {
-        /// <summary>Prototype scope: one at a time. The rest of the code supports more.</summary>
+        /// <summary>Grows with the shop: see DayProgression.MaxCustomers.</summary>
         public int MaxConcurrent = 1;
 
         readonly List<CustomerAgent> _active = new List<CustomerAgent>();
+        readonly List<CustomerAgent> _queue = new List<CustomerAgent>();
+        public const float QueueSpacing = 0.8f;
         Level _level;
         float _timer = 8f;
         int _nextId = 1;
@@ -20,19 +22,45 @@ namespace SnowGlobe.Game
 
         public void Init(Level level) { _level = level; }
 
+        /// <summary>The customer at the front of the counter queue, if they're ready to pay.</summary>
         public CustomerAgent WaitingAtCounter
         {
             get
             {
-                foreach (var c in _active) if (c != null && c.IsWaitingAtCounter) return c;
-                return null;
+                _queue.RemoveAll(c => c == null);
+                return _queue.Count > 0 && _queue[0].IsWaitingAtCounter ? _queue[0] : null;
             }
         }
 
+        public int QueueLength { get { return _queue.Count; } }
+
+        /// <summary>True if a customer has chosen this globe or is holding it for a closer look.</summary>
         public bool IsReservedByWaitingCustomer(int productId)
         {
-            foreach (var c in _active) if (c != null && c.ChosenProduct != null && c.ChosenProduct.Id == productId) return true;
+            foreach (var c in _active)
+            {
+                if (c == null) continue;
+                if (c.ChosenProduct != null && c.ChosenProduct.Id == productId) return true;
+                if (c.Handled != null && c.Handled.P != null && c.Handled.P.Id == productId) return true;
+            }
             return false;
+        }
+
+        public Vector3 JoinQueue(CustomerAgent c)
+        {
+            if (!_queue.Contains(c)) _queue.Add(c);
+            return QueueSpot(c);
+        }
+
+        public void LeaveQueue(CustomerAgent c) { _queue.Remove(c); }
+
+        public int QueueIndex(CustomerAgent c) { return _queue.IndexOf(c); }
+
+        /// <summary>Queue forms back from the counter toward the shop floor.</summary>
+        public Vector3 QueueSpot(CustomerAgent c)
+        {
+            int i = Mathf.Max(0, _queue.IndexOf(c));
+            return _level.CounterSpot.position + new Vector3(0f, 0f, -QueueSpacing * i);
         }
 
         /// <summary>Director context: could any customer currently see a shelf?</summary>
@@ -54,11 +82,14 @@ namespace SnowGlobe.Game
             var root = GameRoot.I;
             if (root == null || root.Session == null || Time.deltaTime <= 0f) return;
             if (!root.Session.Days.IsOpen || root.ClosingRequested || root.Session.Days.PastClosingTime) return;
+            MaxConcurrent = DayProgression.MaxCustomers(root.Session.State.Day.Day);
             if (_active.Count >= MaxConcurrent) return;
             _timer -= Time.deltaTime;
             if (_timer > 0f) return;
             var exposure = root.Session.State.Exposure;
-            _timer = GameBalance.BaseCustomerIntervalSeconds / Mathf.Max(0.2f, exposure.ArrivalRateMultiplier) * Random.Range(0.6f, 1.4f);
+            // Rumours keep people away; well-stocked shelves draw them in (store appeal).
+            float rate = Mathf.Max(0.2f, exposure.ArrivalRateMultiplier) * root.Session.Store.AppealMultiplier();
+            _timer = GameBalance.BaseCustomerIntervalSeconds / rate * Random.Range(0.6f, 1.4f);
             Spawn(exposure.CustomerAttentiveness);
         }
 
@@ -72,7 +103,11 @@ namespace SnowGlobe.Game
             GameRoot.I.Audio.Play(Sfx.Chime, _level.CustomerEntrance.position, 0.5f, 1.5f);
         }
 
-        public void Remove(CustomerAgent agent) { _active.Remove(agent); }
+        public void Remove(CustomerAgent agent)
+        {
+            _active.Remove(agent);
+            _queue.Remove(agent);
+        }
 
         public void BroadcastNoise(NoiseEvent n)
         {
@@ -83,6 +118,7 @@ namespace SnowGlobe.Game
         {
             foreach (var c in _active) if (c != null) c.DespawnSilently();
             _active.Clear();
+            _queue.Clear();
             _timer = 8f;
         }
     }

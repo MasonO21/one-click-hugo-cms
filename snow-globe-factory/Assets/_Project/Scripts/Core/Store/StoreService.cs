@@ -109,6 +109,15 @@ namespace SnowGlobe.Core
             return price;
         }
 
+        /// <summary>
+        /// Store appeal: well-stocked shelves draw more walk-ins. Multiplies the customer arrival
+        /// rate: 0.7 with bare shelves, up to 1.3 with six or more globes on display.
+        /// </summary>
+        public float AppealMultiplier()
+        {
+            return 0.7f + 0.6f * MathUtil.Clamp01(DisplayedCount() / 6f);
+        }
+
         public int DisplayedCount()
         {
             int n = 0;

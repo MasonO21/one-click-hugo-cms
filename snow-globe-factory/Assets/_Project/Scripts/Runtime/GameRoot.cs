@@ -149,8 +149,10 @@ namespace SnowGlobe.Game
             var r = Session.Days.StartNextDay();
             if (!r.Success) { Toast(r.Message, true); return; }
             CloseBasementDoors();
+            var posted = Session.Orders.OnNewDay();
             Saves.Save(Session.State, Saves.CheckpointPath);
-            Hud.ShowBriefing("Day " + Session.State.Day.Day, DayProgression.Briefing(Session.State.Day.Day) + "\n\n(Checkpoint saved.)");
+            string orders = posted.Count > 0 ? "\n\n" + posted.Count + " new special order(s) on the board by the counter." : "";
+            Hud.ShowBriefing("Day " + Session.State.Day.Day, DayProgression.Briefing(Session.State.Day.Day) + orders + "\n\n(Checkpoint saved.)");
         }
 
         // ---------------------------------------------------------------- tick

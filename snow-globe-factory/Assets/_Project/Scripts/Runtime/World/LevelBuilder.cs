@@ -128,7 +128,12 @@ namespace SnowGlobe.Game
             Plant(new Vector3(-6.5f, 0f, 8.9f), 1.3f);
             Plant(new Vector3(6.4f, 0f, 0.6f), 1.1f);
             Plant(new Vector3(2.1f, 0f, 9.6f), 0.9f);
-            Picture(new Vector3(-1.6f, 2.1f, 9.99f), Vector3.back, 0.9f, 0.9f, "painting_town");
+            Picture(new Vector3(0.8f, 2.4f, 9.99f), Vector3.back, 0.7f, 0.7f, "painting_town");
+            // Special orders board (day 4+): look at it and press E to pin an order.
+            var boardGo = Shapes.Empty("OrderBoard", t, new Vector3(-1.6f, 1.85f, 9.96f));
+            Shapes.Box("BoardBack", boardGo.transform, new Vector3(0f, 0f, 0.01f), new Vector3(1.4f, 1.1f, 0.04f), Palette.TealDark);
+            Shapes.Sign("BoardFace", boardGo.transform, new Vector3(0f, 0f, -0.015f), Vector3.back, 1.3f, 1.02f, "order_board");
+            _level.OrderBoard = boardGo.AddComponent<OrderBoard>();
             Picture(new Vector3(6.05f, 2.2f, 9.99f), Vector3.back, 0.6f, 0.6f, "painting_town");
             Banner(new Vector3(-4f, 2.5f, 9.98f), Vector3.back, 0.55f, 1.1f);
 
@@ -292,7 +297,27 @@ namespace SnowGlobe.Game
             socket.Radius = 0.4f;
             socket.Accepts = v => v.P != null && v.P.Stage == ProductStage.Packaged;
             socket.RejectReason = v => "Only boxed globes go on the counter.";
-            socket.Placed = v => v.P.Location = ProductLocation.At(StationId.Counter);
+            socket.Placed = v =>
+            {
+                v.P.Location = ProductLocation.At(StationId.Counter);
+                // Order pickup: a boxed globe that matches the pinned special order is collected and paid for.
+                var root = GameRoot.I;
+                var order = root.Session.Orders.PinnedOrder;
+                if (order == null) return;
+                string reason;
+                if (!OrderService.Matches(order, v.P, out reason))
+                {
+                    root.Toast("Not right for order #" + order.Id + ": " + reason, true);
+                    return;
+                }
+                ActionResult result;
+                root.Session.Orders.Fulfil(order, v.P, out result);
+                root.Toast(result.Message, !result.Success);
+                if (!result.Success) return;
+                root.Audio.Play(Sfx.Chime, v.transform.position);
+                root.OnProductSold(v.P);
+            };
+            _level.AddLabel(r.TransformPoint(new Vector3(0.2f, 1.35f, 0f)), "Order pickup (pinned order)", 3f);
             _level.CounterSocket = socket;
         }
 

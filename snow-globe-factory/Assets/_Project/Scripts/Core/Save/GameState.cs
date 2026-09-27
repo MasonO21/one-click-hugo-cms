@@ -24,6 +24,11 @@ namespace SnowGlobe.Core
         public BusinessExposure Exposure = new BusinessExposure();
         public List<UpgradeId> OwnedUpgrades = new List<UpgradeId>();
         public List<ThemeId> UnlockedThemes = new List<ThemeId>();
+        public ThemeId ActiveTheme = ThemeId.WinterVillage;
+        public List<SpecialOrder> Orders = new List<SpecialOrder>();
+        public int NextOrderId = 1;
+        /// <summary>Order whose card drives the assembly station; 0 = none.</summary>
+        public int PinnedOrderId;
         public List<PendingDelivery> Deliveries = new List<PendingDelivery>();
         public EventDirectorState Director = new EventDirectorState();
         public AutomationState Automation = new AutomationState();

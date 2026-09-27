@@ -16,6 +16,8 @@ namespace SnowGlobe.Core
         public UpgradeService Upgrades { get; private set; }
         public DayCycle Days { get; private set; }
         public AutomationService Automation { get; private set; }
+        public OrderService Orders { get; private set; }
+        public ThemeService Themes { get; private set; }
         public EventDirector Director { get; private set; }
         public SuspicionRegistry Suspicion { get; private set; }
 
@@ -45,6 +47,8 @@ namespace SnowGlobe.Core
             Days = new DayCycle(state);
             Director = new EventDirector(state.Director, state.Rng);
             Automation = new AutomationService(state, Production);
+            Orders = new OrderService(state);
+            Themes = new ThemeService(state);
             Suspicion = new SuspicionRegistry();
             PowerFactor = 1f;
             return log;
