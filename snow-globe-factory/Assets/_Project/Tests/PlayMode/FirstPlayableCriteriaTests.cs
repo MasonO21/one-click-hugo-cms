@@ -269,6 +269,28 @@ namespace SnowGlobe.Game.Tests
             Assert.IsFalse(root.Views.ContainsKey(p.Id));
         }
 
+        // M7 endless sinks: each boutique refit shows up in the shop.
+        [UnityTest]
+        public IEnumerator BoutiqueRefits_AppearInTheShop()
+        {
+            yield return Boot();
+            var root = GameRoot.I;
+            var s = root.Session;
+            s.State.Day.Day = 20;
+            s.State.Wallet.Cash = 100000;
+            yield return null;
+            Assert.IsTrue(root.Level.RefitDecor.All(d => d != null && !d.activeSelf), "a plain shop to start");
+            Assert.IsTrue(s.Reputation.BuyRefit().Success);
+            Assert.IsTrue(s.Reputation.BuyRefit().Success);
+            yield return null;
+            Assert.IsTrue(root.Level.RefitDecor[0].activeSelf && root.Level.RefitDecor[1].activeSelf, "garlands and sconces up");
+            Assert.IsFalse(root.Level.RefitDecor[2].activeSelf);
+            for (int i = 0; i < 3; i++) Assert.IsTrue(s.Reputation.BuyRefit().Success);
+            yield return null;
+            Assert.IsTrue(root.Level.RefitDecor.All(d => d.activeSelf), "all five");
+            for (int i = 0; i < 10; i++) yield return null; // renders without errors
+        }
+
         // §9.11: open, auto-close at 5 pm, summary with bills, next day with a checkpoint.
         [UnityTest]
         public IEnumerator DayLoop_AutoClosesAtFive_BillsAndCheckpointsTheNextDay()

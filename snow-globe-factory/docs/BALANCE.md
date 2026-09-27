@@ -144,7 +144,15 @@ This needs real play data first, because faster players will get there sooner.
      costs **$800** to hire, **$45 a night** and a **10% commission** on every sale the assistant rings up. Serving a
      customer yourself keeps the full price, so there's still a reason to walk to the till.
    * The sim hires them right after the Packaging Machine, on days 18–20.
-6. **Fixes to the sim's buying policy:**
+6. **Endless-mode sinks** (this pass). After the assistant, cash piled up at ~$3.8k a day once everything was bought.
+   * **Boutique refits:** five visible renovations (garlands, sconces, velvet runner, chandelier, gilded sign),
+     each +6% on every retail price, costing $3000, $6000, $12000, $24000 and $48000. Tiers 1–2 pay back in about
+     10–20 days; tiers 4–5 never do. They're prestige.
+   * **Sponsoring the winter fair:** once a day, −20 business exposure, for $1000 more each time. The sim has no
+     exposure, so it never buys it; it's a pressure valve for a busy horror business in real play.
+   * With 50-day runs, the sim buys refit 1 on days 30–32 and refit 5 on days 48–50. Cash on day 36 is now
+     $8k–$18k instead of $26k–$34k, and it stays flat through day 50 while the refits soak it up.
+7. **Fixes to the sim's buying policy:**
    * Buying several things a morning with no saving rule meant cheap upgrades ate every theme budget.
    * Letting themes always come first starved automation.
    * An explicit shopping list with saving (above) behaves like a sensible player.
@@ -163,11 +171,9 @@ This needs real play data first, because faster players will get there sooner.
    * Before: with every upgrade, the line could make about 20 globes a day, but serving ~40 walk-ins took most of the
      day, so the modelled player made 11–13.
    * Now: once the assistant is hired, output climbs to 25–27 globes a day, limited by the line again.
-4. **Cash piles up badly after everything is bought.** With the assistant, that's about $3.8k a day from day 31, and
-   $26k–$34k by day 36. Endless-mode sinks are the next job:
-   * shop expansions with more display slots;
-   * rarer figures;
-   * upkeep that scales with the roster.
+4. **Cash no longer piles up straight away.** The boutique refits give days 30–50 a goal (tuning history 6). After the
+   fifth refit, only the fair sponsorship is left, so a very long game will pile up cash again. More ideas if that
+   matters in playtests: rarer figures, upkeep that scales with the roster, and a second shop.
 5. **The theme twists hold up.**
    * The jig is bought on days 3–4, long before Medieval.
    * The Improved Sealer is bought on day 10, long before Celestial.

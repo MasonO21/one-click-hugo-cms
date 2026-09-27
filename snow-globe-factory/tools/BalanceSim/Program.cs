@@ -120,7 +120,16 @@ namespace SnowGlobe.BalanceSim
                     }
                     // The first item on the plan that's available today; save up for it if it's unaffordable.
                     var next = ShoppingPlan.FirstOrDefault(item => !item.Owned(s) && item.Available(s, day));
-                    if (next == null || st.Wallet.Cash < next.Cost + reserve) break;
+                    if (next == null)
+                    {
+                        // Everything's bought: spend spare cash on boutique refits (endless-mode sink).
+                        if (s.Reputation.RefitsMaxed || st.Wallet.Cash < s.Reputation.NextRefitCost + reserve) break;
+                        if (!s.Reputation.BuyRefit().Success) break;
+                        bought.Add("Refit " + s.Reputation.RefitTier);
+                        milestones.Add("Day " + day + ": Refit " + s.Reputation.RefitTier);
+                        continue;
+                    }
+                    if (st.Wallet.Cash < next.Cost + reserve) break;
                     if (!next.Buy(s).Success) break;
                     bought.Add(next.Name);
                     milestones.Add("Day " + day + ": " + next.Name);

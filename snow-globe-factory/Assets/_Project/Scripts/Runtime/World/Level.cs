@@ -62,6 +62,8 @@ namespace SnowGlobe.Game
         public ServiceCounter Counter;
         /// <summary>Behind the counter; active only while the Shop Assistant is hired.</summary>
         public ShopAssistant Assistant;
+        /// <summary>Boutique refit decor, one layer per tier (shown as tiers are bought).</summary>
+        public readonly GameObject[] RefitDecor = new GameObject[ReputationService.MaxRefitTier];
         public OpenSign Sign;
         public Breaker Breaker;
         public Transform CustomerSpawn;

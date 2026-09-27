@@ -133,6 +133,7 @@ namespace SnowGlobe.Game
 
             BuildRoundDisplay(t);
             BuildCounter(t);
+            BuildRefits(t);
 
             // Side table with lamp, plants, pictures, banner.
             B("LampTable", new Vector3(0.8f, 0.375f, 9.55f), new Vector3(0.9f, 0.75f, 0.5f), Palette.WoodWarm);
@@ -292,6 +293,84 @@ namespace SnowGlobe.Game
             B("RugBorder", c + new Vector3(0f, 0.006f, 0f), new Vector3(5.4f, 0.012f, 4.4f), new Color(0.62f, 0.52f, 0.36f), false);
             B("Rug", c + new Vector3(0f, 0.01f, 0f), new Vector3(5f, 0.012f, 4f), Palette.RugBlue, false);
             B("RugCentre", c + new Vector3(0f, 0.014f, 0f), new Vector3(3.8f, 0.012f, 2.8f), Palette.RugBlue * 0.8f, false);
+        }
+
+        /// <summary>
+        /// Boutique refits (endless-mode sink): five layers of finery, each shown once its tier is bought.
+        /// Nothing here has a collider, so no refit can block a walkway or a customer's path.
+        /// </summary>
+        static void BuildRefits(Transform t)
+        {
+            var bulbColors = new[] { Palette.WarmLight, Palette.StoreTrim, new Color(0.5f, 0.85f, 0.5f) };
+
+            // 1. Garlands and fairy lights along the crown moulding.
+            var g = Refit(t, 0).transform;
+            foreach (var side in new[] { -1f, 1f })
+            {
+                Shapes.Box("Garland", g, new Vector3(6.88f * side, 3.55f, 5f), new Vector3(0.12f, 0.12f, 9.8f), Palette.Foliage, false);
+                for (int i = 0; i < 16; i++)
+                    Emissive(Shapes.Prim(PrimitiveType.Sphere, "FairyLight", g, new Vector3(6.8f * side, 3.47f, 0.4f + i * 0.61f), Vector3.one * 0.045f, bulbColors[i % 3], false), bulbColors[i % 3], 2.2f);
+            }
+            foreach (var span in new[] { new Vector2(-6.9f, 2.4f), new Vector2(5.1f, 6.9f) })
+            {
+                float mid = (span.x + span.y) * 0.5f, len = span.y - span.x;
+                Shapes.Box("Garland", g, new Vector3(mid, 3.55f, 9.9f), new Vector3(len, 0.12f, 0.12f), Palette.Foliage, false);
+                for (float x = span.x + 0.3f; x < span.y; x += 0.6f)
+                {
+                    var c = bulbColors[Mathf.Abs(Mathf.RoundToInt(x * 10f)) % 3];
+                    Emissive(Shapes.Prim(PrimitiveType.Sphere, "FairyLight", g, new Vector3(x, 3.47f, 9.82f), Vector3.one * 0.045f, c, false), c, 2.2f);
+                }
+            }
+
+            // 2. Brass wall sconces on the front and back walls.
+            var sc = Refit(t, 1).transform;
+            var sconces = new[] { new Vector3(0.8f, 2.4f, 0.12f), new Vector3(3.6f, 2.4f, 0.12f), new Vector3(6.2f, 2.4f, 0.12f), new Vector3(-6.2f, 2.4f, 9.88f), new Vector3(-1.2f, 2.4f, 9.88f), new Vector3(1.6f, 2.4f, 9.88f) };
+            foreach (var p in sconces)
+            {
+                float into = p.z < 5f ? 1f : -1f;
+                Metal(Shapes.Box("SconcePlate", sc, p, new Vector3(0.14f, 0.3f, 0.03f), Palette.Brass, false));
+                Metal(Shapes.Box("SconceArm", sc, p + new Vector3(0f, -0.05f, 0.1f * into), new Vector3(0.03f, 0.03f, 0.2f), Palette.Brass, false));
+                Emissive(Shapes.Prim(PrimitiveType.Sphere, "SconceBulb", sc, p + new Vector3(0f, 0.05f, 0.2f * into), new Vector3(0.09f, 0.13f, 0.09f), Palette.WarmLight, false), Palette.WarmLight, 3f);
+            }
+
+            // 3. A velvet carpet runner from the door to the display.
+            var run = Refit(t, 2).transform;
+            float runLen = Level.DisplayCenter.z - 1.6f - 1.3f;
+            var runMid = new Vector3(-2.1f, 0.012f, 1.3f + runLen * 0.5f);
+            Shapes.Box("VelvetRunner", run, runMid, new Vector3(1.1f, 0.01f, runLen), new Color(0.5f, 0.06f, 0.1f), false);
+            foreach (var side in new[] { -1f, 1f })
+                Metal(Shapes.Box("RunnerEdge", run, runMid + new Vector3(0.56f * side, 0.002f, 0f), new Vector3(0.04f, 0.012f, runLen), Palette.Brass, false));
+
+            // 4. A crystal chandelier over the entrance.
+            var ch = Refit(t, 3).transform;
+            var top = new Vector3(-2.6f, 3.8f, 2.6f);
+            Shapes.Rod("ChandelierChain", ch, top, top + Vector3.down * 0.55f, 0.012f, Palette.Brass);
+            var hub = top + Vector3.down * 0.7f;
+            Metal(Shapes.Prim(PrimitiveType.Cylinder, "ChandelierRing", ch, hub, new Vector3(0.8f, 0.02f, 0.8f), Palette.Brass, false));
+            for (int i = 0; i < 14; i++)
+            {
+                float a = i / 14f * Mathf.PI * 2f;
+                var drop = hub + new Vector3(Mathf.Cos(a) * 0.4f, -0.12f - (i % 2) * 0.08f, Mathf.Sin(a) * 0.4f);
+                Emissive(Shapes.Prim(PrimitiveType.Sphere, "Crystal", ch, drop, new Vector3(0.05f, 0.09f, 0.05f), new Color(0.85f, 0.95f, 1f), false), new Color(0.85f, 0.95f, 1f), 2.5f);
+            }
+            var chLight = Shapes.PointLight("ChandelierLight", ch, hub + Vector3.down * 0.2f, Palette.WarmLight, 0.8f, 5f);
+            var chFlicker = chLight.gameObject.AddComponent<FlickerLight>();
+            chFlicker.Area = LightArea.Store;
+            _level.Lights.Add(chFlicker);
+
+            // 5. A gilded sign over the back wall, and a gold frame round the shop name outside.
+            var gs = Refit(t, 4).transform;
+            Metal(Shapes.Box("GildedPlaque", gs, new Vector3(-2.35f, 3.05f, 9.97f), new Vector3(3.4f, 0.46f, 0.04f), Palette.Brass, false));
+            Emissive(Shapes.Box("PlaqueGlow", gs, new Vector3(-2.35f, 2.8f, 9.95f), new Vector3(3.3f, 0.025f, 0.02f), Palette.WarmLight, false), Palette.WarmLight, 2f);
+            Metal(Shapes.Box("NameFrame", gs, new Vector3(-2.1f, 3.2f, -0.195f), new Vector3(2.62f, 0.82f, 0.01f), Palette.Brass, false));
+        }
+
+        static GameObject Refit(Transform t, int index)
+        {
+            var go = Shapes.Empty("Refit" + (index + 1), t, Vector3.zero);
+            go.SetActive(false);
+            _level.RefitDecor[index] = go;
+            return go;
         }
 
         static void BuildCounter(Transform t)

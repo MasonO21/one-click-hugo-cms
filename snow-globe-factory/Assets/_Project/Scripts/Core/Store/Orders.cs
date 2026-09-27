@@ -191,7 +191,7 @@ namespace SnowGlobe.Core
         {
             string reason;
             if (!Matches(o, p, out reason)) { result = ActionResult.Fail(reason); return 0; }
-            int paid = QualityModel.EstimateValue(p) + o.Bonus;
+            int paid = ReputationService.RetailPrice(_state, p) + o.Bonus;
             p.Stage = ProductStage.Sold;
             p.Location = ProductLocation.Gone();
             p.SoldPrice = paid;

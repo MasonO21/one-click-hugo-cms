@@ -249,7 +249,7 @@ namespace SnowGlobe.Game
             if (p == null) return "Checkout counter";
             var assistant = GameRoot.I.Level.Assistant;
             string help = assistant != null && assistant.isActiveAndEnabled && assistant.IsServing ? "  (your assistant is on it)" : "";
-            return "E: Ring up " + p.CharacterName + " globe — $" + QualityModel.EstimateValue(p) + help;
+            return "E: Ring up " + p.CharacterName + " globe — $" + ReputationService.RetailPrice(GameRoot.I.Session.State, p) + help;
         }
 
         public void Interact(PlayerInteractor player)

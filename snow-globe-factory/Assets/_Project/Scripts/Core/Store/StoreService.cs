@@ -46,7 +46,7 @@ namespace SnowGlobe.Core
             _state.Store.Slots[slot] = p.Id;
             p.Stage = ProductStage.Displayed;
             p.Location = ProductLocation.Shelf(slot);
-            return ActionResult.Ok(p.CharacterName + " is on display — $" + QualityModel.EstimateValue(p) + ".");
+            return ActionResult.Ok(p.CharacterName + " is on display — $" + ReputationService.RetailPrice(_state, p) + ".");
         }
 
         /// <summary>Pull a globe off display; it goes back into its box (no new box needed).</summary>
@@ -93,7 +93,7 @@ namespace SnowGlobe.Core
             if (p.Stage != ProductStage.Displayed) { result = ActionResult.Fail("Only displayed globes can be sold."); return 0; }
             if (!_reservations.TryGetValue(p.Id, out holder) || holder != customerId) { result = ActionResult.Fail("That customer hasn't chosen this globe."); return 0; }
 
-            int price = QualityModel.EstimateValue(p);
+            int price = ReputationService.RetailPrice(_state, p);
             _reservations.Remove(p.Id);
             ClearSlotOf(p.Id);
             p.Stage = ProductStage.Sold;

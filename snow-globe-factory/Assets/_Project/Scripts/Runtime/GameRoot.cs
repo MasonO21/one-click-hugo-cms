@@ -301,6 +301,7 @@ namespace SnowGlobe.Game
             SetActive(Level.SealPressRig, a.Owns(MachineId.SealingPress));
             SetActive(Level.WindowDisplay, Session.State.OwnedUpgrades.Contains(UpgradeId.WindowDisplay));
             SetActive(Level.Assistant.gameObject, Session.State.Modifiers.HasAssistant);
+            for (int i = 0; i < Level.RefitDecor.Length; i++) SetActive(Level.RefitDecor[i], Session.Reputation.RefitTier > i);
         }
 
         static void SetActive(GameObject go, bool active)

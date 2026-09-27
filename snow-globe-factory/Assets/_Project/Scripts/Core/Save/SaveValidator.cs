@@ -28,6 +28,12 @@ namespace SnowGlobe.Core
             if (s.Automation == null) s.Automation = new AutomationState();
             if (s.Orders == null) s.Orders = new List<SpecialOrder>();
             if (s.Story == null) s.Story = new StoryState();
+            if (s.Reputation == null) s.Reputation = new ReputationState();
+            if (s.Reputation.RefitTier < 0 || s.Reputation.RefitTier > ReputationService.MaxRefitTier)
+            {
+                log.Add("Refit tier " + s.Reputation.RefitTier + " out of range; clamped.");
+                s.Reputation.RefitTier = s.Reputation.RefitTier < 0 ? 0 : ReputationService.MaxRefitTier;
+            }
             if (s.Story.Chapter < 0) s.Story.Chapter = 0;
             if (s.Story.Chapter > LedgerCatalog.Count) s.Story.Chapter = LedgerCatalog.Count;
             if (s.Story.Ending < LedgerEnding.None || s.Story.Ending > LedgerEnding.Torn) s.Story.Ending = LedgerEnding.None;

@@ -193,7 +193,7 @@ namespace SnowGlobe.Game
                 }
                 else if (p.Stage >= ProductStage.Sealed && p.Stage <= ProductStage.Displayed && Root.Interactor.FocusProduct == v)
                 {
-                    string est = "$" + QualityModel.EstimateValue(p) + " · " + QualityModel.Tier(QualityModel.Compute(p)) + (p.Certified ? " · certified" : " · not inspected");
+                    string est = "$" + ReputationService.RetailPrice(Root.Session.State, p) + " · " + QualityModel.Tier(QualityModel.Compute(p)) + (p.Certified ? " · certified" : " · not inspected");
                     Label(v.transform.position + Vector3.up * 0.45f, est, 3f, Palette.WarmLight, 220f);
                 }
                 if (v.IsEscaped) Label(v.transform.position + Vector3.up * 0.35f, "LOOSE", 12f, Palette.Bad, 60f);
@@ -491,7 +491,38 @@ namespace SnowGlobe.Game
             }
             var m = s.State.Modifiers;
             GUILayout.Label("Power draw: " + m.PowerDraw + "/" + m.PowerCapacity + (m.IsOverPowered ? "  <color=#ff5544>(overloaded — power failures more likely, machines wear faster)</color>" : "") +
-                            "   Nightly bills: $" + DayCycle.OperatingCost(s.State) + " (rent $" + GameBalance.DailyOperatingCost + " + electricity $" + GameBalance.ElectricityPerPowerUnit + " per power unit)", _label);
+                            "   Nightly bills: $" + DayCycle.OperatingCost(s.State) + " (rent $" + GameBalance.DailyOperatingCost + " + electricity $" + GameBalance.ElectricityPerPowerUnit + " per power unit" + (m.DailyWages > 0 ? " + wages $" + m.DailyWages : "") + ")", _label);
+            DrawReputation(open);
+        }
+
+        /// <summary>Endless-mode sinks: boutique refits and sponsoring the winter fair.</summary>
+        void DrawReputation(bool open)
+        {
+            var s = Root.Session;
+            var rep = s.Reputation;
+            int day = s.State.Day.Day;
+            GUILayout.Space(10f);
+            GUILayout.Label("<b>Reputation</b>", _label);
+
+            GUILayout.BeginHorizontal(GUI.skin.box);
+            string next = rep.RefitsMaxed ? "Every refit is done. The shop could not be grander."
+                : "Next: <b>" + ReputationService.RefitName(rep.RefitTier + 1) + "</b>  $" + rep.NextRefitCost;
+            GUILayout.Label("<b>Boutique refit</b>  (tier " + rep.RefitTier + "/" + ReputationService.MaxRefitTier + ", prices +" + Mathf.RoundToInt((rep.PriceMultiplier - 1f) * 100f) + "%)\n<size=12>" + next +
+                            "\nEach refit adds " + Mathf.RoundToInt(ReputationService.RefitPriceBonus * 100f) + "% to every price. Each costs twice the last.</size>", _label, GUILayout.Width(440f));
+            string status = rep.RefitsMaxed ? "Done" : day < ReputationService.RefitUnlockDay ? "Day " + ReputationService.RefitUnlockDay : "Refit";
+            GUI.enabled = !rep.RefitsMaxed && day >= ReputationService.RefitUnlockDay && !open;
+            if (GUILayout.Button(status, GUILayout.Width(120f), GUILayout.Height(44f))) Root.Toast(rep.BuyRefit().Message);
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(GUI.skin.box);
+            GUILayout.Label("<b>Sponsor the winter fair</b>  $" + rep.NextFairCost + "\n<size=12>Your name on every lantern. Lowers business exposure by " + (int)ReputationService.FairExposureRelief +
+                            " (now " + Mathf.RoundToInt(s.State.Exposure.Value) + "). Once a day; costs $" + ReputationService.FairBaseCost + " more each time.</size>", _label, GUILayout.Width(440f));
+            status = day < ReputationService.FairUnlockDay ? "Day " + ReputationService.FairUnlockDay : rep.SponsoredToday ? "Tomorrow" : "Sponsor";
+            GUI.enabled = day >= ReputationService.FairUnlockDay && !rep.SponsoredToday;
+            if (GUILayout.Button(status, GUILayout.Width(120f), GUILayout.Height(44f))) Root.Toast(rep.SponsorFair().Message);
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
         }
 
         void DrawThemes()

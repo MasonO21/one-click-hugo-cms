@@ -33,6 +33,7 @@ namespace SnowGlobe.Core
         public EventDirectorState Director = new EventDirectorState();
         public AutomationState Automation = new AutomationState();
         public StoryState Story = new StoryState();
+        public ReputationState Reputation = new ReputationState();
         public DeterministicRandom Rng = new DeterministicRandom(12345);
         public int EmergencyOrderDay;
         public int LifetimeGlobesSold;
