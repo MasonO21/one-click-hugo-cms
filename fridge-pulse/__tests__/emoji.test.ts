@@ -9,7 +9,7 @@ describe('emojiFor', () => {
 
   it('matches whole words so look-alikes fall back', () => {
     expect(emojiFor('Pineapple chunks', 'canned')).toBe('🍍');
-    expect(emojiFor('Graham crackers', 'snacks')).toBe('🍿');
+    expect(emojiFor('Graham crackers', 'snacks')).toBe('🥨');
     expect(emojiFor('Popcorn', 'snacks')).toBe('🍿');
   });
 

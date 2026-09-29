@@ -17,6 +17,7 @@ export function Chip({ label, selected, onPress, testID }: Props) {
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
       onPress={onPress}
+      hitSlop={{ top: 4, bottom: 4 }}
       style={[
         styles.chip,
         { backgroundColor: selected ? c.primary : c.surface, borderColor: selected ? c.primary : c.border },
@@ -30,5 +31,5 @@ export function Chip({ label, selected, onPress, testID }: Props) {
 }
 
 const styles = StyleSheet.create({
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1 },
+  chip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1 },
 });

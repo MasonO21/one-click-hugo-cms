@@ -1,3 +1,4 @@
+import { SCREENSHOT_MODE } from './config';
 import { addDays, todayISO } from './dates';
 import { localSuggestions } from './meals';
 import type { Meal, MealPrefs, PantryItem, ScanResponse, StorageLocation } from './types';
@@ -51,7 +52,7 @@ export async function demoScan(location: StorageLocation): Promise<ScanResponse>
   };
   return {
     items: byLocation[location],
-    notes: 'Sample items: this preview is not connected to the photo-scanning service.',
+    notes: SCREENSHOT_MODE ? null : 'Sample items: this preview is not connected to the photo-scanning service.',
   };
 }
 

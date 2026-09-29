@@ -29,7 +29,14 @@ try {
   const run = spawnSync('npx', ['expo', 'export', '--platform', 'web', '--output-dir', work, '--clear'], {
     cwd: root,
     stdio: 'inherit',
-    env: { ...process.env, CI: '1', EXPO_PUBLIC_BILLING_MODE: 'demo', EXPO_PUBLIC_API_URL: '' },
+    env: {
+      ...process.env,
+      CI: '1',
+      EXPO_PUBLIC_BILLING_MODE: 'demo',
+      EXPO_PUBLIC_API_URL: '',
+      // SCREENSHOT_MODE=1 hides preview-only notes, for store screenshots (see store/README.md).
+      EXPO_PUBLIC_SCREENSHOT_MODE: process.env.SCREENSHOT_MODE === '1' ? '1' : '',
+    },
   });
   if (run.status !== 0) throw new Error('expo export failed');
 } finally {

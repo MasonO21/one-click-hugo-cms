@@ -12,6 +12,10 @@ interface SettingsState {
   reminderHour: number;
   /** Whether we have already shown our own notification pre-prompt. */
   askedForReminders: boolean;
+  /** Agreement to send photos and ingredient lists to the AI service. Off until the person agrees. */
+  aiConsent: boolean;
+  /** ISO timestamp of when consent was given, for our own records. */
+  aiConsentAt: string | null;
   set: (patch: Partial<Omit<SettingsState, 'set' | 'reset'>>) => void;
   reset: () => void;
 }
@@ -23,6 +27,8 @@ const DEFAULTS = {
   remindersEnabled: true,
   reminderHour: 9,
   askedForReminders: false,
+  aiConsent: false,
+  aiConsentAt: null as string | null,
 };
 
 export const useSettings = create<SettingsState>()(

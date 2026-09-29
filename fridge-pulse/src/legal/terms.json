@@ -1,0 +1,60 @@
+{
+  "title": "Terms of Use",
+  "updated": "2026-09-29",
+  "intro": "These terms cover your use of Fridge Pulse. Please read them, especially the food safety and subscription sections.",
+  "sections": [
+    {
+      "heading": "Agreement",
+      "paragraphs": [
+        "By using Fridge Pulse you agree to these terms. On iPhone, Apple's Standard Licensed Application End User License Agreement (apple.com/legal/internet-services/itunes/dev/stdeula) also applies, and these terms are in addition to it."
+      ]
+    },
+    {
+      "heading": "Food safety: please read",
+      "bullets": [
+        "Expiry dates and shelf-life figures in Fridge Pulse are estimates. Dates read from a photo can be wrong, and the AI can misidentify food.",
+        "Always check the packaging, and use your own judgement: how food looks, smells and was stored. When in doubt, throw it out.",
+        "Fridge Pulse is not professional food-safety, medical or dietary advice.",
+        "Meal ideas may not be free of allergens or suitable for every diet, even when you choose a diet setting. Check every ingredient yourself if you have an allergy or medical dietary need."
+      ]
+    },
+    {
+      "heading": "Free trial and subscription",
+      "bullets": [
+        "Fridge Pulse is free to try for {{trialSpan}}. After that it costs {{price}} per month. Taxes may apply and the price can differ by country.",
+        "The free trial starts when you confirm in the App Store or Google Play purchase sheet. Payment is charged to your Apple ID or Google Play account when the trial ends.",
+        "The subscription renews automatically every month at {{price}} unless you cancel at least 24 hours before the end of the current period.",
+        "Manage or cancel any time in your Apple ID or Google Play subscription settings. Deleting the app does not cancel your subscription.",
+        "Payments and refunds are handled by Apple or Google under their policies. We cannot issue refunds ourselves."
+      ]
+    },
+    {
+      "heading": "Your content",
+      "paragraphs": [
+        "You own your photos and the items you track. You give us permission to process your photos and ingredient lists only to provide the features you use, as described in the Privacy Policy."
+      ]
+    },
+    {
+      "heading": "Fair use",
+      "paragraphs": [
+        "Please do not misuse the service: no reverse engineering, no automated scanning, and no attempts to overload or bypass limits. To keep costs and quality fair for everyone, scanning and meal ideas have daily limits."
+      ]
+    },
+    {
+      "heading": "Changes and availability",
+      "paragraphs": [
+        "We may change, pause or stop features. If we change these terms we will update the date above; continuing to use the app means you accept the update."
+      ]
+    },
+    {
+      "heading": "Disclaimers and liability",
+      "paragraphs": [
+        "Fridge Pulse is provided as is, without promises that it will always be available, accurate or error-free. To the extent the law allows, we are not liable for indirect or consequential losses, or for illness or loss arising from food decisions. Nothing here limits rights you have under the law that cannot be limited."
+      ]
+    },
+    {
+      "heading": "Contact",
+      "paragraphs": ["{{contactLine}}"]
+    }
+  ]
+}

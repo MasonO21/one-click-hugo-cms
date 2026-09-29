@@ -2,13 +2,16 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { getProvider } from '../../store/billing';
+import { AiConsentModal } from '../../components/AiConsentModal';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { Header } from '../../components/Header';
 import { MealCard } from '../../components/MealCard';
 import { Screen } from '../../components/Screen';
 import { Text } from '../../components/Text';
 import { fetchMeals, friendlyError, isDemoMode } from '../../lib/api';
+import { SCREENSHOT_MODE } from '../../lib/config';
 import { filterForDiet, localSuggestions, rankMeals, suggestible, suggestionKey } from '../../lib/meals';
 import type { Meal } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
@@ -21,6 +24,10 @@ export default function Meals() {
   const items = useInventory((s) => s.items);
   const diet = useSettings((s) => s.diet);
   const servings = useSettings((s) => s.servings);
+  const aiConsent = useSettings((s) => s.aiConsent);
+  const [askConsent, setAskConsent] = useState(false);
+  // Without agreement nothing is sent anywhere; ideas come from the built-in list.
+  const aiAllowed = isDemoMode || aiConsent;
   const cache = useMealsCache();
   const [loading, setLoading] = useState(false);
   // An error belongs to the inventory it happened for; a different inventory deserves a fresh try.
@@ -36,8 +43,8 @@ export default function Meals() {
 
   // Instant offline ideas so the tab is never empty while (or instead of) waiting on the AI.
   const fallback = useMemo(() => localSuggestions(items, prefs, new Date()), [items, prefs]);
-  const meals: Meal[] = fresh && cache.meals.length > 0 ? cache.meals : fallback;
-  const showingFallback = !(fresh && cache.meals.length > 0);
+  const meals: Meal[] = aiAllowed && fresh && cache.meals.length > 0 ? cache.meals : fallback;
+  const showingFallback = !(aiAllowed && fresh && cache.meals.length > 0);
 
   const load = useCallback(
     async (more: boolean) => {
@@ -45,6 +52,7 @@ export default function Meals() {
       const candidates = filterForDiet(suggestible(current), prefs.diet);
       const requestKey = suggestionKey(current, prefs);
       if (candidates.length === 0 || inFlight.current === requestKey) return;
+      if (!(isDemoMode || useSettings.getState().aiConsent)) return;
       inFlight.current = requestKey;
       setLoading(true);
       setFailure(null);
@@ -68,12 +76,13 @@ export default function Meals() {
   // Fetch once per inventory/day/preferences change, then serve from cache.
   useFocusEffect(
     useCallback(() => {
-      if (!fresh && pool.length > 0 && !error) void load(false);
+      if (aiAllowed && !fresh && pool.length > 0 && !error) void load(false);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fresh, pool.length, load]),
+    }, [aiAllowed, fresh, pool.length, load]),
   );
 
   return (
+    <>
     <Screen>
       <Header title="Meals" subtitle={pool.length > 0 ? `Built from ${pool.length} items, soonest to expire first` : undefined} />
 
@@ -85,10 +94,18 @@ export default function Meals() {
         />
       ) : (
         <>
-          {isDemoMode ? (
+          {isDemoMode && !SCREENSHOT_MODE ? (
             <Text variant="caption" faint>
               Preview: ideas come from a built-in recipe list. With the scanning service connected, recipes are written by AI to fit your items.
             </Text>
+          ) : null}
+
+          {!aiAllowed ? (
+            <Card style={{ gap: 8, backgroundColor: c.primaryTint, borderColor: c.primaryTint }}>
+              <Text variant="bodyStrong">Want recipes written for exactly what you have?</Text>
+              <Text muted>Turn on AI meal ideas. The names and dates of your items are sent to an AI service, never photos.</Text>
+              <Button testID="enable-ai-meals" label="Turn on AI meal ideas" size="sm" onPress={() => setAskConsent(true)} style={{ alignSelf: 'flex-start' }} />
+            </Card>
           ) : null}
 
           {loading && showingFallback ? (
@@ -133,6 +150,15 @@ export default function Meals() {
         </>
       )}
     </Screen>
+    <AiConsentModal
+      visible={askConsent}
+      onClose={() => setAskConsent(false)}
+      onAgree={() => {
+        setAskConsent(false);
+        void load(false);
+      }}
+    />
+    </>
   );
 }
 

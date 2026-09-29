@@ -2,18 +2,20 @@
 
 Photograph your fridge, freezer or pantry. Fridge Pulse lists what is inside, tracks what is about to expire, reminds you before it goes off, and suggests meals that use it up first.
 
-**Pricing:** free for 14 days, then $9.99 per month. Hard paywall once the trial ends.
+**Pricing:** free for 2 weeks (14 days), then $9.99 per month. Hard paywall once the trial ends. The offer is defined once in `src/billing/trial.ts`, and `__tests__/pricing.test.ts` fails if any other price or trial length appears in the app or store listing.
 
 Built with Expo (SDK 57) and React Native, plus a small Node backend that holds the Anthropic API key.
 
 ```
 fridge-pulse/
-  src/app/          Screens (Expo Router): onboarding, paywall, tabs, scan, review, item detail
+  src/app/          Screens (Expo Router): onboarding, paywall, tabs, scan, review, item detail, about, legal
   src/lib/          Pure logic: dates, expiry, shelf-life estimates, meals, reminders, API client
   src/billing/      Trial / subscription (RevenueCat, local demo, fail-closed)
   src/store/        Persisted state (zustand + AsyncStorage)
   src/components/   UI components and theme
   server/           Backend: photo scan + meal ideas via Claude, subscription check, rate limits
+  src/legal/        Privacy Policy and Terms of Use text (also built to hostable HTML in docs/legal/)
+  store/            App Store / Play listing text, screenshots, graphics and the submission checklist
   __tests__/        App unit tests (jest)   server/test/  Server tests (node:test)
 ```
 
@@ -84,27 +86,41 @@ How the app behaves:
 - First launch: onboarding, then the paywall. Starting the trial opens the store's purchase sheet.
 - While the trial or subscription is active the whole app is unlocked. When it lapses, the app returns to the paywall on the next foreground (hard paywall).
 - Someone who already used a trial sees "Subscribe for $9.99/month" instead of "Start free trial". Trial eligibility is enforced by the stores per Apple ID / Google account, so reinstalling does not grant another trial.
-- `TRIAL_DAYS` and `PRICE_PER_MONTH` in `src/billing/trial.ts` are used for display copy only. Keep them in step with the store offers. The price shown on the paywall comes from the store when available.
+- `TRIAL_DAYS`, `PRICE_PER_MONTH` and the wording constants in `src/billing/trial.ts` are used for display copy only. Keep them in step with the store offers. The price shown on the paywall comes from the store when available.
+- A local notification warns 2 days before the trial ends (1 day if less time is left) with the price and end date, as long as notifications are allowed.
+- The paywall shows the price, trial length, the date the first charge happens, auto-renewal terms, Restore purchases, and in-app Terms and Privacy screens (guideline 3.1.2).
 - **Safety net:** without RevenueCat keys, a production build fails closed (nobody gets access). The local trial simulation only runs in development, Expo Go, or when `EXPO_PUBLIC_BILLING_MODE=demo` is set. Never set that flag for a store release, because on-device state is trivially bypassable.
 
 RevenueCat needs a **development build** (not Expo Go): `npx eas-cli build --profile development --platform ios` (or `android`). Test purchases with App Store sandbox / Play test accounts.
 
 ## Before you submit to the stores
 
-- [ ] Replace the placeholder bundle id / package (`com.fridgepulse.app`) in `app.json` with one you own.
-- [ ] Publish a **privacy policy** and **terms of use** and set `EXPO_PUBLIC_PRIVACY_URL` / `EXPO_PUBLIC_TERMS_URL`. Until then the paywall links point at `example.com`. The policy must say that photos are sent to a third-party AI provider (Anthropic) to identify food. Check the provider's current data-retention terms and reflect them in the App Store privacy details and Play Data safety form.
+The app-side work is done; what is left needs your accounts and decisions. `store/README.md` has the full checklist, `store/subscription-setup.md` the exact App Store Connect / Play / RevenueCat steps for the $9.99 monthly plan with a 2-week free trial, and `store/privacy-and-compliance.md` the answers for Apple's privacy details and Google's Data safety form.
+
+- [ ] Replace the placeholder bundle id / package (`com.fridgepulse.app`) in `app.json`, and the developer name and support email in `src/lib/config.ts`, with your own.
+- [ ] Host the policies: `npm run legal:build` writes `docs/legal/privacy.html` and `terms.html` (copy them to any HTTPS host, or enable GitHub Pages), then set `EXPO_PUBLIC_PRIVACY_URL` / `EXPO_PUBLIC_TERMS_URL`. The store forms need those URLs. The policy text must be reviewed by you (ideally a lawyer) before release. It states that photos and item names go to a third-party AI provider (Anthropic) only after the user agrees in the app.
 - [ ] Deploy the backend (`server/Dockerfile`; any Node 22 host works) over HTTPS and set `EXPO_PUBLIC_API_URL`. Set `TRUST_PROXY=true` behind a reverse proxy. Rate-limit counters are in memory, so use one instance or move them to Redis.
 - [ ] Test with real photos of real fridges. Scan accuracy, date reading and shelf-life estimates depend on the model and prompt (`server/src/prompts.ts`), and I could not evaluate them without an API key.
-- [ ] Build with EAS: `npx eas-cli build --profile production`, then `eas submit`.
-- [ ] App Store review: the paywall already shows the price, trial length, auto-renewal terms, restore purchases, and terms/privacy links (guideline 3.1.2). Add a demo path or reviewer notes if you gate the backend.
+- [ ] Build with EAS: `npx eas-cli build --profile production`, then `eas submit` (fill the placeholders in `eas.json`).
+- [ ] Upload the screenshots in `store/screenshots/` (regenerate with `SCREENSHOT_MODE=1 npm run preview:build && CHROMIUM_PATH=<chromium> npm run store:screenshots`, then `npm run preview:build` for the normal preview). They are drawn from the demo build with sample data, so replace them with device screenshots if you prefer.
+- [ ] Review notes for Apple: the subscription review screenshot is `store/screenshots/subscription-review-paywall.png`. Give the reviewers a way past your backend if it needs sign-in (it does not by default).
+
+### Privacy and AI consent
+
+Before the first photo scan or AI meal request, the app asks for explicit permission and names the AI provider (Apple guideline 5.1.2(i)). Declining keeps the app usable: items can be added by hand and meal ideas come from a built-in list. The choice can be changed in Settings > Privacy and data; turning it off stops uploads immediately and clears saved AI meal ideas.
+
+### Food images
+
+Foods are shown with emoji chosen by name (`src/components/categories.ts`, pinned by a 118-food table test and reviewed visually and blind). Real photos were requested but could not be downloaded from this build environment, so none are included. `docs/food-photos.md` explains the blocker, the licences that are safe for a paid app, the three-step accuracy check to apply, and the design for adding them.
 
 ## Development
 
 ```bash
-npm test               # 57 app tests (dates, expiry, shelf life, meals, reminders, billing rules, scan parsing)
+npm test               # app tests: dates, expiry, meals, reminders, billing, pricing consistency, contrast, emoji accuracy, store listing limits, dependency guard
 npm run typecheck
 npm run lint
 cd server && npm test  # 30 server tests
+npx expo export --platform ios --platform android   # proves the native bundles resolve every import
 ```
 
 Preview in a browser (uses demo billing): `npm run export:web`, then serve `dist/`. Camera capture is native-only; on web the library picker is used.
@@ -124,12 +140,16 @@ The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib
 
 Verified in the build environment:
 
-- App and server typecheck, lint is clean, and all 57 + 30 tests pass.
-- The exported web build was driven in Chromium through the full journey in light and dark mode, and the web preview was also run on an emulated iPhone, inside a sandboxed iframe, from a nested path, under a strict content-security policy: onboarding, trial, sample scan, review and edit, save, every tab, item detail, trial expiry to paywall, and re-subscribe.
-- End to end against the real server with only Anthropic faked: a real 2400x1800 photo is downscaled to 1568px, uploaded, validated, sent to the model with the expected model, effort, structured-output format and fallback setting, and the parsed result, label-date handling, meal ideas and a model refusal all surface correctly in the UI.
+- App and server typecheck, lint is clean, and all 254 app tests and 30 server tests pass. The tests include: the price and trial length appear only as $9.99 and 2 weeks across the app, store listing and legal text; every text/background colour pair meets WCAG AA contrast in light and dark; store listing fields fit Apple and Google limits; the emoji chosen for 118 foods.
+- The iOS and Android bundles export (`expo export`), which proves every import resolves natively. This caught a real defect, a missing `expo-asset` dependency that would have broken the native build, and a test now guards it.
+- The web build was driven in Chromium through the full journey in light and dark mode, on an emulated iPhone, inside a sandboxed iframe, from a nested path, under a strict content-security policy: onboarding, the trial and its price/date wording, sample scan, review and edit, save, every tab, item detail, Settings (plan, restore, legal screens), trial expiry to paywall, and re-subscribe.
+- End to end against the real server with only Anthropic faked: the consent prompt appears before anything is sent (declining sends nothing), a real 2400x1800 photo is downscaled to 1568px, uploaded, validated, sent to the model with the expected model, effort, structured-output format and fallback setting, and the parsed result, label-date handling, meal ideas, a model refusal, and withdrawing then restoring consent all behave correctly in the UI.
+- The 118 food emoji were checked by a rule table, a rendered visual review, and an independent blind identification; see `docs/food-photos.md`.
 
 **Not verified** (needs your hands or credentials):
 
-- Running on an iOS or Android device or simulator: real camera capture, permission prompts, haptics, modal presentation, safe areas, and scheduled local notifications.
-- Real purchases through StoreKit / Play Billing / RevenueCat, including the free-trial conversion.
-- Real Anthropic responses. The request shape was tested against a fake API using the real SDK, but no live call was made.
+- Real food photos. They could not be downloaded from this environment; see `docs/food-photos.md`.
+- Running on an iOS or Android device or simulator: real camera capture, permission prompts, haptics, modal presentation, safe areas, and scheduled local notifications (including the trial-ending reminder).
+- Real purchases through StoreKit / Play Billing / RevenueCat, including the free-trial conversion, and that the store products match the offer in `src/billing/trial.ts`.
+- Real Anthropic responses. The request shape was tested against a fake API using the real SDK, but no live call was made, so scan accuracy on real photos is unmeasured.
+- Legal text is a reasonable starting point, not legal advice.

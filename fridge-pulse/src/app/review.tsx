@@ -123,7 +123,7 @@ export default function Review() {
       settings.set({ askedForReminders: true });
       const turnOn = await confirm({
         title: 'Get expiry reminders?',
-        message: 'Fridge Pulse can nudge you the day before food expires so nothing gets wasted.',
+        message: 'Fridge Pulse can nudge you the day before food expires so nothing gets wasted, and remind you before your free trial ends.',
         confirmLabel: 'Turn on',
         cancelLabel: 'Not now',
       });

@@ -1,6 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { buildDigests } from './reminders';
+import { TRIAL_NAME } from '../billing/trial';
+import { formatShortDate } from './dates';
+import { buildDigests, buildTrialReminder } from './reminders';
 import type { PantryItem } from './types';
 
 const CHANNEL_ID = 'expiry';
@@ -33,32 +35,56 @@ export async function requestPermission(): Promise<boolean> {
 }
 
 /**
- * Replaces all scheduled reminders with a fresh set derived from the inventory.
- * Safe to call on every change: it is one cancel plus at most ~15 schedules.
+ * Replaces all scheduled reminders with a fresh set derived from the inventory and trial state.
+ * Safe to call on every change: it is one cancel plus at most ~16 schedules.
+ *
+ * The trial-ending reminder is separate from the expiry reminders: it only needs notification
+ * permission, so someone who turns expiry reminders off still hears before a charge.
  */
 export async function syncReminders(
   items: PantryItem[],
-  { enabled, hour }: { enabled: boolean; hour: number },
+  {
+    enabled,
+    hour,
+    trial = null,
+  }: {
+    enabled: boolean;
+    hour: number;
+    trial?: { endsOn: string; price: string } | null;
+  },
 ): Promise<void> {
   if (!supported) return;
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    if (!enabled || !(await hasPermission())) return;
+    if (!(await hasPermission())) return;
+
+    const now = new Date();
+    const digests = enabled ? buildDigests(items, now, { hour }) : [];
+    const trialReminder = trial
+      ? buildTrialReminder(trial.endsOn, now, {
+          price: trial.price,
+          endsLabel: formatShortDate(trial.endsOn),
+          trialName: TRIAL_NAME,
+        })
+      : null;
+    if (digests.length === 0 && !trialReminder) return;
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-        name: 'Expiry reminders',
+        name: 'Expiry and trial reminders',
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     }
-    for (const digest of buildDigests(items, new Date(), { hour })) {
+    for (const digest of digests) {
       await Notifications.scheduleNotificationAsync({
         content: { title: digest.title, body: digest.body, data: { route: '/meals' } },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: digest.fireAt,
-          channelId: CHANNEL_ID,
-        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: digest.fireAt, channelId: CHANNEL_ID },
+      });
+    }
+    if (trialReminder) {
+      await Notifications.scheduleNotificationAsync({
+        content: { title: trialReminder.title, body: trialReminder.body, data: { route: '/settings' } },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trialReminder.fireAt, channelId: CHANNEL_ID },
       });
     }
   } catch {

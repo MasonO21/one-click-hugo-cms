@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Animated, Easing, Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AiConsentModal } from '../components/AiConsentModal';
 import { Button } from '../components/Button';
 import { LOCATIONS, LOCATION_LABEL } from '../components/categories';
 import { Card } from '../components/Card';
@@ -10,12 +11,14 @@ import { Logo } from '../components/Logo';
 import { Screen } from '../components/Screen';
 import { Emoji, Text } from '../components/Text';
 import { friendlyError, isDemoMode, scanPhotos } from '../lib/api';
+import { SCREENSHOT_MODE } from '../lib/config';
 import { encodePhoto, MAX_PHOTOS, pickPhotos, takePhoto, type Photo } from '../lib/photos';
 import { toDrafts } from '../lib/scan';
 import type { StorageLocation } from '../lib/types';
 import { getProvider } from '../store/billing';
 import { useInventory } from '../store/inventory';
 import { useScanDraft } from '../store/scanDraft';
+import { useSettings } from '../store/settings';
 import { radius, useTheme } from '../theme';
 
 const TIPS: Record<StorageLocation, string> = {
@@ -72,6 +75,7 @@ export default function Scan() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [askConsent, setAskConsent] = useState(false);
 
   async function add(source: 'camera' | 'library') {
     setError(null);
@@ -89,6 +93,11 @@ export default function Scan() {
   }
 
   async function analyze(sample = false) {
+    // Nothing is uploaded until the person has agreed to AI processing (demo mode never uploads).
+    if (!isDemoMode && !useSettings.getState().aiConsent) {
+      setAskConsent(true);
+      return;
+    }
     setAnalyzing(true);
     setError(null);
     try {
@@ -113,6 +122,7 @@ export default function Scan() {
   if (analyzing) return <Analyzing location={location} />;
 
   return (
+    <>
     <Screen
       edges={['top', 'bottom']}
       footer={
@@ -125,7 +135,7 @@ export default function Scan() {
             onPress={() => void analyze()}
             style={{ alignSelf: 'stretch' }}
           />
-          {isDemoMode ? (
+          {isDemoMode && !SCREENSHOT_MODE ? (
             <Text variant="caption" faint style={{ textAlign: 'center' }}>
               Preview: photos are not analysed here. Tap Analyze to see sample items.
             </Text>
@@ -208,6 +218,15 @@ export default function Scan() {
         </Text>
       ) : null}
     </Screen>
+    <AiConsentModal
+      visible={askConsent}
+      onClose={() => setAskConsent(false)}
+      onAgree={() => {
+        setAskConsent(false);
+        void analyze();
+      }}
+    />
+    </>
   );
 }
 

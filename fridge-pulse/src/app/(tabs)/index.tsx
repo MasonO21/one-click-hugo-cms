@@ -15,6 +15,7 @@ import { addDays, todayISO } from '../../lib/dates';
 import { active, sortByExpiry, summarize, wasteStats, type Urgency } from '../../lib/expiry';
 import { localSuggestions } from '../../lib/meals';
 import { useInventory } from '../../store/inventory';
+import { useScanDraft } from '../../store/scanDraft';
 import { useSettings } from '../../store/settings';
 import { radius, useTheme } from '../../theme';
 
@@ -79,11 +80,22 @@ export default function Pulse() {
         <Button testID="scan-cta" label="Scan your fridge" icon="camera" onPress={() => router.push('/scan')} />
 
         {live.length === 0 ? (
-          <EmptyState
-            emoji="🧺"
-            title="Your fridge is a blank slate"
-            message="Take a photo of a shelf and Fridge Pulse will list what is there and when it needs eating."
-          />
+          <>
+            <EmptyState
+              emoji="🧺"
+              title="Your fridge is a blank slate"
+              message="Take a photo of a shelf and Fridge Pulse will list what is there and when it needs eating."
+            />
+            <Button
+              testID="add-by-hand"
+              label="Add items by hand"
+              variant="ghost"
+              onPress={() => {
+                useScanDraft.getState().start('fridge', [], null);
+                router.push('/review');
+              }}
+            />
+          </>
         ) : (
           <>
             <View style={styles.sectionHead}>

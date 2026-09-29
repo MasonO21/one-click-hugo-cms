@@ -56,6 +56,35 @@ export function buildDigests(
   return digests;
 }
 
+export interface TrialReminder {
+  fireAt: Date;
+  title: string;
+  body: string;
+}
+
+/**
+ * A heads-up before the free trial turns into a paid subscription. Fires at `hour` two days
+ * before the trial ends; if that moment has passed, one day before; otherwise none.
+ */
+export function buildTrialReminder(
+  endsOn: string | null,
+  now: Date,
+  { hour = 10, price, endsLabel, trialName }: { hour?: number; price: string; endsLabel: string; trialName: string },
+): TrialReminder | null {
+  if (!endsOn) return null;
+  for (const daysBefore of [2, 1]) {
+    const fireAt = atHour(addDays(endsOn, -daysBefore), hour);
+    if (fireAt.getTime() > now.getTime() && addDays(endsOn, 0) > todayISO(now)) {
+      return {
+        fireAt,
+        title: daysBefore === 1 ? 'Your free trial ends tomorrow' : 'Your free trial ends in 2 days',
+        body: `Your ${trialName} trial ends ${endsLabel}. After that it is ${price}/month unless you cancel in your account settings.`,
+      };
+    }
+  }
+  return null;
+}
+
 /** Items the user should look at right now (expired or expiring within 2 days). */
 export function needsAttention(items: PantryItem[], now: Date = new Date()): PantryItem[] {
   return active(items).filter((i) => daysLeft(i, now) <= 2);

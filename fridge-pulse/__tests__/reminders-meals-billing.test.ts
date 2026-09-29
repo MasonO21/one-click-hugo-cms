@@ -1,6 +1,6 @@
 import { computeLocalEntitlement, isUnlocked, NO_ENTITLEMENT, TRIAL_DAYS } from '../src/billing/trial';
 import { filterForDiet, localSuggestions, mealScore, rankMeals, suggestionKey, suggestible, urgencyWeight } from '../src/lib/meals';
-import { buildDigests, needsAttention } from '../src/lib/reminders';
+import { buildDigests, buildTrialReminder, needsAttention } from '../src/lib/reminders';
 import type { Meal } from '../src/lib/types';
 import { mk, NOW } from '../test-utils/helpers';
 
@@ -177,5 +177,30 @@ describe('meals: ingredient sanity', () => {
   it('still uses leftover rice for fried rice', () => {
     const items = [mk('a', 'Leftover rice', '2026-10-01', { category: 'leftovers' })];
     expect(localSuggestions(items, prefs, NOW).map((m) => m.title)).toContain('Fried rice');
+  });
+});
+
+describe('trial-ending reminder', () => {
+  const opts = { price: '$9.99', endsLabel: 'Tue, Oct 13', trialName: '2-week' };
+
+  it('fires two days before the trial ends, at the chosen hour', () => {
+    const r = buildTrialReminder('2026-10-13', NOW, opts);
+    expect(r).not.toBeNull();
+    expect([r!.fireAt.getMonth(), r!.fireAt.getDate(), r!.fireAt.getHours()]).toEqual([9, 11, 10]);
+    expect(r!.title).toBe('Your free trial ends in 2 days');
+    expect(r!.body).toBe('Your 2-week trial ends Tue, Oct 13. After that it is $9.99/month unless you cancel in your account settings.');
+  });
+
+  it('falls back to one day before when the two-day mark has passed', () => {
+    // 11 Oct 10:00 is the two-day mark for a trial ending on the 13th; it has just passed.
+    const r = buildTrialReminder('2026-10-13', new Date(2026, 9, 11, 10, 30), opts);
+    expect(r?.title).toBe('Your free trial ends tomorrow');
+    expect([r!.fireAt.getDate(), r!.fireAt.getHours()]).toEqual([12, 10]);
+  });
+
+  it('does not remind once it is too late, or when there is no trial', () => {
+    expect(buildTrialReminder('2026-10-13', new Date(2026, 9, 12, 11, 0), opts)).toBeNull();
+    expect(buildTrialReminder('2026-10-13', new Date(2026, 9, 13, 8, 0), opts)).toBeNull();
+    expect(buildTrialReminder(null, NOW, opts)).toBeNull();
   });
 });

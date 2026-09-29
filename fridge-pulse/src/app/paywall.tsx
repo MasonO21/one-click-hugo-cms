@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { getProvider, useBilling } from '../store/billing';
-import { TRIAL_DAYS } from '../billing/trial';
+import { TRIAL_DAYS, TRIAL_NAME, TRIAL_SPAN } from '../billing/trial';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Logo } from '../components/Logo';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
-import { PRIVACY_URL, TERMS_URL } from '../lib/config';
+import { SCREENSHOT_MODE } from '../lib/config';
+import { addDays, formatShortDate, todayISO } from '../lib/dates';
 import { useTheme } from '../theme';
+
 
 const FEATURES = [
   'Scan your fridge, freezer and pantry with your camera',
@@ -23,6 +26,7 @@ export default function Paywall() {
   const provider = getProvider();
   const returning = entitlement.status === 'expired';
   const store = Platform.OS === 'android' ? 'Google Play account' : 'Apple ID account';
+  const chargeDate = `${formatShortDate(addDays(todayISO(), TRIAL_DAYS))} (in ${TRIAL_SPAN})`;
   const cancelWhere = Platform.OS === 'android' ? 'Google Play' : 'your Apple ID settings';
 
   return (
@@ -32,13 +36,13 @@ export default function Paywall() {
         <View style={styles.footerInner}>
           <Button
             testID="paywall-cta"
-            label={returning ? `Subscribe for ${priceString}/month` : `Start ${TRIAL_DAYS}-day free trial`}
+            label={returning ? `Subscribe for ${priceString}/month` : `Start ${TRIAL_NAME} free trial`}
             loading={busy}
             onPress={() => void useBilling.getState().purchase()}
             style={{ alignSelf: 'stretch' }}
           />
           <Text variant="caption" muted style={{ textAlign: 'center' }}>
-            {returning ? `${priceString} per month. Cancel anytime.` : `Then ${priceString} per month. Cancel anytime.`}
+            {returning ? `${priceString} per month. Cancel anytime.` : `Free for ${TRIAL_SPAN}, then ${priceString} per month. Cancel anytime.`}
           </Text>
         </View>
       }
@@ -46,7 +50,7 @@ export default function Paywall() {
       <View style={styles.header}>
         <Logo size={64} />
         <Text variant="title" style={{ textAlign: 'center' }}>
-          {returning ? 'Your free trial has ended' : `Try Fridge Pulse free for ${TRIAL_DAYS}\u00A0days`}
+          {returning ? 'Your free trial has ended' : `Try Fridge Pulse free for ${TRIAL_SPAN.replace(' ', '\u00A0')}`}
         </Text>
         <Text muted style={{ textAlign: 'center' }}>
           {returning
@@ -78,9 +82,9 @@ export default function Paywall() {
           <View style={styles.step}>
             <View style={[styles.stepDot, { backgroundColor: c.inkFaint }]} />
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">In {TRIAL_DAYS} days</Text>
+              <Text variant="bodyStrong">{chargeDate}</Text>
               <Text variant="caption" muted>
-                {priceString}/month begins. Cancel before then and you will not be charged.
+                {priceString}/month begins. Cancel before then and you will not be charged. If notifications are on, we will remind you 2 days before.
               </Text>
             </View>
           </View>
@@ -97,7 +101,7 @@ export default function Paywall() {
           Purchases are not set up in this build.
         </Text>
       ) : null}
-      {provider.kind === 'local' ? (
+      {provider.kind === 'local' && !SCREENSHOT_MODE ? (
         <Text variant="caption" faint style={{ textAlign: 'center' }}>
           Demo billing: no real payment is taken.
         </Text>
@@ -109,12 +113,12 @@ export default function Paywall() {
             Restore purchases
           </Text>
         </Pressable>
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(TERMS_URL)} hitSlop={8}>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/legal/terms')} hitSlop={8}>
           <Text variant="caption" color={c.primary} style={styles.link}>
             Terms
           </Text>
         </Pressable>
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)} hitSlop={8}>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/legal/privacy')} hitSlop={8}>
           <Text variant="caption" color={c.primary} style={styles.link}>
             Privacy
           </Text>
@@ -122,7 +126,7 @@ export default function Paywall() {
       </View>
 
       <Text variant="caption" faint style={{ textAlign: 'center', fontSize: 11, lineHeight: 15 }}>
-        {returning ? '' : `Your ${TRIAL_DAYS}-day free trial starts when you confirm. `}
+        {returning ? '' : `Your ${TRIAL_NAME} free trial starts when you confirm. `}
         Payment is charged to your {store} at confirmation of purchase. The subscription renews automatically at {priceString}/month
         unless it is cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in {cancelWhere}.
       </Text>

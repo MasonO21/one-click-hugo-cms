@@ -52,3 +52,8 @@ Docs: https://docs.expo.dev/eas/index.md
 - Billing must fail closed: never make the local trial provider reachable in a production build (`src/billing/index.ts`).
 - The app and server share one JSON contract (`server/src/schemas.ts` <-> `src/lib/types.ts`, `src/lib/api.ts`). Change both together.
 - Server model calls follow the Claude API notes: `claude-opus-5-5` default, no `thinking` / sampling params, explicit `output_config.effort`, structured output via `beta.messages.parse`, `fallbacks: "default"`, and `stop_reason` checked before reading content.
+- The offer ($9.99/month, 2-week free trial) lives only in `src/billing/trial.ts`; never type a price or trial length into copy. `__tests__/pricing.test.ts` scans the app, store listing and legal text.
+- Any code path that sends photos or item names to the server needs the user's AI consent (`settings.aiConsent`, `AiConsentModal`); demo mode is exempt because nothing leaves the device.
+- Native bundles must resolve: run `npx expo export --platform ios --platform android --output-dir /tmp/x` after adding imports. Expo peer packages (expo-asset, expo-file-system) must be top-level dependencies; `__tests__/dependencies.test.ts` guards this.
+- Colours come from `src/theme`; `__tests__/contrast.test.ts` fails if a pair drops below WCAG AA. Emoji per food are pinned by `test-utils/foodCases.ts`; add a row when you add a rule in `src/components/categories.ts`.
+- Store assets: `store/` (listing, checklist, screenshots). Regenerate screenshots with `SCREENSHOT_MODE=1 npm run preview:build && CHROMIUM_PATH=/opt/pw-browsers/chromium npm run store:screenshots`, then rebuild the normal preview with `npm run preview:build`.

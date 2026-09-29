@@ -49,7 +49,7 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
       ) : (
         <>
           {icon ? <Ionicons name={icon} size={size === 'sm' ? 16 : 20} color={palette.fg} /> : null}
-          <Text variant="bodyStrong" color={palette.fg} style={size === 'sm' ? { fontSize: 14 } : { fontSize: 17 }}>
+          <Text variant="bodyStrong" color={palette.fg} style={size === 'sm' ? { fontSize: 15 } : { fontSize: 17 }}>
             {label}
           </Text>
         </>
@@ -61,5 +61,5 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
 const styles = StyleSheet.create({
   base: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderRadius: radius.md },
   md: { minHeight: 54, paddingHorizontal: 20 },
-  sm: { minHeight: 38, paddingHorizontal: 14, borderRadius: radius.sm },
+  sm: { minHeight: 44, paddingHorizontal: 14, borderRadius: radius.sm },
 });

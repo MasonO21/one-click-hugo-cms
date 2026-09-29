@@ -1,7 +1,16 @@
 import { addDays, daysBetween, toISODate } from '../lib/dates';
 
+/**
+ * The offer, defined once. It must match the store products: a monthly auto-renewing
+ * subscription at $9.99 with a 2-week (14-day) free-trial introductory offer.
+ * `__tests__/pricing.test.ts` fails if any other price or trial length appears in the app.
+ */
 export const TRIAL_DAYS = 14;
 export const PRICE_PER_MONTH = '$9.99';
+/** Reads naturally in "Start {TRIAL_NAME} free trial" and "Your {TRIAL_NAME} free trial". */
+export const TRIAL_NAME = '2-week';
+/** Reads naturally in "Free for {TRIAL_SPAN}". */
+export const TRIAL_SPAN = '2 weeks';
 /** RevenueCat entitlement identifier that unlocks the app. */
 export const ENTITLEMENT_ID = 'pro';
 

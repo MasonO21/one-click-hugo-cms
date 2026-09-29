@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { Screen } from '../components/Screen';
 import { Emoji, Text } from '../components/Text';
+import { PRICE_PER_MONTH, TRIAL_SPAN } from '../billing/trial';
 import { useSettings } from '../store/settings';
 import { useTheme } from '../theme';
 
@@ -38,6 +39,11 @@ export default function Onboarding() {
       contentStyle={styles.content}
       footer={
         <View style={styles.footerInner}>
+          {last ? (
+            <Text variant="caption" muted style={{ textAlign: 'center' }}>
+              Free for {TRIAL_SPAN}, then {PRICE_PER_MONTH}/month. Cancel anytime.
+            </Text>
+          ) : null}
           <View style={styles.dots}>
             {STEPS.map((_, i) => (
               <View key={i} style={[styles.dot, { backgroundColor: i === step ? c.primary : c.border, width: i === step ? 22 : 8 }]} />

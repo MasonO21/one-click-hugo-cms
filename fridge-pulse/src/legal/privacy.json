@@ -1,0 +1,83 @@
+{
+  "title": "Privacy Policy",
+  "updated": "2026-09-29",
+  "intro": "Fridge Pulse helps you use food before it goes off. This policy explains what the app does with your information, in plain language.",
+  "sections": [
+    {
+      "heading": "The short version",
+      "bullets": [
+        "Your food list stays on your phone. We do not have accounts.",
+        "If you agree, photos you scan and ingredient lists are sent to an AI service to identify food and suggest meals. Fridge Pulse does not keep your photos.",
+        "No ads. No tracking across other apps or websites. No selling your data.",
+        "Payments are handled by Apple or Google. We never see your card details."
+      ]
+    },
+    {
+      "heading": "Who we are",
+      "paragraphs": ["Fridge Pulse is provided by {{developer}}. {{contactLine}}"]
+    },
+    {
+      "heading": "What stays on your device",
+      "paragraphs": [
+        "The items you track (names, quantities, storage place, expiry dates), your meal preferences, reminder settings and the state of your free trial are stored only on your device. Deleting the app, or using Settings > Privacy and data > Delete all my data, removes them."
+      ]
+    },
+    {
+      "heading": "What is sent off your device, and why",
+      "bullets": [
+        "Photos you scan: when you tap Analyze, the photos are sent over an encrypted connection to our server, which passes them to Anthropic, the provider of the Claude AI models, to identify the food and estimate how long it keeps. Our server handles them in memory to return the result and does not save them. Photos are only sent after you agree to this, and you can withdraw that agreement at any time.",
+        "Ingredient lists for meal ideas: to write meal ideas, the names, categories, quantities and days-until-expiry of your tracked items are sent the same way. No photos are included. This also needs your agreement.",
+        "Subscription status: Apple or Google processes your payment. RevenueCat, which we use to manage subscriptions, receives your purchase information and a random app user ID so that the app and our server can tell whether your trial or subscription is active.",
+        "Reminders: expiry and trial reminders are scheduled on your device. Nothing about them is sent to a server."
+      ]
+    },
+    {
+      "heading": "How the AI provider handles your data",
+      "paragraphs": [
+        "Anthropic processes what we send under its own terms and privacy policy (anthropic.com/legal/privacy). Anthropic's commercial terms state that content sent through its API is not used to train its models. Anthropic may keep API inputs and outputs for a limited time under its terms."
+      ]
+    },
+    {
+      "heading": "Technical information",
+      "paragraphs": [
+        "When you use scanning or meal ideas, our server sees your IP address and your random app user ID. We use them only to prevent abuse and to apply daily fair-use limits, and we keep them in memory rather than in a database. Our hosting provider may keep routine server logs (such as timestamps and IP addresses) for security."
+      ]
+    },
+    {
+      "heading": "What we do not do",
+      "bullets": [
+        "We do not show ads or use advertising identifiers.",
+        "We do not track you across other companies' apps and websites.",
+        "We do not include third-party analytics or attribution SDKs.",
+        "We do not sell your information or share it for marketing."
+      ]
+    },
+    {
+      "heading": "Your choices and rights",
+      "bullets": [
+        "Turn off AI features any time in Settings > Privacy and data. Photos and ingredient lists then stay on your device and meal ideas come from a built-in list.",
+        "Delete everything the app stores with Settings > Privacy and data > Delete all my data.",
+        "Cancel your subscription in your Apple ID or Google Play account settings.",
+        "Depending on where you live (for example the EU, the UK or California) you may have rights to access, correct or delete personal information. Because we keep no account data, almost everything is already on your device. Contact us if you have a question or request."
+      ]
+    },
+    {
+      "heading": "Children",
+      "paragraphs": ["Fridge Pulse is not directed at children under 13, and we do not knowingly collect information from them."]
+    },
+    {
+      "heading": "Security and international processing",
+      "paragraphs": [
+        "Data sent from the app uses encrypted connections. Our providers may process data in countries other than your own, including the United States."
+      ]
+    },
+    {
+      "heading": "Changes to this policy",
+      "paragraphs": ["If we change this policy we will update the date above, and tell you in the app if the change is significant."]
+    },
+    {
+      "heading": "Contact",
+      "paragraphs": ["{{contactLine}}"]
+    }
+  ]
+}

@@ -28,16 +28,16 @@ export interface Palette {
   urgency: Record<Urgency, UrgencyColors>;
 }
 
-const light: Palette = {
+export const lightPalette: Palette = {
   bg: '#F4F7F1',
   surface: '#FFFFFF',
   surfaceAlt: '#ECF1E8',
   border: '#DFE6DA',
   ink: '#14261B',
   inkMuted: '#56665C',
-  inkFaint: '#87958C',
-  primary: '#1B9A53',
-  primaryPressed: '#15803F',
+  inkFaint: '#65736A',
+  primary: '#137A3B',
+  primaryPressed: '#0F6B34',
   onPrimary: '#FFFFFF',
   primaryTint: '#E1F3E8',
   hero: '#12382A',
@@ -53,14 +53,14 @@ const light: Palette = {
   },
 };
 
-const dark: Palette = {
+export const darkPalette: Palette = {
   bg: '#0D1410',
   surface: '#16201B',
   surfaceAlt: '#1D2A23',
   border: '#28372F',
   ink: '#EAF2EC',
   inkMuted: '#A3B3A9',
-  inkFaint: '#75857B',
+  inkFaint: '#8A9A90',
   primary: '#3BC97B',
   primaryPressed: '#2FAF69',
   onPrimary: '#052012',
@@ -83,5 +83,5 @@ export const radius = { sm: 10, md: 14, lg: 20, pill: 999 } as const;
 
 export function useTheme() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  return { c: scheme === 'dark' ? dark : light, scheme } as const;
+  return { c: scheme === 'dark' ? darkPalette : lightPalette, scheme } as const;
 }

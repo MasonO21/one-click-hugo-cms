@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { Alert, Linking, Platform, StyleSheet, Switch, View } from 'react-native';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { getProvider, useBilling } from '../../store/billing';
-import { TRIAL_DAYS } from '../../billing/trial';
+import { TRIAL_NAME } from '../../billing/trial';
+import { AiConsentModal } from '../../components/AiConsentModal';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Chip } from '../../components/Chip';
@@ -11,7 +14,8 @@ import { Screen } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
 import { Text } from '../../components/Text';
 import { isDemoMode } from '../../lib/api';
-import { MANAGE_SUBSCRIPTION_URL, PRIVACY_URL, TERMS_URL } from '../../lib/config';
+import { MANAGE_SUBSCRIPTION_URL } from '../../lib/config';
+import { formatShortDate } from '../../lib/dates';
 import { confirm, notify } from '../../lib/dialogs';
 import { hasPermission, requestPermission } from '../../lib/notifications';
 import type { Diet } from '../../lib/types';
@@ -63,18 +67,43 @@ function Row({ label, hint, right }: { label: string; hint?: string; right: Reac
   );
 }
 
+function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
+  const { c } = useTheme();
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.linkRow}>
+      <Text variant="bodyStrong" style={{ flex: 1 }}>
+        {label}
+      </Text>
+      <Ionicons name="chevron-forward" size={20} color={c.inkFaint} />
+    </Pressable>
+  );
+}
+
 export default function Settings() {
   const { c } = useTheme();
   const settings = useSettings();
   const { entitlement, priceString } = useBilling();
   const provider = getProvider();
 
-  const trialLine =
+  const [askConsent, setAskConsent] = useState(false);
+
+  const endsLabel = entitlement.endsOn ? formatShortDate(entitlement.endsOn) : null;
+  const planLine =
     entitlement.status === 'trial'
-      ? `Free trial: ${entitlement.daysRemaining} ${entitlement.daysRemaining === 1 ? 'day' : 'days'} left, then ${priceString}/month`
+      ? `Free trial: ${entitlement.daysRemaining} ${entitlement.daysRemaining === 1 ? 'day' : 'days'} left${endsLabel ? `. ${priceString}/month starts ${endsLabel} unless you cancel.` : '.'}`
       : entitlement.status === 'active'
-        ? `Subscribed: ${priceString}/month`
-        : 'Not subscribed';
+        ? `Subscribed at ${priceString}/month${endsLabel ? `. Renews ${endsLabel}.` : '.'}`
+        : 'No active plan';
+
+  function toggleAi(on: boolean) {
+    if (on) {
+      setAskConsent(true);
+      return;
+    }
+    // Withdrawing consent stops all uploads immediately; AI results already saved are discarded.
+    settings.set({ aiConsent: false, aiConsentAt: null });
+    useMealsCache.getState().clear();
+  }
 
   async function toggleReminders(on: boolean) {
     if (on && !(await hasPermission())) {
@@ -109,17 +138,22 @@ export default function Settings() {
   }
 
   return (
+    <>
     <Screen>
       <Header title="Settings" />
 
-      <Section title="Subscription">
+      <Section title="Your plan">
         <Row
           label="Fridge Pulse"
-          hint={trialLine}
-          right={<Ionicons name="checkmark-circle" size={24} color={c.primary} />}
+          hint={planLine}
+          right={
+            entitlement.status === 'trial' || entitlement.status === 'active' ? (
+              <Ionicons name="checkmark-circle" size={24} color={c.primary} />
+            ) : null
+          }
         />
         <Text variant="caption" muted>
-          {TRIAL_DAYS}-day free trial, then {priceString} per month. Cancel anytime.
+          {TRIAL_NAME} free trial, then {priceString} per month. Cancel anytime in your {Platform.OS === 'android' ? 'Google Play' : 'Apple ID'} subscription settings.
         </Text>
         <View style={styles.buttons}>
           <Button label="Manage subscription" size="sm" variant="secondary" onPress={() => void Linking.openURL(MANAGE_SUBSCRIPTION_URL)} />
@@ -181,17 +215,43 @@ export default function Settings() {
         />
       </Section>
 
-      <Section title="Privacy">
+      <Section title="Privacy and data">
+        {isDemoMode ? (
+          <Text variant="caption" muted>
+            Preview mode: nothing leaves your phone.
+          </Text>
+        ) : (
+          <>
+            <Row
+              label="Use AI to read photos and suggest meals"
+              hint={
+                settings.aiConsent
+                  ? 'On. Photos and item names are sent securely to an AI service when you scan or ask for meal ideas.'
+                  : 'Off. Nothing is sent anywhere. Turn on to scan photos and get AI-written recipes.'
+              }
+              right={
+                <Switch
+                  testID="ai-switch"
+                  accessibilityLabel="Use AI to read photos and suggest meals"
+                  value={settings.aiConsent}
+                  onValueChange={toggleAi}
+                  trackColor={{ true: c.primary, false: c.border }}
+                  thumbColor="#FFFFFF"
+                />
+              }
+            />
+          </>
+        )}
         <Text variant="caption" muted>
-          {isDemoMode
-            ? 'Demo mode: nothing leaves your phone.'
-            : 'Photos are sent to an AI service to identify food, and Fridge Pulse does not keep them. Your item list stays on this device.'}
+          Your items and settings are stored on this device only. Fridge Pulse has no accounts and does not keep your photos.
         </Text>
-        <View style={styles.buttons}>
-          <Button label="Privacy policy" size="sm" variant="ghost" onPress={() => void Linking.openURL(PRIVACY_URL)} />
-          <Button label="Terms of use" size="sm" variant="ghost" onPress={() => void Linking.openURL(TERMS_URL)} />
-        </View>
         <Button label="Delete all my data" variant="danger" size="sm" onPress={() => void confirmDelete()} style={{ alignSelf: 'flex-start' }} />
+      </Section>
+
+      <Section title="About">
+        <LinkRow label="Food safety and about" onPress={() => router.push('/about')} />
+        <LinkRow label="Privacy Policy" onPress={() => router.push('/legal/privacy')} />
+        <LinkRow label="Terms of Use" onPress={() => router.push('/legal/terms')} />
       </Section>
 
       {provider.simulateTrialDaysLeft ? (
@@ -223,11 +283,14 @@ export default function Settings() {
         Fridge Pulse {Constants.expoConfig?.version ?? ''}
       </Text>
     </Screen>
+    <AiConsentModal visible={askConsent} onClose={() => setAskConsent(false)} onAgree={() => setAskConsent(false)} />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   buttons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
 });

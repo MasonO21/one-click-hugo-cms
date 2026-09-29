@@ -4,7 +4,7 @@ import { PRICE_PER_MONTH } from './trial';
 import type { BillingProvider } from './types';
 
 /**
- * Store-backed billing via RevenueCat. The 14-day free trial is an introductory
+ * Store-backed billing via RevenueCat. The 2-week free trial is an introductory
  * offer configured on the subscription product in App Store Connect / Google Play;
  * RevenueCat reports it as an entitlement with periodType "trial".
  */

@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -7,6 +7,7 @@ import { AppState, Platform } from 'react-native';
 import { SafeAreaInsetsContext, SafeAreaProvider } from 'react-native-safe-area-context';
 import { isUnlocked } from '../billing/trial';
 import { DialogHost } from '../components/DialogHost';
+import { ErrorScreen } from '../components/ErrorScreen';
 import { useEmbeddedFonts } from '../lib/embeddedFonts';
 import { configureNotifications, syncReminders } from '../lib/notifications';
 import { useBilling } from '../store/billing';
@@ -26,19 +27,29 @@ function ReminderSync({ enabled }: { enabled: boolean }) {
   const items = useInventory((s) => s.items);
   const remindersEnabled = useSettings((s) => s.remindersEnabled);
   const reminderHour = useSettings((s) => s.reminderHour);
+  const entitlement = useBilling((s) => s.entitlement);
+  const priceString = useBilling((s) => s.priceString);
+  const trialEndsOn = entitlement.status === 'trial' ? entitlement.endsOn : null;
 
   useEffect(() => {
-    void syncReminders(items, { enabled: enabled && remindersEnabled, hour: reminderHour });
-  }, [items, enabled, remindersEnabled, reminderHour]);
+    void syncReminders(items, {
+      enabled: enabled && remindersEnabled,
+      hour: reminderHour,
+      trial: trialEndsOn ? { endsOn: trialEndsOn, price: priceString } : null,
+    });
+  }, [items, enabled, remindersEnabled, reminderHour, trialEndsOn, priceString]);
 
   // Reschedule when the app returns to the foreground: the window of upcoming days moves on.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
       const settings = useSettings.getState();
+      const billing = useBilling.getState();
+      const endsOn = billing.entitlement.status === 'trial' ? billing.entitlement.endsOn : null;
       void syncReminders(useInventory.getState().items, {
         enabled: enabled && settings.remindersEnabled,
         hour: settings.reminderHour,
+        trial: endsOn ? { endsOn, price: billing.priceString } : null,
       });
     });
     return () => sub.remove();
@@ -57,6 +68,11 @@ function NotificationRouter() {
     if (typeof route === 'string') router.push(route as never);
   }, [response, router]);
   return null;
+}
+
+/** Last line of defence: a render error shows a friendly screen instead of a blank or crashed app. */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  return <ErrorScreen onRetry={() => void retry()} />;
 }
 
 export default function RootLayout() {
@@ -110,7 +126,10 @@ export default function RootLayout() {
             <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
             <Stack.Screen name="review" options={{ presentation: 'modal' }} />
             <Stack.Screen name="item/[id]" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="about" options={{ presentation: 'modal' }} />
           </Stack.Protected>
+          {/* Legal text must be readable before onboarding and on the paywall, so it is never guarded. */}
+          <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />
         </Stack>
         <ReminderSync enabled={unlocked} />
         {unlocked && Platform.OS !== 'web' ? <NotificationRouter /> : null}
