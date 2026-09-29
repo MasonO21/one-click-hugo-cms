@@ -1,0 +1,10 @@
+{
+  "name": "Waypath",
+  "short_name": "Waypath",
+  "description": "Record a hike once. Every hiker after you gets arrows to follow.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f2",
+  "theme_color": "#1f7a4d",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "waypath-trail-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Waypath: record hiking trails and guide other hikers along them with GPS-style arrows, built for Meta glasses (audio today, display HUD via adapter).",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"test/*.test.js\"",
+    "e2e": "node e2e/smoke.mjs"
+  }
+}
