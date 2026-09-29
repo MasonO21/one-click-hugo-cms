@@ -26,6 +26,7 @@
 
 /* External Library Includes */
 @import './imports/_reset';
+@import './imports/_fonts';
 
 /* Modules */
 @import './imports/_box-sizing';

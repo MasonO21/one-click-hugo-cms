@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /thanks/
+{{ if hasPrefix .Site.BaseURL "http" }}
+Sitemap: {{ "sitemap.xml" | absURL }}
+{{ end }}

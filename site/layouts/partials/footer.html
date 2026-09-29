@@ -5,19 +5,24 @@
 		<div class="measure-narrow center mb4" id="waitlist">
 
 			<p class="f3 lh-title light-gray b tc mb2">Join the waitlist</p>
-			<p class="tc">We’ll send one email when Trail Notes is ready, and nothing else.</p>
+			<p class="tc">We’ll send one email when Trail Notes is ready, and nothing else. <a href="/privacy/" class="link b">Privacy policy</a></p>
 
 			{{ partial "newsletter-form" (dict "id" "footer") }}
 
 		</div>
 
-		<ul class="flex flex-wrap justify-center">
-			<li><a href="/" class="link pa2 db">Home</a></li>
-			<li><a href="/features/" class="link pa2 db">Features</a></li>
-			<li><a href="/features/#pricing" class="link pa2 db">Pricing</a></li>
-			<li><a href="/post/" class="link pa2 db">Journal</a></li>
-			<li><a href="/contact/" class="link pa2 db">Contact</a></li>
-		</ul>
+		<nav aria-label="Footer">
+			<ul class="flex flex-wrap justify-center">
+				<li><a href="/" class="link pa2 db">Home</a></li>
+				<li><a href="/features/" class="link pa2 db">Features</a></li>
+				<li><a href="/features/#pricing" class="link pa2 db">Pricing</a></li>
+				<li><a href="/post/" class="link pa2 db">Journal</a></li>
+				<li><a href="/contact/" class="link pa2 db">Contact</a></li>
+				<li><a href="/privacy/" class="link pa2 db">Privacy</a></li>
+			</ul>
+		</nav>
+
+		<p class="f6 tc light-gray mt3 mb0">&copy; {{ now.Year }} {{ $.Site.Title }}</p>
 
 	</div>
 
@@ -25,4 +30,3 @@
 
 {{ partial "svg" . }}
 
-<script src="/app.js"></script>

@@ -19,7 +19,7 @@ steps:
 sample:
     heading: "What you get"
     text: "Your words, with the details filled in."
-    date: "Sat, Sep 27 · 7:42 AM"
+    date: "Sat, Sep 26 · 7:42 AM"
     quote: "Fog lifting off the ridge. Legs feel heavy on the climb, but the view is worth it."
     tags:
         - label: Route

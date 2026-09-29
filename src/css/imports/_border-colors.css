@@ -3,7 +3,7 @@
 }
 
 .b--highlight {
-  border-color: --var(--highlight);
+  border-color: var(--highlight);
 }
 
 .b--white {

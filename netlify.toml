@@ -2,9 +2,27 @@
   YARN_VERSION = "1.12.1"
   NPM_VERSION = "6.4.1"
 
+# Hugo reads HUGO_BASEURL, so canonical links, social images and the sitemap
+# use the real address of each deploy instead of "/".
 [build]
-  command = "yarn build"
+  command = "HUGO_BASEURL=$URL yarn build"
   publish = "dist"
 
 [context.deploy-preview]
-  command = "yarn build:preview"
+  command = "HUGO_BASEURL=$DEPLOY_PRIME_URL yarn build:preview"
+
+[context.branch-deploy]
+  command = "HUGO_BASEURL=$DEPLOY_PRIME_URL yarn build"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

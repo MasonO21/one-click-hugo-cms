@@ -17,7 +17,7 @@ export default class Jumbotron extends React.Component {
               </div>
               <button className="btn btn-primary mb3 w-100 w-auto-ns mb0-ns raise" type="button">Join the waitlist</button>
             </div>
-            <p className="f6 grey-3 mb0">We’ll send one email when it’s ready, and nothing else.</p>
+            <p className="f6 grey-3 mb0">We’ll send one email when it’s ready, and nothing else. <a href="/privacy/" className="link b primary">Privacy policy</a></p>
           </div>}
         </div>
       </div>

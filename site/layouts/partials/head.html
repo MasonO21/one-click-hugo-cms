@@ -1,7 +1,15 @@
 <head>
 
-  <title>{{ if .IsHome }}{{ $.Site.Title }} | {{ $.Site.Params.tagline }}{{ else }}{{ .Title }} | {{ $.Site.Title }}{{ end }}</title>
-  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ $.Site.Params.description }}{{ end }}">
+  {{ $pageTitle := cond .IsHome (printf "%s | %s" $.Site.Title $.Site.Params.tagline) (printf "%s | %s" .Title $.Site.Title) }}
+  {{ $description := cond (ne .Description "") .Description $.Site.Params.description }}
+  {{ $netlifyBase := cond (eq "production" (getenv "CONTEXT")) (getenv "URL") (getenv "DEPLOY_PRIME_URL") }}
+  {{ $base := cond (ne (getenv "CONTEXT") "") $netlifyBase $.Site.BaseURL }}
+  {{ $origin := strings.TrimSuffix "/" $base }}
+  {{ $absolute := hasPrefix $base "http" }}
+
+  <title>{{ $pageTitle }}</title>
+  <meta name="description" content="{{ $description }}">
+  {{ if $absolute }}<link rel="canonical" href="{{ $origin }}{{ .RelPermalink }}">{{ end }}
   {{ if eq .Type "thanks" }}<meta name="robots" content="noindex">{{ end }}
 
   {{ $stylesheet := .Site.Data.webpack.main }}
@@ -12,13 +20,13 @@
 	<meta charset="utf-8">
 	<meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  {{ $netlifyBase := cond (eq "production" (getenv "CONTEXT")) (getenv "URL") (getenv "DEPLOY_PRIME_URL") }}
-  {{ $base := cond (ne (getenv "CONTEXT") "") $netlifyBase $.Site.BaseURL }}
   <base href="{{ $base }}">
 
-	<link href="https://fonts.googleapis.com/css?family=Nunito+Sans:400,700" rel="stylesheet">
+	<link rel="preload" href="/fonts/nunito-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+	{{ if or .IsHome (eq .Type "features") }}<link rel="preload" href="{{ .Params.image }}" as="image">{{ end }}
 
 	<!-- Favicons -->
+	<link rel="icon" href="/img/favicon.ico" sizes="any">
 	<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
 	<link rel="icon" type="image/png" href="/img/favicon-32x32.png" sizes="32x32">
 	<link rel="icon" type="image/png" href="/img/favicon-16x16.png" sizes="16x16">
@@ -26,12 +34,19 @@
 	<link rel="mask-icon" href="/img/safari-pinned-tab.svg" color="#1f6b4f">
 	<meta name="theme-color" content="#1f6b4f">
 
-	<!-- Open Graph -->
+	<!-- Open Graph and Twitter -->
 	<meta property="og:type" content="website">
-	<meta property="og:title" content="{{ if .IsHome }}{{ $.Site.Title }} | {{ $.Site.Params.tagline }}{{ else }}{{ .Title }} | {{ $.Site.Title }}{{ end }}">
-	<meta property="og:description" content="{{ with .Description }}{{ . }}{{ else }}{{ $.Site.Params.description }}{{ end }}">
-	<meta property="og:url" content="{{ .Permalink }}">
-	<meta property="og:image" content="{{ printf "%s/img/og-image.png" (strings.TrimSuffix "/" $base) }}">
+	<meta property="og:site_name" content="{{ $.Site.Title }}">
+	<meta property="og:title" content="{{ $pageTitle }}">
+	<meta property="og:description" content="{{ $description }}">
+	{{ if $absolute }}
+	<meta property="og:url" content="{{ $origin }}{{ .RelPermalink }}">
+	<meta property="og:image" content="{{ $origin }}/img/og-image.png">
+	<meta property="og:image:width" content="1200">
+	<meta property="og:image:height" content="630">
+	<meta property="og:image:alt" content="Trail Notes: voice journaling for hikers and runners">
+	{{ end }}
+	<meta name="twitter:card" content="summary_large_image">
 
   {{ if .IsHome }}
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>

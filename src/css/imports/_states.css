@@ -44,3 +44,20 @@ input:focus, textarea:focus, a:focus, button:focus {
 footer input:focus, footer a:focus, footer button:focus {
   box-shadow: inset 0 0 0 2px var(--highlight);
 }
+
+/* Skip link: hidden until it receives keyboard focus */
+.skip-link {
+  position: absolute;
+  left: var(--spacing-medium);
+  top: calc(-1 * var(--spacing-extra-large));
+  z-index: 10;
+  padding: var(--spacing-small) var(--spacing-medium);
+  font-weight: var(--bold-font-weight);
+  color: var(--white);
+  background-color: var(--primary);
+  border-radius: var(--border-radius);
+}
+
+.skip-link:focus {
+  top: var(--spacing-small);
+}

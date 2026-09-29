@@ -13,10 +13,10 @@
 .bottom-2 { bottom: 2rem; }
 .left-2   { left:   2rem; }
 
-.top--1    { top:    -var(--spacing-medium); }
-.right--1  { right:  -var(--spacing-medium); }
-.bottom--1 { bottom: -var(--spacing-medium); }
-.left--1   { left:   -var(--spacing-medium); }
+.top--1    { top:    calc(-1 * var(--spacing-medium)); }
+.right--1  { right:  calc(-1 * var(--spacing-medium)); }
+.bottom--1 { bottom: calc(-1 * var(--spacing-medium)); }
+.left--1   { left:   calc(-1 * var(--spacing-medium)); }
 
 .top--2    { top:    -2rem; }
 .right--2  { right:  -2rem; }
@@ -44,10 +44,10 @@
   .left-2-ns    { left:  2rem; }
   .right-2-ns   { right: 2rem; }
   .bottom-2-ns  { bottom: 2rem; }
-  .top--1-ns    { top:    -var(--spacing-medium); }
-  .right--1-ns  { right:  -var(--spacing-medium); }
-  .bottom--1-ns { bottom: -var(--spacing-medium); }
-  .left--1-ns   { left:   -var(--spacing-medium); }
+  .top--1-ns    { top:    calc(-1 * var(--spacing-medium)); }
+  .right--1-ns  { right:  calc(-1 * var(--spacing-medium)); }
+  .bottom--1-ns { bottom: calc(-1 * var(--spacing-medium)); }
+  .left--1-ns   { left:   calc(-1 * var(--spacing-medium)); }
   .top--2-ns    { top:    -2rem; }
   .right--2-ns  { right:  -2rem; }
   .bottom--2-ns { bottom: -2rem; }
@@ -73,10 +73,10 @@
   .left-2-m    { left:  2rem; }
   .right-2-m   { right: 2rem; }
   .bottom-2-m  { bottom: 2rem; }
-  .top--1-m    { top:    -var(--spacing-medium); }
-  .right--1-m  { right:  -var(--spacing-medium); }
-  .bottom--1-m { bottom: -var(--spacing-medium); }
-  .left--1-m   { left:   -var(--spacing-medium); }
+  .top--1-m    { top:    calc(-1 * var(--spacing-medium)); }
+  .right--1-m  { right:  calc(-1 * var(--spacing-medium)); }
+  .bottom--1-m { bottom: calc(-1 * var(--spacing-medium)); }
+  .left--1-m   { left:   calc(-1 * var(--spacing-medium)); }
   .top--2-m    { top:    -2rem; }
   .right--2-m  { right:  -2rem; }
   .bottom--2-m { bottom: -2rem; }
@@ -102,10 +102,10 @@
   .left-2-l    { left:  2rem; }
   .right-2-l   { right: 2rem; }
   .bottom-2-l  { bottom: 2rem; }
-  .top--1-l    { top:    -var(--spacing-medium); }
-  .right--1-l  { right:  -var(--spacing-medium); }
-  .bottom--1-l { bottom: -var(--spacing-medium); }
-  .left--1-l   { left:   -var(--spacing-medium); }
+  .top--1-l    { top:    calc(-1 * var(--spacing-medium)); }
+  .right--1-l  { right:  calc(-1 * var(--spacing-medium)); }
+  .bottom--1-l { bottom: calc(-1 * var(--spacing-medium)); }
+  .left--1-l   { left:   calc(-1 * var(--spacing-medium)); }
   .top--2-l    { top:    -2rem; }
   .right--2-l  { right:  -2rem; }
   .bottom--2-l { bottom: -2rem; }

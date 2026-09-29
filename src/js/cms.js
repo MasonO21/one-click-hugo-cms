@@ -9,7 +9,7 @@ import PostPreview from "./cms-preview-templates/post";
 import FeaturesPreview from "./cms-preview-templates/features";
 import ContactPreview from "./cms-preview-templates/contact";
 
-CMS.registerPreviewStyle(styles, { raw: true });
+CMS.registerPreviewStyle(styles, {raw: true});
 CMS.registerPreviewTemplate("home", HomePreview);
 CMS.registerPreviewTemplate("post", PostPreview);
 CMS.registerPreviewTemplate("features", FeaturesPreview);

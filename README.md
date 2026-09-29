@@ -6,8 +6,15 @@ Marketing site for **Trail Notes**, a voice-first journaling app for hikers and 
 * **Features** (`site/content/features/_index.md`): free and Plus features, plus the pricing table. Prices are placeholders, so edit them before launch
 * **Journal** (`site/content/post/`): blog posts
 * **Contact** (`site/content/contact/_index.md`) and a **Thanks** page shown after either form is submitted
+* **Privacy** (`site/content/privacy.md`): describes what this website collects. It does not cover the app. Have it reviewed and update it if you add analytics, change form handling, or launch the app
 * **Waitlist and contact forms** use [Netlify Forms](https://docs.netlify.com/forms/setup/). Submissions appear in the Forms tab of your Netlify site after the first deploy
 * All pages are editable in Netlify CMS at `/admin/`
+
+## Deploying
+
+`netlify.toml` passes each deploy's address to Hugo through `HUGO_BASEURL`, so canonical links, social preview images, `sitemap.xml` and `robots.txt` use the real URL. Without it (for example a local `yarn build`), those tags are left out rather than written with a wrong address.
+
+The site uses no analytics or tracking. Nunito Sans is self-hosted from `src/fonts` under the SIL Open Font License (`src/fonts/OFL.txt`).
 
 ---
 

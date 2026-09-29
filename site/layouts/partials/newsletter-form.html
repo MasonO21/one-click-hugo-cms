@@ -1,12 +1,12 @@
 <form name="waitlist" method="POST" action="/thanks/" data-netlify="true" netlify-honeypot="bot-field" class="flex-ns mb3">
 
   <input type="hidden" name="form-name" value="waitlist">
-  <p class="dn"><label>Don’t fill this out: <input name="bot-field"></label></p>
+  <p class="dn"><label>Don’t fill this out: <input type="text" name="bot-field" tabindex="-1" autocomplete="off"></label></p>
 
-  <fieldset class="flex-auto mb2 mb0-ns mr2-ns">
-    <input type="email" id="{{ .id }}-email" name="email" placeholder="Your email" aria-label="Your email" class="w-100" required>
+  <div class="field flex-auto mb2 mb0-ns mr2-ns">
+    <input type="email" id="{{ .id }}-email" name="email" placeholder="Your email" autocomplete="email" class="w-100" required>
     <label for="{{ .id }}-email">Your email</label>
-  </fieldset>
+  </div>
 
   <button class="btn btn-primary mb3 w-100 w-auto-ns mb0-ns raise" type="submit">Join the waitlist</button>
 
