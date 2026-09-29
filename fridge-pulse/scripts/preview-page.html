@@ -1,0 +1,75 @@
+<title>Fridge Pulse</title>
+<style>
+  /* Host page for the app: full-height, themed ground so nothing flashes before the app paints. */
+  :root { --bg: #F4F7F1; --fg: #14261B; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0D1410; --fg: #EAF2EC; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #0D1410; --fg: #EAF2EC; color-scheme: dark; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); overflow: hidden; }
+  #root { display: flex; height: 100%; flex: 1; }
+</style>
+<div id="root"></div>
+<script>
+(function () {
+  // 1. Resolve relative asset URLs against the folder this page was loaded from. Pinned as an
+  //    absolute URL because the app changes the address bar as you move between screens.
+  try {
+    var base = document.createElement('base');
+    base.href = new URL('./', location.href).href;
+    document.head.appendChild(base);
+  } catch (e) {}
+
+  // 2. Some embedded frames refuse history changes. Screens still switch; only the address bar stays put.
+  ['pushState', 'replaceState'].forEach(function (name) {
+    var original = history[name];
+    history[name] = function () {
+      try { return original.apply(this, arguments); } catch (e) {}
+    };
+  });
+
+  // 3. Follow the viewer's explicit light/dark choice (data-theme on <html>), not only the OS setting.
+  if (window.matchMedia) {
+    var root = document.documentElement;
+    var real = window.matchMedia.bind(window);
+    var subscribers = [];
+    var forced = function () {
+      var t = root.getAttribute('data-theme');
+      return t === 'dark' || t === 'light' ? t : null;
+    };
+    window.matchMedia = function (query) {
+      var m = /\(prefers-color-scheme:\s*(dark|light)\)/.exec(query);
+      var mql = real(query);
+      if (!m) return mql;
+      var want = m[1];
+      var view = {
+        media: query,
+        onchange: null,
+        get matches() { var f = forced(); return f ? f === want : mql.matches; },
+        addEventListener: function (type, fn) {
+          if (type !== 'change') return;
+          var call = function () { fn({ matches: view.matches, media: query }); };
+          subscribers.push({ fn: fn, call: call });
+          if (mql.addEventListener) mql.addEventListener('change', call);
+        },
+        removeEventListener: function (type, fn) {
+          subscribers = subscribers.filter(function (s) {
+            if (s.fn !== fn) return true;
+            if (mql.removeEventListener) mql.removeEventListener('change', s.call);
+            return false;
+          });
+        },
+        dispatchEvent: function () { return true; }
+      };
+      view.addListener = function (fn) { view.addEventListener('change', fn); };
+      view.removeListener = function (fn) { view.removeEventListener('change', fn); };
+      return view;
+    };
+    new MutationObserver(function () {
+      subscribers.slice().forEach(function (s) { s.call(); });
+    }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+})();
+</script>
+<script src="app.js" defer></script>

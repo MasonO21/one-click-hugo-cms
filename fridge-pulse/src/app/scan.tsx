@@ -92,7 +92,8 @@ export default function Scan() {
     setAnalyzing(true);
     setError(null);
     try {
-      const images = sample ? [] : await Promise.all(photos.map(encodePhoto));
+      // Demo mode returns sample items and never uploads, so skip the (pointless) photo encoding.
+      const images = sample || isDemoMode ? [] : await Promise.all(photos.map(encodePhoto));
       const userId = await getProvider().getUserId();
       const res = await scanPhotos({ userId, location, images });
       const drafts = toDrafts(res, location, useInventory.getState().items);
@@ -124,6 +125,11 @@ export default function Scan() {
             onPress={() => void analyze()}
             style={{ alignSelf: 'stretch' }}
           />
+          {isDemoMode ? (
+            <Text variant="caption" faint style={{ textAlign: 'center' }}>
+              Preview: photos are not analysed here. Tap Analyze to see sample items.
+            </Text>
+          ) : null}
           <View style={styles.footerLinks}>
             {isDemoMode ? <Button label="Try a sample scan" variant="ghost" size="sm" onPress={() => void analyze(true)} testID="sample-scan" /> : null}
             <Button

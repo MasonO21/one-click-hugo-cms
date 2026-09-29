@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { persistStorage } from './storage';
 import type { Diet } from '../lib/types';
 
 interface SettingsState {
@@ -32,6 +32,6 @@ export const useSettings = create<SettingsState>()(
       set: (patch) => set(patch),
       reset: () => set(DEFAULTS),
     }),
-    { name: 'fp.settings.v1', version: 1, storage: createJSONStorage(() => AsyncStorage) },
+    { name: 'fp.settings.v1', version: 1, storage: persistStorage() },
   ),
 );

@@ -51,7 +51,7 @@ export async function demoScan(location: StorageLocation): Promise<ScanResponse>
   };
   return {
     items: byLocation[location],
-    notes: 'Demo data: connect a backend (EXPO_PUBLIC_API_URL) to scan real photos.',
+    notes: 'Sample items: this preview is not connected to the photo-scanning service.',
   };
 }
 

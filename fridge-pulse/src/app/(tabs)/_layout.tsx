@@ -23,7 +23,7 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: c.surface,
           borderTopColor: c.border,
-          ...(Platform.OS === 'web' ? { height: 68, paddingTop: 6, paddingBottom: 12 } : null),
+          ...(Platform.OS === 'web' ? { height: 78, paddingTop: 6, paddingBottom: 10 } : null),
         },
         tabBarLabelStyle: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
         sceneStyle: { backgroundColor: c.bg },

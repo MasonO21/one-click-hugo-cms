@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { persistStorage } from './storage';
 import type { Meal } from '../lib/types';
 
 interface MealsCacheState {
@@ -19,6 +19,6 @@ export const useMealsCache = create<MealsCacheState>()(
       setResult: (key, meals) => set({ key, meals }),
       clear: () => set({ key: null, meals: [] }),
     }),
-    { name: 'fp.meals.v1', version: 1, storage: createJSONStorage(() => AsyncStorage) },
+    { name: 'fp.meals.v1', version: 1, storage: persistStorage() },
   ),
 );

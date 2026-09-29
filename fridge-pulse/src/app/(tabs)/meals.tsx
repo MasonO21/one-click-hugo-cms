@@ -87,7 +87,7 @@ export default function Meals() {
         <>
           {isDemoMode ? (
             <Text variant="caption" faint>
-              Demo mode: ideas come from a built-in list. Connect the backend for AI-written recipes.
+              Preview: ideas come from a built-in recipe list. With the scanning service connected, recipes are written by AI to fit your items.
             </Text>
           ) : null}
 

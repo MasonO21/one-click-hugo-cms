@@ -1,5 +1,6 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 export interface Photo {
   uri: string;
@@ -19,8 +20,12 @@ function toPhotos(result: ImagePicker.ImagePickerResult): Photo[] {
 }
 
 export async function takePhoto(): Promise<PickResult> {
-  const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) return { denied: true };
+  // On web the picker opens the device camera through a file input (`capture`), which needs no
+  // permission step; requesting getUserMedia here would be refused inside embedded viewers.
+  if (Platform.OS !== 'web') {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return { denied: true };
+  }
   try {
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 });
     return { photos: toPhotos(result) };

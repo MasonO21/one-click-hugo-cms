@@ -46,7 +46,9 @@ Docs: https://docs.expo.dev/eas/index.md
 - Checks to run before finishing: `npm run typecheck && npm run lint && npm test`, and `cd server && npm run typecheck && npm test`.
 - `docs.expo.dev` and `api.expo.dev` can be blocked in cloud sessions, so `npx expo install` and `npx expo lint` auto-setup fail there. Use the installed packages' `.d.ts` files as the API reference, and take SDK-compatible versions from `node_modules/expo/bundledNativeModules.json`.
 - `EXPO_PUBLIC_*` values are inlined at build time; after changing them run Metro / `expo export` with `--clear`.
-- `Alert.alert` is a no-op on web. Use `confirm()` from `src/lib/dialogs.ts` for any flow that awaits an answer.
+- `Alert.alert` is a no-op on web and embedded viewers suppress `window.confirm`. Use `confirm()` / `notify()` from `src/lib/dialogs.ts` (native alert, or the in-app `DialogHost` on web) for any flow that awaits an answer.
+- Persisted stores use `persistStorage()` (`src/store/storage.ts`), which never rejects. A rejected read would leave a store un-hydrated and the app stuck on its splash screen.
+- `npm run preview:build` builds the hosted web preview into `preview/` (git-ignored). Test it against a strict CSP, a nested path and a phone viewport; see the README.
 - Billing must fail closed: never make the local trial provider reachable in a production build (`src/billing/index.ts`).
 - The app and server share one JSON contract (`server/src/schemas.ts` <-> `src/lib/types.ts`, `src/lib/api.ts`). Change both together.
 - Server model calls follow the Claude API notes: `claude-opus-5-5` default, no `thinking` / sampling params, explicit `output_config.effort`, structured output via `beta.messages.parse`, `fallbacks: "default"`, and `stop_reason` checked before reading content.

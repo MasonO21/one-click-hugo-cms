@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addDays, todayISO } from '../lib/dates';
 import { newId } from '../lib/scan';
+import { safeStorage } from '../store/storage';
 import type { BillingProvider } from './types';
 import { computeLocalEntitlement, PRICE_PER_MONTH, type LocalBillingState } from './trial';
 
@@ -17,7 +17,7 @@ export function createLocalProvider(): BillingProvider {
 
   async function load() {
     try {
-      const raw = await AsyncStorage.getItem(KEY);
+      const raw = await safeStorage.getItem(KEY);
       return raw ? { ...EMPTY, ...JSON.parse(raw) } : { ...EMPTY };
     } catch {
       return { ...EMPTY };
@@ -25,7 +25,7 @@ export function createLocalProvider(): BillingProvider {
   }
   async function save(state: typeof EMPTY) {
     try {
-      await AsyncStorage.setItem(KEY, JSON.stringify(state));
+      await safeStorage.setItem(KEY, JSON.stringify(state));
     } catch {
       // Storage failures degrade to a non-persistent trial in demo mode only.
     }

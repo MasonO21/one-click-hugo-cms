@@ -1,13 +1,5 @@
 import { Alert, Platform } from 'react-native';
-
-/** One-button message. `Alert.alert` does nothing on web, so fall back to `window.alert`. */
-export function notify(title: string, message: string): void {
-  if (Platform.OS === 'web') {
-    if (typeof window !== 'undefined') window.alert(`${title}\n\n${message}`);
-    return;
-  }
-  Alert.alert(title, message);
-}
+import { useDialog } from '../store/dialog';
 
 interface ConfirmOptions {
   title: string;
@@ -18,13 +10,13 @@ interface ConfirmOptions {
 }
 
 /**
- * Two-button confirmation that resolves true/false. React Native's `Alert.alert` is a
- * no-op on web, so previews fall back to `window.confirm`; a hung promise there would
- * stall any flow that awaits the answer.
+ * Two-button confirmation that resolves true/false. Native uses the system alert. On web,
+ * `Alert.alert` is a no-op and `window.confirm` is unavailable in embedded viewers, so an
+ * in-app dialog (see DialogHost) is shown instead. Never leaves the promise pending.
  */
 export function confirm({ title, message, confirmLabel, cancelLabel = 'Cancel', destructive }: ConfirmOptions): Promise<boolean> {
   if (Platform.OS === 'web') {
-    return Promise.resolve(typeof window !== 'undefined' && window.confirm(`${title}\n\n${message}`));
+    return useDialog.getState().ask({ title, message, confirmLabel, cancelLabel, destructive: !!destructive });
   }
   return new Promise((resolve) => {
     Alert.alert(
@@ -38,4 +30,13 @@ export function confirm({ title, message, confirmLabel, cancelLabel = 'Cancel', 
       { cancelable: true, onDismiss: () => resolve(false) },
     );
   });
+}
+
+/** One-button message. */
+export function notify(title: string, message: string): void {
+  if (Platform.OS === 'web') {
+    void useDialog.getState().ask({ title, message, confirmLabel: 'OK', cancelLabel: null, destructive: false });
+    return;
+  }
+  Alert.alert(title, message);
 }

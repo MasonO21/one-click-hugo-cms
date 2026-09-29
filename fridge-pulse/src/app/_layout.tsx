@@ -4,8 +4,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext, SafeAreaProvider } from 'react-native-safe-area-context';
 import { isUnlocked } from '../billing/trial';
+import { DialogHost } from '../components/DialogHost';
+import { useEmbeddedFonts } from '../lib/embeddedFonts';
 import { configureNotifications, syncReminders } from '../lib/notifications';
 import { useBilling } from '../store/billing';
 import { useHydrated } from '../store/hydration';
@@ -13,6 +15,8 @@ import { useInventory } from '../store/inventory';
 import { useMealsCache } from '../store/mealsCache';
 import { useSettings } from '../store/settings';
 import { useTheme } from '../theme';
+
+const NO_INSETS = { top: 0, right: 0, bottom: 0, left: 0 };
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 configureNotifications();
@@ -70,7 +74,8 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  const ready = hydrated && billingReady;
+  const fontsReady = useEmbeddedFonts();
+  const ready = hydrated && billingReady && fontsReady;
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
@@ -89,8 +94,8 @@ export default function RootLayout() {
     },
   };
 
-  return (
-    <SafeAreaProvider>
+  const app = (
+    <>
       <ThemeProvider value={navTheme}>
         <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
@@ -109,7 +114,15 @@ export default function RootLayout() {
         </Stack>
         <ReminderSync enabled={unlocked} />
         {unlocked && Platform.OS !== 'web' ? <NotificationRouter /> : null}
+        <DialogHost />
       </ThemeProvider>
+    </>
+  );
+
+  return (
+    <SafeAreaProvider>
+      {/* On web the hosting page already pads for device safe areas; padding here would double it. */}
+      {Platform.OS === 'web' ? <SafeAreaInsetsContext.Provider value={NO_INSETS}>{app}</SafeAreaInsetsContext.Provider> : app}
     </SafeAreaProvider>
   );
 }

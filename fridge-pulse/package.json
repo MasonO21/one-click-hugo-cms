@@ -44,7 +44,8 @@
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "export:web": "EXPO_PUBLIC_BILLING_MODE=demo expo export --platform web",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "preview:build": "node scripts/build-preview.mjs"
   },
   "private": true,
   "jest": {

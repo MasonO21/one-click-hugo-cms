@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { Alert, Linking, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Switch, View } from 'react-native';
 import { getProvider, useBilling } from '../../store/billing';
 import { TRIAL_DAYS } from '../../billing/trial';
 import { Button } from '../../components/Button';
@@ -27,6 +27,9 @@ const DIETS: { value: Diet; label: string }[] = [
   { value: 'gluten-free', label: 'Gluten-free' },
   { value: 'dairy-free', label: 'Dairy-free' },
 ];
+
+// Phone notifications only exist in the native app.
+const remindersSupported = Platform.OS !== 'web';
 
 const formatHour = (h: number) => {
   const suffix = h >= 12 ? 'PM' : 'AM';
@@ -125,31 +128,39 @@ export default function Settings() {
       </Section>
 
       <Section title="Reminders">
-        <Row
-          label="Expiry reminders"
-          hint="A daily note about food expiring today or tomorrow"
-          right={
-            <Switch
-              testID="reminders-switch"
-              value={settings.remindersEnabled}
-              onValueChange={(v) => void toggleReminders(v)}
-              trackColor={{ true: c.primary, false: c.border }}
-              thumbColor="#FFFFFF"
+        {remindersSupported ? (
+          <>
+            <Row
+              label="Expiry reminders"
+              hint="A daily note about food expiring today or tomorrow"
+              right={
+                <Switch
+                  testID="reminders-switch"
+                  value={settings.remindersEnabled}
+                  onValueChange={(v) => void toggleReminders(v)}
+                  trackColor={{ true: c.primary, false: c.border }}
+                  thumbColor="#FFFFFF"
+                />
+              }
             />
-          }
-        />
-        {settings.remindersEnabled ? (
-          <Row
-            label="Time"
-            right={
-              <Stepper
-                label={formatHour(settings.reminderHour)}
-                onDecrement={() => settings.set({ reminderHour: (settings.reminderHour + 23) % 24 })}
-                onIncrement={() => settings.set({ reminderHour: (settings.reminderHour + 1) % 24 })}
+            {settings.remindersEnabled ? (
+              <Row
+                label="Time"
+                right={
+                  <Stepper
+                    label={formatHour(settings.reminderHour)}
+                    onDecrement={() => settings.set({ reminderHour: (settings.reminderHour + 23) % 24 })}
+                    onIncrement={() => settings.set({ reminderHour: (settings.reminderHour + 1) % 24 })}
+                  />
+                }
               />
-            }
-          />
-        ) : null}
+            ) : null}
+          </>
+        ) : (
+          <Text variant="caption" muted>
+            Expiry reminders are sent as phone notifications, so they are available in the mobile app.
+          </Text>
+        )}
       </Section>
 
       <Section title="Meal preferences">

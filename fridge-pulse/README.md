@@ -26,6 +26,17 @@ npx expo start          # press i / a for a simulator, or scan the QR code with 
 
 With no configuration the app runs in **demo mode**: "Try a sample scan" returns sample food, meal ideas come from a built-in recipe list, and the trial is simulated on the device. Settings has buttons to jump the trial to "ends in 3 days" or "expired" so you can see the paywall.
 
+## Web preview (view it in a phone browser)
+
+`npm run preview:build` writes a self-contained, demo-mode build of the app to `preview/`:
+
+- `index.html` is the page content (title, styles, a small bootstrap). Wrap it in a normal HTML shell if you host it yourself, or publish it as-is where the host adds the shell.
+- `app.js` is the app bundle, with asset URLs made relative so it works from any folder.
+
+The preview simulates the trial on the device, returns sample items for "Analyze", and uses the built-in recipes. It is a preview of the app's screens and flow, not the native app: no push notifications, and "Take photo" uses the browser's file/camera picker. Screens that need a confirmation use an in-app dialog because browsers and embedded viewers do not reliably show `confirm()`.
+
+The bootstrap also keeps the preview working where a host serves it from a nested URL, blocks history changes, or forbids `<base>`, and follows an explicit light/dark choice from the host.
+
 ## Run it with real scanning
 
 1. Start the backend (needs an Anthropic API key):
@@ -90,7 +101,7 @@ RevenueCat needs a **development build** (not Expo Go): `npx eas-cli build --pro
 ## Development
 
 ```bash
-npm test               # 52 app tests (dates, expiry, shelf life, meals, reminders, billing rules, scan parsing)
+npm test               # 57 app tests (dates, expiry, shelf life, meals, reminders, billing rules, scan parsing)
 npm run typecheck
 npm run lint
 cd server && npm test  # 30 server tests
@@ -113,8 +124,8 @@ The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib
 
 Verified in the build environment:
 
-- App and server typecheck, lint is clean, and all 52 + 30 tests pass.
-- The exported web build was driven in Chromium through the full journey in light and dark mode: onboarding, trial, sample scan, review and edit, save, every tab, item detail, trial expiry to paywall, and re-subscribe.
+- App and server typecheck, lint is clean, and all 57 + 30 tests pass.
+- The exported web build was driven in Chromium through the full journey in light and dark mode, and the web preview was also run on an emulated iPhone, inside a sandboxed iframe, from a nested path, under a strict content-security policy: onboarding, trial, sample scan, review and edit, save, every tab, item detail, trial expiry to paywall, and re-subscribe.
 - End to end against the real server with only Anthropic faked: a real 2400x1800 photo is downscaled to 1568px, uploaded, validated, sent to the model with the expected model, effort, structured-output format and fallback setting, and the parsed result, label-date handling, meal ideas and a model refusal all surface correctly in the UI.
 
 **Not verified** (needs your hands or credentials):

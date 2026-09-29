@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { persistStorage } from './storage';
 import { addDays, todayISO } from '../lib/dates';
 import type { ItemStatus, PantryItem } from '../lib/types';
 
@@ -44,6 +44,6 @@ export const useInventory = create<InventoryState>()(
       removeItem: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       clear: () => set({ items: [] }),
     }),
-    { name: 'fp.inventory.v1', version: 1, storage: createJSONStorage(() => AsyncStorage) },
+    { name: 'fp.inventory.v1', version: 1, storage: persistStorage() },
   ),
 );

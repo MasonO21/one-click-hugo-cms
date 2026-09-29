@@ -47,3 +47,7 @@ server/dist/
 .env
 .env.*
 !.env.example
+
+# web preview build output
+preview/
+.preview-export/
