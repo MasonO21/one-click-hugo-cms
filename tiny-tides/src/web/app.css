@@ -297,3 +297,8 @@ body.reduce *{animation-duration:.001s!important}
 .coach.compact .skip{display:none}
 @media (max-height:720px){#sheet{max-height:min(44vh,330px)}.portrait{width:54px;height:54px}}
 @media (min-width:700px){.pill{font-size:19px;height:44px}.tab{min-height:60px}.tab .ic{width:34px;height:34px}#nav{max-width:640px}}
+
+#stats{position:absolute;left:calc(var(--sal) + 10px);right:calc(var(--sar) + 10px);bottom:calc(var(--sab) + 84px);display:none;justify-content:center;gap:8px;z-index:3;pointer-events:none}
+#stats.show{display:flex}
+#stats .chip{height:34px;font-size:13.5px;background:rgba(255,255,255,.9)}
+body[data-tut] #stats{display:none!important}

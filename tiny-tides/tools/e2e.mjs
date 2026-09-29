@@ -22,7 +22,7 @@ page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) errs.pu
 let n = 0;
 const shot = async (name) => { await page.waitForTimeout(350); await page.screenshot({ path: path.join(shots, `${String(++n).padStart(2, '0')}-${name}.png`) }); };
 const ev = (fn, arg) => page.evaluate(fn, arg);
-const tapXY = async (x, y) => { await page.touchscreen.tap(x, y); await page.waitForTimeout(120); };
+const tapXY = async (x, y) => { const hit = await page.evaluate(({ x, y }) => { const e = document.elementFromPoint(x, y); return e && e.id !== 'scene' ? (e.className || e.tagName) : ''; }, { x, y }); if (hit) fail(`tap at ${Math.round(x)},${Math.round(y)} lands on a DOM overlay (${hit}) instead of the canvas`); await page.touchscreen.tap(x, y); await page.waitForTimeout(120); };
 const tapTile = async (t) => { const [x, y] = await ev(({ x, y }) => window.__tt.scene.tileCenter(x, y), t); await tapXY(x, y); };
 const tapCreature = async (id) => { const [x, y] = await ev((id) => { const sc = window.__tt.scene; const v = sc.views.get(id); const [px, py] = sc.tileCenter(v.x, v.y); return [px, py - sc.ts * 0.15]; }, id); await tapXY(x, y); };
 const click = async (sel) => { const e = page.locator(sel).first(); await e.waitFor({ state: 'visible', timeout: 4000 }); await e.click({ force: true }); await page.waitForTimeout(150); };

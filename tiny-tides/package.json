@@ -2,20 +2,25 @@
   "name": "tiny-tides",
   "version": "1.0.0",
   "private": true,
-  "description": "Tiny Tides — an idle tidepool ecosystem you check on a few times a day.",
+  "description": "Tiny Tides \u2014 an idle tidepool ecosystem you check on a few times a day.",
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
     "build:demo": "node tools/build.mjs --demo",
     "dev": "node tools/build.mjs --watch --debug",
     "test": "node --test test/*.test.mjs",
-    "test:e2e": "node tools/e2e.mjs",
+    "test:e2e": "node tools/build.mjs --debug && node tools/e2e.mjs",
     "balance": "node tools/balance.mjs",
-    "assets": "node tools/gen-assets.mjs",
-    "screenshots": "node tools/screenshots.mjs",
+    "assets": "node tools/gen-assets.mjs && npx capacitor-assets generate --ios --iconBackgroundColor '#7f8cff' --splashBackgroundColor '#1b1145'",
     "ios:add": "npx cap add ios",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "ios:configure": "node tools/configure-ios.mjs",
+    "storekit": "node tools/gen-storekit.mjs",
+    "rename": "node tools/rename-bundle.mjs",
+    "release": "npm test && npm run build && npx cap sync ios",
+    "sheet": "node tools/contact-sheet.mjs",
+    "store-shots": "node tools/screenshots.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -35,6 +40,10 @@
     "@capacitor/cli": "^8.5.2",
     "@fontsource/fredoka": "^5.3.0",
     "esbuild": "^0.28.2",
-    "playwright": "^1.56.1"
+    "playwright": "^1.56.1",
+    "sharp": "^0.32.6"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

@@ -136,7 +136,22 @@ export function createUI(G) {
       if (id === 'shop') show = !s.iap.starter && s.tut.done && false;
       if (dot) dot.hidden = !show;
     });
+    updateStats(s, n);
     if (G.selected && sheetOpen && tick % 2 === 0) updateSheetLive();
+  }
+
+  let statsSig = '';
+  function updateStats(s, n) {
+    const el0 = $('#stats'), show = G.tab === 'pool' && !sheetOpen && s.tut.done && !modals.length;
+    if (el0.classList.contains('show') !== show) { el0.classList.toggle('show', show); setTimeout(() => ui.layoutChanged(), 0); }
+    if (!show) return;
+    const p = pool(), rate = S.totalRate(s, n), pop = S.population(p), cap = S.popCap(s, p);
+    const egg = pop >= cap ? 'Pool full' : `Egg in ${S.fmtDur(Math.max(0, p.nextEgg - n))}`;
+    const spring = S.springTide(n).on;
+    const sig = `${Math.round(rate)}|${pop}|${cap}|${egg}|${spring}`;
+    if (sig === statsSig) return;
+    statsSig = sig;
+    el0.innerHTML = `<div class="chip">${ic('i-pearl')}<span>${fmt(rate)}/h${spring ? ' ✦' : ''}</span></div><div class="chip">${ic('i-heart')}<span>${pop}/${cap} friends</span></div><div class="chip">${ic('i-sparkle')}<span>${egg}</span></div>`;
   }
 
   // ------------------------------------------------------------------ Build dock
@@ -176,8 +191,9 @@ export function createUI(G) {
     const cs = (e) => parseFloat(getComputedStyle(e).bottom) || 84;
     if (sheetOpen) { const sh = $('#sheet'); bottom = cs(sh) + sh.offsetHeight + 6; }
     else if (G.tab === 'build') { renderDock(); const d = $('#dock'); bottom = cs(d) + d.offsetHeight + 4; }
-    const coach = $('#coach .coach');
-    if (coach) top = Math.max(top, coach.getBoundingClientRect().bottom + 6);
+    else { const stt = $('#stats'); if (stt.classList.contains('show')) bottom = cs(stt) + 34 + 6; }
+    const coach = $('#coach .coach');   // measure the layout box, not the animated rect (it slides in with a transform)
+    if (coach) top = Math.max(top, $('#coach').getBoundingClientRect().top + coach.offsetHeight + 6);
     const ins = { top, bottom: Math.max(bottom, 80) };
     if (scene.W !== W || scene.H !== H || scene.dpr !== Math.min(dpr, 2.5)) scene.resize(W, H, dpr, ins);
     else scene.setInsets(ins);
@@ -505,7 +521,7 @@ export function createUI(G) {
       <div class="setrow"><span>Reminders<small>Max 3 a day, never at night</small></span>${sw('notif')}</div>
       <div class="setrow"><span>Reduce motion<small>Calmer effects</small></span>${sw('reduceMotion')}</div>
       <div class="setrow"><span>Battery saver<small>Lower frame rate &amp; effects</small></span>${sw('battery')}</div>
-      <div class="rowb mt"><button class="btn lav small" data-act="restore">Restore purchases</button><button class="btn ghost small" data-act="tutorialreplay">Replay tips</button></div>
+      <div class="rowb mt"><button class="btn lav small" data-act="restore">Restore purchases</button></div>
       <div class="rowb mt"><button class="link" data-act="link:privacy">Privacy Policy</button><button class="link" data-act="link:terms">Terms of Use</button><button class="link" data-act="link:support">Support</button></div>
       <div class="rowb"><button class="link" data-act="privacysummary">What data do we collect?</button></div>
       <p class="muted center mt">Tiny Tides v${VERSION}${store.mode === 'demo' ? ' · demo build' : ''}<br>Made with ${ic('i-heart', 's')} for tidepool lovers</p>
@@ -596,7 +612,6 @@ export function createUI(G) {
     link(v) { openUrl(LINKS[v]); },
     privacysummary() { ui.showPrivacySummary(); },
     async reset() { if (await ui.confirm({ title: 'Reset everything?', body: 'This permanently deletes your tidepool, creatures and progress. Purchases can be restored.', ok: 'Reset', danger: true })) { if (await ui.confirm({ title: 'Are you sure?', body: 'There is no undo.', ok: 'Yes, reset', danger: true })) G.reset(); } },
-    tutorialreplay() { ui.closeAllModals(); ui.toast('Tips are only for new pools — enjoy!'); },
     tutstart() { ui.closeModal('intro'); G.tutorialStart(); },
     async tutskip() { if (await ui.confirm({ title: 'Skip the tips?', body: "You can always figure things out as you go. I'll be here!", ok: 'Skip', cancel: 'Keep going' })) { G.tutorialSkip(); } },
     notifyes() { ui.closeModal('notifask'); G.setSetting('notif', true); },

@@ -78,11 +78,11 @@ export function createScene(canvas) {
     sc._baseKey = '';
   };
   sc.layoutFor = (pool, W, H, insets) => {
-    // slab = grid + 0.22 padding each side + 0.34 of depth underneath
-    const availW = W - 22, availH = H - insets.top - insets.bottom - 10;
-    const ts = Math.max(28, Math.min(availW / (pool.w + 0.5), availH / (pool.h + 0.5 + 0.34), W >= 700 ? 130 : 92));
+    // slab = grid + 0.22 padding each side + 0.34 of depth underneath; plus 0.5 tile of headroom for bubbles above the top row
+    const HEAD = 0.5, availW = W - 22, availH = H - insets.top - insets.bottom - 10;
+    const ts = Math.max(28, Math.min(availW / (pool.w + 0.5), availH / (pool.h + 0.5 + 0.34 + HEAD), W >= 700 ? 130 : 92));
     const gw = ts * pool.w, gh = ts * pool.h;
-    return { ts, ox: (W - gw) / 2, oy: insets.top + 5 + (availH - (gh + ts * (0.44 + 0.34))) / 2 + ts * 0.22 };
+    return { ts, ox: (W - gw) / 2, oy: insets.top + 5 + ts * HEAD + (availH - (gh + ts * (0.44 + 0.34 + HEAD))) / 2 + ts * 0.22 };
   };
   sc.setInsets = (ins) => { sc.insets = ins; sc.relayout(); };
   sc.relayout = () => {
@@ -511,15 +511,15 @@ export function createScene(canvas) {
     const [W, H] = size, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const pool = sc.pool(), ins = { top: H * 0.1, bottom: H * 0.12 };
     const lay = sc.layoutFor(pool, W, H, ins);
-    const keep = { dpr: sc.dpr };
-    sc.dpr = 1;
+    const keep = { dpr: sc.dpr, ts: sc.ts, ox: sc.ox, oy: sc.oy };
+    sc.dpr = 1; sc.ts = lay.ts; sc.ox = lay.ox; sc.oy = lay.oy;      // object placement reads the live layout fields
     const c = cv.getContext('2d');
-    draw(c, W, H, 1, nowMs, sc.time, { live: false, layout: lay });
+    try { draw(c, W, H, 1, nowMs, sc.time, { live: false, layout: lay }); }
+    finally { sc.dpr = keep.dpr; sc.ts = keep.ts; sc.ox = keep.ox; sc.oy = keep.oy; }
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.font = '700 54px Fredoka, ui-rounded, system-ui, sans-serif'; c.textAlign = 'center';
     c.lineWidth = 10; c.strokeStyle = 'rgba(59,29,94,.9)'; c.lineJoin = 'round'; c.strokeText('Tiny Tides', W / 2, H * 0.075); c.fillStyle = '#fff'; c.fillText('Tiny Tides', W / 2, H * 0.075);
     c.font = '600 28px Fredoka, ui-rounded, system-ui, sans-serif'; c.strokeText(`${S.dexCount(sc.state)} / ${D.FORM_IDS.length} creatures discovered`, W / 2, H * 0.955); c.fillText(`${S.dexCount(sc.state)} / ${D.FORM_IDS.length} creatures discovered`, W / 2, H * 0.955);
-    sc.dpr = keep.dpr;
     return cv;
   };
   return sc;

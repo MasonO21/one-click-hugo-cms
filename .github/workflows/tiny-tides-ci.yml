@@ -1,0 +1,20 @@
+name: Tiny Tides CI
+on:
+  push:
+    paths: ['tiny-tides/**']
+  pull_request:
+    paths: ['tiny-tides/**']
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: tiny-tides } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: tiny-tides/package-lock.json }
+      - run: npm ci
+        env: { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }
+      - run: npm test
+      - run: npm run build
+      - name: Release bundle must not contain debug hooks
+        run: "! grep -q '__tt' www/app.js"

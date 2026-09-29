@@ -1,0 +1,162 @@
+{
+  "identifier": "TINYTIDES1",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "6470000001",
+      "localizations": [
+        {
+          "description": "60 Sea Glass to skip evolution timers and buy decor.",
+          "displayName": "60 Sea Glass",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.glass.60",
+      "referenceName": "60 Sea Glass",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "6470000002",
+      "localizations": [
+        {
+          "description": "330 Sea Glass to skip evolution timers and buy decor.",
+          "displayName": "330 Sea Glass",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.glass.330",
+      "referenceName": "330 Sea Glass",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "6470000003",
+      "localizations": [
+        {
+          "description": "700 Sea Glass to skip evolution timers and buy decor.",
+          "displayName": "700 Sea Glass",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.glass.700",
+      "referenceName": "700 Sea Glass",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "19.99",
+      "familyShareable": false,
+      "internalID": "6470000004",
+      "localizations": [
+        {
+          "description": "1500 Sea Glass to skip evolution timers and buy decor.",
+          "displayName": "1500 Sea Glass",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.glass.1500",
+      "referenceName": "1500 Sea Glass",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "7.99",
+      "familyShareable": false,
+      "internalID": "6470000005",
+      "localizations": [
+        {
+          "description": "Unlocks the glowing Deep Ocean biome with 28 new creatures.",
+          "displayName": "Deep Ocean Biome",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.deepocean",
+      "referenceName": "Deep Ocean Biome",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "6470000006",
+      "localizations": [
+        {
+          "description": "Evolution timers 25% shorter forever, plus one free instant finish per day.",
+          "displayName": "Golden Hourglass",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.hourglass",
+      "referenceName": "Golden Hourglass",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "6470000007",
+      "localizations": [
+        {
+          "description": "A cosmetic decor bundle: pool skin, props, hats and effects.",
+          "displayName": "Sakura Shore Pack",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.pack.sakura",
+      "referenceName": "Sakura Shore Pack",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "6470000008",
+      "localizations": [
+        {
+          "description": "A cosmetic decor bundle: pool skin, props, hats and effects.",
+          "displayName": "Neon Arcade Pack",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.pack.neon",
+      "referenceName": "Neon Arcade Pack",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "6470000009",
+      "localizations": [
+        {
+          "description": "A cosmetic decor bundle: pool skin, props, hats and effects.",
+          "displayName": "Pool Party Pack",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.pack.party",
+      "referenceName": "Pool Party Pack",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "6470000010",
+      "localizations": [
+        {
+          "description": "200 Sea Glass, a Party Hat and the Bubblegum pool skin.",
+          "displayName": "Starter Bundle",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.tinytides.game.starter",
+      "referenceName": "Starter Bundle",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {},
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}
