@@ -64,6 +64,10 @@ async function boot() {
       if (G.tab === 'build' && G.tool) return;
       ui.openSheet(hit.id); G.pet(hit.id); return;
     }
+    if (hit.type === 'tile') {
+      const pl = G.state.pools[G.biome], tl = pl.tiles[hit.y * pl.w + hit.x];
+      if (tl?.d === 'capsulemachine' && G.state.tut.done && !(G.tab === 'build' && G.tool)) { ui.openGacha(); return; }
+    }
     if (ui.sheetIsOpen()) ui.closeSheet();
   }
 

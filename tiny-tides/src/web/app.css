@@ -302,3 +302,76 @@ body.reduce *{animation-duration:.001s!important}
 #stats.show{display:flex}
 #stats .chip{height:34px;font-size:13.5px;background:rgba(255,255,255,.9)}
 body[data-tut] #stats{display:none!important}
+
+/* ---------- Capsule Machine ---------- */
+.modal.gz .mh{flex-wrap:nowrap;font-size:22px;padding-left:16px}
+.modal.gz .mh>span{display:flex;align-items:center;gap:2px;min-width:0;white-space:nowrap}
+.gz-pills{display:inline-flex;gap:5px;margin-left:8px;vertical-align:middle}
+.gz-pill{display:inline-flex;align-items:center;gap:3px;background:#fff;border:2.5px solid var(--ink);border-radius:999px;padding:0 9px 0 4px;height:28px;font-size:14px;font-weight:700}
+.gz-pill .ic{width:20px;height:20px}
+.gz-spot{background:linear-gradient(#fff6c9,#ffe28a);border:3px solid var(--ink);border-radius:18px;padding:6px 10px 8px;margin-bottom:8px}
+.gz-spot-h{display:flex;align-items:center;gap:5px;font-weight:700;font-size:13.5px;justify-content:space-between}
+.gz-spot-h small{color:var(--ink2);font-weight:600}
+.gz-spot-row{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+.gz-spot-item{display:flex;align-items:center;gap:6px;flex:1;min-width:140px;font-size:13px;line-height:1.15}
+.gz-spot-item canvas{width:44px;height:44px;flex:none;background:rgba(255,255,255,.6);border-radius:12px;border:2px solid var(--ink)}
+.gz-spot-item small{display:block;font-size:11px;color:var(--ink2);font-weight:600}
+.gz-stage{position:relative;background:radial-gradient(circle at 50% 30%,#ffffff,#d9ecff 60%,#c1dbff);border:3px solid var(--ink);border-radius:22px;padding:6px 0 0;display:flex;justify-content:center;overflow:hidden}
+.gz-cv{display:block;touch-action:manipulation;cursor:pointer}
+.gz-cap{position:absolute;left:8px;right:8px;bottom:8px;background:#fff;border:3px solid var(--ink);border-radius:20px;padding:6px 10px 8px;text-align:center;box-shadow:0 4px 0 var(--ink);pointer-events:none}
+.gz-cap.in{animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+.gz-cap h3{margin:0;font-size:22px;line-height:1.1}
+.gz-tier{font-size:18px;letter-spacing:.15em;text-shadow:-1px 0 var(--ink),1px 0 var(--ink),0 -1px var(--ink),0 1px var(--ink)}
+.gz-kind{font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:3px}
+.gz-cap .new{display:inline-block;background:linear-gradient(#ff9ad8,#f04fa8);color:#fff;border:2.5px solid var(--ink);border-radius:999px;padding:0 12px;font-weight:700;letter-spacing:.05em;animation:pulse 1s infinite}
+.gz-cap .chips{margin:2px 0 0}
+.gz-sum{position:absolute;inset:0;background:rgba(255,250,241,.97);padding:8px 10px;overflow:auto;text-align:center}
+.gz-sum h3{margin:0 0 6px;font-size:20px}
+.gz-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.gz-cell{min-width:0;position:relative;background:#fff;border:2.5px solid var(--tc,var(--ink));border-radius:14px;padding:2px 0 3px;font-size:9.5px;font-weight:700;line-height:1.1;box-shadow:0 0 0 1.5px var(--ink)}
+.gz-cell canvas{width:100%;aspect-ratio:1;display:block}
+.gz-cell span{display:block;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gz-cell.tier-rare,.gz-cell.tier-legendary{background:linear-gradient(#fffbe0,#ffe9a0)}
+.gz-cell i{position:absolute;top:-6px;right:-4px;font-style:normal;font-size:9px;padding:0 5px;border-radius:8px;border:2px solid var(--ink);color:#fff}
+.gz-cell i.nw{background:var(--bad)}.gz-cell i.dp{background:#8b66f0}
+.gz-pity{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;align-items:center;font-size:12.5px;font-weight:600;padding:8px 0 4px}
+.gz-pity .ic{width:16px;height:16px}
+.gz-pity .link{font-size:12.5px;padding:0}
+.gz-ctl{display:flex;flex-direction:column;gap:8px}
+.gz-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gz-row .btn{min-width:0}
+.gz-wait{padding:14px}
+.toy.slot{border-color:var(--tc,var(--ink))}
+.toy.slot .cnt{position:absolute;top:-6px;right:-4px;font-size:10px;background:#8b66f0;color:#fff;border:2px solid var(--ink);border-radius:8px;padding:0 5px}
+.toy.slot.unk{border-color:var(--ink)}
+.toy.slot.tier-rare:not(.unk),.toy.slot.tier-legendary:not(.unk){background:linear-gradient(#fff9c9,#ffe68a)}
+.dexfam .fh .btn{max-width:56%}
+.rew .ic{width:16px;height:16px}
+.gz-detail-art{width:170px;height:170px;margin:0 auto;border-radius:26px;background:radial-gradient(circle at 50% 35%,#fff,color-mix(in srgb,var(--tc) 35%,#fff));border:3px solid var(--ink)}
+.gz-detail-art canvas{width:100%;height:100%;display:block}
+.prize-row{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px}
+.prize-row .pt{width:54px;height:54px;flex:none;background:#eaf6ff;border-radius:14px;border:2px solid var(--ink)}
+.prize-row .pn{flex:1;min-width:0;line-height:1.15}.prize-row .pn small{display:block;color:var(--ink2);font-weight:600;font-size:12px}
+details.rate-tier{background:#fff;border:3px solid var(--ink);border-radius:18px;margin-top:8px;overflow:hidden}
+details.rate-tier summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-weight:700;background:linear-gradient(color-mix(in srgb,var(--tc) 30%,#fff),color-mix(in srgb,var(--tc) 55%,#fff))}
+details.rate-tier summary::-webkit-details-marker{display:none}
+details.rate-tier .list{padding:8px;gap:4px}
+.rate-row{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
+.rate-row .rt canvas{width:34px;height:34px;display:block;background:#eaf6ff;border-radius:10px}
+.rate-row .rn{flex:1;min-width:0;line-height:1.15}.rate-row .rn small{display:block;color:var(--ink2);font-size:11px}
+.rate-row b{font-variant-numeric:tabular-nums}
+.rate-row .spot{font-style:normal;font-size:10.5px;background:#fff3a6;border:1.5px solid var(--ink);border-radius:8px;padding:0 5px;margin-left:4px}
+.fab#fab-capsule .round{background:linear-gradient(#ffd1ec,#ff9bd0)}
+@media (max-height:700px){.gz-spot-row{display:none}.gz-pity .muted{display:none}}
+
+.mf .gz-ctl{flex:1;min-width:0}
+.gz-ctl .btn{flex:none}
+.gz-row.one{grid-template-columns:1fr}
+.gz-spot{padding:5px 10px 6px}
+.gz-spot-item{font-size:12.5px}
+.gz-pity{padding:6px 0 0}
+.modal.gz .mf{padding-top:6px}
+.dexrow{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dexrow.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.gz-sum .chips{margin:6px 0 0}.gz-sum .chipx{font-size:14px;padding:2px 10px 2px 5px}
+.tabs.compact{gap:4px}.tabs.compact button{padding:5px 9px;font-size:13px;flex:1}

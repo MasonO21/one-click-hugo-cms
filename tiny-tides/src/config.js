@@ -15,5 +15,11 @@ export const POLICY = [
   ['Your game stays on your device', 'Your tidepool, creatures and settings are saved locally on your device and in your normal device backups. Deleting the app deletes the save.'],
   ['Purchases', 'Purchases are handled entirely by Apple. We never see your payment details. "Restore purchases" asks the App Store which items you already own.'],
   ['Notifications', 'Reminders are optional local notifications scheduled on your device. Nothing is sent from a server, and you can turn them off any time in Settings.'],
+  ['Capsule Machine', 'Capsule prizes are picked on your device using the published drop rates shown in the game. Nothing about your pulls is sent anywhere.'],
   ['Sharing pictures', 'When you tap Share, the picture is created on your device and handed to the iOS share sheet. You choose where it goes.'],
 ];
+
+// Storefront countries where paid random items (Sea Glass capsule pulls) are switched off. Free pulls and Capsule Coins still work.
+// Belgium's Gaming Commission treats paid loot boxes as gambling. Have a lawyer review this list for your release territories, or
+// remove those territories in App Store Connect. Apple returns ISO alpha-3 codes ("BEL"); alpha-2 is listed too for safety.
+export const NO_PAID_RANDOM = ['BE', 'BEL'];

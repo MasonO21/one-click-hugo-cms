@@ -81,7 +81,7 @@ export function newPool(biome, now) {
 export function newState(now, seed) {
   return {
     v: SAVE_VERSION, seed: ((seed ?? now) >>> 0) || 1, nid: 1, created: now, lastTick: now, lastSeen: now,
-    cur: { pearls: 150, glass: 20, tokens: 0 },
+    cur: { pearls: 150, glass: 20, tokens: 0, coins: 0 },
     lvl: 1, xp: 0,
     pools: { tide: newPool('tide', now) },
     dex: {}, dexClaimed: [],
@@ -92,7 +92,8 @@ export function newState(now, seed) {
     quests: { day: '', list: [], chest: false },
     daily: { n: 0, last: -99, shield: 1 },
     gift: { key: '' },
-    settings: { music: true, sfx: true, haptics: true, notif: false, reduceMotion: false, battery: false },
+    gacha: { pulls: 0, paidPulls: 0, pityR: 0, pityL: 0, shards: 0, owned: {}, freeDay: '', paidDay: '', paidToday: 0, setsClaimed: {}, milesClaimed: [] },
+    settings: { music: true, sfx: true, haptics: true, notif: false, reduceMotion: false, battery: false, paidPulls: true },
     stats: { collected: 0, pearls: 0, hatched: 0, evolved: 0, pets: 0, placed: 0, levelups: 0, gifts: 0, days: 0 },
     tut: { step: 0, done: false },
     flags: {},
@@ -133,7 +134,8 @@ export function deserialize(str, now) {
     st.pools[biome] = p;
   }
   if (!st.pools.tide) return null;
-  for (const k of ['pearls', 'glass', 'tokens']) if (!Number.isFinite(st.cur[k]) || st.cur[k] < 0) st.cur[k] = 0;
+  for (const k of ['pearls', 'glass', 'tokens', 'coins']) if (!Number.isFinite(st.cur[k]) || st.cur[k] < 0) st.cur[k] = 0;
+  sanitizeGacha(st);
   st.lvl = clamp(st.lvl | 0 || 1, 1, D.MAX_POOL_LVL);
   st.nid = Math.max(st.nid | 0, 1);
   for (const p of Object.values(st.pools)) for (const it of [...p.creatures, ...p.eggs]) st.nid = Math.max(st.nid, (it.id | 0) + 1);
@@ -650,7 +652,7 @@ export function ensureDaily(state, now) {
   while (list.length < D.QUEST_COUNT && bag.length) {
     const tpl = bag.splice(Math.floor(rand(state) * bag.length), 1)[0];
     const goal = tpl.scale ? Math.max(100, roundTo(rate * 2, 10)) : randInt(state, tpl.min, tpl.max);
-    list.push({ id: tpl.id, ev: tpl.ev, goal, prog: 0, done: false, claimed: false, glass: tpl.glass, pearls: Math.max(50, roundTo(rate * 0.3, 10)) });
+    list.push({ id: tpl.id, ev: tpl.ev, goal, prog: 0, done: false, claimed: false, glass: tpl.glass, coins: tpl.coins || 0, pearls: Math.max(50, roundTo(rate * 0.3, 10)) });
   }
   state.quests = { day: dk, list, chest: false };
   return true;
@@ -662,8 +664,9 @@ export function claimQuest(state, i) {
   q.claimed = true;
   state.cur.glass += q.glass;
   state.cur.pearls += q.pearls;
+  if (q.coins) state.cur.coins += q.coins;
   addXp(state, 10, []);
-  return { ok: true, glass: q.glass, pearls: q.pearls };
+  return { ok: true, glass: q.glass, pearls: q.pearls, coins: q.coins || 0 };
 }
 export function claimQuestChest(state) {
   const Q = state.quests;
@@ -671,6 +674,7 @@ export function claimQuestChest(state) {
   Q.chest = true;
   state.cur.glass += D.QUEST_ALL_BONUS.glass;
   state.cur.tokens += D.QUEST_ALL_BONUS.tokens;
+  state.cur.coins += D.QUEST_ALL_BONUS.coins || 0;
   return { ok: true, ...D.QUEST_ALL_BONUS };
 }
 export function dailyAvailable(state, now) { return state.daily.last !== dayNum(now); }
@@ -690,6 +694,7 @@ export function claimDaily(state, now) {
   if (r.pearlsHours) { out.pearls = Math.max(100, Math.round(totalRate(state, now) * r.pearlsHours)); state.cur.pearls += out.pearls; }
   if (r.glass) { out.glass = r.glass; state.cur.glass += r.glass; }
   if (r.tokens) { out.tokens = r.tokens; state.cur.tokens += r.tokens; }
+  if (r.coins) { out.coins = r.coins; state.cur.coins += r.coins; }
   return out;
 }
 export function giftAvailable(state, now) { return state.gift.key !== giftWindow(now).key; }
@@ -701,9 +706,10 @@ export function claimGift(state, now) {
   noteQuest(state, 'gift', 1);
   const r = rand(state), rate = totalRate(state, now);
   let out = { ok: true, window: w.name };
-  if (r < 0.6) { out.pearls = Math.max(80, Math.round(rate * (0.5 + rand(state)))); state.cur.pearls += out.pearls; }
-  else if (r < 0.85) { out.glass = randInt(state, 2, 4); state.cur.glass += out.glass; }
-  else if (r < 0.94) { out.tokens = 1; state.cur.tokens += 1; }
+  if (r < 0.55) { out.pearls = Math.max(80, Math.round(rate * (0.5 + rand(state)))); state.cur.pearls += out.pearls; }
+  else if (r < 0.78) { out.glass = randInt(state, 2, 4); state.cur.glass += out.glass; }
+  else if (r < 0.86) { out.tokens = 1; state.cur.tokens += 1; }
+  else if (r < 0.94) { out.coins = 1; state.cur.coins += 1; }
   else {
     const pool = state.pools.tide;
     const egg = population(pool) < popCap(state, pool) ? spawnEgg(state, pool, now, { warm: 0 }) : null;
@@ -718,6 +724,7 @@ export function decorPrice(id) { return DECOR[id].price || null; }
 export function buyDecor(state, id) {
   const d = DECOR[id];
   if (!d || state.own[id]) return fail('owned');
+  if (d.gacha) return fail('gacha');
   if (d.pack || !d.price) return fail('pack');
   if (d.price.pearls) { if (state.cur.pearls < d.price.pearls) return fail('pearls', { need: d.price.pearls }); state.cur.pearls -= d.price.pearls; }
   else { if (state.cur.glass < d.price.glass) return fail('glass', { need: d.price.glass }); state.cur.glass -= d.price.glass; }
@@ -797,4 +804,139 @@ export function applyProduct(state, productId, txId, now, opts = {}) {
     if (keys.length > 300) for (const k of keys.slice(0, keys.length - 300)) delete state.iap.done[k];
   }
   return out;
+}
+
+
+// ================================================================ Capsule Machine (gashapon)
+// Cosmetic collectibles only. All odds are derived from data.js weights; pity and spending limits are enforced here.
+function sanitizeGacha(st) {
+  const g = st.gacha;
+  for (const k of ['pulls', 'paidPulls', 'pityR', 'pityL', 'shards', 'paidToday']) if (!Number.isFinite(g[k]) || g[k] < 0) g[k] = 0;
+  for (const id of Object.keys(g.owned)) if (!D.POOL_BY_ID[id] || D.POOL_BY_ID[id].filler || !(g.owned[id] > 0)) delete g.owned[id];
+  for (const id of Object.keys(g.owned)) st.own[id] = true;       // ownership can never be lost to a partial save
+  if (!Array.isArray(g.milesClaimed)) g.milesClaimed = [];
+}
+export const gachaWeek = (now) => Math.floor(dayNum(now) / 7);
+const hash32 = (n) => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul(x, 2246822519) >>> 0; x ^= x >>> 13; return x >>> 0; };
+/** This week's Spotlight: one Rare and one Legendary collectible are `spotMult` times as likely as their tier siblings. */
+export function gachaSpotlight(now) {
+  const wk = gachaWeek(now), pick = (tier, salt) => { const list = D.POOL_BY_TIER[tier].filter((i) => !i.filler); return list[hash32(wk * 31 + salt) % list.length].id; };
+  return { week: wk, rare: pick('rare', 7), legendary: pick('legendary', 13), endsAt: (wk + 1) * 7 * 864e5 + new Date(now).getTimezoneOffset() * 60e3 + 4 * HOUR };
+}
+const tableCache = new Map();
+/** Full drop table for the current week. rows: { id, tier, prob, spotlight }, tiers: { tierId: prob }. Probabilities sum to 1. */
+export function gachaTable(now) {
+  const sp = gachaSpotlight(now), key = `${sp.rare}|${sp.legendary}`;
+  if (tableCache.has(key)) return tableCache.get(key);
+  const rows = [], tiers = {};
+  for (const t of D.GACHA.tiers) {
+    const items = D.POOL_BY_TIER[t.id], wOf = (i) => i.w * (i.id === sp.rare || i.id === sp.legendary ? D.GACHA.spotMult : 1);
+    const total = items.reduce((a, i) => a + wOf(i), 0);
+    tiers[t.id] = t.p / 100;
+    for (const i of items) rows.push({ id: i.id, tier: t.id, prob: (t.p / 100) * wOf(i) / total, spotlight: i.id === sp.rare || i.id === sp.legendary });
+  }
+  const out = { rows, tiers, spotlight: sp };
+  tableCache.set(key, out);
+  return out;
+}
+export const gachaFreeAvailable = (state, now) => state.gacha.freeDay !== dayKey(now);
+export function gachaPaidLeft(state, now) {
+  const g = state.gacha; return Math.max(0, D.GACHA.paidDailyCap - (g.paidDay === dayKey(now) ? g.paidToday : 0));
+}
+/** Pulls until the next guaranteed Rare-or-better / Legendary. */
+export function gachaPity(state) {
+  return { rare: Math.max(1, D.GACHA.pityRare - state.gacha.pityR), legendary: Math.max(1, D.GACHA.pityLegend - state.gacha.pityL) };
+}
+function pickWeighted(state, items, wOf) {
+  let r = rand(state) * items.reduce((a, i) => a + wOf(i), 0);
+  for (const i of items) { r -= wOf(i); if (r <= 0) return i; }
+  return items[items.length - 1];
+}
+function grantCapsule(state, item, now) {
+  const g = state.gacha, tier = D.TIER[item.tier], res = { id: item.id, tier: item.tier, kind: item.kind, name: item.name, isNew: false, shards: 0 };
+  if (item.filler) {
+    const r = item.reward; res.reward = {};
+    if (r.coins) { state.cur.coins += r.coins; res.reward.coins = r.coins; }
+    if (r.glass) { state.cur.glass += r.glass; res.reward.glass = r.glass; }
+    if (r.tokens) { state.cur.tokens += r.tokens; res.reward.tokens = r.tokens; }
+    if (r.pearlsHours) { const p = Math.max(100, Math.round(totalRate(state, now) * r.pearlsHours)); state.cur.pearls += p; res.reward.pearls = p; }
+    return res;
+  }
+  if (g.owned[item.id]) { g.owned[item.id]++; g.shards += tier.shards; res.shards = tier.shards; }
+  else { g.owned[item.id] = 1; res.isNew = true; }
+  state.own[item.id] = true;
+  return res;
+}
+/** One capsule. `sp` is this week's spotlight. Updates pity counters. */
+function rollCapsule(state, sp, now) {
+  const g = state.gacha, T = D.GACHA;
+  let tierId;
+  if (g.pityL + 1 >= T.pityLegend) tierId = 'legendary';
+  else if (g.pityR + 1 >= T.pityRare) tierId = rand(state) * (D.TIER.rare.p + D.TIER.legendary.p) < D.TIER.legendary.p ? 'legendary' : 'rare';
+  else { let r = rand(state) * 100; tierId = 'legendary'; for (const t of T.tiers) { if ((r -= t.p) < 0) { tierId = t.id; break; } } }
+  g.pityR++; g.pityL++;
+  if (tierId === 'legendary') { g.pityR = 0; g.pityL = 0; } else if (tierId === 'rare') g.pityR = 0;
+  const item = pickWeighted(state, D.POOL_BY_TIER[tierId], (i) => i.w * (i.id === sp.rare || i.id === sp.legendary ? T.spotMult : 1));
+  return grantCapsule(state, item, now);
+}
+/** mode: 'free' (daily, n=1) | 'coin' | 'glass'. Returns { ok, results[], paid, cost } or { ok:false, reason }. */
+export function gachaPull(state, n, mode, now) {
+  const g = state.gacha, T = D.GACHA;
+  if (!(n === 1 || n === 10)) return fail('count');
+  let cost = 0;
+  if (mode === 'free') {
+    if (n !== 1) return fail('count');
+    if (!gachaFreeAvailable(state, now)) return fail('used');
+  } else if (mode === 'coin') {
+    cost = T.costCoin * n;
+    if (state.cur.coins < cost) return fail('coins', { need: cost });
+  } else if (mode === 'glass') {
+    if (!state.settings.paidPulls) return fail('disabled');
+    cost = n === 10 ? T.costGlass10 : T.costGlass * n;
+    if (n > gachaPaidLeft(state, now)) return fail('cap', { left: gachaPaidLeft(state, now) });
+    if (state.cur.glass < cost) return fail('glass', { need: cost });
+  } else return fail('mode');
+  if (mode === 'free') g.freeDay = dayKey(now);
+  else if (mode === 'coin') state.cur.coins -= cost;
+  else {
+    state.cur.glass -= cost;
+    if (g.paidDay !== dayKey(now)) { g.paidDay = dayKey(now); g.paidToday = 0; }
+    g.paidToday += n; g.paidPulls += n;
+  }
+  const sp = gachaSpotlight(now), results = [];
+  for (let i = 0; i < n; i++) results.push(rollCapsule(state, sp, now));
+  g.pulls += n;
+  state.stats.pulls = (state.stats.pulls || 0) + n;
+  noteQuest(state, 'pull', n);
+  const events = [];
+  addXp(state, 2 * n, events);
+  return { ok: true, results, cost, mode, pity: gachaPity(state), events };
+}
+/** Prize Counter: exchange shards for a specific un-owned collectible. */
+export function prizeCost(id) { const it = D.POOL_BY_ID[id]; return it && !it.filler ? D.TIER[it.tier].prize : 0; }
+export function prizeBuy(state, id) {
+  const it = D.POOL_BY_ID[id], g = state.gacha;
+  if (!it || it.filler) return fail('nope');
+  if (g.owned[id]) return fail('owned');
+  const c = prizeCost(id);
+  if (g.shards < c) return fail('shards', { need: c });
+  g.shards -= c; g.owned[id] = 1; state.own[id] = true;
+  return { ok: true, cost: c };
+}
+export const toysOwned = (state) => D.COLLECTIBLE_IDS.reduce((a, id) => a + (state.gacha.owned[id] ? 1 : 0), 0);
+export function toySetInfo(state) {
+  return D.TOY_SETS.map((s) => ({ ...s, have: s.items.filter((i) => state.gacha.owned[i]).length, total: s.items.length, claimed: !!state.gacha.setsClaimed[s.id] }));
+}
+function giveReward(state, r) { if (r.coins) state.cur.coins += r.coins; if (r.glass) state.cur.glass += r.glass; if (r.tokens) state.cur.tokens += r.tokens; }
+export function claimToySet(state, id) {
+  const s = toySetInfo(state).find((x) => x.id === id);
+  if (!s || s.claimed || s.have < s.total) return fail('nope');
+  state.gacha.setsClaimed[id] = true; giveReward(state, s.reward);
+  return { ok: true, reward: s.reward };
+}
+export function claimToyMile(state, i) {
+  const m = D.TOY_MILESTONES[i], g = state.gacha;
+  if (!m || g.milesClaimed.includes(i) || toysOwned(state) < m.n) return fail('nope');
+  g.milesClaimed.push(i); giveReward(state, m.reward);
+  return { ok: true, reward: m.reward };
 }

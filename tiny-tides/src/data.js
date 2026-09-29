@@ -232,7 +232,7 @@ export const MAX_POOL_LVL = 30;
 export const bubbleCapHours = (lvl) => Math.min(12, 4 + 0.5 * (lvl - 1));
 
 export const DEX_MILESTONES = [
-  { n: 5, glass: 10 }, { n: 15, glass: 20 }, { n: 30, glass: 40 }, { n: 50, glass: 60 }, { n: 70, glass: 100 },
+  { n: 5, glass: 10, coins: 1 }, { n: 15, glass: 20, coins: 2 }, { n: 30, glass: 40, coins: 3 }, { n: 50, glass: 60, coins: 4 }, { n: 70, glass: 100, coins: 6 },
 ];
 
 // ---------------------------------------------------------------- shop / decor
@@ -280,7 +280,37 @@ export const DECOR = {
   petals:      { kind: 'fx', name: 'Sakura Petals',  pack: 'sakura' },
   confetti:    { kind: 'fx', name: 'Confetti',       pack: 'party' },
   stars:       { kind: 'fx', name: 'Neon Stars',     pack: 'neon' },
+  // ---- Capsule Machine exclusives (gacha: tier). Never sold directly; also available at the Prize Counter.
+  capsulestack: { kind: 'prop', place: 'shore', name: 'Capsule Stack',  gacha: 'common' },
+  pinwheel:    { kind: 'prop', place: 'shore', name: 'Pinwheel',        gacha: 'common' },
+  boba:        { kind: 'prop', place: 'shore', name: 'Bubble Tea',      gacha: 'common' },
+  beachball:   { kind: 'prop', place: 'float', name: 'Beach Ball',      gacha: 'common' },
+  balloons:    { kind: 'prop', place: 'shore', name: 'Balloon Bunch',   gacha: 'uncommon' },
+  capsulemachine: { kind: 'prop', place: 'shore', name: 'Beach Gachapon', gacha: 'rare', blurb: 'Tap it on your beach to open the Capsule Machine.' },
+  catears:     { kind: 'hat', name: 'Kitty Ears',    gacha: 'common' },
+  chef:        { kind: 'hat', name: 'Chef Hat',      gacha: 'common' },
+  antenna:     { kind: 'hat', name: 'Bubble Antenna', gacha: 'common' },
+  tophat:      { kind: 'hat', name: 'Top Hat',       gacha: 'uncommon' },
+  pirate:      { kind: 'hat', name: 'Pirate Hat',    gacha: 'uncommon' },
+  starclip:    { kind: 'hat', name: 'Star Clip',     gacha: 'uncommon' },
+  unicorn:     { kind: 'hat', name: 'Unicorn Horn',  gacha: 'rare' },
+  goldcrown:   { kind: 'hat', name: 'Golden Crown',  gacha: 'legendary' },
+  candy:       { kind: 'skin', name: 'Candy Cloud',  gacha: 'rare' },
+  holo:        { kind: 'skin', name: 'Holo Prism',   gacha: 'legendary' },
+  midnight:    { kind: 'skin', name: 'Midnight Cove', gacha: 'legendary' },
+  hearts:      { kind: 'fx', name: 'Floating Hearts', gacha: 'rare' },
+  rainbow:     { kind: 'fx', name: 'Rainbow Sparkle', gacha: 'legendary' },
 };
+
+// ---- Capsule figurines: one collectible toy per creature form (tier follows the form's stage) + a golden one per family
+export const figId = (formId) => `fig_${formId.replace(/\./g, '_')}`;
+export const goldFigId = (fam) => `figg_${fam}`;
+const STAGE_TIER = { 1: 'common', 2: 'uncommon', 3: 'rare' };
+for (const f of FORM_IDS) DECOR[figId(f)] = { kind: 'prop', place: 'shore', name: `${FORMS[f].name} Figure`, gacha: STAGE_TIER[FORMS[f].stage], fig: f };
+for (const fam of FAMILY_IDS) {
+  const top = mythicForm(fam, Object.keys(FAMILIES[fam].br)[0]);
+  DECOR[goldFigId(fam)] = { kind: 'prop', place: 'shore', name: `Golden ${FORMS[top].name}`, gacha: 'legendary', fig: top, gold: true };
+}
 export const DECOR_IDS = Object.keys(DECOR);
 export const FREE_DECOR = DECOR_IDS.filter((d) => DECOR[d].free);
 
@@ -292,6 +322,9 @@ export const SKINS = {
   aurora:    { sand: '#e8edff', sandDk: '#bcc7f6', wet: '#a2b2ec', shallow: '#a0f6e8', shallow2: '#69e5d5', deep: '#7080ff', deep2: '#5b46d8', trench: '#3c2c9e', slab: '#8f9edd', slabDk: '#7280c2' },
   sakura:    { sand: '#fff1f5', sandDk: '#ffcbdb', wet: '#f6abc2', shallow: '#ffd8e8', shallow2: '#ffb5d3', deep: '#ff90c0', deep2: '#e26ba7', trench: '#a9447f', slab: '#f4a5c1', slabDk: '#d888a5', sky: 'dusk' },
   neon:      { sand: '#3d2b7d', sandDk: '#2c1e60', wet: '#20154a', shallow: '#22e8ff', shallow2: '#00c4ff', deep: '#7b3dff', deep2: '#5b20e2', trench: '#2e109e', slab: '#1e1449', slabDk: '#150e35', sky: 'night' },
+  candy:     { sand: '#fff0fb', sandDk: '#ffc6ee', wet: '#f4a8dd', shallow: '#bff6ff', shallow2: '#8fe3ff', deep: '#ff9ce6', deep2: '#e068c8', trench: '#a03fa0', slab: '#ffb5e8', slabDk: '#e18bcb' },
+  holo:      { sand: '#f3eaff', sandDk: '#c9d4ff', wet: '#b5c2f5', shallow: '#aaf5ff', shallow2: '#c8b0ff', deep: '#ff9ad8', deep2: '#7f8cff', trench: '#4a3fb8', slab: '#c6b8ff', slabDk: '#98a2f0' },
+  midnight:  { sand: '#39336f', sandDk: '#282456', wet: '#1b1842', shallow: '#3fd0e8', shallow2: '#2aa8d8', deep: '#5b4bd8', deep2: '#3c2fb0', trench: '#221a78', slab: '#1a1642', slabDk: '#0f0c2e', sky: 'night' },
   abyss:     { sand: '#4d52a8', sandDk: '#383c86', wet: '#2b2f6c', shallow: '#33c9d8', shallow2: '#22a3d0', deep: '#2f74dc', deep2: '#234fbc', trench: '#16308f', slab: '#262870', slabDk: '#16174a', sky: 'night' },
 };
 
@@ -339,9 +372,10 @@ export const QUEST_TEMPLATES = [
   { id: 'pet',      text: (n) => `Pet ${n} creatures`,      min: 4,  max: 8,  ev: 'pet',    glass: 3 },
   { id: 'gift',     text: () => 'Open a Tide Gift',         min: 1,  max: 1,  ev: 'gift',    glass: 3 },
   { id: 'evolve',   text: () => 'Start an evolution',       min: 1,  max: 1,  ev: 'evolve',  glass: 5 },
+  { id: 'pull',     text: () => 'Pull a capsule',           min: 1,  max: 1,  ev: 'pull',    glass: 2, coins: 1 },
 ];
 export const QUEST_COUNT = 3;
-export const QUEST_ALL_BONUS = { glass: 10, tokens: 1 };
+export const QUEST_ALL_BONUS = { glass: 10, tokens: 1, coins: 1 };
 export const DAILY_REWARDS = [
   { pearlsHours: .5, label: 'Pearls' },
   { glass: 5, label: '5 Sea Glass' },
@@ -349,7 +383,7 @@ export const DAILY_REWARDS = [
   { tokens: 1, label: 'Speed Token' },
   { glass: 10, label: '10 Sea Glass' },
   { pearlsHours: 2, label: 'Pearls' },
-  { glass: 25, tokens: 1, label: '25 Glass + Token' },
+  { glass: 25, tokens: 1, coins: 2, label: '25 Glass + Token + 2 Coins' },
 ];
 export const GIFT_WINDOWS = [
   { id: 0, name: 'Morning Tide',   from: 5,  to: 12 },
@@ -357,3 +391,58 @@ export const GIFT_WINDOWS = [
   { id: 2, name: 'Evening Tide',   from: 18, to: 29 },
 ];
 export const SPRING_TIDE = { rate: 1.25, egg: 0.6 };
+
+// ================================================================ Capsule Machine (gashapon)
+// Cosmetic collectibles only. Paid pulls spend Sea Glass; Capsule Coins are earned free through play.
+// Every rate shown in the game is computed from this table (see gachaTable in sim.js), so the disclosed odds are the real odds.
+export const GACHA = {
+  tiers: [
+    { id: 'common',    name: 'Common',    p: 58, color: '#8fd3ff', stars: 1, shards: 1,  prize: 8 },
+    { id: 'uncommon',  name: 'Uncommon',  p: 28, color: '#6fe3a0', stars: 2, shards: 3,  prize: 25 },
+    { id: 'rare',      name: 'Rare',      p: 11, color: '#ffc93f', stars: 3, shards: 10, prize: 80 },
+    { id: 'legendary', name: 'Legendary', p: 3,  color: '#ff7ad9', stars: 4, shards: 40, prize: 300 },
+  ],
+  costCoin: 1,            // Capsule Coins per pull
+  costGlass: 30,          // Sea Glass per pull
+  costGlass10: 270,       // ten pulls (10% off)
+  pityRare: 10,           // a Rare-or-better capsule is guaranteed at least every 10th pull
+  pityLegend: 60,         // a Legendary capsule is guaranteed at least every 60th pull
+  paidDailyCap: 30,       // maximum Sea Glass pulls per day (self-imposed spending guardrail)
+  spotMult: 3,            // this week's Spotlight items are 3x as likely as their tier siblings
+};
+export const TIER = Object.fromEntries(GACHA.tiers.map((t) => [t.id, t]));
+export const TIER_IDS = GACHA.tiers.map((t) => t.id);
+
+// Non-cosmetic "filler" capsules: small refunds that keep pulls feeling generous.
+const FILLERS = [
+  { id: 'f_coin',    tier: 'common',   w: 6, name: 'Capsule Coin',         reward: { coins: 1 } },
+  { id: 'f_glass',   tier: 'common',   w: 4, name: '3 Sea Glass',          reward: { glass: 3 } },
+  { id: 'f_pearls',  tier: 'common',   w: 10, name: '2 hours of Pearls',   reward: { pearlsHours: 2 } },
+  { id: 'f_coin2',   tier: 'uncommon', w: 4, name: '2 Capsule Coins',      reward: { coins: 2 } },
+  { id: 'f_token',   tier: 'uncommon', w: 4, name: 'Speed Token',          reward: { tokens: 1 } },
+  { id: 'f_pearls6', tier: 'uncommon', w: 4, name: '6 hours of Pearls',    reward: { pearlsHours: 6 } },
+  { id: 'f_glass10', tier: 'rare',     w: 3, name: '10 Sea Glass',         reward: { glass: 10 } },
+];
+const DECOR_WEIGHT = { common: 2, uncommon: 2, rare: 3, legendary: 3 };
+export const GACHA_POOL = [];
+for (const id of DECOR_IDS) {
+  const d = DECOR[id]; if (!d.gacha) continue;
+  const isFig = !!d.fig;
+  const w = isFig ? (d.gold ? 2 : d.gacha === 'common' ? 2 : 1) : DECOR_WEIGHT[d.gacha];
+  GACHA_POOL.push({ id, tier: d.gacha, w, name: d.name, kind: isFig ? 'fig' : d.kind, fig: d.fig, gold: !!d.gold, filler: false });
+}
+for (const f of FILLERS) GACHA_POOL.push({ ...f, kind: 'filler', filler: true });
+export const POOL_BY_ID = Object.fromEntries(GACHA_POOL.map((i) => [i.id, i]));
+export const POOL_BY_TIER = Object.fromEntries(TIER_IDS.map((t) => [t, GACHA_POOL.filter((i) => i.tier === t)]));
+export const COLLECTIBLE_IDS = GACHA_POOL.filter((i) => !i.filler).map((i) => i.id);
+export const FIG_IDS = GACHA_POOL.filter((i) => i.kind === 'fig').map((i) => i.id);
+
+// Toybox sets: own every figure of a family (7) for a bonus; own all ten golden figures for a big one.
+export const TOY_SETS = FAMILY_IDS.map((fam) => ({
+  id: `set_${fam}`, name: `${FAMILIES[fam].name} Family`, fam, items: formsOfFamily(fam).map(figId), reward: { coins: 2, glass: 15 },
+}));
+TOY_SETS.push({ id: 'set_gold', name: 'Golden Collection', fam: null, items: FAMILY_IDS.map(goldFigId), reward: { coins: 5, glass: 100 } });
+export const TOY_MILESTONES = [
+  { n: 10, reward: { coins: 1, glass: 5 } }, { n: 25, reward: { coins: 2, glass: 15 } }, { n: 50, reward: { coins: 4, glass: 30 } },
+  { n: 75, reward: { coins: 6, glass: 60 } }, { n: COLLECTIBLE_IDS.length, reward: { coins: 10, glass: 150 } },
+];

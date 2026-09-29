@@ -531,3 +531,59 @@ export function drawSprite(c, formId, x, y, size, o = {}) {
   c.drawImage(s.canvas, x - size / 2, y - size * 0.62, size, size);
 }
 export const FAMILY_LIST = Object.keys(FAMILIES);
+
+// ------------------------------------------------------------------ capsule-machine hats
+Object.assign(HAT_ART, {
+  catears(c) {
+    for (const sd of [-1, 1]) {
+      c.beginPath(); c.moveTo(sd * 6, 2); c.lineTo(sd * 14, -26); c.lineTo(sd * 26, -2); c.closePath(); fillShape(c, vgrad(c, -26, 2, '#ffc0dc', '#ff8ac0'), 4.2);
+      c.beginPath(); c.moveTo(sd * 12, -3); c.lineTo(sd * 15, -17); c.lineTo(sd * 21, -4); c.closePath(); c.fillStyle = '#ffe0ef'; c.fill();
+    }
+  },
+  chef(c) {
+    for (const [x, y, r] of [[-11, -22, 12], [11, -22, 12], [0, -30, 14]]) { c.beginPath(); c.arc(x, y, r, 0, TAU); fillShape(c, vgrad(c, y - r, y + r, '#ffffff', '#e6ecff'), 4); }
+    c.beginPath(); c.rect(-16, -14, 32, 15); fillShape(c, vgrad(c, -14, 1, '#ffffff', '#dfe6fb'), 4.2);
+    c.strokeStyle = 'rgba(59,29,94,.25)'; c.lineWidth = 2; for (const x of [-7, 0, 7]) { c.beginPath(); c.moveTo(x, -12); c.lineTo(x, -1); c.stroke(); }
+  },
+  antenna(c) {
+    c.strokeStyle = OUT; c.lineCap = 'round'; c.lineWidth = 9; c.beginPath(); c.moveTo(0, 2); c.quadraticCurveTo(-6, -16, 4, -30); c.stroke();
+    c.strokeStyle = '#8ff3ff'; c.lineWidth = 4; c.stroke();
+    c.beginPath(); c.arc(4, -36, 11, 0, TAU); fillShape(c, vgrad(c, -47, -25, '#ffffff', '#ff8ac0'), 4.2);
+    c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.ellipse(0, -40, 3.5, 2, -0.7, 0, TAU); c.fill();
+  },
+  tophat(c) {
+    c.beginPath(); c.ellipse(0, 0, 26, 7, 0, 0, TAU); fillShape(c, '#3a2a5e', 4.2);
+    c.beginPath(); c.rect(-15, -34, 30, 34); fillShape(c, vgrad(c, -34, 0, '#5a4690', '#33245a'), 4.2);
+    c.beginPath(); c.rect(-15, -12, 30, 8); c.fillStyle = '#ff6fa8'; c.fill(); c.lineWidth = 2.6; c.strokeStyle = OUT; c.stroke();
+    c.beginPath(); c.ellipse(0, -34, 15, 4.5, 0, 0, TAU); fillShape(c, '#4a3a7a', 3.4);
+    c.save(); c.globalAlpha = 0.5; c.fillStyle = '#fff'; c.fillRect(-11, -30, 4, 16); c.restore();
+  },
+  pirate(c) {
+    c.beginPath(); c.moveTo(-30, 2); c.quadraticCurveTo(-22, -34, 0, -32); c.quadraticCurveTo(22, -34, 30, 2); c.quadraticCurveTo(0, -6, -30, 2); c.closePath(); fillShape(c, vgrad(c, -34, 2, '#4a3f78', '#241a48'), 4.4);
+    c.beginPath(); c.moveTo(-30, 2); c.quadraticCurveTo(0, -6, 30, 2); c.strokeStyle = '#ffd23f'; c.lineWidth = 3.2; c.stroke();
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(0, -16, 6.5, 0, TAU); c.fill(); c.fillRect(-3.5, -12, 7, 6);
+    c.fillStyle = '#241a48'; c.beginPath(); c.arc(-2.4, -17, 1.6, 0, TAU); c.arc(2.4, -17, 1.6, 0, TAU); c.fill();
+    c.strokeStyle = '#fff'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(-10, -8); c.lineTo(10, -22); c.moveTo(10, -8); c.lineTo(-10, -22); c.stroke();
+  },
+  starclip(c) {
+    c.save(); c.rotate(-0.25); c.translate(-14, -6);
+    c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 7 : 16; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); fillShape(c, vgrad(c, -16, 16, '#fff3a6', '#ffb02e'), 3.6);
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(-3, -4, 2.4, 0, TAU); c.fill(); c.restore();
+    sparkle(c, 12, -22, 5, '#fff'); sparkle(c, 22, -8, 3.4, '#ffe66d');
+  },
+  unicorn(c) {
+    c.save(); c.rotate(0.06);
+    c.beginPath(); c.moveTo(-9, 2); c.lineTo(0, -44); c.lineTo(9, 2); c.closePath(); fillShape(c, vgrad(c, -44, 2, '#fff', '#f4c8ff'), 4.2);
+    c.save(); c.clip(); c.strokeStyle = '#ff8ad8'; c.lineWidth = 4.4; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(-14, -6 - i * 9); c.lineTo(14, -14 - i * 9); c.stroke(); } c.restore();
+    c.restore();
+    sparkle(c, -14, -34, 5, '#fff'); sparkle(c, 15, -28, 4, '#ffe66d');
+    for (const [x, col] of [[-14, '#ff8ad8'], [14, '#8ff3ff']]) { c.beginPath(); c.arc(x, -2, 6, 0, TAU); fillShape(c, col, 3.2); }
+  },
+  goldcrown(c) {
+    c.beginPath(); c.moveTo(-26, 2); c.lineTo(-30, -34); c.lineTo(-14, -16); c.lineTo(-7, -42); c.lineTo(0, -18); c.lineTo(7, -42); c.lineTo(14, -16); c.lineTo(30, -34); c.lineTo(26, 2); c.closePath();
+    fillShape(c, vgrad(c, -42, 2, '#fff7b8', '#f5a90f'), 4.6);
+    for (const [x, y, col] of [[-14, -6, '#ff5ea8'], [0, -9, '#5ec8ff'], [14, -6, '#7be3a3']]) { c.beginPath(); c.arc(x, y, 4.2, 0, TAU); fillShape(c, col, 2.2); }
+    for (const [x, y] of [[-30, -36], [-7, -44], [7, -44], [30, -36]]) { c.beginPath(); c.arc(x, y, 3.6, 0, TAU); fillShape(c, '#fff', 2.4); }
+    sparkle(c, -22, -20, 5, '#fff'); sparkle(c, 20, -24, 4, '#fff');
+  },
+});

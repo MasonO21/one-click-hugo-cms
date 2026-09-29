@@ -77,6 +77,16 @@ const SFX = {
   gift() { [76, 79, 83, 88].forEach((m, i) => bell(m, i * 0.07, 0.15, 0.8)); },
   buy() { [79, 83, 86, 91].forEach((m, i) => bell(m, i * 0.06, 0.14, 0.8)); },
   whoosh() { noise({ dur: 0.3, vol: 0.12, f: 400, f2: 3000, q: 0.5 }); },
+  // ---- Capsule Machine
+  crank() { for (let i = 0; i < 9; i++) { tone({ f: 260 + i * 26, f2: 200 + i * 20, t: i * 0.085, dur: 0.05, vol: 0.16, type: 'square' }); noise({ t: i * 0.085, dur: 0.04, vol: 0.09, f: 1800, type: 'highpass' }); } noise({ dur: 0.8, vol: 0.05, f: 300, f2: 900, q: 0.8 }); },
+  rattle() { for (let i = 0; i < 6; i++) noise({ t: i * 0.07 + Math.random() * 0.03, dur: 0.05, vol: 0.14, f: 900 + Math.random() * 1600, q: 2 }); },
+  clunk() { tone({ f: 130, f2: 55, dur: 0.16, vol: 0.5 }); noise({ dur: 0.08, vol: 0.2, f: 500 }); tone({ f: 190, f2: 90, t: 0.13, dur: 0.1, vol: 0.28 }); },
+  twist() { tone({ f: 380, f2: 620, dur: 0.14, vol: 0.14, type: 'triangle' }); tone({ f: 460, f2: 760, t: 0.1, dur: 0.14, vol: 0.14, type: 'triangle' }); noise({ t: 0.05, dur: 0.16, vol: 0.09, f: 2600, type: 'highpass' }); },
+  burst() { noise({ dur: 0.12, vol: 0.28, f: 3000, type: 'highpass' }); tone({ f: 520, f2: 1300, dur: 0.12, vol: 0.22 }); },
+  tier1() { [76, 81].forEach((m, i) => bell(m, i * 0.1, 0.16, 0.7)); },
+  tier2() { [72, 76, 79, 83].forEach((m, i) => bell(m, i * 0.09, 0.17, 0.9)); },
+  tier3() { [72, 76, 79, 84, 88, 91].forEach((m, i) => bell(m, i * 0.09, 0.18, 1.1)); noise({ t: 0.2, dur: 0.6, vol: 0.05, f: 3000, f2: 9000, type: 'highpass' }); },
+  tier4() { [60, 64, 67, 72, 76, 79, 84, 88, 91, 96].forEach((m, i) => bell(m, i * 0.075, 0.2, 1.6)); [72, 76, 79].forEach((m) => tone({ f: mtof(m), t: 0.7, dur: 1.4, vol: 0.09, type: 'triangle', wet: 0.6 })); noise({ t: 0.3, dur: 1.2, vol: 0.06, f: 3500, f2: 11000, type: 'highpass' }); },
 };
 export function play(name, arg) {
   if (!unlocked || !cfg.sfx || !ensure() || ctx.state !== 'running') return;

@@ -4,9 +4,11 @@ import * as D from './data.js';
 import * as S from './sim.js';
 import * as A from './audio.js';
 import { drawSprite, getSilhouette, HAT_ART, shade } from './art_creatures.js';
-import { PIECE_ART, PROP_ART } from './art_world.js';
+import { PIECE_ART } from './art_world.js';
+import { drawProp, drawItemArt } from './art_gacha.js';
 import { store, haptic, openUrl, notify } from './platform.js';
 import { LINKS, VERSION, POLICY } from './config.js';
+import { createGachaUI } from './gacha_ui.js';
 
 const { FORMS, FAMILIES, PIECES, DECOR, TRAIT_INFO, PRODUCTS } = D;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,12 +58,23 @@ export function createUI(G) {
     });
     $$('canvas[data-prop]', root).forEach((cv) => {
       const c = cv.getContext('2d'), px = Math.round((cv.clientWidth || 60) * (window.devicePixelRatio || 1)); cv.width = px; cv.height = px; c.clearRect(0, 0, px, px);
-      const id = cv.dataset.prop; PROP_ART[id](c, px / 2, px * 0.8, px * 0.98, 1.2, false);
+      const id = cv.dataset.prop; drawProp(c, id, px / 2, px * 0.8, px * 0.98, 1.2, false);
     });
     $$('canvas[data-hat]', root).forEach((cv) => {
       if (cv.dataset.form) return;
       const c = cv.getContext('2d'), px = Math.round((cv.clientWidth || 44) * (window.devicePixelRatio || 1)); cv.width = px; cv.height = px; c.clearRect(0, 0, px, px);
       c.save(); c.translate(px / 2, px * 0.7); drawSprite(c, 'crab.0', 0, 0, px * 1.05, { hat: cv.dataset.hat }); c.restore();
+    });
+    $$('canvas[data-toy]', root).forEach((cv) => {
+      const px = Math.round((cv.clientWidth || 72) * (window.devicePixelRatio || 1)) || 96;
+      if (cv.width !== px) { cv.width = px; cv.height = px; }
+      const c = cv.getContext('2d'); c.clearRect(0, 0, px, px);
+      if (cv.dataset.sil) {
+        const tmp = document.createElement('canvas'); tmp.width = tmp.height = px; const t = tmp.getContext('2d');
+        drawItemArt(t, cv.dataset.toy, px / 2, px * 0.46, px * 0.8, 1.2);
+        t.globalCompositeOperation = 'source-in'; t.fillStyle = '#5a4a8c'; t.fillRect(0, 0, px, px);
+        c.drawImage(tmp, 0, 0); c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `700 ${px * 0.32}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', px / 2, px * 0.5);
+      } else drawItemArt(c, cv.dataset.toy, px / 2, px * 0.46, px * 0.8, 1.2);
     });
     $$('canvas[data-skin]', root).forEach((cv) => {
       const c = cv.getContext('2d'), k = D.SKINS[cv.dataset.skin]; cv.width = 120; cv.height = 120;
@@ -94,6 +107,7 @@ export function createUI(G) {
     ].map(([id, icon, label]) => `<button class="tab" data-tab="${id}" data-act="tab:${id}" aria-label="${label}">${ic(icon)}<span>${label}</span><i class="dot" hidden></i></button>`).join('');
     $('#fabs').innerHTML = `
       <div class="fab ready" id="fab-collect" hidden><button class="round fab big" data-act="collectall" aria-label="Collect all pearls">${ic('i-pearl')}<span class="badge" id="fab-collect-n">0</span></button></div>
+      <div class="fab ready" id="fab-capsule" hidden><button class="round" data-act="gacha" aria-label="Capsule Machine">${ic('i-capsule')}<span class="badge" id="fab-capsule-n">!</span></button></div>
       <div class="fab ready" id="fab-gift" hidden><button class="round" data-act="gift" aria-label="Open Tide Gift">${ic('i-gift')}<span class="badge">!</span></button></div>
       <div class="fab opt"><button class="round" data-act="snap" aria-label="Take a picture">${ic('i-camera')}</button></div>`;
   }
@@ -125,13 +139,17 @@ export function createUI(G) {
     const fc = $('#fab-collect'); fc.hidden = !(nReady >= 2 && ready >= 20) || !!document.body.dataset.tut;
     setText('#fab-collect-n', `+${fmt(ready)}`);
     $('#fab-gift').hidden = !(s.tut.done && S.giftAvailable(s, n));
+    const capFab = $('#fab-capsule'), capReady = s.tut.done && (S.gachaFreeAvailable(s, n) || s.cur.coins > 0);
+    capFab.hidden = !s.tut.done; capFab.classList.toggle('ready', !!capReady);
+    setText('#fab-capsule-n', S.gachaFreeAvailable(s, n) ? '!' : String(s.cur.coins));
+    $('#fab-capsule .badge').hidden = !capReady;
     // nav
     $$('#nav .tab').forEach((t) => {
       const id = t.dataset.tab, open = modals.some((m) => m.id === id);
       t.classList.toggle('on', open || (!modals.length && G.tab === id) || (!modals.length && id === 'pool' && G.tab === 'pool'));
       const dot = $('.dot', t);
       let show = false;
-      if (id === 'quests') show = S.dailyAvailable(s, n) || S.giftAvailable(s, n) || s.quests.list.some((q) => q.done && !q.claimed);
+      if (id === 'quests') show = S.dailyAvailable(s, n) || S.giftAvailable(s, n) || S.gachaFreeAvailable(s, n) || s.quests.list.some((q) => q.done && !q.claimed);
       if (id === 'dex') show = D.DEX_MILESTONES.some((m, i) => !s.dexClaimed.includes(i) && S.dexCount(s) >= m.n);
       if (id === 'shop') show = !s.iap.starter && s.tut.done && false;
       if (dot) dot.hidden = !show;
@@ -440,13 +458,15 @@ export function createUI(G) {
     h += `<div class="card ${gAvail ? 'hi' : ''} row between"><div class="row">${ic('i-gift', 'l')}<div><b>${esc(w.name)} Gift</b><div class="muted">${gAvail ? 'Something washed ashore!' : `Next gift in ${S.fmtDur(nextG - n)}`}</div></div></div><button class="btn ${gAvail ? 'lemon pulse' : 'off'} small" data-act="gift">${gAvail ? 'Open' : 'Later'}</button></div>`;
     const dAvail = S.dailyAvailable(s, n);
     h += `<div class="card mt row between"><div class="row">${ic('i-star', 'l')}<div><b>Daily reward</b><div class="muted">${dAvail ? 'Ready to claim!' : `Streak ${s.daily.n} day${s.daily.n === 1 ? '' : 's'}`}</div></div></div><button class="btn ${dAvail ? 'lemon' : 'ghost'} small" data-act="opendaily">${dAvail ? 'Claim' : 'View'}</button></div>`;
+    const cAvail = S.gachaFreeAvailable(s, n);
+    h += `<div class="card mt row between ${cAvail ? 'pinkc' : ''}"><div class="row">${ic('i-capsule', 'l')}<div><b>Free daily capsule</b><div class="muted">${cAvail ? 'Give the crank a turn!' : `${s.cur.coins} Capsule Coin${s.cur.coins === 1 ? '' : 's'} saved`}</div></div></div><button class="btn ${cAvail ? 'pink pulse' : 'ghost'} small" data-act="gacha">${cAvail ? 'Pull' : 'Open'}</button></div>`;
     h += '<h4 class="muted mt" style="margin-bottom:6px">TODAY\'S QUESTS</h4><div class="list">';
     for (const [i, q] of s.quests.list.entries()) {
       h += `<div class="card quest"><div class="q-t">${esc(S.questText(q))}<div class="bar"><i style="width:${q.prog / q.goal * 100}%;background:linear-gradient(#9af5bd,#2fc47e)"></i></div><div class="muted">${Math.min(q.prog, q.goal)}/${q.goal}</div></div>
-        <div class="col center" style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="rew">${ic('i-glass')}${q.glass}</span>${q.claimed ? `<span class="tag">Done</span>` : `<button class="btn small ${q.done ? 'green pulse' : 'off'}" data-act="claimquest:${i}">Claim</button>`}</div></div>`;
+        <div class="col center" style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="rew">${ic('i-glass')}${q.glass}${q.coins ? ` ${ic('i-coin')}${q.coins}` : ''}</span>${q.claimed ? `<span class="tag">Done</span>` : `<button class="btn small ${q.done ? 'green pulse' : 'off'}" data-act="claimquest:${i}">Claim</button>`}</div></div>`;
     }
     const all = s.quests.list.every((q) => q.claimed);
-    h += `</div><div class="card pinkc mt row between"><div class="row">${ic('i-gift', 'l')}<div><b>Bonus chest</b><div class="muted">Finish all quests · ${ic('i-glass', 's')}${D.QUEST_ALL_BONUS.glass} + ${ic('i-token', 's')}1</div></div></div>${s.quests.chest ? '<span class="tag">Opened</span>' : `<button class="btn small ${all ? 'lemon pulse' : 'off'}" data-act="claimchest">Open</button>`}</div>`;
+    h += `</div><div class="card pinkc mt row between"><div class="row">${ic('i-gift', 'l')}<div><b>Bonus chest</b><div class="muted">Finish all quests · ${ic('i-glass', 's')}${D.QUEST_ALL_BONUS.glass} + ${ic('i-token', 's')}1 + ${ic('i-coin', 's')}${D.QUEST_ALL_BONUS.coins}</div></div></div>${s.quests.chest ? '<span class="tag">Opened</span>' : `<button class="btn small ${all ? 'lemon pulse' : 'off'}" data-act="claimchest">Open</button>`}</div>`;
     h += `<p class="muted center mt">New quests arrive every morning.</p>`;
     return { body: h };
   } });
@@ -459,6 +479,7 @@ export function createUI(G) {
     const equipped = (d.kind === 'skin' && s.equip.skin === id) || (d.kind === 'fx' && s.equip.fx === id);
     let btn;
     if (owned) btn = (d.kind === 'skin' || d.kind === 'fx') ? `<button class="btn small wide ${equipped ? 'off' : 'green'}" data-act="equip:${id}">${equipped ? 'Equipped' : 'Equip'}</button>` : d.kind === 'prop' ? `<button class="btn small wide green" data-act="useprop:${id}">Place</button>` : `<span class="tag">Owned</span>`;
+    else if (d.gacha) btn = `<button class="btn small wide pink" data-act="gacha">${ic('i-capsule', 's')} Capsule</button>`;
     else if (d.pack) btn = `<button class="btn small wide pink" data-act="shopsub:bundles">In pack</button>`;
     else btn = `<button class="btn small wide lemon" data-act="buydecor:${id}">${d.price.pearls ? cost(d.price.pearls) : cost(d.price.glass, 'i-glass')}</button>`;
     return `<div class="card prod">${prev}<b style="font-size:13px">${esc(d.name)}</b>${btn}</div>`;
@@ -471,7 +492,7 @@ export function createUI(G) {
       if (!s.iap.starter) h += `<div class="card pinkc" style="margin-bottom:12px"><span class="ribbon">ONE-TIME OFFER</span><div class="row"><div style="flex:1"><h5>Starter Bundle</h5><p>${ic('i-glass', 's')} 200 Sea Glass + Party Hat + Bubblegum pool skin</p></div><div style="width:96px">${priceBtn(D.IAP.starter, 'pink')}</div></div></div>`;
       h += `<div class="grid2">${D.IAP.glass.map((id, i) => { const P = PRODUCTS[id]; return `<div class="card prod ${i === 2 ? 'hi' : ''}">${P.tag ? `<span class="ribbon">${esc(P.tag)}</span>` : ''}${ic('i-glass', 'xl')}<div class="amt">${P.glass}</div><div class="muted">Sea Glass</div>${priceBtn(id)}</div>`; }).join('')}</div>`;
       if (!s.iap.hourglass) h += `<div class="card hi mt row"><div>${ic('i-token', 'xl')}</div><div style="flex:1"><h5>Golden Hourglass</h5><p>Evolution timers 25% shorter — forever. Plus one free instant finish every day.</p></div><div style="width:92px">${priceBtn(D.IAP.hourglass, 'lemon')}</div></div>`;
-      h += `<p class="muted center mt">Sea Glass skips evolution timers and buys premium decor. You also earn it free from quests, gifts and discoveries.</p>`;
+      h += `<p class="muted center mt">Sea Glass skips evolution timers, buys premium decor and can be spent in the Capsule Machine. You also earn it free from quests, gifts and discoveries.</p><div class="center"><button class="link" data-act="gacharates">Capsule Machine drop rates</button></div>`;
     } else if (shopTab === 'boost') {
       h += `<div class="list">${Object.entries(D.BOOSTS).map(([id, b]) => `<div class="card row between"><div class="row"><div style="width:44px">${ic(b.ff ? 'i-pearl' : b.mult ? 'i-sun' : 'i-sparkle', 'l')}</div><div><b>${esc(b.name)}</b><p>${esc(b.desc)}</p></div></div><button class="btn small lemon" data-act="boost:${id}">${cost(b.glass, 'i-glass')}</button></div>`).join('')}</div>
         <div class="card mt row between"><div class="row">${ic('i-token', 'l')}<div><b>Speed Tokens: ${s.cur.tokens}</b><p>Each token shaves 1 hour off an evolution. Earned from gifts and quests.</p></div></div></div>`;
@@ -481,7 +502,7 @@ export function createUI(G) {
       if (shopSub === 'bundles') {
         h += `<div class="list">${Object.entries(D.PACKS).map(([id, pk]) => { const owned = s.iap.packs[id], pid = pk.iap; return `<div class="card ${owned ? '' : 'pinkc'}"><h5>${esc(pk.name)}</h5><p>${esc(pk.blurb)}</p><div class="grid3 mt2" style="grid-template-columns:repeat(5,1fr)">${pk.items.map((it) => { const d = DECOR[it]; return `<div class="center">${d.kind === 'prop' ? `<canvas data-prop="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'hat' ? `<canvas data-hat="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'skin' ? `<canvas data-skin="${it}" style="width:100%;aspect-ratio:1"></canvas>` : ic('i-sparkle', 'l')}</div>`; }).join('')}</div><div class="mt2">${owned ? '<span class="tag">Owned ✓</span>' : priceBtn(pid, 'pink')}</div></div>`; }).join('')}</div>`;
       } else {
-        const ids = D.DECOR_IDS.filter((d) => DECOR[d].kind === shopSub);
+        const ids = D.DECOR_IDS.filter((d) => DECOR[d].kind === shopSub && !DECOR[d].fig);      // figurines live in the Toybox
         h += `<div class="grid3">${ids.map(decorCard).join('')}</div>`;
       }
     } else if (shopTab === 'deep') {
@@ -519,6 +540,7 @@ export function createUI(G) {
       <div class="setrow"><span>Sound effects</span>${sw('sfx')}</div>
       <div class="setrow"><span>Haptics<small>Gentle vibrations</small></span>${sw('haptics')}</div>
       <div class="setrow"><span>Reminders<small>Max 3 a day, never at night</small></span>${sw('notif')}</div>
+      <div class="setrow"><span>Sea Glass capsule pulls<small>Off = only free Coins &amp; daily capsule (max ${D.GACHA.paidDailyCap} pulls/day when on)</small></span>${sw('paidPulls')}</div>
       <div class="setrow"><span>Reduce motion<small>Calmer effects</small></span>${sw('reduceMotion')}</div>
       <div class="setrow"><span>Battery saver<small>Lower frame rate &amp; effects</small></span>${sw('battery')}</div>
       <div class="rowb mt"><button class="btn lav small" data-act="restore">Restore purchases</button></div>
@@ -565,7 +587,7 @@ export function createUI(G) {
   }
   function tutorialEnd() {
     G.tutorialFinish();
-    enqueue(() => mountModal('tutdone', { title: 'You did it!', sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div>${ic('i-gift', 'xl')}<p style="font-weight:600;font-size:16px">Your first evolution! Your pool keeps earning pearls while you're away. A <b>Tide Gift</b> arrives morning, afternoon and evening.</p><div class="chips"><div class="chipx">${ic('i-glass')}+10 Sea Glass</div></div><p class="muted">Try different rocks & water to discover all ${D.FORM_IDS.length} creatures.</p></div>`, footer: `<button class="btn green" data-act="close:tutdone">Onward!</button>` }) }));
+    enqueue(() => mountModal('tutdone', { title: 'You did it!', sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div>${ic('i-gift', 'xl')}<p style="font-weight:600;font-size:16px">Your first evolution! Your pool keeps earning pearls while you're away. A <b>Tide Gift</b> arrives morning, afternoon and evening.</p><div class="chips"><div class="chipx">${ic('i-glass')}+10 Sea Glass</div><div class="chipx">${ic('i-coin')}+2 Capsule Coins</div></div><p class="muted">Tap the capsule button for a free toy every day!</p><p class="muted">Try different rocks & water to discover all ${D.FORM_IDS.length} creatures.</p></div>`, footer: `<button class="btn green" data-act="close:tutdone">Onward!</button>` }) }));
     setTimeout(() => { if (st().tut.done) { const m = modals.find((k) => k.id === 'tutdone'); if (m) m.onClose = () => { ui.showNotifAsk(); enqueueDaily(); }; } }, 0);
   }
 
@@ -603,6 +625,8 @@ export function createUI(G) {
     equip(v) { G.equip(v); },
     boost(v) { G.buyBoost(v); },
     restore() { G.restore(); },
+    gacha() { ui.closeModal('quests'); ui.closeModal('shop'); ui.openGacha(); },
+    gacharates() { ui.closeModal('shop'); ui.openGacha('rates'); },
     godeep() { ui.closeAllModals(); G.switchBiome('deep'); ui.layoutChanged(); },
     claimquest(v) { const r = G.claimQuest(+v); if (r.ok) ui.toast(`+${r.glass} Sea Glass  +${r.pearls} pearls`, 'good'); },
     claimchest() { G.claimChest(); },
@@ -658,5 +682,8 @@ export function createUI(G) {
   };
   ui.onResume = (summary) => { if (summary && st().tut.done) ui.showWelcome(summary); ui.pumpReveals(); enqueueDaily(); ui.refresh(); };
   ui.sheetIsOpen = () => sheetOpen;
+  Object.assign(ui, { mountModal, drawModal, paintMini, ic, esc });
+  ui.gacha = createGachaUI(G, ui);
+  ui.openGacha = (tab) => ui.gacha.open(tab);
   return ui;
 }

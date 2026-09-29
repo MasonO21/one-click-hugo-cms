@@ -4,7 +4,7 @@ Everything that can be prepared without a Mac and an Apple Developer account is 
 the Xcode project (`ios/`), app icon + launch screen, privacy manifest, export-compliance flag, StoreKit test file, store screenshots, listing copy, privacy/terms/support pages, and the IAP catalogue.
 What remains is the part only *you* can do: sign with your Apple account, create the App Store Connect record, and press Submit. This runbook is that part, in order.
 
-> **Honest status:** the game logic (23 unit tests), the full first-run flow and every screen have been tested in a phone-sized browser with real touch input. It has **not** been run on a physical iPhone or through Apple's sandbox — that needs your Mac/devices. Section 6 is a device checklist; please run it via TestFlight before submitting.
+> **Honest status:** the game logic (37 unit tests), the full first-run flow and every screen have been tested in a phone-sized browser with real touch input. It has **not** been run on a physical iPhone or through Apple's sandbox — that needs your Mac/devices. Section 6 is a device checklist; please run it via TestFlight before submitting.
 
 ## 0. What you need
 - A Mac with the **latest stable Xcode** (Capacitor 8 needs a recent Xcode; Apple also raises the minimum SDK for uploads each spring — check *App Store Connect → Apps → Uploads* if the upload is rejected for SDK version).
@@ -17,7 +17,7 @@ What remains is the part only *you* can do: sign with your Apple account, create
 git clone <this repo> && cd <repo>/tiny-tides
 git checkout claude/tiny-tides-game        # the branch this was built on
 npm ci
-npm test                                   # 23 unit tests — should be all green
+npm test                                   # 37 unit tests — should be all green
 ```
 **Pick your bundle id** (reverse-DNS of a domain/name you control). Every IAP product id is derived from it, so change it *before* creating anything in App Store Connect:
 ```bash
@@ -45,7 +45,7 @@ Product → Scheme → Edit Scheme → **Run → Options → StoreKit Configurat
 
 ## 4. Create the app in App Store Connect
 1. Apps → **+ New App**: iOS, name, primary language, the bundle id from step 1, SKU (`tinytides-ios-001`).
-2. **App Information**: category Games (Simulation, Casual), Privacy Policy URL, age rating (answers in `store/APP_STORE_LISTING.md` → expect **4+**).
+2. **App Information**: category Games (Simulation, Casual), Privacy Policy URL, age rating (answers in `store/APP_STORE_LISTING.md`). **The Capsule Machine sells randomized items, so answer the loot-box question Yes and expect a rating above 4+.**
 3. **App Privacy**: *Data Not Collected*.
 4. **Pricing**: Free. **Availability**: all territories.
 5. **Monetization → In-App Purchases**: create the 10 products in `store/iap-products.md` **exactly** (Product ID, type, price, name, description, review screenshot). They must be in *Ready to Submit* state and attached to the version.
@@ -68,6 +68,7 @@ Run on at least one small iPhone, one large iPhone and one iPad if you can.
 - [ ] Fresh install → tutorial completes (dig, rock, egg, hatch, bubble, level, evolve, reveal). No dead ends; "Skip tips" works.
 - [ ] Force-quit and relaunch: pool, creatures, currencies, timers all restored. Leave for a few hours: **Welcome back** modal shows pearls/eggs/evolutions.
 - [ ] Airplane mode: everything except purchases works.
+- [ ] Capsule Machine: free daily pull, 1× and 10× with Coins, then Sea Glass (confirm dialog, exact cost 30/270, cap message after 30 pulls), reveal animations, Skip, Toybox, Prize Counter, Rates totals ≈100%, place a figure, tap the Beach Gachapon. Turn *Sea Glass capsule pulls* off in Settings and confirm the buttons refuse.
 - [ ] Sandbox purchases (Settings → App Store → Sandbox Account): each consumable credits exactly once; Deep Ocean unlocks and its first egg hatches; Golden Hourglass shortens timers; bundles unlock decor; **Restore Purchases** on a second device/reinstall returns the non-consumables (and doesn't re-grant bonus glass).
 - [ ] Interrupt a purchase (kill the app mid-sheet): the item still arrives on next launch, once.
 - [ ] Reminders: Settings → Reminders asks for permission; finish an evolution timer with the app closed and confirm the notification arrives at a sane hour.
@@ -86,8 +87,9 @@ Reasons apps like this get rejected and how this build already handles them:
 | 3.1.1 In-App Purchase | must offer Restore; no unlocking via other means | Restore is in Settings and Shop; all sales go through StoreKit |
 | 4.2 Minimum functionality | "wrapped website" | Native shell **plus** native haptics, local notifications, StoreKit, share sheet, offline play — it is a game with depth |
 | 5.1.1 Privacy | missing policy / label | Policy pages + "Data Not Collected" + privacy manifest |
-| 5.3 Gambling / loot boxes | odds disclosure | Nothing purchasable is random |
-| 1.3 / Kids | Made-for-Kids rules | Not submitted to the Kids Category; rated 4+ but designed with no data collection |
+| 3.1.1 Loot boxes | odds must be shown **before** purchase | Capsule Machine → Rates lists every item's %; linked from the Sea Glass shop tab and the machine screen; confirm dialog before each Sea Glass spend |
+| Local gambling law | paid random items restricted in some countries (e.g. Belgium) | `NO_PAID_RANDOM` in `src/config.js` disables Sea Glass pulls by storefront; review with a lawyer and/or remove territories in App Store Connect |
+| 1.3 / Kids | Made-for-Kids rules | **Do not** submit to the Kids Category (paid random items are not allowed there). The app collects no data, but the audience of paid gacha includes minors, so the guardrails (daily cap, off-switch, confirmation, free pulls) are on by default |
 
 ## 8. After launch
 - Watch *App Store Connect → Analytics* (retention, proceeds) and *Crashes*.

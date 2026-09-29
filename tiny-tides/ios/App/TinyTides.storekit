@@ -8,7 +8,7 @@
       "internalID": "6470000001",
       "localizations": [
         {
-          "description": "60 Sea Glass to skip evolution timers and buy decor.",
+          "description": "60 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
           "displayName": "60 Sea Glass",
           "locale": "en_US"
         }
@@ -23,7 +23,7 @@
       "internalID": "6470000002",
       "localizations": [
         {
-          "description": "330 Sea Glass to skip evolution timers and buy decor.",
+          "description": "330 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
           "displayName": "330 Sea Glass",
           "locale": "en_US"
         }
@@ -38,7 +38,7 @@
       "internalID": "6470000003",
       "localizations": [
         {
-          "description": "700 Sea Glass to skip evolution timers and buy decor.",
+          "description": "700 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
           "displayName": "700 Sea Glass",
           "locale": "en_US"
         }
@@ -53,7 +53,7 @@
       "internalID": "6470000004",
       "localizations": [
         {
-          "description": "1500 Sea Glass to skip evolution timers and buy decor.",
+          "description": "1500 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
           "displayName": "1500 Sea Glass",
           "locale": "en_US"
         }

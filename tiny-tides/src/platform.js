@@ -117,6 +117,7 @@ export const store = {
   /** 'native' (real StoreKit) | 'demo' (simulated, no money) | 'unavailable' */
   mode: isNative ? 'native' : (DEMO || DEBUG ? 'demo' : 'unavailable'),
   prices: {},
+  country: '',
   listener: null,
   async init(onTransaction) {
     if (store.mode !== 'native') return;
@@ -126,6 +127,8 @@ export const store = {
     store.listener = await safe(() => NativePurchases.addListener('transactionUpdated', (t) => {
       if (t && PRODUCTS[t.productIdentifier] && !t.revocationDate) onTransaction(t.productIdentifier, String(t.transactionId));
     }));
+    const sf = await safe(() => NativePurchases.getStorefront(), null);
+    store.country = String(sf?.countryCode || '').toUpperCase();
     await store.loadPrices();
   },
   async loadPrices() {

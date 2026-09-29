@@ -5,10 +5,10 @@ with **exactly** these Product IDs (they are derived from the bundle id `com.tin
 
 | Product ID | Reference / Display name | Type | Suggested price | Description |
 |---|---|---|---|---|
-| `com.tinytides.game.glass.60` | 60 Sea Glass | Consumable | $0.99 | 60 Sea Glass to skip evolution timers and buy decor. |
-| `com.tinytides.game.glass.330` | 330 Sea Glass | Consumable | $4.99 | 330 Sea Glass to skip evolution timers and buy decor. |
-| `com.tinytides.game.glass.700` | 700 Sea Glass | Consumable | $9.99 | 700 Sea Glass to skip evolution timers and buy decor. |
-| `com.tinytides.game.glass.1500` | 1500 Sea Glass | Consumable | $19.99 | 1500 Sea Glass to skip evolution timers and buy decor. |
+| `com.tinytides.game.glass.60` | 60 Sea Glass | Consumable | $0.99 | 60 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
+| `com.tinytides.game.glass.330` | 330 Sea Glass | Consumable | $4.99 | 330 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
+| `com.tinytides.game.glass.700` | 700 Sea Glass | Consumable | $9.99 | 700 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
+| `com.tinytides.game.glass.1500` | 1500 Sea Glass | Consumable | $19.99 | 1500 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
 | `com.tinytides.game.deepocean` | Deep Ocean Biome | Non-Consumable | $7.99 | Unlocks the glowing Deep Ocean biome with 28 new creatures. |
 | `com.tinytides.game.hourglass` | Golden Hourglass | Non-Consumable | $4.99 | Evolution timers 25% shorter forever, plus one free instant finish per day. |
 | `com.tinytides.game.pack.sakura` | Sakura Shore Pack | Non-Consumable | $2.99 | A cosmetic decor bundle: pool skin, props, hats and effects. |

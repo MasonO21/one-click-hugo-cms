@@ -24,6 +24,8 @@ const SHOTS = [
   { slug: 'build', caption: 'Build a tiny living tidepool', bg: ['#5fd6ff', '#8b7bff'] },
   { slug: 'evolve', caption: 'Rocks & water decide what they become', bg: ['#ff9ad8', '#a78bfa'] },
   { slug: 'discover', caption: 'Discover 70 adorable creatures', bg: ['#ffd66d', '#ff8fc4'] },
+  { slug: 'capsules', caption: 'Crank the capsule machine', bg: ['#ff8ad8', '#8b5cf6'] },
+  { slug: 'toybox', caption: 'Collect 99 tiny toys', bg: ['#ffd66d', '#ff7ac8'] },
   { slug: 'idle', caption: 'Check in a few times a day', bg: ['#6ee7b7', '#3fb8ee'] },
   { slug: 'tidedex', caption: 'Complete your Tidedex', bg: ['#a78bfa', '#5b6cff'] },
   { slug: 'deep', caption: 'Dive into the glowing Deep Ocean', bg: ['#3358d6', '#0f1a5c'] },
@@ -99,6 +101,31 @@ async function capture(dev, outDir) {
   await shot('deep', 2000);                                   // 6 deep
   await go(() => { const { G } = window.__tt; G.switchBiome('tide'); const st = G.state; st.equip.skin = 'neon'; st.equip.fx = 'stars'; G.scene._baseKey = ''; G.ui.refresh(); G.ui.layoutChanged(); });
   await shot('decor', 2200);                                  // 7 decor / neon
+  // ---- Capsule Machine: a forced Legendary reveal and a well-filled Toybox
+  await go(() => {
+    const { G, S, D } = window.__tt; const st = G.state;
+    G.ui.closeAllModals(); G.switchBiome('tide'); G.setTab('pool');
+    st.equip.skin = 'candy'; st.equip.fx = 'hearts'; G.scene._baseKey = '';
+    st.cur.coins = 20; st.gacha.pityL = 59; st.gacha.pityR = 3;
+    D.COLLECTIBLE_IDS.forEach((id, i) => { if (i % 3 !== 0 || D.POOL_BY_ID[id].tier === 'common') { st.gacha.owned[id] = 1 + (i % 5 === 0 ? 1 : 0); st.own[id] = true; } });
+    for (const f of D.TOY_SETS.slice(0, 2)) for (const id of f.items) { st.gacha.owned[id] = 1; st.own[id] = true; }
+    st.gacha.owned[D.goldFigId('star')] = 1; st.gacha.owned[D.goldFigId('jelly')] = 1; st.gacha.shards = 42;
+    delete st.gacha.owned[D.goldFigId('octo')]; delete st.gacha.owned.figg_crab;
+    G.ui.refresh(); G.ui.openGacha();
+  });
+  await page.waitForSelector('#gz-cv');
+  await page.waitForTimeout(700);
+  await page.click('[data-gz="pull:1:coin"]', { force: true });
+  await page.waitForSelector('[data-gz="open:0"]', { timeout: 9000 });
+  await page.waitForTimeout(400);
+  await page.click('[data-gz="open:0"]', { force: true });
+  await page.waitForSelector('#gz-cap:not([hidden])');
+  await shot('capsules', 1500);
+  await page.click('[data-gz="next"]', { force: true });
+  await page.waitForTimeout(300);
+  await page.click('[data-gz="tab:toys"]', { force: true });
+  await shot('toybox', 900);
+  await go(() => { window.__tt.G.ui.closeAllModals(); });
   await browser.close();
 }
 

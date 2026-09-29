@@ -7,7 +7,7 @@ import { PRODUCTS, APP_ID } from '../src/data.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const blurb = {
-  consumable: (p) => `${p.glass} Sea Glass to skip evolution timers and buy decor.`,
+  consumable: (p) => `${p.glass} Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).`,
   deep: () => 'Unlocks the glowing Deep Ocean biome with 28 new creatures.',
   hourglass: () => 'Evolution timers 25% shorter forever, plus one free instant finish per day.',
   pack: (p) => 'A cosmetic decor bundle: pool skin, props, hats and effects.',

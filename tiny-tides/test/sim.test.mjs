@@ -44,7 +44,7 @@ test('data integrity: 10 families x 7 forms, sane references', () => {
     assert.ok(D.PIECES_BY_BIOME[p.biome].includes(id));
   }
   for (const pk of Object.values(D.PACKS)) for (const it of pk.items) assert.ok(D.DECOR[it], it);
-  for (const [id, d] of Object.entries(D.DECOR)) assert.ok(d.free || d.price || d.pack, id);
+  for (const [id, d] of Object.entries(D.DECOR)) assert.ok(d.free || d.price || d.pack || d.gacha, id);
   for (const id of D.IAP.glass) assert.equal(D.PRODUCTS[id].type, 'consumable');
   // every trait used by a branch must be producible by some piece/water in that biome
   for (const fid of D.FAMILY_IDS) {

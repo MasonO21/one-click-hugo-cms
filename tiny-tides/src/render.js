@@ -2,7 +2,8 @@
 import * as D from './data.js';
 import * as S from './sim.js';
 import { drawSprite, facingOf, OUT, shade, rng, hash } from './art_creatures.js';
-import { PIECE_ART, PROP_ART, drawEgg, drawCocoon } from './art_world.js';
+import { PIECE_ART, drawEgg, drawCocoon } from './art_world.js';
+import { drawProp } from './art_gacha.js';
 
 const TAU = Math.PI * 2;
 const { FORMS, FAMILIES, SKINS } = D;
@@ -335,6 +336,7 @@ export function createScene(canvas) {
   }
   function drawFx(c, W, H, fx, t, night, reduce) {
     if (reduce || fx === 'nofx') return;
+    if (fx === 'rainbow') { c.save(); c.globalAlpha = 0.16; ['#ff6f8f', '#ffb02e', '#ffe66d', '#6fe3a0', '#5fd6ff', '#b590ff'].forEach((col, k) => { c.beginPath(); c.arc(W / 2, H * 0.34, W * (0.62 - k * 0.035), Math.PI * 1.06, Math.PI * 1.94); c.strokeStyle = col; c.lineWidth = W * 0.035; c.stroke(); }); c.restore(); }
     const n = sc.battery ? 8 : 16;
     for (let i = 0; i < n; i++) {
       const r = rng(i * 977 + 13), a = r(), b = r(), sp = 10 + r() * 22, ph = r() * 10;
@@ -347,6 +349,13 @@ export function createScene(canvas) {
       } else if (fx === 'stardust' || fx === 'stars') {
         const x = b * W, y = a * H, p = Math.abs(Math.sin(t * 1.4 + ph)); c.save(); c.globalAlpha = p * 0.9; c.translate(x, y); c.rotate(t * 0.3 + ph); c.fillStyle = fx === 'stars' ? (i % 2 ? '#7cf0ff' : '#ff8ae0') : '#fff6b0'; const s = 3 + p * 5;
         c.beginPath(); for (let k = 0; k < 4; k++) { const an = k * Math.PI / 2; c.lineTo(Math.cos(an) * s, Math.sin(an) * s); c.lineTo(Math.cos(an + 0.78) * s * 0.3, Math.sin(an + 0.78) * s * 0.3); } c.fill(); c.restore();
+      } else if (fx === 'hearts') {
+        const y = H - ((t * sp * 0.9 + a * H) % (H + 40)) + 20, x = b * W + Math.sin(t * 0.9 + ph) * 22, sz = 6 + r() * 6;
+        c.save(); c.translate(x, y); c.rotate(Math.sin(t + ph) * 0.3); c.globalAlpha = 0.85; c.fillStyle = i % 2 ? '#ff8fc4' : '#ffb1d6';
+        c.beginPath(); c.moveTo(0, sz * 0.35); c.bezierCurveTo(-sz, -sz * 0.3, -sz * 0.5, -sz, 0, -sz * 0.4); c.bezierCurveTo(sz * 0.5, -sz, sz, -sz * 0.3, 0, sz * 0.35); c.fill(); c.restore();
+      } else if (fx === 'rainbow') {
+        const x = b * W, y = a * H, p = Math.abs(Math.sin(t * 1.6 + ph)); c.save(); c.globalAlpha = p * 0.95; c.translate(x, y); c.rotate(t * 0.4 + ph);
+        c.fillStyle = `hsl(${(t * 60 + i * 47) % 360} 95% 70%)`; const s2 = 3 + p * 5; c.beginPath(); for (let k = 0; k < 4; k++) { const an = k * Math.PI / 2; c.lineTo(Math.cos(an) * s2, Math.sin(an) * s2); c.lineTo(Math.cos(an + 0.78) * s2 * 0.3, Math.sin(an + 0.78) * s2 * 0.3); } c.fill(); c.restore();
       } else if (fx === 'petals') {
         const y = ((t * sp * 0.8 + a * H) % (H + 30)) - 15, x = b * W + Math.sin(t * 0.9 + ph) * 30; c.save(); c.translate(x, y); c.rotate(t * 1.2 + ph); c.fillStyle = i % 2 ? '#ffc4dc' : '#ffa6c9'; c.globalAlpha = 0.9; c.beginPath(); c.ellipse(0, 0, 5, 3, 0, 0, TAU); c.fill(); c.restore();
       } else if (fx === 'confetti') {
@@ -441,7 +450,7 @@ export function createScene(canvas) {
         PIECE_ART[tl.p](c, cx, cy, ts, t, x * 7 + y * 13);
         c.restore();
       } });
-      if (tl.d && !tl.p) items.push({ y: y + 0.62, f: () => { const cx = ox + (x + 0.5) * ts, cy = oy + (y + 0.5) * ts + ts * 0.32; PROP_ART[tl.d](c, cx, cy, ts, t, night > 0.4); } });
+      if (tl.d && !tl.p) items.push({ y: y + 0.62, f: () => { const cx = ox + (x + 0.5) * ts, cy = oy + (y + 0.5) * ts + ts * 0.32; drawProp(c, tl.d, cx, cy, ts, t, night > 0.4); } });
     }
     for (const e of pool.eggs) {
       const v = sc.views.get(e.id); if (!v) continue;

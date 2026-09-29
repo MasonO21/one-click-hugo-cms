@@ -4,6 +4,7 @@ import * as D from './data.js';
 import * as S from './sim.js';
 import * as A from './audio.js';
 import { storage, haptic, notify, store, shareCanvas } from './platform.js';
+import { NO_PAID_RANDOM } from './config.js';
 
 const { FORMS, FAMILIES, PIECES } = D;
 const BAK_KEY = D.SAVE_KEY + '.bak';
@@ -278,9 +279,31 @@ export function createGame(scene) {
   G.claimDex = (i) => {
     const m = D.DEX_MILESTONES[i], s = st();
     if (!m || s.dexClaimed.includes(i) || S.dexCount(s) < m.n) return { ok: false };
-    s.dexClaimed.push(i); s.cur.glass += m.glass; A.play('coin'); haptic.success(); scene.confetti(20); mark(); refresh();
-    return { ok: true, glass: m.glass };
+    s.dexClaimed.push(i); s.cur.glass += m.glass; s.cur.coins += m.coins || 0; A.play('coin'); haptic.success(); scene.confetti(20); mark(); refresh();
+    return { ok: true, glass: m.glass, coins: m.coins || 0 };
   };
+
+  // ------------------------------------------------------------------ Capsule Machine
+  const PULL_FAIL = {
+    coins: () => 'Not enough Capsule Coins', glass: () => 'Not enough Sea Glass', used: () => 'Come back tomorrow for another free capsule',
+    disabled: () => 'Sea Glass pulls are turned off in Settings', cap: (r) => (r.left ? `Only ${r.left} Sea Glass pulls left today` : 'Daily Sea Glass pull limit reached'),
+  };
+  G.paidRandomBlocked = () => !!store.country && NO_PAID_RANDOM.includes(store.country);
+  G.gachaPull = (n, mode) => {
+    if (mode === 'glass' && G.paidRandomBlocked()) { tell("Sea Glass pulls aren't available in your region. Free pulls and Coins still work!", 'warn'); A.play('error'); return { ok: false, reason: 'region' }; }
+    const r = S.gachaPull(st(), n, mode, G.now());
+    if (!r.ok) { tell((PULL_FAIL[r.reason] || (() => "Can't pull right now"))(r), 'warn'); A.play('error'); return r; }
+    G.handle(r.events || []); mark(); G.ui?.refresh();
+    return r;
+  };
+  G.prizeBuy = (id) => {
+    const r = S.prizeBuy(st(), id);
+    if (!r.ok) { tell(r.reason === 'shards' ? `Need ${r.need} shards` : "Can't do that", 'warn'); A.play('error'); return r; }
+    A.play('buy'); haptic.success(); scene.confetti(24); tell('Toy exchanged!', 'good'); mark(); G.ui?.refresh();
+    return r;
+  };
+  G.claimToySet = (id) => { const r = S.claimToySet(st(), id); if (r.ok) { A.play('gift'); haptic.success(); scene.confetti(40); tell('Set complete!', 'good'); mark(); G.ui?.refresh(); } return r; };
+  G.claimToyMile = (i) => { const r = S.claimToyMile(st(), i); if (r.ok) { A.play('coin'); haptic.success(); scene.confetti(20); mark(); G.ui?.refresh(); } return r; };
 
   // ------------------------------------------------------------------ purchases
   const grant = async (pid, txId, opts = {}) => {
@@ -358,6 +381,9 @@ export function createGame(scene) {
     let stored = 0, cap = 0, rate = 0;
     for (const p of Object.values(s.pools)) for (const c of p.creatures) if (!c.evo) { const r = S.creatureRate(s, p, c, now); stored += c.stored; cap += r * D.bubbleCapHours(s.lvl); rate += r; }
     if (cap > 0 && rate > 0) { const need = cap * 0.9 - stored; list.push({ t: quiet(now + Math.max(need / rate, 1.5) * D.HOUR), title: 'Your bubbles are full', body: 'Pearls are waiting to be popped. Pop them before they stop growing!' }); }
+    // free daily capsule
+    if (S.gachaFreeAvailable(s, now)) list.push({ t: quiet(now + 3 * D.HOUR), title: 'Your free capsule is ready', body: 'Give the crank a turn. A new toy is waiting!' });
+    else { const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(10, 15, 0, 0); list.push({ t: d.getTime(), title: 'Your free capsule is ready', body: 'A fresh capsule is waiting in the machine.' }); }
     // next tide gift
     const g = S.nextGiftAt(now); if (g - now < 26 * D.HOUR) list.push({ t: quiet(g + 5 * 60e3), title: 'A Tide Gift washed ashore', body: 'Something shiny is waiting on the beach.' });
     list.sort((a, b) => a.t - b.t);
@@ -428,18 +454,18 @@ export function createGame(scene) {
   G.tutorialFinish = () => {
     const t = T(), p = st().pools.tide;
     t.done = true; t.step = 9; p.nextEgg = G.now() + 6 * D.MIN; mark();
-    st().cur.glass += 10;
+    st().cur.glass += 10; st().cur.coins += 2;
     G.ui?.closeSheet(); G.setTab('pool'); G.ui?.tutorialChanged(); refresh();
   };
   G.tutorialSkip = () => {
-    const t = T(); t.done = true; t.step = 9; st().flags.firstEvo = true; st().pools.tide.nextEgg = G.now() + 2 * D.MIN; st().cur.pearls = Math.max(st().cur.pearls, 150); mark();
+    const t = T(); t.done = true; t.step = 9; st().flags.firstEvo = true; st().pools.tide.nextEgg = G.now() + 2 * D.MIN; st().cur.pearls = Math.max(st().cur.pearls, 150); st().cur.coins += 2; mark();
     G.setTab('pool'); G.ui?.tutorialChanged(); refresh();
   };
 
   // ------------------------------------------------------------------ debug hooks (stripped from release builds)
   if (__DEBUG__) {
     window.__tt = {
-      G, S, D, scene,
+      G, S, D, scene, store,
       advance(ms) { G.clockOffset += ms; G.tick(); refresh(); },
       give(o) { Object.assign(st().cur, o); refresh(); },
       level(n) { st().lvl = n; refresh(); },
