@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Fridge Pulse",
+    "slug": "fridge-pulse",
+    "scheme": "fridgepulse",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.fridgepulse.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.fridgepulse.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#12382A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#12382A"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Fridge Pulse uses your camera to photograph your fridge and pantry so it can track what is about to expire.",
+          "photosPermission": "Fridge Pulse reads photos you choose so it can find the food in them.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1B9A53"
+        }
+      ]
+    ]
+  }
+}

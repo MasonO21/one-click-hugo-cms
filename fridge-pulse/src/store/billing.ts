@@ -1,0 +1,82 @@
+import { create } from 'zustand';
+import { pickProvider, type BillingProvider } from '../billing';
+import { NO_ENTITLEMENT, PRICE_PER_MONTH, type Entitlement } from '../billing/trial';
+
+let provider: BillingProvider | null = null;
+/** Lazily created so tests and web builds never touch native billing modules unless needed. */
+export function getProvider(): BillingProvider {
+  provider ??= pickProvider();
+  return provider;
+}
+
+interface BillingState {
+  /** True once the first entitlement lookup has finished (success or failure). */
+  ready: boolean;
+  entitlement: Entitlement;
+  priceString: string;
+  busy: boolean;
+  error: string | null;
+  init: () => Promise<void>;
+  refresh: () => Promise<void>;
+  /** Starts the free trial or subscribes. Resolves true when access was granted. */
+  purchase: () => Promise<boolean>;
+  restore: () => Promise<boolean>;
+}
+
+let initStarted = false;
+
+export const useBilling = create<BillingState>((set, get) => ({
+  ready: false,
+  entitlement: NO_ENTITLEMENT,
+  priceString: PRICE_PER_MONTH,
+  busy: false,
+  error: null,
+
+  async init() {
+    if (initStarted) return;
+    initStarted = true;
+    const p = getProvider();
+    try {
+      await p.init();
+      p.subscribe((entitlement) => set({ entitlement }));
+      const [entitlement, offer] = await Promise.all([p.getEntitlement(), p.getOffer()]);
+      set({ entitlement, priceString: offer.priceString, ready: true, error: null });
+    } catch {
+      set({ ready: true, error: 'Could not check your subscription. Check your connection and try again.' });
+    }
+  },
+
+  async refresh() {
+    try {
+      set({ entitlement: await getProvider().getEntitlement() });
+    } catch {
+      // Keep the last known entitlement when offline.
+    }
+  },
+
+  async purchase() {
+    if (get().busy) return false;
+    set({ busy: true, error: null });
+    const result = await getProvider().purchase();
+    if (result.ok) {
+      set({ busy: false, entitlement: result.entitlement });
+      return true;
+    }
+    set({ busy: false, error: result.cancelled ? null : (result.message ?? 'The purchase could not be completed.') });
+    return false;
+  },
+
+  async restore() {
+    if (get().busy) return false;
+    set({ busy: true, error: null });
+    try {
+      const entitlement = await getProvider().restore();
+      const granted = entitlement.status === 'trial' || entitlement.status === 'active';
+      set({ busy: false, entitlement, error: granted ? null : 'No active subscription was found for this account.' });
+      return granted;
+    } catch {
+      set({ busy: false, error: 'Could not restore purchases. Please try again.' });
+      return false;
+    }
+  },
+}));
