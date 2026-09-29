@@ -66,7 +66,7 @@ DIVE INTO THE DEEP OCEAN (optional)
 A glowing second biome with trenches, thermal vents, bioluminescent kelp and 28 new creatures. One purchase, yours forever.
 
 KIND BY DESIGN
-No ads. No accounts. No tracking. Your game lives on your device. Optional purchases are cosmetic decor, time-savers, Sea Glass and the Deep Ocean biome. Capsule toys are cosmetic only and never change how fast your creatures earn or evolve. Sea Glass capsule pulls are random with published rates, capped at 30 a day, and can be switched off in Settings; free pulls never run out.
+No ads. No accounts. No tracking. Your game lives on your device. Optional purchases are cosmetic decor, time-savers, Sea Glass and the Deep Ocean biome. Capsule toys are cosmetic only and never change how fast your creatures earn or evolve. Sea Glass capsule pulls are random with published rates, capped at 20 a day, and can be switched off in Settings; free pulls never run out.
 
 Follow the tide. See who your friends become.
 
@@ -105,7 +105,7 @@ Regenerate any time with `npm run store-shots`. App icon: `assets/icon-only.png`
 | User-generated content / chat / social features | None |
 | Medical / wellness | None |
 
-**Loot-box compliance summary** (Guideline 3.1.1: odds must be disclosed before purchase): per-item probabilities for all 106 capsule prizes, tier rates, pity rules, spotlight rules, duplicate conversion and the daily spending limit are listed in *Capsule Machine → Rates*, generated from the same table the game rolls against (a unit test verifies real pull frequencies match). Guardrails: guaranteed Rare+ every 10 pulls and Legendary every 60, 30 Sea Glass pulls/day cap, confirmation before every Sea Glass spend, a Settings switch that disables Sea Glass pulls entirely, a free daily pull and free Capsule Coins, and a storefront-country switch (`NO_PAID_RANDOM` in `src/config.js`, Belgium by default) that turns paid pulls off in restricted markets.
+**Loot-box compliance summary** (Guideline 3.1.1: odds must be disclosed before purchase): per-item probabilities for all 106 capsule prizes, tier rates, pity rules, spotlight rules, duplicate conversion and the daily spending limit are listed in *Capsule Machine → Rates*, generated from the same table the game rolls against (a unit test verifies real pull frequencies match). Guardrails: guaranteed Rare+ toy every 10 pulls and Legendary toy every 60, 20 Sea Glass pulls/day cap, confirmation before every Sea Glass spend, a Settings switch that disables Sea Glass pulls entirely, a free daily pull and free Capsule Coins, and a storefront-country switch (`NO_PAID_RANDOM` in `src/config.js`: Belgium and Brazil by default; also off until the App Store region is known) that turns paid pulls off in restricted markets. The website's drop-rate page shows each prize's possible range across all weekly spotlights, and the in-app Rates tab shows the exact chances for the current week.
 
 ## App Privacy ("nutrition label")
 Select **Data Not Collected**. Reasons: no accounts, no analytics, no advertising, no third-party SDKs, no server. Purchases are handled by Apple. (If you later add analytics, crash reporting or cloud save, update this label *before* shipping that version.)
@@ -127,7 +127,7 @@ In-app purchases (all in Settings > gear icon > "Restore purchases", and in the 
 • Deep Ocean biome (non-consumable) – unlocks the second, premium habitat; tap the "Deep" button at the top of the Pool screen to preview and purchase.
 Restore Purchases is in Settings (gear icon).
 
-Capsule Machine (gachapon): tap the pink capsule button on the Pool screen (available after the tutorial). It gives one FREE capsule per day and uses free "Capsule Coins" earned through play. Optionally, Sea Glass can be spent on pulls: a confirmation appears first. The complete drop rates (every item's percentage, pity guarantees and the daily 30-pull limit) are in Capsule Machine > Rates tab, and Sea Glass pulls can be switched off in Settings. All prizes are cosmetic toys or small one-time rewards; nothing affects earning or evolution speed. Sea Glass pulls are disabled automatically in Belgium.
+Capsule Machine (gachapon): tap the pink capsule button on the Pool screen (available after the tutorial). It gives one FREE capsule per day and uses free "Capsule Coins" earned through play. Optionally, Sea Glass can be spent on pulls: a confirmation appears first. The complete drop rates (every item's percentage, pity guarantees and the daily 20-pull limit) are in Capsule Machine > Rates tab, and Sea Glass pulls can be switched off in Settings. Toys are cosmetic and never affect earning or evolution speed; some capsules hold a small one-time reward instead. Sea Glass pulls are disabled automatically in Belgium and Brazil.
 
 Reminders (local notifications) are optional and are requested only after the tutorial. There is no tracking, no ads and no data collection.
 ```

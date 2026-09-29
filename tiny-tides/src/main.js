@@ -72,12 +72,18 @@ async function boot() {
   }
 
   // ---------------- loops
-  let last = performance.now(), skip = false;
+  // Draw at the display rate while the player is interacting or something is happening, and at ~30 fps when the scene is just
+  // sitting there (or in Battery saver): gentler on older phones and the battery. `last` only advances when a frame is drawn,
+  // so animations keep their real-time speed at either rate.
+  let last = performance.now(), lastInput = last;
+  for (const ev of ['pointerdown', 'pointermove', 'keydown']) window.addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true });
+  const modalRoot = document.getElementById('modal-root');
   const frame = (t) => {
     requestAnimationFrame(frame);
     if (document.hidden) { last = t; return; }
+    const calm = t - lastInput > 4000 && !scene.parts.length && !scene.texts.length && !modalRoot.firstElementChild;
+    if ((G.state.settings.battery || calm) && t - last < 30) return;
     const dt = (t - last) / 1000; last = t;
-    if (G.state.settings.battery) { skip = !skip; if (skip) return; }
     scene.frame(dt, G.now());
   };
   requestAnimationFrame(frame);

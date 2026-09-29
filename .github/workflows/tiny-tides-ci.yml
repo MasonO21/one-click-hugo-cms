@@ -1,9 +1,9 @@
 name: Tiny Tides CI
 on:
   push:
-    paths: ['tiny-tides/**']
+    paths: ['tiny-tides/**', '.github/workflows/tiny-tides-ci.yml']
   pull_request:
-    paths: ['tiny-tides/**']
+    paths: ['tiny-tides/**', '.github/workflows/tiny-tides-ci.yml']
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
@@ -14,7 +14,18 @@ jobs:
         with: { node-version: 22, cache: npm, cache-dependency-path: tiny-tides/package-lock.json }
       - run: npm ci
         env: { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }
+      - name: StoreKit plugin patch applied
+        run: grep -q retainUntilConsumed node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift
+      - run: npm run lint
       - run: npm test
+      - name: Legal pages are generated, current and structurally valid (placeholders are allowed here, not at release)
+        run: npm run legal:check:ci && npm run site:check
+      - name: Browser tests (Chromium)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+          node tools/qa/monkey.mjs --seeds=2 --steps=250
+        env: { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '' }
       - run: npm run build
       - name: Release bundle must not contain debug hooks
         run: "! grep -q '__tt' www/app.js"

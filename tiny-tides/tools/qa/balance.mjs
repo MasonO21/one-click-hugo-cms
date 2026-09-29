@@ -1,7 +1,7 @@
 // Economy sanity check: a scripted "typical" player (4 check-ins a day) over N days.
 // Usage: node tools/balance.mjs [days] [checkinsPerDay]
-import * as D from '../src/data.js';
-import * as S from '../src/sim.js';
+import * as D from '../../src/data.js';
+import * as S from '../../src/sim.js';
 
 const DAYS = +process.argv[2] || 30;
 const PER_DAY = +process.argv[3] || 4;
@@ -63,7 +63,6 @@ function spend(now) {
 }
 
 const rows = [];
-let simDay = 0;
 for (let day = 0; day < DAYS; day++) {
   for (const h of HOURS) {
     const now = T0 + day * 864e5 + h * D.HOUR;

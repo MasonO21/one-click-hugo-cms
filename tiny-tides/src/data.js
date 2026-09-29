@@ -227,7 +227,7 @@ export const HOURGLASS_FACTOR = 0.75;
 export const DISCOVER_GLASS = { 1: 0, 2: 4, 3: 12 };
 export const DISCOVER_XP = { 1: 15, 2: 40, 3: 150 };
 
-export const xpForLevel = (l) => Math.round(60 * Math.pow(1.5, l - 1));
+export const xpForLevel = (l) => Math.round(60 * Math.pow(1.42, l - 1));
 export const MAX_POOL_LVL = 30;
 export const bubbleCapHours = (lvl) => Math.min(12, 4 + 0.5 * (lvl - 1));
 
@@ -349,6 +349,11 @@ export const PRODUCTS = {
   [`${APP_ID}.pack.party`]:  { type: 'nonconsumable', name: PACKS.party.name,  pack: 'party',  price: '$2.99' },
   [`${APP_ID}.starter`]:     { type: 'nonconsumable', name: 'Starter Bundle',  starter: true, glass: 200, items: ['partyhat', 'bubblegum'], price: '$2.99' },
 };
+// Bonus labels are computed from the real amounts and prices (glass per dollar compared with the smallest pack), so they are always true.
+{
+  const perUsd = (p) => p.glass / parseFloat(p.price.slice(1)), base = perUsd(PRODUCTS[`${APP_ID}.glass.60`]);
+  for (const p of Object.values(PRODUCTS)) if (p.type === 'consumable' && perUsd(p) > base * 1.005) p.tag = `+${Math.round((perUsd(p) / base - 1) * 100)}% bonus`;
+}
 export const PRODUCT_IDS = Object.keys(PRODUCTS);
 export const IAP = {
   deep: `${APP_ID}.deepocean`, hourglass: `${APP_ID}.hourglass`, starter: `${APP_ID}.starter`,

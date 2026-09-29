@@ -18,7 +18,9 @@ export const POLICY = [
   ['Sharing pictures', 'When you tap Share, the picture is created on your device and handed to the iOS share sheet. You choose where it goes.'],
 ];
 
-// Storefront countries where paid random items (Sea Glass capsule pulls) are switched off. Free pulls and Capsule Coins still work.
-// Belgium's Gaming Commission treats paid loot boxes as gambling. Have a lawyer review this list for your release territories, or
-// remove those territories in App Store Connect. Apple returns ISO alpha-3 codes ("BEL"); alpha-2 is listed too for safety.
-export const NO_PAID_RANDOM = ['BE', 'BEL'];
+// Countries where paid random items (Sea Glass capsule pulls) are switched off. Free pulls and Capsule Coins still work.
+// Checked against BOTH the App Store storefront (Apple returns ISO alpha-3, e.g. "BEL") and the device region (alpha-2, e.g. "BE").
+//  - Belgium: the Gaming Commission treats paid loot boxes as illegal gambling.
+//  - Brazil: precaution — recent child-protection rules restrict paid random items in games that minors may play.
+// Have a lawyer review this list for the countries you sell in (see legal/APP_STORE_ADMIN_CHECKLIST.md), or untick territories in App Store Connect.
+export const NO_PAID_RANDOM = ['BE', 'BEL', 'BR', 'BRA'];

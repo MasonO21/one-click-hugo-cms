@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildSite, config, PAGES } from './site.mjs';
+import { buildSite, buildStoreDocs, config, PAGES } from './site.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PLACEHOLDER = /YOUR|\.example\b|example\.(com|org)|\bTODO\b|\bFIXME\b|lorem ipsum/i;
@@ -27,6 +27,10 @@ export function structuralProblems(cfg, dir = path.join(root, 'site')) {
   for (const [f, content] of buildSite()) {
     const p = path.join(dir, f);
     if (!fs.existsSync(p) || fs.readFileSync(p, 'utf8') !== content) out.push(`site/${f} is out of date — run: npm run site`);
+  }
+  for (const [f, content] of buildStoreDocs()) {
+    const p = path.join(root, f);
+    if (!fs.existsSync(p) || fs.readFileSync(p, 'utf8') !== content) out.push(`${f} is out of date — run: npm run site`);
   }
   for (const f of ['icon.png', 'p1.png', 'p2.png', 'p3.png']) if (!fs.existsSync(path.join(dir, f))) out.push(`site/${f} is missing`);
   return out;

@@ -4,12 +4,12 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const out = process.argv[2] || '/tmp/tt/scene.png';
 const hour = +(process.argv[3] ?? 14);
 const biome = process.argv[4] || 'tide';
 fs.mkdirSync('/tmp/tt', { recursive: true });
-await build({ entryPoints: [path.join(root, 'tools/scene-entry.js')], bundle: true, format: 'iife', outfile: '/tmp/tt/scene-bundle.js', logLevel: 'error' });
+await build({ entryPoints: [path.join(root, 'tools/qa/scene-entry.js')], bundle: true, format: 'iife', outfile: '/tmp/tt/scene-bundle.js', logLevel: 'error' });
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
@@ -35,7 +35,7 @@ await page.evaluate(({ hour, biome }) => {
     const forms = [['crab.0', 3, 4], ['snail.0', 2, 4], ['star.b.warmth', 1, 2], ['horse.m.glow', 3, 3], ['jelly.b.glow', 2, 2], ['octo.0', 3, 2]];
     let n = 0;
     for (const [f, x, y] of forms) { const c = { id: st.nid++, form: f, x, y, lvl: 3, stored: 60 + n * 90, born: now, hat: n === 1 ? 'partyhat' : n === 3 ? 'crownhat' : null, evo: null }; pool.creatures.push(c); n++; }
-    const e = S.spawnEgg(st, pool, now - 1e6, { fam: 'crab' });
+    S.spawnEgg(st, pool, now - 1e6, { fam: 'crab' });
     pool.creatures.push({ id: st.nid++, form: 'crab.0', x: 4, y: 5, lvl: 3, stored: 0, born: now, hat: null, evo: { to: 'crab.b.stone', start: now - 1000, end: now + 3600e3 } });
   } else {
     for (const [x, y] of [[2, 2], [3, 2], [2, 3], [3, 3], [2, 4], [3, 4]]) { put('dig', x, y); put('dig', x, y); put('dig', x, y); }
@@ -48,7 +48,6 @@ await page.evaluate(({ hour, biome }) => {
   sc.state = st; sc.biome = biome;
   sc.resize(390, 844, 2, { top: 130, bottom: 120 });
   sc.buildMode = false;
-  let t = performance.now();
   window.__sc = sc; window.__now = now;
   for (let i = 0; i < 90; i++) sc.frame(1 / 30, now + i * 33);
 }, { hour, biome });

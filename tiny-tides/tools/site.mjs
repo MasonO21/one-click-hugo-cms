@@ -28,19 +28,24 @@ const stars = (n) => '★'.repeat(n);
 const long = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const minIos = (read('ios/App/App.xcodeproj/project.pbxproj').match(/IPHONEOS_DEPLOYMENT_TARGET = ([\d.]+);/) || [])[1]?.replace(/\.0$/, '') || '15';
 
-/** Per-item probability in a normal week and while spotlighted (same maths as gachaTable in src/sim.js). */
+/** Per-item probabilities (same maths as gachaTable in src/sim.js). Every week one Rare and one Legendary collectible is in the spotlight
+ *  (weight x spotMult), which slightly lowers the others in that tier. So a prize that is not in the spotlight has a chance that depends on
+ *  which sibling is: `low`..`high` covers every possible week, and `spot` is its chance in the weeks it is itself the spotlight. */
 export function rateRows() {
   const rows = [];
   for (const t of G.tiers) {
-    const items = D.POOL_BY_TIER[t.id], total = items.reduce((a, i) => a + i.w, 0);
-    const canSpot = t.id === 'rare' || t.id === 'legendary';
+    const items = D.POOL_BY_TIER[t.id], W = items.reduce((a, i) => a + i.w, 0), m = G.spotMult;
+    const spotlit = t.id === 'rare' || t.id === 'legendary' ? items.filter((i) => !i.filler) : [];
     for (const i of items) {
-      const spotTotal = total - i.w + i.w * G.spotMult;
-      rows.push({ item: i, tier: t, normal: (t.p / 100) * i.w / total, spot: canSpot && !i.filler ? (t.p / 100) * (i.w * G.spotMult) / spotTotal : null });
+      if (!spotlit.length) { const v = (t.p / 100) * i.w / W; rows.push({ item: i, tier: t, low: v, high: v, spot: null }); continue; }
+      const others = spotlit.filter((j) => j !== i).map((j) => (t.p / 100) * i.w / (W + (m - 1) * j.w));
+      const canSpot = spotlit.includes(i);
+      rows.push({ item: i, tier: t, low: Math.min(...others), high: Math.max(...others), spot: canSpot ? (t.p / 100) * (i.w * m) / (W + (m - 1) * i.w) : null });
     }
   }
   return rows;
 }
+const range = (r) => { const a = pct(r.low), b = pct(r.high); return a === b ? a : `${a} – ${b}`; };
 const kindLabel = (i) => (i.filler ? 'Prize capsule' : i.kind === 'fig' ? (i.gold ? 'Golden figurine' : 'Figurine') : ({ hat: 'Hat', prop: 'Pool decor', skin: 'Pool look', fx: 'Sparkle effect' }[i.kind] || 'Toy'));
 
 function tiersHtml() {
@@ -52,8 +57,9 @@ function itemsHtml() {
   for (const r of rateRows()) (byTier.get(r.tier.id) || byTier.set(r.tier.id, []).get(r.tier.id)).push(r);
   return [...G.tiers].reverse().map((t) => {
     const list = byTier.get(t.id);
-    const body = list.map((r) => `<tr><td>${esc(r.item.name)}</td><td>${kindLabel(r.item)}</td><td class="num">${pct(r.normal)}</td><td class="num">${r.spot == null ? '—' : pct(r.spot)}</td></tr>`).join('');
-    return `<h3>${stars(t.stars)} ${esc(t.name)} — ${t.p}% per capsule</h3><table><thead><tr><th>Prize</th><th>Type</th><th class="num">Normal week</th><th class="num">In spotlight</th></tr></thead><tbody>${body}</tbody></table>`;
+    const spotCol = t.id === 'rare' || t.id === 'legendary';
+    const body = list.map((r) => `<tr><td>${esc(r.item.name)}</td><td>${kindLabel(r.item)}</td><td class="num">${range(r)}</td>${spotCol ? `<td class="num">${r.spot == null ? '—' : pct(r.spot)}</td>` : ''}</tr>`).join('');
+    return `<h3>${stars(t.stars)} ${esc(t.name)} — ${t.p}% per capsule</h3><table><thead><tr><th>Prize</th><th>Type</th><th class="num">${spotCol ? 'Chance when not in the spotlight' : 'Chance'}</th>${spotCol ? '<th class="num">Chance when in the spotlight</th>' : ''}</tr></thead><tbody>${body}</tbody></table>`;
   }).join('\n');
 }
 const shardsHtml = () => G.tiers.map((t) => `${esc(t.name)} ${t.shards}`).join(', ');
@@ -106,15 +112,38 @@ export function buildSite() {
   return files;
 }
 
+/** Documents for App Store Connect that live in store/ (paths relative to the project root). */
+export function buildStoreDocs() {
+  const v = vars(), docs = new Map();
+  const terms = render(read('legal/templates/terms.body.html'), v, 'terms.body.html');
+  docs.set('store/EULA.txt', htmlToText(terms, config.baseUrl) + '\n');
+  docs.set('store/APP_REVIEW_NOTES.md', render(read('legal/templates/app-review-notes.md'), v, 'app-review-notes.md'));
+  return docs;
+}
+function htmlToText(html, base) {
+  const ent = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' };
+  return html
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, (_, href, t) => `${t.replace(/<[^>]+>/g, '')} (${/^https?:|^mailto:/.test(href) ? href.replace(/^mailto:/, '') : `${base}/${href}`})`)
+    .replace(/<h2>([\s\S]*?)<\/h2>/g, (_, t) => `\n\n${t.toUpperCase()}\n`)
+    .replace(/<div class="callout">([\s\S]*?)<\/div>/g, (_, t) => `\n${t}\n`)
+    .replace(/<ol[^>]*>([\s\S]*?)<\/ol>/g, (_, inner) => { let i = 0; return inner.replace(/<li>/g, () => `\n(${String.fromCharCode(97 + i++)}) `); })
+    .replace(/<li>/g, '\n- ')
+    .replace(/<\/(p|ul|ol)>/g, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (m) => ent[m])
+    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // ------------------------------------------------------------------ run
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const files = buildSite();
+  const files = buildSite(), docs = buildStoreDocs();
+  const outputs = [...files].map(([f, c]) => [path.join(outDir, f), c, `site/${f}`]).concat([...docs].map(([f, c]) => [path.join(root, f), c, f]));
   if (checkOnly) {
-    const stale = [...files].filter(([f, c]) => !fs.existsSync(path.join(outDir, f)) || fs.readFileSync(path.join(outDir, f), 'utf8') !== c).map(([f]) => f);
-    if (stale.length) { console.error(`site/ is out of date (${stale.join(', ')}). Run: npm run site`); process.exit(1); }
-    console.log(`site/ is up to date (${files.size} files)`);
+    const stale = outputs.filter(([p, c]) => !fs.existsSync(p) || fs.readFileSync(p, 'utf8') !== c).map(([, , name]) => name);
+    if (stale.length) { console.error(`out of date: ${stale.join(', ')}. Run: npm run site`); process.exit(1); }
+    console.log(`site/ and store docs are up to date (${outputs.length} files)`);
   } else {
-    for (const [f, c] of files) { const p = path.join(outDir, f); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, c); }
-    console.log(`site: wrote ${files.size} files to ${path.relative(process.cwd(), outDir) || '.'}`);
+    for (const [p, c] of outputs) { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, c); }
+    console.log(`site: wrote ${files.size} pages/assets to ${path.relative(process.cwd(), outDir) || '.'} and ${docs.size} store documents`);
   }
 }

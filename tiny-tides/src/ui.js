@@ -217,7 +217,7 @@ export function createUI(G) {
     const coach = $('#coach .coach');   // measure the layout box, not the animated rect (it slides in with a transform)
     if (coach) top = Math.max(top, $('#coach').getBoundingClientRect().top + coach.offsetHeight + 6);
     const ins = { top, bottom: Math.max(bottom, 80) };
-    if (scene.W !== W || scene.H !== H || scene.dpr !== Math.min(dpr, 2.5)) scene.resize(W, H, dpr, ins);
+    if (scene.W !== W || scene.H !== H || scene.dpr !== Math.min(dpr || 1, scene.battery ? 1.5 : 2.5)) scene.resize(W, H, dpr, ins);
     else scene.setInsets(ins);
     if (!sheetOpen) renderDock();
   };

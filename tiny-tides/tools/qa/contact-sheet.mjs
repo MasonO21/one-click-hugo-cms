@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const out = args[0] || '/tmp/tt/sheet.png';
 const only = args[1];
@@ -14,7 +14,7 @@ const hat = (process.argv.find((a) => a.startsWith('--hat=')) || '').slice(6) ||
 const hats = process.argv.includes('--hats');
 fs.mkdirSync('/tmp/tt', { recursive: true });
 const tmp = '/tmp/tt/sheet-bundle.js';
-await build({ entryPoints: [path.join(root, 'tools/sheet-entry.js')], bundle: true, format: 'iife', outfile: tmp, logLevel: 'error' });
+await build({ entryPoints: [path.join(root, 'tools/qa/sheet-entry.js')], bundle: true, format: 'iife', outfile: tmp, logLevel: 'error' });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 page.on('pageerror', (e) => console.error('PAGEERROR', e.message));

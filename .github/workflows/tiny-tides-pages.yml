@@ -1,0 +1,22 @@
+# Optional: publish tiny-tides/site (privacy policy, terms, drop rates, parents' guide, support, licenses) with GitHub Pages.
+# Manual only. One-time setup: repository Settings → Pages → Source: "GitHub Actions". The site address becomes
+# https://<user>.github.io/<repo>  (set that as "baseUrl" in tiny-tides/legal/site.config.json, then run `npm run site`).
+# Note: a repository has one Pages site; if this repository already publishes another site, host tiny-tides/site somewhere else.
+name: Tiny Tides site → GitHub Pages
+on: workflow_dispatch
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency: { group: tiny-tides-pages, cancel-in-progress: true }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: tiny-tides/site }
+      - id: deployment
+        uses: actions/deploy-pages@v4

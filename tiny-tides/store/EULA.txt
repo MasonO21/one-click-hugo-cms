@@ -1,0 +1,95 @@
+TERMS OF USE (END-USER LICENSE AGREEMENT)
+
+Effective 29 September 2026 · Please read these terms before playing Tiny Tides
+
+In plain English. You may play Tiny Tides for fun on your own Apple devices. Virtual items (pearls, Sea Glass, coins, toys) are part of the game, not money, and cannot be cashed out. Capsule pulls are random and the exact rates are published in the game and on the drop rates page (https://YOUR-HOST.example/tiny-tides/rates.html). Apple handles payments and refunds. Don’t cheat or copy the game. The game is provided as-is, and your legal rights as a consumer are not reduced by these terms.
+
+1. AGREEMENT
+
+These Terms are a license agreement between you and YOUR LEGAL NAME OR COMPANY NAME (“we”, “us”), the developer of the Tiny Tides app (the “App”). By downloading, installing or using the App you agree to them. If you do not agree, do not use the App. These Terms are the End-User License Agreement for the App; Apple’s standard terms are supplemented by section 15 (“Apple terms”). If you are under the age of majority where you live, you may use the App only with the permission of a parent or guardian, who accepts these Terms for you.
+
+2. LICENSE AND RESTRICTIONS
+
+We grant you a limited, personal, non-exclusive, non-transferable, revocable license to install and use the App on Apple-branded devices that you own or control, for your personal, non-commercial entertainment, subject to these Terms and the App Store’s usage rules. You may not: copy, modify, sell, rent, lease or distribute the App; reverse engineer, decompile or extract source code or assets except to the extent the law allows despite this restriction; remove notices; use bots, scripts, modified clients or tools to interfere with purchases, timers or the App’s operation; or use the App unlawfully.
+
+3. VIRTUAL ITEMS
+
+The App contains virtual items and currencies, including Pearls, Sea Glass, Capsule Coins, Speed Tokens, shards, creatures, toys, decor and pool looks (“Virtual Items”). Virtual Items are licensed to you for use inside the App only. They have no cash or real-world value, are not property, cannot be sold, traded, transferred or redeemed for money, and exist only while the App is installed with its saved data. We may adjust prices, costs, timers, rewards and balance in updates, and may add, change or retire optional content. Content you have purchased as a non-consumable (such as the Deep Ocean biome or a decor pack) will not be removed except as required by law or if we stop offering the App, in which case we will give reasonable notice where practicable.
+
+4. PURCHASES, REFUNDS AND RESTORING
+
+Optional purchases are made through your Apple ID and are handled by Apple under the App Store terms; prices, taxes and currency are shown by Apple before you confirm. Payment is charged to your Apple account. Consumable purchases (such as Sea Glass) are delivered immediately and cannot be restored. Non-consumable purchases can be restored on your devices from Settings → Restore purchases. We cannot issue refunds: requests are handled by Apple (see reportaproblem.apple.com (https://reportaproblem.apple.com)), and nothing in these Terms limits any refund or withdrawal right you have by law. Where you are entitled to cancel a digital purchase by law and you have asked for it to be delivered immediately, you acknowledge that you lose the right of withdrawal once delivery has begun, to the extent the law permits.
+
+5. CAPSULE MACHINE (RANDOMIZED PRIZES)
+
+- Capsule prizes are chosen at random on your device from the table published in the App (Capsule Machine → Rates) and on the drop rates page (https://YOUR-HOST.example/tiny-tides/rates.html). Free pulls, Capsule Coin pulls and Sea Glass pulls all use the same rates.
+
+- A Rare-or-better toy is guaranteed at least every 10 pulls and a Legendary toy at least every 60 pulls. Each week one Rare and one Legendary toy are 3 times as likely as other prizes in their tier.
+
+- A Sea Glass pull costs 30 Sea Glass (270 for ten). You can make at most 20 Sea Glass pulls per day, you can turn Sea Glass pulls off in Settings, and they may be unavailable in some regions. A free capsule is available every day.
+
+- Toys are cosmetic collectibles and never change how quickly creatures earn or evolve. Some capsules instead hold a small one-time reward (such as Pearls, Capsule Coins, Sea Glass or a Speed Token); every prize is listed in the published rates. Duplicate toys convert into shards which can be exchanged for specific toys at the Prize Counter. Prizes have no cash value, and nothing you win can be exchanged for money or anything of monetary value outside the App.
+
+6. YOUR PROGRESS AND DEVICES
+
+Your game data is stored on your device (and in your own device backups). If you delete the App, reset progress, lose your device or restore an older backup, your progress may be lost and we cannot recover it. Changing your device clock may affect timers and rewards and can result in progress being adjusted.
+
+7. ACCEPTABLE USE
+
+Be kind and lawful. Do not use the App to harass others, infringe rights, distribute malware or attempt to disrupt Apple’s services. We may suspend or end your license if you materially breach these Terms.
+
+8. INTELLECTUAL PROPERTY
+
+The App, including its code, artwork, characters, animations, sounds, text, names and logos, is owned by us or our licensors and protected by copyright, trademark and other laws. All rights not expressly granted are reserved. The App includes open-source software listed on the Licenses page (https://YOUR-HOST.example/tiny-tides/licenses.html), which is licensed under its own terms. Third-party names and marks belong to their owners; their use here is only to identify them and does not imply endorsement.
+
+9. FEEDBACK
+
+If you send us ideas or suggestions, you allow us to use them without payment or obligation to you.
+
+10. PRIVACY
+
+Our Privacy Policy (https://YOUR-HOST.example/tiny-tides/privacy.html) explains what the App does with data (in short: it collects none).
+
+11. AVAILABILITY AND CHANGES
+
+We work to keep the App working but do not promise it will be uninterrupted or error-free. We may update, suspend or discontinue the App or features, and may update these Terms; if a change materially affects you we will post the new version with a new effective date and, where required, ask you to accept it. Continued use after the effective date means you accept the change.
+
+12. DISCLAIMER OF WARRANTIES
+
+To the fullest extent permitted by law, the App is provided “as is” and “as available”, without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose and non-infringement. Some jurisdictions do not allow certain exclusions, so some of the above may not apply to you, and you keep any rights that cannot lawfully be excluded (including statutory consumer guarantees).
+
+13. LIMITATION OF LIABILITY
+
+To the fullest extent permitted by law, we are not liable for indirect, incidental, special, consequential or punitive damages, loss of data, loss of Virtual Items, or loss of profits arising from the App, and our total liability for any claim relating to the App is limited to the amount you paid for the App and in-app purchases in the 12 months before the claim (or, if none, US$50). Nothing in these Terms excludes or limits liability for death or personal injury caused by negligence, fraud, or anything else that cannot be limited by law.
+
+14. GOVERNING LAW AND DISPUTES
+
+These Terms are governed by the laws of YOUR STATE OR COUNTRY, without regard to conflict-of-law rules, and disputes will be heard in the courts of YOUR CITY, STATE OR COUNTRY, except that if you are a consumer you keep the benefit of the mandatory consumer-protection laws and courts of the place where you live. Please contact us first at support@YOUR-DOMAIN.example (support@YOUR-DOMAIN.example) so we can try to resolve any concern informally.
+
+15. APPLE TERMS
+
+If you obtained the App from the Apple App Store, you acknowledge and agree that:
+
+(a) Acknowledgement. These Terms are concluded between you and us only, and not with Apple. We, not Apple, are solely responsible for the App and its content.
+
+(b) Scope of license. The license granted to you is limited to a non-transferable license to use the App on any Apple-branded products that you own or control and as permitted by the Usage Rules set forth in the App Store Terms of Service, except that the App may be accessed and used by other accounts associated with the purchaser via Family Sharing or volume purchasing.
+
+(c) Maintenance and support. We are solely responsible for providing any maintenance and support services for the App (contact details below). Apple has no obligation whatsoever to furnish any maintenance and support services with respect to the App.
+
+(d) Warranty. We are solely responsible for any product warranties, whether express or implied by law, to the extent not effectively disclaimed. In the event of any failure of the App to conform to any applicable warranty, you may notify Apple, and Apple will refund the purchase price for the App to you (if any); and, to the maximum extent permitted by applicable law, Apple will have no other warranty obligation whatsoever with respect to the App, and any other claims, losses, liabilities, damages, costs or expenses attributable to any failure to conform to any warranty will be our sole responsibility.
+
+(e) Product claims. We, not Apple, are responsible for addressing any claims by you or any third party relating to the App or your possession and/or use of the App, including (i) product liability claims; (ii) any claim that the App fails to conform to any applicable legal or regulatory requirement; and (iii) claims arising under consumer protection, privacy or similar legislation.
+
+(f) Intellectual property rights. In the event of any third-party claim that the App or your possession and use of the App infringes that third party’s intellectual property rights, we, not Apple, will be solely responsible for the investigation, defense, settlement and discharge of any such claim.
+
+(g) Legal compliance. You represent and warrant that (i) you are not located in a country that is subject to a U.S. Government embargo, or that has been designated by the U.S. Government as a “terrorist supporting” country; and (ii) you are not listed on any U.S. Government list of prohibited or restricted parties.
+
+(h) Developer name and address. Questions, complaints or claims about the App: YOUR LEGAL NAME OR COMPANY NAME, YOUR FULL MAILING ADDRESS, YOUR COUNTRY; support@YOUR-DOMAIN.example (support@YOUR-DOMAIN.example).
+
+(i) Third-party terms. You must comply with applicable third-party terms of agreement when using the App (for example, your wireless data service agreement).
+
+(j) Third-party beneficiary. Apple and Apple’s subsidiaries are third-party beneficiaries of these Terms, and upon your acceptance of these Terms, Apple will have the right (and will be deemed to have accepted the right) to enforce these Terms against you as a third-party beneficiary.
+
+16. CONTACT
+
+YOUR LEGAL NAME OR COMPANY NAME, YOUR FULL MAILING ADDRESS, YOUR COUNTRY · support@YOUR-DOMAIN.example (support@YOUR-DOMAIN.example)

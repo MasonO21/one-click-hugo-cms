@@ -103,7 +103,7 @@ async function capture(dev, outDir) {
   await shot('decor', 2200);                                  // 7 decor / neon
   // ---- Capsule Machine: a forced Legendary reveal and a well-filled Toybox
   await go(() => {
-    const { G, S, D } = window.__tt; const st = G.state;
+    const { G, D } = window.__tt; const st = G.state;
     G.ui.closeAllModals(); G.switchBiome('tide'); G.setTab('pool');
     st.equip.skin = 'candy'; st.equip.fx = 'hearts'; G.scene._baseKey = '';
     st.cur.coins = 20; st.gacha.pityL = 59; st.gacha.pityR = 3;

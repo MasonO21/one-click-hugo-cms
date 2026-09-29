@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../www');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../www');
 const shots = process.env.SHOTS || '/tmp/tt/gz';
 fs.mkdirSync(shots, { recursive: true }); for (const f of fs.readdirSync(shots)) fs.unlinkSync(path.join(shots, f));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
@@ -22,7 +22,6 @@ const shot = async (name) => { await page.waitForTimeout(300); await page.screen
 const ev = (fn, arg) => page.evaluate(fn, arg);
 const fail = (m) => { console.error('FAIL: ' + m); errs.push('FAIL ' + m); };
 const click = async (sel) => { const e = page.locator(sel).first(); await e.waitFor({ state: 'visible', timeout: 6000 }); await e.click({ force: true }); await page.waitForTimeout(120); };
-const waitPhase = async (p, ms = 9000) => { await page.waitForFunction((p) => window.__tt.G.ui.gacha && document.querySelector('#gz-ctl') && document.querySelector('#gz-ctl').innerHTML.length > 0 && window.__gzPhase?.() === p, p, { timeout: ms }).catch(() => {}); };
 
 await page.goto(`http://localhost:${server.address().port}/?debug`);
 await page.waitForSelector('#boot.gone', { state: 'attached', timeout: 8000 });
