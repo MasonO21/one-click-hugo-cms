@@ -151,7 +151,7 @@ svg.ic use{pointer-events:none}
 .coach .prg{font-weight:700;color:#14a56b}
 
 /* ---------- Toasts ---------- */
-#toasts{position:absolute;left:0;right:0;top:calc(var(--sat) + 110px);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:9}
+#toasts{position:absolute;left:0;right:0;top:calc(var(--sat) + 110px);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:12}
 .toast{background:#fff;border:3px solid var(--ink);border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;box-shadow:0 3px 0 var(--ink);animation:toast 2.6s forwards;max-width:88vw;text-align:center}
 .toast.good{background:#d6ffe6}.toast.warn{background:#ffe1ea}
 
@@ -281,7 +281,8 @@ body.reduce *{animation-duration:.001s!important}
 .branch{padding:4px 10px 4px 4px;margin-bottom:5px;gap:8px}
 .branch canvas{width:44px;height:44px}
 .sh-head{padding-right:44px}
-@media (max-width:380px){.pill{font-size:15px;padding-right:8px}.pill .ic{width:24px;height:24px}.level{min-width:70px}.level #h-xp{display:none}.round{width:40px;height:40px}.hud-row{gap:5px}}
+@media (max-width:380px){.pill{font-size:15px;padding-right:8px}.pill .ic{width:24px;height:24px}.level{min-width:70px}.level #h-xp{display:none}.round{width:44px;height:44px}.hud-row{gap:5px}}
+@media (max-width:340px){.pill{font-size:13.5px;gap:3px;padding:3px 7px 3px 3px;height:38px}.pill .ic{width:20px;height:20px}.level{min-width:0}.hud-row{gap:4px}.pill .plusbtn{width:20px;height:20px}}
 
 .btn.col{padding:5px 10px;min-height:52px}
 .actions .btn{font-size:16px}
@@ -347,13 +348,13 @@ body[data-tut] #stats{display:none!important}
 .toy.slot.tier-rare:not(.unk),.toy.slot.tier-legendary:not(.unk){background:linear-gradient(#fff9c9,#ffe68a)}
 .dexfam .fh .btn{max-width:56%}
 .rew .ic{width:16px;height:16px}
-.gz-detail-art{width:170px;height:170px;margin:0 auto;border-radius:26px;background:radial-gradient(circle at 50% 35%,#fff,color-mix(in srgb,var(--tc) 35%,#fff));border:3px solid var(--ink)}
+.gz-detail-art{width:170px;height:170px;margin:0 auto;border-radius:26px;background:radial-gradient(circle at 50% 35%,#fff,#efe6ff);background:radial-gradient(circle at 50% 35%,#fff,color-mix(in srgb,var(--tc) 35%,#fff));border:3px solid var(--ink)}
 .gz-detail-art canvas{width:100%;height:100%;display:block}
 .prize-row{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px}
 .prize-row .pt{width:54px;height:54px;flex:none;background:#eaf6ff;border-radius:14px;border:2px solid var(--ink)}
 .prize-row .pn{flex:1;min-width:0;line-height:1.15}.prize-row .pn small{display:block;color:var(--ink2);font-weight:600;font-size:12px}
 details.rate-tier{background:#fff;border:3px solid var(--ink);border-radius:18px;margin-top:8px;overflow:hidden}
-details.rate-tier summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-weight:700;background:linear-gradient(color-mix(in srgb,var(--tc) 30%,#fff),color-mix(in srgb,var(--tc) 55%,#fff))}
+details.rate-tier summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-weight:700;background:linear-gradient(#f3ecff,#e2d4ff);background:linear-gradient(color-mix(in srgb,var(--tc) 30%,#fff),color-mix(in srgb,var(--tc) 55%,#fff))}
 details.rate-tier summary::-webkit-details-marker{display:none}
 details.rate-tier .list{padding:8px;gap:4px}
 .rate-row{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
@@ -375,3 +376,12 @@ details.rate-tier .list{padding:8px;gap:4px}
 .dexrow.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .gz-sum .chips{margin:6px 0 0}.gz-sum .chipx{font-size:14px;padding:2px 10px 2px 5px}
 .tabs.compact{gap:4px}.tabs.compact button{padding:5px 9px;font-size:13px;flex:1}
+
+/* hit areas: the visuals stay the same size, the tappable area grows to ~44px */
+.btn.small::after,.sh-tabs button::after,.link::after,.coach .skip::after,.mile button::after{content:"";position:absolute;inset:-6px}
+.sh-tabs button,.link,.coach .skip,.mile button{position:relative}
+.switch::before{content:"";position:absolute;inset:-8px -6px}
+.coach .skip{padding:6px 4px}
+details.lic{border:2px solid var(--ink);border-radius:12px;background:#fff;padding:6px 10px;margin:6px 0}
+details.lic summary{cursor:pointer;font-weight:700;font-size:13.5px}
+details.lic pre{white-space:pre-wrap;font:11px/1.4 ui-monospace,Menlo,monospace;margin:8px 0 2px;color:var(--ink2)}

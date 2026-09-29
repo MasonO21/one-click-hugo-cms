@@ -1,0 +1,18 @@
+diff --git a/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift b/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift
+index e4ab9e1..5379df8 100644
+--- a/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift
++++ b/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift
+@@ -52,10 +52,10 @@ public class NativePurchasesPlugin: CAPPlugin, CAPBridgedPlugin {
+                         jwsRepresentation: result.jwsRepresentation,
+                         alwaysIncludeWillCancel: true
+                     )
+-                    await transaction.finish()
+-                    try? await Task.sleep(nanoseconds: 500_000_000)
++                    // Tiny Tides patch: do NOT finish here. The app finishes the transaction (acknowledgePurchase) only after the
++                    // purchase has been credited and saved. Retain the event so it is delivered even if JS is not listening yet at launch.
+                     await MainActor.run {
+-                        self?.notifyListeners("transactionUpdated", data: payload)
++                        self?.notifyListeners("transactionUpdated", data: payload, retainUntilConsumed: true)
+                     }
+                 case .unverified(let transaction, let error):
+                     await MainActor.run {

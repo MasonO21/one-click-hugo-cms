@@ -132,7 +132,7 @@ await click('[data-tab="pool"]'); await click('[data-act="snap"]'); await shot('
 // -- persistence + welcome back: save, rewind lastSeen by 6h, reload
 await ev(() => window.__tt.G.save(true));
 const before = await ev(() => ({ n: window.__tt.G.state.pools.tide.creatures.length, lvl: window.__tt.G.state.lvl, dex: Object.keys(window.__tt.G.state.dex).length, deep: window.__tt.G.state.iap.deep }));
-await ev(() => { const raw = JSON.parse(localStorage.getItem('tinytides.save.v1')); raw.lastSeen -= 6 * 3600e3; raw.lastTick -= 6 * 3600e3; localStorage.setItem('tinytides.save.v1', JSON.stringify(raw)); localStorage.removeItem('tinytides.save.v1.bak'); window.__tt.G.saving = true; /* stop the pagehide save from overwriting the rewound save */ });
+await ev(() => { const raw = JSON.parse(localStorage.getItem('tinytides.save.v1')); raw.lastSeen -= 6 * 3600e3; raw.lastTick -= 6 * 3600e3; localStorage.setItem('tinytides.save.v1', JSON.stringify(raw)); localStorage.removeItem('tinytides.save.v1.bak'); window.__tt.G.resetting = true; /* block the pagehide save so it cannot overwrite the rewound save */ });
 await page.reload();
 await page.waitForSelector('#boot.gone', { state: 'attached', timeout: 8000 });
 await page.waitForTimeout(600);

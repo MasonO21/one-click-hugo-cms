@@ -1,13 +1,12 @@
-/* global __DEBUG__ */
 // Tiny Tides — DOM UI (HUD, nav, build dock, inspector, Tidedex, shop, quests, settings, tutorial coach).
 import * as D from './data.js';
 import * as S from './sim.js';
 import * as A from './audio.js';
-import { drawSprite, getSilhouette, HAT_ART, shade } from './art_creatures.js';
+import { drawSprite, getSilhouette } from './art_creatures.js';
 import { PIECE_ART } from './art_world.js';
 import { drawProp, drawItemArt } from './art_gacha.js';
 import { store, haptic, openUrl, notify } from './platform.js';
-import { LINKS, VERSION, POLICY } from './config.js';
+import { LINKS, VERSION, POLICY, SITE, LICENSES } from './config.js';
 import { createGachaUI } from './gacha_ui.js';
 
 const { FORMS, FAMILIES, PIECES, DECOR, TRAIT_INFO, PRODUCTS } = D;
@@ -38,9 +37,12 @@ export function createUI(G) {
     const t = el(`<div class="toast ${kind}">${esc(msg)}</div>`);
     root.appendChild(t); setTimeout(() => t.remove(), 2700);
   };
+  let busyTimer = 0;
   ui.setBusy = (v) => {
     const b = $('#busy'); if (v && !b) $('#app').appendChild(el(`<div class="busy" id="busy"><div class="center">${ic('i-blip')}<div>One moment…</div></div></div>`));
     else if (!v && b) b.remove();
+    clearTimeout(busyTimer);
+    if (v) busyTimer = setTimeout(() => { G.busy = false; ui.setBusy(false); }, 60000);     // a store call that never answers must not lock the game
   };
   const paintMini = (root = document) => {
     $$('canvas[data-form]', root).forEach((cv) => {
@@ -65,17 +67,19 @@ export function createUI(G) {
       const c = cv.getContext('2d'), px = Math.round((cv.clientWidth || 44) * (window.devicePixelRatio || 1)); cv.width = px; cv.height = px; c.clearRect(0, 0, px, px);
       c.save(); c.translate(px / 2, px * 0.7); drawSprite(c, 'crab.0', 0, 0, px * 1.05, { hat: cv.dataset.hat }); c.restore();
     });
+    let scratch = null;
     $$('canvas[data-toy]', root).forEach((cv) => {
       const px = Math.round((cv.clientWidth || 72) * (window.devicePixelRatio || 1)) || 96;
       if (cv.width !== px) { cv.width = px; cv.height = px; }
       const c = cv.getContext('2d'); c.clearRect(0, 0, px, px);
       if (cv.dataset.sil) {
-        const tmp = document.createElement('canvas'); tmp.width = tmp.height = px; const t = tmp.getContext('2d');
+        const tmp = scratch ||= document.createElement('canvas'); tmp.width = tmp.height = px; const t = tmp.getContext('2d');
         drawItemArt(t, cv.dataset.toy, px / 2, px * 0.46, px * 0.8, 1.2);
         t.globalCompositeOperation = 'source-in'; t.fillStyle = '#5a4a8c'; t.fillRect(0, 0, px, px);
         c.drawImage(tmp, 0, 0); c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `700 ${px * 0.32}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', px / 2, px * 0.5);
       } else drawItemArt(c, cv.dataset.toy, px / 2, px * 0.46, px * 0.8, 1.2);
     });
+    if (scratch) scratch.width = scratch.height = 1;           // give the memory back
     $$('canvas[data-skin]', root).forEach((cv) => {
       const c = cv.getContext('2d'), k = D.SKINS[cv.dataset.skin]; cv.width = 120; cv.height = 120;
       c.fillStyle = k.slab; c.beginPath(); c.roundRect ? c.roundRect(6, 10, 108, 100, 24) : c.rect(6, 10, 108, 100); c.fill();
@@ -300,16 +304,18 @@ export function createUI(G) {
     } else {
       const hats = D.DECOR_IDS.filter((d) => DECOR[d].kind === 'hat' && s.own[d]);
       h += `<div class="hatrow"><button class="hat ${c.hat ? '' : 'on'}" data-act="hat:" aria-label="No accessory">${ic('i-close', 's')}</button>${hats.map((d) => `<button class="hat ${c.hat === d ? 'on' : ''}" data-act="hat:${d}" aria-label="${esc(DECOR[d].name)}"><canvas data-hat="${d}" style="width:44px;height:44px"></canvas></button>`).join('')}${hats.length ? '' : '<button class="btn small lemon" data-act="shopdecor2">Find hats in the Shop</button>'}</div>
-        <div class="rowb mt"><button class="btn ghost small danger" data-act="release">Send home</button></div>`;
+        ${s.tut.done ? '<div class="rowb mt"><button class="btn ghost small danger" data-act="release">Send home</button></div>' : ''}`;
     }
     if (sheetTab) h += '</div>';
     const scroll = $('.sh-body', sh)?.scrollTop || 0;
-    sh.innerHTML = h; paintMini(sh);
+    sh.innerHTML = h; paintMini(sh); sh.dataset.evo = c.evo ? '1' : '0';
     const nb = $('.sh-body', sh); if (nb && sh.dataset.for === String(c.id)) nb.scrollTop = scroll;
     sh.dataset.for = c.id;
   }
   function updateSheetLive() {
     const c = pool().creatures.find((k) => k.id === G.selected); if (!c) return;
+    const sh = $('#sheet');
+    if (sh && sh.dataset.evo !== (c.evo ? '1' : '0')) { renderSheet(); return; }        // cocoon finished (or started): rebuild the buttons
     if (c.evo) {
       const n = now(), total = c.evo.end - c.evo.start, left = Math.max(0, c.evo.end - n);
       const t = $('#sh-timer'), p = $('#sh-prog');
@@ -321,12 +327,15 @@ export function createUI(G) {
   function mountModal(id, { title, cls = '', render, sticky = false, top = false, noClose = false }) {
     const existing = modals.find((m) => m.id === id);
     if (existing) existing.el.remove(), (modals = modals.filter((m) => m !== existing));
-    const root = el(`<div class="overlay ${top ? 'top' : ''}" data-overlay="${id}"><div class="modal ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title || id)}"></div></div>`);
+    const root = el(`<div class="overlay ${top ? 'top' : ''}" data-overlay="${id}"><div class="modal ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title || id)}" tabindex="-1"></div></div>`);
     $('#modal-root').appendChild(root);
-    const m = { id, el: root, render, sticky, title, noClose };
+    const m = { id, el: root, render, sticky, title, noClose, opener: document.activeElement };
     modals.push(m);
-    root.addEventListener('pointerdown', (e) => { if (e.target === root && !sticky && !noClose) ui.closeModal(id); });
+    let pressedOnBackdrop = false;
+    root.addEventListener('pointerdown', (e) => { pressedOnBackdrop = e.target === root; });
+    root.addEventListener('click', (e) => { if (e.target === root && pressedOnBackdrop && !sticky && !noClose) ui.closeModal(id); });
     drawModal(m);
+    try { $('.modal', root).focus({ preventScroll: true }); } catch { /* not focusable */ }      // screen readers start inside the dialog
     A.play('whoosh');
     return m;
   }
@@ -341,7 +350,9 @@ export function createUI(G) {
   ui.closeModal = (id) => {
     const m = id ? modals.find((k) => k.id === id) : modals[modals.length - 1];
     if (!m) return;
-    m.el.remove(); modals = modals.filter((k) => k !== m); m.onClose?.();
+    m.el.remove(); modals = modals.filter((k) => k !== m);
+    if (!modals.length && m.opener && document.contains(m.opener)) { try { m.opener.focus({ preventScroll: true }); } catch { /* ignore */ } }
+    m.onClose?.();
     setTimeout(pumpQueue, 60);
   };
   ui.closeAllModals = () => { modals.forEach((m) => m.el.remove()); modals = []; };
@@ -369,7 +380,7 @@ export function createUI(G) {
     if (sum.evolved.length) lines.push(`<div class="chipx">${ic('i-up')}${sum.evolved.length} evolution${sum.evolved.length > 1 ? 's' : ''} finished</div>`);
     if (!lines.length) lines.push(`<div class="chipx">${ic('i-drop')}Your pool is peaceful</div>`);
     const m = mountModal('welcome', { title: 'Welcome back!', sticky: true, render: () => ({ body: `<div class="center"><div class="muted">You were away for ${S.fmtDur(sum.away)}</div><div class="chips">${lines.join('')}</div><p class="muted">Pop your bubbles before they stop growing!</p></div>`, footer: `<button class="btn green" data-act="close:welcome">Let's go!</button>` }) });
-    m.onClose = () => { G.ui.pumpReveals(); enqueueDaily(); };
+    m.onClose = () => { G.ui.pumpReveals(); showTutDone(); enqueueDaily(); };
   };
 
   // ---- Daily reward
@@ -406,7 +417,7 @@ export function createUI(G) {
   ui.pumpReveals = () => {
     if (!G.reveals.length || modals.some((m) => m.id === 'reveal' || m.id === 'welcome')) return;
     const ev = G.reveals.shift();
-    const f = FORMS[ev.form], fam = FAMILIES[f.fam];
+    const f = FORMS[ev.form];
     A.play('reveal'); haptic.success(); scene.confetti(80);
     const m = mountModal('reveal', { title: '', sticky: true, top: true, cls: '', render: () => ({
       body: `<div class="reveal"><div class="rays"></div>${ev.first ? '<span class="new">NEW DISCOVERY!</span>' : '<span class="muted">Evolution complete</span>'}
@@ -415,7 +426,7 @@ export function createUI(G) {
         <p class="muted" style="font-size:14px">${esc(f.blurb)}</p>
         ${ev.first ? `<div class="chips"><div class="chipx">${ic('i-glass')}+${D.DISCOVER_GLASS[f.stage]}</div><div class="chipx">${ic('i-book')}${S.dexCount(st())}/${D.FORM_IDS.length}</div></div>` : ''}</div>`,
       footer: `<button class="btn ghost" data-act="sharereveal:${ev.form}">${ic('i-camera', 's')} Share</button><button class="btn green" data-act="close:reveal">Awesome!</button>` }) });
-    m.onClose = () => { pumpQueue(); ui.pumpReveals(); if (st().tut.step === 8) tutorialEnd(); };
+    m.onClose = () => { pumpQueue(); ui.pumpReveals(); showTutDone(); };
   };
   ui.showLevelUp = (ev) => {
     enqueue(() => mountModal('levelup', { title: `Pool Level ${ev.lvl}!`, sticky: true, top: true, render: () => ({
@@ -428,7 +439,7 @@ export function createUI(G) {
     const s = st(), n = S.dexCount(s), total = D.FORM_IDS.length;
     const fams = D.FAMILIES_BY_BIOME[dexTab];
     let h = `<div class="card hi row between"><div><b>${n} / ${total} discovered</b><div class="muted">Bonus: +${Math.round(n * D.DEX_RATE_BONUS * 100)}% pearls</div></div>${ic('i-book', 'l')}</div>`;
-    h += `<div class="mile">${D.DEX_MILESTONES.map((m, i) => { const got = s.dexClaimed.includes(i), can = !got && n >= m.n; return `<button class="${got ? 'got' : can ? 'can' : ''}" data-act="dexclaim:${i}">${m.n}<br>${got ? '✓' : `${ic('i-glass', 's')}${m.glass}`}</button>`; }).join('')}</div>`;
+    h += `<div class="mile">${D.DEX_MILESTONES.map((m, i) => { const got = s.dexClaimed.includes(i), can = !got && n >= m.n; return `<button class="${got ? 'got' : can ? 'can' : ''}" data-act="dexclaim:${i}">${m.n}<br>${got ? '✓' : `${ic('i-glass', 's')}${m.glass}${m.coins ? ` ${ic('i-coin', 's')}${m.coins}` : ''}`}</button>`; }).join('')}</div>`;
     for (const fid of fams) {
       const fam = FAMILIES[fid], locked = dexTab === 'tide' && s.lvl < fam.unlock, forms = D.formsOfFamily(fid);
       const base = forms[0], b2 = Object.keys(fam.br).map((t) => D.branchForm(fid, t)), b3 = Object.keys(fam.br).map((t) => D.mythicForm(fid, t));
@@ -533,22 +544,33 @@ export function createUI(G) {
   } });
 
   // ---- Settings
-  const sw = (k) => `<button class="switch ${st().settings[k] ? 'on' : ''}" role="switch" aria-checked="${!!st().settings[k]}" data-act="set:${k}" aria-label="${k}"></button>`;
+  const SETTING_LABEL = { music: 'Music', sfx: 'Sound effects', haptics: 'Haptics', notif: 'Reminders', paidPulls: 'Sea Glass capsule pulls', reduceMotion: 'Reduce motion', battery: 'Battery saver' };
+  const sw = (k) => `<button class="switch ${st().settings[k] ? 'on' : ''}" role="switch" aria-checked="${!!st().settings[k]}" data-act="set:${k}" aria-label="${SETTING_LABEL[k] || k}"></button>`;
   ui.openSettings = () => mountModal('settings', { title: 'Settings', cls: 'tall', render: () => {
-    const s = st();
     let h = `<div class="setrow"><span>Music<small>Calm ocean ambience</small></span>${sw('music')}</div>
       <div class="setrow"><span>Sound effects</span>${sw('sfx')}</div>
       <div class="setrow"><span>Haptics<small>Gentle vibrations</small></span>${sw('haptics')}</div>
-      <div class="setrow"><span>Reminders<small>Max 3 a day, never at night</small></span>${sw('notif')}</div>
+      <div class="setrow"><span>Reminders<small>A few a day at most, never at night</small></span>${sw('notif')}</div>
       <div class="setrow"><span>Sea Glass capsule pulls<small>Off = only free Coins &amp; daily capsule (max ${D.GACHA.paidDailyCap} pulls/day when on)</small></span>${sw('paidPulls')}</div>
       <div class="setrow"><span>Reduce motion<small>Calmer effects</small></span>${sw('reduceMotion')}</div>
       <div class="setrow"><span>Battery saver<small>Lower frame rate &amp; effects</small></span>${sw('battery')}</div>
       <div class="rowb mt"><button class="btn lav small" data-act="restore">Restore purchases</button></div>
       <div class="rowb mt"><button class="link" data-act="link:privacy">Privacy Policy</button><button class="link" data-act="link:terms">Terms of Use</button><button class="link" data-act="link:support">Support</button></div>
+      <div class="rowb"><button class="link" data-act="link:rates">Drop rates</button><button class="link" data-act="link:parents">Parents' guide</button><button class="link" data-act="legal">Legal &amp; credits</button></div>
       <div class="rowb"><button class="link" data-act="privacysummary">What data do we collect?</button></div>
       <p class="muted center mt">Tiny Tides v${VERSION}${store.mode === 'demo' ? ' · demo build' : ''}<br>Made with ${ic('i-heart', 's')} for tidepool lovers</p>
       <div class="rowb mt"><button class="btn ghost small danger" data-act="reset">Reset progress</button></div>`;
     if (__DEBUG__) h += `<div class="card mt"><b>Debug</b><div class="rowb mt2"><button class="btn small" data-act="dbg:pearls">+10k pearls</button><button class="btn small" data-act="dbg:glass">+500 glass</button><button class="btn small" data-act="dbg:lvl">Lv +3</button><button class="btn small" data-act="dbg:hours">+6 hours</button></div></div>`;
+    return { body: h };
+  } });
+  ui.showLegal = () => mountModal('legal', { title: 'Legal & credits', cls: 'tall', top: true, render: () => {
+    let h = `<p class="center" style="font-weight:600">Tiny Tides v${VERSION}<br><span class="muted">© ${esc(SITE.year)} ${esc(SITE.developer)}</span></p>
+      <div class="rowb"><button class="link" data-act="link:privacy">Privacy Policy</button><button class="link" data-act="link:terms">Terms of Use</button></div>
+      <div class="rowb"><button class="link" data-act="link:rates">Drop rates</button><button class="link" data-act="link:parents">Parents' guide</button><button class="link" data-act="link:support">Support</button></div>
+      <h4 class="muted mt">OPEN-SOURCE SOFTWARE</h4><p class="muted">All art is drawn by the game and all sound is generated in the app. Tiny Tides is built with these open-source components:</p>`;
+    h += LICENSES.map((g) => `<details class="lic"><summary>${esc(g.license)} — ${g.items.map((i) => esc(i.name)).join(', ')}</summary><pre>${esc(g.text)}</pre></details>`).join('');
+    h += `<p class="muted">In-app purchases use a modified copy of @capgo/native-purchases (MPL-2.0). The modification and where to get the source are published at the Licenses page on our website.</p><div class="rowb"><button class="link" data-act="link:licenses">Open licenses page</button></div>
+      <p class="muted center">Apple, iPhone, iPad and App Store are trademarks of Apple Inc.</p>`;
     return { body: h };
   } });
   ui.showPrivacySummary = () => mountModal('privacy', { title: 'Your privacy', top: true, render: () => ({ body: `<div class="list">${POLICY.map((p) => `<div class="card"><h5>${esc(p[0])}</h5><p>${esc(p[1])}</p></div>`).join('')}</div>` }) });
@@ -585,11 +607,17 @@ export function createUI(G) {
     if (t.target) { const e = $(t.target); if (e) e.classList.add('tut-pulse'); }
     if (t.tool) { const e = $(`.tool[data-act="tool:${t.tool}"]`); if (e) e.classList.add('tut-pulse'); }
   }
-  function tutorialEnd() {
-    G.tutorialFinish();
-    enqueue(() => mountModal('tutdone', { title: 'You did it!', sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div>${ic('i-gift', 'xl')}<p style="font-weight:600;font-size:16px">Your first evolution! Your pool keeps earning pearls while you're away. A <b>Tide Gift</b> arrives morning, afternoon and evening.</p><div class="chips"><div class="chipx">${ic('i-glass')}+10 Sea Glass</div><div class="chipx">${ic('i-coin')}+2 Capsule Coins</div></div><p class="muted">Tap the capsule button for a free toy every day!</p><p class="muted">Try different rocks & water to discover all ${D.FORM_IDS.length} creatures.</p></div>`, footer: `<button class="btn green" data-act="close:tutdone">Onward!</button>` }) }));
-    setTimeout(() => { if (st().tut.done) { const m = modals.find((k) => k.id === 'tutdone'); if (m) m.onClose = () => { ui.showNotifAsk(); enqueueDaily(); }; } }, 0);
+  /** The one-time "You did it!" card after the first evolution. Driven by a saved flag so a restart mid-reveal can't lose it. */
+  function showTutDone() {
+    const f = st().flags;
+    if (!f.tutModal || !st().tut.done || G.reveals.length || modals.some((m) => m.id === 'reveal')) return;
+    f.tutModal = false; G.dirty = true;
+    enqueue(() => {
+      const m = mountModal('tutdone', { title: 'You did it!', sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div>${ic('i-gift', 'xl')}<p style="font-weight:600;font-size:16px">Your first evolution! Your pool keeps earning pearls while you're away. A <b>Tide Gift</b> arrives morning, afternoon and evening.</p><div class="chips"><div class="chipx">${ic('i-glass')}+10 Sea Glass</div><div class="chipx">${ic('i-coin')}+2 Capsule Coins</div></div><p class="muted">Tap the capsule button for a free toy every day!</p><p class="muted">Try different rocks & water to discover all ${D.FORM_IDS.length} creatures.</p></div>`, footer: `<button class="btn green" data-act="close:tutdone">Onward!</button>` }) });
+      m.onClose = () => { ui.showNotifAsk(); enqueueDaily(); };
+    });
   }
+  ui.showTutDone = showTutDone;
 
   // ------------------------------------------------------------------ action dispatch
   const acts = {
@@ -609,14 +637,14 @@ export function createUI(G) {
     evolve() { const c = pool().creatures.find((k) => k.id === G.selected); const info = S.evoInfo(st(), pool(), c); if (info.canStart) G.evolve(G.selected); else ui.toast(info.reason === 'level' ? `Reach Lv ${info.needLvl} first` : info.reason === 'habitat' ? 'Build a better habitat — see the traits above' : info.reason === 'pearls' ? `Need ${info.cost} pearls` : 'Not ready yet', 'warn'); },
     speed(v) { if (v === 'glass') { const c = pool().creatures.find((k) => k.id === G.selected); const g = S.speedUpCost(st(), c, now()); if (st().cur.glass < g) { ui.toast('Not enough Sea Glass', 'warn'); ui.openShop('glass'); return; } } G.speedUp(G.selected, v); },
     hat(v) { G.setHat(G.selected, v || null); },
-    async release() { const c = pool().creatures.find((k) => k.id === G.selected); if (!c) return; if (await ui.confirm({ title: 'Send home?', body: `${esc(FORMS[c.form].name)} will swim off and you'll get some pearls back. You keep the Tidedex entry.`, ok: 'Send home', danger: true })) G.release(G.selected); },
+    async release() { const c = pool().creatures.find((k) => k.id === G.selected); if (!c || !st().tut.done) return; if (await ui.confirm({ title: 'Send home?', body: `${esc(FORMS[c.form].name)} will swim off and you'll get some pearls back. You keep the Tidedex entry.`, ok: 'Send home', danger: true })) G.release(G.selected); },
     tool(v) { G.setTool(v === G.tool ? null : v); if (!G.tool) G.setTool(v); },
     expand() { G.expand(); },
     decorpicker() { ui.showDecorPicker(); },
     useprop(v) { ui.closeModal('decorpick'); ui.closeModal('shop'); G.setTab('build'); G.setTool('decor:' + v); ui.layoutChanged(); },
     shopdecor() { ui.closeModal('decorpick'); shopTab = 'decor'; ui.openShop('decor'); },
     dextab(v) { dexTab = v; ui.refresh(); },
-    dexclaim(v) { const r = G.claimDex(+v); if (r.ok) ui.toast(`+${r.glass} Sea Glass`, 'good'); },
+    dexclaim(v) { const r = G.claimDex(+v); if (r.ok) ui.toast(`+${r.glass} Sea Glass${r.coins ? `  +${r.coins} Capsule Coin${r.coins > 1 ? 's' : ''}` : ''}`, 'good'); },
     slot(v) { slotDetail(v); },
     shoptab(v) { shopTab = v; ui.refresh(); },
     shopsub(v) { shopTab = 'decor'; shopSub = v; ui.refresh(); },
@@ -635,6 +663,7 @@ export function createUI(G) {
     set(v) { G.setSetting(v, !st().settings[v]); },
     link(v) { openUrl(LINKS[v]); },
     privacysummary() { ui.showPrivacySummary(); },
+    legal() { ui.showLegal(); },
     async reset() { if (await ui.confirm({ title: 'Reset everything?', body: 'This permanently deletes your tidepool, creatures and progress. Purchases can be restored.', ok: 'Reset', danger: true })) { if (await ui.confirm({ title: 'Are you sure?', body: 'There is no undo.', ok: 'Yes, reset', danger: true })) G.reset(); } },
     tutstart() { ui.closeModal('intro'); G.tutorialStart(); },
     async tutskip() { if (await ui.confirm({ title: 'Skip the tips?', body: "You can always figure things out as you go. I'll be here!", ok: 'Skip', cancel: 'Keep going' })) { G.tutorialSkip(); } },
@@ -666,10 +695,16 @@ export function createUI(G) {
       A.unlock(); if (name !== 'tool') A.play('tap'); haptic.tap();
       fn(rest.join(':'), b, e);
     });
-    window.addEventListener('resize', () => ui.layoutChanged());
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (modals.length) ui.closeModal(); else if (sheetOpen) ui.closeSheet(); } });
+    let resizeT = 0;
+    window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => ui.layoutChanged(), 80); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const top = modals[modals.length - 1];
+      if (top) { if (!top.sticky && !top.noClose) ui.closeModal(); }         // sticky dialogs (intro, confirm, reveals) need a real answer
+      else if (sheetOpen) ui.closeSheet();
+    });
     ui.layoutChanged();
-    setInterval(() => { tick++; if (G.state) { updateHud(); if (!st().tut.done) renderCoach(); if (modals.some((m) => m.id === 'quests' || m.id === 'daily')) { const m = modals.find((k) => k.id === 'quests'); if (m && tick % 4 === 0) drawModal(m); } } }, 250);
+    setInterval(() => { tick++; if (G.state) { updateHud(); if (!st().tut.done) renderCoach(); if (tick % 8 === 0) { const m = modals.find((k) => k.id === 'quests'); if (m && !document.querySelector('.modal:active')) drawModal(m); } } }, 250);
   };
   ui.start = (summary) => {
     G.ui = ui;
@@ -678,9 +713,9 @@ export function createUI(G) {
     if (G.fresh || !st().tut.done && st().tut.step === 0) { ui.showIntro(); return; }
     if (!st().tut.done) { renderCoach(); return; }
     if (summary) ui.showWelcome(summary);
-    if (!modals.some((m) => m.id === 'welcome')) { ui.pumpReveals(); enqueueDaily(); }
+    if (!modals.some((m) => m.id === 'welcome')) { ui.pumpReveals(); showTutDone(); enqueueDaily(); }
   };
-  ui.onResume = (summary) => { if (summary && st().tut.done) ui.showWelcome(summary); ui.pumpReveals(); enqueueDaily(); ui.refresh(); };
+  ui.onResume = (summary) => { if (summary && st().tut.done) ui.showWelcome(summary); ui.pumpReveals(); showTutDone(); enqueueDaily(); ui.refresh(); };
   ui.sheetIsOpen = () => sheetOpen;
   Object.assign(ui, { mountModal, drawModal, paintMini, ic, esc });
   ui.gacha = createGachaUI(G, ui);

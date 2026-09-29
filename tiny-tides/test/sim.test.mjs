@@ -318,17 +318,38 @@ test('pool expansion', () => {
   assert.equal(S.popCap(st, pool), 3 + 1 + 0);
 });
 
-test('release refunds part of the investment', () => {
-  const st = fresh(); st.pools.tide.nextEgg = T0 - 1;
-  const c = addCreature(st, 'crab.0', 2, 2, 'tide', 4);
+test('release refunds half of what was actually paid, and can never turn a profit', () => {
+  const st = fresh(); st.pools.tide.nextEgg = T0 - 1; st.cur.pearls = 100000;
+  const c = addCreature(st, 'crab.0', 2, 2, 'tide', 1);
+  const start = st.cur.pearls;
+  for (let i = 0; i < 3; i++) assert.ok(S.levelUp(st, 'tide', c.id).ok);
+  const paid = S.levelCost(1, 1) + S.levelCost(1, 2) + S.levelCost(1, 3);
+  assert.equal(c.spent, paid);
+  assert.equal(start - st.cur.pearls, paid);
   const before = st.cur.pearls;
   const r = S.releaseCreature(st, 'tide', c.id, T0);
   assert.ok(r.ok);
-  const invested = S.levelCost(1, 1) + S.levelCost(1, 2) + S.levelCost(1, 3);
-  assert.equal(r.refund, Math.floor(invested * 0.5) + 5);
+  assert.equal(r.refund, Math.floor(paid * 0.5) + 5);
   assert.equal(st.cur.pearls, before + r.refund);
   assert.equal(st.pools.tide.creatures.length, 0);
   assert.ok(st.pools.tide.nextEgg > T0, 'a fresh egg comes soon after freeing a slot');
+});
+
+test('release refund is priced on spend, not on the creature\'s current stage (level, evolve, release loop loses pearls)', () => {
+  const st = fresh(); st.cur.pearls = 1e6;
+  const start = st.cur.pearls;
+  const c = addCreature(st, 'crab.0', 2, 2, 'tide', 1);
+  while (c.lvl < D.STAGE[1].evoLvl) assert.ok(S.levelUp(st, 'tide', c.id).ok);
+  for (const [x, y] of [[1, 2], [3, 2], [2, 1]]) put(st, 'piece:granite', x, y);
+  assert.ok(S.startEvolution(st, 'tide', c.id, T0).ok);
+  S.tick(st, T0 + D.STAGE[1].evoTime + 1);
+  assert.equal(D.FORMS[c.form].stage, 2);
+  while (c.lvl < 6) assert.ok(S.levelUp(st, 'tide', c.id).ok);
+  const r = S.releaseCreature(st, 'tide', c.id, T0 + D.STAGE[1].evoTime + 1);
+  assert.ok(r.ok);
+  const spent = start - (st.cur.pearls - r.refund) - 3 * D.PIECES.granite.cost;
+  assert.ok(r.refund <= spent / 2 + 5, `refund ${r.refund} must not exceed half of the ${spent} pearls paid`);
+  assert.ok(st.cur.pearls < start, 'the whole loop costs pearls');
 });
 
 test('purchases are credited exactly once; restore does not re-grant bonuses', () => {

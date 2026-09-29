@@ -11,7 +11,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { NativePurchases, PURCHASE_TYPE } from '@capgo/native-purchases';
 import { PRODUCTS, PRODUCT_IDS } from './data.js';
 
-/* global __DEMO__, __DEBUG__ */
+
 // Injected by tools/build.mjs as literals so esbuild can strip all debug code from release builds.
 export const DEMO = __DEMO__;
 export const DEBUG = __DEBUG__;
@@ -27,9 +27,12 @@ export const storage = {
     try { b = localStorage.getItem(key); } catch { /* private mode */ }
     return [a, b];
   },
+  /** Resolves true only if at least one backing store accepted the write. */
   async set(key, val) {
-    if (isNative) await safe(() => Preferences.set({ key, value: val }));
-    try { localStorage.setItem(key, val); } catch { /* quota / private mode */ }
+    let ok = false;
+    if (isNative) ok = await safe(async () => { await Preferences.set({ key, value: val }); return true; }, false);
+    try { localStorage.setItem(key, val); ok = true; } catch { /* quota / private mode */ }
+    return ok;
   },
   async remove(key) {
     if (isNative) await safe(() => Preferences.remove({ key }));
@@ -78,8 +81,10 @@ export const notify = {
 
 // ------------------------------------------------------------------ app lifecycle & chrome
 export function onAppState(cb) {
-  document.addEventListener('visibilitychange', () => cb(!document.hidden));
-  if (isNative) safe(() => App.addListener('appStateChange', ({ isActive }) => cb(isActive)));
+  let last = !document.hidden;
+  const fire = (active) => { if (active === last) return; last = active; cb(active); };   // both sources fire on iOS: report each change once
+  document.addEventListener('visibilitychange', () => fire(!document.hidden));
+  if (isNative) safe(() => App.addListener('appStateChange', ({ isActive }) => fire(isActive)));
 }
 export async function setupChrome() {
   if (!isNative) return;
@@ -100,9 +105,11 @@ export async function shareCanvas(canvas, text) {
     return safe(async () => {
       const path = `tiny-tides-${Date.now()}.png`;
       await Filesystem.writeFile({ path, data, directory: Directory.Cache });
-      const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
-      await Share.share({ title: 'Tiny Tides', text, url: uri, dialogTitle: 'Share your tidepool' });
-      return { ok: true };
+      try {
+        const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
+        await Share.share({ title: 'Tiny Tides', text, url: uri, dialogTitle: 'Share your tidepool' });
+        return { ok: true };
+      } finally { safe(() => Filesystem.deleteFile({ path, directory: Directory.Cache })); }
     }, { ok: false });
   }
   const file = new File([blob], 'tiny-tides.png', { type: 'image/png' });
@@ -117,15 +124,22 @@ export const store = {
   /** 'native' (real StoreKit) | 'demo' (simulated, no money) | 'unavailable' */
   mode: isNative ? 'native' : (DEMO || DEBUG ? 'demo' : 'unavailable'),
   prices: {},
-  country: '',
+  country: '',                 // App Store storefront country (ISO alpha-3 from StoreKit, e.g. "USA"); '' until known
   listener: null,
+  /** Two-letter/three-letter region hints: the storefront (authoritative) and the device locale (extra caution). */
+  regions() {
+    let loc = '';
+    try { loc = (new Intl.DateTimeFormat().resolvedOptions().locale.split('-')[1] || '').toUpperCase(); } catch { /* old webview */ }
+    return [store.country, loc].filter(Boolean);
+  },
   async init(onTransaction) {
     if (store.mode !== 'native') return;
     const ok = await safe(async () => (await NativePurchases.isBillingSupported()).isBillingSupported, false);
     if (!ok) { store.mode = 'unavailable'; return; }
-    // transactions completed outside a purchase call (Ask-to-Buy approvals, interrupted purchases, other devices)
+    // Transactions completed outside a purchase call (Ask-to-Buy approvals, interrupted purchases, other devices).
+    // The (patched) plugin retains these events until a listener exists and never finishes them itself.
     store.listener = await safe(() => NativePurchases.addListener('transactionUpdated', (t) => {
-      if (t && PRODUCTS[t.productIdentifier] && !t.revocationDate) onTransaction(t.productIdentifier, String(t.transactionId));
+      if (t && PRODUCTS[t.productIdentifier] && !t.revocationDate && t.transactionId != null) onTransaction(t.productIdentifier, String(t.transactionId));
     }));
     const sf = await safe(() => NativePurchases.getStorefront(), null);
     store.country = String(sf?.countryCode || '').toUpperCase();
@@ -143,7 +157,8 @@ export const store = {
     if (store.mode !== 'native') return { ok: false, error: 'Purchases are available in the App Store version.' };
     try {
       const t = await NativePurchases.purchaseProduct({ productIdentifier: id, productType: PURCHASE_TYPE.INAPP, quantity: 1, autoAcknowledgePurchases: false });
-      return { ok: true, txId: String(t.transactionId) };
+      // the money has moved: never fail here just because the id is missing, use a unique stand-in (a ledger entry still stops repeats)
+      return { ok: true, txId: t?.transactionId != null ? String(t.transactionId) : `local-${id}-${Date.now()}` };
     } catch (e) {
       const msg = String(e?.message || e || '');
       if (/cancel/i.test(msg)) return { ok: false, cancelled: true };
@@ -151,20 +166,22 @@ export const store = {
       return { ok: false, error: msg || 'Purchase failed' };
     }
   },
-  /** Tell StoreKit we've delivered the goods (only after the grant has been saved). */
+  /** Tell StoreKit we've delivered the goods. Call only after the grant is safely saved. Resolves true on success. */
   async finish(txId) {
-    if (store.mode !== 'native') return;
-    await safe(() => NativePurchases.acknowledgePurchase({ purchaseToken: txId }));
+    if (store.mode !== 'native') return true;
+    return safe(async () => { await NativePurchases.acknowledgePurchase({ purchaseToken: txId }); return true; }, false);
   },
-  /** Returns product ids of non-consumables the user owns. */
+  /** Every verified in-app transaction StoreKit knows about: [{ id, txId, date, revoked }]. Receipts are dropped to keep this light. */
+  async history() {
+    if (store.mode !== 'native') return [];
+    const r = await safe(() => NativePurchases.getPurchases({ productType: PURCHASE_TYPE.INAPP }), null);
+    return (r?.purchases || []).filter((p) => PRODUCTS[p.productIdentifier]).map((p) => ({ id: p.productIdentifier, txId: String(p.transactionId), date: Date.parse(p.purchaseDate) || 0, revoked: !!p.revocationDate }));
+  },
+  /** Ask the App Store to sync this Apple ID's purchases (may show a sign-in prompt). The caller then reads `history()`. */
   async restore() {
-    if (store.mode === 'demo') return { ok: true, items: [] };
+    if (store.mode === 'demo') return { ok: true };
     if (store.mode !== 'native') return { ok: false, error: 'Restore is available in the App Store version.' };
-    try {
-      await NativePurchases.restorePurchases();
-      const r = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.INAPP });
-      const items = (r.purchases || []).filter((p) => PRODUCTS[p.productIdentifier]?.type === 'nonconsumable' && !p.revocationDate).map((p) => ({ id: p.productIdentifier, txId: String(p.transactionId) }));
-      return { ok: true, items };
-    } catch (e) { return { ok: false, error: String(e?.message || e) }; }
+    try { await NativePurchases.restorePurchases(); return { ok: true }; }
+    catch (e) { return { ok: false, error: String(e?.message || e) }; }
   },
 };

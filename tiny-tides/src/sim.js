@@ -13,17 +13,20 @@ export function rand(state) {
 }
 const randInt = (s, a, b) => a + Math.floor(rand(s) * (b - a + 1));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const pick = (s, arr) => arr[Math.floor(rand(s) * arr.length)];
 const p2 = (n) => String(n).padStart(2, '0');
 const roundTo = (v, n) => Math.round(v / n) * n;
 
-export function dayKey(now) {
-  const d = new Date(now - 4 * HOUR); // day rolls over at 4am local so night owls aren't punished
-  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+/** The game day: local calendar date, rolling over at 4am local wall-clock so night owls aren't punished (DST-safe). */
+function gameDate(now) {
+  const d = new Date(now);
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() - 4);
+  return [t.getFullYear(), t.getMonth() + 1, t.getDate()];
 }
-export function dayNum(now) {
-  return Math.floor((now - 4 * HOUR - new Date(now).getTimezoneOffset() * MIN) / 864e5);
-}
+/** 'YYYY-MM-DD'. Keys sort chronologically, which the daily gates rely on (see `isNewer`). */
+export function dayKey(now) { const [y, m, d] = gameDate(now); return `${y}-${p2(m)}-${p2(d)}`; }
+export function dayNum(now) { const [y, m, d] = gameDate(now); return Math.round(Date.UTC(y, m - 1, d) / 864e5); }
+/** Daily gates only ever move forward, so winding the clock back can't re-arm a claim that was already taken. */
+export const isNewer = (key, last) => key > (last || '');
 /** The current "Tide Gift" window (morning / afternoon / evening, local time). */
 export function giftWindow(now) {
   const d = new Date(now);
@@ -80,7 +83,7 @@ export function newPool(biome, now) {
 }
 export function newState(now, seed) {
   return {
-    v: SAVE_VERSION, seed: ((seed ?? now) >>> 0) || 1, nid: 1, created: now, lastTick: now, lastSeen: now,
+    v: SAVE_VERSION, seed: ((seed ?? now) >>> 0) || 1, nid: 1, seq: 0, created: now, lastTick: now, lastSeen: now,
     cur: { pearls: 150, glass: 20, tokens: 0, coins: 0 },
     lvl: 1, xp: 0,
     pools: { tide: newPool('tide', now) },
@@ -100,46 +103,117 @@ export function newState(now, seed) {
   };
 }
 function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+/** Overlay saved data onto a fresh default state, keeping the default's shape (wrong types are ignored, not trusted). */
 function mergeInto(base, saved) {
   for (const k of Object.keys(saved)) {
-    if (isObj(base[k]) && isObj(saved[k])) mergeInto(base[k], saved[k]);
-    else base[k] = saved[k];
+    if (UNSAFE_KEYS.has(k)) continue;
+    const b = base[k], v = saved[k];
+    if (isObj(b)) { if (isObj(v)) mergeInto(b, v); }
+    else if (Array.isArray(b)) { if (Array.isArray(v)) base[k] = v; }
+    else if (b === undefined || (v !== null && typeof v === typeof b)) base[k] = v;   // b undefined: open-ended maps (dex, own, iap.done…)
   }
   return base;
 }
+/** `seq` counts writes: it is how the loader tells the newest of several saves apart (wall-clock time can't be trusted). */
 export function serialize(state) {
-  return JSON.stringify(state, (k, v) => (k[0] === '_' ? undefined : v));
+  state.seq = (state.seq | 0) + 1;
+  return JSON.stringify(state, (k, v) => (k[0] === '_' || k === 'ver' ? undefined : v));
 }
-/** Parse + validate a save. Returns a healthy state or null. */
+
+const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const asInt = (v, lo, hi, dflt) => { v = Math.floor(Number(v)); return Number.isFinite(v) ? clamp(v, lo, hi) : dflt; };
+const asNum = (v, lo, hi, dflt) => { v = Number(v); return Number.isFinite(v) ? clamp(v, lo, hi) : dflt; };
+const MAX_CUR = 1e13;
+
+/** Rebuild one pool from saved data, dropping/repairing anything that would break the rules. Returns null if unusable. */
+function sanitizePool(biome, p, now, ids, orphans) {
+  const B = BIOMES[biome];
+  if (!isObj(p) || !Array.isArray(p.tiles)) return null;
+  const w = asInt(p.w, 1, 16, 0), h = asInt(p.h, 1, 16, 0);
+  if (!w || !h || p.tiles.length !== w * h) return null;
+  const pool = { biome, exp: asInt(p.exp, 0, B.steps.length - 1, 0), w, h, ver: 1, tiles: [], creatures: [], eggs: [], nextEgg: asNum(p.nextEgg, 0, 8.64e15, now + 2 * HOUR) };
+  for (const t of p.tiles) {
+    const o = isObj(t) ? t : {};
+    const tw = asInt(o.w, 0, B.maxW, 0);
+    const pc = has(PIECES, o.p) && PIECES[o.p].biome === biome && PIECES[o.p].onW.includes(tw) ? o.p : null;
+    const dc = !pc && has(DECOR, o.d) && DECOR[o.d].kind === 'prop' && (DECOR[o.d].place === 'shore' ? tw === 0 : tw >= 1) ? o.d : null;
+    pool.tiles.push({ w: tw, p: pc, d: dc });
+  }
+  const newId = (v) => { v = asInt(v, 1, 2147483646, 0); if (v && !ids.has(v)) { ids.add(v); return v; } return 0; };
+  const settle = (it, list) => {              // keep it on a tile it can stand on, unshared; otherwise drop it
+    it.x = asInt(it.x, 0, w - 1, 0); it.y = asInt(it.y, 0, h - 1, 0);
+    if (!(canStand(pool, famOf(it), it.x, it.y) && !occupantAt(pool, it.x, it.y)) && !relocate(pool, it)) return;
+    list.push(it);
+    if (!it.id) orphans.push(it);
+  };
+  for (const c of Array.isArray(p.creatures) ? p.creatures : []) {
+    if (!isObj(c) || !has(FORMS, c.form)) continue;
+    const stage = FORMS[c.form].stage, e = c.evo;
+    const evo = isObj(e) && has(FORMS, e.to) && FORMS[e.to].fam === FORMS[c.form].fam && FORMS[e.to].stage === stage + 1 && Number.isFinite(e.end)
+      ? { to: e.to, start: asNum(e.start, 0, 8.64e15, now), end: asNum(e.end, 0, 8.64e15, now) } : null;
+    const it = { id: newId(c.id), form: c.form, x: c.x, y: c.y, lvl: asInt(c.lvl, 1, maxLevel(stage), 1), stored: asNum(c.stored, 0, 1e9, 0), spent: asNum(c.spent, 0, 1e12, 0), born: asNum(c.born, 0, 8.64e15, now), hat: has(DECOR, c.hat) && DECOR[c.hat].kind === 'hat' ? c.hat : null, evo };
+    if (Number.isFinite(c.petAt)) it.petAt = c.petAt;
+    settle(it, pool.creatures);
+  }
+  for (const e of Array.isArray(p.eggs) ? p.eggs : []) {
+    if (!isObj(e) || !has(FAMILIES, e.fam) || FAMILIES[e.fam].biome !== biome) continue;
+    settle({ id: newId(e.id), fam: e.fam, x: e.x, y: e.y, born: asNum(e.born, 0, 8.64e15, now), ready: asNum(e.ready, 0, 8.64e15, now) }, pool.eggs);
+  }
+  return pool;
+}
+/** The most recently written of several loaded saves (highest write counter; the clock is only a tie-breaker). */
+export function newestSave(states) {
+  return [...states].sort((a, b) => (b.seq - a.seq) || (b.lastTick - a.lastTick))[0] || null;
+}
+/** Parse + validate a save. Returns a healthy state or null (the caller then tries the next backup). */
 export function deserialize(str, now) {
   let saved;
   try { saved = JSON.parse(str); } catch { return null; }
   if (!isObj(saved) || !isObj(saved.pools) || !isObj(saved.pools.tide)) return null;
+  try { return rebuild(saved, now); } catch { return null; }
+}
+function rebuild(saved, now) {
   const st = newState(now, saved.seed);
   const pools = saved.pools;
-  delete saved.pools;
-  mergeInto(st, saved);
+  for (const k of Object.keys(saved)) if (k !== 'pools' && has(st, k)) mergeInto(st, { [k]: saved[k] });
+  const ids = new Set(), orphans = [];
   st.pools = {};
   for (const [biome, p] of Object.entries(pools)) {
-    if (!BIOMES[biome] || !isObj(p) || !Array.isArray(p.tiles) || p.tiles.length !== p.w * p.h) continue;
-    p.creatures = (p.creatures || []).filter((c) => FORMS[c.form]);
-    p.eggs = (p.eggs || []).filter((e) => FAMILIES[e.fam]);
-    p.tiles.forEach((t) => {
-      if (t.p && !PIECES[t.p]) t.p = null;
-      if (t.d && !DECOR[t.d]) t.d = null;
-      t.w = clamp(t.w | 0, 0, BIOMES[biome].maxW);
-    });
-    p.ver = 1;
-    p.biome = biome;
-    st.pools[biome] = p;
+    if (!has(BIOMES, biome)) continue;
+    const sp = sanitizePool(biome, p, now, ids, orphans);
+    if (sp) st.pools[biome] = sp;
   }
   if (!st.pools.tide) return null;
-  for (const k of ['pearls', 'glass', 'tokens', 'coins']) if (!Number.isFinite(st.cur[k]) || st.cur[k] < 0) st.cur[k] = 0;
+  // numbers
+  for (const k of ['pearls', 'glass', 'tokens', 'coins']) st.cur[k] = asNum(st.cur[k], 0, MAX_CUR, 0);
+  st.xp = asNum(st.xp, 0, 1e12, 0);
+  st.lvl = asInt(st.lvl, 1, D.MAX_POOL_LVL, 1);
+  st.seq = asInt(st.seq, 0, 2 ** 40, 0);
+  st.seed = (st.seed >>> 0) || 1;
+  st.boost.until = asNum(st.boost.until, 0, 8.64e15, 0);
+  st.boost.mult = asNum(st.boost.mult, 1, 10, 2);
+  st.daily.n = asInt(st.daily.n, 0, 1e6, 0); st.daily.last = asNum(st.daily.last, -99, 1e6, -99); st.daily.shield = asInt(st.daily.shield, 0, 1, 1);
+  st.tut.step = asInt(st.tut.step, 0, 99, 0);
+  for (const k of Object.keys(st.stats)) st.stats[k] = asNum(st.stats[k], 0, 1e12, 0);
+  // maps & lists keyed by content ids
+  st.dex = Object.fromEntries(Object.entries(st.dex).filter(([k, v]) => has(FORMS, k) && Number.isFinite(v)));
+  st.own = { ...Object.fromEntries(Object.keys(st.own).filter((k) => has(DECOR, k) && st.own[k] === true).map((k) => [k, true])), ...Object.fromEntries(D.FREE_DECOR.map((d) => [d, true])) };
+  st.iap.done = Object.fromEntries(Object.entries(st.iap.done).filter(([, v]) => Number.isFinite(v)));
+  st.iap.packs = Object.fromEntries(Object.keys(st.iap.packs).filter((k) => has(D.PACKS, k) && st.iap.packs[k]).map((k) => [k, true]));
+  st.dexClaimed = st.dexClaimed.filter((i) => Number.isInteger(i) && i >= 0 && i < D.DEX_MILESTONES.length);
+  const Q = st.quests;
+  Q.list = Q.list.filter((q) => isObj(q) && D.QUEST_TEMPLATES.some((t) => t.id === q.id) && Number.isFinite(q.goal) && q.goal > 0 && Number.isFinite(q.prog))
+    .map((q) => ({ id: q.id, ev: D.QUEST_TEMPLATES.find((t) => t.id === q.id).ev, goal: Math.floor(q.goal), prog: clamp(Math.floor(q.prog), 0, Math.floor(q.goal)), done: !!q.done, claimed: !!q.claimed, glass: asInt(q.glass, 0, 1e6, 0), coins: asInt(q.coins, 0, 1e6, 0), pearls: asInt(q.pearls, 0, 1e12, 0) }));
   sanitizeGacha(st);
-  st.lvl = clamp(st.lvl | 0 || 1, 1, D.MAX_POOL_LVL);
-  st.nid = Math.max(st.nid | 0, 1);
-  for (const p of Object.values(st.pools)) for (const it of [...p.creatures, ...p.eggs]) st.nid = Math.max(st.nid, (it.id | 0) + 1);
+  for (const k of ['skin', 'fx']) if (!(has(DECOR, st.equip[k]) && DECOR[st.equip[k]].kind === k && st.own[st.equip[k]])) st.equip[k] = k === 'skin' ? 'aqua' : 'bubbles';
+  // ids
+  st.nid = asInt(st.nid, 1, 2147483000, 1);
+  for (const id of ids) st.nid = Math.max(st.nid, id + 1);
+  for (const it of orphans) it.id = st.nid++;
   if (!Number.isFinite(st.lastTick) || st.lastTick > now + HOUR) st.lastTick = now;
+  if (!Number.isFinite(st.lastSeen)) st.lastSeen = now;
+  if (st.iap.deep && !st.pools.deep) st.pools.deep = starterDeepPool(st, now);   // never leave a paying player without their biome
   return st;
 }
 
@@ -311,7 +385,7 @@ export function hatchEgg(state, biome, eggId, now) {
   const egg = pool.eggs[i];
   if (now < egg.ready) return { ok: false, reason: 'warming', wait: egg.ready - now };
   pool.eggs.splice(i, 1);
-  const c = { id: egg.id, form: `${egg.fam}.0`, x: egg.x, y: egg.y, lvl: 1, stored: 0, born: now, hat: null, evo: null };
+  const c = { id: egg.id, form: `${egg.fam}.0`, x: egg.x, y: egg.y, lvl: 1, stored: 0, spent: 0, born: now, hat: null, evo: null };
   pool.creatures.push(c);
   const events = [];
   const isNew = discover(state, c.form, now, events);
@@ -363,6 +437,7 @@ export function levelUp(state, biome, cid) {
   const cost = levelCost(stage, c.lvl);
   if (state.cur.pearls < cost) return { ok: false, reason: 'pearls', need: cost };
   state.cur.pearls -= cost;
+  c.spent = (c.spent || 0) + cost;
   c.lvl++;
   state.stats.levelups++;
   const events = [];
@@ -411,6 +486,7 @@ export function startEvolution(state, biome, cid, now) {
   const info = evoInfo(state, pool, c);
   if (!info.canStart) return { ok: false, reason: info.reason };
   state.cur.pearls -= info.cost;
+  c.spent = (c.spent || 0) + info.cost;
   c.evo = { to: info.to, start: now, end: now + info.dur };
   state.flags.firstEvo = true;
   noteQuest(state, 'evolve', 1);
@@ -428,7 +504,7 @@ function finishEvolution(state, pool, c, events) {
   bump(pool);
 }
 export function speedUpCost(state, c, now) {
-  if (!c.evo) return 0;
+  if (!c.evo || c.evo.end <= now) return 0;
   return Math.max(1, Math.ceil((c.evo.end - now) / (D.SPEEDUP_MIN_PER_GLASS * MIN)));
 }
 /** mode: 'glass' | 'token' | 'free' (daily Golden Hourglass finish). */
@@ -442,7 +518,7 @@ export function speedUp(state, biome, cid, now, mode) {
     state.cur.tokens--;
     c.evo.end -= D.TOKEN_MS;
   } else if (mode === 'free') {
-    if (!state.iap.hourglass || state.flags.freeFinish === dayKey(now)) return { ok: false, reason: 'used' };
+    if (!freeFinishAvailable(state, now)) return { ok: false, reason: 'used' };
     state.flags.freeFinish = dayKey(now);
     c.evo.end = Math.min(c.evo.end, now);
   } else {
@@ -454,18 +530,15 @@ export function speedUp(state, biome, cid, now, mode) {
   if (c.evo.end <= now) finishEvolution(state, pool, c, events);
   return { ok: true, events };
 }
-export function freeFinishAvailable(state, now) { return state.iap.hourglass && state.flags.freeFinish !== dayKey(now); }
+export function freeFinishAvailable(state, now) { return !!state.iap.hourglass && isNewer(dayKey(now), state.flags.freeFinish); }
 
 export function releaseCreature(state, biome, cid, now) {
   const pool = state.pools[biome];
   const i = pool.creatures.findIndex((k) => k.id === cid);
   if (i < 0) return { ok: false };
-  const c = pool.creatures[i], stage = FORMS[c.form].stage;
-  let invest = 0;
-  for (let l = 1; l < c.lvl; l++) invest += levelCost(stage, l);
-  if (stage >= 2) invest += STAGE[1].evoCost;
-  if (stage >= 3) invest += STAGE[2].evoCost;
-  const refund = Math.floor(invest * 0.5) + Math.floor(c.stored) + 5;
+  const c = pool.creatures[i];
+  // half of what was actually paid (level-ups and evolutions), so a release can never earn more than it cost
+  const refund = Math.floor((c.spent || 0) * D.REFUND) + Math.floor(c.stored) + 5;
   state.cur.pearls += refund;
   pool.creatures.splice(i, 1);
   if (pool.nextEgg < now) pool.nextEgg = now + MIN;
@@ -483,13 +556,6 @@ export function setHat(state, biome, cid, hat) {
 // ================================================================ building
 export const maxDig = (state, biome) => (biome === 'tide' ? (state.lvl >= BIOMES.tide.deepUnlock ? 2 : 1) : BIOMES.deep.maxW);
 export function pieceUnlocked(state, id) { const p = PIECES[id]; return p.biome === 'deep' || state.lvl >= p.unlock; }
-export function toolCost(state, biome, tool, x, y) {
-  const pool = state.pools[biome], t = tileAt(pool, x, y);
-  if (!t) return 0;
-  if (tool === 'dig') return BIOMES[biome].digCost[t.w + 1] || 0;
-  if (tool.startsWith('piece:')) return PIECES[tool.slice(6)].cost;
-  return 0;
-}
 const fail = (reason, extra) => ({ ok: false, reason, ...extra });
 
 /** Apply a build tool to one tile. tool: dig | fill | erase | piece:<id> | decor:<id> */
@@ -584,9 +650,10 @@ export function expandPool(state, biome) {
   const tiles = [];
   for (let y = 0; y < info.h; y++) for (let x = 0; x < info.w; x++) tiles.push(x < pool.w && y < pool.h ? pool.tiles[y * pool.w + x] : { w: 0, p: null, d: null });
   pool.tiles = tiles; pool.w = info.w; pool.h = info.h; pool.exp++;
-  addXp(state, 20, []);
+  const events = [];
+  addXp(state, 20, events);
   bump(pool);
-  return { ok: true, w: info.w, h: info.h };
+  return { ok: true, w: info.w, h: info.h, events };
 }
 
 // ================================================================ time advance
@@ -643,7 +710,7 @@ export function noteQuest(state, ev, n) {
 }
 export function ensureDaily(state, now) {
   const dk = dayKey(now);
-  if (state.quests.day === dk) return false;
+  if (!isNewer(dk, state.quests.day)) return false;
   const rate = Math.max(30, totalRate(state, now));
   const canEvolve = Object.values(state.pools).some((p) => p.creatures.some((c) => FORMS[c.form].stage < 3));
   const pool = D.QUEST_TEMPLATES.filter((q) => q.id !== 'evolve' || canEvolve);
@@ -665,8 +732,9 @@ export function claimQuest(state, i) {
   state.cur.glass += q.glass;
   state.cur.pearls += q.pearls;
   if (q.coins) state.cur.coins += q.coins;
-  addXp(state, 10, []);
-  return { ok: true, glass: q.glass, pearls: q.pearls, coins: q.coins || 0 };
+  const events = [];
+  addXp(state, 10, events);
+  return { ok: true, glass: q.glass, pearls: q.pearls, coins: q.coins || 0, events };
 }
 export function claimQuestChest(state) {
   const Q = state.quests;
@@ -677,10 +745,10 @@ export function claimQuestChest(state) {
   state.cur.coins += D.QUEST_ALL_BONUS.coins || 0;
   return { ok: true, ...D.QUEST_ALL_BONUS };
 }
-export function dailyAvailable(state, now) { return state.daily.last !== dayNum(now); }
+export function dailyAvailable(state, now) { return dayNum(now) > state.daily.last; }
 export function claimDaily(state, now) {
   const today = dayNum(now), D0 = state.daily;
-  if (D0.last === today) return { ok: false };
+  if (today <= D0.last) return { ok: false };
   const gap = today - D0.last;
   let saved = false;
   if (gap === 1) D0.n++;
@@ -697,15 +765,16 @@ export function claimDaily(state, now) {
   if (r.coins) { out.coins = r.coins; state.cur.coins += r.coins; }
   return out;
 }
-export function giftAvailable(state, now) { return state.gift.key !== giftWindow(now).key; }
+export function giftAvailable(state, now) { return isNewer(giftWindow(now).key, state.gift.key); }
 export function claimGift(state, now) {
   const w = giftWindow(now);
-  if (state.gift.key === w.key) return { ok: false };
+  if (!isNewer(w.key, state.gift.key)) return { ok: false };
   state.gift.key = w.key;
   state.stats.gifts++;
   noteQuest(state, 'gift', 1);
   const r = rand(state), rate = totalRate(state, now);
-  let out = { ok: true, window: w.name };
+  const events = [];
+  let out = { ok: true, window: w.name, events };
   if (r < 0.55) { out.pearls = Math.max(80, Math.round(rate * (0.5 + rand(state)))); state.cur.pearls += out.pearls; }
   else if (r < 0.78) { out.glass = randInt(state, 2, 4); state.cur.glass += out.glass; }
   else if (r < 0.86) { out.tokens = 1; state.cur.tokens += 1; }
@@ -715,12 +784,11 @@ export function claimGift(state, now) {
     const egg = population(pool) < popCap(state, pool) ? spawnEgg(state, pool, now, { warm: 0 }) : null;
     if (egg) out.egg = egg.id; else { out.glass = 3; state.cur.glass += 3; }
   }
-  addXp(state, 5, []);
+  addXp(state, 5, events);
   return out;
 }
 
 // ================================================================ shop
-export function decorPrice(id) { return DECOR[id].price || null; }
 export function buyDecor(state, id) {
   const d = DECOR[id];
   if (!d || state.own[id]) return fail('owned');
@@ -800,8 +868,8 @@ export function applyProduct(state, productId, txId, now, opts = {}) {
   }
   if (txId) {
     state.iap.done[txId] = now;
-    const keys = Object.keys(state.iap.done);
-    if (keys.length > 300) for (const k of keys.slice(0, keys.length - 300)) delete state.iap.done[k];
+    const all = Object.entries(state.iap.done);
+    if (all.length > 300) for (const [k] of all.sort((a, b) => a[1] - b[1]).slice(0, all.length - 300)) delete state.iap.done[k];
   }
   return out;
 }
@@ -811,23 +879,30 @@ export function applyProduct(state, productId, txId, now, opts = {}) {
 // Cosmetic collectibles only. All odds are derived from data.js weights; pity and spending limits are enforced here.
 function sanitizeGacha(st) {
   const g = st.gacha;
-  for (const k of ['pulls', 'paidPulls', 'pityR', 'pityL', 'shards', 'paidToday']) if (!Number.isFinite(g[k]) || g[k] < 0) g[k] = 0;
-  for (const id of Object.keys(g.owned)) if (!D.POOL_BY_ID[id] || D.POOL_BY_ID[id].filler || !(g.owned[id] > 0)) delete g.owned[id];
+  for (const k of ['pulls', 'paidPulls', 'pityR', 'pityL', 'shards', 'paidToday']) g[k] = asInt(g[k], 0, 1e9, 0);
+  g.pityR = Math.min(g.pityR, D.GACHA.pityRare - 1); g.pityL = Math.min(g.pityL, D.GACHA.pityLegend - 1);
+  for (const id of Object.keys(g.owned)) {
+    if (!has(D.POOL_BY_ID, id) || D.POOL_BY_ID[id].filler || !(g.owned[id] > 0)) delete g.owned[id];
+    else g.owned[id] = asInt(g.owned[id], 1, 1e6, 1);
+  }
   for (const id of Object.keys(g.owned)) st.own[id] = true;       // ownership can never be lost to a partial save
-  if (!Array.isArray(g.milesClaimed)) g.milesClaimed = [];
+  for (const id of Object.keys(g.setsClaimed)) if (!D.TOY_SETS.some((x) => x.id === id) || !g.setsClaimed[id]) delete g.setsClaimed[id];
+  g.milesClaimed = [...new Set(g.milesClaimed.filter((i) => Number.isInteger(i) && i >= 0 && i < D.TOY_MILESTONES.length))];
 }
 export const gachaWeek = (now) => Math.floor(dayNum(now) / 7);
 const hash32 = (n) => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul(x, 2246822519) >>> 0; x ^= x >>> 13; return x >>> 0; };
 /** This week's Spotlight: one Rare and one Legendary collectible are `spotMult` times as likely as their tier siblings. */
 export function gachaSpotlight(now) {
   const wk = gachaWeek(now), pick = (tier, salt) => { const list = D.POOL_BY_TIER[tier].filter((i) => !i.filler); return list[hash32(wk * 31 + salt) % list.length].id; };
-  return { week: wk, rare: pick('rare', 7), legendary: pick('legendary', 13), endsAt: (wk + 1) * 7 * 864e5 + new Date(now).getTimezoneOffset() * 60e3 + 4 * HOUR };
+  const next = new Date((wk + 1) * 7 * 864e5);                 // the next week starts on this game day…
+  return { week: wk, rare: pick('rare', 7), legendary: pick('legendary', 13), endsAt: new Date(next.getUTCFullYear(), next.getUTCMonth(), next.getUTCDate(), 4).getTime() };   // …at 4am local
 }
-const tableCache = new Map();
+const tableCache = new Map();   // one entry per spotlight week
 /** Full drop table for the current week. rows: { id, tier, prob, spotlight }, tiers: { tierId: prob }. Probabilities sum to 1. */
 export function gachaTable(now) {
-  const sp = gachaSpotlight(now), key = `${sp.rare}|${sp.legendary}`;
+  const sp = gachaSpotlight(now), key = `${sp.week}|${sp.endsAt}`;
   if (tableCache.has(key)) return tableCache.get(key);
+  if (tableCache.size > 8) tableCache.clear();
   const rows = [], tiers = {};
   for (const t of D.GACHA.tiers) {
     const items = D.POOL_BY_TIER[t.id], wOf = (i) => i.w * (i.id === sp.rare || i.id === sp.legendary ? D.GACHA.spotMult : 1);
@@ -839,9 +914,9 @@ export function gachaTable(now) {
   tableCache.set(key, out);
   return out;
 }
-export const gachaFreeAvailable = (state, now) => state.gacha.freeDay !== dayKey(now);
+export const gachaFreeAvailable = (state, now) => isNewer(dayKey(now), state.gacha.freeDay);
 export function gachaPaidLeft(state, now) {
-  const g = state.gacha; return Math.max(0, D.GACHA.paidDailyCap - (g.paidDay === dayKey(now) ? g.paidToday : 0));
+  const g = state.gacha; return Math.max(0, D.GACHA.paidDailyCap - (isNewer(dayKey(now), g.paidDay) ? 0 : g.paidToday));
 }
 /** Pulls until the next guaranteed Rare-or-better / Legendary. */
 export function gachaPity(state) {
@@ -867,16 +942,19 @@ function grantCapsule(state, item, now) {
   state.own[item.id] = true;
   return res;
 }
-/** One capsule. `sp` is this week's spotlight. Updates pity counters. */
+/** One capsule. `sp` is this week's spotlight. Updates pity counters.
+ *  Pity: never more than 9 pulls in a row without a Rare-or-better *collectible*, or 59 without a Legendary. The guaranteed pull is
+ *  always a collectible (never a filler prize), and a filler prize never resets the counters. */
 function rollCapsule(state, sp, now) {
   const g = state.gacha, T = D.GACHA;
-  let tierId;
+  let tierId, forced = true;
   if (g.pityL + 1 >= T.pityLegend) tierId = 'legendary';
   else if (g.pityR + 1 >= T.pityRare) tierId = rand(state) * (D.TIER.rare.p + D.TIER.legendary.p) < D.TIER.legendary.p ? 'legendary' : 'rare';
-  else { let r = rand(state) * 100; tierId = 'legendary'; for (const t of T.tiers) { if ((r -= t.p) < 0) { tierId = t.id; break; } } }
+  else { forced = false; let r = rand(state) * 100; tierId = 'legendary'; for (const t of T.tiers) { if ((r -= t.p) < 0) { tierId = t.id; break; } } }
+  const items = forced ? D.POOL_BY_TIER[tierId].filter((i) => !i.filler) : D.POOL_BY_TIER[tierId];
+  const item = pickWeighted(state, items, (i) => i.w * (i.id === sp.rare || i.id === sp.legendary ? T.spotMult : 1));
   g.pityR++; g.pityL++;
-  if (tierId === 'legendary') { g.pityR = 0; g.pityL = 0; } else if (tierId === 'rare') g.pityR = 0;
-  const item = pickWeighted(state, D.POOL_BY_TIER[tierId], (i) => i.w * (i.id === sp.rare || i.id === sp.legendary ? T.spotMult : 1));
+  if (!item.filler) { if (item.tier === 'legendary') { g.pityR = 0; g.pityL = 0; } else if (item.tier === 'rare') g.pityR = 0; }
   return grantCapsule(state, item, now);
 }
 /** mode: 'free' (daily, n=1) | 'coin' | 'glass'. Returns { ok, results[], paid, cost } or { ok:false, reason }. */
@@ -900,7 +978,7 @@ export function gachaPull(state, n, mode, now) {
   else if (mode === 'coin') state.cur.coins -= cost;
   else {
     state.cur.glass -= cost;
-    if (g.paidDay !== dayKey(now)) { g.paidDay = dayKey(now); g.paidToday = 0; }
+    if (isNewer(dayKey(now), g.paidDay)) { g.paidDay = dayKey(now); g.paidToday = 0; }
     g.paidToday += n; g.paidPulls += n;
   }
   const sp = gachaSpotlight(now), results = [];

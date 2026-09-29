@@ -1,0 +1,30 @@
+<h2>Capsule Machine drop rates</h2>
+<p class="small">Last updated {{effectiveDateLong}} · These tables are generated from the same data the game uses to pick prizes.</p>
+
+<div class="callout"><b>How it works.</b> Each capsule first lands in a tier (Common, Uncommon, Rare or Legendary) with the chance shown below, then one prize inside that tier is picked with the chance shown for that prize. <b>Free capsules, Capsule Coin pulls and Sea Glass pulls all use exactly the same rates.</b> Pulls are independent: earlier results don’t change later chances, except through the pity guarantee below.</div>
+
+<h2>Tier chances</h2>
+{{tiersHtml}}
+
+<h2>Guarantee (pity)</h2>
+<ul>
+<li>At most {{pityRareMinus}} pulls in a row can pass without a Rare-or-better <b>toy</b>: your {{pityRare}}th pull is guaranteed to be a Rare or Legendary toy if you haven’t received one since your last. (Prize capsules — the small rewards shown below — never count as, or reset, the guarantee.)</li>
+<li>At most {{pityLegendMinus}} pulls in a row can pass without a Legendary toy: your {{pityLegend}}th pull is guaranteed to be Legendary.</li>
+<li>Getting a Rare or Legendary toy earlier restarts the relevant counter. The game shows your counters in the Capsule Machine. The guarantee only ever adds chances of better toys — it never lowers a rate shown here — so your real long-run chances of Rare and Legendary toys are slightly higher than the tier chances above.</li>
+</ul>
+
+<h2>Weekly spotlight</h2>
+<p>Every week one Rare and one Legendary toy are picked to be “in the spotlight” and are <b>{{spotMult}} times as likely</b> as the other prizes in their tier (the other prizes in that tier become slightly less likely so the tier chance stays the same). The spotlight changes every week at 4 am local time and is shown in the Capsule Machine. The tables below show each prize’s chance in a normal week and when it is in the spotlight.</p>
+
+<h2>Cost and limits</h2>
+<ul>
+<li><b>Free capsule:</b> one per day.</li>
+<li><b>Capsule Coins:</b> {{coinCost}} coin per pull. Coins are earned by playing (tutorial, daily streak, quests, Tidedex milestones, Tide Gifts and Toybox rewards); they cannot be bought.</li>
+<li><b>Sea Glass:</b> {{glassCost}} per pull, or {{glassCost10}} for ten. At most <b>{{paidCap}} Sea Glass pulls per day</b>. Can be switched off in Settings. Not available in some regions.</li>
+<li><b>Duplicates:</b> if you already own a toy, the duplicate turns into shards: {{shardsHtml}}. Shards can be exchanged at the Prize Counter for a specific toy you don’t own yet: {{prizeHtml}}.</li>
+</ul>
+
+<h2>Every prize</h2>
+{{itemsHtml}}
+
+<p class="small">Prizes are virtual items for use in Tiny Tides only, have no cash value and can’t be sold or traded. See the <a href="terms.html">Terms of Use</a> and the <a href="parents.html">parents’ guide</a>.</p>

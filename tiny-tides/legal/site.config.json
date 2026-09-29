@@ -1,0 +1,15 @@
+{
+  "_readme": "Fill in every value below ONCE, then run `npm run site`. Anything still containing YOUR or example is flagged by `npm run legal:check`, which also runs in `npm run release`.",
+  "appName": "Tiny Tides",
+  "developerName": "YOUR LEGAL NAME OR COMPANY NAME",
+  "email": "support@YOUR-DOMAIN.example",
+  "address": "YOUR FULL MAILING ADDRESS",
+  "phone": "YOUR PHONE NUMBER (needed for the EU trader listing, not published on these pages)",
+  "country": "YOUR COUNTRY",
+  "governingLaw": "the laws of YOUR STATE OR COUNTRY",
+  "venue": "the courts of YOUR CITY, STATE OR COUNTRY",
+  "baseUrl": "https://YOUR-HOST.example/tiny-tides",
+  "hostingProvider": "YOUR STATIC HOST (for example GitHub Pages)",
+  "effectiveDate": "2026-09-29",
+  "bundleId": "com.tinytides.game"
+}

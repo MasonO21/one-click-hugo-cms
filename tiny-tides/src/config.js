@@ -1,13 +1,12 @@
 // Tiny Tides — release configuration. Edit these before submitting to the App Store.
 export const VERSION = '1.0.0';
 
-// Public URLs shown in Settings (and required by App Store Connect). Host the pages in /site anywhere
-// (GitHub Pages, Netlify, your own domain) and update these three links.
-export const LINKS = {
-  privacy: 'https://masono21.github.io/tiny-tides/privacy.html',
-  terms: 'https://masono21.github.io/tiny-tides/terms.html',
-  support: 'https://masono21.github.io/tiny-tides/support.html',
-};
+// Public pages. The address and the publisher's name come from legal/site.config.json when the app is built (see tools/build.mjs),
+// so the app, the website and the App Store listing can't drift apart. Edit that file, not this one.
+export const SITE = __SITE__;
+export const LINKS = Object.fromEntries(['privacy', 'terms', 'support', 'rates', 'parents', 'licenses'].map((k) => [k, `${SITE.url}/${k}.html`]));
+// Open-source licence texts, grouped by identical text: [{ license, text, items: [{ name, version, url, use }] }] (from tools/licenses.mjs)
+export const LICENSES = __LICENSES__;
 
 // Plain-language privacy summary shown offline inside the app (kept in sync with site/privacy.html).
 export const POLICY = [

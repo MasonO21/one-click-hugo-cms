@@ -1,7 +1,7 @@
 // Tiny Tides — scene renderer (Canvas 2D). Reads game state, never mutates it.
 import * as D from './data.js';
 import * as S from './sim.js';
-import { drawSprite, facingOf, OUT, shade, rng, hash } from './art_creatures.js';
+import { drawSprite, facingOf, OUT, rng, hash } from './art_creatures.js';
 import { PIECE_ART, drawEgg, drawCocoon } from './art_world.js';
 import { drawProp } from './art_gacha.js';
 
@@ -198,9 +198,10 @@ export function createScene(canvas) {
 
   // ------------------------------------------------ cached base layer (slab, sand, water shapes)
   function skinFor(st, biome) { return biome === 'deep' ? SKINS.abyss : SKINS[st.equip.skin] || SKINS.aqua; }
-  function buildBase(st, pool, ts, ox, oy, W, H, nightMix, skin) {
-    const cv = document.createElement('canvas'); const dpr = sc.dpr;
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  function buildBase(st, pool, ts, ox, oy, W, H, nightMix, skin, reuse) {
+    // the live layer is rebuilt into one long-lived canvas (a fresh screen-sized canvas per rebuild churns memory on older phones)
+    const cv = reuse || document.createElement('canvas'); const dpr = sc.dpr;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);      // (also clears the canvas)
     const c = cv.getContext('2d'); c.scale(dpr, dpr);
     const night = (col) => (nightMix > 0.01 ? mix(col, '#1a1250', nightMix * 0.45) : col);
     const gw = ts * pool.w, gh = ts * pool.h, pad = ts * 0.22, dep = ts * 0.34, R = ts * 0.55;
@@ -400,7 +401,7 @@ export function createScene(canvas) {
     const key = `${sc.biome}|${skin === SKINS[st.equip.skin] ? st.equip.skin : 'x'}|${pool.w}x${pool.h}|${ts.toFixed(2)}|${ox.toFixed(1)}|${oy.toFixed(1)}|${nb}|${pool.ver}|${dpr}|${W}x${H}`;
     let base;
     if (o.live) {
-      if (sc._baseKey !== key) { sc._base = buildBase(st, pool, ts, ox, oy, W, H, nb / 6, skin); sc._baseKey = key; }
+      if (sc._baseKey !== key) { sc._base = buildBase(st, pool, ts, ox, oy, W, H, nb / 6, skin, sc._baseCv ||= document.createElement('canvas')); sc._baseKey = key; }
       base = sc._base;
     } else base = buildBase(st, pool, ts, ox, oy, W, H, nb / 6, skin);
     const shake = sc.shake > 0 && !sc.reduceMotion ? [Math.sin(t * 60) * sc.shake * 3, Math.cos(t * 50) * sc.shake * 2] : [0, 0];
@@ -472,7 +473,6 @@ export function createScene(canvas) {
         const sq = v.squash, breathe = 1 + Math.sin(t * 2.1 + v.phase) * 0.018;
         const sx = 1 + Math.sin(sq * Math.PI * 3) * 0.16 * sq + (breathe - 1), sy = 1 - Math.sin(sq * Math.PI * 3) * 0.16 * sq - (breathe - 1);
         const facing = facingOf(cr.form), flip = facing === 'c' ? false : (facing === 'r' ? v.face < 0 : v.face > 0);
-        const bright = form.stage === 3 ? 1 : 1;
         c.save(); c.translate(x, y + bob); c.scale(sx * (flip ? -1 : 1), sy);
         drawSprite(c, cr.form, 0, 0, size, { blink: v.blink > 0, hat: cr.hat });
         c.restore();
@@ -496,8 +496,8 @@ export function createScene(canvas) {
       for (const h of sc.hintTiles) { const k = 0.5 + 0.5 * Math.sin(t * 5); c.save(); c.strokeStyle = `rgba(255,240,120,${0.6 + 0.4 * k})`; c.lineWidth = 3 + k * 2; const p = new Path2D(); roundedRectPath(p, ox + h.x * ts + 3, oy + h.y * ts + 3, ts - 6, ts - 6, [ts * 0.25, ts * 0.25, ts * 0.25, ts * 0.25]); c.stroke(p); c.fillStyle = `rgba(255,240,120,${0.10 + 0.12 * k})`; c.fill(p); c.restore(); }
       if (sc.hover && sc.buildMode) { const p = new Path2D(); roundedRectPath(p, ox + sc.hover.x * ts + 2, oy + sc.hover.y * ts + 2, ts - 4, ts - 4, [ts * 0.22, ts * 0.22, ts * 0.22, ts * 0.22]); c.save(); c.fillStyle = 'rgba(255,255,255,.28)'; c.fill(p); c.strokeStyle = sc.toolTint; c.lineWidth = 3; c.stroke(p); c.restore(); }
     }
-    // ---- particles + floating text
-    for (const p of sc.parts) {
+    // ---- particles + floating text (not in shared photos)
+    if (o.live) for (const p of sc.parts) {
       const k = p.life / p.max, a = 1 - k * k;
       c.save(); c.globalAlpha = Math.max(0, a); c.translate(p.x, p.y); c.rotate(p.rot);
       if (p.kind === 'spark') { c.fillStyle = p.color; const s = p.size; c.beginPath(); for (let i = 0; i < 4; i++) { const an = i * Math.PI / 2; c.lineTo(Math.cos(an) * s, Math.sin(an) * s); c.lineTo(Math.cos(an + 0.78) * s * 0.3, Math.sin(an + 0.78) * s * 0.3); } c.fill(); }
@@ -508,7 +508,7 @@ export function createScene(canvas) {
       else if (p.kind === 'ring') { c.strokeStyle = p.color; c.lineWidth = 4 * (1 - k); c.beginPath(); c.arc(0, 0, p.size * (0.2 + k * 0.9), 0, TAU); c.stroke(); }
       c.restore();
     }
-    for (const tx of sc.texts) {
+    if (o.live) for (const tx of sc.texts) {
       const k = tx.life / tx.max; c.save(); c.globalAlpha = Math.min(1, (1 - k) * 2.2); c.font = `700 ${tx.size}px Fredoka, ui-rounded, system-ui, sans-serif`; c.textAlign = 'center';
       c.lineWidth = 4; c.strokeStyle = 'rgba(59,29,94,.85)'; c.lineJoin = 'round'; c.strokeText(tx.str, tx.x, tx.y - k * 34); c.fillStyle = tx.color; c.fillText(tx.str, tx.x, tx.y - k * 34); c.restore();
     }

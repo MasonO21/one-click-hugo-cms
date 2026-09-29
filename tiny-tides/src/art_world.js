@@ -1,6 +1,6 @@
 // Tiny Tides — procedural art for rocks, plants, decor props, eggs & cocoons.
 // All functions draw centred on (x, y) = tile centre, scaled by `s` (tile size in px).
-import { OUT, shade, rng, hash } from './art_creatures.js';
+import { OUT, shade, rng } from './art_creatures.js';
 import { FAMILIES } from './data.js';
 
 const TAU = Math.PI * 2;
@@ -14,14 +14,7 @@ function glow(c, x, y, r, col, a = 1) {
   g.addColorStop(0, col); g.addColorStop(1, 'rgba(255,255,255,0)');
   c.save(); c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore();
 }
-function rock(c, x, y, s, w, h, top, bot, seed = 1) {
-  const r = rng(seed * 7919);
-  const pts = [];
-  const n = 9;
-  for (let i = 0; i < n; i++) {
-    const a = Math.PI + (i / (n - 1)) * Math.PI;                 // upper half-ish
-    pts.push([x + Math.cos(a) * w * (0.92 + r() * 0.12), y - Math.sin(-a) * h * (0.9 + r() * 0.16) * -1]);
-  }
+function rock(c, x, y, s, w, h, top, bot) {
   c.beginPath();
   c.moveTo(x - w, y);
   c.bezierCurveTo(x - w * 1.02, y - h * 0.9, x - w * 0.5, y - h * 1.12, x - w * 0.05, y - h);
@@ -36,8 +29,8 @@ function rock(c, x, y, s, w, h, top, bot, seed = 1) {
 export const PIECE_ART = {
   granite(c, x, y, s, t, seed) {
     shadow(c, x, y + s * 0.03, s * 0.36, s * 0.1);
-    rock(c, x + s * 0.16, y, s, s * 0.17, s * 0.15, '#d9def0', '#9aa4c6', seed + 3);
-    rock(c, x - s * 0.06, y + s * 0.02, s, s * 0.3, s * 0.3, '#d3d9ee', '#8792b8', seed);
+    rock(c, x + s * 0.16, y, s, s * 0.17, s * 0.15, '#d9def0', '#9aa4c6');
+    rock(c, x - s * 0.06, y + s * 0.02, s, s * 0.3, s * 0.3, '#d3d9ee', '#8792b8');
   },
   mossy(c, x, y, s, t, seed) {
     PIECE_ART.granite(c, x, y, s, t, seed);
@@ -49,7 +42,7 @@ export const PIECE_ART = {
   },
   ember(c, x, y, s, t, seed) {
     shadow(c, x, y + s * 0.03, s * 0.36, s * 0.1);
-    rock(c, x, y, s, s * 0.32, s * 0.3, '#8a5a78', '#4b2b52', seed);
+    rock(c, x, y, s, s * 0.32, s * 0.3, '#8a5a78', '#4b2b52');
     const p = 0.6 + Math.sin(t * 2.2 + seed) * 0.4;
     glow(c, x, y - s * 0.16, s * 0.4, 'rgba(255,140,60,.75)', 0.5 + p * 0.4);
     c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
@@ -61,7 +54,7 @@ export const PIECE_ART = {
   },
   pearlite(c, x, y, s, t, seed) {
     shadow(c, x, y + s * 0.03, s * 0.36, s * 0.1);
-    rock(c, x, y, s, s * 0.32, s * 0.3, '#f4e3ff', '#b9a2e6', seed);
+    rock(c, x, y, s, s * 0.32, s * 0.3, '#f4e3ff', '#b9a2e6');
     const p = 0.7 + Math.sin(t * 2 + seed) * 0.3;
     glow(c, x, y - s * 0.2, s * 0.42, 'rgba(255,230,255,.95)', 0.45 * p + 0.2);
     c.beginPath(); c.arc(x + s * 0.02, y - s * 0.2, s * 0.09, 0, TAU); fillOut(c, vg(c, y - s * 0.3, y - s * 0.1, '#ffffff', '#ffd1f4'), lw(s, 0.03));
@@ -267,7 +260,12 @@ export function drawCocoon(c, x, y, s, t, progress) {
 }
 
 // ================================================================ capsules (gashapon) & new props
-const HSL = (h, s, l) => `hsl(${h} ${s}% ${l}%)`;
+/** HSL -> #rrggbb (hex, so `shade()` can lighten/darken the result). */
+const HSL = (h, s, l) => {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l), f = (n) => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return '#' + [f(0), f(8), f(4)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+};
 /** Capsule look per rarity. `hue` (0-360) varies the common pastel so a globe full of them looks lively. */
 export function capsuleStyle(tier, hue = 330) {
   switch (tier) {

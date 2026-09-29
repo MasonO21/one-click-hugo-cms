@@ -231,6 +231,7 @@ export const xpForLevel = (l) => Math.round(60 * Math.pow(1.5, l - 1));
 export const MAX_POOL_LVL = 30;
 export const bubbleCapHours = (lvl) => Math.min(12, 4 + 0.5 * (lvl - 1));
 
+// Milestone claims are saved by list position: only ever add new entries at the END of DEX_MILESTONES / TOY_MILESTONES.
 export const DEX_MILESTONES = [
   { n: 5, glass: 10, coins: 1 }, { n: 15, glass: 20, coins: 2 }, { n: 30, glass: 40, coins: 3 }, { n: 50, glass: 60, coins: 4 }, { n: 70, glass: 100, coins: 6 },
 ];
@@ -394,7 +395,8 @@ export const SPRING_TIDE = { rate: 1.25, egg: 0.6 };
 
 // ================================================================ Capsule Machine (gashapon)
 // Cosmetic collectibles only. Paid pulls spend Sea Glass; Capsule Coins are earned free through play.
-// Every rate shown in the game is computed from this table (see gachaTable in sim.js), so the disclosed odds are the real odds.
+// Every rate shown in the game is computed from this table (see gachaTable in sim.js). These are the odds of each capsule before the
+// pity guarantee (see rollCapsule): pity only ever adds chances of a Rare or Legendary collectible, it never lowers a rate.
 export const GACHA = {
   tiers: [
     { id: 'common',    name: 'Common',    p: 58, color: '#8fd3ff', stars: 1, shards: 1,  prize: 8 },
@@ -407,13 +409,14 @@ export const GACHA = {
   costGlass10: 270,       // ten pulls (10% off)
   pityRare: 10,           // a Rare-or-better capsule is guaranteed at least every 10th pull
   pityLegend: 60,         // a Legendary capsule is guaranteed at least every 60th pull
-  paidDailyCap: 30,       // maximum Sea Glass pulls per day (self-imposed spending guardrail)
+  paidDailyCap: 20,       // maximum Sea Glass pulls per day (self-imposed spending guardrail: 600 Sea Glass, roughly $6-9)
   spotMult: 3,            // this week's Spotlight items are 3x as likely as their tier siblings
 };
 export const TIER = Object.fromEntries(GACHA.tiers.map((t) => [t.id, t]));
 export const TIER_IDS = GACHA.tiers.map((t) => t.id);
 
-// Non-cosmetic "filler" capsules: small refunds that keep pulls feeling generous.
+// Non-cosmetic "filler" capsules: small one-time rewards that keep pulls feeling generous. They are listed in the published rates,
+// are never the pity-guaranteed prize, and never reset the pity counters.
 const FILLERS = [
   { id: 'f_coin',    tier: 'common',   w: 6, name: 'Capsule Coin',         reward: { coins: 1 } },
   { id: 'f_glass',   tier: 'common',   w: 4, name: '3 Sea Glass',          reward: { glass: 3 } },

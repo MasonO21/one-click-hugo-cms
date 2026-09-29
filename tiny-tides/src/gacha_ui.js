@@ -38,7 +38,8 @@ export function createGachaUI(G, ui) {
     tab = startTab;
     modal = ui.mountModal('gacha', { title: 'Capsules', cls: 'tall gz', sticky: true, render: () => renderTab() });
     modal.frozen = true;                              // ui.refresh() must not rebuild the canvas; we redraw ourselves
-    modal.onClose = () => { stopRun(); if (run?.unclaimed) G.ui.toast('Your capsules were added to the Toybox', 'good'); run = null; modal = null; box = null; };
+    window.addEventListener('resize', onResize);
+    modal.onClose = () => { window.removeEventListener('resize', onResize); stopRun(); if (run?.unclaimed) G.ui.toast('Your capsules were added to the Toybox', 'good'); run = null; modal = null; box = null; };
     A.play('whoosh');
   }
   function setTab(t) { tab = t; stopRun(); ui.drawModal(modal); }
@@ -66,7 +67,7 @@ export function createGachaUI(G, ui) {
   }
   function pityHtml() {
     const p = S.gachaPity(st()), left = S.gachaPaidLeft(st(), now());
-    return `<span>${ic('i-star', 's')} Rare or better within <b>${p.rare}</b> ${p.rare === 1 ? 'pull' : 'pulls'}</span><span>${ic('i-sparkle', 's')} Legendary within <b>${p.legendary}</b></span><button class="link" data-gz="tab:rates">Drop rates</button>${G.paidRandomBlocked() ? '<span class="muted">Sea Glass pulls: not available in your region</span>' : st().settings.paidPulls ? `<span class="muted">Sea Glass pulls left today: ${left}</span>` : '<span class="muted">Sea Glass pulls are off (Settings)</span>'}`;
+    return `<span>${ic('i-star', 's')} Rare or better within <b>${p.rare}</b> ${p.rare === 1 ? 'pull' : 'pulls'}</span><span>${ic('i-sparkle', 's')} Legendary within <b>${p.legendary}</b> ${p.legendary === 1 ? 'pull' : 'pulls'}</span><button class="link" data-gz="tab:rates">Drop rates</button>${G.paidRandomBlocked() ? '<span class="muted">Sea Glass pulls: not available in your region</span>' : st().settings.paidPulls ? `<span class="muted">Sea Glass pulls left today: ${left}</span>` : '<span class="muted">Sea Glass pulls are off (Settings)</span>'}`;
   }
   function payFor(n) {
     const coins = st().cur.coins;
@@ -83,8 +84,9 @@ export function createGachaUI(G, ui) {
     } else if (ph === 'ready') {
       h = run.n === 1 ? `<button class="btn green wide pulse" data-gz="open:0">Open capsule!</button>` : `<div class="gz-row"><button class="btn green col pulse" data-gz="openall">Open all</button><button class="btn ghost col" data-gz="summary">Skip to results</button></div>`;
     } else if (ph === 'reveal') {
-      const more = run.n > 1 && run.queue.length > 0;
-      h = `<div class="gz-row ${run.n > 1 ? '' : 'one'}"><button class="btn green col" data-gz="next">${more ? 'Next' : (run.n > 1 ? 'See results' : 'Nice!')}</button>${run.n > 1 ? `<button class="btn ghost col" data-gz="summary">Skip</button>` : ''}</div>`;
+      const unopened = run.m.out.filter((o) => !o.opened).length;
+      const label = run.n === 1 ? 'Nice!' : !unopened ? 'See results' : run.queue.length ? 'Next' : 'Back to capsules';
+      h = `<div class="gz-row ${run.n > 1 ? '' : 'one'}"><button class="btn green col" data-gz="next">${label}</button>${run.n > 1 ? `<button class="btn ghost col" data-gz="summary">Skip</button>` : ''}</div>`;
     } else if (ph === 'summary') {
       const p10 = payFor(10);
       h = `<div class="gz-row"><button class="btn ghost col" data-gz="done">Done</button><button class="btn lav col" data-gz="pull:10:${p10.mode}">Pull ×10 again<span class="sub">${cost(p10)}</span></button></div>`;
@@ -100,19 +102,29 @@ export function createGachaUI(G, ui) {
   function startRun(b) {
     stopRun();
     const cv = b.querySelector('#gz-cv'); if (!cv) return;
-    const wCss = Math.max(220, Math.min(b.querySelector('#gz-stage').clientWidth || 340, (window.innerHeight - 500) * (MW / MH), 420));
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    cv.style.width = `${wCss}px`; cv.style.height = `${wCss * MH / MW}px`;
-    cv.width = Math.round(wCss * dpr); cv.height = Math.round(wCss * MH / MW * dpr);
+    sizeCanvas(b, cv);
     const keep = run && run.phase !== 'idle' ? run : null;
     run = keep || { m: newMachine(), phase: 'idle', phaseT: 0, t: 0, results: [], n: 1, queue: [], parts: [], view: 'machine', cur: -1, unclaimed: false };
     run.cv = cv; run.c = cv.getContext('2d'); run.scale = cv.width / MW; run.last = performance.now();
     for (let i = 0; i < 30; i++) stepMachine(run.m, 1 / 30);
-    cv.onpointerdown = onCanvas;
+    cv.onpointerup = onCanvas;                         // on lift, so a scroll that starts on the crank doesn't spend a coin
     const loop = (tm) => { run.raf = requestAnimationFrame(loop); const dt = Math.min(0.05, (tm - run.last) / 1000); run.last = tm; frame(dt); };
     run.raf = requestAnimationFrame(loop);
     renderControls();
     if (run.phase === 'summary') showSummary();
+    else if (run.phase === 'reveal' && run.results[run.cur]) showCard(run.results[run.cur]);
+  }
+  let resizeRaf = 0;
+  function onResize() {
+    if (!modal || !box || tab !== 'machine' || !run?.cv || resizeRaf) return;
+    resizeRaf = requestAnimationFrame(() => { resizeRaf = 0; if (!run?.cv || !box) return; sizeCanvas(box, run.cv); run.scale = run.cv.width / MW; });
+  }
+  function sizeCanvas(b, cv) {
+    const stage = b.querySelector('#gz-stage');
+    const wCss = Math.max(200, Math.min((stage?.clientWidth || 340) - 4, (window.innerHeight - 500) * (MW / MH), 420));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    cv.style.width = `${wCss}px`; cv.style.height = `${wCss * MH / MW}px`;
+    cv.width = Math.round(wCss * dpr); cv.height = Math.round(wCss * MH / MW * dpr);
   }
   function stopRun() { if (run?.raf) { cancelAnimationFrame(run.raf); run.raf = 0; } }
 
@@ -135,7 +147,7 @@ export function createGachaUI(G, ui) {
       if (st().cur.glass < c) { G.ui.toast('Not enough Sea Glass', 'warn'); A.play('error'); ui.openShop('glass'); return; }
       if (!st().settings.paidPulls) { G.ui.toast('Sea Glass pulls are turned off in Settings', 'warn'); A.play('error'); return; }
       const left = S.gachaPaidLeft(st(), now());
-      if (n > left) { G.ui.toast(left ? `Only ${left} Sea Glass pulls left today` : 'Daily Sea Glass pull limit reached. Free pulls still work!', 'warn'); A.play('error'); return; }
+      if (n > left) { G.ui.toast(left ? `Only ${left} Sea Glass pull${left === 1 ? '' : 's'} left today` : 'Daily Sea Glass pull limit reached. Free pulls still work!', 'warn'); A.play('error'); return; }
       const ok = await ui.confirm({ title: 'Spend Sea Glass?', body: `Use <b>${c} Sea Glass</b> for ${n === 1 ? '1 capsule' : '10 capsules'}? What comes out is random. Drop rates are in the Rates tab.`, ok: 'Pull', cancel: 'Not now' });
       if (!ok) return;
     }
@@ -241,7 +253,7 @@ export function createGachaUI(G, ui) {
   function onCanvas(e) {
     if (!run) return; A.unlock();
     const r = run.cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * MW, y = (e.clientY - r.top) / r.height * MH;
-    if (run.phase === 'idle') { if (Math.hypot(x - 262, y - 372) < 56) requestPull(1, payFor(1).mode); return; }
+    if (run.phase === 'idle') { if (Math.hypot(x - 262, y - 372) < 56) requestPull(1, S.gachaFreeAvailable(st(), now()) ? 'free' : payFor(1).mode); return; }
     if (run.phase === 'ready') {
       let best = -1, bd = 1e9;
       run.m.out.forEach((o, i) => { if (o.opened) return; const d = Math.hypot(x - o.x, y - o.y); if (d < o.r + 14 && d < bd) { bd = d; best = i; } });

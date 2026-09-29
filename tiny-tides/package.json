@@ -11,18 +11,22 @@
     "test": "node --test test/*.test.mjs",
     "test:e2e": "node tools/build.mjs --debug && node tools/e2e.mjs",
     "balance": "node tools/balance.mjs",
-    "assets": "node tools/gen-assets.mjs && npx capacitor-assets generate --ios --iconBackgroundColor '#7f8cff' --splashBackgroundColor '#1b1145'",
+    "assets": "node tools/gen-assets.mjs && npx capacitor-assets generate --ios --iconBackgroundColor '#7f8cff' --splashBackgroundColor '#1b1145' && node tools/slim-splash.mjs",
     "ios:add": "npx cap add ios",
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
     "ios:configure": "node tools/configure-ios.mjs",
     "storekit": "node tools/gen-storekit.mjs",
     "rename": "node tools/rename-bundle.mjs",
-    "release": "npm test && npm run build && npx cap sync ios",
+    "site": "node tools/site.mjs",
+    "legal:check": "node tools/legal-check.mjs",
+    "legal:check:ci": "node tools/legal-check.mjs --allow-placeholders",
+    "release": "npm run lint && npm test && npm run legal:check && npm run build && npx cap sync ios",
     "sheet": "node tools/contact-sheet.mjs",
     "store-shots": "node tools/screenshots.mjs",
     "build:single": "node tools/bundle-single.mjs",
-    "test:gacha": "node tools/build.mjs --debug && node tools/gacha-e2e.mjs"
+    "test:gacha": "node tools/build.mjs --debug && node tools/gacha-e2e.mjs",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -35,13 +39,15 @@
     "@capacitor/share": "^8.0.2",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
-    "@capgo/native-purchases": "^8.8.1"
+    "@capgo/native-purchases": "8.8.1"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.2",
     "@fontsource/fredoka": "^5.3.0",
     "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "patch-package": "^8.0.1",
     "playwright": "^1.56.1",
     "sharp": "^0.32.6"
   },

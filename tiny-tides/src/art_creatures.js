@@ -9,6 +9,7 @@ const SPRITE_SCALE = 1.8;          // pixels per design unit in the cached bitma
 
 // ------------------------------------------------------------------ helpers
 export function shade(hex, f) {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return hex;      // only #rrggbb can be shaded; anything else is left as it is rather than turning grey
   const n = parseInt(hex.slice(1), 16);
   let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
   const t = f < 0 ? 0 : 255, p = Math.abs(f);
@@ -193,8 +194,6 @@ FAM.horse = {
     for (let i = 0; i < 3; i++) leaf(c, 78, 96 + i * 16, Math.PI * 0.95 + i * 0.12, 26 - i * 3, 9, pal.accent, false);
     c.restore();
     for (let i = 0; i < 3; i++) { const a = -2.1 + i * 0.3; leaf(c, 100 + Math.cos(a) * 10, 44 + Math.sin(a) * 6, a - 0.2, 22, 8, pal.accent, false); }
-    const spine = (k) => { k.moveTo(108, 62); k.bezierCurveTo(96, 96, 112, 118, 96, 140); };
-    const lower = (k) => { k.moveTo(96, 140); k.bezierCurveTo(88, 160, 70, 170, 78, 184); };
     tube(c, [
       { w: 42, build: (k) => { k.moveTo(106, 66); k.quadraticCurveTo(102, 84, 100, 96); } },
       { w: 36, build: (k) => { k.moveTo(100, 96); k.bezierCurveTo(112, 112, 108, 122, 100, 138); } },

@@ -11,7 +11,10 @@ function ensure() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   ctx = new AC();
-  master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+  master = ctx.createGain(); master.gain.value = 0.9;
+  // a gentle limiter so stacked bells (jackpot reveals) can't clip the speaker
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 20; comp.ratio.value = 6; comp.attack.value = 0.004; comp.release.value = 0.2;
+  master.connect(comp); comp.connect(ctx.destination);
   sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7; sfxBus.connect(master);
   musicBus = ctx.createGain(); musicBus.gain.value = 0.0; musicBus.connect(master);
   // cheap generated reverb
@@ -28,7 +31,7 @@ function ensure() {
 export function unlock() {
   unlocked = true;
   const c = ensure(); if (!c) return;
-  if (c.state === 'suspended') c.resume().catch(() => {});
+  if (c.state !== 'running') c.resume().catch(() => {});        // 'suspended' at first, 'interrupted' after a call / Siri
   if (cfg.music) startMusic();
 }
 export function suspend(v) { if (!ctx || !unlocked) return; if (v) ctx.suspend().catch(() => {}); else ctx.resume().catch(() => {}); }
@@ -89,7 +92,8 @@ const SFX = {
   tier4() { [60, 64, 67, 72, 76, 79, 84, 88, 91, 96].forEach((m, i) => bell(m, i * 0.075, 0.2, 1.6)); [72, 76, 79].forEach((m) => tone({ f: mtof(m), t: 0.7, dur: 1.4, vol: 0.09, type: 'triangle', wet: 0.6 })); noise({ t: 0.3, dur: 1.2, vol: 0.06, f: 3500, f2: 11000, type: 'highpass' }); },
 };
 export function play(name, arg) {
-  if (!unlocked || !cfg.sfx || !ensure() || ctx.state !== 'running') return;
+  if (!unlocked || !cfg.sfx || !ensure()) return;
+  if (ctx.state !== 'running') { ctx.resume().catch(() => {}); return; }   // wake up after an interruption; this one sound is skipped
   try { SFX[name]?.(arg); } catch { /* audio must never break the game */ }
 }
 
@@ -133,6 +137,7 @@ export function startMusic() {
   startPad();
   let n = 0;
   musicTimer = setInterval(() => {
+    if (ctx.state !== 'running') return;         // paused (backgrounded / interrupted): don't pile up notes on a frozen clock
     n++;
     if (n % 5 === 0) startPad();
     if (Math.random() < 0.6) plink();

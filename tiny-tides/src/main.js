@@ -18,7 +18,7 @@ async function boot() {
   scene.setBiome('tide');
   const summary = G.fresh ? null : G.catchUp();
   ui.layoutChanged();
-  store.init((pid, tx) => G.onStoreTransaction(pid, tx)).catch(() => {});
+  store.init((pid, tx) => G.onStoreTransaction(pid, tx)).then(() => G.reconcilePurchases(true)).catch(() => {});
   ui.start(summary);
   hideSplash();
 
@@ -88,9 +88,10 @@ async function boot() {
   onAppState(async (active) => {
     if (active) {
       A.suspend(false);
-      await notify.cancelAll();
-      const s = G.catchUp();
+      const s = G.catchUp();                 // before anything async, so the 1s tick can't consume the offline gains first
       ui.onResume(s);
+      G.reconcilePurchases();
+      notify.cancelAll();
     } else {
       await G.save(true);
       A.suspend(true);

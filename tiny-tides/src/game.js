@@ -1,4 +1,3 @@
-/* global __DEBUG__ */
 // Tiny Tides — game controller: owns the state, save/load, actions (sim + juice), tutorial, reminders.
 import * as D from './data.js';
 import * as S from './sim.js';
@@ -6,14 +5,14 @@ import * as A from './audio.js';
 import { storage, haptic, notify, store, shareCanvas } from './platform.js';
 import { NO_PAID_RANDOM } from './config.js';
 
-const { FORMS, FAMILIES, PIECES } = D;
+const { FORMS } = D;
 const BAK_KEY = D.SAVE_KEY + '.bak';
 
 export function createGame(scene) {
   const G = {
     scene, state: null, ui: null, biome: 'tide', tab: 'pool', tool: null, selected: null,
     clockOffset: 0, reveals: [], busy: false, fresh: false, combo: { n: 0, t: 0 }, toastAt: 0,
-    lastJson: '', lastBak: 0, dirty: false, saving: false,
+    lastJson: '', lastBak: 0, dirty: false, resetting: false,
   };
   G.now = () => Date.now() + G.clockOffset;
   const st = () => G.state;
@@ -28,30 +27,42 @@ export function createGame(scene) {
   // ------------------------------------------------------------------ save / load
   G.load = async () => {
     const now = G.now();
-    const [n1, w1] = await storage.get(D.SAVE_KEY);
-    const [n2, w2] = await storage.get(BAK_KEY);
-    const cands = [n1, w1, n2, w2].filter(Boolean).map((s) => S.deserialize(s, now)).filter(Boolean);
-    cands.sort((a, b) => (b.lastTick || 0) - (a.lastTick || 0));
+    const raw = [...await storage.get(D.SAVE_KEY), ...await storage.get(BAK_KEY)].filter(Boolean);
+    const cands = raw.map((s) => S.deserialize(s, now)).filter(Boolean);
+    // newest write wins (`seq` only ever grows, unlike the wall clock); a damaged copy just falls through to the next one
     G.fresh = !cands.length;
-    G.state = cands[0] || S.newState(now);
+    if (G.fresh && raw.length) await storage.set(D.SAVE_KEY + '.damaged', raw[0]);   // keep the evidence rather than silently overwriting it
+    G.state = S.newestSave(cands) || S.newState(now);
     if (G.fresh) G.state.lastSeen = now;
     G.applySettings();
     return G.state;
   };
-  G.save = async (force) => {
-    if (!G.state || G.saving || (!G.dirty && !force)) return;
-    G.saving = true;
+  // Saves run one at a time. save() resolves true only once the data is really in storage, so callers that must not lose
+  // something (purchases, capsule pulls) can wait for it. Several callers share one queued write, which reads the newest state.
+  let saveTail = Promise.resolve(true), saveQueued = false;
+  const writeSave = async () => {
+    saveQueued = false;
+    G.dirty = false;                             // cleared first: anything changed while the write is in flight re-marks it
     try {
       const now = Date.now();
       G.state.lastSeen = G.now();
       const json = S.serialize(G.state);
-      if (G.lastJson && now - G.lastBak > 10 * 60e3) { await storage.set(BAK_KEY, G.lastJson); G.lastBak = now; }
-      await storage.set(D.SAVE_KEY, json);
-      G.lastJson = json; G.dirty = false;
-    } finally { G.saving = false; }
+      if (G.lastJson && now - G.lastBak > 10 * 60e3 && await storage.set(BAK_KEY, G.lastJson)) G.lastBak = now;
+      if (await storage.set(D.SAVE_KEY, json)) { G.lastJson = json; return true; }
+    } catch (e) { if (__DEBUG__) console.warn('[save]', e); }
+    G.dirty = true;
+    return false;
+  };
+  G.save = (force) => {
+    if (!G.state || G.resetting) return Promise.resolve(false);
+    if (!G.dirty && !force) return saveTail;
+    if (saveQueued) return saveTail;
+    saveQueued = true;
+    return (saveTail = saveTail.then(writeSave));
   };
   G.reset = async () => {
-    G.saving = true; G.dirty = false;            // stop autosave / pagehide save from resurrecting the old game
+    G.resetting = true; G.dirty = false;         // stop autosave / pagehide save from resurrecting the old game
+    await saveTail;
     await storage.remove(D.SAVE_KEY); await storage.remove(BAK_KEY);
     await notify.cancelAll();
     location.reload();
@@ -105,6 +116,7 @@ export function createGame(scene) {
     const before = S.storedTotal(s);
     const events = S.tick(s, now);
     S.ensureDaily(s, now);
+    s.lastSeen = now;                     // a second catch-up right after this one has nothing left to report
     const summary = {
       away, pearls: Math.max(0, Math.round(S.storedTotal(s) - before)),
       eggs: events.filter((e) => e.type === 'egg').length,
@@ -177,7 +189,7 @@ export function createGame(scene) {
   G.levelUp = (id) => {
     const r = S.levelUp(st(), G.biome, id);
     if (!r.ok) { if (r.reason === 'pearls') tell(`Need ${r.need} pearls`, 'warn'); A.play('error'); return r; }
-    const c = pool().creatures.find((k) => k.id === id), p = posOf(id);
+    const p = posOf(id);
     A.play('coin'); haptic.tap(); scene.tap(id);
     scene.burst(0, 0, 'spark', 8, { px: p[0], py: p[1], lift: scene.ts * 0.3, speed: 90 });
     scene.text(0, 0, `Lv ${r.lvl}`, '#b9f5c4', { px: p[0], py: p[1] - scene.ts * 0.9, size: 16 });
@@ -202,6 +214,7 @@ export function createGame(scene) {
   };
   G.release = (id) => {
     const c = pool().creatures.find((k) => k.id === id);
+    if (!st().tut.done) return { ok: false, reason: 'tutorial' };
     const r = S.releaseCreature(st(), G.biome, id, G.now());
     if (r.ok) { tell(`${c ? nameOf(c) : 'Friend'} swam home  +${r.refund}`, 'good'); A.play('bloop'); G.select(null); G.ui?.closeSheet(); mark(); refresh(); }
     return r;
@@ -243,7 +256,7 @@ export function createGame(scene) {
   G.expand = () => {
     const r = S.expandPool(st(), G.biome);
     if (!r.ok) { tell(r.reason === 'pearls' ? `Need ${r.need} pearls` : r.reason === 'locked' ? `Unlocks at Pool Lv ${r.lvl}` : 'Fully expanded', 'warn'); A.play('error'); return r; }
-    scene.relayout(); A.play('levelup'); haptic.success(); scene.confetti(30); tell(`Pool expanded to ${r.w}×${r.h}!`, 'good'); mark(); refresh();
+    scene.relayout(); A.play('levelup'); haptic.success(); scene.confetti(30); tell(`Pool expanded to ${r.w}×${r.h}!`, 'good'); G.handle(r.events); mark(); refresh();
     return r;
   };
 
@@ -265,7 +278,7 @@ export function createGame(scene) {
   G.claimGift = () => {
     const r = S.claimGift(st(), G.now());
     if (!r.ok) return r;
-    A.play('gift'); haptic.success(); scene.confetti(30); mark(); refresh(); G.ui?.showReward('Tide Gift', r, r.window);
+    A.play('gift'); haptic.success(); scene.confetti(30); G.handle(r.events); mark(); refresh(); G.ui?.showReward('Tide Gift', r, r.window);
     return r;
   };
   G.claimDaily = () => {
@@ -274,7 +287,7 @@ export function createGame(scene) {
     A.play('gift'); haptic.success(); scene.confetti(40); mark(); refresh(); G.ui?.showReward(`Day ${r.n} reward`, r, r.saved ? 'Your streak shield saved you!' : 'Come back tomorrow for more!');
     return r;
   };
-  G.claimQuest = (i) => { const r = S.claimQuest(st(), i); if (r.ok) { A.play('coin'); haptic.success(); scene.confetti(14); mark(); refresh(); } return r; };
+  G.claimQuest = (i) => { const r = S.claimQuest(st(), i); if (r.ok) { A.play('coin'); haptic.success(); scene.confetti(14); G.handle(r.events); mark(); refresh(); } return r; };
   G.claimChest = () => { const r = S.claimQuestChest(st()); if (r.ok) { A.play('gift'); haptic.success(); scene.confetti(40); mark(); refresh(); G.ui?.showReward('Daily bonus chest', r, 'You cleared every quest!'); } return r; };
   G.claimDex = (i) => {
     const m = D.DEX_MILESTONES[i], s = st();
@@ -286,14 +299,17 @@ export function createGame(scene) {
   // ------------------------------------------------------------------ Capsule Machine
   const PULL_FAIL = {
     coins: () => 'Not enough Capsule Coins', glass: () => 'Not enough Sea Glass', used: () => 'Come back tomorrow for another free capsule',
-    disabled: () => 'Sea Glass pulls are turned off in Settings', cap: (r) => (r.left ? `Only ${r.left} Sea Glass pulls left today` : 'Daily Sea Glass pull limit reached'),
+    disabled: () => 'Sea Glass pulls are turned off in Settings', cap: (r) => (r.left ? `Only ${r.left} Sea Glass pull${r.left === 1 ? '' : 's'} left today` : 'Daily Sea Glass pull limit reached'),
   };
-  G.paidRandomBlocked = () => !!store.country && NO_PAID_RANDOM.includes(store.country);
+  /** Paid random items are off where the law says so: judged by the App Store storefront, and also by the device region to be safe.
+   *  In the real app, until the storefront is known the answer is "blocked" (the machine re-checks on its own a moment later). */
+  G.paidRandomBlocked = () => (store.mode === 'native' && !store.country) || store.regions().some((r) => NO_PAID_RANDOM.includes(r));
   G.gachaPull = (n, mode) => {
-    if (mode === 'glass' && G.paidRandomBlocked()) { tell("Sea Glass pulls aren't available in your region. Free pulls and Coins still work!", 'warn'); A.play('error'); return { ok: false, reason: 'region' }; }
+    if (mode === 'glass' && G.paidRandomBlocked()) { tell("Sea Glass pulls aren't available right now. Free pulls and Coins still work!", 'warn'); A.play('error'); return { ok: false, reason: 'region' }; }
     const r = S.gachaPull(st(), n, mode, G.now());
     if (!r.ok) { tell((PULL_FAIL[r.reason] || (() => "Can't pull right now"))(r), 'warn'); A.play('error'); return r; }
     G.handle(r.events || []); mark(); G.ui?.refresh();
+    G.save(true);        // write the result (and the spent currency / pity counters) right away, so quitting mid-reveal can't undo a pull
     return r;
   };
   G.prizeBuy = (id) => {
@@ -306,13 +322,19 @@ export function createGame(scene) {
   G.claimToyMile = (i) => { const r = S.claimToyMile(st(), i); if (r.ok) { A.play('coin'); haptic.success(); scene.confetti(20); mark(); G.ui?.refresh(); } return r; };
 
   // ------------------------------------------------------------------ purchases
-  const grant = async (pid, txId, opts = {}) => {
+  // Grants run one at a time (a purchase, a delivered transaction and a restore can all land together at launch).
+  // The store is told "delivered" only after the grant is safely in storage; if the write fails the transaction stays
+  // unfinished, StoreKit hands it over again next launch, and applyProduct's transaction ledger keeps it from paying twice.
+  let grantTail = Promise.resolve();
+  const grantNow = async (pid, txId, opts) => {
     const res = S.applyProduct(st(), pid, txId, G.now(), opts);
     if (!res.ok) return res;
-    mark(); await G.save(true);            // persist the grant BEFORE telling the store we delivered
-    await store.finish(txId);
-    return res;
+    mark();
+    const saved = await G.save(true);
+    if (saved) await store.finish(txId);
+    return { ...res, saved };
   };
+  const grant = (pid, txId, opts = {}) => (grantTail = grantTail.then(() => grantNow(pid, txId, opts), () => grantNow(pid, txId, opts)));
   G.purchase = async (pid) => {
     if (G.busy) return;
     G.busy = true; G.ui?.setBusy(true);
@@ -330,9 +352,28 @@ export function createGame(scene) {
       else if (r.error) tell(r.error, 'warn');
     } finally { G.busy = false; G.ui?.setBusy(false); refresh(); }
   };
+  /** A purchase that finished outside a purchase call: Ask to Buy approval, an interrupted purchase, or one made on another device. */
   G.onStoreTransaction = async (pid, txId) => {
     const res = await grant(pid, txId);
     if (res.ok && !res.dup) { A.play('buy'); scene.confetti(50); tell(`${D.PRODUCTS[pid].name} delivered!`, 'good'); refresh(); }
+  };
+  /** Compare StoreKit's transaction list with the ledger and deliver anything missing (a safety net for lost deliveries and reinstalls).
+   *  Products bought before this save existed (a reinstall) are restored without the one-off Sea Glass bonus, and old consumables are skipped. */
+  G.reconcilePurchases = async (force) => {
+    if (store.mode !== 'native' || G.reconciling) return 0;
+    const t = Date.now();
+    if (!force && t - (G.reconciledAt || 0) < 5 * 60e3) return 0;
+    G.reconciling = true; G.reconciledAt = t;
+    let n = 0;
+    try {
+      for (const h of await store.history()) {
+        const s = st(), P = D.PRODUCTS[h.id], old = h.date < s.created;
+        if (h.revoked || s.iap.done[h.txId] || (P.type === 'consumable' && old)) continue;
+        const res = await grant(h.id, h.txId, { restore: old });
+        if (res.ok && !res.dup) { n++; tell(`${P.name} ${old ? 'restored' : 'delivered'}!`, 'good'); }
+      }
+    } finally { G.reconciling = false; if (n) refresh(); }
+    return n;
   };
   G.restore = async () => {
     if (G.busy) return;
@@ -340,9 +381,8 @@ export function createGame(scene) {
     try {
       const r = await store.restore();
       if (!r.ok) { tell(r.error || 'Could not restore purchases', 'warn'); return; }
-      let n = 0;
-      for (const it of r.items) { const res = await grant(it.id, `restore:${it.id}`, { restore: true }); if (res.ok && !res.dup) n++; }
-      tell(n ? `Restored ${n} purchase${n > 1 ? 's' : ''}` : (store.mode === 'demo' ? 'Nothing to restore in the demo' : 'Everything is already restored'), 'good');
+      const n = await G.reconcilePurchases(true);
+      if (!n) tell(store.mode === 'demo' ? 'Nothing to restore in the demo' : 'Everything is already restored', 'good');
     } finally { G.busy = false; G.ui?.setBusy(false); refresh(); }
   };
 
@@ -354,6 +394,7 @@ export function createGame(scene) {
   };
   G.setTab = (tab) => {
     G.tab = tab; scene.buildMode = tab === 'build';
+    if (tab === 'build') G.ui?.closeSheet();                 // the build dock sits where the creature sheet is
     if (tab !== 'build') { G.tool = null; scene.hover = null; }
     else if (!G.tool) G.tool = S.pieceUnlocked(st(), D.PIECES_BY_BIOME[G.biome][0]) ? 'dig' : 'dig';
     A.play('tick'); G.ui?.layoutChanged(); refresh();
@@ -404,7 +445,7 @@ export function createGame(scene) {
     const s = st(), t = T();
     if (t.done) return null;
     const p = s.pools.tide, [mx, my] = cx();
-    const water = p.tiles.filter((x) => x.w >= 1).length, rocks = p.tiles.filter((x) => x.p).length;
+    const water = p.tiles.filter((x) => x.w >= 1).length;
     switch (t.step) {
       case 1: return { text: 'Tap the sand to dig a little pool. Dig two tiles!', tab: 'build', tool: 'dig', tiles: [{ x: mx, y: my }, { x: mx, y: my + 1 }].filter((q) => S.tileAt(p, q.x, q.y)?.w < 1), progress: `${water}/2` };
       case 2: {
@@ -445,8 +486,8 @@ export function createGame(scene) {
       case 4: if (s.stats.collected >= 1) { s.cur.pearls = Math.max(s.cur.pearls, 60); adv(5); } break;
       case 5: if (c && c.lvl >= 3) { s.cur.pearls = Math.max(s.cur.pearls, 220); adv(6); } else if (c && s.cur.pearls < S.levelCost(1, c.lvl)) s.cur.pearls += S.levelCost(1, c.lvl); break;
       case 6: if (c?.evo) adv(7); else if (s.cur.pearls < 120) s.cur.pearls = 120; break;
-      case 7: if (c && !c.evo && FORMS[c.form].stage >= 2) { adv(8); } break;
-      case 8: break;
+      case 7: if (c && !c.evo && FORMS[c.form].stage >= 2) tutorialComplete(); break;
+      case 8: tutorialComplete(); break;              // (a save from before this rule)
       default: break;
     }
   }
@@ -457,6 +498,9 @@ export function createGame(scene) {
     st().cur.glass += 10; st().cur.coins += 2;
     G.ui?.closeSheet(); G.setTab('pool'); G.ui?.tutorialChanged(); refresh();
   };
+  /** Step 8 = the first evolution has finished. Finish the tutorial now (so eggs, gifts and the capsule machine switch on even if the
+   *  app is closed during the reveal); the "You did it!" card is shown once the reveal closes, driven by this saved flag. */
+  const tutorialComplete = () => { G.tutorialFinish(); st().flags.tutModal = true; };
   G.tutorialSkip = () => {
     const t = T(); t.done = true; t.step = 9; st().flags.firstEvo = true; st().pools.tide.nextEgg = G.now() + 2 * D.MIN; st().cur.pearls = Math.max(st().cur.pearls, 150); st().cur.coins += 2; mark();
     G.setTab('pool'); G.ui?.tutorialChanged(); refresh();
