@@ -4,3 +4,4 @@ www/
 *.log
 /tmp/
 store/screenshots/iphone-6.5/
+dist/

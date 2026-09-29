@@ -11,6 +11,7 @@ Vanilla JavaScript + Canvas 2D game (≈190 KB, no engine), wrapped for iOS with
 npm ci
 npm test                 # 23 simulation tests
 npm run build:demo       # web build in www/ (simulated purchases) — serve www/ with any static server
+npm run build:single     # one self-contained playable file: dist/tiny-tides-demo.html
 npm run dev              # debug build with watch (window.__tt cheat hooks enabled)
 npm run test:e2e         # phone-viewport Playwright run-through (needs the debug build: node tools/build.mjs --debug)
 npm run balance -- 60 4  # economy bot: 60 days, 4 check-ins/day

@@ -20,7 +20,8 @@
     "rename": "node tools/rename-bundle.mjs",
     "release": "npm test && npm run build && npx cap sync ios",
     "sheet": "node tools/contact-sheet.mjs",
-    "store-shots": "node tools/screenshots.mjs"
+    "store-shots": "node tools/screenshots.mjs",
+    "build:single": "node tools/bundle-single.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

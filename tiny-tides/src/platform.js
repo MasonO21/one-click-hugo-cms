@@ -109,9 +109,7 @@ export async function shareCanvas(canvas, text) {
   try {
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text, title: 'Tiny Tides' }); return { ok: true }; }
   } catch (e) { if (e?.name === 'AbortError') return { ok: false, cancelled: true }; }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tiny-tides.png'; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  return { ok: true, downloaded: true };
+  return { ok: false, unsupported: true };   // plain browsers / sandboxed pages: the UI shows the picture to long-press instead
 }
 
 // ------------------------------------------------------------------ in-app purchases (StoreKit 2 via @capgo/native-purchases)

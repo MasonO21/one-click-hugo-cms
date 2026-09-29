@@ -534,7 +534,7 @@ export function createUI(G) {
   // ---- Photo
   ui.showPhoto = (cv) => {
     A.play('gift');
-    mountModal('photo', { title: 'Snapshot', top: true, render: () => ({ body: `<div class="photo" id="photo-slot"></div>`, footer: `<button class="btn ghost" data-act="close:photo">Close</button><button class="btn green" data-act="sharephoto">${ic('i-camera', 's')} Share</button>`, after: (box) => { const slot = $('#photo-slot', box); if (slot && !slot.firstChild) slot.appendChild(cv); } }) });
+    mountModal('photo', { title: 'Snapshot', top: true, render: () => ({ body: `<div class="photo" id="photo-slot"></div>`, footer: `<button class="btn ghost" data-act="close:photo">Close</button><button class="btn green" data-act="sharephoto">${ic('i-camera', 's')} Share</button>`, after: (box) => { const slot = $('#photo-slot', box); if (slot && !slot.firstChild) { const img = new Image(); img.alt = 'Your tidepool'; img.src = cv.toDataURL('image/png'); slot.appendChild(img); } } }) });
     ui._photo = cv;
   };
 

@@ -343,7 +343,7 @@ export function createGame(scene) {
   };
   G.sharePhoto = async (cv) => {
     const r = await shareCanvas(cv, `My Tiny Tides pool — ${S.dexCount(st())} creatures discovered!`);
-    if (r.downloaded) tell('Picture saved', 'good');
+    if (r.unsupported) { G.ui?.showPhoto(cv); tell('Press and hold the picture to save it', 'good'); }
   };
 
   // ------------------------------------------------------------------ reminders (local notifications)
