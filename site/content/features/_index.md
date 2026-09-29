@@ -1,78 +1,55 @@
 ---
-title: What Trail Notes does
+title: Features
 type: features
-subtitle: Talk on the trail. Search it, map it, and keep it for years.
-description: Voice logging, auto-tagged route, weather and mood, and a searchable log are free. Trail Notes Plus adds maps, long-term insights, and yearly recap books.
+subtitle: Everything Trail Notes does.
+description: Voice logging, auto-tagged route, weather and mood, and a searchable log are free. Trail Notes Plus adds maps, insights, and a yearly recap book.
 image: /img/features-jumbotron.svg
 free:
-  heading: Free, for every hike and run
-  description: >-
-    Basic logging costs nothing. Talk, and Trail Notes handles the rest.
+  heading: Free
+  description: Basic logging costs nothing.
   items:
     - image: /img/illustration-speak.svg
-      title: Hands-free voice logging
-      text: >-
-        Record while you walk or run. No screen taps mid-stride and no stopping
-        to type.
+      title: Voice logging
+      text: Talk while you move. No typing.
     - image: /img/illustration-tags.svg
-      title: Auto-tagged entries
-      text: >-
-        Route, weather, and mood are added to every entry automatically.
+      title: Auto-tags
+      text: Route, weather, and mood, added for you.
     - image: /img/illustration-search.svg
-      title: A searchable log
-      text: >-
-        Search by place, conditions, or feeling to pull up any past outing.
+      title: Search
+      text: Find any outing by place, weather, or mood.
 plus:
-  heading: Trail Notes Plus
-  description: >-
-    For when you want to look back and see the bigger picture.
+  heading: Plus
+  description: For the bigger picture.
   items:
     - image: /img/illustration-maps.svg
       title: Route maps
-      text: >-
-        See each outing on a map, with your notes tied to the places you said
-        them.
+      text: See each outing on a map.
     - image: /img/illustration-insights.svg
-      title: Long-term insights
-      text: >-
-        Spot patterns across months and years, like which routes and conditions
-        go with your best days.
+      title: Insights
+      text: Spot patterns over months and years.
     - image: /img/illustration-recap.svg
-      title: Yearly recap books
-      text: >-
-        At the end of the year, your entries, routes, and highlights are
-        collected into a recap book.
+      title: Recap book
+      text: A yearly book of your entries and routes.
 pricing:
   heading: Pricing
-  description: >-
-    Start free. Upgrade when you want maps, insights, and your yearly book.
-    Launch pricing, subject to change.
+  description: Start free. Add Plus when you want more. Launch pricing, subject to change.
   plans:
     - plan: Basic
       price: '0'
       period: Free
-      description: Everything you need to start logging.
+      description: Everything you need to start.
       items:
-        - Hands-free voice logging
-        - Auto-tagged route, weather, and mood
-        - Searchable log
-    - plan: Plus Monthly
+        - Voice logging
+        - Auto-tags
+        - Search
+    - plan: Plus
       price: '6'
-      period: per month
-      description: All of Basic, plus the full picture.
+      period: per month, or $50 per year
+      description: Basic, plus the full picture.
       items:
         - Everything in Basic
         - Route maps
-        - Long-term insights
-        - Yearly recap book
-    - plan: Plus Yearly
-      price: '50'
-      period: per year
-      description: The same as Plus Monthly, billed once a year. Save about 30%.
-      items:
-        - Everything in Basic
-        - Route maps
-        - Long-term insights
+        - Insights
         - Yearly recap book
 ---
 

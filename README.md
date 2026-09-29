@@ -2,10 +2,10 @@
 
 Marketing site for **Trail Notes**, a voice-first journaling app for hikers and runners. It is built on the Hugo + Netlify CMS template described below.
 
-* **Home** (`site/content/_index.md`): hero, how it works, sample entry, Plus upsell, latest journal posts
+* **Home** (`site/content/_index.md`): hero with waitlist signup, how it works, example entry, Plus teaser
 * **Features** (`site/content/features/_index.md`): free and Plus features, plus the pricing table. Prices are placeholders, so edit them before launch
 * **Journal** (`site/content/post/`): blog posts
-* **Contact** (`site/content/contact/_index.md`)
+* **Contact** (`site/content/contact/_index.md`) and a **Thanks** page shown after either form is submitted
 * **Waitlist and contact forms** use [Netlify Forms](https://docs.netlify.com/forms/setup/). Submissions appear in the Forms tab of your Netlify site after the first deploy
 * All pages are editable in Netlify CMS at `/admin/`
 

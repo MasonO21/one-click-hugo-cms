@@ -10,7 +10,7 @@ export default class FeatureGrid extends React.Component {
 
         <div className="flex-ns flex-wrap mhn2-ns mb3">
           {(items || []).map((item, i) => <div className="ph2-ns w-third-ns mb4" key={i}>
-            <img src={item.get("image") && getAsset(item.get("image"))} alt="" className="center db mb3" style={{width: "200px"}}/>
+            <img src={item.get("image") && getAsset(item.get("image"))} alt="" className="center db mb3" style={{width: "160px"}}/>
             {item.get("title") && <h3 className="f4 b lh-title mb2">{item.get("title")}</h3>}
             <p>{item.get("text")}</p>
           </div>)}

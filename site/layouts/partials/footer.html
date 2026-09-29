@@ -4,36 +4,21 @@
 
 		<div class="measure-narrow center mb4" id="waitlist">
 
-			<img src="/img/logo-mark.svg" alt="Trail Notes logo" class="db w3 center mb4 br0">
 			<p class="f3 lh-title light-gray b tc mb2">Join the waitlist</p>
-			<p>Be the first to know when Trail Notes opens up. One email when it’s ready, and nothing in between.</p>
+			<p class="tc">We’ll send one email when Trail Notes is ready, and nothing else.</p>
 
-			{{ partial "newsletter-form" . }}
-
-		</div>
-
-		<div class="flex-ns justify-between">
-
-			<div>
-				<h3 class="f4 b lh-title mb1 highlight">Trail Notes</h3>
-				<ul class="mb3">
-					<li><a href="/" class="link">Home</a></li>
-					<li><a href="/features/" class="link">Features</a></li>
-					<li><a href="/features/#pricing" class="link">Pricing</a></li>
-					<li><a href="/post/" class="link">Journal</a></li>
-					<li><a href="/contact/" class="link">Contact</a></li>
-				</ul>
-			</div>
-
-			<div>
-				<h3 class="f4 b lh-title mb1 highlight">Get started</h3>
-				<ul class="mb3">
-					<li><a href="/#waitlist" class="link">Join the waitlist</a></li>
-					<li><a href="/contact/" class="link">Send feedback</a></li>
-				</ul>
-			</div>
+			{{ partial "newsletter-form" (dict "id" "footer") }}
 
 		</div>
+
+		<ul class="flex flex-wrap justify-center">
+			<li><a href="/" class="link pa2 db">Home</a></li>
+			<li><a href="/features/" class="link pa2 db">Features</a></li>
+			<li><a href="/features/#pricing" class="link pa2 db">Pricing</a></li>
+			<li><a href="/post/" class="link pa2 db">Journal</a></li>
+			<li><a href="/contact/" class="link pa2 db">Contact</a></li>
+		</ul>
+
 	</div>
 
 </footer>

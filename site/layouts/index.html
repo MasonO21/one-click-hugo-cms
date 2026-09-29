@@ -1,15 +1,11 @@
 {{ define "main" }}
 
-{{ partial "jumbotron" (dict "imageUrl" .Params.image "title" .Title "subtitle" .Params.subtitle "buttonText" .Params.cta.text "buttonLink" .Params.cta.link) }}
+{{ partial "jumbotron" (dict "imageUrl" .Params.image "title" .Title "subtitle" .Params.subtitle "waitlist" true) }}
 
-{{ partial "short-text" .Params.blurb }}
-
-{{ partial "feature-grid" (dict "heading" .Params.intro.heading "description" .Params.intro.text "items" .Params.steps "buttonText" "See all features" "buttonLink" "/features/") }}
+{{ partial "feature-grid" (dict "heading" .Params.intro.heading "description" .Params.intro.text "items" .Params.steps) }}
 
 {{ partial "sample-entry" .Params.sample }}
 
 {{ partial "text-and-image" (dict "bg" "bg-highlight" "heading" .Params.plus.heading "text" .Params.plus.text "image" .Params.plus.image "imageAlt" .Params.plus.imageAlt "buttonText" "See pricing" "buttonLink" "/features/#pricing") }}
-
-{{ partial "blog" . }}
 
 {{ end }}

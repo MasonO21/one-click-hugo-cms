@@ -39,7 +39,7 @@ export default class FeaturesPreview extends React.Component {
           <p className="mw6 mb4">{entry.getIn(['data', 'pricing', 'description'])}</p>
 
           <div className="flex-ns mhn2-ns">
-            {(entry.getIn(['data', 'pricing', 'plans']) || []).map((plan, index) => <div className="w-33-ns ph2 mb4 mb0-ns" key={index}>
+            {(entry.getIn(['data', 'pricing', 'plans']) || []).map((plan, index, plans) => <div className={`${plans.size === 2 ? "w-50-ns" : "w-33-ns"} ph2 mb4 mb0-ns`} key={index}>
               <div className="ph2">
 
                 <h3 className="b f5 grey-3 tc lh-title mb3">{plan.get('plan')}</h3>

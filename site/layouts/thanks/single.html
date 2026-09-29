@@ -1,0 +1,9 @@
+{{ define "main" }}
+
+<div class="mw6 center ph3 pv5 tc">
+  <h1 class="f2 lh-title b mb3">{{ .Title }}</h1>
+  <p class="f4 mb4">{{ .Params.message }}</p>
+  <a href="{{ "/" | relURL }}" class="btn btn-primary raise">Back to home</a>
+</div>
+
+{{ end }}

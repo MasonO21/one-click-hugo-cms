@@ -2,6 +2,7 @@
 
   <title>{{ if .IsHome }}{{ $.Site.Title }} | {{ $.Site.Params.tagline }}{{ else }}{{ .Title }} | {{ $.Site.Title }}{{ end }}</title>
   <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ $.Site.Params.description }}{{ end }}">
+  {{ if eq .Type "thanks" }}<meta name="robots" content="noindex">{{ end }}
 
   {{ $stylesheet := .Site.Data.webpack.main }}
   {{ with $stylesheet.css }}

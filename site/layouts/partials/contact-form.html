@@ -1,8 +1,7 @@
 <!-- Contact -->
 <div class="mb4">
-  <h4 class="f3 b lh-title mb3 tc">Drop us a line below</h4>
 
-  <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+  <form name="contact" method="POST" action="/thanks/" data-netlify="true" netlify-honeypot="bot-field">
     <input type="hidden" name="form-name" value="contact">
     <p class="dn"><label>Don’t fill this out: <input name="bot-field"></label></p>
 
@@ -10,14 +9,14 @@
       <!-- Name -->
       <div class="ph1-l w-50-l">
         <fieldset>
-          <input type="text" id="name" name="name" placeholder="Name" class="w-100 mb2">
+          <input type="text" id="name" name="name" placeholder="Name" aria-label="Name" class="w-100 mb2">
           <label for="name">Name</label>
         </fieldset>
       </div>
       <!-- Email -->
       <div class="ph1-l w-50-l">
         <fieldset>
-          <input type="email" id="email" name="email" placeholder="Email" class="w-100 mb2" required>
+          <input type="email" id="email" name="email" placeholder="Email" aria-label="Email" class="w-100 mb2" required>
           <label for="email">Email</label>
         </fieldset>
       </div>
@@ -25,12 +24,12 @@
 
     <!-- Message -->
     <fieldset>
-      <textarea id="message" name="message" placeholder="Your message" rows="8" cols="80" class="w-100" required></textarea>
+      <textarea id="message" name="message" placeholder="Your message" aria-label="Your message" rows="6" cols="80" class="w-100" required></textarea>
       <label for="message">Your message</label>
     </fieldset>
     <!-- Button -->
     <div class="tc">
-      <button type="submit" class="btn w-100 w-auto-ns raise">Send</button>
+      <button type="submit" class="btn btn-primary w-100 w-auto-ns raise">Send</button>
     </div>
   </form>
 </div>
