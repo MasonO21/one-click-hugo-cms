@@ -1,3 +1,16 @@
+# Trail Notes landing site
+
+Marketing site for **Trail Notes**, a voice-first journaling app for hikers and runners. It is built on the Hugo + Netlify CMS template described below.
+
+* **Home** (`site/content/_index.md`): hero, how it works, sample entry, Plus upsell, latest journal posts
+* **Features** (`site/content/features/_index.md`): free and Plus features, plus the pricing table. Prices are placeholders, so edit them before launch
+* **Journal** (`site/content/post/`): blog posts
+* **Contact** (`site/content/contact/_index.md`)
+* **Waitlist and contact forms** use [Netlify Forms](https://docs.netlify.com/forms/setup/). Submissions appear in the Forms tab of your Netlify site after the first deploy
+* All pages are editable in Netlify CMS at `/admin/`
+
+---
+
 # Hugo template for Netlify CMS with Netlify Identity
 
 This is a small business template built with [Victor Hugo](https://github.com/netlify/victor-hugo) and [Netlify CMS](https://github.com/netlify/netlify-cms), designed and developed by [Darin Dimitroff](http://www.darindimitroff.com/), [spacefarm.digital](https://www.spacefarm.digital).

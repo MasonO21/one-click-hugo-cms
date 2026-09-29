@@ -1,0 +1,17 @@
+/* Tag chips used by the sample log entry */
+.chip {
+  display: inline-block;
+  padding: var(--spacing-extra-small) var(--spacing-medium);
+  margin: 0 var(--spacing-small) var(--spacing-small) 0;
+  font-size: .875rem;
+  font-weight: var(--bold-font-weight);
+  line-height: 1.5;
+  color: var(--primary);
+  background-color: var(--highlight);
+  border-radius: 9999px;
+}
+
+.chip-label {
+  font-weight: var(--body-font-weight);
+  color: var(--grey-3);
+}

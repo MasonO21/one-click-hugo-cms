@@ -1,0 +1,22 @@
+<div class="{{ default "bg-off-white" .bg }} pv4">
+  <div class="ph3 mw7 center">
+    <h2 class="f2 b lh-title mb2">{{ .heading }}</h2>
+    <p class="mb4 mw6">{{ .description }}</p>
+
+    <div class="flex-ns flex-wrap mhn2-ns mb3">
+      {{ range .items }}
+      <div class="ph2-ns w-third-ns mb4">
+        <img src="{{ .image }}" alt="" class="center db mb3" style="width: 200px">
+        {{ with .title }}<h3 class="f4 b lh-title mb2">{{ . }}</h3>{{ end }}
+        <p>{{ .text }}</p>
+      </div>
+      {{ end }}
+    </div>
+
+    {{ if .buttonText }}
+    <div class="tc">
+      <a href="{{ .buttonLink }}" class="btn raise">{{ .buttonText }}</a>
+    </div>
+    {{ end }}
+  </div>
+</div>

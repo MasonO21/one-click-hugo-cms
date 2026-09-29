@@ -14,5 +14,8 @@
         {{ end }}
       </div>
     </div>
+    {{ if .buttonText }}
+    <a href="{{ .buttonLink }}" class="btn raise mt3">{{ .buttonText }}</a>
+    {{ end }}
   </div>
 </div>

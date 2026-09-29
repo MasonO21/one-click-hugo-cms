@@ -1,9 +1,13 @@
 baseurl = "/"
 languageCode = "en-us"
 languageLang = "en"
-title = "Homepage"
+title = "Trail Notes"
 
 # RSS, categories and tags disabled for an easy start
-# See configuration options for more details: 
+# See configuration options for more details:
 # https://gohugo.io/getting-started/configuration/#toml-configuration
 disableKinds = ["RSS", "taxonomy", "taxonomyTerm"]
+
+[params]
+  tagline = "Voice journaling for hikers and runners"
+  description = "Trail Notes is a voice-first journaling app for hikers and runners. Talk while you move and it tags your route, weather, and mood into a searchable log."

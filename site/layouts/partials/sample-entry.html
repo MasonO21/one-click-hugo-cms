@@ -1,0 +1,24 @@
+<div class="bg-grey-1 pv4">
+  <div class="ph3 mw7 center">
+    <div class="flex-l mhn2-l items-center">
+
+      <div class="w-40-l ph2-l mb4 mb0-l">
+        <h2 class="f2 b lh-title mb2">{{ .heading }}</h2>
+        <p>{{ .text }}</p>
+      </div>
+
+      <div class="w-60-l ph2-l">
+        <div class="bg-white ba b--grey-2 br1 pa3 pa4-l">
+          <p class="f6 b grey-3 ttu mb2">Example entry · {{ .date }}</p>
+          <p class="f4 lh-copy mb3">“{{ .quote }}”</p>
+          <div>
+            {{ range .tags }}
+            <span class="chip"><span class="chip-label">{{ .label }}</span> {{ .value }}</span>
+            {{ end }}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

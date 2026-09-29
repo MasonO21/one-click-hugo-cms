@@ -1,7 +1,7 @@
-<div class="bg-grey-1 pv4">
+<div class="{{ default "bg-grey-1" .bg }} pv4">
 	<div class="ph3 mw7 center">
 
-		<div class="flex-l mhn2-l">
+		<div class="flex-l mhn2-l items-center">
 			<div class="w-40-l ph2-l">
 				<h2 class="f2 b lh-title mb2">{{.heading}}</h2>
 
@@ -9,7 +9,7 @@
 			</div>
 
 			<div class="w-60-l ph2-l">
-				<img src="img/home-about-section.jpg" alt="" class="mb3">
+				<img src="{{.image}}" alt="{{.imageAlt}}" class="db center mb3" style="max-width: 360px; width: 100%">
 			</div>
 		</div>
 

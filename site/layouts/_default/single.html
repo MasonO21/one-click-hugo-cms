@@ -1,6 +1,9 @@
 {{ define "main" }}
 
-{{ partial "jumbotron" (dict "imageUrl" "/img/7.jpg" "title" "This is where the heading goes" "subtitle" "This is where the subtitle goes") }}
-{{ .Content }}
+{{ partial "jumbotron" (dict "imageUrl" "/img/journal-jumbotron.svg" "title" .Title) }}
+
+<div class="cms mw6 center ph3 pv4">
+  {{ .Content }}
+</div>
 
 {{ end }}

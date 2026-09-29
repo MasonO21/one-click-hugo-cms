@@ -4,9 +4,10 @@
 	<h3 class="b f5 grey-3 tc lh-title mb3">{{.plan}}</h3>
 
 	<!-- Price -->
-	<p class="primary f1 b tc lh-title center">
+	<p class="primary f1 b tc lh-title center mb1">
 		<span class="f4">$</span>{{.price}}
 	</p>
+	<p class="grey-3 f6 b tc mb3">{{ with .period }}{{ . }}{{ else }}&nbsp;{{ end }}</p>
 
 	<!-- Description -->
 	<p class="b">{{.description}}</p>

@@ -1,0 +1,15 @@
+{{ define "main" }}
+
+{{ partial "jumbotron" (dict "imageUrl" .Params.image "title" .Title "subtitle" .Params.subtitle) }}
+
+{{ with .Params.free }}
+{{ partial "feature-grid" (dict "heading" .heading "description" .description "items" .items) }}
+{{ end }}
+
+{{ with .Params.plus }}
+{{ partial "feature-grid" (dict "bg" "bg-grey-1" "heading" .heading "description" .description "items" .items) }}
+{{ end }}
+
+{{ partial "table" .Params.pricing }}
+
+{{ end }}

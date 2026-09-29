@@ -1,5 +1,6 @@
 {
-	"name": "",
+	"name": "Trail Notes",
+	"short_name": "Trail Notes",
 	"icons": [
 		{
 			"src": "\/img\/android-chrome-192x192.png",
@@ -12,6 +13,7 @@
 			"type": "image\/png"
 		}
 	],
-	"theme_color": "#ffffff",
+	"theme_color": "#1f6b4f",
+	"background_color": "#ffffff",
 	"display": "standalone"
 }
