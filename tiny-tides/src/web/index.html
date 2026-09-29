@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tiny Tides">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1b1145">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Tiny Tides — an idle tidepool ecosystem you check on a few times a day.">
+<title>Tiny Tides</title>
+<link rel="stylesheet" href="app.css">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+</head>
+<body>
+<div id="app">
+  <canvas id="scene" aria-label="Your tidepool"></canvas>
+  <header id="hud"></header>
+  <div id="fabs"></div>
+  <div id="dock"></div>
+  <div id="sheet" role="dialog" aria-label="Creature details"></div>
+  <nav id="nav" aria-label="Main"></nav>
+  <div id="coach"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="modal-root"></div>
+  <div id="boot"><div class="boot-blip"><svg class="ic"><use href="#i-blip"/></svg></div><div class="boot-title">Tiny Tides</div><div class="boot-sub">filling the tidepool…</div></div>
+</div>
+
+<svg id="sprite" width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-pearl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#ffe3f6"/><stop offset="1" stop-color="#f2a9e0"/></linearGradient>
+    <linearGradient id="g-glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b9fff0"/><stop offset=".55" stop-color="#4de6cf"/><stop offset="1" stop-color="#1fb0c9"/></linearGradient>
+    <linearGradient id="g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4a8"/><stop offset="1" stop-color="#ffbf2f"/></linearGradient>
+    <linearGradient id="g-aqua" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9af3ff"/><stop offset="1" stop-color="#26b8e6"/></linearGradient>
+    <linearGradient id="g-pink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb3e0"/><stop offset="1" stop-color="#f45db1"/></linearGradient>
+    <linearGradient id="g-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2e6f6"/><stop offset="1" stop-color="#8b95bb"/></linearGradient>
+    <linearGradient id="g-lav" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d3c2ff"/><stop offset="1" stop-color="#8f6cf0"/></linearGradient>
+    <linearGradient id="g-mint" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b6f7cf"/><stop offset="1" stop-color="#34c98a"/></linearGradient>
+    <linearGradient id="g-coral" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc3a8"/><stop offset="1" stop-color="#ff6f61"/></linearGradient>
+    <radialGradient id="g-blip" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#c9f4ff"/><stop offset="1" stop-color="#7fc8ff"/></radialGradient>
+  </defs>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-pearl" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11.5" fill="url(#g-pearl)"/><ellipse cx="12" cy="11.5" rx="3.6" ry="2.2" fill="#fff" stroke="none" transform="rotate(-35 12 11.5)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-glass" viewBox="0 0 32 32"><path d="M16 3.5 26.5 11.5 23.5 27.5 9 27.5 5.5 11.5z" fill="url(#g-glass)"/><path d="M16 3.5 13 13 5.5 11.5M16 3.5 19 13 26.5 11.5M13 13 9 27.5M19 13 23.5 27.5M13 13h6" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-token" viewBox="0 0 32 32"><path d="M8 4h16M8 28h16" fill="none" stroke-width="3"/><path d="M10 4c0 8 6 8 6 12s-6 4-6 12h12c0-8-6-8-6-12s6-4 6-12z" fill="url(#g-gold)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-gear" viewBox="0 0 32 32"><g fill="#cdbdff"><rect x="13" y="2.5" width="6" height="27" rx="2"/><rect x="13" y="2.5" width="6" height="27" rx="2" transform="rotate(45 16 16)"/><rect x="13" y="2.5" width="6" height="27" rx="2" transform="rotate(90 16 16)"/><rect x="13" y="2.5" width="6" height="27" rx="2" transform="rotate(135 16 16)"/></g><circle cx="16" cy="16" r="8.5" fill="#cdbdff"/><circle cx="16" cy="16" r="3.6" fill="#fff"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-drop" viewBox="0 0 32 32"><path d="M16 3.5C13 9 6.5 14.5 6.5 20.5a9.5 9.5 0 0 0 19 0C25.5 14.5 19 9 16 3.5z" fill="url(#g-aqua)"/><ellipse cx="12" cy="20" rx="2" ry="3.4" fill="#fff" stroke="none" transform="rotate(20 12 20)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-build" viewBox="0 0 32 32"><ellipse cx="10.5" cy="22.5" rx="8" ry="6" fill="url(#g-rock)"/><ellipse cx="22.5" cy="23" rx="7" ry="5.2" fill="url(#g-rock)"/><ellipse cx="16" cy="13" rx="8.5" ry="6.5" fill="url(#g-rock)"/><ellipse cx="13" cy="10.6" rx="2.6" ry="1.4" fill="#fff" stroke="none" transform="rotate(-25 13 10.6)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-book" viewBox="0 0 32 32"><path d="M3.5 7c5-1.6 9 .2 12.5 3 3.5-2.800 7.500-4.600 12.500-3v18.500c-5-1.600-9 .2-12.500 3-3.500-2.800-7.500-4.600-12.500-3z" fill="url(#g-lav)"/><path d="M16 10v18.500" fill="none"/><path d="M22 12l1 2.400 2.500.3-1.900 1.700.5 2.500L22 17.700 19.900 19l.5-2.500-1.900-1.700 2.500-.3z" fill="#fff4a8" stroke-width="1.4"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-scroll" viewBox="0 0 32 32"><rect x="6" y="5.500" width="20" height="23" rx="4" fill="url(#g-mint)"/><rect x="11" y="2.800" width="10" height="5.600" rx="2.400" fill="#fff4a8"/><path d="M10.500 15l2.200 2.200 4-4.200M10.500 23h11" fill="none" stroke-width="2.200" stroke="#fff"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-bag" viewBox="0 0 32 32"><path d="M11 12V9.500a5 5 0 0 1 10 0V12" fill="none" stroke-width="2.400"/><path d="M5.500 11.500h21l-1.800 16.500H7.300z" fill="url(#g-pink)"/><path d="M12 17.500c0 2.500 1.800 4 4 4s4-1.500 4-4" fill="none" stroke="#fff" stroke-width="2"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-gift" viewBox="0 0 32 32"><rect x="5" y="13" width="22" height="15" rx="3" fill="url(#g-coral)"/><rect x="3.500" y="9" width="25" height="6.500" rx="2.500" fill="url(#g-pink)"/><path d="M16 9v19" stroke="#fff4a8" stroke-width="4.200"/><path d="M16 9c-3-6-9-4-6.500-1.200S16 9 16 9zM16 9c3-6 9-4 6.500-1.200S16 9 16 9z" fill="url(#g-gold)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-camera" viewBox="0 0 32 32"><path d="M4 11.500a3 3 0 0 1 3-3h3l2-3h8l2 3h3a3 3 0 0 1 3 3V24a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="url(#g-lav)"/><circle cx="16" cy="17" r="5.800" fill="#fff"/><circle cx="16" cy="17" r="3" fill="url(#g-aqua)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-sun" viewBox="0 0 32 32"><g stroke="#ffb02e" stroke-width="2.400"><path d="M16 2.500v4M16 25.500v4M2.500 16h4M25.500 16h4M6.500 6.500l2.800 2.800M22.700 22.700l2.800 2.800M25.500 6.500l-2.800 2.800M9.300 22.700l-2.800 2.800"/></g><circle cx="16" cy="16" r="7.500" fill="url(#g-gold)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-moon" viewBox="0 0 32 32"><path d="M22 4.500A12.500 12.500 0 1 0 27.500 21 10 10 0 0 1 22 4.500z" fill="url(#g-gold)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-lock" viewBox="0 0 32 32"><path d="M10.500 14V10.500a5.500 5.500 0 0 1 11 0V14" fill="none" stroke-width="2.600"/><rect x="6.500" y="13" width="19" height="15" rx="4" fill="url(#g-gold)"/><circle cx="16" cy="20" r="2.400" fill="#3b1d5e" stroke="none"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-plus" viewBox="0 0 32 32"><path d="M16 7v18M7 16h18" fill="none" stroke-width="5.500"/><path d="M16 7v18M7 16h18" fill="none" stroke="#fff" stroke-width="2.600"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-close" viewBox="0 0 32 32"><path d="M8 8l16 16M24 8L8 24" fill="none" stroke-width="6"/><path d="M8 8l16 16M24 8L8 24" fill="none" stroke="#fff" stroke-width="3"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-check" viewBox="0 0 32 32"><path d="M7 17l6 6L25 10" fill="none" stroke-width="6"/><path d="M7 17l6 6L25 10" fill="none" stroke="#fff" stroke-width="3"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-heart" viewBox="0 0 32 32"><path d="M16 27C6 20 4 14 4 10.500A6.500 6.500 0 0 1 16 7.500 6.500 6.500 0 0 1 28 10.500C28 14 26 20 16 27z" fill="url(#g-pink)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-heart-o" viewBox="0 0 32 32"><path d="M16 27C6 20 4 14 4 10.500A6.500 6.500 0 0 1 16 7.500 6.500 6.500 0 0 1 28 10.500C28 14 26 20 16 27z" fill="#f3e6ff"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-sparkle" viewBox="0 0 32 32"><path d="M16 3l3.200 9.800L29 16l-9.800 3.200L16 29l-3.200-9.800L3 16l9.800-3.200z" fill="url(#g-gold)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-up" viewBox="0 0 32 32"><path d="M16 4l11 12h-6.500v10h-9V16H5z" fill="url(#g-mint)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-clock" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="url(#g-aqua)"/><path d="M16 9v7.500l5 3" fill="none" stroke="#fff" stroke-width="2.800"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-star" viewBox="0 0 32 32"><path d="M16 3.500l3.900 8 8.800 1.200-6.400 6.100 1.600 8.700L16 23.200l-7.900 4.300 1.600-8.700-6.400-6.100 8.800-1.200z" fill="url(#g-gold)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-chev" viewBox="0 0 32 32"><path d="M12 7l9 9-9 9" fill="none" stroke-width="4.500"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-blip" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="url(#g-blip)" stroke-width="3"/><ellipse cx="24" cy="18" rx="7" ry="4" fill="#fff" stroke="none" transform="rotate(-30 24 18)"/><ellipse cx="24" cy="33" rx="3.800" ry="5" fill="#3b1d5e" stroke="none"/><ellipse cx="41" cy="33" rx="3.800" ry="5" fill="#3b1d5e" stroke="none"/><circle cx="22.800" cy="31" r="1.400" fill="#fff" stroke="none"/><circle cx="39.800" cy="31" r="1.400" fill="#fff" stroke="none"/><ellipse cx="17.500" cy="40" rx="4" ry="2.600" fill="#ff8fc4" stroke="none" opacity=".7"/><ellipse cx="47.500" cy="40" rx="4" ry="2.600" fill="#ff8fc4" stroke="none" opacity=".7"/><path d="M27 42q5 5 10 0" fill="none" stroke-width="2.600"/></symbol>
+    <!-- traits -->
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="t-stone" viewBox="0 0 32 32"><path d="M4.500 25c-1-8 4-15 11-15.500 8 0 12.500 6 12 15.500z" fill="url(#g-rock)"/><ellipse cx="12" cy="15.500" rx="3.200" ry="1.800" fill="#fff" stroke="none" transform="rotate(-30 12 15.500)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="t-depth" viewBox="0 0 32 32"><path d="M16 3.500C13 9 6.500 14.500 6.500 20.500a9.500 9.500 0 0 0 19 0C25.500 14.500 19 9 16 3.500z" fill="url(#g-lav)"/><path d="M11.500 17.500l4.500 4.500 4.500-4.500M11.500 12.500l4.500 4.500 4.500-4.500" fill="none" stroke="#fff" stroke-width="2.200"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="t-calm" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.500" fill="url(#g-aqua)"/><path d="M8 13q2.700-3 5.300 0t5.300 0 5.300 0M8 19q2.700-3 5.300 0t5.300 0 5.300 0" fill="none" stroke="#fff" stroke-width="2.200"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="t-green" viewBox="0 0 32 32"><path d="M5 27C4 12 13 4 27 5c1 14-7 22-20 22z" fill="url(#g-mint)"/><path d="M6 26C12 19 17 14 24 9" fill="none" stroke="#fff" stroke-width="2"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="t-warmth" viewBox="0 0 32 32"><path d="M16 3c1 6 8 9 8 17a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 1.500 4 3 4 0-4-1-8 1-13z" fill="url(#g-coral)"/><path d="M16 27a4.500 4.500 0 0 1-4.500-4.500c0-2.500 2.500-4 4.500-6.500 2 2.500 4.500 4 4.500 6.500A4.500 4.500 0 0 1 16 27z" fill="url(#g-gold)" stroke-width="1.400"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="t-glow" viewBox="0 0 32 32"><path d="M16 2.500l3.700 9.800 10.300 1.200-7.700 6.900 2.300 10.100L16 25.300l-8.600 5.200 2.300-10.100L2 13.500l10.300-1.200z" fill="url(#g-gold)"/></symbol>
+    <!-- tools -->
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="k-dig" viewBox="0 0 32 32"><path d="M16 3.500C13 9 6.500 14.500 6.500 20.500a9.500 9.500 0 0 0 19 0C25.500 14.500 19 9 16 3.500z" fill="url(#g-aqua)"/><path d="M16 12v10M11.500 18l4.500 4.500 4.500-4.500" fill="none" stroke="#fff" stroke-width="2.600"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="k-fill" viewBox="0 0 32 32"><path d="M3 26q3-14 13-14t13 14z" fill="#ffd98f"/><path d="M12 5v9M8 10.500l4 4 4-4" fill="none" stroke-width="3.200"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="k-erase" viewBox="0 0 32 32"><path d="M5 20L17 6.500a3 3 0 0 1 4.200-.2l5.500 5a3 3 0 0 1 .2 4.200L16 27H9z" fill="url(#g-pink)"/><path d="M12 13.500l9.500 9M9 27h20" fill="none" stroke-width="2.200"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="k-decor" viewBox="0 0 32 32"><path d="M16 7c0-4 6-4 6 0 4-2 6 4 2 6 4 2 1 8-3 5 0 4-6 4-6 0-4 3-8-3-3-5-4-2-2-8 2-6z" fill="url(#g-pink)" transform="translate(-1 2)"/><circle cx="15" cy="15" r="4" fill="url(#g-gold)"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="k-expand" viewBox="0 0 32 32"><rect x="9" y="9" width="14" height="14" rx="3" fill="url(#g-mint)"/><path d="M16 2.500v4M16 25.500v4M2.500 16h4M25.500 16h4" fill="none" stroke-width="3.500"/></symbol>
+    <symbol stroke="#3b1d5e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" id="i-deep" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.500" fill="#3358d6"/><circle cx="16" cy="16" r="8" fill="#5b7bff"/><circle cx="16" cy="16" r="3.600" fill="#9ec0ff"/><circle cx="11" cy="10.500" r="1.400" fill="#fff" stroke="none"/></symbol>
+</svg>
+<script src="app.js"></script>
+</body>
+</html>

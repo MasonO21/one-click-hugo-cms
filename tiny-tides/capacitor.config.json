@@ -1,0 +1,21 @@
+{
+  "appId": "com.tinytides.game",
+  "appName": "Tiny Tides",
+  "webDir": "www",
+  "backgroundColor": "#1b1145",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "limitsNavigationsToAppBoundDomains": false,
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 700,
+      "launchFadeOutDuration": 250,
+      "backgroundColor": "#1b1145",
+      "showSpinner": false
+    }
+  }
+}

@@ -1,0 +1,800 @@
+// Tiny Tides — simulation core. Pure logic (no DOM, no Date.now): every function takes `now`.
+import * as D from './data.js';
+
+const { FORMS, FAMILIES, PIECES, BIOMES, STAGE, DECOR, PRODUCTS, HOUR, MIN } = D;
+export const SAVE_VERSION = 1;
+
+// ================================================================ utils
+export function rand(state) {
+  let t = (state.seed = (state.seed + 0x6D2B79F5) >>> 0);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+const randInt = (s, a, b) => a + Math.floor(rand(s) * (b - a + 1));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const pick = (s, arr) => arr[Math.floor(rand(s) * arr.length)];
+const p2 = (n) => String(n).padStart(2, '0');
+const roundTo = (v, n) => Math.round(v / n) * n;
+
+export function dayKey(now) {
+  const d = new Date(now - 4 * HOUR); // day rolls over at 4am local so night owls aren't punished
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+}
+export function dayNum(now) {
+  return Math.floor((now - 4 * HOUR - new Date(now).getTimezoneOffset() * MIN) / 864e5);
+}
+/** The current "Tide Gift" window (morning / afternoon / evening, local time). */
+export function giftWindow(now) {
+  const d = new Date(now);
+  const h = d.getHours();
+  let day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  let id = h >= 18 ? 2 : h >= 12 ? 1 : h >= 5 ? 0 : 2;
+  if (h < 5) day = new Date(day.getTime() - 864e5 + 12 * HOUR); // belongs to yesterday's evening
+  const dk = `${day.getFullYear()}-${p2(day.getMonth() + 1)}-${p2(day.getDate())}`;
+  return { key: `${dk}:${id}`, id, name: D.GIFT_WINDOWS[id].name };
+}
+/** Next local time a new gift window opens (for notifications / countdown). */
+export function nextGiftAt(now) {
+  const d = new Date(now);
+  const base = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const marks = [];
+  for (let k = 0; k < 3; k++) for (const h of [5, 12, 18]) marks.push(base + k * 864e5 + h * HOUR);
+  return marks.find((t) => t > now);
+}
+export function moonPhase(now) {
+  const syn = 29.530588853, ref = Date.UTC(2000, 0, 6, 18, 14);
+  const days = (now - ref) / 864e5;
+  return (((days % syn) + syn) % syn) / syn; // 0 = new, .5 = full
+}
+export function springTide(now) {
+  const p = moonPhase(now);
+  const dist = Math.min(p, Math.abs(p - 0.5), 1 - p) * 29.53;
+  return dist <= 1.0 ? { on: true, kind: Math.abs(p - 0.5) < 0.25 ? 'Full Moon' : 'New Moon' } : { on: false };
+}
+export const fmtDur = (ms) => {
+  ms = Math.max(0, ms);
+  const s = Math.ceil(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.ceil(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60), mm = m % 60;
+  if (h < 24) return mm ? `${h}h ${mm}m` : `${h}h`;
+  const dd = Math.floor(h / 24);
+  return `${dd}d ${h % 24}h`;
+};
+export const fmtNum = (n) => {
+  n = Math.floor(n);
+  if (n < 10000) return String(n);
+  if (n < 1e6) return (n / 1e3).toFixed(n < 1e5 ? 1 : 0).replace(/\.0$/, '') + 'K';
+  if (n < 1e9) return (n / 1e6).toFixed(n < 1e7 ? 2 : 1).replace(/\.?0+$/, '') + 'M';
+  return (n / 1e9).toFixed(2) + 'B';
+};
+
+// ================================================================ state
+export function newPool(biome, now) {
+  const step = BIOMES[biome].steps[0];
+  const tiles = [];
+  for (let i = 0; i < step.w * step.h; i++) tiles.push({ w: 0, p: null, d: null });
+  return { biome, exp: 0, w: step.w, h: step.h, tiles, creatures: [], eggs: [], nextEgg: now + 2 * HOUR, ver: 1 };
+}
+export function newState(now, seed) {
+  return {
+    v: SAVE_VERSION, seed: ((seed ?? now) >>> 0) || 1, nid: 1, created: now, lastTick: now, lastSeen: now,
+    cur: { pearls: 150, glass: 20, tokens: 0 },
+    lvl: 1, xp: 0,
+    pools: { tide: newPool('tide', now) },
+    dex: {}, dexClaimed: [],
+    own: Object.fromEntries(D.FREE_DECOR.map((d) => [d, true])),
+    equip: { skin: 'aqua', fx: 'bubbles' },
+    iap: { deep: false, hourglass: false, starter: false, packs: {}, done: {} },
+    boost: { until: 0, mult: 2 },
+    quests: { day: '', list: [], chest: false },
+    daily: { n: 0, last: -99, shield: 1 },
+    gift: { key: '' },
+    settings: { music: true, sfx: true, haptics: true, notif: false, reduceMotion: false, battery: false },
+    stats: { collected: 0, pearls: 0, hatched: 0, evolved: 0, pets: 0, placed: 0, levelups: 0, gifts: 0, days: 0 },
+    tut: { step: 0, done: false },
+    flags: {},
+  };
+}
+function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
+function mergeInto(base, saved) {
+  for (const k of Object.keys(saved)) {
+    if (isObj(base[k]) && isObj(saved[k])) mergeInto(base[k], saved[k]);
+    else base[k] = saved[k];
+  }
+  return base;
+}
+export function serialize(state) {
+  return JSON.stringify(state, (k, v) => (k[0] === '_' ? undefined : v));
+}
+/** Parse + validate a save. Returns a healthy state or null. */
+export function deserialize(str, now) {
+  let saved;
+  try { saved = JSON.parse(str); } catch { return null; }
+  if (!isObj(saved) || !isObj(saved.pools) || !isObj(saved.pools.tide)) return null;
+  const st = newState(now, saved.seed);
+  const pools = saved.pools;
+  delete saved.pools;
+  mergeInto(st, saved);
+  st.pools = {};
+  for (const [biome, p] of Object.entries(pools)) {
+    if (!BIOMES[biome] || !isObj(p) || !Array.isArray(p.tiles) || p.tiles.length !== p.w * p.h) continue;
+    p.creatures = (p.creatures || []).filter((c) => FORMS[c.form]);
+    p.eggs = (p.eggs || []).filter((e) => FAMILIES[e.fam]);
+    p.tiles.forEach((t) => {
+      if (t.p && !PIECES[t.p]) t.p = null;
+      if (t.d && !DECOR[t.d]) t.d = null;
+      t.w = clamp(t.w | 0, 0, BIOMES[biome].maxW);
+    });
+    p.ver = 1;
+    p.biome = biome;
+    st.pools[biome] = p;
+  }
+  if (!st.pools.tide) return null;
+  for (const k of ['pearls', 'glass', 'tokens']) if (!Number.isFinite(st.cur[k]) || st.cur[k] < 0) st.cur[k] = 0;
+  st.lvl = clamp(st.lvl | 0 || 1, 1, D.MAX_POOL_LVL);
+  st.nid = Math.max(st.nid | 0, 1);
+  for (const p of Object.values(st.pools)) for (const it of [...p.creatures, ...p.eggs]) st.nid = Math.max(st.nid, (it.id | 0) + 1);
+  if (!Number.isFinite(st.lastTick) || st.lastTick > now + HOUR) st.lastTick = now;
+  return st;
+}
+
+// ================================================================ tiles & traits
+export const inb = (pool, x, y) => x >= 0 && y >= 0 && x < pool.w && y < pool.h;
+export const tileAt = (pool, x, y) => (inb(pool, x, y) ? pool.tiles[y * pool.w + x] : null);
+const bump = (pool) => { pool.ver++; };
+
+function tileContrib(pool, t, out) {
+  const wt = D.WATER_TR[pool.biome][t.w];
+  if (wt) for (const k in wt) out[k] = (out[k] || 0) + wt[k];
+  if (t.p) { const tr = PIECES[t.p].tr; for (const k in tr) out[k] = (out[k] || 0) + tr[k]; }
+}
+/** Habitat trait values (0-100) around a tile. Cached until the pool changes. */
+export function traitsAt(pool, x, y) {
+  if (!pool._tc || pool._tcv !== pool.ver) { pool._tc = new Map(); pool._tcv = pool.ver; }
+  const key = y * pool.w + x;
+  let r = pool._tc.get(key);
+  if (r) return r;
+  const raw = {};
+  for (const [dx, dy, w] of D.KERNEL) {
+    const t = tileAt(pool, x + dx, y + dy);
+    if (!t) continue;
+    const c = {};
+    tileContrib(pool, t, c);
+    for (const k in c) raw[k] = (raw[k] || 0) + c[k] * w;
+  }
+  r = {};
+  for (const t of D.TRAITS) r[t] = Math.min(100, (raw[t] || 0) * D.TRAIT_SCALE);
+  pool._tc.set(key, r);
+  return r;
+}
+export function suitability(fam, tr) {
+  let s = 0, z = 0;
+  for (const k in fam.likes) { s += fam.likes[k] * tr[k]; z += fam.likes[k]; }
+  return clamp(s / z / 60, 0, 1);
+}
+export function occupantAt(pool, x, y) {
+  return pool.creatures.find((c) => c.x === x && c.y === y) || pool.eggs.find((e) => e.x === x && e.y === y) || null;
+}
+export function canStand(pool, fam, x, y) {
+  const t = tileAt(pool, x, y);
+  return !!t && !t.p && fam.w.includes(t.w);
+}
+const famOf = (item) => FAMILIES[item.fam || FORMS[item.form].fam];
+
+function relocate(pool, item) {
+  const fam = famOf(item);
+  const seen = new Set([item.y * pool.w + item.x]);
+  let q = [[item.x, item.y]];
+  while (q.length) {
+    const nq = [];
+    for (const [x, y] of q) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy, k = ny * pool.w + nx;
+        if (!inb(pool, nx, ny) || seen.has(k)) continue;
+        seen.add(k);
+        if (canStand(pool, fam, nx, ny) && !occupantAt(pool, nx, ny)) { item.x = nx; item.y = ny; return true; }
+        nq.push([nx, ny]);
+      }
+    }
+    q = nq;
+  }
+  return false;
+}
+
+// ================================================================ economy helpers
+export const dexCount = (state) => Object.keys(state.dex).length;
+export const popCap = (state, pool) => 3 + pool.exp + Math.floor(state.lvl / 4);
+export const population = (pool) => pool.creatures.length + pool.eggs.length;
+export const levelCost = (stage, lvl) => Math.round(STAGE[stage].lvlBase * Math.pow(STAGE[stage].lvlGrow, lvl - 1));
+export const maxLevel = (stage) => STAGE[stage].maxLvl;
+
+export function globalMult(state, now) {
+  let m = 1 + D.DEX_RATE_BONUS * dexCount(state);
+  m *= 1 + D.POOL_RATE_BONUS * (state.lvl - 1);
+  if (now < state.boost.until) m *= state.boost.mult;
+  if (springTide(now).on) m *= D.SPRING_TIDE.rate;
+  return m;
+}
+export function happiness(pool, c) {
+  return suitability(famOf(c), traitsAt(pool, c.x, c.y));
+}
+/** Pearls per hour for one creature. */
+export function creatureRate(state, pool, c, now, gm) {
+  const f = FORMS[c.form];
+  const g = gm ?? globalMult(state, now);
+  return STAGE[f.stage].rate * BIOMES[pool.biome].rateMult * (1 + D.LVL_RATE_GAIN * (c.lvl - 1))
+    * (0.7 + 0.6 * happiness(pool, c)) * g;
+}
+export function totalRate(state, now) {
+  const gm = globalMult(state, now);
+  let r = 0;
+  for (const pool of Object.values(state.pools)) for (const c of pool.creatures) if (!c.evo) r += creatureRate(state, pool, c, now, gm);
+  return r;
+}
+export const bubbleCap = (state, pool, c, now, gm) => creatureRate(state, pool, c, now, gm) * D.bubbleCapHours(state.lvl);
+export const storedTotal = (state) => {
+  let s = 0;
+  for (const pool of Object.values(state.pools)) for (const c of pool.creatures) s += c.stored;
+  return s;
+};
+
+// ================================================================ progression
+export function unlocksAtLevel(L) {
+  const out = [];
+  for (const [id, p] of Object.entries(PIECES)) if (p.biome === 'tide' && p.unlock === L && L > 1) out.push({ kind: 'piece', id, name: p.name });
+  for (const [id, f] of Object.entries(FAMILIES)) if (f.biome === 'tide' && f.unlock === L && L > 1) out.push({ kind: 'family', id, name: f.name });
+  BIOMES.tide.steps.forEach((s, i) => { if (i && s.lvl === L) out.push({ kind: 'expand', name: `Pool expansion ${s.w}×${s.h}` }); });
+  if (L === BIOMES.tide.deepUnlock) out.push({ kind: 'dig', name: 'Deep water digging' });
+  return out;
+}
+export function addXp(state, n, events) {
+  if (state.lvl >= D.MAX_POOL_LVL) return;
+  state.xp += n;
+  while (state.lvl < D.MAX_POOL_LVL && state.xp >= D.xpForLevel(state.lvl)) {
+    state.xp -= D.xpForLevel(state.lvl);
+    state.lvl++;
+    events?.push({ type: 'levelup', lvl: state.lvl, unlocks: unlocksAtLevel(state.lvl) });
+  }
+}
+function discover(state, formId, now, events) {
+  if (state.dex[formId]) return false;
+  state.dex[formId] = now;
+  const st = FORMS[formId].stage;
+  state.cur.glass += D.DISCOVER_GLASS[st];
+  addXp(state, D.DISCOVER_XP[st], events);
+  return true;
+}
+
+// ================================================================ eggs & hatching
+export function pickSpawn(state, pool, forceFam, near) {
+  const fams = D.FAMILIES_BY_BIOME[pool.biome].filter((f) => state.lvl >= FAMILIES[f].unlock);
+  const starter = D.FAMILIES_BY_BIOME[pool.biome][0];
+  const cands = {};
+  for (const fid of fams) {
+    if (forceFam && fid !== forceFam) continue;
+    const fam = FAMILIES[fid];
+    for (let y = 0; y < pool.h; y++) for (let x = 0; x < pool.w; x++) {
+      if (!canStand(pool, fam, x, y) || occupantAt(pool, x, y)) continue;
+      let s = suitability(fam, traitsAt(pool, x, y));
+      if (near) s += Math.max(0, 0.5 - (Math.abs(x - near[0]) + Math.abs(y - near[1])) * 0.1);
+      if (s >= 0.12 || fid === starter) (cands[fid] ||= []).push({ x, y, s });
+    }
+  }
+  const fw = Object.entries(cands).map(([fid, arr]) => {
+    const best = Math.max(...arr.map((a) => a.s));
+    return [fid, forceFam ? 1 : Math.pow(best, 2) * 100 + (fid === starter ? 2 : 0)];
+  });
+  if (!fw.length) return null;
+  let r = rand(state) * fw.reduce((a, b) => a + b[1], 0), fam = fw[0][0];
+  for (const [fid, w] of fw) { if ((r -= w) <= 0) { fam = fid; break; } }
+  const arr = cands[fam];
+  let tr = rand(state) * arr.reduce((a, b) => a + b.s * b.s + 0.01, 0), spot = arr[0];
+  for (const a of arr) { if ((tr -= a.s * a.s + 0.01) <= 0) { spot = a; break; } }
+  return { fam, x: spot.x, y: spot.y };
+}
+export function spawnEgg(state, pool, now, opts = {}) {
+  const s = pickSpawn(state, pool, opts.fam, opts.near);
+  if (!s) return null;
+  const egg = { id: state.nid++, fam: s.fam, x: s.x, y: s.y, born: now, ready: now + (opts.warm ?? D.EGG_WARM) };
+  pool.eggs.push(egg);
+  return egg;
+}
+export function hatchEgg(state, biome, eggId, now) {
+  const pool = state.pools[biome];
+  const i = pool.eggs.findIndex((e) => e.id === eggId);
+  if (i < 0) return { ok: false, reason: 'gone' };
+  const egg = pool.eggs[i];
+  if (now < egg.ready) return { ok: false, reason: 'warming', wait: egg.ready - now };
+  pool.eggs.splice(i, 1);
+  const c = { id: egg.id, form: `${egg.fam}.0`, x: egg.x, y: egg.y, lvl: 1, stored: 0, born: now, hat: null, evo: null };
+  pool.creatures.push(c);
+  const events = [];
+  const isNew = discover(state, c.form, now, events);
+  addXp(state, 8, events);
+  state.stats.hatched++;
+  noteQuest(state, 'hatch', 1);
+  bump(pool);
+  return { ok: true, creature: c, isNew, events };
+}
+
+// ================================================================ collecting
+export function collect(state, biome, cid) {
+  const pool = state.pools[biome];
+  const c = pool.creatures.find((k) => k.id === cid);
+  if (!c) return 0;
+  const amt = Math.floor(c.stored);
+  if (amt < 1) return 0;
+  c.stored -= amt;
+  state.cur.pearls += amt;
+  state.stats.collected++;
+  state.stats.pearls += amt;
+  noteQuest(state, 'collect', 1);
+  noteQuest(state, 'pearls', amt);
+  return amt;
+}
+export function collectAll(state, biome) {
+  let total = 0, n = 0;
+  for (const c of state.pools[biome].creatures) { const a = collect(state, biome, c.id); if (a) { total += a; n++; } }
+  return { total, n };
+}
+export function petCreature(state, biome, cid, now) {
+  const c = state.pools[biome].creatures.find((k) => k.id === cid);
+  if (!c || (c.petAt && now - c.petAt < 20e3)) return { ok: false };
+  c.petAt = now;
+  state.cur.pearls += 1;
+  state.stats.pets++;
+  noteQuest(state, 'pet', 1);
+  return { ok: true, reward: 1 };
+}
+
+// ================================================================ level-up & evolution
+export function levelUp(state, biome, cid) {
+  const pool = state.pools[biome];
+  const c = pool.creatures.find((k) => k.id === cid);
+  if (!c) return { ok: false, reason: 'gone' };
+  const stage = FORMS[c.form].stage;
+  if (c.evo) return { ok: false, reason: 'evolving' };
+  if (c.lvl >= maxLevel(stage)) return { ok: false, reason: 'max' };
+  const cost = levelCost(stage, c.lvl);
+  if (state.cur.pearls < cost) return { ok: false, reason: 'pearls', need: cost };
+  state.cur.pearls -= cost;
+  c.lvl++;
+  state.stats.levelups++;
+  const events = [];
+  addXp(state, STAGE[stage].lvlXp, events);
+  noteQuest(state, 'levelup', 1);
+  return { ok: true, cost, lvl: c.lvl, events };
+}
+export function evoDuration(state, stage) {
+  if (!state.flags.firstEvo) return D.TUTORIAL_EVO_TIME;
+  const base = STAGE[stage].evoTime;
+  return state.iap.hourglass ? base * D.HOURGLASS_FACTOR : base;
+}
+/** What could this creature evolve into, and what is still missing? */
+export function evoInfo(state, pool, c) {
+  const f = FORMS[c.form], fam = FAMILIES[f.fam], stage = f.stage;
+  const traits = traitsAt(pool, c.x, c.y);
+  const info = { stage, traits, maxed: stage >= 3, evolving: !!c.evo, needLvl: STAGE[stage].evoLvl, lvlOk: c.lvl >= STAGE[stage].evoLvl, cost: STAGE[stage].evoCost, branches: [], best: null, mythic: null, canStart: false, reason: '' };
+  if (info.maxed) { info.reason = 'max'; return info; }
+  if (stage === 1) {
+    for (const trait of Object.keys(fam.br)) {
+      const form = D.branchForm(f.fam, trait), value = traits[trait];
+      info.branches.push({ trait, form, value, need: D.BRANCH_NEED, met: value >= D.BRANCH_NEED, known: !!state.dex[form] });
+    }
+    const met = info.branches.filter((b) => b.met).sort((a, b) => b.value - a.value);
+    info.best = met[0] || null;
+    info.to = info.best?.form;
+  } else {
+    const trait = f.trait, second = fam.second;
+    const m = { trait, form: D.mythicForm(f.fam, trait), value: traits[trait], need: D.MYTHIC_NEED, second, secondValue: traits[second], needSecond: D.MYTHIC_SECOND, known: !!state.dex[D.mythicForm(f.fam, trait)] };
+    m.met = m.value >= m.need && m.secondValue >= m.needSecond;
+    info.mythic = m;
+    info.to = m.met ? m.form : null;
+  }
+  info.dur = evoDuration(state, stage);
+  if (c.evo) info.reason = 'evolving';
+  else if (!info.lvlOk) info.reason = 'level';
+  else if (!info.to) info.reason = 'habitat';
+  else if (state.cur.pearls < info.cost) info.reason = 'pearls';
+  else info.canStart = true;
+  return info;
+}
+export function startEvolution(state, biome, cid, now) {
+  const pool = state.pools[biome];
+  const c = pool.creatures.find((k) => k.id === cid);
+  if (!c) return { ok: false, reason: 'gone' };
+  const info = evoInfo(state, pool, c);
+  if (!info.canStart) return { ok: false, reason: info.reason };
+  state.cur.pearls -= info.cost;
+  c.evo = { to: info.to, start: now, end: now + info.dur };
+  state.flags.firstEvo = true;
+  noteQuest(state, 'evolve', 1);
+  return { ok: true, to: info.to, end: c.evo.end };
+}
+function finishEvolution(state, pool, c, events) {
+  const now = c.evo.end;
+  const to = c.evo.to;
+  c.form = to;
+  c.evo = null;
+  state.stats.evolved++;
+  const isNew = discover(state, to, now, events);
+  addXp(state, D.STAGE[FORMS[to].stage].xp, events);
+  events.push({ type: 'evolved', biome: pool.biome, id: c.id, form: to, first: isNew, at: now });
+  bump(pool);
+}
+export function speedUpCost(state, c, now) {
+  if (!c.evo) return 0;
+  return Math.max(1, Math.ceil((c.evo.end - now) / (D.SPEEDUP_MIN_PER_GLASS * MIN)));
+}
+/** mode: 'glass' | 'token' | 'free' (daily Golden Hourglass finish). */
+export function speedUp(state, biome, cid, now, mode) {
+  const pool = state.pools[biome];
+  const c = pool.creatures.find((k) => k.id === cid);
+  if (!c?.evo) return { ok: false, reason: 'none' };
+  const events = [];
+  if (mode === 'token') {
+    if (state.cur.tokens < 1) return { ok: false, reason: 'tokens' };
+    state.cur.tokens--;
+    c.evo.end -= D.TOKEN_MS;
+  } else if (mode === 'free') {
+    if (!state.iap.hourglass || state.flags.freeFinish === dayKey(now)) return { ok: false, reason: 'used' };
+    state.flags.freeFinish = dayKey(now);
+    c.evo.end = Math.min(c.evo.end, now);
+  } else {
+    const cost = speedUpCost(state, c, now);
+    if (state.cur.glass < cost) return { ok: false, reason: 'glass', need: cost };
+    state.cur.glass -= cost;
+    c.evo.end = Math.min(c.evo.end, now);
+  }
+  if (c.evo.end <= now) finishEvolution(state, pool, c, events);
+  return { ok: true, events };
+}
+export function freeFinishAvailable(state, now) { return state.iap.hourglass && state.flags.freeFinish !== dayKey(now); }
+
+export function releaseCreature(state, biome, cid, now) {
+  const pool = state.pools[biome];
+  const i = pool.creatures.findIndex((k) => k.id === cid);
+  if (i < 0) return { ok: false };
+  const c = pool.creatures[i], stage = FORMS[c.form].stage;
+  let invest = 0;
+  for (let l = 1; l < c.lvl; l++) invest += levelCost(stage, l);
+  if (stage >= 2) invest += STAGE[1].evoCost;
+  if (stage >= 3) invest += STAGE[2].evoCost;
+  const refund = Math.floor(invest * 0.5) + Math.floor(c.stored) + 5;
+  state.cur.pearls += refund;
+  pool.creatures.splice(i, 1);
+  if (pool.nextEgg < now) pool.nextEgg = now + MIN;
+  bump(pool);
+  return { ok: true, refund };
+}
+export function setHat(state, biome, cid, hat) {
+  const c = state.pools[biome].creatures.find((k) => k.id === cid);
+  if (!c) return false;
+  if (hat && !(state.own[hat] && DECOR[hat]?.kind === 'hat')) return false;
+  c.hat = hat || null;
+  return true;
+}
+
+// ================================================================ building
+export const maxDig = (state, biome) => (biome === 'tide' ? (state.lvl >= BIOMES.tide.deepUnlock ? 2 : 1) : BIOMES.deep.maxW);
+export function pieceUnlocked(state, id) { const p = PIECES[id]; return p.biome === 'deep' || state.lvl >= p.unlock; }
+export function toolCost(state, biome, tool, x, y) {
+  const pool = state.pools[biome], t = tileAt(pool, x, y);
+  if (!t) return 0;
+  if (tool === 'dig') return BIOMES[biome].digCost[t.w + 1] || 0;
+  if (tool.startsWith('piece:')) return PIECES[tool.slice(6)].cost;
+  return 0;
+}
+const fail = (reason, extra) => ({ ok: false, reason, ...extra });
+
+/** Apply a build tool to one tile. tool: dig | fill | erase | piece:<id> | decor:<id> */
+export function applyTool(state, biome, tool, x, y) {
+  const pool = state.pools[biome];
+  if (!pool) return fail('nopool');
+  const t = tileAt(pool, x, y);
+  if (!t) return fail('bounds');
+  const B = BIOMES[biome];
+  const occ = occupantAt(pool, x, y);
+  const check = (mutate) => {
+    // apply the mutation; if an occupant can no longer stand there, try to move it, else roll back
+    const snap = { w: t.w, p: t.p, d: t.d };
+    mutate();
+    if (occ) {
+      const fam = famOf(occ);
+      if (!canStand(pool, fam, occ.x, occ.y)) {
+        const from = [occ.x, occ.y];
+        if (!relocate(pool, occ)) { Object.assign(t, snap); return false; }
+        occ._moved = from;
+      }
+    }
+    return true;
+  };
+  if (tool === 'dig') {
+    if (t.p) return fail('piece');
+    const nw = t.w + 1;
+    if (nw > B.maxW) return fail('max');
+    if (nw > maxDig(state, biome)) return fail('locked', { lvl: B.deepUnlock });
+    const cost = B.digCost[nw];
+    if (state.cur.pearls < cost) return fail('pearls', { need: cost });
+    if (!check(() => { t.w = nw; if (t.d && DECOR[t.d].place === 'shore') t.d = null; })) return fail('occupied');
+    state.cur.pearls -= cost;
+    bump(pool);
+    return { ok: true, cost, refund: 0 };
+  }
+  if (tool === 'fill') {
+    if (t.p) return fail('piece');
+    if (t.w <= 0) return fail('dry');
+    const old = t.w, refund = Math.floor((B.digCost[old] || 0) * D.REFUND);
+    if (!check(() => { t.w = old - 1; if (t.d && DECOR[t.d].place === 'float' && t.w === 0) t.d = null; })) return fail('occupied');
+    state.cur.pearls += refund;
+    bump(pool);
+    return { ok: true, cost: 0, refund };
+  }
+  if (tool === 'erase') {
+    if (t.p) { const refund = Math.floor(PIECES[t.p].cost * D.REFUND); t.p = null; state.cur.pearls += refund; bump(pool); return { ok: true, cost: 0, refund }; }
+    if (t.d) { t.d = null; return { ok: true, cost: 0, refund: 0 }; }
+    return fail('empty');
+  }
+  if (tool.startsWith('piece:')) {
+    const id = tool.slice(6), p = PIECES[id];
+    if (!p || p.biome !== biome) return fail('nope');
+    if (!pieceUnlocked(state, id)) return fail('locked', { lvl: p.unlock });
+    if (t.p === id) return fail('same');
+    if (!p.onW.includes(t.w)) return fail('water');
+    // placing over another piece swaps it, refunding part of the old one
+    const refund = t.p ? Math.floor(PIECES[t.p].cost * D.REFUND) : 0;
+    if (state.cur.pearls + refund < p.cost) return fail('pearls', { need: p.cost - refund });
+    if (!check(() => { t.p = id; t.d = null; })) return fail('occupied');
+    state.cur.pearls += refund - p.cost;
+    state.stats.placed++;
+    noteQuest(state, 'place', 1);
+    bump(pool);
+    return { ok: true, cost: p.cost, refund };
+  }
+  if (tool.startsWith('decor:')) {
+    const id = tool.slice(6), d = DECOR[id];
+    if (!d || d.kind !== 'prop') return fail('nope');
+    if (!state.own[id]) return fail('notowned');
+    if (t.p) return fail('piece');
+    if (d.place === 'shore' && t.w !== 0) return fail('shore');
+    if (d.place === 'float' && t.w < 1) return fail('float');
+    if (t.d === id) return fail('same');
+    t.d = id;
+    bump(pool);
+    return { ok: true, cost: 0, refund: 0 };
+  }
+  return fail('tool');
+}
+export function expandInfo(state, biome) {
+  const pool = state.pools[biome], B = BIOMES[biome], next = B.steps[pool.exp + 1];
+  if (!next) return null;
+  return { ...next, lvlOk: state.lvl >= next.lvl, canPay: state.cur.pearls >= next.cost };
+}
+export function expandPool(state, biome) {
+  const pool = state.pools[biome], info = expandInfo(state, biome);
+  if (!info) return fail('max');
+  if (!info.lvlOk) return fail('locked', { lvl: info.lvl });
+  if (!info.canPay) return fail('pearls', { need: info.cost });
+  state.cur.pearls -= info.cost;
+  const tiles = [];
+  for (let y = 0; y < info.h; y++) for (let x = 0; x < info.w; x++) tiles.push(x < pool.w && y < pool.h ? pool.tiles[y * pool.w + x] : { w: 0, p: null, d: null });
+  pool.tiles = tiles; pool.w = info.w; pool.h = info.h; pool.exp++;
+  addXp(state, 20, []);
+  bump(pool);
+  return { ok: true, w: info.w, h: info.h };
+}
+
+// ================================================================ time advance
+const CHUNK = 3 * HOUR;
+function produce(state, pool, t0, t1) {
+  if (t1 <= t0) return;
+  const mid = (t0 + t1) / 2, gm = globalMult(state, mid), hrs = (t1 - t0) / HOUR;
+  const capH = D.bubbleCapHours(state.lvl);
+  for (const c of pool.creatures) {
+    if (c.evo) continue;
+    const r = creatureRate(state, pool, c, mid, gm);
+    const cap = r * capH;
+    // already-stored pearls are never removed, even if the cap later shrinks
+    if (c.stored < cap) c.stored = Math.min(cap, c.stored + r * hrs);
+  }
+}
+function advancePool(state, pool, t0, t1, events) {
+  let t = t0, guard = 0;
+  while (t < t1 && guard++ < 2000) {
+    let next = Math.min(t1, t + CHUNK), kind = null, who = null;
+    for (const c of pool.creatures) {
+      if (!c.evo) continue;
+      const e = Math.max(t, c.evo.end);
+      if (e <= next) { next = e; kind = 'evo'; who = c; }
+    }
+    const canSpawn = (pool.biome !== 'tide' || state.tut.done) && population(pool) < popCap(state, pool);
+    if (canSpawn && pool.nextEgg <= next && pool.nextEgg > t) { next = pool.nextEgg; kind = 'egg'; who = null; }
+    else if (canSpawn && pool.nextEgg <= t) { next = t; kind = 'egg'; }
+    if (state.boost.until > t && state.boost.until < next) { next = state.boost.until; kind = null; }
+    produce(state, pool, t, next);
+    t = next;
+    if (kind === 'evo') finishEvolution(state, pool, who, events);
+    else if (kind === 'egg') {
+      const egg = spawnEgg(state, pool, t);
+      const spring = springTide(t).on;
+      pool.nextEgg = t + D.EGG_INTERVAL * (spring ? D.SPRING_TIDE.egg : 1);
+      if (egg) events.push({ type: 'egg', biome: pool.biome, id: egg.id, fam: egg.fam, at: t });
+    }
+  }
+}
+/** Advance the world to `now` (handles both live ticks and long offline gaps). Returns events. */
+export function tick(state, now) {
+  const events = [];
+  if (now < state.lastTick) { state.lastTick = now; return events; } // clock moved backwards: resync, grant nothing
+  const t0 = Math.max(state.lastTick, now - D.MAX_OFFLINE);
+  for (const pool of Object.values(state.pools)) advancePool(state, pool, t0, now, events);
+  state.lastTick = now;
+  return events;
+}
+
+// ================================================================ quests, daily, gifts
+export function noteQuest(state, ev, n) {
+  for (const q of state.quests.list) if (q.ev === ev && !q.done) { q.prog = Math.min(q.goal, q.prog + n); if (q.prog >= q.goal) q.done = true; }
+}
+export function ensureDaily(state, now) {
+  const dk = dayKey(now);
+  if (state.quests.day === dk) return false;
+  const rate = Math.max(30, totalRate(state, now));
+  const canEvolve = Object.values(state.pools).some((p) => p.creatures.some((c) => FORMS[c.form].stage < 3));
+  const pool = D.QUEST_TEMPLATES.filter((q) => q.id !== 'evolve' || canEvolve);
+  const list = [];
+  const bag = [...pool];
+  while (list.length < D.QUEST_COUNT && bag.length) {
+    const tpl = bag.splice(Math.floor(rand(state) * bag.length), 1)[0];
+    const goal = tpl.scale ? Math.max(100, roundTo(rate * 2, 10)) : randInt(state, tpl.min, tpl.max);
+    list.push({ id: tpl.id, ev: tpl.ev, goal, prog: 0, done: false, claimed: false, glass: tpl.glass, pearls: Math.max(50, roundTo(rate * 0.3, 10)) });
+  }
+  state.quests = { day: dk, list, chest: false };
+  return true;
+}
+export const questText = (q) => D.QUEST_TEMPLATES.find((t) => t.id === q.id).text(q.goal);
+export function claimQuest(state, i) {
+  const q = state.quests.list[i];
+  if (!q || !q.done || q.claimed) return { ok: false };
+  q.claimed = true;
+  state.cur.glass += q.glass;
+  state.cur.pearls += q.pearls;
+  addXp(state, 10, []);
+  return { ok: true, glass: q.glass, pearls: q.pearls };
+}
+export function claimQuestChest(state) {
+  const Q = state.quests;
+  if (Q.chest || !Q.list.length || !Q.list.every((q) => q.claimed)) return { ok: false };
+  Q.chest = true;
+  state.cur.glass += D.QUEST_ALL_BONUS.glass;
+  state.cur.tokens += D.QUEST_ALL_BONUS.tokens;
+  return { ok: true, ...D.QUEST_ALL_BONUS };
+}
+export function dailyAvailable(state, now) { return state.daily.last !== dayNum(now); }
+export function claimDaily(state, now) {
+  const today = dayNum(now), D0 = state.daily;
+  if (D0.last === today) return { ok: false };
+  const gap = today - D0.last;
+  let saved = false;
+  if (gap === 1) D0.n++;
+  else if (gap === 2 && D0.shield > 0) { D0.n++; D0.shield = 0; saved = true; }
+  else D0.n = 1;
+  if (D0.n % 7 === 0) D0.shield = 1;
+  D0.last = today;
+  state.stats.days++;
+  const r = D.DAILY_REWARDS[(D0.n - 1) % 7];
+  const out = { ok: true, n: D0.n, day: (D0.n - 1) % 7, saved, label: r.label };
+  if (r.pearlsHours) { out.pearls = Math.max(100, Math.round(totalRate(state, now) * r.pearlsHours)); state.cur.pearls += out.pearls; }
+  if (r.glass) { out.glass = r.glass; state.cur.glass += r.glass; }
+  if (r.tokens) { out.tokens = r.tokens; state.cur.tokens += r.tokens; }
+  return out;
+}
+export function giftAvailable(state, now) { return state.gift.key !== giftWindow(now).key; }
+export function claimGift(state, now) {
+  const w = giftWindow(now);
+  if (state.gift.key === w.key) return { ok: false };
+  state.gift.key = w.key;
+  state.stats.gifts++;
+  noteQuest(state, 'gift', 1);
+  const r = rand(state), rate = totalRate(state, now);
+  let out = { ok: true, window: w.name };
+  if (r < 0.6) { out.pearls = Math.max(80, Math.round(rate * (0.5 + rand(state)))); state.cur.pearls += out.pearls; }
+  else if (r < 0.85) { out.glass = randInt(state, 2, 4); state.cur.glass += out.glass; }
+  else if (r < 0.94) { out.tokens = 1; state.cur.tokens += 1; }
+  else {
+    const pool = state.pools.tide;
+    const egg = population(pool) < popCap(state, pool) ? spawnEgg(state, pool, now, { warm: 0 }) : null;
+    if (egg) out.egg = egg.id; else { out.glass = 3; state.cur.glass += 3; }
+  }
+  addXp(state, 5, []);
+  return out;
+}
+
+// ================================================================ shop
+export function decorPrice(id) { return DECOR[id].price || null; }
+export function buyDecor(state, id) {
+  const d = DECOR[id];
+  if (!d || state.own[id]) return fail('owned');
+  if (d.pack || !d.price) return fail('pack');
+  if (d.price.pearls) { if (state.cur.pearls < d.price.pearls) return fail('pearls', { need: d.price.pearls }); state.cur.pearls -= d.price.pearls; }
+  else { if (state.cur.glass < d.price.glass) return fail('glass', { need: d.price.glass }); state.cur.glass -= d.price.glass; }
+  state.own[id] = true;
+  return { ok: true };
+}
+export function equip(state, id) {
+  const d = DECOR[id];
+  if (!d || !state.own[id]) return false;
+  if (d.kind === 'skin') state.equip.skin = id;
+  else if (d.kind === 'fx') state.equip.fx = id;
+  else return false;
+  return true;
+}
+export function buyBoost(state, id, now) {
+  const b = D.BOOSTS[id];
+  if (!b) return fail('nope');
+  if (state.cur.glass < b.glass) return fail('glass', { need: b.glass });
+  if (b.ff) {
+    const rate = totalRate(state, now);
+    if (rate <= 0) return fail('nothing');
+    state.cur.glass -= b.glass;
+    const pearls = Math.round(rate * b.ff);
+    state.cur.pearls += pearls;
+    return { ok: true, pearls };
+  }
+  if (b.mult) {
+    state.cur.glass -= b.glass;
+    state.boost = { until: Math.max(now, state.boost.until) + b.dur, mult: b.mult };
+    return { ok: true, until: state.boost.until };
+  }
+  if (b.egg) {
+    const pool = state.pools.tide;
+    if (population(pool) >= popCap(state, pool)) return fail('full');
+    const egg = spawnEgg(state, pool, now, { warm: 0 });
+    if (!egg) return fail('nospot');
+    state.cur.glass -= b.glass;
+    return { ok: true, egg: egg.id };
+  }
+  return fail('nope');
+}
+
+/** The Deep Ocean starts with a small trench, a glowstone and an egg about to hatch, so the first minute is rewarding. */
+function starterDeepPool(state, now) {
+  const p = newPool('deep', now);
+  const cx = Math.floor(p.w / 2) - 1, cy = Math.floor(p.h / 2) - 1;
+  for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) tileAt(p, cx + dx, cy + dy).w = 2;
+  tileAt(p, cx - 1, cy).p = 'glowstone';
+  tileAt(p, cx + 2, cy + 1).p = 'vent';
+  p.nextEgg = now + 20 * MIN;
+  spawnEgg(state, p, now, { fam: 'angler', warm: 12e3 });
+  bump(p);
+  return p;
+}
+/** Grant a purchase exactly once. opts.restore skips one-off glass bonuses. */
+export function applyProduct(state, productId, txId, now, opts = {}) {
+  const P = PRODUCTS[productId];
+  if (!P) return fail('unknown');
+  if (txId && state.iap.done[txId]) return { ok: true, dup: true };
+  const out = { ok: true, product: productId, glass: 0 };
+  if (P.type === 'consumable') {
+    state.cur.glass += P.glass; out.glass = P.glass;
+  } else {
+    let already = false;
+    if (P.deep) { already = state.iap.deep; state.iap.deep = true; if (!state.pools.deep) state.pools.deep = starterDeepPool(state, now); }
+    else if (P.hourglass) { already = state.iap.hourglass; state.iap.hourglass = true; }
+    else if (P.starter) { already = state.iap.starter; state.iap.starter = true; }
+    else if (P.pack) { already = !!state.iap.packs[P.pack]; state.iap.packs[P.pack] = true; }
+    const items = P.pack ? D.PACKS[P.pack].items : P.items || [];
+    for (const it of items) state.own[it] = true;
+    if (!already && !opts.restore && P.glass) { state.cur.glass += P.glass; out.glass = P.glass; }
+    out.dup = already;
+  }
+  if (txId) {
+    state.iap.done[txId] = now;
+    const keys = Object.keys(state.iap.done);
+    if (keys.length > 300) for (const k of keys.slice(0, keys.length - 300)) delete state.iap.done[k];
+  }
+  return out;
+}
