@@ -20,14 +20,14 @@ sample:
     heading: "What you get"
     text: "Your words, with the details filled in."
     date: "Sat, Sep 26 · 7:42 AM"
-    quote: "Fog lifting off the ridge. Legs feel heavy on the climb, but the view is worth it."
+    quote: "Fog lifting off the ridge. Legs feel strong today and the view is unreal. So happy I came out."
     tags:
         - label: Route
           value: "Ridge Loop · 6.2 mi"
         - label: Weather
-          value: "48°F, clearing"
+          value: "Foggy · 48°F"
         - label: Mood
-          value: "Determined, then happy"
+          value: "Happy"
 plus:
     heading: "Free to start"
     text: "Basic logging is free. Plus adds maps, insights, and a yearly recap book."

@@ -6,7 +6,7 @@ date: 2026-09-29T09:00:00.000Z
 
 *Last updated: September 29, 2026*
 
-This policy covers the Trail Notes website. It does not cover the Trail Notes app, which is not released yet. We will publish a separate policy for the app before it launches.
+This policy covers the Trail Notes website. The Trail Notes app has its own [app privacy policy](/app-privacy/).
 
 ## What we collect
 

@@ -1,12 +1,18 @@
-# Trail Notes landing site
+# Trail Notes
 
-Marketing site for **Trail Notes**, a voice-first journaling app for hikers and runners. It is built on the Hugo + Netlify CMS template described below.
+**Trail Notes** is a voice-first journaling app for hikers and runners.
+
+* [`mobile/`](mobile/): the iPhone and Android app (Expo, React Native). See its [README](mobile/README.md) and [launch checklist](mobile/store/CHECKLIST.md)
+* The rest of this repository: the marketing website, built on the Hugo + Netlify CMS template described below
+
+## Website
 
 * **Home** (`site/content/_index.md`): hero with waitlist signup, how it works, example entry, Plus teaser
 * **Features** (`site/content/features/_index.md`): free and Plus features, plus the pricing table. Prices are placeholders, so edit them before launch
 * **Journal** (`site/content/post/`): blog posts
 * **Contact** (`site/content/contact/_index.md`) and a **Thanks** page shown after either form is submitted
 * **Privacy** (`site/content/privacy.md`): describes what this website collects. It does not cover the app. Have it reviewed and update it if you add analytics, change form handling, or launch the app
+* **App privacy** (`site/content/app-privacy.md`): the privacy policy for the mobile app in [`mobile/`](mobile/). The stores need this URL
 * **Waitlist and contact forms** use [Netlify Forms](https://docs.netlify.com/forms/setup/). Submissions appear in the Forms tab of your Netlify site after the first deploy
 * All pages are editable in Netlify CMS at `/admin/`
 
