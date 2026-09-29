@@ -1,0 +1,74 @@
+# XcodeGen spec TEMPLATE. Do not edit project.yml (it is generated and git-ignored).
+# Edit this file, then run: python3 tools/apply_config.py && cd ios && xcodegen generate
+name: NightPrecinct
+
+options:
+  bundleIdPrefix: "{{BUNDLE_ID}}"
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+targets:
+  NightPrecinct:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      # Swift sources, asset catalog and privacy manifest. The privacy manifest has no
+      # special file type, so XcodeGen puts it into Copy Bundle Resources.
+      - path: NightPrecinct
+        excludes:
+          # Info.plist is consumed through INFOPLIST_FILE, never copied as a resource.
+          - "Info.plist"
+          # StoreKit test files are for Xcode only and must never ship inside the app.
+          - "Products.storekit"
+          - "Products.storekit.tmpl"
+      # Show the StoreKit test file in the Xcode navigator without adding it to any build phase.
+      - path: NightPrecinct/Products.storekit
+        buildPhase: none
+      # The built game. A folder reference (blue folder) keeps the directory structure, so the
+      # app bundle contains a directory named "www" with index.html inside it.
+      - path: ../game/www
+        type: folder
+        group: Resources
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_NAME: "{{APP_NAME}}"
+        PRODUCT_MODULE_NAME: NightPrecinct
+        PRODUCT_BUNDLE_IDENTIFIER: "{{BUNDLE_ID}}"
+        MARKETING_VERSION: "{{VERSION}}"
+        CURRENT_PROJECT_VERSION: "{{BUILD}}"
+        DEVELOPMENT_TEAM: "{{TEAM_ID}}"
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        GENERATE_INFOPLIST_FILE: "NO"
+        INFOPLIST_FILE: NightPrecinct/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+        # SWIFT_VERSION is the Swift language MODE (valid: 4, 4.2, 5, 6), not the compiler
+        # version. "5.0" means Swift 5 mode, compiled by whatever Swift 5.9+ compiler Xcode has.
+        SWIFT_VERSION: "5.0"
+        SWIFT_STRICT_CONCURRENCY: minimal
+      configs:
+        Debug:
+          # The #if DEBUG block in GameViewController (Web Inspector) depends on this.
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG"
+
+schemes:
+  NightPrecinct:
+    build:
+      targets:
+        NightPrecinct: all
+    run:
+      config: Debug
+      # Local StoreKit testing: purchases in the simulator or on a device launched from Xcode
+      # use this file instead of the real App Store.
+      storeKitConfiguration: NightPrecinct/Products.storekit
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

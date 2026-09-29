@@ -1,0 +1,22 @@
+{
+  "_comment": "Fill these in once. tools/apply_config.py substitutes them into the legal pages, the App Store text, the iOS project and the game build. Nothing here is a real value yet.",
+  "APP_NAME": "Night Precinct",
+  "APP_SUBTITLE": "Idle Police, Fire & EMS Tycoon",
+  "BUNDLE_ID": "com.yourcompany.nightprecinct",
+  "TEAM_ID": "XXXXXXXXXX",
+  "COMPANY_NAME": "[YOUR COMPANY LEGAL NAME]",
+  "COMPANY_ADDRESS": "[STREET ADDRESS, CITY, STATE/REGION, POSTAL CODE, COUNTRY]",
+  "CONTACT_EMAIL": "support@example.com",
+  "PRIVACY_EMAIL": "privacy@example.com",
+  "WEBSITE_URL": "https://example.com/night-precinct",
+  "SUPPORT_URL": "https://example.com/night-precinct/support.html",
+  "PRIVACY_URL": "https://example.com/night-precinct/privacy.html",
+  "TERMS_URL": "https://example.com/night-precinct/terms.html",
+  "PURCHASE_TERMS_URL": "https://example.com/night-precinct/purchases.html",
+  "ODDS_URL": "https://example.com/night-precinct/odds.html",
+  "GOVERNING_LAW": "[STATE OR COUNTRY WHOSE LAW GOVERNS]",
+  "EFFECTIVE_DATE": "September 29, 2026",
+  "VERSION": "1.0.0",
+  "BUILD": "1",
+  "NOTICES_URL": "https://example.com/night-precinct/notices.html"
+}

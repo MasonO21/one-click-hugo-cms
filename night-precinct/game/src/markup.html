@@ -1,0 +1,37 @@
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="sprite"></defs></svg>
+
+<div id="app">
+  <header class="hud">
+    <div class="siren-bar"></div>
+    <div class="hud-main">
+      <div class="rank">
+        <svg viewBox="0 0 24 24"><use href="#i-shield"/></svg>
+        <div><b id="rankName">Rookie</b><small id="rankSub">Medals 0</small></div>
+      </div>
+      <div class="funds"><div class="funds-num" id="funds">$0</div><div class="ips" id="ips">+0/s</div></div>
+      <button class="badge-btn" id="badgeBtn" aria-label="Get Gold Badges"><svg viewBox="0 0 24 24"><use href="#i-badge"/></svg><span id="badges">0</span><i>+</i></button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <section class="stage" id="stage">
+    <div class="scene-wrap" id="sceneWrap">
+      <canvas id="scene" aria-label="Night street scene with your officers making arrests"></canvas>
+      <div id="fugLayer"></div>
+      <div class="scene-tag" id="sceneTag">Downtown, 02:14</div>
+      <div class="scene-tag r" id="sceneRate">0 arrests/s</div>
+      <div class="scene-tag b" id="hint"></div>
+    </div>
+    <div class="tap-row">
+      <button class="arrest" id="arrestBtn"><span>Arrest!</span><small id="arrestVal">+$1 per tap</small></button>
+      <div class="combo"><span>Combo</span><b id="comboX">x1.0</b><i><em id="comboBar"></em></i></div>
+    </div>
+    <div class="ticker" id="ticker" aria-live="off"></div>
+  </section>
+
+  <main class="panel" id="panel"></main>
+
+  <nav class="nav" id="nav" role="tablist"></nav>
+</div>
+<div id="modal-root"></div>
+<div id="toasts"></div>

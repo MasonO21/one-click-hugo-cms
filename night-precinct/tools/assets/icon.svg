@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="80%">
+      <stop offset="0" stop-color="#1c2a6b"/>
+      <stop offset=".55" stop-color="#0e1430"/>
+      <stop offset="1" stop-color="#050818"/>
+    </radialGradient>
+    <radialGradient id="redglow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(150 110) scale(520)">
+      <stop offset="0" stop-color="#ff3d55" stop-opacity=".85"/><stop offset="1" stop-color="#ff3d55" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blueglow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(874 110) scale(520)">
+      <stop offset="0" stop-color="#3d8bff" stop-opacity=".85"/><stop offset="1" stop-color="#3d8bff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe27a"/><stop offset=".5" stop-color="#ffc53d"/><stop offset="1" stop-color="#b7810f"/>
+    </linearGradient>
+    <linearGradient id="goldEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff2b8"/><stop offset="1" stop-color="#8a5c05"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16225a"/><stop offset="1" stop-color="#0a1136"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1136" stop-opacity="0"/><stop offset="1" stop-color="#03050f" stop-opacity=".95"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#redglow)"/>
+  <rect width="1024" height="1024" fill="url(#blueglow)"/>
+  <!-- skyline -->
+  <g fill="#050818">
+    <path d="M0 1024V760h58v-70h70v96h44v-140h64v120h50v-84h52v110h40V640h60v130h50v-96h58v100h56v-150h64v190h56v-92h52v146h50V690h60v334z"/>
+  </g>
+  <g fill="#ffd21f" opacity=".85">
+    <rect x="80" y="800" width="14" height="18"/><rect x="104" y="840" width="14" height="18"/><rect x="200" y="760" width="14" height="18"/>
+    <rect x="232" y="820" width="14" height="18"/><rect x="330" y="800" width="14" height="18"/><rect x="420" y="830" width="14" height="18"/>
+    <rect x="560" y="760" width="14" height="18"/><rect x="640" y="810" width="14" height="18"/><rect x="742" y="740" width="14" height="18"/>
+    <rect x="800" y="830" width="14" height="18"/><rect x="900" y="790" width="14" height="18"/>
+  </g>
+  <rect y="640" width="1024" height="384" fill="url(#sky)"/>
+  <!-- badge glow -->
+  <ellipse cx="512" cy="540" rx="330" ry="360" fill="#ffc53d" opacity=".28" filter="url(#soft)"/>
+  <!-- shield -->
+  <path d="M512 130 C600 190 720 205 810 200 C818 380 800 560 720 690 C660 780 580 850 512 890 C444 850 364 780 304 690 C224 560 206 380 214 200 C304 205 424 190 512 130Z" fill="url(#goldEdge)"/>
+  <path d="M512 168 C592 222 696 236 776 232 C782 392 764 548 694 664 C640 748 570 812 512 848 C454 812 384 748 330 664 C260 548 242 392 248 232 C328 236 432 222 512 168Z" fill="url(#gold)"/>
+  <path d="M512 214 C580 258 664 272 730 270 C734 404 720 530 662 630 C620 700 566 752 512 784 C458 752 404 700 362 630 C304 530 290 404 294 270 C360 272 444 258 512 214Z" fill="url(#face)"/>
+  <!-- star -->
+  <g transform="translate(512 478)">
+    <path d="M0 -190 L52 -62 L190 -54 L84 34 L118 168 L0 94 L-118 168 L-84 34 L-190 -54 L-52 -62Z" fill="url(#gold)" stroke="#fff2b8" stroke-width="6" stroke-linejoin="round" transform="scale(.82)"/>
+    <circle r="46" fill="#0a1136" stroke="#ffe27a" stroke-width="8" transform="translate(0 6)"/>
+    <path d="M-16 6 L-4 20 L22 -12" fill="none" stroke="#39d98a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 6)"/>
+  </g>
+  <!-- rivets -->
+  <g fill="#fff2b8"><circle cx="512" cy="196" r="9"/><circle cx="270" cy="250" r="8"/><circle cx="754" cy="250" r="8"/></g>
+  <!-- siren light bar under the badge -->
+  <g>
+    <rect x="352" y="900" width="320" height="34" rx="17" fill="#070a19"/>
+    <rect x="360" y="906" width="152" height="22" rx="11" fill="#ff3d55"/>
+    <rect x="512" y="906" width="152" height="22" rx="11" fill="#3d8bff"/>
+  </g>
+</svg>

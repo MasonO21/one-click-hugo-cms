@@ -1,0 +1,13 @@
+{
+  "name": "night-precinct-tests",
+  "private": true,
+  "description": "Browser tests, monkey test, layout audit, performance profile and balance simulator for the game.",
+  "scripts": {
+    "build": "node -e \"require('./lib').build()\"",
+    "test": "node run-all.js",
+    "sim": "node sim/f2p.js regular_mobile"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

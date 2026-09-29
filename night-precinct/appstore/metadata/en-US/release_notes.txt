@@ -1,0 +1,9 @@
+Welcome to {{APP_NAME}} 1.0!
+
+• Three worlds to work through: Night Precinct (police), Ember Station (fire) and Golden Hour (EMS, hard mode), with 12 ranks in each.
+• Hire crews, buy upgrades, run timed cases and chase bounties.
+• Earn while you are away with offline earnings.
+• Free rewards: Rally Boost, Supply Drop and the Daily Roll Call.
+• No ads, no login, and it plays offline.
+
+Questions or feedback? Visit {{SUPPORT_URL}}

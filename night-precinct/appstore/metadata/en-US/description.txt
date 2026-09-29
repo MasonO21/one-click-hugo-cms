@@ -1,0 +1,46 @@
+Run the night shift! Tap to earn, hire crews, buy upgrades and climb the ranks in three cartoon worlds: police, fire and EMS. {{APP_NAME}} is an offline idle tycoon. Play in short bursts, or let your crews work while you are away.
+
+HOW IT PLAYS
+• Tap to earn cash, hire crews that keep earning when you are not tapping, and buy upgrades that multiply your income.
+• Send squads out on timed cases and chase bounty targets for bonus rewards.
+• Promote to the next rank: crews, upgrades and cash reset, but Medals boost your income for good.
+• Offline earnings are waiting when you come back (50% pay, 2 hour cap to start).
+
+THREE WORLDS, 12 RANKS EACH
+• Night Precinct (police): crooks get cuffed. "BUSTED".
+• Ember Station (fire): blazes get put out. "DOUSED".
+• Golden Hour (EMS): the hard-mode world. Patients get treated. "SAVED".
+Play the worlds in order and reach the top rank (12 ranks each) to clear one. Cartoon style, no blood, no injuries shown.
+
+FREE REWARDS, NO ADS
+• Rally Boost: free 2x income for 15 minutes, every 3 hours.
+• Supply Drop: one free standard crate every 6 hours.
+• Daily Roll Call: a 7-day streak calendar. Restore a broken streak for 15 Gold Badges, or restart it free.
+• Achievements, timed cases, bounties and the free Career Pass track can also pay out Gold Badges.
+
+RANDOM CRATES, ODDS PUBLISHED
+Crates hold randomized rewards: cash, Gold Badges and gear that gives permanent income bonuses. Three tiers: Standard, Elite, Legend. Earn crates free or buy them with Gold Badges. Odds for every crate are shown in the app and at {{ODDS_URL}}. Elite and Legend crates guarantee an Epic-or-better gear item within every 10 opens. Buying crates with Gold Badges is turned off in Belgium.
+
+NO LOGIN, NO TRACKING, WORKS OFFLINE
+• No account, sign-in or email. No tracking, no analytics.
+• The game makes no network requests of its own. Only Apple's App Store connects, when you buy or restore.
+• Progress is saved on your device only, with no cloud sync.
+
+OPTIONAL PURCHASES
+{{APP_NAME}} is free to download. Optional purchases use Apple In-App Purchase:
+• Gold Badge packs. Gold Badges are the premium in-game currency: no cash value, not transferable or exchangeable, and also earnable in the game.
+• Evidence Safe; three Daily Deals (each can be bought once a day); Rookie Starter Pack (one-time, first 48 hours); Career Pass Premium (Season 1), the 30-tier premium reward track.
+• Auto-Clicker: taps for you 8 times per second at 1.5x power in every world, with an on/off toggle. Combo Auto-Clicker: each auto-tap also builds your tap combo up to x3.0.
+Purchases can speed up progress. Money spent also raises your permanent Precinct Patron rank, which adds an income bonus.
+
+CHIEF'S CLUB (OPTIONAL WEEKLY SUBSCRIPTION)
+Chief's Club is an auto-renewing weekly subscription. Benefits: all income x1.5; offline earnings at 100% with an offline cap of at least 8 hours; +1 job (squad) slot; bounties collect automatically; 25 Gold Badges every day.
+Price: 4.99 USD per week. Prices vary by country and currency; the price shown in the app at purchase is what you pay.
+• Payment is charged to your Apple Account at confirmation of purchase.
+• The subscription renews automatically each week unless you cancel at least 24 hours before the end of the current period. Renewal is charged within 24 hours before the end of the period, at the same price.
+• Manage or cancel in your Apple Account settings (Settings > your name > Subscriptions) or from Settings in the app. Deleting the app does not cancel. After cancelling, you keep Chief's Club until the paid period ends.
+
+Terms of Use: {{TERMS_URL}}
+Privacy Policy: {{PRIVACY_URL}}
+
+{{APP_NAME}} is fiction and is not affiliated with or endorsed by any real police, fire or emergency medical agency.

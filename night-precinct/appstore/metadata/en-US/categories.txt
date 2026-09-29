@@ -1,0 +1,21 @@
+CATEGORIES (App Store Connect > App Information)
+Everything below is my understanding of the current choices. Verify in App Store Connect that these options and the "up to two game subcategories" rule are still what the form offers.
+
+PRIMARY CATEGORY
+Games
+
+GAME SUBCATEGORIES (App Store Connect lets a Games app pick up to two)
+1. Simulation   (matches docs/FACTS.md: Games > Simulation)
+2. Strategy     (matches docs/FACTS.md: secondary Strategy)
+
+Other subcategory choices I believe Apple offers under Games (Verify in App Store Connect):
+Action, Adventure, Board, Card, Casino, Casual, Family, Music, Puzzle, Racing, Role Playing, Simulation, Sports, Strategy, Trivia, Word.
+
+Alternatives if you prefer a different pair:
+- Casual is a reasonable swap for Strategy. Idle games are commonly filed under Casual or Simulation.
+- Do NOT choose Casino. The game has no casino games, and the label would invite gambling scrutiny and a higher rating.
+- Do NOT choose Family. It reads as directed to children, and this app is not a Kids app (see AGE_RATING.md).
+
+SECONDARY CATEGORY (optional)
+Leave blank, or pick the closest non-Games category (Entertainment is the nearest fit I know of).
+Verify in App Store Connect whether a Games app may use Games again as a secondary category and which categories are offered.
