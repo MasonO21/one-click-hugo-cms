@@ -24,7 +24,15 @@ export interface Palette {
   hero: string;
   onHero: string;
   danger: string;
+  /** Text on a danger-coloured background (the "Thrown out" swipe). */
+  onDanger: string;
   freezer: string;
+  /** The Undo bar: dark in light mode, light in dark mode. */
+  snackBg: string;
+  snackText: string;
+  snackAction: string;
+  /** Off-state switch track; needs 3:1 against the card it sits on. */
+  switchOff: string;
   urgency: Record<Urgency, UrgencyColors>;
 }
 
@@ -43,7 +51,12 @@ export const lightPalette: Palette = {
   hero: '#12382A',
   onHero: '#FFFFFF',
   danger: '#C93B3B',
+  onDanger: '#FFFFFF',
   freezer: '#2F7DB8',
+  snackBg: '#14261B',
+  snackText: '#FFFFFF',
+  snackAction: '#7FD9A1',
+  switchOff: '#7E8B83',
   urgency: {
     expired: { solid: '#D64545', fg: '#A82323', tint: '#FCE7E5' },
     today: { solid: '#EE7A2B', fg: '#A5410C', tint: '#FDEBDC' },
@@ -68,7 +81,12 @@ export const darkPalette: Palette = {
   hero: '#12382A',
   onHero: '#FFFFFF',
   danger: '#FF8A85',
+  onDanger: '#2A0806',
   freezer: '#7FB8E6',
+  snackBg: '#EAF2EC',
+  snackText: '#0D1410',
+  snackAction: '#0F6B34',
+  switchOff: '#6F7F75',
   urgency: {
     expired: { solid: '#F0605A', fg: '#FF9F99', tint: '#3A1D1B' },
     today: { solid: '#F58B45', fg: '#FFB984', tint: '#3B2415' },

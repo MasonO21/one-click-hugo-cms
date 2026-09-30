@@ -1,5 +1,6 @@
 import { daysBetween, todayISO } from './dates';
-import { daysLeft } from './expiry';
+import { daysLeft, sortByExpiry } from './expiry';
+import { uniqueUses } from './meals';
 import { demoMeals, demoScan } from './demo';
 import { newId } from './scan';
 import type { Meal, MealPrefs, PantryItem, ScanResponse, StorageLocation } from './types';
@@ -28,9 +29,11 @@ export class ApiError extends Error {
   }
 }
 
-async function post<T>(path: string, userId: string, body: unknown, timeoutMs: number): Promise<T> {
+async function post<T>(path: string, userId: string, body: unknown, timeoutMs: number, signal?: AbortSignal): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // The caller can cancel too (the person tapped Cancel or left the screen).
+  signal?.addEventListener('abort', () => controller.abort());
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
@@ -70,9 +73,10 @@ export interface ScanRequest {
   location: StorageLocation;
   /** Base64 JPEG data, no data-URL prefix. */
   images: string[];
+  signal?: AbortSignal;
 }
 
-export async function scanPhotos({ userId, location, images }: ScanRequest): Promise<ScanResponse> {
+export async function scanPhotos({ userId, location, images, signal }: ScanRequest): Promise<ScanResponse> {
   if (isDemoMode) return demoScan(location);
   const locale = Intl.DateTimeFormat().resolvedOptions().locale;
   const res = await post<Partial<ScanResponse>>(
@@ -85,6 +89,7 @@ export async function scanPhotos({ userId, location, images }: ScanRequest): Pro
       images: images.map((data) => ({ mediaType: 'image/jpeg', data })),
     },
     90_000,
+    signal,
   );
   if (!Array.isArray(res.items)) throw new ApiError('bad_response', 'Unexpected response from the server.');
   return { items: res.items, notes: res.notes ?? null };
@@ -111,9 +116,14 @@ interface RawMeal {
 const strings = (v: unknown, max: number): string[] =>
   Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string' && s.trim() !== '').slice(0, max) : [];
 
-export async function fetchMeals({ userId, items, prefs, exclude = [] }: MealsRequest): Promise<Meal[]> {
-  if (isDemoMode) return demoMeals(items, prefs);
+/** The server accepts at most this many ingredients per request (server/src/schemas.ts). */
+export const MAX_MEAL_ITEMS = 80;
+
+export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: MealsRequest): Promise<Meal[]> {
+  if (isDemoMode) return demoMeals(all, prefs);
   const now = new Date();
+  // The soonest to expire matter most; a very full pantry must not make every request fail.
+  const items = sortByExpiry(all).slice(0, MAX_MEAL_ITEMS);
   const res = await post<{ meals?: RawMeal[] }>(
     '/v1/meals',
     userId,
@@ -140,7 +150,7 @@ export async function fetchMeals({ userId, items, prefs, exclude = [] }: MealsRe
       summary: typeof m.summary === 'string' ? m.summary : '',
       minutes: typeof m.minutes === 'number' && m.minutes > 0 ? Math.round(m.minutes) : 30,
       servings: typeof m.servings === 'number' && m.servings > 0 ? Math.round(m.servings) : prefs.servings,
-      uses: strings(m.uses, 12),
+      uses: uniqueUses(strings(m.uses, 12)),
       extras: strings(m.extras, 15),
       steps: strings(m.steps, 12),
       source: 'ai' as const,
@@ -148,7 +158,10 @@ export async function fetchMeals({ userId, items, prefs, exclude = [] }: MealsRe
 }
 
 export function friendlyError(e: unknown): { message: string; paywall: boolean } {
-  if (e instanceof ApiError) return { message: e.message, paywall: e.code === 'payment_required' };
+  if (e instanceof ApiError) {
+    if (e.code === 'bad_request') return { message: 'That request could not be processed. Check your items and try again.', paywall: false };
+    return { message: e.message, paywall: e.code === 'payment_required' };
+  }
   return { message: 'Something went wrong. Please try again.', paywall: false };
 }
 

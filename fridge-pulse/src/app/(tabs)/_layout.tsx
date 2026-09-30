@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router/js-tabs';
 import { Platform } from 'react-native';
+import { useShopping } from '../../store/shopping';
 import { useTheme } from '../../theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -8,12 +9,14 @@ type IconName = keyof typeof Ionicons.glyphMap;
 const TABS: { name: string; title: string; icon: IconName; iconOn: IconName }[] = [
   { name: 'index', title: 'Pulse', icon: 'pulse-outline', iconOn: 'pulse' },
   { name: 'inventory', title: 'Items', icon: 'basket-outline', iconOn: 'basket' },
+  { name: 'list', title: 'List', icon: 'cart-outline', iconOn: 'cart' },
   { name: 'meals', title: 'Meals', icon: 'restaurant-outline', iconOn: 'restaurant' },
   { name: 'settings', title: 'Settings', icon: 'settings-outline', iconOn: 'settings' },
 ];
 
 export default function TabsLayout() {
   const { c } = useTheme();
+  const toBuy = useShopping((s) => s.items.filter((i) => !i.checked).length);
   return (
     <Tabs
       screenOptions={{
@@ -36,6 +39,8 @@ export default function TabsLayout() {
           options={{
             title: t.title,
             tabBarButtonTestID: `tab-${t.name}`,
+            tabBarBadge: t.name === 'list' && toBuy > 0 ? toBuy : undefined,
+            tabBarBadgeStyle: { backgroundColor: c.primary, color: c.onPrimary, fontSize: 11, fontWeight: '700' },
             tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? t.iconOn : t.icon} size={size} color={color} />,
           }}
         />

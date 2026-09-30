@@ -31,7 +31,7 @@ export async function demoScan(location: StorageLocation): Promise<ScanResponse>
       item('Greek yogurt', 'dairy', '2 tubs', 12, 'high', 12),
       item('Chicken thighs', 'meat', '4 pieces', 2, 'medium'),
       item('Eggs', 'dairy', '10', 21, 'high'),
-      item('Cheddar cheese', 'dairy', '1 block', 40, 'medium'),
+      item('Cheddar cheese', 'dairy', '1 block', 21, 'medium'),
       item('Bell peppers', 'produce', '3', 8, 'high'),
       item('Strawberries', 'produce', '1 punnet', 3, 'low'),
       item('Leftover pasta', 'leftovers', '1 container', 3, 'low'),
@@ -42,12 +42,12 @@ export async function demoScan(location: StorageLocation): Promise<ScanResponse>
       item('Basmati rice', 'grains', '1 bag', 365, 'high'),
       item('Bananas', 'produce', '5', 4, 'medium'),
       item('Sourdough bread', 'bakery', '1 loaf', 3, 'medium'),
-      item('Peanut butter', 'condiments', '1 jar', 150, 'high'),
+      item('Peanut butter', 'condiments', '1 jar', 90, 'high'),
     ],
     freezer: [
-      item('Frozen peas', 'produce', '1 bag', 240, 'high'),
-      item('Ground beef', 'meat', '500 g', 90, 'medium'),
-      item('Salmon fillets', 'seafood', '2', 120, 'medium'),
+      item('Frozen peas', 'produce', '1 bag', 300, 'high'),
+      item('Ground beef', 'meat', '500 g', 120, 'medium'),
+      item('Salmon fillets', 'seafood', '2', 60, 'medium'),
     ],
   };
   return {

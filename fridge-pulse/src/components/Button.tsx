@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { radius, useTheme } from '../theme';
+import { PressableScale } from './motion';
 import { Text } from './Text';
 
 interface Props {
@@ -27,8 +28,9 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
   const off = disabled || loading;
 
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
+      containerStyle={style}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
@@ -41,7 +43,7 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
         styles.base,
         size === 'sm' ? styles.sm : styles.md,
         { backgroundColor: pressed ? palette.pressed : palette.bg, borderColor: palette.border, opacity: off ? 0.55 : 1 },
-        style,
+        styles.fill,
       ]}
     >
       {loading ? (
@@ -54,11 +56,13 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
           </Text>
         </>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
+  // Fills the animated wrapper, which takes the caller's layout style (width, minHeight, alignSelf).
+  fill: { flexGrow: 1 },
   base: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderRadius: radius.md },
   md: { minHeight: 54, paddingHorizontal: 20 },
   sm: { minHeight: 44, paddingHorizontal: 14, borderRadius: radius.sm },

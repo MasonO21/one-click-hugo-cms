@@ -1,14 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, LayoutAnimation, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { uniqueUses } from '../lib/meals';
 import type { Meal } from '../lib/types';
 import { radius, useTheme } from '../theme';
+import { Button } from './Button';
 import { Card } from './Card';
+import { FadeIn, NATIVE_DRIVER, prefersReducedMotion, useAnimatedValue } from './motion';
 import { Text } from './Text';
 
-export function MealCard({ meal, defaultOpen = false }: { meal: Meal; defaultOpen?: boolean }) {
+interface Props {
+  meal: Meal;
+  defaultOpen?: boolean;
+  /** "I made this": marks the tracked ingredients used. Gets the button's centre for a celebration. */
+  onCooked?: (at?: { x: number; y: number }) => void;
+}
+
+export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
   const { c } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
+  const turn = useAnimatedValue(defaultOpen ? 1 : 0);
+  const cookButton = useRef<View>(null);
+  const uses = uniqueUses(meal.uses);
+
+  useEffect(() => {
+    const a = Animated.timing(turn, { toValue: open ? 1 : 0, duration: prefersReducedMotion() ? 0 : 220, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE_DRIVER });
+    a.start();
+    return () => a.stop();
+  }, [open, turn]);
+
+  const toggle = () => {
+    if (Platform.OS !== 'web' && !prefersReducedMotion()) LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
+    setOpen((o) => !o);
+  };
 
   return (
     <Card style={{ padding: 0, overflow: 'hidden' }}>
@@ -16,8 +40,8 @@ export function MealCard({ meal, defaultOpen = false }: { meal: Meal; defaultOpe
         testID={`meal-${meal.id}`}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        onPress={() => setOpen((o) => !o)}
-        style={styles.head}
+        onPress={toggle}
+        style={({ pressed }) => [styles.head, pressed && { backgroundColor: c.surfaceAlt }]}
       >
         <View style={{ flex: 1, gap: 6 }}>
           <Text variant="heading">{meal.title}</Text>
@@ -45,10 +69,10 @@ export function MealCard({ meal, defaultOpen = false }: { meal: Meal; defaultOpe
               </Text>
             ) : null}
           </View>
-          {meal.uses.length > 0 ? (
+          {uses.length > 0 ? (
             <View style={styles.uses}>
-              {meal.uses.map((u) => (
-                <View key={u} style={[styles.pill, { backgroundColor: c.primaryTint }]}>
+              {uses.map((u, i) => (
+                <View key={`${i}-${u}`} style={[styles.pill, { backgroundColor: c.primaryTint }]}>
                   <Text variant="caption" color={c.primary} style={{ fontWeight: '700' }}>
                     {u}
                   </Text>
@@ -57,11 +81,13 @@ export function MealCard({ meal, defaultOpen = false }: { meal: Meal; defaultOpe
             </View>
           ) : null}
         </View>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={c.inkFaint} />
+        <Animated.View style={{ transform: [{ rotate: turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}>
+          <Ionicons name="chevron-down" size={20} color={c.inkFaint} />
+        </Animated.View>
       </Pressable>
 
       {open ? (
-        <View style={[styles.body, { borderTopColor: c.border }]}>
+        <FadeIn distance={6} style={[styles.body, { borderTopColor: c.border }]}>
           {meal.extras.length > 0 ? (
             <View style={{ gap: 4 }}>
               <Text variant="label" muted>
@@ -85,7 +111,25 @@ export function MealCard({ meal, defaultOpen = false }: { meal: Meal; defaultOpe
               </View>
             ))}
           </View>
-        </View>
+          {onCooked && uses.length > 0 ? (
+            <View ref={cookButton} collapsable={false}>
+              <Button
+                testID={`cooked-${meal.id}`}
+                label="I made this"
+                icon="restaurant"
+                variant="secondary"
+                size="sm"
+                onPress={() => {
+                  // measureInWindow answers through its callback (and returns nothing), so call once there.
+                  const view = cookButton.current;
+                  if (view) view.measureInWindow((x, y, w, h) => onCooked(w > 0 ? { x: x + w / 2, y: y + h / 2 } : undefined));
+                  else onCooked();
+                }}
+                style={{ alignSelf: 'flex-start' }}
+              />
+            </View>
+          ) : null}
+        </FadeIn>
       ) : null}
     </Card>
   );

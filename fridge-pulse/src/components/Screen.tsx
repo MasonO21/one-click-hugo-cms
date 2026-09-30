@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSnackbar } from '../store/snackbar';
 import { useTheme } from '../theme';
 
 interface Props {
@@ -17,6 +18,13 @@ interface Props {
 export function Screen({ children, scroll = true, edges = ['top'], contentStyle, footer }: Props) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
+  // A screen with a bottom button bar tells the message bar to sit above it, and forgets on the way out.
+  const footerId = hash(useId());
+  const hasFooter = !!footer;
+  useEffect(() => {
+    if (!hasFooter) return;
+    return () => useSnackbar.getState().clearFooter(footerId);
+  }, [hasFooter, footerId]);
   const body = scroll ? (
     <ScrollView
       contentContainerStyle={[styles.content, contentStyle]}
@@ -33,12 +41,21 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
     <SafeAreaView style={[styles.flex, { backgroundColor: c.bg }]} edges={edges}>
       <View style={[styles.flex, styles.center]}>{body}</View>
       {footer ? (
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12), backgroundColor: c.bg, borderTopColor: c.border }]}>
+        <View
+          onLayout={(e) => useSnackbar.getState().setFooter(footerId, e.nativeEvent.layout.height)}
+          style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12), backgroundColor: c.bg, borderTopColor: c.border }]}
+        >
           {footer}
         </View>
       ) : null}
     </SafeAreaView>
   );
+}
+
+function hash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
 }
 
 const styles = StyleSheet.create({

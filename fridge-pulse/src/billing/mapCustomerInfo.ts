@@ -5,6 +5,7 @@ import { ENTITLEMENT_ID, NO_ENTITLEMENT, type Entitlement } from './trial';
 export interface EntitlementLike {
   periodType: string;
   expirationDate: string | null;
+  willRenew?: boolean;
 }
 export interface CustomerInfoLike {
   entitlements: {
@@ -27,9 +28,10 @@ export function mapCustomerInfo(info: CustomerInfoLike, now: Date = new Date()):
       status: live.periodType.toLowerCase() === 'trial' ? 'trial' : 'active',
       endsOn,
       daysRemaining: endsOn ? Math.max(0, daysBetween(todayISO(now), endsOn)) : null,
+      ...(typeof live.willRenew === 'boolean' ? { willRenew: live.willRenew } : {}),
     };
   }
   const past = info.entitlements.all[ENTITLEMENT_ID];
-  if (past) return { status: 'expired', endsOn: endDate(past), daysRemaining: 0 };
+  if (past) return { status: 'expired', endsOn: endDate(past), daysRemaining: 0, lapsed: past.periodType.toLowerCase() === 'trial' ? 'trial' : 'paid' };
   return NO_ENTITLEMENT;
 }

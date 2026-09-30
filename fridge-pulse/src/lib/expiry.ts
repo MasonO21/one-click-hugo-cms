@@ -25,7 +25,8 @@ export function expiryLabel(days: number): string {
   if (days === 1) return 'Tomorrow';
   if (days < 14) return `In ${days} days`;
   if (days < 60) return `In ${Math.round(days / 7)} weeks`;
-  return `In ${Math.round(days / 30)} months`;
+  if (days < 365) return `In ${Math.round(days / 30)} months`;
+  return 'In over a year';
 }
 
 export function active(items: PantryItem[]): PantryItem[] {
@@ -69,7 +70,9 @@ export function wasteStats(items: PantryItem[], sinceISO: string): WasteStats {
       continue;
     }
     used += 1;
-    if (daysBetween(item.resolvedOn, item.expiresOn) <= 3) rescued += 1;
+    // Used in its last three days, and not after its date had passed.
+    const spare = daysBetween(item.resolvedOn, item.expiresOn);
+    if (spare >= 0 && spare <= 3) rescued += 1;
   }
   return { used, wasted, rescued };
 }

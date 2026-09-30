@@ -1,21 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Animated, Easing, Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Easing, Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AiConsentModal } from '../components/AiConsentModal';
 import { Button } from '../components/Button';
 import { LOCATIONS, LOCATION_LABEL } from '../components/categories';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
 import { Logo } from '../components/Logo';
+import { FadeIn, NATIVE_DRIVER, useAnimatedValue, useReducedMotion } from '../components/motion';
 import { Screen } from '../components/Screen';
 import { Emoji, Text } from '../components/Text';
 import { friendlyError, isDemoMode, scanPhotos } from '../lib/api';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { encodePhoto, MAX_PHOTOS, pickPhotos, takePhoto, type Photo } from '../lib/photos';
+import { goBack } from '../lib/nav';
 import { toDrafts } from '../lib/scan';
 import type { StorageLocation } from '../lib/types';
-import { getProvider } from '../store/billing';
+import { getProvider, useBilling } from '../store/billing';
 import { useInventory } from '../store/inventory';
 import { useScanDraft } from '../store/scanDraft';
 import { useSettings } from '../store/settings';
@@ -27,44 +29,56 @@ const TIPS: Record<StorageLocation, string> = {
   pantry: 'Photograph one shelf at a time, front row facing the camera. Printed dates help a lot.',
 };
 
-// The native animation driver does not exist on web.
-const NATIVE_DRIVER = Platform.OS !== 'web';
+const SCAN_SIZE = 200;
 
 const STATUS = ['Reading labels...', 'Spotting fresh food...', 'Estimating how long it keeps...', 'Almost there...'];
 
-function Analyzing({ location }: { location: StorageLocation }) {
+/** The photo being read, with a scan line sweeping over it; or the beating logo when there is no photo. */
+function Analyzing({ location, photo, onCancel }: { location: StorageLocation; photo: Photo | undefined; onCancel: () => void }) {
   const { c } = useTheme();
-  const [pulse] = useState(() => new Animated.Value(0));
+  const still = useReducedMotion();
+  const sweep = useAnimatedValue(0);
   const [i, setI] = useState(0);
 
   useEffect(() => {
+    const t = setInterval(() => setI((n) => Math.min(n + 1, STATUS.length - 1)), 2500);
+    if (still || !photo) return () => clearInterval(t);
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: NATIVE_DRIVER }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: NATIVE_DRIVER }),
+        Animated.timing(sweep, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: NATIVE_DRIVER }),
+        Animated.timing(sweep, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: NATIVE_DRIVER }),
       ]),
     );
     loop.start();
-    const t = setInterval(() => setI((n) => Math.min(n + 1, STATUS.length - 1)), 2500);
     return () => {
       loop.stop();
       clearInterval(t);
     };
-  }, [pulse]);
-
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
-  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0] });
+  }, [sweep, still, photo]);
 
   return (
     <View style={[styles.analyzing, { backgroundColor: c.bg }]} testID="analyzing">
-      <View style={styles.logoWrap}>
-        <Animated.View style={[styles.ring, { backgroundColor: c.primary, opacity, transform: [{ scale: Animated.multiply(scale, 1.6) }] }]} />
-        <Animated.View style={{ transform: [{ scale }] }}>
-          <Logo size={88} />
-        </Animated.View>
-      </View>
+      {photo ? (
+        <View style={[styles.scanFrame, { borderColor: c.primary }]}>
+          <Image source={{ uri: photo.uri }} style={styles.scanPhoto} accessibilityLabel="Your photo" />
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.scanLine,
+              { backgroundColor: c.urgency.ok.solid, shadowColor: c.urgency.ok.solid, transform: [{ translateY: sweep.interpolate({ inputRange: [0, 1], outputRange: [0, SCAN_SIZE - 4] }) }] },
+            ]}
+          />
+        </View>
+      ) : (
+        <View style={styles.logoWrap}>
+          <Logo size={88} beat="quick" />
+        </View>
+      )}
       <Text variant="heading">Reading your {location}</Text>
-      <Text muted>{STATUS[i]}</Text>
+      <FadeIn key={i} distance={4}>
+        <Text muted>{STATUS[i]}</Text>
+      </FadeIn>
+      <Button testID="cancel-scan" label="Cancel" variant="ghost" size="sm" onPress={onCancel} style={{ marginTop: 12 }} />
     </View>
   );
 }
@@ -76,6 +90,9 @@ export default function Scan() {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [askConsent, setAskConsent] = useState(false);
+  // A scan in flight belongs to this screen: cancelling or leaving drops its result.
+  const inFlight = useRef<AbortController | null>(null);
+  useEffect(() => () => inFlight.current?.abort(), []);
 
   async function add(source: 'camera' | 'library') {
     setError(null);
@@ -100,11 +117,14 @@ export default function Scan() {
     }
     setAnalyzing(true);
     setError(null);
+    const controller = new AbortController();
+    inFlight.current = controller;
     try {
       // Demo mode returns sample items and never uploads, so skip the (pointless) photo encoding.
       const images = sample || isDemoMode ? [] : await Promise.all(photos.map(encodePhoto));
       const userId = await getProvider().getUserId();
-      const res = await scanPhotos({ userId, location, images });
+      const res = await scanPhotos({ userId, location, images, signal: controller.signal });
+      if (controller.signal.aborted) return;
       const drafts = toDrafts(res, location, useInventory.getState().items);
       if (drafts.length === 0) {
         setError(res.notes ?? 'No food found in those photos. Try a closer, brighter shot.');
@@ -113,13 +133,24 @@ export default function Scan() {
       useScanDraft.getState().start(location, drafts, res.notes);
       router.replace('/review');
     } catch (e) {
-      setError(friendlyError(e).message);
+      if (controller.signal.aborted) return;
+      const { message, paywall } = friendlyError(e);
+      setError(message);
+      // The trial ran out mid-session: re-check, and the paywall takes over if so.
+      if (paywall) void useBilling.getState().refresh();
     } finally {
-      setAnalyzing(false);
+      if (inFlight.current === controller) inFlight.current = null;
+      if (!controller.signal.aborted) setAnalyzing(false);
     }
   }
 
-  if (analyzing) return <Analyzing location={location} />;
+  const cancel = () => {
+    inFlight.current?.abort();
+    inFlight.current = null;
+    setAnalyzing(false);
+  };
+
+  if (analyzing) return <Analyzing location={location} photo={photos[0]} onCancel={cancel} />;
 
   return (
     <>
@@ -159,8 +190,10 @@ export default function Scan() {
         <Text variant="title" accessibilityRole="header">
           Scan
         </Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => router.back()} hitSlop={10} style={[styles.close, { backgroundColor: c.surfaceAlt }]}>
-          <Ionicons name="close" size={20} color={c.ink} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={goBack} style={styles.closeHit}>
+          <View style={[styles.close, { backgroundColor: c.surfaceAlt }]}>
+            <Ionicons name="close" size={20} color={c.ink} />
+          </View>
         </Pressable>
       </View>
 
@@ -183,9 +216,11 @@ export default function Scan() {
               accessibilityRole="button"
               accessibilityLabel={`Remove photo ${i + 1}`}
               onPress={() => setPhotos((all) => all.filter((_, j) => j !== i))}
-              style={[styles.remove, { backgroundColor: c.ink }]}
+              style={styles.removeHit}
             >
-              <Ionicons name="close" size={14} color={c.bg} />
+              <View style={[styles.remove, { backgroundColor: c.ink }]}>
+                <Ionicons name="close" size={14} color={c.bg} />
+              </View>
             </Pressable>
           </View>
         ))}
@@ -232,17 +267,21 @@ export default function Scan() {
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  closeHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -4 },
   close: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   dropActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   thumbWrap: { width: 96, height: 96 },
   thumb: { width: 96, height: 96, borderRadius: radius.md },
-  remove: { position: 'absolute', top: -6, right: -6, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  removeHit: { position: 'absolute', top: -16, right: -16, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  remove: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   drop: { alignItems: 'center', gap: 6, padding: 20, borderRadius: radius.lg, borderWidth: 1.5, borderStyle: 'dashed' },
   footer: { width: '100%', maxWidth: 600, gap: 4, alignItems: 'center' },
   footerLinks: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
   analyzing: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   logoWrap: { width: 160, height: 160, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  ring: { position: 'absolute', width: 88, height: 88, borderRadius: 44 },
+  scanFrame: { width: SCAN_SIZE, height: SCAN_SIZE, borderRadius: radius.lg, borderWidth: 3, overflow: 'hidden', marginBottom: 16 },
+  scanPhoto: { width: '100%', height: '100%' },
+  scanLine: { position: 'absolute', left: 0, right: 0, top: 0, height: 4, shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
 });

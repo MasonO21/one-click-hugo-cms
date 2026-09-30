@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { getProvider, useBilling } from '../../store/billing';
 import { TRIAL_NAME } from '../../billing/trial';
@@ -22,6 +22,7 @@ import type { Diet } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
 import { useSettings } from '../../store/settings';
+import { useShopping } from '../../store/shopping';
 import { useTheme } from '../../theme';
 
 const DIETS: { value: Diet; label: string }[] = [
@@ -35,10 +36,10 @@ const DIETS: { value: Diet; label: string }[] = [
 // Phone notifications only exist in the native app.
 const remindersSupported = Platform.OS !== 'web';
 
-const formatHour = (h: number) => {
-  const suffix = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 === 0 ? 12 : h % 12}:00 ${suffix}`;
-};
+/** "9 AM" or "09:00", however the phone shows times. */
+const formatHour = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+const STORE_NAME = Platform.OS === 'android' ? 'Google Play' : Platform.OS === 'ios' ? 'Apple ID' : 'app store';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -86,14 +87,35 @@ export default function Settings() {
   const provider = getProvider();
 
   const [askConsent, setAskConsent] = useState(false);
+  // Reminders can be on here while the phone has notifications off for the app; say so.
+  const [blocked, setBlocked] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!remindersSupported || !settings.remindersEnabled) {
+        setBlocked(false);
+        return;
+      }
+      let alive = true;
+      void hasPermission().then((ok) => alive && setBlocked(!ok));
+      return () => {
+        alive = false;
+      };
+    }, [settings.remindersEnabled]),
+  );
 
   const endsLabel = entitlement.endsOn ? formatShortDate(entitlement.endsOn) : null;
+  const left = entitlement.daysRemaining;
+  const trialPart = left === 0 ? 'Last day of your free trial' : left != null ? `Free trial: ${left} ${left === 1 ? 'day' : 'days'} left` : 'Free trial';
   const planLine =
     entitlement.status === 'trial'
-      ? `Free trial: ${entitlement.daysRemaining} ${entitlement.daysRemaining === 1 ? 'day' : 'days'} left${endsLabel ? `. ${priceString}/month starts ${endsLabel} unless you cancel.` : '.'}`
+      ? entitlement.willRenew === false
+        ? `${trialPart}. It will not renew, so you will not be charged.`
+        : `${trialPart}${endsLabel ? `. ${priceString}/month starts ${endsLabel} unless you cancel.` : '.'}`
       : entitlement.status === 'active'
-        ? `Subscribed at ${priceString}/month${endsLabel ? `. Renews ${endsLabel}.` : '.'}`
-        : 'No active plan';
+        ? entitlement.willRenew === false
+          ? `Subscribed${endsLabel ? ` until ${endsLabel}` : ''}. It will not renew.`
+          : `Subscribed at ${priceString}/month${endsLabel ? `. Renews ${endsLabel}.` : '.'}`
+        : 'No active plan'
 
   function toggleAi(on: boolean) {
     if (on) {
@@ -128,13 +150,14 @@ export default function Settings() {
   async function confirmDelete() {
     const ok = await confirm({
       title: 'Delete all data?',
-      message: 'This removes every tracked item from this device. It cannot be undone.',
+      message: 'This removes every tracked item, your shopping list and your impact history from this device. It cannot be undone.',
       confirmLabel: 'Delete',
       destructive: true,
     });
     if (!ok) return;
     useInventory.getState().clear();
     useMealsCache.getState().clear();
+    useShopping.getState().clear();
   }
 
   return (
@@ -153,10 +176,12 @@ export default function Settings() {
           }
         />
         <Text variant="caption" muted>
-          {TRIAL_NAME} free trial, then {priceString} per month. Cancel anytime in your {Platform.OS === 'android' ? 'Google Play' : 'Apple ID'} subscription settings.
+          {TRIAL_NAME} free trial, then {priceString} per month. Cancel anytime in your {STORE_NAME} subscription settings.
         </Text>
         <View style={styles.buttons}>
-          <Button label="Manage subscription" size="sm" variant="secondary" onPress={() => void Linking.openURL(MANAGE_SUBSCRIPTION_URL)} />
+          {Platform.OS !== 'web' ? (
+            <Button label="Manage subscription" size="sm" variant="secondary" onPress={() => void Linking.openURL(MANAGE_SUBSCRIPTION_URL)} />
+          ) : null}
           <Button label="Restore purchases" size="sm" variant="ghost" onPress={() => void restore()} />
         </View>
       </Section>
@@ -172,11 +197,20 @@ export default function Settings() {
                   testID="reminders-switch"
                   value={settings.remindersEnabled}
                   onValueChange={(v) => void toggleReminders(v)}
-                  trackColor={{ true: c.primary, false: c.border }}
+                  trackColor={{ true: c.primary, false: c.switchOff }}
+                  ios_backgroundColor={c.switchOff}
                   thumbColor="#FFFFFF"
                 />
               }
             />
+            {settings.remindersEnabled && blocked ? (
+              <View style={{ gap: 8 }} testID="notifications-blocked">
+                <Text variant="caption" color={c.urgency.today.fg} style={{ fontSize: 14, lineHeight: 20 }}>
+                  Notifications are turned off for Fridge Pulse in your phone settings, so reminders cannot arrive.
+                </Text>
+                <Button label="Open phone settings" size="sm" variant="secondary" onPress={() => void Linking.openSettings()} style={{ alignSelf: 'flex-start' }} />
+              </View>
+            ) : null}
             {settings.remindersEnabled ? (
               <Row
                 label="Time"
@@ -235,7 +269,8 @@ export default function Settings() {
                   accessibilityLabel="Use AI to read photos and suggest meals"
                   value={settings.aiConsent}
                   onValueChange={toggleAi}
-                  trackColor={{ true: c.primary, false: c.border }}
+                  trackColor={{ true: c.primary, false: c.switchOff }}
+                  ios_backgroundColor={c.switchOff}
                   thumbColor="#FFFFFF"
                 />
               }

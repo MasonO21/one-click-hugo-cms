@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { AddItemField } from '../components/AddItemField';
 import { Button } from '../components/Button';
+import { FadeIn, stagger } from '../components/motion';
 import { emojiFor, LOCATIONS, LOCATION_LABEL } from '../components/categories';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
@@ -14,11 +14,14 @@ import { Emoji, Text } from '../components/Text';
 import { UrgencyBadge } from '../components/UrgencyBadge';
 import { addDays, daysBetween, formatShortDate, todayISO } from '../lib/dates';
 import { confirm } from '../lib/dialogs';
+import { closeModals, goBack } from '../lib/nav';
 import { requestPermission } from '../lib/notifications';
 import { draftToItem, newId, type DraftItem } from '../lib/scan';
 import { useInventory } from '../store/inventory';
 import { useScanDraft } from '../store/scanDraft';
 import { useSettings } from '../store/settings';
+import { useShopping } from '../store/shopping';
+import { useSnackbar } from '../store/snackbar';
 import { radius, useTheme } from '../theme';
 
 function Tag({ label, tone }: { label: string; tone: 'good' | 'warn' | 'plain' }) {
@@ -54,7 +57,7 @@ function DraftRow({ draft, listLocation }: { draft: DraftItem; listLocation: (ty
           accessibilityState={{ checked: draft.selected }}
           accessibilityLabel={`Include ${draft.name}`}
           onPress={() => update(draft.key, { selected: !draft.selected })}
-          hitSlop={8}
+          style={[styles.iconHit, { marginLeft: -8, marginRight: -4 }]}
         >
           <Ionicons name={draft.selected ? 'checkbox' : 'square-outline'} size={26} color={draft.selected ? c.primary : c.inkFaint} />
         </Pressable>
@@ -66,7 +69,7 @@ function DraftRow({ draft, listLocation }: { draft: DraftItem; listLocation: (ty
           style={styles.name}
           maxLength={80}
         />
-        <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${draft.name}`} onPress={() => remove(draft.key)} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${draft.name}`} onPress={() => remove(draft.key)} style={styles.iconHit}>
           <Ionicons name="trash-outline" size={20} color={c.inkFaint} />
         </Pressable>
       </View>
@@ -101,6 +104,13 @@ export default function Review() {
   const location = useScanDraft((s) => s.location);
   const mode = useScanDraft((s) => s.mode);
   const manual = mode === 'manual';
+  const title = mode === 'shopping' ? 'Put away' : manual ? 'Add items' : 'Review';
+  const subtitle =
+    mode === 'shopping'
+      ? 'Each item is headed where it usually lives. Change anything, then save.'
+      : manual
+        ? 'Start typing and pick a suggestion, then save.'
+        : 'Fix anything that looks off, then save.';
   // Only the names matter to the suggestions; a new array each render would recompute them on every keystroke.
   const addedKey = drafts.map((d) => d.name).join('\n');
   const added = useMemo(() => (addedKey ? addedKey.split('\n') : []), [addedKey]);
@@ -108,10 +118,29 @@ export default function Review() {
   const chosen = drafts.filter((d) => d.selected && d.name.trim() !== '');
 
 
+  async function close() {
+    // A scan or a half-typed list is work; do not throw it away on a stray tap.
+    if (drafts.length > 0) {
+      const ok = await confirm({
+        title: `Discard ${drafts.length === 1 ? 'this item' : `these ${drafts.length} items`}?`,
+        message: 'Nothing has been saved yet.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep editing',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    useScanDraft.getState().clear();
+    goBack();
+  }
+
   async function save() {
     const now = new Date();
     useInventory.getState().addItems(chosen.map((d) => draftToItem(d, newId(), now)));
+    const bought = chosen.map((d) => d.shoppingId).filter((id): id is string => !!id);
+    if (bought.length > 0) useShopping.getState().removeMany(bought);
     useScanDraft.getState().clear();
+    useSnackbar.getState().show({ message: `${chosen.length} ${chosen.length === 1 ? 'item' : 'items'} added`, tone: 'plain' });
 
     // Ask once, in context, right after the first save. Notifications do not exist on web.
     const settings = useSettings.getState();
@@ -125,7 +154,8 @@ export default function Review() {
       });
       if (!turnOn || !(await requestPermission())) useSettings.getState().set({ remindersEnabled: false });
     }
-    router.dismissTo('/');
+    // Back to wherever the person started (Pulse, Items or the shopping list).
+    closeModals();
   }
 
   return (
@@ -146,21 +176,14 @@ export default function Review() {
       <View style={styles.top}>
         <View style={{ flex: 1 }}>
           <Text variant="title" accessibilityRole="header">
-            {manual ? 'Add items' : 'Review'}
+            {title}
           </Text>
-          <Text muted>{manual ? 'Start typing and pick a suggestion, then save.' : 'Fix anything that looks off, then save.'}</Text>
+          <Text muted>{subtitle}</Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Discard and close"
-          onPress={() => {
-            useScanDraft.getState().clear();
-            router.back();
-          }}
-          hitSlop={10}
-          style={[styles.close, { backgroundColor: c.surfaceAlt }]}
-        >
-          <Ionicons name="close" size={20} color={c.ink} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Discard and close" testID="review-close" onPress={() => void close()} style={styles.closeHit}>
+          <View style={[styles.close, { backgroundColor: c.surfaceAlt }]}>
+            <Ionicons name="close" size={20} color={c.ink} />
+          </View>
         </Pressable>
       </View>
 
@@ -202,8 +225,10 @@ export default function Review() {
       ) : null}
 
       <View style={{ gap: 12 }}>
-        {drafts.map((d) => (
-          <DraftRow key={d.key} draft={d} listLocation={location} />
+        {drafts.map((d, i) => (
+          <FadeIn key={d.key} delay={mode === 'scan' ? stagger(i, 35) : 0}>
+            <DraftRow draft={d} listLocation={location} />
+          </FadeIn>
         ))}
       </View>
     </Screen>
@@ -212,7 +237,9 @@ export default function Review() {
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  closeHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -4, marginTop: -4 },
   close: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  iconHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
   chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   name: { flex: 1, minWidth: 0, minHeight: 44, fontWeight: '600' },

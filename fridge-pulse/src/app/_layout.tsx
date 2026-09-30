@@ -1,13 +1,16 @@
-import * as Notifications from 'expo-notifications';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, type ErrorBoundaryProps } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import { SafeAreaInsetsContext, SafeAreaProvider } from 'react-native-safe-area-context';
 import { isUnlocked } from '../billing/trial';
+import { BurstLayer } from '../components/BurstLayer';
 import { DialogHost } from '../components/DialogHost';
 import { ErrorScreen } from '../components/ErrorScreen';
+import { NotificationRouter } from '../components/NotificationRouter';
+import { SnackbarHost } from '../components/Snackbar';
+import { SCREENSHOT_MODE } from '../lib/config';
 import { useEmbeddedFonts } from '../lib/embeddedFonts';
 import { configureNotifications, syncReminders } from '../lib/notifications';
 import { useBilling } from '../store/billing';
@@ -15,6 +18,7 @@ import { useHydrated } from '../store/hydration';
 import { useInventory } from '../store/inventory';
 import { useMealsCache } from '../store/mealsCache';
 import { useSettings } from '../store/settings';
+import { useShopping } from '../store/shopping';
 import { useTheme } from '../theme';
 
 const NO_INSETS = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -31,12 +35,16 @@ function ReminderSync({ enabled }: { enabled: boolean }) {
   const priceString = useBilling((s) => s.priceString);
   const trialEndsOn = entitlement.status === 'trial' ? entitlement.endsOn : null;
 
+  // Waits for a pause in changes (typing a name updates the store on every keystroke), then reschedules.
   useEffect(() => {
-    void syncReminders(items, {
-      enabled: enabled && remindersEnabled,
-      hour: reminderHour,
-      trial: trialEndsOn ? { endsOn: trialEndsOn, price: priceString } : null,
-    });
+    const t = setTimeout(() => {
+      void syncReminders(items, {
+        enabled: enabled && remindersEnabled,
+        hour: reminderHour,
+        trial: trialEndsOn ? { endsOn: trialEndsOn, price: priceString } : null,
+      });
+    }, 500);
+    return () => clearTimeout(t);
   }, [items, enabled, remindersEnabled, reminderHour, trialEndsOn, priceString]);
 
   // Reschedule when the app returns to the foreground: the window of upcoming days moves on.
@@ -58,18 +66,6 @@ function ReminderSync({ enabled }: { enabled: boolean }) {
   return null;
 }
 
-/** Opens the meals tab when a reminder is tapped (including a cold start from one). */
-function NotificationRouter() {
-  const router = useRouter();
-  const response = Notifications.useLastNotificationResponse();
-  useEffect(() => {
-    if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
-    const route = response.notification.request.content.data?.route;
-    if (typeof route === 'string') router.push(route as never);
-  }, [response, router]);
-  return null;
-}
-
 /** Last line of defence: a render error shows a friendly screen instead of a blank or crashed app. */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return <ErrorScreen onRetry={() => void retry()} />;
@@ -77,7 +73,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
 
 export default function RootLayout() {
   const { c, scheme } = useTheme();
-  const hydrated = useHydrated([useInventory, useSettings, useMealsCache]);
+  const hydrated = useHydrated([useInventory, useSettings, useMealsCache, useShopping]);
   const billingReady = useBilling((s) => s.ready);
   const unlocked = useBilling((s) => isUnlocked(s.entitlement));
   const onboarded = useSettings((s) => s.onboarded);
@@ -132,8 +128,11 @@ export default function RootLayout() {
           <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />
         </Stack>
         <ReminderSync enabled={unlocked} />
-        {unlocked && Platform.OS !== 'web' ? <NotificationRouter /> : null}
+        {unlocked ? <NotificationRouter /> : null}
         <DialogHost />
+        {/* Store screenshots should not catch a passing message. */}
+        {SCREENSHOT_MODE ? null : <SnackbarHost />}
+        <BurstLayer />
       </ThemeProvider>
     </>
   );

@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
+import { FadeIn } from '../components/motion';
 import { Screen } from '../components/Screen';
 import { Emoji, Text } from '../components/Text';
-import { PRICE_PER_MONTH, TRIAL_SPAN } from '../billing/trial';
+import { TRIAL_SPAN } from '../billing/trial';
+import { useBilling } from '../store/billing';
 import { useSettings } from '../store/settings';
 import { useTheme } from '../theme';
 
@@ -31,6 +33,8 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const last = step === STEPS.length - 1;
   const s = STEPS[step];
+  // The store's localised price (the same one the paywall shows next), not a hard-coded one.
+  const price = useBilling((b) => b.priceString);
 
   return (
     <Screen
@@ -41,7 +45,7 @@ export default function Onboarding() {
         <View style={styles.footerInner}>
           {last ? (
             <Text variant="caption" muted style={{ textAlign: 'center' }}>
-              Free for {TRIAL_SPAN}, then {PRICE_PER_MONTH}/month. Cancel anytime.
+              Free for {TRIAL_SPAN}, then {price}/month. Cancel anytime.
             </Text>
           ) : null}
           <View style={styles.dots}>
@@ -59,10 +63,10 @@ export default function Onboarding() {
       }
     >
       <View style={styles.brand}>
-        <Logo size={40} />
+        <Logo size={40} beat="calm" />
         <Text variant="heading">Fridge Pulse</Text>
       </View>
-      <View style={styles.hero}>
+      <FadeIn key={step} distance={16} style={styles.hero}>
         <View style={[styles.emojiWrap, { backgroundColor: c.primaryTint }]}>
           <Emoji size={84}>{s.emoji}</Emoji>
         </View>
@@ -72,7 +76,7 @@ export default function Onboarding() {
         <Text muted style={{ textAlign: 'center', fontSize: 17, lineHeight: 25, maxWidth: 360 }}>
           {s.body}
         </Text>
-      </View>
+      </FadeIn>
     </Screen>
   );
 }

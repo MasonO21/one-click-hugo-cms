@@ -1,6 +1,6 @@
 import { addDays, daysBetween, isValidISODate, todayISO } from './dates';
 import { normalizeName } from './expiry';
-import { estimateShelfLifeDays, MAX_SHELF_LIFE_DAYS } from './shelfLife';
+import { estimateShelfLifeDays, knownShelfLifeDays, MAX_SHELF_LIFE_DAYS } from './shelfLife';
 import {
   CATEGORIES,
   type Category,
@@ -24,6 +24,10 @@ export interface DraftItem {
   /** Whether it will be saved. Duplicates of tracked items start unselected. */
   selected: boolean;
   duplicate: boolean;
+  /** True once the person has ticked or unticked it themselves; their choice then sticks. */
+  userSelected?: boolean;
+  /** Came from the shopping list; removed from the list when saved. */
+  shoppingId?: string;
 }
 
 export const MAX_DRAFT_ITEMS = 60;
@@ -40,6 +44,18 @@ function tidyName(raw: string): string {
 
 function isCategory(v: unknown): v is Category {
   return typeof v === 'string' && (CATEGORIES as readonly string[]).includes(v);
+}
+
+/**
+ * The AI judges freshness from the photo, which can only shorten the time left: wilted spinach has
+ * less than the usual five days. For a food the app recognises, it never gets longer than food-safety
+ * guidance allows in the fridge or freezer. (In the cupboard a jar or carton may be unopened, so the
+ * model's reading of the label wins there.)
+ */
+export function reconcile(modelDays: number, name: string, category: Category, location: StorageLocation): number {
+  if (location === 'pantry') return modelDays;
+  const known = knownShelfLifeDays(name, category, location);
+  return known === null ? modelDays : Math.min(modelDays, known);
 }
 
 /**
@@ -83,7 +99,7 @@ export function toDrafts(
     } else {
       const days =
         typeof raw.shelfLifeDays === 'number' && Number.isFinite(raw.shelfLifeDays)
-          ? Math.min(Math.max(Math.round(raw.shelfLifeDays), 0), MAX_SHELF_LIFE_DAYS)
+          ? reconcile(Math.min(Math.max(Math.round(raw.shelfLifeDays), 0), MAX_SHELF_LIFE_DAYS), name, category, location)
           : estimateShelfLifeDays(name, category, location);
       expiresOn = addDays(today, days);
       expirySource = 'estimate';

@@ -34,29 +34,38 @@ export async function requestPermission(): Promise<boolean> {
   return p.granted;
 }
 
+interface SyncOptions {
+  enabled: boolean;
+  hour: number;
+  trial?: { endsOn: string; price: string } | null;
+}
+
+// Runs one at a time, and a run that a newer call has overtaken stops scheduling. Without this, two
+// quick changes (tapping the reminder time up twice) interleave: each cancels before the other
+// schedules, and both sets of reminders survive.
+let queue: Promise<void> = Promise.resolve();
+let latest = 0;
+
 /**
  * Replaces all scheduled reminders with a fresh set derived from the inventory and trial state.
- * Safe to call on every change: it is one cancel plus at most ~16 schedules.
+ * Safe to call on every change: it is one cancel plus at most ~16 schedules, and only the newest
+ * call's reminders end up scheduled.
  *
  * The trial-ending reminder is separate from the expiry reminders: it only needs notification
  * permission, so someone who turns expiry reminders off still hears before a charge.
  */
-export async function syncReminders(
-  items: PantryItem[],
-  {
-    enabled,
-    hour,
-    trial = null,
-  }: {
-    enabled: boolean;
-    hour: number;
-    trial?: { endsOn: string; price: string } | null;
-  },
-): Promise<void> {
-  if (!supported) return;
+export function syncReminders(items: PantryItem[], options: SyncOptions): Promise<void> {
+  if (!supported) return Promise.resolve();
+  const run = ++latest;
+  const stale = () => run !== latest;
+  queue = queue.then(() => (stale() ? undefined : schedule(items, options, stale)));
+  return queue;
+}
+
+async function schedule(items: PantryItem[], { enabled, hour, trial = null }: SyncOptions, stale: () => boolean): Promise<void> {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    if (!(await hasPermission())) return;
+    if (stale() || !(await hasPermission())) return;
 
     const now = new Date();
     const digests = enabled ? buildDigests(items, now, { hour }) : [];
@@ -76,12 +85,13 @@ export async function syncReminders(
       });
     }
     for (const digest of digests) {
+      if (stale()) return;
       await Notifications.scheduleNotificationAsync({
         content: { title: digest.title, body: digest.body, data: { route: '/meals' } },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: digest.fireAt, channelId: CHANNEL_ID },
       });
     }
-    if (trialReminder) {
+    if (trialReminder && !stale()) {
       await Notifications.scheduleNotificationAsync({
         content: { title: trialReminder.title, body: trialReminder.body, data: { route: '/settings' } },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trialReminder.fireAt, channelId: CHANNEL_ID },

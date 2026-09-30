@@ -22,6 +22,10 @@ export interface Entitlement {
   endsOn: string | null;
   /** Whole days left in the current trial / period, when known. */
   daysRemaining: number | null;
+  /** False once the person has cancelled: the trial or period runs out without a charge. */
+  willRenew?: boolean;
+  /** For an expired entitlement: whether it was a free trial or a paid subscription that ended. */
+  lapsed?: 'trial' | 'paid';
 }
 
 export const NO_ENTITLEMENT: Entitlement = { status: 'none', endsOn: null, daysRemaining: null };
@@ -49,10 +53,10 @@ export function computeLocalEntitlement(state: LocalBillingState, now: Date = ne
     if (trialEnd > today) {
       return { status: 'trial', endsOn: trialEnd, daysRemaining: daysBetween(today, trialEnd) };
     }
-    return { status: 'expired', endsOn: trialEnd, daysRemaining: 0 };
+    return { status: 'expired', endsOn: trialEnd, daysRemaining: 0, lapsed: 'trial' };
   }
   if (state.paidThrough) {
-    return { status: 'expired', endsOn: state.paidThrough, daysRemaining: 0 };
+    return { status: 'expired', endsOn: state.paidThrough, daysRemaining: 0, lapsed: 'paid' };
   }
   return NO_ENTITLEMENT;
 }

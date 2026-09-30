@@ -1,24 +1,27 @@
-import { toDrafts, draftToItem } from '../src/lib/scan';
+import { draftToItem, reconcile, toDrafts } from '../src/lib/scan';
 import { estimateShelfLifeDays, guessCategory } from '../src/lib/shelfLife';
 import { mk, NOW } from '../test-utils/helpers';
 
 describe('shelf life', () => {
   it('uses specific rules before category defaults', () => {
     expect(estimateShelfLifeDays('Baby spinach', 'produce', 'fridge')).toBe(5);
-    expect(estimateShelfLifeDays('Cheddar cheese', 'dairy', 'fridge')).toBe(42);
+    expect(estimateShelfLifeDays('Cheddar cheese', 'dairy', 'fridge')).toBe(21);
     expect(estimateShelfLifeDays('Ground beef', 'meat', 'fridge')).toBe(2);
     expect(estimateShelfLifeDays('Chicken thighs', 'meat', 'freezer')).toBe(270);
   });
 
   it('matches rules on whole words', () => {
-    // "cream cheese" must not be treated as "cheese" (hard cheese, 42 days).
+    // "cream cheese" must not be treated as "cheese" (hard cheese, 21 days).
     expect(estimateShelfLifeDays('Cream cheese', 'dairy', 'fridge')).toBe(14);
   });
 
-  it('falls back to the category default when a rule has no figure for that location', () => {
-    // The mushroom rule only defines a fridge figure.
-    expect(estimateShelfLifeDays('Mushrooms', 'produce', 'pantry')).toBe(5);
-    expect(estimateShelfLifeDays('Mystery jar', 'other', 'fridge')).toBe(14);
+  it('falls back to a conservative category figure for foods no rule knows', () => {
+    // Most produce wilts within a day out of the fridge.
+    expect(estimateShelfLifeDays('Dragon fruit', 'produce', 'pantry')).toBe(1);
+    expect(estimateShelfLifeDays('Mystery jar', 'other', 'fridge')).toBe(7);
+    // A can of anything keeps for years unopened, whatever fresh food it contains.
+    expect(estimateShelfLifeDays('Peaches', 'canned', 'pantry')).toBe(730);
+    expect(estimateShelfLifeDays('Peaches', 'produce', 'pantry')).toBe(2);
   });
 
   // Prepared and processed foods used to match the ingredient in their name. Each row here was wrong
@@ -27,10 +30,10 @@ describe('shelf life', () => {
     ['Leftover pasta', 'leftovers', 'fridge', 4],
     ['Leftover rice', 'leftovers', 'fridge', 4],
     ['Pasta salad', 'leftovers', 'fridge', 4],
-    ['Pasta sauce', 'condiments', 'fridge', 7],
+    ['Pasta sauce', 'condiments', 'fridge', 4],
     ['Peanut butter', 'condiments', 'pantry', 90],
-    ['Fish sauce', 'condiments', 'fridge', 120],
-    ['Red wine vinegar', 'condiments', 'fridge', 120],
+    ['Fish sauce', 'condiments', 'fridge', 365],
+    ['Red wine vinegar', 'condiments', 'fridge', 730],
     ['Milk chocolate', 'snacks', 'pantry', 180],
     ['Chocolate milk', 'dairy', 'fridge', 7],
     ['Almond milk', 'dairy', 'fridge', 7],
@@ -38,22 +41,22 @@ describe('shelf life', () => {
     ['Orange juice', 'drinks', 'fridge', 7],
     ['Canned tomatoes', 'canned', 'pantry', 540],
     ['Green onions', 'produce', 'fridge', 7],
-    ['Sugar snap peas', 'produce', 'fridge', 7],
+    ['Sugar snap peas', 'produce', 'fridge', 4],
     ['Black pepper', 'condiments', 'pantry', 730],
-    ['Pepper jack', 'dairy', 'fridge', 42],
+    ['Pepper jack', 'dairy', 'fridge', 21],
     ['Turkey bacon', 'meat', 'fridge', 7],
     ['Tuna steak', 'seafood', 'fridge', 2],
     ['Crab cakes', 'seafood', 'fridge', 2],
     ['Hot dog buns', 'bakery', 'pantry', 4],
-    ['Garlic bread', 'bakery', 'pantry', 4],
+    ['Garlic bread', 'bakery', 'fridge', 4],
     ['Spaghetti squash', 'produce', 'pantry', 60],
-    ['Rice cakes', 'snacks', 'pantry', 60],
-    ['Potato chips', 'snacks', 'pantry', 60],
+    ['Rice cakes', 'snacks', 'pantry', 14],
+    ['Potato chips', 'snacks', 'pantry', 14],
     ['Ice cream', 'dairy', 'freezer', 60],
     ['Ice cream', 'dairy', 'fridge', 0],
-    ['Frozen peas', 'produce', 'freezer', 120],
+    ['Frozen peas', 'produce', 'freezer', 300],
     ['Sushi', 'leftovers', 'fridge', 1],
-    ['Red wine', 'drinks', 'fridge', 5],
+    ['Red wine', 'drinks', 'fridge', 4],
   ] as const)('%s in the %s keeps about the right time', (name, category, location, days) => {
     expect(estimateShelfLifeDays(name, category, location)).toBe(days);
   });
@@ -69,6 +72,31 @@ describe('shelf life', () => {
     expect(guessCategory('Ice cream')).toBe('dairy');
     expect(guessCategory('Fish sauce')).toBe('condiments');
     expect(guessCategory("Grandma's chutney")).toBe('condiments');
+  });
+});
+
+describe('AI estimates are held to food-safety guidance', () => {
+  const base = { quantity: '1', confidence: 'high' as const, labelExpiryDate: null };
+
+  it('never lets the AI give a known food longer than guidance in the fridge or freezer', () => {
+    const [chicken, beef] = toDrafts(
+      { items: [{ ...base, name: 'Chicken thighs', category: 'meat', shelfLifeDays: 10 }, { ...base, name: 'Ground beef', category: 'meat', shelfLifeDays: 400 }] },
+      'fridge',
+      [],
+      NOW,
+    );
+    expect(chicken.expiresOn).toBe('2026-10-01'); // 2 days, not 10
+    expect(beef.expiresOn).toBe('2026-10-01');
+    expect(reconcile(400, 'Ground beef', 'meat', 'freezer')).toBe(120);
+  });
+
+  it('keeps a shorter AI estimate, because the photo can show food past its best', () => {
+    expect(reconcile(1, 'Baby spinach', 'produce', 'fridge')).toBe(1);
+  });
+
+  it('trusts the AI for foods it cannot check, and in the cupboard where a jar may be unopened', () => {
+    expect(reconcile(9, 'Dragon fruit', 'produce', 'fridge')).toBe(9);
+    expect(reconcile(365, 'Pasta sauce', 'condiments', 'pantry')).toBe(365);
   });
 });
 

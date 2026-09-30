@@ -25,9 +25,9 @@ export default function Paywall() {
   const { entitlement, priceString, busy, error } = useBilling();
   const provider = getProvider();
   const returning = entitlement.status === 'expired';
-  const store = Platform.OS === 'android' ? 'Google Play account' : 'Apple ID account';
+  const store = Platform.OS === 'android' ? 'Google Play account' : Platform.OS === 'ios' ? 'Apple ID account' : 'app store account';
   const chargeDate = `${formatShortDate(addDays(todayISO(), TRIAL_DAYS))} (in ${TRIAL_SPAN})`;
-  const cancelWhere = Platform.OS === 'android' ? 'Google Play' : 'your Apple ID settings';
+  const cancelWhere = Platform.OS === 'android' ? 'Google Play' : Platform.OS === 'ios' ? 'your Apple ID settings' : 'your app store account settings';
 
   return (
     <Screen
@@ -48,9 +48,13 @@ export default function Paywall() {
       }
     >
       <View style={styles.header}>
-        <Logo size={64} />
+        <Logo size={64} beat="calm" />
         <Text variant="title" style={{ textAlign: 'center' }}>
-          {returning ? 'Your free trial has ended' : `Try Fridge Pulse free for ${TRIAL_SPAN.replace(' ', '\u00A0')}`}
+          {returning
+            ? entitlement.lapsed === 'paid'
+              ? 'Your subscription has ended'
+              : 'Your free trial has ended'
+            : `Try Fridge Pulse free for ${TRIAL_SPAN.replace(' ', '\u00A0')}`}
         </Text>
         <Text muted style={{ textAlign: 'center' }}>
           {returning
@@ -108,17 +112,17 @@ export default function Paywall() {
       ) : null}
 
       <View style={styles.links}>
-        <Pressable accessibilityRole="button" onPress={() => void useBilling.getState().restore()} hitSlop={8}>
+        <Pressable accessibilityRole="button" onPress={() => void useBilling.getState().restore()} style={styles.linkHit}>
           <Text variant="caption" color={c.primary} style={styles.link}>
             Restore purchases
           </Text>
         </Pressable>
-        <Pressable accessibilityRole="link" onPress={() => router.push('/legal/terms')} hitSlop={8}>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/legal/terms')} style={styles.linkHit}>
           <Text variant="caption" color={c.primary} style={styles.link}>
             Terms
           </Text>
         </Pressable>
-        <Pressable accessibilityRole="link" onPress={() => router.push('/legal/privacy')} hitSlop={8}>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/legal/privacy')} style={styles.linkHit}>
           <Text variant="caption" color={c.primary} style={styles.link}>
             Privacy
           </Text>
@@ -135,6 +139,7 @@ export default function Paywall() {
 }
 
 const styles = StyleSheet.create({
+  linkHit: { minHeight: 44, paddingHorizontal: 6, justifyContent: 'center' },
   header: { alignItems: 'center', gap: 12, paddingTop: 8 },
   feature: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },

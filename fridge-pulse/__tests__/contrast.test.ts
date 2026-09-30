@@ -45,6 +45,10 @@ function pairs(p: Palette): [string, number][] {
     ['onHero on hero', cr(p.onHero, p.hero)],
     ['hero subtitle (75%) on hero', ratio(blend(p.onHero, p.hero, 0.75), rgb(p.hero))],
     ['hero legend (90%) on hero', ratio(blend(p.onHero, p.hero, 0.9), rgb(p.hero))],
+    ['onDanger on danger', cr(p.onDanger, p.danger)],
+    ['onPrimary on primary (swipe: used)', cr(p.onPrimary, p.primary)],
+    ['snack text on snack bar', cr(p.snackText, p.snackBg)],
+    ['snack action on snack bar', cr(p.snackAction, p.snackBg)],
   ];
   for (const [name, u] of Object.entries(p.urgency)) out.push([`urgency ${name}: fg on tint`, cr(u.fg, u.tint)]);
   return out;
@@ -56,5 +60,19 @@ describe.each([
 ])('%s palette contrast (WCAG AA, small text)', (_name, palette) => {
   it.each(pairs(palette))('%s', (_label, ratioValue) => {
     expect(ratioValue).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+/** Controls and their states need 3:1 against what they sit on (WCAG 1.4.11). */
+describe.each([
+  ['light', lightPalette],
+  ['dark', darkPalette],
+])('%s palette contrast (non-text controls)', (_name, p) => {
+  it.each([
+    ['switch off-track on surface', cr(p.switchOff, p.surface)],
+    ['switch off-track on bg', cr(p.switchOff, p.bg)],
+    ['switch on-track on surface', cr(p.primary, p.surface)],
+  ])('%s', (_label, ratioValue) => {
+    expect(ratioValue).toBeGreaterThanOrEqual(3);
   });
 });

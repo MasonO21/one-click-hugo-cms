@@ -39,8 +39,11 @@ export const useBilling = create<BillingState>((set, get) => ({
     try {
       await p.init();
       p.subscribe((entitlement) => set({ entitlement }));
-      const [entitlement, offer] = await Promise.all([p.getEntitlement(), p.getOffer()]);
-      set({ entitlement, priceString: offer.priceString, ready: true, error: null });
+      // The app opens as soon as access is known; the store's localised price follows when it arrives.
+      set({ entitlement: await p.getEntitlement(), ready: true, error: null });
+      p.getOffer()
+        .then((offer) => set({ priceString: offer.priceString }))
+        .catch(() => {});
     } catch {
       set({ ready: true, error: 'Could not check your subscription. Check your connection and try again.' });
     }

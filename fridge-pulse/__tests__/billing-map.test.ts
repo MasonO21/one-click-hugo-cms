@@ -22,6 +22,16 @@ describe('mapCustomerInfo', () => {
     });
   });
 
+  it('knows when a cancelled trial will not turn into a charge', () => {
+    const e = mapCustomerInfo(info({ pro: { periodType: 'TRIAL', expirationDate: '2026-10-13T12:00:00Z', willRenew: false } }), NOW);
+    expect(e).toMatchObject({ status: 'trial', willRenew: false });
+  });
+
+  it('tells an ended trial from an ended subscription', () => {
+    expect(mapCustomerInfo(info({}, { pro: { periodType: 'TRIAL', expirationDate: '2026-09-20T12:00:00Z' } }), NOW)).toMatchObject({ status: 'expired', lapsed: 'trial' });
+    expect(mapCustomerInfo(info({}, { pro: { periodType: 'NORMAL', expirationDate: '2026-09-20T12:00:00Z' } }), NOW)).toMatchObject({ status: 'expired', lapsed: 'paid' });
+  });
+
   it('reports an entitlement that lapsed as expired, and none as none', () => {
     const lapsed = { pro: { periodType: 'TRIAL', expirationDate: '2026-09-20T12:00:00Z' } };
     expect(mapCustomerInfo(info({}, lapsed), NOW).status).toBe('expired');

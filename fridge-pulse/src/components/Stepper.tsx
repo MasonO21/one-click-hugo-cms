@@ -8,34 +8,36 @@ interface Props {
   onDecrement: () => void;
   onIncrement: () => void;
   testID?: string;
+  /** Spoken names for the buttons, e.g. "One day earlier". */
+  decrementLabel?: string;
+  incrementLabel?: string;
 }
 
-export function Stepper({ label, onDecrement, onIncrement, testID }: Props) {
+export function Stepper({ label, onDecrement, onIncrement, testID, decrementLabel = 'Decrease', incrementLabel = 'Increase' }: Props) {
   const { c } = useTheme();
   const btn = (name: 'remove' | 'add', onPress: () => void, hint: string) => (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={hint}
-      hitSlop={6}
       onPress={onPress}
-      style={[styles.btn, { backgroundColor: c.surfaceAlt }]}
+      style={({ pressed }) => [styles.btn, { backgroundColor: pressed ? c.border : c.surfaceAlt }]}
     >
       <Ionicons name={name} size={18} color={c.ink} />
     </Pressable>
   );
   return (
     <View testID={testID} style={styles.row}>
-      {btn('remove', onDecrement, 'Decrease')}
+      {btn('remove', onDecrement, decrementLabel)}
       <Text variant="bodyStrong" style={styles.label}>
         {label}
       </Text>
-      {btn('add', onIncrement, 'Increase')}
+      {btn('add', onIncrement, incrementLabel)}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  btn: { width: 34, height: 34, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
-  label: { minWidth: 96, textAlign: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  btn: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  label: { minWidth: 92, textAlign: 'center' },
 });

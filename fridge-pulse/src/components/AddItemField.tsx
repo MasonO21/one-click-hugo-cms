@@ -10,6 +10,7 @@ import { radius, useTheme } from '../theme';
 import { Button } from './Button';
 import { emojiFor, LOCATION_LABEL } from './categories';
 import { Field } from './Field';
+import { FadeIn } from './motion';
 import { Emoji, Text } from './Text';
 
 interface Props {
@@ -19,6 +20,9 @@ interface Props {
   added: string[];
   onAdd: (food: ResolvedFood) => void;
   autoFocus?: boolean;
+  placeholder?: string;
+  /** Replaces the "keeps about" caption under each suggestion. */
+  caption?: (s: FoodSuggestion) => string;
 }
 
 /** The name with the typed part in bold, so it is clear why each suggestion matched. */
@@ -57,7 +61,7 @@ function describe(s: FoodSuggestion, location: StorageLocation): string {
  * Item name input that suggests foods while you type: your own past items first, then common
  * groceries, with typos forgiven. Tapping a suggestion adds it; Add or the return key adds what was typed.
  */
-export function AddItemField({ location, added, onAdd, autoFocus }: Props) {
+export function AddItemField({ location, added, onAdd, autoFocus, placeholder = 'Type a food, like milk or eggs', caption }: Props) {
   const { c } = useTheme();
   const items = useInventory((s) => s.items);
   const history = useMemo(() => historyFrom(items), [items]);
@@ -85,7 +89,7 @@ export function AddItemField({ location, added, onAdd, autoFocus }: Props) {
           testID="add-name"
           value={text}
           onChangeText={setText}
-          placeholder="Type a food, like milk or eggs"
+          placeholder={placeholder}
           accessibilityLabel="Item name"
           accessibilityHint="Suggestions appear below as you type"
           onSubmitEditing={submit}
@@ -106,10 +110,10 @@ export function AddItemField({ location, added, onAdd, autoFocus }: Props) {
       {suggestions.length > 0 ? (
         <View testID="suggestions" style={[styles.list, { backgroundColor: c.surface, borderColor: c.border }]}>
           {suggestions.map((s, i) => {
-            const detail = describe(s, location);
+            const detail = caption ? caption(s) : describe(s, location);
             return (
+              <FadeIn key={s.name} delay={i * 25} distance={6}>
               <Pressable
-                key={s.name}
                 testID={`suggestion-${i}`}
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${s.name}`}
@@ -132,6 +136,7 @@ export function AddItemField({ location, added, onAdd, autoFocus }: Props) {
                 </View>
                 <Ionicons name="add-circle" size={26} color={c.primary} />
               </Pressable>
+              </FadeIn>
             );
           })}
         </View>

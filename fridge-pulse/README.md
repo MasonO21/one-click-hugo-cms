@@ -1,6 +1,6 @@
 # Fridge Pulse
 
-Photograph your fridge, freezer or pantry. Fridge Pulse lists what is inside, tracks what is about to expire, reminds you before it goes off, and suggests meals that use it up first.
+Photograph your fridge, freezer or pantry. Fridge Pulse lists what is inside, tracks what is about to expire, reminds you before it goes off, and suggests meals that use it up first. When food is about to go, it helps you rescue it: swipe it away as used, freeze it in time, or cook it, and watch your no-waste streak grow. A shopping list closes the loop, putting new food away with its own expiry dates.
 
 **Pricing:** free for 2 weeks (14 days), then $9.99 per month. Hard paywall once the trial ends. The offer is defined once in `src/billing/trial.ts`, and `__tests__/pricing.test.ts` fails if any other price or trial length appears in the app or store listing.
 
@@ -8,7 +8,7 @@ Built with Expo (SDK 57) and React Native, plus a small Node backend that holds 
 
 ```
 fridge-pulse/
-  src/app/          Screens (Expo Router): onboarding, paywall, tabs, scan, review, item detail, about, legal
+  src/app/          Screens (Expo Router): onboarding, paywall, tabs (Pulse, Items, List, Meals, Settings), scan, review, item detail, about, legal
   src/lib/          Pure logic: dates, expiry, shelf-life estimates, meals, reminders, API client
   src/billing/      Trial / subscription (RevenueCat, local demo, fail-closed)
   src/store/        Persisted state (zustand + AsyncStorage)
@@ -38,6 +38,27 @@ With no configuration the app runs in **demo mode**: "Try a sample scan" returns
 The preview simulates the trial on the device, returns sample items for "Analyze", and uses the built-in recipes. It is a preview of the app's screens and flow, not the native app: no push notifications, and "Take photo" uses the browser's file/camera picker. Screens that need a confirmation use an in-app dialog because browsers and embedded viewers do not reliably show `confirm()`.
 
 The bootstrap also keeps the preview working where a host serves it from a nested URL, blocks history changes, or forbids `<base>`, and follows an explicit light/dark choice from the host.
+
+## Rescuing food: what the app does
+
+- **Swipe to resolve.** On Pulse and Items, swipe a row right when you used it, left if it was thrown out (or tap the check). The row slides away, a message bar confirms it with a countdown and **Undo**, and using food in its last three days is celebrated as a rescue with a burst of leaves. Screen readers get the same actions from the row's actions menu.
+- **Your impact.** A card on Pulse shows food rescued in the last 30 days, a no-waste streak (days since anything was thrown out), the last seven days as a chart of used versus thrown out, and progress to the next rescue milestone (1, 5, 10, 25...). Counts only; nothing is estimated.
+- **Freeze it.** When food that freezes well is due within three days, its detail screen offers to move it to the freezer, with the new date (chicken: about 9 months). Foods that freeze badly (salad leaves, eggs in the shell, mayonnaise, soft cheese) are never offered.
+- **Keep it fresh.** Each item shows one or two storage tips from USDA / FSIS / FDA consumer advice: raw poultry on the bottom shelf, cut mould from hard cheese but bin soft cheese, keep basil out of the fridge, and so on.
+- **I made this.** Open a meal idea and tap "I made this" to mark every tracked ingredient it used as used, with one Undo.
+- **Shopping list.** A List tab with typing suggestions, "Buy again" chips for food you finished recently, sharing, and **Put away**: ticked-off items open a review with each food headed where it usually lives (bananas in the cupboard, milk in the fridge, ice cream in the freezer) and saved with its own estimated date.
+- **Motion.** A heartbeat logo that beats faster when food needs using, a freshness bar that grows in, rows and cards that fade in, springy buttons, a scan line over your photo while it is read, and a countdown on the message bar. Everything respects the phone's Reduce Motion setting (and turns off in screenshot builds).
+
+## How accurate are the expiry dates?
+
+Every date the app estimates comes from `src/lib/shelfLife.ts`, and every figure there is checked by a test against an independent reference:
+
+- `test-utils/shelfLifeReference.json` holds fridge, freezer and pantry ranges for 411 foods, compiled without seeing the app's figures from USDA FoodKeeper, the FDA refrigerator and freezer chart and FSIS guidance.
+- `__tests__/shelflife-reference.test.ts` fails if any estimate falls outside its range. The only exceptions are written into the test with their reasons: fresh chorizo uses the raw-sausage figure (the shorter, safer one), estimates stop at two years, and a jar or carton in the cupboard is treated as unopened (an opened one would be in the fridge).
+- Food that must not sit out gets "use today" in the pantry, and food that freezes badly never gains time by being frozen.
+- AI estimates from a photo can shorten a date (wilted greens) but, for a food the app recognises, never exceed the guidance in the fridge or freezer. The scan prompt carries the same reference figures.
+
+These are estimates for a reminder app, not food-safety guarantees; the app labels them and lets people edit every date.
 
 ## Run it with real scanning
 
@@ -151,17 +172,15 @@ The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib
 
 Verified in the build environment:
 
-- App and server typecheck, lint is clean, and all 403 app tests and 30 server tests pass. The tests include: the price and trial length appear only as $9.99 and 2 weeks across the app, store listing and legal text; every text/background colour pair meets WCAG AA contrast in light and dark; store listing fields fit Apple and Google limits; the emoji chosen for about 200 foods, the typing suggestions (ranking, typos, history), and a shelf-life estimate for every catalog food in every location.
-- The iOS and Android bundles export (`expo export`), which proves every import resolves natively. This caught a real defect, a missing `expo-asset` dependency that would have broken the native build, and a test now guards it.
-- The web build was driven in Chromium through the full journey in light and dark mode, on an emulated iPhone, inside a sandboxed iframe, from a nested path, under a strict content-security policy: onboarding, the trial and its price/date wording, sample scan, review and edit, save, every tab, item detail, Settings (plan, restore, legal screens), trial expiry to paywall, and re-subscribe.
-- End to end against the real server with only Anthropic faked: the consent prompt appears before anything is sent (declining sends nothing), a real 2400x1800 photo is downscaled to 1568px, uploaded, validated, sent to the model with the expected model, effort, structured-output format and fallback setting, and the parsed result, label-date handling, meal ideas, a model refusal, and withdrawing then restoring consent all behave correctly in the UI.
-- Typing suggestions were driven in Chromium on an emulated iPhone in light and dark: suggestions after one letter, typo correction, tap to add, the field keeping focus, frozen food going to the freezer, and your own foods coming first on the next visit.
-- The 118 food emoji were checked by a rule table, a rendered visual review, and an independent blind identification; see `docs/food-photos.md`.
+- App and server typecheck, lint is clean, and all 901 app tests and 30 server tests pass. The tests include: every food's shelf life in all three places against the independent reference; the price and trial length appear only as $9.99 and 2 weeks; every text, control and switch colour meets WCAG AA contrast in light and dark; typing suggestions; the rescue stats, streak and milestones; the shopping list and put-away; diet filters; the reminder scheduler under rapid changes; and a render of every animated component through to the end of its animation.
+- The iOS and Android bundles export (`expo export`), which proves every import resolves natively.
+- In Chromium on an emulated iPhone, in light mode, dark mode and with Reduce Motion on, a scripted run covers adding food by typing, rescuing with the check mark and Undo, swiping food away, freezing an item in time, storage tips, the name guard, adding to and ticking off the shopping list, "Buy again", putting shopping away, "I made this", and the discard prompt, with no console errors or warnings. The earlier onboarding-to-subscription runs, a strict-CSP embedded run, and an end-to-end run against the real server with only Anthropic faked all still pass.
+- A full-app review found 17 defects (among them: reminders scheduled twice when settings changed quickly, dates going stale in an app left open overnight, items savable with a blank name, over-80-item meal requests failing, a scan result appearing after cancelling, gluten-free and vegan filters missing foods, food used after its date counted as rescued, an unreadable Undo). Each is fixed and has a test.
 
 **Not verified** (needs your hands or credentials):
 
-- Real food photos. They could not be downloaded from this environment; see `docs/food-photos.md`.
-- Running on an iOS or Android device or simulator: real camera capture, permission prompts, haptics, modal presentation, safe areas, and scheduled local notifications (including the trial-ending reminder).
-- Real purchases through StoreKit / Play Billing / RevenueCat, including the free-trial conversion, and that the store products match the offer in `src/billing/trial.ts`.
-- Real Anthropic responses. The request shape was tested against a fake API using the real SDK, but no live call was made, so scan accuracy on real photos is unmeasured.
+- Real food photos, and scan accuracy on real photos (no API key here).
+- Running on an iOS or Android device or simulator: camera, permission prompts, haptics, swipe feel on a real touch screen, modal presentation, safe areas, and scheduled notifications.
+- Real purchases through StoreKit / Play Billing / RevenueCat, including the trial converting and a cancelled trial not renewing.
+- Real Anthropic responses. The request shape was tested against a fake API using the real SDK, but no live call was made.
 - Legal text is a reasonable starting point, not legal advice.

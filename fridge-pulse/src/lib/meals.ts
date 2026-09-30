@@ -14,16 +14,21 @@ function itemTags(item: PantryItem): Tag[] {
   const name = item.name.toLowerCase();
   const tags: Tag[] = [];
   if (item.category === 'meat' || item.category === 'seafood') tags.push('meat');
-  if (/\b(chicken|beef|pork|bacon|sausage|ham|turkey|lamb|salmon|fish|shrimp|tuna)\b/.test(name)) tags.push('meat');
+  if (/\b(chicken|beef|pork|bacon|sausages?|ham|turkey|lamb|veal|venison|duck|steak|mince|salami|pepperoni|prosciutto|chorizo|salmon|fish|shrimp|prawns?|tuna|sardines?|anchov(y|ies)|crab|lobster|scallops?|mussels|clams|oysters|squid)\b/.test(name)) tags.push('meat');
   if (/\beggs?\b/.test(name)) tags.push('egg');
   if (
-    (item.category === 'dairy' || /\b(milk|yogh?urt|cheese|butter|cream|kefir)\b/.test(name)) &&
+    (item.category === 'dairy' || /\b(milk|yogh?urt|cheese|butter|cream|kefir|ghee)\b/.test(name)) &&
     !/\beggs?\b/.test(name) &&
-    !PLANT_MILK.test(name)
+    !PLANT_MILK.test(name) &&
+    // Nut and seed butters are not dairy.
+    !/\b(peanut|almond|cashew|hazelnut|nut|seed|apple|cocoa) butter\b/.test(name)
   ) {
     tags.push('dairy');
   }
-  if (/\b(bread|bagel|bun|pasta|spaghetti|noodle|flour|cereal|cracker|couscous|pita|wrap|tortilla)s?\b/.test(name) && !/\b(corn|gluten.?free)\b/.test(name)) {
+  if (
+    /\b(bread|breadcrumbs|bagel|bun|roll|baguette|sourdough|croissant|brioche|muffin|crumpet|naan|pita|wrap|tortilla|pasta|spaghetti|penne|macaroni|lasagn[ae]|ravioli|tortellini|gnocchi|noodle|ramen|udon|flour|dough|pizza|cereal|granola|cracker|pretzel|cookie|biscuit|cake|brownie|pie|waffle|pancake|couscous|bulgur|barley|beer)s?\b/.test(name) &&
+    !/\b(corn|rice|gluten.?free)\b/.test(name)
+  ) {
     tags.push('gluten');
   }
   return tags;
@@ -60,12 +65,25 @@ export function urgencyWeight(days: number): number {
   return 1;
 }
 
-function matchTracked(name: string, items: PantryItem[]): PantryItem | undefined {
+export function matchTracked(name: string, items: PantryItem[]): PantryItem | undefined {
   const n = normalizeName(name);
+  if (!n) return undefined;
+  const named = items.filter((i) => normalizeName(i.name) !== '');
   return (
-    items.find((i) => normalizeName(i.name) === n) ??
-    items.find((i) => n.includes(normalizeName(i.name)) || normalizeName(i.name).includes(n))
+    named.find((i) => normalizeName(i.name) === n) ??
+    named.find((i) => n.includes(normalizeName(i.name)) || normalizeName(i.name).includes(n))
   );
+}
+
+/** A meal's ingredient list without repeats (the AI, or two tracked "Carrots", can name one twice). */
+export function uniqueUses(uses: string[]): string[] {
+  const seen = new Set<string>();
+  return uses.filter((u) => {
+    const k = normalizeName(u);
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 export function mealScore(meal: Meal, items: PantryItem[], now: Date = new Date()): number {
@@ -89,8 +107,9 @@ export function rankMeals(meals: Meal[], items: PantryItem[], now: Date = new Da
 
 /** Stable key for caching suggestions: changes when relevant inventory, prefs or the day changes. */
 export function suggestionKey(items: PantryItem[], prefs: MealPrefs, now: Date = new Date()): string {
+  // Name and category too: renaming a misread "Chicken thighs" to "Tofu" must bring new ideas.
   const ids = suggestible(items, now)
-    .map((i) => `${i.id}:${i.expiresOn}`)
+    .map((i) => `${i.id}:${i.expiresOn}:${normalizeName(i.name)}:${i.category}`)
     .sort()
     .join(',');
   return `${todayISO(now)}|${prefs.diet}|${prefs.servings}|${ids}`;
@@ -133,7 +152,7 @@ const isVeg = (i: PantryItem) => i.category === 'produce' && !FRUIT.test(i.name.
 const isFruit = (i: PantryItem) => i.category === 'produce' && !isVeg(i);
 const isMeat = any(cat('meat'), name(/\b(chicken|beef|pork|bacon|sausage|ham|turkey)\b/));
 const isTortilla = name(/\b(tortillas?|wraps?)\b/);
-const isBread = name(/\b(bread|bagels?|sourdough|baguette|buns?)\b/);
+const isBread = name(/\b(bread|bagels?|sourdough|baguettes?|buns?|rolls?|brioche)\b/);
 const isPasta = name(/\b(pasta|spaghetti|noodles?|penne|macaroni)\b/);
 const isRice = any(name(/\brice\b/), name(/\bquinoa\b/));
 const isGreens = name(/\b(lettuce|spinach|arugula|kale|greens|salad)\b/);
@@ -397,7 +416,7 @@ export function localSuggestions(
       summary: recipe.summary,
       minutes: recipe.minutes,
       servings: prefs.servings,
-      uses: chosen.map((c) => c.name),
+      uses: uniqueUses(chosen.map((c) => c.name)),
       extras: recipe.extras,
       steps: recipe.steps,
       source: 'local',

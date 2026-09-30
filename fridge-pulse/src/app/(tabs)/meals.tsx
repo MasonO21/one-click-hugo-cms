@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { getProvider } from '../../store/billing';
+import { getProvider, useBilling } from '../../store/billing';
 import { AiConsentModal } from '../../components/AiConsentModal';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -10,10 +10,15 @@ import { Header } from '../../components/Header';
 import { MealCard } from '../../components/MealCard';
 import { Screen } from '../../components/Screen';
 import { Text } from '../../components/Text';
+import { FadeIn, stagger } from '../../components/motion';
+import { useToday } from '../../hooks/useToday';
+import { confirm } from '../../lib/dialogs';
+import { resolveItems } from '../../store/actions';
+import { useBurst } from '../../store/burst';
 import { fetchMeals, friendlyError, isDemoMode } from '../../lib/api';
 import { SCREENSHOT_MODE } from '../../lib/config';
-import { filterForDiet, localSuggestions, rankMeals, suggestible, suggestionKey } from '../../lib/meals';
-import type { Meal } from '../../lib/types';
+import { filterForDiet, localSuggestions, matchTracked, rankMeals, suggestible, suggestionKey, uniqueUses } from '../../lib/meals';
+import type { Meal, PantryItem } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
 import { useSettings } from '../../store/settings';
@@ -33,9 +38,12 @@ export default function Meals() {
   // An error belongs to the inventory it happened for; a different inventory deserves a fresh try.
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const inFlight = useRef<string | null>(null);
+  // Only the newest request may change what is shown; an older one arriving late is ignored.
+  const latest = useRef<string | null>(null);
+  const today = useToday();
 
   const prefs = useMemo(() => ({ diet, servings }), [diet, servings]);
-  const now = new Date();
+  const now = useMemo(() => new Date(), [today]); // eslint-disable-line react-hooks/exhaustive-deps
   const pool = filterForDiet(suggestible(items, now), diet);
   const key = suggestionKey(items, prefs, now);
   const fresh = cache.key === key;
@@ -54,20 +62,25 @@ export default function Meals() {
       if (candidates.length === 0 || inFlight.current === requestKey) return;
       if (!(isDemoMode || useSettings.getState().aiConsent)) return;
       inFlight.current = requestKey;
+      latest.current = requestKey;
       setLoading(true);
       setFailure(null);
       try {
         const userId = await getProvider().getUserId();
         const exclude = more ? useMealsCache.getState().meals.map((m) => m.title) : [];
         const result = await fetchMeals({ userId, items: candidates, prefs, exclude });
+        if (latest.current !== requestKey) return;
         const ranked = rankMeals(result, candidates);
         if (ranked.length === 0) setFailure({ key: requestKey, message: 'No ideas came back. Try again in a moment.' });
         else useMealsCache.getState().setResult(requestKey, ranked);
       } catch (e) {
-        setFailure({ key: requestKey, message: friendlyError(e).message });
+        if (latest.current !== requestKey) return;
+        const { message, paywall } = friendlyError(e);
+        setFailure({ key: requestKey, message });
+        if (paywall) void useBilling.getState().refresh();
       } finally {
-        inFlight.current = null;
-        setLoading(false);
+        if (inFlight.current === requestKey) inFlight.current = null;
+        if (latest.current === requestKey) setLoading(false);
       }
     },
     [prefs],
@@ -80,6 +93,24 @@ export default function Meals() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [aiAllowed, fresh, pool.length, load]),
   );
+
+  /** "I made this": the tracked ingredients it used are marked used, with a celebration. */
+  async function cooked(meal: Meal, at?: { x: number; y: number }) {
+    const live = useInventory.getState().items.filter((i) => i.status === 'active');
+    const used = uniqueUses(meal.uses)
+      .map((u) => matchTracked(u, live))
+      .filter((i, n, all): i is PantryItem => !!i && all.findIndex((j) => j?.id === i.id) === n);
+    if (used.length === 0) return;
+    const ok = await confirm({
+      title: `Made ${meal.title}?`,
+      message: `This marks ${used.map((i) => i.name).join(', ')} as used.`,
+      confirmLabel: 'Mark as used',
+      cancelLabel: 'Not yet',
+    });
+    if (!ok) return;
+    if (at) useBurst.getState().emit(at.x, at.y);
+    resolveItems(used, 'used', { mealTitle: meal.title });
+  }
 
   return (
     <>
@@ -133,7 +164,9 @@ export default function Meals() {
           ) : (
             <View style={{ gap: 12 }}>
               {meals.map((meal, i) => (
-                <MealCard key={meal.id} meal={meal} defaultOpen={i === 0} />
+                <FadeIn key={meal.id} delay={stagger(i, 70)}>
+                  <MealCard meal={meal} defaultOpen={i === 0} onCooked={(at) => void cooked(meal, at)} />
+                </FadeIn>
               ))}
             </View>
           )}

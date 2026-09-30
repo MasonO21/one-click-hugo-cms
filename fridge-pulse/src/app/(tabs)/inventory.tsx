@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, SectionList, StyleSheet, TextInput, View } from 'react-native';
 import { LOCATIONS, LOCATION_LABEL } from '../../components/categories';
 import { Chip } from '../../components/Chip';
 import { EmptyState } from '../../components/EmptyState';
@@ -9,7 +9,9 @@ import { Header } from '../../components/Header';
 import { ItemRow } from '../../components/ItemRow';
 import { Screen } from '../../components/Screen';
 import { Text } from '../../components/Text';
-import { useMarkUsed } from '../../components/Undo';
+import { FadeIn, PressableScale, stagger } from '../../components/motion';
+import { useToday } from '../../hooks/useToday';
+import { resolveItems } from '../../store/actions';
 import { active, daysLeft, sortByExpiry, urgencyOf, URGENCY_ORDER, type Urgency } from '../../lib/expiry';
 import type { PantryItem, StorageLocation } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
@@ -28,9 +30,10 @@ export default function Inventory() {
   const items = useInventory((s) => s.items);
   const [filter, setFilter] = useState<StorageLocation | 'all'>('all');
   const [query, setQuery] = useState('');
-  const [markUsed, undo] = useMarkUsed();
+  // Re-groups at midnight and on return to the app, so nothing sits under yesterday's heading.
+  const today = useToday();
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), [today]); // eslint-disable-line react-hooks/exhaustive-deps
   const live = useMemo(() => active(items), [items]);
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -40,8 +43,7 @@ export default function Inventory() {
     const groups: Record<Urgency, PantryItem[]> = { expired: [], today: [], soon: [], week: [], ok: [] };
     for (const item of shown) groups[urgencyOf(daysLeft(item, now))].push(item);
     return URGENCY_ORDER.filter((u) => groups[u].length > 0).map((u) => ({ key: u, title: SECTION_TITLE[u], data: groups[u] }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live, filter, query]);
+  }, [live, filter, query, now]);
 
   const countFor = (loc: StorageLocation) => live.filter((i) => i.location === loc).length;
 
@@ -51,15 +53,16 @@ export default function Inventory() {
         title="Items"
         subtitle={`${live.length} tracked`}
         right={
-          <Pressable
+          <PressableScale
             testID="add-items"
             accessibilityRole="button"
             accessibilityLabel="Scan or add items"
             onPress={() => router.push('/scan')}
+            scaleTo={0.9}
             style={[styles.add, { backgroundColor: c.primary }]}
           >
             <Ionicons name="add" size={26} color={c.onPrimary} />
-          </Pressable>
+          </PressableScale>
         }
       />
 
@@ -77,11 +80,14 @@ export default function Inventory() {
         />
       </View>
 
-      <View style={styles.chips}>
-        <Chip label={`All ${live.length}`} selected={filter === 'all'} onPress={() => setFilter('all')} />
-        {LOCATIONS.map((loc) => (
-          <Chip key={loc} label={`${LOCATION_LABEL[loc]} ${countFor(loc)}`} selected={filter === loc} onPress={() => setFilter(loc)} />
-        ))}
+      {/* One scrollable row, so the filters never wrap onto a second line on narrow phones. */}
+      <View style={styles.chipsWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
+          <Chip label={`All ${live.length}`} selected={filter === 'all'} onPress={() => setFilter('all')} />
+          {LOCATIONS.map((loc) => (
+            <Chip key={loc} label={`${LOCATION_LABEL[loc]} ${countFor(loc)}`} selected={filter === loc} onPress={() => setFilter(loc)} />
+          ))}
+        </ScrollView>
       </View>
 
       <SectionList
@@ -99,10 +105,10 @@ export default function Inventory() {
             </Text>
           </View>
         )}
-        renderItem={({ item }) => (
-          <View style={{ marginBottom: 10 }}>
-            <ItemRow item={item} now={now} onPress={() => router.push(`/item/${item.id}`)} onUsed={() => markUsed(item)} />
-          </View>
+        renderItem={({ item, index }) => (
+          <FadeIn delay={stagger(index)} style={{ marginBottom: 10 }}>
+            <ItemRow item={item} now={now} onPress={() => router.push(`/item/${item.id}`)} onResolve={(outcome) => resolveItems([item], outcome)} />
+          </FadeIn>
         )}
         ListEmptyComponent={
           <EmptyState
@@ -114,7 +120,6 @@ export default function Inventory() {
           />
         }
       />
-      {undo}
     </Screen>
   );
 }
@@ -123,7 +128,8 @@ const styles = StyleSheet.create({
   add: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 12, height: 46 },
   input: { flex: 1, fontSize: 16, height: 46 },
-  chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  chipsWrap: { marginHorizontal: -20 },
+  chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 20 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12, paddingBottom: 8 },
   sectionDot: { width: 8, height: 8, borderRadius: 4 },
 });

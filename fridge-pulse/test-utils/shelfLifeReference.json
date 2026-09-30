@@ -1,0 +1,6170 @@
+{
+ "_about": "Independent reference for how long each food keeps (days, [low, high]) in the fridge, freezer and pantry. Compiled blind (without seeing the app figures) from USDA FoodKeeper, the FDA Refrigerator & Freezer Storage Chart and FSIS guidance, in two separate passes. Conventions: produce, meat and fish as bought; cartons, jars and bottles opened; canned goods unopened in the pantry and opened in the fridge; dry goods opened; leftovers cooked; freezer figures for best quality. [0, 0] means it should not be kept there, or that doing so is pointless. Checked by __tests__/shelflife-reference.test.ts.",
+ "foods": {
+  "2% milk": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: milk ~7 days fridge (opened 4-7 days), freezer up to 3 mo; must be refrigerated"
+  },
+  "Almond butter": {
+   "fridge": [
+    90,
+    180
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Natural nut butter: opened ~1-3 months pantry, 3-6 months fridge. Guidance thin"
+  },
+  "Almond milk": {
+   "fridge": [
+    7,
+    10
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: fridge 7-10 days (brand guidance); opened must be refrigerated; manufacturers advise against freezing (separates), usable for cooking ~1-3 mo"
+  },
+  "Almonds": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    365,
+    730
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "Shelled almonds: ~3-6 months pantry once opened, 6-12 months fridge, 1-2 years freezer"
+  },
+  "American cheese": {
+   "fridge": [
+    21,
+    30
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Processed cheese slices: opened fridge 3-4 wk; FDA-style charts: doesn't freeze well (many freeze ~4 mo anyway)"
+  },
+  "Apple juice": {
+   "fridge": [
+    7,
+    10
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper: juice in cartons/bottles 7-10 days after opening refrigerated; freezer 8-12 months; opened must be refrigerated"
+  },
+  "Apple pie": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "USDA-style: baked fruit pie 1-2 days room temp, then 2-4 days fridge; freezer ~2-4 months. Freezer guidance varies"
+  },
+  "Apples": {
+   "fridge": [
+    28,
+    56
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    7,
+    21
+   ],
+   "note": "FoodKeeper: counter ~3 wk, fridge 4-8 wk; freezer (sliced/cooked) ~8 mo"
+  },
+  "Apricots": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Ripen on counter 1-3 days; ripe fridge 3-5 days; frozen fruit 8-12 mo (NCHFP/FSIS)"
+  },
+  "Artichokes": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Fridge ~4-7 days; cooked hearts frozen 8-12 mo"
+  },
+  "Arugula": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Fridge 3-5 days; freezing not recommended for salad use; bagged/cut leafy greens need refrigeration (pantry 0)"
+  },
+  "Asparagus": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper: fridge 3-4 days; blanched frozen 8-12 mo"
+  },
+  "Aubergine": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper-style: fridge 4-7 days; cooked/blanched frozen 6-8 mo"
+  },
+  "Avocados": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    2,
+    5
+   ],
+   "note": "Counter until ripe (2-5 days); ripe whole in fridge 3-5 days; puree frozen 3-6 mo"
+  },
+  "Baby carrots": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Peeled baby carrots: fridge 2-3 wk; blanched frozen 8-12 mo"
+  },
+  "Baby spinach": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Bagged: fridge 3-7 days; frozen for cooking/smoothies 6-12 mo; cut leafy greens need refrigeration"
+  },
+  "Bacon": {
+   "fridge": [
+    7,
+    7
+   ],
+   "freezer": [
+    30,
+    30
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: bacon fridge 7 days, freezer 1 mo"
+  },
+  "Bagels": {
+   "fridge": [
+    7,
+    10
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    2,
+    5
+   ],
+   "note": "Bagels ~2-5 days room temp, ~1 week fridge, 2-3 months freezer"
+  },
+  "Baguette": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Crusty baguette best 1-2 days room temp; fridge stales; freeze 1-3 months"
+  },
+  "Baked beans": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FSIS: low-acid canned food 2-5 years unopened pantry; opened 3-4 days fridge; out of can freezer 1-2 months"
+  },
+  "Balsamic vinegar": {
+   "fridge": [
+    365,
+    730
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "FSIS: vinegar opened ~1 year pantry for best quality, safe indefinitely; fridge not needed"
+  },
+  "Bananas": {
+   "fridge": [
+    2,
+    7
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    2,
+    7
+   ],
+   "note": "Counter until ripe then 2-5 days; fridge ripe a few days (peel blackens); peeled frozen 2-3 mo (FoodKeeper)"
+  },
+  "Basil": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Cold-sensitive: in water at room temp or fridge ~3-7 days; frozen (blanched/in oil) 3-6 mo"
+  },
+  "Basmati rice": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "White rice (dry) ~1-2 years pantry after opening, airtight (USA Rice: indefinitely); fridge/freezer not needed"
+  },
+  "BBQ sauce": {
+   "fridge": [
+    90,
+    120
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS/FoodKeeper: bottled barbecue sauce opened 4 months refrigerated; labels say refrigerate after opening"
+  },
+  "Bean sprouts": {
+   "fridge": [
+    2,
+    3
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper-style: fridge 2-3 days; freezing not recommended; high-risk sprouts must be refrigerated"
+  },
+  "Beef brisket": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    120,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw brisket (roast cut): fridge 3-5 days, freezer 4-12 mo (vac-packed corned brisket 5-7 days)"
+  },
+  "Beef broth": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened carton/can of broth 3-5 days refrigerated (some carton labels allow longer); freezer 2-3 months; opened must be refrigerated"
+  },
+  "Beef mince": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw ground meat/poultry fridge 1-2 days, freezer 3-4 mo"
+  },
+  "Beef stew": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: soups & stews 3-4 days fridge, 2-3 months freezer"
+  },
+  "Beer": {
+   "fridge": [
+    180,
+    240
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    120,
+    180
+   ],
+   "note": "Treated as sealed cans/bottles: ~4-6 months room temp, ~6-8 months cold (quality); opened 1-2 days; do not freeze"
+  },
+  "Beetroot": {
+   "fridge": [
+    7,
+    21
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Tops removed: fridge 1-3 wk; cooked frozen 6-8 mo"
+  },
+  "Beets": {
+   "fridge": [
+    7,
+    21
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Tops removed: fridge 1-3 wk; cooked frozen 6-8 mo"
+  },
+  "Bell peppers": {
+   "fridge": [
+    5,
+    14
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Fridge ~1-2 wk (green longer than red/yellow); chopped frozen 6-8 mo"
+  },
+  "Black beans": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FSIS: low-acid canned food 2-5 years unopened pantry; opened 3-4 days fridge; out of can freezer 1-2 months (assumed canned; dry beans 1-2 years pantry)"
+  },
+  "Black pepper": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    730,
+    1095
+   ],
+   "note": "FoodKeeper: ground spices 2-3 years (quality); whole peppercorns 3-4 years"
+  },
+  "Blackberries": {
+   "fridge": [
+    3,
+    6
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fridge 3-6 days, fragile; frozen berries 8-12 mo; ~1 day at room temp"
+  },
+  "Blue cheese": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened wedge: fridge 3-4 wk; freezer 3-6 mo (crumbly, for cooking)"
+  },
+  "Blueberries": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper-style: fridge 5-10 days (up to 2 wk); frozen 8-12 mo"
+  },
+  "Bok choy": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fridge 3-7 days; blanched frozen 6-12 mo"
+  },
+  "Bratwurst": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Assumed raw fresh brats: fridge 1-2 days, freezer 1-2 mo (precooked ~7 days)"
+  },
+  "Bread": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    90,
+    90
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Commercial loaf: ~3-7 days room temp, 7-14 days fridge (stales faster), freezer ~3 months best quality"
+  },
+  "Breadcrumbs": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "FoodKeeper: dry commercial breadcrumbs ~6 months pantry, 6 months freezer"
+  },
+  "Breakfast sausage": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Assumed raw links/patties: fridge 1-2 days, freezer 1-2 mo (fully cooked links ~7 days)"
+  },
+  "Brie": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart soft cheese: fridge ~1 wk (opened 5-10 days); freezer up to 6 mo (texture changes)"
+  },
+  "Brioche": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    2,
+    4
+   ],
+   "note": "Enriched bread ~2-4 days room temp, ~1 week fridge, 2-3 months freezer"
+  },
+  "Broccoli": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper: fridge 3-5 days; blanched frozen 10-12 mo"
+  },
+  "Brown rice": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    365,
+    540
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "Brown rice (dry): 3-6 months pantry (bran oils go rancid), 6-12 months fridge, 12-18 months freezer"
+  },
+  "Brown sugar": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    180,
+    540
+   ],
+   "note": "Brown sugar ~6-18 months pantry (airtight, hardens); can freeze ~6 months+; fridge hardens it"
+  },
+  "Brownies": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    2,
+    4
+   ],
+   "note": "Brownies 2-4 days room temp (covered), ~1 week fridge, ~3 months freezer"
+  },
+  "Brussels sprouts": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper: fridge 3-5 days (up to ~1 wk); blanched frozen 10-12 mo"
+  },
+  "Burger patties": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw ground meat/poultry fridge 1-2 days, freezer 3-4 mo"
+  },
+  "Butter": {
+   "fridge": [
+    30,
+    90
+   ],
+   "freezer": [
+    180,
+    270
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "FDA chart: fridge 1-3 mo, freezer 6-9 mo; USDA: on counter 1-2 days"
+  },
+  "Buttermilk": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    90,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fridge 1-2 wk; freezer 3 mo"
+  },
+  "Butternut squash": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Winter squash whole: cool pantry 1-3 mo; fridge whole ~1-2 wk (cut 4-5 days); cooked frozen 8-12 mo"
+  },
+  "Cabbage": {
+   "fridge": [
+    7,
+    21
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper ~1-2 wk; whole heads often keep longer; blanched/cooked frozen 8-12 mo"
+  },
+  "Cake": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Iced/plain cake 1-3 days room temp, 3-7 days fridge, 2-4 months freezer; cream/cream-cheese frosted must be refrigerated"
+  },
+  "Camembert": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart soft cheese: fridge ~1 wk (opened 5-10 days); freezer up to 6 mo (texture changes)"
+  },
+  "Canned beans": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FSIS: low-acid canned food 2-5 years unopened pantry; opened 3-4 days fridge; out of can freezer 1-2 months"
+  },
+  "Canned corn": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FSIS: low-acid canned food 2-5 years unopened pantry; opened 3-4 days fridge; out of can freezer 1-2 months"
+  },
+  "Canned soup": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FSIS: low-acid canned soup 2-5 years unopened (tomato-based 12-18 months); opened 3-4 days fridge; freezer 2-3 months"
+  },
+  "Canned tomatoes": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    365,
+    540
+   ],
+   "note": "FSIS: high-acid canned food 12-18 months unopened pantry; opened (in covered container) 5-7 days fridge; out of can freezer 1-2 months"
+  },
+  "Canned tuna": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FDA/FSIS: canned seafood 2-5 years unopened; opened 3-4 days fridge; out of can 2 months freezer"
+  },
+  "Cantaloupe": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    60,
+    240
+   ],
+   "pantry": [
+    2,
+    5
+   ],
+   "note": "Whole: counter 2-5 days to ripen, fridge 5-10 days; whole uncut as bought; cut melon must be refrigerated (3-5 days) and pantry 0 once cut; frozen cubes quality 2-8 mo (thin guidance)"
+  },
+  "Carrots": {
+   "fridge": [
+    14,
+    28
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Tops removed: fridge 2-4 wk; blanched frozen 10-12 mo"
+  },
+  "Cashews": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    365,
+    730
+   ],
+   "pantry": [
+    60,
+    180
+   ],
+   "note": "Shelled cashews: ~2-6 months pantry, 6-12 months fridge, 1-2 years freezer"
+  },
+  "Casserole": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper casseroles 3-4 days fridge, 2-3 months freezer"
+  },
+  "Cauliflower": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper-style: fridge 3-5 days to ~1 wk; blanched frozen 10-12 mo"
+  },
+  "Celery": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper: fridge 1-2 wk; frozen for cooking 10-12 mo"
+  },
+  "Cereal": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened ready-to-eat cereal ~1-3 months pantry (quality/staleness)"
+  },
+  "Cheddar cheese": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard cheese opened 3-4 wk (unopened ~6 mo); freezer 6 mo (crumbly)"
+  },
+  "Cheese": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Assumed hard block cheese: FDA chart opened 3-4 wk; freezer 6 mo"
+  },
+  "Cheesecake": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper: cheesecake 7 days refrigerated, 2-3 months freezer; must be refrigerated"
+  },
+  "Cherries": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "FoodKeeper-style: fridge 4-7 days; frozen 8-12 mo"
+  },
+  "Cherry tomatoes": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    60,
+    240
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Counter until ripe then a few days; fridge ~5-10 days (flavour loss); frozen for cooking 2-8 mo"
+  },
+  "Chicken": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    270,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw poultry pieces fridge 1-2 days, freezer 9 mo"
+  },
+  "Chicken breast": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    270,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw poultry pieces fridge 1-2 days, freezer 9 mo"
+  },
+  "Chicken broth": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened carton/can of broth 3-5 days refrigerated (some carton labels allow longer); freezer 2-3 months; opened must be refrigerated"
+  },
+  "Chicken curry": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Cooked poultry dish 3-4 days fridge; freezer 2-4 months (FoodKeeper cooked poultry dishes 4-6 months)"
+  },
+  "Chicken drumsticks": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    270,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw poultry pieces fridge 1-2 days, freezer 9 mo"
+  },
+  "Chicken soup": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: soups & stews 3-4 days fridge, 2-3 months freezer"
+  },
+  "Chicken thighs": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    270,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw poultry pieces fridge 1-2 days, freezer 9 mo"
+  },
+  "Chicken wings": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    270,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw poultry pieces fridge 1-2 days, freezer 9 mo"
+  },
+  "Chickpeas": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FSIS: low-acid canned food 2-5 years unopened pantry; opened 3-4 days fridge; out of can freezer 1-2 months (assumed canned; dry chickpeas 1-2 years pantry)"
+  },
+  "Chili peppers": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Fresh hot peppers: fridge 1-2 wk; frozen 6-12 mo"
+  },
+  "Chives": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fresh herb: fridge ~5-7 days; frozen chopped 3-6 mo"
+  },
+  "Chocolate chips": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Opened chocolate chips ~6-12 months cool/dry; fridge/freezer OK sealed (may bloom)"
+  },
+  "Chocolate milk": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper: opened milk ~7 days refrigerated; freezer up to 3 months (texture changes)"
+  },
+  "Chocolate spread": {
+   "fridge": [
+    30,
+    90
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Hazelnut spread (e.g. Nutella): opened ~1-3 months at room temp; maker advises against fridge (hardens) but safe"
+  },
+  "Chopped tomatoes": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    365,
+    540
+   ],
+   "note": "FSIS: high-acid canned food 12-18 months unopened pantry; opened (in covered container) 5-7 days fridge; out of can freezer 1-2 months (assumed canned)"
+  },
+  "Chorizo": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Assumed dry-cured (Spanish) opened: fridge 2-3 wk, freezer 1-2 mo; fresh Mexican chorizo is raw sausage: fridge 1-2 days"
+  },
+  "Cilantro": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fresh herb: fridge 5-10 days (stems in water up to ~2 wk); frozen 3-6 mo"
+  },
+  "Clams": {
+   "fridge": [
+    2,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Live clams in shell ~2-5 days fridge (FoodKeeper-style); shucked 1-2 days; freeze ~3 months"
+  },
+  "Clementines": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    5,
+    7
+   ],
+   "note": "Citrus: room temp ~1 wk, fridge 2-3 wk; segments/juice frozen 3-6 mo"
+  },
+  "Coconut": {
+   "fridge": [
+    14,
+    30
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    7,
+    30
+   ],
+   "note": "Whole fresh coconut: room temp 1-4 wk, fridge 2-4 wk; opened meat fridge 3-5 days; grated meat frozen ~6-8 mo (guidance thin)"
+  },
+  "Coconut milk": {
+   "fridge": [
+    4,
+    6
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "Assumed canned: unopened ~2-5 years (low-acid); opened 4-6 days fridge; freezes 1-3 months (separates). Carton beverage opened 7-10 days"
+  },
+  "Coconut water": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened carton/bottle 2-4 days refrigerated (brand labels 24h-5 days); freeze 1-3 months"
+  },
+  "Cod": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: lean fish (cod, haddock, halibut, sole etc.) 1-2 days fridge, 6-8 months freezer"
+  },
+  "Coffee": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    14,
+    60
+   ],
+   "note": "Assumed opened package of ground coffee: best flavor 1-2 weeks, acceptable ~1-2 months pantry (airtight); freeze airtight up to ~1-3 months; NCA advises against fridge"
+  },
+  "Coffee beans": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    60,
+    180
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened whole beans: best within ~1 month, acceptable up to ~3 months airtight; freezer 2-6 months; NCA advises against fridge"
+  },
+  "Cold brew coffee": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Cold brew concentrate ~1-2 weeks refrigerated (diluted/opened bottled ~5-7 days); freezer as cubes 1-3 months"
+  },
+  "Cookies": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    60,
+    180
+   ],
+   "pantry": [
+    14,
+    30
+   ],
+   "note": "Opened packaged cookies ~2-4 weeks pantry; freeze 2-6 months"
+  },
+  "Coriander": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Assumed fresh coriander leaf (= cilantro): fridge 5-10 days; frozen 3-6 mo"
+  },
+  "Corn on the cob": {
+   "fridge": [
+    1,
+    3
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper: in husk fridge 1-2 days (up to 3); blanched frozen 8-12 mo; sugar converts quickly at room temp"
+  },
+  "Corn tortillas": {
+   "fridge": [
+    7,
+    28
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Opened corn tortillas: few days room temp, several weeks fridge (labels up to 6-8 weeks), freezer 3-6 months"
+  },
+  "Cornflakes": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened ready-to-eat cereal ~1-3 months pantry (staleness)"
+  },
+  "Cottage cheese": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fridge ~1 wk (opened); doesn't freeze well"
+  },
+  "Courgette": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Summer squash: fridge 4-7 days; blanched frozen 10-12 mo"
+  },
+  "Couscous": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Dry couscous ~6-12 months after opening, airtight"
+  },
+  "Crab": {
+   "fridge": [
+    1,
+    3
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Live crab: cook same day; fresh crabmeat 2-3 days fridge; freezer ~2-4 months (guidance varies)"
+  },
+  "Crab cakes": {
+   "fridge": [
+    1,
+    3
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw crab cakes 1-2 days, cooked 3-4 days refrigerated; freezer 2-3 months"
+  },
+  "Crackers": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    21,
+    60
+   ],
+   "note": "Opened crackers ~3 weeks-2 months pantry, airtight (staleness)"
+  },
+  "Cranberries": {
+   "fridge": [
+    21,
+    35
+   ],
+   "freezer": [
+    270,
+    365
+   ],
+   "pantry": [
+    1,
+    4
+   ],
+   "note": "Fresh: fridge 3-5 wk (FoodKeeper/grower guidance ~4 wk); frozen ~9-12 mo"
+  },
+  "Cranberry juice": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper: juice in cartons/bottles 7-10 days after opening refrigerated; freezer 8-12 months; opened must be refrigerated; acidic cranberry cocktail often up to ~2 weeks"
+  },
+  "Cream cheese": {
+   "fridge": [
+    10,
+    14
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fridge 2 wk; freezing not recommended"
+  },
+  "Crème fraîche": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: fridge ~5-10 days (labels ~5); freezing not recommended (splits; full-fat usable for cooking)"
+  },
+  "Crisps": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    7,
+    14
+   ],
+   "note": "FoodKeeper-style: opened chips 1-2 weeks pantry (staleness); fridge/freezer not needed"
+  },
+  "Croissants": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Croissants 1-2 days room temp, ~1 week fridge, 1-2 months freezer"
+  },
+  "Crumpets": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    2,
+    4
+   ],
+   "note": "Packaged crumpets ~2-4 days room temp (to date), ~1 week fridge, 1-3 months freezer. Guidance thin"
+  },
+  "Cucumber": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Fridge ~1 wk (4-7 days); freezing not recommended (except as pickles)"
+  },
+  "Custard": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened/prepared custard: fridge 2-4 days; freezing not recommended (weeps); unopened ambient cartons/tins in pantry, but opened must be refrigerated"
+  },
+  "Dark chocolate": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Dark chocolate ~1 year once opened, cool/dry; fridge/freezer OK wrapped (may bloom), not needed"
+  },
+  "Dates": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    365,
+    365
+   ],
+   "pantry": [
+    30,
+    180
+   ],
+   "note": "Assumed dried/soft-dried (Medjool) opened pack: pantry 1-6 mo, fridge 6-12 mo, frozen ~1 yr (guidance thin)"
+  },
+  "Deli turkey": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: opened luncheon/deli meat fridge 3-5 days, freezer 1-2 mo"
+  },
+  "Dijon mustard": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    7,
+    30
+   ],
+   "note": "Opened Dijon ~6-12 months refrigerated; labels say refrigerate after opening (flavor fades at room temp); don't freeze"
+  },
+  "Dill": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fresh herb: fridge 5-10 days; frozen 3-6 mo"
+  },
+  "Dinner rolls": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Commercial rolls/buns ~3-7 days room temp, 1-2 weeks fridge, ~2-3 months freezer"
+  },
+  "Donuts": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Plain/glazed donuts 1-2 days room temp, ~1 week fridge, 1-2 months freezer; cream-filled must be refrigerated"
+  },
+  "Double cream": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "UK labels: opened use within ~3-5 days; freezes OK (best whipped first) ~2-3 mo"
+  },
+  "Dried beans": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "Dry beans ~1-2 years pantry (quality; safe longer)"
+  },
+  "Duck breast": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper raw poultry pieces 1-2 days fridge; duck 6 months, pieces up to 9 months freezer"
+  },
+  "Edamame": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Fresh/thawed in pod: fridge 2-4 days; blanched/commercial frozen 8-12 mo (most sold frozen)"
+  },
+  "Egg noodles": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Dry egg noodles ~6-12 months pantry after opening (FoodKeeper-style up to 2 years unopened)"
+  },
+  "Eggplant": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper-style: fridge 4-7 days; cooked/blanched frozen 6-8 mo"
+  },
+  "Eggs": {
+   "fridge": [
+    21,
+    35
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: in shell fridge 3-5 wk; do not freeze in shell (beaten out of shell up to 12 mo); US washed eggs must be refrigerated (UK/EU often room temp)"
+  },
+  "English muffins": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    4,
+    7
+   ],
+   "note": "Packaged English muffins ~4-7 days room temp, 1-2 weeks fridge, 2-3 months freezer"
+  },
+  "Fennel": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Bulb: fridge ~5-7 days; blanched frozen 6-8 mo"
+  },
+  "Feta": {
+   "fridge": [
+    5,
+    14
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: fridge ~5-7 days out of brine, up to ~2 wk+ in brine; freezer 1-3 mo (crumbly)"
+  },
+  "Figs": {
+   "fridge": [
+    2,
+    3
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Fresh figs very perishable: fridge 2-3 days; frozen 6-12 mo"
+  },
+  "Fish fingers": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Same as fish sticks: frozen breaded fish ~6-12 months best quality; thawed 1-2 days. Guidance thin"
+  },
+  "Fish sauce": {
+   "fridge": [
+    365,
+    730
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Opened fish sauce ~6-12 months pantry (quality), longer refrigerated"
+  },
+  "Fish sticks": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Commercial frozen breaded fish: cook from frozen; best quality ~6-12 months (package date); thawed 1-2 days. Guidance thin"
+  },
+  "Flour": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    365,
+    730
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "FoodKeeper: white flour 6-12 months pantry, ~1 year fridge, 1-2 years freezer (whole wheat much shorter)"
+  },
+  "Flour tortillas": {
+   "fridge": [
+    7,
+    21
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Opened flour tortillas/wraps: ~1 week room temp, ~1-3 weeks fridge (labels vary), freezer 3-6 months"
+  },
+  "Free-range eggs": {
+   "fridge": [
+    21,
+    35
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: in shell fridge 3-5 wk; do not freeze in shell (beaten out of shell up to 12 mo); US washed eggs must be refrigerated (UK/EU often room temp)"
+  },
+  "Frozen berries": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Commercial frozen fruit: freezer 8-12 mo; thawed berries fridge 2-4 days"
+  },
+  "Frozen corn": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Commercial frozen vegetables: freezer ~8-12 mo best quality (FoodKeeper ~8 mo); once thawed fridge 3-5 days"
+  },
+  "Frozen mixed vegetables": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Commercial frozen vegetables: freezer ~8-12 mo best quality (FoodKeeper ~8 mo); once thawed fridge 3-5 days"
+  },
+  "Frozen peas": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Commercial frozen vegetables: freezer ~8-12 mo best quality (FoodKeeper ~8 mo); once thawed fridge 3-5 days"
+  },
+  "Frozen pizza": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Frozen dinners/entrees ~3-4 months best quality (package date often longer); if thawed, cook within 1-2 days"
+  },
+  "Frozen spinach": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Commercial frozen vegetables: freezer ~8-12 mo best quality (FoodKeeper ~8 mo); once thawed fridge 3-5 days"
+  },
+  "Frozen waffles": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Commercial frozen waffles ~1-3 months best quality after opening (package date); thawed 2-4 days fridge"
+  },
+  "Frozen yogurt": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Like ice cream: freezer 2-4 mo; cannot be kept in fridge or pantry"
+  },
+  "Garlic": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    30,
+    180
+   ],
+   "note": "Whole bulb: cool pantry 1-6 mo; fridge (broken/peeled cloves) 1-2 wk; peeled/chopped frozen 6-12 mo"
+  },
+  "Garlic bread": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Chilled store-bought garlic bread keep refrigerated (garlic butter) ~3-5 days/to date; freezer 2-3 months"
+  },
+  "Ginger": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    5,
+    7
+   ],
+   "note": "Fresh root: fridge 3-4 wk; frozen 3-6 mo; ~1 wk at room temp"
+  },
+  "Goat cheese": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart soft cheese: fridge ~1 wk (opened 5-10 days); freezer up to 6 mo (texture changes)"
+  },
+  "Gouda": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard cheese opened 3-4 wk (unopened ~6 mo); freezer 6 mo (crumbly)"
+  },
+  "Granola": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened granola ~1-3 months pantry (nut oils); freezes 3-6 months"
+  },
+  "Granola bars": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "Individually wrapped bars keep to package date (~3-6 months)"
+  },
+  "Grapefruit": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    7,
+    10
+   ],
+   "note": "Citrus: counter ~7-10 days, fridge 2-3 wk; segments/juice frozen 3-6 mo"
+  },
+  "Grapes": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    30,
+    300
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Fridge 1-2 wk unwashed; frozen whole: FoodKeeper short (~1 mo) best quality, general guidance up to ~10 mo"
+  },
+  "Greek yogurt": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: yogurt fridge 1-2 wk; freezer 1-2 mo"
+  },
+  "Green apples": {
+   "fridge": [
+    28,
+    56
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    7,
+    21
+   ],
+   "note": "FoodKeeper: counter ~3 wk, fridge 4-8 wk; freezer (sliced/cooked) ~8 mo"
+  },
+  "Green beans": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fridge 3-7 days; blanched frozen 8-12 mo"
+  },
+  "Green onions": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fridge 5-10 days (up to ~2 wk); chopped frozen 3-6 mo"
+  },
+  "Green tea": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Dry green tea ~6-12 months after opening, airtight, away from light; fridge/freezer not recommended"
+  },
+  "Ground beef": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw ground meat/poultry fridge 1-2 days, freezer 3-4 mo"
+  },
+  "Ground chicken": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw ground meat/poultry fridge 1-2 days, freezer 3-4 mo"
+  },
+  "Ground coffee": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    14,
+    60
+   ],
+   "note": "Opened ground coffee: best 1-2 weeks, acceptable ~1-2 months in airtight container; freeze up to ~1-3 months; NCA advises against fridge"
+  },
+  "Ground pork": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw ground meat/poultry fridge 1-2 days, freezer 3-4 mo"
+  },
+  "Ground turkey": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw ground meat/poultry fridge 1-2 days, freezer 3-4 mo"
+  },
+  "Guacamole": {
+   "fridge": [
+    2,
+    3
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Guacamole 2-3 days refrigerated (homemade 1-2 days); freezer 3-6 months"
+  },
+  "Haddock": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: lean fish (cod, haddock, halibut, sole etc.) 1-2 days fridge, 6-8 months freezer"
+  },
+  "Half and half": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fridge 3-4 days opened (up to ~5); freezer ~4 mo"
+  },
+  "Halibut": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: lean fish (cod, haddock, halibut, sole etc.) 1-2 days fridge, 6-8 months freezer"
+  },
+  "Halloumi": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: labels ~3 days, up to ~1 wk in brine (unopened vacuum pack months); freezes well 6-12 mo"
+  },
+  "Ham": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fully cooked ham whole ~7 days, half 3-5, slices 3-4; freezer 1-2 mo"
+  },
+  "Hamburger buns": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Commercial rolls/buns ~3-7 days room temp, 1-2 weeks fridge, ~2-3 months freezer"
+  },
+  "Heavy cream": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened heavy/whipping cream (often UHT): fridge ~5-10 days; freezer 3-4 mo (texture changes, OK for cooking)"
+  },
+  "Honey": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "FoodKeeper/FSIS: honey ~1 year+ at room temp (safe indefinitely); refrigeration speeds crystallization, not recommended"
+  },
+  "Honeydew melon": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    60,
+    240
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Whole: counter 3-7 days, fridge 1-2 wk; whole uncut as bought; cut melon must be refrigerated (3-5 days) and pantry 0 once cut; frozen cubes 2-8 mo (thin)"
+  },
+  "Hot dog buns": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Commercial rolls/buns ~3-7 days room temp, 1-2 weeks fridge, ~2-3 months freezer"
+  },
+  "Hot dogs": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: opened pack 1 wk, unopened 2 wk; freezer 1-2 mo"
+  },
+  "Hot sauce": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "Vinegar-based hot sauce: opened ~3-6 months pantry, 6-12 months refrigerated (quality)"
+  },
+  "Hummus": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    30,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened commercial hummus 4-7 days refrigerated (homemade 3-5); freezer 1-4 months"
+  },
+  "Ice cream": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: freezer 2-4 mo; cannot be kept in fridge or pantry"
+  },
+  "Iceberg lettuce": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper: whole head fridge 1-2 wk; freezing not recommended"
+  },
+  "Iced tea": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Brewed iced tea 3-4 days; opened bottled ~5-7 days refrigerated; freezing not typical. Guidance thin"
+  },
+  "Italian sausage": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw fresh sausage fridge 1-2 days, freezer 1-2 mo"
+  },
+  "Jalapeno": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Chili peppers ~1-2 weeks fridge; freezer 6-8 months; 1-3 days room temp"
+  },
+  "Jalapeños": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Fresh hot peppers: fridge 1-2 wk; frozen 6-12 mo"
+  },
+  "Jam": {
+   "fridge": [
+    180,
+    180
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS/FoodKeeper: jams/jellies opened 6 months refrigerated; refrigerate after opening"
+  },
+  "Jasmine rice": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "White rice (dry) ~1-2 years pantry after opening, airtight (USA Rice: indefinitely); fridge/freezer not needed"
+  },
+  "Kale": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fridge 5-7 days; blanched frozen 8-12 mo"
+  },
+  "Kefir": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: fridge ~5-10 days (brand guidance); freezer 1-3 mo (texture/culture loss)"
+  },
+  "Ketchup": {
+   "fridge": [
+    180,
+    180
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    30,
+    30
+   ],
+   "note": "FSIS/FoodKeeper: ketchup opened 6 months refrigerated, 1 month pantry; freezing not recommended"
+  },
+  "Kidney beans": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FSIS: low-acid canned food 2-5 years unopened pantry; opened 3-4 days fridge; out of can freezer 1-2 months (assumed canned; dry beans 1-2 years pantry)"
+  },
+  "Kiwi": {
+   "fridge": [
+    7,
+    28
+   ],
+   "freezer": [
+    120,
+    365
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Unripe counter 3-7 days; fridge ripe ~1 wk, firm up to 4 wk; frozen slices 4-12 mo"
+  },
+  "Kombucha": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw kombucha must be refrigerated; unopened keeps to date; opened ~1 week (loses fizz); freezing not recommended"
+  },
+  "Lactose-free milk": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Ultra-pasteurized; opened fridge ~7 days (brand guidance 7-10); freezer up to 3 mo"
+  },
+  "Lamb": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    180,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS lamb: raw chops/roasts/steaks fridge 3-5 days, freezer 6-9 mo (FDA chart 4-12 mo)"
+  },
+  "Lamb chops": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    180,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS lamb: raw chops/roasts/steaks fridge 3-5 days, freezer 6-9 mo (FDA chart 4-12 mo)"
+  },
+  "Lasagna": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Cooked casserole/lasagna 3-5 days fridge, 2-3 months freezer"
+  },
+  "Leeks": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Fridge 1-2 wk; sliced frozen 3-6 mo (blanched longer)"
+  },
+  "Leftover curry": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS/FDA: leftovers 3-4 days fridge, 2-3 months freezer; never pantry"
+  },
+  "Leftover lasagna": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Cooked lasagna 3-5 days fridge, 2-3 months freezer"
+  },
+  "Leftover pasta": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper cooked pasta 3-5 days fridge, 1-2 months freezer"
+  },
+  "Leftover pizza": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: pizza 3-4 days fridge, 1-2 months freezer"
+  },
+  "Leftover rice": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS leftovers 3-4 days (FoodKeeper lists cooked rice up to 4-6 days; UK NHS advises within 1 day); freezer up to ~6 months"
+  },
+  "Leftover roast": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: cooked meat 3-4 days fridge, 2-3 months freezer"
+  },
+  "Leftovers": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS/FDA: leftovers 3-4 days fridge, 2-3 months freezer; never pantry"
+  },
+  "Lemonade": {
+   "fridge": [
+    7,
+    10
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper: juice in cartons/bottles 7-10 days after opening refrigerated; freezer 8-12 months; opened must be refrigerated"
+  },
+  "Lemons": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    7,
+    14
+   ],
+   "note": "FoodKeeper-style: counter 1-2 wk, fridge 3-4 wk; juice/zest frozen 3-4 mo"
+  },
+  "Lentils": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "Dry lentils ~1-2 years pantry (quality; older take longer to cook)"
+  },
+  "Lettuce": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Leaf lettuce 3-7 days, heads 1-2 wk; freezing not recommended"
+  },
+  "Limes": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    7,
+    14
+   ],
+   "note": "FoodKeeper-style: counter 1-2 wk, fridge 3-4 wk; juice/zest frozen 3-4 mo"
+  },
+  "Lobster": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Live lobster: cook within 1 day; cooked/raw meat 1-2 days; freezer ~2-4 months (guidance varies)"
+  },
+  "Lobster tail": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw lobster tails 1-2 days refrigerated (thawed); frozen ~3-6 months best quality"
+  },
+  "Macaroni": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "FoodKeeper/FSIS: dry pasta ~1-2 years pantry; fridge/freezer not needed"
+  },
+  "Mandarins": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    5,
+    7
+   ],
+   "note": "Citrus: room temp ~1 wk, fridge 2-3 wk; segments/juice frozen 3-6 mo"
+  },
+  "Mango": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    2,
+    5
+   ],
+   "note": "Whole mango ripens on counter 2-5 days; ripe whole ~5-7 days fridge (cut 3-4 days); cut/frozen 8-12 months"
+  },
+  "Mangoes": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    180,
+    300
+   ],
+   "pantry": [
+    2,
+    5
+   ],
+   "note": "Counter until ripe; ripe whole in fridge ~5-7 days; cubed frozen 6-10 mo"
+  },
+  "Maple syrup": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    365,
+    730
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Pure maple syrup: refrigerate after opening ~1 year (molds at room temp); freezer indefinitely/1-2 years"
+  },
+  "Margarine": {
+   "fridge": [
+    120,
+    150
+   ],
+   "freezer": [
+    365,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fridge 4-5 mo, freezer 12 mo; tub spreads labelled keep refrigerated"
+  },
+  "Mascarpone": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: fridge ~3-5 days; freezing not recommended (grainy)"
+  },
+  "Mayonnaise": {
+   "fridge": [
+    60,
+    60
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS/FoodKeeper: commercial mayo opened 2 months refrigerated; must be refrigerated; don't freeze"
+  },
+  "Meatballs": {
+   "fridge": [
+    1,
+    4
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw meatballs fridge 1-2 days (cooked 3-4 days); freezer 2-4 mo"
+  },
+  "Melon": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    60,
+    240
+   ],
+   "pantry": [
+    2,
+    7
+   ],
+   "note": "Generic whole melon: counter 2-7 days, fridge 5-10 days; whole uncut as bought; cut melon must be refrigerated (3-5 days) and pantry 0 once cut; frozen cubes 2-8 mo (thin)"
+  },
+  "Milk": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: milk ~7 days fridge (opened 4-7 days), freezer up to 3 mo; must be refrigerated"
+  },
+  "Milk chocolate": {
+   "fridge": [
+    120,
+    240
+   ],
+   "freezer": [
+    120,
+    240
+   ],
+   "pantry": [
+    120,
+    240
+   ],
+   "note": "Milk chocolate ~4-8 months once opened, cool/dry; fridge/freezer OK wrapped (may bloom)"
+  },
+  "Mint": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fresh herb: fridge 5-10 days; frozen 3-6 mo"
+  },
+  "Mixed nuts": {
+   "fridge": [
+    120,
+    180
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened mixed nuts 1-3 months pantry, 4-6 months fridge, 6-12 months freezer"
+  },
+  "Mixed salad": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Bagged mixed salad: fridge 3-7 days (use-by, sooner once opened); freezing not recommended for salad use; bagged/cut leafy greens need refrigeration (pantry 0)"
+  },
+  "Mixed snacks": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    14,
+    30
+   ],
+   "note": "Generic opened dry snacks ~2-4 weeks pantry (staleness). Guidance thin; conservative"
+  },
+  "Monterey Jack": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard cheese opened 3-4 wk (unopened ~6 mo); freezer 6 mo (crumbly)"
+  },
+  "Mozzarella": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart soft/fresh cheese ~1 wk (fresh ball 3-5 days once opened); freezer 3-6 mo (low-moisture block keeps longer)"
+  },
+  "Muffins": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    2,
+    4
+   ],
+   "note": "Bakery muffins 2-4 days room temp, ~1 week fridge, 2-3 months freezer"
+  },
+  "Mushrooms": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper: fridge 3-7 days; cooked/sautéed frozen 10-12 mo"
+  },
+  "Mussels": {
+   "fridge": [
+    1,
+    3
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Live mussels in shell 1-3 days fridge (breathable container); shucked/cooked freeze ~3 months"
+  },
+  "Mustard": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    30,
+    60
+   ],
+   "note": "FSIS/FoodKeeper: mustard opened ~1 year refrigerated; ~1-2 months at room temp; don't freeze"
+  },
+  "Naan": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    2,
+    4
+   ],
+   "note": "Flatbread (pita/naan): ~2-4 days room temp, ~4-7 days fridge, 2-4 months freezer (FoodKeeper-style)"
+  },
+  "Nectarines": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper-style: counter 1-3 days to ripen, ripe fridge 3-5 days; sliced frozen 8-12 mo"
+  },
+  "Oat milk": {
+   "fridge": [
+    7,
+    10
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: fridge 7-10 days (brand guidance); opened must be refrigerated; manufacturers advise against freezing (separates), usable for cooking ~1-3 mo"
+  },
+  "Oatmeal": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Assumed dry oats/instant oatmeal packets ~6-12 months pantry (cooked oatmeal would be 3-5 days fridge)"
+  },
+  "Okra": {
+   "fridge": [
+    2,
+    4
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper-style: fridge 2-3 days (up to 4); blanched frozen 8-12 mo"
+  },
+  "Olive oil": {
+   "fridge": [
+    120,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "Opened olive oil ~3-6 months pantry (cool, dark); refrigeration (clouds, harmless) extends to ~1 year"
+  },
+  "Olives": {
+   "fridge": [
+    14,
+    30
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS: opened jarred olives 2 weeks refrigerated (often longer if kept under brine); don't freeze"
+  },
+  "Onions": {
+   "fridge": [
+    30,
+    60
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Whole dry onions: cool pantry 1-3 mo, fridge 1-2 mo (cut 7-10 days); chopped frozen 6-8 mo"
+  },
+  "Orange juice": {
+   "fridge": [
+    7,
+    10
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper: juice in cartons/bottles 7-10 days after opening refrigerated; freezer 8-12 months; opened must be refrigerated"
+  },
+  "Oranges": {
+   "fridge": [
+    14,
+    28
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    7,
+    10
+   ],
+   "note": "Citrus: counter ~7-10 days, fridge 2-4 wk; segments/juice frozen 3-6 mo"
+  },
+  "Oyster sauce": {
+   "fridge": [
+    90,
+    180
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened oyster sauce: refrigerate (labels) ~3-6 months"
+  },
+  "Oysters": {
+   "fridge": [
+    2,
+    7
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Live oysters in shell up to ~7 days (some sources 7-10); shucked 1-2 days; freeze ~2-3 months"
+  },
+  "Papaya": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    180,
+    300
+   ],
+   "pantry": [
+    2,
+    5
+   ],
+   "note": "Counter until ripe; ripe fridge ~4-7 days; cubed frozen 6-10 mo"
+  },
+  "Parmesan": {
+   "fridge": [
+    28,
+    90
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Hard grating cheese wedge: fridge opened 1-3 mo; grated/frozen 6-12 mo; refrigerate after opening"
+  },
+  "Parsley": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fresh herb: fridge 1-2 wk (stems in water); frozen 3-6 mo"
+  },
+  "Parsnips": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Fridge 2-3 wk; blanched frozen 8-12 mo"
+  },
+  "Passion fruit": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Counter 3-7 days (wrinkles when ripe); fridge 1-2 wk; pulp frozen 6-12 mo (guidance thin)"
+  },
+  "Pasta": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "FoodKeeper/FSIS: dry pasta ~1-2 years pantry; fridge/freezer not needed"
+  },
+  "Pasta salad": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Deli/homemade pasta salad 3-5 days refrigerated; mayo/dressed salads don't freeze well"
+  },
+  "Pasta sauce": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened jarred tomato pasta sauce 3-5 days refrigerated (some labels up to 7-10); freezes 3-6 months"
+  },
+  "Peaches": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper-style: counter 1-3 days to ripen, ripe fridge 3-5 days; sliced frozen 8-12 mo"
+  },
+  "Peanut butter": {
+   "fridge": [
+    90,
+    120
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    60,
+    90
+   ],
+   "note": "FSIS/FoodKeeper: commercial peanut butter opened 2-3 months pantry, 3-4 months fridge; freezing not recommended"
+  },
+  "Peanuts": {
+   "fridge": [
+    90,
+    180
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened shelled peanuts: 1-3 months pantry, 3-6 months fridge, 6-12 months freezer"
+  },
+  "Pears": {
+   "fridge": [
+    5,
+    12
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    2,
+    5
+   ],
+   "note": "Counter until ripe; ripe fridge ~5 days, firm up to ~12 days; frozen (syrup) 8-12 mo"
+  },
+  "Penne": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "FoodKeeper/FSIS: dry pasta ~1-2 years pantry; fridge/freezer not needed"
+  },
+  "Pepper jack": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard cheese opened 3-4 wk (unopened ~6 mo); freezer 6 mo (crumbly)"
+  },
+  "Pepperoni": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard/dry sausage opened fridge 2-3 wk, freezer 1-2 mo; refrigerate once opened (unopened dry-cured can sit cool ~6 wk)"
+  },
+  "Pesto": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened jarred/fresh pesto ~3-7 days refrigerated (labels often 5 days); freezes well 3-6 months"
+  },
+  "Pickles": {
+   "fridge": [
+    30,
+    90
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper-style: opened commercial pickles 1-3 months refrigerated; don't freeze"
+  },
+  "Pineapple": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    120,
+    365
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper: whole counter 1-2 days; fridge (whole/cut) ~3-7 days; cut frozen 4-12 mo"
+  },
+  "Pistachios": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    60,
+    90
+   ],
+   "note": "Opened pistachios: 2-3 months pantry, 6-12 months fridge/freezer"
+  },
+  "Pita": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    2,
+    4
+   ],
+   "note": "Flatbread (pita/naan): ~2-4 days room temp, ~4-7 days fridge, 2-4 months freezer (FoodKeeper-style)"
+  },
+  "Pita bread": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    2,
+    4
+   ],
+   "note": "Flatbread (pita/naan): ~2-4 days room temp, ~4-7 days fridge, 2-4 months freezer (FoodKeeper-style)"
+  },
+  "Pizza": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: cooked pizza 3-4 days fridge, 1-2 months freezer"
+  },
+  "Pizza dough": {
+   "fridge": [
+    2,
+    5
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw yeast dough: refrigerate 2-5 days (or by date), freeze 1-3 months; not for pantry storage"
+  },
+  "Plain yogurt": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: yogurt fridge 1-2 wk; freezer 1-2 mo"
+  },
+  "Plums": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper-style: counter 1-3 days to ripen, ripe fridge 3-5 days; sliced frozen 8-12 mo"
+  },
+  "Pomegranate": {
+   "fridge": [
+    30,
+    60
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    7,
+    14
+   ],
+   "note": "Whole: counter 1-2 wk, fridge 1-2 mo; arils frozen 6-12 mo"
+  },
+  "Popcorn": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    7,
+    14
+   ],
+   "note": "Assumed opened bag of popped popcorn ~1-2 weeks; unpopped kernels 1-2 years, microwave packs ~6-12 months"
+  },
+  "Pork chops": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    120,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw chops fridge 3-5 days, freezer 4-6 mo"
+  },
+  "Pork loin": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    120,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw pork roasts fridge 3-5 days, freezer 4-12 mo"
+  },
+  "Pork ribs": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    120,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw ribs: fridge 3-5 days, freezer 4-6 mo"
+  },
+  "Pork shoulder": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    120,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw pork roasts fridge 3-5 days, freezer 4-12 mo"
+  },
+  "Pork tenderloin": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    120,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw pork roasts fridge 3-5 days, freezer 4-12 mo"
+  },
+  "Potato chips": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    7,
+    14
+   ],
+   "note": "FoodKeeper-style: opened chips 1-2 weeks pantry (staleness); fridge/freezer not needed"
+  },
+  "Potatoes": {
+   "fridge": [
+    14,
+    28
+   ],
+   "freezer": [
+    300,
+    365
+   ],
+   "pantry": [
+    21,
+    60
+   ],
+   "note": "Cool dark pantry 3 wk-2 mo; fridge (US advises against, UK FSA 2023 says OK) ~2-4 wk; freeze only cooked/blanched 10-12 mo"
+  },
+  "Prawns": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fresh shrimp, scallops, crayfish, squid 1-2 days fridge, 3-6 months freezer"
+  },
+  "Pretzels": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    14,
+    30
+   ],
+   "note": "Opened pretzels ~2-4 weeks pantry (staleness)"
+  },
+  "Prosciutto": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened sliced pack: fridge ~3-5 days (whole piece longer); freezer 1-2 mo"
+  },
+  "Prosecco": {
+   "fridge": [
+    1,
+    3
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "Opened sparkling wine 1-3 days with stopper; unopened ~1-2 years; Fridge = opened, re-corked bottle; pantry = unopened bottle stored cool/dark (everyday wine); freezing bottle not recommended"
+  },
+  "Protein bars": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "Individually wrapped bars keep to package date (~3-6 months)"
+  },
+  "Provolone": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard cheese opened 3-4 wk (unopened ~6 mo); freezer 6 mo (crumbly)"
+  },
+  "Pudding": {
+   "fridge": [
+    3,
+    6
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Prepared/opened pudding: fridge 3-6 days (FoodKeeper-style ~5-6 homemade); freezing not recommended; shelf-stable cups only unopened in pantry"
+  },
+  "Pulled pork": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Cooked meat: fridge 3-4 days, freezer 2-3 mo"
+  },
+  "Pumpkin": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Whole: cool pantry 1-3 mo; fridge ~1-2 wk (cut 5-7 days); cooked frozen 8-12 mo"
+  },
+  "Quinoa": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "Dry quinoa ~1-2 years pantry, airtight"
+  },
+  "Radishes": {
+   "fridge": [
+    10,
+    14
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "FoodKeeper: fridge 10-14 days; freezing not recommended (texture)"
+  },
+  "Raisins": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "FoodKeeper-style dried fruit: ~6 months pantry once opened, 6-12 months fridge/freezer"
+  },
+  "Ramen": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Assumed instant ramen (dry): ~6-12 months package date. Fresh noodles ~1 week fridge; cooked ramen 3-4 days fridge"
+  },
+  "Ramen noodles": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Instant ramen: ~6-12 months (package date; fried noodles go rancid)"
+  },
+  "Ranch dressing": {
+   "fridge": [
+    30,
+    60
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened creamy/ranch dressing ~1-2 months refrigerated (refrigerated-case brands ~2-3 weeks); don't freeze"
+  },
+  "Raspberries": {
+   "fridge": [
+    2,
+    3
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Very perishable: fridge 2-3 days; frozen 8-12 mo"
+  },
+  "Red cabbage": {
+   "fridge": [
+    7,
+    21
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper ~1-2 wk; whole heads often keep longer; blanched/cooked frozen 8-12 mo"
+  },
+  "Red onions": {
+   "fridge": [
+    30,
+    60
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Whole dry onions: cool pantry 1-3 mo, fridge 1-2 mo (cut 7-10 days); chopped frozen 6-8 mo"
+  },
+  "Red pepper": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "FoodKeeper: bell peppers ~1-2 weeks fridge (red ripens faster, ~5-10 days); freezer 6-8 months; 1-3 days room temp"
+  },
+  "Red peppers": {
+   "fridge": [
+    4,
+    10
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Red bell peppers: fridge ~4-10 days; chopped frozen 6-8 mo"
+  },
+  "Red wine": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    730,
+    1095
+   ],
+   "note": "Opened red wine 3-5 days (re-corked, cool); unopened everyday red ~2-3 years; Fridge = opened, re-corked bottle; pantry = unopened bottle stored cool/dark (everyday wine); freezing bottle not recommended"
+  },
+  "Red wine vinegar": {
+   "fridge": [
+    365,
+    730
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "FSIS: vinegar opened ~1 year pantry for best quality, safe indefinitely; fridge not needed"
+  },
+  "Relish": {
+   "fridge": [
+    90,
+    180
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened pickle relish ~3-6 months refrigerated. Guidance thin"
+  },
+  "Rhubarb": {
+   "fridge": [
+    5,
+    14
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Stalks wrapped in fridge ~1-2 wk; cut frozen 8-12 mo; wilts at room temp"
+  },
+  "Rice": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "White rice (dry) ~1-2 years pantry after opening, airtight (USA Rice: indefinitely); fridge/freezer not needed"
+  },
+  "Rice cakes": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    7,
+    30
+   ],
+   "note": "Opened rice cakes go stale in ~1-4 weeks; airtight. Guidance thin"
+  },
+  "Rice noodles": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "Dry rice noodles ~1-2 years pantry, airtight"
+  },
+  "Ricotta": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fridge ~1 wk (opened 5-7 days); doesn't freeze well (grainy; OK for cooking ~2 mo)"
+  },
+  "Roast beef": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Assumed cooked (leftover/deli roast beef): fridge 3-5 days, freezer 2-4 mo; a raw beef roast would be fridge 3-5 days, freezer 4-12 mo"
+  },
+  "Rocket": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Same as arugula: fridge 3-5 days; freezing not recommended for salad use; bagged/cut leafy greens need refrigeration (pantry 0)"
+  },
+  "Rolled oats": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Rolled oats ~6-12 months pantry after opening, airtight"
+  },
+  "Romaine lettuce": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Heads fridge ~7-10 days (hearts/leaf shorter); freezing not recommended"
+  },
+  "Rosé wine": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "Opened rose 3-5 days refrigerated; unopened ~1-2 years; Fridge = opened, re-corked bottle; pantry = unopened bottle stored cool/dark (everyday wine); freezing bottle not recommended"
+  },
+  "Rosemary": {
+   "fridge": [
+    10,
+    21
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Woody herb: fridge 10-21 days; frozen 3-6 mo"
+  },
+  "Rotisserie chicken": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA/FoodKeeper: cooked poultry fridge 3-4 days, freezer 2-4 mo"
+  },
+  "Rye bread": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    90,
+    90
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Commercial loaf: ~3-7 days room temp, 7-14 days fridge (stales faster), freezer ~3 months best quality"
+  },
+  "Salad dressing": {
+   "fridge": [
+    30,
+    90
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS: bottled salad dressing opened up to ~3 months refrigerated; don't freeze"
+  },
+  "Salad greens": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Bagged salad greens: fridge 3-7 days; freezing not recommended for salad use; bagged/cut leafy greens need refrigeration (pantry 0)"
+  },
+  "Salami": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard/dry sausage opened fridge 2-3 wk, freezer 1-2 mo; refrigerate once opened (unopened dry-cured can sit cool ~6 wk)"
+  },
+  "Salmon": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fatty fish (salmon, tuna, mackerel etc.) 1-2 days fridge, 2-3 months freezer"
+  },
+  "Salmon fillets": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fatty fish (salmon, tuna, mackerel etc.) 1-2 days fridge, 2-3 months freezer"
+  },
+  "Salsa": {
+   "fridge": [
+    14,
+    30
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS: jarred salsa opened ~1 month refrigerated (fresh refrigerated salsa 5-7 days); freezes poorly (texture)"
+  },
+  "Salt": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    1825,
+    3650
+   ],
+   "note": "Salt keeps indefinitely in pantry; fridge/freezer not needed"
+  },
+  "Sardines": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "FDA/FSIS: canned fish 2-5 years unopened; opened 3-4 days fridge; out of can 2 months freezer"
+  },
+  "Sausages": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw fresh sausage fridge 1-2 days, freezer 1-2 mo"
+  },
+  "Scallions": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fridge 5-10 days (up to ~2 wk); chopped frozen 3-6 mo"
+  },
+  "Scallops": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fresh shrimp, scallops, crayfish, squid 1-2 days fridge, 3-6 months freezer"
+  },
+  "Sea bass": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Treated as lean fish per FDA chart: 1-2 days fridge, 6-8 months freezer (fattier Chilean sea bass ~2-3 months)"
+  },
+  "Semi-skimmed milk": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: milk ~7 days fridge (opened 4-7 days), freezer up to 3 mo; must be refrigerated"
+  },
+  "Shallots": {
+   "fridge": [
+    14,
+    30
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    30,
+    60
+   ],
+   "note": "Cool pantry ~1-2 mo; fridge 2-4 wk; chopped frozen 3-6 mo"
+  },
+  "Shredded cheese": {
+   "fridge": [
+    5,
+    14
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened bag: brand guidance ~5-7 days up to ~2 wk (mould risk); freezer 3-6 mo (freezes well)"
+  },
+  "Shrimp": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fresh shrimp, scallops, crayfish, squid 1-2 days fridge, 3-6 months freezer"
+  },
+  "Single cream": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "UK labels: opened use within ~3-5 days; not suitable for freezing (separates)"
+  },
+  "Skim milk": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: milk ~7 days fridge (opened 4-7 days), freezer up to 3 mo; must be refrigerated"
+  },
+  "Sliced cheese": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    60,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened pack: fridge 1-2 wk; freezer 2-6 mo"
+  },
+  "Sliced ham": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: opened luncheon/deli meat fridge 3-5 days, freezer 1-2 mo"
+  },
+  "Smoked salmon": {
+   "fridge": [
+    5,
+    14
+   ],
+   "freezer": [
+    60,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: smoked fish 14 days fridge (vacuum pack/by date), 2 months freezer; once opened use within ~5-7 days"
+  },
+  "Smoothie": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Homemade/opened smoothie 1-2 days refrigerated; freeze 1-3 months"
+  },
+  "Snap peas": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper-style: fridge 3-5 days; blanched frozen 8-12 mo"
+  },
+  "Snow peas": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper-style: fridge 3-5 days; blanched frozen 8-12 mo"
+  },
+  "Soda": {
+   "fridge": [
+    180,
+    270
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    270
+   ],
+   "note": "Treated as sealed cans/bottles: regular soda ~6-9 months (diet ~3-4 months) past pack date; opened 2-4 days fridge; do not freeze (cans burst)"
+  },
+  "Soup": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: soups & stews 3-4 days fridge, 2-3 months freezer"
+  },
+  "Sour cream": {
+   "fridge": [
+    7,
+    21
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fridge 7-21 days; freezing not recommended"
+  },
+  "Sourdough bread": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Crusty/artisan loaf ~3-5 days room temp; fridge stales it; freeze 2-3 months"
+  },
+  "Soy milk": {
+   "fridge": [
+    7,
+    10
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened: fridge 7-10 days (brand guidance); opened must be refrigerated; manufacturers advise against freezing (separates), usable for cooking ~1-3 mo"
+  },
+  "Soy sauce": {
+   "fridge": [
+    180,
+    730
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened soy sauce is shelf-stable but best quality ~1-3 months at room temp; refrigerated 6 months-2 years"
+  },
+  "Spaghetti": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "FoodKeeper/FSIS: dry pasta ~1-2 years pantry; fridge/freezer not needed"
+  },
+  "Spaghetti squash": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Whole winter squash 1-3 months in cool dry place; fridge 1-2 weeks (cut 3-5 days); cooked freezes 8-12 months"
+  },
+  "Sparkling water": {
+   "fridge": [
+    270,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    270,
+    365
+   ],
+   "note": "Treated as sealed single-serve cans/bottles: ~9-12 months (quality); once opened 1-3 days (loses fizz); do not freeze (containers burst)"
+  },
+  "Spinach": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Fridge 3-5 days (bagged up to ~7); blanched frozen 10-12 mo; cut leafy greens need refrigeration"
+  },
+  "Spring onions": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Fridge 5-10 days (up to ~2 wk); chopped frozen 3-6 mo"
+  },
+  "Squid": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fresh shrimp, scallops, crayfish, squid 1-2 days fridge, 3-6 months freezer"
+  },
+  "Sriracha": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    90,
+    180
+   ],
+   "note": "Opened Sriracha: maker says no refrigeration needed; ~3-6 months pantry, 6-12 months fridge (quality)"
+  },
+  "Steak": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    120,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw steaks fridge 3-5 days, freezer 4-12 mo"
+  },
+  "Stew": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: soups & stews 3-4 days fridge, 2-3 months freezer"
+  },
+  "Stewing beef": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw stew meat fridge 1-2 days, freezer 3-4 mo"
+  },
+  "Strawberries": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "FoodKeeper-style: fridge 3-7 days; frozen 8-12 mo"
+  },
+  "Strawberry jam": {
+   "fridge": [
+    180,
+    180
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FSIS/FoodKeeper: jams/jellies opened 6 months refrigerated; refrigerate after opening"
+  },
+  "String cheese": {
+   "fridge": [
+    14,
+    28
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Low-moisture mozzarella sticks: opened pack 2-4 wk (individually wrapped to date); freezer 3-6 mo"
+  },
+  "Sugar": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    730,
+    3650
+   ],
+   "note": "Granulated sugar ~2 years+ (indefinite if kept dry)"
+  },
+  "Sugar snap peas": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    1
+   ],
+   "note": "FoodKeeper: peas in pod 3-5 days fridge; blanched freeze 8-12 months; wilt within ~1 day at room temp"
+  },
+  "Sushi": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw-fish sushi within 24 hours; cooked/vegetable sushi up to ~2 days refrigerated; freezing not recommended"
+  },
+  "Sweet potato": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    300,
+    365
+   ],
+   "pantry": [
+    21,
+    35
+   ],
+   "note": "FoodKeeper: sweet potatoes 3-5 weeks in cool dry pantry; do not refrigerate raw (hard core/off flavor); freezer 10-12 months cooked/blanched only"
+  },
+  "Sweet potatoes": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    300,
+    365
+   ],
+   "pantry": [
+    21,
+    35
+   ],
+   "note": "FoodKeeper-style: cool pantry 3-5 wk; refrigeration not recommended (chilling injury, hard core); cooked frozen 10-12 mo"
+  },
+  "Sweetcorn": {
+   "fridge": [
+    1,
+    3
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    0,
+    1
+   ],
+   "note": "Assumed fresh cobs (same as corn on the cob): fridge 1-3 days; frozen 8-12 mo. If canned: pantry 1-2 yr unopened, opened fridge 3-4 days"
+  },
+  "Swiss cheese": {
+   "fridge": [
+    21,
+    28
+   ],
+   "freezer": [
+    180,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: hard cheese opened 3-4 wk (unopened ~6 mo); freezer 6 mo (crumbly)"
+  },
+  "Tahini": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    60,
+    180
+   ],
+   "note": "Opened tahini ~2-6 months pantry, 6-12 months refrigerated. Guidance thin"
+  },
+  "Takeout": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Leftover takeout 3-4 days fridge; 1-3 months freezer depending on dish"
+  },
+  "Tangerines": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    5,
+    7
+   ],
+   "note": "Citrus: room temp ~1 wk, fridge 2-3 wk; segments/juice frozen 3-6 mo"
+  },
+  "Tea": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "Dry tea bags/leaves: best quality ~6-12 months after opening in airtight container; fridge/freezer not recommended (moisture/odors)"
+  },
+  "Tempeh": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Tempeh: ~1 week refrigerated once opened (unopened to date); freezer 3-6 months. Guidance thin"
+  },
+  "Teriyaki sauce": {
+   "fridge": [
+    30,
+    90
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened teriyaki sauce/marinade ~1-3 months refrigerated; labels say refrigerate after opening. Guidance thin"
+  },
+  "Thyme": {
+   "fridge": [
+    10,
+    14
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    1,
+    3
+   ],
+   "note": "Woody herb: fridge 10-14 days; frozen 3-6 mo"
+  },
+  "Tilapia": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    180,
+    240
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: lean fish (cod, haddock, halibut, sole etc.) 1-2 days fridge, 6-8 months freezer"
+  },
+  "Tofu": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    90,
+    150
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened tofu 3-5 days refrigerated in fresh water (unopened to date); freezer 3-5 months (texture changes)"
+  },
+  "Tomato paste": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    365,
+    540
+   ],
+   "note": "Canned tomato paste: 12-18 months unopened; opened 5-7 days fridge (tube ~4-6 weeks); portions freeze 3-6 months"
+  },
+  "Tomato soup": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Treated as cooked/opened soup: 3-4 days fridge, 2-3 months freezer. Unopened canned tomato soup 12-18 months pantry"
+  },
+  "Tomatoes": {
+   "fridge": [
+    3,
+    7
+   ],
+   "freezer": [
+    60,
+    240
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Counter until ripe, ripe a few days; fridge 3-7 days once ripe; frozen for cooking 2-8 mo"
+  },
+  "Tortilla chips": {
+   "fridge": [
+    0,
+    0
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    7,
+    14
+   ],
+   "note": "FoodKeeper-style: opened chips 1-2 weeks pantry (staleness); fridge/freezer not needed"
+  },
+  "Trail mix": {
+   "fridge": [
+    60,
+    120
+   ],
+   "freezer": [
+    180,
+    365
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Opened trail mix ~1-3 months pantry (nut rancidity); fridge/freezer extend. Guidance thin"
+  },
+  "Trout": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Treated as fatty/oily fish per FDA chart: 1-2 days fridge, 2-3 months freezer"
+  },
+  "Tuna": {
+   "fridge": [
+    3,
+    4
+   ],
+   "freezer": [
+    60,
+    60
+   ],
+   "pantry": [
+    730,
+    1825
+   ],
+   "note": "Assumed canned tuna (most common household form): 2-5 years unopened, opened 3-4 days fridge. Raw tuna would be 1-2 days fridge / 2-3 months freezer"
+  },
+  "Tuna steak": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: fatty fish (salmon, tuna, mackerel etc.) 1-2 days fridge, 2-3 months freezer"
+  },
+  "Turkey bacon": {
+   "fridge": [
+    5,
+    7
+   ],
+   "freezer": [
+    30,
+    30
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FoodKeeper: opened turkey bacon fridge ~7 days, freezer 1 mo"
+  },
+  "Turkey breast": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    270,
+    270
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Raw turkey breast (poultry pieces): fridge 1-2 days, freezer 9 mo"
+  },
+  "Turnips": {
+   "fridge": [
+    10,
+    21
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Tops removed: fridge ~2 wk (10-21 days); blanched frozen 8-12 mo"
+  },
+  "Tzatziki": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened/homemade tzatziki 3-5 days refrigerated; yogurt/cucumber separate on freezing, not recommended"
+  },
+  "Unsalted butter": {
+   "fridge": [
+    30,
+    60
+   ],
+   "freezer": [
+    180,
+    270
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Like butter but less salt: fridge ~1-2 mo; freezer 6-9 mo; counter 1-2 days"
+  },
+  "Vegetable oil": {
+   "fridge": [
+    120,
+    365
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    60,
+    180
+   ],
+   "note": "FSIS: vegetable oil opened 1-3 months pantry (industry up to 6-12 months); fridge extends"
+  },
+  "Vegetable stock": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    60,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened carton/can of broth 3-5 days refrigerated (some carton labels allow longer); freezer 2-3 months; opened must be refrigerated"
+  },
+  "Veggie burgers": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Refrigerated/thawed veggie burgers 3-5 days; frozen ~3-6 months best quality (package date)"
+  },
+  "Walnuts": {
+   "fridge": [
+    180,
+    365
+   ],
+   "freezer": [
+    365,
+    730
+   ],
+   "pantry": [
+    30,
+    90
+   ],
+   "note": "Walnuts go rancid fast: 1-3 months pantry, 6-12 months fridge, 1-2 years freezer"
+  },
+  "Watercress": {
+   "fridge": [
+    2,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Very perishable: fridge 2-5 days; freezing not recommended; keep chilled"
+  },
+  "Watermelon": {
+   "fridge": [
+    14,
+    21
+   ],
+   "freezer": [
+    60,
+    240
+   ],
+   "pantry": [
+    7,
+    10
+   ],
+   "note": "Whole: counter 7-10 days, fridge 2-3 wk; whole uncut as bought; cut melon must be refrigerated (3-5 days) and pantry 0 once cut; frozen cubes 2-8 mo (texture suffers)"
+  },
+  "Whipping cream": {
+   "fridge": [
+    5,
+    10
+   ],
+   "freezer": [
+    90,
+    120
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "Opened heavy/whipping cream (often UHT): fridge ~5-10 days; freezer 3-4 mo (texture changes, OK for cooking)"
+  },
+  "White bread": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    90,
+    90
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Commercial loaf: ~3-7 days room temp, 7-14 days fridge (stales faster), freezer ~3 months best quality"
+  },
+  "White wine": {
+   "fridge": [
+    3,
+    5
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    365,
+    730
+   ],
+   "note": "Opened white wine 3-5 days refrigerated; Fridge = opened, re-corked bottle; pantry = unopened bottle stored cool/dark (everyday wine); freezing bottle not recommended"
+  },
+  "Whole chicken": {
+   "fridge": [
+    1,
+    2
+   ],
+   "freezer": [
+    365,
+    365
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: raw whole poultry fridge 1-2 days, freezer 12 mo"
+  },
+  "Whole milk": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    30,
+    90
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: milk ~7 days fridge (opened 4-7 days), freezer up to 3 mo; must be refrigerated"
+  },
+  "Whole wheat bread": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    90,
+    90
+   ],
+   "pantry": [
+    3,
+    5
+   ],
+   "note": "Commercial loaf: ~3-7 days room temp, 7-14 days fridge (stales faster), freezer ~3 months best quality; whole grain slightly shorter at room temp"
+  },
+  "Worcestershire sauce": {
+   "fridge": [
+    365,
+    730
+   ],
+   "freezer": [
+    0,
+    0
+   ],
+   "pantry": [
+    180,
+    365
+   ],
+   "note": "FSIS: Worcestershire ~1 year pantry after opening; refrigerating extends quality"
+  },
+  "Wraps": {
+   "fridge": [
+    7,
+    21
+   ],
+   "freezer": [
+    90,
+    180
+   ],
+   "pantry": [
+    3,
+    7
+   ],
+   "note": "Opened flour tortillas/wraps: ~1 week room temp, ~1-3 weeks fridge (labels vary), freezer 3-6 months"
+  },
+  "Yogurt": {
+   "fridge": [
+    7,
+    14
+   ],
+   "freezer": [
+    30,
+    60
+   ],
+   "pantry": [
+    0,
+    0
+   ],
+   "note": "FDA chart: yogurt fridge 1-2 wk; freezer 1-2 mo"
+  },
+  "Zucchini": {
+   "fridge": [
+    4,
+    7
+   ],
+   "freezer": [
+    240,
+    365
+   ],
+   "pantry": [
+    1,
+    2
+   ],
+   "note": "Summer squash: fridge 4-7 days; blanched frozen 10-12 mo"
+  }
+ }
+}
