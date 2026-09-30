@@ -15,9 +15,11 @@ import { friendlyError, isDemoMode, scanPhotos } from '../lib/api';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { encodePhoto, MAX_PHOTOS, pickPhotos, takePhoto, type Photo } from '../lib/photos';
 import { goBack } from '../lib/nav';
+import { knownForScan } from '../lib/identify';
 import { toDrafts } from '../lib/scan';
 import type { StorageLocation } from '../lib/types';
 import { getProvider, useBilling } from '../store/billing';
+import { useFoods } from '../store/foods';
 import { useInventory } from '../store/inventory';
 import { useScanDraft } from '../store/scanDraft';
 import { useSettings } from '../store/settings';
@@ -123,14 +125,16 @@ export default function Scan() {
       // Demo mode returns sample items and never uploads, so skip the (pointless) photo encoding.
       const images = sample || isDemoMode ? [] : await Promise.all(photos.map(encodePhoto));
       const userId = await getProvider().getUserId();
-      const res = await scanPhotos({ userId, location, images, signal: controller.signal });
+      const known = knownForScan(useFoods.getState().foods);
+      const res = await scanPhotos({ userId, location, images, known, signal: controller.signal });
       if (controller.signal.aborted) return;
       const drafts = toDrafts(res, location, useInventory.getState().items);
       if (drafts.length === 0) {
         setError(res.notes ?? 'No food found in those photos. Try a closer, brighter shot.');
         return;
       }
-      useScanDraft.getState().start(location, drafts, res.notes);
+      // The photos stay in memory so the review screen can look up anything the app does not know.
+      useScanDraft.getState().start(location, drafts, res.notes, 'scan', images);
       router.replace('/review');
     } catch (e) {
       if (controller.signal.aborted) return;

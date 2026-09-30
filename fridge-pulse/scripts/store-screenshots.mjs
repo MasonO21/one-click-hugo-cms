@@ -37,6 +37,7 @@ const base = `http://localhost:${server.address().port}/`;
 const SHOTS = [
   { id: 'pulse', title: 'Know what to eat first', sub: 'See what is about to expire, at a glance' },
   { id: 'review', title: 'Snap a photo. Get your list.', sub: 'Fridge Pulse spots the food and reads dates' },
+  { id: 'lookup', title: 'Not sure what it is?', sub: 'It searches the web and shows you a picture to confirm' },
   { id: 'items', title: 'Everything in one place', sub: 'Fridge, freezer and pantry, sorted by date' },
   { id: 'meals', title: 'Cook what needs using up', sub: 'Meal ideas built around your soonest dates' },
   { id: 'item', title: 'Stay in control', sub: 'Edit dates and quantities, mark items used' },
@@ -67,6 +68,14 @@ async function captureApp(target) {
   await tap('[data-testid="sample-scan"]');
   await page.locator('[data-testid="save-items"]').waitFor({ timeout: 20000 });
   await grab('review');
+  // The unfamiliar sample item is looked up; capture the "Is this your item?" card.
+  await page.locator('[data-testid="lookup-found"]').waitFor({ timeout: 20000 });
+  await page.evaluate(() => [...document.querySelectorAll('[data-testid="lookup-found"]')].pop()?.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(700);
+  await grab('lookup');
+  await page.locator('[data-testid="lookup-yes"]').last().tap();
+  await page.waitForTimeout(600);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await tap('[data-testid="save-items"]');
   await page.locator('[data-testid="hero-headline"]').waitFor();
   await grab('pulse');
@@ -97,6 +106,8 @@ for (const target of TARGETS) {
   const raw = await captureApp(target);
   const dir = path.join(outDir, 'screenshots', target.name);
   fs.mkdirSync(dir, { recursive: true });
+  // Numbering shifts when a shot is added, so clear the previous set first.
+  for (const f of fs.readdirSync(dir)) if (/^\d\d-[a-z-]+\.jpg$/.test(f)) fs.unlinkSync(path.join(dir, f));
   const page = await (await browser.newContext({ viewport: { width: target.canvas.w, height: target.canvas.h }, deviceScaleFactor: 1 })).newPage();
   let n = 0;
   for (const shot of SHOTS) {

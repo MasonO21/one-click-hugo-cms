@@ -5,13 +5,17 @@ import { z } from 'zod';
 import { EntitlementLookupError, isValidAppUserId, type EntitlementChecker } from './auth.js';
 import { UpstreamError, type ClaudeService } from './claude.js';
 import type { Config } from './config.js';
+import { withPictures } from './identify.js';
+import { noPictures, type PictureFinder } from './pictures.js';
 import { DAY_MS, RateLimiter } from './ratelimit.js';
-import { MAX_IMAGE_BYTES, MealsRequestSchema, ScanRequestSchema } from './schemas.js';
+import { IdentifyRequestSchema, MAX_IMAGE_BYTES, MealsRequestSchema, ScanRequestSchema } from './schemas.js';
 
 export interface Deps {
-  config: Pick<Config, 'scansPerDay' | 'mealsPerDay' | 'corsOrigin'>;
+  config: Pick<Config, 'scansPerDay' | 'mealsPerDay' | 'identifiesPerDay' | 'corsOrigin'>;
   claude: ClaudeService;
   entitlements: EntitlementChecker;
+  /** Finds product pictures for identified foods. Without it, candidates come back without pictures. */
+  pictures?: PictureFinder;
   limiter?: RateLimiter;
   /** Resolves the caller's IP for abuse limiting. */
   clientIp?: (c: Context) => string;
@@ -34,7 +38,16 @@ function matchesMediaType(b64: string, mediaType: string): boolean {
 
 type Env = { Variables: { userId: string } };
 
-export function createApp({ config, claude, entitlements, limiter = new RateLimiter(), clientIp = () => 'unknown' }: Deps) {
+/** Why an uploaded image cannot be used, or null when it is fine. */
+function badImage(img: { mediaType: string; data: string }): { status: 400 | 413; message: string } | null {
+  if (!matchesMediaType(img.data, img.mediaType)) return { status: 400, message: 'An image does not match its declared type.' };
+  if (Buffer.byteLength(img.data, 'base64') > MAX_IMAGE_BYTES) return { status: 413, message: 'An image is too large.' };
+  return null;
+}
+
+const BURST_PER_MINUTE = { scan: 8, meals: 20, identify: 6 } as const;
+
+export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown' }: Deps) {
   const app = new Hono<Env>();
 
   if (config.corsOrigin) app.use('*', cors({ origin: config.corsOrigin }));
@@ -77,11 +90,11 @@ export function createApp({ config, claude, entitlements, limiter = new RateLimi
     await next();
   });
 
-  function limited(c: Context<Env>, bucket: 'scan' | 'meals', perDay: number) {
+  function limited(c: Context<Env>, bucket: keyof typeof BURST_PER_MINUTE, perDay: number) {
     const userId = c.get('userId');
     const day = limiter.hit(`${bucket}:day:${userId}`, perDay, DAY_MS);
     // A short burst cap stops a stuck client from looping.
-    const burst = day.ok ? limiter.hit(`${bucket}:min:${userId}`, bucket === 'scan' ? 8 : 20, 60_000) : day;
+    const burst = day.ok ? limiter.hit(`${bucket}:min:${userId}`, BURST_PER_MINUTE[bucket], 60_000) : day;
     if (burst.ok) return null;
     c.header('Retry-After', String(burst.retryAfterSec));
     return fail(c, 429, 'rate_limited', day.ok ? 'Too many requests. Please wait a minute.' : 'You have reached today\'s limit. Try again tomorrow.');
@@ -109,12 +122,8 @@ export function createApp({ config, claude, entitlements, limiter = new RateLimi
     const req = parsed.data;
 
     for (const img of req.images) {
-      if (!matchesMediaType(img.data, img.mediaType)) {
-        return fail(c, 400, 'bad_request', 'An image does not match its declared type.');
-      }
-      if (Buffer.byteLength(img.data, 'base64') > MAX_IMAGE_BYTES) {
-        return fail(c, 413, 'bad_request', 'An image is too large.');
-      }
+      const bad = badImage(img);
+      if (bad) return fail(c, bad.status, 'bad_request', bad.message);
     }
 
     const blocked = limited(c, 'scan', config.scansPerDay);
@@ -144,6 +153,32 @@ export function createApp({ config, claude, entitlements, limiter = new RateLimi
     try {
       const out = await claude.meals(parsed.data);
       return c.json(out);
+    } catch (e) {
+      return upstream(c, e);
+    }
+  });
+
+  app.post('/v1/identify', async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return fail(c, 400, 'bad_request', 'The request body must be JSON.');
+    }
+    const parsed = IdentifyRequestSchema.safeParse(body);
+    if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
+    const req = parsed.data;
+    if (req.image) {
+      const bad = badImage(req.image);
+      if (bad) return fail(c, bad.status, 'bad_request', bad.message);
+    }
+
+    const blocked = limited(c, 'identify', config.identifiesPerDay);
+    if (blocked) return blocked;
+
+    try {
+      const report = await claude.identify(req);
+      return c.json(await withPictures(report, pictures));
     } catch (e) {
       return upstream(c, e);
     }

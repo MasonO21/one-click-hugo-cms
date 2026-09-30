@@ -48,6 +48,10 @@ export interface ScanItem {
   /** Printed date, if one was legible, as YYYY-MM-DD. */
   labelExpiryDate: string | null;
   confidence: Confidence;
+  /** What the scan saw when it could not tell exactly what the item is: container, colours, words. */
+  clue?: string | null;
+  /** Which photo (1 = first) shows the item best. */
+  photo?: number | null;
 }
 
 export interface ScanResponse {
@@ -75,4 +79,46 @@ export type Diet = 'none' | 'vegetarian' | 'vegan' | 'gluten-free' | 'dairy-free
 export interface MealPrefs {
   diet: Diet;
   servings: number;
+}
+
+export interface ShelfLifeDays {
+  fridge: number | null;
+  /** null when freezing is not advised. */
+  freezer: number | null;
+  pantry: number | null;
+}
+
+/** A possible match from the online lookup (server/src/schemas.ts FoodCandidate). */
+export interface FoodCandidate {
+  name: string;
+  brand: string | null;
+  product: string | null;
+  category: Category;
+  keptIn: StorageLocation;
+  shelfLife: ShelfLifeDays;
+  /** How it looks, so a later scan can recognise it. */
+  looks: string;
+  /** Why the lookup thinks it matches. */
+  why: string;
+  sourceUrl: string | null;
+  image: { url: string; credit: string; pageUrl: string } | null;
+}
+
+/** A food the person confirmed from a picture, kept on this device (src/store/foods.ts). */
+export interface LearnedFood {
+  id: string;
+  name: string;
+  brand: string | null;
+  product: string | null;
+  category: Category;
+  keptIn: StorageLocation;
+  shelfLife: ShelfLifeDays;
+  looks: string;
+  /** Other names that mean this food, such as what a scan first called it. */
+  aliases: string[];
+  imageUrl: string | null;
+  imageCredit: string | null;
+  sourceUrl: string | null;
+  /** YYYY-MM-DD. */
+  addedOn: string;
 }

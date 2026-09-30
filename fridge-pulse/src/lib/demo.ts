@@ -1,5 +1,6 @@
 import { SCREENSHOT_MODE } from './config';
 import { addDays, todayISO } from './dates';
+import { DEMO_GOCHUJANG_PICTURE, DEMO_SSAMJANG_PICTURE } from './demoPictures';
 import { localSuggestions } from './meals';
 import type { Meal, MealPrefs, PantryItem, ScanResponse, StorageLocation } from './types';
 
@@ -12,6 +13,7 @@ const item = (
   shelfLifeDays: number | null,
   confidence: Sample['confidence'] = 'high',
   labelInDays: number | null = null,
+  clue: string | null = null,
 ): Sample => ({
   name,
   category,
@@ -19,14 +21,24 @@ const item = (
   shelfLifeDays,
   labelExpiryDate: labelInDays == null ? null : addDays(todayISO(), labelInDays),
   confidence,
+  clue,
+  photo: 1,
 });
 
-/** Sample scan results used when no backend is configured. */
-export async function demoScan(location: StorageLocation): Promise<ScanResponse> {
+const MYSTERY_CLUE = 'Red plastic tub, red lid, Korean label, chili pepper picture';
+
+/**
+ * Sample scan results used when no backend is configured. Like the real scan, it names foods the
+ * person has taught the app: once the mystery tub is confirmed, it comes back by its name.
+ */
+export async function demoScan(location: StorageLocation, known: { name: string }[] = []): Promise<ScanResponse> {
+  const taught = known.find((k) => /^(gochujang|ssamjang)$/i.test(k.name.trim()));
   await new Promise((r) => setTimeout(r, 1600));
   const byLocation: Record<StorageLocation, Sample[]> = {
     fridge: [
       item('Whole milk', 'dairy', '1 carton', 6, 'high', 6),
+      // Something the app does not know: the review screen looks it up and asks "Is this it?".
+      taught ? item(taught.name, 'condiments', '1 tub', 180, 'high') : item('Chili paste', 'condiments', '1 tub', 60, 'low', null, MYSTERY_CLUE),
       item('Baby spinach', 'produce', '1 bag', 3, 'medium'),
       item('Greek yogurt', 'dairy', '2 tubs', 12, 'high', 12),
       item('Chicken thighs', 'meat', '4 pieces', 2, 'medium'),
@@ -54,6 +66,53 @@ export async function demoScan(location: StorageLocation): Promise<ScanResponse>
     items: byLocation[location],
     notes: SCREENSHOT_MODE ? null : 'Sample items: this preview is not connected to the photo-scanning service.',
   };
+}
+
+const wait = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(t);
+      reject(new Error('aborted'));
+    });
+  });
+
+const GOCHUJANG = {
+  name: 'Gochujang',
+  brand: null,
+  product: null,
+  category: 'condiments',
+  keptIn: 'pantry',
+  shelfLife: { fridge: 180, freezer: 365, pantry: 365 },
+  looks: 'Red plastic tub with a red lid and a chili pepper on the label',
+  why: 'The red tub, chili pepper picture and Korean label match gochujang, a fermented chili paste.',
+  sourceUrl: 'https://en.wikipedia.org/wiki/Gochujang',
+  image: { url: DEMO_GOCHUJANG_PICTURE, credit: 'Sample picture', pageUrl: 'https://en.wikipedia.org/wiki/Gochujang' },
+};
+
+const SSAMJANG = {
+  name: 'Ssamjang',
+  brand: null,
+  product: null,
+  category: 'condiments',
+  keptIn: 'pantry',
+  shelfLife: { fridge: 90, freezer: 180, pantry: 365 },
+  looks: 'Brown plastic tub with a green lid',
+  why: 'A similar Korean tub, though ssamjang is usually brown rather than red.',
+  sourceUrl: 'https://en.wikipedia.org/wiki/Ssamjang',
+  image: { url: DEMO_SSAMJANG_PICTURE, credit: 'Sample picture', pageUrl: 'https://en.wikipedia.org/wiki/Ssamjang' },
+};
+
+/**
+ * Sample lookup used when no backend is configured. It only knows the sample scan's mystery tub;
+ * anything else comes back with no match.
+ */
+export async function demoIdentify(name: string, clue: string | undefined, signal?: AbortSignal): Promise<unknown> {
+  await wait(2200, signal);
+  const text = `${name} ${clue ?? ''}`.toLowerCase();
+  if (/ssamjang/.test(text)) return { candidates: [SSAMJANG] };
+  if (/gochujang|chil+i paste|korean/.test(text)) return { candidates: [GOCHUJANG, SSAMJANG] };
+  return { candidates: [] };
 }
 
 export async function demoMeals(items: PantryItem[], prefs: MealPrefs): Promise<Meal[]> {

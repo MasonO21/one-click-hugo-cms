@@ -1,9 +1,10 @@
 import { daysBetween, todayISO } from './dates';
 import { daysLeft, sortByExpiry } from './expiry';
 import { uniqueUses } from './meals';
-import { demoMeals, demoScan } from './demo';
+import { demoIdentify, demoMeals, demoScan } from './demo';
+import { toCandidates } from './identify';
 import { newId } from './scan';
-import type { Meal, MealPrefs, PantryItem, ScanResponse, StorageLocation } from './types';
+import type { Category, FoodCandidate, Meal, MealPrefs, PantryItem, ScanResponse, StorageLocation } from './types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') ?? '';
 
@@ -73,11 +74,13 @@ export interface ScanRequest {
   location: StorageLocation;
   /** Base64 JPEG data, no data-URL prefix. */
   images: string[];
+  /** Foods the person has taught the app, so the scan can name them. */
+  known?: { name: string; looks: string | null }[];
   signal?: AbortSignal;
 }
 
-export async function scanPhotos({ userId, location, images, signal }: ScanRequest): Promise<ScanResponse> {
-  if (isDemoMode) return demoScan(location);
+export async function scanPhotos({ userId, location, images, known = [], signal }: ScanRequest): Promise<ScanResponse> {
+  if (isDemoMode) return demoScan(location, known);
   const locale = Intl.DateTimeFormat().resolvedOptions().locale;
   const res = await post<Partial<ScanResponse>>(
     '/v1/scan',
@@ -87,12 +90,50 @@ export async function scanPhotos({ userId, location, images, signal }: ScanReque
       today: todayISO(),
       locale,
       images: images.map((data) => ({ mediaType: 'image/jpeg', data })),
+      ...(known.length > 0 ? { known } : {}),
     },
     90_000,
     signal,
   );
   if (!Array.isArray(res.items)) throw new ApiError('bad_response', 'Unexpected response from the server.');
   return { items: res.items, notes: res.notes ?? null };
+}
+
+export interface IdentifyRequest {
+  userId: string;
+  name: string;
+  category: Category;
+  location: StorageLocation;
+  clue?: string;
+  /** Base64 JPEG of the photo the item was seen in, if there is one. */
+  image?: string;
+  signal?: AbortSignal;
+}
+
+/**
+ * Looks an unrecognised item up online: the server checks the photo, searches the web for the
+ * exact product and finds a picture of it. An empty list means no confident match.
+ */
+export async function identifyFood({ userId, name, category, location, clue, image, signal }: IdentifyRequest): Promise<FoodCandidate[]> {
+  if (isDemoMode) return toCandidates(await demoIdentify(name, clue, signal), true);
+  const res = await post<unknown>(
+    '/v1/identify',
+    userId,
+    {
+      name: name.slice(0, 80),
+      category,
+      location,
+      ...(clue ? { clue: clue.slice(0, 300) } : {}),
+      today: todayISO(),
+      locale: Intl.DateTimeFormat().resolvedOptions().locale,
+      ...(image ? { image: { mediaType: 'image/jpeg', data: image } } : {}),
+    },
+    // Web searches take a while.
+    120_000,
+    signal,
+  );
+  if (!Array.isArray((res as { candidates?: unknown } | null)?.candidates)) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return toCandidates(res);
 }
 
 export interface MealsRequest {

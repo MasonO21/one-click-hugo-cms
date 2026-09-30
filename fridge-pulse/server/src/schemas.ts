@@ -32,6 +32,8 @@ export const ScanOutputSchema = z.object({
       shelfLifeDays: z.number().nullable(),
       labelExpiryDate: z.string().nullable(),
       confidence: z.enum(['high', 'medium', 'low']),
+      clue: z.string().nullable(),
+      photo: z.number().nullable(),
     }),
   ),
   notes: z.string().nullable(),
@@ -53,6 +55,30 @@ export const MealsOutputSchema = z.object({
 });
 export type MealsOutput = z.infer<typeof MealsOutputSchema>;
 
+/** What the identify call reports through its `report_food` tool (see claude.ts). */
+export const ReportFoodSchema = z.object({
+  candidates: z.array(
+    z.object({
+      name: z.string(),
+      brand: z.string().nullable(),
+      product: z.string().nullable(),
+      barcode: z.string().nullable(),
+      category: z.enum(CATEGORIES),
+      kind: z.enum(['packaged', 'fresh']),
+      wikipediaTitle: z.string().nullable(),
+      keptIn: z.enum(LOCATIONS),
+      fridgeDays: z.number().nullable(),
+      freezerDays: z.number().nullable(),
+      pantryDays: z.number().nullable(),
+      looks: z.string(),
+      why: z.string(),
+      sourceUrl: z.string().nullable(),
+    }),
+  ),
+});
+export type ReportFood = z.infer<typeof ReportFoodSchema>;
+export type ReportedCandidate = ReportFood['candidates'][number];
+
 // ---------------------------------------------------------------------------
 // Requests from the app.
 // ---------------------------------------------------------------------------
@@ -64,19 +90,23 @@ export const MAX_IMAGES = 4;
 export const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 export const MAX_IMAGE_B64_CHARS = Math.ceil((MAX_IMAGE_BYTES * 4) / 3) + 4;
 
+const ImageSchema = z.object({
+  mediaType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  data: z.string().min(64).max(MAX_IMAGE_B64_CHARS),
+});
+
+/** Foods the person has identified before, so a scan can recognise them by name. */
+export const MAX_KNOWN_FOODS = 50;
+
 export const ScanRequestSchema = z.object({
   location: z.enum(LOCATIONS),
   today: isoDate,
   locale: z.string().max(35).optional(),
-  images: z
-    .array(
-      z.object({
-        mediaType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-        data: z.string().min(64).max(MAX_IMAGE_B64_CHARS),
-      }),
-    )
-    .min(1)
-    .max(MAX_IMAGES),
+  images: z.array(ImageSchema).min(1).max(MAX_IMAGES),
+  known: z
+    .array(z.object({ name: z.string().trim().min(1).max(80), looks: z.string().trim().max(200).nullish() }))
+    .max(MAX_KNOWN_FOODS)
+    .optional(),
 });
 export type ScanRequest = z.infer<typeof ScanRequestSchema>;
 
@@ -98,3 +128,35 @@ export const MealsRequestSchema = z.object({
     .max(80),
 });
 export type MealsRequest = z.infer<typeof MealsRequestSchema>;
+
+export const IdentifyRequestSchema = z.object({
+  /** What the scan (or the person) called it: "Jar of red paste", "Yakult". */
+  name: z.string().trim().min(1).max(80),
+  category: z.enum(CATEGORIES),
+  location: z.enum(LOCATIONS),
+  /** What the scan saw: container, colours, legible words. */
+  clue: z.string().trim().max(300).optional(),
+  today: isoDate,
+  locale: z.string().max(35).optional(),
+  /** The photo the item was seen in. Optional: a typed name can be looked up on its own. */
+  image: ImageSchema.optional(),
+});
+export type IdentifyRequest = z.infer<typeof IdentifyRequestSchema>;
+
+/** One possible match, as sent to the app. */
+export interface FoodCandidate {
+  name: string;
+  brand: string | null;
+  product: string | null;
+  category: (typeof CATEGORIES)[number];
+  keptIn: (typeof LOCATIONS)[number];
+  shelfLife: { fridge: number | null; freezer: number | null; pantry: number | null };
+  looks: string;
+  why: string;
+  sourceUrl: string | null;
+  image: { url: string; credit: string; pageUrl: string } | null;
+}
+
+export interface IdentifyResponse {
+  candidates: FoodCandidate[];
+}

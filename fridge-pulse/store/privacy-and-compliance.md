@@ -23,6 +23,7 @@ Answer **Yes, we collect data**, and add these types. None are used for tracking
 Notes:
 
 - Photos are declared as collected because they go to a third-party AI provider that may retain API inputs for a limited period under its own terms. If you later agree zero data retention with the provider, revisit this answer.
+- Item lookups (a scan finds something the app does not know) send the same photo plus the item's name and a packaging description, so they fall under the same two data types. The web searches Claude runs, and the Open Food Facts and Wikipedia requests our server makes for a product picture, contain only product words, nothing about the person. The phone then loads the picture from Open Food Facts or Wikimedia directly, like any web image.
 - **Tracking:** No. The privacy manifest in `app.json` sets `NSPrivacyTracking` to false and lists the same data types.
 - The app makes no use of the advertising identifier, so you can answer **No** to the IDFA question.
 

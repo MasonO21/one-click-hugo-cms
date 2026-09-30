@@ -5,10 +5,12 @@ import { Animated, Easing, PanResponder, Platform, Pressable, StyleSheet, View, 
 import { daysLeft } from '../lib/expiry';
 import type { PantryItem } from '../lib/types';
 import { useBurst } from '../store/burst';
+import { usePictureFor } from '../store/foods';
 import { radius, useTheme } from '../theme';
 import { emojiFor, LOCATION_LABEL } from './categories';
+import { FoodPicture } from './FoodPicture';
 import { NATIVE_DRIVER, prefersReducedMotion, useAnimatedValue } from './motion';
-import { Emoji, Text } from './Text';
+import { Text } from './Text';
 import { UrgencyBadge } from './UrgencyBadge';
 
 type Outcome = 'used' | 'wasted';
@@ -29,6 +31,7 @@ const SWIPE_SHARE = 0.33;
 
 export function ItemRow({ item, onPress, onResolve, now }: Props) {
   const { c } = useTheme();
+  const picture = usePictureFor(item.name);
   const days = daysLeft(item, now);
 
   const x = useAnimatedValue(0); // swipe offset
@@ -185,9 +188,7 @@ export function ItemRow({ item, onPress, onResolve, now }: Props) {
           onPress={onPress}
           style={({ pressed }) => [styles.main, pressed && { opacity: 0.7 }]}
         >
-          <View style={[styles.icon, { backgroundColor: c.surfaceAlt }]}>
-            <Emoji size={22}>{emojiFor(item.name, item.category)}</Emoji>
-          </View>
+          <FoodPicture uri={picture} emoji={emojiFor(item.name, item.category)} emojiSize={22} style={[styles.icon, { backgroundColor: picture ? '#FFFFFF' : c.surfaceAlt }]} />
           <View style={{ flex: 1, gap: 4 }}>
             <Text variant="bodyStrong" numberOfLines={1}>
               {item.name}

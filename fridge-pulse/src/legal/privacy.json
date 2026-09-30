@@ -1,31 +1,35 @@
 {
   "title": "Privacy Policy",
-  "updated": "2026-09-29",
+  "updated": "2026-09-30",
   "intro": "Fridge Pulse helps you use food before it goes off. This policy explains what the app does with your information, in plain language.",
   "sections": [
     {
       "heading": "The short version",
       "bullets": [
         "Your food list stays on your phone. We do not have accounts.",
-        "If you agree, photos you scan and ingredient lists are sent to an AI service to identify food and suggest meals. Fridge Pulse does not keep your photos.",
+        "If you agree, photos you scan and ingredient lists are sent to an AI service to identify food and suggest meals. When a scan finds something the app does not know, it can also be looked up on the web. Fridge Pulse does not keep your photos.",
         "No ads. No tracking across other apps or websites. No selling your data.",
         "Payments are handled by Apple or Google. We never see your card details."
       ]
     },
     {
       "heading": "Who we are",
-      "paragraphs": ["Fridge Pulse is provided by {{developer}}. {{contactLine}}"]
+      "paragraphs": [
+        "Fridge Pulse is provided by {{developer}}. {{contactLine}}"
+      ]
     },
     {
       "heading": "What stays on your device",
       "paragraphs": [
-        "The items you track (names, quantities, storage place, expiry dates), your meal preferences, reminder settings and the state of your free trial are stored only on your device. Deleting the app, or using Settings > Privacy and data > Delete all my data, removes them."
+        "The items you track (names, quantities, storage place, expiry dates), the foods you have confirmed from a lookup, your meal preferences, reminder settings and the state of your free trial are stored only on your device. Deleting the app, or using Settings > Privacy and data > Delete all my data, removes them."
       ]
     },
     {
       "heading": "What is sent off your device, and why",
       "bullets": [
-        "Photos you scan: when you tap Analyze, the photos are sent over an encrypted connection to our server, which passes them to Anthropic, the provider of the Claude AI models, to identify the food and estimate how long it keeps. Our server handles them in memory to return the result and does not save them. Photos are only sent after you agree to this, and you can withdraw that agreement at any time.",
+        "Photos you scan: when you tap Analyze, the photos are sent over an encrypted connection to our server, which passes them to Anthropic, the provider of the Claude AI models, to identify the food and estimate how long it keeps. The names of foods you have confirmed from a lookup are sent with them, so the scan can recognise them. Our server handles them in memory to return the result and does not save them. Photos are only sent after you agree to this, and you can withdraw that agreement at any time.",
+        "Looking up an item the app does not recognise: the photo it was seen in, the name the scan gave it and a short description of its packaging are sent the same way. Anthropic's Claude searches the web for the exact product and its storage guidance; those searches contain words describing the product, never your photo or anything about you. Our server then asks Open Food Facts (openfoodfacts.org) and Wikipedia for a picture of the product, sending only the product's name and brand. When you add an item by typing, a lookup happens only if you tap Look it up online. This also needs your permission to use AI.",
+        "Product pictures: to show you a picture to confirm, your phone loads it directly from Open Food Facts or Wikimedia, which see your IP address like any website you visit. Foods you confirm, with their pictures' addresses, are saved in the food list on your device.",
         "Ingredient lists for meal ideas: to write meal ideas, the names, categories, quantities and days-until-expiry of your tracked items are sent the same way. No photos are included. This also needs your agreement.",
         "Subscription status: Apple or Google processes your payment. RevenueCat, which we use to manage subscriptions, receives your purchase information and a random app user ID so that the app and our server can tell whether your trial or subscription is active.",
         "Reminders: expiry and trial reminders are scheduled on your device. Nothing about them is sent to a server."
@@ -55,7 +59,7 @@
     {
       "heading": "Your choices and rights",
       "bullets": [
-        "Turn off AI features any time in Settings > Privacy and data. Photos and ingredient lists then stay on your device and meal ideas come from a built-in list.",
+        "Turn off AI features any time in Settings > Privacy and data. Photos, ingredient lists and item names then stay on your device, nothing is looked up online, and meal ideas come from a built-in list.",
         "Delete everything the app stores with Settings > Privacy and data > Delete all my data.",
         "Cancel your subscription in your Apple ID or Google Play account settings.",
         "Depending on where you live (for example the EU, the UK or California) you may have rights to access, correct or delete personal information. Because we keep no account data, almost everything is already on your device. Contact us if you have a question or request."
@@ -63,7 +67,9 @@
     },
     {
       "heading": "Children",
-      "paragraphs": ["Fridge Pulse is not directed at children under 13, and we do not knowingly collect information from them."]
+      "paragraphs": [
+        "Fridge Pulse is not directed at children under 13, and we do not knowingly collect information from them."
+      ]
     },
     {
       "heading": "Security and international processing",
@@ -73,11 +79,15 @@
     },
     {
       "heading": "Changes to this policy",
-      "paragraphs": ["If we change this policy we will update the date above, and tell you in the app if the change is significant."]
+      "paragraphs": [
+        "If we change this policy we will update the date above, and tell you in the app if the change is significant."
+      ]
     },
     {
       "heading": "Contact",
-      "paragraphs": ["{{contactLine}}"]
+      "paragraphs": [
+        "{{contactLine}}"
+      ]
     }
   ]
 }

@@ -20,10 +20,21 @@ describe('config', () => {
     // Abuse ceilings are deliberately modest relative to a monthly subscription price.
     assert.equal(d.scansPerDay, 15);
     assert.equal(d.mealsPerDay, 40);
+    assert.equal(d.identifiesPerDay, 10);
+    assert.equal(d.identifyEffort, 'medium');
+    assert.equal(d.offBaseUrl, 'https://world.openfoodfacts.org');
+    assert.equal(d.wikiBaseUrl, 'https://en.wikipedia.org');
+    assert.match(d.pictureUserAgent, /FridgePulse/);
     const c = loadConfig({ REVENUECAT_SECRET_KEY: 'sk', ANTHROPIC_MODEL: 'claude-sonnet-5-5', SCAN_EFFORT: 'high', MEALS_EFFORT: 'bogus', PORT: '9000' });
     assert.equal(c.model, 'claude-sonnet-5-5');
     assert.equal(c.scanEffort, 'high');
     assert.equal(c.mealsEffort, 'low');
     assert.equal(c.port, 9000);
+  });
+
+  it('only accepts http(s) base URLs for the picture services', () => {
+    const c = loadConfig({ REVENUECAT_SECRET_KEY: 'sk', OFF_BASE_URL: 'http://127.0.0.1:9/', WIKI_BASE_URL: 'file:///etc' });
+    assert.equal(c.offBaseUrl, 'http://127.0.0.1:9');
+    assert.equal(c.wikiBaseUrl, 'https://en.wikipedia.org');
   });
 });

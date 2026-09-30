@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { AddItemField } from '../components/AddItemField';
+import { AiConsentModal } from '../components/AiConsentModal';
 import { Button } from '../components/Button';
+import { FoodPicture } from '../components/FoodPicture';
+import { IdentifyCard } from '../components/IdentifyCard';
 import { FadeIn, stagger } from '../components/motion';
 import { emojiFor, LOCATIONS, LOCATION_LABEL } from '../components/categories';
 import { Card } from '../components/Card';
@@ -10,14 +13,18 @@ import { Chip } from '../components/Chip';
 import { Field } from '../components/Field';
 import { Screen } from '../components/Screen';
 import { Stepper } from '../components/Stepper';
-import { Emoji, Text } from '../components/Text';
+import { Text } from '../components/Text';
 import { UrgencyBadge } from '../components/UrgencyBadge';
+import { isDemoMode } from '../lib/api';
 import { addDays, daysBetween, formatShortDate, todayISO } from '../lib/dates';
 import { confirm } from '../lib/dialogs';
+import { canLookUp, MAX_AUTO_LOOKUPS, needsLookup } from '../lib/identify';
 import { closeModals, goBack } from '../lib/nav';
 import { requestPermission } from '../lib/notifications';
 import { draftToItem, newId, type DraftItem } from '../lib/scan';
+import { usePictureFor } from '../store/foods';
 import { useInventory } from '../store/inventory';
+import { useLookups } from '../store/lookups';
 import { useScanDraft } from '../store/scanDraft';
 import { useSettings } from '../store/settings';
 import { useShopping } from '../store/shopping';
@@ -37,10 +44,21 @@ function Tag({ label, tone }: { label: string; tone: 'good' | 'warn' | 'plain' }
   );
 }
 
-function DraftRow({ draft, listLocation }: { draft: DraftItem; listLocation: (typeof LOCATIONS)[number] }) {
+/** The scanned photo an item was seen in, for looking it up. */
+function photoFor(draft: DraftItem): string | undefined {
+  const { photos } = useScanDraft.getState();
+  return photos[draft.photo ?? 0] ?? photos[0];
+}
+
+function DraftRow({ draft, listLocation, onLookUp }: { draft: DraftItem; listLocation: (typeof LOCATIONS)[number]; onLookUp: (draft: DraftItem) => void }) {
   const { c } = useTheme();
   const update = useScanDraft((s) => s.update);
-  const remove = useScanDraft((s) => s.remove);
+  const lookup = useLookups((s) => s.byKey[draft.key]);
+  const picture = usePictureFor(draft.name);
+  const remove = (key: string) => {
+    useLookups.getState().cancel(key);
+    useScanDraft.getState().remove(key);
+  };
   const days = daysBetween(todayISO(), draft.expiresOn);
   const shift = (delta: number) => {
     const next = addDays(draft.expiresOn, delta);
@@ -61,7 +79,7 @@ function DraftRow({ draft, listLocation }: { draft: DraftItem; listLocation: (ty
         >
           <Ionicons name={draft.selected ? 'checkbox' : 'square-outline'} size={26} color={draft.selected ? c.primary : c.inkFaint} />
         </Pressable>
-        <Emoji size={24}>{emojiFor(draft.name, draft.category)}</Emoji>
+        <FoodPicture uri={picture} emoji={emojiFor(draft.name, draft.category)} emojiSize={24} style={[styles.thumb, picture ? { backgroundColor: '#FFFFFF' } : null]} />
         <Field
           value={draft.name}
           onChangeText={(name) => update(draft.key, { name })}
@@ -78,10 +96,28 @@ function DraftRow({ draft, listLocation }: { draft: DraftItem; listLocation: (ty
         <UrgencyBadge days={days} />
         {draft.expirySource === 'label' ? <Tag label="Date from label" tone="good" /> : null}
         {draft.expirySource === 'estimate' ? <Tag label="Estimated" tone="plain" /> : null}
-        {draft.confidence === 'low' ? <Tag label="Double-check" tone="warn" /> : null}
+        {draft.identified ? <Tag label="Identified online" tone="good" /> : null}
+        {draft.confidence === 'low' && !lookup ? <Tag label="Double-check" tone="warn" /> : null}
         {draft.duplicate ? <Tag label="Already tracked" tone="plain" /> : null}
         {draft.location !== listLocation ? <Tag label={LOCATION_LABEL[draft.location]} tone="plain" /> : null}
       </View>
+
+      {lookup ? (
+        <IdentifyCard draftKey={draft.key} lookup={lookup} location={draft.location} onRetry={() => onLookUp(draft)} />
+      ) : canLookUp(draft) || needsLookup(draft) ? (
+        <Pressable
+          testID={`look-up-${draft.key}`}
+          accessibilityRole="button"
+          accessibilityLabel={`Look up ${draft.name} online`}
+          onPress={() => onLookUp(draft)}
+          style={styles.lookUp}
+        >
+          <Ionicons name="search" size={16} color={c.primary} />
+          <Text variant="bodyStrong" color={c.primary} style={{ fontSize: 14 }}>
+            Not sure what this is? Look it up online
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.rowBottom}>
         <Field
@@ -116,6 +152,29 @@ export default function Review() {
   const added = useMemo(() => (addedKey ? addedKey.split('\n') : []), [addedKey]);
 
   const chosen = drafts.filter((d) => d.selected && d.name.trim() !== '');
+  const [askConsent, setAskConsent] = useState<DraftItem | null>(null);
+
+  // Anything the app does not recognise in a scan is looked up online straight away, using the photo.
+  useEffect(() => {
+    const draft = useScanDraft.getState();
+    if (draft.mode === 'scan') {
+      draft.drafts
+        .filter(needsLookup)
+        .slice(0, MAX_AUTO_LOOKUPS)
+        .forEach((d) => useLookups.getState().start(d, photoFor(d)));
+    }
+    // Leaving the screen (saved or discarded) stops any search still running.
+    return () => useLookups.getState().reset();
+  }, []);
+
+  const lookUp = (d: DraftItem) => {
+    // A typed item has not been through a scan, so ask before its name leaves the phone.
+    if (!isDemoMode && !useSettings.getState().aiConsent) {
+      setAskConsent(d);
+      return;
+    }
+    useLookups.getState().start(d, photoFor(d));
+  };
 
 
   async function close() {
@@ -227,10 +286,19 @@ export default function Review() {
       <View style={{ gap: 12 }}>
         {drafts.map((d, i) => (
           <FadeIn key={d.key} delay={mode === 'scan' ? stagger(i, 35) : 0}>
-            <DraftRow draft={d} listLocation={location} />
+            <DraftRow draft={d} listLocation={location} onLookUp={lookUp} />
           </FadeIn>
         ))}
       </View>
+      <AiConsentModal
+        visible={askConsent !== null}
+        onClose={() => setAskConsent(null)}
+        onAgree={() => {
+          const d = askConsent;
+          setAskConsent(null);
+          if (d) useLookups.getState().start(d, photoFor(d));
+        }}
+      />
     </Screen>
   );
 }
@@ -246,6 +314,9 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
   rowBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  qty: { width: 120, minHeight: 44 },
+  // Gives way on narrow phones so the date stepper stays inside the card.
+  qty: { width: 120, flexShrink: 1, minWidth: 64, minHeight: 44 },
   footer: { width: '100%', maxWidth: 600 },
+  thumb: { width: 36, height: 36, borderRadius: 10 },
+  lookUp: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, alignSelf: 'flex-start' },
 });

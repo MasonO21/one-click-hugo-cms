@@ -28,6 +28,12 @@ export interface DraftItem {
   userSelected?: boolean;
   /** Came from the shopping list; removed from the list when saved. */
   shoppingId?: string;
+  /** What the scan saw when it could not tell exactly what the item is. */
+  clue?: string;
+  /** Index into the scanned photos (0-based) of the one that shows it best. */
+  photo?: number;
+  /** Confirmed from an online lookup. */
+  identified?: boolean;
 }
 
 export const MAX_DRAFT_ITEMS = 60;
@@ -106,6 +112,8 @@ export function toDrafts(
     }
 
     const duplicate = tracked.has(norm);
+    const clue = typeof raw.clue === 'string' ? raw.clue.trim().replace(/\s+/g, ' ').slice(0, 200) : '';
+    const photo = typeof raw.photo === 'number' && Number.isInteger(raw.photo) && raw.photo >= 1 && raw.photo <= 10 ? raw.photo - 1 : undefined;
     drafts.push({
       key: `${norm}-${drafts.length}`,
       name,
@@ -117,6 +125,8 @@ export function toDrafts(
       confidence: raw.confidence === 'high' || raw.confidence === 'low' ? raw.confidence : 'medium',
       selected: !duplicate,
       duplicate,
+      ...(clue ? { clue } : {}),
+      ...(photo !== undefined ? { photo } : {}),
     });
   }
   return drafts;

@@ -3,23 +3,49 @@ import { describe, it } from 'node:test';
 import { createApp } from '../src/app.js';
 import { EntitlementLookupError, type EntitlementChecker } from '../src/auth.js';
 import { UpstreamError, type ClaudeService } from '../src/claude.js';
+import type { PictureFinder } from '../src/pictures.js';
 import { RateLimiter } from '../src/ratelimit.js';
-import type { MealsRequest, ScanRequest } from '../src/schemas.js';
+import type { IdentifyRequest, IdentifyResponse, MealsRequest, ReportFood, ScanRequest } from '../src/schemas.js';
 import { fakeJpegBase64 } from './helpers.js';
 
 const USER = 'user-1234567890';
-const config = { scansPerDay: 3, mealsPerDay: 3, corsOrigin: null };
+const config = { scansPerDay: 3, mealsPerDay: 3, identifiesPerDay: 3, corsOrigin: null };
 
-function setup(over: { entitled?: boolean | Error; claude?: Partial<ClaudeService>; limiter?: RateLimiter } = {}) {
-  const seen: { scan: ScanRequest[]; meals: MealsRequest[] } = { scan: [], meals: [] };
+const report: ReportFood = {
+  candidates: [
+    {
+      name: 'gochujang',
+      brand: 'Chung Jung One',
+      product: 'Gochujang Hot Pepper Paste',
+      barcode: '8801052040',
+      category: 'condiments',
+      kind: 'packaged',
+      wikipediaTitle: 'Gochujang',
+      keptIn: 'pantry',
+      fridgeDays: 180,
+      freezerDays: null,
+      pantryDays: 9999,
+      looks: 'Red tub, green lid',
+      why: 'Same red tub and green lid',
+      sourceUrl: 'https://example.com/gochujang',
+    },
+  ],
+};
+
+function setup(over: { entitled?: boolean | Error; claude?: Partial<ClaudeService>; limiter?: RateLimiter; pictures?: PictureFinder } = {}) {
+  const seen: { scan: ScanRequest[]; meals: MealsRequest[]; identify: IdentifyRequest[] } = { scan: [], meals: [], identify: [] };
   const claude: ClaudeService = {
     async scan(req) {
       seen.scan.push(req);
-      return { items: [{ name: 'Milk', category: 'dairy', quantity: '1', shelfLifeDays: 6, labelExpiryDate: null, confidence: 'high' }], notes: null };
+      return { items: [{ name: 'Milk', category: 'dairy', quantity: '1', shelfLifeDays: 6, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1 }], notes: null };
     },
     async meals(req) {
       seen.meals.push(req);
       return { meals: [] };
+    },
+    async identify(req) {
+      seen.identify.push(req);
+      return report;
     },
     ...over.claude,
   };
@@ -29,7 +55,7 @@ function setup(over: { entitled?: boolean | Error; claude?: Partial<ClaudeServic
       return over.entitled ?? true;
     },
   };
-  const app = createApp({ config, claude, entitlements, limiter: over.limiter });
+  const app = createApp({ config, claude, entitlements, limiter: over.limiter, pictures: over.pictures });
   const call = (path: string, body: unknown, headers: Record<string, string> = { Authorization: `Bearer ${USER}` }) =>
     app.request(path, {
       method: 'POST',
@@ -52,6 +78,17 @@ const mealsBody = (over: Partial<MealsRequest> = {}) => ({
   servings: 2,
   exclude: [],
   items: [{ name: 'Milk', category: 'dairy', quantity: '1', daysLeft: 2 }],
+  ...over,
+});
+
+const identifyBody = (over: Partial<IdentifyRequest> = {}) => ({
+  name: 'Jar of red paste',
+  category: 'condiments',
+  location: 'fridge',
+  clue: 'Red tub, green lid, Korean text',
+  today: '2026-09-29',
+  locale: 'en-GB',
+  image: { mediaType: 'image/jpeg', data: fakeJpegBase64() },
   ...over,
 });
 
@@ -178,12 +215,87 @@ describe('POST /v1/meals', () => {
   });
 });
 
+describe('POST /v1/identify', () => {
+  const picture = { url: 'https://images.openfoodfacts.org/images/products/x/front_en.400.jpg', credit: 'Open Food Facts' as const, pageUrl: 'https://world.openfoodfacts.org/product/8801052040' };
+
+  it('returns tidied candidates with a picture from the finder', async () => {
+    const asked: string[] = [];
+    const { call, seen } = setup({ pictures: { find: async (c) => (asked.push(c.name), picture) } });
+    const res = await call('/v1/identify', identifyBody());
+    assert.equal(res.status, 200);
+    const out = (await res.json()) as IdentifyResponse;
+    assert.equal(out.candidates.length, 1);
+    const c = out.candidates[0]!;
+    assert.equal(c.name, 'Gochujang');
+    assert.equal(c.brand, 'Chung Jung One');
+    assert.deepEqual(c.shelfLife, { fridge: 180, freezer: null, pantry: 730 });
+    assert.deepEqual(c.image, picture);
+    assert.deepEqual(asked, ['Gochujang']);
+    // The photo, clue and locale reach the model.
+    assert.equal(seen.identify[0]?.clue, 'Red tub, green lid, Korean text');
+    assert.equal(seen.identify[0]?.image?.mediaType, 'image/jpeg');
+  });
+
+  it('works without a photo, and without a picture service', async () => {
+    const { call } = setup();
+    const res = await call('/v1/identify', identifyBody({ image: undefined }));
+    assert.equal(res.status, 200);
+    const out = (await res.json()) as IdentifyResponse;
+    assert.equal(out.candidates[0]?.image, null);
+  });
+
+  it('still answers when a picture lookup throws', async () => {
+    const { call } = setup({ pictures: { find: async () => { throw new Error('boom'); } } });
+    const res = await call('/v1/identify', identifyBody());
+    assert.equal(res.status, 200);
+    assert.equal(((await res.json()) as IdentifyResponse).candidates[0]?.image, null);
+  });
+
+  it('passes through "no match" as an empty list', async () => {
+    const { call } = setup({ claude: { identify: async () => ({ candidates: [] }) } });
+    const res = await call('/v1/identify', identifyBody());
+    assert.deepEqual(await res.json(), { candidates: [] });
+  });
+
+  it('validates the request before any model work', async () => {
+    const { call, seen } = setup();
+    assert.equal((await call('/v1/identify', identifyBody({ name: '' }))).status, 400);
+    assert.equal((await call('/v1/identify', identifyBody({ name: 'x'.repeat(81) }))).status, 400);
+    assert.equal((await call('/v1/identify', identifyBody({ category: 'cake' as never }))).status, 400);
+    assert.equal((await call('/v1/identify', identifyBody({ clue: 'x'.repeat(301) }))).status, 400);
+    assert.equal((await call('/v1/identify', identifyBody({ image: { mediaType: 'image/png', data: fakeJpegBase64() } }))).status, 400);
+    assert.equal((await call('/v1/identify', 'not json')).status, 400);
+    assert.equal(seen.identify.length, 0);
+  });
+
+  it('has its own daily limit', async () => {
+    const { call } = setup();
+    for (let i = 0; i < 3; i++) assert.equal((await call('/v1/identify', identifyBody())).status, 200);
+    const res = await call('/v1/identify', identifyBody());
+    assert.equal(res.status, 429);
+    assert.ok(Number(res.headers.get('Retry-After')) > 0);
+    // Scans are unaffected.
+    assert.equal((await call('/v1/scan', scanBody())).status, 200);
+  });
+
+  it('maps upstream failures like the other endpoints', async () => {
+    const { call } = setup({ claude: { identify: async () => { throw new UpstreamError('refused', 'no'); } } });
+    assert.equal((await call('/v1/identify', identifyBody())).status, 422);
+  });
+
+  it('requires a subscription', async () => {
+    const { call, seen } = setup({ entitled: false });
+    assert.equal((await call('/v1/identify', identifyBody())).status, 402);
+    assert.equal(seen.identify.length, 0);
+  });
+});
+
 describe('abuse limits', () => {
   it('caps requests per IP before any entitlement lookup happens', async () => {
     let lookups = 0;
     const app = createApp({
       config,
-      claude: { scan: async () => ({ items: [], notes: null }), meals: async () => ({ meals: [] }) },
+      claude: { scan: async () => ({ items: [], notes: null }), meals: async () => ({ meals: [] }), identify: async () => ({ candidates: [] }) },
       entitlements: { isActive: async () => { lookups++; return true; } },
     });
     let last = 0;

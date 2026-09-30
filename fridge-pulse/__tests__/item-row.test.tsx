@@ -2,6 +2,17 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ItemRow } from '../src/components/ItemRow';
 import { mk } from '../test-utils/helpers';
 
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const data = new Map<string, string>();
+  return {
+    __esModule: true,
+    default: {
+      getItem: async (k: string) => data.get(k) ?? null,
+      setItem: async (k: string, v: string) => void data.set(k, v),
+      removeItem: async (k: string) => void data.delete(k),
+    },
+  };
+});
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn(async () => {}), impactAsync: jest.fn(async () => {}), ImpactFeedbackStyle: {} }));
 
 const find = (tree: ReactTestRenderer, id: string) => tree.root.findAll((n) => n.props.testID === id && typeof n.props.onPress === 'function')[0]!;

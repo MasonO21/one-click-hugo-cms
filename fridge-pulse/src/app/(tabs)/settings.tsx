@@ -22,6 +22,7 @@ import type { Diet } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
 import { useSettings } from '../../store/settings';
+import { useFoods } from '../../store/foods';
 import { useShopping } from '../../store/shopping';
 import { useTheme } from '../../theme';
 
@@ -83,6 +84,7 @@ function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
 export default function Settings() {
   const { c } = useTheme();
   const settings = useSettings();
+  const foodCount = useFoods((s) => s.foods.length);
   const { entitlement, priceString } = useBilling();
   const provider = getProvider();
 
@@ -150,7 +152,7 @@ export default function Settings() {
   async function confirmDelete() {
     const ok = await confirm({
       title: 'Delete all data?',
-      message: 'This removes every tracked item, your shopping list and your impact history from this device. It cannot be undone.',
+      message: 'This removes every tracked item, your shopping list, the foods you have taught the app and your impact history from this device. It cannot be undone.',
       confirmLabel: 'Delete',
       destructive: true,
     });
@@ -158,6 +160,7 @@ export default function Settings() {
     useInventory.getState().clear();
     useMealsCache.getState().clear();
     useShopping.getState().clear();
+    useFoods.getState().clear();
   }
 
   return (
@@ -260,7 +263,7 @@ export default function Settings() {
               label="Use AI to read photos and suggest meals"
               hint={
                 settings.aiConsent
-                  ? 'On. Photos and item names are sent securely to an AI service when you scan or ask for meal ideas.'
+                  ? 'On. Photos and item names are sent securely to an AI service when you scan, look up an item or ask for meal ideas.'
                   : 'Off. Nothing is sent anywhere. Turn on to scan photos and get AI-written recipes.'
               }
               right={
@@ -284,6 +287,7 @@ export default function Settings() {
       </Section>
 
       <Section title="About">
+        <LinkRow label={`Your foods${foodCount > 0 ? ` (${foodCount})` : ''}`} onPress={() => router.push('/foods')} />
         <LinkRow label="Food safety and about" onPress={() => router.push('/about')} />
         <LinkRow label="Privacy Policy" onPress={() => router.push('/legal/privacy')} />
         <LinkRow label="Terms of Use" onPress={() => router.push('/legal/terms')} />

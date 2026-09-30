@@ -12,10 +12,21 @@ export interface HistoryFood {
   lastAdded: string;
 }
 
+/** A food the person taught the app from an online lookup (src/store/foods.ts). */
+export interface TaughtFood {
+  name: string;
+  category: Category;
+  imageUrl: string | null;
+}
+
 export interface FoodSuggestion {
   name: string;
   category: Category;
   fromHistory: boolean;
+  /** One of the person's own taught foods. */
+  taught?: boolean;
+  /** Its product picture, when it has one. */
+  imageUrl?: string;
   /** Set for foods that belong somewhere specific whatever list they are added to (ice cream: freezer). */
   keptIn?: StorageLocation;
   /** Character ranges [start, end) of `name` that match what was typed, for highlighting. */
@@ -24,6 +35,7 @@ export interface FoodSuggestion {
 
 export interface SuggestOptions {
   history?: HistoryFood[];
+  taught?: TaughtFood[];
   /** Names already in the list being built; they are not suggested again. */
   exclude?: string[];
   limit?: number;
@@ -116,6 +128,7 @@ interface Candidate {
   history: HistoryFood | null;
   staple: boolean;
   keptIn?: StorageLocation;
+  taught?: TaughtFood;
 }
 
 interface Scored extends Candidate {
@@ -170,7 +183,7 @@ function compare(a: Scored, b: Scored, queryLength: number): number {
  * Suggestions for a partly typed item name: the person's own foods first, then common groceries.
  * Typos are only guessed at when nothing matches as typed.
  */
-export function suggestFoods(typed: string, { history = [], exclude = [], limit = SUGGESTION_LIMIT }: SuggestOptions = {}): FoodSuggestion[] {
+export function suggestFoods(typed: string, { history = [], taught = [], exclude = [], limit = SUGGESTION_LIMIT }: SuggestOptions = {}): FoodSuggestion[] {
   const query = tidyQuery(typed);
   if (!query) return [];
   const tokens = query.split(' ');
@@ -181,11 +194,21 @@ export function suggestFoods(typed: string, { history = [], exclude = [], limit 
     const key = tidyQuery(h.name);
     if (key && !pool.has(key)) pool.set(key, { name: h.name, category: h.category, history: h, staple: false });
   }
+  // Taught foods rank like everyday staples and keep their own spelling and category. Their usual
+  // place is where they live unopened, so the list being built still decides where they go.
+  for (const t of taught) {
+    const key = tidyQuery(t.name);
+    if (!key) continue;
+    const mine = pool.get(key);
+    if (mine) Object.assign(mine, { staple: true, taught: t, category: t.category });
+    else pool.set(key, { name: t.name, category: t.category, history: null, staple: true, taught: t });
+  }
   for (const f of FOOD_CATALOG) {
     const key = tidyQuery(f.name);
     const mine = pool.get(key);
-    if (mine) Object.assign(mine, { staple: f.staple, keptIn: f.keptIn });
-    else pool.set(key, { name: f.name, category: f.category, history: null, staple: f.staple, keptIn: f.keptIn });
+    if (mine) {
+      Object.assign(mine, mine.taught ? { keptIn: f.keptIn } : { staple: f.staple, keptIn: f.keptIn });
+    } else pool.set(key, { name: f.name, category: f.category, history: null, staple: f.staple, keptIn: f.keptIn });
   }
 
   const scored: Scored[] = [];
@@ -202,6 +225,8 @@ export function suggestFoods(typed: string, { history = [], exclude = [], limit 
       name: s.name,
       category: s.category,
       fromHistory: s.history !== null,
+      ...(s.taught ? { taught: true } : {}),
+      ...(s.taught?.imageUrl ? { imageUrl: s.taught.imageUrl } : {}),
       ...(s.keptIn ? { keptIn: s.keptIn } : {}),
       matches: s.matches,
     }));
@@ -239,8 +264,10 @@ export interface ResolvedFood {
  * they have used before, or a known food, keeps its usual spelling and category ("milk" becomes
  * "Milk", dairy); anything else is added as typed, with a guessed category.
  */
-export function resolveTyped(typed: string, history: HistoryFood[] = []): ResolvedFood {
+export function resolveTyped(typed: string, history: HistoryFood[] = [], taught: TaughtFood[] = []): ResolvedFood {
   const key = tidyQuery(typed);
+  const food = taught.find((t) => tidyQuery(t.name) === key);
+  if (food) return { name: food.name, category: food.category };
   const mine = history.find((h) => tidyQuery(h.name) === key);
   const known = FOOD_CATALOG.find((f) => tidyQuery(f.name) === key);
   if (mine) return { name: mine.name, category: mine.category, ...(known?.keptIn ? { keptIn: known.keptIn } : {}) };

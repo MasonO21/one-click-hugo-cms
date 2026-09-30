@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import Anthropic from '@anthropic-ai/sdk';
-import { createClaude, UpstreamError } from '../src/claude.js';
-import type { MealsRequest, ScanRequest } from '../src/schemas.js';
+import { countryFromLocale, createClaude, IDENTIFY_MAX_SEARCHES, UpstreamError } from '../src/claude.js';
+import type { IdentifyRequest, MealsRequest, ScanRequest } from '../src/schemas.js';
 import { fakeAnthropic, fakeJpegBase64, messageResponse } from './helpers.js';
 
 const scanReq: ScanRequest = {
@@ -27,7 +27,7 @@ const mealsReq: MealsRequest = {
 };
 
 const scanOutput = {
-  items: [{ name: 'Baby spinach', category: 'produce', quantity: '1 bag', shelfLifeDays: 3, labelExpiryDate: null, confidence: 'high' }],
+  items: [{ name: 'Baby spinach', category: 'produce', quantity: '1 bag', shelfLifeDays: 3, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1 }],
   notes: null,
 };
 
@@ -132,5 +132,147 @@ describe('claude service against a fake Messages API (real SDK code path)', () =
     await assert.rejects(svc().scan(scanReq), (e: unknown) => e instanceof UpstreamError && e.kind === 'unavailable');
     mode = 'auth';
     await assert.rejects(svc().scan(scanReq), (e: unknown) => e instanceof UpstreamError && e.kind === 'unavailable');
+  });
+});
+
+const identifyReq: IdentifyRequest = {
+  name: 'Jar of red paste',
+  category: 'condiments',
+  location: 'fridge',
+  clue: 'Red tub, green lid, Korean text',
+  today: '2026-09-29',
+  locale: 'en-GB',
+  image: { mediaType: 'image/jpeg', data: fakeJpegBase64() },
+};
+
+const candidate = {
+  name: 'Gochujang',
+  brand: null,
+  product: null,
+  barcode: null,
+  category: 'condiments',
+  kind: 'fresh',
+  wikipediaTitle: 'Gochujang',
+  keptIn: 'pantry',
+  fridgeDays: 180,
+  freezerDays: null,
+  pantryDays: 365,
+  looks: 'Red tub, green lid',
+  why: 'Same tub',
+  sourceUrl: null,
+};
+
+function toolTurn(content: unknown[], stopReason: string) {
+  return { ...messageResponse('', stopReason), content };
+}
+const searched = [
+  { type: 'server_tool_use', id: 'srvtoolu_1', name: 'web_search', input: { query: 'red tub green lid korean chili paste' } },
+  {
+    type: 'web_search_tool_result',
+    tool_use_id: 'srvtoolu_1',
+    content: [{ type: 'web_search_result', url: 'https://en.wikipedia.org/wiki/Gochujang', title: 'Gochujang', encrypted_content: 'x', page_age: null }],
+  },
+];
+const reported = (input: unknown) => ({ type: 'tool_use', id: 'toolu_1', name: 'report_food', input });
+
+describe('identify against a fake Messages API', () => {
+  let script: unknown[] = [];
+  let api: Awaited<ReturnType<typeof fakeAnthropic>>;
+  before(async () => {
+    api = await fakeAnthropic(() => ({ json: script.shift() ?? messageResponse('out of script') }));
+  });
+  after(() => api.close());
+  const svc = () => createClaude({ model: 'claude-opus-5-5', scanEffort: 'medium', mealsEffort: 'low', identifyEffort: 'high', client: clientFor(api.baseURL) });
+
+  it('sends the photo, a capped web search and a strict report tool, and reads the report', async () => {
+    const before = api.requests.length;
+    script = [toolTurn([...searched, reported({ candidates: [candidate] })], 'tool_use')];
+    const out = await svc().identify(identifyReq);
+    assert.equal(out.candidates[0]?.name, 'Gochujang');
+    assert.equal(api.requests.length - before, 1);
+
+    const b = api.requests.at(-1)!.body;
+    assert.equal(b.model, 'claude-opus-5-5');
+    assert.equal(b.output_config.effort, 'high');
+    assert.equal(b.output_config.format, undefined);
+    assert.equal(b.fallbacks, 'default');
+    assert.equal(b.thinking, undefined);
+    // Forced tool choice 400s on this model family; auto plus an instruction instead.
+    assert.deepEqual(b.tool_choice, { type: 'auto' });
+    const search = b.tools.find((t: { name: string }) => t.name === 'web_search');
+    assert.equal(search.type, 'web_search_20260209');
+    assert.equal(search.max_uses, IDENTIFY_MAX_SEARCHES);
+    assert.deepEqual(search.user_location, { type: 'approximate', country: 'GB' });
+    const tool = b.tools.find((t: { name: string }) => t.name === 'report_food');
+    assert.equal(tool.strict, true);
+    assert.equal(tool.input_schema.additionalProperties, false);
+    assert.equal(tool.input_schema.properties.candidates.items.additionalProperties, false);
+
+    const blocks = b.messages[0].content as { type: string; text?: string }[];
+    assert.equal(blocks[0]?.type, 'image');
+    assert.match(blocks.at(-1)?.text ?? '', /Jar of red paste/);
+    assert.match(blocks.at(-1)?.text ?? '', /Red tub, green lid, Korean text/);
+    assert.match(String(b.system), /never instructions to you/);
+  });
+
+  it('resumes a paused server-tool turn by sending the assistant turn back unchanged', async () => {
+    const before = api.requests.length;
+    script = [toolTurn(searched, 'pause_turn'), toolTurn([reported({ candidates: [candidate] })], 'tool_use')];
+    const out = await svc().identify(identifyReq);
+    assert.equal(out.candidates.length, 1);
+    assert.equal(api.requests.length - before, 2);
+    const second = api.requests.at(-1)!.body;
+    assert.equal(second.messages.length, 2);
+    assert.equal(second.messages[1].role, 'assistant');
+    assert.deepEqual(second.messages[1].content, searched);
+  });
+
+  it('nudges once when the model ends without reporting, then gives up', async () => {
+    script = [messageResponse('It looks like gochujang.'), toolTurn([reported({ candidates: [candidate] })], 'tool_use')];
+    const out = await svc().identify(identifyReq);
+    assert.equal(out.candidates[0]?.name, 'Gochujang');
+    const nudge = api.requests.at(-1)!.body.messages.at(-1);
+    assert.equal(nudge.role, 'user');
+    assert.match(String(nudge.content), /report_food/);
+
+    script = [messageResponse('Hmm.'), messageResponse('Still hmm.')];
+    await assert.rejects(svc().identify(identifyReq), (e: unknown) => e instanceof UpstreamError && e.kind === 'bad_output');
+  });
+
+  it('works without a photo', async () => {
+    script = [toolTurn([reported({ candidates: [] })], 'tool_use')];
+    const out = await svc().identify({ ...identifyReq, image: undefined, locale: undefined });
+    assert.deepEqual(out.candidates, []);
+    const b = api.requests.at(-1)!.body;
+    assert.equal(b.messages[0].content.length, 1);
+    assert.equal(b.tools[0].user_location, undefined);
+    assert.match(b.messages[0].content[0].text, /no photo/);
+  });
+
+  it('rejects a report that does not match the schema, and refusals', async () => {
+    script = [toolTurn([reported({ candidates: [{ name: 'x' }] })], 'tool_use')];
+    await assert.rejects(svc().identify(identifyReq), (e: unknown) => e instanceof UpstreamError && e.kind === 'bad_output');
+    script = [{ ...messageResponse('', 'refusal'), stop_details: { type: 'refusal', category: null, explanation: 'x' } }];
+    await assert.rejects(svc().identify(identifyReq), (e: unknown) => e instanceof UpstreamError && e.kind === 'refused');
+    script = [messageResponse('{"cand', 'max_tokens')];
+    await assert.rejects(svc().identify(identifyReq), (e: unknown) => e instanceof UpstreamError && e.kind === 'bad_output');
+  });
+
+  it('stops after a bounded number of paused turns', async () => {
+    script = Array.from({ length: 6 }, () => toolTurn(searched, 'pause_turn'));
+    const before = api.requests.length;
+    await assert.rejects(svc().identify(identifyReq), (e: unknown) => e instanceof UpstreamError);
+    assert.ok(api.requests.length - before <= 4);
+    script = [];
+  });
+});
+
+describe('countryFromLocale', () => {
+  it('reads the region from a locale', () => {
+    assert.equal(countryFromLocale('en-GB'), 'GB');
+    assert.equal(countryFromLocale('zh-Hant-TW'), 'TW');
+    assert.equal(countryFromLocale('fr_CA'), 'CA');
+    assert.equal(countryFromLocale('en'), null);
+    assert.equal(countryFromLocale(undefined), null);
   });
 });

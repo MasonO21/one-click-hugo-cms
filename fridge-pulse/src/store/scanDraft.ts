@@ -3,7 +3,7 @@ import { addDays, todayISO } from '../lib/dates';
 import { normalizeName } from '../lib/expiry';
 import type { DraftItem } from '../lib/scan';
 import { estimateShelfLifeDays, guessCategory, usualPlace } from '../lib/shelfLife';
-import type { Category, StorageLocation } from '../lib/types';
+import type { Category, LearnedFood, StorageLocation } from '../lib/types';
 import { useInventory } from './inventory';
 import type { ShoppingItem } from './shopping';
 
@@ -15,13 +15,17 @@ interface ScanDraftState {
   location: StorageLocation;
   drafts: DraftItem[];
   notes: string | null;
-  start: (location: StorageLocation, drafts: DraftItem[], notes: string | null, mode?: DraftMode) => void;
+  /** The scanned photos (base64 JPEG), kept in memory only, so unrecognised items can be looked up. */
+  photos: string[];
+  start: (location: StorageLocation, drafts: DraftItem[], notes: string | null, mode?: DraftMode, photos?: string[]) => void;
   /** Starts a list from ticked-off shopping, each item headed for where it usually lives. */
   startPutAway: (items: ShoppingItem[]) => void;
   update: (key: string, patch: Partial<DraftItem>) => void;
   remove: (key: string) => void;
   /** Adds a typed or suggested item at the top of the list. `keptIn` overrides the list's location. */
   addManual: (name: string, opts?: { category?: Category; keptIn?: StorageLocation }) => void;
+  /** Turns a draft into the food the person confirmed from a lookup. */
+  applyIdentified: (key: string, food: LearnedFood) => void;
   /** Moves the list to another location, re-estimating dates that were estimates. */
   setLocation: (location: StorageLocation) => void;
   clear: () => void;
@@ -55,12 +59,14 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
   location: 'fridge',
   drafts: [],
   notes: null,
-  start: (location, drafts, notes, mode = 'scan') => set({ location, drafts, notes, mode }),
+  photos: [],
+  start: (location, drafts, notes, mode = 'scan', photos = []) => set({ location, drafts, notes, mode, photos }),
   startPutAway: (items) =>
     set({
       mode: 'shopping',
       location: 'fridge',
       notes: null,
+      photos: [],
       drafts: items.map((i, n) => draftFor(i.name, i.category, i.keptIn ?? usualPlace(i.name, i.category), `shop-${i.id}-${n}`, { shoppingId: i.id })),
     }),
   update: (key, patch) =>
@@ -68,6 +74,26 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
       drafts: s.drafts.map((d) => (d.key === key ? { ...d, ...patch, ...('selected' in patch ? { userSelected: true } : null) } : d)),
     })),
   remove: (key) => set((s) => ({ drafts: s.drafts.filter((d) => d.key !== key) })),
+  applyIdentified: (key, food) =>
+    set((s) => ({
+      drafts: s.drafts.map((d) => {
+        if (d.key !== key) return d;
+        // A printed date or one the person set still wins; an estimate uses the food's own figure
+        // (the registry already knows the food, see src/store/foods.ts).
+        const expiresOn = d.expirySource === 'estimate' ? addDays(todayISO(), estimateShelfLifeDays(food.name, food.category, d.location)) : d.expiresOn;
+        const duplicate = tracked(food.name, d.location);
+        return {
+          ...d,
+          name: food.name,
+          category: food.category,
+          expiresOn,
+          confidence: 'high',
+          identified: true,
+          duplicate,
+          selected: d.userSelected ? d.selected : s.mode === 'scan' ? !duplicate : d.selected,
+        };
+      }),
+    })),
   addManual: (rawName, opts = {}) => {
     const trimmed = rawName.trim().replace(/\s+/g, ' ');
     if (!trimmed) return;
@@ -96,5 +122,5 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
       }),
     });
   },
-  clear: () => set({ drafts: [], notes: null }),
+  clear: () => set({ drafts: [], notes: null, photos: [] }),
 }));

@@ -5,13 +5,15 @@ import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { estimateShelfLifeDays } from '../lib/shelfLife';
 import { historyFrom, keepsLabel, resolveTyped, suggestFoods, type FoodSuggestion, type ResolvedFood } from '../lib/suggest';
 import type { StorageLocation } from '../lib/types';
+import { useFoods } from '../store/foods';
 import { useInventory } from '../store/inventory';
 import { radius, useTheme } from '../theme';
 import { Button } from './Button';
 import { emojiFor, LOCATION_LABEL } from './categories';
 import { Field } from './Field';
 import { FadeIn } from './motion';
-import { Emoji, Text } from './Text';
+import { FoodPicture } from './FoodPicture';
+import { Text } from './Text';
 
 interface Props {
   /** Where the list is stored; used for the "keeps about" estimate. */
@@ -49,7 +51,7 @@ function MatchedName({ name, matches }: { name: string; matches: [number, number
 function describe(s: FoodSuggestion, location: StorageLocation): string {
   const kept = s.keptIn ?? location;
   return [
-    s.fromHistory ? 'Added before' : null,
+    s.taught ? 'Your food' : s.fromHistory ? 'Added before' : null,
     kept !== location ? LOCATION_LABEL[kept] : null,
     keepsLabel(estimateShelfLifeDays(s.name, s.category, kept)),
   ]
@@ -65,9 +67,11 @@ export function AddItemField({ location, added, onAdd, autoFocus, placeholder = 
   const { c } = useTheme();
   const items = useInventory((s) => s.items);
   const history = useMemo(() => historyFrom(items), [items]);
+  const foods = useFoods((s) => s.foods);
+  const taught = useMemo(() => foods.map((f) => ({ name: f.name, category: f.category, imageUrl: f.imageUrl })), [foods]);
   const [text, setText] = useState('');
   const input = useRef<TextInput>(null);
-  const suggestions = useMemo(() => suggestFoods(text, { history, exclude: added }), [text, history, added]);
+  const suggestions = useMemo(() => suggestFoods(text, { history, taught, exclude: added }), [text, history, taught, added]);
 
   function add(food: ResolvedFood) {
     onAdd(food);
@@ -78,7 +82,7 @@ export function AddItemField({ location, added, onAdd, autoFocus, placeholder = 
   }
 
   function submit() {
-    if (text.trim()) add(resolveTyped(text, history));
+    if (text.trim()) add(resolveTyped(text, history, taught));
   }
 
   return (
@@ -125,9 +129,7 @@ export function AddItemField({ location, added, onAdd, autoFocus, placeholder = 
                   pressed && { backgroundColor: c.surfaceAlt },
                 ]}
               >
-                <View style={[styles.glyph, { backgroundColor: c.surfaceAlt }]}>
-                  <Emoji size={20}>{emojiFor(s.name, s.category)}</Emoji>
-                </View>
+                <FoodPicture uri={s.imageUrl} emoji={emojiFor(s.name, s.category)} emojiSize={20} style={[styles.glyph, { backgroundColor: s.imageUrl ? '#FFFFFF' : c.surfaceAlt }]} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <MatchedName name={s.name} matches={s.matches} />
                   <Text variant="caption" muted numberOfLines={1}>

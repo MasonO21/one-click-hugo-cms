@@ -40,12 +40,13 @@ export function AiConsentModal({ visible, onAgree, onClose }: Props) {
           <ScrollView contentContainerStyle={{ gap: 12 }} showsVerticalScrollIndicator={false}>
             <Text variant="heading">Use AI to read your food?</Text>
             <Text>
-              To identify food in your photos and write meal ideas, Fridge Pulse sends them securely through our server to an AI
-              service, Anthropic&apos;s Claude.
+              To identify food in your photos, look up items it does not know and write meal ideas, Fridge Pulse sends them
+              securely through our server to an AI service, Anthropic&apos;s Claude.
             </Text>
             <View style={{ gap: 8 }}>
               {[
                 'Photos are sent only when you tap Analyze. For meal ideas, the names and dates of your tracked items are sent, with no photos.',
+                'If a scan finds something unfamiliar, Claude searches the web for the exact product, and you confirm it from a picture.',
                 'Fridge Pulse does not keep your photos.',
                 'You can turn this off any time in Settings. Everything else keeps working.',
               ].map((line) => (

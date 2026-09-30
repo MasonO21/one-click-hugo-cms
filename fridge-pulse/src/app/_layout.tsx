@@ -14,6 +14,7 @@ import { SCREENSHOT_MODE } from '../lib/config';
 import { useEmbeddedFonts } from '../lib/embeddedFonts';
 import { configureNotifications, syncReminders } from '../lib/notifications';
 import { useBilling } from '../store/billing';
+import { useFoods } from '../store/foods';
 import { useHydrated } from '../store/hydration';
 import { useInventory } from '../store/inventory';
 import { useMealsCache } from '../store/mealsCache';
@@ -73,7 +74,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
 
 export default function RootLayout() {
   const { c, scheme } = useTheme();
-  const hydrated = useHydrated([useInventory, useSettings, useMealsCache, useShopping]);
+  const hydrated = useHydrated([useInventory, useSettings, useMealsCache, useShopping, useFoods]);
   const billingReady = useBilling((s) => s.ready);
   const unlocked = useBilling((s) => isUnlocked(s.entitlement));
   const onboarded = useSettings((s) => s.onboarded);
@@ -123,6 +124,7 @@ export default function RootLayout() {
             <Stack.Screen name="review" options={{ presentation: 'modal' }} />
             <Stack.Screen name="item/[id]" options={{ presentation: 'modal' }} />
             <Stack.Screen name="about" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="foods" options={{ presentation: 'modal' }} />
           </Stack.Protected>
           {/* Legal text must be readable before onboarding and on the paywall, so it is never guarded. */}
           <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />

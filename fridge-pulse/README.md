@@ -49,6 +49,19 @@ The bootstrap also keeps the preview working where a host serves it from a neste
 - **Shopping list.** A List tab with typing suggestions, "Buy again" chips for food you finished recently, sharing, and **Put away**: ticked-off items open a review with each food headed where it usually lives (bananas in the cupboard, milk in the fridge, ice cream in the freezer) and saved with its own estimated date.
 - **Motion.** A heartbeat logo that beats faster when food needs using, a freshness bar that grows in, rows and cards that fade in, springy buttons, a scan line over your photo while it is read, and a countdown on the message bar. Everything respects the phone's Reduce Motion setting (and turns off in screenshot builds).
 
+## Unfamiliar food: looked up online, confirmed from a picture
+
+When a scan finds something the app does not know (a name with no shelf-life rule and not in its food list, or a product the scan could only describe, like "Jar of red paste"), Fridge Pulse looks it up by itself:
+
+1. The review screen shows "Looking this up online..." under that item. The server sends Claude the photo the item was seen in, the scan's name and what it saw ("Red plastic tub, green lid, Korean label"), and Claude searches the web for the exact product and how long it keeps.
+2. The server then finds a picture of that product: by barcode or name on Open Food Facts for packaged food, or on Wikipedia for fresh food. Pictures only ever come from those two sources; the model never supplies an image address.
+3. The item shows **"Is this your item?"** with the picture, the name and brand, how long it keeps where it is stored, why it matches and the source. **Yes, that's it** saves it; **No** shows the next match (up to three); after the last "No" it says there was no confident match and the item stays as scanned.
+4. Confirmed foods go into **Your foods** (Settings > Your foods), a database on the phone. From then on the food has its own shelf life in the fridge, freezer and pantry, its picture shows in lists, typing suggests it, and later scans are told about it so they name it straight away instead of looking it up again. Foods can be removed there; "Delete all my data" clears them.
+
+Typed items the app does not know get a "Look it up online" link instead (name only, on request). Leftovers are never looked up. At most five items are looked up automatically per scan, two at a time; leaving the review screen or removing an item stops its search.
+
+In the web preview (no server) the sample scan includes a mystery tub that "finds" gochujang or ssamjang with drawn sample pictures, so the flow can be tried without an API key.
+
 ## How accurate are the expiry dates?
 
 Every date the app estimates comes from `src/lib/shelfLife.ts`, and every figure there is checked by a test against an independent reference:
@@ -57,6 +70,8 @@ Every date the app estimates comes from `src/lib/shelfLife.ts`, and every figure
 - `__tests__/shelflife-reference.test.ts` fails if any estimate falls outside its range. The only exceptions are written into the test with their reasons: fresh chorizo uses the raw-sausage figure (the shorter, safer one), estimates stop at two years, and a jar or carton in the cupboard is treated as unopened (an opened one would be in the fridge).
 - Food that must not sit out gets "use today" in the pantry, and food that freezes badly never gains time by being frozen.
 - AI estimates from a photo can shorten a date (wilted greens) but, for a food the app recognises, never exceed the guidance in the fridge or freezer. The scan prompt carries the same reference figures.
+
+Foods confirmed from an online lookup use the shelf life found for them (the shorter figure when sources disagree, clamped to two years, and "not advised" for freezing when no freezer figure was found). Those come from web sources rather than the reference table, and the Your foods screen says so.
 
 These are estimates for a reminder app, not food-safety guarantees; the app labels them and lets people edit every date.
 
@@ -87,9 +102,16 @@ These are estimates for a reminder app, not food-safety guarantees; the app labe
 - The model returns each item's name, category, quantity, a shelf-life estimate, and the printed date when one is legible. Printed dates win over estimates; implausible ones (years off, in the far past) are discarded.
 - Nothing is saved until the person reviews it. Estimates are labelled "Estimated" and are editable. They are typical shelf lives, not food-safety guarantees.
 - Meal ideas are ranked by how soon their ingredients expire. Items already past their date are never suggested.
-- The server defaults to `claude-opus-5-5` (override with `ANTHROPIC_MODEL`), with `output_config.effort` set explicitly (scan: medium, meals: low) and server-side refusal fallback enabled. Photos are not stored or logged by the server.
+- The server defaults to `claude-opus-5-5` (override with `ANTHROPIC_MODEL`), with `output_config.effort` set explicitly (scan: medium, meals: low, identify: medium) and server-side refusal fallback enabled. Photos are not stored or logged by the server.
 
-Rough cost, as an estimate to check against your own usage: a 3-photo scan is about 8k input tokens plus a few thousand output tokens, so on the order of $0.05 to $0.10 with Opus 5.5 pricing, and about half that on Sonnet 5.5 (`ANTHROPIC_MODEL=claude-sonnet-5-5`). Per-user daily caps (`SCANS_PER_DAY`, `MEALS_PER_DAY`) bound worst-case spend.
+Looking up an unfamiliar item:
+
+`photo + name + clue -> POST /v1/identify -> Claude with web search (web_search_20260209, at most 4 searches) -> answer through a strict report_food tool -> picture from Open Food Facts / Wikipedia -> "Is this your item?" -> Your foods`
+
+- The answer comes back through a strict tool rather than structured output so it can be combined with the web search server tool; paused server-tool turns are resumed, and a model that forgets to report is asked once more before the lookup fails.
+- Searches favour the country in the phone's locale. Picture lookups send only product words, identify the server with `PICTURE_USER_AGENT` (set a contact address, as Open Food Facts asks) and are cached for 12 hours.
+
+Rough cost, as an estimate to check against your own usage: a 3-photo scan is about 8k input tokens plus a few thousand output tokens, so on the order of $0.05 to $0.10 with Opus 5.5 pricing, and about half that on Sonnet 5.5 (`ANTHROPIC_MODEL=claude-sonnet-5-5`). A lookup is dearer than a scan: up to four web searches ($10 per 1,000 searches, so at most $0.04) plus the search results as input tokens, very roughly $0.05 to $0.25 each. Each food is looked up once, since confirmed foods are recognised afterwards. Per-user daily caps (`SCANS_PER_DAY` 15, `MEALS_PER_DAY` 40, `IDENTIFIES_PER_DAY` 10) bound worst-case spend.
 
 ## Monetization: 14-day free trial, then $9.99/month
 
@@ -121,6 +143,8 @@ The app-side work is done; what is left needs your accounts and decisions. `stor
 - [ ] Replace the placeholder bundle id / package (`com.fridgepulse.app`) in `app.json`, and the developer name and support email in `src/lib/config.ts`, with your own.
 - [ ] Host the policies: `npm run legal:build` writes `docs/legal/privacy.html` and `terms.html` (copy them to any HTTPS host, or enable GitHub Pages), then set `EXPO_PUBLIC_PRIVACY_URL` / `EXPO_PUBLIC_TERMS_URL`. The store forms need those URLs. The policy text must be reviewed by you (ideally a lawyer) before release. It states that photos and item names go to a third-party AI provider (Anthropic) only after the user agrees in the app.
 - [ ] Deploy the backend (`server/Dockerfile`; any Node 22 host works) over HTTPS and set `EXPO_PUBLIC_API_URL`. Set `TRUST_PROXY=true` behind a reverse proxy. Rate-limit counters are in memory, so use one instance or move them to Redis.
+- [ ] Set `PICTURE_USER_AGENT` on the server to include your contact address (Open Food Facts asks every client to identify itself), and check that web search is enabled for your Anthropic organization (Console > Settings), or lookups will find nothing.
+- [ ] Try the online lookup with real unfamiliar products (foreign-label jars, niche brands) and check the pictures and shelf lives it finds before relying on them.
 - [ ] Test with real photos of real fridges. Scan accuracy, date reading and shelf-life estimates depend on the model and prompt (`server/src/prompts.ts`), and I could not evaluate them without an API key.
 - [ ] Build with EAS: `npx eas-cli build --profile production`, then `eas submit` (fill the placeholders in `eas.json`).
 - [ ] Upload the screenshots in `store/screenshots/` (regenerate with `SCREENSHOT_MODE=1 npm run preview:build && CHROMIUM_PATH=<chromium> npm run store:screenshots`, then `npm run preview:build` for the normal preview). They are drawn from the demo build with sample data, so replace them with device screenshots if you prefer.
@@ -151,7 +175,7 @@ Foods are shown with emoji chosen by name (`src/components/categories.ts`, pinne
 npm test               # app tests: dates, expiry, meals, reminders, billing, pricing consistency, contrast, emoji accuracy, store listing limits, dependency guard
 npm run typecheck
 npm run lint
-cd server && npm test  # 30 server tests
+cd server && npm test  # 56 server tests
 npx expo export --platform ios --platform android   # proves the native bundles resolve every import
 ```
 
@@ -163,7 +187,8 @@ Notifications: one digest per day for the next 14 days, listing items that expir
 
 `Authorization: Bearer <RevenueCat app user id>` on every call. Errors are `{ "error": { "code", "message" } }` with 401/402 (not subscribed), 400/413 (bad input), 422 (model declined), 429 (rate limited, with `Retry-After`), 502/503 (upstream).
 
-- `POST /v1/scan` `{ location, today, locale, images: [{ mediaType, data(base64) }] }` returns `{ items: [{ name, category, quantity, shelfLifeDays, labelExpiryDate, confidence }], notes }`
+- `POST /v1/scan` `{ location, today, locale, images: [{ mediaType, data(base64) }], known?: [{ name, looks }] }` returns `{ items: [{ name, category, quantity, shelfLifeDays, labelExpiryDate, confidence, clue, photo }], notes }`
+- `POST /v1/identify` `{ name, category, location, clue?, today, locale?, image?: { mediaType, data } }` returns `{ candidates: [{ name, brand, product, category, keptIn, shelfLife: { fridge, freezer, pantry }, looks, why, sourceUrl, image: { url, credit, pageUrl } | null }] }` (an empty list means no confident match)
 - `POST /v1/meals` `{ today, diet, servings, exclude, items: [{ name, category, quantity, daysLeft }] }` returns `{ meals: [{ title, summary, minutes, servings, uses, extras, steps }] }`
 
 The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib/types.ts` and `src/lib/api.ts`. Change them together.
@@ -172,9 +197,9 @@ The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib
 
 Verified in the build environment:
 
-- App and server typecheck, lint is clean, and all 901 app tests and 30 server tests pass. The tests include: every food's shelf life in all three places against the independent reference; the price and trial length appear only as $9.99 and 2 weeks; every text, control and switch colour meets WCAG AA contrast in light and dark; typing suggestions; the rescue stats, streak and milestones; the shopping list and put-away; diet filters; the reminder scheduler under rapid changes; and a render of every animated component through to the end of its animation.
+- App and server typecheck, lint is clean, and all 922 app tests and 56 server tests pass. The tests include: every food's shelf life in all three places against the independent reference; the price and trial length appear only as $9.99 and 2 weeks; every text, control and switch colour meets WCAG AA contrast in light and dark; typing suggestions; the rescue stats, streak and milestones; the shopping list and put-away; diet filters; the reminder scheduler under rapid changes; the online lookup (which items are looked up, the answer checked at the app's trust boundary, pictures only from the two allowed hosts, Yes / No / cancel, the food database feeding shelf life, suggestions and later scans); the identify request sent through the real SDK to a fake API (photo, web search limits, strict report tool, resuming a paused turn, one nudge, refusals); picture lookups against stand-in Open Food Facts and Wikipedia services; and a render of every animated component through to the end of its animation.
 - The iOS and Android bundles export (`expo export`), which proves every import resolves natively.
-- In Chromium on an emulated iPhone, in light mode, dark mode and with Reduce Motion on, a scripted run covers adding food by typing, rescuing with the check mark and Undo, swiping food away, freezing an item in time, storage tips, the name guard, adding to and ticking off the shopping list, "Buy again", putting shopping away, "I made this", and the discard prompt, with no console errors or warnings. The earlier onboarding-to-subscription runs, a strict-CSP embedded run, and an end-to-end run against the real server with only Anthropic faked all still pass.
+- In Chromium on an emulated iPhone, in light mode, dark mode and with Reduce Motion on, a scripted run covers adding food by typing, rescuing with the check mark and Undo, swiping food away, freezing an item in time, storage tips, the name guard, adding to and ticking off the shopping list, "Buy again", putting shopping away, "I made this", and the discard prompt, with no console errors or warnings. A second scripted run covers the lookup: the mystery item is looked up on its own, "Is this your item?" shows a picture, "No" steps to the next match and then to no match, "Yes" renames the item and saves it to Your foods, its picture then appears in Items, the next scan names it without a lookup, and typing suggests it. The earlier onboarding-to-subscription runs, a strict-CSP embedded run, and an end-to-end run against the real server (with Anthropic, Open Food Facts and Wikipedia faked) all pass; the end-to-end run now includes a lookup from a real uploaded photo through to a tracked item with the looked-up shelf life.
 - A full-app review found 17 defects (among them: reminders scheduled twice when settings changed quickly, dates going stale in an app left open overnight, items savable with a blank name, over-80-item meal requests failing, a scan result appearing after cancelling, gluten-free and vegan filters missing foods, food used after its date counted as rescued, an unreadable Undo). Each is fixed and has a test.
 
 **Not verified** (needs your hands or credentials):
@@ -182,5 +207,6 @@ Verified in the build environment:
 - Real food photos, and scan accuracy on real photos (no API key here).
 - Running on an iOS or Android device or simulator: camera, permission prompts, haptics, swipe feel on a real touch screen, modal presentation, safe areas, and scheduled notifications.
 - Real purchases through StoreKit / Play Billing / RevenueCat, including the trial converting and a cancelled trial not renewing.
-- Real Anthropic responses. The request shape was tested against a fake API using the real SDK, but no live call was made.
+- Real Anthropic responses. The request shape was tested against a fake API using the real SDK, but no live call was made. That includes web search: how well real searches identify real products, and how accurate the shelf lives they find are, is untested.
+- Real Open Food Facts and Wikipedia responses and pictures (this environment cannot reach them); the parsing follows their documented response formats and was tested against stand-ins.
 - Legal text is a reasonable starting point, not legal advice.

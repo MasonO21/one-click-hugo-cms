@@ -8,6 +8,7 @@ import { emojiFor, LOCATIONS, LOCATION_LABEL } from '../../components/categories
 import { Card } from '../../components/Card';
 import { Chip } from '../../components/Chip';
 import { Field } from '../../components/Field';
+import { FoodPicture } from '../../components/FoodPicture';
 import { FadeIn } from '../../components/motion';
 import { Screen } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
@@ -24,6 +25,7 @@ import { storageTips } from '../../lib/tips';
 import type { PantryItem, StorageLocation } from '../../lib/types';
 import { resolveItems } from '../../store/actions';
 import { useBurst } from '../../store/burst';
+import { usePictureFor } from '../../store/foods';
 import { useInventory } from '../../store/inventory';
 import { useShopping } from '../../store/shopping';
 import { useSnackbar } from '../../store/snackbar';
@@ -60,6 +62,7 @@ export default function ItemDetail() {
   const { c } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const item = useInventory((s) => s.items.find((i) => i.id === id));
+  const picture = usePictureFor(item?.name ?? '');
   const update = useInventory((s) => s.updateItem);
   const today = useToday();
   const freezeButton = useRef<View>(null);
@@ -158,9 +161,13 @@ export default function ItemDetail() {
     >
       <View style={styles.top}>
         <FadeIn distance={14}>
-          <View style={[styles.hero, { backgroundColor: c.surfaceAlt }]}>
-            <Emoji size={40}>{emojiFor(item.name, item.category)}</Emoji>
-          </View>
+          <FoodPicture
+            uri={picture}
+            emoji={emojiFor(item.name, item.category)}
+            emojiSize={40}
+            accessibilityLabel={picture ? `Picture of ${item.name}` : undefined}
+            style={[styles.hero, { backgroundColor: picture ? '#FFFFFF' : c.surfaceAlt }]}
+          />
         </FadeIn>
         <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={leave} style={styles.closeHit}>
           <View style={[styles.close, { backgroundColor: c.surfaceAlt }]}>

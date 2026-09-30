@@ -277,9 +277,83 @@ const RULES: Rule[] = [
 /** Estimates never exceed two years; past that, "keeps a year or more" is all anyone needs to know. */
 export const MAX_SHELF_LIFE_DAYS = 730;
 
+// ---------------------------------------------------------------------------
+// Foods the person has taught the app: looked up online and confirmed from a picture
+// (src/store/foods.ts keeps this registry in step). They win over the built-in rules.
+// ---------------------------------------------------------------------------
+
+export interface LearnedShelfLife {
+  name: string;
+  /** Other names for the same food, such as what a scan first called it. */
+  aliases?: string[];
+  category: Category;
+  keptIn: StorageLocation;
+  /** Days in each place; null when unknown (fridge, pantry) or when freezing is not advised (freezer). */
+  shelfLife: { fridge: number | null; freezer: number | null; pantry: number | null };
+}
+
+interface Learned {
+  food: LearnedShelfLife;
+  rule: Rule;
+}
+
+let learned = new Map<string, Learned>();
+
+/** Case, accents and spacing do not matter when matching a taught food's name. */
+export function learnedKey(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function learnedRule(food: LearnedShelfLife): Rule {
+  const fallback = CATEGORY_DEFAULTS[food.category];
+  const clamp = (n: number) => Math.min(Math.max(Math.round(n), 0), MAX_SHELF_LIFE_DAYS);
+  const fridge = clamp(food.shelfLife.fridge ?? fallback.fridge);
+  const freezer = food.shelfLife.freezer;
+  return {
+    re: /$^/,
+    days: { fridge, freezer: freezer == null ? fridge : clamp(freezer), pantry: clamp(food.shelfLife.pantry ?? fallback.pantry) },
+    noFreeze: freezer == null,
+    packaged: true,
+  };
+}
+
+/** Days a taught food (or a lookup candidate) keeps in a place, with the same fallbacks as the registry. */
+export function learnedDays(food: Pick<LearnedShelfLife, 'category' | 'shelfLife'>, location: StorageLocation): number {
+  return learnedRule({ name: '', keptIn: 'fridge', ...food }).days[location];
+}
+
+/** Replaces the taught foods. Later entries win when two share a name. */
+export function setLearnedFoods(foods: LearnedShelfLife[]): void {
+  const next = new Map<string, Learned>();
+  for (const food of foods) {
+    const entry = { food, rule: learnedRule(food) };
+    for (const n of [food.name, ...(food.aliases ?? [])]) {
+      const key = learnedKey(n);
+      if (key) next.set(key, entry);
+    }
+  }
+  learned = next;
+}
+
+export function learnedFood(name: string): LearnedShelfLife | undefined {
+  return learned.get(learnedKey(name))?.food;
+}
+
 function ruleFor(name: string): Rule | undefined {
+  const taught = learned.get(learnedKey(name));
+  if (taught) return taught.rule;
   const lower = name.toLowerCase();
   return RULES.find((rule) => rule.re.test(lower));
+}
+
+/** True when a built-in rule or a taught food covers this name. */
+export function hasShelfLifeRule(name: string): boolean {
+  return ruleFor(name) !== undefined;
 }
 
 function ruleForItem(name: string, category: Category): Rule | undefined {
@@ -318,6 +392,8 @@ export function freezesWell(name: string, category: Category): boolean {
 
 /** Best-effort category guess for manually typed items. */
 export function guessCategory(name: string): Category {
+  const taught = learnedFood(name);
+  if (taught) return taught.category;
   const lower = name.toLowerCase();
   const rules: [RegExp, Category][] = [
     // Compound names that contain a misleading word ("peanut butter" is not dairy).
@@ -351,6 +427,8 @@ const COLD_DRINKS = /\b(juice|milk|lemonade|smoothies?|kombucha|cold brew|creame
  * potatoes on the counter or in the cupboard, milk and meat in the fridge, frozen peas in the freezer.
  */
 export function usualPlace(name: string, category: Category): StorageLocation {
+  const taught = learnedFood(name);
+  if (taught) return taught.keptIn;
   const lower = name.toLowerCase();
   if (/\b(frozen|ice cream|gelato|sorbet|ice pops?|popsicles?|fish sticks|fish fingers)\b/.test(lower)) return 'freezer';
   switch (category) {
