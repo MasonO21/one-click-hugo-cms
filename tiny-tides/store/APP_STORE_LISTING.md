@@ -1,6 +1,7 @@
 # App Store Connect — listing copy (paste-ready)
 
 > Field limits are Apple's. Everything below is already within them.
+> Source of truth for the name, subtitle, promo, keywords, description and in-app purchase text: `store/listing/en.json` (checked by `npm test`).
 
 ## App information
 | Field | Value |
@@ -14,7 +15,7 @@
 | **SKU** | `tinytides-ios-001` |
 | **Primary language** | English (U.S.) |
 | **Price** | Free (with in-app purchases) |
-| **Availability** | All territories |
+| **Availability** | All territories except those you untick in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6 (e.g. mainland China, Vietnam) |
 | **Content rights** | You own all content: art is procedurally drawn in code, audio is synthesized in code, UI font is Fredoka (SIL OFL 1.1) |
 
 ## Version 1.0 text
@@ -31,12 +32,14 @@ idle,tidepool,cozy,cute,creatures,evolve,ocean,collect,relaxing,gacha,capsule,to
 
 **Description** (≤4000)
 ```
+Contains in-game purchases (includes random items).
+
 Build a tiny living tidepool — then check in whenever you like.
 
 Tiny Tides is a cozy idle game about a pocket-sized tidepool. Dig water, place rocks and plant kelp, and little creatures wash ashore as eggs. What they grow into depends on the world YOU arrange around them.
 
 ARRANGE. WAIT. DISCOVER.
-• Rocky shores raise Stone, kelp raises Green, ember rocks bring Warmth, pearlite makes things Glow, and deeper water adds Depth and Calm.
+• Rocky shores raise Stone, kelp raises Green, ember rocks bring Warmth, pearlite makes things Glow, shallow water brings Calm and deep water adds Depth.
 • Every creature has three evolutions — and a legendary form for keepers who build the perfect habitat.
 • Not sure what a creature will become? Tap it: its evolution tab shows exactly what each form needs.
 
@@ -70,7 +73,7 @@ No ads. No accounts. No tracking. Your game lives on your device. Optional purch
 
 Follow the tide. See who your friends become.
 
-Tiny Tides is free to play with optional in-app purchases, including randomized capsule pulls. Drop rates are shown in the game. Privacy: no data is collected.
+Tiny Tides is free to play with optional in-app purchases, including randomized capsule pulls (random items). Drop rates are shown in the game and on our website. Privacy: no data is collected.
 ```
 
 **What's New** (v1.0)
@@ -102,10 +105,12 @@ Regenerate any time with `npm run store-shots`. App icon: `assets/icon-only.png`
 | Simulated gambling (casino-style games) | None — capsules are collectible toys with no cash-out of any kind |
 | **Loot boxes / paid random items** | **Yes.** Capsule Machine pulls cost Sea Glass (or free Capsule Coins). Rates for every item are shown in-app before any spend (Capsule Machine → Rates, and linked from the Sea Glass shop tab). |
 | Unrestricted web access | No (only Settings links to the developer's own privacy/terms/support pages) |
+| Parental controls | **Yes** — a parental gate before Sea Glass pulls and real-money purchases for players under 18, plus a Settings switch that turns Sea Glass pulls off |
+| Age assurance | **Yes** — Apple's Declared Age Range on iOS 26+, otherwise a neutral birth month/year screen; only "adult / under 18" is kept on the device |
 | User-generated content / chat / social features | None |
 | Medical / wellness | None |
 
-**Loot-box compliance summary** (Guideline 3.1.1: odds must be disclosed before purchase): per-item probabilities for all 106 capsule prizes, tier rates, pity rules, spotlight rules, duplicate conversion and the daily spending limit are listed in *Capsule Machine → Rates*, generated from the same table the game rolls against (a unit test verifies real pull frequencies match). Guardrails: guaranteed Rare+ toy every 10 pulls and Legendary toy every 60, 20 Sea Glass pulls/day cap, confirmation before every Sea Glass spend, a Settings switch that disables Sea Glass pulls entirely, a free daily pull and free Capsule Coins, and a storefront-country switch (`NO_PAID_RANDOM` in `src/config.js`: Belgium and Brazil by default; also off until the App Store region is known) that turns paid pulls off in restricted markets. The website's drop-rate page shows each prize's possible range across all weekly spotlights, and the in-app Rates tab shows the exact chances for the current week.
+**Loot-box compliance summary** (Guideline 3.1.1: odds must be disclosed before purchase): per-item probabilities for all 106 capsule prizes, tier rates, pity rules, spotlight rules, duplicate conversion and the daily spending limit are listed in *Capsule Machine → Rates*, generated from the same table the game rolls against (a unit test verifies real pull frequencies match). Guardrails: guaranteed Rare+ toy every 10 pulls and Legendary toy every 60, 20 Sea Glass pulls/day cap, confirmation before every Sea Glass spend, a Settings switch that disables Sea Glass pulls entirely, a free daily pull and free Capsule Coins, and a storefront-country switch (`NO_PAID_RANDOM` in `src/regions.js`: Belgium and Brazil by default; also off until the App Store region is known) that turns paid pulls off in restricted markets, an age check before the first paid pull with a parental gate for players under 18, and the approximate real-money value shown with every Sea Glass spend. The website's drop-rate page shows each prize's possible range across all weekly spotlights, and the in-app Rates tab shows the exact chances for the current week.
 
 ## App Privacy ("nutrition label")
 Select **Data Not Collected**. Reasons: no accounts, no analytics, no advertising, no third-party SDKs, no server. Purchases are handled by Apple. (If you later add analytics, crash reporting or cloud save, update this label *before* shipping that version.)

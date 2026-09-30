@@ -24,8 +24,9 @@ const SHOTS = [
   { slug: 'build', caption: 'Build a tiny living tidepool', bg: ['#5fd6ff', '#8b7bff'] },
   { slug: 'evolve', caption: 'Rocks & water decide what they become', bg: ['#ff9ad8', '#a78bfa'] },
   { slug: 'discover', caption: 'Discover 70 adorable creatures', bg: ['#ffd66d', '#ff8fc4'] },
-  { slug: 'capsules', caption: 'Crank the capsule machine', bg: ['#ff8ad8', '#8b5cf6'] },
-  { slug: 'toybox', caption: 'Collect 99 tiny toys', bg: ['#ffd66d', '#ff7ac8'] },
+  // notice: screens that show paid random items carry the disclosure (UK ASA / CAP guidance on loot-box advertising)
+  { slug: 'capsules', caption: 'Crank the capsule machine', bg: ['#ff8ad8', '#8b5cf6'], notice: true },
+  { slug: 'toybox', caption: 'Collect 99 tiny toys', bg: ['#ffd66d', '#ff7ac8'], notice: true },
   { slug: 'idle', caption: 'Check in a few times a day', bg: ['#6ee7b7', '#3fb8ee'] },
   { slug: 'tidedex', caption: 'Complete your Tidedex', bg: ['#a78bfa', '#5b6cff'] },
   { slug: 'deep', caption: 'Dive into the glowing Deep Ocean', bg: ['#3358d6', '#0f1a5c'] },
@@ -151,8 +152,15 @@ async function frame(dev, rawDir, outDir) {
       lines.push(cur);
       const top = H * 0.045 + fs0;
       lines.forEach((ln, i) => { const y = top + i * fs0 * 1.08; c.lineJoin = 'round'; c.lineWidth = fs0 * 0.24; c.strokeStyle = '#3b1d5e'; c.strokeText(ln, W / 2, y); c.fillStyle = '#fff'; c.fillText(ln, W / 2, y); });
+      let noticeH = 0;
+      if (s.notice) {
+        const nf = W * 0.03, ny = top + (lines.length - 1) * fs0 * 1.08 + fs0 * 0.55 + nf;
+        c.font = `700 ${nf}px F`; c.lineWidth = nf * 0.3; c.strokeStyle = '#3b1d5e'; c.strokeText('Contains in-game purchases (includes random items)', W / 2, ny, W * 0.92);
+        c.fillStyle = '#fff'; c.fillText('Contains in-game purchases (includes random items)', W / 2, ny, W * 0.92);
+        noticeH = nf * 1.6;
+      }
       // device screenshot with rounded corners, border, shadow
-      const sy = H * 0.045 + fs0 * (1.08 * lines.length + 0.5) + H * 0.02, aspect = img.height / img.width;
+      const sy = H * 0.045 + fs0 * (1.08 * lines.length + 0.5) + H * 0.02 + noticeH, aspect = img.height / img.width;
       const sw = Math.min(W * 0.86, (H - sy - H * 0.03) / aspect), sh = sw * aspect, sx = (W - sw) / 2;
       const rad = sw * 0.075;
       const rr = (x, y, w, h, r0) => { c.beginPath(); c.moveTo(x + r0, y); c.arcTo(x + w, y, x + w, y + h, r0); c.arcTo(x + w, y + h, x, y + h, r0); c.arcTo(x, y + h, x, y, r0); c.arcTo(x, y, x + w, y, r0); c.closePath(); };

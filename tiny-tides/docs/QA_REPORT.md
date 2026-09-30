@@ -13,7 +13,7 @@ Run `npm run verify` to reproduce everything marked ✅ except the device items 
 | **Legal pages**: no unresolved placeholders, links resolve, tags balanced, every prize and percentage on the drop-rates page lies inside what the game can roll in any of 200 different weeks, all Apple minimum EULA clauses present, no network calls / tracking SDKs in the app, privacy manifest says no tracking | `test/legal.test.mjs` | ✅ |
 | Progression & economy pacing | `npm run balance` (see docs/GAME_DESIGN.md → Balance) | ✅ |
 | First-run tutorial → every screen → premium purchase (demo mode) → save/reload → welcome-back; **zero requests to any server** | `tools/qa/e2e.mjs` — Playwright, real touch, mobile Chromium | ✅ |
-| Capsule Machine UI end-to-end (free pull, 10-pull, Open all, Sea Glass confirm, region block, Toybox, Prize Counter, Rates, persistence) at 390×844, 375×667, 360×740, 820×1180 | `tools/qa/gacha-e2e.mjs` | ✅ |
+| Capsule Machine UI end-to-end (free pull, 10-pull, Open all, age check with an under-18 answer, wrong and right parental-gate answers, Sea Glass confirm with real-money hint, region block, Toybox, Prize Counter, Rates, persistence) at 390×844, 375×667, 360×740, 820×1180 | `tools/qa/gacha-e2e.mjs` | ✅ |
 | Review regressions: tutorial can't be stranded by a restart, no Send-home mid-tutorial, toasts above dialogs, free capsule on crank tap, Escape/backdrop behaviour, HUD fits at 320 and 375 wide | `tools/qa/regress-e2e.mjs` | ✅ |
 | UI monkey: 2 500+ random taps/presses/time jumps/reloads at 320×568, 390×844, 507×900 and 694×900 — no errors, invariants hold, UI always recoverable | `tools/qa/monkey.mjs` | ✅ |
 | Frame cost under 4× CPU throttle (JS draw time per frame ~4–5 ms iPhone-size, ~12 ms iPad-size in software rendering; idle scenes draw at 30 fps) | `tools/qa/perf.mjs` | ✅ |
@@ -21,7 +21,8 @@ Run `npm run verify` to reproduce everything marked ✅ except the device items 
 | Release bundle contains no debug hooks | grep `__tt` in `www/app.js` (also in CI) | ✅ ~285 KB |
 | iOS project files | Info.plist/PrivacyInfo valid; `cap sync ios` succeeds with all plugins; Swift plugin patch applies cleanly | ✅ |
 | Independent adversarial code reviews (rules layer; UI & tutorial flow; rendering/platform/iOS) | three reviewers, every finding reproduced or read-verified; fixes have regression tests | ✅ all confirmed findings fixed |
-| **Real iPhone / iPad, TestFlight, Apple sandbox purchases, notifications, audio session, StoreKit behaviours** | *Not possible in this environment* | ⚠️ **run the checklists in `docs/APP_STORE_RELEASE.md` §6 and `legal/APP_STORE_ADMIN_CHECKLIST.md` §4** |
+| Text: `en.json` matches the code, plural/number/duration helpers, App Store listing within Apple's limits and opening with the random-items notice | `test/i18n.test.mjs` | ✅ |
+| **Real iPhone / iPad, TestFlight, Apple sandbox purchases, notifications, audio session, StoreKit behaviours, Apple's Declared Age Range sheet (iOS 26) and launching on iOS 15–25 with the weak-linked framework** | *Not possible in this environment (no Mac/Xcode)* | ⚠️ **run the checklists in `docs/APP_STORE_RELEASE.md` §6 and `legal/APP_STORE_ADMIN_CHECKLIST.md` §4** |
 
 ## Design decisions worth knowing
 - **Purchases are delivered safely.** The StoreKit plugin is patched so a purchase is never “finished” automatically; the game saves the grant first, then acknowledges. On every launch/resume it also compares Apple’s transaction list with its ledger and delivers anything missing. Old (pre-install) consumables are not re-delivered; refunds are not clawed back. Verify on a device with sandbox purchases (see the checklist).

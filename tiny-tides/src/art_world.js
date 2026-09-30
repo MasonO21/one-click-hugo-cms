@@ -142,7 +142,7 @@ export const PROP_ART = {
     shadow(c, x, y + s * 0.03, s * 0.16, s * 0.05);
     pole(c, x, y, y - s * 0.5, s * 0.05);
     const p = 0.75 + Math.sin(t * 3) * 0.1;
-    glow(c, x, y - s * 0.6, s * (night ? 0.75 : 0.45), 'rgba(255,220,120,.95)', night ? p : 0.4);
+    glow(c, x, y - s * 0.6, s * (night ? 0.62 : 0.45), 'rgba(255,220,120,.95)', night ? p * 0.85 : 0.4);
     c.beginPath(); c.roundRect ? c.roundRect(x - s * 0.1, y - s * 0.74, s * 0.2, s * 0.24, s * 0.05) : c.rect(x - s * 0.1, y - s * 0.74, s * 0.2, s * 0.24); fillOut(c, '#ffe98a', lw(s, 0.04));
     c.beginPath(); c.moveTo(x - s * 0.12, y - s * 0.74); c.lineTo(x, y - s * 0.82); c.lineTo(x + s * 0.12, y - s * 0.74); c.closePath(); fillOut(c, '#ff8a5c', lw(s, 0.035));
   },
@@ -155,7 +155,7 @@ export const PROP_ART = {
     c.restore();
     c.beginPath(); c.moveTo(x - s * 0.17, y); c.lineTo(x - s * 0.11, y - s * 0.66); c.lineTo(x + s * 0.11, y - s * 0.66); c.lineTo(x + s * 0.17, y); c.closePath(); c.lineWidth = lw(s, 0.04); c.strokeStyle = OUT; c.stroke();
     const p = 0.7 + Math.sin(t * 2.5) * 0.3;
-    glow(c, x, y - s * 0.78, s * (night ? 1.0 : 0.5), 'rgba(255,240,150,1)', night ? p : 0.35);
+    glow(c, x, y - s * 0.78, s * (night ? 0.72 : 0.5), 'rgba(255,240,150,1)', night ? p * 0.8 : 0.35);
     c.beginPath(); c.rect(x - s * 0.09, y - s * 0.8, s * 0.18, s * 0.14); fillOut(c, '#fff3a6', lw(s, 0.035));
     c.beginPath(); c.moveTo(x - s * 0.13, y - s * 0.8); c.lineTo(x, y - s * 0.92); c.lineTo(x + s * 0.13, y - s * 0.8); c.closePath(); fillOut(c, '#ff6f8f', lw(s, 0.035));
   },
@@ -195,7 +195,14 @@ export const PROP_ART = {
     c.beginPath(); c.rect(x - s * 0.3, y - s * 0.3, s * 0.6, s * 0.3); fillOut(c, vg(c, y - s * 0.3, y, '#ff8fc4', '#e2559f'), lw(s, 0.04));
     for (const sd of [-1, 1]) { c.beginPath(); c.arc(x + sd * s * 0.16, y - s * 0.15, s * 0.1, 0, TAU); fillOut(c, '#3b1d5e', lw(s, 0.03)); const p = 1 + Math.sin(t * 8) * 0.12; c.beginPath(); c.arc(x + sd * s * 0.16, y - s * 0.15, s * 0.05 * p, 0, TAU); c.fillStyle = '#ffe98a'; c.fill(); }
     c.beginPath(); c.moveTo(x - s * 0.18, y - s * 0.3); c.quadraticCurveTo(x, y - s * 0.44, x + s * 0.18, y - s * 0.3); c.lineWidth = lw(s, 0.04); c.strokeStyle = OUT; c.stroke();
-    for (let i = 0; i < 2; i++) { const k = ((t * 0.5 + i * 0.5) % 1); c.save(); c.globalAlpha = 1 - k; c.fillStyle = '#fff'; c.font = `bold ${s * 0.22}px sans-serif`; c.fillText('♪', x + s * (0.12 + i * 0.16), y - s * (0.42 + k * 0.4)); c.restore(); }
+    for (let i = 0; i < 2; i++) {          // floating music notes, drawn (not a font glyph) and outlined so they show on light sand
+      const k = ((t * 0.5 + i * 0.5) % 1), nx = x + s * (0.12 + i * 0.16), ny = y - s * (0.42 + k * 0.4), u = s * 0.05;
+      c.save(); c.globalAlpha = 1 - k; c.translate(nx, ny); c.lineJoin = 'round'; c.lineCap = 'round';
+      const note = () => { c.beginPath(); c.ellipse(0, 0, u * 1.1, u * 0.8, -0.4, 0, TAU); c.moveTo(u * 0.95, -u * 0.2); c.lineTo(u * 0.95, -u * 3.4); c.quadraticCurveTo(u * 2.2, -u * 2.9, u * 2.1, -u * 1.7); };
+      note(); c.lineWidth = u * 1.1; c.strokeStyle = OUT; c.stroke();
+      note(); c.fillStyle = '#fff'; c.fill(); c.lineWidth = u * 0.45; c.strokeStyle = '#fff'; c.stroke();
+      c.restore();
+    }
   },
   sakuratree(c, x, y, s, t) {
     shadow(c, x, y + s * 0.03, s * 0.28, s * 0.08);
@@ -207,8 +214,16 @@ export const PROP_ART = {
     shadow(c, x, y + s * 0.03, s * 0.16, s * 0.05);
     pole(c, x, y, y - s * 0.52, s * 0.04);
     glow(c, x, y - s * 0.62, s * (night ? 0.7 : 0.4), 'rgba(255,150,170,.95)', night ? 0.8 : 0.35);
-    c.beginPath(); c.ellipse(x, y - s * 0.62, s * 0.15, s * 0.19, 0, 0, TAU); fillOut(c, vg(c, y - s * 0.8, y - s * 0.44, '#ff8aa8', '#e2496d'), lw(s, 0.04));
-    c.strokeStyle = 'rgba(255,230,180,.8)'; c.lineWidth = lw(s, 0.025); for (const k of [-0.6, 0, 0.6]) { c.beginPath(); c.ellipse(x, y - s * 0.62, s * 0.15 * Math.abs(k) + 0.1, s * 0.19, 0, -Math.PI / 2, Math.PI / 2); c.stroke(); }
+    const cy = y - s * 0.62, rx = s * 0.17, ry = s * 0.17;
+    c.beginPath(); c.ellipse(x, cy, rx, ry, 0, 0, TAU); fillOut(c, vg(c, cy - ry, cy + ry, '#ff8aa8', '#e2496d'), lw(s, 0.04));
+    // paper ribs: curved bands around the lantern, clipped to its shape
+    c.save(); c.beginPath(); c.ellipse(x, cy, rx, ry, 0, 0, TAU); c.clip();
+    c.strokeStyle = 'rgba(255,225,190,.75)'; c.lineWidth = lw(s, 0.022);
+    for (const k of [-0.55, 0, 0.55]) { c.beginPath(); c.ellipse(x, cy + ry * k, rx * 1.02, ry * 0.16, 0, 0, Math.PI); c.stroke(); }
+    c.beginPath(); c.moveTo(x, cy - ry); c.lineTo(x, cy + ry); c.stroke();
+    c.restore();
+    for (const [yy, h] of [[cy - ry - s * 0.035, s * 0.05], [cy + ry - s * 0.015, s * 0.05]]) { c.beginPath(); c.rect(x - rx * 0.45, yy, rx * 0.9, h); fillOut(c, '#ffc94d', lw(s, 0.03)); }
+    c.strokeStyle = '#ffc94d'; c.lineWidth = lw(s, 0.025); c.beginPath(); c.moveTo(x, cy + ry + s * 0.035); c.lineTo(x, cy + ry + s * 0.09); c.stroke();
   },
   neonpalm(c, x, y, s, t, night) {
     shadow(c, x, y + s * 0.03, s * 0.22, s * 0.06);
@@ -242,7 +257,12 @@ export function drawEgg(c, fam, x, y, s, t, o = {}) {
   for (const [dx, dy, r] of [[-0.35, -1.2, 0.13], [0.3, -0.9, 0.1], [0.05, -1.55, 0.09], [-0.2, -0.5, 0.08], [0.42, -1.4, 0.07]]) { c.beginPath(); c.arc(dx * w * 1.5, dy * h, r * s, 0, TAU); c.fill(); }
   c.restore();
   c.save(); c.globalAlpha = 0.6; c.fillStyle = '#fff'; c.beginPath(); c.ellipse(-w * 0.5, -h * 1.45, w * 0.18, h * 0.32, 0.3, 0, TAU); c.fill(); c.restore();
-  if (cracks) { c.strokeStyle = OUT; c.lineWidth = lw(s, 0.03); c.lineCap = 'round'; c.beginPath(); c.moveTo(-w * 0.5, -h * 1.2); c.lineTo(-w * 0.1, -h * 1.0); c.lineTo(w * 0.1, -h * 1.25); if (cracks > 1) { c.lineTo(w * 0.4, -h * 1.05); c.moveTo(-w * 0.1, -h * 1.0); c.lineTo(-w * 0.2, -h * 0.7); } c.stroke(); }
+  if (cracks) {       // a zig-zag (reads as a crack, not a tick mark); the second crack runs further and branches
+    c.strokeStyle = OUT; c.lineWidth = lw(s, 0.03); c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath();
+    c.moveTo(-w * 0.45, -h * 1.12); c.lineTo(-w * 0.22, -h * 1.0); c.lineTo(-w * 0.02, -h * 1.2); c.lineTo(w * 0.16, -h * 1.04);
+    if (cracks > 1) { c.lineTo(w * 0.36, -h * 1.2); c.lineTo(w * 0.5, -h * 1.08); c.moveTo(-w * 0.22, -h * 1.0); c.lineTo(-w * 0.3, -h * 0.74); }
+    c.stroke();
+  }
   c.restore();
   if (ready) { const k = (t * 1.2) % 2; if (k < 1) { c.save(); c.globalAlpha = 1 - k; c.fillStyle = '#fff'; const px = x + s * 0.2, py = y - s * 0.45 - k * s * 0.1; c.beginPath(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; c.lineTo(px + Math.cos(a) * s * 0.09, py + Math.sin(a) * s * 0.09); c.lineTo(px + Math.cos(a + 0.78) * s * 0.025, py + Math.sin(a + 0.78) * s * 0.025); } c.fill(); c.restore(); } }
 }

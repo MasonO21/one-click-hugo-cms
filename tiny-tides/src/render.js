@@ -443,9 +443,20 @@ export function createScene(canvas) {
         c.restore();
       }
     }
+    // ---- night glows of glowing creatures: drawn first (additive) so they halo around the creature instead of washing out its face
+    if (night > 0.25) {
+      c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = night * 0.8;
+      for (const cr of pool.creatures) {
+        const v = sc.views.get(cr.id), form = FORMS[cr.form];
+        if (!v || cr.evo || !(form.deco.includes('glowdots') || form.deco.includes('lava'))) continue;
+        const [x, y0] = tc(v.x, v.y), size = ts * creatureScale(cr), gy = y0 + ts * 0.18 - size * 0.3, r = size * 0.85;
+        const gr = c.createRadialGradient(x, gy, size * 0.2, x, gy, r); gr.addColorStop(0, form.deco.includes('lava') ? 'rgba(255,140,60,.6)' : 'rgba(255,240,140,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        c.fillStyle = gr; c.beginPath(); c.arc(x, gy, r, 0, TAU); c.fill();
+      }
+      c.restore();
+    }
     // ---- objects (depth sorted)
     const items = [];
-    const glows = [];
     for (let y = 0; y < pool.h; y++) for (let x = 0; x < pool.w; x++) {
       const tl = pool.tiles[y * pool.w + x], idx = y * pool.w + x;
       if (tl.p) items.push({ y: y + 0.6, f: () => {
@@ -482,16 +493,9 @@ export function createScene(canvas) {
         c.save(); c.translate(x, y + bob); c.scale(sx * (flip ? -1 : 1), sy);
         drawSprite(c, cr.form, 0, 0, size, { blink: v.blink > 0, hat: cr.hat });
         c.restore();
-        if (form.deco.includes('glowdots') || form.deco.includes('lava')) glows.push({ x, y: y + bob - size * 0.3, r: size * 0.7, col: form.deco.includes('lava') ? 'rgba(255,140,60,.55)' : 'rgba(255,240,140,.5)' });
       } });
     }
     items.sort((a, b) => a.y - b.y).forEach((it) => it.f());
-    // ---- night glows (additive)
-    if (night > 0.25) {
-      c.save(); c.globalCompositeOperation = 'lighter';
-      for (const g of glows) { const gr = c.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.r); gr.addColorStop(0, g.col); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.globalAlpha = night * 0.8; c.fillStyle = gr; c.beginPath(); c.arc(g.x, g.y, g.r, 0, TAU); c.fill(); }
-      c.restore();
-    }
     // ---- bubbles (always on top)
     if (o.live) for (const cr of pool.creatures) {
       const v = sc.views.get(cr.id); if (!v) continue;

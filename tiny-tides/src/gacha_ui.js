@@ -159,7 +159,7 @@ export function createGachaUI(G, ui) {
   function spawnOut(results, n) {
     const m = run.m; m.out = [];
     results.forEach((r, i) => {
-      const o = { x: CHUTE.x, y: 382, tx: CHUTE.x, ty: TRAY_Y - 12, r: 26, tier: r.tier, hue: [330, 190, 48, 120, 260][i % 5], rot: 0.3, vr: 3, vy: 0, t0: m.time, i, ready: false, landed: false, res: r };
+      const o = { x: CHUTE.x, y: 382, tx: CHUTE.x, ty: TRAY_Y - 20, r: 26, tier: r.tier, hue: [330, 190, 48, 120, 260][i % 5], rot: 0.3, vr: 3, vy: 0, t0: m.time, i, ready: false, landed: false, res: r };
       if (n > 1) { const col = i % 5, row = Math.floor(i / 5); Object.assign(o, { x: 60 + col * 60 + (Math.random() - 0.5) * 14, y: -30 - i * 34, tx: 44 + col * 68, ty: 232 + row * 96, r: 27, t0: m.time + i * 0.11, vr: (Math.random() - 0.5) * 8 }); }
       let bumped = false;
       o.onLand = () => { if (!bumped) { bumped = true; if (n === 1 || i % 3 === 0) { A.play('clunk'); haptic.pop(); } } };

@@ -28,7 +28,7 @@ npm run rename -- com.yourname.tinytides    # updates data.js, capacitor.config.
 
 ## 2. Publish the legal pages and set the links
 All legal documents are generated from **`legal/site.config.json`** (see `legal/README.md`).
-1. Fill in every value in `legal/site.config.json`: your legal name, a support inbox you monitor, postal address, governing law, and the address (`baseUrl`) where you will host the site. `bundleId` is already set by step 1.
+1. Fill in every value in `legal/site.config.json`: your legal name, postal address, phone, US state (governing law) and the address (`baseUrl`) where you will host the site. The support email (`maceion@proton.me`) and country (United States of America) are already set. `bundleId` is already set by step 1.
 2. `npm run site` — writes `site/` (privacy, terms/EULA, drop rates, parents' guide, support, licenses) and `store/EULA.txt` + `store/APP_REVIEW_NOTES.md`.
 3. Host the `site/` folder at `baseUrl` (GitHub Pages via the manual workflow `.github/workflows/tiny-tides-pages.yml`, Netlify, Cloudflare Pages, your domain…). Open every page on a phone.
 4. `npm run legal:check` must pass. It fails while any placeholder remains, a generated page is stale, or the bundle id differs between the config, Xcode and Capacitor. `npm run release` runs it for you, and `npm run build` bakes the same details into the app (Settings links, Legal & credits).
@@ -41,7 +41,7 @@ npm run ios:open      # opens ios/App/App.xcodeproj
 ```
 In Xcode → target **App**:
 - **Signing & Capabilities** → select your *Team*; leave "Automatically manage signing" on.
-- **+ Capability → In-App Purchase**.
+- **+ Capability → In-App Purchase** and **+ Capability → Declared Age Range** (the entitlement file `App/App.entitlements` is already in the project). Build with **Xcode 26.2 or later**.
 - **General**: Display Name `Tiny Tides`, Version `1.0`, Build `1` (bump Build for every upload). Deployment target iOS 15. Devices: iPhone + iPad.
 - Confirm `ios/App/App/PrivacyInfo.xcprivacy` shows under the App group (it is wired in already).
 
@@ -52,7 +52,7 @@ Product → Scheme → Edit Scheme → **Run → Options → StoreKit Configurat
 1. Apps → **+ New App**: iOS, name, primary language, the bundle id from step 1, SKU (`tinytides-ios-001`).
 2. **App Information**: category Games (Simulation, Casual), Privacy Policy URL, age rating (answers in `store/APP_STORE_LISTING.md`). **The Capsule Machine sells randomized items, so answer the loot-box question Yes and expect a rating above 4+.**
 3. **App Privacy**: *Data Not Collected*.
-4. **Pricing**: Free. **Availability**: all territories.
+4. **Pricing**: Free. **Availability**: see `legal/APP_STORE_ADMIN_CHECKLIST.md` §6 for the territories to untick (mainland China, Vietnam; decide on Brazil, South Korea, Indonesia, Russia).
 5. **Monetization → In-App Purchases**: create the 10 products in `store/iap-products.md` **exactly** (Product ID, type, price, name, description, review screenshot). They must be in *Ready to Submit* state and attached to the version.
 6. **Version 1.0**: paste the text from `store/APP_STORE_LISTING.md`; upload screenshots from `store/screenshots/` (iPhone 6.9″ and iPad 13″ are the required sets); reviewer notes; contact info.
 
