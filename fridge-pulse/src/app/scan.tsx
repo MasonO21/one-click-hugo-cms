@@ -147,7 +147,7 @@ export default function Scan() {
               variant="ghost"
               size="sm"
               onPress={() => {
-                useScanDraft.getState().start(location, [], null);
+                useScanDraft.getState().start(location, [], null, 'manual');
                 router.replace('/review');
               }}
             />

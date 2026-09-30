@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AddItemField } from '../components/AddItemField';
 import { Button } from '../components/Button';
 import { emojiFor, LOCATIONS, LOCATION_LABEL } from '../components/categories';
 import { Card } from '../components/Card';
@@ -33,7 +34,7 @@ function Tag({ label, tone }: { label: string; tone: 'good' | 'warn' | 'plain' }
   );
 }
 
-function DraftRow({ draft }: { draft: DraftItem }) {
+function DraftRow({ draft, listLocation }: { draft: DraftItem; listLocation: (typeof LOCATIONS)[number] }) {
   const { c } = useTheme();
   const update = useScanDraft((s) => s.update);
   const remove = useScanDraft((s) => s.remove);
@@ -76,6 +77,7 @@ function DraftRow({ draft }: { draft: DraftItem }) {
         {draft.expirySource === 'estimate' ? <Tag label="Estimated" tone="plain" /> : null}
         {draft.confidence === 'low' ? <Tag label="Double-check" tone="warn" /> : null}
         {draft.duplicate ? <Tag label="Already tracked" tone="plain" /> : null}
+        {draft.location !== listLocation ? <Tag label={LOCATION_LABEL[draft.location]} tone="plain" /> : null}
       </View>
 
       <View style={styles.rowBottom}>
@@ -97,20 +99,14 @@ export default function Review() {
   const drafts = useScanDraft((s) => s.drafts);
   const notes = useScanDraft((s) => s.notes);
   const location = useScanDraft((s) => s.location);
-  const [name, setName] = useState('');
+  const mode = useScanDraft((s) => s.mode);
+  const manual = mode === 'manual';
+  // Only the names matter to the suggestions; a new array each render would recompute them on every keystroke.
+  const addedKey = drafts.map((d) => d.name).join('\n');
+  const added = useMemo(() => (addedKey ? addedKey.split('\n') : []), [addedKey]);
 
   const chosen = drafts.filter((d) => d.selected && d.name.trim() !== '');
 
-  function setAllLocation(loc: (typeof LOCATIONS)[number]) {
-    const st = useScanDraft.getState();
-    useScanDraft.setState({ location: loc, drafts: st.drafts.map((d) => ({ ...d, location: loc })) });
-  }
-
-  function addByHand() {
-    if (!name.trim()) return;
-    useScanDraft.getState().addManual(name);
-    setName('');
-  }
 
   async function save() {
     const now = new Date();
@@ -150,9 +146,9 @@ export default function Review() {
       <View style={styles.top}>
         <View style={{ flex: 1 }}>
           <Text variant="title" accessibilityRole="header">
-            Review
+            {manual ? 'Add items' : 'Review'}
           </Text>
-          <Text muted>Fix anything that looks off, then save.</Text>
+          <Text muted>{manual ? 'Start typing and pick a suggestion, then save.' : 'Fix anything that looks off, then save.'}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -182,32 +178,33 @@ export default function Review() {
         </Text>
         <View style={styles.chips}>
           {LOCATIONS.map((l) => (
-            <Chip key={l} label={LOCATION_LABEL[l]} selected={location === l} onPress={() => setAllLocation(l)} />
+            <Chip key={l} label={LOCATION_LABEL[l]} selected={location === l} onPress={() => useScanDraft.getState().setLocation(l)} />
           ))}
         </View>
       </View>
 
-      <Text variant="caption" muted style={{ fontSize: 13 }}>
-        Dates marked &ldquo;Estimated&rdquo; are typical shelf lives, not guarantees. Check labels and use your judgment.
-      </Text>
+      <View style={{ gap: 8 }}>
+        <Text variant="label" muted>
+          {manual ? 'What do you have?' : 'Missing something?'}
+        </Text>
+        <AddItemField
+          location={location}
+          added={added}
+          autoFocus={manual && drafts.length === 0}
+          onAdd={(food) => useScanDraft.getState().addManual(food.name, { category: food.category, keptIn: food.keptIn })}
+        />
+      </View>
+
+      {drafts.length > 0 ? (
+        <Text variant="caption" muted style={{ fontSize: 13 }}>
+          Dates marked &ldquo;Estimated&rdquo; are typical shelf lives, not guarantees. Check labels and use your judgment.
+        </Text>
+      ) : null}
 
       <View style={{ gap: 12 }}>
         {drafts.map((d) => (
-          <DraftRow key={d.key} draft={d} />
+          <DraftRow key={d.key} draft={d} listLocation={location} />
         ))}
-      </View>
-
-      <View style={styles.addRow}>
-        <Field
-          testID="add-name"
-          value={name}
-          onChangeText={setName}
-          placeholder="Add another item"
-          onSubmitEditing={addByHand}
-          returnKeyType="done"
-          style={{ flex: 1 }}
-        />
-        <Button label="Add" variant="secondary" onPress={addByHand} disabled={!name.trim()} style={{ minHeight: 48 }} />
       </View>
     </Screen>
   );
@@ -223,6 +220,5 @@ const styles = StyleSheet.create({
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
   rowBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   qty: { width: 120, minHeight: 44 },
-  addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   footer: { width: '100%', maxWidth: 600 },
 });

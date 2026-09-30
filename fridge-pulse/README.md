@@ -109,6 +109,17 @@ The app-side work is done; what is left needs your accounts and decisions. `stor
 
 Before the first photo scan or AI meal request, the app asks for explicit permission and names the AI provider (Apple guideline 5.1.2(i)). Declining keeps the app usable: items can be added by hand and meal ideas come from a built-in list. The choice can be changed in Settings > Privacy and data; turning it off stops uploads immediately and clears saved AI meal ideas.
 
+### Adding items by typing
+
+"Add items by hand" (Home when empty, or the Scan screen) opens a list where suggestions appear as you type (`src/components/AddItemField.tsx`, logic in `src/lib/suggest.ts`):
+
+- Your own foods come first (anything you have added in the last 90 days, most frequent first), then about 380 common groceries (`src/lib/foodCatalog.ts`).
+- Matches the start of any word ("milk" finds Oat milk; "gr yo" finds Greek yogurt), ignores accents and case, and forgives typos ("brocoli", "chiken", "avacado") when nothing matches as typed.
+- Each suggestion shows its emoji and how long it keeps where you are storing it. Frozen foods go to the freezer on their own. Tapping one adds it with the right category and an estimated date; the field clears and keeps the keyboard up for the next item. Return or Add adds exactly what you typed.
+- Everything runs on the phone; nothing typed is sent anywhere.
+
+Building the catalog meant checking the app's shelf-life and emoji rules against 380 foods, which found and fixed real errors: leftover pasta and rice were estimated at a year (they matched "pasta"/"rice" before "leftover"), peanut butter at 2 days in the pantry (it matched "butter"), fish sauce at 2 days, orange juice at 4 weeks, and canned tomatoes at 5 days in the pantry. `__tests__/shelflife-scan.test.ts` pins the corrected figures.
+
 ### Food images
 
 Foods are shown with emoji chosen by name (`src/components/categories.ts`, pinned by a 118-food table test and reviewed visually and blind). Real photos were requested but could not be downloaded from this build environment, so none are included. `docs/food-photos.md` explains the blocker, the licences that are safe for a paid app, the three-step accuracy check to apply, and the design for adding them.
@@ -140,10 +151,11 @@ The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib
 
 Verified in the build environment:
 
-- App and server typecheck, lint is clean, and all 254 app tests and 30 server tests pass. The tests include: the price and trial length appear only as $9.99 and 2 weeks across the app, store listing and legal text; every text/background colour pair meets WCAG AA contrast in light and dark; store listing fields fit Apple and Google limits; the emoji chosen for 118 foods.
+- App and server typecheck, lint is clean, and all 403 app tests and 30 server tests pass. The tests include: the price and trial length appear only as $9.99 and 2 weeks across the app, store listing and legal text; every text/background colour pair meets WCAG AA contrast in light and dark; store listing fields fit Apple and Google limits; the emoji chosen for about 200 foods, the typing suggestions (ranking, typos, history), and a shelf-life estimate for every catalog food in every location.
 - The iOS and Android bundles export (`expo export`), which proves every import resolves natively. This caught a real defect, a missing `expo-asset` dependency that would have broken the native build, and a test now guards it.
 - The web build was driven in Chromium through the full journey in light and dark mode, on an emulated iPhone, inside a sandboxed iframe, from a nested path, under a strict content-security policy: onboarding, the trial and its price/date wording, sample scan, review and edit, save, every tab, item detail, Settings (plan, restore, legal screens), trial expiry to paywall, and re-subscribe.
 - End to end against the real server with only Anthropic faked: the consent prompt appears before anything is sent (declining sends nothing), a real 2400x1800 photo is downscaled to 1568px, uploaded, validated, sent to the model with the expected model, effort, structured-output format and fallback setting, and the parsed result, label-date handling, meal ideas, a model refusal, and withdrawing then restoring consent all behave correctly in the UI.
+- Typing suggestions were driven in Chromium on an emulated iPhone in light and dark: suggestions after one letter, typo correction, tap to add, the field keeping focus, frozen food going to the freezer, and your own foods coming first on the next visit.
 - The 118 food emoji were checked by a rule table, a rendered visual review, and an independent blind identification; see `docs/food-photos.md`.
 
 **Not verified** (needs your hands or credentials):

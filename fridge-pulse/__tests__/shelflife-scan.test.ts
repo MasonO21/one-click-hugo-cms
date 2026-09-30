@@ -21,11 +21,54 @@ describe('shelf life', () => {
     expect(estimateShelfLifeDays('Mystery jar', 'other', 'fridge')).toBe(14);
   });
 
+  // Prepared and processed foods used to match the ingredient in their name. Each row here was wrong
+  // before (leftover pasta kept a year, peanut butter two days in the pantry, fish sauce two days).
+  it.each([
+    ['Leftover pasta', 'leftovers', 'fridge', 4],
+    ['Leftover rice', 'leftovers', 'fridge', 4],
+    ['Pasta salad', 'leftovers', 'fridge', 4],
+    ['Pasta sauce', 'condiments', 'fridge', 7],
+    ['Peanut butter', 'condiments', 'pantry', 90],
+    ['Fish sauce', 'condiments', 'fridge', 120],
+    ['Red wine vinegar', 'condiments', 'fridge', 120],
+    ['Milk chocolate', 'snacks', 'pantry', 180],
+    ['Chocolate milk', 'dairy', 'fridge', 7],
+    ['Almond milk', 'dairy', 'fridge', 7],
+    ['Egg noodles', 'grains', 'pantry', 365],
+    ['Orange juice', 'drinks', 'fridge', 7],
+    ['Canned tomatoes', 'canned', 'pantry', 540],
+    ['Green onions', 'produce', 'fridge', 7],
+    ['Sugar snap peas', 'produce', 'fridge', 7],
+    ['Black pepper', 'condiments', 'pantry', 730],
+    ['Pepper jack', 'dairy', 'fridge', 42],
+    ['Turkey bacon', 'meat', 'fridge', 7],
+    ['Tuna steak', 'seafood', 'fridge', 2],
+    ['Crab cakes', 'seafood', 'fridge', 2],
+    ['Hot dog buns', 'bakery', 'pantry', 4],
+    ['Garlic bread', 'bakery', 'pantry', 4],
+    ['Spaghetti squash', 'produce', 'pantry', 60],
+    ['Rice cakes', 'snacks', 'pantry', 60],
+    ['Potato chips', 'snacks', 'pantry', 60],
+    ['Ice cream', 'dairy', 'freezer', 60],
+    ['Ice cream', 'dairy', 'fridge', 0],
+    ['Frozen peas', 'produce', 'freezer', 120],
+    ['Sushi', 'leftovers', 'fridge', 1],
+    ['Red wine', 'drinks', 'fridge', 5],
+  ] as const)('%s in the %s keeps about the right time', (name, category, location, days) => {
+    expect(estimateShelfLifeDays(name, category, location)).toBe(days);
+  });
+
   it('guesses categories for typed items', () => {
     expect(guessCategory('Greek yogurt')).toBe('dairy');
     expect(guessCategory('Chicken breast')).toBe('meat');
     expect(guessCategory('Sourdough bread')).toBe('bakery');
     expect(guessCategory('Widget')).toBe('other');
+    expect(guessCategory('Peanut butter')).toBe('condiments');
+    expect(guessCategory('Unsalted butter')).toBe('dairy');
+    expect(guessCategory('Egg noodles')).toBe('grains');
+    expect(guessCategory('Ice cream')).toBe('dairy');
+    expect(guessCategory('Fish sauce')).toBe('condiments');
+    expect(guessCategory("Grandma's chutney")).toBe('condiments');
   });
 });
 

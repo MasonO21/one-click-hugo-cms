@@ -42,6 +42,10 @@ The same three checks were applied to the emoji that are in the app now:
 2. **Rendered review.** Every glyph was rendered in a browser next to its label and reviewed. That found inaccuracies the table could not: raspberries showing blue blueberries, sausages showing a raw steak, bagels showing a loaf, crackers showing popcorn.
 3. **Blind identification.** The rendered glyphs, with numbers only, were given to a separate reviewer to name without seeing the labels. Of 118 foods, none was named as something unrelated. Where the reviewer's name differs from the food, it is one of the approximations below (a raspberry drawn as a strawberry, a lime as a lemon), which are not errors in the rules.
 
+### Expanded with typing suggestions
+
+Adding a 380-food suggestion catalog meant every one of those foods now appears with a glyph, so the rules were extended and 80 more foods pinned in the table test (about 200 in total). Fixes included a lettuce shown for plums, figs and ginger (these now show a neutral produce basket 🧺), a milk glass for milk chocolate, a fish for fish sauce, a cake for rice cakes, a hot dog for hot dog buns, and a lettuce for salad dressing.
+
 ### Known approximations
 
 Emoji are a fixed set, so some foods can only be approximated. The blind review confirmed these:
@@ -50,7 +54,9 @@ Emoji are a fixed set, so some foods can only be approximated. The blind review 
 - Zucchini shows a cucumber; almonds and nut butters show a peanut.
 - Yogurt, sour cream and buttermilk show a glass of milk; margarine shows butter.
 - Quinoa shows a bowl of rice, black pepper shows a salt shaker, coffee beans show a cup of coffee, and potato chips and mixed snacks show a pretzel.
-- Kale, spinach and lettuce all show the same leafy green; minced beef and pork chops show a steak.
+- Kale, spinach and lettuce all show the same leafy green; minced beef, burger patties and pork chops show a steak.
+- Fruit and vegetables with no emoji of their own (plums, figs, pomegranate, ginger, asparagus, green beans, radishes) show a produce basket rather than a wrong picture. Cauliflower shows broccoli, parsnips a carrot, and pumpkins and winter squash a jack-o'-lantern.
+- Sauces and spreads without their own emoji (mayonnaise, mustard, soy sauce, hummus) show the condiments salt shaker; tofu and tempeh show a package.
 
 Compatibility: newer glyphs (Emoji 12: garlic, onion, butter; Emoji 13: bell pepper, blueberries, olive, flatbread) show as an empty box on Android older than 10 or 11. iOS versions that Expo SDK 57 supports are all new enough.
 

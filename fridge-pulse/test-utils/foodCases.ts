@@ -38,10 +38,28 @@ export const FOOD_CASES: [string, Category, string][] = [
   ['Cornflakes', 'grains', '🥣'], ['Rolled oats', 'grains', '🥣'], ['Granola', 'snacks', '🥣'],
   // prepared food, condiments, snacks, drinks
   ['Chicken soup', 'leftovers', '🍲'], ['Tomato soup', 'canned', '🍲'], ['Beef stew', 'leftovers', '🍲'], ['Chicken curry', 'leftovers', '🍲'],
-  ['Leftover lasagna', 'leftovers', '🍝'], ['Leftover roast', 'leftovers', '🍖'], ['Takeout', 'leftovers', '🍲'],
+  ['Leftover lasagna', 'leftovers', '🍝'], ['Leftover roast', 'leftovers', '🍖'], ['Takeout', 'leftovers', '🥡'],
   ['Peanut butter', 'condiments', '🥜'], ['Almond butter', 'condiments', '🥜'], ['Almonds', 'snacks', '🥜'], ['Honey', 'condiments', '🍯'],
   ['Black pepper', 'condiments', '🧂'], ['Dark chocolate', 'snacks', '🍫'], ['Orange juice', 'drinks', '🧃'], ['Apple juice', 'drinks', '🧃'],
   ['Coffee beans', 'drinks', '☕'], ['Green tea', 'drinks', '🍵'], ['Beer', 'drinks', '🍺'], ['Red wine', 'drinks', '🍷'],
   ['Popcorn', 'snacks', '🍿'], ['Crackers', 'snacks', '🥨'], ['Pretzels', 'snacks', '🥨'], ['Potato chips', 'snacks', '🥨'], ['Mixed snacks', 'snacks', '🥨'],
+  // Added with typing suggestions: every one of these is offered by the suggestion list, and each was a
+  // wrong or misleading glyph before (a lettuce for plums, a milk glass for milk chocolate, a fish for fish sauce).
+  ['Plums', 'produce', '🧺'], ['Pomegranate', 'produce', '🧺'], ['Figs', 'produce', '🧺'], ['Ginger', 'produce', '🧺'], ['Asparagus', 'produce', '🧺'],
+  ['Green beans', 'produce', '🧺'], ['Radishes', 'produce', '🧺'], ['Celery', 'produce', '🧺'], ['Sugar snap peas', 'produce', '🧺'],
+  ['Cauliflower', 'produce', '🥦'], ['Parsnips', 'produce', '🥕'], ['Pumpkin', 'produce', '🎃'], ['Butternut squash', 'produce', '🎃'], ['Spaghetti squash', 'produce', '🎃'],
+  ['Scallions', 'produce', '🧅'], ['Leeks', 'produce', '🧅'], ['Bok choy', 'produce', '🥬'], ['Brussels sprouts', 'produce', '🥬'],
+  ['Basil', 'produce', '🌿'], ['Cilantro', 'produce', '🌿'], ['Mixed salad', 'produce', '🥗'], ['Pasta salad', 'leftovers', '🥗'], ['Raisins', 'snacks', '🍇'],
+  ['Pepper jack', 'dairy', '🧀'], ['Monterey Jack', 'dairy', '🧀'], ['Camembert', 'dairy', '🧀'], ['Provolone', 'dairy', '🧀'], ['Mascarpone', 'dairy', '🧀'],
+  ['Frozen yogurt', 'dairy', '🍨'], ['Custard', 'dairy', '🍮'], ['Chocolate milk', 'dairy', '🥛'], ['Milk chocolate', 'snacks', '🍫'], ['Chocolate chips', 'snacks', '🍫'],
+  ['Coconut milk', 'canned', '🥥'], ['Coconut water', 'drinks', '🥥'], ['Almond milk', 'dairy', '🥛'],
+  ['Turkey bacon', 'meat', '🥓'], ['Tuna steak', 'seafood', '🐟'], ['Burger patties', 'meat', '🥩'], ['Meatballs', 'meat', '🥩'],
+  ['Oysters', 'seafood', '🦪'], ['Mussels', 'seafood', '🦪'], ['Squid', 'seafood', '🦑'], ['Crab cakes', 'seafood', '🦀'], ['Sushi', 'leftovers', '🍣'],
+  ['English muffins', 'bakery', '🍞'], ['Muffins', 'bakery', '🧁'], ['Hot dog buns', 'bakery', '🍞'], ['Hamburger buns', 'bakery', '🍞'], ['Garlic bread', 'bakery', '🍞'],
+  ['Breadcrumbs', 'grains', '🍞'], ['Frozen waffles', 'bakery', '🧇'], ['Apple pie', 'bakery', '🥧'], ['Rice cakes', 'snacks', '🍘'],
+  ['Tortilla chips', 'snacks', '🥨'], ['Granola bars', 'snacks', '🥨'], ['Trail mix', 'snacks', '🥜'],
+  ['Ketchup', 'condiments', '🍅'], ['Pasta sauce', 'condiments', '🍅'], ['Salsa', 'condiments', '🍅'], ['Hot sauce', 'condiments', HOT_PEPPER], ['Guacamole', 'condiments', '🥑'],
+  ['Pesto', 'condiments', '🌿'], ['Maple syrup', 'condiments', '🍁'], ['Strawberry jam', 'condiments', '🍯'], ['Pickles', 'condiments', '🥒'],
+  ['Salad dressing', 'condiments', '🧂'], ['Fish sauce', 'condiments', '🧂'], ['Oyster sauce', 'condiments', '🧂'], ['Red wine vinegar', 'condiments', '🧂'], ['Hummus', 'condiments', '🧂'],
+  ['Prosecco', 'drinks', '🥂'], ['Iced tea', 'drinks', '🥤'],
 ];
-

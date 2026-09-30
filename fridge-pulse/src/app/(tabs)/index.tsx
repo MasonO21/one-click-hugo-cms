@@ -91,7 +91,7 @@ export default function Pulse() {
               label="Add items by hand"
               variant="ghost"
               onPress={() => {
-                useScanDraft.getState().start('fridge', [], null);
+                useScanDraft.getState().start('fridge', [], null, 'manual');
                 router.push('/review');
               }}
             />
