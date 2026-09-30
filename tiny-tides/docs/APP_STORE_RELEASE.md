@@ -52,7 +52,7 @@ Product → Scheme → Edit Scheme → **Run → Options → StoreKit Configurat
 1. Apps → **+ New App**: iOS, name, primary language, the bundle id from step 1, SKU (`tinytides-ios-001`).
 2. **App Information**: category Games (Simulation, Casual), Privacy Policy URL, age rating (answers in `store/APP_STORE_LISTING.md`). **The Capsule Machine sells randomized items, so answer the loot-box question Yes and expect a rating above 4+.**
 3. **App Privacy**: *Data Not Collected*.
-4. **Pricing**: Free. **Availability**: all territories **except** these 10, which you untick: China mainland, Vietnam, Indonesia, Russia, Brazil, South Korea, Japan, Belgium, Saudi Arabia, United Arab Emirates (reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6).
+4. **Pricing**: Free. **Availability**: all territories **except** these 36, which you untick: China mainland, Vietnam, Indonesia, Russia, Brazil, South Korea, Japan, Saudi Arabia, United Arab Emirates, and all 27 EU countries (Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden). Reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6.
 5. **Monetization → In-App Purchases**: create the 10 products in `store/iap-products.md` **exactly** (Product ID, type, price, name, description, review screenshot). They must be in *Ready to Submit* state and attached to the version.
 6. **Version 1.0**: paste the text from `store/APP_STORE_LISTING.md`; upload screenshots from `store/screenshots/` (iPhone 6.9″ and iPad 13″ are the required sets); reviewer notes; contact info.
 

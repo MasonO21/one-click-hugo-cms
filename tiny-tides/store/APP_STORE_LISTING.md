@@ -15,7 +15,7 @@
 | **SKU** | `tinytides-ios-001` |
 | **Primary language** | English (U.S.) |
 | **Price** | Free (with in-app purchases) |
-| **Availability** | All territories **except** China mainland, Vietnam, Indonesia, Russia, Brazil, South Korea, Japan, Belgium, Saudi Arabia, United Arab Emirates (untick these; reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6) |
+| **Availability** | All territories **except** China mainland, Vietnam, Indonesia, Russia, Brazil, South Korea, Japan, Saudi Arabia, United Arab Emirates and all 27 EU countries (untick these; list and reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6) |
 | **Content rights** | You own all content: art is procedurally drawn in code, audio is synthesized in code, UI font is Fredoka (SIL OFL 1.1) |
 
 ## Version 1.0 text
