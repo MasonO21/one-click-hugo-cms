@@ -8,7 +8,7 @@
       "internalID": "6470000001",
       "localizations": [
         {
-          "description": "60 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
+          "description": "Sea Glass for timers, decor and capsules",
           "displayName": "60 Sea Glass",
           "locale": "en_US"
         }
@@ -23,7 +23,7 @@
       "internalID": "6470000002",
       "localizations": [
         {
-          "description": "330 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
+          "description": "Sea Glass for timers, decor and capsules",
           "displayName": "330 Sea Glass",
           "locale": "en_US"
         }
@@ -38,7 +38,7 @@
       "internalID": "6470000003",
       "localizations": [
         {
-          "description": "700 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
+          "description": "Sea Glass for timers, decor and capsules",
           "displayName": "700 Sea Glass",
           "locale": "en_US"
         }
@@ -53,7 +53,7 @@
       "internalID": "6470000004",
       "localizations": [
         {
-          "description": "1500 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).",
+          "description": "Sea Glass for timers, decor and capsules",
           "displayName": "1500 Sea Glass",
           "locale": "en_US"
         }
@@ -68,7 +68,7 @@
       "internalID": "6470000005",
       "localizations": [
         {
-          "description": "Unlocks the glowing Deep Ocean biome with 28 new creatures.",
+          "description": "A glowing biome with 28 new creatures",
           "displayName": "Deep Ocean Biome",
           "locale": "en_US"
         }
@@ -83,7 +83,7 @@
       "internalID": "6470000006",
       "localizations": [
         {
-          "description": "Evolution timers 25% shorter forever, plus one free instant finish per day.",
+          "description": "Faster evolutions + a daily free finish",
           "displayName": "Golden Hourglass",
           "locale": "en_US"
         }
@@ -98,7 +98,7 @@
       "internalID": "6470000007",
       "localizations": [
         {
-          "description": "A cosmetic decor bundle: pool skin, props, hats and effects.",
+          "description": "Cherry-blossom skin, props, hats & petals",
           "displayName": "Sakura Shore Pack",
           "locale": "en_US"
         }
@@ -113,7 +113,7 @@
       "internalID": "6470000008",
       "localizations": [
         {
-          "description": "A cosmetic decor bundle: pool skin, props, hats and effects.",
+          "description": "Neon skin, arcade props, hats & stars",
           "displayName": "Neon Arcade Pack",
           "locale": "en_US"
         }
@@ -128,7 +128,7 @@
       "internalID": "6470000009",
       "localizations": [
         {
-          "description": "A cosmetic decor bundle: pool skin, props, hats and effects.",
+          "description": "Flamingo float, crowns, confetti & more",
           "displayName": "Pool Party Pack",
           "locale": "en_US"
         }
@@ -143,7 +143,7 @@
       "internalID": "6470000010",
       "localizations": [
         {
-          "description": "200 Sea Glass, a Party Hat and the Bubblegum pool skin.",
+          "description": "200 Sea Glass, a Party Hat & a pool skin",
           "displayName": "Starter Bundle",
           "locale": "en_US"
         }

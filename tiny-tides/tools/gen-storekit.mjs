@@ -6,24 +6,22 @@ import { fileURLToPath } from 'node:url';
 import { PRODUCTS, APP_ID } from '../src/data.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const blurb = {
-  consumable: (p) => `${p.glass} Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game).`,
-  deep: () => 'Unlocks the glowing Deep Ocean biome with 28 new creatures.',
-  hourglass: () => 'Evolution timers 25% shorter forever, plus one free instant finish per day.',
-  pack: (p) => 'A cosmetic decor bundle: pool skin, props, hats and effects.',
-  starter: () => '200 Sea Glass, a Party Hat and the Bubblegum pool skin.',
-};
-const descFor = (p) => (p.type === 'consumable' ? blurb.consumable(p) : p.deep ? blurb.deep() : p.hourglass ? blurb.hourglass() : p.starter ? blurb.starter() : blurb.pack(p));
+// Display names and descriptions come from the App Store listing text (store/listing/en.json).
+// Apple's limits: display name ≤ 30 characters, description ≤ 45 (checked by test/i18n.test.mjs).
+const en = JSON.parse(fs.readFileSync(path.join(root, 'store/listing/en.json'), 'utf8'));
+const keyOf = (id) => id.slice(APP_ID.length + 1);
+const descFor = (id) => en.iap[keyOf(id)].description;
+const nameFor = (id) => en.iap[keyOf(id)].name;
 const products = Object.entries(PRODUCTS).map(([id, p], i) => ({
   displayPrice: p.price.replace('$', ''), familyShareable: false, internalID: String(6470000001 + i),
-  localizations: [{ description: descFor(p), displayName: p.name, locale: 'en_US' }],
-  productID: id, referenceName: p.name, type: p.type === 'consumable' ? 'Consumable' : 'NonConsumable',
+  localizations: [{ description: descFor(id), displayName: nameFor(id), locale: 'en_US' }],
+  productID: id, referenceName: nameFor(id), type: p.type === 'consumable' ? 'Consumable' : 'NonConsumable',
 }));
 const cfg = { identifier: 'TINYTIDES1', nonRenewingSubscriptions: [], products, settings: {}, subscriptionGroups: [], version: { major: 3, minor: 0 } };
 fs.mkdirSync(path.join(root, 'ios/App'), { recursive: true });
 fs.writeFileSync(path.join(root, 'ios/App/TinyTides.storekit'), JSON.stringify(cfg, null, 2) + '\n');
 
-const rows = Object.entries(PRODUCTS).map(([id, p]) => `| \`${id}\` | ${p.name} | ${p.type === 'consumable' ? 'Consumable' : 'Non-Consumable'} | ${p.price} | ${descFor(p)} |`);
+const rows = Object.entries(PRODUCTS).map(([id, p]) => `| \`${id}\` | ${nameFor(id)} | ${p.type === 'consumable' ? 'Consumable' : 'Non-Consumable'} | ${p.price} | ${descFor(id)} |`);
 fs.mkdirSync(path.join(root, 'store'), { recursive: true });
 fs.writeFileSync(path.join(root, 'store/iap-products.md'), `# In-App Purchases (generated — do not edit)
 
@@ -34,6 +32,6 @@ with **exactly** these Product IDs (they are derived from the bundle id \`${APP_
 |---|---|---|---|---|
 ${rows.join('\n')}
 
-Every product needs a display name, description, a price, and a **review screenshot** (a screenshot of the Shop screen showing that item; use the ones in \`store/screenshots\`).
+Every product needs a display name (≤ 30 characters), a description (≤ 45), a price, and a **review screenshot** (a screenshot of the Shop screen showing that item). Use the English (U.S.) localization with the name and description above.
 `);
 console.log(`wrote TinyTides.storekit with ${products.length} products`);

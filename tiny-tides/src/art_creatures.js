@@ -100,7 +100,9 @@ const FAM = {};
 
 FAM.crab = {
   facing: 'c',
-  geom: { cx: 100, cy: 122, rx: 60, ry: 42, hat: { x: 100, y: 52, s: 0.85, rot: 0, w: 40 }, eye: { x: 100, y: 68, gap: 44 } },
+  // the hat sits small on the shell top, between the eye-stalks, so it never covers the eyes
+  geom: { cx: 100, cy: 122, rx: 60, ry: 42, hat: { x: 100, y: 86, s: 0.7, rot: 0, w: 62 }, eye: { x: 100, y: 68, gap: 52 },
+    face: [[100, 120, 24], [66, 118, 12], [134, 118, 12], [74, 66, 18], [126, 66, 18], [74, 84, 7], [126, 84, 7]] },
   draw(c, { pal }) {
     for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) {
       const y = 132 + i * 9;
@@ -122,8 +124,8 @@ FAM.crab = {
   },
   face(c, { pal, blink }) {
     for (const sd of [-1, 1]) {
-      const x = 100 + sd * 22;
-      tube(c, [{ w: 5, build: (k) => { k.moveTo(x, 90); k.lineTo(x, 74); } }], pal.body, 4);
+      const x = 100 + sd * 26;
+      tube(c, [{ w: 5, build: (k) => { k.moveTo(x - sd * 3, 90); k.lineTo(x, 74); } }], pal.body, 4);
       c.fillStyle = '#fff'; c.beginPath(); c.arc(x, 66, 14, 0, TAU); c.fill(); c.lineWidth = 4.5; c.strokeStyle = OUT; c.stroke();
       if (blink) { c.beginPath(); c.moveTo(x - 9, 68); c.quadraticCurveTo(x, 76, x + 9, 68); c.stroke(); }
       else { c.fillStyle = '#2b1248'; c.beginPath(); c.arc(x, 68, 8, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x - 2.5, 65, 3, 0, TAU); c.fill(); }
@@ -134,7 +136,7 @@ FAM.crab = {
 
 FAM.snail = {
   facing: 'r',
-  geom: { cx: 84, cy: 108, rx: 50, ry: 50, hat: { x: 82, y: 58, s: 0.9, rot: -0.18, w: 34 }, eye: { x: 154, y: 128, gap: 24 } },
+  geom: { cx: 84, cy: 108, rx: 50, ry: 50, hat: { x: 82, y: 58, s: 0.9, rot: -0.18, w: 34 }, eye: { x: 154, y: 128, gap: 24 }, face: [[154, 134, 24]] },
   draw(c, { pal }) {
     blob(c, [(k) => k.ellipse(92, 152, 76, 24, 0, 0, TAU), (k) => k.arc(154, 128, 28, 0, TAU)], vgrad(c, 100, 176, shade(pal.body, 0.2), pal.body), 6);
     ellipse(c, 100, 165, 56, 9); c.fillStyle = pal.belly; c.globalAlpha = 0.5; c.fill(); c.globalAlpha = 1;
@@ -162,7 +164,7 @@ FAM.snail = {
 
 FAM.star = {
   facing: 'c',
-  geom: { cx: 100, cy: 108, rx: 44, ry: 44, hat: { x: 100, y: 46, s: 0.78, rot: 0, w: 30 }, eye: { x: 100, y: 108, gap: 28 } },
+  geom: { cx: 100, cy: 108, rx: 44, ry: 44, hat: { x: 100, y: 46, s: 0.78, rot: 0, w: 30 }, eye: { x: 100, y: 108, gap: 28 }, face: [[100, 114, 28]] },
   draw(c, { pal }) {
     const cx = 100, cy = 110, R = 76, r = 42;
     const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R; pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); }
@@ -187,7 +189,7 @@ FAM.star = {
 
 FAM.horse = {
   facing: 'r',
-  geom: { cx: 96, cy: 108, rx: 30, ry: 52, hat: { x: 100, y: 34, s: 0.85, rot: 0.12, w: 26 }, eye: { x: 108, y: 58, gap: 0 } },
+  geom: { cx: 96, cy: 108, rx: 30, ry: 52, hat: { x: 100, y: 34, s: 0.85, rot: 0.12, w: 26 }, eye: { x: 108, y: 58, gap: 0 }, face: [[108, 58, 18], [118, 70, 11], [140, 72, 14]] },
   draw(c, { pal }) {
     // fins
     c.save();
@@ -198,7 +200,7 @@ FAM.horse = {
       { w: 42, build: (k) => { k.moveTo(106, 66); k.quadraticCurveTo(102, 84, 100, 96); } },
       { w: 36, build: (k) => { k.moveTo(100, 96); k.bezierCurveTo(112, 112, 108, 122, 100, 138); } },
       { w: 24, build: (k) => { k.moveTo(100, 138); k.bezierCurveTo(92, 156, 76, 156, 74, 174); } },
-      { w: 13, build: (k) => { k.moveTo(74, 174); k.bezierCurveTo(72, 190, 96, 192, 100, 178); } },
+      { w: 13, build: (k) => { k.moveTo(74, 174); k.bezierCurveTo(72, 186, 96, 188, 100, 176); } },
     ], pal.body, 6);
     // belly stripes
     c.save(); c.strokeStyle = pal.belly; c.lineWidth = 4.5; c.lineCap = 'round'; c.globalAlpha = 0.9;
@@ -216,11 +218,11 @@ FAM.horse = {
 
 FAM.jelly = {
   facing: 'c',
-  geom: { cx: 100, cy: 92, rx: 62, ry: 50, hat: { x: 100, y: 44, s: 0.95, rot: 0, w: 46 }, eye: { x: 100, y: 100, gap: 40 } },
+  geom: { cx: 100, cy: 92, rx: 62, ry: 50, hat: { x: 100, y: 60, s: 0.95, rot: 0, w: 46 }, eye: { x: 100, y: 100, gap: 40 }, face: [[100, 103, 28], [67, 108, 12], [133, 108, 12]] },
   draw(c, { pal }) {
     // tentacles behind
     for (let i = 0; i < 5; i++) {
-      const x = 58 + i * 21, len = 66 + (i % 2) * 14;
+      const x = 58 + i * 21, len = 62 + (i % 2) * 14;
       tube(c, [{ w: 8, build: (k) => { k.moveTo(x, 112); k.bezierCurveTo(x - 12, 112 + len * 0.35, x + 12, 112 + len * 0.7, x - 2 + (i - 2) * 3, 112 + len); } }], shade(pal.accent, 0.1), 4.5);
     }
     tube(c, [{ w: 14, build: (k) => { k.moveTo(86, 108); k.bezierCurveTo(78, 130, 96, 148, 86, 168); } }, { w: 14, build: (k) => { k.moveTo(114, 108); k.bezierCurveTo(122, 130, 104, 148, 114, 168); } }], pal.belly, 5);
@@ -229,14 +231,14 @@ FAM.jelly = {
     c.beginPath(); dome(c); fillShape(c, vgrad(c, 34, 126, shade(pal.body, 0.38), pal.body), 6.5);
     c.save(); c.beginPath(); dome(c); c.clip();
     c.fillStyle = pal.accent; c.globalAlpha = 0.28; ellipse(c, 100, 122, 70, 26); c.fill(); c.restore();
-    gloss(c, 100, 88, 62, 50, 0.6);
+    gloss(c, 100, 100, 56, 44, 0.6);        // kept low enough that the highlight stays inside the dome outline
   },
   face(c, { blink }) { eyes(c, 100, 98, 40, 9.5, blink); cheeks(c, 100, 108, 66, 9); mouth(c, 100, 110, 14); },
 };
 
 FAM.octo = {
   facing: 'c',
-  geom: { cx: 100, cy: 92, rx: 54, ry: 50, hat: { x: 100, y: 46, s: 0.95, rot: 0, w: 40 }, eye: { x: 100, y: 96, gap: 38 } },
+  geom: { cx: 100, cy: 92, rx: 54, ry: 50, hat: { x: 100, y: 46, s: 0.95, rot: 0, w: 40 }, eye: { x: 100, y: 96, gap: 38 }, face: [[100, 104, 28], [68, 110, 12], [132, 110, 12]] },
   draw(c, { pal }) {
     const arms = [[-52, 10], [-34, 22], [-14, 28], [14, 28], [34, 22], [52, 10]];
     for (const [dx, k] of arms) {
@@ -257,7 +259,7 @@ FAM.octo = {
 
 FAM.angler = {
   facing: 'r',
-  geom: { cx: 96, cy: 118, rx: 60, ry: 50, hat: { x: 82, y: 76, s: 0.9, rot: -0.2, w: 34 }, eye: { x: 122, y: 108, gap: 0 } },
+  geom: { cx: 96, cy: 118, rx: 60, ry: 50, hat: { x: 82, y: 76, s: 0.9, rot: -0.2, w: 34 }, eye: { x: 122, y: 108, gap: 0 }, face: [[122, 106, 18], [108, 124, 11], [130, 140, 24]] },
   draw(c, { pal }) {
     // tail + fins
     blob(c, [(k) => { k.moveTo(46, 118); k.lineTo(12, 88); k.quadraticCurveTo(4, 118, 12, 148); k.closePath(); }], shade(pal.body, -0.08), 6);
@@ -282,15 +284,13 @@ FAM.angler = {
 
 FAM.naut = {
   facing: 'r',
-  geom: { cx: 90, cy: 100, rx: 54, ry: 54, hat: { x: 88, y: 48, s: 0.9, rot: -0.1, w: 34 }, eye: { x: 142, y: 130, gap: 22 } },
+  geom: { cx: 90, cy: 100, rx: 54, ry: 54, hat: { x: 88, y: 48, s: 0.9, rot: -0.1, w: 34 }, eye: { x: 146, y: 130, gap: 22 }, face: [[146, 132, 24]] },
   draw(c, { pal }) {
     // tentacles
     for (let i = 0; i < 4; i++) {
       const y = 150 + i * 7;
-      tube(c, [{ w: 7, build: (k) => { k.moveTo(140, y - 6); k.quadraticCurveTo(160, y + 8, 178 - i * 4, y + 4 + i * 4); } }], pal.belly, 4.5);
+      tube(c, [{ w: 7, build: (k) => { k.moveTo(144, y - 6); k.quadraticCurveTo(162, y + 8, 180 - i * 4, y + 4 + i * 4); } }], pal.belly, 4.5);
     }
-    // hood / head
-    blob(c, [(k) => k.ellipse(140, 128, 30, 28, 0, 0, TAU)], vgrad(c, 100, 160, shade(pal.belly, 0.2), pal.belly), 6);
     // shell
     c.beginPath(); c.arc(90, 104, 58, 0, TAU); fillShape(c, vgrad(c, 46, 162, shade(pal.body, 0.25), pal.body), 6.5);
     c.save(); c.beginPath(); c.arc(90, 104, 58, 0, TAU); c.clip();
@@ -304,15 +304,18 @@ FAM.naut = {
     c.restore();
     c.beginPath(); c.arc(90, 104, 58, 0, TAU); c.lineWidth = 6.5; c.strokeStyle = OUT; c.stroke();
     gloss(c, 90, 104, 56, 56, 0.55);
+    // hood / head, peeking out in front of the shell so the whole face sits on it
+    blob(c, [(k) => k.ellipse(148, 130, 29, 27, 0, 0, TAU)], vgrad(c, 103, 157, shade(pal.belly, 0.2), pal.belly), 6);
+    gloss(c, 148, 130, 26, 24, 0.45);
   },
-  face(c, { blink }) { eyes(c, 142, 126, 22, 7.5, blink); cheeks(c, 142, 139, 34, 6); mouth(c, 142, 141, 10); },
+  face(c, { blink }) { eyes(c, 146, 128, 22, 7.5, blink); cheeks(c, 146, 141, 34, 6); mouth(c, 146, 143, 10); },
 };
 
 FAM.manta = {
   facing: 'c',
-  geom: { cx: 100, cy: 108, rx: 70, ry: 42, hat: { x: 100, y: 60, s: 0.9, rot: 0, w: 40 }, eye: { x: 100, y: 108, gap: 36 } },
+  geom: { cx: 100, cy: 108, rx: 70, ry: 42, hat: { x: 100, y: 60, s: 0.9, rot: 0, w: 40 }, eye: { x: 100, y: 108, gap: 36 }, face: [[100, 110, 26], [69, 116, 11], [131, 116, 11]] },
   draw(c, { pal }) {
-    tube(c, [{ w: 6, build: (k) => { k.moveTo(100, 150); k.bezierCurveTo(92, 168, 110, 180, 100, 196); } }], pal.accent, 4.5);
+    tube(c, [{ w: 6, build: (k) => { k.moveTo(100, 150); k.bezierCurveTo(92, 166, 110, 176, 100, 189); } }], pal.accent, 4.5);
     const wing = (k) => { k.moveTo(100, 56); k.bezierCurveTo(140, 62, 170, 96, 190, 122); k.bezierCurveTo(160, 118, 132, 128, 100, 158); k.bezierCurveTo(68, 128, 40, 118, 10, 122); k.bezierCurveTo(30, 96, 60, 62, 100, 56); k.closePath(); };
     c.beginPath(); wing(c); fillShape(c, vgrad(c, 54, 160, shade(pal.body, 0.3), pal.body), 6.5);
     c.save(); c.beginPath(); wing(c); c.clip();
@@ -328,7 +331,7 @@ FAM.manta = {
 
 FAM.drake = {
   facing: 'l',
-  geom: { cx: 92, cy: 112, rx: 54, ry: 26, hat: { x: 148, y: 60, s: 0.8, rot: 0.2, w: 24 }, eye: { x: 150, y: 80, gap: 0 } },
+  geom: { cx: 92, cy: 112, rx: 54, ry: 26, hat: { x: 148, y: 60, s: 0.8, rot: 0.2, w: 24 }, eye: { x: 150, y: 80, gap: 0 }, face: [[152, 78, 18], [160, 90, 9], [176, 90, 10]] },
   draw(c, { pal }) {
     // leafy appendages (behind)
     const L = [[120, 96, -1.3, 34], [96, 100, -1.5, 40], [72, 110, -1.7, 38], [50, 122, -1.9, 32], [112, 124, 1.1, 26], [84, 134, 1.4, 28], [58, 140, 1.6, 24]];
@@ -353,12 +356,20 @@ export const FAMILY_ART = FAM;
 
 // ------------------------------------------------------------------ decorations
 const DECO_LAYER = { aura: 'back', rays: 'back' };
+/** True when (x, y) is on the creature's face (eyes, cheeks, mouth), where decorations and sparkles must not go. */
+const onFace = (g, x, y, pad = 6) => (g.face || []).some(([fx, fy, r]) => Math.hypot(x - fx, y - fy) < r + pad);
 function decoPoints(g, rnd, n, top = false) {
   const pts = [];
   for (let i = 0; i < n; i++) {
-    const a = top ? -Math.PI * (0.12 + rnd() * 0.76) : rnd() * TAU;
-    const k = top ? 0.75 + rnd() * 0.2 : Math.sqrt(rnd()) * 0.75;
-    pts.push([g.cx + Math.cos(a) * g.rx * k, g.cy + Math.sin(a) * g.ry * k, a]);
+    let p;
+    for (let tries = 0; tries < 12; tries++) {
+      const a = top ? -Math.PI * (0.12 + rnd() * 0.76) : rnd() * TAU;
+      const k = top ? 0.75 + rnd() * 0.2 : Math.sqrt(rnd()) * 0.75;
+      p = [g.cx + Math.cos(a) * g.rx * k, g.cy + Math.sin(a) * g.ry * k, a];
+      if (!onFace(g, p[0], p[1])) break;
+      p = null;
+    }
+    if (p) pts.push(p);
   }
   return pts;
 }
@@ -481,18 +492,21 @@ export function paintForm(c, formId, { blink = false, hat = null, plain = false 
   if (!plain) for (const d of f.deco) if (DECO_LAYER[d] === 'back' && DECO[d]) DECO[d](c, g, pal, rnd);
   art.draw(c, P);
   for (const d of f.deco) if (!DECO_LAYER[d] && d !== 'crown' && DECO[d]) DECO[d](c, g, pal, rnd);
-  art.face(c, P);
   const h = hat || (f.deco.includes('crown') ? '__crown' : null);
-  if (h) {
-    c.save(); c.translate(g.hat.x, g.hat.y); c.rotate(g.hat.rot || 0); c.scale(g.hat.s, g.hat.s);
-    if (h === '__crown') HAT_ART.crownhat(c, g);
-    else if (h === 'shades') { c.setTransform(1, 0, 0, 1, 0, 0); }
-    if (h === 'shades') {
-      c.restore(); c.save(); c.translate(g.eye.x, g.eye.y - 1); c.scale(Math.max(0.7, (g.eye.gap || 34) / 34), 1); HAT_ART.shades(c, g);
-    } else if (h !== '__crown') HAT_ART[h]?.(c, g);
-    c.restore();
+  const behind = h && h !== 'shades' && g.hatBehind;        // e.g. the crab: the hat sits on the shell, behind its eye-stalks
+  if (behind) drawHat(c, g, h);
+  art.face(c, P);
+  if (h && !behind) drawHat(c, g, h);
+  if (f.stage === 3 && !plain) {
+    const r = rng(hash(formId + 'sp'));
+    for (let i = 0, n = 0; i < 24 && n < 4; i++) { const x = 20 + r() * 160, y = 22 + r() * 120, sz = 4 + r() * 4, rot = r(); if (!onFace(g, x, y, 10)) { sparkle(c, x, y, sz, '#fff', rot); n++; } }
   }
-  if (f.stage === 3 && !plain) { const r = rng(hash(formId + 'sp')); for (let i = 0; i < 4; i++) sparkle(c, 20 + r() * 160, 22 + r() * 120, 4 + r() * 4, '#fff', r()); }
+}
+function drawHat(c, g, h) {
+  c.save();
+  if (h === 'shades') { c.translate(g.eye.x, g.eye.y - 1); c.scale(Math.max(0.7, (g.eye.gap || 34) / 34), 1); HAT_ART.shades(c, g); }
+  else { c.translate(g.hat.x, g.hat.y); c.rotate(g.hat.rot || 0); c.scale(g.hat.s, g.hat.s); (h === '__crown' ? HAT_ART.crownhat : HAT_ART[h])?.(c, g); }
+  c.restore();
 }
 /** Cached bitmap sprite. Returns { canvas, w, h } in design units (canvas is SPRITE_SCALE times larger). */
 export function getSprite(formId, opts = {}) {

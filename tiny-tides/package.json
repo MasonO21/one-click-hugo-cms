@@ -28,7 +28,9 @@
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
     "release": "npm run lint && npm test && npm run legal:check && npm run site:check && npm run build && npx cap sync ios",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "i18n": "node tools/i18n-extract.mjs",
+    "i18n:check": "node tools/i18n-extract.mjs --check"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

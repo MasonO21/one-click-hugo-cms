@@ -3,29 +3,30 @@ import * as D from './data.js';
 import * as S from './sim.js';
 import * as A from './audio.js';
 import { haptic } from './platform.js';
+import { t, tk, num, dur, intlTag, list, poolItemName, tierName, decorBlurb, toySetName } from './i18n.js';
 import { drawMachine, drawDropped, newMachine, stepMachine, drawItemArt, MW, MH, CHUTE, TRAY_Y, TIER_COLOR } from './art_gacha.js';
 
 const TAU = Math.PI * 2;
 const TIERS = D.GACHA.tiers;
 const stars = (n) => '★'.repeat(n);
-const pct = (p) => `${(p * 100).toFixed(p < 0.001 ? 3 : 2)}%`;
+const pct = (p) => { const d = p < 0.001 ? 3 : 2; return new Intl.NumberFormat(intlTag(), { style: 'percent', minimumFractionDigits: d, maximumFractionDigits: d }).format(p); };
 const easeOutBack = (k) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
 
 export function createGachaUI(G, ui) {
   const { ic, esc } = ui;
   const st = () => G.state;
   const now = () => G.now();
-  const fmt = S.fmtNum;
+  const fmt = num;
   let modal = null, box = null, tab = 'machine', prizeTier = 'common', toyTab = 'figs';
   let run = null;                                   // live animation state while the Machine tab is showing
 
   // ------------------------------------------------------------------ helpers
-  const itemName = (id) => D.POOL_BY_ID[id]?.name || id;
+  const itemName = (id) => poolItemName(id);
   const tierOf = (id) => D.TIER[D.POOL_BY_ID[id].tier];
   const thumb = (id, owned = true, cls = '') => `<canvas class="${cls}" data-toy="${id}" ${owned ? '' : 'data-sil="1"'}></canvas>`;
-  const tierTag = (t) => `<span class="tag tier-${t}" style="border-color:var(--ink);background:${TIER_COLOR[t]}33">${stars(D.TIER[t].stars)} ${D.TIER[t].name}</span>`;
+  const tierTag = (tr) => `<span class="tag tier-${tr}" style="border-color:var(--ink);background:${TIER_COLOR[tr]}33">${stars(D.TIER[tr].stars)} ${tierName(tr)}</span>`;
   const rewardChips = (r) => [r.coins && `<span class="rew">${ic('i-coin')}${r.coins}</span>`, r.glass && `<span class="rew">${ic('i-glass')}${r.glass}</span>`, r.tokens && `<span class="rew">${ic('i-token')}${r.tokens}</span>`].filter(Boolean).join(' ');
-  const wallet = () => `<span class="gz-pill" id="gz-coins" title="Capsule Coins">${ic('i-coin')}<b>${st().cur.coins}</b></span><span class="gz-pill" id="gz-glass" title="Sea Glass">${ic('i-glass')}<b>${fmt(st().cur.glass)}</b></span>`;
+  const wallet = () => `<span class="gz-pill" id="gz-coins" title="${t('Capsule Coins')}">${ic('i-coin')}<b>${st().cur.coins}</b></span><span class="gz-pill" id="gz-glass" title="${t('Sea Glass')}">${ic('i-glass')}<b>${fmt(st().cur.glass)}</b></span>`;
   function updateWallet() {
     if (!box) return;
     const set = (id, v) => { const e = box.querySelector(`#${id} b`); if (e && e.textContent !== String(v)) e.textContent = v; };
@@ -36,17 +37,17 @@ export function createGachaUI(G, ui) {
   function open(startTab = 'machine') {
     if (modal && document.body.contains(modal.el)) { setTab(startTab); return; }
     tab = startTab;
-    modal = ui.mountModal('gacha', { title: 'Capsules', cls: 'tall gz', sticky: true, render: () => renderTab() });
+    modal = ui.mountModal('gacha', { title: t('Capsules'), cls: 'tall gz', sticky: true, render: () => renderTab() });
     modal.frozen = true;                              // ui.refresh() must not rebuild the canvas; we redraw ourselves
     window.addEventListener('resize', onResize);
-    modal.onClose = () => { window.removeEventListener('resize', onResize); stopRun(); if (run?.unclaimed) G.ui.toast('Your capsules were added to the Toybox', 'good'); run = null; modal = null; box = null; };
+    modal.onClose = () => { window.removeEventListener('resize', onResize); stopRun(); if (run?.unclaimed) G.ui.toast(t('Your capsules were added to the Toybox'), 'good'); run = null; modal = null; box = null; };
     A.play('whoosh');
   }
-  function setTab(t) { tab = t; stopRun(); ui.drawModal(modal); }
+  function setTab(name) { tab = name; stopRun(); ui.drawModal(modal); }
   function renderTab() {
-    const tabs = [['machine', 'Machine'], ['toys', 'Toybox'], ['prizes', 'Prizes'], ['rates', 'Rates']].map(([id, l]) => `<button class="${tab === id ? 'on' : ''}" data-gz="tab:${id}">${l}</button>`).join('');
+    const tabs = [['machine', t('Machine')], ['toys', t('Toybox')], ['prizes', t('Prizes')], ['rates', t('Rates')]].map(([id, l]) => `<button class="${tab === id ? 'on' : ''}" data-gz="tab:${id}">${l}</button>`).join('');
     const body = tab === 'machine' ? machineBody() : tab === 'toys' ? toysBody() : tab === 'prizes' ? prizesBody() : ratesBody();
-    return { title: `Capsules <span class="gz-pills">${wallet()}</span>`, tabs, body, footer: tab === 'machine' ? '<div id="gz-ctl" class="gz-ctl"></div>' : '', after: afterRender };
+    return { title: `${t('Capsules')} <span class="gz-pills">${wallet()}</span>`, tabs, body, footer: tab === 'machine' ? '<div id="gz-ctl" class="gz-ctl"></div>' : '', after: afterRender };
   }
   function afterRender(b) {
     if (box !== b) { box = b; box.addEventListener('click', onClick); }      // first render fires inside mountModal, before open() returns
@@ -57,17 +58,17 @@ export function createGachaUI(G, ui) {
   // ------------------------------------------------------------------ MACHINE tab
   function spotlightHtml() {
     const sp = S.gachaSpotlight(now()), left = Math.max(0, sp.endsAt - now());
-    const one = (id) => `<span class="gz-spot-item">${thumb(id, true)}<span><b>${esc(itemName(id))}</b><small>${stars(tierOf(id).stars)} · ${D.GACHA.spotMult}× rate</small></span></span>`;
-    return `<div class="gz-spot"><div class="gz-spot-h">${ic('i-sparkle', 's')} This week's spotlight <small>${S.fmtDur(left)} left</small></div><div class="gz-spot-row">${one(sp.rare)}${one(sp.legendary)}</div></div>`;
+    const one = (id) => `<span class="gz-spot-item">${thumb(id, true)}<span><b>${esc(itemName(id))}</b><small>${stars(tierOf(id).stars)} · ${t('{n}× rate', { n: D.GACHA.spotMult })}</small></span></span>`;
+    return `<div class="gz-spot"><div class="gz-spot-h">${ic('i-sparkle', 's')} ${t("This week's spotlight")} <small>${t('{time} left', { time: dur(left) })}</small></div><div class="gz-spot-row">${one(sp.rare)}${one(sp.legendary)}</div></div>`;
   }
   function machineBody() {
     return `${spotlightHtml()}
-      <div class="gz-stage" id="gz-stage"><canvas id="gz-cv" class="gz-cv" aria-label="Capsule machine"></canvas><div id="gz-cap" class="gz-cap" hidden></div><div id="gz-sum" class="gz-sum" hidden></div></div>
+      <div class="gz-stage" id="gz-stage"><canvas id="gz-cv" class="gz-cv" aria-label="${t('Capsule Machine')}"></canvas><div id="gz-cap" class="gz-cap" hidden></div><div id="gz-sum" class="gz-sum" hidden></div></div>
       <div id="gz-pity" class="gz-pity"></div>`;
   }
   function pityHtml() {
     const p = S.gachaPity(st()), left = S.gachaPaidLeft(st(), now());
-    return `<span>${ic('i-star', 's')} Rare or better within <b>${p.rare}</b> ${p.rare === 1 ? 'pull' : 'pulls'}</span><span>${ic('i-sparkle', 's')} Legendary within <b>${p.legendary}</b> ${p.legendary === 1 ? 'pull' : 'pulls'}</span><button class="link" data-gz="tab:rates">Drop rates</button>${G.paidRandomBlocked() ? '<span class="muted">Sea Glass pulls: not available in your region</span>' : st().settings.paidPulls ? `<span class="muted">Sea Glass pulls left today: ${left}</span>` : '<span class="muted">Sea Glass pulls are off (Settings)</span>'}`;
+    return `<span>${ic('i-star', 's')} ${t('Rare or better within {n} pull|Rare or better within {n} pulls', { n: `<b>${p.rare}</b>`, count: p.rare })}</span><span>${ic('i-sparkle', 's')} ${t('Legendary within {n} pull|Legendary within {n} pulls', { n: `<b>${p.legendary}</b>`, count: p.legendary })}</span><button class="link" data-gz="tab:rates">${t('Drop rates')}</button>${G.paidRandomBlocked() ? `<span class="muted">${t('Sea Glass pulls: not available in your region')}</span>` : st().settings.paidPulls ? `<span class="muted">${t('Sea Glass pulls left today: {n}', { n: left })}</span>` : `<span class="muted">${t('Sea Glass pulls are off (Settings)')}</span>`}`;
   }
   function payFor(n) {
     const coins = st().cur.coins;
@@ -79,17 +80,17 @@ export function createGachaUI(G, ui) {
     let h = '';
     if (ph === 'idle') {
       const free = S.gachaFreeAvailable(st(), now()), p1 = payFor(1), p10 = payFor(10);
-      if (free) h += `<button class="btn lemon wide pulse gz-free" data-gz="pull:1:free">${ic('i-gift', 's')} Free daily capsule</button>`;
-      h += `<div class="gz-row"><button class="btn pink col" data-gz="pull:1:${p1.mode}">Pull ×1<span class="sub">${cost(p1)}</span></button><button class="btn lav col" data-gz="pull:10:${p10.mode}">Pull ×10<span class="sub">${cost(p10)}</span></button></div>`;
+      if (free) h += `<button class="btn lemon wide pulse gz-free" data-gz="pull:1:free">${ic('i-gift', 's')} ${t('Free daily capsule')}</button>`;
+      h += `<div class="gz-row"><button class="btn pink col" data-gz="pull:1:${p1.mode}">${t('Pull ×{n}', { n: 1 })}<span class="sub">${cost(p1)}</span></button><button class="btn lav col" data-gz="pull:10:${p10.mode}">${t('Pull ×{n}', { n: 10 })}<span class="sub">${cost(p10)}</span></button></div>`;
     } else if (ph === 'ready') {
-      h = run.n === 1 ? `<button class="btn green wide pulse" data-gz="open:0">Open capsule!</button>` : `<div class="gz-row"><button class="btn green col pulse" data-gz="openall">Open all</button><button class="btn ghost col" data-gz="summary">Skip to results</button></div>`;
+      h = run.n === 1 ? `<button class="btn green wide pulse" data-gz="open:0">${t('Open capsule!')}</button>` : `<div class="gz-row"><button class="btn green col pulse" data-gz="openall">${t('Open all')}</button><button class="btn ghost col" data-gz="summary">${t('Skip to results')}</button></div>`;
     } else if (ph === 'reveal') {
       const unopened = run.m.out.filter((o) => !o.opened).length;
-      const label = run.n === 1 ? 'Nice!' : !unopened ? 'See results' : run.queue.length ? 'Next' : 'Back to capsules';
-      h = `<div class="gz-row ${run.n > 1 ? '' : 'one'}"><button class="btn green col" data-gz="next">${label}</button>${run.n > 1 ? `<button class="btn ghost col" data-gz="summary">Skip</button>` : ''}</div>`;
+      const label = run.n === 1 ? t('Nice!') : !unopened ? t('See results') : run.queue.length ? t('Next') : t('Back to capsules');
+      h = `<div class="gz-row ${run.n > 1 ? '' : 'one'}"><button class="btn green col" data-gz="next">${label}</button>${run.n > 1 ? `<button class="btn ghost col" data-gz="summary">${t('Skip')}</button>` : ''}</div>`;
     } else if (ph === 'summary') {
       const p10 = payFor(10);
-      h = `<div class="gz-row"><button class="btn ghost col" data-gz="done">Done</button><button class="btn lav col" data-gz="pull:10:${p10.mode}">Pull ×10 again<span class="sub">${cost(p10)}</span></button></div>`;
+      h = `<div class="gz-row"><button class="btn ghost col" data-gz="done">${t('Done')}</button><button class="btn lav col" data-gz="pull:10:${p10.mode}">${t('Pull ×{n} again', { n: 10 })}<span class="sub">${cost(p10)}</span></button></div>`;
     } else h = `<div class="muted center gz-wait">…</div>`;
     el.innerHTML = h; run.ctlSig = ctlSig();
     const pit = box.querySelector('#gz-pity'); if (pit) pit.innerHTML = pityHtml();
@@ -144,11 +145,13 @@ export function createGachaUI(G, ui) {
     if (mode === 'glass') {
       if (G.paidRandomBlocked()) { G.gachaPull(n, 'glass'); return; }      // shows the region message
       const c = payFor(n).cost;
-      if (st().cur.glass < c) { G.ui.toast('Not enough Sea Glass', 'warn'); A.play('error'); ui.openShop('glass'); return; }
-      if (!st().settings.paidPulls) { G.ui.toast('Sea Glass pulls are turned off in Settings', 'warn'); A.play('error'); return; }
+      if (st().cur.glass < c) { G.ui.toast(t('Not enough Sea Glass'), 'warn'); A.play('error'); ui.openShop('glass'); return; }
+      if (!st().settings.paidPulls) { G.ui.toast(t('Sea Glass pulls are turned off in Settings'), 'warn'); A.play('error'); return; }
       const left = S.gachaPaidLeft(st(), now());
-      if (n > left) { G.ui.toast(left ? `Only ${left} Sea Glass pull${left === 1 ? '' : 's'} left today` : 'Daily Sea Glass pull limit reached. Free pulls still work!', 'warn'); A.play('error'); return; }
-      const ok = await ui.confirm({ title: 'Spend Sea Glass?', body: `Use <b>${c} Sea Glass</b> for ${n === 1 ? '1 capsule' : '10 capsules'}? What comes out is random. Drop rates are in the Rates tab.`, ok: 'Pull', cancel: 'Not now' });
+      if (n > left) { G.ui.toast(left ? t('Only {n} Sea Glass pull left today|Only {n} Sea Glass pulls left today', { n: left }) : t('Daily Sea Glass pull limit reached. Free pulls still work!'), 'warn'); A.play('error'); return; }
+      if (!(await ui.ensurePaidOk())) return;
+      const money = G.glassMoney(c);
+      const ok = await ui.confirm({ title: t('Spend Sea Glass?'), body: `${t('Use {cost} Sea Glass for {n} capsule?|Use {cost} Sea Glass for {n} capsules?', { cost: `<b>${c}</b>`, n })} ${money ? `<br><small class="muted">${t('That is about {money} of Sea Glass.', { money })}</small><br>` : ''}${t('What comes out is random. Drop rates are in the Rates tab.')}`, ok: t('Pull'), cancel: t('Not now') });
       if (!ok) return;
     }
     begin(n, mode);
@@ -174,8 +177,8 @@ export function createGachaUI(G, ui) {
   }
   function reveal() {
     const res = run.results[run.cur], o = run.m.out[run.cur];
-    A.play('burst'); A.play(`tier${TIERS.findIndex((t) => t.id === res.tier) + 1}`);
-    const tierIdx = TIERS.findIndex((t) => t.id === res.tier);
+    A.play('burst'); A.play(`tier${TIERS.findIndex((x) => x.id === res.tier) + 1}`);
+    const tierIdx = TIERS.findIndex((x) => x.id === res.tier);
     if (tierIdx >= 3) { haptic.success(); setTimeout(() => haptic.heavy(), 180); run.m.flash = 1; } else if (tierIdx === 2) haptic.success(); else haptic.pop();
     const col = TIER_COLOR[res.tier], n = 18 + tierIdx * 14;
     for (let k = 0; k < n; k++) { const a = Math.random() * TAU, sp = 90 + Math.random() * 220; run.parts.push({ x: MW / 2, y: 210, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, life: 0, max: 0.9 + Math.random() * 0.8, s: 3 + Math.random() * 5 + tierIdx, col: k % 3 ? col : '#fff', rot: Math.random() * TAU }); }
@@ -185,15 +188,16 @@ export function createGachaUI(G, ui) {
   }
   function showCard(res) {
     const el = box.querySelector('#gz-cap'); if (!el) return;
-    const it = D.POOL_BY_ID[res.id], t = D.TIER[res.tier];
+    const it = D.POOL_BY_ID[res.id], tier = D.TIER[res.tier];
     let sub;
     if (res.reward) sub = `<div class="chips">${Object.entries(res.reward).map(([k, v]) => `<span class="chipx">${ic(k === 'coins' ? 'i-coin' : k === 'glass' ? 'i-glass' : k === 'tokens' ? 'i-token' : 'i-pearl')}+${fmt(v)}</span>`).join('')}</div>`;
-    else if (res.isNew) sub = `<span class="new">NEW!</span>`;
-    else sub = `<span class="tag">Duplicate · ×${st().gacha.owned[res.id]}</span> <span class="chipx">${ic('i-shard')}+${res.shards}</span>`;
-    el.innerHTML = `<div class="gz-tier" style="color:${t.color}">${stars(t.stars)}</div><h3>${esc(it.name)}</h3><div class="gz-kind">${t.name} ${kindLabel(it)}</div>${sub}`;
+    else if (res.isNew) sub = `<span class="new">${t('NEW!')}</span>`;
+    else sub = `<span class="tag">${t('Duplicate · ×{n}', { n: st().gacha.owned[res.id] })}</span> <span class="chipx">${ic('i-shard')}+${res.shards}</span>`;
+    el.innerHTML = `<div class="gz-tier" style="color:${tier.color}">${stars(tier.stars)}</div><h3>${esc(itemName(res.id))}</h3><div class="gz-kind">${tierName(res.tier)} · ${kindLabel(it)}</div>${sub}`;
     el.hidden = false; el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
   }
-  const kindLabel = (it) => it.filler ? 'prize' : it.kind === 'fig' ? (it.gold ? 'golden figure' : 'figure') : it.kind === 'prop' ? 'decor' : it.kind === 'hat' ? 'hat' : it.kind === 'skin' ? 'pool skin' : it.kind === 'fx' ? 'effect' : '';
+  const KIND = { prize: tk('prize'), gold: tk('golden figure'), fig: tk('figure'), prop: tk('decor'), hat: tk('hat'), skin: tk('pool skin'), fx: tk('effect') };
+  const kindLabel = (it) => t(KIND[it.filler ? 'prize' : it.gold ? 'gold' : it.kind] || KIND.fx);
   function hideCard() { const el = box?.querySelector('#gz-cap'); if (el) el.hidden = true; }
   function afterReveal() {
     hideCard();
@@ -206,11 +210,11 @@ export function createGachaUI(G, ui) {
   function showSummary() {
     hideCard(); run.unclaimed = false; run.auto = false;
     const el = box.querySelector('#gz-sum'); if (!el) return;
-    const res = run.results; let news = 0, sh = 0; const rank = (r) => TIERS.findIndex((t) => t.id === r.tier);
+    const res = run.results; let news = 0, sh = 0; const rank = (r) => TIERS.findIndex((x) => x.id === r.tier);
     res.forEach((r) => { if (r.isNew) news++; sh += r.shards || 0; });
     const best = res.reduce((a, r) => (rank(r) > rank(a) ? r : a), res[0]);
-    el.innerHTML = `<h3>Results</h3><div class="gz-grid">${res.map((r) => `<div class="gz-cell tier-${r.tier}" style="--tc:${TIER_COLOR[r.tier]}">${thumb(r.id, true)}${r.isNew ? '<i class="nw">NEW</i>' : r.shards ? `<i class="dp">+${r.shards}</i>` : ''}<span>${esc(itemName(r.id))}</span></div>`).join('')}</div>
-      <div class="chips"><span class="chipx">${ic('i-sparkle')}${news} new</span><span class="chipx">${ic('i-shard')}+${sh} shards</span><span class="chipx">${stars(D.TIER[best.tier].stars)} best: ${D.TIER[best.tier].name}</span></div>`;
+    el.innerHTML = `<h3>${t('Results')}</h3><div class="gz-grid">${res.map((r) => `<div class="gz-cell tier-${r.tier}" style="--tc:${TIER_COLOR[r.tier]}">${thumb(r.id, true)}${r.isNew ? `<i class="nw">${t('NEW')}</i>` : r.shards ? `<i class="dp">+${r.shards}</i>` : ''}<span>${esc(itemName(r.id))}</span></div>`).join('')}</div>
+      <div class="chips"><span class="chipx">${ic('i-sparkle')}${t('{n} new', { n: news })}</span><span class="chipx">${ic('i-shard')}${t('+{n} shard|+{n} shards', { n: sh })}</span><span class="chipx">${stars(D.TIER[best.tier].stars)} ${t('best: {tier}', { tier: tierName(best.tier) })}</span></div>`;
     el.hidden = false; paintBox(el);
     setPhase('summary');
   }
@@ -270,17 +274,20 @@ export function createGachaUI(G, ui) {
   }
   function toysBody() {
     const s = st(), owned = S.toysOwned(s), total = D.COLLECTIBLE_IDS.length;
-    let h = `<div class="card hi row between"><div><b>${owned} / ${total} toys collected</b><div class="muted">Duplicates become shards for the Prize Counter</div></div>${ic('i-capsule', 'l')}</div>`;
-    h += `<div class="mile">${D.TOY_MILESTONES.map((m, i) => { const got = s.gacha.milesClaimed.includes(i), can = !got && owned >= m.n; return `<button class="${got ? 'got' : can ? 'can' : ''}" data-gz="mile:${i}">${m.n}<br>${got ? '✓' : `${ic('i-coin', 's')}${m.reward.coins}`}</button>`; }).join('')}</div>`;
-    h += `<div class="tabs" style="padding:0 0 8px"><button class="${toyTab === 'figs' ? 'on' : ''}" data-gz="toytab:figs">Figures</button><button class="${toyTab === 'goods' ? 'on' : ''}" data-gz="toytab:goods">Goodies</button></div>`;
+    let h = `<div class="card hi row between"><div><b>${t('{n} / {total} toys collected', { n: owned, total })}</b><div class="muted">${t('Duplicates become shards for the Prize Counter')}</div></div>${ic('i-capsule', 'l')}</div>`;
+    const noRewards = G.setRewardsBlocked();          // e.g. Japan: no rewards for completing sets of capsule prizes
+    if (!noRewards) h += `<div class="mile">${D.TOY_MILESTONES.map((m, i) => { const got = s.gacha.milesClaimed.includes(i), can = !got && owned >= m.n; return `<button class="${got ? 'got' : can ? 'can' : ''}" data-gz="mile:${i}">${m.n}<br>${got ? '✓' : `${ic('i-coin', 's')}${m.reward.coins} ${ic('i-glass', 's')}${m.reward.glass}`}</button>`; }).join('')}</div>`;
+    h += `<div class="tabs" style="padding:0 0 8px"><button class="${toyTab === 'figs' ? 'on' : ''}" data-gz="toytab:figs">${t('Figures')}</button><button class="${toyTab === 'goods' ? 'on' : ''}" data-gz="toytab:goods">${t('Goodies')}</button></div>`;
     if (toyTab === 'figs') {
       for (const set of S.toySetInfo(s)) {
         const gold = set.id === 'set_gold';
-        h += `<div class="dexfam"><div class="fh"><span>${esc(set.name)} <small>${set.have}/${set.total}</small></span>${set.claimed ? '<span class="tag">Complete ✓</span>' : set.have >= set.total ? `<button class="btn small lemon pulse" data-gz="set:${set.id}">Claim ${rewardChips(set.reward)}</button>` : `<small>Set bonus ${rewardChips(set.reward)}</small>`}</div>
+        const done = set.have >= set.total;
+        const right = set.claimed || (done && noRewards) ? `<span class="tag">${t('Complete')} ✓</span>` : noRewards ? '' : done ? `<button class="btn small lemon pulse" data-gz="set:${set.id}">${t('Claim')} ${rewardChips(set.reward)}</button>` : `<small>${t('Set bonus')} ${rewardChips(set.reward)}</small>`;
+        h += `<div class="dexfam"><div class="fh"><span>${esc(toySetName(set))} <small>${set.have}/${set.total}</small></span>${right}</div>
           <div class="dexrow ${gold ? '' : ''}">${set.items.slice(0, 4).map(slot).join('')}</div>${set.items.length > 4 ? `<div class="dexrow r3" style="grid-template-columns:repeat(${Math.min(4, set.items.length - 4)},1fr)">${set.items.slice(4, 8).map(slot).join('')}</div>` : ''}${set.items.length > 8 ? `<div class="dexrow r3" style="grid-template-columns:repeat(${set.items.length - 8},1fr)">${set.items.slice(8).map(slot).join('')}</div>` : ''}</div>`;
       }
     } else {
-      for (const [kind, label] of [['hat', 'Hats'], ['prop', 'Beach decor'], ['skin', 'Pool skins'], ['fx', 'Effects']]) {
+      for (const [kind, label] of [['hat', t('Hats')], ['prop', t('Beach decor')], ['skin', t('Pool skins')], ['fx', t('Effects')]]) {
         const ids = D.GACHA_POOL.filter((i) => i.kind === kind).map((i) => i.id);
         h += `<div class="dexfam"><div class="fh"><span>${label}</span><small>${ids.filter((i) => s.gacha.owned[i]).length}/${ids.length}</small></div><div class="dexrow">${ids.map(slot).join('')}</div></div>`;
       }
@@ -288,43 +295,44 @@ export function createGachaUI(G, ui) {
     return h;
   }
   function toyDetail(id) {
-    const s = st(), it = D.POOL_BY_ID[id], n = s.gacha.owned[id] || 0, t = D.TIER[it.tier], row = S.gachaTable(now()).rows.find((r) => r.id === id);
-    ui.mountModal('toydetail', { title: n ? it.name : 'Not collected yet', top: true, render: () => {
+    const s = st(), it = D.POOL_BY_ID[id], n = s.gacha.owned[id] || 0, tier = D.TIER[it.tier], row = S.gachaTable(now()).rows.find((r) => r.id === id);
+    ui.mountModal('toydetail', { title: n ? itemName(id) : t('Not collected yet'), top: true, render: () => {
       let act = '';
-      if (n && (it.kind === 'fig' || it.kind === 'prop')) act = `<button class="btn green wide" data-gz="place:${id}">Place on my beach</button>`;
-      else if (n && (it.kind === 'skin' || it.kind === 'fx')) act = `<button class="btn green wide" data-gz="equip:${id}">Equip</button>`;
-      else if (n && it.kind === 'hat') act = `<p class="muted">Tap a creature, open <b>Style</b> and pick this hat.</p>`;
-      else act = `<button class="btn lemon wide" data-gz="prizefor:${id}">Prize Counter · ${ic('i-shard', 's')}${t.prize}</button>`;
-      return { body: `<div class="reveal center"><div class="gz-detail-art" style="--tc:${TIER_COLOR[it.tier]}">${thumb(id, !!n)}</div><div class="chips">${tierTag(it.tier)}${n ? `<span class="tag">Owned ×${n}</span>` : ''}</div><p class="muted">${n ? esc(D.DECOR[id]?.blurb || `A ${kindLabel(it)} from the Capsule Machine.`) : `Chance per pull: ${pct(row.prob)}${row.spotlight ? ' (this week\'s spotlight!)' : ''}`}</p>${act}</div>` };
+      if (n && (it.kind === 'fig' || it.kind === 'prop')) act = `<button class="btn green wide" data-gz="place:${id}">${t('Place on my beach')}</button>`;
+      else if (n && (it.kind === 'skin' || it.kind === 'fx')) act = `<button class="btn green wide" data-gz="equip:${id}">${t('Equip')}</button>`;
+      else if (n && it.kind === 'hat') act = `<p class="muted">${t('Tap a creature, open Style and pick this hat.')}</p>`;
+      else act = `<button class="btn lemon wide" data-gz="prizefor:${id}">${t('Prize Counter')} · ${ic('i-shard', 's')}${tier.prize}</button>`;
+      return { body: `<div class="reveal center"><div class="gz-detail-art" style="--tc:${TIER_COLOR[it.tier]}">${thumb(id, !!n)}</div><div class="chips">${tierTag(it.tier)}${n ? `<span class="tag">${t('Owned ×{n}', { n })}</span>` : ''}</div><p class="muted">${n ? esc(decorBlurb(id) || t('A {kind} from the Capsule Machine.', { kind: kindLabel(it) })) : `${t('Chance per pull: {p}', { p: pct(row.prob) })}${row.spotlight ? ` ${t("(this week's spotlight!)")}` : ''}`}</p>${act}</div>` };
     } });
   }
 
   // ------------------------------------------------------------------ PRIZES tab
   function prizesBody() {
     const s = st(), g = s.gacha;
-    let h = `<div class="card hi"><div class="row between"><div><b>${ic('i-shard', 's')} ${fmt(g.shards)} shards</b><div class="muted">Every duplicate capsule turns into shards. Trade them for the exact toy you want.</div></div></div></div>`;
-    h += `<div class="tabs compact" style="padding:8px 0">${TIERS.map((t) => `<button class="${prizeTier === t.id ? 'on' : ''}" data-gz="ptier:${t.id}">${t.name}</button>`).join('')}</div>`;
-    const list = D.POOL_BY_TIER[prizeTier].filter((i) => !i.filler && !g.owned[i.id]);
-    if (!list.length) h += `<div class="card center"><b>You own every ${D.TIER[prizeTier].name} toy!</b></div>`;
-    else h += `<div class="list">${list.map((i) => { const c = S.prizeCost(i.id), can = g.shards >= c; return `<div class="card prize-row">${thumb(i.id, true, 'pt')}<div class="pn"><b>${esc(i.name)}</b><small>${kindLabel(i)}</small></div><button class="btn small ${can ? 'green' : 'off'}" data-gz="prize:${i.id}">${ic('i-shard', 's')}${c}</button></div>`; }).join('')}</div>`;
+    let h = `<div class="card hi"><div class="row between"><div><b>${ic('i-shard', 's')} ${t('{n} shard|{n} shards', { n: fmt(g.shards), count: g.shards })}</b><div class="muted">${t('Every duplicate capsule turns into shards. Trade them for the exact toy you want.')}</div></div></div></div>`;
+    h += `<div class="tabs compact" style="padding:8px 0">${TIERS.map((tr) => `<button class="${prizeTier === tr.id ? 'on' : ''}" data-gz="ptier:${tr.id}">${tierName(tr.id)}</button>`).join('')}</div>`;
+    const avail = D.POOL_BY_TIER[prizeTier].filter((i) => !i.filler && !g.owned[i.id]);
+    if (!avail.length) h += `<div class="card center"><b>${t('You own every {tier} toy!', { tier: tierName(prizeTier) })}</b></div>`;
+    else h += `<div class="list">${avail.map((i) => { const c = S.prizeCost(i.id), can = g.shards >= c; return `<div class="card prize-row">${thumb(i.id, true, 'pt')}<div class="pn"><b>${esc(itemName(i.id))}</b><small>${kindLabel(i)}</small></div><button class="btn small ${can ? 'green' : 'off'}" data-gz="prize:${i.id}">${ic('i-shard', 's')}${c}</button></div>`; }).join('')}</div>`;
     return h;
   }
 
   // ------------------------------------------------------------------ RATES tab
   function ratesBody() {
     const s = st(), tb = S.gachaTable(now()), cap = D.GACHA.paidDailyCap;
-    let h = `<div class="card"><h5>How the Capsule Machine works</h5><ul class="bul">
-      <li>${ic('i-check', 's')}<span>Every capsule comes from the tables below. Free, Coin and Sea Glass pulls all use <b>the same rates</b>.</span></li>
-      <li>${ic('i-check', 's')}<span>Tier rates: ${TIERS.map((t) => `<b>${t.name} ${t.p}%</b>`).join(' · ')}. Inside a tier, each item's share is listed below.</span></li>
-      <li>${ic('i-check', 's')}<span><b>Guarantees:</b> at least one Rare or better <i>toy</i> in every ${D.GACHA.pityRare} pulls and a Legendary toy at least every ${D.GACHA.pityLegend} pulls (small prize capsules don't count). This only ever adds chances, it never lowers a rate. Your counters: <b>${s.gacha.pityR}</b> of ${D.GACHA.pityRare} and <b>${s.gacha.pityL}</b> of ${D.GACHA.pityLegend}.</span></li>
-      <li>${ic('i-check', 's')}<span><b>Spotlight:</b> each week one Rare and one Legendary toy are ${D.GACHA.spotMult}× as likely as usual, so the others in that tier are slightly less likely that week. The lists below are this week's exact chances.</span></li>
-      <li>${ic('i-check', 's')}<span><b>Duplicates</b> become shards (${TIERS.map((t) => `${t.name} ${t.shards}`).join(', ')}) for the Prize Counter, where any toy can be bought outright.</span></li>
-      <li>${ic('i-check', 's')}<span>Toys, hats and looks are cosmetic. They never change how fast creatures earn or evolve. Small prizes (coins, Sea Glass, pearls, Speed Tokens) are one-time.</span></li>
-      <li>${ic('i-check', 's')}<span><b>Free ways to pull:</b> a free capsule every day, plus Capsule Coins from quests, Tide Gifts, daily rewards and the Tidedex.</span></li>
-      <li>${ic('i-check', 's')}<span><b>Spending limit:</b> ${cap} Sea Glass pulls per day. Turn Sea Glass pulls off any time in Settings.</span></li></ul></div>`;
-    for (const t of TIERS) {
-      const rows = tb.rows.filter((r) => r.tier === t.id).sort((a, b) => b.prob - a.prob);
-      h += `<details class="rate-tier" ${t.id === 'legendary' ? 'open' : ''}><summary style="--tc:${t.color}"><span>${stars(t.stars)} ${t.name}</span><b>${t.p}%</b></summary><div class="list">${rows.map((r) => `<div class="rate-row"><span class="rt">${thumb(r.id, true)}</span><span class="rn">${esc(itemName(r.id))}${r.spotlight ? ` <i class="spot">${ic('i-sparkle', 's')}spotlight</i>` : ''}<small>${s.gacha.owned[r.id] ? `owned ×${s.gacha.owned[r.id]}` : ''}</small></span><b>${pct(r.prob)}</b></div>`).join('')}</div></details>`;
+    const li = (html) => `<li>${ic('i-check', 's')}<span>${html}</span></li>`;
+    let h = `<div class="card"><h5>${t('How the Capsule Machine works')}</h5><ul class="bul">
+      ${li(t('Every capsule comes from the tables below. Free, Coin and Sea Glass pulls all use the same rates.'))}
+      ${li(t("Tier rates: {rates}. Inside a tier, each item's share is listed below.", { rates: TIERS.map((tr) => `<b>${tierName(tr.id)} ${tr.p}%</b>`).join(' · ') }))}
+      ${li(t("Guarantees: at least one Rare or better toy in every {r} pulls and a Legendary toy at least every {l} pulls (small prize capsules don't count). This only ever adds chances, it never lowers a rate.", { r: D.GACHA.pityRare, l: D.GACHA.pityLegend }) + ' ' + t('Your counters: {r} of {rr} and {l} of {ll}.', { r: `<b>${s.gacha.pityR}</b>`, rr: D.GACHA.pityRare, l: `<b>${s.gacha.pityL}</b>`, ll: D.GACHA.pityLegend }))}
+      ${li(t("Spotlight: each week one Rare and one Legendary toy are {n}× as likely as usual, so the others in that tier are slightly less likely that week. The lists below are this week's exact chances.", { n: D.GACHA.spotMult }))}
+      ${li(t('Duplicates become shards ({list}) for the Prize Counter, where any toy can be bought outright.', { list: list(TIERS.map((tr) => `${tierName(tr.id)} ${tr.shards}`), 'unit') }))}
+      ${li(t('Toys, hats and looks are cosmetic. They never change how fast creatures earn or evolve. Small prizes (coins, Sea Glass, pearls, Speed Tokens) are one-time.'))}
+      ${li(t('Free ways to pull: a free capsule every day, plus Capsule Coins from quests, Tide Gifts, daily rewards and the Tidedex.'))}
+      ${li(t('Spending limit: {n} Sea Glass pulls per day. Turn Sea Glass pulls off any time in Settings.', { n: cap }))}</ul></div>`;
+    for (const tr of TIERS) {
+      const rows = tb.rows.filter((r) => r.tier === tr.id).sort((a, b) => b.prob - a.prob);
+      h += `<details class="rate-tier" ${tr.id === 'legendary' ? 'open' : ''}><summary style="--tc:${tr.color}"><span>${stars(tr.stars)} ${tierName(tr.id)}</span><b>${tr.p}%</b></summary><div class="list">${rows.map((r) => `<div class="rate-row"><span class="rt">${thumb(r.id, true)}</span><span class="rn">${esc(itemName(r.id))}${r.spotlight ? ` <i class="spot">${ic('i-sparkle', 's')}${t('spotlight')}</i>` : ''}<small>${s.gacha.owned[r.id] ? t('owned ×{n}', { n: s.gacha.owned[r.id] }) : ''}</small></span><b>${pct(r.prob)}</b></div>`).join('')}</div></details>`;
     }
     return h;
   }

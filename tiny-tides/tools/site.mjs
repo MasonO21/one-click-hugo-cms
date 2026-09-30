@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as D from '../src/data.js';
 import { collectLicenses, groupByText } from './licenses.mjs';
+import { NO_PAID_RANDOM, NO_SET_REWARDS } from '../src/regions.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -72,6 +73,12 @@ function licensesHtml() {
   return `${summary}<h3>Full license texts</h3>${full}`;
 }
 
+/** ['BE', 'BEL', 'BR', 'BRA'] → "Belgium and Brazil" (two-letter codes are the names; three-letter ones are the same places). */
+function countryNames(codes) {
+  const names = new Intl.DisplayNames('en', { type: 'region' });
+  return new Intl.ListFormat('en', { type: 'conjunction' }).format(codes.filter((c) => c.length === 2).map((c) => names.of(c)));
+}
+
 // ------------------------------------------------------------------ template engine
 export function vars() {
   const year = config.effectiveDate.slice(0, 4);
@@ -80,6 +87,7 @@ export function vars() {
     creatures: D.FORM_IDS.length, families: D.FAMILY_IDS.length, toys: D.COLLECTIBLE_IDS.length,
     pityRare: G.pityRare, pityLegend: G.pityLegend, pityRareMinus: G.pityRare - 1, pityLegendMinus: G.pityLegend - 1, spotMult: G.spotMult,
     glassCost: G.costGlass, glassCost10: G.costGlass10, coinCost: G.costCoin, paidCap: G.paidDailyCap,
+    noPaidCountries: countryNames(NO_PAID_RANDOM), noSetRewardCountries: countryNames(NO_SET_REWARDS),
     shardsHtml: shardsHtml(), prizeHtml: prizeHtml(), tiersHtml: tiersHtml(), itemsHtml: itemsHtml(), licensesHtml: licensesHtml(),
   };
 }

@@ -1,6 +1,6 @@
 TERMS OF USE (END-USER LICENSE AGREEMENT)
 
-Effective 29 September 2026 · Please read these terms before playing Tiny Tides
+Effective 30 September 2026 · Please read these terms before playing Tiny Tides
 
 In plain English. You may play Tiny Tides for fun on your own Apple devices. Virtual items (pearls, Sea Glass, coins, toys) are part of the game, not money, and cannot be cashed out. Capsule pulls are random and the exact rates are published in the game and on the drop rates page (https://YOUR-HOST.example/tiny-tides/rates.html). Apple handles payments and refunds. Don’t cheat or copy the game. The game is provided as-is, and your legal rights as a consumer are not reduced by these terms.
 
@@ -52,7 +52,7 @@ Our Privacy Policy (https://YOUR-HOST.example/tiny-tides/privacy.html) explains 
 
 11. AVAILABILITY AND CHANGES
 
-We work to keep the App working but do not promise it will be uninterrupted or error-free. We may update, suspend or discontinue the App or features, and may update these Terms; if a change materially affects you we will post the new version with a new effective date and, where required, ask you to accept it. Continued use after the effective date means you accept the change.
+We work to keep the App working but do not promise it will be uninterrupted or error-free. Some features are not offered everywhere so that the App follows local law: currently Sea Glass capsule pulls are unavailable in Belgium and Brazil, and Toybox set and collection rewards are unavailable in Japan. We may update, suspend or discontinue the App or features, and may update these Terms; if a change materially affects you we will post the new version with a new effective date and, where required, ask you to accept it. Continued use after the effective date means you accept the change.
 
 12. DISCLAIMER OF WARRANTIES
 
@@ -64,7 +64,7 @@ To the fullest extent permitted by law, we are not liable for indirect, incident
 
 14. GOVERNING LAW AND DISPUTES
 
-These Terms are governed by the laws of YOUR STATE OR COUNTRY, without regard to conflict-of-law rules, and disputes will be heard in the courts of YOUR CITY, STATE OR COUNTRY, except that if you are a consumer you keep the benefit of the mandatory consumer-protection laws and courts of the place where you live. Please contact us first at support@YOUR-DOMAIN.example (support@YOUR-DOMAIN.example) so we can try to resolve any concern informally.
+These Terms are governed by the laws of the State of YOUR STATE (for example California), United States of America, and applicable U.S. federal law, without regard to conflict-of-law rules, and disputes will be heard in the state or federal courts located in YOUR STATE (for example California), except that if you are a consumer you keep the benefit of the mandatory consumer-protection laws and courts of the place where you live. Please contact us first at maceion@proton.me (maceion@proton.me) so we can try to resolve any concern informally. If you live in the European Union, you can also use your national consumer bodies or out-of-court dispute resolution; we are not obliged to take part in consumer arbitration boards but will consider it in good faith.
 
 15. APPLE TERMS
 
@@ -84,7 +84,7 @@ If you obtained the App from the Apple App Store, you acknowledge and agree that
 
 (g) Legal compliance. You represent and warrant that (i) you are not located in a country that is subject to a U.S. Government embargo, or that has been designated by the U.S. Government as a “terrorist supporting” country; and (ii) you are not listed on any U.S. Government list of prohibited or restricted parties.
 
-(h) Developer name and address. Questions, complaints or claims about the App: YOUR LEGAL NAME OR COMPANY NAME, YOUR FULL MAILING ADDRESS, YOUR COUNTRY; support@YOUR-DOMAIN.example (support@YOUR-DOMAIN.example).
+(h) Developer name and address. Questions, complaints or claims about the App: YOUR LEGAL NAME OR COMPANY NAME, YOUR MAILING ADDRESS (street or PO box, city, state, ZIP), United States of America; telephone YOUR PHONE NUMBER (a Google Voice or business number is fine); maceion@proton.me (maceion@proton.me).
 
 (i) Third-party terms. You must comply with applicable third-party terms of agreement when using the App (for example, your wireless data service agreement).
 
@@ -92,4 +92,4 @@ If you obtained the App from the Apple App Store, you acknowledge and agree that
 
 16. CONTACT
 
-YOUR LEGAL NAME OR COMPANY NAME, YOUR FULL MAILING ADDRESS, YOUR COUNTRY · support@YOUR-DOMAIN.example (support@YOUR-DOMAIN.example)
+YOUR LEGAL NAME OR COMPANY NAME, YOUR MAILING ADDRESS (street or PO box, city, state, ZIP), United States of America · maceion@proton.me (maceion@proton.me) · YOUR PHONE NUMBER (a Google Voice or business number is fine)

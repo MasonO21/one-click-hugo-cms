@@ -5,15 +5,15 @@ with **exactly** these Product IDs (they are derived from the bundle id `com.tin
 
 | Product ID | Reference / Display name | Type | Suggested price | Description |
 |---|---|---|---|---|
-| `com.tinytides.game.glass.60` | 60 Sea Glass | Consumable | $0.99 | 60 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
-| `com.tinytides.game.glass.330` | 330 Sea Glass | Consumable | $4.99 | 330 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
-| `com.tinytides.game.glass.700` | 700 Sea Glass | Consumable | $9.99 | 700 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
-| `com.tinytides.game.glass.1500` | 1500 Sea Glass | Consumable | $19.99 | 1500 Sea Glass to skip evolution timers, buy decor and optionally pull from the Capsule Machine (randomized prizes, rates shown in game). |
-| `com.tinytides.game.deepocean` | Deep Ocean Biome | Non-Consumable | $7.99 | Unlocks the glowing Deep Ocean biome with 28 new creatures. |
-| `com.tinytides.game.hourglass` | Golden Hourglass | Non-Consumable | $4.99 | Evolution timers 25% shorter forever, plus one free instant finish per day. |
-| `com.tinytides.game.pack.sakura` | Sakura Shore Pack | Non-Consumable | $2.99 | A cosmetic decor bundle: pool skin, props, hats and effects. |
-| `com.tinytides.game.pack.neon` | Neon Arcade Pack | Non-Consumable | $2.99 | A cosmetic decor bundle: pool skin, props, hats and effects. |
-| `com.tinytides.game.pack.party` | Pool Party Pack | Non-Consumable | $2.99 | A cosmetic decor bundle: pool skin, props, hats and effects. |
-| `com.tinytides.game.starter` | Starter Bundle | Non-Consumable | $2.99 | 200 Sea Glass, a Party Hat and the Bubblegum pool skin. |
+| `com.tinytides.game.glass.60` | 60 Sea Glass | Consumable | $0.99 | Sea Glass for timers, decor and capsules |
+| `com.tinytides.game.glass.330` | 330 Sea Glass | Consumable | $4.99 | Sea Glass for timers, decor and capsules |
+| `com.tinytides.game.glass.700` | 700 Sea Glass | Consumable | $9.99 | Sea Glass for timers, decor and capsules |
+| `com.tinytides.game.glass.1500` | 1500 Sea Glass | Consumable | $19.99 | Sea Glass for timers, decor and capsules |
+| `com.tinytides.game.deepocean` | Deep Ocean Biome | Non-Consumable | $7.99 | A glowing biome with 28 new creatures |
+| `com.tinytides.game.hourglass` | Golden Hourglass | Non-Consumable | $4.99 | Faster evolutions + a daily free finish |
+| `com.tinytides.game.pack.sakura` | Sakura Shore Pack | Non-Consumable | $2.99 | Cherry-blossom skin, props, hats & petals |
+| `com.tinytides.game.pack.neon` | Neon Arcade Pack | Non-Consumable | $2.99 | Neon skin, arcade props, hats & stars |
+| `com.tinytides.game.pack.party` | Pool Party Pack | Non-Consumable | $2.99 | Flamingo float, crowns, confetti & more |
+| `com.tinytides.game.starter` | Starter Bundle | Non-Consumable | $2.99 | 200 Sea Glass, a Party Hat & a pool skin |
 
-Every product needs a display name, description, a price, and a **review screenshot** (a screenshot of the Shop screen showing that item; use the ones in `store/screenshots`).
+Every product needs a display name (≤ 30 characters), a description (≤ 45), a price, and a **review screenshot** (a screenshot of the Shop screen showing that item). Use the English (U.S.) localization with the name and description above.

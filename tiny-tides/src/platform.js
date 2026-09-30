@@ -1,5 +1,5 @@
 // Tiny Tides — native/web bridge. Every call is wrapped so the game works in a plain browser too.
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -10,6 +10,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { NativePurchases, PURCHASE_TYPE } from '@capgo/native-purchases';
 import { PRODUCTS, PRODUCT_IDS } from './data.js';
+import { tk } from './i18n.js';
 
 
 // Injected by tools/build.mjs as literals so esbuild can strip all debug code from release builds.
@@ -119,11 +120,34 @@ export async function shareCanvas(canvas, text) {
   return { ok: false, unsupported: true };   // plain browsers / sandboxed pages: the UI shows the picture to long-press instead
 }
 
+// ------------------------------------------------------------------ age (Apple's Declared Age Range, iOS 26+)
+// Native side: ios/App/App/AgeRangePlugin.swift. Where Apple offers nothing (older iOS, the web) the game asks its own
+// neutral birth-month question instead, see ui.ensurePaidOk().
+const AgeRange = registerPlugin('AgeRange');
+export const age = {
+  /** { available, required }: can Apple share an age range here, and does the law where the player is require an age check? */
+  async status() {
+    if (!isNative) return { available: false, required: false };
+    const r = await safe(() => AgeRange.status(), null);
+    return { available: !!r?.available, required: !!r?.required };
+  },
+  /** Asks Apple (system sheet) whether the player is at least `gate` years old: 'adult' | 'minor' | '' (declined, unavailable, error). */
+  async ask(gate) {
+    if (!isNative) return '';
+    const r = await safe(() => AgeRange.request({ gate }), null);
+    if (r?.result !== 'sharing') return '';
+    if (Number.isFinite(r.lower) && r.lower >= gate) return 'adult';
+    if (!Number.isFinite(r.lower) || (Number.isFinite(r.upper) && r.upper < gate)) return 'minor';
+    return '';
+  },
+};
+
 // ------------------------------------------------------------------ in-app purchases (StoreKit 2 via @capgo/native-purchases)
 export const store = {
   /** 'native' (real StoreKit) | 'demo' (simulated, no money) | 'unavailable' */
   mode: isNative ? 'native' : (DEMO || DEBUG ? 'demo' : 'unavailable'),
   prices: {},
+  priceNums: {},               // productId -> { price: number, currency: 'USD' } from the App Store
   country: '',                 // App Store storefront country (ISO alpha-3 from StoreKit, e.g. "USA"); '' until known
   listener: null,
   /** Two-letter/three-letter region hints: the storefront (authoritative) and the device locale (extra caution). */
@@ -148,13 +172,23 @@ export const store = {
   async loadPrices() {
     if (store.mode !== 'native') return;
     const r = await safe(() => NativePurchases.getProducts({ productIdentifiers: PRODUCT_IDS, productType: PURCHASE_TYPE.INAPP }), null);
-    for (const p of r?.products || []) store.prices[p.identifier] = p.priceString;
+    for (const p of r?.products || []) {
+      store.prices[p.identifier] = p.priceString;
+      if (Number.isFinite(Number(p.price)) && p.currencyCode) store.priceNums[p.identifier] = { price: Number(p.price), currency: String(p.currencyCode) };
+    }
   },
   price(id) { return store.prices[id] || PRODUCTS[id].price; },
+  /** { price, currency } for a product: the App Store's numbers when known, otherwise the US list price (web/demo builds). */
+  priceInfo(id) {
+    if (store.priceNums[id]) return store.priceNums[id];
+    if (store.mode === 'native') return null;
+    const m = /^\$(\d+(?:\.\d+)?)$/.exec(PRODUCTS[id]?.price || '');
+    return m ? { price: Number(m[1]), currency: 'USD' } : null;
+  },
   /** Resolves { ok, txId } | { ok:false, cancelled } | { ok:false, pending } | { ok:false, error } */
   async buy(id) {
     if (store.mode === 'demo') { await new Promise((r) => setTimeout(r, 450)); return { ok: true, txId: `demo-${id}-${Date.now()}` }; }
-    if (store.mode !== 'native') return { ok: false, error: 'Purchases are available in the App Store version.' };
+    if (store.mode !== 'native') return { ok: false, error: tk('Purchases are available in the App Store version.') };
     try {
       const t = await NativePurchases.purchaseProduct({ productIdentifier: id, productType: PURCHASE_TYPE.INAPP, quantity: 1, autoAcknowledgePurchases: false });
       // the money has moved: never fail here just because the id is missing, use a unique stand-in (a ledger entry still stops repeats)
@@ -163,7 +197,7 @@ export const store = {
       const msg = String(e?.message || e || '');
       if (/cancel/i.test(msg)) return { ok: false, cancelled: true };
       if (/pending/i.test(msg)) return { ok: false, pending: true };
-      return { ok: false, error: msg || 'Purchase failed' };
+      return { ok: false, error: msg || tk('Purchase failed') };
     }
   },
   /** Tell StoreKit we've delivered the goods. Call only after the grant is safely saved. Resolves true on success. */
@@ -180,7 +214,7 @@ export const store = {
   /** Ask the App Store to sync this Apple ID's purchases (may show a sign-in prompt). The caller then reads `history()`. */
   async restore() {
     if (store.mode === 'demo') return { ok: true };
-    if (store.mode !== 'native') return { ok: false, error: 'Restore is available in the App Store version.' };
+    if (store.mode !== 'native') return { ok: false, error: tk('Restore is available in the App Store version.') };
     try { await NativePurchases.restorePurchases(); return { ok: true }; }
     catch (e) { return { ok: false, error: String(e?.message || e) }; }
   },

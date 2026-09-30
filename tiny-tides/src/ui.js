@@ -2,22 +2,21 @@
 import * as D from './data.js';
 import * as S from './sim.js';
 import * as A from './audio.js';
-import { drawSprite, getSilhouette } from './art_creatures.js';
+import { drawSprite, HAT_ART, geomOf } from './art_creatures.js';
 import { PIECE_ART } from './art_world.js';
 import { drawProp, drawItemArt } from './art_gacha.js';
-import { store, haptic, openUrl, notify } from './platform.js';
-import { LINKS, VERSION, POLICY, SITE, LICENSES } from './config.js';
+import { store, haptic, openUrl, notify, age } from './platform.js';
+import { VERSION, POLICY, SITE, LICENSES, pageUrl } from './config.js';
 import { createGachaUI } from './gacha_ui.js';
+import { t, tk, num, dur, list, sentences, formName, formBlurb, famHint, traitName, stageName, pieceName, pieceShort, decorName, packName, packBlurb, productName, productTag, boostName, boostDesc, questText, giftName, unlockName } from './i18n.js';
 
 const { FORMS, FAMILIES, PIECES, DECOR, TRAIT_INFO, PRODUCTS } = D;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ic = (n, c = '') => `<svg class="ic ${c}" aria-hidden="true"><use href="#${n}"/></svg>`;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const fmt = S.fmtNum;
+const fmt = num;
 const cost = (n, icon = 'i-pearl', cls = 's') => `<span class="cost">${ic(icon, cls)}${fmt(n)}</span>`;
-const traitName = (t) => TRAIT_INFO[t].name;
-const stageName = (s) => (s === 1 ? 'Baby' : s === 2 ? 'Evolved' : 'Mythic');
 
 export function createUI(G) {
   const scene = G.scene;
@@ -30,16 +29,16 @@ export function createUI(G) {
   let shopTab = 'glass', shopSub = 'bundles', dexTab = 'tide', tick = 0;
 
   // ------------------------------------------------------------------ small helpers
-  const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+  const el = (html) => { const tpl = document.createElement('template'); tpl.innerHTML = html.trim(); return tpl.content.firstElementChild; };
   ui.toast = (msg, kind = '') => {
     const root = $('#toasts');
     while (root.children.length > 2) root.firstChild.remove();
-    const t = el(`<div class="toast ${kind}">${esc(msg)}</div>`);
-    root.appendChild(t); setTimeout(() => t.remove(), 2700);
+    const node = el(`<div class="toast ${kind}">${esc(msg)}</div>`);
+    root.appendChild(node); setTimeout(() => node.remove(), 2700);
   };
   let busyTimer = 0;
   ui.setBusy = (v) => {
-    const b = $('#busy'); if (v && !b) $('#app').appendChild(el(`<div class="busy" id="busy"><div class="center">${ic('i-blip')}<div>One moment…</div></div></div>`));
+    const b = $('#busy'); if (v && !b) $('#app').appendChild(el(`<div class="busy" id="busy"><div class="center">${ic('i-blip')}<div>${t('One moment…')}</div></div></div>`));
     else if (!v && b) b.remove();
     clearTimeout(busyTimer);
     if (v) busyTimer = setTimeout(() => { G.busy = false; ui.setBusy(false); }, 60000);     // a store call that never answers must not lock the game
@@ -50,13 +49,14 @@ export function createUI(G) {
       if (cv.width !== px) { cv.width = px; cv.height = px; }
       c.clearRect(0, 0, cv.width, cv.height);
       const f = cv.dataset.form, size = cv.width;
-      if (cv.dataset.sil) { const s = getSilhouette(f); c.drawImage(s.canvas, 0, 0, size, size); c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `700 ${size * 0.34}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', size / 2, size * 0.5); }
-      else { c.save(); c.translate(size / 2, size * 0.72); drawSprite(c, f, 0, 0, size * 0.98, { hat: cv.dataset.hat || null }); c.restore(); }
+      // discovered and undiscovered creatures use the same framing, so the silhouette and the reveal line up exactly
+      c.save(); c.translate(size / 2, size * 0.6); drawSprite(c, f, 0, 0, size * 0.96, { hat: cv.dataset.hat || null, silhouette: !!cv.dataset.sil }); c.restore();
+      if (cv.dataset.sil) { c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `700 ${size * 0.34}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', size / 2, size * 0.5); }
     });
     $$('canvas[data-piece]', root).forEach((cv) => {
       const c = cv.getContext('2d'), px = Math.round((cv.clientWidth || 38) * (window.devicePixelRatio || 1)); cv.width = px; cv.height = px; c.clearRect(0, 0, px, px);
-      const id = cv.dataset.piece; const s = px * 1.0;
-      PIECE_ART[id](c, px / 2, px * 0.78, s * 0.98, 1.2, 3);
+      const id = cv.dataset.piece;
+      PIECE_ART[id](c, px / 2, px * 0.8, px * (D.PIECES[id].kind === 'plant' ? 0.72 : 0.92), 1.2, 3);       // plants are tall: smaller, so the fronds fit
     });
     $$('canvas[data-prop]', root).forEach((cv) => {
       const c = cv.getContext('2d'), px = Math.round((cv.clientWidth || 60) * (window.devicePixelRatio || 1)); cv.width = px; cv.height = px; c.clearRect(0, 0, px, px);
@@ -65,7 +65,9 @@ export function createUI(G) {
     $$('canvas[data-hat]', root).forEach((cv) => {
       if (cv.dataset.form) return;
       const c = cv.getContext('2d'), px = Math.round((cv.clientWidth || 44) * (window.devicePixelRatio || 1)); cv.width = px; cv.height = px; c.clearRect(0, 0, px, px);
-      c.save(); c.translate(px / 2, px * 0.7); drawSprite(c, 'crab.0', 0, 0, px * 1.05, { hat: cv.dataset.hat }); c.restore();
+      // the hat on its own, big enough to tell apart (on a creature it's too small to read at this size)
+      const id = cv.dataset.hat; c.save(); c.translate(px / 2, px * (id === 'shades' ? 0.5 : 0.72)); c.scale(px / 78, px / 78);
+      if (HAT_ART[id]) HAT_ART[id](c, geomOf('crab.0')); c.restore();
     });
     let scratch = null;
     $$('canvas[data-toy]', root).forEach((cv) => {
@@ -73,9 +75,9 @@ export function createUI(G) {
       if (cv.width !== px) { cv.width = px; cv.height = px; }
       const c = cv.getContext('2d'); c.clearRect(0, 0, px, px);
       if (cv.dataset.sil) {
-        const tmp = scratch ||= document.createElement('canvas'); tmp.width = tmp.height = px; const t = tmp.getContext('2d');
-        drawItemArt(t, cv.dataset.toy, px / 2, px * 0.46, px * 0.8, 1.2);
-        t.globalCompositeOperation = 'source-in'; t.fillStyle = '#5a4a8c'; t.fillRect(0, 0, px, px);
+        const tmp = scratch ||= document.createElement('canvas'); tmp.width = tmp.height = px; const tc = tmp.getContext('2d');
+        drawItemArt(tc, cv.dataset.toy, px / 2, px * 0.46, px * 0.8, 1.2);
+        tc.globalCompositeOperation = 'source-in'; tc.fillStyle = '#5a4a8c'; tc.fillRect(0, 0, px, px);
         c.drawImage(tmp, 0, 0); c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `700 ${px * 0.32}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', px / 2, px * 0.5);
       } else drawItemArt(c, cv.dataset.toy, px / 2, px * 0.46, px * 0.8, 1.2);
     });
@@ -93,27 +95,27 @@ export function createUI(G) {
   function buildChrome() {
     $('#hud').innerHTML = `
       <div class="hud-row">
-        <button class="pill level" data-act="levelinfo" aria-label="Pool level"><b>Lv <span id="h-lv">1</span><span id="h-xp"></span></b><div class="xp"><i id="h-xpbar"></i></div></button>
+        <button class="pill level" data-act="levelinfo" aria-label="${t('Pool level')}"><b><span id="h-lvl">${t('Lv {n}', { n: 1 })}</span><span id="h-xp"></span></b><div class="xp"><i id="h-xpbar"></i></div></button>
         <div class="spacer"></div>
-        <div class="pill" id="h-pearls" aria-label="Pearls">${ic('i-pearl')}<span>0</span></div>
-        <button class="pill plus" id="h-glass" data-act="shop:glass" aria-label="Sea Glass — open shop">${ic('i-glass')}<span>0</span><span class="plusbtn">${ic('i-plus')}</span></button>
-        <button class="round" data-act="settings" aria-label="Settings">${ic('i-gear')}</button>
+        <div class="pill" id="h-pearls" aria-label="${t('Pearls')}">${ic('i-pearl')}<span>0</span></div>
+        <button class="pill plus" id="h-glass" data-act="shop:glass" aria-label="${t('Sea Glass — open shop')}">${ic('i-glass')}<span>0</span><span class="plusbtn">${ic('i-plus')}</span></button>
+        <button class="round" data-act="settings" aria-label="${t('Settings')}">${ic('i-gear')}</button>
       </div>
       <div class="hud-row sub">
-        <div class="chip" id="h-tide">${ic('i-sun')}<span>Morning Tide</span></div>
+        <div class="chip" id="h-tide">${ic('i-sun')}<span></span></div>
         <div class="biomes">
-          <button class="bio on" data-act="biome:tide" id="b-tide">${ic('i-drop')}Tidepool</button>
-          <button class="bio" data-act="biome:deep" id="b-deep">${ic('i-deep')}Deep<span id="b-lock">${ic('i-lock', 's')}</span></button>
+          <button class="bio on" data-act="biome:tide" id="b-tide">${ic('i-drop')}${t('Tidepool')}</button>
+          <button class="bio" data-act="biome:deep" id="b-deep">${ic('i-deep')}${t('Deep')}<span id="b-lock">${ic('i-lock', 's')}</span></button>
         </div>
       </div>`;
     $('#nav').innerHTML = [
-      ['pool', 'i-drop', 'Pool'], ['build', 'i-build', 'Build'], ['dex', 'i-book', 'Tidedex'], ['quests', 'i-scroll', 'Quests'], ['shop', 'i-bag', 'Shop'],
+      ['pool', 'i-drop', t('Pool')], ['build', 'i-build', t('Build')], ['dex', 'i-book', t('Tidedex')], ['quests', 'i-scroll', t('Quests')], ['shop', 'i-bag', t('Shop')],
     ].map(([id, icon, label]) => `<button class="tab" data-tab="${id}" data-act="tab:${id}" aria-label="${label}">${ic(icon)}<span>${label}</span><i class="dot" hidden></i></button>`).join('');
     $('#fabs').innerHTML = `
-      <div class="fab ready" id="fab-collect" hidden><button class="round fab big" data-act="collectall" aria-label="Collect all pearls">${ic('i-pearl')}<span class="badge" id="fab-collect-n">0</span></button></div>
-      <div class="fab ready" id="fab-capsule" hidden><button class="round" data-act="gacha" aria-label="Capsule Machine">${ic('i-capsule')}<span class="badge" id="fab-capsule-n">!</span></button></div>
-      <div class="fab ready" id="fab-gift" hidden><button class="round" data-act="gift" aria-label="Open Tide Gift">${ic('i-gift')}<span class="badge">!</span></button></div>
-      <div class="fab opt"><button class="round" data-act="snap" aria-label="Take a picture">${ic('i-camera')}</button></div>`;
+      <div class="fab ready" id="fab-collect" hidden><button class="round fab big" data-act="collectall" aria-label="${t('Collect all pearls')}">${ic('i-pearl')}<span class="badge" id="fab-collect-n">0</span></button></div>
+      <div class="fab ready" id="fab-capsule" hidden><button class="round" data-act="gacha" aria-label="${t('Capsule Machine')}">${ic('i-capsule')}<span class="badge" id="fab-capsule-n">!</span></button></div>
+      <div class="fab ready" id="fab-gift" hidden><button class="round" data-act="gift" aria-label="${t('Open Tide Gift')}">${ic('i-gift')}<span class="badge">!</span></button></div>
+      <div class="fab opt"><button class="round" data-act="snap" aria-label="${t('Take a picture')}">${ic('i-camera')}</button></div>`;
   }
 
   // ------------------------------------------------------------------ HUD & chrome updates (cheap, run ~4x/sec)
@@ -123,17 +125,17 @@ export function createUI(G) {
     const s = st(), n = now();
     setText('#h-pearls span', fmt(s.cur.pearls));
     setText('#h-glass span', fmt(s.cur.glass));
-    setText('#h-lv', String(s.lvl));
+    setText('#h-lvl', t('Lv {n}', { n: s.lvl }));
     const need = D.xpForLevel(s.lvl);
-    setText('#h-xp', s.lvl >= D.MAX_POOL_LVL ? 'MAX' : `${s.xp}/${need}`);
+    setText('#h-xp', s.lvl >= D.MAX_POOL_LVL ? t('MAX') : `${s.xp}/${need}`);
     const xb = $('#h-xpbar'); if (xb) xb.style.width = `${s.lvl >= D.MAX_POOL_LVL ? 100 : Math.min(100, s.xp / need * 100)}%`;
     const spring = S.springTide(n), hour = new Date(n).getHours();
     const w = S.giftWindow(n);
     const night = hour >= 20 || hour < 6;
-    const label = G.biome === 'deep' ? 'Deep Ocean' : spring.on ? `Spring Tide · ${spring.kind}` : (night ? 'Night Tide' : w.name);
+    const label = G.biome === 'deep' ? t('Deep Ocean') : spring.on ? t('Spring Tide · {kind}', { kind: spring.kind === 'Full Moon' ? t('Full Moon') : t('New Moon') }) : (night ? t('Night Tide') : giftName(w.id));
     const icon = G.biome === 'deep' ? 'i-deep' : night ? 'i-moon' : 'i-sun';
     const chip = $('#h-tide');
-    if (chip && (last.chip !== label + icon)) { last.chip = label + icon; chip.innerHTML = `${ic(icon)}<span>${esc(label)}</span>`; chip.classList.toggle('spring', spring.on); chip.title = spring.on ? '+25% pearls and faster eggs' : ''; }
+    if (chip && (last.chip !== label + icon)) { last.chip = label + icon; chip.innerHTML = `${ic(icon)}<span>${esc(label)}</span>`; chip.classList.toggle('spring', spring.on); chip.title = spring.on ? t('+25% pearls and faster eggs') : ''; }
     $('#b-deep').classList.toggle('locked', !s.iap.deep);
     $('#b-lock').hidden = !!s.iap.deep;
     $('#b-tide').classList.toggle('on', G.biome === 'tide');
@@ -148,10 +150,10 @@ export function createUI(G) {
     setText('#fab-capsule-n', S.gachaFreeAvailable(s, n) ? '!' : String(s.cur.coins));
     $('#fab-capsule .badge').hidden = !capReady;
     // nav
-    $$('#nav .tab').forEach((t) => {
-      const id = t.dataset.tab, open = modals.some((m) => m.id === id);
-      t.classList.toggle('on', open || (!modals.length && G.tab === id) || (!modals.length && id === 'pool' && G.tab === 'pool'));
-      const dot = $('.dot', t);
+    $$('#nav .tab').forEach((tabEl) => {
+      const id = tabEl.dataset.tab, open = modals.some((m) => m.id === id);
+      tabEl.classList.toggle('on', open || (!modals.length && G.tab === id) || (!modals.length && id === 'pool' && G.tab === 'pool'));
+      const dot = $('.dot', tabEl);
       let show = false;
       if (id === 'quests') show = S.dailyAvailable(s, n) || S.giftAvailable(s, n) || S.gachaFreeAvailable(s, n) || s.quests.list.some((q) => q.done && !q.claimed);
       if (id === 'dex') show = D.DEX_MILESTONES.some((m, i) => !s.dexClaimed.includes(i) && S.dexCount(s) >= m.n);
@@ -168,12 +170,12 @@ export function createUI(G) {
     if (el0.classList.contains('show') !== show) { el0.classList.toggle('show', show); setTimeout(() => ui.layoutChanged(), 0); }
     if (!show) return;
     const p = pool(), rate = S.totalRate(s, n), pop = S.population(p), cap = S.popCap(s, p);
-    const egg = pop >= cap ? 'Pool full' : `Egg in ${S.fmtDur(Math.max(0, p.nextEgg - n))}`;
+    const egg = pop >= cap ? t('Pool full') : t('Egg in {time}', { time: dur(Math.max(0, p.nextEgg - n)) });
     const spring = S.springTide(n).on;
     const sig = `${Math.round(rate)}|${pop}|${cap}|${egg}|${spring}`;
     if (sig === statsSig) return;
     statsSig = sig;
-    el0.innerHTML = `<div class="chip">${ic('i-pearl')}<span>${fmt(rate)}/h${spring ? ' ✦' : ''}</span></div><div class="chip">${ic('i-heart')}<span>${pop}/${cap} friends</span></div><div class="chip">${ic('i-sparkle')}<span>${egg}</span></div>`;
+    el0.innerHTML = `<div class="chip">${ic('i-pearl')}<span>${t('{n}/h', { n: fmt(rate) })}${spring ? ' ✦' : ''}</span></div><div class="chip">${ic('i-heart')}<span>${t('{pop}/{cap} friends', { pop, cap })}</span></div><div class="chip">${ic('i-sparkle')}<span>${egg}</span></div>`;
   }
 
   // ------------------------------------------------------------------ Build dock
@@ -187,18 +189,18 @@ export function createUI(G) {
     if (!open) { dock.classList.remove('open'); return; }
     const ex = S.expandInfo(s, biome);
     let h = '<div class="dock-in">';
-    h += toolBtn('dig', ic('k-dig'), 'Dig', cost(B.digCost[1], 'i-pearl', 's'));
-    h += toolBtn('fill', ic('k-fill'), 'Fill', '');
+    h += toolBtn('dig', ic('k-dig'), t('Dig'), cost(B.digCost[1], 'i-pearl', 's'));
+    h += toolBtn('fill', ic('k-fill'), t('Fill'), '');
     h += '<i class="dock-div"></i>';
     for (const id of D.PIECES_BY_BIOME[biome]) {
       const pc = PIECES[id], locked = !S.pieceUnlocked(s, id);
-      h += `<button class="tool ${G.tool === 'piece:' + id ? 'on' : ''} ${locked ? 'lock' : ''}" data-act="tool:piece:${id}" aria-label="${esc(pc.name)}"><canvas data-piece="${id}" style="width:38px;height:38px"></canvas><span>${esc(pc.short || pc.name)}</span><span class="price">${cost(pc.cost, 'i-pearl', 's')}</span>${locked ? `<i class="lk">${ic('i-lock', 's')}${pc.unlock}</i>` : ''}</button>`;
+      h += `<button class="tool ${G.tool === 'piece:' + id ? 'on' : ''} ${locked ? 'lock' : ''}" data-act="tool:piece:${id}" aria-label="${esc(pieceName(id))}"><canvas data-piece="${id}" style="width:38px;height:38px"></canvas><span>${esc(pieceShort(id))}</span><span class="price">${cost(pc.cost, 'i-pearl', 's')}</span>${locked ? `<i class="lk">${ic('i-lock', 's')}${pc.unlock}</i>` : ''}</button>`;
     }
     h += '<i class="dock-div"></i>';
     const decorId = G.tool?.startsWith('decor:') ? G.tool.slice(6) : null;
-    h += `<button class="tool ${decorId ? 'on' : ''}" data-act="decorpicker" aria-label="Decor">${decorId ? `<canvas data-prop="${decorId}" style="width:38px;height:38px"></canvas>` : ic('k-decor')}<span>Decor</span></button>`;
-    h += toolBtn('erase', ic('k-erase'), 'Erase', '');
-    if (ex) h += `<button class="tool sep ${ex.lvlOk ? '' : 'lock'}" data-act="expand" aria-label="Expand pool">${ic('k-expand')}<span>${ex.w}×${ex.h}</span><span class="price">${cost(ex.cost, 'i-pearl', 's')}</span>${ex.lvlOk ? '' : `<i class="lk">${ic('i-lock', 's')}${ex.lvl}</i>`}</button>`;
+    h += `<button class="tool ${decorId ? 'on' : ''}" data-act="decorpicker" aria-label="${t('Decor')}">${decorId ? `<canvas data-prop="${decorId}" style="width:38px;height:38px"></canvas>` : ic('k-decor')}<span>${t('Decor')}</span></button>`;
+    h += toolBtn('erase', ic('k-erase'), t('Erase'), '');
+    if (ex) h += `<button class="tool sep ${ex.lvlOk ? '' : 'lock'}" data-act="expand" aria-label="${t('Expand pool')}">${ic('k-expand')}<span>${ex.w}×${ex.h}</span><span class="price">${cost(ex.cost, 'i-pearl', 's')}</span>${ex.lvlOk ? '' : `<i class="lk">${ic('i-lock', 's')}${ex.lvl}</i>`}</button>`;
     h += '</div>';
     if (dock.dataset.sig !== h) { dock.dataset.sig = h; dock.innerHTML = h; paintMini(dock); }
     dock.classList.add('open');
@@ -243,68 +245,68 @@ export function createUI(G) {
   function renderSheet() {
     const sh = $('#sheet'), c = pool().creatures.find((k) => k.id === G.selected);
     if (!c) { ui.closeSheet(); return; }
-    const s = st(), p = pool(), f = FORMS[c.form], fam = FAMILIES[f.fam], n = now();
+    const s = st(), p = pool(), f = FORMS[c.form], n = now();
     const info = S.evoInfo(s, p, c), rate = S.creatureRate(s, p, c, n), hap = S.happiness(p, c);
     const rel = habitatRelevant(c, info);
     const lvlMax = S.maxLevel(f.stage), lc = c.lvl < lvlMax ? S.levelCost(f.stage, c.lvl) : 0;
     if (sh.dataset.for !== String(c.id)) sheetTab = window.innerHeight < 720 ? '' : (info.maxed ? 'habitat' : 'evo');   // short screens start collapsed
     if (info.maxed && sheetTab === 'evo') sheetTab = 'habitat';
-    const hearts = [0.34, 0.67, 0.95].map((t) => ic(hap >= t ? 'i-heart' : 'i-heart-o')).join('');
-    let h = `<button class="round x" data-act="closesheet" aria-label="Close">${ic('i-close')}</button>
+    const hearts = [0.34, 0.67, 0.95].map((k) => ic(hap >= k ? 'i-heart' : 'i-heart-o')).join('');
+    let h = `<button class="round x" data-act="closesheet" aria-label="${t('Close')}">${ic('i-close')}</button>
       <div class="sh-head"><canvas class="portrait" data-form="${c.form}" ${c.hat ? `data-hat="${c.hat}"` : ''}></canvas>
-        <div class="sh-title"><h3>${esc(f.name)}</h3>
-          <div class="meta"><span class="pips">${[1, 2, 3].map((i) => `<i class="${i <= f.stage ? 'on' : ''}"></i>`).join('')}</span><span>${stageName(f.stage)}</span><span>Lv ${c.lvl}${c.lvl >= lvlMax ? ' MAX' : ''}</span></div>
-          <div class="meta"><span class="hearts" title="Happiness">${hearts}</span><span class="cost">${ic('i-pearl', 's')}${fmt(c.evo ? 0 : rate)}/h</span></div>
+        <div class="sh-title"><h3>${esc(formName(c.form))}</h3>
+          <div class="meta"><span class="pips">${[1, 2, 3].map((i) => `<i class="${i <= f.stage ? 'on' : ''}"></i>`).join('')}</span><span>${stageName(f.stage)}</span><span>${t('Lv {n}', { n: c.lvl })}${c.lvl >= lvlMax ? ` ${t('MAX')}` : ''}</span></div>
+          <div class="meta"><span class="hearts" title="${t('Happiness')}">${hearts}</span><span class="cost">${ic('i-pearl', 's')}${t('{n}/h', { n: fmt(c.evo ? 0 : rate) })}</span></div>
         </div></div>`;
     if (c.evo) {
       const total = c.evo.end - c.evo.start, left = Math.max(0, c.evo.end - n), gcost = S.speedUpCost(s, c, n);
-      h += `<div class="evo-box mt2"><div class="row between"><span class="muted">Evolving…</span><span class="evo-timer" id="sh-timer">${S.fmtDur(left)}</span></div>
+      h += `<div class="evo-box mt2"><div class="row between"><span class="muted">${t('Evolving…')}</span><span class="evo-timer" id="sh-timer">${dur(left)}</span></div>
         <div class="prog"><i id="sh-prog" style="width:${Math.min(100, (1 - left / total) * 100)}%"></i></div>
         <div class="rowb">
-          <button class="btn lemon small" data-act="speed:glass">${ic('i-clock', 's')} Skip · ${cost(gcost, 'i-glass')}</button>
-          ${s.cur.tokens > 0 ? `<button class="btn lav small" data-act="speed:token">${ic('i-token', 's')} −1h (${s.cur.tokens})</button>` : ''}
-          ${S.freeFinishAvailable(s, n) ? `<button class="btn green small" data-act="speed:free">Free finish</button>` : ''}
+          <button class="btn lemon small" data-act="speed:glass">${ic('i-clock', 's')} ${t('Skip')} · ${cost(gcost, 'i-glass')}</button>
+          ${s.cur.tokens > 0 ? `<button class="btn lav small" data-act="speed:token">${ic('i-token', 's')} ${t('−1h ({n})', { n: s.cur.tokens })}</button>` : ''}
+          ${S.freeFinishAvailable(s, n) ? `<button class="btn green small" data-act="speed:free">${t('Free finish')}</button>` : ''}
         </div></div>`;
     } else {
       let evoBtn = '';
       if (!info.maxed) {
         const ready = info.reason !== 'level' && info.reason !== 'habitat';
-        const label = info.reason === 'level' ? `Reach Lv ${info.needLvl}` : info.reason === 'habitat' ? 'Improve habitat' : 'Evolve';
-        evoBtn = `<button class="btn pink btn-evolve col ${info.canStart ? 'pulse' : 'off'}" data-act="evolve">${label}${ready ? `<span class="sub">${cost(info.cost)} · ${S.fmtDur(info.dur)}</span>` : ''}</button>`;
+        const label = info.reason === 'level' ? t('Reach Lv {n}', { n: info.needLvl }) : info.reason === 'habitat' ? t('Improve habitat') : t('Evolve');
+        evoBtn = `<button class="btn pink btn-evolve col ${info.canStart ? 'pulse' : 'off'}" data-act="evolve">${label}${ready ? `<span class="sub">${cost(info.cost)} · ${dur(info.dur)}</span>` : ''}</button>`;
       }
-      const lvlBtn = c.lvl >= lvlMax ? `<button class="btn green btn-level off col" data-act="levelup">Max level</button>`
-        : `<button class="btn green btn-level col ${s.cur.pearls >= lc ? '' : 'off'}" data-act="levelup">${ic('i-up', 's')} Level up<span class="sub">${cost(lc)}</span></button>`;
+      const lvlBtn = c.lvl >= lvlMax ? `<button class="btn green btn-level off col" data-act="levelup">${t('Max level')}</button>`
+        : `<button class="btn green btn-level col ${s.cur.pearls >= lc ? '' : 'off'}" data-act="levelup">${ic('i-up', 's')} ${t('Level up')}<span class="sub">${cost(lc)}</span></button>`;
       h += `<div class="actions">${lvlBtn}${evoBtn || '<span></span>'}</div>`;
     }
-    h += `<div class="sh-tabs">${[['evo', info.maxed ? '' : 'Evolution'], ['habitat', 'Habitat'], ['style', 'Style']].filter((t) => t[1]).map(([id, l]) => `<button class="${sheetTab === id ? 'on' : ''}" data-act="shtab:${id}">${l}</button>`).join('')}</div>${sheetTab ? '<div class="sh-body">' : ''}`;
+    h += `<div class="sh-tabs">${[['evo', info.maxed ? '' : t('Evolution')], ['habitat', t('Habitat')], ['style', t('Style')]].filter((x) => x[1]).map(([id, l]) => `<button class="${sheetTab === id ? 'on' : ''}" data-act="shtab:${id}">${l}</button>`).join('')}</div>${sheetTab ? '<div class="sh-body">' : ''}`;
     if (!sheetTab) { /* collapsed */ }
     else if (sheetTab === 'evo' && !info.maxed) {
       if (info.stage === 1) {
         h += info.branches.map((b) => {
           const known = b.known, lead = info.best && info.best.form === b.form, need = traitUnlockLvl(b.trait, G.biome), locked = need > s.lvl;
           return `<div class="branch ${lead ? 'lead' : ''}"><canvas data-form="${b.form}" ${known ? '' : 'data-sil="1"'}></canvas>
-            <div class="bn">${known ? esc(FORMS[b.form].name) : '???'}<small>${ic('t-' + b.trait, 's')} ${traitName(b.trait)} ${D.BRANCH_NEED}+ nearby${locked ? ` · Pool Lv ${need}` : ''}</small></div>
-            <div class="st ${b.met ? 'ok' : ''}">${b.met ? (lead ? 'Leading!' : 'Ready') : `${Math.round(b.value)}/${b.need}`}</div></div>`;
-        }).join('') + `<p class="muted">Needs Lv ${info.needLvl}. The strongest trait nearby decides the form.</p>`;
+            <div class="bn">${known ? esc(formName(b.form)) : '???'}<small>${ic('t-' + b.trait, 's')} ${t('{trait} {n}+ nearby', { trait: traitName(b.trait), n: D.BRANCH_NEED })}${locked ? ` · ${t('Pool Lv {n}', { n: need })}` : ''}</small></div>
+            <div class="st ${b.met ? 'ok' : ''}">${b.met ? (lead ? t('Leading!') : t('Ready')) : `${Math.round(b.value)}/${b.need}`}</div></div>`;
+        }).join('') + `<p class="muted">${t('Needs Lv {n}. The strongest trait nearby decides the form.', { n: info.needLvl })}</p>`;
       } else {
         const m = info.mythic;
         h += `<div class="branch ${m.met ? 'lead' : ''}"><canvas data-form="${m.form}" ${m.known ? '' : 'data-sil="1"'}></canvas>
-          <div class="bn">${m.known ? esc(FORMS[m.form].name) : '???'}<small>${ic('t-' + m.trait, 's')} ${traitName(m.trait)} ${m.need}+ &amp; ${ic('t-' + m.second, 's')} ${traitName(m.second)} ${m.needSecond}+</small></div>
-          <div class="st ${m.met ? 'ok' : ''}">${m.met ? 'Ready!' : `${Math.round(m.value)} · ${Math.round(m.secondValue)}`}</div></div>
-          <p class="muted">Needs Lv ${info.needLvl} and a legendary habitat nearby.</p>`;
+          <div class="bn">${m.known ? esc(formName(m.form)) : '???'}<small>${ic('t-' + m.trait, 's')} ${traitName(m.trait)} ${m.need}+ &amp; ${ic('t-' + m.second, 's')} ${traitName(m.second)} ${m.needSecond}+</small></div>
+          <div class="st ${m.met ? 'ok' : ''}">${m.met ? t('Ready!') : `${Math.round(m.value)} · ${Math.round(m.secondValue)}`}</div></div>
+          <p class="muted">${t('Needs Lv {n} and a legendary habitat nearby.', { n: info.needLvl })}</p>`;
       }
     } else if (sheetTab === 'habitat' || (sheetTab === 'evo' && info.maxed)) {
       h += `<div class="traits">`;
-      for (const t of D.TRAITS) {
-        const v = info.traits[t], key = rel.has(t);
-        const need = info.stage === 1 ? (key ? D.BRANCH_NEED : 0) : (info.mythic && t === info.mythic.trait ? D.MYTHIC_NEED : info.mythic && t === info.mythic.second ? D.MYTHIC_SECOND : 0);
-        h += `<div class="trait ${key ? 'key' : ''}">${ic('t-' + t)}<div class="bar"><i style="width:${v}%;background:${TRAIT_INFO[t].color}"></i>${need ? `<u style="left:${need}%"></u>` : ''}</div><em>${Math.round(v)}</em></div>`;
+      for (const tr of D.TRAITS) {
+        const v = info.traits[tr], key = rel.has(tr);
+        const need = info.stage === 1 ? (key ? D.BRANCH_NEED : 0) : (info.mythic && tr === info.mythic.trait ? D.MYTHIC_NEED : info.mythic && tr === info.mythic.second ? D.MYTHIC_SECOND : 0);
+        h += `<div class="trait ${key ? 'key' : ''}" title="${esc(traitName(tr))}">${ic('t-' + tr)}<div class="bar"><i style="width:${v}%;background:${TRAIT_INFO[tr].color}"></i>${need ? `<u style="left:${need}%"></u>` : ''}</div><em>${Math.round(v)}</em></div>`;
       }
-      h += `</div><p class="muted">${info.maxed ? `${esc(f.name)} is fully evolved. ` : ''}${esc(fam.hint)}. Glowing bars matter for its evolution.</p>`;
+      h += `</div><p class="muted">${info.maxed ? `${esc(t('{name} is fully evolved.', { name: formName(c.form) }))} ` : ''}${esc(famHint(f.fam))}. ${t('Glowing bars matter for its evolution.')}</p>`;
     } else {
       const hats = D.DECOR_IDS.filter((d) => DECOR[d].kind === 'hat' && s.own[d]);
-      h += `<div class="hatrow"><button class="hat ${c.hat ? '' : 'on'}" data-act="hat:" aria-label="No accessory">${ic('i-close', 's')}</button>${hats.map((d) => `<button class="hat ${c.hat === d ? 'on' : ''}" data-act="hat:${d}" aria-label="${esc(DECOR[d].name)}"><canvas data-hat="${d}" style="width:44px;height:44px"></canvas></button>`).join('')}${hats.length ? '' : '<button class="btn small lemon" data-act="shopdecor2">Find hats in the Shop</button>'}</div>
-        ${s.tut.done ? '<div class="rowb mt"><button class="btn ghost small danger" data-act="release">Send home</button></div>' : ''}`;
+      h += `<div class="hatrow"><button class="hat ${c.hat ? '' : 'on'}" data-act="hat:" aria-label="${t('No accessory')}">${ic('i-close', 's')}</button>${hats.map((d) => `<button class="hat ${c.hat === d ? 'on' : ''}" data-act="hat:${d}" aria-label="${esc(decorName(d))}"><canvas data-hat="${d}" style="width:44px;height:44px"></canvas></button>`).join('')}${hats.length ? '' : `<button class="btn small lemon" data-act="shopdecor2">${t('Find hats in the Shop')}</button>`}</div>
+        ${s.tut.done ? `<div class="rowb mt"><button class="btn ghost small danger" data-act="release">${t('Send home')}</button></div>` : ''}`;
     }
     if (sheetTab) h += '</div>';
     const scroll = $('.sh-body', sh)?.scrollTop || 0;
@@ -318,8 +320,8 @@ export function createUI(G) {
     if (sh && sh.dataset.evo !== (c.evo ? '1' : '0')) { renderSheet(); return; }        // cocoon finished (or started): rebuild the buttons
     if (c.evo) {
       const n = now(), total = c.evo.end - c.evo.start, left = Math.max(0, c.evo.end - n);
-      const t = $('#sh-timer'), p = $('#sh-prog');
-      if (t) t.textContent = S.fmtDur(left); if (p) p.style.width = `${Math.min(100, (1 - left / total) * 100)}%`;
+      const tm = $('#sh-timer'), p = $('#sh-prog');
+      if (tm) tm.textContent = dur(left); if (p) p.style.width = `${Math.min(100, (1 - left / total) * 100)}%`;
     }
   }
 
@@ -342,7 +344,7 @@ export function createUI(G) {
   function drawModal(m) {
     const box = $('.modal', m.el), prev = $('.mb', box)?.scrollTop || 0, prevTabs = $('.tabs', box)?.scrollLeft || 0;
     const r = m.render();
-    box.innerHTML = `${m.title ? `<div class="mh"><span>${r.title || m.title}</span>${m.noClose ? '' : `<button class="round" data-act="close:${m.id}" aria-label="Close">${ic('i-close')}</button>`}</div>` : ''}${r.tabs ? `<div class="tabs">${r.tabs}</div>` : ''}<div class="mb">${r.body}</div>${r.footer ? `<div class="mf">${r.footer}</div>` : ''}`;
+    box.innerHTML = `${m.title ? `<div class="mh"><span>${r.title || m.title}</span>${m.noClose ? '' : `<button class="round" data-act="close:${m.id}" aria-label="${t('Close')}">${ic('i-close')}</button>`}</div>` : ''}${r.tabs ? `<div class="tabs">${r.tabs}</div>` : ''}<div class="mb">${r.body}</div>${r.footer ? `<div class="mf">${r.footer}</div>` : ''}`;
     const mb = $('.mb', box); if (mb) mb.scrollTop = prev; const tb = $('.tabs', box); if (tb) tb.scrollLeft = prevTabs;
     paintMini(box);
     r.after?.(box);
@@ -365,9 +367,70 @@ export function createUI(G) {
     for (const m of modals) if (m.render && !m.frozen) drawModal(m);
     if (sheetOpen) renderSheet();
   };
-  ui.confirm = ({ title, body, ok = 'OK', cancel = 'Cancel', danger = false }) => new Promise((res) => {
+  ui.confirm = ({ title, body, ok = t('OK'), cancel = t('Cancel'), danger = false }) => new Promise((res) => {
     const m = mountModal('confirm', { title, top: true, sticky: true, render: () => ({ body: `<p class="center" style="font-weight:600;font-size:16px">${body}</p>`, footer: `<button class="btn ghost" data-act="confirm:no">${cancel}</button><button class="btn ${danger ? 'pink' : 'green'}" data-act="confirm:yes">${ok}</button>` }) });
     m.answer = (v) => { ui.closeModal('confirm'); res(v); };
+  });
+
+  /** Every Sea Glass spend asks first and shows roughly what that much Sea Glass costs in real money. */
+  ui.confirmGlass = (cost, what) => {
+    const money = G.glassMoney(cost);
+    return ui.confirm({ title: t('Spend Sea Glass?'), body: `${t('Use {cost} Sea Glass for {item}?', { cost: `<b>${cost}</b>`, item: esc(what) })}${money ? `<br><small class="muted">${t('That is about {money} of Sea Glass.', { money })}</small>` : ''}`, ok: t('Buy'), cancel: t('Not now') });
+  };
+
+  // ---- Age check & parental gate (Sea Glass capsule pulls)
+  /** Resolves true when this player may use Sea Glass on capsule pulls. Asks once: Apple's Declared Age Range where the device offers it,
+   *  otherwise a neutral date-of-birth question. Only "adult" or "minor" is kept, on this device (never the date). */
+  let recheckedAge = false;
+  ui.ensurePaidOk = async () => {
+    const g = st().guard;
+    if (g.age === 'minor' && g.src === 'apple' && !g.parent && !recheckedAge) {        // they may have turned 18 since: ask Apple again once per session
+      recheckedAge = true; const a = await age.ask(G.PAID_AGE); if (a) G.setAge(a, 'apple');
+    }
+    if (!g.age) {
+      const s = await age.status();
+      const a = s.available ? await age.ask(G.PAID_AGE) : '';
+      if (a) G.setAge(a, 'apple');
+      else if (s.required) G.setAge('minor', 'apple');     // where the law requires an age check, no answer means the protective default
+      else { const b = await ui.askBirth(); if (!b) return false; G.setAge(b, 'self'); }
+    }
+    return G.paidPullsAllowed() || ui.askParent();
+  };
+  /** A neutral age screen: no default answer and no hint of which answer "works". Resolves 'adult' | 'minor' | '' (cancelled). */
+  ui.askBirth = () => new Promise((res) => {
+    const Y = new Date().getFullYear();
+    const months = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en', { month: 'long' }));
+    const m = mountModal('age', { title: t('Before you continue'), top: true, sticky: true, render: () => ({
+      body: `<p class="center" style="font-weight:600">${t('Please enter your date of birth.')}</p>
+        <div class="agepick"><select id="age-m" aria-label="${esc(t('Month'))}"><option value="">${t('Month')}</option>${months.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join('')}</select><select id="age-y" aria-label="${esc(t('Year'))}"><option value="">${t('Year')}</option>${Array.from({ length: 100 }, (_, i) => `<option value="${Y - i}">${Y - i}</option>`).join('')}</select></div>
+        <p class="muted center"><small>${t('Your answer stays on this device.')}</small></p>`,
+      footer: `<button class="btn ghost" data-act="age:cancel">${t('Cancel')}</button><button class="btn green" data-act="age:ok">${t('Continue')}</button>` }) });
+    m.frozen = true;                                   // no redraws while choosing
+    let done = false;
+    m.answer = (v) => { done = true; ui.closeModal('age'); res(v); };
+    m.onClose = () => { if (!done) res(''); };
+  });
+  /** Age in whole years from a birth month (0–11) and year; the birthday month counts as "not yet", so this never overstates. */
+  const ageFrom = (y, mo) => { const d = new Date(); return d.getFullYear() - y - (d.getMonth() <= mo ? 1 : 0); };
+  /** For a player under 18: explain, then let a parent or guardian turn Sea Glass pulls on after an adult-level question. */
+  ui.askParent = async () => {
+    const go = await ui.confirm({ title: t('Ask a parent'), body: t('Sea Glass capsule pulls are for players 18 and over. A parent or guardian can turn them on for you.'), ok: t("I'm a parent"), cancel: t('Not now') });
+    if (!go || !(await ui.parentGate())) return false;
+    G.setParentOk(true);
+    ui.toast(t('Sea Glass pulls are on. You can turn them off in Settings.'), 'good');
+    return true;
+  };
+  /** Parental gate (App Store guideline 1.3): a multiplication a young child is unlikely to solve. Resolves true when answered correctly. */
+  ui.parentGate = () => new Promise((res) => {
+    const a = 12 + Math.floor(Math.random() * 8), b = 6 + Math.floor(Math.random() * 4);
+    const m = mountModal('gate', { title: t('For parents'), top: true, sticky: true, render: () => ({
+      body: `<p class="center" style="font-weight:600">${t('To continue, type the answer:')}</p><p class="center big" style="font-size:30px">${a} × ${b} = ?</p><input id="gate-in" class="gate-in" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="${esc(t('Answer'))}">`,
+      footer: `<button class="btn ghost" data-act="gate:cancel">${t('Cancel')}</button><button class="btn green" data-act="gate:ok">${t('Continue')}</button>` }) });
+    m.frozen = true;
+    let done = false;
+    m.answer = (v) => { done = true; ui.closeModal('gate'); res(v); };
+    m.onClose = () => { if (!done) res(false); };
+    m.right = () => Number($('#gate-in', m.el)?.value) === a * b;
   });
 
   // ---- Welcome back
@@ -375,11 +438,11 @@ export function createUI(G) {
     const mins = Math.round(sum.away / 60e3);
     if (mins < 10 && !sum.evolved.length) return;
     const lines = [];
-    if (sum.pearls > 0) lines.push(`<div class="chipx">${ic('i-pearl')}+${fmt(sum.pearls)} waiting in bubbles</div>`);
-    if (sum.eggs > 0) lines.push(`<div class="chipx">${ic('i-sparkle')}${sum.eggs} new egg${sum.eggs > 1 ? 's' : ''} washed ashore</div>`);
-    if (sum.evolved.length) lines.push(`<div class="chipx">${ic('i-up')}${sum.evolved.length} evolution${sum.evolved.length > 1 ? 's' : ''} finished</div>`);
-    if (!lines.length) lines.push(`<div class="chipx">${ic('i-drop')}Your pool is peaceful</div>`);
-    const m = mountModal('welcome', { title: 'Welcome back!', sticky: true, render: () => ({ body: `<div class="center"><div class="muted">You were away for ${S.fmtDur(sum.away)}</div><div class="chips">${lines.join('')}</div><p class="muted">Pop your bubbles before they stop growing!</p></div>`, footer: `<button class="btn green" data-act="close:welcome">Let's go!</button>` }) });
+    if (sum.pearls > 0) lines.push(`<div class="chipx">${ic('i-pearl')}${t('+{n} waiting in bubbles', { n: fmt(sum.pearls) })}</div>`);
+    if (sum.eggs > 0) lines.push(`<div class="chipx">${ic('i-sparkle')}${t('{n} new egg washed ashore|{n} new eggs washed ashore', { n: sum.eggs })}</div>`);
+    if (sum.evolved.length) lines.push(`<div class="chipx">${ic('i-up')}${t('{n} evolution finished|{n} evolutions finished', { n: sum.evolved.length })}</div>`);
+    if (!lines.length) lines.push(`<div class="chipx">${ic('i-drop')}${t('Your pool is peaceful')}</div>`);
+    const m = mountModal('welcome', { title: t('Welcome back!'), sticky: true, render: () => ({ body: `<div class="center"><div class="muted">${t('You were away for {time}', { time: dur(sum.away) })}</div><div class="chips">${lines.join('')}</div><p class="muted">${t('Pop your bubbles before they stop growing!')}</p></div>`, footer: `<button class="btn green" data-act="close:welcome">${t("Let's go!")}</button>` }) });
     m.onClose = () => { G.ui.pumpReveals(); showTutDone(); enqueueDaily(); };
   };
 
@@ -387,7 +450,7 @@ export function createUI(G) {
   function enqueueDaily() { if (st().tut.done && S.dailyAvailable(st(), now())) enqueue(openDaily); }
   function openDaily() {
     if (modals.some((m) => m.id === 'daily')) return;
-    mountModal('daily', { title: 'Daily Reward', sticky: true, render: () => {
+    mountModal('daily', { title: t('Daily Reward'), sticky: true, render: () => {
       const s = st(), avail = S.dailyAvailable(s, now());
       const n = s.daily.n, gap = S.dayNum(now()) - s.daily.last;
       const nextN = avail ? (gap === 1 || (gap === 2 && s.daily.shield) ? n + 1 : 1) : n;
@@ -395,10 +458,10 @@ export function createUI(G) {
       const days = D.DAILY_REWARDS.map((r, i) => {
         const done = avail ? i < cur : i <= cur;
         const icon = r.glass && r.tokens ? 'i-gift' : r.glass ? 'i-glass' : r.tokens ? 'i-token' : 'i-pearl';
-        return `<div class="day ${done ? 'done' : ''} ${i === cur && avail ? 'now' : ''} ${i === 6 ? 'big' : ''}">Day ${i + 1}${ic(icon)}<span>${done ? '✓' : (r.glass && !r.tokens ? r.glass : r.tokens && !r.glass ? '1' : r.glass ? '25+' : '')}</span></div>`;
+        return `<div class="day ${done ? 'done' : ''} ${i === cur && avail ? 'now' : ''} ${i === 6 ? 'big' : ''}">${t('Day {n}', { n: i + 1 })}${ic(icon)}<span>${done ? '✓' : (r.glass && !r.tokens ? r.glass : r.tokens && !r.glass ? '1' : r.glass ? '25+' : '')}</span></div>`;
       }).join('');
-      return { body: `<div class="center"><div class="muted">${avail ? (nextN === 1 && n > 0 ? 'Your streak restarted — welcome back!' : `Day ${nextN} of your streak`) : `Streak: ${n} day${n > 1 ? 's' : ''}`}</div></div><div class="days mt">${days}</div><p class="muted center mt">${s.daily.shield ? `${ic('i-star', 's')} A streak shield protects you if you miss one day.` : 'Missed a day? Keep your streak by returning the next day.'}</p>`,
-        footer: avail ? `<button class="btn lemon pulse" data-act="claimdaily">Claim!</button>` : `<button class="btn ghost" data-act="close:daily">See you tomorrow</button>` };
+      return { body: `<div class="center"><div class="muted">${avail ? (nextN === 1 && n > 0 ? t('Your streak restarted — welcome back!') : t('Day {n} of your streak', { n: nextN })) : t('Streak: {n} day|Streak: {n} days', { n })}</div></div><div class="days mt">${days}</div><p class="muted center mt">${s.daily.shield ? `${ic('i-star', 's')} ${t('A streak shield protects you if you miss one day.')}` : t('Missed a day? Keep your streak by returning the next day.')}</p>`,
+        footer: avail ? `<button class="btn lemon pulse" data-act="claimdaily">${t('Claim!')}</button>` : `<button class="btn ghost" data-act="close:daily">${t('See you tomorrow')}</button>` };
     } });
   }
   ui.openDaily = openDaily;
@@ -408,9 +471,10 @@ export function createUI(G) {
     const chips = [];
     if (r.pearls) chips.push(`<div class="chipx">${ic('i-pearl')}+${fmt(r.pearls)}</div>`);
     if (r.glass) chips.push(`<div class="chipx">${ic('i-glass')}+${r.glass}</div>`);
-    if (r.tokens) chips.push(`<div class="chipx">${ic('i-token')}+${r.tokens} Speed Token</div>`);
-    if (r.egg) chips.push(`<div class="chipx">${ic('i-sparkle')}A lucky egg!</div>`);
-    mountModal('reward', { title, top: true, sticky: true, render: () => ({ body: `<div class="reveal center"><div style="font-size:64px">${ic('i-gift', 'xl')}</div><div class="chips">${chips.join('')}</div><div class="muted">${esc(sub || '')}</div></div>`, footer: `<button class="btn green" data-act="close:reward">Yay!</button>` }) });
+    if (r.tokens) chips.push(`<div class="chipx">${ic('i-token')}${t('+{n} Speed Token|+{n} Speed Tokens', { n: r.tokens })}</div>`);
+    if (r.coins) chips.push(`<div class="chipx">${ic('i-coin')}${t('+{n} Capsule Coin|+{n} Capsule Coins', { n: r.coins })}</div>`);
+    if (r.egg) chips.push(`<div class="chipx">${ic('i-sparkle')}${t('A lucky egg!')}</div>`);
+    mountModal('reward', { title, top: true, sticky: true, render: () => ({ body: `<div class="reveal center"><div style="font-size:64px">${ic('i-gift', 'xl')}</div><div class="chips">${chips.join('')}</div><div class="muted">${esc(sub || '')}</div></div>`, footer: `<button class="btn green" data-act="close:reward">${t('Yay!')}</button>` }) });
   };
 
   // ---- Evolution / discovery reveal
@@ -420,65 +484,65 @@ export function createUI(G) {
     const f = FORMS[ev.form];
     A.play('reveal'); haptic.success(); scene.confetti(80);
     const m = mountModal('reveal', { title: '', sticky: true, top: true, cls: '', render: () => ({
-      body: `<div class="reveal"><div class="rays"></div>${ev.first ? '<span class="new">NEW DISCOVERY!</span>' : '<span class="muted">Evolution complete</span>'}
-        <canvas data-form="${ev.form}"></canvas><h2 class="big">${esc(f.name)}</h2>
+      body: `<div class="reveal"><div class="rays"></div>${ev.first ? `<span class="new">${t('NEW DISCOVERY!')}</span>` : `<span class="muted">${t('Evolution complete')}</span>`}
+        <canvas data-form="${ev.form}"></canvas><h2 class="big">${esc(formName(ev.form))}</h2>
         <div class="chips"><span class="tag">${stageName(f.stage)}</span><span class="tag">${ic('t-' + f.trait, 's')}${traitName(f.trait)}</span></div>
-        <p class="muted" style="font-size:14px">${esc(f.blurb)}</p>
+        <p class="muted" style="font-size:14px">${esc(formBlurb(ev.form))}</p>
         ${ev.first ? `<div class="chips"><div class="chipx">${ic('i-glass')}+${D.DISCOVER_GLASS[f.stage]}</div><div class="chipx">${ic('i-book')}${S.dexCount(st())}/${D.FORM_IDS.length}</div></div>` : ''}</div>`,
-      footer: `<button class="btn ghost" data-act="sharereveal:${ev.form}">${ic('i-camera', 's')} Share</button><button class="btn green" data-act="close:reveal">Awesome!</button>` }) });
+      footer: `<button class="btn ghost" data-act="sharereveal:${ev.form}">${ic('i-camera', 's')} ${t('Share')}</button><button class="btn green" data-act="close:reveal">${t('Awesome!')}</button>` }) });
     m.onClose = () => { pumpQueue(); ui.pumpReveals(); showTutDone(); };
   };
   ui.showLevelUp = (ev) => {
-    enqueue(() => mountModal('levelup', { title: `Pool Level ${ev.lvl}!`, sticky: true, top: true, render: () => ({
-      body: `<div class="reveal center"><div style="font-size:60px">${ic('i-star', 'xl')}</div>${ev.unlocks.length ? `<h4 class="muted">Unlocked</h4><div class="chips">${ev.unlocks.map((u) => `<div class="chipx">${ic(u.kind === 'piece' ? 'i-build' : u.kind === 'family' ? 'i-sparkle' : 'k-expand')}${esc(u.name)}</div>`).join('')}</div>` : '<p class="muted">Your tidepool grows more beautiful!</p>'}<p class="muted">Bubbles now hold up to ${D.bubbleCapHours(ev.lvl)} hours of pearls.</p></div>`,
-      footer: `<button class="btn green" data-act="close:levelup">Nice!</button>` }) }));
+    enqueue(() => mountModal('levelup', { title: t('Pool Level {n}!', { n: ev.lvl }), sticky: true, top: true, render: () => ({
+      body: `<div class="reveal center"><div style="font-size:60px">${ic('i-star', 'xl')}</div>${ev.unlocks.length ? `<h4 class="muted">${t('Unlocked')}</h4><div class="chips">${ev.unlocks.map((u) => `<div class="chipx">${ic(u.kind === 'piece' ? 'i-build' : u.kind === 'family' ? 'i-sparkle' : 'k-expand')}${esc(unlockName(u))}</div>`).join('')}</div>` : `<p class="muted">${t('Your tidepool grows more beautiful!')}</p>`}<p class="muted">${t('Bubbles now hold up to {n} hours of pearls.', { n: D.bubbleCapHours(ev.lvl) })}</p></div>`,
+      footer: `<button class="btn green" data-act="close:levelup">${t('Nice!')}</button>` }) }));
   };
 
   // ---- Dex
   function dexHtml() {
     const s = st(), n = S.dexCount(s), total = D.FORM_IDS.length;
     const fams = D.FAMILIES_BY_BIOME[dexTab];
-    let h = `<div class="card hi row between"><div><b>${n} / ${total} discovered</b><div class="muted">Bonus: +${Math.round(n * D.DEX_RATE_BONUS * 100)}% pearls</div></div>${ic('i-book', 'l')}</div>`;
+    let h = `<div class="card hi row between"><div><b>${t('{n} / {total} discovered', { n, total })}</b><div class="muted">${t('Bonus: +{n}% pearls', { n: Math.round(n * D.DEX_RATE_BONUS * 100) })}</div></div>${ic('i-book', 'l')}</div>`;
     h += `<div class="mile">${D.DEX_MILESTONES.map((m, i) => { const got = s.dexClaimed.includes(i), can = !got && n >= m.n; return `<button class="${got ? 'got' : can ? 'can' : ''}" data-act="dexclaim:${i}">${m.n}<br>${got ? '✓' : `${ic('i-glass', 's')}${m.glass}${m.coins ? ` ${ic('i-coin', 's')}${m.coins}` : ''}`}</button>`; }).join('')}</div>`;
     for (const fid of fams) {
       const fam = FAMILIES[fid], locked = dexTab === 'tide' && s.lvl < fam.unlock, forms = D.formsOfFamily(fid);
-      const base = forms[0], b2 = Object.keys(fam.br).map((t) => D.branchForm(fid, t)), b3 = Object.keys(fam.br).map((t) => D.mythicForm(fid, t));
+      const base = forms[0], b2 = Object.keys(fam.br).map((tr) => D.branchForm(fid, tr)), b3 = Object.keys(fam.br).map((tr) => D.mythicForm(fid, tr));
       const have = forms.filter((f) => s.dex[f]).length;
-      const slot = (f) => { const known = !!s.dex[f]; return `<button class="slot ${known ? '' : 'unk'} ${FORMS[f].stage === 3 ? 'stage3' : ''}" data-act="slot:${f}"><canvas data-form="${f}" ${known ? '' : 'data-sil="1"'}></canvas>${known ? esc(FORMS[f].name) : '???'}</button>`; };
-      h += `<div class="dexfam ${locked ? 'fam-locked' : ''}"><div class="fh"><span>${s.dex[base] ? esc(fam.name) : '???'} ${locked ? `${ic('i-lock', 's')}` : ''}</span><small>${locked ? `Unlocks at Lv ${fam.unlock}` : `${have}/7 · likes ${Object.keys(fam.likes).map(traitName).join(' + ')}`}</small></div>
+      const slot = (f) => { const known = !!s.dex[f]; return `<button class="slot ${known ? '' : 'unk'} ${FORMS[f].stage === 3 ? 'stage3' : ''}" data-act="slot:${f}"><canvas data-form="${f}" ${known ? '' : 'data-sil="1"'}></canvas>${known ? esc(formName(f)) : '???'}</button>`; };
+      h += `<div class="dexfam ${locked ? 'fam-locked' : ''}"><div class="fh"><span>${s.dex[base] ? esc(formName(base)) : '???'} ${locked ? `${ic('i-lock', 's')}` : ''}</span><small>${locked ? t('Unlocks at Lv {n}', { n: fam.unlock }) : t('{have}/7 · likes {traits}', { have, traits: Object.keys(fam.likes).map(traitName).join(' + ') })}</small></div>
         <div class="dexrow">${[base, ...b2].map(slot).join('')}</div><div class="dexrow r3">${b3.map(slot).join('')}</div></div>`;
     }
     return h;
   }
-  ui.openDex = () => mountModal('dex', { title: 'Tidedex', cls: 'tall', render: () => ({
-    tabs: `<button class="${dexTab === 'tide' ? 'on' : ''}" data-act="dextab:tide">Tidepool</button><button class="${dexTab === 'deep' ? 'on' : ''}" data-act="dextab:deep">Deep Ocean ${st().iap.deep ? '' : ic('i-lock', 's')}</button>`,
+  ui.openDex = () => mountModal('dex', { title: t('Tidedex'), cls: 'tall', render: () => ({
+    tabs: `<button class="${dexTab === 'tide' ? 'on' : ''}" data-act="dextab:tide">${t('Tidepool')}</button><button class="${dexTab === 'deep' ? 'on' : ''}" data-act="dextab:deep">${t('Deep Ocean')} ${st().iap.deep ? '' : ic('i-lock', 's')}</button>`,
     body: dexHtml() }) });
   function slotDetail(f) {
     const s = st(), form = FORMS[f], fam = FAMILIES[form.fam], known = !!s.dex[f];
     let how = '';
-    if (form.stage === 1) how = `Sometimes washes in as an egg where it's ${Object.keys(fam.likes).map((t) => traitName(t)).join(' and ')}-rich. ${fam.hint}.`;
-    else if (form.stage === 2) how = `Evolve ${s.dex[form.fam + '.0'] ? fam.name : 'the baby'} at Lv ${D.STAGE[1].evoLvl} with ${traitName(form.trait)} ${D.BRANCH_NEED}+ nearby (and it must be the strongest).`;
-    else how = `Ascend ${s.dex[D.branchForm(form.fam, form.trait)] ? FORMS[D.branchForm(form.fam, form.trait)].name : 'the evolved form'} at Lv ${D.STAGE[2].evoLvl} with ${traitName(form.trait)} ${D.MYTHIC_NEED}+ and ${traitName(fam.second)} ${D.MYTHIC_SECOND}+ nearby.`;
-    mountModal('slot', { title: known ? form.name : 'Undiscovered', top: true, render: () => ({ body: `<div class="reveal center"><canvas data-form="${f}" ${known ? '' : 'data-sil="1"'} style="width:180px;height:180px"></canvas><div class="chips"><span class="tag">${stageName(form.stage)}</span>${form.trait ? `<span class="tag">${ic('t-' + form.trait, 's')}${traitName(form.trait)}</span>` : ''}</div><p style="font-weight:600">${known ? esc(form.blurb) : 'A mystery creature. Try different rocks and water!'}</p><p class="muted">${esc(how)}</p></div>` }) });
+    if (form.stage === 1) how = sentences(t('Washes in as an egg where {traits} are high.', { traits: list(Object.keys(fam.likes).map(traitName)) }), famHint(form.fam));
+    else if (form.stage === 2) how = t('Evolve {name} at Lv {lvl} with {trait} {n}+ nearby (and it must be the strongest).', { name: s.dex[form.fam + '.0'] ? formName(form.fam + '.0') : t('the baby'), lvl: D.STAGE[1].evoLvl, trait: traitName(form.trait), n: D.BRANCH_NEED });
+    else how = t('Ascend {name} at Lv {lvl} with {trait} {n}+ and {second} {m}+ nearby.', { name: s.dex[D.branchForm(form.fam, form.trait)] ? formName(D.branchForm(form.fam, form.trait)) : t('the evolved form'), lvl: D.STAGE[2].evoLvl, trait: traitName(form.trait), n: D.MYTHIC_NEED, second: traitName(fam.second), m: D.MYTHIC_SECOND });
+    mountModal('slot', { title: known ? formName(f) : t('Undiscovered'), top: true, render: () => ({ body: `<div class="reveal center"><canvas data-form="${f}" ${known ? '' : 'data-sil="1"'} style="width:180px;height:180px"></canvas><div class="chips"><span class="tag">${stageName(form.stage)}</span>${form.trait ? `<span class="tag">${ic('t-' + form.trait, 's')}${traitName(form.trait)}</span>` : ''}</div><p style="font-weight:600">${known ? esc(formBlurb(f)) : t('A mystery creature. Try different rocks and water!')}</p><p class="muted">${esc(how)}</p></div>` }) });
   }
 
   // ---- Quests
-  ui.openQuests = () => mountModal('quests', { title: 'Quests & Gifts', cls: 'tall', render: () => {
+  ui.openQuests = () => mountModal('quests', { title: t('Quests & Gifts'), cls: 'tall', render: () => {
     const s = st(), n = now(), w = S.giftWindow(n), gAvail = S.giftAvailable(s, n), nextG = S.nextGiftAt(n);
     let h = '';
-    h += `<div class="card ${gAvail ? 'hi' : ''} row between"><div class="row">${ic('i-gift', 'l')}<div><b>${esc(w.name)} Gift</b><div class="muted">${gAvail ? 'Something washed ashore!' : `Next gift in ${S.fmtDur(nextG - n)}`}</div></div></div><button class="btn ${gAvail ? 'lemon pulse' : 'off'} small" data-act="gift">${gAvail ? 'Open' : 'Later'}</button></div>`;
+    h += `<div class="card ${gAvail ? 'hi' : ''} row between"><div class="row">${ic('i-gift', 'l')}<div><b>${esc(t('{window} Gift', { window: giftName(w.id) }))}</b><div class="muted">${gAvail ? t('Something washed ashore!') : t('Next gift in {time}', { time: dur(nextG - n) })}</div></div></div><button class="btn ${gAvail ? 'lemon pulse' : 'off'} small" data-act="gift">${gAvail ? t('Open') : t('Later')}</button></div>`;
     const dAvail = S.dailyAvailable(s, n);
-    h += `<div class="card mt row between"><div class="row">${ic('i-star', 'l')}<div><b>Daily reward</b><div class="muted">${dAvail ? 'Ready to claim!' : `Streak ${s.daily.n} day${s.daily.n === 1 ? '' : 's'}`}</div></div></div><button class="btn ${dAvail ? 'lemon' : 'ghost'} small" data-act="opendaily">${dAvail ? 'Claim' : 'View'}</button></div>`;
+    h += `<div class="card mt row between"><div class="row">${ic('i-star', 'l')}<div><b>${t('Daily reward')}</b><div class="muted">${dAvail ? t('Ready to claim!') : t('Streak: {n} day|Streak: {n} days', { n: s.daily.n })}</div></div></div><button class="btn ${dAvail ? 'lemon' : 'ghost'} small" data-act="opendaily">${dAvail ? t('Claim') : t('View')}</button></div>`;
     const cAvail = S.gachaFreeAvailable(s, n);
-    h += `<div class="card mt row between ${cAvail ? 'pinkc' : ''}"><div class="row">${ic('i-capsule', 'l')}<div><b>Free daily capsule</b><div class="muted">${cAvail ? 'Give the crank a turn!' : `${s.cur.coins} Capsule Coin${s.cur.coins === 1 ? '' : 's'} saved`}</div></div></div><button class="btn ${cAvail ? 'pink pulse' : 'ghost'} small" data-act="gacha">${cAvail ? 'Pull' : 'Open'}</button></div>`;
-    h += '<h4 class="muted mt" style="margin-bottom:6px">TODAY\'S QUESTS</h4><div class="list">';
+    h += `<div class="card mt row between ${cAvail ? 'pinkc' : ''}"><div class="row">${ic('i-capsule', 'l')}<div><b>${t('Free daily capsule')}</b><div class="muted">${cAvail ? t('Give the crank a turn!') : t('{n} Capsule Coin saved|{n} Capsule Coins saved', { n: s.cur.coins })}</div></div></div><button class="btn ${cAvail ? 'pink pulse' : 'ghost'} small" data-act="gacha">${cAvail ? t('Pull') : t('Open')}</button></div>`;
+    h += `<h4 class="muted mt" style="margin-bottom:6px">${t("TODAY'S QUESTS")}</h4><div class="list">`;
     for (const [i, q] of s.quests.list.entries()) {
-      h += `<div class="card quest"><div class="q-t">${esc(S.questText(q))}<div class="bar"><i style="width:${q.prog / q.goal * 100}%;background:linear-gradient(#9af5bd,#2fc47e)"></i></div><div class="muted">${Math.min(q.prog, q.goal)}/${q.goal}</div></div>
-        <div class="col center" style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="rew">${ic('i-glass')}${q.glass}${q.coins ? ` ${ic('i-coin')}${q.coins}` : ''}</span>${q.claimed ? `<span class="tag">Done</span>` : `<button class="btn small ${q.done ? 'green pulse' : 'off'}" data-act="claimquest:${i}">Claim</button>`}</div></div>`;
+      h += `<div class="card quest"><div class="q-t">${esc(questText(q))}<div class="bar"><i style="width:${q.prog / q.goal * 100}%;background:linear-gradient(#9af5bd,#2fc47e)"></i></div><div class="muted">${Math.min(q.prog, q.goal)}/${q.goal}</div></div>
+        <div class="col center" style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="rew">${ic('i-glass')}${q.glass}${q.coins ? ` ${ic('i-coin')}${q.coins}` : ''}</span>${q.claimed ? `<span class="tag">${t('Done')}</span>` : `<button class="btn small ${q.done ? 'green pulse' : 'off'}" data-act="claimquest:${i}">${t('Claim')}</button>`}</div></div>`;
     }
     const all = s.quests.list.every((q) => q.claimed);
-    h += `</div><div class="card pinkc mt row between"><div class="row">${ic('i-gift', 'l')}<div><b>Bonus chest</b><div class="muted">Finish all quests · ${ic('i-glass', 's')}${D.QUEST_ALL_BONUS.glass} + ${ic('i-token', 's')}1 + ${ic('i-coin', 's')}${D.QUEST_ALL_BONUS.coins}</div></div></div>${s.quests.chest ? '<span class="tag">Opened</span>' : `<button class="btn small ${all ? 'lemon pulse' : 'off'}" data-act="claimchest">Open</button>`}</div>`;
-    h += `<p class="muted center mt">New quests arrive every morning.</p>`;
+    h += `</div><div class="card pinkc mt row between"><div class="row">${ic('i-gift', 'l')}<div><b>${t('Bonus chest')}</b><div class="muted">${t('Finish all quests')} · ${ic('i-glass', 's')}${D.QUEST_ALL_BONUS.glass} + ${ic('i-token', 's')}1 + ${ic('i-coin', 's')}${D.QUEST_ALL_BONUS.coins}</div></div></div>${s.quests.chest ? `<span class="tag">${t('Opened')}</span>` : `<button class="btn small ${all ? 'lemon pulse' : 'off'}" data-act="claimchest">${t('Open')}</button>`}</div>`;
+    h += `<p class="muted center mt">${t('New quests arrive every morning.')}</p>`;
     return { body: h };
   } });
 
@@ -489,123 +553,125 @@ export function createUI(G) {
     const prev = d.kind === 'prop' ? `<canvas data-prop="${id}" style="width:64px;height:64px"></canvas>` : d.kind === 'hat' ? `<canvas data-hat="${id}" style="width:64px;height:64px"></canvas>` : d.kind === 'skin' ? `<canvas data-skin="${id}" style="width:64px;height:64px"></canvas>` : ic('i-sparkle', 'xl');
     const equipped = (d.kind === 'skin' && s.equip.skin === id) || (d.kind === 'fx' && s.equip.fx === id);
     let btn;
-    if (owned) btn = (d.kind === 'skin' || d.kind === 'fx') ? `<button class="btn small wide ${equipped ? 'off' : 'green'}" data-act="equip:${id}">${equipped ? 'Equipped' : 'Equip'}</button>` : d.kind === 'prop' ? `<button class="btn small wide green" data-act="useprop:${id}">Place</button>` : `<span class="tag">Owned</span>`;
-    else if (d.gacha) btn = `<button class="btn small wide pink" data-act="gacha">${ic('i-capsule', 's')} Capsule</button>`;
-    else if (d.pack) btn = `<button class="btn small wide pink" data-act="shopsub:bundles">In pack</button>`;
+    if (owned) btn = (d.kind === 'skin' || d.kind === 'fx') ? `<button class="btn small wide ${equipped ? 'off' : 'green'}" data-act="equip:${id}">${equipped ? t('Equipped') : t('Equip')}</button>` : d.kind === 'prop' ? `<button class="btn small wide green" data-act="useprop:${id}">${t('Place')}</button>` : `<span class="tag">${t('Owned')}</span>`;
+    else if (d.gacha) btn = `<button class="btn small wide pink" data-act="gacha">${ic('i-capsule', 's')} ${t('Capsule')}</button>`;
+    else if (d.pack) btn = `<button class="btn small wide pink" data-act="shopsub:bundles">${t('In pack')}</button>`;
     else btn = `<button class="btn small wide lemon" data-act="buydecor:${id}">${d.price.pearls ? cost(d.price.pearls) : cost(d.price.glass, 'i-glass')}</button>`;
-    return `<div class="card prod">${prev}<b style="font-size:13px">${esc(d.name)}</b>${btn}</div>`;
+    return `<div class="card prod">${prev}<b style="font-size:13px">${esc(decorName(id))}</b>${btn}</div>`;
   };
   function shopBody() {
     const s = st();
     let h = '';
-    if (store.mode !== 'native') h += `<div class="card pinkc center" style="margin-bottom:10px"><b>${store.mode === 'demo' ? 'Demo mode' : 'Preview'}</b><p>${store.mode === 'demo' ? 'Purchases here are free and simulated so you can try everything!' : 'Real purchases are available in the App Store version.'}</p></div>`;
+    if (store.mode !== 'native') h += `<div class="card pinkc center" style="margin-bottom:10px"><b>${store.mode === 'demo' ? t('Demo mode') : t('Preview')}</b><p>${store.mode === 'demo' ? t('Purchases here are free and simulated so you can try everything!') : t('Real purchases are available in the App Store version.')}</p></div>`;
     if (shopTab === 'glass') {
-      if (!s.iap.starter) h += `<div class="card pinkc" style="margin-bottom:12px"><span class="ribbon">ONE-TIME OFFER</span><div class="row"><div style="flex:1"><h5>Starter Bundle</h5><p>${ic('i-glass', 's')} 200 Sea Glass + Party Hat + Bubblegum pool skin</p></div><div style="width:96px">${priceBtn(D.IAP.starter, 'pink')}</div></div></div>`;
-      h += `<div class="grid2">${D.IAP.glass.map((id, i) => { const P = PRODUCTS[id]; return `<div class="card prod ${i === 2 ? 'hi' : ''}">${P.tag ? `<span class="ribbon">${esc(P.tag)}</span>` : ''}${ic('i-glass', 'xl')}<div class="amt">${P.glass}</div><div class="muted">Sea Glass</div>${priceBtn(id)}</div>`; }).join('')}</div>`;
-      if (!s.iap.hourglass) h += `<div class="card hi mt row"><div>${ic('i-token', 'xl')}</div><div style="flex:1"><h5>Golden Hourglass</h5><p>Evolution timers 25% shorter — forever. Plus one free instant finish every day.</p></div><div style="width:92px">${priceBtn(D.IAP.hourglass, 'lemon')}</div></div>`;
-      h += `<p class="muted center mt">Sea Glass skips evolution timers, buys premium decor and can be spent in the Capsule Machine. You also earn it free from quests, gifts and discoveries.</p><div class="center"><button class="link" data-act="gacharates">Capsule Machine drop rates</button></div>`;
+      if (!s.iap.starter) h += `<div class="card pinkc" style="margin-bottom:12px"><span class="ribbon">${t('ONE-TIME OFFER')}</span><div class="row"><div style="flex:1"><h5>${esc(productName(D.IAP.starter))}</h5><p>${ic('i-glass', 's')} ${t('{n} Sea Glass + {hat} + {skin} pool skin', { n: PRODUCTS[D.IAP.starter].glass, hat: decorName('partyhat'), skin: decorName('bubblegum') })}</p></div><div style="width:96px">${priceBtn(D.IAP.starter, 'pink')}</div></div></div>`;
+      h += `<div class="grid2">${D.IAP.glass.map((id, i) => { const P = PRODUCTS[id]; return `<div class="card prod ${i === 2 ? 'hi' : ''}">${P.bonus ? `<span class="ribbon">${esc(productTag(id))}</span>` : ''}${ic('i-glass', 'xl')}<div class="amt">${P.glass}</div><div class="muted">${t('Sea Glass')}</div>${priceBtn(id)}</div>`; }).join('')}</div>`;
+      if (!s.iap.hourglass) h += `<div class="card hi mt row"><div>${ic('i-token', 'xl')}</div><div style="flex:1"><h5>${esc(productName(D.IAP.hourglass))}</h5><p>${t('Evolution timers 25% shorter — forever. Plus one free instant finish every day.')}</p></div><div style="width:92px">${priceBtn(D.IAP.hourglass, 'lemon')}</div></div>`;
+      h += `<p class="muted center mt">${t('Sea Glass skips evolution timers, buys premium decor and can be spent in the Capsule Machine. You also earn it free from quests, gifts and discoveries.')}</p><div class="center"><button class="link" data-act="gacharates">${t('Capsule Machine drop rates')}</button></div>`;
     } else if (shopTab === 'boost') {
-      h += `<div class="list">${Object.entries(D.BOOSTS).map(([id, b]) => `<div class="card row between"><div class="row"><div style="width:44px">${ic(b.ff ? 'i-pearl' : b.mult ? 'i-sun' : 'i-sparkle', 'l')}</div><div><b>${esc(b.name)}</b><p>${esc(b.desc)}</p></div></div><button class="btn small lemon" data-act="boost:${id}">${cost(b.glass, 'i-glass')}</button></div>`).join('')}</div>
-        <div class="card mt row between"><div class="row">${ic('i-token', 'l')}<div><b>Speed Tokens: ${s.cur.tokens}</b><p>Each token shaves 1 hour off an evolution. Earned from gifts and quests.</p></div></div></div>`;
+      h += `<div class="list">${Object.entries(D.BOOSTS).map(([id, b]) => `<div class="card row between"><div class="row"><div style="width:44px">${ic(b.ff ? 'i-pearl' : b.mult ? 'i-sun' : 'i-sparkle', 'l')}</div><div><b>${esc(boostName(id))}</b><p>${esc(boostDesc(id))}</p></div></div><button class="btn small lemon" data-act="boost:${id}">${cost(b.glass, 'i-glass')}</button></div>`).join('')}</div>
+        <div class="card mt row between"><div class="row">${ic('i-token', 'l')}<div><b>${t('Speed Tokens: {n}', { n: s.cur.tokens })}</b><p>${t('Each token shaves 1 hour off an evolution. Earned from gifts and quests.')}</p></div></div></div>`;
     } else if (shopTab === 'decor') {
-      const subs = [['bundles', 'Bundles'], ['prop', 'Props'], ['hat', 'Hats'], ['skin', 'Pool skins'], ['fx', 'Effects']];
+      const subs = [['bundles', t('Bundles')], ['prop', t('Props')], ['hat', t('Hats')], ['skin', t('Pool skins')], ['fx', t('Effects')]];
       h += `<div class="tabs" style="padding:0 0 8px">${subs.map(([id, l]) => `<button class="${shopSub === id ? 'on' : ''}" data-act="shopsub:${id}">${l}</button>`).join('')}</div>`;
       if (shopSub === 'bundles') {
-        h += `<div class="list">${Object.entries(D.PACKS).map(([id, pk]) => { const owned = s.iap.packs[id], pid = pk.iap; return `<div class="card ${owned ? '' : 'pinkc'}"><h5>${esc(pk.name)}</h5><p>${esc(pk.blurb)}</p><div class="grid3 mt2" style="grid-template-columns:repeat(5,1fr)">${pk.items.map((it) => { const d = DECOR[it]; return `<div class="center">${d.kind === 'prop' ? `<canvas data-prop="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'hat' ? `<canvas data-hat="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'skin' ? `<canvas data-skin="${it}" style="width:100%;aspect-ratio:1"></canvas>` : ic('i-sparkle', 'l')}</div>`; }).join('')}</div><div class="mt2">${owned ? '<span class="tag">Owned ✓</span>' : priceBtn(pid, 'pink')}</div></div>`; }).join('')}</div>`;
+        h += `<div class="list">${Object.entries(D.PACKS).map(([id, pk]) => { const owned = s.iap.packs[id], pid = pk.iap; return `<div class="card ${owned ? '' : 'pinkc'}"><h5>${esc(packName(id))}</h5><p>${esc(packBlurb(id))}</p><div class="grid3 mt2" style="grid-template-columns:repeat(5,1fr)">${pk.items.map((it) => { const d = DECOR[it]; return `<div class="center">${d.kind === 'prop' ? `<canvas data-prop="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'hat' ? `<canvas data-hat="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'skin' ? `<canvas data-skin="${it}" style="width:100%;aspect-ratio:1"></canvas>` : ic('i-sparkle', 'l')}</div>`; }).join('')}</div><div class="mt2">${owned ? `<span class="tag">${t('Owned')} ✓</span>` : priceBtn(pid, 'pink')}</div></div>`; }).join('')}</div>`;
       } else {
         const ids = D.DECOR_IDS.filter((d) => DECOR[d].kind === shopSub && !DECOR[d].fig);      // figurines live in the Toybox
         h += `<div class="grid3">${ids.map(decorCard).join('')}</div>`;
       }
     } else if (shopTab === 'deep') {
-      h += deepHero() + (s.iap.deep ? `<div class="mt"><button class="btn green wide" data-act="godeep">Dive in!</button></div>` : `<ul class="bul">${DEEP_POINTS.map((p) => `<li>${ic('i-check', 's')}<span>${p}</span></li>`).join('')}</ul>${priceBtn(D.IAP.deep, 'pink')}`);
+      h += deepHero() + (s.iap.deep ? `<div class="mt"><button class="btn green wide" data-act="godeep">${t('Dive in!')}</button></div>` : `<ul class="bul">${DEEP_POINTS.map((p) => `<li>${ic('i-check', 's')}<span>${t(p)}</span></li>`).join('')}</ul>${priceBtn(D.IAP.deep, 'pink')}`);
     }
-    h += `<div class="center mt"><button class="link" data-act="restore">Restore purchases</button></div>`;
+    h += `<div class="center mt"><button class="link" data-act="restore">${t('Restore purchases')}</button></div>`;
     return h;
   }
-  const DEEP_POINTS = ['A second, glowing ocean-floor diorama with its own sky', '28 new creatures across 4 families — anglers, nautili, mantas & dragons', 'Trench digging, vents, glowstones & bioluminescent kelp', 'Earns 70% more pearls than the tidepool', 'Includes 50 Sea Glass. One purchase, yours forever.'];
-  function deepHero() { return `<div class="hero"><div class="row">${['angler.b.glow', 'naut.b.stone', 'manta.b.glow', 'drake.b.glow'].map((f) => `<canvas data-form="${f}"></canvas>`).join('')}</div><h2 class="big" style="font-size:24px">Deep Ocean</h2><div style="font-size:13px;opacity:.9">A glowing biome for keepers who want more</div></div>`; }
+  const DEEP_POINTS = [tk('A second, glowing ocean-floor diorama with its own sky'), tk('28 new creatures across 4 families — anglers, nautili, mantas & dragons'), tk('Trench digging, vents, glowstones & bioluminescent kelp'), tk('Earns 70% more pearls than the tidepool'), tk('Includes 50 Sea Glass. One purchase, yours forever.')];
+  function deepHero() { return `<div class="hero"><div class="row">${['angler.b.glow', 'naut.b.stone', 'manta.b.glow', 'drake.b.glow'].map((f) => `<canvas data-form="${f}"></canvas>`).join('')}</div><h2 class="big" style="font-size:24px">${t('Deep Ocean')}</h2><div style="font-size:13px;opacity:.9">${t('A glowing biome for keepers who want more')}</div></div>`; }
   ui.openShop = (tab) => {
     if (tab) shopTab = tab;
-    mountModal('shop', { title: 'Shop', cls: 'tall', render: () => ({
-      tabs: [['glass', 'Sea Glass'], ['boost', 'Boosts'], ['decor', 'Decor'], ['deep', 'Deep']].map(([id, l]) => `<button class="${shopTab === id ? 'on' : ''}" data-act="shoptab:${id}">${l}</button>`).join(''),
+    mountModal('shop', { title: t('Shop'), cls: 'tall', render: () => ({
+      tabs: [['glass', t('Sea Glass')], ['boost', t('Boosts')], ['decor', t('Decor')], ['deep', t('Deep')]].map(([id, l]) => `<button class="${shopTab === id ? 'on' : ''}" data-act="shoptab:${id}">${l}</button>`).join(''),
       body: shopBody() }) });
   };
-  ui.showDeepUpsell = () => mountModal('deepup', { title: 'Deep Ocean', top: true, render: () => ({ body: deepHero() + `<ul class="bul">${DEEP_POINTS.map((p) => `<li>${ic('i-check', 's')}<span>${p}</span></li>`).join('')}</ul>`, footer: `<button class="btn ghost" data-act="close:deepup">Not now</button><button class="btn pink" data-act="buy:${D.IAP.deep}">${esc(store.price(D.IAP.deep))}</button>` }) });
+  ui.showDeepUpsell = () => mountModal('deepup', { title: t('Deep Ocean'), top: true, render: () => ({ body: deepHero() + `<ul class="bul">${DEEP_POINTS.map((p) => `<li>${ic('i-check', 's')}<span>${t(p)}</span></li>`).join('')}</ul>`, footer: `<button class="btn ghost" data-act="close:deepup">${t('Not now')}</button><button class="btn pink" data-act="buy:${D.IAP.deep}">${esc(store.price(D.IAP.deep))}</button>` }) });
   ui.showPurchased = (pid) => {
     const P = PRODUCTS[pid];
     ui.closeModal('deepup');
-    enqueue(() => mountModal('purchased', { title: 'Thank you!', sticky: true, top: true, render: () => ({ body: `<div class="reveal center">${ic(P.deep ? 'i-deep' : P.type === 'consumable' ? 'i-glass' : 'i-star', 'xl')}<h2 class="big" style="font-size:24px">${esc(P.name)}</h2><p class="muted">${P.deep ? 'Tap the Deep tab at the top to dive in — your first egg arrives soon!' : P.type === 'consumable' ? `+${P.glass} Sea Glass added.` : 'It is ready to use.'}</p></div>`, footer: `${P.deep ? `<button class="btn pink" data-act="godeep">Dive in!</button>` : `<button class="btn green" data-act="close:purchased">Great!</button>`}` }) }));
+    enqueue(() => mountModal('purchased', { title: t('Thank you!'), sticky: true, top: true, render: () => ({ body: `<div class="reveal center">${ic(P.deep ? 'i-deep' : P.type === 'consumable' ? 'i-glass' : 'i-star', 'xl')}<h2 class="big" style="font-size:24px">${esc(productName(pid))}</h2><p class="muted">${P.deep ? t('Tap the Deep tab at the top to dive in — your first egg arrives soon!') : P.type === 'consumable' ? t('+{n} Sea Glass added.', { n: P.glass }) : t('It is ready to use.')}</p></div>`, footer: `${P.deep ? `<button class="btn pink" data-act="godeep">${t('Dive in!')}</button>` : `<button class="btn green" data-act="close:purchased">${t('Great!')}</button>`}` }) }));
   };
 
   // ---- Decor picker
-  ui.showDecorPicker = () => mountModal('decorpick', { title: 'Place decor', top: true, render: () => {
+  ui.showDecorPicker = () => mountModal('decorpick', { title: t('Place decor'), top: true, render: () => {
     const s = st(), ids = D.DECOR_IDS.filter((d) => DECOR[d].kind === 'prop' && s.own[d]);
-    return { body: ids.length ? `<p class="muted center">Shore items go on sand; floaty ones on water.</p><div class="grid3">${ids.map((id) => `<button class="card prod" data-act="useprop:${id}" style="font-family:inherit;color:inherit"><canvas data-prop="${id}" style="width:64px;height:64px"></canvas><b style="font-size:13px">${esc(DECOR[id].name)}</b></button>`).join('')}</div>` : `<div class="center"><p class="muted">You don't own any decor yet.</p><button class="btn lemon" data-act="shopdecor">Visit the Shop</button></div>` };
+    return { body: ids.length ? `<p class="muted center">${t('Shore items go on sand; floaty ones on water.')}</p><div class="grid3">${ids.map((id) => `<button class="card prod" data-act="useprop:${id}" style="font-family:inherit;color:inherit"><canvas data-prop="${id}" style="width:64px;height:64px"></canvas><b style="font-size:13px">${esc(decorName(id))}</b></button>`).join('')}</div>` : `<div class="center"><p class="muted">${t("You don't own any decor yet.")}</p><button class="btn lemon" data-act="shopdecor">${t('Visit the Shop')}</button></div>` };
   } });
 
   // ---- Settings
-  const SETTING_LABEL = { music: 'Music', sfx: 'Sound effects', haptics: 'Haptics', notif: 'Reminders', paidPulls: 'Sea Glass capsule pulls', reduceMotion: 'Reduce motion', battery: 'Battery saver' };
-  const sw = (k) => `<button class="switch ${st().settings[k] ? 'on' : ''}" role="switch" aria-checked="${!!st().settings[k]}" data-act="set:${k}" aria-label="${SETTING_LABEL[k] || k}"></button>`;
-  ui.openSettings = () => mountModal('settings', { title: 'Settings', cls: 'tall', render: () => {
-    let h = `<div class="setrow"><span>Music<small>Calm ocean ambience</small></span>${sw('music')}</div>
-      <div class="setrow"><span>Sound effects</span>${sw('sfx')}</div>
-      <div class="setrow"><span>Haptics<small>Gentle vibrations</small></span>${sw('haptics')}</div>
-      <div class="setrow"><span>Reminders<small>A few a day at most, never at night</small></span>${sw('notif')}</div>
-      <div class="setrow"><span>Sea Glass capsule pulls<small>Off = only free Coins &amp; daily capsule (max ${D.GACHA.paidDailyCap} pulls/day when on)</small></span>${sw('paidPulls')}</div>
-      <div class="setrow"><span>Reduce motion<small>Calmer effects</small></span>${sw('reduceMotion')}</div>
-      <div class="setrow"><span>Battery saver<small>Lower frame rate &amp; effects</small></span>${sw('battery')}</div>
-      <div class="rowb mt"><button class="btn lav small" data-act="restore">Restore purchases</button></div>
-      <div class="rowb mt"><button class="link" data-act="link:privacy">Privacy Policy</button><button class="link" data-act="link:terms">Terms of Use</button><button class="link" data-act="link:support">Support</button></div>
-      <div class="rowb"><button class="link" data-act="link:rates">Drop rates</button><button class="link" data-act="link:parents">Parents' guide</button><button class="link" data-act="legal">Legal &amp; credits</button></div>
-      <div class="rowb"><button class="link" data-act="privacysummary">What data do we collect?</button></div>
-      <p class="muted center mt">Tiny Tides v${VERSION}${store.mode === 'demo' ? ' · demo build' : ''}<br>Made with ${ic('i-heart', 's')} for tidepool lovers</p>
-      <div class="rowb mt"><button class="btn ghost small danger" data-act="reset">Reset progress</button></div>`;
+  const SETTING_LABEL = { music: tk('Music'), sfx: tk('Sound effects'), haptics: tk('Haptics'), notif: tk('Reminders'), paidPulls: tk('Sea Glass capsule pulls'), reduceMotion: tk('Reduce motion'), battery: tk('Battery saver') };
+  /** Sea Glass pulls show as on only when they would actually work (for a player under 18 that also needs a parent's OK). */
+  const pullsOn = () => st().settings.paidPulls && (st().guard.age !== 'minor' || st().guard.parent);
+  const sw = (k) => { const on = k === 'paidPulls' ? pullsOn() : !!st().settings[k]; return `<button class="switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-act="set:${k}" aria-label="${esc(t(SETTING_LABEL[k] || k))}"></button>`; };
+  ui.openSettings = () => mountModal('settings', { title: t('Settings'), cls: 'tall', render: () => {
+    let h = `<div class="setrow"><span>${t('Music')}<small>${t('Calm ocean ambience')}</small></span>${sw('music')}</div>
+      <div class="setrow"><span>${t('Sound effects')}</span>${sw('sfx')}</div>
+      <div class="setrow"><span>${t('Haptics')}<small>${t('Gentle vibrations')}</small></span>${sw('haptics')}</div>
+      <div class="setrow"><span>${t('Reminders')}<small>${t('A few a day at most, never at night')}</small></span>${sw('notif')}</div>
+      <div class="setrow"><span>${t('Sea Glass capsule pulls')}<small>${t('Off = only free Coins & daily capsule (max {n} pulls/day when on)', { n: D.GACHA.paidDailyCap })}${st().guard.age === 'minor' ? ` ${t('Under 18: a parent or guardian turns these on.')}` : ''}</small></span>${sw('paidPulls')}</div>
+      <div class="setrow"><span>${t('Reduce motion')}<small>${t('Calmer effects')}</small></span>${sw('reduceMotion')}</div>
+      <div class="setrow"><span>${t('Battery saver')}<small>${t('Lower frame rate & effects')}</small></span>${sw('battery')}</div>
+      <div class="rowb mt"><button class="btn lav small" data-act="restore">${t('Restore purchases')}</button></div>
+      <div class="rowb mt"><button class="link" data-act="link:privacy">${t('Privacy Policy')}</button><button class="link" data-act="link:terms">${t('Terms of Use')}</button><button class="link" data-act="link:support">${t('Support')}</button></div>
+      <div class="rowb"><button class="link" data-act="link:rates">${t('Drop rates')}</button><button class="link" data-act="link:parents">${t("Parents' guide")}</button><button class="link" data-act="legal">${t('Legal & credits')}</button></div>
+      <div class="rowb"><button class="link" data-act="privacysummary">${t('What data do we collect?')}</button></div>
+      <p class="muted center mt">Tiny Tides v${VERSION}${store.mode === 'demo' ? ` · ${t('demo build')}` : ''}<br>${t('Made with {heart} for tidepool lovers', { heart: ic('i-heart', 's') })}</p>
+      <div class="rowb mt"><button class="btn ghost small danger" data-act="reset">${t('Reset progress')}</button></div>`;
     if (__DEBUG__) h += `<div class="card mt"><b>Debug</b><div class="rowb mt2"><button class="btn small" data-act="dbg:pearls">+10k pearls</button><button class="btn small" data-act="dbg:glass">+500 glass</button><button class="btn small" data-act="dbg:lvl">Lv +3</button><button class="btn small" data-act="dbg:hours">+6 hours</button></div></div>`;
     return { body: h };
   } });
-  ui.showLegal = () => mountModal('legal', { title: 'Legal & credits', cls: 'tall', top: true, render: () => {
+  ui.showLegal = () => mountModal('legal', { title: t('Legal & credits'), cls: 'tall', top: true, render: () => {
     let h = `<p class="center" style="font-weight:600">Tiny Tides v${VERSION}<br><span class="muted">© ${esc(SITE.year)} ${esc(SITE.developer)}</span></p>
-      <div class="rowb"><button class="link" data-act="link:privacy">Privacy Policy</button><button class="link" data-act="link:terms">Terms of Use</button></div>
-      <div class="rowb"><button class="link" data-act="link:rates">Drop rates</button><button class="link" data-act="link:parents">Parents' guide</button><button class="link" data-act="link:support">Support</button></div>
-      <h4 class="muted mt">OPEN-SOURCE SOFTWARE</h4><p class="muted">All art is drawn by the game and all sound is generated in the app. Tiny Tides is built with these open-source components:</p>`;
-    h += LICENSES.map((g) => `<details class="lic"><summary>${esc(g.license)} — ${g.items.map((i) => esc(i.name)).join(', ')}</summary><pre>${esc(g.text)}</pre></details>`).join('');
-    h += `<p class="muted">In-app purchases use a modified copy of @capgo/native-purchases (MPL-2.0). The modification and where to get the source are published at the Licenses page on our website.</p><div class="rowb"><button class="link" data-act="link:licenses">Open licenses page</button></div>
-      <p class="muted center">Apple, iPhone, iPad and App Store are trademarks of Apple Inc.</p>`;
+      <div class="rowb"><button class="link" data-act="link:privacy">${t('Privacy Policy')}</button><button class="link" data-act="link:terms">${t('Terms of Use')}</button></div>
+      <div class="rowb"><button class="link" data-act="link:rates">${t('Drop rates')}</button><button class="link" data-act="link:parents">${t("Parents' guide")}</button><button class="link" data-act="link:support">${t('Support')}</button></div>
+      <h4 class="muted mt">${t('OPEN-SOURCE SOFTWARE')}</h4><p class="muted">${t('All art is drawn by the game and all sound is generated in the app. Tiny Tides is built with these open-source components:')}</p>`;
+    h += LICENSES.map((g) => `<details class="lic"><summary>${esc(g.license)} — ${g.items.map((i) => esc(i.name)).join(', ')}</summary><pre lang="en">${esc(g.text)}</pre></details>`).join('');
+    h += `<p class="muted">${t('In-app purchases use a modified copy of @capgo/native-purchases (MPL-2.0). The modification and where to get the source are published at the Licenses page on our website.')}</p><div class="rowb"><button class="link" data-act="link:licenses">${t('Open licenses page')}</button></div>
+      <p class="muted center">${t('Apple, iPhone, iPad and App Store are trademarks of Apple Inc.')}</p>`;
     return { body: h };
   } });
-  ui.showPrivacySummary = () => mountModal('privacy', { title: 'Your privacy', top: true, render: () => ({ body: `<div class="list">${POLICY.map((p) => `<div class="card"><h5>${esc(p[0])}</h5><p>${esc(p[1])}</p></div>`).join('')}</div>` }) });
+  ui.showPrivacySummary = () => mountModal('privacy', { title: t('Your privacy'), top: true, render: () => ({ body: `<div class="list">${POLICY.map((p) => `<div class="card"><h5>${esc(t(p[0]))}</h5><p>${esc(t(p[1]))}</p></div>`).join('')}</div>` }) });
 
   // ---- Photo
   ui.showPhoto = (cv) => {
     A.play('gift');
-    mountModal('photo', { title: 'Snapshot', top: true, render: () => ({ body: `<div class="photo" id="photo-slot"></div>`, footer: `<button class="btn ghost" data-act="close:photo">Close</button><button class="btn green" data-act="sharephoto">${ic('i-camera', 's')} Share</button>`, after: (box) => { const slot = $('#photo-slot', box); if (slot && !slot.firstChild) { const img = new Image(); img.alt = 'Your tidepool'; img.src = cv.toDataURL('image/png'); slot.appendChild(img); } } }) });
+    mountModal('photo', { title: t('Snapshot'), top: true, render: () => ({ body: `<div class="photo" id="photo-slot"></div>`, footer: `<button class="btn ghost" data-act="close:photo">${t('Close')}</button><button class="btn green" data-act="sharephoto">${ic('i-camera', 's')} ${t('Share')}</button>`, after: (box) => { const slot = $('#photo-slot', box); if (slot && !slot.firstChild) { const img = new Image(); img.alt = t('Your tidepool'); img.src = cv.toDataURL('image/png'); slot.appendChild(img); } } }) });
     ui._photo = cv;
   };
 
   // ---- Intro / notification ask
-  ui.showIntro = () => mountModal('intro', { title: '', sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div><div style="width:110px;margin:0 auto">${ic('i-blip', 'xl')}</div><h2 class="big" style="font-size:34px">Tiny Tides</h2><p style="font-weight:600;font-size:16px">Hi, I'm <b>Blip</b>! Build a little tidepool, welcome tiny creatures, and watch them evolve based on the rocks and water you arrange.</p><p class="muted">Check in a few times a day — your pool keeps working while you're away.</p></div>`, footer: `<button class="btn green" data-act="tutstart">Let's build!</button>` }) });
+  ui.showIntro = () => mountModal('intro', { title: '', sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div><div style="width:110px;margin:0 auto">${ic('i-blip', 'xl')}</div><h2 class="big" style="font-size:34px">Tiny Tides</h2><p style="font-weight:600;font-size:16px">${t("Hi, I'm {name}! Build a little tidepool, welcome tiny creatures, and watch them evolve based on the rocks and water you arrange.", { name: '<b>Blip</b>' })}</p><p class="muted">${t("Check in a few times a day — your pool keeps working while you're away.")}</p></div>`, footer: `<button class="btn green" data-act="tutstart">${t("Let's build!")}</button>` }) });
   ui.showNotifAsk = () => {
     if (!notify.supported || st().settings.notif || st().flags.notifAsked) return;
     st().flags.notifAsked = true;
-    mountModal('notifask', { title: 'Want reminders?', sticky: true, top: true, render: () => ({ body: `<div class="center"><div>${ic('i-gift', 'xl')}</div><p style="font-weight:600">I can nudge you when a Tide Gift arrives, evolutions finish, or bubbles are full. No more than a few a day, and never at night.</p></div>`, footer: `<button class="btn ghost" data-act="close:notifask">Maybe later</button><button class="btn green" data-act="notifyes">Yes please</button>` }) });
+    mountModal('notifask', { title: t('Want reminders?'), sticky: true, top: true, render: () => ({ body: `<div class="center"><div>${ic('i-gift', 'xl')}</div><p style="font-weight:600">${t('I can nudge you when a Tide Gift arrives, evolutions finish, or bubbles are full. No more than a few a day, and never at night.')}</p></div>`, footer: `<button class="btn ghost" data-act="close:notifask">${t('Maybe later')}</button><button class="btn green" data-act="notifyes">${t('Yes please')}</button>` }) });
   };
 
   // ------------------------------------------------------------------ Tutorial coach
   let coachSig = '';
   ui.tutorialChanged = () => { renderCoach(); };
   function renderCoach() {
-    const root = $('#coach'), t = G.tutorial();
-    document.body.dataset.tut = t && st().tut.step >= 1 && st().tut.step <= 7 ? String(st().tut.step) : '';
+    const root = $('#coach'), tu = G.tutorial();
+    document.body.dataset.tut = tu && st().tut.step >= 1 && st().tut.step <= 7 ? String(st().tut.step) : '';
     if (!document.body.dataset.tut) delete document.body.dataset.tut;
     $$('.tut-pulse').forEach((e) => e.classList.remove('tut-pulse'));
-    if (!t || !t.text) { if (coachSig) { root.innerHTML = ''; coachSig = ''; setTimeout(() => ui.layoutChanged(), 30); } scene.hintTiles = []; return; }
-    scene.hintTiles = t.tiles || [];
-    if (t.tool && G.tool !== t.tool && (G.tab === 'build')) G.setTool(t.tool);
-    if (t.tab && G.tab !== t.tab && !(t.tab === 'pool' && sheetOpen && G.tab === 'pool')) G.setTab(t.tab);
-    const sig = t.text + (t.progress || '') + (sheetOpen ? '|c' : '');
-    if (sig !== coachSig) { coachSig = sig; setTimeout(() => ui.layoutChanged(), 30); root.innerHTML = `<div class="coach ${sheetOpen ? 'compact' : ''}"><div class="blip">${ic('i-blip')}</div><div><p>${esc(t.text)} ${t.progress ? `<span class="prg">${t.progress}</span>` : ''}</p><button class="skip" data-act="tutskip">Skip tips</button></div></div>`; }
-    if (t.target) { const e = $(t.target); if (e) e.classList.add('tut-pulse'); }
-    if (t.tool) { const e = $(`.tool[data-act="tool:${t.tool}"]`); if (e) e.classList.add('tut-pulse'); }
+    if (!tu || !tu.text) { if (coachSig) { root.innerHTML = ''; coachSig = ''; setTimeout(() => ui.layoutChanged(), 30); } scene.hintTiles = []; return; }
+    scene.hintTiles = tu.tiles || [];
+    if (tu.tool && G.tool !== tu.tool && (G.tab === 'build')) G.setTool(tu.tool);
+    if (tu.tab && G.tab !== tu.tab && !(tu.tab === 'pool' && sheetOpen && G.tab === 'pool')) G.setTab(tu.tab);
+    const sig = tu.text + (tu.progress || '') + (sheetOpen ? '|c' : '');
+    if (sig !== coachSig) { coachSig = sig; setTimeout(() => ui.layoutChanged(), 30); root.innerHTML = `<div class="coach ${sheetOpen ? 'compact' : ''}"><div class="blip">${ic('i-blip')}</div><div><p>${esc(tu.text)} ${tu.progress ? `<span class="prg">${tu.progress}</span>` : ''}</p><button class="skip" data-act="tutskip">${t('Skip tips')}</button></div></div>`; }
+    if (tu.target) { const e = $(tu.target); if (e) e.classList.add('tut-pulse'); }
+    if (tu.tool) { const e = $(`.tool[data-act="tool:${tu.tool}"]`); if (e) e.classList.add('tut-pulse'); }
   }
   /** The one-time "You did it!" card after the first evolution. Driven by a saved flag so a restart mid-reveal can't lose it. */
   function showTutDone() {
@@ -613,7 +679,7 @@ export function createUI(G) {
     if (!f.tutModal || !st().tut.done || G.reveals.length || modals.some((m) => m.id === 'reveal')) return;
     f.tutModal = false; G.dirty = true;
     enqueue(() => {
-      const m = mountModal('tutdone', { title: 'You did it!', sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div>${ic('i-gift', 'xl')}<p style="font-weight:600;font-size:16px">Your first evolution! Your pool keeps earning pearls while you're away. A <b>Tide Gift</b> arrives morning, afternoon and evening.</p><div class="chips"><div class="chipx">${ic('i-glass')}+10 Sea Glass</div><div class="chipx">${ic('i-coin')}+2 Capsule Coins</div></div><p class="muted">Tap the capsule button for a free toy every day!</p><p class="muted">Try different rocks & water to discover all ${D.FORM_IDS.length} creatures.</p></div>`, footer: `<button class="btn green" data-act="close:tutdone">Onward!</button>` }) });
+      const m = mountModal('tutdone', { title: t('You did it!'), sticky: true, render: () => ({ body: `<div class="reveal center"><div class="rays"></div>${ic('i-gift', 'xl')}<p style="font-weight:600;font-size:16px">${t("Your first evolution! Your pool keeps earning pearls while you're away. A Tide Gift arrives morning, afternoon and evening.")}</p><div class="chips"><div class="chipx">${ic('i-glass')}${t('+{n} Sea Glass', { n: 10 })}</div><div class="chipx">${ic('i-coin')}${t('+{n} Capsule Coin|+{n} Capsule Coins', { n: 2 })}</div></div><p class="muted">${t('Tap the capsule button for a free toy every day!')}</p><p class="muted">${esc(t('Try different rocks & water to discover all {n} creatures.', { n: D.FORM_IDS.length }))}</p></div>`, footer: `<button class="btn green" data-act="close:tutdone">${t('Onward!')}</button>` }) });
       m.onClose = () => { ui.showNotifAsk(); enqueueDaily(); };
     });
   }
@@ -625,62 +691,106 @@ export function createUI(G) {
     close(v) { ui.closeModal(v); },
     biome(v) { G.switchBiome(v); ui.layoutChanged(); },
     settings() { ui.openSettings(); },
-    levelinfo() { const s = st(); ui.toast(`Pool Lv ${s.lvl} · ${s.xp}/${D.xpForLevel(s.lvl)} XP — evolve & discover to level up`); },
+    levelinfo() { const s = st(); ui.toast(t('Pool Lv {lvl} · {xp}/{need} XP — evolve & discover to level up', { lvl: s.lvl, xp: s.xp, need: D.xpForLevel(s.lvl) })); },
     shop(v) { ui.openShop(v); },
     collectall() { G.collectAll(); },
-    gift() { if (S.giftAvailable(st(), now())) G.claimGift(); else ui.toast('Next gift is on its way'); },
+    gift() { if (S.giftAvailable(st(), now())) G.claimGift(); else ui.toast(t('Next gift is on its way')); },
     snap() { G.snap(); },
     closesheet() { ui.closeSheet(); },
     shtab(v) { sheetTab = sheetTab === v ? '' : v; renderSheet(); ui.layoutChanged(); },
     shopdecor2() { ui.openShop('decor'); shopSub = 'hat'; ui.refresh(); },
     levelup() { G.levelUp(G.selected); },
-    evolve() { const c = pool().creatures.find((k) => k.id === G.selected); const info = S.evoInfo(st(), pool(), c); if (info.canStart) G.evolve(G.selected); else ui.toast(info.reason === 'level' ? `Reach Lv ${info.needLvl} first` : info.reason === 'habitat' ? 'Build a better habitat — see the traits above' : info.reason === 'pearls' ? `Need ${info.cost} pearls` : 'Not ready yet', 'warn'); },
-    speed(v) { if (v === 'glass') { const c = pool().creatures.find((k) => k.id === G.selected); const g = S.speedUpCost(st(), c, now()); if (st().cur.glass < g) { ui.toast('Not enough Sea Glass', 'warn'); ui.openShop('glass'); return; } } G.speedUp(G.selected, v); },
+    evolve() { const c = pool().creatures.find((k) => k.id === G.selected); const info = S.evoInfo(st(), pool(), c); if (info.canStart) G.evolve(G.selected); else ui.toast(info.reason === 'level' ? t('Reach Lv {n} first', { n: info.needLvl }) : info.reason === 'habitat' ? t('Build a better habitat — see the traits above') : info.reason === 'pearls' ? t('Need {n} pearls', { n: info.cost }) : t('Not ready yet'), 'warn'); },
+    async speed(v) {
+      const id = G.selected;
+      if (v === 'glass') {
+        const c = pool().creatures.find((k) => k.id === id); const g = S.speedUpCost(st(), c, now());
+        if (st().cur.glass < g) { ui.toast(t('Not enough Sea Glass'), 'warn'); ui.openShop('glass'); return; }
+        if (!(await ui.confirmGlass(g, t('finishing the evolution now')))) return;
+      }
+      G.speedUp(id, v);
+    },
     hat(v) { G.setHat(G.selected, v || null); },
-    async release() { const c = pool().creatures.find((k) => k.id === G.selected); if (!c || !st().tut.done) return; if (await ui.confirm({ title: 'Send home?', body: `${esc(FORMS[c.form].name)} will swim off and you'll get some pearls back. You keep the Tidedex entry.`, ok: 'Send home', danger: true })) G.release(G.selected); },
+    async release() { const c = pool().creatures.find((k) => k.id === G.selected); if (!c || !st().tut.done) return; if (await ui.confirm({ title: t('Send home?'), body: esc(t("{name} will swim off and you'll get some pearls back. You keep the Tidedex entry.", { name: formName(c.form) })), ok: t('Send home'), danger: true })) G.release(G.selected); },
     tool(v) { G.setTool(v === G.tool ? null : v); if (!G.tool) G.setTool(v); },
     expand() { G.expand(); },
     decorpicker() { ui.showDecorPicker(); },
     useprop(v) { ui.closeModal('decorpick'); ui.closeModal('shop'); G.setTab('build'); G.setTool('decor:' + v); ui.layoutChanged(); },
     shopdecor() { ui.closeModal('decorpick'); shopTab = 'decor'; ui.openShop('decor'); },
     dextab(v) { dexTab = v; ui.refresh(); },
-    dexclaim(v) { const r = G.claimDex(+v); if (r.ok) ui.toast(`+${r.glass} Sea Glass${r.coins ? `  +${r.coins} Capsule Coin${r.coins > 1 ? 's' : ''}` : ''}`, 'good'); },
+    dexclaim(v) { const r = G.claimDex(+v); if (r.ok) ui.toast(`${t('+{n} Sea Glass', { n: r.glass })}${r.coins ? `  ${t('+{n} Capsule Coin|+{n} Capsule Coins', { n: r.coins })}` : ''}`, 'good'); },
     slot(v) { slotDetail(v); },
     shoptab(v) { shopTab = v; ui.refresh(); },
     shopsub(v) { shopTab = 'decor'; shopSub = v; ui.refresh(); },
-    buy(v) { G.purchase(v); },
-    buydecor(v) { G.buyDecor(v); },
+    async buy(v) { if (st().guard.age === 'minor' && !(await ui.parentGate())) return; G.purchase(v); },       // a known under-18 player: a parent confirms real-money purchases
+    async buydecor(v) {
+      const g = DECOR[v]?.price?.glass;
+      if (g) { if (st().cur.glass < g) { ui.toast(t('Not enough Sea Glass'), 'warn'); ui.openShop('glass'); return; } if (!(await ui.confirmGlass(g, decorName(v)))) return; }
+      G.buyDecor(v);
+    },
     equip(v) { G.equip(v); },
-    boost(v) { G.buyBoost(v); },
+    async boost(v) {
+      const g = D.BOOSTS[v]?.glass;
+      if (g) { if (st().cur.glass < g) { ui.toast(t('Not enough Sea Glass'), 'warn'); ui.openShop('glass'); return; } if (!(await ui.confirmGlass(g, boostName(v)))) return; }
+      G.buyBoost(v);
+    },
     restore() { G.restore(); },
     gacha() { ui.closeModal('quests'); ui.closeModal('shop'); ui.openGacha(); },
     gacharates() { ui.closeModal('shop'); ui.openGacha('rates'); },
     godeep() { ui.closeAllModals(); G.switchBiome('deep'); ui.layoutChanged(); },
-    claimquest(v) { const r = G.claimQuest(+v); if (r.ok) ui.toast(`+${r.glass} Sea Glass  +${r.pearls} pearls`, 'good'); },
+    claimquest(v) { const r = G.claimQuest(+v); if (r.ok) ui.toast(`${t('+{n} Sea Glass', { n: r.glass })}  ${t('+{n} pearls', { n: fmt(r.pearls) })}`, 'good'); },
     claimchest() { G.claimChest(); },
     claimdaily() { ui.closeModal('daily'); G.claimDaily(); },
     opendaily() { openDaily(); },
-    set(v) { G.setSetting(v, !st().settings[v]); },
-    link(v) { openUrl(LINKS[v]); },
+    async set(v) {
+      if (v === 'paidPulls' && !pullsOn() && st().guard.age === 'minor') {        // a younger player: a parent turns them on
+        if (!(await ui.parentGate())) return;
+        G.setParentOk(true);
+        if (!st().settings.paidPulls) G.setSetting('paidPulls', true); else ui.refresh();
+        return;
+      }
+      G.setSetting(v, !st().settings[v]);
+    },
+    link(v) { openUrl(pageUrl(v)); },
     privacysummary() { ui.showPrivacySummary(); },
     legal() { ui.showLegal(); },
-    async reset() { if (await ui.confirm({ title: 'Reset everything?', body: 'This permanently deletes your tidepool, creatures and progress. Purchases can be restored.', ok: 'Reset', danger: true })) { if (await ui.confirm({ title: 'Are you sure?', body: 'There is no undo.', ok: 'Yes, reset', danger: true })) G.reset(); } },
+    async reset() { if (await ui.confirm({ title: t('Reset everything?'), body: t('This permanently deletes your tidepool, creatures and progress. Purchases can be restored.'), ok: t('Reset'), danger: true })) { if (await ui.confirm({ title: t('Are you sure?'), body: t('There is no undo.'), ok: t('Yes, reset'), danger: true })) G.reset(); } },
     tutstart() { ui.closeModal('intro'); G.tutorialStart(); },
-    async tutskip() { if (await ui.confirm({ title: 'Skip the tips?', body: "You can always figure things out as you go. I'll be here!", ok: 'Skip', cancel: 'Keep going' })) { G.tutorialSkip(); } },
+    async tutskip() { if (await ui.confirm({ title: t('Skip the tips?'), body: t("You can always figure things out as you go. I'll be here!"), ok: t('Skip'), cancel: t('Keep going') })) { G.tutorialSkip(); } },
     notifyes() { ui.closeModal('notifask'); G.setSetting('notif', true); },
     sharephoto() { if (ui._photo) G.sharePhoto(ui._photo); },
     sharereveal(v) { shareReveal(v); },
     confirm(v) { modals.find((m) => m.id === 'confirm')?.answer(v === 'yes'); },
+    age(v) {
+      const m = modals.find((x) => x.id === 'age'); if (!m) return;
+      if (v === 'cancel') return m.answer('');
+      const mo = $('#age-m', m.el)?.value, y = $('#age-y', m.el)?.value;
+      if (!mo || !y) { ui.toast(t('Please choose a month and a year.'), 'warn'); return; }
+      m.answer(ageFrom(+y, +mo) >= G.PAID_AGE ? 'adult' : 'minor');
+    },
+    gate(v) {
+      const m = modals.find((x) => x.id === 'gate'); if (!m) return;
+      if (v === 'cancel') return m.answer(false);
+      if (m.right()) m.answer(true); else { ui.toast(t("That's not right. Ask a parent or guardian."), 'warn'); m.answer(false); }
+    },
     ...(__DEBUG__ ? { dbg(v) { const s = st(); if (v === 'pearls') s.cur.pearls += 10000; if (v === 'glass') s.cur.glass += 500; if (v === 'lvl') { s.lvl += 3; } if (v === 'hours') window.__tt.advance(6 * D.HOUR); ui.refresh(); } } : {}),
   };
+  /** Largest font size (≤ max) at which `text` fits in `width` pixels. */
+  function fitFont(c, text, max, width, family, weight = 700) {
+    let size = max;
+    for (; size > 20; size -= 2) { c.font = `${weight} ${size}px ${family}`; if (c.measureText(text).width <= width) break; }
+    return size;
+  }
   function shareReveal(formId) {
     const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350; const c = cv.getContext('2d');
     const g = c.createLinearGradient(0, 0, 0, 1350); g.addColorStop(0, '#59c6ff'); g.addColorStop(1, '#ffd2ef'); c.fillStyle = g; c.fillRect(0, 0, 1080, 1350);
     c.save(); c.translate(540, 700); c.fillStyle = 'rgba(255,255,255,.4)'; for (let i = 0; i < 16; i++) { c.rotate(Math.PI / 8); c.fillRect(-26, 0, 52, 900); } c.restore();
     c.save(); c.translate(540, 820); drawSprite(c, formId, 0, 0, 900, {}); c.restore();
     c.textAlign = 'center'; c.font = '700 96px Fredoka, ui-rounded, sans-serif'; c.lineWidth = 16; c.strokeStyle = '#3b1d5e'; c.lineJoin = 'round';
-    c.strokeText(FORMS[formId].name, 540, 210); c.fillStyle = '#fff'; c.fillText(FORMS[formId].name, 540, 210);
-    c.font = '600 46px Fredoka, ui-rounded, sans-serif'; c.lineWidth = 10; c.strokeText('I discovered it in Tiny Tides!', 540, 1270); c.fillText('I discovered it in Tiny Tides!', 540, 1270);
+    const nm = formName(formId), line = t('I discovered it in Tiny Tides!');
+    c.font = `700 ${fitFont(c, nm, 96, 980, 'Fredoka, ui-rounded, sans-serif')}px Fredoka, ui-rounded, sans-serif`;
+    c.strokeText(nm, 540, 210); c.fillStyle = '#fff'; c.fillText(nm, 540, 210);
+    c.font = `600 ${fitFont(c, line, 46, 1000, 'Fredoka, ui-rounded, sans-serif', 600)}px Fredoka, ui-rounded, sans-serif`; c.lineWidth = 10; c.strokeText(line, 540, 1270); c.fillText(line, 540, 1270);
     G.sharePhoto(cv);
   }
   ui.actions = acts;

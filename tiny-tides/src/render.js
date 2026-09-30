@@ -2,6 +2,7 @@
 import * as D from './data.js';
 import * as S from './sim.js';
 import { drawSprite, facingOf, OUT, rng, hash } from './art_creatures.js';
+import { t as tr } from './i18n.js';      // (t is used for time throughout this file)
 import { PIECE_ART, drawEgg, drawCocoon } from './art_world.js';
 import { drawProp } from './art_gacha.js';
 
@@ -243,7 +244,12 @@ export function createScene(canvas) {
       for (let L = 1; L <= 3; L++) {
         if (!pool.tiles.some((t) => t.w >= L)) break;
         const cols = colsFor[L];
-        const wg = c.createLinearGradient(0, oy, 0, oy + gh); wg.addColorStop(0, night(cols[0])); wg.addColorStop(1, night(cols[1]));
+        let wg;
+        if (skin.prism && L < 3) {        // Holo Prism: diagonal pastel rainbow bands instead of a plain top-to-bottom fade
+          wg = c.createLinearGradient(ox, oy, ox + pool.w * ts, oy + gh);
+          const bands = L === 1 ? ['#ffc4ec', cols[0], '#fff3b0', cols[1], '#c4ffd6', '#ffc4ec'] : ['#e39cf0', cols[0], '#9fb2ff', cols[1], '#8ee6d8', '#e39cf0'];
+          bands.forEach((col, i) => wg.addColorStop(i / (bands.length - 1), night(col)));
+        } else { wg = c.createLinearGradient(0, oy, 0, oy + gh); wg.addColorStop(0, night(cols[0])); wg.addColorStop(1, night(cols[1])); }
         c.fillStyle = wg; c.fill(paths[L]);
         // edge-only strips (never along shared tile edges, so no grid lines inside a puddle)
         const has = (x, y) => { const t = S.tileAt(pool, x, y); return !!t && t.w >= L; };
@@ -528,7 +534,9 @@ export function createScene(canvas) {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.font = '700 54px Fredoka, ui-rounded, system-ui, sans-serif'; c.textAlign = 'center';
     c.lineWidth = 10; c.strokeStyle = 'rgba(59,29,94,.9)'; c.lineJoin = 'round'; c.strokeText('Tiny Tides', W / 2, H * 0.075); c.fillStyle = '#fff'; c.fillText('Tiny Tides', W / 2, H * 0.075);
-    c.font = '600 28px Fredoka, ui-rounded, system-ui, sans-serif'; c.strokeText(`${S.dexCount(sc.state)} / ${D.FORM_IDS.length} creatures discovered`, W / 2, H * 0.955); c.fillText(`${S.dexCount(sc.state)} / ${D.FORM_IDS.length} creatures discovered`, W / 2, H * 0.955);
+    const line = tr('{n} / {total} creatures discovered', { n: S.dexCount(sc.state), total: D.FORM_IDS.length });
+    let fs = 28; do { c.font = `600 ${fs}px Fredoka, ui-rounded, system-ui, sans-serif`; } while (c.measureText(line).width > W * 0.9 && (fs -= 2) > 14);
+    c.strokeText(line, W / 2, H * 0.955); c.fillText(line, W / 2, H * 0.955);
     return cv;
   };
   return sc;

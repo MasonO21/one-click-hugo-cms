@@ -2,6 +2,8 @@
 
 export const APP_ID = 'com.tinytides.game';
 export const SAVE_KEY = 'tinytides.save.v1';
+/** Interface languages (see src/i18n.js for names and src/locales/ for the text). */
+export const LANG_CODES = ['en'];     // the game ships in English; add a code here + src/locales/<code>.json to add a language
 export const HOUR = 3600e3;
 export const MIN = 60e3;
 
@@ -324,7 +326,8 @@ export const SKINS = {
   sakura:    { sand: '#fff1f5', sandDk: '#ffcbdb', wet: '#f6abc2', shallow: '#ffd8e8', shallow2: '#ffb5d3', deep: '#ff90c0', deep2: '#e26ba7', trench: '#a9447f', slab: '#f4a5c1', slabDk: '#d888a5', sky: 'dusk' },
   neon:      { sand: '#3d2b7d', sandDk: '#2c1e60', wet: '#20154a', shallow: '#22e8ff', shallow2: '#00c4ff', deep: '#7b3dff', deep2: '#5b20e2', trench: '#2e109e', slab: '#1e1449', slabDk: '#150e35', sky: 'night' },
   candy:     { sand: '#fff0fb', sandDk: '#ffc6ee', wet: '#f4a8dd', shallow: '#bff6ff', shallow2: '#8fe3ff', deep: '#ff9ce6', deep2: '#e068c8', trench: '#a03fa0', slab: '#ffb5e8', slabDk: '#e18bcb' },
-  holo:      { sand: '#f3eaff', sandDk: '#c9d4ff', wet: '#b5c2f5', shallow: '#aaf5ff', shallow2: '#c8b0ff', deep: '#ff9ad8', deep2: '#7f8cff', trench: '#4a3fb8', slab: '#c6b8ff', slabDk: '#98a2f0' },
+  // prism: the water shimmers in rainbow bands (render.js)
+  holo:      { sand: '#f5f8ff', sandDk: '#d4dbff', wet: '#b6c1f2', shallow: '#a6fff0', shallow2: '#b9a8ff', deep: '#7fd6ff', deep2: '#c07bff', trench: '#5a3fd0', slab: '#cdc6ff', slabDk: '#9d95e6', prism: true },
   midnight:  { sand: '#39336f', sandDk: '#282456', wet: '#1b1842', shallow: '#3fd0e8', shallow2: '#2aa8d8', deep: '#5b4bd8', deep2: '#3c2fb0', trench: '#221a78', slab: '#1a1642', slabDk: '#0f0c2e', sky: 'night' },
   abyss:     { sand: '#4d52a8', sandDk: '#383c86', wet: '#2b2f6c', shallow: '#33c9d8', shallow2: '#22a3d0', deep: '#2f74dc', deep2: '#234fbc', trench: '#16308f', slab: '#262870', slabDk: '#16174a', sky: 'night' },
 };
@@ -352,7 +355,7 @@ export const PRODUCTS = {
 // Bonus labels are computed from the real amounts and prices (glass per dollar compared with the smallest pack), so they are always true.
 {
   const perUsd = (p) => p.glass / parseFloat(p.price.slice(1)), base = perUsd(PRODUCTS[`${APP_ID}.glass.60`]);
-  for (const p of Object.values(PRODUCTS)) if (p.type === 'consumable' && perUsd(p) > base * 1.005) p.tag = `+${Math.round((perUsd(p) / base - 1) * 100)}% bonus`;
+  for (const p of Object.values(PRODUCTS)) if (p.type === 'consumable' && perUsd(p) > base * 1.005) { p.bonus = Math.round((perUsd(p) / base - 1) * 100); p.tag = `+${p.bonus}% bonus`; }
 }
 export const PRODUCT_IDS = Object.keys(PRODUCTS);
 export const IAP = {
@@ -369,16 +372,17 @@ export const BOOSTS = {
 };
 
 // ---------------------------------------------------------------- quests & rewards
+// text: English wording; 'singular|plural' where the goal is a count ({n}). Shown translated via i18n (key quest:<id>).
 export const QUEST_TEMPLATES = [
-  { id: 'collect',  text: (n) => `Pop ${n} bubbles`,        min: 8,  max: 20, ev: 'collect', glass: 3 },
-  { id: 'pearls',   text: (n) => `Earn ${n} pearls`,        scale: true,     ev: 'pearls',  glass: 3 },
-  { id: 'place',    text: (n) => `Place ${n} rocks or plants`, min: 4, max: 8, ev: 'place',  glass: 3 },
-  { id: 'levelup',  text: (n) => `Level up creatures ${n} times`, min: 2, max: 4, ev: 'levelup', glass: 4 },
-  { id: 'hatch',    text: (n) => `Hatch ${n} egg${n > 1 ? 's' : ''}`, min: 1, max: 2, ev: 'hatch', glass: 4 },
-  { id: 'pet',      text: (n) => `Pet ${n} creatures`,      min: 4,  max: 8,  ev: 'pet',    glass: 3 },
-  { id: 'gift',     text: () => 'Open a Tide Gift',         min: 1,  max: 1,  ev: 'gift',    glass: 3 },
-  { id: 'evolve',   text: () => 'Start an evolution',       min: 1,  max: 1,  ev: 'evolve',  glass: 5 },
-  { id: 'pull',     text: () => 'Pull a capsule',           min: 1,  max: 1,  ev: 'pull',    glass: 2, coins: 1 },
+  { id: 'collect',  text: 'Pop {n} bubble|Pop {n} bubbles',        min: 8,  max: 20, ev: 'collect', glass: 3 },
+  { id: 'pearls',   text: 'Earn {n} pearls',        scale: true,     ev: 'pearls',  glass: 3 },
+  { id: 'place',    text: 'Place {n} rock or plant|Place {n} rocks or plants', min: 4, max: 8, ev: 'place',  glass: 3 },
+  { id: 'levelup',  text: 'Level up creatures {n} time|Level up creatures {n} times', min: 2, max: 4, ev: 'levelup', glass: 4 },
+  { id: 'hatch',    text: 'Hatch {n} egg|Hatch {n} eggs', min: 1, max: 2, ev: 'hatch', glass: 4 },
+  { id: 'pet',      text: 'Pet {n} creature|Pet {n} creatures',      min: 4,  max: 8,  ev: 'pet',    glass: 3 },
+  { id: 'gift',     text: 'Open a Tide Gift',         min: 1,  max: 1,  ev: 'gift',    glass: 3 },
+  { id: 'evolve',   text: 'Start an evolution',       min: 1,  max: 1,  ev: 'evolve',  glass: 5 },
+  { id: 'pull',     text: 'Pull a capsule',           min: 1,  max: 1,  ev: 'pull',    glass: 2, coins: 1 },
 ];
 export const QUEST_COUNT = 3;
 export const QUEST_ALL_BONUS = { glass: 10, tokens: 1, coins: 1 };

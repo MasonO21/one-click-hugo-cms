@@ -97,6 +97,8 @@ export function newState(now, seed) {
     gift: { key: '' },
     gacha: { pulls: 0, paidPulls: 0, pityR: 0, pityL: 0, shards: 0, owned: {}, freeDay: '', paidDay: '', paidToday: 0, setsClaimed: {}, milesClaimed: [] },
     settings: { music: true, sfx: true, haptics: true, notif: false, reduceMotion: false, battery: false, paidPulls: true },
+    // age check for Sea Glass capsule pulls: only the answer is kept (never a birth date), plus whether a parent said yes
+    guard: { age: '', src: '', parent: false },
     stats: { collected: 0, pearls: 0, hatched: 0, evolved: 0, pets: 0, placed: 0, levelups: 0, gifts: 0, days: 0 },
     tut: { step: 0, done: false },
     flags: {},
@@ -206,6 +208,9 @@ function rebuild(saved, now) {
   Q.list = Q.list.filter((q) => isObj(q) && D.QUEST_TEMPLATES.some((t) => t.id === q.id) && Number.isFinite(q.goal) && q.goal > 0 && Number.isFinite(q.prog))
     .map((q) => ({ id: q.id, ev: D.QUEST_TEMPLATES.find((t) => t.id === q.id).ev, goal: Math.floor(q.goal), prog: clamp(Math.floor(q.prog), 0, Math.floor(q.goal)), done: !!q.done, claimed: !!q.claimed, glass: asInt(q.glass, 0, 1e6, 0), coins: asInt(q.coins, 0, 1e6, 0), pearls: asInt(q.pearls, 0, 1e12, 0) }));
   sanitizeGacha(st);
+  if (!['', 'adult', 'minor'].includes(st.guard.age)) st.guard.age = '';
+  if (!['', 'apple', 'self'].includes(st.guard.src)) st.guard.src = '';
+  st.guard.parent = st.guard.parent === true;
   for (const k of ['skin', 'fx']) if (!(has(DECOR, st.equip[k]) && DECOR[st.equip[k]].kind === k && st.own[st.equip[k]])) st.equip[k] = k === 'skin' ? 'aqua' : 'bubbles';
   // ids
   st.nid = asInt(st.nid, 1, 2147483000, 1);
@@ -322,7 +327,7 @@ export function unlocksAtLevel(L) {
   const out = [];
   for (const [id, p] of Object.entries(PIECES)) if (p.biome === 'tide' && p.unlock === L && L > 1) out.push({ kind: 'piece', id, name: p.name });
   for (const [id, f] of Object.entries(FAMILIES)) if (f.biome === 'tide' && f.unlock === L && L > 1) out.push({ kind: 'family', id, name: f.name });
-  BIOMES.tide.steps.forEach((s, i) => { if (i && s.lvl === L) out.push({ kind: 'expand', name: `Pool expansion ${s.w}×${s.h}` }); });
+  BIOMES.tide.steps.forEach((s, i) => { if (i && s.lvl === L) out.push({ kind: 'expand', w: s.w, h: s.h, name: `Pool expansion ${s.w}×${s.h}` }); });
   if (L === BIOMES.tide.deepUnlock) out.push({ kind: 'dig', name: 'Deep water digging' });
   return out;
 }
@@ -724,7 +729,7 @@ export function ensureDaily(state, now) {
   state.quests = { day: dk, list, chest: false };
   return true;
 }
-export const questText = (q) => D.QUEST_TEMPLATES.find((t) => t.id === q.id).text(q.goal);
+export const questText = (q) => { const [one, other = one] = D.QUEST_TEMPLATES.find((t) => t.id === q.id).text.split('|'); return (q.goal === 1 ? one : other).replace('{n}', q.goal); };
 export function claimQuest(state, i) {
   const q = state.quests.list[i];
   if (!q || !q.done || q.claimed) return { ok: false };

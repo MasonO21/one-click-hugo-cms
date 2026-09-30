@@ -3,7 +3,8 @@ import * as D from './data.js';
 import * as S from './sim.js';
 import * as A from './audio.js';
 import { storage, haptic, notify, store, shareCanvas } from './platform.js';
-import { NO_PAID_RANDOM } from './config.js';
+import { NO_PAID_RANDOM, NO_SET_REWARDS } from './config.js';
+import { t, tk, num, dur, intlTag, formName, decorName, productName } from './i18n.js';
 
 const { FORMS } = D;
 const BAK_KEY = D.SAVE_KEY + '.bak';
@@ -22,7 +23,7 @@ export function createGame(scene) {
   const tell = (msg, kind) => G.ui?.toast(msg, kind);
   const refresh = () => { tutorialTick(G.now()); G.ui?.refresh(); };
   const mark = () => { G.dirty = true; };
-  const nameOf = (c) => FORMS[c.form].name;
+  const nameOf = (c) => formName(c.form);
 
   // ------------------------------------------------------------------ save / load
   G.load = async () => {
@@ -79,8 +80,8 @@ export function createGame(scene) {
   G.setSetting = async (k, v) => {
     if (k === 'notif' && v) {
       const ok = await notify.request();
-      if (!ok && notify.supported) { tell('Turn on notifications in iOS Settings to get reminders', 'warn'); v = false; }
-      if (!notify.supported) { tell('Reminders are available in the app version', 'warn'); v = false; }
+      if (!ok && notify.supported) { tell(t('Turn on notifications in iOS Settings to get reminders'), 'warn'); v = false; }
+      if (!notify.supported) { tell(t('Reminders are available in the app version'), 'warn'); v = false; }
     }
     st().settings[k] = v; mark(); G.applySettings(); if (k === 'battery') scene.resize(scene.W, scene.H, window.devicePixelRatio, scene.insets); refresh();
   };
@@ -91,7 +92,7 @@ export function createGame(scene) {
       if (e.type === 'evolved') { G.reveals.push(e); }
       else if (e.type === 'levelup') { G.ui?.showLevelUp(e); A.play('levelup'); haptic.success(); scene.confetti(40); }
       else if (e.type === 'egg' && !o.silent && e.biome === G.biome) {
-        A.play('bloop'); tell('An egg washed ashore!', 'good');
+        A.play('bloop'); tell(t('An egg washed ashore!'), 'good');
         const eg = pool().eggs.find((x) => x.id === e.id);
         if (eg) { scene.burst(eg.x, eg.y, 'bubble', 8, { colors: ['#fff'], speed: 50 }); scene.ring(eg.x, eg.y, '#fff'); }
       }
@@ -129,7 +130,7 @@ export function createGame(scene) {
   };
 
   // ------------------------------------------------------------------ actions: collecting & creatures
-  const comboBump = () => { const t = performance.now(); G.combo.n = t - G.combo.t < 1500 ? G.combo.n + 1 : 1; G.combo.t = t; return G.combo.n; };
+  const comboBump = () => { const ms = performance.now(); G.combo.n = ms - G.combo.t < 1500 ? G.combo.n + 1 : 1; G.combo.t = ms; return G.combo.n; };
   G.collect = (id, delay = 0) => {
     const p0 = posOf(id);
     const amt = S.collect(st(), G.biome, id);
@@ -140,7 +141,7 @@ export function createGame(scene) {
       scene.burst(0, 0, 'pearl', 7, { px: p0[0], py: p0[1], lift: scene.ts * 0.7, speed: 110, size: 7, life: 0.7 });
       scene.burst(0, 0, 'bubble', 6, { px: p0[0], py: p0[1], lift: scene.ts * 0.7, speed: 80, colors: ['#bdf6ff', '#fff'], size: 8 });
       scene.text(0, 0, `+${amt}`, '#fff6b0', { px: p0[0], py: p0[1] - scene.ts * 0.6, size: 17 });
-      if (n >= 4) scene.text(0, 0, `x${n} combo!`, '#ffb1e6', { px: p0[0], py: p0[1] - scene.ts * 1.1, size: 14 });
+      if (n >= 4) scene.text(0, 0, t('x{n} combo!', { n }), '#ffb1e6', { px: p0[0], py: p0[1] - scene.ts * 1.1, size: 14 });
     }, delay);
     mark(); refresh();
     return amt;
@@ -149,14 +150,14 @@ export function createGame(scene) {
     const ids = pool().creatures.filter((c) => c.stored >= 1 && !c.evo).map((c) => c.id);
     let total = 0;
     ids.forEach((id, i) => { total += G.collect(id, i * 80); });
-    if (total) tell(`+${total} pearls`, 'good');
+    if (total) tell(t('+{n} pearls', { n: num(total) }), 'good');
     return total;
   };
   G.readyPearls = () => pool().creatures.reduce((a, c) => a + (c.evo ? 0 : Math.floor(c.stored)), 0);
   G.tapEgg = (id) => {
     const p = pool(), egg = p.eggs.find((e) => e.id === id), v = view(id), now = G.now();
     if (!egg) return;
-    if (now < egg.ready) { A.play('tick'); if (v) v.squash = 1; tell(`Still warming… ${S.fmtDur(egg.ready - now)}`); return; }
+    if (now < egg.ready) { A.play('tick'); if (v) v.squash = 1; tell(t('Still warming… {time}', { time: dur(egg.ready - now) })); return; }
     v.taps = (v.taps || 0) + 1; v.squash = 1; A.play('crack'); haptic.tap();
     scene.burst(egg.x, egg.y, 'spark', 5, { speed: 70, size: 4 });
     if (v.taps < 3) return;
@@ -166,7 +167,7 @@ export function createGame(scene) {
     scene.burst(egg.x, egg.y, 'spark', 16, { speed: 130 });
     scene.burst(egg.x, egg.y, 'heart', 5, { colors: ['#ff8fc4'], speed: 60, size: 9, up: 70 });
     scene.ring(egg.x, egg.y, '#fff');
-    tell(`${FORMS[res.creature.form].name} hatched!`, 'good');
+    tell(t('{name} hatched!', { name: formName(res.creature.form) }), 'good');
     G.handle(res.events);
     mark(); refresh();
   };
@@ -188,11 +189,11 @@ export function createGame(scene) {
 
   G.levelUp = (id) => {
     const r = S.levelUp(st(), G.biome, id);
-    if (!r.ok) { if (r.reason === 'pearls') tell(`Need ${r.need} pearls`, 'warn'); A.play('error'); return r; }
+    if (!r.ok) { if (r.reason === 'pearls') tell(t('Need {n} pearls', { n: r.need }), 'warn'); A.play('error'); return r; }
     const p = posOf(id);
     A.play('coin'); haptic.tap(); scene.tap(id);
     scene.burst(0, 0, 'spark', 8, { px: p[0], py: p[1], lift: scene.ts * 0.3, speed: 90 });
-    scene.text(0, 0, `Lv ${r.lvl}`, '#b9f5c4', { px: p[0], py: p[1] - scene.ts * 0.9, size: 16 });
+    scene.text(0, 0, t('Lv {n}', { n: r.lvl }), '#b9f5c4', { px: p[0], py: p[1] - scene.ts * 0.9, size: 16 });
     G.handle(r.events); mark(); refresh();
     return r;
   };
@@ -203,12 +204,12 @@ export function createGame(scene) {
     A.play('evolve'); haptic.heavy();
     scene.burst(0, 0, 'spark', 22, { px: p[0], py: p[1], speed: 150, size: 7 });
     scene.ring(0, 0, '#e6d0ff', { px: p[0], py: p[1], size: scene.ts * 1.2 });
-    tell('Evolution started!', 'good'); mark(); refresh();
+    tell(t('Evolution started!'), 'good'); mark(); refresh();
     return r;
   };
   G.speedUp = (id, mode) => {
     const r = S.speedUp(st(), G.biome, id, G.now(), mode);
-    if (!r.ok) { if (r.reason === 'glass') { tell('Not enough Sea Glass', 'warn'); G.ui?.openShop('glass'); } A.play('error'); return r; }
+    if (!r.ok) { if (r.reason === 'glass') { tell(t('Not enough Sea Glass'), 'warn'); G.ui?.openShop('glass'); } A.play('error'); return r; }
     A.play('whoosh'); haptic.success(); G.handle(r.events); mark(); refresh();
     return r;
   };
@@ -216,16 +217,16 @@ export function createGame(scene) {
     const c = pool().creatures.find((k) => k.id === id);
     if (!st().tut.done) return { ok: false, reason: 'tutorial' };
     const r = S.releaseCreature(st(), G.biome, id, G.now());
-    if (r.ok) { tell(`${c ? nameOf(c) : 'Friend'} swam home  +${r.refund}`, 'good'); A.play('bloop'); G.select(null); G.ui?.closeSheet(); mark(); refresh(); }
+    if (r.ok) { tell(t('{name} swam home  +{n}', { name: c ? nameOf(c) : t('Friend'), n: num(r.refund) }), 'good'); A.play('bloop'); G.select(null); G.ui?.closeSheet(); mark(); refresh(); }
     return r;
   };
   G.setHat = (id, hat) => { if (S.setHat(st(), G.biome, id, hat)) { A.play('tap'); scene.tap(id); mark(); G.ui?.refreshSheet(); } };
 
   // ------------------------------------------------------------------ actions: building
   const FAIL = {
-    pearls: (r) => `Need ${r.need} pearls`, locked: (r) => `Unlocks at Pool Lv ${r.lvl}`, occupied: () => 'A creature has no room to move',
-    water: () => "Can't go on that water depth", piece: () => 'Remove the rock there first', max: () => 'Already at max depth', dry: () => 'Nothing to fill',
-    empty: () => '', same: () => '', shore: () => 'Shore decor goes on dry sand', float: () => 'Floaty decor goes on water', notowned: () => 'Buy it in the Shop first', nope: () => '',
+    pearls: (r) => t('Need {n} pearls', { n: r.need }), locked: (r) => t('Unlocks at Pool Lv {n}', { n: r.lvl }), occupied: () => t('A creature has no room to move'),
+    water: () => t("Can't go on that water depth"), piece: () => t('Remove the rock there first'), max: () => t('Already at max depth'), dry: () => t('Nothing to fill'),
+    empty: () => '', same: () => '', shore: () => t('Shore decor goes on dry sand'), float: () => t('Floaty decor goes on water'), notowned: () => t('Buy it in the Shop first'), nope: () => '',
   };
   G.setTool = (tool) => {
     G.tool = tool; scene.toolTint = tool === 'dig' ? '#7cf0ff' : tool === 'fill' ? '#ffd9a0' : tool === 'erase' ? '#ff9ab0' : '#fff';
@@ -237,8 +238,8 @@ export function createGame(scene) {
     const idx = y * pool().w + x;
     if (!r.ok) {
       const msg = (FAIL[r.reason] || (() => ''))(r);
-      const t = performance.now();
-      if (msg && t - G.toastAt > 900) { tell(msg, 'warn'); G.toastAt = t; A.play('error'); haptic.warn(); }
+      const ms = performance.now();
+      if (msg && ms - G.toastAt > 900) { tell(msg, 'warn'); G.toastAt = ms; A.play('error'); haptic.warn(); }
       return r;
     }
     const [px, py] = scene.tileCenter(x, y);
@@ -255,24 +256,24 @@ export function createGame(scene) {
   };
   G.expand = () => {
     const r = S.expandPool(st(), G.biome);
-    if (!r.ok) { tell(r.reason === 'pearls' ? `Need ${r.need} pearls` : r.reason === 'locked' ? `Unlocks at Pool Lv ${r.lvl}` : 'Fully expanded', 'warn'); A.play('error'); return r; }
-    scene.relayout(); A.play('levelup'); haptic.success(); scene.confetti(30); tell(`Pool expanded to ${r.w}×${r.h}!`, 'good'); G.handle(r.events); mark(); refresh();
+    if (!r.ok) { tell(r.reason === 'pearls' ? t('Need {n} pearls', { n: r.need }) : r.reason === 'locked' ? t('Unlocks at Pool Lv {n}', { n: r.lvl }) : t('Fully expanded'), 'warn'); A.play('error'); return r; }
+    scene.relayout(); A.play('levelup'); haptic.success(); scene.confetti(30); tell(t('Pool expanded to {w}×{h}!', { w: r.w, h: r.h }), 'good'); G.handle(r.events); mark(); refresh();
     return r;
   };
 
   // ------------------------------------------------------------------ shop & rewards
   G.buyDecor = (id) => {
     const r = S.buyDecor(st(), id);
-    if (!r.ok) { if (r.reason === 'pearls') tell(`Need ${r.need} pearls`, 'warn'); else if (r.reason === 'glass') { tell('Not enough Sea Glass', 'warn'); G.ui?.openShop('glass'); } A.play('error'); return r; }
-    A.play('buy'); haptic.success(); tell(`${D.DECOR[id].name} unlocked!`, 'good'); if (D.DECOR[id].kind === 'skin' || D.DECOR[id].kind === 'fx') S.equip(st(), id); mark(); refresh();
+    if (!r.ok) { if (r.reason === 'pearls') tell(t('Need {n} pearls', { n: r.need }), 'warn'); else if (r.reason === 'glass') { tell(t('Not enough Sea Glass'), 'warn'); G.ui?.openShop('glass'); } A.play('error'); return r; }
+    A.play('buy'); haptic.success(); tell(t('{name} unlocked!', { name: decorName(id) }), 'good'); if (D.DECOR[id].kind === 'skin' || D.DECOR[id].kind === 'fx') S.equip(st(), id); mark(); refresh();
     return r;
   };
   G.equip = (id) => { if (S.equip(st(), id)) { A.play('tap'); scene._baseKey = ''; mark(); refresh(); } };
   G.buyBoost = (id) => {
     const r = S.buyBoost(st(), id, G.now());
-    if (!r.ok) { tell(r.reason === 'glass' ? 'Not enough Sea Glass' : r.reason === 'full' ? 'Your pool is full — release a friend first' : r.reason === 'nothing' ? 'Hatch a friend first!' : "Can't do that right now", 'warn'); if (r.reason === 'glass') G.ui?.openShop('glass'); A.play('error'); return r; }
+    if (!r.ok) { tell(r.reason === 'glass' ? t('Not enough Sea Glass') : r.reason === 'full' ? t('Your pool is full — release a friend first') : r.reason === 'nothing' ? t('Hatch a friend first!') : t("Can't do that right now"), 'warn'); if (r.reason === 'glass') G.ui?.openShop('glass'); A.play('error'); return r; }
     A.play('buy'); haptic.success(); scene.confetti(20);
-    tell(id === 'sun' ? 'Sun Surge! Double pearls for 2 hours' : id === 'egg' ? 'A lucky egg washed ashore!' : `+${S.fmtNum(r.pearls)} pearls`, 'good'); mark(); refresh();
+    tell(id === 'sun' ? t('Sun Surge! Double pearls for 2 hours') : id === 'egg' ? t('A lucky egg washed ashore!') : t('+{n} pearls', { n: num(r.pearls) }), 'good'); mark(); refresh();
     return r;
   };
   G.claimGift = () => {
@@ -298,28 +299,48 @@ export function createGame(scene) {
 
   // ------------------------------------------------------------------ Capsule Machine
   const PULL_FAIL = {
-    coins: () => 'Not enough Capsule Coins', glass: () => 'Not enough Sea Glass', used: () => 'Come back tomorrow for another free capsule',
-    disabled: () => 'Sea Glass pulls are turned off in Settings', cap: (r) => (r.left ? `Only ${r.left} Sea Glass pull${r.left === 1 ? '' : 's'} left today` : 'Daily Sea Glass pull limit reached'),
+    coins: () => t('Not enough Capsule Coins'), glass: () => t('Not enough Sea Glass'), used: () => t('Come back tomorrow for another free capsule'),
+    disabled: () => t('Sea Glass pulls are turned off in Settings'), age: () => t('A parent or guardian needs to turn on Sea Glass pulls first'), cap: (r) => (r.left ? t('Only {n} Sea Glass pull left today|Only {n} Sea Glass pulls left today', { n: r.left }) : t('Daily Sea Glass pull limit reached')),
   };
   /** Paid random items are off where the law says so: judged by the App Store storefront, and also by the device region to be safe.
    *  In the real app, until the storefront is known the answer is "blocked" (the machine re-checks on its own a moment later). */
   G.paidRandomBlocked = () => (store.mode === 'native' && !store.country) || store.regions().some((r) => NO_PAID_RANDOM.includes(r));
+  /** Rewards for completing sets of capsule prizes are off where "complete gacha" rules apply (see config.js). */
+  G.setRewardsBlocked = () => (store.mode === 'native' && !store.country) || store.regions().some((r) => NO_SET_REWARDS.includes(r));
+  /** What `n` Sea Glass cost in real money at the player's App Store prices, e.g. "$0.30–$0.50" ('' if prices are unknown). */
+  G.glassMoney = (n) => {
+    const per = D.IAP.glass.map((id) => store.priceInfo(id)).filter((p) => p && p.price > 0 && p.currency)
+      .map((p, i, all) => ({ v: p.price / D.PRODUCTS[D.IAP.glass[i]].glass, c: p.currency, same: all.every((q) => q.currency === p.currency) }));
+    if (per.length < 2 || !per[0].same) return '';
+    const vs = per.map((p) => p.v * n), lo = Math.min(...vs), hi = Math.max(...vs);
+    try {
+      const f = new Intl.NumberFormat(intlTag(), { style: 'currency', currency: per[0].c, maximumFractionDigits: 2 });
+      return f.format(lo) === f.format(hi) ? f.format(lo) : `${f.format(lo)}–${f.format(hi)}`;
+    } catch { return ''; }
+  };
+  // Age check: Sea Glass capsule pulls are for adults, or for a younger player whose parent or guardian turned them on
+  // (ui.ensurePaidOk asks). Only the answer is stored, on the device: 'adult' | 'minor', and where it came from.
+  G.PAID_AGE = 18;
+  G.paidPullsAllowed = () => st().guard.age === 'adult' || st().guard.parent;
+  G.setAge = (age, src) => { Object.assign(st().guard, { age, src }); mark(); G.save(true); };
+  G.setParentOk = (v) => { st().guard.parent = !!v; mark(); G.save(true); };
   G.gachaPull = (n, mode) => {
-    if (mode === 'glass' && G.paidRandomBlocked()) { tell("Sea Glass pulls aren't available right now. Free pulls and Coins still work!", 'warn'); A.play('error'); return { ok: false, reason: 'region' }; }
+    if (mode === 'glass' && G.paidRandomBlocked()) { tell(t("Sea Glass pulls aren't available right now. Free pulls and Coins still work!"), 'warn'); A.play('error'); return { ok: false, reason: 'region' }; }
+    if (mode === 'glass' && !G.paidPullsAllowed()) { tell(PULL_FAIL.age(), 'warn'); A.play('error'); return { ok: false, reason: 'age' }; }
     const r = S.gachaPull(st(), n, mode, G.now());
-    if (!r.ok) { tell((PULL_FAIL[r.reason] || (() => "Can't pull right now"))(r), 'warn'); A.play('error'); return r; }
+    if (!r.ok) { tell((PULL_FAIL[r.reason] || (() => t("Can't pull right now")))(r), 'warn'); A.play('error'); return r; }
     G.handle(r.events || []); mark(); G.ui?.refresh();
     G.save(true);        // write the result (and the spent currency / pity counters) right away, so quitting mid-reveal can't undo a pull
     return r;
   };
   G.prizeBuy = (id) => {
     const r = S.prizeBuy(st(), id);
-    if (!r.ok) { tell(r.reason === 'shards' ? `Need ${r.need} shards` : "Can't do that", 'warn'); A.play('error'); return r; }
-    A.play('buy'); haptic.success(); scene.confetti(24); tell('Toy exchanged!', 'good'); mark(); G.ui?.refresh();
+    if (!r.ok) { tell(r.reason === 'shards' ? t('Need {n} shards', { n: r.need }) : t("Can't do that"), 'warn'); A.play('error'); return r; }
+    A.play('buy'); haptic.success(); scene.confetti(24); tell(t('Toy exchanged!'), 'good'); mark(); G.ui?.refresh();
     return r;
   };
-  G.claimToySet = (id) => { const r = S.claimToySet(st(), id); if (r.ok) { A.play('gift'); haptic.success(); scene.confetti(40); tell('Set complete!', 'good'); mark(); G.ui?.refresh(); } return r; };
-  G.claimToyMile = (i) => { const r = S.claimToyMile(st(), i); if (r.ok) { A.play('coin'); haptic.success(); scene.confetti(20); mark(); G.ui?.refresh(); } return r; };
+  G.claimToySet = (id) => { if (G.setRewardsBlocked()) return { ok: false, reason: 'region' }; const r = S.claimToySet(st(), id); if (r.ok) { A.play('gift'); haptic.success(); scene.confetti(40); tell(t('Set complete!'), 'good'); mark(); G.ui?.refresh(); } return r; };
+  G.claimToyMile = (i) => { if (G.setRewardsBlocked()) return { ok: false, reason: 'region' }; const r = S.claimToyMile(st(), i); if (r.ok) { A.play('coin'); haptic.success(); scene.confetti(20); mark(); G.ui?.refresh(); } return r; };
 
   // ------------------------------------------------------------------ purchases
   // Grants run one at a time (a purchase, a delivered transaction and a restore can all land together at launch).
@@ -344,33 +365,32 @@ export function createGame(scene) {
         const res = await grant(pid, r.txId);
         if (res.ok && !res.dup) {
           A.play('buy'); haptic.success(); scene.confetti(70);
-          const P = D.PRODUCTS[pid];
-          tell(`${P.name} unlocked!`, 'good');
+          tell(t('{name} unlocked!', { name: productName(pid) }), 'good');
           G.ui?.showPurchased(pid);
         }
-      } else if (r.pending) tell('Waiting for approval… your purchase will arrive automatically', 'warn');
-      else if (r.error) tell(r.error, 'warn');
+      } else if (r.pending) tell(t('Waiting for approval… your purchase will arrive automatically'), 'warn');
+      else if (r.error) tell(t(r.error), 'warn');
     } finally { G.busy = false; G.ui?.setBusy(false); refresh(); }
   };
   /** A purchase that finished outside a purchase call: Ask to Buy approval, an interrupted purchase, or one made on another device. */
   G.onStoreTransaction = async (pid, txId) => {
     const res = await grant(pid, txId);
-    if (res.ok && !res.dup) { A.play('buy'); scene.confetti(50); tell(`${D.PRODUCTS[pid].name} delivered!`, 'good'); refresh(); }
+    if (res.ok && !res.dup) { A.play('buy'); scene.confetti(50); tell(t('{name} delivered!', { name: productName(pid) }), 'good'); refresh(); }
   };
   /** Compare StoreKit's transaction list with the ledger and deliver anything missing (a safety net for lost deliveries and reinstalls).
    *  Products bought before this save existed (a reinstall) are restored without the one-off Sea Glass bonus, and old consumables are skipped. */
   G.reconcilePurchases = async (force) => {
     if (store.mode !== 'native' || G.reconciling) return 0;
-    const t = Date.now();
-    if (!force && t - (G.reconciledAt || 0) < 5 * 60e3) return 0;
-    G.reconciling = true; G.reconciledAt = t;
+    const ms = Date.now();
+    if (!force && ms - (G.reconciledAt || 0) < 5 * 60e3) return 0;
+    G.reconciling = true; G.reconciledAt = ms;
     let n = 0;
     try {
       for (const h of await store.history()) {
         const s = st(), P = D.PRODUCTS[h.id], old = h.date < s.created;
         if (h.revoked || s.iap.done[h.txId] || (P.type === 'consumable' && old)) continue;
         const res = await grant(h.id, h.txId, { restore: old });
-        if (res.ok && !res.dup) { n++; tell(`${P.name} ${old ? 'restored' : 'delivered'}!`, 'good'); }
+        if (res.ok && !res.dup) { n++; tell(t(old ? tk('{name} restored!') : tk('{name} delivered!'), { name: productName(h.id) }), 'good'); }
       }
     } finally { G.reconciling = false; if (n) refresh(); }
     return n;
@@ -380,9 +400,9 @@ export function createGame(scene) {
     G.busy = true; G.ui?.setBusy(true);
     try {
       const r = await store.restore();
-      if (!r.ok) { tell(r.error || 'Could not restore purchases', 'warn'); return; }
+      if (!r.ok) { tell(t(r.error || tk('Could not restore purchases')), 'warn'); return; }
       const n = await G.reconcilePurchases(true);
-      if (!n) tell(store.mode === 'demo' ? 'Nothing to restore in the demo' : 'Everything is already restored', 'good');
+      if (!n) tell(store.mode === 'demo' ? t('Nothing to restore in the demo') : t('Everything is already restored'), 'good');
     } finally { G.busy = false; G.ui?.setBusy(false); refresh(); }
   };
 
@@ -406,8 +426,8 @@ export function createGame(scene) {
     G.ui?.showPhoto(cv);
   };
   G.sharePhoto = async (cv) => {
-    const r = await shareCanvas(cv, `My Tiny Tides pool — ${S.dexCount(st())} creatures discovered!`);
-    if (r.unsupported) { G.ui?.showPhoto(cv); tell('Press and hold the picture to save it', 'good'); }
+    const r = await shareCanvas(cv, t('My Tiny Tides pool — {n} creatures discovered!', { n: S.dexCount(st()) }));
+    if (r.unsupported) { G.ui?.showPhoto(cv); tell(t('Press and hold the picture to save it'), 'good'); }
   };
 
   // ------------------------------------------------------------------ reminders (local notifications)
@@ -415,18 +435,18 @@ export function createGame(scene) {
     const s = st();
     if (!s.settings.notif || !notify.supported) return;
     const now = G.now(), list = [];
-    const quiet = (t) => { const d = new Date(t); const h = d.getHours() + d.getMinutes() / 60; if (h >= 8 && h < 21.5) return t; const n = new Date(t); if (h >= 21.5) n.setDate(n.getDate() + 1); n.setHours(8, 5, 0, 0); return n.getTime(); };
+    const quiet = (ms) => { const d = new Date(ms); const h = d.getHours() + d.getMinutes() / 60; if (h >= 8 && h < 21.5) return ms; const n = new Date(ms); if (h >= 21.5) n.setDate(n.getDate() + 1); n.setHours(8, 5, 0, 0); return n.getTime(); };
     // evolutions finishing
-    for (const p of Object.values(s.pools)) for (const c of p.creatures) if (c.evo && c.evo.end > now) list.push({ t: quiet(c.evo.end + 30e3), title: `${nameOf(c)} is ready!`, body: 'Their evolution has finished. Come see who they became.' });
+    for (const p of Object.values(s.pools)) for (const c of p.creatures) if (c.evo && c.evo.end > now) list.push({ t: quiet(c.evo.end + 30e3), title: t('{name} is ready!', { name: nameOf(c) }), body: t('Their evolution has finished. Come see who they became.') });
     // bubbles nearly full
     let stored = 0, cap = 0, rate = 0;
     for (const p of Object.values(s.pools)) for (const c of p.creatures) if (!c.evo) { const r = S.creatureRate(s, p, c, now); stored += c.stored; cap += r * D.bubbleCapHours(s.lvl); rate += r; }
-    if (cap > 0 && rate > 0) { const need = cap * 0.9 - stored; list.push({ t: quiet(now + Math.max(need / rate, 1.5) * D.HOUR), title: 'Your bubbles are full', body: 'Pearls are waiting to be popped. Pop them before they stop growing!' }); }
+    if (cap > 0 && rate > 0) { const need = cap * 0.9 - stored; list.push({ t: quiet(now + Math.max(need / rate, 1.5) * D.HOUR), title: t('Your bubbles are full'), body: t('Pearls are waiting to be popped. Pop them before they stop growing!') }); }
     // free daily capsule
-    if (S.gachaFreeAvailable(s, now)) list.push({ t: quiet(now + 3 * D.HOUR), title: 'Your free capsule is ready', body: 'Give the crank a turn. A new toy is waiting!' });
-    else { const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(10, 15, 0, 0); list.push({ t: d.getTime(), title: 'Your free capsule is ready', body: 'A fresh capsule is waiting in the machine.' }); }
+    if (S.gachaFreeAvailable(s, now)) list.push({ t: quiet(now + 3 * D.HOUR), title: t('Your free capsule is ready'), body: t('Give the crank a turn. A new toy is waiting!') });
+    else { const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(10, 15, 0, 0); list.push({ t: d.getTime(), title: t('Your free capsule is ready'), body: t('A fresh capsule is waiting in the machine.') }); }
     // next tide gift
-    const g = S.nextGiftAt(now); if (g - now < 26 * D.HOUR) list.push({ t: quiet(g + 5 * 60e3), title: 'A Tide Gift washed ashore', body: 'Something shiny is waiting on the beach.' });
+    const g = S.nextGiftAt(now); if (g - now < 26 * D.HOUR) list.push({ t: quiet(g + 5 * 60e3), title: t('A Tide Gift washed ashore'), body: t('Something shiny is waiting on the beach.') });
     list.sort((a, b) => a.t - b.t);
     const out = [];
     for (const it of list) if (!out.length || it.t - out[out.length - 1].t >= 2 * D.HOUR) out.push(it);
@@ -437,44 +457,44 @@ export function createGame(scene) {
   const T = () => st().tut;
   const freeTiles = (want) => {
     const p = st().pools.tide, out = [];
-    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) { const t = S.tileAt(p, x, y); if (want(t, x, y) && !S.occupantAt(p, x, y)) out.push({ x, y }); }
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) { const tl = S.tileAt(p, x, y); if (want(tl, x, y) && !S.occupantAt(p, x, y)) out.push({ x, y }); }
     return out;
   };
   const cx = () => { const p = st().pools.tide; return [Math.floor(p.w / 2), Math.floor(p.h / 2) - 1]; };
   G.tutorial = () => {
-    const s = st(), t = T();
-    if (t.done) return null;
+    const s = st(), tu = T();
+    if (tu.done) return null;
     const p = s.pools.tide, [mx, my] = cx();
     const water = p.tiles.filter((x) => x.w >= 1).length;
-    switch (t.step) {
-      case 1: return { text: 'Tap the sand to dig a little pool. Dig two tiles!', tab: 'build', tool: 'dig', tiles: [{ x: mx, y: my }, { x: mx, y: my + 1 }].filter((q) => S.tileAt(p, q.x, q.y)?.w < 1), progress: `${water}/2` };
+    switch (tu.step) {
+      case 1: return { text: t('Tap the sand to dig a little pool. Dig two tiles!'), tab: 'build', tool: 'dig', tiles: [{ x: mx, y: my }, { x: mx, y: my + 1 }].filter((q) => S.tileAt(p, q.x, q.y)?.w < 1), progress: `${water}/2` };
       case 2: {
         const w = p.tiles.map((tl, i) => [tl, i]).find(([tl]) => tl.w >= 1);
         const wx = w ? w[1] % p.w : mx, wy = w ? Math.floor(w[1] / p.w) : my;
         const near = freeTiles((tl, x, y) => tl.w === 0 && !tl.p && Math.abs(x - wx) + Math.abs(y - wy) === 1).slice(0, 2);
-        return { text: 'Now place a rock beside the water. Creatures love rocky shores!', tab: 'build', tool: 'piece:granite', tiles: near };
+        return { text: t('Now place a rock beside the water. Creatures love rocky shores!'), tab: 'build', tool: 'piece:granite', tiles: near };
       }
-      case 3: { const egg = p.eggs[0]; return { text: egg && G.now() < egg.ready ? 'Something is washing in…' : 'An egg! Tap it 3 times to hatch it.', tab: 'pool', tool: null, tiles: egg ? [{ x: egg.x, y: egg.y }] : [], noProgress: true }; }
-      case 4: { const c = p.creatures[0]; return { text: 'Hello, little friend! Tap the bubble to pop your first pearls.', tab: 'pool', tool: null, tiles: c ? [{ x: c.x, y: c.y }] : [] }; }
-      case 5: { const c = p.creatures[0]; return { text: 'Tap your friend, then Level up to Lv 3.', tab: 'pool', tool: null, tiles: c ? [{ x: c.x, y: c.y }] : [], target: '#sheet .btn-level' }; }
+      case 3: { const egg = p.eggs[0]; return { text: egg && G.now() < egg.ready ? t('Something is washing in…') : t('An egg! Tap it 3 times to hatch it.'), tab: 'pool', tool: null, tiles: egg ? [{ x: egg.x, y: egg.y }] : [], noProgress: true }; }
+      case 4: { const c = p.creatures[0]; return { text: t('Hello, little friend! Tap the bubble to pop your first pearls.'), tab: 'pool', tool: null, tiles: c ? [{ x: c.x, y: c.y }] : [] }; }
+      case 5: { const c = p.creatures[0]; return { text: t('Tap your friend, then Level up to Lv 3.'), tab: 'pool', tool: null, tiles: c ? [{ x: c.x, y: c.y }] : [], target: '#sheet .btn-level' }; }
       case 6: {
         const c = p.creatures[0];
         const near = c ? freeTiles((tl, x, y) => !tl.p && Math.abs(x - c.x) + Math.abs(y - c.y) === 1 && tl.w <= 1).slice(0, 3) : [];
         const info = c && S.evoInfo(s, p, c);
-        if (info?.canStart) return { text: 'Perfect — they love it here! Open your friend and tap Evolve.', tab: 'pool', tool: null, tiles: [{ x: c.x, y: c.y }], target: '#sheet .btn-evolve' };
-        return { text: 'What your friend becomes depends on what surrounds them. Place rocks right next to them!', tab: 'build', tool: 'piece:granite', tiles: near, progress: info ? `Stone ${Math.round(info.traits.stone)}/${D.BRANCH_NEED}` : '' };
+        if (info?.canStart) return { text: t('Perfect — they love it here! Open your friend and tap Evolve.'), tab: 'pool', tool: null, tiles: [{ x: c.x, y: c.y }], target: '#sheet .btn-evolve' };
+        return { text: t('What your friend becomes depends on what surrounds them. Place rocks right next to them!'), tab: 'build', tool: 'piece:granite', tiles: near, progress: info ? `${t('trait:stone')} ${Math.round(info.traits.stone)}/${D.BRANCH_NEED}` : '' };
       }
-      case 7: return { text: 'Evolving… this first one is quick. Watch the cocoon!', tab: 'pool', tool: null, tiles: [], noProgress: true };
+      case 7: return { text: t('Evolving… this first one is quick. Watch the cocoon!'), tab: 'pool', tool: null, tiles: [], noProgress: true };
       case 8: return { text: '', tab: 'pool', tiles: [] };
       default: return null;
     }
   };
   function tutorialTick(now) {
-    const s = st(), t = T();
-    if (!s.tut || t.done) return;
+    const s = st(), tu = T();
+    if (!s.tut || tu.done) return;
     const p = s.pools.tide, c = p.creatures[0];
-    const adv = (n) => { t.step = n; mark(); G.ui?.tutorialChanged(); };
-    switch (t.step) {
+    const adv = (n) => { tu.step = n; mark(); G.ui?.tutorialChanged(); };
+    switch (tu.step) {
       case 0: break;
       case 1: if (p.tiles.filter((x) => x.w >= 1).length >= 2) { adv(2); } break;
       case 2: if (p.tiles.some((x) => x.p)) {
@@ -493,8 +513,8 @@ export function createGame(scene) {
   }
   G.tutorialStart = () => { T().step = 1; mark(); G.setTab('build'); G.ui?.tutorialChanged(); };
   G.tutorialFinish = () => {
-    const t = T(), p = st().pools.tide;
-    t.done = true; t.step = 9; p.nextEgg = G.now() + 6 * D.MIN; mark();
+    const tu = T(), p = st().pools.tide;
+    tu.done = true; tu.step = 9; p.nextEgg = G.now() + 6 * D.MIN; mark();
     st().cur.glass += 10; st().cur.coins += 2;
     G.ui?.closeSheet(); G.setTab('pool'); G.ui?.tutorialChanged(); refresh();
   };
@@ -502,7 +522,7 @@ export function createGame(scene) {
    *  app is closed during the reveal); the "You did it!" card is shown once the reveal closes, driven by this saved flag. */
   const tutorialComplete = () => { G.tutorialFinish(); st().flags.tutModal = true; };
   G.tutorialSkip = () => {
-    const t = T(); t.done = true; t.step = 9; st().flags.firstEvo = true; st().pools.tide.nextEgg = G.now() + 2 * D.MIN; st().cur.pearls = Math.max(st().cur.pearls, 150); st().cur.coins += 2; mark();
+    const tu = T(); tu.done = true; tu.step = 9; st().flags.firstEvo = true; st().pools.tide.nextEgg = G.now() + 2 * D.MIN; st().cur.pearls = Math.max(st().cur.pearls, 150); st().cur.coins += 2; mark();
     G.setTab('pool'); G.ui?.tutorialChanged(); refresh();
   };
 

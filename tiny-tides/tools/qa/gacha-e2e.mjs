@@ -78,10 +78,33 @@ await ev(() => { window.__tt.G.state.cur.coins = 0; window.__tt.store.country = 
   await ev(() => { window.__tt.store.country = 'USA'; });
   await page.waitForTimeout(700);
 }
-// ---- glass pull needs a confirm + spends glass
+// ---- first Sea Glass pull: neutral age check. A 10-year-old is sent to a parent; a wrong gate answer pulls nothing.
 await ev(() => { window.__tt.G.state.cur.coins = 0; });
 const g0 = await ev(() => window.__tt.G.state.cur.glass);
 await click('[data-gz^="pull:1:glass"]');
+await page.waitForSelector('#age-y', { timeout: 3000 });
+await shot('age-check');
+await click('[data-act="age:ok"]');                                   // nothing chosen: stays open
+if (!(await page.locator('#age-y').count())) fail('age check closed without an answer');
+await page.selectOption('#age-m', '5'); await page.selectOption('#age-y', String(new Date().getFullYear() - 10));
+await click('[data-act="age:ok"]');
+await page.waitForSelector('[data-act="confirm:yes"]', { timeout: 3000 });
+await shot('ask-parent');
+if ((await ev(() => window.__tt.G.state.guard.age)) !== 'minor') fail('a 10-year-old was not recorded as a minor');
+await click('[data-act="confirm:yes"]');                              // "I'm a parent"
+await page.waitForSelector('#gate-in', { timeout: 3000 });
+await shot('parent-gate');
+await page.fill('#gate-in', '1'); await click('[data-act="gate:ok"]');
+await page.waitForTimeout(300);
+if (await ev(() => window.__tt.G.state.guard.parent)) fail('a wrong gate answer turned pulls on');
+if ((await ev(() => window.__tt.G.state.cur.glass)) !== g0) fail('glass was spent without a parent');
+// ---- right answer: the parent turns pulls on, then the pull still needs a confirm and spends glass
+await click('[data-gz^="pull:1:glass"]');
+await page.waitForSelector('[data-act="confirm:yes"]', { timeout: 3000 }); await click('[data-act="confirm:yes"]');
+await page.waitForSelector('#gate-in', { timeout: 3000 });
+const answer = await ev(() => { const m = /(\d+) × (\d+)/.exec(document.querySelector('[data-overlay="gate"]').textContent); return +m[1] * +m[2]; });
+await page.fill('#gate-in', String(answer)); await click('[data-act="gate:ok"]');
+if (!(await ev(() => window.__tt.G.state.guard.parent))) fail('the right gate answer did not turn pulls on');
 await page.waitForSelector('[data-act="confirm:yes"]', { timeout: 3000 });
 await shot('confirm-glass');
 await click('[data-act="confirm:yes"]');

@@ -7,7 +7,7 @@ The code, the legal pages and the store text are done. These are the steps only 
 ## 0. Before anything else (30 minutes)
 
 - [ ] **Decide who the publisher is** — you as an individual, or a company (an LLC is common; needs a D-U-N-S number, free from Dun & Bradstreet, which can take days). The name you pick appears on the App Store as the seller. ⚖
-- [ ] Fill in **`legal/site.config.json`** with the same legal name, a real support email, and a postal address. Apple and EU law require a way for customers to reach the publisher; an individual’s home address can be replaced by a PO box or virtual office if you prefer privacy (check that it can receive legal post).
+- [ ] Fill in **`legal/site.config.json`**: the support email (`maceion@proton.me`) and country (United States of America) are already set. Add your legal name, a postal address, a phone number and your **US state** (the terms use that state’s law and courts). Apple and EU law require a way for customers to reach the publisher; an individual’s home address can be replaced by a PO box or virtual office if you prefer privacy (check that it can receive legal post). `npm run legal:check` lists anything still missing.
 - [ ] **Check the name “Tiny Tides”.** Search App Store, Google Play, the USPTO (tmsearch.uspto.gov), EUIPO and WIPO Global Brand Database for conflicts in games (class 9 / 41). If it’s taken you only need to change `appName` in the config, the display name in `ios/App/App/Info.plist`, and the App Store name. ⚖
 - [ ] **Register a domain or choose free hosting**, publish `site/` (see `legal/README.md`), and set `baseUrl`. Open every page on a phone.
 
@@ -23,7 +23,8 @@ The code, the legal pages and the store text are done. These are the steps only 
 ## 2. Identifiers and project (needs a Mac with Xcode)
 
 - [ ] `npm ci` (this also applies the StoreKit patch), then **`npm run rename -- com.yourname.tinytides`** if you want a different bundle id (it updates Xcode, Capacitor, the StoreKit test file and the legal config together). Keep it lower-case, reverse-domain, and permanent — it can never change after release.
-- [ ] `npm run ios:sync`, `npm run ios:open`, then in Xcode: **Signing & Capabilities** → select your Team (also put the same 10-character Team ID into `ios/ExportOptions.plist`, replacing `YOURTEAMID`) → keep **Automatic signing** on. Capabilities: *In-App Purchase* only (no Push, no iCloud, no Sign-in with Apple — and none are needed).
+- [ ] `npm run ios:sync`, `npm run ios:open`, then in Xcode: **Signing & Capabilities** → select your Team (also put the same 10-character Team ID into `ios/ExportOptions.plist`, replacing `YOURTEAMID`) → keep **Automatic signing** on. Capabilities: *In-App Purchase* and *Declared Age Range* (the entitlement file `ios/App/App/App.entitlements` is already wired in; if Xcode shows a signing error, click **+ Capability → Declared Age Range** once so your App ID gets it). No Push, iCloud or Sign in with Apple are needed.
+- [ ] Build with **Xcode 26.2 or later** (iOS 26.2 SDK). Apple requires it for the age-assurance APIs, and the project weak-links the `DeclaredAgeRange` framework so the app still runs on iOS 15–25. On an iOS 15–18 device, launch the app once to confirm it starts normally.
 - [ ] Set **Version 1.0.0 / Build 1** (Xcode → App target → General), deployment target iOS 15.
 - [ ] **Product → Archive** → *Distribute App* → *App Store Connect* → *Upload*.
 - [ ] Xcode → Organizer → the archive → **Generate Privacy Report** and confirm it matches `legal/DATA_MAP.md` (no tracking, no collected data).
@@ -38,9 +39,9 @@ The code, the legal pages and the store text are done. These are the steps only 
 - [ ] **Age Rating** questionnaire — answer honestly:
   - Violence, horror, sexual content, profanity, drugs, medical, mature themes: **None**.
   - Gambling / contests: **None** (no simulated casino games, no real-money gambling).
-  - **Loot boxes / paid random items: Yes.** This raises the rating above 4+ (Apple sets the exact minimum age). Do not pick “Made for Kids”.
+  - **Loot boxes / paid random items: Yes.** This raises the rating above 4+. Apple sets the exact minimum age per country (at the time of writing: 9+ in most countries, 16+ in Australia and 18+ in Brazil). Do not pick “Made for Kids”.
   - Unrestricted web access: **No** (links open in the browser only).
-  - Parental controls / age assurance features in the app: **No**.
+  - **Parental controls: Yes** (a parental gate for Sea Glass pulls and real-money purchases for players under 18, plus the in-game off switch). **Age assurance: Yes** (Apple’s Declared Age Range on iOS 26+, otherwise a neutral date-of-birth screen; only “adult / under 18” is kept on the device).
 - [ ] **Version page**: description, promo text, keywords, support URL `<baseUrl>/support.html`, marketing URL `<baseUrl>/index.html`, copyright `© 2026 <your legal name>`, screenshots from `store/screenshots/` (6.9″ iPhone and 13″ iPad sets are required; the 6.5″ set is optional and can be regenerated with `npm run store-shots`).
 - [ ] **App Review Information**: your name, phone, email; sign-in required = **No**; paste `store/APP_REVIEW_NOTES.md` into Notes.
 - [ ] **Export compliance**: the build already sets `ITSAppUsesNonExemptEncryption = NO` (the app uses only Apple’s built-in HTTPS/StoreKit, which is exempt), so Connect should not ask. If it does: “Uses encryption? Yes → exempt (only standard OS encryption)”. No French/other annual filings are needed for exempt use. ⚖
@@ -51,6 +52,7 @@ The code, the legal pages and the store text are done. These are the steps only 
 ## 4. Test before you submit (TestFlight)
 
 - [ ] Internal TestFlight (up to 100 team members, no review): install on **two real devices**, ideally the oldest iPhone you can find that runs iOS 15.
+- [ ] **Age check:** on an iOS 26 device, make the first Sea Glass pull and confirm Apple’s age-range sheet appears. On an older device, confirm the date-of-birth screen appears. Pick an under-18 date on a second test install and confirm pulls stay off until the parent question is answered.
 - [ ] Using a **Sandbox Apple ID** (App Store Connect → Users and Access → Sandbox): buy each product once; buy Sea Glass twice; force-quit during a purchase and relaunch; turn on Airplane Mode mid-purchase; delete the app, reinstall and **Restore purchases**; test *Ask to Buy* with a child account in Family Sharing.
 - [ ] Play 2 days across midnight; change time zone; set the clock forward/back and confirm rewards can’t be claimed twice.
 - [ ] Verify on device (can’t be tested off-device): (a) after a reinstall, finished *consumable* purchases from before the reinstall are **not** re-delivered (expected), (b) a refunded purchase is not clawed back (by design), (c) the Restore button shows Apple’s sign-in sheet when needed.
@@ -63,12 +65,27 @@ The code, the legal pages and the store text are done. These are the steps only 
 
 ## 6. Territories and local rules ⚖
 
-Paid random items and games are regulated differently by country. The code turns **Sea Glass pulls off** in the countries listed in `src/config.js → NO_PAID_RANDOM` (currently Belgium, where paid loot boxes are treated as illegal gambling, and Brazil as a precaution for minors’ protection rules). Free pulls and Capsule Coins keep working everywhere. Before release decide, with advice for your situation, whether to:
+Researched September 2026. Laws on paid random items (“loot boxes”) and minors change quickly, so re-check before release and ask a lawyer about the markets that matter to you. The game ships in **English only**, and the App Store shows the English listing in every country you choose.
 
-- [ ] **Untick** countries in Pricing and Availability instead of (or as well as) the in-app switch. Consider unticking **mainland China** (games with in-app purchases need a Chinese publishing licence, ISBN and ICP filing), and **South Korea** unless you have completed Korean game rating (GRAC) and business requirements for games.
-- [ ] Review rules on paid random items where you sell: **Australia** and **New Zealand** (classification systems), **the UK / EU** (consumer-protection and advertising rules on odds, transparency and children), **the Netherlands**, **Japan** (complete-gacha ban), **Brazil**, **US states** (evolving). Add a country to `NO_PAID_RANDOM` (use both the ISO alpha-2 and alpha-3 code, e.g. `'BE', 'BEL'`) to switch pulls off there.
-- [ ] Confirm the **governing law and venue** clauses in the terms (`governingLaw`, `venue` in the config) suit where you live, and that the consumer-rights wording is right for your main markets.
-- [ ] Confirm **COPPA / GDPR-K** posture: the app is not in the Kids Category, is not directed to children under 13, and collects no personal information from anyone. If you ever switch to the Kids Category, paid random items, external links and IAP rules change substantially — talk to counsel first.
+**Already handled in the app**
+- Belgium and Brazil: Sea Glass capsule pulls are switched off (`src/regions.js → NO_PAID_RANDOM`). Free pulls and Capsule Coins still work.
+- Japan: rewards for completing capsule sets are switched off (`NO_SET_REWARDS`, the “kompu gacha” rule).
+- Everywhere: odds are shown before any purchase, there is a daily cap and an off switch, and every Sea Glass spend shows the approximate real-money price (EU consumer-protection guidance). Before the first paid pull the app checks age; players under 18 need a parent’s OK for paid pulls and real-money purchases.
+- **Texas (SB 2420, in force since 4 June 2026):** where Apple reports that age assurance is required, the app asks Apple’s Declared Age Range at launch and applies the under-18 protections. Similar laws take effect in **Utah (6 May 2027), Louisiana (1 July 2027), Alabama (1 January 2027) and California (AB 1043, 1 January 2027)**. The same code covers them, but re-check Apple’s guidance before each date. If a future update is a “significant change” under these laws, Apple’s `showSignificantUpdateAcknowledgment` API must be added. ⚖
+
+**Decide in Pricing and Availability (untick = the simplest safe choice)**
+- [ ] **Mainland China: untick.** Games need a government publishing licence (ISBN) to sell there.
+- [ ] **Vietnam: untick** unless you obtain a game licence.
+- [ ] **Indonesia:** untick, or register as an Electronic System Provider (PSE) and get an IGRS game rating.
+- [ ] **Russia:** App Store payments there have been halted since April 2026, so in-app purchases can’t be sold. Untick it, or leave it free-only.
+- [ ] **Brazil:** paid pulls are already off. The ECA Digital law (in force since March 2026) also expects parental tools, protective defaults and a **Brazilian legal representative** for foreign providers of apps likely used by minors. Apple rates apps with paid loot boxes 18+ there. Untick Brazil unless a lawyer confirms your position. ⚖
+- [ ] **South Korea:** Korean law requires the probability-item notice (“확률형 아이템 포함”) in Korean on the listing, in the game and in ads. The listing and game are English only, so untick Korea or add that notice to the Korean listing. ⚖
+- [ ] **Japan:** set rewards are already off. Show the odds (done). If Sea Glass sold but unused ever exceeds ¥10 million at a 31 March or 30 September balance date, the Payment Services Act requires a filing and a deposit. A 特定商取引法 (seller information) page is also expected for Japanese buyers. ⚖
+- [ ] **UK:** the advertising regulator (ASA) expects “Contains in-game purchases (includes random items)” to be shown prominently: at the top of the description (done), on screenshots that show purchases, and in every ad (the trailer end card has it).
+- [ ] **Australia:** classification treats games with paid loot boxes as unsuitable for young children (Apple’s rating handles this). **Netherlands** and other EU countries: odds disclosure, real-money price hints and no pressure selling are in place.
+- [ ] Confirm the governing-law clause (the **state** in `site.config.json`) and the consumer-rights wording suit your main markets.
+- [ ] Confirm the **COPPA / GDPR-K** position: the app is not in the Kids Category, is not directed to children under 13, and collects no personal information from anyone (the age check keeps only “adult / under 18” on the device). If you ever move to the Kids Category, talk to counsel first.
+- [ ] **US consumer protection:** the FTC’s 2025 order against HoYoverse (Genshin Impact) expects odds, real-money exchange rates and parental consent for under-16 loot-box purchases. The app provides all three (it asks consent for anyone under 18). New York’s action against Valve concerned tradable prizes; our prizes can’t be traded or cashed out, so keep it that way.
 
 ## 7. After release
 

@@ -3,9 +3,12 @@ import { createScene } from './render.js';
 import { createGame } from './game.js';
 import { createUI } from './ui.js';
 import * as A from './audio.js';
-import { store, onAppState, setupChrome, hideSplash, notify } from './platform.js';
+import { store, onAppState, setupChrome, hideSplash, notify, age } from './platform.js';
+import { t } from './i18n.js';
 
 async function boot() {
+  const bootSub = document.querySelector('.boot-sub'); if (bootSub) bootSub.textContent = t('filling the tidepool…');
+  for (const [sel, label] of [['#scene', t('Your tidepool')], ['#sheet', t('Creature details')], ['#nav', t('Main')]]) document.querySelector(sel)?.setAttribute('aria-label', label);
   const canvas = document.getElementById('scene');
   const scene = createScene(canvas);
   const G = createGame(scene);
@@ -19,6 +22,9 @@ async function boot() {
   const summary = G.fresh ? null : G.catchUp();
   ui.layoutChanged();
   store.init((pid, tx) => G.onStoreTransaction(pid, tx)).then(() => G.reconcilePurchases(true)).catch(() => {});
+  // Where the law requires apps to check age (for example Texas, via Apple's Declared Age Range), ask Apple once at launch.
+  // Declining leaves the protective default: Sea Glass pulls and real-money purchases need a parent's OK.
+  age.status().then(async (s) => { if (s.required && G.state.guard.src !== 'apple') G.setAge((await age.ask(G.PAID_AGE)) || 'minor', 'apple'); }).catch(() => {});
   ui.start(summary);
   hideSplash();
 
@@ -30,12 +36,12 @@ async function boot() {
   const pt = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   let down = null, painting = false, lastKey = '';
   const paintAt = (p) => {
-    const t = scene.screenToTile(p.x, p.y);
-    scene.hover = t;
-    if (!t) return;
-    const k = `${t.x},${t.y}`;
+    const tile = scene.screenToTile(p.x, p.y);
+    scene.hover = tile;
+    if (!tile) return;
+    const k = `${tile.x},${tile.y}`;
     if (k === lastKey) return;
-    lastKey = k; G.buildAt(t.x, t.y);
+    lastKey = k; G.buildAt(tile.x, tile.y);
   };
   canvas.addEventListener('pointerdown', (e) => {
     A.unlock();
@@ -78,12 +84,12 @@ async function boot() {
   let last = performance.now(), lastInput = last;
   for (const ev of ['pointerdown', 'pointermove', 'keydown']) window.addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true });
   const modalRoot = document.getElementById('modal-root');
-  const frame = (t) => {
+  const frame = (ts) => {
     requestAnimationFrame(frame);
-    if (document.hidden) { last = t; return; }
-    const calm = t - lastInput > 4000 && !scene.parts.length && !scene.texts.length && !modalRoot.firstElementChild;
-    if ((G.state.settings.battery || calm) && t - last < 30) return;
-    const dt = (t - last) / 1000; last = t;
+    if (document.hidden) { last = ts; return; }
+    const calm = ts - lastInput > 4000 && !scene.parts.length && !scene.texts.length && !modalRoot.firstElementChild;
+    if ((G.state.settings.battery || calm) && ts - last < 30) return;
+    const dt = (ts - last) / 1000; last = ts;
     scene.frame(dt, G.now());
   };
   requestAnimationFrame(frame);
@@ -111,5 +117,5 @@ boot().catch((e) => {
   console.error('Tiny Tides failed to start', e);
   hideSplash();
   const b = document.getElementById('boot');
-  if (b) b.innerHTML = '<div style="padding:24px;text-align:center;font-family:sans-serif"><h2>Something went wrong</h2><p>Please restart the app.</p></div>';
+  if (b) b.innerHTML = `<div style="padding:24px;text-align:center;font-family:sans-serif"><h2>${t('Something went wrong')}</h2><p>${t('Please restart the app.')}</p></div>`;
 });

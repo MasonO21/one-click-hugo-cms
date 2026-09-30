@@ -387,3 +387,9 @@ details.lic summary{cursor:pointer;font-weight:700;font-size:13.5px}
 details.lic pre{white-space:pre-wrap;font:11px/1.4 ui-monospace,Menlo,monospace;margin:8px 0 2px;color:var(--ink2)}
 /* very narrow windows (iPhone SE 1st gen, iPad Split View): keep the second HUD row on one line */
 @media (max-width:340px){.hud-row.sub{gap:4px}.chip{font-size:11.5px;padding:3px 7px 3px 4px;gap:3px;white-space:nowrap;min-width:0}.chip .ic{width:18px;height:18px}.biomes{gap:4px}.bio{font-size:12.5px;padding:0 8px 0 4px;gap:3px;white-space:nowrap}.bio .ic{width:18px;height:18px}}
+/* age check & parental gate */
+.agepick{display:flex;gap:10px;justify-content:center;margin:12px 0}
+.agepick select,.gate-in{font:inherit;font-weight:700;font-size:17px;color:var(--ink);background:#fff;border:3px solid rgba(59,29,94,.35);border-radius:14px;padding:10px 12px;min-height:48px}
+.agepick select{flex:1;max-width:170px}
+.gate-in{display:block;margin:6px auto 0;width:130px;text-align:center;font-size:24px}
+.agepick select:focus,.gate-in:focus{outline:3px solid #7f8cff;outline-offset:2px}

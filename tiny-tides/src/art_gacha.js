@@ -18,11 +18,17 @@ function figBitmap(formId, gold) {
   const c = cv.getContext('2d');
   c.drawImage(src, 0, 0);
   if (gold) {
-    c.globalCompositeOperation = 'color';
-    const g = c.createLinearGradient(0, 0, cv.width, cv.height); g.addColorStop(0, '#fff2a0'); g.addColorStop(0.5, '#ffc21f'); g.addColorStop(1, '#e58a00');
-    c.fillStyle = g; c.fillRect(0, 0, cv.width, cv.height);
-    c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.7; c.drawImage(src, 0, 0);
-    c.globalAlpha = 1; c.globalCompositeOperation = 'destination-in'; c.drawImage(src, 0, 0);
+    // grey it, lift the darks (so dark-blue and purple creatures still come out gold, not brown), then tint with gold
+    const W = cv.width, H = cv.height;
+    c.globalCompositeOperation = 'saturation'; c.fillStyle = '#808080'; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'screen'; c.fillStyle = '#6a6a6a'; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'multiply';
+    const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#fff3b0'); g.addColorStop(0.5, '#ffc526'); g.addColorStop(1, '#f09a00');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'source-atop';                  // a soft diagonal shine
+    const sh = c.createLinearGradient(0, 0, W, H); sh.addColorStop(0.28, 'rgba(255,255,255,0)'); sh.addColorStop(0.4, 'rgba(255,255,240,.45)'); sh.addColorStop(0.52, 'rgba(255,255,255,0)');
+    c.fillStyle = sh; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'destination-in'; c.drawImage(src, 0, 0);
   }
   figCache.set(key, cv);
   return cv;
@@ -65,7 +71,14 @@ export function drawSkinChip(c, key, x, y, size) {
   const u = size / 120, rr = (px, py, w, h, r) => { c.beginPath(); c.roundRect ? c.roundRect(x + px * u, y + py * u, w * u, h * u, r * u) : c.rect(x + px * u, y + py * u, w * u, h * u); };
   rr(6, 10, 108, 100, 24); c.fillStyle = k.slab; c.fill();
   rr(10, 10, 100, 88, 22); c.fillStyle = k.sand; c.fill();
-  for (const [r0, col] of [[32, k.wet], [27, k.shallow], [15, k.deep]]) { c.beginPath(); c.arc(x + 60 * u, y + 54 * u, r0 * u, 0, TAU); c.fillStyle = col; c.fill(); }
+  for (const [r0, col] of [[32, k.wet], [27, k.shallow], [15, k.deep]]) {
+    let fill = col;
+    if (k.prism && r0 === 27) {                          // Holo Prism: a rainbow ring, like its shimmering water
+      fill = c.createConicGradient ? c.createConicGradient(0, x + 60 * u, y + 54 * u) : col;
+      if (fill !== col) ['#ffc4ec', '#fff3b0', '#c4ffd6', '#a6fff0', '#b9a8ff', '#ffc4ec'].forEach((cc, i, a) => fill.addColorStop(i / (a.length - 1), cc));
+    }
+    c.beginPath(); c.arc(x + 60 * u, y + 54 * u, r0 * u, 0, TAU); c.fillStyle = fill; c.fill();
+  }
   rr(10, 10, 100, 88, 22); c.strokeStyle = OUT; c.lineWidth = Math.max(2, 5 * u); c.stroke();
 }
 function heart(c, x, y, s, col) { c.beginPath(); c.moveTo(x, y + s * 0.35); c.bezierCurveTo(x - s, y - s * 0.3, x - s * 0.5, y - s, x, y - s * 0.4); c.bezierCurveTo(x + s * 0.5, y - s, x + s, y - s * 0.3, x, y + s * 0.35); c.fillStyle = col; c.fill(); c.lineWidth = Math.max(1.6, s * 0.12); c.strokeStyle = OUT; c.stroke(); }
