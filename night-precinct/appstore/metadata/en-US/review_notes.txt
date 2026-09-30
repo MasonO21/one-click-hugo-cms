@@ -21,7 +21,7 @@ Fresh install: the Starter Pack is offered for 48 hours after first launch; all 
 Gold Badges have no cash value and cannot be transferred or exchanged. Purchases also raise a lifetime "Precinct Patron" rank (permanent income bonus), calculated on the device.
 
 RANDOMIZED CRATES
-Crates give randomized rewards (cash, Gold Badges, gear). They can be earned free or bought with Gold Badges. Odds for every tier are in the app (Cases tab, "Drop rates" button next to the crates; also Crate odds in Settings and the Store tab) and at {{ODDS_URL}}. Elite and Legend crates guarantee an Epic-or-better gear item within every 10 opens. Buying crates with Gold Badges is switched off when the device region is Belgium.
+Crates give randomized rewards (cash, Gold Badges, gear). They can be earned free or bought with Gold Badges. Odds are shown before every purchase that includes crates (the crate purchase confirmation, and the Starter Pack, Crate Trio and Career Pass sheets), in the Cases tab ("Drop rates"), in Settings and at {{ODDS_URL}}. Gold Badge prices show an approximate real-money value. The app is not distributed in Belgium or Brazil; it also switches off paid crates if the App Store country or the device region is BE or BR.
 
 SUBSCRIPTION: CHIEF'S CLUB
 One-week auto-renewable subscription (group "Chief's Club") on a card in the Store tab. The purchase screen shows the price and "per week", the benefits, renewal and cancellation terms, and links to Terms of Use, Privacy Policy and Purchase Terms. Benefits: all income x1.5, offline earnings at 100% (cap of at least 8 hours), +1 job slot, bounties auto-collect, 25 Gold Badges per day (Claim button on the card). No free trial. Cancel with Manage Subscription or in iOS Settings > Apple Account > Subscriptions.

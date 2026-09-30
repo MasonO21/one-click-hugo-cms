@@ -100,8 +100,8 @@
       <td>To remember the choices you made in Settings.</td>
     </tr>
     <tr>
-      <th scope="row">A list of recent purchase transaction IDs (Apple's reference numbers for your recent purchases)</th>
-      <td>So that a purchase is delivered once and never twice.</td>
+      <th scope="row">A list of recent purchase transaction IDs (Apple's reference numbers for your recent purchases), and how many Gold Badges each of those purchases gave</th>
+      <td>So that a purchase is delivered once and never twice, and so that the Gold Badges from a purchase that Apple refunds can be taken back.</td>
     </tr>
     <tr>
       <th scope="row">A running total of purchases, counted in US-dollar reference values</th>
@@ -112,7 +112,7 @@
 </div>
 
 <p>The saved game does not contain your name, email address, Apple Account details, payment details or location. We do not have access to it.</p>
-<p>While it is running, the game also reads a few device settings to work properly. It reads your device's region and language (for example, to apply the Belgium rule for crates described in <a href="purchases.html#crates">Purchase Terms</a>), and it reads whether Reduce Motion is switched on in iOS so it can adapt to it. These settings are used on the device and are not sent anywhere.</p>
+<p>While it is running, the game also reads a few device settings to work properly. It reads your device's region and language, and asks Apple's StoreKit for the country of your App Store account (only the country code), to apply the country rules for crates described in <a href="purchases.html#crates">Purchase Terms</a>. The game is currently available in English only; it reads the language so that it can follow your device language if a translation is added. It also reads whether Reduce Motion is switched on in iOS so it can adapt to it. These settings are used on the device and are not sent anywhere.</p>
 <p>The game does not ask for any device permissions.</p>
 
 <h2 id="s4">4. What we receive</h2>
@@ -141,7 +141,7 @@
 
 <h2 id="s5">5. Purchases and Apple</h2>
 <p>All purchases in the game are Apple In-App Purchases made through the App Store. Apple processes the payment, collects any taxes, keeps your purchase history, handles refunds and, if you use Family Sharing, handles Ask to Buy approvals. We never see your card number, billing address or other payment details, and we do not see your Apple Account.</p>
-<p>The game receives from Apple's StoreKit only the product ID, transaction ID and date of your purchases, so that it can deliver what you bought and avoid delivering it twice. These stay on your device (see <a href="#s3">section 3</a>).</p>
+<p>The game receives from Apple's StoreKit only the prices of its products, the product ID, transaction ID and date of your purchases, and the country code of your App Store account (see <a href="#s3">section 3</a>), so that it can show prices, deliver what you bought, avoid delivering it twice and apply the country rules for crates. These stay on your device (see <a href="#s3">section 3</a>).</p>
 <p>How Apple handles your information is governed by <a href="https://www.apple.com/legal/privacy/" rel="noopener noreferrer">Apple's Privacy Policy</a> and Apple's terms, not by this policy.</p>
 
 <h2 id="s6">6. Links the game can open</h2>
@@ -201,7 +201,7 @@
 <p>Email <a href="mailto:{{PRIVACY_EMAIL}}">{{PRIVACY_EMAIL}}</a> and say which right you want to use and where you live. Please write from the email address you used when you contacted us. To protect your privacy we may ask you to confirm that you control that address before we act. An authorized agent may make a request for you if they can show they have your permission. There is no charge. We will answer within the time the law requires where you live (generally one month for GDPR and UK GDPR requests, and 45 days for California requests, with extensions where the law allows). If we hold nothing about you, we will tell you so.</p>
 
 <h2 id="s12">12. Automated decision-making</h2>
-<p>We do not make decisions about you by automated means, and we do not profile you. The game applies fixed rules on your device, such as switching off the purchase of crates with Gold Badges when your device region is set to Belgium, and it uses random draws for crates. These are rules and chance, they are not decisions about you personally, and nothing about them is sent to us.</p>
+<p>We do not make decisions about you by automated means, and we do not profile you. The game applies fixed rules on your device, such as switching off paid random rewards when your App Store country or device region is Belgium or Brazil, and it uses random draws for crates. These are rules and chance, they are not decisions about you personally, and nothing about them is sent to us.</p>
 
 <h2 id="s13">13. Changes to this policy</h2>
 <p>If we change this policy, we will post the new version on this page with a new effective date. If the change is material, we will also mention it in the App Store release notes for the update it relates to. If we ever change the game so that it collects any information, we will update this policy before that version is released and, where the law requires, ask for your consent first.</p>

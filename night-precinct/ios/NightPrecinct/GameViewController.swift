@@ -151,6 +151,7 @@ final class GameViewController: UIViewController, WKNavigationDelegate, WKUIDele
             "version": (info["CFBundleShortVersionString"] as? String) ?? "",
             "build": (info["CFBundleVersion"] as? String) ?? "",
             "reduceMotion": UIAccessibility.isReduceMotionEnabled,
+            "languages": Locale.preferredLanguages,
             "platform": "ios"
         ]
         if let save = saveStore.read() {

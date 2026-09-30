@@ -107,6 +107,9 @@ final class NPBridge: NSObject, WKScriptMessageHandlerWithReply {
         case "unfinished":
             return await store.unfinished()
 
+        case "storefront":
+            return await store.storefront()
+
         case "save":
             guard let data = fields["data"] as? String else {
                 return BridgeReply.failure("data must be a string")

@@ -53,6 +53,24 @@ def subst(text, cfg):
     return re.sub(r"\{\{([A-Z_]+)\}\}", rep, text)
 
 
+I18N = ROOT / "game" / "i18n"
+LANG_CODES = ["es", "fr", "de", "it", "pt-BR", "ja", "ko", "zh-Hans", "zh-Hant"]
+
+
+def embed_catalogs(js):
+    """Put every translation catalog into the page as a JSON string (parsed only for the active language)."""
+    marker = "/*I18N_DATA*/{}"
+    if marker not in js:
+        sys.exit("build.py: i18n marker missing from 00-i18n.js")
+    data = {}
+    for code in LANG_CODES:
+        f = I18N / (code + ".json")
+        if f.exists():
+            cat = {k: v for k, v in json.loads(f.read_text()).items() if isinstance(v, str) and v}
+            data[code] = json.dumps(cat, ensure_ascii=False, separators=(",", ":"))
+    return js.replace(marker, json.dumps(data, ensure_ascii=False))
+
+
 def build(target, debug, out_override=None):
     cfg = load_config()
     css = (SRC / "styles.css").read_text()
@@ -64,6 +82,7 @@ def build(target, debug, out_override=None):
         if "__np" in js:
             sys.exit("build.py: debug hook leaked into a release build")
     js = subst(js, cfg)
+    js = embed_catalogs(js)
     markup = subst(markup, cfg)
     css = subst(css, cfg)
     js = js.replace("</script", "<\\/script")  # never let script text close the tag

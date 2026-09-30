@@ -1,3 +1,5 @@
+Contains loot boxes: in-game purchases include random items (crates). Odds are shown in the game before you buy.
+
 Run the night shift! Tap to earn, hire crews, buy upgrades and climb the ranks in three cartoon worlds: police, fire and EMS. {{APP_NAME}} is an offline idle tycoon. Play in short bursts, or let your crews work while you are away.
 
 HOW IT PLAYS
@@ -19,7 +21,7 @@ FREE REWARDS, NO ADS
 • Achievements, timed cases, bounties and the free Career Pass track can also pay out Gold Badges.
 
 RANDOM CRATES, ODDS PUBLISHED
-Crates hold randomized rewards: cash, Gold Badges and gear that gives permanent income bonuses. Three tiers: Standard, Elite, Legend. Earn crates free or buy them with Gold Badges. Odds for every crate are shown in the app and at {{ODDS_URL}}. Elite and Legend crates guarantee an Epic-or-better gear item within every 10 opens. Buying crates with Gold Badges is turned off in Belgium.
+Crates hold randomized rewards: cash, Gold Badges and gear that gives permanent income bonuses. Three tiers: Standard, Elite, Legend. Earn crates free or buy them with Gold Badges. Odds for every crate are shown in the app before you buy and at {{ODDS_URL}}. Elite and Legend crates guarantee an Epic-or-better gear item within every 10 opens.
 
 NO LOGIN, NO TRACKING, WORKS OFFLINE
 • No account, sign-in or email. No tracking, no analytics.

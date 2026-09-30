@@ -138,6 +138,17 @@ actor StoreManager {
         return await currentEntitlements()
     }
 
+    // MARK: - Storefront
+
+    /// The App Store country of the signed-in account as an ISO 3166-1 alpha-3 code (for example "BEL").
+    /// The page uses it for country rules; it never leaves the device.
+    func storefront() async -> [String: Any] {
+        if let storefront = await Storefront.current {
+            return BridgeReply.ok(["countryCode": storefront.countryCode])
+        }
+        return BridgeReply.failure("storefront unavailable")
+    }
+
     // MARK: - Transaction.updates
 
     /// Starts (once) a long-lived task that receives transactions arriving outside of a

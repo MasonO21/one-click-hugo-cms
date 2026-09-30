@@ -6,6 +6,8 @@ const steps = [
   ['static (release build)', ['static.js']],
   ['saves', ['saves.js']],
   ['native bridge mock', ['native-mock.js']],
+  ['regressions', ['regressions.js']],
+  ['translation coverage', ['i18n.js']],
   ['layout', ['layout.js']],
   ['monkey 400x820', ['monkey.js', '1', quick ? '600' : '3000', '400x820']],
   ['monkey 320x568', ['monkey.js', '2', quick ? '600' : '3000', '320x568']],

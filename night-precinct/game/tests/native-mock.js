@@ -4,47 +4,9 @@
 //   node native-mock.js
 const { launch, url } = require('./lib');
 const BUNDLE = 'com.yourcompany.nightprecinct';
-const PRICES = { badges_80: '0.99', badges_500: '4.99', badges_1200: '9.99', badges_2600: '19.99', badges_7000: '49.99', badges_15000: '99.99', piggy: '2.99', deal_crates: '2.99', deal_cash: '4.99', deal_recruit: '7.99', starter: '1.99', pass_premium: '9.99', auto_basic: '4.79', auto_combo: '9.59', auto_upgrade: '4.79', vip_weekly: '4.99' };
+const PRICES = { badges_80: '0.99', badges_500: '4.99', badges_1200: '9.99', badges_2600: '19.99', badges_7000: '49.99', badges_15000: '99.99', piggy: '2.99', deal_crates: '2.99', deal_boost: '2.99', deal_cash: '4.99', deal_recruit: '7.99', starter: '1.99', pass_premium: '9.99', auto_basic: '4.79', auto_combo: '9.59', auto_upgrade: '4.79', vip_weekly: '4.99' };
 
-/* Everything injected before the game script runs. `cfg` lets each scenario pre-load the fake App Store. */
-function initScript(cfg) {
-  const BUNDLE = cfg.bundle;
-  window.NP_BOOT = { save: cfg.save || null, region: cfg.region || 'US', locale: 'en-US', version: '1.0.0', build: '1', reduceMotion: false, platform: 'ios' };
-  const log = window.__log = [];
-  const unfinished = new Map(cfg.unfinished ? cfg.unfinished.map(t => [t.id, t]) : []);
-  let entitlements = cfg.entitlements || [];
-  let nextTx = 5000;
-  const kind = s => (s === 'vip_weekly' ? 'autoRenewable' : ['starter', 'pass_premium', 'auto_basic', 'auto_combo', 'auto_upgrade'].includes(s) ? 'nonConsumable' : 'consumable');
-  window.__mock = { setEntitlements(e) { entitlements = e; }, tx(s, extra) { const id = String(nextTx++); return Object.assign({ id, originalId: id, productId: BUNDLE + '.' + s, type: kind(s), purchaseDate: Date.now(), expirationDate: null, revoked: false }, extra || {}); }, unfinished, behaviour: cfg.behaviour || 'success' };
-  window.webkit = { messageHandlers: { np: { postMessage: async msg => {
-    log.push(msg);
-    await new Promise(r => setTimeout(r, 5));
-    switch (msg.cmd) {
-      case 'products': return { ok: true, products: msg.ids.filter(id => !(cfg.missing || []).includes(id)).map(id => { const s = id.slice(BUNDLE.length + 1); return { id, displayName: s, displayPrice: '€' + cfg.prices[s], price: cfg.prices[s], currency: 'EUR', type: kind(s), period: s === 'vip_weekly' ? 'P1W' : null }; }), missing: [] };
-      case 'purchase': {
-        const s = msg.id.slice(BUNDLE.length + 1);
-        const b = window.__mock.behaviour;
-        if (b === 'cancelled') return { ok: true, status: 'cancelled' };
-        if (b === 'pending') return { ok: true, status: 'pending' };
-        if (b === 'error') return { ok: false, error: 'network' };
-        const tx = window.__mock.tx(s, s === 'vip_weekly' ? { expirationDate: Date.now() + 7 * 864e5 } : {});
-        unfinished.set(tx.id, tx);
-        if (kind(s) !== 'consumable') entitlements = entitlements.concat([tx]);
-        return { ok: true, status: 'success', tx };
-      }
-      case 'finish': unfinished.delete(msg.txId); return { ok: true };
-      case 'unfinished': return { ok: true, transactions: [...unfinished.values()] };
-      case 'entitlements': return { ok: true, entitlements };
-      case 'restore': return { ok: true, entitlements };
-      case 'save': window.__saved = msg.data; return { ok: true };
-      case 'wipe': window.__saved = null; return { ok: true };
-      case 'openUrl': window.__opened = (window.__opened || []).concat([msg.url]); return { ok: true };
-      case 'manageSubscriptions': return { ok: true };
-      case 'haptic': return { ok: true };
-      default: return { ok: false, error: 'unknown' };
-    }
-  } } } };
-}
+const { initScript } = require('./mock-bridge');
 
 let fails = 0;
 const check = (name, cond, extra) => { if (!cond) fails++; console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond || extra === undefined ? '' : '  -> ' + JSON.stringify(extra))); };
@@ -67,7 +29,7 @@ const check = (name, cond, extra) => { if (!cond) fails++; console.log((cond ? '
   /* 1. boot: products loaded, native flag, localized price shown, no restricted content */
   let p = await open();
   check('native mode detected', await S(p, () => window.__np.APP.native === true));
-  check('all 16 products loaded', await S(p, () => Object.keys(window.__np.Pay.info).length === 16 && window.__np.Pay.loaded));
+  check('all products loaded', await S(p, () => Object.keys(window.__np.Pay.info).length === Object.keys(window.__np.PRODUCTS).length && window.__np.Pay.loaded));
   check('storekit price is displayed (not the hard-coded USD)', await S(p, () => window.__np.Pay.price('badges_500') === '€4.99'));
   check('entitlements + unfinished queried at launch', await S(p, () => { const c = window.__log.map(m => m.cmd); return c.includes('products') && c.includes('unfinished') && c.includes('entitlements'); }));
   await p.evaluate(() => window.__np.showTab('shop')); await p.waitForTimeout(200);
@@ -91,18 +53,27 @@ const check = (name, cond, extra) => { if (!cond) fails++; console.log((cond ? '
   console.log('  info reachable purchase entries: ' + found.join(', '));
   check('every product is reachable from the Store tab on a new save', found.filter(x => x.startsWith('pack')).length === 6 && found.includes('starter:') && found.includes('pass:') && found.includes('vip:') && found.includes('piggy:') && found.filter(x => x.startsWith('deal')).length === 3 && found.includes('autoBuy:1') && found.includes('autoBuy:2'), found);
 
-  /* 1c. offers that contain crates show the odds; the Career tab price comes from StoreKit */
+  /* 1c. offers that contain crates show the odds; with paid random items off, no offer contains crates at all */
   await p.evaluate(() => { const m = document.getElementById('modal-root'); m.classList.remove('on'); m.innerHTML = ''; });
+  const paidRandom = await S(p, () => window.__np.PAID_RANDOM);
+  console.log('  info paid random items: ' + (paidRandom ? 'ON' : 'OFF'));
   const sheets = {};
-  for (const [act, id] of [['starter', ''], ['pass', ''], ['deal', 'd0']]) {
+  for (const [act, id] of [['starter', ''], ['pass', ''], ...(paidRandom ? [['deal', 'd0']] : []), ['deal', 'd1'], ['deal', 'd2'], ['vip', ''], ['piggy', '']]) {
     await p.evaluate(() => window.__np.showTab('shop')); await p.waitForTimeout(100);
     await p.evaluate(({ act, id }) => { const b = [...document.querySelectorAll('#panel [data-act]')].find(x => x.dataset.act === act && (x.dataset.id || '') === id); b.click(); }, { act, id });
-    sheets[act] = await p.evaluate(() => document.getElementById('modal-root').innerText);
+    sheets[act + id] = await p.evaluate(() => document.getElementById('modal-root').innerText);
     await p.evaluate(() => { const c = document.querySelector('#modal-root [data-x=close]'); if (c) c.click(); });
   }
-  check('Crate Trio sheet lists Elite crate odds', /Elite crate odds/i.test(sheets.deal) || /Sealed Case odds/i.test(sheets.deal) || /odds/i.test(sheets.deal) && /17%/.test(sheets.deal), sheets.deal);
-  check('Starter Pack sheet lists crate odds', /odds/i.test(sheets.starter) && /15%/.test(sheets.starter), sheets.starter);
-  check('Career Pass sheet lists Elite and Legend odds', /odds/i.test(sheets.pass) && /35%/.test(sheets.pass) && /17%/.test(sheets.pass), sheets.pass);
+  if (paidRandom) {
+    check('Starter Pack sheet lists its crates and their odds', /3 Standard crates/.test(sheets.starter) && /odds/i.test(sheets.starter) && /55%/.test(sheets.starter), sheets.starter);
+    check('Crate Trio sheet lists Elite crate odds', /odds/i.test(sheets.deald0) && /17%/.test(sheets.deald0), sheets.deald0);
+    check('Career Pass sheet lists Elite and Legend odds', /odds/i.test(sheets.pass) && /35%/.test(sheets.pass) && /17%/.test(sheets.pass), sheets.pass);
+  } else {
+    const any = Object.entries(sheets).filter(([k, t]) => /odds|random/i.test(t));
+    check('no purchase sheet sells random items', any.length === 0, any.map(x => x[0]));
+    check('Crate Trio not offered', await S(p, () => { window.__np.showTab('shop'); return !document.querySelector('#panel [data-act=deal][data-id=d0]'); }));
+    check('Career Pass premium lists fixed Gold Badges instead of crates', /Gold Badges on every fifth tier/.test(sheets.pass), sheets.pass);
+  }
   await p.evaluate(() => window.__np.showTab('career')); await p.waitForTimeout(200);
   check('Career tab premium button shows the StoreKit price', await S(p, () => /Go Premium\s*€9\.99/i.test(document.getElementById('panel').innerText)));
 
@@ -184,7 +155,9 @@ const check = (name, cond, extra) => { if (!cond) fails++; console.log((cond ? '
   await p.context().close();
 
   /* 9. region gate: Belgium cannot buy randomized crates with badges; other regions can */
-  for (const [region, expectBlocked] of [['BE', true], ['US', false]]) {
+  const paidOn = await (async () => { const q = await open(); const v = await q.evaluate(() => window.__np.PAID_RANDOM); await q.context().close(); return v; })();
+  for (const [region, expB] of [['BE', true], ['BR', true], ['US', false]]) {
+    const expectBlocked = expB || !paidOn;
     p = await open({ region });
     const res = await p.evaluate(() => {
       const N = window.__np; N.S().badges = 5000;
@@ -192,9 +165,15 @@ const check = (name, cond, extra) => { if (!cond) fails++; console.log((cond ? '
       const before = N.S().crates.std; N.ACT.buyCrate && document.body.click();
       return { buttons, region: N.APP.region };
     });
-    const blockedCall = await p.evaluate(() => { const N = window.__np, S = N.S(), b = S.badges, c = S.crates.std; const btn = document.createElement('button'); btn.dataset.act = 'buyCrate'; btn.dataset.k = 'std'; btn.dataset.n = '1'; document.getElementById('panel').appendChild(btn); btn.click(); return { granted: S.crates.std - c, spent: b - S.badges }; });
+    const blockedCall = await p.evaluate(() => { const N = window.__np, S = N.S(), b = S.badges, c = S.crates.std; const btn = document.createElement('button'); btn.dataset.act = 'buyCrate'; btn.dataset.k = 'std'; btn.dataset.n = '1'; document.getElementById('panel').appendChild(btn); btn.click();
+      /* crate purchases go through a confirmation that shows the odds */
+      const m = document.getElementById('modal-root'), ok = m.querySelector('[data-x=ok]'), confirm = { shown: !!ok, odds: /odds/i.test(m.innerText) }; if (ok) ok.click();
+      return { granted: S.crates.std - c, spent: b - S.badges, confirm }; });
     check('region ' + region + ': crate-buy buttons ' + (expectBlocked ? 'hidden' : 'shown'), expectBlocked ? res.buttons === 0 : res.buttons > 0, res);
-    check('region ' + region + ': direct buyCrate ' + (expectBlocked ? 'refused' : 'works'), expectBlocked ? (blockedCall.granted === 0 && blockedCall.spent === 0) : blockedCall.granted === 1, blockedCall);
+    check('region ' + region + ': direct buyCrate ' + (expectBlocked ? 'refused' : 'works after a confirmation with the odds'), expectBlocked ? (blockedCall.granted === 0 && blockedCall.spent === 0 && !blockedCall.confirm.shown) : (blockedCall.granted === 1 && blockedCall.spent > 0 && blockedCall.confirm.shown && blockedCall.confirm.odds), blockedCall);
+    const starter = await p.evaluate(() => { const N = window.__np; N.showTab('shop'); const m = document.getElementById('modal-root'); m.classList.remove('on'); m.innerHTML = ''; const b = document.querySelector('#panel [data-act=starter]'); if (!b) return null; b.click(); const t = m.innerText; m.classList.remove('on'); m.innerHTML = ''; return t + (document.querySelector('#panel [data-act=deal][data-id=d0]') ? '\n[Crate Trio offered]' : ''); });
+    if (starter !== null) check('region ' + region + ': Starter Pack ' + (expectBlocked ? 'has Gold Badges instead of crates' : 'includes crates'), expectBlocked ? (!/crate|odds/i.test(starter) && /390 Gold Badges/.test(starter)) : /3 Standard crates/.test(starter), starter);
+    if (starter !== null) check('region ' + region + ': Crate Trio deal ' + (expectBlocked ? 'hidden' : 'offered'), /\[Crate Trio offered\]/.test(starter) !== expectBlocked);
     await p.context().close();
   }
 

@@ -11,15 +11,23 @@ function fmt(n){
   if(n!==n) return '0';
   if(!isFinite(n)) return '∞';
   if(n<0) return '-'+fmt(-n);
-  if(n<1000){ return n<10?String(Math.floor(n*100)/100):n<100?String(Math.floor(n*10)/10):String(Math.floor(n)); }
-  const e=Math.floor(Math.log10(n)/3);
-  if(e>=SUF.length) return n.toExponential(2).replace('e+','e');
-  const v=n/Math.pow(1000,e);
-  return (v<10?v.toFixed(2):v<100?v.toFixed(1):v.toFixed(0))+SUF[e];
+  if(n<1000){ return dec(n<10?Math.floor(n*100)/100:n<100?Math.floor(n*10)/10:Math.floor(n)); }
+  let e=Math.floor(Math.log10(n)/3),v=n/Math.pow(1000,e);
+  if(v>=999.5){ e++; v=n/Math.pow(1000,e); }  /* 999,500 is 1.00M, not 1000K */
+  if(e>=SUF.length) return dec(n.toExponential(2).replace('e+','e'));
+  return dec(v<9.995?v.toFixed(2):v<99.95?v.toFixed(1):v.toFixed(0))+SUF[e];
 }
+/* Decimal comma for languages that use one. */
+const dec=x=>DEC==='.'?String(x):String(x).replace('.',DEC);
 const money=n=>'$'+fmt(n);
 function clock(s){ s=Math.max(0,Math.ceil(s)); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60; return h?`${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`:`${m}:${String(x).padStart(2,'0')}`; }
-function dur(s){ s=Math.round(s); if(s<60) return s+'s'; if(s<3600) return Math.round(s/60)+'m'; if(s<86400){ const h=Math.floor(s/3600),m=Math.round(s%3600/60); return m?`${h}h ${m}m`:`${h}h`; } const d=Math.floor(s/86400),h=Math.round(s%86400/3600); return h?`${d}d ${h}h`:`${d}d`; }
+function dur(s){
+  s=Math.round(s);
+  if(s<60) return _('{n}s',{n:s});
+  if(s<3600) return _('{n}m',{n:Math.round(s/60)});
+  if(s<86400){ const h=Math.floor(s/3600),m=Math.round(s%3600/60); return m?_('{h}h {m}m',{h,m}):_('{h}h',{h}); }
+  const d=Math.floor(s/86400),h=Math.round(s%86400/3600); return h?_('{d}d {h}h',{d,h}):_('{d}d',{d});
+}
 const dayKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const yesterdayKey=()=>{ const d=new Date(); d.setDate(d.getDate()-1); return dayKey(d); };
 
@@ -230,7 +238,7 @@ const WORLDS=[
   {id:'e_pip',n:'Pip, Therapy Legend',role:'Certified good boy',price:500,m:3,gen:4,desc:'Therapy Dogs earn x3',face:{hat:'dog'}},
   {id:'e_nadia',n:'Flight Nurse Nadia',role:'Calm at 3,000 feet',price:900,m:2,desc:'All income x2',face:{skin:'#c98b62',hair:'#0a0a12',hat:'ems',hc:'#ff4d6d',body:'#1c2a5a'}},
   {id:'e_vo',n:'Dr. Kim Vo',role:'Trauma surgeon',price:1600,m:5,gen:6,desc:'Trauma Teams earn x5',face:{skin:'#f0c9a0',hair:'#111',hat:'ems',hc:'#39c6a6',body:'#39c6a6',gl:1}},
-  {id:'e_dir',n:'Director Alvarez',role:'Runs every hospital in town',price:4500,m:3,desc:'All income x3',face:{skin:'#d9a679',hair:'#c8c8d8',hat:'peak',gold:1,body:'#e8ecff'}},
+  {id:'e_dir',n:'Director Alvarez',role:'Runs every hospital in town',price:4500,m:3,desc:'All income x3',face:{skin:'#d9a679',hair:'#c8c8d8',hat:'ems',hc:'#e8ecff',gold:1,body:'#e8ecff'}},
  ],
  startBonus:100,
 },
@@ -278,42 +286,63 @@ const DAILY=[
 ];
 const PASS_N=30, PASS_XP=100;
 const AUTO_RATE=8, AUTO_MULT=1.5;
+const STARTER_BADGES=300, STARTER_CRATES=3;   /* Rookie Starter Pack */
 const OFFLINE_X2=6, OFFLINE_X3=15;   /* Gold Badges to double / triple offline earnings */
 function passReward(t,prem){
   if(!prem){
     if(t%10===0) return {k:'badge',v:40};
-    if(t%5===0) return {k:'crate',v:'std'};
+    if(t%5===0) return crateBuyAllowed()?{k:'crate',v:'std'}:{k:'badge',v:15};  /* tiers can be skipped with Gold Badges */
     if(t%2===0) return {k:'badge',v:5};
     return {k:'cash',v:300*t};
   }
-  if(t===30) return {k:'crate',v:'legend',x:{k:'badge',v:250}};
+  /* The premium track is bought with money, so where paid random rewards are not allowed its crates become fixed Gold Badges. */
+  if(t===30) return crateBuyAllowed()?{k:'crate',v:'legend',x:{k:'badge',v:250}}:{k:'badge',v:400};
   if(t===20) return {k:'theme',v:'rain'};
   if(t===10) return {k:'skin',v:'neon'};
-  if(t%5===0) return {k:'crate',v:'elite'};
+  if(t%5===0) return crateBuyAllowed()?{k:'crate',v:'elite'}:{k:'badge',v:60};
   return {k:'badge',v:10+t};
+}
+
+/* Translate every player-facing string in the data tables (see trData in 00-i18n.js). */
+function localizeData(){
+  const WCTX={name:'world name (title)',short:'world short name, max 8 chars',dept:'department name',blurb:'world description, one sentence',ranks:'rank title (career ladder), max 22 chars',
+    districts:'district name shown on the street scene',ops:'timed job name',milestone:'equipment upgrade name',tapUp:'tap-power upgrade name',gup:'global income upgrade name',
+    msg:'news ticker line. Shown right after the unit short name, which is its subject: "<short name> wrote up a jaywalker...". Write it so it reads after the short name.'};
+  const LCTX={tap:'giant tap button label, max 11 chars, exclamation',tapWord:'the tap button word in capitals, used in a hint sentence',rate:'rate label after a number, e.g. "12 arrests/s"',
+    done:'word popping over a handled target on the street, max 9 chars, capitals',bounty:'label on a running bounty target, max 10 chars, capitals',spree:'boost name, capitals, max 16 chars',jackpot:'reward headline, capitals'};
+  WORLDS.forEach(w=>{
+    Object.keys(WCTX).forEach(k=>trData(w,k,w.id+': '+WCTX[k]));
+    Object.keys(w.L).forEach(k=>trData(w.L,k,w.id+' UI label '+k+(LCTX[k]?': '+LCTX[k]:'')));
+    Object.keys(w.crates).forEach(k=>trData(w.crates,k,w.id+': crate name ('+k+' tier)'));
+    w.gens.forEach((g,i)=>{ trData(g,'n',w.id+' unit '+(i+1)+': name'); trData(g,'s',w.id+' unit '+(i+1)+': short name, max 10 chars'); trData(g,'role',w.id+' unit '+(i+1)+': tagline'); trData(g,'crime',w.id+' unit '+(i+1)+': ledger row, what this unit handled (count follows)'); });
+    w.skins.forEach(x=>trData(x,'n',w.id+': vehicle paint job name'));
+    w.agents.forEach(a=>{ trData(a,'n',w.id+': elite recruit name (keep the personal name)'); trData(a,'role',w.id+': elite recruit tagline'); trData(a,'desc',w.id+': elite recruit bonus'); });
+  });
+  RAR.forEach(r=>trData(r,'n','gear rarity')); GEARS.forEach(g=>trData(g,'n','gear item name')); THEMES.forEach(t=>trData(t,'n','skyline theme name'));
+  PATRON.forEach(p=>trData(p,1,'patron rank name')); PACKS.forEach(p=>{ trData(p,'n','Gold Badge pack name'); if(p.tag) trData(p,'tag','pack ribbon, max 12 chars'); });
 }
 
 /* ====================== ACTIVE WORLD ====================== */
 let W=WORLDS[0],GENS=W.gens,AGENTS=W.agents,UPS=[],ACH=[];
 function buildUpgrades(){
   UPS=[];
-  GENS.forEach((g,i)=>MILE_T.forEach((t,k)=>UPS.push({id:`g${i}_${k}`,kind:'gen',gen:i,cost:g.cost*Math.pow(W.g,t)*12,name:`${g.s}: ${W.milestone[k]}`,desc:`${g.n} pay x2`,glyph:MILE_G[k],ok:()=>S.owned[i]>=t})));
-  TAP_C.forEach((c,k)=>UPS.push({id:`t${k}`,kind:'tap',cost:c,name:W.tapUp[k],desc:'Each tap earns x2',glyph:'cuffs',ok:()=>(k===0||S.ups[`t${k-1}`])&&S.run>=c*0.1}));
-  ['Adrenaline','Energy Drinks','Hero Complex','Overdrive','Caffeine IV'].forEach((n,k)=>UPS.push({id:`p${k}`,kind:'pct',cost:PCT_C[k],name:n,desc:'Taps also earn +1% of your income/s',glyph:'bolt',ok:()=>(k===0||S.ups[`p${k-1}`])&&S.run>=PCT_C[k]*0.1}));
-  W.gup.forEach((n,k)=>UPS.push({id:`u${k}`,kind:'glob',p:GUP_P[k],cost:GUP_C[k],name:n,desc:`All income +${Math.round(GUP_P[k]*100)}%`,glyph:['bag','bag','radio','cam','shield','star','star','star','eye','eye','key','key'][k],ok:()=>S.run>=GUP_C[k]*0.1}));
+  GENS.forEach((g,i)=>MILE_T.forEach((t,k)=>UPS.push({id:`g${i}_${k}`,kind:'gen',gen:i,cost:g.cost*Math.pow(W.g,t)*12,name:_('{unit}: {upgrade}',{unit:g.s,upgrade:W.milestone[k]}),desc:_('{unit} pay x2',{unit:g.n}),glyph:MILE_G[k],ok:()=>S.owned[i]>=t})));
+  TAP_C.forEach((c,k)=>UPS.push({id:`t${k}`,kind:'tap',cost:c,name:W.tapUp[k],desc:_('Each tap earns x2'),glyph:'cuffs',ok:()=>(k===0||S.ups[`t${k-1}`])&&S.run>=c*0.1}));
+  [N_('Adrenaline'),N_('Energy Drinks'),N_('Hero Complex'),N_('Overdrive'),N_('Caffeine IV')].forEach((n,k)=>UPS.push({id:`p${k}`,kind:'pct',cost:PCT_C[k],name:_(n),desc:_('Taps also earn +1% of your income/s'),glyph:'bolt',ok:()=>(k===0||S.ups[`p${k-1}`])&&S.run>=PCT_C[k]*0.1}));
+  W.gup.forEach((n,k)=>UPS.push({id:`u${k}`,kind:'glob',p:GUP_P[k],cost:GUP_C[k],name:n,desc:_('All income +{p}%',{p:Math.round(GUP_P[k]*100)}),glyph:['bag','bag','radio','cam','shield','star','star','star','eye','eye','key','key'][k],ok:()=>S.run>=GUP_C[k]*0.1}));
 }
 function buildAch(){
   ACH=[]; const p=W.id+':';
-  [1e3,1e6,1e9,1e12,1e15,1e18,1e21,1e24].forEach(v=>ACH.push({id:p+'life'+v,n:`${money(v)} Club`,d:`Earn ${money(v)} in total`,t:()=>S.life>=v,r:5+Math.round(Math.log10(v))}));
-  [100,1000,10000,50000].forEach(v=>ACH.push({id:p+'tap'+v,n:`${fmt(v)} Taps`,d:`Make ${fmt(v)} taps by hand`,t:()=>S.taps>=v,r:3+Math.round(Math.log10(v))}));
+  [1e3,1e6,1e9,1e12,1e15,1e18,1e21,1e24].forEach(v=>ACH.push({id:p+'life'+v,n:_('{amount} Club',{amount:money(v)}),d:_('Earn {amount} in total',{amount:money(v)}),t:()=>S.life>=v,r:5+Math.round(Math.log10(v))}));
+  [100,1000,10000,50000].forEach(v=>ACH.push({id:p+'tap'+v,n:_('{n} Taps',{n:fmt(v)}),d:_('Make {n} taps by hand',{n:fmt(v)}),t:()=>S.taps>=v,r:3+Math.round(Math.log10(v))}));
   GENS.forEach((g,i)=>{
-    ACH.push({id:p+'own1_'+i,n:`First ${g.s}`,d:`Get your first ${g.n}`,t:()=>S.owned[i]>=1,r:1+Math.floor(i/3)});
-    ACH.push({id:p+'own25_'+i,n:`${g.s} Force`,d:`Have 25 ${g.n}s`,t:()=>S.owned[i]>=25,r:3+Math.floor(i/2)});
+    ACH.push({id:p+'own1_'+i,n:_('First {unit}',{unit:g.s}),d:_('Get your first {unit}',{unit:g.n}),t:()=>S.owned[i]>=1,r:1+Math.floor(i/3)});
+    ACH.push({id:p+'own25_'+i,n:_('{unit} Force',{unit:g.s}),d:_('Have 25 {units}',{units:plu(g.n)}),t:()=>S.owned[i]>=25,r:3+Math.floor(i/2)});
   });
-  [1,10,50].forEach(v=>ACH.push({id:p+'bty'+v,n:`${W.L.bounty} x${v}`,d:`Catch ${v} bounty target${v>1?'s':''}`,t:()=>S.bounties>=v,r:2+Math.round(Math.log10(v)*3)}));
-  [1,10,50].forEach(v=>ACH.push({id:p+'ops'+v,n:`Case Closed x${v}`,d:`Complete ${v} timed job${v>1?'s':''}`,t:()=>S.opsDone>=v,r:2+Math.round(Math.log10(v)*3)}));
-  [1,3,6,11].forEach(v=>ACH.push({id:p+'rank'+v,n:`Rank ${v+1}: ${W.ranks[v]}`,d:`Reach the rank of ${W.ranks[v]}`,t:()=>S.promos>=v,r:8+v*4}));
-  [1,10,50].forEach(v=>ACH.push({id:p+'lock'+v,n:`Crate Opener x${v}`,d:`Open ${v} crate${v>1?'s':''}`,t:()=>S.opened>=v,r:2+Math.round(Math.log10(v)*4)}));
+  [1,10,50].forEach(v=>ACH.push({id:p+'bty'+v,n:`${W.L.bounty} x${v}`,d:v>1?_('Catch {n} bounty targets',{n:v}):_('Catch 1 bounty target'),t:()=>S.bounties>=v,r:2+Math.round(Math.log10(v)*3)}));
+  [1,10,50].forEach(v=>ACH.push({id:p+'ops'+v,n:_('Case Closed x{n}',{n:v}),d:v>1?_('Complete {n} timed jobs',{n:v}):_('Complete 1 timed job'),t:()=>S.opsDone>=v,r:2+Math.round(Math.log10(v)*3)}));
+  [1,3,6,11].forEach(v=>ACH.push({id:p+'rank'+v,n:_('Rank {n}: {rank}',{n:v+1,rank:W.ranks[v]}),d:_('Reach the rank of {rank}',{rank:W.ranks[v]}),t:()=>S.promos>=v,r:8+v*4}));
+  [1,10,50].forEach(v=>ACH.push({id:p+'lock'+v,n:_('Crate Opener x{n}',{n:v}),d:v>1?_('Open {n} crates',{n:v}):_('Open 1 crate'),t:()=>S.opened>=v,r:2+Math.round(Math.log10(v)*4)}));
 }
 function setWorld(id){
   W=worldById(id); GENS=W.gens; AGENTS=W.agents;
@@ -337,12 +366,12 @@ function fresh(){
     badges:60,opened:0,pity:0,crates:{std:1,elite:0,legend:0},gear:{},agents:{},
     perm:{off:0,slots:0,auto:0},autoOn:true,boosts:{dbl:0,spree:0},vip:0,vipDay:'',
     pass:{xp:0,premium:false,f:{},p:{}},piggy:0,spent:0,packs:{},starter:false,
-    daily:{last:'',streak:0},ach:{},skins:{'police:classic':1},theme:'night',themes:{night:1},
-    sound:true,haptics:true,calm:false,calmSet:false,txs:[],
+    daily:{last:'',streak:0,at:0},ach:{},skins:{'police:classic':1},theme:'night',themes:{night:1},
+    sound:true,haptics:true,calm:false,calmSet:false,txs:[],txb:{},lang:'auto',
     pending:null,rallyAt:0,supplyAt:0,amt:1,sessions:0,deals:{},
   },freshWorld('police'));
 }
-const MAPS=new Set(['ups','gear','agents','packs','ach','skins','themes','deals','f','p','ws','done']);
+const MAPS=new Set(['ups','gear','agents','packs','ach','skins','themes','deals','f','p','ws','done','txb']);
 function merge(d,o){
   for(const k in o){
     if(!(k in d)) continue;
@@ -354,6 +383,16 @@ function merge(d,o){
     else if(Array.isArray(dv)){ if(Array.isArray(ov)) ov.forEach((x,i)=>{ if(i<dv.length) dv[i]=x; }); }
     else if(typeof dv===typeof ov) d[k]=ov;
   }
+}
+/* The device clock went back by ms (for example it was set ahead and then corrected): move every stored
+   timestamp back by the same amount so timers, cooldowns and boosts do not stretch or lock up. */
+function unskew(st,ms){
+  if(!(ms>5000)||!isFinite(ms)) return;
+  ['last','t0','rallyAt','supplyAt'].forEach(k=>{ if(st[k]>0) st[k]-=ms; });
+  ['dbl','spree'].forEach(k=>{ if(st.boosts&&st.boosts[k]>0) st.boosts[k]-=ms; });
+  if(st.daily&&st.daily.at>0) st.daily.at-=ms;
+  const sh=a=>{ if(Array.isArray(a)) a.forEach(o=>{ if(o&&isFinite(o.end)) o.end-=ms; }); };
+  sh(st.ops); Object.values(st.ws||{}).forEach(w=>w&&sh(w.ops));
 }
 let S=(function(){
   const d=fresh();
@@ -380,13 +419,15 @@ let S=(function(){
   Object.keys(d.ws).forEach(id=>{ if(!WORLDS.some(w=>w.id===id)||id===d.world||!d.ws[id]||typeof d.ws[id]!=='object') delete d.ws[id]; else fixWorld(d.ws[id]); });
   ['dbl','spree'].forEach(k=>{ if(!isFinite(d.boosts[k])) d.boosts[k]=0; });
   ['vip','rallyAt','supplyAt','t0','last'].forEach(k=>{ if(!isFinite(d[k])||d[k]<0) d[k]=(k==='t0'||k==='last')?Date.now():0; });
-  if(d.last>Date.now()) d.last=Date.now();
+  unskew(d,d.last-Date.now());
   if(![0,1,2].includes(d.perm.auto)) d.perm.auto=d.perm.auto?1:0;
   d.perm.off=clamp(Math.floor(d.perm.off)||0,0,3); d.perm.slots=clamp(Math.floor(d.perm.slots)||0,0,2);
   if(!(d.amt==='max'||[1,10,100].includes(d.amt))) d.amt=1;
   if(!d.calmSet){ d.calmSet=true; if(APP.reduceMotion) d.calm=true; }
+  if(d.lang!=='auto'&&!LANGS.some(x=>x[0]===d.lang)) d.lang='auto';
   return d;
 })();
+setLang(S.lang); localizeData();
 setWorld(S.world);
 let wiping=false;
 function save(){
@@ -436,8 +477,10 @@ function recalc(){
     ips+=D.gen[i]; rate+=S.owned[i]*m*gm/10;
   });
   D.ips=ips; D.crimeRate=rate;
-  let tb=1; TAP_C.forEach((_,k)=>{ if(S.ups[`t${k}`]) tb*=2; });
-  let pct=0.01; PCT_C.forEach((_,k)=>{ if(S.ups[`p${k}`]) pct+=0.01; });
+  /* Income without temporary boosts: lump-sum rewards (time warps, deals, jobs, crates) use this. */
+  D.baseIps=ips/((S.boosts.dbl>t?2:1)*(S.boosts.spree>t?7:1));
+  let tb=1; TAP_C.forEach((z,k)=>{ if(S.ups[`t${k}`]) tb*=2; });
+  let pct=0.01; PCT_C.forEach((z,k)=>{ if(S.ups[`p${k}`]) pct+=0.01; });
   D.tap=tb*gm+ips*pct;
 }
 const MEDAL={div:2e7,pow:0.4,bonus:0.03};
@@ -447,7 +490,7 @@ const isTop=()=>S.promos>=W.ranks.length-1;
 const rankName=()=>W.ranks[Math.min(S.promos,W.ranks.length-1)];
 const promoReq=()=>W.req.table[Math.min(isTop()?W.ranks.length-3:S.promos,W.req.table.length-1)];
 const canPromote=()=>S.run>=promoReq()&&medalGain()>=1;
-const cashFor=sec=>Math.max(D.ips,1)*sec;
+const cashFor=sec=>Math.max(D.baseIps,1)*sec;
 const boostOn=k=>S.boosts[k]>now();
 const passLevel=()=>Math.min(PASS_N,Math.floor(S.pass.xp/PASS_XP));
 const opSlots=()=>2+(D.vip?1:0)+S.perm.slots;
@@ -456,7 +499,7 @@ const offlineCap=()=>Math.max([2,4,8,24][S.perm.off]||2,D.vip?8:0)*3600;
 function checkAch(){
   let got=0,badges=0,first='';
   ACH.forEach(a=>{ if(!S.ach[a.id]&&a.t()){ S.ach[a.id]=1; S.badges+=a.r; badges+=a.r; if(!got) first=a.n; got++; } });
-  if(got){ toast(`Service Record: ${first}${got>1?` and ${got-1} more`:''}  +${badges} Badges`,'gold'); recalc(); sfx('level'); dirty('career'); }
+  if(got){ toast(got>1?_('Service Record: {name} and {more} more  +{n} Badges',{name:first,more:got-1,n:badges}):_('Service Record: {name}  +{n} Badges',{name:first,n:badges}),'gold'); recalc(); sfx('level'); dirty('career'); }
 }
 
 /* ====================== ACTIONS ====================== */
@@ -476,7 +519,7 @@ function buyGen(i,free){
 }
 function buyUp(id){
   const u=UPS.find(x=>x.id===id); if(!u||S.ups[id]||S.funds<u.cost){ sfx('no'); return; }
-  S.funds-=u.cost; S.ups[id]=1; recalc(); sfx('buy'); toast(`${u.name} installed`,'good'); dirty('upgrades');
+  S.funds-=u.cost; S.ups[id]=1; recalc(); sfx('buy'); toast(_('{name} installed',{name:u.name}),'good'); dirty('upgrades');
 }
 const combo={n:0,t:0};
 function comboMult(){ if(performance.now()-combo.t>1400) combo.n=0; return 1+Math.min(combo.n,50)*0.04; }
@@ -501,23 +544,23 @@ function autoTick(dt){
 function addXP(n){
   const before=passLevel();
   S.pass.xp=Math.min(PASS_N*PASS_XP,S.pass.xp+n);
-  if(passLevel()>before){ toast(`Career Pass tier ${passLevel()} reached`,'gold'); sfx('level'); dirty('career'); }
+  if(passLevel()>before){ toast(_('Career Pass tier {n} reached',{n:passLevel()}),'gold'); sfx('level'); dirty('career'); }
 }
 const skinById=id=>W.skins.find(s=>s.id===id);
 function grant(r){
   switch(r.k){
-    case 'badge': S.badges+=r.v; return {t:`+${r.v} Gold Badges`,g:'badge'};
+    case 'badge': S.badges+=r.v; return {t:_('+{n} Gold Badges',{n:r.v}),g:'badge'};
     case 'cash': { const a=cashFor(r.v); addFunds(a); return {t:`+${money(a)}`,g:'bag'}; }
-    case 'crate': S.crates[r.v]=(S.crates[r.v]||0)+(r.n||1); if(r.x) grant(r.x); return {t:`${crateName(r.v)}${r.x?` and ${r.x.v} Badges`:''}`,g:'crate'};
+    case 'crate': S.crates[r.v]=(S.crates[r.v]||0)+(r.n||1); if(r.x) grant(r.x); return {t:r.x?_('{crate} and {n} Badges',{crate:crateName(r.v),n:r.x.v}):crateName(r.v),g:'crate'};
     case 'skin': S.skins[W.id+':'+r.v]=1; return {t:`${skinById(r.v).n}`,g:'cam'};
-    case 'theme': S.themes[r.v]=1; return {t:`${THEMES.find(s=>s.id===r.v).n} skyline`,g:'eye'};
+    case 'theme': S.themes[r.v]=1; return {t:_('{name} skyline',{name:THEMES.find(s=>s.id===r.v).n}),g:'eye'};
   }
   return {t:'',g:'star'};
 }
-function rewardLabel(r){
+function rewardLabel(r,short){
   switch(r.k){
-    case 'badge': return `${r.v} Badges`;
-    case 'cash': return dur(r.v)+' of pay';
+    case 'badge': return _('{n} Badges',{n:r.v});
+    case 'cash': return short?_('{time} pay',{time:dur(r.v)}):_('{time} of pay',{time:dur(r.v)});
     case 'crate': return crateName(r.v);
     case 'skin': return skinById(r.v).n;
     case 'theme': return THEMES.find(s=>s.id===r.v).n;
@@ -530,8 +573,8 @@ const rewardGlyph=r=>({badge:'badge',cash:'bag',crate:'crate',skin:'cam',theme:'
 function rollGear(rar){
   const pool=GEARS.filter(g=>g.r===rar);
   const g=pick(pool); const lv=S.gear[g.id]||0;
-  if(lv>=10){ S.badges+=3; return {kind:'dupe',g,t:`${g.n} is maxed. +3 Badges`}; }
-  S.gear[g.id]=lv+1; return {kind:'gear',g,lv:lv+1,t:`${g.n} ${lv?`Lv ${lv+1}`:'NEW'}`};
+  if(lv>=10){ S.badges+=3; return {kind:'dupe',g,t:_('{gear} is maxed. +3 Badges',{gear:g.n})}; }
+  S.gear[g.id]=lv+1; return {kind:'gear',g,lv:lv+1,t:lv?_('{gear} Lv {n}',{gear:g.n,n:lv+1}):_('{gear} NEW',{gear:g.n})};
 }
 function openCrate(type){
   if(!S.crates[type]) return null;
@@ -545,7 +588,7 @@ function openCrate(type){
   }
   let res;
   if(pick_==='cash'){ const a=cashFor(c.cash)*rnd(0.8,1.4); addFunds(a); res={kind:'cash',t:`+${money(a)}`,g:'bag'}; }
-  else if(pick_==='badge'){ const n=rint(c.badge[0],c.badge[1]); S.badges+=n; res={kind:'badge',t:`+${n} Gold Badges`,g:'badge'}; }
+  else if(pick_==='badge'){ const n=rint(c.badge[0],c.badge[1]); S.badges+=n; res={kind:'badge',t:_('+{n} Gold Badges',{n}),g:'badge'}; }
   else res=rollGear(+pick_[1]);
   recalc(); checkAch(); dirty('ops'); dirty('shop');
   return res;
@@ -555,7 +598,7 @@ function openCrate(type){
 function startOp(id){
   const slots=opSlots(); let i=-1;
   for(let k=0;k<slots;k++) if(!S.ops[k]){ i=k; break; }
-  if(i<0){ toast(`All ${W.L.squad.toLowerCase()}s are out`,'bad'); sfx('no'); return; }
+  if(i<0){ toast(_('Every {squad} is busy',{squad:W.L.squad}),'bad'); sfx('no'); return; }
   const o=OPS.find(x=>x.id===id);
   S.ops[i]={id,end:now()+o.dur*1000}; sfx('buy'); dirty('ops');
 }
@@ -565,16 +608,16 @@ function claimOp(i){
   const o=OPS.find(x=>x.id===s.id);
   const cash=cashFor(o.k)*(W.opMul||1); addFunds(cash);
   const b=rint(o.badge[0],o.badge[1]); S.badges+=b;
-  let extra='';
-  if(Math.random()<o.crate){ const type=o.elite&&Math.random()<.5?'elite':'std'; S.crates[type]++; extra=` + ${crateName(type)}`; }
+  const parts=[money(cash)]; if(b) parts.push(_('{n} Badges',{n:b}));
+  if(Math.random()<o.crate){ const type=o.elite&&Math.random()<.5?'elite':'std'; S.crates[type]++; parts.push(crateName(type)); }
   S.ops[i]=null; S.opsDone++; addXP(o.xp); addPiggy(3);
-  toast(`${opName(o.id)} complete: ${money(cash)}${b?` + ${b} Badges`:''}${extra}`,'good'); sfx('coin');
+  toast(_('{job} complete: {reward}',{job:opName(o.id),reward:parts.join(' + ')}),'good'); sfx('coin');
   checkAch(); dirty('ops');
 }
 const speedCost=i=>Math.max(1,Math.ceil(opLeft(i)/300));
 function speedOp(i){
   if(!S.ops[i]) return;
-  const c=speedCost(i); if(S.badges<c){ sfx('no'); toast('Not enough Gold Badges','bad'); openShopHint(); return; }
+  const c=speedCost(i); if(S.badges<c){ sfx('no'); toast(_('Not enough Gold Badges'),'bad'); openShopHint(); return; }
   S.badges-=c; S.ops[i].end=now(); claimOp(i);
 }
 function addPiggy(n){ S.piggy=Math.min(500,S.piggy+n); }
@@ -590,23 +633,23 @@ const RALLY_CD=3*36e5, RALLY_SEC=900, SUPPLY_CD=6*36e5;
 const rallyReady=()=>now()>=S.rallyAt+RALLY_CD;
 const supplyReady=()=>now()>=S.supplyAt+SUPPLY_CD;
 function claimRally(){
-  if(!rallyReady()){ sfx('no'); toast('Rally Boost is still recharging'); return false; }
-  S.rallyAt=now(); addBoost('dbl',RALLY_SEC); sfx('level'); Native.haptic('success'); toast('Rally Boost: double income for 15 minutes','gold'); dirty('hq'); return true;
+  if(!rallyReady()){ sfx('no'); toast(_('Rally Boost is still recharging')); return false; }
+  S.rallyAt=now(); addBoost('dbl',RALLY_SEC); sfx('level'); Native.haptic('success'); toast(_('Rally Boost: double income for 15 minutes'),'gold'); dirty('hq'); return true;
 }
 function claimSupply(){
-  if(!supplyReady()){ sfx('no'); toast('The next Supply Drop is still on its way'); return false; }
-  S.supplyAt=now(); S.crates.std++; sfx('coin'); toast(crateName('std')+' delivered','gold'); dirty('ops'); dirty('hq'); return true;
+  if(!supplyReady()){ sfx('no'); toast(_('The next Supply Drop is still on its way')); return false; }
+  S.supplyAt=now(); S.crates.std++; sfx('coin'); toast(_('{crate} delivered',{crate:crateName('std')}),'gold'); dirty('ops'); dirty('hq'); return true;
 }
-const spend=n=>{ if(S.badges<n){ sfx('no'); toast('Not enough Gold Badges','bad'); openShopHint(); return false; } S.badges-=n; return true; };
+const spend=n=>{ if(S.badges<n){ sfx('no'); toast(_('Not enough Gold Badges'),'bad'); openShopHint(); return false; } S.badges-=n; return true; };
 
 /* Bounty targets */
 function bountyReward(){
   const r=Math.random();
-  if(r<0.55){ const a=Math.max(cashFor(45),D.tap*20); addFunds(a); return `${W.L.bountyOk}: ${money(a)}`; }
-  if(r<0.65){ addBoost('spree',20); return `${W.L.spree}! Income x7 for 20s`; }
-  if(r<0.90){ const n=rint(2,6); S.badges+=n; return `Reward posted: +${n} Gold Badges`; }
-  if(r<0.96){ S.crates.std++; dirty('ops'); return `${crateName('std')} recovered`; }
-  const a=Math.max(cashFor(300),D.tap*150); addFunds(a); return `${W.L.jackpot}: ${money(a)}`;
+  if(r<0.55){ const a=Math.max(cashFor(45),D.tap*20); addFunds(a); return _('{label}: {amount}',{label:W.L.bountyOk,amount:money(a)}); }
+  if(r<0.65){ addBoost('spree',20); return _('{spree}! Income x7 for 20s',{spree:W.L.spree}); }
+  if(r<0.90){ const n=rint(2,6); S.badges+=n; return _('Reward posted: +{n} Gold Badges',{n}); }
+  if(r<0.96){ S.crates.std++; dirty('ops'); return _('{crate} recovered',{crate:crateName('std')}); }
+  const a=Math.max(cashFor(300),D.tap*150); addFunds(a); return _('{label}: {amount}',{label:W.L.jackpot,amount:money(a)});
 }
 function catchFugitive(){
   S.bounties++; addXP(3); addPiggy(1);
@@ -618,12 +661,13 @@ function promote(){
   if(!canPromote()) return null;
   const g=medalGain(),wasTop=isTop();
   S.medals+=g; if(!wasTop) S.promos++;
-  S.funds=0; S.run=0; S.owned=Array(NT).fill(0); S.ups={}; S.ops=[null,null,null,null,null];
+  S.ops.forEach((o,i)=>{ if(o&&opLeft(i)<=0) claimOp(i); });   /* pay out finished jobs; running jobs keep running */
+  S.funds=0; S.run=0; S.owned=Array(NT).fill(0); S.ups={};
   S.owned[0]=Math.min(50,S.promos*5); S.badges+=25;
   const cleared=!wasTop&&isTop();
   if(cleared) S.done[W.id]=true;
   recalc(); checkAch(); save(); sfx('level'); Native.haptic('success');
-  toast(cleared?`${W.ranks[W.ranks.length-1]}! ${W.name} cleared`:`Promoted to ${rankName()}! +${g} Medals`,'gold');
+  toast(cleared?_('{rank}! {world} cleared',{rank:W.ranks[W.ranks.length-1],world:W.name}):_('Promoted to {rank}! +{n} Medals',{rank:rankName(),n:g}),'gold');
   dirty('roster'); dirty('upgrades'); dirty('ops'); dirty('career');
   return {gain:g,cleared};
 }
@@ -652,8 +696,10 @@ function offlineFor(sec){
 /* Daily */
 function dailyState(){
   const today=dayKey();
-  if(S.daily.last===today) return {claimed:true,day:(S.daily.streak-1+7)%7,broken:false};
-  const cont=S.daily.last===yesterdayKey();
+  /* A later date (time zone moved west, clock moved back) still counts as claimed; a claim less than 48 h ago
+     keeps the streak even when a time-zone change skipped a calendar day. */
+  if(S.daily.last&&S.daily.last>=today) return {claimed:true,day:(S.daily.streak-1+7)%7,broken:false};
+  const cont=S.daily.last===yesterdayKey()||(S.daily.at>0&&Date.now()-S.daily.at<48*36e5);
   if(cont||!S.daily.last) return {claimed:false,day:S.daily.streak%7,broken:false};
   return {claimed:false,day:0,broken:S.daily.streak>0,lost:S.daily.streak};
 }
@@ -662,9 +708,9 @@ function claimDaily(){
   const idx=st.broken?0:st.day;
   if(st.broken) S.daily.streak=0;
   const d=DAILY[idx]; let out;
-  if(d.k==='jack'){ grant({k:'badge',v:60}); grant({k:'crate',v:'elite'}); grant({k:'cash',v:7200}); out=`60 Badges, ${crateName('elite')}, 2h of pay`; }
+  if(d.k==='jack'){ grant({k:'badge',v:60}); grant({k:'crate',v:'elite'}); grant({k:'cash',v:7200}); out=_('60 Badges, {crate}, 2h of pay',{crate:crateName('elite')}); }
   else out=grant(d).t;
-  S.daily.streak++; S.daily.last=dayKey(); addXP(10); dirty('career');
+  S.daily.streak++; S.daily.last=dayKey(); S.daily.at=Date.now(); addXP(10); dirty('career');
   return out;
 }
 function restoreStreak(){

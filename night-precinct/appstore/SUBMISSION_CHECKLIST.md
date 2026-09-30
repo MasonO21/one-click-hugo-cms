@@ -10,7 +10,8 @@ No script, and no one who prepared this package, can do these for you:
 - [ ] Accept Apple's agreements and enter your tax and bank details (step 2). Apple will not let you sell without them.
 - [ ] Decide the legal entity, company name, and the address and email you are willing to publish. Fill `release.config.json` (step 4).
 - [ ] Buy a domain or web space and host the legal pages at the URLs you chose (step 6).
-- [ ] Have an attorney review the legal texts (`legal/`, `release/legal/`) and the export, trademark and loot-box points. Nothing here is legal advice.
+- [ ] Have an attorney review the legal texts (`legal/`, `release/legal/`) and the export, trademark and loot-box points, and the "Counsel" items in `COMPLIANCE_BY_COUNTRY.md`. Nothing here is legal advice.
+- [ ] Decide the open storefront questions in `COMPLIANCE_BY_COUNTRY.md` (South Korea, Taiwan, Indonesia, Japan) and the United States age-assurance item (step 15).
 - [ ] Run a trademark and App Store name search for the app name and the item names (`EXPORT_COMPLIANCE_AND_RIGHTS.md` section 3).
 - [ ] Create the app and every in-app purchase in ASC (steps 7 and 8).
 - [ ] Build, sign and run the app in Xcode on a real device; fix compile errors (step 9). Apple's signing keys and your device are yours.
@@ -79,7 +80,7 @@ Edit each value. Nothing in the file is a real value yet.
 
 | Output | What it is |
 |---|---|
-| `release/legal/` | The filled-in legal pages (all eight files of `legal/`). Deleted and recreated on every run. |
+| `release/legal/` | The filled-in legal pages (all nine files of `legal/`). Deleted and recreated on every run. |
 | `release/appstore/` | A filled-in copy of this whole folder (text, `.md` documents and the screenshots). Deleted and recreated on every run. **The text for ASC is in `release/appstore/metadata/en-US/`.** |
 | `ios/project.yml` | The XcodeGen spec (from `ios/project.yml.tmpl`). |
 | `ios/NightPrecinct/Products.storekit` | The local StoreKit test catalog (from `Products.storekit.tmpl`). |
@@ -93,7 +94,7 @@ Edit each value. Nothing in the file is a real value yet.
 ## Step 6. Host the legal pages
 
 - [ ] Have an attorney review the pages in `release/legal/` (privacy policy, terms of use, purchase terms, crate odds, support, notices).
-- [ ] Upload the whole `release/legal/` folder (`index.html`, `terms.html`, `privacy.html`, `purchases.html`, `odds.html`, `support.html`, `notices.html` and `legal.css`; the pages link to each other and to the style sheet) so that the live URLs are exactly the values of `WEBSITE_URL`, `SUPPORT_URL`, `PRIVACY_URL`, `TERMS_URL`, `PURCHASE_TERMS_URL`, `ODDS_URL` and `NOTICES_URL`.
+- [ ] Upload the whole `release/legal/` folder (`index.html`, `terms.html`, `privacy.html`, `purchases.html`, `odds.html`, `support.html`, `notices.html`, `japan.html` and `legal.css`; the pages link to each other and to the style sheet) so that the live URLs are exactly the values of `WEBSITE_URL`, `SUPPORT_URL`, `PRIVACY_URL`, `TERMS_URL`, `PURCHASE_TERMS_URL`, `ODDS_URL` and `NOTICES_URL`.
 - [ ] Check every URL: opens over https, valid certificate, no login, no redirect loop, readable on a phone. For example `curl -sI <url>` returns `200`.
 - [ ] Check the odds page matches `docs/FACTS.md` section 4 and the in-app "Drop rates" screen (Cases tab); both were checked against `game/src` and agree.
 - [ ] Check the support page has a real way to contact you.
@@ -102,7 +103,7 @@ Edit each value. Nothing in the file is a real value yet.
 
 ## Step 7. Create the app record in ASC
 
-- [ ] ASC > Apps > + > New App. Platform iOS. Name: the value of `APP_NAME`. Primary language: English (U.S.). Bundle ID: pick it from the list (it appears after step 3). SKU: any unique internal string, for example `nightprecinct-ios-001` (never shown to users, cannot be changed). User Access: Full Access.
+- [ ] ASC > Apps > + > New App. Platform iOS. Name: the value of `APP_NAME`. Primary language: English (U.S.). The game, the listing and the legal pages are English only; do not add other App Store localizations until a translation exists (`docs/TRANSLATING.md`). Bundle ID: pick it from the list (it appears after step 3). SKU: any unique internal string, for example `nightprecinct-ios-001` (never shown to users, cannot be changed). User Access: Full Access.
 - [ ] If the name is already taken, ASC tells you. Change `APP_NAME` (and re-run step 5), or choose another.
 - [ ] Creating the record reserves the name for a limited time. **Verify in App Store Connect** how long.
 - [ ] App Information: Subtitle from `metadata/en-US/subtitle.txt`; Categories from `metadata/en-US/categories.txt` (Games, subcategories Simulation and Strategy; **verify the choices in ASC**); Privacy Policy URL from `metadata/en-US/privacy_url.txt`.
@@ -137,6 +138,7 @@ Edit each value. Nothing in the file is a real value yet.
 
 - [ ] The StoreKit test file is `ios/NightPrecinct/Products.storekit`, rendered from `Products.storekit.tmpl` in step 5, so its product IDs are your bundle ID plus the suffixes in `IAP.md` and its prices are the intended prices. The generated Run scheme already points at it (`project.yml.tmpl` sets it), so no manual scheme step is needed. Check once: Product > Scheme > Edit Scheme > Run > Options > StoreKit Configuration reads `Products.storekit`. If it says None, pick the file. If Xcode refuses to open the file, use the recreate steps in `ios/README.md`.
 - [ ] Run on the device or the Simulator from Xcode. Use Xcode's Debug > StoreKit > Manage Transactions to refund, expire, or approve and decline pending purchases, and to delete a transaction so you can buy a non-consumable again.
+- [ ] The StoreKit configuration also sets the App Store country the app sees (the file's default storefront is the United States). To test another country, open `Products.storekit` in Xcode and choose Editor > Default Storefront (**verify the menu in your Xcode**). `apply_config.py` rewrites the file on every run, so set it again after running the script.
 - [ ] The subscription in the test file renews weekly in real time. To speed it up, open `Products.storekit` in Xcode and use Editor > Subscription Renewal Rate.
 - [ ] Run the test matrix below.
 
@@ -159,33 +161,43 @@ Edit each value. Nothing in the file is a real value yet.
 - [ ] Interrupted purchase: force-quit the app right after paying, before the goods show. On relaunch the game recovers the transaction (`unfinished`) and grants once.
 - [ ] First-purchase bonus: the +bonus applies on the first purchase of each pack only, and a second purchase of the same pack gives no extra bonus.
 - [ ] Starter Pack: shows in the Store tab on a fresh install (with a countdown, a "STARTER DEAL" chip above the scene and a dot on the Store tab), only within 48 hours of first launch, buys once, and is gone afterward.
-- [ ] Daily Deals: all three (Crate Trio, Cash Crate, Recruit Rush) are listed in the Store tab every day, with no need to change any date. Buy each one: it then reads "Bought today" and cannot be bought again until the next calendar day on the device (the game uses the device date). With the device region set to Belgium the crate deal is hidden and the other two remain. The purchase sheet of the crate deal and of the Starter Pack does not print the odds; check that the "Crate odds" link in the Store tab footer and the "Drop rates" button in the Cases tab both work (see "Open points in the build" in `README.md`).
+- [ ] Daily Deals: all three (Crate Trio, Cash Crate, Recruit Rush) are listed in the Store tab every day, with no need to change any date. Buy each one: it then reads "Bought today" and cannot be bought again until the next calendar day on the device (the game uses the device date). The Crate Trio purchase sheet shows the Elite crate odds before you buy.
+- [ ] Offers with crates: the purchase sheets of the Rookie Starter Pack (3 Standard crates, Standard odds) and Career Pass Premium (Elite and Legend odds) print the odds before you buy, under "Crates hold random rewards. The odds:".
+- [ ] Crate purchase with Gold Badges (Cases tab, x1 and x5 under each crate): every tap opens the "Buy crates" confirmation with the crate name and number, the price in Gold Badges, "about <money value>", the odds of that tier (and the pity line for Elite and Legend), "Buy for N Gold Badges" and Cancel. Cancel takes nothing. Buy takes the Gold Badges once and adds the crates. With too few Gold Badges, nothing is taken and "Not enough Gold Badges" shows. Prices: 30 / 120 / 300, and 135 / 540 / 1,350 for five.
+- [ ] Money values: after prices have loaded, the Store's Gold Badge items, the Elite Recruits and the cosmetics, and the crates in the Cases tab show "about <price>" in the StoreKit currency, at the smallest pack's price per Gold Badge (for example with 80 Gold Badges at USD 0.99, a Legend crate at 300 Gold Badges reads "about $3.71"). In Airplane Mode before prices load, the values are simply absent.
 - [ ] Evidence Safe: the card shows "Holds N Gold Badges (20 to 500)" and the purchase sheet is titled "Evidence Safe: N Gold Badges"; on a new save N is 20 and can be bought at once. The grant matches N, and the safe starts filling again afterwards.
 - [ ] Auto-Clicker family: on a new save the Auto-Clickers card offers both the Auto-Clicker and the Combo Auto-Clicker. Buy `auto_basic` (8 taps per second at 1.5x, every world, the On/Off card and the AUTO chip work); the card then becomes an "Upgrade" card; buy `auto_upgrade` (combo builds to x3.0). On a fresh install (or after deleting the transaction in Manage Transactions) buy `auto_combo` directly.
 - [ ] Career Pass Premium: the Store card disappears and the premium track in the Career tab unlocks (30 tiers, tiers already reached become claimable). The Career tab's Go Premium button shows the StoreKit price and opens the same purchase sheet.
 - [ ] Precinct Patron: spending moves the lifetime counter shown on the Career tab and the permanent bonus at the thresholds (4.99 / 19.99 / 49.99 / 99.99 / 249.99). Chief's Club counts once, not for weekly renewals.
+- [ ] Price loading: launch in Airplane Mode (price buttons read "..."), then turn the network on and switch back to the app, or open a purchase sheet: prices appear without a relaunch, and an open purchase sheet fills in its price.
+- [ ] Purchase in progress: tap Buy on any sheet and, while Apple's payment sheet is up, try to close the game's sheet (the close and Cancel buttons are hidden, tapping outside does nothing) and try to open another sheet ("A purchase is already in progress"). After Apple's sheet closes, only the purchase sheet closes.
 
 **Restore**
-- [ ] Restore Purchases (Settings, the Store tab footer or the Career tab) on a second install (delete the app and reinstall, or a second device). Non-consumables and the subscription come back and the game says "Purchases restored" (or "Nothing new to restore"); consumables do not come back. The game does not say that consumables cannot be restored; that is written on the Purchase Terms and Support pages.
+- [ ] Restore Purchases (Settings, the Store tab footer or the Career tab) on a second install (delete the app and reinstall, or a second device). Non-consumables and the subscription come back and the game says "Purchases restored" (or "Nothing new to restore"); consumables do not come back, as the Store footer, the Purchase Terms and the Support page say.
 - [ ] Restore while offline fails gracefully: no crash and the message "Could not reach the App Store. Try again later."
 
 **Subscription (Chief's Club)**
 - [ ] Purchase: all benefits apply (income x1.5, offline earnings 100% with a cap of at least 8 hours, +1 job slot, bounties auto-collect). The 25 Gold Badges per day are claimed with the Claim button on the Chief's Club card in the Store tab, once per calendar day.
 - [ ] Renewal: in the sandbox, time is accelerated (I believe one week renews about every 3 minutes, and only a limited number of times; **verify in App Store Connect**). Let it renew and check the benefits persist, a "Chief's Club renewed" message appears, the Precinct Patron total is not raised again and the daily badges can still only be claimed once a day.
 - [ ] Expiry: cancel in the sandbox (Settings > Apple Account > Subscriptions), let it expire, and check the benefits stop and the game returns to normal.
-- [ ] Refund or revoke (Xcode Manage Transactions). One-time unlocks (the Auto-Clicker levels and Career Pass Premium): the game removes the unlock as soon as the revoked transaction arrives and shows "A purchase was refunded, so its unlock was removed". Consumables that were already spent (Gold Badges, deals, the Evidence Safe) and the contents of the Starter Pack stay. The Chief's Club benefits stop the next time the game checks Apple's entitlements, which happens at launch and on Restore Purchases.
+- [ ] Refund or revoke (Xcode Manage Transactions). One-time unlocks (the Auto-Clicker levels and Career Pass Premium): the game removes the unlock as soon as the revoked transaction arrives and shows "A purchase was refunded, so its unlock was removed". A Gold Badge pack (also the Evidence Safe, a Daily Deal, the Starter Pack): the Gold Badges it gave are removed as far as they are unspent (buy a pack, spend part of it, refund it: the balance drops by the pack's amount but not below zero), "A purchase was refunded, so its Gold Badges were removed" shows, and the Precinct Patron total on the Career tab drops by the product's value. Crates, cash and units already delivered stay. The Chief's Club benefits stop the next time the game checks Apple's entitlements, which happens at launch, when offline earnings are worked out and on Restore Purchases.
 - [ ] Manage Subscription (Settings, the Store tab footer, or the Manage button on an active Chief's Club card) opens Apple's subscription screen.
 - [ ] The Chief's Club purchase sheet shows the title, the price with "per week", what is included, the renewal and cancellation wording, and links to Terms of Use, Privacy Policy and Purchase Terms. Restore Purchases and Manage Subscription are not on the sheet; they are in the Store tab footer (visible on the same tab) and in Settings. Compare with `IAP.md`.
 - [ ] Airplane Mode: an active subscription keeps its benefits offline.
+- [ ] Renewal while away: with Chief's Club active, leave the app in the background past a renewal (sandbox), come back: the off-duty earnings screen says "Offline rate 100% (Chief's Club)" and uses the 8 hour minimum cap.
+- [ ] Lapsed slot: start a job in the third slot while Chief's Club is active, let the subscription expire: the job stays on the Cases tab and can be collected when done; no new job can be started in that slot.
 
 **Conditions**
 - [ ] Airplane Mode: fresh launch, full play, offline earnings after time passes, and the Store tab shows a calm unavailable state: greyed-out price buttons that read "..." and no hard-coded prices.
 - [ ] Low storage: with the device almost full, launching, playing and saving do not crash. If the file write fails, the native shell answers `save failed` and the game carries on without showing a message (the copy in the web view's local storage is still written). The shell reads no disk-space API, so no required-reason declaration is expected (`APP_PRIVACY.md`); **verify in App Store Connect** when the upload check runs.
 - [ ] Backgrounding: during a purchase sheet, during a timed job, and with the app suspended for hours and days; progress and offline earnings are right when you come back.
+- [ ] Clock and time zone: claim the Daily Roll Call, then change the time zone east and west (Settings > General > Date & Time) and move the clock back an hour: the streak is not reported broken, and Rally Boost, Supply Drop, Double Time and running jobs keep sensible timers (no cooldown locked for hours).
+- [ ] Promotion with finished jobs: let a job finish without collecting it, then promote: the job's reward is paid, and a job still running keeps running.
 - [ ] Force-quit and relaunch: progress is intact (`save.json` mirroring).
 - [ ] Backup and restore of the device: progress comes back with a normal iOS backup.
-- [ ] Region: set the device region to Belgium (Settings > General > Language & Region). Buying crates with Gold Badges is disabled with a clear message. Free crates behave as designed.
-- [ ] Odds: the "Drop rates" screen in the Cases tab shows the odds for all three crate tiers, and the "Crate odds" links in Settings and the Store footer open the odds page. Both match `docs/FACTS.md` section 4.
+- [ ] Belgian device region (safety net): set the device region to Belgium (Settings > General > Language & Region) and relaunch. The x1 and x5 crate buttons are gone from the Cases tab, the Crate Trio is not in the Daily Deals, the Starter Pack reads 390 Gold Badges and no crates, and the Career Pass Premium card and sheet read "Gold Badges on every fifth tier and 400 at tier 30" with no odds. Free crates (Supply Drop, jobs, bounties, Daily Roll Call) still arrive and open. Repeat with Brazil.
+- [ ] Belgian App Store country (safety net): with the device region set back to the United States, set the StoreKit configuration's storefront to Belgium (step 10a: open `Products.storekit`, Editor > Default Storefront) and run from Xcode. The same things switch off as with the Belgian region. Switch the storefront back to the United States and bring the app back to the foreground (or run it again from Xcode if the change does not reach the running app): crate buying returns. (In the sandbox or TestFlight the storefront is the tester account's country.)
+- [ ] Odds: the "Drop rates" screen (Cases tab, and "Crate odds" in Settings, which opens the same in-app screen) shows the odds for all three crate tiers, and the "Crate odds" link in the Store footer opens the odds web page. Both match `docs/FACTS.md` section 4.
 - [ ] Layout: iPhone portrait with the smallest and largest screens you can test, iPad in all orientations, safe areas and the Dynamic Island, Reduce Motion, sound off in Settings, haptics.
 - [ ] Oldest supported iOS (16.0) on a real device or simulator, and the latest iOS.
 - [ ] Network check: with a proxy or Xcode's network tools, or Settings > Privacy & Security > App Privacy Report on the device, confirm the app makes no network requests other than StoreKit and the legal pages.
@@ -226,7 +238,7 @@ None of them shows the Store tab, so the in-app purchase review screenshots (`IA
 - Some of the images (for example `iphone-6.5/04-ops` and `iphone-6.5/06-ems`) show a "Service Record" banner across the top. It is part of the game (an achievement message), but you may prefer to regenerate them without it.
 - The EMS screenshot (`06-ems`) shows a heartbeat (ECG pulse) mark on the ambulances and pulse marks in the portraits. No red cross, red crescent or Star of Life is used.
 - Show the real game in use. No real agency logos, no other apps' names, no prices in the image, and nothing that would not suit a low age rating (Guideline 2.3.x; verify).
-- App previews (short videos) are optional.
+- App previews (short videos) are optional. Any App Preview, trailer or ad must show "In-game purchases (includes random items)" on screen (UK ASA enforcement notice on loot boxes; see `COMPLIANCE_BY_COUNTRY.md`).
 - Do not show anything the game does not do, and do not show a screen that no longer matches the build. If you change the game, regenerate the screenshots with `node tools/make_assets.js shots` and then run `python3 tools/apply_config.py` again (see step 9).
 
 ## Step 14. Version information and App Review information
@@ -240,17 +252,24 @@ None of them shows the Store tab, so the in-app purchase review screenshots (`IA
 ## Step 15. Price and availability
 
 - [ ] App price: Free (all revenue is from in-app purchases). **Verify in App Store Connect.**
-- [ ] Availability: all countries and regions except:
-  - **Belgium**: exclude (the game also disables crate purchases there). Paid randomized rewards are treated as gambling there, as I understand it; confirm with your attorney.
-  - **Mainland China**: exclude. Games need a licence and ISBN and the app needs a filing there; this package covers neither. **Verify in App Store Connect.**
-  - **South Korea**: the app publishes its odds, which addresses the probability-disclosure requirement, but games may also need a game rating there. Read what ASC asks and either complete it or exclude Korea. **Verify in App Store Connect.**
-  - **Other regions**: check the warnings ASC shows for each storefront, and ask your attorney about loot-box, consumer-protection and subscription rules in the regions where you sell (for example the UK, the Netherlands, Australia, Brazil). **Verify in App Store Connect.**
-- [ ] Consider turning off automatic availability in new regions, so you decide about each new storefront. **Verify in App Store Connect.**
+- [ ] Availability: all countries and regions except these, which the app is **not** offered in (reasons and sources: `COMPLIANCE_BY_COUNTRY.md`):
+  - **Belgium**: paid loot boxes are banned (Gaming Act).
+  - **Brazil**: paid loot boxes are banned in games likely accessed by minors (Law 15.211/2025, ECA Digital).
+  - **Mainland China**: games need an NPPA licence (ISBN).
+  - **Vietnam**: games need a publishing licence through a local entity.
+  - **Russia**: Apple payments are unavailable there.
+  - The game keeps a safety net: if the App Store country or the device region is Belgium or Brazil, paid random items switch off.
+- [ ] **Turn off automatic availability in new countries and regions**, so every new storefront is your decision. **Verify in App Store Connect** where the switch is.
+- [ ] Owner decisions before you tick these storefronts (`COMPLIANCE_BY_COUNTRY.md`):
+  - **South Korea** and **Taiwan**: they expect odds disclosures in Korean and Traditional Chinese; the game is English only. Recommended: exclude until local-language odds texts exist, or get counsel's OK.
+  - **Indonesia**: a mandatory game rating (IGRS). Register and get one, or exclude.
+  - **Japan**: the English "Notices for Japan" page exists (`legal/japan.html`); get a Japanese version before selling there, and track the unused Japanese Gold Badge balance against the 10 million yen Payment Services Act threshold (31 March and 30 September).
+  - **United States**: the Texas age-assurance APIs are not implemented (Apple enforces the Texas law for new Texas accounts from 4 June 2026; Alabama and California follow on 1 January 2027, Utah on 6 May 2027, Louisiana on 1 July 2027). Before selling in the US, ship the age-assurance update or get counsel's view.
 - [ ] Confirm the in-app purchase prices (step 8) and that the description's "4.99 USD per week" matches the price you set.
 
 ## Step 16. Age rating, privacy, and other declarations
 
-- [ ] Age Rating: answer as in `AGE_RATING.md` (**verify wording**). Accept the rating Apple calculates.
+- [ ] Age Rating: answer as in `AGE_RATING.md` (**verify wording**), with Loot Boxes = **Yes**. Expect 9+ worldwide and 16+ in Australia. Accept the rating Apple calculates.
 - [ ] Not Made for Kids; no Kids category.
 - [ ] App Privacy: **Data Not Collected**, as in `APP_PRIVACY.md`. Publish it.
 - [ ] Privacy Policy URL: `{{PRIVACY_URL}}`.
@@ -269,7 +288,8 @@ On the version page, in the "In-App Purchases and Subscriptions" section, attach
 - [ ] `review_notes.txt` matches the real app (step 10) and is under 4000 characters after substitution.
 - [ ] The reviewer can reach every product (`IAP.md`, "Reachability").
 - [ ] The Chief's Club purchase sheet shows the required terms and links (`IAP.md`).
-- [ ] Odds can be reached before every random purchase: the "Drop rates" button sits next to the crate buy buttons in the Cases tab, and the Store footer has a "Crate odds" link. The Crate Trio deal and the Starter Pack do not print them on the offer itself (`README.md`, "Open points in the build"); decide whether that is acceptable to you.
+- [ ] Odds are shown before every purchase that includes crates: the crate confirmation sheet, and the Crate Trio, Starter Pack and Career Pass Premium purchase sheets (test matrix, step 10).
+- [ ] The description (en-US) starts with "Contains loot boxes: in-game purchases include random items (crates). Odds are shown in the game before you buy."
 - [ ] The description claims match the build (`README.md` has the list).
 - [ ] The build you selected is the one you tested in TestFlight.
 
@@ -300,5 +320,5 @@ On the version page, in the "In-App Purchases and Subscriptions" section, attach
 - **The game, `tools/*.py` and the `ios/` project were read and cross-checked when this folder was brought up to date.** Names of screens and buttons, the behavior of `tools/apply_config.py` and the name of the StoreKit test file (`Products.storekit`) are verified, and the Store tab, the Career tab, the Settings screen and the purchase sheets were looked at in a desktop browser with a mock bridge. They have not been seen on an iOS device. If the game text changes, check `metadata/en-US/review_notes.txt` and `IAP.md` again (step 10).
 - **Apple's rules are from my knowledge and may be out of date**: age-rating wording, screenshot sizes, SDK requirement, price points, guideline numbers, ASC menu names and limits. Each is marked "Verify in App Store Connect" or "verify the exact guideline number".
 - **No trademark, export or loot-box legal search was done.** The name is a working title. The EMS art uses no protected medical emblem, but a lawyer should still look at the name and at the crate rules of the regions where you sell.
-- **Screenshots are generated, not captured.** `tools/make_assets.js` renders them from the web build. None shows the Store tab, and the iPad ones show a dollar price chip (step 13).
+- **Screenshots are generated, not captured.** `tools/make_assets.js` renders them from the web build. None shows the Store tab (step 13).
 - **Some differences between these documents and the build are listed, not fixed.** See "Open points in the build" in `README.md`.

@@ -28,6 +28,10 @@ def load():
     cfg = json.loads((ROOT / "release.config.json").read_text())
     cfg.pop("_comment", None)
     cfg["YEAR"] = str(datetime.date.today().year)
+    # Localized legal page URLs: {{PRIVACY_URL_ES}} -> https://host/path/es/privacy.html
+    for k in [k for k in cfg if k.endswith("_URL") and k != "WEBSITE_URL"]:
+        for code in ("es", "fr", "de", "it", "pt-br", "ja", "ko", "zh-hans", "zh-hant"):
+            cfg["%s_%s" % (k, code.upper().replace("-", "_"))] = re.sub(r"/([^/?#]+)$", "/%s/\\1" % code, cfg[k])
     return cfg
 
 
@@ -53,7 +57,7 @@ def main():
     a = ap.parse_args()
     cfg = load()
 
-    placeholders = {k: v for k, v in cfg.items() if isinstance(v, str) and PLACEHOLDER.search(v)}
+    placeholders = {k: v for k, v in cfg.items() if isinstance(v, str) and PLACEHOLDER.search(v) and not re.search(r"_URL_[A-Z_]+$", k)}
     problems = []
 
     out = ROOT / "release"
@@ -62,9 +66,9 @@ def main():
 
     # legal pages
     n = 0
-    for src in sorted((ROOT / "legal").glob("*")):
+    for src in sorted((ROOT / "legal").rglob("*")):
         if src.is_file():
-            dst = out / "legal" / src.name
+            dst = out / "legal" / src.relative_to(ROOT / "legal")
             dst.parent.mkdir(parents=True, exist_ok=True)
             if src.suffix in (".html", ".css", ".txt", ".md"):
                 dst.write_text(render(src.read_text(), cfg, str(src)))

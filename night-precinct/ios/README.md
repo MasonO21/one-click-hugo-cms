@@ -161,12 +161,17 @@ small tweak. Fix in this order; most first-build failures are one of the first f
    (FACTS.md: iPad full screen) and safe to leave.
 9. **Empty `game/www`.** Until step 4 has produced `index.html`, the app launches to a plain
    "game files are missing" message. That is the designed failure screen, not a crash.
+10. **`Storefront.current`** in `StoreManager.storefront()`. It is an async static property
+   (`await Storefront.current`, iOS 15+) and `countryCode` is the ISO 3166-1 alpha-3 code
+   (`"BEL"`, `"USA"`). If the compiler rejects the `await`, you are looking at the older
+   `SKPaymentQueue.default().storefront` API by mistake; keep the StoreKit 2 one.
 
 After it builds, verify at runtime: the page loads and is dark edge to edge; a purchase in the
 test store returns a `tx` and the game grants once and calls `finish`; a force-quit and relaunch
 mid-purchase redelivers the transaction; save, kill, relaunch restores the save; **Settings >
 Erase save restarts the game empty (the erased save must not come back after the reload)**;
-the Safari sheet opens for a legal link; haptics fire on a phone.
+the Safari sheet opens for a legal link; haptics fire on a phone; with the Xcode StoreKit
+configuration's storefront set to Belgium, the Store and Cases tabs show no crate purchases.
 
 ## Design notes for the reviewer
 

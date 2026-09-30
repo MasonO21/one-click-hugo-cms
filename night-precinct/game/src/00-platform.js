@@ -11,11 +11,22 @@ const APP={
   urls:{privacy:'{{PRIVACY_URL}}',terms:'{{TERMS_URL}}',support:'{{SUPPORT_URL}}',purchases:'{{PURCHASE_TERMS_URL}}',odds:'{{ODDS_URL}}',notices:'{{NOTICES_URL}}',subscriptions:'https://apps.apple.com/account/subscriptions'},
   native:!!(BOOT&&window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.np),
   region:String((BOOT&&BOOT.region)||'').toUpperCase(),
+  storefront:'',
   reduceMotion:!!((BOOT&&BOOT.reduceMotion)||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)),
 };
-/* Regions where buying randomized crates with Gold Badges is switched off (paid loot-box restrictions). */
-const LOOT_BLOCKED_REGIONS=['BE'];
-const crateBuyAllowed=()=>!LOOT_BLOCKED_REGIONS.includes(APP.region);
+/* Paid random items: buying crates with Gold Badges, the Crate Trio deal, crates in the Starter Pack and on the paid
+   Career Pass track. ON. The app is not offered in countries that ban them (see appstore/COMPLIANCE_BY_COUNTRY.md);
+   as a safety net they are also switched off when the App Store country or the device region is one of these.
+   BE: Belgian gambling law. BR: Law 15.211/2025 (ECA Digital). */
+const PAID_RANDOM=true;
+const LOOT_BLOCKED_REGIONS=['BE','BR'];
+const ISO3={BEL:'BE',BRA:'BR',USA:'US',GBR:'GB',DEU:'DE',FRA:'FR',NLD:'NL',ESP:'ES',ITA:'IT',JPN:'JP',KOR:'KR',CHN:'CN',TWN:'TW',HKG:'HK',CAN:'CA',AUS:'AU',MEX:'MX'};
+const crateBuyAllowed=()=>PAID_RANDOM&&!LOOT_BLOCKED_REGIONS.includes(APP.region)&&!LOOT_BLOCKED_REGIONS.includes(APP.storefront);
+/* Legal pages are hosted per language: https://host/path/privacy.html (English) and https://host/path/fr/privacy.html. */
+function legalURL(k){
+  const u=APP.urls[k]; if(!u||k==='subscriptions'||LANG==='en') return u;
+  return u.replace(/\/([^\/?#]+)$/,'/'+LANG.toLowerCase()+'/$1');
+}
 
 const Native={
   call(msg){
@@ -29,6 +40,7 @@ const Native={
   save(json){ if(APP.native) Native.call({cmd:'save',data:json}); },
   wipe(){ return Native.call({cmd:'wipe'}); },
   haptic(style){ if(APP.native&&S.haptics!==false) Native.call({cmd:'haptic',style}); },
+  openLegal(k){ return Native.open(legalURL(k)); },
   open(url){
     if(APP.native) return Native.call({cmd:'openUrl',url});
     try{ window.open(url,'_blank','noopener'); }catch(e){}

@@ -17,6 +17,7 @@ window.NP_BOOT = {
   save: "<string or null>",      // contents of Application Support/save.json, or null if none
   region: "US",                  // Locale.current.region?.identifier, uppercase, or ""
   locale: "en-US",
+  languages: ["en-US"],          // Locale.preferredLanguages (the game picks its language from this list)
   version: "1.0.0",              // CFBundleShortVersionString
   build: "1",                    // CFBundleVersion
   reduceMotion: false,           // UIAccessibility.isReduceMotionEnabled
@@ -34,6 +35,7 @@ window.NP_BOOT = {
 | `entitlements` | none | `{ok, entitlements:[tx]}` verified current entitlements: non-consumables plus active (unexpired, not revoked) subscriptions |
 | `restore` | none | runs `try await AppStore.sync()`, then behaves like `entitlements`. A user-cancelled sync is `{ok:true, entitlements:[...]}` from whatever is cached |
 | `unfinished` | none | `{ok, transactions:[tx]}` verified transactions from `Transaction.unfinished` |
+| `storefront` | none | `{ok, countryCode:"BEL"}` the App Store country from `await Storefront.current`, ISO 3166-1 alpha-3. `{ok:false}` if unknown. The page maps it to alpha-2 and applies the country rules (`LOOT_BLOCKED_REGIONS`) |
 | `save` | `data: String` | `{ok}` atomically writes `save.json` in Application Support (create the directory if missing; exclude nothing from backup) |
 | `wipe` | none | `{ok}` deletes `save.json` |
 | `openUrl` | `url: String` | `{ok}` opens `https:` URLs in `SFSafariViewController` presented from the top view controller. Reject any other scheme. Also accept exactly `https://apps.apple.com/account/subscriptions` |
@@ -67,6 +69,13 @@ window.NPNative && window.NPNative.onTransaction(<tx object>)
 via `webView.evaluateJavaScript`. The page defines `window.NPNative` after it has loaded; if the call arrives earlier it is harmless because the game also calls `unfinished` and `entitlements` at launch. The JS side grants the goods (once, de-duplicated by transaction ID) and then sends `finish`.
 
 `purchase` also stores the successful transaction in the same dictionary without finishing it. The JS side grants and then sends `finish`.
+
+Lifecycle hooks, also called through `evaluateJavaScript` and only if the page defined them:
+
+```js
+window.NPNative.onBackground()   // the app is about to go to the background: the game saves now
+window.NPNative.onForeground()   // the app became active again: the game retries prices if they failed and re-reads the storefront
+```
 
 ## Rules the Swift side must follow
 

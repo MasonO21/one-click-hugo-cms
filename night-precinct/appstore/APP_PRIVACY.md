@@ -16,6 +16,18 @@ Apple's definition, as I know it: "collect" means transmitting data off the devi
 
 The app has no account, no analytics, no advertising, no tracking, no crash-reporting SDK and no third-party SDK. It makes no network requests of its own. The only network traffic is Apple's own StoreKit traffic (which Apple handles) and, when the player taps a link, a browser view on a legal or support page.
 
+## The App Store country and the device region
+
+The game reads the App Store country (the storefront of the Apple Account signed in on the device) through StoreKit, with the native bridge command `storefront` (`docs/NATIVE_BRIDGE.md`), at launch and whenever the app becomes active again. It also reads the device region from the iOS settings at launch. If either one is Belgium or Brazil, the game switches off paid random items (a safety net: the app is not offered in those storefronts; see `COMPLIANCE_BY_COUNTRY.md`).
+
+This is still **Data Not Collected**, because:
+
+- Both values are read and used only inside the app on the device. The game makes no network request of its own (the release build's Content Security Policy blocks all connections from the page), so neither value is sent to the developer or to anyone else, and neither is stored in the save file.
+- Reading `Storefront.current` is a StoreKit call answered by Apple's own framework for the account already signed in on the device. The developer receives nothing from it.
+- Apple's definition of "collect" (as I know it: transmitting data off the device so that you or your partners can access it for longer than needed to service the request in real time) is therefore not met. A country code is also not precise or coarse location in the sense of the label.
+
+If the game ever sends either value off the device (for example to an analytics service or a server), this answer changes.
+
 ## Justification by data type
 
 ASC lists the categories below. The names may differ slightly. **Verify in App Store Connect.**
@@ -25,14 +37,14 @@ ASC lists the categories below. The names may differ slightly. **Verify in App S
 | Contact Info | Name, Email Address, Phone Number, Physical Address, Other User Contact Info | No | No account, no sign-in, no form. The app never asks for any of these. |
 | Health & Fitness | Health, Fitness | No | The app does not read HealthKit or any health data. The EMS theme is fiction. |
 | Financial Info | Payment Info, Credit Info, Other Financial Info | No | Purchases are processed entirely by Apple. The developer never sees payment details. |
-| Location | Precise Location, Coarse Location | No | No location permission or API. The app reads the device region code (for example `US`) only on the device, to switch off buying crates with Gold Badges in Belgium. It is not sent anywhere. |
+| Location | Precise Location, Coarse Location | No | No location permission or API. The app reads two country codes on the device only: the device region (for example `US`, from the iOS region setting) and the App Store country of the signed-in Apple Account (StoreKit `Storefront.current`, for example `BEL`). They are used to switch off paid random items in Belgium and Brazil and are never sent anywhere (see "The App Store country and the device region" below). |
 | Sensitive Info | Sensitive Info | No | None. |
 | Contacts | Contacts | No | No Contacts access. |
 | User Content | Emails or Text Messages, Photos or Videos, Audio Data, Gameplay Content, Customer Support, Other User Content | No | Nothing is uploaded. Gameplay content (currencies, upgrades, timestamps, settings) is saved on the device only, in local storage mirrored to `save.json` in Application Support. Customer support happens by email or on the website, outside the app. |
 | Browsing History | Browsing History | No | No browsing inside the app. |
 | Search History | Search History | No | No search feature. |
 | Identifiers | User ID, Device ID | No | No account, no user ID. No IDFA, no IDFV sent anywhere, no App Tracking Transparency prompt. |
-| Purchases | Purchase History | No | StoreKit gives the app only product IDs, transaction IDs and dates. The app keeps a list of its most recent transaction IDs (at most 300) in the on-device save file to avoid double-granting. That list never leaves the device. Apple keeps its own purchase records under its own privacy policy. |
+| Purchases | Purchase History | No | StoreKit gives the app product IDs and prices, transaction IDs and dates, and the App Store country code. The app keeps a list of its most recent transaction IDs (at most 300) in the on-device save file to avoid double-granting, and for recent purchases the number of Gold Badges each gave, so a refunded purchase can be taken back. That list never leaves the device. Apple keeps its own purchase records under its own privacy policy. |
 | Usage Data | Product Interaction, Advertising Data, Other Usage Data | No | No analytics. No ads. |
 | Diagnostics | Crash Data, Performance Data, Other Diagnostic Data | No | No crash-reporting or performance SDK. Crash logs that users choose to share with developers through iOS and Xcode Organizer come from Apple's own system, not from code in the app. **Verify in App Store Connect** that Apple does not want these listed. |
 | Other Data | Other Data Types | No | None. |

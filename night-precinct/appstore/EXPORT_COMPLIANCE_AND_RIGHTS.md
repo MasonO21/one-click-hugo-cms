@@ -72,7 +72,7 @@ Have these ready. Not all will be requested. **Verify in App Store Connect** wha
 | Trademark or written authorization from a rights holder | Only if the app uses someone else's marks | Not applicable; do not use any. |
 | Export compliance documents (annual self-classification, CCATS, French declaration) | Only for non-exempt encryption | Not needed here (section 1). |
 | Age-rating support | If Apple questions an answer | `AGE_RATING.md` and `docs/FACTS.md` section 5. |
-| Game license or rating certificate | Some storefronts require one for games: mainland China (game license and ISBN), South Korea (game rating). | Not covered by this package. See `SUBMISSION_CHECKLIST.md`. **Verify in App Store Connect.** |
+| Game license or rating certificate | Some storefronts require one for games: mainland China (game licence and ISBN) and Vietnam (publishing licence), where the app is not offered; Indonesia (IGRS rating), an open owner decision. In South Korea, Apple's own age rating serves as the game rating. | Not covered by this package. See `COMPLIANCE_BY_COUNTRY.md` and `SUBMISSION_CHECKLIST.md` step 15. **Verify in App Store Connect.** |
 | Demo account | Only for apps with login | Not needed: no login. |
 | Screen recording of the purchase flow | Reviewers sometimes ask when they cannot reach a product | Record on a device with the sandbox account. |
 | Business and consumer contact for support | Consumer protection rules in some regions | `{{CONTACT_EMAIL}}`. |

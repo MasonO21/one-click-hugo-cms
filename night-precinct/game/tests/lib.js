@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const OUT = path.join(__dirname, '.build', 'index.html');
+const OUT = process.env.NP_BUILD_OUT ? path.resolve(process.env.NP_BUILD_OUT) : path.join(__dirname, '.build', 'index.html');
 
 /** Build the native page WITH the debug hooks (window.__np) the tests drive. */
 function build() {
