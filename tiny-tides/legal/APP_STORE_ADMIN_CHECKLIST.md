@@ -65,7 +65,7 @@ The code, the legal pages and the store text are done. These are the steps only 
 
 ## 6. Territories and local rules ⚖
 
-Researched September 2026. Laws on paid random items (“loot boxes”) and minors change quickly, so re-check before release and ask a lawyer about the markets that matter to you. The game ships in **English only**, and the App Store shows the English listing in every country you choose.
+Researched September 2026. Laws on paid random items (“loot boxes”) and minors change quickly, so re-check before release and ask a lawyer about the markets that matter to you. The game ships in **English only**, and the App Store shows the English listing in every country you sell in.
 
 **Already handled in the app**
 - Belgium and Brazil: Sea Glass capsule pulls are switched off (`src/regions.js → NO_PAID_RANDOM`). Free pulls and Capsule Coins still work.
@@ -73,16 +73,26 @@ Researched September 2026. Laws on paid random items (“loot boxes”) and mino
 - Everywhere: odds are shown before any purchase, there is a daily cap and an off switch, and every Sea Glass spend shows the approximate real-money price (EU consumer-protection guidance). Before the first paid pull the app checks age; players under 18 need a parent’s OK for paid pulls and real-money purchases.
 - **Texas (SB 2420, in force since 4 June 2026):** where Apple reports that age assurance is required, the app asks Apple’s Declared Age Range at launch and applies the under-18 protections. Similar laws take effect in **Utah (6 May 2027), Louisiana (1 July 2027), Alabama (1 January 2027) and California (AB 1043, 1 January 2027)**. The same code covers them, but re-check Apple’s guidance before each date. If a future update is a “significant change” under these laws, Apple’s `showSignificantUpdateAcknowledgment` API must be added. ⚖
 
-**Decide in Pricing and Availability (untick = the simplest safe choice)**
-- [ ] **Mainland China: untick.** Games need a government publishing licence (ISBN) to sell there.
-- [ ] **Vietnam: untick** unless you obtain a game licence.
-- [ ] **Indonesia:** untick, or register as an Electronic System Provider (PSE) and get an IGRS game rating.
-- [ ] **Russia:** App Store payments there have been halted since April 2026, so in-app purchases can’t be sold. Untick it, or leave it free-only.
-- [ ] **Brazil:** paid pulls are already off. The ECA Digital law (in force since March 2026) also expects parental tools, protective defaults and a **Brazilian legal representative** for foreign providers of apps likely used by minors. Apple rates apps with paid loot boxes 18+ there. Untick Brazil unless a lawyer confirms your position. ⚖
-- [ ] **South Korea:** Korean law requires the probability-item notice (“확률형 아이템 포함”) in Korean on the listing, in the game and in ads. The listing and game are English only, so untick Korea or add that notice to the Korean listing. ⚖
-- [ ] **Japan:** set rewards are already off. Show the odds (done). If Sea Glass sold but unused ever exceeds ¥10 million at a 31 March or 30 September balance date, the Payment Services Act requires a filing and a deposit. A 特定商取引法 (seller information) page is also expected for Japanese buyers. ⚖
-- [ ] **UK:** the advertising regulator (ASA) expects “Contains in-game purchases (includes random items)” to be shown prominently: at the top of the description (done), on screenshots that show purchases, and in every ad (the trailer end card has it).
-- [ ] **Australia:** classification treats games with paid loot boxes as unsuitable for young children (Apple’s rating handles this). **Netherlands** and other EU countries: odds disclosure, real-money price hints and no pressure selling are in place.
+**Untick these 10 territories** in App Store Connect → your app → **Pricing and Availability** (decided: any country that adds a licence, registration, local representative, local-language notice or a ban on paid random items is left out). You can add a country back later, after sorting out its requirements.
+- [ ] **China mainland**: every game needs a government publishing licence (ISBN/“banhao”) through a Chinese publisher.
+- [ ] **Vietnam**: games need a local licence.
+- [ ] **Indonesia**: Electronic System Provider (PSE) registration and an IGRS game rating.
+- [ ] **Russia**: App Store payments there have been halted since April 2026.
+- [ ] **Brazil**: paid loot boxes are banned in games minors can use (ECA Digital, March 2026), and a Brazilian legal representative is required.
+- [ ] **South Korea**: the probability-item notice must appear in Korean on the listing, in the game and in ads, and a Korean game rating is needed.
+- [ ] **Japan**: Apple requires a seller-information page (特定商取引法) for apps with in-app purchases; complete-gacha and prepaid-balance rules also apply.
+- [ ] **Belgium**: paid loot boxes are treated as illegal gambling.
+- [ ] **Saudi Arabia**: the media regulator (GAMR, formerly GCAM) may require a Saudi game classification even for games sold through the App Store.
+- [ ] **United Arab Emirates**: the UAE Media Council runs its own age classification for games, mobile included.
+
+Keep everything else ticked. The in-app switches (no paid pulls in Belgium and Brazil, no set rewards in Japan) stay in the code as a backup, for example for a player whose Apple ID later moves to one of these countries.
+
+**Countries you keep, and why they need nothing extra**
+- **United States, UK, Canada, Australia, New Zealand and the rest:** the odds disclosure, spending limits, age check, parental gate and purchase notices already in the app cover them.
+- **Netherlands:** paid random items whose prizes can’t be traded or cashed out are lawful. Tiny Tides toys can’t be, so keep it that way.
+- **European Union (27 countries):** the only extra step is the **Digital Services Act trader form** (Business → Compliance) with the same name, address, phone and email you put in `site.config.json`. It isn’t a legal problem, just a form. If you’d rather not show those details publicly, untick all EU countries instead.
+- **Watch list (no action now):** Poland has a draft law that would need a gambling licence for paid random items, and the EU’s planned Digital Fairness Act may restrict them for minors. If either passes, untick the country or turn off paid pulls there (`src/regions.js`).
+
 - [ ] Confirm the governing-law clause (the **state** in `site.config.json`) and the consumer-rights wording suit your main markets.
 - [ ] Confirm the **COPPA / GDPR-K** position: the app is not in the Kids Category, is not directed to children under 13, and collects no personal information from anyone (the age check keeps only “adult / under 18” on the device). If you ever move to the Kids Category, talk to counsel first.
 - [ ] **US consumer protection:** the FTC’s 2025 order against HoYoverse (Genshin Impact) expects odds, real-money exchange rates and parental consent for under-16 loot-box purchases. The app provides all three (it asks consent for anyone under 18). New York’s action against Valve concerned tradable prizes; our prizes can’t be traded or cashed out, so keep it that way.
