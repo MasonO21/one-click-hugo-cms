@@ -55,7 +55,7 @@ svg{display:block}
 #scene{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
 .scene-tag{position:absolute;top:6px;left:8px;font-family:var(--f-mono);font-size:11px;color:#cfd8ff;background:rgba(7,10,25,.62);padding:2px 6px;border-radius:3px;pointer-events:none}
 .scene-tag.r{left:auto;right:8px;color:var(--gold)}
-.scene-tag.b{top:auto;bottom:6px;color:var(--tape);max-width:calc(100% - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scene-tag.b{top:auto;bottom:6px;color:var(--tape);background:rgba(7,10,25,.94);max-width:calc(100% - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scene-tag.b:empty{display:none}
 #fugLayer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .fugitive{position:absolute;bottom:12%;left:-70px;width:52px;height:64px;pointer-events:auto;cursor:pointer;animation:fugrun var(--dur,9s) linear forwards;filter:drop-shadow(0 0 8px rgba(255,210,31,.8))}
