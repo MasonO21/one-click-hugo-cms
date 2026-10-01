@@ -100,13 +100,19 @@ ID). The full logs are under **Artifacts** (`testflight-logs`).
 
 ## Submit for review
 
-When the TestFlight build works: App Store Connect > your app > the 1.0 version page. Paste
-the store text (from the `app-store-text-and-legal-pages` download, `appstore/metadata/en-US/`),
-upload `appstore/screenshots/` and the app preview `appstore/trailer/app-preview-886x1920.mp4`,
-answer the age rating and privacy questions (`appstore/AGE_RATING.md`, `appstore/APP_PRIVACY.md`),
-pick the build, untick the countries in `appstore/COMPLIANCE_BY_COUNTRY.md` under Pricing and
-Availability, and Submit for Review. The legal pages (the `legal/` folder in the same download)
-must be online at the URLs in `release.config.json` before you submit.
+When the TestFlight build works: App Store Connect > your app > the 1.0.0 version page.
+
+- Screenshots and app preview: GitHub > Actions > **Night Precinct store screenshots and video**
+  > Run workflow > **upload**. It puts the six 6.9-inch iPhone and six 13-inch iPad screenshots
+  and the app preview video on the English (U.S.) page, and renames the version to match the
+  build (1.0.0). Done once already on 1 October 2026. To replace them later, delete the old ones
+  in App Store Connect and run it again.
+- Then paste the store text (from the `app-store-text-and-legal-pages` download,
+  `appstore/metadata/en-US/`), answer the age rating and privacy questions
+  (`appstore/AGE_RATING.md`, `appstore/APP_PRIVACY.md`), pick the build, untick the countries
+  in `appstore/COMPLIANCE_BY_COUNTRY.md` under Pricing and Availability, and Submit for Review.
+  The legal pages (the `legal/` folder in the same download) must be online at the URLs in
+  `release.config.json` before you submit.
 
 ## Costs and limits
 
