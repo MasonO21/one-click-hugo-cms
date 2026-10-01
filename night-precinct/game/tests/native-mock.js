@@ -2,8 +2,7 @@
 // pipeline: product loading, success / pending / cancel / failure, de-duplication, unfinished-transaction recovery,
 // entitlement sync (non-consumables + subscription), restore, region gating, save mirroring and privacy (no network).
 //   node native-mock.js
-const { launch, url } = require('./lib');
-const BUNDLE = 'com.yourcompany.nightprecinct';
+const { launch, url, BUNDLE } = require('./lib');
 const PRICES = { badges_80: '0.99', badges_500: '4.99', badges_1200: '9.99', badges_2600: '19.99', badges_7000: '49.99', badges_15000: '99.99', piggy: '2.99', deal_crates: '2.99', deal_boost: '2.99', deal_cash: '4.99', deal_recruit: '7.99', starter: '1.99', pass_premium: '9.99', auto_basic: '4.79', auto_combo: '9.59', auto_upgrade: '4.79', vip_weekly: '4.99' };
 
 const { initScript } = require('./mock-bridge');
@@ -135,7 +134,7 @@ const check = (name, cond, extra) => { if (!cond) fails++; console.log((cond ? '
   await p.evaluate(() => window.__np.syncEntitlements()); await p.waitForTimeout(100);
   check('lapsed subscription removes VIP', await S(p, () => window.__np.S().vip === 0 && !window.__np.D.vip));
   check('non-consumable is never taken away by a later sync', await S(p, () => window.__np.S().perm.auto === 2 && window.__np.S().pass.premium));
-  await p.evaluate(() => window.__mock.setEntitlements([{ id: '9', originalId: '9', productId: 'com.yourcompany.nightprecinct.starter', type: 'nonConsumable', purchaseDate: Date.now(), expirationDate: null, revoked: false }]));
+  await p.evaluate(B => window.__mock.setEntitlements([{ id: '9', originalId: '9', productId: B + '.starter', type: 'nonConsumable', purchaseDate: Date.now(), expirationDate: null, revoked: false }]), BUNDLE);
   await p.evaluate(() => window.__np.restorePurchases()); await p.waitForTimeout(150);
   check('restore purchases grants starter flag', await S(p, () => window.__np.S().starter === true));
   check('restore command was sent to native', await S(p, () => window.__log.some(m => m.cmd === 'restore')));
@@ -144,7 +143,7 @@ const check = (name, cond, extra) => { if (!cond) fails++; console.log((cond ? '
   /* 7b. refund: a revoked non-consumable is taken away, everything else stays */
   p = await open({ entitlements: ent });
   await p.evaluate(() => { window.__mock.setEntitlements([window.__mock.tx('pass_premium', { id: '2', originalId: '2' })]); });
-  await p.evaluate(async () => { await window.__np.processTx({ id: '1', originalId: '1', productId: 'com.yourcompany.nightprecinct.auto_combo', type: 'nonConsumable', purchaseDate: Date.now(), expirationDate: null, revoked: true }); });
+  await p.evaluate(async B => { await window.__np.processTx({ id: '1', originalId: '1', productId: B + '.auto_combo', type: 'nonConsumable', purchaseDate: Date.now(), expirationDate: null, revoked: true }); }, BUNDLE);
   r = await S(p, () => { const s = window.__np.S(); return { auto: s.perm.auto, pass: s.pass.premium }; });
   check('refunded auto-clicker unlock removed, pass kept', r.auto === 0 && r.pass === true, r);
   await p.context().close();

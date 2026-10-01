@@ -27,4 +27,6 @@ async function launch() {
 }
 
 const url = () => 'file://' + OUT;
-module.exports = { ROOT, OUT, build, launch, url };
+/** The bundle ID the build uses (product IDs are this plus a dot and the suffix). */
+const BUNDLE = JSON.parse(fs.readFileSync(path.join(ROOT, 'release.config.json'), 'utf8')).BUNDLE_ID;
+module.exports = { ROOT, OUT, build, launch, url, BUNDLE };

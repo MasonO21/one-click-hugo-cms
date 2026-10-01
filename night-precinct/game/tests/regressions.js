@@ -1,7 +1,6 @@
 // Regression tests for defects found in review (each one reproduced first, then fixed).  node regressions.js
-const { launch, url } = require('./lib');
+const { launch, url, BUNDLE } = require('./lib');
 const { initScript } = require('./mock-bridge');
-const BUNDLE = 'com.yourcompany.nightprecinct';
 const PRICES = { badges_80: '0.99', badges_500: '4.99', badges_1200: '9.99', badges_2600: '19.99', badges_7000: '49.99', badges_15000: '99.99', piggy: '2.99', deal_crates: '2.99', deal_cash: '4.99', deal_recruit: '7.99', starter: '1.99', pass_premium: '9.99', auto_basic: '4.79', auto_combo: '9.59', auto_upgrade: '4.79', vip_weekly: '4.99' };
 let fails = 0;
 const check = (n, c, x) => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + n + (c || x === undefined ? '' : '  -> ' + JSON.stringify(x))); };
