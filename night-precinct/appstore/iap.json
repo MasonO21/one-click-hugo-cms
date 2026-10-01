@@ -1,0 +1,23 @@
+{
+  "_comment": "The 16 in-app purchases, as created in App Store Connect by tools/asc_iap.py (GitHub: Actions > Night Precinct in-app purchases). Same values as appstore/IAP.md. Product ID = BUNDLE_ID + '.' + suffix. A product ID and its type can never be changed or reused once created; names, descriptions and prices can.",
+  "excluded_territories": ["BEL", "BRA", "CHN", "VNM", "RUS"],
+  "products": [
+    {"suffix": "badges_80", "type": "CONSUMABLE", "reference": "Gold Badges 80", "name": "80 Gold Badges", "description": "80 Gold Badges. First purchase adds 80 more.", "usd": "0.99", "where": "Store tab, Gold Badges section, Pocketful card"},
+    {"suffix": "badges_500", "type": "CONSUMABLE", "reference": "Gold Badges 500", "name": "500 Gold Badges", "description": "500 + 50 bonus badges. First buy adds 500.", "usd": "4.99", "where": "Store tab, Gold Badges section, Handful card"},
+    {"suffix": "badges_1200", "type": "CONSUMABLE", "reference": "Gold Badges 1200", "name": "1,200 Gold Badges", "description": "1,200 + 200 bonus. First buy adds 1,200.", "usd": "9.99", "where": "Store tab, Gold Badges section, Duffel Bag card"},
+    {"suffix": "badges_2600", "type": "CONSUMABLE", "reference": "Gold Badges 2600", "name": "2,600 Gold Badges", "description": "2,600 + 600 bonus. First buy adds 2,600.", "usd": "19.99", "where": "Store tab, Gold Badges section, The Vault card"},
+    {"suffix": "badges_7000", "type": "CONSUMABLE", "reference": "Gold Badges 7000", "name": "7,000 Gold Badges", "description": "7,000 + 2,000 bonus. First buy adds 7,000.", "usd": "49.99", "where": "Store tab, Gold Badges section, Evidence Room card"},
+    {"suffix": "badges_15000", "type": "CONSUMABLE", "reference": "Gold Badges 15000", "name": "15,000 Gold Badges", "description": "15,000 + 5,000 bonus. First buy adds 15,000.", "usd": "99.99", "where": "Store tab, Gold Badges section, Federal Reserve card"},
+    {"suffix": "piggy", "type": "CONSUMABLE", "reference": "Evidence Safe", "name": "Evidence Safe", "description": "Opens the safe: 20 to 500 collected badges.", "usd": "2.99", "where": "Store tab, Evidence Safe card"},
+    {"suffix": "deal_crates", "type": "CONSUMABLE", "reference": "Daily Deal A Crates", "name": "Daily Deal: Crate Trio", "description": "3 Elite crates + 50 Gold Badges.", "usd": "2.99", "where": "Store tab, Daily Deals, Crate Trio (shows the crate odds before purchase)"},
+    {"suffix": "deal_cash", "type": "CONSUMABLE", "reference": "Daily Deal B Cash", "name": "Daily Deal: Cash Crate", "description": "24 hours of income + 200 Gold Badges.", "usd": "4.99", "where": "Store tab, Daily Deals, Cash Crate"},
+    {"suffix": "deal_recruit", "type": "CONSUMABLE", "reference": "Daily Deal C Recruits", "name": "Daily Deal: Recruit Rush", "description": "+15 of first 6 unit types + 100 Badges.", "usd": "7.99", "where": "Store tab, Daily Deals, Recruit Rush"},
+    {"suffix": "starter", "type": "NON_CONSUMABLE", "reference": "Rookie Starter Pack", "name": "Rookie Starter Pack", "description": "300 Badges, 3 crates, 25 units, 2h 2x income.", "usd": "1.99", "where": "Store tab, Rookie Starter Pack card (offered for the first 48 hours after first launch)"},
+    {"suffix": "pass_premium", "type": "NON_CONSUMABLE", "reference": "Career Pass Premium S1", "name": "Career Pass Premium", "description": "Unlocks the Season 1 premium reward track.", "usd": "9.99", "where": "Store tab, Career Pass card (also Career tab, Go Premium)"},
+    {"suffix": "auto_basic", "type": "NON_CONSUMABLE", "reference": "Auto-Clicker", "name": "Auto-Clicker", "description": "Taps for you 8 times a second at 1.5x power.", "usd": "4.79", "where": "Store tab, Auto-Clickers card, Auto-Clicker"},
+    {"suffix": "auto_combo", "type": "NON_CONSUMABLE", "reference": "Combo Auto-Clicker", "name": "Combo Auto-Clicker", "description": "Auto-taps 8 times a second and builds combo.", "usd": "9.59", "where": "Store tab, Auto-Clickers card, Combo Auto-Clicker"},
+    {"suffix": "auto_upgrade", "type": "NON_CONSUMABLE", "reference": "Auto-Clicker to Combo Upgrade", "name": "Upgrade to Combo Auto-Clicker", "description": "Auto-taps now build your tap combo up to x3.", "usd": "4.79", "where": "Store tab, Auto-Clickers card after the Auto-Clicker is owned (tagged Upgrade)"}
+  ],
+  "subscription_group": {"reference": "Chief's Club", "name": "Chief's Club"},
+  "subscription": {"suffix": "vip_weekly", "reference": "Chief's Club Weekly", "name": "Chief's Club (Weekly)", "description": "1.5x income, 100% offline, +1 job, badges/day", "usd": "4.99", "period": "ONE_WEEK", "where": "Store tab, Chief's Club card"}
+}

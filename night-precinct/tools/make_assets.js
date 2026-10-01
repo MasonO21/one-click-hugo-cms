@@ -1,6 +1,7 @@
 // Generates the App Store artwork with Playwright + the built game.
 //   node tools/make_assets.js [icon|shots|all]
 // icon  -> ios/NightPrecinct/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png  (1024x1024 PNG, no transparency)
+// iap   -> appstore/iap-review/<suffix>.png  (App Review screenshot for each in-app purchase: its purchase screen, US prices)
 // shots -> appstore/screenshots/{iphone-6.9,iphone-6.5,ipad-13}/NN-name.png
 //   node tools/make_assets.js shots [--raw]
 // The screenshots are rendered from the game in a browser at the exact pixel sizes App Store Connect accepts:
@@ -103,9 +104,47 @@ async function shots(b) {
   }
 }
 
+/* App Review screenshots: each product's purchase screen as a player sees it, rendered through the mock iOS bridge
+   so the sheet is the in-app one (real "Buy for $x" button, terms links), with the US prices from appstore/iap.json. */
+async function iapShots(b) {
+  const { initScript } = require(path.join(ROOT, 'game', 'tests', 'mock-bridge.js'));
+  const spec = JSON.parse(fs.readFileSync(path.join(ROOT, 'appstore', 'iap.json'), 'utf8'));
+  const bundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'release.config.json'), 'utf8')).BUNDLE_ID;
+  const all = spec.products.concat([spec.subscription]), prices = {};
+  all.forEach(p => { prices[p.suffix] = p.usd; });
+  const OPEN = { badges_80: ['pack', 'p1'], badges_500: ['pack', 'p2'], badges_1200: ['pack', 'p3'], badges_2600: ['pack', 'p4'], badges_7000: ['pack', 'p5'], badges_15000: ['pack', 'p6'],
+    piggy: ['piggy'], deal_crates: ['deal', 'd0'], deal_cash: ['deal', 'd1'], deal_recruit: ['deal', 'd2'], starter: ['starter'], pass_premium: ['pass'],
+    auto_basic: ['autoBuy', null, '1'], auto_combo: ['autoBuy', null, '2'], auto_upgrade: ['autoBuy', null, '2'], vip_weekly: ['vip'] };
+  execFileSync('python3', [path.join(ROOT, 'tools', 'build.py'), '--target', 'native', '--debug', '--out', path.join(ROOT, 'game', 'tests', '.build', 'index.html')], { stdio: 'inherit' });
+  const url = 'file://' + path.join(ROOT, 'game', 'tests', '.build', 'index.html');
+  const dir = path.join(ROOT, 'appstore', 'iap-review'); fs.mkdirSync(dir, { recursive: true });
+  for (const p of all) {
+    const ctx = await b.newContext({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3 });
+    const pg = await ctx.newPage();
+    const owned = p.suffix === 'auto_upgrade' ? [{ id: '1', originalId: '1', productId: bundle + '.auto_basic', type: 'nonConsumable', purchaseDate: Date.now(), expirationDate: null, revoked: false }] : [];
+    await pg.addInitScript(initScript, { bundle, prices, currency: 'USD', symbol: '$', entitlements: owned });
+    await pg.addInitScript(() => { try { localStorage.setItem('night-precinct-v2', JSON.stringify({ v: 3, sound: false, music: false, haptics: false, tut: 99 })); } catch (e) { } });
+    await pg.goto(url); await pg.waitForTimeout(900);
+    const ok = await pg.evaluate(([act, id, l]) => {
+      const N = window.__np, t = N.S(); t.owned = [60, 45, 30, 20, 12, 8, 4, 2, 1, 0, 0, 0, 0, 0, 0, 0]; t.funds = 8.4e9; t.run = 1.6e11; t.life = 2.5e11; t.promos = 4; t.badges = 340; t.piggy = 180; N.recalc(); N.checkAch();
+      const m = document.getElementById('modal-root'); m.classList.remove('on'); m.innerHTML = ''; document.getElementById('app').inert = false;
+      N.showTab('shop'); N.ACT[act]({ dataset: { id, l } });
+      return !!document.querySelector('#modal-root.on [data-x]');
+    }, OPEN[p.suffix]);
+    await pg.waitForTimeout(500);
+    await pg.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
+    const file = path.join(dir, p.suffix + '.png');
+    await pg.screenshot({ path: file });
+    execFileSync('python3', ['-c', `from PIL import Image;im=Image.open(${JSON.stringify(file)}).convert('RGB');im.save(${JSON.stringify(file)})`]);
+    console.log(ok ? 'ok  ' : 'NO SHEET', p.suffix);
+    await ctx.close();
+  }
+}
+
 (async () => {
   const b = await launch();
   if (what === 'icon' || what === 'all') await icon(b);
+  if (what === 'iap' || what === 'all') await iapShots(b);
   if (what === 'shots' || what === 'all') await shots(b);
   await b.close();
 })();

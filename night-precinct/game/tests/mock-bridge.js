@@ -14,7 +14,7 @@ function initScript(cfg) {
     await new Promise(r => setTimeout(r, 5));
     switch (msg.cmd) {
       case 'storefront': return cfg.storefront ? { ok: true, countryCode: cfg.storefront } : { ok: false, error: 'unavailable' };
-      case 'products': if (window.__mock.failProducts > 0) { window.__mock.failProducts--; return { ok: false, error: 'offline' }; } return { ok: true, products: msg.ids.filter(id => !(cfg.missing || []).includes(id)).map(id => { const s = id.slice(BUNDLE.length + 1); return { id, displayName: s, displayPrice: '€' + cfg.prices[s], price: cfg.prices[s], currency: 'EUR', type: kind(s), period: s === 'vip_weekly' ? 'P1W' : null }; }), missing: [] };
+      case 'products': if (window.__mock.failProducts > 0) { window.__mock.failProducts--; return { ok: false, error: 'offline' }; } return { ok: true, products: msg.ids.filter(id => !(cfg.missing || []).includes(id)).map(id => { const s = id.slice(BUNDLE.length + 1); return { id, displayName: s, displayPrice: (cfg.symbol || '€') + cfg.prices[s], price: cfg.prices[s], currency: cfg.currency || 'EUR', type: kind(s), period: s === 'vip_weekly' ? 'P1W' : null }; }), missing: [] };
       case 'purchase': {
         if (window.__mock.delay) await new Promise(r => setTimeout(r, window.__mock.delay));
         const s = msg.id.slice(BUNDLE.length + 1);
