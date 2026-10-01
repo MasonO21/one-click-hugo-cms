@@ -2,7 +2,10 @@
 import * as D from './data.js';
 import * as S from './sim.js';
 import * as A from './audio.js';
-import { drawSprite, HAT_ART, geomOf } from './art_creatures.js';
+import { drawSprite, drawSpriteSharp, HAT_ART, geomOf } from './art_creatures.js';
+
+// Hat previews (shop, packs): a fixed head width, so wide hats like headphones fit their box whatever creature geometry changes
+const PREVIEW_HAT_GEOM = { ...geomOf('crab.0'), hat: { ...geomOf('crab.0').hat, w: 26 } };
 import { PIECE_ART } from './art_world.js';
 import { drawProp, drawItemArt } from './art_gacha.js';
 import { store, haptic, openUrl, notify, age } from './platform.js';
@@ -66,8 +69,8 @@ export function createUI(G) {
       if (cv.dataset.form) return;
       const c = cv.getContext('2d'), px = Math.round((cv.clientWidth || 44) * (window.devicePixelRatio || 1)); cv.width = px; cv.height = px; c.clearRect(0, 0, px, px);
       // the hat on its own, big enough to tell apart (on a creature it's too small to read at this size)
-      const id = cv.dataset.hat; c.save(); c.translate(px / 2, px * (id === 'shades' ? 0.5 : 0.72)); c.scale(px / 78, px / 78);
-      if (HAT_ART[id]) HAT_ART[id](c, geomOf('crab.0')); c.restore();
+      const id = cv.dataset.hat; c.save(); c.translate(px / 2, px * (id === 'shades' ? 0.5 : id === 'headphones' ? 0.62 : 0.72)); c.scale(px / 78, px / 78);
+      if (HAT_ART[id]) HAT_ART[id](c, PREVIEW_HAT_GEOM); c.restore();
     });
     let scratch = null;
     $$('canvas[data-toy]', root).forEach((cv) => {
@@ -575,7 +578,7 @@ export function createUI(G) {
       const subs = [['bundles', t('Bundles')], ['prop', t('Props')], ['hat', t('Hats')], ['skin', t('Pool skins')], ['fx', t('Effects')]];
       h += `<div class="tabs" style="padding:0 0 8px">${subs.map(([id, l]) => `<button class="${shopSub === id ? 'on' : ''}" data-act="shopsub:${id}">${l}</button>`).join('')}</div>`;
       if (shopSub === 'bundles') {
-        h += `<div class="list">${Object.entries(D.PACKS).map(([id, pk]) => { const owned = s.iap.packs[id], pid = pk.iap; return `<div class="card ${owned ? '' : 'pinkc'}"><h5>${esc(packName(id))}</h5><p>${esc(packBlurb(id))}</p><div class="grid3 mt2" style="grid-template-columns:repeat(5,1fr)">${pk.items.map((it) => { const d = DECOR[it]; return `<div class="center">${d.kind === 'prop' ? `<canvas data-prop="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'hat' ? `<canvas data-hat="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'skin' ? `<canvas data-skin="${it}" style="width:100%;aspect-ratio:1"></canvas>` : ic('i-sparkle', 'l')}</div>`; }).join('')}</div><div class="mt2">${owned ? `<span class="tag">${t('Owned')} ✓</span>` : priceBtn(pid, 'pink')}</div></div>`; }).join('')}</div>`;
+        h += `<div class="list">${Object.entries(D.PACKS).map(([id, pk]) => { const owned = s.iap.packs[id], pid = pk.iap; return `<div class="card ${owned ? '' : 'pinkc'}"><h5>${esc(packName(id))}</h5><p>${esc(packBlurb(id))}</p><div class="grid3 mt2" style="grid-template-columns:repeat(${Math.max(5, pk.items.length)},minmax(0,1fr))">${pk.items.map((it) => { const d = DECOR[it]; return `<div class="center">${d.kind === 'prop' ? `<canvas data-prop="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'hat' ? `<canvas data-hat="${it}" style="width:100%;aspect-ratio:1"></canvas>` : d.kind === 'skin' ? `<canvas data-skin="${it}" style="width:100%;aspect-ratio:1"></canvas>` : ic('i-sparkle', 'l')}</div>`; }).join('')}</div><div class="mt2">${owned ? `<span class="tag">${t('Owned')} ✓</span>` : priceBtn(pid, 'pink')}</div></div>`; }).join('')}</div>`;
       } else {
         const ids = D.DECOR_IDS.filter((d) => DECOR[d].kind === shopSub && !DECOR[d].fig);      // figurines live in the Toybox
         h += `<div class="grid3">${ids.map(decorCard).join('')}</div>`;
@@ -785,7 +788,7 @@ export function createUI(G) {
     const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350; const c = cv.getContext('2d');
     const g = c.createLinearGradient(0, 0, 0, 1350); g.addColorStop(0, '#59c6ff'); g.addColorStop(1, '#ffd2ef'); c.fillStyle = g; c.fillRect(0, 0, 1080, 1350);
     c.save(); c.translate(540, 700); c.fillStyle = 'rgba(255,255,255,.4)'; for (let i = 0; i < 16; i++) { c.rotate(Math.PI / 8); c.fillRect(-26, 0, 52, 900); } c.restore();
-    c.save(); c.translate(540, 820); drawSprite(c, formId, 0, 0, 900, {}); c.restore();
+    drawSpriteSharp(c, formId, 540, 820, 900);
     c.textAlign = 'center'; c.font = '700 96px Fredoka, ui-rounded, sans-serif'; c.lineWidth = 16; c.strokeStyle = '#3b1d5e'; c.lineJoin = 'round';
     const nm = formName(formId), line = t('I discovered it in Tiny Tides!');
     c.font = `700 ${fitFont(c, nm, 96, 980, 'Fredoka, ui-rounded, sans-serif')}px Fredoka, ui-rounded, sans-serif`;

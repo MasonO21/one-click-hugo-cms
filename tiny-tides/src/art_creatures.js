@@ -543,6 +543,10 @@ export function drawSprite(c, formId, x, y, size, o = {}) {
   const s = o.silhouette ? getSilhouette(formId) : getSprite(formId, o);
   c.drawImage(s.canvas, x - size / 2, y - size * 0.62, size, size);
 }
+/** Same placement as drawSprite, but painted as vectors at full size: for large one-off pictures (share images, icons), where the cached bitmap would be upscaled and soft. */
+export function drawSpriteSharp(c, formId, x, y, size, o = {}) {
+  c.save(); c.translate(x - size / 2, y - size * 0.62); c.scale(size / CELL, size / CELL); paintForm(c, formId, o); c.restore();
+}
 export const FAMILY_LIST = Object.keys(FAMILIES);
 
 // ------------------------------------------------------------------ capsule-machine hats

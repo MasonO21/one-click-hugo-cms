@@ -171,8 +171,12 @@ svg.ic use{pointer-events:none}
 .tabs button.on{background:linear-gradient(#fff3a6,#ffc93f);color:var(--ink);box-shadow:0 2px 0 var(--ink)}
 .center{text-align:center}
 .muted{color:var(--ink2);font-size:13px;font-weight:600}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* cards in the grids may be narrower than their button's text on small phones: shrink the button instead of widening the column */
+.grid2>*,.grid3>*{min-width:0}
+.prod .btn{min-width:0;max-width:100%;padding-left:6px;padding-right:6px;overflow:hidden;text-overflow:ellipsis}
+.prod b{max-width:100%;overflow-wrap:anywhere}
 .card{background:#fff;border:3px solid var(--ink);border-radius:20px;padding:10px;position:relative}
 .card.hi{background:linear-gradient(#fffbd0,#ffe98a)}
 .card.pinkc{background:linear-gradient(#fff0fa,#ffd3ef)}

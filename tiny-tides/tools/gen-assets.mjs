@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 fs.mkdirSync(path.join(root, 'assets/web'), { recursive: true });
 fs.mkdirSync('/tmp/tt', { recursive: true });
-await build({ entryPoints: [path.join(root, 'tools/art-entry.js')], bundle: true, format: 'iife', outfile: '/tmp/tt/art-bundle.js', logLevel: 'error' });
+await build({ entryPoints: [path.join(root, 'tools/qa/art-entry.js')], bundle: true, format: 'iife', outfile: '/tmp/tt/art-bundle.js', logLevel: 'error' });
 const font = fs.readFileSync(path.join(root, 'node_modules/@fontsource/fredoka/files/fredoka-latin-700-normal.woff2')).toString('base64');
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1024, height: 1024 }, deviceScaleFactor: 1 });
@@ -22,7 +22,7 @@ await page.evaluate(() => document.fonts.load('700 100px F'));
 
 // ---------------------------------------------------------------- icon
 const iconPng = await page.evaluate(() => {
-  const cv = document.getElementById('c'), c = cv.getContext('2d'), T = Math.PI * 2, { drawSprite } = window.Art;
+  const cv = document.getElementById('c'), c = cv.getContext('2d'), T = Math.PI * 2, { paintForm, CELL } = window.Art;
   c.clearRect(0, 0, 1024, 1024);
   const g = c.createLinearGradient(0, 0, 0, 1024); g.addColorStop(0, '#5fd6ff'); g.addColorStop(0.55, '#7f8cff'); g.addColorStop(1, '#b06cf5');
   c.fillStyle = g; c.fillRect(0, 0, 1024, 1024);
@@ -38,8 +38,9 @@ const iconPng = await page.evaluate(() => {
   ring(430, 160, '#ffe9c2'); ring(360, 120, '#7fe6f6');
   const wg = c.createLinearGradient(0, 700, 0, 900); wg.addColorStop(0, '#9af3ff'); wg.addColorStop(1, '#3fb4ea'); c.fillStyle = wg; c.beginPath(); c.ellipse(512, 800, 360, 120, 0, 0, T); c.fill();
   c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 8; c.lineCap = 'round'; for (const [x, y, w] of [[380, 790, 90], [560, 830, 110], [640, 770, 70]]) { c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + w / 2, y - 18, x + w, y); c.stroke(); }
-  // hero: evolved starfish + crab friend
-  c.save(); c.translate(512, 745); drawSprite(c, 'crab.0', 0, 0, 720, { hat: 'crownhat' }); c.restore();
+  // hero: the crab, crowned
+  // drawn as vectors at full size (not the game's cached sprite bitmap, which would be upscaled and soft)
+  { const size = 720; c.save(); c.translate(512 - size / 2, 745 - size * 0.62); c.scale(size / CELL, size / CELL); paintForm(c, 'crab.0', { hat: 'crownhat' }); c.restore(); }
   // bubbles & sparkles
   const bub = (x, y, r) => { const b = c.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.1, x, y, r); b.addColorStop(0, 'rgba(255,255,255,.95)'); b.addColorStop(0.6, 'rgba(200,240,255,.35)'); b.addColorStop(1, 'rgba(180,200,255,.5)'); c.fillStyle = b; c.beginPath(); c.arc(x, y, r, 0, T); c.fill(); c.lineWidth = 7; c.strokeStyle = '#3b1d5e'; c.stroke(); };
   bub(190, 300, 74); bub(800, 230, 92); bub(880, 440, 46); bub(120, 520, 40);

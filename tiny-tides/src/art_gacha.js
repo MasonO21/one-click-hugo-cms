@@ -113,7 +113,7 @@ export function drawItemArt(c, id, x, y, size, t = 0) {
   const it = D.POOL_BY_ID[id]; if (!it) return;
   if (it.filler) return fillerIcon(c, it.reward, x, y, size, t);
   if (it.kind === 'fig') return drawFigure(c, it.fig, x, y + size * 0.4, size * 1.1, t, { gold: it.gold, tier: it.tier });
-  if (it.kind === 'hat') { c.save(); c.translate(x, y + size * 0.1); drawSprite(c, 'crab.0', 0, 0, size * 1.15, { hat: id }); c.restore(); return; }
+  if (it.kind === 'hat') { c.save(); c.translate(x, y + size * 0.1); drawSprite(c, 'octo.0', 0, 0, size * 1.1, { hat: id }); c.restore(); return; }
   if (it.kind === 'prop') return PROP_ART[id]?.(c, x, y + size * 0.42, size, t, false);
   if (it.kind === 'skin') return drawSkinChip(c, id, x - size / 2, y - size / 2, size);
   if (it.kind === 'fx') {
