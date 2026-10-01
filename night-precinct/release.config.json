@@ -10,15 +10,15 @@
   "CONTACT_PHONE": "[PHONE NUMBER WITH COUNTRY CODE]",
   "CONTACT_EMAIL": "support@example.com",
   "PRIVACY_EMAIL": "privacy@example.com",
-  "WEBSITE_URL": "https://example.com/night-precinct",
-  "SUPPORT_URL": "https://example.com/night-precinct/support.html",
-  "PRIVACY_URL": "https://example.com/night-precinct/privacy.html",
-  "TERMS_URL": "https://example.com/night-precinct/terms.html",
-  "PURCHASE_TERMS_URL": "https://example.com/night-precinct/purchases.html",
-  "ODDS_URL": "https://example.com/night-precinct/odds.html",
+  "WEBSITE_URL": "https://masono21.github.io/one-click-hugo-cms/",
+  "SUPPORT_URL": "https://masono21.github.io/one-click-hugo-cms/support.html",
+  "PRIVACY_URL": "https://masono21.github.io/one-click-hugo-cms/privacy.html",
+  "TERMS_URL": "https://masono21.github.io/one-click-hugo-cms/terms.html",
+  "PURCHASE_TERMS_URL": "https://masono21.github.io/one-click-hugo-cms/purchases.html",
+  "ODDS_URL": "https://masono21.github.io/one-click-hugo-cms/odds.html",
   "GOVERNING_LAW": "[STATE OR COUNTRY WHOSE LAW GOVERNS]",
   "EFFECTIVE_DATE": "September 29, 2026",
   "VERSION": "1.0.0",
   "BUILD": "1",
-  "NOTICES_URL": "https://example.com/night-precinct/notices.html"
+  "NOTICES_URL": "https://masono21.github.io/one-click-hugo-cms/notices.html"
 }

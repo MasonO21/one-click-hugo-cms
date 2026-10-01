@@ -1,0 +1,54 @@
+# Night Precinct: publishes the legal and support pages (night-precinct/legal/, filled in from
+# release.config.json) to the gh-pages branch, which GitHub Pages serves at
+# https://masono21.github.io/one-click-hugo-cms/  (Settings > Pages > Deploy from a branch > gh-pages, / (root)).
+# Runs on every change to the pages or the config, or from Actions > "Night Precinct legal pages" > Run workflow.
+# It refuses to publish while any placeholder ([YOUR ...], example.com) is left in the pages.
+name: Night Precinct legal pages
+
+on:
+  push:
+    branches: [app-store-release]
+    paths: ['night-precinct/legal/**', 'night-precinct/release.config.json', '.github/workflows/night-precinct-legal.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: night-precinct-legal
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish the legal pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: night-precinct
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fill in the pages from release.config.json
+        run: python3 tools/apply_config.py --no-build
+      - name: Refuse to publish placeholders
+        id: check
+        run: |
+          if grep -nE "\[[A-Z][A-Z ,/']+\]|example\.com|yourcompany|\{\{[A-Z_]+\}\}" release/legal/*.html; then
+            msg="The legal pages above still contain placeholders. Fill in release.config.json (company name, address, e-mails, governing law) first."
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "::error::$msg"; exit 1; fi
+            echo "::notice::Not published yet. $msg"; echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to the gh-pages branch
+        if: steps.check.outputs.ready == 'yes'
+        run: |
+          cd release/legal
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Night Precinct legal pages from ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
+          echo "::notice::Published. Live at https://masono21.github.io/one-click-hugo-cms/ within a minute or two (once GitHub Pages is switched on for the gh-pages branch)."
