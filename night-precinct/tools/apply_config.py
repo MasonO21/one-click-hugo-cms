@@ -47,6 +47,9 @@ def render(text, cfg, where):
             sys.exit("apply_config: unknown token {{%s}} in %s" % (k, where))
         v = str(cfg[k])
         return html.escape(v, quote=True) if esc else v
+    # One mailbox for support and privacy: say it once, not "x@y or x@y".
+    if cfg.get("CONTACT_EMAIL") == cfg.get("PRIVACY_EMAIL"):
+        text = re.sub(r"(`?)\{\{CONTACT_EMAIL\}\}\1 or (`?)\{\{PRIVACY_EMAIL\}\}\2", r"\1{{CONTACT_EMAIL}}\1", text)
     return TOKEN.sub(rep, text)
 
 

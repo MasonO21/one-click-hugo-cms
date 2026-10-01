@@ -8,7 +8,7 @@ name: Night Precinct legal pages
 on:
   push:
     branches: [app-store-release]
-    paths: ['night-precinct/legal/**', 'night-precinct/release.config.json', '.github/workflows/night-precinct-legal.yml']
+    paths: ['night-precinct/legal/**', 'night-precinct/release.config.json', 'night-precinct/tools/apply_config.py', '.github/workflows/night-precinct-legal.yml']
   workflow_dispatch:
 
 permissions:
