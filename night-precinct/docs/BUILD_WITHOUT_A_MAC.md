@@ -67,9 +67,15 @@ You need a paid Apple Developer Program membership.
 
    Secrets are encrypted; nobody can read them back, not even on a public repository.
 
-6. **Create the in-app purchases** in App Store Connect exactly as listed in
-   `appstore/IAP.md` (product IDs, types, prices). Purchases in TestFlight only work for
-   products that exist there.
+6. **Create the in-app purchases.** GitHub > Actions > **Night Precinct in-app purchases** >
+   Run workflow > mode **create**. It creates all 16 from `appstore/iap.json` (IDs, types,
+   names, descriptions, US prices with Apple's equivalents elsewhere, availability without
+   the excluded countries, and an App Review screenshot from `appstore/iap-review/`), and
+   skips anything that already exists. Mode **check** only reports. (Done once already on
+   1 October 2026: the 15 one-time products are Ready to Submit.)
+7. **Activate the Paid Apps agreement**: App Store Connect > Business > Agreements > Paid Apps,
+   with bank account and tax forms. Until it is Active, no product loads anywhere, TestFlight
+   included, and the Store shows "..." instead of prices.
 
 ## Upload a build to TestFlight
 
