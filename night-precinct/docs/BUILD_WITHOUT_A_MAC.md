@@ -125,7 +125,8 @@ When the TestFlight build works: App Store Connect > your app > the 1.0.0 versio
   compliance for the newest build and adds it to your internal TestFlight group. It never submits.
 - What the API cannot do, so you do it in App Store Connect (the workflow lists what is still open at
   the end of its log): the App Privacy answers ("Data Not Collected", `appstore/APP_PRIVACY.md`), the
-  App Review phone number, the Paid Apps agreement, and finally adding the 16 in-app purchases to
+  App Review phone number (or add it as the GitHub secret `ASC_REVIEW_PHONE`, for example
+  `+1 480 555 0100`, and run apply again; Apple will not save the review notes without it), the Paid Apps agreement, and finally adding the 16 in-app purchases to
   the version and Submit for Review. The legal pages must be online (GitHub Pages, above) first.
 
 ## Costs and limits

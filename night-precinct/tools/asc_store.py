@@ -395,28 +395,50 @@ def content_rights():
 section('Content rights', content_rights)
 
 
+PHONE_TODO = ('App Review phone number. Apple will not save the App Review details (contact, notes) without one. Either add it as a '
+              'GitHub secret named ASC_REVIEW_PHONE (repository > Settings > Secrets and variables > Actions > New repository secret; '
+              'with + and the country code, for example +1 480 555 0100) and run this workflow with apply again, or type it in '
+              'App Store Connect > the 1.0.0 version page > App Review Information and run apply again for the rest. Apple uses it only '
+              'to reach you during review; it is not shown in the store, and the secret stays out of the logs.')
+
+
 def review_details():
     want = {'contactFirstName': STORE['review_contact']['first_name'], 'contactLastName': STORE['review_contact']['last_name'],
             'contactEmail': CFG['CONTACT_EMAIL'], 'demoAccountRequired': False, 'notes': text('review_notes')}
     if len(want['notes']) > 4000:
         warn('review_notes.txt is %d characters; App Review allows 4,000.' % len(want['notes']))
         return
+    phone = re.sub(r'[^0-9+ ()-]', '', os.environ.get('ASC_REVIEW_PHONE', '')).strip()   # never printed: the logs are public
+    if phone and not phone.startswith('+'):
+        warn('The ASC_REVIEW_PHONE secret must start with + and the country code (for example +1 480 555 0100).')
+        phone = ''
+    digits = lambda v: re.sub(r'\D', '', v or '')
     cur = call('GET', '/v1/appStoreVersions/%s/appStoreReviewDetail' % VID, ok404=True)
     cur = (cur or {}).get('data')
     if not cur:
-        note('no App Review details yet: %s contact name, e-mail, "no sign-in needed" and the review notes (%d characters)' % ('adding' if APPLY else 'would add', len(want['notes'])))
+        if not phone:
+            note('no App Review details yet; Apple needs a phone number to create them (see the list at the end)')
+            todo.append(PHONE_TODO)
+            return
+        note('no App Review details yet: %s contact name, phone, e-mail, "no sign-in needed" and the review notes (%d characters)'
+             % ('adding' if APPLY else 'would add', len(want['notes'])))
         if APPLY:
-            cur = call('POST', '/v1/appStoreReviewDetails', {'data': {'type': 'appStoreReviewDetails', 'attributes': want,
-                                                                      'relationships': {'appStoreVersion': rel('appStoreVersions', VID)}}})['data']
+            call('POST', '/v1/appStoreReviewDetails', {'data': {'type': 'appStoreReviewDetails', 'attributes': dict(want, contactPhone=phone),
+                                                                'relationships': {'appStoreVersion': rel('appStoreVersions', VID)}}})
             note('App Review details added')
+        return
+    diff = changes(cur['attributes'], want)
+    if report('review', diff, cur['attributes']):
+        patch('appStoreReviewDetails', cur['id'], diff)
+        note('App Review details updated')
+    if phone and digits(phone) != digits(cur['attributes'].get('contactPhone')):
+        note('review phone: %s from the ASC_REVIEW_PHONE secret (not shown)' % ('updating' if APPLY else 'would update'))
+        if APPLY:
+            patch('appStoreReviewDetails', cur['id'], {'contactPhone': phone})
+    elif cur['attributes'].get('contactPhone') or phone:
+        note('review phone: set (not shown)')
     else:
-        diff = changes(cur['attributes'], want)
-        if report('review', diff, cur['attributes']):
-            patch('appStoreReviewDetails', cur['id'], diff)
-            note('App Review details updated')
-    if not (cur and cur['attributes'].get('contactPhone')):
-        todo.append('App Review contact phone number: App Store Connect > the 1.0.0 version page > App Review Information > Phone number. '
-                    'Apple only uses it to reach you during review; it is not shown in the store.')
+        todo.append(PHONE_TODO)
 
 
 section('App Review information', review_details)

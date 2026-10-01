@@ -12,7 +12,7 @@ Source of truth: `docs/FACTS.md` section 5 (content descriptors) and sections 3 
 
 The question wording below is paraphrased. Match the meaning of each answer to what App Store Connect (ASC) actually shows, and answer honestly. If a question is not listed here, answer it from the same facts.
 
-Where to answer: the **Night Precinct store listing** workflow (`tools/asc_store.py`) saves these answers from `store.json` (decided 1 Oct 2026; the three cautious answers below are marked "Decided"). By hand: ASC > your app > App Information > Age Rating (Edit). Apple calculates the rating from your answers and shows it before you save.
+Where to answer: the **Night Precinct store listing** workflow (`tools/asc_store.py`) saves these answers from `store.json` (decided 1 Oct 2026; the three cautious answers below are marked "Decided"). By hand: ASC > your app > App Information > Age Rating (Edit). **Result in App Store Connect on 1 Oct 2026: 9+, and 15+ in Australia** (the API's `appStoreAgeRating` NINE_PLUS and `australiaAgeRating` FIFTEEN). Apple calculates the rating from your answers and shows it before you save.
 
 ## Answers
 
