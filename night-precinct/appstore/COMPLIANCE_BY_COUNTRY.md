@@ -20,7 +20,7 @@ Status words used below:
 
 ### Where the game is not listed
 
-In App Store Connect (Pricing and Availability), untick these storefronts and **turn off automatic availability in new countries and regions**, so that every new storefront is a deliberate decision.
+In App Store Connect (Pricing and Availability) these storefronts are unticked and **automatic availability in new countries and regions is off**, so that every new storefront is a deliberate decision. The list lives in `store.json`; the **Night Precinct store listing** workflow (`tools/asc_store.py`) applies it to the app, and `tools/asc_iap.py` uses it for the in-app purchases.
 
 | Storefront | Why it is excluded |
 |---|---|
@@ -30,6 +30,7 @@ In App Store Connect (Pricing and Availability), untick these storefronts and **
 | **Vietnam** | Decree 147/2024: even offline games need a publishing confirmation through a local entity, and Apple requires the licence number in the Vietnamese description. |
 | **Russia** | Apple payments (in-app purchases and renewals) are unavailable there since 1 Apr 2026. |
 | **Japan** | Owner decision, 1 Oct 2026. Selling there would need a public Japanese seller notice (responsible person and phone number), a Japanese version of it, and tracking of the unused Gold Badge balance under the Payment Services Act. The game is not listed in Japan. |
+| **European Union**: all 27 member states (Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain and Sweden) | Owner decision, 1 Oct 2026. Not selling there also removes the Digital Services Act trader listing (a public address and phone number on the store page), the EU withdrawal-right and virtual-currency questions, the French-language risk and the pending Spanish loot-box bill. Norway, Iceland, Switzerland and the United Kingdom are not in the EU and stay listed. |
 
 ### Owner decisions still open
 
@@ -63,6 +64,8 @@ In App Store Connect (Pricing and Availability), untick these storefronts and **
 | Storefront availability | Exclusions in section 1; automatic availability in new storefronts off. | Owner action |
 
 ### European Union (all member states where listed)
+
+> **Not listed anywhere in the EU** (owner decision, 1 Oct 2026). This section and the Belgium, Netherlands, Germany, France, Spain and Italy sections below only matter if that changes.
 
 | Rule | What the game does | Status |
 |---|---|---|
@@ -221,46 +224,46 @@ In App Store Connect (Pricing and Availability), untick these storefronts and **
 
 ### Owner
 
-1. **Availability** (ASC > Pricing and Availability): untick Belgium, Brazil, mainland China, Vietnam, Russia and Japan, and turn off automatic availability in new countries and regions.
+1. **Availability** (ASC > Pricing and Availability): not listed in Brazil, mainland China, Vietnam, Russia, Japan and the 27 EU member states (Belgium included), with automatic availability in new countries and regions off. Set by the **Night Precinct store listing** workflow from `store.json`.
 2. **Decide** on South Korea and Taiwan (recommended: exclude until local-language odds texts exist), Indonesia (IGRS rating or exclude) (Japan: decided, not listed).
 3. **United States**: before selling there, ship the age-assurance update (Declared Age Range, PermissionKit significant change, StoreKit `ageRatingCode`, a plan for consent withdrawal without a server) or get counsel's written view on launching without it. Give each in-app purchase an age rating if ASC asks. Diary 1 Jan 2027 (California, Alabama), 6 May 2027 (Utah), 1 Jul 2027 (Louisiana).
 4. **Age rating**: answer the loot-box question Yes (`AGE_RATING.md`). Expect 9+ worldwide and 16+ in Australia.
 5. **Listing and marketing**: keep "Contains loot boxes: ..." as the first line of the description; every ad, trailer and App Preview shows "In-game purchases (includes random items)" on screen.
-6. **EU**: declare trader status (DSA); confirm microenterprise status (Accessibility Act).
+6. **EU**: not listed (owner decision, 1 Oct 2026), so no trader status is needed. If that changes: declare trader status (DSA) and confirm microenterprise status (Accessibility Act).
 7. **Japan**: not listed (owner decision, 1 Oct 2026). If that changes, the old notices page is in git history (`legal/japan.html`); it needs a Japanese version, a public responsible person and phone number, and twice-yearly tracking of unused Gold Badges.
 8. **Privacy**: a process for support email, including from children (COPPA), and for web-server logs of the legal pages.
-9. **Monitor**: the Spanish minors bill (be ready to add `ES` to `LOOT_BLOCKED_REGIONS` or exclude Spain), the EU Digital Fairness Act proposal (Q4 2026), the UK DMCC subscription rules (spring 2027), New York loot-box bills.
+9. **Monitor**: the UK DMCC subscription rules (spring 2027) and New York loot-box bills. Only if the game is ever listed in the EU: the Spanish minors bill (be ready to add `ES` to `LOOT_BLOCKED_REGIONS` or exclude Spain) and the EU Digital Fairness Act proposal (Q4 2026).
 10. **Decide** whether to add an under-16 gate for paid crates in the US (FTC Genshin precedent); it needs an age signal the app does not have today.
 
 ### Counsel
 
 1. United States: the risk of launching without the Texas age-assurance APIs, and what "an age rating for each in-app purchase" requires beyond `ageRatingCode`.
-2. EU: who is the "trader" for the withdrawal right and the Art. 11a withdrawal button; whether Apple's checkout obtains the Art. 16(m) consent; whether unused Gold Badges must be refundable.
-3. EU and Netherlands: whether the remaining price gaps matter (pack sizes that do not match crate prices), and which pack's rate should set the reference value (the game uses the smallest pack).
-4. France and Quebec: the risk of selling in English only.
+2. EU (only if ever listed there): who is the "trader" for the withdrawal right and the Art. 11a withdrawal button; whether Apple's checkout obtains the Art. 16(m) consent; whether unused Gold Badges must be refundable.
+3. EU and Netherlands (only if ever listed there): whether the remaining price gaps matter (pack sizes that do not match crate prices), and which pack's rate should set the reference value (the game uses the smallest pack).
+4. Quebec (and France, if ever listed): the risk of selling in English only.
 5. UK: whether Ask to Buy meets Ukie principle 1; whether crates bought with Gold Badges (a currency that can be earned or bought) fall under the CAP notice.
-6. Germany: section 312k BGB for subscriptions sold through Apple.
+6. Germany (only if ever listed there): section 312k BGB for subscriptions sold through Apple.
 7. Japan: whether the developer is the tokushoho "seller"; how to measure a prepaid balance that lives only on devices.
 8. South Korea and Taiwan: only if the owner wants to list there in English.
 9. US: California's annual reminder for a weekly plan sold through Apple; COPPA handling of support email.
-10. GDPR: whether an Art. 27 EU representative is needed.
+10. GDPR: whether an Art. 27 EU representative is needed (less likely while the game is not offered in the EU).
 
 ## 4. Unverified or needs counsel
 
 - **Apple dates for Utah and Louisiana.** Apple's 24 Feb 2026 notice still gives Utah 6 May 2026 and Louisiana 1 Jul 2026; the later state amendments moved both to 2027. What Apple does now in those states is not confirmed.
 - **Texas appeal.** The final 5th Circuit ruling on the merits and the exact date of the stay are unverified, and so is what "age rating for each IAP" requires beyond `ageRatingCode`.
 - **Brazil scope.** Whether crates earned free, or bought with Gold Badges that can be earned or bought, are "mediante pagamento", and whether Apple's A18 gate satisfies the provider's own age-verification duty. (Moot while Brazil is not listed.)
-- **EU withdrawal.** Whether Apple's EU checkout obtains the Art. 16(m) consent or gives a 14-day refund; Apple's terms could not be fetched.
+- **EU withdrawal.** Whether Apple's EU checkout obtains the Art. 16(m) consent or gives a 14-day refund; Apple's terms could not be fetched. (Moot while the EU is not listed.)
 - **CPC reference price.** Which pack's rate should set the real-money equivalent (the game uses the smallest pack, the highest price per badge).
 - **Korea.** The exact Korean ad wording ("확률형 아이템 포함" is reported), whether the odds must be in Korean, and how Apple maps loot boxes to a Korean rating in 2026.
 - **Taiwan.** Whether an offline game falls under the online-game contract rules, and whether a Taiwan rating mark is needed on the listing.
 - **Australia.** Whether Apple's own ratings satisfy the Classification Act.
-- **Germany.** Section 312k for in-app subscriptions, and any USK duty on the developer.
+- **Germany.** Section 312k for in-app subscriptions, and any USK duty on the developer. (Moot while the EU is not listed.)
 - **UK.** Whether hybrid (earned or bought) currency brings crates bought with Gold Badges into the CAP notice, and the start date of the DMCC subscription rules.
 - **Other markets.** Mexico's language and price rules, Chile's bill, rating duties in Saudi Arabia and the UAE, sanctions questions for Russia.
 - **Japan.** Whether the developer is the tokushoho "seller" given Apple's agent role, and how to measure a prepaid balance that lives only on devices.
 - **Indonesia.** How Apple enforces the IGRS rating.
-- **EU Accessibility Act.** Whether the Apple-run in-app purchase flow puts any duty on the developer.
+- **EU Accessibility Act.** Whether the Apple-run in-app purchase flow puts any duty on the developer. (Moot while the EU is not listed.)
 
 ## 5. What the build does, for reference
 

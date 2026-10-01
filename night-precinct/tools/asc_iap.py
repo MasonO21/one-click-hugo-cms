@@ -5,7 +5,8 @@
   python3 tools/asc_iap.py create   # creates whatever is missing; safe to run again
 
 Reads appstore/iap.json (the 15 one-time products, the Chief's Club subscription group and its weekly
-subscription) and the App Review screenshots in appstore/iap-review/<suffix>.png.
+subscription), the excluded countries in appstore/store.json and the App Review screenshots in
+appstore/iap-review/<suffix>.png.
 Credentials come from the environment: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (the GitHub secrets).
 Needs: pip install pyjwt cryptography requests
 
@@ -101,6 +102,7 @@ def rel(type_, id_):
 
 # ---------- what we want ----------
 SPEC = json.loads((ROOT / 'appstore' / 'iap.json').read_text())
+EXCLUDED = sorted({t for group in json.loads((ROOT / 'appstore' / 'store.json').read_text())['excluded_territories'].values() for t in group})
 CFG = json.loads((ROOT / 'release.config.json').read_text())
 BUNDLE = CFG['BUNDLE_ID']
 if 'yourcompany' in BUNDLE:
@@ -127,8 +129,8 @@ APP = apps[0]['id']
 print('App: %s (%s), id %s' % (apps[0]['attributes'].get('name'), BUNDLE, APP))
 
 territories = sorted(t['id'] for t in get_all('/v1/territories', {'limit': 200}))
-available = [t for t in territories if t not in SPEC['excluded_territories']]
-print('Territories: %d, selling in %d (not in %s)' % (len(territories), len(available), ', '.join(SPEC['excluded_territories'])))
+available = [t for t in territories if t not in EXCLUDED]
+print('Territories: %d, selling in %d (not in %s)' % (len(territories), len(available), ', '.join(EXCLUDED)))
 
 
 def screenshot_file(suffix):

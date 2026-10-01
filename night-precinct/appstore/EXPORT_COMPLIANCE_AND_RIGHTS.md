@@ -64,7 +64,7 @@ Have these ready. Not all will be requested. **Verify in App Store Connect** wha
 |---|---|---|
 | Legal entity name, address, phone, D-U-N-S number, proof of authority to sign | Organization enrollment in the Apple Developer Program | The owner's company records. Not part of this package. |
 | Paid Applications agreement, tax forms, bank details | Needed before in-app purchases and subscriptions can be sold | ASC > Business (or Agreements, Tax, and Banking). See `SUBMISSION_CHECKLIST.md`. |
-| Trader status and contact details (address, phone, email) for the EU Digital Services Act | Shown on the product page in EU storefronts; Apple may ask for verification documents (for example business registration) | The owner. Uses `{{COMPANY_NAME}}` and `{{COMPANY_ADDRESS}}` from the config. **Verify in App Store Connect.** |
+| Trader status and contact details (address, phone, email) for the EU Digital Services Act (not needed while the game is not listed in the EU) | Shown on the product page in EU storefronts; Apple may ask for verification documents (for example business registration) | The owner. Uses `{{COMPANY_NAME}}` and `{{COMPANY_ADDRESS}}` from the config. **Verify in App Store Connect.** |
 | Privacy policy URL and support URL that work | Required for every app | `{{PRIVACY_URL}}`, `{{SUPPORT_URL}}`, hosted from `release/legal/` |
 | Terms of Use (EULA) or agreement to Apple's standard EULA | Required for subscriptions to be linked | `{{TERMS_URL}}` (custom) or Apple's standard EULA. **Verify in App Store Connect.** |
 | Proof of rights for third-party content | Only if you answered Yes to third-party content | Not needed for this app. Keep the font license texts from `game/fonts/`. |

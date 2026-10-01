@@ -12,7 +12,7 @@ Source of truth: `docs/FACTS.md` section 5 (content descriptors) and sections 3 
 
 The question wording below is paraphrased. Match the meaning of each answer to what App Store Connect (ASC) actually shows, and answer honestly. If a question is not listed here, answer it from the same facts.
 
-Where to answer: ASC > your app > App Information > Age Rating (Edit). Apple calculates the rating from your answers and shows it before you save.
+Where to answer: the **Night Precinct store listing** workflow (`tools/asc_store.py`) saves these answers from `store.json` (decided 1 Oct 2026; the three cautious answers below are marked "Decided"). By hand: ASC > your app > App Information > Age Rating (Edit). Apple calculates the rating from your answers and shows it before you save.
 
 ## Answers
 
@@ -52,12 +52,12 @@ Most questions use a frequency scale (None / Infrequent / Frequent). **Verify wo
 
 | Question | Answer | Justification |
 |---|---|---|
-| Cartoon or Fantasy Violence | None (see note) | `docs/FACTS.md` section 5: no violence is shown. Crooks are cuffed ("BUSTED"), fires are put out ("DOUSED"), patients are treated ("SAVED"). No blood, no injuries. |
+| Cartoon or Fantasy Violence | **Infrequent** (decided) | `docs/FACTS.md` section 5: no violence is shown. Crooks are cuffed ("BUSTED"), fires are put out ("DOUSED"), patients are treated ("SAVED"). No blood, no injuries. |
 | Realistic Violence | None | Nothing realistic is depicted. |
 | Prolonged Graphic or Sadistic Realistic Violence | None | Nothing of the kind. |
-| Guns or Other Weapons | None | `docs/FACTS.md` says no weapons are shown being fired. No gun, knife or similar prop is drawn in the game art (the scene and portrait drawing code, `game/src/02-art-scene.js`, has none). Some Gear-Up upgrades have weapon-like names as text only ("Stun Baton", "Taser X2", "Quick-Draw Holster", and cannon-style names in the fire and EMS worlds), shown with a handcuff or generic icon. If the question covers references as well as depictions, or you want to be cautious, answer Infrequent. |
+| Guns or Other Weapons | **Infrequent** (decided) | `docs/FACTS.md` says no weapons are shown being fired. No gun, knife or similar prop is drawn in the game art (the scene and portrait drawing code, `game/src/02-art-scene.js`, has none). Some Gear-Up upgrades have weapon-like names as text only ("Stun Baton", "Taser X2", "Quick-Draw Holster", and cannon-style names in the fire and EMS worlds), shown with a handcuff or generic icon. If the question covers references as well as depictions, or you want to be cautious, answer Infrequent. |
 
-**Note on cartoon violence.** The loot-box answer already puts the game at 9+, so a mild violence answer is not what sets the rating. Answer None, or Infrequent if you read chasing and cuffing crooks (the main button reads "ARREST!", and the scene shows "BUSTED" pop-ups and running bounty targets) as mild cartoon conflict. Over-declaring is safe; under-declaring risks a rejection or a forced change later.
+**Note on the cautious answers (decided: Infrequent for cartoon violence, weapons and contests).** Apple's table puts Infrequent cartoon violence and Infrequent weapons at 9+ and Infrequent contests at 4+, so with the loot-box answer the rating stays 9+. Apple's definitions are broad: weapons covers "references to" (the upgrade names), contests covers "the achievement of personal goals" (achievements and Career Pass tiers with rewards). Over-declaring is safe; under-declaring risks a rejection or a forced change later.
 
 ### Language, horror, substances
 
@@ -74,7 +74,7 @@ Most questions use a frequency scale (None / Infrequent / Frequent). **Verify wo
 | Gambling (real-money gambling) | **No** | No real-money gambling of any kind (`docs/FACTS.md` section 5). Gold Badges have no cash value and cannot be sold, transferred or exchanged. |
 | Simulated Gambling (casino-style games, poker, slots, betting) | None | There are no simulated casino games. Crates are opened for rewards, not bet on. The opening screen is a single pop-up that reveals one reward with one icon scaling in (no reels, wheel or betting); if that changes, answer honestly. |
 | Loot Boxes | **Yes** | Decided. Crates give randomized rewards (cash, Gold Badges, gear). They are earned free, bought with Gold Badges (which are sold for real money), and included in paid products: the Crate Trio daily deal, the Rookie Starter Pack (3 Standard crates) and the Career Pass Premium track. Odds are shown in the game before every purchase that includes crates and at `{{ODDS_URL}}` (`docs/FACTS.md` section 4). Expected effect: 9+ worldwide, 16+ in Australia. |
-| Contests | None, unless the definition says otherwise (see justification) | There are no competitions between players, no leaderboards, no prizes of real value and no sweepstakes. Apple's definition of Contests also covers the achievement of personal goals; the game has achievements (Service Record) and Career Pass tiers that pay in-game rewards. Read the definition shown in ASC: if it clearly covers personal-goal rewards of this kind, answer Infrequent rather than None, and check the calculated rating before you save. |
+| Contests | **Infrequent** (decided) | There are no competitions between players, no leaderboards, no prizes of real value and no sweepstakes. Apple's definition of Contests also covers the achievement of personal goals; the game has achievements (Service Record) and Career Pass tiers that pay in-game rewards. Read the definition shown in ASC: if it clearly covers personal-goal rewards of this kind, answer Infrequent rather than None, and check the calculated rating before you save. |
 
 ### In-app purchases and spending
 

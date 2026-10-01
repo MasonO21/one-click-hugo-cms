@@ -116,12 +116,17 @@ When the TestFlight build works: App Store Connect > your app > the 1.0.0 versio
   and the app preview video on the English (U.S.) page, and renames the version to match the
   build (1.0.0). Done once already on 1 October 2026. To replace them later, delete the old ones
   in App Store Connect and run it again.
-- Then paste the store text (from the `app-store-text-and-legal-pages` download,
-  `appstore/metadata/en-US/`), answer the age rating and privacy questions
-  (`appstore/AGE_RATING.md`, `appstore/APP_PRIVACY.md`), pick the build, untick the countries
-  in `appstore/COMPLIANCE_BY_COUNTRY.md` under Pricing and Availability, and Submit for Review.
-  The legal pages (the `legal/` folder in the same download) must be online at the URLs in
-  `release.config.json` before you submit.
+- Everything else on the page: GitHub > Actions > **Night Precinct store listing** > Run workflow >
+  **apply** (**check** only reports). From `appstore/metadata/en-US/` and `appstore/store.json` it sets
+  the store text and URLs, subtitle, privacy policy URL, categories (Games: Simulation, Strategy), the
+  age-rating answers (`appstore/AGE_RATING.md`), content rights, copyright, manual release, the App
+  Review contact, notes and "no sign-in", the newest processed build, a free price, and the countries
+  (not in Belgium, Brazil, mainland China, Vietnam, Russia, Japan or the EU). It also answers export
+  compliance for the newest build and adds it to your internal TestFlight group. It never submits.
+- What the API cannot do, so you do it in App Store Connect (the workflow lists what is still open at
+  the end of its log): the App Privacy answers ("Data Not Collected", `appstore/APP_PRIVACY.md`), the
+  App Review phone number, the Paid Apps agreement, and finally adding the 16 in-app purchases to
+  the version and Submit for Review. The legal pages must be online (GitHub Pages, above) first.
 
 ## Costs and limits
 

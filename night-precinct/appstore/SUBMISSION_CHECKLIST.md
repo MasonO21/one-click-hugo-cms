@@ -43,7 +43,7 @@ No script, and no one who prepared this package, can do these for you:
 - [ ] ASC > Business (called "Agreements, Tax, and Banking" in older versions; **verify the menu name**): accept the **Paid Applications Agreement**. It is required even though the app is free, because it sells in-app purchases and a subscription.
 - [ ] Add a bank account and the tax forms Apple asks for (for example W-9 for a US entity, W-8 forms otherwise), and the required contacts.
 - [ ] Wait until the agreement status shows Active. Until then, products cannot be sold and may not load in sandbox or TestFlight.
-- [ ] EU Digital Services Act: enter your trader status and the contact details that will be shown on the product page in EU storefronts (address, phone, email). Apple may ask for proof (for example a business registration). Use a business address you are willing to publish. **Verify in App Store Connect.**
+- [ ] EU Digital Services Act trader status: **not needed**, because the game is not listed in the EU (owner decision, 1 Oct 2026). If App Store Connect still asks, answer that you do not distribute in the EU.
 
 ## Step 3. App ID and bundle ID
 
@@ -260,12 +260,14 @@ None of them shows the Store tab, so the in-app purchase review screenshots (`IA
   - **Mainland China**: games need an NPPA licence (ISBN).
   - **Vietnam**: games need a publishing licence through a local entity.
   - **Russia**: Apple payments are unavailable there.
+  - **Japan**: owner decision, 1 Oct 2026 (seller notice and prepaid-balance rules).
+  - **All 27 EU member states** (Belgium included): owner decision, 1 Oct 2026.
+  - The **Night Precinct store listing** workflow sets this list (`appstore/store.json`) and turns off automatic availability.
   - The game keeps a safety net: if the App Store country or the device region is Belgium or Brazil, paid random items switch off.
 - [ ] **Turn off automatic availability in new countries and regions**, so every new storefront is your decision. **Verify in App Store Connect** where the switch is.
 - [ ] Owner decisions before you tick these storefronts (`COMPLIANCE_BY_COUNTRY.md`):
   - **South Korea** and **Taiwan**: they expect odds disclosures in Korean and Traditional Chinese; the game is English only. Recommended: exclude until local-language odds texts exist, or get counsel's OK.
   - **Indonesia**: a mandatory game rating (IGRS). Register and get one, or exclude.
-  - **Japan**: not listed (owner decision, 1 Oct 2026); untick it with the countries above.
   - **United States**: the Texas age-assurance APIs are not implemented (Apple enforces the Texas law for new Texas accounts from 4 June 2026; Alabama and California follow on 1 January 2027, Utah on 6 May 2027, Louisiana on 1 July 2027). Before selling in the US, ship the age-assurance update or get counsel's view.
 - [ ] Confirm the in-app purchase prices (step 8) and that the description's "4.99 USD per week" matches the price you set.
 

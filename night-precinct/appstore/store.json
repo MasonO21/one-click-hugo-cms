@@ -1,0 +1,39 @@
+{
+  "_comment": "App Store Connect settings that tools/asc_store.py applies (GitHub: Actions > Night Precinct store listing). The store text itself comes from appstore/metadata/en-US/*.txt, filled in from release.config.json. Territory codes are Apple's three-letter codes. Reasons for each excluded country: appstore/COMPLIANCE_BY_COUNTRY.md. tools/asc_iap.py uses the same list for the in-app purchases.",
+  "excluded_territories": {
+    "not_allowed": ["BEL", "BRA", "CHN", "VNM", "RUS", "JPN"],
+    "eu": ["AUT", "BEL", "BGR", "HRV", "CYP", "CZE", "DNK", "EST", "FIN", "FRA", "DEU", "GRC", "HUN", "IRL", "ITA",
+           "LVA", "LTU", "LUX", "MLT", "NLD", "POL", "PRT", "ROU", "SVK", "SVN", "ESP", "SWE"]
+  },
+  "available_in_new_territories": false,
+  "price_usd": "0",
+  "categories": {
+    "primaryCategory": "GAMES",
+    "primarySubcategoryOne": "GAMES_SIMULATION",
+    "primarySubcategoryTwo": "GAMES_STRATEGY",
+    "secondaryCategory": null
+  },
+  "content_rights": "DOES_NOT_USE_THIRD_PARTY_CONTENT",
+  "release_type": "MANUAL",
+  "review_contact": {"first_name": "Mason", "last_name": "Osborn"},
+  "age_rating": {
+    "_comment": "Answers and reasons: appstore/AGE_RATING.md. Loot boxes = yes sets 9+ (16+ in Australia). Contests, cartoon violence and weapons are answered Infrequent, the cautious reading of Apple's definitions (personal goals with rewards; chasing and cuffing crooks; weapon-like upgrade names such as Taser X2); Apple's table puts each of those at 9+ or lower, so the rating stays 9+.",
+    "lootBox": true,
+    "advertising": false, "gambling": false, "healthOrWellnessTopics": false, "messagingAndChat": false,
+    "parentalControls": false, "ageAssurance": false, "unrestrictedWebAccess": false, "userGeneratedContent": false,
+    "socialMedia": false, "socialMediaAgeRestricted": false,
+    "contests": "INFREQUENT",
+    "violenceCartoonOrFantasy": "INFREQUENT_OR_MILD",
+    "gunsOrOtherWeapons": "INFREQUENT",
+    "gamblingSimulated": "NONE",
+    "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+    "medicalOrTreatmentInformation": "NONE",
+    "profanityOrCrudeHumor": "NONE",
+    "sexualContentGraphicAndNudity": "NONE",
+    "sexualContentOrNudity": "NONE",
+    "horrorOrFearThemes": "NONE",
+    "matureOrSuggestiveThemes": "NONE",
+    "violenceRealistic": "NONE",
+    "violenceRealisticProlongedGraphicOrSadistic": "NONE"
+  }
+}

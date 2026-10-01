@@ -1,6 +1,5 @@
 {
-  "_comment": "The 16 in-app purchases, as created in App Store Connect by tools/asc_iap.py (GitHub: Actions > Night Precinct in-app purchases). Same values as appstore/IAP.md. Product ID = BUNDLE_ID + '.' + suffix. A product ID and its type can never be changed or reused once created; names, descriptions and prices can.",
-  "excluded_territories": ["BEL", "BRA", "CHN", "VNM", "RUS", "JPN"],
+  "_comment": "The 16 in-app purchases, as created in App Store Connect by tools/asc_iap.py (GitHub: Actions > Night Precinct in-app purchases). Same values as appstore/IAP.md. Product ID = BUNDLE_ID + '.' + suffix. A product ID and its type can never be changed or reused once created; names, descriptions and prices can. The countries they are not sold in come from appstore/store.json.",
   "products": [
     {"suffix": "badges_80", "type": "CONSUMABLE", "reference": "Gold Badges 80", "name": "80 Gold Badges", "description": "80 Gold Badges. First purchase adds 80 more.", "usd": "0.99", "where": "Store tab, Gold Badges section, Pocketful card"},
     {"suffix": "badges_500", "type": "CONSUMABLE", "reference": "Gold Badges 500", "name": "500 Gold Badges", "description": "500 + 50 bonus badges. First buy adds 500.", "usd": "4.99", "where": "Store tab, Gold Badges section, Handful card"},

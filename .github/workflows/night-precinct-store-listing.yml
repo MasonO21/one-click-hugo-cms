@@ -1,0 +1,46 @@
+# Night Precinct: fills in the App Store page in App Store Connect (store text, URLs, categories, age rating,
+# App Review details, the build to submit, free price, countries) and puts the newest build in TestFlight,
+# using the same API key secrets as the TestFlight upload. It never submits anything for review.
+# Actions > "Night Precinct store listing" > Run workflow:
+#   check = only look and report (changes nothing)
+#   apply = make the changes (safe to run again)
+# Settings come from night-precinct/appstore/store.json and the text from night-precinct/appstore/metadata/en-US/.
+name: Night Precinct store listing
+
+on:
+  # A change to the script or the settings runs the read-only check automatically.
+  push:
+    paths: ['night-precinct/tools/asc_store.py', 'night-precinct/appstore/store.json', '.github/workflows/night-precinct-store-listing.yml']
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check = report only, apply = make the changes'
+        type: choice
+        options: [check, apply]
+        default: check
+
+permissions:
+  contents: read
+
+concurrency:
+  group: night-precinct-store-listing
+
+jobs:
+  listing:
+    name: Store listing (${{ inputs.mode || 'check' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: night-precinct
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet pyjwt cryptography requests
+      - run: python3 tools/asc_store.py ${{ inputs.mode || 'check' }}
