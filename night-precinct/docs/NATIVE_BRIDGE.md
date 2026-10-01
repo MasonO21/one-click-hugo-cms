@@ -18,6 +18,7 @@ window.NP_BOOT = {
   region: "US",                  // Locale.current.region?.identifier, uppercase, or ""
   locale: "en-US",
   languages: ["en-US"],          // Locale.preferredLanguages (the game picks its language from this list)
+  otherAudio: false,             // AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint: another app is playing audio, so the game does not start its music
   version: "1.0.0",              // CFBundleShortVersionString
   build: "1",                    // CFBundleVersion
   reduceMotion: false,           // UIAccessibility.isReduceMotionEnabled

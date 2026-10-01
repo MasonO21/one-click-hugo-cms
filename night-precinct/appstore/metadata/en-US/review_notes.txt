@@ -10,7 +10,7 @@ The game is bundled in the app and runs from local files in a WKWebView; it load
 
 WHERE TO FIND THINGS
 - Store: STORE in the bottom tab bar (HQ, Roster, Gear-Up, Cases, Store, Career), or tap the Gold Badge counter at the top. Every purchase is listed there with its real StoreKit price. At the bottom: Restore Purchases, Manage Subscription, Settings and the legal links (Terms of Use, Privacy Policy, Purchase Terms, Crate odds).
-- Settings: HQ tab, "Settings and Legal" card, OPEN (or the Settings button in the Store tab): sound, haptics and Reduce flashing switches, Restore Purchases, Manage Subscription, legal links, Credits, Erase save.
+- Settings: HQ tab, "Settings and Legal" card, OPEN (or the Settings button in the Store tab): sound effects, music, haptics and Reduce flashing switches, Restore Purchases, Manage Subscription, legal links, Credits, Erase save.
 
 IN-APP PURCHASES (Apple IAP; test with the sandbox account)
 - Consumables: six Gold Badge packs, Evidence Safe, three Daily Deals (Crate Trio, Cash Crate, Recruit Rush).

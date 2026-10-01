@@ -4,6 +4,7 @@ Welcome to {{APP_NAME}} 1.0!
 • Hire crews, buy upgrades, run timed cases and chase bounties.
 • Earn while you are away with offline earnings.
 • Free rewards: Rally Boost, Supply Drop and the Daily Roll Call.
+• An original soundtrack for each world, and a quick tutorial to get you started.
 • No ads, no login, and it plays offline.
 
 Questions or feedback? Visit {{SUPPORT_URL}}

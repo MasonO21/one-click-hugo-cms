@@ -11,7 +11,7 @@ const LANGS = LANG_ARG === 'all' ? ['en', 'es', 'fr', 'de', 'it', 'pt-BR', 'ja',
     await p.goto(url()); await p.waitForTimeout(500);
     if (lang !== 'en') await p.evaluate(l => window.__np.applyLanguage(l), lang);
     for (const world of ['police', 'fire', 'ems']) {
-      await p.evaluate(world => { const N = window.__np, s = N.S(); s.done.police = true; s.done.fire = true; if (s.world !== world) N.doTravel(world); const t = N.S(); t.funds = 5e12; t.run = 5e12; t.life = 5e12; t.badges = 999; t.perm.auto = 1; for (let i = 0; i < 10; i++) t.owned[i] = 20 + i; t.crates.std = 3; N.recalc(); const m = document.getElementById('modal-root'); m.classList.remove('on'); m.innerHTML = ''; }, world);
+      await p.evaluate(world => { const N = window.__np, s = N.S(); s.done.police = true; s.done.fire = true; if (s.world !== world) N.doTravel(world); const t = N.S(); t.tut = 99; t.bigScene = world === 'fire'; N.applySceneSize(); t.funds = 5e12; t.run = 5e12; t.life = 5e12; t.badges = 999; t.perm.auto = 1; for (let i = 0; i < 10; i++) t.owned[i] = 20 + i; t.crates.std = 3; N.recalc(); const m = document.getElementById('modal-root'); m.classList.remove('on'); m.innerHTML = ''; }, world);
       await p.waitForTimeout(700); await p.evaluate(() => { const m = document.getElementById('modal-root'); m.classList.remove('on'); m.innerHTML = ''; });
       const views = ['roster', 'upgrades', 'ops', 'shop', 'career', 'hq'];
       for (const tab of views.concat(['modal:settings', 'modal:purchase'])) {
@@ -30,6 +30,7 @@ const LANGS = LANG_ARG === 'all' ? ['en', 'es', 'fr', 'de', 'it', 'pt-BR', 'ja',
             if (el.scrollWidth > el.clientWidth + 2 && cs.overflowX !== 'auto' && cs.overflowX !== 'scroll' && !['svg', 'CANVAS', 'HTML', 'BODY'].includes(el.tagName) && cs.overflow !== 'hidden') out.push('overflowing ' + el.tagName + '.' + String(el.className).slice(0, 30) + ' sw=' + el.scrollWidth + ' cw=' + el.clientWidth);
           }
           for (const el of document.querySelectorAll('button,.btn')) { const r = el.getBoundingClientRect(); if (r.width > 0 && el.scrollWidth > el.clientWidth + 2) out.push('button clipped: ' + el.textContent.trim().slice(0, 30)); }
+          const pn = document.getElementById('panel'); if (pn && pn.clientHeight < 90) out.push('panel too short: ' + pn.clientHeight);
           return [...new Set(out)].slice(0, 6);
         });
         res.forEach(x => issues.push(`${lang} ${vw}x${vh} ${world}/${tab}: ${x}`));

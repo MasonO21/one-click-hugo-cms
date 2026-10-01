@@ -82,6 +82,35 @@ const check = (n, c, x) => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL '
     check('refunded renewal leaves the Patron total alone', r.mid === 4.99 && r.spent === 4.99, r);
     await p.context().close();
   }
+  /* First-run coach: a new player gets it and can skip it; a save that already has progress never sees it */
+  {
+    const q = await open(null, { wait: 500 });
+    const st = () => E(q, () => ({ tut: window.__np.S().tut, shown: !document.getElementById('coach').hidden, text: document.querySelector('#coach .bubble p').textContent }));
+    const a = await st();
+    check('new player sees the coach on the tap button', a.tut === 1 && a.shown && /tap/i.test(a.text), a);
+    await E(q, () => { for (let i = 0; i < 20; i++) window.__np.doTap(150); }); await q.waitForTimeout(300);
+    const h = await st();
+    check('after earning $15 the coach points at the first hire', h.tut === 3 && h.shown, h);
+    await E(q, () => document.querySelector('#coach [data-c=skip]').click()); await q.waitForTimeout(200);
+    const sk = await st();
+    check('Skip tutorial ends it for good', sk.tut === 99 && !sk.shown, sk);
+    await q.context().close();
+    const old = await open(null, { wait: 500, local: JSON.stringify({ v: 3, last: Date.now(), owned: [12, 3], funds: 500, run: 900, life: 900 }) });
+    const o = await E(old, () => ({ tut: window.__np.S().tut, shown: !document.getElementById('coach').hidden }));
+    check('existing save with progress skips the coach', o.tut === 99 && !o.shown, o);
+    await old.context().close();
+  }
+  /* Music: each world's loop renders without errors, loops seamlessly, and Settings can switch it off and on */
+  {
+    const q = await open(null, { wait: 500 });
+    const m = await E(q, async () => { const out = {}; for (const id of ['police', 'fire', 'ems']) { const b = await window.__np.Music.render(id), x = b.getChannelData(0); let pk = 0, bad = 0; for (let i = 0; i < x.length; i++) { const v = Math.abs(x[i]); if (!(v <= 1)) bad++; if (v > pk) pk = v; } out[id] = { secs: +(x.length / b.sampleRate).toFixed(1), pk: +pk.toFixed(2), bad, seam: +Math.abs(x[0] - x[x.length - 1]).toFixed(3) }; } return out; });
+    check('music loops render cleanly for all three worlds', Object.values(m).every(r => r.secs > 30 && r.pk > 0.5 && r.pk <= 0.91 && r.bad === 0 && r.seam < 0.02), m);
+    await E(q, () => { window.__np.S().tut = 99; window.__np.settingsModal(); });
+    const t1 = await E(q, () => { const b = document.querySelector('#modal-root [data-x=music]'); b.click(); return window.__np.S().music; });
+    const t2 = await E(q, () => { document.querySelector('#modal-root [data-x=music]').click(); return window.__np.S().music; });
+    check('Settings has a Music switch that turns music off and on', t1 === false && t2 === true && q.errs.length === 0, { t1, t2, errs: q.errs });
+    await q.context().close();
+  }
   /* The rest runs in the web build (no bridge needed) */
   const p = await open(null, { wait: 500 });
   const close = () => E(p, () => { const m = document.getElementById('modal-root'); m.classList.remove('on'); m.innerHTML = ''; document.getElementById('app').inert = false; });

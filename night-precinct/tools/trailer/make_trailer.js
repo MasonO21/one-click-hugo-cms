@@ -154,12 +154,12 @@ async function render(name) {
   const ctx = await b.newContext({ viewport: { width: V.vw, height: V.vh }, deviceScaleFactor: V.dsf });
   const p = await ctx.newPage();
   await p.clock.install({ time: new Date('2026-10-02T21:47:00') });
-  await p.addInitScript(() => { try { localStorage.setItem('night-precinct-v2', JSON.stringify({ v: 3, sound: false, haptics: false, starter: true, calmSet: true })); } catch (e) { } });
+  await p.addInitScript(() => { try { localStorage.setItem('night-precinct-v2', JSON.stringify({ v: 3, sound: false, music: false, haptics: false, starter: true, calmSet: true, tut: 99 })); } catch (e) { } });
   await p.goto('file://' + build);
   await p.clock.runFor(800);
   await p.evaluate(({ icon, cta }) => {
     const N = window.__np, s = N.S();
-    s.sound = false; s.starter = true; s.perm.auto = 0; s.autoOn = false; s.badges = 1840;
+    s.sound = false; s.music = false; s.tut = 99; s.starter = true; s.perm.auto = 0; s.autoOn = false; s.badges = 1840;
     s.owned = [60, 45, 30, 20, 12, 8, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0]; s.funds = 8.4e9; s.run = 1.6e10; s.life = 2.5e10; s.promos = 4; s.medals = 180;
     N.recalc(); N.checkAch();
     const css = document.createElement('style'); css.textContent = '[data-chip=buyauto],[data-chip=starter]{display:none!important} #toasts{opacity:.95}';

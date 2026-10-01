@@ -52,6 +52,7 @@ release.config.json   the only file you edit to personalise everything
 - Purchases are de-duplicated by transaction ID and finished only after the reward is saved, so a crash mid-purchase cannot lose or duplicate items. Non-consumables and the subscription are re-derived from Apple's records at every launch and on Restore.
 - Crate odds are shown in the app (Settings > Crate odds, the Cases tab, and the confirmation shown before every crate purchase) and on `odds.html`. Gold Badge prices show an approximate real-money value. The store listing starts with "Contains loot boxes" (required in the UK). Crate purchases are hidden if the App Store country or device region is Belgium or Brazil.
 - "Reduce flashing" (Settings) dims siren lights; it is on by default when iOS Reduce Motion is on.
+- New players get a short skippable tutorial. Music (an original loop per world) and sound effects are synthesized on the device, with separate switches in Settings; the game does not start its music over another app's audio. On phones the street scene can be enlarged with the button in its corner.
 - Balance (free-to-play, no purchases, simulated with the real game code): see "Balance" below.
 
 ## Building and testing
@@ -60,7 +61,7 @@ release.config.json   the only file you edit to personalise everything
 python3 tools/build.py --target native          # -> game/www/index.html   (what the app bundles)
 python3 tools/build.py --target preview         # -> release/preview/night_precinct.html (fragment for web preview)
 cd game/tests && npm install && npm test        # full QA suite (needs Chromium via Playwright)
-node tools/make_assets.js all                   # regenerate app icon + screenshots
+node tools/make_assets.js all                   # regenerate app icon + captioned screenshots (shots --raw for plain ones)
 node tools/trailer/make_trailer.js all          # re-render both trailer videos (about 4 min each)
 ```
 

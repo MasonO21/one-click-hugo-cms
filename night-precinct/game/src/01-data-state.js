@@ -368,7 +368,7 @@ function fresh(){
     pass:{xp:0,premium:false,f:{},p:{}},piggy:0,spent:0,packs:{},starter:false,
     daily:{last:'',streak:0,at:0},ach:{},skins:{'police:classic':1},theme:'night',themes:{night:1},
     sound:true,haptics:true,calm:false,calmSet:false,txs:[],txb:{},lang:'auto',
-    pending:null,rallyAt:0,supplyAt:0,amt:1,sessions:0,deals:{},
+    pending:null,rallyAt:0,supplyAt:0,amt:1,sessions:0,deals:{},tut:0,music:true,bigScene:false,
   },freshWorld('police'));
 }
 const MAPS=new Set(['ups','gear','agents','packs','ach','skins','themes','deals','f','p','ws','done','txb']);
@@ -539,7 +539,7 @@ function autoTick(dt){
   if(lvl>=2){ for(let k=0;k<n;k++){ combo.n++; combo.t=performance.now(); addFunds(D.tap*(1+Math.min(combo.n,50)*0.04)); } }
   else if(n>0) addFunds(D.tap*AUTO_MULT*n);
   autoVis+=dt;
-  if(autoVis>=.3){ autoVis=0; Scene.tap(rnd(30,330),D.tap*(lvl>=2?comboMult():AUTO_MULT)*AUTO_RATE*.3,true); }
+  if(autoVis>=.3){ autoVis=0; Scene.tap(Scene.randX(),D.tap*(lvl>=2?comboMult():AUTO_MULT)*AUTO_RATE*.3,true); }
 }
 function addXP(n){
   const before=passLevel();

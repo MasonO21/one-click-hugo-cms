@@ -1,5 +1,6 @@
 import UIKit
 import WebKit
+import AVFoundation
 
 /// Hosts the game: a full-screen WKWebView that loads the bundled www/index.html.
 /// The web view is locked to that one page; everything native goes through NPBridge.
@@ -152,6 +153,8 @@ final class GameViewController: UIViewController, WKNavigationDelegate, WKUIDele
             "build": (info["CFBundleVersion"] as? String) ?? "",
             "reduceMotion": UIAccessibility.isReduceMotionEnabled,
             "languages": Locale.preferredLanguages,
+            // true while another app (music, podcast) is playing: the game then starts without its own music
+            "otherAudio": AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint,
             "platform": "ios"
         ]
         if let save = saveStore.read() {

@@ -12,6 +12,7 @@ const APP={
   native:!!(BOOT&&window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.np),
   region:String((BOOT&&BOOT.region)||'').toUpperCase(),
   storefront:'',
+  otherAudio:!!(BOOT&&BOOT.otherAudio),
   reduceMotion:!!((BOOT&&BOOT.reduceMotion)||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)),
 };
 /* Paid random items: buying crates with Gold Badges, the Crate Trio deal, crates in the Starter Pack and on the paid

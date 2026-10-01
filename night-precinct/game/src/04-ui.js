@@ -342,6 +342,7 @@ function applyWorldUI(){
   Object.keys(built).forEach(k=>delete built[k]);
   lastPatron=patronTier(); showTab(cur); hud(); dots();
   $('.rank use').setAttribute('href',rankIcon());
+  Music.world();
 }
 function pclaimAll(){ let n=0; for(let t=1;t<=PASS_N;t++){ if(claimPass(t,false,true)) n++; if(claimPass(t,true,true)) n++; } if(n){ toast(_('Claimed {n} pass rewards',{n}),'gold'); sfx('coin'); dirty('career'); } else toast(_('Nothing to claim yet')); }
 function claimPass(t,prem,quiet){
@@ -403,12 +404,13 @@ function languageModal(){
 }
 function settingsModal(){
   const tog=(k,label,on)=>`<div class="card row sp"><span>${esc(label)}</span><button class="btn sm ${on?'green':'ghost'}" data-x="${k}">${on?eT('On'):eT('Off')}</button></div>`;
-  modal(`<h3>${eT('Settings')}</h3><div class="list">${tog('sound',_('Sound'),S.sound)}${tog('haptics',_('Haptics'),S.haptics!==false)}${tog('calm',_('Reduce flashing'),!!S.calm)}${availLangs().length>1?`<div class="card row sp"><span>${eT('Language')}</span><button class="btn sm ghost" data-x="language">${esc(S.lang==='auto'?_('Automatic ({language})',{language:langName(LANG)}):langName(LANG))}</button></div>`:''}</div>
+  modal(`<h3>${eT('Settings')}</h3><div class="list">${tog('sound',_('Sound effects'),S.sound)}${tog('music',_('Music'),S.music!==false)}${tog('haptics',_('Haptics'),S.haptics!==false)}${tog('calm',_('Reduce flashing'),!!S.calm)}${availLangs().length>1?`<div class="card row sp"><span>${eT('Language')}</span><button class="btn sm ghost" data-x="language">${esc(S.lang==='auto'?_('Automatic ({language})',{language:langName(LANG)}):langName(LANG))}</button></div>`:''}</div>
    <div class="list"><button class="btn ghost" data-x="restore">${eT('Restore Purchases')}</button><button class="btn ghost" data-x="manage">${eT('Manage Subscription')}</button></div>
    <div class="list"><button class="btn ghost" data-x="privacy">${eT('Privacy Policy')}</button><button class="btn ghost" data-x="terms">${eT('Terms of Use')}</button><button class="btn ghost" data-x="purch">${eT('Purchase Terms')}</button><button class="btn ghost" data-x="odds">${eT('Crate odds')}</button><button class="btn ghost" data-x="support">${eT('Support')}</button><button class="btn ghost" data-x="credits">${eT('Credits')}</button></div>
    <button class="btn red" data-x="erase">${eT('Erase save')}</button>
    <p class="fine">${esc(APP.name)} ${esc(APP.version)} (${esc(APP.build)}). ${eT('Your progress is stored on this device.')}</p>`,
    {sound(){ S.sound=!S.sound; if(S.sound) sfx('buy'); save(); settingsModal(); return false; },
+    music(){ S.music=S.music===false; Music.toggle(); save(); settingsModal(); return false; },
     haptics(){ S.haptics=S.haptics===false; if(S.haptics) Native.haptic('light'); save(); settingsModal(); return false; },
     calm(){ S.calm=!S.calm; applyCalm(); save(); settingsModal(); return false; },
     language(){ languageModal(); return false; },
@@ -457,9 +459,9 @@ document.addEventListener('click',e=>{
 });
 $('#badgeBtn').addEventListener('click',()=>showTab('shop'));
 const arrestBtn=$('#arrestBtn');
-arrestBtn.addEventListener('pointerdown',e=>{ e.preventDefault(); arrestBtn.classList.add('down'); doTap(rnd(70,290)); });
+arrestBtn.addEventListener('pointerdown',e=>{ e.preventDefault(); arrestBtn.classList.add('down'); doTap(Scene.randX()); });
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>arrestBtn.addEventListener(ev,()=>arrestBtn.classList.remove('down')));
-arrestBtn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); if(!e.repeat) doTap(rnd(70,290)); } });
+arrestBtn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); if(!e.repeat) doTap(Scene.randX()); } });
 
 /* ====================== HUD + CHIPS ====================== */
 const chipsEl=$('#chips');
@@ -471,8 +473,17 @@ const CHIPS=[
 function renderChips(){ chipsEl.innerHTML=CHIPS.map(([k,c,l,a])=>`<span class="${c}" data-chip="${k}"${a?` data-act="${a}"`:''} hidden><b>${eT(l)}</b> <span data-t></span></span>`).join(''); }
 renderChips();
 const chip=k=>chipsEl.querySelector(`[data-chip="${k}"]`);
+/* Phones: the street view can be enlarged (setting kept in the save). */
+const zoomBtn=$('#sceneZoom');
+function applySceneSize(){
+  const big=!!S.bigScene; $('#app').classList.toggle('big-scene',big);
+  zoomBtn.setAttribute('aria-pressed',String(big)); zoomBtn.setAttribute('aria-label',big?_('Shrink street view'):_('Enlarge street view'));
+  zoomBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${big?'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5':'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'}"/></svg>`;
+}
+zoomBtn.addEventListener('click',()=>{ S.bigScene=!S.bigScene; applySceneSize(); sfx('tap'); save(); });
 /* Static page text that is not rebuilt by the tabs. */
 function applyLangUI(){
+  applySceneSize();
   $('#comboLbl').textContent=_('Combo');
   $('#badgeBtn').setAttribute('aria-label',_('Get Gold Badges'));
   $('#scene').setAttribute('aria-label',_('Street scene with your team at work'));
@@ -533,6 +544,61 @@ function spawnFugitive(){
   if(D.vip) setTimeout(grab,1600);
 }
 
+/* ====================== FIRST-RUN COACH ======================
+   A short guided start for new players: a pointing hand, a highlight ring and one line of text per step.
+   S.tut: 0 not decided yet, 1..7 the current step, 99 done or skipped. Every step can be skipped. */
+const Coach=(function(){
+  const el=document.createElement('div'); el.id='coach'; el.hidden=true;
+  el.innerHTML=`<div class="ring"></div><svg class="hand" viewBox="0 0 48 48" aria-hidden="true"><path d="M17 4c2 0 3.5 1.6 3.5 3.6V21l1.4-.3c.3-1.7 1.8-2.9 3.5-2.9 1.6 0 3 1.1 3.4 2.6.6-.4 1.4-.7 2.2-.7 1.7 0 3.1 1.2 3.4 2.8.5-.3 1.1-.4 1.7-.4 2 0 3.4 1.6 3.4 3.6v8.8c0 6.9-5.6 12.5-12.5 12.5h-2.6c-4.1 0-7.9-2-10.2-5.4L6.8 31.6c-1-1.6-.6-3.7.9-4.8 1.5-1 3.5-.8 4.7.6l1.1 1.3V7.6C13.5 5.6 15 4 17 4z" fill="#fff" stroke="#0a0c1c" stroke-width="2.4" stroke-linejoin="round"/><path d="M20.5 21v6M27 20.5v6M33 22v5" stroke="#0a0c1c" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg><div class="bubble" role="status" aria-live="polite"><p></p><div class="row sp"><button class="linkbtn" type="button" data-c="skip"></button><button class="btn sm" type="button" data-c="ok"></button></div></div>`;
+  document.body.appendChild(el);
+  const ring=el.querySelector('.ring'),hand=el.querySelector('.hand'),bub=el.querySelector('.bubble'),txt=bub.querySelector('p'),okB=bub.querySelector('[data-c=ok]'),skipB=bub.querySelector('[data-c=skip]');
+  let shownStep=-1,stepAt=0;
+  const tabBtn=t=>navEl.querySelector(`[data-t="${t}"]`);
+  const cheapUp=()=>availUps().find(u=>S.funds>=u.cost);
+  const STEPS={
+    1:{target:()=>arrestBtn,text:()=>_('Tap {button}! Every tap earns cash.',{button:W.L.tapWord}),done:()=>S.funds>=unitCost(0,1)||S.owned[0]>0},
+    2:{target:()=>tabBtn('roster'),text:()=>_('You can afford a {unit}. Open {tab}.',{unit:GENS[0].n,tab:_('Roster')}),done:()=>cur==='roster'},
+    3:{target:()=>panel.querySelector('.gen[data-i="0"] .buy'),text:()=>_('Hire your first {unit}.',{unit:GENS[0].n}),done:()=>S.owned[0]>0,back:()=>cur!=='roster'?2:0},
+    4:{target:()=>$('#ips'),hand:false,ok:true,text:()=>_('Your team earns cash on its own, even while you are away. Keep hiring to earn faster.'),done:()=>now()-stepAt>15000},
+    5:{wait:true,done:()=>!!cheapUp()},
+    6:{target:()=>tabBtn('upgrades'),text:()=>_('You can afford your first upgrade. Open {tab}.',{tab:_('Gear-Up')}),done:()=>cur==='upgrades'},
+    7:{target:()=>{ const u=cheapUp(); return u?panel.querySelector(`.up[data-id="${u.id}"] .btn`):null; },text:()=>_('Gear-Up items are permanent boosts. Buy one.'),done:()=>Object.keys(S.ups).length>0,back:()=>cur!=='upgrades'?6:0},
+  };
+  function go(n){ S.tut=n; stepAt=now(); shownStep=-1; if(n>=99){ el.hidden=true; } save(); }
+  function finish(){ go(99); toast(_('Training complete. The city is yours.'),'gold'); sfx('level'); }
+  okB.addEventListener('click',()=>{ if(S.tut===4){ go(5); update(); } });
+  skipB.addEventListener('click',()=>{ go(99); });
+  /* Decide once whether this save needs the tutorial at all. */
+  function start(){
+    if(S.tut===0) S.tut=(S.owned.some(x=>x>0)||S.promos>0||S.world!=='police'||Object.keys(S.done).length||S.life>1000)?99:1;
+    stepAt=now(); update();
+  }
+  function place(t,st){
+    const r=t.getBoundingClientRect(),vw=innerWidth,vh=innerHeight;
+    ring.style.cssText=`left:${r.left-4}px;top:${r.top-4}px;width:${r.width+8}px;height:${r.height+8}px`;
+    const showHand=st.hand!==false;
+    hand.style.cssText=showHand?`left:${Math.min(vw-52,r.left+r.width*.6-19)}px;top:${r.top+r.height*.55-4}px`:'display:none';
+    const bw=bub.offsetWidth,bh=bub.offsetHeight,sat=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat'))||0;
+    let top=r.top-bh-14; if(top<sat+8) top=r.bottom+(showHand?58:14); if(top+bh>vh-8) top=Math.max(sat+8,r.top-bh-14);
+    bub.style.left=clamp(r.left+r.width/2-bw/2,12,vw-bw-12)+'px'; bub.style.top=top+'px';
+  }
+  function update(){
+    if(S.tut<1||S.tut>=99){ if(!el.hidden) el.hidden=true; return; }
+    if(S.world!=='police'||S.promos>0){ go(99); return; }
+    let st=STEPS[S.tut]; if(!st){ go(99); return; }
+    if(st.back){ const b=st.back(); if(b){ go(b); st=STEPS[b]; } }
+    if(st.done()){ if(S.tut===7){ finish(); return; } go(S.tut+1); Native.haptic('light'); st=STEPS[S.tut]; if(st.done()) return; }
+    const t=!st.wait&&st.target&&st.target(),busy=$('#modal-root').classList.contains('on')||document.hidden;
+    if(!t||busy||!t.getClientRects().length){ if(!el.hidden) el.hidden=true; return; }
+    if(shownStep!==S.tut){
+      shownStep=S.tut; txt.textContent=st.text(); okB.hidden=!st.ok; okB.textContent=_('Got it'); skipB.textContent=_('Skip tutorial');
+      const pr=panel.getBoundingClientRect(),r=t.getBoundingClientRect(); if(panel.contains(t)&&(r.top<pr.top||r.bottom>pr.bottom)) t.scrollIntoView({block:'nearest'});
+    }
+    el.hidden=false; place(t,st);
+  }
+  return {start,update,go};
+})();
+
 /* ====================== LOOP ====================== */
 let bountyT=60,slowAcc=0,achAcc=0,saveAcc=0;
 function tickGame(){
@@ -550,7 +616,7 @@ function tickGame(){
 }
 setInterval(()=>{
   tickGame(); slowAcc+=.1; achAcc+=.1; saveAcc+=.1;
-  hud();
+  hud(); Coach.update();
   if(slowAcc>=.25){ slowAcc=0; if(dirtyTabs[cur]){ dirtyTabs[cur]=false; rebuildKeep(cur); } else REFRESH[cur](); dots(); }
   if(achAcc>=1.5){ achAcc=0; checkAch(); }
   if(saveAcc>=4){ saveAcc=0; save(); }
@@ -568,13 +634,13 @@ window.addEventListener('pagehide',save);
   $('.rank use').setAttribute('href',rankIcon());
   const purchasesReady=bootPurchases();
   showTab('roster');
-  hud();
+  hud(); Coach.start();
   if(S.pending) queueModal(offlineModal);
   if(el>90) settleOffline(el,purchasesReady);
   if(S.sessions>1&&!dailyState().claimed) queueModal(dailyModal);
   /*DEBUG_HOOK_START*/
   window.__np={APP,Pay,PAID_RANDOM,fmt,dailyState,spawnFugitive,openCrateUI,promoteModal,crateBuyAllowed,LANGS,availLangs,setLang,applyLanguage,languageModal,offlineModal,I18N_SEEN,_,
     pseudoLang(){ CAT=new Proxy({},{get:(t,k)=>typeof k==='string'?'\u27e6'+k+'\u27e7':undefined}); localizeData(); localizeShopData(); setWorld(S.world); renderNav(); renderChips(); applyLangUI(); applyWorldUI(); },PRODUCTS,processTx,applyEntitlements,grantSku,purchaseSheet,settingsModal,claimRally,claimSupply,rallyReady,supplyReady,syncEntitlements,restorePurchases,S:()=>S,D,tickGame,recalc,buyGen,buyUp,availUps,doTap,ACT,showTab,GENS:()=>GENS,W:()=>W,WORLDS,promote,canPromote,promoReq,travel,doTravel,applyWorldUI,worldUnlocked,checkAch,addBoost,Scene,
-    offlineFor,openCrate,startOp,claimOp,opLeft,opSlots,claimDaily,claimPass,passLevel,catchFugitive,buyItem,buyAgent,ITEMS,AGENTS:()=>AGENTS,addFunds,dailyState,isTop,OPS,unitCost,MILE_T,save,merge,fresh,worlds:()=>WORLDS};
+    applyLangUI,applySceneSize,Coach,Music,offlineFor,openCrate,startOp,claimOp,opLeft,opSlots,claimDaily,claimPass,passLevel,catchFugitive,buyItem,buyAgent,ITEMS,AGENTS:()=>AGENTS,addFunds,dailyState,isTop,OPS,unitCost,MILE_T,save,merge,fresh,worlds:()=>WORLDS};
   /*DEBUG_HOOK_END*/
 })();
