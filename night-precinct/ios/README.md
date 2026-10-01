@@ -7,8 +7,10 @@ mirror, haptics and Safari links. No SwiftUI, no third-party code, no network ca
 The message protocol is defined in `../docs/NATIVE_BRIDGE.md`. Product catalog, prices and data
 practices are defined in `../docs/FACTS.md`. Neither is repeated here.
 
-**Important: this code was written without a compiler.** Nobody has built it yet. Read the
-"First compile checklist" below before you assume a failure is a bigger problem than it is.
+**Build status:** the app compiles with Xcode 26.6 (Debug for the simulator and Release for iPhone,
+no Swift warnings) on GitHub's cloud Macs; `.github/workflows/night-precinct-ios.yml` re-checks it on every
+push. It has not yet run on a device or in the simulator. If a newer Xcode complains, the "First compile
+checklist" below lists the places most likely to need a tweak.
 
 ## What is in this folder
 
