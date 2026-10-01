@@ -22,6 +22,8 @@ The code, the legal pages and the store text are done. These are the steps only 
 
 ## 2. Identifiers and project (needs a Mac with Xcode)
 
+> **No Mac?** Follow `docs/BUILD_WITHOUT_A_MAC.md` instead of this section and section 4’s Xcode steps: a GitHub-hosted Mac builds the app and uploads it to TestFlight for you. (App Store Connect’s *Safari Web Extension Packager* is for Safari browser add-ons and isn’t used for this game.)
+
 - [ ] `npm ci` (this also applies the StoreKit patch), then **`npm run rename -- com.yourname.tinytides`** if you want a different bundle id (it updates Xcode, Capacitor, the StoreKit test file and the legal config together). Keep it lower-case, reverse-domain, and permanent — it can never change after release.
 - [ ] `npm run ios:sync`, `npm run ios:open`, then in Xcode: **Signing & Capabilities** → select your Team (also put the same 10-character Team ID into `ios/ExportOptions.plist`, replacing `YOURTEAMID`) → keep **Automatic signing** on. Capabilities: *In-App Purchase* and *Declared Age Range* (the entitlement file `ios/App/App/App.entitlements` is already wired in; if Xcode shows a signing error, click **+ Capability → Declared Age Range** once so your App ID gets it). No Push, iCloud or Sign in with Apple are needed.
 - [ ] Build with **Xcode 26.2 or later** (iOS 26.2 SDK). Apple requires it for the age-assurance APIs, and the project weak-links the `DeclaredAgeRange` framework so the app still runs on iOS 15–25. On an iOS 15–18 device, launch the app once to confirm it starts normally.

@@ -20,7 +20,7 @@ node tools/qa/monkey.mjs # random-tap UI monkey test; tools/qa/perf.mjs = CPU-th
 npm run balance          # economy, collector-progression and capsule-economy simulations
 npm run trailer          # renders the 30 s App Store / social trailer into store/trailer/ (needs ffmpeg with libx264)
 ```
-Ship it: **[docs/APP_STORE_RELEASE.md](docs/APP_STORE_RELEASE.md)** · the non-code paperwork: **[legal/APP_STORE_ADMIN_CHECKLIST.md](legal/APP_STORE_ADMIN_CHECKLIST.md)** · listing copy: [store/APP_STORE_LISTING.md](store/APP_STORE_LISTING.md) · design & balance: [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) · what was verified: [docs/QA_REPORT.md](docs/QA_REPORT.md)
+Ship it: **[docs/APP_STORE_RELEASE.md](docs/APP_STORE_RELEASE.md)** · no Mac? **[docs/BUILD_WITHOUT_A_MAC.md](docs/BUILD_WITHOUT_A_MAC.md)** (GitHub builds and uploads to TestFlight) · the non-code paperwork: **[legal/APP_STORE_ADMIN_CHECKLIST.md](legal/APP_STORE_ADMIN_CHECKLIST.md)** · listing copy: [store/APP_STORE_LISTING.md](store/APP_STORE_LISTING.md) · design & balance: [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) · what was verified: [docs/QA_REPORT.md](docs/QA_REPORT.md)
 
 ## Before you can submit (5 minutes of your details)
 Fill in **`legal/site.config.json`** (your legal or LLC name, US state and web address; the support email `maceion@proton.me` and country are already set, and no address or phone is published), then `npm run site`, host the `site/` folder at that address, and `npm run legal:check` must pass. `npm run release` refuses to continue until it does. See [legal/README.md](legal/README.md).

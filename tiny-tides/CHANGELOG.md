@@ -16,6 +16,7 @@
 - All text moved into one generated English file (src/locales/en.json), ready for translation later.
 - Art: crab hats sit between the eye-stalks, jellyfish hats sit on the dome, the nautilus face sits in front of its shell, decorations and sparkles never cover faces, golden figures read as gold for every creature, Holo Prism skin has rainbow water, and several edge-clipping fixes.
 - 30-second vertical and landscape trailer (store/trailer/).
+- Build without a Mac: GitHub Actions workflow builds on a hosted Mac (Xcode 26) and uploads to TestFlight (docs/BUILD_WITHOUT_A_MAC.md); shared Xcode scheme with the StoreKit test file; Xcode Cloud post-clone script.
 
 **Polish & hardening pass:**
 - Rules: release refunds are priced on actual spend; daily gates only move forward (clock rewinds can't re-arm rewards, free capsule or the daily pull cap); DST-safe game days; damaged saves are repaired or refused (backup is used); newest save wins by write counter; pity-guaranteed pulls are always real toys; purchase ledger trimmed by age; honest Sea Glass bonus labels; pool XP curve softened (1.5 → 1.42); daily Sea Glass pull cap 30 → 20.

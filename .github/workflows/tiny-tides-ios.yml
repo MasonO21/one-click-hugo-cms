@@ -1,0 +1,104 @@
+# Builds the Tiny Tides iPhone/iPad app on a GitHub-hosted Mac and uploads it to App Store Connect (TestFlight).
+# No Mac of your own is needed. Run it by hand: GitHub → Actions → "Tiny Tides iOS → TestFlight" → Run workflow.
+# One-time setup (Apple Developer account, App Store Connect API key, repository secrets): tiny-tides/docs/BUILD_WITHOUT_A_MAC.md
+name: Tiny Tides iOS → TestFlight
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload to App Store Connect (TestFlight). Untick to only build and check signing.
+        type: boolean
+        default: true
+      release:
+        description: Release build for App Review (fails while legal/site.config.json still has placeholders)
+        type: boolean
+        default: false
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults: { run: { working-directory: tiny-tides } }
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      HAS_P8: ${{ secrets.ASC_KEY_P8 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the repository secrets are set
+        run: |
+          missing=""
+          for v in ASC_KEY_ID ASC_ISSUER_ID APPLE_TEAM_ID; do [ -n "${!v}" ] || missing="$missing $v"; done
+          [ "$HAS_P8" = "true" ] || missing="$missing ASC_KEY_P8"
+          if [ -n "$missing" ]; then echo "::error::Missing repository secrets:$missing. See tiny-tides/docs/BUILD_WITHOUT_A_MAC.md"; exit 1; fi
+
+      - name: Use the newest Xcode 26 (Apple requires the iOS 26 SDK)
+        run: |
+          XC=$(ls -d /Applications/Xcode_26*.app | grep -iv beta | sort -V | tail -1)
+          [ -n "$XC" ] || { echo "::error::No Xcode 26 on this runner"; ls /Applications; exit 1; }
+          sudo xcode-select -s "$XC/Contents/Developer"
+          xcodebuild -version
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: tiny-tides/package-lock.json }
+      - run: npm ci
+        env: { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }
+      - name: Lint and unit tests
+        run: npm run lint && npm test
+      - name: Legal pages
+        run: |
+          if [ "${{ inputs.release }}" = "true" ]; then npm run legal:check; else npm run legal:check:ci; fi
+          npm run site:check
+
+      - name: Build the game and copy it into the Xcode project
+        run: npm run build && npx cap sync ios && node tools/configure-ios.mjs
+
+      - name: Install the App Store Connect API key
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Archive (automatic signing through the API key)
+        run: |
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/TinyTides.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+
+      - name: Export the .ipa and upload it to App Store Connect
+        run: |
+          DEST=$([ "${{ inputs.upload }}" = "true" ] && echo upload || echo export)
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>$DEST</string>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/TinyTides.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          if [ "$DEST" = upload ]; then
+            echo "### Uploaded build ${{ github.run_number }} to App Store Connect" >> "$GITHUB_STEP_SUMMARY"
+            echo "It appears in App Store Connect → TestFlight after Apple finishes processing (usually 5–30 minutes)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Keep the .ipa (when not uploading)
+        if: ${{ !inputs.upload }}
+        uses: actions/upload-artifact@v4
+        with: { name: tiny-tides-ipa, path: '${{ runner.temp }}/export/*.ipa', if-no-files-found: warn }
+
+      - name: Remove the API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
