@@ -199,11 +199,24 @@ try:
     psets = {s['attributes']['previewType']: s for s in get_all('/v1/appStoreVersionLocalizations/%s/appPreviewSets' % lid)}
     ps = psets.get(ptype)
     have = {p['attributes'].get('fileName'): p for p in get_all('/v1/appPreviewSets/%s/appPreviews' % ps['id'])} if ps else {}
+    failed = []
     for n, p in have.items():
-        note('there: %s (%s, video %s)' % (n, (p['attributes'].get('assetDeliveryState') or {}).get('state'), p['attributes'].get('videoDeliveryState', {}) and p['attributes']['videoDeliveryState'].get('state')))
-    if pfile.name in have:
+        ad, vd = p['attributes'].get('assetDeliveryState') or {}, p['attributes'].get('videoDeliveryState') or {}
+        note('there: %s (%s, video %s)' % (n, ad.get('state'), vd.get('state')))
+        for e in (ad.get('errors') or []) + (vd.get('errors') or []):
+            note('  Apple says: %s %s' % (e.get('code', ''), e.get('description') or e.get('message') or json.dumps(e)))
+        if 'FAILED' in (ad.get('state'), vd.get('state')):
+            failed.append(p)
+    if failed and not UPLOAD:
+        warn('Apple could not process the app preview (reasons above). Upload mode deletes the failed one and uploads %s again.' % pfile.name)
+    elif failed:
+        for p in failed:
+            call('DELETE', '/v1/appPreviews/%s' % p['id'])
+            have.pop(p['attributes'].get('fileName'), None)
+            note('deleted the failed preview %s' % p['attributes'].get('fileName'))
+    if pfile.name in have and not failed:
         note('nothing to upload')
-    elif have and len(have) >= 3:
+    elif have and len(have) >= 3 and not failed:
         warn('%s already has 3 previews (the limit). Delete one in App Store Connect first.' % ptype)
     elif not UPLOAD:
         note('would upload: %s (%.1f MB), poster frame at %s' % (pfile.name, pfile.stat().st_size / 1e6, poster))
