@@ -349,9 +349,23 @@ try:
                 note('group name [%s] "%s" state %s' % (l['attributes'].get('locale'), l['attributes'].get('name'), l['attributes'].get('state')))
             for l in get_all('/v1/subscriptions/%s/subscriptionLocalizations' % sid):
                 note('name [%s] "%s" / "%s" state %s' % (l['attributes'].get('locale'), l['attributes'].get('name'), l['attributes'].get('description'), l['attributes'].get('state')))
-            note('prices: %d countries' % len(get_all('/v1/subscriptions/%s/prices' % sid, {'limit': 200})))
+            priced = {((x.get('relationships', {}).get('territory') or {}).get('data') or {}).get('id')
+                      for x in get_all('/v1/subscriptions/%s/prices' % sid, {'limit': 200, 'include': 'territory'})}
+            note('prices: %d countries' % len(priced))
             av = call('GET', '/v1/subscriptions/%s/subscriptionAvailability' % sid, ok404=True)
             note('availability: %s' % ('set' if av and av.get('data') else 'missing'))
+            if av and av.get('data'):
+                sold = {t['id'] for t in get_all('/v1/subscriptionAvailabilities/%s/availableTerritories' % av['data']['id'], {'limit': 200})}
+                note('sold in %d countries; without a price: %s' % (len(sold), ', '.join(sorted(sold - priced)) or 'none'))
+            app_av = call('GET', '/v1/apps/%s/appAvailabilityV2' % APP, ok404=True)
+            if app_av and app_av.get('data'):
+                app_on = {((x.get('relationships', {}).get('territory') or {}).get('data') or {}).get('id')
+                          for x in get_all('/v2/appAvailabilities/%s/territoryAvailabilities' % app_av['data']['id'], {'limit': 200, 'include': 'territory'})
+                          if x['attributes'].get('available')}
+                note('app sold in %d countries; of those without a subscription price: %s' % (len(app_on), ', '.join(sorted(app_on - priced)) or 'none'))
+            for k in ('name', 'productId', 'reviewNote', 'availableInAllTerritories'):
+                if k in fresh:
+                    note('%s: %s' % (k, json.dumps(fresh.get(k))[:120]))
             sh = call('GET', '/v1/subscriptions/%s/appStoreReviewScreenshot' % sid, ok404=True)
             sa = (sh or {}).get('data') or {}
             note('review screenshot: %s' % (json.dumps((sa.get('attributes') or {}).get('assetDeliveryState')) if sa else 'missing'))
