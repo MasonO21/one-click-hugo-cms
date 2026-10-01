@@ -11,10 +11,10 @@ The text files contain double-brace tokens such as `{{APP_NAME}}`. The limit app
 | `name.txt` | App Name | 30 | 12 | 14 | Must be unique on the App Store. Do not put the word "free" or a price in it. |
 | `subtitle.txt` | Subtitle | 30 | 16 | 30 | The default subtitle is exactly 30 characters, so any edit that adds text will go over. |
 | `promotional_text.txt` | Promotional Text | 170 | 148 | 148 | Can be changed at any time without a new build or review. |
-| `description.txt` | Description | 4000 | 3846 | 3948 | Only about 50 characters of headroom for a longer app name and longer URLs (the app name appears three times, the Odds, Terms and Privacy URLs once each). Contains the subscription disclosure paragraph and starts with the "Contains loot boxes" line (keep that line first). If your real URLs push it over, shorten the feature list, not the disclosures. |
+| `description.txt` | Description | 4000 | 3846 | 3981 (real config) | Only 19 characters of headroom with the real URLs (the app name appears three times, the Odds, Terms and Privacy URLs once each). Contains the subscription disclosure paragraph and starts with the "Contains loot boxes" line (keep that line first). If your real URLs push it over, shorten the feature list, not the disclosures. |
 | `keywords.txt` | Keywords | 100 | 96 | 96 | Comma separated, no spaces after commas. Counts commas. |
 | `release_notes.txt` | What's New in This Version | 4000 | 513 | 547 | |
-| `review_notes.txt` | Notes (App Review Information) | 4000 | 3870 | 3901 | Paste-ready. About 100 characters of headroom for a longer company name, e-mail address and odds URL. It must stay under 4000 after substitution: if you add text here, cut text elsewhere in the file. |
+| `review_notes.txt` | Notes (App Review Information) | 4000 | 3870 | 3897 (real config) | Paste-ready. About 100 characters of headroom for a longer company name, e-mail address and odds URL. It must stay under 4000 after substitution: if you add text here, cut text elsewhere in the file. |
 | `support_url.txt` | Support URL | 255 (script's assumption) | 15 | 47 | A working https URL with real contact information. **Verify in App Store Connect** the maximum URL length. |
 | `marketing_url.txt` | Marketing URL (optional) | 255 (script's assumption) | 15 | 34 | Optional. Leave the field empty if you have no marketing page. |
 | `privacy_url.txt` | Privacy Policy URL | 255 (script's assumption) | 15 | 47 | Required for iOS apps. |

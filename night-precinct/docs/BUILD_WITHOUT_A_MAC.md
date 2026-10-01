@@ -35,7 +35,7 @@ You need a paid Apple Developer Program membership.
    - `BUNDLE_ID`: from step 1.
    - `TEAM_ID`: [developer.apple.com/account](https://developer.apple.com/account) >
      Membership details > Team ID (10 letters and digits).
-   - Fill in the rest (company name, address, e-mails, URLs, governing law, Japan contact)
+   - Fill in the rest (company name, address, e-mails, URLs, governing law)
      before you submit to App Review.
 
 3. **Register the bundle ID.** developer.apple.com > Certificates, Identifiers & Profiles >
@@ -76,6 +76,15 @@ You need a paid Apple Developer Program membership.
 7. **Activate the Paid Apps agreement**: App Store Connect > Business > Agreements > Paid Apps,
    with bank account and tax forms. Until it is Active, no product loads anywhere, TestFlight
    included, and the Store shows "..." instead of prices.
+
+## Legal pages (privacy policy, terms, support)
+
+They are published automatically with GitHub Pages at https://masono21.github.io/one-click-hugo-cms/
+(privacy.html, terms.html, purchases.html, odds.html, support.html, notices.html). The workflow
+**Night Precinct legal pages** fills them in from `release.config.json` and republishes on every
+change to `legal/` or the config; it refuses to publish while a placeholder is left.
+One-time switch: GitHub > Settings > Pages > Build and deployment > Source **Deploy from a branch**,
+branch **gh-pages**, folder **/ (root)**, Save.
 
 ## Upload a build to TestFlight
 

@@ -11,7 +11,7 @@ No script, and no one who prepared this package, can do these for you:
 - [ ] Decide the legal entity, company name, and the address and email you are willing to publish. Fill `release.config.json` (step 4).
 - [ ] Buy a domain or web space and host the legal pages at the URLs you chose (step 6).
 - [ ] Have an attorney review the legal texts (`legal/`, `release/legal/`) and the export, trademark and loot-box points, and the "Counsel" items in `COMPLIANCE_BY_COUNTRY.md`. Nothing here is legal advice.
-- [ ] Decide the open storefront questions in `COMPLIANCE_BY_COUNTRY.md` (South Korea, Taiwan, Indonesia, Japan) and the United States age-assurance item (step 15).
+- [ ] Decide the open storefront questions in `COMPLIANCE_BY_COUNTRY.md` (South Korea, Taiwan, Indonesia; Japan is decided: not listed) and the United States age-assurance item (step 15).
 - [ ] Run a trademark and App Store name search for the app name and the item names (`EXPORT_COMPLIANCE_AND_RIGHTS.md` section 3).
 - [ ] Create the app and every in-app purchase in ASC (steps 7 and 8).
 - [ ] Build, sign and run the app in Xcode on a real device; fix compile errors (step 9). Apple's signing keys and your device are yours.
@@ -94,7 +94,7 @@ Edit each value. Nothing in the file is a real value yet.
 ## Step 6. Host the legal pages
 
 - [ ] Have an attorney review the pages in `release/legal/` (privacy policy, terms of use, purchase terms, crate odds, support, notices).
-- [ ] Upload the whole `release/legal/` folder (`index.html`, `terms.html`, `privacy.html`, `purchases.html`, `odds.html`, `support.html`, `notices.html`, `japan.html` and `legal.css`; the pages link to each other and to the style sheet) so that the live URLs are exactly the values of `WEBSITE_URL`, `SUPPORT_URL`, `PRIVACY_URL`, `TERMS_URL`, `PURCHASE_TERMS_URL`, `ODDS_URL` and `NOTICES_URL`.
+- [ ] Upload the whole `release/legal/` folder (`index.html`, `terms.html`, `privacy.html`, `purchases.html`, `odds.html`, `support.html`, `notices.html` and `legal.css`; the pages link to each other and to the style sheet) so that the live URLs are exactly the values of `WEBSITE_URL`, `SUPPORT_URL`, `PRIVACY_URL`, `TERMS_URL`, `PURCHASE_TERMS_URL`, `ODDS_URL` and `NOTICES_URL`.
 - [ ] Check every URL: opens over https, valid certificate, no login, no redirect loop, readable on a phone. For example `curl -sI <url>` returns `200`.
 - [ ] Check the odds page matches `docs/FACTS.md` section 4 and the in-app "Drop rates" screen (Cases tab); both were checked against `game/src` and agree.
 - [ ] Check the support page has a real way to contact you.
@@ -265,7 +265,7 @@ None of them shows the Store tab, so the in-app purchase review screenshots (`IA
 - [ ] Owner decisions before you tick these storefronts (`COMPLIANCE_BY_COUNTRY.md`):
   - **South Korea** and **Taiwan**: they expect odds disclosures in Korean and Traditional Chinese; the game is English only. Recommended: exclude until local-language odds texts exist, or get counsel's OK.
   - **Indonesia**: a mandatory game rating (IGRS). Register and get one, or exclude.
-  - **Japan**: the English "Notices for Japan" page exists (`legal/japan.html`); get a Japanese version before selling there, and track the unused Japanese Gold Badge balance against the 10 million yen Payment Services Act threshold (31 March and 30 September).
+  - **Japan**: not listed (owner decision, 1 Oct 2026); untick it with the countries above.
   - **United States**: the Texas age-assurance APIs are not implemented (Apple enforces the Texas law for new Texas accounts from 4 June 2026; Alabama and California follow on 1 January 2027, Utah on 6 May 2027, Louisiana on 1 July 2027). Before selling in the US, ship the age-assurance update or get counsel's view.
 - [ ] Confirm the in-app purchase prices (step 8) and that the description's "4.99 USD per week" matches the price you set.
 

@@ -86,7 +86,7 @@ Crates contain randomized rewards. Crates can be earned free (jobs, bounties, da
 - Pity: opening elite or legend crates guarantees at least one Epic-or-better gear item within every 10 opens.
 - Buying crates with Gold Badges: standard 30, elite 120, legend 300 (or 5 for 4.5x that price), always through a confirmation that shows the odds and the approximate real-money value.
 - `PAID_RANDOM=true` in `game/src/00-platform.js`. Setting it to false turns every paid random item into a fixed reward (no crate buying, no Crate Trio, badges instead of crates in the Starter Pack and on the pass).
-- **Distribution:** the app is NOT offered in Belgium or Brazil (paid loot boxes are banned there), nor in mainland China, Vietnam or Russia (see `appstore/COMPLIANCE_BY_COUNTRY.md`). Automatic availability in new storefronts is switched off in App Store Connect.
+- **Distribution:** the app is NOT offered in Belgium or Brazil (paid loot boxes are banned there), nor in mainland China, Vietnam, Russia or Japan (see `appstore/COMPLIANCE_BY_COUNTRY.md`). Automatic availability in new storefronts is switched off in App Store Connect.
 - Safety net: if the App Store country or the device region is Belgium (`BE`) or Brazil (`BR`) the app switches off paid random rewards: no buying crates with Gold Badges, no Crate Trio deal, the Starter Pack crates become 90 Gold Badges, and the Career Pass tiers that give crates give fixed Gold Badges instead (free 15, premium 60, premium tier 30: 400). The region is the App Store storefront country (StoreKit `Storefront.current`, read at launch and whenever the app becomes active) or the device region (read at launch); either one being BE or BR applies the rule. Free crates earned by playing are unchanged.
 
 ## 5. Age suitability and content descriptors (for the questionnaire)
@@ -104,6 +104,6 @@ Crates contain randomized rewards. Crates can be earned free (jobs, bounties, da
 ## 7. Config tokens
 
 These tokens appear as `{{TOKEN}}` in templates and are filled from `release.config.json` by `tools/apply_config.py`:
-`APP_NAME`, `APP_SUBTITLE`, `BUNDLE_ID`, `TEAM_ID`, `COMPANY_NAME`, `COMPANY_ADDRESS`, `COMPANY_REPRESENTATIVE`, `CONTACT_PHONE`, `CONTACT_EMAIL`, `PRIVACY_EMAIL`, `WEBSITE_URL`, `SUPPORT_URL`, `PRIVACY_URL`, `TERMS_URL`, `PURCHASE_TERMS_URL`, `ODDS_URL`, `NOTICES_URL`, `GOVERNING_LAW`, `EFFECTIVE_DATE`, `VERSION`, `BUILD`, `YEAR`.
+`APP_NAME`, `APP_SUBTITLE`, `BUNDLE_ID`, `TEAM_ID`, `COMPANY_NAME`, `COMPANY_ADDRESS`, `CONTACT_EMAIL`, `PRIVACY_EMAIL`, `WEBSITE_URL`, `SUPPORT_URL`, `PRIVACY_URL`, `TERMS_URL`, `PURCHASE_TERMS_URL`, `ODDS_URL`, `NOTICES_URL`, `GOVERNING_LAW`, `EFFECTIVE_DATE`, `VERSION`, `BUILD`, `YEAR`.
 
 The templates must never contain the owner's real personal details. Defaults are obvious placeholders.

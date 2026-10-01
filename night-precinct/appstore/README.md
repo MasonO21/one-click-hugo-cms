@@ -132,7 +132,7 @@ Checklist (`SUBMISSION_CHECKLIST.md`)
 - Content-rights answer.
 - Sandbox tester menu, the sandbox sign-in path on the device, product loading conditions, subscription renewal speed and count, and Ask to Buy testing.
 - Screenshot sizes and which sets are required. The generated sets are iPhone 6.9-inch (1320 x 2868), iPhone 6.5-inch (1284 x 2778) and iPad 13-inch (2064 x 2752); Apple currently accepts a smaller set of sizes, so check which of them ASC asks for.
-- App price Free, and availability: the excluded storefronts (Belgium, Brazil, mainland China, Vietnam, Russia), the open decisions (South Korea, Taiwan, Indonesia, Japan, the United States age-assurance item) and where to turn off automatic availability in new regions.
+- App price Free, and availability: the excluded storefronts (Belgium, Brazil, mainland China, Vietnam, Russia, Japan), the open decisions (South Korea, Taiwan, Indonesia, the United States age-assurance item) and where to turn off automatic availability in new regions.
 - The Default Storefront menu for the StoreKit configuration file (for the Belgian storefront test).
 - Review submission button names, typical review time, phased release (updates only), and consent for subscription price increases.
 - Low-storage handling (the shell reads no disk-space API, so no manifest entry is expected).

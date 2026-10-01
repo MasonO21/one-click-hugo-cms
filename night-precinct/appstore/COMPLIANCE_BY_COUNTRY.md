@@ -29,6 +29,7 @@ In App Store Connect (Pricing and Availability), untick these storefronts and **
 | **Mainland China** | Games with in-app purchases need an NPPA game licence (ISBN) through a local publisher. Apple enforces it. |
 | **Vietnam** | Decree 147/2024: even offline games need a publishing confirmation through a local entity, and Apple requires the licence number in the Vietnamese description. |
 | **Russia** | Apple payments (in-app purchases and renewals) are unavailable there since 1 Apr 2026. |
+| **Japan** | Owner decision, 1 Oct 2026. Selling there would need a public Japanese seller notice (responsible person and phone number), a Japanese version of it, and tracking of the unused Gold Badge balance under the Payment Services Act. The game is not listed in Japan. |
 
 ### Owner decisions still open
 
@@ -36,7 +37,6 @@ In App Store Connect (Pricing and Availability), untick these storefronts and **
 |---|---|
 | **South Korea** | The law expects odds as percentages on the purchase screen and a probability-items notice in ads, and they are expected in Korean (whether Korean is strictly required is unverified). The game is English only. **Exclude until a Korean odds text exists**, or list only with counsel's written OK. |
 | **Taiwan** | The online-game contract rules expect odds and a fixed warning sentence in Traditional Chinese. The game is English only, and whether an offline game is covered is unclear. **Exclude until a Traditional Chinese odds text exists**, or list only with counsel's written OK. |
-| **Japan** | An English "Notices for Japan" page exists (`legal/japan.html`: seller information under the Act on Specified Commercial Transactions, and the Payment Services Act notice for Gold Badges). **Get a Japanese version before selling there.** Gold Badges never expire, so they are a prepaid instrument: if the unused Japanese balance is above **10 million yen on 31 March or 30 September**, the issuer must notify the regulator within 2 months and deposit at least half of that balance. The balance lives only on players' devices, so the owner needs a way to estimate it. |
 | **Indonesia** | The Indonesia Game Rating System (IGRS) rating is mandatory (enforced since Jan 2026) after registering as an electronic-system operator. **Register and get a rating, or exclude.** How Apple enforces it is unverified. |
 | **United States** | Texas (App Store Accountability Act) is being enforced by Apple for new Texas accounts since 4 Jun 2026, and the age-assurance APIs it relies on are **not implemented** in the app. **Before selling in the US**, either ship an update with them or get counsel's view on launching without them (section 2, "United States"). |
 
@@ -155,6 +155,8 @@ In App Store Connect (Pricing and Availability), untick these storefronts and **
 
 ### Japan
 
+**Not listed** (owner decision, 1 Oct 2026). The rules below are kept for reference if that changes.
+
 | Rule | What the game does | Status |
 |---|---|---|
 | Act on Specified Commercial Transactions (tokushoho): seller page and final-confirmation-screen rules (from 1 Jun 2022); likely applies although Apple acts as agent. [Nao Law](https://nao-lawoffice.jp/venture-startup/platform/online-game1.php), [IkiNavi](https://ikinavi.jp/en/consumer/misleading-online-shopping-screens/) | `legal/japan.html`, section 1: seller, person responsible, address, phone, email, price, timing, delivery, cancellation. **English only.** The tokens `COMPANY_REPRESENTATIVE` and `CONTACT_PHONE` must be filled. | Owner action: Japanese version; fill in the owner details. Counsel: whether the developer is the "seller". |
@@ -219,13 +221,13 @@ In App Store Connect (Pricing and Availability), untick these storefronts and **
 
 ### Owner
 
-1. **Availability** (ASC > Pricing and Availability): untick Belgium, Brazil, mainland China, Vietnam and Russia, and turn off automatic availability in new countries and regions.
-2. **Decide** on South Korea and Taiwan (recommended: exclude until local-language odds texts exist), Indonesia (IGRS rating or exclude) and Japan (Japanese version of `legal/japan.html` before selling; see item 7).
+1. **Availability** (ASC > Pricing and Availability): untick Belgium, Brazil, mainland China, Vietnam, Russia and Japan, and turn off automatic availability in new countries and regions.
+2. **Decide** on South Korea and Taiwan (recommended: exclude until local-language odds texts exist), Indonesia (IGRS rating or exclude) (Japan: decided, not listed).
 3. **United States**: before selling there, ship the age-assurance update (Declared Age Range, PermissionKit significant change, StoreKit `ageRatingCode`, a plan for consent withdrawal without a server) or get counsel's written view on launching without it. Give each in-app purchase an age rating if ASC asks. Diary 1 Jan 2027 (California, Alabama), 6 May 2027 (Utah), 1 Jul 2027 (Louisiana).
 4. **Age rating**: answer the loot-box question Yes (`AGE_RATING.md`). Expect 9+ worldwide and 16+ in Australia.
 5. **Listing and marketing**: keep "Contains loot boxes: ..." as the first line of the description; every ad, trailer and App Preview shows "In-game purchases (includes random items)" on screen.
 6. **EU**: declare trader status (DSA); confirm microenterprise status (Accessibility Act).
-7. **Japan** (if listed): Japanese version of the notices page; fill `COMPANY_REPRESENTATIVE` and `CONTACT_PHONE`; estimate the unused Japanese Gold Badge balance on every 31 March and 30 September against the 10 million yen threshold.
+7. **Japan**: not listed (owner decision, 1 Oct 2026). If that changes, the old notices page is in git history (`legal/japan.html`); it needs a Japanese version, a public responsible person and phone number, and twice-yearly tracking of unused Gold Badges.
 8. **Privacy**: a process for support email, including from children (COPPA), and for web-server logs of the legal pages.
 9. **Monitor**: the Spanish minors bill (be ready to add `ES` to `LOOT_BLOCKED_REGIONS` or exclude Spain), the EU Digital Fairness Act proposal (Q4 2026), the UK DMCC subscription rules (spring 2027), New York loot-box bills.
 10. **Decide** whether to add an under-16 gate for paid crates in the US (FTC Genshin precedent); it needs an age signal the app does not have today.
