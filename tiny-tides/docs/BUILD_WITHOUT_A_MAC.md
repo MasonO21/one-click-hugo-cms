@@ -26,6 +26,7 @@ Tiny Tides is an iPhone/iPad app. To get it onto the App Store it has to be buil
 
 ## Make a test build
 
+0. **Merge the game’s branch into your main branch** (once, and again after future changes): GitHub only shows *Run workflow* for workflows on the repository’s default branch. On GitHub: **Pull requests** → **New pull request** → base `main` (or `master`) ← compare `claude/tiny-tides-game` → Create → **Merge**.
 1. On GitHub: **Actions** → **Tiny Tides iOS → TestFlight** → **Run workflow**. For the very first run, **untick “Upload”**: this only builds the app and registers its bundle ID (`com.tinytides.game`) with Apple. It takes about 10–20 minutes. A green tick means it worked.
 2. **Create the app record** (once): App Store Connect → Apps → **+** → New App → iOS, name *Tiny Tides*, language English (U.S.), bundle ID `com.tinytides.game`, SKU `tinytides-ios-001` (more fields in `legal/APP_STORE_ADMIN_CHECKLIST.md` §3).
 3. **Run the workflow again with “Upload” ticked.** When it finishes, App Store Connect needs another 5–30 minutes to process the build.
