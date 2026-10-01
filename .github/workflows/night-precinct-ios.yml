@@ -185,9 +185,13 @@ jobs:
           BUILD=$((100 + ${{ github.run_number }}))
           AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID_CLEAN" -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN")
           cd ios
+          # The archive is built unsigned: signing it here would make Xcode create a *development* profile,
+          # which needs a registered test device. The export below signs it for App Store distribution
+          # (no devices needed), creating the distribution certificate and profile through the API key.
           xcodebuild -project NightPrecinct.xcodeproj -scheme NightPrecinct -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NightPrecinct.xcarchive" \
-            CURRENT_PROJECT_VERSION=$BUILD DEVELOPMENT_TEAM=$TEAM "${AUTH[@]}" archive > "$RUNNER_TEMP/archive.log" 2>&1 \
+            CURRENT_PROJECT_VERSION=$BUILD DEVELOPMENT_TEAM=$TEAM CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            archive > "$RUNNER_TEMP/archive.log" 2>&1 \
             || { grep -E "error:" -A4 "$RUNNER_TEMP/archive.log" | head -100; tail -40 "$RUNNER_TEMP/archive.log"; exit 1; }
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
