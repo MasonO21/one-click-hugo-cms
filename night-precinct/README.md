@@ -16,6 +16,8 @@ release.config.json   the only file you edit to personalise everything
 
 ## Ship it in 10 steps
 
+**No Mac?** Follow `docs/BUILD_WITHOUT_A_MAC.md` instead of steps 5, 6 and 8: GitHub's cloud Macs compile the app on every push and upload it to TestFlight with one button.
+
 1. **Fill in `release.config.json`**: your company name and address, bundle ID, Team ID, contact e-mails, the URLs where you will host the legal pages, governing law.
 2. `python3 tools/apply_config.py --strict` renders the legal pages, store text, Xcode project spec and StoreKit test file. `--strict` fails while any placeholder remains.
 3. **Host `release/legal/*.html`** at the URLs from step 1 (any static host works; GitHub Pages is fine). They must be live before you submit.

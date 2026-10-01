@@ -1,0 +1,170 @@
+# Night Precinct: builds the iPhone app on a GitHub-hosted Mac, so you do not need a Mac of your own.
+#  - Every push that touches night-precinct/ runs the game tests and compiles the iOS app.
+#    No Apple account or secrets are needed for this.
+#  - Actions > "Night Precinct iOS" > Run workflow, with "Upload to TestFlight" ticked, signs the app and
+#    uploads it to App Store Connect. One-time setup: night-precinct/docs/BUILD_WITHOUT_A_MAC.md
+name: Night Precinct iOS
+
+on:
+  push:
+    paths: ['night-precinct/**', '.github/workflows/night-precinct-ios.yml']
+  pull_request:
+    paths: ['night-precinct/**', '.github/workflows/night-precinct-ios.yml']
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: 'Upload to TestFlight (needs the App Store Connect API key secrets, see docs/BUILD_WITHOUT_A_MAC.md)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: night-precinct-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: night-precinct
+
+jobs:
+  game-tests:
+    name: Game tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium
+        working-directory: night-precinct/game/tests
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run the test suite
+        working-directory: night-precinct/game/tests
+        run: node run-all.js --quick
+      - name: Fill in the store text and legal pages from release.config.json
+        run: python3 tools/apply_config.py --no-build
+      - name: Keep them as a download (Actions run page > Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-store-text-and-legal-pages
+          path: |
+            night-precinct/release/appstore
+            night-precinct/release/legal
+
+  ios-build:
+    name: Compile the iOS app
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          xcodebuild -version
+          brew install xcodegen
+      - name: Generate the Xcode project and build the game
+        run: |
+          python3 tools/apply_config.py
+          cd ios && xcodegen generate
+      - name: Compile for the iOS Simulator (Debug)
+        run: |
+          cd ios
+          xcodebuild -project NightPrecinct.xcodeproj -scheme NightPrecinct -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/debug.log" 2>&1 \
+            || { grep -E "error:" -A4 "$RUNNER_TEMP/debug.log" | head -150; tail -40 "$RUNNER_TEMP/debug.log"; exit 1; }
+          echo "Debug build OK. Warnings: $(grep -c 'warning:' "$RUNNER_TEMP/debug.log" || true)"
+          grep -E "warning:" "$RUNNER_TEMP/debug.log" | sort -u | head -40 || true
+      - name: Compile for iPhone (Release, unsigned)
+        run: |
+          cd ios
+          xcodebuild -project NightPrecinct.xcodeproj -scheme NightPrecinct -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/release.log" 2>&1 \
+            || { grep -E "error:" -A4 "$RUNNER_TEMP/release.log" | head -150; tail -40 "$RUNNER_TEMP/release.log"; exit 1; }
+          echo "Release build OK."
+          APP=$(find ~/Library/Developer/Xcode/DerivedData -maxdepth 6 -path '*Release-iphoneos/*.app' | head -1)
+          echo "App bundle: $APP"; ls "$APP"; ls "$APP/www"
+          test -f "$APP/www/index.html" && test -f "$APP/PrivacyInfo.xcprivacy"
+          plutil -p "$APP/Info.plist" | grep -E "CFBundle(Identifier|ShortVersionString|Version)|ITSAppUses"
+      - name: Build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: ${{ runner.temp }}/*.log
+          if-no-files-found: ignore
+
+  testflight:
+    name: Upload to TestFlight
+    if: github.event_name == 'workflow_dispatch' && inputs.upload
+    needs: [game-tests, ios-build]
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the one-time setup
+        run: |
+          missing=""
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do [ -n "${!v}" ] || missing="$missing $v"; done
+          if [ -n "$missing" ]; then echo "::error::Missing repository secrets:$missing. See night-precinct/docs/BUILD_WITHOUT_A_MAC.md, step 5."; exit 1; fi
+          python3 - <<'PY'
+          import json, re, sys
+          c = json.load(open('release.config.json'))
+          bad = [k for k in ('BUNDLE_ID', 'TEAM_ID') if 'yourcompany' in c[k] or re.fullmatch(r'X+', c[k])]
+          if bad:
+              print('::error::Fill in %s in night-precinct/release.config.json first. See docs/BUILD_WITHOUT_A_MAC.md, step 2.' % ', '.join(bad)); sys.exit(1)
+          if not re.fullmatch(r'[A-Z0-9]{10}', c['TEAM_ID']):
+              print('::error::TEAM_ID should be the 10-character Team ID from developer.apple.com > Account > Membership details.'); sys.exit(1)
+          print('Bundle ID', c['BUNDLE_ID'], 'Team', c['TEAM_ID'], 'Version', c['VERSION'])
+          PY
+      - name: Tools
+        run: brew install xcodegen
+      - name: Generate the Xcode project and build the game
+        run: |
+          python3 tools/apply_config.py
+          cd ios && xcodegen generate
+      - name: Archive, sign and upload
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey.p8"; printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          TEAM=$(python3 -c "import json;print(json.load(open('release.config.json'))['TEAM_ID'])")
+          # Every upload needs a higher build number than the last one; the run number always goes up.
+          BUILD=$((100 + ${{ github.run_number }}))
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          cd ios
+          xcodebuild -project NightPrecinct.xcodeproj -scheme NightPrecinct -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NightPrecinct.xcarchive" \
+            CURRENT_PROJECT_VERSION=$BUILD DEVELOPMENT_TEAM=$TEAM "${AUTH[@]}" archive > "$RUNNER_TEMP/archive.log" 2>&1 \
+            || { grep -E "error:" -A4 "$RUNNER_TEMP/archive.log" | head -100; tail -40 "$RUNNER_TEMP/archive.log"; exit 1; }
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NightPrecinct.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" "${AUTH[@]}" > "$RUNNER_TEMP/upload.log" 2>&1 \
+            || { tail -60 "$RUNNER_TEMP/upload.log"; exit 1; }
+          rm -f "$KEY"
+          echo "::notice::Uploaded build $BUILD. It appears in App Store Connect > TestFlight once Apple has processed it (usually 5 to 30 minutes)."
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-logs
+          path: ${{ runner.temp }}/*.log
+          if-no-files-found: ignore
