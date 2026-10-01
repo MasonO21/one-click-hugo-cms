@@ -12,6 +12,7 @@
 - Every Sea Glass spend asks first and shows the approximate real-money value; the App Store description opens with "Contains in-game purchases (includes random items)."
 - Toybox set rewards are off in Japan (complete-gacha rule); paid pulls stay off in Belgium and Brazil.
 - Publisher contact maceion@proton.me, United States; terms use your US state's law; privacy policy adds US state privacy, Do Not Track/GPC and age-check sections.
+- No street address or phone number is published: the website and terms show only the publisher name, country and email, and the App Store uses Apple's standard EULA. Not offered in 37 territories (the EU, plus countries with licensing, payment or disclosure hurdles); see the admin checklist.
 - All text moved into one generated English file (src/locales/en.json), ready for translation later.
 - Art: crab hats sit between the eye-stalks, jellyfish hats sit on the dome, the nautilus face sits in front of its shell, decorations and sparkles never cover faces, golden figures read as gold for every creature, Holo Prism skin has rainbow water, and several edge-clipping fixes.
 - 30-second vertical and landscape trailer (store/trailer/).

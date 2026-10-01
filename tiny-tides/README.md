@@ -23,7 +23,7 @@ npm run trailer          # renders the 30 s App Store / social trailer into stor
 Ship it: **[docs/APP_STORE_RELEASE.md](docs/APP_STORE_RELEASE.md)** · the non-code paperwork: **[legal/APP_STORE_ADMIN_CHECKLIST.md](legal/APP_STORE_ADMIN_CHECKLIST.md)** · listing copy: [store/APP_STORE_LISTING.md](store/APP_STORE_LISTING.md) · design & balance: [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) · what was verified: [docs/QA_REPORT.md](docs/QA_REPORT.md)
 
 ## Before you can submit (5 minutes of your details)
-Fill in **`legal/site.config.json`** (your legal name, address, phone, US state and web address; the support email `maceion@proton.me` and country are already set), then `npm run site`, host the `site/` folder at that address, and `npm run legal:check` must pass. `npm run release` refuses to continue until it does. See [legal/README.md](legal/README.md).
+Fill in **`legal/site.config.json`** (your legal or LLC name, US state and web address; the support email `maceion@proton.me` and country are already set, and no address or phone is published), then `npm run site`, host the `site/` folder at that address, and `npm run legal:check` must pass. `npm run release` refuses to continue until it does. See [legal/README.md](legal/README.md).
 
 ## Layout
 ```
@@ -41,9 +41,9 @@ src/platform.js      Capacitor bridge (storage, haptics, notifications, share, S
 src/audio.js         WebAudio synth: SFX + procedural ocean loop
 ios/                 Xcode project (SPM) — icon, splash, privacy manifest, StoreKit test file, AgeRangePlugin.swift (Apple Declared Age Range)
 patches/             patch-package fix for the StoreKit plugin (never finish a purchase before it is saved)
-legal/               site.config.json + templates + checklists → generates site/ and store/EULA.txt
+legal/               site.config.json + templates + checklists → generates site/ and store/APP_REVIEW_NOTES.md
 site/                GENERATED public pages (privacy, terms, drop rates, parents, support, licenses) — host these
-store/               listing copy (listing/en.json), IAP table, EULA text, review notes, screenshots, trailer/ (30 s video)
+store/               listing copy (listing/en.json), IAP table, review notes, screenshots, trailer/ (30 s video)
 tools/               build, site & legal generators, asset/screenshot tools;  tools/qa/ = e2e, monkey, perf, balance simulations;  tools/trailer/ = trailer renderer
 test/                node:test suites (rules, capsules, economy, hardening, fuzz, legal, text & listing limits)
 ```

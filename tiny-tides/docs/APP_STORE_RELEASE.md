@@ -1,7 +1,7 @@
 # Shipping Tiny Tides to the App Store
 
 Everything that can be prepared without a Mac and an Apple Developer account is **already done and committed** in this folder:
-the Xcode project (`ios/`), app icon + launch screen, privacy manifest, export-compliance flag, StoreKit test file, store screenshots, listing copy, a generated legal website (privacy, terms/EULA, drop rates, parents' guide, support, licenses), the IAP catalogue and an App Review notes file.
+the Xcode project (`ios/`), app icon + launch screen, privacy manifest, export-compliance flag, StoreKit test file, store screenshots, listing copy, a generated legal website (privacy, terms of use, drop rates, parents' guide, support, licenses), the IAP catalogue and an App Review notes file.
 What remains is the part only *you* can do: sign with your Apple account, create the App Store Connect record, and press Submit. This runbook is that part, in order.
 
 > **Honest status:** the game logic (95+ unit tests including fuzzers), the full first-run flow and every screen have been tested in a phone-sized browser with real touch input. It has **not** been run on a physical iPhone or through Apple's sandbox — that needs your Mac/devices. Section 6 is a device checklist; please run it via TestFlight before submitting.
@@ -28,8 +28,8 @@ npm run rename -- com.yourname.tinytides    # updates data.js, capacitor.config.
 
 ## 2. Publish the legal pages and set the links
 All legal documents are generated from **`legal/site.config.json`** (see `legal/README.md`).
-1. Fill in every value in `legal/site.config.json`: your legal name, postal address, phone, US state (governing law) and the address (`baseUrl`) where you will host the site. The support email (`maceion@proton.me`) and country (United States of America) are already set. `bundleId` is already set by step 1.
-2. `npm run site` — writes `site/` (privacy, terms/EULA, drop rates, parents' guide, support, licenses) and `store/EULA.txt` + `store/APP_REVIEW_NOTES.md`.
+1. Fill in every value in `legal/site.config.json`: your legal or LLC name, US state (governing law) and the address (`baseUrl`) where you will host the site. No street address or phone number is published. The support email (`maceion@proton.me`) and country (United States of America) are already set. `bundleId` is already set by step 1.
+2. `npm run site` — writes `site/` (privacy, terms of use, drop rates, parents' guide, support, licenses) and `store/APP_REVIEW_NOTES.md`. Keep Apple's standard EULA in App Store Connect.
 3. Host the `site/` folder at `baseUrl` (GitHub Pages via the manual workflow `.github/workflows/tiny-tides-pages.yml`, Netlify, Cloudflare Pages, your domain…). Open every page on a phone.
 4. `npm run legal:check` must pass. It fails while any placeholder remains, a generated page is stale, or the bundle id differs between the config, Xcode and Capacitor. `npm run release` runs it for you, and `npm run build` bakes the same details into the app (Settings links, Legal & credits).
 
@@ -52,7 +52,7 @@ Product → Scheme → Edit Scheme → **Run → Options → StoreKit Configurat
 1. Apps → **+ New App**: iOS, name, primary language, the bundle id from step 1, SKU (`tinytides-ios-001`).
 2. **App Information**: category Games (Simulation, Casual), Privacy Policy URL, age rating (answers in `store/APP_STORE_LISTING.md`). **The Capsule Machine sells randomized items, so answer the loot-box question Yes and expect a rating above 4+.**
 3. **App Privacy**: *Data Not Collected*.
-4. **Pricing**: Free. **Availability**: all territories **except** these 36, which you untick: China mainland, Vietnam, Indonesia, Russia, Brazil, South Korea, Japan, Saudi Arabia, United Arab Emirates, and all 27 EU countries (Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden). Reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6.
+4. **Pricing**: Free. **Availability**: all territories **except** these 37, which you untick: China mainland, Vietnam, Indonesia, Russia, Belarus, Brazil, South Korea, Japan, Saudi Arabia, United Arab Emirates, and all 27 EU countries (Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden). Reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6.
 5. **Monetization → In-App Purchases**: create the 10 products in `store/iap-products.md` **exactly** (Product ID, type, price, name, description, review screenshot). They must be in *Ready to Submit* state and attached to the version.
 6. **Version 1.0**: paste the text from `store/APP_STORE_LISTING.md`; upload screenshots from `store/screenshots/` (iPhone 6.9″ and iPad 13″ are the required sets); reviewer notes; contact info.
 

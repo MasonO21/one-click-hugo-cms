@@ -4,14 +4,14 @@ Everything the App Store and the law expect a game like this to publish is **gen
 
 | You edit | It produces |
 |---|---|
-| `legal/site.config.json` (your name, email, address, web address, governing law…) | the website in `site/`, the offline “Legal & credits” screen and settings links in the app, `store/EULA.txt` |
+| `legal/site.config.json` (your name, email, US state, web address…) | the website in `site/`, the offline “Legal & credits” screen and settings links in the app, `store/APP_REVIEW_NOTES.md` |
 | `src/data.js` (prices, odds, pity, daily limit) | the drop-rates page, the numbers quoted in the terms / parents’ guide / home page, and the in-game Rates tab (same data) |
 | `package.json` dependencies | the open-source licenses page and the in-app licence list |
 
 ## The 5-minute setup
 
-1. Open `legal/site.config.json` and replace **every** `YOUR …` / `.example` value. `_readme` explains each field. (`phone` is only needed for Apple’s EU trader form; it is never printed on the site.)
-2. `npm run site` — writes the pages into `site/` (privacy, terms/EULA, drop rates, parents’ guide, support, licenses, home).
+1. Open `legal/site.config.json` and replace **every** `YOUR …` / `.example` value. `_readme` explains each field. Only your name (or company name), country and email are published; there is no street address or phone number.
+2. `npm run site` — writes the pages into `site/` (privacy, terms of use, drop rates, parents’ guide, support, licenses, home).
 3. Host the `site/` folder at the `baseUrl` you chose (see “Hosting” below). The URLs must work **before** you submit.
 4. `npm run legal:check` — fails while any placeholder is left, a page is stale, or the bundle id disagrees between the config, Xcode and Capacitor. `npm run release` runs it for you.
 5. `npm run build` bakes the same details (publisher name, page addresses, licence texts) into the app.
@@ -23,7 +23,7 @@ Templates live in `legal/templates/*.body.html` (plain HTML with `{{placeholders
 | Page | Why it exists |
 |---|---|
 | `privacy.html` | Required by App Store Connect (Privacy Policy URL) and by law in most places. States that the app collects nothing. |
-| `terms.html` + `store/EULA.txt` | Your End-User License Agreement. Contains all of Apple’s minimum terms (Apple as third-party beneficiary, warranty, product claims, IP claims, legal compliance…). Paste `store/EULA.txt` into App Store Connect → App Information → License Agreement → *Edit* (or leave Apple’s standard EULA on and just link the terms). |
+| `terms.html` | Your terms of use, read together with Apple’s standard EULA (keep that one in App Store Connect; a custom EULA would have to include your address and phone). Also repeats Apple’s required points (Apple as third-party beneficiary, warranty, product claims, IP claims, legal compliance…). |
 | `rates.html` | Guideline 3.1.1 requires the odds of random paid items to be disclosed *before* purchase. Generated from the live table; a test compares it to what the game really rolls (including every possible weekly spotlight). |
 | `parents.html` | How to block or limit purchases (Screen Time, Ask to Buy), how to switch off Sea Glass pulls. Good practice for a game that young people may play, and helpful in review. |
 | `support.html` | App Store Connect requires a Support URL; answers the questions reviewers and users ask most (restore, refunds, lost saves). |

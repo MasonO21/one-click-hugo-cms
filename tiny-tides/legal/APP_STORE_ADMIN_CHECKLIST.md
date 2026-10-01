@@ -6,8 +6,8 @@ The code, the legal pages and the store text are done. These are the steps only 
 
 ## 0. Before anything else (30 minutes)
 
-- [ ] **Decide who the publisher is** — you as an individual, or a company (an LLC is common; needs a D-U-N-S number, free from Dun & Bradstreet, which can take days). The name you pick appears on the App Store as the seller. ⚖
-- [ ] Fill in **`legal/site.config.json`**: the support email (`maceion@proton.me`) and country (United States of America) are already set. Add your legal name, a postal address, a phone number and your **US state** (the terms use that state’s law and courts). Apple and EU law require a way for customers to reach the publisher; an individual’s home address can be replaced by a PO box or virtual office if you prefer privacy (check that it can receive legal post). `npm run legal:check` lists anything still missing.
+- [ ] **Decide who the publisher is** — you as an individual, or a company (an LLC is common; needs a D-U-N-S number, free from Dun & Bradstreet, which can take days). **The name you pick appears on the App Store as the seller in every country, and no territory choice can hide it.** If you don’t want your personal legal name public, publish as an LLC (its name shows instead). ⚖
+- [ ] Fill in **`legal/site.config.json`**: the support email (`maceion@proton.me`) and country (United States of America) are already set. Add your legal name (or LLC name) and your **US state** (the terms use that state’s law and courts). **No street address or phone number is published anywhere**: the website and terms show only name, country and email, and the App Store uses Apple’s standard license agreement. `npm run legal:check` lists anything still missing. ⚖ Some consumer laws (for example California’s online-seller disclosure) expect a postal address on request; a PO box or virtual mailbox covers that without using your home address.
 - [ ] **Check the name “Tiny Tides”.** Search App Store, Google Play, the USPTO (tmsearch.uspto.gov), EUIPO and WIPO Global Brand Database for conflicts in games (class 9 / 41). If it’s taken you only need to change `appName` in the config, the display name in `ios/App/App/Info.plist`, and the App Store name. ⚖
 - [ ] **Register a domain or choose free hosting**, publish `site/` (see `legal/README.md`), and set `baseUrl`. Open every page on a phone.
 
@@ -32,7 +32,7 @@ The code, the legal pages and the store text are done. These are the steps only 
 ## 3. App Store Connect → My Apps → New App
 
 - [ ] Platform iOS · Name (30 chars max) · Primary language English (U.S.) · Bundle ID (from the list) · SKU (any unique string, e.g. `tinytides-ios-1`).
-- [ ] **App Information**: Category *Games* → primary *Simulation* (secondary *Casual*, optional). Subtitle and keywords: `store/APP_STORE_LISTING.md`. **License Agreement → Edit → Custom** and paste `store/EULA.txt` (or leave Apple’s standard EULA on; the terms page then still applies through the link).
+- [ ] **App Information**: Category *Games* → primary *Simulation* (secondary *Casual*, optional). Subtitle and keywords: `store/APP_STORE_LISTING.md`. **License Agreement: leave Apple’s standard EULA** (don’t add a custom one: a custom EULA must include your address and phone). The terms page adds the game’s own rules and is linked from the app and the listing.
 - [ ] **Pricing and Availability**: Free. Choose countries (see section 6 first!).
 - [ ] **In-App Purchases** (Monetization → In-App Purchases → “+”): create the 10 products exactly as listed in `store/iap-products.md` — product **ID**, type (Consumable / Non-Consumable), price tier, display name, description, and a **review screenshot** of the Shop for each (any screenshot of the item’s card in the Shop, 640×920 or larger). Products must be in “Ready to Submit” and attached to the first version.
 - [ ] **App Privacy**: Privacy Policy URL = `<baseUrl>/privacy.html`; data collection = **Data Not Collected**. (See `legal/DATA_MAP.md`.)
@@ -43,7 +43,7 @@ The code, the legal pages and the store text are done. These are the steps only 
   - Unrestricted web access: **No** (links open in the browser only).
   - **Parental controls: Yes** (a parental gate for Sea Glass pulls and real-money purchases for players under 18, plus the in-game off switch). **Age assurance: Yes** (Apple’s Declared Age Range on iOS 26+, otherwise a neutral date-of-birth screen; only “adult / under 18” is kept on the device).
 - [ ] **Version page**: description, promo text, keywords, support URL `<baseUrl>/support.html`, marketing URL `<baseUrl>/index.html`, copyright `© 2026 <your legal name>`, screenshots from `store/screenshots/` (6.9″ iPhone and 13″ iPad sets are required; the 6.5″ set is optional and can be regenerated with `npm run store-shots`).
-- [ ] **App Review Information**: your name, phone, email; sign-in required = **No**; paste `store/APP_REVIEW_NOTES.md` into Notes.
+- [ ] **App Review Information**: your name, phone, email (seen only by Apple’s reviewers, never published); sign-in required = **No**; paste `store/APP_REVIEW_NOTES.md` into Notes.
 - [ ] **Export compliance**: the build already sets `ITSAppUsesNonExemptEncryption = NO` (the app uses only Apple’s built-in HTTPS/StoreKit, which is exempt), so Connect should not ask. If it does: “Uses encryption? Yes → exempt (only standard OS encryption)”. No French/other annual filings are needed for exempt use. ⚖
 - [ ] **Content rights**: “Does your app contain, show or access third-party content?” → **No** (all art is procedural, sound is synthesized, the font is OFL and bundled).
 - [ ] **Advertising Identifier**: No. **Tracking**: No.
@@ -73,13 +73,14 @@ Researched September 2026. Laws on paid random items (“loot boxes”) and mino
 - Everywhere: odds are shown before any purchase, there is a daily cap and an off switch, and every Sea Glass spend shows the approximate real-money price (EU consumer-protection guidance). Before the first paid pull the app checks age; players under 18 need a parent’s OK for paid pulls and real-money purchases.
 - **Texas (SB 2420, in force since 4 June 2026):** where Apple reports that age assurance is required, the app asks Apple’s Declared Age Range at launch and applies the under-18 protections. Similar laws take effect in **Utah (6 May 2027), Louisiana (1 July 2027), Alabama (1 January 2027) and California (AB 1043, 1 January 2027)**. The same code covers them, but re-check Apple’s guidance before each date. If a future update is a “significant change” under these laws, Apple’s `showSignificantUpdateAcknowledgment` API must be added. ⚖
 
-**Untick these 36 territories** in App Store Connect → your app → **Pricing and Availability** (decided: any country that adds a licence, registration, local representative, local-language notice, extra paperwork or a ban on paid random items is left out, and the whole European Union is left out). You can add a country back later, after sorting out its requirements.
+**Untick these 37 territories** in App Store Connect → your app → **Pricing and Availability** (decided: any country that adds a licence, registration, local representative, local-language notice, extra paperwork or a ban on paid random items is left out; so is any country where in-app purchases don’t work or where Apple must publish your personal details; and the whole European Union is left out). You can add a country back later, after sorting out its requirements.
 
-*Outside the EU (9):*
+*Outside the EU (10):*
 - [ ] **China mainland**: every game needs a government publishing licence (ISBN/“banhao”) through a Chinese publisher.
 - [ ] **Vietnam**: games need a local licence.
 - [ ] **Indonesia**: Electronic System Provider (PSE) registration and an IGRS game rating.
-- [ ] **Russia**: App Store payments there have been halted since April 2026.
+- [ ] **Russia**: App Store payments there stopped on 1 April 2026, so in-app purchases can’t be bought.
+- [ ] **Belarus**: precaution. Sanctions are cutting Belarusian bank cards off from Apple’s payments, and App Store purchases there may stop the way they did in Russia.
 - [ ] **Brazil**: paid loot boxes are banned in games minors can use (ECA Digital, March 2026), and a Brazilian legal representative is required.
 - [ ] **South Korea**: the probability-item notice must appear in Korean on the listing, in the game and in ads, and a Korean game rating is needed.
 - [ ] **Japan**: Apple requires a seller-information page (特定商取引法) for apps with in-app purchases; complete-gacha and prepaid-balance rules also apply.
@@ -88,6 +89,8 @@ Researched September 2026. Laws on paid random items (“loot boxes”) and mino
 
 *The whole European Union (27):* Austria, **Belgium** (it also treats paid loot boxes as illegal gambling), Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden.
 - [ ] All 27 unticked. This avoids the Digital Services Act trader listing (your name, address, phone and email shown publicly), EU consumer-law and loot-box rules, and pending EU laws (Poland’s draft gambling-licence rule, the Digital Fairness Act). Norway, Iceland and Liechtenstein aren’t in the EU and stay ticked; untick them too if you want all of Europe’s single market out.
+
+**Where Apple publishes a developer’s personal details** (checked against App Store Connect’s compliance pages, October 2026): the **EU** (Digital Services Act: name, address, phone, email), **China mainland** (company registration details) and **South Korea** (only for developers based in Korea). All are unticked above. Everywhere else the App Store shows only the seller name (see section 0 for keeping your personal name off it). The tax-reporting forms Apple collects (DAC7, Canada’s ITA, MRDP, SERR) are sent to tax authorities, not published.
 
 Keep everything else ticked. The in-app switches (no paid pulls in Belgium and Brazil, no set rewards in Japan) stay in the code as a backup, for example for a player whose Apple ID later moves to one of these countries.
 

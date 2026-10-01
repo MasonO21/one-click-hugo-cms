@@ -1,10 +1,8 @@
 {
-  "_readme": "Fill in every value that still says YOUR, then run `npm run site`. `npm run legal:check` (also run by `npm run release`) lists anything left. The email and country are already set. Publisher name, address and phone appear in the Terms of Use because Apple requires a developer's name, address, phone and email in any custom license agreement, and the EU shows the same details on your App Store page if you sell there as a trader.",
+  "_readme": "Fill in every value that still says YOUR, then run `npm run site`. `npm run legal:check` (also run by `npm run release`) lists anything left. The email and country are already set. Only your name (or company name), country and email are published; no street address or phone number. The App Store uses Apple's standard license agreement (EULA), so none is needed. Tip: publish as a company (LLC) if you don't want your personal legal name shown as the seller.",
   "appName": "Tiny Tides",
   "developerName": "YOUR LEGAL NAME OR COMPANY NAME",
   "email": "maceion@proton.me",
-  "address": "YOUR MAILING ADDRESS (street or PO box, city, state, ZIP)",
-  "phone": "YOUR PHONE NUMBER (a Google Voice or business number is fine)",
   "country": "United States of America",
   "state": "YOUR STATE (for example California)",
   "baseUrl": "https://YOUR-HOST.example/tiny-tides",

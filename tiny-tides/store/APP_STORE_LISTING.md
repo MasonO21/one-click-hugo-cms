@@ -15,7 +15,7 @@
 | **SKU** | `tinytides-ios-001` |
 | **Primary language** | English (U.S.) |
 | **Price** | Free (with in-app purchases) |
-| **Availability** | All territories **except** China mainland, Vietnam, Indonesia, Russia, Brazil, South Korea, Japan, Saudi Arabia, United Arab Emirates and all 27 EU countries (untick these; list and reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6) |
+| **Availability** | All territories **except** China mainland, Vietnam, Indonesia, Russia, Belarus, Brazil, South Korea, Japan, Saudi Arabia, United Arab Emirates and all 27 EU countries (untick these 37; list and reasons in `legal/APP_STORE_ADMIN_CHECKLIST.md` §6) |
 | **Content rights** | You own all content: art is procedurally drawn in code, audio is synthesized in code, UI font is Fredoka (SIL OFL 1.1) |
 
 ## Version 1.0 text
@@ -121,7 +121,7 @@ Tracking: **No**. The bundled `PrivacyInfo.xcprivacy` declares no tracking and n
 
 ## App Review Information
 - **Sign-in required:** No.
-- **Contact:** your name, phone, email.
+- **Contact:** your name, phone, email (only Apple's reviewers see these; they are not published).
 - **Notes for the reviewer** (paste):
 ```
 Tiny Tides is a single-player idle game; no account or network is needed. A short guided tutorial runs on first launch (about 2 minutes).

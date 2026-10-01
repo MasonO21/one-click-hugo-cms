@@ -1,4 +1,4 @@
-// Builds the public website (privacy policy, terms/EULA, drop rates, parents' guide, support, licenses) from
+// Builds the public website (privacy policy, terms of use, drop rates, parents' guide, support, licenses) from
 // legal/site.config.json + legal/templates/*.html + the game's own data. Output: site/ (host it anywhere static).
 //
 //   node tools/site.mjs           write site/
@@ -102,7 +102,7 @@ function render(tpl, v, file) {
 export const PAGES = [
   { file: 'index', title: 'A cozy idle tidepool', description: 'Arrange rocks and water, welcome tiny creatures and watch them evolve. Check in a few times a day.' },
   { file: 'privacy', title: 'Privacy Policy', description: 'Tiny Tides collects no personal information: no accounts, ads, analytics or tracking.' },
-  { file: 'terms', title: 'Terms of Use', description: 'The license agreement (EULA) for Tiny Tides, including virtual items and capsule rules.' },
+  { file: 'terms', title: 'Terms of Use', description: 'The terms of use for Tiny Tides, including virtual items and capsule rules.' },
   { file: 'rates', title: 'Capsule drop rates', description: 'Every prize in the Tiny Tides Capsule Machine with its exact chance, the guarantee and the spending limits.' },
   { file: 'parents', title: 'Parents’ guide', description: 'What is in Tiny Tides and how to control in-app purchases and capsule pulls.' },
   { file: 'support', title: 'Support', description: 'Help with Tiny Tides: restoring purchases, refunds, lost progress and contacting us.' },
@@ -123,25 +123,9 @@ export function buildSite() {
 /** Documents for App Store Connect that live in store/ (paths relative to the project root). */
 export function buildStoreDocs() {
   const v = vars(), docs = new Map();
-  const terms = render(read('legal/templates/terms.body.html'), v, 'terms.body.html');
-  docs.set('store/EULA.txt', htmlToText(terms, config.baseUrl) + '\n');
   docs.set('store/APP_REVIEW_NOTES.md', render(read('legal/templates/app-review-notes.md'), v, 'app-review-notes.md'));
   return docs;
 }
-function htmlToText(html, base) {
-  const ent = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' };
-  return html
-    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, (_, href, t) => `${t.replace(/<[^>]+>/g, '')} (${/^https?:|^mailto:/.test(href) ? href.replace(/^mailto:/, '') : `${base}/${href}`})`)
-    .replace(/<h2>([\s\S]*?)<\/h2>/g, (_, t) => `\n\n${t.toUpperCase()}\n`)
-    .replace(/<div class="callout">([\s\S]*?)<\/div>/g, (_, t) => `\n${t}\n`)
-    .replace(/<ol[^>]*>([\s\S]*?)<\/ol>/g, (_, inner) => { let i = 0; return inner.replace(/<li>/g, () => `\n(${String.fromCharCode(97 + i++)}) `); })
-    .replace(/<li>/g, '\n- ')
-    .replace(/<\/(p|ul|ol)>/g, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (m) => ent[m])
-    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-}
-
 // ------------------------------------------------------------------ run
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const files = buildSite(), docs = buildStoreDocs();

@@ -76,7 +76,7 @@ test('spending limits and guarantees are stated consistently in the terms, paren
 
 test('the terms carry every clause Apple requires in a custom EULA (Schedule 2 / Standard EULA minimums)', () => {
   const t = text(page('terms'));
-  for (const needle of ['acknowledge', 'Scope of license', 'Maintenance and support', 'Warranty', 'Product claims', 'Intellectual property rights', 'Legal compliance', 'Developer name and address', 'Third-party terms', 'Third-party beneficiary']) {
+  for (const needle of ['acknowledge', 'Scope of license', 'Maintenance and support', 'Warranty', 'Product claims', 'Intellectual property rights', 'Legal compliance', 'Developer name and contact', 'Third-party terms', 'Third-party beneficiary']) {
     assert.ok(t.toLowerCase().includes(needle.toLowerCase()), `terms lack "${needle}"`);
   }
 });
