@@ -138,8 +138,9 @@ jobs:
         shell: python3 {0}
         run: |
           import base64, os, re, sys
+          problems = []
           def fail(msg):
-              print('::error::' + msg); sys.exit(1)
+              problems.append(msg)
           raw = os.environ['ASC_KEY_P8']
           kid = re.sub(r'\s+', '', os.environ['ASC_KEY_ID']).strip('"\'').upper()
           iss = re.sub(r'\s+', '', os.environ['ASC_ISSUER_ID']).strip('"\'')
@@ -161,6 +162,12 @@ jobs:
               fail('ASC_KEY_ID should be the 10-character Key ID shown next to your key in App Store Connect (letters and digits only).')
           if not re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', iss):
               fail('ASC_ISSUER_ID should be the Issuer ID shown above the key list in App Store Connect (it looks like 57246542-96fe-1a63-e053-0824d011072a).')
+          if len(raw.strip()) == 10:
+              fail('ASC_KEY_P8 holds only 10 characters, which looks like the Key ID. It needs the whole contents of the .p8 key file.')
+          if problems:
+              for m in problems:
+                  print('::error::' + m)
+              sys.exit(1)
           b64 = base64.b64encode(der).decode()
           pem = '-----BEGIN PRIVATE KEY-----\n' + '\n'.join(b64[i:i + 64] for i in range(0, len(b64), 64)) + '\n-----END PRIVATE KEY-----\n'
           path = os.path.join(os.environ['RUNNER_TEMP'], 'AuthKey_%s.p8' % kid)
