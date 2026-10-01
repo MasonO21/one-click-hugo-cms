@@ -15,7 +15,7 @@ const ffmpeg = () => { try { return execFileSync('python3', ['-c', 'import image
 
 const VERSIONS = {
   ad: { vw: 432, vh: 768, dsf: 2.5, file: 'night-precinct-trailer-1080x1920.mp4', cta: true },
-  preview: { vw: 443, vh: 960, dsf: 2, file: 'app-preview-886x1920.mp4', cta: false },
+  preview: { vw: 443, vh: 960, dsf: 2, file: 'app-preview-886x1920.mp4', cta: false, maxSec: 29.5 },   // Apple: 15 to 30 s; exactly 30 failed processing
 };
 
 /* Everything below runs inside the page. t is seconds since the trailer started. */
@@ -195,7 +195,9 @@ async function render(name) {
   const out = path.join(OUT, V.file);
   execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%04d.jpg'), '-i', wav,
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level:v', '4.0', '-r', String(FPS),
-    '-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-ac', '2', '-shortest', '-movflags', '+faststart', out], { stdio: 'inherit' });
+    '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
+    ...(V.maxSec ? ['-t', String(V.maxSec), '-af', `afade=t=out:st=${V.maxSec - 1}:d=1`] : []),
+    '-c:a', 'aac', '-b:a', V.maxSec ? '192k' : '256k', '-ar', '48000', '-ac', '2', '-shortest', '-movflags', '+faststart', out], { stdio: 'inherit' });
   console.log('wrote', out);
 }
 
