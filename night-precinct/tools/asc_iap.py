@@ -336,8 +336,23 @@ try:
                 note('review screenshot uploaded')
             else:
                 note('missing: review screenshot')
-        if s.get('attributes', {}).get('state'):
-            note('state: %s' % s['attributes']['state'])
+        st = s.get('attributes', {}).get('state')
+        if st:
+            note('state: %s' % st)
+        if st and st != 'READY_TO_SUBMIT':
+            # Show each piece Apple looks at, so a "Missing Metadata" can be traced.
+            fresh = call('GET', '/v1/subscriptions/%s' % sid)['data']['attributes']
+            note('details: period %s, level %s, family sharing %s' % (fresh.get('subscriptionPeriod'), fresh.get('groupLevel'), fresh.get('familySharable')))
+            for l in get_all('/v1/subscriptionGroups/%s/subscriptionGroupLocalizations' % group['id']):
+                note('group name [%s] "%s" state %s' % (l['attributes'].get('locale'), l['attributes'].get('name'), l['attributes'].get('state')))
+            for l in get_all('/v1/subscriptions/%s/subscriptionLocalizations' % sid):
+                note('name [%s] "%s" / "%s" state %s' % (l['attributes'].get('locale'), l['attributes'].get('name'), l['attributes'].get('description'), l['attributes'].get('state')))
+            note('prices: %d countries' % len(get_all('/v1/subscriptions/%s/prices' % sid, {'limit': 200})))
+            av = call('GET', '/v1/subscriptions/%s/subscriptionAvailability' % sid, ok404=True)
+            note('availability: %s' % ('set' if av and av.get('data') else 'missing'))
+            sh = call('GET', '/v1/subscriptions/%s/appStoreReviewScreenshot' % sid, ok404=True)
+            sa = (sh or {}).get('data') or {}
+            note('review screenshot: %s' % (json.dumps((sa.get('attributes') or {}).get('assetDeliveryState')) if sa else 'missing'))
 except ApiError as e:
     warn('subscription: %s' % e)
 
