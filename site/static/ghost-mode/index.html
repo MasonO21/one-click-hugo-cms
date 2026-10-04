@@ -306,7 +306,7 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .av4{background:var(--surface-3);color:var(--fg)}
 .list-foot{padding:10px 18px 18px;border-top:1px solid var(--line)}
 
-.thread-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center;padding:6px 12px 10px 8px;border-bottom:1px solid var(--line)}
+.thread-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center;padding:6px 12px 10px 8px;border-bottom:1px solid var(--line)}
 .icon-btn{border:0;background:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--trust-ink)}
 .icon-btn:hover{background:var(--surface-2)}
 .icon-btn .ic{width:22px;height:22px}
@@ -363,6 +363,45 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .pv-help p{font-size:13px}
 .nc-form{display:grid;gap:12px}
 .nc-form .muted{font-size:13px}
+
+/* ---------- v2 additions ---------- */
+.sev-ok .alert-icon{background:var(--ok-tint);color:var(--ok)}
+.ok-line{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ok);padding:8px 10px;border-radius:10px;background:var(--ok-tint)}
+.tl{list-style:none;margin:0;padding:2px 0;display:grid;position:relative}
+.tl::before{content:"";position:absolute;left:calc(78px + 10px + 6px);top:14px;bottom:14px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:78px 14px minmax(0,1fr);gap:10px;align-items:center;padding:4px 0;font-size:13.5px}
+.tl time{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;line-height:1.25}
+.tl .dot{width:12px;height:12px;border-radius:50%;background:var(--surface-3);box-shadow:0 0 0 3px var(--surface);position:relative;z-index:1;justify-self:center}
+.tl li.hi .dot{background:var(--urgent)}
+.tl li.hi span{font-weight:600}
+.tl em{font-style:normal;color:var(--soft-ink);font-weight:600;font-size:12px}
+.is-reviewed .tl .dot{box-shadow:0 0 0 3px var(--surface-2)}
+.pause{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2)}
+.pause>.ic{color:var(--soft-ink);width:22px;height:22px}
+.pause>div{flex:1;min-width:0;display:grid;gap:1px}
+.pause b{font-size:14px;font-weight:600}
+.pause span{font-size:12.5px;color:var(--muted)}
+.pause.on{background:var(--soft-tint);border-color:transparent}
+.patterns{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.patterns li{padding:10px 12px;border:1px solid var(--line);border-radius:12px;display:grid;gap:4px;align-content:start}
+.patterns li.kid{background:var(--soft-tint);border-color:transparent}
+.patterns p{font-size:12.5px;color:var(--muted);line-height:1.4}
+.pt-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.pt-head b{font-size:13.5px}
+.dots{display:inline-flex;gap:3px;flex:none}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--surface-3)}
+.dots i.on{background:var(--soft)}
+.blocked-bar{padding:12px 14px 16px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted)}
+.blocked-tag{color:var(--urgent);border-color:color-mix(in srgb,var(--urgent) 40%,var(--line))}
+#blockBtn{padding:4px 10px;font-size:12px}
+#blockBody{display:grid;gap:12px}
+#blockBody p{font-size:13.5px}
+.think p{font-size:13.5px}
+.think-head{display:flex;align-items:center;gap:10px}
+.think-head .g-logo{width:40px;height:40px}
+.draft{justify-self:end;max-width:85%;padding:8px 12px;border-radius:19px 19px 6px 19px;background:var(--bubble-me);color:#fff;font-size:14px!important;overflow-wrap:anywhere}
+.sheet-actions{display:grid;gap:8px}
+.fine{font-size:12px!important;color:var(--muted)}
 
 /* ---------- responsive ---------- */
 @media (max-width:1279px){
@@ -486,6 +525,7 @@ img{max-width:100%}
               <p id="actSub"></p>
             </div>
           </div>
+          <div id="pauseRow"></div>
           <div class="chart-box" id="chartBox"></div>
           <div class="legend" id="chartLegend"></div>
           <div class="act-stats" id="actStats"></div>
@@ -540,6 +580,11 @@ img{max-width:100%}
               <label class="switch"><span><b>Show contact names in alerts</b><small>When off, alerts say "Contact #6" instead of a name.</small></span><input type="checkbox" id="showNames" name="showNames"></label>
               <label class="switch"><span><b>Tell <span class="kid-name">Maya</span> when an alert goes out</b><small>They see which kind of alert was sent. Nothing more.</small></span><input type="checkbox" id="tellKid" name="tellKid"></label>
             </fieldset>
+            <fieldset class="set-group">
+              <legend>What Ghost Mode looks for</legend>
+              <p class="hint">Each warning sign adds weight (dots). Signs from adults you haven't approved count in full. From kids their own age they count for less than half, so "don't tell anyone about the party" won't set anything off. Disguised spellings like "sn4p" and emoji like 📸 count too.</p>
+              <ul class="patterns" id="patternList"></ul>
+            </fieldset>
             <p class="saved" id="savedNote" aria-live="polite"></p>
           </form>
         </div>
@@ -591,6 +636,7 @@ img{max-width:100%}
             <div class="thread-head">
               <button type="button" class="icon-btn" data-action="back" aria-label="Back to chats"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
               <div class="thread-title" id="threadTitle"></div>
+              <button type="button" class="btn sm danger" id="blockBtn" data-action="block">Block</button>
             </div>
             <div class="thread-body" id="threadBody" aria-live="polite"></div>
             <form class="composer" id="composer" autocomplete="off">
@@ -606,6 +652,7 @@ img{max-width:100%}
                 <button class="send" type="submit" aria-label="Send"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7"/></svg></button>
               </div>
             </form>
+            <div class="blocked-bar" id="blockedBar" hidden><span id="blockedText">You blocked this contact.</span><button type="button" class="btn sm" data-action="unblock">Unblock</button></div>
           </div>
 
           <div class="sheet" id="sheetPrivacy" hidden data-action="sheet-scrim">
@@ -613,6 +660,14 @@ img{max-width:100%}
               <div class="sheet-top"><span class="pill ok">Ghost Mode</span><button type="button" class="icon-btn" data-action="close-sheet" aria-label="Close"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
               <div id="privacyBody" style="display:grid;gap:14px"></div>
             </div>
+          </div>
+
+          <div class="sheet" id="sheetThink" hidden>
+            <div class="sheet-panel think" role="dialog" aria-label="Think twice before sharing" id="thinkBody"></div>
+          </div>
+
+          <div class="sheet" id="sheetBlock" hidden data-action="sheet-scrim">
+            <div class="sheet-panel" role="dialog" aria-label="Block contact" id="blockBody"></div>
           </div>
 
           <div class="sheet" id="sheetNew" hidden data-action="sheet-scrim">
@@ -639,7 +694,7 @@ img{max-width:100%}
 <script>
 (function(){
 'use strict';
-const KEY='ghost-mode-kids-v1';
+const KEY='ghost-mode-kids-v2';
 const MIN=60e3, DAY=24*60*MIN, WINDOW=7*DAY;
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -678,47 +733,91 @@ const SENS={
 const RANK={info:0,watch:1,urgent:2};
 const MARKERS=[
   {id:'secrecy_request',label:'Asked to keep secrets',w:3,
+   desc:'Asking to keep the chat secret, hide it or delete it, like "don\'t tell your parents."',
    talk:'"Has anyone online asked you to keep a secret from us? You won\'t be in trouble for telling me."',
-   re:[/\bdon't tell\b/,/\bdo not tell\b/,/\bour (little )?secret\b/,/\bbetween (us|you and me)\b/,/\bdelete (this|these|the|our) (chat|chats|message|messages|convo|conversation)\b/,/\bkeep (this|it) (quiet|private|secret|to yourself)\b/,/\bno one (needs to|has to|should) know\b/]},
+   re:[/\bdon't tell\b/,/\bdo not tell\b/,/\bour (little )?secret\b/,/\bbetween (us|you and me)\b/,/\b(delete|clear|erase) (this|these|the|our|your) (chat|chats|message|messages|convo|conversation|history|texts)\b/,/\bkeep (this|it|us) (quiet|private|secret|to yourself)\b/,/\bno one (needs to|has to|should) know\b/,/\b(can't|cannot|shouldn't) tell (anyone|anybody|your)\b/,/\bdon't (let|show) (your )?(parents|mom|dad|anyone|anybody)\b/,/\bif (anyone|your (mom|dad|parents)) asks?\b/,/\bshh?\b/]},
   {id:'turning_against_family',label:'Turned them against family',w:3,
+   desc:'Saying parents or friends "wouldn\'t understand," or that only this person really gets them.',
    talk:'"Has anyone told you we wouldn\'t understand something? I\'d always rather know."',
-   re:[/\b(parents|mom|dad|family|friends|they) (don't|do not|never|wouldn't|won't) (understand|get) (you|it)\b/,/\bthey (wouldn't|won't|don't) understand\b/,/\bonly i (understand|get) you\b/,/\bi'm the only one who\b/,/\bnobody (else )?(understands|gets) you\b/,/\byou can trust me\b/]},
+   re:[/\b(parents|mom|dad|family|friends|they) (don't|do not|never|wouldn't|won't) (understand|get) (you|it)\b/,/\bthey (wouldn't|won't|don't) understand\b/,/\bonly i (understand|get) you\b/,/\bi'm the only one who\b/,/\bnobody (else )?(understands|gets) you\b/,/\byou can trust me\b/,/\bunderstand you better\b/,/\b(parents|mom|dad) (is|are) (so |too |really )?(strict|controlling|unfair)\b/,/\b(they'd|they would|she'd|he'd) (freak|flip) out\b/]},
   {id:'gift_or_money',label:'Offered gifts or money',w:2,
+   desc:'Offering Robux, V-Bucks, gift cards or money, often as "no big deal."',
    talk:'"Has anyone offered you Robux, gift cards or money? What did they want back?"',
-   re:[/\bgift ?cards?\b/,/\b(robux|vbucks|v bucks|nitro)\b/,/\bi('ll| will| can) (buy|get|send|give) you\b/,/\bsend you (money|\$?\d+)\b/,/\b(venmo|cash ?app|paypal)\b/]},
+   re:[/\bgift ?cards?\b/,/\b(robux|vbucks|v bucks|nitro)\b/,/\bi('ll| will| can| could) (buy|get|send|give) you\b/,/\bsend you (money|\$?\d+)\b/,/\b(venmo|cash ?app|paypal)\b/,/\bfree (money|robux|vbucks|skins)\b/]},
   {id:'move_to_private_app',label:'Pushed to a private app',w:2,
+   desc:'Pushing to switch to Snapchat, Telegram or another app that\'s harder for parents to see.',
    talk:'"Has someone asked you to switch to Snapchat or another app to keep talking?"',
-   re:[/\badd me on\b/,/\b(snap|snapchat|telegram|whatsapp|kik|wickr)\b/,/\b(dm|message|text|hit) me (up )?(on|at)\b/,/\bswitch (apps|to)\b/,/\bwhat's your (number|snap|insta|cell|phone number)\b/]},
+   re:[/\badd me on\b/,/\b(snap|snapchat|sc|telegram|tele|whatsapp|kik|wickr)\b/,/\b(dm|message|text|hit) me (up )?(on|at)\b/,/\bswitch (apps|to)\b/,/\bwhat's your (number|snap|sc|insta|cell|phone number|discord)\b/,/\b(yellow|ghost) app\b/,/\b(somewhere|someplace|an app|a chat) (more )?private\b/,/\btalk (in private|privately)\b/]},
   {id:'personal_info_request',label:'Asked for location or school',w:2,
+   desc:'Asking where they live, what school they go to, or when they\'re home alone.',
    talk:'"Has anyone asked where you live or go to school?"',
-   re:[/\bwhere do you live\b/,/\b(what|which) school\b/,/\bhome alone\b/,/\bare you alone\b/,/\byour (address|location)\b/,/\bsend (me )?your (location|address)\b/]},
+   re:[/\bwhere do you live\b/,/\b(what|which) school\b/,/\bhome alone\b/,/\bare you alone\b/,/\byour (address|location)\b/,/\bsend (me )?your (location|address)\b/,/\bwhat's your (address|last name|street)\b/,/\bwhat (city|town|street|neighborhood)\b/,/\bare your parents (home|around|out)\b/,/\bwhen (are|do|will) your parents (get home|leave|go out|be home)\b/,/\bwhat time do you get (home|out of school)\b/]},
   {id:'photo_request',label:'Asked for photos',w:4,
+   desc:'Asking for pictures or video, or to turn on a camera or video call.',
    talk:'"If anyone asks you for a photo, you can always say no and come to me. No matter what."',
-   re:[/\bsend (me )?(a |some |more )?(pic|pics|picture|pictures|photo|photos|selfie|selfies|vid|video)\b/,/\bwhat are you wearing\b/,/\bshow me (you|yourself|your)\b/,/\b(pic|photo|picture) of you\b/,/\bturn (on )?(your )?(camera|cam)\b/,/\bcam on\b/]},
+   re:[/\bsend (me )?(a |some |more |another )?(pic|pics|picture|pictures|photo|photos|selfie|selfies|vid|video)\b/,/\bwhat are you wearing\b/,/\bshow me (you|yourself|your)\b/,/\b(pic|photo|picture|selfie) of (you|yourself)\b/,/\bturn (on )?(your )?(camera|cam)\b/,/\bcam on\b/,/\b(facetime|video call|video chat)\b/]},
   {id:'meetup_request',label:'Asked to meet in person',w:4,
+   desc:'Asking to meet up, offering a ride, or saying they\'ll be near home or school.',
    talk:'"Has anyone you met online asked to meet up?"',
-   re:[/\bmeet (up|me|in person|irl)\b/,/\b(come|sneak) (over|out)\b/,/\bpick you up\b/,/\bwhere can we meet\b/,/\bi (could|can) (come|drive) (to you|over|get you)\b/,/\bhang out irl\b/]},
+   re:[/\bmeet (up|me|in person|irl)\b/,/\b(come|sneak) (over|out)\b/,/\bpick you up\b/,/\bwhere can we meet\b/,/\bi (could|can) (come|drive) (to you|over|get you)\b/,/\bhang out irl\b/,/\b(i'll|i will|i can|i could) be (near|by|around|outside) your (school|house|place|home)\b/,/\bcome to my (place|house|apartment|car)\b/,/\bget in my car\b/]},
+  {id:'romantic_or_sexual_talk',label:'Romantic or sexual talk',w:4,
+   desc:'Flirting, sexual comments, or calling them "hot" or "sexy."',
+   talk:'"If anyone online says something that makes you uncomfortable, you can stop replying and tell me. You won\'t lose your phone over it."',
+   re:[/\b(sexy|nude|nudes|naked|horny)\b/,/\bturn me on\b/,/\bmake out\b/,/\b(you're|you are|you look) (so |really |very )?(hot|sexy|gorgeous)\b/,/\bkiss (you|me)\b/,/\bwish i (was|were) (there )?with you\b/,/\b(love|miss) you (so much )?(baby|babe)\b/,/\bbaby girl\b/]},
   {id:'maturity_talk',label:'"Mature for your age" talk',w:2,
+   desc:'Telling them they\'re "mature for their age," or asking their age or about dating.',
    talk:'"Has someone older been telling you you\'re mature for your age?"',
-   re:[/\bmature for your age\b/,/\bage (is )?just a number\b/,/\byou're (so|really|very) mature\b/,/\bhow old are you\b/,/\bdo you have a (boyfriend|girlfriend|bf|gf)\b/,/\bolder (guys|girls|people) like you\b/]}
+   re:[/\bmature for your age\b/,/\bage (is )?just a number\b/,/\byou're (so|really|very) mature\b/,/\bhow old are you\b/,/\bdo you have a (boyfriend|girlfriend|bf|gf)\b/,/\bolder (guys|girls|people) like you\b/,/\byou're not like other (kids|girls|guys|boys)\b/]},
+  {id:'shared_personal_info',label:'Shared personal details',w:3,kid:true,
+   desc:'Your child sends a phone number, address, school or "home alone" to an adult they don\'t know. They get a think-twice prompt first.',
+   talk:'"Has anyone asked for your number, address or school? It\'s always okay to say no, even to someone who seems nice."',
+   re:[]}
 ];
 const MARKER=Object.fromEntries(MARKERS.map(m=>[m.id,m]));
-const SHORT={u:'you',ur:'your',r:'are',ya:'you',im:"i'm",dont:"don't",wont:"won't",cant:"can't",wouldnt:"wouldn't",didnt:"didn't",doesnt:"doesn't",isnt:"isn't",wanna:'want to',gonna:'going to',pls:'please',plz:'please',rn:'right now',tmrw:'tomorrow',cuz:'because',bc:'because',ppl:'people',thats:"that's",whats:"what's",youre:"you're",ive:"i've"};
+const SHORT={u:'you',ur:'your',r:'are',ya:'you',im:"i'm",dont:"don't",wont:"won't",cant:"can't",wouldnt:"wouldn't",didnt:"didn't",doesnt:"doesn't",isnt:"isn't",arent:"aren't",wanna:'want to',gonna:'going to',pls:'please',plz:'please',rn:'right now',tmrw:'tomorrow',cuz:'because',bc:'because',ppl:'people',thats:"that's",whats:"what's",youre:"you're",ive:"i've"};
+const EMOJI=[[/[\u{1F4F8}\u{1F4F7}\u{1F933}]/gu,' photo '],[/[\u{1F92B}\u{1F910}]/gu,' shh '],[/[\u{1F4B8}\u{1F4B0}\u{1F4B5}\u{1F911}]/gu,' money '],[/\u{1F381}/gu,' gift '],[/[\u{1F346}\u{1F351}\u{1F4A6}\u{1F975}]/gu,' sexy ']];
+const LEET={'0':'o','1':'i','3':'e','4':'a','5':'s','7':'t','@':'a','$':'s'};
+const SPACED=new Set(['snap','snapchat','sc','kik','tele','telegram','pic','pics','nudes','sexy','naked','robux','secret','meet','cam']);
+/* Undo common disguises before matching: emoji, leetspeak (sn4p), stretched letters (piiic), spaced-out letters (s n a p) and text-speak (ur, rn). */
 function normalize(s){
-  return ' '+String(s).toLowerCase().replace(/[\u2018\u2019`]/g,"'").replace(/[^a-z0-9'$ ]+/g,' ')
-    .split(/\s+/).filter(Boolean).map(w=>SHORT[w]||w).join(' ')+' ';
+  let x=String(s).toLowerCase().replace(/[‘’`]/g,"'");
+  for(const [re,w] of EMOJI)x=x.replace(re,w);
+  const words=x.replace(/[^a-z0-9'$@ ]+/g,' ').split(/\s+/).filter(Boolean)
+    .map(w=>/[a-z]/.test(w)&&/[0-9@$]/.test(w)?w.replace(/[013457@$]/g,ch=>LEET[ch]):w)
+    .map(w=>w.replace(/([a-z])\1{2,}/g,'$1'));
+  const out=[];let run=[];
+  const flush=()=>{
+    for(let i=0;i<run.length;){
+      let j=run.length;
+      while(j>i+1&&!SPACED.has(run.slice(i,j).join('')))j--;
+      if(j>i+1){out.push(run.slice(i,j).join(''));i=j}else{out.push(run[i]);i++}
+    }
+    run=[];
+  };
+  for(const w of words){if(/^[a-z]$/.test(w))run.push(w);else{flush();out.push(w)}}
+  flush();
+  return ' '+out.map(w=>SHORT[w]||w).join(' ')+' ';
 }
+/* What the kid is about to send. Checked on the phone only, to power the think-twice prompt. */
+const SHARE_KINDS=[
+  ['your phone number',(raw,n)=>/\b\d{3}[\s.)-]*\d{3}[\s.-]*\d{4}\b/.test(raw)],
+  ['your address',(raw,n)=>/\b\d{1,5} [a-z]+( [a-z]+)? (st|street|ave|avenue|rd|road|dr|drive|ln|lane|blvd|way|ct|court|pl|place|cir|circle)\b/.test(n)||/\bmy address is\b/.test(n)],
+  ['what school you go to',(raw,n)=>/\b(i go to|my school is|i attend) ([a-z]+ ){1,3}(school|middle|elementary|high|academy|prep)\b/.test(n)],
+  ["that you're home alone",(raw,n)=>/\b(i'm|i am) (home )?alone\b/.test(n)||/\bmy (parents|mom|dad) (aren't|are not|isn't|is not|won't be) (home|here|around)\b/.test(n)||/\bmy (parents|mom|dad) (are|is) (out|away|gone)\b/.test(n)]
+];
+function sharedKinds(text){const n=normalize(text);return SHARE_KINDS.filter(k=>k[1](text,n)).map(k=>k[0])}
 const ADULT_CUES=[['work',/\b(my|at|from) (job|work|office|boss)\b/],['college',/\b(college|university|dorm)\b/],['driving',/\b(my car|my truck|i drive|i can drive)\b/],['own place',/\bmy (apartment|place|wife|husband)\b/]];
 
 /* ---------- state ---------- */
 let S=null, seeding=false, playing=null;
-const T={arrived:null,fresh:null,notif:null,notifTimer:0,sheet:null,helpSent:false,openTalk:new Set(),settingsTimer:0};
+const T={arrived:null,fresh:null,notif:null,notifTimer:0,sheet:null,think:null,helpSent:false,openTalk:new Set(),settingsTimer:0};
 
 const name=()=>(S.parent.settings.kidName||'').trim()||'Your child';
 const poss=n=>/s$/i.test(n)?n+"'":n+"'s";
 const cfg=()=>S.device.config;
 const isTrusted=c=>S.device.trusted.includes(c.name.toLowerCase());
 const factor=c=>isTrusted(c)?.5:c.ageBand==='adult'?1:c.ageBand==='unknown'?.8:.4;
+const riskyForSharing=c=>!!c&&!isTrusted(c)&&(c.ageBand==='adult'||c.ageBand==='unknown');
 const contactRef=c=>cfg().showNames?c.name:`Contact #${c.ref}`;
 const initial=n=>(String(n).match(/[a-z0-9]/i)||['?'])[0].toUpperCase();
 function baselineFor(counts,nk){let s=0;for(let i=1;i<=14;i++)s+=counts[shiftKey(nk,-i)]||0;return s/14}
@@ -739,10 +838,19 @@ function transmit(p,dir,t){
 function parentReceive(p,t){
   const P=S.parent;P.lastSync=t;
   if(p.type==='counts'){P.rollups[p.night]=p.late_night;P.today={day:p.day,total:p.messages_today};return}
+  if(p.type==='event'){
+    if(p.event==='contact_blocked'){
+      P.blocked[p.contact]=t;delete P.unblocked[p.contact];
+      const a={id:'blocked-'+uid(),p:Object.assign({alert:'contact_blocked',severity:'ok'},p),createdAt:t,updatedAt:t,status:'new',seq:P.seq=(P.seq||0)+1};
+      P.alerts.push(a);
+      if(!seeding){T.arrived=a.id;announce(`${name()} blocked a contact`)}
+    }else if(p.event==='contact_unblocked'){delete P.blocked[p.contact];P.unblocked[p.contact]=t}
+    return;
+  }
   if(p.type==='alert'){
     let a=P.alerts.find(x=>x.id===p.alert_id);
-    if(a){a.p=p;a.updatedAt=t;a.status='new';a.checkIn=false}
-    else{a={id:p.alert_id,p,createdAt:t,updatedAt:t,status:'new'};P.alerts.push(a)}
+    if(a){a.p=p;a.updatedAt=t;a.status='new';a.checkIn=false;a.seq=P.seq=(P.seq||0)+1}
+    else{a={id:p.alert_id,p,createdAt:t,updatedAt:t,status:'new',seq:P.seq=(P.seq||0)+1};P.alerts.push(a)}
     if(!seeding){T.arrived=a.id;announce(`New alert: ${alertTitle(p)}`)}
   }
 }
@@ -753,7 +861,7 @@ function deviceReceive(p,t){
   if(p.type==='settings'){
     D.config={kidName:p.child,quietStart:p.quiet_start,quietEnd:p.quiet_end,sensitivity:p.sensitivity,
       alerts:{adult:p.alerts_on.includes('new_adult_contact'),late:p.alerts_on.includes('late_night_spike'),grooming:p.alerts_on.includes('grooming_language_markers')},
-      showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts};
+      showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null};
   }else if(p.type==='trusted_adults'){D.trusted=p.names.map(n=>n.toLowerCase())}
   else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(p.note,'From your parent')}
 }
@@ -761,7 +869,7 @@ function deviceReceive(p,t){
 function settingsPayload(s){
   return {type:'settings',child:(s.kidName||'').trim()||'Your child',quiet_start:s.quietStart,quiet_end:s.quietEnd,sensitivity:s.sensitivity,
     alerts_on:[s.alerts.adult&&'new_adult_contact',s.alerts.late&&'late_night_spike',s.alerts.grooming&&'grooming_language_markers'].filter(Boolean),
-    show_contact_names:s.showNames,tell_child_about_alerts:s.tellKid};
+    show_contact_names:s.showNames,tell_child_about_alerts:s.tellKid,late_alerts_paused_night:s.latePausedNight||null};
 }
 
 const KID_NOTICE={
@@ -778,7 +886,7 @@ function sendAlert(p,t,notify){
 /* Every message on the kid's phone goes through here. Text never leaves this function. */
 function deliver(cid,from,text){
   const D=S.device,t=S.clock,c=D.contacts[cid];
-  if(!c)return;
+  if(!c||c.blocked)return;
   const msg={id:uid(),from,text,at:t};
   (D.threads[cid]=D.threads[cid]||[]).push(msg);
   T.fresh=msg.id;
@@ -791,17 +899,25 @@ function deliver(cid,from,text){
   }
   transmit({type:'counts',night:nk,late_night:D.nightCounts[nk]||0,day,messages_today:D.dayTotals[day]},'up',t);
   if(from==='them')analyzeIncoming(c,text,t);
+  else if(riskyForSharing(c)&&sharedKinds(text).length)markSignal(c,'shared_personal_info',t);
   if(quiet&&c.ageBand==='adult'&&!isTrusted(c))D.nightSpan[nk].adult=true;
   evalAdult(c,t);
-  if(from==='them')evalGrooming(c,t);
+  evalGrooming(c,t);
   if(quiet)evalLate(nk,t);
   commit();
 }
 
+/* Remember when each warning sign first and last showed up for a contact (times only). */
+function markSignal(c,id,t){
+  const sig=S.device.signals[c.id]=S.device.signals[c.id]||{markers:{},first:{},cues:[]};
+  if(!(id in sig.first)||t-sig.markers[id]>WINDOW)sig.first[id]=t;
+  sig.markers[id]=t;
+}
+
 function analyzeIncoming(c,text,t){
   const n=normalize(text);
-  const sig=S.device.signals[c.id]=S.device.signals[c.id]||{markers:{},cues:[]};
-  for(const m of MARKERS)if(m.re.some(r=>r.test(n)))sig.markers[m.id]=t;
+  for(const m of MARKERS)if(m.re.some(r=>r.test(n)))markSignal(c,m.id,t);
+  const sig=S.device.signals[c.id]=S.device.signals[c.id]||{markers:{},first:{},cues:[]};
   let age=null,mm;
   if((mm=n.match(/\bi(?:'m| am) (\d{2})\b/)))age=+mm[1];
   else if((mm=n.match(/\b(\d{2}) ?(?:years old|yrs old|yo)\b/)))age=+mm[1];
@@ -828,13 +944,12 @@ function evalGrooming(c,t){
   const cf=cfg(),D=S.device;
   if(!cf.alerts.grooming)return;
   const sig=D.signals[c.id];if(!sig)return;
-  const ids=Object.keys(sig.markers).filter(id=>t-sig.markers[id]<=WINDOW).sort((a,b)=>MARKER[b].w-MARKER[a].w);
+  const ids=Object.keys(sig.markers).filter(id=>t-sig.markers[id]<=WINDOW);
   if(!ids.length)return;
   const th=SENS[cf.sensitivity]||SENS.balanced;
   const score=ids.reduce((s,id)=>s+MARKER[id].w,0)*factor(c);
   let sev=score>=th.urgent?'urgent':score>=th.watch?'watch':null;
-  const risky=!isTrusted(c)&&(c.ageBand==='adult'||c.ageBand==='unknown');
-  if(risky&&ids.includes('secrecy_request')&&(ids.includes('photo_request')||ids.includes('meetup_request')))sev='urgent';
+  if(riskyForSharing(c)&&ids.includes('secrecy_request')&&ids.some(id=>id==='photo_request'||id==='meetup_request'||id==='romantic_or_sexual_talk'))sev='urgent';
   if(!sev)return;
   const key='grooming-'+c.id,prev=D.alertState[key];
   if(prev&&RANK[prev.severity]>RANK[sev])sev=prev.severity;
@@ -842,7 +957,9 @@ function evalGrooming(c,t){
   if(prev&&!raised&&prev.markers.length===ids.length)return;
   const rev=(prev?prev.rev:0)+1;
   D.alertState[key]={severity:sev,markers:ids,rev};
-  sendAlert({alert_id:key,rev,alert:'grooming_language_markers',severity:sev,contact:contactRef(c),where:c.app,contact_age:c.ageSource,markers:ids,window_days:7},t,raised);
+  const tl=ids.map(id=>[sig.first[id]||sig.markers[id],id]).sort((a,b)=>a[0]-b[0]);
+  sendAlert({alert_id:key,rev,alert:'grooming_language_markers',severity:sev,contact:contactRef(c),where:c.app,contact_age:c.ageSource,
+    timeline:tl.map(([at,id])=>[iso(at),id]),escalation_minutes:Math.round((tl[tl.length-1][0]-tl[0][0])/MIN),window_days:7},t,raised);
   if(sev==='urgent'&&!D.sysNoted[c.id]){
     D.sysNoted[c.id]=true;
     D.threads[c.id].push({id:uid(),from:'sys',at:t,text:'Ghost Mode noticed this chat asking for things like secrets, gifts or photos. People use these to pressure kids. You can stop replying, block them, or talk to someone you trust.'+(cf.tellKid?' Your parent got an alert, not your messages.':'')});
@@ -851,7 +968,7 @@ function evalGrooming(c,t){
 
 function evalLate(nk,t){
   const cf=cfg(),D=S.device;
-  if(!cf.alerts.late)return;
+  if(!cf.alerts.late||cf.latePausedNight===nk)return;
   const count=D.nightCounts[nk]||0,base=baselineFor(D.nightCounts,nk),thr=lateThreshold(base,cf.sensitivity);
   if(count<thr)return;
   const span=D.nightSpan[nk];
@@ -882,9 +999,9 @@ function leakChars(){
 function seed(){
   const b=new Date();b.setHours(16,12,0,0);const T0=b.getTime();
   const at=(daysAgo,h)=>{const d=new Date(b);d.setDate(d.getDate()-daysAgo);const [hh,mm]=h.split(':').map(Number);d.setHours(hh,mm,0,0);return d.getTime()};
-  const settings={kidName:'Maya',quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true};
-  S={v:1,clock:at(15,'19:00'),
-    parent:{settings,alerts:[],rollups:{},today:{day:'',total:0},lastSync:0,
+  const settings={kidName:'Maya',quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true,latePausedNight:null};
+  S={v:2,clock:at(15,'19:00'),
+    parent:{settings,alerts:[],rollups:{},today:{day:'',total:0},lastSync:0,blocked:{},unblocked:{},
       trusted:[{name:'Grandma Rose',relation:'Family',addedAt:at(15,'19:02')},{name:'Coach Daniels',relation:'Coach or teacher',addedAt:at(15,'19:02')}]},
     device:{config:null,contacts:{},threads:{},signals:{},nightCounts:{},nightSpan:{},dayTotals:{},alertState:{},trusted:[],sentLog:[],notes:[],sysNoted:{}},
     wall:[],stats:{sent:0},
@@ -934,14 +1051,14 @@ function ensureContact(c){
   }
 }
 const SCENARIOS=[
-  {id:'stranger',title:'Stranger from a game',kind:'urgent',result:'Urgent alert',
-   blurb:'An adult from Roblox chat pushes for secrets, gifts and a photo.',
+  {id:'stranger',contact:'nova',title:'Stranger from a game',kind:'urgent',result:'Urgent alert',
+   blurb:'An adult from Roblox chat pushes for secrets, gifts and a photo, using disguised spellings.',
    steps:[['nova','them','yo you on tonight? that obby run was insane',3],['nova','me','haha yeah i got lucky',1],
      ['nova','them',"nah you're legit good. honestly you're really mature for your age",2],['nova','me','lol thanks',1],
      ['nova','them','i can send you 800 robux if you want, no big deal',2],['nova','me','wait really??',1],
-     ['nova','them',"ya but roblox chat is laggy. add me on snap, it's easier",2],
+     ['nova','them',"ya but roblox chat is laggy. add me on sn@p, it's easier",2],
      ['nova','them',"and don't tell your parents ok? they wouldn't understand. it's our secret",1],['nova','me','um ok',2],
-     ['nova','them',"cool. send me a pic so i know it's really you",1]]},
+     ['nova','them',"cool. send me a p1c so i know it's really you \u{1F4F8}",1]]},
   {id:'latenight',title:'2 AM group chat',kind:'watch',result:'Late-night alert',at:'00:38',
    blurb:'Friends keep messaging long after bedtime on a school night.',
    steps:[['jess','them','r u awake',0],['jess','me','yeah cant sleep',2],['jess','them','same. did u see the finale',3],['jess','me','YES the ending???',2],
@@ -955,32 +1072,46 @@ const SCENARIOS=[
      ['jess','them',"shhh don't tell anyone about the cake lol",1],['jess','me','my lips are sealed',1],
      ['leo','them','my mom can pick you up at 1:30',6],['leo','me','perfect thank u',1],
      ['leo','them',"don't tell ava, she thinks we're going bowling",2],['leo','me','lol ok',1]]},
-  {id:'older',title:'Older teen on Instagram',kind:'watch',result:'New-adult alert',
-   blurb:'A new contact with no age on their profile mentions they\'re 19.',
+  {id:'older',contact:'drew',title:'Older teen on Instagram',kind:'watch',result:'New-adult alert',
+   blurb:k=>`A new contact says they're 19 and asks about school. ${k} gets a think-twice prompt.`,
    setup(){ensureContact({id:'drew',name:'drew.k_art',app:'Instagram',ageBand:'unknown',ageSource:'unknown'})},
    steps:[['drew','them',"hey saw your drawing post, it's really good",2],['drew','me','omg thank you!!',1],
      ['drew','them',"np. i'm 19 btw, just started college for art",3],['drew','them','what school do you go to?',1],
-     ['drew','me',"um i'd rather not say",2]]}
+     ['drew','try','i go to lincoln middle school',2,"um i'd rather not say"]]}
 ];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function play(id){
   if(playing)return;
   const sc=SCENARIOS.find(s=>s.id===id);if(!sc)return;
+  const main=sc.contact&&S.device.contacts[sc.contact];
+  if(main&&main.blocked)return;
   const token=playing={id,i:0};
   if(sc.at)setClockTo(sc.at);
   if(sc.setup)sc.setup();
-  T.sheet=null;
+  T.sheet=null;T.think=null;
   commit();
   for(let i=0;i<sc.steps.length;i++){
     if(playing!==token)return;
-    const [cid,from,text,gap]=sc.steps[i];
+    const [cid,from,text,gap,alt]=sc.steps[i];
     S.clock+=(gap==null?2:gap)*MIN;
     S.ui.screen='thread';S.ui.thread=cid;
     token.i=i+1;
-    deliver(cid,from,text);
+    if(from==='try'){
+      T.think={cid,text,kinds:sharedKinds(text),auto:true};T.sheet='think';commit();
+      await sleep(reduced?400:2800);
+      if(playing!==token)return;
+      T.think=null;T.sheet=null;S.clock+=MIN;
+      deliver(cid,'me',alt);
+    }else deliver(cid,from,text);
     await sleep(reduced?150:800);
   }
   if(playing===token){playing=null;renderScenarios()}
+}
+function stopScenario(){playing=null;if(T.sheet==='think'){T.sheet=null;T.think=null}commit()}
+function setBlocked(cid,on){
+  const c=S.device.contacts[cid];if(!c||!!c.blocked===on)return;
+  c.blocked=on;
+  transmit({type:'event',event:on?'contact_blocked':'contact_unblocked',contact:contactRef(c),where:c.app,at:iso(S.clock)},'up');
 }
 function setClockTo(h){
   const [hh,mm]=h.split(':').map(Number);const d=new Date(S.clock);d.setHours(hh,mm,0,0);
@@ -1000,7 +1131,8 @@ const ICONS={
   check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.6A9.7 9.7 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3.3 4.1M6.3 7.2A16 16 0 0 0 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
-  play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>'
+  play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
+  ban:'<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'
 };
 const ic=(n,c='ic')=>`<svg class="${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 const ghost=()=>`<svg class="g-logo" viewBox="0 0 64 64" aria-hidden="true">
@@ -1021,43 +1153,65 @@ const ALERTS={
   new_adult_contact:{title:()=>'New adult contact',icon:'userPlus'},
   late_night_spike:{title:()=>'Late-night activity spike',icon:'moon'},
   grooming_language_markers:{title:()=>'Grooming language markers',icon:'shield'},
-  kid_request:{title:k=>`${k} asked to talk`,icon:'heart'}
+  kid_request:{title:k=>`${k} asked to talk`,icon:'heart'},
+  contact_blocked:{title:k=>`${k} blocked a contact`,icon:'ban'}
 };
 const alertTitle=p=>ALERTS[p.alert].title(name());
-const SEV_LABEL={urgent:'Urgent',watch:'Watch',info:'Info'};
+const SEV_LABEL={urgent:'Urgent',watch:'Watch',info:'Info',ok:'Good sign'};
+function fmtSpan(m){
+  if(m<1)return 'under a minute';
+  if(m<60)return `${m} minute${m===1?'':'s'}`;
+  if(m<1440){const h=Math.round(m/60);return `${h} hour${h===1?'':'s'}`}
+  const d=Math.round(m/1440);return `${d} day${d===1?'':'s'}`;
+}
+const joinList=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
 
 function alertCard(a){
-  const p=a.p,k=name(),meta=ALERTS[p.alert],sev=p.severity;
+  const P=S.parent,p=a.p,k=name(),meta=ALERTS[p.alert],sev=p.severity;
   const anon=p.contact&&/^Contact #/.test(p.contact);
   const who=p.contact?`<b>${esc(p.contact)}</b>`:'';
   const btn=(action,label,cls)=>`<button type="button" class="btn ${cls||''}" data-action="${action}" data-id="${esc(a.id)}">${label}</button>`;
-  let line='',chips='',why='',next='',talk=[],acts=[];
+  let line='',extra='',why='',next='',talk=[],acts=[];
+  const blockedAt=p.contact&&P.blocked[p.contact];
+  const blockedLine=blockedAt&&blockedAt>=a.createdAt&&p.alert!=='contact_blocked'?`<p class="ok-line">${ic('check','ic sm')}${esc(k)} blocked this contact · ${when(blockedAt)}</p>`:'';
   if(p.alert==='new_adult_contact'){
     line=`${who} · ${esc(p.where)} · ${esc(p.contact_age)}`;
     why=`Someone 18 or older who isn't on your trusted list is now chatting with ${esc(k)}. If it's a relative, coach or tutor, add them as trusted and Ghost Mode won't flag them again.`;
     talk=[`"Who's ${anon?'your new contact':esc(p.contact)}? How do you know them?"`,'"Have you met them in real life?"'];
-    if(!anon)acts.push(btn('trust','We know them'));
+    if(!anon&&!blockedLine)acts.push(btn('trust','We know them'));
   }else if(p.alert==='late_night_spike'){
     line=`<b>${p.messages} messages</b> between ${fmtTime(isoToT(p.first_message_at))} and ${fmtTime(isoToT(p.last_message_at))} · usually ${p.usual_per_night} a night · ${p.chats} chat${p.chats===1?'':'s'}`;
     why=p.adult_contact_involved?`An adult who isn't on your trusted list was part of tonight's late messaging. Worth a calm check-in.`:`Most of the time this is just friends, but it cuts into sleep. A quick, low-key check-in usually covers it.`;
     talk=['"Rough night? The phone was busy late. Everything okay?"','"Want to try charging phones outside bedrooms on school nights? I\'ll do it too."'];
   }else if(p.alert==='grooming_language_markers'){
+    const tl=p.timeline.map(([at,id])=>({t:isoToT(at),id}));
+    const ids=tl.map(x=>x.id).sort((x,y)=>MARKER[y].w-MARKER[x].w);
+    const n=tl.length,fast=n>=3&&p.escalation_minutes<=60;
     line=`${who} · ${esc(p.where)} · ${esc(p.contact_age)}`;
-    chips=`<ul class="chips" aria-label="Patterns detected">${p.markers.map(id=>`<li class="${MARKER[id].w>=3?'hi':''}">${esc(MARKER[id].label)}</li>`).join('')}</ul>`;
-    why=`${p.markers.length} warning sign${p.markers.length===1?'':'s'} in the last ${p.window_days} days. These match patterns child-safety groups link to grooming. You're seeing which patterns showed up, not what was said.`;
+    extra=`<ol class="tl" aria-label="When each warning sign appeared">${tl.map((x,i)=>{
+      const newDay=i===0||ymd(x.t)!==ymd(tl[i-1].t);
+      return `<li class="${MARKER[x.id].w>=3?'hi':''}"><time>${newDay&&dayDiff(x.t)?esc(dayLabel(x.t))+' ':''}${fmtTime(x.t)}</time><i class="dot"></i><span>${esc(MARKER[x.id].label)}${MARKER[x.id].kid?` <em>by ${esc(k)}</em>`:''}</span></li>`;
+    }).join('')}</ol>`;
+    why=`${n} warning sign${n===1?'':'s'}${n>1?` over ${fmtSpan(p.escalation_minutes)}`:''}. ${fast?'Escalating this fast is a strong warning sign. ':''}These match patterns child-safety groups link to grooming. You're seeing which patterns showed up and when, not what was said.`;
     if(sev==='urgent')next=`<p class="alert-next"><b>Talk with ${esc(k)} today.</b> Stay calm and make it clear they're not in trouble. If someone asked for photos or to meet, you can report it to the NCMEC CyberTipline (US) at <a href="https://report.cybertip.org" target="_blank" rel="noopener">report.cybertip.org</a> or 1-800-843-5678.</p>`;
-    talk=p.markers.slice(0,3).map(id=>MARKER[id].talk);
+    talk=ids.slice(0,3).map(id=>MARKER[id].talk);
     talk.push('"You won\'t be in trouble for anything someone else asked you to do."');
   }else if(p.alert==='kid_request'){
     line=`Sent from the Ghost Mode screen on ${esc(poss(k))} phone`;
     why=`${esc(k)} wants to talk. They chose to reach out, and no messages came with the request.`;
     talk=['"Thanks for coming to me. Want to talk now or after dinner?"'];
+  }else if(p.alert==='contact_blocked'){
+    line=`${who} · ${esc(p.where)}`;
+    why=`${esc(k)} blocked this contact on their own. That's the move you'd hope for, and a quick "proud of you" goes a long way.`;
+    const un=P.unblocked[p.contact];
+    if(un&&un>=a.createdAt)extra=`<p class="resolved">Unblocked later · ${when(un)}</p>`;
+    talk=['"I saw you blocked someone. Good call. Want to tell me what happened? You\'re not in trouble."'];
   }
   if(a.status==='new'){
     if(p.alert==='kid_request')acts.unshift(btn('checkin',a.checkIn?ic('check','ic sm')+'Reply sent':"Reply: let's talk",'primary'));
-    else acts.unshift(btn('checkin',a.checkIn?ic('check','ic sm')+'Check-in sent':'Send check-in'));
+    else if(p.alert!=='contact_blocked')acts.unshift(btn('checkin',a.checkIn?ic('check','ic sm')+'Check-in sent':'Send check-in'));
     acts.push(btn('review','Mark reviewed','primary'));
-  }
+  }else acts.push(btn('reopen','Reopen','sm'));
   const status=a.status==='reviewed'?`<span class="pill plain">${a.note?esc(a.note):'Reviewed'}</span>`:(p.rev>1?'<span class="pill info">Updated</span>':'<span class="pill info">New</span>');
   return `<article class="alert sev-${sev}${a.status==='reviewed'?' is-reviewed':''}${T.arrived===a.id?' arrive':''}">
     <div class="alert-head">
@@ -1068,13 +1222,14 @@ function alertCard(a){
       </div>
       <span class="alert-time">${when(a.updatedAt)}</span>
     </div>
-    ${chips}
+    ${extra}
+    ${blockedLine}
     <p class="alert-why">${why}</p>
     ${next}
     ${talk.length?`<details class="talk" data-id="${esc(a.id)}"${T.openTalk.has(a.id)?' open':''}><summary>How to bring it up</summary><ul>${talk.map(x=>`<li>${x}</li>`).join('')}</ul></details>`:''}
     <div class="alert-foot">
       <span class="no-text">${ic('lock','ic sm')}No message text included</span>
-      ${acts.length?`<div class="actions">${acts.join('')}</div>`:''}
+      <div class="actions">${acts.join('')}</div>
     </div>
   </article>`;
 }
@@ -1104,7 +1259,7 @@ function renderAlerts(){
   const P=S.parent,f=S.ui.filter;
   const cnt={all:P.alerts.length,new:P.alerts.filter(a=>a.status==='new').length,reviewed:P.alerts.filter(a=>a.status==='reviewed').length};
   $('#alertFilter').innerHTML=[['all','All'],['new','New'],['reviewed','Reviewed']].map(([id,l])=>`<button type="button" data-action="filter" data-id="${id}" aria-pressed="${f===id}">${l} ${cnt[id]}</button>`).join('');
-  const list=P.alerts.slice().sort((a,b)=>b.updatedAt-a.updatedAt).filter(a=>f==='all'||a.status===f);
+  const list=P.alerts.slice().sort((a,b)=>(b.updatedAt-a.updatedAt)||((b.seq||0)-(a.seq||0))).filter(a=>f==='all'||a.status===f);
   $('#alertList').innerHTML=list.length?list.map(alertCard).join(''):`<div class="empty">${ghost()}<p>${f==='new'?'Nothing new. Ghost Mode keeps watching for patterns.':'No alerts here yet.'}</p></div>`;
   T.arrived=null;
 }
@@ -1116,6 +1271,10 @@ function renderActivity(){
   const vals=keys.map(x=>P.rollups[x]||0);
   const base=baselineFor(P.rollups,cur),thr=lateThreshold(base,s.sensitivity);
   $('#actSub').textContent=`Counts only, for quiet hours (${fmtHM(s.quietStart)} to ${fmtHM(s.quietEnd)}). Each night is compared with the 14 before it.`;
+  const paused=s.latePausedNight===cur;
+  $('#pauseRow').innerHTML=paused
+    ?`<div class="pause on">${ic('moon')}<div><b>Late-night alerts are paused for tonight.</b><span>They turn back on at ${fmtHM(s.quietEnd)}. Counts still come through, and every other alert stays on.</span></div><button type="button" class="btn sm" data-action="resume-late">Resume</button></div>`
+    :`<div class="pause">${ic('moon')}<div><b>Sleepover or a late night out?</b><span>Pause late-night alerts until ${fmtHM(s.quietEnd)}. Every other alert stays on.</span></div><button type="button" class="btn sm" data-action="pause-late">Pause tonight</button></div>`;
   const box=$('#chartBox');const W=Math.max(300,Math.round(box.clientWidth||600)),H=230;
   const pl=30,pr=78,pt=18,pb=30,iw=W-pl-pr,ih=H-pt-pb;
   let ymax=Math.max(thr+1,4,...vals);ymax=ymax<=10?Math.ceil(ymax/2)*2:Math.ceil(ymax/10)*10;
@@ -1176,8 +1335,21 @@ function onSettings(){
 }
 
 /* ---------- wall rendering ---------- */
+function pretty(p){
+  const keys=Object.keys(p),lines=['{'];
+  keys.forEach((k,i)=>{
+    const v=p[k],c=i<keys.length-1?',':'';
+    if(Array.isArray(v)&&JSON.stringify(v).length>36){
+      lines.push(`  ${JSON.stringify(k)}: [`);
+      v.forEach((x,j)=>lines.push(`    ${JSON.stringify(x).replace(/","/g,'", "')}${j<v.length-1?',':''}`));
+      lines.push(`  ]${c}`);
+    }else lines.push(`  ${JSON.stringify(k)}: ${JSON.stringify(v)}${c}`);
+  });
+  lines.push('}');
+  return lines.join('\n');
+}
 function hl(p){
-  return JSON.stringify(p,null,2).replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?)/g,(m,str,colon,lit,num)=>{
+  return pretty(p).replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?)/g,(m,str,colon,lit,num)=>{
     if(str)return colon?`<span class="k">${esc(str)}</span>:`:`<span class="s">${esc(str)}</span>`;
     if(lit)return `<span class="v">${lit}</span>`;
     return `<span class="n">${num}</span>`;
@@ -1185,7 +1357,7 @@ function hl(p){
 }
 function wallItem(w){
   const p=w.p,up=w.dir==='up',k=name();
-  const label=p.type==='counts'?'Counts':p.type==='alert'?alertTitle(p):p.type==='settings'?'Settings':p.type==='trusted_adults'?'Trusted adults list':p.type==='check_in'?'Check-in note':p.type;
+  const label=p.type==='counts'?'Counts':p.type==='alert'?alertTitle(p):p.type==='settings'?'Settings':p.type==='trusted_adults'?'Trusted adults list':p.type==='check_in'?'Check-in note':p.type==='event'?(p.event==='contact_blocked'?'Contact blocked':'Contact unblocked'):p.type;
   const body=p.type==='counts'
     ?`<code>${esc(JSON.stringify(p))}</code><span class="wl-sub">Rolled up from ${w.n} message${w.n>1?'s':''}. The text stayed on the phone.</span>`
     :`<pre>${hl(p)}</pre>`;
@@ -1213,12 +1385,16 @@ function renderKid(){
       .sort((a,b)=>(b.last?b.last.at:b.c.firstSeen)-(a.last?a.last.at:a.c.firstSeen));
     $('#chatList').innerHTML=rows.map(({c,last})=>`<button type="button" class="chat-row" data-action="open-thread" data-id="${esc(c.id)}">
       <span class="av av${c.ref%5}">${esc(initial(c.name))}</span>
-      <span class="cr-main"><span class="cr-name"><span>${esc(c.name)}</span>${c.app!=='Messages'?`<span class="app-tag">${esc(c.app)}</span>`:''}</span>
+      <span class="cr-main"><span class="cr-name"><span>${esc(c.name)}</span>${c.app!=='Messages'?`<span class="app-tag">${esc(c.app)}</span>`:''}${c.blocked?'<span class="app-tag blocked-tag">Blocked</span>':''}</span>
       <span class="cr-prev">${last?esc((last.from==='me'?'You: ':'')+last.text):'New conversation'}</span></span>
       <span class="cr-time">${last?shortWhen(last.at):''}</span></button>`).join('');
   }else renderThread();
   $('#sheetPrivacy').hidden=T.sheet!=='privacy';
   $('#sheetNew').hidden=T.sheet!=='new';
+  $('#sheetThink').hidden=T.sheet!=='think';
+  $('#sheetBlock').hidden=T.sheet!=='block';
+  if(T.sheet==='think')renderThink();
+  if(T.sheet==='block')renderBlock();
   if(T.sheet==='privacy')renderPrivacy();
   const n=$('#phoneNotif');
   if(T.notif){n.hidden=false;n.innerHTML=`${ghost()}<div><b>${esc(T.notif.from)}</b><time>now</time><div>${esc(T.notif.text)}</div></div>`}
@@ -1239,6 +1415,25 @@ function renderThread(){
   me.textContent=k;them.textContent=c.name;
   me.setAttribute('aria-pressed',String(S.ui.typeAs==='me'));them.setAttribute('aria-pressed',String(S.ui.typeAs==='them'));
   $('#composeInput').placeholder=`Message as ${S.ui.typeAs==='me'?k:c.name}`;
+  const blocked=!!c.blocked,bb=$('#blockBtn');
+  $('#composer').hidden=blocked;$('#blockedBar').hidden=!blocked;
+  $('#blockedText').textContent=`You blocked ${c.name}.`;
+  bb.textContent=blocked?'Unblock':'Block';bb.dataset.action=blocked?'unblock':'block';
+}
+function renderThink(){
+  const th=T.think;if(!th)return;
+  const c=S.device.contacts[th.cid],k=name();
+  $('#thinkBody').innerHTML=`<div class="think-head">${ghost()}<h3>Hold on a sec</h3></div>
+    <p>You're about to share ${joinList(th.kinds.map(esc))} with <b>${esc(c.name)}</b>, who you know from ${esc(c.app)}. People online aren't always who they say they are.</p>
+    <p class="draft">${esc(th.text)}</p>
+    <div class="sheet-actions"><button type="button" class="btn primary block" data-action="think-edit"${th.auto?' disabled':''}>Edit message</button><button type="button" class="btn block" data-action="think-send"${th.auto?' disabled':''}>Send anyway</button></div>
+    <p class="fine">${th.auto?`${esc(k)} is deciding… `:''}Only you can see this message. If it's sent, your parent may get an alert that personal details were shared, never the message itself.</p>`;
+}
+function renderBlock(){
+  const c=S.device.contacts[S.ui.thread];if(!c)return;
+  $('#blockBody').innerHTML=`<h3>Block ${esc(c.name)}?</h3>
+    <p class="muted">They won't be able to message you anymore. Ghost Mode will let your parent know you blocked someone. That's a good thing, and you're not in trouble.</p>
+    <div class="sheet-actions"><button type="button" class="btn danger block" data-action="confirm-block">Block</button><button type="button" class="btn block" data-action="close-sheet">Cancel</button></div>`;
 }
 function renderPrivacy(){
   const D=S.device,k=name(),cf=cfg();
@@ -1249,6 +1444,7 @@ function renderPrivacy(){
       <li>An alert if a new adult starts chatting with you</li>
       <li>An alert if your phone is much busier than usual late at night</li>
       <li>An alert if someone uses pressure tactics, like asking for secrets or photos</li>
+      <li>An alert if you share personal details, like your address, with an adult you don't know</li>
       <li>How many messages you sent at night, as a number</li></ul></div>
     <div class="pv-col no"><h4>${ic('eyeOff','ic sm')}They never get</h4><ul>
       <li>What you or anyone else writes</li><li>Your photos</li><li>Your contact list. A name only shows up if it's part of an alert.</li></ul></div>
@@ -1264,12 +1460,20 @@ function kidNotice(text,from){
 }
 
 function renderScenarios(){
+  const k=name();
   $('#scenarios').innerHTML=SCENARIOS.map(sc=>{
     const on=playing&&playing.id===sc.id;
-    return `<button type="button" class="scn${on?' on':''}" data-action="scenario" data-id="${sc.id}"${playing?' disabled':''}>
+    const bc=sc.contact&&S.device.contacts[sc.contact],blocked=!!(bc&&bc.blocked);
+    const blurb=on?`Playing message ${playing.i} of ${sc.steps.length}. Click to stop.`
+      :blocked?`${bc.name} is blocked on ${poss(k)} phone. Unblock them to replay this.`
+      :(typeof sc.blurb==='function'?sc.blurb(k):sc.blurb);
+    return `<button type="button" class="scn${on?' on':''}" data-action="scenario" data-id="${sc.id}"${(playing&&!on)||blocked?' disabled':''}>
       <span class="pill ${sc.kind}">${esc(sc.result)}</span><span class="scn-title">${on?ic('play','ic xs'):''}${esc(sc.title)}</span>
-      <span class="scn-blurb">${on?`Playing message ${playing.i} of ${sc.steps.length}…`:esc(sc.blurb)}</span></button>`;
+      <span class="scn-blurb">${esc(blurb)}</span></button>`;
   }).join('');
+}
+function renderPatterns(){
+  $('#patternList').innerHTML=MARKERS.map(m=>`<li${m.kid?' class="kid"':''}><div class="pt-head"><b>${esc(m.label)}</b><span class="dots" role="img" aria-label="Weight ${m.w} of 4">${[1,2,3,4].map(i=>`<i${i<=m.w?' class="on"':''}></i>`).join('')}</span></div><p>${esc(m.desc)}</p></li>`).join('');
 }
 
 function announce(t){const a=$('#announcer');a.textContent='';setTimeout(()=>{a.textContent=t},50)}
@@ -1303,6 +1507,15 @@ document.addEventListener('click',e=>{
     case 'filter':S.ui.filter=id;commit();break;
     case 'view':S.ui.view=id;commit();window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});break;
     case 'review':{const al=findAlert(id);if(al){al.status='reviewed';commit()}break}
+    case 'reopen':{const al=findAlert(id);if(al){al.status='new';al.note=null;commit()}break}
+    case 'block':T.sheet='block';commit();break;
+    case 'confirm-block':T.sheet=null;setBlocked(S.ui.thread,true);commit();break;
+    case 'unblock':setBlocked(S.ui.thread,false);commit();break;
+    case 'think-edit':if(T.think&&!T.think.auto){T.sheet=null;T.think=null;commit();$('#composeInput').focus()}break;
+    case 'think-send':if(T.think&&!T.think.auto){const th=T.think;T.sheet=null;T.think=null;$('#composeInput').value='';S.clock+=MIN;deliver(th.cid,'me',th.text)}break;
+    case 'pause-late':case 'resume-late':{
+      const st=S.parent.settings;st.latePausedNight=a==='pause-late'?nightKey(S.clock,st):null;
+      transmit(settingsPayload(st),'down');commit();break}
     case 'checkin':{
       const al=findAlert(id);if(!al||al.checkIn)break;
       al.checkIn=true;
@@ -1328,7 +1541,7 @@ document.addEventListener('click',e=>{
       T.helpSent=true;
       sendAlert({alert_id:'help-'+uid(),rev:1,alert:'kid_request',severity:'info'},S.clock,false);
       commit();break}
-    case 'scenario':play(id);break;
+    case 'scenario':if(playing&&playing.id===id)stopScenario();else play(id);break;
     case 'reset':{
       if(Date.now()-resetArmed<3000){
         resetArmed=0;playing=null;try{localStorage.removeItem(KEY)}catch(err){}
@@ -1349,7 +1562,12 @@ document.addEventListener('toggle',e=>{
 $('#composer').addEventListener('submit',e=>{
   e.preventDefault();
   const inp=$('#composeInput'),text=inp.value.trim();
-  if(!text||!S.ui.thread)return;
+  if(!text||!S.ui.thread||playing)return;
+  const c=S.device.contacts[S.ui.thread];
+  if(S.ui.typeAs==='me'&&riskyForSharing(c)){
+    const kinds=sharedKinds(text);
+    if(kinds.length){T.think={cid:c.id,text,kinds,auto:false};T.sheet='think';renderKid();return}
+  }
   S.clock+=MIN;inp.value='';
   deliver(S.ui.thread,S.ui.typeAs,text);
 });
@@ -1389,9 +1607,10 @@ let rz=0;
 window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S.ui.tab==='activity')renderActivity()},120)});
 
 /* ---------- boot ---------- */
-try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(st&&st.v===1&&st.device&&st.parent)S=st}}catch(e){S=null}
+try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(st&&st.v===2&&st.device&&st.parent)S=st}}catch(e){S=null}
 if(!S)seed();
 $('#brandLogo').innerHTML=ghost();
+renderPatterns();
 $$('.pill-logo').forEach(el=>{el.outerHTML=ghost()});
 fillSettingsForm();
 renderAll();
