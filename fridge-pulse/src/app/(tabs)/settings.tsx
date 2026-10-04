@@ -3,8 +3,8 @@ import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
-import { getProvider, useBilling } from '../../store/billing';
-import { TRIAL_NAME } from '../../billing/trial';
+import { getProvider, planPriceLabel, useBilling } from '../../store/billing';
+import { HOUSEHOLD_MAX_PEOPLE, isUnlocked, planName, TRIAL_NAME } from '../../billing/trial';
 import { AiConsentModal } from '../../components/AiConsentModal';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -26,7 +26,7 @@ import { useFoods } from '../../store/foods';
 import { useShopping } from '../../store/shopping';
 import { useFoodLog } from '../../store/foodLog';
 import { getHealth, useHealth } from '../../store/health';
-import { useHousehold } from '../../store/household';
+import { isCovered, sponsorName, useHousehold } from '../../store/household';
 import { NO_PROFILE, targetsFor } from '../../lib/goals';
 import { useTheme } from '../../theme';
 
@@ -169,7 +169,10 @@ export default function Settings() {
   const settings = useSettings();
   const foodCount = useFoods((s) => s.foods.length);
   const household = useHousehold((s) => s.household);
-  const { entitlement, priceString } = useBilling();
+  const { entitlement, prices } = useBilling();
+  const priceString = planPriceLabel(prices, entitlement.planId ?? 'monthly');
+  const covered = isCovered(household);
+  const sponsor = sponsorName(household);
   const provider = getProvider();
 
   const [askConsent, setAskConsent] = useState(false);
@@ -196,12 +199,15 @@ export default function Settings() {
     entitlement.status === 'trial'
       ? entitlement.willRenew === false
         ? `${trialPart}. It will not renew, so you will not be charged.`
-        : `${trialPart}${endsLabel ? `. ${priceString}/month starts ${endsLabel} unless you cancel.` : '.'}`
+        : `${trialPart}${endsLabel ? `. ${priceString} starts ${endsLabel} unless you cancel.` : '.'}`
       : entitlement.status === 'active'
         ? entitlement.willRenew === false
           ? `Subscribed${endsLabel ? ` until ${endsLabel}` : ''}. It will not renew.`
-          : `Subscribed at ${priceString}/month${endsLabel ? `. Renews ${endsLabel}.` : '.'}`
-        : 'No active plan'
+          : `Subscribed at ${priceString}${endsLabel ? `. Renews ${endsLabel}.` : '.'}`
+        : covered
+          ? `Included in ${sponsor ? `${sponsor}’s` : 'your household’s'} household plan.`
+          : 'No active plan'
+  const planLabel = isUnlocked(entitlement) && entitlement.planId ? `Fridge Pulse · ${planName(entitlement.planId)}` : 'Fridge Pulse'
 
   function toggleAi(on: boolean) {
     if (on) {
@@ -262,18 +268,15 @@ export default function Settings() {
 
       <Section title="Your plan">
         <Row
-          label="Fridge Pulse"
+          label={planLabel}
           hint={planLine}
-          right={
-            entitlement.status === 'trial' || entitlement.status === 'active' ? (
-              <Ionicons name="checkmark-circle" size={24} color={c.primary} />
-            ) : null
-          }
+          right={isUnlocked(entitlement) || covered ? <Ionicons name="checkmark-circle" size={24} color={c.primary} /> : null}
         />
-        <Text variant="caption" muted>
-          {TRIAL_NAME} free trial, then {priceString} per month. Cancel anytime in your {STORE_NAME} subscription settings.
+        <Text variant="caption" muted testID="settings-plan-caption">
+          {`${TRIAL_NAME} free trial, then ${planPriceLabel(prices, 'annual')} or ${planPriceLabel(prices, 'monthly')}. The household plan covers up to ${HOUSEHOLD_MAX_PEOPLE} people for ${planPriceLabel(prices, 'household-annual')} or ${planPriceLabel(prices, 'household-monthly')}. Cancel anytime in your ${STORE_NAME} subscription settings.`}
         </Text>
         <View style={styles.buttons}>
+          <Button testID="settings-plans" label={entitlement.household ? 'Change plan' : 'Plans and household plan'} size="sm" variant="secondary" onPress={() => router.push('/plans')} />
           {Platform.OS !== 'web' ? (
             <Button label="Manage subscription" size="sm" variant="secondary" onPress={() => void Linking.openURL(MANAGE_SUBSCRIPTION_URL)} />
           ) : null}
@@ -332,7 +335,11 @@ export default function Settings() {
         <LinkRow
           testID="settings-household"
           label="Household sharing"
-          hint={household ? `${household.name} · ${household.members.length} ${household.members.length === 1 ? 'person' : 'people'}` : 'Share your fridge and shopping list'}
+          hint={
+            household
+              ? `${household.name} · ${household.members.length} ${household.members.length === 1 ? 'person' : 'people'}${covered ? ' · household plan' : ''}`
+              : 'Share your fridge and shopping list'
+          }
           onPress={() => router.push('/household')}
         />
       </Section>

@@ -181,7 +181,7 @@ describe('meals: ingredient sanity', () => {
 });
 
 describe('trial-ending reminder', () => {
-  const opts = { price: '$9.99', endsLabel: 'Tue, Oct 13', trialName: '2-week' };
+  const opts = { price: '$9.99/month', endsLabel: 'Tue, Oct 13', trialName: '2-week' };
 
   it('fires two days before the trial ends, at the chosen hour', () => {
     const r = buildTrialReminder('2026-10-13', NOW, opts);

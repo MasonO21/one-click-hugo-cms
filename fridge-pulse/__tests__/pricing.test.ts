@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { PRICE_PER_MONTH, TRIAL_DAYS, TRIAL_NAME, TRIAL_SPAN } from '../src/billing/trial';
+import { DEFAULT_PLAN, HOUSEHOLD_MAX_PEOPLE, PLAN_IDS, PLANS, PRICE_PER_MONTH, TRIAL_DAYS, TRIAL_NAME, TRIAL_SPAN } from '../src/billing/trial';
 import { legalDocument } from '../src/legal/render';
 
 const ROOT = path.resolve(__dirname, '..');
@@ -27,15 +27,35 @@ function customerFacingFiles(): string[] {
 
 const rel = (f: string) => path.relative(ROOT, f);
 
-describe('the offer: $9.99 per month with a 2-week free trial', () => {
+/** The only prices anyone should ever read: the four plans. */
+const PLAN_PRICES = new Set(Object.values(PLANS).map((p) => p.price));
+
+describe('the offer: four plans, each with a 2-week free trial', () => {
   it('is defined once, with matching wording', () => {
     expect(PRICE_PER_MONTH).toBe('$9.99');
+    expect(Object.fromEntries(PLAN_IDS.map((id) => [id, `${PLANS[id].price}/${PLANS[id].period}`]))).toEqual({
+      monthly: '$9.99/month',
+      annual: '$59.99/year',
+      'household-monthly': '$14.99/month',
+      'household-annual': '$89.99/year',
+    });
+    expect(DEFAULT_PLAN).toBe('annual');
+    expect(HOUSEHOLD_MAX_PEOPLE).toBe(8);
     expect(TRIAL_DAYS).toBe(14);
     expect(TRIAL_NAME).toBe('2-week');
     expect(TRIAL_SPAN).toBe('2 weeks');
   });
 
-  it('never shows a price other than $9.99 in the app, legal text, store copy or docs', () => {
+  it('keeps every plan a real deal: yearly below twelve months, household above one person', () => {
+    const n = (p: string) => Number(p.replace('$', ''));
+    expect(n(PLANS.annual.price)).toBeLessThan(n(PLANS.monthly.price) * 12);
+    expect(n(PLANS['household-annual'].price)).toBeLessThan(n(PLANS['household-monthly'].price) * 12);
+    expect(n(PLANS['household-monthly'].price)).toBeGreaterThan(n(PLANS.monthly.price));
+    expect(n(PLANS['household-annual'].price)).toBeGreaterThan(n(PLANS.annual.price));
+    expect(new Set(Object.values(PLANS).map((p) => p.productId)).size).toBe(4);
+  });
+
+  it('never shows a price other than the plans’ in the app, legal text, store copy or docs', () => {
     const offenders: string[] = [];
     for (const file of customerFacingFiles()) {
       // Cost estimates for the AI backend (README) are not customer prices; those sit on lines that mention tokens or scans.
@@ -43,7 +63,7 @@ describe('the offer: $9.99 per month with a 2-week free trial', () => {
       lines.forEach((line, i) => {
         if (/\btokens?\b|per scan|scan is|API|Opus|Sonnet|cost/i.test(line) && rel(file) === 'README.md') return;
         for (const m of line.matchAll(/\$\s?\d[\d,]*(?:\.\d+)?/g)) {
-          if (m[0].replace(/\s/g, '') !== '$9.99') offenders.push(`${rel(file)}:${i + 1} ${m[0]}`);
+          if (!PLAN_PRICES.has(m[0].replace(/\s/g, ''))) offenders.push(`${rel(file)}:${i + 1} ${m[0]}`);
         }
       });
     }
@@ -75,9 +95,24 @@ describe('the offer: $9.99 per month with a 2-week free trial', () => {
     expect(found).toBeGreaterThan(0); // the scan is not vacuous
   });
 
-  it('is stated in the Terms of Use with the same price and trial', () => {
+  it('is only typed in src/billing/trial.ts: everything else reads it from there', () => {
+    const offenders: string[] = [];
+    for (const file of walk(path.join(ROOT, 'src'), ['.ts', '.tsx', '.json'])) {
+      if (rel(file) === path.join('src', 'billing', 'trial.ts')) continue;
+      fs.readFileSync(file, 'utf8')
+        .split('\n')
+        .forEach((line, i) => {
+          if (/\$\s?\d/.test(line)) offenders.push(`${rel(file)}:${i + 1}`);
+        });
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('is stated in the Terms of Use with the same prices and trial', () => {
     const text = JSON.stringify(legalDocument('terms'));
-    expect(text).toContain('$9.99 per month');
+    expect(text).toContain('$9.99 per month, or $59.99 per year');
+    expect(text).toContain('$14.99 per month or $89.99 per year');
+    expect(text).toContain('up to 8 people');
     expect(text).toContain('free to try for 2 weeks');
     expect(text).toContain('at least 24 hours before the end of the current period');
   });

@@ -19,7 +19,7 @@ const app = createApp({
   pictures: createPictureFinder({ userAgent: config.pictureUserAgent, offBaseUrl: config.offBaseUrl, wikiBaseUrl: config.wikiBaseUrl }),
   households: config.householdDb ? createHouseholdStore(config.householdDb) : undefined,
   entitlements: config.revenueCatSecretKey
-    ? createRevenueCatChecker({ secretKey: config.revenueCatSecretKey, entitlementId: config.entitlementId })
+    ? createRevenueCatChecker({ secretKey: config.revenueCatSecretKey, entitlementId: config.entitlementId, householdEntitlementId: config.householdEntitlementId })
     : createOpenChecker(),
   clientIp: (c) => {
     if (config.trustProxy) {

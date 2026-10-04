@@ -26,6 +26,7 @@ Notes:
 - Item lookups (a scan finds something the app does not know) send the same photo plus the item's name and a packaging description, so they fall under the same two data types. The web searches Claude runs, and the Open Food Facts and Wikipedia requests our server makes for a product picture, contain only product words, nothing about the person. The phone then loads the picture from Open Food Facts or Wikimedia directly, like any web image.
 - Receipt photos (Scan a receipt) are photos too, so they fall under the same data type. A receipt can show the shop, the time and the last digits of a payment card; the server does not keep the photo, the AI is asked to read only the food lines and the date, and the app tells people to fold card details over. The privacy policy says the same.
 - Shared households store the household's food and shopping lists on your server, keyed by a SHA-256 hash of the RevenueCat app user ID, so Other User Content is declared as linked. Nothing is stored for people who never start or join a household. The last member leaving deletes the household and its lists.
+- The household plan: for the one member who pays for it, the server also keeps their RevenueCat app user ID itself (not hashed) with the household and the plan's end date, so it can ask RevenueCat whether the plan has renewed and keep covering the others. It is cleared when they leave or the plan ends. This is the same User ID already declared above, used for App Functionality.
 - Health data (Apple Health / Health Connect: steps, active energy, workouts read; nutrition written) never leaves the phone, so it is not "collected" in Apple's sense and is not declared. The food log, body details and goals stay on the device too.
 - **Tracking:** No. The privacy manifest in `app.json` sets `NSPrivacyTracking` to false and lists the same data types.
 - The app makes no use of the advertising identifier, so you can answer **No** to the IDFA question.
@@ -68,7 +69,9 @@ The app uses only standard HTTPS. `ITSAppUsesNonExemptEncryption` is set to fals
 
 ## Notes for App Review (paste into App Store Connect)
 
-> Fridge Pulse needs no sign-in. On first launch there is a short intro, then the subscription screen (2-week free trial, then $9.99 per month). Use the sandbox account provided to start the trial.
+> Fridge Pulse needs no sign-in. On first launch there is a short intro, then the subscription screen: four plans (monthly or yearly, for one person or for the household), each with a 2-week free trial. Use the sandbox account provided to start the trial.
+>
+> The household plans also cover up to 8 people in the payer's shared household (Settings > Household). On a second device, "Someone at home has the household plan? Join with their code" on the subscription screen joins with the invite code shown in Settings > Household on the first device, and the app unlocks without a purchase.
 >
 > To try scanning: tap "Scan your fridge", add a photo (Choose from library or Take photo), tap Analyze. On first use an AI consent prompt appears; tap "I agree". The photo is analysed by our server and results appear on a review screen. "Add items by hand" works without AI. The Meals tab shows meal ideas, and Settings > Privacy and data lets you turn AI off.
 >

@@ -14,9 +14,17 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const out = path.join(root, 'docs/legal');
 const trial = fs.readFileSync(path.join(root, 'src/billing/trial.ts'), 'utf8');
-const price = /PRICE_PER_MONTH = '([^']+)'/.exec(trial)?.[1];
+// Each plan's US price, from its line in PLANS ("  annual: { id: 'annual', ..., price: '...', ...").
+const planPrice = (id) => new RegExp(`id: '${id}',[^}]*price: '([^']+)'`).exec(trial)?.[1];
+const prices = {
+  price: planPrice('monthly'),
+  yearlyPrice: planPrice('annual'),
+  householdMonthlyPrice: planPrice('household-monthly'),
+  householdYearlyPrice: planPrice('household-annual'),
+  householdPeople: /HOUSEHOLD_MAX_PEOPLE = (\d+)/.exec(trial)?.[1],
+};
 const span = /TRIAL_SPAN = '([^']+)'/.exec(trial)?.[1];
-if (!price || !span) throw new Error('Could not read the offer from src/billing/trial.ts');
+if (!span || Object.values(prices).some((v) => !v)) throw new Error('Could not read the offer from src/billing/trial.ts');
 
 const developer = process.env.LEGAL_DEVELOPER || 'the Fridge Pulse team';
 const email = process.env.LEGAL_EMAIL || '';
@@ -26,7 +34,12 @@ if (!process.env.LEGAL_DEVELOPER || !process.env.LEGAL_EMAIL) {
 const contactLine = email ? `Questions? Email ${email}.` : 'Questions? Contact us through the app store listing.';
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const fill = (t) =>
-  esc(t.replaceAll('{{developer}}', developer).replaceAll('{{contactLine}}', contactLine).replaceAll('{{price}}', price).replaceAll('{{trialSpan}}', span));
+  esc(
+    Object.entries(prices).reduce(
+      (s, [key, value]) => s.replaceAll(`{{${key}}}`, value),
+      t.replaceAll('{{developer}}', developer).replaceAll('{{contactLine}}', contactLine).replaceAll('{{trialSpan}}', span),
+    ),
+  );
 
 function page(doc) {
   const body = doc.sections

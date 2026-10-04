@@ -2,10 +2,10 @@ import { addDays, todayISO } from '../lib/dates';
 import { newId } from '../lib/scan';
 import { safeStorage } from '../store/storage';
 import type { BillingProvider } from './types';
-import { computeLocalEntitlement, PRICE_PER_MONTH, type LocalBillingState } from './trial';
+import { computeLocalEntitlement, isUnlocked, PLANS, type LocalBillingState } from './trial';
 
 const KEY = 'fp.local-billing.v1';
-const EMPTY: LocalBillingState & { userId: string | null } = { trialStartedOn: null, paidThrough: null, userId: null };
+const EMPTY: LocalBillingState & { userId: string | null } = { trialStartedOn: null, paidThrough: null, plan: null, userId: null };
 
 /**
  * Stand-in for the app stores, used in development, Expo Go and demo builds.
@@ -41,14 +41,19 @@ export function createLocalProvider(): BillingProvider {
       return computeLocalEntitlement(await load());
     },
     async getOffer() {
-      return { priceString: PRICE_PER_MONTH };
+      return { prices: {} };
     },
-    async purchase() {
+    async purchase(plan) {
       const state = await load();
       const today = todayISO();
-      const next = state.trialStartedOn
-        ? { ...state, paidThrough: addDays(today, 30) }
-        : { ...state, trialStartedOn: today };
+      const now = computeLocalEntitlement(state);
+      // A first purchase starts the trial on the chosen plan; a change during the trial or a paid period
+      // just switches plan, as the stores do; after it has run out, a purchase pays for a period.
+      const next = !state.trialStartedOn
+        ? { ...state, plan, trialStartedOn: today }
+        : isUnlocked(now)
+          ? { ...state, plan }
+          : { ...state, plan, paidThrough: addDays(today, PLANS[plan].period === 'year' ? 365 : 30) };
       return { ok: true, entitlement: await save(next) };
     },
     async restore() {

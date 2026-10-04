@@ -1,11 +1,19 @@
 import { daysBetween, toISODate, todayISO } from '../lib/dates';
-import { ENTITLEMENT_ID, NO_ENTITLEMENT, type Entitlement } from './trial';
+import { ENTITLEMENT_ID, HOUSEHOLD_ENTITLEMENT_ID, NO_ENTITLEMENT, PLANS, type Entitlement, type PlanId } from './trial';
 
 /** The slice of RevenueCat's CustomerInfo we read, so mapping can be tested without the SDK. */
 export interface EntitlementLike {
   periodType: string;
   expirationDate: string | null;
   willRenew?: boolean;
+  /** The store product behind it ("fridge_pulse_annual", or "...:base-plan" on Google Play). */
+  productIdentifier?: string;
+}
+
+/** Which plan a store product id belongs to. */
+export function planOfProduct(productId: string | undefined): PlanId | undefined {
+  if (!productId) return undefined;
+  return (Object.keys(PLANS) as PlanId[]).find((id) => productId === PLANS[id].productId || productId.startsWith(`${PLANS[id].productId}:`));
 }
 export interface CustomerInfoLike {
   entitlements: {
@@ -29,6 +37,8 @@ export function mapCustomerInfo(info: CustomerInfoLike, now: Date = new Date()):
       endsOn,
       daysRemaining: endsOn ? Math.max(0, daysBetween(todayISO(now), endsOn)) : null,
       ...(typeof live.willRenew === 'boolean' ? { willRenew: live.willRenew } : {}),
+      ...(planOfProduct(live.productIdentifier) ? { planId: planOfProduct(live.productIdentifier) } : {}),
+      ...(info.entitlements.active[HOUSEHOLD_ENTITLEMENT_ID] ? { household: true } : {}),
     };
   }
   const past = info.entitlements.all[ENTITLEMENT_ID];

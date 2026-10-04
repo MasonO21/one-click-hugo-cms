@@ -1,30 +1,128 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { getProvider, useBilling } from '../store/billing';
-import { TRIAL_DAYS, TRIAL_NAME, TRIAL_SPAN } from '../billing/trial';
+import { getProvider, planPriceLabel, useBilling } from '../store/billing';
+import { DEFAULT_PLAN, HOUSEHOLD_MAX_PEOPLE, PLANS, TRIAL_DAYS, TRIAL_NAME, TRIAL_SPAN, type PlanId } from '../billing/trial';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { Field } from '../components/Field';
 import { Logo } from '../components/Logo';
+import { PlanPicker } from '../components/PlanPicker';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
+import { isDemoMode } from '../lib/api';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { addDays, formatShortDate, todayISO } from '../lib/dates';
+import { useHousehold } from '../store/household';
 import { useTheme } from '../theme';
-
 
 const FEATURES = [
   'Scan your fridge, freezer and pantry with your camera',
   'Expiry reminders before food goes off',
   'Meal ideas that use up what needs eating first',
-  'Track how much food you rescue from the bin',
+  'Protein goals, a food log that fills itself and a weekly score',
+  'Share the fridge and shopping list with your household',
 ];
+
+/** For someone whose household already has the household plan: join with the invite code instead of paying. */
+function JoinHousehold() {
+  const { c } = useTheme();
+  const memberName = useHousehold((s) => s.memberName);
+  const error = useHousehold((s) => s.error);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(memberName);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const join = async () => {
+    setBusy(true);
+    await useHousehold.getState().join(code.trim(), name.trim());
+    setBusy(false);
+  };
+
+  if (!open) {
+    return (
+      <Pressable testID="paywall-join-open" accessibilityRole="button" onPress={() => setOpen(true)} style={styles.linkHit}>
+        <Text variant="caption" color={c.primary} style={[styles.link, { textAlign: 'center' }]}>
+          Someone at home has the household plan? Join with their code
+        </Text>
+      </Pressable>
+    );
+  }
+  return (
+    <Card style={{ gap: 10 }} testID="paywall-join">
+      <Text variant="heading">Join your household</Text>
+      <Text variant="caption" muted>
+        {`If someone you live with has the household plan, it covers you too. Ask them for the invite code in Settings > Household.`}
+      </Text>
+      <Field testID="paywall-join-name" value={name} onChangeText={setName} placeholder="Your name" maxLength={40} accessibilityLabel="Your name" />
+      <Field
+        testID="paywall-join-code"
+        value={code}
+        onChangeText={setCode}
+        placeholder="ABCD-EF23"
+        autoCapitalize="characters"
+        autoCorrect={false}
+        maxLength={12}
+        accessibilityLabel="Invite code"
+      />
+      <Button
+        testID="paywall-join-button"
+        label="Join household"
+        variant="secondary"
+        icon="people"
+        disabled={!name.trim() || (!isDemoMode && code.replace(/[^a-z0-9]/gi, '').length < 8) || busy}
+        loading={busy}
+        onPress={() => void join()}
+      />
+      {error ? (
+        <Text variant="caption" color={c.danger} style={{ fontSize: 14 }}>
+          {error}
+        </Text>
+      ) : null}
+      <Text variant="caption" faint>
+        {isDemoMode
+          ? 'Preview: any code joins a sample household whose housemate has the household plan.'
+          : 'Sharing stores your household’s food and shopping lists on the Fridge Pulse server so the others can see them.'}
+      </Text>
+    </Card>
+  );
+}
+
+/** In a household that no household plan covers right now. */
+function HouseholdNotCovered({ name }: { name: string }) {
+  const [checking, setChecking] = useState(false);
+  const check = async () => {
+    setChecking(true);
+    await useHousehold.getState().refresh();
+    setChecking(false);
+  };
+  return (
+    <Card style={{ gap: 8 }} testID="paywall-household">
+      <Text variant="bodyStrong">{`You are in ${name}`}</Text>
+      <Text variant="caption" muted>
+        Nobody there has the household plan right now. Start your own plan below, or ask whoever pays to switch to the household plan, which covers
+        everyone.
+      </Text>
+      <Button label="Check again" size="sm" variant="ghost" icon="refresh" loading={checking} onPress={() => void check()} style={{ alignSelf: 'flex-start' }} />
+    </Card>
+  );
+}
 
 export default function Paywall() {
   const { c } = useTheme();
-  const { entitlement, priceString, busy, error } = useBilling();
+  const { entitlement, prices, busy, error } = useBilling();
+  const household = useHousehold((s) => s.household);
+  const [plan, setPlan] = useState<PlanId>(entitlement.planId ?? DEFAULT_PLAN);
+  const priceString = planPriceLabel(prices, plan);
   const provider = getProvider();
   const returning = entitlement.status === 'expired';
+
+  // Someone in the household may have started a household plan since the last look.
+  const inHousehold = household !== null;
+  useEffect(() => {
+    if (inHousehold) void useHousehold.getState().refresh();
+  }, [inHousehold]);
   const store = Platform.OS === 'android' ? 'Google Play account' : Platform.OS === 'ios' ? 'Apple ID account' : 'app store account';
   const chargeDate = `${formatShortDate(addDays(todayISO(), TRIAL_DAYS))} (in ${TRIAL_SPAN})`;
   const cancelWhere = Platform.OS === 'android' ? 'Google Play' : Platform.OS === 'ios' ? 'your Apple ID settings' : 'your app store account settings';
@@ -36,13 +134,13 @@ export default function Paywall() {
         <View style={styles.footerInner}>
           <Button
             testID="paywall-cta"
-            label={returning ? `Subscribe for ${priceString}/month` : `Start ${TRIAL_NAME} free trial`}
+            label={returning ? `Subscribe for ${priceString}` : `Start ${TRIAL_NAME} free trial`}
             loading={busy}
-            onPress={() => void useBilling.getState().purchase()}
+            onPress={() => void useBilling.getState().purchase(plan)}
             style={{ alignSelf: 'stretch' }}
           />
           <Text variant="caption" muted style={{ textAlign: 'center' }}>
-            {returning ? `${priceString} per month. Cancel anytime.` : `Free for ${TRIAL_SPAN}, then ${priceString} per month. Cancel anytime.`}
+            {returning ? `${priceString}. Cancel anytime.` : `Free for ${TRIAL_SPAN}, then ${priceString}. Cancel anytime.`}
           </Text>
         </View>
       }
@@ -63,6 +161,8 @@ export default function Paywall() {
         </Text>
       </View>
 
+      {household ? <HouseholdNotCovered name={household.name} /> : null}
+
       <Card glow="blue" style={{ gap: 14 }}>
         {FEATURES.map((f) => (
           <View key={f} style={styles.feature}>
@@ -71,6 +171,8 @@ export default function Paywall() {
           </View>
         ))}
       </Card>
+
+      <PlanPicker selected={plan} onSelect={setPlan} prices={prices} />
 
       {!returning ? (
         <Card style={{ gap: 12 }}>
@@ -88,12 +190,14 @@ export default function Paywall() {
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong">{chargeDate}</Text>
               <Text variant="caption" muted>
-                {priceString}/month begins. Cancel before then and you will not be charged. If notifications are on, we will remind you 2 days before.
+                {priceString} begins. Cancel before then and you will not be charged. If notifications are on, we will remind you 2 days before.
               </Text>
             </View>
           </View>
         </Card>
       ) : null}
+
+      {household ? null : <JoinHousehold />}
 
       {error ? (
         <Text testID="paywall-error" variant="caption" color={c.danger} style={{ textAlign: 'center' }}>
@@ -131,8 +235,9 @@ export default function Paywall() {
 
       <Text variant="caption" faint style={{ textAlign: 'center', fontSize: 11, lineHeight: 15 }}>
         {returning ? '' : `Your ${TRIAL_NAME} free trial starts when you confirm. `}
-        Payment is charged to your {store} at confirmation of purchase. The subscription renews automatically at {priceString}/month
+        Payment is charged to your {store} at confirmation of purchase. The subscription renews automatically at {priceString}
         unless it is cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in {cancelWhere}.
+        {PLANS[plan].household ? ` The household plan also covers up to ${HOUSEHOLD_MAX_PEOPLE} people in your shared household on Fridge Pulse.` : ''}
       </Text>
     </Screen>
   );

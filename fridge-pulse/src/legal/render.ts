@@ -1,4 +1,4 @@
-import { PRICE_PER_MONTH, TRIAL_SPAN } from '../billing/trial';
+import { HOUSEHOLD_MAX_PEOPLE, PLANS, TRIAL_SPAN } from '../billing/trial';
 import privacy from './privacy.json';
 import terms from './terms.json';
 
@@ -20,9 +20,18 @@ export type LegalKey = 'privacy' | 'terms';
 export interface LegalContext {
   developer: string;
   email: string;
+  /** The monthly plan's price. */
   price: string;
   trialSpan: string;
 }
+
+/** The other plans' prices, filled in the same way. */
+const PLAN_PLACEHOLDERS: Record<string, string> = {
+  '{{yearlyPrice}}': PLANS.annual.price,
+  '{{householdMonthlyPrice}}': PLANS['household-monthly'].price,
+  '{{householdYearlyPrice}}': PLANS['household-annual'].price,
+  '{{householdPeople}}': String(HOUSEHOLD_MAX_PEOPLE),
+};
 
 const RAW: Record<LegalKey, LegalDocument> = { privacy, terms };
 
@@ -33,18 +42,19 @@ export function isLegalKey(key: string | undefined): key is LegalKey {
 /** Fills the {{placeholders}} in the bundled policy text. */
 export function fillLegal(text: string, ctx: LegalContext): string {
   const contactLine = ctx.email ? `Questions? Email ${ctx.email}.` : 'Questions? Contact us through the app store listing.';
-  return text
+  const filled = text
     .replaceAll('{{developer}}', ctx.developer)
     .replaceAll('{{contactLine}}', contactLine)
     .replaceAll('{{price}}', ctx.price)
     .replaceAll('{{trialSpan}}', ctx.trialSpan);
+  return Object.entries(PLAN_PLACEHOLDERS).reduce((s, [key, value]) => s.replaceAll(key, value), filled);
 }
 
 export function legalDocument(key: LegalKey, ctx: Partial<LegalContext> = {}): LegalDocument {
   const full: LegalContext = {
     developer: ctx.developer ?? 'the Fridge Pulse team',
     email: ctx.email ?? '',
-    price: ctx.price ?? PRICE_PER_MONTH,
+    price: ctx.price ?? PLANS.monthly.price,
     trialSpan: ctx.trialSpan ?? TRIAL_SPAN,
   };
   const doc = RAW[key];

@@ -7,7 +7,7 @@ import { Screen } from '../components/Screen';
 import { Emoji, Text } from '../components/Text';
 import { Wordmark } from '../components/Wordmark';
 import { TRIAL_SPAN } from '../billing/trial';
-import { useBilling } from '../store/billing';
+import { planPriceLabel, useBilling } from '../store/billing';
 import { useSettings } from '../store/settings';
 import { BRAND, glow, useTheme } from '../theme';
 
@@ -38,7 +38,7 @@ export default function Onboarding() {
   const last = step === STEPS.length - 1;
   const s = STEPS[step];
   // The store's localised price (the same one the paywall shows next), not a hard-coded one.
-  const price = useBilling((b) => b.priceString);
+  const prices = useBilling((b) => b.prices);
 
   return (
     <Screen
@@ -49,7 +49,7 @@ export default function Onboarding() {
         <View style={styles.footerInner}>
           {last ? (
             <Text variant="caption" muted style={{ textAlign: 'center' }}>
-              Free for {TRIAL_SPAN}, then {price}/month. Cancel anytime.
+              Free for {TRIAL_SPAN}, then {planPriceLabel(prices, 'annual')} or {planPriceLabel(prices, 'monthly')}. Cancel anytime.
             </Text>
           ) : null}
           <View style={styles.dots}>

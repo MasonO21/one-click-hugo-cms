@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, it } from 'node:test';
 import { createApp } from '../src/app.js';
 import type { ClaudeService } from '../src/claude.js';
@@ -89,6 +93,75 @@ describe('household store', () => {
     assert.notEqual(again.code, '');
   });
 
+  it('records who pays for a household plan, and the cover it gives everyone', () => {
+    const store = createHouseholdStore();
+    const { code } = store.create('payer', 'Sam', 'Home');
+    store.join('housemate', 'Alex', code);
+    const now = 1_000_000;
+    assert.deepEqual(store.coverage('housemate'), { until: null, sponsorUser: null });
+    store.sponsor('payer', now + 5000, now);
+    assert.deepEqual(store.coverage('housemate'), { until: now + 5000, sponsorUser: 'payer' });
+    // A shorter plan from someone else does not take over; a longer one does.
+    store.join('other', 'Kim', code);
+    store.sponsor('other', now + 1000, now);
+    assert.equal(store.coverage('housemate')?.sponsorUser, 'payer');
+    store.sponsor('other', now + 9000, now);
+    assert.deepEqual(store.coverage('housemate'), { until: now + 9000, sponsorUser: 'other' });
+    // The payer's plan ending ends the cover; someone who never paid changes nothing.
+    store.sponsor('housemate', null, now);
+    assert.equal(store.coverage('housemate')?.sponsorUser, 'other');
+    store.sponsor('other', null, now);
+    assert.deepEqual(store.coverage('housemate'), { until: null, sponsorUser: null });
+    // Leaving stops paying for the others; someone outside a household has no cover.
+    store.sponsor('payer', now + 5000, now);
+    store.leave('payer');
+    assert.deepEqual(store.coverage('housemate'), { until: null, sponsorUser: null });
+    assert.equal(store.coverage('stranger'), null);
+    store.sponsor('stranger', now + 5000, now);
+  });
+
+  it('shows the cover and who pays, without anyone’s id', () => {
+    const store = createHouseholdStore();
+    const { code } = store.create('payer', 'Sam', 'Home');
+    store.join('housemate', 'Alex', code);
+    const until = Date.now() + 86_400_000;
+    store.sponsor('payer', until);
+    const seen = store.get('housemate')!;
+    assert.equal(seen.coveredUntil, until);
+    assert.deepEqual(seen.members, [
+      { name: 'Sam', you: false, sponsor: true },
+      { name: 'Alex', you: true },
+    ]);
+    assert.ok(!JSON.stringify(seen).includes('payer'));
+    // Once the date on record has passed, nobody is shown as covered.
+    store.sponsor('payer', Date.now() - 1000 + 2000);
+    const later = store.sync('housemate', 0, [], Date.now() + 10_000).household;
+    assert.equal(later.coveredUntil, null);
+    assert.deepEqual(later.members.map((m) => m.sponsor ?? false), [false, false]);
+  });
+
+  it('adds the household plan columns to a database made before them', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fp-households-'));
+    try {
+      const file = join(dir, 'old.sqlite');
+      const old = new DatabaseSync(file);
+      old.exec(`
+        CREATE TABLE households (id TEXT PRIMARY KEY, name TEXT NOT NULL, code TEXT NOT NULL UNIQUE, seq INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
+        CREATE TABLE members (member TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id) ON DELETE CASCADE, name TEXT NOT NULL, joined_at INTEGER NOT NULL);
+        INSERT INTO households VALUES ('h1', 'Old home', 'ABCDEFGH', 0, 1);
+      `);
+      old.close();
+      const store = createHouseholdStore(file);
+      const joined = store.join('late', 'Late', 'ABCD-EFGH');
+      assert.equal(joined.coveredUntil, null);
+      store.sponsor('late', Date.now() + 60_000);
+      assert.equal(store.coverage('late')?.sponsorUser, 'late');
+      store.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('reads invite codes however they are typed', () => {
     assert.equal(normalizeCode('abcd-ef23'), 'ABCDEF23');
     assert.equal(formatCode('ABCDEF23'), 'ABCD-EF23');
@@ -147,6 +220,104 @@ describe('household endpoints', () => {
     const statuses: number[] = [];
     for (let i = 0; i < 12; i += 1) statuses.push((await call('/v1/household/join', B, { code: `ZZZZ-ZZ${i}`, memberName: 'Alex' })).status);
     assert.ok(statuses.includes(429));
+  });
+
+  describe('household plan', () => {
+    /** Stands in for RevenueCat: who has a plan of their own, and whose household plan runs until when. */
+    const plans = () => {
+      const own = new Map<string, boolean>();
+      const household = new Map<string, number | null>();
+      let lookups = 0;
+      return {
+        own,
+        household,
+        lookups: () => lookups,
+        checker: {
+          isActive: async (u: string) => own.get(u) ?? false,
+          householdUntil: async (u: string) => {
+            lookups += 1;
+            return household.get(u) ?? null;
+          },
+        },
+      };
+    };
+    const setupPlans = () => {
+      const p = plans();
+      const store = createHouseholdStore();
+      const app = createApp({ config: { scansPerDay: 3, mealsPerDay: 3, identifiesPerDay: 3, corsOrigin: null }, claude, entitlements: p.checker, households: store });
+      const call = (path: string, user: string, body?: unknown) =>
+        app.request(path, {
+          method: body === undefined && path === '/v1/household' ? 'GET' : 'POST',
+          headers: { 'content-type': 'application/json', Authorization: `Bearer ${user}` },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+      return { p, store, call };
+    };
+    const C = '$RCAnonymousID:cccccccccccccccccccccccccccccccc';
+    const meals = (call: (path: string, user: string, body?: unknown) => Promise<Response> | Response, user: string) =>
+      call('/v1/meals', user, { items: [{ name: 'Milk', category: 'dairy', daysLeft: 2 }], diet: 'none', count: 1 });
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    it('covers everyone in the payer’s household, and nobody else', async () => {
+      const { p, call } = setupPlans();
+      p.own.set(A, true);
+      p.household.set(A, Date.now() + 86_400_000);
+      const made = (await (await call('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
+      // Without a plan, B can still join; the answer says the household is covered.
+      assert.equal((await meals(call, B)).status, 402);
+      const joined = (await (await call('/v1/household/join', B, { code: made.household.code, memberName: 'Alex' })).json()) as { household: { coveredUntil: number | null; members: { sponsor?: boolean }[] } };
+      assert.ok(joined.household.coveredUntil);
+      assert.deepEqual(joined.household.members.map((m) => m.sponsor ?? false), [true, false]);
+      assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 200);
+      assert.notEqual((await meals(call, B)).status, 402);
+      // C has no plan and no household: only the open household calls answer.
+      assert.equal((await meals(call, C)).status, 402);
+      assert.equal((await call('/v1/household/sync', C, { since: 0, changes: [] })).status, 402);
+      assert.deepEqual(await (await call('/v1/household', C)).json(), { household: null });
+      assert.equal((await call('/v1/household', C, { name: 'Mine', memberName: 'C' })).status, 402);
+    });
+
+    it('asks the store again when the plan reaches its end date: renewed keeps the cover, ended stops it', async () => {
+      const { p, call } = setupPlans();
+      p.own.set(A, true);
+      p.household.set(A, Date.now() + 40);
+      const made = (await (await call('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
+      await call('/v1/household/join', B, { code: made.household.code, memberName: 'Alex' });
+      // The plan renews while the payer is away; the housemate is still let in.
+      p.household.set(A, Date.now() + 86_400_000);
+      await wait(60);
+      const before = p.lookups();
+      assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 200);
+      assert.equal(p.lookups(), before + 1);
+      // Covered again until the new date: no more store lookups for a while.
+      assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 200);
+      assert.equal(p.lookups(), before + 1);
+    });
+
+    it('stops covering the household when the plan ends or the payer switches to a plan just for them', async () => {
+      const { p, call } = setupPlans();
+      p.own.set(A, true);
+      p.household.set(A, Date.now() + 40);
+      const made = (await (await call('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
+      await call('/v1/household/join', B, { code: made.household.code, memberName: 'Alex' });
+      p.household.set(A, null);
+      await wait(60);
+      assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 402);
+      const seen = (await (await call('/v1/household', B)).json()) as { household: { coveredUntil: number | null } };
+      assert.equal(seen.household.coveredUntil, null);
+      // Leaving is always allowed.
+      assert.equal((await call('/v1/household/leave', B, {})).status, 200);
+
+      // Switching plans: the payer's next call ends the cover straight away.
+      const { p: q, call: call2 } = setupPlans();
+      q.own.set(A, true);
+      q.household.set(A, Date.now() + 86_400_000);
+      const home = (await (await call2('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
+      await call2('/v1/household/join', B, { code: home.household.code, memberName: 'Alex' });
+      q.household.set(A, null);
+      await call2('/v1/household/sync', A, { since: 0, changes: [] });
+      assert.equal((await call2('/v1/household/sync', B, { since: 0, changes: [] })).status, 402);
+    });
   });
 
   it('answers 503 when the server has no household storage', async () => {

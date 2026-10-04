@@ -23,9 +23,11 @@
     {
       "heading": "Free trial and subscription",
       "bullets": [
-        "Fridge Pulse is free to try for {{trialSpan}}. After that it costs {{price}} per month. Taxes may apply and the price can differ by country.",
+        "Fridge Pulse is free to try for {{trialSpan}}. After that it costs {{price}} per month, or {{yearlyPrice}} per year on the yearly plan. The household plan costs {{householdMonthlyPrice}} per month or {{householdYearlyPrice}} per year. Taxes may apply and the price can differ by country.",
         "The free trial starts when you confirm in the App Store or Google Play purchase sheet. Payment is charged to your Apple ID or Google Play account when the trial ends.",
-        "The subscription renews automatically every month at {{price}} unless you cancel at least 24 hours before the end of the current period.",
+        "Each plan renews automatically at its price, every month or every year, unless you cancel at least 24 hours before the end of the current period.",
+        "The household plan also gives Fridge Pulse to everyone in the shared household of the person who pays, up to {{householdPeople}} people including them, for as long as the plan is active and they stay in the household. The people it covers do not pay and have no subscription of their own: if the plan ends, or they leave the household, they need their own plan to keep using the app.",
+        "You can switch plans in the app or in your Apple ID or Google Play subscription settings. Apple or Google decides when a change starts and any credit for the time left on your current plan.",
         "Manage or cancel any time in your Apple ID or Google Play subscription settings. Deleting the app does not cancel your subscription.",
         "Payments and refunds are handled by Apple or Google under their policies. We cannot issue refunds ourselves."
       ]
@@ -57,7 +59,9 @@
     },
     {
       "heading": "Contact",
-      "paragraphs": ["{{contactLine}}"]
+      "paragraphs": [
+        "{{contactLine}}"
+      ]
     }
   ]
 }

@@ -217,10 +217,19 @@ export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: Me
 // Shared households (server/src/household.ts). Demo mode never calls these.
 // ---------------------------------------------------------------------------
 
+export interface HouseholdMember {
+  name: string;
+  you: boolean;
+  /** Pays for the household plan that covers everyone. */
+  sponsor?: boolean;
+}
+
 export interface HouseholdView {
   name: string;
   code: string;
-  members: { name: string; you: boolean }[];
+  members: HouseholdMember[];
+  /** While a member's household plan covers everyone: when it runs out or renews (ms). */
+  coveredUntil?: number | null;
 }
 
 export interface SyncRecord {
@@ -243,12 +252,14 @@ function householdOf(res: unknown): HouseholdView | null {
   if (h === null) return null;
   const v = h as Partial<HouseholdView> | undefined;
   if (!v || typeof v.name !== 'string' || typeof v.code !== 'string' || !Array.isArray(v.members)) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  const until = v.coveredUntil;
   return {
     name: v.name.slice(0, 40),
     code: v.code.slice(0, 12),
     members: v.members
-      .filter((m): m is { name: string; you: boolean } => !!m && typeof (m as { name?: unknown }).name === 'string')
-      .map((m) => ({ name: m.name.slice(0, 40), you: m.you === true })),
+      .filter((m): m is HouseholdMember => !!m && typeof (m as { name?: unknown }).name === 'string')
+      .map((m) => ({ name: m.name.slice(0, 40), you: m.you === true, ...(m.sponsor === true ? { sponsor: true } : {}) })),
+    coveredUntil: typeof until === 'number' && Number.isFinite(until) && until > 0 ? until : null,
   };
 }
 

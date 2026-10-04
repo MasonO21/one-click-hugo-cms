@@ -1,11 +1,11 @@
 # Store launch pack
 
-Everything needed to list Fridge Pulse in the App Store and Google Play, and what you still have to supply. **$9.99 per month with a 2-week free trial** is the only offer, and tests keep the app, legal text and these documents in agreement.
+Everything needed to list Fridge Pulse in the App Store and Google Play, and what you still have to supply. The offer is four plans, each with a **2-week free trial**: **$9.99 per month or $59.99 per year** for one person, and **$14.99 per month or $89.99 per year** for the household plan, which covers up to 8 people in the payer's shared household. Tests keep the app, legal text and these documents in agreement.
 
 | File | What it is |
 | --- | --- |
 | `listing.json` | Copy-paste listing text for both stores. Character limits are tested. |
-| `subscription-setup.md` | Exactly how to configure the subscription in App Store Connect, Google Play and RevenueCat. |
+| `subscription-setup.md` | Exactly how to configure the four subscriptions in App Store Connect, Google Play and RevenueCat, and how the household plan covers a household. |
 | `privacy-and-compliance.md` | Answers for the App Privacy label, Data safety form, age ratings, and App Review notes. |
 | `screenshots/ios-6.9in/` | Eight 1290x2796 App Store screenshots. |
 | `screenshots/android-phone/` | Eight 1080x1920 Google Play screenshots. |

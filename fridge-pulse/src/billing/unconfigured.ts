@@ -1,4 +1,4 @@
-import { NO_ENTITLEMENT, PRICE_PER_MONTH } from './trial';
+import { NO_ENTITLEMENT } from './trial';
 import type { BillingProvider } from './types';
 
 /**
@@ -14,7 +14,7 @@ export function createUnconfiguredProvider(): BillingProvider {
       return NO_ENTITLEMENT;
     },
     async getOffer() {
-      return { priceString: PRICE_PER_MONTH };
+      return { prices: {} };
     },
     async purchase() {
       return { ok: false, cancelled: false, message };

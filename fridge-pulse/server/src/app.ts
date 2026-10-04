@@ -39,7 +39,7 @@ function matchesMediaType(b64: string, mediaType: string): boolean {
   return false;
 }
 
-type Env = { Variables: { userId: string } };
+type Env = { Variables: { userId: string; /** When the caller's own household plan runs out, if they have one. */ householdUntil: number | null } };
 
 /** Why an uploaded image cannot be used, or null when it is fine. */
 function badImage(img: { mediaType: string; data: string }): { status: 400 | 413; message: string } | null {
@@ -53,6 +53,14 @@ const BURST_PER_MINUTE = { scan: 8, meals: 20, identify: 6, household: 30, join:
 const HOUSEHOLD_CALLS_PER_DAY = 6000;
 /** Wrong invite codes allowed per day, so codes cannot be guessed. */
 const JOINS_PER_DAY = 10;
+/**
+ * Household calls open to people without a plan: joining (someone else's household plan may cover
+ * them), looking at their household (to see whether it does) and leaving. Everything else needs a plan
+ * or that cover.
+ */
+const OPEN_ROUTES = new Set(['GET /v1/household', 'POST /v1/household/join', 'POST /v1/household/leave']);
+/** Calls to those routes per IP per day from people without a plan, so made-up ids cannot farm them. */
+const OPEN_CALLS_PER_IP_PER_DAY = 200;
 
 export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown', households }: Deps) {
   const app = new Hono<Env>();
@@ -83,8 +91,15 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     if (!userId || !isValidAppUserId(userId)) return fail(c, 401, 'unauthorized', 'Sign in again to continue.');
 
     try {
-      if (!(await entitlements.isActive(userId))) {
-        return fail(c, 402, 'payment_required', 'Start your free trial or subscribe to use this feature.');
+      if (!(await allowed(c, userId))) {
+        if (!OPEN_ROUTES.has(`${c.req.method} ${c.req.path}`)) {
+          return fail(c, 402, 'payment_required', 'Start your free trial or subscribe to use this feature.');
+        }
+        const open = limiter.hit(`open:ip:${clientIp(c)}`, OPEN_CALLS_PER_IP_PER_DAY, DAY_MS);
+        if (!open.ok) {
+          c.header('Retry-After', String(open.retryAfterSec));
+          return fail(c, 429, 'rate_limited', 'Too many requests. Try again tomorrow.');
+        }
       }
     } catch (e) {
       if (e instanceof EntitlementLookupError) {
@@ -96,6 +111,39 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     c.set('userId', userId);
     await next();
   });
+
+  /** A plan of their own, or a household plan someone in their household pays for. */
+  async function allowed(c: Context<Env>, userId: string): Promise<boolean> {
+    c.set('householdUntil', null);
+    const own = await entitlements.isActive(userId);
+    if (!households || !entitlements.householdUntil) return own;
+    if (own) {
+      // Someone on a household plan covers their household; note it (or that it has ended) on the way past.
+      const until = await entitlements.householdUntil(userId);
+      c.set('householdUntil', until);
+      try {
+        households.sponsor(userId, until);
+      } catch (e) {
+        // Their own plan still lets them in.
+        console.error('Could not record a household plan:', e instanceof Error ? e.message : e);
+      }
+      return true;
+    }
+    let cover;
+    try {
+      cover = households.coverage(userId);
+    } catch (e) {
+      console.error('Could not read household cover:', e instanceof Error ? e.message : e);
+      return false;
+    }
+    if (!cover) return false;
+    if (cover.until != null && cover.until > Date.now()) return true;
+    if (!cover.sponsorUser) return false;
+    // The plan has reached its end date on record; it may have renewed since, so ask the store.
+    const until = await entitlements.householdUntil(cover.sponsorUser);
+    households.sponsor(cover.sponsorUser, until);
+    return until != null && until > Date.now();
+  }
 
   function limited(c: Context<Env>, bucket: keyof typeof BURST_PER_MINUTE, perDay: number) {
     const userId = c.get('userId');
@@ -237,7 +285,11 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     household(async (c, store) => {
       const parsed = CreateHouseholdSchema.safeParse(await body(c));
       if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
-      return c.json({ household: store.create(c.get('userId'), parsed.data.memberName, parsed.data.name) });
+      const userId = c.get('userId');
+      store.create(userId, parsed.data.memberName, parsed.data.name);
+      // A payer on the household plan covers the new household from the start.
+      store.sponsor(userId, c.get('householdUntil'));
+      return c.json({ household: store.get(userId) });
     }),
   );
 
@@ -248,7 +300,10 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
       const blocked = limited(c, 'join', JOINS_PER_DAY);
       if (blocked) return blocked;
-      return c.json({ household: store.join(c.get('userId'), parsed.data.memberName, parsed.data.code) });
+      const userId = c.get('userId');
+      store.join(userId, parsed.data.memberName, parsed.data.code);
+      store.sponsor(userId, c.get('householdUntil'));
+      return c.json({ household: store.get(userId) });
     }),
   );
 

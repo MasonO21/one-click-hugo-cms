@@ -2,7 +2,15 @@
 export interface EntitlementChecker {
   /** Resolves true when entitled. Throws `EntitlementLookupError` when the store lookup itself fails. */
   isActive(appUserId: string): Promise<boolean>;
+  /**
+   * When the person's household plan runs out (ms since the epoch), or null without a live one. A
+   * household plan covers everyone in the payer's shared household. Without this, no plan does.
+   */
+  householdUntil?(appUserId: string): Promise<number | null>;
 }
+
+/** Stands in for "never runs out" (a lifetime entitlement has no expiry date). */
+export const NO_EXPIRY = Date.UTC(9999, 11, 31);
 
 export class EntitlementLookupError extends Error {
   constructor(message: string) {
@@ -21,6 +29,8 @@ export function isValidAppUserId(id: string): boolean {
 interface RevenueCatOptions {
   secretKey: string;
   entitlementId: string;
+  /** The entitlement the household plans grant as well. */
+  householdEntitlementId?: string;
   fetchImpl?: typeof fetch;
   now?: () => number;
   /** How long a positive answer is reused. */
@@ -29,9 +39,11 @@ interface RevenueCatOptions {
   negativeTtlMs?: number;
 }
 
+type RevenueCatEntitlement = { expires_date?: string | null; grace_period_expires_date?: string | null };
+
 interface RevenueCatSubscriber {
   subscriber?: {
-    entitlements?: Record<string, { expires_date?: string | null; grace_period_expires_date?: string | null }>;
+    entitlements?: Record<string, RevenueCatEntitlement>;
   };
 }
 
@@ -39,53 +51,59 @@ interface RevenueCatSubscriber {
 export function createRevenueCatChecker({
   secretKey,
   entitlementId,
+  householdEntitlementId = 'household',
   fetchImpl = fetch,
   now = Date.now,
   positiveTtlMs = 5 * 60_000,
   negativeTtlMs = 30_000,
 }: RevenueCatOptions): EntitlementChecker {
-  const cache = new Map<string, { active: boolean; until: number }>();
+  // One lookup answers both questions, so checking for a household plan costs nothing extra.
+  const cache = new Map<string, { active: boolean; household: number | null; until: number }>();
+
+  async function lookup(appUserId: string) {
+    const t = now();
+    const hit = cache.get(appUserId);
+    if (hit && hit.until > t) return hit;
+
+    let res: Response;
+    try {
+      res = await fetchImpl(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`, {
+        headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(8_000),
+      });
+    } catch {
+      throw new EntitlementLookupError('Could not reach RevenueCat');
+    }
+    if (!res.ok) throw new EntitlementLookupError(`RevenueCat responded ${res.status}`);
+
+    const body = (await res.json()) as RevenueCatSubscriber;
+    const entitlements = body.subscriber?.entitlements ?? {};
+    const active = liveUntil(entitlements[entitlementId], t) != null;
+    const household = liveUntil(entitlements[householdEntitlementId], t);
+
+    // Bound the cache so a flood of made-up ids cannot grow memory without limit.
+    if (cache.size > 10_000) cache.clear();
+    const entry = { active, household, until: t + (active ? positiveTtlMs : negativeTtlMs) };
+    cache.set(appUserId, entry);
+    return entry;
+  }
 
   return {
-    async isActive(appUserId) {
-      const t = now();
-      const hit = cache.get(appUserId);
-      if (hit && hit.until > t) return hit.active;
-
-      let res: Response;
-      try {
-        res = await fetchImpl(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`, {
-          headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(8_000),
-        });
-      } catch {
-        throw new EntitlementLookupError('Could not reach RevenueCat');
-      }
-      if (!res.ok) throw new EntitlementLookupError(`RevenueCat responded ${res.status}`);
-
-      const body = (await res.json()) as RevenueCatSubscriber;
-      const ent = body.subscriber?.entitlements?.[entitlementId];
-      const active = ent != null && isLive(ent, t);
-
-      // Bound the cache so a flood of made-up ids cannot grow memory without limit.
-      if (cache.size > 10_000) cache.clear();
-      cache.set(appUserId, { active, until: t + (active ? positiveTtlMs : negativeTtlMs) });
-      return active;
-    },
+    isActive: async (appUserId) => (await lookup(appUserId)).active,
+    householdUntil: async (appUserId) => (await lookup(appUserId)).household,
   };
 }
 
-function isLive(
-  ent: { expires_date?: string | null; grace_period_expires_date?: string | null },
-  nowMs: number,
-): boolean {
+/** When a live entitlement runs out (ms), or null when it is missing or has run out. */
+function liveUntil(ent: RevenueCatEntitlement | undefined, nowMs: number): number | null {
+  if (!ent) return null;
   // A null expiry means a lifetime / non-expiring entitlement.
-  if (ent.expires_date == null) return true;
+  if (ent.expires_date == null) return NO_EXPIRY;
   const expires = Date.parse(ent.expires_date);
-  if (Number.isFinite(expires) && expires > nowMs) return true;
   // Billing retry grace period: the store is still trying to collect payment.
   const grace = ent.grace_period_expires_date ? Date.parse(ent.grace_period_expires_date) : NaN;
-  return Number.isFinite(grace) && grace > nowMs;
+  const until = Math.max(Number.isFinite(expires) ? expires : 0, Number.isFinite(grace) ? grace : 0);
+  return until > nowMs ? until : null;
 }
 
 /** Development only: lets every request through. */

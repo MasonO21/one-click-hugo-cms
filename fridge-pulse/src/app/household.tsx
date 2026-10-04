@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 import { Button } from '../components/Button';
@@ -10,7 +11,8 @@ import { Screen } from '../components/Screen';
 import { Emoji, Text } from '../components/Text';
 import { isDemoMode } from '../lib/api';
 import { confirm } from '../lib/dialogs';
-import { useHousehold } from '../store/household';
+import { HOUSEHOLD_MAX_PEOPLE } from '../billing/trial';
+import { isCovered, sponsorName, useHousehold } from '../store/household';
 import { radius, useTheme } from '../theme';
 
 function ago(ms: number | null): string {
@@ -93,10 +95,28 @@ export default function Household() {
                 <Button label="New code" variant="ghost" size="sm" onPress={() => void useHousehold.getState().newCode()} />
               </View>
               <Text variant="caption" muted>
-                Anyone with the code can join, up to 8 people. A new code stops the old one working.
+                {`Anyone with the code can join, up to ${HOUSEHOLD_MAX_PEOPLE} people. A new code stops the old one working.`}
               </Text>
             </Card>
           </FadeIn>
+
+          {isCovered(household) ? (
+            <View style={[styles.plan, { backgroundColor: c.primaryTint }]} testID="household-covered">
+              <Ionicons name="checkmark-circle" size={20} color={c.primary} />
+              <Text variant="caption" style={{ flex: 1, fontSize: 14, lineHeight: 20 }}>
+                {sponsorName(household)
+                  ? `${sponsorName(household)}’s household plan covers everyone here.`
+                  : 'Your household plan covers everyone here. Anyone who joins gets Fridge Pulse too.'}
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.plan, { backgroundColor: c.surfaceAlt }]} testID="household-upsell">
+              <Text variant="caption" muted style={{ flex: 1, fontSize: 14, lineHeight: 20 }}>
+                {`Right now everyone here needs their own plan. One person on the household plan covers up to ${HOUSEHOLD_MAX_PEOPLE} people.`}
+              </Text>
+              <Button label="See plans" size="sm" variant="ghost" onPress={() => router.push('/plans')} />
+            </View>
+          )}
 
           <View style={{ gap: 8 }}>
             <Text variant="label" muted>
@@ -110,10 +130,17 @@ export default function Household() {
                       {m.name.trim()[0]?.toUpperCase() ?? '?'}
                     </Text>
                   </View>
-                  <Text variant="bodyStrong" style={{ flex: 1 }}>
-                    {m.name}
-                    {m.you ? <Text muted>{' (you)'}</Text> : null}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong">
+                      {m.name}
+                      {m.you ? <Text muted>{' (you)'}</Text> : null}
+                    </Text>
+                    {m.sponsor ? (
+                      <Text variant="caption" muted>
+                        Pays for the household plan
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
               </FadeIn>
             ))}
@@ -198,5 +225,6 @@ export default function Household() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   member: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.md, borderWidth: 1 },
+  plan: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: radius.md, flexWrap: 'wrap' },
   avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 });

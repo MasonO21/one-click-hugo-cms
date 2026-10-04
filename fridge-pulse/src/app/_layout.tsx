@@ -13,11 +13,11 @@ import { SnackbarHost } from '../components/Snackbar';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { useEmbeddedFonts } from '../lib/embeddedFonts';
 import { configureNotifications, syncReminders } from '../lib/notifications';
-import { useBilling } from '../store/billing';
+import { planPriceLabel, useBilling } from '../store/billing';
 import { useFoodLog } from '../store/foodLog';
 import { useFoods } from '../store/foods';
 import { useHealth } from '../store/health';
-import { useHousehold } from '../store/household';
+import { isCovered, useHousehold } from '../store/household';
 import { useHydrated } from '../store/hydration';
 import { useInventory } from '../store/inventory';
 import { useMealsCache } from '../store/mealsCache';
@@ -36,8 +36,10 @@ function ReminderSync({ enabled }: { enabled: boolean }) {
   const remindersEnabled = useSettings((s) => s.remindersEnabled);
   const reminderHour = useSettings((s) => s.reminderHour);
   const entitlement = useBilling((s) => s.entitlement);
-  const priceString = useBilling((s) => s.priceString);
+  const prices = useBilling((s) => s.prices);
   const trialEndsOn = entitlement.status === 'trial' ? entitlement.endsOn : null;
+  // The price that starts after the trial: the plan the person picked.
+  const priceString = planPriceLabel(prices, entitlement.planId ?? 'monthly');
 
   // Waits for a pause in changes (typing a name updates the store on every keystroke), then reschedules.
   useEffect(() => {
@@ -61,7 +63,7 @@ function ReminderSync({ enabled }: { enabled: boolean }) {
       void syncReminders(useInventory.getState().items, {
         enabled: enabled && settings.remindersEnabled,
         hour: settings.reminderHour,
-        trial: endsOn ? { endsOn, price: billing.priceString } : null,
+        trial: endsOn ? { endsOn, price: planPriceLabel(billing.prices, billing.entitlement.planId ?? 'monthly') } : null,
       });
     });
     return () => sub.remove();
@@ -108,12 +110,17 @@ function HouseholdSync() {
     const offShopping = useShopping.subscribe((s, prev) => {
       if (s.items !== prev.items || s.deleted !== prev.deleted) later();
     });
+    // A new or changed plan can start or stop covering the household: ask straight away.
+    const offBilling = useBilling.subscribe((s, prev) => {
+      if (s.entitlement !== prev.entitlement) sync();
+    });
     return () => {
       clearInterval(every);
       clearTimeout(soon);
       sub.remove();
       offItems();
       offShopping();
+      offBilling();
     };
   }, [shared]);
   return null;
@@ -128,7 +135,10 @@ export default function RootLayout() {
   const { c, scheme } = useTheme();
   const hydrated = useHydrated([useInventory, useSettings, useMealsCache, useShopping, useFoods, useFoodLog, useHealth, useHousehold]);
   const billingReady = useBilling((s) => s.ready);
-  const unlocked = useBilling((s) => isUnlocked(s.entitlement));
+  const subscribed = useBilling((s) => isUnlocked(s.entitlement));
+  // Someone else's household plan can cover this person too.
+  const covered = useHousehold((s) => isCovered(s.household));
+  const unlocked = subscribed || covered;
   const onboarded = useSettings((s) => s.onboarded);
 
   useEffect(() => {
@@ -180,6 +190,7 @@ export default function RootLayout() {
             <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
             <Stack.Screen name="log" options={{ presentation: 'modal' }} />
             <Stack.Screen name="household" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="plans" options={{ presentation: 'modal' }} />
           </Stack.Protected>
           {/* Legal text must be readable before onboarding and on the paywall, so it is never guarded. */}
           <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />

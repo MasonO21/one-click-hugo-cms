@@ -6,7 +6,7 @@ import { act } from 'react-test-renderer';
 import type { HouseholdView, SyncRecord } from '../src/lib/api';
 import { itemData, itemFrom, merge, nextStamp, outgoing, pruneTombstones, shoppingFrom, TOMBSTONE_MS } from '../src/lib/householdSync';
 import type { PantryItem } from '../src/lib/types';
-import { useHousehold } from '../src/store/household';
+import { isCovered, useHousehold } from '../src/store/household';
 import { useInventory } from '../src/store/inventory';
 import { useShopping } from '../src/store/shopping';
 import { mk } from '../test-utils/helpers';
@@ -45,6 +45,7 @@ jest.mock('../src/lib/api', () => {
     isDemoMode: false,
     createHousehold: jest.fn(async () => mockServer.view),
     joinHousehold: jest.fn(async () => mockServer.view),
+    getHousehold: jest.fn(async () => mockServer.view),
     leaveHousehold: jest.fn(async () => {}),
     syncHousehold: jest.fn(async (_user: string, since: number, changes: SyncRecord[]) => mockServer.sync(since, changes)),
   };
@@ -183,6 +184,30 @@ describe('syncing with the household', () => {
     });
     expect(useHousehold.getState().household).toBeNull();
     expect(useInventory.getState().items).toHaveLength(1);
+  });
+
+  it('learns when a household plan starts or stops covering everyone', async () => {
+    await act(async () => {
+      await useHousehold.getState().create('Home', 'Me');
+    });
+    const api = jest.requireMock('../src/lib/api');
+    const { ApiError } = jest.requireActual('../src/lib/api');
+    const until = Date.now() + 86_400_000;
+    api.getHousehold.mockImplementationOnce(async () => ({ ...mockServer.view, coveredUntil: until, members: [{ name: 'Me', you: true }, { name: 'Sam', you: false, sponsor: true }] }));
+    await act(async () => {
+      await useHousehold.getState().refresh();
+    });
+    expect(isCovered(useHousehold.getState().household)).toBe(true);
+    // The plan ended and this person has none of their own: the server says so, and the household stays.
+    api.syncHousehold.mockImplementationOnce(async () => {
+      throw new ApiError('payment_required', 'Start your free trial or subscribe to use this feature.');
+    });
+    await act(async () => {
+      await useHousehold.getState().sync();
+    });
+    expect(useHousehold.getState().household).toMatchObject({ name: 'Home', coveredUntil: null });
+    expect(isCovered(useHousehold.getState().household)).toBe(false);
+    expect(useHousehold.getState().error).toBeNull();
   });
 
   it('leaving keeps this phone’s copy', async () => {

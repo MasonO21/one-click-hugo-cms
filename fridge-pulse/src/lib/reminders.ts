@@ -69,7 +69,7 @@ export interface TrialReminder {
 export function buildTrialReminder(
   endsOn: string | null,
   now: Date,
-  { hour = 10, price, endsLabel, trialName }: { hour?: number; price: string; endsLabel: string; trialName: string },
+  { hour = 10, price, endsLabel, trialName }: { hour?: number; /** The plan's price and period, from `planPriceLabel`. */ price: string; endsLabel: string; trialName: string },
 ): TrialReminder | null {
   if (!endsOn) return null;
   for (const daysBefore of [2, 1]) {
@@ -78,7 +78,7 @@ export function buildTrialReminder(
       return {
         fireAt,
         title: daysBefore === 1 ? 'Your free trial ends tomorrow' : 'Your free trial ends in 2 days',
-        body: `Your ${trialName} trial ends ${endsLabel}. After that it is ${price}/month unless you cancel in your account settings.`,
+        body: `Your ${trialName} trial ends ${endsLabel}. After that it is ${price} unless you cancel in your account settings.`,
       };
     }
   }

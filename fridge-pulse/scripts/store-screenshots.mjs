@@ -42,7 +42,7 @@ const SHOTS = [
   { id: 'meals', title: 'Cook what needs using up', sub: 'Meal ideas built around your soonest dates' },
   { id: 'nutrition', title: 'Calories and macros', sub: 'For your food and every meal idea' },
   { id: 'log', title: 'Hit your protein', sub: 'Meals you cook log themselves' },
-  { id: 'paywall', title: 'Try free for 2 weeks', sub: 'Then $9.99 per month. Cancel anytime.' },
+  { id: 'paywall', title: 'Try free for 2 weeks', sub: 'Then $59.99 a year or $9.99 a month' },
 ];
 
 const TARGETS = [

@@ -9,6 +9,8 @@ export interface Config {
   identifyEffort: Effort;
   revenueCatSecretKey: string | null;
   entitlementId: string;
+  /** The RevenueCat entitlement the household plans grant: its holder covers their shared household. */
+  householdEntitlementId: string;
   /** Skips subscription checks. Local development only. */
   allowUnauthenticated: boolean;
   /** Per-user daily caps, to bound spend if an account is abused. */
@@ -63,6 +65,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     identifyEffort: effort(env.IDENTIFY_EFFORT, 'medium'),
     revenueCatSecretKey,
     entitlementId: env.REVENUECAT_ENTITLEMENT_ID?.trim() || 'pro',
+    householdEntitlementId: env.REVENUECAT_HOUSEHOLD_ENTITLEMENT_ID?.trim() || 'household',
     allowUnauthenticated,
     scansPerDay: int(env.SCANS_PER_DAY, 15),
     mealsPerDay: int(env.MEALS_PER_DAY, 40),

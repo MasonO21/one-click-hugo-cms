@@ -1,8 +1,8 @@
-import type { Entitlement } from './trial';
+import type { Entitlement, PlanId } from './trial';
 
 export interface Offer {
-  /** Localised price, e.g. "$9.99". */
-  priceString: string;
+  /** Localised price of each plan, as the store formats it, when the store has it. */
+  prices: Partial<Record<PlanId, string>>;
 }
 
 export type PurchaseResult =
@@ -14,8 +14,8 @@ export interface BillingProvider {
   init(): Promise<void>;
   getEntitlement(): Promise<Entitlement>;
   getOffer(): Promise<Offer>;
-  /** Starts the free trial (first time) or subscribes (after a trial). */
-  purchase(): Promise<PurchaseResult>;
+  /** Starts the free trial (first time) or subscribes (after a trial, or to change plan). */
+  purchase(plan: PlanId): Promise<PurchaseResult>;
   restore(): Promise<Entitlement>;
   /** Subscribes to entitlement changes pushed by the store. Returns an unsubscribe fn. */
   subscribe(listener: (e: Entitlement) => void): () => void;
