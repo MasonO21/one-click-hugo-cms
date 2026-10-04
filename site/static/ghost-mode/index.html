@@ -6,6 +6,12 @@
 <meta name="description" content="Ghost Mode for Kids: parents get pattern alerts (new adult contacts, late-night activity spikes, grooming language markers) instead of reading their kids' messages.">
 <meta name="theme-color" content="#4A90E2">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%234A90E2%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239B51E0%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Cpath%20d%3D%22M17%2033C17%2021.5%2023.5%2014%2032%2014S47%2021.5%2047%2033V50.5C47%2054%2043.5%2055%2041.6%2052.6C40%2050.6%2037.4%2050.6%2035.8%2052.6C34%2055%2030%2055%2028.2%2052.6C26.6%2050.6%2024%2050.6%2022.4%2052.6C20.5%2055%2017%2054%2017%2050.5Z%22%20fill%3D%22%23fff%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2231.5%22%20r%3D%222.8%22%20fill%3D%22%232D3566%22/%3E%3Ccircle%20cx%3D%2237%22%20cy%3D%2231.5%22%20r%3D%222.8%22%20fill%3D%22%232D3566%22/%3E%3Cpath%20d%3D%22M45%2039.5l7.5%202.8v5.4c0%204.6-3.2%207.6-7.5%209.3-4.3-1.7-7.5-4.7-7.5-9.3v-5.4z%22%20fill%3D%22%23F5A623%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.6%22/%3E%3C/svg%3E">
+<link rel="manifest" href="/ghost-mode/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/ghost-mode/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ghost Mode">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Ghost Mode for Kids</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -452,6 +458,16 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .verdict.ok{color:var(--ok);font-weight:600}
 @media (max-width:899px){.how-steps{grid-template-columns:minmax(0,1fr);gap:10px}}
 
+/* ---------- v4: grows with them ---------- */
+.age-card{display:grid;gap:6px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);max-width:620px}
+.age-card:empty{display:none}
+.age-card p{font-size:13px}
+.age-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.age-head b{font-size:14px}
+.age-card .btn{justify-self:start;margin-top:2px}
+.grow{display:flex;gap:8px;align-items:flex-start;padding-top:8px;margin-top:2px;border-top:1px dashed var(--line);color:var(--muted)}
+.grow .ic{color:var(--soft-ink);margin-top:1px}
+
 /* ---------- responsive ---------- */
 @media (max-width:1279px){
   .stage{grid-template-columns:minmax(0,1fr) 372px;grid-template-areas:"parent kid" "parent wall"}
@@ -609,7 +625,11 @@ img{max-width:100%}
           <form class="settings" id="settingsForm" autocomplete="off">
             <fieldset class="set-group">
               <legend>Your child</legend>
-              <label class="field" style="max-width:300px">First name<input id="setName" name="kidName" maxlength="20"></label>
+              <div class="row2">
+                <label class="field">First name<input id="setName" name="kidName" maxlength="20"></label>
+                <label class="field">Age<input id="setAge" name="kidAge" type="number" min="5" max="19" inputmode="numeric"></label>
+              </div>
+              <div class="age-card" id="ageCard"></div>
             </fieldset>
             <fieldset class="set-group">
               <legend>Quiet hours</legend>
@@ -812,13 +832,26 @@ function dayLabel(t){const d=dayDiff(t);return d===0?'Today':d===1?'Yesterday':s
 const when=t=>`${dayLabel(t)}, ${fmtTime(t)}`;
 const shortWhen=t=>{const d=dayDiff(t);return d===0?fmtTime(t):d===1?'Yesterday':shortDate(t)};
 
-/* ---------- on-device detection engine ---------- */
+/* ---------- on-device detection engine (tested by tests/ghost-mode/engine.test.js) ---------- */
 const SENS={
   low:{watch:6,urgent:10,lateMin:10,lateMult:4},
   balanced:{watch:4,urgent:8,lateMin:5,lateMult:3},
   high:{watch:3,urgent:6,lateMin:3,lateMult:2}
 };
 const RANK={info:0,watch:1,urgent:2};
+const SENS_LABEL={low:'Low',balanced:'Balanced',high:'High'};
+/* Suggested settings by age. Ghost Mode is meant to get lighter as kids get older. */
+const AGE_PROFILES=[
+  {from:5,to:10,label:'10 and under',sensitivity:'high',quietStart:'20:30',quietEnd:'07:00',alerts:{adult:true,late:true,grooming:true},
+   why:'Younger kids get the closest watch and an earlier quiet-hours window.'},
+  {from:11,to:13,label:'11 to 13',sensitivity:'balanced',quietStart:'22:00',quietEnd:'06:00',alerts:{adult:true,late:true,grooming:true},
+   why:'Full coverage with a typical school-night window.',change:'quiet hours move to 10 PM and sensitivity eases to Balanced'},
+  {from:14,to:15,label:'14 and 15',sensitivity:'balanced',quietStart:'23:00',quietEnd:'06:00',alerts:{adult:true,late:true,grooming:true},
+   why:'A later quiet-hours window, with the same protection from adults.',change:'quiet hours start at 11 PM'},
+  {from:16,to:17,label:'16 and 17',sensitivity:'low',quietStart:'00:00',quietEnd:'06:00',alerts:{adult:true,late:false,grooming:true},
+   why:'Late-night alerts switch off. Only strong patterns and new adults are flagged.',change:'late-night alerts switch off and sensitivity drops to Low'}
+];
+const ageProfile=age=>age&&age<18?AGE_PROFILES.find(p=>age<=p.to):null;
 const MARKERS=[
   {id:'secrecy_request',label:'Asked to keep secrets',w:3,
    desc:'Asking to keep the chat secret, hide it or delete it, like "don\'t tell your parents."',
@@ -960,7 +993,7 @@ function deviceReceive(p,t){
   if(p.type==='settings'){
     D.config={kidName:p.child,quietStart:p.quiet_start,quietEnd:p.quiet_end,sensitivity:p.sensitivity,
       alerts:{adult:p.alerts_on.includes('new_adult_contact'),late:p.alerts_on.includes('late_night_spike'),grooming:p.alerts_on.includes('grooming_language_markers')},
-      showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null};
+      showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null,kidAge:p.child_age||null};
   }else if(p.type==='trusted_adults'){D.trusted=p.names.map(n=>n.toLowerCase())}
   else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(p.note,'From your parent')}
   else if(p.type==='share_request'){
@@ -971,7 +1004,7 @@ function deviceReceive(p,t){
 }
 
 function settingsPayload(s){
-  return {type:'settings',child:(s.kidName||'').trim()||'Your child',quiet_start:s.quietStart,quiet_end:s.quietEnd,sensitivity:s.sensitivity,
+  return {type:'settings',child:(s.kidName||'').trim()||'Your child',child_age:s.kidAge||null,quiet_start:s.quietStart,quiet_end:s.quietEnd,sensitivity:s.sensitivity,
     alerts_on:[s.alerts.adult&&'new_adult_contact',s.alerts.late&&'late_night_spike',s.alerts.grooming&&'grooming_language_markers'].filter(Boolean),
     show_contact_names:s.showNames,tell_child_about_alerts:s.tellKid,late_alerts_paused_night:s.latePausedNight||null};
 }
@@ -1103,7 +1136,7 @@ function leakChars(){
 function seed(){
   const b=new Date();b.setHours(16,12,0,0);const T0=b.getTime();
   const at=(daysAgo,h)=>{const d=new Date(b);d.setDate(d.getDate()-daysAgo);const [hh,mm]=h.split(':').map(Number);d.setHours(hh,mm,0,0);return d.getTime()};
-  const settings={kidName:'Maya',quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true,latePausedNight:null};
+  const settings={kidName:'Maya',kidAge:12,quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true,latePausedNight:null};
   S={v:2,clock:at(15,'19:00'),
     parent:{settings,alerts:[],rollups:{},today:{day:'',total:0},lastSync:0,blocked:{},unblocked:{},shares:{},
       trusted:[{name:'Grandma Rose',relation:'Family',addedAt:at(15,'19:02')},{name:'Coach Daniels',relation:'Coach or teacher',addedAt:at(15,'19:02')}]},
@@ -1382,6 +1415,7 @@ function renderParent(){
   if(S.ui.tab==='alerts')renderAlerts();
   if(S.ui.tab==='activity')renderActivity();
   if(S.ui.tab==='trusted')renderTrusted();
+  if(S.ui.tab==='settings')renderAgeCard();
 }
 
 function renderAlerts(){
@@ -1437,9 +1471,22 @@ function renderTrusted(){
   $('#trustedList').innerHTML=P.trusted.length?P.trusted.map((t,i)=>`<li class="t-row"><span class="av sm av${(i+1)%5}">${esc(initial(t.name))}</span><div class="t-text"><b>${esc(t.name)}</b><span>${esc(t.relation)} · added ${shortDate(t.addedAt)}</span></div><button type="button" class="btn sm" data-action="untrust" data-id="${esc(t.name)}">Remove</button></li>`).join(''):'<li class="t-row"><span class="muted">No trusted adults yet.</span></li>';
 }
 
+function renderAgeCard(){
+  const s=S.parent.settings,k=name(),age=s.kidAge,el=$('#ageCard');
+  if(age>=18){el.innerHTML=`<p>Ghost Mode is built for kids under 18. At 18, it's time to turn it off together.</p>`;return}
+  const pr=ageProfile(age);if(!pr){el.innerHTML='';return}
+  const match=s.sensitivity===pr.sensitivity&&s.quietStart===pr.quietStart&&s.quietEnd===pr.quietEnd&&['adult','late','grooming'].every(x=>s.alerts[x]===pr.alerts[x]);
+  const on=[pr.alerts.adult&&'new adults',pr.alerts.late&&'late nights',pr.alerts.grooming&&'grooming patterns'].filter(Boolean);
+  const later=AGE_PROFILES.filter(x=>x.from>pr.to).map(x=>`At ${x.from}, ${x.change}.`).concat(["At 18, it's time to turn it off together."]).join(' ');
+  el.innerHTML=`<div class="age-head"><b>Suggested for ages ${pr.label}</b>${match?`<span class="pill ok">${ic('check','ic xs')}In use</span>`:''}</div>
+    <p>${SENS_LABEL[pr.sensitivity]} sensitivity · quiet hours ${fmtHM(pr.quietStart)} to ${fmtHM(pr.quietEnd)} · alerts for ${joinList(on)}</p>
+    <p class="muted">${esc(pr.why)}</p>
+    ${match?'':`<button type="button" class="btn sm primary" data-action="apply-age">Use these settings</button>`}
+    <p class="grow">${ic('heart','ic sm')}<span>Ghost Mode gets lighter as ${esc(k)} grows. ${esc(later)}</span></p>`;
+}
 function fillSettingsForm(){
   const s=S.parent.settings,f=$('#settingsForm');
-  f.elements.kidName.value=s.kidName;f.elements.quietStart.value=s.quietStart;f.elements.quietEnd.value=s.quietEnd;
+  f.elements.kidName.value=s.kidName;f.elements.kidAge.value=s.kidAge||'';f.elements.quietStart.value=s.quietStart;f.elements.quietEnd.value=s.quietEnd;
   f.querySelectorAll('[name="sensitivity"]').forEach(r=>{r.checked=r.value===s.sensitivity});
   f.elements.aAdult.checked=s.alerts.adult;f.elements.aLate.checked=s.alerts.late;f.elements.aGroom.checked=s.alerts.grooming;
   f.elements.showNames.checked=s.showNames;f.elements.tellKid.checked=s.tellKid;
@@ -1448,6 +1495,7 @@ function fillSettingsForm(){
 function onSettings(){
   const s=S.parent.settings,f=$('#settingsForm');
   s.kidName=f.elements.kidName.value.trim();
+  const ag=parseInt(f.elements.kidAge.value,10);s.kidAge=isNaN(ag)?null:ag;
   if(f.elements.quietStart.value)s.quietStart=f.elements.quietStart.value;
   if(f.elements.quietEnd.value)s.quietEnd=f.elements.quietEnd.value;
   const r=f.querySelector('[name="sensitivity"]:checked');if(r)s.sensitivity=r.value;
@@ -1602,6 +1650,7 @@ function renderPrivacy(){
       <li>How many messages you sent at night, as a number</li></ul></div>
     <div class="pv-col no"><h4>${ic('eyeOff','ic sm')}They never get</h4><ul>
       <li>What you or anyone else writes, unless you choose to share a chat for a report</li><li>Your photos</li><li>Your contact list. A name only shows up if it's part of an alert.</li></ul></div>
+    ${cf.kidAge?`<p class="muted" style="font-size:12.5px">Ghost Mode is set up for age ${cf.kidAge}. It's designed to get lighter as you get older, and to be turned off at 18.</p>`:''}
     <div class="pv-log"><h4>Alerts sent in the last 7 days</h4>${cf.tellKid?(week.length?`<ul>${week.map(x=>`<li><span>${esc(ALERTS[x.alert].title(k))}</span><time>${when(x.at)}</time></li>`).join('')}</ul>`:'<p class="muted">None.</p>'):'<p class="muted">Your parent turned off alert notices.</p>'}</div>
     ${D.notes.length?`<div class="pv-log"><h4>From your parent</h4><ul>${D.notes.slice(0,3).map(x=>`<li><span>${esc(x.text)}</span><time>${when(x.at)}</time></li>`).join('')}</ul></div>`:''}
     <div class="pv-help"><p><b>Something feel off?</b> Ask your parent to talk. They'll only see that you asked.</p>
@@ -1671,7 +1720,19 @@ function announce(t){const a=$('#announcer');a.textContent='';setTimeout(()=>{a.
 /* ---------- render + save ---------- */
 let saveTimer=0;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function commit(){if(seeding)return;renderAll();clearTimeout(saveTimer);saveTimer=setTimeout(save,250)}
+/* Hold re-renders while a pointer is pressed. Otherwise a blur-triggered update can replace
+   the button under the pointer between mousedown and mouseup, and the click is lost. */
+let pointerHeld=false,renderPending=false,heldTimer=0;
+function flushRender(){if(renderPending){renderPending=false;renderAll()}}
+document.addEventListener('pointerdown',()=>{pointerHeld=true;clearTimeout(heldTimer);heldTimer=setTimeout(()=>{pointerHeld=false;flushRender()},1500)},true);
+const releasePointer=()=>{if(!pointerHeld)return;pointerHeld=false;clearTimeout(heldTimer);setTimeout(flushRender,0)};
+document.addEventListener('pointerup',releasePointer,true);
+document.addEventListener('pointercancel',releasePointer,true);
+function commit(){
+  if(seeding)return;
+  if(pointerHeld)renderPending=true;else{renderPending=false;renderAll()}
+  clearTimeout(saveTimer);saveTimer=setTimeout(save,250);
+}
 function renderAll(){
   const k=name();
   $$('.kid-name').forEach(e=>{e.textContent=k});
@@ -1704,11 +1765,17 @@ document.addEventListener('click',e=>{
       shares()[al.id]={state:'pending',at:S.clock,contact:al.p.contact,where:al.p.where};
       transmit({type:'share_request',alert_id:al.id,contact:al.p.contact,reason:'report'},'down');commit();break}
     case 'view-share':T.dialog=id;$('#copyNote').textContent='';$('#copyArea').hidden=true;commit();setTimeout(()=>{const x=$('#chatDialog .icon-btn');if(x)x.focus()},30);break;
-    case 'close-dialog':case 'dialog-scrim':T.dialog=null;commit();break;
+    case 'close-dialog':case 'dialog-scrim':closeDialog();break;
     case 'copy-chat':copyChat();break;
     case 'share-yes':answerShare(true);break;
     case 'share-no':answerShare(false);break;
     case 'open-share':T.sheet='share';commit();break;
+    case 'apply-age':{
+      const st=S.parent.settings,pr=ageProfile(st.kidAge);if(!pr)break;
+      Object.assign(st,{sensitivity:pr.sensitivity,quietStart:pr.quietStart,quietEnd:pr.quietEnd,alerts:Object.assign({},pr.alerts)});
+      fillSettingsForm();transmit(settingsPayload(st),'down');
+      $('#savedNote').textContent=`Applied the suggested settings for age ${st.kidAge} and sent them to ${poss(name())} phone.`;
+      commit();break}
     case 'dismiss-how':S.ui.introDismissed=true;commit();break;
     case 'reopen':{const al=findAlert(id);if(al){al.status='new';al.note=null;commit()}break}
     case 'block':T.sheet='block';commit();break;
@@ -1812,15 +1879,34 @@ window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S.u
 /* ---------- boot ---------- */
 try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(st&&st.v===2&&st.device&&st.parent)S=st}}catch(e){S=null}
 if(!S)seed();
+if(S.parent.settings.kidAge===undefined)S.parent.settings.kidAge=12;
 $('#brandLogo').innerHTML=ghost();
 renderPatterns();
 renderTester();
 $('#phraseInput').addEventListener('input',renderTester);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&T.dialog){T.dialog=null;commit()}});
+function closeDialog(){
+  const id=T.dialog;T.dialog=null;commit();
+  const back=id&&$$('[data-action="view-share"]').find(x=>x.dataset.id===id);if(back)back.focus();
+}
+document.addEventListener('keydown',e=>{
+  if(!T.dialog)return;
+  if(e.key==='Escape'){e.preventDefault();closeDialog();return}
+  if(e.key!=='Tab')return;
+  const dlg=$('#chatDialog'),f=$$('button,a[href],textarea',dlg).filter(x=>!x.disabled&&!x.hidden&&x.offsetParent!==null);
+  if(!f.length)return;
+  const first=f[0],last=f[f.length-1];
+  if(!dlg.contains(document.activeElement)){e.preventDefault();first.focus()}
+  else if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+});
 $$('.pill-logo').forEach(el=>{el.outerHTML=ghost()});
 fillSettingsForm();
 renderAll();
 })();
+</script>
+<script>
+/* Installable app: offline support via a service worker (site version only) */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/ghost-mode/sw.js',{scope:'/ghost-mode/'}).catch(function(){})})}
 </script>
 </body>
 </html>

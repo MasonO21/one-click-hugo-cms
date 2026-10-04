@@ -1,0 +1,15 @@
+{
+  "name": "Ghost Mode for Kids",
+  "short_name": "Ghost Mode",
+  "description": "Pattern alerts for parents. Your kid's messages stay on their phone.",
+  "start_url": "/ghost-mode/",
+  "scope": "/ghost-mode/",
+  "display": "standalone",
+  "background_color": "#F1F3FA",
+  "theme_color": "#4A90E2",
+  "icons": [
+    { "src": "/ghost-mode/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/ghost-mode/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/ghost-mode/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

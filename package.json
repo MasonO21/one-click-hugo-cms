@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint src",
+    "test:ghost-mode": "node tests/ghost-mode/engine.test.js",
     "start": "run-p start:**",
     "start:hugo": "hugo -d ../dist -s site -vw",
     "start:webpack": "webpack-dev-server --config webpack.dev.js --hot",
