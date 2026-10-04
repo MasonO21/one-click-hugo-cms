@@ -1,6 +1,9 @@
 import { act, create, type ReactTestRendererJSON } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BurstLayer } from '../src/components/BurstLayer';
+import { Button } from '../src/components/Button';
+import { FreshnessMeter } from '../src/components/FreshnessMeter';
+import { HeartbeatLine } from '../src/components/HeartbeatLine';
 import { ImpactCard } from '../src/components/ImpactCard';
 import { Logo } from '../src/components/Logo';
 import { MealCard } from '../src/components/MealCard';
@@ -94,5 +97,34 @@ describe('animated components render and animate', () => {
     expect(useBurst.getState().bursts).toHaveLength(1);
     run();
     expect(useBurst.getState().bursts).toHaveLength(0);
+  });
+
+  it('Freshness meter fills to the score', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(<FreshnessMeter score={73} />);
+    });
+    expect(textOf(tree.toJSON())).toBe('0');
+    run();
+    expect(textOf(tree.toJSON())).toBe('73');
+    expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Freshness score 73 out of 100').length).toBeGreaterThan(0);
+  });
+
+  it('Heartbeat trace scrolls once it knows its width', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(<HeartbeatLine pace="quick" />);
+    });
+    const strip = tree.root.findAll((n) => typeof n.props.onLayout === 'function')[0]!;
+    act(() => strip.props.onLayout({ nativeEvent: { layout: { width: 320, height: 32, x: 0, y: 0 } } }));
+    run();
+  });
+
+  it('The orange call to action and its gradient', () => {
+    act(() => {
+      create(<Button variant="cta" label="Scan your fridge" icon="scan" onPress={() => {}} />);
+      create(<Button variant="primary" label="Next" onPress={() => {}} loading />);
+    });
+    run();
   });
 });

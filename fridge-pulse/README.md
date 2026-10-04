@@ -1,6 +1,6 @@
 # Fridge Pulse
 
-Photograph your fridge, freezer or pantry. Fridge Pulse lists what is inside, tracks what is about to expire, reminds you before it goes off, and suggests meals that use it up first. When food is about to go, it helps you rescue it: swipe it away as used, freeze it in time, or cook it, and watch your no-waste streak grow. A shopping list closes the loop, putting new food away with its own expiry dates.
+*Your kitchen's vital sign.* Photograph your fridge, freezer or pantry. Fridge Pulse lists what is inside, tracks what is about to expire, reminds you before it goes off, and suggests meals that use it up first. When food is about to go, it helps you rescue it: swipe it away as used, freeze it in time, or cook it, and watch your no-waste streak grow. A shopping list closes the loop, putting new food away with its own expiry dates.
 
 **Pricing:** free for 2 weeks (14 days), then $9.99 per month. Hard paywall once the trial ends. The offer is defined once in `src/billing/trial.ts`, and `__tests__/pricing.test.ts` fails if any other price or trial length appears in the app or store listing.
 
@@ -39,6 +39,14 @@ The preview simulates the trial on the device, returns sample items for "Analyze
 
 The bootstrap also keeps the preview working where a host serves it from a nested URL, blocks history changes, or forbids `<base>`, and follows an explicit light/dark choice from the host.
 
+## Look and feel
+
+The app follows the brand sheet (`docs/brand.md`): a dark neon interface in Pulse Magenta, Electric Blue, Zesty Orange and Lime Spark, Montserrat headlines with Open Sans text, glowing card outlines, and a heartbeat that runs through the logo and the dashboard.
+
+- **Home dashboard.** The "Fridge Pulse" wordmark and a beating neon fridge logo, a glowing dashboard card with the **Freshness score** (the share of your food with more than 3 days left, as a lime meter), the colour-coded freshness bar and a scrolling heart-monitor trace, then a big orange **Scan your fridge** button.
+- **Dark by default**, with Light and Match phone under Settings > Appearance. Every text and control colour passes WCAG AA in both looks (`__tests__/contrast.test.ts`); the orange button keeps its white label at large-text size so it does too.
+- **New icon and store art**: the neon fridge on a blue-to-orange tile (`scripts/brand-assets.mjs` renders every size), a dark neon splash screen, and store screenshots and the Play feature graphic in the same style.
+
 ## Rescuing food: what the app does
 
 - **Swipe to resolve.** On Pulse and Items, swipe a row right when you used it, left if it was thrown out (or tap the check). The row slides away, a message bar confirms it with a countdown and **Undo**, and using food in its last three days is celebrated as a rescue with a burst of leaves. Screen readers get the same actions from the row's actions menu.
@@ -47,7 +55,7 @@ The bootstrap also keeps the preview working where a host serves it from a neste
 - **Keep it fresh.** Each item shows one or two storage tips from USDA / FSIS / FDA consumer advice: raw poultry on the bottom shelf, cut mould from hard cheese but bin soft cheese, keep basil out of the fridge, and so on.
 - **I made this.** Open a meal idea and tap "I made this" to mark every tracked ingredient it used as used, with one Undo.
 - **Shopping list.** A List tab with typing suggestions, "Buy again" chips for food you finished recently, sharing, and **Put away**: ticked-off items open a review with each food headed where it usually lives (bananas in the cupboard, milk in the fridge, ice cream in the freezer) and saved with its own estimated date.
-- **Motion.** A heartbeat logo that beats faster when food needs using, a freshness bar that grows in, rows and cards that fade in, springy buttons, a scan line over your photo while it is read, and a countdown on the message bar. Everything respects the phone's Reduce Motion setting (and turns off in screenshot builds).
+- **Motion.** A heartbeat logo that beats faster when food needs using, a heart-monitor trace on the dashboard, a freshness meter that fills up, a freshness bar that grows in, rows and cards that fade in, springy buttons, a scan line over your photo while it is read, and a countdown on the message bar. Everything respects the phone's Reduce Motion setting (and turns off in screenshot builds).
 
 ## Unfamiliar food: looked up online, confirmed from a picture
 
@@ -197,7 +205,7 @@ The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib
 
 Verified in the build environment:
 
-- App and server typecheck, lint is clean, and all 922 app tests and 56 server tests pass. The tests include: every food's shelf life in all three places against the independent reference; the price and trial length appear only as $9.99 and 2 weeks; every text, control and switch colour meets WCAG AA contrast in light and dark; typing suggestions; the rescue stats, streak and milestones; the shopping list and put-away; diet filters; the reminder scheduler under rapid changes; the online lookup (which items are looked up, the answer checked at the app's trust boundary, pictures only from the two allowed hosts, Yes / No / cancel, the food database feeding shelf life, suggestions and later scans); the identify request sent through the real SDK to a fake API (photo, web search limits, strict report tool, resuming a paused turn, one nudge, refusals); picture lookups against stand-in Open Food Facts and Wikipedia services; and a render of every animated component through to the end of its animation.
+- App and server typecheck, lint is clean, and all 955 app tests and 56 server tests pass. The tests include: every food's shelf life in all three places against the independent reference; the price and trial length appear only as $9.99 and 2 weeks; every text, control and switch colour meets WCAG AA contrast in light and dark; typing suggestions; the rescue stats, streak and milestones; the shopping list and put-away; diet filters; the reminder scheduler under rapid changes; the online lookup (which items are looked up, the answer checked at the app's trust boundary, pictures only from the two allowed hosts, Yes / No / cancel, the food database feeding shelf life, suggestions and later scans); the identify request sent through the real SDK to a fake API (photo, web search limits, strict report tool, resuming a paused turn, one nudge, refusals); picture lookups against stand-in Open Food Facts and Wikipedia services; and a render of every animated component through to the end of its animation.
 - The iOS and Android bundles export (`expo export`), which proves every import resolves natively.
 - In Chromium on an emulated iPhone, in light mode, dark mode and with Reduce Motion on, a scripted run covers adding food by typing, rescuing with the check mark and Undo, swiping food away, freezing an item in time, storage tips, the name guard, adding to and ticking off the shopping list, "Buy again", putting shopping away, "I made this", and the discard prompt, with no console errors or warnings. A second scripted run covers the lookup: the mystery item is looked up on its own, "Is this your item?" shows a picture, "No" steps to the next match and then to no match, "Yes" renames the item and saves it to Your foods, its picture then appears in Items, the next scan names it without a lookup, and typing suggests it. The earlier onboarding-to-subscription runs, a strict-CSP embedded run, and an end-to-end run against the real server (with Anthropic, Open Food Facts and Wikipedia faked) all pass; the end-to-end run now includes a lookup from a real uploaded photo through to a tracked item with the looked-up shelf life.
 - A full-app review found 17 defects (among them: reminders scheduled twice when settings changed quickly, dates going stale in an app left open overnight, items savable with a blank name, over-80-item meal requests failing, a scan result appearing after cancelling, gluten-free and vegan filters missing foods, food used after its date counted as rescued, an unreadable Undo). Each is fixed and has a test.

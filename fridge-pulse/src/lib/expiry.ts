@@ -51,6 +51,23 @@ export function summarize(items: PantryItem[], now: Date = new Date()): PulseSum
   return { total: live.length, counts };
 }
 
+/**
+ * Freshness score: the share of tracked food with more than 3 days left, 0 to 100. Null when
+ * nothing is tracked. Simple on purpose, so the number is easy to explain on screen.
+ */
+export function freshnessScore(summary: PulseSummary): number | null {
+  if (summary.total === 0) return null;
+  return Math.round(((summary.counts.week + summary.counts.ok) / summary.total) * 100);
+}
+
+/** A few words for a score. */
+export function freshnessWord(score: number): string {
+  if (score >= 80) return 'Looking fresh';
+  if (score >= 50) return 'Some need using';
+  if (score >= 25) return 'Time to cook';
+  return 'Use it or lose it';
+}
+
 export interface WasteStats {
   used: number;
   wasted: number;

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnackbar, type Snack } from '../store/snackbar';
-import { radius, useTheme } from '../theme';
+import { glow, radius, useTheme } from '../theme';
 import { NATIVE_DRIVER, useAnimatedValue, useReducedMotion } from './motion';
 import { Emoji, Text } from './Text';
 
@@ -16,7 +16,7 @@ const TAB_BAR = Platform.select({ web: 78, ios: 49, default: 56 }) ?? 56;
  * (usually Undo). Mounted once at the root so it survives closing the screen that triggered it.
  */
 export function SnackbarHost() {
-  const { c } = useTheme();
+  const { c, scheme } = useTheme();
   const snack = useSnackbar((s) => s.snack);
   const footer = useSnackbar((s) => s.footers[s.footers.length - 1]?.height ?? 0);
   const segments = useSegments();
@@ -73,6 +73,7 @@ export function SnackbarHost() {
         accessibilityLiveRegion="polite"
         style={[
           styles.bar,
+          scheme === 'dark' ? { borderWidth: 1, borderColor: `${c.glow}80`, ...glow(c.glow, 18, 0.3) } : null,
           {
             backgroundColor: c.snackBg,
             opacity: enter,

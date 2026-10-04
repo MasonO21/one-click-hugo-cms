@@ -35,7 +35,7 @@ export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
   };
 
   return (
-    <Card style={{ padding: 0, overflow: 'hidden' }}>
+    <Card glow={open ? 'blue' : undefined} style={{ padding: 0, overflow: 'hidden' }}>
       <Pressable
         testID={`meal-${meal.id}`}
         accessibilityRole="button"
@@ -117,7 +117,7 @@ export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
                 testID={`cooked-${meal.id}`}
                 label="I made this"
                 icon="restaurant"
-                variant="secondary"
+                variant="primary"
                 size="sm"
                 onPress={() => {
                   // measureInWindow answers through its callback (and returns nothing), so call once there.

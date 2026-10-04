@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router/js-tabs';
 import { Platform } from 'react-native';
 import { useShopping } from '../../store/shopping';
-import { useTheme } from '../../theme';
+import { FONT, useTheme } from '../../theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -15,7 +15,7 @@ const TABS: { name: string; title: string; icon: IconName; iconOn: IconName }[] 
 ];
 
 export default function TabsLayout() {
-  const { c } = useTheme();
+  const { c, scheme } = useTheme();
   const toBuy = useShopping((s) => s.items.filter((i) => !i.checked).length);
   return (
     <Tabs
@@ -25,10 +25,12 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: c.inkFaint,
         tabBarStyle: {
           backgroundColor: c.surface,
-          borderTopColor: c.border,
+          // A thin neon line along the top in the dark theme.
+          borderTopColor: scheme === 'dark' ? `${c.glow}66` : c.border,
+          ...(scheme === 'dark' ? { boxShadow: `0px -6px 18px ${c.glow}22` } : null),
           ...(Platform.OS === 'web' ? { height: 78, paddingTop: 6, paddingBottom: 10 } : null),
         },
-        tabBarLabelStyle: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, lineHeight: 16, fontFamily: FONT.headingBold, letterSpacing: 0.3 },
         sceneStyle: { backgroundColor: c.bg },
       }}
     >
@@ -40,7 +42,7 @@ export default function TabsLayout() {
             title: t.title,
             tabBarButtonTestID: `tab-${t.name}`,
             tabBarBadge: t.name === 'list' && toBuy > 0 ? toBuy : undefined,
-            tabBarBadgeStyle: { backgroundColor: c.primary, color: c.onPrimary, fontSize: 11, fontWeight: '700' },
+            tabBarBadgeStyle: { backgroundColor: c.primaryFill, color: c.onPrimary, fontSize: 11, fontFamily: FONT.bodyBold },
             tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? t.iconOn : t.icon} size={size} color={color} />,
           }}
         />

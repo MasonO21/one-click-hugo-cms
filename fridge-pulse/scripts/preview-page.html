@@ -1,11 +1,8 @@
 <title>Fridge Pulse</title>
 <style>
-  /* Host page for the app: full-height, themed ground so nothing flashes before the app paints. */
-  :root { --bg: #F4F7F1; --fg: #14261B; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #0D1410; --fg: #EAF2EC; color-scheme: dark; }
-  }
-  :root[data-theme="dark"] { --bg: #0D1410; --fg: #EAF2EC; color-scheme: dark; }
+  /* Host page for the app: full-height, on the app's dark neon ground (its default look, whatever
+     the host's theme) so nothing flashes before the app paints. */
+  :root { --bg: #070B16; --fg: #F3F6FF; color-scheme: dark; }
   html, body { height: 100%; }
   body { background: var(--bg); color: var(--fg); overflow: hidden; }
   #root { display: flex; height: 100%; flex: 1; }

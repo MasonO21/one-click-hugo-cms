@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet } from 'react-native';
-import { radius, useTheme } from '../theme';
+import { glow, radius, useTheme } from '../theme';
 import { Text } from './Text';
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function Chip({ label, selected, onPress, testID }: Props) {
-  const { c } = useTheme();
+  const { c, scheme } = useTheme();
   return (
     <Pressable
       testID={testID}
@@ -20,7 +20,8 @@ export function Chip({ label, selected, onPress, testID }: Props) {
       hitSlop={{ top: 4, bottom: 4 }}
       style={[
         styles.chip,
-        { backgroundColor: selected ? c.primary : c.surface, borderColor: selected ? c.primary : c.border },
+        { backgroundColor: selected ? c.primaryFill : c.surface, borderColor: selected ? c.primaryFill : c.border },
+        selected && scheme === 'dark' ? glow(c.primaryFill, 12, 0.45) : null,
       ]}
     >
       <Text variant="caption" color={selected ? c.onPrimary : c.ink} style={{ fontWeight: '600', fontSize: 14 }}>

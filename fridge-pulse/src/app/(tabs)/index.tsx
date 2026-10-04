@@ -5,7 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
-import { Header } from '../../components/Header';
+import { FreshnessMeter } from '../../components/FreshnessMeter';
+import { HeartbeatLine } from '../../components/HeartbeatLine';
 import { ImpactCard } from '../../components/ImpactCard';
 import { ItemRow } from '../../components/ItemRow';
 import { Logo } from '../../components/Logo';
@@ -13,9 +14,10 @@ import { FadeIn, PressableScale, stagger } from '../../components/motion';
 import { PulseBar } from '../../components/PulseBar';
 import { Screen } from '../../components/Screen';
 import { Text } from '../../components/Text';
+import { Wordmark } from '../../components/Wordmark';
 import { useToday } from '../../hooks/useToday';
 import { isDemoMode } from '../../lib/api';
-import { active, sortByExpiry, summarize, type Urgency } from '../../lib/expiry';
+import { active, freshnessScore, freshnessWord, sortByExpiry, summarize, type Urgency } from '../../lib/expiry';
 import { computeImpact } from '../../lib/impact';
 import { localSuggestions, suggestionKey } from '../../lib/meals';
 import { resolveItems } from '../../store/actions';
@@ -23,7 +25,7 @@ import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
 import { useScanDraft } from '../../store/scanDraft';
 import { useSettings } from '../../store/settings';
-import { radius, useTheme } from '../../theme';
+import { glow, radius, useTheme } from '../../theme';
 
 const LEGEND: { key: Urgency; label: string }[] = [
   { key: 'expired', label: 'expired' },
@@ -36,7 +38,7 @@ const LEGEND: { key: Urgency; label: string }[] = [
 const items_ = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`;
 
 export default function Pulse() {
-  const { c } = useTheme();
+  const { c, scheme } = useTheme();
   const items = useInventory((s) => s.items);
   const lifetime = useInventory((s) => s.lifetime);
   const diet = useSettings((s) => s.diet);
@@ -50,6 +52,7 @@ export default function Pulse() {
   const live = active(items);
   const summary = summarize(items, now);
   const dueSoon = summary.counts.today + summary.counts.soon;
+  const score = freshnessScore(summary);
   const expired = summary.counts.expired;
   const upNext = sortByExpiry(live).slice(0, 5);
   const prefs = { diet, servings };
@@ -73,16 +76,49 @@ export default function Pulse() {
 
   return (
     <Screen>
-      <Header title="Pulse" subtitle={dateLine} right={<Logo size={40} beat={summary.total === 0 ? undefined : dueSoon + expired > 0 ? 'quick' : 'calm'} />} />
+      <View style={styles.top}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Wordmark size={26} />
+          <Text muted variant="caption" style={{ fontSize: 14 }}>
+            {dateLine}
+          </Text>
+        </View>
+        <Logo size={48} beat={summary.total === 0 ? undefined : dueSoon + expired > 0 ? 'quick' : 'calm'} />
+      </View>
 
       <FadeIn>
-        <View style={[styles.hero, { backgroundColor: c.hero }]}>
-          <Text testID="hero-headline" variant="title" color={c.onHero}>
+        <View
+          style={[
+            styles.hero,
+            { backgroundColor: c.hero, borderColor: `${c.glow}${scheme === 'dark' ? 'B3' : '66'}` },
+            glow(c.glow, 22, scheme === 'dark' ? 0.35 : 0.2),
+          ]}
+        >
+          <Text variant="label" color="rgba(255,255,255,0.75)">
+            Home dashboard
+          </Text>
+          <Text testID="hero-headline" variant="title" color={c.onHero} style={{ marginTop: -6 }}>
             {headline.big}
           </Text>
-          <Text color="rgba(255,255,255,0.75)" style={{ marginTop: -6 }}>
+          <Text color="rgba(255,255,255,0.75)" style={{ marginTop: -8 }}>
             {headline.sub}
           </Text>
+          {score !== null ? (
+            <View style={styles.scoreRow} testID="freshness-score">
+              <FreshnessMeter score={score} width={118} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="label" color={c.success}>
+                  Freshness score
+                </Text>
+                <Text variant="heading" color={c.onHero}>
+                  {freshnessWord(score)}
+                </Text>
+                <Text variant="caption" color="rgba(255,255,255,0.75)">
+                  {score}% of your food has more than 3 days left
+                </Text>
+              </View>
+            </View>
+          ) : null}
           <PulseBar summary={summary} />
           {summary.total > 0 ? (
             <View style={styles.legend}>
@@ -96,11 +132,14 @@ export default function Pulse() {
               ))}
             </View>
           ) : null}
+          <View style={styles.ecg}>
+            <HeartbeatLine pace={dueSoon + expired > 0 ? 'quick' : 'calm'} />
+          </View>
         </View>
       </FadeIn>
 
       <FadeIn delay={80}>
-        <Button testID="scan-cta" label="Scan your fridge" icon="camera" onPress={() => router.push('/scan')} />
+        <Button testID="scan-cta" variant="cta" label="Scan your fridge" icon="scan" onPress={() => router.push('/scan')} />
       </FadeIn>
 
       {live.length === 0 ? (
@@ -146,7 +185,7 @@ export default function Pulse() {
           {idea ? (
             <FadeIn delay={200}>
               <PressableScale accessibilityRole="button" testID="meal-teaser" onPress={() => router.push('/meals')}>
-                <Card style={{ gap: 6, backgroundColor: c.primaryTint, borderColor: c.primaryTint }}>
+                <Card glow="magenta" style={{ gap: 6, backgroundColor: c.primaryTint }}>
                   <Text variant="label" color={c.primary}>
                     Cook this tonight
                   </Text>
@@ -178,7 +217,10 @@ export default function Pulse() {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: radius.lg, padding: 20, gap: 14 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  hero: { borderRadius: radius.lg, borderWidth: 1, padding: 20, paddingBottom: 6, gap: 14, overflow: 'hidden' },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  ecg: { marginHorizontal: -20, marginTop: -4 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 6 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },

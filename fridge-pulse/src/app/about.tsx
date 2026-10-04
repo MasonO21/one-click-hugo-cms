@@ -6,6 +6,7 @@ import { Card } from '../components/Card';
 import { Logo } from '../components/Logo';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
+import { Wordmark } from '../components/Wordmark';
 import { SUPPORT_EMAIL } from '../lib/config';
 import { useTheme } from '../theme';
 
@@ -26,8 +27,11 @@ export default function About() {
       </View>
 
       <View style={styles.brand}>
-        <Logo size={72} />
-        <Text variant="heading">Fridge Pulse</Text>
+        <Logo size={88} beat="calm" />
+        <Wordmark size={30} center />
+        <Text variant="label" muted>
+          Your kitchen&apos;s vital sign
+        </Text>
         <Text variant="caption" muted>
           Version {version}
         </Text>

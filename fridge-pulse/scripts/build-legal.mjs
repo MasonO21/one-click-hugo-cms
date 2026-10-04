@@ -41,8 +41,8 @@ function page(doc) {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)} - Fridge Pulse</title>
 <style>
-  :root{--bg:#f4f7f1;--fg:#14261b;--muted:#56665c;--accent:#137a3b}
-  @media (prefers-color-scheme: dark){:root{--bg:#0d1410;--fg:#eaf2ec;--muted:#a3b3a9;--accent:#3bc97b}}
+  :root{--bg:#f5f7fc;--fg:#222222;--muted:#545b6b;--accent:#c2006a}
+  @media (prefers-color-scheme: dark){:root{--bg:#070b16;--fg:#f3f6ff;--muted:#aab5d1;--accent:#ff4da6}}
   body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
   main{max-width:42rem;margin:0 auto;padding:2rem 1.25rem 4rem}
   h1{font-size:2rem;margin:0 0 .25rem} h2{font-size:1.25rem;margin:2rem 0 .5rem}

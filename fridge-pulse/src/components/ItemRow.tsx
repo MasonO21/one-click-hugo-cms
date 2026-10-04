@@ -155,11 +155,11 @@ export function ItemRow({ item, onPress, onResolve, now }: Props) {
           importantForAccessibility="no-hide-descendants"
           aria-hidden
         >
-          <Animated.View style={[styles.reveal, styles.revealLeft, { backgroundColor: c.primary, opacity: usedOpacity }]}>
+          <Animated.View style={[styles.reveal, styles.revealLeft, { backgroundColor: c.success, opacity: usedOpacity }]}>
             <Animated.View style={{ transform: [{ scale: usedIcon }] }}>
-              <Ionicons name="checkmark-circle" size={24} color={c.onPrimary} />
+              <Ionicons name="checkmark-circle" size={24} color={c.onSuccess} />
             </Animated.View>
-            <Text variant="bodyStrong" color={c.onPrimary}>
+            <Text variant="bodyStrong" color={c.onSuccess}>
               Used
             </Text>
           </Animated.View>
@@ -209,8 +209,8 @@ export function ItemRow({ item, onPress, onResolve, now }: Props) {
             onPress={tapCheck}
             style={styles.usedHit}
           >
-            <Animated.View ref={check} style={[styles.used, { backgroundColor: c.primaryTint, transform: [{ scale: pop }] }]}>
-              <Ionicons name="checkmark" size={20} color={c.primary} />
+            <Animated.View ref={check} style={[styles.used, { backgroundColor: c.urgency.ok.tint, transform: [{ scale: pop }] }]}>
+              <Ionicons name="checkmark" size={20} color={c.urgency.ok.fg} />
             </Animated.View>
           </Pressable>
         ) : null}

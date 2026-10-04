@@ -21,7 +21,7 @@ import { hasPermission, requestPermission } from '../../lib/notifications';
 import type { Diet } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
-import { useSettings } from '../../store/settings';
+import { useSettings, type Appearance } from '../../store/settings';
 import { useFoods } from '../../store/foods';
 import { useShopping } from '../../store/shopping';
 import { useTheme } from '../../theme';
@@ -41,6 +41,12 @@ const remindersSupported = Platform.OS !== 'web';
 const formatHour = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
 const STORE_NAME = Platform.OS === 'android' ? 'Google Play' : Platform.OS === 'ios' ? 'Apple ID' : 'app store';
+
+const APPEARANCES: { value: Appearance; label: string }[] = [
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'Match phone' },
+];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -250,6 +256,17 @@ export default function Settings() {
             />
           }
         />
+      </Section>
+
+      <Section title="Appearance">
+        <View style={styles.chips}>
+          {APPEARANCES.map((a) => (
+            <Chip key={a.value} testID={`appearance-${a.value}`} label={a.label} selected={settings.appearance === a.value} onPress={() => settings.set({ appearance: a.value })} />
+          ))}
+        </View>
+        <Text variant="caption" muted>
+          {settings.appearance === 'dark' ? 'The neon look. Easy on the eyes in a dim kitchen.' : settings.appearance === 'light' ? 'The same colours on a bright background.' : 'Follows your phone’s light or dark setting.'}
+        </Text>
       </Section>
 
       <Section title="Privacy and data">

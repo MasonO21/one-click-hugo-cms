@@ -15,7 +15,7 @@ import { resolveItems } from '../../store/actions';
 import { active, daysLeft, sortByExpiry, urgencyOf, URGENCY_ORDER, type Urgency } from '../../lib/expiry';
 import type { PantryItem, StorageLocation } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
-import { radius, useTheme } from '../../theme';
+import { FONT, glow, radius, useTheme } from '../../theme';
 
 const SECTION_TITLE: Record<Urgency, string> = {
   expired: 'Expired',
@@ -26,7 +26,7 @@ const SECTION_TITLE: Record<Urgency, string> = {
 };
 
 export default function Inventory() {
-  const { c } = useTheme();
+  const { c, scheme } = useTheme();
   const items = useInventory((s) => s.items);
   const [filter, setFilter] = useState<StorageLocation | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -59,7 +59,7 @@ export default function Inventory() {
             accessibilityLabel="Scan or add items"
             onPress={() => router.push('/scan')}
             scaleTo={0.9}
-            style={[styles.add, { backgroundColor: c.primary }]}
+            style={[styles.add, { backgroundColor: c.primaryFill }, scheme === 'dark' ? glow(c.primaryFill, 14, 0.5) : null]}
           >
             <Ionicons name="add" size={26} color={c.onPrimary} />
           </PressableScale>
@@ -127,7 +127,7 @@ export default function Inventory() {
 const styles = StyleSheet.create({
   add: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 12, height: 46 },
-  input: { flex: 1, fontSize: 16, height: 46 },
+  input: { flex: 1, fontSize: 16, height: 46, fontFamily: FONT.body },
   chipsWrap: { marginHorizontal: -20 },
   chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 20 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12, paddingBottom: 8 },

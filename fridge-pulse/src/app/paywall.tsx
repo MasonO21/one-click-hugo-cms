@@ -63,7 +63,7 @@ export default function Paywall() {
         </Text>
       </View>
 
-      <Card style={{ gap: 14 }}>
+      <Card glow="blue" style={{ gap: 14 }}>
         {FEATURES.map((f) => (
           <View key={f} style={styles.feature}>
             <Ionicons name="checkmark-circle" size={22} color={c.primary} />
@@ -75,7 +75,7 @@ export default function Paywall() {
       {!returning ? (
         <Card style={{ gap: 12 }}>
           <View style={styles.step}>
-            <View style={[styles.stepDot, { backgroundColor: c.primary }]} />
+            <View style={[styles.stepDot, { backgroundColor: c.primaryFill }]} />
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong">Today</Text>
               <Text variant="caption" muted>

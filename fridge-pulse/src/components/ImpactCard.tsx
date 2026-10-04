@@ -8,7 +8,7 @@ import { Emoji, Text } from './Text';
 
 const BAR_HEIGHT = 56;
 
-/** One day's column: food used (green) stacked on food thrown out (red). Rises into place. */
+/** One day's column: food used (lime) stacked on food thrown out (magenta). Rises into place. */
 function DayColumn({ used, wasted, max, label, isToday, index }: { used: number; wasted: number; max: number; label: string; isToday: boolean; index: number }) {
   const { c } = useTheme();
   const still = useReducedMotion();
@@ -88,9 +88,17 @@ export function ImpactCard({ impact }: { impact: Impact }) {
             <Emoji size={28}>🌱</Emoji>
           </View>
           <Text variant="bodyStrong">{impact.rescuedRecently === 1 ? 'item rescued' : 'items rescued'} in 30 days</Text>
-          <Text variant="caption" muted>
-            {impact.usedRecently} used · {impact.wastedRecently} thrown out
-          </Text>
+          {/* Doubles as the chart's legend: each count sits beside its colour. */}
+          <View style={styles.key}>
+            <View style={[styles.keyDot, { backgroundColor: c.urgency.ok.solid }]} />
+            <Text variant="caption" muted>
+              {impact.usedRecently} used
+            </Text>
+            <View style={[styles.keyDot, { backgroundColor: c.urgency.expired.solid, marginLeft: 6 }]} />
+            <Text variant="caption" muted>
+              {impact.wastedRecently} thrown out
+            </Text>
+          </View>
         </View>
         <View style={styles.week} accessible accessibilityLabel={`Last 7 days. ${weekText}`}>
           {impact.week.map((d, i) => (
@@ -129,4 +137,6 @@ const styles = StyleSheet.create({
   track: { width: '100%', justifyContent: 'flex-end' },
   meter: { height: 8, borderRadius: 4, overflow: 'hidden' },
   meterFill: { height: 8, borderRadius: 4, transformOrigin: 'left' },
+  key: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  keyDot: { width: 8, height: 8, borderRadius: 4 },
 });

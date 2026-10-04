@@ -164,6 +164,7 @@ export default function Scan() {
         <View style={styles.footer}>
           <Button
             testID="analyze"
+            variant={photos.length === 0 ? 'secondary' : 'cta'}
             label={photos.length === 0 ? 'Add a photo to continue' : `Analyze ${photos.length} ${photos.length === 1 ? 'photo' : 'photos'}`}
             icon="sparkles"
             disabled={photos.length === 0}

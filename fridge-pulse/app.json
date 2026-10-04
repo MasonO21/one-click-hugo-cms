@@ -82,7 +82,8 @@
     "android": {
       "package": "com.fridgepulse.app",
       "adaptiveIcon": {
-        "backgroundColor": "#12382A",
+        "backgroundColor": "#0B1530",
+        "backgroundImage": "./assets/android-icon-background.png",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -106,9 +107,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 160,
+          "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#12382A"
+          "backgroundColor": "#070B16"
         }
       ],
       [
@@ -122,10 +123,11 @@
       [
         "expo-notifications",
         {
-          "color": "#1B9A53"
+          "color": "#FF007F"
         }
       ]
     ],
-    "description": "Photograph your fridge and pantry, get reminded before food expires, and cook what needs using up first."
+    "description": "Photograph your fridge and pantry, get reminded before food expires, and cook what needs using up first.",
+    "backgroundColor": "#070B16"
   }
 }

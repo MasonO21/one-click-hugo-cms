@@ -3,6 +3,9 @@ import { persist } from 'zustand/middleware';
 import { persistStorage } from './storage';
 import type { Diet } from '../lib/types';
 
+/** Dark is the brand's neon look; light and "match the phone" are there for those who prefer them. */
+export type Appearance = 'dark' | 'light' | 'system';
+
 interface SettingsState {
   onboarded: boolean;
   diet: Diet;
@@ -16,6 +19,7 @@ interface SettingsState {
   aiConsent: boolean;
   /** ISO timestamp of when consent was given, for our own records. */
   aiConsentAt: string | null;
+  appearance: Appearance;
   set: (patch: Partial<Omit<SettingsState, 'set' | 'reset'>>) => void;
   reset: () => void;
 }
@@ -29,6 +33,7 @@ const DEFAULTS = {
   askedForReminders: false,
   aiConsent: false,
   aiConsentAt: null as string | null,
+  appearance: 'dark' as Appearance,
 };
 
 export const useSettings = create<SettingsState>()(

@@ -1,1 +1,6 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><g transform="translate(512 512) scale(0.66) translate(-512 -512)"><rect x="284" y="150" width="456" height="724" rx="76" fill="#000"/><rect x="284" y="384" width="456" height="14" fill="#fff"/><polyline points="338,690 424,690 470,590 528,796 584,650 616,690 686,690" fill="none" stroke="#fff" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><g transform="translate(232 222) scale(5.6)"><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="24" y="6" width="52" height="80" rx="11" stroke-width="5"/>
+      <line x1="33" y1="87" x2="33" y2="94" stroke-width="5"/><line x1="67" y1="87" x2="67" y2="94" stroke-width="5"/>
+      <line x1="37" y1="19" x2="37" y2="28" stroke-width="3.4"/><line x1="37" y1="40" x2="37" y2="50" stroke-width="3.4"/>
+      <line x1="31" y1="34" x2="69" y2="34" stroke-width="3.4"/>
+      <polyline points="26,60 40,60 45.5,49 51.5,71 56.5,54 60.5,60 74,60" stroke-width="4.6"/></g></g></svg>

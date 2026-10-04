@@ -91,15 +91,27 @@ async function captureApp(target) {
   return raw;
 }
 
+/** The brand fonts and the neon backdrop shared by the screenshot frames and the feature graphic. */
+const fontFace = (family, file) =>
+  `@font-face{font-family:"${family}";src:url(data:font/ttf;base64,${fs.readFileSync(path.join(root, 'node_modules/@expo-google-fonts', file)).toString('base64')}) format("truetype")}`;
+const BRAND_CSS = [
+  fontFace('Montserrat XB', 'montserrat/800ExtraBold/Montserrat_800ExtraBold.ttf'),
+  fontFace('Open Sans', 'open-sans/400Regular/OpenSans_400Regular.ttf'),
+  '.bg{position:absolute;inset:0;background:radial-gradient(70% 45% at 10% 0%,rgba(0,127,255,.45) 0%,rgba(0,127,255,0) 70%),radial-gradient(70% 45% at 100% 100%,rgba(255,0,127,.38) 0%,rgba(255,0,127,0) 70%),radial-gradient(50% 30% at 100% 35%,rgba(255,95,0,.18) 0%,rgba(255,95,0,0) 70%),#070B16}',
+].join('');
+/** A neon heartbeat trace across the backdrop, `y` from the top. */
+const pulseLine = (w, y, scale) =>
+  `<svg style="position:absolute;left:0;top:${y}px;opacity:.55" width="${w}" height="${48 * scale}" viewBox="0 0 ${w / scale} 48"><defs><linearGradient id="ecg" x1="0" x2="1"><stop offset="0" stop-color="#007FFF"/><stop offset=".5" stop-color="#FF007F"/><stop offset="1" stop-color="#007FFF"/></linearGradient></defs><path d="M0 30 ${Array.from({ length: Math.ceil(w / scale / 120) + 1 }, () => 'h40 l4 -3 l4 3 l6 2 l4 -18 l4 24 l4 -8 l8 -5 l8 5 h38').join(' ')}" fill="none" stroke="url(#ecg)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+
 function frameHtml(target, shot, png) {
   const { w, h } = target.canvas;
-  return `<!doctype html><meta charset="utf-8"><style>
-    html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden;font-family:"Helvetica Neue",Arial,"Liberation Sans",sans-serif}
-    .bg{position:absolute;inset:0;background:radial-gradient(120% 60% at 20% 0%,#2f9a5c 0%,rgba(47,154,92,0) 60%),linear-gradient(165deg,#12382a 0%,#137a3b 100%)}
-    h1{position:absolute;left:${Math.round(w * 0.075)}px;right:${Math.round(w * 0.075)}px;top:${Math.round(target.phoneTop * 0.2)}px;margin:0;color:#fff;font-size:${target.title}px;line-height:1.05;font-weight:800;letter-spacing:-2px;text-wrap:balance}
-    p{position:absolute;left:${Math.round(w * 0.075)}px;right:${Math.round(w * 0.075)}px;top:${Math.round(target.phoneTop * 0.2 + target.title * 2.3)}px;margin:0;color:rgba(255,255,255,.88);font-size:${target.sub}px;line-height:1.3;font-weight:500}
-    img{position:absolute;left:${Math.round((w - target.phoneW) / 2)}px;top:${target.phoneTop}px;width:${target.phoneW}px;border-radius:${target.radius}px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
-  </style><div class="bg"></div><h1>${shot.title}</h1><p>${shot.sub}</p><img src="data:image/png;base64,${png.toString('base64')}">`;
+  const s = w / 1290;
+  return `<!doctype html><meta charset="utf-8"><style>${BRAND_CSS}
+    html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden}
+    h1{position:absolute;left:${Math.round(w * 0.075)}px;right:${Math.round(w * 0.075)}px;top:${Math.round(target.phoneTop * 0.2)}px;margin:0;color:#fff;font-family:"Montserrat XB";font-size:${target.title}px;line-height:1.08;letter-spacing:-1px;text-wrap:balance;text-shadow:0 0 ${Math.round(28 * s)}px rgba(0,127,255,.55)}
+    p{position:absolute;left:${Math.round(w * 0.075)}px;right:${Math.round(w * 0.075)}px;top:${Math.round(target.phoneTop * 0.2 + target.title * 2.35)}px;margin:0;color:rgba(243,246,255,.85);font-family:"Open Sans";font-size:${target.sub}px;line-height:1.3}
+    img{position:absolute;left:${Math.round((w - target.phoneW) / 2)}px;top:${target.phoneTop}px;width:${target.phoneW}px;border-radius:${target.radius}px;outline:${Math.max(2, Math.round(3 * s))}px solid rgba(0,127,255,.7);box-shadow:0 0 ${Math.round(60 * s)}px rgba(0,127,255,.45),0 0 ${Math.round(140 * s)}px rgba(255,0,127,.25)}
+  </style><div class="bg"></div>${pulseLine(w, target.phoneTop + Math.round((h - target.phoneTop) * 0.32), 2.6 * s)}<h1>${shot.title}</h1><p>${shot.sub}</p><img src="data:image/png;base64,${png.toString('base64')}">`;
 }
 
 for (const target of TARGETS) {
@@ -126,13 +138,14 @@ for (const target of TARGETS) {
 // Play feature graphic (1024x500) and 512px icon.
 const gfx = await (await browser.newContext({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 })).newPage();
 const icon = fs.readFileSync(path.join(root, 'assets/icon.png')).toString('base64');
-await gfx.setContent(`<!doctype html><meta charset="utf-8"><style>
-  html,body{margin:0;width:1024px;height:500px;overflow:hidden;font-family:"Helvetica Neue",Arial,"Liberation Sans",sans-serif}
-  .bg{position:absolute;inset:0;background:radial-gradient(90% 120% at 15% 0%,#2f9a5c 0%,rgba(47,154,92,0) 60%),linear-gradient(165deg,#12382a,#137a3b)}
-  img{position:absolute;left:84px;top:150px;width:200px;height:200px;border-radius:46px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
-  h1{position:absolute;left:330px;top:150px;margin:0;color:#fff;font-size:84px;font-weight:800;letter-spacing:-2px}
-  p{position:absolute;left:334px;top:262px;margin:0;color:rgba(255,255,255,.9);font-size:34px;font-weight:500;width:640px;line-height:1.25}
-</style><div class="bg"></div><img src="data:image/png;base64,${icon}"><h1>Fridge Pulse</h1><p>Snap your fridge. Use food before it expires.</p>`);
+await gfx.setContent(`<!doctype html><meta charset="utf-8"><style>${BRAND_CSS}
+  html,body{margin:0;width:1024px;height:500px;overflow:hidden}
+  img{position:absolute;left:84px;top:140px;width:220px;height:220px;border-radius:50px;box-shadow:0 0 50px rgba(0,127,255,.5),0 0 90px rgba(255,0,127,.3)}
+  h1{position:absolute;left:350px;top:150px;margin:0;font-family:"Montserrat XB";font-size:86px;letter-spacing:-2px;white-space:nowrap}
+  h1 .f{color:#3D9BFF;text-shadow:0 0 26px rgba(0,127,255,.8)} h1 .p{color:#FF2D95;text-shadow:0 0 26px rgba(255,0,127,.8)}
+  p{position:absolute;left:354px;top:268px;margin:0;color:rgba(243,246,255,.9);font-family:"Open Sans";font-size:34px;width:620px;line-height:1.25}
+</style><div class="bg"></div>${pulseLine(1024, 400, 1.6)}<img src="data:image/png;base64,${icon}"><h1><span class="f">Fridge</span> <span class="p">Pulse</span></h1><p>Your kitchen&rsquo;s vital sign. Use food before it expires.</p>`);
+await gfx.waitForTimeout(200);
 fs.mkdirSync(path.join(outDir, 'graphics'), { recursive: true });
 await gfx.screenshot({ path: path.join(outDir, 'graphics', 'play-feature-graphic-1024x500.jpg'), type: 'jpeg', quality: 92 });
 fs.copyFileSync(path.join(root, 'assets/icon.png'), path.join(outDir, 'graphics', 'app-store-icon-1024.png'));
