@@ -317,7 +317,7 @@ describe('recording a note', () => {
 
     expect(await screen.findByText('Listening')).toBeOnTheScreen();
     expect(speechMock.ExpoSpeechRecognitionModule.start).toHaveBeenCalledWith(
-      expect.objectContaining({ lang: 'en-US', continuous: true, interimResults: true, requiresOnDeviceRecognition: true }),
+      expect.objectContaining({ lang: 'en-US', continuous: true, interimResults: true, requiresOnDeviceRecognition: true, iosTaskHint: 'dictation' }),
     );
 
     await result('the fog is lifting', false);
@@ -331,6 +331,8 @@ describe('recording a note', () => {
     await eventually(async () => expect(await listEntries(mockDb)).toHaveLength(1));
     const [entry] = await listEntries(mockDb);
     expect(entry.transcript).toBe('The fog is lifting off the ridge');
+    // Music or a podcast paused by recording can resume.
+    expect(speechMock.ExpoSpeechRecognitionModule.setAudioSessionActiveIOS).toHaveBeenCalledWith(false, { notifyOthersOnDeactivation: true });
     expect(entry.latitude).toBe(40.01);
     expect(await screen.findByText('No notes yet', {}, { timeout: 200 }).catch(() => null)).toBeNull();
     await eventually(async () => expect(await getEntry(mockDb, entry.id)).toMatchObject({ place: 'Chautauqua Park, Boulder', weatherCode: 2 }));

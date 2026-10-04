@@ -18,6 +18,7 @@ export const speechMock = {
     getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
     isRecognitionAvailable: jest.fn(() => true),
     supportsOnDeviceRecognition: jest.fn(() => true),
+    setAudioSessionActiveIOS: jest.fn(),
   },
   __emit(event: string, payload: unknown = null) {
     [...(handlers.get(event) ?? [])].forEach((handler) => handler(payload));

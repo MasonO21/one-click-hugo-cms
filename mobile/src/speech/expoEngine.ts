@@ -16,6 +16,12 @@ export const expoSpeechEngine: SpeechEngine = {
     const subscription = ExpoSpeechRecognitionModule.addListener(event, handler as never);
     return () => subscription.remove();
   },
+  // The recognizer leaves the iOS audio session active after it stops, which keeps
+  // music or a podcast that recording paused from resuming. Hand the audio back.
+  release() {
+    if (Platform.OS !== 'ios') return;
+    ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(false, { notifyOthersOnDeactivation: true });
+  },
 };
 
 export type SpeechPermission = 'granted' | 'denied' | 'blocked';

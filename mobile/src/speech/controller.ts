@@ -24,6 +24,8 @@ export interface SpeechEngine {
   stop(): void;
   abort(): void;
   on<K extends keyof SpeechEvents>(event: K, handler: (payload: SpeechEvents[K]) => void): () => void;
+  // Called once a session is over, so other audio (music, podcasts) can resume.
+  release?(): void;
 }
 
 export type SessionState = 'idle' | 'listening' | 'stopping';
@@ -252,6 +254,11 @@ export class SpeechController {
     this.unsubscribe.forEach((off) => off());
     this.unsubscribe = [];
     this.accumulator.commitInterim();
+    try {
+      this.engine.release?.();
+    } catch {
+      // Releasing audio is best effort.
+    }
 
     const result: SessionResult = {
       text: this.accumulator.liveText,

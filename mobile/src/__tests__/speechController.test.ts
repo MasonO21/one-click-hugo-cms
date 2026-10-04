@@ -13,6 +13,7 @@ class FakeEngine implements SpeechEngine {
   starts: SpeechStartOptions[] = [];
   stops = 0;
   aborts = 0;
+  releases = 0;
   private handlers: { [K in keyof SpeechEvents]?: ((payload: SpeechEvents[K]) => void)[] } = {};
 
   start(options: SpeechStartOptions) {
@@ -23,6 +24,9 @@ class FakeEngine implements SpeechEngine {
   }
   abort() {
     this.aborts += 1;
+  }
+  release() {
+    this.releases += 1;
   }
   on<K extends keyof SpeechEvents>(event: K, handler: (payload: SpeechEvents[K]) => void) {
     const list = (this.handlers[event] ??= []) as ((payload: SpeechEvents[K]) => void)[];
@@ -230,6 +234,22 @@ describe('SpeechController', () => {
     controller.stop();
     engine.emit('end', null);
     expect(done[0].text).toBe('First phrase. Second phrase');
+  });
+
+  it('hands the audio back once, when the session is over', () => {
+    const { engine, controller } = setup();
+    controller.begin();
+    engine.result('a thought', true);
+    engine.emit('end', null);
+    jest.advanceTimersByTime(config.restartDelayMs);
+    expect(engine.releases).toBe(0);
+    controller.stop();
+    engine.emit('end', null);
+    expect(engine.releases).toBe(1);
+
+    controller.begin();
+    controller.cancel();
+    expect(engine.releases).toBe(2);
   });
 
   it('ignores a second begin and a stop when idle', () => {
