@@ -54,6 +54,8 @@ The app follows the brand sheet (`docs/brand.md`): a dark neon interface in Puls
 - **Freeze it.** When food that freezes well is due within three days, its detail screen offers to move it to the freezer, with the new date (chicken: about 9 months). Foods that freeze badly (salad leaves, eggs in the shell, mayonnaise, soft cheese) are never offered.
 - **Keep it fresh.** Each item shows one or two storage tips from USDA / FSIS / FDA consumer advice: raw poultry on the bottom shelf, cut mould from hard cheese but bin soft cheese, keep basil out of the fridge, and so on.
 - **I made this.** Open a meal idea and tap "I made this" to mark every tracked ingredient it used as used, with one Undo.
+- **Receipt scanning.** "Scan a receipt" on Pulse (or the Receipt switch on the scan screen) reads a shopping receipt: abbreviations are expanded ("BNLS SKNLS CHKN BRST" is chicken breast), bags, cleaning products, tax and totals are skipped, each food is headed for the fridge, freezer or pantry with its own Fridge / Freezer / Pantry choice, and dates count from the day on the receipt. See "Receipts" below.
+- **Calories and macros.** Every item's detail screen shows calories, protein, carbs, fat and fibre for a typical portion and per 100 g, plus the whole amount when the quantity is a weight or a count ("1.3 lb" of bananas). Every meal idea shows calories on its card and a per-serving breakdown when opened. See "Nutrition" below.
 - **184 built-in recipes.** Without AI (or offline) the Meals tab picks from a library of omelets, curries, soups, salads, pasta, tacos, traybakes, sides, snacks, desserts and drinks, best first, six at a time with "More ideas". See "Meal ideas" below.
 - **Shopping list.** A List tab with typing suggestions, "Buy again" chips for food you finished recently, sharing, and **Put away**: ticked-off items open a review with each food headed where it usually lives (bananas in the cupboard, milk in the fridge, ice cream in the freezer) and saved with its own estimated date.
 - **Motion.** A heartbeat logo that beats faster when food needs using, a heart-monitor trace on the dashboard, a freshness meter that fills up, a freshness bar that grows in, rows and cards that fade in, springy buttons, a scan line over your photo while it is read, and a countdown on the message bar. Everything respects the phone's Reduce Motion setting (and turns off in screenshot builds).
@@ -184,6 +186,24 @@ The built-in recipes (`src/lib/recipes.ts`, 184 of them) never match food by a w
 
 Steps are written for the meal actually suggested: lines appear only when their ingredient is used, `{veg}` becomes "spinach and bell peppers", and wording follows the diet (vegans get "plant milk" and "vegan butter", vegetarians "vegetable stock", gluten-free cooks "gluten-free soy sauce"). Ideas are ranked by how much soon-to-expire food they use, each page of six holds at most two of a kind, and one idea never marks more than eight items used. `__tests__/recipes.test.ts` checks every recipe against hand-written lists of sweet-only, savoury-only and leftover foods, renders each recipe with random kitchens, and checks the wording for every diet.
 
+### Receipts
+
+`receipt photo(s) -> POST /v1/scan with mode "receipt" -> Claude reads the food lines -> review: each item with its own place -> saved with the shopping date`
+
+- The server uses a separate receipt prompt (`RECEIPT_SYSTEM` in `server/src/prompts.ts`) with the same output shape as a shelf scan plus `keptIn` per item and the `purchaseDate` printed on the receipt. Low-confidence lines keep the printed text as their clue, so the person can check it and the online lookup has something to search for (a receipt photo is never sent to the lookup, since it does not show the food).
+- `toDrafts` (`src/lib/scan.ts`) decides where each item goes: the app's own rule for food it knows (bananas on the counter, ice cream in the freezer), the reader's answer for anything else, and never the cupboard for food that must be chilled. Dates count from the purchase date when it is believable (today or up to 30 days back), otherwise from today, and the saved item's "added" date is the day of the shop.
+- A repeat of something already tracked stays ticked (it is more of it, not the same jar seen twice) but is labelled "Already tracked".
+- Receipts can show the shop and the last digits of a payment card. The prompt reads only food lines and the date, the server keeps nothing, the tip on the scan screen says to fold card details over, and the privacy policy says so.
+- In the preview, "Try a sample receipt" returns a sample shop.
+
+### Nutrition
+
+- `src/lib/nutritionData.ts` holds calories, protein, carbs, fat and fibre per 100 g, and a household portion, for 360 of the 383 foods in the typing catalog. The figures are USDA FoodData Central SR Legacy (public domain) as published in the TempoLife food database (CC BY 4.0, credited on the About screen); each line names the SR Legacy food it came from. The other 23 (halloumi, takeout, soup, oat milk...) vary too much or have no close SR Legacy entry, so they show "No nutrition figures" instead of a guess.
+- `nutritionFor` (`src/lib/nutrition.ts`) matches a name exactly (any case, singular or plural, pack sizes like "80/20" or "x12" ignored) or by the catalog food it ends with ("Kirkland chicken breast"), but never when a word in front changes the food: dried apricots, chocolate milk, fried rice, cauliflower rice and light mayonnaise get no figures rather than wrong ones.
+- Built-in recipes: each ingredient counts as its typical portion times how much of it goes into one serving (two eggs in an omelette, two slices in a sandwich, half a portion from an optional slot), plus half a tablespoon of oil or butter when the recipe cooks in it. The card says when some ingredients had no figures ("4 of 5 ingredients").
+- AI meal ideas carry the model's own per-serving estimate (`nutrition` in the meals response). The app keeps it only when the numbers are sensible and the calories roughly match the macros (`toMealNutrition`).
+- `__tests__/nutrition.test.ts` checks every row adds up (energy against the macros, at most 100 g per 100 g), spot-checks a dozen foods against USDA values typed in by hand, the name matching both ways, quantities, and that every built-in recipe gives a believable figure per serving.
+
 ### Categories
 
 A typed or scanned food gets its category from what the app knows first: a food the person has taught it, then the food list (so oat milk is always a drink, frozen pizza is a ready meal), then the food-list name it ends with ("organic baby spinach", "sliced pepperoni"), then word rules. Words at the front decide where they should ("canned peaches", "pickled onions", "dried apricots"), and meat-free versions of meat are not meat. `__tests__/categories.test.ts` checks every catalog food, its variants, and about 60 awkward names.
@@ -198,7 +218,7 @@ Foods are shown with emoji chosen by name (`src/components/categories.ts`, pinne
 npm test               # app tests: dates, expiry, meals and recipes, categories, reminders, billing, pricing consistency, contrast, emoji accuracy, store listing limits, dependency guard
 npm run typecheck
 npm run lint
-cd server && npm test  # 56 server tests
+cd server && npm test  # 58 server tests
 npx expo export --platform ios --platform android   # proves the native bundles resolve every import
 ```
 
@@ -210,9 +230,9 @@ Notifications: one digest per day for the next 14 days, listing items that expir
 
 `Authorization: Bearer <RevenueCat app user id>` on every call. Errors are `{ "error": { "code", "message" } }` with 401/402 (not subscribed), 400/413 (bad input), 422 (model declined), 429 (rate limited, with `Retry-After`), 502/503 (upstream).
 
-- `POST /v1/scan` `{ location, today, locale, images: [{ mediaType, data(base64) }], known?: [{ name, looks }] }` returns `{ items: [{ name, category, quantity, shelfLifeDays, labelExpiryDate, confidence, clue, photo }], notes }`
+- `POST /v1/scan` `{ mode?: "shelf" | "receipt", location, today, locale, images: [{ mediaType, data(base64) }], known?: [{ name, looks }] }` returns `{ items: [{ name, category, quantity, shelfLifeDays, labelExpiryDate, confidence, clue, photo, keptIn }], purchaseDate, notes }` (`keptIn` and `purchaseDate` are null for shelf photos)
 - `POST /v1/identify` `{ name, category, location, clue?, today, locale?, image?: { mediaType, data } }` returns `{ candidates: [{ name, brand, product, category, keptIn, shelfLife: { fridge, freezer, pantry }, looks, why, sourceUrl, image: { url, credit, pageUrl } | null }] }` (an empty list means no confident match)
-- `POST /v1/meals` `{ today, diet, servings, exclude, items: [{ name, category, quantity, daysLeft }] }` returns `{ meals: [{ title, summary, minutes, servings, uses, extras, steps }] }`
+- `POST /v1/meals` `{ today, diet, servings, exclude, items: [{ name, category, quantity, daysLeft }] }` returns `{ meals: [{ title, summary, minutes, servings, uses, extras, steps, nutrition: { kcal, protein, carbs, fat } | null }] }` (nutrition is per serving)
 
 The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib/types.ts` and `src/lib/api.ts`. Change them together.
 
@@ -220,14 +240,16 @@ The shapes are defined in `server/src/schemas.ts` (zod) and mirrored in `src/lib
 
 Verified in the build environment:
 
-- App and server typecheck, lint is clean, and all 955 app tests and 56 server tests pass. The tests include: every food's shelf life in all three places against the independent reference; the price and trial length appear only as $9.99 and 2 weeks; every text, control and switch colour meets WCAG AA contrast in light and dark; typing suggestions; the rescue stats, streak and milestones; the shopping list and put-away; diet filters; the reminder scheduler under rapid changes; the online lookup (which items are looked up, the answer checked at the app's trust boundary, pictures only from the two allowed hosts, Yes / No / cancel, the food database feeding shelf life, suggestions and later scans); the identify request sent through the real SDK to a fake API (photo, web search limits, strict report tool, resuming a paused turn, one nudge, refusals); picture lookups against stand-in Open Food Facts and Wikipedia services; and a render of every animated component through to the end of its animation.
+- App and server typecheck, lint is clean, and all 1375 app tests and 58 server tests pass. The tests include: every food's shelf life in all three places against the independent reference; the price and trial length appear only as $9.99 and 2 weeks; every text, control and switch colour meets WCAG AA contrast in light and dark; typing suggestions; the rescue stats, streak and milestones; the shopping list and put-away; diet filters; the reminder scheduler under rapid changes; the online lookup (which items are looked up, the answer checked at the app's trust boundary, pictures only from the two allowed hosts, Yes / No / cancel, the food database feeding shelf life, suggestions and later scans); the identify request sent through the real SDK to a fake API (photo, web search limits, strict report tool, resuming a paused turn, one nudge, refusals); picture lookups against stand-in Open Food Facts and Wikipedia services; and a render of every animated component through to the end of its animation.
 - The iOS and Android bundles export (`expo export`), which proves every import resolves natively.
+- Receipts and nutrition, in Chromium on an emulated iPhone (dark, light and Reduce Motion, no console errors): "Scan a receipt" opens the scan screen in receipt mode, the switch goes back and forth, the sample receipt lands on "Your receipt" with the shopping date and 6 / 2 / 6 items headed for the fridge, freezer and pantry, ice cream in the freezer and bananas in the pantry, moving chicken to the freezer re-dates it, the bananas' detail screen shows 105 kcal per medium banana and the whole 1.3 lb, and meal cards show calories with the per-serving tiles when opened.
 - In Chromium on an emulated iPhone, in light mode, dark mode and with Reduce Motion on, a scripted run covers adding food by typing, rescuing with the check mark and Undo, swiping food away, freezing an item in time, storage tips, the name guard, adding to and ticking off the shopping list, "Buy again", putting shopping away, "I made this", and the discard prompt, with no console errors or warnings. A second scripted run covers the lookup: the mystery item is looked up on its own, "Is this your item?" shows a picture, "No" steps to the next match and then to no match, "Yes" renames the item and saves it to Your foods, its picture then appears in Items, the next scan names it without a lookup, and typing suggests it. The earlier onboarding-to-subscription runs, a strict-CSP embedded run, and an end-to-end run against the real server (with Anthropic, Open Food Facts and Wikipedia faked) all pass; the end-to-end run now includes a lookup from a real uploaded photo through to a tracked item with the looked-up shelf life.
 - A full-app review found 17 defects (among them: reminders scheduled twice when settings changed quickly, dates going stale in an app left open overnight, items savable with a blank name, over-80-item meal requests failing, a scan result appearing after cancelling, gluten-free and vegan filters missing foods, food used after its date counted as rescued, an unreadable Undo). Each is fixed and has a test.
 
 **Not verified** (needs your hands or credentials):
 
-- Real food photos, and scan accuracy on real photos (no API key here).
+- Real food photos, and scan accuracy on real photos and real receipts (no API key here), including how well real receipt abbreviations are expanded.
+- How close the AI's per-serving nutrition estimates are on real recipes (the app checks they are self-consistent, not that they are right).
 - Running on an iOS or Android device or simulator: camera, permission prompts, haptics, swipe feel on a real touch screen, modal presentation, safe areas, and scheduled notifications.
 - Real purchases through StoreKit / Play Billing / RevenueCat, including the trial converting and a cancelled trial not renewing.
 - Real Anthropic responses. The request shape was tested against a fake API using the real SDK, but no live call was made. That includes web search: how well real searches identify real products, and how accurate the shelf lives they find are, is untested.

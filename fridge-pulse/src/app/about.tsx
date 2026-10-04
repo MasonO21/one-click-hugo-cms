@@ -48,6 +48,16 @@ export default function About() {
         </Text>
       </Card>
 
+      <Card style={{ gap: 8 }} testID="nutrition-credit">
+        <Text variant="heading">Nutrition data</Text>
+        <Text>
+          Calories and macros are estimates for typical portions. Figures for foods and built-in recipes come from USDA FoodData
+          Central (SR Legacy, public domain), as published in the TempoLife food database (tempolife.app) under the Creative
+          Commons Attribution 4.0 licence.
+        </Text>
+        <Row label="About the licence" hint="creativecommons.org/licenses/by/4.0" onPress={() => void Linking.openURL('https://creativecommons.org/licenses/by/4.0/')} />
+      </Card>
+
       <Card style={{ gap: 4 }}>
         <Row label="Privacy Policy" onPress={() => router.push('/legal/privacy')} />
         <Row label="Terms of Use" onPress={() => router.push('/legal/terms')} />

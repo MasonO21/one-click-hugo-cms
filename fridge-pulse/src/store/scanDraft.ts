@@ -7,8 +7,11 @@ import type { Category, LearnedFood, StorageLocation } from '../lib/types';
 import { useInventory } from './inventory';
 import type { ShoppingItem } from './shopping';
 
-/** "scan": reviewing what a photo found. "manual": typing items in. "shopping": putting shopping away. */
-export type DraftMode = 'scan' | 'manual' | 'shopping';
+/**
+ * "scan": reviewing what a shelf photo found. "receipt": what a receipt listed, each item headed for its
+ * own place. "manual": typing items in. "shopping": putting shopping away.
+ */
+export type DraftMode = 'scan' | 'receipt' | 'manual' | 'shopping';
 
 interface ScanDraftState {
   mode: DraftMode;
@@ -28,6 +31,8 @@ interface ScanDraftState {
   applyIdentified: (key: string, food: LearnedFood) => void;
   /** Moves the list to another location, re-estimating dates that were estimates. */
   setLocation: (location: StorageLocation) => void;
+  /** Moves one item, re-estimating its date if it was an estimate. */
+  moveDraft: (key: string, location: StorageLocation) => void;
   clear: () => void;
 }
 
@@ -78,14 +83,17 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
     set((s) => ({
       drafts: s.drafts.map((d) => {
         if (d.key !== key) return d;
+        // A receipt's food goes where this food is kept; a photographed one is already somewhere.
+        const location = s.mode === 'receipt' ? food.keptIn : d.location;
         // A printed date or one the person set still wins; an estimate uses the food's own figure
         // (the registry already knows the food, see src/store/foods.ts).
-        const expiresOn = d.expirySource === 'estimate' ? addDays(todayISO(), estimateShelfLifeDays(food.name, food.category, d.location)) : d.expiresOn;
-        const duplicate = tracked(food.name, d.location);
+        const expiresOn = d.expirySource === 'estimate' ? addDays(d.addedOn ?? todayISO(), estimateShelfLifeDays(food.name, food.category, location)) : d.expiresOn;
+        const duplicate = tracked(food.name, location);
         return {
           ...d,
           name: food.name,
           category: food.category,
+          location,
           expiresOn,
           confidence: 'high',
           identified: true,
@@ -98,8 +106,10 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
     const trimmed = rawName.trim().replace(/\s+/g, ' ');
     if (!trimmed) return;
     const name = trimmed[0]!.toUpperCase() + trimmed.slice(1);
-    const location = opts.keptIn ?? get().location;
-    const draft = draftFor(name, opts.category ?? guessCategory(name), location, `manual-${Date.now()}-${get().drafts.length}`);
+    const category = opts.category ?? guessCategory(name);
+    // On a receipt every item has its own place, so a forgotten one goes where it usually lives.
+    const location = opts.keptIn ?? (get().mode === 'receipt' ? usualPlace(name, category) : get().location);
+    const draft = draftFor(name, category, location, `manual-${Date.now()}-${get().drafts.length}`);
     set((s) => ({ drafts: [draft, ...s.drafts] }));
   },
   setLocation: (location) => {
@@ -122,5 +132,17 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
       }),
     });
   },
+  moveDraft: (key, location) =>
+    set((s) => ({
+      drafts: s.drafts.map((d) => {
+        if (d.key !== key || d.location === location) return d;
+        return {
+          ...d,
+          location,
+          expiresOn: d.expirySource === 'estimate' ? addDays(d.addedOn ?? todayISO(), estimateShelfLifeDays(d.name, d.category, location)) : d.expiresOn,
+          duplicate: tracked(d.name, location),
+        };
+      }),
+    })),
   clear: () => set({ drafts: [], notes: null, photos: [] }),
 }));

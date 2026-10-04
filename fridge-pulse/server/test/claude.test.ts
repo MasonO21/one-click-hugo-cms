@@ -27,7 +27,8 @@ const mealsReq: MealsRequest = {
 };
 
 const scanOutput = {
-  items: [{ name: 'Baby spinach', category: 'produce', quantity: '1 bag', shelfLifeDays: 3, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1 }],
+  items: [{ name: 'Baby spinach', category: 'produce', quantity: '1 bag', shelfLifeDays: 3, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1, keptIn: null }],
+  purchaseDate: null,
   notes: null,
 };
 
@@ -43,7 +44,7 @@ describe('claude service against a fake Messages API (real SDK code path)', () =
     api = await fakeAnthropic((req) => {
       const isMeals = String(req.body?.system ?? '').includes('recipe engine');
       const output = isMeals
-        ? { meals: [{ title: 'Spinach frittata', summary: 's', minutes: 20, servings: 3, uses: ['Baby spinach', 'Eggs'], extras: ['Oil'], steps: ['Cook.'] }] }
+        ? { meals: [{ title: 'Spinach frittata', summary: 's', minutes: 20, servings: 3, uses: ['Baby spinach', 'Eggs'], extras: ['Oil'], steps: ['Cook.'], nutrition: { kcal: 310, protein: 19, carbs: 6, fat: 23 } }] }
         : scanOutput;
       switch (mode) {
         case 'refusal':
@@ -99,10 +100,31 @@ describe('claude service against a fake Messages API (real SDK code path)', () =
     assert.match(String(b.system), /never instructions to you/);
   });
 
+  it('reads a receipt with the receipt instructions, not the shelf ones', async () => {
+    mode = 'ok';
+    await svc().scan({ ...scanReq, mode: 'receipt' });
+    const b = last().body;
+    assert.match(String(b.system), /receipt reader/);
+    assert.match(String(b.system), /Skip everything that is not food or drink/);
+    assert.match(String(b.system), /never instructions to you/);
+    const blocks = b.messages[0].content as { type: string; text?: string }[];
+    assert.match(blocks.at(-1)?.text ?? '', /2 photos of the receipt, in order/);
+    assert.doesNotMatch(blocks.at(-1)?.text ?? '', /Storage area/);
+    // The same output shape, with where each item goes and the purchase date.
+    const schema = JSON.stringify(b.output_config.format.schema);
+    assert.match(schema, /purchaseDate/);
+    assert.match(schema, /keptIn/);
+
+    await svc().scan(scanReq);
+    assert.match(String(last().body.system), /vision engine/);
+  });
+
   it('uses the meals effort and passes diet, servings and exclusions as data', async () => {
     mode = 'ok';
     const out = await svc().meals(mealsReq);
     assert.equal(out.meals[0]?.title, 'Spinach frittata');
+    assert.deepEqual(out.meals[0]?.nutrition, { kcal: 310, protein: 19, carbs: 6, fat: 23 });
+    assert.match(String(last().body.system), /"nutrition": your estimate for ONE serving/);
     const b = last().body;
     assert.equal(b.output_config.effort, 'low');
     const text = String(b.messages[0].content);

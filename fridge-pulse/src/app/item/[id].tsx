@@ -9,6 +9,7 @@ import { Card } from '../../components/Card';
 import { Chip } from '../../components/Chip';
 import { Field } from '../../components/Field';
 import { FoodPicture } from '../../components/FoodPicture';
+import { MacroTiles } from '../../components/Macros';
 import { FadeIn } from '../../components/motion';
 import { Screen } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
@@ -18,7 +19,9 @@ import { useToday } from '../../hooks/useToday';
 import { addDays, daysBetween, formatShortDate } from '../../lib/dates';
 import { confirm } from '../../lib/dialogs';
 import { daysLeft } from '../../lib/expiry';
+import { displayName } from '../../lib/meals';
 import { goBack } from '../../lib/nav';
+import { formatGrams, nutritionFor, portionMacros, quantityGrams, scaleMacros, type Macros } from '../../lib/nutrition';
 import { estimateShelfLifeDays, freezeRescueDays, freezesWell } from '../../lib/shelfLife';
 import { keepsLabel } from '../../lib/suggest';
 import { storageTips } from '../../lib/tips';
@@ -84,6 +87,8 @@ export default function ItemDetail() {
   const rescueDays = freezeRescueDays(item, days);
   const tips = storageTips(item.name, item.category, item.location);
   const typical = addDays(item.addedOn, estimateShelfLifeDays(item.name, item.category, item.location));
+  const nutrition = nutritionFor(item.name);
+  const wholeGrams = nutrition ? quantityGrams(item.quantity, nutrition) : null;
 
   const shift = (delta: number) => {
     const next = addDays(item.expiresOn, delta);
@@ -237,6 +242,42 @@ export default function ItemDetail() {
         </FadeIn>
       ) : null}
 
+      <FadeIn delay={200}>
+        <Card style={{ gap: 10 }} testID="nutrition">
+          <View style={styles.rescueHead}>
+            <Ionicons name="nutrition-outline" size={18} color={c.primary} />
+            <Text variant="label" color={c.primary}>
+              Nutrition
+            </Text>
+          </View>
+          {nutrition ? (
+            <>
+              <Text variant="caption" muted style={{ fontSize: 14 }}>
+                Per {nutrition.portion.label} ({nutrition.portion.grams} g)
+              </Text>
+              <MacroTiles macros={portionMacros(nutrition)} testID="item-macros" />
+              {nutrition.portion.grams !== 100 ? (
+                <Text variant="caption" muted style={{ fontSize: 14, lineHeight: 20 }}>
+                  Per 100 g: {macroLine(nutrition.per100g)}
+                </Text>
+              ) : null}
+              {wholeGrams && wholeGrams !== nutrition.portion.grams ? (
+                <Text variant="caption" muted style={{ fontSize: 14, lineHeight: 20 }} testID="whole-macros">
+                  All {item.quantity} (about {wholeGrams} g): {macroLine(scaleMacros(nutrition.per100g, wholeGrams))}
+                </Text>
+              ) : null}
+              <Text variant="caption" faint>
+                USDA figures for {displayName(nutrition.food)}.
+              </Text>
+            </>
+          ) : (
+            <Text variant="caption" muted style={{ fontSize: 14, lineHeight: 20 }}>
+              No nutrition figures for this food yet.
+            </Text>
+          )}
+        </Card>
+      </FadeIn>
+
       <View style={{ gap: 8 }}>
         <Text variant="label" muted>
           Quantity
@@ -258,6 +299,10 @@ export default function ItemDetail() {
       <Button testID="add-to-list" label="Add to shopping list" icon="cart-outline" variant="secondary" onPress={addToList} style={{ alignSelf: 'flex-start' }} />
     </Screen>
   );
+}
+
+function macroLine(m: Macros): string {
+  return `${Math.round(m.kcal)} kcal · ${formatGrams(m.protein)} protein · ${formatGrams(m.carbs)} carbs · ${formatGrams(m.fat)} fat${m.fiber > 0 ? ` · ${formatGrams(m.fiber)} fibre` : ''}`;
 }
 
 const styles = StyleSheet.create({

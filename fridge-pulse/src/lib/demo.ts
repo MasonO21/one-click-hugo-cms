@@ -68,6 +68,48 @@ export async function demoScan(location: StorageLocation, known: { name: string 
   };
 }
 
+const line = (name: string, category: Sample['category'], quantity: string, shelfLifeDays: number, keptIn: StorageLocation, confidence: Sample['confidence'] = 'high', clue: string | null = null): Sample => ({
+  name,
+  category,
+  quantity,
+  shelfLifeDays,
+  labelExpiryDate: null,
+  confidence,
+  clue,
+  photo: null,
+  keptIn,
+});
+
+/**
+ * A sample receipt read, used when no backend is configured: abbreviations already expanded, each
+ * line headed for where it is kept, bought yesterday.
+ */
+export async function demoReceipt(known: { name: string }[] = []): Promise<ScanResponse> {
+  const taught = known.find((k) => /^(gochujang|ssamjang)$/i.test(k.name.trim()));
+  await new Promise((r) => setTimeout(r, 1600));
+  return {
+    purchaseDate: addDays(todayISO(), -1),
+    items: [
+      line('Bananas', 'produce', '1.3 lb', 5, 'pantry'),
+      line('2% milk', 'dairy', '1 gallon', 7, 'fridge'),
+      line('Chicken breast', 'meat', '1.5 lb', 2, 'fridge', 'medium'),
+      line('Baby spinach', 'produce', '1 bag', 5, 'fridge'),
+      line('Greek yogurt', 'dairy', '2', 14, 'fridge'),
+      line('Strawberries', 'produce', '1 lb', 4, 'fridge'),
+      line('Cheddar cheese', 'dairy', '8 oz', 42, 'fridge', 'medium'),
+      line('Avocados', 'produce', '3', 4, 'pantry'),
+      line('Sourdough bread', 'bakery', '1 loaf', 4, 'pantry'),
+      line('Spaghetti', 'grains', '2', 365, 'pantry'),
+      line('Canned tomatoes', 'canned', '4', 540, 'pantry'),
+      line('Frozen peas', 'produce', '1 bag', 300, 'freezer'),
+      line('Ice cream', 'dairy', '1 tub', 60, 'freezer'),
+      // A line the reader could not decode: the review screen looks it up.
+      taught ? line(taught.name, 'condiments', '1 tub', 365, 'pantry') : line('Chili paste', 'condiments', '1 tub', 365, 'pantry', 'low', 'CJ GOCHU PST 500G'),
+    ],
+    notes: SCREENSHOT_MODE ? null : 'Sample receipt: this preview is not connected to the receipt-reading service.',
+  };
+}
+
 const wait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const t = setTimeout(resolve, ms);

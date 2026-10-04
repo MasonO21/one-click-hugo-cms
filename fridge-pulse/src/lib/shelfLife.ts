@@ -396,7 +396,7 @@ export function freezesWell(name: string, category: Category): boolean {
 // ---------------------------------------------------------------------------
 
 /** Lower case, no accents, punctuation as spaces: "Crème fraîche" -> "creme fraiche". */
-function plain(name: string): string {
+export function plain(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
@@ -407,7 +407,7 @@ function plain(name: string): string {
 }
 
 /** The last word without its plural ending, so "tomatoes" finds "Tomato" and "berries" finds "Berry". */
-function singularLast(text: string): string {
+export function singularLast(text: string): string {
   return text.replace(/\w+$/, (w) =>
     w.length <= 3 ? w : /ies$/.test(w) ? `${w.slice(0, -3)}y` : /(oes|ches|shes|xes)$/.test(w) ? w.slice(0, -2) : /[^s]s$/.test(w) ? w.slice(0, -1) : w,
   );
@@ -416,7 +416,7 @@ function singularLast(text: string): string {
 const escapeRe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** A pattern for a catalog name that also matches its plural ("tomato" -> tomato, tomatoes). */
-function catalogPattern(name: string): RegExp {
+export function catalogPattern(name: string): RegExp {
   const base = escapeRe(singularLast(plain(name)));
   const body = /y$/.test(base) ? `${base.slice(0, -1)}(y|ies)` : `${base}(s|es)?`;
   return new RegExp(`(?:^|[^a-z0-9])${body}(?![a-z0-9])`, 'g');

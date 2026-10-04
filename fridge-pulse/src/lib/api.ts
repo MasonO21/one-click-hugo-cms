@@ -1,10 +1,11 @@
 import { daysBetween, todayISO } from './dates';
 import { daysLeft, sortByExpiry } from './expiry';
 import { uniqueUses } from './meals';
-import { demoIdentify, demoMeals, demoScan } from './demo';
+import { demoIdentify, demoMeals, demoReceipt, demoScan } from './demo';
 import { toCandidates } from './identify';
 import { newId } from './scan';
-import type { Category, FoodCandidate, Meal, MealPrefs, PantryItem, ScanResponse, StorageLocation } from './types';
+import { toMealNutrition } from './nutrition';
+import type { Category, FoodCandidate, Meal, MealPrefs, PantryItem, ScanMode, ScanResponse, StorageLocation } from './types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') ?? '';
 
@@ -71,6 +72,8 @@ async function post<T>(path: string, userId: string, body: unknown, timeoutMs: n
 
 export interface ScanRequest {
   userId: string;
+  /** Shelf photos (default) or a shopping receipt. */
+  mode?: ScanMode;
   location: StorageLocation;
   /** Base64 JPEG data, no data-URL prefix. */
   images: string[];
@@ -79,13 +82,14 @@ export interface ScanRequest {
   signal?: AbortSignal;
 }
 
-export async function scanPhotos({ userId, location, images, known = [], signal }: ScanRequest): Promise<ScanResponse> {
-  if (isDemoMode) return demoScan(location, known);
+export async function scanPhotos({ userId, mode = 'shelf', location, images, known = [], signal }: ScanRequest): Promise<ScanResponse> {
+  if (isDemoMode) return mode === 'receipt' ? demoReceipt(known) : demoScan(location, known);
   const locale = Intl.DateTimeFormat().resolvedOptions().locale;
   const res = await post<Partial<ScanResponse>>(
     '/v1/scan',
     userId,
     {
+      ...(mode === 'receipt' ? { mode } : {}),
       location,
       today: todayISO(),
       locale,
@@ -96,7 +100,7 @@ export async function scanPhotos({ userId, location, images, known = [], signal 
     signal,
   );
   if (!Array.isArray(res.items)) throw new ApiError('bad_response', 'Unexpected response from the server.');
-  return { items: res.items, notes: res.notes ?? null };
+  return { items: res.items, notes: res.notes ?? null, purchaseDate: typeof res.purchaseDate === 'string' ? res.purchaseDate : null };
 }
 
 export interface IdentifyRequest {
@@ -152,6 +156,7 @@ interface RawMeal {
   uses?: unknown;
   extras?: unknown;
   steps?: unknown;
+  nutrition?: unknown;
 }
 
 const strings = (v: unknown, max: number): string[] =>
@@ -195,6 +200,7 @@ export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: Me
       extras: strings(m.extras, 15),
       steps: strings(m.steps, 12),
       source: 'ai' as const,
+      nutrition: toMealNutrition(m.nutrition),
     }));
 }
 

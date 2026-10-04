@@ -2,10 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, LayoutAnimation, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { uniqueUses } from '../lib/meals';
+import { nutritionNote } from '../lib/nutrition';
 import type { Meal } from '../lib/types';
 import { radius, useTheme } from '../theme';
 import { Button } from './Button';
 import { Card } from './Card';
+import { MacroTiles } from './Macros';
 import { FadeIn, NATIVE_DRIVER, prefersReducedMotion, useAnimatedValue } from './motion';
 import { Text } from './Text';
 
@@ -63,6 +65,14 @@ export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
                 Serves {meal.servings}
               </Text>
             </View>
+            {meal.nutrition ? (
+              <View style={styles.metaItem} testID={`kcal-${meal.id}`}>
+                <Ionicons name="flame-outline" size={15} color={c.inkMuted} />
+                <Text variant="caption" muted>
+                  {meal.nutrition.kcal} kcal
+                </Text>
+              </View>
+            ) : null}
             {meal.source === 'local' ? (
               <Text variant="caption" faint>
                 Quick idea
@@ -88,6 +98,17 @@ export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
 
       {open ? (
         <FadeIn distance={6} style={[styles.body, { borderTopColor: c.border }]}>
+          {meal.nutrition ? (
+            <View style={{ gap: 8 }} testID={`nutrition-${meal.id}`}>
+              <Text variant="label" muted>
+                Per serving
+              </Text>
+              <MacroTiles macros={meal.nutrition} />
+              <Text variant="caption" faint>
+                {nutritionNote(meal)}
+              </Text>
+            </View>
+          ) : null}
           {meal.extras.length > 0 ? (
             <View style={{ gap: 4 }}>
               <Text variant="label" muted>

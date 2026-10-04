@@ -1,13 +1,13 @@
 {
   "title": "Privacy Policy",
-  "updated": "2026-09-30",
+  "updated": "2026-10-04",
   "intro": "Fridge Pulse helps you use food before it goes off. This policy explains what the app does with your information, in plain language.",
   "sections": [
     {
       "heading": "The short version",
       "bullets": [
         "Your food list stays on your phone. We do not have accounts.",
-        "If you agree, photos you scan and ingredient lists are sent to an AI service to identify food and suggest meals. When a scan finds something the app does not know, it can also be looked up on the web. Fridge Pulse does not keep your photos.",
+        "If you agree, photos you scan (of your shelves or a shopping receipt) and ingredient lists are sent to an AI service to identify food and suggest meals. When a scan finds something the app does not know, it can also be looked up on the web. Fridge Pulse does not keep your photos.",
         "No ads. No tracking across other apps or websites. No selling your data.",
         "Payments are handled by Apple or Google. We never see your card details."
       ]
@@ -28,6 +28,7 @@
       "heading": "What is sent off your device, and why",
       "bullets": [
         "Photos you scan: when you tap Analyze, the photos are sent over an encrypted connection to our server, which passes them to Anthropic, the provider of the Claude AI models, to identify the food and estimate how long it keeps. The names of foods you have confirmed from a lookup are sent with them, so the scan can recognise them. Our server handles them in memory to return the result and does not save them. Photos are only sent after you agree to this, and you can withdraw that agreement at any time.",
+        "Receipt photos: when you tap Read receipt, photos of a shopping receipt are sent the same way so the food on it can be listed. A receipt can show the shop, the date and time and the last digits of a payment card. The AI is asked to read only the food and drink lines and the purchase date, and our server does not save the photo. You can fold over or cover card details before taking the photo.",
         "Looking up an item the app does not recognise: the photo it was seen in, the name the scan gave it and a short description of its packaging are sent the same way. Anthropic's Claude searches the web for the exact product and its storage guidance; those searches contain words describing the product, never your photo or anything about you. Our server then asks Open Food Facts (openfoodfacts.org) and Wikipedia for a picture of the product, sending only the product's name and brand. When you add an item by typing, a lookup happens only if you tap Look it up online. This also needs your permission to use AI.",
         "Product pictures: to show you a picture to confirm, your phone loads it directly from Open Food Facts or Wikimedia, which see your IP address like any website you visit. Foods you confirm, with their pictures' addresses, are saved in the food list on your device.",
         "Ingredient lists for meal ideas: to write meal ideas, the names, categories, quantities and days-until-expiry of your tracked items are sent the same way. No photos are included. This also needs your agreement.",

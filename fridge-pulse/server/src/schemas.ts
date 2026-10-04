@@ -34,8 +34,12 @@ export const ScanOutputSchema = z.object({
       confidence: z.enum(['high', 'medium', 'low']),
       clue: z.string().nullable(),
       photo: z.number().nullable(),
+      /** Receipts: where the item goes once home. Null for shelf photos. */
+      keptIn: z.enum(LOCATIONS).nullable(),
     }),
   ),
+  /** Receipts: the purchase date printed on it, YYYY-MM-DD. Null for shelf photos. */
+  purchaseDate: z.string().nullable(),
   notes: z.string().nullable(),
 });
 export type ScanOutput = z.infer<typeof ScanOutputSchema>;
@@ -50,6 +54,8 @@ export const MealsOutputSchema = z.object({
       uses: z.array(z.string()),
       extras: z.array(z.string()),
       steps: z.array(z.string()),
+      /** Estimate for one serving. */
+      nutrition: z.object({ kcal: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).nullable(),
     }),
   ),
 });
@@ -98,7 +104,12 @@ const ImageSchema = z.object({
 /** Foods the person has identified before, so a scan can recognise them by name. */
 export const MAX_KNOWN_FOODS = 50;
 
+export const SCAN_MODES = ['shelf', 'receipt'] as const;
+
 export const ScanRequestSchema = z.object({
+  /** "shelf": photos of a fridge, freezer or pantry. "receipt": photos of a shopping receipt. Default shelf. */
+  mode: z.enum(SCAN_MODES).optional(),
+  /** Where the photographed food is (shelf), or where most of it is going (receipt). */
   location: z.enum(LOCATIONS),
   today: isoDate,
   locale: z.string().max(35).optional(),

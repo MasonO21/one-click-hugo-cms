@@ -37,7 +37,7 @@ function setup(over: { entitled?: boolean | Error; claude?: Partial<ClaudeServic
   const claude: ClaudeService = {
     async scan(req) {
       seen.scan.push(req);
-      return { items: [{ name: 'Milk', category: 'dairy', quantity: '1', shelfLifeDays: 6, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1 }], notes: null };
+      return { items: [{ name: 'Milk', category: 'dairy', quantity: '1', shelfLifeDays: 6, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1, keptIn: null }], purchaseDate: null, notes: null };
     },
     async meals(req) {
       seen.meals.push(req);
@@ -135,6 +135,15 @@ describe('POST /v1/scan', () => {
     const body = (await res.json()) as { items: { name: string }[] };
     assert.equal(body.items[0]?.name, 'Milk');
     assert.equal(seen.scan[0]?.location, 'fridge');
+  });
+
+  it('forwards a receipt scan, and treats a missing mode as shelf photos', async () => {
+    const { call, seen } = setup();
+    assert.equal((await call('/v1/scan', scanBody({ mode: 'receipt' }))).status, 200);
+    assert.equal(seen.scan[0]?.mode, 'receipt');
+    assert.equal((await call('/v1/scan', scanBody())).status, 200);
+    assert.equal(seen.scan[1]?.mode, undefined);
+    assert.equal((await call('/v1/scan', scanBody({ mode: 'invoice' as never }))).status, 400);
   });
 
   it('validates the request', async () => {
@@ -295,7 +304,7 @@ describe('abuse limits', () => {
     let lookups = 0;
     const app = createApp({
       config,
-      claude: { scan: async () => ({ items: [], notes: null }), meals: async () => ({ meals: [] }), identify: async () => ({ candidates: [] }) },
+      claude: { scan: async () => ({ items: [], purchaseDate: null, notes: null }), meals: async () => ({ meals: [] }), identify: async () => ({ candidates: [] }) },
       entitlements: { isActive: async () => { lookups++; return true; } },
     });
     let last = 0;

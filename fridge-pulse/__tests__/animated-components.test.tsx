@@ -6,6 +6,7 @@ import { FreshnessMeter } from '../src/components/FreshnessMeter';
 import { HeartbeatLine } from '../src/components/HeartbeatLine';
 import { ImpactCard } from '../src/components/ImpactCard';
 import { Logo } from '../src/components/Logo';
+import { MacroTiles } from '../src/components/Macros';
 import { MealCard } from '../src/components/MealCard';
 import { PulseBar } from '../src/components/PulseBar';
 import { SnackbarHost } from '../src/components/Snackbar';
@@ -71,6 +72,32 @@ describe('animated components render and animate', () => {
     expect(JSON.stringify(tree.toJSON()).match(/"Eggs"/g)).toHaveLength(1);
     act(() => tree.root.findAll((n) => n.props.testID === 'meal-m' && typeof n.props.onPress === 'function')[0]!.props.onPress());
     run();
+  });
+
+  it('Meal card with figures per serving, and the macro bar growing in', () => {
+    let tree!: ReturnType<typeof create>;
+    const meal = {
+      id: 'n',
+      title: 'Omelette',
+      summary: '',
+      minutes: 10,
+      servings: 2,
+      uses: ['Eggs', 'Gochujang'],
+      extras: [],
+      steps: ['Cook.'],
+      source: 'local' as const,
+      nutrition: { kcal: 366, protein: 20, carbs: 4, fat: 30, counted: 1, total: 2 },
+    };
+    act(() => {
+      tree = create(<MealCard meal={meal} defaultOpen />);
+      create(<MacroTiles macros={{ kcal: 0, protein: 0, carbs: 0, fat: 0 }} />);
+    });
+    run();
+    const text = textOf(tree.toJSON());
+    expect(text).toContain('366 kcal');
+    expect(text).toContain('Per serving');
+    expect(text).toContain('20 g');
+    expect(text).toContain('1 of 2 ingredients');
   });
 
   it('Message bar showing, counting down and hiding', () => {

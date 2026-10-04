@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import type { Effort } from './config.js';
-import { IDENTIFY_SYSTEM, identifyUserText, MEALS_SYSTEM, mealsUserText, SCAN_SYSTEM, scanUserText } from './prompts.js';
+import { IDENTIFY_SYSTEM, identifyUserText, MEALS_SYSTEM, mealsUserText, RECEIPT_SYSTEM, receiptUserText, SCAN_SYSTEM, scanUserText } from './prompts.js';
 import {
   CATEGORIES,
   LOCATIONS,
@@ -150,17 +150,18 @@ export function createClaude({ model, scanEffort, mealsEffort, identifyEffort = 
     scan: (req) =>
       run(async () => {
         const { effort, ...base } = common(model, scanEffort);
+        const receipt = req.mode === 'receipt';
         const content: Anthropic.Beta.BetaContentBlockParam[] = [];
         req.images.forEach((img, i) => {
           content.push({ type: 'text', text: `Photo ${i + 1} of ${req.images.length}:` });
           content.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } });
         });
-        content.push({ type: 'text', text: scanUserText(req) });
+        content.push({ type: 'text', text: receipt ? receiptUserText(req) : scanUserText(req) });
 
         const res = await anthropic.beta.messages.parse({
           ...base,
           output_config: { effort, format: zodOutputFormat(ScanOutputSchema) },
-          system: SCAN_SYSTEM,
+          system: receipt ? RECEIPT_SYSTEM : SCAN_SYSTEM,
           messages: [{ role: 'user', content }],
         });
         return usable(res, 'scan');

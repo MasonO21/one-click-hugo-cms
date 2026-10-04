@@ -45,7 +45,7 @@ export function AiConsentModal({ visible, onAgree, onClose }: Props) {
             </Text>
             <View style={{ gap: 8 }}>
               {[
-                'Photos are sent only when you tap Analyze. For meal ideas, the names and dates of your tracked items are sent, with no photos.',
+                'Photos are sent only when you tap Analyze or Read receipt. For meal ideas, the names and dates of your tracked items are sent, with no photos.',
                 'If a scan finds something unfamiliar, Claude searches the web for the exact product, and you confirm it from a picture.',
                 'Fridge Pulse does not keep your photos.',
                 'You can turn this off any time in Settings. Everything else keeps working.',

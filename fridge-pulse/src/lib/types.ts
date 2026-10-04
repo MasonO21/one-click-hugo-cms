@@ -52,10 +52,17 @@ export interface ScanItem {
   clue?: string | null;
   /** Which photo (1 = first) shows the item best. */
   photo?: number | null;
+  /** Receipts: where the item goes once home. */
+  keptIn?: StorageLocation | null;
 }
+
+/** "shelf": photos of a fridge, freezer or pantry. "receipt": a shopping receipt. */
+export type ScanMode = 'shelf' | 'receipt';
 
 export interface ScanResponse {
   items: ScanItem[];
+  /** Receipts: the purchase date printed on it, YYYY-MM-DD. */
+  purchaseDate?: string | null;
   /** Short note when the photo is unusable (blurry, not food, ...). */
   notes: string | null;
 }
@@ -72,6 +79,19 @@ export interface Meal {
   extras: string[];
   steps: string[];
   source: 'ai' | 'local';
+  /** Estimated energy and macros for one serving, when there is an estimate. */
+  nutrition?: MealNutrition | null;
+}
+
+/** Per-serving estimate: kcal and grams. */
+export interface MealNutrition {
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  /** Built-in recipes: how many of the ingredients used have figures, out of `total`. */
+  counted?: number;
+  total?: number;
 }
 
 export type Diet = 'none' | 'vegetarian' | 'vegan' | 'gluten-free' | 'dairy-free';

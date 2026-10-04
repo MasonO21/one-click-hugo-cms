@@ -44,13 +44,25 @@ function Tag({ label, tone }: { label: string; tone: 'good' | 'warn' | 'plain' }
   );
 }
 
-/** The scanned photo an item was seen in, for looking it up. */
+/** The scanned photo an item was seen in, for looking it up. A receipt photo does not show the food. */
 function photoFor(draft: DraftItem): string | undefined {
-  const { photos } = useScanDraft.getState();
+  const { photos, mode } = useScanDraft.getState();
+  if (mode === 'receipt') return undefined;
   return photos[draft.photo ?? 0] ?? photos[0];
 }
 
-function DraftRow({ draft, listLocation, onLookUp }: { draft: DraftItem; listLocation: (typeof LOCATIONS)[number]; onLookUp: (draft: DraftItem) => void }) {
+function DraftRow({
+  draft,
+  listLocation,
+  ownPlace,
+  onLookUp,
+}: {
+  draft: DraftItem;
+  listLocation: (typeof LOCATIONS)[number];
+  /** Each item picks its own place (a receipt), instead of the whole list sharing one. */
+  ownPlace: boolean;
+  onLookUp: (draft: DraftItem) => void;
+}) {
   const { c } = useTheme();
   const update = useScanDraft((s) => s.update);
   const lookup = useLookups((s) => s.byKey[draft.key]);
@@ -99,8 +111,16 @@ function DraftRow({ draft, listLocation, onLookUp }: { draft: DraftItem; listLoc
         {draft.identified ? <Tag label="Identified online" tone="good" /> : null}
         {draft.confidence === 'low' && !lookup ? <Tag label="Double-check" tone="warn" /> : null}
         {draft.duplicate ? <Tag label="Already tracked" tone="plain" /> : null}
-        {draft.location !== listLocation ? <Tag label={LOCATION_LABEL[draft.location]} tone="plain" /> : null}
+        {!ownPlace && draft.location !== listLocation ? <Tag label={LOCATION_LABEL[draft.location]} tone="plain" /> : null}
       </View>
+
+      {ownPlace ? (
+        <View style={styles.place}>
+          {LOCATIONS.map((l) => (
+            <Chip key={l} testID={`place-${draft.key}-${l}`} label={LOCATION_LABEL[l]} selected={draft.location === l} onPress={() => useScanDraft.getState().moveDraft(draft.key, l)} />
+          ))}
+        </View>
+      ) : null}
 
       {lookup ? (
         <IdentifyCard draftKey={draft.key} lookup={lookup} location={draft.location} onRetry={() => onLookUp(draft)} />
@@ -140,13 +160,18 @@ export default function Review() {
   const location = useScanDraft((s) => s.location);
   const mode = useScanDraft((s) => s.mode);
   const manual = mode === 'manual';
-  const title = mode === 'shopping' ? 'Put away' : manual ? 'Add items' : 'Review';
+  const receipt = mode === 'receipt';
+  const bought = receipt ? drafts.find((d) => d.addedOn)?.addedOn : undefined;
+  const title = mode === 'shopping' ? 'Put away' : manual ? 'Add items' : receipt ? 'Your receipt' : 'Review';
   const subtitle =
     mode === 'shopping'
       ? 'Each item is headed where it usually lives. Change anything, then save.'
       : manual
         ? 'Start typing and pick a suggestion, then save.'
-        : 'Fix anything that looks off, then save.';
+        : receipt
+          ? `${bought ? `Bought ${formatShortDate(bought)}. ` : ''}Each item is headed where it keeps best. Change anything, then save.`
+          : 'Fix anything that looks off, then save.';
+  const places = receipt ? LOCATIONS.map((l) => [l, drafts.filter((d) => d.selected && d.location === l).length] as const).filter(([, n]) => n > 0) : [];
   // Only the names matter to the suggestions; a new array each render would recompute them on every keystroke.
   const addedKey = drafts.map((d) => d.name).join('\n');
   const added = useMemo(() => (addedKey ? addedKey.split('\n') : []), [addedKey]);
@@ -157,7 +182,7 @@ export default function Review() {
   // Anything the app does not recognise in a scan is looked up online straight away, using the photo.
   useEffect(() => {
     const draft = useScanDraft.getState();
-    if (draft.mode === 'scan') {
+    if (draft.mode === 'scan' || draft.mode === 'receipt') {
       draft.drafts
         .filter(needsLookup)
         .slice(0, MAX_AUTO_LOOKUPS)
@@ -254,16 +279,26 @@ export default function Review() {
         </Card>
       ) : null}
 
-      <View style={{ gap: 8 }}>
-        <Text variant="label" muted>
-          Stored in
-        </Text>
-        <View style={styles.chips}>
-          {LOCATIONS.map((l) => (
-            <Chip key={l} label={LOCATION_LABEL[l]} selected={location === l} onPress={() => useScanDraft.getState().setLocation(l)} />
-          ))}
+      {receipt ? (
+        places.length > 0 ? (
+          <View style={styles.chips} testID="receipt-places">
+            {places.map(([l, n]) => (
+              <Tag key={l} label={`${n} to the ${LOCATION_LABEL[l].toLowerCase()}`} tone="plain" />
+            ))}
+          </View>
+        ) : null
+      ) : (
+        <View style={{ gap: 8 }}>
+          <Text variant="label" muted>
+            Stored in
+          </Text>
+          <View style={styles.chips}>
+            {LOCATIONS.map((l) => (
+              <Chip key={l} label={LOCATION_LABEL[l]} selected={location === l} onPress={() => useScanDraft.getState().setLocation(l)} />
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={{ gap: 8 }}>
         <Text variant="label" muted>
@@ -285,8 +320,8 @@ export default function Review() {
 
       <View style={{ gap: 12 }}>
         {drafts.map((d, i) => (
-          <FadeIn key={d.key} delay={mode === 'scan' ? stagger(i, 35) : 0}>
-            <DraftRow draft={d} listLocation={location} onLookUp={lookUp} />
+          <FadeIn key={d.key} delay={mode === 'scan' || receipt ? stagger(i, 35) : 0}>
+            <DraftRow draft={d} listLocation={location} ownPlace={receipt} onLookUp={lookUp} />
           </FadeIn>
         ))}
       </View>
@@ -319,4 +354,5 @@ const styles = StyleSheet.create({
   footer: { width: '100%', maxWidth: 600 },
   thumb: { width: 36, height: 36, borderRadius: 10 },
   lookUp: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, alignSelf: 'flex-start' },
+  place: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
 });

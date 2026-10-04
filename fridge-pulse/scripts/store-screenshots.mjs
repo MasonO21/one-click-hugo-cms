@@ -38,9 +38,10 @@ const SHOTS = [
   { id: 'pulse', title: 'Know what to eat first', sub: 'See what is about to expire, at a glance' },
   { id: 'review', title: 'Snap a photo. Get your list.', sub: 'Fridge Pulse spots the food and reads dates' },
   { id: 'lookup', title: 'Not sure what it is?', sub: 'It searches the web and shows you a picture to confirm' },
+  { id: 'receipt', title: 'Back from the shops?', sub: 'Scan the receipt. Each food goes on the right shelf' },
   { id: 'items', title: 'Everything in one place', sub: 'Fridge, freezer and pantry, sorted by date' },
   { id: 'meals', title: 'Cook what needs using up', sub: 'Meal ideas built around your soonest dates' },
-  { id: 'item', title: 'Stay in control', sub: 'Edit dates and quantities, mark items used' },
+  { id: 'nutrition', title: 'Calories and macros', sub: 'For your food and every meal idea' },
   { id: 'paywall', title: 'Try free for 2 weeks', sub: 'Then $9.99 per month. Cancel anytime.' },
 ];
 
@@ -79,14 +80,37 @@ async function captureApp(target) {
   await tap('[data-testid="save-items"]');
   await page.locator('[data-testid="hero-headline"]').waitFor();
   await grab('pulse');
+  // A sample receipt, put away with the rest.
+  await tap('[data-testid="receipt-cta"]');
+  await tap('[data-testid="sample-scan"]');
+  await page.locator('[data-testid="receipt-places"]').waitFor({ timeout: 20000 });
+  await page.waitForTimeout(700);
+  await grab('receipt');
+  await tap('[data-testid="save-items"]');
+  await page.locator('[data-testid="hero-headline"]').waitFor();
   await tap('[data-testid="tab-inventory"]');
+  await page.evaluate(() => window.scrollTo(0, 0));
   await grab('items');
   await tap('[data-testid="tab-meals"]');
   await page.waitForTimeout(1200);
   await grab('meals');
   await tap('[data-testid="tab-inventory"]');
-  await page.locator('[data-testid^="item-"]').last().tap();
-  await grab('item');
+  // Other tabs stay rendered underneath: tap the row on the Items tab, the one actually on top.
+  const row = await page.evaluate(() => {
+    for (const e of document.querySelectorAll('[aria-label^="Chicken thighs,"]')) {
+      const r = e.getBoundingClientRect();
+      if (!r.width || r.top > innerHeight) continue;
+      const t = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      if (t && e.contains(t)) return [r.x + r.width / 2, r.y + r.height / 2];
+    }
+    return null;
+  });
+  if (!row) throw new Error('Chicken thighs row not found on the Items tab');
+  await page.touchscreen.tap(row[0], row[1]);
+  await page.locator('[data-testid="item-macros"]').waitFor();
+  await page.evaluate(() => document.querySelector('[data-testid="nutrition"]')?.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(900);
+  await grab('nutrition');
   await ctx.close();
   return raw;
 }

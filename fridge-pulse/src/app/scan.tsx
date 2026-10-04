@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Easing, Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AiConsentModal } from '../components/AiConsentModal';
@@ -17,7 +17,7 @@ import { encodePhoto, MAX_PHOTOS, pickPhotos, takePhoto, type Photo } from '../l
 import { goBack } from '../lib/nav';
 import { knownForScan } from '../lib/identify';
 import { toDrafts } from '../lib/scan';
-import type { StorageLocation } from '../lib/types';
+import type { ScanMode, StorageLocation } from '../lib/types';
 import { getProvider, useBilling } from '../store/billing';
 import { useFoods } from '../store/foods';
 import { useInventory } from '../store/inventory';
@@ -31,19 +31,26 @@ const TIPS: Record<StorageLocation, string> = {
   pantry: 'Photograph one shelf at a time, front row facing the camera. Printed dates help a lot.',
 };
 
+const RECEIPT_TIP =
+  'Lay the receipt flat in good light and fit its full width in the frame. For a long receipt, take one photo per section, top to bottom. Fold over any card details first.';
+
 const SCAN_SIZE = 200;
 
-const STATUS = ['Reading labels...', 'Spotting fresh food...', 'Estimating how long it keeps...', 'Almost there...'];
+const STATUS: Record<ScanMode, string[]> = {
+  shelf: ['Reading labels...', 'Spotting fresh food...', 'Estimating how long it keeps...', 'Almost there...'],
+  receipt: ['Reading the receipt...', 'Decoding abbreviations...', 'Working out where each item goes...', 'Almost there...'],
+};
 
 /** The photo being read, with a scan line sweeping over it; or the beating logo when there is no photo. */
-function Analyzing({ location, photo, onCancel }: { location: StorageLocation; photo: Photo | undefined; onCancel: () => void }) {
+function Analyzing({ mode, location, photo, onCancel }: { mode: ScanMode; location: StorageLocation; photo: Photo | undefined; onCancel: () => void }) {
   const { c } = useTheme();
   const still = useReducedMotion();
   const sweep = useAnimatedValue(0);
   const [i, setI] = useState(0);
+  const status = STATUS[mode];
 
   useEffect(() => {
-    const t = setInterval(() => setI((n) => Math.min(n + 1, STATUS.length - 1)), 2500);
+    const t = setInterval(() => setI((n) => Math.min(n + 1, STATUS.shelf.length - 1)), 2500);
     if (still || !photo) return () => clearInterval(t);
     const loop = Animated.loop(
       Animated.sequence([
@@ -76,17 +83,51 @@ function Analyzing({ location, photo, onCancel }: { location: StorageLocation; p
           <Logo size={88} beat="quick" />
         </View>
       )}
-      <Text variant="heading">Reading your {location}</Text>
+      <Text variant="heading">Reading your {mode === 'receipt' ? 'receipt' : location}</Text>
       <FadeIn key={i} distance={4}>
-        <Text muted>{STATUS[i]}</Text>
+        <Text muted>{status[i]}</Text>
       </FadeIn>
       <Button testID="cancel-scan" label="Cancel" variant="ghost" size="sm" onPress={onCancel} style={{ marginTop: 12 }} />
     </View>
   );
 }
 
+/** Shelf photos or a receipt: two halves of one pill. */
+function ModeSwitch({ mode, onChange }: { mode: ScanMode; onChange: (mode: ScanMode) => void }) {
+  const { c } = useTheme();
+  const options: { key: ScanMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { key: 'shelf', label: 'Shelf photos', icon: 'camera-outline' },
+    { key: 'receipt', label: 'Receipt', icon: 'receipt-outline' },
+  ];
+  return (
+    <View style={[styles.switch, { backgroundColor: c.surfaceAlt }]} accessibilityRole="tablist">
+      {options.map((o) => {
+        const on = mode === o.key;
+        return (
+          <Pressable
+            key={o.key}
+            testID={`mode-${o.key}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            onPress={() => onChange(o.key)}
+            style={[styles.switchOption, on && { backgroundColor: c.primaryFill }]}
+          >
+            <Ionicons name={o.icon} size={17} color={on ? c.onPrimary : c.inkMuted} />
+            <Text variant="bodyStrong" color={on ? c.onPrimary : c.inkMuted} style={{ fontSize: 15 }}>
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function Scan() {
   const { c } = useTheme();
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<ScanMode>(params.mode === 'receipt' ? 'receipt' : 'shelf');
+  const receipt = mode === 'receipt';
   const [location, setLocation] = useState<StorageLocation>('fridge');
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
@@ -126,15 +167,15 @@ export default function Scan() {
       const images = sample || isDemoMode ? [] : await Promise.all(photos.map(encodePhoto));
       const userId = await getProvider().getUserId();
       const known = knownForScan(useFoods.getState().foods);
-      const res = await scanPhotos({ userId, location, images, known, signal: controller.signal });
+      const res = await scanPhotos({ userId, mode, location, images, known, signal: controller.signal });
       if (controller.signal.aborted) return;
-      const drafts = toDrafts(res, location, useInventory.getState().items);
+      const drafts = toDrafts(res, location, useInventory.getState().items, new Date(), mode);
       if (drafts.length === 0) {
-        setError(res.notes ?? 'No food found in those photos. Try a closer, brighter shot.');
+        setError(res.notes ?? (receipt ? 'No food found on that receipt. Try a flatter, brighter photo.' : 'No food found in those photos. Try a closer, brighter shot.'));
         return;
       }
       // The photos stay in memory so the review screen can look up anything the app does not know.
-      useScanDraft.getState().start(location, drafts, res.notes, 'scan', images);
+      useScanDraft.getState().start(location, drafts, res.notes, receipt ? 'receipt' : 'scan', images);
       router.replace('/review');
     } catch (e) {
       if (controller.signal.aborted) return;
@@ -154,7 +195,10 @@ export default function Scan() {
     setAnalyzing(false);
   };
 
-  if (analyzing) return <Analyzing location={location} photo={photos[0]} onCancel={cancel} />;
+  if (analyzing) return <Analyzing mode={mode} location={location} photo={photos[0]} onCancel={cancel} />;
+
+  const analyzeLabel =
+    photos.length === 0 ? 'Add a photo to continue' : receipt ? 'Read receipt' : `Analyze ${photos.length} ${photos.length === 1 ? 'photo' : 'photos'}`;
 
   return (
     <>
@@ -165,7 +209,7 @@ export default function Scan() {
           <Button
             testID="analyze"
             variant={photos.length === 0 ? 'secondary' : 'cta'}
-            label={photos.length === 0 ? 'Add a photo to continue' : `Analyze ${photos.length} ${photos.length === 1 ? 'photo' : 'photos'}`}
+            label={analyzeLabel}
             icon="sparkles"
             disabled={photos.length === 0}
             onPress={() => void analyze()}
@@ -173,11 +217,13 @@ export default function Scan() {
           />
           {isDemoMode && !SCREENSHOT_MODE ? (
             <Text variant="caption" faint style={{ textAlign: 'center' }}>
-              Preview: photos are not analysed here. Tap Analyze to see sample items.
+              {receipt ? 'Preview: receipts are not read here. Tap Read receipt to see sample items.' : 'Preview: photos are not analysed here. Tap Analyze to see sample items.'}
             </Text>
           ) : null}
           <View style={styles.footerLinks}>
-            {isDemoMode ? <Button label="Try a sample scan" variant="ghost" size="sm" onPress={() => void analyze(true)} testID="sample-scan" /> : null}
+            {isDemoMode ? (
+              <Button label={receipt ? 'Try a sample receipt' : 'Try a sample scan'} variant="ghost" size="sm" onPress={() => void analyze(true)} testID="sample-scan" />
+            ) : null}
             <Button
               label="Add items by hand"
               variant="ghost"
@@ -202,16 +248,30 @@ export default function Scan() {
         </Pressable>
       </View>
 
-      <View style={{ gap: 8 }}>
-        <Text variant="label" muted>
-          What are you scanning?
+      <ModeSwitch
+        mode={mode}
+        onChange={(m) => {
+          setMode(m);
+          setError(null);
+        }}
+      />
+
+      {receipt ? (
+        <Text muted style={{ fontSize: 15, lineHeight: 22 }}>
+          Photograph a shopping receipt and Fridge Pulse adds the food on it, each item headed for the fridge, freezer or pantry, with dates counted from the day you shopped.
         </Text>
-        <View style={styles.chips}>
-          {LOCATIONS.map((l) => (
-            <Chip key={l} testID={`loc-${l}`} label={LOCATION_LABEL[l]} selected={location === l} onPress={() => setLocation(l)} />
-          ))}
+      ) : (
+        <View style={{ gap: 8 }}>
+          <Text variant="label" muted>
+            What are you scanning?
+          </Text>
+          <View style={styles.chips}>
+            {LOCATIONS.map((l) => (
+              <Chip key={l} testID={`loc-${l}`} label={LOCATION_LABEL[l]} selected={location === l} onPress={() => setLocation(l)} />
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.grid}>
         {photos.map((p, i) => (
@@ -233,10 +293,12 @@ export default function Scan() {
 
       {photos.length < MAX_PHOTOS ? (
         <View style={[styles.drop, { borderColor: c.border, backgroundColor: c.surface }]}>
-          <Emoji size={40}>📷</Emoji>
-          <Text variant="bodyStrong">{photos.length === 0 ? 'Add photos of your shelves' : 'Add another shelf'}</Text>
+          <Emoji size={40}>{receipt ? '🧾' : '📷'}</Emoji>
+          <Text variant="bodyStrong">
+            {receipt ? (photos.length === 0 ? 'Add a photo of your receipt' : 'Add the next part of the receipt') : photos.length === 0 ? 'Add photos of your shelves' : 'Add another shelf'}
+          </Text>
           <Text variant="caption" muted>
-            Up to {MAX_PHOTOS} photos
+            {receipt ? `A long receipt can take up to ${MAX_PHOTOS} photos` : `Up to ${MAX_PHOTOS} photos`}
           </Text>
           <View style={styles.dropActions}>
             <Button testID="take-photo" label="Take photo" icon="camera" size="sm" onPress={() => void add('camera')} />
@@ -248,7 +310,7 @@ export default function Scan() {
       <Card style={{ flexDirection: 'row', gap: 10, backgroundColor: c.primaryTint, borderColor: c.primaryTint }}>
         <Ionicons name="bulb-outline" size={20} color={c.primary} />
         <Text variant="caption" style={{ flex: 1, fontSize: 14, lineHeight: 20 }}>
-          {TIPS[location]}
+          {receipt ? RECEIPT_TIP : TIPS[location]}
         </Text>
       </Card>
 
@@ -275,6 +337,8 @@ const styles = StyleSheet.create({
   closeHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -4 },
   close: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  switch: { flexDirection: 'row', borderRadius: radius.pill, padding: 4, gap: 4 },
+  switchOption: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: radius.pill, paddingHorizontal: 10 },
   dropActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   thumbWrap: { width: 96, height: 96 },

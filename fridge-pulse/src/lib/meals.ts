@@ -1,6 +1,7 @@
 import { todayISO } from './dates';
 import { active, daysLeft, normalizeName, sortByExpiry } from './expiry';
 import { rolesFor, type Role } from './ingredients';
+import { mealNutrition, type Portion } from './nutrition';
 import { RECIPES, type Cond, type Course, type Line, type Recipe, type Slot } from './recipes';
 import type { Diet, Meal, MealPrefs, PantryItem } from './types';
 
@@ -348,12 +349,51 @@ export function renderLine(text: string, filled: FilledRecipe, diet: Diet): stri
 
 const lineText = (line: Line) => (typeof line === 'string' ? line : line.text);
 
+/**
+ * Typical portions per serving for foods whose listed portion is one of several on a plate: two eggs
+ * in an omelette, two slices in a sandwich, a few wings.
+ */
+const PORTIONS_PER_SERVING: Partial<Record<Role, number>> = {
+  egg: 2,
+  bread: 2,
+  'crusty-bread': 2,
+  tortilla: 2,
+  'corn-tortilla': 2,
+  bacon: 2,
+  sausage: 2,
+  'chicken-wings': 5,
+  'chicken-bone-in': 2,
+  cookies: 2,
+};
+
+/**
+ * How many typical portions of each food go into one serving: about one from each slot the recipe
+ * needs (a little more, shared, when the slot holds several foods), half as much from an optional slot.
+ */
+export function servingPortions(filled: FilledRecipe): Portion[] {
+  const { recipe } = filled;
+  const slots = new Map([...recipe.needs, ...(recipe.anyOf ?? []), ...(recipe.optional ?? [])].map((slot) => [slot.key, slot]));
+  const optional = new Set((recipe.optional ?? []).map((slot) => slot.key));
+  const parts: Portion[] = [];
+  for (const [key, items] of filled.slots) {
+    if (items.length === 0) continue;
+    const share = ((optional.has(key) ? 0.5 : 1) * Math.min(1 + 0.5 * (items.length - 1), 2)) / items.length;
+    for (const item of items) {
+      const have = new Set(rolesFor(item));
+      const role = slots.get(key)?.roles.find((r) => have.has(r));
+      parts.push({ name: item.name, portions: share * ((role && PORTIONS_PER_SERVING[role]) || 1) });
+    }
+  }
+  return parts;
+}
+
 /** Turns a filled recipe into a meal suggestion. */
 export function toMeal(filled: FilledRecipe, prefs: MealPrefs): Meal {
   const { recipe } = filled;
   const render = (lines: Line[]) => lines.filter((l) => applies(l, filled)).map((l) => renderLine(lineText(l), filled, prefs.diet));
   // "Garlic" is not an extra to buy when tracked garlic fills the garlic slot.
   const tracked = (line: Line) => (filled.slots.get(lineText(line).toLowerCase())?.length ?? 0) > 0;
+  const extras = render(recipe.extras.filter((l) => !tracked(l)));
   return {
     id: `local-${recipe.id}`,
     title: recipe.title,
@@ -361,9 +401,10 @@ export function toMeal(filled: FilledRecipe, prefs: MealPrefs): Meal {
     minutes: recipe.minutes,
     servings: prefs.servings,
     uses: uniqueUses(filled.chosen.map((c) => c.name)),
-    extras: render(recipe.extras.filter((l) => !tracked(l))),
+    extras,
     steps: render(recipe.steps),
     source: 'local',
+    nutrition: mealNutrition(servingPortions(filled), extras),
   };
 }
 

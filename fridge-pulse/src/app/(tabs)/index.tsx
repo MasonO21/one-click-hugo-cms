@@ -139,8 +139,15 @@ export default function Pulse() {
         </View>
       </FadeIn>
 
-      <FadeIn delay={80}>
+      <FadeIn delay={80} style={{ gap: 8 }}>
         <Button testID="scan-cta" variant="cta" label="Scan your fridge" icon="scan" onPress={() => router.push('/scan')} />
+        <Button
+          testID="receipt-cta"
+          variant="secondary"
+          label="Scan a receipt"
+          icon="receipt-outline"
+          onPress={() => router.push({ pathname: '/scan', params: { mode: 'receipt' } })}
+        />
       </FadeIn>
 
       {live.length === 0 ? (

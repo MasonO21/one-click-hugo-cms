@@ -7,8 +7,8 @@ Everything needed to list Fridge Pulse in the App Store and Google Play, and wha
 | `listing.json` | Copy-paste listing text for both stores. Character limits are tested. |
 | `subscription-setup.md` | Exactly how to configure the subscription in App Store Connect, Google Play and RevenueCat. |
 | `privacy-and-compliance.md` | Answers for the App Privacy label, Data safety form, age ratings, and App Review notes. |
-| `screenshots/ios-6.9in/` | Seven 1290x2796 App Store screenshots. |
-| `screenshots/android-phone/` | Seven 1080x1920 Google Play screenshots. |
+| `screenshots/ios-6.9in/` | Eight 1290x2796 App Store screenshots. |
+| `screenshots/android-phone/` | Eight 1080x1920 Google Play screenshots. |
 | `screenshots/subscription-review-paywall.png` | Paywall capture for the App Store subscription review. |
 | `graphics/` | 1024px App Store icon, 512px Play icon, 1024x500 Play feature graphic. |
 | `../docs/legal/` | Hostable Privacy Policy and Terms of Use pages (`npm run legal:build`). |
