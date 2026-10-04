@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { persistStorage } from './storage';
 import { addDays, todayISO } from '../lib/dates';
 import { isRescue, NO_LIFETIME, type Lifetime } from '../lib/impact';
+import { nextStamp, pruneTombstones, type Tombstones } from '../lib/householdSync';
 import type { ItemStatus, PantryItem } from '../lib/types';
 
 /** How long used/wasted items stay around for the "rescued" stats and the weekly chart. */
@@ -11,6 +12,10 @@ const HISTORY_DAYS = 90;
 interface InventoryState {
   items: PantryItem[];
   lifetime: Lifetime;
+  /** Ids removed on this phone, and when: passed on to a shared household. */
+  deleted: Tombstones;
+  /** Replaces the items with a merged copy from the household. */
+  applyRemote: (items: PantryItem[], deleted: Tombstones) => void;
   addItems: (items: PantryItem[]) => void;
   updateItem: (id: string, patch: Partial<Omit<PantryItem, 'id'>>) => void;
   resolveItem: (id: string, status: Exclude<ItemStatus, 'active'>) => void;
@@ -18,6 +23,15 @@ interface InventoryState {
   removeItem: (id: string) => void;
   clear: () => void;
 }
+
+let author: string | null = null;
+/** The name new items are added under while the phone shares a household. */
+export function setItemAuthor(name: string | null): void {
+  author = name;
+}
+
+/** Marks an item changed now, so a shared household takes this version. */
+const touch = (i: PantryItem): PantryItem => ({ ...i, updatedAt: nextStamp(i.updatedAt) });
 
 function pruned(items: PantryItem[]): PantryItem[] {
   const cutoff = addDays(todayISO(), -HISTORY_DAYS);
@@ -42,19 +56,21 @@ export const useInventory = create<InventoryState>()(
     (set) => ({
       items: [],
       lifetime: NO_LIFETIME,
+      deleted: {},
+      applyRemote: (items, deleted) => set({ items: pruned(items), deleted }),
       addItems: (added) =>
         set((s) => ({
-          items: pruned([...added, ...s.items]),
+          items: pruned([...added.map((i) => touch(author && !i.addedBy ? { ...i, addedBy: author } : i)), ...s.items]),
           lifetime: s.lifetime.startedOn || added.length === 0 ? s.lifetime : { ...s.lifetime, startedOn: todayISO() },
         })),
-      updateItem: (id, patch) => set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) })),
+      updateItem: (id, patch) => set((s) => ({ items: s.items.map((i) => (i.id === id ? touch({ ...i, ...patch }) : i)) })),
       resolveItem: (id, status) =>
         set((s) => {
           const item = s.items.find((i) => i.id === id);
           // Resolving twice (a double tap) must not count twice.
           if (!item || item.status !== 'active') return {};
           const today = todayISO();
-          const done: PantryItem = { ...item, status, resolvedOn: today };
+          const done: PantryItem = touch({ ...item, status, resolvedOn: today });
           const lifetime = count(s.lifetime, done, 1);
           return {
             items: pruned(s.items.map((i) => (i.id === id ? done : i))),
@@ -66,12 +82,17 @@ export const useInventory = create<InventoryState>()(
           const item = s.items.find((i) => i.id === id);
           if (!item || item.status === 'active') return {};
           const { resolvedOn: _drop, ...rest } = item;
-          const items = s.items.map((i) => (i.id === id ? { ...rest, status: 'active' as const } : i));
+          const items = s.items.map((i) => (i.id === id ? touch({ ...rest, status: 'active' as const }) : i));
           const lifetime = count(s.lifetime, item, -1);
           return { items, lifetime: item.status === 'wasted' ? { ...lifetime, lastWastedOn: lastWasted(items) } : lifetime };
         }),
-      removeItem: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
-      clear: () => set({ items: [], lifetime: NO_LIFETIME }),
+      removeItem: (id) =>
+        set((s) => {
+          const deleted = pruneTombstones(s.deleted);
+          deleted[id] = nextStamp(s.items.find((i) => i.id === id)?.updatedAt);
+          return { items: s.items.filter((i) => i.id !== id), deleted };
+        }),
+      clear: () => set({ items: [], lifetime: NO_LIFETIME, deleted: {} }),
     }),
     {
       name: 'fp.inventory.v1',

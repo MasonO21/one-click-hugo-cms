@@ -19,6 +19,8 @@ export type ApiErrorCode =
   | 'bad_request'
   | 'unavailable'
   | 'network'
+  | 'not_found'
+  | 'conflict'
   | 'bad_response';
 
 export class ApiError extends Error {
@@ -31,7 +33,7 @@ export class ApiError extends Error {
   }
 }
 
-async function post<T>(path: string, userId: string, body: unknown, timeoutMs: number, signal?: AbortSignal): Promise<T> {
+async function post<T>(path: string, userId: string, body: unknown, timeoutMs: number, signal?: AbortSignal, method: 'POST' | 'GET' = 'POST'): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   // The caller can cancel too (the person tapped Cancel or left the screen).
@@ -39,9 +41,9 @@ async function post<T>(path: string, userId: string, body: unknown, timeoutMs: n
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
-      method: 'POST',
+      method,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userId}` },
-      body: JSON.stringify(body),
+      ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
       signal: controller.signal,
     });
   } catch {
@@ -63,6 +65,8 @@ async function post<T>(path: string, userId: string, body: unknown, timeoutMs: n
     if (res.status === 402 || res.status === 401 || res.status === 403) throw new ApiError('payment_required', message);
     if (res.status === 429) throw new ApiError('rate_limited', message);
     if (res.status === 422) throw new ApiError('refused', message);
+    if (res.status === 404) throw new ApiError('not_found', message);
+    if (res.status === 409) throw new ApiError('conflict', message);
     if (res.status === 400 || res.status === 413) throw new ApiError('bad_request', message);
     throw new ApiError('unavailable', message);
   }
@@ -100,7 +104,12 @@ export async function scanPhotos({ userId, mode = 'shelf', location, images, kno
     signal,
   );
   if (!Array.isArray(res.items)) throw new ApiError('bad_response', 'Unexpected response from the server.');
-  return { items: res.items, notes: res.notes ?? null, purchaseDate: typeof res.purchaseDate === 'string' ? res.purchaseDate : null };
+  return {
+    items: res.items,
+    notes: res.notes ?? null,
+    purchaseDate: typeof res.purchaseDate === 'string' ? res.purchaseDate : null,
+    currency: typeof res.currency === 'string' ? res.currency : null,
+  };
 }
 
 export interface IdentifyRequest {
@@ -202,6 +211,78 @@ export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: Me
       source: 'ai' as const,
       nutrition: toMealNutrition(m.nutrition),
     }));
+}
+
+// ---------------------------------------------------------------------------
+// Shared households (server/src/household.ts). Demo mode never calls these.
+// ---------------------------------------------------------------------------
+
+export interface HouseholdView {
+  name: string;
+  code: string;
+  members: { name: string; you: boolean }[];
+}
+
+export interface SyncRecord {
+  kind: 'item' | 'shopping';
+  id: string;
+  updatedAt: number;
+  deleted: boolean;
+  data: Record<string, unknown> | null;
+}
+
+export interface SyncResponse {
+  cursor: number;
+  more: boolean;
+  changes: SyncRecord[];
+  household: HouseholdView;
+}
+
+function householdOf(res: unknown): HouseholdView | null {
+  const h = (res as { household?: unknown } | null)?.household;
+  if (h === null) return null;
+  const v = h as Partial<HouseholdView> | undefined;
+  if (!v || typeof v.name !== 'string' || typeof v.code !== 'string' || !Array.isArray(v.members)) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return {
+    name: v.name.slice(0, 40),
+    code: v.code.slice(0, 12),
+    members: v.members
+      .filter((m): m is { name: string; you: boolean } => !!m && typeof (m as { name?: unknown }).name === 'string')
+      .map((m) => ({ name: m.name.slice(0, 40), you: m.you === true })),
+  };
+}
+
+export async function getHousehold(userId: string): Promise<HouseholdView | null> {
+  return householdOf(await post<unknown>('/v1/household', userId, null, 20_000, undefined, 'GET'));
+}
+
+export async function createHousehold(userId: string, name: string, memberName: string): Promise<HouseholdView> {
+  const h = householdOf(await post<unknown>('/v1/household', userId, { name, memberName }, 20_000));
+  if (!h) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return h;
+}
+
+export async function joinHousehold(userId: string, code: string, memberName: string): Promise<HouseholdView> {
+  const h = householdOf(await post<unknown>('/v1/household/join', userId, { code, memberName }, 20_000));
+  if (!h) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return h;
+}
+
+export async function leaveHousehold(userId: string): Promise<void> {
+  await post<unknown>('/v1/household/leave', userId, {}, 20_000);
+}
+
+export async function newHouseholdCode(userId: string): Promise<HouseholdView> {
+  const h = householdOf(await post<unknown>('/v1/household/code', userId, {}, 20_000));
+  if (!h) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return h;
+}
+
+export async function syncHousehold(userId: string, since: number, changes: SyncRecord[]): Promise<SyncResponse> {
+  const res = await post<Partial<SyncResponse>>('/v1/household/sync', userId, { since, changes }, 30_000);
+  const household = householdOf(res);
+  if (!household || typeof res.cursor !== 'number' || !Array.isArray(res.changes)) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return { cursor: res.cursor, more: res.more === true, changes: res.changes, household };
 }
 
 export function friendlyError(e: unknown): { message: string; paywall: boolean } {

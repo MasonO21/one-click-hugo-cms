@@ -24,6 +24,10 @@ import { useMealsCache } from '../../store/mealsCache';
 import { useSettings, type Appearance } from '../../store/settings';
 import { useFoods } from '../../store/foods';
 import { useShopping } from '../../store/shopping';
+import { useFoodLog } from '../../store/foodLog';
+import { getHealth, useHealth } from '../../store/health';
+import { useHousehold } from '../../store/household';
+import { NO_PROFILE, targetsFor } from '../../lib/goals';
 import { useTheme } from '../../theme';
 
 const DIETS: { value: Diet; label: string }[] = [
@@ -75,15 +79,88 @@ function Row({ label, hint, right }: { label: string; hint?: string; right: Reac
   );
 }
 
-function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
+function LinkRow({ label, hint, onPress, testID }: { label: string; hint?: string; onPress: () => void; testID?: string }) {
   const { c } = useTheme();
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.linkRow}>
-      <Text variant="bodyStrong" style={{ flex: 1 }}>
-        {label}
-      </Text>
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.linkRow} testID={testID}>
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong">{label}</Text>
+        {hint ? (
+          <Text variant="caption" muted>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
       <Ionicons name="chevron-forward" size={20} color={c.inkFaint} />
     </Pressable>
+  );
+}
+
+/** Goals, the food log and the phone's health app. */
+function HealthSection() {
+  const { c } = useTheme();
+  const profile = useSettings((s) => s.profile);
+  const targets = targetsFor(profile);
+  const connected = useHealth((s) => s.connected);
+  const writeFood = useHealth((s) => s.writeFood);
+  const error = useHealth((s) => s.error);
+  const health = getHealth();
+  const goalHint = targets ? `${targets.protein} g protein${targets.kcal !== null ? ` · ${targets.kcal.toLocaleString()} kcal` : ''} a day` : 'Protein and calories from your weight';
+  return (
+    <Section title="Health and goals">
+      <LinkRow testID="settings-goals" label="Your goals" hint={goalHint} onPress={() => router.push('/goals')} />
+      <LinkRow testID="settings-log" label="Food log" hint="What you ate, logged from meals and food" onPress={() => router.push('/log')} />
+      {health.kind === 'none' ? (
+        <Text variant="caption" muted>
+          Apple Health and Health Connect sync is in the iPhone and Android app.
+        </Text>
+      ) : (
+        <>
+          <Row
+            label={health.kind === 'sample' ? 'Health app (sample data)' : health.name}
+            hint={connected ? 'Reading steps, active energy and workouts for your active days.' : 'Connect to count your active days and save the food you log.'}
+            right={
+              <Switch
+                testID="health-switch"
+                accessibilityLabel={`Connect ${health.name}`}
+                value={connected}
+                onValueChange={(on) => (on ? void useHealth.getState().connect() : useHealth.getState().disconnect())}
+                trackColor={{ true: c.primary, false: c.switchOff }}
+                ios_backgroundColor={c.switchOff}
+                thumbColor="#FFFFFF"
+              />
+            }
+          />
+          {connected ? (
+            <Row
+              label="Save logged food"
+              hint={`Calories, protein, carbs and fat go to ${health.kind === 'sample' ? 'the health app' : health.name}.`}
+              right={
+                <Switch
+                  testID="health-write-switch"
+                  accessibilityLabel="Save logged food to the health app"
+                  value={writeFood}
+                  onValueChange={(on) => useHealth.getState().setWriteFood(on)}
+                  trackColor={{ true: c.primary, false: c.switchOff }}
+                  ios_backgroundColor={c.switchOff}
+                  thumbColor="#FFFFFF"
+                />
+              }
+            />
+          ) : null}
+          {error ? (
+            <Text variant="caption" color={c.urgency.today.fg} style={{ fontSize: 14 }}>
+              {error}
+            </Text>
+          ) : null}
+          {health.openSettings ? (
+            <Text variant="caption" muted>
+              {`Turning this off stops Fridge Pulse using ${health.name}. To remove its access completely, change it in ${health.name}.`}
+            </Text>
+          ) : null}
+        </>
+      )}
+    </Section>
   );
 }
 
@@ -91,6 +168,7 @@ export default function Settings() {
   const { c } = useTheme();
   const settings = useSettings();
   const foodCount = useFoods((s) => s.foods.length);
+  const household = useHousehold((s) => s.household);
   const { entitlement, priceString } = useBilling();
   const provider = getProvider();
 
@@ -158,15 +236,23 @@ export default function Settings() {
   async function confirmDelete() {
     const ok = await confirm({
       title: 'Delete all data?',
-      message: 'This removes every tracked item, your shopping list, the foods you have taught the app and your impact history from this device. It cannot be undone.',
+      message: 'This removes every tracked item, your shopping list, the foods you have taught the app, your food log, your goals and your impact history from this device. It cannot be undone.',
       confirmLabel: 'Delete',
       destructive: true,
     });
     if (!ok) return;
+    // Leave a shared household first, so the others keep their lists and this phone stops sharing.
+    if (useHousehold.getState().household && !(await useHousehold.getState().leave())) {
+      notify('Could not leave your household', 'Check your connection and try again, so your data can be removed.');
+      return;
+    }
     useInventory.getState().clear();
     useMealsCache.getState().clear();
     useShopping.getState().clear();
     useFoods.getState().clear();
+    useFoodLog.getState().clear();
+    useHealth.getState().disconnect();
+    useSettings.getState().set({ profile: NO_PROFILE });
   }
 
   return (
@@ -240,6 +326,17 @@ export default function Settings() {
         )}
       </Section>
 
+      <HealthSection />
+
+      <Section title="Household">
+        <LinkRow
+          testID="settings-household"
+          label="Household sharing"
+          hint={household ? `${household.name} · ${household.members.length} ${household.members.length === 1 ? 'person' : 'people'}` : 'Share your fridge and shopping list'}
+          onPress={() => router.push('/household')}
+        />
+      </Section>
+
       <Section title="Meal preferences">
         <View style={styles.chips}>
           {DIETS.map((d) => (
@@ -298,7 +395,9 @@ export default function Settings() {
           </>
         )}
         <Text variant="caption" muted>
-          Your items and settings are stored on this device only. Fridge Pulse has no accounts and does not keep your photos.
+          {household
+            ? 'Your food and shopping lists are shared with your household through the Fridge Pulse server. Your food log, goals and health data stay on this device. Fridge Pulse does not keep your photos.'
+            : 'Your items and settings are stored on this device only. Fridge Pulse has no accounts and does not keep your photos.'}
         </Text>
         <Button label="Delete all my data" variant="danger" size="sm" onPress={() => void confirmDelete()} style={{ alignSelf: 'flex-start' }} />
       </Section>

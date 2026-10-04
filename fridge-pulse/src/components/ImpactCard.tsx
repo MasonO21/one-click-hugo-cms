@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import type { Impact } from '../lib/impact';
+import { formatMoney, type MoneySummary } from '../lib/money';
 import { radius, useTheme } from '../theme';
 import { Card } from './Card';
 import { NATIVE_DRIVER, useAnimatedValue, useReducedMotion } from './motion';
@@ -44,7 +45,7 @@ function DayColumn({ used, wasted, max, label, isToday, index }: { used: number;
  * "Your impact": food rescued this month, the no-waste streak, the last seven days, and progress
  * to the next rescue milestone. Counts only; nothing here is estimated.
  */
-export function ImpactCard({ impact }: { impact: Impact }) {
+export function ImpactCard({ impact, money }: { impact: Impact; money?: MoneySummary | null }) {
   const { c } = useTheme();
   const max = Math.max(1, ...impact.week.map((d) => d.used + d.wasted));
   const still = useReducedMotion();
@@ -107,6 +108,32 @@ export function ImpactCard({ impact }: { impact: Impact }) {
         </View>
       </View>
 
+      {money ? (
+        <View style={[styles.money, { borderColor: c.border }]} testID="money-month">
+          <View style={styles.moneyCol}>
+            <Text variant="heading" color={c.urgency.ok.fg}>
+              {formatMoney(money.rescued, money.currency)}
+            </Text>
+            <Text variant="caption" muted>
+              rescued this month
+            </Text>
+          </View>
+          <View style={styles.moneyCol}>
+            <Text variant="heading" color={c.urgency.expired.fg}>
+              {formatMoney(money.wasted, money.currency)}
+            </Text>
+            <Text variant="caption" muted>
+              thrown out this month
+            </Text>
+          </View>
+        </View>
+      ) : null}
+      {money ? (
+        <Text variant="caption" faint style={{ marginTop: -8 }}>
+          {`From receipt prices on ${money.priced} ${money.priced === 1 ? 'item' : 'items'}.`}
+        </Text>
+      ) : null}
+
       {impact.nextMilestone ? (
         <View style={{ gap: 6 }}>
           <View style={[styles.meter, { backgroundColor: c.surfaceAlt }]}>
@@ -139,4 +166,6 @@ const styles = StyleSheet.create({
   meterFill: { height: 8, borderRadius: 4, transformOrigin: 'left' },
   key: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   keyDot: { width: 8, height: 8, borderRadius: 4 },
+  money: { flexDirection: 'row', gap: 12, borderTopWidth: 1, paddingTop: 12 },
+  moneyCol: { flex: 1, gap: 2 },
 });

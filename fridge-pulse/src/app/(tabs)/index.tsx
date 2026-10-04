@@ -14,11 +14,18 @@ import { FadeIn, PressableScale, stagger } from '../../components/motion';
 import { PulseBar } from '../../components/PulseBar';
 import { Screen } from '../../components/Screen';
 import { Text } from '../../components/Text';
+import { TodayCard } from '../../components/TodayCard';
+import { WeeklyScoreCard } from '../../components/WeeklyScoreCard';
 import { Wordmark } from '../../components/Wordmark';
 import { useToday } from '../../hooks/useToday';
 import { isDemoMode } from '../../lib/api';
 import { active, freshnessScore, freshnessWord, sortByExpiry, summarize, type Urgency } from '../../lib/expiry';
 import { computeImpact } from '../../lib/impact';
+import { moneyThisMonth } from '../../lib/money';
+import { targetsFor } from '../../lib/goals';
+import { weeklyScore } from '../../lib/weekly';
+import { useFoodLog } from '../../store/foodLog';
+import { useHealth } from '../../store/health';
 import { localSuggestions, suggestionKey } from '../../lib/meals';
 import { resolveItems } from '../../store/actions';
 import { useInventory } from '../../store/inventory';
@@ -61,6 +68,15 @@ export default function Pulse() {
   const builtIn = useMemo(() => (aiFresh ? undefined : localSuggestions(items, prefs, now, 1)[0]), [aiFresh, items, prefs, now]);
   const idea = aiFresh ? cache.meals[0] : builtIn;
   const impact = useMemo(() => computeImpact(items, lifetime, now), [items, lifetime, now]);
+  const money = useMemo(() => moneyThisMonth(items, today), [items, today]);
+  const logEntries = useFoodLog((s) => s.entries);
+  const profile = useSettings((s) => s.profile);
+  const healthConnected = useHealth((s) => s.connected);
+  const healthDays = useHealth((s) => s.days);
+  const week = useMemo(
+    () => weeklyScore({ items, log: logEntries, proteinTarget: targetsFor(profile)?.protein ?? null, activity: healthConnected ? healthDays : null, today }),
+    [items, logEntries, profile, healthConnected, healthDays, today],
+  );
   const dateLine = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
   const headline =
@@ -150,6 +166,10 @@ export default function Pulse() {
         />
       </FadeIn>
 
+      <FadeIn delay={110}>
+        <TodayCard today={today} />
+      </FadeIn>
+
       {live.length === 0 ? (
         <FadeIn delay={140} style={{ gap: 8 }}>
           <EmptyState
@@ -213,9 +233,13 @@ export default function Pulse() {
             </FadeIn>
           ) : null}
 
+          <FadeIn delay={230}>
+            <WeeklyScoreCard week={week} />
+          </FadeIn>
+
           {lifetime.used + lifetime.wasted > 0 ? (
             <FadeIn delay={260}>
-              <ImpactCard impact={impact} />
+              <ImpactCard impact={impact} money={money} />
             </FadeIn>
           ) : null}
         </>

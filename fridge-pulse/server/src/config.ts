@@ -24,6 +24,8 @@ export interface Config {
   /** Read the client IP from X-Forwarded-For (set when behind a trusted reverse proxy). */
   trustProxy: boolean;
   corsOrigin: string | null;
+  /** SQLite file for shared households, or null to turn household sharing off. */
+  householdDb: string | null;
 }
 
 const EFFORTS: Effort[] = ['low', 'medium', 'high', 'xhigh', 'max'];
@@ -70,5 +72,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     wikiBaseUrl: baseUrl(env.WIKI_BASE_URL, 'https://en.wikipedia.org'),
     trustProxy: env.TRUST_PROXY === 'true',
     corsOrigin: env.CORS_ORIGIN?.trim() || null,
+    householdDb: env.HOUSEHOLD_DB?.trim() === 'off' ? null : env.HOUSEHOLD_DB?.trim() || 'data/households.sqlite',
   };
 }

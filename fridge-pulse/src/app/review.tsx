@@ -21,6 +21,7 @@ import { confirm } from '../lib/dialogs';
 import { canLookUp, MAX_AUTO_LOOKUPS, needsLookup } from '../lib/identify';
 import { closeModals, goBack } from '../lib/nav';
 import { requestPermission } from '../lib/notifications';
+import { deviceCurrency, formatMoney } from '../lib/money';
 import { draftToItem, newId, type DraftItem } from '../lib/scan';
 import { usePictureFor } from '../store/foods';
 import { useInventory } from '../store/inventory';
@@ -111,6 +112,7 @@ function DraftRow({
         {draft.identified ? <Tag label="Identified online" tone="good" /> : null}
         {draft.confidence === 'low' && !lookup ? <Tag label="Double-check" tone="warn" /> : null}
         {draft.duplicate ? <Tag label="Already tracked" tone="plain" /> : null}
+        {draft.price !== undefined ? <Tag label={formatMoney(draft.price, draft.currency ?? deviceCurrency())} tone="plain" /> : null}
         {!ownPlace && draft.location !== listLocation ? <Tag label={LOCATION_LABEL[draft.location]} tone="plain" /> : null}
       </View>
 

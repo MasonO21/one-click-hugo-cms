@@ -12,6 +12,9 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
+# Shared households live in a SQLite file here: mount a volume so they survive a redeploy.
+RUN mkdir -p /app/data && chown node:node /app/data
+VOLUME /app/data
 USER node
 EXPOSE 8787
 CMD ["node", "dist/index.js"]

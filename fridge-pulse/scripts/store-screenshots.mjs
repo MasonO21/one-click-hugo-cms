@@ -39,9 +39,9 @@ const SHOTS = [
   { id: 'review', title: 'Snap a photo. Get your list.', sub: 'Fridge Pulse spots the food and reads dates' },
   { id: 'lookup', title: 'Not sure what it is?', sub: 'It searches the web and shows you a picture to confirm' },
   { id: 'receipt', title: 'Back from the shops?', sub: 'Scan the receipt. Each food goes on the right shelf' },
-  { id: 'items', title: 'Everything in one place', sub: 'Fridge, freezer and pantry, sorted by date' },
   { id: 'meals', title: 'Cook what needs using up', sub: 'Meal ideas built around your soonest dates' },
   { id: 'nutrition', title: 'Calories and macros', sub: 'For your food and every meal idea' },
+  { id: 'log', title: 'Hit your protein', sub: 'Meals you cook log themselves' },
   { id: 'paywall', title: 'Try free for 2 weeks', sub: 'Then $9.99 per month. Cancel anytime.' },
 ];
 
@@ -88,9 +88,13 @@ async function captureApp(target) {
   await grab('receipt');
   await tap('[data-testid="save-items"]');
   await page.locator('[data-testid="hero-headline"]').waitFor();
-  await tap('[data-testid="tab-inventory"]');
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await grab('items');
+  // A protein goal from body weight, for the food log shot.
+  await tap('[data-testid="tab-settings"]');
+  await tap('[data-testid="settings-goals"]');
+  await page.locator('[data-testid="goal-weight"]').last().fill('80');
+  await page.waitForTimeout(300);
+  await page.locator('[aria-label="Close"]').last().tap();
+  await page.waitForTimeout(500);
   await tap('[data-testid="tab-meals"]');
   await page.waitForTimeout(1200);
   await grab('meals');
@@ -111,6 +115,21 @@ async function captureApp(target) {
   await page.evaluate(() => document.querySelector('[data-testid="nutrition"]')?.scrollIntoView({ block: 'center' }));
   await page.waitForTimeout(900);
   await grab('nutrition');
+  await page.locator('[aria-label="Close"]').last().tap();
+  await page.waitForTimeout(500);
+  // Cook the top idea, which logs a serving, then open the food log.
+  await tap('[data-testid="tab-meals"]');
+  await page.waitForTimeout(800);
+  await page.locator('[data-testid^="cooked-"]').first().scrollIntoViewIfNeeded();
+  await page.locator('[data-testid^="cooked-"]').first().tap();
+  await page.waitForTimeout(400);
+  await tap('[data-testid="dialog-confirm"]');
+  await page.waitForTimeout(600);
+  await tap('[data-testid="tab-index"]');
+  await page.locator('[data-testid="today-open-log"]').first().tap();
+  await page.locator('[data-testid="log-totals"]').waitFor();
+  await page.waitForTimeout(900);
+  await grab('log');
   await ctx.close();
   return raw;
 }

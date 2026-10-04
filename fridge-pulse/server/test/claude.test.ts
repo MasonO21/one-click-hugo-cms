@@ -27,8 +27,8 @@ const mealsReq: MealsRequest = {
 };
 
 const scanOutput = {
-  items: [{ name: 'Baby spinach', category: 'produce', quantity: '1 bag', shelfLifeDays: 3, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1, keptIn: null }],
-  purchaseDate: null,
+  items: [{ name: 'Baby spinach', category: 'produce', quantity: '1 bag', shelfLifeDays: 3, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1, keptIn: null, price: null }],
+  purchaseDate: null, currency: null,
   notes: null,
 };
 

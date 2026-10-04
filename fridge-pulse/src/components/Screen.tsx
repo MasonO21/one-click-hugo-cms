@@ -1,5 +1,5 @@
 import { useEffect, useId, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnackbar } from '../store/snackbar';
 import { useTheme } from '../theme';
@@ -29,7 +29,9 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
     <ScrollView
       contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
+      // On the web every scroll counts as a drag, and a phone browser scrolls to show the field you tap,
+      // so dismissing on drag would close the keyboard as soon as you started typing.
+      keyboardDismissMode={Platform.OS === 'web' ? 'none' : 'on-drag'}
       showsVerticalScrollIndicator={false}
     >
       {children}

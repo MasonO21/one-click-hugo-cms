@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { persistStorage } from './storage';
+import { NO_PROFILE, type Profile } from '../lib/goals';
 import type { Diet } from '../lib/types';
 
 /** Dark is the brand's neon look; light and "match the phone" are there for those who prefer them. */
@@ -20,6 +21,8 @@ interface SettingsState {
   /** ISO timestamp of when consent was given, for our own records. */
   aiConsentAt: string | null;
   appearance: Appearance;
+  /** Body details for protein and calorie targets. Kept on this device only. */
+  profile: Profile;
   set: (patch: Partial<Omit<SettingsState, 'set' | 'reset'>>) => void;
   reset: () => void;
 }
@@ -34,6 +37,7 @@ const DEFAULTS = {
   aiConsent: false,
   aiConsentAt: null as string | null,
   appearance: 'dark' as Appearance,
+  profile: NO_PROFILE,
 };
 
 export const useSettings = create<SettingsState>()(

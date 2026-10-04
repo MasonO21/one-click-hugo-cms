@@ -8,7 +8,8 @@ import type { Config } from './config.js';
 import { withPictures } from './identify.js';
 import { noPictures, type PictureFinder } from './pictures.js';
 import { DAY_MS, RateLimiter } from './ratelimit.js';
-import { IdentifyRequestSchema, MAX_IMAGE_BYTES, MealsRequestSchema, ScanRequestSchema } from './schemas.js';
+import { HouseholdError, type HouseholdStore } from './household.js';
+import { CreateHouseholdSchema, HouseholdSyncSchema, IdentifyRequestSchema, JoinHouseholdSchema, MAX_IMAGE_BYTES, MealsRequestSchema, ScanRequestSchema } from './schemas.js';
 
 export interface Deps {
   config: Pick<Config, 'scansPerDay' | 'mealsPerDay' | 'identifiesPerDay' | 'corsOrigin'>;
@@ -19,11 +20,13 @@ export interface Deps {
   limiter?: RateLimiter;
   /** Resolves the caller's IP for abuse limiting. */
   clientIp?: (c: Context) => string;
+  /** Shared households. Without it, the household endpoints answer 503. */
+  households?: HouseholdStore;
 }
 
-type ErrorCode = 'unauthorized' | 'payment_required' | 'rate_limited' | 'bad_request' | 'refused' | 'unavailable';
+type ErrorCode = 'unauthorized' | 'payment_required' | 'rate_limited' | 'bad_request' | 'refused' | 'unavailable' | 'not_found' | 'conflict';
 
-function fail(c: Context, status: 400 | 401 | 402 | 413 | 422 | 429 | 502 | 503, code: ErrorCode, message: string) {
+function fail(c: Context, status: 400 | 401 | 402 | 404 | 409 | 413 | 422 | 429 | 502 | 503, code: ErrorCode, message: string) {
   return c.json({ error: { code, message } }, status);
 }
 
@@ -45,9 +48,13 @@ function badImage(img: { mediaType: string; data: string }): { status: 400 | 413
   return null;
 }
 
-const BURST_PER_MINUTE = { scan: 8, meals: 20, identify: 6 } as const;
+const BURST_PER_MINUTE = { scan: 8, meals: 20, identify: 6, household: 30, join: 5 } as const;
+/** Household sync runs every half minute while the app is open; this is several times a full day of that. */
+const HOUSEHOLD_CALLS_PER_DAY = 6000;
+/** Wrong invite codes allowed per day, so codes cannot be guessed. */
+const JOINS_PER_DAY = 10;
 
-export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown' }: Deps) {
+export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown', households }: Deps) {
   const app = new Hono<Env>();
 
   if (config.corsOrigin) app.use('*', cors({ origin: config.corsOrigin }));
@@ -183,6 +190,89 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       return upstream(c, e);
     }
   });
+
+  // -------------------------------------------------------------------------
+  // Shared households
+  // -------------------------------------------------------------------------
+
+  async function body(c: Context<Env>): Promise<unknown> {
+    try {
+      return await c.req.json();
+    } catch {
+      return undefined;
+    }
+  }
+
+  function householdFailure(c: Context<Env>, e: unknown) {
+    if (e instanceof HouseholdError) {
+      if (e.code === 'not_found') return fail(c, 404, 'not_found', e.message);
+      if (e.code === 'not_member') return fail(c, 404, 'not_found', e.message);
+      return fail(c, 409, 'conflict', e.message);
+    }
+    console.error('Household error:', e instanceof Error ? e.message : e);
+    return fail(c, 503, 'unavailable', 'Household sharing is not available right now.');
+  }
+
+  /** Runs a household call: the store must exist, and the caller stays inside the household limits. */
+  function household(handler: (c: Context<Env>, store: HouseholdStore) => Promise<Response> | Response) {
+    return async (c: Context<Env>) => {
+      if (!households) return fail(c, 503, 'unavailable', 'Household sharing is not set up on this server.');
+      const blocked = limited(c, 'household', HOUSEHOLD_CALLS_PER_DAY);
+      if (blocked) return blocked;
+      try {
+        return await handler(c, households);
+      } catch (e) {
+        return householdFailure(c, e);
+      }
+    };
+  }
+
+  app.get(
+    '/v1/household',
+    household((c, store) => c.json({ household: store.get(c.get('userId')) })),
+  );
+
+  app.post(
+    '/v1/household',
+    household(async (c, store) => {
+      const parsed = CreateHouseholdSchema.safeParse(await body(c));
+      if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
+      return c.json({ household: store.create(c.get('userId'), parsed.data.memberName, parsed.data.name) });
+    }),
+  );
+
+  app.post(
+    '/v1/household/join',
+    household(async (c, store) => {
+      const parsed = JoinHouseholdSchema.safeParse(await body(c));
+      if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
+      const blocked = limited(c, 'join', JOINS_PER_DAY);
+      if (blocked) return blocked;
+      return c.json({ household: store.join(c.get('userId'), parsed.data.memberName, parsed.data.code) });
+    }),
+  );
+
+  app.post(
+    '/v1/household/leave',
+    household((c, store) => {
+      store.leave(c.get('userId'));
+      return c.json({ household: null });
+    }),
+  );
+
+  app.post(
+    '/v1/household/code',
+    household((c, store) => c.json({ household: store.newCode(c.get('userId')) })),
+  );
+
+  app.post(
+    '/v1/household/sync',
+    household(async (c, store) => {
+      const parsed = HouseholdSyncSchema.safeParse(await body(c));
+      if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
+      return c.json(store.sync(c.get('userId'), parsed.data.since, parsed.data.changes));
+    }),
+  );
 
   app.notFound((c) => fail(c, 400, 'bad_request', 'Not found.'));
   app.onError((e, c) => {

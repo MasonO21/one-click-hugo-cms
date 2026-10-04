@@ -387,6 +387,14 @@ export function servingPortions(filled: FilledRecipe): Portion[] {
   return parts;
 }
 
+/** Most protein per serving first; ideas without figures go last, in their original order. */
+export function byProtein(meals: Meal[]): Meal[] {
+  return meals
+    .map((m, i) => ({ m, i }))
+    .sort((a, b) => (b.m.nutrition?.protein ?? -1) - (a.m.nutrition?.protein ?? -1) || a.i - b.i)
+    .map(({ m }) => m);
+}
+
 /** Turns a filled recipe into a meal suggestion. */
 export function toMeal(filled: FilledRecipe, prefs: MealPrefs): Meal {
   const { recipe } = filled;

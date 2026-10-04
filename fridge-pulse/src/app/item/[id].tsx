@@ -21,15 +21,20 @@ import { confirm } from '../../lib/dialogs';
 import { daysLeft } from '../../lib/expiry';
 import { displayName } from '../../lib/meals';
 import { goBack } from '../../lib/nav';
+import { cleanPrice, deviceCurrency, formatMoney } from '../../lib/money';
+import { parseNumber } from '../../lib/goals';
 import { formatGrams, nutritionFor, portionMacros, quantityGrams, scaleMacros, type Macros } from '../../lib/nutrition';
 import { estimateShelfLifeDays, freezeRescueDays, freezesWell } from '../../lib/shelfLife';
 import { keepsLabel } from '../../lib/suggest';
 import { storageTips } from '../../lib/tips';
 import type { PantryItem, StorageLocation } from '../../lib/types';
 import { resolveItems } from '../../store/actions';
+import { logWithUndo } from '../../store/logActions';
+import { entryFromFood } from '../../lib/foodLog';
 import { useBurst } from '../../store/burst';
 import { usePictureFor } from '../../store/foods';
 import { useInventory } from '../../store/inventory';
+import { useHousehold } from '../../store/household';
 import { useShopping } from '../../store/shopping';
 import { useSnackbar } from '../../store/snackbar';
 import { radius, useTheme } from '../../theme';
@@ -67,6 +72,7 @@ export default function ItemDetail() {
   const item = useInventory((s) => s.items.find((i) => i.id === id));
   const picture = usePictureFor(item?.name ?? '');
   const update = useInventory((s) => s.updateItem);
+  const household = useHousehold((s) => s.household);
   const today = useToday();
   const freezeButton = useRef<View>(null);
 
@@ -202,6 +208,7 @@ export default function ItemDetail() {
         </View>
         <Text variant="caption" muted>
           {source} · added {formatShortDate(item.addedOn)}
+          {item.addedBy && household ? ` by ${item.addedBy}` : ''}
         </Text>
       </Card>
 
@@ -269,6 +276,15 @@ export default function ItemDetail() {
               <Text variant="caption" faint>
                 USDA figures for {displayName(nutrition.food)}.
               </Text>
+              <Button
+                testID="log-portion"
+                label={`Log ${nutrition.portion.label}`}
+                icon="add-circle-outline"
+                variant="secondary"
+                size="sm"
+                onPress={() => logWithUndo(entryFromFood(item.name, nutrition))}
+                style={{ alignSelf: 'flex-start' }}
+              />
             </>
           ) : (
             <Text variant="caption" muted style={{ fontSize: 14, lineHeight: 20 }}>
@@ -283,6 +299,31 @@ export default function ItemDetail() {
           Quantity
         </Text>
         <CommitField value={item.quantity} fallback="1" onCommit={(quantity) => update(item.id, { quantity })} accessibilityLabel="Quantity" maxLength={30} />
+      </View>
+
+      <View style={{ gap: 8 }}>
+        <Text variant="label" muted>
+          Price paid
+        </Text>
+        <CommitField
+          value={item.price !== undefined ? String(item.price) : ''}
+          fallback=""
+          placeholder="Optional, e.g. 3.49"
+          keyboardType="decimal-pad"
+          accessibilityLabel="Price paid"
+          testID="item-price"
+          maxLength={8}
+          onCommit={(text) => {
+            const price = cleanPrice(parseNumber(text));
+            if (price === null) update(item.id, { price: undefined, currency: undefined });
+            else update(item.id, { price, currency: item.currency ?? deviceCurrency() });
+          }}
+        />
+        {item.price !== undefined ? (
+          <Text variant="caption" muted>
+            {`${formatMoney(item.price, item.currency ?? deviceCurrency())}. Counts towards money rescued or thrown out.`}
+          </Text>
+        ) : null}
       </View>
 
       <View style={{ gap: 8 }}>

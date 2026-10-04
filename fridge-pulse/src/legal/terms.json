@@ -15,6 +15,7 @@
         "Expiry dates and shelf-life figures in Fridge Pulse are estimates. Dates read from a photo can be wrong, and the AI can misidentify food.",
         "Always check the packaging, and use your own judgement: how food looks, smells and was stored. When in doubt, throw it out.",
         "Calories, protein, carbs and fat are estimates for typical portions, from public nutrition data or, for AI meal ideas, from the AI. Real amounts depend on the product, the portion and how it is cooked. Check the label when the numbers matter to you.",
+        "Protein and calorie targets are general estimates for healthy adults, not advice for pregnancy, children, eating disorders or medical conditions. Ask a doctor or dietitian about what suits you.",
         "Fridge Pulse is not professional food-safety, medical or dietary advice.",
         "Meal ideas may not be free of allergens or suitable for every diet, even when you choose a diet setting. Check every ingredient yourself if you have an allergy or medical dietary need."
       ]
@@ -32,7 +33,8 @@
     {
       "heading": "Your content",
       "paragraphs": [
-        "You own your photos and the items you track. You give us permission to process your photos and ingredient lists only to provide the features you use, as described in the Privacy Policy."
+        "You own your photos and the items you track. You give us permission to process your photos and ingredient lists only to provide the features you use, as described in the Privacy Policy.",
+        "If you share a household, the people you give your invite code to can see and change the shared food and shopping lists. Share the code only with people you trust, and make a new code if it gets out."
       ]
     },
     {

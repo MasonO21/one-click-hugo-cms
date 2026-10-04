@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { createOpenChecker, createRevenueCatChecker } from './auth.js';
 import { createClaude } from './claude.js';
 import { loadConfig } from './config.js';
+import { createHouseholdStore } from './household.js';
 import { createPictureFinder } from './pictures.js';
 
 const config = loadConfig();
@@ -16,6 +17,7 @@ const app = createApp({
   config,
   claude: createClaude({ model: config.model, scanEffort: config.scanEffort, mealsEffort: config.mealsEffort, identifyEffort: config.identifyEffort }),
   pictures: createPictureFinder({ userAgent: config.pictureUserAgent, offBaseUrl: config.offBaseUrl, wikiBaseUrl: config.wikiBaseUrl }),
+  households: config.householdDb ? createHouseholdStore(config.householdDb) : undefined,
   entitlements: config.revenueCatSecretKey
     ? createRevenueCatChecker({ secretKey: config.revenueCatSecretKey, entitlementId: config.entitlementId })
     : createOpenChecker(),

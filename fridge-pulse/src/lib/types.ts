@@ -34,6 +34,14 @@ export interface PantryItem {
   status: ItemStatus;
   /** Local calendar date the item was marked used / wasted. */
   resolvedOn?: string;
+  /** What it cost (from a receipt, or typed in), in `currency`. */
+  price?: number;
+  /** ISO 4217 code, e.g. "USD". */
+  currency?: string;
+  /** Who added it, in a shared household. */
+  addedBy?: string;
+  /** Last change (ms since epoch), for merging a shared household's lists. */
+  updatedAt?: number;
 }
 
 export type Confidence = 'high' | 'medium' | 'low';
@@ -54,6 +62,8 @@ export interface ScanItem {
   photo?: number | null;
   /** Receipts: where the item goes once home. */
   keptIn?: StorageLocation | null;
+  /** Receipts: what the line cost in total. */
+  price?: number | null;
 }
 
 /** "shelf": photos of a fridge, freezer or pantry. "receipt": a shopping receipt. */
@@ -63,6 +73,8 @@ export interface ScanResponse {
   items: ScanItem[];
   /** Receipts: the purchase date printed on it, YYYY-MM-DD. */
   purchaseDate?: string | null;
+  /** Receipts: ISO 4217 currency of the prices. */
+  currency?: string | null;
   /** Short note when the photo is unusable (blurry, not food, ...). */
   notes: string | null;
 }

@@ -1,10 +1,12 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { getProvider, useBilling } from '../../store/billing';
 import { AiConsentModal } from '../../components/AiConsentModal';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { Chip } from '../../components/Chip';
+import { GoalBar } from '../../components/GoalBar';
 import { EmptyState } from '../../components/EmptyState';
 import { Header } from '../../components/Header';
 import { MealCard } from '../../components/MealCard';
@@ -14,19 +16,26 @@ import { FadeIn, stagger } from '../../components/motion';
 import { useToday } from '../../hooks/useToday';
 import { confirm } from '../../lib/dialogs';
 import { resolveItems } from '../../store/actions';
+import { addToLog } from '../../store/logActions';
 import { useBurst } from '../../store/burst';
 import { fetchMeals, friendlyError, isDemoMode } from '../../lib/api';
 import { SCREENSHOT_MODE } from '../../lib/config';
-import { filterForDiet, localSuggestions, matchTracked, plausibleMeal, rankMeals, suggestible, suggestionKey, uniqueUses } from '../../lib/meals';
+import { byProtein, filterForDiet, localSuggestions, matchTracked, plausibleMeal, rankMeals, suggestible, suggestionKey, uniqueUses } from '../../lib/meals';
 import type { Meal, PantryItem } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
 import { useSettings } from '../../store/settings';
+import { useFoodLog } from '../../store/foodLog';
+import { dayTotals, entryFromMeal } from '../../lib/foodLog';
+import { targetsFor } from '../../lib/goals';
 import { useTheme } from '../../theme';
 
 /** Built-in ideas per page, and the most worked out at once. */
 const LOCAL_PAGE = 6;
 const LOCAL_MAX = 120;
+
+type Order = 'soonest' | 'protein';
+
 
 export default function Meals() {
   const { c } = useTheme();
@@ -45,6 +54,11 @@ export default function Meals() {
   // Only the newest request may change what is shown; an older one arriving late is ignored.
   const latest = useRef<string | null>(null);
   const today = useToday();
+  const profile = useSettings((s) => s.profile);
+  const logEntries = useFoodLog((s) => s.entries);
+  const targets = targetsFor(profile);
+  const eatenProtein = dayTotals(logEntries, today).protein;
+  const [order, setOrder] = useState<Order>('soonest');
 
   const prefs = useMemo(() => ({ diet, servings }), [diet, servings]);
   const now = useMemo(() => new Date(), [today]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -58,8 +72,10 @@ export default function Meals() {
   const allLocal = useMemo(() => localSuggestions(items, prefs, new Date(), LOCAL_MAX), [items, prefs]);
   const [localPages, setLocalPages] = useState({ key: '', pages: 1 });
   const pages = localPages.key === key ? localPages.pages : 1;
-  const fallback = allLocal.slice(0, LOCAL_PAGE * pages);
-  const meals: Meal[] = aiAllowed && fresh && cache.meals.length > 0 ? cache.meals : fallback;
+  const ordered = useMemo(() => (order === 'protein' ? byProtein(allLocal) : allLocal), [allLocal, order]);
+  const fallback = ordered.slice(0, LOCAL_PAGE * pages);
+  const aiMeals = aiAllowed && fresh && cache.meals.length > 0 ? cache.meals : null;
+  const meals: Meal[] = aiMeals ? (order === 'protein' ? byProtein(aiMeals) : aiMeals) : fallback;
   const showingFallback = !(aiAllowed && fresh && cache.meals.length > 0);
 
   const load = useCallback(
@@ -111,13 +127,15 @@ export default function Meals() {
     if (used.length === 0) return;
     const ok = await confirm({
       title: `Made ${meal.title}?`,
-      message: `This marks ${used.map((i) => i.name).join(', ')} as used.`,
+      message: `This marks ${used.map((i) => i.name).join(', ')} as used${meal.nutrition ? ' and logs one serving in your food log' : ''}.`,
       confirmLabel: 'Mark as used',
       cancelLabel: 'Not yet',
     });
     if (!ok) return;
     if (at) useBurst.getState().emit(at.x, at.y);
-    resolveItems(used, 'used', { mealTitle: meal.title });
+    // One serving goes in the food log, with its figures, when the meal has them.
+    const entry = entryFromMeal(meal);
+    resolveItems(used, 'used', { mealTitle: meal.title, logged: entry ? addToLog(entry) : undefined });
   }
 
   return (
@@ -138,6 +156,20 @@ export default function Meals() {
               Preview: ideas come from a built-in recipe list. With the scanning service connected, recipes are written by AI to fit your items.
             </Text>
           ) : null}
+
+          {targets ? (
+            <Card style={{ gap: 10 }} testID="meals-protein">
+              <GoalBar label="g protein today" unit="g" value={eatenProtein} target={targets.protein} color={c.blue} />
+            </Card>
+          ) : null}
+
+          <View style={styles.order}>
+            <Chip testID="order-soonest" label="Use it up first" selected={order === 'soonest'} onPress={() => setOrder('soonest')} />
+            <Chip testID="order-protein" label="Most protein" selected={order === 'protein'} onPress={() => setOrder('protein')} />
+            {!targets ? (
+              <Button label="Set a protein goal" variant="ghost" size="sm" onPress={() => router.push('/goals')} />
+            ) : null}
+          </View>
 
           {!aiAllowed ? (
             <Card style={{ gap: 8, backgroundColor: c.primaryTint, borderColor: c.primaryTint }}>
@@ -173,7 +205,12 @@ export default function Meals() {
             <View style={{ gap: 12 }}>
               {meals.map((meal, i) => (
                 <FadeIn key={meal.id} delay={stagger(i, 70)}>
-                  <MealCard meal={meal} defaultOpen={i === 0} onCooked={(at) => void cooked(meal, at)} />
+                  <MealCard
+                    meal={meal}
+                    defaultOpen={i === 0}
+                    proteinToGo={targets ? Math.max(0, targets.protein - eatenProtein) : undefined}
+                    onCooked={(at) => void cooked(meal, at)}
+                  />
                 </FadeIn>
               ))}
             </View>
@@ -213,4 +250,5 @@ export default function Meals() {
 
 const styles = StyleSheet.create({
   loading: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  order: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
 });

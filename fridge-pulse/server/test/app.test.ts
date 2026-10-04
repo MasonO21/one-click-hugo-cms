@@ -37,7 +37,7 @@ function setup(over: { entitled?: boolean | Error; claude?: Partial<ClaudeServic
   const claude: ClaudeService = {
     async scan(req) {
       seen.scan.push(req);
-      return { items: [{ name: 'Milk', category: 'dairy', quantity: '1', shelfLifeDays: 6, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1, keptIn: null }], purchaseDate: null, notes: null };
+      return { items: [{ name: 'Milk', category: 'dairy', quantity: '1', shelfLifeDays: 6, labelExpiryDate: null, confidence: 'high', clue: null, photo: 1, keptIn: null, price: null }], purchaseDate: null, currency: null, notes: null };
     },
     async meals(req) {
       seen.meals.push(req);
@@ -304,7 +304,7 @@ describe('abuse limits', () => {
     let lookups = 0;
     const app = createApp({
       config,
-      claude: { scan: async () => ({ items: [], purchaseDate: null, notes: null }), meals: async () => ({ meals: [] }), identify: async () => ({ candidates: [] }) },
+      claude: { scan: async () => ({ items: [], purchaseDate: null, currency: null, notes: null }), meals: async () => ({ meals: [] }), identify: async () => ({ candidates: [] }) },
       entitlements: { isActive: async () => { lookups++; return true; } },
     });
     let last = 0;

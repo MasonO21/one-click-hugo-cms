@@ -1,8 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { AccessibilityInfo, Platform } from 'react-native';
 import { daysBetween, todayISO } from '../lib/dates';
+import type { LogEntry } from '../lib/foodLog';
 import type { PantryItem } from '../lib/types';
 import { useInventory } from './inventory';
+import { loggedMessage, removeFromLog } from './logActions';
 import { useSnackbar } from './snackbar';
 
 /** Used in its last three days and not yet past its date. */
@@ -26,7 +28,7 @@ export function resolveMessage(items: Pick<PantryItem, 'name' | 'expiresOn'>[], 
  * Marks items as used or thrown out, with haptics and a message bar that offers Undo. Used by the
  * row check mark, swipes, item detail and "I made this" on a meal.
  */
-export function resolveItems(items: PantryItem[], status: 'used' | 'wasted', opts: { mealTitle?: string } = {}): void {
+export function resolveItems(items: PantryItem[], status: 'used' | 'wasted', opts: { mealTitle?: string; logged?: LogEntry } = {}): void {
   const live = items.filter((i) => i.status === 'active');
   if (live.length === 0) return;
   const inventory = useInventory.getState();
@@ -37,7 +39,8 @@ export function resolveItems(items: PantryItem[], status: 'used' | 'wasted', opt
     const kind = status === 'used' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning;
     Haptics.notificationAsync(kind).catch(() => {});
   }
-  const message = resolveMessage(live, status, opts.mealTitle);
+  // "I made this" also logs a serving: the same message bar says so, and its Undo takes both back.
+  const message = `${resolveMessage(live, status, opts.mealTitle)}${opts.logged ? `. ${loggedMessage(opts.logged)}` : ''}`;
   AccessibilityInfo.announceForAccessibility?.(message);
   useSnackbar.getState().show({
     message,
@@ -47,6 +50,7 @@ export function resolveItems(items: PantryItem[], status: 'used' | 'wasted', opt
       onPress: () => {
         const store = useInventory.getState();
         for (const item of live) store.reactivateItem(item.id);
+        if (opts.logged) removeFromLog(opts.logged.id);
       },
     },
   });

@@ -186,6 +186,9 @@ export function formatGrams(g: number): string {
   return `${g < 10 && g % 1 !== 0 ? g.toFixed(1) : Math.round(g)} g`;
 }
 
+/** A serving this rich in protein gets a "High protein" tag. */
+export const HIGH_PROTEIN_G = 25;
+
 /** The figures a card shows: energy and the three macros. */
 export type MacroValues = Pick<Macros, 'kcal' | 'protein' | 'carbs' | 'fat'>;
 

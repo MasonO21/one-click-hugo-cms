@@ -1,5 +1,6 @@
 import { addDays, daysBetween, isValidISODate, todayISO } from './dates';
 import { normalizeName } from './expiry';
+import { cleanCurrency, cleanPrice, deviceCurrency } from './money';
 import { catalogCategory, estimateShelfLifeDays, guessCategory, hasShelfLifeRule, knownShelfLifeDays, MAX_SHELF_LIFE_DAYS, usualPlace } from './shelfLife';
 import {
   CATEGORIES,
@@ -37,6 +38,9 @@ export interface DraftItem {
   identified?: boolean;
   /** Bought on this day (from a receipt), YYYY-MM-DD; otherwise added today. */
   addedOn?: string;
+  /** What it cost, from the receipt. */
+  price?: number;
+  currency?: string;
 }
 
 export const MAX_DRAFT_ITEMS = 60;
@@ -96,7 +100,7 @@ export function reconcile(modelDays: number, name: string, category: Category, l
  * that ends up in storage, so it coerces rather than assumes.
  */
 export function toDrafts(
-  response: Pick<ScanResponse, 'items' | 'purchaseDate'>,
+  response: Pick<ScanResponse, 'items' | 'purchaseDate' | 'currency'>,
   location: StorageLocation,
   existing: PantryItem[],
   now: Date = new Date(),
@@ -106,6 +110,7 @@ export function toDrafts(
   const receipt = mode === 'receipt';
   // Food from a receipt was bought on the receipt's date, so its time counts from then.
   const bought = receipt ? purchaseDay(response.purchaseDate, today) : today;
+  const currency = receipt ? cleanCurrency(response.currency) : null;
   const tracked = new Set(
     existing.filter((i) => i.status === 'active').map((i) => `${i.location}:${normalizeName(i.name)}`),
   );
@@ -161,6 +166,7 @@ export function toDrafts(
       ...(clue ? { clue } : {}),
       ...(photo !== undefined && !receipt ? { photo } : {}),
       ...(bought !== today ? { addedOn: bought } : {}),
+      ...(receipt && cleanPrice(raw.price) !== null ? { price: cleanPrice(raw.price)!, ...(currency ? { currency } : {}) } : {}),
     });
   }
   return drafts;
@@ -177,6 +183,7 @@ export function draftToItem(draft: DraftItem, id: string, now: Date = new Date()
     expiresOn: draft.expiresOn,
     expirySource: draft.expirySource,
     status: 'active',
+    ...(draft.price !== undefined ? { price: draft.price, currency: draft.currency ?? deviceCurrency() } : {}),
   };
 }
 

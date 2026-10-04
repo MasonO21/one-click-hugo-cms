@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, LayoutAnimation, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { uniqueUses } from '../lib/meals';
-import { nutritionNote } from '../lib/nutrition';
+import { HIGH_PROTEIN_G, nutritionNote } from '../lib/nutrition';
 import type { Meal } from '../lib/types';
 import { radius, useTheme } from '../theme';
 import { Button } from './Button';
@@ -16,9 +16,11 @@ interface Props {
   defaultOpen?: boolean;
   /** "I made this": marks the tracked ingredients used. Gets the button's centre for a celebration. */
   onCooked?: (at?: { x: number; y: number }) => void;
+  /** Protein still to eat today, when the person has a goal: the card says how much of it a serving covers. */
+  proteinToGo?: number;
 }
 
-export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
+export function MealCard({ meal, defaultOpen = false, onCooked, proteinToGo }: Props) {
   const { c } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
   const turn = useAnimatedValue(defaultOpen ? 1 : 0);
@@ -69,7 +71,14 @@ export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
               <View style={styles.metaItem} testID={`kcal-${meal.id}`}>
                 <Ionicons name="flame-outline" size={15} color={c.inkMuted} />
                 <Text variant="caption" muted>
-                  {meal.nutrition.kcal} kcal
+                  {meal.nutrition.kcal} kcal · {meal.nutrition.protein} g protein
+                </Text>
+              </View>
+            ) : null}
+            {meal.nutrition && meal.nutrition.protein >= HIGH_PROTEIN_G ? (
+              <View style={[styles.tag, { backgroundColor: c.urgency.week.tint }]} testID={`high-protein-${meal.id}`}>
+                <Text variant="caption" color={c.urgency.week.fg} style={{ fontWeight: '700' }}>
+                  High protein
                 </Text>
               </View>
             ) : null}
@@ -104,6 +113,11 @@ export function MealCard({ meal, defaultOpen = false, onCooked }: Props) {
                 Per serving
               </Text>
               <MacroTiles macros={meal.nutrition} />
+              {proteinToGo !== undefined && proteinToGo > 0 ? (
+                <Text variant="caption" color={c.blue} style={{ fontSize: 14 }}>
+                  {`One serving covers ${Math.min(100, Math.round((meal.nutrition.protein / proteinToGo) * 100))}% of the ${Math.round(proteinToGo)} g protein you have left today.`}
+                </Text>
+              ) : null}
               <Text variant="caption" faint>
                 {nutritionNote(meal)}
               </Text>
@@ -162,6 +176,7 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   uses: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
+  tag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill },
   body: { padding: 16, gap: 16, borderTopWidth: 1 },
   step: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   num: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },

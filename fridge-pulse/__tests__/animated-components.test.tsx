@@ -5,7 +5,9 @@ import { Button } from '../src/components/Button';
 import { FreshnessMeter } from '../src/components/FreshnessMeter';
 import { HeartbeatLine } from '../src/components/HeartbeatLine';
 import { ImpactCard } from '../src/components/ImpactCard';
+import { GoalBar } from '../src/components/GoalBar';
 import { Logo } from '../src/components/Logo';
+import { WeeklyScoreCard } from '../src/components/WeeklyScoreCard';
 import { MacroTiles } from '../src/components/Macros';
 import { MealCard } from '../src/components/MealCard';
 import { PulseBar } from '../src/components/PulseBar';
@@ -98,6 +100,42 @@ describe('animated components render and animate', () => {
     expect(text).toContain('Per serving');
     expect(text).toContain('20 g');
     expect(text).toContain('1 of 2 ingredients');
+  });
+
+  it('Goal bars, the weekly score and the money on the impact card', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <>
+          <GoalBar label="g protein" unit="g" value={62} target={130} color="#00f" />
+          <GoalBar label="kcal" unit="kcal" value={2400} target={2100} color="#f80" />
+          <WeeklyScoreCard
+            week={{
+              score: 71,
+              message: 'A good week, with room to grow.',
+              parts: [
+                { key: 'food', label: 'Food used, not wasted', ratio: 0.8, detail: '8 used, 2 thrown out', hint: null },
+                { key: 'protein', label: 'Protein goal met', ratio: null, detail: 'No goal set', hint: 'Set a protein goal to count this.' },
+                { key: 'active', label: 'Active days', ratio: 0.6, detail: '3 of 5', hint: null },
+              ],
+            }}
+          />
+          <ImpactCard
+            impact={computeImpact([], { ...NO_LIFETIME, rescued: 1, used: 1, startedOn: '2026-09-01' }, NOW)}
+            money={{ currency: 'USD', rescued: 41, wasted: 23.5, used: 60, priced: 9 }}
+          />
+        </>,
+      );
+    });
+    run();
+    const text = textOf(tree.toJSON());
+    expect(text).toContain('62 of 130 g protein');
+    expect(text).toContain('68 g to go');
+    expect(text).toContain('Target reached');
+    expect(text).toContain('71');
+    expect(text).toContain('Set a protein goal to count this.');
+    expect(text).toContain('rescued this month');
+    expect(text).toContain('From receipt prices on 9 items.');
   });
 
   it('Message bar showing, counting down and hiding', () => {

@@ -16,7 +16,7 @@ Answer **Yes, we collect data**, and add these types. None are used for tracking
 | Data type | Linked to the person? | Purpose |
 | --- | --- | --- |
 | Photos or Videos | No | App Functionality |
-| Other User Content (ingredient lists) | No | App Functionality |
+| Other User Content (ingredient lists; a shared household's food and shopping lists) | Yes (household lists, by a scrambled app user ID) | App Functionality |
 | Purchases (purchase history) | Yes | App Functionality |
 | Identifiers > User ID (RevenueCat app user ID) | Yes | App Functionality |
 
@@ -25,12 +25,19 @@ Notes:
 - Photos are declared as collected because they go to a third-party AI provider that may retain API inputs for a limited period under its own terms. If you later agree zero data retention with the provider, revisit this answer.
 - Item lookups (a scan finds something the app does not know) send the same photo plus the item's name and a packaging description, so they fall under the same two data types. The web searches Claude runs, and the Open Food Facts and Wikipedia requests our server makes for a product picture, contain only product words, nothing about the person. The phone then loads the picture from Open Food Facts or Wikimedia directly, like any web image.
 - Receipt photos (Scan a receipt) are photos too, so they fall under the same data type. A receipt can show the shop, the time and the last digits of a payment card; the server does not keep the photo, the AI is asked to read only the food lines and the date, and the app tells people to fold card details over. The privacy policy says the same.
+- Shared households store the household's food and shopping lists on your server, keyed by a SHA-256 hash of the RevenueCat app user ID, so Other User Content is declared as linked. Nothing is stored for people who never start or join a household. The last member leaving deletes the household and its lists.
+- Health data (Apple Health / Health Connect: steps, active energy, workouts read; nutrition written) never leaves the phone, so it is not "collected" in Apple's sense and is not declared. The food log, body details and goals stay on the device too.
 - **Tracking:** No. The privacy manifest in `app.json` sets `NSPrivacyTracking` to false and lists the same data types.
 - The app makes no use of the advertising identifier, so you can answer **No** to the IDFA question.
 
+## HealthKit and Health Connect
+
+- **App Store:** the HealthKit capability and both usage strings come from the `@kingstinct/react-native-healthkit` config plugin (`app.json`). Guideline 5.1.3 applies: health data must not be used for advertising or sold, must not be stored in iCloud, and the privacy policy must say how it is used (it does, under "Apple Health and Health Connect"). In App Review notes, say that HealthKit reads steps, active energy and workouts for the weekly score and writes dietary energy and macros from the food log, and that a reviewer can try it from Pulse > Today > Connect Apple Health.
+- **Google Play:** fill in the Health Connect permissions declaration in Play Console for READ_STEPS, READ_ACTIVE_CALORIES_BURNED, READ_EXERCISE and WRITE_NUTRITION, with the same reasons, and the Health apps declaration. The privacy-policy link Health Connect shows comes from the rationale activity the `react-native-health-connect` plugin adds.
+
 ## Google Play: Data safety
 
-- **Data collected:** Photos (in "Photos and videos"), Purchase history (in "Financial info"), and Device or other IDs (the RevenueCat app user ID).
+- **Data collected:** Photos (in "Photos and videos"), Purchase history (in "Financial info"), Device or other IDs (the RevenueCat app user ID), and, for people who share a household, Other user-generated content (the shared food and shopping lists).
 - **Shared with third parties:** No. Photos are processed by a service provider on your behalf (Anthropic), which Google treats as processing rather than sharing. Confirm this against your own agreement.
 - **Purpose:** App functionality.
 - **Optional:** Photos are optional; the app works without AI features.

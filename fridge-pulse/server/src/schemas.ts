@@ -36,10 +36,14 @@ export const ScanOutputSchema = z.object({
       photo: z.number().nullable(),
       /** Receipts: where the item goes once home. Null for shelf photos. */
       keptIn: z.enum(LOCATIONS).nullable(),
+      /** Receipts: what the line cost in total, after line discounts. Null for shelf photos. */
+      price: z.number().nullable(),
     }),
   ),
   /** Receipts: the purchase date printed on it, YYYY-MM-DD. Null for shelf photos. */
   purchaseDate: z.string().nullable(),
+  /** Receipts: ISO 4217 currency of the prices ("USD", "GBP"). Null for shelf photos. */
+  currency: z.string().nullable(),
   notes: z.string().nullable(),
 });
 export type ScanOutput = z.infer<typeof ScanOutputSchema>;
@@ -171,3 +175,65 @@ export interface FoodCandidate {
 export interface IdentifyResponse {
   candidates: FoodCandidate[];
 }
+
+// ---------------------------------------------------------------------------
+// Shared households.
+// ---------------------------------------------------------------------------
+
+const personName = z.string().trim().min(1).max(40);
+const ITEM_STATUS = ['active', 'used', 'wasted'] as const;
+const EXPIRY_SOURCES = ['label', 'estimate', 'manual'] as const;
+
+/** A tracked item as shared with the household. Unknown fields are dropped. */
+export const SharedItemSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  category: z.enum(CATEGORIES),
+  quantity: z.string().max(30),
+  location: z.enum(LOCATIONS),
+  addedOn: isoDate,
+  expiresOn: isoDate,
+  expirySource: z.enum(EXPIRY_SOURCES),
+  status: z.enum(ITEM_STATUS),
+  resolvedOn: isoDate.optional(),
+  price: z.number().positive().max(10000).optional(),
+  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+  addedBy: z.string().max(40).optional(),
+});
+
+/** A shopping-list entry as shared with the household. */
+export const SharedShoppingSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  category: z.enum(CATEGORIES),
+  keptIn: z.enum(LOCATIONS).optional(),
+  checked: z.boolean(),
+  addedOn: isoDate,
+  addedBy: z.string().max(40).optional(),
+});
+
+export const MAX_SYNC_CHANGES = 500;
+
+const SyncChangeSchema = z
+  .object({
+    kind: z.enum(['item', 'shopping']),
+    id: z.string().min(1).max(64),
+    updatedAt: z.number().int().nonnegative(),
+    deleted: z.boolean(),
+    data: z.unknown().nullable(),
+  })
+  .transform((c, ctx) => {
+    if (c.deleted) return { ...c, data: null };
+    const parsed = (c.kind === 'item' ? SharedItemSchema : SharedShoppingSchema).safeParse(c.data);
+    if (!parsed.success) {
+      ctx.addIssue({ code: 'custom', message: `Invalid ${c.kind} data`, path: ['data'] });
+      return z.NEVER;
+    }
+    return { ...c, data: parsed.data as Record<string, unknown> };
+  });
+
+export const HouseholdSyncSchema = z.object({
+  since: z.number().int().min(0),
+  changes: z.array(SyncChangeSchema).max(MAX_SYNC_CHANGES).default([]),
+});
+
+export const CreateHouseholdSchema = z.object({ name: personName, memberName: personName });
+export const JoinHouseholdSchema = z.object({ code: z.string().trim().min(4).max(20), memberName: personName });
