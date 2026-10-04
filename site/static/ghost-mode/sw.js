@@ -1,5 +1,5 @@
 /* Ghost Mode for Kids: offline support, so the installed app opens without a connection. */
-const CACHE = 'ghost-mode-v5';
+const CACHE = 'ghost-mode-v6';
 const SHELL = [
   '/ghost-mode/',
   '/ghost-mode/manifest.webmanifest',
@@ -28,9 +28,18 @@ self.addEventListener('fetch', e => {
 
   // The app page: network first so updates show up, saved copy when offline.
   if (req.mode === 'navigate' && url.pathname.startsWith('/ghost-mode')) {
+    // Only the app page itself, loaded successfully and without a redirect, may replace the saved copy.
+    // Error pages, captive portals and other files must never become the offline app.
+    const isShell = url.pathname === '/ghost-mode/' || url.pathname === '/ghost-mode/index.html';
     e.respondWith(
       fetch(req)
-        .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put('/ghost-mode/', copy)); return res; })
+        .then(res => {
+          if (isShell && res.ok && res.type === 'basic' && !res.redirected) {
+            const copy = res.clone();
+            caches.open(CACHE).then(c => c.put('/ghost-mode/', copy));
+          }
+          return res;
+        })
         .catch(() => caches.match('/ghost-mode/'))
     );
     return;

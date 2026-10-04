@@ -15,8 +15,8 @@ const page = fs.readFileSync(path.join(__dirname, '../../site/static/ghost-mode/
 const start = page.indexOf('const SENS=');
 const end = page.indexOf('/* ---------- state ---------- */');
 assert(start > 0 && end > start, 'Could not find the detection engine section in index.html');
-const engine = new Function(page.slice(start, end) + ';return {normalize, MARKERS, sharedKinds, ageProfile};')();
-const { normalize, MARKERS, sharedKinds, ageProfile } = engine;
+const engine = new Function(page.slice(start, end) + ';return {normalize, MARKERS, sharedKinds, ageProfile, statedAge};')();
+const { normalize, MARKERS, sharedKinds, ageProfile, statedAge } = engine;
 
 const detect = text => {
   const n = normalize(text);
@@ -67,6 +67,13 @@ signs('see you at 4pm for practice', []);
 signs('did you finish the science worksheet', []);
 signs('Love you sweetheart! See you Sunday for pancakes', []);
 signs('my parents are home', []);
+signs('oh snap i forgot', []);
+signs('shh the baby is sleeping', []);
+signs('i can get you a ride home after practice', []);
+signs("i'll send you the homework", []);
+signs('snap me later', ['move_to_private_app']);
+signs('whats ur snap', ['move_to_private_app']);
+signs("shhh don't tell anyone", ['secrecy_request']);
 
 // What the kid is about to share (think-twice prompt)
 const shares = (text, expected) => check(`sharing in ${JSON.stringify(text)}`, () => assert.deepStrictEqual(sharedKinds(text), expected));
@@ -77,6 +84,16 @@ shares('im home alone rn', ["that you're home alone"]);
 shares('my mom isnt home', ["that you're home alone"]);
 shares("i'm at practice till 6", []);
 shares('we have 3 tests this week', []);
+
+// Stated ages: real ones count, times and distances don't
+const age = (text, expected) => check(`age in ${JSON.stringify(text)}`, () => assert.strictEqual(statedAge(normalize(text)), expected));
+age("i'm 19 btw", 19);
+age('i am 27', 27);
+age('im 25yo', 25);
+age('19yrs old here', 19);
+age("i'm 15 minutes away", null);
+age('im 30 mins late', null);
+age('im 12', 12);
 
 // Text-speak normalization
 check('normalizes text-speak', () => assert.strictEqual(normalize('r u a kid').trim(), 'are you a kid'));
