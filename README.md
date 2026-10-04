@@ -47,8 +47,9 @@ All SVG icons stored in `site/static/img/icons` are automatically optimized with
 
 ## Ghost Mode for Kids
 
-`site/static/ghost-mode/` holds Ghost Mode for Kids, a prototype parental-safety app served at `/ghost-mode/`. The kid's phone checks messages for warning patterns on the device, and parents get pattern alerts (new adult contacts, late-night activity spikes, grooming language markers) instead of the messages themselves.
+`site/static/ghost-mode/` holds Ghost Mode for Kids, a prototype parental-safety app served at `/ghost-mode/`. The kid's phone checks texts, email and social apps (Instagram, TikTok, Snapchat, Discord, Roblox, WhatsApp, Minecraft) for warning patterns on the device, and parents get pattern alerts (new adult contacts, busy late nights, grooming warning signs) instead of the messages themselves.
 
 * `index.html` is the whole app: HTML, CSS and JavaScript in one file. The detection engine is the section that starts at `const SENS=`.
 * `manifest.webmanifest`, `sw.js` and the PNG icons make it installable on phones ("Add to Home Screen") and let it open offline.
+* Pricing is $9.99 a month or $99 a year, each with a free first week. The plan screens are UI only: no payment details are collected. Connect a payment provider (for example Stripe) before charging anyone.
 * `yarn test:ghost-mode` (or `node tests/ghost-mode/engine.test.js`) checks the detection engine against sample messages, including disguised spellings and everyday phrases that must not trigger alerts.

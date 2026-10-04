@@ -43,6 +43,11 @@ signs('i can send you 800 robux if you want', ['gift_or_money']);
 signs("i'll send you \u{1F4B8}", ['gift_or_money']);
 signs('want some robux?', ['gift_or_money']);
 signs('free vbucks for you', ['gift_or_money']);
+// Phrasing common in scam and grooming emails
+signs('We pay $500 per shoot.', ['gift_or_money']);
+signs('Send us a few selfies so we can see your look.', ['photo_request']);
+signs('You look so mature in your photos.', ['maturity_talk']);
+signs("Don't tell your parents yet. Text us on WhatsApp.", ['secrecy_request', 'move_to_private_app']);
 signs("add me on sn@p, it's easier", ['move_to_private_app']);
 signs('add me on s n a p', ['move_to_private_app']);
 signs('talk somewhere more private?', ['move_to_private_app']);

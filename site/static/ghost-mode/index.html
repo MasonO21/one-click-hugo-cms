@@ -151,7 +151,7 @@ p{margin:0}
 .p-who-text{flex:1;min-width:0}
 .p-who h2{font-size:19px}
 .p-who p{font-size:13px;color:var(--muted)}
-.p-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.p-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .stat{background:var(--surface);border-radius:14px;padding:10px 12px;display:grid;gap:2px;min-width:0}
 .stat b{font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
 .stat span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;line-height:1.3}
@@ -481,8 +481,8 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .short-label{display:none}
 .btn.quiet{border-color:transparent;background:transparent;color:var(--muted)}
 .btn.quiet:hover{background:var(--surface-2);color:var(--fg)}
-.try-bar{display:flex;align-items:center;gap:12px;margin-bottom:22px;min-width:0}
-.try-label{font-family:var(--font-display);font-weight:700;font-size:13.5px;white-space:nowrap}
+.try-bar{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin-bottom:22px;min-width:0}
+.try-label{font-family:var(--font-display);font-weight:700;font-size:12.5px;color:var(--muted);white-space:nowrap}
 .try-bar .scenarios{display:flex;gap:8px;overflow-x:auto;min-width:0;flex:1;padding:2px;scrollbar-width:thin}
 .try-bar .scn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);white-space:nowrap;flex:0 0 auto;box-shadow:0 1px 2px rgba(25,30,51,.05)}
 .try-bar .scn.on{background:var(--safe-tint);border-color:var(--alert)}
@@ -533,6 +533,30 @@ button.stat:hover{border-color:var(--trust)}
 .disclosure>summary{cursor:pointer;font-family:var(--font-display);font-weight:700;font-size:14.5px;width:max-content;max-width:100%}
 .disclosure-body{display:grid;gap:12px;margin-top:12px}
 .field-label{font-size:13px;font-weight:600;margin-top:6px}
+
+/* ---------- v8: pricing ---------- */
+.set-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin-bottom:8px}
+.pill.accent{background:var(--soft-tint);color:var(--soft-ink)}
+.price-dialog{width:min(720px,100%)}
+.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.plan{border:1.5px solid var(--line);border-radius:18px;padding:16px;display:grid;gap:8px;align-content:start}
+.plan.best{border-color:var(--soft)}
+.plan.current{background:var(--soft-tint)}
+.plan-name{font-family:var(--font-display);font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.plan-price{font-family:var(--font-display);font-weight:800;font-size:34px;line-height:1.05;font-variant-numeric:tabular-nums}
+.plan-price small{font-size:14px;font-weight:600;color:var(--muted);margin-left:6px}
+.plan-note{font-size:13px;color:var(--muted);min-height:2.6em}
+.plan-fine{font-size:12px;color:var(--muted)}
+.included{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;font-size:13.5px}
+.included li{display:flex;gap:8px;align-items:flex-start}
+.included .ic{color:var(--ok);margin-top:2px;flex:none}
+.trial-banner{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:10px 12px;border-radius:12px;background:var(--ok-tint)}
+.trial-banner .ic{color:var(--ok);margin-top:2px;flex:none}
+.price-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.demo-fine{font-size:12px;color:var(--faint)}
+.plan-card .btn{justify-self:start}
+@media (min-width:900px){.try-bar .scenarios{flex-wrap:wrap;flex:none}}
+@media (max-width:560px){.plans,.included{grid-template-columns:minmax(0,1fr)}.plan-note{min-height:0}}
 
 /* ---------- responsive ---------- */
 @media (max-width:1279px){
@@ -618,7 +642,8 @@ img{max-width:100%}
     </div>
     <div class="top-actions">
       <button type="button" class="btn" data-action="how" aria-label="How it works"><span class="long-label">How it works</span><span class="short-label" aria-hidden="true">?</span></button>
-      <button type="button" class="btn quiet" id="resetBtn" data-action="reset" title="Demo data is saved in this browser">Reset<span class="reset-long"> demo</span></button>
+      <button type="button" class="btn" data-action="pricing">Pricing</button>
+      <button type="button" class="btn quiet" id="resetBtn" data-action="reset" title="Demo data is saved in this browser" aria-label="Reset demo"><span class="long-label">Reset demo</span><span class="short-label" aria-hidden="true">↺</span></button>
     </div>
   </header>
 
@@ -682,6 +707,10 @@ img{max-width:100%}
         </div>
 
         <div class="p-panel" id="tab-settings" role="tabpanel" hidden>
+          <section class="set-group" aria-labelledby="planTitle">
+            <h3 class="set-title" id="planTitle">Your plan</h3>
+            <div class="age-card plan-card" id="planCard"></div>
+          </section>
           <form class="settings" id="settingsForm" autocomplete="off">
             <fieldset class="set-group">
               <legend>Your child</legend>
@@ -692,10 +721,16 @@ img{max-width:100%}
               <div class="age-card" id="ageCard"></div>
             </fieldset>
             <fieldset class="set-group">
+              <legend>What Ghost Mode checks</legend>
+              <label class="switch"><span><b>Text messages</b><small>Texts and chats on <span class="kid-poss">Maya's</span> phone.</small></span><input type="checkbox" id="srcTexts" name="srcTexts"></label>
+              <label class="switch"><span><b>Email</b><small><span class="kid-poss">Maya's</span> email inbox.</small></span><input type="checkbox" id="srcEmail" name="srcEmail"></label>
+              <label class="switch"><span><b>Social media and games</b><small>Instagram, TikTok, Snapchat, Discord, Roblox, WhatsApp and Minecraft.</small></span><input type="checkbox" id="srcSocial" name="srcSocial"></label>
+            </fieldset>
+            <fieldset class="set-group">
               <legend>Alerts</legend>
               <label class="switch"><span><b>New adult contacts</b><small>Someone 18+ who isn't on your trusted list starts chatting.</small></span><input type="checkbox" id="aAdult" name="aAdult"></label>
-              <label class="switch"><span><b>Late-night activity spikes</b><small>Quiet-hours messaging well above the last 14 nights.</small></span><input type="checkbox" id="aLate" name="aLate"></label>
-              <label class="switch"><span><b>Grooming language markers</b><small>Secrecy, gifts, photo requests, moving to private apps and more.</small></span><input type="checkbox" id="aGroom" name="aGroom"></label>
+              <label class="switch"><span><b>Busy late at night</b><small>Much more messaging than usual during quiet hours.</small></span><input type="checkbox" id="aLate" name="aLate"></label>
+              <label class="switch"><span><b>Grooming warning signs</b><small>Secrets, gifts, photo requests, moving to private apps and more.</small></span><input type="checkbox" id="aGroom" name="aGroom"></label>
               <p class="field-label" id="sensLabel">Sensitivity</p>
               <div class="sens" role="radiogroup" aria-labelledby="sensLabel">
                 <label class="sens-opt"><input type="radio" name="sensitivity" value="low" id="sensLow"><span><b>Low</b><small>Only strong patterns. Fewest alerts.</small></span></label>
@@ -808,9 +843,9 @@ img{max-width:100%}
               <div class="sheet-top"><h3>New chat</h3><button type="button" class="icon-btn" data-action="close-sheet" aria-label="Close"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
               <form class="nc-form" id="newChatForm" autocomplete="off">
                 <p class="muted">Pretend someone new is chatting with <span class="kid-name">Maya</span>. Ghost Mode sees the same profile details the app shows.</p>
-                <label class="field">Name or username<input id="ncName" maxlength="24" placeholder="e.g. pixel_dragon" required></label>
+                <label class="field">Name or username<input id="ncName" maxlength="24" placeholder="e.g. pixel_dragon or name@email.com" required></label>
                 <label class="field">Where they're chatting
-                  <select id="ncApp"><option>Messages</option><option>Roblox chat</option><option>Instagram</option><option>Discord</option><option>Minecraft</option></select>
+                  <select id="ncApp"><option>Messages</option><option>Email</option><option>Instagram</option><option>TikTok</option><option>Snapchat</option><option>Discord</option><option>WhatsApp</option><option>Roblox chat</option><option>Minecraft</option></select>
                 </label>
                 <label class="field">Age on their profile<input id="ncAge" type="number" min="5" max="99" inputmode="numeric" placeholder="Leave blank if unknown"></label>
                 <button class="btn primary block" type="submit">Start chat</button>
@@ -853,13 +888,23 @@ img{max-width:100%}
       </div>
       <div class="dlg-body">
         <ol class="how-steps">
-          <li><span class="how-n">1</span><div><b>Checks on the phone</b><span class="how-t">Every message is checked for warning signs right on <span class="kid-poss">Maya's</span> phone.</span></div></li>
+          <li><span class="how-n">1</span><div><b>Checks on the phone</b><span class="how-t">Every text, email and social media message is checked for warning signs right on <span class="kid-poss">Maya's</span> phone.</span></div></li>
           <li><span class="how-n">2</span><div><b>Only the pattern crosses over</b><span class="how-t">Which kind of sign, who, and when. Never the words.</span></div></li>
           <li><span class="how-n">3</span><div><b>You get an alert</b><span class="how-t">With ideas for how to bring it up, and a way to report it, with your kid's OK, if it's serious.</span></div></li>
         </ol>
         <p class="hint">To try it, pick a scenario at the top and watch the parent side. "See what was sent" shows every update that left <span class="kid-poss">Maya's</span> phone.</p>
         <button type="button" class="btn primary" data-action="close-how">Got it</button>
       </div>
+    </div>
+  </div>
+
+  <div class="dialog-scrim" id="priceDialog" hidden data-action="price-scrim">
+    <div class="dialog price-dialog" role="dialog" aria-modal="true" aria-labelledby="priceTitle">
+      <div class="dlg-head">
+        <div><h2 id="priceTitle">Simple pricing</h2><p>Every plan includes everything, and starts with a free week. Cancel anytime.</p></div>
+        <button type="button" class="icon-btn" data-action="close-price" aria-label="Close"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="dlg-body" id="priceBody"></div>
     </div>
   </div>
 
@@ -950,7 +995,7 @@ const MARKERS=[
   {id:'gift_or_money',label:'Offered gifts or money',w:2,
    desc:'Offering Robux, V-Bucks, gift cards or money, often as "no big deal."',
    talk:'"Has anyone offered you Robux, gift cards or money? What did they want back?"',
-   re:[/\bgift ?cards?\b/,/\b(robux|vbucks|v bucks|nitro)\b/,/\bi('ll| will| can| could) (buy|give) you\b/,/\b(send|get) you (a |some |free )?(money|\$?\d+|robux|vbucks|nitro|gift|gifts|gift card|present|skins)\b/,/\b(venmo|cash ?app|paypal)\b/,/\bfree (money|robux|vbucks|skins)\b/]},
+   re:[/\bgift ?cards?\b/,/\b(robux|vbucks|v bucks|nitro)\b/,/\bi('ll| will| can| could) (buy|give) you\b/,/\b(send|get) you (a |some |free )?(money|\$?\d+|robux|vbucks|nitro|gift|gifts|gift card|present|skins)\b/,/\b(venmo|cash ?app|paypal)\b/,/\bfree (money|robux|vbucks|skins)\b/,/\b(we|i)('ll| will| can| could)? pay (you )?\$?\d+/,/\b(we|i)('ll| will| can| could)? pay you\b/]},
   {id:'move_to_private_app',label:'Pushed to a private app',w:2,
    desc:'Pushing to switch to Snapchat, Telegram or another app that\'s harder for parents to see.',
    talk:'"Has someone asked you to switch to Snapchat or another app to keep talking?"',
@@ -962,7 +1007,7 @@ const MARKERS=[
   {id:'photo_request',label:'Asked for photos',w:4,
    desc:'Asking for pictures or video, or to turn on a camera or video call.',
    talk:'"If anyone asks you for a photo, you can always say no and come to me. No matter what."',
-   re:[/\bsend (me )?(a |some |more |another )?(pic|pics|picture|pictures|photo|photos|selfie|selfies|vid|video)\b/,/\bwhat are you wearing\b/,/\bshow me (you|yourself|your)\b/,/\b(pic|photo|picture|selfie) of (you|yourself)\b/,/\bturn (on )?(your )?(camera|cam)\b/,/\bcam on\b/,/\b(facetime|video call|video chat)\b/]},
+   re:[/\bsend (me |us )?(a |some |more |another |a few )?(pic|pics|picture|pictures|photo|photos|selfie|selfies|vid|video|videos)\b/,/\bwhat are you wearing\b/,/\bshow me (you|yourself|your)\b/,/\b(pic|photo|picture|selfie) of (you|yourself)\b/,/\bturn (on )?(your )?(camera|cam)\b/,/\bcam on\b/,/\b(facetime|video call|video chat)\b/]},
   {id:'meetup_request',label:'Asked to meet in person',w:4,
    desc:'Asking to meet up, offering a ride, or saying they\'ll be near home or school.',
    talk:'"Has anyone you met online asked to meet up?"',
@@ -974,7 +1019,7 @@ const MARKERS=[
   {id:'maturity_talk',label:'"Mature for your age" talk',w:2,
    desc:'Telling them they\'re "mature for their age," or asking their age or about dating.',
    talk:'"Has someone older been telling you you\'re mature for your age?"',
-   re:[/\bmature for your age\b/,/\bage (is )?just a number\b/,/\byou're (so|really|very) mature\b/,/\bhow old are you\b/,/\bdo you have a (boyfriend|girlfriend|bf|gf)\b/,/\bolder (guys|girls|people) like you\b/,/\byou're not like other (kids|girls|guys|boys)\b/]},
+   re:[/\bmature for your age\b/,/\bage (is )?just a number\b/,/\byou're (so|really|very) mature\b/,/\bhow old are you\b/,/\bdo you have a (boyfriend|girlfriend|bf|gf)\b/,/\bolder (guys|girls|people) like you\b/,/\byou're not like other (kids|girls|guys|boys)\b/,/\byou (look|seem) (so |really |very )?mature\b/]},
   {id:'shared_personal_info',label:'Shared personal details',w:3,kid:true,
    desc:'Your child sends a phone number, address, school or "home alone" to an adult they don\'t know. They get a think-twice prompt first.',
    talk:'"Has anyone asked for your number, address or school? It\'s always okay to say no, even to someone who seems nice."',
@@ -1020,7 +1065,7 @@ function statedAge(n){
   for(const re of AGE_RES){const m=n.match(re);if(m){const a=+m[1];if(a>=10&&a<90)return a}}
   return null;
 }
-const ADULT_CUES=[['work',/\b(my|at|from) (job|work|office|boss)\b/],['college',/\b(college|university|dorm)\b/],['driving',/\b(my car|my truck|i drive|i can drive)\b/],['own place',/\bmy (apartment|place|wife|husband)\b/]];
+const ADULT_CUES=[['work',/\b(my|our|at|from) (job|work|office|boss|agency|company)\b/],['college',/\b(college|university|dorm)\b/],['driving',/\b(my car|my truck|i drive|i can drive)\b/],['own place',/\bmy (apartment|place|wife|husband)\b/]];
 
 /* ---------- state ---------- */
 let S=null, seeding=false, playing=null;
@@ -1035,6 +1080,10 @@ const poss=n=>/s$/i.test(n)?n+"'":n+"'s";
 const cfg=()=>S.device.config;
 const isTrusted=c=>S.device.trusted.includes(c.name.toLowerCase());
 const factor=c=>isTrusted(c)?.5:c.ageBand==='adult'?1:c.ageBand==='unknown'?.8:.4;
+/* Where a chat comes from: texts, email, or a social app or game. Parents can switch each off. */
+const SOURCE_OF=app=>app==='Messages'?'texts':app==='Email'?'email':'social';
+const srcOn=c=>{const so=cfg().sources;return !so||so[SOURCE_OF(c.app)]!==false};
+const sourcesText=so=>joinList([(!so||so.texts!==false)&&'texts',(!so||so.email!==false)&&'email',(!so||so.social!==false)&&'social apps'].filter(Boolean));
 const riskyForSharing=c=>!!c&&!isTrusted(c)&&(c.ageBand==='adult'||c.ageBand==='unknown');
 const contactRef=c=>cfg().showNames?c.name:`Contact #${c.ref}`;
 const initial=n=>(String(n).match(/[a-z0-9]/i)||['?'])[0].toUpperCase();
@@ -1095,7 +1144,8 @@ function deviceReceive(p,t){
   if(p.type==='settings'){
     D.config={kidName:p.child,quietStart:p.quiet_start,quietEnd:p.quiet_end,sensitivity:p.sensitivity,
       alerts:{adult:p.alerts_on.includes('new_adult_contact'),late:p.alerts_on.includes('late_night_spike'),grooming:p.alerts_on.includes('grooming_language_markers')},
-      showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null,kidAge:p.child_age||null};
+      showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null,kidAge:p.child_age||null,
+      sources:p.sources_on?{texts:p.sources_on.includes('texts'),email:p.sources_on.includes('email'),social:p.sources_on.includes('social')}:{texts:true,email:true,social:true}};
   }else if(p.type==='trusted_adults'){D.trusted=p.names.map(n=>n.toLowerCase())}
   else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(p.note,'From your parent')}
   else if(p.type==='share_request'){
@@ -1109,7 +1159,8 @@ function deviceReceive(p,t){
 function settingsPayload(s){
   return {type:'settings',child:(s.kidName||'').trim()||'Your child',child_age:s.kidAge||null,quiet_start:s.quietStart,quiet_end:s.quietEnd,sensitivity:s.sensitivity,
     alerts_on:[s.alerts.adult&&'new_adult_contact',s.alerts.late&&'late_night_spike',s.alerts.grooming&&'grooming_language_markers'].filter(Boolean),
-    show_contact_names:s.showNames,tell_child_about_alerts:s.tellKid,late_alerts_paused_night:s.latePausedNight||null};
+    show_contact_names:s.showNames,tell_child_about_alerts:s.tellKid,late_alerts_paused_night:s.latePausedNight||null,
+    sources_on:['texts','email','social'].filter(x=>!s.sources||s.sources[x]!==false)};
 }
 
 const KID_NOTICE={
@@ -1138,11 +1189,11 @@ function deliver(cid,from,text){
     span.last=t;if(!span.chats.includes(cid))span.chats.push(cid);
   }
   transmit({type:'counts',night:nk,late_night:D.nightCounts[nk]||0,day,messages_today:D.dayTotals[day]},'up',t);
-  if(from==='them')analyzeIncoming(c,text,t);
-  else if(riskyForSharing(c)&&sharedKinds(text).length)markSignal(c,'shared_personal_info',t);
+  const watched=srcOn(c);
+  if(watched&&from==='them')analyzeIncoming(c,text,t);
+  else if(watched&&riskyForSharing(c)&&sharedKinds(text).length)markSignal(c,'shared_personal_info',t);
   if(quiet&&c.ageBand==='adult'&&!isTrusted(c))D.nightSpan[nk].adult=true;
-  evalAdult(c,t);
-  evalGrooming(c,t);
+  if(watched){evalAdult(c,t);evalGrooming(c,t)}
   if(quiet)evalLate(nk,t);
   commit();
 }
@@ -1249,7 +1300,7 @@ function leakCheck(){
 function seed(){
   const b=new Date();b.setHours(16,12,0,0);const T0=b.getTime();
   const at=(daysAgo,h)=>{const d=new Date(b);d.setDate(d.getDate()-daysAgo);const [hh,mm]=h.split(':').map(Number);d.setHours(hh,mm,0,0);return d.getTime()};
-  const settings={kidName:'Maya',kidAge:12,quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true,latePausedNight:null};
+  const settings={kidName:'Maya',kidAge:12,sources:{texts:true,email:true,social:true},quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true,latePausedNight:null};
   S={v:2,clock:at(15,'19:00'),
     parent:{settings,alerts:[],rollups:{},today:{day:'',total:0},lastSync:0,blocked:{},unblocked:{},shares:{},
       trusted:[{name:'Grandma Rose',relation:'Family',addedAt:at(15,'19:02')},{name:'Coach Daniels',relation:'Coach or teacher',addedAt:at(15,'19:02')}]},
@@ -1261,16 +1312,17 @@ function seed(){
   transmit(settingsPayload(settings),'down',at(15,'19:00'));
   transmit({type:'trusted_adults',names:S.parent.trusted.map(x=>x.name)},'down',at(15,'19:02'));
   const mk=(id,nm,app,ageBand,ageSource,ref,firstSeen)=>({id,name:nm,app,ageBand,ageSource,ref,firstSeen});
-  [mk('jess','Jess','Messages','kid','classmate',1,at(300,'12:00')),mk('leo','Leo','Messages','teen','teammate',2,at(200,'12:00')),
-   mk('ava','Ava','Messages','kid','classmate',3,at(120,'12:00')),mk('grandma','Grandma Rose','Messages','adult','family',4,at(400,'12:00')),
-   mk('coach','Coach Daniels','Messages','adult','soccer coach',5,at(90,'12:00'))].forEach(c=>{D.contacts[c.id]=c});
+  [mk('jess','Jess','Messages','kid','classmate',1,at(300,'12:00')),mk('leo','Leo','Snapchat','teen','teammate',2,at(200,'12:00')),
+   mk('ava','Ava','TikTok','kid','classmate',3,at(120,'12:00')),mk('grandma','Grandma Rose','Messages','adult','family',4,at(400,'12:00')),
+   mk('coach','Coach Daniels','Messages','adult','soccer coach',5,at(90,'12:00')),mk('school','Lincoln Middle School','Email','unknown','school newsletter',7,at(60,'08:00'))].forEach(c=>{D.contacts[c.id]=c});
   const m=(from,text,t)=>({id:uid(),from,text,at:t});
   D.threads={
     coach:[m('them','Great hustle today. Practice Thursday 5:30, field 3.',at(3,'19:20')),m('me','ok thank you coach!',at(3,'19:24'))],
     grandma:[m('them','Love you sweetheart! See you Sunday for pancakes',at(2,'09:15')),m('me','love you too grandma!!',at(2,'10:02'))],
     leo:[m('them','bring your switch on saturday',at(1,'18:40')),m('me','ok!!',at(1,'18:41'))],
     ava:[m('me','omg the new episode',at(1,'20:05')),m('them','NO SPOILERS',at(1,'20:06'))],
-    jess:[m('them','see you at lunch tomorrow',at(1,'21:10'))]
+    jess:[m('them','see you at lunch tomorrow',at(1,'21:10'))],
+    school:[m('them','Reminder: picture day is this Friday. Smiles on!',at(2,'07:30'))]
   };
   [1,0,2,0,0,1,0,14,1,0,2,1,0,1].forEach((n,i)=>{D.nightCounts[ymd(at(14-i,'23:00'))]=n});
   Object.assign(S.parent.rollups,D.nightCounts);
@@ -1301,7 +1353,7 @@ function ensureContact(c){
   }
 }
 const SCENARIOS=[
-  {id:'stranger',contact:'nova',title:'Stranger from a game',kind:'urgent',result:'Urgent',
+  {id:'stranger',contact:'nova',title:'Stranger in a game',kind:'urgent',result:'Act today',
    blurb:'An adult from Roblox chat pushes for secrets, gifts and a photo, using disguised spellings.',
    steps:[['nova','them','yo you on tonight? that obby run was insane',3],['nova','me','haha yeah i got lucky',1],
      ['nova','them',"nah you're legit good. honestly you're really mature for your age",2],['nova','me','lol thanks',1],
@@ -1309,25 +1361,33 @@ const SCENARIOS=[
      ['nova','them',"ya but roblox chat is laggy. add me on sn@p, it's easier",2],
      ['nova','them',"and don't tell your parents ok? they wouldn't understand. it's our secret",1],['nova','me','um ok',2],
      ['nova','them',"cool. send me a p1c so i know it's really you \u{1F4F8}",1]]},
-  {id:'latenight',title:'2 AM group chat',kind:'watch',result:'Late night',at:'00:38',
+  {id:'latenight',title:'2 AM group chat',kind:'watch',result:'Check in',at:'00:38',
    blurb:'Friends keep messaging long after bedtime on a school night.',
    steps:[['jess','them','r u awake',0],['jess','me','yeah cant sleep',2],['jess','them','same. did u see the finale',3],['jess','me','YES the ending???',2],
      ['leo','them','wait are you guys up too lol',4],['leo','them','that plot twist was crazy',2],['leo','me','i screamed',3],
      ['ava','them','omg hiii why is everyone awake',5],['ava','them','we have a math test tmrw nooo',2],['ava','me','dont remind me',3],
      ['jess','them',"ok i'm watching it again",6],['jess','me','lol same',4],['leo','them','brb snack',7],
      ['ava','them','my mom is gonna kill me if she sees my light on',5],['ava','me','haha go to sleep',4],['jess','them','night night',6]]},
-  {id:'party',title:'Surprise party plans',kind:'ok',result:'No alert',at:'15:45',
+  {id:'party',title:'Surprise party',kind:'ok',result:'No alert',at:'15:45',
    blurb:'Friends say "don\'t tell" and "pick you up". Context says it\'s a birthday.',
    steps:[['jess','them',"ok so saturday at 2 for ava's surprise party!!",0],['jess','me',"yesss i'll bring the banner",2],
      ['jess','them',"shhh don't tell anyone about the cake lol",1],['jess','me','my lips are sealed',1],
      ['leo','them','my mom can pick you up at 1:30',6],['leo','me','perfect thank u',1],
      ['leo','them',"don't tell ava, she thinks we're going bowling",2],['leo','me','lol ok',1]]},
-  {id:'older',contact:'drew',title:'Older teen on Instagram',kind:'watch',result:'New adult',
+  {id:'older',contact:'drew',title:'Teen on Instagram',kind:'watch',result:'Check in',
    blurb:k=>`A new contact says they're 19 and asks about school. ${k} gets a think-twice prompt.`,
    setup(){ensureContact({id:'drew',name:'drew.k_art',app:'Instagram',ageBand:'unknown',ageSource:'unknown'})},
    steps:[['drew','them',"hey saw your drawing post, it's really good",2],['drew','me','omg thank you!!',1],
      ['drew','them',"np. i'm 19 btw, just started college for art",3],['drew','them','what school do you go to?',1],
-     ['drew','try','i go to lincoln middle school',2,"um i'd rather not say"]]}
+     ['drew','try','i go to lincoln middle school',2,"um i'd rather not say"]]},
+  {id:'email',contact:'scout',title:'Scam email',kind:'urgent',result:'Act today',
+   blurb:k=>`A "talent scout" email offers ${k} a paid modeling job, then asks for selfies and secrecy.`,
+   setup(){ensureContact({id:'scout',name:'casting@starlight-talent.co',app:'Email',ageBand:'unknown',ageSource:'unknown'})},
+   steps:[['scout','them','Hi! Our agency found your Instagram and we think you could model for us.',2],
+     ['scout','them','We pay $500 per shoot. You look so mature in your photos.',2],
+     ['scout','me','omg really?? what do i do',3],
+     ['scout','them','Send us a few selfies so we can see your look. Full length photos are best.',2],
+     ['scout','them',"Don't tell your parents yet, we want it to be a surprise when you sign. Text us on WhatsApp.",1]]}
 ];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function play(id){
@@ -1415,13 +1475,13 @@ const ghost=()=>`<svg class="g-logo" viewBox="0 0 64 64" aria-hidden="true">
 /* ---------- parent rendering ---------- */
 const ALERTS={
   new_adult_contact:{title:()=>'New adult contact',icon:'userPlus'},
-  late_night_spike:{title:()=>'Late-night activity spike',icon:'moon'},
-  grooming_language_markers:{title:()=>'Grooming language markers',icon:'shield'},
-  kid_request:{title:k=>`${k} asked to talk`,icon:'heart'},
+  late_night_spike:{title:()=>'Busy late at night',icon:'moon'},
+  grooming_language_markers:{title:()=>'Grooming warning signs',icon:'shield'},
+  kid_request:{title:k=>`${k} wants to talk`,icon:'heart'},
   contact_blocked:{title:k=>`${k} blocked a contact`,icon:'ban'}
 };
 const alertTitle=p=>ALERTS[p.alert].title(name());
-const SEV_LABEL={urgent:'Urgent',watch:'Watch',info:'Info',ok:'Good sign'};
+const SEV_LABEL={urgent:'Act today',watch:'Check in',info:'FYI',ok:'Good sign'};
 function fmtSpan(m){
   if(m<1)return 'under a minute';
   if(m<60)return `${m} minute${m===1?'':'s'}`;
@@ -1440,7 +1500,7 @@ function alertCard(a){
   const blockedAt=p.contact&&P.blocked[p.contact];
   if(blockedAt&&blockedAt>=a.createdAt&&p.alert!=='contact_blocked')status+=`<p class="ok-line">${ic('check','ic sm')}${esc(k)} blocked this contact · ${when(blockedAt)}</p>`;
   if(p.alert==='new_adult_contact'){
-    line=`${who} · ${esc(p.where)} · ${esc(p.contact_age)}`;
+    line=`${who} · ${esc(p.where)} · ${esc(p.contact_age==='unknown'?'age unknown':p.contact_age)}`;
     sum=`Someone 18 or older who isn't on your trusted list started chatting with ${esc(k)}.`;
     why=`It's often a relative, coach or tutor. If you know them, choose "We know them" and Ghost Mode won't flag them again.`;
     talk=[`"Who's ${anon?'your new contact':esc(p.contact)}? How do you know them?"`,'"Have you met them in real life?"'];
@@ -1455,7 +1515,7 @@ function alertCard(a){
     const tl=p.timeline.map(([at,id])=>({t:isoToT(at),id}));
     const ids=tl.map(x=>x.id).sort((x,y)=>MARKER[y].w-MARKER[x].w);
     const n=tl.length,fast=n>=3&&p.escalation_minutes<=60;
-    line=`${who} · ${esc(p.where)} · ${esc(p.contact_age)}`;
+    line=`${who} · ${esc(p.where)} · ${esc(p.contact_age==='unknown'?'age unknown':p.contact_age)}`;
     sum=`${n} warning sign${n===1?'':'s'}${n>1?` in ${fmtSpan(p.escalation_minutes)}`:''}. Most serious: ${esc(MARKER[ids[0]].label)}.`;
     extra=`<ol class="tl" aria-label="When each warning sign appeared">${tl.map((x,i)=>{
       const newDay=i===0||ymd(x.t)!==ymd(tl[i-1].t);
@@ -1519,13 +1579,15 @@ function renderParent(){
   const P=S.parent,k=name();
   const open=P.alerts.filter(a=>a.status==='new').length;
   const anyOn=Object.values(P.settings.alerts).some(Boolean);
+  const newA=P.alerts.filter(a=>a.status==='new'),urgentN=newA.filter(a=>a.p.severity==='urgent').length;
+  const headline=urgentN?`${urgentN} alert${urgentN>1?'s':''} need${urgentN>1?'':'s'} you today`:newA.length?`${newA.length} alert${newA.length>1?'s':''} to look at`:'All calm right now';
+  const watching=sourcesText(P.settings.sources);
   const leaked=(T.leak||leakCheck()).msgs,fresh=!!(S.wall[0]&&S.wall[0].fresh);
   $('#pStatus').innerHTML=`
-    <div class="p-who">${ghost()}<div class="p-who-text"><h2>Ghost Mode is on for ${esc(k)}</h2><p>${P.lastSync?`Last update ${when(P.lastSync)}`:'Waiting for the first update'}</p></div>
+    <div class="p-who">${ghost()}<div class="p-who-text"><h2>${esc(headline)}</h2><p>${watching?`Checking ${esc(poss(k))} ${esc(watching)}`:'All checks are off'}${P.lastSync?` · Updated ${fmtTime(P.lastSync)}`:''}</p></div>
       <span class="pill ${anyOn?'ok':'watch'}">${anyOn?ic('check','ic xs')+'Protected':'Alerts off'}</span></div>
     <div class="p-stats">
       <div class="stat ${leaked?'bad':'zero'}"><b>${leaked}</b><span>${ic('lock','ic xs')}Messages shared without consent</span></div>
-      <div class="stat"><b>${open}</b><span>Alert${open===1?'':'s'} to review</span></div>
       <button type="button" class="stat link${fresh?' pulse':''}" data-action="open-data"><b>${S.stats.sent}</b><span>Updates sent<span class="more">See what was sent ›</span></span></button>
     </div>`;
   $$('.p-tab-btn').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.id===S.ui.tab)));
@@ -1534,7 +1596,7 @@ function renderParent(){
   if(S.ui.tab==='alerts')renderAlerts();
   if(S.ui.tab==='activity')renderActivity();
   if(S.ui.tab==='trusted')renderTrusted();
-  if(S.ui.tab==='settings')renderAgeCard();
+  if(S.ui.tab==='settings'){renderAgeCard();renderPlanCard()}
 }
 
 function renderAlerts(){
@@ -1608,6 +1670,7 @@ function fillSettingsForm(){
   f.querySelectorAll('[name="sensitivity"]').forEach(r=>{r.checked=r.value===s.sensitivity});
   f.elements.aAdult.checked=s.alerts.adult;f.elements.aLate.checked=s.alerts.late;f.elements.aGroom.checked=s.alerts.grooming;
   f.elements.showNames.checked=s.showNames;f.elements.tellKid.checked=s.tellKid;
+  const so=s.sources||{};f.elements.srcTexts.checked=so.texts!==false;f.elements.srcEmail.checked=so.email!==false;f.elements.srcSocial.checked=so.social!==false;
   $('#savedNote').textContent='';
 }
 function onSettings(){
@@ -1619,6 +1682,7 @@ function onSettings(){
   const r=f.querySelector('[name="sensitivity"]:checked');if(r)s.sensitivity=r.value;
   s.alerts={adult:f.elements.aAdult.checked,late:f.elements.aLate.checked,grooming:f.elements.aGroom.checked};
   s.showNames=f.elements.showNames.checked;s.tellKid=f.elements.tellKid.checked;
+  s.sources={texts:f.elements.srcTexts.checked,email:f.elements.srcEmail.checked,social:f.elements.srcSocial.checked};
   $('#savedNote').textContent='Saving…';
   clearTimeout(T.settingsTimer);
   T.settingsTimer=setTimeout(()=>{
@@ -1761,7 +1825,7 @@ function renderPrivacy(){
   const D=S.device,k=name(),cf=cfg();
   const week=D.sentLog.filter(x=>S.clock-x.at<=7*DAY&&S.clock>=x.at);
   $('#privacyBody').innerHTML=(pendingShare()?`<div class="pv-help"><p><b>Your parent asked to see ${shareQueue().length===1?'one chat':shareQueue().length+' chats, one at a time'}.</b> It's your choice.</p><button type="button" class="btn primary block" data-action="open-share">Review the request</button></div>`:'')+`
-    <div class="pv-head">${ghost()}<div><h3>What your parent can see</h3><p>Ghost Mode checks for warning signs right here on your phone. Your messages never leave it.</p></div></div>
+    <div class="pv-head">${ghost()}<div><h3>What your parent can see</h3><p>Ghost Mode checks your ${esc(sourcesText(cf.sources))} for warning signs, right here on your phone. Your messages never leave it.</p></div></div>
     <div class="pv-col yes"><h4>${ic('eye','ic sm')}They get</h4><ul>
       <li>An alert if a new adult starts chatting with you</li>
       <li>An alert if your phone is much busier than usual late at night</li>
@@ -1828,6 +1892,69 @@ function renderTester(){
     ${hits.length?`<ul class="chips">${hits.map(m=>`<li class="${m.w>=3?'hi':''}">${esc(m.label)}</li>`).join('')}</ul><p class="verdict">${verdict}</p>`:'<p class="verdict ok">No warning signs found.</p>'}
     ${kinds.length?`<p class="verdict">If ${esc(k)} typed this to an adult they don't know, they'd get a think-twice prompt about sharing ${joinList(kinds.map(x=>esc(THIRD_PERSON[x]||x)))}.</p>`:''}`;
 }
+/* ---------- plans: $9.99 a month or $99 a year, both with a free week ---------- */
+const PLANS={
+  monthly:{label:'Monthly',price:'$9.99',per:'a month',after:'$9.99 a month'},
+  yearly:{label:'Yearly',price:'$99',per:'a year',after:'$99 a year',note:'Just $8.25 a month. You save $20.88 a year.',best:true}
+};
+const TRIAL_DAYS=7;
+const fmtDate=t=>new Date(t).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+const daysLeft=n=>n<=0?'Last day':`${n} day${n===1?'':'s'} left`;
+function planState(){
+  const pl=S.parent.plan;if(!pl)return {kind:'none'};
+  if(S.clock<pl.ends)return {kind:pl.status==='canceled'?'canceled':pl.status==='active'?'paid':'trial',left:Math.round((keyToDate(ymd(pl.ends))-keyToDate(ymd(S.clock)))/DAY),pl};
+  return {kind:pl.status==='canceled'?'ended':'paid',pl};
+}
+function choosePlan(cycle){
+  const st=planState(),P=S.parent;
+  if(st.kind==='none')P.plan={cycle,start:S.clock,ends:S.clock+TRIAL_DAYS*DAY,status:'trial'};
+  else if(st.kind==='canceled'){P.plan.cycle=cycle;P.plan.status='trial'}
+  else if(st.kind==='ended')P.plan={cycle,start:S.clock,ends:S.clock,status:'active'};
+  else P.plan.cycle=cycle;
+}
+function renderPricing(){
+  const st=planState(),cur=st.kind==='trial'||st.kind==='paid'?st.pl.cycle:null;
+  let banner='';
+  if(st.kind==='trial')banner=`<p class="trial-banner">${ic('check','ic sm')}<span><b>Your free week is on.</b> ${daysLeft(st.left)}. It ends ${fmtDate(st.pl.ends)}, then ${PLANS[st.pl.cycle].after}. Cancel before then and you pay nothing.</span></p>`;
+  else if(st.kind==='paid')banner=`<p class="trial-banner">${ic('check','ic sm')}<span><b>You're on the ${PLANS[st.pl.cycle].label.toLowerCase()} plan</b> at ${PLANS[st.pl.cycle].after}.</span></p>`;
+  else if(st.kind==='canceled')banner=`<p class="share-line">Your free week is canceled. Ghost Mode keeps working until ${fmtDate(st.pl.ends)}, and you won't be charged. Pick a plan to keep it on.</p>`;
+  else if(st.kind==='ended')banner=`<p class="share-line">Your free week has ended. Pick a plan to keep Ghost Mode on.</p>`;
+  const cards=Object.entries(PLANS).map(([id,pl])=>{
+    const isCur=cur===id;
+    const action=isCur?`<button type="button" class="btn block" disabled>${ic('check','ic sm')}Your plan</button>`
+      :st.kind==='none'?`<button type="button" class="btn primary block" data-action="choose-plan" data-id="${id}">Start free week</button>`
+      :st.kind==='canceled'?`<button type="button" class="btn primary block" data-action="choose-plan" data-id="${id}">Keep my free week</button>`
+      :st.kind==='ended'?`<button type="button" class="btn primary block" data-action="choose-plan" data-id="${id}">Choose ${pl.label.toLowerCase()}</button>`
+      :`<button type="button" class="btn block" data-action="choose-plan" data-id="${id}">Switch to ${pl.label.toLowerCase()}</button>`;
+    return `<div class="plan${pl.best?' best':''}${isCur?' current':''}">
+      <div class="plan-name">${pl.label}${pl.best?'<span class="pill accent">Best value</span>':''}</div>
+      <div class="plan-price">${pl.price}<small>${pl.per}</small></div>
+      <p class="plan-note">${pl.note||'Pay as you go. Stop anytime.'}</p>
+      ${action}
+      <p class="plan-fine">${st.kind==='ended'||st.kind==='paid'?`Billed ${pl.after}.`:`Free for ${TRIAL_DAYS} days, then ${pl.after}.`}</p>
+    </div>`;
+  }).join('');
+  $('#priceBody').innerHTML=`${banner}<div class="plans">${cards}</div>
+    <div><h3 class="set-title">Included in both plans</h3>
+    <ul class="included">
+      <li>${ic('check','ic sm')}<span>Alerts for texts, email and social apps</span></li>
+      <li>${ic('check','ic sm')}<span>Your kid's messages are never read or sent to you</span></li>
+      <li>${ic('check','ic sm')}<span>Plain advice on how to bring things up</span></li>
+      <li>${ic('check','ic sm')}<span>Help reporting, with your kid's OK</span></li>
+      <li>${ic('check','ic sm')}<span>Settings that grow with your kid</span></li>
+      <li>${ic('check','ic sm')}<span>Works on any phone</span></li>
+    </ul></div>
+    <div class="price-foot">${st.kind==='trial'?'<button type="button" class="btn quiet" data-action="cancel-trial">Cancel free week</button>':''}<p class="demo-fine">This is a demo. No payment details are collected and nothing is charged.</p></div>`;
+}
+function renderPlanCard(){
+  const st=planState();let html;
+  if(st.kind==='none')html=`<p><b>Try Ghost Mode free for a week.</b> Then $9.99 a month or $99 a year. Cancel anytime.</p><button type="button" class="btn sm primary" data-action="pricing">See plans</button>`;
+  else if(st.kind==='trial')html=`<div class="age-head"><b>Free week</b><span class="pill ok">${daysLeft(st.left)}</span></div><p>Ends ${fmtDate(st.pl.ends)}, then ${PLANS[st.pl.cycle].after}. Cancel anytime before then and you pay nothing.</p><button type="button" class="btn sm" data-action="pricing">Manage plan</button>`;
+  else if(st.kind==='canceled')html=`<p><b>Free week canceled.</b> Ghost Mode keeps working until ${fmtDate(st.pl.ends)}. You won't be charged.</p><button type="button" class="btn sm primary" data-action="pricing">See plans</button>`;
+  else if(st.kind==='ended')html=`<p><b>Your free week has ended.</b> Pick a plan to keep Ghost Mode on.</p><button type="button" class="btn sm primary" data-action="pricing">See plans</button>`;
+  else html=`<div class="age-head"><b>${PLANS[st.pl.cycle].label} plan</b></div><p>${PLANS[st.pl.cycle].after}.</p><button type="button" class="btn sm" data-action="pricing">Manage plan</button>`;
+  $('#planCard').innerHTML=html;
+}
 function renderPatterns(){
   $('#patternList').innerHTML=MARKERS.map(m=>`<li${m.kid?' class="kid"':''}><div class="pt-head"><b>${esc(m.label)}</b><span class="dots" role="img" aria-label="Weight ${m.w} of 4">${[1,2,3,4].map(i=>`<i${i<=m.w?' class="on"':''}></i>`).join('')}</span></div><p>${esc(m.desc)}</p></li>`).join('');
 }
@@ -1859,8 +1986,9 @@ function renderAll(){
   const nNew=S.parent.alerts.filter(a=>a.status==='new').length;
   const vb=$('#viewBadge');vb.textContent=nNew;vb.hidden=!nNew;
   $('#clockNow').textContent=`${new Date(S.clock).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}, ${fmtTime(S.clock)}`;
-  $('#dataDrawer').hidden=!T.drawer;$('#howDialog').hidden=!T.how;
-  document.body.style.overflow=T.drawer||T.dialog||T.how?'hidden':'';
+  $('#dataDrawer').hidden=!T.drawer;$('#howDialog').hidden=!T.how;$('#priceDialog').hidden=!T.price;
+  if(T.price)renderPricing();
+  document.body.style.overflow=T.drawer||T.dialog||T.how||T.price?'hidden':'';
   const kb=$('#kidBadge'),nq=shareQueue().length;kb.textContent=nq;kb.hidden=!nq;
   T.leak=leakCheck();
   renderParent();if(T.drawer)renderWall();renderKid();renderScenarios();renderDialog();
@@ -1870,6 +1998,7 @@ function renderAll(){
 /* ---------- actions ---------- */
 function findAlert(id){return S.parent.alerts.find(a=>a.id===id)}
 let resetArmed=0;
+const RESET_HTML='<span class="long-label">Reset demo</span><span class="short-label" aria-hidden="true">↺</span>';
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-action]');if(!b)return;
   const a=b.dataset.action,id=b.dataset.id;
@@ -1899,7 +2028,10 @@ document.addEventListener('click',e=>{
       {const x=$$('[data-action="toggle-details"]').find(el=>el.dataset.id===id);if(x)x.focus()}break;
     case 'open-data':T.drawer=true;commit();setTimeout(()=>{const x=$('#dataDrawer .icon-btn');if(x)x.focus()},30);break;
     case 'how':T.how=true;commit();setTimeout(()=>{const x=$('#howDialog .icon-btn');if(x)x.focus()},30);break;
-    case 'close-drawer':case 'drawer-scrim':case 'close-how':case 'how-scrim':closeOverlay();break;
+    case 'close-drawer':case 'drawer-scrim':case 'close-how':case 'how-scrim':case 'close-price':case 'price-scrim':closeOverlay();break;
+    case 'pricing':T.price=true;commit();setTimeout(()=>{const x=$('#priceDialog .icon-btn');if(x)x.focus()},30);break;
+    case 'choose-plan':choosePlan(id);commit();break;
+    case 'cancel-trial':if(S.parent.plan){S.parent.plan.status='canceled'}commit();break;
     case 'dismiss-how':S.ui.introDismissed=true;commit();break;
     case 'reopen':{const al=findAlert(id);if(al){al.status='new';al.note=null;commit()}break}
     case 'block':T.sheet='block';commit();break;
@@ -1939,12 +2071,12 @@ document.addEventListener('click',e=>{
     case 'reset':{
       if(Date.now()-resetArmed<3000){
         resetArmed=0;playing=null;try{localStorage.removeItem(KEY)}catch(err){}
-        Object.assign(T,{arrived:null,fresh:null,notif:null,sheet:null,think:null,dialog:null,drawer:false,how:false,helpSent:false,showReviewed:false});T.expanded.clear();T.openTalk.clear();
+        Object.assign(T,{arrived:null,fresh:null,notif:null,sheet:null,think:null,dialog:null,drawer:false,how:false,price:false,helpSent:false,showReviewed:false});T.expanded.clear();T.openTalk.clear();
         clearTimeout(T.settingsTimer);clearTimeout(T.notifTimer);
-        seed();fillSettingsForm();b.innerHTML='Reset<span class="reset-long"> demo</span>';commit();
+        seed();fillSettingsForm();b.innerHTML=RESET_HTML;commit();
       }else{
-        resetArmed=Date.now();b.textContent='Click again to reset';
-        setTimeout(()=>{if(Date.now()-resetArmed>=2900){b.innerHTML='Reset<span class="reset-long"> demo</span>'}},3000);
+        resetArmed=Date.now();b.innerHTML='<span class="long-label">Click again to reset</span><span class="short-label">Sure?</span>';
+        setTimeout(()=>{if(Date.now()-resetArmed>=2900){b.innerHTML=RESET_HTML}},3000);
       }
       break}
   }
@@ -1958,7 +2090,7 @@ $('#composer').addEventListener('submit',e=>{
   const inp=$('#composeInput'),text=inp.value.trim();
   if(!text||!S.ui.thread||playing)return;
   const c=S.device.contacts[S.ui.thread];
-  if(S.ui.typeAs==='me'&&riskyForSharing(c)){
+  if(S.ui.typeAs==='me'&&riskyForSharing(c)&&srcOn(c)){
     const kinds=sharedKinds(text);
     if(kinds.length){T.think={cid:c.id,text,kinds,auto:false};T.sheet='think';renderKid();return}
   }
@@ -2004,6 +2136,7 @@ try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(st&&
 if(!S)seed();
 if(S.ui.view==='wall')S.ui.view='parent';
 if(S.parent.settings.kidAge===undefined)S.parent.settings.kidAge=12;
+if(!S.parent.settings.sources)S.parent.settings.sources={texts:true,email:true,social:true};
 if(!document.documentElement.lang)document.documentElement.lang='en';
 $('#brandLogo').innerHTML=ghost();
 renderPatterns();
@@ -2015,12 +2148,12 @@ function closeDialog(){
 }
 function closeOverlay(){
   if(T.dialog){closeDialog();return}
-  const back=T.drawer?'[data-action="open-data"]':T.how?'[data-action="how"]':null;
-  T.drawer=false;T.how=false;commit();
+  const back=T.drawer?'[data-action="open-data"]':T.how?'[data-action="how"]':T.price?'[data-action="pricing"]':null;
+  T.drawer=false;T.how=false;T.price=false;commit();
   const x=back&&$(back);if(x)x.focus();
 }
 document.addEventListener('keydown',e=>{
-  const ov=T.dialog?$('#chatDialog'):T.drawer?$('#dataDrawer'):T.how?$('#howDialog'):null;
+  const ov=T.dialog?$('#chatDialog'):T.drawer?$('#dataDrawer'):T.how?$('#howDialog'):T.price?$('#priceDialog'):null;
   if(!ov)return;
   if(e.key==='Escape'){e.preventDefault();closeOverlay();return}
   if(e.key!=='Tab')return;
