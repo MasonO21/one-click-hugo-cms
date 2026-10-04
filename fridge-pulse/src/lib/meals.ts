@@ -1,33 +1,46 @@
 import { todayISO } from './dates';
 import { active, daysLeft, normalizeName, sortByExpiry } from './expiry';
+import { rolesFor, type Role } from './ingredients';
+import { RECIPES, type Cond, type Course, type Line, type Recipe, type Slot } from './recipes';
 import type { Diet, Meal, MealPrefs, PantryItem } from './types';
 
 // ---------------------------------------------------------------------------
 // Diet filtering
 // ---------------------------------------------------------------------------
 
-type Tag = 'meat' | 'dairy' | 'egg' | 'gluten';
+type Tag = 'meat' | 'dairy' | 'egg' | 'gluten' | 'honey';
 
-const PLANT_MILK = /\b(oat|almond|soy|coconut|plant|vegan|cashew|rice)\b/;
+const PLANT_MILK = /\b(oat|almond|soy|soya|coconut|plant|vegan|cashew|rice|hemp|pea|macadamia|hazelnut) (milk|drink|beverage|cream|yogh?urt|cheese|butter|creamer)\b/;
+
+/** Plant-based versions of meat and dairy foods ("veggie sausages", "vegan mayo", "Quorn mince"). */
+const PLANT_BASED = /\b(vegan|veggie|vegetarian|plant[- ]based|meatless|meat[- ]free|dairy[- ]free|quorn|beyond|impossible|tofu|soy|soya|seitan|tempeh|jackfruit)\b/;
 
 function itemTags(item: PantryItem): Tag[] {
   const name = item.name.toLowerCase();
   const tags: Tag[] = [];
-  if (item.category === 'meat' || item.category === 'seafood') tags.push('meat');
-  if (/\b(chicken|beef|pork|bacon|sausages?|ham|turkey|lamb|veal|venison|duck|steak|mince|salami|pepperoni|prosciutto|chorizo|salmon|fish|shrimp|prawns?|tuna|sardines?|anchov(y|ies)|crab|lobster|scallops?|mussels|clams|oysters|squid)\b/.test(name)) tags.push('meat');
-  if (/\beggs?\b/.test(name)) tags.push('egg');
+  const plant = PLANT_BASED.test(name);
+  if ((item.category === 'meat' || item.category === 'seafood') && !plant) tags.push('meat');
   if (
-    (item.category === 'dairy' || /\b(milk|yogh?urt|cheese|butter|cream|kefir|ghee)\b/.test(name)) &&
+    !plant &&
+    /\b(chicken|beef|pork|bacon|sausages?|ham|turkey|lamb|veal|venison|duck|steak|mince|salami|pepperoni|prosciutto|chorizo|pancetta|lardons|gelatine?|lard|bone broth|salmon|fish|shrimp|prawns?|tuna|sardines?|anchov(y|ies)|crab|lobster|scallops?|mussels|clams|oysters|squid|worcestershire|caesar)\b/.test(name)
+  ) {
+    tags.push('meat');
+  }
+  if (!plant && /\b(eggs?|mayo|mayonnaise|aioli)\b/.test(name)) tags.push('egg');
+  if (/\bhoney\b/.test(name) && !/\bhoneydew\b/.test(name)) tags.push('honey');
+  if (
+    (item.category === 'dairy' || /\b(milk|yogh?urt|cheese|butter|cream|kefir|ghee|custard|paneer|halloumi|mozzarella|feta|parmesan|ricotta|mascarpone|gelato|whey)\b/.test(name)) &&
     !/\beggs?\b/.test(name) &&
     !PLANT_MILK.test(name) &&
+    !plant &&
     // Nut and seed butters are not dairy.
     !/\b(peanut|almond|cashew|hazelnut|nut|seed|apple|cocoa) butter\b/.test(name)
   ) {
     tags.push('dairy');
   }
   if (
-    /\b(bread|breadcrumbs|bagel|bun|roll|baguette|sourdough|croissant|brioche|muffin|crumpet|naan|pita|wrap|tortilla|pasta|spaghetti|penne|macaroni|lasagn[ae]|ravioli|tortellini|gnocchi|noodle|ramen|udon|flour|dough|pizza|cereal|granola|cracker|pretzel|cookie|biscuit|cake|brownie|pie|waffle|pancake|couscous|bulgur|barley|beer)s?\b/.test(name) &&
-    !/\b(corn|rice|gluten.?free)\b/.test(name)
+    /\b(bread|breadcrumbs|panko|bagel|bun|roll|baguette|sourdough|ciabatta|focaccia|croissant|brioche|muffin|crumpet|naan|pita|pitta|flatbread|wrap|tortilla|pasta|spaghetti|penne|macaroni|linguine|fettuccine|fusilli|rigatoni|orzo|lasagn[ae]|ravioli|tortellini|gnocchi|noodle|ramen|udon|flour|dough|pizza|cereal|granola|cracker|pretzel|cookie|biscuit|cake|brownie|pie|waffle|pancake|couscous|bulgur|barley|farro|spelt|rye|seitan|beer|soy sauce|teriyaki|hoisin|dumpling|crouton)s?\b/.test(name) &&
+    !/\b(corn|rice|gluten.?free|buckwheat)\b/.test(name)
   ) {
     tags.push('gluten');
   }
@@ -37,7 +50,7 @@ function itemTags(item: PantryItem): Tag[] {
 const FORBIDDEN: Record<Diet, Tag[]> = {
   none: [],
   vegetarian: ['meat'],
-  vegan: ['meat', 'dairy', 'egg'],
+  vegan: ['meat', 'dairy', 'egg', 'honey'],
   'gluten-free': ['gluten'],
   'dairy-free': ['dairy'],
 };
@@ -119,309 +132,336 @@ export function suggestionKey(items: PantryItem[], prefs: MealPrefs, now: Date =
 // Local (offline) recipe ideas
 // ---------------------------------------------------------------------------
 
-interface Slot {
-  label: string;
-  test: (i: PantryItem) => boolean;
-  /** Minimum distinct matching items (default 1). */
-  min?: number;
-  /** Maximum items to use (default 2). */
-  max?: number;
-  /** Allow leftovers (cooked food) to fill this slot. Off by default: they are not raw ingredients. */
-  leftovers?: boolean;
+/** Each food's culinary roles, worked out once per call. */
+export type RoleIndex = Map<string, Set<Role>>;
+
+export function indexRoles(pool: PantryItem[]): RoleIndex {
+  return new Map(pool.map((i) => [i.id, new Set(rolesFor(i))]));
 }
 
-interface Recipe {
-  id: string;
-  title: string;
-  summary: string;
-  minutes: number;
-  extras: string[];
-  steps: string[];
-  required: Slot[];
-  optional?: Slot[];
+/** A recipe with tracked food assigned to its slots. */
+export interface FilledRecipe {
+  recipe: Recipe;
+  /** Slot key to the foods in it, soonest to expire first. */
+  slots: Map<string, PantryItem[]>;
+  /** Roles the used foods filled their slots as. */
+  roles: Set<Role>;
+  chosen: PantryItem[];
 }
 
-const name = (re: RegExp) => (i: PantryItem) => re.test(i.name.toLowerCase());
-const cat = (...c: PantryItem['category'][]) => (i: PantryItem) => c.includes(i.category);
-const any = (...tests: ((i: PantryItem) => boolean)[]) => (i: PantryItem) => tests.some((t) => t(i));
+const FROZEN = /\bfrozen\b/i;
+/** One idea never marks more than this many items used: optional extras stop here. */
+export const MAX_USES = 8;
 
-const isEgg = name(/\beggs?\b/);
-const isCheese = name(/\bcheese|cheddar|parmesan|mozzarella|feta\b/);
-const FRUIT = /\b(bananas?|apples?|grapes?|oranges?|clementines?|mango|peach|pears?|lemons?|limes?|melon|pineapple|kiwi|plums?|cherr)|berr/;
-const isVeg = (i: PantryItem) => i.category === 'produce' && !FRUIT.test(i.name.toLowerCase());
-const isFruit = (i: PantryItem) => i.category === 'produce' && !isVeg(i);
-const isMeat = any(cat('meat'), name(/\b(chicken|beef|pork|bacon|sausage|ham|turkey)\b/));
-const isTortilla = name(/\b(tortillas?|wraps?)\b/);
-const isBread = name(/\b(bread|bagels?|sourdough|baguettes?|buns?|rolls?|brioche)\b/);
-const isPasta = name(/\b(pasta|spaghetti|noodles?|penne|macaroni)\b/);
-const isRice = any(name(/\brice\b/), name(/\bquinoa\b/));
-const isGreens = name(/\b(lettuce|spinach|arugula|kale|greens|salad)\b/);
-const isMilky = name(/\b(milk|yogh?urt|kefir)\b/);
+/** Whether a food can go in a slot: it has one of the slot's roles (and is fresh when it must be). */
+export function slotAccepts(slot: Slot, item: Pick<PantryItem, 'name' | 'category'>, roles: Iterable<Role> = rolesFor(item)): boolean {
+  if (slot.fresh && FROZEN.test(item.name)) return false;
+  const have = new Set(roles);
+  return slot.roles.some((r) => have.has(r));
+}
 
-const RECIPES: Recipe[] = [
-  {
-    id: 'omelet',
-    title: 'Loaded omelet',
-    summary: 'Eggs folded around whatever veg and cheese needs using.',
-    minutes: 10,
-    extras: ['Butter or oil', 'Salt', 'Pepper'],
-    steps: [
-      'Whisk 2-3 eggs per person with a pinch of salt.',
-      'Saute the chopped veg in a little butter or oil until soft, 2-3 minutes.',
-      'Pour in the eggs and cook gently until nearly set.',
-      'Add cheese or other fillings, fold, and serve.',
-    ],
-    required: [{ label: 'eggs', test: isEgg, max: 1 }],
-    optional: [
-      { label: 'veg', test: isVeg, max: 3 },
-      { label: 'cheese', test: isCheese, max: 1 },
-      { label: 'ham', test: name(/\b(ham|bacon|sausage)\b/), max: 1 },
-    ],
-  },
-  {
-    id: 'stir-fry',
-    title: 'Clear-the-crisper stir-fry',
-    summary: 'Fast, hot pan, any mix of vegetables plus a protein.',
-    minutes: 20,
-    extras: ['Soy sauce', 'Oil', 'Garlic or ginger (optional)'],
-    steps: [
-      'Slice everything small and even so it cooks quickly.',
-      'Heat oil in a wide pan until shimmering; cook protein first and set aside.',
-      'Stir-fry the hardest veg first, then softer ones, 4-6 minutes total.',
-      'Return the protein, add soy sauce, and toss for a minute. Serve over rice or noodles.',
-    ],
-    required: [{ label: 'veg', test: isVeg, min: 2, max: 4 }],
-    optional: [
-      { label: 'protein', test: any(isMeat, name(/\b(tofu|shrimp|prawns?)\b/)), max: 1 },
-      { label: 'starch', test: any(isRice, isPasta), max: 1 },
-    ],
-  },
-  {
-    id: 'fried-rice',
-    title: 'Fried rice',
-    summary: 'Turns leftover rice and odds and ends into dinner.',
-    minutes: 15,
-    extras: ['Soy sauce', 'Oil'],
-    steps: [
-      'Heat oil in a large pan over high heat.',
-      'Cook diced veg and any protein for 3-4 minutes.',
-      'Push to the side, scramble an egg if you have one, then add the rice.',
-      'Toss with soy sauce until the rice is hot and slightly crisp.',
-    ],
-    required: [{ label: 'rice', test: any(isRice, name(/\brice\b/)), max: 1, leftovers: true }],
-    optional: [
-      { label: 'egg', test: isEgg, max: 1 },
-      { label: 'veg', test: isVeg, max: 3 },
-      { label: 'protein', test: isMeat, max: 1 },
-    ],
-  },
-  {
-    id: 'soup',
-    title: 'Everything-in soup',
-    summary: 'Simmer tired vegetables into something warm.',
-    minutes: 35,
-    extras: ['Stock or water', 'Olive oil', 'Salt', 'Pepper'],
-    steps: [
-      'Dice the veg. Soften onion or the firmest veg in oil for 5 minutes.',
-      'Add the rest, cover with stock or water, and simmer 20 minutes.',
-      'Blend for a smooth soup or leave it chunky. Season to taste.',
-    ],
-    required: [{ label: 'veg', test: isVeg, min: 2, max: 5 }],
-    optional: [{ label: 'cream', test: name(/\b(cream|yogh?urt)\b/), max: 1 }],
-  },
-  {
-    id: 'smoothie',
-    title: 'Rescue smoothie',
-    summary: 'Ripe fruit plus milk or yogurt, blended.',
-    minutes: 5,
-    extras: ['Ice (optional)', 'Honey (optional)'],
-    steps: ['Add fruit and milk or yogurt to a blender.', 'Blend until smooth, adding ice or honey to taste.'],
-    required: [
-      { label: 'fruit', test: isFruit, max: 3 },
-      { label: 'milk or yogurt', test: isMilky, max: 1 },
-    ],
-  },
-  {
-    id: 'quesadilla',
-    title: 'Crispy quesadillas',
-    summary: 'Tortillas, cheese, and whatever else is nearby.',
-    minutes: 12,
-    extras: ['Oil or butter'],
-    steps: [
-      'Fill half of each tortilla with cheese and chopped fillings.',
-      'Fold and cook in a lightly oiled pan 2-3 minutes per side until crisp.',
-      'Slice and serve with salsa or sour cream.',
-    ],
-    required: [
-      { label: 'tortillas', test: isTortilla, max: 1 },
-      { label: 'cheese', test: isCheese, max: 1 },
-    ],
-    optional: [
-      { label: 'protein', test: isMeat, max: 1 },
-      { label: 'veg', test: isVeg, max: 2 },
-    ],
-  },
-  {
-    id: 'pasta',
-    title: 'Use-it-up pasta',
-    summary: 'Pasta tossed with sauteed veg and a little cheese.',
-    minutes: 20,
-    extras: ['Olive oil', 'Garlic', 'Salt', 'Pepper'],
-    steps: [
-      'Boil pasta in well-salted water until just tender; save a cup of the water.',
-      'Saute garlic and chopped veg in olive oil until soft.',
-      'Toss the pasta in the pan with a splash of pasta water until glossy.',
-      'Finish with cheese and pepper.',
-    ],
-    required: [{ label: 'pasta', test: isPasta, max: 1 }],
-    optional: [
-      { label: 'veg', test: isVeg, max: 3 },
-      { label: 'cheese', test: isCheese, max: 1 },
-      { label: 'protein', test: any(name(/\b(sausage|bacon|ham|chicken)\b/)), max: 1 },
-    ],
-  },
-  {
-    id: 'salad',
-    title: 'Big fridge salad',
-    summary: 'Greens first, then whatever else needs eating.',
-    minutes: 10,
-    extras: ['Olive oil', 'Vinegar or lemon', 'Salt'],
-    steps: [
-      'Tear the greens into a large bowl.',
-      'Add chopped veg, cheese, and any cooked protein or egg.',
-      'Dress with oil, vinegar or lemon, and salt just before serving.',
-    ],
-    required: [{ label: 'greens', test: isGreens, max: 1 }],
-    optional: [
-      { label: 'veg', test: (i) => isVeg(i) && !isGreens(i), max: 3 },
-      { label: 'cheese', test: isCheese, max: 1 },
-      { label: 'protein', test: any(isMeat, isEgg), max: 1 },
-    ],
-  },
-  {
-    id: 'french-toast',
-    title: 'French toast',
-    summary: 'Day-old bread plus eggs and milk.',
-    minutes: 15,
-    extras: ['Butter', 'Cinnamon', 'Maple syrup (optional)'],
-    steps: [
-      'Whisk eggs with a splash of milk and cinnamon.',
-      'Soak bread slices for a few seconds per side.',
-      'Fry in butter until golden on both sides. Top with fruit or syrup.',
-    ],
-    required: [
-      { label: 'bread', test: isBread, max: 1 },
-      { label: 'eggs', test: isEgg, max: 1 },
-    ],
-    optional: [
-      { label: 'milk', test: name(/\bmilk\b/), max: 1 },
-      { label: 'fruit', test: isFruit, max: 2 },
-    ],
-  },
-  {
-    id: 'roast',
-    title: 'Sheet-pan roast',
-    summary: 'One pan, high heat, minimal cleanup.',
-    minutes: 40,
-    extras: ['Olive oil', 'Salt', 'Pepper', 'Dried herbs (optional)'],
-    steps: [
-      'Heat the oven to 425F / 220C.',
-      'Cut veg and protein into similar-sized pieces, toss with oil, salt, and pepper.',
-      'Roast on a single layer for 25-35 minutes, turning once, until browned and cooked through.',
-    ],
-    required: [{ label: 'veg', test: isVeg, min: 2, max: 4 }],
-    optional: [{ label: 'protein', test: any(isMeat, name(/\b(salmon|fish)\b/)), max: 1 }],
-  },
-  {
-    id: 'tacos',
-    title: 'Quick tacos',
-    summary: 'Tortillas with a savory filling and fresh toppings.',
-    minutes: 20,
-    extras: ['Taco seasoning or cumin', 'Salsa (optional)'],
-    steps: [
-      'Brown the filling with seasoning until cooked through.',
-      'Warm the tortillas in a dry pan.',
-      'Fill and top with chopped veg, cheese, and salsa.',
-    ],
-    required: [
-      { label: 'tortillas', test: isTortilla, max: 1 },
-      { label: 'filling', test: any(isMeat, name(/\b(beans?|tofu)\b/)), max: 1 },
-    ],
-    optional: [
-      { label: 'veg', test: isVeg, max: 2 },
-      { label: 'cheese', test: isCheese, max: 1 },
-    ],
-  },
-  {
-    id: 'grain-bowl',
-    title: 'Grain bowl',
-    summary: 'Rice or quinoa topped with veg and protein.',
-    minutes: 25,
-    extras: ['Olive oil or dressing', 'Salt'],
-    steps: [
-      'Cook or reheat the grain.',
-      'Roast or saute the veg and warm any protein.',
-      'Pile onto the grain and finish with a drizzle of dressing.',
-    ],
-    required: [
-      { label: 'grain', test: isRice, max: 1 },
-      { label: 'veg', test: isVeg, max: 3 },
-    ],
-    optional: [{ label: 'protein', test: any(isMeat, isEgg, name(/\btofu\b/)), max: 1 }],
-  },
+/**
+ * Fills a recipe's slots from the pool, soonest-expiring food first. Null when a required slot
+ * cannot be filled. Two items with the same name count once.
+ */
+interface Entry {
+  item: PantryItem;
+  name: string;
+  /** Position soonest-to-expire first. */
+  rank: number;
+}
+
+/**
+ * The pool soonest-first and grouped by role, worked out once per pool and role index (every recipe
+ * fills from the same ones), so a slot only looks at food that could fill it.
+ */
+const prepared = new WeakMap<RoleIndex, { pool: PantryItem[]; byRole: Map<Role, Entry[]> }>();
+function byRole(pool: PantryItem[], index: RoleIndex): Map<Role, Entry[]> {
+  const cached = prepared.get(index);
+  if (cached && cached.pool === pool) return cached.byRole;
+  const groups = new Map<Role, Entry[]>();
+  sortByExpiry(pool).forEach((item, rank) => {
+    const entry = { item, name: normalizeName(item.name), rank };
+    for (const role of index.get(item.id) ?? []) {
+      const list = groups.get(role);
+      if (list) list.push(entry);
+      else groups.set(role, [entry]);
+    }
+  });
+  prepared.set(index, { pool, byRole: groups });
+  return groups;
+}
+
+export function fillRecipe(recipe: Recipe, pool: PantryItem[], index: RoleIndex = indexRoles(pool)): FilledRecipe | null {
+  const groups = byRole(pool, index);
+  const used = new Set<string>();
+  const slots = new Map<string, PantryItem[]>();
+  const roles = new Set<Role>();
+  const chosen: PantryItem[] = [];
+
+  const take = (slot: Slot, optional = false): boolean => {
+    // Everything with one of the slot's roles, soonest to expire first.
+    const seen = new Set<string>();
+    const candidates: Entry[] = [];
+    for (const role of slot.roles) {
+      for (const entry of groups.get(role) ?? []) {
+        if (seen.has(entry.item.id)) continue;
+        seen.add(entry.item.id);
+        candidates.push(entry);
+      }
+    }
+    if (slot.roles.length > 1) candidates.sort((a, b) => a.rank - b.rank);
+    const names = new Set<string>();
+    const hits: PantryItem[] = [];
+    for (const { item, name } of candidates) {
+      if (used.has(item.id) || names.has(name) || (slot.fresh && FROZEN.test(item.name))) continue;
+      names.add(name);
+      hits.push(item);
+    }
+    const room = optional ? MAX_USES - chosen.length : Infinity;
+    if (hits.length < (slot.min ?? 1) || room < (slot.min ?? 1)) return false;
+    const picked = hits.slice(0, Math.min(slot.max ?? 1, room));
+    for (const item of picked) {
+      used.add(item.id);
+      const have = index.get(item.id);
+      for (const r of slot.roles) if (have?.has(r)) roles.add(r);
+    }
+    slots.set(slot.key, picked);
+    chosen.push(...picked);
+    return true;
+  };
+
+  for (const slot of recipe.needs) if (!take(slot)) return null;
+  if (recipe.anyOf) {
+    // Fill every alternative that can be filled; at least one must be.
+    const filled = recipe.anyOf.map((slot) => take(slot));
+    if (!filled.some(Boolean)) return null;
+  }
+  for (const slot of recipe.optional ?? []) take(slot, true);
+  return { recipe, slots, roles, chosen };
+}
+
+function holds(cond: Cond, filled: FilledRecipe): boolean {
+  const list = Array.isArray(cond) ? cond : [cond];
+  return list.some((c) => (c.startsWith('@') ? filled.roles.has(c.slice(1) as Role) : (filled.slots.get(c)?.length ?? 0) > 0));
+}
+
+function applies(line: Line, filled: FilledRecipe): boolean {
+  if (typeof line === 'string') return true;
+  return (line.if === undefined || holds(line.if, filled)) && (line.unless === undefined || !holds(line.unless, filled));
+}
+
+/** Words that keep their capital in the middle of a sentence. */
+const PROPER = /^(American|Greek|Italian|French|English|Swiss|Monterey|Dijon|Thai|Spanish|Mexican|Japanese|Chinese|Korean|Indian|Brussels|Parma|Serrano|Cumberland|Toulouse|Granny|Yukon|Maris|Kalamata|Black Forest|Philadelphia)\b/;
+
+/** "Bell peppers" reads "bell peppers" mid-sentence; "BBQ sauce" and "Greek yogurt" keep their capitals. */
+export function displayName(name: string): string {
+  const t = name.trim().replace(/\s+/g, ' ');
+  return /^[A-Z][a-z]/.test(t) && !PROPER.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
+}
+
+/** "a", "a and b", "a, b and c". */
+export function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/** Keeps a leading capital when swapping words at the start of a line. */
+function sameCase(original: string, replacement: string): string {
+  return /^[A-Z]/.test(original) ? replacement[0].toUpperCase() + replacement.slice(1) : replacement;
+}
+
+type Rewrite = [RegExp, string | ((match: string, ...groups: string[]) => string)];
+
+const MEATLESS: Rewrite[] = [
+  [/\bfish sauce \(or soy sauce\)|\bfish sauce or soy sauce\b|\bfish sauce\b/gi, (m) => sameCase(m, 'soy sauce')],
+  [/\bWorcestershire sauce\b/gi, (m) => sameCase(m, 'soy sauce')],
+  [/\boyster or hoisin sauce\b/gi, (m) => sameCase(m, 'hoisin sauce')],
+  [/\b(?:(chicken|beef|fish|bone|beef or vegetable|vegetable|veggie) )?(stock|broth)\b/gi, (m, kind?: string) => (kind && /^(vegetable|veggie)$/i.test(kind) ? m : sameCase(m, 'vegetable stock'))],
 ];
 
-function fillSlot(slot: Slot, pool: PantryItem[], used: Set<string>): PantryItem[] {
-  const hits = sortByExpiry(
-    pool.filter((i) => !used.has(i.id) && (slot.leftovers || i.category !== 'leftovers') && slot.test(i)),
-  );
-  if (hits.length < (slot.min ?? 1)) return [];
-  return hits.slice(0, slot.max ?? 2);
+const NO_DAIRY: Rewrite[] = [
+  [/\bbutter or (olive )?oil\b/gi, (m, olive?: string) => sameCase(m, `${olive ?? ''}oil`)],
+  [/\b(olive )?oil or butter\b/gi, (m, olive?: string) => sameCase(m, `${olive ?? ''}oil`)],
+  [/\b(?:(peanut|nut|almond|cashew|vegan|plant|apple|cocoa) )?butter\b/gi, (m, kind?: string) => (kind ? m : sameCase(m, 'vegan butter'))],
+  [/\b(?:(plant|oat|almond|soy|coconut|rice|dairy-free) )?milk\b/gi, (m, kind?: string) => (kind ? m : sameCase(m, 'plant milk'))],
+  [/\b(?:(ice|sour|whipped|coconut|oat|soy|heavy|single|double|whipping) )?cream( cheese)?\b/gi, (m, kind?: string, cheese?: string) => {
+    if (cheese) return sameCase(m, 'dairy-free cream cheese');
+    if (kind && /^(coconut|oat|soy)$/i.test(kind)) return m;
+    if (kind && /^(ice|sour|whipped)$/i.test(kind)) return sameCase(m, `dairy-free ${kind.toLowerCase()} cream`);
+    return sameCase(m, 'oat cream');
+  }],
+  [/\b(?:(dairy-free|coconut|soy|vegan|plant) )?yogh?urt\b/gi, (m, kind?: string) => (kind ? m : sameCase(m, 'dairy-free yogurt'))],
+  [/\bparmesan( or pecorino)?\b/gi, (m) => sameCase(m, 'nutritional yeast')],
+];
+
+const VEGAN_ONLY: Rewrite[] = [
+  [/\bhoney or (maple syrup|brown sugar|sugar)\b/gi, (m, other: string) => sameCase(m, other === 'maple syrup' ? 'maple syrup' : `maple syrup or ${other}`)],
+  [/\bhoney\b/gi, (m) => sameCase(m, 'maple syrup')],
+  [/\b(?:(vegan) )?mayonnaise\b/gi, (m, kind?: string) => (kind ? m : sameCase(m, 'vegan mayonnaise'))],
+];
+
+const GLUTEN_FREE: Rewrite[] = [
+  [/\b(?:(gluten-free) )?(soy sauce|teriyaki sauce|hoisin sauce|oyster or hoisin sauce|Worcestershire sauce|breadcrumbs|gravy granules|flour)\b/gi, (m, gf?: string) => (gf ? m : sameCase(m, `gluten-free ${m.toLowerCase().replace(/^worcestershire/, 'Worcestershire')}`))],
+];
+
+const REWRITES: Record<Diet, Rewrite[]> = {
+  none: [],
+  vegetarian: MEATLESS,
+  vegan: [...MEATLESS, ...NO_DAIRY, ...VEGAN_ONLY],
+  'dairy-free': NO_DAIRY,
+  'gluten-free': GLUTEN_FREE,
+};
+
+/** Recipe wording for a diet: "milk" becomes "plant milk" for vegans, "stock" "vegetable stock" for vegetarians. */
+export function adaptText(text: string, diet: Diet): string {
+  return REWRITES[diet].reduce((t, [re, to]) => t.replace(re, to as (m: string, ...g: string[]) => string), text);
 }
 
-export function localSuggestions(
-  items: PantryItem[],
-  prefs: MealPrefs,
-  now: Date = new Date(),
-  limit = 6,
-): Meal[] {
-  const pool = filterForDiet(suggestible(items, now), prefs.diet);
-  const meals: Meal[] = [];
+const PLACEHOLDER = /\{([\w-]+)(?::(one))?(?:\|([^}]*))?\}/g;
 
-  for (const recipe of RECIPES) {
-    const used = new Set<string>();
-    const chosen: PantryItem[] = [];
-    let feasible = true;
+/** "Lemons" -> "lemon" for "a squeeze of lemon juice". */
+export function singular(name: string): string {
+  return name.replace(/\w+$/, (w) =>
+    /ies$/i.test(w) ? `${w.slice(0, -3)}y` : /(o|ch|sh|x)es$/i.test(w) ? w.slice(0, -2) : /[^s]s$/i.test(w) ? w.slice(0, -1) : w,
+  );
+}
 
-    for (const slot of recipe.required) {
-      const hits = fillSlot(slot, pool, used);
-      if (hits.length === 0) {
-        feasible = false;
-        break;
-      }
-      hits.forEach((h) => used.add(h.id));
-      chosen.push(...hits);
-    }
-    if (!feasible) continue;
-
-    for (const slot of recipe.optional ?? []) {
-      const hits = fillSlot(slot, pool, used);
-      hits.forEach((h) => used.add(h.id));
-      chosen.push(...hits);
-    }
-
-    meals.push({
-      id: `local-${recipe.id}`,
-      title: recipe.title,
-      summary: recipe.summary,
-      minutes: recipe.minutes,
-      servings: prefs.servings,
-      uses: uniqueUses(chosen.map((c) => c.name)),
-      extras: recipe.extras,
-      steps: recipe.steps,
-      source: 'local',
-    });
+/**
+ * A recipe line for this meal: placeholders become the foods used ("{veg}" -> "spinach and bell
+ * peppers", "{stock|stock}" -> the tracked broth or the word "stock"), and the wording suits the diet.
+ * Names the person typed are never rewritten.
+ */
+export function renderLine(text: string, filled: FilledRecipe, diet: Diet): string {
+  const parts: string[] = [];
+  let last = 0;
+  for (const m of text.matchAll(PLACEHOLDER)) {
+    parts.push(adaptText(text.slice(last, m.index), diet));
+    const items = filled.slots.get(m[1]) ?? [];
+    const names = uniqueUses(items.map((i) => (m[2] ? singular(displayName(i.name)) : displayName(i.name))));
+    parts.push(items.length > 0 ? listNames(uniqueUses(names)) : adaptText(m[3] ?? '', diet));
+    last = m.index + m[0].length;
   }
+  parts.push(adaptText(text.slice(last), diet));
+  return parts.join('');
+}
 
-  return rankMeals(meals, pool, now).slice(0, limit);
+const lineText = (line: Line) => (typeof line === 'string' ? line : line.text);
+
+/** Turns a filled recipe into a meal suggestion. */
+export function toMeal(filled: FilledRecipe, prefs: MealPrefs): Meal {
+  const { recipe } = filled;
+  const render = (lines: Line[]) => lines.filter((l) => applies(l, filled)).map((l) => renderLine(lineText(l), filled, prefs.diet));
+  // "Garlic" is not an extra to buy when tracked garlic fills the garlic slot.
+  const tracked = (line: Line) => (filled.slots.get(lineText(line).toLowerCase())?.length ?? 0) > 0;
+  return {
+    id: `local-${recipe.id}`,
+    title: recipe.title,
+    summary: adaptText(recipe.summary, prefs.diet),
+    minutes: recipe.minutes,
+    servings: prefs.servings,
+    uses: uniqueUses(filled.chosen.map((c) => c.name)),
+    extras: render(recipe.extras.filter((l) => !tracked(l))),
+    steps: render(recipe.steps),
+    source: 'local',
+  };
+}
+
+/** Main dishes first when two ideas use the food equally well. */
+const COURSE_ORDER: Record<Course, number> = { main: 0, breakfast: 1, side: 2, snack: 2, dessert: 3, drink: 3 };
+/** Ideas per page, and how many of one family a page may hold. */
+const PAGE = 6;
+const PER_FAMILY = 2;
+
+/**
+ * Offline meal ideas from the built-in recipes, best first: the ones that use the most food that is
+ * about to expire. Each page of six holds at most two of a kind (two pastas, two soups), so the list
+ * stays varied; within a page the order is strictly by score.
+ */
+export function localSuggestions(items: PantryItem[], prefs: MealPrefs, now: Date = new Date(), limit = PAGE): Meal[] {
+  const pool = filterForDiet(suggestible(items, now), prefs.diet);
+  if (pool.length === 0) return [];
+  const index = indexRoles(pool);
+
+  // The same score as mealScore (first tracked item with each name), without searching the pool per use.
+  const firstByName = new Map<string, PantryItem>();
+  for (const i of pool) {
+    const n = normalizeName(i.name);
+    if (n && !firstByName.has(n)) firstByName.set(n, i);
+  }
+  const score = (uses: string[]) => {
+    const seen = new Set<string>();
+    let total = 0;
+    for (const use of uses) {
+      const item = firstByName.get(normalizeName(use));
+      if (!item || seen.has(item.id)) continue;
+      seen.add(item.id);
+      total += urgencyWeight(daysLeft(item, now));
+    }
+    return total;
+  };
+
+  const ranked = RECIPES.map((recipe, order) => ({ recipe, order, filled: fillRecipe(recipe, pool, index) }))
+    .filter((r): r is { recipe: Recipe; order: number; filled: FilledRecipe } => r.filled !== null)
+    .map((r) => {
+      const uses = uniqueUses(r.filled.chosen.map((c) => c.name));
+      return { ...r, uses: uses.length, score: score(uses) };
+    })
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        COURSE_ORDER[a.recipe.course] - COURSE_ORDER[b.recipe.course] ||
+        b.uses - a.uses ||
+        a.order - b.order,
+    );
+
+  type Ranked = (typeof ranked)[number];
+  const position = new Map<Ranked, number>(ranked.map((r, i) => [r, i]));
+  const out: Ranked[] = [];
+  let rest = ranked;
+  while (out.length < limit && rest.length > 0) {
+    const page = new Set<Ranked>();
+    const perFamily = new Map<string, number>();
+    for (const r of rest) {
+      if (page.size >= PAGE) break;
+      const n = perFamily.get(r.recipe.family) ?? 0;
+      if (n >= PER_FAMILY) continue;
+      perFamily.set(r.recipe.family, n + 1);
+      page.add(r);
+    }
+    // Not enough variety to fill the page: top it up with the best of the rest.
+    for (const r of rest) {
+      if (page.size >= PAGE) break;
+      page.add(r);
+    }
+    out.push(...[...page].sort((a, b) => position.get(a)! - position.get(b)!));
+    rest = rest.filter((r) => !page.has(r));
+  }
+  // Only the ideas returned are written out.
+  return out.slice(0, limit).map((r) => toMeal(r.filled, prefs));
+}
+
+// ---------------------------------------------------------------------------
+// AI ideas: a last check
+// ---------------------------------------------------------------------------
+
+/** Roles of food that only belongs in desserts, sweet breakfasts and drinks. */
+const SWEET_ONLY = new Set<Role>(['ice-cream', 'custard', 'cake', 'cookies', 'chocolate', 'chocolate-spread', 'jam', 'sweetener', 'whipped-cream', 'yogurt-sweet']);
+const SAVORY_TITLE =
+  /\b(soups?|stews?|chowder|salads?|pasta|spaghetti|linguine|penne|noodles?|ramen|curry|dal|stir[- ]?fry|fried rice|risotto|pizzas?|tacos?|burritos?|quesadillas?|enchiladas?|fajitas?|nachos|omelet(te)?s?|frittata|shakshuka|chili|casserole|traybake|roast|sandwich(es)?|wraps?|burgers?|hash|gratin|lasagn[ae]|skillet)\b/i;
+const SWEET_TITLE =
+  /\b(ice cream|sundaes?|cakes?|pies?|crumble|crisp|cobbler|cookies?|desserts?|sweet|chocolate|pudding|smoothies?|shakes?|parfait|waffles?|pancakes?|french toast|muffins?|trifle|tarts?|compote|fruit salad|affogato|float|bark|nice cream)\b/i;
+
+/**
+ * False for an AI idea that puts a dessert-only food into a savoury dish ("Ice cream in vegetable
+ * soup"). The prompt forbids it; this catches the rare idea that slips through.
+ */
+export function plausibleMeal(meal: Pick<Meal, 'title' | 'uses'>, items: PantryItem[]): boolean {
+  if (!SAVORY_TITLE.test(meal.title) || SWEET_TITLE.test(meal.title)) return true;
+  return !meal.uses.some((name) => {
+    const item = matchTracked(name, items);
+    if (!item) return false;
+    const roles = rolesFor(item);
+    return roles.length > 0 && roles.every((r) => SWEET_ONLY.has(r));
+  });
 }

@@ -55,10 +55,11 @@ export default function Pulse() {
   const score = freshnessScore(summary);
   const expired = summary.counts.expired;
   const upNext = sortByExpiry(live).slice(0, 5);
-  const prefs = { diet, servings };
+  const prefs = useMemo(() => ({ diet, servings }), [diet, servings]);
   // Prefer the AI's idea when it was made for exactly this fridge; otherwise a built-in one.
   const aiFresh = (isDemoMode || aiConsent) && cache.key === suggestionKey(items, prefs, now) && cache.meals.length > 0;
-  const idea = aiFresh ? cache.meals[0] : localSuggestions(items, prefs, now, 1)[0];
+  const builtIn = useMemo(() => (aiFresh ? undefined : localSuggestions(items, prefs, now, 1)[0]), [aiFresh, items, prefs, now]);
+  const idea = aiFresh ? cache.meals[0] : builtIn;
   const impact = useMemo(() => computeImpact(items, lifetime, now), [items, lifetime, now]);
   const dateLine = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 

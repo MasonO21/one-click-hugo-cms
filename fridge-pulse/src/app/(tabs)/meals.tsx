@@ -17,12 +17,16 @@ import { resolveItems } from '../../store/actions';
 import { useBurst } from '../../store/burst';
 import { fetchMeals, friendlyError, isDemoMode } from '../../lib/api';
 import { SCREENSHOT_MODE } from '../../lib/config';
-import { filterForDiet, localSuggestions, matchTracked, rankMeals, suggestible, suggestionKey, uniqueUses } from '../../lib/meals';
+import { filterForDiet, localSuggestions, matchTracked, plausibleMeal, rankMeals, suggestible, suggestionKey, uniqueUses } from '../../lib/meals';
 import type { Meal, PantryItem } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
 import { useSettings } from '../../store/settings';
 import { useTheme } from '../../theme';
+
+/** Built-in ideas per page, and the most worked out at once. */
+const LOCAL_PAGE = 6;
+const LOCAL_MAX = 120;
 
 export default function Meals() {
   const { c } = useTheme();
@@ -50,7 +54,11 @@ export default function Meals() {
   const error = failure?.key === key ? failure.message : null;
 
   // Instant offline ideas so the tab is never empty while (or instead of) waiting on the AI.
-  const fallback = useMemo(() => localSuggestions(items, prefs, new Date()), [items, prefs]);
+  // Every built-in idea that fits, shown a page at a time.
+  const allLocal = useMemo(() => localSuggestions(items, prefs, new Date(), LOCAL_MAX), [items, prefs]);
+  const [localPages, setLocalPages] = useState({ key: '', pages: 1 });
+  const pages = localPages.key === key ? localPages.pages : 1;
+  const fallback = allLocal.slice(0, LOCAL_PAGE * pages);
   const meals: Meal[] = aiAllowed && fresh && cache.meals.length > 0 ? cache.meals : fallback;
   const showingFallback = !(aiAllowed && fresh && cache.meals.length > 0);
 
@@ -70,7 +78,7 @@ export default function Meals() {
         const exclude = more ? useMealsCache.getState().meals.map((m) => m.title) : [];
         const result = await fetchMeals({ userId, items: candidates, prefs, exclude });
         if (latest.current !== requestKey) return;
-        const ranked = rankMeals(result, candidates);
+        const ranked = rankMeals(result.filter((m) => plausibleMeal(m, candidates)), candidates);
         if (ranked.length === 0) setFailure({ key: requestKey, message: 'No ideas came back. Try again in a moment.' });
         else useMealsCache.getState().setResult(requestKey, ranked);
       } catch (e) {
@@ -171,13 +179,21 @@ export default function Meals() {
             </View>
           )}
 
-          {!showingFallback && !isDemoMode ? (
+          {!showingFallback ? (
             <Button
               label="More ideas"
               variant="secondary"
               icon="refresh"
               loading={loading}
               onPress={() => void load(true)}
+            />
+          ) : allLocal.length > fallback.length ? (
+            <Button
+              testID="more-local-ideas"
+              label="More ideas"
+              variant="secondary"
+              icon="add"
+              onPress={() => setLocalPages({ key, pages: pages + 1 })}
             />
           ) : null}
         </>

@@ -1,3 +1,4 @@
+import { FOOD_CATALOG } from './foodCatalog';
 import type { Category, StorageLocation } from './types';
 
 /**
@@ -390,32 +391,177 @@ export function freezesWell(name: string, category: Category): boolean {
   return category !== 'condiments' && category !== 'drinks';
 }
 
-/** Best-effort category guess for manually typed items. */
+// ---------------------------------------------------------------------------
+// Categories
+// ---------------------------------------------------------------------------
+
+/** Lower case, no accents, punctuation as spaces: "Crème fraîche" -> "creme fraiche". */
+function plain(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9%' ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** The last word without its plural ending, so "tomatoes" finds "Tomato" and "berries" finds "Berry". */
+function singularLast(text: string): string {
+  return text.replace(/\w+$/, (w) =>
+    w.length <= 3 ? w : /ies$/.test(w) ? `${w.slice(0, -3)}y` : /(oes|ches|shes|xes)$/.test(w) ? w.slice(0, -2) : /[^s]s$/.test(w) ? w.slice(0, -1) : w,
+  );
+}
+
+const escapeRe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** A pattern for a catalog name that also matches its plural ("tomato" -> tomato, tomatoes). */
+function catalogPattern(name: string): RegExp {
+  const base = escapeRe(singularLast(plain(name)));
+  const body = /y$/.test(base) ? `${base.slice(0, -1)}(y|ies)` : `${base}(s|es)?`;
+  return new RegExp(`(?:^|[^a-z0-9])${body}(?![a-z0-9])`, 'g');
+}
+
+/**
+ * Checked before anything else: a modifier at the front decides ("canned peaches" are canned, "pickled
+ * onions" a condiment), and meat-free versions of meat are not meat.
+ */
+const CATEGORY_FIRST: [RegExp, Category][] = [
+  [/^leftovers?\b/, 'leftovers'],
+  [/\b(vegan|veggie|vegetarian|plant based|meat free|meatless|quorn|beyond|impossible|tofu|seitan)\b.*\b(chicken|beef|pork|sausages?|bacon|mince|burgers?|patties|nuggets|meatballs|hot dogs?|ham|turkey|steak|meat|crumbles)\b|\bquorn\b/, 'other'],
+  [/^(canned|tinned)\b|\b(can|tin) of\b|\bin (brine|oil|olive oil|sunflower oil|spring water|water|tomato sauce|syrup|light syrup|own juice|juice)$/, 'canned'],
+  [/\bfrozen\b.*\b(pizzas?|meals?|dinners?|lasagn[ae]|burritos?|entrees?|pies?|curry)\b/, 'other'],
+  [/^pickled\b/, 'condiments'],
+  [/^dried (herbs|oregano|basil|parsley|thyme|rosemary|dill|mint|sage|chives|chil(l)?ies|chil(l)?i)\b/, 'condiments'],
+  [/^dried (fruit|apricots?|figs?|mango|cranberr(y|ies)|cherr(y|ies)|apples?|bananas?|blueberr(y|ies)|dates|plums?)\b/, 'snacks'],
+];
+
+/**
+ * Compound names whose last word would mislead ("fish cakes" are not cake, "lemon juice" is not a
+ * drink), checked with the catalog names and the general rules below.
+ */
+const CATEGORY_COMPOUNDS: [RegExp, Category][] = [
+  [/\b(ice cream|gelato|frozen yogh?urt)( sandwich(es)?| bars?| cones?| tubs?)?\b/, 'dairy'],
+  [/\b(pepper|monterey) ?jack\b/, 'dairy'],
+  [/\b(peanut|almond|cashew|hazelnut|nut|seed|sunflower|apple) butter\b/, 'condiments'],
+  [/\bcoconut milk (beverage|drink)s?\b/, 'drinks'],
+  [/\bcoconut (milk|cream)\b|\bcreamed coconut\b/, 'canned'],
+  [/\b(tomato (paste|puree)|passata)\b|\b(chopped|diced|crushed|whole peeled|peeled plum|stewed) tomato(es)?\b/, 'canned'],
+  [/\bdried (beans|lentils|chickpeas|split peas)\b/, 'grains'],
+  [/\bcoffee (beans|grounds|pods|capsules)\b/, 'drinks'],
+  [/\bground (ginger|cinnamon|cumin|coriander|nutmeg|turmeric|cloves|allspice|cardamom|paprika)\b/, 'condiments'],
+  [/\bbaking (soda|powder)\b/, 'condiments'],
+  [/\b(cauliflower|broccoli) rice\b|\b(zucchini|courgette|veggie|vegetable) (noodles|spaghetti)\b|\bzoodles\b/, 'produce'],
+  [/\bbread (and butter )?pudding\b/, 'bakery'],
+  [/\bqueso (fresco|blanco)\b/, 'dairy'],  [/\b(fish|crab|salmon|tuna|cod|shrimp|prawn) ?cakes?\b/, 'seafood'],
+  [/\b(salmon|tuna|swordfish|cod|halibut|fish) (steaks?|fillets?|portions?)\b/, 'seafood'],
+  [/\bcauliflower steaks?\b/, 'produce'],
+  [/\b(lemon|lime) juice\b/, 'condiments'],
+  [/\b(black|white|ground|cracked|cayenne|lemon) pepper\b/, 'condiments'],
+  [/\bpeanut butter cups\b/, 'snacks'],
+  [/\b(oat|almond|soy|soya|rice|cashew|hemp|pea|macadamia|hazelnut|coconut) (milk|drink|beverage)s?\b/, 'drinks'],
+  [/\b(veggie|vegan|vegetable|bean|black bean|plant based|quinoa|mushroom|falafel) (burgers?|patties)\b/, 'other'],
+  [/\bmilkshakes?\b/, 'drinks'],
+  [/\bmac(aroni)? (and|n) cheese\b|\b(fried rice|mashed potato(es)?|potato salad|pasta salad|coleslaw|egg salad|tuna salad|chicken salad)\b/, 'leftovers'],
+  [/\b(spring|egg) rolls?\b|\b(dumplings?|samosas?|gyoza|pot ?stickers?)\b/, 'other'],
+  [/\b(sweet potato )?fries\b|\bhash browns?\b|\btater tots\b|\bonion rings\b|\bpotato wedges\b/, 'other'],
+  [/\b(sorbet|popsicles?|ice pops?|ice lollies)\b/, 'other'],
+  [/\bcreamer\b/, 'dairy'],
+  [/\b(green|runner|string|french|broad|fava|wax|yellow) beans\b/, 'produce'],
+  [/\bwater chestnuts\b|\bbamboo shoots\b/, 'canned'],
+  [/\b(stock|broth|bouillon)( cubes?| pots?)?\b/, 'canned'],
+  [/\b(pie crust|puff pastry|filo|phyllo|shortcrust)\b/, 'bakery'],
+  [/\b(chocolate|hazelnut) spread\b/, 'condiments'],
+];
+
+/** Word rules for names the catalog does not know. */
+const CATEGORY_WORDS: [RegExp, Category][] = [
+  [/\b(leftovers?|soups?|stews?|chowder|bisque|curry|curries|chili con carne|lasagn[ae]|casserole|takeout|takeaway|pizzas?|quiche|risotto|paella|biryani|pad thai|stir fry|meatloaf|pot roast|enchiladas?|burritos?|sushi|sandwich(es)?)\b/, 'leftovers'],
+  [/\b(chips|crisps|crackers|cookies|biscuits|popcorn|pretzels|chocolates?|candy|candies|sweets|gumm(y|ies)|jelly beans|marshmallows|rice cakes|bars|snacks|jerky|biltong|pork rinds|trail mix|nuts|peanuts|almonds|cashews|pistachios|walnuts|pecans|hazelnuts|macadamias?|seeds|raisins|sultanas|prunes|dried fruit)\b/, 'snacks'],
+  [/\b(juice|smoothies?|lemonade|coffee|espresso|tea|wine|beer|lager|ale|cider|prosecco|champagne|kombucha|soda|cola|water|energy drinks?|sports drinks?)\b/, 'drinks'],
+  [/\b(\w+ sauce|sauces?|ketchup|mayo|mayonnaise|aioli|dressing|vinaigrette|ranch|jam|jelly|marmalade|preserves|curd|honey|syrup|molasses|treacle|hummus|houmous|salsa|pesto|chutney|relish|oils?|vinegar|salt|sugar|peppercorns|spices?|seasoning|rub|marinade|powder|flakes|mustard|tahini|miso|gochujang|harissa|sriracha|tabasco|worcestershire|paste|dips?|guacamole|tzatziki|pico de gallo|queso|pickles?|gherkins?|kimchi|sauerkraut|olives?|capers|extract|essence|gravy|yeast|baking soda|baking powder|cornstarch|cornflour|cocoa)\b/, 'condiments'],
+  [/\b(milk|buttermilk|yogh?urt|skyr|labneh|quark|kefir|cheeses?|cheddar|mozzarella|burrata|parmesan|pecorino|feta|brie|camembert|gouda|edam|gruyere|emmental|provolone|havarti|manchego|gorgonzola|stilton|roquefort|ricotta|mascarpone|halloumi|paneer|butter|margarine|ghee|cream|half and half|creme fraiche|custard|pudding|eggs?)\b/, 'dairy'],
+  [/\b(chicken|beef|pork|steaks?|bacon|sausages?|ham|turkey|lamb|veal|venison|duck|goose|mince|salami|pepperoni|prosciutto|chorizo|pancetta|meatballs?|burgers?|patties|ribs|brisket|hot dogs?|frankfurters?|bratwursts?|kielbasa|liver|gammon|pastrami|bologna|mortadella|bresaola|soppressata|deli meats?|lunch ?meats?|cold cuts)\b/, 'meat'],
+  [/\b(fish|salmon|tuna|cod|haddock|pollock|tilapia|halibut|trout|bass|bream|snapper|mackerel|sardines?|anchov(y|ies)|herrings?|kippers?|shrimps?|prawns?|scallops?|crab|lobster|mussels|clams|oysters|squid|calamari|octopus|seafood|caviar|roe)\b/, 'seafood'],
+  [/\b(bread|loaf|rolls?|buns?|bagels?|baguettes?|ciabatta|focaccia|croissants?|brioche|muffins?|crumpets?|scones?|cakes?|cupcakes?|brownies?|donuts?|doughnuts?|pastr(y|ies)|pies?|tarts?|cheesecakes?|tortillas?|taco shells?|tostadas?|wraps?|pitas?|naan|flatbreads?|waffles?|pancakes|crepes|dough)\b/, 'bakery'],
+  [/\b(rice|pasta|spaghetti|penne|macaroni|fusilli|linguine|fettuccine|rigatoni|orzo|noodles?|ramen|udon|soba|quinoa|couscous|bulgur|barley|farro|oats|oatmeal|porridge|cereal|cornflakes|granola|muesli|flour|breadcrumbs|panko|lentils?|split peas|polenta|cornmeal|semolina|gnocchi|ravioli|tortellini)\b/, 'grains'],
+  [/\b(beans|chickpeas)\b/, 'canned'],
+  [
+    /\b(fruits?|veg|veggies|vegetables?|lettuce|greens|salad|spinach|kale|chard|cabbages?|bok choy|pak choi|tomato(es)?|cucumbers?|peppers?|capsicums?|chil(l)?ies|chil(l)?is?|jalapenos?|carrots?|broccoli|cauliflower|onions?|scallions?|shallots?|garlic|ginger|potato(es)?|squash|pumpkins?|zucchinis?|courgettes?|aubergines?|eggplants?|mushrooms?|herbs?|basil|parsley|cilantro|coriander|dill|mint|chives|thyme|rosemary|sage|oregano|celery|fennel|leeks?|asparagus|artichokes?|okra|corn|sweetcorn|peas|edamame|beets?|beetroots?|radish(es)?|turnips?|parsnips?|yams?|arugula|rocket|watercress|apples?|apricots?|bananas?|plantains?|\w*berry|\w*berries|cherr(y|ies)|grapes?|lemons?|limes?|oranges?|clementines?|mandarins?|tangerines?|satsumas?|\w*melons?|cantaloupes?|mango(es|s)?|papayas?|pineapples?|peach(es)?|nectarines?|pears?|plums?|figs?|pomegranates?|kiwis?|coconuts?|rhubarb|avocados?|sprouts|shoots|microgreens)\b|\w+fruit\b/,
+    'produce',
+  ],
+];
+
+interface CategoryRule {
+  re: RegExp;
+  category: Category;
+}
+
+const global = (re: RegExp) => new RegExp(re.source, 'g');
+
+let categoryTable: { exact: Map<string, Category>; rules: CategoryRule[] } | null = null;
+
+/** Built on first use: the catalog names (longest first), between the compounds and the word rules. */
+function categories() {
+  if (!categoryTable) {
+    const exact = new Map(FOOD_CATALOG.map((f) => [singularLast(plain(f.name)), f.category]));
+    const catalog = [...FOOD_CATALOG].sort((a, b) => b.name.length - a.name.length).map((f) => ({ re: catalogPattern(f.name), category: f.category }));
+    categoryTable = {
+      exact,
+      rules: [
+        ...CATEGORY_COMPOUNDS.map(([re, category]) => ({ re: global(re), category })),
+        ...catalog,
+        ...CATEGORY_WORDS.map(([re, category]) => ({ re: global(re), category })),
+      ],
+    };
+  }
+  return categoryTable;
+}
+
+/** The rule whose match ends furthest right wins: a name's last word says what it is. */
+function rightmost(text: string, rules: CategoryRule[]): Category | undefined {
+  let best: Category | undefined;
+  let bestEnd = -1;
+  for (const { re, category } of rules) {
+    re.lastIndex = 0;
+    let end = -1;
+    for (const m of text.matchAll(re)) end = Math.max(end, m.index + m[0].length);
+    if (end > bestEnd) {
+      bestEnd = end;
+      best = category;
+    }
+  }
+  return best;
+}
+
+/** The catalog's category for a known food name ("Oat milk" is a drink), ignoring case and plurals. */
+export function catalogCategory(name: string): Category | undefined {
+  return learnedFood(name)?.category ?? categories().exact.get(singularLast(plain(name)));
+}
+
+/**
+ * The category from the word rules alone, without the catalog: what an unfamiliar food gets. Exported
+ * so the tests can check the rules agree with the catalog.
+ */
+export function ruleCategory(name: string): Category {
+  const text = plain(name);
+  return (
+    CATEGORY_FIRST.find(([re]) => re.test(text))?.[1] ??
+    rightmost(text, [...CATEGORY_COMPOUNDS, ...CATEGORY_WORDS].map(([re, category]) => ({ re: global(re), category }))) ??
+    'other'
+  );
+}
+
+/**
+ * Best guess at a typed or scanned food's category: a taught food or catalog name first, then the
+ * catalog name it ends with ("organic baby spinach", "honey roast ham"), then word rules.
+ */
 export function guessCategory(name: string): Category {
-  const taught = learnedFood(name);
-  if (taught) return taught.category;
-  const lower = name.toLowerCase();
-  const rules: [RegExp, Category][] = [
-    // Compound names that contain a misleading word ("peanut butter" is not dairy).
-    [/\b((peanut|almond|cashew|hazelnut|nut|seed|apple) butter|\w+ sauce|ketchup|mayo|mayonnaise|dressing|jam|honey|syrup|hummus|salsa|pesto|chutney|oil|vinegar|salt|sugar(?! snap)|black pepper)\b/, 'condiments'],
-    [/\b(ice cream|pepper ?jack|monterey jack|frozen yogh?urt)\b/, 'dairy'],
-    [/\b(soup|stew|curry|leftover|cooked|takeout|lasagn[ae]|casserole)\b/, 'leftovers'],
-    [/\b(chips|crisps|crackers|cookies|popcorn|pretzels|chocolate(?! milk)|rice cakes?|granola bars?)\b/, 'snacks'],
-    [/\b(juice|smoothie|lemonade|coffee|tea|wine|beer|oat milk|almond milk|soy milk)\b/, 'drinks'],
-    [/\b(egg noodles|noodles?|pasta|spaghetti)\b/, 'grains'],
-    [/\b(lettuce|spinach|kale|tomato|cucumber|pepper|carrot|broccoli|onion|garlic|potato|apple|banana|berr|lemon|lime|avocado|mushroom|herb|celery|cabbage|fruit|veg)/, 'produce'],
-    [/\b(milk|yogh?urt|cheese|butter|cream|eggs?|kefir)\b/, 'dairy'],
-    [/\b(chicken|beef|pork|steak|bacon|sausage|ham|turkey|lamb|deli)\b/, 'meat'],
-    [/\b(salmon|fish|shrimp|prawn|cod|tuna|scallop)\b/, 'seafood'],
-    [/\b(bread|bagel|bun|roll|tortilla|wrap|pita|cake|muffin)\b/, 'bakery'],
-    [/\b(leftover|cooked|takeout|soup|stew|curry)\b/, 'leftovers'],
-    [/\b(juice|soda|water|beer|wine|coffee|tea|kombucha)\b/, 'drinks'],
-    [/\b(ketchup|mustard|mayo|sauce|jam|dressing|vinegar|oil|spice)\b/, 'condiments'],
-    [/\b(rice|pasta|noodle|quinoa|oats?|cereal|flour|couscous|beans?|lentil)\b/, 'grains'],
-    [/\b(canned|can of|tinned)\b/, 'canned'],
-    [/\b(chips|crackers|cookies|nuts|granola|snack|chocolate)\b/, 'snacks'],
-  ];
-  return rules.find(([re]) => re.test(lower))?.[1] ?? 'other';
+  const known = catalogCategory(name);
+  if (known) return known;
+  const text = plain(name);
+  if (!text) return 'other';
+  return CATEGORY_FIRST.find(([re]) => re.test(text))?.[1] ?? rightmost(text, categories().rules) ?? 'other';
 }
 
 const COUNTER_PRODUCE =

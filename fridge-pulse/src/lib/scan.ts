@@ -1,6 +1,6 @@
 import { addDays, daysBetween, isValidISODate, todayISO } from './dates';
 import { normalizeName } from './expiry';
-import { estimateShelfLifeDays, knownShelfLifeDays, MAX_SHELF_LIFE_DAYS } from './shelfLife';
+import { catalogCategory, estimateShelfLifeDays, guessCategory, knownShelfLifeDays, MAX_SHELF_LIFE_DAYS } from './shelfLife';
 import {
   CATEGORIES,
   type Category,
@@ -90,7 +90,8 @@ export function toDrafts(
     if (seen.has(norm)) continue;
     seen.add(norm);
 
-    const category: Category = isCategory(raw.category) ? raw.category : 'other';
+    // A food the app knows keeps its usual category, so oat milk is always filed with the drinks.
+    const category: Category = catalogCategory(name) ?? (isCategory(raw.category) ? raw.category : guessCategory(name));
 
     let expiresOn: string;
     let expirySource: ExpirySource;

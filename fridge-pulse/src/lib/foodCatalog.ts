@@ -23,7 +23,7 @@ const GROUPS: [Category, string][] = [
   ],
   [
     'dairy',
-    'Milk|Whole milk|Skim milk|Semi-skimmed milk|2% milk|Lactose-free milk|Oat milk|Almond milk|Soy milk|Buttermilk|Heavy cream|Whipping cream|Double cream|Single cream|Half and half|Sour cream|Crème fraîche|Yogurt|Greek yogurt|Plain yogurt|Kefir|Butter|Unsalted butter|Margarine|Eggs|Free-range eggs|' +
+    'Milk|Whole milk|Skim milk|Semi-skimmed milk|2% milk|Lactose-free milk|Buttermilk|Heavy cream|Whipping cream|Double cream|Single cream|Half and half|Sour cream|Crème fraîche|Yogurt|Greek yogurt|Plain yogurt|Kefir|Butter|Unsalted butter|Margarine|Eggs|Free-range eggs|' +
       'Cheese|Cheddar cheese|Mozzarella|Parmesan|Feta|Goat cheese|Brie|Camembert|Swiss cheese|Gouda|Halloumi|Cottage cheese|Cream cheese|Ricotta|Mascarpone|Blue cheese|Provolone|Monterey Jack|Pepper jack|String cheese|Shredded cheese|Sliced cheese|American cheese|' +
       'Ice cream|Frozen yogurt|Custard|Pudding',
   ],
@@ -41,11 +41,11 @@ const GROUPS: [Category, string][] = [
   ],
   [
     'leftovers',
-    'Leftovers|Leftover pizza|Leftover pasta|Leftover rice|Leftover curry|Soup|Chicken soup|Stew|Lasagna|Casserole|Takeout|Pizza|Frozen pizza',
+    'Leftovers|Leftover pizza|Leftover pasta|Leftover rice|Leftover curry|Soup|Chicken soup|Stew|Lasagna|Casserole|Takeout|Pizza',
   ],
   [
     'drinks',
-    'Orange juice|Apple juice|Cranberry juice|Lemonade|Iced tea|Coffee|Ground coffee|Coffee beans|Cold brew coffee|Tea|Green tea|Sparkling water|Soda|Kombucha|Coconut water|Smoothie|Beer|White wine|Red wine|Rosé wine|Prosecco',
+    'Oat milk|Almond milk|Soy milk|Orange juice|Apple juice|Cranberry juice|Lemonade|Iced tea|Coffee|Ground coffee|Coffee beans|Cold brew coffee|Tea|Green tea|Sparkling water|Soda|Kombucha|Coconut water|Smoothie|Beer|White wine|Red wine|Rosé wine|Prosecco',
   ],
   [
     'condiments',
@@ -63,7 +63,7 @@ const GROUPS: [Category, string][] = [
     'snacks',
     'Crackers|Potato chips|Crisps|Tortilla chips|Pretzels|Popcorn|Cookies|Granola bars|Protein bars|Dark chocolate|Milk chocolate|Almonds|Cashews|Walnuts|Peanuts|Pistachios|Mixed nuts|Trail mix|Raisins|Rice cakes',
   ],
-  ['other', 'Tofu|Tempeh|Veggie burgers'],
+  ['other', 'Tofu|Tempeh|Veggie burgers|Frozen pizza'],
 ];
 
 const STAPLES = new Set(

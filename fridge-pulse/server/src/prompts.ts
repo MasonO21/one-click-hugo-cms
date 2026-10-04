@@ -41,6 +41,7 @@ Rules:
 - Suggest 5 different meals, ordered best first. Prioritise ingredients with the lowest daysLeft, and try to use at least one ingredient with daysLeft of 3 or less in every meal.
 - "uses" lists tracked ingredients the meal uses, copied exactly as named in the list. Anything else goes in "extras": pantry staples (oil, salt, pepper, common spices, water) and any other ingredient not in the list. Prefer meals needing 4 or fewer extras.
 - Follow the diet strictly. vegetarian: no meat or fish. vegan: no animal products. gluten-free: no gluten. dairy-free: no dairy. Do not use a tracked ingredient that conflicts with the diet.
+- Use every ingredient the way a cook would. Sweet foods (ice cream, frozen yogurt, custard, pudding, cake, cookies, chocolate, jam, syrup, sweetened or flavoured yogurt) belong only in desserts, drinks and sweet breakfasts, never in soups, salads, pasta, curries, stir-fries or other savoury dishes. Leftovers and ready meals are eaten as they are, not cooked into a new dish, unless they are plain cooked rice, pasta, potatoes or meat. It is better to leave a tracked ingredient out than to force it into a meal where it does not belong.
 - "servings" equals the requested servings. "minutes" is realistic total time.
 - "steps": 3 to 8 short imperative steps with times and temperatures. Cook meat, poultry and fish thoroughly.
 - "summary" is one short sentence.

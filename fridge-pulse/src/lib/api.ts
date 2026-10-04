@@ -161,7 +161,7 @@ const strings = (v: unknown, max: number): string[] =>
 export const MAX_MEAL_ITEMS = 80;
 
 export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: MealsRequest): Promise<Meal[]> {
-  if (isDemoMode) return demoMeals(all, prefs);
+  if (isDemoMode) return demoMeals(all, prefs, exclude);
   const now = new Date();
   // The soonest to expire matter most; a very full pantry must not make every request fail.
   const items = sortByExpiry(all).slice(0, MAX_MEAL_ITEMS);

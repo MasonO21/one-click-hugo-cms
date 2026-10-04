@@ -54,6 +54,7 @@ The app follows the brand sheet (`docs/brand.md`): a dark neon interface in Puls
 - **Freeze it.** When food that freezes well is due within three days, its detail screen offers to move it to the freezer, with the new date (chicken: about 9 months). Foods that freeze badly (salad leaves, eggs in the shell, mayonnaise, soft cheese) are never offered.
 - **Keep it fresh.** Each item shows one or two storage tips from USDA / FSIS / FDA consumer advice: raw poultry on the bottom shelf, cut mould from hard cheese but bin soft cheese, keep basil out of the fridge, and so on.
 - **I made this.** Open a meal idea and tap "I made this" to mark every tracked ingredient it used as used, with one Undo.
+- **184 built-in recipes.** Without AI (or offline) the Meals tab picks from a library of omelets, curries, soups, salads, pasta, tacos, traybakes, sides, snacks, desserts and drinks, best first, six at a time with "More ideas". See "Meal ideas" below.
 - **Shopping list.** A List tab with typing suggestions, "Buy again" chips for food you finished recently, sharing, and **Put away**: ticked-off items open a review with each food headed where it usually lives (bananas in the cupboard, milk in the fridge, ice cream in the freezer) and saved with its own estimated date.
 - **Motion.** A heartbeat logo that beats faster when food needs using, a heart-monitor trace on the dashboard, a freshness meter that fills up, a freshness bar that grows in, rows and cards that fade in, springy buttons, a scan line over your photo while it is read, and a countdown on the message bar. Everything respects the phone's Reduce Motion setting (and turns off in screenshot builds).
 
@@ -109,7 +110,7 @@ These are estimates for a reminder app, not food-safety guarantees; the app labe
 
 - The model returns each item's name, category, quantity, a shelf-life estimate, and the printed date when one is legible. Printed dates win over estimates; implausible ones (years off, in the far past) are discarded.
 - Nothing is saved until the person reviews it. Estimates are labelled "Estimated" and are editable. They are typical shelf lives, not food-safety guarantees.
-- Meal ideas are ranked by how soon their ingredients expire. Items already past their date are never suggested.
+- Meal ideas are ranked by how soon their ingredients expire. Items already past their date are never suggested. The AI is told to use each food the way a cook would (no dessert food in savoury dishes), and the app drops any AI idea that still puts, say, ice cream into a soup (`plausibleMeal` in `src/lib/meals.ts`).
 - The server defaults to `claude-opus-5-5` (override with `ANTHROPIC_MODEL`), with `output_config.effort` set explicitly (scan: medium, meals: low, identify: medium) and server-side refusal fallback enabled. Photos are not stored or logged by the server.
 
 Looking up an unfamiliar item:
@@ -173,6 +174,20 @@ Before the first photo scan or AI meal request, the app asks for explicit permis
 
 Building the catalog meant checking the app's shelf-life and emoji rules against 380 foods, which found and fixed real errors: leftover pasta and rice were estimated at a year (they matched "pasta"/"rice" before "leftover"), peanut butter at 2 days in the pantry (it matched "butter"), fish sauce at 2 days, orange juice at 4 weeks, and canned tomatoes at 5 days in the pantry. `__tests__/shelflife-scan.test.ts` pins the corrected figures.
 
+### Meal ideas
+
+The built-in recipes (`src/lib/recipes.ts`, 184 of them) never match food by a word in its name or by its category. Each food gets culinary **roles** from an ordered table (`src/lib/ingredients.ts`): spinach can be a salad leaf or cooking greens, cherry tomatoes go raw or roasted, heavy cream cooks or whips, ice cream is only ever ice cream. A recipe slot asks for roles ("a vegetable that roasts", "a cheese that melts", "fruit for a crumble"), so:
+
+- ice cream never lands in a soup because its name contains "cream", strawberries never count as a vegetable, and leftover lasagna is not cooked into anything;
+- compound names read the way a cook reads them: the rule whose match ends furthest right wins ("honey roast ham" is ham, "strawberry yogurt" is a sweet yogurt, "peanut butter" is not butter), and compound rules come before the words they end with;
+- frozen food loses its raw uses (frozen spinach goes in soup, not salad), and food the table does not know is left out of the built-in recipes (the AI still sees it).
+
+Steps are written for the meal actually suggested: lines appear only when their ingredient is used, `{veg}` becomes "spinach and bell peppers", and wording follows the diet (vegans get "plant milk" and "vegan butter", vegetarians "vegetable stock", gluten-free cooks "gluten-free soy sauce"). Ideas are ranked by how much soon-to-expire food they use, each page of six holds at most two of a kind, and one idea never marks more than eight items used. `__tests__/recipes.test.ts` checks every recipe against hand-written lists of sweet-only, savoury-only and leftover foods, renders each recipe with random kitchens, and checks the wording for every diet.
+
+### Categories
+
+A typed or scanned food gets its category from what the app knows first: a food the person has taught it, then the food list (so oat milk is always a drink, frozen pizza is a ready meal), then the food-list name it ends with ("organic baby spinach", "sliced pepperoni"), then word rules. Words at the front decide where they should ("canned peaches", "pickled onions", "dried apricots"), and meat-free versions of meat are not meat. `__tests__/categories.test.ts` checks every catalog food, its variants, and about 60 awkward names.
+
 ### Food images
 
 Foods are shown with emoji chosen by name (`src/components/categories.ts`, pinned by a 118-food table test and reviewed visually and blind). Real photos were requested but could not be downloaded from this build environment, so none are included. `docs/food-photos.md` explains the blocker, the licences that are safe for a paid app, the three-step accuracy check to apply, and the design for adding them.
@@ -180,7 +195,7 @@ Foods are shown with emoji chosen by name (`src/components/categories.ts`, pinne
 ## Development
 
 ```bash
-npm test               # app tests: dates, expiry, meals, reminders, billing, pricing consistency, contrast, emoji accuracy, store listing limits, dependency guard
+npm test               # app tests: dates, expiry, meals and recipes, categories, reminders, billing, pricing consistency, contrast, emoji accuracy, store listing limits, dependency guard
 npm run typecheck
 npm run lint
 cd server && npm test  # 56 server tests

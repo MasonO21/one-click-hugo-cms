@@ -115,7 +115,10 @@ export async function demoIdentify(name: string, clue: string | undefined, signa
   return { candidates: [] };
 }
 
-export async function demoMeals(items: PantryItem[], prefs: MealPrefs): Promise<Meal[]> {
+/** Sample "AI" ideas: the built-in recipes, skipping titles already shown when asked for more. */
+export async function demoMeals(items: PantryItem[], prefs: MealPrefs, exclude: string[] = []): Promise<Meal[]> {
   await new Promise((r) => setTimeout(r, 600));
-  return localSuggestions(items, prefs);
+  const all = localSuggestions(items, prefs, new Date(), 120);
+  const unseen = all.filter((m) => !exclude.includes(m.title));
+  return (unseen.length > 0 ? unseen : all).slice(0, 6);
 }
