@@ -12,6 +12,7 @@ import { PlanPicker } from '../components/PlanPicker';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
 import { isDemoMode } from '../lib/api';
+import { confirm } from '../lib/dialogs';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { addDays, formatShortDate, todayISO } from '../lib/dates';
 import { useHousehold } from '../store/household';
@@ -97,6 +98,16 @@ function HouseholdNotCovered({ name }: { name: string }) {
     await useHousehold.getState().refresh();
     setChecking(false);
   };
+  // Joined the wrong one, or moved out: leaving needs no plan.
+  const leave = async () => {
+    const ok = await confirm({
+      title: 'Leave the household?',
+      message: 'This phone keeps its copy of the lists, but stops sharing. The others keep theirs.',
+      confirmLabel: 'Leave',
+      destructive: true,
+    });
+    if (ok) await useHousehold.getState().leave();
+  };
   return (
     <Card style={{ gap: 8 }} testID="paywall-household">
       <Text variant="bodyStrong">{`You are in ${name}`}</Text>
@@ -104,7 +115,10 @@ function HouseholdNotCovered({ name }: { name: string }) {
         Nobody there has the household plan right now. Start your own plan below, or ask whoever pays to switch to the household plan, which covers
         everyone.
       </Text>
-      <Button label="Check again" size="sm" variant="ghost" icon="refresh" loading={checking} onPress={() => void check()} style={{ alignSelf: 'flex-start' }} />
+      <View style={styles.row}>
+        <Button label="Check again" size="sm" variant="ghost" icon="refresh" loading={checking} onPress={() => void check()} />
+        <Button testID="paywall-household-leave" label="Leave household" size="sm" variant="danger" onPress={() => void leave()} />
+      </View>
     </Card>
   );
 }
@@ -247,6 +261,7 @@ const styles = StyleSheet.create({
   linkHit: { minHeight: 44, paddingHorizontal: 6, justifyContent: 'center' },
   header: { alignItems: 'center', gap: 12, paddingTop: 8 },
   feature: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' },
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   stepDot: { width: 12, height: 12, borderRadius: 6, marginTop: 5 },
   footerInner: { width: '100%', maxWidth: 600, gap: 8, alignItems: 'center' },

@@ -23,6 +23,14 @@ export const MAX_RECORDS = 3000;
 export const PAGE = 500;
 /** Deletions are remembered this long; a phone offline for longer may bring an old item back. */
 export const TOMBSTONE_DAYS = 60;
+/**
+ * How often the server asks the store about whoever pays for a household plan while its date is still
+ * ahead: a refund or a revoked purchase ends a plan early, and nobody should stay covered for months on
+ * the strength of an old answer.
+ */
+export const SPONSOR_RECHECK_MS = 6 * 3_600_000;
+/** Seeing the payer again within this long does not rewrite their record. */
+const SPONSOR_TOUCH_MS = 10 * 60_000;
 /** A phone whose clock runs ahead cannot make its changes win forever. */
 const MAX_CLOCK_AHEAD_MS = 5 * 60_000;
 
@@ -52,8 +60,10 @@ export interface HouseholdView {
 export interface Coverage {
   /** When the plan runs out or renews (ms), or null when no plan is on record. */
   until: number | null;
-  /** The app user id of the person who pays, to ask the store again once `until` has passed. */
+  /** The app user id of the person who pays, to ask the store again. */
   sponsorUser: string | null;
+  /** When the store last confirmed the plan (ms), or null. */
+  checkedAt: number | null;
 }
 
 export type HouseholdErrorCode = 'not_found' | 'full' | 'already_member' | 'not_member' | 'too_many';
@@ -117,9 +127,10 @@ interface HouseholdRow {
   sponsor_member: string | null;
   sponsor_user: string | null;
   sponsor_until: number | null;
+  sponsor_checked_at: number | null;
 }
 
-const HOUSEHOLD_COLUMNS = 'h.id, h.name, h.code, h.seq, h.sponsor_member, h.sponsor_user, h.sponsor_until';
+const HOUSEHOLD_COLUMNS = 'h.id, h.name, h.code, h.seq, h.sponsor_member, h.sponsor_user, h.sponsor_until, h.sponsor_checked_at';
 
 export function createHouseholdStore(path = ':memory:'): HouseholdStore {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
@@ -143,6 +154,7 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
     ['sponsor_member', 'TEXT'],
     ['sponsor_user', 'TEXT'],
     ['sponsor_until', 'INTEGER'],
+    ['sponsor_checked_at', 'INTEGER'],
   ] as const) {
     if (!columns.has(name)) db.exec(`ALTER TABLE households ADD COLUMN ${name} ${type}`);
   }
@@ -150,7 +162,7 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
   const q = {
     householdOf: db.prepare(`SELECT ${HOUSEHOLD_COLUMNS} FROM members m JOIN households h ON h.id = m.household_id WHERE m.member = ?`),
     byCode: db.prepare(`SELECT ${HOUSEHOLD_COLUMNS} FROM households h WHERE h.code = ?`),
-    setSponsor: db.prepare('UPDATE households SET sponsor_member = ?, sponsor_user = ?, sponsor_until = ? WHERE id = ?'),
+    setSponsor: db.prepare('UPDATE households SET sponsor_member = ?, sponsor_user = ?, sponsor_until = ?, sponsor_checked_at = ? WHERE id = ?'),
     members: db.prepare('SELECT member, name FROM members WHERE household_id = ? ORDER BY joined_at, rowid'),
     memberCount: db.prepare('SELECT COUNT(*) AS n FROM members WHERE household_id = ?'),
     insertHousehold: db.prepare('INSERT INTO households (id, name, code, seq, created_at) VALUES (?, ?, ?, 0, ?)'),
@@ -219,16 +231,18 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
       if (live) {
         // Another member's plan that runs for longer keeps the household; otherwise this one does.
         const other = h.sponsor_member != null && h.sponsor_member !== me && h.sponsor_until != null && h.sponsor_until >= until;
-        if (other || (h.sponsor_member === me && h.sponsor_user === userId && h.sponsor_until === until)) return;
-        q.setSponsor.run(me, userId, until, h.id);
+        if (other) return;
+        const same = h.sponsor_member === me && h.sponsor_user === userId && h.sponsor_until === until;
+        if (same && h.sponsor_checked_at != null && now - h.sponsor_checked_at < SPONSOR_TOUCH_MS) return;
+        q.setSponsor.run(me, userId, until, now, h.id);
       } else if (h.sponsor_member === me) {
-        q.setSponsor.run(null, null, null, h.id);
+        q.setSponsor.run(null, null, null, null, h.id);
       }
     },
 
     coverage: (userId) => {
       const h = mine(userId);
-      return h ? { until: h.sponsor_until, sponsorUser: h.sponsor_user } : null;
+      return h ? { until: h.sponsor_until, sponsorUser: h.sponsor_user, checkedAt: h.sponsor_checked_at } : null;
     },
 
     create: (userId, memberName, name) =>
@@ -256,7 +270,7 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
         const h = mine(userId);
         if (!h) return;
         // Someone who leaves stops paying for the others.
-        if (h.sponsor_member === memberKey(userId)) q.setSponsor.run(null, null, null, h.id);
+        if (h.sponsor_member === memberKey(userId)) q.setSponsor.run(null, null, null, null, h.id);
         q.deleteMember.run(memberKey(userId));
         // The last one out takes the shared lists with them.
         if ((q.memberCount.get(h.id) as { n: number }).n === 0) q.deleteHousehold.run(h.id);

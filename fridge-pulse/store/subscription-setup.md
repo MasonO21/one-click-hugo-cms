@@ -22,7 +22,9 @@ The payer gets the app like any other plan. On top of that, everyone in their sh
 2. Whenever the payer's phone talks to the server, the server sees that entitlement and its end date and records the payer against their household.
 3. A member without a plan of their own is let in while that date is in the future. The app shows "Included in Sam's household plan" in Settings.
 4. When the date passes (the plan renews or ends), the next member request makes the server ask RevenueCat about the payer again: a renewal carries on the cover, an ended plan stops it and those members see the paywall.
-5. The payer leaving the household, or switching to a plan just for them, ends the cover.
+5. The server also asks again every 6 hours while the date is still ahead, so a refund or revoked purchase ends the cover within hours rather than at the end of a paid year. If RevenueCat cannot be reached then, a date still ahead holds until it can.
+6. The payer leaving the household, or switching to a plan just for them, ends the cover. So does a refund, the next time the payer's own phone calls the server.
+7. Someone in a household that no plan covers can still leave it from the paywall.
 
 Joining a household, looking at it and leaving it work without a plan (with a per-IP limit), so a covered person can join from the paywall: "Someone at home has the household plan? Join with their code".
 
@@ -65,7 +67,7 @@ Joining a household, looking at it and leaving it work without a plan (with a pe
 - [ ] Scanning works (the server accepted the app user ID). Without a purchase it returns a "start your free trial" message.
 - [ ] Settings > Plans: switching from Monthly to Household yearly goes through the store's change sheet, and on Android the old subscription is replaced rather than kept.
 - [ ] Household cover: the payer starts a household; a second phone with no plan taps "Join with their code" on the paywall, enters the code and gets in. Settings on the second phone says "Included in ...'s household plan".
-- [ ] The payer cancels the household plan; once the period has ended (minutes in sandbox), the second phone is back on the paywall within a sync or two, and its card says nobody's household plan covers the household.
+- [ ] The payer cancels the household plan; once the period has ended (minutes in sandbox), the second phone is back on the paywall within a sync or two, and its card says nobody's household plan covers the household. "Leave household" on that card works without a plan.
 - [ ] Two days before a trial ends (or one, if you start late) a reminder notification arrives naming the picked plan's price, if notifications are allowed.
 - [ ] After a trial lapses the app returns to the paywall. "Restore purchases" works on a second device.
 - [ ] Cancelling in the store's subscription settings stops renewal at the end of the period.

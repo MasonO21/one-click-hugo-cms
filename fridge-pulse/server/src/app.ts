@@ -8,7 +8,7 @@ import type { Config } from './config.js';
 import { withPictures } from './identify.js';
 import { noPictures, type PictureFinder } from './pictures.js';
 import { DAY_MS, RateLimiter } from './ratelimit.js';
-import { HouseholdError, type HouseholdStore } from './household.js';
+import { HouseholdError, SPONSOR_RECHECK_MS, type HouseholdStore } from './household.js';
 import { CreateHouseholdSchema, HouseholdSyncSchema, IdentifyRequestSchema, JoinHouseholdSchema, MAX_IMAGE_BYTES, MealsRequestSchema, ScanRequestSchema } from './schemas.js';
 
 export interface Deps {
@@ -22,6 +22,8 @@ export interface Deps {
   clientIp?: (c: Context) => string;
   /** Shared households. Without it, the household endpoints answer 503. */
   households?: HouseholdStore;
+  /** The time, for tests. */
+  now?: () => number;
 }
 
 type ErrorCode = 'unauthorized' | 'payment_required' | 'rate_limited' | 'bad_request' | 'refused' | 'unavailable' | 'not_found' | 'conflict';
@@ -62,7 +64,7 @@ const OPEN_ROUTES = new Set(['GET /v1/household', 'POST /v1/household/join', 'PO
 /** Calls to those routes per IP per day from people without a plan, so made-up ids cannot farm them. */
 const OPEN_CALLS_PER_IP_PER_DAY = 200;
 
-export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown', households }: Deps) {
+export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown', households, now = Date.now }: Deps) {
   const app = new Hono<Env>();
 
   if (config.corsOrigin) app.use('*', cors({ origin: config.corsOrigin }));
@@ -117,18 +119,18 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     c.set('householdUntil', null);
     const own = await entitlements.isActive(userId);
     if (!households || !entitlements.householdUntil) return own;
-    if (own) {
-      // Someone on a household plan covers their household; note it (or that it has ended) on the way past.
-      const until = await entitlements.householdUntil(userId);
-      c.set('householdUntil', until);
-      try {
-        households.sponsor(userId, until);
-      } catch (e) {
-        // Their own plan still lets them in.
-        console.error('Could not record a household plan:', e instanceof Error ? e.message : e);
-      }
-      return true;
+    const t = now();
+    // The same lookup says whether they pay for a household plan. Note it, or that it has ended (a
+    // cancellation that has run out, a refund, a switch to a plan just for them), on the way past.
+    const mine = await entitlements.householdUntil(userId);
+    c.set('householdUntil', mine);
+    try {
+      households.sponsor(userId, mine, t);
+    } catch (e) {
+      console.error('Could not record a household plan:', e instanceof Error ? e.message : e);
     }
+    if (own) return true;
+
     let cover;
     try {
       cover = households.coverage(userId);
@@ -136,13 +138,21 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       console.error('Could not read household cover:', e instanceof Error ? e.message : e);
       return false;
     }
-    if (!cover) return false;
-    if (cover.until != null && cover.until > Date.now()) return true;
-    if (!cover.sponsorUser) return false;
-    // The plan has reached its end date on record; it may have renewed since, so ask the store.
-    const until = await entitlements.householdUntil(cover.sponsorUser);
-    households.sponsor(cover.sponsorUser, until);
-    return until != null && until > Date.now();
+    if (!cover?.sponsorUser || cover.until == null) return false;
+    const live = cover.until > t;
+    // Ask the store about the payer once the date on record has passed (the plan may have renewed), and
+    // every few hours before then (a refund ends it early).
+    if (live && cover.checkedAt != null && t - cover.checkedAt < SPONSOR_RECHECK_MS) return true;
+    let until: number | null;
+    try {
+      until = await entitlements.householdUntil(cover.sponsorUser);
+    } catch (e) {
+      // The store cannot be asked right now: a date still ahead holds until it can.
+      if (live && e instanceof EntitlementLookupError) return true;
+      throw e;
+    }
+    households.sponsor(cover.sponsorUser, until, t);
+    return until != null && until > t;
   }
 
   function limited(c: Context<Env>, bucket: keyof typeof BURST_PER_MINUTE, perDay: number) {

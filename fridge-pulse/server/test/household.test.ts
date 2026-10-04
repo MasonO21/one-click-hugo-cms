@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, it } from 'node:test';
 import { createApp } from '../src/app.js';
+import { EntitlementLookupError } from '../src/auth.js';
 import type { ClaudeService } from '../src/claude.js';
 import { createHouseholdStore, formatCode, HouseholdError, MAX_MEMBERS, normalizeCode, TOMBSTONE_DAYS, type SyncRecord } from '../src/household.js';
 
@@ -95,29 +96,47 @@ describe('household store', () => {
 
   it('records who pays for a household plan, and the cover it gives everyone', () => {
     const store = createHouseholdStore();
+    const coverage = (u: string) => {
+      const c = store.coverage(u);
+      return c && { until: c.until, sponsorUser: c.sponsorUser };
+    };
     const { code } = store.create('payer', 'Sam', 'Home');
     store.join('housemate', 'Alex', code);
     const now = 1_000_000;
-    assert.deepEqual(store.coverage('housemate'), { until: null, sponsorUser: null });
+    assert.deepEqual(coverage('housemate'), { until: null, sponsorUser: null });
     store.sponsor('payer', now + 5000, now);
-    assert.deepEqual(store.coverage('housemate'), { until: now + 5000, sponsorUser: 'payer' });
+    assert.deepEqual(coverage('housemate'), { until: now + 5000, sponsorUser: 'payer' });
     // A shorter plan from someone else does not take over; a longer one does.
     store.join('other', 'Kim', code);
     store.sponsor('other', now + 1000, now);
-    assert.equal(store.coverage('housemate')?.sponsorUser, 'payer');
+    assert.equal(coverage('housemate')?.sponsorUser, 'payer');
     store.sponsor('other', now + 9000, now);
-    assert.deepEqual(store.coverage('housemate'), { until: now + 9000, sponsorUser: 'other' });
+    assert.deepEqual(coverage('housemate'), { until: now + 9000, sponsorUser: 'other' });
     // The payer's plan ending ends the cover; someone who never paid changes nothing.
     store.sponsor('housemate', null, now);
-    assert.equal(store.coverage('housemate')?.sponsorUser, 'other');
+    assert.equal(coverage('housemate')?.sponsorUser, 'other');
     store.sponsor('other', null, now);
-    assert.deepEqual(store.coverage('housemate'), { until: null, sponsorUser: null });
+    assert.deepEqual(coverage('housemate'), { until: null, sponsorUser: null });
     // Leaving stops paying for the others; someone outside a household has no cover.
     store.sponsor('payer', now + 5000, now);
     store.leave('payer');
-    assert.deepEqual(store.coverage('housemate'), { until: null, sponsorUser: null });
-    assert.equal(store.coverage('stranger'), null);
+    assert.deepEqual(coverage('housemate'), { until: null, sponsorUser: null });
+    assert.equal(coverage('stranger'), null);
     store.sponsor('stranger', now + 5000, now);
+  });
+
+  it('notes when the store last confirmed the plan, without rewriting it on every call', () => {
+    const store = createHouseholdStore();
+    store.create('payer', 'Sam', 'Home');
+    const now = 1_000_000;
+    store.sponsor('payer', now + 86_400_000, now);
+    assert.equal(store.coverage('payer')?.checkedAt, now);
+    store.sponsor('payer', now + 86_400_000, now + 60_000);
+    assert.equal(store.coverage('payer')?.checkedAt, now);
+    store.sponsor('payer', now + 86_400_000, now + 11 * 60_000);
+    assert.equal(store.coverage('payer')?.checkedAt, now + 11 * 60_000);
+    store.sponsor('payer', null, now + 12 * 60_000);
+    assert.deepEqual(store.coverage('payer'), { until: null, sponsorUser: null, checkedAt: null });
   });
 
   it('shows the cover and who pays, without anyone’s id', () => {
@@ -227,15 +246,16 @@ describe('household endpoints', () => {
     const plans = () => {
       const own = new Map<string, boolean>();
       const household = new Map<string, number | null>();
-      let lookups = 0;
+      const asked = new Map<string, number>();
       return {
         own,
         household,
-        lookups: () => lookups,
+        /** Times the store was asked about this person's household plan. */
+        lookups: (u: string) => asked.get(u) ?? 0,
         checker: {
           isActive: async (u: string) => own.get(u) ?? false,
           householdUntil: async (u: string) => {
-            lookups += 1;
+            asked.set(u, (asked.get(u) ?? 0) + 1);
             return household.get(u) ?? null;
           },
         },
@@ -244,19 +264,19 @@ describe('household endpoints', () => {
     const setupPlans = () => {
       const p = plans();
       const store = createHouseholdStore();
-      const app = createApp({ config: { scansPerDay: 3, mealsPerDay: 3, identifiesPerDay: 3, corsOrigin: null }, claude, entitlements: p.checker, households: store });
+      const clock = { t: Date.now() };
+      const app = createApp({ config: { scansPerDay: 3, mealsPerDay: 3, identifiesPerDay: 3, corsOrigin: null }, claude, entitlements: p.checker, households: store, now: () => clock.t });
       const call = (path: string, user: string, body?: unknown) =>
         app.request(path, {
           method: body === undefined && path === '/v1/household' ? 'GET' : 'POST',
           headers: { 'content-type': 'application/json', Authorization: `Bearer ${user}` },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
-      return { p, store, call };
+      return { p, store, call, clock };
     };
     const C = '$RCAnonymousID:cccccccccccccccccccccccccccccccc';
     const meals = (call: (path: string, user: string, body?: unknown) => Promise<Response> | Response, user: string) =>
       call('/v1/meals', user, { items: [{ name: 'Milk', category: 'dairy', daysLeft: 2 }], diet: 'none', count: 1 });
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
     it('covers everyone in the payer’s household, and nobody else', async () => {
       const { p, call } = setupPlans();
@@ -278,30 +298,30 @@ describe('household endpoints', () => {
     });
 
     it('asks the store again when the plan reaches its end date: renewed keeps the cover, ended stops it', async () => {
-      const { p, call } = setupPlans();
+      const { p, call, clock } = setupPlans();
       p.own.set(A, true);
-      p.household.set(A, Date.now() + 40);
+      p.household.set(A, clock.t + 40);
       const made = (await (await call('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
       await call('/v1/household/join', B, { code: made.household.code, memberName: 'Alex' });
       // The plan renews while the payer is away; the housemate is still let in.
-      p.household.set(A, Date.now() + 86_400_000);
-      await wait(60);
-      const before = p.lookups();
+      p.household.set(A, clock.t + 86_400_000);
+      clock.t += 60;
+      const before = p.lookups(A);
       assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 200);
-      assert.equal(p.lookups(), before + 1);
+      assert.equal(p.lookups(A), before + 1);
       // Covered again until the new date: no more store lookups for a while.
       assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 200);
-      assert.equal(p.lookups(), before + 1);
+      assert.equal(p.lookups(A), before + 1);
     });
 
     it('stops covering the household when the plan ends or the payer switches to a plan just for them', async () => {
-      const { p, call } = setupPlans();
+      const { p, call, clock } = setupPlans();
       p.own.set(A, true);
-      p.household.set(A, Date.now() + 40);
+      p.household.set(A, clock.t + 40);
       const made = (await (await call('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
       await call('/v1/household/join', B, { code: made.household.code, memberName: 'Alex' });
       p.household.set(A, null);
-      await wait(60);
+      clock.t += 60;
       assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 402);
       const seen = (await (await call('/v1/household', B)).json()) as { household: { coveredUntil: number | null } };
       assert.equal(seen.household.coveredUntil, null);
@@ -309,14 +329,88 @@ describe('household endpoints', () => {
       assert.equal((await call('/v1/household/leave', B, {})).status, 200);
 
       // Switching plans: the payer's next call ends the cover straight away.
-      const { p: q, call: call2 } = setupPlans();
+      const { p: q, call: call2, clock: clock2 } = setupPlans();
       q.own.set(A, true);
-      q.household.set(A, Date.now() + 86_400_000);
+      q.household.set(A, clock2.t + 86_400_000);
       const home = (await (await call2('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
       await call2('/v1/household/join', B, { code: home.household.code, memberName: 'Alex' });
       q.household.set(A, null);
       await call2('/v1/household/sync', A, { since: 0, changes: [] });
       assert.equal((await call2('/v1/household/sync', B, { since: 0, changes: [] })).status, 402);
+    });
+  });
+
+  describe('household plan ending early', () => {
+    const plansSetup = () => {
+      const own = new Map<string, boolean>();
+      const household = new Map<string, number | null>();
+      const asked = new Map<string, number>();
+      let down = false;
+      const store = createHouseholdStore();
+      const clock = { t: Date.now() };
+      const app = createApp({
+        config: { scansPerDay: 3, mealsPerDay: 3, identifiesPerDay: 3, corsOrigin: null },
+        claude,
+        entitlements: {
+          isActive: async (u: string) => own.get(u) ?? false,
+          householdUntil: async (u: string) => {
+            asked.set(u, (asked.get(u) ?? 0) + 1);
+            // The caller's own answer comes from the lookup that just let them in; the payer's needs a new one.
+            if (down && u === A) throw new EntitlementLookupError('down');
+            return household.get(u) ?? null;
+          },
+        },
+        households: store,
+        now: () => clock.t,
+      });
+      const call = (path: string, user: string, body?: unknown) =>
+        app.request(path, {
+          method: body === undefined && path === '/v1/household' ? 'GET' : 'POST',
+          headers: { 'content-type': 'application/json', Authorization: `Bearer ${user}` },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+      const sync = async (user: string) => (await call('/v1/household/sync', user, { since: 0, changes: [] })).status;
+      return { own, household, asked: (u: string) => asked.get(u) ?? 0, setDown: (v: boolean) => (down = v), clock, call, sync };
+    };
+    const payerAndHousemate = async (t: ReturnType<typeof plansSetup>) => {
+      t.own.set(A, true);
+      t.household.set(A, t.clock.t + 300 * 86_400_000);
+      const made = (await (await t.call('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
+      await t.call('/v1/household/join', B, { code: made.household.code, memberName: 'Alex' });
+      assert.equal(await t.sync(B), 200);
+    };
+
+    it('a refunded payer is not covered by their own old record, and their next call ends the cover', async () => {
+      const t = plansSetup();
+      await payerAndHousemate(t);
+      t.own.set(A, false);
+      t.household.set(A, null);
+      assert.equal(await t.sync(A), 402);
+      assert.equal(await t.sync(B), 402);
+    });
+
+    it('asks the store about the payer every few hours, even with the date far ahead', async () => {
+      const t = plansSetup();
+      await payerAndHousemate(t);
+      // The payer is refunded and does not open the app again.
+      t.own.set(A, false);
+      t.household.set(A, null);
+      const before = t.asked(A);
+      assert.equal(await t.sync(B), 200);
+      assert.equal(t.asked(A), before, 'a recent answer is trusted');
+      t.clock.t += 7 * 3_600_000;
+      assert.equal(await t.sync(B), 402);
+      assert.equal(t.asked(A), before + 1);
+    });
+
+    it('keeps a date still ahead when the store cannot be asked, but not one that has passed', async () => {
+      const t = plansSetup();
+      await payerAndHousemate(t);
+      t.setDown(true);
+      t.clock.t += 7 * 3_600_000;
+      assert.equal(await t.sync(B), 200);
+      t.clock.t += 400 * 86_400_000;
+      assert.equal(await t.sync(B), 503);
     });
   });
 
