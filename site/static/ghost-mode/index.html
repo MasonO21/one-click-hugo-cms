@@ -1,0 +1,1401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Ghost Mode for Kids: parents get pattern alerts (new adult contacts, late-night activity spikes, grooming language markers) instead of reading their kids' messages.">
+<meta name="theme-color" content="#4A90E2">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%234A90E2%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239B51E0%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Cpath%20d%3D%22M17%2033C17%2021.5%2023.5%2014%2032%2014S47%2021.5%2047%2033V50.5C47%2054%2043.5%2055%2041.6%2052.6C40%2050.6%2037.4%2050.6%2035.8%2052.6C34%2055%2030%2055%2028.2%2052.6C26.6%2050.6%2024%2050.6%2022.4%2052.6C20.5%2055%2017%2054%2017%2050.5Z%22%20fill%3D%22%23fff%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2231.5%22%20r%3D%222.8%22%20fill%3D%22%232D3566%22/%3E%3Ccircle%20cx%3D%2237%22%20cy%3D%2231.5%22%20r%3D%222.8%22%20fill%3D%22%232D3566%22/%3E%3Cpath%20d%3D%22M45%2039.5l7.5%202.8v5.4c0%204.6-3.2%207.6-7.5%209.3-4.3-1.7-7.5-4.7-7.5-9.3v-5.4z%22%20fill%3D%22%23F5A623%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.6%22/%3E%3C/svg%3E">
+<title>Ghost Mode for Kids</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: two devices with a see-through wall between them. Parent app on the left, the exact data that crossed in the middle, the kid's phone on the right. */
+:root{
+  --trust:#4A90E2; --soft:#9B51E0; --safe:#F5A623;
+  --bg:#F1F3FA; --surface:#FFFFFF; --surface-2:#F0F2FA; --surface-3:#DCE2F1;
+  --fg:#191E33; --muted:#566080; --faint:#737C9B; --line:#DEE3F0;
+  --trust-ink:#2C6DBF; --soft-ink:#7A33C0; --safe-ink:#8A5200;
+  --trust-tint:#E5EFFC; --soft-tint:#F2E8FC; --safe-tint:#FDF0DA;
+  --urgent:#BF3038; --urgent-tint:#FBE6E7; --on-urgent:#FFFFFF; --ok:#1F7A49; --ok-tint:#E1F3E8;
+  --primary:#3A76CC; --on-primary:#FFFFFF;
+  --bubble-me:#3A78D2; --bubble-them:#ECEFF8;
+  --bezel:#1A1D2B; --phone-bg:#FFFFFF; --scrim:rgba(16,18,36,.45);
+  --shadow:0 1px 2px rgba(25,30,51,.05),0 10px 30px rgba(25,30,51,.07);
+  --font-display:"Montserrat","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --font-body:"Open Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r-lg:22px; --r-md:16px; --r-sm:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1020; --surface:#161A2C; --surface-2:#1D2236; --surface-3:#2E3656;
+    --fg:#E8EBF7; --muted:#A3ABC6; --faint:#8088A8; --line:#283050;
+    --trust-ink:#82B6F2; --soft-ink:#C79DF2; --safe-ink:#F6B84E;
+    --trust-tint:#1A2944; --soft-tint:#291D42; --safe-tint:#36290F;
+    --urgent:#F27C7C; --urgent-tint:#3B1B22; --on-urgent:#2A0B0F; --ok:#5ACB8B; --ok-tint:#14301F;
+    --primary:#6AA5EC; --on-primary:#0A1022;
+    --bubble-me:#3A78D2; --bubble-them:#242A42;
+    --bezel:#04050B; --phone-bg:#10131F; --scrim:rgba(0,0,0,.55);
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px rgba(0,0,0,.3);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1020; --surface:#161A2C; --surface-2:#1D2236; --surface-3:#2E3656;
+  --fg:#E8EBF7; --muted:#A3ABC6; --faint:#8088A8; --line:#283050;
+  --trust-ink:#82B6F2; --soft-ink:#C79DF2; --safe-ink:#F6B84E;
+  --trust-tint:#1A2944; --soft-tint:#291D42; --safe-tint:#36290F;
+  --urgent:#F27C7C; --urgent-tint:#3B1B22; --on-urgent:#2A0B0F; --ok:#5ACB8B; --ok-tint:#14301F;
+  --primary:#6AA5EC; --on-primary:#0A1022;
+  --bubble-me:#3A78D2; --bubble-them:#242A42;
+  --bezel:#04050B; --phone-bg:#10131F; --scrim:rgba(0,0,0,.55);
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;color:var(--fg);font:15px/1.5 var(--font-body);-webkit-font-smoothing:antialiased;
+  background:radial-gradient(900px 380px at 0% -8%,var(--trust-tint),transparent 70%),radial-gradient(900px 380px at 100% -8%,var(--soft-tint),transparent 70%),var(--bg);
+  background-repeat:no-repeat;background-color:var(--bg)}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3,h4{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em;line-height:1.2}
+p{margin:0}
+:focus-visible{outline:2px solid var(--soft-ink);outline-offset:2px}
+.ic{width:18px;height:18px;flex:none}
+.ic.sm{width:15px;height:15px}
+.ic.xs{width:13px;height:13px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+
+.app{max-width:1500px;margin:0 auto;padding-inline:20px;padding-block:14px 48px}
+
+/* ---------- header ---------- */
+.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:4px 16px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.brand .g-logo{width:48px;height:48px;filter:drop-shadow(0 6px 14px rgba(74,144,226,.35))}
+.wordmark{font-family:var(--font-display);font-weight:800;font-size:23px;line-height:1.1;letter-spacing:-.02em}
+.wordmark span{color:var(--soft-ink)}
+.tagline{color:var(--muted);font-size:13.5px}
+.top-actions{display:flex;align-items:center;gap:10px}
+.demo-note{font-size:12.5px;color:var(--faint)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;border:1px solid var(--line);background:var(--surface);cursor:pointer;line-height:1.2;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--surface-2)}
+.btn:disabled{cursor:default;opacity:.65}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--urgent);border-color:color-mix(in srgb,var(--urgent) 40%,var(--line))}
+.btn.block{width:100%;padding:11px 16px;font-size:14px}
+.btn.sm{padding:5px 11px;font-size:12.5px}
+
+/* ---------- demo bar ---------- */
+.demo-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:22px}
+.demo-label{display:grid;gap:2px;padding-inline:4px}
+.demo-label b{font-family:var(--font-display);font-size:14px}
+.demo-label span{font-size:12px;color:var(--muted);max-width:21ch}
+.scenarios{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;min-width:0}
+.scn{display:grid;grid-template-columns:minmax(0,1fr);justify-items:start;align-content:start;gap:4px;text-align:left;border:1px solid var(--line);border-radius:14px;padding:9px 11px;background:var(--surface-2);cursor:pointer;min-width:0;transition:border-color .15s,background .15s}
+.scn:hover:not(:disabled){border-color:var(--trust);background:var(--surface)}
+.scn:disabled{cursor:default}
+.scn:disabled:not(.on){opacity:.55}
+.scn.on{border-color:var(--soft);background:var(--soft-tint)}
+.scn-title{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:6px;min-width:0}
+.scn-blurb{font-size:12px;color:var(--muted);line-height:1.35}
+.clock{display:grid;gap:4px;justify-items:start;padding-left:14px;border-left:1px solid var(--line)}
+.clock-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.clock-now{font-family:var(--font-display);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.clock-row{display:flex;gap:6px;align-items:center}
+.clock-row input{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:4px 10px;font-size:13px;min-width:0}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap;line-height:1.3}
+.pill.urgent{background:var(--urgent-tint);color:var(--urgent)}
+.pill.watch{background:var(--safe-tint);color:var(--safe-ink)}
+.pill.info{background:var(--trust-tint);color:var(--trust-ink)}
+.pill.ok{background:var(--ok-tint);color:var(--ok)}
+.pill.plain{background:var(--surface-2);color:var(--muted)}
+
+/* ---------- stage ---------- */
+.viewswitch{display:none}
+.stage{display:grid;gap:22px;align-items:start;grid-template-columns:minmax(0,1fr) minmax(250px,300px) 372px;grid-template-areas:"parent wall kid"}
+.pane{min-width:0}
+.pane.parent{grid-area:parent}
+.pane.wall{grid-area:wall;position:sticky;top:calc(env(safe-area-inset-top,0px) + 14px)}
+.pane.kid{grid-area:kid}
+.pane-label{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:700;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;min-height:20px}
+.pane-label i{width:8px;height:8px;border-radius:50%;flex:none}
+.parent .pane-label i{background:var(--trust)}
+.wall .pane-label i{background:var(--ok)}
+.kid .pane-label i{background:var(--soft)}
+
+/* ---------- parent app ---------- */
+.parent-app{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+.p-status{padding:20px 22px 18px;display:grid;gap:16px;background:linear-gradient(135deg,var(--trust-tint),var(--soft-tint))}
+.p-who{display:flex;align-items:center;gap:14px}
+.p-who .g-logo{width:44px;height:44px}
+.p-who-text{flex:1;min-width:0}
+.p-who h2{font-size:19px}
+.p-who p{font-size:13px;color:var(--muted)}
+.p-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface);border-radius:14px;padding:10px 12px;display:grid;gap:2px;min-width:0}
+.stat b{font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;line-height:1.3}
+.stat.zero b{color:var(--ok)}
+
+.p-tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.p-tab-btn{border:0;background:none;padding:13px 11px 11px;font-weight:600;font-size:14px;color:var(--muted);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.p-tab-btn[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--soft)}
+.badge{min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--urgent);color:var(--on-urgent);font-size:11px;font-weight:700;display:inline-grid;place-items:center;font-variant-numeric:tabular-nums}
+.p-panel{padding:18px 20px 22px;display:grid;gap:14px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.panel-head p{font-size:13px;color:var(--muted);max-width:60ch}
+
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(20,25,50,.12)}
+
+/* alerts */
+.alerts{display:grid;gap:12px}
+.alert{border:1px solid var(--line);border-radius:var(--r-md);padding:16px;display:grid;gap:12px;background:var(--surface)}
+.alert.sev-urgent{border-color:color-mix(in srgb,var(--urgent) 50%,var(--line))}
+.alert.is-reviewed{background:var(--surface-2)}
+.alert.arrive{animation:arrive .7s ease-out}
+@keyframes arrive{from{transform:translateY(-6px);box-shadow:0 0 0 5px var(--soft-tint)}to{transform:none;box-shadow:0 0 0 0 transparent}}
+.alert-head{display:flex;gap:12px;align-items:flex-start}
+.alert-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:none}
+.alert-icon .ic{width:21px;height:21px}
+.sev-urgent .alert-icon{background:var(--urgent-tint);color:var(--urgent)}
+.sev-watch .alert-icon{background:var(--safe-tint);color:var(--safe-ink)}
+.sev-info .alert-icon{background:var(--trust-tint);color:var(--trust-ink)}
+.alert-text{flex:1;min-width:0;display:grid;gap:3px}
+.alert-title{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.alert h4{font-size:16px}
+.alert-time{font-size:12px;color:var(--faint);white-space:nowrap;display:flex;gap:6px;align-items:center}
+.alert-meta{color:var(--muted);font-size:13.5px}
+.alert-meta b{color:var(--fg);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.chips li{font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line)}
+.chips li.hi{background:var(--urgent-tint);border-color:transparent;color:var(--urgent)}
+.alert-why{font-size:14px;max-width:70ch}
+.alert-next{font-size:13.5px;padding:10px 12px;border-radius:12px;background:var(--urgent-tint);max-width:none}
+.alert-next b,.alert-next a{color:var(--urgent)}
+details.talk summary{cursor:pointer;font-weight:600;color:var(--trust-ink);font-size:13.5px;width:max-content;max-width:100%}
+details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:14px}
+.alert-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-top:1px dashed var(--line);padding-top:12px}
+.no-text{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ok);font-weight:600}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.resolved{font-size:12.5px;color:var(--muted);display:inline-flex;gap:6px;align-items:center}
+.empty{display:grid;justify-items:center;gap:10px;padding:34px 16px;text-align:center;color:var(--muted)}
+.empty .g-logo{width:52px;height:52px;opacity:.9}
+
+/* activity */
+.chart-box{width:100%;min-width:0}
+.chart{display:block;width:100%;height:auto}
+.chart text{font-family:var(--font-body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .tick{fill:var(--faint);font-size:11px}
+.chart .now-l{fill:var(--soft-ink);font-weight:700}
+.chart .val{fill:var(--muted);font-size:10.5px;font-variant-numeric:tabular-nums}
+.chart .bar{fill:var(--trust);fill-opacity:.55}
+.chart .bar.hot{fill:var(--safe);fill-opacity:1}
+.chart .bar.now{fill:var(--soft);fill-opacity:1}
+.chart .thr{stroke:var(--safe-ink);stroke-width:1.5;stroke-dasharray:5 4}
+.chart .base{stroke:var(--muted);stroke-width:1.25;stroke-dasharray:2 3}
+.chart .lbl{fill:var(--muted);font-size:11px;font-weight:600}
+.chart .thr-l{fill:var(--safe-ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.act-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.act-stats .stat{background:var(--surface-2)}
+
+/* trusted */
+.t-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.t-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px}
+.t-text{flex:1;min-width:0;display:grid}
+.t-text b{font-weight:600}
+.t-text span{font-size:12.5px;color:var(--muted)}
+.t-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px;align-items:end;padding:14px;border-radius:14px;background:var(--surface-2)}
+.field{display:grid;gap:4px;font-size:12.5px;font-weight:600;color:var(--muted);min-width:0}
+.field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;font-size:14px;font-weight:400;color:var(--fg);width:100%;min-width:0}
+
+/* settings */
+.settings{display:grid;gap:18px}
+.set-group{border:0;margin:0;padding:0;display:grid;gap:10px;min-width:0}
+.set-group legend{font-family:var(--font-display);font-weight:700;font-size:14.5px;padding:0;margin-bottom:8px}
+.hint{font-size:12.5px;color:var(--muted);margin-top:-6px}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:420px}
+.sens{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sens-opt{display:block;cursor:pointer}
+.sens-opt input{position:absolute;opacity:0;pointer-events:none}
+.sens-opt span{display:grid;gap:2px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;height:100%}
+.sens-opt b{font-size:14px}
+.sens-opt small{font-size:12px;color:var(--muted);line-height:1.35}
+.sens-opt input:checked+span{border-color:var(--soft);background:var(--soft-tint)}
+.sens-opt input:focus-visible+span{outline:2px solid var(--soft-ink);outline-offset:2px}
+.switch{display:flex;align-items:center;gap:14px;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.switch>span{display:grid;gap:1px;min-width:0}
+.switch b{font-weight:600;font-size:14px}
+.switch small{font-size:12.5px;color:var(--muted)}
+.switch input{appearance:none;-webkit-appearance:none;margin:0;width:44px;height:26px;border-radius:999px;background:var(--surface-3);position:relative;flex:none;cursor:pointer;transition:background .2s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.switch input:checked{background:var(--primary)}
+.switch input:checked::after{transform:translateX(18px)}
+.saved{font-size:12.5px;color:var(--ok);font-weight:600;min-height:1.4em}
+
+/* ---------- wall ---------- */
+.wall-card{background:var(--surface);border:1.5px dashed color-mix(in srgb,var(--ok) 45%,var(--line));border-radius:var(--r-lg);padding:16px;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 60px)}
+.wall-card h3{font-size:16px}
+.wall-card>p{font-size:12.5px;color:var(--muted);margin-top:-8px}
+.leak{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--ok-tint)}
+.leak-num{font-family:var(--font-display);font-weight:800;font-size:40px;line-height:1;color:var(--ok);font-variant-numeric:tabular-nums}
+.leak-label{font-size:13px;font-weight:600;line-height:1.3}
+.leak-sub{grid-column:1/-1;font-size:11.5px;color:var(--muted)}
+.wall-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wall-stats div{display:grid;padding:8px 10px;border-radius:12px;background:var(--surface-2)}
+.wall-stats b{font-family:var(--font-display);font-size:18px;font-variant-numeric:tabular-nums}
+.wall-stats span{font-size:11.5px;color:var(--muted);line-height:1.3}
+.wall-log{list-style:none;margin:0;padding:0 2px 0 0;display:grid;gap:8px;align-content:start;overflow:auto;min-height:0;flex:1}
+.wl{border-radius:12px;padding:10px;background:var(--surface-2);font-size:12.5px;display:grid;gap:5px;border:1px solid transparent;min-width:0}
+.wl-head{display:flex;align-items:center;gap:7px;font-weight:700;min-width:0}
+.wl-head>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl-dir{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;flex:none}
+.wl.up .wl-dir{background:var(--trust-tint);color:var(--trust-ink)}
+.wl.down .wl-dir{background:var(--soft-tint);color:var(--soft-ink)}
+.wl time{margin-left:auto;color:var(--faint);font-weight:400;font-size:11.5px;white-space:nowrap}
+.wl-to{font-size:11.5px;color:var(--muted)}
+.wl pre,.wl code{margin:0;font-family:var(--font-mono);font-size:11.3px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--fg)}
+.wl code{word-break:break-all;color:var(--muted)}
+.wl .k{color:var(--trust-ink)}
+.wl .v,.wl .n{color:var(--soft-ink)}
+.wl-sub{font-size:11.5px;color:var(--muted)}
+.wl.sev-urgent{border-color:color-mix(in srgb,var(--urgent) 55%,transparent)}
+.wl.sev-watch{border-color:color-mix(in srgb,var(--safe) 60%,transparent)}
+.wl.flash{animation:flash 1.4s ease-out}
+@keyframes flash{from{background:var(--ok-tint)}to{background:var(--surface-2)}}
+
+/* ---------- phone ---------- */
+.phone{width:100%;max-width:372px;margin-inline:auto;background:var(--bezel);border-radius:48px;padding:11px;box-shadow:0 24px 60px rgba(25,25,60,.22)}
+.phone-screen{position:relative;height:690px;border-radius:38px;overflow:hidden;background:var(--phone-bg);display:flex;flex-direction:column}
+.statusbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:12px 24px 4px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.island{width:92px;height:26px;background:var(--bezel);border-radius:999px}
+.sb-icons{justify-self:end;display:flex;gap:5px;align-items:center}
+.sb-icons svg{width:17px;height:12px}
+.screen{flex:1;min-height:0;display:flex;flex-direction:column}
+.app-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px 8px}
+.app-head h3{font-size:26px;font-weight:800}
+.ghost-pill{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:3px 10px 3px 3px;background:var(--soft-tint);color:var(--soft-ink);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.ghost-pill .g-logo{width:24px;height:24px}
+.phone-hint{margin:0 18px 6px;font-size:12px;color:var(--muted)}
+.chat-list{flex:1;overflow:auto;min-height:0}
+.chat-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;border:0;background:none;padding:9px 18px;text-align:left;cursor:pointer}
+.chat-row:hover{background:var(--surface-2)}
+.cr-main{display:grid;min-width:0}
+.cr-name{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;min-width:0}
+.cr-name>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-tag{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--surface-2);color:var(--muted);white-space:nowrap;border:1px solid var(--line)}
+.cr-prev{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cr-time{font-size:12px;color:var(--faint);align-self:start;padding-top:3px;white-space:nowrap}
+.av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:17px;flex:none}
+.av.sm{width:34px;height:34px;font-size:14px}
+.av0{background:var(--trust-tint);color:var(--trust-ink)}
+.av1{background:var(--soft-tint);color:var(--soft-ink)}
+.av2{background:var(--safe-tint);color:var(--safe-ink)}
+.av3{background:var(--ok-tint);color:var(--ok)}
+.av4{background:var(--surface-3);color:var(--fg)}
+.list-foot{padding:10px 18px 18px;border-top:1px solid var(--line)}
+
+.thread-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center;padding:6px 12px 10px 8px;border-bottom:1px solid var(--line)}
+.icon-btn{border:0;background:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--trust-ink)}
+.icon-btn:hover{background:var(--surface-2)}
+.icon-btn .ic{width:22px;height:22px}
+.thread-title{display:flex;align-items:center;gap:10px;min-width:0}
+.tt-text{display:grid;min-width:0;line-height:1.25}
+.tt-text b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tt-text span{font-size:12px;color:var(--muted)}
+.thread-body{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.b{max-width:80%;padding:8px 12px;border-radius:19px;font-size:14.5px;line-height:1.35;overflow-wrap:anywhere}
+.b.me{align-self:flex-end;background:var(--bubble-me);color:#fff;border-bottom-right-radius:6px}
+.b.them{align-self:flex-start;background:var(--bubble-them);border-bottom-left-radius:6px}
+.b.me+.b.them,.b.them+.b.me{margin-top:6px}
+.b.pop{animation:pop .28s ease-out}
+@keyframes pop{from{transform:scale(.92);opacity:.4}to{transform:none;opacity:1}}
+.tsep{align-self:center;font-size:11px;color:var(--faint);margin:10px 0 4px;font-weight:600}
+.sys{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border-radius:14px;background:var(--soft-tint);font-size:12.5px;margin:8px 0;line-height:1.4}
+.sys .g-logo{width:28px;height:28px}
+.composer{padding:8px 12px 14px;border-top:1px solid var(--line);display:grid;gap:8px}
+.as-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);font-weight:600;min-width:0}
+.as-row .seg{min-width:0;max-width:100%;overflow:hidden}
+.as-row .seg button{padding:4px 10px;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.compose-row{display:flex;gap:8px;align-items:center}
+.compose-row input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:9px 14px;font-size:14.5px}
+.send{width:38px;height:38px;border-radius:50%;border:0;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;cursor:pointer;flex:none}
+.send .ic{transform:rotate(-90deg)}
+
+.notif{position:absolute;top:44px;left:10px;right:10px;z-index:6;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:18px;padding:10px 12px;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;font-size:12.5px;line-height:1.4;animation:drop .35s ease-out;cursor:pointer}
+.notif .g-logo{width:30px;height:30px}
+.notif b{font-size:12px}
+.notif time{color:var(--faint);font-weight:400;margin-left:4px}
+@keyframes drop{from{transform:translateY(-14px);opacity:.3}to{transform:none;opacity:1}}
+
+.sheet{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;z-index:8}
+.sheet-panel{background:var(--phone-bg);width:100%;border-radius:26px 26px 0 0;padding:18px 18px 24px;max-height:90%;overflow:auto;display:grid;gap:14px;animation:rise .3s ease-out}
+@keyframes rise{from{transform:translateY(30px)}to{transform:none}}
+.sheet-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sheet-top h3{font-size:18px}
+.pv-head{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center}
+.pv-head .g-logo{width:44px;height:44px}
+.pv-head p{font-size:13px;color:var(--muted)}
+.pv-col{border-radius:14px;padding:12px 14px;display:grid;gap:6px}
+.pv-col h4{font-size:13px;display:flex;align-items:center;gap:6px}
+.pv-col ul{margin:0;padding-left:18px;display:grid;gap:3px;font-size:13px}
+.pv-col.yes{background:var(--trust-tint)}
+.pv-col.yes h4{color:var(--trust-ink)}
+.pv-col.no{background:var(--ok-tint)}
+.pv-col.no h4{color:var(--ok)}
+.pv-log h4{font-size:13px;margin-bottom:6px}
+.pv-log ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pv-log li{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:7px 10px;border-radius:10px;background:var(--surface-2)}
+.pv-log time{color:var(--faint);font-size:12px;white-space:nowrap}
+.pv-log p{font-size:13px}
+.pv-help{display:grid;gap:10px;padding:14px;border-radius:14px;border:1px solid var(--line)}
+.pv-help p{font-size:13px}
+.nc-form{display:grid;gap:12px}
+.nc-form .muted{font-size:13px}
+
+/* ---------- responsive ---------- */
+@media (max-width:1279px){
+  .stage{grid-template-columns:minmax(0,1fr) 372px;grid-template-areas:"parent kid" "parent wall"}
+  .pane.wall{position:static}
+  .wall-card{max-height:none}
+  .wall-log{max-height:520px}
+  .scenarios{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:899px){
+  .app{padding-inline:16px}
+  .demo-note{display:none}
+  .demo-bar{grid-template-columns:minmax(0,1fr);gap:10px;padding:12px}
+  .demo-label span{max-width:none}
+  .scenarios{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;margin-inline:-2px}
+  .scn{flex:0 0 228px;scroll-snap-align:start}
+  .clock{border-left:0;padding-left:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+  .viewswitch{display:flex;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding-block:8px;margin-block:-8px 14px}
+  .viewswitch .seg{width:100%}
+  .viewswitch .seg button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 6px;font-size:13px}
+  .stage{grid-template-columns:minmax(0,1fr);grid-template-areas:"parent" "wall" "kid"}
+  .stage[data-view="parent"] .pane:not(.parent),
+  .stage[data-view="kid"] .pane:not(.kid),
+  .stage[data-view="wall"] .pane:not(.wall){display:none}
+  .wall-log{max-height:none;overflow:visible}
+  .phone-screen{height:640px}
+}
+@media (max-width:560px){
+  .p-status{padding:16px}
+  .p-panel{padding:16px 14px 18px}
+  .p-who h2{font-size:17px}
+  .stat b{font-size:21px}
+  .sens{grid-template-columns:minmax(0,1fr)}
+  .t-form{grid-template-columns:minmax(0,1fr)}
+  .phone{padding:8px;border-radius:40px}
+  .phone-screen{border-radius:32px;height:600px}
+  .alert-head{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+<style>
+/* Page frame: safe-area padding and hidden handling for a standalone page */
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+img{max-width:100%}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="gmTile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4A90E2"/><stop offset="1" stop-color="#9B51E0"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span id="brandLogo"></span>
+      <div>
+        <div class="wordmark">Ghost Mode <span>for Kids</span></div>
+        <div class="tagline">Pattern alerts for parents. Your kid's messages stay on their phone.</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="demo-note">Demo data · saved in this browser</span>
+      <button type="button" class="btn" id="resetBtn" data-action="reset">Reset demo</button>
+    </div>
+  </header>
+
+  <section class="demo-bar" aria-label="Demo controls">
+    <div class="demo-label"><b>Try a scenario</b><span>Plays out on <span class="kid-poss">Maya's</span> phone. Watch what reaches the parent.</span></div>
+    <div class="scenarios" id="scenarios"></div>
+    <div class="clock">
+      <span class="clock-label">Phone clock</span>
+      <span class="clock-now" id="clockNow"></span>
+      <form class="clock-row" id="clockForm">
+        <label class="sr-only" for="clockInput">Set phone time</label>
+        <input type="time" id="clockInput" value="23:30">
+        <button class="btn sm" type="submit">Set</button>
+      </form>
+    </div>
+  </section>
+
+  <nav class="viewswitch" aria-label="Choose a view">
+    <div class="seg" role="group">
+      <button type="button" data-action="view" data-id="parent">Parent <span class="badge" id="viewBadge" hidden></span></button>
+      <button type="button" data-action="view" data-id="wall">Data sent</button>
+      <button type="button" data-action="view" data-id="kid"><span><span class="kid-poss">Maya's</span> phone</span></button>
+    </div>
+  </nav>
+
+  <main class="stage" id="stage" data-view="parent">
+    <!-- PARENT -->
+    <section class="pane parent" aria-label="Parent app">
+      <div class="pane-label"><i></i>Parent app · your phone</div>
+      <div class="parent-app">
+        <div class="p-status" id="pStatus"></div>
+        <div class="p-tabs" role="tablist" aria-label="Parent app sections">
+          <button type="button" role="tab" class="p-tab-btn" data-action="tab" data-id="alerts" aria-controls="tab-alerts">Alerts <span class="badge" id="alertBadge" hidden></span></button>
+          <button type="button" role="tab" class="p-tab-btn" data-action="tab" data-id="activity" aria-controls="tab-activity">Activity</button>
+          <button type="button" role="tab" class="p-tab-btn" data-action="tab" data-id="trusted" aria-controls="tab-trusted">Trusted adults</button>
+          <button type="button" role="tab" class="p-tab-btn" data-action="tab" data-id="settings" aria-controls="tab-settings">Settings</button>
+        </div>
+
+        <div class="p-panel" id="tab-alerts" role="tabpanel">
+          <div class="panel-head">
+            <p>You see the pattern and who it involves. Never the words.</p>
+            <div class="seg" role="group" aria-label="Filter alerts" id="alertFilter"></div>
+          </div>
+          <div class="alerts" id="alertList"></div>
+        </div>
+
+        <div class="p-panel" id="tab-activity" role="tabpanel" hidden>
+          <div class="panel-head">
+            <div>
+              <h3 style="font-size:16px">Late-night messages</h3>
+              <p id="actSub"></p>
+            </div>
+          </div>
+          <div class="chart-box" id="chartBox"></div>
+          <div class="legend" id="chartLegend"></div>
+          <div class="act-stats" id="actStats"></div>
+        </div>
+
+        <div class="p-panel" id="tab-trusted" role="tabpanel" hidden>
+          <div class="panel-head">
+            <p>Adults on this list won't set off new-contact alerts. Grooming patterns from them are still checked, at a lower weight.</p>
+          </div>
+          <ul class="t-list" id="trustedList"></ul>
+          <form class="t-form" id="trustedForm">
+            <label class="field">Name or username<input id="trustedName" maxlength="28" placeholder="e.g. Uncle Ray" required></label>
+            <label class="field">Who they are
+              <select id="trustedRel">
+                <option>Family</option><option>Coach or teacher</option><option>Family friend</option><option>Tutor</option><option>Other</option>
+              </select>
+            </label>
+            <button class="btn primary" type="submit">Add</button>
+          </form>
+        </div>
+
+        <div class="p-panel" id="tab-settings" role="tabpanel" hidden>
+          <form class="settings" id="settingsForm" autocomplete="off">
+            <fieldset class="set-group">
+              <legend>Your child</legend>
+              <label class="field" style="max-width:300px">First name<input id="setName" name="kidName" maxlength="20"></label>
+            </fieldset>
+            <fieldset class="set-group">
+              <legend>Quiet hours</legend>
+              <p class="hint">Messages sent or received in this window count toward late-night alerts.</p>
+              <div class="row2">
+                <label class="field">Starts<input type="time" id="setQs" name="quietStart"></label>
+                <label class="field">Ends<input type="time" id="setQe" name="quietEnd"></label>
+              </div>
+            </fieldset>
+            <fieldset class="set-group">
+              <legend>Sensitivity</legend>
+              <div class="sens">
+                <label class="sens-opt"><input type="radio" name="sensitivity" value="low" id="sensLow"><span><b>Low</b><small>Only strong patterns. Fewest alerts.</small></span></label>
+                <label class="sens-opt"><input type="radio" name="sensitivity" value="balanced" id="sensBal"><span><b>Balanced</b><small>A good starting point for most families.</small></span></label>
+                <label class="sens-opt"><input type="radio" name="sensitivity" value="high" id="sensHigh"><span><b>High</b><small>Flags early signs. Expect more alerts.</small></span></label>
+              </div>
+            </fieldset>
+            <fieldset class="set-group">
+              <legend>Alert types</legend>
+              <label class="switch"><span><b>New adult contacts</b><small>Someone 18+ who isn't on your trusted list starts chatting.</small></span><input type="checkbox" id="aAdult" name="aAdult"></label>
+              <label class="switch"><span><b>Late-night activity spikes</b><small>Quiet-hours messaging well above the last 14 nights.</small></span><input type="checkbox" id="aLate" name="aLate"></label>
+              <label class="switch"><span><b>Grooming language markers</b><small>Secrecy, gifts, photo requests, moving to private apps and more.</small></span><input type="checkbox" id="aGroom" name="aGroom"></label>
+            </fieldset>
+            <fieldset class="set-group">
+              <legend>Privacy</legend>
+              <label class="switch"><span><b>Show contact names in alerts</b><small>When off, alerts say "Contact #6" instead of a name.</small></span><input type="checkbox" id="showNames" name="showNames"></label>
+              <label class="switch"><span><b>Tell <span class="kid-name">Maya</span> when an alert goes out</b><small>They see which kind of alert was sent. Nothing more.</small></span><input type="checkbox" id="tellKid" name="tellKid"></label>
+            </fieldset>
+            <p class="saved" id="savedNote" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- WALL -->
+    <section class="pane wall" aria-label="Data that left the phone">
+      <div class="pane-label"><i></i>Between the phones</div>
+      <div class="wall-card">
+        <h3 id="wallTitle">What left Maya's phone</h3>
+        <p>Every update Ghost Mode sends, exactly as sent.</p>
+        <div class="leak">
+          <span class="leak-num" id="leakNum">0</span>
+          <span class="leak-label">characters of message text in anything sent to you</span>
+          <span class="leak-sub">Checked live against every message on the phone.</span>
+        </div>
+        <div class="wall-stats" id="wallStats"></div>
+        <ol class="wall-log" id="wallLog" reversed></ol>
+      </div>
+    </section>
+
+    <!-- KID -->
+    <section class="pane kid" aria-label="Kid's phone simulator">
+      <div class="pane-label"><i></i><span><span class="kid-poss">Maya's</span> phone · simulator</span></div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="statusbar">
+            <span id="phoneTime">4:12</span>
+            <span class="island"></span>
+            <span class="sb-icons" aria-hidden="true">
+              <svg viewBox="0 0 17 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="9" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+              <svg viewBox="0 0 26 12" style="width:24px"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="16" height="8" rx="1.8" fill="currentColor"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>
+            </span>
+          </div>
+          <div class="notif" id="phoneNotif" hidden data-action="dismiss-notif"></div>
+
+          <div class="screen" id="screenList">
+            <div class="app-head">
+              <h3>Messages</h3>
+              <button type="button" class="ghost-pill" data-action="privacy"><span class="pill-logo"></span>Ghost Mode on</button>
+            </div>
+            <p class="phone-hint">Open a chat and type, or play a scenario above.</p>
+            <div class="chat-list" id="chatList"></div>
+            <div class="list-foot"><button type="button" class="btn block" data-action="new-chat"><svg class="ic sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New chat</button></div>
+          </div>
+
+          <div class="screen" id="screenThread" hidden>
+            <div class="thread-head">
+              <button type="button" class="icon-btn" data-action="back" aria-label="Back to chats"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+              <div class="thread-title" id="threadTitle"></div>
+            </div>
+            <div class="thread-body" id="threadBody" aria-live="polite"></div>
+            <form class="composer" id="composer" autocomplete="off">
+              <div class="as-row">Demo: type as
+                <div class="seg" role="group" aria-label="Who is typing">
+                  <button type="button" data-action="as" data-id="me" id="asMe">Maya</button>
+                  <button type="button" data-action="as" data-id="them" id="asThem">Them</button>
+                </div>
+              </div>
+              <div class="compose-row">
+                <label class="sr-only" for="composeInput">Message</label>
+                <input id="composeInput" maxlength="300" placeholder="Message">
+                <button class="send" type="submit" aria-label="Send"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7"/></svg></button>
+              </div>
+            </form>
+          </div>
+
+          <div class="sheet" id="sheetPrivacy" hidden data-action="sheet-scrim">
+            <div class="sheet-panel" role="dialog" aria-label="What your parent can see">
+              <div class="sheet-top"><span class="pill ok">Ghost Mode</span><button type="button" class="icon-btn" data-action="close-sheet" aria-label="Close"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+              <div id="privacyBody" style="display:grid;gap:14px"></div>
+            </div>
+          </div>
+
+          <div class="sheet" id="sheetNew" hidden data-action="sheet-scrim">
+            <div class="sheet-panel" role="dialog" aria-label="New chat">
+              <div class="sheet-top"><h3>New chat</h3><button type="button" class="icon-btn" data-action="close-sheet" aria-label="Close"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+              <form class="nc-form" id="newChatForm" autocomplete="off">
+                <p class="muted">Pretend someone new is chatting with <span class="kid-name">Maya</span>. Ghost Mode sees the same profile details the app shows.</p>
+                <label class="field">Name or username<input id="ncName" maxlength="24" placeholder="e.g. pixel_dragon" required></label>
+                <label class="field">Where they're chatting
+                  <select id="ncApp"><option>Messages</option><option>Roblox chat</option><option>Instagram</option><option>Discord</option><option>Minecraft</option></select>
+                </label>
+                <label class="field">Age on their profile<input id="ncAge" type="number" min="5" max="99" inputmode="numeric" placeholder="Leave blank if unknown"></label>
+                <button class="btn primary block" type="submit">Start chat</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="sr-only" aria-live="polite" id="announcer"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const KEY='ghost-mode-kids-v1';
+const MIN=60e3, DAY=24*60*MIN, WINDOW=7*DAY;
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const uid=()=>Math.random().toString(36).slice(2,9);
+const round1=n=>Math.round(n*10)/10;
+const reduced=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- time helpers ---------- */
+const ymd=t=>{const d=new Date(t);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const keyToDate=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+const shiftKey=(k,n)=>{const d=keyToDate(k);d.setDate(d.getDate()+n);return ymd(d)};
+const hm=s=>{const [h,m]=String(s).split(':').map(Number);return h*60+(m||0)};
+const minsOf=t=>{const d=new Date(t);return d.getHours()*60+d.getMinutes()};
+function inQuiet(t,c){const m=minsOf(t),a=hm(c.quietStart),b=hm(c.quietEnd);return a<b?(m>=a&&m<b):(m>=a||m<b)}
+function nightKey(t,c){const a=hm(c.quietStart),b=hm(c.quietEnd);const d=new Date(t);if(a>b&&minsOf(t)<b)d.setDate(d.getDate()-1);return ymd(d)}
+const fmtTime=t=>{const d=new Date(t);let h=d.getHours();const ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${pad(d.getMinutes())} ${ap}`};
+const fmtHM=s=>{const [h,m]=String(s).split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h%12||12;return m?`${hh}:${pad(m)} ${ap}`:`${hh} ${ap}`};
+const phoneTime=t=>{const d=new Date(t);return `${d.getHours()%12||12}:${pad(d.getMinutes())}`};
+const iso=t=>{const d=new Date(t);return `${ymd(t)}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const isoToT=s=>{const [dk,tm]=s.split('T');const d=keyToDate(dk);const [h,m]=tm.split(':').map(Number);d.setHours(h,m,0,0);return d.getTime()};
+const shortDate=t=>new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const nightLabel=k=>shortDate(keyToDate(k).getTime());
+function dayDiff(t){return Math.round((keyToDate(ymd(S.clock))-keyToDate(ymd(t)))/DAY)}
+function dayLabel(t){const d=dayDiff(t);return d===0?'Today':d===1?'Yesterday':shortDate(t)}
+const when=t=>`${dayLabel(t)}, ${fmtTime(t)}`;
+const shortWhen=t=>{const d=dayDiff(t);return d===0?fmtTime(t):d===1?'Yesterday':shortDate(t)};
+
+/* ---------- on-device detection engine ---------- */
+const SENS={
+  low:{watch:6,urgent:10,lateMin:10,lateMult:4},
+  balanced:{watch:4,urgent:8,lateMin:5,lateMult:3},
+  high:{watch:3,urgent:6,lateMin:3,lateMult:2}
+};
+const RANK={info:0,watch:1,urgent:2};
+const MARKERS=[
+  {id:'secrecy_request',label:'Asked to keep secrets',w:3,
+   talk:'"Has anyone online asked you to keep a secret from us? You won\'t be in trouble for telling me."',
+   re:[/\bdon't tell\b/,/\bdo not tell\b/,/\bour (little )?secret\b/,/\bbetween (us|you and me)\b/,/\bdelete (this|these|the|our) (chat|chats|message|messages|convo|conversation)\b/,/\bkeep (this|it) (quiet|private|secret|to yourself)\b/,/\bno one (needs to|has to|should) know\b/]},
+  {id:'turning_against_family',label:'Turned them against family',w:3,
+   talk:'"Has anyone told you we wouldn\'t understand something? I\'d always rather know."',
+   re:[/\b(parents|mom|dad|family|friends|they) (don't|do not|never|wouldn't|won't) (understand|get) (you|it)\b/,/\bthey (wouldn't|won't|don't) understand\b/,/\bonly i (understand|get) you\b/,/\bi'm the only one who\b/,/\bnobody (else )?(understands|gets) you\b/,/\byou can trust me\b/]},
+  {id:'gift_or_money',label:'Offered gifts or money',w:2,
+   talk:'"Has anyone offered you Robux, gift cards or money? What did they want back?"',
+   re:[/\bgift ?cards?\b/,/\b(robux|vbucks|v bucks|nitro)\b/,/\bi('ll| will| can) (buy|get|send|give) you\b/,/\bsend you (money|\$?\d+)\b/,/\b(venmo|cash ?app|paypal)\b/]},
+  {id:'move_to_private_app',label:'Pushed to a private app',w:2,
+   talk:'"Has someone asked you to switch to Snapchat or another app to keep talking?"',
+   re:[/\badd me on\b/,/\b(snap|snapchat|telegram|whatsapp|kik|wickr)\b/,/\b(dm|message|text|hit) me (up )?(on|at)\b/,/\bswitch (apps|to)\b/,/\bwhat's your (number|snap|insta|cell|phone number)\b/]},
+  {id:'personal_info_request',label:'Asked for location or school',w:2,
+   talk:'"Has anyone asked where you live or go to school?"',
+   re:[/\bwhere do you live\b/,/\b(what|which) school\b/,/\bhome alone\b/,/\bare you alone\b/,/\byour (address|location)\b/,/\bsend (me )?your (location|address)\b/]},
+  {id:'photo_request',label:'Asked for photos',w:4,
+   talk:'"If anyone asks you for a photo, you can always say no and come to me. No matter what."',
+   re:[/\bsend (me )?(a |some |more )?(pic|pics|picture|pictures|photo|photos|selfie|selfies|vid|video)\b/,/\bwhat are you wearing\b/,/\bshow me (you|yourself|your)\b/,/\b(pic|photo|picture) of you\b/,/\bturn (on )?(your )?(camera|cam)\b/,/\bcam on\b/]},
+  {id:'meetup_request',label:'Asked to meet in person',w:4,
+   talk:'"Has anyone you met online asked to meet up?"',
+   re:[/\bmeet (up|me|in person|irl)\b/,/\b(come|sneak) (over|out)\b/,/\bpick you up\b/,/\bwhere can we meet\b/,/\bi (could|can) (come|drive) (to you|over|get you)\b/,/\bhang out irl\b/]},
+  {id:'maturity_talk',label:'"Mature for your age" talk',w:2,
+   talk:'"Has someone older been telling you you\'re mature for your age?"',
+   re:[/\bmature for your age\b/,/\bage (is )?just a number\b/,/\byou're (so|really|very) mature\b/,/\bhow old are you\b/,/\bdo you have a (boyfriend|girlfriend|bf|gf)\b/,/\bolder (guys|girls|people) like you\b/]}
+];
+const MARKER=Object.fromEntries(MARKERS.map(m=>[m.id,m]));
+const SHORT={u:'you',ur:'your',r:'are',ya:'you',im:"i'm",dont:"don't",wont:"won't",cant:"can't",wouldnt:"wouldn't",didnt:"didn't",doesnt:"doesn't",isnt:"isn't",wanna:'want to',gonna:'going to',pls:'please',plz:'please',rn:'right now',tmrw:'tomorrow',cuz:'because',bc:'because',ppl:'people',thats:"that's",whats:"what's",youre:"you're",ive:"i've"};
+function normalize(s){
+  return ' '+String(s).toLowerCase().replace(/[\u2018\u2019`]/g,"'").replace(/[^a-z0-9'$ ]+/g,' ')
+    .split(/\s+/).filter(Boolean).map(w=>SHORT[w]||w).join(' ')+' ';
+}
+const ADULT_CUES=[['work',/\b(my|at|from) (job|work|office|boss)\b/],['college',/\b(college|university|dorm)\b/],['driving',/\b(my car|my truck|i drive|i can drive)\b/],['own place',/\bmy (apartment|place|wife|husband)\b/]];
+
+/* ---------- state ---------- */
+let S=null, seeding=false, playing=null;
+const T={arrived:null,fresh:null,notif:null,notifTimer:0,sheet:null,helpSent:false,openTalk:new Set(),settingsTimer:0};
+
+const name=()=>(S.parent.settings.kidName||'').trim()||'Your child';
+const poss=n=>/s$/i.test(n)?n+"'":n+"'s";
+const cfg=()=>S.device.config;
+const isTrusted=c=>S.device.trusted.includes(c.name.toLowerCase());
+const factor=c=>isTrusted(c)?.5:c.ageBand==='adult'?1:c.ageBand==='unknown'?.8:.4;
+const contactRef=c=>cfg().showNames?c.name:`Contact #${c.ref}`;
+const initial=n=>(String(n).match(/[a-z0-9]/i)||['?'])[0].toUpperCase();
+function baselineFor(counts,nk){let s=0;for(let i=1;i<=14;i++)s+=counts[shiftKey(nk,-i)]||0;return s/14}
+function lateThreshold(base,sens){const th=SENS[sens]||SENS.balanced;return Math.max(th.lateMin,Math.ceil(base*th.lateMult))}
+const totalMsgs=()=>Object.values(S.device.threads).reduce((n,th)=>n+th.filter(m=>m.from!=='sys').length,0);
+
+/* ---------- the wire between the phones ---------- */
+function transmit(p,dir,t){
+  t=t||S.clock;
+  S.stats.sent++;
+  const top=S.wall[0];
+  if(p.type==='counts'&&top&&top.p.type==='counts'){top.p=p;top.n++;top.at=t;top.fresh=true}
+  else{S.wall.unshift({id:uid(),dir,at:t,p,n:1,fresh:true});if(S.wall.length>60)S.wall.length=60}
+  if(dir==='up')parentReceive(p,t);else deviceReceive(p,t);
+}
+
+/* Parent side: builds its whole view from payloads only. */
+function parentReceive(p,t){
+  const P=S.parent;P.lastSync=t;
+  if(p.type==='counts'){P.rollups[p.night]=p.late_night;P.today={day:p.day,total:p.messages_today};return}
+  if(p.type==='alert'){
+    let a=P.alerts.find(x=>x.id===p.alert_id);
+    if(a){a.p=p;a.updatedAt=t;a.status='new';a.checkIn=false}
+    else{a={id:p.alert_id,p,createdAt:t,updatedAt:t,status:'new'};P.alerts.push(a)}
+    if(!seeding){T.arrived=a.id;announce(`New alert: ${alertTitle(p)}`)}
+  }
+}
+
+/* Device side: config and notes from the parent. */
+function deviceReceive(p,t){
+  const D=S.device;
+  if(p.type==='settings'){
+    D.config={kidName:p.child,quietStart:p.quiet_start,quietEnd:p.quiet_end,sensitivity:p.sensitivity,
+      alerts:{adult:p.alerts_on.includes('new_adult_contact'),late:p.alerts_on.includes('late_night_spike'),grooming:p.alerts_on.includes('grooming_language_markers')},
+      showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts};
+  }else if(p.type==='trusted_adults'){D.trusted=p.names.map(n=>n.toLowerCase())}
+  else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(p.note,'From your parent')}
+}
+
+function settingsPayload(s){
+  return {type:'settings',child:(s.kidName||'').trim()||'Your child',quiet_start:s.quietStart,quiet_end:s.quietEnd,sensitivity:s.sensitivity,
+    alerts_on:[s.alerts.adult&&'new_adult_contact',s.alerts.late&&'late_night_spike',s.alerts.grooming&&'grooming_language_markers'].filter(Boolean),
+    show_contact_names:s.showNames,tell_child_about_alerts:s.tellKid};
+}
+
+const KID_NOTICE={
+  new_adult_contact:'Your parent got an alert that a new adult is chatting with you. None of your messages were shared.',
+  late_night_spike:'Your parent got an alert that your phone has been busy late tonight. None of your messages were shared.',
+  grooming_language_markers:'Your parent got an alert about warning signs in a chat. None of your messages were shared.'
+};
+function sendAlert(p,t,notify){
+  transmit(Object.assign({type:'alert'},p,{message_text_included:false,sent_at:iso(t)}),'up',t);
+  S.device.sentLog.unshift({alert:p.alert,at:t});
+  if(notify&&!seeding&&cfg().tellKid&&KID_NOTICE[p.alert])kidNotice(KID_NOTICE[p.alert],'Ghost Mode');
+}
+
+/* Every message on the kid's phone goes through here. Text never leaves this function. */
+function deliver(cid,from,text){
+  const D=S.device,t=S.clock,c=D.contacts[cid];
+  if(!c)return;
+  const msg={id:uid(),from,text,at:t};
+  (D.threads[cid]=D.threads[cid]||[]).push(msg);
+  T.fresh=msg.id;
+  const day=ymd(t),cf=cfg(),quiet=inQuiet(t,cf),nk=nightKey(t,cf);
+  D.dayTotals[day]=(D.dayTotals[day]||0)+1;
+  if(quiet){
+    D.nightCounts[nk]=(D.nightCounts[nk]||0)+1;
+    const span=D.nightSpan[nk]=D.nightSpan[nk]||{first:t,last:t,chats:[],adult:false};
+    span.last=t;if(!span.chats.includes(cid))span.chats.push(cid);
+  }
+  transmit({type:'counts',night:nk,late_night:D.nightCounts[nk]||0,day,messages_today:D.dayTotals[day]},'up',t);
+  if(from==='them')analyzeIncoming(c,text,t);
+  if(quiet&&c.ageBand==='adult'&&!isTrusted(c))D.nightSpan[nk].adult=true;
+  evalAdult(c,t);
+  if(from==='them')evalGrooming(c,t);
+  if(quiet)evalLate(nk,t);
+  commit();
+}
+
+function analyzeIncoming(c,text,t){
+  const n=normalize(text);
+  const sig=S.device.signals[c.id]=S.device.signals[c.id]||{markers:{},cues:[]};
+  for(const m of MARKERS)if(m.re.some(r=>r.test(n)))sig.markers[m.id]=t;
+  let age=null,mm;
+  if((mm=n.match(/\bi(?:'m| am) (\d{2})\b/)))age=+mm[1];
+  else if((mm=n.match(/\b(\d{2}) ?(?:years old|yrs old|yo)\b/)))age=+mm[1];
+  if(age&&age>=10&&age<90){
+    if(age>=18){if(c.ageBand!=='adult'){c.ageBand='adult';c.ageSource=`said they're ${age}`}}
+    else if(c.ageBand==='unknown'){c.ageBand=age>=13?'teen':'kid';c.ageSource=`said they're ${age}`}
+  }
+  if(c.ageBand==='unknown'){
+    for(const [cue,re] of ADULT_CUES)if(re.test(n)&&!sig.cues.includes(cue))sig.cues.push(cue);
+    if(sig.cues.length>=2){c.ageBand='adult';c.ageSource=`likely adult (mentions ${sig.cues.slice(0,2).join(' and ')})`}
+  }
+}
+
+function evalAdult(c,t){
+  const cf=cfg();
+  if(!cf.alerts.adult||isTrusted(c)||c.ageBand!=='adult')return;
+  const key='adult-'+c.id,D=S.device;
+  if(D.alertState[key])return;
+  D.alertState[key]={severity:'watch',rev:1};
+  sendAlert({alert_id:key,rev:1,alert:'new_adult_contact',severity:'watch',contact:contactRef(c),where:c.app,contact_age:c.ageSource,first_seen:iso(c.firstSeen)},t,true);
+}
+
+function evalGrooming(c,t){
+  const cf=cfg(),D=S.device;
+  if(!cf.alerts.grooming)return;
+  const sig=D.signals[c.id];if(!sig)return;
+  const ids=Object.keys(sig.markers).filter(id=>t-sig.markers[id]<=WINDOW).sort((a,b)=>MARKER[b].w-MARKER[a].w);
+  if(!ids.length)return;
+  const th=SENS[cf.sensitivity]||SENS.balanced;
+  const score=ids.reduce((s,id)=>s+MARKER[id].w,0)*factor(c);
+  let sev=score>=th.urgent?'urgent':score>=th.watch?'watch':null;
+  const risky=!isTrusted(c)&&(c.ageBand==='adult'||c.ageBand==='unknown');
+  if(risky&&ids.includes('secrecy_request')&&(ids.includes('photo_request')||ids.includes('meetup_request')))sev='urgent';
+  if(!sev)return;
+  const key='grooming-'+c.id,prev=D.alertState[key];
+  if(prev&&RANK[prev.severity]>RANK[sev])sev=prev.severity;
+  const raised=!prev||RANK[sev]>RANK[prev.severity];
+  if(prev&&!raised&&prev.markers.length===ids.length)return;
+  const rev=(prev?prev.rev:0)+1;
+  D.alertState[key]={severity:sev,markers:ids,rev};
+  sendAlert({alert_id:key,rev,alert:'grooming_language_markers',severity:sev,contact:contactRef(c),where:c.app,contact_age:c.ageSource,markers:ids,window_days:7},t,raised);
+  if(sev==='urgent'&&!D.sysNoted[c.id]){
+    D.sysNoted[c.id]=true;
+    D.threads[c.id].push({id:uid(),from:'sys',at:t,text:'Ghost Mode noticed this chat asking for things like secrets, gifts or photos. People use these to pressure kids. You can stop replying, block them, or talk to someone you trust.'+(cf.tellKid?' Your parent got an alert, not your messages.':'')});
+  }
+}
+
+function evalLate(nk,t){
+  const cf=cfg(),D=S.device;
+  if(!cf.alerts.late)return;
+  const count=D.nightCounts[nk]||0,base=baselineFor(D.nightCounts,nk),thr=lateThreshold(base,cf.sensitivity);
+  if(count<thr)return;
+  const span=D.nightSpan[nk];
+  let sev=(count>=thr*3||span.adult)?'watch':'info';
+  const key='late-'+nk,prev=D.alertState[key];
+  if(prev&&RANK[prev.severity]>RANK[sev])sev=prev.severity;
+  const raised=!prev||RANK[sev]>RANK[prev.severity];
+  if(prev&&!raised&&count-prev.count<5)return;
+  const rev=(prev?prev.rev:0)+1;
+  D.alertState[key]={severity:sev,count,rev};
+  sendAlert({alert_id:key,rev,alert:'late_night_spike',severity:sev,night:nk,messages:count,usual_per_night:round1(base),alert_threshold:thr,
+    quiet_hours:`${cf.quietStart}-${cf.quietEnd}`,first_message_at:iso(span.first),last_message_at:iso(span.last),chats:span.chats.length,adult_contact_involved:!!span.adult},t,raised);
+}
+
+/* Truthful leak check: does any message text appear in anything sent? */
+function leakChars(){
+  const blob=S.wall.map(w=>JSON.stringify(w.p)).join('\n').toLowerCase();
+  let n=0;
+  for(const th of Object.values(S.device.threads))for(const m of th){
+    if(m.from==='sys')continue;
+    const s=m.text.toLowerCase().trim();
+    if(s.length>=6&&blob.includes(s))n+=s.length;
+  }
+  return n;
+}
+
+/* ---------- seed ---------- */
+function seed(){
+  const b=new Date();b.setHours(16,12,0,0);const T0=b.getTime();
+  const at=(daysAgo,h)=>{const d=new Date(b);d.setDate(d.getDate()-daysAgo);const [hh,mm]=h.split(':').map(Number);d.setHours(hh,mm,0,0);return d.getTime()};
+  const settings={kidName:'Maya',quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true};
+  S={v:1,clock:at(15,'19:00'),
+    parent:{settings,alerts:[],rollups:{},today:{day:'',total:0},lastSync:0,
+      trusted:[{name:'Grandma Rose',relation:'Family',addedAt:at(15,'19:02')},{name:'Coach Daniels',relation:'Coach or teacher',addedAt:at(15,'19:02')}]},
+    device:{config:null,contacts:{},threads:{},signals:{},nightCounts:{},nightSpan:{},dayTotals:{},alertState:{},trusted:[],sentLog:[],notes:[],sysNoted:{}},
+    wall:[],stats:{sent:0},
+    ui:{view:'parent',tab:'alerts',filter:'all',screen:'list',thread:null,typeAs:'me'}};
+  seeding=true;
+  const D=S.device;
+  transmit(settingsPayload(settings),'down',at(15,'19:00'));
+  transmit({type:'trusted_adults',names:S.parent.trusted.map(x=>x.name)},'down',at(15,'19:02'));
+  const mk=(id,nm,app,ageBand,ageSource,ref,firstSeen)=>({id,name:nm,app,ageBand,ageSource,ref,firstSeen});
+  [mk('jess','Jess','Messages','kid','classmate',1,at(300,'12:00')),mk('leo','Leo','Messages','teen','teammate',2,at(200,'12:00')),
+   mk('ava','Ava','Messages','kid','classmate',3,at(120,'12:00')),mk('grandma','Grandma Rose','Messages','adult','family',4,at(400,'12:00')),
+   mk('coach','Coach Daniels','Messages','adult','soccer coach',5,at(90,'12:00'))].forEach(c=>{D.contacts[c.id]=c});
+  const m=(from,text,t)=>({id:uid(),from,text,at:t});
+  D.threads={
+    coach:[m('them','Great hustle today. Practice Thursday 5:30, field 3.',at(3,'19:20')),m('me','ok thank you coach!',at(3,'19:24'))],
+    grandma:[m('them','Love you sweetheart! See you Sunday for pancakes',at(2,'09:15')),m('me','love you too grandma!!',at(2,'10:02'))],
+    leo:[m('them','bring your switch on saturday',at(1,'18:40')),m('me','ok!!',at(1,'18:41'))],
+    ava:[m('me','omg the new episode',at(1,'20:05')),m('them','NO SPOILERS',at(1,'20:06'))],
+    jess:[m('them','see you at lunch tomorrow',at(1,'21:10'))]
+  };
+  [1,0,2,0,0,1,0,14,1,0,2,1,0,1].forEach((n,i)=>{D.nightCounts[ymd(at(14-i,'23:00'))]=n});
+  Object.assign(S.parent.rollups,D.nightCounts);
+  // a past late-night spike, already reviewed
+  const sk=ymd(at(7,'23:00')),sbase=baselineFor(D.nightCounts,sk);
+  D.nightSpan[sk]={first:at(6,'00:10'),last:at(6,'01:31'),chats:['jess','leo','ava'],adult:false};
+  D.alertState['late-'+sk]={severity:'info',count:14,rev:1};
+  sendAlert({alert_id:'late-'+sk,rev:1,alert:'late_night_spike',severity:'info',night:sk,messages:14,usual_per_night:round1(sbase),alert_threshold:lateThreshold(sbase,'balanced'),
+    quiet_hours:'22:00-06:00',first_message_at:iso(at(6,'00:10')),last_message_at:iso(at(6,'01:31')),chats:3,adult_contact_involved:false},at(6,'01:31'),false);
+  S.parent.alerts[0].status='reviewed';
+  // today
+  D.contacts.nova=mk('nova','xNovaBlade','Roblox chat','adult','profile age 27',6,at(0,'15:58'));
+  [['jess','them','did you finish the science worksheet','15:31'],['jess','me','almost, #4 is so hard','15:33'],['jess','them','same lol. call me after dinner?','15:52'],
+   ['nova','them','gg that obby run was crazy','15:58'],['nova','me','haha thx','15:59'],['nova','them',"you're really good at this",'16:01']]
+   .forEach(([c,f,txt,h])=>{S.clock=at(0,h);deliver(c,f,txt)});
+  S.clock=T0;
+  S.wall.forEach(w=>{w.fresh=false});
+  seeding=false;
+  return S;
+}
+
+/* ---------- scenarios ---------- */
+function ensureContact(c){
+  const D=S.device;
+  if(!D.contacts[c.id]){
+    const ref=Math.max(0,...Object.values(D.contacts).map(x=>x.ref))+1;
+    D.contacts[c.id]=Object.assign({ref,firstSeen:S.clock},c);
+  }
+}
+const SCENARIOS=[
+  {id:'stranger',title:'Stranger from a game',kind:'urgent',result:'Urgent alert',
+   blurb:'An adult from Roblox chat pushes for secrets, gifts and a photo.',
+   steps:[['nova','them','yo you on tonight? that obby run was insane',3],['nova','me','haha yeah i got lucky',1],
+     ['nova','them',"nah you're legit good. honestly you're really mature for your age",2],['nova','me','lol thanks',1],
+     ['nova','them','i can send you 800 robux if you want, no big deal',2],['nova','me','wait really??',1],
+     ['nova','them',"ya but roblox chat is laggy. add me on snap, it's easier",2],
+     ['nova','them',"and don't tell your parents ok? they wouldn't understand. it's our secret",1],['nova','me','um ok',2],
+     ['nova','them',"cool. send me a pic so i know it's really you",1]]},
+  {id:'latenight',title:'2 AM group chat',kind:'watch',result:'Late-night alert',at:'00:38',
+   blurb:'Friends keep messaging long after bedtime on a school night.',
+   steps:[['jess','them','r u awake',0],['jess','me','yeah cant sleep',2],['jess','them','same. did u see the finale',3],['jess','me','YES the ending???',2],
+     ['leo','them','wait are you guys up too lol',4],['leo','them','that plot twist was crazy',2],['leo','me','i screamed',3],
+     ['ava','them','omg hiii why is everyone awake',5],['ava','them','we have a math test tmrw nooo',2],['ava','me','dont remind me',3],
+     ['jess','them',"ok i'm watching it again",6],['jess','me','lol same',4],['leo','them','brb snack',7],
+     ['ava','them','my mom is gonna kill me if she sees my light on',5],['ava','me','haha go to sleep',4],['jess','them','night night',6]]},
+  {id:'party',title:'Surprise party plans',kind:'ok',result:'No alert',at:'15:45',
+   blurb:'Friends say "don\'t tell" and "pick you up". Context says it\'s a birthday.',
+   steps:[['jess','them',"ok so saturday at 2 for ava's surprise party!!",0],['jess','me',"yesss i'll bring the banner",2],
+     ['jess','them',"shhh don't tell anyone about the cake lol",1],['jess','me','my lips are sealed',1],
+     ['leo','them','my mom can pick you up at 1:30',6],['leo','me','perfect thank u',1],
+     ['leo','them',"don't tell ava, she thinks we're going bowling",2],['leo','me','lol ok',1]]},
+  {id:'older',title:'Older teen on Instagram',kind:'watch',result:'New-adult alert',
+   blurb:'A new contact with no age on their profile mentions they\'re 19.',
+   setup(){ensureContact({id:'drew',name:'drew.k_art',app:'Instagram',ageBand:'unknown',ageSource:'unknown'})},
+   steps:[['drew','them',"hey saw your drawing post, it's really good",2],['drew','me','omg thank you!!',1],
+     ['drew','them',"np. i'm 19 btw, just started college for art",3],['drew','them','what school do you go to?',1],
+     ['drew','me',"um i'd rather not say",2]]}
+];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function play(id){
+  if(playing)return;
+  const sc=SCENARIOS.find(s=>s.id===id);if(!sc)return;
+  const token=playing={id,i:0};
+  if(sc.at)setClockTo(sc.at);
+  if(sc.setup)sc.setup();
+  T.sheet=null;
+  commit();
+  for(let i=0;i<sc.steps.length;i++){
+    if(playing!==token)return;
+    const [cid,from,text,gap]=sc.steps[i];
+    S.clock+=(gap==null?2:gap)*MIN;
+    S.ui.screen='thread';S.ui.thread=cid;
+    token.i=i+1;
+    deliver(cid,from,text);
+    await sleep(reduced?150:800);
+  }
+  if(playing===token){playing=null;renderScenarios()}
+}
+function setClockTo(h){
+  const [hh,mm]=h.split(':').map(Number);const d=new Date(S.clock);d.setHours(hh,mm,0,0);
+  if(d.getTime()<=S.clock)d.setDate(d.getDate()+1);
+  S.clock=d.getTime();
+}
+
+/* ---------- icons ---------- */
+const ICONS={
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  moon:'<path d="M20 14.2A8 8 0 1 1 9.8 4a6.4 6.4 0 0 0 10.2 10.2z"/>',
+  userPlus:'<circle cx="9" cy="8" r="3.6"/><path d="M2.5 20c.6-3.6 3.2-6 6.5-6s5.9 2.4 6.5 6"/><path d="M19 8v6M16 11h6"/>',
+  shield:'<path d="M12 3l7.5 2.8v5.8c0 4.7-3.2 8.2-7.5 9.9-4.3-1.7-7.5-5.2-7.5-9.9V5.8z"/><path d="M12 8.5v4.5"/><path d="M12 16.3v.2"/>',
+  heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z"/>',
+  left:'<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  right:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.6A9.7 9.7 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3.3 4.1M6.3 7.2A16 16 0 0 0 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>'
+};
+const ic=(n,c='ic')=>`<svg class="${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
+const ghost=()=>`<svg class="g-logo" viewBox="0 0 64 64" aria-hidden="true">
+<rect width="64" height="64" rx="16" fill="url(#gmTile)"/>
+<path d="M15 31C15 18 22.5 9.5 32 9.5S49 18 49 31" fill="none" stroke="#2D3566" stroke-width="3" stroke-linecap="round"/>
+<path d="M17 33C17 21.5 23.5 14 32 14S47 21.5 47 33V50.5C47 54 43.5 55 41.6 52.6C40 50.6 37.4 50.6 35.8 52.6C34 55 30 55 28.2 52.6C26.6 50.6 24 50.6 22.4 52.6C20.5 55 17 54 17 50.5Z" fill="#fff"/>
+<rect x="11" y="25.5" width="8" height="13" rx="4" fill="#7E8FD0"/><rect x="45" y="25.5" width="8" height="13" rx="4" fill="#7E8FD0"/>
+<circle cx="27" cy="31.5" r="2.8" fill="#2D3566"/><circle cx="37" cy="31.5" r="2.8" fill="#2D3566"/>
+<circle cx="27.9" cy="30.5" r=".9" fill="#fff"/><circle cx="37.9" cy="30.5" r=".9" fill="#fff"/>
+<ellipse cx="23" cy="37" rx="2.4" ry="1.4" fill="#D7B8F5"/><ellipse cx="41" cy="37" rx="2.4" ry="1.4" fill="#D7B8F5"/>
+<path d="M29.5 37.2Q32 39.6 34.5 37.2" fill="none" stroke="#2D3566" stroke-width="1.6" stroke-linecap="round"/>
+<path d="M45 39.5l7.5 2.8v5.4c0 4.6-3.2 7.6-7.5 9.3-4.3-1.7-7.5-4.7-7.5-9.3v-5.4z" fill="#F5A623" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M41.7 48.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+/* ---------- parent rendering ---------- */
+const ALERTS={
+  new_adult_contact:{title:()=>'New adult contact',icon:'userPlus'},
+  late_night_spike:{title:()=>'Late-night activity spike',icon:'moon'},
+  grooming_language_markers:{title:()=>'Grooming language markers',icon:'shield'},
+  kid_request:{title:k=>`${k} asked to talk`,icon:'heart'}
+};
+const alertTitle=p=>ALERTS[p.alert].title(name());
+const SEV_LABEL={urgent:'Urgent',watch:'Watch',info:'Info'};
+
+function alertCard(a){
+  const p=a.p,k=name(),meta=ALERTS[p.alert],sev=p.severity;
+  const anon=p.contact&&/^Contact #/.test(p.contact);
+  const who=p.contact?`<b>${esc(p.contact)}</b>`:'';
+  const btn=(action,label,cls)=>`<button type="button" class="btn ${cls||''}" data-action="${action}" data-id="${esc(a.id)}">${label}</button>`;
+  let line='',chips='',why='',next='',talk=[],acts=[];
+  if(p.alert==='new_adult_contact'){
+    line=`${who} · ${esc(p.where)} · ${esc(p.contact_age)}`;
+    why=`Someone 18 or older who isn't on your trusted list is now chatting with ${esc(k)}. If it's a relative, coach or tutor, add them as trusted and Ghost Mode won't flag them again.`;
+    talk=[`"Who's ${anon?'your new contact':esc(p.contact)}? How do you know them?"`,'"Have you met them in real life?"'];
+    if(!anon)acts.push(btn('trust','We know them'));
+  }else if(p.alert==='late_night_spike'){
+    line=`<b>${p.messages} messages</b> between ${fmtTime(isoToT(p.first_message_at))} and ${fmtTime(isoToT(p.last_message_at))} · usually ${p.usual_per_night} a night · ${p.chats} chat${p.chats===1?'':'s'}`;
+    why=p.adult_contact_involved?`An adult who isn't on your trusted list was part of tonight's late messaging. Worth a calm check-in.`:`Most of the time this is just friends, but it cuts into sleep. A quick, low-key check-in usually covers it.`;
+    talk=['"Rough night? The phone was busy late. Everything okay?"','"Want to try charging phones outside bedrooms on school nights? I\'ll do it too."'];
+  }else if(p.alert==='grooming_language_markers'){
+    line=`${who} · ${esc(p.where)} · ${esc(p.contact_age)}`;
+    chips=`<ul class="chips" aria-label="Patterns detected">${p.markers.map(id=>`<li class="${MARKER[id].w>=3?'hi':''}">${esc(MARKER[id].label)}</li>`).join('')}</ul>`;
+    why=`${p.markers.length} warning sign${p.markers.length===1?'':'s'} in the last ${p.window_days} days. These match patterns child-safety groups link to grooming. You're seeing which patterns showed up, not what was said.`;
+    if(sev==='urgent')next=`<p class="alert-next"><b>Talk with ${esc(k)} today.</b> Stay calm and make it clear they're not in trouble. If someone asked for photos or to meet, you can report it to the NCMEC CyberTipline (US) at <a href="https://report.cybertip.org" target="_blank" rel="noopener">report.cybertip.org</a> or 1-800-843-5678.</p>`;
+    talk=p.markers.slice(0,3).map(id=>MARKER[id].talk);
+    talk.push('"You won\'t be in trouble for anything someone else asked you to do."');
+  }else if(p.alert==='kid_request'){
+    line=`Sent from the Ghost Mode screen on ${esc(poss(k))} phone`;
+    why=`${esc(k)} wants to talk. They chose to reach out, and no messages came with the request.`;
+    talk=['"Thanks for coming to me. Want to talk now or after dinner?"'];
+  }
+  if(a.status==='new'){
+    if(p.alert==='kid_request')acts.unshift(btn('checkin',a.checkIn?ic('check','ic sm')+'Reply sent':"Reply: let's talk",'primary'));
+    else acts.unshift(btn('checkin',a.checkIn?ic('check','ic sm')+'Check-in sent':'Send check-in'));
+    acts.push(btn('review','Mark reviewed','primary'));
+  }
+  const status=a.status==='reviewed'?`<span class="pill plain">${a.note?esc(a.note):'Reviewed'}</span>`:(p.rev>1?'<span class="pill info">Updated</span>':'<span class="pill info">New</span>');
+  return `<article class="alert sev-${sev}${a.status==='reviewed'?' is-reviewed':''}${T.arrived===a.id?' arrive':''}">
+    <div class="alert-head">
+      <div class="alert-icon">${ic(meta.icon)}</div>
+      <div class="alert-text">
+        <div class="alert-title"><h4>${esc(meta.title(k))}</h4><span class="pill ${sev}">${SEV_LABEL[sev]}</span>${status}</div>
+        <p class="alert-meta">${line}</p>
+      </div>
+      <span class="alert-time">${when(a.updatedAt)}</span>
+    </div>
+    ${chips}
+    <p class="alert-why">${why}</p>
+    ${next}
+    ${talk.length?`<details class="talk" data-id="${esc(a.id)}"${T.openTalk.has(a.id)?' open':''}><summary>How to bring it up</summary><ul>${talk.map(x=>`<li>${x}</li>`).join('')}</ul></details>`:''}
+    <div class="alert-foot">
+      <span class="no-text">${ic('lock','ic sm')}No message text included</span>
+      ${acts.length?`<div class="actions">${acts.join('')}</div>`:''}
+    </div>
+  </article>`;
+}
+
+function renderParent(){
+  const P=S.parent,k=name();
+  const open=P.alerts.filter(a=>a.status==='new').length;
+  const week=P.alerts.filter(a=>S.clock-a.createdAt<=7*DAY&&S.clock>=a.createdAt).length;
+  const anyOn=Object.values(P.settings.alerts).some(Boolean);
+  $('#pStatus').innerHTML=`
+    <div class="p-who">${ghost()}<div class="p-who-text"><h2>Ghost Mode is on for ${esc(k)}</h2><p>${P.lastSync?`Last update from ${esc(poss(k))} phone: ${when(P.lastSync)}`:'Waiting for the first update'}</p></div>
+      <span class="pill ${anyOn?'ok':'watch'}">${anyOn?ic('check','ic xs')+'Protected':'Alerts off'}</span></div>
+    <div class="p-stats">
+      <div class="stat zero"><b>0</b><span>${ic('lock','ic xs')}Messages you've read</span></div>
+      <div class="stat"><b>${open}</b><span>Alerts to review</span></div>
+      <div class="stat"><b>${week}</b><span>Alerts in the last 7 days</span></div>
+    </div>`;
+  $$('.p-tab-btn').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.id===S.ui.tab)));
+  const ab=$('#alertBadge');ab.textContent=open;ab.hidden=!open;
+  ['alerts','activity','trusted','settings'].forEach(t=>{$('#tab-'+t).hidden=S.ui.tab!==t});
+  if(S.ui.tab==='alerts')renderAlerts();
+  if(S.ui.tab==='activity')renderActivity();
+  if(S.ui.tab==='trusted')renderTrusted();
+}
+
+function renderAlerts(){
+  const P=S.parent,f=S.ui.filter;
+  const cnt={all:P.alerts.length,new:P.alerts.filter(a=>a.status==='new').length,reviewed:P.alerts.filter(a=>a.status==='reviewed').length};
+  $('#alertFilter').innerHTML=[['all','All'],['new','New'],['reviewed','Reviewed']].map(([id,l])=>`<button type="button" data-action="filter" data-id="${id}" aria-pressed="${f===id}">${l} ${cnt[id]}</button>`).join('');
+  const list=P.alerts.slice().sort((a,b)=>b.updatedAt-a.updatedAt).filter(a=>f==='all'||a.status===f);
+  $('#alertList').innerHTML=list.length?list.map(alertCard).join(''):`<div class="empty">${ghost()}<p>${f==='new'?'Nothing new. Ghost Mode keeps watching for patterns.':'No alerts here yet.'}</p></div>`;
+  T.arrived=null;
+}
+
+function renderActivity(){
+  const P=S.parent,s=P.settings;
+  const cur=nightKey(S.clock,s);
+  const keys=[];for(let i=14;i>=0;i--)keys.push(shiftKey(cur,-i));
+  const vals=keys.map(x=>P.rollups[x]||0);
+  const base=baselineFor(P.rollups,cur),thr=lateThreshold(base,s.sensitivity);
+  $('#actSub').textContent=`Counts only, for quiet hours (${fmtHM(s.quietStart)} to ${fmtHM(s.quietEnd)}). Each night is compared with the 14 before it.`;
+  const box=$('#chartBox');const W=Math.max(300,Math.round(box.clientWidth||600)),H=230;
+  const pl=30,pr=78,pt=18,pb=30,iw=W-pl-pr,ih=H-pt-pb;
+  let ymax=Math.max(thr+1,4,...vals);ymax=ymax<=10?Math.ceil(ymax/2)*2:Math.ceil(ymax/10)*10;
+  const y=v=>pt+ih-(v/ymax)*ih;
+  const bw=iw/vals.length,barW=Math.min(26,bw*.62);
+  let g='';
+  [0,ymax/2,ymax].forEach(t=>{g+=`<line x1="${pl}" x2="${W-pr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${pl-8}" y="${y(t)+4}" text-anchor="end" class="tick">${t}</text>`});
+  vals.forEach((v,i)=>{
+    const x=pl+i*bw+(bw-barW)/2,now=i===vals.length-1,cls=now?'bar now':v>=thr?'bar hot':'bar';
+    const top=v?y(v):pt+ih-2,h=v?pt+ih-y(v):2;
+    g+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="${v?4:1}" class="${cls}"><title>${now?'Tonight':nightLabel(keys[i])}: ${v} late-night message${v===1?'':'s'}</title></rect>`;
+    if(v>0)g+=`<text x="${(x+barW/2).toFixed(1)}" y="${(top-5).toFixed(1)}" text-anchor="middle" class="val">${v}</text>`;
+  });
+  const ty=y(thr),by=y(base);
+  g+=`<line x1="${pl}" x2="${W-pr}" y1="${ty}" y2="${ty}" class="thr"/><text x="${W-pr+8}" y="${ty+4}" class="lbl thr-l">Alert at ${thr}</text>`;
+  g+=`<line x1="${pl}" x2="${W-pr}" y1="${by}" y2="${by}" class="base"/><text x="${W-pr+8}" y="${Math.abs(by-ty)<14?by+15:by+4}" class="lbl">Usual ${round1(base)}</text>`;
+  const step=W<520?4:2;
+  keys.forEach((kk,i)=>{
+    const cx=(pl+i*bw+bw/2).toFixed(1);
+    if(i===keys.length-1)g+=`<text x="${cx}" y="${H-9}" text-anchor="middle" class="tick now-l">Tonight</text>`;
+    else if(i%step===0&&keys.length-1-i>=step)g+=`<text x="${cx}" y="${H-9}" text-anchor="middle" class="tick">${nightLabel(kk)}</text>`;
+  });
+  box.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Late-night messages for the last 15 nights">${g}</svg>`;
+  $('#chartLegend').innerHTML=`<span><i style="background:var(--trust);opacity:.55"></i>Normal night</span><span><i style="background:var(--safe)"></i>At or above the alert line</span><span><i style="background:var(--soft)"></i>Tonight</span>`;
+  const todayTotal=P.today.day===ymd(S.clock)?P.today.total:0;
+  $('#actStats').innerHTML=`<div class="stat"><b>${vals[vals.length-1]}</b><span>Tonight so far</span></div><div class="stat"><b>${round1(base)}</b><span>Usual night</span></div><div class="stat"><b>${thr}+</b><span>Sets off an alert</span></div><div class="stat"><b>${todayTotal}</b><span>Messages today (all hours)</span></div>`;
+}
+
+function renderTrusted(){
+  const P=S.parent;
+  $('#trustedList').innerHTML=P.trusted.length?P.trusted.map((t,i)=>`<li class="t-row"><span class="av sm av${(i+1)%5}">${esc(initial(t.name))}</span><div class="t-text"><b>${esc(t.name)}</b><span>${esc(t.relation)} · added ${shortDate(t.addedAt)}</span></div><button type="button" class="btn sm" data-action="untrust" data-id="${esc(t.name)}">Remove</button></li>`).join(''):'<li class="t-row"><span class="muted">No trusted adults yet.</span></li>';
+}
+
+function fillSettingsForm(){
+  const s=S.parent.settings,f=$('#settingsForm');
+  f.elements.kidName.value=s.kidName;f.elements.quietStart.value=s.quietStart;f.elements.quietEnd.value=s.quietEnd;
+  f.querySelectorAll('[name="sensitivity"]').forEach(r=>{r.checked=r.value===s.sensitivity});
+  f.elements.aAdult.checked=s.alerts.adult;f.elements.aLate.checked=s.alerts.late;f.elements.aGroom.checked=s.alerts.grooming;
+  f.elements.showNames.checked=s.showNames;f.elements.tellKid.checked=s.tellKid;
+  $('#savedNote').textContent='';
+}
+function onSettings(){
+  const s=S.parent.settings,f=$('#settingsForm');
+  s.kidName=f.elements.kidName.value.trim();
+  if(f.elements.quietStart.value)s.quietStart=f.elements.quietStart.value;
+  if(f.elements.quietEnd.value)s.quietEnd=f.elements.quietEnd.value;
+  const r=f.querySelector('[name="sensitivity"]:checked');if(r)s.sensitivity=r.value;
+  s.alerts={adult:f.elements.aAdult.checked,late:f.elements.aLate.checked,grooming:f.elements.aGroom.checked};
+  s.showNames=f.elements.showNames.checked;s.tellKid=f.elements.tellKid.checked;
+  $('#savedNote').textContent='Saving…';
+  clearTimeout(T.settingsTimer);
+  T.settingsTimer=setTimeout(()=>{
+    transmit(settingsPayload(s),'down');
+    $('#savedNote').textContent=`Saved and sent to ${poss(name())} phone at ${fmtTime(S.clock)}.`;
+    commit();
+  },600);
+  commit();
+}
+
+/* ---------- wall rendering ---------- */
+function hl(p){
+  return JSON.stringify(p,null,2).replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?)/g,(m,str,colon,lit,num)=>{
+    if(str)return colon?`<span class="k">${esc(str)}</span>:`:`<span class="s">${esc(str)}</span>`;
+    if(lit)return `<span class="v">${lit}</span>`;
+    return `<span class="n">${num}</span>`;
+  });
+}
+function wallItem(w){
+  const p=w.p,up=w.dir==='up',k=name();
+  const label=p.type==='counts'?'Counts':p.type==='alert'?alertTitle(p):p.type==='settings'?'Settings':p.type==='trusted_adults'?'Trusted adults list':p.type==='check_in'?'Check-in note':p.type;
+  const body=p.type==='counts'
+    ?`<code>${esc(JSON.stringify(p))}</code><span class="wl-sub">Rolled up from ${w.n} message${w.n>1?'s':''}. The text stayed on the phone.</span>`
+    :`<pre>${hl(p)}</pre>`;
+  return `<li class="wl ${up?'up':'down'}${p.type==='alert'?' sev-'+p.severity:''}${w.fresh&&!seeding?' flash':''}">
+    <div class="wl-head"><span class="wl-dir">${ic(up?'left':'right','ic xs')}</span><span>${esc(label)}</span><time>${when(w.at)}</time></div>
+    <div class="wl-to">${up?`${esc(poss(k))} phone → you`:`You → ${esc(poss(k))} phone`}</div>${body}</li>`;
+}
+function renderWall(){
+  const k=name();
+  $('#wallTitle').textContent=`What left ${poss(k)} phone`;
+  $('#leakNum').textContent=leakChars();
+  $('#wallStats').innerHTML=`<div><b>${totalMsgs()}</b><span>messages checked on the phone</span></div><div><b>${S.stats.sent}</b><span>small updates sent</span></div>`;
+  $('#wallLog').innerHTML=S.wall.map(wallItem).join('');
+}
+
+/* ---------- kid phone rendering ---------- */
+function renderKid(){
+  const D=S.device,k=name();
+  $('#phoneTime').textContent=phoneTime(S.clock);
+  if(S.ui.screen==='thread'&&!D.contacts[S.ui.thread])S.ui.screen='list';
+  $('#screenList').hidden=S.ui.screen!=='list';
+  $('#screenThread').hidden=S.ui.screen!=='thread';
+  if(S.ui.screen==='list'){
+    const rows=Object.values(D.contacts).map(c=>{const th=(D.threads[c.id]||[]).filter(m=>m.from!=='sys');return {c,last:th[th.length-1]}})
+      .sort((a,b)=>(b.last?b.last.at:b.c.firstSeen)-(a.last?a.last.at:a.c.firstSeen));
+    $('#chatList').innerHTML=rows.map(({c,last})=>`<button type="button" class="chat-row" data-action="open-thread" data-id="${esc(c.id)}">
+      <span class="av av${c.ref%5}">${esc(initial(c.name))}</span>
+      <span class="cr-main"><span class="cr-name"><span>${esc(c.name)}</span>${c.app!=='Messages'?`<span class="app-tag">${esc(c.app)}</span>`:''}</span>
+      <span class="cr-prev">${last?esc((last.from==='me'?'You: ':'')+last.text):'New conversation'}</span></span>
+      <span class="cr-time">${last?shortWhen(last.at):''}</span></button>`).join('');
+  }else renderThread();
+  $('#sheetPrivacy').hidden=T.sheet!=='privacy';
+  $('#sheetNew').hidden=T.sheet!=='new';
+  if(T.sheet==='privacy')renderPrivacy();
+  const n=$('#phoneNotif');
+  if(T.notif){n.hidden=false;n.innerHTML=`${ghost()}<div><b>${esc(T.notif.from)}</b><time>now</time><div>${esc(T.notif.text)}</div></div>`}
+  else n.hidden=true;
+}
+function renderThread(){
+  const D=S.device,c=D.contacts[S.ui.thread],k=name();
+  $('#threadTitle').innerHTML=`<span class="av sm av${c.ref%5}">${esc(initial(c.name))}</span><span class="tt-text"><b>${esc(c.name)}</b><span>${esc(c.app)}</span></span>`;
+  const th=D.threads[c.id]||[];let html='',prev=0;
+  for(const m of th){
+    if(m.at-prev>20*MIN)html+=`<div class="tsep">${when(m.at)}</div>`;
+    prev=m.at;
+    if(m.from==='sys')html+=`<div class="sys">${ghost()}<p>${esc(m.text)}</p></div>`;
+    else html+=`<div class="b ${m.from}${m.id===T.fresh?' pop':''}">${esc(m.text)}</div>`;
+  }
+  const body=$('#threadBody');body.innerHTML=html||'<div class="tsep">No messages yet. Say hi.</div>';body.scrollTop=body.scrollHeight;
+  const me=$('#asMe'),them=$('#asThem');
+  me.textContent=k;them.textContent=c.name;
+  me.setAttribute('aria-pressed',String(S.ui.typeAs==='me'));them.setAttribute('aria-pressed',String(S.ui.typeAs==='them'));
+  $('#composeInput').placeholder=`Message as ${S.ui.typeAs==='me'?k:c.name}`;
+}
+function renderPrivacy(){
+  const D=S.device,k=name(),cf=cfg();
+  const week=D.sentLog.filter(x=>S.clock-x.at<=7*DAY&&S.clock>=x.at);
+  $('#privacyBody').innerHTML=`
+    <div class="pv-head">${ghost()}<div><h3>What your parent can see</h3><p>Ghost Mode checks for warning signs right here on your phone. Your messages never leave it.</p></div></div>
+    <div class="pv-col yes"><h4>${ic('eye','ic sm')}They get</h4><ul>
+      <li>An alert if a new adult starts chatting with you</li>
+      <li>An alert if your phone is much busier than usual late at night</li>
+      <li>An alert if someone uses pressure tactics, like asking for secrets or photos</li>
+      <li>How many messages you sent at night, as a number</li></ul></div>
+    <div class="pv-col no"><h4>${ic('eyeOff','ic sm')}They never get</h4><ul>
+      <li>What you or anyone else writes</li><li>Your photos</li><li>Your contact list. A name only shows up if it's part of an alert.</li></ul></div>
+    <div class="pv-log"><h4>Alerts sent in the last 7 days</h4>${cf.tellKid?(week.length?`<ul>${week.map(x=>`<li><span>${esc(ALERTS[x.alert].title(k))}</span><time>${when(x.at)}</time></li>`).join('')}</ul>`:'<p class="muted">None.</p>'):'<p class="muted">Your parent turned off alert notices.</p>'}</div>
+    ${D.notes.length?`<div class="pv-log"><h4>From your parent</h4><ul>${D.notes.slice(0,3).map(x=>`<li><span>${esc(x.text)}</span><time>${when(x.at)}</time></li>`).join('')}</ul></div>`:''}
+    <div class="pv-help"><p><b>Something feel off?</b> Ask your parent to talk. They'll only see that you asked.</p>
+      <button type="button" class="btn primary block" data-action="ask-help"${T.helpSent?' disabled':''}>${T.helpSent?ic('check','ic sm')+'Sent. Your parent will come find you.':'Ask my parent to talk'}</button></div>`;
+}
+function kidNotice(text,from){
+  T.notif={text,from};
+  clearTimeout(T.notifTimer);
+  T.notifTimer=setTimeout(()=>{T.notif=null;renderKid()},6500);
+}
+
+function renderScenarios(){
+  $('#scenarios').innerHTML=SCENARIOS.map(sc=>{
+    const on=playing&&playing.id===sc.id;
+    return `<button type="button" class="scn${on?' on':''}" data-action="scenario" data-id="${sc.id}"${playing?' disabled':''}>
+      <span class="pill ${sc.kind}">${esc(sc.result)}</span><span class="scn-title">${on?ic('play','ic xs'):''}${esc(sc.title)}</span>
+      <span class="scn-blurb">${on?`Playing message ${playing.i} of ${sc.steps.length}…`:esc(sc.blurb)}</span></button>`;
+  }).join('');
+}
+
+function announce(t){const a=$('#announcer');a.textContent='';setTimeout(()=>{a.textContent=t},50)}
+
+/* ---------- render + save ---------- */
+let saveTimer=0;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function commit(){if(seeding)return;renderAll();clearTimeout(saveTimer);saveTimer=setTimeout(save,250)}
+function renderAll(){
+  const k=name();
+  $$('.kid-name').forEach(e=>{e.textContent=k});
+  $$('.kid-poss').forEach(e=>{e.textContent=poss(k)});
+  $('#stage').dataset.view=S.ui.view;
+  $$('[data-action="view"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===S.ui.view)));
+  const nNew=S.parent.alerts.filter(a=>a.status==='new').length;
+  const vb=$('#viewBadge');vb.textContent=nNew;vb.hidden=!nNew;
+  $('#clockNow').textContent=`${new Date(S.clock).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}, ${fmtTime(S.clock)}`;
+  renderParent();renderWall();renderKid();renderScenarios();
+  S.wall.forEach(w=>{w.fresh=false});T.fresh=null;
+}
+
+/* ---------- actions ---------- */
+function findAlert(id){return S.parent.alerts.find(a=>a.id===id)}
+let resetArmed=0;
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-action]');if(!b)return;
+  const a=b.dataset.action,id=b.dataset.id;
+  if(a==='sheet-scrim'&&e.target!==b)return;
+  switch(a){
+    case 'tab':S.ui.tab=id;commit();break;
+    case 'filter':S.ui.filter=id;commit();break;
+    case 'view':S.ui.view=id;commit();window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});break;
+    case 'review':{const al=findAlert(id);if(al){al.status='reviewed';commit()}break}
+    case 'checkin':{
+      const al=findAlert(id);if(!al||al.checkIn)break;
+      al.checkIn=true;
+      const note=al.p.alert==='kid_request'?'Your parent got your note and will come find you to talk.':'Your parent would like to check in with you later today. None of your messages were shared with them.';
+      transmit({type:'check_in',note,about:al.p.alert},'down');commit();break}
+    case 'trust':{
+      const al=findAlert(id);if(!al||!al.p.contact)break;
+      const nm=al.p.contact;
+      if(!S.parent.trusted.some(t=>t.name.toLowerCase()===nm.toLowerCase()))S.parent.trusted.push({name:nm,relation:'Added from an alert',addedAt:S.clock});
+      transmit({type:'trusted_adults',names:S.parent.trusted.map(t=>t.name)},'down');
+      al.status='reviewed';al.note='Added to trusted adults';commit();break}
+    case 'untrust':{
+      S.parent.trusted=S.parent.trusted.filter(t=>t.name!==id);
+      transmit({type:'trusted_adults',names:S.parent.trusted.map(t=>t.name)},'down');commit();break}
+    case 'open-thread':S.ui.screen='thread';S.ui.thread=id;S.ui.typeAs='me';commit();break;
+    case 'back':S.ui.screen='list';commit();break;
+    case 'as':S.ui.typeAs=id;commit();$('#composeInput').focus();break;
+    case 'privacy':T.sheet='privacy';commit();break;
+    case 'new-chat':T.sheet='new';commit();setTimeout(()=>$('#ncName').focus(),50);break;
+    case 'close-sheet':case 'sheet-scrim':T.sheet=null;T.helpSent=false;commit();break;
+    case 'dismiss-notif':T.notif=null;renderKid();break;
+    case 'ask-help':{
+      T.helpSent=true;
+      sendAlert({alert_id:'help-'+uid(),rev:1,alert:'kid_request',severity:'info'},S.clock,false);
+      commit();break}
+    case 'scenario':play(id);break;
+    case 'reset':{
+      if(Date.now()-resetArmed<3000){
+        resetArmed=0;playing=null;try{localStorage.removeItem(KEY)}catch(err){}
+        Object.assign(T,{arrived:null,fresh:null,notif:null,sheet:null,helpSent:false});T.openTalk.clear();
+        seed();fillSettingsForm();b.textContent='Reset demo';commit();
+      }else{
+        resetArmed=Date.now();b.textContent='Click again to reset';
+        setTimeout(()=>{if(Date.now()-resetArmed>=2900){b.textContent='Reset demo'}},3000);
+      }
+      break}
+  }
+});
+document.addEventListener('toggle',e=>{
+  const d=e.target;if(!(d instanceof HTMLDetailsElement)||!d.classList.contains('talk'))return;
+  if(d.open)T.openTalk.add(d.dataset.id);else T.openTalk.delete(d.dataset.id);
+},true);
+
+$('#composer').addEventListener('submit',e=>{
+  e.preventDefault();
+  const inp=$('#composeInput'),text=inp.value.trim();
+  if(!text||!S.ui.thread)return;
+  S.clock+=MIN;inp.value='';
+  deliver(S.ui.thread,S.ui.typeAs,text);
+});
+$('#newChatForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const nm=$('#ncName').value.trim().slice(0,24);if(!nm)return;
+  const app=$('#ncApp').value,age=parseInt($('#ncAge').value,10);
+  const D=S.device;
+  let c=Object.values(D.contacts).find(x=>x.name.toLowerCase()===nm.toLowerCase());
+  if(!c){
+    const id='c'+uid();
+    const band=isNaN(age)?'unknown':age>=18?'adult':age>=13?'teen':'kid';
+    ensureContact({id,name:nm,app,ageBand:band,ageSource:isNaN(age)?'unknown':`profile age ${age}`});
+    c=D.contacts[id];
+    evalAdult(c,S.clock);
+  }
+  $('#newChatForm').reset();
+  T.sheet=null;S.ui.screen='thread';S.ui.thread=c.id;S.ui.typeAs='them';
+  commit();$('#composeInput').focus();
+});
+$('#trustedForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const nm=$('#trustedName').value.trim();if(!nm)return;
+  if(!S.parent.trusted.some(t=>t.name.toLowerCase()===nm.toLowerCase()))S.parent.trusted.push({name:nm,relation:$('#trustedRel').value,addedAt:S.clock});
+  transmit({type:'trusted_adults',names:S.parent.trusted.map(t=>t.name)},'down');
+  $('#trustedForm').reset();commit();
+});
+$('#settingsForm').addEventListener('input',onSettings);
+$('#settingsForm').addEventListener('change',onSettings);
+$('#settingsForm').addEventListener('submit',e=>e.preventDefault());
+$('#clockForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const v=$('#clockInput').value;if(!v||playing)return;
+  setClockTo(v);commit();
+});
+let rz=0;
+window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S.ui.tab==='activity')renderActivity()},120)});
+
+/* ---------- boot ---------- */
+try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(st&&st.v===1&&st.device&&st.parent)S=st}}catch(e){S=null}
+if(!S)seed();
+$('#brandLogo').innerHTML=ghost();
+$$('.pill-logo').forEach(el=>{el.outerHTML=ghost()});
+fillSettingsForm();
+renderAll();
+})();
+</script>
+</body>
+</html>
