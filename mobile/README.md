@@ -22,7 +22,9 @@ Plus features from the website (route maps, long-term insights, yearly recap boo
 
 ## Run it
 
-You need Node 20 or newer.
+To try the app on a phone without setting up a development environment, follow [TESTING.md](TESTING.md).
+
+To work on the code you need Node 20 or newer.
 
 ```bash
 cd mobile

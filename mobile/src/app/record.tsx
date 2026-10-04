@@ -19,6 +19,7 @@ import {
   getSpeechPermission,
   isSpeechAvailable,
   requestSpeechPermission,
+  supportsContinuousRecognition,
 } from '@/speech/expoEngine';
 import { useSpeechSession } from '@/speech/useSpeechSession';
 import { AppText } from '@/ui/AppText';
@@ -96,7 +97,8 @@ export default function RecordScreen() {
     [outing, save],
   );
 
-  const session = useSpeechSession({ lang, onDevice, engine: expoSpeechEngine, onDone });
+  const [continuous] = useState(() => supportsContinuousRecognition());
+  const session = useSpeechSession({ lang, onDevice, continuous, engine: expoSpeechEngine, onDone });
   const { begin: beginListening, cancel: cancelListening, stop: stopListening, text: liveText } = session;
 
   const begin = useCallback(async () => {

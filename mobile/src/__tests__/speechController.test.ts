@@ -43,7 +43,7 @@ class FakeEngine implements SpeechEngine {
   }
 }
 
-const config: ControllerConfig = { ...DEFAULT_CONTROLLER_CONFIG, lang: 'en-US', onDevice: true };
+const config: ControllerConfig = { ...DEFAULT_CONTROLLER_CONFIG, lang: 'en-US', onDevice: true, continuous: true };
 
 function setup(overrides: Partial<ControllerConfig> = {}) {
   const engine = new FakeEngine();
@@ -66,7 +66,14 @@ describe('SpeechController', () => {
     const { engine, controller, done, texts, states } = setup();
     controller.begin();
     expect(engine.starts).toEqual([
-      { lang: 'en-US', interimResults: true, continuous: true, requiresOnDeviceRecognition: true, addsPunctuation: true },
+      {
+        lang: 'en-US',
+        interimResults: true,
+        continuous: true,
+        requiresOnDeviceRecognition: true,
+        addsPunctuation: true,
+        iosTaskHint: 'dictation',
+      },
     ]);
     engine.emit('start', null);
     engine.result('the fog', false);
@@ -208,6 +215,21 @@ describe('SpeechController', () => {
     expect(engine.listenerCount).toBe(0);
     controller.cancel();
     expect(done).toHaveLength(1);
+  });
+
+  it('asks for single-phrase sessions where continuous listening is not supported', () => {
+    const { engine, controller, done } = setup({ continuous: false });
+    controller.begin();
+    expect(engine.starts[0].continuous).toBe(false);
+    engine.result('first phrase', true);
+    engine.emit('end', null);
+    jest.advanceTimersByTime(config.restartDelayMs);
+    expect(engine.starts).toHaveLength(2);
+    expect(engine.starts[1].continuous).toBe(false);
+    engine.result('second phrase', true);
+    controller.stop();
+    engine.emit('end', null);
+    expect(done[0].text).toBe('First phrase. Second phrase');
   });
 
   it('ignores a second begin and a stop when idle', () => {

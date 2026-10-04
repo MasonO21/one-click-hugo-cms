@@ -3,9 +3,11 @@ import { TranscriptAccumulator } from '@/domain/transcript';
 export interface SpeechStartOptions {
   lang: string;
   interimResults: true;
-  continuous: true;
+  continuous: boolean;
   requiresOnDeviceRecognition: boolean;
   addsPunctuation: boolean;
+  // Tells iOS this is free-form dictation rather than a short command.
+  iosTaskHint: 'dictation';
 }
 
 export interface SpeechEvents {
@@ -42,6 +44,9 @@ export interface SessionResult {
 export interface ControllerConfig {
   lang: string;
   onDevice: boolean;
+  // Android 12 and older cannot listen continuously. The controller restarts the
+  // recognizer between phrases either way.
+  continuous: boolean;
   maxDurationMs: number;
   silenceTimeoutMs: number;
   maxRestarts: number;
@@ -49,7 +54,7 @@ export interface ControllerConfig {
   stopGraceMs: number;
 }
 
-export const DEFAULT_CONTROLLER_CONFIG: Omit<ControllerConfig, 'lang' | 'onDevice'> = {
+export const DEFAULT_CONTROLLER_CONFIG: Omit<ControllerConfig, 'lang' | 'onDevice' | 'continuous'> = {
   maxDurationMs: 5 * 60 * 1000,
   silenceTimeoutMs: 20 * 1000,
   maxRestarts: 30,
@@ -157,9 +162,10 @@ export class SpeechController {
       this.engine.start({
         lang: this.config.lang,
         interimResults: true,
-        continuous: true,
+        continuous: this.config.continuous,
         requiresOnDeviceRecognition: this.config.onDevice,
         addsPunctuation: true,
+        iosTaskHint: 'dictation',
       });
     } catch {
       this.failure = { code: 'client', message: describeSpeechError('client', this.config.onDevice) };

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import type { SpeechEngine, SpeechEvents, SpeechStartOptions } from './controller';
 
@@ -45,4 +46,9 @@ export function canRecognizeOnDevice(): boolean {
   } catch {
     return false;
   }
+}
+
+// Continuous recognition needs Android 13 (API 33) or newer. iOS supports it.
+export function supportsContinuousRecognition(): boolean {
+  return Platform.OS !== 'android' || Number(Platform.Version) >= 33;
 }

@@ -4,6 +4,7 @@ import { buildFtsQuery, escapeLike, searchTerms } from '@/domain/search';
 import type { TrackPoint } from '@/domain/track';
 import { weatherSearchTerms } from '@/domain/weather';
 import { hasFullTextSearch } from './migrations';
+import { serialized, transaction } from './queue';
 import type { Database, Entry, MoodSource, NewEntry, Outing, OutingWithTrack, SqlValue } from './types';
 
 interface EntryRow {
@@ -103,7 +104,7 @@ async function rebuildSearch(db: Database, entryId: number): Promise<void> {
 
 export async function createEntry(db: Database, input: NewEntry): Promise<Entry> {
   let id = 0;
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     const result = await db.runAsync(
       `INSERT INTO entries (outing_id, created_at, transcript, duration_s, latitude, longitude,
          place, temp_c, weather_code, mood, mood_source)
@@ -195,7 +196,7 @@ export async function listMoodsInUse(db: Database): Promise<MoodId[]> {
 }
 
 export async function updateTranscript(db: Database, id: number, transcript: string, mood?: MoodId | null) {
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     if (mood !== undefined) {
       await db.runAsync(
         "UPDATE entries SET transcript = ?, mood = ?, mood_source = 'auto' WHERE id = ?",
@@ -211,7 +212,7 @@ export async function updateTranscript(db: Database, id: number, transcript: str
 }
 
 export async function updateMood(db: Database, id: number, mood: MoodId | null, source: MoodSource) {
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     await db.runAsync('UPDATE entries SET mood = ?, mood_source = ? WHERE id = ?', mood, source, id);
     await rebuildSearch(db, id);
   });
@@ -239,14 +240,14 @@ export async function updateEntryTags(db: Database, id: number, tags: EntryTags)
     params.push(tags.weatherCode);
   }
   if (sets.length === 0) return;
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     await db.runAsync(`UPDATE entries SET ${sets.join(', ')} WHERE id = ?`, ...params, id);
     await rebuildSearch(db, id);
   });
 }
 
 export async function deleteEntry(db: Database, id: number) {
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     await db.runAsync('DELETE FROM entries WHERE id = ?', id);
     if (hasFullTextSearch(db)) await db.runAsync('DELETE FROM entries_fts WHERE rowid = ?', id);
   });
@@ -261,11 +262,13 @@ export async function createOuting(
   input: { kind: OutingKind; startedAt?: number; name?: string },
 ): Promise<Outing> {
   const startedAt = input.startedAt ?? Date.now();
-  const result = await db.runAsync(
-    'INSERT INTO outings (kind, name, started_at) VALUES (?, ?, ?)',
-    input.kind,
-    input.name?.trim() || defaultOutingName(input.kind, startedAt),
-    startedAt,
+  const result = await serialized(db, () =>
+    db.runAsync(
+      'INSERT INTO outings (kind, name, started_at) VALUES (?, ?, ?)',
+      input.kind,
+      input.name?.trim() || defaultOutingName(input.kind, startedAt),
+      startedAt,
+    ),
   );
   const outing = await getOuting(db, result.lastInsertRowId);
   if (!outing) throw new Error('Outing was not saved');
@@ -301,11 +304,13 @@ export async function saveOutingProgress(
   id: number,
   progress: { distanceM: number; track: TrackPoint[] },
 ) {
-  await db.runAsync(
-    'UPDATE outings SET distance_m = ?, track = ? WHERE id = ?',
-    progress.distanceM,
-    JSON.stringify(progress.track),
-    id,
+  await serialized(db, () =>
+    db.runAsync(
+      'UPDATE outings SET distance_m = ?, track = ? WHERE id = ?',
+      progress.distanceM,
+      JSON.stringify(progress.track),
+      id,
+    ),
   );
 }
 
@@ -314,19 +319,21 @@ export async function finishOuting(
   id: number,
   result: { endedAt?: number; distanceM: number; track: TrackPoint[] },
 ) {
-  await db.runAsync(
-    'UPDATE outings SET ended_at = ?, distance_m = ?, track = ? WHERE id = ?',
-    result.endedAt ?? Date.now(),
-    result.distanceM,
-    JSON.stringify(result.track),
-    id,
+  await serialized(db, () =>
+    db.runAsync(
+      'UPDATE outings SET ended_at = ?, distance_m = ?, track = ? WHERE id = ?',
+      result.endedAt ?? Date.now(),
+      result.distanceM,
+      JSON.stringify(result.track),
+      id,
+    ),
   );
 }
 
 export async function renameOuting(db: Database, id: number, name: string) {
   const trimmed = name.trim();
   if (!trimmed) return;
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     await db.runAsync('UPDATE outings SET name = ? WHERE id = ?', trimmed, id);
     const ids = await db.getAllAsync<{ id: number }>('SELECT id FROM entries WHERE outing_id = ?', id);
     for (const { id: entryId } of ids) await rebuildSearch(db, entryId);
@@ -335,7 +342,7 @@ export async function renameOuting(db: Database, id: number, name: string) {
 
 // Deletes an outing and its route. Entries stay in the log, just without a route.
 export async function deleteOuting(db: Database, id: number) {
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     const ids = await db.getAllAsync<{ id: number }>('SELECT id FROM entries WHERE outing_id = ?', id);
     await db.runAsync('UPDATE entries SET outing_id = NULL WHERE outing_id = ?', id);
     await db.runAsync('DELETE FROM outings WHERE id = ?', id);
@@ -348,7 +355,7 @@ export async function deleteOuting(db: Database, id: number) {
 // ---------------------------------------------------------------------------
 
 export async function deleteAllData(db: Database) {
-  await db.withTransactionAsync(async () => {
+  await transaction(db, async () => {
     if (hasFullTextSearch(db)) await db.runAsync('DELETE FROM entries_fts');
     await db.runAsync('DELETE FROM entries');
     await db.runAsync('DELETE FROM outings');
@@ -372,10 +379,12 @@ export async function getSetting(db: Database, key: string): Promise<string | nu
 }
 
 export async function setSetting(db: Database, key: string, value: string) {
-  await db.runAsync(
-    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-    key,
-    value,
+  await serialized(db, () =>
+    db.runAsync(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      key,
+      value,
+    ),
   );
 }
 

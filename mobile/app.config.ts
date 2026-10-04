@@ -3,6 +3,9 @@ import type { ExpoConfig } from 'expo/config';
 // Identifiers below are placeholders until the app is registered: change the iOS
 // bundle identifier and Android package to ones you own before the first store build.
 const IDENTIFIER = 'com.trailnotes.app';
+// Before the first cloud build, paste your project id from expo.dev into the empty quotes
+// at the end of the next line (or set the EAS_PROJECT_ID environment variable).
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '';
 const GREEN = '#1F6B4F';
 const INK = '#0F1A15';
 
@@ -91,6 +94,7 @@ const config: ExpoConfig = {
     typedRoutes: true,
     reactCompiler: true,
   },
+  ...(EAS_PROJECT_ID ? { extra: { eas: { projectId: EAS_PROJECT_ID } } } : {}),
 };
 
 export default config;

@@ -11,6 +11,7 @@ import {
 export interface UseSpeechSessionOptions {
   lang: string;
   onDevice: boolean;
+  continuous: boolean;
   onDone: (result: SessionResult) => void;
   engine: SpeechEngine;
   config?: Partial<ControllerConfig>;
@@ -31,10 +32,10 @@ export function useSpeechSession(options: UseSpeechSessionOptions) {
   const begin = useCallback(() => {
     controller.current?.cancel();
     setText('');
-    const { engine, config, lang, onDevice } = latest.current;
+    const { engine, config, lang, onDevice, continuous } = latest.current;
     controller.current = new SpeechController(
       engine,
-      { ...DEFAULT_CONTROLLER_CONFIG, ...config, lang, onDevice },
+      { ...DEFAULT_CONTROLLER_CONFIG, ...config, lang, onDevice, continuous },
       {
         onText: setText,
         onState: setState,

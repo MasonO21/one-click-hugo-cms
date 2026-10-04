@@ -4,7 +4,7 @@ The app builds, type-checks, lints, and passes its tests. That does **not** mean
 
 ## 1. Test on real phones (not done)
 
-Everything was checked with automated tests and simulated native modules. Nobody has run this app on a phone yet. Before any store build, try at least one recent iPhone and two Android phones (one Android 12 or older, one Android 14 or newer):
+Everything was checked with automated tests and simulated native modules. Nobody has run this app on a phone yet. [TESTING.md](../TESTING.md) explains how to get a build onto a phone and has a 15-minute first test. Before any store build, try at least one recent iPhone and two Android phones (one Android 12 or older, one Android 14 or newer):
 
 - [ ] Microphone and speech permission prompts: allow, deny, deny twice, then turn on from Settings.
 - [ ] Voice recognition in your language, with and without signal. Check that a 60-second note is captured in full, and that long pauses do not lose text.
