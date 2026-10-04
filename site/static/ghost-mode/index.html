@@ -403,6 +403,55 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .sheet-actions{display:grid;gap:8px}
 .fine{font-size:12px!important;color:var(--muted)}
 
+/* ---------- v3: consent sharing, tester, intro ---------- */
+.how{position:relative;display:flex;align-items:center;margin-bottom:14px;padding:12px 52px 12px 16px;border-radius:var(--r-lg);background:linear-gradient(135deg,var(--trust-tint),var(--soft-tint))}
+.how-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;flex:1;min-width:0}
+.how-steps li{display:flex;gap:10px;align-items:flex-start;min-width:0}
+.how-n{width:26px;height:26px;border-radius:50%;background:var(--surface);color:var(--soft-ink);font-family:var(--font-display);font-weight:800;font-size:13px;display:grid;place-items:center;flex:none}
+.how-steps li>div{display:grid;min-width:0}
+.how-steps b{font-size:13.5px;font-family:var(--font-display)}
+.how-t{font-size:12.5px;color:var(--muted);line-height:1.4}
+.how-x{position:absolute;top:8px;right:8px;color:var(--muted)}
+.kid-badge{background:var(--soft);color:#fff}
+.share-line{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--surface-2)}
+.is-reviewed .share-line{background:var(--surface)}
+.share-facts{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:13px}
+.share-facts li{display:flex;gap:8px;align-items:flex-start}
+.share-facts .ic{color:var(--ok);margin-top:2px}
+.wl.consent{border-color:color-mix(in srgb,var(--soft) 60%,transparent)}
+.dialog-scrim{position:fixed;inset:0;z-index:50;background:var(--scrim);display:grid;place-items:center;padding:16px}
+.dialog{background:var(--surface);color:var(--fg);border-radius:var(--r-lg);width:min(640px,100%);max-height:min(88vh,880px);display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(10,12,30,.35);overflow:hidden}
+.dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+.dlg-head h3{font-size:18px}
+.dlg-head p{font-size:13px;color:var(--muted)}
+.dlg-body{overflow:auto;padding:16px 20px 22px;display:grid;gap:16px}
+.consent-line{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:10px 12px;border-radius:12px;background:var(--ok-tint);color:var(--fg)}
+.consent-line .ic{color:var(--ok);margin-top:1px}
+.transcript{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:14px;background:var(--surface-2);max-height:320px;overflow:auto}
+.tb{max-width:82%;display:grid;gap:2px}
+.tb.me{align-self:flex-end;justify-items:end}
+.tb.them{align-self:flex-start}
+.tb span{padding:7px 11px;border-radius:16px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.tb.me span{background:var(--bubble-me);color:#fff}
+.tb.them span{background:var(--surface);border:1px solid var(--line)}
+.tb small{font-size:11px;color:var(--faint);padding:0 4px}
+.report-steps{display:grid;gap:10px}
+.report-steps h4{font-size:15px}
+.report-steps ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:14px}
+.report-steps a{color:var(--trust-ink)}
+.copy-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#copyArea{width:100%;min-height:130px;font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--fg);padding:8px;resize:vertical}
+.tester{display:grid;gap:8px;padding:14px;border-radius:14px;background:var(--surface-2);margin-top:6px}
+.tester h4{font-size:14.5px}
+.tester .hint{margin-top:0}
+.tester-input{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;font-size:14px;width:100%;min-width:0}
+.tester-out{display:grid;gap:8px}
+.read-as{display:flex;gap:8px;align-items:baseline;font-size:12.5px;color:var(--muted);min-width:0}
+.read-as code{font-family:var(--font-mono);font-size:12px;color:var(--fg);overflow-wrap:anywhere;min-width:0}
+.verdict{font-size:13.5px}
+.verdict.ok{color:var(--ok);font-weight:600}
+@media (max-width:899px){.how-steps{grid-template-columns:minmax(0,1fr);gap:10px}}
+
 /* ---------- responsive ---------- */
 @media (max-width:1279px){
   .stage{grid-template-columns:minmax(0,1fr) 372px;grid-template-areas:"parent kid" "parent wall"}
@@ -475,6 +524,15 @@ img{max-width:100%}
     </div>
   </header>
 
+  <section class="how" id="howStrip" aria-label="How Ghost Mode works">
+    <ol class="how-steps">
+      <li><span class="how-n">1</span><div><b>Checks on the phone</b><span class="how-t">Every message is checked for warning signs right on <span class="kid-poss">Maya's</span> phone.</span></div></li>
+      <li><span class="how-n">2</span><div><b>Only the pattern crosses over</b><span class="how-t">Which kind of sign, who, and when. Never the words.</span></div></li>
+      <li><span class="how-n">3</span><div><b>You get an alert</b><span class="how-t">With ideas for how to bring it up, and a way to report it, with your kid's OK, if it's serious.</span></div></li>
+    </ol>
+    <button type="button" class="icon-btn how-x" data-action="dismiss-how" aria-label="Hide how it works"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </section>
+
   <section class="demo-bar" aria-label="Demo controls">
     <div class="demo-label"><b>Try a scenario</b><span>Plays out on <span class="kid-poss">Maya's</span> phone. Watch what reaches the parent.</span></div>
     <div class="scenarios" id="scenarios"></div>
@@ -493,7 +551,7 @@ img{max-width:100%}
     <div class="seg" role="group">
       <button type="button" data-action="view" data-id="parent">Parent <span class="badge" id="viewBadge" hidden></span></button>
       <button type="button" data-action="view" data-id="wall">Data sent</button>
-      <button type="button" data-action="view" data-id="kid"><span><span class="kid-poss">Maya's</span> phone</span></button>
+      <button type="button" data-action="view" data-id="kid"><span><span class="kid-poss">Maya's</span> phone</span> <span class="badge kid-badge" id="kidBadge" hidden>1</span></button>
     </div>
   </nav>
 
@@ -587,6 +645,13 @@ img{max-width:100%}
             </fieldset>
             <p class="saved" id="savedNote" aria-live="polite"></p>
           </form>
+          <section class="tester" aria-labelledby="testerTitle">
+            <h4 id="testerTitle">Try a phrase</h4>
+            <p class="hint">See what Ghost Mode would notice in a message to <span class="kid-name">Maya</span> from an adult who isn't on your trusted list. This runs right here. Nothing is saved or sent.</p>
+            <label class="sr-only" for="phraseInput">Phrase to test</label>
+            <input id="phraseInput" class="tester-input" maxlength="200" autocomplete="off" value="add me on sn4p, dont tell ur mom 🤫">
+            <div id="phraseOut" class="tester-out" aria-live="polite"></div>
+          </section>
         </div>
       </div>
     </section>
@@ -599,8 +664,8 @@ img{max-width:100%}
         <p>Every update Ghost Mode sends, exactly as sent.</p>
         <div class="leak">
           <span class="leak-num" id="leakNum">0</span>
-          <span class="leak-label">characters of message text in anything sent to you</span>
-          <span class="leak-sub">Checked live against every message on the phone.</span>
+          <span class="leak-label">characters of message text sent without <span class="kid-poss">Maya's</span> OK</span>
+          <span class="leak-sub" id="leakSub">Checked live against every message on the phone.</span>
         </div>
         <div class="wall-stats" id="wallStats"></div>
         <ol class="wall-log" id="wallLog" reversed></ol>
@@ -666,6 +731,10 @@ img{max-width:100%}
             <div class="sheet-panel think" role="dialog" aria-label="Think twice before sharing" id="thinkBody"></div>
           </div>
 
+          <div class="sheet" id="sheetShare" hidden>
+            <div class="sheet-panel think" role="dialog" aria-label="Share this chat?" id="shareBody"></div>
+          </div>
+
           <div class="sheet" id="sheetBlock" hidden data-action="sheet-scrim">
             <div class="sheet-panel" role="dialog" aria-label="Block contact" id="blockBody"></div>
           </div>
@@ -688,6 +757,25 @@ img{max-width:100%}
       </div>
     </section>
   </main>
+  <div class="dialog-scrim" id="chatDialog" hidden data-action="dialog-scrim">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+      <div class="dlg-head">
+        <div><h3 id="dlgTitle">Shared chat</h3><p id="dlgSub"></p></div>
+        <button type="button" class="icon-btn" data-action="close-dialog" aria-label="Close"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="dlg-body">
+        <p class="consent-line" id="dlgConsent"></p>
+        <div class="transcript" id="dlgTranscript"></div>
+        <div class="report-steps">
+          <h4>How to report it</h4>
+          <ol id="dlgSteps"></ol>
+          <div class="copy-row"><button type="button" class="btn primary" data-action="copy-chat">Copy chat</button><span class="muted" id="copyNote" aria-live="polite"></span></div>
+          <label class="sr-only" for="copyArea">Chat text</label>
+          <textarea id="copyArea" readonly hidden></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="sr-only" aria-live="polite" id="announcer"></div>
 </div>
 
@@ -810,7 +898,9 @@ const ADULT_CUES=[['work',/\b(my|at|from) (job|work|office|boss)\b/],['college',
 
 /* ---------- state ---------- */
 let S=null, seeding=false, playing=null;
-const T={arrived:null,fresh:null,notif:null,notifTimer:0,sheet:null,think:null,helpSent:false,openTalk:new Set(),settingsTimer:0};
+const T={arrived:null,fresh:null,notif:null,notifTimer:0,sheet:null,think:null,dialog:null,helpSent:false,openTalk:new Set(),settingsTimer:0};
+const shares=()=>S.parent.shares||(S.parent.shares={});
+const contactByRef=ref=>Object.values(S.device.contacts).find(x=>x.name===ref||`Contact #${x.ref}`===ref);
 
 const name=()=>(S.parent.settings.kidName||'').trim()||'Your child';
 const poss=n=>/s$/i.test(n)?n+"'":n+"'s";
@@ -847,6 +937,15 @@ function parentReceive(p,t){
     }else if(p.event==='contact_unblocked'){delete P.blocked[p.contact];P.unblocked[p.contact]=t}
     return;
   }
+  if(p.type==='shared_chat'||p.type==='share_declined'){
+    shares()[p.alert_id]=p.type==='shared_chat'
+      ?{state:'shared',at:t,contact:p.contact,where:p.where,child:p.child,messages:p.messages}
+      :{state:'declined',at:t,contact:p.contact};
+    const a=P.alerts.find(x=>x.id===p.alert_id);
+    if(a){a.updatedAt=t;a.seq=P.seq=(P.seq||0)+1;if(p.type==='shared_chat')a.status='new';if(!seeding)T.arrived=a.id}
+    if(!seeding)announce(p.type==='shared_chat'?`${name()} shared a chat with you`:`${name()} said not now`);
+    return;
+  }
   if(p.type==='alert'){
     let a=P.alerts.find(x=>x.id===p.alert_id);
     if(a){a.p=p;a.updatedAt=t;a.status='new';a.checkIn=false;a.seq=P.seq=(P.seq||0)+1}
@@ -864,6 +963,11 @@ function deviceReceive(p,t){
       showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null};
   }else if(p.type==='trusted_adults'){D.trusted=p.names.map(n=>n.toLowerCase())}
   else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(p.note,'From your parent')}
+  else if(p.type==='share_request'){
+    const c=contactByRef(p.contact);if(!c)return;
+    D.shareReq={cid:c.id,alert_id:p.alert_id,at:t};
+    if(!seeding){if(T.sheet!=='think')T.sheet='share';kidNotice(`Your parent is asking you to share your chat with ${c.name} for a safety report. It's your choice.`,'From your parent')}
+  }
 }
 
 function settingsPayload(s){
@@ -985,7 +1089,7 @@ function evalLate(nk,t){
 
 /* Truthful leak check: does any message text appear in anything sent? */
 function leakChars(){
-  const blob=S.wall.map(w=>JSON.stringify(w.p)).join('\n').toLowerCase();
+  const blob=S.wall.filter(w=>!w.p.shared_with_consent).map(w=>JSON.stringify(w.p)).join('\n').toLowerCase();
   let n=0;
   for(const th of Object.values(S.device.threads))for(const m of th){
     if(m.from==='sys')continue;
@@ -1001,7 +1105,7 @@ function seed(){
   const at=(daysAgo,h)=>{const d=new Date(b);d.setDate(d.getDate()-daysAgo);const [hh,mm]=h.split(':').map(Number);d.setHours(hh,mm,0,0);return d.getTime()};
   const settings={kidName:'Maya',quietStart:'22:00',quietEnd:'06:00',sensitivity:'balanced',alerts:{adult:true,late:true,grooming:true},showNames:true,tellKid:true,latePausedNight:null};
   S={v:2,clock:at(15,'19:00'),
-    parent:{settings,alerts:[],rollups:{},today:{day:'',total:0},lastSync:0,blocked:{},unblocked:{},
+    parent:{settings,alerts:[],rollups:{},today:{day:'',total:0},lastSync:0,blocked:{},unblocked:{},shares:{},
       trusted:[{name:'Grandma Rose',relation:'Family',addedAt:at(15,'19:02')},{name:'Coach Daniels',relation:'Coach or teacher',addedAt:at(15,'19:02')}]},
     device:{config:null,contacts:{},threads:{},signals:{},nightCounts:{},nightSpan:{},dayTotals:{},alertState:{},trusted:[],sentLog:[],notes:[],sysNoted:{}},
     wall:[],stats:{sent:0},
@@ -1107,6 +1211,17 @@ async function play(id){
   }
   if(playing===token){playing=null;renderScenarios()}
 }
+function answerShare(yes){
+  const D=S.device,r=D.shareReq;if(!r)return;
+  const c=D.contacts[r.cid],k=name();
+  D.shareReq=null;T.sheet=null;
+  if(yes){
+    const msgs=(D.threads[c.id]||[]).filter(m=>m.from!=='sys').map(m=>[iso(m.at),m.from==='me'?k:contactRef(c),m.text]);
+    transmit({type:'shared_chat',alert_id:r.alert_id,child:k,contact:contactRef(c),where:c.app,shared_with_consent:true,message_text_included:true,messages:msgs},'up');
+    kidNotice('Thanks for sharing. Only that one chat went to your parent.','Ghost Mode');
+  }else transmit({type:'share_declined',alert_id:r.alert_id,contact:contactRef(c)},'up');
+  commit();
+}
 function stopScenario(){playing=null;if(T.sheet==='think'){T.sheet=null;T.think=null}commit()}
 function setBlocked(cid,on){
   const c=S.device.contacts[cid];if(!c||!!c.blocked===on)return;
@@ -1132,7 +1247,9 @@ const ICONS={
   eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.6A9.7 9.7 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3.3 4.1M6.3 7.2A16 16 0 0 0 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
-  ban:'<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'
+  ban:'<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  share:'<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'
 };
 const ic=(n,c='ic')=>`<svg class="${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 const ghost=()=>`<svg class="g-logo" viewBox="0 0 64 64" aria-hidden="true">
@@ -1171,7 +1288,7 @@ function alertCard(a){
   const anon=p.contact&&/^Contact #/.test(p.contact);
   const who=p.contact?`<b>${esc(p.contact)}</b>`:'';
   const btn=(action,label,cls)=>`<button type="button" class="btn ${cls||''}" data-action="${action}" data-id="${esc(a.id)}">${label}</button>`;
-  let line='',extra='',why='',next='',talk=[],acts=[];
+  let line='',extra='',why='',next='',talk=[],acts=[],keep=[],shareLine='';
   const blockedAt=p.contact&&P.blocked[p.contact];
   const blockedLine=blockedAt&&blockedAt>=a.createdAt&&p.alert!=='contact_blocked'?`<p class="ok-line">${ic('check','ic sm')}${esc(k)} blocked this contact · ${when(blockedAt)}</p>`:'';
   if(p.alert==='new_adult_contact'){
@@ -1193,7 +1310,17 @@ function alertCard(a){
       return `<li class="${MARKER[x.id].w>=3?'hi':''}"><time>${newDay&&dayDiff(x.t)?esc(dayLabel(x.t))+' ':''}${fmtTime(x.t)}</time><i class="dot"></i><span>${esc(MARKER[x.id].label)}${MARKER[x.id].kid?` <em>by ${esc(k)}</em>`:''}</span></li>`;
     }).join('')}</ol>`;
     why=`${n} warning sign${n===1?'':'s'}${n>1?` over ${fmtSpan(p.escalation_minutes)}`:''}. ${fast?'Escalating this fast is a strong warning sign. ':''}These match patterns child-safety groups link to grooming. You're seeing which patterns showed up and when, not what was said.`;
-    if(sev==='urgent')next=`<p class="alert-next"><b>Talk with ${esc(k)} today.</b> Stay calm and make it clear they're not in trouble. If someone asked for photos or to meet, you can report it to the NCMEC CyberTipline (US) at <a href="https://report.cybertip.org" target="_blank" rel="noopener">report.cybertip.org</a> or 1-800-843-5678.</p>`;
+    if(sev==='urgent')next=`<p class="alert-next"><b>Talk with ${esc(k)} today.</b> Stay calm and make it clear they're not in trouble. If someone asked for photos or to meet, ask ${esc(k)} to share the chat, then report it to the NCMEC CyberTipline (US) at <a href="https://report.cybertip.org" target="_blank" rel="noopener">report.cybertip.org</a> or 1-800-843-5678.</p>`;
+    const sh=shares()[a.id];
+    if(sh&&sh.state==='shared'){
+      shareLine=`<p class="ok-line">${ic('check','ic sm')}${esc(k)} shared this chat with you · ${when(sh.at)}</p>`;
+      keep.push(btn('view-share',ic('eye','ic sm')+'View shared chat','primary'));
+    }else if(sh&&sh.state==='pending'){
+      shareLine=`<p class="share-line">${ic('clock','ic sm')}You asked ${esc(k)} to share this chat · ${when(sh.at)}. Waiting for their answer.</p>`;
+    }else{
+      if(sh)shareLine=`<p class="share-line">${esc(k)} said "not now" · ${when(sh.at)}. Talking first often helps. You can ask again.</p>`;
+      acts.push(btn('ask-share',ic('share','ic sm')+(sh?'Ask again':'Ask to share this chat')));
+    }
     talk=ids.slice(0,3).map(id=>MARKER[id].talk);
     talk.push('"You won\'t be in trouble for anything someone else asked you to do."');
   }else if(p.alert==='kid_request'){
@@ -1210,8 +1337,9 @@ function alertCard(a){
   if(a.status==='new'){
     if(p.alert==='kid_request')acts.unshift(btn('checkin',a.checkIn?ic('check','ic sm')+'Reply sent':"Reply: let's talk",'primary'));
     else if(p.alert!=='contact_blocked')acts.unshift(btn('checkin',a.checkIn?ic('check','ic sm')+'Check-in sent':'Send check-in'));
-    acts.push(btn('review','Mark reviewed','primary'));
-  }else acts.push(btn('reopen','Reopen','sm'));
+    acts.push(btn('review','Mark reviewed',keep.length?'':'primary'));
+  }else acts=[btn('reopen','Reopen','sm')];
+  acts=keep.concat(acts);
   const status=a.status==='reviewed'?`<span class="pill plain">${a.note?esc(a.note):'Reviewed'}</span>`:(p.rev>1?'<span class="pill info">Updated</span>':'<span class="pill info">New</span>');
   return `<article class="alert sev-${sev}${a.status==='reviewed'?' is-reviewed':''}${T.arrived===a.id?' arrive':''}">
     <div class="alert-head">
@@ -1224,6 +1352,7 @@ function alertCard(a){
     </div>
     ${extra}
     ${blockedLine}
+    ${shareLine}
     <p class="alert-why">${why}</p>
     ${next}
     ${talk.length?`<details class="talk" data-id="${esc(a.id)}"${T.openTalk.has(a.id)?' open':''}><summary>How to bring it up</summary><ul>${talk.map(x=>`<li>${x}</li>`).join('')}</ul></details>`:''}
@@ -1355,13 +1484,19 @@ function hl(p){
     return `<span class="n">${num}</span>`;
   });
 }
+const WALL_LABEL={counts:'Counts',settings:'Settings',trusted_adults:'Trusted adults list',check_in:'Check-in note',share_request:'Request to share a chat',shared_chat:'Chat shared with consent',share_declined:'Share request declined'};
+function wallLabel(p){
+  if(p.type==='alert')return alertTitle(p);
+  if(p.type==='event')return p.event==='contact_blocked'?'Contact blocked':'Contact unblocked';
+  return WALL_LABEL[p.type]||p.type;
+}
 function wallItem(w){
   const p=w.p,up=w.dir==='up',k=name();
-  const label=p.type==='counts'?'Counts':p.type==='alert'?alertTitle(p):p.type==='settings'?'Settings':p.type==='trusted_adults'?'Trusted adults list':p.type==='check_in'?'Check-in note':p.type==='event'?(p.event==='contact_blocked'?'Contact blocked':'Contact unblocked'):p.type;
+  const label=wallLabel(p);
   const body=p.type==='counts'
     ?`<code>${esc(JSON.stringify(p))}</code><span class="wl-sub">Rolled up from ${w.n} message${w.n>1?'s':''}. The text stayed on the phone.</span>`
     :`<pre>${hl(p)}</pre>`;
-  return `<li class="wl ${up?'up':'down'}${p.type==='alert'?' sev-'+p.severity:''}${w.fresh&&!seeding?' flash':''}">
+  return `<li class="wl ${up?'up':'down'}${p.type==='alert'?' sev-'+p.severity:''}${p.shared_with_consent?' consent':''}${w.fresh&&!seeding?' flash':''}">
     <div class="wl-head"><span class="wl-dir">${ic(up?'left':'right','ic xs')}</span><span>${esc(label)}</span><time>${when(w.at)}</time></div>
     <div class="wl-to">${up?`${esc(poss(k))} phone → you`:`You → ${esc(poss(k))} phone`}</div>${body}</li>`;
 }
@@ -1369,6 +1504,9 @@ function renderWall(){
   const k=name();
   $('#wallTitle').textContent=`What left ${poss(k)} phone`;
   $('#leakNum').textContent=leakChars();
+  const sharedW=S.wall.filter(w=>w.p.type==='shared_chat');
+  const sharedChars=sharedW.reduce((n,w)=>n+w.p.messages.reduce((m,x)=>m+x[2].length,0),0);
+  $('#leakSub').textContent='Checked live against every message on the phone.'+(sharedW.length?` Separately, ${k} chose to share ${sharedW.length===1?'1 chat':sharedW.length+' chats'} (${sharedChars} characters) for a report.`:'');
   $('#wallStats').innerHTML=`<div><b>${totalMsgs()}</b><span>messages checked on the phone</span></div><div><b>${S.stats.sent}</b><span>small updates sent</span></div>`;
   $('#wallLog').innerHTML=S.wall.map(wallItem).join('');
 }
@@ -1393,6 +1531,9 @@ function renderKid(){
   $('#sheetNew').hidden=T.sheet!=='new';
   $('#sheetThink').hidden=T.sheet!=='think';
   $('#sheetBlock').hidden=T.sheet!=='block';
+  if(T.sheet==='share'&&!S.device.shareReq)T.sheet=null;
+  $('#sheetShare').hidden=T.sheet!=='share';
+  if(T.sheet==='share')renderShare();
   if(T.sheet==='think')renderThink();
   if(T.sheet==='block')renderBlock();
   if(T.sheet==='privacy')renderPrivacy();
@@ -1429,6 +1570,19 @@ function renderThink(){
     <div class="sheet-actions"><button type="button" class="btn primary block" data-action="think-edit"${th.auto?' disabled':''}>Edit message</button><button type="button" class="btn block" data-action="think-send"${th.auto?' disabled':''}>Send anyway</button></div>
     <p class="fine">${th.auto?`${esc(k)} is deciding… `:''}Only you can see this message. If it's sent, your parent may get an alert that personal details were shared, never the message itself.</p>`;
 }
+function renderShare(){
+  const r=S.device.shareReq;if(!r)return;
+  const c=S.device.contacts[r.cid];
+  const n=(S.device.threads[c.id]||[]).filter(m=>m.from!=='sys').length;
+  $('#shareBody').innerHTML=`<div class="think-head">${ghost()}<h3>Share this chat?</h3></div>
+    <p>Ghost Mode warned your parent about warning signs in your chat with <b>${esc(c.name)}</b>. They'd like to report it, and a report needs to show what was said.</p>
+    <ul class="share-facts">
+      <li>${ic('check','ic sm')}<span>Only this chat (${n} message${n===1?'':'s'}). Nothing else on your phone.</span></li>
+      <li>${ic('check','ic sm')}<span>You're not in trouble. Reporting helps stop this person.</span></li>
+      <li>${ic('check','ic sm')}<span>It's your choice. "Not now" is okay too.</span></li>
+    </ul>
+    <div class="sheet-actions"><button type="button" class="btn primary block" data-action="share-yes">Share this chat</button><button type="button" class="btn block" data-action="share-no">Not now</button></div>`;
+}
 function renderBlock(){
   const c=S.device.contacts[S.ui.thread];if(!c)return;
   $('#blockBody').innerHTML=`<h3>Block ${esc(c.name)}?</h3>
@@ -1438,7 +1592,7 @@ function renderBlock(){
 function renderPrivacy(){
   const D=S.device,k=name(),cf=cfg();
   const week=D.sentLog.filter(x=>S.clock-x.at<=7*DAY&&S.clock>=x.at);
-  $('#privacyBody').innerHTML=`
+  $('#privacyBody').innerHTML=(D.shareReq?`<div class="pv-help"><p><b>Your parent asked to see one chat.</b> It's your choice.</p><button type="button" class="btn primary block" data-action="open-share">Review the request</button></div>`:'')+`
     <div class="pv-head">${ghost()}<div><h3>What your parent can see</h3><p>Ghost Mode checks for warning signs right here on your phone. Your messages never leave it.</p></div></div>
     <div class="pv-col yes"><h4>${ic('eye','ic sm')}They get</h4><ul>
       <li>An alert if a new adult starts chatting with you</li>
@@ -1447,7 +1601,7 @@ function renderPrivacy(){
       <li>An alert if you share personal details, like your address, with an adult you don't know</li>
       <li>How many messages you sent at night, as a number</li></ul></div>
     <div class="pv-col no"><h4>${ic('eyeOff','ic sm')}They never get</h4><ul>
-      <li>What you or anyone else writes</li><li>Your photos</li><li>Your contact list. A name only shows up if it's part of an alert.</li></ul></div>
+      <li>What you or anyone else writes, unless you choose to share a chat for a report</li><li>Your photos</li><li>Your contact list. A name only shows up if it's part of an alert.</li></ul></div>
     <div class="pv-log"><h4>Alerts sent in the last 7 days</h4>${cf.tellKid?(week.length?`<ul>${week.map(x=>`<li><span>${esc(ALERTS[x.alert].title(k))}</span><time>${when(x.at)}</time></li>`).join('')}</ul>`:'<p class="muted">None.</p>'):'<p class="muted">Your parent turned off alert notices.</p>'}</div>
     ${D.notes.length?`<div class="pv-log"><h4>From your parent</h4><ul>${D.notes.slice(0,3).map(x=>`<li><span>${esc(x.text)}</span><time>${when(x.at)}</time></li>`).join('')}</ul></div>`:''}
     <div class="pv-help"><p><b>Something feel off?</b> Ask your parent to talk. They'll only see that you asked.</p>
@@ -1472,6 +1626,42 @@ function renderScenarios(){
       <span class="scn-blurb">${esc(blurb)}</span></button>`;
   }).join('');
 }
+function chatText(sh){
+  return [`Chat between ${sh.child} and ${sh.contact} (${sh.where}), shared by ${sh.child} on ${shortDate(sh.at)}, ${fmtTime(sh.at)}.`,'',
+    ...sh.messages.map(([at,who,text])=>`[${shortDate(isoToT(at))}, ${fmtTime(isoToT(at))}] ${who}: ${text}`)].join('\n');
+}
+function renderDialog(){
+  const el=$('#chatDialog'),sh=T.dialog&&shares()[T.dialog];
+  el.hidden=!(sh&&sh.state==='shared');
+  if(el.hidden)return;
+  $('#dlgTitle').textContent=`Chat shared by ${sh.child}`;
+  $('#dlgSub').textContent=`${sh.contact} · ${sh.where} · shared ${when(sh.at)}`;
+  $('#dlgConsent').innerHTML=`${ic('lock','ic sm')}<span>${esc(sh.child)} chose to share this one chat for a report. Ghost Mode never sends a chat on its own.</span>`;
+  $('#dlgTranscript').innerHTML=sh.messages.map(([at,who,text])=>`<div class="tb ${who===sh.child?'me':'them'}"><span>${esc(text)}</span><small>${esc(who)} · ${when(isoToT(at))}</small></div>`).join('');
+  $('#dlgSteps').innerHTML=`<li><b>Save a copy.</b> Use "Copy chat" below and keep it somewhere safe. Leave the chat on ${esc(poss(sh.child))} phone for now, even if they've blocked the person.</li>
+    <li><b>Report it to the NCMEC CyberTipline</b> (US) at <a href="https://report.cybertip.org" target="_blank" rel="noopener">report.cybertip.org</a> or 1-800-843-5678. Include the username (${esc(sh.contact)}) and the app (${esc(sh.where)}). Outside the US, contact your local police.</li>
+    <li><b>Report the account in ${esc(sh.where)}</b> with the app's own report button.</li>
+    <li><b>If anyone is in immediate danger,</b> call 911 or your local emergency number.</li>`;
+}
+function copyChat(){
+  const sh=T.dialog&&shares()[T.dialog];if(!sh)return;
+  const text=chatText(sh),note=$('#copyNote'),area=$('#copyArea');
+  const fallback=()=>{area.value=text;area.hidden=false;area.focus();area.select();note.textContent='Copying is blocked here, so the chat is selected below. Press Ctrl+C or ⌘C.'};
+  try{navigator.clipboard.writeText(text).then(()=>{note.textContent='Copied. Paste it somewhere safe.'},fallback)}catch(err){fallback()}
+}
+const THIRD_PERSON={'your phone number':'their phone number','your address':'their address','what school you go to':'what school they go to',"that you're home alone":"that they're home alone"};
+function renderTester(){
+  const v=$('#phraseInput').value,out=$('#phraseOut');
+  if(!v.trim()){out.innerHTML='<p class="muted" style="font-size:13px">Type a message to test it.</p>';return}
+  const n=normalize(v),hits=MARKERS.filter(m=>m.re.some(r=>r.test(n))),ids=hits.map(m=>m.id);
+  const th=SENS[S.parent.settings.sensitivity]||SENS.balanced,score=hits.reduce((x,m)=>x+m.w,0);
+  const urgent=score>=th.urgent||(ids.includes('secrecy_request')&&ids.some(id=>id==='photo_request'||id==='meetup_request'||id==='romantic_or_sexual_talk'));
+  const verdict=urgent?'From an unknown adult, this alone would send an urgent alert.':score>=th.watch?'From an unknown adult, this alone would send a watch alert.':'Not enough for an alert on its own. It adds up with other signs from the same person over 7 days.';
+  const kinds=sharedKinds(v),k=name();
+  out.innerHTML=`<p class="read-as"><span>Read as</span><code>${esc(n.trim())}</code></p>
+    ${hits.length?`<ul class="chips">${hits.map(m=>`<li class="${m.w>=3?'hi':''}">${esc(m.label)}</li>`).join('')}</ul><p class="verdict">${verdict}</p>`:'<p class="verdict ok">No warning signs found.</p>'}
+    ${kinds.length?`<p class="verdict">If ${esc(k)} typed this to an adult they don't know, they'd get a think-twice prompt about sharing ${joinList(kinds.map(x=>esc(THIRD_PERSON[x]||x)))}.</p>`:''}`;
+}
 function renderPatterns(){
   $('#patternList').innerHTML=MARKERS.map(m=>`<li${m.kid?' class="kid"':''}><div class="pt-head"><b>${esc(m.label)}</b><span class="dots" role="img" aria-label="Weight ${m.w} of 4">${[1,2,3,4].map(i=>`<i${i<=m.w?' class="on"':''}></i>`).join('')}</span></div><p>${esc(m.desc)}</p></li>`).join('');
 }
@@ -1491,7 +1681,9 @@ function renderAll(){
   const nNew=S.parent.alerts.filter(a=>a.status==='new').length;
   const vb=$('#viewBadge');vb.textContent=nNew;vb.hidden=!nNew;
   $('#clockNow').textContent=`${new Date(S.clock).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}, ${fmtTime(S.clock)}`;
-  renderParent();renderWall();renderKid();renderScenarios();
+  $('#howStrip').hidden=!!S.ui.introDismissed;
+  const kb=$('#kidBadge');kb.hidden=!S.device.shareReq;
+  renderParent();renderWall();renderKid();renderScenarios();renderDialog();
   S.wall.forEach(w=>{w.fresh=false});T.fresh=null;
 }
 
@@ -1501,12 +1693,23 @@ let resetArmed=0;
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-action]');if(!b)return;
   const a=b.dataset.action,id=b.dataset.id;
-  if(a==='sheet-scrim'&&e.target!==b)return;
+  if((a==='sheet-scrim'||a==='dialog-scrim')&&e.target!==b)return;
   switch(a){
     case 'tab':S.ui.tab=id;commit();break;
     case 'filter':S.ui.filter=id;commit();break;
     case 'view':S.ui.view=id;commit();window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});break;
     case 'review':{const al=findAlert(id);if(al){al.status='reviewed';commit()}break}
+    case 'ask-share':{
+      const al=findAlert(id);if(!al)break;
+      shares()[al.id]={state:'pending',at:S.clock,contact:al.p.contact,where:al.p.where};
+      transmit({type:'share_request',alert_id:al.id,contact:al.p.contact,reason:'report'},'down');commit();break}
+    case 'view-share':T.dialog=id;$('#copyNote').textContent='';$('#copyArea').hidden=true;commit();setTimeout(()=>{const x=$('#chatDialog .icon-btn');if(x)x.focus()},30);break;
+    case 'close-dialog':case 'dialog-scrim':T.dialog=null;commit();break;
+    case 'copy-chat':copyChat();break;
+    case 'share-yes':answerShare(true);break;
+    case 'share-no':answerShare(false);break;
+    case 'open-share':T.sheet='share';commit();break;
+    case 'dismiss-how':S.ui.introDismissed=true;commit();break;
     case 'reopen':{const al=findAlert(id);if(al){al.status='new';al.note=null;commit()}break}
     case 'block':T.sheet='block';commit();break;
     case 'confirm-block':T.sheet=null;setBlocked(S.ui.thread,true);commit();break;
@@ -1545,7 +1748,7 @@ document.addEventListener('click',e=>{
     case 'reset':{
       if(Date.now()-resetArmed<3000){
         resetArmed=0;playing=null;try{localStorage.removeItem(KEY)}catch(err){}
-        Object.assign(T,{arrived:null,fresh:null,notif:null,sheet:null,helpSent:false});T.openTalk.clear();
+        Object.assign(T,{arrived:null,fresh:null,notif:null,sheet:null,think:null,dialog:null,helpSent:false});T.openTalk.clear();
         seed();fillSettingsForm();b.textContent='Reset demo';commit();
       }else{
         resetArmed=Date.now();b.textContent='Click again to reset';
@@ -1611,6 +1814,9 @@ try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(st&&
 if(!S)seed();
 $('#brandLogo').innerHTML=ghost();
 renderPatterns();
+renderTester();
+$('#phraseInput').addEventListener('input',renderTester);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&T.dialog){T.dialog=null;commit()}});
 $$('.pill-logo').forEach(el=>{el.outerHTML=ghost()});
 fillSettingsForm();
 renderAll();
