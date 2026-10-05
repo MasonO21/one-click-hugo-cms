@@ -7,7 +7,7 @@ import { describe, it } from 'node:test';
 import { createApp } from '../src/app.js';
 import { EntitlementLookupError } from '../src/auth.js';
 import type { ClaudeService } from '../src/claude.js';
-import { createHouseholdStore, formatCode, HouseholdError, MAX_MEMBERS, MEMBER_IDLE_DAYS, normalizeCode, TOMBSTONE_DAYS, type SyncRecord } from '../src/household.js';
+import { createHouseholdStore, formatCode, HouseholdError, MAX_MEMBERS, MEMBER_IDLE_DAYS, normalizeCode, RESOLVED_KEEP_DAYS, TOMBSTONE_DAYS, type SyncRecord } from '../src/household.js';
 
 /** Members as a person sees them, without the opaque refs. */
 const people = (members: { ref?: string }[]) => members.map(({ ref: _ref, ...m }) => m);
@@ -225,10 +225,30 @@ describe('household store', () => {
     assert.deepEqual(later.members.map((m) => m.name), ['Sam', 'Kim']);
     assert.ok(later.coveredUntil);
     assert.equal(store.get('b'), null);
-    // Once that plan has ended, C goes the same way.
-    const after = store.sync('a', 0, [], start + 401 * 86_400_000).household;
+    // A payer whose plan's date has just passed is kept for a while: it has usually renewed, and the
+    // next check with the store says so.
+    const justPast = store.sync('a', 0, [], start + 401 * 86_400_000).household;
+    assert.deepEqual(justPast.members.map((m) => m.name), ['Sam', 'Kim']);
+    // Long after that plan ended, C goes the same way.
+    const after = store.sync('a', 0, [], start + 446 * 86_400_000).household;
     assert.deepEqual(after.members.map((m) => m.name), ['Sam']);
     assert.equal(after.coveredUntil, null);
+  });
+
+  it('drops old used-up items so a household never fills up, and deletions always fit', () => {
+    const store = createHouseholdStore();
+    store.create('a', 'A', 'Home');
+    const start = 1_000_000_000_000;
+    const used = Array.from({ length: 3000 }, (_, i) => item(`u${i}`, `Food ${i}`, start, { status: 'used', resolvedOn: '2026-01-01' }));
+    store.sync('a', 0, used, start);
+    // Full: a new item is refused, but removing food still works and makes room.
+    assert.throws(() => store.sync('a', 0, [item('new', 'Milk', start + 1)], start + 1), (e: unknown) => e instanceof HouseholdError && e.code === 'too_many');
+    store.sync('a', 0, [{ kind: 'item', id: 'u0', updatedAt: start + 2, deleted: true, data: null }], start + 2);
+    store.sync('a', 0, [item('new', 'Milk', start + 3)], start + 3);
+    // Months later the used-up items are gone from the server too, and there is room again.
+    const later = start + (RESOLVED_KEEP_DAYS + 1) * 86_400_000;
+    const res = store.sync('a', 0, [item('newer', 'Eggs', later)], later);
+    assert.deepEqual(res.changes.filter((c) => !c.deleted).map((c) => c.id).sort(), ['new', 'newer']);
   });
 
   it('reads invite codes however they are typed', () => {

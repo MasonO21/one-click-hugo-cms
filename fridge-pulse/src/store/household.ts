@@ -15,7 +15,7 @@ import {
   type SyncRecord,
 } from '../lib/api';
 import { addDays, todayISO } from '../lib/dates';
-import { itemData, itemFrom, merge, nextStamp, outgoing, shoppingData, shoppingFrom } from '../lib/householdSync';
+import { itemData, itemFrom, merge, outgoing, shoppingData, shoppingFrom } from '../lib/householdSync';
 import { newId } from '../lib/scan';
 import { getProvider, useBilling } from './billing';
 import { setItemAuthor, useInventory } from './inventory';
@@ -55,14 +55,24 @@ export function sponsorName(h: HouseholdView | null | undefined): string | null 
   return s && !s.you ? s.name : null;
 }
 
-/** Every item and shopping entry counts as changed now, so joining shares what this phone already has. */
-function stampEverything(): void {
+/**
+ * Joining shares what this phone already has: everything goes out with the time it last changed (the
+ * sync starts from nothing). Only food that never had a time gets one now. Stamping everything as new
+ * would let a stale copy, kept since leaving, win over what the others changed in the meantime.
+ */
+function stampUnstamped(): void {
   const now = Date.now();
   const inv = useInventory.getState();
-  inv.applyRemote(inv.items.map((i) => ({ ...i, updatedAt: nextStamp(i.updatedAt, now) })), inv.deleted);
+  if (inv.items.some((i) => !i.updatedAt)) inv.applyRemote(inv.items.map((i) => (i.updatedAt ? i : { ...i, updatedAt: now })), inv.deleted);
   const shop = useShopping.getState();
-  shop.applyRemote(shop.items.map((i) => ({ ...i, updatedAt: nextStamp(i.updatedAt, now) })), shop.deleted);
+  if (shop.items.some((i) => !i.updatedAt)) shop.applyRemote(shop.items.map((i) => (i.updatedAt ? i : { ...i, updatedAt: now })), shop.deleted);
 }
+
+/**
+ * Goes up on every join, create and leave. A sync or refresh still running from before (the household
+ * was left, or all data deleted, while it waited on the server) sees it changed and drops its answer.
+ */
+let generation = 0;
 
 const DEMO_HOUSEMATE = 'Sam (sample)';
 
@@ -79,6 +89,8 @@ function demoHousehold(name: string, memberName: string, joined: boolean): House
 
 /** What the server would work out: whoever is on a household plan covers everyone. */
 function withDemoCoverage(h: HouseholdView): HouseholdView {
+  // Only alongside demo billing. A store build that somehow has no server must not hand out free cover.
+  if (getProvider().kind !== 'local') return { ...h, members: h.members.map(({ sponsor: _s, ...m }) => m), coveredUntil: null };
   const e = useBilling.getState().entitlement;
   const mine = e.household && e.endsOn ? new Date(`${e.endsOn}T23:59:59`).getTime() : null;
   const sample = h.members.some((m) => m.name === DEMO_HOUSEMATE) ? Date.now() + 30 * 86_400_000 : null;
@@ -134,8 +146,9 @@ export const useHousehold = create<HouseholdState>()(
         set({ error: null });
         try {
           const household = isDemoMode ? demoHousehold(name, memberName, false) : await createHousehold(await getProvider().getUserId(), name, memberName);
-          stampEverything();
-          set({ household, memberName, cursor: 0, pushedUpTo: 0 });
+          generation += 1;
+          stampUnstamped();
+          set({ household, memberName, cursor: 0, pushedUpTo: 0, syncing: false });
           void get().sync();
           return true;
         } catch (e) {
@@ -148,8 +161,9 @@ export const useHousehold = create<HouseholdState>()(
         set({ error: null });
         try {
           const household = isDemoMode ? demoHousehold('The Sample Kitchen', memberName, true) : await joinHousehold(await getProvider().getUserId(), code, memberName);
-          stampEverything();
-          set({ household, memberName, cursor: 0, pushedUpTo: 0 });
+          generation += 1;
+          stampUnstamped();
+          set({ household, memberName, cursor: 0, pushedUpTo: 0, syncing: false });
           if (isDemoMode) addDemoHousemateFood();
           void get().sync();
           return true;
@@ -161,6 +175,8 @@ export const useHousehold = create<HouseholdState>()(
 
       leave: async () => {
         set({ error: null });
+        // Whatever a sync still running brings back belongs to the household being left.
+        generation += 1;
         try {
           if (!isDemoMode) await leaveHousehold(await getProvider().getUserId());
         } catch (e) {
@@ -171,7 +187,7 @@ export const useHousehold = create<HouseholdState>()(
           }
         }
         // This phone keeps its copy of the lists.
-        set({ household: null, cursor: 0, pushedUpTo: 0, lastSyncAt: null });
+        set({ household: null, cursor: 0, pushedUpTo: 0, lastSyncAt: null, syncing: false });
         return true;
       },
 
@@ -208,6 +224,8 @@ export const useHousehold = create<HouseholdState>()(
           return;
         }
         set({ syncing: true });
+        const gen = generation;
+        const stale = () => gen !== generation;
         try {
           const userId = await getProvider().getUserId();
           // Anything stamped at this very millisecond goes again next time; sending twice is harmless.
@@ -219,18 +237,19 @@ export const useHousehold = create<HouseholdState>()(
           let cursor = get().cursor;
           for (let page = 0; page < 20; page += 1) {
             const res = await syncHousehold(userId, cursor, changes.slice(0, 500));
+            if (stale()) return;
             changes = changes.slice(500);
             cursor = res.cursor;
             const items = res.changes.filter((r) => r.kind === 'item');
             const shopping = res.changes.filter((r) => r.kind === 'shopping');
             if (items.length > 0) {
               const now = useInventory.getState();
-              const merged = merge(now.items, now.deleted, items, itemFrom);
+              const merged = merge(now.items, now.deleted, items, itemFrom, itemData);
               if (merged.changed) now.applyRemote(merged.list, merged.deleted);
             }
             if (shopping.length > 0) {
               const now = useShopping.getState();
-              const merged = merge(now.items, now.deleted, shopping, shoppingFrom);
+              const merged = merge(now.items, now.deleted, shopping, shoppingFrom, shoppingData);
               if (merged.changed) now.applyRemote(merged.list, merged.deleted);
             }
             set({ household: res.household, cursor });
@@ -238,13 +257,15 @@ export const useHousehold = create<HouseholdState>()(
           }
           set({ pushedUpTo: startedAt, lastSyncAt: Date.now(), error: null });
         } catch (e) {
+          if (stale()) return;
           // Removed from the household elsewhere (or it was deleted): stop sharing, keep the lists.
           if (e instanceof ApiError && e.code === 'not_found') set({ household: null, cursor: 0, pushedUpTo: 0, error: 'You are no longer in a household.' });
           // No plan of your own and nobody's household plan covers you: the paywall says so.
           else if (e instanceof ApiError && e.code === 'payment_required') set({ household: uncovered(get().household), error: null });
           else set({ error: message(e) });
         } finally {
-          set({ syncing: false });
+          // A newer household's sync may be running by now; its flag is its own.
+          if (!stale()) set({ syncing: false });
         }
       },
 
@@ -255,11 +276,14 @@ export const useHousehold = create<HouseholdState>()(
           set({ household: withDemoCoverage(current) });
           return;
         }
+        const gen = generation;
         try {
           const household = await getHousehold(await getProvider().getUserId());
+          if (gen !== generation) return;
           if (household) set({ household, error: null });
           else set({ household: null, cursor: 0, pushedUpTo: 0, error: 'You are no longer in a household.' });
         } catch (e) {
+          if (gen !== generation) return;
           if (e instanceof ApiError && e.code === 'payment_required') set({ household: uncovered(get().household) });
           // Offline: keep what is known.
         }

@@ -67,6 +67,10 @@ const within = (v: number | null, [lo, hi]: readonly [number, number]) => v !== 
 const round5 = (n: number) => Math.round(n / 5) * 5;
 
 /** Protein per kilogram for this person: the goal's figure, a little more when active or older. */
+/** Above this a daily protein target stops being useful advice. */
+const PROTEIN_CAP_G = 250;
+const PROTEIN_RANGE_MAX_G = 300;
+
 function proteinPerKg(p: Profile): number {
   let perKg = GOALS[p.goal].perKg;
   if (p.goal === 'maintain' && (p.activity === 'moderate' || p.activity === 'active' || p.activity === 'very-active')) perKg = 1.3;
@@ -84,10 +88,15 @@ export function restingKcal(weightKg: number, heightCm: number, age: number, sex
 export function targetsFor(p: Profile): Targets | null {
   if (!within(p.weightKg, LIMITS.weightKg)) return null;
   const weight = p.weightKg!;
-  const perKg = proteinPerKg(p);
   const [lo, hi] = GOALS[p.goal].range;
-  const protein = Math.min(250, round5(weight * perKg));
-  const proteinRange: [number, number] = [round5(weight * Math.min(lo, perKg)), Math.min(300, round5(weight * Math.max(hi, perKg)))];
+  const uncapped = round5(weight * proteinPerKg(p));
+  const protein = Math.min(PROTEIN_CAP_G, uncapped);
+  // At a very high weight the target is capped, so the per-kg figure and the range follow the cap:
+  // the range always holds the target, and never runs backwards.
+  const perKg = protein < uncapped ? Math.round((protein / weight) * 10) / 10 : proteinPerKg(p);
+  const low = Math.min(protein, round5(weight * Math.min(lo, perKg)));
+  const high = Math.max(protein, Math.min(PROTEIN_RANGE_MAX_G, round5(weight * Math.max(hi, perKg))));
+  const proteinRange: [number, number] = [low, high];
 
   let kcal: number | null = null;
   let kcalMissing: string | null = null;

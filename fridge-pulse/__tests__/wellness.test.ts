@@ -66,6 +66,26 @@ describe('goals', () => {
   });
 });
 
+describe('protein at very high weights', () => {
+  it('keeps the range around the capped target, and the per-kg figure true to it', () => {
+    for (const weightKg of [60, 80, 160, 200, 220, 300]) {
+      for (const goal of ['lose', 'maintain', 'muscle', 'gain'] as const) {
+        const t = targetsFor({ ...NO_PROFILE, weightKg, goal })!;
+        expect(t.proteinRange[0]).toBeLessThanOrEqual(t.protein);
+        expect(t.proteinRange[1]).toBeGreaterThanOrEqual(t.protein);
+        expect(t.protein).toBeLessThanOrEqual(250);
+        expect(Math.abs(t.proteinPerKg * weightKg - t.protein)).toBeLessThanOrEqual(weightKg * 0.05 + 5);
+      }
+    }
+  });
+});
+
+describe('prices', () => {
+  it('does not keep a fraction of a cent as a price of nothing', () => {
+    expect([cleanPrice(0.004), cleanPrice(0.005), cleanPrice(1.234), cleanPrice(9999.999), cleanPrice(-1)]).toEqual([null, 0.01, 1.23, null, null]);
+  });
+});
+
 describe('food log entries', () => {
   const meal = { title: 'Omelette', nutrition: { kcal: 366, protein: 20, carbs: 4, fat: 30 } };
 
@@ -291,5 +311,54 @@ describe('protein-first ideas', () => {
   it('puts the most protein first and ideas without figures last', () => {
     const meal = (id: string, protein: number | null) => ({ id, title: id, nutrition: protein === null ? null : { kcal: 1, protein, carbs: 0, fat: 0 } }) as Meal;
     expect(byProtein([meal('a', 10), meal('b', null), meal('c', 40), meal('d', 10)]).map((m) => m.id)).toEqual(['c', 'a', 'd', 'b']);
+  });
+});
+
+describe('the health app while a write is slow', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+    setHealthForTesting(null);
+  });
+
+  it('keeps one sample when the servings change before the first write has finished', async () => {
+    jest.useFakeTimers();
+    const samples = new Map<string, number>();
+    let n = 0;
+    setHealthForTesting({
+      kind: 'apple',
+      name: 'Apple Health',
+      isAvailable: async () => true,
+      requestAccess: async () => true,
+      readDays: async () => [],
+      writeNutrition: (s: NutritionSample) =>
+        new Promise((done) =>
+          setTimeout(() => {
+            const id = `h${++n}`;
+            samples.set(id, s.kcal);
+            done([id]);
+          }, 1500),
+        ),
+      deleteNutrition: async (ids: string[]) => {
+        ids.forEach((id) => samples.delete(id));
+      },
+    } as HealthProvider);
+    act(() => {
+      useHealth.setState({ connected: true, writeFood: true });
+    });
+    let id = '';
+    act(() => {
+      id = addToLog({ title: 'Toast', kind: 'quick', portion: '1 serving', servings: 1, perServing: { kcal: 100, protein: 5, carbs: 10, fat: 2 } }).id;
+    });
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(200);
+      changeServings(id, 2);
+      await jest.advanceTimersByTimeAsync(5000);
+    });
+    expect([...samples.values()]).toEqual([200]);
+    expect(useFoodLog.getState().entries.find((e) => e.id === id)?.healthIds).toEqual([...samples.keys()]);
+    act(() => {
+      useFoodLog.getState().clear();
+      useHealth.setState({ connected: false });
+    });
   });
 });

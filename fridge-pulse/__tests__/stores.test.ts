@@ -48,7 +48,9 @@ describe('lifetime totals', () => {
 
   it('remember the last day food was thrown out, and forget it on undo', () => {
     act(() => useInventory.getState().addItems([mk('a', 'Spinach', soon)]));
-    act(() => useInventory.getState().resolveItem('a', 'wasted'));
+    act(() => {
+      useInventory.getState().resolveItem('a', 'wasted');
+    });
     expect(useInventory.getState().lifetime).toMatchObject({ wasted: 1, lastWastedOn: today });
     act(() => useInventory.getState().reactivateItem('a'));
     expect(useInventory.getState().lifetime).toMatchObject({ wasted: 0, lastWastedOn: null });
@@ -64,6 +66,38 @@ describe('resolveItems', () => {
     expect(snack).toMatchObject({ message: 'Nice save! Milk rescued', tone: 'rescue' });
     act(() => snack.action!.onPress());
     expect(useInventory.getState().items[0]!.status).toBe('active');
+  });
+
+  it('counts and undoes only what it changed, even from stale copies', () => {
+    act(() => useInventory.getState().addItems([mk('eggs', 'Eggs', later), mk('milk', 'Milk', soon)]));
+    // The caller read both before a housemate's change (Milk thrown out) arrived.
+    const stale = useInventory.getState().items.map((i) => ({ ...i }));
+    act(() => {
+      useInventory.getState().resolveItem('milk', 'wasted');
+    });
+    act(() => resolveItems(stale, 'used', { mealTitle: 'Omelette' }));
+    const snack = useSnackbar.getState().snack!;
+    expect(snack.message).toBe('1 item used in Omelette');
+    act(() => snack.action!.onPress());
+    const status = Object.fromEntries(useInventory.getState().items.map((i) => [i.id, i.status]));
+    expect(status).toEqual({ eggs: 'active', milk: 'wasted' });
+  });
+
+  it('puts the last-waste date back on undo, so the streak is not reset', () => {
+    act(() => {
+      useInventory.setState({ lifetime: { ...useInventory.getState().lifetime, startedOn: addDays(today, -200), lastWastedOn: addDays(today, -120) } });
+      useInventory.getState().addItems([mk('a', 'Spinach', soon), mk('b', 'Kale', soon)]);
+    });
+    act(() => resolveItems([useInventory.getState().items.find((i) => i.id === 'a')!], 'wasted'));
+    expect(useInventory.getState().lifetime.lastWastedOn).toBe(today);
+    act(() => useSnackbar.getState().snack!.action!.onPress());
+    expect(useInventory.getState().lifetime.lastWastedOn).toBe(addDays(today, -120));
+    // Something thrown out after it keeps today's date when the earlier one is undone.
+    act(() => resolveItems([useInventory.getState().items.find((i) => i.id === 'a')!], 'wasted'));
+    const first = useSnackbar.getState().snack!;
+    act(() => resolveItems([useInventory.getState().items.find((i) => i.id === 'b')!], 'wasted'));
+    act(() => first.action!.onPress());
+    expect(useInventory.getState().lifetime.lastWastedOn).toBe(today);
   });
 });
 

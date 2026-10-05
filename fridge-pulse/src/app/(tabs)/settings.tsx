@@ -45,6 +45,8 @@ const remindersSupported = Platform.OS !== 'web';
 /** "9 AM" or "09:00", however the phone shows times. */
 const formatHour = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
+/** React Native Web draws switches at 40x20, too small to tap reliably; this makes them 56x28 there. */
+const WEB_SWITCH = Platform.OS === 'web' ? { height: 28 } : undefined;
 const STORE_NAME = Platform.OS === 'android' ? 'Google Play' : Platform.OS === 'ios' ? 'Apple ID' : 'app store';
 
 const APPEARANCES: { value: Appearance; label: string }[] = [
@@ -122,6 +124,7 @@ function HealthSection() {
             hint={connected ? 'Reading steps, active energy and workouts for your active days.' : 'Connect to count your active days and save the food you log.'}
             right={
               <Switch
+                style={WEB_SWITCH}
                 testID="health-switch"
                 accessibilityLabel={`Connect ${health.name}`}
                 value={connected}
@@ -138,6 +141,7 @@ function HealthSection() {
               hint={`Calories, protein, carbs and fat go to ${health.kind === 'sample' ? 'the health app' : health.name}.`}
               right={
                 <Switch
+                  style={WEB_SWITCH}
                   testID="health-write-switch"
                   accessibilityLabel="Save logged food to the health app"
                   value={writeFood}
@@ -294,6 +298,7 @@ export default function Settings() {
               hint="A daily note about food expiring today or tomorrow"
               right={
                 <Switch
+                  style={WEB_SWITCH}
                   testID="reminders-switch"
                   value={settings.remindersEnabled}
                   onValueChange={(v) => void toggleReminders(v)}
@@ -391,6 +396,7 @@ export default function Settings() {
               }
               right={
                 <Switch
+                  style={WEB_SWITCH}
                   testID="ai-switch"
                   accessibilityLabel="Use AI to read photos and suggest meals"
                   value={settings.aiConsent}

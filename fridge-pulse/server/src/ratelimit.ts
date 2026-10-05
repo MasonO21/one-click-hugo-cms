@@ -26,6 +26,12 @@ export class RateLimiter {
     return { ok: true, retryAfterSec: 0 };
   }
 
+  /** Gives back one hit (a request that failed through no fault of the caller). */
+  refund(key: string): void {
+    const w = this.windows.get(key);
+    if (w && w.count > 0) w.count -= 1;
+  }
+
   private sweep(t: number) {
     for (const [k, w] of this.windows) if (w.resetAt <= t) this.windows.delete(k);
   }

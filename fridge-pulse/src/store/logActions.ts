@@ -4,18 +4,26 @@ import { useFoodLog } from './foodLog';
 import { useHealth } from './health';
 import { useSnackbar } from './snackbar';
 
+/** The latest health write for each entry, so an older one that finishes late can be told apart. */
+const writing = new Map<string, Promise<string[]>>();
+
 /** Writes an entry to the health store in the background and remembers the sample ids on it. */
 function sendToHealth(entry: LogEntry): void {
   const totals = entryTotals(entry);
-  void useHealth
+  const write = useHealth
     .getState()
     .saveFood({ title: entry.title, at: new Date(entry.at), ...totals })
-    .then((ids) => {
-      if (ids.length === 0) return;
-      // The entry may have been removed (Undo) while the write was in flight.
-      if (useFoodLog.getState().entries.some((e) => e.id === entry.id)) useFoodLog.getState().update(entry.id, { healthIds: ids });
-      else void useHealth.getState().removeFood(ids);
-    });
+    .catch(() => [] as string[]);
+  writing.set(entry.id, write);
+  void write.then((ids) => {
+    const latest = writing.get(entry.id) === write;
+    if (latest) writing.delete(entry.id);
+    if (ids.length === 0) return;
+    // A newer write replaced this one (the servings changed while it was in flight), or the entry was
+    // removed (Undo): these samples are out of date, so they come out of the health app again.
+    if (latest && useFoodLog.getState().entries.some((e) => e.id === entry.id)) useFoodLog.getState().update(entry.id, { healthIds: ids });
+    else void useHealth.getState().removeFood(ids);
+  });
 }
 
 /** Adds to the food log (and the health store) without a message; returns the new entry. */

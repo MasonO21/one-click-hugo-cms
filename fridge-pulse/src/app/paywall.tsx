@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { getProvider, planPriceLabel, useBilling } from '../store/billing';
 import { DEFAULT_PLAN, HOUSEHOLD_MAX_PEOPLE, PLANS, TRIAL_DAYS, TRIAL_NAME, TRIAL_SPAN, type PlanId } from '../billing/trial';
@@ -123,6 +123,9 @@ function HouseholdNotCovered({ name }: { name: string }) {
   );
 }
 
+/** Taps this soon after the paywall appears belong to the screen before it. */
+const GHOST_TAP_MS = 700;
+
 export default function Paywall() {
   const { c } = useTheme();
   const { entitlement, prices, busy, error } = useBilling();
@@ -131,6 +134,10 @@ export default function Paywall() {
   const priceString = planPriceLabel(prices, plan);
   const provider = getProvider();
   const returning = entitlement.status === 'expired';
+  const shownAt = useRef(Number.MAX_SAFE_INTEGER);
+  useEffect(() => {
+    shownAt.current = Date.now();
+  }, []);
 
   // Someone in the household may have started a household plan since the last look.
   const inHousehold = household !== null;
@@ -150,7 +157,12 @@ export default function Paywall() {
             testID="paywall-cta"
             label={returning ? `Subscribe for ${priceString}` : `Start ${TRIAL_NAME} free trial`}
             loading={busy}
-            onPress={() => void useBilling.getState().purchase(plan)}
+            onPress={() => {
+              // A double tap on "Get started" lands its second tap here as the screen appears; it must not
+              // start a trial (or open the store's purchase sheet) the person never saw.
+              if (Date.now() - shownAt.current < GHOST_TAP_MS) return;
+              void useBilling.getState().purchase(plan);
+            }}
             style={{ alignSelf: 'stretch' }}
           />
           <Text variant="caption" muted style={{ textAlign: 'center' }}>

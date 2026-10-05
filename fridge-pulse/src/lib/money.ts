@@ -24,8 +24,10 @@ export function formatMoney(amount: number, currency: string): string {
 
 /** A price worth keeping: a positive amount under 10,000, to the cent. */
 export function cleanPrice(raw: unknown): number | null {
-  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0 || raw >= 10000) return null;
-  return Math.round(raw * 100) / 100;
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return null;
+  // Rounded first, so a fraction of a cent is not kept as a price of nothing.
+  const cents = Math.round(raw * 100) / 100;
+  return cents > 0 && cents < 10000 ? cents : null;
 }
 
 /** A currency code worth keeping. */

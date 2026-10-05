@@ -28,11 +28,18 @@ export function resolveMessage(items: Pick<PantryItem, 'name' | 'expiresOn'>[], 
  * Marks items as used or thrown out, with haptics and a message bar that offers Undo. Used by the
  * row check mark, swipes, item detail and "I made this" on a meal.
  */
+/** Counts waste resolves, so an Undo can tell whether anything was thrown out after it. */
+let wasteActions = 0;
+
 export function resolveItems(items: PantryItem[], status: 'used' | 'wasted', opts: { mealTitle?: string; logged?: LogEntry } = {}): void {
-  const live = items.filter((i) => i.status === 'active');
-  if (live.length === 0) return;
   const inventory = useInventory.getState();
-  for (const item of live) inventory.resolveItem(item.id, status);
+  const lastWastedBefore = inventory.lifetime.lastWastedOn;
+  // The caller's copies can be stale (a dialog was open while a housemate's changes arrived): only
+  // what this call actually changed goes into the message and the Undo.
+  const byId = new Map(inventory.items.map((i) => [i.id, i]));
+  const live = items.map((i) => byId.get(i.id)).filter((i): i is PantryItem => !!i && i.status === 'active' && inventory.resolveItem(i.id, status));
+  if (live.length === 0) return;
+  const action = status === 'wasted' ? ++wasteActions : wasteActions;
 
   const rescued = status === 'used' && live.some((i) => wouldRescue(i));
   if (Platform.OS !== 'web') {
@@ -48,8 +55,13 @@ export function resolveItems(items: PantryItem[], status: 'used' | 'wasted', opt
     action: {
       label: 'Undo',
       onPress: () => {
-        const store = useInventory.getState();
-        for (const item of live) store.reactivateItem(item.id);
+        // The last-waste date goes back to what it was, unless something was thrown out after this.
+        const lastWasted = status === 'wasted' && action === wasteActions ? lastWastedBefore : undefined;
+        useInventory.getState().undoResolve(
+          live.map((i) => i.id),
+          status,
+          lastWasted,
+        );
         if (opts.logged) removeFromLog(opts.logged.id);
       },
     },

@@ -9,7 +9,7 @@ import { withPictures } from './identify.js';
 import { noPictures, type PictureFinder } from './pictures.js';
 import { DAY_MS, RateLimiter } from './ratelimit.js';
 import { BarcodeUnavailable, isValidGtin, type BarcodeLookup } from './barcode.js';
-import { HouseholdError, SPONSOR_RECHECK_MS, type HouseholdStore } from './household.js';
+import { HouseholdError, normalizeCode, SPONSOR_RECHECK_MS, type HouseholdStore } from './household.js';
 import { BarcodeRequestSchema, CreateHouseholdSchema, HouseholdSyncSchema, IdentifyRequestSchema, JoinHouseholdSchema, MAX_IMAGE_BYTES, MealsRequestSchema, RemoveMemberSchema, ScanRequestSchema } from './schemas.js';
 
 export interface Deps {
@@ -63,6 +63,11 @@ const BURST_PER_MINUTE = { scan: 8, meals: 20, identify: 6, household: 30, join:
 const HOUSEHOLD_CALLS_PER_DAY = 6000;
 /** Wrong invite codes allowed per day, so codes cannot be guessed. */
 const JOINS_PER_DAY = 10;
+/**
+ * Joins into one household per day. Joining needs no plan, so without this a household could cycle
+ * throwaway members through to multiply everyone's daily scan and meal allowances.
+ */
+const JOINS_PER_HOUSEHOLD_PER_DAY = 12;
 /**
  * Household calls open to people without a plan: joining (someone else's household plan may cover
  * them), looking at their household (to see whether it does) and leaving. Everything else needs a plan
@@ -173,6 +178,14 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     return fail(c, 429, 'rate_limited', day.ok ? 'Too many requests. Please wait a minute.' : 'You have reached today\'s limit. Try again tomorrow.');
   }
 
+  /** A call that failed on our side (the AI service was down) does not use up the person's allowance. */
+  function refund(c: Context<Env>, bucket: keyof typeof BURST_PER_MINUTE, e: unknown) {
+    if (e instanceof UpstreamError && e.kind === 'refused') return;
+    const userId = c.get('userId');
+    limiter.refund(`${bucket}:day:${userId}`);
+    limiter.refund(`${bucket}:min:${userId}`);
+  }
+
   function upstream(c: Context, e: unknown) {
     if (e instanceof UpstreamError) {
       if (e.kind === 'refused') return fail(c, 422, 'refused', e.message);
@@ -206,6 +219,7 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       const out = await claude.scan(req);
       return c.json(out);
     } catch (e) {
+      refund(c, 'scan', e);
       return upstream(c, e);
     }
   });
@@ -227,6 +241,7 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       const out = await claude.meals(parsed.data);
       return c.json(out);
     } catch (e) {
+      refund(c, 'meals', e);
       return upstream(c, e);
     }
   });
@@ -253,6 +268,7 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       const report = await claude.identify(req);
       return c.json(await withPictures(report, pictures));
     } catch (e) {
+      refund(c, 'identify', e);
       return upstream(c, e);
     }
   });
@@ -340,6 +356,11 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
       const blocked = limited(c, 'join', JOINS_PER_DAY);
       if (blocked) return blocked;
+      const into = limiter.hit(`join-into:${normalizeCode(parsed.data.code)}`, JOINS_PER_HOUSEHOLD_PER_DAY, DAY_MS);
+      if (!into.ok) {
+        c.header('Retry-After', String(into.retryAfterSec));
+        return fail(c, 429, 'rate_limited', 'Too many people have joined this household today. Try again tomorrow.');
+      }
       const userId = c.get('userId');
       store.join(userId, parsed.data.memberName, parsed.data.code);
       store.sponsor(userId, c.get('householdUntil'));

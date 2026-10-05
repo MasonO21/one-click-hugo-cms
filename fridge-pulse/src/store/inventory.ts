@@ -18,8 +18,14 @@ interface InventoryState {
   applyRemote: (items: PantryItem[], deleted: Tombstones) => void;
   addItems: (items: PantryItem[]) => void;
   updateItem: (id: string, patch: Partial<Omit<PantryItem, 'id'>>) => void;
-  resolveItem: (id: string, status: Exclude<ItemStatus, 'active'>) => void;
+  /** Marks an active item used or thrown out. Returns false when it was not active (already done, or gone). */
+  resolveItem: (id: string, status: Exclude<ItemStatus, 'active'>) => boolean;
   reactivateItem: (id: string) => void;
+  /**
+   * Takes back a resolve: the items still in the state it left them go back to active, and the date
+   * of the last waste returns to what it was before (`lastWastedOn`), when nothing was thrown out since.
+   */
+  undoResolve: (ids: string[], status: Exclude<ItemStatus, 'active'>, lastWastedOn: string | null | undefined) => void;
   removeItem: (id: string) => void;
   clear: () => void;
 }
@@ -53,7 +59,7 @@ function lastWasted(items: PantryItem[]): string | null {
 
 export const useInventory = create<InventoryState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
       lifetime: NO_LIFETIME,
       deleted: {},
@@ -64,11 +70,11 @@ export const useInventory = create<InventoryState>()(
           lifetime: s.lifetime.startedOn || added.length === 0 ? s.lifetime : { ...s.lifetime, startedOn: todayISO() },
         })),
       updateItem: (id, patch) => set((s) => ({ items: s.items.map((i) => (i.id === id ? touch({ ...i, ...patch }) : i)) })),
-      resolveItem: (id, status) =>
+      resolveItem: (id, status) => {
+        const item = get().items.find((i) => i.id === id);
+        // Resolving twice (a double tap) must not count twice.
+        if (!item || item.status !== 'active') return false;
         set((s) => {
-          const item = s.items.find((i) => i.id === id);
-          // Resolving twice (a double tap) must not count twice.
-          if (!item || item.status !== 'active') return {};
           const today = todayISO();
           const done: PantryItem = touch({ ...item, status, resolvedOn: today });
           const lifetime = count(s.lifetime, done, 1);
@@ -76,6 +82,21 @@ export const useInventory = create<InventoryState>()(
             items: pruned(s.items.map((i) => (i.id === id ? done : i))),
             lifetime: status === 'wasted' ? { ...lifetime, lastWastedOn: today } : lifetime,
           };
+        });
+        return true;
+      },
+      undoResolve: (ids, status, lastWastedOn) =>
+        set((s) => {
+          let lifetime = s.lifetime;
+          const items = s.items.map((i) => {
+            // Changed again since (a housemate, say): their version stands.
+            if (!ids.includes(i.id) || i.status !== status) return i;
+            lifetime = count(lifetime, i, -1);
+            const { resolvedOn: _drop, ...rest } = i;
+            return touch({ ...rest, status: 'active' as const });
+          });
+          if (status === 'wasted' && lastWastedOn !== undefined) lifetime = { ...lifetime, lastWastedOn };
+          return { items, lifetime };
         }),
       reactivateItem: (id) =>
         set((s) => {

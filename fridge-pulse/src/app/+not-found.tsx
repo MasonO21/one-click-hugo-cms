@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { isUnlocked } from '../billing/trial';
 import { useBilling } from '../store/billing';
+import { isCovered, useHousehold } from '../store/household';
 import { useSettings } from '../store/settings';
 
 /**
@@ -10,6 +11,9 @@ import { useSettings } from '../store/settings';
  */
 export default function NotFound() {
   const onboarded = useSettings((s) => s.onboarded);
-  const unlocked = useBilling((s) => isUnlocked(s.entitlement));
+  // The same access as the root layout: a plan of their own, or a household plan covering them.
+  const subscribed = useBilling((s) => isUnlocked(s.entitlement));
+  const covered = useHousehold((s) => isCovered(s.household));
+  const unlocked = subscribed || covered;
   return <Redirect href={!onboarded ? '/onboarding' : unlocked ? '/' : '/paywall'} />;
 }

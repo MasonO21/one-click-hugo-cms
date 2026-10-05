@@ -96,6 +96,20 @@ describe('merging the household lists', () => {
     expect(out[0]!.data).not.toHaveProperty('updatedAt');
   });
 
+  it('takes the server’s earlier time for its own change, so a phone with a fast clock still hears about later deletions', () => {
+    const ahead = 10_000_000;
+    const mine = { ...mk('milk', 'Milk', '2026-10-08', { category: 'dairy' }), updatedAt: ahead };
+    // The server kept our edit but pulled its time back, and sends it back to us.
+    const echoed = merge([mine], {}, [{ kind: 'item', id: 'milk', updatedAt: 9_000_000, deleted: false, data: itemData(mine) }], itemFrom, itemData);
+    expect(echoed.list[0]!.updatedAt).toBe(9_000_000);
+    // A housemate deletes it afterwards (by the server's clock): this phone now takes the deletion.
+    const gone = merge(echoed.list, echoed.deleted, [{ kind: 'item', id: 'milk', updatedAt: 9_500_000, deleted: true, data: null }], itemFrom, itemData);
+    expect(gone.list).toEqual([]);
+    // Someone else's different version at an earlier time is still ignored.
+    const other = merge([mine], {}, [{ kind: 'item', id: 'milk', updatedAt: 9_000_000, deleted: false, data: itemData({ ...mine, name: 'Oat milk' }) }], itemFrom, itemData);
+    expect(other.list[0]).toMatchObject({ name: 'Milk', updatedAt: ahead });
+  });
+
   it('stamps a change later than the version it replaces, even within the same millisecond', () => {
     expect(nextStamp(undefined, 100)).toBe(100);
     expect(nextStamp(100, 100)).toBe(101);
@@ -232,6 +246,47 @@ describe('syncing with the household', () => {
     });
     expect(ok).toBe(false);
     expect(useHousehold.getState().error).toBe('That person is no longer in the household.');
+  });
+
+  it('drops what a sync still running brings back once the household is left (Delete all data)', async () => {
+    await act(async () => {
+      await useHousehold.getState().create('Home', 'Me');
+    });
+    mockServer.apply([ITEM('sam-1', 'Halloumi', Date.now())]);
+    const api = jest.requireMock('../src/lib/api');
+    let answer!: () => void;
+    api.syncHousehold.mockImplementationOnce(
+      (_u: string, since: number, changes: SyncRecord[]) => new Promise((done) => (answer = () => done(mockServer.sync(since, changes)))),
+    );
+    let syncing!: Promise<void>;
+    act(() => {
+      syncing = useHousehold.getState().sync();
+    });
+    await act(async () => {
+      await useHousehold.getState().leave();
+      useInventory.getState().clear();
+    });
+    await act(async () => {
+      answer();
+      await syncing;
+    });
+    expect(useHousehold.getState().household).toBeNull();
+    expect(useInventory.getState().items).toEqual([]);
+  });
+
+  it('rejoining does not let this phone’s old copy win over newer changes', async () => {
+    const old = Date.now() - 60_000;
+    act(() => {
+      useInventory.getState().applyRemote([{ ...mk('milk', 'Milk', '2026-10-08', { category: 'dairy' }), updatedAt: old }], {});
+    });
+    // While this phone was away, the housemate used the milk.
+    mockServer.apply([ITEM('milk', 'Milk', Date.now(), { status: 'used', resolvedOn: '2026-10-05' })]);
+    await act(async () => {
+      await useHousehold.getState().join('ABCD-EF23', 'Me');
+      await useHousehold.getState().sync();
+    });
+    expect(useInventory.getState().items.find((i) => i.id === 'milk')?.status).toBe('used');
+    expect(mockServer.records.get('item:milk')?.data?.status).toBe('used');
   });
 
   it('leaving keeps this phone’s copy', async () => {

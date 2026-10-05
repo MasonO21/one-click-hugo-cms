@@ -91,6 +91,8 @@ export function merge<T extends { id: string; updatedAt?: number }>(
   deleted: Tombstones,
   incoming: SyncRecord[],
   parse: (id: string, updatedAt: number, data: Record<string, unknown> | null) => T | null,
+  /** The shared part of a local copy, to recognise the server sending this phone's own change back. */
+  dataOf?: (x: T) => Record<string, unknown>,
 ): { list: T[]; deleted: Tombstones; changed: boolean } {
   const byId = new Map(list.map((x) => [x.id, x]));
   const tomb = { ...deleted };
@@ -98,7 +100,19 @@ export function merge<T extends { id: string; updatedAt?: number }>(
   for (const r of incoming) {
     const local = byId.get(r.id);
     const localAt = Math.max(local?.updatedAt ?? 0, tomb[r.id] ?? 0);
-    if (localAt >= r.updatedAt) continue;
+    if (localAt >= r.updatedAt) {
+      // The server pulls back a time that is too far ahead (this phone's clock runs fast). When it sends
+      // this phone's own change back with that earlier time, take the server's time, or a later change
+      // from someone else would look older than ours and be ignored here for good.
+      if (dataOf && local && !r.deleted && r.data && (local.updatedAt ?? 0) > r.updatedAt && sameData(dataOf(local), r.data)) {
+        byId.set(r.id, { ...local, updatedAt: r.updatedAt });
+        changed = true;
+      } else if (!local && r.deleted && (tomb[r.id] ?? 0) > r.updatedAt) {
+        tomb[r.id] = r.updatedAt;
+        changed = true;
+      }
+      continue;
+    }
     if (r.deleted) {
       if (local) {
         byId.delete(r.id);
@@ -127,6 +141,12 @@ export function merge<T extends { id: string; updatedAt?: number }>(
  */
 export function nextStamp(previous: number | undefined, now: number = Date.now()): number {
   return Math.max(now, (previous ?? 0) + 1);
+}
+
+/** The same shared data, whatever order its fields came back in. */
+function sameData(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const stable = (o: Record<string, unknown>) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
+  return stable(a) === stable(b);
 }
 
 /** Drops tombstones older than the server keeps them. */

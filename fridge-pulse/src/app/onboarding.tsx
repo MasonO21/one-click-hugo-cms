@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { FadeIn } from '../components/motion';
@@ -34,6 +34,8 @@ const STEPS = [
 
 export default function Onboarding() {
   const { c, scheme } = useTheme();
+  // Short phones (an iPhone SE) get a smaller picture, and the page scrolls rather than overlapping.
+  const compact = useWindowDimensions().height < 700;
   const [step, setStep] = useState(0);
   const last = step === STEPS.length - 1;
   const s = STEPS[step];
@@ -42,7 +44,6 @@ export default function Onboarding() {
 
   return (
     <Screen
-      scroll={false}
       edges={['top', 'bottom']}
       contentStyle={styles.content}
       footer={
@@ -68,15 +69,22 @@ export default function Onboarding() {
       }
     >
       <View style={styles.brand}>
-        <Logo size={64} beat="calm" />
-        <Wordmark size={32} center />
+        <Logo size={compact ? 48 : 64} beat="calm" />
+        <Wordmark size={compact ? 28 : 32} center />
         <Text variant="label" muted style={{ textAlign: 'center' }}>
           Your kitchen&apos;s vital sign
         </Text>
       </View>
       <FadeIn key={step} distance={16} style={styles.hero}>
-        <View style={[styles.emojiWrap, { backgroundColor: c.surface, borderColor: s.ring }, scheme === 'dark' ? glow(s.ring, 26, 0.45) : null]}>
-          <Emoji size={76}>{s.emoji}</Emoji>
+        <View
+          style={[
+            styles.emojiWrap,
+            compact ? styles.emojiWrapCompact : null,
+            { backgroundColor: c.surface, borderColor: s.ring },
+            scheme === 'dark' ? glow(s.ring, 26, 0.45) : null,
+          ]}
+        >
+          <Emoji size={compact ? 52 : 76}>{s.emoji}</Emoji>
         </View>
         <Text variant="title" style={{ textAlign: 'center' }}>
           {s.title}
@@ -90,10 +98,12 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, justifyContent: 'space-between' },
+  // Fills the screen when there is room (keeping the picture centred), and scrolls when there is not.
+  content: { flexGrow: 1, justifyContent: 'space-between' },
   brand: { alignItems: 'center', gap: 6, paddingTop: 8 },
-  hero: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  hero: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
   emojiWrap: { width: 156, height: 156, borderRadius: 78, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  emojiWrapCompact: { width: 112, height: 112, borderRadius: 56, marginBottom: 4 },
   footerInner: { width: '100%', maxWidth: 600, gap: 20, alignItems: 'center' },
   dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot: { height: 8, borderRadius: 4 },

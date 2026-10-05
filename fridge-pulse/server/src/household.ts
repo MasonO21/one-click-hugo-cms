@@ -39,6 +39,16 @@ export const AWAY_DAYS = 7;
 /** How often a member's "last seen" is written; syncs come every half minute while the app is open. */
 const SEEN_EVERY_MS = 60 * 60_000;
 const DAY_MS = 86_400_000;
+/**
+ * A payer whose plan's end date on record has passed is kept this long before being treated as idle:
+ * the plan has usually renewed, and the next check with the store will say so.
+ */
+const PAYER_GRACE_MS = 45 * 86_400_000;
+/**
+ * Used and thrown-out items are kept this long after their last change, then dropped: phones drop them
+ * from their own lists after 90 days, and the household's record count must not only ever grow.
+ */
+export const RESOLVED_KEEP_DAYS = 100;
 /** Seeing the payer again within this long does not rewrite their record. */
 const SPONSOR_TOUCH_MS = 10 * 60_000;
 /** A phone whose clock runs ahead cannot make its changes win forever. */
@@ -192,8 +202,12 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
     deleteHousehold: db.prepare('DELETE FROM households WHERE id = ?'),
     setCode: db.prepare('UPDATE households SET code = ? WHERE id = ?'),
     bumpSeq: db.prepare('UPDATE households SET seq = seq + 1 WHERE id = ? RETURNING seq'),
-    record: db.prepare('SELECT updated_at FROM records WHERE household_id = ? AND kind = ? AND id = ?'),
-    recordCount: db.prepare('SELECT COUNT(*) AS n FROM records WHERE household_id = ?'),
+    record: db.prepare('SELECT updated_at, deleted FROM records WHERE household_id = ? AND kind = ? AND id = ?'),
+    // Deletions are kept for a while but do not count toward the cap: removing food must always work.
+    recordCount: db.prepare('SELECT COUNT(*) AS n FROM records WHERE household_id = ? AND deleted = 0'),
+    pruneResolved: db.prepare(
+      "DELETE FROM records WHERE household_id = ? AND kind = 'item' AND deleted = 0 AND json_extract(data, '$.status') IN ('used', 'wasted') AND updated_at < ?",
+    ),
     upsert: db.prepare(
       `INSERT INTO records (household_id, kind, id, updated_at, deleted, data, seq) VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (household_id, kind, id) DO UPDATE SET updated_at = excluded.updated_at, deleted = excluded.deleted, data = excluded.data, seq = excluded.seq`,
@@ -245,7 +259,8 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
   const dropIdle = (h: HouseholdRow, now: number) => {
     for (const { member } of q.idle.all(h.id, now - MEMBER_IDLE_DAYS * DAY_MS) as { member: string }[]) {
       if (h.sponsor_member === member) {
-        if (h.sponsor_until != null && h.sponsor_until > now) continue;
+        // Still paying, or past the date on record but not yet re-checked with the store: kept.
+        if (h.sponsor_until != null && h.sponsor_until > now - PAYER_GRACE_MS) continue;
         q.setSponsor.run(null, null, null, null, h.id);
       }
       q.deleteMember.run(member);
@@ -354,15 +369,19 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
         // Dropping someone can take the household plan with them.
         const h = mine(userId)!;
         q.prune.run(h.id, now - TOMBSTONE_DAYS * 86_400_000);
+        q.pruneResolved.run(h.id, now - RESOLVED_KEEP_DAYS * 86_400_000);
         let count = (q.recordCount.get(h.id) as { n: number }).n;
         for (const c of changes) {
           const updatedAt = Math.min(c.updatedAt, now + MAX_CLOCK_AHEAD_MS);
-          const existing = q.record.get(h.id, c.kind, c.id) as { updated_at: number } | undefined;
+          const existing = q.record.get(h.id, c.kind, c.id) as { updated_at: number; deleted: number } | undefined;
           // Newest wins; a tie keeps what is there, so a phone re-sending its own change changes nothing.
           if (existing && existing.updated_at >= updatedAt) continue;
-          if (!existing) {
+          const wasLive = !!existing && existing.deleted === 0;
+          if (!c.deleted && !wasLive) {
             if (count >= MAX_RECORDS) throw new HouseholdError('too_many', 'This household has too many items to share. Clear out some old ones.');
             count += 1;
+          } else if (c.deleted && wasLive) {
+            count -= 1;
           }
           const seq = (q.bumpSeq.get(h.id) as { seq: number }).seq;
           q.upsert.run(h.id, c.kind, c.id, updatedAt, c.deleted ? 1 : 0, c.deleted ? null : JSON.stringify(c.data ?? {}), seq);

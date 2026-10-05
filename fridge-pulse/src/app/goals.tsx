@@ -69,8 +69,9 @@ function NumberField({
           onChangeText={(t) => {
             setText(t);
             const v = parseNumber(t);
-            if (t.trim() === '') onValid(null);
-            else if (v !== null && v >= range[0] && v <= range[1]) onValid(v);
+            // Anything that is not a usable number clears the value, so the targets below never show
+            // figures from a number typed on the way while the box itself says it is wrong.
+            onValid(t.trim() !== '' && v !== null && v >= range[0] && v <= range[1] ? v : null);
           }}
           keyboardType="decimal-pad"
           accessibilityLabel={`${label} in ${unit}`}

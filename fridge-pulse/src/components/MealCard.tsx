@@ -92,7 +92,8 @@ export function MealCard({ meal, defaultOpen = false, onCooked, proteinToGo }: P
             <View style={styles.uses}>
               {uses.map((u, i) => (
                 <View key={`${i}-${u}`} style={[styles.pill, { backgroundColor: c.primaryTint }]}>
-                  <Text variant="caption" color={c.primary} style={{ fontWeight: '700' }}>
+                  {/* A long food name ends in "..." inside its pill rather than running off the card. */}
+                  <Text variant="caption" color={c.primary} style={{ fontWeight: '700' }} numberOfLines={1}>
                     {u}
                   </Text>
                 </View>
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   uses: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
+  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, maxWidth: '100%' },
   tag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill },
   body: { padding: 16, gap: 16, borderTopWidth: 1 },
   step: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
