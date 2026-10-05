@@ -34,6 +34,7 @@ export class Enemies {
     this.eliteBurst = hdr(0xffd04a, 3.5);
     this.counts = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, boss: 0 };
     this.time = 0;
+    this.uidSeq = 0;
   }
 
   get count() { return this.active.length; }
@@ -42,7 +43,9 @@ export class Enemies {
     if (type !== 'boss' && this.counts[type] >= MAX_PER[type]) return null;
     const d = type === 'boss' ? BOSS : ENEMIES[type];
     const e = this.pool.pop() || {};
+    e.pooled = false;
     e.active = true; e.type = type; e.elite = elite;
+    e.uid = ++this.uidSeq; // unique per spawn, so stale references to a recycled object can be detected
     e.x = x; e.z = z; e.vx = 0; e.vz = 0; e.kx = 0; e.kz = 0;
     e.maxHp = e.hp = d.hp * hpMul * (elite ? ELITE.hpMul : 1);
     e.dmg = d.dmg * dmgMul * (elite ? ELITE.dmgMul : 1);
@@ -181,8 +184,17 @@ export class Enemies {
       if (dist > 42) this.remove(e);
     }
     // compact, then rebuild so the grid indexes the compacted list for everyone querying after us
-    if (a.some((e) => !e.active)) this.active = a.filter((e) => e.active);
+    this.compact();
     this.rebuildGrid();
+  }
+
+  /** Drop dead entries and only now return them to the pool, so a spawn can never re-add an object still listed. */
+  compact() {
+    const a = this.active;
+    if (!a.some((e) => !e.active)) return;
+    const keep = [];
+    for (const e of a) { if (e.active) keep.push(e); else if (!e.pooled) { e.pooled = true; this.pool.push(e); } }
+    this.active = keep;
   }
 
   explodeBloater(e) {
@@ -237,7 +249,6 @@ export class Enemies {
     if (!e.active) return;
     e.active = false;
     this.counts[e.type]--;
-    this.pool.push(e);
   }
 
   clearAll(withFx = true) {
@@ -246,7 +257,7 @@ export class Enemies {
       if (withFx) this.run.particles.burst(e.x, 0.7, e.z, 6, this.burstCol, { speed: 4, life: 0.5, size: 0.4 });
       this.remove(e);
     }
-    this.active = this.active.filter((e) => e.active);
+    this.compact();
     this.rebuildGrid();
   }
 

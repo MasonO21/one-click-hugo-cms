@@ -39,7 +39,7 @@ export class Projectiles {
     const spread = o.spread || 0;
     if (spread) { const a = Math.atan2(dz, dx) + spread; dx = Math.cos(a); dz = Math.sin(a); }
     const speed = o.speed || 17;
-    this.shots.push({ kind: 'bolt', x, z, y: 1.1, vx: dx * speed, vz: dz * speed, speed, target, dmg, pierce, life: 1.4, hit: new Set(), explode: o.explode || 0, crit: o.crit });
+    this.shots.push({ kind: 'bolt', x, z, y: 1.1, vx: dx * speed, vz: dz * speed, speed, target, tuid: target ? target.uid : 0, dmg, pierce, life: 1.4, hit: new Set(), explode: o.explode || 0, crit: o.crit });
   }
 
   spear(x, z, dx, dz, dmg, pierce, crit) {
@@ -69,7 +69,10 @@ export class Projectiles {
       const s = shots[i];
       s.life -= dt;
       if (s.kind === 'bolt') {
-        if (!s.target || !s.target.active) s.target = E.nearest(s.x, s.z, 8, (e) => s.hit.has(e));
+        if (!s.target || !s.target.active || s.target.uid !== s.tuid) {
+          s.target = E.nearest(s.x, s.z, 8, (e) => s.hit.has(e.uid));
+          s.tuid = s.target ? s.target.uid : 0;
+        }
         if (s.target) {
           const dx = s.target.x - s.x, dz = s.target.z - s.z, l = Math.hypot(dx, dz) || 1;
           const turn = Math.min(1, dt * 9);
@@ -84,8 +87,8 @@ export class Projectiles {
       let dead = s.life <= 0;
       if (!dead) {
         E.query(s.x, s.z, s.kind === 'spear' ? 0.45 : 0.3, (e) => {
-          if (s.hit.has(e)) return;
-          s.hit.add(e);
+          if (s.hit.has(e.uid)) return;
+          s.hit.add(e.uid);
           const killed = E.damage(e, s.dmg, { kx: s.vx, kz: s.vz, knock: s.kind === 'spear' ? 5 : 2.2, crit: s.crit, source: s.kind });
           parts.burst(s.x, s.y, s.z, 5, s.kind === 'spear' ? this.spearCol : this.boltCol, { speed: 4, life: 0.25, size: 0.3 });
           if (!killed) run.audio.sfx('hit', { volume: 0.4 });

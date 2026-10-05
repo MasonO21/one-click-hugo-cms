@@ -66,6 +66,7 @@ button { font: inherit; color: inherit; }
 #ui > * { pointer-events: auto; }
 #ui .pass-through { pointer-events: none; }
 #ui .pass-through > * { pointer-events: auto; }
+#ui .pass-through > .pass-through { pointer-events: none; }
 
 /* ---------- Boot ---------- */
 #boot {

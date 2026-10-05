@@ -239,6 +239,8 @@ export class Run {
   }
 
   showLevelUp() {
+    if (this.levelPending || this.ended) return;
+    if (this.bossDead && !this.endless) { this.levelQueue = 0; return; } // the chapter is won; no more cards
     this.levelPending = true;
     this.recomputeStats();
     const P = this.player;
@@ -254,7 +256,7 @@ export class Run {
       this.levelQueue--;
       this.levelPending = false;
       this.player.invuln = Math.max(this.player.invuln, 0.6);
-      if (this.levelQueue > 0) setTimeout(() => !this.ended && this.showLevelUp(), 120);
+      if (this.levelQueue > 0) setTimeout(() => { if (!this.ended && !this.levelPending && this.levelQueue > 0) this.showLevelUp(); }, 120);
     });
   }
 
@@ -355,6 +357,7 @@ export class Run {
   onBossKilled(x, z) {
     if (this.endless) return this.onEndlessBossKilled(x, z);
     this.bossDead = true;
+    this.bossEnemy = null;
     this.fx.slowMo(0.15, 1.6);
     this.fx.flash(1);
     this.fx.shake(1);
@@ -369,14 +372,19 @@ export class Run {
     this.enemies.clearAll(true);
     this.projectiles.clearEnemyShots();
     this.pickups.magnetAll();
-    // the King's soul joins your legion
-    setTimeout(() => {
-      for (let i = 0; i < 30; i++) this.legion.raise(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 4);
-    }, 600);
     this.ui.banner('CHAPTER CLEARED', `${this.chapter.name} is free`, 'gold');
     this.audio.stopMusic();
-    setTimeout(() => this.audio.sfx('victory'), 900);
-    setTimeout(() => this.end(true), 3200);
+    // the rest of the victory beat plays out in update() so it respects pause and ends cleanly
+    this.victory = { t: 0, x, z, raised: false, jingle: false };
+  }
+
+  updateVictory(realDt) {
+    const v = this.victory;
+    if (!v || this.ended || this.paused) return;
+    v.t += realDt;
+    if (!v.raised && v.t > 0.6) { v.raised = true; for (let i = 0; i < 30; i++) this.legion.raise(v.x + (Math.random() - 0.5) * 4, v.z + (Math.random() - 0.5) * 4); }
+    if (!v.jingle && v.t > 0.9) { v.jingle = true; this.audio.sfx('victory'); }
+    if (v.t > 3.2) this.end(true);
   }
 
   /** Endless Abyss: the King falls, the abyss deepens, the run continues. */
@@ -385,6 +393,9 @@ export class Run {
     this.bossSpawned = false; this.warned = false;
     this.nextBossAt = this.time + ENDLESS_BOSS_EVERY;
     this.bossEnemy = null;
+    // resume the gate/swarm rhythm from now instead of firing every slot missed during the fight
+    this.nextGate = this.time + 12;
+    this.nextSwarm = this.time + 30;
     this.fx.slowMo(0.25, 0.9);
     this.fx.flash(0.7); this.fx.shake(0.8); this.fx.aberration(0.8);
     const col = hdr(this.chapter.boss, 4);
@@ -406,7 +417,7 @@ export class Run {
     this.input.reset();
     this.profile.flags.tutorialDone = true;
     const result = {
-      chapter: this.chapter.id, time: Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
+      chapter: this.chapter.id, time: this.endless ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
     };
@@ -457,6 +468,7 @@ export class Run {
       this.updateNova(dt);
       if (this.tutorial && this.time > 1.5 && !this.input.moved) this.hint('move', 'Drag anywhere to move. Your Shepherd attacks automatically.');
     }
+    this.updateVictory(realDt);
     if (this.deathT >= 0) {
       this.deathT += realDt;
       if (this.deathT > 1.1 && !this.paused) {

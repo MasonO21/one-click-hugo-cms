@@ -107,14 +107,24 @@ function boot() {
   app.meta.show('battle');
 
   // Audio needs a user gesture on mobile.
-  loadAudio().then(() => applySettings());
-  const unlock = () => {
+  let audioLoaded = false, gestured = false;
+  const startAudio = () => {
     audio.init();
     applySettings();
-    if (!app.run) audio.playMusic('menu');
+    audio.playMusic(app.run ? 'battle' : 'menu');
+  };
+  const unlock = () => {
+    gestured = true;
+    if (!audioLoaded) return; // too early: keep listening, a later tap will start it
+    startAudio();
     window.removeEventListener('pointerdown', unlock);
     window.removeEventListener('keydown', unlock);
   };
+  loadAudio().then(() => {
+    audioLoaded = true;
+    applySettings();
+    if (gestured) startAudio(); // the module resumes its context on the next tap if the browser still blocks it
+  });
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);
 

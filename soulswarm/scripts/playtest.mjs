@@ -71,6 +71,8 @@ for (const hero of ['vael', 'nyx', 'seraphine', 'mordrake']) {
       window.__soulswarm.startRun(1); return window.__bot(60, false);
     }, hero);
     check(`${hero}: 60s run`, s.kills > 40 && s.peak > 5, JSON.stringify(s));
+    const dup = await page.evaluate(() => { const a = window.__soulswarm.run.enemies.active; return a.length - new Set(a).size; });
+    check(`${hero}: no duplicated pooled enemies`, dup === 0, `duplicates=${dup}`);
   });
   check(`${hero}: no runtime errors`, !errs.length, errs[0] || '');
 }
@@ -99,10 +101,12 @@ errs = await session(async (page) => {
     const app = window.__soulswarm; app.profile.chapter.unlocked = 6; app.startRun(6);
     const r = app.run; while (r.time < 304 && !r.ended) window.__bot(5, true);
     const b = r.bossEnemy; if (b) { b.hp = 1; r.enemies.damage(b, 50); }
+    const gatesBefore = r.counters.gates, t = r.time;
     window.__bot(2, true);
-    return { up: !!b, kills: r.bossKills, next: Math.round(r.nextBossAt), ended: r.ended };
+    return { up: !!b, kills: r.bossKills, next: Math.round(r.nextBossAt), ended: r.ended, gateIn: Math.round(r.nextGate - t), swarmIn: Math.round(r.nextSwarm - t), pairsSpawned: r.gates.pair ? 1 : 0 };
   });
   check('endless: boss returns and run continues', s.up && s.kills === 1 && !s.ended && s.next > 600, JSON.stringify(s));
+  check('endless: no gate/swarm catch-up burst after the kill', s.gateIn >= 10 && s.swarmIn >= 25 && !s.pairsSpawned, JSON.stringify(s));
 });
 check('endless: no runtime errors', !errs.length, errs[0] || '');
 

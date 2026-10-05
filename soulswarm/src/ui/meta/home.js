@@ -44,7 +44,7 @@ export function createHome(ctx) {
     // Chapter status line
     let status;
     if (locked) status = `<span class="chap-lock">${icon('lock')} Clear Chapter ${sel - 1}</span>`;
-    else if (ch.endless) status = best ? `<span class="chap-best">${icon('trophy')} Deepest run ${fmtTime(best.time)}</span>` : '<span class="chap-best t-dim">No time limit. Gravemaw returns every 5:00.</span>';
+    else if (ch.endless) status = best ? `<span class="chap-best">${icon('trophy')} Deepest run ${fmtTime(best.time)}${best.depth ? ` · depth ${best.depth}` : ''}</span>` : '<span class="chap-best t-dim">No time limit. Gravemaw returns every 5:00.</span>';
     else if (best?.cleared) status = `<span class="pill pill-soul">${icon('check')} Cleared</span><span class="chap-best t-dim">Best ${fmtTime(best.time)}</span>`;
     else if (best) status = `<span class="chap-best">${icon('hourglass')} Best ${fmtTime(best.time)} <span class="t-dim">/ 06:00</span></span>`;
     else status = '<span class="chap-best t-dim">Survive 6:00 and slay Gravemaw</span>';

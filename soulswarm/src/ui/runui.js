@@ -202,11 +202,14 @@ export class RunUI {
       <div class="ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="46"/><circle class="fg" cx="50" cy="50" r="46"/></svg><b>${left}</b></div>
       <p>${canRevive ? 'Rise again with full health and a soul blast.' : 'Your Shepherd has fallen.'}</p></div>`);
     const fg = $(body, '.fg'), num = $(body, 'b');
+    let iv = 0, adOpen = false;
     const finish = (choice, close) => { if (done) return; done = true; clearInterval(iv); close && close(); cb(choice); };
     const actions = [];
     if (canRevive) {
       actions.push({ label: `${icon('ad')} Revive free`, cls: 'btn-ad btn-lg', onClick: (close) => {
-        watchAd(app, 'revive').then((ok) => { if (ok) finish('revive', close); });
+        if (adOpen) return false;
+        adOpen = true; // the countdown waits while the ad plays
+        watchAd(app, 'revive').then((ok) => { adOpen = false; if (ok) finish('revive', close); });
         return false;
       } });
       actions.push({ label: `Revive · ${icon('gems')} ${gemCost}`, cls: 'btn-gem', onClick: (close) => {
@@ -218,7 +221,8 @@ export class RunUI {
     }
     actions.push({ label: 'Give up', cls: 'btn-ghost', onClick: (close) => { finish('end', close); return false; } });
     const m = modal({ title: 'You have fallen', body, actions, dismissable: false });
-    const iv = setInterval(() => {
+    iv = setInterval(() => {
+      if (adOpen || document.hidden) return;
       left -= 1;
       num.textContent = Math.max(0, left);
       fg.style.strokeDashoffset = String(289 * (1 - left / 10));

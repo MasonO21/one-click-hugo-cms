@@ -12,6 +12,7 @@ const PAGE_URL = process.argv[3] || 'http://localhost:5173/';
 mkdirSync(OUT, { recursive: true });
 
 // Each shot stages a moment in page JS, steps the simulation, then adds a caption band.
+const ONLY = process.env.ONLY;
 const SHOTS = [
   { name: '01-legion', caption: 'EVERY KILL <em>JOINS YOUR ARMY</em>', stage: `
     start(1, 150); give({ soulBolt: 3, skullHalo: 2, gravePulse: 1 });
@@ -54,18 +55,20 @@ const caption = (html) => `(() => {
 })()`;
 
 const browser = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-for (const shot of SHOTS) {
+for (const shot of SHOTS.filter((x) => !ONLY || x.name.startsWith(ONLY))) {
+  const t0 = Date.now();
   const ctx = await browser.newContext({ viewport: { width: 430, height: 932 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true, ignoreHTTPSErrors: true });
   await serveGoogleFonts(ctx);
   const page = await ctx.newPage();
   await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3500);
   await page.evaluate(`(() => { ${helpers} ${shot.stage} })()`);
+  console.log(shot.name, 'staged', Date.now() - t0, 'ms');
   if (shot.menu) await page.waitForTimeout(1500);
   else await page.evaluate(() => { for (const a of document.getAnimations()) { try { if (a.effect.getComputedTiming().iterations !== Infinity) a.finish(); } catch (e) { /* ignore */ } } });
   await page.evaluate(caption(shot.caption));
   await page.waitForTimeout(300);
-  await page.screenshot({ path: `${OUT}/${shot.name}.png` });
+  await page.screenshot({ path: `${OUT}/${shot.name}.png`, timeout: 180000 });
   console.log('wrote', shot.name);
   await ctx.close();
 }

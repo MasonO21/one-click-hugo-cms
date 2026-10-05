@@ -118,11 +118,12 @@ export class Legion {
       m.retarget -= dt;
 
       // keep a target only while it stays inside the leash around the Shepherd
-      if (m.target && (!m.target.active || (m.target.x - P.x) ** 2 + (m.target.z - P.z) ** 2 > (leash + 3) ** 2)) m.target = null;
+      if (m.target && (!m.target.active || m.target.uid !== m.tuid || (m.target.x - P.x) ** 2 + (m.target.z - P.z) ** 2 > (leash + 3) ** 2)) m.target = null;
       if (m.retarget <= 0) {
         m.retarget = 0.25 + Math.random() * 0.2;
         if (!m.target) {
           m.target = E.nearest(m.x, m.z, 6.5, (e) => (e.x - P.x) ** 2 + (e.z - P.z) ** 2 > leash * leash);
+          m.tuid = m.target ? m.target.uid : 0;
         }
       }
 

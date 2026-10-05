@@ -362,7 +362,7 @@ export function applyRunResult(p, result) {
   // chapter progress
   const prev = p.chapter.best[ch] || { time: 0, cleared: false, kills: 0 };
   const newBest = result.time > prev.time || (result.victory && !prev.cleared);
-  p.chapter.best[ch] = { time: Math.max(prev.time, result.time), cleared: prev.cleared || result.victory, kills: Math.max(prev.kills || 0, result.kills) };
+  p.chapter.best[ch] = { time: Math.max(prev.time, result.time), cleared: prev.cleared || result.victory, kills: Math.max(prev.kills || 0, result.kills), depth: Math.max(prev.depth || 0, (result.bossKills || 0) + 1) };
   if (result.victory && ch === p.chapter.unlocked && ch < CHAPTERS.length) p.chapter.unlocked = ch + 1;
 
   // quests
