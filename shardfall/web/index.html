@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1029">
+<title>Shardfall Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira+Condensed:ital,wght@0,600;0,700;0,800;1,800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+  <section id="lobby" class="screen">
+    <header class="topbar">
+      <button class="profile" data-act="settings" aria-label="Profile and settings">
+        <span class="lvl" id="accLvl"><b>1</b></span>
+        <span class="pname" id="pName">Shardling</span>
+      </button>
+      <div class="currencies">
+        <button class="cur" data-act="go" data-v="free" aria-label="Coins"><i class="ico ico-coin"></i><b id="coinVal">0</b></button>
+        <button class="cur" data-act="go" data-v="shop" data-tab="gems" aria-label="Gems, buy more"><i class="ico ico-gem"></i><b id="gemVal">0</b><span class="plus">+</span></button>
+        <button class="icon-btn" data-act="settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
+    </header>
+    <nav class="nav" aria-label="Main">
+      <button data-act="go" data-v="home"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Battle</button>
+      <button data-act="go" data-v="heroes"><svg viewBox="0 0 24 24"><path d="M12 2l5 6-2 13H9L7 8z"/><path d="M12 2v19"/></svg>Heroes</button>
+      <button data-act="go" data-v="shop"><svg viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Shop</button>
+      <button data-act="go" data-v="pass"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>Pass<i class="badge" id="bPass" hidden></i></button>
+      <button data-act="go" data-v="missions"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Missions<i class="badge" id="bMis" hidden></i></button>
+      <button data-act="go" data-v="free"><svg viewBox="0 0 24 24"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Free<i class="badge" id="bFree" hidden></i></button>
+    </nav>
+    <main id="view"></main>
+  </section>
+
+  <section id="loading" class="screen loading" hidden></section>
+
+  <section id="match" class="screen" hidden>
+    <canvas id="game"></canvas>
+    <div class="hud-top">
+      <canvas id="minimap" aria-label="Minimap"></canvas>
+      <div class="score"><b id="kBlue" class="k-blue">0</b><span id="clock">0:00</span><b id="kRed" class="k-red">0</b></div>
+      <div class="hud-top-right">
+        <div id="buffs" class="buffs"></div>
+        <button id="btnPause" class="icon-btn" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+      </div>
+    </div>
+    <ol id="feed" class="feed"></ol>
+    <div id="announce" class="announce" hidden><b></b><span></span></div>
+    <div id="toast" class="toast" hidden></div>
+    <div class="hud-left">
+      <button id="btnShop" class="shop-btn" aria-label="Open item shop"><i class="ico ico-coin"></i><b id="goldVal">0</b></button>
+      <button id="btnQuick" class="quick-btn" aria-label="Buy recommended item"><span class="item-ic" id="qIcon"></span><span><span id="qName"></span><br><span class="num" id="qCost"></span></span></button>
+      <div id="slots" class="slots"></div>
+    </div>
+    <div id="joyZone" class="joy-zone"><div class="joy-hint" id="joyHint"></div><div id="joy" class="joy" hidden><div class="joy-knob" id="joyKnob"></div></div></div>
+    <div class="mini-row">
+      <button class="pbtn" id="btnRecall" aria-label="Recall to base"><em class="key">B</em></button>
+      <button class="pbtn" id="btnFlash" aria-label="Blink"><span class="cd"></span><em class="key">F</em></button>
+    </div>
+    <div class="pad">
+      <button class="pbtn atk" id="btnAtk" aria-label="Attack"><em class="key">Space</em></button>
+      <button class="pbtn sk s0" data-i="0"><span class="cd"></span><em class="key">Q</em></button>
+      <button class="pbtn sk s1" data-i="1"><span class="cd"></span><em class="key">E</em></button>
+      <button class="pbtn sk s2" data-i="2"><span class="cd"></span><em class="key">R</em></button>
+    </div>
+    <div id="cancelZone" class="cancel-zone" hidden>Cancel</div>
+    <div id="death" class="death" hidden><p>Respawning in</p><b id="respawnT">0</b></div>
+    <div class="xp"><i id="xpFill"></i></div>
+    <div id="rotate" class="rotate-hint" hidden>Turn your phone sideways for the full arena</div>
+    <div id="shop" class="sheet" hidden></div>
+    <div id="pause" class="pause" hidden></div>
+    <div id="tutorial" class="tutorial" hidden></div>
+  </section>
+
+  <div id="modalRoot"></div>
+</div>
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/match.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/lobby.js"></script>
+</body>
+</html>
