@@ -1,0 +1,16 @@
+{
+  "name": "shardfall-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Server-authoritative online match server, matchmaking, accounts and cloud save for Shardfall Arena.",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
