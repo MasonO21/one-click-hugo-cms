@@ -47,9 +47,13 @@ All SVG icons stored in `site/static/img/icons` are automatically optimized with
 
 ## Ghost Mode for Kids
 
-`site/static/ghost-mode/` holds Ghost Mode for Kids, a prototype parental-safety app served at `/ghost-mode/`. The kid's phone checks texts, email and social apps (Instagram, TikTok, Snapchat, Discord, Roblox, WhatsApp, Minecraft) for warning patterns on the device, and parents get pattern alerts (new adult contacts, busy late nights, grooming warning signs) instead of the messages themselves.
+`site/static/ghost-mode/` holds Ghost Mode for Kids, a prototype parental-safety app served at `/ghost-mode/`. The kid's phone checks texts, email and social apps (Instagram, TikTok, Snapchat, Discord, Roblox, WhatsApp, Minecraft) for warning patterns on the device, and parents get pattern alerts instead of the messages themselves: new adult contacts, busy late nights, grooming warning signs, scams and fake links, bullying, signs of distress (with 988 crisis-line resources), and live location shared with someone new.
 
 * `index.html` is the whole app: HTML, CSS and JavaScript in one file. The detection engine is the section that starts at `const SENS=`.
 * `manifest.webmanifest`, `sw.js` and the PNG icons make it installable on phones ("Add to Home Screen") and let it open offline.
-* Pricing is $9.99 a month or $99 a year, each with a free first week. The plan screens are UI only: no payment details are collected. Connect a payment provider (for example Stripe) before charging anyone.
+* One account covers up to 5 kids. Each kid has their own phone, alerts and age-based settings.
+* Parents choose which alerts pop up on their phone. During quiet time only "Act today" alerts come through; the rest wait for a morning roundup.
+* The app is in English and Spanish (switch in the header or Settings), and detection works on English and Spanish messages either way. All app text goes through `L()`, with English as the key; the Spanish strings are in the `DICT.es` block. Another language is one more entry in `LANGS` and `DICT`.
+* The distress and bullying wording, and the advice shown to parents, should be reviewed by child-safety and mental-health professionals before launch.
+* Pricing is $9.99 a month or $99 a year for one child, or $14.99 a month for up to 5 kids, each with a free first week. The plan screens are UI only: no payment details are collected. Connect a payment provider (for example Stripe) before charging anyone.
 * `yarn test:ghost-mode` (or `node tests/ghost-mode/engine.test.js`) checks the detection engine against sample messages, including disguised spellings and everyday phrases that must not trigger alerts.
