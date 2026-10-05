@@ -256,22 +256,32 @@
       ];
     }
 
+    // Two ways to build a match:
+    //  - single player: opts.hero/skin + opts.allies + opts.enemies (the local player is always blue, slot 1)
+    //  - roster (online / server): opts.roster = [[spec...], [spec...]] with spec { id, skin, name, human, pid, difficulty }
+    //    and opts.localPid naming which human (if any) is the local player.
     setupHeroes() {
       const o = this.opts;
-      const mk = (spec, team, slot, isPlayer) => {
+      const mk = (spec, team, slot, human) => {
         const def = SF.HERO[spec.id];
         const f = this.fountains[team];
-        const h = new Hero(this, def, { team, x: f.x + (team === 0 ? 70 : -70), y: W.laneY + (slot - 1) * 70, skin: spec.skin || SF.defaultSkin(spec.id), name: spec.name, isPlayer });
-        if (!isPlayer || o.autoplay) h.brain = new Brain(this, h, team === 0 ? 'normal' : o.difficulty);
-        if (team === 1) h.botDmg = SF.DIFFICULTY[o.difficulty].dmg;
+        const h = new Hero(this, def, { team, x: f.x + (team === 0 ? 70 : -70), y: W.laneY + (slot - 1) * 70, skin: spec.skin || SF.defaultSkin(spec.id), name: spec.name, human, pid: spec.pid, isPlayer: false });
+        if (!human || o.autoplay) h.brain = new Brain(this, h, spec.difficulty || (o.roster || team === 0 ? 'normal' : o.difficulty));
+        if (!human && team === 1 && !o.roster) h.botDmg = SF.DIFFICULTY[o.difficulty].dmg;
         this.add(h); this.heroes.push(h);
         return h;
       };
-      this.player = mk({ id: o.hero, skin: o.skin, name: o.playerName || 'You' }, 0, 1, true);
-      o.allies.forEach((s, i) => mk(s, 0, i === 0 ? 0 : 2, false));
-      o.enemies.forEach((s, i) => mk(s, 1, i, false));
+      if (o.roster) {
+        o.roster.forEach((list, team) => list.forEach((spec, i) => mk(spec, team, i, !!spec.human)));
+        this.player = this.heroes.find(h => h.human && h.pid != null && h.pid === o.localPid) || null;
+      } else {
+        this.player = mk({ id: o.hero, skin: o.skin, name: o.playerName || 'You' }, 0, 1, true);
+        o.allies.forEach((s, i) => mk(s, 0, i === 0 ? 0 : 2, false));
+        o.enemies.forEach((s, i) => mk(s, 1, i, false));
+      }
+      if (this.player) this.player.isPlayer = true;
       for (const team of [0, 1]) {
-        const bots = this.heroes.filter(h => h.team === team && h.brain && !h.isPlayer);
+        const bots = this.heroes.filter(h => h.team === team && h.brain && !h.human);
         const j = bots.find(b => b.def0.role === 'Assassin' || b.def0.role === 'Fighter') || (team === 1 ? bots[0] : null);
         if (j) j.brain.jungler = true;
       }
@@ -515,9 +525,11 @@
     }
 
     // ---- player control -----------------------------------------------------
+    // Applies human input (wantDir / attackHeld set by the HUD or by the network) for every human hero.
     playerControl(dt) {
-      const p = this.player;
-      if (!p.alive || p.brain) return;
+      for (const p of this.heroes) if (p.human && !p.brain && p.alive) this.humanControl(p, dt);
+    }
+    humanControl(p, dt) {
       if (p.wantDir) { p.want = null; if (p.recallT > 0) p.recallT = 0; }
       if (p.attackHeld) {
         p.retarget = (p.retarget || 0) - dt;
@@ -963,7 +975,7 @@
     // ---- results ------------------------------------------------------------
     summary() {
       const rows = this.heroes.map(h => ({
-        name: h.name, hero: h.def0.name, heroId: h.def0.id, skin: h.skin, team: h.team, isPlayer: h.isPlayer,
+        name: h.name, hero: h.def0.name, heroId: h.def0.id, skin: h.skin, team: h.team, isPlayer: h.isPlayer, pid: h.pid, human: !!h.human,
         k: h.k, d: h.dth, a: h.ast, gold: Math.round(h.goldEarned), dmg: Math.round(h.dmgDealt), level: h.level, towers: h.towers,
         score: h.k * 3 + h.ast * 2 - h.dth * 1.5 + h.dmgDealt / 1500 + h.towers * 2 + h.goldEarned / 1200
       }));

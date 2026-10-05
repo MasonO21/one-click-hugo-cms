@@ -323,7 +323,8 @@
       onEnd = cb; ended = false; paused = false; annQ = []; annT = 0; aim = null; keys.clear();
       joy.id = null; joy.dir = null; $('joy').hidden = true; $('joyHint').hidden = false;
       $('match').hidden = false;
-      m = new SF.Match(opts);
+      // opts.remote: an online match object with the same interface as SF.Match (see net.js).
+      m = opts.remote || new SF.Match(opts);
       if (!R) R = new SF.Renderer($('game'), $('minimap')); else R.resize();
       R.bushImgs = null; R.cam = { x: m.player.x, y: m.player.y };
       skillEls().forEach((b, i) => {
