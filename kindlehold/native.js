@@ -24,7 +24,7 @@
  * - In a plain browser, everything works and reports "unavailable": purchases
  *   resolve { ok:false, error:'unavailable' }, notifications are no-ops.
  *
- * Load order: <script src="native.js"></script> before game.js. Nothing here
+ * Load order: include native.js before core.js (see index.html). Nothing here
  * throws; every method returns a value or a Promise that always resolves.
  */
 (function (root) {

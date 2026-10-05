@@ -305,10 +305,11 @@
   function syncEvent(offline) {
     const c = cycle();
     if (S.ev.idx === c) return;
-    if (S.ev.idx >= 0 && S.ev.idx < c) endEvent();
+    const first = S.ev.idx < 0;
+    if (!first && S.ev.idx < c) endEvent();
     S.ev = { idx: c, start: c * EV.length, pts: 0, claimed: [], rivals: [], bracket: bracket() };
     if (evKey(c) === 'thaw') S.ev.rivals = makeRivals();
-    if (!offline) KH.toast(`New event: ${EV.defs[evKey(c)].name}.`, 'good', 'event', 5);
+    if (!offline && !first) KH.toast(`New event: ${EV.defs[evKey(c)].name}.`, 'good', 'event', 5);
   }
   const addPts = (key, n) => { if (S && S.ev.idx === cycle() && evKey(S.ev.idx) === key) S.ev.pts += n; };
   const TP = EV.thawPoints;
