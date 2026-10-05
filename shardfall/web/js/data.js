@@ -346,10 +346,10 @@ window.SF = window.SF || {};
   };
 
   SF.MODES = {
-    quick:  { name: 'Quick Match', sub: '3v3 vs bots. Pick your difficulty.', minutes: 8 },
-    ranked: { name: 'Ranked', sub: 'Climb from Bronze to Legend. Bots get tougher as you rise.', minutes: 8 },
-    brawl:  { name: 'Shard Brawl', sub: 'Random hero, start at level 5 with gold, no jungle. Fast fights.', minutes: 5 },
-    online: { name: 'Online 3v3', sub: 'Real players, bots fill empty slots.', minutes: 8 }
+    quick:  { name: 'Quick Match', tab: 'Quick', sub: '3v3 vs bots. Pick your difficulty.', minutes: 8 },
+    ranked: { name: 'Ranked', tab: 'Ranked', sub: 'Climb from Bronze to Legend. Bots get tougher as you rise.', minutes: 8 },
+    brawl:  { name: 'Shard Brawl', tab: 'Brawl', sub: 'Random hero, start at level 5 with gold, no jungle. Fast fights.', minutes: 5 },
+    online: { name: 'Online 3v3', tab: 'Online', sub: 'Real players, bots fill empty slots.', minutes: 8 }
   };
 
   SF.BOT_NAMES = ['Valtor', 'Mirelle', 'Quill', 'Ashgrove', 'Tamsin', 'Rook', 'Juniper', 'Okoro', 'Pell', 'Sora', 'Bexley', 'Dax', 'Ilse', 'Marrow', 'Wren', 'Corvin', 'Hollis', 'Nadia', 'Teo', 'Briar', 'Kestrel', 'Lux', 'Moss', 'Ines'];

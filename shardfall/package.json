@@ -1,0 +1,35 @@
+{
+  "name": "shardfall-arena",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shardfall Arena: a 3v3 mobile MOBA. Plain-JS web build in web/, wrapped for iOS and Android with Capacitor.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "build": "node build.mjs",
+    "test": "node tests/run.mjs",
+    "test:ui": "node tests/ui.mjs",
+    "test:platform": "node tools/verify-platform.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "cap:sync": "cap sync",
+    "cap:ios": "cap sync ios && cap open ios",
+    "cap:android": "cap sync android && cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.2.0",
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "@revenuecat/purchases-capacitor": "^13.7.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "playwright": "1.56.1"
+  }
+}

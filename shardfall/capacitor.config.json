@@ -1,0 +1,31 @@
+{
+  "appId": "com.shardfall.arena",
+  "appName": "Shardfall Arena",
+  "webDir": "web",
+  "backgroundColor": "#0b1029",
+  "loggingBehavior": "debug",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#0b1029",
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "backgroundColor": "#0b1029",
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "hidden": true,
+      "style": "DARK",
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    }
+  }
+}

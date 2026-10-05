@@ -153,7 +153,7 @@
         <aside class="battle">
           ${offer}${monthly}${event}
           <div class="card mode">
-            <div class="modes" role="tablist" aria-label="Game mode">${Object.keys(SF.MODES).map(k => `<button role="tab" aria-selected="${k === mode}" class="${k === mode ? 'on' : ''}" data-act="mode" data-m="${k}">${SF.MODES[k].name}</button>`).join('')}</div>
+            <div class="modes" role="tablist" aria-label="Game mode">${Object.keys(SF.MODES).map(k => `<button role="tab" aria-selected="${k === mode}" class="${k === mode ? 'on' : ''}" data-act="mode" data-m="${k}">${SF.MODES[k].tab}</button>`).join('')}</div>
             <h2>${SF.MODES[mode].name}</h2>
             <p class="muted mode-sub">${SF.MODES[mode].sub} About ${SF.MODES[mode].minutes} minutes.</p>
             ${body}

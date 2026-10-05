@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Shardfall Arena</string>
+    <string name="title_activity_main">Shardfall Arena</string>
+    <string name="package_name">com.shardfall.arena</string>
+    <string name="custom_url_scheme">com.shardfall.arena</string>
+</resources>

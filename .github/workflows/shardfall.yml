@@ -1,0 +1,39 @@
+name: Shardfall Arena
+
+on:
+  push:
+    paths: ['shardfall/**', '.github/workflows/shardfall.yml']
+  pull_request:
+    paths: ['shardfall/**', '.github/workflows/shardfall.yml']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shardfall
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            shardfall/package-lock.json
+            shardfall/server/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Game rules (skills, full matches, economy)
+        run: npm test
+      - name: Browser smoke test (every screen and mode)
+        run: npm run test:ui
+      - name: Platform layer (PWA, offline, native fallbacks)
+        run: npm run test:platform
+      - name: Game server (protocol, HTTP API, two-browser online match)
+        working-directory: shardfall/server
+        run: npm ci && npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shardfall-single-file
+          path: shardfall/dist/shardfall.html
