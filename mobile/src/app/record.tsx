@@ -55,6 +55,9 @@ export default function RecordScreen() {
   // save waiting for GPS) must not start the microphone or navigate after that.
   const leaving = useRef(false);
   const saving = useRef(false);
+  // A start is in progress. Permission dialogs make the app inactive and active again,
+  // which must not start a second listening session on top of the first.
+  const beginning = useRef(false);
   const [pulse] = useState(() => new Animated.Value(1));
   const [reduceMotion, setReduceMotion] = useState(false);
   const activeOutingId = outing.active?.id ?? null;
@@ -111,7 +114,7 @@ export default function RecordScreen() {
       }
       // Show that the note is being saved while the location (if still coming) arrives.
       setPhase('saving');
-      const fix = outing.latestFix() ?? (await fixPromise.current);
+      const fix = outing.latestFix() ?? (await fixPromise.current.catch(() => null));
       await save({ text, durationS: result.durationMs / 1000, fix }, result.failure);
     },
     [outing, save],
@@ -122,19 +125,26 @@ export default function RecordScreen() {
   const { begin: beginListening, cancel: cancelListening, stop: stopListening, text: liveText } = session;
 
   const begin = useCallback(async () => {
-    setFailure(null);
-    // Ask for location before listening: the system prompt would interrupt the microphone.
-    await promptForLocationOnce().catch(() => undefined);
-    if (leaving.current) return;
-    // Keep the outing's latest position now: if the person stands still while talking,
-    // no newer one may arrive before the note is saved.
-    const recent = outing.latestFix();
-    fixPromise.current = recent ? Promise.resolve(recent) : getCurrentFix();
-    startedAt.current = Date.now();
-    setElapsed(0);
-    // Before starting: if the recognizer fails to start, its error must win.
-    setPhase('listening');
-    beginListening();
+    if (beginning.current) return;
+    beginning.current = true;
+    try {
+      setFailure(null);
+      // Ask for location before listening: the system prompt would interrupt the microphone.
+      await promptForLocationOnce().catch(() => undefined);
+      if (leaving.current) return;
+      // Keep the outing's latest position now: if the person stands still while talking,
+      // no newer one may arrive before the note is saved.
+      const recent = outing.latestFix();
+      // A failed location lookup must never stop the note from saving.
+      fixPromise.current = recent ? Promise.resolve(recent) : getCurrentFix().catch(() => null);
+      startedAt.current = Date.now();
+      setElapsed(0);
+      // Before starting: if the recognizer fails to start, its error must win.
+      setPhase('listening');
+      beginListening();
+    } finally {
+      beginning.current = false;
+    }
   }, [outing, beginListening]);
 
   const checkPermission = useCallback(async () => {
@@ -180,14 +190,16 @@ export default function RecordScreen() {
   }, []);
 
   // After the person turns on the microphone in Settings and comes back, check again.
-  const waitingForPermission = phase === 'blocked' || phase === 'needs-permission';
+  // Only when blocked: while asking, the permission dialog itself makes the app
+  // inactive and active again.
+  const blocked = phase === 'blocked';
   useEffect(() => {
-    if (!waitingForPermission) return undefined;
+    if (!blocked) return undefined;
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') prepare().catch(() => setPhase('unavailable'));
     });
     return () => subscription?.remove();
-  }, [waitingForPermission, prepare]);
+  }, [blocked, prepare]);
 
   useEffect(() => {
     if (phase !== 'listening') return undefined;

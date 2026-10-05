@@ -42,6 +42,7 @@ function toFix(location: Location.LocationObject): Fix {
     longitude: location.coords.longitude,
     timestamp: location.timestamp,
     accuracy: location.coords.accuracy,
+    speed: location.coords.speed,
   };
 }
 

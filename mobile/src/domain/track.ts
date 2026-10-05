@@ -5,7 +5,12 @@ export interface Fix {
   longitude: number;
   timestamp: number;
   accuracy: number | null;
+  // Speed over ground in m/s as the GPS measured it, when the phone reports one.
+  speed?: number | null;
 }
+
+// Below this GPS speed the person is standing still.
+const STILL_MPS = 0.3;
 
 const EARTH_RADIUS_M = 6371008.8;
 
@@ -62,6 +67,7 @@ export class TrackRecorder {
     if (![fix.latitude, fix.longitude, fix.timestamp].every(Number.isFinite)) return false;
     if (Math.abs(fix.latitude) > 90 || Math.abs(fix.longitude) > 180) return false;
     const accuracy = fix.accuracy !== null && Number.isFinite(fix.accuracy) && fix.accuracy >= 0 ? fix.accuracy : null;
+    const speed = typeof fix.speed === 'number' && Number.isFinite(fix.speed) && fix.speed >= 0 ? fix.speed : null;
     if (accuracy !== null && accuracy > this.options.maxAccuracyM) return false;
 
     const previous = this.last;
@@ -78,9 +84,17 @@ export class TrackRecorder {
       { latitude: previous[0], longitude: previous[1] },
       { latitude: fix.latitude, longitude: fix.longitude },
     );
-    // A fix can be off by its accuracy in any direction, so a step smaller than that is
-    // as likely to be GPS drift as movement. Standing still must not add distance.
-    if (step < Math.max(this.options.minStepM, accuracy ?? 0)) return false;
+    // Standing still must not add distance, but a moving route should keep its corners.
+    // When the GPS says the phone is still, a step within the fix's accuracy is drift.
+    // When it says the phone is moving, keep points close so switchbacks are not cut.
+    // Without a speed reading, use part of the accuracy, capped.
+    const minStep =
+      speed === null
+        ? Math.max(this.options.minStepM, Math.min((accuracy ?? 0) * 0.75, 20))
+        : speed < STILL_MPS
+          ? Math.max(this.options.minStepM, accuracy ?? 0)
+          : this.options.minStepM;
+    if (step < minStep) return false;
 
     if (step / seconds > this.options.maxSpeedMps) {
       this.jumps += 1;

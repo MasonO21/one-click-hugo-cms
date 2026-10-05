@@ -121,6 +121,12 @@ describe.each([
     expect(await listEntries(db, { query: 'ภูเขา' })).toEqual([]);
   });
 
+  it('finds a lowercase accented word typed with a capital', async () => {
+    const db = await setup();
+    await createEntry(db, { transcript: 'Walked past the école on the way up' });
+    expect(await listEntries(db, { query: 'École' })).toHaveLength(1);
+  });
+
   it('finds nothing for a search with no words in it', async () => {
     const db = await setup();
     await createEntry(db, { transcript: 'Saw a 🌲 tree' });
@@ -289,6 +295,26 @@ describe('search index upkeep', () => {
     expect(table?.sql).toContain('categories');
     expect(await listEntries(db, { query: 'हिन्दी' })).toHaveLength(1);
     db.close();
+  });
+
+  it('does not rebuild the index on every launch when the tokenizer option is unsupported', async () => {
+    const real = createTestDatabase();
+    // A SQLite build without the categories option.
+    const old = Object.create(real) as typeof real;
+    const statements: string[] = [];
+    old.execAsync = async (source: string) => {
+      statements.push(source);
+      if (source.includes('categories')) throw new Error('unknown tokenizer option');
+      return real.execAsync(source);
+    };
+    await migrate(old);
+    await createEntry(old, { transcript: 'fog on the ridge' });
+    statements.length = 0;
+    await migrate(old);
+    expect(statements.some((sql) => sql.includes('DROP TABLE entries_fts'))).toBe(false);
+    expect(hasFullTextSearch(old)).toBe(true);
+    expect(await listEntries(old, { query: 'fog' })).toHaveLength(1);
+    real.close();
   });
 
   it('falls back to plain search when the index exists but cannot be used', async () => {

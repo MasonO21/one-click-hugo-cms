@@ -64,6 +64,7 @@ export async function enrichEntry(db: Database, entryId: number, enrichers: Enri
       } else {
         await updateEntryTags(db, entryId, { place: '' });
         result.place = 'none';
+        notifyDataChanged();
       }
     } catch {
       result.place = 'failed';

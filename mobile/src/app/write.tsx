@@ -40,7 +40,8 @@ export default function WriteScreen() {
     setSaving(true);
     try {
       await promptForLocationOnce().catch(() => undefined);
-      const fix = outing.latestFix() ?? (await getCurrentFix(4000));
+      // A failed location lookup must never stop the note from saving.
+      const fix = outing.latestFix() ?? (await getCurrentFix(4000).catch(() => null));
       const entry = await saveNewEntry(db, {
         transcript,
         durationS: 0,

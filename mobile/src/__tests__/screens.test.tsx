@@ -266,6 +266,17 @@ describe('log', () => {
     expect(await screen.findByText('Partly cloudy · 48°F')).toBeOnTheScreen();
   });
 
+  it('stops offering a retry when the map has no name for the spot', async () => {
+    mockDb = await freshDb();
+    location.reverseGeocodeAsync.mockImplementationOnce(async () => []);
+    const entry = await createEntry(mockDb, { transcript: 'Deep in the woods.', latitude: 40.01, longitude: -105.27, weatherCode: 2, tempC: 9 });
+    await openApp(`/entry/${entry.id}`);
+    await press(await screen.findByRole('button', { name: 'Add place and weather' }));
+    await eventually(() => expect(screen.queryByRole('button', { name: 'Add place and weather' })).toBeNull());
+    expect(screen.queryByText(/Could not reach/)).toBeNull();
+    expect((await getEntry(mockDb, entry.id))?.place).toBe('');
+  });
+
   it('says so when a note has no location', async () => {
     mockDb = await freshDb();
     const entry = await createEntry(mockDb, { transcript: 'Indoors.' });
@@ -568,6 +579,68 @@ describe('recording a note', () => {
     await act(async () => appStateListeners.forEach((listener) => listener('active')));
     expect(await screen.findByText('Listening')).toBeOnTheScreen();
     appStateSpy.mockRestore();
+  });
+
+  it('starts listening once when permission dialogs make the app inactive and active', async () => {
+    mockDb = await freshDb();
+    const appStateListeners: ((state: string) => void)[] = [];
+    const appStateSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      appStateListeners.push(listener as (state: string) => void);
+      return { remove: jest.fn() } as unknown as ReturnType<typeof AppState.addEventListener>;
+    });
+    const module = speechMock.ExpoSpeechRecognitionModule;
+    // System dialogs send the app to the background and back.
+    const dialog = () => {
+      appStateListeners.forEach((listener) => listener('inactive'));
+      appStateListeners.forEach((listener) => listener('active'));
+    };
+    let micGranted = false;
+    module.getPermissionsAsync.mockImplementation(async () => ({ granted: micGranted, canAskAgain: true }));
+    module.requestPermissionsAsync.mockImplementation(async () => {
+      micGranted = true;
+      dialog();
+      return { granted: true, canAskAgain: true };
+    });
+    // The first recording also asks for location, with its own dialog.
+    let locationGranted = false;
+    location.getForegroundPermissionsAsync.mockImplementation(async () => ({ granted: locationGranted, canAskAgain: true }));
+    location.requestForegroundPermissionsAsync.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            locationGranted = true;
+            dialog();
+            resolve({ granted: true, canAskAgain: true });
+          }, 100);
+        }),
+    );
+    await openApp('/record');
+    await press(await screen.findByRole('button', { name: 'Allow microphone' }));
+    expect(await screen.findByText('Listening')).toBeOnTheScreen();
+    await act(async () => jest.advanceTimersByTimeAsync(500));
+    expect(module.start).toHaveBeenCalledTimes(1);
+    expect(module.abort).not.toHaveBeenCalled();
+    appStateSpy.mockRestore();
+  });
+
+  it('still saves the note when the location lookup fails', async () => {
+    mockDb = await freshDb();
+    location.getLastKnownPositionAsync.mockImplementation(async () => {
+      throw new Error('location unavailable');
+    });
+    location.getCurrentPositionAsync.mockImplementation(async () => {
+      throw new Error('location unavailable');
+    });
+    location.getForegroundPermissionsAsync.mockImplementation(async () => {
+      throw new Error('permission check failed');
+    });
+    await openApp('/record');
+    await screen.findByText('Listening');
+    await result('the creek is high', true);
+    await press(screen.getByRole('button', { name: 'Stop and save' }));
+    await act(async () => speechMock.__emit('end'));
+    await eventually(async () => expect(await listEntries(mockDb)).toHaveLength(1));
+    expect((await listEntries(mockDb))[0].latitude).toBeNull();
   });
 
   it('carries a note that could not be saved over to writing', async () => {

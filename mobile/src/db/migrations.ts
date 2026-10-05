@@ -38,8 +38,9 @@ CREATE TABLE settings (
 
 // Letters, numbers and accent marks (M*) are word characters, so marks in Hindi or Thai
 // words stay inside the word.
+const TOKENIZER = `"unicode61 remove_diacritics 2 categories 'L* N* Co M*'"`;
 const FTS = `
-CREATE VIRTUAL TABLE entries_fts USING fts5(body, tokenize = "unicode61 remove_diacritics 2 categories 'L* N* Co M*'");
+CREATE VIRTUAL TABLE entries_fts USING fts5(body, tokenize = ${TOKENIZER});
 `;
 
 // For SQLite builds too old for the categories option.
@@ -52,6 +53,16 @@ let lastKnown = false;
 
 export function hasFullTextSearch(db: Database): boolean {
   return ftsSupport.get(db) ?? lastKnown;
+}
+
+async function supportsCategories(db: Database): Promise<boolean> {
+  try {
+    await db.execAsync(`CREATE VIRTUAL TABLE temp.entries_fts_probe USING fts5(body, tokenize = ${TOKENIZER});`);
+    await db.execAsync('DROP TABLE temp.entries_fts_probe;');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Creates or upgrades the schema. Runs every time the app opens the database.
@@ -75,14 +86,18 @@ export async function migrate(db: Database): Promise<void> {
       "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'entries_fts'",
     );
     // The first index split words at accent marks, which breaks Hindi, Thai and similar
-    // scripts. Rebuild it with the current tokenizer.
-    if (existing && !existing.sql?.includes('categories')) await db.execAsync('DROP TABLE entries_fts');
-    if (!existing || !existing.sql?.includes('categories')) {
+    // scripts. Rebuild it with the current tokenizer, once, and only if this SQLite build
+    // supports it (otherwise the basic index would be rebuilt on every launch).
+    const current = Boolean(existing?.sql?.includes('categories'));
+    if (!existing) {
       try {
         await db.execAsync(FTS);
       } catch {
         await db.execAsync(FTS_BASIC);
       }
+    } else if (!current && (await supportsCategories(db))) {
+      await db.execAsync('DROP TABLE entries_fts');
+      await db.execAsync(FTS);
     }
     // The table can exist in a database restored onto a build without FTS5, so prove it works.
     await db.getFirstAsync('SELECT rowid FROM entries_fts LIMIT 1');

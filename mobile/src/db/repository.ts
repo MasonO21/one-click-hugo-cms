@@ -146,12 +146,14 @@ export async function listEntries(db: Database, filter: EntryFilter = {}): Promi
       where.push('entries_fts MATCH ?');
       params.push(buildFtsQuery(query) ?? '');
     } else {
-      // LIKE already ignores case for A to Z. Lowercasing the term here would stop a
-      // word with a capital such as "Österreich" from matching itself.
+      // LIKE ignores case only for A to Z, so also try the word in lowercase: "École"
+      // then finds "école", and "Österreich" still finds itself.
       for (const term of terms) {
-        where.push("(e.transcript LIKE ? ESCAPE '\\' OR coalesce(e.place, '') LIKE ? ESCAPE '\\')");
-        const pattern = `%${escapeLike(term)}%`;
-        params.push(pattern, pattern);
+        const variants = [...new Set([term, term.toLowerCase()])].map((t) => `%${escapeLike(t)}%`);
+        where.push(
+          `(${variants.map(() => "e.transcript LIKE ? ESCAPE '\\' OR coalesce(e.place, '') LIKE ? ESCAPE '\\'").join(' OR ')})`,
+        );
+        for (const pattern of variants) params.push(pattern, pattern);
       }
     }
   }

@@ -19,6 +19,8 @@ function isStreetAddress(address: AddressLike, name: string): boolean {
   // "12 Main St" or "12B Main St". Names like "4th of July Trailhead" or "14er Basecamp"
   // also start with a digit and are kept.
   if (/^\d+[A-Za-z]?\s/.test(name)) return true;
+  // Android often gives just the house number ("1600", "12-14") as the name.
+  if (/^\d[\d\s\-/]*[A-Za-z]?$/.test(name)) return true;
   const lower = name.toLowerCase();
   const street = clean(address.street)?.toLowerCase();
   if (!street) return false;

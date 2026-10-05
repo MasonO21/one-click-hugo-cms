@@ -73,6 +73,42 @@ describe('TrackRecorder', () => {
     expect(recorder.distanceM).toBeLessThan(320);
   });
 
+  it('keeps the corners of a winding trail while moving', () => {
+    const recorder = new TrackRecorder();
+    // Hairpin switchbacks: 30 m up, 6 m across, 30 m down, 6 m across... at about 1.2 m/s,
+    // a fix every 5 s, each accurate to 30 m (tree cover), with the GPS reporting walking speed.
+    const legs: [number, number, number][] = [
+      [1, 0, 5],
+      [0, 1, 1],
+      [-1, 0, 5],
+      [0, 1, 1],
+    ];
+    let north = 0;
+    let east = 0;
+    let t = 0;
+    let walked = 0;
+    recorder.add({ latitude: 40, longitude: -105, timestamp: 0, accuracy: 30, speed: 1.2 });
+    for (let leg = 0; leg < 40; leg += 1) {
+      const [dn, de, steps] = legs[leg % 4];
+      for (let i = 0; i < steps; i += 1) {
+        north += dn * 6;
+        east += de * 6;
+        walked += 6;
+        t += 5;
+        recorder.add({ latitude: 40 + north / 111_195, longitude: -105 + east / 85_000, timestamp: t * 1000, accuracy: 30, speed: 1.2 });
+      }
+    }
+    // The 6 m crossings are shorter than the 8 m minimum step, so a little is cut.
+    expect(recorder.distanceM).toBeGreaterThan(walked * 0.88);
+  });
+
+  it('ignores drift when the GPS reports the phone is still', () => {
+    const recorder = new TrackRecorder();
+    recorder.add({ ...fix(40, -105, 0, 15), speed: 0 });
+    for (let i = 1; i <= 60; i += 1) recorder.add({ ...fix(i % 2 ? 40.0001 : 40, -105, i * 10, 15), speed: 0.1 });
+    expect(recorder.distanceM).toBe(0);
+  });
+
   it('moves a stale first fix to where the phone really is', () => {
     const recorder = new TrackRecorder();
     recorder.add(fix(40.27, -105, 0)); // a cached position 30 km away

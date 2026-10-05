@@ -18,6 +18,13 @@ describe('describePlace', () => {
     expect(describePlace([{ ...base, name: 'Hauptstraße 5', street: 'Hauptstraße', streetNumber: '5', city: 'Berlin' }])).toBe('Berlin');
   });
 
+  it('ignores a name that is only a house number', () => {
+    expect(describePlace([{ ...base, name: '1600', street: 'Baseline Rd', streetNumber: '1600', city: 'Boulder', region: 'Colorado' }])).toBe(
+      'Boulder, Colorado',
+    );
+    expect(describePlace([{ ...base, name: '12-14', city: 'Boulder' }])).toBe('Boulder');
+  });
+
   it('keeps names that start with a number', () => {
     expect(describePlace([{ ...base, name: '4th of July Trailhead', city: 'Nederland', region: 'CO' }])).toBe(
       '4th of July Trailhead, Nederland',
