@@ -380,19 +380,25 @@ function endMatch(win){
 }
 
 /* ====================== RENDER MATCH ====================== */
+const ROLE_ICON={Fighter:'⚔️',Marksman:'🏹',Mage:'🔮',Tank:'🛡️',Support:'✨',Assassin:'🗡️'};
+let grass=null;
+function grassPattern(){ const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#173f2a';g.fillRect(0,0,128,128);
+  for(let i=0;i<70;i++){g.fillStyle=Math.random()<.5?'#1d4d33':'#143823';g.fillRect(Math.random()*128,Math.random()*128,2+Math.random()*3,2+Math.random()*3);} return cx.createPattern(c,'repeat'); }
+function icon(ch,x,y,sz){ cx.font=sz+'px sans-serif'; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText(ch,x,y); cx.textAlign='left'; cx.textBaseline='alphabetic'; }
 function draw_(){
   const p=G.p, W=cv.width, H=cv.height; camX=Math.max(0,Math.min(WW-W/scale,p.x-W/scale/2)); camY=Math.max(0,Math.min(WH-H/scale,p.y-H/scale/2));
   cx.setTransform(1,0,0,1,0,0); cx.fillStyle='#10301f'; cx.fillRect(0,0,W,H);
   cx.setTransform(scale,0,0,scale,-camX*scale,-camY*scale);
-  cx.fillStyle='#173f2a'; cx.fillRect(0,0,WW,WH);
+  cx.fillStyle=grass=grass||grassPattern(); cx.fillRect(0,0,WW,WH);
   cx.fillStyle='#3a3a52'; for(const y of LANES) cx.fillRect(0,y-60,WW,120);
   cx.fillStyle='#1f2c60'; cx.fillRect(0,BASEY-140,320,280); cx.fillStyle='#5a1f2c'; cx.fillRect(WW-320,BASEY-140,320,280);
   cx.fillStyle='#2a6f8a55'; cx.fillRect(WW/2-120,BASEY-90,240,180); // river
   for(const e of G.ents.slice().sort((a,b)=>a.y-b.y)){
     if(e.dead)continue; cx.fillStyle=e.col;
-    if(e.k==='tower'){cx.fillRect(e.x-18,e.y-34,36,50);cx.fillStyle='#fff6';cx.fillRect(e.x-10,e.y-44,20,12);}
-    else if(e.k==='nexus'){cx.beginPath();cx.arc(e.x,e.y,e.r,0,7);cx.fill();cx.fillStyle='#fff7';cx.beginPath();cx.arc(e.x,e.y,e.r*.5,0,7);cx.fill();}
+    if(e.k==='tower'){cx.fillRect(e.x-18,e.y-34,36,50);cx.fillStyle='#fff6';cx.fillRect(e.x-10,e.y-44,20,12);icon('🗼',e.x,e.y-8,34);}
+    else if(e.k==='nexus'){cx.beginPath();cx.arc(e.x,e.y,e.r,0,7);cx.fill();cx.fillStyle='#fff7';cx.beginPath();cx.arc(e.x,e.y,e.r*.5,0,7);cx.fill();icon('💎',e.x,e.y,40);}
     else{ cx.beginPath();cx.arc(e.x,e.y,e.r,0,7);cx.fill(); cx.lineWidth=3; cx.strokeStyle=e.team?'#ff5470':'#47a8ff'; cx.stroke(); if(e.isPlayer){cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(e.x,e.y,e.r+6,0,7);cx.stroke();}
+      icon(e.k==='hero'?ROLE_ICON[e.def.role]:e.k==='monster'?'👹':e.ranged?'🏹':'🗡️',e.x,e.y,e.k==='hero'?26:e.k==='monster'?28:14);
       if(e.shield>0){cx.strokeStyle='#9cf';cx.beginPath();cx.arc(e.x,e.y,e.r+4,0,7);cx.stroke();} if(e.stun>0){cx.fillStyle='#fff';cx.fillText('✦',e.x-5,e.y-e.r-14);} }
     const w=e.k==='minion'?26:e.k==='hero'?46:60, y0=e.y-e.r-(e.k==='tower'?36:10);
     cx.fillStyle='#000a'; cx.fillRect(e.x-w/2,y0,w,5); cx.fillStyle=e.team?'#ff5470':'#3cf'; cx.fillRect(e.x-w/2,y0,w*Math.max(0,e.hp)/e.max,5); }
