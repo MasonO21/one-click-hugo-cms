@@ -87,7 +87,8 @@ p{margin:0}
 
 /* ---------- header ---------- */
 .topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:4px 16px}
-.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+/* the title keeps its natural minimum width, so the header buttons drop to a second row instead of overlapping it */
+.brand{display:flex;align-items:center;gap:12px;min-width:auto;flex:1}
 .brand .g-logo{width:48px;height:48px;filter:drop-shadow(0 6px 14px rgba(255,0,127,.28))}
 .wordmark{font-family:var(--font-display);font-weight:800;font-size:23px;line-height:1.1;letter-spacing:-.02em}
 .wordmark span{color:var(--soft-ink);white-space:nowrap}
@@ -162,7 +163,7 @@ p{margin:0}
 .p-tab-btn{border:0;background:none;padding:13px 11px 11px;font-weight:600;font-size:14px;color:var(--muted);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .p-tab-btn[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--soft)}
 .badge{min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--alert);color:var(--on-alert);font-size:11px;font-weight:700;display:inline-grid;place-items:center;font-variant-numeric:tabular-nums}
-.p-panel{padding:18px 20px 22px;display:grid;gap:14px}
+.p-panel{padding:18px 20px 22px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .panel-head p{font-size:13px;color:var(--muted);max-width:60ch}
 
@@ -236,8 +237,8 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;font-size:14px;font-weight:400;color:var(--fg);width:100%;min-width:0}
 
 /* settings */
-.settings{display:grid;gap:18px}
-.set-group{border:0;margin:0;padding:0;display:grid;gap:10px;min-width:0}
+.settings{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.set-group{border:0;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
 .set-group legend{font-family:var(--font-display);font-weight:700;font-size:14.5px;padding:0;margin-bottom:8px}
 .hint{font-size:12.5px;color:var(--muted);margin-top:-6px}
 .row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:420px}
@@ -670,9 +671,21 @@ button.stat:hover{border-color:var(--trust)}
   .p-tab-btn .short-label{font-weight:inherit;padding:0}
   #langBtn .ic{display:none}
   .p-who{flex-wrap:wrap;gap:6px 10px}
+  .p-who-text{flex-basis:190px}
   .alert-icon{display:none}
   .alert-time{order:-1;width:100%}
   .alert-head{gap:6px}
+}
+@media (max-width:420px){
+  .wordmark{font-size:18px}
+}
+@media (max-width:360px){
+  .wordmark{font-size:17px}
+  .brand{gap:8px}
+  .brand .g-logo{width:34px;height:34px}
+  .top-actions .btn{padding:6px 8px}
+  .p-tabs{padding:0 4px;gap:0}
+  .p-tab-btn{padding:12px 3px 10px;font-size:12px}
 }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
@@ -1075,7 +1088,7 @@ const keyToDate=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1
 const shiftKey=(k,n)=>{const d=keyToDate(k);d.setDate(d.getDate()+n);return ymd(d)};
 const hm=s=>{const [h,m]=String(s).split(':').map(Number);return h*60+(m||0)};
 const minsOf=t=>{const d=new Date(t);return d.getHours()*60+d.getMinutes()};
-function inQuiet(t,c){const m=minsOf(t),a=hm(c.quietStart),b=hm(c.quietEnd);return a<b?(m>=a&&m<b):(m>=a||m<b)}
+function inQuiet(t,c){const m=minsOf(t),a=hm(c.quietStart),b=hm(c.quietEnd);if(a===b)return false;return a<b?(m>=a&&m<b):(m>=a||m<b)}
 function nightKey(t,c){const a=hm(c.quietStart),b=hm(c.quietEnd);const d=new Date(t);if(a>b&&minsOf(t)<b)d.setDate(d.getDate()-1);return ymd(d)}
 const ampm=h=>LANG==='es'?(h>=12?'p. m.':'a. m.'):(h>=12?'PM':'AM');
 const fmtTime=t=>{const d=new Date(t);let h=d.getHours();const ap=ampm(h);h=h%12||12;return `${h}:${pad(d.getMinutes())} ${ap}`};
@@ -1258,6 +1271,7 @@ const ADULT_CUES=[['work',/\b(my|our|at|from) (job|work|office|boss|agency|compa
 /* ---------- state ---------- */
 let S=null, seeding=false, playing=null;
 const T={arrived:null,fresh:null,notif:null,notifTimer:0,sheet:null,think:null,dialog:null,drawer:false,how:false,helpSent:false,openTalk:new Set(),expanded:new Set(),showReviewed:false,settingsTimer:0};
+const exKey=id=>S.active+'|'+id;
 const shares=()=>S.parent.shares||(S.parent.shares={});
 const shareQueue=()=>{const D=S.device;if(!D.shareReqs){D.shareReqs=D.shareReq?[D.shareReq]:[];delete D.shareReq}return D.shareReqs};
 const pendingShare=()=>shareQueue()[0]||null;
@@ -1320,6 +1334,7 @@ function notifyParent(type,sev,title,body,alertId){
   const N=S.family.notify;if(N.types[type]===false)return;
   const item={kid:S.active,kidName:name(),type,sev,title,body:body||'',alertId,at:S.clock};
   if(parentQuiet(S.clock)&&sev!=='urgent'){N.held.push(item);return}
+  if(alertId)N.held=N.held.filter(h=>!(h.kid===item.kid&&h.alertId===alertId));
   showParentNotif(item);
 }
 function showParentNotif(item){
@@ -1375,7 +1390,7 @@ function parentReceive(p,t){
     const prevSev=a?a.p.severity:null;
     if(a){a.p=p;a.updatedAt=t;a.status='new';a.checkIn=false;a.seq=P.seq=(P.seq||0)+1}
     else{a={id:p.alert_id,p,createdAt:t,updatedAt:t,status:'new',seq:P.seq=(P.seq||0)+1};P.alerts.push(a)}
-    if(!seeding){T.arrived=a.id;announce(L('New alert: {t}',{t:alertTitle(p)}));if(p.severity==='urgent')T.expanded.add(a.id)}
+    if(!seeding){T.arrived=a.id;announce(L('New alert: {t}',{t:alertTitle(p)}));if(p.severity==='urgent')T.expanded.add(exKey(a.id))}
     if(!prevSev||RANK[p.severity]>RANK[prevSev])notifyParent(p.alert,p.severity,alertTitle(p),p.contacts?joinList(p.contacts.map(showContact)):showContact(p.contact),a.id);
   }
 }
@@ -1389,7 +1404,7 @@ function deviceReceive(p,t){
       showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null,kidAge:p.child_age||null,
       sources:p.sources_on?{texts:p.sources_on.includes('texts'),email:p.sources_on.includes('email'),social:p.sources_on.includes('social')}:{texts:true,email:true,social:true}};
   }else if(p.type==='trusted_adults'){D.trusted=p.names.map(n=>n.toLowerCase())}
-  else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(p.note,L('From your parent'))}
+  else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(L(p.note),L('From your parent'))}
   else if(p.type==='share_request'){
     const c=contactByRef(p.contact);if(!c)return;
     const q=shareQueue(),req={cid:c.id,alert_id:p.alert_id,at:t},i=q.findIndex(x=>x.alert_id===p.alert_id);
@@ -1531,6 +1546,14 @@ function evalScam(c,text,t){
   if(!D.sysNoted[key]){D.sysNoted[key]=true;addSys(c.id,'scam',t)}
 }
 
+/* Alerts counted over a rolling window keep one id while the pattern continues, so midnight doesn't split them in two. */
+function rollingKey(name,t,span){
+  const D=S.device,r=(D.rolling=D.rolling||{})[name];
+  const key=r&&t-r.at<=span?r.key:name+'-'+ymd(t);
+  D.rolling[name]={key,at:t};
+  return key;
+}
+
 /* Bullying: the same person more than once in 7 days, or two or more people within a day.
    Telling the kid to hurt themselves counts on its own and is "Act today". */
 function evalBullying(c,text,t){
@@ -1544,7 +1567,7 @@ function evalBullying(c,text,t){
   let sev=signs.includes('harm_urging')?'urgent':(pile||mine.length>=2)?'watch':null;
   if(!sev)return;
   const pool=pile?today:mine,allSigns=[...new Set(pool.flatMap(x=>x.signs))];
-  const key=pile?'bully-group-'+ymd(t):'bully-'+c.id,prev=D.alertState[key];
+  const key=pile?rollingKey('bully-group',t,DAY):'bully-'+c.id,prev=D.alertState[key];
   if(prev&&RANK[prev.severity]>RANK[sev])sev=prev.severity;
   const raised=!prev||RANK[sev]>RANK[prev.severity];
   if(prev&&!raised&&prev.signs.length===allSigns.length&&prev.people===group.length)return;
@@ -1564,7 +1587,7 @@ function evalDistress(c,text,t){
   const strong=lvl==='strong',mild=D.distress.filter(x=>x.lvl==='mild').length;
   if(!strong&&mild<2)return;
   let sev=strong?'urgent':'watch';
-  const key='distress-'+ymd(t),prev=D.alertState[key];
+  const key=rollingKey('distress',t,DAY),prev=D.alertState[key];
   if(prev&&RANK[prev.severity]>=RANK[sev])return;
   const rev=(prev?prev.rev:0)+1;
   D.alertState[key]={severity:sev,rev};
@@ -1636,8 +1659,17 @@ const NOTIFY_TYPES=[['distress','Signs of distress'],['grooming_language_markers
   ['contact_blocked','Good signs, like blocking someone'],['share_reply','Answers to chat-sharing requests']];
 const defaultNotify=()=>({types:Object.fromEntries(NOTIFY_TYPES.map(([k])=>[k,true])),quiet:{on:true,start:'21:00',end:'07:00'},held:[]});
 function useKid(id){
+  if(S.parent&&T.settingsDue)flushSettings();
   const k=S.kids.find(x=>x.id===id)||S.kids[0];
   S.active=k.id;S.parent=k.parent;S.device=k.device;S.wall=k.wall;S.stats=k.stats;
+}
+/* Switching kids from the chips, a notification or the add-a-child form. Nothing open on one kid's phone carries over. */
+function switchKid(id){
+  if(playing)stopScenario();
+  useKid(id);
+  S.ui.screen='list';S.ui.thread=null;
+  Object.assign(T,{sheet:null,think:null,notif:null,helpSent:false});
+  fillSettingsForm();
 }
 function settingsForAge(name,age){
   const pr=ageProfile(age)||AGE_PROFILES[1];
@@ -1832,7 +1864,7 @@ async function play(id){
   const main=sc.contact&&S.device.contacts[sc.contact];
   if(main&&main.blocked)return;
   T.playingKid=S.active;
-  const steps=scSteps(sc),token=playing={id,i:0,n:steps.length};
+  const steps=scSteps(sc),token=playing={id,i:0,n:steps.length,started:Date.now()};
   if(sc.at)setClockTo(sc.at);
   if(sc.setup)sc.setup();
   steps.forEach(st=>{if(CONTACT_LIBRARY[st[0]])ensureContact(Object.assign({},CONTACT_LIBRARY[st[0]]))});
@@ -2045,7 +2077,7 @@ function alertCard(a){
     primary=checkin;
   }
   if(!isNew&&a.note)status+=`<p class="resolved">${esc(L(a.note))}</p>`;
-  const open=T.expanded.has(a.id);
+  const open=T.expanded.has(exKey(a.id));
   let actions='';
   if(isNew)actions=primary+btn('review',L('Mark reviewed'));
   else{if(keepPrimary)actions=primary;more.push(btn('reopen',L('Reopen')))}
@@ -2124,7 +2156,8 @@ function renderActivity(){
     ?`<div class="pause on">${ic('moon')}<div><b>${L('Late-night alerts are paused for tonight.')}</b><span>${L('They turn back on at {t}. Counts still come through, and every other alert stays on.',{t:fmtHM(s.quietEnd)})}</span></div><button type="button" class="btn sm" data-action="resume-late">${L('Resume')}</button></div>`
     :`<div class="pause">${ic('moon')}<div><b>${L('Sleepover or a late night out?')}</b><span>${L('Pause late-night alerts until {t}. Every other alert stays on.',{t:fmtHM(s.quietEnd)})}</span></div><button type="button" class="btn sm" data-action="pause-late">${L('Pause tonight')}</button></div>`;
   const box=$('#chartBox');const W=Math.max(300,Math.round(box.clientWidth||600)),H=230;
-  const pl=30,pr=78,pt=18,pb=30,iw=W-pl-pr,ih=H-pt-pb;
+  const lblThr=L('Alert at {n}',{n:thr}),lblBase=L('Usual {n}',{n:round1(base)});
+  const pl=30,pr=Math.max(78,Math.ceil(16+6.8*Math.max(lblThr.length,lblBase.length))),pt=18,pb=30,iw=W-pl-pr,ih=H-pt-pb;
   let ymax=Math.max(thr+1,4,...vals);ymax=ymax<=10?Math.ceil(ymax/2)*2:Math.ceil(ymax/10)*10;
   const y=v=>pt+ih-(v/ymax)*ih;
   const bw=iw/vals.length,barW=Math.min(26,bw*.62);
@@ -2137,8 +2170,8 @@ function renderActivity(){
     if(v>0)g+=`<text x="${(x+barW/2).toFixed(1)}" y="${(top-5).toFixed(1)}" text-anchor="middle" class="val">${v}</text>`;
   });
   const ty=y(thr),by=y(base);
-  g+=`<line x1="${pl}" x2="${W-pr}" y1="${ty}" y2="${ty}" class="thr"/><text x="${W-pr+8}" y="${ty+4}" class="lbl thr-l">${L('Alert at {n}',{n:thr})}</text>`;
-  g+=`<line x1="${pl}" x2="${W-pr}" y1="${by}" y2="${by}" class="base"/><text x="${W-pr+8}" y="${Math.abs(by-ty)<14?by+15:by+4}" class="lbl">${L('Usual {n}',{n:round1(base)})}</text>`;
+  g+=`<line x1="${pl}" x2="${W-pr}" y1="${ty}" y2="${ty}" class="thr"/><text x="${W-pr+8}" y="${ty+4}" class="lbl thr-l">${lblThr}</text>`;
+  g+=`<line x1="${pl}" x2="${W-pr}" y1="${by}" y2="${by}" class="base"/><text x="${W-pr+8}" y="${Math.abs(by-ty)<14?by+15:by+4}" class="lbl">${lblBase}</text>`;
   const step=W<520?4:2;
   keys.forEach((kk,i)=>{
     const cx=(pl+i*bw+bw/2).toFixed(1);
@@ -2179,8 +2212,9 @@ function fillSettingsForm(){
 }
 function onSettings(){
   const s=S.parent.settings,f=$('#settingsForm');
-  s.kidName=f.elements.kidName.value.trim();
-  const ag=parseInt(f.elements.kidAge.value,10);s.kidAge=isNaN(ag)?null:ag;
+  const nm=f.elements.kidName.value.trim();if(nm)s.kidName=nm;
+  const av=f.elements.kidAge.value,ag=parseInt(av,10);
+  if(av==='')s.kidAge=null;else if(ag>=3&&ag<=19)s.kidAge=ag;
   if(f.elements.quietStart.value)s.quietStart=f.elements.quietStart.value;
   if(f.elements.quietEnd.value)s.quietEnd=f.elements.quietEnd.value;
   const r=f.querySelector('[name="sensitivity"]:checked');if(r)s.sensitivity=r.value;
@@ -2188,13 +2222,16 @@ function onSettings(){
   s.showNames=f.elements.showNames.checked;s.tellKid=f.elements.tellKid.checked;
   s.sources={texts:f.elements.srcTexts.checked,email:f.elements.srcEmail.checked,social:f.elements.srcSocial.checked};
   $('#savedNote').textContent=L('Saving…');
-  clearTimeout(T.settingsTimer);
-  T.settingsTimer=setTimeout(()=>{
-    transmit(settingsPayload(s),'down');
-    $('#savedNote').textContent=L('Saved and sent to {poss} phone at {t}.',{poss:poss(name()),k:name(),t:fmtTime(S.clock)});
-    commit();
-  },600);
+  T.settingsDue=true;clearTimeout(T.settingsTimer);
+  T.settingsTimer=setTimeout(()=>{flushSettings();commit()},600);
   commit();
+}
+/* Sends a waiting settings change. Also runs before switching kids, so a change never lands on the wrong phone. */
+function flushSettings(){
+  if(!T.settingsDue)return;
+  T.settingsDue=false;clearTimeout(T.settingsTimer);
+  transmit(settingsPayload(S.parent.settings),'down');
+  $('#savedNote').textContent=L('Saved and sent to {poss} phone at {t}.',{poss:poss(name()),k:name(),t:fmtTime(S.clock)});
 }
 
 /* ---------- wall rendering ---------- */
@@ -2248,7 +2285,7 @@ function wallSummary(w){
       return {icon:'sliders',title:L('Your settings'),text:`${L('Quiet hours {a} to {b}.',{a:fmtHM(p.quiet_start),b:fmtHM(p.quiet_end)})} ${L('{s} sensitivity.',{s:sens,sl:sens.toLowerCase()})} ${what?L('Checks {what}.',{what}):L('All checks off.')}`};
     }
     case 'trusted_adults':return {icon:'users',title:L('Trusted adults'),text:p.names.length?joinList(p.names)+'.':L('The list is empty.')};
-    case 'check_in':return {icon:'chat',title:L('Check-in note to {k}',{k}),text:`"${p.note}"`};
+    case 'check_in':return {icon:'chat',title:L('Check-in note to {k}',{k}),text:`"${L(p.note)}"`};
     case 'share_request':return {icon:'share',title:L('Request to share a chat'),text:L('Asked {k} to share the chat with {c}.',{k,c})};
   }
   return {icon:'chat',title:p.type,text:''};
@@ -2331,6 +2368,7 @@ function renderThread(){
 function renderThink(){
   const th=T.think;if(!th)return;
   const c=S.device.contacts[th.cid],k=name();
+  if(!c){T.think=null;T.sheet=null;$('#sheetThink').hidden=true;return}
   $('#thinkBody').innerHTML=`<div class="think-head">${ghost()}<h3>${L('Hold on a sec')}</h3></div>
     <p>${L("You're about to share {what} with <b>{c}</b>, who you know from {app}. People online aren't always who they say they are.",{what:joinList(th.kinds.map(x=>esc(L(x)))),c:esc(c.name),app:esc(L(c.app))})}</p>
     <p class="draft">${esc(th.text)}</p>
@@ -2370,7 +2408,7 @@ function renderPrivacy(){
     <div class="pv-col no"><h4>${ic('eyeOff','ic sm')}${L('They never get')}</h4><ul>${PV_NO.map(x=>`<li>${esc(L(x))}</li>`).join('')}</ul></div>
     ${cf.kidAge?`<p class="muted" style="font-size:12.5px">${L("Ghost Mode is set up for age {n}. It's designed to get lighter as you get older, and to be turned off at 18.",{n:cf.kidAge})}</p>`:''}
     <div class="pv-log"><h4>${L('Alerts sent in the last 7 days')}</h4>${cf.tellKid?(week.length?`<ul>${week.map(x=>`<li><span>${esc(ALERTS[x.alert].title(k))}</span><time>${when(x.at)}</time></li>`).join('')}</ul>`:`<p class="muted">${L('None.')}</p>`):`<p class="muted">${L('Your parent turned off alert notices.')}</p>`}</div>
-    ${D.notes.length?`<div class="pv-log"><h4>${L('From your parent')}</h4><ul>${D.notes.slice(0,3).map(x=>`<li><span>${esc(x.text)}</span><time>${when(x.at)}</time></li>`).join('')}</ul></div>`:''}
+    ${D.notes.length?`<div class="pv-log"><h4>${L('From your parent')}</h4><ul>${D.notes.slice(0,3).map(x=>`<li><span>${esc(L(x.text))}</span><time>${when(x.at)}</time></li>`).join('')}</ul></div>`:''}
     <div class="pv-help"><p>${L("<b>Something feel off?</b> Ask your parent to talk. They'll only see that you asked.")}</p>
       <button type="button" class="btn primary block" data-action="ask-help"${T.helpSent?' disabled':''}>${T.helpSent?ic('check','ic sm')+L('Sent. Your parent will come find you.'):L('Ask my parent to talk')}</button></div>`;
 }
@@ -2564,7 +2602,7 @@ document.addEventListener('click',e=>{
       fillSettingsForm();transmit(settingsPayload(st),'down');
       $('#savedNote').textContent=L('Applied the suggested settings for age {n} and sent them to {poss} phone.',{n:st.kidAge,poss:poss(name()),k:name()});
       commit();break}
-    case 'toggle-details':if(T.expanded.has(id))T.expanded.delete(id);else T.expanded.add(id);commit();
+    case 'toggle-details':if(T.expanded.has(exKey(id)))T.expanded.delete(exKey(id));else T.expanded.add(exKey(id));commit();
       {const x=$$('[data-action="toggle-details"]').find(el=>el.dataset.id===id);if(x)x.focus()}break;
     case 'open-data':T.drawer=true;commit();setTimeout(()=>{const x=$('#dataDrawer .icon-btn');if(x)x.focus()},30);break;
     case 'how':T.how=true;commit();setTimeout(()=>{const x=$('#howDialog .icon-btn');if(x)x.focus()},30);break;
@@ -2572,14 +2610,15 @@ document.addEventListener('click',e=>{
     case 'pricing':T.price=true;commit();setTimeout(()=>{const x=$('#priceDialog .icon-btn');if(x)x.focus()},30);break;
     case 'choose-plan':choosePlan(id);commit();break;
     case 'cancel-trial':if(S.family.plan){S.family.plan.status='canceled'}commit();break;
-    case 'switch-kid':if(id!==S.active){if(playing)stopScenario();useKid(id);S.ui.screen='list';S.ui.thread=null;T.sheet=null;T.think=null;T.notif=null;fillSettingsForm();commit()}break;
+    case 'switch-kid':if(id!==S.active){switchKid(id);commit()}break;
     case 'add-kid':T.addKid=true;commit();setTimeout(()=>$('#newKidName').focus(),30);break;
     case 'close-kid':case 'kid-scrim':closeOverlay();break;
     case 'pn-close':T.pnotif=null;renderParentNotif();break;
     case 'pn-view':{
       const n=T.pnotif;T.pnotif=null;if(!n)break;
-      if(n.kid!==S.active&&S.kids.some(k=>k.id===n.kid)){if(playing)stopScenario();useKid(n.kid);S.ui.screen='list';S.ui.thread=null;fillSettingsForm()}
-      S.ui.tab='alerts';S.ui.view='parent';if(n.alertId)T.expanded.add(n.alertId);
+      if(n.kid!==S.active&&S.kids.some(k=>k.id===n.kid))switchKid(n.kid);
+      S.ui.tab='alerts';S.ui.view='parent';if(n.alertId)T.expanded.add(exKey(n.alertId));
+      const al=n.alertId&&findAlert(n.alertId);if(al&&al.status!=='new')T.showReviewed=true;
       commit();
       const card=n.alertId&&$$('[data-alert]').find(x=>x.dataset.alert===n.alertId);
       if(card){card.scrollIntoView({block:'center',behavior:reduced?'auto':'smooth'});const b=card.querySelector('button');if(b)b.focus()}
@@ -2589,7 +2628,7 @@ document.addEventListener('click',e=>{
     case 'dismiss-how':S.ui.introDismissed=true;commit();break;
     case 'reopen':{const al=findAlert(id);if(al){al.status='new';al.note=null;commit()}break}
     case 'block':T.sheet='block';commit();break;
-    case 'confirm-block':T.sheet=null;setBlocked(S.ui.thread,true);commit();break;
+    case 'confirm-block':T.sheet=null;if(playing)stopScenario();setBlocked(S.ui.thread,true);commit();break;
     case 'unblock':setBlocked(S.ui.thread,false);commit();break;
     case 'think-edit':if(T.think&&!T.think.auto){T.sheet=null;T.think=null;commit();$('#composeInput').focus()}break;
     case 'think-send':if(T.think&&!T.think.auto){const th=T.think;T.sheet=null;T.think=null;$('#composeInput').value='';S.clock+=MIN;deliver(th.cid,'me',th.text)}break;
@@ -2599,7 +2638,7 @@ document.addEventListener('click',e=>{
     case 'checkin':{
       const al=findAlert(id);if(!al||al.checkIn)break;
       al.checkIn=true;
-      const note=al.p.alert==='kid_request'?L('Your parent got your note and will come find you to talk.'):L('Your parent would like to check in with you later today. None of your messages were shared with them.');
+      const note=al.p.alert==='kid_request'?'Your parent got your note and will come find you to talk.':'Your parent would like to check in with you later today. None of your messages were shared with them.';
       transmit({type:'check_in',note,about:al.p.alert},'down');commit();break}
     case 'trust':{
       const al=findAlert(id);if(!al||!al.p.contact)break;
@@ -2621,12 +2660,12 @@ document.addEventListener('click',e=>{
       T.helpSent=true;
       sendAlert({alert_id:'help-'+uid(),rev:1,alert:'kid_request',severity:'info'},S.clock,false);
       commit();break}
-    case 'scenario':if(playing&&playing.id===id)stopScenario();else play(id);break;
+    case 'scenario':if(playing&&playing.id===id){if(Date.now()-playing.started>600)stopScenario()}else play(id);break;
     case 'reset':{
       if(Date.now()-resetArmed<3000){
         resetArmed=0;playing=null;try{localStorage.removeItem(KEY)}catch(err){}
         Object.assign(T,{arrived:null,fresh:null,notif:null,sheet:null,think:null,dialog:null,drawer:false,how:false,price:false,addKid:false,helpSent:false,showReviewed:false});T.expanded.clear();T.openTalk.clear();
-        clearTimeout(T.settingsTimer);clearTimeout(T.notifTimer);
+        clearTimeout(T.settingsTimer);T.settingsDue=false;clearTimeout(T.notifTimer);
         clearTimeout(T.pnotifTimer);T.pnotif=null;
         seed();fillSettingsForm();fillNotifyForm();b.innerHTML=resetHTML();commit();
       }else{
@@ -2674,8 +2713,10 @@ $('#kidForm').addEventListener('submit',e=>{
   const nm=$('#newKidName').value.trim().slice(0,20),age=parseInt($('#newKidAge').value,10);
   if(!nm||isNaN(age))return;
   if(playing)stopScenario();
+  flushSettings();
   const id=addKid(nm,Math.min(17,Math.max(5,age)));
-  $('#kidForm').reset();T.addKid=false;S.ui.screen='list';S.ui.thread=null;fillSettingsForm();commit();
+  switchKid(id);
+  $('#kidForm').reset();T.addKid=false;commit();
   const b=$$('[data-action="switch-kid"]').find(x=>x.dataset.id===id);if(b)b.focus();
 });
 $('#trustedForm').addEventListener('submit',e=>{
@@ -2686,6 +2727,11 @@ $('#trustedForm').addEventListener('submit',e=>{
   $('#trustedForm').reset();commit();
 });
 $('#settingsForm').addEventListener('input',onSettings);
+$('#settingsForm').addEventListener('focusout',e=>{
+  const s=S.parent.settings,x=e.target;
+  if(x.id==='setName'&&!x.value.trim())x.value=s.kidName;
+  if(x.id==='setAge'&&x.value!==''&&parseInt(x.value,10)!==s.kidAge)x.value=s.kidAge||'';
+});
 $('#settingsForm').addEventListener('submit',e=>e.preventDefault());
 $('#clockForm').addEventListener('submit',e=>{
   e.preventDefault();
@@ -3295,9 +3341,14 @@ const SEED_TEXT={es:{"Proud of you, buddy! Fishing on Saturday?":"¡Qué orgullo
 
 /* ---------- boot ---------- */
 LANG=/^es\b/i.test(navigator.language||'')?'es':'en';
-try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(st&&st.v===3&&Array.isArray(st.kids)&&st.kids.length){S=st;useKid(S.active)}}}catch(e){S=null}
+const usable=st=>st&&st.v===3&&Array.isArray(st.kids)&&st.kids.length&&st.kids.every(k=>k&&k.id&&k.parent&&k.parent.settings&&Array.isArray(k.parent.alerts)&&k.device&&k.device.contacts&&Array.isArray(k.wall)&&k.stats);
+try{const raw=localStorage.getItem(KEY);if(raw){const st=JSON.parse(raw);if(usable(st)){S=st;if(!S.kids.some(k=>k.id===S.active))S.active=S.kids[0].id;useKid(S.active)}}}catch(e){S=null}
 if(!S)seed();
-if(!S.family.notify)S.family.notify=defaultNotify();
+S.family=S.family||{plan:null};
+S.ui=Object.assign({view:'parent',tab:'alerts',filter:'all',screen:'list',thread:null,typeAs:'me'},S.ui||{});
+{const N=S.family.notify,d=defaultNotify();
+  if(!N||!N.types||!N.quiet)S.family.notify=d;
+  else{N.types=Object.assign(d.types,N.types);if(!Array.isArray(N.held))N.held=[]}}
 if(S.ui.view==='wall')S.ui.view='parent';
 if(S.parent.settings.kidAge===undefined)S.parent.settings.kidAge=12;
 if(!S.parent.settings.sources)S.parent.settings.sources={texts:true,email:true,social:true};
@@ -3334,6 +3385,7 @@ function setLang(l){
   announce(LANGS[l]);
 }
 applyStatic();
+$('#resetBtn').innerHTML=resetHTML();
 if(LANG!=='en')$('#phraseInput').value=L(TESTER_DEFAULT);
 renderPatterns();
 renderNotifyList();
