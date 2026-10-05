@@ -100,49 +100,46 @@ describe('household store', () => {
     assert.notEqual(again.code, '');
   });
 
-  it('records who pays for a household plan, and the cover it gives everyone', () => {
+  it('records everyone who pays for a household plan, and the cover it gives', () => {
     const store = createHouseholdStore();
-    const coverage = (u: string) => {
-      const c = store.coverage(u);
-      return c && { until: c.until, sponsorUser: c.sponsorUser };
-    };
     const { code } = store.create('payer', 'Sam', 'Home');
     store.join('housemate', 'Alex', code);
     const now = 1_000_000;
-    assert.deepEqual(coverage('housemate'), { until: null, sponsorUser: null });
+    const payers = (u: string) => store.coverage(u)?.payers.map((p) => [p.user, p.until]);
+    assert.deepEqual(payers('housemate'), []);
     store.sponsor('payer', now + 5000, now);
-    assert.deepEqual(coverage('housemate'), { until: now + 5000, sponsorUser: 'payer' });
-    // A shorter plan from someone else does not take over; a longer one does.
+    assert.deepEqual(payers('housemate'), [['payer', now + 5000]]);
+    // A second payer is recorded alongside, latest date first.
     store.join('other', 'Kim', code);
     store.sponsor('other', now + 1000, now);
-    assert.equal(coverage('housemate')?.sponsorUser, 'payer');
-    store.sponsor('other', now + 9000, now);
-    assert.deepEqual(coverage('housemate'), { until: now + 9000, sponsorUser: 'other' });
-    // The payer's plan ending ends the cover; someone who never paid changes nothing.
+    assert.deepEqual(payers('housemate'), [
+      ['payer', now + 5000],
+      ['other', now + 1000],
+    ]);
+    // A plan ending takes only that payer off; someone who never paid changes nothing.
+    store.sponsor('payer', null, now);
     store.sponsor('housemate', null, now);
-    assert.equal(coverage('housemate')?.sponsorUser, 'other');
-    store.sponsor('other', null, now);
-    assert.deepEqual(coverage('housemate'), { until: null, sponsorUser: null });
+    assert.deepEqual(payers('housemate'), [['other', now + 1000]]);
     // Leaving stops paying for the others; someone outside a household has no cover.
-    store.sponsor('payer', now + 5000, now);
-    store.leave('payer');
-    assert.deepEqual(coverage('housemate'), { until: null, sponsorUser: null });
-    assert.equal(coverage('stranger'), null);
+    store.leave('other');
+    assert.deepEqual(payers('housemate'), []);
+    assert.equal(store.coverage('stranger'), null);
     store.sponsor('stranger', now + 5000, now);
   });
 
-  it('notes when the store last confirmed the plan, without rewriting it on every call', () => {
+  it('notes when the store last confirmed a plan, without rewriting it on every call', () => {
     const store = createHouseholdStore();
     store.create('payer', 'Sam', 'Home');
     const now = 1_000_000;
+    const checked = () => store.coverage('payer')!.payers[0]?.checkedAt;
     store.sponsor('payer', now + 86_400_000, now);
-    assert.equal(store.coverage('payer')?.checkedAt, now);
+    assert.equal(checked(), now);
     store.sponsor('payer', now + 86_400_000, now + 60_000);
-    assert.equal(store.coverage('payer')?.checkedAt, now);
+    assert.equal(checked(), now);
     store.sponsor('payer', now + 86_400_000, now + 11 * 60_000);
-    assert.equal(store.coverage('payer')?.checkedAt, now + 11 * 60_000);
+    assert.equal(checked(), now + 11 * 60_000);
     store.sponsor('payer', null, now + 12 * 60_000);
-    assert.deepEqual(store.coverage('payer'), { until: null, sponsorUser: null, checkedAt: null });
+    assert.deepEqual(store.coverage('payer'), { payers: [] });
   });
 
   it('shows the cover and who pays, without anyone’s id', () => {
@@ -165,7 +162,7 @@ describe('household store', () => {
     assert.deepEqual(later.members.map((m) => m.sponsor ?? false), [false, false]);
   });
 
-  it('adds the household plan columns to a database made before them', () => {
+  it('upgrades a database made before household plans and last-seen times', () => {
     const dir = mkdtempSync(join(tmpdir(), 'fp-households-'));
     try {
       const file = join(dir, 'old.sqlite');
@@ -180,7 +177,7 @@ describe('household store', () => {
       const joined = store.join('late', 'Late', 'ABCD-EFGH');
       assert.equal(joined.coveredUntil, null);
       store.sponsor('late', Date.now() + 60_000);
-      assert.equal(store.coverage('late')?.sponsorUser, 'late');
+      assert.equal(store.coverage('late')?.payers[0]?.user, 'late');
       store.close();
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -484,6 +481,24 @@ describe('household endpoints', () => {
       t.clock.t += 7 * 3_600_000;
       assert.equal(await t.sync(B), 402);
       assert.equal(t.asked(A), before + 1);
+    });
+
+    it('with two payers, the other keeps everyone covered when one is refunded', async () => {
+      const t = plansSetup();
+      await payerAndHousemate(t);
+      const Q = '$RCAnonymousID:dddddddddddddddddddddddddddddddd';
+      t.own.set(Q, true);
+      t.household.set(Q, t.clock.t + 30 * 86_400_000);
+      const view = (await (await t.call('/v1/household', A)).json()) as { household: { code: string } };
+      await t.call('/v1/household/join', Q, { code: view.household.code, memberName: 'Kim' });
+      // A is refunded and never opens the app again; hours later the store is asked about both.
+      t.own.set(A, false);
+      t.household.set(A, null);
+      t.clock.t += 7 * 3_600_000;
+      assert.equal(await t.sync(B), 200);
+      const seen = (await (await t.call('/v1/household', B)).json()) as { household: { coveredUntil: number | null; members: { name: string; sponsor?: boolean }[] } };
+      assert.equal(seen.household.coveredUntil, t.household.get(Q));
+      assert.deepEqual(seen.household.members.filter((m) => m.sponsor).map((m) => m.name), ['Kim']);
     });
 
     it('keeps a date still ahead when the store cannot be asked, but not one that has passed', async () => {

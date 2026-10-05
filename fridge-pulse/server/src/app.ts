@@ -74,6 +74,8 @@ const JOINS_PER_HOUSEHOLD_PER_DAY = 12;
  * or that cover.
  */
 const OPEN_ROUTES = new Set(['GET /v1/household', 'POST /v1/household/join', 'POST /v1/household/leave']);
+/** Payers asked about in one call, at most, so a household of lapsed plans cannot slow every request. */
+const PAYER_CHECKS_PER_CALL = 3;
 /** Calls to those routes per IP per day from people without a plan, so made-up ids cannot farm them. */
 const OPEN_CALLS_PER_IP_PER_DAY = 200;
 
@@ -151,21 +153,24 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
       console.error('Could not read household cover:', e instanceof Error ? e.message : e);
       return false;
     }
-    if (!cover?.sponsorUser || cover.until == null) return false;
-    const live = cover.until > t;
-    // Ask the store about the payer once the date on record has passed (the plan may have renewed), and
-    // every few hours before then (a refund ends it early).
-    if (live && cover.checkedAt != null && t - cover.checkedAt < SPONSOR_RECHECK_MS) return true;
-    let until: number | null;
-    try {
-      until = await entitlements.householdUntil(cover.sponsorUser);
-    } catch (e) {
-      // The store cannot be asked right now: a date still ahead holds until it can.
-      if (live && e instanceof EntitlementLookupError) return true;
-      throw e;
+    if (!cover || cover.payers.length === 0) return false;
+    // Someone's plan runs on, and the store said so recently.
+    if (cover.payers.some((p) => p.until > t && t - p.checkedAt < SPONSOR_RECHECK_MS)) return true;
+    // Otherwise ask the store again, about each payer in turn (latest date first): a date on record that
+    // has passed may have renewed, and one still ahead may have ended early (a refund).
+    for (const payer of cover.payers.slice(0, PAYER_CHECKS_PER_CALL)) {
+      let until: number | null;
+      try {
+        until = await entitlements.householdUntil(payer.user);
+      } catch (e) {
+        // The store cannot be asked right now: a date still ahead holds until it can.
+        if (payer.until > t && e instanceof EntitlementLookupError) return true;
+        throw e;
+      }
+      households.sponsor(payer.user, until, t);
+      if (until != null && until > t) return true;
     }
-    households.sponsor(cover.sponsorUser, until, t);
-    return until != null && until > t;
+    return false;
   }
 
   function limited(c: Context<Env>, bucket: keyof typeof BURST_PER_MINUTE, perDay: number) {

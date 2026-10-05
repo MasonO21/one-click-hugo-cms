@@ -19,7 +19,7 @@ The app expects exactly these plans. The wording in the app and both listings co
 The payer gets the app like any other plan. On top of that, everyone in their shared household (Settings > Household, up to 8 people including the payer) gets the app too, without paying:
 
 1. The household plans grant a second RevenueCat entitlement, **`household`**.
-2. Whenever the payer's phone talks to the server, the server sees that entitlement and its end date and records the payer against their household.
+2. Whenever a payer's phone talks to the server, the server sees that entitlement and its end date and records the payer against their household. If two members both pay for a household plan, both are recorded and either one covers everyone.
 3. A member without a plan of their own is let in while that date is in the future. The app shows "Included in Sam's household plan" in Settings.
 4. When the date passes (the plan renews or ends), the next member request makes the server ask RevenueCat about the payer again: a renewal carries on the cover, an ended plan stops it and those members see the paywall.
 5. The server also asks again every 6 hours while the date is still ahead, so a refund or revoked purchase ends the cover within hours rather than at the end of a paid year. If RevenueCat cannot be reached then, a date still ahead holds until it can.

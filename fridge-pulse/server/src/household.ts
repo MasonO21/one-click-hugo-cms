@@ -79,14 +79,19 @@ export interface HouseholdView {
   coveredUntil: number | null;
 }
 
-/** Whose household plan covers a person's household, and until when. */
+/** Someone in the household who pays for a household plan. */
+export interface Payer {
+  /** Their app user id, to ask the store again. */
+  user: string;
+  /** When their plan runs out or renews (ms), as the store last said. */
+  until: number;
+  /** When the store last said so (ms). */
+  checkedAt: number;
+}
+
+/** The household plans covering a person's household: every member who pays for one, latest date first. */
 export interface Coverage {
-  /** When the plan runs out or renews (ms), or null when no plan is on record. */
-  until: number | null;
-  /** The app user id of the person who pays, to ask the store again. */
-  sponsorUser: string | null;
-  /** When the store last confirmed the plan (ms), or null. */
-  checkedAt: number | null;
+  payers: Payer[];
 }
 
 export type HouseholdErrorCode = 'not_found' | 'full' | 'already_member' | 'not_member' | 'too_many' | 'self';
@@ -112,7 +117,7 @@ export interface HouseholdStore {
   get(userId: string): HouseholdView | null;
   /**
    * Records what the store says about the person's household plan: a live one (`until` in the future)
-   * covers their household, unless another member's runs for longer; none ends their cover.
+   * covers their household; none (ended, refunded, switched) takes them off the household's payers.
    */
   sponsor(userId: string, until: number | null, now?: number): void;
   /** The cover for the person's household, or null when they are not in one. */
@@ -151,13 +156,9 @@ interface HouseholdRow {
   name: string;
   code: string;
   seq: number;
-  sponsor_member: string | null;
-  sponsor_user: string | null;
-  sponsor_until: number | null;
-  sponsor_checked_at: number | null;
 }
 
-const HOUSEHOLD_COLUMNS = 'h.id, h.name, h.code, h.seq, h.sponsor_member, h.sponsor_user, h.sponsor_until, h.sponsor_checked_at';
+const HOUSEHOLD_COLUMNS = 'h.id, h.name, h.code, h.seq';
 
 export function createHouseholdStore(path = ':memory:'): HouseholdStore {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
@@ -174,24 +175,27 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
     );
     CREATE INDEX IF NOT EXISTS records_by_seq ON records (household_id, seq);
     CREATE INDEX IF NOT EXISTS members_by_household ON members (household_id);
+    -- Members who pay for a household plan. A member leaving (or being removed) takes their row along.
+    CREATE TABLE IF NOT EXISTS payers (
+      member TEXT PRIMARY KEY REFERENCES members(member) ON DELETE CASCADE,
+      household_id TEXT NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+      user TEXT NOT NULL, until INTEGER NOT NULL, checked_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS payers_by_household ON payers (household_id);
   `);
-  // Added with the household plans; older databases get the columns on start.
-  const columns = new Set((db.prepare('PRAGMA table_info(households)').all() as { name: string }[]).map((c) => c.name));
-  for (const [name, type] of [
-    ['sponsor_member', 'TEXT'],
-    ['sponsor_user', 'TEXT'],
-    ['sponsor_until', 'INTEGER'],
-    ['sponsor_checked_at', 'INTEGER'],
-  ] as const) {
-    if (!columns.has(name)) db.exec(`ALTER TABLE households ADD COLUMN ${name} ${type}`);
-  }
   const memberColumns = new Set((db.prepare('PRAGMA table_info(members)').all() as { name: string }[]).map((c) => c.name));
   if (!memberColumns.has('last_seen')) db.exec('ALTER TABLE members ADD COLUMN last_seen INTEGER');
 
   const q = {
     householdOf: db.prepare(`SELECT ${HOUSEHOLD_COLUMNS} FROM members m JOIN households h ON h.id = m.household_id WHERE m.member = ?`),
     byCode: db.prepare(`SELECT ${HOUSEHOLD_COLUMNS} FROM households h WHERE h.code = ?`),
-    setSponsor: db.prepare('UPDATE households SET sponsor_member = ?, sponsor_user = ?, sponsor_until = ?, sponsor_checked_at = ? WHERE id = ?'),
+    payers: db.prepare('SELECT member, user, until, checked_at FROM payers WHERE household_id = ? ORDER BY until DESC'),
+    payerOf: db.prepare('SELECT user, until, checked_at FROM payers WHERE member = ?'),
+    setPayer: db.prepare(
+      `INSERT INTO payers (member, household_id, user, until, checked_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (member) DO UPDATE SET household_id = excluded.household_id, user = excluded.user, until = excluded.until, checked_at = excluded.checked_at`,
+    ),
+    deletePayer: db.prepare('DELETE FROM payers WHERE member = ?'),
     members: db.prepare('SELECT member, name, COALESCE(last_seen, joined_at) AS seen FROM members WHERE household_id = ? ORDER BY joined_at, rowid'),
     seen: db.prepare('UPDATE members SET last_seen = ? WHERE member = ? AND (last_seen IS NULL OR last_seen < ?)'),
     idle: db.prepare('SELECT member FROM members WHERE household_id = ? AND COALESCE(last_seen, joined_at) < ?'),
@@ -228,8 +232,13 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
     }
   };
 
+  type PayerRow = { member: string; user: string; until: number; checked_at: number };
+  const payersOf = (householdId: string) => q.payers.all(householdId) as PayerRow[];
+
   const view = (h: HouseholdRow, me: string, now = Date.now()): HouseholdView => {
-    const coveredUntil = h.sponsor_until != null && h.sponsor_until > now ? h.sponsor_until : null;
+    const live = payersOf(h.id).filter((p) => p.until > now);
+    const paying = new Set(live.map((p) => p.member));
+    const coveredUntil = live.length > 0 ? Math.max(...live.map((p) => p.until)) : null;
     return {
       name: h.name,
       code: formatCode(h.code),
@@ -239,7 +248,7 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
           name: m.name,
           you: m.member === me,
           ref: memberRef(m.member),
-          ...(coveredUntil && m.member === h.sponsor_member ? { sponsor: true } : {}),
+          ...(paying.has(m.member) ? { sponsor: true } : {}),
           ...(m.member !== me && idleDays >= AWAY_DAYS ? { idleDays } : {}),
         };
       }),
@@ -258,11 +267,9 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
    */
   const dropIdle = (h: HouseholdRow, now: number) => {
     for (const { member } of q.idle.all(h.id, now - MEMBER_IDLE_DAYS * DAY_MS) as { member: string }[]) {
-      if (h.sponsor_member === member) {
-        // Still paying, or past the date on record but not yet re-checked with the store: kept.
-        if (h.sponsor_until != null && h.sponsor_until > now - PAYER_GRACE_MS) continue;
-        q.setSponsor.run(null, null, null, null, h.id);
-      }
+      // Still paying, or past the date on record but not yet re-checked with the store: kept.
+      const paying = q.payerOf.get(member) as { until: number } | undefined;
+      if (paying && paying.until > now - PAYER_GRACE_MS) continue;
       q.deleteMember.run(member);
     }
   };
@@ -287,22 +294,18 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
       const h = mine(userId);
       if (!h) return;
       const me = memberKey(userId);
-      const live = until != null && until > now;
-      if (live) {
-        // Another member's plan that runs for longer keeps the household; otherwise this one does.
-        const other = h.sponsor_member != null && h.sponsor_member !== me && h.sponsor_until != null && h.sponsor_until >= until;
-        if (other) return;
-        const same = h.sponsor_member === me && h.sponsor_user === userId && h.sponsor_until === until;
-        if (same && h.sponsor_checked_at != null && now - h.sponsor_checked_at < SPONSOR_TOUCH_MS) return;
-        q.setSponsor.run(me, userId, until, now, h.id);
-      } else if (h.sponsor_member === me) {
-        q.setSponsor.run(null, null, null, null, h.id);
+      if (until == null || until <= now) {
+        q.deletePayer.run(me);
+        return;
       }
+      const row = q.payerOf.get(me) as { user: string; until: number; checked_at: number } | undefined;
+      if (row && row.user === userId && row.until === until && now - row.checked_at < SPONSOR_TOUCH_MS) return;
+      q.setPayer.run(me, h.id, userId, until, now);
     },
 
     coverage: (userId) => {
       const h = mine(userId);
-      return h ? { until: h.sponsor_until, sponsorUser: h.sponsor_user, checkedAt: h.sponsor_checked_at } : null;
+      return h ? { payers: payersOf(h.id).map((p) => ({ user: p.user, until: p.until, checkedAt: p.checked_at })) } : null;
     },
 
     create: (userId, memberName, name) =>
@@ -332,8 +335,7 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
       tx(() => {
         const h = mine(userId);
         if (!h) return;
-        // Someone who leaves stops paying for the others.
-        if (h.sponsor_member === memberKey(userId)) q.setSponsor.run(null, null, null, null, h.id);
+        // Someone who leaves stops paying for the others (their payer row goes with them).
         q.deleteMember.run(memberKey(userId));
         // The last one out takes the shared lists with them.
         if ((q.memberCount.get(h.id) as { n: number }).n === 0) q.deleteHousehold.run(h.id);
@@ -355,7 +357,6 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
         const target = (q.members.all(h.id) as { member: string }[]).find((m) => memberRef(m.member) === ref);
         if (!target) throw new HouseholdError('not_found', 'That person is no longer in the household.');
         if (target.member === me) throw new HouseholdError('self', 'Use Leave household to leave.');
-        if (h.sponsor_member === target.member) q.setSponsor.run(null, null, null, null, h.id);
         q.deleteMember.run(target.member);
         return view(mine(userId)!, me, now);
       }),
