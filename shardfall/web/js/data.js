@@ -58,7 +58,7 @@ window.SF = window.SF || {};
       id: 'orin', name: 'Orin', title: 'Tidecaller', role: 'Mage', shape: 'drop', ranged: true,
       lore: 'An abyssal crystal that remembers every ocean it has drowned.',
       price: { coins: 0 },
-      base: { hp: 640, atk: 48, power: 40, def: 16, ms: 295, range: 470, as: 0.75, regen: 4 },
+      base: { hp: 620, atk: 48, power: 34, def: 16, ms: 295, range: 470, as: 0.75, regen: 4 },
       grow: { hp: 82, atk: 3, power: 14, def: 2 },
       build: B.Mage,
       skills: [
@@ -97,8 +97,8 @@ window.SF = window.SF || {};
       id: 'nyx', name: 'Nyx', title: 'Veilblade', role: 'Assassin', shape: 'star',
       lore: 'A shard of the eclipse, seen only in the instant before it strikes.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 720, atk: 70, power: 0, def: 18, ms: 320, range: 100, as: 1.0, regen: 4 },
-      grow: { hp: 88, atk: 7, power: 0, def: 2.5 },
+      base: { hp: 840, atk: 76, power: 0, def: 24, ms: 325, range: 100, as: 1.0, regen: 6 },
+      grow: { hp: 96, atk: 7.5, power: 0, def: 3 },
       build: B.Assassin,
       skills: [
         { id: 'shadow_lunge', name: 'Shadow Lunge', cd: 7, range: 380, kind: 'dash', ai: 'enemy', needsTarget: true, anyTarget: true, desc: 'Blink behind an enemy and strike.' },
@@ -110,7 +110,7 @@ window.SF = window.SF || {};
       id: 'lumen', name: 'Lumen', title: 'Dawn Oracle', role: 'Support', shape: 'halo', ranged: true,
       lore: 'The first light that ever struck the Shard, still keeping watch.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 700, atk: 44, power: 30, def: 20, ms: 295, range: 450, as: 0.8, regen: 5 },
+      base: { hp: 730, atk: 46, power: 36, def: 21, ms: 295, range: 450, as: 0.8, regen: 5 },
       grow: { hp: 92, atk: 3, power: 11, def: 3 },
       build: B.Support,
       skills: [
@@ -149,8 +149,8 @@ window.SF = window.SF || {};
       id: 'rhea', name: 'Rhea', title: 'Prismshot', role: 'Marksman', shape: 'prism', ranged: true,
       lore: 'She bends sunlight through her own body and lets it fly.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 640, atk: 64, power: 0, def: 15, ms: 300, range: 540, as: 0.95, regen: 4 },
-      grow: { hp: 82, atk: 7, power: 0, def: 2 },
+      base: { hp: 610, atk: 58, power: 0, def: 14, ms: 295, range: 500, as: 0.92, regen: 4 },
+      grow: { hp: 80, atk: 6.5, power: 0, def: 2 },
       build: B.Marksman,
       skills: [
         { id: 'refraction', name: 'Refraction', cd: 6, range: 600, kind: 'bolt', ai: 'enemy', desc: 'Fire three bolts of light in a narrow fan.' },

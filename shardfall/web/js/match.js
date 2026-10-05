@@ -85,7 +85,7 @@
   const skinC = h => (SF.SKIN[h.skin] || {}).c1 || '#fff';
   const SK = {
     flare_step(m, h, a, s) {
-      m.dashTo(h, a.dir, s.range, 1500, { trail: skinC(h), onPass: e => m.applyDamage(h, e, 70 + 0.9 * h.atk, { skill: true }) });
+      m.dashTo(h, a.dir, s.range, 1500, { trail: skinC(h), onPass: e => m.applyDamage(h, e, 80 + 0.95 * h.atk, { skill: true }) });
       return true;
     },
     cinder_whirl(m, h, a, s) {
@@ -105,7 +105,7 @@
       return true;
     },
     riptide_bolt(m, h, a, s) {
-      m.shoot(h, a.dir, { speed: 950, r: 16, max: s.range, color: skinC(h), kind: 'orb', onHit: e => { m.applyDamage(h, e, 110 + 0.75 * h.power, { skill: true }); m.slow(e, 0.35, 1.5); m.burst(e.x, e.y, skinC(h), 10, 160); } });
+      m.shoot(h, a.dir, { speed: 950, r: 16, max: s.range, color: skinC(h), kind: 'orb', onHit: e => { m.applyDamage(h, e, 100 + 0.7 * h.power, { skill: true }); m.slow(e, 0.35, 1.5); m.burst(e.x, e.y, skinC(h), 10, 160); } });
       return true;
     },
     whirlpool(m, h, a, s) {
@@ -166,7 +166,7 @@
       m.burst(h.x, h.y, '#6b4bd6', 12, 140);
       h.x = clamp(t.x + dir.x * (t.r + h.r + 6), 40, W.w - 40); h.y = clamp(t.y + dir.y * (t.r + h.r + 6), 60, W.h - 60);
       h.face = { x: -dir.x, y: -dir.y };
-      m.applyDamage(h, t, 80 + 1.0 * h.atk, { skill: true });
+      m.applyDamage(h, t, 95 + 1.1 * h.atk, { skill: true });
       m.burst(h.x, h.y, skinC(h), 14, 180);
       h.target = t;
       return true;
@@ -186,7 +186,7 @@
         m.later(i * 0.2, () => {
           if (!t.alive || !h.alive) return;
           const extra = i === 2 ? 0.25 * (t.maxHp - t.hp) : 0;
-          m.applyDamage(h, t, 70 + 0.7 * h.atk + extra, { skill: true });
+          m.applyDamage(h, t, 80 + 0.8 * h.atk + extra, { skill: true });
           m.slashFx(t.x, t.y, Math.random() * 6.28, skinC(h)); if (i === 2) { m.shake(6); m.burst(t.x, t.y, skinC(h), 24, 280); }
         });
       }
@@ -198,7 +198,7 @@
     },
     mending_light(m, h, a, s) {
       for (const al of m.heroes) if (al.alive && al.team === h.team && d2(al, h) < s.range * s.range) {
-        m.heal(al, 120 + 0.8 * h.power + 0.05 * al.maxHp); m.burst(al.x, al.y, '#9dffb0', 10, 120);
+        m.heal(al, 140 + 0.85 * h.power + 0.05 * al.maxHp); m.burst(al.x, al.y, '#9dffb0', 10, 120);
       }
       m.ring(h.x, h.y, s.range, '#9dffb0', 0.5, 3);
       return true;
@@ -282,7 +282,7 @@
       const base = Math.atan2(a.dir.y, a.dir.x);
       for (let i = -1; i <= 1; i++) {
         const ang = base + i * 0.1;
-        m.shoot(h, { x: Math.cos(ang), y: Math.sin(ang) }, { speed: 1300, r: 12, max: s.range, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 60 + 0.75 * h.atk, { skill: true }) });
+        m.shoot(h, { x: Math.cos(ang), y: Math.sin(ang) }, { speed: 1300, r: 12, max: s.range, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 50 + 0.65 * h.atk, { skill: true }) });
       }
       return true;
     },
@@ -297,7 +297,7 @@
       m.zone({ x: h.x, y: h.y, r: 30, team: h.team, dur: 0.5, kind: 'charge', dir: d, len: s.range, color: skinC(h), follow: h });
       m.later(0.5, () => {
         if (!h.alive) return;
-        for (const e of m.unitsOnLine(h.team, h.x, h.y, d, s.range, 32)) m.applyDamage(h, e, 300 + 1.4 * h.atk, { skill: true });
+        for (const e of m.unitsOnLine(h.team, h.x, h.y, d, s.range, 32)) m.applyDamage(h, e, 260 + 1.25 * h.atk, { skill: true });
         m.fx.push({ type: 'lance', x: h.x, y: h.y, dir: d, len: s.range, color: skinC(h), t: 0, dur: 0.45 }); m.shake(5);
       });
       return true;
