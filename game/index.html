@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b1020"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg">
 <title>Aether Rift: Warden Clash</title>
 <style>
 :root{--bg:#0b1020;--panel:#151c36;--panel2:#1d2750;--gold:#ffc83d;--gem:#47e0ff;--ok:#4be38a;--red:#ff5470;--txt:#eaf0ff;--mut:#8b97c4}
@@ -79,6 +80,14 @@ const HEROES = {
           sk:[{n:'Wind Volley',t:'shot',cd:3.5,dmg:190},{n:'Tumble',t:'dash',cd:6,dmg:0},{n:'Storm Arrow',t:'shot',cd:20,dmg:520,w:30}]},
   morrow:{n:'Morrow, Void Mage', role:'Mage', hp:950, atk:70, rng:320, spd:205, ranged:true, col:'#b87bff', cost:4500,
           sk:[{n:'Rift Bolt',t:'shot',cd:3,dmg:210},{n:'Gravity Well',t:'aoe',cd:8,dmg:180,r:190,stun:.8},{n:'Collapse',t:'aoe',cd:24,dmg:620,r:280}]},
+  seren: {n:'Seren, Dawn Healer', role:'Support', hp:1100, atk:52, rng:290, spd:210, ranged:true, col:'#ffe27a', cost:5000,
+          sk:[{n:'Light Bolt',t:'shot',cd:3,dmg:150},{n:'Mending Pulse',t:'heal',cd:7,amt:380,r:260},{n:'Sunburst',t:'heal',cd:24,amt:900,r:340,dmg:300}]},
+  riven: {n:'Riven, Night Blade', role:'Assassin', hp:1200, atk:85, rng:65, spd:240, ranged:false, col:'#ff4d8d', cost:7500,
+          sk:[{n:'Shadow Step',t:'dash',cd:3.5,dmg:170},{n:'Fan of Knives',t:'aoe',cd:6,dmg:200,r:130},{n:'Execution',t:'dash',cd:16,dmg:560,stun:.5}]},
+  thorne:{n:'Thorne, Briar Hunter', role:'Marksman', hp:1150, atk:72, rng:270, spd:215, ranged:true, col:'#3fd0c9', cost:7500,
+          sk:[{n:'Thorn Shot',t:'shot',cd:3,dmg:170},{n:'Root Snare',t:'aoe',cd:8,dmg:120,r:170,stun:1},{n:'Briar Barrage',t:'shot',cd:19,dmg:600,w:40}]},
+  zeph:  {n:'Zeph, Storm Monk', role:'Fighter', hp:1700, atk:58, rng:75, spd:225, ranged:false, col:'#6fa8ff', cost:9000,
+          sk:[{n:'Thunder Step',t:'dash',cd:4,dmg:140,stun:.4},{n:'Static Field',t:'aoe',cd:7,dmg:190,r:160},{n:'Tempest',t:'aoe',cd:22,dmg:520,r:260,stun:1}]},
   brum:  {n:'Brum, Stone Warden', role:'Tank', hp:2300, atk:48, rng:70,  spd:195, ranged:false, col:'#8fa6c9', cost:6000,
           sk:[{n:'Shield Bash',t:'dash',cd:5,dmg:110,stun:.6},{n:'Bulwark',t:'shield',cd:9,amt:420},{n:'Quake',t:'aoe',cd:21,dmg:360,r:260,stun:1.5}]}
 };
@@ -102,12 +111,18 @@ const KEY='aetherRiftSave1';
 let S = load();
 function load(){ try{const j=JSON.parse(localStorage.getItem(KEY)); if(j) return j;}catch(e){}
   return {coins:1500,gems:300,owned:['kael'],skins:[],sel:'kael',skin:null,bpxp:0,free:[],prem:[],premium:false,pity:0,pity2:0,
-          adsDay:'',adsUsed:0,daily:'',streak:0,bought:{},wins:0,played:0}; }
+          adsDay:'',adsUsed:0,daily:'',streak:0,bought:{},wins:0,played:0,tro:0}; }
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
 const today=()=>new Date().toISOString().slice(0,10);
 if(S.adsDay!==today()){S.adsDay=today();S.adsUsed=0;}
 const AD_CAP=6;
 
+/* ====================== SOUND (WebAudio, no assets) ====================== */
+let AC=null;
+function sfx(k){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;
+  const P={hit:[180,90,.06,'square'],skill:[420,820,.18,'sawtooth'],kill:[300,600,.25,'triangle'],win:[400,900,.6,'triangle'],lose:[300,100,.6,'sawtooth'],ui:[600,700,.05,'sine']}[k]||[300,300,.05,'sine'];
+  o.type=P[3];o.frequency.setValueAtTime(P[0],t);o.frequency.exponentialRampToValueAtTime(P[1],t+P[2]);g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.001,t+P[2]);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+P[2]); }catch(e){} }
+document.addEventListener('pointerdown',e=>{ if(e.target.closest&&e.target.closest('.btn'))sfx('ui'); },true);
 /* ====================== UI HELPERS ====================== */
 const $=id=>document.getElementById(id);
 function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2200);}
@@ -149,9 +164,11 @@ function renderHome(){
     <button class="btn pri" style="width:80%" onclick="startMatch()">PLAY</button>
     ${canDaily?`<button class="btn" onclick="claimDaily()">🎁 Daily Reward (day ${S.streak%7+1}/7)</button>`:''}
     <button class="btn ad sm ${adsLeft()<=0?'dis':''}" onclick="watchAd('Free gems',()=>{S.gems+=20;save();toast('+20 💎');renderHome()})">📺 Watch ad: +20 💎 (${adsLeft()} left today)</button>
-    <div class="sub">Record: ${S.wins} wins / ${S.played} matches</div>
+    <div class="sub">🏆 ${S.tro||0} · <b>${rankOf(S.tro||0)}</b> · ${S.wins} wins / ${S.played} matches</div>
   </div>` + nav();
 }
+const RANKS=[['Bronze',0],['Silver',100],['Gold',250],['Platinum',450],['Diamond',700],['Master',1000],['Grandmaster',1400]];
+function rankOf(t){ let r=RANKS[0]; for(const x of RANKS) if(t>=x[1])r=x; return r[0]; }
 function claimDaily(){ S.streak++; const d=S.streak%7; const g=d===0?100:20, c=d===0?0:400; S.gems+=g; S.coins+=c+500; S.daily=today(); save(); toast(`Daily: +${c+500}🪙 +${g}💎`); renderHome(); }
 function renderHeroes(){
   let h=cur()+'<h2>Wardens</h2><div class="grid">';
@@ -236,38 +253,45 @@ function startMatch(){
   for(const team of [0,1]) for(let l=0;l<2;l++) for(const f of [.27,.45]){
     const x=team?WW*(1-f):WW*f; E.push({k:'tower',team,x,y:LANES[l],hp:1800,max:1800,r:30,cd:0,col:team?'#ff5470':'#47a8ff'}); }
   for(const team of [0,1]) E.push({k:'nexus',team,x:team?WW-130:130,y:BASEY,hp:4000,max:4000,r:55,cd:0,col:team?'#ff5470':'#47a8ff'});
+  G.camps=[[WW/2-380,BASEY],[WW/2+380,BASEY],[WW/2,WH/2-150],[WW/2,WH/2+150]].map(([x,y],i)=>({x,y,i,respawn:0,m:null}));
+  for(const c of G.camps) spawnMonster(c);
   $('hud').style.display='block'; cv.style.display='block'; document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   ['sk1','sk2','sk3'].forEach((id,i)=>{const e=$(id);e.innerHTML=`${p.sk[i].n}<div class="cd" style="height:0"></div>`;});
   resize(); last=performance.now(); requestAnimationFrame(loop);
 }
+function spawnMonster(c){ const hp=900+G.t*2; c.m={k:'monster',team:2,x:c.x,y:c.y,hx:c.x,hy:c.y,hp,max:hp,atk:55,rng:55,spd:120,r:20,cd:0,stun:0,col:'#e0a030',camp:c}; G.ents.push(c.m); }
 function spawnWave(){
   for(const team of [0,1]) for(let l=0;l<2;l++) for(let i=0;i<3;i++)
     G.ents.push({k:'minion',team,lane:l,x:team?WW-170-i*30:170+i*30,y:BASEY,hp:420+G.t*1.2,max:420+G.t*1.2,atk:28+G.t/20,rng:i===2?170:60,ranged:i===2,spd:95,r:12,cd:0,wp:0,stun:0,col:team?'#ff8aa0':'#8ad0ff'});
 }
 function wps(e){ const y=LANES[e.lane], t=e.team; const a=[[.2,y],[.8,y],[.93,BASEY]]; const pts=a.map(([f,yy])=>({x:WW*(t?1-f:f),y:yy})); return pts; }
-function enemiesOf(e){ return G.ents.filter(o=>o.team!==e.team&&o.hp>0&&!o.dead); }
+function enemiesOf(e){ return G.ents.filter(o=>o.team!==e.team&&o.hp>0&&!o.dead&&!(e.team===2&&o.team===2)&&!(e.k!=='hero'&&e.k!=='monster'&&o.k==='monster')); }
 function pickTarget(e,range){
   let best=null,bd=1e9; for(const o of enemiesOf(e)){ const d=dist(e,o)-o.r; if(d>range)continue;
     let pr=d+(o.k==='hero'?-40:o.k==='minion'?0:120); if(pr<bd){bd=pr;best=o;} } return best; }
-function dmgTo(t,d,src){
+function dmgTo(t,d,src){ if(src&&src.isPlayer&&Math.random()<.5)sfx('hit');
   if(t.shield>0){const a=Math.min(t.shield,d);t.shield-=a;d-=a;} t.hp-=d; G.fx.push({x:t.x,y:t.y-20,txt:Math.round(d),life:.6,col:t.team?'#ffd':'#f88'});
   if(t.hp<=0&&!t.dead){ kill(t,src); } }
 function kill(t,src){
+  if(t.k==='monster'){ t.camp.respawn=45; t.camp.m=null; if(src&&src.k==='hero'){src.hp=Math.min(src.max,src.hp+src.max*.3);G.fx.push({x:src.x,y:src.y,ring:60,life:.5,col:'#fd3'});} sfx('kill'); }
+  if(t.k==='hero')sfx('kill');
   if(t.k==='hero'){ t.dead=8+t.lvl*1.2; t.hp=0; t.deaths++; if(src&&src.k==='hero'){src.kills++;} G.kills[1-t.team]++; }
   else if(t.k==='nexus'){ endMatch(t.team===1); }
-  if(src&&src.k==='hero'&&src.team!==t.team){ src.xp+=t.k==='hero'?120:t.k==='tower'?200:30; while(src.xp>=100*src.lvl&&src.lvl<10){src.xp-=100*src.lvl;src.lvl++;src.max*=1.08;src.hp+=src.max*.08;src.atk*=1.07;} }
+  if(src&&src.k==='hero'&&src.team!==t.team){ src.xp+=t.k==='monster'?90:t.k==='hero'?120:t.k==='tower'?200:30; while(src.xp>=100*src.lvl&&src.lvl<10){src.xp-=100*src.lvl;src.lvl++;src.max*=1.08;src.hp+=src.max*.08;src.atk*=1.07;} }
   if(t.k==='minion') G.ents.splice(G.ents.indexOf(t),1);
 }
 function attack(e,t){
   const dmg=e.atk||e.dmg; if(e.ranged||e.k==='tower') G.proj.push({x:e.x,y:e.y,t,dmg,src:e,spd:520,col:e.col});
   else dmgTo(t,dmg,e); }
 function useSkill(h,i,aim){
-  const s=h.sk[i]; if(h.acd[i]>0||h.stun>0||h.dead)return false; h.acd[i]=s.cd;
+  const s=h.sk[i]; if(h.acd[i]>0||h.stun>0||h.dead)return false; h.acd[i]=s.cd; if(h.isPlayer)sfx('skill');
   const dir=aim||h.dir, lvlm=1+h.lvl*.06;
   if(s.t==='dash'){ const hit=new Set(); for(let st=0;st<10;st++){h.x=Math.max(20,Math.min(WW-20,h.x+dir.x*22));h.y=Math.max(20,Math.min(WH-20,h.y+dir.y*22));
       for(const o of enemiesOf(h)) if(!hit.has(o)&&dist(h,o)<h.r+o.r+14){hit.add(o); if(s.dmg)dmgTo(o,s.dmg*lvlm,h); if(s.stun)o.stun=s.stun;} } }
   else if(s.t==='aoe'){ G.fx.push({x:h.x,y:h.y,ring:s.r,life:.4,col:h.col}); for(const o of enemiesOf(h)) if(dist(h,o)<s.r+o.r){dmgTo(o,s.dmg*lvlm,h); if(s.stun)o.stun=s.stun;} }
   else if(s.t==='shot'){ G.proj.push({x:h.x,y:h.y,vx:dir.x*700,vy:dir.y*700,dmg:s.dmg*lvlm,src:h,life:.9,pierce:true,w:s.w||18,col:h.col,hit:new Set()}); }
+  else if(s.t==='heal'){ G.fx.push({x:h.x,y:h.y,ring:s.r,life:.5,col:'#9f9'}); for(const o of G.ents) if(o.k==='hero'&&o.team===h.team&&!o.dead&&dist(h,o)<s.r){o.hp=Math.min(o.max,o.hp+s.amt*lvlm);}
+    if(s.dmg) for(const o of enemiesOf(h)) if(dist(h,o)<s.r+o.r)dmgTo(o,s.dmg*lvlm,h); }
   else if(s.t==='shield'){ h.shield=s.amt*lvlm; G.fx.push({x:h.x,y:h.y,ring:50,life:.6,col:'#9cf'}); }
   return true;
 }
@@ -276,6 +300,7 @@ function aimAt(h){ const t=pickTarget(h,h.rng+260); if(t){const d=Math.hypot(t.x
 function moveToward(e,tx,ty,dt,sp){ const dx=tx-e.x,dy=ty-e.y,d=Math.hypot(dx,dy); if(d<4)return; e.x+=dx/d*sp*dt; e.y+=dy/d*sp*dt; e.dir={x:dx/d,y:dy/d}; }
 function update(dt){
   G.t+=dt; G.wave-=dt; if(G.wave<=0){spawnWave();G.wave=14;}
+  for(const c of G.camps) if(!c.m&&(c.respawn-=dt)<=0) spawnMonster(c);
   for(const e of G.ents.slice()){
     if(e.hp<=0&&e.k!=='hero')continue;
     if(e.cd>0)e.cd-=dt; if(e.stun>0){e.stun-=dt;continue;}
@@ -295,6 +320,10 @@ function update(dt){
           if(e.cd<=0){attack(e,t);e.cd=.8;} for(let i=2;i>=0;i--) if(e.acd[i]<=0&&Math.random()<dt*.8&&(e.sk[i].t!=='dash')&&dist(e,t)<(e.sk[i].r||350)){useSkill(e,i,aimAt(e));break;} }
         else { const p=wps(e)[Math.min(e.wp,2)]; if(dist(e,p)<30)e.wp=Math.min(2,e.wp+1); moveToward(e,p.x,p.y,dt,e.spd); }
       }
+    } else if(e.k==='monster'){
+      let t=null,bd=1e9; for(const o of G.ents) if(o.team!==2&&(o.k==='hero'||o.k==='minion')&&!o.dead&&o.hp>0){const d=dist(o,e); if(d<150&&d<bd){bd=d;t=o;}}
+      if(t&&dist(e,{x:e.hx,y:e.hy})<320){ if(dist(e,t)>e.rng)moveToward(e,t.x,t.y,dt,e.spd); else if(e.cd<=0){dmgTo(t,e.atk,e);e.cd=1;} }
+      else { moveToward(e,e.hx,e.hy,dt,e.spd); e.hp=Math.min(e.max,e.hp+30*dt); }
     } else if(e.k==='minion'){
       const t=pickTarget(e,e.rng);
       if(t){ if(e.cd<=0){attack(e,t);e.cd=1;} }
@@ -317,11 +346,11 @@ function update(dt){
   if(G.t>300&&!G.over){ const a=G.ents.find(e=>e.k==='nexus'&&e.team===0),b=G.ents.find(e=>e.k==='nexus'&&e.team===1); endMatch(b.hp<a.hp); }
 }
 function endMatch(win){
-  if(G.over)return; G.over=true; S.played++; if(win)S.wins++;
+  if(G.over)return; G.over=true; S.played++; if(win)S.wins++; const dT=win?25:(S.tro>=15?-15:-(S.tro||0)); S.tro=(S.tro||0)+dT; sfx(win?'win':'lose');
   const coins=(win?600:250)+G.p.kills*30, gems=win?10:3, xp=win?60:35;
   const pend={coins,gems,xp}; G.pend=pend;
   setTimeout(()=>{ $('hud').style.display='none'; cv.style.display='none';
-    modal(`<h1>${win?'VICTORY':'DEFEAT'}</h1><p>K/D ${G.p.kills}/${G.p.deaths}</p><p>🪙 ${coins} · 💎 ${gems} · 🎖 ${xp} pass XP</p>
+    modal(`<h1>${win?'VICTORY':'DEFEAT'}</h1><p>K/D ${G.p.kills}/${G.p.deaths}</p><p>🪙 ${coins} · 💎 ${gems} · 🎖 ${xp} pass XP</p><p>🏆 ${dT>0?'+':''}${dT} → ${S.tro} (${rankOf(S.tro)})</p>
     <div class="row" style="justify-content:center"><button class="btn ad ${adsLeft()<=0?'dis':''}" id="dbl">📺 Watch ad: 2× rewards</button><button class="btn" id="cl">Continue</button></div>`);
     const fin=m=>{S.coins+=coins*m;S.gems+=gems*m;addPassXp(xp*m);save();closeModal();show('home');};
     $('dbl').onclick=()=>watchAd('Double rewards',()=>fin(2)); $('cl').onclick=()=>fin(1); },900);
@@ -348,7 +377,7 @@ function draw_(){
   cx.font='bold 14px sans-serif';
   for(const f of G.fx){ if(f.ring){cx.strokeStyle=f.col;cx.lineWidth=4;cx.globalAlpha=f.life*2;cx.beginPath();cx.arc(f.x,f.y,f.ring*(1-f.life),0,7);cx.stroke();cx.globalAlpha=1;} else {cx.fillStyle=f.col;cx.fillText(f.txt,f.x,f.y-(.6-f.life)*40);} }
   // minimap
-  mx.clearRect(0,0,300,124); const k=300/WW; for(const e of G.ents){ if(e.dead)continue; mx.fillStyle=e.isPlayer?'#fff':e.team?'#ff5470':'#47a8ff'; const s=e.k==='nexus'?7:e.k==='tower'?5:e.k==='hero'?5:2; mx.fillRect(e.x*k-s/2,e.y*k-s/2,s,s); }
+  mx.clearRect(0,0,300,124); const k=300/WW; for(const e of G.ents){ if(e.dead)continue; mx.fillStyle=e.isPlayer?'#fff':e.team===2?'#fc3':e.team?'#ff5470':'#47a8ff'; const s=e.k==='nexus'?7:e.k==='tower'?5:e.k==='hero'?5:2; mx.fillRect(e.x*k-s/2,e.y*k-s/2,s,s); }
 }
 function loop(now){ if(!G||G.over&&!G.ents)return; const dt=Math.min(.05,(now-last)/1000); last=now; if(!G.over)update(dt); draw_(); if(cv.style.display==='block')requestAnimationFrame(loop); }
 
@@ -363,6 +392,7 @@ addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; keys[e.key]=true;
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false; keys[e.key]=false;});
 
 render('home');
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
