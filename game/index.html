@@ -44,7 +44,7 @@ h2{margin:8px 0}
 #knob{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:#fff5}
 .sk{position:absolute;width:64px;height:64px;border-radius:50%;background:#2a3680;border:3px solid #9bf;color:#fff;font-weight:900;font-size:12px;pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
 .sk .cd{position:absolute;left:0;right:0;bottom:0;background:#000b}
-#sk0{right:20px;bottom:30px;width:84px;height:84px;background:#a2331c;border-color:#ff9}
+#sk0{right:20px;bottom:30px;width:84px;height:84px;background:#1c5ea2;border-color:#9cf;font-size:13px}
 #sk1{right:120px;bottom:30px}#sk2{right:100px;bottom:105px}#sk3{right:20px;bottom:125px}
 #mini{position:absolute;right:8px;top:max(8px,env(safe-area-inset-top));width:150px;height:62px;background:#000a;border-radius:8px}
 .modal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
@@ -59,7 +59,7 @@ h2{margin:8px 0}
 <div id="hud">
   <div class="pb" id="pb"></div><div class="t" id="clock">0:00</div><canvas id="mini" width="300" height="124"></canvas>
   <div id="stick"><div id="knob"></div></div>
-  <div class="sk" id="sk0">ATK</div><div class="sk" id="sk1"></div><div class="sk" id="sk2"></div><div class="sk" id="sk3"></div>
+  <div class="sk" id="sk0">🏠<br>Recall</div><div class="sk" id="pause" style="left:10px;top:64px;width:40px;height:40px;font-size:18px;border-radius:12px">⏸</div><div class="sk" id="sk1"></div><div class="sk" id="sk2"></div><div class="sk" id="sk3"></div>
 </div>
 
 <div class="screen on" id="s-home"></div>
@@ -67,6 +67,7 @@ h2{margin:8px 0}
 <div class="screen" id="s-shop"></div>
 <div class="screen" id="s-draw"></div>
 <div class="screen" id="s-pass"></div>
+<div class="screen" id="s-settings"></div>
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 <div class="toast" id="toast"></div>
 
@@ -116,10 +117,12 @@ function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
 const today=()=>new Date().toISOString().slice(0,10);
 if(S.adsDay!==today()){S.adsDay=today();S.adsUsed=0;}
 const AD_CAP=6;
+S.set=Object.assign({sound:true,limit:0,spent:0,month:'',minor:false,tut:false,age:false},S.set||{});
+if(S.set.month!==today().slice(0,7)){S.set.month=today().slice(0,7);S.set.spent=0;}
 
 /* ====================== SOUND (WebAudio, no assets) ====================== */
 let AC=null;
-function sfx(k){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;
+function sfx(k){ if(!S.set.sound)return; try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;
   const P={hit:[180,90,.06,'square'],skill:[420,820,.18,'sawtooth'],kill:[300,600,.25,'triangle'],win:[400,900,.6,'triangle'],lose:[300,100,.6,'sawtooth'],ui:[600,700,.05,'sine']}[k]||[300,300,.05,'sine'];
   o.type=P[3];o.frequency.setValueAtTime(P[0],t);o.frequency.exponentialRampToValueAtTime(P[1],t+P[2]);g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.001,t+P[2]);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+P[2]); }catch(e){} }
 document.addEventListener('pointerdown',e=>{ if(e.target.closest&&e.target.closest('.btn'))sfx('ui'); },true);
@@ -130,7 +133,7 @@ function modal(html){ $('mbox').innerHTML=html; $('modal').classList.add('on'); 
 function closeModal(){ $('modal').classList.remove('on'); }
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $('s-'+id).classList.add('on'); render(id); }
 function cur(){ return `<div class="top"><div class="cur g">🪙 ${S.coins.toLocaleString()}</div><div class="cur m">💎 ${S.gems.toLocaleString()}</div></div>`; }
-function nav(){ return `<div class="nav"><button class="btn" onclick="show('home')">⚔️ Battle</button><button class="btn" onclick="show('heroes')">🛡 Wardens</button><button class="btn" onclick="show('draw')">✨ Draw</button><button class="btn" onclick="show('pass')">🎖 Pass</button><button class="btn" onclick="show('shop')">🛒 Shop</button></div>`; }
+function nav(){ return `<div class="nav"><button class="btn" onclick="show('home')">⚔️ Battle</button><button class="btn" onclick="show('heroes')">🛡 Wardens</button><button class="btn" onclick="show('draw')">✨ Draw</button><button class="btn" onclick="show('pass')">🎖 Pass</button><button class="btn" onclick="show('shop')">🛒 Shop</button><button class="btn" onclick="show('settings')">⚙️</button></div>`; }
 function heroAv(id,skin){ const c=skin&&SKINS[skin]?SKINS[skin].col:HEROES[id].col; return `<div class="hero-av" style="background:radial-gradient(circle at 35% 30%,#fff8,${c})"></div>`; }
 
 /* Rewarded ad (placeholder: swap body for AdMob / AppLovin / Unity Ads SDK call). Daily cap keeps it fair. */
@@ -143,8 +146,11 @@ function watchAd(label,onReward){
 /* In-app purchase stub (replace with StoreKit 2 / Google Play Billing; verify receipts server-side). */
 function buy(id){
   const p=SHOP.find(x=>x.id===id); if(p.once&&S.bought[id]){toast('Already owned');return;}
+  const price=parseFloat(p.price.slice(1));
+  if(S.set.minor){toast('Purchases are disabled for players under 18');return;}
+  if(S.set.limit>0&&S.set.spent+price>S.set.limit){toast(`Monthly spending limit ($${S.set.limit}) reached — change it in Settings`);return;}
   if(!confirm(`[TEST MODE] Simulate purchase of ${p.n} for ${p.price}?`))return;
-  if(p.gems) S.gems+=p.gems;
+  S.set.spent+=price; if(p.gems) S.gems+=p.gems;
   if(id==='starter'){ if(!S.owned.includes('lyra'))S.owned.push('lyra'); S.gems+=600; if(!S.skins.includes('nova'))S.skins.push('nova'); }
   if(id==='pass') S.premium=true;
   if(p.once) S.bought[id]=1; save(); toast('Purchased: '+p.n); render('shop');
@@ -153,7 +159,7 @@ function buy(id){
 /* ====================== SCREENS ====================== */
 function render(id){
   if(id==='home') renderHome(); if(id==='heroes') renderHeroes(); if(id==='shop') renderShop();
-  if(id==='draw') renderDraw(); if(id==='pass') renderPass();
+  if(id==='settings') renderSettings(); if(id==='draw') renderDraw(); if(id==='pass') renderPass();
 }
 function renderHome(){
   const h=HEROES[S.sel], canDaily=S.daily!==today();
@@ -169,6 +175,18 @@ function renderHome(){
 }
 const RANKS=[['Bronze',0],['Silver',100],['Gold',250],['Platinum',450],['Diamond',700],['Master',1000],['Grandmaster',1400]];
 function rankOf(t){ let r=RANKS[0]; for(const x of RANKS) if(t>=x[1])r=x; return r[0]; }
+function renderSettings(){
+  const m=S.set;
+  $('s-settings').innerHTML=cur()+`<h2>⚙️ Settings</h2>
+  <div class="card" style="margin-bottom:10px"><div class="row"><b>Sound</b><button class="btn sm" onclick="S.set.sound=!S.set.sound;save();renderSettings()">${m.sound?'On':'Off'}</button></div></div>
+  <div class="card" style="margin-bottom:10px"><b>Monthly spending limit</b><div class="sub">Spent this month: $${m.spent.toFixed(2)}${m.minor?' · purchases disabled (under 18)':''}</div>
+  <div class="row" style="margin-top:8px">${[0,10,25,50,100].map(v=>`<button class="btn sm ${m.limit===v?'pri':''}" style="${m.limit===v?'font-size:13px;padding:8px 12px':''}" onclick="S.set.limit=${v};save();renderSettings()">${v?'$'+v:'No limit'}</button>`).join('')}</div></div>
+  <div class="card" style="margin-bottom:10px"><div class="row"><button class="btn sm" onclick="toast('Purchases restored')">Restore purchases</button><button class="btn sm" onclick="show('home');tutorial()">How to play</button>
+  <button class="btn sm" onclick="if(confirm('Erase all progress?')){localStorage.removeItem(KEY);location.reload()}">Reset progress</button></div></div>
+  <div class="sub">Test build: purchases and ads are simulated. Draw odds are shown on the Draw screen. Skins are cosmetic only.</div>`+nav();
+}
+function tutorial(){ modal(`<h2>How to play</h2><p style="text-align:left;font-size:14px">🕹 <b>Move</b> with the left stick (WASD on keyboard).<br>⚔️ You <b>auto-attack</b> nearby enemies.<br>✨ Use your 3 <b>skills</b> (J / K / L). The last is your ultimate.<br>🏠 <b>Recall</b> (B) heals you at base after 3 seconds if you don't move.<br>🗼 Destroy enemy towers, then the <b>nexus</b>. Kill monsters in the jungle for healing and XP.<br>⏱ At 5:00 the side with the healthier nexus wins.</p><button class="btn" onclick="closeModal()">Got it</button>`); S.set.tut=true; save(); }
+function ageGate(){ modal(`<h2>Welcome, Warden</h2><p class="sub">Are you 18 or older? Players under 18 get spending turned off.</p><div class="row" style="justify-content:center"><button class="btn" onclick="S.set.age=true;S.set.minor=false;save();closeModal();tutorial()">I'm 18+</button><button class="btn" onclick="S.set.age=true;S.set.minor=true;save();closeModal();tutorial()">Under 18</button></div>`); }
 function claimDaily(){ S.streak++; const d=S.streak%7; const g=d===0?100:20, c=d===0?0:400; S.gems+=g; S.coins+=c+500; S.daily=today(); save(); toast(`Daily: +${c+500}🪙 +${g}💎`); renderHome(); }
 function renderHeroes(){
   let h=cur()+'<h2>Wardens</h2><div class="grid">';
@@ -194,7 +212,7 @@ function renderDraw(){
   let odds='<table class="odds">'+ODDS.map(o=>`<tr><td class="rar-${o[1]}">${o[0]}</td><td>${o[2]}%</td></tr>`).join('')+'</table>';
   $('s-draw').innerHTML=cur()+`<h2>✨ Aether Draw</h2><div class="sub">Skins are cosmetic only — no gameplay power.</div>
   <div class="card" style="margin:12px 0;text-align:center">${odds}
-  <div class="sub" style="margin:8px">Pity: guaranteed Epic+ within 10 draws (${10-S.pity} to go) · guaranteed Legendary within 50 (${50-S.pity2} to go)<br>Duplicates convert to coins.</div>
+  <div class="sub" style="margin:8px">Pity: guaranteed Epic+ within 10 draws (${10-S.pity} to go) · guaranteed Legendary within 50 (${50-S.pity2} to go)<br>Duplicates convert to coins.<br>Rates above are base rates. With pity included, long-run average rates are about 3.1% Legendary and 12.9% Epic.</div>
   <div class="row" style="justify-content:center"><button class="btn" onclick="draw(1)">💎 100 · x1</button><button class="btn" onclick="draw(10)">💎 900 · x10</button>
   <button class="btn ad sm ${adsLeft()<=0?'dis':''}" onclick="watchAd('Free draw',()=>draw(1,true))">📺 Free draw</button></div></div>`+nav();
 }
@@ -239,8 +257,8 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 function resize(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;scale=Math.max(.6,Math.min(1.1,innerHeight/620))*devicePixelRatio;}
 addEventListener('resize',resize);
 
-function mkHero(id,team,isPlayer,lane,skin){
-  const d=HEROES[id]; return {k:'hero',id,team,isPlayer,lane,x:team?250:WW-250,y:BASEY+(lane?60:-60),hp:d.hp,max:d.hp,atk:d.atk,rng:d.rng,spd:d.spd,
+function mkHero(id,team,isPlayer,lane,skin){ const sc=(!isPlayer&&team===1)?1+Math.min(.35,(S.tro||0)/1500):1;
+  const d=HEROES[id]; return {k:'hero',id,team,isPlayer,lane,x:team?250:WW-250,y:BASEY+(lane?60:-60),hp:d.hp*sc,max:d.hp*sc,atk:d.atk*sc,rng:d.rng,spd:d.spd,
     ranged:d.ranged,r:20,col:skin&&SKINS[skin]?SKINS[skin].col:d.col,cd:0,acd:[0,0,0],lvl:1,xp:0,stun:0,shield:0,dead:0,kills:0,deaths:0,wp:0,dir:{x:1,y:0},def:d,sk:d.sk};
 }
 function startMatch(){
@@ -299,6 +317,7 @@ function aimAt(h){ const t=pickTarget(h,h.rng+260); if(t){const d=Math.hypot(t.x
 
 function moveToward(e,tx,ty,dt,sp){ const dx=tx-e.x,dy=ty-e.y,d=Math.hypot(dx,dy); if(d<4)return; e.x+=dx/d*sp*dt; e.y+=dy/d*sp*dt; e.dir={x:dx/d,y:dy/d}; }
 function update(dt){
+  if(G.paused)return;
   G.t+=dt; G.wave-=dt; if(G.wave<=0){spawnWave();G.wave=14;}
   for(const c of G.camps) if(!c.m&&(c.respawn-=dt)<=0) spawnMonster(c);
   for(const e of G.ents.slice()){
@@ -339,12 +358,16 @@ function update(dt){
       if(p.life<=0)G.proj.splice(G.proj.indexOf(p),1); } }
   for(const f of G.fx)f.life-=dt; G.fx=G.fx.filter(f=>f.life>0);
   G.ents=G.ents.filter(e=>e.k==='hero'||e.hp>0||e.k==='nexus');
+  if(G.recall>0){ if(Math.hypot(joy.x,joy.y)>.2||keys.w||keys.a||keys.s||keys.d||G.p.dead){G.recall=0;toast('Recall cancelled');} else { G.recall-=dt; if(G.recall<=0){G.recall=0;G.p.x=250;G.p.y=BASEY;G.p.hp=G.p.max;G.fx.push({x:G.p.x,y:G.p.y,ring:80,life:.6,col:'#9cf'});} } }
   // skill button cooldown UI
   for(let i=0;i<3;i++){const c=document.querySelector('#sk'+(i+1)+' .cd'); if(c)c.style.height=Math.max(0,G.p.acd[i]/G.p.sk[i].cd*100)+'%';}
   const m=Math.floor(G.t/60),s=Math.floor(G.t%60); $('clock').textContent=`${m}:${String(s).padStart(2,'0')}`;
-  $('pb').innerHTML=`Lv ${G.p.lvl} · K/D ${G.p.kills}/${G.p.deaths}<br>Team ${G.kills[0]} – ${G.kills[1]}${G.p.dead?` · respawn ${Math.ceil(G.p.dead)}s`:''}`;
+  $('pb').innerHTML=`${G.recall>0?'Recalling '+G.recall.toFixed(1)+'s<br>':''}Lv ${G.p.lvl} · K/D ${G.p.kills}/${G.p.deaths}<br>Team ${G.kills[0]} – ${G.kills[1]}${G.p.dead?` · respawn ${Math.ceil(G.p.dead)}s`:''}`;
   if(G.t>300&&!G.over){ const a=G.ents.find(e=>e.k==='nexus'&&e.team===0),b=G.ents.find(e=>e.k==='nexus'&&e.team===1); endMatch(b.hp<a.hp); }
 }
+function pauseMatch(){ if(!G||G.over)return; G.paused=true; modal(`<h2>Paused</h2><div class="row" style="justify-content:center"><button class="btn" onclick="closeModal();G.paused=false">Resume</button><button class="btn" onclick="quitMatch()">Quit match</button></div>`); }
+function quitMatch(){ G.over=true; cv.style.display='none'; $('hud').style.display='none'; closeModal(); show('home'); }
+function startRecall(){ if(G&&!G.over&&!G.p.dead&&!G.paused){G.recall=3;toast('Recalling… stay still');} }
 function endMatch(win){
   if(G.over)return; G.over=true; S.played++; if(win)S.wins++; const dT=win?25:(S.tro>=15?-15:-(S.tro||0)); S.tro=(S.tro||0)+dT; sfx(win?'win':'lose');
   const coins=(win?600:250)+G.p.kills*30, gems=win?10:3, xp=win?60:35;
@@ -388,10 +411,13 @@ stick.addEventListener('pointerdown',e=>{sid=e.pointerId;stick.setPointerCapture
 stick.addEventListener('pointermove',e=>{if(e.pointerId===sid)stickMove(e);});
 const rel=e=>{if(e.pointerId===sid){sid=null;joy={x:0,y:0};knob.style.transform='';}}; stick.addEventListener('pointerup',rel); stick.addEventListener('pointercancel',rel);
 ['sk1','sk2','sk3'].forEach((id,i)=>$(id).addEventListener('pointerdown',e=>{if(G&&!G.over)useSkill(G.p,i,aimAt(G.p));e.preventDefault();}));
-addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; keys[e.key]=true; if(G&&!G.over){ if(e.key==='j')useSkill(G.p,0,aimAt(G.p)); if(e.key==='k')useSkill(G.p,1,aimAt(G.p)); if(e.key==='l')useSkill(G.p,2,aimAt(G.p)); }});
+$('sk0').addEventListener('pointerdown',e=>{startRecall();e.preventDefault();});
+$('pause').addEventListener('pointerdown',e=>{pauseMatch();e.preventDefault();});
+addEventListener('keydown',e=>{if(e.key==='b')startRecall(); if(e.key==='Escape')pauseMatch(); keys[e.key.toLowerCase()]=true; keys[e.key]=true; if(G&&!G.over){ if(e.key==='j')useSkill(G.p,0,aimAt(G.p)); if(e.key==='k')useSkill(G.p,1,aimAt(G.p)); if(e.key==='l')useSkill(G.p,2,aimAt(G.p)); }});
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false; keys[e.key]=false;});
 
 render('home');
+if(!S.set.age)ageGate(); else if(!S.set.tut)tutorial();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
