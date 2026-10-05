@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import type { OutingKind } from '@/domain/format';
 import { formatDuration } from '@/domain/format';
 import { formatDistance } from '@/domain/units';
-import { useOuting } from '@/providers/OutingProvider';
+import { useOuting, type StartResult } from '@/providers/OutingProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
@@ -50,7 +50,7 @@ export function OutingPanel() {
 
   if (outing.active) {
     return (
-      <View style={box} accessibilityLiveRegion="polite">
+      <View style={box}>
         <AppText variant="heading">{outing.active.name}</AppText>
         <AppText tone="textMuted">
           {formatDuration(outing.elapsedS)} {'·'} {formatDistance(outing.distanceM, units.distance)}
@@ -75,7 +75,7 @@ export function OutingPanel() {
   );
 }
 
-function explain(reason: 'denied' | 'blocked' | 'error') {
+function explain(reason: Exclude<StartResult, { ok: true }>['reason']) {
   if (reason === 'blocked') {
     Alert.alert('Location is turned off', 'Turn on location for Trail Notes in Settings to record a route.', [
       { text: 'Not now', style: 'cancel' },
@@ -83,6 +83,17 @@ function explain(reason: 'denied' | 'blocked' | 'error') {
     ]);
   } else if (reason === 'denied') {
     Alert.alert('Location needed', 'Trail Notes needs your location to record a route. You can still write and record notes without it.');
+  } else if (reason === 'services-off') {
+    Alert.alert('Location Services are off', 'Turn on Location Services in your phone’s settings to record a route.');
+  } else if (reason === 'approximate') {
+    Alert.alert(
+      'Precise location is off',
+      'With approximate location, Trail Notes cannot measure your route. Turn on Precise Location for Trail Notes in Settings.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ],
+    );
   } else {
     Alert.alert('Could not start', 'Something went wrong starting the outing. Please try again.');
   }

@@ -14,6 +14,17 @@ describe('describePlace', () => {
     expect(describePlace([{ ...base, name: 'Baseline Rd', street: 'Baseline Rd', city: 'Boulder', region: 'CO' }])).toBe('Boulder, CO');
   });
 
+  it('treats a house number after the street as an address', () => {
+    expect(describePlace([{ ...base, name: 'Hauptstraße 5', street: 'Hauptstraße', streetNumber: '5', city: 'Berlin' }])).toBe('Berlin');
+  });
+
+  it('keeps names that start with a number', () => {
+    expect(describePlace([{ ...base, name: '4th of July Trailhead', city: 'Nederland', region: 'CO' }])).toBe(
+      '4th of July Trailhead, Nederland',
+    );
+    expect(describePlace([{ ...base, name: '14er Basecamp', city: 'Leadville' }])).toBe('14er Basecamp, Leadville');
+  });
+
   it('falls back to district, city, then region', () => {
     expect(describePlace([{ ...base, district: 'Table Mesa', city: 'Boulder', region: 'CO' }])).toBe('Table Mesa, Boulder');
     expect(describePlace([{ ...base, subregion: 'Boulder County', region: 'CO' }])).toBe('Boulder County, CO');

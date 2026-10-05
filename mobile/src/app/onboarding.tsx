@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,8 +20,12 @@ export default function Onboarding() {
   const { update } = useSettings();
 
   async function start() {
-    await update('onboarded', true);
-    router.replace('/');
+    try {
+      await update('onboarded', true);
+      router.replace('/');
+    } catch {
+      Alert.alert('Could not continue', 'Something went wrong saving your choice. Please try again.');
+    }
   }
 
   return (

@@ -1,9 +1,9 @@
 import { defaultOutingName, type OutingKind } from '@/domain/format';
-import { MOOD_LABELS, isMoodId, type MoodId } from '@/domain/moods';
+import { isMoodId, type MoodId } from '@/domain/moods';
 import { buildFtsQuery, escapeLike, searchTerms } from '@/domain/search';
 import type { TrackPoint } from '@/domain/track';
-import { weatherSearchTerms } from '@/domain/weather';
 import { hasFullTextSearch } from './migrations';
+import { indexEntry } from './searchIndex';
 import { serialized, transaction } from './queue';
 import type { Database, Entry, MoodSource, NewEntry, Outing, OutingWithTrack, SqlValue } from './types';
 
@@ -83,19 +83,7 @@ const OUTING_COLUMNS = `o.id, o.kind, o.name, o.started_at, o.ended_at, o.distan
 // ---------------------------------------------------------------------------
 
 async function rebuildSearch(db: Database, entryId: number): Promise<void> {
-  if (!hasFullTextSearch(db)) return;
-  const row = await db.getFirstAsync<EntryRow & { outing_name: string | null }>(
-    `SELECT e.*, o.name AS outing_name FROM entries e
-     LEFT JOIN outings o ON o.id = e.outing_id WHERE e.id = ?`,
-    entryId,
-  );
-  await db.runAsync('DELETE FROM entries_fts WHERE rowid = ?', entryId);
-  if (!row) return;
-  const mood = isMoodId(row.mood) ? MOOD_LABELS[row.mood] : '';
-  const body = [row.transcript, row.place, weatherSearchTerms(row.weather_code), mood, row.outing_name]
-    .filter(Boolean)
-    .join(' ');
-  await db.runAsync('INSERT INTO entries_fts (rowid, body) VALUES (?, ?)', entryId, body);
+  if (hasFullTextSearch(db)) await indexEntry(db, entryId);
 }
 
 // ---------------------------------------------------------------------------
@@ -149,16 +137,19 @@ export async function listEntries(db: Database, filter: EntryFilter = {}): Promi
 
   const query = filter.query?.trim() ?? '';
   if (query) {
+    const terms = searchTerms(query);
+    // A search for only punctuation or emoji has no words to match: it finds nothing,
+    // rather than every note.
+    if (terms.length === 0) return [];
     if (hasFullTextSearch(db)) {
-      const match = buildFtsQuery(query);
-      if (match) {
-        from = 'entries e JOIN entries_fts ON entries_fts.rowid = e.id';
-        where.push('entries_fts MATCH ?');
-        params.push(match);
-      }
+      from = 'entries e JOIN entries_fts ON entries_fts.rowid = e.id';
+      where.push('entries_fts MATCH ?');
+      params.push(buildFtsQuery(query) ?? '');
     } else {
-      for (const term of searchTerms(query)) {
-        where.push("(lower(e.transcript) LIKE ? ESCAPE '\\' OR lower(coalesce(e.place, '')) LIKE ? ESCAPE '\\')");
+      // LIKE already ignores case for A to Z. Lowercasing the term here would stop a
+      // word with a capital such as "Österreich" from matching itself.
+      for (const term of terms) {
+        where.push("(e.transcript LIKE ? ESCAPE '\\' OR coalesce(e.place, '') LIKE ? ESCAPE '\\')");
         const pattern = `%${escapeLike(term)}%`;
         params.push(pattern, pattern);
       }
@@ -289,6 +280,16 @@ export async function getActiveOuting(db: Database): Promise<OutingWithTrack | n
      WHERE o.ended_at IS NULL ORDER BY o.started_at DESC LIMIT 1`,
   );
   return row ? { ...toOuting(row), track: parseTrack(row.track) } : null;
+}
+
+// When the last note of an outing was made, so an outing left open can end at its
+// last sign of activity even when no route points were saved.
+export async function latestEntryTime(db: Database, outingId: number): Promise<number | null> {
+  const row = await db.getFirstAsync<{ latest: number | null }>(
+    'SELECT MAX(created_at) AS latest FROM entries WHERE outing_id = ?',
+    outingId,
+  );
+  return row?.latest ?? null;
 }
 
 export async function listOutings(db: Database, limit = 50): Promise<Outing[]> {

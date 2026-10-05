@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useOuting } from '@/providers/OutingProvider';
 import { useDatabase } from '@/providers/useDatabase';
 import { enrichers } from '@/services/enrichers';
@@ -18,12 +18,25 @@ export default function WriteScreen() {
   const palette = usePalette();
   const db = useDatabase();
   const outing = useOuting();
-  const [text, setText] = useState('');
+  // A voice note that could not be saved arrives here as text, so it is not lost.
+  const params = useLocalSearchParams<{ text?: string }>();
+  const [text, setText] = useState(() => (typeof params.text === 'string' ? params.text : ''));
   const [saving, setSaving] = useState(false);
+  const busy = useRef(false);
+  // Saving can wait a few seconds for GPS. If the person has left by then, the note is
+  // still saved but the app must not close whatever screen they moved on to.
+  const left = useRef(false);
+  useEffect(
+    () => () => {
+      left.current = true;
+    },
+    [],
+  );
 
   async function save() {
     const transcript = text.trim();
-    if (!transcript || saving) return;
+    if (!transcript || busy.current) return;
+    busy.current = true;
     setSaving(true);
     try {
       await promptForLocationOnce().catch(() => undefined);
@@ -36,8 +49,9 @@ export default function WriteScreen() {
       });
       enrichEntry(db, entry.id, enrichers).catch(() => undefined);
       success();
-      goBack(router);
+      if (!left.current) goBack(router);
     } catch {
+      busy.current = false;
       setSaving(false);
       Alert.alert('Could not save', 'Your note could not be saved. Your text is still here, so try again.');
     }

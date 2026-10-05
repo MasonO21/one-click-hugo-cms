@@ -25,9 +25,15 @@ export default function SettingsScreen() {
   const version = Constants.expoConfig?.version ?? '1.0.0';
 
   async function exportData(kind: ExportKind) {
+    if (exporting) return;
     setExporting(kind);
     try {
-      const result = await shareExport(kind, await loadEverything(db), units);
+      const data = await loadEverything(db);
+      if (data.entries.length === 0 && data.outings.length === 0) {
+        Alert.alert('Nothing to export yet', 'Record or write a note first.');
+        return;
+      }
+      const result = await shareExport(kind, data, units);
       if (result === 'unavailable') Alert.alert('Sharing is not available', 'This phone cannot share files from Trail Notes.');
     } catch {
       Alert.alert('Could not export', 'Something went wrong creating the file. Please try again.');
@@ -107,8 +113,8 @@ export default function SettingsScreen() {
 
         <Section title="Your data">
           <AppText tone="textMuted">Your notes are stored only on this phone. Export a copy to keep or move them.</AppText>
-          <Button label="Export as text" icon="document-text-outline" variant="secondary" loading={exporting === 'markdown'} onPress={() => exportData('markdown')} />
-          <Button label="Export everything (JSON)" icon="share-outline" variant="secondary" loading={exporting === 'json'} onPress={() => exportData('json')} />
+          <Button label="Export as text" icon="document-text-outline" variant="secondary" loading={exporting === 'markdown'} disabled={exporting === 'json'} onPress={() => exportData('markdown')} />
+          <Button label="Export everything (JSON)" icon="share-outline" variant="secondary" loading={exporting === 'json'} disabled={exporting === 'markdown'} onPress={() => exportData('json')} />
           <Button label="Delete all notes" variant="danger" onPress={confirmDeleteAll} />
         </Section>
 

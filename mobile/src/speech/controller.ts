@@ -78,7 +78,10 @@ export function describeSpeechError(code: string, onDevice: boolean): string {
     case 'not-allowed':
       return 'Trail Notes needs microphone access to hear you. You can turn it on in Settings.';
     case 'service-not-allowed':
-      return 'Speech recognition is turned off on this phone. Turn it on in Settings, then try again.';
+      // iPhones also use this code when on-device speech is not downloaded for the language.
+      return onDevice
+        ? 'On-device speech recognition is not ready for your language. You can allow online recognition, or try again later.'
+        : 'Speech recognition is turned off on this phone. Turn it on in Settings, then try again.';
     case 'language-not-supported':
       return onDevice
         ? 'This language is not available for on-device speech recognition. You can allow online recognition in Settings.'
@@ -179,8 +182,14 @@ export class SpeechController {
     if (this.state !== 'listening') return;
     this.reason = reason;
     this.setState('stopping');
+    const betweenRestarts = this.restartTimer !== null;
     this.clearTimer('restartTimer');
     this.clearTimer('silenceTimer');
+    // Between restarts the recognizer is not running, so no end event will come.
+    if (betweenRestarts) {
+      this.finish(reason);
+      return;
+    }
     try {
       this.engine.stop();
     } catch {
@@ -193,7 +202,11 @@ export class SpeechController {
 
   private handleResult(event: SpeechEvents['result']): void {
     if (this.state === 'idle') return;
-    this.accumulator.add({ transcript: event.results[0]?.transcript ?? '', isFinal: event.isFinal });
+    const transcript = event.results[0]?.transcript ?? '';
+    this.accumulator.add({ transcript, isFinal: event.isFinal });
+    // The restart limit is for a recognizer that keeps ending without hearing anything,
+    // not for a long note on a phone that ends recognition after every phrase.
+    if (transcript.trim()) this.restarts = 0;
     this.handlers.onText?.(this.accumulator.liveText);
     if (this.state === 'listening') this.armSilenceTimer();
   }
@@ -211,6 +224,8 @@ export class SpeechController {
 
   private handleEnd(): void {
     if (this.state === 'idle') return;
+    // Some recognizers report the end twice. One restart is enough.
+    if (this.restartTimer !== null) return;
     this.accumulator.commitInterim();
 
     if (this.state === 'stopping' || this.reason === 'interrupted') {

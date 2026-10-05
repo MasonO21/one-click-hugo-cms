@@ -104,6 +104,31 @@ describe.each([
     expect((await listEntries(db, { query: '   ' })).length).toBe(1);
   });
 
+  it('finds words with capitals and accents as typed', async () => {
+    const db = await setup();
+    await createEntry(db, { transcript: 'Flew into İstanbul with Éric to see Österreich' });
+    expect(await listEntries(db, { query: 'İstanbul' })).toHaveLength(1);
+    expect(await listEntries(db, { query: 'E\u0301ric' })).toHaveLength(1);
+    expect(await listEntries(db, { query: 'Österreich' })).toHaveLength(1);
+  });
+
+  it('keeps Hindi and Thai words whole', async () => {
+    const db = await setup();
+    await createEntry(db, { transcript: 'हिन्दी' });
+    await createEntry(db, { transcript: 'हम नदी देखी' });
+    await createEntry(db, { transcript: 'ภาพ เขาใหญ่' });
+    expect((await listEntries(db, { query: 'हिन्दी' })).map((e) => e.transcript)).toEqual(['हिन्दी']);
+    expect(await listEntries(db, { query: 'ภูเขา' })).toEqual([]);
+  });
+
+  it('finds nothing for a search with no words in it', async () => {
+    const db = await setup();
+    await createEntry(db, { transcript: 'Saw a 🌲 tree' });
+    await createEntry(db, { transcript: 'Nothing here' });
+    expect(await listEntries(db, { query: '🌲' })).toEqual([]);
+    expect(await listEntries(db, { query: '?!' })).toEqual([]);
+  });
+
   it('filters by mood and outing', async () => {
     const db = await setup();
     const outing = await createOuting(db, { kind: 'hike', startedAt: 5 });
@@ -238,5 +263,50 @@ describe.each([
       }),
     ).rejects.toThrow('boom');
     expect(await countEntries(db)).toBe(0);
+  });
+});
+
+describe('search index upkeep', () => {
+  it('indexes notes that are missing from the index', async () => {
+    const db = createTestDatabase();
+    await migrate(db);
+    await createEntry(db, { transcript: 'old foggy note' });
+    await db.execAsync('DELETE FROM entries_fts');
+    expect(await listEntries(db, { query: 'foggy' })).toHaveLength(0);
+    await migrate(db);
+    expect(await listEntries(db, { query: 'foggy' })).toHaveLength(1);
+    db.close();
+  });
+
+  it('rebuilds an index made with the first tokenizer', async () => {
+    const db = createTestDatabase();
+    await migrate(db);
+    await db.execAsync("DROP TABLE entries_fts; CREATE VIRTUAL TABLE entries_fts USING fts5(body, tokenize = 'unicode61 remove_diacritics 2');");
+    await createEntry(db, { transcript: 'हिन्दी' });
+    await createEntry(db, { transcript: 'हम नदी देखी' });
+    await migrate(db);
+    const table = await db.getFirstAsync<{ sql: string }>("SELECT sql FROM sqlite_master WHERE name = 'entries_fts'");
+    expect(table?.sql).toContain('categories');
+    expect(await listEntries(db, { query: 'हिन्दी' })).toHaveLength(1);
+    db.close();
+  });
+
+  it('falls back to plain search when the index exists but cannot be used', async () => {
+    const real = createTestDatabase();
+    await migrate(real);
+    // A database restored onto a build without FTS5: the table exists, the module does not.
+    const broken = Object.create(real) as typeof real;
+    for (const method of ['execAsync', 'runAsync', 'getAllAsync', 'getFirstAsync'] as const) {
+      const original = real[method].bind(real) as (...args: unknown[]) => Promise<unknown>;
+      (broken as unknown as Record<string, unknown>)[method] = async (source: string, ...params: unknown[]) => {
+        if (source.includes('entries_fts') && !source.includes('sqlite_master')) throw new Error('no such module: fts5');
+        return original(source, ...params);
+      };
+    }
+    await migrate(broken);
+    expect(hasFullTextSearch(broken)).toBe(false);
+    await createEntry(broken, { transcript: 'Still saves.' });
+    expect(await listEntries(broken, { query: 'saves' })).toHaveLength(1);
+    real.close();
   });
 });

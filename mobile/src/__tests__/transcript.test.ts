@@ -9,6 +9,21 @@ describe('joinSegments', () => {
     expect(joinSegments(['  Wow!  ', 'great   view'])).toBe('Wow! Great view');
   });
 
+  it('does not add a full stop after a pause mid-sentence', () => {
+    expect(joinSegments(['so then,', 'we left'])).toBe('So then, we left');
+    expect(joinSegments(['the trail goes up:', 'steep'])).toBe('The trail goes up: steep');
+    expect(joinSegments(['she said “wow!”', 'ok'])).toBe('She said “wow!” Ok');
+  });
+
+  it('writes Chinese and Japanese without spaces or Latin full stops', () => {
+    expect(joinSegments(['今日は晴れです。', '山頂に着いた。'])).toBe('今日は晴れです。山頂に着いた。');
+    expect(joinSegments(['今日は晴れです', '山頂に着いた'])).toBe('今日は晴れです。山頂に着いた');
+  });
+
+  it('leaves words like iPhone alone', () => {
+    expect(joinSegments(['iPhone battery is low'])).toBe('iPhone battery is low');
+  });
+
   it('skips empty segments', () => {
     expect(joinSegments(['', '  ', 'hello'])).toBe('Hello');
     expect(joinSegments([])).toBe('');

@@ -16,6 +16,8 @@ import { EmptyState } from '@/ui/EmptyState';
 import { Screen } from '@/ui/Screen';
 import { SearchField } from '@/ui/SearchField';
 import { MIN_TOUCH, spacing, usePalette } from '@/ui/theme';
+import { useTapGuard } from '@/ui/useTapGuard';
+import { useToday } from '@/ui/useToday';
 
 const BAR_HEIGHT = 96;
 
@@ -27,13 +29,24 @@ export default function LogScreen() {
   const [query, setQuery] = useState('');
   const [mood, setMood] = useState<MoodId | null>(null);
   const { entries, moods, outings, total, loading, loadMore } = useEntries({ query, mood });
+  const today = useToday();
+  const guard = useTapGuard();
 
-  const sections = useMemo(() => groupByDay(entries), [entries]);
+  const sections = useMemo(() => groupByDay(entries, today), [entries, today]);
+
+  // Once every note is gone, a leftover search or mood filter would hide new notes.
+  if (total === 0 && (query !== '' || mood !== null)) {
+    setQuery('');
+    setMood(null);
+  }
 
   if (!settings.onboarded) return <Redirect href="/onboarding" />;
 
   const filtering = query.trim().length > 0 || mood !== null;
   const showEmpty = !loading && entries.length === 0;
+  // Keep the selected mood visible even after its last note changed mood, so it is clear
+  // what is filtering the list and how to clear it.
+  const moodChips = mood !== null && !moods.includes(mood) ? [...moods, mood] : moods;
 
   const header = (
     <View style={styles.header}>
@@ -41,10 +54,10 @@ export default function LogScreen() {
       {total !== null && total > 0 ? (
         <>
           <SearchField value={query} onChangeText={setQuery} placeholder="Search your notes" />
-          {moods.length > 0 ? (
+          {moodChips.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
               <Chip value="All" selected={mood === null} onPress={() => setMood(null)} accessibilityLabel="Show all moods" />
-              {moods.map((id) => (
+              {moodChips.map((id) => (
                 <Chip
                   key={id}
                   value={MOOD_LABELS[id]}
@@ -69,7 +82,7 @@ export default function LogScreen() {
               accessibilityRole="button"
               accessibilityLabel="Settings"
               hitSlop={12}
-              onPress={() => router.push('/settings')}
+              onPress={guard(() => router.push('/settings'))}
               style={styles.settingsButton}
             >
               <Ionicons name="settings-outline" size={24} color={palette.primary} />

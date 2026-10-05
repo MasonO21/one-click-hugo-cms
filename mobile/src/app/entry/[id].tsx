@@ -40,7 +40,7 @@ export default function EntryScreen() {
   if (!entry) {
     return (
       <Screen>
-        <EmptyState title="This note is gone" message="It may have been deleted." actionLabel="Back to your notes" onAction={() => router.replace('/')} />
+        <EmptyState title="This note is gone" message="It may have been deleted." actionLabel="Back to your notes" onAction={() => goBack(router)} />
       </Screen>
     );
   }
@@ -50,7 +50,8 @@ export default function EntryScreen() {
   const dirty = trimmed.length > 0 && trimmed !== entry.transcript;
   const hasLocation = entry.latitude !== null && entry.longitude !== null;
   const weather = weatherText(entry, units.temperature);
-  const missingTags = hasLocation && (!weather || !entry.place);
+  // An empty place means the map service had no name for the spot, so there is nothing to retry.
+  const missingTags = hasLocation && (!weather || entry.place === null);
 
   async function saveText() {
     if (!entry || !dirty) return;
@@ -130,12 +131,18 @@ export default function EntryScreen() {
                 onPress={() => router.push({ pathname: '/outing/[id]', params: { id: String(outing.id) } })}
               />
             ) : null}
-            {!entry.mood ? <AppText variant="small" tone="textMuted">No mood was picked up from this note.</AppText> : null}
+            {!entry.mood && entry.moodSource === 'auto' ? (
+              <AppText variant="small" tone="textMuted">No mood was picked up from this note.</AppText>
+            ) : null}
           </View>
 
           <View style={styles.section}>
             <AppText variant="small" tone="textMuted">
-              {entry.moodSource === 'user' ? 'You chose this mood.' : 'The mood is estimated from your words.'}
+              {entry.moodSource === 'user'
+                ? entry.mood
+                  ? 'You chose this mood.'
+                  : 'You chose no mood for this note.'
+                : 'The mood is estimated from your words.'}
             </AppText>
             {changingMood ? (
               <View style={styles.moods}>
@@ -143,6 +150,7 @@ export default function EntryScreen() {
                   <Chip key={mood} value={MOOD_LABELS[mood]} selected={entry.mood === mood} onPress={() => chooseMood(mood)} />
                 ))}
                 <Chip value="No mood" selected={entry.mood === null} onPress={() => chooseMood(null)} />
+                <Chip value="Cancel" onPress={() => setChangingMood(false)} accessibilityLabel="Keep the current mood" />
               </View>
             ) : (
               <Button label="Change mood" variant="secondary" onPress={() => setChangingMood(true)} />

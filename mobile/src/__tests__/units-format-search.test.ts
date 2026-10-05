@@ -72,15 +72,18 @@ describe('format', () => {
 });
 
 describe('search', () => {
-  it('splits input into lowercase words', () => {
-    expect(searchTerms('Foggy  Ridge!')).toEqual(['foggy', 'ridge']);
+  it('splits input into words, keeping case and accent marks for the index to fold', () => {
+    expect(searchTerms('Foggy  Ridge!')).toEqual(['Foggy', 'Ridge']);
     expect(searchTerms('café 3.5km')).toEqual(['café', '3', '5km']);
+    expect(searchTerms('E\u0301ric')).toEqual(['Éric']);
+    expect(searchTerms('İstanbul')).toEqual(['İstanbul']);
+    expect(searchTerms('हिन्दी ภูเขา')).toEqual(['हिन्दी', 'ภูเขา']);
     expect(searchTerms('   ')).toEqual([]);
   });
 
   it('builds a safe prefix query', () => {
     expect(buildFtsQuery('foggy rid')).toBe('"foggy"* "rid"*');
-    expect(buildFtsQuery('"; DROP TABLE entries; --')).toBe('"drop"* "table"* "entries"*');
+    expect(buildFtsQuery('"; DROP TABLE entries; --')).toBe('"DROP"* "TABLE"* "entries"*');
     expect(buildFtsQuery('***')).toBeNull();
   });
 

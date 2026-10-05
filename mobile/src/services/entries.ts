@@ -38,8 +38,10 @@ export interface Enrichers {
   weather: (latitude: number, longitude: number) => Promise<Weather>;
 }
 
+// 'none': the map service answered but has no name for the spot. The note is marked so
+// it is not looked up again (its place is stored as an empty string).
 export interface EnrichResult {
-  place: 'added' | 'skipped' | 'failed';
+  place: 'added' | 'none' | 'skipped' | 'failed';
   weather: 'added' | 'skipped' | 'failed';
 }
 
@@ -60,7 +62,8 @@ export async function enrichEntry(db: Database, entryId: number, enrichers: Enri
         result.place = 'added';
         notifyDataChanged();
       } else {
-        result.place = 'failed';
+        await updateEntryTags(db, entryId, { place: '' });
+        result.place = 'none';
       }
     } catch {
       result.place = 'failed';

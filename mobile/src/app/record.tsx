@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Alert, Animated, Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Alert, Animated, AppState, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { getLocales } from 'expo-localization';
 import { useRouter } from 'expo-router';
@@ -51,6 +51,10 @@ export default function RecordScreen() {
   const [unsaved, setUnsaved] = useState<Pending | null>(null);
   const fixPromise = useRef<Promise<Fix | null>>(Promise.resolve(null));
   const startedAt = useRef(0);
+  // Set when the person leaves the screen. Work still running (permission checks, a
+  // save waiting for GPS) must not start the microphone or navigate after that.
+  const leaving = useRef(false);
+  const saving = useRef(false);
   const [pulse] = useState(() => new Animated.Value(1));
   const [reduceMotion, setReduceMotion] = useState(false);
   const activeOutingId = outing.active?.id ?? null;
@@ -60,6 +64,8 @@ export default function RecordScreen() {
 
   const save = useCallback(
     async (note: Pending, speechFailure: SpeechFailure | null) => {
+      if (saving.current) return;
+      saving.current = true;
       setPhase('saving');
       try {
         const entry = await saveNewEntry(db, {
@@ -71,12 +77,16 @@ export default function RecordScreen() {
         setUnsaved(null);
         enrichEntry(db, entry.id, enrichers).catch(() => undefined);
         success();
-        goBack(router);
-        if (speechFailure) Alert.alert('Saved what we heard', speechFailure.message);
+        if (!leaving.current) {
+          goBack(router);
+          if (speechFailure) Alert.alert('Saved what we heard', speechFailure.message);
+        }
       } catch {
         setUnsaved(note);
         setFailure({ code: 'save', message: 'Your note could not be saved. Try saving it again.' });
         setPhase('failed');
+      } finally {
+        saving.current = false;
       }
     },
     [db, activeOutingId, router],
@@ -87,10 +97,20 @@ export default function RecordScreen() {
       if (result.reason === 'cancelled') return;
       const text = result.text.trim();
       if (!text) {
+        if (!result.failure && result.reason === 'interrupted') {
+          setFailure({
+            code: 'interrupted',
+            message: 'Recording stopped because something else needed the microphone, such as a call. Try again when you are ready.',
+          });
+          setPhase('failed');
+          return;
+        }
         setFailure(result.failure);
         setPhase(result.failure ? 'failed' : 'nothing-heard');
         return;
       }
+      // Show that the note is being saved while the location (if still coming) arrives.
+      setPhase('saving');
       const fix = outing.latestFix() ?? (await fixPromise.current);
       await save({ text, durationS: result.durationMs / 1000, fix }, result.failure);
     },
@@ -105,15 +125,21 @@ export default function RecordScreen() {
     setFailure(null);
     // Ask for location before listening: the system prompt would interrupt the microphone.
     await promptForLocationOnce().catch(() => undefined);
-    fixPromise.current = outing.latestFix() ? Promise.resolve(null) : getCurrentFix();
+    if (leaving.current) return;
+    // Keep the outing's latest position now: if the person stands still while talking,
+    // no newer one may arrive before the note is saved.
+    const recent = outing.latestFix();
+    fixPromise.current = recent ? Promise.resolve(recent) : getCurrentFix();
     startedAt.current = Date.now();
     setElapsed(0);
-    beginListening();
+    // Before starting: if the recognizer fails to start, its error must win.
     setPhase('listening');
+    beginListening();
   }, [outing, beginListening]);
 
   const checkPermission = useCallback(async () => {
     const permission = await getSpeechPermission();
+    if (leaving.current) return;
     if (permission === 'granted') await begin();
     else setPhase(permission === 'blocked' ? 'blocked' : 'needs-permission');
   }, [begin]);
@@ -140,14 +166,28 @@ export default function RecordScreen() {
   }, []);
 
   async function askForPermission() {
-    const permission = await requestSpeechPermission();
+    const permission = await requestSpeechPermission().catch(() => 'denied' as const);
+    if (leaving.current) return;
     if (permission === 'granted') await begin();
     else setPhase(permission === 'blocked' ? 'blocked' : 'needs-permission');
   }
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => undefined);
+    return () => {
+      leaving.current = true;
+    };
   }, []);
+
+  // After the person turns on the microphone in Settings and comes back, check again.
+  const waitingForPermission = phase === 'blocked' || phase === 'needs-permission';
+  useEffect(() => {
+    if (!waitingForPermission) return undefined;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') prepare().catch(() => setPhase('unavailable'));
+    });
+    return () => subscription?.remove();
+  }, [waitingForPermission, prepare]);
 
   useEffect(() => {
     if (phase !== 'listening') return undefined;
@@ -180,17 +220,21 @@ export default function RecordScreen() {
   }, [phase, reduceMotion, pulse]);
 
   function close() {
+    leaving.current = true;
     cancelListening();
     goBack(router);
   }
 
   function writeInstead() {
+    leaving.current = true;
     cancelListening();
-    router.replace('/write');
+    // A note that could not be saved goes to the write screen instead of being lost.
+    router.replace(unsaved ? { pathname: '/write', params: { text: unsaved.text } } : '/write');
   }
 
   const offerOnline =
     onDevice && (failure?.code === 'language-not-supported' || failure?.code === 'network' || failure?.code === 'service-not-allowed');
+  const offerSettings = failure?.code === 'not-allowed' || (failure?.code === 'service-not-allowed' && !onDevice);
 
   return (
     <Screen edges={['top', 'bottom', 'left', 'right']}>
@@ -291,6 +335,7 @@ export default function RecordScreen() {
                 }}
               />
             ) : null}
+            {offerSettings ? <Button label="Open Settings" variant="secondary" onPress={() => Linking.openSettings()} /> : null}
             <Button label="Write a note instead" variant="secondary" onPress={writeInstead} />
             <Button label="Close" variant="ghost" onPress={close} />
           </Message>

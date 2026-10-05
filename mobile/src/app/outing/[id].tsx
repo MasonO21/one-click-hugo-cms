@@ -34,13 +34,15 @@ export default function OutingScreen() {
   if (!outing) {
     return (
       <Screen>
-        <EmptyState title="This outing is gone" message="It may have been deleted." actionLabel="Back to your notes" onAction={() => router.replace('/')} />
+        <EmptyState title="This outing is gone" message="It may have been deleted." actionLabel="Back to your notes" onAction={() => goBack(router)} />
       </Screen>
     );
   }
 
   const isActive = running.active?.id === outing.id;
-  const seconds = isActive ? running.elapsedS : ((outing.endedAt ?? outing.startedAt) - outing.startedAt) / 1000;
+  // An outing left open (not the one recording now) runs until its last route point or note.
+  const lastSeen = Math.max(outing.startedAt, outing.track.at(-1)?.[2] ?? 0, ...entries.map((e) => e.createdAt));
+  const seconds = isActive ? running.elapsedS : ((outing.endedAt ?? lastSeen) - outing.startedAt) / 1000;
   const meters = isActive ? running.distanceM : outing.distanceM;
 
   async function saveName() {

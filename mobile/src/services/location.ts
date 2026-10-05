@@ -17,6 +17,25 @@ export async function requestLocationPermission(): Promise<PermissionState> {
   return toPermissionState(await Location.requestForegroundPermissionsAsync());
 }
 
+export type RouteReadiness = 'ready' | 'services-off' | 'approximate';
+
+// Recording a route needs the phone's location services on and precise location.
+// With approximate location every fix is kilometers off, so the route would stay empty.
+export async function checkRouteTracking(): Promise<RouteReadiness> {
+  try {
+    if (!(await Location.hasServicesEnabledAsync())) return 'services-off';
+  } catch {
+    // Unknown: let tracking try.
+  }
+  try {
+    const permission = await Location.getForegroundPermissionsAsync();
+    if (permission.ios?.accuracy === 'reduced' || permission.android?.accuracy === 'coarse') return 'approximate';
+  } catch {
+    // Unknown: let tracking try.
+  }
+  return 'ready';
+}
+
 function toFix(location: Location.LocationObject): Fix {
   return {
     latitude: location.coords.latitude,
@@ -60,14 +79,28 @@ export async function getCurrentFix(timeoutMs = 8000): Promise<Fix | null> {
   return current ? toFix(current) : null;
 }
 
+// Returns the place name, or null when the map service has no name for this spot (common
+// in the backcountry). Throws when the service could not be reached in time, so the
+// lookup can be tried again later.
 export async function reverseGeocode(latitude: number, longitude: number, timeoutMs = 6000): Promise<string | null> {
-  const addresses = await withTimeout(Location.reverseGeocodeAsync({ latitude, longitude }), timeoutMs);
-  return describePlace(addresses);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Place lookup timed out')), timeoutMs);
+  });
+  try {
+    const addresses = await Promise.race([Location.reverseGeocodeAsync({ latitude, longitude }), timeout]);
+    return describePlace(addresses);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Follows the phone's position while the app is open.
 export class LocationTracker {
   private subscription: Location.LocationSubscription | null = null;
+  // Each start() gets a number. A watch that finishes starting after stop() or a newer
+  // start() is removed, so an old outing's callback can never stay live.
+  private generation = 0;
   private starting = false;
 
   get isRunning(): boolean {
@@ -76,21 +109,22 @@ export class LocationTracker {
 
   async start(onFix: (fix: Fix) => void): Promise<void> {
     if (this.isRunning) return;
+    const generation = ++this.generation;
     this.starting = true;
     try {
       const subscription = await Location.watchPositionAsync(
         { accuracy: Location.LocationAccuracy.High, distanceInterval: 10, timeInterval: 5000 },
         (location) => onFix(toFix(location)),
       );
-      // stop() may have been called while the subscription was being created.
-      if (this.starting) this.subscription = subscription;
+      if (generation === this.generation) this.subscription = subscription;
       else subscription.remove();
     } finally {
-      this.starting = false;
+      if (generation === this.generation) this.starting = false;
     }
   }
 
   stop(): void {
+    this.generation += 1;
     this.starting = false;
     this.subscription?.remove();
     this.subscription = null;

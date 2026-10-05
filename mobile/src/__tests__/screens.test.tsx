@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { router } from 'expo-router';
 import { act, cleanup, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { createEntry, createOuting, finishOuting, getEntry, listEntries, listOutings } from '@/db/repository';
@@ -31,6 +31,7 @@ jest.mock('expo-location', () => ({
   LocationAccuracy: { Balanced: 3, High: 4 },
   getForegroundPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
   requestForegroundPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+  hasServicesEnabledAsync: jest.fn(async () => true),
   getLastKnownPositionAsync: jest.fn(async () => mockPosition()),
   getCurrentPositionAsync: jest.fn(async () => mockPosition()),
   watchPositionAsync: jest.fn(async (_options: unknown, callback: (location: unknown) => void) => {
@@ -89,6 +90,7 @@ jest.mock('expo-file-system', () => ({
 
 const sharing = jest.requireMock('expo-sharing') as { shareAsync: jest.Mock };
 const location = jest.requireMock('expo-location') as Record<string, jest.Mock>;
+const keepAwake = jest.requireMock('expo-keep-awake') as { activateKeepAwakeAsync: jest.Mock; deactivateKeepAwake: jest.Mock };
 
 const APP = './src/app';
 const weatherResponse = { current: { temperature_2m: 9, weather_code: 2 } };
@@ -141,6 +143,8 @@ beforeEach(() => {
   const granted = async () => ({ granted: true, canAskAgain: true });
   location.getForegroundPermissionsAsync.mockImplementation(granted);
   location.requestForegroundPermissionsAsync.mockImplementation(granted);
+  location.getLastKnownPositionAsync.mockImplementation(async () => mockPosition());
+  location.getCurrentPositionAsync.mockImplementation(async () => mockPosition());
   global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => weatherResponse })) as unknown as typeof fetch;
   alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 });
@@ -275,9 +279,99 @@ describe('log', () => {
     await openApp('/entry/999');
     expect(await screen.findByText('This note is gone')).toBeOnTheScreen();
   });
+
+  it('treats a broken link to a note as gone', async () => {
+    mockDb = await freshDb();
+    await openApp('/entry/abc');
+    expect(await screen.findByText('This note is gone')).toBeOnTheScreen();
+  });
+
+  it('treats a broken link to an outing as gone', async () => {
+    mockDb = await freshDb();
+    await openApp('/outing/xyz');
+    expect(await screen.findByText('This outing is gone')).toBeOnTheScreen();
+  });
+
+  it('goes back to the same log from a note that is gone', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await screen.findByText('No notes yet');
+    await act(async () => {
+      router.push('/entry/999');
+    });
+    await press(await screen.findByRole('button', { name: 'Back to your notes' }));
+    await screen.findByText('No notes yet');
+    expect(router.canGoBack()).toBe(false);
+  });
+
+  it('keeps the mood filter visible after its last note changes mood', async () => {
+    mockDb = await freshDb();
+    await createEntry(mockDb, { transcript: 'So tired now.', mood: 'tired' });
+    await createEntry(mockDb, { transcript: 'Such a happy day.', mood: 'happy' });
+    await openApp();
+    await press(await screen.findByRole('button', { name: 'Show Tired notes' }));
+    await press(await screen.findByText('So tired now.'));
+    await press(await screen.findByRole('button', { name: 'Change mood' }));
+    await press(await screen.findByRole('button', { name: 'Calm' }));
+    await act(async () => {
+      router.back();
+    });
+    const chip = await screen.findByRole('button', { name: 'Show Tired notes' });
+    expect(chip).toBeSelected();
+    expect(await screen.findByText('Nothing found')).toBeOnTheScreen();
+  });
+
+  it('moves notes from Today to Yesterday when the app is opened the next morning', async () => {
+    mockDb = await freshDb();
+    const appStateListeners: ((state: string) => void)[] = [];
+    const appStateSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      appStateListeners.push(listener as (state: string) => void);
+      return { remove: jest.fn() } as unknown as ReturnType<typeof AppState.addEventListener>;
+    });
+    const lateTonight = new Date();
+    lateTonight.setHours(23, 50, 0, 0);
+    await createEntry(mockDb, { transcript: 'Late walk.', createdAt: lateTonight.getTime() });
+    await openApp();
+    expect(await screen.findByText('TODAY')).toBeOnTheScreen();
+
+    jest.setSystemTime(lateTonight.getTime() + 8 * 3600 * 1000);
+    await act(async () => appStateListeners.forEach((listener) => listener('active')));
+    expect(await screen.findByText('YESTERDAY')).toBeOnTheScreen();
+    appStateSpy.mockRestore();
+  });
+
+  it('describes a note card and its tags to screen readers', async () => {
+    mockDb = await freshDb();
+    await createEntry(mockDb, { transcript: 'Fog on the ridge.', place: 'Chautauqua Park', mood: 'calm' });
+    await openApp();
+    expect(await screen.findByRole('button', { name: /\. Fog on the ridge\. Place: Chautauqua Park\. Mood: Calm$/ })).toBeOnTheScreen();
+  });
+
+  it('says clearly when the person chose no mood', async () => {
+    mockDb = await freshDb();
+    const entry = await createEntry(mockDb, { transcript: 'Just a note.', mood: 'happy' });
+    await openApp(`/entry/${entry.id}`);
+    await press(await screen.findByRole('button', { name: 'Change mood' }));
+    await press(await screen.findByRole('button', { name: 'No mood' }));
+    expect(await screen.findByText('You chose no mood for this note.')).toBeOnTheScreen();
+    expect(screen.queryByText('No mood was picked up from this note.')).toBeNull();
+  });
 });
 
 describe('writing a note', () => {
+  it('saves once on a double tap', async () => {
+    mockDb = await freshDb();
+    await openApp('/write');
+    await type(await screen.findByLabelText('Your note'), 'Double tap note.');
+    const save = screen.getByRole('button', { name: 'Save note' });
+    await press(save);
+    await press(save);
+    await act(async () => jest.advanceTimersByTimeAsync(1000));
+    await eventually(async () => expect(await listEntries(mockDb)).toHaveLength(1));
+    await act(async () => jest.advanceTimersByTimeAsync(1000));
+    expect(await listEntries(mockDb)).toHaveLength(1);
+  });
+
   it('saves typed text with the mood, then adds place and weather', async () => {
     mockDb = await freshDb();
     await openApp('/write');
@@ -403,13 +497,113 @@ describe('recording a note', () => {
     expect(speechMock.ExpoSpeechRecognitionModule.start).toHaveBeenLastCalledWith(expect.objectContaining({ requiresOnDeviceRecognition: false }));
     expect((await loadSettings(mockDb)).onDeviceSpeech).toBe(false);
   });
+
+  it('shows that it is saving right after Stop, even while the location is still coming', async () => {
+    mockDb = await freshDb();
+    location.getLastKnownPositionAsync.mockImplementation(async () => null);
+    location.getCurrentPositionAsync.mockImplementation(() => new Promise(() => undefined));
+    await openApp('/record');
+    await screen.findByText('Listening');
+    await result('short note at the creek', true);
+    await press(screen.getByRole('button', { name: 'Stop and save' }));
+    await act(async () => speechMock.__emit('end'));
+    expect(await screen.findByText('Saving your note')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Stop and save' })).toBeNull();
+
+    await act(async () => jest.advanceTimersByTimeAsync(9000));
+    await eventually(async () => expect(await listEntries(mockDb)).toHaveLength(1));
+    expect((await listEntries(mockDb))[0].latitude).toBeNull();
+  });
+
+  it('does not start the microphone if the person leaves while it is getting ready', async () => {
+    mockDb = await freshDb();
+    speechMock.ExpoSpeechRecognitionModule.getPermissionsAsync.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ granted: true, canAskAgain: true }), 300)),
+    );
+    await openApp();
+    await screen.findByText('No notes yet');
+    await act(async () => {
+      router.push('/record');
+    });
+    expect(await screen.findByText('Getting ready')).toBeOnTheScreen();
+    await act(async () => {
+      router.back();
+    });
+    await act(async () => jest.advanceTimersByTimeAsync(500));
+    expect(speechMock.ExpoSpeechRecognitionModule.start).not.toHaveBeenCalled();
+    expect(speechMock.__listenerCount()).toBe(0);
+  });
+
+  it('shows the problem when the recognizer cannot start', async () => {
+    mockDb = await freshDb();
+    speechMock.ExpoSpeechRecognitionModule.start.mockImplementationOnce(() => {
+      throw new Error('cannot start');
+    });
+    await openApp('/record');
+    expect(await screen.findByText('Something went wrong')).toBeOnTheScreen();
+    expect(screen.queryByText('Listening')).toBeNull();
+  });
+
+  it('explains an interruption that came before any words', async () => {
+    mockDb = await freshDb();
+    await openApp('/record');
+    await screen.findByText('Listening');
+    await act(async () => speechMock.__emit('error', { error: 'interrupted' }));
+    await act(async () => speechMock.__emit('end'));
+    expect(await screen.findByText(/something else needed the microphone/)).toBeOnTheScreen();
+  });
+
+  it('checks the microphone again after the person comes back from Settings', async () => {
+    mockDb = await freshDb();
+    const appStateListeners: ((state: string) => void)[] = [];
+    const appStateSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      appStateListeners.push(listener as (state: string) => void);
+      return { remove: jest.fn() } as unknown as ReturnType<typeof AppState.addEventListener>;
+    });
+    speechMock.ExpoSpeechRecognitionModule.getPermissionsAsync.mockImplementation(async () => ({ granted: false, canAskAgain: false }));
+    await openApp('/record');
+    expect(await screen.findByText('Microphone is turned off')).toBeOnTheScreen();
+
+    speechMock.ExpoSpeechRecognitionModule.getPermissionsAsync.mockImplementation(async () => ({ granted: true, canAskAgain: true }));
+    await act(async () => appStateListeners.forEach((listener) => listener('active')));
+    expect(await screen.findByText('Listening')).toBeOnTheScreen();
+    appStateSpy.mockRestore();
+  });
+
+  it('carries a note that could not be saved over to writing', async () => {
+    mockDb = await freshDb();
+    const runAsync = mockDb.runAsync.bind(mockDb);
+    let failNext = true;
+    mockDb.runAsync = (async (source: string, ...params: never[]) => {
+      if (failNext && source.includes('INSERT INTO entries')) {
+        failNext = false;
+        throw new Error('disk full');
+      }
+      return runAsync(source, ...params);
+    }) as typeof mockDb.runAsync;
+    await openApp('/record');
+    await screen.findByText('Listening');
+    await result('the lake is frozen', true);
+    await press(screen.getByRole('button', { name: 'Stop and save' }));
+    await act(async () => speechMock.__emit('end'));
+    expect(await screen.findByRole('button', { name: 'Save again' })).toBeOnTheScreen();
+
+    await press(screen.getByRole('button', { name: 'Write a note instead' }));
+    expect(await screen.findByDisplayValue('The lake is frozen')).toBeOnTheScreen();
+  });
 });
 
 describe('outings', () => {
-  const fixAt = (latitude: number, seconds: number) =>
-    act(async () => {
-      mockWatchers.at(-1)?.({ coords: { latitude, longitude: -105.27, accuracy: 5 }, timestamp: 1_000_000 + seconds * 1000 });
+  // Sends a GPS fix `seconds` after the first one, moving the clock forward to match.
+  let fixStart = 0;
+  const fixAt = async (latitude: number, seconds: number) => {
+    if (seconds === 0) fixStart = Date.now();
+    const wait = fixStart + seconds * 1000 - Date.now();
+    if (wait > 0) await act(async () => jest.advanceTimersByTimeAsync(wait));
+    await act(async () => {
+      mockWatchers.at(-1)?.({ coords: { latitude, longitude: -105.27, accuracy: 5 }, timestamp: Date.now() });
     });
+  };
 
   it('starts, tracks distance, and finishes an outing with notes attached', async () => {
     mockDb = await freshDb();
@@ -491,6 +685,116 @@ describe('outings', () => {
   });
 });
 
+describe('outing edge cases', () => {
+  it('starts only one outing on a double tap', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    // The permission check takes a moment, so the second tap lands while the first is busy.
+    location.requestForegroundPermissionsAsync.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ granted: true, canAskAgain: true }), 300)),
+    );
+    const start = await screen.findByRole('button', { name: 'Start hike' });
+    await press(start);
+    await press(start);
+    await act(async () => jest.advanceTimersByTimeAsync(400));
+    expect(await screen.findByText('Recording your route. Keep Trail Notes open while you are out.')).toBeOnTheScreen();
+    expect(await listOutings(mockDb)).toHaveLength(1);
+  });
+
+  it('applies the keep-screen-on setting to the outing in progress', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await press(await screen.findByRole('button', { name: 'Start hike' }));
+    await eventually(() => expect(keepAwake.activateKeepAwakeAsync).toHaveBeenCalledWith('trailnotes-outing'));
+
+    await press(screen.getByRole('button', { name: 'Settings' }));
+    await fire(await screen.findByLabelText('Keep screen on during outings'), 'valueChange', false);
+    await eventually(() => expect(keepAwake.deactivateKeepAwake).toHaveBeenCalledWith('trailnotes-outing'));
+  });
+
+  it('stops the outing when everything is deleted, so new notes still save', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await press(await screen.findByRole('button', { name: 'Start hike' }));
+    await screen.findByText('Recording your route. Keep Trail Notes open while you are out.');
+
+    await press(screen.getByRole('button', { name: 'Settings' }));
+    await press(await screen.findByRole('button', { name: 'Delete all notes' }));
+    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.at(-1) as [string, string, { text: string; onPress?: () => void }[]];
+    await act(async () => {
+      await buttons.find((b) => b.text === 'Delete everything')?.onPress?.();
+    });
+    await act(async () => {
+      router.back();
+    });
+    expect(await screen.findByText('Heading out?')).toBeOnTheScreen();
+
+    await press(screen.getByRole('button', { name: 'Write' }));
+    await type(await screen.findByLabelText('Your note'), 'After the reset.');
+    await press(screen.getByRole('button', { name: 'Save note' }));
+    await eventually(async () => expect(await listEntries(mockDb)).toHaveLength(1));
+  });
+
+  it('shows a new name for the outing in progress', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await press(await screen.findByRole('button', { name: 'Start hike' }));
+    await screen.findByText('Recording your route. Keep Trail Notes open while you are out.');
+    const [outing] = await listOutings(mockDb);
+
+    await act(async () => {
+      router.push(`/outing/${outing.id}`);
+    });
+    const name = await screen.findByLabelText('Outing name');
+    await type(name, 'Mesa Trail');
+    await fire(name, 'blur');
+    await act(async () => {
+      router.back();
+    });
+    expect(await screen.findByText('Mesa Trail')).toBeOnTheScreen();
+  });
+
+  it('stops offering to continue an open outing that was deleted', async () => {
+    mockDb = await freshDb();
+    const outing = await createOuting(mockDb, { kind: 'hike', startedAt: Date.now() - 30 * 60 * 1000 });
+    await openApp();
+    expect(await screen.findByText('Outing still open')).toBeOnTheScreen();
+
+    await act(async () => {
+      router.push(`/outing/${outing.id}`);
+    });
+    await press(await screen.findByRole('button', { name: 'Delete outing' }));
+    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.at(-1) as [string, string, { text: string; onPress?: () => void }[]];
+    await act(async () => {
+      await buttons.find((b) => /Delete/.test(b.text))?.onPress?.();
+    });
+    await eventually(async () => expect(await listOutings(mockDb)).toHaveLength(0));
+    await act(async () => {
+      if (router.canGoBack()) router.back();
+    });
+    expect(await screen.findByText('Heading out?')).toBeOnTheScreen();
+    expect(screen.queryByText('Outing still open')).toBeNull();
+  });
+
+  it('ends a long-forgotten outing at its last note', async () => {
+    mockDb = await freshDb();
+    const startedAt = Date.now() - 20 * 3600 * 1000;
+    const outing = await createOuting(mockDb, { kind: 'hike', startedAt });
+    await createEntry(mockDb, { transcript: 'Summit.', outingId: outing.id, createdAt: startedAt + 3 * 3600 * 1000 });
+    await openApp();
+    await eventually(async () => expect((await listOutings(mockDb))[0].endedAt).toBe(startedAt + 3 * 3600 * 1000));
+  });
+
+  it('explains when only approximate location is allowed', async () => {
+    mockDb = await freshDb();
+    location.getForegroundPermissionsAsync.mockImplementation(async () => ({ granted: true, canAskAgain: true, ios: { scope: 'whenInUse', accuracy: 'reduced' } }));
+    await openApp();
+    await press(await screen.findByRole('button', { name: 'Start hike' }));
+    await eventually(() => expect(Alert.alert).toHaveBeenCalledWith('Precise location is off', expect.any(String), expect.any(Array)));
+    expect(await listOutings(mockDb)).toHaveLength(0);
+  });
+});
+
 describe('settings', () => {
   it('changes units and the log follows', async () => {
     mockDb = await freshDb();
@@ -541,6 +845,32 @@ describe('settings', () => {
       await buttons.find((b) => b.text === 'Delete everything')?.onPress?.();
     });
     await eventually(async () => expect(await listEntries(mockDb)).toHaveLength(0));
+  });
+
+  it('shows the empty log after deleting everything while searching', async () => {
+    mockDb = await freshDb();
+    await createEntry(mockDb, { transcript: 'Fog everywhere.' });
+    await openApp();
+    await type(await screen.findByLabelText('Search your notes'), 'fog');
+    await act(async () => jest.advanceTimersByTimeAsync(300));
+    await press(screen.getByRole('button', { name: 'Settings' }));
+    await press(await screen.findByRole('button', { name: 'Delete all notes' }));
+    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.at(-1) as [string, string, { text: string; onPress?: () => void }[]];
+    await act(async () => {
+      await buttons.find((b) => b.text === 'Delete everything')?.onPress?.();
+    });
+    await act(async () => {
+      router.back();
+    });
+    expect(await screen.findByText('No notes yet')).toBeOnTheScreen();
+  });
+
+  it('says there is nothing to export when there are no notes', async () => {
+    mockDb = await freshDb();
+    await openApp('/settings');
+    await press(await screen.findByRole('button', { name: 'Export as text' }));
+    await eventually(() => expect(Alert.alert).toHaveBeenCalledWith('Nothing to export yet', expect.any(String)));
+    expect(sharing.shareAsync).not.toHaveBeenCalled();
   });
 
   it('turns off the on-device speech switch', async () => {

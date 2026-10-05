@@ -93,6 +93,29 @@ describe('exports', () => {
     expect(text).toContain('- Mood: Happy');
   });
 
+  it('keeps note text as plain text in Markdown', () => {
+    const tricky = entry({
+      id: 3,
+      createdAt: new Date(2026, 8, 27, 8).getTime(),
+      transcript: '# of switchbacks: 12\nMade it\n---\n- not a tag\n1. first',
+      outingId: 8,
+      place: '<b>Ridge</b>',
+    });
+    const odd: OutingWithTrack = { ...outing, id: 8, name: '*Bold* [loop](x)', endedAt: null };
+    const text = toMarkdown({ entries: [tricky], outings: [odd] }, { temperature: 'f', distance: 'mi' }, 'en-US');
+    expect(text).toContain('\\# of switchbacks: 12');
+    expect(text).toContain('\n\\---\n');
+    expect(text).toContain('\\- not a tag');
+    expect(text).toContain('1\\. first');
+    expect(text).toContain('- Route: \\*Bold\\* \\[loop\\](x) (6.2 mi)');
+    expect(text).toContain('- Place: \\<b\\>Ridge\\</b\\>');
+  });
+
+  it('keeps the temperature when the weather code is unknown', () => {
+    const cold = entry({ id: 4, createdAt: new Date(2026, 8, 27, 8).getTime(), transcript: 'Cold.', tempC: 3, weatherCode: 4 });
+    expect(toMarkdown({ entries: [cold], outings: [] }, { temperature: 'f', distance: 'mi' }, 'en-US')).toContain('- Weather: 37°F');
+  });
+
   it('handles an empty journal', () => {
     expect(toMarkdown({ entries: [], outings: [] }, { temperature: 'c', distance: 'km' })).toContain('No entries yet.');
   });

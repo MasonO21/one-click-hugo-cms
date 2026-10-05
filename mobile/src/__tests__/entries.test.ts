@@ -85,16 +85,34 @@ describe('enrichEntry', () => {
     db.close();
   });
 
-  it('treats an empty place as a failure and a weather error as a failure', async () => {
+  it('marks a spot with no place name so it is not looked up again', async () => {
+    const db = await setup();
+    const entry = await createEntry(db, { transcript: 'hi', latitude: 40, longitude: -105 });
+    const geocode = jest.fn(async () => null);
+    const result = await enrichEntry(db, entry.id, { geocode, weather: working.weather });
+    expect(result).toEqual({ place: 'none', weather: 'added' });
+    expect((await getEntry(db, entry.id))?.place).toBe('');
+    await expect(enrichEntry(db, entry.id, { geocode, weather: working.weather })).resolves.toEqual({
+      place: 'skipped',
+      weather: 'skipped',
+    });
+    expect(geocode).toHaveBeenCalledTimes(1);
+    db.close();
+  });
+
+  it('reports lookups that could not reach their service as failures', async () => {
     const db = await setup();
     const entry = await createEntry(db, { transcript: 'hi', latitude: 40, longitude: -105 });
     const result = await enrichEntry(db, entry.id, {
-      geocode: async () => null,
+      geocode: async () => {
+        throw new Error('timed out');
+      },
       weather: async () => {
         throw new Error('429');
       },
     });
     expect(result).toEqual({ place: 'failed', weather: 'failed' });
+    expect((await getEntry(db, entry.id))?.place).toBeNull();
     db.close();
   });
 

@@ -57,6 +57,51 @@ describe('TrackRecorder', () => {
     expect(recorder.add(fix(40.001, -105, 50))).toBe(false);
   });
 
+  it('does not add distance while standing still with GPS drift', () => {
+    const recorder = new TrackRecorder();
+    recorder.add(fix(40, -105, 0, 30));
+    // Ten minutes of fixes bouncing between two spots 15 m apart, each accurate to 30 m.
+    for (let i = 1; i <= 60; i += 1) recorder.add(fix(i % 2 ? 40.000135 : 40, -105, i * 10, 30));
+    expect(recorder.distanceM).toBe(0);
+  });
+
+  it('still measures real walking when accuracy is rough', () => {
+    const recorder = new TrackRecorder();
+    // 10 m every 10 s, accurate to 30 m: about 1 m/s for 300 m.
+    for (let i = 0; i <= 30; i += 1) recorder.add(fix(40 + i * 0.00009, -105, i * 10, 30));
+    expect(recorder.distanceM).toBeGreaterThan(250);
+    expect(recorder.distanceM).toBeLessThan(320);
+  });
+
+  it('moves a stale first fix to where the phone really is', () => {
+    const recorder = new TrackRecorder();
+    recorder.add(fix(40.27, -105, 0)); // a cached position 30 km away
+    expect(recorder.add(fix(40, -105, 10))).toBe(false);
+    expect(recorder.add(fix(40.00001, -105, 15))).toBe(true); // second disagreement: re-anchor
+    expect(recorder.distanceM).toBe(0);
+    recorder.add(fix(40.001, -105, 115));
+    expect(recorder.distanceM).toBeCloseTo(110, -1);
+  });
+
+  it('keeps a route when a jump happens mid-way', () => {
+    const recorder = new TrackRecorder();
+    recorder.add(fix(40, -105, 0));
+    recorder.add(fix(40.001, -105, 100));
+    expect(recorder.add(fix(41, -105, 110))).toBe(false);
+    expect(recorder.add(fix(41.0001, -105, 115))).toBe(false);
+    expect(recorder.points).toHaveLength(2);
+  });
+
+  it('ignores fixes with impossible values', () => {
+    const recorder = new TrackRecorder();
+    recorder.add(fix(40, -105, 0));
+    expect(recorder.add(fix(Number.NaN, -105, 100))).toBe(false);
+    expect(recorder.add(fix(40.001, 200, 100))).toBe(false);
+    expect(recorder.add(fix(40.001, -105, Number.NaN))).toBe(false);
+    expect(recorder.add(fix(40.001, -105, 100, Number.NaN))).toBe(true);
+    expect(Number.isFinite(recorder.distanceM)).toBe(true);
+  });
+
   it('continues a saved route', () => {
     const recorder = new TrackRecorder([[40, -105, 0]], 500);
     recorder.add(fix(40.001, -105, 100));

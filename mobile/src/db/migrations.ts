@@ -1,3 +1,4 @@
+import { indexMissingEntries } from './searchIndex';
 import type { Database } from './types';
 
 const V1 = `
@@ -35,7 +36,14 @@ CREATE TABLE settings (
 );
 `;
 
+// Letters, numbers and accent marks (M*) are word characters, so marks in Hindi or Thai
+// words stay inside the word.
 const FTS = `
+CREATE VIRTUAL TABLE entries_fts USING fts5(body, tokenize = "unicode61 remove_diacritics 2 categories 'L* N* Co M*'");
+`;
+
+// For SQLite builds too old for the categories option.
+const FTS_BASIC = `
 CREATE VIRTUAL TABLE entries_fts USING fts5(body, tokenize = 'unicode61 remove_diacritics 2');
 `;
 
@@ -63,10 +71,22 @@ export async function migrate(db: Database): Promise<void> {
   // Full-text search is optional. If this SQLite build lacks FTS5, search falls back to
   // a slower substring match and everything else keeps working.
   try {
-    const existing = await db.getFirstAsync<{ name: string }>(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'entries_fts'",
+    const existing = await db.getFirstAsync<{ sql: string | null }>(
+      "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'entries_fts'",
     );
-    if (!existing) await db.execAsync(FTS);
+    // The first index split words at accent marks, which breaks Hindi, Thai and similar
+    // scripts. Rebuild it with the current tokenizer.
+    if (existing && !existing.sql?.includes('categories')) await db.execAsync('DROP TABLE entries_fts');
+    if (!existing || !existing.sql?.includes('categories')) {
+      try {
+        await db.execAsync(FTS);
+      } catch {
+        await db.execAsync(FTS_BASIC);
+      }
+    }
+    // The table can exist in a database restored onto a build without FTS5, so prove it works.
+    await db.getFirstAsync('SELECT rowid FROM entries_fts LIMIT 1');
+    await indexMissingEntries(db);
     ftsSupport.set(db, true);
     lastKnown = true;
   } catch {

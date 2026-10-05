@@ -209,6 +209,41 @@ describe('SpeechController', () => {
     expect(done).toHaveLength(1);
   });
 
+  it('keeps going through a long note on phones that end after every phrase', () => {
+    const { engine, controller, done } = setup({ maxRestarts: 3, continuous: false, silenceTimeoutMs: 999999 });
+    controller.begin();
+    for (let i = 0; i < 10; i += 1) {
+      engine.result(`phrase ${i}`, true);
+      engine.emit('end', null);
+      jest.advanceTimersByTime(config.restartDelayMs);
+    }
+    expect(done).toHaveLength(0);
+    expect(engine.starts).toHaveLength(11);
+  });
+
+  it('finishes right away when stopped between restarts', () => {
+    const { engine, controller, done } = setup();
+    controller.begin();
+    engine.result('the fog', true);
+    engine.emit('end', null);
+    jest.advanceTimersByTime(100);
+    controller.stop();
+    expect(done).toHaveLength(1);
+    expect(done[0].text).toBe('The fog');
+    expect(engine.starts).toHaveLength(1);
+  });
+
+  it('restarts once when the recognizer reports the end twice', () => {
+    const { engine, controller } = setup();
+    controller.begin();
+    engine.result('the fog', true);
+    engine.emit('end', null);
+    engine.emit('error', { error: 'no-speech', message: '' });
+    engine.emit('end', null);
+    jest.advanceTimersByTime(config.restartDelayMs);
+    expect(engine.starts).toHaveLength(2);
+  });
+
   it('cancels without keeping text', () => {
     const { engine, controller, done } = setup();
     controller.begin();

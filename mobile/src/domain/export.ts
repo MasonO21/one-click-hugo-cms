@@ -38,7 +38,7 @@ export function toJson(data: ExportData, exportedAt: number = Date.now()): strin
         durationSeconds: entry.durationS,
         latitude: entry.latitude,
         longitude: entry.longitude,
-        place: entry.place,
+        place: entry.place || null,
         temperatureC: entry.tempC,
         weather: weatherLabel(entry.weatherCode),
         weatherCode: entry.weatherCode,
@@ -48,6 +48,24 @@ export function toJson(data: ExportData, exportedAt: number = Date.now()): strin
     null,
     2,
   );
+}
+
+// Characters that change formatting anywhere in a line.
+function escapeInline(text: string): string {
+  return text.replace(/[\\`*_[\]<>~]/g, (char) => `\\${char}`);
+}
+
+// Note text exactly as said or typed: a line that would become a heading, list, quote
+// or rule in Markdown is escaped so it stays plain text.
+function escapeNote(text: string): string {
+  return text
+    .split('\n')
+    .map((line) =>
+      escapeInline(line)
+        .replace(/^(\s*)(\d+)([.)])(?=\s|$)/, '$1$2\\$3')
+        .replace(/^(\s*)([#>+=-])/, '$1\\$2'),
+    )
+    .join('\n');
 }
 
 export function toMarkdown(data: ExportData, units: ExportUnits, locale?: string): string {
@@ -66,20 +84,24 @@ export function toMarkdown(data: ExportData, units: ExportUnits, locale?: string
     }
 
     lines.push(`### ${date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}`, '');
-    lines.push(entry.transcript, '');
+    lines.push(escapeNote(entry.transcript), '');
 
     const tags: string[] = [];
     const outing = entry.outingId === null ? undefined : outingById.get(entry.outingId);
     if (outing) {
-      tags.push(
-        `Route: ${outing.name}${outing.distanceM > 0 ? ` (${formatDistance(outing.distanceM, units.distance)}, ${formatDuration(((outing.endedAt ?? outing.startedAt) - outing.startedAt) / 1000)})` : ''}`,
-      );
+      // An outing still in progress has no duration yet.
+      const details = [
+        outing.distanceM > 0 ? formatDistance(outing.distanceM, units.distance) : null,
+        outing.endedAt !== null && outing.distanceM > 0 ? formatDuration((outing.endedAt - outing.startedAt) / 1000) : null,
+      ].filter(Boolean);
+      tags.push(`Route: ${escapeInline(outing.name)}${details.length ? ` (${details.join(', ')})` : ''}`);
     }
-    if (entry.place) tags.push(`Place: ${entry.place}`);
-    const weather = weatherLabel(entry.weatherCode);
-    if (weather) {
-      tags.push(`Weather: ${weather}${entry.tempC !== null ? `, ${formatTemperature(entry.tempC, units.temperature)}` : ''}`);
-    }
+    if (entry.place) tags.push(`Place: ${escapeInline(entry.place)}`);
+    const weather = [
+      weatherLabel(entry.weatherCode),
+      entry.tempC !== null ? formatTemperature(entry.tempC, units.temperature) : null,
+    ].filter(Boolean);
+    if (weather.length) tags.push(`Weather: ${weather.join(', ')}`);
     if (entry.mood) tags.push(`Mood: ${MOOD_LABELS[entry.mood]}`);
     if (tags.length > 0) lines.push(tags.map((t) => `- ${t}`).join('\n'), '');
   }

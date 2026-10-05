@@ -23,6 +23,19 @@ export function routeText(outing: Pick<Outing, 'name' | 'distanceM'>, unit: Dist
   return outing.distanceM >= 50 ? `${outing.name} · ${formatDistance(outing.distanceM, unit)}` : outing.name;
 }
 
+// The tags in words, for screen readers.
+export function tagsLabel({ entry, outing, units }: Props): string {
+  const weather = weatherText(entry, units.temperature);
+  return [
+    outing ? `Route: ${routeText(outing, units.distance)}` : null,
+    entry.place ? `Place: ${entry.place}` : null,
+    weather ? `Weather: ${weather}` : null,
+    entry.mood ? `Mood: ${MOOD_LABELS[entry.mood]}` : null,
+  ]
+    .filter(Boolean)
+    .join('. ');
+}
+
 export function EntryTags({ entry, outing, units }: Props) {
   const weather = weatherText(entry, units.temperature);
   return (

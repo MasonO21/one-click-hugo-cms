@@ -55,7 +55,18 @@ export function useEntries({ query, mood }: Options) {
             hasMore: rows.length >= limit,
           });
         } catch {
-          if (!cancelled) setData((current) => current ?? { key, entries: [], moods: [], outings: NO_OUTINGS, total: 0, hasMore: false });
+          // Show an empty result for this query rather than the previous query's notes
+          // with a spinner that never stops.
+          if (!cancelled) {
+            setData((current) => ({
+              key,
+              entries: [],
+              moods: current?.moods ?? [],
+              outings: current?.outings ?? NO_OUTINGS,
+              total: current?.total ?? 0,
+              hasMore: false,
+            }));
+          }
         }
       },
       query ? SEARCH_DELAY_MS : 0,

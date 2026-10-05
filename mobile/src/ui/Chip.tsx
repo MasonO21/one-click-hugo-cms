@@ -21,11 +21,11 @@ export function Chip({ label, value, onPress, selected, accessibilityLabel }: Pr
       ]}
     >
       {label ? (
-        <AppText variant="small" tone={selected ? 'onPrimary' : 'textMuted'}>
+        <AppText variant="small" tone={selected ? 'onPrimary' : 'textMuted'} style={styles.label}>
           {label}
         </AppText>
       ) : null}
-      <AppText variant="caption" tone={selected ? 'onPrimary' : 'onHighlight'}>
+      <AppText variant="caption" tone={selected ? 'onPrimary' : 'onHighlight'} style={styles.value}>
         {value}
       </AppText>
     </View>
@@ -33,7 +33,7 @@ export function Chip({ label, value, onPress, selected, accessibilityLabel }: Pr
 
   if (!onPress) {
     return (
-      <View accessible accessibilityLabel={accessibilityLabel ?? (label ? `${label}: ${value}` : value)}>
+      <View accessible accessibilityLabel={accessibilityLabel ?? (label ? `${label}: ${value}` : value)} style={styles.shrink}>
         {content}
       </View>
     );
@@ -46,6 +46,7 @@ export function Chip({ label, value, onPress, selected, accessibilityLabel }: Pr
       accessibilityState={{ selected: Boolean(selected) }}
       onPress={onPress}
       hitSlop={{ top: 8, bottom: 8 }}
+      style={styles.shrink}
     >
       {content}
     </Pressable>
@@ -60,5 +61,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.md,
+    // Long place or route names wrap inside the chip instead of running off the card.
+    maxWidth: '100%',
+    flexShrink: 1,
   },
+  shrink: { maxWidth: '100%', flexShrink: 1 },
+  label: { flexShrink: 0 },
+  value: { flexShrink: 1 },
 });

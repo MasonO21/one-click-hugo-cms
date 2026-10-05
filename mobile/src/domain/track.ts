@@ -38,6 +38,7 @@ export class TrackRecorder {
   private readonly options: TrackOptions;
   private readonly recorded: TrackPoint[] = [];
   private meters = 0;
+  private jumps = 0;
 
   constructor(initial: TrackPoint[] = [], distanceM = 0, options: Partial<TrackOptions> = {}) {
     this.options = { ...DEFAULT_TRACK_OPTIONS, ...options };
@@ -58,24 +59,42 @@ export class TrackRecorder {
   }
 
   add(fix: Fix): boolean {
-    if (fix.accuracy !== null && fix.accuracy > this.options.maxAccuracyM) return false;
+    if (![fix.latitude, fix.longitude, fix.timestamp].every(Number.isFinite)) return false;
+    if (Math.abs(fix.latitude) > 90 || Math.abs(fix.longitude) > 180) return false;
+    const accuracy = fix.accuracy !== null && Number.isFinite(fix.accuracy) && fix.accuracy >= 0 ? fix.accuracy : null;
+    if (accuracy !== null && accuracy > this.options.maxAccuracyM) return false;
 
     const previous = this.last;
     if (!previous) {
       this.recorded.push([fix.latitude, fix.longitude, fix.timestamp]);
+      this.jumps = 0;
       return true;
     }
+
+    const seconds = (fix.timestamp - previous[2]) / 1000;
+    if (seconds <= 0) return false;
 
     const step = haversineMeters(
       { latitude: previous[0], longitude: previous[1] },
       { latitude: fix.latitude, longitude: fix.longitude },
     );
-    if (step < this.options.minStepM) return false;
+    // A fix can be off by its accuracy in any direction, so a step smaller than that is
+    // as likely to be GPS drift as movement. Standing still must not add distance.
+    if (step < Math.max(this.options.minStepM, accuracy ?? 0)) return false;
 
-    const seconds = (fix.timestamp - previous[2]) / 1000;
-    if (seconds > 0 && step / seconds > this.options.maxSpeedMps) return false;
-    if (seconds <= 0) return false;
+    if (step / seconds > this.options.maxSpeedMps) {
+      this.jumps += 1;
+      // The very first fix of a route is often stale or rough. When the next fixes keep
+      // disagreeing with it, move the start to where the phone really is.
+      if (this.recorded.length === 1 && this.jumps >= 2) {
+        this.recorded[0] = [fix.latitude, fix.longitude, fix.timestamp];
+        this.jumps = 0;
+        return true;
+      }
+      return false;
+    }
 
+    this.jumps = 0;
     this.meters += step;
     this.recorded.push([fix.latitude, fix.longitude, fix.timestamp]);
     return true;

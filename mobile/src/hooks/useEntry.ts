@@ -15,7 +15,10 @@ export function useEntry(id: number) {
   const version = useDataVersion();
   const [data, setData] = useState<Loaded | null>(null);
 
+  const valid = Number.isInteger(id);
+
   useEffect(() => {
+    if (!valid) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -29,8 +32,10 @@ export function useEntry(id: number) {
     return () => {
       cancelled = true;
     };
-  }, [db, id, version]);
+  }, [db, id, valid, version]);
 
+  // An id that is not a number (a bad link) can never load: show it as gone right away.
+  if (!valid) return { entry: null, outing: null, loading: false };
   const current = data?.id === id ? data : null;
   return { entry: current?.entry ?? null, outing: current?.outing ?? null, loading: current === null };
 }
