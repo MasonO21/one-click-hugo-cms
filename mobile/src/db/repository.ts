@@ -1,4 +1,4 @@
-import { defaultOutingName, type OutingKind } from '@/domain/format';
+import { currentTimeZone, defaultOutingName, type OutingKind } from '@/domain/format';
 import { isMoodId, type MoodId } from '@/domain/moods';
 import { buildFtsQuery, escapeLike, searchTerms } from '@/domain/search';
 import type { TrackPoint } from '@/domain/track';
@@ -20,6 +20,7 @@ interface EntryRow {
   weather_code: number | null;
   mood: string | null;
   mood_source: string;
+  time_zone: string | null;
 }
 
 interface OutingRow {
@@ -31,6 +32,7 @@ interface OutingRow {
   distance_m: number;
   track?: string | null;
   entry_count?: number;
+  time_zone: string | null;
 }
 
 function toEntry(row: EntryRow): Entry {
@@ -47,6 +49,7 @@ function toEntry(row: EntryRow): Entry {
     weatherCode: row.weather_code,
     mood: isMoodId(row.mood) ? row.mood : null,
     moodSource: row.mood_source === 'user' ? 'user' : 'auto',
+    timeZone: row.time_zone ?? null,
   };
 }
 
@@ -59,6 +62,7 @@ function toOuting(row: OutingRow): Outing {
     endedAt: row.ended_at,
     distanceM: row.distance_m,
     entryCount: row.entry_count ?? 0,
+    timeZone: row.time_zone ?? null,
   };
 }
 
@@ -75,7 +79,7 @@ function parseTrack(raw: string | null | undefined): TrackPoint[] {
   }
 }
 
-const OUTING_COLUMNS = `o.id, o.kind, o.name, o.started_at, o.ended_at, o.distance_m,
+const OUTING_COLUMNS = `o.id, o.kind, o.name, o.started_at, o.ended_at, o.distance_m, o.time_zone,
   (SELECT COUNT(*) FROM entries e WHERE e.outing_id = o.id) AS entry_count`;
 
 // ---------------------------------------------------------------------------
@@ -95,8 +99,8 @@ export async function createEntry(db: Database, input: NewEntry): Promise<Entry>
   await transaction(db, async () => {
     const result = await db.runAsync(
       `INSERT INTO entries (outing_id, created_at, transcript, duration_s, latitude, longitude,
-         place, temp_c, weather_code, mood, mood_source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         place, temp_c, weather_code, mood, mood_source, time_zone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       input.outingId ?? null,
       input.createdAt ?? Date.now(),
       input.transcript,
@@ -108,6 +112,7 @@ export async function createEntry(db: Database, input: NewEntry): Promise<Entry>
       input.weatherCode ?? null,
       input.mood ?? null,
       input.moodSource ?? 'auto',
+      input.timeZone === undefined ? currentTimeZone() : input.timeZone,
     );
     id = result.lastInsertRowId;
     await rebuildSearch(db, id);
@@ -257,10 +262,11 @@ export async function createOuting(
   const startedAt = input.startedAt ?? Date.now();
   const result = await serialized(db, () =>
     db.runAsync(
-      'INSERT INTO outings (kind, name, started_at) VALUES (?, ?, ?)',
+      'INSERT INTO outings (kind, name, started_at, time_zone) VALUES (?, ?, ?, ?)',
       input.kind,
       input.name?.trim() || defaultOutingName(input.kind, startedAt),
       startedAt,
+      currentTimeZone(),
     ),
   );
   const outing = await getOuting(db, result.lastInsertRowId);
@@ -282,6 +288,22 @@ export async function getActiveOuting(db: Database): Promise<OutingWithTrack | n
      WHERE o.ended_at IS NULL ORDER BY o.started_at DESC LIMIT 1`,
   );
   return row ? { ...toOuting(row), track: parseTrack(row.track) } : null;
+}
+
+// The outings with these ids, for labeling the notes on screen however old they are.
+export async function listOutingsByIds(db: Database, ids: number[]): Promise<Outing[]> {
+  const unique = [...new Set(ids)];
+  const outings: Outing[] = [];
+  // SQLite limits how many values one statement can take.
+  for (let i = 0; i < unique.length; i += 500) {
+    const chunk = unique.slice(i, i + 500);
+    const rows = await db.getAllAsync<OutingRow>(
+      `SELECT ${OUTING_COLUMNS} FROM outings o WHERE o.id IN (${chunk.map(() => '?').join(', ')})`,
+      ...chunk,
+    );
+    outings.push(...rows.map(toOuting));
+  }
+  return outings;
 }
 
 // When the last note of an outing was made, so an outing left open can end at its

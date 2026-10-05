@@ -22,7 +22,7 @@ function asSentence(text: string): string {
 export function EntryCard({ entry, outing, units }: Props) {
   const router = useRouter();
   const palette = usePalette();
-  const time = formatTime(entry.createdAt);
+  const time = formatTime(entry.createdAt, undefined, entry.timeZone);
   const guard = useTapGuard();
   const tags = tagsLabel({ entry, outing, units });
 

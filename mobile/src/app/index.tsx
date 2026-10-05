@@ -43,7 +43,8 @@ export default function LogScreen() {
   if (!settings.onboarded) return <Redirect href="/onboarding" />;
 
   const filtering = query.trim().length > 0 || mood !== null;
-  const showEmpty = !loading && entries.length === 0;
+  // While a new search runs, keep showing the last answer instead of flashing a spinner.
+  const showEmpty = total !== null && entries.length === 0;
   // Keep the selected mood visible even after its last note changed mood, so it is clear
   // what is filtering the list and how to clear it.
   const moodChips = mood !== null && !moods.includes(mood) ? [...moods, mood] : moods;
@@ -112,7 +113,7 @@ export default function LogScreen() {
         keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingBottom: BAR_HEIGHT + insets.bottom + spacing.xl }}
         ListEmptyComponent={
-          loading ? (
+          loading && total === null ? (
             <ActivityIndicator style={styles.loading} color={palette.primary} accessibilityLabel="Loading notes" />
           ) : showEmpty ? (
             filtering ? (

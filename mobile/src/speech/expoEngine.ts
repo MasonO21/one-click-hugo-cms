@@ -2,8 +2,21 @@ import { Platform } from 'react-native';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import type { SpeechEngine, SpeechEvents, SpeechStartOptions } from './controller';
 
+// Counts recordings, so a delayed audio hand-back never cuts into a newer one.
+let sessions = 0;
+const RELEASE_RETRY_MS = 600;
+
+function deactivateAudio() {
+  try {
+    ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(false, { notifyOthersOnDeactivation: true });
+  } catch {
+    // Handing audio back is best effort.
+  }
+}
+
 export const expoSpeechEngine: SpeechEngine = {
   start(options: SpeechStartOptions) {
+    sessions += 1;
     ExpoSpeechRecognitionModule.start(options);
   },
   stop() {
@@ -20,7 +33,14 @@ export const expoSpeechEngine: SpeechEngine = {
   // music or a podcast that recording paused from resuming. Hand the audio back.
   release() {
     if (Platform.OS !== 'ios') return;
-    ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(false, { notifyOthersOnDeactivation: true });
+    deactivateAudio();
+    // After Cancel the recognizer takes a moment to shut down, and iOS will not hand the
+    // audio back while it is still in use. Try once more shortly after, unless a new
+    // recording has started by then.
+    const session = sessions;
+    setTimeout(() => {
+      if (session === sessions) deactivateAudio();
+    }, RELEASE_RETRY_MS);
   },
 };
 

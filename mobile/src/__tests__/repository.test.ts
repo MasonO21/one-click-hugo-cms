@@ -14,6 +14,7 @@ import {
   listEntries,
   listMoodsInUse,
   listOutings,
+  listOutingsByIds,
   loadEverything,
   renameOuting,
   saveOutingProgress,
@@ -334,5 +335,53 @@ describe('search index upkeep', () => {
     await createEntry(broken, { transcript: 'Still saves.' });
     expect(await listEntries(broken, { query: 'saves' })).toHaveLength(1);
     real.close();
+  });
+});
+
+describe('time zones in the database', () => {
+  it('stores the phone\'s time zone with new notes and outings', async () => {
+    const db = createTestDatabase();
+    await migrate(db);
+    const entry = await createEntry(db, { transcript: 'Here and now.' });
+    expect(entry.timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    expect((await createEntry(db, { transcript: 'Unknown zone.', timeZone: null })).timeZone).toBeNull();
+    expect((await createEntry(db, { transcript: 'In Tokyo.', timeZone: 'Asia/Tokyo' })).timeZone).toBe('Asia/Tokyo');
+    expect((await createOuting(db, { kind: 'hike' })).timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    db.close();
+  });
+
+  it('upgrades a database from before time zones were saved', async () => {
+    const db = createTestDatabase();
+    await db.execAsync(`
+      CREATE TABLE outings (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, name TEXT NOT NULL,
+        started_at INTEGER NOT NULL, ended_at INTEGER, distance_m REAL NOT NULL DEFAULT 0, track TEXT);
+      CREATE TABLE entries (id INTEGER PRIMARY KEY AUTOINCREMENT, outing_id INTEGER REFERENCES outings(id) ON DELETE SET NULL,
+        created_at INTEGER NOT NULL, transcript TEXT NOT NULL, duration_s INTEGER NOT NULL DEFAULT 0, latitude REAL,
+        longitude REAL, place TEXT, temp_c REAL, weather_code INTEGER, mood TEXT, mood_source TEXT NOT NULL DEFAULT 'auto');
+      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      INSERT INTO entries (created_at, transcript) VALUES (1, 'An old note');
+      PRAGMA user_version = 1;
+    `);
+    await migrate(db);
+    const [old] = await listEntries(db);
+    expect(old).toMatchObject({ transcript: 'An old note', timeZone: null });
+    expect(await listEntries(db, { query: 'old' })).toHaveLength(1);
+    const version = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
+    expect(version?.user_version).toBe(2);
+    db.close();
+  });
+});
+
+describe('outings by id', () => {
+  it('returns the outings asked for, old or new, once each', async () => {
+    const db = createTestDatabase();
+    await migrate(db);
+    const first = await createOuting(db, { kind: 'hike', name: 'First' });
+    await createOuting(db, { kind: 'run', name: 'Second' });
+    const third = await createOuting(db, { kind: 'hike', name: 'Third' });
+    const found = await listOutingsByIds(db, [third.id, first.id, first.id]);
+    expect(found.map((o) => o.name).sort()).toEqual(['First', 'Third']);
+    expect(await listOutingsByIds(db, [])).toEqual([]);
+    db.close();
   });
 });

@@ -1,5 +1,5 @@
 import type { Entry, OutingWithTrack } from '@/db/types';
-import { formatDuration } from './format';
+import { formatDuration, formatTime } from './format';
 import { MOOD_LABELS } from './moods';
 import { formatDistance, formatTemperature, type DistanceUnit, type TemperatureUnit } from './units';
 import { weatherLabel } from './weather';
@@ -26,6 +26,7 @@ export function toJson(data: ExportData, exportedAt: number = Date.now()): strin
         name: outing.name,
         startedAt: new Date(outing.startedAt).toISOString(),
         endedAt: outing.endedAt === null ? null : new Date(outing.endedAt).toISOString(),
+        timeZone: outing.timeZone,
         distanceMeters: Math.round(outing.distanceM),
         // Each point is [latitude, longitude, unix time in milliseconds].
         track: outing.track,
@@ -34,6 +35,7 @@ export function toJson(data: ExportData, exportedAt: number = Date.now()): strin
         id: entry.id,
         outingId: entry.outingId,
         createdAt: new Date(entry.createdAt).toISOString(),
+        timeZone: entry.timeZone,
         transcript: entry.transcript,
         durationSeconds: entry.durationS,
         latitude: entry.latitude,
@@ -48,6 +50,16 @@ export function toJson(data: ExportData, exportedAt: number = Date.now()): strin
     null,
     2,
   );
+}
+
+function zoneOf(timeZone: string | null): { timeZone?: string } {
+  if (!timeZone) return {};
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return { timeZone };
+  } catch {
+    return {};
+  }
 }
 
 // Characters that change formatting anywhere in a line.
@@ -77,13 +89,15 @@ export function toMarkdown(data: ExportData, units: ExportUnits, locale?: string
 
   for (const entry of newestFirst) {
     const date = new Date(entry.createdAt);
-    const day = date.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    // Each note's day and time where it was made.
+    const zone = zoneOf(entry.timeZone);
+    const day = date.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', ...zone });
     if (day !== currentDay) {
       currentDay = day;
       lines.push(`## ${day}`, '');
     }
 
-    lines.push(`### ${date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}`, '');
+    lines.push(`### ${formatTime(entry.createdAt, locale, entry.timeZone)}`, '');
     lines.push(escapeNote(entry.transcript), '');
 
     const tags: string[] = [];

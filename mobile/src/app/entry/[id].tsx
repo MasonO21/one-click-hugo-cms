@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { notifyDataChanged } from '@/db/events';
@@ -17,6 +17,8 @@ import { Chip } from '@/ui/Chip';
 import { EmptyState } from '@/ui/EmptyState';
 import { success, warning } from '@/ui/haptics';
 import { goBack } from '@/ui/navigation';
+import { useConfirmLeave } from '@/ui/useConfirmLeave';
+import { useToday } from '@/ui/useToday';
 import { Screen } from '@/ui/Screen';
 import { fonts, radius, spacing, usePalette } from '@/ui/theme';
 
@@ -34,6 +36,14 @@ export default function EntryScreen() {
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupFailed, setLookupFailed] = useState(false);
   const [changingMood, setChangingMood] = useState(false);
+  const today = useToday();
+  const editedUnsaved = Boolean(entry && draft !== null && draft.trim() !== '' && draft.trim() !== entry.transcript);
+  const leaveAllowed = useRef(false);
+  useConfirmLeave(
+    editedUnsaved,
+    { title: 'Discard your changes?', message: 'Your edits to this note have not been saved.', keep: 'Keep editing', discard: 'Discard' },
+    leaveAllowed,
+  );
 
   if (loading) return <Screen>{null}</Screen>;
 
@@ -94,6 +104,7 @@ export default function EntryScreen() {
         onPress: async () => {
           await deleteEntry(db, entryId);
           notifyDataChanged();
+          leaveAllowed.current = true;
           goBack(router);
         },
       },
@@ -102,7 +113,7 @@ export default function EntryScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: `${formatDay(entry.createdAt)}, ${formatTime(entry.createdAt)}` }} />
+      <Stack.Screen options={{ title: `${formatDay(entry.createdAt, today, undefined, entry.timeZone)}, ${formatTime(entry.createdAt, undefined, entry.timeZone)}` }} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TextInput

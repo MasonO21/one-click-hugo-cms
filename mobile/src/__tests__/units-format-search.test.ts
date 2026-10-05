@@ -1,4 +1,4 @@
-import { dayKey, defaultOutingName, formatDay, formatDuration, partOfDay } from '@/domain/format';
+import { currentTimeZone, dayKey, defaultOutingName, formatDay, formatDuration, formatTime, partOfDay } from '@/domain/format';
 import { buildFtsQuery, escapeLike, searchTerms } from '@/domain/search';
 import {
   celsiusToFahrenheit,
@@ -93,5 +93,37 @@ describe('search', () => {
 
   it('escapes LIKE wildcards', () => {
     expect(escapeLike('50%_off\\')).toBe('50\\%\\_off\\\\');
+  });
+});
+
+describe('time zones', () => {
+  // Noon UTC on 26 September: already 27 September at UTC+14, still 26 September at UTC-11.
+  const moment = Date.UTC(2026, 8, 26, 12, 0);
+
+  it('puts a note on the calendar day where it was made', () => {
+    expect(dayKey(moment, 'Pacific/Kiritimati')).toBe('2026-09-27');
+    expect(dayKey(moment, 'Pacific/Pago_Pago')).toBe('2026-09-26');
+  });
+
+  it('shows the local time where the note was made, with the zone when it is not the phone\'s', () => {
+    const time = formatTime(Date.UTC(2026, 8, 26, 22, 42), 'en-US', 'Asia/Tokyo');
+    expect(time).toMatch(/^7:42\sAM/);
+    if (currentTimeZone() !== 'Asia/Tokyo') expect(time).toMatch(/GMT\+9|JST/);
+  });
+
+  it('leaves out the zone name for notes made in the phone\'s own zone', () => {
+    const zone = currentTimeZone();
+    expect(formatTime(moment, 'en-US', zone)).toBe(formatTime(moment, 'en-US'));
+  });
+
+  it('falls back to the phone\'s zone for an unknown zone name', () => {
+    expect(formatTime(moment, 'en-US', 'Not/A_Zone')).toBe(formatTime(moment, 'en-US'));
+    expect(dayKey(moment, 'Not/A_Zone')).toBe(dayKey(moment));
+  });
+
+  it('names the date where the note was made', () => {
+    const monthLater = Date.UTC(2026, 9, 27, 12, 0);
+    expect(formatDay(moment, monthLater, 'en-US', 'Pacific/Kiritimati')).toBe('Sunday, September 27');
+    expect(formatDay(moment, monthLater, 'en-US', 'Pacific/Pago_Pago')).toBe('Saturday, September 26');
   });
 });

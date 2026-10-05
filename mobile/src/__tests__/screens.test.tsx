@@ -291,6 +291,30 @@ describe('log', () => {
     expect(await screen.findByText('This note is gone')).toBeOnTheScreen();
   });
 
+  it('labels the route of a note from an old outing', async () => {
+    mockDb = await freshDb();
+    // More outings than any fixed list would hold; the note belongs to the oldest one.
+    await mockDb.execAsync(`
+      WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 600)
+      INSERT INTO outings (kind, name, started_at, ended_at, distance_m) SELECT 'hike', 'Hike ' || i, i * 1000, i * 1000 + 1, 5000 FROM n;
+    `);
+    await createEntry(mockDb, { transcript: 'From the very first hike.', outingId: 1 });
+    await openApp();
+    expect(await screen.findByText(/^Hike 1 · /)).toBeOnTheScreen();
+  });
+
+  it('keeps showing "Nothing found" while a search is refined', async () => {
+    mockDb = await freshDb();
+    await createEntry(mockDb, { transcript: 'Fog on the ridge.' });
+    await openApp();
+    await type(await screen.findByLabelText('Search your notes'), 'zz');
+    await act(async () => jest.advanceTimersByTimeAsync(300));
+    expect(await screen.findByText('Nothing found')).toBeOnTheScreen();
+    await type(screen.getByLabelText('Search your notes'), 'zzz');
+    expect(screen.queryByLabelText('Loading notes')).toBeNull();
+    expect(screen.getByText('Nothing found')).toBeOnTheScreen();
+  });
+
   it('treats a broken link to a note as gone', async () => {
     mockDb = await freshDb();
     await openApp('/entry/abc');
@@ -366,6 +390,71 @@ describe('log', () => {
     await press(await screen.findByRole('button', { name: 'No mood' }));
     expect(await screen.findByText('You chose no mood for this note.')).toBeOnTheScreen();
     expect(screen.queryByText('No mood was picked up from this note.')).toBeNull();
+  });
+});
+
+describe('unsaved words', () => {
+  const discardPrompt = (title: string) =>
+    (Alert.alert as jest.Mock).mock.calls.find(([t]) => t === title) as [string, string, { text: string; onPress?: () => void }[]] | undefined;
+
+  it('asks before throwing away a typed note, and leaves when told to', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await screen.findByText('No notes yet');
+    await press(screen.getByRole('button', { name: 'Write' }));
+    await type(await screen.findByLabelText('Your note'), 'Half a thought');
+    await act(async () => {
+      router.back();
+    });
+    const prompt = discardPrompt('Discard this note?');
+    expect(prompt).toBeDefined();
+    expect(screen.getByLabelText('Your note')).toBeOnTheScreen();
+
+    await act(async () => {
+      prompt?.[2].find((b) => b.text === 'Discard')?.onPress?.();
+    });
+    expect(await screen.findByText('No notes yet')).toBeOnTheScreen();
+    expect(await listEntries(mockDb)).toHaveLength(0);
+  });
+
+  it('leaves without asking after saving', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await screen.findByText('No notes yet');
+    await press(screen.getByRole('button', { name: 'Write' }));
+    await type(await screen.findByLabelText('Your note'), 'Saved properly.');
+    await press(screen.getByRole('button', { name: 'Save note' }));
+    expect(await screen.findByText('Saved properly.')).toBeOnTheScreen();
+    expect(discardPrompt('Discard this note?')).toBeUndefined();
+  });
+
+  it('asks before throwing away edits to a note', async () => {
+    mockDb = await freshDb();
+    const entry = await createEntry(mockDb, { transcript: 'Original.' });
+    await openApp();
+    await press(await screen.findByText('Original.'));
+    await type(await screen.findByLabelText('Note text'), 'Original, with more.');
+    await act(async () => {
+      router.back();
+    });
+    expect(discardPrompt('Discard your changes?')).toBeDefined();
+    expect(screen.getByLabelText('Note text')).toBeOnTheScreen();
+    expect((await getEntry(mockDb, entry.id))?.transcript).toBe('Original.');
+  });
+
+  it('does not ask when the edited note is deleted', async () => {
+    mockDb = await freshDb();
+    await createEntry(mockDb, { transcript: 'Delete me.' });
+    await openApp();
+    await press(await screen.findByText('Delete me.'));
+    await type(await screen.findByLabelText('Note text'), 'Delete me, edited.');
+    await press(screen.getByRole('button', { name: 'Delete note' }));
+    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.at(-1) as [string, string, { text: string; onPress?: () => void }[]];
+    await act(async () => {
+      await buttons.find((b) => b.text === 'Delete')?.onPress?.();
+    });
+    expect(await screen.findByText('No notes yet')).toBeOnTheScreen();
+    expect(discardPrompt('Discard your changes?')).toBeUndefined();
   });
 });
 

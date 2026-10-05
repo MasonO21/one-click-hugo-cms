@@ -14,6 +14,7 @@ const entry = (over: Partial<Entry> & { id: number; createdAt: number }): Entry 
   weatherCode: null,
   mood: null,
   moodSource: 'auto',
+  timeZone: null,
   ...over,
 });
 
@@ -29,6 +30,15 @@ describe('groupByDay', () => {
     const sections = groupByDay(items, now);
     expect(sections.map((s) => s.title)).toEqual(['Today', 'Yesterday', expect.stringContaining('September 20')]);
     expect(sections.map((s) => s.data.map((i) => i.id))).toEqual([[1, 2], [3], [4]]);
+  });
+
+  it('groups notes by the day where each was made', () => {
+    const moment = Date.UTC(2026, 8, 26, 12, 0);
+    const sections = groupByDay(
+      [entry({ id: 1, createdAt: moment, timeZone: 'Pacific/Kiritimati' }), entry({ id: 2, createdAt: moment - 1, timeZone: 'Pacific/Pago_Pago' })],
+      Date.UTC(2026, 10, 1),
+    );
+    expect(sections.map((s) => s.key)).toEqual(['2026-09-27', '2026-09-26']);
   });
 
   it('returns nothing for no entries', () => {
@@ -63,6 +73,7 @@ describe('exports', () => {
     endedAt: new Date(2026, 8, 26, 9, 30).getTime(),
     distanceM: 9977,
     entryCount: 1,
+    timeZone: null,
     track: [[40, -105, 1]],
   };
   const entries = [

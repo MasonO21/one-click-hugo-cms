@@ -10,6 +10,7 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { success } from '@/ui/haptics';
 import { goBack } from '@/ui/navigation';
+import { useConfirmLeave } from '@/ui/useConfirmLeave';
 import { Screen } from '@/ui/Screen';
 import { fonts, radius, spacing, usePalette } from '@/ui/theme';
 
@@ -23,6 +24,12 @@ export default function WriteScreen() {
   const [text, setText] = useState(() => (typeof params.text === 'string' ? params.text : ''));
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
+  const leaveAllowed = useRef(false);
+  useConfirmLeave(
+    text.trim().length > 0,
+    { title: 'Discard this note?', message: 'What you typed has not been saved.', keep: 'Keep writing', discard: 'Discard' },
+    leaveAllowed,
+  );
   // Saving can wait a few seconds for GPS. If the person has left by then, the note is
   // still saved but the app must not close whatever screen they moved on to.
   const left = useRef(false);
@@ -50,6 +57,7 @@ export default function WriteScreen() {
       });
       enrichEntry(db, entry.id, enrichers).catch(() => undefined);
       success();
+      leaveAllowed.current = true;
       if (!left.current) goBack(router);
     } catch {
       busy.current = false;

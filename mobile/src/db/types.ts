@@ -29,6 +29,8 @@ export interface Entry {
   weatherCode: number | null;
   mood: MoodId | null;
   moodSource: MoodSource;
+  // Where the note was made, such as "America/Denver". Null for notes from before this was saved.
+  timeZone: string | null;
 }
 
 export interface NewEntry {
@@ -43,6 +45,7 @@ export interface NewEntry {
   weatherCode?: number | null;
   mood?: MoodId | null;
   moodSource?: MoodSource;
+  timeZone?: string | null;
 }
 
 export interface Outing {
@@ -53,6 +56,7 @@ export interface Outing {
   endedAt: number | null;
   distanceM: number;
   entryCount: number;
+  timeZone: string | null;
 }
 
 export interface OutingWithTrack extends Outing {

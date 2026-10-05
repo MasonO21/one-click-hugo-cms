@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { countEntries, listEntries, listMoodsInUse, listOutings } from '@/db/repository';
+import { countEntries, listEntries, listMoodsInUse, listOutingsByIds } from '@/db/repository';
 import type { Entry, Outing } from '@/db/types';
 import type { MoodId } from '@/domain/moods';
 import { useDatabase } from '@/providers/useDatabase';
@@ -39,12 +39,12 @@ export function useEntries({ query, mood }: Options) {
     const timer = setTimeout(
       async () => {
         try {
-          const [rows, inUse, count, outingRows] = await Promise.all([
-            listEntries(db, { query, mood, limit }),
-            listMoodsInUse(db),
-            countEntries(db),
-            listOutings(db, 500),
-          ]);
+          const [rows, inUse, count] = await Promise.all([listEntries(db, { query, mood, limit }), listMoodsInUse(db), countEntries(db)]);
+          // Only the outings of the notes shown, so older notes keep their route label.
+          const outingRows = await listOutingsByIds(
+            db,
+            rows.flatMap((row) => (row.outingId === null ? [] : [row.outingId])),
+          );
           if (cancelled) return;
           setData({
             key,

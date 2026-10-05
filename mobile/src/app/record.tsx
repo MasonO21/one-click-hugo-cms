@@ -26,6 +26,7 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { success } from '@/ui/haptics';
 import { goBack } from '@/ui/navigation';
+import { useConfirmLeave } from '@/ui/useConfirmLeave';
 import { Screen } from '@/ui/Screen';
 import { radius, spacing, usePalette } from '@/ui/theme';
 
@@ -58,6 +59,8 @@ export default function RecordScreen() {
   // A start is in progress. Permission dialogs make the app inactive and active again,
   // which must not start a second listening session on top of the first.
   const beginning = useRef(false);
+  // Set just before leaving on purpose (saved, Cancel, Close), so no discard prompt shows.
+  const leaveAllowed = useRef(false);
   const [pulse] = useState(() => new Animated.Value(1));
   const [reduceMotion, setReduceMotion] = useState(false);
   const activeOutingId = outing.active?.id ?? null;
@@ -81,6 +84,7 @@ export default function RecordScreen() {
         enrichEntry(db, entry.id, enrichers).catch(() => undefined);
         success();
         if (!leaving.current) {
+          leaveAllowed.current = true;
           goBack(router);
           if (speechFailure) Alert.alert('Saved what we heard', speechFailure.message);
         }
@@ -123,6 +127,19 @@ export default function RecordScreen() {
   const [continuous] = useState(() => supportsContinuousRecognition());
   const session = useSpeechSession({ lang, onDevice, continuous, engine: expoSpeechEngine, onDone });
   const { begin: beginListening, cancel: cancelListening, stop: stopListening, text: liveText } = session;
+
+  // Android back (or a gesture) must not silently throw away words. The Cancel and
+  // Close buttons say what they do, so they leave without asking.
+  useConfirmLeave(
+    (phase === 'listening' && liveText.trim() !== '') || unsaved !== null,
+    {
+      title: 'Discard this note?',
+      message: 'What you said has not been saved.',
+      keep: 'Keep it',
+      discard: 'Discard',
+    },
+    leaveAllowed,
+  );
 
   const begin = useCallback(async () => {
     if (beginning.current) return;
@@ -233,12 +250,14 @@ export default function RecordScreen() {
 
   function close() {
     leaving.current = true;
+    leaveAllowed.current = true;
     cancelListening();
     goBack(router);
   }
 
   function writeInstead() {
     leaving.current = true;
+    leaveAllowed.current = true;
     cancelListening();
     // A note that could not be saved goes to the write screen instead of being lost.
     router.replace(unsaved ? { pathname: '/write', params: { text: unsaved.text } } : '/write');

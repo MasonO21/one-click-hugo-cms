@@ -79,6 +79,14 @@ export async function migrate(db: Database): Promise<void> {
     });
   }
 
+  // Version 2: notes and outings remember the time zone they were made in.
+  if (version < 2) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync('ALTER TABLE entries ADD COLUMN time_zone TEXT; ALTER TABLE outings ADD COLUMN time_zone TEXT;');
+      await db.execAsync('PRAGMA user_version = 2');
+    });
+  }
+
   // Full-text search is optional. If this SQLite build lacks FTS5, search falls back to
   // a slower substring match and everything else keeps working.
   try {

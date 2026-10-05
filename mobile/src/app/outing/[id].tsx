@@ -15,6 +15,7 @@ import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { warning } from '@/ui/haptics';
 import { goBack } from '@/ui/navigation';
+import { useToday } from '@/ui/useToday';
 import { Screen } from '@/ui/Screen';
 import { fonts, radius, spacing, usePalette } from '@/ui/theme';
 
@@ -27,6 +28,7 @@ export default function OutingScreen() {
   const { units } = useSettings();
   const running = useOuting();
   const { outing, entries, loading } = useOutingDetail(outingId);
+  const today = useToday();
   const [name, setName] = useState<string | null>(null);
 
   if (loading) return <Screen>{null}</Screen>;
@@ -91,7 +93,7 @@ export default function OutingScreen() {
               ]}
             />
             <AppText tone="textMuted">
-              {outing.kind === 'run' ? 'Run' : 'Hike'} {'·'} {formatDay(outing.startedAt)}, {formatTime(outing.startedAt)}
+              {outing.kind === 'run' ? 'Run' : 'Hike'} {'·'} {formatDay(outing.startedAt, today, undefined, outing.timeZone)}, {formatTime(outing.startedAt, undefined, outing.timeZone)}
             </AppText>
           </View>
 
