@@ -24,8 +24,11 @@ const SHOTS = [
     start(1, 200); give({ soulBolt: 3, gravePulse: 2 }); r.legion.addMany(180, r.player.x, r.player.z); ring(60, 10); ring(60, 13); sim(1.2);
     r.nova = 1; r.triggerNova(); sim(0.45);` },
   { name: '04-boss', caption: 'SLAY <em>THE HOLLOW KING</em>', stage: `
-    start(1, 340); give({ soulBolt: 3, scythe: 2, skullHalo: 2 }); r.legion.addMany(90, r.player.x, r.player.z); r.time = 359.9; sim(3.4);
-    r.boss.cd = 0; sim(0.9);` },
+    start(1, 340); give({ soulBolt: 3, scythe: 2, skullHalo: 2 }); r.legion.addMany(70, r.player.x, r.player.z); r.time = 359.9; sim(3.4, 0, 0);
+    const b = r.bossEnemy; r.boss.update = () => {}; // pose the King for the still: in place, facing the camera
+    b.x = r.player.x; b.z = r.player.z - 5.5; b.rot = 0; r.boss.y = 0; r.boss.state = 'chase';
+    const rb = r.boss.render.bind(r.boss); r.boss.render = (dt) => { rb(dt); r.boss.mat.uniforms.uFlash.value = 0; };
+    r.camPos.copy(r.desiredCam()); sim(0.7, 0, 0);` },
   { name: '05-heroes', caption: 'COLLECT <em>LEGENDARY SHEPHERDS</em>', menu: 'heroes', stage: `
     const p = app.profile; for (const id of ['nyx', 'seraphine', 'mordrake']) { p.heroes[id].owned = true; p.heroes[id].stars = 1 + (id === 'mordrake' ? 2 : 1); }
     p.heroes.vael.stars = 3; p.gold = 48200; p.gems = 2350; E.manual = false; app.meta.show('heroes'); app.meta.refresh();` },
@@ -48,7 +51,7 @@ const helpers = `
 
 const caption = (html) => `(() => {
   const s = document.createElement('style');
-  s.textContent = '.hint,.banner,.lvl-back,.toast{display:none!important}.ss-cap{position:absolute;left:0;right:0;top:0;z-index:90;padding:calc(var(--safe-t) + 74px) 18px 26px;text-align:center;font-family:Cinzel,serif;font-weight:900;font-size:31px;line-height:1.08;letter-spacing:.03em;color:#fff;background:linear-gradient(180deg,rgba(3,5,12,.96) 55%,rgba(3,5,12,0));text-shadow:0 0 18px rgba(78,242,255,.85),0 3px 0 #00303a;pointer-events:none}.ss-cap em{font-style:normal;display:block;color:#ffcf4a;font-size:38px;text-shadow:0 0 20px rgba(255,207,74,.9),0 3px 0 #4a2a00}';
+  s.textContent = '.hint,.banner,.lvl-back,.toast{display:none!important}.hud-top{visibility:hidden}.ss-cap{position:absolute;left:0;right:0;top:0;z-index:90;padding:calc(var(--safe-t) + 74px) 18px 26px;text-align:center;font-family:Cinzel,serif;font-weight:900;font-size:31px;line-height:1.08;letter-spacing:.03em;color:#fff;background:linear-gradient(180deg,rgba(3,5,12,.96) 55%,rgba(3,5,12,0));text-shadow:0 0 18px rgba(78,242,255,.85),0 3px 0 #00303a;pointer-events:none}.ss-cap em{font-style:normal;display:block;color:#ffcf4a;font-size:38px;text-shadow:0 0 20px rgba(255,207,74,.9),0 3px 0 #4a2a00}';
   document.head.appendChild(s);
   const d = document.createElement('div'); d.className = 'ss-cap'; d.innerHTML = ${JSON.stringify(html)};
   document.getElementById('ui').appendChild(d);
@@ -68,7 +71,7 @@ for (const shot of SHOTS.filter((x) => !ONLY || x.name.startsWith(ONLY))) {
   else await page.evaluate(() => { for (const a of document.getAnimations()) { try { if (a.effect.getComputedTiming().iterations !== Infinity) a.finish(); } catch (e) { /* ignore */ } } });
   await page.evaluate(caption(shot.caption));
   await page.waitForTimeout(300);
-  await page.screenshot({ path: `${OUT}/${shot.name}.png`, timeout: 180000 });
+  await page.screenshot({ path: `${OUT}/${shot.name}.jpg`, type: 'jpeg', quality: 92, timeout: 180000 });
   console.log('wrote', shot.name);
   await ctx.close();
 }
