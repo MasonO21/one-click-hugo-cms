@@ -417,6 +417,28 @@ describe('unsaved words', () => {
     expect(await listEntries(mockDb)).toHaveLength(0);
   });
 
+  it('has a Cancel button that leaves at once when nothing was typed', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await screen.findByText('No notes yet');
+    await press(screen.getByRole('button', { name: 'Write' }));
+    await screen.findByLabelText('Your note');
+    await press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByText('No notes yet')).toBeOnTheScreen();
+    expect(discardPrompt('Discard this note?')).toBeUndefined();
+  });
+
+  it('asks before Cancel throws away typed text', async () => {
+    mockDb = await freshDb();
+    await openApp();
+    await screen.findByText('No notes yet');
+    await press(screen.getByRole('button', { name: 'Write' }));
+    await type(await screen.findByLabelText('Your note'), 'Not finished');
+    await press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(discardPrompt('Discard this note?')).toBeDefined();
+    expect(screen.getByLabelText('Your note')).toBeOnTheScreen();
+  });
+
   it('leaves without asking after saving', async () => {
     mockDb = await freshDb();
     await openApp();

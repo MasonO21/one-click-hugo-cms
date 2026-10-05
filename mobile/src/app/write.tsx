@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useOuting } from '@/providers/OutingProvider';
 import { useDatabase } from '@/providers/useDatabase';
 import { enrichers } from '@/services/enrichers';
@@ -68,6 +68,18 @@ export default function WriteScreen() {
 
   return (
     <Screen>
+      {/* A visible way out of the sheet, besides swiping it down. Unsaved text is confirmed first. */}
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <Pressable accessibilityRole="button" accessibilityLabel="Cancel" hitSlop={12} onPress={() => goBack(router)} style={styles.cancel}>
+              <AppText variant="bodyBold" style={{ color: palette.primary }}>
+                Cancel
+              </AppText>
+            </Pressable>
+          ),
+        }}
+      />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <AppText tone="textMuted">Write what you see, hear, or feel. The place, weather, and mood are added for you.</AppText>
@@ -95,6 +107,8 @@ export default function WriteScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Phones inset the header's left button themselves; the browser build does not.
+  cancel: { minHeight: 44, justifyContent: 'center', paddingRight: spacing.md, paddingLeft: Platform.OS === 'web' ? spacing.lg : 0 },
   fill: { flex: 1 },
   content: { gap: spacing.lg, padding: spacing.lg },
   input: { minHeight: 200, fontSize: 17, lineHeight: 25, padding: spacing.lg, borderRadius: radius.md, borderWidth: 1 },
