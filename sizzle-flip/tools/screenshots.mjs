@@ -5,10 +5,10 @@ fs.mkdirSync('store', { recursive: true });
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 430, height: 932 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
 page.on('pageerror', e => console.log('PAGEERROR', e.message));
-await page.goto('http://localhost:8123/?nosw&debug');
+await page.goto('http://localhost:8123/?nosw');
 await page.waitForTimeout(2500);
 await page.screenshot({ path: 'store/screenshot-1-title.png' });
-const shots = [[3, 'kitchen'], [24, 'living'], [47, 'backyard'], [107, 'toyroom'], [165, 'space'], [189, 'heaven']];
+const shots = [[3, 'kitchen'], [24, 'living'], [47, 'backyard'], [66, 'bathroom'], [107, 'toyroom'], [146, 'beach'], [165, 'space'], [189, 'heaven']];
 let n = 2;
 for (const [lvl, name] of shots) {
   await page.evaluate((i) => window.__app.startLevel(i), lvl);

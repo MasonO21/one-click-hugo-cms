@@ -2,7 +2,9 @@
 
 A polished mobile physics game about flipping a squishy sausage out of a frying pan, onto random household objects, and — eventually — into a hot dog bun.
 
-Inspired by the one-button chaos of *a weird game about sausage*, rebuilt for phones with touch controls and **200 hand-tuned, machine-verified levels** across 10 worlds.
+Inspired by the one-button chaos of *a weird game about sausage*, rebuilt for phones with touch controls and **200 machine-verified levels** across 10 worlds.
+
+![Sizzle Flip screenshots](store/overview.jpg)
 
 | | |
 |---|---|
@@ -54,7 +56,9 @@ Levels are built by `tools/generate.mjs` from per-world *recipes* (which props, 
 
 Every candidate level is then **played by a bot**: `tools/solver.mjs` beam-searches thousands of flips per resting position using the *exact same deterministic physics* the game runs and finds the fewest-flip route. Each shot on that route is re-fired with human-sized mistakes (aim ±1.2°, power ±2%, reaction time ±0.06 s) and must still work a set fraction of the time — high for early levels, lower as the game gets harder — so no level depends on a pixel-perfect shot. Impossible, trivial or fragile levels are rejected and rebuilt. The winning route is stored with the level and **replayed continuously** to prove it reproduces; that same route powers the in-game 💡 hint and the title-screen demo.
 
-`node tools/qa.mjs` re-plays every stored route with random human error and reports a success rate per level.
+`node tools/qa.mjs` re-plays every stored route with random human error and reports a success rate per level. `node tools/tune-par.mjs` then sets each level's **par**: the bot's fewest flips, plus one (or two, for long routes) where the clean route is rarely executed perfectly, so three stars stay within reach. The solver's minimum is kept as `minFlips` — beating par is possible and earns the *Under Par* trophy.
+
+Full rebuild: `node tools/generate.mjs --workers 4 && node tools/tune-par.mjs` (about 1–2 hours on 4 cores).
 
 ```bash
 node tools/generate.mjs --workers 4             # (re)generate all 200 levels → src/levels/data.js
@@ -78,7 +82,8 @@ src/objects.js              prop library: collision shapes, materials, roles (10
 src/art/                    procedural vector art: sausage + face, props per world, backgrounds, logo
 src/audio.js                synthesized SFX + per-world procedural music
 src/levels/data.js          the 200 generated & verified levels
-tools/                      generator, solver, build, QA pages, icon renderer
+tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon & screenshot renderers
+store/                      store screenshots (1290×2796) and feature graphic source in icons/
 android/                    Capacitor Android project
 ```
 

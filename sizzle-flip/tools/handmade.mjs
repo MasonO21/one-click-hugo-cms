@@ -7,9 +7,9 @@ export const HANDMADE = {
     h: H, seed: 11, par: 1, start: [150, H - 190], tip: 'Drag back anywhere, aim, and release to <b>flip</b>!',
     objects: [
       ...stovePan(150),
-      { t: 'counter', x: 462, y: H - 100, w: 320, h: 200, color: '#86b8a8' },
-      { t: 'bun', x: 428, y: H - 233 },
-      { t: 'jar', x: 584, y: H - 250 },
+      { t: 'counter', x: 488, y: H - 100, w: 280, h: 200, color: '#86b8a8' },
+      { t: 'bun', x: 446, y: H - 233 },
+      { t: 'jar', x: 592, y: H - 250 },
       { t: 'shelf', x: 470, y: 640, w: 220, color: '#c98a4b' },
       { t: 'microwave', x: 470, y: 640 - 9 - 52 },
     ],

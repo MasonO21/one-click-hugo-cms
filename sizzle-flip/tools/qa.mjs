@@ -6,12 +6,6 @@ import { makeSim } from './solver.mjs';
 import { PHYS } from '../src/physics.js';
 import path from 'node:path';
 
-const args = process.argv.slice(2);
-const arg = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 ? args[i + 1] : d; };
-const file = path.resolve(arg('file', 'src/levels/data.js'));
-const N = +arg('n', 30);
-const { LEVELS } = await import(file);
-const ids = arg('ids', null) ? arg('ids').split(',').map(Number) : LEVELS.map((_, i) => i);
 
 function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -38,7 +32,13 @@ export function perturbedRate(L, wi, n = 30, seed = 1) {
   return wins / n;
 }
 
-if (process.argv[1].endsWith('qa.mjs')) {
+if ((process.argv[1] || '').endsWith('qa.mjs')) {
+  const args = process.argv.slice(2);
+  const arg = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 ? args[i + 1] : d; };
+  const file = path.resolve(arg('file', 'src/levels/data.js'));
+  const N = +arg('n', 30);
+  const { LEVELS } = await import(file);
+  const ids = arg('ids', null) ? arg('ids').split(',').map(Number) : LEVELS.map((_, i) => i);
   const rows = [];
   for (const i of ids) {
     const L = LEVELS[i];

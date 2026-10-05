@@ -128,7 +128,7 @@ const RECIPES = {
     ],
   },
   beach: {
-    ground: ['pillar'], wall: null, shelfColor: '#9a6b42', groundColor: ['#9a6b42'],
+    ground: [], wall: null, float: true, shelfColor: '#9a6b42', groundColor: ['#9a6b42'],
     stones: [['cooler', 0, 2], ['crate', 0, 2], ['sandcastle', 2, 1], ['surfboard', 4, 1]],
     mechs: [
       { k: 0, kind: 'note', tip: 'The sea is <b>soggy</b>. Stay dry!' },
@@ -334,6 +334,8 @@ export class Builder {
         const seg = { x0: pb.x0, x1: pb.x1, y0: pb.y0, y1: stopY };
         if (blocked || !this.free(seg, 4, [inst, ...this.boxes.filter(o => o.box.y0 >= stopY - 1).map(o => o.inst)])) continue;
         if (this.corridor && overlaps(seg, this.corridor, 0)) continue;
+        // never wall in the frying pan: keep tall posts well clear of the stove
+        if (this.start && Math.abs(px - this.start[0]) < 250 && stopY > this.start[1] - 260) continue;
         const len = stopY - box.y1 + (stopY === H ? 80 : 4);
         const g = { t: 'pillar', x: px, y: box.y1 - 2 + len / 2, w: 26, h: len, color: R.shelfColor };
         this.add(g, { box: seg });
@@ -500,6 +502,11 @@ export class Builder {
     if (!bun) return null;
     this.corridor = null;
 
+    // the tutorial obstacle goes in first, while there is still room for it
+    if (this.introMech && !stoneKinds.includes(this.introMech.kind)) {
+      if (!this.placeObstacle(this.introMech, placed, bun, d)) return null;
+    }
+
     // ---- floor dressing: furniture standing on the floor (also usable as alternate landing spots)
     const dress = FLOOR_DRESSING[this.world.id] || [];
     const nDress = dress.length ? 1 + Math.floor(this.r() * 2.2) : 0;
@@ -522,7 +529,7 @@ export class Builder {
 
     // ---- obstacles & hazards
     for (const m of want) {
-      if (stoneKinds.includes(m.kind)) continue;
+      if (stoneKinds.includes(m.kind) || m === this.introMech) continue;
       this.placeObstacle(m, placed, bun, d);
     }
     // extra decoy stones for alternative routes + set dressing so scenes feel lived-in
@@ -684,17 +691,19 @@ export class Builder {
     const seg = Math.floor(this.r() * (pts.length - 1));
     const a = pts[seg], b = pts[seg + 1];
     const mx = (a[0] + b[0]) / 2, my = Math.min(a[1], b[1]);
-    for (let tries = 0; tries < 8; tries++) {
+    for (let tries = 0; tries < 14; tries++) {
       let inst = null;
       if (m.kind === 'hazard') {
         // near a landing spot, beside it (punish overshoot) or floating mid-route
         const target = this.pick(placed.length ? [...placed, bun] : [bun]);
         const l = landStrip(target);
-        const sideX = this.r() < 0.5 ? l.x0 - this.range(70, 120) : l.x1 + this.range(70, 120);
+        let sideX = this.r() < 0.5 ? l.x0 - this.range(70, 120) : l.x1 + this.range(70, 120);
+        let baseY = l.y + this.range(-10, 40);
+        if (tries >= 6) { sideX = this.range(70, 570); baseY = this.range(this.topY - 40, this.start[1] - 120); }
         inst = { t: m.t, flip: this.r() < 0.5 };
         const T = OBJECTS[m.t];
         if (T.ground) placeOnBottom(inst, clamp(sideX, 60, 580), H);
-        else placeOnBottom(inst, clamp(sideX, 60, 580), l.y + this.range(-10, 40));
+        else placeOnBottom(inst, clamp(sideX, 60, 580), baseY);
         const box = worldBox(inst);
         if (!this.free(box, 18)) continue;
         this.add(inst, { box });
@@ -717,7 +726,8 @@ export class Builder {
         const target = this.pick([...placed, bun]);
         const l = landStrip(target);
         inst = { t: m.t, timer: { period: this.range(2.4, 3.4), on: 0.45, phase: this.r() } };
-        placeOnBottom(inst, clamp(this.r() < 0.5 ? l.x0 - 80 : l.x1 + 80, 70, 570), l.y + 4);
+        if (tries < 6) placeOnBottom(inst, clamp(this.r() < 0.5 ? l.x0 - 80 : l.x1 + 80, 70, 570), l.y + 4);
+        else placeOnBottom(inst, this.range(70, 570), this.range(this.topY - 40, this.start[1] - 120));
         const box = worldBox(inst, true);
         if (!this.free(box, 14)) continue;
         this.add(inst, { box });
@@ -735,11 +745,13 @@ export class Builder {
       }
       if (m.kind === 'rotor') {
         const T = OBJECTS[m.t];
-        inst = { t: m.t, x: clamp(mx + this.range(-60, 60), 140, 500), y: my - this.range(20, 120), move: { type: 'rotate', speed: this.range(0.5, 1.1) * (this.r() < 0.5 ? -1 : 1) } };
-        const rad = Math.hypot(T.w, T.h) / 2 + 10;
+        inst = { t: m.t, x: tries < 4 ? clamp(mx + this.range(-60, 60), 140, 500) : this.range(140, 500), y: tries < 4 ? my - this.range(20, 120) : this.range(Math.min(a[1], b[1]) - 200, Math.max(a[1], b[1])), move: { type: 'rotate', speed: this.range(0.5, 1.1) * (this.r() < 0.5 ? -1 : 1) } };
+        // true sweep radius: farthest solid point from the pivot
+        const lb = localBox(inst), pv = T.pivot || [0, 0];
+        const rad = Math.max(...[[lb[0], lb[1]], [lb[2], lb[1]], [lb[0], lb[3]], [lb[2], lb[3]]].map(([cx, cy]) => Math.hypot(cx - pv[0], cy - pv[1]))) + 10;
         const box = { x0: inst.x - rad, x1: inst.x + rad, y0: inst.y - rad, y1: inst.y + rad };
         if (box.x0 < -40 || box.x1 > W + 40) continue;
-        if (!this.free({ ...box, x0: Math.max(0, box.x0), x1: Math.min(W, box.x1) }, 10)) continue;
+        if (!this.free({ ...box, x0: Math.max(0, box.x0), x1: Math.min(W, box.x1) }, 6)) continue;
         this.add(inst, { box });
         return inst;
       }
@@ -848,6 +860,19 @@ export function generateOne(index, opts = {}) {
     if (replaySolution(lvl, w, solution) !== 'win') continue;
     best = { lvl, sol, score: 99, attempt: maxAttempts + attempt, tip: b.tip };
   }
+  // final tier: plainer and a bit shorter still
+  for (let attempt = 0; attempt < 24 && !best; attempt++) {
+    const seed = (index + 1) * 32452843 + attempt * 104729;
+    const b = new Builder(index, seed);
+    const lvl0 = b.build(Math.max(2, T.par - 2), T.d * 0.3, true);
+    if (!lvl0) continue;
+    const lvl = { ...lvl0, start: lvl0.start.map(v => Math.round(v * 10) / 10), objects: lvl0.objects.map(roundInst) };
+    const sol = solve(lvl, w, { maxDepth: T.par + 2, beam: 7, minEdge: 0.06 });
+    if (!sol.par) continue;
+    const solution = sol.path.map(s => [s.a, s.p, s.delay || 0]);
+    if (replaySolution(lvl, w, solution) !== 'win') continue;
+    best = { lvl, sol, score: 999, attempt: 99 + attempt, tip: b.tip };
+  }
   if (!best) throw new Error('Failed to generate level ' + index);
   const { lvl, sol } = best;
   return {
@@ -884,7 +909,11 @@ if (isMainThread && process.argv[1] && process.argv[1].endsWith('generate.mjs'))
   const todo = [];
   const list = arg('list', null);
   const range = list ? list.split(',').map(Number) : Array.from({ length: to - from }, (_, k) => from + k);
-  for (const i of range) if (!cache[i] || (only && only.split(',').map(Number).includes(i)) || args.includes('--force')) todo.push(i);
+  const onlySet = only ? new Set(only.split(',').map(Number)) : null;
+  for (const i of range) {
+    if (onlySet) { if (onlySet.has(i)) todo.push(i); }
+    else if (!cache[i] || args.includes('--force')) todo.push(i);
+  }
   console.log(`generating ${todo.length} levels with ${workers} workers`);
   let active = 0, done = 0;
   const t0 = Date.now();
@@ -893,7 +922,7 @@ if (isMainThread && process.argv[1] && process.argv[1].endsWith('generate.mjs'))
       if (!todo.length) { if (!active) resolve(); return; }
       const i = todo.shift();
       active++;
-      const wk = new Worker(new URL(import.meta.url), { workerData: { index: i } });
+      const wk = new Worker(new URL(import.meta.url), { workerData: { index: i, attempts: +arg('attempts', 18) } });
       wk.on('message', (m) => {
         cache[m.index] = m.level;
         done++;
@@ -918,6 +947,6 @@ if (isMainThread && process.argv[1] && process.argv[1].endsWith('generate.mjs'))
   if (arg('preview', null)) fs.writeFileSync(arg('preview'), JSON.stringify(cache));
   console.log('wrote', out, (body.length / 1024).toFixed(1) + 'KB');
 } else if (!isMainThread) {
-  const level = generateOne(workerData.index);
+  const level = generateOne(workerData.index, { maxAttempts: workerData.attempts || 18 });
   parentPort.postMessage({ index: workerData.index, level });
 }
