@@ -1,0 +1,18 @@
+{
+  "name": "Sizzle Flip",
+  "short_name": "Sizzle Flip",
+  "description": "Flip a squishy sausage out of the frying pan and onto 200 levels of random objects until it lands in the bun.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#2a1a2e",
+  "theme_color": "#ef4b3c",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

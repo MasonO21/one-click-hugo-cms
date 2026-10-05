@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>html,body{overflow:auto;background:#eee}</style></head><body><canvas id="c" width="1500" height="700"></canvas>
+<script type="module">
+import { drawSausage, makeFaceState, SKINS } from '../src/art/sausage.js';
+const ctx = document.getElementById('c').getContext('2d');
+ctx.fillStyle = '#f6e7c8'; ctx.fillRect(0,0,1500,700);
+const exprs = ['idle','aim','aim2','wide','scared','happy','win','fail','dizzy'];
+exprs.forEach((e, i) => {
+  const N = 10, px = new Float64Array(N), py = new Float64Array(N);
+  const ox = 60 + (i % 5) * 290, oy = 120 + Math.floor(i / 5) * 300;
+  for (let k = 0; k < N; k++) { px[k] = ox + k * 11; py[k] = oy - Math.sin(k / 9 * Math.PI) * 6; }
+  const f = makeFaceState(); f.expr = e === 'aim2' ? 'aim' : e; f.power = e === 'aim2' ? 0.95 : 0.3; f.lookX = 1; f.lookY = 0.3;
+  ctx.save(); ctx.translate(ox, oy); ctx.scale(2.2, 2.2); ctx.translate(-ox, -oy);
+  drawSausage(ctx, px, py, { R: 15, skin: SKINS[i % SKINS.length], face: f, t: 1 });
+  ctx.restore();
+  ctx.font = '20px Fredoka'; ctx.fillStyle = '#333'; ctx.fillText(e + ' / ' + SKINS[i % SKINS.length].id, ox - 20, oy + 90);
+});
+window.__done = true;
+</script></body></html>

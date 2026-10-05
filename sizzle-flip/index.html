@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#ef4b3c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sizzle Flip">
+  <meta name="description" content="Flip a squishy sausage out of the frying pan and onto 200 levels of random household objects until it lands in the bun.">
+  <title>Sizzle Flip</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Sizzle Flip game"></canvas>
+
+  <div id="ui">
+    <!-- Title / main menu -->
+    <section class="screen" id="scr-title">
+      <div class="title-wrap">
+        <canvas id="logo" width="720" height="420" aria-hidden="true"></canvas>
+        <h1 class="sr-only">Sizzle Flip</h1>
+        <div class="tagline">a weird little game about flipping a sausage</div>
+      </div>
+      <div class="menu-buttons">
+        <button class="btn btn-big btn-ketchup" data-act="play"><span>PLAY</span></button>
+        <div class="row">
+          <button class="btn btn-mustard" data-act="skins"><span class="ico">🌭</span><span>SKINS</span><i class="badge" id="skin-badge" hidden>NEW</i></button>
+          <button class="btn btn-sky" data-act="settings"><span class="ico">⚙️</span><span>OPTIONS</span></button>
+        </div>
+        <div class="star-total"><span class="star">★</span> <b id="title-stars">0</b> / 600</div>
+      </div>
+      <div class="install-hint" id="install-hint" hidden>Tip: <b>Add to Home Screen</b> to play full-screen &amp; offline</div>
+    </section>
+
+    <!-- World select -->
+    <section class="screen" id="scr-worlds" hidden>
+      <header class="bar">
+        <button class="btn btn-round" data-act="back" aria-label="Back">◀</button>
+        <h2>Choose a World</h2>
+        <div class="pill"><span class="star">★</span> <b id="worlds-stars">0</b></div>
+      </header>
+      <div class="world-scroller" id="world-list"></div>
+      <div class="dots" id="world-dots"></div>
+    </section>
+
+    <!-- Level select -->
+    <section class="screen" id="scr-levels" hidden>
+      <header class="bar">
+        <button class="btn btn-round" data-act="back" aria-label="Back">◀</button>
+        <h2 id="levels-title">World</h2>
+        <div class="pill"><span class="star">★</span> <b id="levels-stars">0</b>/60</div>
+      </header>
+      <div class="level-grid" id="level-grid"></div>
+    </section>
+
+    <!-- In-game HUD -->
+    <section id="hud" hidden>
+      <div class="hud-top">
+        <button class="btn btn-round" data-act="pause" aria-label="Pause">❚❚</button>
+        <div class="hud-title"><b id="hud-level">1-1</b><span id="hud-name">Name</span></div>
+        <div class="hud-flips">
+          <div class="flips-num"><span id="hud-flips">0</span><small>FLIPS</small></div>
+          <div class="flips-par">PAR <b id="hud-par">2</b></div>
+          <div class="flips-stars" id="hud-stars">★★★</div>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <button class="btn btn-round" data-act="overview" aria-label="Look around">👁</button>
+        <button class="btn btn-round btn-mustard hint-btn" data-act="hint" id="hud-hint" aria-label="Show a hint" hidden>💡</button>
+        <div class="tip" id="hud-tip" hidden></div>
+        <button class="btn btn-round" data-act="restart" aria-label="Restart level">↻</button>
+      </div>
+    </section>
+
+    <!-- Pause -->
+    <section class="modal" id="scr-pause" hidden>
+      <div class="card">
+        <div class="ribbon">PAUSED</div>
+        <button class="btn btn-big btn-relish" data-act="resume"><span>RESUME</span></button>
+        <div class="row">
+          <button class="btn btn-mustard" data-act="restart"><span>↻ RESTART</span></button>
+          <button class="btn btn-sky" data-act="levels"><span>☰ LEVELS</span></button>
+        </div>
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" data-set="sfx"><span>Sound FX</span></label>
+          <label class="toggle"><input type="checkbox" data-set="music"><span>Music</span></label>
+          <label class="toggle"><input type="checkbox" data-set="longAim"><span>Long aim guide</span></label>
+        </div>
+        <button class="btn btn-ghost" data-act="home"><span>Main menu</span></button>
+      </div>
+    </section>
+
+    <!-- Level complete -->
+    <section class="modal" id="scr-win" hidden>
+      <div class="card win-card">
+        <div class="ribbon ribbon-gold" id="win-title">LEVEL COMPLETE!</div>
+        <div class="win-stars" id="win-stars">
+          <span class="bigstar" data-i="0">★</span><span class="bigstar mid" data-i="1">★</span><span class="bigstar" data-i="2">★</span>
+        </div>
+        <div class="win-stats">
+          <div><small>FLIPS</small><b id="win-flips">0</b></div>
+          <div><small>PAR</small><b id="win-par">0</b></div>
+          <div><small>BEST</small><b id="win-best">0</b></div>
+        </div>
+        <div class="win-msg" id="win-msg"></div>
+        <div class="unlock" id="win-unlock" hidden>
+          <canvas width="200" height="90" id="win-unlock-canvas"></canvas>
+          <div><small>NEW SKIN UNLOCKED!</small><b id="win-unlock-name"></b></div>
+        </div>
+        <div class="row">
+          <button class="btn btn-round btn-mustard" data-act="replay" aria-label="Replay">↻</button>
+          <button class="btn btn-round btn-sky" data-act="levels" aria-label="Levels">☰</button>
+          <button class="btn btn-big btn-relish" data-act="next"><span>NEXT ▶</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- World complete -->
+    <section class="modal" id="scr-worlddone" hidden>
+      <div class="card">
+        <div class="ribbon ribbon-gold" id="wd-title">WORLD COMPLETE!</div>
+        <canvas id="wd-canvas" width="480" height="260"></canvas>
+        <p class="wd-text" id="wd-text"></p>
+        <button class="btn btn-big btn-relish" data-act="wd-continue"><span>CONTINUE ▶</span></button>
+      </div>
+    </section>
+
+    <!-- Skins -->
+    <section class="screen" id="scr-skins" hidden>
+      <header class="bar">
+        <button class="btn btn-round" data-act="back" aria-label="Back">◀</button>
+        <h2>Sausage Locker</h2>
+        <div class="pill"><span class="star">★</span> <b id="skins-stars">0</b></div>
+      </header>
+      <div class="skin-grid" id="skin-grid"></div>
+    </section>
+
+    <!-- Settings -->
+    <section class="screen" id="scr-settings" hidden>
+      <header class="bar">
+        <button class="btn btn-round" data-act="back" aria-label="Back">◀</button>
+        <h2>Options</h2>
+        <div></div>
+      </header>
+      <div class="card settings-card">
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" data-set="sfx"><span>Sound FX</span></label>
+          <label class="toggle"><input type="checkbox" data-set="music"><span>Music</span></label>
+          <label class="toggle"><input type="checkbox" data-set="haptics"><span>Vibration</span></label>
+          <label class="toggle"><input type="checkbox" data-set="longAim"><span>Long aim guide (easier)</span></label>
+        </div>
+        <button class="btn btn-ghost danger" data-act="reset"><span>Reset progress</span></button>
+        <div class="credits">
+          <b>SIZZLE FLIP</b><br>
+          Design, code, art &amp; sound: built from scratch with canvas + Web Audio.<br>
+          Fonts: Lilita One &amp; Fredoka (SIL Open Font License).<br>
+          Inspired by the one-button chaos of “a weird game about sausage”.
+        </div>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" hidden></div>
+    <div class="confirm modal" id="scr-confirm" hidden>
+      <div class="card">
+        <p id="confirm-text">Are you sure?</p>
+        <div class="row">
+          <button class="btn btn-ghost" data-act="confirm-no"><span>Cancel</span></button>
+          <button class="btn btn-ketchup" data-act="confirm-yes"><span>Yes</span></button>
+        </div>
+      </div>
+    </div>
+    <div id="rotate" hidden><div>🌭↻<br><small>Rotate to portrait for the best view</small></div></div>
+    <div id="loading"><div class="spin">🌭</div></div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

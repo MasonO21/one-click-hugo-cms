@@ -1,0 +1,81 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>html,body{overflow:auto;background:#444}</style></head><body>
+<canvas id="c"></canvas>
+<script type="module">
+import { drawSausage, makeFaceState, SKINS } from '../src/art/sausage.js';
+import { INK } from '../src/art/common.js';
+const p = new URLSearchParams(location.search);
+const size = +(p.get('size') || 512);
+const maskable = p.has('maskable');
+const wide = p.has('wide');
+const fg = p.has('fg'), round = p.has('round');
+const splash = p.get('splash'); // "WxH"
+import { drawLogo } from '../src/art/logo.js';
+await document.fonts.load('40px "Lilita One"').catch(() => {});
+const c = document.getElementById('c');
+c.width = wide ? 1024 : size; c.height = wide ? 500 : size;
+const ctx = c.getContext('2d');
+const S = wide ? 500 : size;
+function bg(w, h, r) {
+  const g = ctx.createRadialGradient(w * 0.5, h * 0.35, 10, w * 0.5, h * 0.5, Math.max(w, h) * 0.75);
+  g.addColorStop(0, '#ffcf4a'); g.addColorStop(0.55, '#ff8a3c'); g.addColorStop(1, '#e8402f');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.roundRect(0, 0, w, h, r); ctx.fill();
+  // sunburst
+  ctx.save(); ctx.translate(w / 2, h * 0.42); ctx.globalAlpha = 0.18; ctx.fillStyle = '#fff';
+  for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-Math.max(w,h) * 0.08, -Math.max(w, h)); ctx.lineTo(Math.max(w,h) * 0.08, -Math.max(w, h)); ctx.fill(); }
+  ctx.restore();
+}
+function scene(cx, cy, s) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+  // pan
+  ctx.save(); ctx.translate(0, 120);
+  ctx.beginPath(); ctx.moveTo(-150, -20); ctx.lineTo(150, -20); ctx.lineTo(128, 38); ctx.lineTo(-128, 38); ctx.closePath();
+  ctx.fillStyle = '#2d292a'; ctx.fill(); ctx.lineWidth = 12; ctx.strokeStyle = INK; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, -20, 150, 18, 0, 0, Math.PI * 2); ctx.fillStyle = '#4a4446'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(140, -14, 120, 26, 13); ctx.fillStyle = '#7a3b1e'; ctx.fill(); ctx.stroke();
+  ctx.restore();
+  // motion arcs
+  ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 12;
+  for (const r of [150, 185]) { ctx.beginPath(); ctx.arc(0, 80, r, Math.PI * 1.08, Math.PI * 1.32); ctx.stroke(); }
+  // sausage mid-flip
+  const N = 10, px = new Float64Array(N), py = new Float64Array(N);
+  for (let i = 0; i < N; i++) { const u = i / (N - 1); const a = -0.5 + u * 1.0; px[i] = -60 + u * 120; py[i] = -30 - Math.sin(u * Math.PI) * 16; }
+  const f = makeFaceState(); f.expr = 'win';
+  ctx.save(); ctx.rotate(-0.35); ctx.scale(2.3, 2.3);
+  drawSausage(ctx, px, py, { R: 15, skin: SKINS[0], face: f, t: 0 });
+  ctx.restore();
+  // oil drops
+  for (const [x, y, r] of [[-120, 70, 9], [110, 60, 7], [-80, 30, 6], [140, 20, 5]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ffe27a'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke(); }
+  ctx.restore();
+}
+if (splash) {
+  const [sw, sh] = splash.split('x').map(Number);
+  c.width = sw; c.height = sh;
+  const g = ctx.createRadialGradient(sw / 2, sh * 0.45, 10, sw / 2, sh / 2, Math.max(sw, sh) * 0.7);
+  g.addColorStop(0, '#5a2d4a'); g.addColorStop(1, '#2a1a2e');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, sw, sh);
+  const lc = document.createElement('canvas'); lc.width = 720; lc.height = 420; drawLogo(lc);
+  const lw = Math.min(sw, sh) * 0.8, lh = lw * 420 / 720;
+  ctx.drawImage(lc, (sw - lw) / 2, (sh - lh) / 2 - sh * 0.04, lw, lh);
+} else if (fg) {
+  ctx.clearRect(0, 0, size, size);
+  scene(size / 2, size * 0.53, size / 512 * 0.62);
+} else if (round) {
+  ctx.save(); ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); ctx.clip();
+  bg(size, size, 0); scene(size / 2, size * 0.53, size / 512 * 0.8);
+  ctx.restore();
+} else if (wide) {
+  bg(1024, 500, 0);
+  scene(235, 235, 0.95);
+  ctx.save(); ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+  const word = (t, x, y, sz, a, b) => { ctx.font = sz + 'px "Lilita One"'; for (let d = 10; d > 0; d -= 2) { ctx.fillStyle = d > 2 ? '#7a1f14' : INK; ctx.fillText(t, x, y + d); } ctx.lineWidth = 16; ctx.strokeStyle = INK; ctx.strokeText(t, x, y); const g = ctx.createLinearGradient(0, y - sz * 0.7, 0, y); g.addColorStop(0, a); g.addColorStop(1, b); ctx.fillStyle = g; ctx.fillText(t, x, y); };
+  word('SIZZLE', 700, 210, 130, '#fff2a8', '#ffb31a');
+  word('FLIP!', 715, 340, 130, '#ffffff', '#ffd9c9');
+  ctx.font = '30px Fredoka'; ctx.fillStyle = '#fff'; ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.strokeText('200 levels of sausage-flipping chaos', 700, 440); ctx.fillText("200 levels of sausage-flipping chaos", 700, 440);
+  ctx.restore();
+} else {
+  bg(size, size, maskable ? 0 : size * 0.22);
+  scene(size / 2, size * 0.52, size / 512 * (maskable ? 0.78 : 0.98));
+}
+window.__done = true;
+</script></body></html>

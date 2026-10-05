@@ -1,0 +1,8 @@
+{
+  "appId": "com.sizzleflip.game",
+  "appName": "Sizzle Flip",
+  "webDir": "dist",
+  "backgroundColor": "#2a1a2e",
+  "android": { "backgroundColor": "#2a1a2e" },
+  "ios": { "backgroundColor": "#2a1a2e", "contentInset": "never" }
+}

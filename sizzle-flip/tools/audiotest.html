@@ -1,0 +1,29 @@
+<!doctype html><html><body><script type="module">
+import { AudioEngine } from '../src/audio.js';
+const results = {};
+async function render(name, fn, dur = 2) {
+  const off = new OfflineAudioContext(2, 44100 * dur, 44100);
+  window.AudioContext = function () { return off; };
+  const a = new AudioEngine();
+  a.unlock();
+  fn(a);
+  const buf = await off.startRendering();
+  const d = buf.getChannelData(0);
+  let peak = 0, sum = 0;
+  for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v; sum += d[i] * d[i]; }
+  results[name] = { peak: +peak.toFixed(3), rms: +Math.sqrt(sum / d.length).toFixed(4) };
+}
+const sfx = ['click', 'grab', 'flip', 'panflip', 'pop', 'respawn', 'win', 'star', 'unlock', 'whoosh'];
+for (const s of sfx) await render(s, a => a.play(s, { power: 0.8 }));
+await render('fail', a => a.play('fail', { reason: 'floor' }), 3);
+for (const m of ['wood', 'metal', 'glass', 'soft', 'food', 'piano', 'drum', 'xylo', 'floor']) await render('impact-' + m, a => a.impact(m, 0.8, false));
+await render('impact-bouncy', a => a.impact('rubber', 0.8, true));
+for (const song of ['menu', 'kitchen', 'space']) {
+  await render('music-' + song, a => {
+    a.playMusic(song); clearInterval(a.timer);
+    const st = a.song; const stepDur = 60 / st.S.bpm / 4;
+    for (let k = 0; k < 64; k++) a.musicStep(st.S, st, Math.floor(k / 16) % 4, k % 16, k * stepDur, stepDur);
+  }, 9);
+}
+window.__results = results; window.__done = true;
+</script></body></html>
