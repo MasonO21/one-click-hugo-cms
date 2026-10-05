@@ -27,11 +27,11 @@ window.__trailer = (() => {
   E.manual = true;
   E.q = { ...E.q, pr: ${DSF}, bloomScale: 1, particles: 1, lights: 24 };
   E.resize();
-  r.player.hurt = () => {};
-  r.addXp = () => {};
+  r.addXp = () => {}; // no level-up pauses mid-ad; the player can still take damage
   r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.warned = true;
   r.skillLv.soulBolt = 3; r.skillLv.skullHalo = 2; r.skillLv.gravePulse = 1;
-  const boost = () => { r.stats.raise = 0.85; r.stats.cap = 400; r.stats.minionDmg *= 1.6; };
+  // An upgraded late-game account: raise chance at its 85% cap (reachable via talents, relics and Raise Dead).
+  const boost = () => { r.stats.raise = 0.85; r.stats.cap = 400; };
   const rc = r.recomputeStats.bind(r); r.recomputeStats = () => { rc(); boost(); }; r.recomputeStats();
   r.time = 170;
   app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
@@ -41,16 +41,17 @@ window.__trailer = (() => {
     '.ad-cap em{font-style:normal;color:#ffcf4a;text-shadow:0 0 18px rgba(255,207,74,.9),0 3px 0 #4a2a00}' +
     '.ad-end{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(70% 50% at 50% 45%,rgba(10,40,55,.85),rgba(2,3,8,.96));opacity:0;transition:opacity .4s}' +
     '.ad-end .logo{font-size:52px}.ad-end .tag{font-family:Cinzel,serif;font-weight:700;letter-spacing:.35em;color:#9fb2cc;font-size:14px}' +
+    '.ad-end .legal{margin-top:22px;font-family:Oxanium,sans-serif;font-size:11px;line-height:1.5;color:#7f93ad;text-align:center;letter-spacing:.04em}' +
     '.ad-end .cta{margin-top:18px;padding:14px 34px;font-family:Oxanium,sans-serif;font-weight:800;font-size:22px;letter-spacing:.08em;color:#2a1300;background:linear-gradient(180deg,#ffe07a,#e88f1a);clip-path:var(--bevel-sm)}';
   document.head.appendChild(style);
   const cap = document.createElement('div'); cap.className = 'ad-cap'; document.getElementById('ui').appendChild(cap);
   const end = document.createElement('div'); end.className = 'ad-end';
-  end.innerHTML = '<div class="logo">SOUL<span>SWARM</span></div><div class="tag">RAISE THE LEGION</div><div class="cta">PLAY FREE</div>';
+  end.innerHTML = '<div class="logo">SOUL<span>SWARM</span></div><div class="tag">RAISE THE LEGION</div><div class="cta">PLAY FREE</div><div class="legal">Free to play · In-app purchases<br>In-engine footage from an upgraded account. Sequence edited.</div>';
   document.getElementById('ui').appendChild(end);
   const say = (html) => { cap.innerHTML = html; cap.style.opacity = html ? 1 : 0; };
   const ring = (n, R, type) => { const P = r.player; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; r.enemies.spawn(type || (i % 4 ? 'husk' : 'ghoul'), P.x + Math.cos(a) * R, P.z + Math.sin(a) * R, { hpMul: 2.2, dmgMul: 1 }); } };
   const beats = [
-    [0.0, () => { ring(36, 9); ring(44, 12.5); say('THEY OUTNUMBER YOU<br><em>500 TO 1</em>'); }],
+    [0.0, () => { ring(36, 9); ring(44, 12.5); say('ONE SHEPHERD<br><em>AGAINST THE HORDE</em>'); }],
     [3.2, () => say('BUT EVERY ENEMY YOU KILL...')],
     [5.6, () => { say('...<em>JOINS YOUR ARMY</em>'); ring(40, 13); }],
     [8.6, () => { say('PICK THE RIGHT GATE'); r.gates.spawnPair([{ type: 'mul', n: 3 }, { type: 'div', n: 2 }]); }],

@@ -2,7 +2,7 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, RUN_LENGTH, RARITY_COLOR } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, RARITY_COLOR } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 
 export class RunUI {
@@ -62,9 +62,9 @@ export class RunUI {
     this.set('gold', gold, (v) => { q.gold.textContent = fmt(v); });
     const tsec = Math.floor(run.time);
     this.set('time', tsec, () => {
-      if (run.bossSpawned) { q.timer.textContent = fmtTime(run.time); q.timerSub.textContent = 'Boss fight'; }
+      if (run.bossSpawned) { q.timer.textContent = fmtTime(run.time); q.timerSub.textContent = run.endless ? `Abyss depth ${run.bossKills + 1} · Boss` : 'Boss fight'; }
       else {
-        const left = Math.max(0, RUN_LENGTH - run.time);
+        const left = Math.max(0, run.nextBossAt - run.time);
         q.timer.textContent = fmtTime(run.time);
         q.timerSub.textContent = left < 60 ? `Boss in ${Math.ceil(left)}s` : run.chapter.name;
       }
@@ -234,7 +234,7 @@ export class RunUI {
     let doubled = false;
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
-      <div class="res-head ${win ? 'win' : 'lose'}"><b>${win ? 'VICTORY' : 'DEFEAT'}</b><span>Chapter ${result.chapter} · ${this.run.chapter.name}</span></div>
+      <div class="res-head ${win || result.endless ? 'win' : 'lose'}"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} Gravemaw slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
       <div class="res-badges">${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
       <div class="res-stats">
         <div><b>${fmtTime(result.time)}</b><small>Survived</small></div>
@@ -246,7 +246,7 @@ export class RunUI {
       </div>
       <div class="res-sub">Rewards</div>
       <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>
-      ${!win ? '<div class="res-tip">Tip: Talents and Relics make every run stronger. Gravemaw waits at 6:00.</div>' : ''}
+      ${result.endless ? '<div class="res-tip">Gravemaw returns every 5:00, stronger each time. How deep can your legion go?</div>' : !win ? '<div class="res-tip">Tip: Talents and Relics make every run stronger. Gravemaw waits at 6:00.</div>' : ''}
     </div>`);
     const actions = [];
     if (outcome.rewards.gold > 0) {

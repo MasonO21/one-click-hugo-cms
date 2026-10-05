@@ -12,7 +12,7 @@
 
 ## Art direction: "Neon Gothic"
 - Dark obsidian graveyard ground with glowing rune lines, fog vignette and heavy bloom.
-- **Allies are cool colours:** player and legion in spectral cyan/teal (#4ef2ff, #7cffd4).
+- **Allies are cool colours:** each hero's legion has its own cool colour (Vael cyan #4ef2ff, Nyx violet #b36bff, Seraphine mint #7cffd4, Mordrake green #6dff9a), while the hero model keeps its own tint (Seraphine stays amber). The Eclipse Vael skin's pale-gold legion (#ffe9a0) is an intentional exception for a premium cosmetic.
 - **Enemies are warm colours:** ember/crimson (#ff4a2a, #ff8a3d). Elites are gold (#ffd04a). Bosses are magenta/violet (#ff3df0).
 - Readability first: silhouettes, emissive cores, additive particles, screen shake and hit-stop.
 - Each chapter re-tints the palette: 1 Ashen Necropolis (teal/ember), 2 Ember Wastes (orange), 3 Frozen Ossuary (ice blue), 4 Abyssal Cathedral (violet), 5 Crimson Throne (blood red).
@@ -45,7 +45,7 @@ Heroes rank up 1★ to 5★ using shards. Each star adds +12% damage and +8% HP.
 Pickups: soul shards (XP), heart (heal), magnet, relic chest (from elites).
 
 ## Chapters
-1 Ashen Necropolis, 2 Ember Wastes, 3 Frozen Ossuary, 4 Abyssal Cathedral, 5 Crimson Throne. Each lasts 6:00 and ends in a boss fight; enemy HP and density scale per chapter. Chapter 5 is followed by "Endless Abyss" (Planned: leaderboard mode, live ops).
+1 Ashen Necropolis, 2 Ember Wastes, 3 Frozen Ossuary, 4 Abyssal Cathedral, 5 Crimson Throne. Each lasts 6:00 and ends in a boss fight; enemy HP and density scale per chapter. Chapter 5 is followed by "Endless Abyss": no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded (weekly leaderboards are planned for live ops).
 
 ## Meta & economy
 **Currencies:** Gold (soft), Soul Gems (premium), Energy (30 max, a run costs 5, +1 every 6 min), Altar Sigils (summon keys), Hero Shards.
@@ -73,7 +73,7 @@ Relics: Lantern of the Lost (+raise chance), Crown of Thorns (+damage), Bone Ido
 | soul_pass | $9.99 / season | Premium track of Soul Pass |
 The first purchase of each gem tier gives double gems.
 
-**Soul Pass (season battle pass):** 30 tiers, with 100 pass XP per tier. XP comes from runs and quests. The free track gives gold, small gem drops and sigils. The premium track gives large gems, sigils, Epic and Legendary relics, Seraphine shards and the exclusive "Eclipse Vael" skin at tier 30. Seasons last 28 days.
+**Soul Pass (season battle pass):** 30 tiers, with 500 pass XP per tier (15,000 XP). XP comes from runs and quests: all quests plus 3 runs a day finishes in about 3 weeks, and quests plus 1 run a day reaches roughly tier 15–20. The free track gives gold, small gem drops and sigils. The premium track gives large gems, sigils, Epic and Legendary relics, Seraphine shards and the exclusive "Eclipse Vael" skin at tier 30. Seasons last 28 days.
 
 **Daily quests (reset at midnight):** Slay 500 enemies, Raise 150 souls, Survive 4 minutes, Unleash Soul Nova 3×, Pass 3 Soul Gates, Finish 2 runs. Rewards are gems, gold and pass XP.
 **7-day login calendar:** escalating rewards. Day 7 gives a Legendary-chance relic chest and 100 gems.

@@ -341,13 +341,15 @@ export const accountXpFor = (lv) => 80 + lv * 40;
 export function applyRunResult(p, result) {
   const L = computeLoadout(p);
   const ch = result.chapter;
-  const firstClear = result.victory && !p.chapter.best[ch]?.cleared;
+  const firstClear = result.victory && !result.endless && !p.chapter.best[ch]?.cleared;
   const gold = Math.round((result.kills * 0.9 + result.time * 2.2 + (result.victory ? 400 * ch : 0)) * L.goldMul + (result.bonusGold || 0));
-  const gems = result.victory ? (firstClear ? 50 + 20 * ch : 10 + 2 * ch) : Math.floor(result.time / 120) * 2;
+  const gems = result.endless ? (result.bossKills || 0) * 15 + Math.floor(result.time / 60) * 2
+    : result.victory ? (firstClear ? 50 + 20 * ch : 10 + 2 * ch) : Math.floor(result.time / 120) * 2;
   const passXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0));
   const rewards = { gold, gems, passXp };
   if (firstClear) rewards.sigils = 1;
   if (result.victory) rewards.relic = ch >= 3 && rand() < 0.35 ? 'epic' : rand() < 0.5 ? 'rare' : 'common';
+  if (result.endless && result.bossKills) rewards.relic = result.bossKills >= 3 ? 'epic+' : result.bossKills >= 2 ? 'epic' : 'rare';
 
   const items = grant(p, rewards);
 

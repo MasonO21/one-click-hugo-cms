@@ -44,6 +44,7 @@ export function createHome(ctx) {
     // Chapter status line
     let status;
     if (locked) status = `<span class="chap-lock">${icon('lock')} Clear Chapter ${sel - 1}</span>`;
+    else if (ch.endless) status = best ? `<span class="chap-best">${icon('trophy')} Deepest run ${fmtTime(best.time)}</span>` : '<span class="chap-best t-dim">No time limit. Gravemaw returns every 5:00.</span>';
     else if (best?.cleared) status = `<span class="pill pill-soul">${icon('check')} Cleared</span><span class="chap-best t-dim">Best ${fmtTime(best.time)}</span>`;
     else if (best) status = `<span class="chap-best">${icon('hourglass')} Best ${fmtTime(best.time)} <span class="t-dim">/ 06:00</span></span>`;
     else status = '<span class="chap-best t-dim">Survive 6:00 and slay Gravemaw</span>';
@@ -70,7 +71,7 @@ export function createHome(ctx) {
         <div class="chap ${locked ? 'is-locked' : ''}" style="--cc:${cc}">
           <button class="chap-arrow" data-act="prev" ${sel <= 1 ? 'disabled' : ''} aria-label="Previous chapter">${icon('left')}</button>
           <div class="chap-body">
-            <div class="chap-no t-label">Chapter ${sel}<span class="chap-dots">${CHAPTERS.map((c) => `<i class="${c.id === sel ? 'on' : ''} ${c.id > p.chapter.unlocked ? 'lk' : ''}"></i>`).join('')}</span></div>
+            <div class="chap-no t-label">${ch.endless ? 'Endless' : `Chapter ${sel}`}<span class="chap-dots">${CHAPTERS.map((c) => `<i class="${c.id === sel ? 'on' : ''} ${c.id > p.chapter.unlocked ? 'lk' : ''}"></i>`).join('')}</span></div>
             <div class="chap-name t-display">${ch.name}</div>
             <div class="chap-status">${status}</div>
           </div>

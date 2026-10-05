@@ -13,10 +13,12 @@ export class Boss {
     this.state = 'none';
   }
 
-  spawn() {
+  /** scale > 1 makes a stronger King (Endless Abyss returns). */
+  spawn(scale = 1) {
     const run = this.run, P = run.player, ch = run.chapter;
+    if (this.mesh) { run.scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mat.dispose(); this.mesh = null; }
     const x = P.x, z = P.z - 11;
-    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + 0.15 * (ch.id - 1)), dmgMul: 1 + 0.3 * (ch.id - 1) });
+    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + 0.15 * (ch.id - 1)) * scale, dmgMul: (1 + 0.3 * (ch.id - 1)) * Math.sqrt(scale) });
     this.e = e;
     run.bossEnemy = e;
     this.color = new THREE.Color(ch.boss);

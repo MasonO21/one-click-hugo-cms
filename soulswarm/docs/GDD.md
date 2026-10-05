@@ -14,7 +14,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
-| Content | 5 chapters, 5 enemy types plus elites, 6 weapons, 8 passives, 2 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless Abyss, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
+| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 2 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | — | Blood Moon, Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
@@ -46,7 +46,7 @@ Everything below describes the build unless it is marked **Planned**.
 |---|---|---|---|---|
 | Moment-to-moment | 1–10 s | Survive, kill, collect | Floating joystick, auto-attack, raises, pickups | Soul shards (XP), new minions |
 | Run | 6–9 min | Clear the chapter (survive 6:00, kill Gravemaw) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
-| Meta | Days to months | Get strong enough for the next chapter | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Endless Abyss (Planned) |
+| Meta | Days to months | Get strong enough for the next chapter | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Endless Abyss depth record |
 | Daily | 15–40 min/day | Finish quests, spend energy | 6 daily quests, 7-day login calendar, rewarded ads, energy | Gems, gold, sigils, pass XP |
 | Weekly (Planned) | 7 days | Climb the leaderboard, farm Blood Moon | Blood Moon weekend, Endless Abyss weekly board, weekly quest chest | Sigils, gems, league rewards |
 | Seasonal | 28 days | Finish the Soul Pass, collect the new hero | Soul Pass (30 tiers); Planned: monthly Boss Rush, new hero every 1–2 seasons | Skins, Epic/Legendary relics, hero shards |
@@ -72,7 +72,7 @@ Everything below describes the build unless it is marked **Planned**.
 
 **Weekly (Planned).** Blood Moon runs every weekend (Fri 00:00 – Sun 23:59 UTC): 2× elites (8 per run instead of 4) and 2× run rewards. Endless Abyss leaderboards reset Monday 00:00 UTC. The weekly quest chest (finish 25 daily quests in a week) gives 1 Altar Sigil, 50 gems and 100 pass XP.
 
-**Seasonal.** A Soul Pass season lasts 28 days with 30 tiers × 100 pass XP = 3,000 XP. Daily quests give 220 pass XP and a run gives about 80–210 (§10), so a player who does all quests and about 3 runs a day earns about 600 pass XP per day and reaches tier 30 in about 5 days. A casual player (4 days a week, 2 runs a day) finishes in about 2 weeks. *(Tuning: far faster than the 28-day pacing the season was designed for; see §18.)*
+**Seasonal.** A Soul Pass season lasts 28 days with 30 tiers × 500 pass XP = 15,000 XP. Daily quests give 220 pass XP and a run gives about 80–210 (§10), so a player who does all quests and about 3 runs a day earns about 700 pass XP per day and reaches tier 30 in about 3 weeks. A casual player (quests plus 1 run a day) reaches roughly tier 15–20 by the end of the season.
 
 ---
 
@@ -112,7 +112,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 - Every kill rolls Raise Chance, whether the Shepherd, a minion, the Nova or a Bloater blast made the kill. Elites can be raised. The Bloater that explodes does not rise, and Gravemaw cannot be raised (killing him adds 30 minions instead).
 - **Legion cap:** base 30. Flat bonuses: the Legion Cap skill (+10 per level, +50 at Lv5), the Dominion talent (+2 per level, +40 at L20), the Bone Idol relic (+3 to +18, up to +42 at Legendary Lv10). Mordrake multiplies the total by 1.25, then it is rounded. **Technical hard ceiling: 400 minions** on every device, for performance and leaderboard fairness.
 - Kills only roll while the legion is below the cap; at the cap nothing happens. *(Planned: a successful roll at the cap heals the weakest minion by 50%.)*
-- **Minions (build):** one minion type, a soul wisp in the hero's colour. Level = the Shepherd's in-run level, c = chapter.
+- **Minions (build):** one minion type, a soul wisp in the hero's legion colour (§14). Level = the Shepherd's in-run level, c = chapter.
 
 | Stat | Value |
 |---|---|
@@ -122,7 +122,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 | Speed | 9.5 m/s (Nyx +20%); 15% faster while returning to formation |
 | Damage taken | 30% of the target's damage per hit (50% against Gravemaw). Boss slams kill every minion in the slam radius. Bloater blasts deal 60. |
 
-- **Planned minion variants** (not in the build). Minion types inherit the silhouette of what they were, recoloured cyan/teal:
+- **Planned minion variants** (not in the build). Minion types inherit the silhouette of what they were, recoloured in the hero's legion colour:
 
 | Raised from | Minion | HP | Damage / hit | Attack interval | Speed (m/s) | Special |
 |---|---|---|---|---|---|---|
@@ -157,7 +157,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 ### 4.4 Soul Nova
 
-- **Charge meter:** each kill (any source) adds 1/140 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). Kills during a detonation add nothing. A full charge takes 140 kills (≈108 for Seraphine), so a Chapter 1 clear (~2,000 kills) can fill the meter roughly 14 times. *(Planned: +5 per elite kill, +3 per gate.)*
+- **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). Kills during a detonation add nothing. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas. *(Planned: +5 per elite kill, +3 per gate.)*
 - **Activation:** tap NOVA at 100%. It fires at once with 0.55 s of slow motion (30% speed), a flash, and all enemy projectiles cleared. Every minion detonates in a chain that ripples outward from the player over min(0.75, 0.15 + 0.003N) s. *(Planned: 0.4 s wind-up with hit-stop and 1.5 s of invulnerability.)*
 - **Damage per detonation** = (35 + 0.5 × N) × Damage multiplier × (1 + 0.45(c − 1)), radius 2.6 m, where N = legion size when NOVA was pressed and the Damage multiplier includes stars, the Might talent and skill, and Crown of Thorns. The Shepherd's own blast deals 1.2× that damage in a 7 m radius, with knockback. At N = 300, each blast deals 185 base damage, 300 times, overlapping.
 - **Cost:** the legion drops to 0, and Raise Chance is halved until the chain finishes, so the rebuild starts a beat later.
@@ -195,9 +195,9 @@ Base values are for Chapter 1 at minute 0. Scaling is in §8. Each enemy deals i
 | **Ghoul** | Runner | 8 | 4.4 | 5 per touch | 1 | A fast chaser; every 3rd swarm-ring enemy after 2:00. *(Planned: packs of 4–6 that flank in a ±30° arc and lunge at 3 m after a 0.4 s crouch telegraph.)* | Keep moving. Skull Halo and Grave Pulse shred packs. |
 | **Brute** | Tank | 75 | 1.7 | 18 per touch | 4 | Mass 5: shrugs off most knockback and shoves smaller enemies aside. Soaks minion attacks. *(Planned: a 1.5 m cone slam after a 0.8 s wind-up.)* | Bone Spears pierce. |
 | **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and fires a straight ember orb (6.5 m/s) about every 2.6 s. *(Planned: arcing orbs onto a telegraphed circle; burning ground from Chapter 2.)* | Ashen Chains and homing Soul Bolts reach her. Sidestep the orbs. |
-| **Bloater** | Bomber | 28 | 2.0 | 26 AoE (2.6 m) | 2 | Within 2.4 m of the player it slows to 25%, flashes and shows a 2.6 m telegraph, then explodes after 0.85 s. The blast also deals 60 to minions and 1.2× its max HP to other *enemies*. Killed early, it just dies (and can rise). | Kill it early, or let it detonate inside a crowd. Never let it reach you. |
+| **Bloater** | Bomber | 28 | 2.0 | 26 AoE (2.6 m) | 2 | Within 2.4 m of the player it slows to 25%, flashes and shows a 2.6 m telegraph, then explodes after 1.0 s. The blast also deals 60 to minions and 1.2× its max HP to other *enemies*. Killed early, it just dies (and can rise). | Kill it early, or let it detonate inside a crowd. Never let it reach you. |
 | **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass. Can be raised. *(Planned: crown-shaped silhouette marker.)* | Drops a **Relic Chest**. |
-| **Gravemaw, the Hollow King** | Boss | 3,400 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing him clears the chapter. | See §6. |
+| **Gravemaw, the Hollow King** | Boss | 9,000 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing him clears the chapter. | See §6. |
 
 Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a), boss magenta/violet (#ff3df0). Every enemy has an emissive core so it reads against the dark ground.
 
@@ -205,7 +205,7 @@ Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a),
 
 ## 6. Boss: Gravemaw, the Hollow King
 
-Normal spawns stop at 6:00 and any open Soul Gates vanish. A trickle of Husks (70%) and Ghouls (30%) continues at 1.2/s × the chapter spawn mult, up to 90 alive. Gravemaw rises 11 m up-screen from the player over 1.4 s and cannot be damaged while rising. Target time-to-kill is 60–100 s for a player at the recommended power *(tuning; see §18)*.
+Normal spawns stop at 6:00 and any open Soul Gates vanish. A trickle of Husks (70%) and Ghouls (30%) continues at 1.2/s × the chapter spawn mult, up to 90 alive. Gravemaw rises 11 m up-screen from the player over 1.4 s and cannot be damaged while rising. A measured Chapter 1 fight with a typical build and a player who engages lasts about 45 s *(tuning; see §18)*.
 
 | Attack | Chosen when | Normal | Enraged (below 50% HP) |
 |---|---|---|---|
@@ -218,9 +218,9 @@ His first attack comes 2.5 s after he rises. At 50% HP he enrages once ("GRAVEMA
 
 **Planned (design, not in the build):** an 18 m arena sealed by a magenta rune border; three phases (*Hollow Tread* 100–66%, *Ember Liturgy* 66–33%, *Crown of Cinders* 33–0%) with 2 s invulnerable roar transitions; Grave Slam as three concentric rings (radii 3 / 6 / 9 m, 1.2 s telegraph, 30 damage per ring); bullet rings of 24 orbs with 2 safe gaps; a 4-arm spiral stream and an arena that closes from 18 m to 12 m in phase 3; Husk waves (12–20, plus a Brute in phase 3) every 12–15 s; and a "Hollow Dirge" soft enrage (+50% damage and attack rate) 3:00 into the fight.
 
-**Chapter twists (Planned):** Ch2 slams leave fire rings for 3 s · Ch3 slams leave ice patches (slide) · Ch4 adds one extra bullet ring per volley · Ch5 Phase 3 begins at 50% HP. Telegraphs never get shorter than 1.0 s in any chapter (an accessibility floor; the build's enraged slam sits exactly at 1.0 s).
+**Chapter twists (Planned):** Ch2 slams leave fire rings for 3 s · Ch3 slams leave ice patches (slide) · Ch4 adds one extra bullet ring per volley · Ch5 Phase 3 begins at 50% HP. Telegraphs never get shorter than 1.0 s in any chapter (an accessibility floor; the build's enraged slam and the Bloater fuse sit exactly at 1.0 s).
 
-Boss HP = 3,400 × chapter HP mult × (1 + 0.15(c−1)): **Ch1 3,400 · Ch2 7,429 · Ch3 14,144 · Ch4 24,650 · Ch5 40,800**. Boss damage = 22 × (1 + 0.3(c−1)): Ch1 22 · Ch2 28.6 · Ch3 35.2 · Ch4 41.8 · Ch5 48.4. Neither scales with run time.
+Boss HP = 9,000 × chapter HP mult × (1 + 0.15(c−1)): **Ch1 9,000 · Ch2 19,665 · Ch3 37,440 · Ch4 65,250 · Ch5 108,000**. Boss damage = 22 × (1 + 0.3(c−1)): Ch1 22 · Ch2 28.6 · Ch3 35.2 · Ch4 41.8 · Ch5 48.4. Neither scales with run time.
 
 ---
 
@@ -293,12 +293,10 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 | Legion Cap (max minions) | +10 | +20 | +30 | +40 | +50 |
 | Minion Fury (minion damage) | +20% | +40% | +60% | +80% | +100% |
 | Haste (move speed) | +8% | +16% | +24% | +32% | +40% |
-| Vitality (max HP; the added HP is also healed) | +20 | +40 | +60 | +80 | +100 |
+| Vitality (max HP; each pick also heals 30% of max HP) | +20 | +40 | +60 | +80 | +100 |
 | Soul Magnet (pickup radius, base 2.8 m) | +30% | +60% | +90% | +120% | +150% |
 | Might (weapon and Nova damage, not minions) | +10% | +20% | +30% | +40% | +50% |
 | Frenzy (attack speed) | +8% | +16% | +24% | +32% | +40% |
-
-The Vitality card text says "heal 30%", but the build only adds the +20 HP to current HP. Fix the card or the code before soft launch.
 
 ### 7.3 Evolutions
 
@@ -322,16 +320,16 @@ Both evolutions are in the build. An evolution card enters the pool when the wea
 | 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul packs of 6–8; ice patches | ~25 |
 | 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | 2× Bloaters; tighter fog vignette | ~60 |
 | 5 | Crimson Throne | Blood red | 7.50 | 1.60 | Extra elites | ~110 |
-| ∞ | Endless Abyss (Planned) | Shifting | 7.50 (c = 5) | 1.60 | Time keeps scaling; Abyss Surge every 5:00 | Endgame |
+| ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time | Endgame |
 
-In the build, chapters differ only in palette, HP mult, spawn mult and the chapter terms below; every chapter has the same 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N. *(Planned: Endless Abyss unlocks after the first Chapter 5 clear.)*
+In the build, chapters differ only in palette, HP mult, spawn mult and the chapter terms below; every chapter has the same 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N. Endless Abyss unlocks after the first Chapter 5 clear.
 
 **Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
 
 - **Enemy HP** = BaseHP × chapter HP mult × (1 + 0.28m + 0.04m²)
 - **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)). Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84.
 - **Spawn rate (enemies/s)** = (1.1 + 0.85m + 0.22m²) × chapter spawn mult, with a limit of 200 / 280 / 340 enemies alive at once (low / mid / high quality tier). Swarm rings and elites come on top and are not scaled by chapter.
-- **Elite HP** = 6 × Enemy HP · **Boss HP** = 3,400 × chapter HP mult × (1 + 0.15(c−1))
+- **Elite HP** = 6 × Enemy HP · **Boss HP** = 9,000 × chapter HP mult × (1 + 0.15(c−1))
 - **The Shepherd's side:** minion damage ×(1 + 0.45(c−1)), minion HP ×(1 + 0.4(c−1)) and Nova damage ×(1 + 0.45(c−1)).
 
 | Enemy HP multiplier | m=0 | m=1 | m=2 | m=3 | m=4 | m=5 | m=6 |
@@ -350,7 +348,7 @@ In the build, chapters differ only in palette, HP mult, spawn mult and the chapt
 
 These are upper bounds: when the alive limit is reached, the director skips spawns.
 
-**Endless Abyss (Planned)** would use c = 5 with m unbounded. With the build's quadratic curves, minute 10 would mean ×58.5 HP and 50.6 spawns/s, far beyond the alive limit, so Endless needs its own flatter curve before it ships. Every 5:00 an *Abyss Surge* spawns a Gravemaw Echo (30% of Ch5 boss HP = 12,240). Ranking is by time survived, with kills as the tie-break.
+**Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). Gravemaw returns every 5:00 with HP `9,000 × 4.0 × 1.75 × (1 + 0.6k)` (63,000 for the first, k = kills so far) and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per Gravemaw plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
 
 ---
 
@@ -439,7 +437,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 - **Camera:** top-down perspective with a 57° tilt and 45° FOV, portrait. About 12.5 m of world is visible across the screen, widening by up to 5 m as the legion grows (legion ÷ 50) and by 3.5 m during the boss. Slight look-ahead (0.22 s of movement, ~1.4 m) so gates and threats appear in front of the thumb, not under it.
 - **Ground:** dark obsidian graveyard, glowing rune lines, fog vignette, heavy bloom. Value range is kept low (L* < 20) so emissives carry the image.
-- **Colour law:** allies are always cool (#4ef2ff, #7cffd4), enemies are always warm (#ff4a2a, #ff8a3d), elites are gold (#ffd04a), bosses are magenta/violet (#ff3df0). Chapter tints change the environment only and never ally or enemy colours. *Build note: the legion, Nova and Soul Bolts take the hero's colour (Nyx #b36bff, Seraphine #ffb347, Mordrake #6dff9a), so Seraphine's amber legion breaks this law (§18).*
+- **Colour law:** allies are always cool, enemies are always warm (#ff4a2a, #ff8a3d), elites are gold (#ffd04a), bosses are magenta/violet (#ff3df0). Chapter tints change the environment only and never ally or enemy colours. Each hero has its own cool **legion colour**, used for the legion, Nova and Soul Bolts: Vael cyan #4ef2ff, Nyx violet #b36bff, Seraphine mint #7cffd4, Mordrake green #6dff9a. The hero model keeps its own tint, so Seraphine herself stays amber (#ffb347) while her legion is mint. *Exception: the premium Eclipse Vael skin gives its legion pale gold (#ffe9a0). This is intentional, a cosmetic flex the player chooses to equip.*
 
 | Chapter | Environment key colour | Fog / rune accent | Note |
 |---|---|---|---|
@@ -475,7 +473,7 @@ Goal: the player experiences all three hooks (raise, gate, Nova) and a boss kill
 | First run, 1.5 s in, the player has not moved yet | "Drag anywhere to move. Your Shepherd attacks automatically." |
 | First minion raised | "Slain foes rise to fight for you. This is your LEGION!" |
 | First Soul Gate pair (0:28) | "Walk through a Soul Gate to grow your legion!" (with the banner "SOUL GATES: Walk through one to reshape your legion") |
-| Nova meter first reaches 100% (after ~140 kills, around 1:20) | "Soul Nova is ready! Tap NOVA to detonate your legion." |
+| Nova meter first reaches 100% (after ~300 kills, around 2:30–3:00) | "Soul Nova is ready! Tap NOVA to detonate your legion." |
 
 The scripted beats below are **Planned**. Times are session times from app open (the planned tutorial run starts at 0:20). Where a beat uses run systems, the build's run time is given in brackets.
 
@@ -490,9 +488,9 @@ The scripted beats below are **Planned**. Times are session times from app open 
 | 0:50 | First level-up | 3 cards. Planned: Raise Dead is highlighted, but any pick is allowed. (Build: the first level needs only 7 XP, so it comes ~0:08 into the run.) | `ftue_levelup` |
 | 1:20 | **Hook 2: Soul Gate** | Legion is about 12. Planned scripted pair: +5 vs ×2. After passing, a short caption explains the maths ("×2 = +12!"). A wrong pick gets a gentle hint, not a punishment. (Build: the first pair arrives at 0:28 with the gate hint; at legion ~12 it is typically +20 vs ×2.) | `ftue_gate` (choice) |
 | 1:45 | First elite | Gold Brute (Planned script). It drops a Relic Chest → free pick. (Build: an Elite Husk at 1:15; the chest card is applied automatically.) | `ftue_elite` |
-| 2:15 | **Hook 3: Soul Nova** | Planned: the meter is accelerated in the tutorial, and a pulsing ring and finger point at NOVA. Screen wipe, slow-mo, legion count drops to 0 and starts climbing again. (Build: the meter fills after ~140 kills, around 1:20, and the Nova hint fires; 0.55 s slow-mo.) | `ftue_nova` |
+| 2:15 | **Hook 3: Soul Nova** | Planned: the meter is accelerated in the tutorial, and a pulsing ring and finger point at NOVA. Screen wipe, slow-mo, legion count drops to 0 and starts climbing again. (Build: the meter fills after ~300 kills, around 2:30–3:00, and the Nova hint fires; 0.55 s slow-mo.) | `ftue_nova` |
 | 2:40 | Second gate | ×2 vs ÷2, where ×2 sits behind a Bloater (Planned placement). Teaches risk. (Build: pairs at 1:08, 1:48 and 2:28 can offer ×2 vs −N or ÷2.) | `ftue_gate2` |
-| 3:00 | Gravemaw (Planned tutorial boss) | 25% HP, Phase 1 only. Telegraph rings are shown slowly. (Build: Gravemaw arrives at 6:00 with full Ch1 HP, 3,400.) | `ftue_boss` |
+| 3:00 | Gravemaw (Planned tutorial boss) | 25% HP, Phase 1 only. Telegraph rings are shown slowly. (Build: Gravemaw arrives at 6:00 with full Ch1 HP, 9,000.) | `ftue_boss` |
 | 3:45 | Victory | Results: time, kills, peak legion, raised, level, gates and rewards (a Ch1 first clear gives ~3,100 gold, 70 gems, 1 sigil and a relic). Planned line: "Your legion peaked at N." | `ftue_complete` |
 | 4:00 | Home screen | Planned: only **Play** and **Talents** are lit; other tabs show locked silhouettes. (Build: every tab is open.) | `home_first` |
 | 4:15 | First talent | Buy Might Lv1 (150 gold; new accounts start with 1,500 gold). Planned: guided. The gold sink is learned. | `talent_first` |
@@ -514,7 +512,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 | Photosensitivity | **Reduce flashes**: Nova and boss flashes capped at 3 Hz with luminance limits, bloom reduced. Screen shake slider (0–100%). Hit-stop toggle. |
 | Motor | One-thumb by design. Left-handed mode mirrors the NOVA button. Adjustable joystick size and dead zone. **Auto-Nova** option (fires at 100% when legion ≥ 50). Pause anywhere. No timing-critical taps outside movement. |
 | Hearing | Every audio cue has a visual twin. Subtitles for all VO. Separate volume sliders for music, SFX and UI. |
-| Cognitive | Gate maths preview toggle ("shows result: 37 → 74"). Telegraphs are never under 1.0 s (the build's Bloater fuse is 0.85 s, §18). A tutorial replay and a short skills glossary in pause. |
+| Cognitive | Gate maths preview toggle ("shows result: 37 → 74"). Telegraphs are never under 1.0 s (the build's Bloater fuse and enraged slam sit exactly at 1.0 s). A tutorial replay and a short skills glossary in pause. |
 | Performance comfort | 30 / 60 fps choice, battery saver mode, reduced-particles mode. |
 
 ---
@@ -525,7 +523,6 @@ The scripted beats below are **Planned**. Times are session times from app open 
 2. Overflow minions above the cap persist in the build. Should they fade (the original design) or persist until the next Nova?
 3. Both evolutions shipped in the build. Does a third recipe ship in Season 2?
 4. Auto-Nova (Planned) could reduce the skill expression of Nova timing. Monitor Nova-timing win rates for players who use it.
-5. Boss HP: Gravemaw is 3,400 × chapter scaling in the build, down from the 40,000 design. Measure time-to-kill against the 60–100 s target.
-6. Soul Pass pacing: quest and run pass XP let a daily player finish 30 tiers in about 5 days. Cut pass XP or raise XP per tier to fit the 28-day season.
-7. Nova frequency: a full charge every 140 kills allows ~14 Novas per Chapter 1 clear, versus the earlier target of ~3. Decide whether the meter should be slower.
-8. Rule breaks to fix in code: the Bloater fuse (0.85 s) is under the 1.0 s telegraph floor, and the hero-coloured legion breaks the colour law for Seraphine (§14).
+5. **Resolved: boss HP.** Gravemaw's base HP is now 9,000 (was 3,400), scaled by chapter as in §6. A measured Chapter 1 fight with a typical build and a player who engages lasts about 45 s; at 3,400 HP he died in about 16 s.
+6. **Resolved: Soul Pass pacing.** XP per tier is now 500 (was 100), so 30 tiers take 15,000 XP. A player who does all quests and 3 runs a day finishes in about 3 weeks; a casual player (quests plus 1 run) reaches roughly tier 15–20 (§2).
+7. **Resolved: Nova frequency.** A full charge now takes 300 kills (was 140), about 6–7 Novas per Chapter 1 clear instead of ~14 (§4.4).

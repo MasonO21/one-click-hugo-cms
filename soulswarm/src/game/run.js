@@ -14,7 +14,7 @@ import { Pickups } from './pickups.js';
 import { Gates } from './gates.js';
 import { Boss } from './boss.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
-import { ENEMIES, BASE, RUN_LENGTH, xpForLevel, SKINS } from './data.js';
+import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -77,6 +77,10 @@ export class Run {
     this.bonusGold = 0;
     this.spawnAcc = 0; this.nextGate = 28; this.nextSwarm = 50; this.eliteIdx = 0;
     this.warned = false; this.bossSpawned = false; this.bossDead = false;
+    this.endless = !!chapter.endless;
+    this.nextBossAt = this.endless ? ENDLESS_BOSS_EVERY : RUN_LENGTH;
+    this.bossKills = 0;
+    this.nextElite = 0;
     this.freeRevives = loadout.revives; this.revivesUsed = 0; this.deathT = -1;
     this.camTarget = new THREE.Vector3(); this.camPos = new THREE.Vector3(0, 30, 20); this.camW = 12.5;
     this.maxEnemies = engine.qName === 'low' ? 200 : engine.qName === 'high' ? 340 : 280;
@@ -89,7 +93,11 @@ export class Run {
 
   // ---------------------------------------------------------------- scaling helpers
   get minute() { return this.time / 60; }
-  hpMul() { const m = this.minute; return this.chapter.hpMul * (1 + 0.28 * m + 0.04 * m * m); }
+  hpMul() {
+    const m = this.minute;
+    // Endless Abyss runs far past 6:00, so it uses a flatter curve than the campaign.
+    return this.chapter.hpMul * (this.endless ? 1 + 0.32 * m + 0.025 * m * m : 1 + 0.28 * m + 0.04 * m * m);
+  }
   dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)); }
   recomputeStats() {
     this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
@@ -156,22 +164,25 @@ export class Run {
       }
       if (this.time >= this.nextGate) { this.nextGate += 40; this.gates.spawnPair(); }
       if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
-      if (this.eliteIdx < ELITE_TIMES.length && this.time >= ELITE_TIMES[this.eliteIdx]) {
-        const t = ['husk', 'brute', 'witch', 'brute'][this.eliteIdx++];
+      const eliteDue = this.eliteIdx < ELITE_TIMES.length ? this.time >= ELITE_TIMES[this.eliteIdx]
+        : this.endless && this.time >= this.nextElite;
+      if (eliteDue) {
+        const t = ['husk', 'brute', 'witch', 'brute'][this.eliteIdx++ % 4];
+        if (this.eliteIdx >= ELITE_TIMES.length) this.nextElite = this.time + 70;
         this.spawnEnemy(t, { elite: true });
         this.ui.banner('ELITE', 'A gilded horror has risen. It carries a Relic Chest!', 'gold');
         this.audio.sfx('warning', { volume: 0.5 });
       }
-      if (!this.warned && this.time >= RUN_LENGTH - 8) {
+      if (!this.warned && this.time >= this.nextBossAt - 8) {
         this.warned = true;
-        this.ui.banner('THE HOLLOW KING APPROACHES', 'Gather your legion', 'boss');
+        this.ui.banner(this.bossKills ? 'THE HOLLOW KING RETURNS' : 'THE HOLLOW KING APPROACHES', this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion', 'boss');
         this.audio.sfx('warning');
         this.app.haptic('warning');
       }
-      if (this.time >= RUN_LENGTH) {
+      if (this.time >= this.nextBossAt) {
         this.bossSpawned = true;
         this.gates.despawn();
-        this.boss.spawn();
+        this.boss.spawn(1 + 0.6 * this.bossKills);
       }
     } else if (!this.bossDead) {
       this.spawnAcc += 1.2 * dt * this.chapter.rate;
@@ -342,6 +353,7 @@ export class Run {
   }
 
   onBossKilled(x, z) {
+    if (this.endless) return this.onEndlessBossKilled(x, z);
     this.bossDead = true;
     this.fx.slowMo(0.15, 1.6);
     this.fx.flash(1);
@@ -367,6 +379,27 @@ export class Run {
     setTimeout(() => this.end(true), 3200);
   }
 
+  /** Endless Abyss: the King falls, the abyss deepens, the run continues. */
+  onEndlessBossKilled(x, z) {
+    this.bossKills++;
+    this.bossSpawned = false; this.warned = false;
+    this.nextBossAt = this.time + ENDLESS_BOSS_EVERY;
+    this.bossEnemy = null;
+    this.fx.slowMo(0.25, 0.9);
+    this.fx.flash(0.7); this.fx.shake(0.8); this.fx.aberration(0.8);
+    const col = hdr(this.chapter.boss, 4);
+    this.particles.burst(x, 2, z, 200, col, { speed: 12, life: 1.2, size: 0.7, up: 1.5 });
+    this.fx.shockwave(x, z, 14, this.chapter.boss, 0.9, 0.06);
+    this.fx.light(x, z, 16, 3.5, new THREE.Color(this.chapter.boss), 1.2);
+    this.audio.sfx('boss_slam'); this.app.haptic('heavy');
+    this.pickups.magnetAll();
+    this.pickups.dropSpecial('chest', x, z);
+    for (let i = 0; i < 25; i++) this.legion.raise(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 4);
+    this.ui.bossBar(false);
+    this.ui.banner(`ABYSS DEPTH ${this.bossKills + 1}`, 'Gravemaw falls. The abyss grows hungrier.', 'gold');
+    this.audio.playMusic('battle');
+  }
+
   end(victory) {
     if (this.ended) return;
     this.ended = true;
@@ -375,7 +408,7 @@ export class Run {
     const result = {
       chapter: this.chapter.id, time: Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
-      bonusGold: this.bonusGold, heroId: this.loadout.heroId,
+      bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
     };
     if (this.onEnd) this.onEnd(result);
   }

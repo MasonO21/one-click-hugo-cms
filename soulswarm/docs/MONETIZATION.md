@@ -120,10 +120,10 @@ In midcore gacha games a small share of payers usually produces most IAP revenue
 
 | Technique | How we use it | Honesty rule |
 |---|---|---|
-| **Anchoring** | `gems_15000` sits at the right edge with "Best rate: 150 gems/$". The $9.99 tier sits in the visual centre with the "Most popular" tag. | "Most popular" only if it is true in the last 30 days of data for that region. **Build gap:** the prototype tags `gems_7000` "Best Value", but `gems_15000` has the better rate (150 vs 140 gems/$). Move the tag. |
+| **Anchoring** | `gems_15000` sits at the right edge with "Best rate: 150 gems/$". The $9.99 tier sits in the visual centre with the "Most popular" tag. | "Most popular" only if it is true in the last 30 days of data for that region. The build's "Best Value" tag sits on `gems_15000`, the best rate (150 gems/$); `gems_7000` has no tag. |
 | **Bonus labels** | Each pack shows "+X% gems vs $0.99 rate" (+24% / +49% / +61% / +73% / +86%). | Always computed against `gems_80`. Never against an imaginary "original price". |
 | **First-purchase bonus** | ×2 gems, one per tier. | Shown as "×2 on first purchase", never a fake crossed-out price. |
-| **Starter Pack value framing** | 300 gems + 3 sigils = 750 gems of value, **plus** a Rare hero and 10,000 gold, for $1.99. At the $4.99 tier rate (100 gems/$), 750 gems ≈ $7.49. The honest badge reads **"750 gems' worth + Nyx"**, not a made-up "1,000% value". | Value claims are computed from public gem prices. Gold and heroes are listed, not priced. **Build gap:** the prototype's badge still reads "1,250% value" (`SKUS.starter_pack.value`). Replace it before soft launch. |
+| **Starter Pack value framing** | The honest, conservative badge reads **"540% value"** (`SKUS.starter_pack.value`), with Nyx shown separately as the Rare hero. Basis: 300 gems + 10,000 gold (120 gems at the gem-shop rate) + 3 sigils (450 gems) = 870 gems ≈ $10.77 at the $0.99/80-gem rate, ÷ $1.99, with the hero not counted. | Value claims are computed from public prices: gems at the `gems_80` base rate, gold and sigils at their gem-shop prices. Heroes are listed, not priced, so the badge understates the pack rather than inflating it. |
 | **Timed offer** | The Starter Pack has a real 48 h countdown from first display. (Build: the 48 h start at account creation; counting from first display is Planned.) | The timer never resets secretly. If it expires, the pack is gone for good. We do not "surprise" re-offer the same pack. |
 | **Charm pricing** | All prices end in .99 (store price tiers). Regional prices use the store's local tiers. | Same contents in every region. |
 | **Decoy / ladder** | The `gems_1200` → `gems_2600` jump is small in price-per-gem, but crosses "two 10-pulls". | — |
@@ -194,7 +194,7 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 
 ## 7. Soul Pass economics
 
-- 30 tiers × 100 XP = 3,000 XP per 28-day season. Daily quests give 220 pass XP a day and each run gives round(20 + T/6 + K/40 + 40 on a clear), about 80–210. A daily player (all quests, ~3 runs) earns ~600 XP/day and finishes in about 5 days. A 4-days-a-week player (2 runs a day) finishes in about 2 weeks. *(Tuning: the season was designed for ~125 XP/day and a finish around day 22. Pass XP should come down, or XP per tier go up, before soft launch; GDD §18.)*
+- 30 tiers × 500 XP = 15,000 XP per 28-day season. Daily quests give 220 pass XP a day and each run gives round(20 + T/6 + K/40 + 40 on a clear), about 80–210. A daily player (all quests, ~3 runs) earns ~700 XP/day and finishes in about 3 weeks, leaving a week of slack. A casual player (quests plus 1 run a day) reaches roughly tier 15–20.
 - **Free track (30 tiers):** 20,800 gold, 340 gems, 6 sigils.
 - **Premium track ($9.99):** 1,140 gems, 12 sigils, 1 Epic relic (tier 10), 1 Legendary relic (tier 20), 25 Seraphine shards (S1: 10 at tier 10, 5 at tiers 5, 15 and 25), "Eclipse Vael" skin + 300 gems (tier 30). Premium unlocks retroactively. Buying on day 20 grants every premium reward already earned.
 - **Honest value badge:** 1,140 gems + 12 sigils = 2,940 gem-equivalent, versus 1,200 gems for the $9.99 gem pack → **"2.4× the gems of the $9.99 pack"**, plus relics, shards and the skin, which we list but do not price.

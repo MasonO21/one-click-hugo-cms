@@ -44,6 +44,8 @@
         └────────────────┘
 ```
 
+**Tooling.** `scripts/record-trailer.mjs` renders a scripted 9:16 gameplay ad (1080×1920, 30 fps) to MP4 from the dev build: it steps a real run frame by frame in headless Chromium (Playwright) and encodes with ffmpeg (libx264). It is the in-engine way to produce Ad 1-style creatives for creative testing (`MARKETING.md` §6).
+
 ---
 
 ## 3. Capacitor wrapping (iOS and Android)

@@ -155,6 +155,7 @@ All scripts are 9:16 first, with 1:1 and 16:9 cut-downs. Every script ends on th
 - 10–13 s: the legion overwhelms the remaining horde. Caption: **"Now it's 300 vs them."**
 - 13–15 s: end card.
 - **Variants:** caption "Me vs the entire graveyard"; counter in red vs cyan.
+- **In-engine render:** `scripts/record-trailer.mjs` produces Ad 1-style creatives straight from the game. It renders a scripted 9:16 gameplay ad (1080×1920, 30 fps, 21 s by default) to MP4 with these beats: "They outnumber you 500 to 1" → every kill joins your army → pick the ×3 gate over ÷2 → Soul Nova wipe → Gravemaw → end card "PLAY FREE". Run `node scripts/record-trailer.mjs [out.mp4] [url]` against the dev server (`npm run dev`); it needs Playwright and ffmpeg with libx264. It steps a real Chapter 1 run frame by frame, but the beats are scripted (invulnerable Shepherd, Raise Chance at the 85% cap, a forced ×3 vs ÷2 pair, an instant Nova, Gravemaw called early), so check every cut against the truthfulness policy (§1) and add the standard end card's store badges and "Free to play · In-app purchases" line before it runs.
 
 ### Ad 2: "Pick the Right Gate" (20 s)
 

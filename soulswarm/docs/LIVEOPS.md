@@ -2,7 +2,7 @@
 
 **Status:** v1.0 · **Owner:** Live Ops Producer + Lead Game Designer · **Source of truth:** `DESIGN_BRIEF.md`
 **Assumed global launch:** Monday 14 June 2027 (see `PRODUCTION_ROADMAP.md`). If launch moves, the calendar shifts with it. Seasons are always 28 days and always start on a Monday at 00:00 UTC.
-**Implementation status:** this whole plan is **Planned**. The prototype build has the daily layer only (6 daily quests, the 7-day login, energy, rewarded-ad placements), one Soul Pass season ("Season I: The Hollow Crown" in `data.js`) and the Soul Pact. Blood Moon, Boss Rush, Endless Abyss, holiday events, the weekly quest chest, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
+**Implementation status:** this whole plan is **Planned**. The prototype build has the daily layer only (6 daily quests, the 7-day login, energy, rewarded-ad placements), one Soul Pass season ("Season I: The Waking Legion" in `data.js`) and the Soul Pact. Blood Moon, Boss Rush, Endless Abyss, holiday events, the weekly quest chest, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
 
 ---
 
@@ -169,7 +169,7 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | | Death-minute heatmap | Distribution of death time per chapter | Peak at 4:30–6:00 | Peak before 2:30 (unfair spike) |
 | Gameplay | Skill pick rates | Share of offers taken, per card | No card < 10% or > 60% | Outside the band |
 | | Gate "correct" rate | Share choosing the higher-value gate | 65–80% | > 90% (too easy) or < 50% (unclear) |
-| | Novas per run | | To set in tuning (the build's 140-kill meter allows ~14 per Ch1 clear; GDD §18) | < 2 |
+| | Novas per run | | ~6–7 per Ch1 clear (the build's 300-kill meter; GDD §4.4) | < 2 |
 | Monetization | ARPDAU (IAP / ads) | Revenue ÷ DAU | $0.30 ($0.22 / $0.08) | −20% week-on-week |
 | | Payer conversion D7 / D30 | Cumulative share of installs who paid | 1.5% / 3% | D7 < 1% |
 | | ARPPU (30 d) | | $25+ | — |
@@ -197,7 +197,7 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | 1 | Soft launch | FTUE guaranteed raises | First 5 kills raise vs first 10 | D1 retention (40% → 42%) | FTUE time, D7 | 9,490 |
 | 2 | Soft launch | Tutorial boss strength | Gravemaw 25% HP vs 40% HP | FTUE completion (85% → 87%) | D1 | 4,722 |
 | 3 | Soft launch | Gate interval | 35 s vs 40 s vs 45 s | Gate "correct" rate, D7 | Run length | 9,254 (D7 15% → 16.5%) |
-| 4 | Soft launch | Kills per full Nova charge | 140 (build) vs 200 | Novas per run, D7 | Chapter clear rate | 9,254 |
+| 4 | Soft launch | Kills per full Nova charge | 300 (build) vs 200 | Novas per run, D7 | Chapter clear rate | 9,254 |
 | 5 | Soft launch | Early card offers | Guaranteed new-skill card in level-ups 1–3 vs pure random | D1 | Pick-rate spread | 9,490 |
 | 6 | Soft launch | Starter Pack first display | After first Ch1 boss kill vs after run 3 | D7 payer conversion | D7 retention, refund rate | 13,911 (3.0% → 3.6%) |
 | 7 | Soft launch | Revive offer timing | Offer instantly vs after a 1 s death slow-mo | Revive opt-in rate | Run-end rage-quits | 4,722 |

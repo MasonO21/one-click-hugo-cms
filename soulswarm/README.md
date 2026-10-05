@@ -17,6 +17,22 @@ SINGLE=1 npm run build   # one self-contained HTML file in dist-single/
 
 Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag anywhere to move and tap NOVA.
 
+## What's in the game
+
+- **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded.
+- **4 heroes** with signature weapons, plus **6 weapons, 8 passives and 2 evolutions** drafted on level-up cards.
+- **The legion:** raise slain enemies, multiply them through **Soul Gates**, and detonate them with **Soul Nova**.
+- **Meta progression:** talents, relics (8 types × 4 rarities), hero stars, the Soul Altar gacha (odds and pity shown in-game), a 30-tier Soul Pass, daily quests, a 7-day login calendar, energy, and a shop with simulated IAP and rewarded ads.
+
+## Test and marketing tools
+
+```bash
+npm run playtest      # headless bot plays every hero, a full Chapter 1 clear, Endless and economy checks (23 checks)
+npm run trailer       # renders a 21 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
+npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
+npm run build:web     # one-file web build, plus dist-single/soulswarm.html for embedding hosts
+```
+
 ## Ship it to the stores
 
 ```bash
@@ -47,6 +63,8 @@ See `docs/PRODUCTION_ROADMAP.md` for the full checklist, team plan and budget.
 | `src/ui/` | Design system (`style.css`), HUD and run modals (`runui.js`), menus (`meta/`) |
 | `src/audio/audio.js` | Procedural Web Audio SFX and music, with no audio files |
 | `resources/` | Master icon and splash art |
+| `store/` | Rendered trailer and App Store screenshots |
+| `scripts/` | Playtest bot, trailer and screenshot renderers, icon generator, web build |
 
 ## QA hooks
 
