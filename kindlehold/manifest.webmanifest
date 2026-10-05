@@ -1,0 +1,11 @@
+{
+  "name": "Kindlehold",
+  "short_name": "Kindlehold",
+  "description": "Raise the last living flame and keep your people alive through the long winter.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1320",
+  "theme_color": "#0b1320",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
