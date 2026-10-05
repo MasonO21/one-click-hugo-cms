@@ -76,7 +76,7 @@ body{margin:0;color:var(--fg);font:15px/1.5 var(--font-body);-webkit-font-smooth
 button,input,select{font:inherit;color:inherit}
 h1,h2,h3,h4{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em;line-height:1.2}
 p{margin:0}
-:focus-visible{outline:2px solid var(--soft-ink);outline-offset:2px}
+:focus-visible,input[type=time]:focus-within{outline:2px solid var(--soft-ink);outline-offset:2px}
 .ic{width:18px;height:18px;flex:none}
 .ic.sm{width:15px;height:15px}
 .ic.xs{width:13px;height:13px}
@@ -1272,6 +1272,7 @@ const ADULT_CUES=[['work',/\b(my|our|at|from) (job|work|office|boss|agency|compa
 let S=null, seeding=false, playing=null;
 const T={arrived:null,fresh:null,notif:null,notifTimer:0,sheet:null,think:null,dialog:null,drawer:false,how:false,helpSent:false,openTalk:new Set(),expanded:new Set(),showReviewed:false,settingsTimer:0};
 const exKey=id=>S.active+'|'+id;
+const kidNameOf=id=>{const k=S.kids.find(x=>x.id===id);return (k&&(k.parent.settings.kidName||'').trim())||L('Your child')};
 const shares=()=>S.parent.shares||(S.parent.shares={});
 const shareQueue=()=>{const D=S.device;if(!D.shareReqs){D.shareReqs=D.shareReq?[D.shareReq]:[];delete D.shareReq}return D.shareReqs};
 const pendingShare=()=>shareQueue()[0]||null;
@@ -1329,10 +1330,11 @@ function transmit(p,dir,t){
 /* Parent side: builds its whole view from payloads only. */
 /* A notification on the parent's phone. During quiet time only "Act today" comes through; the rest waits for a morning roundup. */
 const parentQuiet=t=>{const q=S.family.notify.quiet;return q.on&&inQuiet(t,{quietStart:q.start,quietEnd:q.end})};
+/* title and body are functions, so the words follow the app language even after the notification is created */
 function notifyParent(type,sev,title,body,alertId){
   if(seeding)return;
   const N=S.family.notify;if(N.types[type]===false)return;
-  const item={kid:S.active,kidName:name(),type,sev,title,body:body||'',alertId,at:S.clock};
+  const item={kid:S.active,type,sev,title,body,alertId,at:S.clock};
   if(parentQuiet(S.clock)&&sev!=='urgent'){N.held.push(item);return}
   if(alertId)N.held=N.held.filter(h=>!(h.kid===item.kid&&h.alertId===alertId));
   showParentNotif(item);
@@ -1348,17 +1350,18 @@ function checkRoundup(){
   const N=S.family.notify;
   if(!N.held.length||parentQuiet(S.clock))return;
   const seen=new Set(),by={};
-  N.held.forEach(h=>{const k=h.kid+'|'+(h.alertId||h.at);if(seen.has(k))return;seen.add(k);by[h.kidName]=(by[h.kidName]||0)+1});
-  const parts=Object.entries(by).map(([k,n])=>L('{n} for {k}',{n,k}));
-  showParentNotif({roundup:true,kid:N.held[0].kid,title:L('Morning roundup'),body:L('While your phone was quiet: {list}.',{list:joinList(parts)}),count:seen.size,at:S.clock});
+  N.held.forEach(h=>{const k=h.kid+'|'+(h.alertId||h.at);if(seen.has(k))return;seen.add(k);by[h.kid]=(by[h.kid]||0)+1});
+  const body=()=>L('While your phone was quiet: {list}.',{list:joinList(Object.entries(by).map(([id,n])=>L('{n} for {k}',{n,k:kidNameOf(id)})))});
+  showParentNotif({roundup:true,kid:N.held[0].kid,title:()=>L('Morning roundup'),body,count:seen.size,at:S.clock});
   N.held=[];
 }
 function renderParentNotif(){
   const n=T.pnotif,el=$('#parentNotif');
   if(!n){el.hidden=true;el.innerHTML='';return}
   el.hidden=false;
-  const head=n.roundup?n.title:`${sevLabel(n.sev)}: ${n.title}`;
-  const body=n.roundup?n.body:`${n.kidName}${n.body?' · '+n.body:''}`;
+  const val=x=>typeof x==='function'?x():(x||''),title=val(n.title),more=val(n.body);
+  const head=n.roundup?title:`${sevLabel(n.sev)}: ${title}`;
+  const body=n.roundup?more:`${kidNameOf(n.kid)}${more?' · '+more:''}`;
   el.innerHTML=`${ghost()}<div class="pn-text"><span class="pn-app">${L('Ghost Mode · now')}</span><b>${esc(head)}</b><span>${esc(body)}</span></div>
     <div class="pn-actions"><button type="button" class="btn sm primary" data-action="pn-view">${L('View')}</button><button type="button" class="icon-btn" data-action="pn-close" aria-label="${esc(L('Dismiss notification'))}">${ic('x','ic sm')}</button></div>`;
 }
@@ -1371,7 +1374,8 @@ function parentReceive(p,t){
       const a={id:'blocked-'+uid(),p:Object.assign({alert:'contact_blocked',severity:'ok'},p),createdAt:t,updatedAt:t,status:'new',seq:P.seq=(P.seq||0)+1};
       P.alerts.push(a);
       if(!seeding){T.arrived=a.id;announce(L('{k} blocked a contact',{k:name()}))}
-      notifyParent('contact_blocked','ok',L('{k} blocked a contact',{k:name()}),showContact(p.contact),a.id);
+      const kid=S.active;
+      notifyParent('contact_blocked','ok',()=>L('{k} blocked a contact',{k:kidNameOf(kid)}),()=>showContact(p.contact),a.id);
     }else if(p.event==='contact_unblocked'){delete P.blocked[p.contact];P.unblocked[p.contact]=t}
     return;
   }
@@ -1382,7 +1386,8 @@ function parentReceive(p,t){
     const a=P.alerts.find(x=>x.id===p.alert_id);
     if(a){a.updatedAt=t;a.seq=P.seq=(P.seq||0)+1;if(p.type==='shared_chat')a.status='new';if(!seeding)T.arrived=a.id}
     if(!seeding)announce(p.type==='shared_chat'?L('{k} shared a chat with you',{k:name()}):L('{k} said not now',{k:name()}));
-    notifyParent('share_reply','info',p.type==='shared_chat'?L('{k} shared a chat with you',{k:name()}):L('{k} said "not now"',{k:name()}),showContact(p.contact),p.alert_id);
+    const kid=S.active,shared=p.type==='shared_chat';
+    notifyParent('share_reply','info',()=>shared?L('{k} shared a chat with you',{k:kidNameOf(kid)}):L('{k} said "not now"',{k:kidNameOf(kid)}),()=>showContact(p.contact),p.alert_id);
     return;
   }
   if(p.type==='alert'){
@@ -1391,7 +1396,8 @@ function parentReceive(p,t){
     if(a){a.p=p;a.updatedAt=t;a.status='new';a.checkIn=false;a.seq=P.seq=(P.seq||0)+1}
     else{a={id:p.alert_id,p,createdAt:t,updatedAt:t,status:'new',seq:P.seq=(P.seq||0)+1};P.alerts.push(a)}
     if(!seeding){T.arrived=a.id;announce(L('New alert: {t}',{t:alertTitle(p)}));if(p.severity==='urgent')T.expanded.add(exKey(a.id))}
-    if(!prevSev||RANK[p.severity]>RANK[prevSev])notifyParent(p.alert,p.severity,alertTitle(p),p.contacts?joinList(p.contacts.map(showContact)):showContact(p.contact),a.id);
+    const kid=S.active;
+    if(!prevSev||RANK[p.severity]>RANK[prevSev])notifyParent(p.alert,p.severity,()=>ALERTS[p.alert].title(kidNameOf(kid)),()=>p.contacts?joinList(p.contacts.map(showContact)):showContact(p.contact),a.id);
   }
 }
 
@@ -2627,7 +2633,7 @@ document.addEventListener('click',e=>{
     case 'more-scenarios':T.moreScenarios=!T.moreScenarios;renderScenarios();break;
     case 'dismiss-how':S.ui.introDismissed=true;commit();break;
     case 'reopen':{const al=findAlert(id);if(al){al.status='new';al.note=null;commit()}break}
-    case 'block':T.sheet='block';commit();break;
+    case 'block':T.sheet='block';commit();focusSheet('#sheetBlock');break;
     case 'confirm-block':T.sheet=null;if(playing)stopScenario();setBlocked(S.ui.thread,true);commit();break;
     case 'unblock':setBlocked(S.ui.thread,false);commit();break;
     case 'think-edit':if(T.think&&!T.think.auto){T.sheet=null;T.think=null;commit();$('#composeInput').focus()}break;
@@ -2652,9 +2658,9 @@ document.addEventListener('click',e=>{
     case 'open-thread':S.ui.screen='thread';S.ui.thread=id;S.ui.typeAs='me';commit();break;
     case 'back':S.ui.screen='list';commit();break;
     case 'as':S.ui.typeAs=id;commit();$('#composeInput').focus();break;
-    case 'privacy':T.sheet='privacy';commit();break;
+    case 'privacy':T.sheet='privacy';commit();focusSheet('#sheetPrivacy');break;
     case 'new-chat':T.sheet='new';commit();setTimeout(()=>$('#ncName').focus(),50);break;
-    case 'close-sheet':case 'sheet-scrim':T.sheet=null;T.helpSent=false;commit();break;
+    case 'close-sheet':case 'sheet-scrim':closeSheet();break;
     case 'dismiss-notif':T.notif=null;renderKid();break;
     case 'ask-help':{
       T.helpSent=true;
@@ -3406,6 +3412,13 @@ $('#notifyForm').addEventListener('submit',e=>e.preventDefault());
 fillNotifyForm();
 renderTester();
 $('#phraseInput').addEventListener('input',renderTester);
+/* Phone sheets that a button opens. The think-twice and share sheets wait for an answer instead. */
+const SHEET_OPENER={privacy:'[data-action="privacy"]',block:'#blockBtn',new:'[data-action="new-chat"]'};
+function focusSheet(sel){setTimeout(()=>{const x=$$(`${sel} button,${sel} input`).find(b=>!b.disabled&&b.offsetParent!==null);if(x)x.focus()},30)}
+function closeSheet(){
+  const was=T.sheet;T.sheet=null;T.helpSent=false;commit();
+  const o=SHEET_OPENER[was]&&$(SHEET_OPENER[was]);if(o&&o.offsetParent!==null)o.focus();
+}
 function closeDialog(){
   const id=T.dialog;T.dialog=null;commit();
   const back=id&&$$('[data-action="view-share"]').find(x=>x.dataset.id===id);if(back)back.focus();
@@ -3418,7 +3431,7 @@ function closeOverlay(){
 }
 document.addEventListener('keydown',e=>{
   const ov=T.dialog?$('#chatDialog'):T.drawer?$('#dataDrawer'):T.how?$('#howDialog'):T.price?$('#priceDialog'):T.addKid?$('#kidDialog'):null;
-  if(!ov)return;
+  if(!ov){if(e.key==='Escape'&&SHEET_OPENER[T.sheet]){e.preventDefault();closeSheet()}return}
   if(e.key==='Escape'){e.preventDefault();closeOverlay();return}
   if(e.key!=='Tab')return;
   const f=$$('button,a[href],textarea,summary,input',ov).filter(x=>!x.disabled&&!x.hidden&&x.offsetParent!==null);

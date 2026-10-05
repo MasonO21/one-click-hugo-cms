@@ -1,5 +1,5 @@
 /* Ghost Mode for Kids: offline support, so the installed app opens without a connection. */
-const CACHE = 'ghost-mode-v7';
+const CACHE = 'ghost-mode-v8';
 const SHELL = [
   '/ghost-mode/',
   '/ghost-mode/manifest.webmanifest',
