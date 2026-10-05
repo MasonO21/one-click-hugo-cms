@@ -1,0 +1,554 @@
+// A single run: owns the battlefield scene and drives every gameplay system.
+import * as THREE from 'three';
+import { World } from './world.js';
+import { Particles, hdr } from '../engine/particles.js';
+import { GlowSprites, makeShadowMaterial } from '../engine/materials.js';
+import { Input } from '../engine/input.js';
+import { Effects } from './effects.js';
+import { Player } from './player.js';
+import { Enemies } from './enemies.js';
+import { Legion } from './legion.js';
+import { Projectiles } from './projectiles.js';
+import { Weapons } from './weapons.js';
+import { Pickups } from './pickups.js';
+import { Gates } from './gates.js';
+import { Boss } from './boss.js';
+import { computeStats, rollChoices, applyChoice } from './skills.js';
+import { ENEMIES, BASE, RUN_LENGTH, xpForLevel, SKINS } from './data.js';
+
+const PITCH = THREE.MathUtils.degToRad(57);
+const ELITE_TIMES = [75, 150, 225, 290];
+const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
+
+export class Run {
+  constructor(engine, { app, loadout, chapter }) {
+    this.isRun = true;
+    this.engine = engine;
+    this.app = app;
+    this.audio = app.audio;
+    this.profile = app.profile;
+    this.loadout = loadout;
+    this.chapter = chapter;
+    this.ui = null;
+    this.onEnd = null;
+
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(chapter.fog);
+    this.camera = new THREE.PerspectiveCamera(45, 0.5, 0.5, 220);
+
+    const skin = loadout.skin ? SKINS[loadout.skin] : null;
+    this.heroColor = skin ? skin.color : loadout.hero.color;
+    this.heroColorObj = new THREE.Color(this.heroColor);
+    this.weaponColorObj = this.heroColorObj.clone();
+
+    this.world = new World(this.scene, chapter, { maxLights: engine.maxGroundLights });
+    this.particles = new Particles(9000);
+    this.particles.budget = engine.particleBudget;
+    this.glow = new GlowSprites(2800);
+    this.scene.add(this.particles.points, this.glow.points);
+    this.shadowMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), makeShadowMaterial(), 900);
+    this.shadowMesh.count = 0; this.shadowMesh.frustumCulled = false; this.shadowMesh.renderOrder = 0;
+    this.shadowMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.scene.add(this.shadowMesh);
+
+    this.fx = new Effects(this);
+    this.skillLv = { [loadout.hero.weapon]: 1 };
+    this.evolved = {};
+    this.level = 1; this.xp = 0; this.xpNeed = xpForLevel(1);
+    this.stats = computeStats(loadout, this.skillLv, chapter, this.level);
+    this.player = new Player(this, loadout);
+    this.enemies = new Enemies(this);
+    this.legion = new Legion(this);
+    this.legion.setColor(this.heroColor);
+    this.projectiles = new Projectiles(this);
+    this.projectiles.setBoltColor(this.heroColor);
+    this.weapons = new Weapons(this);
+    this.pickups = new Pickups(this);
+    this.gates = new Gates(this);
+    this.boss = new Boss(this);
+    this.bossEnemy = null;
+    this.input = new Input(engine.canvas);
+
+    this.time = 0; this.t = 0;
+    this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0;
+    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0 };
+    this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0;
+    this.bonusGold = 0;
+    this.spawnAcc = 0; this.nextGate = 28; this.nextSwarm = 50; this.eliteIdx = 0;
+    this.warned = false; this.bossSpawned = false; this.bossDead = false;
+    this.freeRevives = loadout.revives; this.revivesUsed = 0; this.deathT = -1;
+    this.camTarget = new THREE.Vector3(); this.camPos = new THREE.Vector3(0, 30, 20); this.camW = 12.5;
+    this.maxEnemies = engine.qName === 'low' ? 200 : engine.qName === 'high' ? 340 : 280;
+    this.hintsShown = {};
+    this.tutorial = !this.profile.flags.tutorialDone;
+    this.minionLightIdx = 0;
+    this.resize(engine.w, engine.h);
+    this.camPos.copy(this.desiredCam());
+  }
+
+  // ---------------------------------------------------------------- scaling helpers
+  get minute() { return this.time / 60; }
+  hpMul() { const m = this.minute; return this.chapter.hpMul * (1 + 0.28 * m + 0.04 * m * m); }
+  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)); }
+  recomputeStats() {
+    this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
+  }
+
+  onQuality(q) {
+    this.particles.budget = q.particles;
+    this.world.maxLights = q.lights;
+  }
+
+  resize(w, h) {
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+  }
+
+  hint(key, text) {
+    if (this.hintsShown[key] || this.profile.flags.hints[key]) return;
+    this.hintsShown[key] = true;
+    this.profile.flags.hints[key] = true;
+    if (this.ui) this.ui.hint(text);
+  }
+
+  // ---------------------------------------------------------------- director
+  pickType() {
+    const m = this.minute;
+    const w = m < 1 ? [1, 0, 0, 0, 0]
+      : m < 2 ? [0.75, 0.25, 0, 0, 0]
+      : m < 3 ? [0.55, 0.25, 0, 0.1, 0.1]
+      : m < 4 ? [0.45, 0.2, 0.13, 0.12, 0.1]
+      : [0.4, 0.2, 0.17, 0.13, 0.1];
+    const types = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
+    let r = Math.random();
+    for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return types[i]; }
+    return 'husk';
+  }
+
+  spawnPoint(bias = true) {
+    const P = this.player;
+    let a = Math.random() * Math.PI * 2;
+    if (bias && (P.vx || P.vz) && Math.random() < 0.45) a = Math.atan2(P.vz, P.vx) + (Math.random() - 0.5) * 1.6;
+    let R = 11;
+    for (let i = 0; i < 14; i++) {
+      _v.set(P.x + Math.cos(a) * R, 0.5, P.z + Math.sin(a) * R);
+      const p = this.engine.project(_v, this.camera, _sp);
+      if (!p || p.x < -40 || p.x > this.engine.w + 40 || p.y < -60 || p.y > this.engine.h + 40) break;
+      R += 2.5;
+    }
+    return { x: P.x + Math.cos(a) * R, z: P.z + Math.sin(a) * R };
+  }
+
+  spawnEnemy(type, opts = {}) {
+    const p = opts.at || this.spawnPoint();
+    return this.enemies.spawn(type, p.x, p.z, { hpMul: this.hpMul(), dmgMul: this.dmgMul(), elite: !!opts.elite });
+  }
+
+  director(dt) {
+    const m = this.minute;
+    if (!this.bossSpawned) {
+      const rate = (1.1 + 0.85 * m + 0.22 * m * m) * this.chapter.rate;
+      this.spawnAcc = Math.min(6, this.spawnAcc + rate * dt);
+      while (this.spawnAcc >= 1) {
+        this.spawnAcc -= 1;
+        if (this.enemies.count < this.maxEnemies) this.spawnEnemy(this.pickType());
+      }
+      if (this.time >= this.nextGate) { this.nextGate += 40; this.gates.spawnPair(); }
+      if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
+      if (this.eliteIdx < ELITE_TIMES.length && this.time >= ELITE_TIMES[this.eliteIdx]) {
+        const t = ['husk', 'brute', 'witch', 'brute'][this.eliteIdx++];
+        this.spawnEnemy(t, { elite: true });
+        this.ui.banner('ELITE', 'A gilded horror has risen. It carries a Relic Chest!', 'gold');
+        this.audio.sfx('warning', { volume: 0.5 });
+      }
+      if (!this.warned && this.time >= RUN_LENGTH - 8) {
+        this.warned = true;
+        this.ui.banner('THE HOLLOW KING APPROACHES', 'Gather your legion', 'boss');
+        this.audio.sfx('warning');
+        this.app.haptic('warning');
+      }
+      if (this.time >= RUN_LENGTH) {
+        this.bossSpawned = true;
+        this.gates.despawn();
+        this.boss.spawn();
+      }
+    } else if (!this.bossDead) {
+      this.spawnAcc += 1.2 * dt * this.chapter.rate;
+      while (this.spawnAcc >= 1) { this.spawnAcc -= 1; if (this.enemies.count < 90) this.spawnEnemy(Math.random() < 0.7 ? 'husk' : 'ghoul'); }
+    }
+  }
+
+  swarmRing() {
+    const P = this.player;
+    const n = Math.min(40, 18 + Math.floor(this.minute * 5));
+    const R = 13;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      this.spawnEnemy(this.minute > 2 && i % 3 === 0 ? 'ghoul' : 'husk', { at: { x: P.x + Math.cos(a) * R, z: P.z + Math.sin(a) * R } });
+    }
+    this.ui.banner('SURROUNDED', 'The horde closes in', 'ember');
+    this.audio.sfx('warning', { volume: 0.4, pitch: 0.8 });
+  }
+
+  // ---------------------------------------------------------------- kills, xp, chests
+  onEnemyKilled(e, source, noRaise) {
+    this.counters.kills++;
+    if (this.novaQueue.length === 0) this.nova = Math.min(1, this.nova + this.stats.novaMul / BASE.novaKills);
+    if (this.nova >= 1 && !this.hintsShown.nova) this.hint('nova', 'Soul Nova is ready! Tap NOVA to detonate your legion.');
+    const d = ENEMIES[e.type];
+    this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1));
+    if (e.elite) this.pickups.dropSpecial('chest', e.x, e.z);
+    else {
+      const r = Math.random();
+      if (r < 0.006) this.pickups.dropSpecial('heart', e.x, e.z);
+      else if (r < 0.009) this.pickups.dropSpecial('magnet', e.x, e.z);
+    }
+    if (!noRaise && this.legion.count < this.stats.cap) {
+      let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
+      if (source === 'skull' && this.evolved.boneCrown) chance = 1;
+      if (Math.random() < chance) {
+        this.legion.raise(e.x, e.z);
+        this.counters.raised++;
+        if (this.counters.raised === 1) this.hint('raise', 'Slain foes rise to fight for you. This is your LEGION!');
+      }
+    }
+    this.audio.sfx('kill', { volume: 0.35 });
+  }
+
+  addXp(v) {
+    this.xp += v;
+    while (this.xp >= this.xpNeed) {
+      this.xp -= this.xpNeed;
+      this.level++;
+      this.xpNeed = xpForLevel(this.level);
+      this.levelQueue++;
+    }
+    if (this.levelQueue > 0 && !this.levelPending && !this.ended) this.showLevelUp();
+  }
+
+  showLevelUp() {
+    this.levelPending = true;
+    this.recomputeStats();
+    const P = this.player;
+    this.particles.burst(P.x, 1, P.z, 50, hdr(0xffd04a, 3), { speed: 6, life: 0.8, size: 0.4, up: 1.5 });
+    this.fx.shockwave(P.x, P.z, 4, 0xffd04a, 0.5, 0.1);
+    this.audio.sfx('levelup');
+    this.app.haptic('success');
+    this.input.reset();
+    const choices = rollChoices(this, 3);
+    this.ui.showLevelUp(choices, this.level, (c) => {
+      applyChoice(this, c);
+      this.audio.sfx('select');
+      this.levelQueue--;
+      this.levelPending = false;
+      this.player.invuln = Math.max(this.player.invuln, 0.6);
+      if (this.levelQueue > 0) setTimeout(() => !this.ended && this.showLevelUp(), 120);
+    });
+  }
+
+  openChest() {
+    const c = rollChoices(this, 1)[0];
+    applyChoice(this, c);
+    const P = this.player;
+    this.particles.burst(P.x, 1, P.z, 80, hdr(0xffd04a, 3.5), { speed: 8, life: 1, size: 0.5, up: 2 });
+    this.fx.flash(0.3);
+    this.audio.sfx('chest');
+    this.app.haptic('success');
+    this.ui.banner('RELIC CHEST', `${c.name}${c.level ? ' · Lv ' + c.level : ''}`, 'gold');
+  }
+
+  // ---------------------------------------------------------------- Soul Nova
+  triggerNova() {
+    if (this.nova < 1 || this.ended || this.paused || this.levelPending || this.player.dead) return false;
+    this.nova = 0;
+    this.counters.novas++;
+    const P = this.player;
+    const size = this.legion.count;
+    const pts = this.legion.detonateAll();
+    pts.sort((a, b) => ((a.x - P.x) ** 2 + (a.z - P.z) ** 2) - ((b.x - P.x) ** 2 + (b.z - P.z) ** 2));
+    const span = Math.min(0.75, 0.15 + pts.length * 0.003);
+    this.novaQueue = pts.map((p, i) => ({ ...p, t: (i / Math.max(1, pts.length)) * span }));
+    this.novaT = 0;
+    this.novaDmg = (35 + size * 0.5) * this.stats.dmgMul * (1 + 0.45 * (this.chapter.id - 1));
+    // the Shepherd's own blast
+    const R = 7;
+    this.enemies.query(P.x, P.z, R, (e) => { this.enemies.damage(e, this.novaDmg * 1.2, { kx: e.x - P.x, kz: e.z - P.z, knock: 14, source: 'nova' }); });
+    this.projectiles.clearEnemyShots();
+    this.fx.shockwave(P.x, P.z, R * 1.5, this.heroColor, 0.6, 0.08);
+    this.particles.ring(P.x, P.z, R, 90, hdr(this.heroColor, 3.5), { life: 0.5, size: 0.8 });
+    this.particles.burst(P.x, 1, P.z, 80, [3, 3, 3.2], { speed: 12, life: 0.6, size: 0.6, up: 0.6 });
+    this.fx.flash(0.85);
+    this.fx.aberration(1);
+    this.fx.shake(0.75);
+    this.fx.slowMo(0.3, 0.55);
+    this.fx.light(P.x, P.z, 14, 3, this.heroColorObj, 0.8);
+    this.audio.sfx('nova');
+    this.app.haptic('heavy');
+    if (this.ui) this.ui.bigNumber(size ? `${size} SOULS` : 'NOVA', size ? 'DETONATED' : 'UNLEASHED', true);
+    return true;
+  }
+
+  updateNova(dt) {
+    if (!this.novaQueue.length) return;
+    this.novaT += dt;
+    const col = hdr(this.heroColor, 3.2);
+    let i = 0;
+    while (i < this.novaQueue.length && this.novaQueue[i].t <= this.novaT) {
+      const p = this.novaQueue[i++];
+      this.enemies.query(p.x, p.z, 2.6, (e) => { this.enemies.damage(e, this.novaDmg, { kx: e.x - p.x, kz: e.z - p.z, knock: 6, source: 'nova', silent: Math.random() < 0.6 }); });
+      this.particles.burst(p.x, p.y, p.z, 14, col, { speed: 7, life: 0.5, size: 0.55, up: 0.8 });
+      this.particles.burst(p.x, p.y, p.z, 4, [3, 3, 3], { speed: 2, life: 0.3, size: 1.0 });
+      if (i % 4 === 0) this.fx.shockwave(p.x, p.z, 2.6, this.heroColor, 0.35, 0.14);
+      if (i % 6 === 0) this.fx.light(p.x, p.z, 4, 1.4, this.heroColorObj, 0.4);
+      if (i % 10 === 0) this.audio.sfx('explosion', { volume: 0.35, pitch: 1.2 + Math.random() * 0.4 });
+    }
+    this.novaQueue.splice(0, i);
+  }
+
+  // ---------------------------------------------------------------- death, revive, victory
+  onPlayerDeath() {
+    if (this.ended) return;
+    const P = this.player;
+    if (this.freeRevives > 0) {
+      this.freeRevives--;
+      this.revive(true);
+      this.ui.banner('UNDYING', 'Mordrake refuses to stay dead', 'gold');
+      return;
+    }
+    P.dead = true;
+    this.deathT = 0;
+    this.fx.slowMo(0.2, 1.0);
+    this.particles.burst(P.x, 1, P.z, 80, hdr(this.heroColor, 3), { speed: 6, life: 1, size: 0.5, up: 1 });
+    this.audio.sfx('defeat');
+    this.app.haptic('heavy');
+  }
+
+  revive(free = false) {
+    const P = this.player;
+    if (!free) this.revivesUsed++;
+    P.dead = false;
+    P.hp = P.maxHp;
+    P.invuln = 2.5;
+    this.deathT = -1;
+    this.paused = false;
+    this.projectiles.clearEnemyShots();
+    this.enemies.query(P.x, P.z, 8, (e) => { this.enemies.damage(e, e.type === 'boss' ? 0.01 : e.maxHp * 0.5, { kx: e.x - P.x, kz: e.z - P.z, knock: 20, source: 'nova', silent: true }); });
+    this.fx.shockwave(P.x, P.z, 10, 0xffd04a, 0.6, 0.1);
+    this.particles.ring(P.x, P.z, 8, 80, hdr(0xffd04a, 3), { life: 0.5, size: 0.8 });
+    this.fx.flash(0.6);
+    this.audio.sfx('heal');
+    this.audio.playMusic(this.bossSpawned ? 'boss' : 'battle');
+  }
+
+  onBossKilled(x, z) {
+    this.bossDead = true;
+    this.fx.slowMo(0.15, 1.6);
+    this.fx.flash(1);
+    this.fx.shake(1);
+    this.fx.aberration(1);
+    const col = hdr(this.chapter.boss, 4);
+    this.particles.burst(x, 2, z, 250, col, { speed: 14, life: 1.4, size: 0.8, up: 1.5 });
+    this.particles.burst(x, 2, z, 120, [3, 3, 3], { speed: 8, life: 1, size: 1, up: 2 });
+    this.fx.shockwave(x, z, 16, this.chapter.boss, 1.0, 0.06);
+    this.fx.light(x, z, 18, 4, new THREE.Color(this.chapter.boss), 1.5);
+    this.audio.sfx('boss_slam');
+    this.app.haptic('heavy');
+    this.enemies.clearAll(true);
+    this.projectiles.clearEnemyShots();
+    this.pickups.magnetAll();
+    // the King's soul joins your legion
+    setTimeout(() => {
+      for (let i = 0; i < 30; i++) this.legion.raise(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 4);
+    }, 600);
+    this.ui.banner('CHAPTER CLEARED', `${this.chapter.name} is free`, 'gold');
+    this.audio.stopMusic();
+    setTimeout(() => this.audio.sfx('victory'), 900);
+    setTimeout(() => this.end(true), 3200);
+  }
+
+  end(victory) {
+    if (this.ended) return;
+    this.ended = true;
+    this.input.reset();
+    this.profile.flags.tutorialDone = true;
+    const result = {
+      chapter: this.chapter.id, time: Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
+      bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
+      bonusGold: this.bonusGold, heroId: this.loadout.heroId,
+    };
+    if (this.onEnd) this.onEnd(result);
+  }
+
+  pause(on) {
+    if (on) {
+      if (this.paused || this.levelPending || this.ended || this.player.dead) return;
+      this.paused = true;
+      this.input.reset();
+      if (this.ui) this.ui.showPause();
+    } else this.paused = false;
+  }
+
+  // ---------------------------------------------------------------- frame
+  desiredCam() {
+    const P = this.player;
+    const zoom = Math.min(5, this.legion.count / 50) + (this.bossSpawned && !this.bossDead ? 3.5 : 0);
+    const W = 12.5 + zoom;
+    this.camW += (W - this.camW) * 0.03;
+    const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const aspect = Math.max(0.3, this.camera.aspect);
+    const dist = THREE.MathUtils.clamp(this.camW / 2 / (tan * aspect), 16, 60);
+    this.camTarget.set(P.x + P.vx * 0.22, 0, P.z + P.vz * 0.22 - 1.2);
+    return _p.set(this.camTarget.x, dist * Math.sin(PITCH), this.camTarget.z + dist * Math.cos(PITCH));
+  }
+
+  update(realDt) {
+    this.t += realDt;
+    const blocked = this.paused || this.levelPending || (this.ended && !this.bossDead);
+    const ts = blocked ? 0 : this.fx.timeScale();
+    const dt = realDt * ts;
+    this.input.update();
+    if (this.ui && this.ui.wantsNova) { this.ui.wantsNova = false; this.triggerNova(); }
+    if (this.input.keys.has('Space')) { this.input.keys.delete('Space'); this.triggerNova(); }
+
+    if (dt > 0) {
+      this.time += dt;
+      if (!this.ended) this.director(dt);
+      this.player.update(dt, this.input);
+      if (!this.player.dead) this.weapons.update(dt);
+      this.enemies.update(dt);
+      this.legion.update(dt);
+      this.projectiles.update(dt);
+      this.pickups.update(dt);
+      this.gates.update(dt);
+      this.updateNova(dt);
+      if (this.tutorial && this.time > 1.5 && !this.input.moved) this.hint('move', 'Drag anywhere to move. Your Shepherd attacks automatically.');
+    }
+    if (this.deathT >= 0) {
+      this.deathT += realDt;
+      if (this.deathT > 1.1 && !this.paused) {
+        this.paused = true;
+        this.ui.showRevive({ canRevive: this.revivesUsed < 1, gemCost: 60 }, (choice) => {
+          if (choice === 'revive') this.revive(false);
+          else this.end(false);
+        });
+      }
+    }
+    this.fx.update(dt, realDt);
+    this.particles.update(dt);
+
+    // camera
+    const want = this.desiredCam();
+    this.camPos.lerp(want, 1 - Math.exp(-realDt * 6));
+    this.camera.position.set(this.camPos.x + this.fx.shakeX, this.camPos.y, this.camPos.z + this.fx.shakeZ);
+    this.camera.lookAt(this.camTarget.x + this.fx.shakeX * 0.5, 0, this.camTarget.z + this.fx.shakeZ * 0.5);
+
+    this.render(dt);
+    if (this.ui) this.ui.update(this, realDt);
+  }
+
+  render(dt) {
+    const P = this.player;
+    this.glow.begin();
+    this.legion.render();
+    this.projectiles.render();
+    this.pickups.render();
+    this.enemies.render();
+    this.boss.render(dt);
+    this.player.render(this.t);
+
+    // shared lighting for characters
+    const plx = P.x, plz = P.z;
+    this.enemies.mat.uniforms.uPLPos.value.set(plx, 1.6, plz);
+    this.enemies.mat.uniforms.uPLColor.value.copy(this.heroColorObj).multiplyScalar(0.45);
+    this.world.propMat.uniforms.uPLPos.value.set(plx, 1.6, plz);
+    this.world.propMat.uniforms.uPLColor.value.copy(this.heroColorObj);
+    this.world.propMat.uniforms.uPLRadius.value = 7;
+
+    // ground light pools
+    const W = this.world;
+    W.beginLights();
+    W.addLight(plx, plz, 6.5, 0.9, this.heroColorObj);
+    const L = this.legion.list;
+    if (L.length) {
+      const n = Math.min(8, L.length);
+      const step = Math.max(1, Math.floor(L.length / n));
+      for (let i = 0; i < n; i++) {
+        const m = L[(i * step + this.minionLightIdx) % L.length];
+        W.addLight(m.x, m.z, 3.2, 0.45, this.heroColorObj);
+      }
+    }
+    if (this.bossEnemy && this.bossEnemy.active) W.addLight(this.bossEnemy.x, this.bossEnemy.z, 9, 1.0, this.boss.color);
+    this.fx.pushLights(W);
+    W.endLights();
+    W.update(P, this.t);
+
+    // blob shadows
+    let si = 0;
+    const sm = this.shadowMesh;
+    const addShadow = (x, z, r) => {
+      if (si >= 900) return;
+      _p.set(x, 0.02, z); _s.set(r, 1, r);
+      _m.compose(_p, _q, _s);
+      sm.setMatrixAt(si++, _m);
+    };
+    addShadow(P.x, P.z, 1.5);
+    for (const e of this.enemies.active) if (e.active) addShadow(e.x, e.z, e.radius * (e.type === 'boss' ? 2.8 : 2.6));
+    sm.count = si;
+    sm.instanceMatrix.needsUpdate = true;
+
+    this.glow.end();
+    const ps = this.engine.pointScale(this.camera);
+    this.glow.material.uniforms.uScale.value = ps;
+    this.particles.material.uniforms.uScale.value = ps;
+    this.fx.applyPost(this.engine.post);
+    this.engine.post.uDesat.value = P.dead ? Math.min(0.85, this.deathT * 0.9) : 0;
+  }
+
+  draw2d(ctx) {
+    const P = this.player;
+    // HP bar under the Shepherd
+    if (!P.dead) {
+      _v.set(P.x, 0, P.z);
+      const p = this.engine.project(_v, this.camera, _sp);
+      if (p) {
+        const w = 46, h = 6, x = p.x - w / 2, y = p.y + 14;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+        const f = P.hp / P.maxHp;
+        ctx.fillStyle = f > 0.5 ? '#49f59a' : f > 0.25 ? '#ffcf4a' : '#ff2e55';
+        ctx.fillRect(x, y, w * f, h);
+      }
+    }
+    // off-screen boss arrow
+    const b = this.bossEnemy;
+    if (b && b.active) {
+      _v.set(b.x, 2, b.z);
+      const p = this.engine.project(_v, this.camera, _sp);
+      const W = this.engine.w, H = this.engine.h;
+      if (p && (p.x < 0 || p.x > W || p.y < 0 || p.y > H)) {
+        const cx = W / 2, cy = H / 2;
+        const a = Math.atan2(p.y - cy, p.x - cx);
+        const ax = cx + Math.cos(a) * (W / 2 - 30), ay = cy + Math.sin(a) * (H / 2 - 90);
+        ctx.save(); ctx.translate(ax, ay); ctx.rotate(a);
+        ctx.fillStyle = '#ff3df0'; ctx.shadowColor = '#ff3df0'; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-8, -9); ctx.lineTo(-8, 9); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+    }
+    this.fx.draw2d(ctx, this.camera, this.engine);
+    if (!this.paused && !this.levelPending) this.input.draw(ctx);
+  }
+
+  dispose() {
+    this.input.dispose();
+    this.gates.dispose();
+    this.boss.dispose();
+    for (const sys of [this.player, this.enemies, this.legion, this.projectiles, this.weapons, this.pickups, this.world]) sys.dispose();
+    this.particles.points.geometry.dispose(); this.particles.material.dispose();
+    this.glow.points.geometry.dispose(); this.glow.material.dispose();
+    this.shadowMesh.geometry.dispose(); this.shadowMesh.material.dispose();
+    this.scene.traverse((o) => { if (o.geometry && o.geometry.dispose) o.geometry.dispose(); });
+    this.engine.post.uDesat.value = 0; this.engine.post.uWhite.value = 0; this.engine.post.uFlash.value.w = 0; this.engine.post.uAberr.value = 0;
+  }
+}

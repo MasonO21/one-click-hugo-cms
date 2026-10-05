@@ -1,0 +1,12 @@
+{
+  "appId": "com.soulswarm.game",
+  "appName": "Soulswarm",
+  "webDir": "dist",
+  "backgroundColor": "#05060b",
+  "ios": { "contentInset": "never", "backgroundColor": "#05060b" },
+  "android": { "backgroundColor": "#05060b" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 1200, "backgroundColor": "#05060b", "showSpinner": false },
+    "StatusBar": { "style": "DARK", "overlaysWebView": true }
+  }
+}

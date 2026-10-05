@@ -1,0 +1,126 @@
+// SOULSWARM: app bootstrap. Wires the profile, audio, renderer, menus and runs together.
+import './ui/style.css';
+import { audio, loadAudio } from './audio/index.js';
+import { loadProfile, saveProfile } from './meta/save.js';
+import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult } from './meta/economy.js';
+import { Store } from './meta/store.js';
+import { haptic, setHapticsEnabled } from './engine/platform.js';
+import { Engine } from './engine/engine.js';
+import { Showcase } from './game/showcase.js';
+import { Run } from './game/run.js';
+import { RunUI } from './ui/runui.js';
+import { createMeta } from './ui/meta/index.js';
+import { CHAPTERS } from './game/data.js';
+import { toast } from './ui/dom.js';
+
+const profile = loadProfile();
+
+/**
+ * The app object is the contract between systems. Menus receive it and use:
+ *   app.profile, app.audio, app.store, app.haptic(kind), app.engine
+ *   app.heroPortrait(heroId) -> dataURL of a rendered 3D portrait
+ *   app.showcase.setHero(heroId)  (the 3D hero standing behind the home screen)
+ *   app.startRun(chapterId) -> boolean (false when out of energy)
+ *   app.applySettings()     (after changing profile.settings)
+ */
+const app = {
+  profile,
+  audio,
+  store: Store,
+  haptic,
+  engine: null,
+  showcase: null,
+  meta: null,
+  run: null,
+  runUI: null,
+  heroPortrait: (id) => (app.engine ? app.engine.heroPortrait(id, profile) : ''),
+  startRun,
+  exitRun,
+  applySettings,
+};
+window.__soulswarm = app; // handy for QA scripts
+
+function applySettings() {
+  const s = profile.settings;
+  audio.setVolumes({ music: s.music, sfx: s.sfx });
+  audio.setMuted(!!s.muted);
+  setHapticsEnabled(s.haptics);
+  if (app.engine) app.engine.setQuality(s.quality);
+  saveProfile(profile);
+}
+
+function startRun(chapterId) {
+  const chapter = CHAPTERS[chapterId - 1];
+  if (!chapter || chapterId > profile.chapter.unlocked) return false;
+  if (!spendEnergy(profile)) return false;
+  profile.chapter.selected = chapterId;
+  commit(profile);
+  app.meta.hide();
+  const loadout = computeLoadout(profile);
+  const run = new Run(app.engine, { app, loadout, chapter });
+  const runUI = new RunUI(app, run);
+  app.run = run; app.runUI = runUI;
+  app.engine.setController(run);
+  audio.playMusic('battle');
+  run.onEnd = (result) => {
+    const outcome = applyRunResult(profile, result);
+    commit(profile);
+    runUI.showResults(result, outcome);
+  };
+  return true;
+}
+
+function exitRun() {
+  if (app.run) app.run.dispose();
+  if (app.runUI) app.runUI.dispose();
+  app.run = null; app.runUI = null;
+  app.engine.setController(app.showcase);
+  app.showcase.setHero(profile.selectedHero);
+  app.meta.show('battle');
+  audio.playMusic('menu');
+}
+
+function boot() {
+  upkeep(profile);
+  commit(profile);
+  setHapticsEnabled(profile.settings.haptics);
+
+  const engine = new Engine(document.getElementById('game'), document.getElementById('fx2d'), { quality: profile.settings.quality });
+  app.engine = engine;
+  app.showcase = new Showcase(engine);
+  app.showcase.setHero(profile.selectedHero);
+  engine.setController(app.showcase);
+  engine.start();
+
+  app.meta = createMeta(app);
+  document.getElementById('ui').appendChild(app.meta.el);
+  app.meta.show('battle');
+
+  // Audio needs a user gesture on mobile.
+  loadAudio().then(() => applySettings());
+  const unlock = () => {
+    audio.init();
+    applySettings();
+    if (!app.run) audio.playMusic('menu');
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+  };
+  window.addEventListener('pointerdown', unlock);
+  window.addEventListener('keydown', unlock);
+
+  // Periodic upkeep (energy regen, daily resets).
+  setInterval(() => { upkeep(profile); if (!app.run) commit(profile); }, 15000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { saveProfile(profile, true); if (app.run) app.run.pause(true); }
+  });
+
+  const bootEl = document.getElementById('boot');
+  requestAnimationFrame(() => { bootEl.classList.add('out'); setTimeout(() => bootEl.remove(), 600); });
+}
+
+try {
+  boot();
+} catch (e) {
+  console.error(e);
+  toast('Something went wrong while starting. Please reload.');
+}

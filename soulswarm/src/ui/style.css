@@ -1,0 +1,181 @@
+/* SOULSWARM: "Neon Gothic" UI system.
+   Layout concept: a full-bleed WebGL battlefield, with gothic glass panels floating over it.
+   The look is deliberately single-theme (dark): the game world is a night graveyard. */
+:root {
+  color-scheme: dark;
+  --void: #05060b;
+  --ink: #eaf6ff;
+  --ink-dim: #9fb2cc;
+  --ink-faint: #5d6c86;
+  --soul: #4ef2ff;
+  --soul-2: #7cffd4;
+  --soul-deep: #0c7d9a;
+  --ember: #ff5a2e;
+  --ember-2: #ff9a3d;
+  --gold: #ffcf4a;
+  --gold-deep: #b5761a;
+  --gem: #d36bff;
+  --gem-deep: #6d22b8;
+  --blood: #ff2e55;
+  --ok: #49f59a;
+  --panel: rgba(10, 14, 28, 0.86);
+  --panel-2: rgba(18, 24, 46, 0.92);
+  --edge: rgba(126, 226, 255, 0.22);
+  --edge-strong: rgba(126, 226, 255, 0.55);
+  --r-common: #a9b6cc;
+  --r-rare: #3fb0ff;
+  --r-epic: #c35cff;
+  --r-legendary: #ffb52e;
+  --f-display: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
+  --f-ui: 'Oxanium', 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --bevel: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+  --bevel-sm: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--void); color: var(--ink); }
+body {
+  font-family: var(--f-ui);
+  font-size: 14px;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+  touch-action: none;
+  background:
+    radial-gradient(120% 80% at 50% 0%, #10172e 0%, transparent 60%),
+    radial-gradient(80% 60% at 50% 100%, #1a0b1f 0%, transparent 70%),
+    var(--void);
+}
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+/* The game is a portrait phone experience. On wide screens it's framed as a phone-shaped column. */
+#app {
+  position: fixed; inset: 0; margin: 0 auto;
+  width: 100%; max-width: calc(100dvh * 0.62);
+  overflow: hidden; background: var(--void);
+  box-shadow: 0 0 0 1px rgba(78, 242, 255, 0.08), 0 0 80px rgba(0, 0, 0, 0.8);
+}
+#game, #fx2d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#fx2d { pointer-events: none; }
+#ui { position: absolute; inset: 0; pointer-events: none; font-variant-numeric: tabular-nums; }
+#ui > * { pointer-events: auto; }
+#ui .pass-through { pointer-events: none; }
+#ui .pass-through > * { pointer-events: auto; }
+
+/* ---------- Boot ---------- */
+#boot {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: radial-gradient(60% 40% at 50% 45%, #0d2a3a 0%, var(--void) 70%);
+  z-index: 50; transition: opacity .5s ease;
+}
+#boot.out { opacity: 0; pointer-events: none; }
+.boot-logo, .logo {
+  font-family: var(--f-display); font-weight: 900; letter-spacing: .06em; font-size: 46px; line-height: 1;
+  color: #dffbff; text-shadow: 0 0 18px rgba(78, 242, 255, .8), 0 0 42px rgba(78, 242, 255, .45);
+}
+.boot-logo span, .logo span { color: var(--soul); }
+.boot-sub { font-family: var(--f-display); font-weight: 700; letter-spacing: .4em; text-transform: uppercase; font-size: 11px; color: var(--ink-dim); }
+.boot-bar { width: 160px; height: 3px; background: rgba(255,255,255,.08); margin-top: 18px; overflow: hidden; }
+.boot-bar i { display: block; height: 100%; width: 40%; background: var(--soul); box-shadow: 0 0 10px var(--soul); animation: bootbar 1s ease-in-out infinite; }
+@keyframes bootbar { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+
+/* ---------- Primitives ---------- */
+.panel {
+  position: relative; background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  clip-path: var(--bevel); padding: 14px;
+}
+.panel::before {
+  content: ''; position: absolute; inset: 0; clip-path: var(--bevel); pointer-events: none;
+  background: linear-gradient(180deg, var(--edge-strong), var(--edge) 30%, rgba(126,226,255,.06) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; padding: 1px;
+}
+.t-display { font-family: var(--f-display); font-weight: 900; letter-spacing: .04em; }
+.t-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
+.t-dim { color: var(--ink-dim); }
+.glow-soul { color: var(--soul); text-shadow: 0 0 10px rgba(78,242,255,.6); }
+.glow-gold { color: var(--gold); text-shadow: 0 0 10px rgba(255,207,74,.55); }
+.glow-gem { color: var(--gem); text-shadow: 0 0 10px rgba(211,107,255,.6); }
+.glow-ember { color: var(--ember-2); text-shadow: 0 0 10px rgba(255,90,46,.6); }
+
+.btn {
+  --c1: #2a3550; --c2: #182035; --tx: var(--ink); --gl: rgba(126,226,255,.0);
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 42px; padding: 0 16px; border: 0; cursor: pointer;
+  font-family: var(--f-ui); font-weight: 800; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx);
+  background: linear-gradient(180deg, var(--c1), var(--c2));
+  clip-path: var(--bevel-sm);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -3px 0 rgba(0,0,0,.35), 0 0 22px var(--gl);
+  transition: transform .08s ease, filter .15s ease;
+  text-shadow: 0 1px 0 rgba(0,0,0,.4);
+}
+.btn:active { transform: translateY(2px) scale(.98); filter: brightness(1.15); }
+.btn:focus-visible { outline: 2px solid var(--soul); outline-offset: 2px; }
+.btn[disabled], .btn.is-disabled { filter: grayscale(.85) brightness(.6); pointer-events: none; }
+.btn-primary { --c1: #ffe07a; --c2: #e88f1a; --tx: #2a1300; text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+.btn-soul { --c1: #6ff6ff; --c2: #138fb0; --tx: #02222b; text-shadow: 0 1px 0 rgba(255,255,255,.3); }
+.btn-gem { --c1: #e48bff; --c2: #7a2bd0; --tx: #fff; }
+.btn-ad { --c1: #6dffb0; --c2: #149a5c; --tx: #00230f; text-shadow: none; }
+.btn-danger { --c1: #ff6a7d; --c2: #b3132f; --tx: #fff; }
+.btn-ghost { --c1: rgba(40,52,80,.7); --c2: rgba(20,26,44,.7); }
+.btn-lg { min-height: 56px; font-size: 20px; padding: 0 28px; }
+.btn-sm { min-height: 32px; font-size: 12px; padding: 0 10px; }
+.btn-block { display: flex; width: 100%; }
+.btn .price { font-variant-numeric: tabular-nums; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  background: rgba(255,255,255,.08); clip-path: var(--bevel-sm);
+}
+.pill-hot { background: linear-gradient(90deg, #ff2e55, #ff7a2e); color: #fff; }
+.pill-gold { background: linear-gradient(90deg, #ffcf4a, #ff9a1f); color: #2a1300; }
+.pill-soul { background: linear-gradient(90deg, #4ef2ff, #2aa8ff); color: #00202a; }
+
+.badge-dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--blood); box-shadow: 0 0 8px var(--blood); }
+
+.rarity-common { --rc: var(--r-common); }
+.rarity-rare { --rc: var(--r-rare); }
+.rarity-epic { --rc: var(--r-epic); }
+.rarity-legendary { --rc: var(--r-legendary); }
+
+/* Currency chip (top bar) */
+.cur {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px 0 4px;
+  background: rgba(4, 8, 18, .72); clip-path: var(--bevel-sm); font-weight: 800; font-size: 14px;
+}
+.cur svg { width: 20px; height: 20px; flex: none; }
+.cur .plus { width: 18px; height: 18px; display: grid; place-items: center; background: var(--ok); color: #00230f; font-weight: 900; font-size: 15px; line-height: 1; clip-path: var(--bevel-sm); margin-left: 2px; }
+
+.icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+
+/* ---------- Modal layer ---------- */
+.modal-back {
+  position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(2, 3, 8, .72); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  animation: fadein .18s ease;
+}
+.modal { width: 100%; max-width: 380px; max-height: calc(100% - 40px); overflow: auto; animation: popin .25s cubic-bezier(.2,1.4,.4,1); }
+.modal h2 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 900; font-size: 22px; letter-spacing: .05em; text-align: center; }
+.modal .row { display: flex; gap: 8px; }
+.modal .row > * { flex: 1; }
+@keyframes fadein { from { opacity: 0; } }
+@keyframes popin { from { opacity: 0; transform: scale(.85); } }
+
+.toast {
+  position: absolute; left: 50%; top: calc(var(--safe-t) + 70px); transform: translateX(-50%); z-index: 60;
+  padding: 10px 16px; font-weight: 700; background: var(--panel-2); clip-path: var(--bevel-sm); white-space: nowrap;
+  animation: toast 2.2s ease forwards; pointer-events: none;
+}
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, -10px); } 10%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+
+/* Scroll areas (menus) */
+.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
