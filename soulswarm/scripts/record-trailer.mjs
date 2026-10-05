@@ -33,15 +33,15 @@ window.__trailer = (() => {
   // An upgraded late-game account: raise chance at its 85% cap (reachable via talents, relics and Raise Dead).
   const boost = () => { r.stats.raise = 0.85; r.stats.cap = 400; };
   const rc = r.recomputeStats.bind(r); r.recomputeStats = () => { rc(); boost(); }; r.recomputeStats();
-  r.time = 170;
+  r.time = 170; r.level = 16; r.xp = Math.floor(r.xpNeed * 0.6); r.recomputeStats();
   app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
   const style = document.createElement('style');
   style.textContent = '.hint,.banner{display:none!important}' +
-    '.ad-cap{position:absolute;left:0;right:0;top:19%;z-index:20;text-align:center;font-family:Cinzel,serif;font-weight:900;color:#fff;font-size:30px;line-height:1.1;letter-spacing:.04em;padding:0 18px;text-shadow:0 0 18px rgba(78,242,255,.9),0 3px 0 #00303a;pointer-events:none;transition:opacity .25s}' +
+    '.ad-cap{position:absolute;left:0;right:0;top:29%;z-index:20;text-align:center;font-family:Cinzel,serif;font-weight:900;color:#fff;font-size:30px;line-height:1.1;letter-spacing:.04em;padding:0 18px;text-shadow:0 0 18px rgba(78,242,255,.9),0 3px 0 #00303a;pointer-events:none;transition:opacity .25s}' +
     '.ad-cap em{font-style:normal;color:#ffcf4a;text-shadow:0 0 18px rgba(255,207,74,.9),0 3px 0 #4a2a00}' +
     '.ad-end{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(70% 50% at 50% 45%,rgba(10,40,55,.85),rgba(2,3,8,.96));opacity:0;transition:opacity .4s}' +
-    '.ad-end .logo{font-size:52px}.ad-end .tag{font-family:Cinzel,serif;font-weight:700;letter-spacing:.35em;color:#9fb2cc;font-size:14px}' +
-    '.ad-end .legal{margin-top:22px;font-family:Oxanium,sans-serif;font-size:11px;line-height:1.5;color:#7f93ad;text-align:center;letter-spacing:.04em}' +
+    '.ad-end .logo{font-size:40px;max-width:92%;text-align:center}.ad-end .tag{font-family:Cinzel,serif;font-weight:700;letter-spacing:.35em;color:#9fb2cc;font-size:14px}' +
+    '.ad-end .legal{max-width:86%;margin-top:22px;font-family:Oxanium,sans-serif;font-size:11px;line-height:1.5;color:#7f93ad;text-align:center;letter-spacing:.04em}' +
     '.ad-end .cta{margin-top:18px;padding:14px 34px;font-family:Oxanium,sans-serif;font-weight:800;font-size:22px;letter-spacing:.08em;color:#2a1300;background:linear-gradient(180deg,#ffe07a,#e88f1a);clip-path:var(--bevel-sm)}';
   document.head.appendChild(style);
   const cap = document.createElement('div'); cap.className = 'ad-cap'; document.getElementById('ui').appendChild(cap);
@@ -51,7 +51,7 @@ window.__trailer = (() => {
   const say = (html) => { cap.innerHTML = html; cap.style.opacity = html ? 1 : 0; };
   const ring = (n, R, type) => { const P = r.player; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; r.enemies.spawn(type || (i % 4 ? 'husk' : 'ghoul'), P.x + Math.cos(a) * R, P.z + Math.sin(a) * R, { hpMul: 2.2, dmgMul: 1 }); } };
   const beats = [
-    [0.0, () => { ring(36, 9); ring(44, 12.5); say('ONE SHEPHERD<br><em>AGAINST THE HORDE</em>'); }],
+    [0.0, () => { ring(36, 11); ring(44, 14.5); say('ONE SHEPHERD<br><em>AGAINST THE HORDE</em>'); }],
     [3.2, () => say('BUT EVERY ENEMY YOU KILL...')],
     [5.6, () => { say('...<em>JOINS YOUR ARMY</em>'); ring(40, 13); }],
     [8.6, () => { say('PICK THE RIGHT GATE'); r.gates.spawnPair([{ type: 'mul', n: 3 }, { type: 'div', n: 2 }]); }],
@@ -106,6 +106,6 @@ for (let f = 0; f < FRAMES; f++) {
   if (f % 60 === 0) console.log(`frame ${f}/${FRAMES}`, info, `${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }
 await browser.close();
-execSync(`ffmpeg -y -loglevel error -framerate ${FPS} -i "${join(dir, 'f%05d.jpg')}" -vf "scale=1080:1920:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 18 -movflags +faststart "${OUT}"`);
+execSync(`ffmpeg -y -loglevel error -framerate ${FPS} -i "${join(dir, 'f%05d.jpg')}" -vf "scale=1080:1920:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 27 -tune film -movflags +faststart "${OUT}"`);
 rmSync(dir, { recursive: true, force: true });
 console.log('wrote', OUT);

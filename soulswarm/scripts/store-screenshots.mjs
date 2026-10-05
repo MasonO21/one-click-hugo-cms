@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const pw = require(execSync('npm root -g').toString().trim() + '/playwright');
 const OUT = process.argv[2] || new URL('../store/screenshots/', import.meta.url).pathname;
-const URL = process.argv[3] || 'http://localhost:5173/';
+const PAGE_URL = process.argv[3] || 'http://localhost:5173/';
 mkdirSync(OUT, { recursive: true });
 
 // Each shot stages a moment in page JS, steps the simulation, then adds a caption band.
@@ -56,7 +56,7 @@ const browser = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle
 for (const shot of SHOTS) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 932 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true, ignoreHTTPSErrors: true });
   const page = await ctx.newPage();
-  await page.goto(URL, { waitUntil: 'domcontentloaded' });
+  await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3500);
   await page.evaluate(`(() => { ${helpers} ${shot.stage} })()`);
   if (shot.menu) await page.waitForTimeout(1500);
