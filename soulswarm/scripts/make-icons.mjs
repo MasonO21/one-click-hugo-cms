@@ -4,6 +4,7 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { serveGoogleFonts } from './lib/fonts.mjs';
 
 const require = createRequire(import.meta.url);
 const pw = require(execSync('npm root -g').toString().trim() + '/playwright');
@@ -78,6 +79,7 @@ const compose = async (page, size, heroId, color, splash) => page.evaluate(async
 
 const browser = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const ctx = await browser.newContext({ viewport: { width: 430, height: 932 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true, ignoreHTTPSErrors: true });
+await serveGoogleFonts(ctx);
 const page = await ctx.newPage();
 await page.goto(URL);
 await page.waitForTimeout(3000);

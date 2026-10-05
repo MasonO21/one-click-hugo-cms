@@ -4,6 +4,7 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { serveGoogleFonts } from './lib/fonts.mjs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -79,6 +80,7 @@ window.__trailer = (() => {
 
 const browser = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const ctx = await browser.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: DSF, ignoreHTTPSErrors: true });
+await serveGoogleFonts(ctx);
 const page = await ctx.newPage();
 console.log('loading', URL);
 await page.goto(URL);
