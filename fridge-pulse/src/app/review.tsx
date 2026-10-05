@@ -26,7 +26,7 @@ import { draftToItem, newId, type DraftItem } from '../lib/scan';
 import { usePictureFor } from '../store/foods';
 import { useInventory } from '../store/inventory';
 import { useLookups } from '../store/lookups';
-import { useScanDraft } from '../store/scanDraft';
+import { placesPerItem, useScanDraft } from '../store/scanDraft';
 import { useSettings } from '../store/settings';
 import { useShopping } from '../store/shopping';
 import { useSnackbar } from '../store/snackbar';
@@ -48,7 +48,7 @@ function Tag({ label, tone }: { label: string; tone: 'good' | 'warn' | 'plain' }
 /** The scanned photo an item was seen in, for looking it up. A receipt photo does not show the food. */
 function photoFor(draft: DraftItem): string | undefined {
   const { photos, mode } = useScanDraft.getState();
-  if (mode === 'receipt') return undefined;
+  if (mode !== 'scan') return undefined;
   return photos[draft.photo ?? 0] ?? photos[0];
 }
 
@@ -163,17 +163,18 @@ export default function Review() {
   const mode = useScanDraft((s) => s.mode);
   const manual = mode === 'manual';
   const receipt = mode === 'receipt';
+  const ownPlaces = placesPerItem(mode);
   const bought = receipt ? drafts.find((d) => d.addedOn)?.addedOn : undefined;
-  const title = mode === 'shopping' ? 'Put away' : manual ? 'Add items' : receipt ? 'Your receipt' : 'Review';
+  const title = mode === 'shopping' ? 'Put away' : manual ? 'Add items' : receipt ? 'Your receipt' : mode === 'barcode' ? 'Scanned items' : 'Review';
   const subtitle =
     mode === 'shopping'
       ? 'Each item is headed where it usually lives. Change anything, then save.'
       : manual
         ? 'Start typing and pick a suggestion, then save.'
-        : receipt
+        : ownPlaces
           ? `${bought ? `Bought ${formatShortDate(bought)}. ` : ''}Each item is headed where it keeps best. Change anything, then save.`
           : 'Fix anything that looks off, then save.';
-  const places = receipt ? LOCATIONS.map((l) => [l, drafts.filter((d) => d.selected && d.location === l).length] as const).filter(([, n]) => n > 0) : [];
+  const places = ownPlaces ? LOCATIONS.map((l) => [l, drafts.filter((d) => d.selected && d.location === l).length] as const).filter(([, n]) => n > 0) : [];
   // Only the names matter to the suggestions; a new array each render would recompute them on every keystroke.
   const addedKey = drafts.map((d) => d.name).join('\n');
   const added = useMemo(() => (addedKey ? addedKey.split('\n') : []), [addedKey]);
@@ -281,7 +282,7 @@ export default function Review() {
         </Card>
       ) : null}
 
-      {receipt ? (
+      {ownPlaces ? (
         places.length > 0 ? (
           <View style={styles.chips} testID="receipt-places">
             {places.map(([l, n]) => (
@@ -322,8 +323,8 @@ export default function Review() {
 
       <View style={{ gap: 12 }}>
         {drafts.map((d, i) => (
-          <FadeIn key={d.key} delay={mode === 'scan' || receipt ? stagger(i, 35) : 0}>
-            <DraftRow draft={d} listLocation={location} ownPlace={receipt} onLookUp={lookUp} />
+          <FadeIn key={d.key} delay={mode === 'scan' || ownPlaces ? stagger(i, 35) : 0}>
+            <DraftRow draft={d} listLocation={location} ownPlace={ownPlaces} onLookUp={lookUp} />
           </FadeIn>
         ))}
       </View>

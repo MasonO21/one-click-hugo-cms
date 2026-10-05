@@ -29,6 +29,16 @@ export const TOMBSTONE_DAYS = 60;
  * the strength of an old answer.
  */
 export const SPONSOR_RECHECK_MS = 6 * 3_600_000;
+/**
+ * Members whose phone has not synced for this long are dropped. Reinstalling the app gives a person a
+ * new app user id, so without this their old self would stay in the household for good.
+ */
+export const MEMBER_IDLE_DAYS = 60;
+/** A member is shown as away once they have not synced for this many days. */
+export const AWAY_DAYS = 7;
+/** How often a member's "last seen" is written; syncs come every half minute while the app is open. */
+const SEEN_EVERY_MS = 60 * 60_000;
+const DAY_MS = 86_400_000;
 /** Seeing the payer again within this long does not rewrite their record. */
 const SPONSOR_TOUCH_MS = 10 * 60_000;
 /** A phone whose clock runs ahead cannot make its changes win forever. */
@@ -50,8 +60,11 @@ export interface HouseholdView {
   name: string;
   /** Invite code, shown as XXXX-XXXX. */
   code: string;
-  /** `sponsor` marks the person whose household plan covers everyone. */
-  members: { name: string; you: boolean; sponsor?: boolean }[];
+  /**
+   * `ref` names a member for removal without revealing their id; `sponsor` marks the person whose
+   * household plan covers everyone; `idleDays` says how long someone has been away, once it is a week.
+   */
+  members: { name: string; you: boolean; ref: string; sponsor?: boolean; idleDays?: number }[];
   /** While a member's household plan covers everyone: when it runs out or renews (ms). */
   coveredUntil: number | null;
 }
@@ -66,7 +79,7 @@ export interface Coverage {
   checkedAt: number | null;
 }
 
-export type HouseholdErrorCode = 'not_found' | 'full' | 'already_member' | 'not_member' | 'too_many';
+export type HouseholdErrorCode = 'not_found' | 'full' | 'already_member' | 'not_member' | 'too_many' | 'self';
 
 export class HouseholdError extends Error {
   constructor(
@@ -98,6 +111,8 @@ export interface HouseholdStore {
   join(userId: string, memberName: string, code: string): HouseholdView;
   leave(userId: string): void;
   newCode(userId: string): HouseholdView;
+  /** Takes someone else out of the caller's household, by the `ref` the caller was shown. */
+  remove(userId: string, memberRef: string, now?: number): HouseholdView;
   sync(userId: string, since: number, changes: SyncRecord[], now?: number): SyncResult;
   close(): void;
 }
@@ -118,6 +133,8 @@ export function normalizeCode(code: string): string {
 export const formatCode = (code: string) => `${code.slice(0, 4)}-${code.slice(4)}`;
 
 const memberKey = (userId: string) => createHash('sha256').update(`fp-household:${userId}`).digest('hex');
+/** What other members see of someone's member key: enough to name them for removal, nothing more. */
+export const memberRef = (member: string) => createHash('sha256').update(`fp-member-ref:${member}`).digest('hex').slice(0, 16);
 
 interface HouseholdRow {
   id: string;
@@ -139,7 +156,7 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
     CREATE TABLE IF NOT EXISTS households (id TEXT PRIMARY KEY, name TEXT NOT NULL, code TEXT NOT NULL UNIQUE, seq INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS members (member TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id) ON DELETE CASCADE, name TEXT NOT NULL, joined_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS members (member TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id) ON DELETE CASCADE, name TEXT NOT NULL, joined_at INTEGER NOT NULL, last_seen INTEGER);
     CREATE TABLE IF NOT EXISTS records (
       household_id TEXT NOT NULL REFERENCES households(id) ON DELETE CASCADE,
       kind TEXT NOT NULL, id TEXT NOT NULL, updated_at INTEGER NOT NULL, deleted INTEGER NOT NULL, data TEXT, seq INTEGER NOT NULL,
@@ -158,15 +175,19 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
   ] as const) {
     if (!columns.has(name)) db.exec(`ALTER TABLE households ADD COLUMN ${name} ${type}`);
   }
+  const memberColumns = new Set((db.prepare('PRAGMA table_info(members)').all() as { name: string }[]).map((c) => c.name));
+  if (!memberColumns.has('last_seen')) db.exec('ALTER TABLE members ADD COLUMN last_seen INTEGER');
 
   const q = {
     householdOf: db.prepare(`SELECT ${HOUSEHOLD_COLUMNS} FROM members m JOIN households h ON h.id = m.household_id WHERE m.member = ?`),
     byCode: db.prepare(`SELECT ${HOUSEHOLD_COLUMNS} FROM households h WHERE h.code = ?`),
     setSponsor: db.prepare('UPDATE households SET sponsor_member = ?, sponsor_user = ?, sponsor_until = ?, sponsor_checked_at = ? WHERE id = ?'),
-    members: db.prepare('SELECT member, name FROM members WHERE household_id = ? ORDER BY joined_at, rowid'),
+    members: db.prepare('SELECT member, name, COALESCE(last_seen, joined_at) AS seen FROM members WHERE household_id = ? ORDER BY joined_at, rowid'),
+    seen: db.prepare('UPDATE members SET last_seen = ? WHERE member = ? AND (last_seen IS NULL OR last_seen < ?)'),
+    idle: db.prepare('SELECT member FROM members WHERE household_id = ? AND COALESCE(last_seen, joined_at) < ?'),
     memberCount: db.prepare('SELECT COUNT(*) AS n FROM members WHERE household_id = ?'),
     insertHousehold: db.prepare('INSERT INTO households (id, name, code, seq, created_at) VALUES (?, ?, ?, 0, ?)'),
-    insertMember: db.prepare('INSERT INTO members (member, household_id, name, joined_at) VALUES (?, ?, ?, ?)'),
+    insertMember: db.prepare('INSERT INTO members (member, household_id, name, joined_at, last_seen) VALUES (?, ?, ?, ?, ?)'),
     deleteMember: db.prepare('DELETE FROM members WHERE member = ?'),
     deleteHousehold: db.prepare('DELETE FROM households WHERE id = ?'),
     setCode: db.prepare('UPDATE households SET code = ? WHERE id = ?'),
@@ -198,16 +219,38 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
     return {
       name: h.name,
       code: formatCode(h.code),
-      members: (q.members.all(h.id) as { member: string; name: string }[]).map((m) => ({
-        name: m.name,
-        you: m.member === me,
-        ...(coveredUntil && m.member === h.sponsor_member ? { sponsor: true } : {}),
-      })),
+      members: (q.members.all(h.id) as { member: string; name: string; seen: number }[]).map((m) => {
+        const idleDays = Math.floor((now - m.seen) / DAY_MS);
+        return {
+          name: m.name,
+          you: m.member === me,
+          ref: memberRef(m.member),
+          ...(coveredUntil && m.member === h.sponsor_member ? { sponsor: true } : {}),
+          ...(m.member !== me && idleDays >= AWAY_DAYS ? { idleDays } : {}),
+        };
+      }),
       coveredUntil,
     };
   };
 
   const mine = (userId: string): HouseholdRow | null => (q.householdOf.get(memberKey(userId)) as HouseholdRow | undefined) ?? null;
+
+  /** Notes that the person's phone is still in use (at most hourly). */
+  const touch = (userId: string, now: number) => q.seen.run(now, memberKey(userId), now - SEEN_EVERY_MS);
+
+  /**
+   * Drops members who have been away too long. Someone whose household plan still covers everyone
+   * stays: they may simply not open the app, and the store checks keep that plan honest.
+   */
+  const dropIdle = (h: HouseholdRow, now: number) => {
+    for (const { member } of q.idle.all(h.id, now - MEMBER_IDLE_DAYS * DAY_MS) as { member: string }[]) {
+      if (h.sponsor_member === member) {
+        if (h.sponsor_until != null && h.sponsor_until > now) continue;
+        q.setSponsor.run(null, null, null, null, h.id);
+      }
+      q.deleteMember.run(member);
+    }
+  };
 
   const uniqueCode = (): string => {
     for (let i = 0; i < 10; i += 1) {
@@ -220,7 +263,9 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
   return {
     get: (userId) => {
       const h = mine(userId);
-      return h ? view(h, memberKey(userId)) : null;
+      if (!h) return null;
+      touch(userId, Date.now());
+      return view(h, memberKey(userId));
     },
 
     sponsor: (userId, until, now = Date.now()) => {
@@ -251,7 +296,7 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
         const id = randomUUID();
         const now = Date.now();
         q.insertHousehold.run(id, name, uniqueCode(), now);
-        q.insertMember.run(memberKey(userId), id, memberName, now);
+        q.insertMember.run(memberKey(userId), id, memberName, now, now);
         return view(q.householdOf.get(memberKey(userId)) as unknown as HouseholdRow, memberKey(userId));
       }),
 
@@ -260,9 +305,12 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
         if (mine(userId)) throw new HouseholdError('already_member', 'Leave your current household first.');
         const h = q.byCode.get(normalizeCode(code)) as HouseholdRow | undefined;
         if (!h) throw new HouseholdError('not_found', 'No household has that code. Check it and try again.');
+        const now = Date.now();
+        // Someone long gone makes room.
+        dropIdle(h, now);
         if ((q.memberCount.get(h.id) as { n: number }).n >= MAX_MEMBERS) throw new HouseholdError('full', `A household can have up to ${MAX_MEMBERS} people.`);
-        q.insertMember.run(memberKey(userId), h.id, memberName, Date.now());
-        return view(h, memberKey(userId));
+        q.insertMember.run(memberKey(userId), h.id, memberName, now, now);
+        return view(mine(userId)!, memberKey(userId), now);
       }),
 
     leave: (userId) =>
@@ -284,10 +332,27 @@ export function createHouseholdStore(path = ':memory:'): HouseholdStore {
         return view(mine(userId)!, memberKey(userId));
       }),
 
-    sync: (userId, since, changes, now = Date.now()) =>
+    remove: (userId, ref, now = Date.now()) =>
       tx(() => {
         const h = mine(userId);
         if (!h) throw new HouseholdError('not_member', 'You are not in a household.');
+        const me = memberKey(userId);
+        const target = (q.members.all(h.id) as { member: string }[]).find((m) => memberRef(m.member) === ref);
+        if (!target) throw new HouseholdError('not_found', 'That person is no longer in the household.');
+        if (target.member === me) throw new HouseholdError('self', 'Use Leave household to leave.');
+        if (h.sponsor_member === target.member) q.setSponsor.run(null, null, null, null, h.id);
+        q.deleteMember.run(target.member);
+        return view(mine(userId)!, me, now);
+      }),
+
+    sync: (userId, since, changes, now = Date.now()) =>
+      tx(() => {
+        const found = mine(userId);
+        if (!found) throw new HouseholdError('not_member', 'You are not in a household.');
+        touch(userId, now);
+        dropIdle(found, now);
+        // Dropping someone can take the household plan with them.
+        const h = mine(userId)!;
         q.prune.run(h.id, now - TOMBSTONE_DAYS * 86_400_000);
         let count = (q.recordCount.get(h.id) as { n: number }).n;
         for (const c of changes) {

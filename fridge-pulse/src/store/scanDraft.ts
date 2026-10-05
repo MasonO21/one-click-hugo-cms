@@ -9,9 +9,13 @@ import type { ShoppingItem } from './shopping';
 
 /**
  * "scan": reviewing what a shelf photo found. "receipt": what a receipt listed, each item headed for its
- * own place. "manual": typing items in. "shopping": putting shopping away.
+ * own place. "barcode": scanned product barcodes, each headed for its own place too. "manual": typing
+ * items in. "shopping": putting shopping away.
  */
-export type DraftMode = 'scan' | 'receipt' | 'manual' | 'shopping';
+export type DraftMode = 'scan' | 'receipt' | 'barcode' | 'manual' | 'shopping';
+
+/** Lists where every item picks its own place, instead of the whole list sharing one. */
+export const placesPerItem = (mode: DraftMode) => mode === 'receipt' || mode === 'barcode';
 
 interface ScanDraftState {
   mode: DraftMode;
@@ -84,7 +88,7 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
       drafts: s.drafts.map((d) => {
         if (d.key !== key) return d;
         // A receipt's food goes where this food is kept; a photographed one is already somewhere.
-        const location = s.mode === 'receipt' ? food.keptIn : d.location;
+        const location = placesPerItem(s.mode) ? food.keptIn : d.location;
         // A printed date or one the person set still wins; an estimate uses the food's own figure
         // (the registry already knows the food, see src/store/foods.ts).
         const expiresOn = d.expirySource === 'estimate' ? addDays(d.addedOn ?? todayISO(), estimateShelfLifeDays(food.name, food.category, location)) : d.expiresOn;
@@ -108,7 +112,7 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
     const name = trimmed[0]!.toUpperCase() + trimmed.slice(1);
     const category = opts.category ?? guessCategory(name);
     // On a receipt every item has its own place, so a forgotten one goes where it usually lives.
-    const location = opts.keptIn ?? (get().mode === 'receipt' ? usualPlace(name, category) : get().location);
+    const location = opts.keptIn ?? (placesPerItem(get().mode) ? usualPlace(name, category) : get().location);
     const draft = draftFor(name, category, location, `manual-${Date.now()}-${get().drafts.length}`);
     set((s) => ({ drafts: [draft, ...s.drafts] }));
   },

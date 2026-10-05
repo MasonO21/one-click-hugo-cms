@@ -9,6 +9,7 @@ import {
   joinHousehold,
   leaveHousehold,
   newHouseholdCode,
+  removeHouseholdMember,
   syncHousehold,
   type HouseholdView,
   type SyncRecord,
@@ -36,6 +37,8 @@ interface HouseholdState {
   join: (code: string, memberName: string) => Promise<boolean>;
   leave: () => Promise<boolean>;
   newCode: () => Promise<void>;
+  /** Takes someone else out of the household (an old phone, someone who moved out). */
+  removeMember: (ref: string) => Promise<boolean>;
   sync: () => Promise<void>;
   /** Asks the server for the household again, for its members and whether a household plan covers it. */
   refresh: () => Promise<void>;
@@ -69,7 +72,8 @@ const DEMO_HOUSEMATE = 'Sam (sample)';
  */
 function demoHousehold(name: string, memberName: string, joined: boolean): HouseholdView {
   const code = `${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 6)}`.toUpperCase().replace(/[01ILO]/g, '7');
-  const members = joined ? [{ name: DEMO_HOUSEMATE, you: false, sponsor: true }, { name: memberName, you: true }] : [{ name: memberName, you: true }];
+  const you = { name: memberName, you: true, ref: 'demo-you' };
+  const members = joined ? [{ name: DEMO_HOUSEMATE, you: false, sponsor: true, ref: 'demo-sam' }, you] : [you];
   return withDemoCoverage({ name, code, members, coveredUntil: null });
 }
 
@@ -178,6 +182,22 @@ export const useHousehold = create<HouseholdState>()(
           set({ household: isDemoMode ? { ...household, code: demoHousehold(household.name, memberName, false).code } : await newHouseholdCode(await getProvider().getUserId()), error: null });
         } catch (e) {
           set({ error: message(e) });
+        }
+      },
+
+      removeMember: async (ref) => {
+        const household = get().household;
+        if (!household) return false;
+        set({ error: null });
+        try {
+          const next = isDemoMode
+            ? withDemoCoverage({ ...household, members: household.members.filter((m) => m.ref !== ref) })
+            : await removeHouseholdMember(await getProvider().getUserId(), ref);
+          set({ household: next });
+          return true;
+        } catch (e) {
+          set({ error: message(e) });
+          return false;
         }
       },
 

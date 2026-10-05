@@ -15,7 +15,7 @@ import { mk } from '../test-utils/helpers';
 const mockServer = {
   seq: 0,
   records: new Map<string, SyncRecord & { seq: number }>(),
-  view: { name: 'Home', code: 'ABCD-EF23', members: [{ name: 'Me', you: true }, { name: 'Sam', you: false }] } as HouseholdView,
+  view: { name: 'Home', code: 'ABCD-EF23', members: [{ name: 'Me', you: true, ref: '1111111111111111' }, { name: 'Sam', you: false, ref: '2222222222222222', idleDays: 70 }] } as HouseholdView,
   calls: 0,
   reset() {
     this.seq = 0;
@@ -46,6 +46,7 @@ jest.mock('../src/lib/api', () => {
     createHousehold: jest.fn(async () => mockServer.view),
     joinHousehold: jest.fn(async () => mockServer.view),
     getHousehold: jest.fn(async () => mockServer.view),
+    removeHouseholdMember: jest.fn(async (_user: string, ref: string) => ({ ...mockServer.view, members: mockServer.view.members.filter((m) => m.ref !== ref) })),
     leaveHousehold: jest.fn(async () => {}),
     syncHousehold: jest.fn(async (_user: string, since: number, changes: SyncRecord[]) => mockServer.sync(since, changes)),
   };
@@ -208,6 +209,29 @@ describe('syncing with the household', () => {
     expect(useHousehold.getState().household).toMatchObject({ name: 'Home', coveredUntil: null });
     expect(isCovered(useHousehold.getState().household)).toBe(false);
     expect(useHousehold.getState().error).toBeNull();
+  });
+
+  it('takes someone else out of the household, and says why when it cannot', async () => {
+    await act(async () => {
+      await useHousehold.getState().create('Home', 'Me');
+    });
+    const api = jest.requireMock('../src/lib/api');
+    const { ApiError } = jest.requireActual('../src/lib/api');
+    let ok = false;
+    await act(async () => {
+      ok = await useHousehold.getState().removeMember('2222222222222222');
+    });
+    expect(ok).toBe(true);
+    expect(api.removeHouseholdMember).toHaveBeenLastCalledWith('test-user', '2222222222222222');
+    expect(useHousehold.getState().household?.members.map((m) => m.name)).toEqual(['Me']);
+    api.removeHouseholdMember.mockImplementationOnce(async () => {
+      throw new ApiError('not_found', 'That person is no longer in the household.');
+    });
+    await act(async () => {
+      ok = await useHousehold.getState().removeMember('2222222222222222');
+    });
+    expect(ok).toBe(false);
+    expect(useHousehold.getState().error).toBe('That person is no longer in the household.');
   });
 
   it('leaving keeps this phone’s copy', async () => {

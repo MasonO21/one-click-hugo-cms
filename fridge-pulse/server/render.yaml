@@ -1,0 +1,29 @@
+# Render Blueprint: one web service with a disk for the shared households database.
+# In Render: New > Blueprint, pick this repository and set the Blueprint path to
+# fridge-pulse/server/render.yaml. Steps are in DEPLOY.md.
+services:
+  - type: web
+    name: fridge-pulse-api
+    runtime: docker
+    rootDir: fridge-pulse/server
+    dockerfilePath: ./Dockerfile
+    # A disk needs a paid instance type. Keep a single instance: the database is on this disk.
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /health
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: HOUSEHOLD_DB
+        value: /app/data/households.sqlite
+      - key: TRUST_PROXY
+        value: "true"
+      # Set these in the dashboard; they are secrets.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: REVENUECAT_SECRET_KEY
+        sync: false
+      - key: PICTURE_USER_AGENT
+        sync: false

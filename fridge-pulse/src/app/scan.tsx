@@ -233,6 +233,7 @@ export default function Scan() {
                 router.replace('/review');
               }}
             />
+            <Button testID="scan-barcodes" label="Scan barcodes" variant="ghost" size="sm" onPress={() => router.replace('/barcode')} />
           </View>
         </View>
       }

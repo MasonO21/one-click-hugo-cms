@@ -9,11 +9,18 @@ import { ModalTop } from '../components/ModalTop';
 import { FadeIn, stagger } from '../components/motion';
 import { Screen } from '../components/Screen';
 import { Emoji, Text } from '../components/Text';
-import { isDemoMode } from '../lib/api';
+import { isDemoMode, type HouseholdMember } from '../lib/api';
 import { confirm } from '../lib/dialogs';
 import { HOUSEHOLD_MAX_PEOPLE } from '../billing/trial';
 import { isCovered, sponsorName, useHousehold } from '../store/household';
 import { radius, useTheme } from '../theme';
+
+/** "3 weeks", for someone whose phone has not synced in a while. */
+function away(days: number): string {
+  if (days < 14) return `${days} days`;
+  if (days < 60) return `${Math.floor(days / 7)} weeks`;
+  return `${Math.floor(days / 30)} months`;
+}
 
 function ago(ms: number | null): string {
   if (!ms) return 'not yet';
@@ -56,6 +63,16 @@ export default function Household() {
     });
     if (ok) await useHousehold.getState().leave();
   };
+  const remove = async (member: HouseholdMember) => {
+    if (!member.ref) return;
+    const ok = await confirm({
+      title: `Remove ${member.name}?`,
+      message: `${member.name} stops seeing the shared lists${member.sponsor ? ', and their household plan stops covering everyone here' : ''}. They can join again with the invite code, so make a new code if you do not want that.`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (ok) await useHousehold.getState().removeMember(member.ref);
+  };
   const share = async () => {
     if (!household) return;
     try {
@@ -95,7 +112,7 @@ export default function Household() {
                 <Button label="New code" variant="ghost" size="sm" onPress={() => void useHousehold.getState().newCode()} />
               </View>
               <Text variant="caption" muted>
-                {`Anyone with the code can join, up to ${HOUSEHOLD_MAX_PEOPLE} people. A new code stops the old one working.`}
+                {`Anyone with the code can join, up to ${HOUSEHOLD_MAX_PEOPLE} people. A new code stops the old one working. Someone whose phone has not synced for 2 months is taken out, so an old phone does not keep a place.`}
               </Text>
             </Card>
           </FadeIn>
@@ -140,7 +157,15 @@ export default function Household() {
                         Pays for the household plan
                       </Text>
                     ) : null}
+                    {m.idleDays ? (
+                      <Text variant="caption" muted testID={`member-away-${i}`}>
+                        {`Not seen for ${away(m.idleDays)}`}
+                      </Text>
+                    ) : null}
                   </View>
+                  {!m.you && m.ref ? (
+                    <Button testID={`member-remove-${i}`} label="Remove" size="sm" variant="ghost" onPress={() => void remove(m)} />
+                  ) : null}
                 </View>
               </FadeIn>
             ))}

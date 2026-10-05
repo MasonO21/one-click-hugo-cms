@@ -1,13 +1,15 @@
 # Privacy answers and store policy notes
 
-What the app does with data, so the store forms can be answered accurately. These reflect version 1.0 as built. If you add analytics, crash reporting, ads or accounts, update the forms, the privacy manifest in `app.json`, and `src/legal/privacy.json`.
+What the app does with data, so the store forms can be answered accurately. These reflect version 1.0 as built. If you add analytics, ads or accounts, or ship without crash reporting, update the forms, the privacy manifest in `app.json`, and `src/legal/privacy.json`.
 
 ## What the app does with data
 
 - Food items, quantities, dates and preferences are stored on the device only. There are no accounts.
 - **With the person's agreement** (asked in-app before the first scan, revocable in Settings), photos are sent over HTTPS to your server and on to Anthropic's Claude API to identify food. For meal ideas, item names, categories, quantities and days-until-expiry are sent, with no photos. The server processes these in memory and does not store them.
 - RevenueCat receives purchase information and a random app user ID to manage the trial and subscription. Apple and Google process payments.
-- No advertising, no tracking, no analytics or crash-reporting SDK.
+- Barcode scans send only the barcode number to your server, which asks Open Food Facts for the product. Nothing about the person goes with it.
+- Crash reports go to Sentry, only in builds made with `EXPO_PUBLIC_SENTRY_DSN` set: the error, device model and OS and app versions, with no user ID (`sendDefaultPii: false`, the user is stripped from every event, and log lines are dropped). In Sentry, also turn on Project settings > Security & Privacy > "Prevent storing of IP addresses". If you ship without a DSN, remove the Crash Data rows below.
+- No advertising, no tracking, no analytics SDK.
 
 ## Apple: App Privacy ("nutrition label")
 
@@ -19,6 +21,7 @@ Answer **Yes, we collect data**, and add these types. None are used for tracking
 | Other User Content (ingredient lists; a shared household's food and shopping lists) | Yes (household lists, by a scrambled app user ID) | App Functionality |
 | Purchases (purchase history) | Yes | App Functionality |
 | Identifiers > User ID (RevenueCat app user ID) | Yes | App Functionality |
+| Diagnostics > Crash Data (only with a Sentry DSN) | No | App Functionality |
 
 Notes:
 
@@ -38,8 +41,8 @@ Notes:
 
 ## Google Play: Data safety
 
-- **Data collected:** Photos (in "Photos and videos"), Purchase history (in "Financial info"), Device or other IDs (the RevenueCat app user ID), and, for people who share a household, Other user-generated content (the shared food and shopping lists).
-- **Shared with third parties:** No. Photos are processed by a service provider on your behalf (Anthropic), which Google treats as processing rather than sharing. Confirm this against your own agreement.
+- **Data collected:** Photos (in "Photos and videos"), Purchase history (in "Financial info"), Device or other IDs (the RevenueCat app user ID), for people who share a household Other user-generated content (the shared food and shopping lists), and, in builds with a Sentry DSN, Crash logs and Diagnostics (in "App info and performance").
+- **Shared with third parties:** No. Photos are processed by a service provider on your behalf (Anthropic), and crash reports by Sentry, which Google treats as processing rather than sharing. Confirm this against your own agreements.
 - **Purpose:** App functionality.
 - **Optional:** Photos are optional; the app works without AI features.
 - **Encrypted in transit:** Yes.

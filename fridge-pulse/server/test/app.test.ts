@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createApp } from '../src/app.js';
+import { CALLS_PER_IP_PER_MINUTE, createApp } from '../src/app.js';
 import { EntitlementLookupError, type EntitlementChecker } from '../src/auth.js';
 import { UpstreamError, type ClaudeService } from '../src/claude.js';
 import type { PictureFinder } from '../src/pictures.js';
@@ -308,11 +308,11 @@ describe('abuse limits', () => {
       entitlements: { isActive: async () => { lookups++; return true; } },
     });
     let last = 0;
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < CALLS_PER_IP_PER_MINUTE + 10; i++) {
       const res = await app.request('/v1/scan', { method: 'POST', headers: { Authorization: `Bearer flood-user-${i}0000` }, body: '{}' });
       last = res.status;
     }
     assert.equal(last, 429);
-    assert.ok(lookups <= 60);
+    assert.ok(lookups <= CALLS_PER_IP_PER_MINUTE);
   });
 });

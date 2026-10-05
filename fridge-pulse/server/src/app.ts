@@ -8,11 +8,12 @@ import type { Config } from './config.js';
 import { withPictures } from './identify.js';
 import { noPictures, type PictureFinder } from './pictures.js';
 import { DAY_MS, RateLimiter } from './ratelimit.js';
+import { BarcodeUnavailable, isValidGtin, type BarcodeLookup } from './barcode.js';
 import { HouseholdError, SPONSOR_RECHECK_MS, type HouseholdStore } from './household.js';
-import { CreateHouseholdSchema, HouseholdSyncSchema, IdentifyRequestSchema, JoinHouseholdSchema, MAX_IMAGE_BYTES, MealsRequestSchema, ScanRequestSchema } from './schemas.js';
+import { BarcodeRequestSchema, CreateHouseholdSchema, HouseholdSyncSchema, IdentifyRequestSchema, JoinHouseholdSchema, MAX_IMAGE_BYTES, MealsRequestSchema, RemoveMemberSchema, ScanRequestSchema } from './schemas.js';
 
 export interface Deps {
-  config: Pick<Config, 'scansPerDay' | 'mealsPerDay' | 'identifiesPerDay' | 'corsOrigin'>;
+  config: Pick<Config, 'scansPerDay' | 'mealsPerDay' | 'identifiesPerDay' | 'corsOrigin'> & Partial<Pick<Config, 'barcodesPerDay'>>;
   claude: ClaudeService;
   entitlements: EntitlementChecker;
   /** Finds product pictures for identified foods. Without it, candidates come back without pictures. */
@@ -20,6 +21,8 @@ export interface Deps {
   limiter?: RateLimiter;
   /** Resolves the caller's IP for abuse limiting. */
   clientIp?: (c: Context) => string;
+  /** Product barcodes. Without it, the barcode endpoint answers 503. */
+  barcodes?: BarcodeLookup;
   /** Shared households. Without it, the household endpoints answer 503. */
   households?: HouseholdStore;
   /** The time, for tests. */
@@ -50,7 +53,12 @@ function badImage(img: { mediaType: string; data: string }): { status: 400 | 413
   return null;
 }
 
-const BURST_PER_MINUTE = { scan: 8, meals: 20, identify: 6, household: 30, join: 5 } as const;
+/**
+ * All calls from one IP address in a minute. Phones on one mobile network can share an address, and
+ * each phone in a household syncs twice a minute, so this leaves room for many people behind one.
+ */
+export const CALLS_PER_IP_PER_MINUTE = 240;
+const BURST_PER_MINUTE = { scan: 8, meals: 20, identify: 6, household: 30, join: 5, barcode: 40 } as const;
 /** Household sync runs every half minute while the app is open; this is several times a full day of that. */
 const HOUSEHOLD_CALLS_PER_DAY = 6000;
 /** Wrong invite codes allowed per day, so codes cannot be guessed. */
@@ -64,7 +72,7 @@ const OPEN_ROUTES = new Set(['GET /v1/household', 'POST /v1/household/join', 'PO
 /** Calls to those routes per IP per day from people without a plan, so made-up ids cannot farm them. */
 const OPEN_CALLS_PER_IP_PER_DAY = 200;
 
-export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown', households, now = Date.now }: Deps) {
+export function createApp({ config, claude, entitlements, pictures = noPictures, limiter = new RateLimiter(), clientIp = () => 'unknown', households, barcodes, now = Date.now }: Deps) {
   const app = new Hono<Env>();
 
   if (config.corsOrigin) app.use('*', cors({ origin: config.corsOrigin }));
@@ -82,7 +90,7 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
   // Every API call must come from a current subscriber or trial user.
   app.use('/v1/*', async (c, next) => {
     // Cheap per-IP cap first, so a flood of made-up ids cannot hammer the entitlement lookup.
-    const ipGate = limiter.hit(`ip:${clientIp(c)}`, 60, 60_000);
+    const ipGate = limiter.hit(`ip:${clientIp(c)}`, CALLS_PER_IP_PER_MINUTE, 60_000);
     if (!ipGate.ok) {
       c.header('Retry-After', String(ipGate.retryAfterSec));
       return fail(c, 429, 'rate_limited', 'Too many requests. Please slow down.');
@@ -249,6 +257,28 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     }
   });
 
+  app.post('/v1/barcode', async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return fail(c, 400, 'bad_request', 'The request body must be JSON.');
+    }
+    const parsed = BarcodeRequestSchema.safeParse(body);
+    if (!parsed.success || !isValidGtin(parsed.data.code)) return fail(c, 400, 'bad_request', 'That is not a product barcode.');
+    if (!barcodes) return fail(c, 503, 'unavailable', 'Barcode lookups are not set up on this server.');
+
+    const blocked = limited(c, 'barcode', config.barcodesPerDay ?? 300);
+    if (blocked) return blocked;
+
+    try {
+      return c.json({ product: await barcodes.find(parsed.data.code) });
+    } catch (e) {
+      if (e instanceof BarcodeUnavailable) return fail(c, 503, 'unavailable', 'Could not look that barcode up right now. Try again in a moment.');
+      throw e;
+    }
+  });
+
   // -------------------------------------------------------------------------
   // Shared households
   // -------------------------------------------------------------------------
@@ -322,6 +352,15 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     household((c, store) => {
       store.leave(c.get('userId'));
       return c.json({ household: null });
+    }),
+  );
+
+  app.post(
+    '/v1/household/remove',
+    household(async (c, store) => {
+      const parsed = RemoveMemberSchema.safeParse(await body(c));
+      if (!parsed.success) return fail(c, 400, 'bad_request', describe(parsed.error));
+      return c.json({ household: store.remove(c.get('userId'), parsed.data.member) });
     }),
   );
 

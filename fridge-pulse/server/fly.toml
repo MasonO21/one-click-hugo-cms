@@ -1,0 +1,39 @@
+# Fly.io: one machine with a volume for the shared households database.
+# Steps are in DEPLOY.md. Change `app` to a name of your own before the first deploy.
+app = "fridge-pulse-api"
+primary_region = "iad"
+kill_signal = "SIGTERM"
+kill_timeout = "15s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8787"
+  HOUSEHOLD_DB = "/app/data/households.sqlite"
+  # Fly's proxy sets this to the caller's address; callers cannot fake it.
+  CLIENT_IP_HEADER = "fly-client-ip"
+
+# Households live in SQLite on this volume. One volume means one machine: do not scale past 1.
+[[mounts]]
+  source = "fridge_pulse_data"
+  destination = "/app/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  # Rate limits are kept in memory and the database is on this machine's volume, so keep it running.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

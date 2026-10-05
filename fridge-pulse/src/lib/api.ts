@@ -1,3 +1,4 @@
+import { toBarcodeProduct, type BarcodeProduct } from './barcode';
 import { daysBetween, todayISO } from './dates';
 import { daysLeft, sortByExpiry } from './expiry';
 import { uniqueUses } from './meals';
@@ -214,14 +215,29 @@ export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: Me
 }
 
 // ---------------------------------------------------------------------------
+// Product barcodes (server/src/barcode.ts). Only the number is sent. Demo mode never calls this.
+// ---------------------------------------------------------------------------
+
+/** The product with this barcode, or null when Open Food Facts does not have it. */
+export async function lookupBarcode(userId: string, code: string, signal?: AbortSignal): Promise<BarcodeProduct | null> {
+  const res = await post<{ product?: unknown }>('/v1/barcode', userId, { code }, 15_000, signal);
+  if (!res || !('product' in res)) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return toBarcodeProduct(code, res.product);
+}
+
+// ---------------------------------------------------------------------------
 // Shared households (server/src/household.ts). Demo mode never calls these.
 // ---------------------------------------------------------------------------
 
 export interface HouseholdMember {
   name: string;
   you: boolean;
+  /** Names the member for removal, without revealing their id. */
+  ref?: string;
   /** Pays for the household plan that covers everyone. */
   sponsor?: boolean;
+  /** Days since their phone last synced, once it is a week or more. */
+  idleDays?: number;
 }
 
 export interface HouseholdView {
@@ -258,7 +274,13 @@ function householdOf(res: unknown): HouseholdView | null {
     code: v.code.slice(0, 12),
     members: v.members
       .filter((m): m is HouseholdMember => !!m && typeof (m as { name?: unknown }).name === 'string')
-      .map((m) => ({ name: m.name.slice(0, 40), you: m.you === true, ...(m.sponsor === true ? { sponsor: true } : {}) })),
+      .map((m) => ({
+        name: m.name.slice(0, 40),
+        you: m.you === true,
+        ...(typeof m.ref === 'string' && /^[a-z0-9-]{1,32}$/.test(m.ref) ? { ref: m.ref } : {}),
+        ...(m.sponsor === true ? { sponsor: true } : {}),
+        ...(typeof m.idleDays === 'number' && Number.isInteger(m.idleDays) && m.idleDays > 0 ? { idleDays: m.idleDays } : {}),
+      })),
     coveredUntil: typeof until === 'number' && Number.isFinite(until) && until > 0 ? until : null,
   };
 }
@@ -281,6 +303,12 @@ export async function joinHousehold(userId: string, code: string, memberName: st
 
 export async function leaveHousehold(userId: string): Promise<void> {
   await post<unknown>('/v1/household/leave', userId, {}, 20_000);
+}
+
+export async function removeHouseholdMember(userId: string, member: string): Promise<HouseholdView> {
+  const h = householdOf(await post<unknown>('/v1/household/remove', userId, { member }, 20_000));
+  if (!h) throw new ApiError('bad_response', 'Unexpected response from the server.');
+  return h;
 }
 
 export async function newHouseholdCode(userId: string): Promise<HouseholdView> {

@@ -12,7 +12,9 @@ import { NotificationRouter } from '../components/NotificationRouter';
 import { SnackbarHost } from '../components/Snackbar';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { useEmbeddedFonts } from '../lib/embeddedFonts';
+import { reportError, startCrashReports } from '../lib/crashReports';
 import { configureNotifications, syncReminders } from '../lib/notifications';
+import { useBarcodes } from '../store/barcodes';
 import { planPriceLabel, useBilling } from '../store/billing';
 import { useFoodLog } from '../store/foodLog';
 import { useFoods } from '../store/foods';
@@ -27,6 +29,7 @@ import { useTheme } from '../theme';
 
 const NO_INSETS = { top: 0, right: 0, bottom: 0, left: 0 };
 
+startCrashReports();
 SplashScreen.preventAutoHideAsync().catch(() => {});
 configureNotifications();
 
@@ -127,13 +130,16 @@ function HouseholdSync() {
 }
 
 /** Last line of defence: a render error shows a friendly screen instead of a blank or crashed app. */
-export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    reportError(error);
+  }, [error]);
   return <ErrorScreen onRetry={() => void retry()} />;
 }
 
 export default function RootLayout() {
   const { c, scheme } = useTheme();
-  const hydrated = useHydrated([useInventory, useSettings, useMealsCache, useShopping, useFoods, useFoodLog, useHealth, useHousehold]);
+  const hydrated = useHydrated([useInventory, useSettings, useMealsCache, useShopping, useFoods, useFoodLog, useHealth, useHousehold, useBarcodes]);
   const billingReady = useBilling((s) => s.ready);
   const subscribed = useBilling((s) => isUnlocked(s.entitlement));
   // Someone else's household plan can cover this person too.
@@ -191,6 +197,7 @@ export default function RootLayout() {
             <Stack.Screen name="log" options={{ presentation: 'modal' }} />
             <Stack.Screen name="household" options={{ presentation: 'modal' }} />
             <Stack.Screen name="plans" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="barcode" options={{ presentation: 'modal' }} />
           </Stack.Protected>
           {/* Legal text must be readable before onboarding and on the paywall, so it is never guarded. */}
           <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />

@@ -18,6 +18,8 @@ export interface Config {
   mealsPerDay: number;
   /** Web lookups of unrecognised items. Each one runs web searches, so it costs more than a scan. */
   identifiesPerDay: number;
+  /** Barcode lookups. Each is one Open Food Facts request, so these are cheap; the cap stops abuse. */
+  barcodesPerDay: number;
   /** Sent to Open Food Facts and Wikipedia with picture lookups, as both ask. Include a contact. */
   pictureUserAgent: string;
   /** Overridable for tests; the public services by default. */
@@ -25,6 +27,11 @@ export interface Config {
   wikiBaseUrl: string;
   /** Read the client IP from X-Forwarded-For (set when behind a trusted reverse proxy). */
   trustProxy: boolean;
+  /**
+   * A header the host's proxy sets to the caller's IP and callers cannot fake (Fly.io: Fly-Client-IP).
+   * Preferred over X-Forwarded-For, whose first entry a caller can make up.
+   */
+  clientIpHeader: string | null;
   corsOrigin: string | null;
   /** SQLite file for shared households, or null to turn household sharing off. */
   householdDb: string | null;
@@ -70,10 +77,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     scansPerDay: int(env.SCANS_PER_DAY, 15),
     mealsPerDay: int(env.MEALS_PER_DAY, 40),
     identifiesPerDay: int(env.IDENTIFIES_PER_DAY, 10),
+    barcodesPerDay: int(env.BARCODES_PER_DAY, 300),
     pictureUserAgent: env.PICTURE_USER_AGENT?.trim() || 'FridgePulse/1.0 (food expiry tracker)',
     offBaseUrl: baseUrl(env.OFF_BASE_URL, 'https://world.openfoodfacts.org'),
     wikiBaseUrl: baseUrl(env.WIKI_BASE_URL, 'https://en.wikipedia.org'),
     trustProxy: env.TRUST_PROXY === 'true',
+    clientIpHeader: env.CLIENT_IP_HEADER?.trim().toLowerCase() || null,
     corsOrigin: env.CORS_ORIGIN?.trim() || null,
     householdDb: env.HOUSEHOLD_DB?.trim() === 'off' ? null : env.HOUSEHOLD_DB?.trim() || 'data/households.sqlite',
   };

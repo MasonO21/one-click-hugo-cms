@@ -22,6 +22,7 @@ import type { Diet } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { useMealsCache } from '../../store/mealsCache';
 import { useSettings, type Appearance } from '../../store/settings';
+import { useBarcodes } from '../../store/barcodes';
 import { useFoods } from '../../store/foods';
 import { useShopping } from '../../store/shopping';
 import { useFoodLog } from '../../store/foodLog';
@@ -256,6 +257,7 @@ export default function Settings() {
     useMealsCache.getState().clear();
     useShopping.getState().clear();
     useFoods.getState().clear();
+    useBarcodes.getState().clear();
     useFoodLog.getState().clear();
     useHealth.getState().disconnect();
     useSettings.getState().set({ profile: NO_PROFILE });

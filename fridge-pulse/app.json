@@ -75,6 +75,14 @@
             "NSPrivacyCollectedDataTypePurposes": [
               "NSPrivacyCollectedDataTypePurposeAppFunctionality"
             ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeCrashData",
+            "NSPrivacyCollectedDataTypeLinked": false,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
           }
         ]
       }
@@ -121,7 +129,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Fridge Pulse uses your camera to photograph your fridge and pantry so it can track what is about to expire.",
+          "cameraPermission": "Fridge Pulse uses your camera to photograph your fridge, pantry and receipts and to scan product barcodes, so it can track what is about to expire.",
           "photosPermission": "Fridge Pulse reads photos you choose so it can find the food in them.",
           "microphonePermission": false
         }
@@ -147,6 +155,15 @@
           "android": {
             "minSdkVersion": 26
           }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Fridge Pulse uses your camera to photograph your fridge, pantry and receipts and to scan product barcodes, so it can track what is about to expire.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
         }
       ]
     ],

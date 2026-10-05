@@ -15,6 +15,8 @@ export const CATEGORIES = [
   'other',
 ] as const;
 
+export type Category = (typeof CATEGORIES)[number];
+
 export const LOCATIONS = ['fridge', 'freezer', 'pantry'] as const;
 export const DIETS = ['none', 'vegetarian', 'vegan', 'gluten-free', 'dairy-free'] as const;
 
@@ -237,3 +239,8 @@ export const HouseholdSyncSchema = z.object({
 
 export const CreateHouseholdSchema = z.object({ name: personName, memberName: personName });
 export const JoinHouseholdSchema = z.object({ code: z.string().trim().min(4).max(20), memberName: personName });
+/** A product barcode: the digits only (8, 12, 13 or 14; the check digit is verified separately). */
+export const BarcodeRequestSchema = z.object({ code: z.string().regex(/^\d{8,14}$/) });
+
+/** A member to take out of the household, by the `ref` the household view gave. */
+export const RemoveMemberSchema = z.object({ member: z.string().regex(/^[a-f0-9]{16}$/) });

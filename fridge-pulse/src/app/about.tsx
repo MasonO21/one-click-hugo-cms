@@ -58,6 +58,15 @@ export default function About() {
         <Row label="About the licence" hint="creativecommons.org/licenses/by/4.0" onPress={() => void Linking.openURL('https://creativecommons.org/licenses/by/4.0/')} />
       </Card>
 
+      <Card style={{ gap: 8 }} testID="barcode-credit">
+        <Text variant="heading">Product data</Text>
+        <Text>
+          Products found by barcode, and their pictures, come from Open Food Facts (openfoodfacts.org), a database anyone can add to,
+          under the Open Database License.
+        </Text>
+        <Row label="About the licence" hint="opendatacommons.org/licenses/odbl" onPress={() => void Linking.openURL('https://opendatacommons.org/licenses/odbl/1-0/')} />
+      </Card>
+
       <Card style={{ gap: 4 }}>
         <Row label="Privacy Policy" onPress={() => router.push('/legal/privacy')} />
         <Row label="Terms of Use" onPress={() => router.push('/legal/terms')} />

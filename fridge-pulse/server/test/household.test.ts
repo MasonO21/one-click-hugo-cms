@@ -7,7 +7,10 @@ import { describe, it } from 'node:test';
 import { createApp } from '../src/app.js';
 import { EntitlementLookupError } from '../src/auth.js';
 import type { ClaudeService } from '../src/claude.js';
-import { createHouseholdStore, formatCode, HouseholdError, MAX_MEMBERS, normalizeCode, TOMBSTONE_DAYS, type SyncRecord } from '../src/household.js';
+import { createHouseholdStore, formatCode, HouseholdError, MAX_MEMBERS, MEMBER_IDLE_DAYS, normalizeCode, TOMBSTONE_DAYS, type SyncRecord } from '../src/household.js';
+
+/** Members as a person sees them, without the opaque refs. */
+const people = (members: { ref?: string }[]) => members.map(({ ref: _ref, ...m }) => m);
 
 const item = (id: string, name: string, updatedAt: number, over: Record<string, unknown> = {}): SyncRecord => ({
   kind: 'item',
@@ -22,13 +25,16 @@ describe('household store', () => {
     const store = createHouseholdStore();
     const made = store.create('user-a', 'Sam', 'Our flat');
     assert.match(made.code, /^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
-    assert.deepEqual(made.members, [{ name: 'Sam', you: true }]);
+    assert.deepEqual(people(made.members), [{ name: 'Sam', you: true }]);
     const joined = store.join('user-b', 'Alex', made.code.toLowerCase().replace('-', ' '));
     assert.equal(joined.name, 'Our flat');
-    assert.deepEqual(joined.members, [
+    assert.deepEqual(people(joined.members), [
       { name: 'Sam', you: false },
       { name: 'Alex', you: true },
     ]);
+    // Each member has a ref for removal that is not their id, nor their stored key.
+    assert.match(joined.members[0]!.ref, /^[a-f0-9]{16}$/);
+    assert.notEqual(joined.members[0]!.ref, joined.members[1]!.ref);
     assert.equal(store.get('user-c'), null);
   });
 
@@ -147,7 +153,7 @@ describe('household store', () => {
     store.sponsor('payer', until);
     const seen = store.get('housemate')!;
     assert.equal(seen.coveredUntil, until);
-    assert.deepEqual(seen.members, [
+    assert.deepEqual(people(seen.members), [
       { name: 'Sam', you: false, sponsor: true },
       { name: 'Alex', you: true },
     ]);
@@ -179,6 +185,50 @@ describe('household store', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('lets a member take someone else out, but not themselves', () => {
+    const store = createHouseholdStore();
+    const { code } = store.create('payer', 'Sam', 'Home');
+    const joined = store.join('housemate', 'Alex', code);
+    store.join('old-phone', 'Alex (old phone)', code);
+    store.sponsor('payer', Date.now() + 86_400_000);
+    const [sam, alex] = joined.members;
+    assert.throws(() => store.remove('housemate', alex!.ref), (e: unknown) => e instanceof HouseholdError && e.code === 'self');
+    assert.throws(() => store.remove('housemate', '0123456789abcdef'), (e: unknown) => e instanceof HouseholdError && e.code === 'not_found');
+    assert.throws(() => store.remove('stranger', sam!.ref), (e: unknown) => e instanceof HouseholdError && e.code === 'not_member');
+    const old = store.get('payer')!.members.find((m) => m.name === 'Alex (old phone)')!;
+    const after = store.remove('housemate', old.ref);
+    assert.deepEqual(after.members.map((m) => m.name), ['Sam', 'Alex']);
+    assert.throws(() => store.sync('old-phone', 0, []), (e: unknown) => e instanceof HouseholdError && e.code === 'not_member');
+    // Taking out the person who pays ends the household plan's cover.
+    assert.ok(store.get('housemate')!.coveredUntil);
+    store.remove('housemate', sam!.ref);
+    assert.equal(store.get('housemate')!.coveredUntil, null);
+  });
+
+  it('shows who has been away, and drops members whose phone has not synced for 60 days', () => {
+    const store = createHouseholdStore();
+    const { code } = store.create('a', 'Sam', 'Home');
+    store.join('b', 'Alex', code);
+    store.join('c', 'Kim', code);
+    const start = Date.now();
+    store.sponsor('c', start + 400 * 86_400_000, start);
+    const week = store.sync('a', 0, [], start + 8 * 86_400_000).household;
+    assert.deepEqual(people(week.members), [
+      { name: 'Sam', you: true },
+      { name: 'Alex', you: false, idleDays: 8 },
+      { name: 'Kim', you: false, sponsor: true, idleDays: 8 },
+    ]);
+    // A's syncs keep A; B is gone after 60 days. C pays for a plan that still covers everyone, so stays.
+    const later = store.sync('a', 0, [], start + (MEMBER_IDLE_DAYS + 1) * 86_400_000).household;
+    assert.deepEqual(later.members.map((m) => m.name), ['Sam', 'Kim']);
+    assert.ok(later.coveredUntil);
+    assert.equal(store.get('b'), null);
+    // Once that plan has ended, C goes the same way.
+    const after = store.sync('a', 0, [], start + 401 * 86_400_000).household;
+    assert.deepEqual(after.members.map((m) => m.name), ['Sam']);
+    assert.equal(after.coveredUntil, null);
   });
 
   it('reads invite codes however they are typed', () => {
@@ -232,6 +282,19 @@ describe('household endpoints', () => {
     assert.equal((await call('/v1/household/join', B, { code: 'ZZZZ-ZZZZ', memberName: 'Alex' })).status, 404);
     assert.equal((await call('/v1/household', B, { name: '', memberName: 'Alex' })).status, 400);
     assert.equal((await call('/v1/household', A, { name: 'Again', memberName: 'Sam' })).status, 409);
+  });
+
+  it('takes someone out of the household on request', async () => {
+    const call = setup();
+    const made = (await (await call('/v1/household', A, { name: 'Home', memberName: 'Sam' })).json()) as { household: { code: string } };
+    const joined = (await (await call('/v1/household/join', B, { code: made.household.code, memberName: 'Alex' })).json()) as { household: { members: { ref: string; you: boolean }[] } };
+    const alex = joined.household.members.find((m) => m.you)!;
+    assert.equal((await call('/v1/household/remove', A, { member: 'not-a-ref' })).status, 400);
+    assert.equal((await call('/v1/household/remove', A, { member: '0123456789abcdef' })).status, 404);
+    assert.equal((await call('/v1/household/remove', B, { member: alex.ref })).status, 409);
+    const res = (await (await call('/v1/household/remove', A, { member: alex.ref })).json()) as { household: { members: unknown[] } };
+    assert.equal(res.household.members.length, 1);
+    assert.equal((await call('/v1/household/sync', B, { since: 0, changes: [] })).status, 404);
   });
 
   it('limits guesses at invite codes', async () => {

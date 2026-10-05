@@ -157,13 +157,17 @@ export default function Pulse() {
 
       <FadeIn delay={80} style={{ gap: 8 }}>
         <Button testID="scan-cta" variant="cta" label="Scan your fridge" icon="scan" onPress={() => router.push('/scan')} />
-        <Button
-          testID="receipt-cta"
-          variant="secondary"
-          label="Scan a receipt"
-          icon="receipt-outline"
-          onPress={() => router.push({ pathname: '/scan', params: { mode: 'receipt' } })}
-        />
+        <View style={styles.twoUp}>
+          <Button
+            testID="receipt-cta"
+            variant="secondary"
+            label="Receipt"
+            icon="receipt-outline"
+            onPress={() => router.push({ pathname: '/scan', params: { mode: 'receipt' } })}
+            style={{ flex: 1 }}
+          />
+          <Button testID="barcode-cta" variant="secondary" label="Barcodes" icon="barcode-outline" onPress={() => router.push('/barcode')} style={{ flex: 1 }} />
+        </View>
       </FadeIn>
 
       <FadeIn delay={110}>
@@ -249,6 +253,7 @@ export default function Pulse() {
 }
 
 const styles = StyleSheet.create({
+  twoUp: { flexDirection: 'row', gap: 8 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hero: { borderRadius: radius.lg, borderWidth: 1, padding: 20, paddingBottom: 6, gap: 14, overflow: 'hidden' },
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },

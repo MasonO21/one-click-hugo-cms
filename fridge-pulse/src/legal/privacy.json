@@ -1,6 +1,6 @@
 {
   "title": "Privacy Policy",
-  "updated": "2026-10-04",
+  "updated": "2026-10-05",
   "intro": "Fridge Pulse helps you use food before it goes off. This policy explains what the app does with your information, in plain language.",
   "sections": [
     {
@@ -22,7 +22,7 @@
     {
       "heading": "What stays on your device",
       "paragraphs": [
-        "The items you track (names, quantities, storage place, expiry dates), the foods you have confirmed from a lookup, your food log, your body details and goals (weight, height, age, activity), the activity read from your health app, your meal preferences, reminder settings and the state of your free trial are stored only on your device. Deleting the app, or using Settings > Privacy and data > Delete all my data, removes them."
+        "The items you track (names, quantities, storage place, expiry dates), the foods you have confirmed from a lookup, the products you have scanned by barcode, your food log, your body details and goals (weight, height, age, activity), the activity read from your health app, your meal preferences, reminder settings and the state of your free trial are stored only on your device. Deleting the app, or using Settings > Privacy and data > Delete all my data, removes them."
       ]
     },
     {
@@ -32,10 +32,12 @@
         "Receipt photos: when you tap Read receipt, photos of a shopping receipt are sent the same way so the food on it can be listed. A receipt can show the shop, the date and time and the last digits of a payment card. The AI is asked to read only the food and drink lines, their prices and the purchase date, and our server does not save the photo. You can fold over or cover card details before taking the photo.",
         "Looking up an item the app does not recognise: the photo it was seen in, the name the scan gave it and a short description of its packaging are sent the same way. Anthropic's Claude searches the web for the exact product and its storage guidance; those searches contain words describing the product, never your photo or anything about you. Our server then asks Open Food Facts (openfoodfacts.org) and Wikipedia for a picture of the product, sending only the product's name and brand. When you add an item by typing, a lookup happens only if you tap Look it up online. This also needs your permission to use AI.",
         "Product pictures: to show you a picture to confirm, your phone loads it directly from Open Food Facts or Wikimedia, which see your IP address like any website you visit. Foods you confirm, with their pictures' addresses, are saved in the food list on your device.",
+        "Barcodes: when you scan a product barcode, or type its number, only the number is sent to our server, which asks Open Food Facts, a public food database, what the product is. The products you scan are remembered on your phone, so scanning one again needs no lookup.",
         "Ingredient lists for meal ideas: to write meal ideas, the names, categories, quantities and days-until-expiry of your tracked items are sent the same way. No photos are included. This also needs your agreement.",
-        "Household sharing: only if you start or join a household, your food list (item names, quantities, where they are kept, dates, prices and who added them) and your shopping list are stored on our server so the other members can see them, together with the household's name, the names members chose to show, and a scrambled form of your app user ID. When you remove an item, a note that it was removed is kept for 60 days so the other phones hear about it. Leaving takes you out; when the last member leaves, the household's lists are deleted from our server. If you pay for the household plan, your app user ID itself is also kept with your household, so our server can check with RevenueCat that the plan is still active and keep covering the others without you opening the app. It is removed when you leave the household or your household plan ends. Your food log, goals and health data are never shared.",
+        "Household sharing: only if you start or join a household, your food list (item names, quantities, where they are kept, dates, prices and who added them) and your shopping list are stored on our server so the other members can see them, together with the household's name, the names members chose to show, and a scrambled form of your app user ID. When you remove an item, a note that it was removed is kept for 60 days so the other phones hear about it. Leaving takes you out; when the last member leaves, the household's lists are deleted from our server. If you pay for the household plan, your app user ID itself is also kept with your household, so our server can check with RevenueCat that the plan is still active and keep covering the others without you opening the app. It is removed when you leave the household or your household plan ends. The server also notes when each member's phone last synced: someone whose phone has not synced for 60 days is taken out of the household, and members can take someone out themselves. Your food log, goals and health data are never shared.",
         "Subscription status: Apple or Google processes your payment. RevenueCat, which we use to manage subscriptions, receives your purchase information and a random app user ID so that the app and our server can tell whether your trial or subscription is active, and whether it is a household plan that covers the people in your shared household.",
-        "Reminders: expiry and trial reminders are scheduled on your device. Nothing about them is sent to a server."
+        "Reminders: expiry and trial reminders are scheduled on your device. Nothing about them is sent to a server.",
+        "Crash reports: if the app crashes, a report (where in the app's code it failed, the device model, and the iOS or Android and app versions) is sent to Sentry, the crash reporting service we use, so we can fix it. It does not include your food list, photos, health data or an ID that identifies you."
       ]
     },
     {
@@ -61,7 +63,7 @@
       "bullets": [
         "We do not show ads or use advertising identifiers.",
         "We do not track you across other companies' apps and websites.",
-        "We do not include third-party analytics or attribution SDKs.",
+        "We do not include third-party analytics or attribution SDKs. Crash reports, described above, are used only to fix crashes.",
         "We do not sell your information or share it for marketing."
       ]
     },
