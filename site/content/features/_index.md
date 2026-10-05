@@ -2,7 +2,7 @@
 title: Features
 type: features
 subtitle: Everything Trail Notes does.
-description: Voice logging, auto-tagged route, weather and mood, and a searchable log are free. Trail Notes Plus adds maps, insights, and a yearly recap book.
+description: Voice logging, auto-tagged route, weather and mood, and a searchable log are free. Trail Notes Plus, coming after launch, adds maps, insights, and a yearly recap book.
 image: /img/features-jumbotron.svg
 free:
   heading: Free
@@ -19,7 +19,7 @@ free:
       text: Find any outing by place, weather, or mood.
 plus:
   heading: Plus
-  description: For the bigger picture.
+  description: Coming after launch, for the bigger picture.
   items:
     - image: /img/illustration-maps.svg
       title: Route maps
@@ -32,7 +32,7 @@ plus:
       text: A yearly book of your entries and routes.
 pricing:
   heading: Pricing
-  description: Start free. Add Plus when you want more. Launch pricing, subject to change.
+  description: Basic is free. Plus comes after launch, and its price may change before then.
   plans:
     - plan: Basic
       price: '0'
@@ -45,7 +45,7 @@ pricing:
     - plan: Plus
       price: '6'
       period: per month, or $50 per year
-      description: Basic, plus the full picture.
+      description: Coming after launch. Basic, plus the full picture.
       items:
         - Everything in Basic
         - Route maps

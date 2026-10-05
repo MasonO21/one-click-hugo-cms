@@ -50,7 +50,7 @@ Set these environment variables before building (for example in EAS secrets or a
 
 | Variable | Purpose |
 | --- | --- |
-| `EXPO_PUBLIC_SITE_URL` | The website's address. Enables the privacy policy and support links in Settings. |
+| `EXPO_PUBLIC_SITE_URL` | The website's address. Enables the privacy policy and support links in Settings. Apple requires the privacy link, so a production build on EAS stops with an error when this is missing. |
 | `EXPO_PUBLIC_OPEN_METEO_API_KEY` | Paid Open-Meteo key. **Required for a commercial launch**: the free weather API is for non-commercial use only. A key inside the app can be extracted, so for heavy use put a small proxy in front of the API. |
 
 Also change the placeholder iOS bundle identifier and Android package (`com.trailnotes.app`) in `app.config.ts` to ones you own.

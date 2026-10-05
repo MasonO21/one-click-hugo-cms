@@ -6,6 +6,14 @@ const IDENTIFIER = 'com.trailnotes.app';
 // Before the first cloud build, paste your project id from expo.dev into the empty quotes
 // at the end of the next line (or set the EAS_PROJECT_ID environment variable).
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '';
+// Apple requires a privacy policy link inside the app, and Settings only shows it when the
+// website address is set. Stop a store build on EAS that would ship without it.
+if (process.env.EAS_BUILD === 'true' && process.env.EAS_BUILD_PROFILE === 'production' && !process.env.EXPO_PUBLIC_SITE_URL) {
+  throw new Error(
+    'EXPO_PUBLIC_SITE_URL is not set. Add it to the production environment on expo.dev (or to the production profile in eas.json) so the app links to its privacy policy. See mobile/README.md.',
+  );
+}
+
 const GREEN = '#1F6B4F';
 const INK = '#0F1A15';
 

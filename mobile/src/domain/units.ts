@@ -21,7 +21,12 @@ export function formatDistance(meters: number, unit: DistanceUnit): string {
 interface LocaleHints {
   measurementSystem?: 'metric' | 'us' | 'uk' | null;
   temperatureUnit?: 'celsius' | 'fahrenheit' | null;
+  regionCode?: string | null;
 }
+
+// Regions that give road and trail distances in miles. Used when the phone does not
+// report its measurement system.
+const MILE_REGIONS = new Set(['US', 'GB', 'LR', 'MM']);
 
 export function defaultTemperatureUnit(locale: LocaleHints | undefined): TemperatureUnit {
   if (locale?.temperatureUnit === 'fahrenheit') return 'f';
@@ -30,5 +35,8 @@ export function defaultTemperatureUnit(locale: LocaleHints | undefined): Tempera
 }
 
 export function defaultDistanceUnit(locale: LocaleHints | undefined): DistanceUnit {
-  return locale?.measurementSystem === 'us' || locale?.measurementSystem === 'uk' ? 'mi' : 'km';
+  if (locale?.measurementSystem) {
+    return locale.measurementSystem === 'us' || locale.measurementSystem === 'uk' ? 'mi' : 'km';
+  }
+  return locale?.regionCode && MILE_REGIONS.has(locale.regionCode.toUpperCase()) ? 'mi' : 'km';
 }

@@ -30,7 +30,7 @@ sample:
           value: "Happy"
 plus:
     heading: "Free to start"
-    text: "Basic logging is free. Plus adds maps, insights, and a yearly recap book."
+    text: "Basic logging is free. Plus, coming after launch, adds maps, insights, and a yearly recap book."
     image: /img/illustration-recap.svg
     imageAlt: "A yearly Trail Notes recap book"
 ---

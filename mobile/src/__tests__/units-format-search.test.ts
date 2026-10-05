@@ -33,6 +33,13 @@ describe('units', () => {
     expect(defaultDistanceUnit({ measurementSystem: 'metric' })).toBe('km');
     expect(defaultDistanceUnit(undefined)).toBe('km');
   });
+
+  it('uses the region when the phone does not report a measurement system', () => {
+    expect(defaultDistanceUnit({ measurementSystem: null, regionCode: 'US' })).toBe('mi');
+    expect(defaultDistanceUnit({ measurementSystem: null, regionCode: 'gb' })).toBe('mi');
+    expect(defaultDistanceUnit({ measurementSystem: null, regionCode: 'DE' })).toBe('km');
+    expect(defaultDistanceUnit({ measurementSystem: 'metric', regionCode: 'US' })).toBe('km');
+  });
 });
 
 describe('format', () => {
