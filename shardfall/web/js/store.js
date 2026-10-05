@@ -28,10 +28,15 @@
       weekly: { key: weekKey(), progress: 0, claimed: false },
       ads: { key: dayKey(), coins: 0, chest: 0, double: 0 },
       chestPity: 0,
-      stats: { matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0 },
+      stats: { matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0, towers: 0, shards: 0, triples: 0, mvps: 0 },
+      rank: { stars: 0, best: 0, streak: 0, claimed: [] },
+      mastery: {},
+      history: [],
+      achievements: [],
+      event: { tokens: 0, week: weekKey(), bought: {} },
       purchases: [], firstPack: {}, starter: false,
       monthly: { until: null, last: null },
-      settings: { sound: true, cap: 0 },
+      settings: { sound: true, music: true, cap: 0, gfx: 'high', numbers: true, lefty: false },
       tutorial: false
     };
   }
@@ -45,7 +50,15 @@
       try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { raw = null; }
       if (!raw && snapshot && snapshot.v === 1) raw = snapshot;
       const base = fresh();
-      memory = raw && raw.v === 1 ? Object.assign(base, raw) : base;
+      if (raw && raw.v === 1) {
+        // One-level deep merge so saves from older versions pick up new nested fields.
+        for (const k of Object.keys(raw)) {
+          const b = base[k], r = raw[k];
+          base[k] = b && r && typeof b === 'object' && typeof r === 'object' && !Array.isArray(b) && !Array.isArray(r) && Object.keys(b).length ? Object.assign(b, r) : r;
+        }
+      }
+      memory = base;
+      SF.gfx = { low: memory.settings.gfx === 'low', numbers: memory.settings.numbers !== false };
       S.rollover();
       S.save();
     },
@@ -63,6 +76,7 @@
       if (d.daily.key !== today) d.daily = { key: today, progress: {}, claimed: [] };
       if (d.ads.key !== today) d.ads = { key: today, coins: 0, chest: 0, double: 0 };
       if (d.weekly.key !== wk) d.weekly = { key: wk, progress: 0, claimed: false };
+      if (d.event.week !== wk) { d.event.week = wk; d.event.bought = {}; }
     },
 
     owns: {
@@ -196,6 +210,84 @@
       return { label: pick.label, got: S.grant([pick.reward]) };
     },
 
+    // ---- Ranked ----
+    rankOf(stars) {
+      const T = SF.RANKS.tiers;
+      let left = stars;
+      for (let i = 0; i < T.length; i++) {
+        const tier = T[i];
+        if (left < tier.stars || i === T.length - 1) {
+          const base = { tier: i, name: tier.name, color: tier.color, diff: tier.diff, floor: stars - left, protect: !!tier.protect };
+          if (tier.stars === 9) {
+            const div = 3 - Math.floor(left / 3);
+            return Object.assign(base, { div, star: left % 3, starsPerDiv: 3, label: `${tier.name} ${['', 'I', 'II', 'III'][div]}` });
+          }
+          return Object.assign(base, { div: 0, star: left, starsPerDiv: tier.stars < 1e8 ? tier.stars : 0, label: tier.name });
+        }
+        left -= tier.stars;
+      }
+    },
+    rank() { return S.rankOf(memory.rank.stars); },
+    rankedUnlocked() { return memory.account.level >= SF.RANKS.unlockLevel; },
+    // Applies a ranked result. Wins give a star (two on a 3+ win streak below Platinum).
+    // Losses take one, except for the MVP and except where a tier is protected (Bronze, Silver).
+    applyRanked(won, mvp) {
+      const r = memory.rank, before = S.rankOf(r.stars);
+      let delta;
+      if (won) { r.streak = Math.max(0, r.streak) + 1; delta = r.streak >= 3 && before.tier <= 2 ? 2 : 1; }
+      else {
+        r.streak = 0;
+        delta = mvp ? 0 : -1;
+        if (delta < 0 && before.protect && r.stars - 1 < before.floor) delta = 0;
+      }
+      r.stars = Math.max(0, r.stars + delta);
+      const after = S.rankOf(r.stars);
+      r.best = Math.max(r.best, after.tier);
+      S.save();
+      return { before, after, delta, protected: !won && delta === 0, mvpSaved: !won && mvp };
+    },
+    rankRewardsReady() { return SF.RANKS.rewards.filter(x => x.tier <= memory.rank.best && !memory.rank.claimed.includes(x.tier)); },
+
+    // ---- Hero mastery ----
+    masteryOf(heroId) {
+      const pts = memory.mastery[heroId] || 0, L = SF.MASTERY.levels;
+      let lvl = 0;
+      for (let i = 0; i < L.length; i++) if (pts >= L[i]) lvl = i;
+      return { pts, lvl, name: SF.MASTERY.names[lvl], next: L[lvl + 1] != null ? L[lvl + 1] : null, prev: L[lvl] };
+    },
+    addMastery(heroId, pts) {
+      const before = S.masteryOf(heroId).lvl;
+      memory.mastery[heroId] = (memory.mastery[heroId] || 0) + pts;
+      const after = S.masteryOf(heroId).lvl, got = [];
+      for (let l = before + 1; l <= after; l++) if (SF.MASTERY.rewards[l]) got.push(...S.grant([SF.MASTERY.rewards[l]]));
+      return { before, after, got };
+    },
+
+    // ---- Achievements ----
+    achievementValue(stat) {
+      const d = memory;
+      switch (stat) {
+        case 'heroesOwned': return d.heroes.length;
+        case 'skinsOwned': return d.skins.filter(id => SF.SKIN[id] && SF.SKIN[id].tier !== 'Classic').length;
+        case 'bestTier': return d.rank.best;
+        case 'bestMastery': return Math.max(0, ...SF.HEROES.map(h => S.masteryOf(h.id).lvl));
+        default: return d.stats[stat] || 0;
+      }
+    },
+    achievementsReady() { return SF.ACHIEVEMENTS.filter(a => !memory.achievements.includes(a.id) && S.achievementValue(a.stat) >= a.goal); },
+
+    // ---- Match history (newest first, last 20) ----
+    pushHistory(entry) { memory.history.unshift(entry); memory.history.length = Math.min(memory.history.length, 20); },
+
+    // ---- Event exchange ----
+    eventBuy(id) {
+      const it = SF.EVENT.shop.find(x => x.id === id), ev = memory.event;
+      if (!it || ev.tokens < it.cost || (ev.bought[id] || 0) >= it.limit) return null;
+      if (it.reward.type === 'skin' && memory.skins.includes(it.reward.id)) return null;
+      ev.tokens -= it.cost; ev.bought[id] = (ev.bought[id] || 0) + 1;
+      return S.grant([it.reward]);
+    },
+
     // ---- Spending ----
     monthSpent() {
       const m = monthKey();
@@ -272,7 +364,12 @@
   // ---- Tiny synthesized sound effects (no audio files to ship) ----
   let ac = null;
   SF.sfx = {
-    unlock() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } if (ac && ac.state === 'suspended') ac.resume(); },
+    unlock() {
+      if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
+      if (ac && ac.state === 'suspended') ac.resume();
+      if (ac && SF.music) SF.music.resume();
+    },
+    ctx() { return ac; },
     play(name) {
       if (!ac || !memory || !memory.settings.sound) return;
       const P = {

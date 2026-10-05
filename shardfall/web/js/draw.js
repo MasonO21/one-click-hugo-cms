@@ -9,8 +9,15 @@
     leaf:  [[0, -1.35], [0.3, -0.62], [0.38, 0.06], [0.22, 0.6], [0, 0.82], [-0.22, 0.6], [-0.38, 0.06], [-0.3, -0.62]],
     block: [[-0.52, -0.95], [0.52, -0.95], [0.74, -0.2], [0.62, 0.72], [-0.62, 0.72], [-0.74, -0.2]],
     star:  [[0, -1.32], [0.24, -0.46], [0.78, -0.32], [0.3, 0.08], [0.42, 0.78], [0, 0.46], [-0.42, 0.78], [-0.3, 0.08], [-0.78, -0.32], [-0.24, -0.46]],
-    halo:  Array.from({ length: 8 }, (_, i) => [Math.cos(i / 8 * TAU + TAU / 16) * 0.68, Math.sin(i / 8 * TAU + TAU / 16) * 0.78 - 0.2])
+    halo:  Array.from({ length: 8 }, (_, i) => [Math.cos(i / 8 * TAU + TAU / 16) * 0.68, Math.sin(i / 8 * TAU + TAU / 16) * 0.78 - 0.2]),
+    spire: [[0, -1.45], [0.22, -0.7], [0.4, -0.1], [0.26, 0.55], [0, 0.8], [-0.26, 0.55], [-0.4, -0.1], [-0.22, -0.7]],
+    axe:   [[0, -1.05], [0.6, -0.7], [0.66, 0.1], [0.36, 0.75], [-0.36, 0.75], [-0.66, 0.1], [-0.6, -0.7]],
+    prism: [[0, -1.35], [0.34, -0.35], [0.62, 0.7], [-0.62, 0.7], [-0.34, -0.35]],
+    shell: [[0, -0.95], [0.45, -0.82], [0.75, -0.35], [0.8, 0.2], [0.55, 0.72], [-0.55, 0.72], [-0.8, 0.2], [-0.75, -0.35], [-0.45, -0.82]]
   };
+  // Graphics settings (set from the lobby): low = no glow blur and fewer cosmetic particles.
+  SF.gfx = SF.gfx || { low: false, numbers: true };
+  const blur = v => (SF.gfx.low ? 0 : v);
   const AURA = { frost: '#cfefff', gold: '#ffe27a', bubbles: '#8ff7ff', leaf: '#ffb35c', storm: '#c8d4ff', embers: '#ff8a3d', void: '#8a5bff' };
 
   function poly(g, pts, x, y, s) {
@@ -19,6 +26,13 @@
     g.closePath();
   }
   function ellipse(g, x, y, rx, ry) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); }
+  // Jagged path between two points (lightning, chains, cracks). Re-randomised every frame so it flickers.
+  function zig(g, x1, y1, x2, y2, n, amp) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    g.beginPath(); g.moveTo(x1, y1);
+    for (let i = 1; i < n; i++) { const k = i / n, o = (Math.random() - 0.5) * amp; g.lineTo(x1 + dx * k + nx * o, y1 + dy * k + ny * o); }
+    g.lineTo(x2, y2);
+  }
 
   // Draws a hero at ground point (x, y). Used both in matches and the lobby showcase.
   function drawHero(g, o) {
@@ -59,13 +73,13 @@
     g.restore();
     // heart gem
     g.beginPath(); g.arc(x, cy - s * 0.12, s * 0.15, 0, TAU);
-    g.fillStyle = sk.c3; g.shadowColor = sk.c3; g.shadowBlur = 10 * (o.scale || 1); g.fill(); g.shadowBlur = 0;
+    g.fillStyle = sk.c3; g.shadowColor = sk.c3; g.shadowBlur = blur(10 * (o.scale || 1)); g.fill(); g.shadowBlur = 0;
     if (def.shape !== 'halo') drawWeapon(g, def.shape, sk, x, cy, s, face, fx, t);
     if (sk.crown) {
       for (let i = 0; i < 3; i++) {
         const a = t * 1.6 + i * TAU / 3, cx = x + Math.cos(a) * s * 0.75, cyy = cy - s * 1.35 + Math.sin(a) * s * 0.18;
         poly(g, [[0, -1], [0.6, 0], [0, 1], [-0.6, 0]], cx, cyy, s * 0.16);
-        g.fillStyle = sk.c3; g.shadowColor = sk.c1; g.shadowBlur = 8; g.fill(); g.shadowBlur = 0;
+        g.fillStyle = sk.c3; g.shadowColor = sk.c1; g.shadowBlur = blur(8); g.fill(); g.shadowBlur = 0;
       }
     }
     if (o.flash > 0) { poly(g, pts, x, cy, s); g.fillStyle = `rgba(255,255,255,${Math.min(0.7, o.flash * 7)})`; g.fill(); }
@@ -78,7 +92,7 @@
     switch (shape) {
       case 'blade': {
         const bx = x + fx * s * 0.62, by = cy + s * 0.15;
-        g.strokeStyle = sk.c3; g.lineWidth = s * 0.16; g.shadowColor = sk.c1; g.shadowBlur = 12;
+        g.strokeStyle = sk.c3; g.lineWidth = s * 0.16; g.shadowColor = sk.c1; g.shadowBlur = blur(12);
         g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + fx * s * 0.5, by - s * 1.05); g.stroke();
         g.shadowBlur = 0; g.strokeStyle = sk.c2; g.lineWidth = s * 0.12;
         g.beginPath(); g.moveTo(bx - s * 0.18, by + s * 0.02); g.lineTo(bx + s * 0.18, by - s * 0.02); g.stroke();
@@ -87,13 +101,13 @@
       case 'drop': {
         const a = t * 2.2;
         g.beginPath(); g.arc(x + Math.cos(a) * s * 0.95, cy + Math.sin(a) * s * 0.4, s * 0.2, 0, TAU);
-        g.fillStyle = sk.c3; g.shadowColor = sk.c1; g.shadowBlur = 14; g.fill();
+        g.fillStyle = sk.c3; g.shadowColor = sk.c1; g.shadowBlur = blur(14); g.fill();
         g.beginPath(); g.ellipse(x, cy + s * 0.2, s * 0.95, s * 0.4, 0, 0, TAU); g.strokeStyle = sk.c1 + '88'; g.lineWidth = 1.5; g.shadowBlur = 0; g.stroke();
         break;
       }
       case 'leaf': {
         const bx = x + fx * s * 0.55;
-        g.strokeStyle = sk.c3; g.lineWidth = s * 0.1; g.shadowColor = sk.c1; g.shadowBlur = 8;
+        g.strokeStyle = sk.c3; g.lineWidth = s * 0.1; g.shadowColor = sk.c1; g.shadowBlur = blur(8);
         g.beginPath(); g.arc(bx - fx * s * 0.25, cy, s * 0.8, fx > 0 ? -1.1 : Math.PI - 1.1 + 0.0, fx > 0 ? 1.1 : Math.PI + 1.1); g.stroke();
         g.shadowBlur = 0; g.lineWidth = 1; g.strokeStyle = 'rgba(255,255,255,.7)';
         const ex = bx - fx * s * 0.25 + Math.cos(1.1) * s * 0.8 * fx;
@@ -108,16 +122,49 @@
         break;
       }
       case 'star': {
-        g.strokeStyle = sk.c3; g.lineWidth = s * 0.09; g.shadowColor = sk.c1; g.shadowBlur = 10;
+        g.strokeStyle = sk.c3; g.lineWidth = s * 0.09; g.shadowColor = sk.c1; g.shadowBlur = blur(10);
         for (const side of [-1, 1]) {
           const bx = x + side * s * 0.7, by = cy + s * 0.25;
           g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + side * s * 0.3, by - s * 0.55); g.stroke();
         }
         break;
       }
+      case 'spire': {
+        for (let i = 0; i < 3; i++) {
+          const a = t * 3.2 + i * TAU / 3, px = x + Math.cos(a) * s * 0.85, py = cy + Math.sin(a) * s * 0.35 - s * 0.1;
+          poly(g, [[0, -1], [0.55, 0], [0, 1], [-0.55, 0]], px, py, s * 0.16);
+          g.fillStyle = i ? sk.c1 : sk.c3; g.shadowColor = sk.c3; g.shadowBlur = blur(10); g.fill();
+        }
+        break;
+      }
+      case 'axe': {
+        const hx = x + fx * s * 0.5, hy = cy + s * 0.45, ex = x + fx * s * 0.82, ey = cy - s * 0.95;
+        g.strokeStyle = sk.c2; g.lineWidth = s * 0.11;
+        g.beginPath(); g.moveTo(hx, hy); g.lineTo(ex, ey); g.stroke();
+        g.beginPath(); g.moveTo(ex - fx * s * 0.05, ey - s * 0.05); g.quadraticCurveTo(ex + fx * s * 0.55, ey + s * 0.05, ex + fx * s * 0.05, ey + s * 0.55); g.closePath();
+        g.fillStyle = sk.c3; g.shadowColor = sk.c1; g.shadowBlur = blur(10); g.fill();
+        break;
+      }
+      case 'prism': {
+        const px = x + fx * s * 0.75, py = cy - s * 0.1 + Math.sin(t * 4) * s * 0.06;
+        poly(g, [[0, -1], [0.85, 0.6], [-0.85, 0.6]], px, py, s * 0.24);
+        g.fillStyle = sk.c3; g.shadowColor = sk.c1; g.shadowBlur = blur(14); g.fill();
+        g.strokeStyle = sk.c1 + '99'; g.lineWidth = 1.5;
+        for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(px + fx * s * 0.2, py); g.lineTo(px + fx * s * 0.7, py + i * s * 0.3); g.stroke(); }
+        break;
+      }
+      case 'shell': {
+        const ax = x + fx * s * 0.85, ay = cy - s * 0.15;
+        g.strokeStyle = sk.c3; g.lineWidth = s * 0.09;
+        g.beginPath(); g.moveTo(ax, ay - s * 0.45); g.lineTo(ax, ay + s * 0.45); g.stroke();
+        g.beginPath(); g.arc(ax, ay + s * 0.15, s * 0.32, 0.2, Math.PI - 0.2); g.stroke();
+        g.beginPath(); g.moveTo(ax - s * 0.2, ay - s * 0.25); g.lineTo(ax + s * 0.2, ay - s * 0.25); g.stroke();
+        g.beginPath(); g.arc(ax, ay - s * 0.52, s * 0.09, 0, TAU); g.stroke();
+        break;
+      }
       case 'halo': {
         g.beginPath(); g.ellipse(x, cy - s * 1.15, s * 0.55, s * 0.16, 0, 0, TAU);
-        g.strokeStyle = sk.c3; g.lineWidth = s * 0.1; g.shadowColor = sk.c1; g.shadowBlur = 16; g.stroke();
+        g.strokeStyle = sk.c3; g.lineWidth = s * 0.1; g.shadowColor = sk.c1; g.shadowBlur = blur(16); g.stroke();
         const a = t * 1.5;
         g.beginPath(); g.arc(x + Math.cos(a) * s * 0.9, cy + Math.sin(a) * s * 0.35 + s * 0.1, s * 0.13, 0, TAU); g.fillStyle = sk.c1; g.fill();
         break;
@@ -150,7 +197,7 @@
     }
     g.fill(); g.stroke();
     if (u.mtype === 'ranged') { g.beginPath(); g.arc(u.x, cy - r * 0.15, r * 0.25, 0, TAU); g.fillStyle = '#fff'; g.fill(); }
-    if (u.mtype === 'golem') { g.beginPath(); g.arc(u.x, cy - r * 0.2, r * 0.22, 0, TAU); g.fillStyle = '#8ff7ff'; g.shadowColor = '#8ff7ff'; g.shadowBlur = 12; g.fill(); g.shadowBlur = 0; }
+    if (u.mtype === 'golem') { g.beginPath(); g.arc(u.x, cy - r * 0.2, r * 0.22, 0, TAU); g.fillStyle = '#8ff7ff'; g.shadowColor = '#8ff7ff'; g.shadowBlur = blur(12); g.fill(); g.shadowBlur = 0; }
     if (u.flash > 0) { g.globalAlpha = 0.6; g.fillStyle = '#fff'; g.fill(); g.globalAlpha = 1; }
   }
 
@@ -222,7 +269,7 @@
         const a = t * 1.2 + i * TAU / 4, sx = u.x + Math.cos(a) * r * 1.5, sy = cy + Math.sin(a) * r * 0.5;
         poly(g, [[0, -1], [0.55, 0], [0, 1], [-0.55, 0]], sx, sy, 12); g.fillStyle = '#9ffcff'; g.fill();
       }
-      g.beginPath(); g.arc(u.x, cy - r * 0.2, r * 0.2, 0, TAU); g.fillStyle = '#fff'; g.shadowColor = '#8ff7ff'; g.shadowBlur = 16; g.fill(); g.shadowBlur = 0;
+      g.beginPath(); g.arc(u.x, cy - r * 0.2, r * 0.2, 0, TAU); g.fillStyle = '#fff'; g.shadowColor = '#8ff7ff'; g.shadowBlur = blur(16); g.fill(); g.shadowBlur = 0;
     }
     if (u.flash > 0) { g.globalAlpha = 0.4; g.beginPath(); g.arc(u.x, u.y - r, r, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.globalAlpha = 1; }
   }
@@ -405,7 +452,7 @@
         if (!u.alive) g.globalAlpha = Math.max(0, 1 - u.deadT / 0.6);
         if (u.kind === 'hero') {
           const sk = SF.SKIN[u.skin];
-          if (sk && sk.aura && Math.random() < 0.35 && m.parts.length < 650) {
+          if (sk && sk.aura && Math.random() < (SF.gfx.low ? 0.08 : 0.35) && m.parts.length < 650) {
             m.parts.push({ x: u.x + (Math.random() - 0.5) * 36, y: u.y - Math.random() * 50, vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 30, life: 0.9, max: 0.9, color: AURA[sk.aura], size: 2.5 + Math.random() * 2.5, shape: sk.aura === 'frost' || sk.aura === 'gold' || sk.aura === 'storm' ? 'diamond' : 'dot' });
           }
           const ring = u === p ? '#5be38a' : SF.TEAM_COLORS[u.team];
@@ -424,8 +471,14 @@
         if (!inView(pr.x, pr.y)) continue;
         const yo = pr.homing ? 0 : -24;
         g.save(); g.translate(pr.x, pr.y + yo); g.rotate(pr.ang || 0);
-        g.shadowColor = pr.color; g.shadowBlur = 12;
-        if (pr.kind === 'arrow') { g.strokeStyle = pr.color; g.lineWidth = 4; g.beginPath(); g.moveTo(-26, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#fff'; poly(g, [[1, 0], [-0.4, 0.5], [-0.4, -0.5]], 12, 0, 8); g.fill(); }
+        g.shadowColor = pr.color; g.shadowBlur = blur(12);
+        if (pr.kind === 'hook') {
+          g.restore(); g.save();
+          g.setLineDash([6, 5]); g.beginPath(); g.moveTo(pr.src.x, pr.src.y - 24); g.lineTo(pr.x, pr.y - 24); g.strokeStyle = '#c9d6e8'; g.lineWidth = 3; g.stroke(); g.setLineDash([]);
+          g.translate(pr.x, pr.y - 24); g.rotate(pr.ang || 0);
+          g.strokeStyle = pr.color; g.lineWidth = 4; g.beginPath(); g.moveTo(-10, 0); g.lineTo(10, 0); g.stroke();
+          g.beginPath(); g.arc(4, 0, 12, -1.3, 1.3); g.stroke();
+        } else if (pr.kind === 'arrow') { g.strokeStyle = pr.color; g.lineWidth = 4; g.beginPath(); g.moveTo(-26, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#fff'; poly(g, [[1, 0], [-0.4, 0.5], [-0.4, -0.5]], 12, 0, 8); g.fill(); }
         else if (pr.kind === 'wave') { g.fillStyle = pr.color + 'cc'; g.beginPath(); g.ellipse(0, 0, 34, pr.r, 0, -1.4, 1.4); g.lineTo(-10, 0); g.closePath(); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, 0, 34, pr.r, 0, -1.2, 1.2); g.stroke(); }
         else { g.fillStyle = pr.color; g.beginPath(); g.arc(0, 0, pr.r, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, pr.r * 0.45, 0, TAU); g.fill(); }
         g.restore();
@@ -445,6 +498,17 @@
         g.globalAlpha = 1 - k;
         if (f.type === 'ring') { g.beginPath(); g.ellipse(f.x, f.y, f.r * (0.4 + 0.6 * k), f.r * (0.4 + 0.6 * k) * 0.9, 0, 0, TAU); g.strokeStyle = f.color; g.lineWidth = f.w; g.stroke(); }
         else if (f.type === 'slash') { g.beginPath(); g.arc(f.x, f.y - 20, 26, f.ang - 1 + k, f.ang + 0.6 + k); g.strokeStyle = f.color; g.lineWidth = 5 * (1 - k) + 1; g.stroke(); }
+        else if (f.type === 'beam') { zig(g, f.x, f.y - 22, f.x2, f.y2 - 22, 7, 14); g.strokeStyle = f.color; g.lineWidth = 5; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); }
+        else if (f.type === 'lightning') { zig(g, f.x, f.y - 420, f.x, f.y, 9, 30); g.strokeStyle = f.color; g.lineWidth = 7; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.stroke(); }
+        else if (f.type === 'arc') { g.beginPath(); g.moveTo(f.x, f.y); g.arc(f.x, f.y, f.r * (0.6 + 0.4 * k), f.ang - 0.75, f.ang + 0.75); g.closePath(); g.fillStyle = f.color + '66'; g.fill(); g.strokeStyle = f.color; g.lineWidth = 3; g.stroke(); }
+        else if (f.type === 'fissure') {
+          const ex = f.x + f.dir.x * f.len, ey = f.y + f.dir.y * f.len;
+          zig(g, f.x, f.y, ex, ey, 12, 16); g.strokeStyle = '#1a0d06'; g.lineWidth = 16; g.stroke(); g.strokeStyle = f.color; g.lineWidth = 6; g.stroke();
+        }
+        else if (f.type === 'lance') {
+          const ex = f.x + f.dir.x * f.len, ey = f.y + f.dir.y * f.len;
+          g.beginPath(); g.moveTo(f.x, f.y - 24); g.lineTo(ex, ey - 24); g.strokeStyle = f.color; g.lineWidth = 34 * (1 - k) + 2; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 10 * (1 - k) + 1; g.stroke();
+        }
       }
       g.globalAlpha = 1;
       // bushes (drawn over units so heroes inside are tucked in)
@@ -501,6 +565,29 @@
         } else {
           for (let i = 0; i < 3; i++) { g.beginPath(); g.ellipse(zn.x, zn.y, zn.r * (0.4 + i * 0.25), zn.r * 0.9 * (0.4 + i * 0.25), 0, t * 8 + i, t * 8 + i + 4); g.strokeStyle = zn.color; g.lineWidth = 4; g.stroke(); }
         }
+      } else if (zn.kind === 'static') {
+        g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.fillStyle = zn.color + '26'; g.fill();
+        g.strokeStyle = zn.color; g.lineWidth = 2; g.stroke();
+        for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, b = Math.random() * TAU; zig(g, zn.x + Math.cos(a) * zn.r * 0.8, zn.y + Math.sin(a) * zn.r * 0.7, zn.x + Math.cos(b) * zn.r * 0.8, zn.y + Math.sin(b) * zn.r * 0.7, 5, 18); g.strokeStyle = '#ffffffcc'; g.lineWidth = 1.5; g.stroke(); }
+      } else if (zn.kind === 'tempest') {
+        g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.fillStyle = 'rgba(20,10,40,.35)'; g.fill();
+        g.setLineDash([10, 8]); g.strokeStyle = zn.color; g.lineWidth = 2.5; g.stroke(); g.setLineDash([]);
+        g.beginPath(); g.ellipse(zn.x, zn.y, zn.r * 0.7, zn.r * 0.63, 0, t * 4, t * 4 + 4); g.strokeStyle = zn.color + '88'; g.lineWidth = 4; g.stroke();
+      } else if (zn.kind === 'fissure' || zn.kind === 'charge') {
+        const o = zn.follow || zn, k = Math.min(1, zn.t / (zn.dur || 1));
+        const ex = o.x + zn.dir.x * zn.len, ey = o.y + zn.dir.y * zn.len, w = zn.kind === 'fissure' ? 90 : 64;
+        g.save(); g.translate(o.x, o.y); g.rotate(Math.atan2(zn.dir.y, zn.dir.x));
+        g.fillStyle = zn.color + '22'; g.fillRect(0, -w / 2, zn.len, w);
+        g.fillStyle = zn.color + '55'; g.fillRect(0, -w / 2, zn.len * k, w);
+        g.strokeStyle = zn.color; g.lineWidth = 2; g.setLineDash([8, 6]); g.strokeRect(0, -w / 2, zn.len, w); g.setLineDash([]);
+        g.restore();
+        if (zn.kind === 'charge') { g.beginPath(); g.moveTo(o.x, o.y - 24); g.lineTo(ex, ey - 24); g.strokeStyle = '#ffffff'; g.lineWidth = 1 + k * 3; g.stroke(); }
+      } else if (zn.kind === 'dome') {
+        const gr = g.createRadialGradient(zn.x, zn.y - 30, zn.r * 0.2, zn.x, zn.y, zn.r);
+        gr.addColorStop(0, zn.color + '10'); gr.addColorStop(1, zn.color + '55');
+        g.fillStyle = gr; g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.fill();
+        g.strokeStyle = zn.color; g.lineWidth = 4; g.stroke();
+        for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + t, yy = zn.y - ((t * 60 + i * 25) % 110); g.beginPath(); g.arc(zn.x + Math.cos(a) * zn.r * 0.7, yy + Math.sin(a) * zn.r * 0.4, 5, 0, TAU); g.strokeStyle = '#ffffffaa'; g.lineWidth = 1.5; g.stroke(); }
       } else if (zn.kind === 'sanct') {
         const gr = g.createRadialGradient(zn.x, zn.y, 0, zn.x, zn.y, zn.r);
         gr.addColorStop(0, zn.color + '44'); gr.addColorStop(1, zn.color + '11');
@@ -520,9 +607,10 @@
       if (s.range) { g.beginPath(); g.ellipse(p.x, p.y, s.range, s.range * 0.92, 0, 0, TAU); g.setLineDash([10, 8]); g.stroke(); g.setLineDash([]); }
       if (s.ground && a.point) { g.beginPath(); g.ellipse(a.point.x, a.point.y, s.ai === 'fight' ? 220 : 130, (s.ai === 'fight' ? 220 : 130) * 0.9, 0, 0, TAU); g.fill(); g.stroke(); }
       else if (s.needsTarget) { if (a.target) { g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(a.target.x, a.target.y); g.stroke(); g.beginPath(); g.ellipse(a.target.x, a.target.y, 34, 16, 0, 0, TAU); g.strokeStyle = '#ff5d6c'; g.lineWidth = 3; g.stroke(); } }
-      else if (s.kind === 'nova' || (s.range && s.range < 260 && s.kind !== 'dash')) { g.beginPath(); g.ellipse(p.x, p.y, s.range, s.range * 0.92, 0, 0, TAU); g.fill(); }
+      else if (s.id === 'cleave') { g.beginPath(); g.moveTo(p.x, p.y); g.arc(p.x, p.y, s.range, Math.atan2(a.dir.y, a.dir.x) - 0.75, Math.atan2(a.dir.y, a.dir.x) + 0.75); g.closePath(); g.fill(); g.stroke(); }
+      else if (s.kind === 'nova' || (s.range && s.range < 270 && s.kind !== 'dash')) { g.beginPath(); g.ellipse(p.x, p.y, s.range, s.range * 0.92, 0, 0, TAU); g.fill(); }
       else if (s.range) {
-        const wdt = s.id === 'leviathan_surge' ? 120 : s.id === 'storm_volley' ? 0 : 36;
+        const wdt = s.id === 'leviathan_surge' ? 120 : s.id === 'earthsplitter' ? 90 : s.id === 'solar_lance' ? 64 : s.id === 'storm_volley' || s.id === 'refraction' ? 0 : 36;
         g.translate(p.x, p.y); g.rotate(Math.atan2(a.dir.y, a.dir.x));
         if (wdt) { g.fillRect(0, -wdt / 2, s.range, wdt); g.strokeRect(0, -wdt / 2, s.range, wdt); }
         else { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, s.range, -0.42, 0.42); g.closePath(); g.fill(); g.stroke(); }

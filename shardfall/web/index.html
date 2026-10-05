@@ -16,9 +16,10 @@
 
   <section id="lobby" class="screen">
     <header class="topbar">
-      <button class="profile" data-act="settings" aria-label="Profile and settings">
+      <button class="profile" data-act="go" data-v="profile" aria-label="Profile">
         <span class="lvl" id="accLvl"><b>1</b></span>
         <span class="pname" id="pName">Shardling</span>
+        <i class="badge" id="bProf" hidden></i>
       </button>
       <div class="currencies">
         <button class="cur" data-act="go" data-v="free" aria-label="Coins"><i class="ico ico-coin"></i><b id="coinVal">0</b></button>
@@ -45,7 +46,7 @@
     <canvas id="game"></canvas>
     <div class="hud-top">
       <canvas id="minimap" aria-label="Minimap"></canvas>
-      <div class="score"><b id="kBlue" class="k-blue">0</b><span id="clock">0:00</span><b id="kRed" class="k-red">0</b></div>
+      <button class="score" id="scoreBtn" aria-label="Scoreboard"><b id="kBlue" class="k-blue">0</b><span id="clock">0:00</span><b id="kRed" class="k-red">0</b></button>
       <div class="hud-top-right">
         <div id="buffs" class="buffs"></div>
         <button id="btnPause" class="icon-btn" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
@@ -74,6 +75,7 @@
     <div id="death" class="death" hidden><p>Respawning in</p><b id="respawnT">0</b></div>
     <div class="xp"><i id="xpFill"></i></div>
     <div id="rotate" class="rotate-hint" hidden>Turn your phone sideways for the full arena</div>
+    <div id="board" class="board" hidden></div>
     <div id="shop" class="sheet" hidden></div>
     <div id="pause" class="pause" hidden></div>
     <div id="tutorial" class="tutorial" hidden></div>
@@ -83,6 +85,7 @@
 </div>
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/match.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/hud.js"></script>

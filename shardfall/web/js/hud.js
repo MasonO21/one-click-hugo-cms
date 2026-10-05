@@ -85,7 +85,7 @@
     const el = $('pause');
     el.hidden = !paused;
     if (paused) {
-      el.innerHTML = `<div class="tut"><p class="eyebrow">Paused</p><h3>Take a breather</h3>
+      el.innerHTML = `<div class="tut"><p class="eyebrow">Paused · ${m.mode === 'brawl' ? 'Shard Brawl' : m.remote ? 'Online' : 'Match'}</p><h3>${m.remote ? 'The match keeps running' : 'Take a breather'}</h3>
         <div class="actions"><button class="btn primary" data-hud="resume">Resume</button>
         <button class="btn ghost" data-hud="sound">Sound: ${SF.store.d.settings.sound ? 'On' : 'Off'}</button>
         <button class="btn ghost" data-hud="surrender">Surrender</button></div></div>`;
@@ -118,6 +118,24 @@
         return `<div class="irow ${r >= 0 ? 'rec' : ''}">${SF.itemIcon(id)}<div><b>${it.name}</b>${r >= 0 ? ` <span class="tag">Build ${r + 1}</span>` : ''}<p>${it.desc}</p></div>
           ${owned ? '<span class="own">Owned</span>' : `<button class="btn sm buy" data-hud="buy" data-id="${id}" ${can ? '' : 'disabled'}><i class="ico ico-coin"></i>${it.cost}</button>`}</div>`;
       }).join('')}<p class="muted" style="font-size:13px">You can shop from anywhere on the map. Six item slots.</p></div>`;
+  }
+
+  function toggleBoard(force) {
+    const el = $('board');
+    el.hidden = force != null ? !force : !el.hidden;
+    if (!el.hidden) renderBoard();
+  }
+  function renderBoard() {
+    const side = team => m.heroes.filter(h => h.team === team).map(h => {
+      const hidden = team !== 0 && !m.visible(h, 0);
+      return `<div class="brow ${h === m.player ? 'me' : ''} ${h.alive ? '' : 'dead'}"><span class="bdot" style="--c:${(SF.SKIN[h.skin] || {}).c1 || '#fff'}"></span>
+        <span class="bname"><b>${h.name}</b><span>${h.def0.name} · Lv ${h.level}${h.alive ? '' : ` · ${Math.ceil(h.respawnT)}s`}${hidden ? ' · unseen' : ''}</span></span>
+        <span class="bkda num">${h.k}/${h.dth}/${h.ast}</span>
+        <span class="bitems">${h.items.map(id => SF.itemIcon(id)).join('')}</span></div>`;
+    }).join('');
+    $('board').innerHTML = `<div class="board-in"><div class="board-col"><p class="eyebrow" style="color:var(--ally)">Your team · ${m.kills[0]}</p>${side(0)}</div>
+      <div class="board-col"><p class="eyebrow" style="color:var(--enemy)">Enemy team · ${m.kills[1]}</p>${side(1)}</div>
+      <p class="muted small">Tap anywhere to close</p></div>`;
   }
 
   function renderFeed() {
@@ -210,6 +228,8 @@
     $('btnShop').addEventListener('click', () => toggleShop());
     $('btnQuick').addEventListener('click', quickBuy);
     $('btnPause').addEventListener('click', () => togglePause());
+    $('scoreBtn').addEventListener('click', () => toggleBoard());
+    $('board').addEventListener('click', () => toggleBoard(false));
 
     $('match').addEventListener('click', e => {
       const el = e.target.closest('[data-hud]');
@@ -246,6 +266,7 @@
       if (k === 'b') doRecall();
       if (k === 'p' || k === 'tab') toggleShop();
       if (k === 'g') quickBuy();
+      if (k === 'o') toggleBoard();
     });
     window.addEventListener('keyup', e => {
       const k = e.key.toLowerCase();
@@ -261,7 +282,7 @@
     raf = requestAnimationFrame(loop);
     const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
     if (!m) return;
-    if (!paused) {
+    if (!paused || m.remote) {
       const p = m.player;
       p.wantDir = keyDir() || joy.dir;
       m.update(dt);
@@ -306,6 +327,7 @@
       $('slots').innerHTML = Array.from({ length: 6 }, (_, i) => (p.items[i] ? SF.itemIcon(p.items[i]) : '<span class="empty"></span>')).join('');
       $('buffs').innerHTML = p.buffs.filter(b => b.label).map(b => `<span class="buff" style="--c:${b.id === 'shard' ? '#4fe3d3' : '#ffb347'}">${b.label} ${Math.ceil(b.t)}s</span>`).join('');
       if (!$('shop').hidden) renderShop();
+      if (!$('board').hidden) renderBoard();
       renderFeed();
       $('rotate').hidden = !(window.innerHeight > window.innerWidth);
     }
@@ -335,20 +357,24 @@
         b.title = s.name;
       });
       m.on('announce', (text, team, sub) => annQ.push({ text, team, sub }));
-      m.on('kill', ev => { renderFeed(); if (ev.killer === m.player || ev.victim === m.player || ev.assists.includes(m.player)) SF.sfx.play('kill'); });
+      m.on('kill', ev => {
+        renderFeed();
+        if (ev.killer === m.player || ev.victim === m.player || ev.assists.includes(m.player)) { SF.sfx.play('kill'); if (SF.haptics) SF.haptics.impact(); }
+      });
       m.on('levelup', h => { if (h === m.player) { toast(h.level === 4 ? 'Ultimate unlocked' : 'Level ' + h.level); SF.sfx.play('level'); } });
-      m.on('cast', h => { if (h === m.player) SF.sfx.play('skill'); });
+      m.on('cast', h => { if (h === m.player) { SF.sfx.play('skill'); if (SF.haptics) SF.haptics.tap(); } });
       m.on('hit', () => { const n = performance.now(); if (n - lastHit > 90) { lastHit = n; SF.sfx.play('hit'); } });
       m.on('gold', () => { const n = performance.now(); if (n - lastCoin > 160) { lastCoin = n; SF.sfx.play('coin'); } });
       m.on('tower', () => SF.sfx.play('tower'));
       m.on('end', team => {
         ended = true; annQ = [];
-        $('shop').hidden = true; $('death').hidden = true; $('game').classList.remove('dead');
+        $('shop').hidden = true; $('board').hidden = true; $('death').hidden = true; $('game').classList.remove('dead');
         showAnnounce({ text: team === 0 ? 'Victory' : 'Defeat', team: team === 0 ? 2 : 1, sub: team === 0 ? 'The enemy Heartstone shatters' : 'Your Heartstone has fallen' });
         SF.sfx.play(team === 0 ? 'win' : 'lose');
         setTimeout(() => { const s = m.summary(); SF.hud.stop(); onEnd(s); }, 2800);
       });
-      $('shop').hidden = true; $('pause').hidden = true; $('tutorial').hidden = true; $('announce').hidden = true; $('toast').hidden = true;
+      $('shop').hidden = true; $('pause').hidden = true; $('tutorial').hidden = true; $('announce').hidden = true; $('toast').hidden = true; $('board').hidden = true;
+      $('match').classList.toggle('lefty', !!(SF.store.d && SF.store.d.settings.lefty));
       $('feed').innerHTML = '';
       if (opts.tutorial) showTutorial();
       last = performance.now();
