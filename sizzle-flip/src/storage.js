@@ -13,6 +13,8 @@ const DEFAULTS = {
   seenTips: {},
   totalFlips: 0,
   seenSkins: {},
+  ach: {},
+  counters: {},
 };
 
 export function loadSave() {
@@ -20,7 +22,7 @@ export function loadSave() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
     const d = JSON.parse(raw);
-    return { ...DEFAULTS, ...d, stars: d.stars || {}, best: d.best || {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {} };
+    return { ...DEFAULTS, ...d, stars: d.stars || {}, best: d.best || {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
   } catch (e) {
     return { ...DEFAULTS };
   }

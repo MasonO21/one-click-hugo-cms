@@ -3,6 +3,7 @@ import { WORLDS } from './objects.js';
 import { totalStars } from './storage.js';
 import { SKINS, drawSausage, makeFaceState } from './art/sausage.js';
 import { renderLevelThumb } from './thumbs.js';
+import { ACHIEVEMENTS } from './achievements.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -56,7 +57,11 @@ export class UI {
   action(act, el) {
     const app = this.app;
     switch (act) {
-      case 'play': this.show('scr-worlds'); break;
+      case 'play':
+        // brand-new players go straight into the first level
+        if (app.save.unlocked <= 1 && !app.save.stars[0]) { this.stack = ['scr-title', 'scr-worlds']; this.worldIndex = 0; app.startLevel(0); }
+        else this.show('scr-worlds');
+        break;
       case 'skins': this.show('scr-skins'); break;
       case 'settings': this.show('scr-settings'); break;
       case 'back': { const prev = this.stack.pop() || 'scr-title'; this.show(prev, false); break; }
@@ -64,7 +69,13 @@ export class UI {
       case 'resume': $('scr-pause').hidden = true; app.pause(false); break;
       case 'restart': $('scr-pause').hidden = true; $('scr-win').hidden = true; app.restartLevel(); break;
       case 'overview': app.game && app.game.toggleOverview(); break;
-      case 'hint': if (app.game) { app.game.useHint(); this.toast('Follow the dotted route!'); } break;
+      case 'hint':
+        if (app.game) {
+          app.game.useHint();
+          const timed = app.game.sim.bodies.some(b => b.kinematic || b.timer);
+          this.toast(timed ? 'Follow the route — and time it with the moving parts!' : 'Follow the dotted route!', 2600);
+        }
+        break;
       case 'levels': $('scr-pause').hidden = true; $('scr-win').hidden = true; app.toMenu('scr-levels'); break;
       case 'home': $('scr-pause').hidden = true; app.toMenu('scr-title'); break;
       case 'replay': $('scr-win').hidden = true; app.restartLevel(); break;
@@ -77,6 +88,15 @@ export class UI {
   }
 
   confirm(text, cb) { $('confirm-text').textContent = text; this._confirmCb = cb; $('scr-confirm').hidden = false; }
+
+  trophyToast(a) {
+    const t = document.getElementById('trophy');
+    t.innerHTML = `<span class="ti">${a.icon}</span><span><small>TROPHY UNLOCKED</small><b>${a.name}</b></span>`;
+    t.hidden = false;
+    t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+    clearTimeout(this._trT);
+    this._trT = setTimeout(() => { t.hidden = true; }, 3200);
+  }
 
   toast(text, ms = 1800) {
     const t = $('toast');
@@ -197,6 +217,11 @@ export class UI {
       });
       grid.appendChild(d);
     });
+    // trophies
+    const tl = document.getElementById('trophy-list');
+    const got = app.save.ach || {};
+    document.getElementById('trophy-count').textContent = `${Object.keys(got).length} / ${ACHIEVEMENTS.length}`;
+    tl.innerHTML = ACHIEVEMENTS.map(a => `<div class="trophy-row${got[a.id] ? ' got' : ''}"><span class="ti">${got[a.id] ? a.icon : '🔒'}</span><span><b>${a.name}</b><small>${a.desc}</small></span></div>`).join('');
     app.persist();
   }
 

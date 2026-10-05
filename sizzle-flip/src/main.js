@@ -8,6 +8,7 @@ import { UI } from './ui.js';
 import { drawLogo } from './art/logo.js';
 import { SKINS, SKIN_BY_ID } from './art/sausage.js';
 import { PHYS } from './physics.js';
+import { Trophies } from './achievements.js';
 
 const params = new URLSearchParams(location.search);
 // Native shell (Capacitor) bridges — absent on the web.
@@ -27,6 +28,7 @@ class App {
     this.audio.musicOn = this.save.music;
     this.debug = params.has('debug');
     this.ui = new UI(this);
+    this.trophies = new Trophies(this);
     this.game = null;
     this.levelIndex = 0;
     this.last = performance.now();
@@ -236,6 +238,7 @@ class App {
     this.persist();
     if (i % 20 === 19 && wasLocked) this.pendingWorldDone = Math.floor(i / 20);
     this.ui.showWin(game, { stars, best: this.save.best[i], newBest, newSkin, isLast: i === this.levels.length - 1 });
+    setTimeout(() => this.trophies.onWin(game), 1400);
   }
 
   starsFor(flips, par) {
@@ -272,8 +275,12 @@ class App {
 
 const app = new App();
 window.__app = app;
-app.boot();
+// Live-update hook when hosted as a Claude artifact: keep the level being played across republishes.
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) { try { hot.snapshot(() => ({ level: app.game && !app.game.attract ? app.game.info.index : null })); } catch (e) { /* noop */ } }
+const resume = (data) => { app.boot(); if (data && Number.isInteger(data.level)) setTimeout(() => app.startLevel(data.level), 600); };
+if (hot && hot.ready) hot.ready(resume); else resume((hot && hot.data) || {});
 
-if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:' && !params.has('nosw')) {
+if (!NATIVE && !window.__ARTIFACT && 'serviceWorker' in navigator && location.protocol === 'https:' && !params.has('nosw')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }

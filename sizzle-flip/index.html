@@ -137,7 +137,11 @@
         <h2>Sausage Locker</h2>
         <div class="pill"><span class="star">★</span> <b id="skins-stars">0</b></div>
       </header>
-      <div class="skin-grid" id="skin-grid"></div>
+      <div class="locker-scroll">
+        <div class="skin-grid" id="skin-grid"></div>
+        <h3 class="section-title">Trophies <span id="trophy-count"></span></h3>
+        <div class="trophy-list" id="trophy-list"></div>
+      </div>
     </section>
 
     <!-- Settings -->
@@ -165,6 +169,7 @@
     </section>
 
     <div class="toast" id="toast" hidden></div>
+    <div class="trophy-toast" id="trophy" hidden></div>
     <div class="confirm modal" id="scr-confirm" hidden>
       <div class="card">
         <p id="confirm-text">Are you sure?</p>

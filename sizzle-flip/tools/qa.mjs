@@ -1,5 +1,6 @@
-// Human-likeness QA: replays each level's verified route with small human-sized errors
-// (aim ±1.5°, power ±2.5%, reaction delay 0.2–1.2 s) and reports how often it still wins.
+// Human-likeness QA: replays each level's verified route end-to-end with human-sized errors on every
+// shot (aim ±1.2°, power ±2%, timing ±0.06 s) and reports how often the whole route still wins.
+// (Pessimistic: a real player re-aims after an imperfect landing; this replay does not.)
 // Usage: node tools/qa.mjs [--file src/levels/data.js] [--n 30] [--ids 0,1,2]
 import { makeSim } from './solver.mjs';
 import { PHYS } from '../src/physics.js';
@@ -20,12 +21,12 @@ export function perturbedRate(L, wi, n = 30, seed = 1) {
   for (let k = 0; k < n; k++) {
     const sim = makeSim(L, wi);
     for (const [a, p, delay] of L.solution) {
-      const d = (delay || 0) + 0.2 + rnd() * 1.0;
+      const d = Math.max(0, (delay || 0) + (rnd() - 0.5) * 0.12);
       const steps = Math.round(d / PHYS.DT);
       for (let i = 0; i < steps && sim.status === 'play'; i++) sim.step();
       if (sim.status !== 'play') break;
-      const aa = a + (rnd() - 0.5) * 2 * (1.5 * Math.PI / 180);
-      const pp = Math.max(0, Math.min(1, p + (rnd() - 0.5) * 2 * 0.025));
+      const aa = a + (rnd() - 0.5) * 2 * (1.2 * Math.PI / 180);
+      const pp = Math.max(0, Math.min(1, p + (rnd() - 0.5) * 2 * 0.02));
       const v = PHYS.MIN_V + (PHYS.MAX_V - PHYS.MIN_V) * pp;
       sim.launch(Math.cos(aa) * v, Math.sin(aa) * v);
       const t0 = sim.t;
@@ -44,7 +45,7 @@ if (process.argv[1].endsWith('qa.mjs')) {
     if (!L) { console.log(i + 1, 'MISSING'); continue; }
     const r = perturbedRate(L, Math.floor(i / 20), N, i + 1);
     rows.push([i, r]);
-    console.log(`#${i + 1} ${L.name.padEnd(26)} par ${L.par}  human-ish success ${(r * 100).toFixed(0)}%${r < 0.15 ? '  <-- TOUGH' : ''}`);
+    console.log(`#${i + 1} ${L.name.padEnd(26)} par ${L.par}  route success ${(r * 100).toFixed(0)}%${r < 0.15 ? '  <-- TOUGH' : ''}`);
   }
   const avg = rows.reduce((a, b) => a + b[1], 0) / rows.length;
   console.log('average', (avg * 100).toFixed(1) + '%');

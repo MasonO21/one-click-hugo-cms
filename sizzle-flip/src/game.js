@@ -67,6 +67,9 @@ export class Game {
       return !!(b.kinematic || ty.anim || ty.role === 'bouncer' || ty.role === 'launcher' || ty.role === 'start' || b.timer);
     });
     this.winT = 0;
+    this.winShown = false;
+    this.timeScale = 1;
+    this.acc = 0;
     this.aim = null;
     this.face.expr = 'idle';
     if (!first) {
@@ -160,7 +163,7 @@ export class Game {
     this.fx.dust(cx, cy + 12, 8, 0.8);
     if (inPan) {
       const bs = this.bodyState[this.panBody];
-      bs.flipV = -9 - power * 8;
+      bs.flipV = 9 + power * 8;
       this.fx.oil(cx, cy + 8, 10);
       this.au.play('panflip', { power });
     } else {
@@ -169,6 +172,7 @@ export class Game {
     this.face.expr = 'wide';
     this.hap(12);
     this.lastSettled = false;
+    if (!this.attract) this.app.trophies.onFlip();
   }
 
   // ---- hints: trace the verified solution from the start as a dotted route
@@ -181,6 +185,7 @@ export class Game {
     this.reset();
     this.showHint = true;
     this.hintPaths = this.traceSolution();
+    this.app.trophies.onHint();
     this.au.play('unlock');
     this.hud();
   }
@@ -225,6 +230,18 @@ export class Game {
       ctx.beginPath(); ctx.arc(x0, y0 - 46, 17, 0, TAU); ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
       ctx.fillStyle = INK; ctx.fillText(String(k + 1), x0, y0 - 45);
     });
+    // a ghost sausage tracing the route on loop
+    const all = this.hintPaths.flatMap(hp => hp.pts);
+    if (all.length > 2) {
+      const idx = Math.floor((this.t * 60) % (all.length + 40));
+      if (idx < all.length) {
+        const [gx, gy] = all[idx];
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath(); ctx.ellipse(gx, gy, 62, 16, 0, 0, TAU);
+        ctx.fillStyle = '#ffb08a'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(58,34,22,0.6)'; ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
     ctx.restore();
   }
 
@@ -383,6 +400,7 @@ export class Game {
         if (e.speed > 260) this.fx.dust(e.x, e.y, Math.round(4 + k * 10), 0.6 + k, IMPACT_COLORS[e.mat] || '#ffffff');
         if (e.speed > 900) { this.fx.shake(4 + k * 8); this.hap(8); }
         if (e.boost || e.bounce > 0.6) {
+          if (e.speed > 300 && !this.attract) this.app.trophies.onBounce();
           if (e.speed > 300) { this.fx.text(pick(['BOING!', 'BOINK!', 'SPROING!']), e.x, e.y - 60, { size: 34, color: '#7be0ff', life: 0.8 }); this.fx.ring(e.x, e.y, 10, 70, 0.35, '#ffffff'); }
         }
         if (e.sticky && e.speed > 200) this.fx.text('SPLAT!', e.x, e.y - 50, { size: 30, color: '#ff8fc7', life: 0.7 });
@@ -390,6 +408,7 @@ export class Game {
         const st = this.bodyState[e.body];
         if (st) st.pop = 1;
         this.fx.text('POP!', e.x, e.y - 70, { size: 46, color: '#ffd23f' });
+        if (!this.attract) this.app.trophies.onLauncher(s.bodies[e.body] && s.bodies[e.body].type && s.bodies[e.body].type.id);
         this.fx.sparks(e.x, e.y, 10, '#ffd23f');
         this.fx.shake(8);
         this.au.play('pop');
@@ -407,6 +426,7 @@ export class Game {
     if (this.phase !== 'play') return;
     this.fails = (this.fails || 0) + 1;
     this.hud();
+    if (!this.attract) this.app.trophies.onFail(reason);
     this.phase = 'fail';
     this.phaseT = 0;
     const msgs = FAIL_TEXT[reason] || FAIL_TEXT.floor;
@@ -553,6 +573,7 @@ export class Game {
 
   drawContactShadow(ctx, b) {
     if (b.kinematic) return;
+    if (this.world.id === 'space' || this.world.id === 'heaven') return; // nothing to cast onto
     const inst = b.inst, ty = b.type;
     const s = inst.s || 1;
     const w = (inst.w || ty.w) * s, h = (inst.h || ty.h) * s;

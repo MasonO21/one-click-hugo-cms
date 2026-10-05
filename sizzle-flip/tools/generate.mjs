@@ -172,6 +172,8 @@ const RECIPES = {
   },
 };
 
+export const RECIPES_EXPORT = RECIPES;
+
 // ------------------------------------------------------------------ helpers
 function mulberry(seed) {
   let a = seed >>> 0;
@@ -445,7 +447,10 @@ export class Builder {
     const want = [];
     if (this.introMech) want.push(this.introMech);
     const extraCount = simple ? 0 : Math.floor(d * 3 + this.r() * 1.5);
-    for (let i = 0; i < extraCount && mechs.length; i++) want.push(this.pick(mechs));
+    for (let i = 0; i < extraCount && mechs.length; i++) {
+      const m = this.pick(mechs);
+      if (!want.includes(m) || ['stone', 'bouncer', 'hazard'].includes(m.kind)) want.push(m);
+    }
 
     // stone-like mechanics replace planned stones
     const stoneKinds = ['stone', 'groundstone', 'launcher', 'mover', 'bouncer', 'cup', 'conveyor', 'orbit', 'orbitufo', 'bob', 'timedstone', 'lift'];
@@ -535,6 +540,9 @@ export class Builder {
     const bl = this.available('blocker');
     if (!simple && bl.length && this.r() < 0.3 + d * 0.3) this.placeObstacle(this.pick(bl), placed, bun, d);
 
+    // the level must actually feature the mechanic it introduces
+    if (this.introMech && !this.objects.some(o => o.t === this.introMech.t)) return null;
+
     // ---- assemble
     return {
       h: H,
@@ -561,16 +569,29 @@ export class Builder {
           return null;
         }
         if (this.R.float || !this.R.ground.length) return this.stone(p.t, x, y);
+        const onFloor = () => {
+          // planned x first, then scan the floor for any free spot
+          const xsTry = [x];
+          for (let k = 0; k < 14; k++) xsTry.push(60 + (520 * k) / 13);
+          for (const tx of xsTry) {
+            placeOnBottom(inst, tx, H);
+            const fb = worldBox(inst);
+            if (fb.x0 < 4 || fb.x1 > W - 4 || !this.free(fb, 6)) continue;
+            this.add(inst, { box: fb });
+            return inst;
+          }
+          return null;
+        };
         placeOnStrip(inst, x, y);
         const b = worldBox(inst);
         const gap = H - b.y1;
-        if (gap > 460) return null;
-        if (b.x0 < 4 || b.x1 > W - 4 || !this.free(b, 22)) return null;
+        if (gap > 620) return onFloor();
+        if (b.x0 < 4 || b.x1 > W - 4 || !this.free(b, 22)) return onFloor();
         const gt = this.R.ground[0] === 'pillar' ? 'cabinet' : this.R.ground[0];
         const w = clamp(b.x1 - b.x0 + 20, 160, 340);
         const g = { t: gt, x: clamp((b.x0 + b.x1) / 2, w / 2 + 2, W - w / 2 - 2), y: H - gap / 2, w, h: gap, color: this.pick(this.R.groundColor) };
         const gb = worldBox(g); gb.y0 = Math.max(gb.y0, b.y1 - 2);
-        if (!this.free(gb, 14)) return null;
+        if (!this.free(gb, 14)) return onFloor();
         this.add(inst, { box: b }); this.add(g, { box: gb });
         return inst;
       }

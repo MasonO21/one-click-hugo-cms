@@ -26,10 +26,11 @@ html = html.replace('<script type="module" src="src/main.js"></script>', () => `
 const hash = crypto.createHash('sha1').update(html).digest('hex').slice(0, 10);
 
 if (artifact) {
-  const icon = 'data:image/png;base64,' + fs.readFileSync(path.join(root, 'icons/icon-64.png')).toString('base64');
-  html = html.replace('<link rel="manifest" href="manifest.webmanifest">\n', '');
-  html = html.replace(/<link rel="icon"[^>]*>/, `<link rel="icon" type="image/png" href="${icon}">`);
-  html = html.replace(/<link rel="apple-touch-icon"[^>]*>\n?/, '');
+  // Artifact pages are wrapped in their own document skeleton: emit only title, styles and body content.
+  const title = html.match(/<title>[^<]*<\/title>/)[0];
+  const style = html.match(/<style>[\s\S]*?<\/style>/)[0];
+  const body = html.match(/<body>([\s\S]*)<\/body>/)[1];
+  html = `${title}\n<meta name="theme-color" content="#ef4b3c">\n${style}\n<script>window.__ARTIFACT = true;</script>\n${body}`;
 } else {
   fs.mkdirSync(path.join(out, 'icons'), { recursive: true });
   for (const f of fs.readdirSync(path.join(root, 'icons'))) fs.copyFileSync(path.join(root, 'icons', f), path.join(out, 'icons', f));

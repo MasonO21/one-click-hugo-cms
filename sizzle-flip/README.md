@@ -8,7 +8,7 @@ Inspired by the one-button chaos of *a weird game about sausage*, rebuilt for ph
 |---|---|
 | **Platforms** | iOS & Android (installable PWA, works offline) · Capacitor native shell for the App Store / Play Store · any desktop browser |
 | **Controls** | Drag back anywhere, aim with the trajectory guide, release to flip. Land on things, flip again. |
-| **Content** | 10 worlds × 20 levels, 600 stars, 12 unlockable sausage skins, hints, per-level par & best scores |
+| **Content** | 10 worlds × 20 levels, 600 stars, 12 unlockable sausage skins, 17 trophies, route hints, per-level par & best scores |
 | **Tech** | Vanilla JS + Canvas 2D, custom deterministic soft-body physics, procedural vector art, synthesized audio — zero image/audio assets |
 
 ## The worlds
@@ -52,7 +52,9 @@ Native extras are wired in automatically when running inside Capacitor: real hap
 
 Levels are built by `tools/generate.mjs` from per-world *recipes* (which props, hazards and mechanics are unlocked at each level, with the tutorial tip that introduces them) and a difficulty curve (target par, level height, obstacle density).
 
-Every candidate level is then **played by a bot**: `tools/solver.mjs` beam-searches thousands of flips per resting position using the *exact same deterministic physics* the game runs, finds the fewest-flip route, measures how forgiving each required shot is (neighbouring aim/power samples must also succeed), and rejects levels that are impossible, trivial, or require pixel-perfect shots. The winning route is stored with the level and **replayed continuously** to prove it reproduces — that same route powers the in-game 💡 hint and the title-screen demo.
+Every candidate level is then **played by a bot**: `tools/solver.mjs` beam-searches thousands of flips per resting position using the *exact same deterministic physics* the game runs and finds the fewest-flip route. Each shot on that route is re-fired with human-sized mistakes (aim ±1.2°, power ±2%, reaction time ±0.06 s) and must still work a set fraction of the time — high for early levels, lower as the game gets harder — so no level depends on a pixel-perfect shot. Impossible, trivial or fragile levels are rejected and rebuilt. The winning route is stored with the level and **replayed continuously** to prove it reproduces; that same route powers the in-game 💡 hint and the title-screen demo.
+
+`node tools/qa.mjs` re-plays every stored route with random human error and reports a success rate per level.
 
 ```bash
 node tools/generate.mjs --workers 4             # (re)generate all 200 levels → src/levels/data.js

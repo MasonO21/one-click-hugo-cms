@@ -2,6 +2,7 @@
 import { INK, rgba, circlePath, ellipsePath } from './art/common.js';
 
 const TAU = Math.PI * 2;
+const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CONFETTI = ['#ff5d5d', '#ffd23f', '#3fc1ff', '#7be07b', '#ff8fd1', '#ffffff', '#b38cff'];
 
 export class FX {
@@ -87,7 +88,10 @@ export class FX {
     this.texts.push({ str, x, y, t: 0, life: opts.life || 1.1, size: opts.size || 46, color: opts.color || '#ffd23f', rot: opts.rot ?? (Math.random() - 0.5) * 0.2, vy: opts.vy ?? -60 });
   }
 
-  shake(a) { this.shakeAmt = Math.min(28, Math.max(this.shakeAmt, a)); }
+  shake(a) {
+    if (REDUCED_MOTION) return;
+    this.shakeAmt = Math.min(28, Math.max(this.shakeAmt, a));
+  }
 
   update(dt) {
     for (const p of this.parts) {

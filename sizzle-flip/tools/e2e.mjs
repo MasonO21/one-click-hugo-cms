@@ -15,8 +15,10 @@ await page.waitForTimeout(1500);
 const shot = (n) => page.screenshot({ path: `/tmp/claude-0/shots/e2e-${n}.png` });
 if (startLevel === 1) {
   await page.click('[data-act=play]', { force: true }); await page.waitForTimeout(700);
-  await page.click('.world-card', { force: true }); await page.waitForTimeout(700);
-  await page.click('.lvl', { force: true });
+  if (await page.evaluate(() => window.__app.game.attract)) {
+    await page.click('.world-card', { force: true }); await page.waitForTimeout(700);
+    await page.click('.lvl', { force: true });
+  }
 } else {
   await page.evaluate((i) => window.__app.startLevel(i), startLevel - 1);
 }
