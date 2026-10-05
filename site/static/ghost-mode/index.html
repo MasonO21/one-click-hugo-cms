@@ -558,6 +558,31 @@ button.stat:hover{border-color:var(--trust)}
 @media (min-width:900px){.try-bar .scenarios{flex-wrap:wrap;flex:none}}
 @media (max-width:560px){.plans,.included{grid-template-columns:minmax(0,1fr)}.plan-note{min-height:0}}
 
+/* ---------- v9: readable "what was sent" log ---------- */
+.drawer .wl{padding:12px;gap:6px;font-size:13px;background:var(--surface-2);border:1px solid transparent}
+.drawer .wl-head{display:flex;align-items:flex-start;gap:10px;font-weight:400}
+.wl-icon{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--surface);color:var(--muted)}
+.wl-icon .ic{width:17px;height:17px}
+.wl.down .wl-icon{background:var(--soft-tint);color:var(--soft-ink)}
+.wl.sev-urgent .wl-icon{background:var(--alert);color:var(--on-alert)}
+.wl.sev-watch .wl-icon{background:var(--safe-tint);color:var(--safe-ink)}
+.wl.sev-info .wl-icon{background:var(--trust-tint);color:var(--trust-ink)}
+.wl.sev-ok .wl-icon{background:var(--lime);color:#222222}
+.wl-main{display:grid;gap:1px;min-width:0}
+.wl-title{font-weight:700;font-size:14px;line-height:1.3}
+.wl-when{font-size:12px;color:var(--muted)}
+.wl-text{font-size:13.5px;line-height:1.45;overflow-wrap:anywhere}
+.wl-private{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ok)}
+.wl-private.consent{color:var(--soft-ink)}
+.drawer .wl.counts{background:transparent;border:1px dashed var(--line);padding:9px 12px}
+.drawer .wl.counts .wl-icon{width:26px;height:26px;background:var(--surface-2)}
+.drawer .wl.counts .wl-title{font-size:13px}
+.drawer .wl.counts .wl-text{font-size:12.5px;color:var(--muted)}
+.wl-data summary{font-size:12px;color:var(--muted);font-weight:600}
+.wl-tags li{font-size:12px;padding:3px 9px;background:var(--surface)}
+.leak.bad{background:var(--urgent-tint)}
+.leak.bad .leak-num{color:var(--urgent)}
+
 /* ---------- responsive ---------- */
 @media (max-width:1279px){
   .pane.wall{position:static}
@@ -865,13 +890,13 @@ img{max-width:100%}
   <div class="drawer-scrim" id="dataDrawer" hidden data-action="drawer-scrim">
     <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="wallTitle">
       <div class="drawer-head">
-        <div><h2 id="wallTitle">What left Maya's phone</h2><p>Every update Ghost Mode sends, exactly as sent.</p></div>
+        <div><h2 id="wallTitle">What left Maya's phone</h2><p>Every update Ghost Mode sent, in plain words.</p></div>
         <button type="button" class="icon-btn" data-action="close-drawer" aria-label="Close"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="drawer-body">
         <div class="leak">
           <span class="leak-num" id="leakNum">0</span>
-          <span class="leak-label">characters of message text sent without <span class="kid-poss">Maya's</span> OK</span>
+          <span class="leak-label">messages shared without <span class="kid-poss">Maya's</span> OK</span>
           <span class="leak-sub" id="leakSub">Checked live against every message on the phone.</span>
         </div>
         <div class="wall-stats" id="wallStats"></div>
@@ -1455,6 +1480,10 @@ const ICONS={
   play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
   ban:'<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
   chev:'<path d="M6 9l6 6 6-6"/>',
+  chart:'<path d="M5 20V11M12 20V5M19 20v-6"/>',
+  sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  chat:'<path d="M20 12a7 7 0 0 1-10.4 6.1L4 19.5l1.4-4.6A7 7 0 1 1 20 12z"/>',
+  users:'<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c.6-3.4 3.2-5.6 6.5-5.6s5.9 2.2 6.5 5.6"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8M18.5 14.6c1.7.8 2.8 2.7 3 5.4"/>',
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   share:'<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'
 };
@@ -1488,6 +1517,7 @@ function fmtSpan(m){
   if(m<1440){const h=Math.round(m/60);return `${h} hour${h===1?'':'s'}`}
   const d=Math.round(m/1440);return `${d} day${d===1?'':'s'}`;
 }
+const usualNight=u=>u<1?'Usually less than 1 a night':`Usually about ${Math.round(u)} a night`;
 const joinList=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
 
 function alertCard(a){
@@ -1507,7 +1537,7 @@ function alertCard(a){
     if(!anon&&!blockedAt){primary=btn('trust','We know them','primary');more.push(checkin)}else primary=checkin;
   }else if(p.alert==='late_night_spike'){
     line=`Night of ${nightLabel(p.night)} · ${p.chats} chat${p.chats===1?'':'s'}`;
-    sum=`<b>${p.messages} messages</b> between ${fmtTime(isoToT(p.first_message_at))} and ${fmtTime(isoToT(p.last_message_at))}. Usually about ${p.usual_per_night} a night.`;
+    sum=`<b>${p.messages} messages</b> between ${fmtTime(isoToT(p.first_message_at))} and ${fmtTime(isoToT(p.last_message_at))}. ${usualNight(p.usual_per_night)}.`;
     why=p.adult_contact_involved?`An adult who isn't on your trusted list was part of the late messaging. Worth a calm check-in.`:`Most of the time this is just friends, but it cuts into sleep. A quick, low-key check-in usually covers it.`;
     talk=['"Rough night? The phone was busy late. Everything okay?"','"Want to try charging phones outside bedrooms on school nights? I\'ll do it too."'];
     primary=checkin;
@@ -1714,32 +1744,59 @@ function hl(p){
     return `<span class="n">${num}</span>`;
   });
 }
-const WALL_LABEL={counts:'Counts',settings:'Settings',trusted_adults:'Trusted adults list',check_in:'Check-in note',share_request:'Request to share a chat',shared_chat:'Chat shared with consent',share_declined:'Share request declined'};
-function wallLabel(p){
-  if(p.type==='alert')return alertTitle(p);
-  if(p.type==='event')return p.event==='contact_blocked'?'Contact blocked':'Contact unblocked';
-  return WALL_LABEL[p.type]||p.type;
+/* Turns each update into a plain title and sentence for parents. */
+function wallSummary(w){
+  const p=w.p,k=name(),age=x=>x==='unknown'?'age unknown':x,plural=(n,word)=>`${n} ${word}${n===1?'':'s'}`;
+  switch(p.type){
+    case 'counts':return {icon:'chart',title:'Message counts',text:`Numbers only: ${plural(p.messages_today,'message')} today, ${p.late_night} late at night.`};
+    case 'alert':{
+      const meta=ALERTS[p.alert],title=p.alert==='kid_request'||p.alert==='contact_blocked'?meta.title(k):`Alert: ${meta.title(k)}`;
+      if(p.alert==='new_adult_contact')return {icon:meta.icon,title,text:`About ${p.contact} on ${p.where} (${age(p.contact_age)}).`};
+      if(p.alert==='late_night_spike')return {icon:meta.icon,title,text:`${plural(p.messages,'message')} between ${fmtTime(isoToT(p.first_message_at))} and ${fmtTime(isoToT(p.last_message_at))}. ${usualNight(p.usual_per_night)}.`};
+      if(p.alert==='grooming_language_markers'){
+        const ids=p.timeline.map(x=>x[1]).sort((a,b)=>MARKER[b].w-MARKER[a].w);
+        return {icon:meta.icon,title,text:`About ${p.contact} on ${p.where}. ${plural(ids.length,'warning sign')}:`,tags:ids.map(id=>MARKER[id].label)};
+      }
+      return {icon:meta.icon,title,text:`Sent when ${k} tapped "Ask my parent to talk."`};
+    }
+    case 'event':return p.event==='contact_blocked'
+      ?{icon:'ban',title:`${k} blocked a contact`,text:`Blocked ${p.contact} on ${p.where}.`}
+      :{icon:'ban',title:`${k} unblocked a contact`,text:`Unblocked ${p.contact} on ${p.where}.`};
+    case 'shared_chat':return {icon:'share',title:`${k} shared a chat`,text:`${plural(p.messages.length,'message')} with ${p.contact}, shared for a report.`};
+    case 'share_declined':return {icon:'clock',title:`${k} said "not now"`,text:`To sharing the chat with ${p.contact}.`};
+    case 'settings':{
+      const src=p.sources_on?{texts:p.sources_on.includes('texts'),email:p.sources_on.includes('email'),social:p.sources_on.includes('social')}:null;
+      const what=sourcesText(src);
+      return {icon:'sliders',title:'Your settings',text:`Quiet hours ${fmtHM(p.quiet_start)} to ${fmtHM(p.quiet_end)}. ${SENS_LABEL[p.sensitivity]} sensitivity. ${what?`Checks ${what}.`:'All checks off.'}`};
+    }
+    case 'trusted_adults':return {icon:'users',title:'Trusted adults',text:p.names.length?joinList(p.names)+'.':'The list is empty.'};
+    case 'check_in':return {icon:'chat',title:`Check-in note to ${k}`,text:`"${p.note}"`};
+    case 'share_request':return {icon:'share',title:'Request to share a chat',text:`Asked ${k} to share the chat with ${p.contact}.`};
+  }
+  return {icon:'chat',title:p.type,text:''};
 }
-function wallItem(w,open){
-  const p=w.p,up=w.dir==='up',k=name();
-  const label=wallLabel(p);
-  const body=p.type==='counts'
-    ?`<code>${esc(JSON.stringify(p))}</code><span class="wl-sub">Rolled up from ${w.n} message${w.n>1?'s':''}. The text stayed on the phone.</span>`
-    :`<details class="wl-data"${open?' open':''}><summary>Show the data</summary><pre>${hl(p)}</pre></details>`;
-  return `<li class="wl ${up?'up':'down'}${p.type==='alert'?' sev-'+p.severity:''}${p.shared_with_consent?' consent':''}${w.fresh&&!seeding?' flash':''}">
-    <div class="wl-head"><span class="wl-dir">${ic(up?'left':'right','ic xs')}</span><span>${esc(label)}</span><time>${when(w.at)}</time></div>
-    <div class="wl-to">${up?`${esc(poss(k))} phone → you`:`You → ${esc(poss(k))} phone`}</div>${body}</li>`;
+function wallItem(w){
+  const p=w.p,up=w.dir==='up',k=name(),sm=wallSummary(w);
+  const sev=p.type==='alert'?p.severity:p.type==='event'&&p.event==='contact_blocked'?'ok':'';
+  const privacy=!up||p.type==='counts'?''
+    :p.shared_with_consent?`<p class="wl-private consent">${ic('share','ic sm')}Messages included, with ${esc(poss(k))} OK</p>`
+    :`<p class="wl-private">${ic('check','ic sm')}No message text included</p>`;
+  return `<li class="wl ${up?'up':'down'}${p.type==='counts'?' counts':''}${sev?' sev-'+sev:''}${w.fresh&&!seeding?' flash':''}">
+    <div class="wl-head"><span class="wl-icon">${ic(sm.icon)}</span><div class="wl-main"><b class="wl-title">${esc(sm.title)}</b><span class="wl-when">${up?`From ${esc(poss(k))} phone`:`To ${esc(poss(k))} phone`} · ${when(w.at)}</span></div></div>
+    <p class="wl-text">${esc(sm.text)}</p>
+    ${sm.tags?`<ul class="chips wl-tags">${sm.tags.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}
+    ${privacy}
+    <details class="wl-data"><summary>Technical details</summary><pre>${hl(p)}</pre></details></li>`;
 }
 function renderWall(){
-  const k=name();
+  const k=name(),leak=T.leak||leakCheck();
   $('#wallTitle').textContent=`What left ${poss(k)} phone`;
-  $('#leakNum').textContent=(T.leak||leakCheck()).chars;
+  $('#leakNum').textContent=leak.msgs;
+  $('#leakNum').closest('.leak').classList.toggle('bad',leak.msgs>0);
   const sharedW=S.wall.filter(w=>w.p.type==='shared_chat');
-  const sharedChars=sharedW.reduce((n,w)=>n+w.p.messages.reduce((m,x)=>m+x[2].length,0),0);
-  $('#leakSub').textContent='Checked live against every message on the phone.'+(sharedW.length?` Separately, ${k} chose to share ${sharedW.length===1?'1 chat':sharedW.length+' chats'} (${sharedChars} characters) for a report.`:'');
-  $('#wallStats').innerHTML=`<div><b>${totalMsgs()}</b><span>messages checked on the phone</span></div><div><b>${S.stats.sent}</b><span>small updates sent</span></div>`;
-  const first=S.wall.findIndex(w=>w.p.type!=='counts');
-  $('#wallLog').innerHTML=S.wall.map((w,i)=>wallItem(w,i===first)).join('');
+  $('#leakSub').textContent=`Ghost Mode checks every update below against every message on ${poss(k)} phone.`+(sharedW.length?` ${k} also chose to share ${sharedW.length===1?'1 chat':sharedW.length+' chats'} with you for a report.`:'');
+  $('#wallStats').innerHTML=`<div><b>${totalMsgs()}</b><span>messages checked on the phone</span></div><div><b>${S.stats.sent}</b><span>updates sent</span></div>`;
+  $('#wallLog').innerHTML=S.wall.map(wallItem).join('');
 }
 
 /* ---------- kid phone rendering ---------- */
