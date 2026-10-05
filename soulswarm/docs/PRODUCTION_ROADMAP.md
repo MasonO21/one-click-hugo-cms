@@ -159,13 +159,15 @@ Apple's age-rating questionnaire (the updated 4+/9+/13+/16+/18+ system) and the 
 | Render resolution | DPR cap 1.25, dynamic 70–100% | DPR cap 2.0 | Native up to 2.5 |
 | Bloom | Off (baked emissive sprites) | Half-res | Full-res |
 | Particles | ≤ 800 | ≤ 2,000 | ≤ 4,000 |
-| Units (gameplay parity) | 220 enemies, 400 minions, 600 projectiles on **every tier** | same | same |
+| Units (build caps) | 200 enemies alive, 400 minions, ≤ 400 player shots + 150 enemy orbs | 280 enemies, rest same | 340 enemies, rest same |
 | Memory (whole app) | ≤ 600 MB (GPU textures ≤ 120 MB, JS heap ≤ 150 MB) | ≤ 900 MB | ≤ 1.2 GB |
 | Garbage collection | Zero allocations per frame in a run (pools, typed arrays); GC pause ≤ 5 ms | same | same |
 | Cold start → home | ≤ 8 s | ≤ 5 s | ≤ 3 s |
 | Thermal / battery | 30-min session without dropping a tier | ≤ 12% battery per 30 min | — |
 
-**Techniques:** one `InstancedMesh` per unit archetype with vertex-animation textures (no skinned meshes for the horde). Structure-of-arrays typed buffers. A 2 m spatial hash for targeting and separation. Minion AI updated in thirds (staggered ticks). Shard merging past 300. Pooled additive particles. A shared ribbon trail per minion ring. Shader warm-up during the loading screen.
+**Gameplay parity:** the prototype scales the alive-enemy cap by quality tier (200 / 280 / 340, `run.js`). The 400-minion ceiling is the same on every tier. Leaderboard modes (Planned) need one shared enemy cap on every tier for fairness, so this must be decided before Endless Abyss ships.
+
+**Techniques:** one `InstancedMesh` per unit archetype with vertex-animation textures (no skinned meshes for the horde). Structure-of-arrays typed buffers. A 2 m spatial hash for targeting and separation. Minion AI updated in thirds (staggered ticks). Shard merging past ~416 shards on the map (the build's 420-shard pool). Pooled additive particles. A shared ribbon trail per minion ring. Shader warm-up during the loading screen.
 
 ---
 

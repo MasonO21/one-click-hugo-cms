@@ -1,6 +1,6 @@
 # SOULSWARM: Monetization and Economy Design
 
-**Status:** v1.0 · **Owner:** Lead Game Designer / PM · **Source of truth:** `DESIGN_BRIEF.md` (prices, odds, SKUs). Gameplay numbers referenced here are defined in `GDD.md`.
+**Status:** v1.1, synced to the prototype build (Oct 2026) · **Owner:** Lead Game Designer / PM · **Source of truth:** the code (`src/game/data.js` for prices, odds, SKUs and rewards; `src/meta/economy.js` for the rules). `DESIGN_BRIEF.md` and `GDD.md` mirror it. Anything marked **Planned** is not in the current build, where purchases and ads are simulated.
 
 ---
 
@@ -26,52 +26,62 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 
 | Sources | Typical amount | Sinks | Amount |
 |---|---|---|---|
-| Run rewards (formula in GDD §10) | 1,110 (Ch1 clear) to 3,000 (Ch5 clear) | **Talents** (6 × 40 levels) | 690,300 to max everything |
-| Daily quests | 3,000 / day | Talent level cap = 10 + 6 × chapters cleared | Paces spending |
+| Run rewards (formula in GDD §10) | 3,124 (Ch1 clear) to 5,714 (Ch5 clear); ~1,300–1,750 for a death at 4:00 | **Talents** (6 talents, 125 levels) | 1,358,940 to max everything |
+| Daily quests | 2,700 / day | Talent level cap = 10 + 6 × chapters cleared (Planned) | Paces spending |
 | 7-day login | 7,000 / cycle | | |
-| Soul Pass free track | 30,000 / season | | |
+| Soul Pass free track | 20,800 / season | | |
 | Starter Pack | 10,000 (one-time) | | |
-| Gold bundles (gem sink) | 100 gems → 5,000 · 500 gems → 28,000 | | |
-| Rewarded "daily free chest" | 1,000–5,000 by chapter | | |
-| Soul Pact | +20% gold on all sources | | |
+| Gold bundles (gem sink) | 60 gems → 5,000 · 300 gems → 30,000 | | |
+| Rewarded "daily free chest" | 800–1,499 (plus 10 gems and a relic) | | |
+| Soul Pact | +20% run gold | | |
+| New account | 1,500 (one-time) | | |
 
-**Risk:** an engaged player maxes all talents in roughly 2.5–4 months, after which gold has no sink. Post-launch sinks (Relic Ascension, legion cosmetics bought with gold) are on the live-ops roadmap for Season 4 (see `LIVEOPS.md`). Watch the median gold balance of D60+ players. If it climbs without stopping, the sink is late.
+**Risk:** an engaged player (4–6 runs a day) maxes all talents in roughly 2–3 months, after which gold has no sink. Post-launch sinks (Relic Ascension, legion cosmetics bought with gold) are on the live-ops roadmap for Season 4 (see `LIVEOPS.md`). Watch the median gold balance of D60+ players. If it climbs without stopping, the sink is late.
 
 ### 2.2 Soul Gems (premium)
 
 | Sources | Amount | Sinks | Price |
 |---|---|---|---|
 | IAP gem packs | 80–15,000 (×2 on the first buy of each tier) | **Soul Altar** | 150 per pull · 1,350 per 10-pull |
-| Daily quests | 50 / day | Energy refill | 30 energy for 60 gems, up to 3 per day |
-| 7-day login | 150 / cycle | Revive (alternative to the ad) | 50 gems, 1 revive per run in total |
-| Weekly quest chest | 50 / week | Gold bundles | 100 / 500 gems |
-| Soul Pass free / premium | 300 / 1,500 per season | Soul Pass catch-up tiers | 100 per tier, last 7 days of a season only |
-| Chapter first clears | 100 each for Ch1–4, 300 for Ch5 (one-time) | | |
+| Daily quests | 60 / day | Energy refill | 30 energy for 50 gems (no daily cap in the build) |
+| 7-day login | 180 / cycle | Revive (alternative to the ad) | 60 gems, 1 paid revive per run in total |
+| Run rewards | 12–20 per repeat clear; 2 per full 2 minutes survived on a defeat | Gold bundles | 60 / 300 gems |
+| Account level-ups | 20 each | Altar Sigils (gem shop) | 150 each · 1,350 for 10 |
+| Soul Pass free / premium | 340 / 1,140 per season | Soul Pass catch-up tiers (Planned) | 100 per tier, last 7 days of a season only |
+| Chapter first clears | 70 / 90 / 110 / 130 / 150 for Ch1–5 (one-time, 550 total) | | |
 | Soul Pact | 300 now + 100 / day | | |
 | Starter Pack | 300 | | |
-| Events and leaderboards | 50–500 per event | | |
+| Daily free chest (rewarded ad) | 10 / day | | |
+| New account | 150 (one-time) | | |
+| Weekly quest chest (Planned) | 50 / week | | |
+| Events and leaderboards (Planned) | 50–500 per event | | |
 
 ### 2.3 Energy, Altar Sigils, Hero Shards
 
 | Currency | Sources | Sinks | Design intent |
 |---|---|---|---|
-| **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), login D6 (+15), rewarded ad (+30, 2/day), gems (60 for 30, 3/day). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run (chapters and Endless Abyss). The tutorial and Boss Rush (3 free tries per day) cost nothing. | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
-| **Altar Sigils** (1 sigil = 1 pull) | Login (2 per cycle), weekly chest (1), free pass (5), premium pass (10), Starter Pack (3), Ch5 first clear (5), events | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
-| **Hero Shards** | Epic rolls (2 Nyx/Seraphine shards), Legendary rolls (5 Mordrake shards), premium pass S1 (10 Seraphine), Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week) | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
+| **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10, 3/day), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run. Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
+| **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
+| **Hero Shards** | Epic rolls (4 Seraphine or 6 Nyx, 50/50), Legendary rolls (5 Mordrake or 6 Seraphine, 50/50), premium pass S1 (25 Seraphine), duplicate hero grants (20). Planned: Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week). | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
 
-### 2.4 What a free player earns per 28-day season (daily active, all quests)
+### 2.4 What a free player earns per 28-day season (daily active, all quests, ~3 runs a day)
 
 | Source | Gems | Sigils | Pulls |
 |---|---|---|---|
-| Daily quests (50 × 28) | 1,400 | — | |
-| 7-day login (4 cycles) | 600 | 8 | |
-| Weekly quest chest (×4) | 200 | 4 | |
-| Soul Pass free track | 300 | 5 | |
-| **Subtotal** | **2,500 gems ≈ 18.5 pulls** (at 10-pull price) | **17** | **≈ 35.5** |
+| Daily quests (60 × 28, 1 sigil a day) | 1,680 | 28 | |
+| 7-day login (4 cycles) | 720 | 12 | |
+| Soul Pass free track | 340 | 6 | |
+| Run gems (~84 runs, half repeat clears, half defeats, ~9 each) | ~750 | — | |
+| Account level-ups (~21 in the first season, fewer later) | ~420 | — | |
+| Weekly quest chest (Planned) | — | — | |
+| **Subtotal** | **≈ 3,900 gems ≈ 29 pulls** (at 10-pull price) | **46** | **≈ 75** |
 | Rewarded "free daily summon" (×28) | — | — | +28 |
-| **Total** | | | **≈ 63.5 pulls ≈ 1.8 Legendaries per season** (≈ 1.0 without ads) |
+| Rewarded daily free chest (10 gems × 28) | 280 | — | +2 |
+| **Total** | | | **≈ 105 pulls ≈ 3.0 Legendaries per season** (≈ 2.1 without ads) |
 
-That is generous by design. A free player unlocks Mordrake (2 Legendary rolls) in about 4–8 weeks, and the whole story is clearable with Vael. Spending buys *speed* (more pulls now), *depth* (stars and relic levels) and *cosmetics*.
+One-time sources are not included: chapter first clears (550 gems + 5 sigils) and the new-account balance (150 gems + 1 sigil).
+
+That is generous by design. A free player unlocks Mordrake (10 shards = two Mordrake drops, ≈ 4 Legendary rolls, because half of Legendary rolls give Seraphine shards instead) in about 5–8 weeks, and the whole story is clearable with Vael. Spending buys *speed* (more pulls now), *depth* (stars and relic levels) and *cosmetics*.
 
 ---
 
@@ -79,9 +89,9 @@ That is generous by design. A free player unlocks Mordrake (2 Legendary rolls) i
 
 | Tier | Lifetime / monthly spend | Typical purchases | What they get | Share of players (target) |
 |---|---|---|---|---|
-| **Free** | $0 | Rewarded ads | Full story, ~1.8 Legendaries per season with ads | 95–97% |
+| **Free** | $0 | Rewarded ads | Full story, ~3 Legendaries per season with ads | 95–97% |
 | **Minnow** | $0.99–$9.99 lifetime | `starter_pack` $1.99, first-purchase `gems_80` (160 gems), one `gems_500` | Nyx early; 1 extra 10-pull | ~2–3% |
-| **Dolphin** | ~$15–$60 per month | `soul_pact` $4.99 + `soul_pass` $9.99 (= $14.98), occasional `gems_1200`/`gems_2600` | ~44 extra pulls per season + guaranteed Legendary relic + Eclipse Vael skin. About 2.2× a free player's Legendary rate. | ~0.8–1.5% |
+| **Dolphin** | ~$15–$60 per month | `soul_pact` $4.99 + `soul_pass` $9.99 (= $14.98), occasional `gems_1200`/`gems_2600` | ~43 extra pulls per season + guaranteed Legendary relic + Eclipse Vael skin. About 1.4× the pull rate of a free player who watches every ad (≈ 2× one who watches none). | ~0.8–1.5% |
 | **Whale** | $100–$500+ per month | `gems_7000`, `gems_15000` | $100 ≈ 111 pulls ≈ 3.2 Legendaries · $500 ≈ 16 Legendaries. Chasing Mordrake 5★ and Legendary relic levels. | ~0.1–0.3% |
 
 In midcore gacha games a small share of payers usually produces most IAP revenue. Industry write-ups often cite 50–70% from the top 10% of payers. We design for depth, but we cap harm with the spending limits in §10. **Dolphins are the health metric:** a game that only works with whales is fragile and attracts regulatory and press risk.
@@ -98,8 +108,8 @@ In midcore gacha games a small share of payers usually produces most IAP revenue
 | `gems_2600` | $19.99 | 2,600 (5,200) | 130.1 (+61%) | About two 10-pulls (2,700) with a small top-up. |
 | `gems_7000` | $49.99 | 7,000 (14,000) | 140.0 (+73%) | Dolphin-to-whale bridge. ~52 pulls, close to one guaranteed pity cycle (60). |
 | `gems_15000` | $99.99 | 15,000 (30,000) | 150.0 (+86%) | **Anchor.** Sets the price ceiling that makes everything else look reasonable, and serves whales. |
-| `starter_pack` | $1.99, one-time, 48 h | Nyx Hollowborn + 300 gems + 10,000 gold + 3 sigils | — | Converts new players at their most engaged moment and gives a new hero, not just currency. |
-| `soul_pact` | $4.99 / 30 days | 300 gems now + 100 / day + ad-free rewards + 20% more gold | 661 (if claimed daily) | Habit and retention product. It rewards daily logins and is the best value in the shop on purpose. |
+| `starter_pack` | $1.99, one-time, 48 h | Nyx Hollowborn (20 Nyx shards if already owned) + 300 gems + 10,000 gold + 3 sigils | — | Converts new players at their most engaged moment and gives a new hero, not just currency. |
+| `soul_pact` | $4.99 / 30 days | 300 gems now + 100 / day + ad-free rewards + 20% more run gold | 661 (if claimed daily) | Habit and retention product. It rewards daily logins and is the best value in the shop on purpose. |
 | `soul_pass` | $9.99 / season | Premium Soul Pass track | — | Seasonal engagement product. Value is paced over 28 days and finished by playing. |
 
 **First-purchase doubling:** the first purchase of *each* gem tier gives double gems (the "×2 FIRST" badge disappears after use). That turns every tier into a one-time "deal", encourages trying the next tier up, and removes the risk of the first purchase feeling bad.
@@ -110,11 +120,11 @@ In midcore gacha games a small share of payers usually produces most IAP revenue
 
 | Technique | How we use it | Honesty rule |
 |---|---|---|
-| **Anchoring** | `gems_15000` sits at the right edge with "Best rate: 150 gems/$". The $9.99 tier sits in the visual centre with the "Most popular" tag. | "Most popular" only if it is true in the last 30 days of data for that region. |
+| **Anchoring** | `gems_15000` sits at the right edge with "Best rate: 150 gems/$". The $9.99 tier sits in the visual centre with the "Most popular" tag. | "Most popular" only if it is true in the last 30 days of data for that region. **Build gap:** the prototype tags `gems_7000` "Best Value", but `gems_15000` has the better rate (150 vs 140 gems/$). Move the tag. |
 | **Bonus labels** | Each pack shows "+X% gems vs $0.99 rate" (+24% / +49% / +61% / +73% / +86%). | Always computed against `gems_80`. Never against an imaginary "original price". |
 | **First-purchase bonus** | ×2 gems, one per tier. | Shown as "×2 on first purchase", never a fake crossed-out price. |
-| **Starter Pack value framing** | 300 gems + 3 sigils = 750 gems of value, **plus** a Rare hero and 10,000 gold, for $1.99. At the $4.99 tier rate (100 gems/$), 750 gems ≈ $7.49. The honest badge reads **"750 gems' worth + Nyx"**, not a made-up "1,000% value". | Value claims are computed from public gem prices. Gold and heroes are listed, not priced. |
-| **Timed offer** | The Starter Pack has a real 48 h countdown from first display. | The timer never resets secretly. If it expires, the pack is gone for good. We do not "surprise" re-offer the same pack. |
+| **Starter Pack value framing** | 300 gems + 3 sigils = 750 gems of value, **plus** a Rare hero and 10,000 gold, for $1.99. At the $4.99 tier rate (100 gems/$), 750 gems ≈ $7.49. The honest badge reads **"750 gems' worth + Nyx"**, not a made-up "1,000% value". | Value claims are computed from public gem prices. Gold and heroes are listed, not priced. **Build gap:** the prototype's badge still reads "1,250% value" (`SKUS.starter_pack.value`). Replace it before soft launch. |
+| **Timed offer** | The Starter Pack has a real 48 h countdown from first display. (Build: the 48 h start at account creation; counting from first display is Planned.) | The timer never resets secretly. If it expires, the pack is gone for good. We do not "surprise" re-offer the same pack. |
 | **Charm pricing** | All prices end in .99 (store price tiers). Regional prices use the store's local tiers. | Same contents in every region. |
 | **Decoy / ladder** | The `gems_1200` → `gems_2600` jump is small in price-per-gem, but crosses "two 10-pulls". | — |
 | **Real-money echo** | In the EU/UK (and as an option elsewhere) gem prices show an approximate local-currency equivalent ("1,350 gems ≈ €9.99"). | Required by our reading of the 2025 EU CPC principles on in-game currencies. |
@@ -124,6 +134,8 @@ In midcore gacha games a small share of payers usually produces most IAP revenue
 ## 6. Soul Altar gacha math
 
 ### 6.1 Rules (as disclosed in-game)
+
+These rules were re-checked against `summon` and `rollRarity` in `src/meta/economy.js` and match the build.
 
 - Per-pull odds: **Common 60% · Rare 28% · Epic 10% · Legendary 2%.**
 - **Legendary pity:** a visible counter. If pulls 1–59 since your last Legendary have none, pull 60 is a Legendary. The counter resets on any Legendary and carries over between sessions and between single and 10-pulls.
@@ -137,7 +149,7 @@ Let p = 0.02, q = 0.98, and N = the pull on which the first Legendary arrives. W
 > P(N = k) = q^(k−1) · p for k = 1…59, and P(N = 60) = q^59
 > **E[N] = Σ_{k=0}^{59} q^k = (1 − q^60) / p = (1 − 0.2976) / 0.02 = 35.12 pulls**
 
-Without pity it would be 1/p = **50 pulls**. Pity cuts the average by 30% and the effective Legendary rate becomes 1/35.12 = **2.85%**. The standard deviation is 21.4 pulls. A Monte Carlo check (200,000 simulated players, including the 10-pull rule) gives 35.12.
+Without pity it would be 1/p = **50 pulls**. Pity cuts the average by 30% and the effective Legendary rate becomes 1/35.12 = **2.85%**. The standard deviation is 21.4 pulls. A Monte Carlo re-check that runs the build's own `summon` logic (400,000 simulated players, including the 10-pull rule) gives 35.18, within sampling error of 35.12, with 30.5% of players hitting pity.
 
 | Pulls done | P(at least one Legendary) |
 |---|---|
@@ -165,14 +177,14 @@ Without pity it would be 1/p = **50 pulls**. Pity cuts the average by 30% and th
 
 ### 6.4 Epics and the 10-pull guarantee
 
-P(no Epic+ in 10 natural rolls) = 0.88^10 = 27.9%. Expected Epics per 10-pull = 1.0 + 0.279 = **1.28**, and expected Epic-or-better = **1.48**. The guarantee lifts the effective Epic rate from 10% to about 12.8%. (If design ever let the guaranteed slot roll Legendary at the 10:2 Epic:Legendary weight, simulation shows expected pulls to Legendary would drop to ~31.5. That would also change the disclosed odds, so it is **not** our launch rule.)
+P(no Epic+ in 10 natural rolls) = 0.88^10 = 27.9%. Expected Epics per 10-pull = 1.0 + 0.279 = **1.28**, and expected Epic-or-better = **1.48**. The guarantee lifts the effective Epic rate from 10% to about 12.8%. Counting pity Legendaries (long-run Legendary rate 2.85%), a simulation of the build gives 1.24 Epics and 1.53 Epic-or-better per 10-pull. (If design ever let the guaranteed slot roll Legendary at the 10:2 Epic:Legendary weight, simulation shows expected pulls to Legendary would drop to ~31.5. That would also change the disclosed odds, so it is **not** our launch rule.)
 
 ### 6.5 Collection depth (why whales have somewhere to go)
 
 | Chase | Legendaries needed | Expected pulls | Gems (at 135) | ≈ USD (150 gems/$) |
 |---|---|---|---|---|
-| Unlock Mordrake (10 shards, 5 per Legendary) | 2 | 70 | 9,483 | $63 |
-| Mordrake 1★ → 5★ (160 shards) | 32 | 1,124 | 151,729 | $1,012 |
+| Unlock Mordrake (10 shards; a Legendary gives 5 Mordrake shards 50% of the time) | 4 | 140 | 18,966 | $126 |
+| Mordrake first shard → 5★ (160 shards) | 64 | 2,248 | 303,457 | $2,023 |
 | One of each of the 8 Legendary relic types (coupon collector, 8 × H₈) | 21.7 | 764 | 103,094 | $687 |
 | One *specific* Legendary relic at Lv10 (10 copies, 1/8 chance each) | 80 | 2,810 | 379,321 | $2,529 |
 
@@ -182,20 +194,21 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 
 ## 7. Soul Pass economics
 
-- 30 tiers × 100 XP = 3,000 XP per 28-day season. A daily player earns ~125 XP/day and finishes on about day 22. A 4-days-a-week player reaches about tier 15.
-- **Free track (30 tiers):** 30,000 gold, 300 gems, 5 sigils.
-- **Premium track ($9.99):** 1,500 gems, 10 sigils, 3 Epic relics, 1 Legendary relic (tier 25), 10 Seraphine shards (S1), "Eclipse Vael" skin (tier 30). Premium unlocks retroactively. Buying on day 20 grants every premium reward already earned.
-- **Honest value badge:** 1,500 gems + 10 sigils = 3,000 gem-equivalent, versus 1,200 gems for the $9.99 gem pack → **"2.5× the gems of the $9.99 pack"**, plus relics and the skin, which we list but do not price.
+- 30 tiers × 100 XP = 3,000 XP per 28-day season. Daily quests give 220 pass XP a day and each run gives round(20 + T/6 + K/40 + 40 on a clear), about 80–210. A daily player (all quests, ~3 runs) earns ~600 XP/day and finishes in about 5 days. A 4-days-a-week player (2 runs a day) finishes in about 2 weeks. *(Tuning: the season was designed for ~125 XP/day and a finish around day 22. Pass XP should come down, or XP per tier go up, before soft launch; GDD §18.)*
+- **Free track (30 tiers):** 20,800 gold, 340 gems, 6 sigils.
+- **Premium track ($9.99):** 1,140 gems, 12 sigils, 1 Epic relic (tier 10), 1 Legendary relic (tier 20), 25 Seraphine shards (S1: 10 at tier 10, 5 at tiers 5, 15 and 25), "Eclipse Vael" skin + 300 gems (tier 30). Premium unlocks retroactively. Buying on day 20 grants every premium reward already earned.
+- **Honest value badge:** 1,140 gems + 12 sigils = 2,940 gem-equivalent, versus 1,200 gems for the $9.99 gem pack → **"2.4× the gems of the $9.99 pack"**, plus relics, shards and the skin, which we list but do not price.
 - **Targets:** premium attach rate 5% of season MAU in Tier-1 markets. 60–70% of premium buyers reach tier 30. If completion falls below 55%, we raise XP rewards *during* the season, never later.
 - Revenue per season per 100k MAU at 5% attach = 5,000 × $9.99 ≈ **$50k gross** (before store fees).
-- Catch-up tiers (100 gems each) unlock only in the final 7 days, so buying tiers never replaces playing for most of the season.
+- *(Planned)* Catch-up tiers (100 gems each) unlock only in the final 7 days, so buying tiers never replaces playing for most of the season.
 
 ## 8. Soul Pact (30-day pass)
 
 - Implemented as a **non-renewing 30-day purchase** (iOS non-renewing subscription; a Play one-time product with a server-side 30-day entitlement). Apple's auto-renew periods are calendar months, not 30 days. Non-renewing also removes any "forgot to cancel" complaint.
-- Value: 300 + 30 × 100 = 3,300 gems for $4.99 (661 gems/$, 4.4× the best gem pack). The daily 100 gems are claimed in the mailbox. **Unclaimed days carry over for up to 3 days** (grace), then expire.
+- Value: 300 + 30 × 100 = 3,300 gems for $4.99 (661 gems/$, 4.4× the best gem pack). The first daily 100 is granted with the purchase. In the build, the daily 100 gems are claimed from the Pact card (home screen or shop), and a day that is not claimed is lost. *(Planned: claims through the mailbox, and **unclaimed days carry over for up to 3 days** (grace), then expire.)*
 - "Ad-free rewards": every rewarded-ad placement grants its reward instantly, with the same daily caps.
-- Reminders at 3 days and 1 day before expiry (in-game only; push only if the player opted in).
+- The +20% gold applies to run gold only, not to quest, login or pass gold.
+- *(Planned)* Reminders at 3 days and 1 day before expiry (in-game only; push only if the player opted in).
 
 ---
 
@@ -203,14 +216,15 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 
 | Placement | Reward | Cap | Surface |
 |---|---|---|---|
-| Revive | Revive at 50% HP, 2 s invulnerability, knockback pulse | 1 per run (shared with the 50-gem revive) | Death screen |
-| Double run rewards | ×2 run gold (stacks with Blood Moon) | 5 / day | Results screen |
+| Revive | Revive at full HP, 2.5 s invulnerability, a blast that deals 50% max HP to enemies within 8 m, with knockback | 1 per run (shared with the 60-gem revive) | Death screen (10 s) |
+| Double run rewards | Run gold and gems granted again (Planned: stacks with Blood Moon) | 1 per run (Planned: 5 / day) | Results screen |
 | Free daily summon | 1 single Soul Altar pull | 1 / day | Soul Altar |
-| Energy refill | +30 energy | 2 / day | Energy popup |
-| Daily free chest | 1,000–5,000 gold (by chapter) + 10% chance of 1 Altar Sigil (odds shown) | 1 / day | Shop |
-| **Global cap** | | **12 ads / day** | |
+| Energy refill | +10 energy | 3 / day | Energy popup |
+| Daily free chest | 800–1,499 gold + 10 gems + 1 relic (Common 85% / Rare 15%; showing these odds is Planned) | 1 / day | Shop and home screen |
+| Level-up reroll | Redraw the 3 cards | 1 per run | Level-up screen |
+| **Global cap** | | **12 ads / day (Planned)** | |
 
-- No ad offer appears during the tutorial or in run 1. No ad offer appears within 30 s of a purchase.
+- *(Planned)* No ad offer appears during the tutorial or in run 1. No ad offer appears within 30 s of a purchase. (Build: every placement is offered from the first run.)
 - Soul Pact holders skip ads with the same caps.
 
 **Ad revenue model.** Ad ARPDAU = impressions per DAU × eCPM ÷ 1,000. Rough industry ranges for rewarded video (they vary a lot by season, network and year; Q4 is highest): US iOS ~$15–$40, US Android ~$8–$25, Tier-2 ~$3–$10, Tier-3 ~$0.5–$3. **Target:** 2.0–3.0 rewarded impressions per DAU and ad ARPDAU of $0.03–$0.06 in Tier-1 markets. Ads monetise the 95%+ who never pay.
@@ -267,7 +281,7 @@ The same game can land in any of those rows. Soft launch exists to find out whic
 | **COPPA (US) / GDPR-K (EU)** | Under-13s (US) and under the local digital consent age (13–16, EU) need verified parental consent before personal data is collected. Ad SDKs must respect child status. | **Neutral age gate** before any SDK starts. Under the threshold → restricted mode: no IAP surfaces, no personalised ads (child-directed flags set in AppLovin MAX), no IDFA/GAID, preset names only on leaderboards, analytics without advertising IDs. Store target audience is 13+, so we do not opt into the Families programme. |
 | **Spending limits** | Brief: confirmation on every purchase; parental controls and an age gate in production. | Every purchase and every gem spend of 150+ gems has an in-game confirm before the OS sheet. **Under 16 (self-declared): $50/month cap. 16–17: $100/month cap.** Optional self-set daily/weekly/monthly limits for everyone; lowering a limit is instant, raising one takes 24 h. Parental PIN for purchases. Spend history in Settings. A non-blocking well-being check-in after $500 in 30 days. |
 | **Dark-pattern avoidance** | The FTC's 2022 Epic Games settlement ($245M in refunds) set a clear bar on misleading purchase flows. | No fake timers, no secret timer resets, no confirm-shaming, no pre-ticked boxes, no forced or interstitial ads, no "pay to beat this boss" prompts. Refunds are handled by the stores. Refunded gems are clawed back (the balance can go negative). There are no bans for a first chargeback. |
-| **Odds integrity** | Odds must not vary by player, spend or segment. | Rolls happen on the server with an audited RNG. Odds are never A/B tested. Pity state is stored on the server. |
+| **Odds integrity** | Odds must not vary by player, spend or segment. | Rolls happen on the server with an audited RNG. Odds are never A/B tested. Pity state is stored on the server. (Planned for production; the prototype rolls and stores pity on the device.) |
 
 ---
 

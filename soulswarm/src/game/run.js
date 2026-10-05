@@ -38,7 +38,7 @@ export class Run {
     this.camera = new THREE.PerspectiveCamera(45, 0.5, 0.5, 220);
 
     const skin = loadout.skin ? SKINS[loadout.skin] : null;
-    this.heroColor = skin ? skin.color : loadout.hero.color;
+    this.heroColor = skin ? skin.legion : loadout.hero.legion || loadout.hero.color;
     this.heroColorObj = new THREE.Color(this.heroColor);
     this.weaponColorObj = this.heroColorObj.clone();
 

@@ -7,8 +7,7 @@ import {
 } from '../../game/data.js';
 import {
   onChange, commit, computeLoadout, heroAction, heroNextCost, selectHero, equipRelic, upgradeTalent, notifications,
-  starterAvailable,
-} from '../../meta/economy.js';
+  starterAvailable, equipSkin } from '../../meta/economy.js';
 import { portrait, bar, stars, tap, delegate, keepScroll } from './util.js';
 import { openStarter } from './panels.js';
 
@@ -154,7 +153,7 @@ export function createHeroes(ctx) {
         toast(res.unlocked ? `${hero.name} joins your legion!` : `${hero.name} reached ${res.stars} stars`);
       } else if (a === 'skin') {
         const skin = Object.keys(SKINS).find((s) => SKINS[s].hero === id && p.skins[s]);
-        p.equippedSkin = p.equippedSkin === skin ? null : skin;
+        equipSkin(p, skin);
         tap(app); commit(p);
         try { app.showcase && app.showcase.setHero(p.selectedHero); } catch (err) { console.warn(err); }
       } else if (a === 'starter') { m.close(); openStarter(ctx); }

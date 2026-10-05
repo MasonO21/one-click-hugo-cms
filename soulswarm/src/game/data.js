@@ -9,28 +9,28 @@ export const RARITY_MULT = { common: 1, rare: 2, epic: 3.5, legendary: 6 };
 export const HEROES = {
   vael: {
     id: 'vael', name: 'Vael', title: 'the Gravecaller', rarity: 'common', weapon: 'soulBolt',
-    color: 0x4ef2ff, css: '#4ef2ff', body: 0x1b2a44,
+    color: 0x4ef2ff, css: '#4ef2ff', body: 0x1b2a44, legion: 0x4ef2ff,
     passive: { raise: 0.10 }, passiveText: '+10% Raise Chance',
     hp: 100, speed: 6.2,
     lore: 'A lantern-bearer who learned the dead would follow anyone who remembered their names.',
   },
   nyx: {
     id: 'nyx', name: 'Nyx', title: 'Hollowborn', rarity: 'rare', weapon: 'scythe',
-    color: 0xb36bff, css: '#b36bff', body: 0x22163a,
+    color: 0xb36bff, css: '#b36bff', body: 0x22163a, legion: 0xb36bff,
     passive: { minionDmg: 0.20, minionSpeed: 0.20 }, passiveText: 'Minions +20% speed & damage',
     hp: 110, speed: 6.5,
     lore: 'Born in the hollow between heartbeats. Her scythe reaps, and her legion feasts.',
   },
   seraphine: {
     id: 'seraphine', name: 'Seraphine', title: 'Ashveil', rarity: 'epic', weapon: 'chains',
-    color: 0xffb347, css: '#ffb347', body: 0x3a2414,
+    color: 0xffb347, css: '#ffb347', body: 0x3a2414, legion: 0x7cffd4,
     passive: { nova: 0.30 }, passiveText: 'Soul Nova charges 30% faster',
     hp: 95, speed: 6.4,
     lore: 'A fallen choir-saint whose chains still burn with the last hymn of a dead cathedral.',
   },
   mordrake: {
     id: 'mordrake', name: 'Mordrake', title: 'the Undying', rarity: 'legendary', weapon: 'spears',
-    color: 0x6dff9a, css: '#6dff9a', body: 0x16301f,
+    color: 0x6dff9a, css: '#6dff9a', body: 0x16301f, legion: 0x6dff9a,
     passive: { cap: 0.25, revive: 1 }, passiveText: 'Legion cap +25%, revive once per run',
     hp: 130, speed: 6.0,
     lore: 'He has died nine hundred times. Each time, he brought someone back with him.',
@@ -49,9 +49,9 @@ export const ENEMIES = {
   ghoul:   { name: 'Ghoul',        hp: 8,   speed: 4.4, dmg: 5,  radius: 0.38, xp: 1, mass: 0.7, scale: 0.9 },
   brute:   { name: 'Brute',        hp: 75,  speed: 1.7, dmg: 18, radius: 0.85, xp: 4, mass: 5.0, scale: 1.0 },
   witch:   { name: 'Cinder Witch', hp: 22,  speed: 2.3, dmg: 10, radius: 0.45, xp: 2, mass: 1.0, scale: 1.0, ranged: { range: 8.5, cooldown: 2.6, speed: 6.5 } },
-  bloater: { name: 'Bloater',      hp: 28,  speed: 2.0, dmg: 26, radius: 0.62, xp: 2, mass: 2.0, scale: 1.0, explode: { radius: 2.6, fuse: 0.85 } },
+  bloater: { name: 'Bloater',      hp: 28,  speed: 2.0, dmg: 26, radius: 0.62, xp: 2, mass: 2.0, scale: 1.0, explode: { radius: 2.6, fuse: 1.0 } },
 };
-export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 3400, speed: 2.3, dmg: 22, radius: 1.9, mass: 999 };
+export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 9000, speed: 2.3, dmg: 22, radius: 1.9, mass: 999 };
 export const ELITE = { hpMul: 6, scale: 1.35, dmgMul: 1.5 };
 
 // ---------------------------------------------------------------- Chapters
@@ -122,7 +122,7 @@ export const EVOLUTIONS = {
 export const WEAPON_SLOTS = 4;
 export const BASE = {
   raise: 0.25, cap: 30, minionDmg: 7, minionSpeed: 9.5, minionHp: 34, pickup: 2.8,
-  novaKills: 140, hardLegionMax: 400, minionLeash: 9,
+  novaKills: 300, hardLegionMax: 400, minionLeash: 9,
 };
 export const xpForLevel = (lv) => Math.floor(4 + 3.2 * lv + 0.38 * lv * lv);
 
@@ -162,10 +162,10 @@ export const SKUS = {
   gems_500:    { id: 'gems_500',    kind: 'gems', price: 4.99,  gems: 500,   label: 'Sack of Gems' },
   gems_1200:   { id: 'gems_1200',   kind: 'gems', price: 9.99,  gems: 1200,  label: 'Chest of Gems', tag: 'Popular' },
   gems_2600:   { id: 'gems_2600',   kind: 'gems', price: 19.99, gems: 2600,  label: 'Coffer of Gems' },
-  gems_7000:   { id: 'gems_7000',   kind: 'gems', price: 49.99, gems: 7000,  label: 'Vault of Gems', tag: 'Best Value' },
-  gems_15000:  { id: 'gems_15000',  kind: 'gems', price: 99.99, gems: 15000, label: 'Hoard of Gems' },
+  gems_7000:   { id: 'gems_7000',   kind: 'gems', price: 49.99, gems: 7000,  label: 'Vault of Gems', },
+  gems_15000:  { id: 'gems_15000',  kind: 'gems', price: 99.99, gems: 15000, label: 'Hoard of Gems', tag: 'Best Value' },
   starter_pack:{ id: 'starter_pack',kind: 'bundle', price: 1.99, label: 'Starter Pack', once: true,
-                 rewards: { hero: 'nyx', gems: 300, gold: 10000, sigils: 3 }, value: '1,250%' },
+                 rewards: { hero: 'nyx', gems: 300, gold: 10000, sigils: 3 }, value: '540%' }, // 870 gems of contents at the $0.99 pack rate ÷ $1.99, hero not counted
   soul_pact:   { id: 'soul_pact',   kind: 'sub', price: 4.99, label: 'Soul Pact', days: 30,
                  rewards: { gems: 300 }, daily: { gems: 100 } },
   soul_pass:   { id: 'soul_pass',   kind: 'pass', price: 9.99, label: 'Soul Pass Premium' },
@@ -191,8 +191,8 @@ export const ALTAR = {
 
 // ---------------------------------------------------------------- Soul Pass
 export const PASS_TIERS = 30;
-export const PASS_XP_PER_TIER = 100;
-export const PASS_SEASON = { id: 1, name: 'Season I: The Hollow Crown', days: 28 };
+export const PASS_XP_PER_TIER = 500;
+export const PASS_SEASON = { id: 1, name: 'Season I: The Waking Legion', days: 28 };
 export function passReward(tier, premium) {
   // tier is 1-based
   if (!premium) {
@@ -223,5 +223,5 @@ export const LOGIN_REWARDS = [
 ];
 
 export const SKINS = {
-  eclipse_vael: { hero: 'vael', name: 'Eclipse Vael', color: 0xffd04a, body: 0x1a1020 },
+  eclipse_vael: { hero: 'vael', name: 'Eclipse Vael', color: 0xffd04a, body: 0x1a1020, legion: 0xffe9a0 },
 };

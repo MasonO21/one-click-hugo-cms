@@ -1,7 +1,7 @@
 // SOULSWARM: app bootstrap. Wires the profile, audio, renderer, menus and runs together.
 import './ui/style.css';
 import { audio, loadAudio } from './audio/index.js';
-import { loadProfile, saveProfile } from './meta/save.js';
+import { loadProfile, saveProfile, newProfile } from './meta/save.js';
 import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult } from './meta/economy.js';
 import { Store } from './meta/store.js';
 import { haptic, setHapticsEnabled } from './engine/platform.js';
@@ -37,8 +37,18 @@ const app = {
   startRun,
   exitRun,
   applySettings,
+  resetProgress,
 };
 window.__soulswarm = app; // handy for QA scripts
+
+/** Wipe all progress: blank the live profile (so an unload save cannot restore it), persist, reload. */
+function resetProgress() {
+  const fresh = newProfile();
+  for (const k of Object.keys(profile)) delete profile[k];
+  Object.assign(profile, fresh);
+  saveProfile(profile, true);
+  try { location.reload(); } catch (e) { /* ignore */ }
+}
 
 function applySettings() {
   const s = profile.settings;

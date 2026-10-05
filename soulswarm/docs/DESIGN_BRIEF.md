@@ -1,4 +1,4 @@
-# SOULSWARM — Design Brief (source of truth for names & numbers)
+# SOULSWARM — Design Brief (mirrors `src/game/data.js`; if they disagree, the code wins)
 
 **Tagline:** *Raise the Legion.*
 **Genre:** "Legion Survivor": a top-down horde-survival roguelite in which every enemy you kill can rise as a glowing soul minion that fights for you. You start alone and finish the run leading a spectral legion of 300+.
@@ -7,7 +7,7 @@
 
 ## The three hooks (what the ads sell)
 1. **Convert the horde.** Killed enemies have a *Raise Chance* to come back as cyan soul minions that orbit you and hunt enemies. Your army grows on screen, from 1 to 300+.
-2. **Soul Gates.** Every ~40 s a pair of glowing gates appears near the player, e.g. `+15` vs `×2` or `×2` vs `−50%`. Walking through one changes the size of your legion. This is the "pick the right gate" ad bait, built into real gameplay.
+2. **Soul Gates.** Every ~40 s a pair of glowing gates appears near the player, e.g. `+15` vs `×2` or `×2` vs `÷2`. Walking through one changes the size of your legion. This is the "pick the right gate" ad bait, built into real gameplay.
 3. **Soul Nova.** The ultimate meter fills as you kill. Tap NOVA and every minion detonates in a chain of spectral explosions whose damage scales with legion size. It is the big screen-clearing ad moment. You trade your army for a wipe.
 
 ## Art direction: "Neon Gothic"
@@ -41,15 +41,15 @@ Heroes rank up 1★ to 5★ using shards. Each star adds +12% damage and +8% HP.
 ## In-run skills (level-up cards, choose 1 of 3, max Lv5)
 **Weapons:** Soul Bolt, Spectral Scythe, Ashen Chains, Bone Spears, Skull Halo (orbiting skulls), Grave Pulse (AoE pulse).
 **Passives:** Raise Dead (+raise chance), Legion Cap (+max minions), Minion Fury (+minion dmg), Haste (+move speed), Vitality (+max HP and heal), Soul Magnet (+pickup radius), Might (+damage), Frenzy (+attack speed).
-**Evolutions (stretch):** Soul Bolt Lv5 + Might → *Soul Storm*. Skull Halo Lv5 + Minion Fury → *Bone Crown*.
+**Evolutions (in the build):** Soul Bolt Lv5 + Might → *Soul Storm*. Skull Halo Lv5 + Minion Fury → *Bone Crown*.
 Pickups: soul shards (XP), heart (heal), magnet, relic chest (from elites).
 
 ## Chapters
-1 Ashen Necropolis, 2 Ember Wastes, 3 Frozen Ossuary, 4 Abyssal Cathedral, 5 Crimson Throne. Each lasts 6:00 and ends in a boss fight; enemy HP and density scale per chapter. Chapter 5 is followed by "Endless Abyss" (leaderboard mode, live ops).
+1 Ashen Necropolis, 2 Ember Wastes, 3 Frozen Ossuary, 4 Abyssal Cathedral, 5 Crimson Throne. Each lasts 6:00 and ends in a boss fight; enemy HP and density scale per chapter. Chapter 5 is followed by "Endless Abyss" (Planned: leaderboard mode, live ops).
 
 ## Meta & economy
 **Currencies:** Gold (soft), Soul Gems (premium), Energy (30 max, a run costs 5, +1 every 6 min), Altar Sigils (summon keys), Hero Shards.
-**Gold sinks:** Talents (permanent upgrades): Might, Vitality, Raise Chance, Legion Cap, Greed (+gold), Swiftness. Each talent's cost rises per level.
+**Gold sinks:** Talents (permanent upgrades): Might, Vitality, Raise Chance (Necromancy), Legion Cap (Dominion), Greed (+gold), Swiftness. Each talent's cost rises per level.
 **Relics (gear):** 8 relic types, 4 rarities (Common ×1, Rare ×2, Epic ×3.5, Legendary ×6 stat multiplier). Equip 3. Duplicates add +1 relic level (+15% stat).
 Relics: Lantern of the Lost (+raise chance), Crown of Thorns (+damage), Bone Idol (+legion cap), Ember Heart (+max HP), Wraith Boots (+move speed), Grave Coin (+gold), Hourglass of Ash (+attack speed), Abyss Eye (+nova charge).
 
@@ -86,5 +86,5 @@ The first purchase of each gem tier gives double gems.
 - All story content can be completed free-to-play. Spending speeds progress and buys cosmetics.
 - Every purchase needs a confirmation step. The production build should add parental controls and an age gate.
 
-## Live ops cadence
+## Live ops cadence (Planned; none of this is in the prototype yet)
 Weekly event (Blood Moon: 2× elites and 2× rewards), a 28-day Soul Pass season, a new hero every 1–2 seasons, a monthly limited boss rush, and Endless Abyss weekly leaderboards. Clans/guilds and co-op "Legion Raids" are on the roadmap.

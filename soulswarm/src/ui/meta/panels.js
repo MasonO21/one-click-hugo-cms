@@ -3,7 +3,7 @@
 import { h, $, $$, fmt, toast, modal, purchaseFlow, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
 import { SKUS, GEM_SHOP, ENERGY_MAX, ENERGY_REGEN_SEC, HEROES } from '../../game/data.js';
-import { todayKey, newProfile } from '../../meta/save.js';
+import { todayKey } from '../../meta/save.js';
 import {
   onChange, commit, grant, questList, claimQuest, loginState, claimLogin, energyNextIn, buyGemShop,
   starterAvailable, pactActive, pactDailyAvailable, claimPactDaily,
@@ -240,14 +240,7 @@ export function openSettings(ctx) {
     reset: () => { $(body, '.st-reset').hidden = true; $(body, '.st-confirm').hidden = false; app.audio.sfx('warning'); },
     cancel: () => { $(body, '.st-reset').hidden = false; $(body, '.st-confirm').hidden = true; },
     wipe: () => {
-      try {
-        // Blank the in-memory profile too, so a save fired during unload cannot restore old progress.
-        const fresh = newProfile();
-        for (const k of Object.keys(p)) delete p[k];
-        Object.assign(p, fresh);
-        localStorage.removeItem('soulswarm.save.v1');
-      } catch (e) { /* storage unavailable */ }
-      try { location.reload(); } catch (e) { toast('Please restart the game.'); }
+      try { app.resetProgress(); } catch (e) { toast('Please restart the game.'); }
     },
   });
   modal({ title: 'Settings', body, cls: 'mm-settings scroll' });

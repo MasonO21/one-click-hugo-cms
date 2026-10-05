@@ -117,7 +117,7 @@ export function createPass(ctx) {
     const s = passState(app.profile);
     const row = root.querySelector(`[data-tier="${Math.max(1, Math.min(PASS_TIERS, s.tier + 1))}"]`);
     // Only scroll when the next tier would sit below the fold, so the season header stays visible early on.
-    if (row && row.offsetTop + row.offsetHeight > scroller.clientHeight - 16) scroller.scrollTop = Math.max(0, row.offsetTop - scroller.clientHeight * 0.55);
+    if (row && row.offsetTop > scroller.clientHeight * 1.4) scroller.scrollTop = Math.max(0, row.offsetTop - scroller.clientHeight * 0.55);
   }
 
   return { el, render, onShow };

@@ -42,7 +42,9 @@ export class Showcase {
     const skin = p && p.equippedSkin && SKINS[p.equippedSkin]?.hero === id ? SKINS[p.equippedSkin] : null;
     const hero = HEROES[id];
     const color = skin ? skin.color : hero.color;
-    if (this.heroId !== id) {
+    const key = id + (skin ? skin.name : '');
+    if (this.heroKey !== key) {
+      this.heroKey = key;
       this.hero.geometry.dispose();
       this.hero.geometry = heroGeometry(id, skin ? skin.body : hero.body);
       this.heroId = id;

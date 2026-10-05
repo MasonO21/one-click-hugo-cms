@@ -75,4 +75,5 @@ export function applyChoice(run, c) {
     else run.bonusGold += 150;
   } else run.skillLv[c.id] = (run.skillLv[c.id] || 0) + 1;
   run.recomputeStats();
+  if (c.id === 'vitality') { run.player.update(0, { x: 0, z: 0 }); run.player.heal(run.player.maxHp * 0.3); }
 }

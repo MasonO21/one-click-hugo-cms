@@ -139,7 +139,7 @@
 .meta .pane-home { pointer-events: none; }
 .pane-home .hm-meta, .pane-home .hm-side, .pane-home .hm-bottom { pointer-events: auto; }
 .hm { position: absolute; inset: 0; }
-.hm-head { position: absolute; left: 70px; right: 70px; top: calc(var(--top) - 2px); text-align: center; }
+.hm-head { position: absolute; left: 12px; right: 12px; top: calc(var(--top) - 2px); text-align: center; }
 .hm-name {
   font-size: 30px; line-height: 1.05; letter-spacing: .14em; text-transform: uppercase; color: #fff;
   text-shadow: 0 0 14px var(--hc), 0 0 34px color-mix(in srgb, var(--hc) 55%, transparent), 0 2px 0 rgba(0,0,0,.7);
@@ -149,7 +149,7 @@
 .hm-power { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; clip-path: var(--bevel-sm);
   background: linear-gradient(180deg, rgba(60,40,8,.85), rgba(20,12,2,.85)); box-shadow: inset 0 0 0 1px rgba(255,207,74,.45); color: var(--gold); font-weight: 800; font-size: 14px; }
 .hm-power svg { width: 16px; height: 16px; }
-.hm-chip { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px; border: 0; cursor: pointer; clip-path: var(--bevel-sm);
+.hm-chip { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px; white-space: nowrap; border: 0; cursor: pointer; clip-path: var(--bevel-sm);
   background: linear-gradient(180deg, rgba(20,60,80,.88), rgba(6,20,30,.88)); box-shadow: inset 0 0 0 1px rgba(78,242,255,.45); color: #bff9ff; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .hm-chip svg { width: 14px; height: 14px; }
 .hm-chip .badge-dot { top: 2px; right: 2px; width: 7px; height: 7px; }
@@ -710,7 +710,7 @@
 .ps-prem-body ul { list-style: none; margin: 2px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; }
 .ps-prem-body li { display: flex; align-items: center; gap: 6px; }
 .ps-prem-body li svg { width: 15px; height: 15px; }
-.ps-prem-body .btn { font-size: 13px; padding: 0 8px; gap: 5px; }
+.ps-prem-body .btn { font-size: 12.5px; padding: 0 8px; gap: 5px; letter-spacing: .04em; white-space: nowrap; }
 .ps-premon { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-top: 12px; padding: 10px 12px; font-size: 12px; clip-path: var(--bevel-sm);
   background: linear-gradient(90deg, rgba(255,207,74,.22), rgba(255,207,74,.04)); box-shadow: inset 0 0 0 1px rgba(255,207,74,.4); }
 .ps-premon svg { width: 18px; height: 18px; }
@@ -807,7 +807,7 @@
 .lg-big .lg-d { color: var(--gold); }
 .lg-note { font-size: 10px; font-weight: 700; color: #ffd98a; letter-spacing: .04em; }
 .lg-day.is-today { box-shadow: inset 0 0 0 2px var(--gold), inset 0 0 22px rgba(255,207,74,.35); animation: m-readyGlow 1.5s ease-in-out infinite; }
-.lg-day.is-claimed > :not(.lg-check) { opacity: .35; }
+.lg-day.is-claimed > :not(.lg-check) { opacity: .22; }
 .lg-check { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ok); }
 .lg-check svg { width: 34px; height: 34px; stroke-width: 3; filter: drop-shadow(0 0 8px var(--ok)) drop-shadow(0 1px 2px #000); }
 .lg-today { position: absolute; left: 0; right: 0; bottom: 0; padding: 1px 0; text-align: center; font-size: 9px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; background: var(--gold); color: #2a1300; }
@@ -905,9 +905,16 @@
 
 /* very narrow phones */
 @media (max-width: 370px) {
-  .mt-cur { font-size: 12px; }
-  .mt-cur svg { width: 16px; height: 16px; }
+  .mt-top { gap: 4px; }
+  .mt-curs { gap: 3px; }
+  .mt-cur { font-size: 12px; gap: 1px; padding: 0 2px; }
+  .mt-cur svg { width: 15px; height: 15px; }
+  .mt-cur .plus { width: 13px; height: 13px; font-size: 12px; }
+  .mt-pname { font-size: 11px; letter-spacing: 0; }
+  .mt-lv { width: 30px; height: 34px; }
   .mt-xp { width: 44px; }
+  .pity-top { font-size: 11.5px; }
+  .ps-prem-body .btn { font-size: 11.5px; }
   .hm-name { font-size: 26px; }
   .bb-label { font-size: 26px; }
   .gem-amt { font-size: 20px; }

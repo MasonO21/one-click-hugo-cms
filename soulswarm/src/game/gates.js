@@ -29,7 +29,8 @@ export class Gates {
     this.passed = 0;
   }
 
-  spawnPair() {
+  /** forcedOps lets scripted moments (tutorials, trailers) choose the two gates. */
+  spawnPair(forcedOps = null) {
     if (this.pair) this.despawn(false);
     const run = this.run, P = run.player;
     let dx = P.vx, dz = P.vz;
@@ -37,7 +38,7 @@ export class Gates {
     if (l < 0.5) { dx = 0; dz = -1; } else { dx /= l; dz /= l; }
     const rx = -dz, rz = dx; // right vector
     const cx = P.x + dx * 10.5, cz = P.z + dz * 10.5;
-    const ops = makeOps(run.legion.count, run.time / 60);
+    const ops = forcedOps || makeOps(run.legion.count, run.time / 60);
     const gates = ops.map((op, i) => {
       const side = i === 0 ? -1 : 1;
       const g = makeGate(label(op), isGood(op), WIDTH);

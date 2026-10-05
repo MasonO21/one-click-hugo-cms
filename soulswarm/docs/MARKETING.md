@@ -14,7 +14,7 @@
 ### Ad truthfulness policy (non-negotiable)
 
 1. Every frame of every ad comes from the shipping build (or a dev build with identical content). There is no mocked-up gameplay. The "pick the right gate" mechanic is in the game, so we can run that creative honestly.
-2. Every number shown is achievable in-game: legion up to the 400 ceiling, gate values from the real pools, enemies alive at once ≤ 220. "1 vs 1,000" refers to the **kill counter** in one run, not 1,000 enemies on screen at once.
+2. Every number shown is achievable in-game: legion up to the 400 ceiling, gate values from the real generator (GDD §4.3), enemies alive at once ≤ 340 (the build's high-tier cap; 200 on low, 280 on mid). Features that are still Planned (GDD §0) cannot appear in an ad until they ship. "1 vs 1,000" refers to the **kill counter** in one run, not 1,000 enemies on screen at once.
 3. Sped-up footage carries a small "Gameplay sped up" label. Debug or cheat builds are used only for *camera* control, never to show results a player cannot get.
 4. No implied odds ("I always pull Legendary!"), no real-money gambling imagery, no ads aimed at children.
 
@@ -44,7 +44,7 @@ Keyword rules: no words already in the name or subtitle (Apple indexes those alr
 > Husks, Ghouls, Brutes, Cinder Witches, even exploding Bloaters: whatever falls, rises. Watch your cyan legion swell on screen and hunt the horde for you.
 >
 > **PICK THE RIGHT GATE**
-> Every 40 seconds, two Soul Gates appear. +15 or ×2? ×2 or −50%? Do the maths, dodge the danger and walk through. One choice can double your army.
+> Every 40 seconds, two Soul Gates appear. +15 or ×2? ×2 or ÷2? Do the maths, dodge the danger and walk through. One choice can double your army.
 >
 > **UNLEASH SOUL NOVA**
 > Fill the Nova meter, tap once, and your entire legion detonates in a chain of spectral explosions. The bigger your army, the bigger the blast. Trade everything for a total screen wipe, then raise it all again.
@@ -70,6 +70,8 @@ Keyword rules: no words already in the name or subtitle (Apple indexes those alr
 
 (≈2,000 characters; limit 4,000.)
 
+*Build check:* Endless Abyss, Blood Moon, colourblind modes, flash reduction and the left-handed layout are Planned (GDD §0, §17). Cut those lines if they are not in the submitted build.
+
 ## 3. Google Play listing
 
 | Field | Limit | Copy | Length |
@@ -91,12 +93,12 @@ Format: iOS 6.9" (1320 × 2868) is required, and the 6.5" set is derived from it
 
 | # | Caption | Scene | Composition notes |
 |---|---|---|---|
-| 1 | **RAISE THE LEGION** | End of a Ch1 run: Vael in the centre, ~300 cyan minions in three orbit rings, a wall of ember Husks on the edges | Legion counter "LEGION 312" enlarged in the HUD. This is the hero shot. |
-| 2 | **PICK THE RIGHT GATE** | Two glowing gates, `+15` and `×2`, legion of 37, a Brute lurking behind the ×2 gate | Large "?" between the gates. Thumb-shaped arrow toward ×2. |
+| 1 | **RAISE THE LEGION** | End of a Ch1 run: Vael in the centre, ~300 cyan minions in orbit rings, a wall of ember Husks on the edges | Legion counter "LEGION 312" enlarged in the HUD. This is the hero shot. |
+| 2 | **PICK THE RIGHT GATE** | Two glowing gates, `+25` and `×2`, legion of 37 (a real 1:08 pair), a Brute lurking behind the ×2 gate | Large "?" between the gates. Thumb-shaped arrow toward ×2. |
 | 3 | **SACRIFICE THE SWARM. WIPE THE SCREEN.** | Mid-Nova: a chain of cyan explosions rippling out, enemies vaporising | Peak bloom frame. NOVA button visibly pressed. |
 | 4 | **TOPPLE THE HOLLOW KING** | Gravemaw, magenta, mid-slam with telegraph rings, legion charging him | Boss health bar visible. Strong diagonal composition. |
 | 5 | **4 SHEPHERDS. ENDLESS BUILDS.** | Hero line-up (Vael, Nyx, Seraphine, Mordrake) above a level-up screen showing 3 skill cards | Rarity frames (Common → Legendary) visible. |
-| 6 | **CLIMB THE ENDLESS ABYSS** | Endless Abyss run at 12:00 with the weekly leaderboard panel overlaid | "Blood Moon weekend: 2× rewards" banner along the bottom |
+| 6 | **CLIMB THE ENDLESS ABYSS** (Planned; needs Endless Abyss and Blood Moon to ship) | Endless Abyss run at 12:00 with the weekly leaderboard panel overlaid | "Blood Moon weekend: 2× rewards" banner along the bottom |
 
 **App preview video (iOS, 25 s):** 0–3 s legion growing (hook 1) → 3–9 s gate choice → 9–15 s Nova wipe → 15–21 s Gravemaw fight → 21–25 s logo + "Raise the Legion". In-game audio only. No device frames (per Apple's guidelines).
 
@@ -156,10 +158,10 @@ All scripts are 9:16 first, with 1:1 and 16:9 cut-downs. Every script ends on th
 
 ### Ad 2: "Pick the Right Gate" (20 s)
 
-- **Hook (0–3 s):** freeze-frame on two gates, **`+15`** and **`×2`**, legion count **9**. Caption: **"Which gate??"** with a 3-2-1 timer.
-- 3–6 s: the player walks through ×2. 9 → 18. Caption: "Wrong! ×2 = only +9."
-- 6–9 s: rewind wipe (presented clearly as a replay). Takes +15 → 24.
-- 9–14 s: the next gate pair `×2` vs `+40` at legion 52 → ×2 → **104**. Caption: "Now ×2 wins."
+- **Hook (0–3 s):** freeze-frame on two gates, **`+15`** and **`×2`**, legion count **10** (the first pair at 0:28; the build never offers ×2 below a legion of 10). Caption: **"Which gate??"** with a 3-2-1 timer.
+- 3–6 s: the player walks through ×2. 10 → 20. Caption: "Wrong! ×2 = only +10."
+- 6–9 s: rewind wipe (presented clearly as a replay). Takes +15 → 25.
+- 9–14 s: the next gate pair `×2` vs `+40` at legion 52 (a real 2:28 pair) → ×2 → **104**. Caption: "Now ×2 wins."
 - 14–18 s: the legion swarms a Brute.
 - 18–20 s: end card. "Can you do the maths?"
 - **Variants:** a numbers-only version at different legion sizes to drive comments ("Comment your pick").
@@ -167,7 +169,7 @@ All scripts are 9:16 first, with 1:1 and 16:9 cut-downs. Every script ends on th
 ### Ad 3: "Soul Nova Wipe" (15 s)
 
 - **Hook (0–3 s):** a screen completely packed: 300 cyan minions vs an ember horde. Thumb hovers over the glowing **NOVA** button. Caption: **"Do I sacrifice them all?"**
-- 3–4 s: tap. A 0.4 s silence and hit-stop.
+- 3–4 s: tap. A beat of silence and slow motion (the build's 0.55 s slow-mo; the 0.4 s wind-up is Planned).
 - 4–9 s: chain detonation ripples outward in slow motion, then real time. Screen-clearing white-cyan bloom. Bass drop.
 - 9–12 s: an empty, smouldering arena. Legion counter 0. Then the first enemies killed by the Nova rise again. Caption: "…and raise them again."
 - 12–15 s: end card.
@@ -177,20 +179,20 @@ All scripts are 9:16 first, with 1:1 and 16:9 cut-downs. Every script ends on th
 
 - **Hook (0–3 s):** Gravemaw's slam rings close in, the player panics and dies. Caption: **"I lost to this boss 5 times…"**
 - 3–8 s: a replay of the mistake: the player popped Nova early on Husks. The legion is gone when the boss arrives. Caption: "Mistake: wasted Nova."
-- 8–14 s: second attempt. The player saves Nova, picks ×2 at 5:20 → legion 280.
-- 14–22 s: Gravemaw Phase 2 bullet rings. The player dodges through the gaps, then fires Nova at 66% HP. A big chunk of the bar disappears.
-- 22–27 s: Phase 3. The legion and Bone Spears finish him. "CHAPTER CLEAR".
+- 8–14 s: second attempt. The player saves Nova, picks ×2 at the 5:08 gate → legion 280.
+- 14–22 s: Gravemaw's ember bullet rings. The player dodges through the gaps, then fires Nova. A big chunk of the bar disappears.
+- 22–27 s: he enrages at 50% HP. The legion and Bone Spears finish him. "CHAPTER CLEARED".
 - 27–30 s: end card. "Save your Nova."
 - **Note:** both attempts are real recorded runs. The losing run must not be staged with a weakened build.
 
 ### Ad 5: "1 → 300 Timelapse" (20 s)
 
 - **Hook (0–3 s):** a giant counter fills the top third: **1**. Caption: "Watch my army grow."
-- 3–17 s: a single run sped up ×6. The camera pulls back slowly as the legion grows: 1 → 12 → 47 → 120 → 233 → **312**. Music stems layer in at each threshold (the in-game feature).
+- 3–17 s: a single run sped up ×6. The camera pulls back slowly as the legion grows: 1 → 12 → 47 → 120 → 233 → **312**. Music stems layer in at each threshold (a Planned in-game feature, GDD §15; not in the current build).
 - 17–20 s: end card.
 - **Variants:** with and without the music-stem explanation caption.
 
-### Ad 6: "Turn Their Bomb on Them" (15 s)
+### Ad 6: "Turn Their Bomb on Them" (15 s) (Planned: needs Soul Bomb minions, GDD §4.2. Do not produce until they ship.)
 
 - **Hook (0–3 s):** a Bloater swells and flashes red right next to Vael. Caption: **"DON'T let it touch you!"**
 - 3–6 s: Soul Bolt kills it early. It rises as a **cyan Soul Bomb**.
@@ -201,8 +203,8 @@ All scripts are 9:16 first, with 1:1 and 16:9 cut-downs. Every script ends on th
 
 - **Hook (0–3 s):** low angle on Gravemaw, magenta crown blazing. Caption: **"Can 300 souls beat the Hollow King?"**
 - 3–10 s: the legion charges. Slam rings knock minions flying (they really do die to slams). Legion 300 → 210.
-- 10–17 s: Bulwark minions taunt the summoned Husks. Soul Witches pepper the boss. Health bar 66% → 33%.
-- 17–22 s: Phase 3 spiral bullets. Nova finisher.
+- 10–17 s: the legion tears through the summoned Husks and Ghouls and swarms the boss. Health bar 100% → 50%: "GRAVEMAW ENRAGES". (Bulwark and Soul Witch minions are Planned.)
+- 17–22 s: enraged ember rings (3 waves of 26 orbs). Nova finisher.
 - 22–25 s: end card. "Yes. Yes they can."
 
 ### Ad 8: "Which Shepherd Are You?" (20 s)
@@ -228,7 +230,7 @@ Each week: 6–10 new variants (new hooks on proven bodies) → $300–$600 per 
 | **Gate Math Challenge** (stitch/duet) | Creator freezes on "37 souls: `+40` or `×2`?" and asks viewers to comment before the reveal | Comment bait built on a real mechanic. The answer is debatable once position and risk are considered. |
 | **Biggest Nova** | "My 400-legion Nova" compilations, ranked by kills per Nova | Satisfying, loops well, natural competition between creators |
 | **Rate My Legion** | Results-screen card: peak legion, kills, build | Shareable flex. The in-game share card (launch) makes it one tap. |
-| **Boss Fail → Win tips** | "Beat Gravemaw Phase 3 with this build" | Search-friendly guides that grow the community |
+| **Boss Fail → Win tips** | "Beat an enraged Gravemaw with this build" | Search-friendly guides that grow the community |
 | **Hero tier list** | "Is Mordrake worth it?" | Debate content. We never pay for tier-list rankings. |
 
 **Program:** 30–50 nano and micro creators (5k–100k followers) in CA/AU during soft launch Phase C, then 150+ at global launch. Creators get early-access builds, a creator code that grants a cosmetic legion tint (no power), and a flat fee or CPI-based deal. Every paid post uses the platform's branded-content tag and #ad (FTC endorsement guides and ASA/CAP rules). The brief to creators forbids showing or implying guaranteed summon results and any targeting of under-13 audiences.

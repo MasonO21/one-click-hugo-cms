@@ -16,7 +16,7 @@ export class Enemies {
     this.run = run;
     this.active = [];
     this.pool = [];
-    this.head = new Int32Array(GRID * GRID);
+    this.head = new Int32Array(GRID * GRID).fill(-1); // -1 = empty cell (0 would be a valid index)
     this.next = new Int32Array(2048);
     this.mat = makeCharMaterial({ rim: new THREE.Color(run.chapter.enemy).multiplyScalar(0.55).getHex(), emit: 2.8, anim: 1, ambient: 0x3a3236, key: 0x9a9098, plRadius: 6 });
     this.meshes = {};
@@ -180,8 +180,9 @@ export class Enemies {
       // despawn stragglers that fell far behind (they respawn ahead via the director)
       if (dist > 42) this.remove(e);
     }
-    // compact
+    // compact, then rebuild so the grid indexes the compacted list for everyone querying after us
     if (a.some((e) => !e.active)) this.active = a.filter((e) => e.active);
+    this.rebuildGrid();
   }
 
   explodeBloater(e) {
@@ -246,6 +247,7 @@ export class Enemies {
       this.remove(e);
     }
     this.active = this.active.filter((e) => e.active);
+    this.rebuildGrid();
   }
 
   render() {

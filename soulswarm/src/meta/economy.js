@@ -157,6 +157,12 @@ export function heroNextCost(p, id) {
   return HERO_STAR_COST[h.stars];
 }
 export function selectHero(p, id) { if (p.heroes[id].owned) p.selectedHero = id; }
+/** Toggle an owned skin on or off. Returns the equipped skin id (or null). */
+export function equipSkin(p, id) {
+  if (!p.skins[id]) return p.equippedSkin || null;
+  p.equippedSkin = p.equippedSkin === id ? null : id;
+  return p.equippedSkin;
+}
 
 // ---------------------------------------------------------------- relics & talents
 export function equipRelic(p, uid) {

@@ -2,6 +2,7 @@
 
 **Status:** v1.0 · **Owner:** Live Ops Producer + Lead Game Designer · **Source of truth:** `DESIGN_BRIEF.md`
 **Assumed global launch:** Monday 14 June 2027 (see `PRODUCTION_ROADMAP.md`). If launch moves, the calendar shifts with it. Seasons are always 28 days and always start on a Monday at 00:00 UTC.
+**Implementation status:** this whole plan is **Planned**. The prototype build has the daily layer only (6 daily quests, the 7-day login, energy, rewarded-ad placements), one Soul Pass season ("Season I: The Hollow Crown" in `data.js`) and the Soul Pact. Blood Moon, Boss Rush, Endless Abyss, holiday events, the weekly quest chest, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
 
 ---
 
@@ -23,7 +24,7 @@
 |---|---|
 | Mon 00:00 | Endless Abyss weekly board resets; last week's league rewards land in the mailbox. In-season weeks 1 and 3 get a fresh quest-chest theme. |
 | Tue–Thu | Quiet days. In week 3 of each season the **Boss Rush** runs Tue 00:00 – Thu 23:59. |
-| Fri 00:00 – Sun 23:59 | **Blood Moon**: elites ×2 (6 per chapter run), all run rewards ×2. The sky and fog turn red and an App Store In-App Event / Play promotional card goes live. |
+| Fri 00:00 – Sun 23:59 | **Blood Moon**: elites ×2 (8 per chapter run instead of 4), all run rewards ×2. The sky and fog turn red and an App Store In-App Event / Play promotional card goes live. |
 | Sun 20:00 | "Last chance" in-game banner for the leaderboard. Push only if the player opted in. Never more than 1 push per day. |
 
 ---
@@ -60,7 +61,7 @@
 | Thessaly of the Thorn | Rare | **Thorn Whip** (new: long line attack) | +15% max HP; reflects 10% of contact damage | Free via S11 event track; banner |
 | Malachar, the First Shepherd | Legendary | **Shepherd's Crook** (new: pull-and-slam) | Soul Gates' × values +0.5 | Featured banner shards |
 
-**Banner rule:** when a featured hero is live, their shards replace Mordrake's on Legendary rolls (or Nyx/Seraphine's on Epic rolls) for that banner only. The banner screen shows exactly which shards each rarity gives. Odds (60 / 28 / 10 / 2), the 10-pull guarantee and the 60-pull pity are identical on every banner. Pity carries over between banners.
+**Banner rule:** when a featured hero is live, their shards replace the standard hero shards on Legendary rolls (Mordrake/Seraphine) or Epic rolls (Nyx/Seraphine) for that banner only. The banner screen shows exactly which shards each rarity gives. Odds (60 / 28 / 10 / 2), the 10-pull guarantee and the 60-pull pity are identical on every banner. Pity carries over between banners.
 
 **Power-creep rule:** a new hero may be best in one niche but must not beat the launch Legendary (Mordrake) on overall power by more than 5% at equal stars. Balance sims must pass before content lock.
 
@@ -71,7 +72,7 @@
 ### 3.1 Blood Moon (weekly)
 
 - **When:** every Fri 00:00 – Sun 23:59 UTC (72 h).
-- **Effect:** elites ×2 (6 per standard chapter run, 8 in Ch5), all run rewards ×2 (stacks with the rewarded-ad double, so up to ×4 gold).
+- **Effect:** elites ×2 (8 per chapter run instead of the build's 4), all run rewards ×2 (stacks with the rewarded-ad double, so up to ×4 gold).
 - **Why:** it gives weekends a reason to play and supplies extra Relic Chests, which make better builds and more evolutions. It costs no new art: it is a red sky preset, an audio filter and config.
 - **Guardrail:** Blood Moon must not raise difficulty past the player's current chapter. Elite HP stays at 6× normal.
 
@@ -168,7 +169,7 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | | Death-minute heatmap | Distribution of death time per chapter | Peak at 4:30–6:00 | Peak before 2:30 (unfair spike) |
 | Gameplay | Skill pick rates | Share of offers taken, per card | No card < 10% or > 60% | Outside the band |
 | | Gate "correct" rate | Share choosing the higher-value gate | 65–80% | > 90% (too easy) or < 50% (unclear) |
-| | Novas per run | | ~3 (Ch1) | < 2 |
+| | Novas per run | | To set in tuning (the build's 140-kill meter allows ~14 per Ch1 clear; GDD §18) | < 2 |
 | Monetization | ARPDAU (IAP / ads) | Revenue ÷ DAU | $0.30 ($0.22 / $0.08) | −20% week-on-week |
 | | Payer conversion D7 / D30 | Cumulative share of installs who paid | 1.5% / 3% | D7 < 1% |
 | | ARPPU (30 d) | | $25+ | — |
@@ -196,7 +197,7 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | 1 | Soft launch | FTUE guaranteed raises | First 5 kills raise vs first 10 | D1 retention (40% → 42%) | FTUE time, D7 | 9,490 |
 | 2 | Soft launch | Tutorial boss strength | Gravemaw 25% HP vs 40% HP | FTUE completion (85% → 87%) | D1 | 4,722 |
 | 3 | Soft launch | Gate interval | 35 s vs 40 s vs 45 s | Gate "correct" rate, D7 | Run length | 9,254 (D7 15% → 16.5%) |
-| 4 | Soft launch | Nova charge per kill | +0.30 vs +0.35 | Novas per run, D7 | Chapter clear rate | 9,254 |
+| 4 | Soft launch | Kills per full Nova charge | 140 (build) vs 200 | Novas per run, D7 | Chapter clear rate | 9,254 |
 | 5 | Soft launch | Early card offers | Guaranteed new-skill card in level-ups 1–3 vs pure random | D1 | Pick-rate spread | 9,490 |
 | 6 | Soft launch | Starter Pack first display | After first Ch1 boss kill vs after run 3 | D7 payer conversion | D7 retention, refund rate | 13,911 (3.0% → 3.6%) |
 | 7 | Soft launch | Revive offer timing | Offer instantly vs after a 1 s death slow-mo | Revive opt-in rate | Run-end rage-quits | 4,722 |

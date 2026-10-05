@@ -68,6 +68,7 @@ export class Engine {
     this.qName = quality === 'auto' ? 'medium' : quality;
     this.frameTimes = [];
     this.time = 0;
+    this.manual = false;
     this.portraits = new Map();
 
     this.composer = new EffectComposer(this.renderer);
@@ -144,19 +145,24 @@ export class Engine {
       let dt = (now - last) / 1000;
       last = now;
       if (dt > 0.1) dt = 0.1;
-      if (dt <= 0) return;
-      this.time += dt;
+      if (dt <= 0 || this.manual) return;
       this.autoQuality(dt);
-      const c = this.ctrl;
-      if (!c) return;
-      c.update(dt);
-      this.post.uTime.value = this.time;
-      this.composer.render(dt);
-      const ctx = this.ctx2d;
-      ctx.clearRect(0, 0, this.w, this.h);
-      if (c.draw2d) c.draw2d(ctx, this.w, this.h);
+      this.step(dt);
     };
     requestAnimationFrame(loop);
+  }
+
+  /** Advance and draw one frame. Also used directly (with manual = true) for frame-perfect video capture. */
+  step(dt) {
+    this.time += dt;
+    const c = this.ctrl;
+    if (!c) return;
+    c.update(dt);
+    this.post.uTime.value = this.time;
+    this.composer.render(dt);
+    const ctx = this.ctx2d;
+    ctx.clearRect(0, 0, this.w, this.h);
+    if (c.draw2d) c.draw2d(ctx, this.w, this.h);
   }
 
   // Drop quality if the device can't hold ~45fps (only in 'auto').
