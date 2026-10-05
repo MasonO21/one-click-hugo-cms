@@ -9,6 +9,7 @@ import { drawLogo } from './art/logo.js';
 import { SKINS, SKIN_BY_ID } from './art/sausage.js';
 import { PHYS } from './physics.js';
 import { Trophies } from './achievements.js';
+import { AdManager } from './ads.js';
 
 const params = new URLSearchParams(location.search);
 // Native shell (Capacitor) bridges — absent on the web.
@@ -29,6 +30,7 @@ class App {
     this.debug = params.has('debug');
     this.ui = new UI(this);
     this.trophies = new Trophies(this);
+    this.ads = new AdManager(this);
     this.game = null;
     this.levelIndex = 0;
     this.last = performance.now();
@@ -38,6 +40,8 @@ class App {
     this.bindInput();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
+        // a full-screen native ad hides the web view — that's not the player leaving
+        if (this.ads.showing) return;
         if (this.game && !this.game.attract && this.ui && document.getElementById('scr-win').hidden) this.ui.action('pause');
         if (this.audio.ctx) this.audio.ctx.suspend();
       } else if (this.audio.ctx) this.audio.ctx.resume();
@@ -89,7 +93,7 @@ class App {
     c.addEventListener('pointerup', up);
     c.addEventListener('pointercancel', (e) => { if (e.pointerId === active) { active = null; if (this.game) { this.game.aim = null; this.audio.stopCharge(); } } });
     window.addEventListener('keydown', (e) => {
-      if (!this.game || this.game.attract) return;
+      if (!this.game || this.game.attract || this.ads.showing) return;
       if (e.key === 'r' || e.key === 'R') this.restartLevel();
       if (e.key === 'Escape' || e.key === 'p') this.ui.action(document.getElementById('scr-pause').hidden ? 'pause' : 'resume');
     });
@@ -114,6 +118,7 @@ class App {
     if (this.game) {
       this.game.update(dt);
       if (this.game.attract) this.attractTick(dt);
+      else if (!this.game.paused && !this.game.winShown && !document.hidden) this.ads.tickPlay(dt);
       this.game.render(this.ctx);
     }
     requestAnimationFrame((tt) => this.loop(tt));
@@ -235,10 +240,28 @@ class App {
     this.save.totalFlips += game.flips;
     const after = totalStars(this.save);
     const newSkin = SKINS.find(s => s.stars > before && s.stars <= after);
+    delete this.save.skipped[i];
     this.persist();
     if (i % 20 === 19 && wasLocked) this.pendingWorldDone = Math.floor(i / 20);
+    this.ads.onLevelComplete();
+    // context for the forced-ad check when the player leaves the win screen
+    this.lastWin = { index: i, fails: game.fails || 0, worldEnd: this.pendingWorldDone !== undefined || i === this.levels.length - 1 };
     this.ui.showWin(game, { stars, best: this.save.best[i], newBest, newSkin, isLast: i === this.levels.length - 1 });
     setTimeout(() => this.trophies.onWin(game), 1400);
+  }
+
+  // Reward for watching an ad when stuck: open the next level without stars for this one.
+  skipLevel() {
+    const g = this.game;
+    if (!g || g.attract) return;
+    const i = g.info.index;
+    this.save.skipped[i] = true;
+    this.save.unlocked = Math.max(this.save.unlocked, Math.min(this.levels.length, i + 2));
+    this.persist();
+    const next = i + 1;
+    if (next % 20 === 0) this.ui.worldIndex = Math.floor(next / 20);
+    this.startLevel(next);
+    this.ui.toast(next % 20 === 0 ? `Skipped! ${WORLDS[next / 20].name} unlocked` : 'Level skipped — come back anytime for the ★', 2600);
   }
 
   starsFor(flips, par) {
@@ -262,7 +285,9 @@ class App {
   }
 
   resetProgress() {
-    this.save = { ...resetSave(), sfx: this.save.sfx, music: this.save.music, haptics: this.save.haptics };
+    const keep = this.save;
+    // ad pacing and a "remove ads" purchase survive a progress reset; free hints come back
+    this.save = { ...resetSave(), sfx: keep.sfx, music: keep.music, haptics: keep.haptics, adsRemoved: keep.adsRemoved, adFast: keep.adFast, ads: keep.ads ? { ...keep.ads, freeHints: {} } : null };
     this.persist();
     this.ui._worldsBuilt = false;
     document.getElementById('world-list').innerHTML = '';

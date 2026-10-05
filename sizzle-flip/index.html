@@ -71,7 +71,10 @@
       </div>
       <div class="hud-bottom">
         <button class="btn btn-round" data-act="overview" aria-label="Look around">👁</button>
-        <button class="btn btn-round btn-mustard hint-btn" data-act="hint" id="hud-hint" aria-label="Show a hint" hidden>💡</button>
+        <div class="hud-help">
+          <button class="btn btn-round btn-mustard hint-btn" data-act="hint" id="hud-hint" aria-label="Show a hint" hidden>💡<i class="badge ad-badge" id="hint-ad" hidden>AD</i></button>
+          <button class="btn btn-round btn-sky skip-btn" data-act="skip" id="hud-skip" aria-label="Skip this level" hidden>⏭<i class="badge ad-badge" id="skip-ad">AD</i></button>
+        </div>
         <div class="tip" id="hud-tip" hidden></div>
         <button class="btn btn-round" data-act="restart" aria-label="Restart level">↻</button>
       </div>
@@ -159,6 +162,18 @@
           <label class="toggle"><input type="checkbox" data-set="longAim"><span>Long aim guide (easier)</span></label>
         </div>
         <button class="btn btn-ghost danger" data-act="reset"><span>Reset progress</span></button>
+        <div class="ad-test" id="ad-test" hidden>
+          <h4>Ad testing <small>(test builds only)</small></h4>
+          <div class="toggles">
+            <label class="toggle"><input type="checkbox" data-set="adFast"><span>Fast ad pacing</span></label>
+            <label class="toggle"><input type="checkbox" data-set="adsRemoved"><span>Pretend “Remove ads” was bought</span></label>
+          </div>
+          <div class="row">
+            <button class="btn btn-ghost" data-act="ad-preview" data-kind="interstitial"><span>Forced ad</span></button>
+            <button class="btn btn-ghost" data-act="ad-preview" data-kind="rewarded"><span>Reward ad</span></button>
+          </div>
+          <p class="ad-status" id="ad-status"></p>
+        </div>
         <div class="credits">
           <b>SIZZLE FLIP</b><br>
           Design, code, art &amp; sound: built from scratch with canvas + Web Audio.<br>
@@ -175,7 +190,7 @@
         <p id="confirm-text">Are you sure?</p>
         <div class="row">
           <button class="btn btn-ghost" data-act="confirm-no"><span>Cancel</span></button>
-          <button class="btn btn-ketchup" data-act="confirm-yes"><span>Yes</span></button>
+          <button class="btn btn-ketchup" data-act="confirm-yes"><span id="confirm-yes">Yes</span></button>
         </div>
       </div>
     </div>

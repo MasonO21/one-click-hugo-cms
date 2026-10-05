@@ -16,7 +16,7 @@ export class UI {
       el.addEventListener('click', (e) => { e.stopPropagation(); this.app.audio.play('click'); this.action(el.dataset.act, el); });
     });
     document.querySelectorAll('input[data-set]').forEach(el => {
-      el.addEventListener('change', () => this.app.setSetting(el.dataset.set, el.checked));
+      el.addEventListener('change', () => { this.app.setSetting(el.dataset.set, el.checked); if (!$('scr-settings').hidden) this.renderAdTest(); });
     });
     // stop menu taps from reaching the canvas
     $('ui').addEventListener('pointerdown', (e) => { if (e.target !== $('ui')) e.stopPropagation(); });
@@ -37,7 +37,7 @@ export class UI {
     if (id === 'scr-worlds') this.renderWorlds();
     if (id === 'scr-levels') this.renderLevels();
     if (id === 'scr-skins') this.renderSkins();
-    if (id === 'scr-settings') this.syncToggles();
+    if (id === 'scr-settings') { this.syncToggles(); this.renderAdTest(); }
   }
 
   hideScreens() {
@@ -47,7 +47,8 @@ export class UI {
 
   onBack() {
     // Android back button / browser back
-    if (!$('scr-confirm').hidden) { $('scr-confirm').hidden = true; return; }
+    if (this.app.ads.showing) return;
+    if (!$('scr-confirm').hidden) { this.action('confirm-no'); return; }
     if (!$('scr-pause').hidden) { this.action('resume'); return; }
     if (this.app.game && !this.app.game.attract && $('scr-pause').hidden && $('scr-win').hidden) { this.action('pause'); try { history.pushState({ s: 'game' }, ''); } catch (e) { /* noop */ } return; }
     const prev = this.stack.pop();
@@ -69,25 +70,83 @@ export class UI {
       case 'resume': $('scr-pause').hidden = true; app.pause(false); break;
       case 'restart': $('scr-pause').hidden = true; $('scr-win').hidden = true; app.restartLevel(); break;
       case 'overview': app.game && app.game.toggleOverview(); break;
-      case 'hint':
-        if (app.game) {
-          app.game.useHint();
-          const timed = app.game.sim.bodies.some(b => b.kinematic || b.timer);
-          this.toast(timed ? 'Follow the route — and time it with the moving parts!' : 'Follow the dotted route!', 2600);
-        }
-        break;
-      case 'levels': $('scr-pause').hidden = true; $('scr-win').hidden = true; app.toMenu('scr-levels'); break;
+      case 'hint': this.hint(); break;
+      case 'skip': this.offerSkip(); break;
+      case 'levels':
+        if (!$('scr-win').hidden) { this.leaveWin(() => app.toMenu('scr-levels')); break; }
+        $('scr-pause').hidden = true; app.toMenu('scr-levels'); break;
       case 'home': $('scr-pause').hidden = true; app.toMenu('scr-title'); break;
       case 'replay': $('scr-win').hidden = true; app.restartLevel(); break;
-      case 'next': $('scr-win').hidden = true; app.nextLevel(); break;
+      case 'next': this.leaveWin(() => app.nextLevel()); break;
       case 'wd-continue': $('scr-worlddone').hidden = true; app.afterWorldDone(); break;
       case 'reset': this.confirm('Erase all stars and progress?', () => { app.resetProgress(); this.toast('Progress reset'); }); break;
       case 'confirm-yes': $('scr-confirm').hidden = true; this._confirmCb && this._confirmCb(); break;
-      case 'confirm-no': $('scr-confirm').hidden = true; break;
+      case 'confirm-no': $('scr-confirm').hidden = true; this._confirmNo && this._confirmNo(); break;
+      case 'ad-preview': app.ads.preview(el.dataset.kind).then(() => this.renderAdTest()); break;
     }
   }
 
-  confirm(text, cb) { $('confirm-text').textContent = text; this._confirmCb = cb; $('scr-confirm').hidden = false; }
+  confirm(text, cb, { yes = 'Yes', no = null } = {}) {
+    $('confirm-text').textContent = text;
+    $('confirm-yes').textContent = yes;
+    this._confirmCb = cb; this._confirmNo = no;
+    $('scr-confirm').hidden = false;
+  }
+
+  // ------------------------------------------------------------ ads
+  // Leaving the level-complete card (Next / Levels) is the only place a forced ad may appear;
+  // the card stays up underneath so nothing jumps while the ad loads.
+  async leaveWin(go) {
+    if (this._leaving) return;
+    this._leaving = true;
+    try { await this.app.ads.maybeInterstitial(this.app.lastWin || {}); } finally { this._leaving = false; }
+    $('scr-win').hidden = true;
+    go();
+  }
+
+  // The first hint in each world is free; later ones are unlocked with an opt-in reward ad.
+  async hint() {
+    const app = this.app, g = app.game;
+    if (!g || g.attract || this._adBusy) return;
+    const w = g.info.worldIndex;
+    let msg = null;
+    if (app.ads.enabled && !app.ads.hintIsFree(w)) {
+      this._adBusy = true;
+      const r = await app.ads.rewarded('hint').finally(() => { this._adBusy = false; });
+      if (app.game !== g) return;
+      if (r === 'closed') { this.toast('Watch the whole ad to unlock the hint', 2400); return; }
+      if (r === 'nofill') msg = 'No ad right now — this hint is on the house!';
+    } else if (app.ads.enabled) {
+      app.ads.useFreeHint(w);
+      msg = 'Free hint! Follow the dotted route.';
+    }
+    g.useHint();
+    const timed = g.sim.bodies.some(b => b.kinematic || b.timer);
+    this.toast(msg || (timed ? 'Follow the route — and time it with the moving parts!' : 'Follow the dotted route!'), 2600);
+  }
+
+  // After many fails on an unbeaten level: watch a reward ad to move on (no stars, come back anytime).
+  offerSkip() {
+    const app = this.app, g = app.game;
+    if (!g || g.attract || this._adBusy || !app.ads.canOfferSkip(g)) return;
+    app.pause(true);
+    const viaAd = app.ads.enabled;
+    this.confirm(viaAd ? 'Stuck? Watch a short ad to skip to the next level. You can come back for the stars anytime.'
+      : 'Skip to the next level? You can come back for the stars anytime.', async () => {
+      this._adBusy = true;
+      const r = viaAd ? await app.ads.rewarded('skip').finally(() => { this._adBusy = false; }) : 'nofill';
+      this._adBusy = false;
+      if (app.game !== g) return;
+      if (r === 'closed') { app.pause(false); this.toast('Watch the whole ad to skip', 2400); return; }
+      app.skipLevel();
+    }, { yes: viaAd ? '▶ Watch ad' : 'Skip', no: () => app.pause(false) });
+  }
+
+  renderAdTest() {
+    const box = $('ad-test');
+    box.hidden = !this.app.ads.testing;
+    if (!box.hidden) $('ad-status').textContent = this.app.ads.status();
+  }
 
   trophyToast(a) {
     const t = document.getElementById('trophy');
@@ -185,9 +244,10 @@ export class UI {
       const b = document.createElement('button');
       const unlocked = i < app.save.unlocked;
       const stars = app.save.stars[i] || 0;
-      b.className = 'lvl' + (unlocked ? '' : ' locked') + (unlocked && !stars ? ' current' : '') + (k === 19 ? ' boss' : '');
+      const skipped = unlocked && !stars && !!app.save.skipped[i];
+      b.className = 'lvl' + (unlocked ? '' : ' locked') + (unlocked && !stars && !skipped ? ' current' : '') + (skipped ? ' skipped' : '') + (k === 19 ? ' boss' : '');
       b.innerHTML = `<span>${k + 1}</span><span class="s">${[0, 1, 2].map(j => j < stars ? '<b>★</b>' : '★').join('')}</span>`;
-      b.setAttribute('aria-label', `Level ${k + 1}${unlocked ? '' : ' locked'}`);
+      b.setAttribute('aria-label', `Level ${k + 1}${unlocked ? (skipped ? ' skipped' : '') : ' locked'}`);
       b.addEventListener('click', () => {
         if (!unlocked) { app.audio.play('tap'); this.toast('Beat the previous level first'); return; }
         app.audio.play('click');
@@ -253,10 +313,18 @@ export class UI {
     const stars = this.app.starsFor(Math.max(game.flips, 1), game.info.par);
     const projected = game.flips < game.info.par ? 3 : this.app.starsFor(game.flips + 1, game.info.par);
     $('hud-stars').innerHTML = [0, 1, 2].map(j => j < projected ? '★' : '<span class="off">★</span>').join('');
+    const ads = this.app.ads;
     const hint = $('hud-hint');
     const ready = game.hintReady();
-    if (ready && hint.hidden) { hint.hidden = false; this.toast('Stuck? Tap 💡 for a hint'); }
+    const paidHint = ads.enabled && !ads.hintIsFree(game.info.worldIndex);
+    $('hint-ad').hidden = !paidHint;
+    if (ready && hint.hidden) { hint.hidden = false; this.toast(paidHint ? 'Stuck? Tap 💡 to watch an ad for a hint' : 'Stuck? Tap 💡 for a free hint'); }
     else if (!ready) hint.hidden = true;
+    const skip = $('hud-skip');
+    const canSkip = ads.canOfferSkip(game);
+    $('skip-ad').hidden = !ads.enabled;
+    if (canSkip && skip.hidden) { skip.hidden = false; this.toast('Still stuck? Tap ⏭ to skip this level', 2600); }
+    else if (!canSkip) skip.hidden = true;
   }
 
   // ------------------------------------------------------------ win

@@ -132,6 +132,8 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .lvl.locked::after { content: '🔒'; position: absolute; font-size: 22px; }
 .lvl.locked span { visibility: hidden; }
 .lvl.boss::before { content: '👑'; position: absolute; top: -12px; right: -6px; font-size: 18px; }
+.lvl.skipped { background: #e3f3ff; box-shadow: 0 5px 0 #8fc1e3, 0 5px 0 3px var(--ink); }
+.lvl.skipped::after { content: 'SKIPPED'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--sky); color: #fff; font-size: 10px; letter-spacing: 0.5px; padding: 1px 6px; border: 2px solid var(--ink); border-radius: 8px; white-space: nowrap; }
 
 /* HUD */
 #hud { position: absolute; inset: 0; pointer-events: none; }
@@ -152,6 +154,8 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .hud-bottom { position: absolute; bottom: calc(var(--sab) + 14px); left: calc(var(--sal) + 10px); right: calc(var(--sar) + 10px); display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
 .hud-bottom .btn-round { opacity: 0.92; }
 .hint-btn { animation: pulse 1s ease-in-out infinite; }
+.hud-help { display: flex; gap: 12px; }
+.ad-badge { font-family: 'Fredoka'; font-weight: 700; font-size: 10px; letter-spacing: 0.5px; padding: 2px 5px; top: -8px; right: -10px; background: var(--grape); }
 .tip { pointer-events: none; flex: 1; text-align: center; background: rgba(42,26,46,0.82); color: #fff; border-radius: 16px; padding: 10px 14px; font-size: 15px; border: 2px solid rgba(255,255,255,0.25); animation: screenIn 0.3s; max-width: 420px; margin: 0 auto; }
 .tip b { color: var(--mustard); font-family: 'Lilita One'; font-weight: 400; }
 
@@ -232,6 +236,34 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .skin.locked .nm { color: #8a7262; }
 
 .settings-card { margin-top: 30px; padding-top: 22px; overflow-y: auto; max-height: 80vh; }
+.ad-test { border: 3px dashed rgba(58,34,22,0.3); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.ad-test h4 { margin: 0; font-family: 'Lilita One'; font-weight: 400; font-size: 20px; text-align: center; }
+.ad-test h4 small { font-family: 'Fredoka'; font-size: 12px; color: #8a7262; }
+.ad-test .row { flex-wrap: nowrap; gap: 10px; }
+.ad-test .row .btn { flex: 1; font-size: 15px; padding: 8px 10px; }
+.ad-status { margin: 0; font-size: 12px; color: #6b5547; white-space: pre-line; text-align: center; line-height: 1.45; }
+
+/* placeholder ads (test builds) */
+.adlayer { position: absolute; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: rgba(12,6,14,0.94); padding: calc(var(--sat) + 12px) 12px calc(var(--sab) + 12px); animation: fadeIn 0.2s; }
+.ad-card {
+  position: relative; width: min(92vw, 420px); min-height: min(78vh, 620px); display: flex; flex-direction: column; padding: 14px; overflow: hidden;
+  border: 4px solid #fff; border-radius: 26px; color: var(--ink); box-shadow: 0 20px 50px rgba(0,0,0,0.5); animation: cardIn 0.35s cubic-bezier(.2,1.5,.4,1);
+  background: radial-gradient(120% 70% at 50% 25%, rgba(255,255,255,0.6), rgba(255,255,255,0) 60%), var(--adc);
+}
+.ad-top { display: flex; align-items: center; gap: 8px; }
+.ad-pill { background: #ffd23f; font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 6px; border: 2px solid var(--ink); }
+.ad-kind { flex: 1; font-size: 13px; font-weight: 700; opacity: 0.8; }
+.ad-close { width: 42px; height: 42px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; font-family: 'Lilita One'; font-size: 18px; color: var(--ink); cursor: pointer; padding: 0; }
+.ad-close:disabled { opacity: 0.55; cursor: default; }
+.ad-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; padding: 20px 0; }
+.ad-emoji { font-size: 120px; line-height: 1; animation: bob 1.4s ease-in-out infinite; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.25)); }
+.ad-brand { font-family: 'Lilita One'; font-size: 38px; line-height: 1.05; color: #fff; text-shadow: 0 3px 0 var(--ink), 0 -2px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink); }
+.ad-line { font-size: 18px; font-weight: 700; }
+.ad-reward { display: flex; flex-direction: column; gap: 10px; }
+.ad-why { text-align: center; font-family: 'Lilita One'; font-size: 19px; }
+.ad-bar { height: 16px; border: 3px solid var(--ink); border-radius: 10px; background: rgba(58,34,22,0.25); overflow: hidden; }
+.ad-bar i { display: block; height: 100%; width: 0; background: #fff; }
+.ad-foot { text-align: center; font-size: 12px; opacity: 0.75; margin-top: 10px; }
 .credits { font-size: 13px; color: #6b5547; text-align: center; line-height: 1.5; }
 
 .toast { position: absolute; top: calc(var(--sat) + 80px); left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 14px; font-family: 'Lilita One'; font-size: 17px; z-index: 50; pointer-events: none; animation: toastIn 0.3s; max-width: calc(100vw - 32px); width: max-content; text-align: center; }

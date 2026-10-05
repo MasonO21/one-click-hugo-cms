@@ -1,9 +1,11 @@
 // Save data (per-device). Every access is guarded: storage can be unavailable (private mode, previews).
 const KEY = 'sizzleflip.save.v1';
 
-const DEFAULTS = {
+// A fresh object each time, so nested maps are never shared with (or mutated into) the defaults.
+const defaults = () => ({
   stars: {},        // levelIndex -> best stars (1..3)
   best: {},         // levelIndex -> fewest flips
+  skipped: {},      // levelIndex -> true when skipped with a reward ad (no stars until beaten)
   unlocked: 1,      // number of unlocked levels (sequential)
   skin: 'classic',
   sfx: true,
@@ -15,16 +17,20 @@ const DEFAULTS = {
   seenSkins: {},
   ach: {},
   counters: {},
-};
+  ads: null,        // ad pacing state, owned by AdManager (src/ads.js)
+  adsRemoved: false,
+  adFast: false,
+});
 
 export function loadSave() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULTS };
+    if (!raw) return defaults();
     const d = JSON.parse(raw);
-    return { ...DEFAULTS, ...d, stars: d.stars || {}, best: d.best || {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
+    const base = defaults();
+    return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
   } catch (e) {
-    return { ...DEFAULTS };
+    return defaults();
   }
 }
 
@@ -34,7 +40,7 @@ export function writeSave(save) {
 
 export function resetSave() {
   try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
-  return { ...DEFAULTS };
+  return defaults();
 }
 
 export function totalStars(save) {

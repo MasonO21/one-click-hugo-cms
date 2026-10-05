@@ -56,7 +56,7 @@ export class Game {
     this.prevX = Float64Array.from(this.sim.px); this.prevY = Float64Array.from(this.sim.py);
     this.checkpoint = this.makeCheckpoint();
     this.flips = 0;
-    this.showHint = false;
+    this.showHint = !!this.hintUnlocked; // a hint, once taken, stays up through restarts of this level
     this.fx.clear();
     this.bodyState = this.sim.bodies.map(() => ({ pop: 0, hit: 0, tilt: 0, flipA: 0, flipV: 0, on: true, warn: 0 }));
     this.goalBody = this.sim.bodies.findIndex(b => b.type && b.type.role === 'goal');
@@ -177,13 +177,13 @@ export class Game {
 
   // ---- hints: trace the verified solution from the start as a dotted route
   hintReady() {
-    return !this.attract && (this.level.solution || []).length > 0 && (this.fails >= 3 || this.flips >= this.info.par + 3) && !this.showHint;
+    return !this.attract && (this.level.solution || []).length > 0 && (this.fails >= 3 || this.flips >= this.info.par + 3) && !this.hintUnlocked;
   }
 
   useHint() {
     if (!this.level.solution || !this.level.solution.length) return;
     this.reset();
-    this.showHint = true;
+    this.showHint = this.hintUnlocked = true;
     this.hintPaths = this.traceSolution();
     this.app.trophies.onHint();
     this.au.play('unlock');

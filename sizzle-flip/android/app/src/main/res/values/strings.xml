@@ -4,4 +4,6 @@
     <string name="title_activity_main">Sizzle Flip</string>
     <string name="package_name">com.sizzleflip.game</string>
     <string name="custom_url_scheme">com.sizzleflip.game</string>
+    <!-- Google's public TEST AdMob app id. Replace with your own (ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY) before release. -->
+    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
 </resources>

@@ -65,6 +65,8 @@ export class AudioEngine {
 
   setSfx(on) { this.sfxOn = on; if (this.sfx) this.sfx.gain.setTargetAtTime(on ? 1.6 : 0, this.ctx.currentTime, 0.05); }
   setMusic(on) { this.musicOn = on; if (this.mus) this.mus.gain.setTargetAtTime(on ? 0.26 : 0, this.ctx.currentTime, 0.1); }
+  // Silence everything while an ad is on screen (ads bring their own audio).
+  duck(on) { this.ducked = on; if (this.master) this.master.gain.setTargetAtTime(on ? 0 : 0.9, this.ctx.currentTime, 0.08); if (on) this.stopCharge(); }
 
   // ---- primitives
   tone(freq, dur, { type = 'sine', vol = 0.3, attack = 0.005, slide = 0, delay = 0, out = null, decay = null, vibrato = 0, filter = 0, verb = 0 } = {}) {

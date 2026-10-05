@@ -50,6 +50,34 @@ npx cap add ios && npx cap open ios     # on macOS with Xcode → Archive → Ap
 
 Native extras are wired in automatically when running inside Capacitor: real haptics (`@capacitor/haptics`) and a hidden status bar (`@capacitor/status-bar`).
 
+## Ads
+
+All ad logic lives in `src/ads.js`: the pacing rules (`AD_RULES`), the AdMob unit ids (`ADMOB_UNITS`) and the providers.
+
+**When ads appear**
+
+| Ad | Where | Rule |
+|---|---|---|
+| Forced (interstitial) | Tapping **Next** or **Levels** on the level-complete card | Not before 5 levels are beaten **and** 5 minutes are played · then at most every 3rd level beaten **and** 3+ minutes apart · skipped after a level that took 10+ fails · never on world-complete, the finale, retry, fail or pause |
+| Reward (opt-in) | 💡 hint | The first hint in each world is free; later ones show an **AD** badge and unlock after a reward ad |
+| Reward (opt-in) | ⏭ skip | Shows after 8 fails on an unbeaten level (never on level 200). The level is marked *skipped* (no stars) and the next one opens |
+
+If no ad is available (no fill, offline), the reward is granted anyway. A taken hint stays on screen through restarts. The game pauses and its audio is muted while any ad is showing. There are no banners. Setting `save.adsRemoved` (wire it to a "Remove ads" purchase) stops forced ads and keeps the opt-in ones.
+
+**Testing the flow:** the Claude artifact, a `localhost` dev server and any URL with `?adtest` show clearly labelled placeholder ads. **Settings → Ad testing** (test builds only) has fast pacing, a "Remove ads" switch, buttons to preview both ad types, and a live readout of the pacing state. `node tools/e2e-ads.mjs` runs the whole flow in headless Chromium (31 checks). A deployed web build shows no ads.
+
+**Going live with AdMob** (`@capacitor-community/admob` is installed and synced):
+
+1. Create the app and two ad units (Interstitial, Rewarded) per platform in the [AdMob console](https://apps.admob.com).
+2. Put the unit ids in `ADMOB_UNITS` in `src/ads.js` and set `testing: false`. To keep test ads on your own phone, add its test-device id to `testingDevices`.
+3. Android: replace `admob_app_id` in `android/app/src/main/res/values/strings.xml` (it's read by `AndroidManifest.xml`).
+4. iOS (after `npx cap add ios`): add to `ios/App/App/Info.plist` the keys `GADApplicationIdentifier` (your iOS app id), `GADIsAdManagerApp` = `true`, `SKAdNetworkItems` (Google's list) and `NSUserTrackingUsageDescription` (for example "Used to show you more relevant ads.").
+5. Set up a GDPR consent message (AdMob → Privacy & messaging). The app asks for consent and App Tracking Transparency at launch.
+6. Store forms: declare that the app contains ads and fill in the data-safety section (advertising ID). If you target children, set `childDirected: true` and follow Google Play Families policy.
+7. `npm run build && npx cap sync`, then build.
+
+Google's public test ids are configured now, so a debug build shows real test ads right away.
+
 ## How the levels are made (and why they're all beatable)
 
 Levels are built by `tools/generate.mjs` from per-world *recipes* (which props, hazards and mechanics are unlocked at each level, with the tutorial tip that introduces them) and a difficulty curve (target par, level height, obstacle density).
@@ -81,6 +109,7 @@ src/physics.js              deterministic position-based soft-body physics (shar
 src/objects.js              prop library: collision shapes, materials, roles (10 worlds, 100+ props)
 src/art/                    procedural vector art: sausage + face, props per world, backgrounds, logo
 src/audio.js                synthesized SFX + per-world procedural music
+src/ads.js                  ad pacing rules, AdMob + placeholder providers
 src/levels/data.js          the 200 generated & verified levels
 tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon & screenshot renderers
 store/                      store screenshots (1290×2796) and feature graphic source in icons/
