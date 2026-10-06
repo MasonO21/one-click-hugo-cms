@@ -30,7 +30,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 3850 characters
+## Description (4,000 max) · 3983 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -41,21 +41,21 @@ SURVIVAL THAT STAYS REAL
 • Water is life. Your people drink it and your wyrm breathes it. Let the wells run dry and the wyrm sleeps, the heat pours in and families leave.
 • Read the forecast and prepare. Sandstorms and heatwaves arrive on a schedule you can see coming.
 • Let the wyrm drizzle on calm days to save water, then set it to Downpour when the storm hits.
-• The sun hunts water. The bigger your wyrm grows, the hotter the storms come for it.
 • Call the Rain. Your wyrm can summon a shower that fills the wells, cools the keep and calms a sandstorm.
 • Watch raiders march across the dunes to your gate, then time the rain to turn the sand to mud under their feet.
 
 BUILD YOUR KEEP IN 3D
 • Thirteen buildings on the terraces of a canyon oasis, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
 • Watch your villagers carry water jars up the stone stairs, camels cross the dunes outside the gate and lanterns come on at night. Pan, zoom and turn anywhere in your keep.
-• Assign workers, research twelve technologies and guard your stores against raiders.
 • Light the Sunsteel Forge and forge the Warden's Gear: six pieces, five tiers, and every squad you send out gets stronger.
 • Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms. Every choice costs something and pays off in its own way.
 • Trade with merchant caravans that camp by the gate, swapping what you have too much of for what you're short on.
+• Raise fountains, wyrm statues and a glass mosaic court in the keep gardens. Each has its own place on the terraces and a lasting bonus.
 
 HEROES WITH A JOB AT HOME
 • Recruit 22 illustrated heroes across three classes: Shieldbearers, Dune Archers and Camel Lancers.
 • Station heroes as Stewards to boost a building, then lead them into battle.
+• Battles play out round by round: fire each hero's skill when it's ready, and time your wyrm's breath to break a foe's heaviest blow.
 • Recruitment odds are always shown, with a guaranteed Legendary within 40 recruits.
 
 CROSS THE DUNES
@@ -72,10 +72,10 @@ RIDE WITH YOUR CARAVAN
 PLAY YOUR WAY
 • Your keep keeps working while you're away, and your wyrm keeps a gentle mist so no one falls ill.
 • Guide the water in Channels: turn the stone channels until every hut, palm and field drinks. A new puzzle every day.
+• Fly your Rainwyrm through the sky in Cloud Run and herd the rain clouds home, three flights a day.
 • Your Rainwyrm makes wishes: a splash in the rain, fresh dates, a story from the Dunes. Grant them to deepen your bond.
 • Daily duties, a gift calendar, achievements, six rotating events and the Wellkeeper's Ledger season pass, with a new wyrm skin every season.
 • Patron levels reward loyal players with faster production, shorter timers and a daily chest. They never add combat strength.
-• Cosmetic dragon skins change how your wyrm looks and nothing else.
 
 Rainkeep is free to play with optional in-app purchases, including items that give random heroes. You can turn off in-app purchases in your device settings.
 ```
