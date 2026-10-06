@@ -11,7 +11,8 @@
  *            Starglass hoards up to about $1,000). Purchases are simulated through the store.
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
- *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels
+ *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups)
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -95,9 +96,9 @@ const HOURS = Number(process.argv[3] || 8);
         for (const [l] of D.growthFund) A.growth(l);
         A.stipend();
         if (PAYS) A.patronchest();
-        // spare Starglass: crates for whatever the next Rainwyrm level (and the buildings it needs) is short of,
-        // then speedups on long builds, keeping a reserve
-        if (PAYS && S.starglass > 1500) {
+        // spare Starglass (every mode, so spend levels compare like for like): crates for whatever the next
+        // Rainwyrm level (and the buildings it needs) is short of, then speedups on long builds, keeping a reserve
+        if (!NO.includes('sgspend') && S.starglass > 1500) {
           const need = {};
           const addCost = (pid, to) => { for (const [k, v] of Object.entries(KH.buildCost(pid, to))) if (k in S.res) need[k] = (need[k] || 0) + v; };
           if (S.lv.wyrm < D.wyrm.maxLevel) {
@@ -157,7 +158,7 @@ const HOURS = Number(process.argv[3] || 8);
         for (const [k, id] of Object.entries(byKind)) if (S.stewards[k] !== id) A.station(id);
         while (S.beacons >= 1) { A.pull('1'); }
         const allStarred = D.heroes.filter((h) => KH.heroAvailable(h)).every((h) => S.heroes[h.id] && S.heroes[h.id].stars >= D.heroMaxStars);
-        if (S.starglass > 2500 && !(PAYS && allStarred)) A.pull('10');
+        if (S.starglass > 2500 && (NO.includes('sgspend') || !allStarred)) A.pull('10');
         // kindred
         if (S.lv.hall && !S.caravan.joined) A.kjoin('lastwell');
         if (S.caravan.joined) {
