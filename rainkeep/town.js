@@ -42,17 +42,21 @@
     T.qh = $('#quest').offsetHeight || 70;
     const groundH = VH - T.top - (T.qh + 22);
     T.k = clamp(Math.min(VW / 400, VH / 560), 0.7, 1.2);
+    // the same terraced layout as the 3D keep (DATA.keep), seen from above at a slant:
+    // x across the screen, z down it, and height lifting things up the screen
+    T.ux = (VW * 0.45) / 13.4;
+    T.uz = Math.min((groundH - 80 * T.k) / 28.6, T.ux * 0.8);
+    T.uy = T.uz * 0.8;
     T.cx = VW / 2;
-    T.cy = T.top + groundH * 0.52 + 16;
-    T.ry = groundH * 0.39;
-    T.rx = Math.min(VW * 0.385, T.ry * 1.9, 250);
-    DATA.plots.forEach((p, i) => {
-      const a = KH.plotAngle(i);
-      const x = T.cx + T.rx * Math.cos(a), y = T.cy + T.ry * Math.sin(a);
-      const depth = (y - (T.cy - T.ry)) / (2 * T.ry);
-      T.pos[p.id] = { x, y, s: T.k * (0.8 + 0.22 * depth) };
-    });
-    T.pos.wyrm = { x: T.cx, y: T.cy, s: T.k };
+    T.cy = T.top + 56 * T.k + 12.3 * T.uz + 4.4 * T.uy + Math.max(0, (groundH - 80 * T.k - 28.6 * T.uz) / 2);
+    T.ry = 12.6 * T.uz;
+    T.rx = 12.2 * T.ux;
+    for (const p of DATA.plots) {
+      const l = DATA.keep.plots[p.id], P = proj(l.x, l.y, l.z);
+      T.pos[p.id] = { x: P.x, y: P.y, s: T.k * (0.78 + 0.24 * clamp((l.z + 13) / 26, 0, 1)) };
+    }
+    const sp = DATA.keep.spring;
+    T.pos.wyrm = { ...proj(sp.x, 0, sp.z), s: T.k };
     T.stars = Array.from({ length: 60 }, () => ({ x: rand(0, VW), y: rand(0, T.top), r: rand(0.4, 1.3), p: rand(0, 6) }));
     const ridge = (h0, h1, step) => {
       const pts = [];
@@ -61,6 +65,8 @@
     };
     T.ridges = [ridge(14, 46, 38), ridge(4, 20, 26)];
     if (!T.flakes.length) T.flakes = Array.from({ length: 170 }, () => ({ x: Math.random(), y: Math.random(), z: rand(0.3, 1), p: rand(0, 6) }));
+    const hb = $('#camhome');
+    if (hb) hb.style.bottom = `${T.qh + 22}px`;
     const toasts = $('#toasts');
     toasts.style.top = 'auto';
     toasts.style.bottom = `${$('#tabs').offsetHeight + T.qh + 22}px`;
@@ -72,6 +78,45 @@
   // ======================================================================
   // Buildings
   // ======================================================================
+  function proj(x, y, z) { return { x: T.cx + x * T.ux, y: T.cy + z * T.uz - y * T.uy }; }
+  // terraces as raised slabs: the wall face first, then the lifted top
+  function drawTerraces() {
+    const lim = (VW / 2) / T.ux + 1.5;
+    const pt = (x, y, z) => proj(clamp(x, -lim, lim), y, Math.max(z, -14.2));
+    const poly = (pts, y) => { ctx.beginPath(); pts.forEach(([x, z], i) => { const P = pt(x, y, z); if (i) ctx.lineTo(P.x, P.y); else ctx.moveTo(P.x, P.y); }); ctx.closePath(); };
+    for (const t of DATA.keep.terraces) {
+      ctx.fillStyle = '#a8703f'; poly(t.pts, 0); ctx.fill();
+      for (let k = 1; k < 4; k++) { ctx.fillStyle = k % 2 ? '#b77d48' : '#9c6638'; poly(t.pts, (t.y * k) / 4); ctx.fill(); }
+      ctx.fillStyle = '#ddb075'; poly(t.pts, t.y); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,236,200,.55)'; ctx.lineWidth = 1.5; poly(t.pts, t.y); ctx.stroke();
+    }
+    const c = DATA.keep.crag, C = proj(c.x, 2.8, c.z), Ct = proj(c.x, c.y, c.z);
+    ctx.fillStyle = '#9c5f38'; ell(C.x, C.y, c.r * T.ux, c.r * T.uz); ctx.fill();
+    ctx.fillRect(C.x - c.r * T.ux, Ct.y, c.r * T.ux * 2, C.y - Ct.y);
+    ctx.fillStyle = '#c98a52'; ell(Ct.x, Ct.y, c.r * T.ux, c.r * T.uz); ctx.fill();
+    // stairs between the levels
+    for (const s of DATA.keep.stairs) {
+      const A0 = proj(s.a[0], s.a[2], s.a[1]), B0 = proj(s.b[0], s.b[2], s.b[1]), hw = (s.w / 2) * T.ux, n = 6;
+      ctx.fillStyle = '#e6c08a';
+      ctx.beginPath(); ctx.moveTo(A0.x - hw, A0.y); ctx.lineTo(A0.x + hw, A0.y); ctx.lineTo(B0.x + hw, B0.y); ctx.lineTo(B0.x - hw, B0.y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(120,70,30,.5)'; ctx.lineWidth = 1;
+      for (let i = 1; i < n; i++) { const y = A0.y + ((B0.y - A0.y) * i) / n; ctx.beginPath(); ctx.moveTo(A0.x - hw, y); ctx.lineTo(A0.x + hw, y); ctx.stroke(); }
+    }
+    // the sunken spring and its plaza
+    const sp = DATA.keep.spring, P = proj(sp.x, 0, sp.z);
+    ctx.fillStyle = '#e6c393'; ell(P.x, P.y, 7 * T.ux, 7 * T.uz); ctx.fill();
+    ctx.strokeStyle = 'rgba(150,100,50,.4)'; ctx.lineWidth = 1.2;
+    for (const r of [5.3, 4.6, 3.9]) { ell(P.x, P.y, r * T.ux, r * T.uz); ctx.stroke(); }
+    ctx.fillStyle = '#b8895a'; ell(P.x, P.y + 0.4 * T.uz, 5.3 * T.ux, 5.3 * T.uz); ctx.fill();
+    ctx.fillStyle = '#d4a874'; ell(P.x, P.y + 0.3 * T.uz, 4.6 * T.ux, 4.6 * T.uz); ctx.fill();
+    ctx.fillStyle = '#c99a66'; ell(P.x, P.y + 0.2 * T.uz, 3.9 * T.ux, 3.9 * T.uz); ctx.fill();
+    // the front wall and its gate
+    const g = DATA.keep.gate, W0 = proj(-lim, 0, g.z), W1 = proj(lim, 0, g.z), hh = 1.7 * T.uy;
+    ctx.fillStyle = '#b77d48'; ctx.fillRect(W0.x, W0.y - hh, W1.x - W0.x, hh);
+    ctx.fillStyle = '#deaa70'; ctx.fillRect(W0.x, W0.y - hh - 3, W1.x - W0.x, 4);
+    const G = proj(g.x, 0, g.z);
+    ctx.fillStyle = '#5a3418'; ctx.fillRect(G.x - 1.6 * T.ux, G.y - hh * 0.85, 3.2 * T.ux, hh * 0.85);
+  }
   function ell(x, y, rx, ry) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, Math.PI * 2); }
 
   function hut(x, y, w, h, rh, wall, roof, lit) {
@@ -559,10 +604,10 @@
       const pid = posts[i % posts.length], P = T.pos[pid];
       const sp = 0.12 + (i % 5) * 0.02;
       const u = (Math.sin(t * sp * Math.PI + i * 1.9) + 1) / 2;
-      const sx = T.cx + (P.x - T.cx) * 0.28, sy = T.cy + (P.y - T.cy) * 0.28;
+      const W = T.pos.wyrm, sx = W.x + (P.x - W.x) * 0.45, sy = W.y + (P.y - W.y) * 0.45;
       const x = sx + (P.x - sx) * (0.15 + 0.7 * u) + Math.sin(i * 7) * 5, y = sy + (P.y - sy) * (0.15 + 0.7 * u) + Math.cos(i * 5) * 3;
       list.push({ y, draw: () => {
-        const s = T.k * (0.85 + 0.25 * ((y - (T.cy - T.ry)) / (2 * T.ry)));
+        const s = T.k * (0.85 + 0.25 * clamp((y - (T.cy - T.ry)) / (2 * T.ry), 0, 1));
         ctx.fillStyle = 'rgba(8,16,30,.3)'; ell(x, y + 1, 3.2 * s, 1.2 * s); ctx.fill();
         ctx.fillStyle = i % 3 ? '#3a2d24' : '#2c3a4a'; ctx.beginPath(); ctx.ellipse(x, y - 4 * s, 2.4 * s, 4 * s, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#e9dcc8'; ell(x, y - 9 * s, 1.8 * s, 1.8 * s); ctx.fill();
@@ -576,8 +621,18 @@
   // Frame
   // ======================================================================
   let lastNow = 0;
+  // the compass button: shown once the view has moved away from home, its needle follows the camera
+  function camHome() {
+    const b = $('#camhome');
+    if (!b) return;
+    const T3 = KH.town3d;
+    const show = !!(S && UI.tab === 'town' && T3 && T3.active && !T3.home && !UI.sheet);
+    if (b.hidden === show) b.hidden = !show;
+    if (show && T3.az) b.firstElementChild.style.transform = `rotate(${(-T3.az()).toFixed(3)}rad)`;
+  }
   function frame(now) {
     requestAnimationFrame(frame);
+    camHome();
     if (!S || UI.tab !== 'town' || document.hidden || !VW) return;
     const t = now / 1000;
     const dt = Math.min(0.05, (now - (lastNow || now)) / 1000);
@@ -589,6 +644,10 @@
     if (KH.town3d && KH.town3d.active) {
       ctx.clearRect(0, 0, VW, VH);
       overlay3d(now, t, dt, R, wxType);
+      if (!S.settings.camHint && S.seenIntro && !UI.sheet && S.quest >= 2) {
+        S.settings.camHint = true;
+        KH.toast('Drag to move around the keep, pinch or scroll to zoom, and twist with two fingers to turn.', '', 'camhint', 6);
+      }
       return;
     }
 
@@ -607,15 +666,17 @@
     ctx.fillStyle = gr; ctx.fillRect(0, T.top, VW, VH - T.top);
     ctx.strokeStyle = 'rgba(160,100,50,.18)'; ctx.lineWidth = 2;
     for (let i = 0; i < 7; i++) { const yy = T.top + 24 + i * (VH - T.top) / 7; ctx.beginPath(); ctx.moveTo(0, yy); ctx.quadraticCurveTo(VW / 2, yy - 14, VW, yy + 6); ctx.stroke(); }
+    drawTerraces();
+    const W = T.pos.wyrm;
     ctx.strokeStyle = 'rgba(240,215,170,.55)'; ctx.lineCap = 'round';
     for (const p of DATA.plots) {
       if (!S.lv[p.id]) continue;
       const P = T.pos[p.id];
-      ctx.lineWidth = 7 * P.s; ctx.beginPath(); ctx.moveTo(T.cx, T.cy); ctx.lineTo(P.x, P.y); ctx.stroke();
+      ctx.lineWidth = 7 * P.s; ctx.beginPath(); ctx.moveTo(W.x, W.y); ctx.lineTo(P.x, P.y); ctx.stroke();
     }
 
     const items = DATA.plots.map((p) => ({ y: T.pos[p.id].y, draw: () => drawPlot(p.id, now, t) }));
-    items.push({ y: T.cy, draw: () => townWyrm(T.cx, T.cy, t, now) });
+    items.push({ y: W.y, draw: () => townWyrm(W.x, W.y, t, now) });
     items.push(...drawWalkers(t));
     items.sort((a, b) => a.y - b.y).forEach((it) => it.draw());
 
@@ -630,10 +691,10 @@
     UI.floaters = UI.floaters.filter((f) => now - f.t0 < 1600);
 
     keepMarks(t, (pid) => {
-      const P = pid === 'gate' ? { x: T.cx, y: T.cy + T.ry + 30 * T.k, s: T.k } : T.pos[pid];
+      const P = pid === 'gate' ? { ...proj(DATA.keep.gate.x, 1.7, DATA.keep.gate.z), s: T.k } : T.pos[pid];
       return P ? { x: P.x, y: P.y - 36 * P.s, s: P.s } : null;
     });
-    if (KH.keep && KH.keep.merchantHere()) merchantCamp(T.cx + T.rx * 0.8, T.cy + T.ry * 0.9, T.k, t);
+    if (KH.keep && KH.keep.merchantHere()) { const M = proj(4.2, 0, 13.6); merchantCamp(M.x, M.y, T.k, t); }
     if (KH.keep && KH.keep.raining()) rainStreaks(t, KH.keep.rainK());
     screenFx(t, dt, R, wxType, true);
   }
@@ -764,7 +825,7 @@
   }
   function overlay3d(now, t, dt, R, wxType) {
     const AN = KH.town3d.anchors;
-    const ids = DATA.plots.map((p) => p.id).filter((id) => AN[id]).sort((a, b) => AN[a].y - AN[b].y);
+    const ids = DATA.plots.map((p) => p.id).filter((id) => AN[id] && AN[id].vis !== false).sort((a, b) => AN[a].y - AN[b].y);
     for (const pid of ids) {
       const a = AN[pid], s = a.s, p = PLOT[pid], L = S.lv[pid];
       const job = S.builds.find((b) => b.plot === pid);
@@ -800,7 +861,7 @@
     }
     UI.floaters = UI.floaters.filter((f) => now - f.t0 < 1600);
     const W = AN.wyrm;
-    if (W) {
+    if (W && W.vis !== false) {
       if (S.dormant) pill(W.tx, W.ty - 10, 'Dormant: needs water', W.s, 0);
       else if (R && R.net.water < 0 && S.res.water / -R.net.water < 45) pill(W.tx, W.ty - 10, 'Thirsty!', W.s, 1);
       const pa = UI.petT ? (now - UI.petT) / 1000 : 9;
@@ -812,7 +873,7 @@
     }
     keepMarks(t, (pid) => {
       const a = AN[pid];
-      return a ? { x: a.tx, y: a.ty, s: a.s } : null;
+      return a && a.vis !== false ? { x: a.tx, y: a.ty, s: a.s } : null;
     });
     screenFx(t, dt, R, wxType, false);
   }
@@ -831,38 +892,78 @@
     return best;
   }
 
-  // taps open buildings; in 3D a drag orbits the camera and a pinch or the wheel zooms
+  // Taps open buildings. In 3D one finger (or the left mouse button) drags the view around, two fingers
+  // pinch to zoom, twist to turn and slide to pan, the wheel zooms toward the cursor, the right button
+  // (or Shift-drag) turns and tilts, and a double tap or the compass button flies back home.
   const touches = new Map();
-  let gest = null;
-  const pinchDist = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  let gest = null, lastTap = null;
+  const T3on = () => (KH.town3d && KH.town3d.active ? KH.town3d : null);
+  const pair = () => {
+    const [a, b] = [...touches.values()];
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  };
+  cv.addEventListener('contextmenu', (e) => { if (T3on()) e.preventDefault(); });
   cv.addEventListener('pointerdown', (e) => {
     touches.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
-    if (touches.size === 1) gest = { x0: e.offsetX, y0: e.offsetY, lx: e.offsetX, ly: e.offsetY, moved: false, pinch: 0 };
-    else if (touches.size === 2 && gest) { gest.moved = true; gest.pinch = pinchDist(); }
+    const T3 = T3on();
+    if (touches.size === 1) {
+      gest = { x0: e.offsetX, y0: e.offsetY, lx: e.offsetX, ly: e.offsetY, moved: false, two: null, turn: e.button === 2 || e.shiftKey || e.altKey, vx: 0, vy: 0, lt: performance.now() };
+      if (T3) T3.hold(true);
+    } else if (touches.size === 2 && gest) { gest.moved = true; gest.two = pair(); }
     if (cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
   });
   cv.addEventListener('pointermove', (e) => {
     if (!touches.has(e.pointerId) || !gest) return;
     touches.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
-    const T3 = KH.town3d && KH.town3d.active ? KH.town3d : null;
+    const T3 = T3on();
     if (touches.size >= 2) {
-      const d = pinchDist();
-      if (T3 && gest.pinch) T3.zoom(d / gest.pinch);
-      gest.pinch = d;
+      const p = pair(), q = gest.two;
+      if (T3 && q) {
+        if (q.d > 0) T3.zoomAt(p.d / q.d, p.mx, p.my);
+        let da = p.ang - q.ang;
+        if (da > Math.PI) da -= Math.PI * 2;
+        if (da < -Math.PI) da += Math.PI * 2;
+        T3.rotate(da);
+        T3.pan(p.mx - q.mx, p.my - q.my);
+      }
+      gest.two = p;
       return;
     }
     if (Math.hypot(e.offsetX - gest.x0, e.offsetY - gest.y0) > 10) gest.moved = true;
-    if (gest.moved && T3) T3.drag(e.offsetX - gest.lx, e.offsetY - gest.ly);
+    if (gest.moved && T3) {
+      const dx = e.offsetX - gest.lx, dy = e.offsetY - gest.ly;
+      if (gest.turn) T3.rotate(-dx * 0.008, dy * 0.004);
+      else {
+        T3.pan(dx, dy);
+        const now = performance.now(), dts = Math.max(8, now - gest.lt) / 1000;
+        gest.vx = gest.vx * 0.5 + (dx / dts) * 0.5; gest.vy = gest.vy * 0.5 + (dy / dts) * 0.5; gest.lt = now;
+      }
+    }
     gest.lx = e.offsetX; gest.ly = e.offsetY;
   });
   const endTouch = (e, cancel) => {
     touches.delete(e.pointerId);
-    if (touches.size) return;
+    if (touches.size) {
+      // one finger of a pinch lifted: carry on panning with the other
+      if (gest) { const [r] = [...touches.values()]; gest.lx = r.x; gest.ly = r.y; gest.two = null; }
+      return;
+    }
     const g = gest;
     gest = null;
+    const T3 = T3on();
+    if (T3) {
+      T3.hold(false);
+      if (g && g.moved && !g.turn && !cancel && performance.now() - g.lt < 90) T3.fling(g.vx, g.vy);
+    }
     if (cancel || !g || g.moved || !S) return;
     const pid = hitTest(e.offsetX, e.offsetY);
-    if (!pid) return;
+    if (!pid) {
+      // double tap on open ground: back to the home view
+      const now = performance.now();
+      if (T3 && lastTap && now - lastTap.t < 380 && Math.hypot(e.offsetX - lastTap.x, e.offsetY - lastTap.y) < 40) { T3.reset(); lastTap = null; } else lastTap = { t: now, x: e.offsetX, y: e.offsetY };
+      return;
+    }
+    lastTap = null;
     if (pid[0] === '@') {
       const [kind, arg] = pid.slice(1).split(':');
       if (kind === 'collect') ACT.collect(arg);
@@ -885,11 +986,30 @@
   cv.addEventListener('pointerup', (e) => endTouch(e, false));
   cv.addEventListener('pointercancel', (e) => endTouch(e, true));
   cv.addEventListener('wheel', (e) => {
-    if (!(KH.town3d && KH.town3d.active)) return;
+    const T3 = T3on();
+    if (!T3) return;
     e.preventDefault();
-    KH.town3d.zoom(e.deltaY < 0 ? 1.08 : 1 / 1.08);
+    // trackpad pinches arrive as wheel events with ctrlKey set
+    const k = (e.ctrlKey ? 0.012 : 0.0016) * (e.deltaMode === 1 ? 18 : 1);
+    T3.zoomAt(Math.exp(-e.deltaY * k), e.offsetX, e.offsetY);
   }, { passive: false });
-  cv.addEventListener('dblclick', () => { if (KH.town3d && KH.town3d.active) KH.town3d.reset(); });
+  cv.addEventListener('dblclick', () => { const T3 = T3on(); if (T3) T3.reset(); });
+  // keyboard: arrows or WASD move, + and - zoom, Q and E turn, Home recenters
+  window.addEventListener('keydown', (e) => {
+    const T3 = T3on();
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (!T3 || UI.sheet || tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key, step = 60;
+    const moves = { ArrowLeft: [step, 0], a: [step, 0], ArrowRight: [-step, 0], d: [-step, 0], ArrowUp: [0, step], w: [0, step], ArrowDown: [0, -step], s: [0, -step] };
+    if (moves[k]) T3.pan(...moves[k]);
+    else if (k === '+' || k === '=') T3.zoom(1.2);
+    else if (k === '-' || k === '_') T3.zoom(1 / 1.2);
+    else if (k === 'q') T3.rotate(-0.2);
+    else if (k === 'e') T3.rotate(0.2);
+    else if (k === 'Home') T3.reset();
+    else return;
+    e.preventDefault();
+  });
   window.addEventListener('resize', resize);
   if (window.ResizeObserver) new ResizeObserver(resize).observe($('#stage'));
 })();

@@ -956,7 +956,9 @@
   ACT.plot = (pid) => {
     if (UI.tab !== 'town') ACT.tab('town');
     UI.sheet = { kind: 'plot', pid };
+    if (KH.town3d && KH.town3d.focus) KH.town3d.focus(pid);
   };
+  ACT.camhome = () => { if (KH.town3d && KH.town3d.reset) KH.town3d.reset(); };
   ACT.go = (target) => {
     const [kind, arg] = target.split(':');
     if (kind === 'surplus') { ACT.tab('town'); if (KH.keep && !KH.keep.bubbles().length) toast('Surplus builds up over working buildings. Tap the bubble when it appears.', ''); return; }

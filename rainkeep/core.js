@@ -92,9 +92,6 @@
     mine: 'Copper Mine', hall: 'Caravan Hall', storehouse: 'Storehouse', forge: 'Forge',
   };
   const plotName = (pid) => DATA.buildings[PLOT[pid].type].name + (pid === 'shelter2' ? ' II' : '');
-  // Where plot i sits on the ring (radians; pi/2 is the front, toward the camera). Plots are spread a
-  // little wider at the back, where perspective squeezes them, and a little tighter at the front.
-  KH.plotAngle = (i) => { const f = (i * Math.PI * 2) / DATA.plots.length; return Math.PI / 2 + f - 0.16 * Math.sin(f); };
   Object.assign(KH, { HERO, PLOT, PROD, RES, ICON, NAME, SHORT, plotName });
 
   // ======================================================================

@@ -428,6 +428,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 700; margin: 0; text
 /* ======================================================================
    1.0 additions: side strip, sub-tabs, world map, events, caravan
    ====================================================================== */
+.cam-home { position: absolute; right: 12px; bottom: 96px; z-index: 1; width: 46px; height: 46px; padding: 8px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #5a3820, #24150b); border: 1.5px solid #a8742c; color: var(--gold); box-shadow: 0 2px 10px #0008, inset 0 1px 0 #ffcf6e44; cursor: pointer; }
+.cam-home .ic { width: 100%; height: 100%; display: block; transition: transform .15s; }
+.cam-home[hidden] { display: none; }
 #side { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: flex-end; gap: 4px; z-index: 1; pointer-events: none; }
 .side-btn { pointer-events: auto; position: relative; display: grid; justify-items: center; gap: 2px; width: 50px; color: var(--frost); }
 .side-btn .ic { width: 34px; height: 34px; padding: 7px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #5a3820, #24150b); border: 1.5px solid #a8742c; color: var(--gold); box-shadow: 0 2px 8px #0007, inset 0 1px 0 #ffcf6e44; }

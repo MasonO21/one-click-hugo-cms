@@ -195,6 +195,44 @@ const DATA = {
     { id: 'mine', type: 'mine', unlock: 3 },
     { id: 'forge', type: 'forge', unlock: 12 },
   ],
+  // ---------- The keep's layout: a terraced oasis at the head of a canyon ----------
+  // x runs right, z toward the viewer (the front gate), y up. The spring sits in a sunken stepped basin;
+  // the houses and the barracks stand on raised side terraces (y 1.4), the upper town on the back
+  // crescent (y 2.8) and the watchtower on its own crag (y 4.4). ry turns a building toward the spring.
+  keep: {
+    spring: { x: 0, z: -0.5, depth: 1.2 },
+    gate: { x: 0, z: 16 },
+    // raised ground on stone retaining walls (outline in x, z) and the watchtower's crag
+    terraces: [
+      { y: 2.8, pts: [[-17.5, -19.5], [17.5, -19.5], [17.5, -6.2], [8.5, -6.2], [6.5, -6.8], [4.5, -7.6], [2.2, -8.1], [0, -8.25], [-2.2, -8.1], [-4.5, -7.6], [-6.5, -6.8], [-8.5, -6.2], [-17.5, -6.2]] },
+      { y: 1.4, pts: [[-17.5, -6.4], [-8.5, -6.4], [-7.4, -4.6], [-7.0, -2.2], [-7.0, 1.6], [-7.3, 4.6], [-8.1, 6.3], [-9.0, 6.8], [-17.5, 6.8]] },
+      { y: 1.4, pts: [[17.5, -6.4], [8.5, -6.4], [7.4, -4.6], [7.0, -2.2], [7.0, 1.6], [7.3, 4.6], [8.1, 6.3], [9.0, 6.8], [17.5, 6.8]] },
+    ],
+    crag: { x: 10.4, z: -11.2, r: 2.35, y: 4.4 },
+    // stairs from [x, z, y] at the foot to [x, z, y] at the head
+    stairs: [
+      { a: [-9.4, 9.0, 0], b: [-9.4, 6.8, 1.4], w: 1.5 },
+      { a: [9.4, 9.0, 0], b: [9.4, 6.8, 1.4], w: 1.5 },
+      { a: [-8.4, -4.0, 1.4], b: [-8.4, -6.2, 2.8], w: 1.4 },
+      { a: [8.4, -4.0, 1.4], b: [8.4, -6.2, 2.8], w: 1.4 },
+      { a: [10.4, -6.9, 2.8], b: [10.4, -8.95, 4.4], w: 1.1 },
+    ],
+    plots: {
+      well: { x: -4.4, z: 8.0, y: 0, ry: 0.35 },
+      grove: { x: 5.0, z: 8.4, y: 0, ry: -0.35 },
+      storehouse: { x: -6.4, z: 12.6, y: 0, ry: 0.5 },
+      quarry: { x: -12.2, z: 10.8, y: 0, ry: 0.65 },
+      mine: { x: 12.0, z: 10.8, y: 0, ry: -0.65 },
+      shelter1: { x: -10.6, z: -2.2, y: 1.4, ry: 0.55 },
+      shelter2: { x: -10.2, z: 3.4, y: 1.4, ry: 0.4 },
+      barracks: { x: 10.6, z: -2.2, y: 1.4, ry: -0.55 },
+      infirmary: { x: 10.2, z: 3.4, y: 1.4, ry: -0.4 },
+      forge: { x: -10.2, z: -10.4, y: 2.8, ry: 0.35 },
+      archive: { x: -4.2, z: -12.0, y: 2.8, ry: 0.15 },
+      hall: { x: 3.6, z: -12.2, y: 2.8, ry: -0.15 },
+      watchtower: { x: 10.4, z: -11.2, y: 4.4, ry: -0.3 },
+    },
+  },
   wyrmReqs: (to) => {
     if (to < 2) return [];
     const r = [{ plot: 'well', lvl: to - 1 }, { plot: 'shelter1', lvl: to - 1 }];

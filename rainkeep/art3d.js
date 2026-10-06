@@ -196,6 +196,34 @@
       }
     }
   });
+  // dressed sandstone blocks for terrace walls, stairs and the spring basin (tiles both ways)
+  tex.ashlar = canvasTex(256, 256, (g, w, h) => {
+    const r = seeded(23), rows = 6, cols = 4, rh = h / rows, cw = w / cols;
+    g.fillStyle = '#7a5434'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < rows; y++) for (let c = -1; c < cols; c++) {
+      const x = c * cw + (y % 2 ? cw / 2 : 0), v = 196 + r() * 44;
+      const fill = `rgb(${v},${v * 0.8},${v * 0.58})`;
+      for (const ox of [0, w]) {
+        g.fillStyle = fill; g.fillRect(x + 2 - ox, y * rh + 2, cw - 4, rh - 4);
+        g.fillStyle = 'rgba(255,240,210,.14)'; g.fillRect(x + 3 - ox, y * rh + 3, cw - 6, 3);
+        g.fillStyle = 'rgba(60,30,10,.12)'; g.fillRect(x + 3 - ox, y * rh + rh - 6, cw - 6, 3);
+      }
+      for (let k = 0; k < 6; k++) { g.fillStyle = `rgba(90,50,20,${0.06 + r() * 0.08})`; g.fillRect(x + r() * cw, y * rh + r() * rh, 2 + r() * 4, 1 + r() * 2); }
+    }
+  });
+  // furrowed crop rows for the irrigated fields
+  tex.crops = canvasTex(128, 128, (g, w, h) => {
+    const r = seeded(31);
+    g.fillStyle = '#8a6238'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 8; i++) {
+      const x = (i + 0.5) * (w / 8);
+      for (let y = 0; y < h; y += 6) {
+        const v = 0.75 + r() * 0.35;
+        g.fillStyle = `rgb(${Math.round(80 * v)},${Math.round(140 * v)},${Math.round(56 * v)})`;
+        g.beginPath(); g.ellipse(x + (r() - 0.5) * 2, y + 3, 4.5, 3.4, 0, 0, Math.PI * 2); g.fill();
+      }
+    }
+  });
   const stripeCache = {};
   tex.stripes = (a, b, n = 8) => stripeCache[a + b + n] || (stripeCache[a + b + n] = canvasTex(64, 64, (g, w, h) => {
     for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? b : a; g.fillRect((i * w) / n, 0, w / n + 1, h); }
@@ -373,6 +401,9 @@
     crown.add(sph(0.15, mat('#6b8a2a', { flat: true }), 0, 0, 0, 6));
     g.add(crown);
     g.userData.crown = crown;
+    // the crown sways as one piece, so each part merges into a few meshes
+    bake(crown);
+    bake(g);
     return g;
   };
   A.swayPalm = (p, t, wind) => {
@@ -440,6 +471,7 @@
     hat.scale.set(1, 0.75, 1.05);
     g.add(hat);
     if (o.jar) { const j = A.jar(0.5, '#b0603a'); j.position.set(0, 0.8, 0); g.add(j); }
+    bake(g);
     g.scale.setScalar(o.scale || 1);
     return g;
   };
