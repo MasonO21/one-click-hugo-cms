@@ -1312,6 +1312,48 @@ textarea.input {
   min-height: 52px;
 }
 
+.verify-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--warn-bg);
+  font-size: 13.5px;
+}
+
+.verify-row.ok {
+  background: var(--ok-bg);
+}
+
+.verify-row svg {
+  color: var(--ok);
+  vertical-align: -3px;
+}
+
+.verify-row .btn {
+  flex-shrink: 0;
+}
+
+.code-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.code-entry label {
+  width: 100%;
+}
+
+.input.code {
+  font-size: 28px;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .reach {
   font-size: 15px;
 }

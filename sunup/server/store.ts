@@ -62,6 +62,11 @@ export class Store {
     return token;
   }
 
+  revokeToken(token: string) {
+    delete this.data.tokens[hashToken(token)];
+    this.save();
+  }
+
   userForToken(token: string): Id | undefined {
     const id = this.data.tokens[hashToken(token)];
     return id && this.data.state.users[id] ? id : undefined;

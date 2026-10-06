@@ -187,6 +187,33 @@ describe('circle', () => {
   });
 });
 
+describe('contact consent', () => {
+  it('texts new contacts for consent and never contacts someone who replied STOP', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    act(maya, { type: 'addContact', name: 'Dad', phone: '555-201-0009' }, T0);
+    const invite = svc.drain().find((o) => o.to.name === 'Dad');
+    expect(invite?.body).toContain('Reply YES to confirm');
+
+    expect(svc.contactReply('+15552010009', 'yes!', T0 + 1000)).toContain('if Maya misses a check-in');
+    expect(svc.watchersOf(maya.id).find((w) => w.name === 'Dad')?.consent).toBe('confirmed');
+    expect(svc.drain().some((o) => o.to.id === maya.id && o.title === 'Dad said yes')).toBe(true);
+
+    expect(svc.contactReply('+15552010009', 'STOP', T0 + 2000)).toBeNull();
+    expect(svc.drain().some((o) => o.to.id === maya.id && o.title === 'Dad opted out')).toBe(true);
+
+    // Mom and Jordan still hear about a missed check-in; Dad doesn't.
+    tickThrough(svc, at('2026-03-04', '10:00'), at('2026-03-04', '11:05'));
+    const sent = svc.drain();
+    expect(sent.some((o) => o.to.name === 'Mom')).toBe(true);
+    expect(sent.some((o) => o.to.name === 'Dad')).toBe(false);
+
+    expect(svc.contactReply('+15552010009', 'START', T0 + 3000)).toContain('back on');
+    expect(svc.contactReply('+15552019999', 'hello?', T0 + 4000)).toBeNull();
+    expect(svc.contactReply('+15552010009', 'is she ok??', T0 + 5000)).toContain('call them directly');
+  });
+});
+
 describe('moments and SOS', () => {
   it('requires premium, then alerts only the people the timer was shared with', () => {
     const { svc, maya, jordan, act } = setup();

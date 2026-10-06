@@ -33,7 +33,7 @@ function base64ToBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-export function createServerApi(): Api {
+export function createServerApi(features: { billing?: boolean } = {}): Api {
   let token = readToken();
   const listeners = new Set<(snap: Snapshot) => void>();
   const photos = new Map<string, Promise<string>>();
@@ -152,9 +152,44 @@ export function createServerApi(): Api {
     },
 
     signOut() {
-      token = null;
-      writeToken(null);
-      location.replace('/');
+      const old = token;
+      const done = () => {
+        token = null;
+        writeToken(null);
+        location.replace('/');
+      };
+      if (!old) return done();
+      fetch('/api/auth/logout', { method: 'POST', headers: { authorization: `Bearer ${old}` } }).finally(done);
+    },
+
+    billing: features.billing
+      ? {
+          async checkout(interval) {
+            const { url } = await call<{ url: string }>('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ interval }) });
+            location.assign(url);
+          },
+          async portal() {
+            const { url } = await call<{ url: string }>('/api/billing/portal', { method: 'POST', body: '{}' });
+            location.assign(url);
+          },
+        }
+      : undefined,
+
+    auth: {
+      start(phone) {
+        return call('/api/auth/start', { method: 'POST', body: JSON.stringify({ phone }) });
+      },
+      async verify(input) {
+        const res = await call<{ token?: string; snapshot?: Snapshot; needsName?: boolean }>('/api/auth/verify', {
+          method: 'POST',
+          body: JSON.stringify(input),
+        });
+        if (res.token) {
+          token = res.token;
+          writeToken(token);
+        }
+        return { snapshot: res.snapshot, needsName: res.needsName };
+      },
     },
   };
 }

@@ -11,24 +11,29 @@ export interface NotifierConfig {
   twilioFrom?: string;
   vapidSubject: string;
   log?: (line: string) => void;
+  /** Swappable for tests. */
+  fetch?: typeof fetch;
 }
 
 export interface Notifier {
   deliver(messages: Outbound[]): Promise<void>;
+  /** A one-off text outside the alert flow (sign-in codes, replies). */
+  text(phone: string, body: string): Promise<void>;
   readonly twilio: boolean;
 }
 
-function escapeXml(text: string): string {
+export function escapeXml(text: string): string {
   return text.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
 }
 
 export function createNotifier(store: Store, config: NotifierConfig): Notifier {
   const log = config.log ?? ((line: string) => console.log(line));
   const twilio = !!(config.twilioSid && config.twilioToken && config.twilioFrom);
+  const http = config.fetch ?? fetch;
   webpush.setVapidDetails(config.vapidSubject, store.vapid.publicKey, store.vapid.privateKey);
 
   async function twilioPost(resource: 'Messages' | 'Calls', params: Record<string, string>) {
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.twilioSid}/${resource}.json`, {
+    const res = await http(`https://api.twilio.com/2010-04-01/Accounts/${config.twilioSid}/${resource}.json`, {
       method: 'POST',
       headers: {
         authorization: `Basic ${Buffer.from(`${config.twilioSid}:${config.twilioToken}`).toString('base64')}`,
@@ -69,6 +74,13 @@ export function createNotifier(store: Store, config: NotifierConfig): Notifier {
 
   return {
     twilio,
+    async text(phone, body) {
+      if (!twilio) {
+        log(`[sms -> ${phone}] ${body}`);
+        return;
+      }
+      await twilioPost('Messages', { To: phone, Body: body });
+    },
     async deliver(messages) {
       // Each message is independent: one failure must never block an alert to someone else.
       const results = await Promise.allSettled(messages.map(deliverOne));

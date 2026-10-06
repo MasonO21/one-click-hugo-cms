@@ -133,10 +133,18 @@ export function createDemoApi(): Api {
     }
   }
 
+  /** Demo contacts "reply YES" to their consent text a few seconds after being added. */
+  function runContacts(t: number) {
+    for (const c of Object.values(file.state.contacts)) {
+      if ((c.consent ?? 'pending') === 'pending' && t - c.createdAt > 6000) svc.contactReply(c.phone, 'YES', t);
+    }
+  }
+
   function tick() {
     if (!file.meId) return;
     const t = now();
     runBots(t);
+    runContacts(t);
     svc.tick(t);
     svc.drain();
     // Keep localStorage small: photos only live for three days in the demo.

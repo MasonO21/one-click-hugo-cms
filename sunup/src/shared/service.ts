@@ -3,8 +3,10 @@
 
 import type {
   Alert,
+  Billing,
   AlertKind,
   CheckIn,
+  Consent,
   Contact,
   GeoPoint,
   Id,
@@ -89,6 +91,8 @@ export interface Watcher {
   receivesPacket: boolean;
   /** The Watch record, for app users. */
   watchId?: Id;
+  /** For contacts: their reply to the consent text. */
+  consent?: Consent;
 }
 
 export interface ServiceOptions {
@@ -145,7 +149,7 @@ export class Sunup {
     }
     for (const c of Object.values(this.state.contacts)) {
       if (c.ownerId !== userId) continue;
-      out.push({ ref: { type: 'contact', id: c.id }, name: c.name, phone: c.phone, color: c.color, receivesPacket: c.receivesPacket });
+      out.push({ ref: { type: 'contact', id: c.id }, name: c.name, phone: c.phone, color: c.color, receivesPacket: c.receivesPacket, consent: c.consent ?? 'pending' });
     }
     return out;
   }
@@ -160,9 +164,10 @@ export class Sunup {
 
   // ---------------------------------------------------------------- accounts
 
-  createUser(input: { name: unknown; phone?: unknown; timezone: unknown }, now: number): User {
+  createUser(input: { name: unknown; phone?: unknown; timezone: unknown; phoneVerified?: boolean }, now: number): User {
     const name = cleanText(input.name, 40, 'Name', true);
     const phone = input.phone ? normalizePhone(input.phone) : undefined;
+    if (phone && input.phoneVerified && this.userByVerifiedPhone(phone)) fail('phone_taken', 'That number already has a Sunup account. Sign in instead.');
     const timezone = isTimeZone(input.timezone) ? input.timezone : 'America/New_York';
     const id = `u_${randomId()}`;
     let inviteCode = randomId(8);
@@ -171,6 +176,7 @@ export class Sunup {
       id,
       name,
       phone,
+      phoneVerified: phone ? input.phoneVerified === true : undefined,
       color: colorFor(id),
       timezone,
       createdAt: now,
@@ -185,9 +191,36 @@ export class Sunup {
     return user;
   }
 
+  userByVerifiedPhone(phone: string): User | undefined {
+    return Object.values(this.state.users).find((u) => u.phoneVerified && u.phone === phone);
+  }
+
+  /** Marks a user's number as confirmed by a texted code. A number signs in to one account only. */
+  verifyPhone(userId: Id, phone: string): void {
+    const user = this.user(userId);
+    const owner = this.userByVerifiedPhone(phone);
+    if (owner && owner.id !== userId) fail('phone_taken', 'That number is already linked to another Sunup account. Sign in with it instead.');
+    user.phone = phone;
+    user.phoneVerified = true;
+  }
+
   /** Billing hook: the server's payment webhook (or the demo) sets the plan. */
   setPlan(userId: Id, plan: Plan): void {
     this.user(userId).plan = plan;
+  }
+
+  userByCustomerId(customerId: string): User | undefined {
+    return Object.values(this.state.users).find((u) => u.billing?.customerId === customerId);
+  }
+
+  /** Records a subscription change from the payment provider and sets the plan from its status. */
+  applyBilling(userId: Id, patch: Billing, now: number): void {
+    const user = this.user(userId);
+    user.billing = { ...user.billing, ...patch };
+    const status = user.billing.status;
+    if (status) user.plan = ['active', 'trialing', 'past_due'].includes(status) ? 'premium' : 'free';
+    // A paid trial uses up the card-free one.
+    user.trialEndsAt ??= now;
   }
 
   // ---------------------------------------------------------------- actions
@@ -352,7 +385,13 @@ export class Sunup {
 
   private updateProfile(user: User, input: { name?: unknown; phone?: unknown; timezone?: unknown }, now: number): void {
     if (input.name !== undefined) user.name = cleanText(input.name, 40, 'Name', true);
-    if (input.phone !== undefined) user.phone = input.phone === '' ? undefined : normalizePhone(input.phone);
+    if (input.phone !== undefined) {
+      const phone = input.phone === '' ? undefined : normalizePhone(input.phone);
+      if (phone !== user.phone) {
+        user.phone = phone;
+        user.phoneVerified = phone ? false : undefined;
+      }
+    }
     if (input.timezone !== undefined && input.timezone !== user.timezone) {
       if (!isTimeZone(input.timezone)) fail('invalid', 'Unknown time zone.');
       user.timezone = input.timezone;
@@ -375,9 +414,69 @@ export class Sunup {
     }
     this.assertRoom(user, now);
     const id = `c_${randomId()}`;
-    const contact: Contact = { id, ownerId: user.id, name, phone, color: colorFor(id), receivesPacket: input.receivesPacket === true, createdAt: now };
+    const contact: Contact = { id, ownerId: user.id, name, phone, color: colorFor(id), receivesPacket: input.receivesPacket === true, createdAt: now, consent: 'pending' };
     this.state.contacts[id] = contact;
+    const owner = firstName(user.name);
+    this.send(
+      { ref: { type: 'contact', id }, name, phone, color: contact.color, receivesPacket: false, consent: 'pending' },
+      'sms',
+      {
+        aboutUserId: user.id,
+        urgent: false,
+        title: 'Circle invite',
+        body: `Sunup: ${user.name} added you as someone to contact if ${owner} misses a daily safety check-in. Reply YES to confirm, or STOP to opt out. Msg & data rates may apply.`,
+      },
+    );
     return contact;
+  }
+
+  /**
+   * A text from a contact's phone (YES, STOP, START, HELP or anything else).
+   * Returns the reply to text back, or null for no reply.
+   */
+  contactReply(phone: string, text: string, now: number): string | null {
+    this.now = now;
+    const contacts = Object.values(this.state.contacts).filter((c) => c.phone === phone);
+    const word = text.toUpperCase().replace(/[^A-Z]/g, ' ').trim().split(/\s+/)[0] ?? '';
+    const owners = (list: Contact[]) => [...new Set(list.map((c) => this.state.users[c.ownerId]).filter(Boolean).map((u) => firstName(u!.name)))];
+    const tellOwners = (list: Contact[], title: (c: Contact) => string, body: (c: Contact) => string) => {
+      for (const c of list) {
+        const owner = this.state.users[c.ownerId];
+        if (!owner) continue;
+        const ref: Watcher = { ref: { type: 'user', id: owner.id }, name: owner.name, color: owner.color, receivesPacket: false };
+        this.notify(ref, { aboutUserId: owner.id, urgent: false, link: '#circle', title: title(c), body: body(c) });
+      }
+    };
+
+    if (['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT', 'OPTOUT', 'REVOKE'].includes(word)) {
+      const changed = contacts.filter((c) => c.consent !== 'stopped');
+      changed.forEach((c) => (c.consent = 'stopped'));
+      tellOwners(changed, (c) => `${firstName(c.name)} opted out`, (c) => `${firstName(c.name)} replied STOP, so Sunup won't text or call them. Add someone else to your circle.`);
+      // The carrier sends the standard opt-out confirmation.
+      return null;
+    }
+    if (['START', 'UNSTOP'].includes(word)) {
+      const changed = contacts.filter((c) => c.consent === 'stopped');
+      changed.forEach((c) => (c.consent = 'confirmed'));
+      tellOwners(changed, (c) => `${firstName(c.name)} is back in your circle`, (c) => `${firstName(c.name)} turned Sunup texts back on.`);
+      return contacts.length ? 'Sunup: texts are back on. Reply STOP to opt out.' : null;
+    }
+    if (['YES', 'Y', 'YEP', 'YEAH', 'OK', 'OKAY', 'CONFIRM', 'SURE'].includes(word)) {
+      const changed = contacts.filter((c) => c.consent === 'pending' || c.consent === undefined);
+      changed.forEach((c) => (c.consent = 'confirmed'));
+      tellOwners(changed, (c) => `${firstName(c.name)} said yes`, (c) => `${firstName(c.name)} confirmed. They'll get texts and calls if you go quiet.`);
+      const names = owners(contacts.filter((c) => c.consent === 'confirmed'));
+      return names.length
+        ? `Thank you. You'll only hear from Sunup if ${names.join(' or ')} misses a check-in. Reply STOP to opt out.`
+        : null;
+    }
+    if (word === 'HELP' || word === 'INFO') {
+      return 'Sunup sends safety alerts when someone in your circle misses a daily check-in. Reply STOP to opt out.';
+    }
+    const names = owners(contacts);
+    return names.length
+      ? `Sunup can't read replies. To check on ${names.join(' or ')}, call them directly. Reply STOP to opt out.`
+      : null;
   }
 
   private setPacketRecipient(user: User, ref: RecipientRef, value: boolean): void {
@@ -734,6 +833,8 @@ export class Sunup {
   }
 
   private send(to: Watcher, channel: Outbound['channel'], msg: { title: string; body: string; urgent: boolean; link?: string; aboutUserId: Id; alertId?: Id }): void {
+    // People who replied STOP never get another text or call.
+    if (to.consent === 'stopped') return;
     const out: Outbound = {
       id: `o_${randomId()}`,
       at: this.now || Date.now(),

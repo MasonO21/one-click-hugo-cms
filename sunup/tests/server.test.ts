@@ -17,7 +17,7 @@ const logs: string[] = [];
 
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'sunup-'));
-  const created = createApp({ dataDir: dir, publicUrl: 'https://sunup.test', tickMs: 60_000, log: (l) => logs.push(l) });
+  const created = createApp({ dataDir: dir, publicUrl: 'https://sunup.test', tickMs: 60_000, devCodes: true, log: (l) => logs.push(l) });
   close = created.close;
   server = created.app.listen(0);
   await new Promise((r) => server.once('listening', r));
@@ -119,5 +119,62 @@ describe('server', () => {
     expect(bad.status).toBe(400);
     const ok = await call('/api/push/subscribe', { token: user.token, body: { endpoint: 'https://push.example/abc', keys: { p256dh: 'x', auth: 'y' } } });
     expect(ok.status).toBe(200);
+  });
+
+  it('creates an account with a texted code and signs in again on another device', async () => {
+    const phone = '555-201-0042';
+    const first = await call<{ sentTo: string; devCode: string }>('/api/auth/start', { body: { phone } });
+    expect(first.body.sentTo).toBe('(555) 201-0042');
+    expect(logs.some((l) => l.includes('is your Sunup code') && l.includes('@sunup.test #'))).toBe(true);
+
+    const wrong = await call<{ code: string }>('/api/auth/verify', { body: { phone, code: first.body.devCode === '000000' ? '111111' : '000000' } });
+    expect(wrong.body.code).toBe('code_wrong');
+
+    // Right code, no account yet: the code stays valid until a name is added.
+    const noName = await call<{ needsName: boolean }>('/api/auth/verify', { body: { phone, code: first.body.devCode } });
+    expect(noName.body.needsName).toBe(true);
+    const created = await call<{ token: string; snapshot: Snapshot }>('/api/auth/verify', {
+      body: { phone, code: first.body.devCode, name: 'Priya', timezone: 'America/Denver' },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.snapshot.me).toMatchObject({ name: 'Priya', phone: '+15552010042', phoneVerified: true });
+
+    // The code is used up.
+    const reuse = await call<{ code: string }>('/api/auth/verify', { body: { phone, code: first.body.devCode } });
+    expect(reuse.body.code).toBe('code_expired');
+
+    // A second device signs in to the same account, and each device signs out on its own.
+    const again = await call<{ sentTo: string; devCode: string }>('/api/auth/start', { body: { phone: '+15552010042' } });
+    const second = await call<{ token: string; snapshot: Snapshot }>('/api/auth/verify', { body: { phone, code: again.body.devCode } });
+    expect(second.body.snapshot.me.id).toBe(created.body.snapshot.me.id);
+    expect(second.body.token).not.toBe(created.body.token);
+    await call('/api/auth/logout', { token: second.body.token, body: {} });
+    expect((await call('/api/state', { token: second.body.token })).status).toBe(401);
+    expect((await call('/api/state', { token: created.body.token })).status).toBe(200);
+  });
+
+  it('confirms a profile number and keeps each number on one account', async () => {
+    const ana = await signup('Ana B');
+    await call('/api/action', { token: ana.token, body: { type: 'updateProfile', phone: '555-201-0077' } });
+    const sent = await call<{ devCode: string }>('/api/auth/start', { body: { phone: '555-201-0077' } });
+    const verified = await call<{ snapshot: Snapshot }>('/api/auth/verify', { token: ana.token, body: { phone: '555-201-0077', code: sent.body.devCode } });
+    expect(verified.body.snapshot.me.phoneVerified).toBe(true);
+
+    // Changing the number clears the confirmation.
+    const changed = await call('/api/action', { token: ana.token, body: { type: 'updateProfile', phone: '555-201-0078' } });
+    expect(changed.body.me.phoneVerified).toBe(false);
+
+    // Someone else can't claim a confirmed number.
+    const ben = await signup('Ben');
+    await call('/api/action', { token: ben.token, body: { type: 'updateProfile', phone: '555-201-0042' } });
+    const benCode = await call<{ devCode: string }>('/api/auth/start', { body: { phone: '555-201-0042' } });
+    const taken = await call<{ code: string }>('/api/auth/verify', { token: ben.token, body: { phone: '555-201-0042', code: benCode.body.devCode } });
+    expect(taken.body.code).toBe('phone_taken');
+  });
+
+  it('limits how fast codes can be requested', async () => {
+    await call('/api/auth/start', { body: { phone: '555-201-0099' } });
+    const tooSoon = await call<{ code: string }>('/api/auth/start', { body: { phone: '555-201-0099' } });
+    expect(tooSoon.status).toBe(429);
   });
 });

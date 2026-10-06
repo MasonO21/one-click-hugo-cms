@@ -10,11 +10,19 @@ const { app, close } = createApp({
   staticDir: fileURLToPath(new URL('../dist', import.meta.url)),
   twilio: { sid: process.env.TWILIO_ACCOUNT_SID, token: process.env.TWILIO_AUTH_TOKEN, from: process.env.TWILIO_FROM },
   vapidSubject: process.env.VAPID_SUBJECT,
+  devCodes: process.env.NODE_ENV !== 'production',
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    priceMonthly: process.env.STRIPE_PRICE_MONTHLY,
+    priceYearly: process.env.STRIPE_PRICE_YEARLY,
+  },
 });
 
 const server = app.listen(port, () => {
   console.log(`Sunup server on http://localhost:${port} (public URL ${publicUrl})`);
   if (!process.env.TWILIO_ACCOUNT_SID) console.log('Twilio not configured: texts and calls are logged here instead of sent.');
+  if (!process.env.STRIPE_SECRET_KEY) console.log('Stripe not configured: Premium uses the card-free trial only.');
 });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

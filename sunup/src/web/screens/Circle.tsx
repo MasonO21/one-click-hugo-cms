@@ -54,7 +54,17 @@ export function Circle() {
                 <Avatar name={w.name} color={w.color} size={40} />
                 <div className="people-text">
                   <strong>{w.name}</strong>
-                  <span>{w.kind === 'contact' ? `Texts and calls · ${formatPhone(w.phone!)}` : 'On Sunup · push, texts and calls'}</span>
+                  {w.kind === 'contact' ? (
+                    <span className={w.consent === 'stopped' ? 'tone-danger' : w.consent === 'confirmed' ? '' : 'tone-warn'}>
+                      {w.consent === 'stopped'
+                        ? 'Replied STOP: won\'t be texted or called'
+                        : w.consent === 'confirmed'
+                          ? `Confirmed · texts and calls · ${formatPhone(w.phone!)}`
+                          : `Waiting for a YES reply · ${formatPhone(w.phone!)}`}
+                    </span>
+                  ) : (
+                    <span>On Sunup · push, texts and calls</span>
+                  )}
                 </div>
                 <button
                   className={`icon-btn${w.receivesPacket ? ' on' : ''}`}
@@ -80,7 +90,7 @@ export function Circle() {
           </button>
         </div>
         <p className="fine">
-          <KeyRound size={12} /> marks who receives your "If I go dark" packet. People added by phone don't need the app: they get texts and calls.
+          <KeyRound size={12} /> marks who receives your "If I go dark" packet. People added by phone don't need the app. They get a text asking them to reply YES, then texts and calls if you go quiet.
         </p>
       </section>
 
@@ -272,7 +282,7 @@ function AddContactSheet({ open, onClose }: { open: boolean; onClose: () => void
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (await run({ type: 'addContact', name, phone, receivesPacket: packet })) {
-      toast({ title: `${name} is in your circle`, body: 'They\'ll get a text and a call if you go quiet.', tone: 'ok' });
+      toast({ title: `${name} is in your circle`, body: 'We texted them to confirm. They just need to reply YES.', tone: 'ok' });
       setName('');
       setPhone('');
       onClose();

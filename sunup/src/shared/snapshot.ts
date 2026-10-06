@@ -1,6 +1,6 @@
 // What one user's app shows, computed from the shared state.
 
-import type { Alert, CheckIn, Id, Moment, Outbound, Packet, User } from './types';
+import type { Alert, CheckIn, Consent, Id, Moment, Outbound, Packet, User } from './types';
 import type { LadderStep } from './ladder';
 import { limitsFor, type Limits } from './plans';
 import { isPaused, slotStatus, slotsAround, checkInFor, streak, type SlotInstance, type SlotStatus } from './schedule';
@@ -18,6 +18,7 @@ export interface PersonView {
 export interface WatcherView extends PersonView {
   receivesPacket: boolean;
   watchId?: Id;
+  consent?: Consent;
 }
 
 export interface SlotView extends SlotInstance {
@@ -114,6 +115,7 @@ export function buildSnapshot(service: Sunup, userId: Id, now: number, options: 
     phone: w.phone,
     receivesPacket: w.receivesPacket,
     watchId: w.watchId,
+    consent: w.consent,
   }));
 
   const watching: WatchedView[] = service.watchedBy(me.id).map((w) => {

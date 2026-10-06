@@ -28,12 +28,16 @@ export interface User {
   name: string;
   /** E.164, used for alarm texts and escalation calls. */
   phone?: string;
+  /** The phone was confirmed with a texted code, so it can be used to sign in. */
+  phoneVerified?: boolean;
   color: string;
   timezone: string;
   createdAt: number;
   onboarded: boolean;
   plan: Plan;
   trialEndsAt?: number;
+  /** Set by the payment provider's webhook. */
+  billing?: Billing;
   schedule: Schedule;
   /** When the current schedule took effect; earlier windows are never enforced. */
   scheduleSince: number;
@@ -41,6 +45,16 @@ export interface User {
   graceMinutes: number;
   pause?: Pause;
   inviteCode: string;
+}
+
+export interface Billing {
+  customerId?: string;
+  subscriptionId?: string;
+  /** The provider's subscription status, e.g. trialing, active, past_due, canceled. */
+  status?: string;
+  /** When the current period (or trial) ends. */
+  periodEnd?: number;
+  cancelAtPeriodEnd?: boolean;
 }
 
 /** Someone without the app who watches over the user who added them, by text and phone call. */
@@ -52,7 +66,11 @@ export interface Contact {
   color: string;
   receivesPacket: boolean;
   createdAt: number;
+  /** Their answer to the consent text: YES confirms, STOP opts out (and Sunup stops texting and calling). */
+  consent?: Consent;
 }
+
+export type Consent = 'pending' | 'confirmed' | 'stopped';
 
 /** An app user (watcher) watching over another app user (watched). */
 export interface Watch {

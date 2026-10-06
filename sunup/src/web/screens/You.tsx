@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, ChevronRight, Crown, MessageSquare, Pause, Phone, Plus, Smartphone, Sparkles, Trash2 } from 'lucide-react';
+import { BadgeCheck, Bell, ChevronRight, Crown, MessageSquare, Pause, Phone, Plus, Smartphone, Sparkles, Trash2 } from 'lucide-react';
 import type { Schedule, Slot } from '../../shared/types';
 import type { AlertView } from '../../shared/snapshot';
 import { GRACE_OPTIONS, ladderFor } from '../../shared/ladder';
@@ -7,6 +7,8 @@ import { formatPhone } from '../../shared/util';
 import { useNow, useStore } from '../store/StoreContext';
 import { Avatar, PremiumBadge, Sheet, Toggle } from '../components/ui';
 import { Ladder } from '../components/Ladder';
+import { CodeInput } from '../components/CodeInput';
+import type { CodeSent } from '../store/api';
 import { ago, when } from '../lib/format';
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -21,6 +23,16 @@ export function You() {
   const [notifications, setNotifications] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
   const paused = me.pause && me.pause.until > now;
   const trialLeft = me.trialEndsAt && me.trialEndsAt > now && me.plan !== 'premium' ? me.trialEndsAt - now : 0;
+
+  function planLine(): string {
+    const b = me.billing;
+    const date = b?.periodEnd ? new Date(b.periodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    if (b?.status === 'past_due') return 'Your last payment didn\'t go through. Update your card to stay covered.';
+    if (b?.status === 'trialing') return date ? `Free trial until ${date}${b.cancelAtPeriodEnd ? ', then it ends' : ''}` : 'Free trial';
+    if (me.plan === 'premium') return b?.cancelAtPeriodEnd && date ? `Ends ${date}` : date ? `Renews ${date}` : 'Full safety net active';
+    if (trialLeft) return `Free trial: ${Math.ceil(trialLeft / 86_400_000)} days left`;
+    return 'Daily check-in, SOS and 2 people. Upgrade for the full safety net.';
+  }
 
   function setSchedule(next: Partial<Schedule>) {
     return run({ type: 'setSchedule', schedule: { ...me.schedule, ...next } });
@@ -75,13 +87,7 @@ export function You() {
         <Crown size={22} />
         <div>
           <strong>{limits.premium ? 'Sunup Premium' : 'Free plan'}</strong>
-          <span>
-            {me.plan === 'premium'
-              ? 'Full safety net active'
-              : trialLeft
-                ? `Free trial: ${Math.ceil(trialLeft / 86_400_000)} days left`
-                : 'Daily check-in, SOS and 2 people. Upgrade for the full safety net.'}
-          </span>
+          <span>{planLine()}</span>
         </div>
         {!limits.premium && <span className="btn primary sm">Upgrade</span>}
       </button>
@@ -272,11 +278,29 @@ export function You() {
       )}
 
       {api.mode === 'server' && (
-        <button className="btn ghost block" onClick={async () => (await ask({ title: 'Sign out?', body: 'Sign-in by phone number isn\'t built yet, so you\'d need a new account on this device.', confirm: 'Sign out', cancel: 'Stay signed in', danger: true })) && api.signOut()}>
+        <button className="btn ghost block" onClick={async () =>
+            (await ask({
+              title: 'Sign out?',
+              body: me.phoneVerified
+                ? `Sign back in any time with ${formatPhone(me.phone!)}.`
+                : 'Your number isn\'t confirmed, so you won\'t be able to sign back in. Confirm it in Your details first.',
+              confirm: 'Sign out',
+              cancel: 'Stay signed in',
+              danger: true,
+            })) && api.signOut()
+          }>
           Sign out
         </button>
       )}
-      {me.plan === 'premium' && api.mode === 'server' && (
+      {api.billing && me.billing?.customerId && (
+        <button
+          className="btn block"
+          onClick={() => api.billing!.portal().catch((e: Error) => toast({ title: e.message, tone: 'error' }))}
+        >
+          Manage subscription
+        </button>
+      )}
+      {me.plan === 'premium' && api.mode === 'server' && !me.billing?.customerId && (
         <button className="btn ghost block" onClick={async () => (await ask({ title: 'Cancel Premium?', body: 'Your circle goes back to 2 people and the full escalation ladder turns off.', confirm: 'Cancel Premium', cancel: 'Keep Premium', danger: true })) && run({ type: 'cancelPremium' })}>
           Cancel Premium
         </button>
@@ -318,32 +342,88 @@ function TimeField({ value, onCommit }: { value: string; onCommit: (v: string) =
 }
 
 function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { snap, run } = useStore();
+  const { snap, run, api, attempt } = useStore();
   const [name, setName] = useState(snap.me.name);
   const [phone, setPhone] = useState(snap.me.phone ? formatPhone(snap.me.phone) : '');
+  const [sent, setSent] = useState<CodeSent | null>(null);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const auth = api.auth;
+  const savedPhone = snap.me.phone;
+  const needsVerify = !!auth && !!savedPhone && !snap.me.phoneVerified;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (await run({ type: 'updateProfile', name, phone })) onClose();
+    if (!(await run({ type: 'updateProfile', name, phone }))) return;
+    // A new number has to be confirmed before it can be used to sign in, so stay open for that.
+    const digits = phone.replace(/\D/g, '');
+    const newNumber = !!digits && !savedPhone?.endsWith(digits.slice(-10));
+    if (!auth || !newNumber) onClose();
+  }
+
+  async function sendCode() {
+    setError('');
+    try {
+      setSent(await auth!.start(savedPhone!));
+      setCode('');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function verify(e: React.FormEvent) {
+    e.preventDefault();
+    const ok = await attempt(async () => (await auth!.verify({ phone: savedPhone!, code })).snapshot!);
+    if (ok) {
+      setSent(null);
+      onClose();
+    }
   }
 
   return (
     <Sheet open={open} onClose={onClose} title="Your details">
-      <form className="form" onSubmit={save}>
-        <label>
-          <span>Name</span>
-          <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} required />
-        </label>
-        <label>
-          <span>Mobile number</span>
-          <input className="input" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" />
-          <small className="fine">For alarm texts and the escalation call, and so your circle can call you.</small>
-        </label>
-        <p className="fine">Time zone: {snap.me.timezone.replace(/_/g, ' ')}</p>
-        <button className="btn primary block" type="submit">
-          Save
-        </button>
-      </form>
+      {sent ? (
+        <form className="form" onSubmit={verify}>
+          <CodeInput sent={sent} value={code} onChange={setCode} onResend={sendCode} />
+          <button className="btn primary block" type="submit" disabled={code.length !== 6}>
+            Confirm number
+          </button>
+        </form>
+      ) : (
+        <form className="form" onSubmit={save}>
+          <label>
+            <span>Name</span>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} required />
+          </label>
+          <label>
+            <span>Mobile number</span>
+            <input className="input" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" />
+            <small className="fine">For alarm texts and the escalation call, and so your circle can call you.</small>
+          </label>
+          {auth && savedPhone && (
+            <div className={`verify-row ${snap.me.phoneVerified ? 'ok' : ''}`}>
+              {snap.me.phoneVerified ? (
+                <span>
+                  <BadgeCheck size={16} /> {formatPhone(savedPhone)} is confirmed. Use it to sign in on a new phone.
+                </span>
+              ) : (
+                <>
+                  <span>{formatPhone(savedPhone)} isn't confirmed yet, so you can't sign in with it.</span>
+                  <button type="button" className="btn sm" onClick={sendCode}>
+                    Text me a code
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {error && <p className="error-text">{error}</p>}
+          <p className="fine">Time zone: {snap.me.timezone.replace(/_/g, ' ')}</p>
+          <button className="btn primary block" type="submit">
+            Save
+          </button>
+          {needsVerify && <p className="fine">Saving a new number keeps this sheet open so you can confirm it.</p>}
+        </form>
+      )}
     </Sheet>
   );
 }

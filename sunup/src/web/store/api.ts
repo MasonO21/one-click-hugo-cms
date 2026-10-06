@@ -24,6 +24,32 @@ export interface DemoControls {
   reset(): void;
 }
 
+export interface CodeSent {
+  sentTo: string;
+  /** Only in local development without Twilio. */
+  devCode?: string;
+}
+
+export interface VerifyResult {
+  snapshot?: Snapshot;
+  /** The code was right but there's no account for the number yet. */
+  needsName?: boolean;
+}
+
+/** Phone-number sign-in (server mode only). */
+export interface PhoneAuth {
+  start(phone: string): Promise<CodeSent>;
+  verify(input: { phone: string; code: string; name?: string; timezone?: string }): Promise<VerifyResult>;
+}
+
+/** Subscriptions through the server's payment provider (server mode, when configured). */
+export interface BillingApi {
+  /** Sends the browser to Checkout. */
+  checkout(interval: 'month' | 'year'): Promise<void>;
+  /** Sends the browser to the subscription settings page. */
+  portal(): Promise<void>;
+}
+
 export interface Api {
   mode: 'demo' | 'server';
   /** The current snapshot, or null when there's no account on this device yet. */
@@ -38,6 +64,8 @@ export interface Api {
   watch(listener: (snap: Snapshot) => void): () => void;
   enablePush(): Promise<'granted' | 'denied' | 'unsupported'>;
   signOut(): void;
+  auth?: PhoneAuth;
+  billing?: BillingApi;
   demo?: DemoControls;
 }
 

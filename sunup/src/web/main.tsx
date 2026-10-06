@@ -11,10 +11,14 @@ const MODE = import.meta.env.VITE_SUNUP_MODE as 'demo' | 'server' | undefined;
 /** Server mode when a Sunup server answers, otherwise the on-device demo. */
 async function pickApi(): Promise<Api> {
   if (MODE === 'demo') return createDemoApi();
-  if (MODE === 'server') return createServerApi();
+  if (MODE === 'server') {
+    const health = await fetch('/api/health').then((r) => r.json()).catch(() => ({}));
+    return createServerApi({ billing: health.billing === true });
+  }
   try {
     const res = await fetch('/api/health', { signal: AbortSignal.timeout(2500) });
-    if (res.ok && (await res.json()).sunup) return createServerApi();
+    const health = res.ok ? await res.json() : null;
+    if (health?.sunup) return createServerApi({ billing: health.billing === true });
   } catch {
     // No server: fall through to the demo.
   }

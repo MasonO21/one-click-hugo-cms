@@ -84,7 +84,17 @@ function tabFromHash(): Tab {
 }
 
 function Shell({ invite, joinCode, onInviteHandled }: { invite: InviteInfo | null; joinCode: string | null; onInviteHandled: () => void }) {
-  const { snap, api } = useStore();
+  const { snap, api, toast, attempt } = useStore();
+
+  // Back from Checkout: the payment webhook lands within seconds, so refresh a couple of times.
+  useEffect(() => {
+    const url = new URL(location.href);
+    if (url.searchParams.get('billing') !== 'success') return;
+    url.searchParams.delete('billing');
+    history.replaceState(null, '', url.toString());
+    toast({ title: 'Thank you! Premium is turning on', body: 'It can take a few seconds to show up.', tone: 'ok' });
+    for (const ms of [2500, 7000]) setTimeout(() => void attempt(async () => (await api.load())!), ms);
+  }, [api, toast, attempt]);
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const [sos, setSos] = useState(false);
 

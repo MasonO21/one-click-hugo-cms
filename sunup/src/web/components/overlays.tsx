@@ -11,6 +11,14 @@ export function Paywall() {
   const trialUsed = !!snap.me.trialEndsAt;
 
   async function start() {
+    if (api.billing) {
+      try {
+        await api.billing.checkout(yearly ? 'year' : 'month');
+      } catch (e) {
+        toast({ title: (e as Error).message, tone: 'error' });
+      }
+      return;
+    }
     if (!trialUsed) {
       if (await run({ type: 'startTrial' })) {
         toast({ title: `Premium is on for ${TRIAL_DAYS} days`, body: 'Your full safety net is active.', tone: 'ok' });
@@ -65,8 +73,10 @@ export function Paywall() {
           {trialUsed ? `Subscribe for $${yearly ? PRICE_YEARLY : PRICE_MONTHLY}` : `Start ${TRIAL_DAYS}-day free trial`}
         </button>
         <p className="fine center">
-          {trialUsed ? 'Cancel anytime.' : `Free for ${TRIAL_DAYS} days, then $${yearly ? `${PRICE_YEARLY}/year` : `${PRICE_MONTHLY}/month`}. Cancel anytime.`} SOS and
-          your daily check-in stay free forever.
+          {trialUsed
+            ? 'Cancel anytime.'
+            : `Free for ${TRIAL_DAYS} days, then $${yearly ? `${PRICE_YEARLY}/year` : `${PRICE_MONTHLY}/month`}.${api.billing ? ' You won\'t be charged before the trial ends.' : ''} Cancel anytime.`}{' '}
+          SOS and your daily check-in stay free forever.
         </p>
         </div>
       </div>

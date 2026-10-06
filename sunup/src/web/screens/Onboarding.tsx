@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { ArrowLeft, Bell, Check, Share2, UserPlus, Users } from 'lucide-react';
 import type { Snapshot } from '../../shared/snapshot';
 import { formatHM, firstName } from '../../shared/util';
-import { ApiError, type Api, type InviteInfo } from '../store/api';
+import { ApiError, type Api, type CodeSent, type InviteInfo } from '../store/api';
 import { useStore } from '../store/StoreContext';
 import { Avatar, SunMark, Toggle } from '../components/ui';
+import { CodeInput } from '../components/CodeInput';
 
 const PRESETS = [
   { label: 'Early bird', start: '06:00', deadline: '09:00' },
@@ -12,25 +13,79 @@ const PRESETS = [
   { label: 'Late riser', start: '09:00', deadline: '12:00' },
 ];
 
-/** Before there's an account: the pitch, then name and number. */
+type WelcomeStep = 'hello' | 'name' | 'login' | 'code';
+
+/** Before there's an account: the pitch, then name and number (confirmed by a texted code in server mode). */
 export function Welcome({ api, invite, onSignedUp }: { api: Api; invite: InviteInfo | null; onSignedUp: (snap: Snapshot) => void }) {
-  const [step, setStep] = useState<'hello' | 'name'>('hello');
+  const [step, setStep] = useState<WelcomeStep>('hello');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [sent, setSent] = useState<CodeSent | null>(null);
+  /** A code already proven correct, waiting for a name to create the account. */
+  const [provenCode, setProvenCode] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const auth = api.auth;
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function run(fn: () => Promise<void>) {
     setBusy(true);
     setError('');
     try {
-      onSignedUp(await api.signup({ name, phone: phone || undefined, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+      await fn();
     } catch (err) {
       setError(err instanceof ApiError || err instanceof Error ? err.message : 'Something went wrong.');
-      setBusy(false);
     }
+    setBusy(false);
   }
+
+  const sendCode = () =>
+    run(async () => {
+      setSent(await auth!.start(phone));
+      setCode('');
+      setStep('code');
+    });
+
+  async function submitName(e: React.FormEvent) {
+    e.preventDefault();
+    if (auth && provenCode) {
+      return run(async () => {
+        const res = await auth.verify({ phone, code: provenCode, name, timezone });
+        if (res.snapshot) onSignedUp(res.snapshot);
+      });
+    }
+    if (auth && phone.trim()) return sendCode();
+    return run(async () => onSignedUp(await api.signup({ name, phone: phone || undefined, timezone })));
+  }
+
+  async function submitCode(e: React.FormEvent) {
+    e.preventDefault();
+    return run(async () => {
+      const res = await auth!.verify({ phone, code, name: name.trim() || undefined, timezone });
+      if (res.snapshot) return onSignedUp(res.snapshot);
+      if (res.needsName) {
+        setProvenCode(code);
+        setNotice('There\'s no Sunup account for that number yet. Add your name to create one.');
+        setStep('name');
+      }
+    });
+  }
+
+  const back = (to: WelcomeStep) => (
+    <button
+      type="button"
+      className="icon-btn back"
+      onClick={() => {
+        setError('');
+        setStep(to);
+      }}
+      aria-label="Back"
+    >
+      <ArrowLeft size={20} />
+    </button>
+  );
 
   if (step === 'hello') {
     return (
@@ -56,31 +111,80 @@ export function Welcome({ api, invite, onSignedUp }: { api: Api; invite: InviteI
           <button className="btn primary block lg" onClick={() => setStep('name')}>
             Get started
           </button>
-          <p className="fine center">Free daily check-in and SOS. No location tracking, ever.</p>
+          {auth && (
+            <button className="btn ghost block" onClick={() => setStep('login')}>
+              I already have an account
+            </button>
+          )}
+          <p className="fine center">
+            Free daily check-in and SOS. No location tracking, ever. <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a>
+          </p>
         </div>
       </div>
     );
   }
 
+  if (step === 'login') {
+    return (
+      <form
+        className="onboard step"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void sendCode();
+        }}
+      >
+        {back('hello')}
+        <h1 className="display">Welcome back</h1>
+        <p className="muted">Enter the number on your account. We'll text you a code.</p>
+        <label>
+          <span>Mobile number</span>
+          <input className="input lg" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" required autoFocus />
+        </label>
+        {error && <p className="error-text">{error}</p>}
+        <button className="btn primary block lg" type="submit" disabled={busy || !phone.trim()}>
+          Text me a code
+        </button>
+      </form>
+    );
+  }
+
+  if (step === 'code' && sent) {
+    return (
+      <form className="onboard step" onSubmit={submitCode}>
+        {back(name ? 'name' : 'login')}
+        <h1 className="display">Check your texts</h1>
+        <CodeInput sent={sent} value={code} onChange={setCode} onResend={sendCode} />
+        {error && <p className="error-text">{error}</p>}
+        <button className="btn primary block lg" type="submit" disabled={busy || code.length !== 6}>
+          Continue
+        </button>
+      </form>
+    );
+  }
+
   return (
-    <form className="onboard step" onSubmit={submit}>
-      <button type="button" className="icon-btn back" onClick={() => setStep('hello')} aria-label="Back">
-        <ArrowLeft size={20} />
-      </button>
+    <form className="onboard step" onSubmit={submitName}>
+      {back('hello')}
       <p className="eyebrow">Step 1 of 4</p>
       <h1 className="display">What should we call you?</h1>
+      {notice && <p className="invite-banner">{notice}</p>}
       <label>
         <span>Your first name</span>
         <input className="input lg" value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" maxLength={40} required autoFocus />
       </label>
-      <label>
-        <span>Mobile number (recommended)</span>
-        <input className="input lg" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" />
-        <small className="fine">For alarm texts and the escalation call if you miss a check-in. Your circle can also call you from an alert.</small>
-      </label>
+      {!provenCode && (
+        <label>
+          <span>Mobile number (recommended)</span>
+          <input className="input lg" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" />
+          <small className="fine">
+            For alarm texts and the escalation call if you miss a check-in. Your circle can also call you from an alert.
+            {auth && ' We\'ll text you a code to confirm it, and it\'s how you sign back in on a new phone.'}
+          </small>
+        </label>
+      )}
       {error && <p className="error-text">{error}</p>}
       <button className="btn primary block lg" type="submit" disabled={busy || !name.trim()}>
-        Continue
+        {auth && phone.trim() && !provenCode ? 'Text me a code' : 'Continue'}
       </button>
     </form>
   );
