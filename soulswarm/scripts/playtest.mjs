@@ -847,6 +847,235 @@ errs = await session(async (page) => {
 });
 check('streaks and game feel: no runtime errors', !errs.length, errs[0] || '');
 
+// 18. Elite affixes and run events (affixes.js, events.js). Frame-stepped in a quiet arena: each affix's mechanic, the
+//     affix count and banner, chests from affixed elites, the event schedule, each event end to end, hazard-free
+//     placement and the off-screen arrow; then a bot plays Chapter 4 (two affixes per elite) to shake out errors.
+const AFFIX_QA = `
+window.__aq = (ch) => {
+  const app = window.__soulswarm, prof = app.profile;
+  if (app.run) app.exitRun();
+  document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+  app.engine.manual = true;
+  prof.flags.tutorialDone = true; prof.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; prof.energy = 30; prof.chapter.unlocked = 6;
+  app.startRun(ch);
+  const r = app.run;
+  r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0;
+  r.weapons.update = () => {}; r.player.hurt = () => {}; r.addXp = () => {}; r.input.tx = r.input.tz = 0;
+  r.events.director = () => {}; // events start only when a check starts one
+  return r;
+};
+window.__elite = (r, type, ids, dx, dz) => { const e = r.enemies.spawn(type, r.player.x + dx, r.player.z + dz, { elite: true, hpMul: 10 }); e.spawnT = 1; r.affixes.apply(e, ids); return e; };`;
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  await page.evaluate(AFFIX_QA);
+  const a = await page.evaluate(() => {
+    const rnd = Math.random, out = {}, step = (r, sec) => window.__step(r, sec);
+    // Warded: the ward (35% of max HP) soaks 70% of each hit, then shatters into a stagger; afterwards hits land in full
+    let r = window.__aq(1), e = window.__elite(r, 'brute', ['warded'], 0, -9);
+    const ward0 = e.aff.ward, hp0 = e.hp;
+    r.affixes.render(); const bubble = r.affixes.bubbles.mesh.count;
+    r.enemies.damage(e, 100, { silent: true });
+    const cut = { ward: +(ward0 - e.aff.ward).toFixed(2), hp: +(hp0 - e.hp).toFixed(2) };
+    r.enemies.damage(e, ward0 * 2, { silent: true });
+    const x0 = e.x, z0 = e.z; step(r, 0.5);
+    const hp1 = e.hp; r.enemies.damage(e, 100, { silent: true });
+    r.affixes.render();
+    out.ward = { share: +(ward0 / e.maxHp).toFixed(3), cut, broken: e.aff.ward === 0, staggerMoved: +Math.hypot(e.x - x0, e.z - z0).toFixed(3), after: +(hp1 - e.hp).toFixed(2), bubble, bubbleAfter: r.affixes.bubbles.mesh.count };
+    // Splitter: dies into 3-4 smaller, faster, non-elite copies with 0.9× a normal husk's HP; only the elite drops a chest
+    r = window.__aq(1); e = window.__elite(r, 'husk', ['splitter'], 0, -8);
+    const g0 = r.bonusGold, n0 = r.enemies.count, uid0 = e.uid;
+    Math.random = () => 0.99; r.enemies.kill(e, 'bolt'); Math.random = () => 0.5; r.update(1 / 30); Math.random = rnd;
+    const copies = r.enemies.active.filter((o) => o.active && o.uid !== uid0), added = r.enemies.count - (n0 - 1); // (a copy may reuse the pooled elite)
+    const c0 = copies[0] || {};
+    for (const o of copies) r.enemies.kill(o, 'bolt');
+    out.split = { n: copies.length, added, elite: copies.some((o) => o.elite), hp: +(c0.maxHp / (14 * r.hpMul())).toFixed(2), speed: +(c0.speed / 2.4).toFixed(2), scale: +(c0.scale || 0).toFixed(2),
+      chests: r.pickups.special.filter((p) => p.kind === 'chest').length, gold: r.bonusGold - g0 };
+    // Vampiric: a death within 6 m heals 4% of max HP (once per 0.35 s); one farther away does not
+    r = window.__aq(1); e = window.__elite(r, 'witch', ['vampiric'], 0, -8); e.speed = 0; e.hp = e.maxHp * 0.5;
+    const die = (dx) => { const h = r.enemies.spawn('husk', e.x + dx, e.z, { hpMul: 1 }); r.enemies.kill(h, 'bolt'); };
+    let v = e.hp; die(3); const near = (e.hp - v) / e.maxHp;
+    v = e.hp; die(3); const cooldown = e.hp - v;
+    r.affixes.list[0].vampT = -1e9; v = e.hp; die(9); const far = e.hp - v;
+    out.vamp = { near: +near.toFixed(3), cooldown, far };
+    // Hasted: +45% move speed, and it really closes the distance faster
+    r = window.__aq(1);
+    Math.random = () => 0.5;
+    const plain = r.enemies.spawn('husk', r.player.x + 10, r.player.z, { elite: true, hpMul: 10 }), fast = r.enemies.spawn('husk', r.player.x - 10, r.player.z, { elite: true, hpMul: 10 });
+    Math.random = rnd;
+    plain.spawnT = fast.spawnT = 1; r.affixes.apply(fast, ['hasted']);
+    step(r, 1);
+    out.haste = { ratio: +(fast.speed / plain.speed).toFixed(3), closed: +((10 - Math.hypot(fast.x - r.player.x, fast.z - r.player.z)) / (10 - Math.hypot(plain.x - r.player.x, plain.z - r.player.z))).toFixed(2) };
+    // Commander: foes inside its 6 m aura move and hit 25% harder; out of it (or once it dies) the buff drops, and its death routs them
+    r = window.__aq(1); e = window.__elite(r, 'brute', ['commander'], 0, -10); e.speed = 0;
+    const nr = r.enemies.spawn('husk', e.x + 3, e.z, { hpMul: 50 }), fr = r.enemies.spawn('husk', e.x + 12, e.z, { hpMul: 50 });
+    const s0 = nr.speed, d0 = nr.dmg, f0 = fr.speed;
+    r.update(1 / 30); r.affixes.render();
+    const buffed = { speed: +(nr.speed / s0).toFixed(3), dmg: +(nr.dmg / d0).toFixed(3), far: +(fr.speed / f0).toFixed(3), ring: r.affixes.rings.mesh.count };
+    nr.x = e.x + 20; r.update(1 / 30); const left = +(nr.speed / s0).toFixed(3);
+    nr.x = e.x + 3; nr.z = e.z; r.update(1 / 30); const back = +(nr.speed / s0).toFixed(3);
+    r.enemies.kill(e, 'bolt'); r.update(1 / 30);
+    out.cmd = { buffed, left, back, after: { speed: +(nr.speed / s0).toFixed(3), dmg: +(nr.dmg / d0).toFixed(3) }, rout: nr.slowUid === nr.uid ? nr.slowMul : -1, shoved: +Math.hypot(nr.kx, nr.kz).toFixed(1) };
+    // affixed elites still drop their Relic Chest (+40 gold per affix); a coffin's mini-elite drops none; Champions carry no affix
+    r = window.__aq(1); r.stats.raise = 1;
+    e = window.__elite(r, 'husk', ['warded', 'vampiric'], 0, -6);
+    const gc = r.bonusGold; r.enemies.kill(e, 'bolt');
+    const champ = r.legion.list[r.legion.list.length - 1];
+    const m = r.enemies.spawn('husk', r.player.x, r.player.z - 6, { elite: true, hpMul: 1 }); r.affixes.roll(m, 1, { noChest: true }); r.enemies.kill(m, 'bolt');
+    out.chest = { chests: r.pickups.special.filter((p) => p.kind === 'chest').length, gold: r.bonusGold - gc - 40, champ: !!champ && champ.champ && !champ.aff, elites: r.counters.elites };
+    // how many: 1 affix (Ch1), 2 from Chapter 4 and in Endless, plus run.diff.eliteAffixes; the banner names them
+    const count = {};
+    for (const ch of [1, 3, 4, 5, 6]) { r = window.__aq(ch); r.affixes.roll(r.spawnEnemy('brute', { elite: true })); count[ch] = r.affixes.list[0].ids.length; }
+    r = window.__aq(1); r.diff = { eliteAffixes: 1 }; r.affixes.roll(r.spawnEnemy('brute', { elite: true })); count.diff = r.affixes.list[0].ids.length;
+    r = window.__aq(1); r.tutorial = true; const tut = new Set();
+    for (let i = 0; i < 20; i++) { const t = r.spawnEnemy('husk', { elite: true }); r.affixes.roll(t); for (const id of t.aff.ids) tut.add(id); r.enemies.remove(t); }
+    r = window.__aq(1); r.eliteIdx = 0; r.time = 75; r.director(0);
+    const first = r.enemies.active.find((o) => o.elite);
+    out.count = { count, tutorial: [...tut].sort().join(), banner: document.querySelector('.banner b')?.textContent, ids: first && first.aff ? first.aff.ids : null };
+    return out;
+  });
+  check('affix warded: the ward soaks 70% until it breaks, then a stagger and full hits', a.ward.share === 0.35 && Math.abs(a.ward.cut.ward - 70) < 0.01 && Math.abs(a.ward.cut.hp - 30) < 0.01 && a.ward.broken && a.ward.staggerMoved < 0.05 && Math.abs(a.ward.after - 100) < 0.01 && a.ward.bubble === 1 && a.ward.bubbleAfter === 0, JSON.stringify(a.ward));
+  check('affix splitter: dies into 3-4 smaller, faster, chest-less copies', a.split.n === 4 && a.split.added === 4 && !a.split.elite && a.split.hp === 0.9 && a.split.speed === 1.35 && a.split.scale < 1 && a.split.chests === 1 && a.split.gold === 40, JSON.stringify(a.split));
+  check('affix vampiric: a death within 6 m heals 4% (throttled), farther does not', a.vamp.near === 0.04 && a.vamp.cooldown === 0 && a.vamp.far === 0, JSON.stringify(a.vamp));
+  check('affix hasted: +45% move speed', a.haste.ratio === 1.45 && a.haste.closed > 1.3, JSON.stringify(a.haste));
+  check('affix commander: +25% speed and damage in its aura, dropped outside and on its death (rout)', a.cmd.buffed.speed === 1.25 && a.cmd.buffed.dmg === 1.25 && a.cmd.buffed.far === 1 && a.cmd.buffed.ring === 1 && a.cmd.left === 1 && a.cmd.back === 1.25 && a.cmd.after.speed === 1 && a.cmd.after.dmg === 1 && a.cmd.rout === 0.4 && a.cmd.shoved > 2, JSON.stringify(a.cmd));
+  check('affixed elites drop their chest and bonus gold; mini-elites none; Champions carry no affix', a.chest.chests === 1 && a.chest.gold === 80 && a.chest.champ && a.chest.elites === 2, JSON.stringify(a.chest));
+  check('affix count: 1, 2 from Ch4 and in Endless, +run.diff; banner names them', JSON.stringify(a.count.count) === JSON.stringify({ 1: 1, 3: 1, 4: 2, 5: 2, 6: 2, diff: 2 }) && a.count.tutorial === 'hasted,warded' && !!a.count.ids && / HUSK$/.test(a.count.banner || '') && a.count.banner.startsWith(a.count.ids[0].toUpperCase()), JSON.stringify(a.count));
+
+  const b = await page.evaluate(() => {
+    const out = {}, step = (r, sec) => window.__step(r, sec), app = window.__soulswarm;
+    let seed = 20261007;
+    Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    // the schedule: the real director from 0:00 to 6:00 with real gates, swarm rings and elites (recorded, not spawned)
+    const schedule = (ch, tutorial) => {
+      const r = window.__aq(ch); delete r.events.director;
+      r.nextGate = 28; r.nextSwarm = 50; r.eliteIdx = 0; r.tutorial = tutorial;
+      const T = { gate: [], swarm: [], elite: [], ev: [] };
+      r.gates.spawnPair = () => T.gate.push(r.time); r.swarmRing = () => T.swarm.push(r.time);
+      const sp = r.spawnEnemy.bind(r); r.spawnEnemy = (t, o = {}) => { if (o.elite) T.elite.push(r.time); return sp(t, o); };
+      for (let t = 0; t < 359; t += 0.25) { r.time = t; r.director(0.25); if (r.events.cur) { T.ev.push(t); if (r.events.cur.e) r.enemies.remove(r.events.cur.e); r.events.cur = null; } }
+      const gap = (L) => Math.min(...T.ev.map((t) => Math.min(...L.map((x) => Math.abs(x - t)))));
+      return { ev: T.ev, gaps: T.ev.slice(1).map((t, i) => t - T.ev[i]), gate: gap(T.gate), elite: gap(T.elite), swarm: gap(T.swarm) };
+    };
+    out.ch1 = schedule(1, false); out.ch5 = schedule(5, false); out.tut = schedule(1, true);
+    // Endless keeps rolling after 5:20 (once the depth banner has played); nothing starts in Gravemaw's fight
+    let r = window.__aq(6); delete r.events.director;
+    r.bossKills = 1; r.nextBossAt = 700; r.time = 400; r.events.nextAt = 0; r.director(0.1); const early = !!r.events.cur;
+    r.time = 430; r.director(0.1); out.endless = { early, at430: r.events.cur ? r.events.cur.kind : null };
+    r.events.start('shrine') || r.events.cur; r.bossSpawned = true; step(r, 1); out.endless.bossClears = !r.events.cur;
+    // Soul Thief: it flees, the off-screen arrow points to it, a kill pays gold and an XP burst (no raise), an escape pays nothing
+    r = window.__aq(1); const P = r.player;
+    r.events.start('thief', { x: P.x + 5, z: P.z });
+    const ev = r.events.cur, th = ev.e;
+    const banner = document.querySelector('.banner b')?.textContent;
+    step(r, 1.5); const fled = +Math.hypot(th.x - P.x, th.z - P.z).toFixed(2);
+    th.x = P.x + 26; th.z = P.z; app.engine.step(1 / 30); const arrowOff = r.events.arrow.on, arrowX = Math.round(r.events.arrow.x);
+    th.x = P.x + 2.5; th.z = P.z - 1; app.engine.step(1 / 30); const arrowOn = r.events.arrow.on;
+    const gold0 = r.bonusGold, gems0 = r.pickups.gems.length, legion0 = r.legion.count;
+    r.stats.raise = 0.85; r.enemies.damage(th, 1e9, { silent: true });
+    const xp = r.pickups.gems.slice(gems0).reduce((s, g) => s + g.value, 0);
+    out.thief = { banner, fled, arrowOff, arrowX, arrowOn, gold: r.bonusGold - gold0, gems: r.pickups.gems.length - gems0, xp, need: r.xpNeed, raised: r.legion.count - legion0, events: r.counters.events, kind: ev.kind };
+    step(r, 1);
+    r.events.start('thief', { x: P.x + 6, z: P.z }); const th2 = r.events.cur.e; th2.speed = 0; // pinned, so only the 18 s clock can end it
+    let gone = -1; for (let i = 0; i < 30 * 20 && gone < 0; i++) { r.update(1 / 30); if (!th2.active) gone = r.events.cur ? r.events.cur.t : -2; }
+    out.escape = { at: +gone.toFixed(2), banner: document.querySelector('.banner b')?.textContent, events: r.counters.events, gold: r.bonusGold - gold0 };
+    return out;
+  });
+  const sched = (s) => s.ev.length >= 2 && s.ev.every((t) => t >= 60 && t <= 320) && s.gaps.every((g) => g >= 80) && s.gate >= 8 && s.elite >= 8 && s.swarm >= 5;
+  check('events: 1:00-5:20, every 80 s+, clear of gate pairs, elites and swarm rings', sched(b.ch1) && sched(b.ch5), JSON.stringify({ ch1: b.ch1, ch5: b.ch5 }));
+  check('events: none before 2:30 in the first run; Endless keeps rolling; the boss fight clears them', b.tut.ev.length >= 1 && b.tut.ev[0] >= 150 && !b.endless.early && !!b.endless.at430 && b.endless.bossClears, JSON.stringify({ tut: b.tut.ev, endless: b.endless }));
+  check('event thief: banner, flees, off-screen arrow (and none on screen)', b.thief.banner === 'SOUL THIEF' && b.thief.fled > 6 && b.thief.arrowOff && b.thief.arrowX > 300 && !b.thief.arrowOn, JSON.stringify(b.thief));
+  check('event thief: a kill pays gold and a big XP burst, no raise', b.thief.gold === 140 && b.thief.gems === 10 && b.thief.xp >= b.thief.need && b.thief.raised === 0 && b.thief.events === 1, JSON.stringify(b.thief));
+  check('event thief: escapes after 18 s ("It got away"), paying nothing', Math.abs(b.escape.at - 18) < 0.1 && b.escape.banner === 'IT GOT AWAY' && b.escape.events === 1 && b.escape.gold === 140, JSON.stringify(b.escape));
+
+  const c = await page.evaluate(() => {
+    const out = {}, step = (r, sec) => window.__step(r, sec), rnd = Math.random;
+    // Shrine of Souls: 2.5 s inside the circle pauses on a 1-of-3 blessing; Wraith Stride is +30% speed for 60 s, with a HUD chip
+    let r = window.__aq(1); const P = r.player;
+    r.events.start('shrine', { x: P.x + 5, z: P.z });
+    const ev = r.events.cur, speed0 = r.stats.speed;
+    step(r, 1); const idle = { hold: ev.hold, pending: r.levelPending };
+    P.x = ev.x; P.z = ev.z; step(r, 2.3); const early = r.levelPending;
+    Math.random = () => 0; step(r, 0.3); Math.random = rnd; // the draw: Soul Feast, Legion Wrath, Wraith Stride
+    const cards = [...document.querySelectorAll('.lvl-back.shrine .card')], t0 = r.time;
+    step(r, 0.5); const frozen = r.time === t0;
+    r.t += 1; cards.find((n) => n.textContent.includes('Wraith Stride'))?.click();
+    step(r, 0.2);
+    out.shrine = { idle, early, pending: !!cards.length, cards: cards.length, frozen, ratio: +(r.stats.speed / speed0).toFixed(3), resumed: !r.levelPending, chip: document.querySelector('.hud-buffs .buff b')?.textContent, events: r.counters.events };
+    r.recomputeStats(); out.shrine.survivesRecompute = +(r.stats.speed / speed0).toFixed(3); // a level-up recomputes stats: the blessing stays
+    step(r, 60); out.shrine.expired = { ratio: +(r.stats.speed / speed0).toFixed(3), chips: document.querySelectorAll('.hud-buffs .buff').length, left: r.events.buffs.length };
+    // the other blessings: Soul Feast doubles XP, Grave Call +20 pp Raise Chance, Legion Wrath ×1.5 minion damage
+    const raise0 = r.stats.raise, md0 = r.stats.minionDmg;
+    r.events.bless('feast'); r.events.bless('call'); r.events.bless('wrath');
+    const xp0 = r.xp; Object.getPrototypeOf(r).addXp.call(r, 1);
+    out.blessings = { xp: r.xp - xp0, raise: +(r.stats.raise - raise0).toFixed(3), minion: +(r.stats.minionDmg / md0).toFixed(3) };
+    // ignored, a shrine lapses
+    r = window.__aq(1); r.events.start('shrine', { x: r.player.x + 6, z: r.player.z }); step(r, 30);
+    out.lapse = { cur: !!r.events.cur, buffs: r.events.buffs.length, events: r.counters.events };
+    // Cursed Coffin: static and hidden from the horde mesh; breaking it releases 20 foes and a chest-less mini-elite; clearing
+    // them (or lasting 20 s) sends a Relic Chest flying to the Shepherd
+    r = window.__aq(2); const Q = r.player;
+    r.events.start('coffin', { x: Q.x + 6, z: Q.z });
+    const cf = r.events.cur, cof = cf.e, x0 = cof.x;
+    step(r, 1);
+    r.enemies.render(); const drawn = Object.values(r.enemies.meshes).reduce((s, M) => s + M.n, 0);
+    const n0 = r.enemies.count;
+    r.enemies.damage(cof, 1e9, { silent: true }); const state = cf.state; r.update(1 / 30);
+    const mini = cf.wave.map((w) => w.e).find((o) => o.elite);
+    out.coffin = { kind: cf.kind, still: cof.x === x0 || !cof.active, drawn, state, after: cf.state, wave: cf.wave.length, spawned: r.enemies.count - n0 + 1, mini: !!mini && !!mini.aff && mini.aff.noChest && mini.aff.ids.length === 1, banner: document.querySelector('.banner b')?.textContent };
+    const sp0 = r.pickups.special.length;
+    for (const w of cf.wave.slice(1)) r.enemies.kill(w.e, 'bolt');
+    r.update(1 / 30); const notYet = cf.state;
+    r.enemies.kill(cf.wave[0].e, 'bolt'); r.update(1 / 30);
+    const chest = r.pickups.special.slice(sp0).filter((p) => p.kind === 'chest');
+    const chests0 = r.counters.chests; step(r, 2);
+    out.coffin.reward = { notYet, state: cf.state, chests: chest.length, flying: chest.every((p) => p.pulled), opened: r.counters.chests - chests0, events: r.counters.events };
+    document.querySelectorAll('.lvl-back').forEach((n) => n.remove()); r.levelPending = false; r.chestQueue = 0;
+    // left alone after breaking, the reward still comes 20 s later
+    r = window.__aq(2); r.events.start('coffin', { x: r.player.x + 6, z: r.player.z }); const cf2 = r.events.cur;
+    r.enemies.damage(cf2.e, 1e9, { silent: true }); r.update(1 / 30);
+    for (const w of cf2.wave) w.e.speed = 0;
+    let at = -1; for (let i = 0; i < 30 * 22 && at < 0; i++) { r.update(1 / 30); if (cf2.state === 'gone') at = cf2.waveT; }
+    out.coffin.timeout = +at.toFixed(2);
+    // unbroken, it sinks away after 30 s
+    r = window.__aq(2); r.events.start('coffin', { x: r.player.x + 6, z: r.player.z }); const cf3 = r.events.cur; step(r, 31);
+    out.coffin.lapse = { cur: !!r.events.cur, alive: cf3.e.active, events: r.counters.events };
+    // placement: 12 m out, never on a vent (Ch2) or ice (Ch3), nor on burning ground
+    const place = (ch) => {
+      const rr = window.__aq(ch), H = rr.hazards, p = rr.player; let n = 0, bad = 0, dmin = 99, dmax = 0;
+      for (let i = 0; i < 40; i++) {
+        p.x = (Math.random() - 0.5) * 300; p.z = (Math.random() - 0.5) * 300; H.update(0);
+        const s = rr.events.spot(); if (!s) continue; n++;
+        const d = Math.hypot(s.x - p.x, s.z - p.z); dmin = Math.min(dmin, d); dmax = Math.max(dmax, d);
+        for (let k = 0; k < H.nv; k++) if (Math.hypot(H.vents[k].x - s.x, H.vents[k].z - s.z) < 2.6 + 1.6) bad++;
+        for (let k = 0; k < 16; k++) { const a = k * 0.3927, q = k % 2 ? 1 : 2; if (H.iceAt(s.x + Math.cos(a) * q, s.z + Math.sin(a) * q)) { bad++; break; } }
+      }
+      return { n, bad, d: [+dmin.toFixed(1), +dmax.toFixed(1)] };
+    };
+    let rr = window.__aq(2); rr.hazards.burn(rr.player.x + 3, rr.player.z, 1.1, 10);
+    out.place = { ch2: place(2), ch3: place(3), burn: !rr.hazards.isClear(rr.player.x + 3, rr.player.z, 1) && rr.hazards.isClear(rr.player.x + 9, rr.player.z, 1) };
+    return out;
+  });
+  check('event shrine: 2.5 s inside pauses on a 1-of-3 blessing pick', !c.shrine.idle.pending && c.shrine.idle.hold === 0 && !c.shrine.early && c.shrine.cards === 3 && c.shrine.frozen && c.shrine.resumed, JSON.stringify(c.shrine));
+  check('event shrine: the blessing applies (+30% speed, HUD chip) and expires after 60 s', c.shrine.ratio === 1.3 && c.shrine.survivesRecompute === 1.3 && c.shrine.chip === 'Wraith Stride' && c.shrine.events === 1 && c.shrine.expired.ratio === 1 && c.shrine.expired.chips === 0 && c.shrine.expired.left === 0, JSON.stringify(c.shrine));
+  check('event shrine: Soul Feast ×2 XP, Grave Call +20 pp, Legion Wrath ×1.5; ignored, it lapses', c.blessings.xp === 2 && c.blessings.raise === 0.2 && c.blessings.minion === 1.5 && !c.lapse.cur && c.lapse.buffs === 0 && c.lapse.events === 0, JSON.stringify({ b: c.blessings, lapse: c.lapse }));
+  check('event coffin: breaking it releases 20 foes and a chest-less mini-elite', c.coffin.still && c.coffin.drawn === 0 && c.coffin.state === 'burst' && c.coffin.after === 'wave' && c.coffin.wave === 21 && c.coffin.spawned === 21 && c.coffin.mini && c.coffin.banner === 'THE COFFIN BURSTS', JSON.stringify(c.coffin));
+  check('event coffin: clearing the wave (or 20 s) gives a Relic Chest; unbroken it lapses', c.coffin.reward.notYet === 'wave' && c.coffin.reward.state === 'gone' && c.coffin.reward.chests === 1 && c.coffin.reward.flying && c.coffin.reward.opened === 1 && c.coffin.reward.events === 1 && Math.abs(c.coffin.timeout - 20) < 0.1 && !c.coffin.lapse.cur && !c.coffin.lapse.alive && c.coffin.lapse.events === 0, JSON.stringify(c.coffin));
+  check('events: placed 12 m out, never on vents, ice or burning ground', c.place.ch2.n >= 30 && c.place.ch3.n >= 30 && !c.place.ch2.bad && !c.place.ch3.bad && c.place.ch2.d[0] > 11.9 && c.place.ch3.d[1] < 12.1 && c.place.burn, JSON.stringify(c.place));
+
+  // a bot plays 4:40 of Chapter 4 (two affixes per elite) with events on
+  const d = await page.evaluate(() => {
+    const app = window.__soulswarm; if (app.run) app.exitRun();
+    document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+    app.profile.energy = 30; app.startRun(4); const r = app.run; let maxAff = 0, kinds = new Set();
+    const ev0 = r.events.start.bind(r.events); r.events.start = (k, at) => { const ok = ev0(k, at); if (ok) kinds.add(k); return ok; };
+    const roll0 = r.affixes.roll.bind(r.affixes); r.affixes.roll = (e, n, o) => { const b = roll0(e, n, o); if (e && e.aff) maxAff = Math.max(maxAff, e.aff.ids.length); return b; };
+    while (r.time < 280 && !r.ended) window.__bot(10, true);
+    return { t: Math.round(r.time), maxAff, kinds: [...kinds].sort(), started: r.events.started, elites: r.counters.elites };
+  });
+  check('bot: Chapter 4 with affixed elites and events runs clean', d.t >= 280 && d.maxAff === 2 && d.started >= 2, JSON.stringify(d));
+});
+check('affixes and events: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

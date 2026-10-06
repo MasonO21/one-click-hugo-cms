@@ -13,7 +13,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests, gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
@@ -53,7 +53,7 @@ Everything below describes the build unless it is marked **Planned**.
 
 **Moment-to-moment.** Move → weapons fire automatically at the nearest threat → an enemy dies → it drops a soul shard and has a *Raise Chance* to rise as a cyan minion → minions orbit you and hunt nearby enemies → more kills → more shards and more minions. The player's only job is positioning: kite, collect, pick gates, avoid telegraphs.
 
-**Run.** 0:00–6:00 survival with rising density, 9 Soul Gate pairs (0:28, then every 40 s), 6 swarm rings, 4 elites (1:15, 2:30, 3:45, 4:50) and roughly 21 level-ups (about Lv22, §9), then Gravemaw at 6:00. A full clear is 6:00 plus the boss fight. A failed run usually ends between 2:30 and 5:00.
+**Run.** 0:00–6:00 survival with rising density, 9 Soul Gate pairs (0:28, then every 40 s), 6 swarm rings, 4 elites (1:15, 2:30, 3:45, 4:50) each with an affix (§5.1), about 3 optional mid-run events (§4.8) and roughly 21 level-ups (about Lv22, §9), then Gravemaw at 6:00. A full clear is 6:00 plus the boss fight. A failed run usually ends between 2:30 and 5:00.
 
 **Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quests rotate: "Finish 2 runs" every day plus 5 drawn by date from a pool of 11: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Open 2 Relic Chests · Slay 3 elites · Lead a legion of 100, and after the first Chapter 1 clear also Evolve a weapon · Defeat Gravemaw · Clear the Daily Trial. Rewards belong to the 5 slots (in order: 20 gems · 1,500 gold · 15 gems · 1,200 gold · 1 sigil, each with pass XP), so the daily value never changes.
 
@@ -179,7 +179,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 | Soul shard (XP) | Every kill | XP equal to the enemy's XP value (×12 for elites). At most 420 shards on the map; past ~416, new shards merge into the nearest shard within 3 m. Shards left 48 m behind are lost. |
 | Heart | 0.6% per non-elite kill | Heals 30% of max HP |
 | Magnet | 0.3% per non-elite kill | Pulls every shard on the map |
-| Relic Chest | Every elite | Choose 1 of 3 cards, drawn like a level-up (an eligible evolution is almost always offered). Uses the run's single ad reroll if it is still unspent. |
+| Relic Chest | Every elite (not a Cursed Coffin's mini-elite), and a cleared Cursed Coffin (§4.8) | Choose 1 of 3 cards, drawn like a level-up (an eligible evolution is almost always offered). Uses the run's single ad reroll if it is still unspent. |
 
 Pickup radius is 2.8 m (Soul Magnet +30% per level). Hearts, magnets and chests are pulled in at 80% of that radius and vanish after 40 s.
 
@@ -247,6 +247,22 @@ The spread between runs is large (±60 s), so each average is good to about ±5%
 - Real-time timers keep running: the HUD, banners, the death and victory beats, and the streak's fade-out.
 - It is a motion effect, so it scales with the screen-shake slider; at 0% there is no hit-stop (§17).
 
+### 4.8 Run events
+
+Optional side objectives that add a decision between the scripted beats. Numbers live in `RUN_EVENTS` and `BLESSINGS` (`data.js`); the logic is in `events.js`.
+
+- **Schedule:** one event at a time. The first comes at 1:02–1:20, then one every 80–110 s, only between 1:00 and 5:20, so a campaign run sees about 3 (measured: 1:23, 2:55 and 4:16 in one Chapter 1 run). Endless keeps rolling them, waiting 25 s after each Gravemaw kill.
+- **Spacing:** never within 8 s of a gate pair or an elite, 5 s of a swarm ring, or 40 s of Gravemaw's arrival, and never during his fight. If Gravemaw arrives anyway, the event lapses quietly (a pending coffin reward pays out at once). A first run gets none before 2:30.
+- **Placement:** 12 m from the Shepherd, ahead of him when possible. The spot must be at least 2.6 m clear of ember vents, ice patches, burning ground, a pending abyssal grab and a standing gate pair. With no clear spot, it retries 2 s later.
+- **Presentation:** a banner announces each event. While it is off screen, an arrow on the screen edge (kept clear of the HUD) points at it, with its distance. Each event is optional: ignored, it lapses.
+- **Counters:** `counters.events` counts events completed (thief slain, blessing taken, coffin cleared), and the run result carries it as `events`.
+
+| Event | What happens | Reward | If ignored |
+|---|---|---|---|
+| **Soul Thief** | A glinting imp with a glowing sack. It rummages for 1.2 s, or until the Shepherd comes within 8 m, then flees at 5.0 m/s, jinking as it runs: faster than Husks (2.4) and Ghouls (4.4), slower than the Shepherd (6.2). Beyond 15 m it dawdles at 55% speed. It has 125 × the run's HP multiplier, takes hits from every weapon and minion, and never attacks. | +100 + 40 × chapter bonus gold (Ch1 140) and a burst of 10 soul shards worth one full level of XP. It never rises. | It escapes after 18 s (or past 40 m): "IT GOT AWAY". |
+| **Shrine of Souls** | A glowing 1.9 m rune circle with a floating soul crystal. Standing inside fills a gold progress ring over 2.5 s (it drains at 1.5× when you step out). Then gameplay pauses, like a level-up, on a pick of 3 blessings (no reroll). | A 60 s blessing, shown as a HUD chip with a timer: **Soul Feast** ×2 XP · **Legion Wrath** minions +50% damage · **Wraith Stride** +30% move speed · **Soul Tide** every shard, heart, magnet and chest flies to you · **Grave Call** +20 pp Raise Chance (85% cap). Blessings already active are not offered; they survive level-ups. | It fades after 28 s. |
+| **Cursed Coffin** | An upright, chained coffin on a crimson rune circle. Any damage counts (weapons, minions, Bloater blasts); it has 150 × the run's HP multiplier and never moves. Breaking it releases a wave of 20 foes from the current spawn mix, in a ring 2.2–4.6 m around it, plus one mini-elite: an elite with half an elite's HP, 85% of its size and 1 affix, which carries no chest. | When the wave is cleared, or after 20 s, a Relic Chest rises from the coffin and flies to the Shepherd (the normal chest pick). | It sinks after 30 s. |
+
 ---
 
 ## 5. Enemy roster
@@ -260,10 +276,38 @@ Base values are for Chapter 1 at minute 0. Scaling is in §8. Each enemy deals i
 | **Brute** | Tank | 75 | 1.7 | 18 per touch | 4 | Mass 5: shrugs off most knockback and shoves smaller enemies aside. Within 2.2 m it rears back for **1.0 s** with a ground cone telegraph (2.4 m, ±40°; both × elite scale), then **slams** for 1.4× damage to the Shepherd and every minion in the cone, with 9 m/s knockback. 0.8 s recovery, 2.4 s between slams. | Step out of the cone. Bone Spears pierce. |
 | **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and **lobs** an ember orb about every 3.0 s (±15%) at the Shepherd's position 0.3 s ahead. The orb arcs for 1.0 s onto a 1.1 m telegraph circle (with a closing outer ring) and hits the Shepherd and minions inside. From Chapter 2 the landing leaves **burning ground** for 3 s (25% of the orb damage per second, ticks every 0.3 s, patches don't stack). | Ashen Chains and homing Soul Bolts reach her. Keep moving when a circle appears. |
 | **Bloater** | Bomber | 28 | 2.0 | 26 AoE (2.6 m) | 2 | Within 2.4 m of the player it slows to 25%, flashes and shows a 2.6 m telegraph, then explodes after 1.0 s. The blast also deals 60 to minions and 1.2× its max HP to other *enemies*. Killed early, it just dies (and can rise). | Kill it early, or let it detonate inside a crowd. Never let it reach you. |
-| **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass, and a floating gold **crown** marker. Can be raised. | Drops a **Relic Chest**. |
+| **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass, and a floating gold **crown** marker. Rolls 1–2 affixes (§5.1). Can be raised. | Drops a **Relic Chest**. |
 | **Gravemaw, the Hollow King** | Boss | 12,500 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing him clears the chapter. | See §6. |
 
 Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a), boss magenta/violet (#ff3df0). Every enemy has an emissive core so it reads against the dark ground.
+
+### 5.1 Elite affixes
+
+Every elite the director raises rolls **1 affix**, or **2 from Chapter 4 and in Endless**, plus `run.diff.eliteAffixes` when a difficulty sets it. A first run rolls only Warded or Hasted.
+- **Announcement:** the ELITE banner names them (e.g. "WARDED BRUTE", "VAMPIRIC HASTED CINDER WITCH") and says what each does. A small tag in each affix's colour floats over the elite, with a thin gauge under it while a ward holds.
+- **Rewards:** affixed elites still drop their Relic Chest, plus **+40 bonus gold per affix**.
+- **Champions:** an elite raised as a Champion carries no affix.
+- **Boss fight:** boss-time adds never roll affixes. An affixed elite that is still alive when Gravemaw arrives keeps its affixes.
+
+Numbers live in `AFFIXES` (`data.js`), the logic in `affixes.js`.
+
+| Affix | Effect | Visual and sound |
+|---|---|---|
+| **Warded** | A soul ward worth 35% of max HP. While it holds, it soaks 70% of every hit (30% reaches HP), so the elite effectively has about 1.35× HP. When it breaks, the elite staggers in place for 0.9 s. | A pale-cyan fresnel bubble that flashes on hits. The break: a glass shatter, a shockwave, "WARD BROKEN", a short hit-stop and a light haptic. |
+| **Splitter** | On death it bursts into 3–4 smaller copies of its type. The copies are 78% size, have 0.9× a normal enemy's HP, move 35% faster, are not elites and carry no chest. | A throbbing orange aura; a wet pop and an orange burst on the split. |
+| **Vampiric** | Heals 4% of max HP whenever another enemy dies within 6 m, at most once per 0.35 s (so at most about 11% per second inside a meat grinder). | A pulsing red aura; a red tether of blood motes streams from each corpse it feeds on. |
+| **Hasted** | +45% move speed (an elite Brute walks at about 2.2 m/s, an elite Husk at 3.1, both still slower than the Shepherd). | A trail of embers. |
+| **Commander** | Enemies within 6 m move and hit 25% harder (slams and lobs included). Killing it routs them: a 7 m/s shove away from it, then 40% speed for 2 s. | A dashed gold ground ring of 6 m; embers over the rallied foes. The rout: "ROUTED!", a gold ring and a sagging war horn. |
+
+**Balance check (2026-10-06).** The balance bot played Vael 16 times on each of Chapters 2, 4 and 5, measuring average survival:
+
+| Build | Ch2 | Ch4 | Ch5 |
+|---|---|---|---|
+| Before | 265 s | 275 s | 286 s |
+| Affixes only (events off) | 291 s | 292 s | 272 s |
+| Affixes and events | 271 s | 284 s | 289 s |
+
+Runs spread by about ±60 s (standard error about 15 s). The one drop is Ch5 with affixes only: 8 elites with 2 affixes each cost 5%. That is inside the noise and well inside the 10% budget for affixes. The bot never seeks out events, so events show up here only when it stumbles on one.
 
 ---
 
@@ -495,7 +539,7 @@ A Chapter 1 clear produces about 2,000 kills at about 1 XP each, plus 132 XP fro
 
 **Gold** = round( (0.9 × K + 2.2 × T + 400 × c × B) × (1 + G) × P + bonus )
 
-K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if Gravemaw was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, bonus = 150 per "Grave Gold" card. Blood Moon doubles the run's gold and gems, and the rewarded-ad "double rewards" then grants the (doubled) gold and gems a second time, so the two stack to ×4.
+K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if Gravemaw was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, bonus = 150 per "Grave Gold" card + 40 per affix on each slain elite (§5.1) + 100 + 40c per slain Soul Thief (§4.8). Blood Moon doubles the run's gold and gems, and the rewarded-ad "double rewards" then grants the (doubled) gold and gems a second time, so the two stack to ×4.
 
 | Example (G = 0) | Full clear (T = 7:00) | Death at 4:00 (no boss) |
 |---|---|---|
@@ -596,7 +640,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 ## 15. Audio direction
 
-*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). The stem system below is Planned.*
+*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). Elite affixes and run events add a glass ward shatter, the Splitter's pop, the Commander's rout horn, the Soul Thief's jingle-and-cackle and its escape whoosh, the shrine's bell chime and the coffin's wood-splitting boom. Rendered offline, they peak between −19 and −7 dBFS before the master limiter, the same range as the existing SFX, so none of them clips. The stem system below is Planned.*
 
 - **Music:** dark synthwave with choir and pipe organ. **Stems are added as the legion grows** (25 / 100 / 200 / 300 minions): percussion, then bass, choir and lead. The player *hears* the army getting bigger. Boss tracks are separate, with a phase-3 key change.
 - **SFX priorities** (voice limit 32): 1) player hit and telegraphs, 2) Nova, 3) gates, 4) level-up, 5) raises (pooled into a shimmering chord, at most 10 voices), 6) weapons, 7) enemy deaths (heavily pooled).

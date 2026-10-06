@@ -181,6 +181,46 @@ export function enemyGeometry(type) {
   return merge(parts);
 }
 
+/** Run-event props (events.js): 'thief' (a hunched imp lugging a sack of stolen souls) or 'coffin' (an upright, chained,
+ *  rune-cut coffin). Both face +z; parts with e: 1 glow in the mesh tint. */
+export function eventGeometry(kind) {
+  if (kind === 'thief') {
+    const skin = 0x3b3046, dark = 0x1d1726, sack = 0x6e5434;
+    return merge([
+      ...mirror((x) => P(Cyl(0.05, 0.07, 0.36, 4), dark, { p: [0.12 * x, 0.18, 0.02], r: [0.2, 0, 0.12 * x] })),
+      P(Sph(0.24, 6, 4), skin, { p: [0, 0.5, 0.04], s: [1, 1.05, 0.95], r: [0.55, 0, 0] }),
+      P(Sph(0.19, 6, 4), skin, { p: [0, 0.78, 0.24] }),
+      ...mirror((x) => P(Cone(0.07, 0.36, 4), skin, { p: [0.22 * x, 0.9, 0.18], r: [0.25, 0, -1.15 * x] })),
+      ...mirror((x) => P(Sph(0.04, 4, 3), 0, { p: [0.07 * x, 0.82, 0.41], e: 1 })),
+      P(Box(0.12, 0.03, 0.03), 0xe0d2a4, { p: [0, 0.71, 0.4] }),
+      ...mirror((x) => P(Cyl(0.035, 0.05, 0.4, 4), dark, { p: [0.21 * x, 0.66, -0.02], r: [-1.0, 0, 0.45 * x] })),
+      P(Sph(0.34, 7, 5), sack, { p: [0, 0.78, -0.36], s: [1, 1.08, 0.95] }),
+      P(Cyl(0.07, 0.11, 0.14, 6), sack, { p: [0, 1.14, -0.34] }),
+      P(Tor(0.1, 0.025, 3, 8), 0, { p: [0, 1.08, -0.34], r: [Math.PI / 2, 0, 0], e: 1 }),
+      ...[[0.1, 1.24, -0.32], [-0.08, 1.2, -0.28], [0.02, 1.32, -0.38], [0.2, 0.96, -0.12], [-0.22, 0.7, -0.2]].map((p, i) => P(Oct(0.05 + (i % 2) * 0.02), 0, { p, e: 1 })),
+    ]);
+  }
+  const wood = 0x2c1d17, lid = 0x3d2a20, iron = 0x4b4a55, earth = 0x1b1512;
+  const outline = (k) => {
+    const s = new THREE.Shape();
+    s.moveTo(-0.25 * k, 0); s.lineTo(0.25 * k, 0); s.lineTo(0.44 * k, 1.45); s.lineTo(0.31 * k, 2.08); s.lineTo(-0.31 * k, 2.08); s.lineTo(-0.44 * k, 1.45); s.closePath();
+    return s;
+  };
+  const slab = (k, depth) => { const g = new THREE.ExtrudeGeometry(outline(k), { depth, bevelEnabled: false }); g.translate(0, 0, -depth / 2); return g; };
+  const g = merge([
+    P(slab(1, 0.36), wood),
+    P(slab(0.84, 0.06), lid, { p: [0, 0.14, 0.2], s: [1, 0.88, 1] }),
+    P(Box(0.08, 0.78, 0.05), 0, { p: [0, 1.22, 0.25], e: 1 }),
+    P(Box(0.4, 0.08, 0.05), 0, { p: [0, 1.42, 0.25], e: 1 }),
+    P(Box(0.82, 0.07, 0.44), iron, { p: [0, 1.72, 0], r: [0, 0, 0.12] }),
+    P(Box(0.74, 0.07, 0.44), iron, { p: [0, 0.62, 0], r: [0, 0, -0.1] }),
+    ...[[-0.24, 1.86], [0.22, 0.4], [-0.16, 0.34], [0.26, 1.6]].map(([x, y]) => P(Box(0.05, 0.12, 0.04), 0, { p: [x, y, 0.22], r: [0, 0, x * 2], e: 1 })),
+    P(Ico(0.07), 0, { p: [0, 1.95, 0.23], e: 1 }),
+  ]);
+  g.rotateX(-0.3); // leans back, toward the top of the screen
+  return merge([g, P(Dod(0.55), earth, { p: [0, 0.02, 0.05], s: [1.5, 0.3, 1.1] })]);
+}
+
 export function bossGeometry() {
   const bone = 0x5a4e46, dark = 0x1e1822, metal = 0x6a5a78;
   return merge([
