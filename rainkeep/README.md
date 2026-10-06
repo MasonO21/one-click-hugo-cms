@@ -1,0 +1,79 @@
+# Rainkeep
+
+A complete desert water-survival strategy game for phones, in 3D. The rain stopped a generation ago. You raise the last Rainwyrm, a water dragon whose cooling mist keeps your keep alive. You dig wells so your people have water to drink and the wyrm has water to breathe, read the horizon for sandstorms and heatwaves, shelter survivors, recruit heroes, send caravans across the Dunes, ride with your Caravan and push six chapters of story to the Sunheart, the fallen shard of sun that boiled the sky dry.
+
+- **Play:** open `index.html` in any browser, or install it to your phone's home screen (see below).
+- **Design and business plan:** [DESIGN.md](DESIGN.md)
+- **Putting it on the App Store and Google Play:** [NATIVE.md](NATIVE.md)
+- **Store listing copy:** [STORE_LISTING.md](STORE_LISTING.md) · **Privacy policy:** [PRIVACY.md](PRIVACY.md)
+
+## What's in the game
+
+| Area | Contents |
+|---|---|
+| **3D world** | The keep and the Dunes are real-time 3D scenes (three.js, vendored): low-poly desert architecture that changes with building level, a day and night cycle, sandstorms, dust haze and heatwaves, villagers walking to work, camels, palms swaying in the wind, an animated oasis and the Rainwyrm itself. Drag to orbit, pinch to zoom. Falls back to a 2D renderer on devices without WebGL, and can be switched off in Settings |
+| **The Rainwyrm** | 15 levels, 7 forms that grow fins, horns, whiskers and finally a rain cloud of its own, 3 mist settings, petting and naming, an Ascension choice at Lv 12 (Monsoon, Mistveil or Floodheart), Wyrm's Torrent that opens every battle, 6 skins |
+| **Survival** | Water is life: survivors drink it and the wyrm breathes it as cooling mist. If the wells run dry, the wyrm sleeps, the heat pours in and families leave. Forecast weather (dust haze, sandstorms, heatwaves) gets hotter as the wyrm grows; heat bands drive sickness and productivity; food, housing, raider attacks with a Storehouse to protect stock, offline protection |
+| **The keep** | 12 buildings on fixed plots (Deep Well, Date Grove, Sandstone Quarry, Copper Mine, Mudbrick Houses, Healer's House, Barracks, Watchtower, Archive of Rains, Caravan Hall, Storehouse), worker assignment (auto or manual), 10 research lines with 10 levels each, 3 troop types in a counter triangle |
+| **Heroes** | 18 illustrated heroes in 3 rarities and 3 classes, levels, stars from duplicates, skills that grow with stars, Steward posts that boost buildings, recruitment with published odds, a 40-pull Legendary guarantee and a rotating featured hero |
+| **Expedition** | 60 story stages in 6 chapters with 12 bosses, chapter story cards, an ending ("The Rains"), then the endless Burning Line. A patrol cache pays out while you're away |
+| **The Dunes** | A seeded 21×21 world map whose dust haze recedes as the wyrm grows: resource nodes and gathering caravans, beasts, Scorpion raider camps, and 12 story ruins whose choices change what you bring home |
+| **Caravan** | Three simulated alliances to choose from: members help your timers, fund 5 Caravan techs, send gift chests, chat and react to what happens, and fight a Colossus raid boss with you on a timer |
+| **Meta** | 45 chapter quests, daily duties with 5 chests, a 7-day gift calendar, 30 achievements, mail, a 30-tier season pass, a backpack with speedups, crates and shard pouches, and 4 rotating events including **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket |
+| **Store** | Founder's Cache, Oasis Stipend, Ledger Premium, Growth Fund, Sandstorm Kit, War Chest, Starglass packs, wyrm skins and supply crates. Purchases are simulated on the web and go through Apple/Google in the app build |
+| **Polish** | Procedural music on a Hijaz scale, desert wind and spring ambience and sound effects (no audio files), haptics, a quest-driven tutorial pointer, notifications in the app build, save codes to move progress between devices, offline play when hosted, bundled fonts |
+
+Caravan members and Oasis Wars rivals are simulated, so the whole game works offline with no server. DESIGN.md explains what a live multiplayer version would add.
+
+## Play it
+
+No build step is needed:
+
+- Open `index.html` in a browser, or
+- Serve the folder (`npx serve rainkeep` from the repo root) and open it on your phone over the same Wi-Fi. When served over https, the game also works offline.
+- On iPhone, open it in Safari and choose **Share → Add to Home Screen** to play full screen.
+
+Progress saves in the browser. Settings (gear icon) has sound toggles, the 3D graphics switch, save codes and **Start a new keep**. Add `?flat` to the URL to force the 2D renderer.
+
+## Files
+
+| File | What it does |
+|---|---|
+| `index.html` | Page shell: HUD, tabs, icon set, script order |
+| `style.css` | All styling (desert theme, bundled fonts) |
+| `data.js` | Every tunable number and all content: buildings, weather, heroes, stages, quests, events, Caravan, the Dunes, ruins, store |
+| `core.js` | State, simulation (water, heat, sickness, production), combat, core actions, save/load, the event bus other scripts hook into |
+| `ui.js` | HUD, tabs, panels, every sheet, battles, toasts, tutorial hints, input, sound and haptic cues |
+| `art2d.js` | Illustrated SVG hero portraits (built from each hero's `look` in data.js) and foe illustrations |
+| `art3d.js` | The procedural 3D model kit: terrain, sky, water, buildings in three detail tiers, palms, camels, villagers, particles, and the animated Rainwyrm. Also renders wyrm portraits for sheets |
+| `town3d.js` | The 3D keep: plot models, lighting, day and night, weather, mist, people, camera fitting, picking |
+| `town.js` | The keep's 2D overlay (plates, badges, timers) and touch input; draws the whole keep in 2D when WebGL is unavailable |
+| `world3d.js` | The Dunes in 3D: tile models, dust haze, caravans, badges, panning and picking |
+| `world.js` | The Dunes rules: tiles, marches, beasts, camps, ruins and raids on the keep; 2D map fallback |
+| `events.js` | Backpack, speedups, daily duties, gift calendar, achievements, mail, timed events, Oasis Wars |
+| `caravan.js` | The simulated alliance: help, tech, shop, gifts, chat, Colossus raid |
+| `audio.js` | Procedural Web Audio engine (`KHAudio`) |
+| `native.js` | App-store bridge (`KHNative`): RevenueCat purchases, notifications, haptics, sharing, service worker |
+| `sw.js` | Service worker for offline play when hosted |
+| `vendor/three.min.js` | three.js r158 (MIT, see `vendor/THREE_LICENSE.txt`) |
+| `fonts/` | El Messiri and Barlow Semi Condensed (SIL Open Font License) |
+| `icons/`, `icon.svg`, `manifest.webmanifest` | App icons, splash screen and home-screen install |
+| `package.json`, `capacitor.config.json`, `scripts/build-www.mjs` | Native app shell (Capacitor) and build script |
+
+## Tuning and testing
+
+Change numbers in `data.js` and reload. Timers and production run about 30× faster than a typical live-service strategy game, so the full story takes a handful of evenings. For quick testing, open the browser console:
+
+```js
+rainkeep.advance(600)                            // fast-forward 10 minutes of game time
+rainkeep.grant({ stone: 5000, water: 5000, starglass: 2000, beacons: 10, speed60: 3 })
+rainkeep.act('fight')                            // any action the buttons use
+rainkeep.state()                                 // the full save object
+KH.town3d.zoom(1.5); KH.town3d.drag(0, -100)     // move the 3D camera
+```
+
+The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties) for 8-13 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
+
+## Shipping it
+
+Purchases are simulated on the web. The App Store build uses Apple in-app purchase through RevenueCat. [NATIVE.md](NATIVE.md) covers the whole path: building the iOS project on a Mac, creating the 14 products in App Store Connect, connecting RevenueCat, sandbox testing, TestFlight and review.

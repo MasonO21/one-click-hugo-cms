@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Rainkeep</title>
+<meta name="description" content="Rainkeep: raise the last Rainwyrm, dig deep wells and keep your people alive in a desert that forgot the rain.">
+<meta name="theme-color" content="#24130a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-stone" viewBox="0 0 24 24"><path d="M2.5 14.2l7-2.9 7 2.9-7 2.9z" fill="#f2cf98"/><path d="M2.5 14.2v5l7 2.9v-5z" fill="#cf9558"/><path d="M16.5 14.2v5l-7 2.9v-5z" fill="#a96f3b"/><path d="M8.5 6.6l6.5-2.7 6.5 2.7-6.5 2.7z" fill="#f8dcaa"/><path d="M8.5 6.6v4.7l6.5 2.7V9.3z" fill="#d89f60"/><path d="M21.5 6.6v4.7L15 14V9.3z" fill="#b27b45"/><path d="M5 15.6l2.2.9M11 13.2l2.6 1.1" stroke="#fff3da" stroke-width=".8" stroke-linecap="round" opacity=".7"/></symbol>
+    <symbol id="i-food" viewBox="0 0 24 24"><path d="M12.5 2.8c-.6 2.6-.6 4.6-.2 6.8" stroke="#7a5a2a" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M12.4 3.4c2.8-1.9 6.3-1.7 8.6.4-3.3.1-5.8.8-8.4 2.8z" fill="#5f9a3e"/><path d="M12.4 3.4C10 1.6 6.6 1.9 4.4 4c3.2 0 5.6.7 8 2.6z" fill="#77b24a"/><g fill="#8a3b1c"><ellipse cx="9" cy="13" rx="2.6" ry="3.4"/><ellipse cx="14.6" cy="12.6" rx="2.6" ry="3.4"/><ellipse cx="11.8" cy="17.6" rx="2.6" ry="3.4"/><ellipse cx="6.8" cy="18.4" rx="2.4" ry="3.1"/><ellipse cx="16.9" cy="18.1" rx="2.4" ry="3.1"/></g><g fill="#d07a3a"><ellipse cx="8.2" cy="12" rx=".9" ry="1.4"/><ellipse cx="13.8" cy="11.6" rx=".9" ry="1.4"/><ellipse cx="11" cy="16.6" rx=".9" ry="1.4"/><ellipse cx="6.1" cy="17.4" rx=".8" ry="1.2"/><ellipse cx="16.2" cy="17.1" rx=".8" ry="1.2"/></g></symbol>
+    <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 2.2C8.6 7.6 5.4 11 5.4 15a6.6 6.6 0 0 0 13.2 0c0-4-3.2-7.4-6.6-12.8z" fill="#2a9fd8"/><path d="M18.6 15a6.6 6.6 0 0 1-13.2 0c2.6 2.4 10.6 2.4 13.2 0z" fill="#1d77b3"/><path d="M12 2.2c1.5 2.4 3 4.4 4.2 6.2-2.4-.6-3.8-2.4-4.2-6.2z" fill="#7fd6ff"/><path d="M8.7 14.2a3.4 3.4 0 0 0 2.6 3.9" stroke="#d9f6ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></symbol>
+    <symbol id="i-copper" viewBox="0 0 24 24"><path d="M2.5 17l3.4-6.6h12.2l3.4 6.6z" fill="#c7703a"/><path d="M5.9 10.4h12.2l-2.3-3.6H8.2z" fill="#f2a066"/><path d="M2.5 17h19v2.6h-19z" fill="#8f4a22"/><path d="M9 8.2h5" stroke="#ffd2a8" stroke-width="1" stroke-linecap="round"/><ellipse cx="7.6" cy="14.6" rx="1.6" ry=".9" fill="#4fc0a0"/><ellipse cx="15.8" cy="13.4" rx="1.1" ry=".7" fill="#4fc0a0" opacity=".8"/></symbol>
+    <symbol id="i-gem" viewBox="0 0 24 24"><path d="M12 2.5l7.5 6.5L12 21.5 4.5 9z" fill="#5cc4f2"/><path d="M12 2.5l3.2 6.5H8.8z" fill="#d8f4ff"/><path d="M4.5 9h15L12 21.5z" fill="#2f8fcf"/><path d="M8.8 9L12 21.5 15.2 9z" fill="#7fd8ff"/><path d="M12 5.6l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" fill="#fff"/></symbol>
+    <symbol id="i-beacon" viewBox="0 0 24 24"><path d="M6.5 16.5h11l-1.6 5h-7.8z" fill="#a8703c"/><path d="M5.5 15h13v2h-13z" fill="#e0b071"/><path d="M12 2c1.1 3.5 5.6 5.1 5.6 9.6a5.6 5.6 0 0 1-11.2 0c0-2.6 1.6-4.2 2.6-5.1 0 1.8.9 2.7 1.8 2.7 0-3.6-.9-5.4 1.2-7.2z" fill="#ff7b2e"/><path d="M12 9.6c.5 1.8 2.8 2.8 2.8 4.6a2.8 2.8 0 0 1-5.6 0c0-1.4.9-2.3 2.8-4.6z" fill="#ffd27a"/></symbol>
+    <symbol id="i-journal" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="2" fill="#2f6f8a"/><rect x="7" y="2.5" width="2.2" height="19" fill="#1f4d63"/><rect x="11" y="7" width="6" height="1.8" rx=".9" fill="#dff6ff"/><rect x="11" y="10.5" width="4.5" height="1.8" rx=".9" fill="#a8e2f2"/><path d="M14 15.2c-.9 1.4-1.6 2.2-1.6 3a1.6 1.6 0 0 0 3.2 0c0-.8-.7-1.6-1.6-3z" fill="#7fd6ff"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2l8.5 3.2v6.2c0 5.3-3.6 9-8.5 10.9-4.9-1.9-8.5-5.6-8.5-10.9V5.2z" fill="currentColor"/><path d="M12 6.5l1.5 3.4 3.6.3-2.7 2.4.8 3.5L12 14.3l-3.2 1.8.8-3.5-2.7-2.4 3.6-.3z" fill="#2a1608" opacity=".55"/></symbol>
+    <symbol id="i-temp" viewBox="0 0 24 24"><path d="M9 4.5a2 2 0 0 1 4 0v8.8a4.2 4.2 0 1 1-4 0z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="11" cy="17" r="2.2" fill="currentColor"/><path d="M11 9v7" stroke="currentColor" stroke-width="2"/><path d="M17 4.5v2M20.2 7.2l-1.4 1.4M21 11h-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-storm" viewBox="0 0 24 24"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"><path d="M3 8.5h10.5a3 3 0 1 0-3-3"/><path d="M3 12.5h15a3 3 0 1 1-3 3"/><path d="M3 16.5h7"/></g><circle cx="20" cy="8.5" r="1" fill="currentColor"/><circle cx="13" cy="19.5" r=".9" fill="currentColor"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></g></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="9" cy="7.5" r="3.3"/><path d="M2.5 20.5c0-3.9 2.9-6.6 6.5-6.6s6.5 2.7 6.5 6.6z"/><circle cx="17.2" cy="8.6" r="2.6"/><path d="M15.3 14.2c3.5-.9 6.7 1.6 6.7 6.3h-4.6c0-2.6-.8-4.7-2.1-6.3z"/></g></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><path d="M6.5 3h11M6.5 21h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.5 3c0 4.5 4.5 6.5 4.5 9s-4.5 4.5-4.5 9h9c0-4.5-4.5-6.5-4.5-9s4.5-4.5 4.5-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.2 19.6c.6-1.8 2.8-2.6 2.8-3.6 0 1 2.2 1.8 2.8 3.6z" fill="currentColor"/></symbol>
+    <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M13.5 3.5l6 3-2 3.5-2.4-1.2L8 20.5l-3-2 7-11.6-1.5-.9z" fill="currentColor"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.2" fill="#2a1608"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 4l8 9h-5v7H9v-7H4z" fill="currentColor"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.2l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" fill="currentColor"/></symbol>
+    <symbol id="i-town" viewBox="0 0 24 24"><path d="M3.5 21v-7.5h17V21z" fill="currentColor"/><path d="M6.5 13.5a5.5 5.5 0 0 1 11 0z" fill="currentColor"/><path d="M12 5.5v2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M10 21v-3.5a2 2 0 0 1 4 0V21z" fill="#2a1608" opacity=".55"/></symbol>
+    <symbol id="i-heroes" viewBox="0 0 24 24"><path d="M12 2.5c4.6 0 8 3.3 8 8.2V15l-3 1.5V21H7v-4.5L4 15v-4.3c0-4.9 3.4-8.2 8-8.2z" fill="currentColor"/><path d="M7.5 11h9v2.5h-9z" fill="#2a1608"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M6 21V3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M7 3.5h12l-3 4.25 3 4.25H7z" fill="currentColor"/></symbol>
+    <symbol id="i-recruit" viewBox="0 0 24 24"><path d="M12 1.5c.7 2.3 3.6 3.3 3.6 6.6a3.6 3.6 0 0 1-7.2 0c0-1.7 1-2.8 1.8-3.4 0 1.2.6 1.8 1.2 1.8 0-2.4-.6-3.6.6-5z" fill="currentColor"/><path d="M8 12.5h8l1.5 9h-11z" fill="currentColor"/></symbol>
+    <symbol id="i-shop" viewBox="0 0 24 24"><path d="M4.5 8h15l-1.2 13H5.7z" fill="currentColor"/><path d="M8.5 10V6.5a3.5 3.5 0 0 1 7 0V10" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-guard" viewBox="0 0 24 24"><path d="M12 2.5l8 3v6c0 5-3.4 8.6-8 10.4-4.6-1.8-8-5.4-8-10.4v-6z" fill="currentColor"/><circle cx="12" cy="11.5" r="2.6" fill="#2a1608" opacity=".5"/></symbol>
+    <symbol id="i-bow" viewBox="0 0 24 24"><path d="M6 3c7 2.5 11 7.5 11 9s-4 6.5-11 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M6 3v18M3 12h17" stroke="currentColor" stroke-width="1.4"/><path d="M21 12l-3.5-2v4z" fill="currentColor"/></symbol>
+    <symbol id="i-lancer" viewBox="0 0 24 24"><path d="M4 20L19 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19 5l2-2.5-.5 3.5z" fill="currentColor"/><path d="M13 11l-1-5.5 5 1.5z" fill="currentColor"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7C19.5 15.9 12 20.5 12 20.5z" fill="currentColor"/></symbol>
+    <symbol id="i-caravan" viewBox="0 0 24 24"><path d="M3.2 21v-6.3c0-1.6.9-2.8 2.2-3.4l1.7-3.3c.6-1.1 2-1.1 2.6 0l1 1.9c.3.6 1.2.6 1.6 0l.9-1.4c.6-1 2.1-1 2.7 0l1.3 2.4h1.7l.9-3.6c.2-1 1-1.6 2-1.6h1.4v2h-1.1l-1.3 5.5c-.2.8-.9 1.4-1.8 1.4h-.6V21h-1.9v-4.4h-7V21H6.7v-4.8l-1.7 1.3V21z" fill="currentColor"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M7 8V6.5a5 5 0 0 1 10 0V8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="8" width="16" height="13" rx="3" fill="currentColor"/><rect x="9" y="12" width="6" height="3" rx="1" fill="#2a1608" opacity=".5"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2" fill="currentColor"/><path d="M4 7l8 6 8-6" fill="none" stroke="#2a1608" stroke-width="1.8" opacity=".6"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 3.5h10v5a5 5 0 0 1-10 0z" fill="currentColor"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 13h3v4h-3zM7.5 17.5h9v3h-9z" fill="currentColor"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="currentColor"/><rect x="3.5" y="5" width="17" height="4.5" rx="2" fill="currentColor" opacity=".55"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7" y="12" width="3" height="3" rx=".6" fill="#2a1608" opacity=".55"/><rect x="11" y="12" width="3" height="3" rx=".6" fill="#2a1608" opacity=".55"/><rect x="15" y="12" width="3" height="3" rx=".6" fill="#2a1608" opacity=".55"/></symbol>
+    <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M6 3.5h11a2.5 2.5 0 0 1 2.5 2.5v12.5a2.5 2.5 0 0 1-2.5 2.5H8.5A2.5 2.5 0 0 1 6 18.5z" fill="currentColor"/><path d="M9 8h7M9 11.5h7M9 15h4.5" stroke="#2a1608" stroke-width="1.6" stroke-linecap="round" opacity=".55"/></symbol>
+    <symbol id="i-event" viewBox="0 0 24 24"><path d="M12 2l2.3 5.6 6 .5-4.6 3.9 1.4 5.9L12 14.8l-5.1 3.1 1.4-5.9-4.6-3.9 6-.5z" fill="currentColor"/><path d="M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-world" viewBox="0 0 24 24"><path d="M2.5 19.5c3-4.5 5.5-6.5 9-6.5s6.5 2.5 10 6.5z" fill="currentColor"/><path d="M8.5 13.8c2.2-4 4.8-6 7.6-6 2.1 0 3.9 1.3 5.4 3.7v8" fill="currentColor" opacity=".6"/><circle cx="7" cy="6.5" r="2.6" fill="currentColor"/></symbol>
+    <symbol id="i-sword" viewBox="0 0 24 24"><path d="M19.5 3.5l-1 4L9 17l-2-2 9.5-9.5z" fill="currentColor"/><path d="M5 14.5l4.5 4.5M4 20l2.5-2.5M7.5 12.5l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M7 4h11l-2.5 3.75L18 11.5H7z" fill="currentColor"/></symbol>
+    <symbol id="i-paw" viewBox="0 0 24 24"><g fill="currentColor"><ellipse cx="12" cy="16" rx="5" ry="4.2"/><circle cx="6" cy="10.5" r="2"/><circle cx="9.5" cy="6.8" r="2"/><circle cx="14.5" cy="6.8" r="2"/><circle cx="18" cy="10.5" r="2"/></g></symbol>
+    <symbol id="i-ruin" viewBox="0 0 24 24"><path d="M3.5 21V10a8.5 8.5 0 0 1 12.6-7.4L14.6 5a6 6 0 0 0-8.6 5.4V21z" fill="currentColor"/><path d="M15.5 21v-9.5l2.5-1.5 2.5 2v9z" fill="currentColor"/><path d="M8.5 21v-4h4v4z" fill="currentColor" opacity=".6"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<div id="app">
+  <header id="hud">
+    <div class="hud-row hud-top">
+      <button class="power" data-act="tab" data-arg="heroes" aria-label="Your power">
+        <svg class="ic"><use href="#i-power"/></svg><span id="hud-power">0</span>
+      </button>
+      <button class="wyrm-chip" data-act="plot" data-arg="wyrm" id="hud-wyrm"><b>Lv 1</b><span>Hatchling</span></button>
+      <button class="cur" data-act="tab" data-arg="shop" aria-label="Starglass"><svg class="ic"><use href="#i-gem"/></svg><span id="hud-starglass">0</span><span class="plus">+</span></button>
+      <button class="cur" data-act="tab" data-arg="recruit" aria-label="Beacon Tokens"><svg class="ic"><use href="#i-beacon"/></svg><span id="hud-beacons">0</span></button>
+      <button class="icon-btn" data-act="settings" aria-label="Settings"><svg class="ic"><use href="#i-gear"/></svg></button>
+    </div>
+    <div class="hud-row res-row" id="hud-res"></div>
+    <button class="hud-row climate" data-act="forecast" id="hud-climate" aria-label="Weather forecast"></button>
+  </header>
+
+  <main id="stage">
+    <canvas id="town3d" aria-hidden="true"></canvas>
+    <canvas id="town" aria-label="Your keep. Tap a building to manage it. Drag to look around."></canvas>
+    <div id="side"></div>
+    <div id="queue"></div>
+    <div id="quest"></div>
+    <section id="world" hidden>
+      <canvas id="world3d" aria-hidden="true"></canvas>
+      <canvas id="worldmap" aria-label="The Dunes. Drag to look around, tap a tile to act."></canvas>
+      <div id="world-ui"></div>
+    </section>
+    <section id="panel" hidden></section>
+  </main>
+
+  <nav id="tabs">
+    <button data-act="tab" data-arg="town" class="tab"><svg class="ic"><use href="#i-town"/></svg><span>Keep</span></button>
+    <button data-act="tab" data-arg="world" class="tab"><svg class="ic"><use href="#i-world"/></svg><span>World</span><i class="dot" id="dot-world" hidden></i></button>
+    <button data-act="tab" data-arg="heroes" class="tab"><svg class="ic"><use href="#i-heroes"/></svg><span>Heroes</span><i class="dot" id="dot-heroes" hidden></i></button>
+    <button data-act="tab" data-arg="caravan" class="tab"><svg class="ic"><use href="#i-caravan"/></svg><span>Caravan</span><i class="dot" id="dot-caravan" hidden></i></button>
+    <button data-act="tab" data-arg="shop" class="tab"><svg class="ic"><use href="#i-shop"/></svg><span>Store</span><i class="dot" id="dot-shop" hidden></i></button>
+  </nav>
+
+  <div id="toasts" aria-live="polite"></div>
+  <div id="scrim" hidden data-act="close"></div>
+  <section id="sheet" hidden role="dialog" aria-modal="true"></section>
+  <section id="battle" hidden></section>
+</div>
+
+<script src="data.js"></script>
+<script src="audio.js"></script>
+<script src="native.js"></script>
+<script src="core.js"></script>
+<script src="art2d.js"></script>
+<script src="ui.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="art3d.js"></script>
+<script src="town.js"></script>
+<script src="town3d.js"></script>
+<script src="events.js"></script>
+<script src="caravan.js"></script>
+<script src="world.js"></script>
+<script src="world3d.js"></script>
+</body>
+</html>

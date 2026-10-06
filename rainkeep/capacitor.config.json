@@ -1,0 +1,18 @@
+{
+  "appId": "com.rainkeep.game",
+  "appName": "Rainkeep",
+  "webDir": "www",
+  "backgroundColor": "#1a0e07",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#1a0e07"
+  },
+  "android": {
+    "backgroundColor": "#1a0e07"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#4fd0ff"
+    }
+  }
+}
