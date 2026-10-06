@@ -513,7 +513,7 @@
       const st = m.state === 'out' ? 'marching' : m.state === 'work' ? (m.kind === 'gather' ? 'working' : 'waiting for you') : 'returning';
       return `<div class="march"><span class="grow"><b>${lbl}</b><br><span class="muted small">${sum(m.troops)} troops · ${st}</span></span><time>${t === Infinity ? '' : fmtTime(t - S.time)}</time>${m.state !== 'back' && m.kind !== 'ruin' ? `<button class="btn small alt" data-act="recall" data-arg="${m.id}">Recall</button>` : m.kind === 'ruin' && m.state === 'work' ? '<button class="btn small gold" data-act="sheet" data-arg="ruin">Open</button>' : ''}</div>`;
     }).join('');
-    const html = `<div class="world-top">${KH.subtabs('world', [['map', 'Dunes'], ['expedition', 'Expedition']])}</div>
+    const html = `<div class="world-top">${KH.subtabs('world', [['map', 'Dunes'], ['expedition', 'Expedition'], ...KH.worldTabs.map((w) => [w.id, w.label, w.dot && w.dot()])])}</div>
       <div class="world-tools"><span class="chip">${icon('i-flag')}${S.map.marches.length}/${slots()} marches</span><span class="chip">${icon('i-people')}${fmt(sum(S.troops))} home</span><button class="btn small alt" data-act="wcenter">Center</button><button class="btn small gold" data-act="wnearest" data-primary>Find resources</button></div>
       ${marches ? `<div class="marches">${marches}</div>` : `<div class="marches"><p class="muted small">${S.lv.barracks ? 'Tap a resource, beast, ruin or camp to send a march. Drag to look around.' : 'Build the Barracks to send marches onto the Dunes.'}</p></div>`}`;
     KH.setHTML($('#world-ui'), html, force);

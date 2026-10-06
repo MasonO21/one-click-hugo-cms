@@ -102,6 +102,7 @@
     const status = `<div class="card stack"><div class="row"><div class="grow"><b>${icon('i-anvil')}Forge Lv ${S.lv.forge}</b><div class="muted small">${smeltLine()} Gear level cap ${cap}.</div></div>
       <button class="switch ${S.forge.on ? 'on' : ''}" data-act="forgetoggle" role="switch" aria-checked="${S.forge.on}" aria-label="Forge lit"><i></i></button></div>
       <div class="row wrap"><span class="chip">${icon('i-sword')}${pct(b.atk)} attack</span><span class="chip">${icon('i-guard')}${pct(b.def)} defense</span><span class="chip">${icon('i-heart')}${pct(b.hp)} health</span></div></div>`;
+    const first = F.gear.find(canUpgrade);
     const cards = F.gear.map((g) => {
       const L = S.gear[g.id], t = tierOf(L), maxed = L >= 50, capped = L >= cap;
       const c = gearCost(L), ok = !capped && KH.canAfford(c);
@@ -111,7 +112,7 @@
           <div class="muted small">${esc(g.desc)} ${pct(gearValue(g, L))} ${next}</div>
           <div class="bar"><i style="width:${(L / 50) * 100}%;background:${t.color}"></i></div>
           ${maxed ? '<div class="muted small">Fully forged.</div>' : capped ? `<div class="muted small">Level cap ${cap}: upgrade the Forge.</div>` : KH.costHTML(c)}</div>
-        ${maxed || capped ? '' : `<div class="stack" style="gap:6px"><button class="btn small ${ok ? '' : 'off'}" data-act="gearup" data-arg="${g.id}:1">Forge</button><button class="btn small alt ${ok ? '' : 'off'}" data-act="gearup" data-arg="${g.id}:5">×5</button></div>`}</div>`;
+        ${maxed || capped ? '' : `<div class="stack" style="gap:6px"><button class="btn small ${ok ? '' : 'off'}" data-act="gearup" data-arg="${g.id}:1" ${first === g ? 'data-primary' : ''}>Forge</button><button class="btn small alt ${ok ? '' : 'off'}" data-act="gearup" data-arg="${g.id}:5">×5</button></div>`}</div>`;
     }).join('');
     return `${head}${status}<div class="section-label">Six pieces · every 10 levels a piece reaches a new tier and gets a bigger bonus</div><div class="stack">${cards}</div>
       <p class="muted small">Gear strengthens every squad you send: the expedition, the Mirage Spire, the Dune Duels, marches on the Dunes and the keep's defense.</p>`;
