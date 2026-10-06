@@ -32,6 +32,8 @@
 .bossbar.immune .bar i { background: linear-gradient(90deg, #c9b8d6, #fff, #ffe6fd); box-shadow: 0 0 16px #fff; }
 
 .hud-skills { position: absolute; left: 10px; bottom: calc(var(--safe-b) + 14px); display: flex; gap: 4px; pointer-events: none; }
+.hud.lefty .hud-skills { left: auto; right: 10px; flex-direction: row-reverse; }
+.hud.lefty .nova { right: auto; left: 16px; }
 .hud-skill { position: relative; width: 30px; height: 30px; display: grid; place-items: center; background: rgba(8,12,24,.75); clip-path: var(--bevel-sm); color: var(--rc, var(--soul)); }
 .hud-skill svg { width: 18px; height: 18px; }
 .hud-skill small { position: absolute; right: 2px; bottom: 0; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 0 3px #000; }
@@ -87,6 +89,11 @@
 /* level up */
 .lvl-back { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px;
   background: radial-gradient(80% 60% at 50% 45%, rgba(40,30,4,.55), rgba(2,3,8,.86)); animation: fadein .2s ease; }
+.lvl-back.chest { background: radial-gradient(80% 60% at 50% 45%, rgba(80,52,6,.7), rgba(2,3,8,.9)); }
+.lvl-back.chest::before { content: ''; position: absolute; left: 50%; top: 45%; width: 620px; height: 620px; margin: -310px 0 0 -310px; pointer-events: none;
+  background: repeating-conic-gradient(rgba(255,207,74,.13) 0 7deg, transparent 7deg 18deg); -webkit-mask: radial-gradient(circle, #000 12%, transparent 62%); mask: radial-gradient(circle, #000 12%, transparent 62%); animation: chestspin 30s linear infinite; }
+@keyframes chestspin { to { transform: rotate(360deg); } }
+.lvl-back.chest > * { position: relative; }
 .lvl-title { text-align: center; }
 .lvl-title b { display: block; font-family: var(--f-display); font-weight: 900; font-size: 34px; letter-spacing: .08em; color: #fff3c8; text-shadow: 0 0 22px var(--gold), 0 2px 0 #4a2a00; animation: banin .5s cubic-bezier(.2,1.5,.4,1) both; }
 .lvl-title span { font-size: 12px; letter-spacing: .2em; color: var(--ink-dim); text-transform: uppercase; }
@@ -127,6 +134,13 @@
 .res-head.win b { color: #fff3c8; text-shadow: 0 0 22px var(--gold); }
 .res-head.lose b { color: #ffd2da; text-shadow: 0 0 22px var(--blood); }
 .res-head span { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-dim); }
+.res-build { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.res-w { display: grid; grid-template-columns: 22px 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; padding: 6px 8px; clip-path: var(--bevel-sm); background: rgba(78,242,255,.06); }
+.res-w svg { grid-row: span 2; width: 22px; height: 22px; color: var(--soul); }
+.res-w b { font-size: 12px; line-height: 1.1; }
+.res-w small { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.res-w.evo { background: linear-gradient(90deg, rgba(255,207,74,.18), rgba(255,207,74,.04)); box-shadow: inset 0 0 0 1px rgba(255,207,74,.45); }
+.res-w.evo svg, .res-w.evo small { color: var(--gold); }
 .res-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .res-stats div { padding: 8px 4px; text-align: center; background: rgba(255,255,255,.04); clip-path: var(--bevel-sm); }
 .res-stats b { display: block; font-size: 18px; font-weight: 800; }

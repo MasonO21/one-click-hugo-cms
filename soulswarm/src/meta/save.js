@@ -38,7 +38,7 @@ export function newProfile() {
     purchases: { first: {}, starterBought: false, starterExpires: now + STARTER_PACK_HOURS * 3600e3, pactUntil: 0, pactLastClaim: null, history: [] },
     altar: { pity: 0, pulls: 0, freeDate: null },
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0 },
-    settings: { music: 0.5, sfx: 0.8, quality: 'auto', haptics: true, muted: false },
+    settings: { music: 0.5, sfx: 0.8, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
     flags: { tutorialDone: false, hints: {} },
     freeChestDate: null,
   };

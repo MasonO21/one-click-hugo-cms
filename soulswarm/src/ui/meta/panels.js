@@ -195,6 +195,13 @@ export function openSettings(ctx) {
     <div class="st-row"><span class="st-l">${icon('pulse')} Haptics</span><button class="tgl" role="switch" data-t="haptics"><i></i></button></div>
     <div class="st-row st-col"><span class="st-l">${icon('eye')} Graphics</span>
       <div class="seg">${['auto', 'low', 'medium', 'high'].map((q) => `<button data-q="${q}">${q}</button>`).join('')}</div></div>
+    <div class="st-row"><span class="st-l">${icon('energy')} Battery saver</span><button class="tgl" role="switch" data-t="fps30"><i></i></button><small class="t-dim">30 FPS</small></div>
+    <div class="st-sep"></div>
+    <div class="st-h t-label">Accessibility</div>
+    <div class="st-row"><span class="st-l">${icon('wing')} Screen shake</span><input class="rng" type="range" min="0" max="1" step="0.05" data-k="shake"><b class="st-v tnum"></b></div>
+    <div class="st-row"><span class="st-l">${icon('star')} Reduce flashes</span><button class="tgl" role="switch" data-t="reduceFlash"><i></i></button></div>
+    <div class="st-row"><span class="st-l">${icon('nova')} Auto-Nova</span><button class="tgl" role="switch" data-t="autoNova"><i></i></button><small class="t-dim">at 100%, legion 50+</small></div>
+    <div class="st-row"><span class="st-l">${icon('left')} Left-handed</span><button class="tgl" role="switch" data-t="lefty"><i></i></button><small class="t-dim">NOVA on the left</small></div>
     <div class="st-sep"></div>
     <button class="btn btn-ghost btn-block" data-act="restore">Restore purchases</button>
     <div class="st-danger">

@@ -44,11 +44,20 @@ export const heroStarBonus = (stars) => ({ dmg: 0.12 * Math.max(0, stars - 1), h
 
 // ---------------------------------------------------------------- Enemies
 // hp/dmg are chapter-1, minute-0 values. Scaling lives in run.js (see GDD).
+// Signature moves (seconds, metres, radians). Damaging telegraphs never go below 1.0 s (accessibility floor).
+//   ghoul.pack: pack size [min, max] from one direction · flank: each member's heading offset (±30°), fading out from 6.5 m to 3 m
+//   ghoul.lunge: crouch telegraph at `range`, aimed `lead` s ahead of the target; then a dash at `speed` for `dur` along that
+//     locked direction; then `recover` s at `crawl` × speed; then `cd` s of normal chasing (contact still hurts) before the next
+//   brute.slam: wind up at `range`, then a cone (`reach`, ±`arc`) for dmgMul × damage with knockback; `cd` before the next one
+//   witch.lob: arcing orb at the target's position `lead` s ahead, landing after `flight` s on a `radius` circle (area damage)
 export const ENEMIES = {
   husk:    { name: 'Husk',         hp: 14,  speed: 2.4, dmg: 6,  radius: 0.45, xp: 1, mass: 1.0, scale: 1.0 },
-  ghoul:   { name: 'Ghoul',        hp: 8,   speed: 4.4, dmg: 5,  radius: 0.38, xp: 1, mass: 0.7, scale: 0.9 },
-  brute:   { name: 'Brute',        hp: 75,  speed: 1.7, dmg: 18, radius: 0.85, xp: 4, mass: 5.0, scale: 1.0 },
-  witch:   { name: 'Cinder Witch', hp: 22,  speed: 2.3, dmg: 10, radius: 0.45, xp: 2, mass: 1.0, scale: 1.0, ranged: { range: 8.5, cooldown: 2.6, speed: 6.5 } },
+  ghoul:   { name: 'Ghoul',        hp: 8,   speed: 4.4, dmg: 5,  radius: 0.38, xp: 1, mass: 0.7, scale: 0.9,
+             pack: [4, 6], flank: 0.52, lunge: { range: 3, crouch: 0.4, lead: 0.4, speed: 11, dur: 0.3, recover: 0.6, crawl: 0.35, cd: 1.5 } },
+  brute:   { name: 'Brute',        hp: 75,  speed: 1.7, dmg: 18, radius: 0.85, xp: 4, mass: 5.0, scale: 1.0,
+             slam: { range: 2.2, windup: 1.0, reach: 2.4, arc: 0.7, dmgMul: 1.4, knock: 9, recover: 0.8, cd: 2.4 } },
+  witch:   { name: 'Cinder Witch', hp: 22,  speed: 2.3, dmg: 10, radius: 0.45, xp: 2, mass: 1.0, scale: 1.0, ranged: { range: 8.5, cooldown: 3.0, speed: 6.5 },
+             lob: { flight: 1.0, lead: 0.3, radius: 1.1, height: 3.2 } }, // gentler lead: slow movers were hit far more (+76% Ch1)
   bloater: { name: 'Bloater',      hp: 28,  speed: 2.0, dmg: 26, radius: 0.62, xp: 2, mass: 2.0, scale: 1.0, explode: { radius: 2.6, fuse: 1.0 } },
 };
 export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 12000, speed: 2.3, dmg: 22, radius: 1.9, mass: 999 };
@@ -85,19 +94,48 @@ export const BOSS_PHASES = {
   extraRing: 1,
   ch5Crown: 0.5,
 };
-export const ELITE = { hpMul: 6, scale: 1.35, dmgMul: 1.5 };
+export const ELITE = { hpMul: 6, scale: 1.35, dmgMul: 1.5, crown: 0xffd04a };
 
 // ---------------------------------------------------------------- Chapters
 // Each chapter re-tints the world. Colors are hex ints for three.js.
+// mods = the chapter's identity, read by the director (run.js), enemies.js, hazards.js and player.js:
+//   tag: run-start banner line · weights: spawn-weight multiplier per enemy type · pack: Ghoul pack size [min, max]
+//   burn: Witch lobs leave burning ground · vents / ice / hands: ground hazards (tuning in HAZARDS below)
+//   vignette: fog vignette strength for the run (engine default 0.85) · sight: metres before the ground fades to fog (default 26)
+//   elites: elite spawn times in seconds
+//   rotate (Endless): the chapter mods used at abyss depth 1, 2, 3… (cycles)
 export const CHAPTERS = [
-  { id: 1, name: 'Ashen Necropolis', ground: 0x3a4658, groundB: 0x1c2330, rune: 0x2ad8ff, fog: 0x04070c, rim: 0x6fd8ff, enemy: 0xff5a2e, boss: 0xff3df0, hpMul: 1.0,  rate: 1.0 },
-  { id: 2, name: 'Ember Wastes',     ground: 0x4a3226, groundB: 0x241510, rune: 0xff8a2a, fog: 0x0b0503, rim: 0xffb37a, enemy: 0xff3a3a, boss: 0xff3df0, hpMul: 1.9,  rate: 1.15 },
-  { id: 3, name: 'Frozen Ossuary',   ground: 0x51637c, groundB: 0x26324a, rune: 0x9fe4ff, fog: 0x060b14, rim: 0xbfeaff, enemy: 0xff4f6a, boss: 0xb46bff, hpMul: 3.2,  rate: 1.3 },
-  { id: 4, name: 'Abyssal Cathedral',ground: 0x3a2e4e, groundB: 0x1a1226, rune: 0xa35bff, fog: 0x06030c, rim: 0xd2a8ff, enemy: 0xff5a2e, boss: 0xff3df0, hpMul: 5.0,  rate: 1.45 },
-  { id: 5, name: 'Crimson Throne',   ground: 0x4a2228, groundB: 0x220e12, rune: 0xff2e55, fog: 0x0a0204, rim: 0xff9aaa, enemy: 0xffb02e, boss: 0xff3df0, hpMul: 7.5,  rate: 1.6 },
+  { id: 1, name: 'Ashen Necropolis', ground: 0x3a4658, groundB: 0x1c2330, rune: 0x2ad8ff, fog: 0x04070c, rim: 0x6fd8ff, enemy: 0xff5a2e, boss: 0xff3df0, hpMul: 1.0,  rate: 1.0,
+    mods: {} },
+  { id: 2, name: 'Ember Wastes',     ground: 0x4a3226, groundB: 0x241510, rune: 0xff8a2a, fog: 0x0b0503, rim: 0xffb37a, enemy: 0xff3a3a, boss: 0xff3df0, hpMul: 1.9,  rate: 1.15,
+    mods: { tag: 'The witches’ fire lingers', weights: { witch: 1.8 }, burn: true, vents: true } },
+  { id: 3, name: 'Frozen Ossuary',   ground: 0x51637c, groundB: 0x26324a, rune: 0x9fe4ff, fog: 0x060b14, rim: 0xbfeaff, enemy: 0xff4f6a, boss: 0xb46bff, hpMul: 3.2,  rate: 1.3,
+    mods: { tag: 'Ghoul packs hunt on treacherous ice', weights: { ghoul: 1.5 }, pack: [6, 8], ice: true } },
+  { id: 4, name: 'Abyssal Cathedral',ground: 0x3a2e4e, groundB: 0x1a1226, rune: 0xa35bff, fog: 0x06030c, rim: 0xd2a8ff, enemy: 0xff5a2e, boss: 0xff3df0, hpMul: 5.0,  rate: 1.45,
+    mods: { tag: 'Bloaters swarm and the abyss reaches up', weights: { bloater: 2 }, vignette: 1.25, sight: 17, hands: true } },
+  { id: 5, name: 'Crimson Throne',   ground: 0x4a2228, groundB: 0x220e12, rune: 0xff2e55, fog: 0x0a0204, rim: 0xff9aaa, enemy: 0xffb02e, boss: 0xff3df0, hpMul: 7.5,  rate: 1.6,
+    mods: { tag: 'The gilded court rises: twice the elites', weights: { brute: 1.6 }, elites: [45, 75, 110, 150, 185, 225, 255, 290] } },
   // Unlocked by clearing Chapter 5. No time limit; the run ends when you fall.
-  { id: 6, name: 'Endless Abyss', endless: true, ground: 0x2c2848, groundB: 0x120e22, rune: 0x6b7bff, fog: 0x05040c, rim: 0xa8b4ff, enemy: 0xff4a6a, boss: 0xff3df0, hpMul: 4.0, rate: 1.4 },
+  { id: 6, name: 'Endless Abyss', endless: true, ground: 0x2c2848, groundB: 0x120e22, rune: 0x6b7bff, fog: 0x05040c, rim: 0xa8b4ff, enemy: 0xff4a6a, boss: 0xff3df0, hpMul: 4.0, rate: 1.4,
+    mods: { rotate: [2, 3, 4, 5] } },
 ];
+/** The modifier set active in a chapter; Endless rotates through other chapters' sets by abyss depth (0-based). */
+export const chapterMods = (ch, depth = 0) => {
+  const rot = ch.mods && ch.mods.rotate;
+  return rot ? CHAPTERS[rot[depth % rot.length] - 1].mods : ch.mods || {};
+};
+// Ground hazards (hazards.js). Damage values are chapter-1, minute-0 and scale like enemy damage.
+//   burn: burning ground left by Witch lobs; dps = this share of the orb's damage per second, for `life` s
+//   vents: ember vents on a hash grid (`cell` m, `chance` per cell); each puffs every `period` s after a `warn` s telegraph
+//   ice: translucent patches (radius range); on ice the Shepherd's acceleration and stopping friction are scaled, top speed ×speed
+//   hands: abyssal grabs every `every` s at the Shepherd's position `lead` s ahead; telegraph `warn` s, then root for `root` s
+//     (claws stay up for `grab` s)
+export const HAZARDS = {
+  burn: { share: 0.25, life: 3 },
+  vents: { cell: 15, chance: 0.32, radius: 1.6, period: [6.5, 9], warn: 1.2, puff: 0.5, dmg: 12 },
+  ice: { cell: 12, chance: 0.5, radius: [2.6, 4.4], accel: 0.3, friction: 0.2, speed: 1.08 },
+  hands: { every: [6, 9], lead: 0.6, radius: 1.3, warn: 1.0, root: 0.6, grab: 0.7 },
+};
 export const RUN_LENGTH = 360; // seconds until the boss arrives
 export const ENDLESS_BOSS_EVERY = 300; // Endless Abyss: Gravemaw returns every 5:00, stronger each time
 export const ENERGY_COST = 5;
@@ -111,8 +149,8 @@ export const SKILLS = {
   // Weapons
   soulBolt: {
     type: 'weapon', name: 'Soul Bolt', icon: 'bolt', max: 5,
-    dmg: L([12, 15, 18, 22, 28]), count: L([1, 2, 2, 3, 4]), cd: L([0.7, 0.66, 0.6, 0.55, 0.48]), pierce: L([0, 0, 1, 1, 2]),
-    desc: (lv) => [`Homing bolts strike the nearest foe.`, `+1 bolt`, `Bolts pierce 1 enemy`, `+1 bolt, faster casting`, `+1 bolt, pierce 2`][lv - 1],
+    dmg: L([13, 17, 22, 30, 40]), count: L([1, 2, 2, 3, 5]), cd: L([0.7, 0.66, 0.6, 0.55, 0.48]), pierce: L([0, 1, 1, 2, 3]),
+    desc: (lv) => [`Homing bolts strike the nearest foe.`, `+1 bolt, pierce 1`, `+Damage`, `+1 bolt, pierce 2, faster`, `+2 bolts, pierce 3`][lv - 1],
   },
   scythe: {
     type: 'weapon', name: 'Spectral Scythe', icon: 'scythe', max: 5,
@@ -121,8 +159,9 @@ export const SKILLS = {
   },
   chains: {
     type: 'weapon', name: 'Ashen Chains', icon: 'chain', max: 5,
-    dmg: L([14, 17, 21, 26, 33]), jumps: L([3, 4, 5, 6, 8]), cd: L([1.5, 1.4, 1.25, 1.1, 0.95]), range: 7.5,
-    desc: (lv) => [`Burning chains leap between foes.`, `+1 jump`, `+1 jump, +damage`, `+1 jump, faster`, `+2 jumps, searing damage`][lv - 1],
+    dmg: L([18, 23, 29, 37, 48]), jumps: L([3, 4, 5, 6, 8]), cd: L([1.5, 1.4, 1.25, 1.1, 0.95]), range: 7.5,
+    splash: 1.4, splashDmg: 0.5, // each link also scorches foes within 1.4 m of its target for 50%
+    desc: (lv) => [`Burning chains leap between foes, scorching those beside them.`, `+1 jump`, `+1 jump, +damage`, `+1 jump, faster`, `+2 jumps, searing damage`][lv - 1],
   },
   spears: {
     type: 'weapon', name: 'Bone Spears', icon: 'spear', max: 5,
@@ -153,6 +192,33 @@ export const SKILLS = {
 export const EVOLUTIONS = {
   soulStorm: { name: 'Soul Storm', from: 'soulBolt', needs: 'might', icon: 'bolt', desc: 'EVOLVED: 6 bolts that detonate on impact.' },
   boneCrown: { name: 'Bone Crown', from: 'skullHalo', needs: 'minionFury', icon: 'skull', desc: 'EVOLVED: 8 skulls. Skull kills always raise a soul.' },
+  // Tunables below are read by weapons.js. Radii are in metres, times in seconds, dmg before Might/crits.
+  harvestMoon: {
+    name: 'Harvest Moon', from: 'scythe', needs: 'haste', icon: 'scythe', desc: 'EVOLVED: Twin moon blades orbit you. Scythe kills heal.',
+    dmg: 46, arcs: 3, cd: 0.9,                                   // the periodic sweep (reach = scythe Lv5 radius)
+    blades: 2, bladeDmg: 58, spin: 5.2, bladeHit: 1.3, bladeCd: 0.3, // orbiting crescents at max reach (rad/s); per-enemy hit cooldown
+    heal: 1, healPerSec: 6,                                      // HP per scythe kill, capped by a bank that refills at healPerSec
+  },
+  chainsOfPerdition: {
+    name: 'Chains of Perdition', from: 'chains', needs: 'frenzy', icon: 'chain', desc: 'EVOLVED: 12-jump chains set foes ablaze. The burning rise more often.',
+    dmg: 54, jumps: 12, minHop: 1.6,        // links prefer targets at least 1.6 m apart (max jump 4.5 m, as Lv5)
+    splash: 1.7,                            // scorch radius around each link (50% damage, as the base chains)
+    burn: 0.4, burnTime: 2, burnTick: 0.25, // burn deals 40% of each hit over 2 s (re-hits add to the pool and refresh the timer)
+    raise: 0.25,                            // +25 pp Raise Chance for kills while burning (still capped at 85%)
+  },
+  ossuaryBarrage: {
+    name: 'Ossuary Barrage', from: 'spears', needs: 'vitality', icon: 'spear', desc: 'EVOLVED: A fan of 5 spears that burst into bone shrapnel.',
+    count: 5, dmg: 56, spread: 0.2,          // infinite pierce
+    past: 3.5, minReach: 5, maxReach: 16,    // flight ends 3.5 m past the target (5-16 m; 16 with no target), then bursts
+    stagger: 1.2,                            // odd spears fly 1.2 m further, so the bursts land in two rows
+    shrapnel: 0.55, shrapnelR: 2, shards: 12, // burst = 55% of the spear's damage in 2 m; bone shard meshes per burst
+  },
+  requiem: {
+    name: 'Requiem', from: 'gravePulse', needs: 'soulMagnet', icon: 'pulse', desc: 'EVOLVED: Drags the horde in, then detonates. Draws in soul shards.',
+    dmg: 46, radius: 6.5, cd: 1.4,
+    pull: 0.3, pullForce: 70, swirl: 0.35,   // 0.3 s inward drag (accel m/s², tangential share) before the blast
+    shardR: 12,                              // soul shards within 12 m fly to the Shepherd on each blast
+  },
 };
 
 export const WEAPON_SLOTS = 4;

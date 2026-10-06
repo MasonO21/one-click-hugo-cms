@@ -150,7 +150,7 @@ export class Projectiles {
     this.bolts.instanceMatrix.needsUpdate = true; this.spears.instanceMatrix.needsUpdate = true; this.orbs.instanceMatrix.needsUpdate = true; this.orbs.instanceColor.needsUpdate = true;
   }
 
-  clearEnemyShots() { this.embers.length = 0; }
+  clearEnemyShots() { this.embers.length = 0; this.clearLobs(); }
 
   // ---------------------------------------------------------------- Gravemaw bullet patterns (boss.js)
   // Boss orbs ride the ember pool (same update, collision and instancing) with their own colour, size and hitbox.
@@ -192,4 +192,81 @@ export class Projectiles {
   dispose() {
     for (const m of [this.bolts, this.spears, this.orbs]) { m.geometry.dispose(); m.material.dispose(); }
   }
+
+  // ---------------------------------------------------------------- Cinder Witch lobs (horde behaviours)
+  // Arcing ember orbs that land on a telegraphed circle. Self-contained: Run calls initLobs() at setup and
+  // disposeLobs() on dispose, Enemies drives updateLobs()/renderLobs() each frame, and clearLobs() empties the sky.
+  initLobs() {
+    this.lobs = [];
+    this.lobPool = [];
+    this.lobMesh = instanced(orbGeometry(), 64, new THREE.Color(0xffc070).multiplyScalar(3.4));
+    this.run.scene.add(this.lobMesh);
+    this.lobCol = hdr(0xff7a2a, 3.6);
+    this.lobHot = hdr(0xffd08a, 3.2);
+    this.lobTele = new THREE.Color(0xff7a2e);
+    this.lobLight = new THREE.Color(0xff7a2e);
+    this.lobScale = new THREE.Vector3(1.7, 1.7, 1.7);
+  }
+
+  /** Lob an orb from (x, z) onto (tx, tz). spec = ENEMIES.witch.lob {flight, radius, height}; burn leaves burning ground. */
+  lob(x, z, tx, tz, dmg, spec, burn) {
+    if (!this.lobs || this.lobs.length >= 64) return null;
+    const L = this.lobPool.pop() || {};
+    L.x0 = x; L.z0 = z; L.tx = tx; L.tz = tz; L.x = x; L.y = 1.6; L.z = z; L.t = 0; L.fresh = true;
+    L.flight = spec.flight; L.r = spec.radius; L.h = spec.height; L.dmg = dmg; L.burn = !!burn;
+    this.lobs.push(L);
+    this.run.hazards.circle(tx, tz, L.r, L.flight, this.lobTele, 1.8); // plus a ring closing in as the orb falls
+    this.run.audio.sfx('shoot', { volume: 0.3, pitch: 0.45 });
+    return L;
+  }
+
+  updateLobs(dt) {
+    if (!this.lobs) return;
+    const parts = this.run.particles, c = this.lobCol, lobs = this.lobs;
+    let w = 0;
+    for (let i = 0; i < lobs.length; i++) {
+      const L = lobs[i];
+      if (L.fresh) L.fresh = false; else L.t += dt; // the throw frame doesn't count: the telegraph shows for the full flight
+      const u = L.t >= L.flight - 1e-6 ? 1 : L.t / L.flight;
+      L.x = L.x0 + (L.tx - L.x0) * u; L.z = L.z0 + (L.tz - L.z0) * u;
+      L.y = 1.6 * (1 - u) + 0.25 * u + 4 * L.h * u * (1 - u);
+      if (Math.random() < 0.85) parts.emit(L.x, L.y, L.z, 0, 0.3, 0, 0.4, 0.45, 0.05, c[0], c[1], c[2], 0.85);
+      if (u < 1) { lobs[w++] = L; continue; }
+      this.landLob(L);
+      this.lobPool.push(L);
+    }
+    lobs.length = w;
+  }
+
+  /** Area damage where the orb lands: the Shepherd and minions inside the circle; burning ground from Ch2. */
+  landLob(L) {
+    const run = this.run, P = run.player, x = L.tx, z = L.tz;
+    if ((P.x - x) ** 2 + (P.z - z) ** 2 < (L.r + P.radius) ** 2) P.hurt(L.dmg);
+    run.legion.damageArea(x, z, L.r, L.dmg);
+    if (L.burn) run.hazards.burn(x, z, L.r, L.dmg);
+    run.particles.burst(x, 0.4, z, 26, this.lobCol, { speed: 5, life: 0.5, size: 0.55, up: 0.9 });
+    run.particles.burst(x, 0.3, z, 8, this.lobHot, { speed: 2, life: 0.35, size: 0.9, up: 0.4 });
+    run.fx.shockwave(x, z, L.r * 1.25, 0xff7a2e, 0.3, 0.2);
+    run.fx.light(x, z, 3.5, 1.4, this.lobLight, 0.35);
+    if ((P.x - x) ** 2 + (P.z - z) ** 2 < 200) run.audio.sfx('explosion', { volume: 0.3, pitch: 1.3 });
+  }
+
+  renderLobs() {
+    if (!this.lobs) return;
+    const g = this.run.glow, c = this.lobCol, m = this.lobMesh;
+    let n = 0;
+    _q.identity();
+    for (const L of this.lobs) {
+      _p.set(L.x, L.y, L.z);
+      _m.compose(_p, _q, this.lobScale);
+      if (n < 64) m.setMatrixAt(n++, _m);
+      g.add(L.x, L.y, L.z, 2.0, c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 0.95);
+    }
+    m.count = n;
+    if (n) m.instanceMatrix.needsUpdate = true;
+  }
+
+  clearLobs() { if (this.lobs) { for (const L of this.lobs) this.lobPool.push(L); this.lobs.length = 0; } }
+
+  disposeLobs() { if (this.lobMesh) { this.lobMesh.geometry.dispose(); this.lobMesh.material.dispose(); } }
 }

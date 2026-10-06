@@ -68,7 +68,9 @@ export class Boss {
     this.state = 'enter'; this.t = 0; this.cd = 2.5; this.y = -5;
     this.phase = 0; this.pendingPhase = 0; this.immune = BP.rise; this.lockHp = e.maxHp;
     this.fightT = 0; this.phaseT = 0; this.held = false; this.dirge = false; this.baseDmg = this.dmg = e.dmg; this.rate = 1; this.last = '';
-    this.twist = ch.endless ? 0 : ch.id; // 2 fire rings, 3 frost shards, 4 extra ring, 5 early Crown
+    // chapter twist: 2 fire rings, 3 frost shards, 4 extra ring, 5 early Crown; Endless follows its modifier rotation by depth
+    const rot = ch.mods && ch.mods.rotate;
+    this.twist = ch.endless ? (rot ? rot[run.bossKills % rot.length] : 0) : ch.id;
     this.thresholds = [BP.phases[1].from, this.twist === 5 ? BP.ch5Crown : BP.phases[2].from];
     this.nextWave = Infinity; this.zones.length = 0; this.pending.length = 0; this.shards.count = 0;
     for (const S of this.slams) { S.on = false; S.mesh.visible = false; }

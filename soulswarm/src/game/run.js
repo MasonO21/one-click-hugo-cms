@@ -13,11 +13,14 @@ import { Weapons } from './weapons.js';
 import { Pickups } from './pickups.js';
 import { Gates } from './gates.js';
 import { Boss } from './boss.js';
+import { Hazards } from './hazards.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
-import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS } from './data.js';
+import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
+const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
+const CHAPTER_NAMES = CHAPTERS.map((c) => c.name);
 const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
@@ -71,9 +74,10 @@ export class Run {
     this.input = new Input(engine.canvas);
 
     this.time = 0; this.t = 0;
-    this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0;
+    this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
     this.counters = { kills: 0, raised: 0, novas: 0, gates: 0 };
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0;
+    this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
     this.bonusGold = 0;
     this.spawnAcc = 0; this.nextGate = 28; this.nextSwarm = 50; this.eliteIdx = 0;
     this.warned = false; this.bossSpawned = false; this.bossDead = false;
@@ -87,6 +91,12 @@ export class Run {
     this.hintsShown = {};
     this.tutorial = !this.profile.flags.tutorialDone;
     this.minionLightIdx = 0;
+    // chapter identity (CHAPTERS[].mods; Endless rotates it by depth), ground hazards, Witch lobs, Ghoul packs
+    this.mods = chapterMods(chapter); this.modDepth = 0; this.modBannerAt = 0.6;
+    this.eliteTimes = (!this.endless && this.mods.elites) || ELITE_TIMES;
+    this.packAcc = 0; this.packN = 0;
+    this.hazards = new Hazards(this);
+    this.projectiles.initLobs();
     this.resize(engine.w, engine.h);
     this.camPos.copy(this.desiredCam());
   }
@@ -128,10 +138,26 @@ export class Run {
       : m < 3 ? [0.55, 0.25, 0, 0.1, 0.1]
       : m < 4 ? [0.45, 0.2, 0.13, 0.12, 0.1]
       : [0.4, 0.2, 0.17, 0.13, 0.1];
-    const types = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
-    let r = Math.random();
-    for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return types[i]; }
+    // chapter modifiers re-weight the mix (e.g. Ember Wastes ×1.8 Witches)
+    const mul = this.mods.weights;
+    let total = 0;
+    if (mul) for (let i = 0; i < 5; i++) { w[i] *= mul[TYPES[i]] || 1; total += w[i]; }
+    let r = Math.random() * (mul ? total : 1);
+    for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return TYPES[i]; }
     return 'husk';
+  }
+
+  /** Ghouls arrive in packs from one direction (almost always ahead), each member flanking at its own angle across ±flank. */
+  spawnPack(n) {
+    const P = this.player, G = ENEMIES.ghoul;
+    let c = this.spawnPoint();
+    for (let k = 0; k < 2 && (c.x - P.x) * P.vx + (c.z - P.z) * P.vz < 0; k++) c = this.spawnPoint();
+    const ax = c.x - P.x, az = c.z - P.z, l = Math.hypot(ax, az) || 1, px = -az / l, pz = ax / l;
+    for (let i = 0; i < n && this.enemies.count < this.maxEnemies; i++) {
+      const u = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;
+      const e = this.spawnEnemy('ghoul', { at: { x: c.x + px * u * 1.8 + (Math.random() - 0.5) * 0.6, z: c.z + pz * u * 1.8 + (Math.random() - 0.5) * 0.6 } });
+      if (e) e.flank = -u * G.flank; // the left of the pack swings left, the right swings right
+    }
   }
 
   spawnPoint(bias = true) {
@@ -156,19 +182,40 @@ export class Run {
   director(dt) {
     const m = this.minute;
     if (!this.bossSpawned) {
+      // Endless: each depth (Gravemaw kill) rotates the chapter modifiers; announce once the depth banner has played
+      if (this.endless && this.modDepth !== this.bossKills) {
+        this.modDepth = this.bossKills;
+        this.mods = chapterMods(this.chapter, this.modDepth);
+        this.hazards.setMods(this.mods);
+        this.modBannerAt = this.time + 3;
+      }
+      if (this.modBannerAt && this.time >= this.modBannerAt) {
+        this.modBannerAt = 0;
+        const src = this.endless ? this.chapter.mods.rotate[this.modDepth % this.chapter.mods.rotate.length] - 1 : -1;
+        const title = !this.endless ? this.chapter.name.toUpperCase() : this.modDepth ? 'THE ABYSS SHIFTS' : 'ENDLESS ABYSS';
+        if (this.mods.tag) this.ui.banner(title, src >= 0 ? `${CHAPTER_NAMES[src]}: ${this.mods.tag}` : this.mods.tag, 'ember');
+      }
       const rate = (1.1 + 0.85 * m + 0.22 * m * m) * this.chapter.rate;
       this.spawnAcc = Math.min(6, this.spawnAcc + rate * dt);
       while (this.spawnAcc >= 1) {
         this.spawnAcc -= 1;
-        if (this.enemies.count < this.maxEnemies) this.spawnEnemy(this.pickType());
+        if (this.enemies.count >= this.maxEnemies) continue;
+        const t = this.pickType();
+        if (t !== 'ghoul') { this.spawnEnemy(t); continue; }
+        // Ghouls bank up and arrive as a pack, so the mix per enemy stays the same
+        const pk = this.mods.pack || ENEMIES.ghoul.pack;
+        if (!this.packN) this.packN = pk[0] + Math.floor(Math.random() * (pk[1] - pk[0] + 1));
+        if (++this.packAcc >= this.packN) { this.spawnPack(this.packN); this.packAcc = this.packN = 0; }
       }
       if (this.time >= this.nextGate) { this.nextGate += 40; this.gates.spawnPair(); }
       if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
-      const eliteDue = this.eliteIdx < ELITE_TIMES.length ? this.time >= ELITE_TIMES[this.eliteIdx]
+      const times = this.eliteTimes;
+      const eliteDue = this.eliteIdx < times.length ? this.time >= times[this.eliteIdx]
         : this.endless && this.time >= this.nextElite;
       if (eliteDue) {
         const t = ['husk', 'brute', 'witch', 'brute'][this.eliteIdx++ % 4];
-        if (this.eliteIdx >= ELITE_TIMES.length) this.nextElite = this.time + 70;
+        // Endless keeps them coming; a modifier set with more elites (Crimson Throne) shortens the gap
+        if (this.eliteIdx >= times.length) this.nextElite = this.time + 70 * ELITE_TIMES.length / (this.mods.elites || ELITE_TIMES).length;
         this.spawnEnemy(t, { elite: true });
         this.ui.banner('ELITE', 'A gilded horror has risen. It carries a Relic Chest!', 'gold');
         this.audio.sfx('warning', { volume: 0.5 });
@@ -200,10 +247,16 @@ export class Run {
   }
 
   // ---------------------------------------------------------------- kills, xp, chests
+  /** Soul Nova charge in kill-equivalents (an elite is worth 6 kills, a gate 3). Nothing charges mid-detonation. */
+  addNovaCharge(kills) {
+    if (this.tutorial && this.counters.novas === 0) kills *= 2.5; // first run: the first Nova comes early so it gets taught
+    if (this.novaQueue.length === 0) this.nova = Math.min(1, this.nova + kills * this.stats.novaMul / BASE.novaKills);
+    if (this.nova >= 1 && !this.hintsShown.nova) this.hint('nova', 'Soul Nova is ready! Tap NOVA to detonate your legion.');
+  }
+
   onEnemyKilled(e, source, noRaise) {
     this.counters.kills++;
-    if (this.novaQueue.length === 0) this.nova = Math.min(1, this.nova + this.stats.novaMul / BASE.novaKills);
-    if (this.nova >= 1 && !this.hintsShown.nova) this.hint('nova', 'Soul Nova is ready! Tap NOVA to detonate your legion.');
+    this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
     this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1));
     if (e.elite) this.pickups.dropSpecial('chest', e.x, e.z);
@@ -214,6 +267,7 @@ export class Run {
     }
     if (!noRaise && this.legion.count < this.stats.cap) {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
+      if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
       if (source === 'skull' && this.evolved.boneCrown) chance = 1;
       if (Math.random() < chance) {
         this.legion.raise(e.x, e.z);
@@ -235,37 +289,64 @@ export class Run {
     if (this.levelQueue > 0 && !this.levelPending && !this.ended) this.showLevelUp();
   }
 
+  /** Shows the next pending pick: Relic Chests first, then level-ups. Gameplay pauses until a card is chosen. */
   showLevelUp() {
     if (this.levelPending || this.ended) return;
-    if (this.bossDead && !this.endless) { this.levelQueue = 0; return; } // the chapter is won; no more cards
+    if (this.bossDead && !this.endless) { this.levelQueue = this.chestQueue = 0; return; } // the chapter is won; no more cards
+    const chest = this.chestQueue > 0;
+    if (!chest && this.levelQueue <= 0) return;
     this.levelPending = true;
     this.recomputeStats();
     const P = this.player;
-    this.particles.burst(P.x, 1, P.z, 50, hdr(0xffd04a, 3), { speed: 6, life: 0.8, size: 0.4, up: 1.5 });
-    this.fx.shockwave(P.x, P.z, 4, 0xffd04a, 0.5, 0.1);
-    this.audio.sfx('levelup');
-    this.app.haptic('success');
+    if (!chest) {
+      this.particles.burst(P.x, 1, P.z, 50, hdr(0xffd04a, 3), { speed: 6, life: 0.8, size: 0.4, up: 1.5 });
+      this.fx.shockwave(P.x, P.z, 4, 0xffd04a, 0.5, 0.1);
+      this.audio.sfx('levelup');
+      this.app.haptic('success');
+    }
     this.input.reset();
     const choices = rollChoices(this, 3);
     this.ui.showLevelUp(choices, this.level, (c) => {
       applyChoice(this, c);
-      this.audio.sfx('select');
-      this.levelQueue--;
+      if (c.kind === 'evolution') this.celebrateEvolution(c); else this.audio.sfx('select');
+      if (chest) this.chestQueue--; else this.levelQueue--;
       this.levelPending = false;
       this.player.invuln = Math.max(this.player.invuln, 0.6);
-      if (this.levelQueue > 0) setTimeout(() => { if (!this.ended && !this.levelPending && this.levelQueue > 0) this.showLevelUp(); }, 120);
-    });
+      if (this.levelQueue > 0 || this.chestQueue > 0) setTimeout(() => { if (!this.ended && !this.levelPending) this.showLevelUp(); }, 120);
+    }, { chest });
   }
 
+  /** An evolution is the build's payoff: slow-mo, a gold shockwave that hurls the horde back, the legendary fanfare. */
+  celebrateEvolution(c) {
+    const P = this.player, gold = hdr(0xffd04a, 4);
+    this.fx.slowMo(0.35, 0.7);
+    this.fx.flash(0.45); this.fx.shake(0.4);
+    this.fx.shockwave(P.x, P.z, 9, 0xffd04a, 0.7, 0.08);
+    this.fx.shockwave(P.x, P.z, 6, this.heroColor, 0.5, 0.12);
+    this.fx.light(P.x, P.z, 12, 3, new THREE.Color(0xffd04a), 0.9);
+    this.particles.ring(P.x, P.z, 3, 90, gold, { life: 0.8, size: 0.7 });
+    this.particles.burst(P.x, 1.2, P.z, 140, gold, { speed: 10, life: 1.1, size: 0.6, up: 2.5 });
+    this.enemies.query(P.x, P.z, 8, (e) => {
+      if (e.type === 'boss') return;
+      const dx = e.x - P.x, dz = e.z - P.z, d = Math.hypot(dx, dz) || 1, k = 16 / Math.max(1, e.mass * 0.6);
+      e.kx += (dx / d) * k; e.kz += (dz / d) * k;
+    });
+    this.player.invuln = Math.max(this.player.invuln, 1.2);
+    this.audio.sfx('legendary');
+    this.app.haptic('heavy');
+    this.ui.banner(c.name.toUpperCase(), 'Weapon evolved', 'gold');
+  }
+
+  /** Elites drop a Relic Chest: a free pick of 3 cards. */
   openChest() {
-    const c = rollChoices(this, 1)[0];
-    applyChoice(this, c);
+    if (this.ended) return;
     const P = this.player;
     this.particles.burst(P.x, 1, P.z, 80, hdr(0xffd04a, 3.5), { speed: 8, life: 1, size: 0.5, up: 2 });
     this.fx.flash(0.3);
     this.audio.sfx('chest');
     this.app.haptic('success');
-    this.ui.banner('RELIC CHEST', `${c.name}${c.level ? ' · Lv ' + c.level : ''}`, 'gold');
+    this.chestQueue++;
+    this.showLevelUp();
   }
 
   // ---------------------------------------------------------------- Soul Nova
@@ -274,6 +355,7 @@ export class Run {
     this.nova = 0;
     this.counters.novas++;
     const P = this.player;
+    P.invuln = Math.max(P.invuln, 1.5); // the Shepherd stands untouchable inside the blast
     const size = this.legion.count;
     const pts = this.legion.detonateAll();
     pts.sort((a, b) => ((a.x - P.x) ** 2 + (a.z - P.z) ** 2) - ((b.x - P.x) ** 2 + (b.z - P.z) ** 2));
@@ -314,6 +396,31 @@ export class Run {
       if (i % 10 === 0) this.audio.sfx('explosion', { volume: 0.35, pitch: 1.2 + Math.random() * 0.4 });
     }
     this.novaQueue.splice(0, i);
+  }
+
+  /** Souls lost to a −N / ÷2 gate detonate at half Nova power, rippling out from the gate. */
+  soulBurst(points, legionSize, x, z) {
+    if (!points || !points.length) return;
+    const pts = points.map((p) => ({ x: p.x, y: p.y, z: p.z, d: (p.x - x) ** 2 + (p.z - z) ** 2 })).sort((a, b) => a.d - b.d);
+    const span = Math.min(0.6, 0.12 + pts.length * 0.003);
+    this.burstQueue = pts.map((p, i) => ({ ...p, t: (i / pts.length) * span }));
+    this.burstT = 0;
+    this.burstDmg = 0.5 * (35 + legionSize * 0.5) * this.stats.dmgMul * (1 + 0.45 * (this.chapter.id - 1));
+  }
+
+  updateBursts(dt) {
+    if (!this.burstQueue.length) return;
+    this.burstT += dt;
+    const col = hdr(this.heroColor, 2.6);
+    let i = 0;
+    while (i < this.burstQueue.length && this.burstQueue[i].t <= this.burstT) {
+      const p = this.burstQueue[i++];
+      this.enemies.query(p.x, p.z, 2.6, (e) => { this.enemies.damage(e, this.burstDmg, { kx: e.x - p.x, kz: e.z - p.z, knock: 5, source: 'nova', silent: Math.random() < 0.6 }); });
+      this.particles.burst(p.x, p.y, p.z, 10, col, { speed: 6, life: 0.45, size: 0.5, up: 0.8 });
+      if (i % 4 === 0) this.fx.shockwave(p.x, p.z, 2.6, this.heroColor, 0.3, 0.14);
+      if (i % 12 === 0) this.audio.sfx('explosion', { volume: 0.3, pitch: 1.4 + Math.random() * 0.3 });
+    }
+    this.burstQueue.splice(0, i);
   }
 
   // ---------------------------------------------------------------- death, revive, victory
@@ -451,6 +558,7 @@ export class Run {
     this.input.update();
     if (this.ui && this.ui.wantsNova) { this.ui.wantsNova = false; this.triggerNova(); }
     if (this.input.keys.has('Space')) { this.input.keys.delete('Space'); this.triggerNova(); }
+    if (this.profile.settings.autoNova && this.nova >= 1 && this.legion.count >= 50) this.triggerNova(); // accessibility: Auto-Nova
 
     if (dt > 0) {
       this.time += dt;
@@ -463,6 +571,7 @@ export class Run {
       this.pickups.update(dt);
       this.gates.update(dt);
       this.updateNova(dt);
+      this.updateBursts(dt);
       if (this.tutorial && this.time > 1.5 && !this.input.moved) this.hint('move', 'Drag anywhere to move. Your Shepherd attacks automatically.');
     }
     this.updateVictory(realDt);
@@ -482,8 +591,9 @@ export class Run {
     // camera
     const want = this.desiredCam();
     this.camPos.lerp(want, 1 - Math.exp(-realDt * 6));
-    this.camera.position.set(this.camPos.x + this.fx.shakeX, this.camPos.y, this.camPos.z + this.fx.shakeZ);
-    this.camera.lookAt(this.camTarget.x + this.fx.shakeX * 0.5, 0, this.camTarget.z + this.fx.shakeZ * 0.5);
+    const sk = this.profile.settings.shake ?? 1, sx = this.fx.shakeX * sk, sz = this.fx.shakeZ * sk;
+    this.camera.position.set(this.camPos.x + sx, this.camPos.y, this.camPos.z + sz);
+    this.camera.lookAt(this.camTarget.x + sx * 0.5, 0, this.camTarget.z + sz * 0.5);
 
     this.render(dt);
     if (this.ui) this.ui.update(this, realDt);
@@ -494,6 +604,7 @@ export class Run {
     this.glow.begin();
     this.legion.render();
     this.projectiles.render();
+    this.weapons.render();
     this.pickups.render();
     this.enemies.render();
     this.boss.render(dt);
@@ -586,6 +697,7 @@ export class Run {
     this.input.dispose();
     this.gates.dispose();
     this.boss.dispose();
+    this.hazards.dispose(); this.projectiles.disposeLobs(); // also restores the fog vignette
     for (const sys of [this.player, this.enemies, this.legion, this.projectiles, this.weapons, this.pickups, this.world]) sys.dispose();
     this.particles.points.geometry.dispose(); this.particles.material.dispose();
     this.glow.points.geometry.dispose(); this.glow.material.dispose();

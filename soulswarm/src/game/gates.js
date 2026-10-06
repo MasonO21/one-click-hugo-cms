@@ -21,6 +21,11 @@ function makeOps(L, minute) {
 }
 const label = (op) => ({ add: `+${op.n}`, mul: `×${op.n}`, sub: `−${op.n}`, div: `÷${op.n}` }[op.type]);
 const isGood = (op) => op.type === 'add' || op.type === 'mul';
+/** Legion change if the gate were taken now (before the 400 ceiling). */
+const gain = (op, L) => ({ add: op.n, mul: L * (op.n - 1), sub: -Math.min(L, op.n), div: -Math.floor(L / op.n) }[op.type]);
+
+// From 2:00 the better gate is often guarded: risk for the bigger reward (GDD §4.3).
+const GUARD = { fromMinute: 2, chance: 0.6, dist: 3.4 };
 
 export class Gates {
   constructor(run) {
@@ -38,7 +43,10 @@ export class Gates {
     if (l < 0.5) { dx = 0; dz = -1; } else { dx /= l; dz /= l; }
     const rx = -dz, rz = dx; // right vector
     const cx = P.x + dx * 10.5, cz = P.z + dz * 10.5;
-    const ops = forcedOps || makeOps(run.legion.count, run.time / 60);
+    // first run: once the legion reaches 10, the next pair is a scripted maths lesson (+5 vs ×2, sides random)
+    const lesson = !forcedOps && run.tutorial && !this.lessonShown && run.legion.count >= 10;
+    if (lesson) this.lessonShown = true;
+    const ops = forcedOps || (lesson ? (Math.random() < 0.5 ? [{ type: 'add', n: 5 }, { type: 'mul', n: 2 }] : [{ type: 'mul', n: 2 }, { type: 'add', n: 5 }]) : makeOps(run.legion.count, run.time / 60));
     const gates = ops.map((op, i) => {
       const side = i === 0 ? -1 : 1;
       const g = makeGate(label(op), isGood(op), WIDTH);
@@ -49,12 +57,27 @@ export class Gates {
       const lab = g.userData.label;
       g.remove(lab);
       run.scene.add(lab);
-      return { g, op, x, z, lab, prev: null, born: 0 };
+      return { g, op, x, z, lab, prev: null, born: 0, lesson };
     });
     this.pair = { gates, nx: dx, nz: dz, rx, rz, t: 0, life: 15, done: false };
+    if (!forcedOps && run.time / 60 >= GUARD.fromMinute && Math.random() < GUARD.chance) this.guard(gates, dx, dz);
     run.ui.banner('SOUL GATES', 'Walk through one to reshape your legion', 'soul');
     run.audio.sfx('warning', { volume: 0.4, pitch: 1.6 });
     run.hint('gates', 'Walk through a Soul Gate to grow your legion!');
+  }
+
+  /** Plants a Brute squad or a Bloater cluster just in front of the gate with the bigger payoff. */
+  guard(gates, dx, dz) {
+    const run = this.run, L = run.legion.count;
+    const G = gain(gates[0].op, L) >= gain(gates[1].op, L) ? gates[0] : gates[1];
+    const x = G.x - dx * GUARD.dist, z = G.z - dz * GUARD.dist;
+    const squad = run.time / 60 < 4 || Math.random() < 0.5
+      ? ['brute', 'husk', 'husk', 'husk']
+      : ['bloater', 'bloater', 'bloater'];
+    squad.forEach((t, i) => {
+      const a = (i / squad.length) * Math.PI * 2, r = i ? 1.3 : 0;
+      run.spawnEnemy(t, { at: { x: x + Math.cos(a) * r, z: z + Math.sin(a) * r } });
+    });
   }
 
   update(dt) {
@@ -90,19 +113,20 @@ export class Gates {
     this.passed++;
     run.counters.gates++;
     const before = L.count;
+    const good = isGood(op);
     if (op.type === 'add') L.addMany(Math.min(op.n, BASE.hardLegionMax - before), G.x, G.z);
     else if (op.type === 'mul') L.addMany(Math.min(before * (op.n - 1), BASE.hardLegionMax - before), G.x, G.z);
-    else if (op.type === 'sub') L.removeMany(Math.min(before, op.n));
-    else L.removeMany(Math.floor(before / op.n));
+    else run.soulBurst(L.removeMany(-gain(op, before)), before, G.x, G.z); // lost souls detonate: ÷2 doubles as an escape
     const delta = L.count - before;
-    const good = isGood(op);
+    run.addNovaCharge(3);
+    if (G.lesson && op.type === 'mul' && run.ui) run.ui.hint(`×${op.n} turned ${before} souls into ${L.count}. Multipliers grow with your legion!`);
     run.fx.shockwave(G.x, G.z, 6, good ? 0x4ef2ff : 0xff2e55, 0.5, 0.15);
     run.fx.flash(good ? 0.25 : 0.1);
     if (!good) run.fx.hurt(0.4);
     run.fx.shake(good ? 0.2 : 0.3);
     run.audio.sfx(good ? 'gate_good' : 'gate_bad');
     run.app.haptic(good ? 'success' : 'warning');
-    run.ui.bigNumber(`${delta >= 0 ? '+' : '−'}${Math.abs(delta)}`, good ? 'LEGION SURGES' : 'SOULS LOST', good);
+    run.ui.bigNumber(`${delta >= 0 ? '+' : '−'}${Math.abs(delta)}`, good ? 'LEGION SURGES' : delta ? 'SOULS DETONATE' : 'SOULS LOST', good);
     run.fx.light(G.x, G.z, 9, 2.2, new THREE.Color(good ? 0x4ef2ff : 0xff2e55), 0.6);
   }
 
