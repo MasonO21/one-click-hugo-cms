@@ -192,11 +192,11 @@ Base values are for Chapter 1 at minute 0. Scaling is in §8. Each enemy deals i
 | Enemy | Role | Base HP | Speed (m/s) | Damage | XP | Behaviour | Counterplay |
 |---|---|---|---|---|---|---|---|
 | **Husk** | Basic chaser | 14 | 2.4 | 6 per touch | 1 | Walks straight at the player with flocking separation and a slight weave. Spawns just off-screen and in swarm rings. 40–100% of the horde. | Anything works. Husks are raise fodder. |
-| **Ghoul** | Runner | 8 | 4.4 | 5 per touch | 1 | A fast chaser; every 3rd swarm-ring enemy after 2:00. *(Planned: packs of 4–6 that flank in a ±30° arc and lunge at 3 m after a 0.4 s crouch telegraph.)* | Keep moving. Skull Halo and Grave Pulse shred packs. |
-| **Brute** | Tank | 75 | 1.7 | 18 per touch | 4 | Mass 5: shrugs off most knockback and shoves smaller enemies aside. Soaks minion attacks. *(Planned: a 1.5 m cone slam after a 0.8 s wind-up.)* | Bone Spears pierce. |
-| **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and fires a straight ember orb (6.5 m/s) about every 2.6 s. *(Planned: arcing orbs onto a telegraphed circle; burning ground from Chapter 2.)* | Ashen Chains and homing Soul Bolts reach her. Sidestep the orbs. |
+| **Ghoul** | Runner | 8 | 4.4 | 5 per touch | 1 | Spawns in **packs of 4–6** (Ch3: 6–8) from one point, usually ahead of the Shepherd; members fan out 1.8 m apart and flank at their own angle within ±30° (full swing beyond 6.5 m, none at 3 m). Within 3 m: a 0.4 s crouch (squash and flash), aimed 0.4 s ahead, then a **lunge** at 11 m/s for 0.3 s, 0.6 s recovery at 35% speed, then 1.5 s before it can lunge again. Ghoul share of the horde is unchanged (packs bank the director's picks). Every 3rd swarm-ring enemy after 2:00 is a single Ghoul. | Keep moving; sidestep the lunge. Skull Halo and Grave Pulse shred packs. |
+| **Brute** | Tank | 75 | 1.7 | 18 per touch | 4 | Mass 5: shrugs off most knockback and shoves smaller enemies aside. Within 2.2 m it rears back for **1.0 s** with a ground cone telegraph (2.4 m, ±40°; both × elite scale), then **slams** for 1.4× damage to the Shepherd and every minion in the cone, with 9 m/s knockback. 0.8 s recovery, 2.4 s between slams. | Step out of the cone. Bone Spears pierce. |
+| **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and **lobs** an ember orb about every 3.0 s (±15%) at the Shepherd's position 0.3 s ahead. The orb arcs for 1.0 s onto a 1.1 m telegraph circle (with a closing outer ring) and hits the Shepherd and minions inside. From Chapter 2 the landing leaves **burning ground** for 3 s (25% of the orb damage per second, ticks every 0.3 s, patches don't stack). | Ashen Chains and homing Soul Bolts reach her. Keep moving when a circle appears. |
 | **Bloater** | Bomber | 28 | 2.0 | 26 AoE (2.6 m) | 2 | Within 2.4 m of the player it slows to 25%, flashes and shows a 2.6 m telegraph, then explodes after 1.0 s. The blast also deals 60 to minions and 1.2× its max HP to other *enemies*. Killed early, it just dies (and can rise). | Kill it early, or let it detonate inside a crowd. Never let it reach you. |
-| **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass. Can be raised. *(Planned: crown-shaped silhouette marker.)* | Drops a **Relic Chest**. |
+| **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass, and a floating gold **crown** marker. Can be raised. | Drops a **Relic Chest**. |
 | **Gravemaw, the Hollow King** | Boss | 9,000 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing him clears the chapter. | See §6. |
 
 Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a), boss magenta/violet (#ff3df0). Every enemy has an emissive core so it reads against the dark ground.
@@ -319,16 +319,16 @@ Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s,
 
 ## 8. Chapters and difficulty scaling
 
-| # | Chapter | Palette | HP mult | Spawn mult | Modifier (Planned) | Recommended talents |
+| # | Chapter | Palette | HP mult | Spawn mult | Modifier | Recommended talents |
 |---|---|---|---|---|---|---|
 | 1 | Ashen Necropolis | Teal / ember | 1.00 | 1.00 | None (teaching chapter) | 0 |
-| 2 | Ember Wastes | Orange | 1.90 | 1.15 | More Cinder Witches; burning ground | ~8 levels total |
-| 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul packs of 6–8; ice patches | ~25 |
-| 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | 2× Bloaters; tighter fog vignette | ~60 |
-| 5 | Crimson Throne | Blood red | 7.50 | 1.60 | Extra elites | ~110 |
-| ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time | Endgame |
+| 2 | Ember Wastes | Orange | 1.90 | 1.15 | Cinder Witch weight ×1.8; lobs leave burning ground; **ember vents** (15 m grid, 32% of cells, 1.6 m radius, a puff every 6.5–9 s after a 1.2 s telegraph, 12 base damage scaled like enemy damage) | ~8 levels total |
+| 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul weight ×1.5, packs of 6–8; **ice patches** (12 m grid, 50% of cells, radius 2.6–4.4 m): on ice the Shepherd accelerates at 30% of normal, stops with 20% of normal friction and gets +8% top speed | ~25 |
+| 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | Bloater weight ×2; vignette 1.25 and ground fog pulled in from 26 to 17 m; **abyssal hands** every 6–9 s aimed 0.6 s ahead (1.3 m, 1.0 s telegraph, 0.6 s root) | ~60 |
+| 5 | Crimson Throne | Blood red | 7.50 | 1.60 | **8 elites** (45, 75, 110, 150, 185, 225, 255, 290 s); Brute weight ×1.6 | ~110 |
+| ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
 
-In the build, chapters differ only in palette, HP mult, spawn mult and the chapter terms below; every chapter has the same 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N. Endless Abyss unlocks after the first Chapter 5 clear.
+Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with a banner naming the chapter and its twist. Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N. Endless Abyss unlocks after the first Chapter 5 clear.
 
 **Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
 

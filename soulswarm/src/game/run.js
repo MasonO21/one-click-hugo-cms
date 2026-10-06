@@ -321,14 +321,14 @@ export class Run {
 
   /** An evolution is the build's payoff: slow-mo, a gold shockwave that hurls the horde back, the legendary fanfare. */
   celebrateEvolution(c) {
-    const P = this.player, gold = hdr(0xffd04a, 4);
+    const P = this.player, gold = hdr(0xffd04a, 2.6);
     this.fx.slowMo(0.35, 0.7);
-    this.fx.flash(0.45); this.fx.shake(0.4);
+    this.fx.flash(0.15); this.fx.shake(0.4);
     this.fx.shockwave(P.x, P.z, 9, 0xffd04a, 0.7, 0.08);
     this.fx.shockwave(P.x, P.z, 6, this.heroColor, 0.5, 0.12);
-    this.fx.light(P.x, P.z, 12, 3, new THREE.Color(0xffd04a), 0.9);
-    this.particles.ring(P.x, P.z, 3, 90, gold, { life: 0.8, size: 0.7 });
-    this.particles.burst(P.x, 1.2, P.z, 140, gold, { speed: 10, life: 1.1, size: 0.6, up: 2.5 });
+    this.fx.light(P.x, P.z, 10, 1.6, new THREE.Color(0xffd04a), 0.8);
+    this.particles.ring(P.x, P.z, 3, 70, gold, { life: 0.8, size: 0.6 });
+    this.particles.burst(P.x, 1.2, P.z, 80, gold, { speed: 10, life: 1.0, size: 0.5, up: 2.5 });
     this.enemies.query(P.x, P.z, 8, (e) => {
       if (e.type === 'boss') return;
       const dx = e.x - P.x, dz = e.z - P.z, d = Math.hypot(dx, dz) || 1, k = 16 / Math.max(1, e.mass * 0.6);
