@@ -54,7 +54,7 @@ window.SF = window.SF || {};
     dmg: [[0.8, 0.95, 1.1, 1.25], [0.8, 0.95, 1.1, 1.25], [0.9, 1.1, 1.3]],
     cd:  [[1, 0.95, 0.9, 0.85],   [1, 0.95, 0.9, 0.85],   [1, 0.85, 0.7]]
   };
-  SF.skillCdOf = (h, i) => h.def0.skills[i].cd * SF.SKILL_RANK.cd[i][Math.max(0, (h.ranks ? h.ranks[i] : 1) - 1)] * (1 - (h.cdr || 0));
+  SF.skillCdOf = (h, i) => h.def0.skills[i].cd * SF.SKILL_RANK.cd[i][Math.max(0, (h.ranks ? h.ranks[i] : 1) - 1)] * (1 - (h.cdr || 0)) * (h.cdMul || 1);
 
   // In-match items. `stats` are flat adds except as/cdr/lifesteal/crit (fractions). Critical hits deal 175%. `passive` names a
   // unique effect handled in match.js (owning two copies is impossible, so passives never stack).
@@ -447,6 +447,23 @@ window.SF = window.SF || {};
     brawl:  { name: 'Shard Brawl', tab: 'Brawl', sub: 'Random hero, start at level 5 with gold, no jungle. Fast fights.', minutes: 5 },
     online: { name: 'Online 3v3', tab: 'Online', sub: 'Real players, bots fill empty slots.', minutes: 8 },
     practice: { name: 'Training Grounds', tab: 'Train', sub: 'Any hero, even ones you don\'t own, against target dummies. No rewards and no pressure.', minutes: 0 }
+  };
+
+  // Brawl adds one rule twist that rotates every week, the same for everyone (taken from the week key,
+  // so consecutive weeks always differ). `fx` multiplies cooldowns, hero damage, hero max health, move
+  // speed and passive gold; `rune` is how often river power shards come back, in seconds.
+  SF.MUTATORS = [
+    { id: 'rapid', name: 'Rapid Fire', desc: 'Skill cooldowns are 40% shorter.', fx: { cd: 0.6 } },
+    { id: 'glass', name: 'Glass Cannons', desc: 'Heroes deal 30% more damage but have 20% less max health.', fx: { dmg: 1.3, hp: 0.8 } },
+    { id: 'swift', name: 'Swiftwind', desc: 'Every hero moves 25% faster.', fx: { ms: 1.25 } },
+    { id: 'gold', name: 'Gold Rush', desc: 'Passive gold income is tripled.', fx: { gold: 3 } },
+    { id: 'storm', name: 'Shard Storm', desc: 'River power shards come back every 30 seconds.', fx: { rune: 30 } }
+  ];
+  SF.MUTATOR = {};
+  for (const x of SF.MUTATORS) SF.MUTATOR[x.id] = x;
+  SF.mutatorOf = wk => {
+    const m = /^(\d+)-W(\d+)$/.exec(String(wk)), n = m ? +m[1] * 53 + +m[2] : 0;
+    return SF.MUTATORS[n % SF.MUTATORS.length].id;
   };
 
   SF.BOT_NAMES = ['Valtor', 'Mirelle', 'Quill', 'Ashgrove', 'Tamsin', 'Rook', 'Juniper', 'Okoro', 'Pell', 'Sora', 'Bexley', 'Dax', 'Ilse', 'Marrow', 'Wren', 'Corvin', 'Hollis', 'Nadia', 'Teo', 'Briar', 'Kestrel', 'Lux', 'Moss', 'Ines'];

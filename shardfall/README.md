@@ -46,11 +46,26 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 
 **Modes**
 - **Quick Match:** 3v3 against bots at Easy, Normal or Hard.
+- **Hero draft** before every Quick and Ranked match (except your very first):
+  - Picks go ally, enemy, enemy, you, ally, enemy, so you see two enemy heroes before you choose.
+  - Ranked adds one ban per side first. Banned heroes can't be picked by either team.
+  - Bot picks fill what their team lacks (a frontliner, ranged damage, no doubled roles). The enemy answers a fragile backline with its Assassin.
+  - You get 25 seconds to pick (15 to ban), and the timer locks in your hovered hero.
+  - A one-line hint reads your team's shape ("no frontline yet", "good pick: their backline is fragile").
+  - In Quick nobody takes the hero you're hovering. In Ranked the enemy can ban it or take it.
+  - If the draft takes every hero you own, any remaining hero is yours as a trial for that match.
 - **Ranked:** Bronze → Silver → Gold → Platinum → Diamond → Master → Legend, with three divisions of three stars per tier.
   - Win streaks earn bonus stars, and the match MVP never loses a star.
   - Bronze and Silver are protected from demotion.
   - Bots get tougher as you climb, and every tier has a one-time reward.
 - **Shard Brawl:** a random hero (including ones you don't own), level 5 start with gold, no jungle, about 5 minutes.
+  - One rule twist each week, the same for everyone, and never the same twist two weeks running:
+    - Rapid Fire: cooldowns 40% shorter.
+    - Glass Cannons: +30% hero damage, −20% max health.
+    - Swiftwind: +25% move speed.
+    - Gold Rush: triple passive gold.
+    - Shard Storm: river power shards every 30 seconds.
+  - The twist shows on the Brawl card and the loading screen, and is announced when the match starts.
 - **Online 3v3:** real players on a server-authoritative match. Bots fill empty slots, and if you disconnect a bot takes over until you reconnect.
 - **Training Grounds:** any hero, including ones you don't own yet, against three target dummies in mid lane.
   - Dummies stand still, heal to full a few seconds after the last hit, and stand back up 2 seconds after falling. Towers hold fire.
@@ -193,7 +208,7 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 | `web/js/match.js` | Match simulation and bot AI. No DOM access, and the server runs this same file |
 | `web/js/draw.js` | All rendering: hero sprites (with the drawn crystal as fallback), map, effects, minimap |
 | `web/js/hud.js` | Touch and keyboard controls, in-match HUD, shop and scoreboard |
-| `web/js/lobby.js` | Menus, modes, economy screens, profile, results |
+| `web/js/lobby.js` | Menus, modes, hero draft, economy screens, profile, results |
 | `web/js/store.js` | Save data, economy and ranked rules, and the test stand-ins for purchases and ads |
 | `web/js/platform.js` | Native bridge: RevenueCat purchases, AdMob rewarded video, haptics, Android back button |
 | `web/js/net.js` | Online play: connection, matchmaking, and the server-fed match the HUD renders |

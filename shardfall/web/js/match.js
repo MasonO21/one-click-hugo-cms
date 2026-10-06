@@ -63,13 +63,14 @@
       const b = this.def0.base, g = this.def0.grow, lv = this.level - 1;
       const add = { hp: 0, atk: 0, power: 0, def: 0, ms: 0, as: 0, regen: 0, lifesteal: 0, cdr: 0, crit: 0 };
       for (const id of this.items) { const s = SF.ITEMS[id].stats; for (const k in s) add[k] += s[k]; }
-      const newMax = b.hp + g.hp * lv + add.hp;
+      const mu = (this.m && this.m.mut) || {};
+      const newMax = (b.hp + g.hp * lv + add.hp) * (mu.hp || 1);
       if (newMax > this.maxHp) this.hp += newMax - this.maxHp;
       this.maxHp = newMax; this.hp = Math.min(this.hp, newMax);
       this.atk = b.atk + g.atk * lv + add.atk;
       this.power = b.power + (g.power || 0) * lv + add.power;
       this.def = b.def + g.def * lv + add.def;
-      this.ms = b.ms + add.ms;
+      this.ms = (b.ms + add.ms) * (mu.ms || 1);
       this.range = b.range;
       this.as = b.as * (1 + 0.025 * lv + add.as);
       this.regen = b.regen + lv * 0.6 + add.regen;
@@ -393,13 +394,18 @@
       // 'classic' (quick / ranked / online) or 'brawl': start at level 5 with gold, no jungle, early Shard.
       // 'practice' is the Training Grounds: dummy enemies, optional free cooldowns / gold / max level.
       this.mode = opts.mode === 'brawl' ? 'brawl' : opts.mode === 'practice' ? 'practice' : 'classic';
+      // Brawl's weekly rule twist (see SF.MUTATORS).
+      this.mutator = this.mode === 'brawl' && SF.MUTATOR[opts.mutator] ? opts.mutator : null;
+      this.mut = this.mutator ? SF.MUTATOR[this.mutator].fx : {};
       this.waveEvery = 30; this.overchargeAt = 480; this.respawnMul = 1;
       this.setupMap();
       this.setupHeroes();
       if (this.mode === 'practice') this.setupPractice(opts.practice || {});
       if (this.mode === 'brawl') {
         this.camps = []; this.shardAt = 45; this.wyrmAt = 150; this.runeAt = 60; this.nextWave = 2; this.waveEvery = 25; this.overchargeAt = 240; this.respawnMul = 0.6;
-        for (const h of this.heroes) { h.level = 5; h.points = 5; h.recalc(); h.hp = h.maxHp; h.gold = 1800; }
+        for (const h of this.heroes) { h.level = 5; h.points = 5; h.recalc(); h.hp = h.maxHp; h.gold = 1800; h.cdMul = this.mut.cd || 1; }
+        if (this.mut.rune) this.runeAt = 30;
+        if (this.mutator) { const mu = SF.MUTATOR[this.mutator]; this.later(1.5, () => this.announce(mu.name, 2, mu.desc)); }
         for (const u of this.units) if (isStructure(u)) { u.maxHp *= 0.7; u.hp = u.maxHp; }
       }
     }
@@ -534,7 +540,7 @@
       if (this.t >= this.goldAt) { this.goldAt += 15; this.goldLine.push([Math.round(this.t), ...[0, 1].map(tm => Math.round(this.heroes.reduce((a, h) => a + (h.team === tm ? h.goldEarned : 0), 0)))]); }
       if (this.runes.length) this.runePickups();
       if (!this.overcharged && this.t >= this.overchargeAt) { this.overcharged = true; this.announce('Shards Overcharged', 2, 'Minions are empowered'); }
-      for (const h of this.heroes) { this.addGold(h, 3.2 * dt, true); if (h.alive) this.giveXp(h, 2 * dt); }
+      for (const h of this.heroes) { this.addGold(h, 3.2 * (this.mut.gold || 1) * dt, true); if (h.alive) this.giveXp(h, 2 * dt); }
       if (this.later_.length) {
         const due = this.later_.filter(l => l.at <= this.t);
         this.later_ = this.later_.filter(l => l.at > this.t);
@@ -648,7 +654,7 @@
 
     // River power-ups: fill any empty spot with a random shard, then again in 90 seconds.
     spawnRunes() {
-      this.runeAt = this.t + 90;
+      this.runeAt = this.t + (this.mut.rune || 90);
       const ids = Object.keys(SF.RUNES);
       let n = 0;
       for (const s of SF.RUNE_SPOTS) {
@@ -1211,6 +1217,7 @@
       }
       if (o.basic && src && src.passives && src.passives.has('frost') && !isStructure(t)) this.slow(t, 0.2, 1);
       if (o.gale && !isStructure(t)) this.slow(t, 0.3, 0.8);
+      if (src && src.kind === 'hero' && this.mut.dmg) amt *= this.mut.dmg;
       if (src && src.kind === 'hero' && t.kind === 'hero' && t.team !== src.team) amt = this.passiveHit(src, t, amt, o);
       // Spined Carapace: reflect a quarter of a hero's attack back as true damage.
       if (o.basic && !o.reflect && t.passives && t.passives.has('thorns') && src && src.kind === 'hero' && src.alive) this.applyDamage(t, src, amt * 0.25, { true: true, reflect: true });
@@ -1809,6 +1816,36 @@
       return false;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Draft (offline Quick / Ranked). Picks alternate blue, red, red, you, blue, red, so you see two
+  // enemy picks before choosing. Ranked opens with one ban per team.
+  // ---------------------------------------------------------------------------
+  const FRONT = ['Tank', 'Fighter'], RANGED = ['Marksman', 'Mage'];
+  SF.Draft = {
+    ORDER: ['B', 'R', 'R', 'P', 'B', 'R'],
+    taken(st) { return new Set([...st.blue, ...st.red, ...st.bans]); },
+    // A bot fills what its team lacks: no duplicate roles, a frontliner and a ranged damage dealer
+    // early, and (for red) an answer to a blue team stacked with squishies.
+    botPick(side, st, rnd = Math.random) {
+      const taken = SF.Draft.taken(st), mine = st[side].map(id => SF.HERO[id].role), theirs = st[side === 'blue' ? 'red' : 'blue'].map(id => SF.HERO[id].role);
+      let best = null, bs = -1e9;
+      for (const h of SF.HEROES) {
+        if (taken.has(h.id)) continue;
+        let sc = rnd();
+        if (mine.includes(h.role)) sc -= 1.5;
+        if (!mine.some(r => FRONT.includes(r)) && FRONT.includes(h.role)) sc += 0.8;
+        if (!mine.some(r => RANGED.includes(r)) && RANGED.includes(h.role)) sc += 0.8;
+        if (theirs.filter(r => r === 'Marksman' || r === 'Mage' || r === 'Support').length >= 2 && h.role === 'Assassin') sc += 0.6;
+        if (sc > bs) { bs = sc; best = h.id; }
+      }
+      return best;
+    },
+    botBan(st, rnd = Math.random) {
+      const pool = SF.HEROES.filter(h => !SF.Draft.taken(st).has(h.id));
+      return pool[Math.floor(rnd() * pool.length)].id;
+    }
+  };
 
   SF.Match = Match;
   SF.Brain = Brain;

@@ -702,6 +702,77 @@ section('Death recap', () => {
   check('the damage log resets after a death', !p.taken.length);
 });
 
+section('Hero draft', () => {
+  const D = SF.Draft, roles = ids => ids.map(id => SF.HERO[id].role);
+  check('pick order lets you see two enemy heroes first', D.ORDER.join('') === 'BRRPBR');
+  let dupes = 0, noFront = 0, noRanged = 0, clash = 0;
+  for (let n = 0; n < 300; n++) {
+    const st = { blue: [], red: [], bans: [] };
+    st.bans.push(D.botBan(st), D.botBan(st));
+    if (st.bans[0] === st.bans[1]) { st.bans.pop(); }
+    for (const side of ['blue', 'red', 'red', 'blue', 'blue', 'red']) {
+      const id = D.botPick(side, st);
+      if (D.taken(st).has(id)) clash++;
+      st[side].push(id);
+    }
+    for (const side of ['blue', 'red']) {
+      const r = roles(st[side]);
+      if (new Set(r).size < r.length) dupes++;
+      if (!r.some(x => x === 'Tank' || x === 'Fighter')) noFront++;
+      if (!r.some(x => x === 'Marksman' || x === 'Mage')) noRanged++;
+    }
+  }
+  check('bots never pick a taken or banned hero', clash === 0, `${clash}`);
+  check('bot teams avoid duplicate roles', dupes < 30, `${dupes} of 600 teams`);
+  check('bot teams usually have a frontliner', noFront < 60, `${noFront} of 600 teams without one`);
+  check('bot teams usually have ranged damage', noRanged < 60, `${noRanged} of 600 teams without one`);
+  // Red answers a fragile blue backline with its Assassin (Nyx) more often than it otherwise would.
+  let vsSquishy = 0, vsTanky = 0;
+  for (let n = 0; n < 400; n++) {
+    if (D.botPick('red', { blue: ['vexa', 'sylva'], red: ['brakka', 'orin'], bans: [] }) === 'nyx') vsSquishy++;
+    if (D.botPick('red', { blue: ['kaida', 'drace'], red: ['brakka', 'orin'], bans: [] }) === 'nyx') vsTanky++;
+  }
+  check('red counter-picks a fragile backline with an assassin', vsSquishy > vsTanky + 40, `${vsSquishy} vs ${vsTanky}`);
+});
+
+section('Weekly Brawl mutators', () => {
+  const weeks = Array.from({ length: 12 }, (_, i) => SF.weekKey(new Date(Date.UTC(2026, 0, 5 + 7 * i))));
+  const ids = weeks.map(SF.mutatorOf);
+  check('a known mutator every week', ids.every(id => SF.MUTATOR[id]), ids.join());
+  check('consecutive weeks always differ', ids.every((id, i) => i === 0 || id !== ids[i - 1]), ids.join());
+  check('all five twists come up within five weeks', new Set(ids.slice(0, 5)).size === 5, ids.slice(0, 5).join());
+  check('the twist is the same all week', SF.mutatorOf(SF.weekKey(new Date(2026, 9, 5))) === SF.mutatorOf(SF.weekKey(new Date(2026, 9, 11))));
+  const brawl = mut => botMatch(SF, { mode: 'brawl', mutator: mut, hero: 'kaida', allies: [{ id: 'orin' }, { id: 'sylva' }], enemies: [{ id: 'vexa' }, { id: 'nyx' }, { id: 'brakka' }] });
+  const base = brawl(null), k0 = base.heroes.find(h => h.def0.id === 'kaida');
+  check('plain Brawl has no twist', base.mutator === null && k0.cdMul === 1);
+  const rapid = brawl('rapid'), k1 = rapid.heroes.find(h => h.def0.id === 'kaida');
+  check('Rapid Fire cuts cooldowns by 40%', Math.abs(SF.skillCdOf(k1, 0) / SF.skillCdOf(k0, 0) - 0.6) < 1e-9);
+  const glass = brawl('glass'), k2 = glass.heroes.find(h => h.def0.id === 'kaida');
+  check('Glass Cannons cut max health by 20%', Math.abs(k2.maxHp / k0.maxHp - 0.8) < 1e-9, `${k2.maxHp} vs ${k0.maxHp}`);
+  const hit = (m, a, b) => { const t = m.heroes.find(h => h.def0.id === b); t.x = 1600; t.y = 540; t.shield = 0; const hp = t.hp; m.applyDamage(m.heroes.find(h => h.def0.id === a), t, 200, { true: true }); return hp - t.hp; };
+  check('Glass Cannons add 30% hero damage', Math.abs(hit(glass, 'orin', 'vexa') / hit(base, 'orin', 'vexa') - 1.3) < 0.01);
+  const swift = brawl('swift'), k3 = swift.heroes.find(h => h.def0.id === 'kaida');
+  check('Swiftwind speeds every hero up 25%', Math.abs(k3.ms / k0.ms - 1.25) < 1e-9);
+  const gold = brawl('gold');
+  const income = m => { const h = m.heroes[0], before = h.gold; for (let i = 0; i < 30; i++) m.update(1 / 30); return h.gold - before; };
+  const gBase = income(base), gRush = income(gold);
+  check('Gold Rush triples passive gold', gRush > gBase * 2.4, `${gRush.toFixed(1)} vs ${gBase.toFixed(1)}`);
+  const storm = brawl('storm');
+  check('Shard Storm brings the first power shards at 30s', storm.runeAt === 30 && base.runeAt === 60);
+  storm.t = 30; storm.spawnRunes();
+  check('Shard Storm refills every 30s', storm.runeAt === 60);
+  check('mutators only apply in Brawl', botMatch(SF, { mutator: 'glass' }).mutator === null);
+  const said = [];
+  rapid.on('announce', (text, team, sub) => said.push(text + ': ' + sub));
+  for (let i = 0; i < 60; i++) rapid.update(1 / 30);
+  check('the twist is announced at the start', said.some(t => t.startsWith('Rapid Fire: ')), said.join(' | '));
+  for (const mu of SF.MUTATORS) {
+    const m = botMatch(SF, { mode: 'brawl', mutator: mu.id });
+    for (let i = 0; !m.over && i < 30 * 16 * 60; i++) m.update(1 / 30);
+    check(`a ${mu.name} Brawl finishes`, m.over, `still running at ${Math.round(m.t)}s`);
+  }
+});
+
 section('Online-style roster with two humans', () => {
   const ids = SF.HEROES.map(h => h.id);
   const m = new SF.Match({ difficulty: 'normal', localPid: 'p2', roster: [

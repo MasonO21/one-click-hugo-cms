@@ -383,7 +383,7 @@
         hit: [220, 120, 0.05, 'square', 0.04], skill: [520, 260, 0.14, 'sawtooth', 0.05], coin: [880, 1320, 0.12, 'triangle', 0.08],
         level: [440, 880, 0.35, 'triangle', 0.09], kill: [330, 660, 0.3, 'sawtooth', 0.07], click: [660, 660, 0.04, 'sine', 0.06],
         win: [523, 1046, 0.7, 'triangle', 0.1], lose: [330, 165, 0.7, 'triangle', 0.08], tower: [140, 60, 0.4, 'square', 0.08],
-        ping: [988, 1480, 0.16, 'sine', 0.07]
+        ping: [988, 1480, 0.16, 'sine', 0.07], lock: [392, 784, 0.22, 'triangle', 0.08], ban: [300, 110, 0.25, 'sawtooth', 0.06]
       }[name];
       if (!P) return;
       const [f0, f1, dur, type, vol] = P, t = ac.currentTime;

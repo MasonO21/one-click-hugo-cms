@@ -203,7 +203,8 @@
         body = `<div class="train"><select id="trainHero" aria-label="Hero to train">${SF.HEROES.map(x => `<option value="${x.id}" ${x.id === id ? 'selected' : ''}>${x.name} · ${x.role}${S.playable(x.id) ? '' : ' (trial)'}</option>`).join('')}</select>
           <div class="train-opts">${[['cd', 'No cooldowns'], ['gold', 'Free gold'], ['max', 'Max level']].map(([k, l]) => `<button class="tog${tr[k] ? ' on' : ''}" data-act="trainOpt" data-k="${k}" aria-pressed="${!!tr[k]}">${l}</button>`).join('')}</div></div>`;
       } else if (mode === 'brawl') {
-        body = `<p class="muted small">You get a random hero each match, including heroes you don't own yet.</p>`;
+        const mu = SF.MUTATOR[SF.mutatorOf(SF.weekKey())];
+        body = `<div class="mutator"><span class="eyebrow">This week</span><b>${mu.name}</b><span class="muted small">${mu.desc}</span></div>`;
       } else {
         ready = onlineReady() && !queueing;
         label = queueing ? 'Searching…' : 'Find match';
@@ -523,26 +524,184 @@
     'Press Recall to heal at your base fountain.',
     'The glowing item on the left is your next recommended buy.',
     'Tap the score at the top to see everyone\'s items and K/D/A.',
-    'MVPs never lose a star in Ranked.'
+    'MVPs never lose a star in Ranked.',
+    'Brawl has a new rule twist every week.'
   ];
   const pickSkin = id => { const list = SF.skinsFor(id).filter(s => !s.lock || Math.random() < 0.3); return Math.random() < 0.5 ? list[0].id : list[Math.floor(Math.random() * list.length)].id; };
 
-  function startBattle(modeArg) {
+  function startBattle(modeArg, o = {}) {
     const mode = modeArg || S.d.mode || 'quick';
     if (mode === 'online') return startOnline();
     if (mode === 'practice') return startPractice();
     if (mode === 'ranked' && !S.rankedUnlocked()) return infoModal('Ranked is locked', `Reach account level ${SF.RANKS.unlockLevel} to play Ranked.`);
+    // Quick and Ranked open with a draft, except the very first (tutorial) match.
+    if ((mode === 'quick' || mode === 'ranked') && S.d.tutorial && o.draft !== false) return startDraft(mode);
     let heroId = S.d.selected; if (!S.playable(heroId)) heroId = S.d.heroes[0];
     if (mode === 'brawl') heroId = SF.HEROES[Math.floor(Math.random() * SF.HEROES.length)].id;
     const others = shuffle(SF.HEROES.map(h => h.id).filter(id => id !== heroId));
     const names = shuffle(SF.BOT_NAMES.slice());
     const allies = others.slice(0, 2).map((id, i) => ({ id, skin: pickSkin(id), name: names[i] }));
     const enemies = others.slice(2, 5).map((id, i) => ({ id, skin: pickSkin(id), name: names[2 + i] }));
+    launch(mode, heroId, allies, enemies);
+  }
+  function launch(mode, heroId, allies, enemies) {
     const difficulty = mode === 'ranked' ? S.rank().diff : mode === 'brawl' ? 'normal' : S.d.difficulty;
     const opts = { hero: heroId, skin: S.skinOf(heroId), spell: S.spellOf(mode === 'brawl' ? S.d.selected : heroId), playerName: S.d.name, difficulty, allies, enemies, mode: mode === 'brawl' ? 'brawl' : 'classic', tutorial: !S.d.tutorial && mode === 'quick' };
-    const me = { id: heroId, skin: opts.skin };
-    showLoading(SF.MODES[mode].name, [allies[0], me, allies[1]], enemies, 1, () => SF.hud.start(opts, sum => finishMatch(sum, { mode, heroId, skin: opts.skin })));
+    if (mode === 'brawl') opts.mutator = SF.mutatorOf(SF.weekKey());
+    const me = { id: heroId, skin: opts.skin }, mu = opts.mutator && SF.MUTATOR[opts.mutator];
+    showLoading(SF.MODES[mode].name, [allies[0], me, allies[1]], enemies, 1, () => SF.hud.start(opts, sum => finishMatch(sum, { mode, heroId, skin: opts.skin })), mu ? `${mu.name}: ${mu.desc}` : '');
   }
+
+  // ---------- hero draft ----------
+  // Picks go blue, red, red, you, blue, red, so you see two enemy heroes before choosing; Ranked
+  // opens with one ban per side. Bots pick in about a second; you get 25 seconds (15 to ban). In
+  // Quick nobody takes the hero you're hovering. In Ranked the enemy can ban or take it.
+  const DRAFT = { pick: 25, ban: 15, bot: 900 };
+  let draft = null;
+  function startDraft(mode) {
+    const hover = S.playable(S.d.selected) ? S.d.selected : S.d.heroes[0];
+    draft = { mode, blue: [], red: [], bans: [], banOf: {}, hover, banHover: null, names: shuffle(SF.BOT_NAMES.slice()), skins: {},
+      steps: (mode === 'ranked' ? ['PB', 'RB'] : []).concat(SF.Draft.ORDER), i: 0, end: 0, timers: [] };
+    $('draft').hidden = false;
+    closeModal();
+    nextDraftStep();
+    draft.timers.push(setInterval(draftClock, 200));
+  }
+  const draftStep = () => draft && draft.steps[draft.i];
+  const draftFree = id => !SF.Draft.taken(draft).has(id);
+  // Heroes you can pick: owned or free this week. If the draft took every one of those, any free hero is
+  // yours for this match.
+  function draftPickable(id) {
+    if (!draftFree(id)) return false;
+    return S.playable(id) || !SF.HEROES.some(h => S.playable(h.id) && draftFree(h.id));
+  }
+  function draftFixHover() {
+    if (draftPickable(draft.hover)) return;
+    const h = SF.HEROES.find(x => draftPickable(x.id) && S.playable(x.id)) || SF.HEROES.find(x => draftPickable(x.id));
+    draft.hover = h ? h.id : null;
+  }
+  function nextDraftStep() {
+    if (!draft) return;
+    draftFixHover();
+    const step = draftStep();
+    if (!step) { renderDraft(); draft.timers.push(setTimeout(finishDraft, 1100)); return; }
+    if (step === 'P' || step === 'PB') {
+      draft.end = performance.now() + (step === 'P' ? DRAFT.pick : DRAFT.ban) * 1000;
+      if (step === 'PB') draft.banHover = null;
+      renderDraft();
+      return;
+    }
+    draft.end = 0;
+    renderDraft();
+    draft.timers.push(setTimeout(() => {
+      if (!draft) return;
+      // Your teammates never take the hero you're hovering; in Quick the enemy doesn't either.
+      const reserve = draft.mode === 'quick' || step === 'B' ? [draft.hover] : [];
+      const view = { blue: draft.blue, red: draft.red, bans: draft.bans.concat(reserve.filter(Boolean)) };
+      if (step === 'RB') { const id = SF.Draft.botBan(view); draft.bans.push(id); draft.banOf.red = id; SF.sfx.play('ban'); }
+      else { const side = step === 'B' ? 'blue' : 'red', id = SF.Draft.botPick(side, view); draft[side].push(id); draft.skins[id] = pickSkin(id); draft.fresh = id; SF.sfx.play('lock'); }
+      draft.i++;
+      nextDraftStep();
+    }, DRAFT.bot));
+  }
+  function draftClock() {
+    if (!draft) return;
+    const el = $('drTimer'), step = draftStep();
+    if (!draft.end || !(step === 'P' || step === 'PB')) { if (el) el.textContent = ''; return; }
+    const left = Math.max(0, Math.ceil((draft.end - performance.now()) / 1000));
+    if (el) { el.textContent = left; el.classList.toggle('low', left <= 5); }
+    if (left <= 0) draftLock();
+  }
+  // Lock in the hovered hero (or ban). Out of time with nothing chosen: the ban is skipped, the pick is
+  // your hover or the first hero you can play.
+  function draftLock() {
+    const step = draftStep();
+    if (step === 'PB') {
+      const id = draft.banHover && draftFree(draft.banHover) ? draft.banHover : null;
+      if (id) { draft.bans.push(id); draft.banOf.blue = id; SF.sfx.play('ban'); }
+      draft.i++; nextDraftStep();
+    } else if (step === 'P') {
+      draftFixHover();
+      if (!draft.hover) return;
+      draft.blue.splice(1, 0, draft.hover);
+      draft.mine = draft.fresh = draft.hover;
+      if (S.owns.hero(draft.hover)) S.d.selected = draft.hover;
+      S.save();
+      SF.sfx.play('lock');
+      draft.i++; nextDraftStep();
+    }
+  }
+  function closeDraft() {
+    if (!draft) return;
+    draft.timers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    draft = null;
+    $('draft').hidden = true;
+    $('draft').innerHTML = '';
+  }
+  function finishDraft() {
+    if (!draft) return;
+    const d = draft, names = d.names;
+    const allies = [d.blue[0], d.blue[2]].map((id, i) => ({ id, skin: d.skins[id], name: names[i] }));
+    const enemies = d.red.map((id, i) => ({ id, skin: d.skins[id], name: names[2 + i] }));
+    closeDraft();
+    launch(d.mode, d.mine, allies, enemies);
+  }
+  // One line of advice about the hovered hero and your team's shape.
+  function draftHint(id) {
+    if (!id) return '';
+    const role = SF.HERO[id].role, mine = [draft.blue[0], draft.blue[2]].filter(Boolean).map(x => SF.HERO[x].role);
+    const theirs = draft.red.map(x => SF.HERO[x].role), roles = mine.concat(role);
+    if (mine.includes(role)) return `An ally already plays ${role}.`;
+    if (role === 'Assassin' && theirs.filter(r => r === 'Marksman' || r === 'Mage' || r === 'Support').length >= 2) return 'Good pick: the enemy backline is fragile.';
+    if ((role === 'Tank' || role === 'Support') && theirs.includes('Assassin')) return 'Good pick: you can peel their Assassin off your carries.';
+    if (!roles.some(r => r === 'Tank' || r === 'Fighter')) return 'Your team has no frontline yet.';
+    if (!roles.some(r => r === 'Marksman' || r === 'Mage')) return 'Your team has no ranged damage yet.';
+    return 'Your team looks balanced.';
+  }
+  function renderDraft() {
+    if (!draft) return;
+    const d = draft, step = draftStep(), banning = step === 'PB', picking = step === 'P';
+    const phase = !step ? 'Ready!' : banning ? 'Ban a hero' : picking ? 'Pick your hero' : step === 'RB' ? 'Enemy is banning…' : step === 'B' ? 'Ally is picking…' : 'Enemy is picking…';
+    const curSide = step === 'B' || step === 'P' ? 'blue' : step === 'R' ? 'red' : null;
+    // Blue shows ally, you, ally; your slot previews the hovered hero until you lock in.
+    const slot = (id, label, active, preview) => `<div class="dr-slot${active ? ' active' : ''}${preview ? ' preview' : ''}${id ? '' : ' empty'}${id && id === d.fresh && !preview ? ' new' : ''}">
+      ${id ? heroCanvas(id, d.skins[id] || S.skinOf(id)) : '<i class="dr-q">?</i>'}<span><b>${id ? SF.HERO[id].name : active ? 'Picking…' : '—'}</b><small>${label}</small></span></div>`;
+    const bluePicks = d.blue.length, meLocked = !!d.mine;
+    const blue = [
+      slot(d.blue[0], esc(d.names[0]), curSide === 'blue' && bluePicks === 0),
+      slot(meLocked ? d.mine : d.hover, 'You', picking, !meLocked && !!d.hover),
+      slot(d.blue[2], esc(d.names[1]), curSide === 'blue' && meLocked && bluePicks === 2)
+    ].join('');
+    const red = [0, 1, 2].map(i => slot(d.red[i], esc(d.names[2 + i]), curSide === 'red' && d.red.length === i)).join('');
+    const banBox = side => d.mode === 'ranked' ? `<div class="dr-ban"><small>Ban</small>${d.banOf[side] ? `${heroCanvas(d.banOf[side], SF.defaultSkin(d.banOf[side]))}<i class="x"></i>` : ''}</div>` : '';
+    const tile = h => {
+      const taken = d.blue.includes(h.id) ? 'b' : d.red.includes(h.id) ? 'r' : d.bans.includes(h.id) ? 'x' : '';
+      const ok = banning ? !taken : draftPickable(h.id);
+      const on = banning ? d.banHover === h.id : d.hover === h.id && !meLocked;
+      const trial = !banning && !taken && !S.playable(h.id) && ok;
+      return `<button class="dr-tile${on ? ' on' : ''}${taken ? ' taken ' + taken : ''}${!ok && !taken ? ' locked' : ''}" data-act="draftHover" data-id="${h.id}" ${ok && (picking || banning) ? '' : 'disabled'} aria-pressed="${on}" aria-label="${h.name}, ${h.role}${taken === 'x' ? ', banned' : taken ? ', taken' : !ok ? ', not owned' : ''}">
+        ${heroCanvas(h.id, S.skinOf(h.id))}<b>${h.name}</b><small>${trial ? 'Trial' : taken === 'x' ? 'Banned' : taken ? 'Taken' : !ok ? 'Locked' : h.role}</small></button>`;
+    };
+    const sel = banning ? d.banHover : d.hover, art = sel && SF.artFor(sel, S.skinOf(sel));
+    const anim = d.shownPhase !== phase; d.shownPhase = phase;
+    const artNew = d.shownArt !== art; d.shownArt = art;
+    const info = sel ? `<b>${SF.HERO[sel].name}</b> <span class="muted">${SF.HERO[sel].role}</span>` : '<span class="muted">Choose a hero</span>';
+    const sp = !banning && d.hover ? SF.SPELLS[S.spellOf(d.hover)] : null;
+    $('draft').innerHTML = `<div class="dr-head"><button class="btn ghost sm" data-act="draftLeave">Leave</button>
+        <div class="dr-title"><span class="eyebrow">${SF.MODES[d.mode].name} · Draft</span><b class="${banning || step === 'RB' ? 'ban' : ''}${anim ? ' anim' : ''}">${phase}</b></div><span class="dr-timer" id="drTimer"></span></div>
+      <div class="dr-body">
+        <div class="dr-team b">${blue}${banBox('blue')}</div>
+        <div class="dr-pool">${art ? `<img class="dr-splash${banning ? ' ban' : ''}${artNew ? ' anim' : ''}" src="${art}" alt="" decoding="async">` : ''}<div class="dr-grid">${SF.HEROES.map(tile).join('')}</div>
+          <div class="dr-foot"><div class="dr-info">${info}${banning ? '<small>Banned heroes can\'t be picked by either team.</small>' : picking || !meLocked ? `<small>${draftHint(d.hover)}</small>` : '<small>Locked in. Waiting for the others…</small>'}</div>
+            ${sp ? `<button class="spell-pick" data-act="spells" title="Battle spell: ${sp.name}" aria-label="Battle spell: ${sp.name}. Change"><span class="sp-ic">${SF.ICONS[sp.icon]}</span><span class="sp-name">${sp.name.replace('Shard ', '')}</span></button>` : ''}
+            <button class="btn ${banning ? 'danger' : 'primary'} dr-lock" data-act="draftLock" ${(banning || (picking && d.hover)) ? '' : 'disabled'}>${banning ? (d.banHover ? 'Ban' : 'Skip ban') : 'Lock in'}</button></div></div>
+        <div class="dr-team r">${red}${banBox('red')}</div>
+      </div>`;
+    paintCanvases($('draft'));
+    d.fresh = null;
+    draftClock();
+  }
+
   // Training Grounds: three random heroes stand in mid lane as dummies. Nothing is earned or recorded.
   function startPractice() {
     const tr = S.d.train, heroId = SF.HERO[tr.hero] ? tr.hero : S.d.selected;
@@ -550,10 +709,10 @@
     const opts = { hero: heroId, skin: S.skinOf(heroId), spell: S.spellOf(heroId), playerName: S.d.name, difficulty: 'easy', allies: [], enemies, mode: 'practice', practice: { cd: tr.cd, gold: tr.gold, max: tr.max }, tutorial: false };
     showLoading(SF.MODES.practice.name, [{ id: heroId, skin: opts.skin }], enemies, 0, () => SF.hud.start(opts, () => finishMatch(null, { mode: 'practice' })));
   }
-  function showLoading(title, blue, red, meIndex, done) {
+  function showLoading(title, blue, red, meIndex, done, sub) {
     const el = $('loading');
     const card = (s, team, me, i) => `<div class="lcard" style="--c:${team === 0 ? 'var(--ally)' : 'var(--enemy)'};animation-delay:${i * 0.08}s">${heroArt(s.id, s.skin)}<b>${SF.HERO[s.id].name}</b><span>${me ? 'You' : esc(s.name)}</span>${me ? masteryBadge(s.id) : ''}</div>`;
-    el.innerHTML = `<h2>${title}</h2>
+    el.innerHTML = `<h2>${title}${sub ? `<small class="load-sub">${esc(sub)}</small>` : ''}</h2>
       <div class="vs"><div class="side">${blue.map((s, i) => card(s, 0, i === meIndex, i)).join('')}</div>
       <span class="vsmark">VS</span><div class="side">${red.map((e, i) => card(e, 1, false, i + 3)).join('')}</div></div>
       <div class="bar loadbar"><i id="loadFill"></i></div><p class="muted" style="text-align:center">${TIPS[Math.floor(Math.random() * TIPS.length)]}</p>`;
@@ -639,11 +798,14 @@
     mode(d) { S.d.mode = d.m; S.save(); render(); },
     diff(d) { S.d.difficulty = d.d; S.save(); render(); },
     battle() { startBattle(); },
-    spells() { spellModal(S.d.mode === 'practice' && SF.HERO[S.d.train.hero] ? S.d.train.hero : S.d.selected); },
+    draftHover(d) { if (!draft) return; if (draftStep() === 'PB') draft.banHover = d.id; else if (draftPickable(d.id)) draft.hover = d.id; renderDraft(); },
+    draftLock() { if (draft) draftLock(); },
+    draftLeave() { closeDraft(); },
+    spells() { spellModal(draft && draft.hover ? draft.hover : S.d.mode === 'practice' && SF.HERO[S.d.train.hero] ? S.d.train.hero : S.d.selected); },
     trainOpt(d) { S.d.train[d.k] = !S.d.train[d.k]; S.save(); render(); },
     pickSpell(d) {
       if (!S.setSpell(d.h, d.s)) return;
-      closeModal(); render();
+      closeModal(); render(); renderDraft();
     },
     again() { startBattle(lastRewards ? lastRewards.mode : S.d.mode); },
     cancelQueue() { try { SF.net.cancel(); } catch (e) { /* ignore */ } queueing = false; render(); },
@@ -908,6 +1070,7 @@
     document.addEventListener('keydown', e => {
       if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.stage[data-act]')) { e.preventDefault(); e.target.click(); }
       if (e.key === 'Escape' && $('modal')) closeModal();
+      if (e.key === 'Enter' && draft && !$('modal') && !e.target.closest('button')) draftLock();
     });
     document.addEventListener('change', e => {
       if (e.target.id === 'capSel') { S.d.settings.cap = +e.target.value; S.save(); settingsModal(); }
@@ -927,7 +1090,7 @@
       setTimeout(loginModal, 500);
     },
     // Hooks used by automated tests.
-    _test: { startBattle, finishMatch, get view() { return view; }, go: v => A.go({ v }) }
+    _test: { startBattle: (m, o) => startBattle(m, Object.assign({ draft: false }, o)), finishMatch, get draft() { return draft; }, get view() { return view; }, go: v => A.go({ v }) }
   };
 
   function boot(data) { SF.lobby.init(data || {}); }

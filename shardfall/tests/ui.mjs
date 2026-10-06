@@ -59,6 +59,19 @@ try {
     await page.click('[data-act=close]');
     check(`${label} has no page errors in the lobby`, errors.length === 0, errors.join('; '));
 
+    // Quick Match opens with a hero draft: three bot picks, then yours. Leaving returns to the lobby.
+    await page.evaluate(() => { SF.store.d.mode = 'quick'; SF.lobby._test.go('home'); });
+    await page.click('[data-act=battle]');
+    await page.waitForFunction(() => { const d = SF.lobby._test.draft; return d && d.steps[d.i] === 'P'; }, null, { timeout: 8000 });
+    await page.waitForTimeout(300);
+    const dr = await page.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, tiles: document.querySelectorAll('.dr-tile').length, phase: document.querySelector('.dr-title b').textContent,
+      lock: document.querySelector('.dr-lock').getBoundingClientRect().bottom <= innerHeight, grid: document.querySelector('.dr-grid').scrollHeight <= document.querySelector('.dr-grid').clientHeight + 2 }));
+    check(`${label} draft shows every hero and your turn`, dr.tiles === 11 && dr.phase === 'Pick your hero', JSON.stringify(dr));
+    check(`${label} draft fits the screen`, dr.over <= 0 && dr.lock, JSON.stringify(dr));
+    await shot(page, `${label}-draft`);
+    await page.click('[data-act=draftLeave]');
+    check(`${label} leaving the draft returns to the lobby`, await page.evaluate(() => document.getElementById('draft').hidden && !SF.lobby._test.draft && !document.getElementById('lobby').hidden));
+
     if (label === 'phone-landscape') {
       // Training Grounds: starts any hero, shows the DPS meter, and leaving earns nothing.
       await page.evaluate(() => { SF.store.d.train.hero = 'oska'; SF.lobby._test.startBattle('practice'); });
@@ -93,6 +106,43 @@ try {
       }
       const after = await page.evaluate(() => ({ matches: SF.store.d.stats.matches, history: SF.store.d.history.length, stars: SF.store.d.rank.stars }));
       check('matches are recorded', after.matches === 9 && after.history === 5 && after.stars > 20, JSON.stringify(after));
+
+      // Ranked draft: you ban, the enemy bans, then picks. The match uses exactly the drafted heroes.
+      await page.evaluate(() => { SF.store.d.mode = 'ranked'; SF.lobby._test.go('home'); });
+      await page.click('[data-act=battle]');
+      await page.waitForSelector('#draft:not([hidden]) .dr-tile');
+      check('ranked draft opens with your ban', (await page.textContent('.dr-title b')) === 'Ban a hero');
+      await page.click('.dr-tile[data-id=brakka]');
+      await shot(page, 'draft-ban');
+      await page.click('[data-act=draftLock]');
+      await page.waitForFunction(() => { const d = SF.lobby._test.draft; return d && d.steps[d.i] === 'P'; }, null, { timeout: 8000 });
+      const pre = await page.evaluate(() => { const d = SF.lobby._test.draft; return { bans: d.bans.slice(), blue: d.blue.slice(), red: d.red.slice() }; });
+      check('your ban and the enemy ban are both in', pre.bans.length === 2 && pre.bans[0] === 'brakka', JSON.stringify(pre));
+      check('banned heroes are not picked', !pre.blue.concat(pre.red).some(id => pre.bans.includes(id)), JSON.stringify(pre));
+      check('banned tiles are disabled', await page.evaluate(() => document.querySelector('.dr-tile[data-id=brakka]').disabled));
+      const pick = await page.evaluate(() => { const ok = [...document.querySelectorAll('.dr-tile:not([disabled])')].map(b => b.dataset.id); return ok.find(id => SF.store.d.heroes.includes(id)) || ok[0]; });
+      await page.click(`.dr-tile[data-id=${pick}]`);
+      await shot(page, 'draft-pick');
+      await page.click('[data-act=draftLock]');
+      await page.waitForFunction(() => SF.hud.match && !document.getElementById('match').hidden, null, { timeout: 12000 });
+      const got = await page.evaluate(() => { const m = SF.hud.match; return { me: m.player.def0.id, blue: m.heroes.filter(h => h.team === 0).map(h => h.def0.id), red: m.heroes.filter(h => h.team === 1).map(h => h.def0.id) }; });
+      const draft = await page.evaluate(() => SF.store.d.selected);
+      check('the match starts with your drafted hero', got.me === pick, JSON.stringify({ got, pick, draft }));
+      check('the match uses the drafted enemies', got.red.length === 3 && got.red.slice(0, 2).every(id => pre.red.includes(id)) && !got.red.includes('brakka') && !got.blue.includes('brakka'), JSON.stringify({ got, pre }));
+      await page.evaluate(() => SF.hud.match.end(0));
+      await page.waitForFunction(() => !SF.hud.match && SF.lobby._test.view === 'results', null, { timeout: 8000 });
+
+      // Brawl shows this week's twist on the mode card and announces it in the match.
+      await page.evaluate(() => { SF.store.d.mode = 'brawl'; SF.lobby._test.go('home'); });
+      const mu = await page.evaluate(() => ({ shown: document.querySelector('.mutator b')?.textContent, want: SF.MUTATOR[SF.mutatorOf(SF.weekKey())].name }));
+      check('Brawl card shows the weekly twist', mu.shown === mu.want, JSON.stringify(mu));
+      await shot(page, 'home-brawl');
+      await page.evaluate(() => SF.lobby._test.startBattle('brawl'));
+      await page.waitForFunction(() => SF.hud.match && !document.getElementById('match').hidden, null, { timeout: 8000 });
+      check('Brawl match runs the twist', await page.evaluate(want => SF.hud.match.mutator === want, await page.evaluate(() => SF.mutatorOf(SF.weekKey()))));
+      await page.evaluate(() => SF.hud.match.end(0));
+      await page.waitForFunction(() => !SF.hud.match && SF.lobby._test.view === 'results', null, { timeout: 8000 });
+      check('no page errors in draft or Brawl', errors.length === 0, errors.join('; '));
       check('no page errors during matches', errors.length === 0, errors.join('; '));
     }
     await ctx.close();
