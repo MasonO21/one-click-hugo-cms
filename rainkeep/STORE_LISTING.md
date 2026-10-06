@@ -30,7 +30,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 3496 characters
+## Description (4,000 max) · 3850 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -43,6 +43,7 @@ SURVIVAL THAT STAYS REAL
 • Let the wyrm drizzle on calm days to save water, then set it to Downpour when the storm hits.
 • The sun hunts water. The bigger your wyrm grows, the hotter the storms come for it.
 • Call the Rain. Your wyrm can summon a shower that fills the wells, cools the keep and calms a sandstorm.
+• Watch raiders march across the dunes to your gate, then time the rain to turn the sand to mud under their feet.
 
 BUILD YOUR KEEP IN 3D
 • Thirteen buildings on the terraces of a canyon oasis, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
@@ -70,6 +71,8 @@ RIDE WITH YOUR CARAVAN
 
 PLAY YOUR WAY
 • Your keep keeps working while you're away, and your wyrm keeps a gentle mist so no one falls ill.
+• Guide the water in Channels: turn the stone channels until every hut, palm and field drinks. A new puzzle every day.
+• Your Rainwyrm makes wishes: a splash in the rain, fresh dates, a story from the Dunes. Grant them to deepen your bond.
 • Daily duties, a gift calendar, achievements, six rotating events and the Wellkeeper's Ledger season pass, with a new wyrm skin every season.
 • Patron levels reward loyal players with faster production, shorter timers and a daily chest. They never add combat strength.
 • Cosmetic dragon skins change how your wyrm looks and nothing else.

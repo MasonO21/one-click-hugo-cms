@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '3.3.0',
+  version: '3.4.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
