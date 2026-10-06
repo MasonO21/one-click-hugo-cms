@@ -15,7 +15,6 @@ const CELL = 2.0, GRID = 64, GRID_MASK = 63;
 // Read MINIONS off the namespace so it is just undefined (radius 3) until the Legion branch adds that export.
 const MINIONS = Reflect.get(DATA, 'MINIONS');
 const TAUNT_R = (MINIONS && MINIONS.bulwark && MINIONS.bulwark.taunt) || 3;
-const TAUNT_SKIP = 20; // enemies farther than this from the Shepherd can't be near a taunter (minions stay leashed)
 const HEAD = { husk: 1.4, ghoul: 0.85, brute: 2.25, witch: 2.35, bloater: 1.5 }; // crown height above the model origin
 const MAX_CROWNS = 24;
 const CONE_COL = 0xff4a2a;
@@ -146,6 +145,10 @@ export class Enemies {
     this.time += dt;
     const run = this.run, P = run.player, a = this.active;
     const T = run.legion.taunters, nT = T ? T.length : 0; // Bulwark taunters (Legion variants); inert while absent or empty
+    // Bulwarks stay leashed near the Shepherd: enemies beyond the farthest one's reach skip the taunter scan
+    let tReach = 0;
+    for (let k = 0; k < nT; k++) { const m = T[k]; if (m && m.hp > 0) tReach = Math.max(tReach, Math.hypot(m.x - P.x, m.z - P.z)); }
+    tReach = nT ? tReach + TAUNT_R + 0.5 : 0;
     this.rebuildGrid();
     for (let i = 0; i < a.length; i++) {
       const e = a[i];
@@ -159,7 +162,7 @@ export class Enemies {
       const pdist = Math.hypot(P.x - e.x, P.z - e.z) || 0.001;
       // taunt: the nearest taunter within range replaces the Shepherd as the target
       let tm = null;
-      if (nT && pdist < TAUNT_SKIP) {
+      if (pdist < tReach && e.type !== 'bloater') { // Bloaters ignore taunts: they only ever want the Shepherd
         let bd = TAUNT_R * TAUNT_R;
         for (let k = 0; k < nT; k++) {
           const m = T[k];

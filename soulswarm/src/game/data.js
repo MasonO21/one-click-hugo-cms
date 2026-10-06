@@ -195,6 +195,30 @@ export const BASE = {
 };
 export const xpForLevel = (lv) => Math.floor(4 + 3.2 * lv + 0.38 * lv * lv);
 
+// ---------------------------------------------------------------- Legion variants (GDD §4.2)
+// A raised minion keeps the identity of the enemy it was (`from`). hp / dmg / speed multiply the run's
+// minion stats (stats.minionHp / minionDmg / minionSpeed), so chapter, level, Nyx and Minion Fury scaling apply.
+// interval = seconds between attacks · seek = target search radius (m) · leash = metres added to (or taken from)
+// BASE.minionLeash · contact = melee reach beyond the target's radius · scale = ghost model scale (Shades stay wisps).
+// Tuned with bot sims so the Ch1 Gravemaw time-to-kill stays within ±25% of the all-Shade legion (see the GDD).
+export const MINIONS = {
+  shade:     { from: 'husk',    hp: 1,    dmg: 1,    interval: 0.5,  speed: 1,    seek: 6.5, contact: 0.4 },
+  runner:    { from: 'ghoul',   hp: 0.55, dmg: 0.75, interval: 0.32, speed: 1.3,  seek: 6.5, contact: 0.4, leash: 3, scale: 1.15 },
+  // taunt: enemies within this many metres attack the Bulwark instead of the Shepherd · guard: idle ring radius
+  // · a bodyguard: it only engages foes within 5 m of the Shepherd (leash -4), so it holds the line instead of hunting
+  bulwark:   { from: 'brute',   hp: 3,    dmg: 1.0,  interval: 1.1,  speed: 0.7,  seek: 6.5, contact: 0.7, leash: -4, taunt: 3, guard: 2.3, knock: 3, scale: 0.8 },
+  // ranged: one orb per interval within range, holding `keep` metres from the target; an orb costs recoilMul × melee recoil
+  soulWitch: { from: 'witch',   hp: 0.8,  dmg: 1.1,  interval: 1.1,  speed: 0.9,  seek: 7,   range: 6, keep: 4, orbSpeed: 12, recoilMul: 0.75, scale: 0.8 },
+  // dives into the densest cluster within seek (at least minCluster enemies, any after `patience` idle seconds),
+  // flashes for `fuse` s on contact, then blasts `blast` × minionDmg in `radius` m and leaves the legion
+  soulBomb:  { from: 'bloater', hp: 0.7,  speed: 1.15, seek: 8,   radius: 2.4, blast: 6, fuse: 0.25, knock: 9,
+               minCluster: 3, patience: 5, searchEvery: 0.6, eliteWeight: 2, bossWeight: 2, scale: 0.75 },
+  champion:  { scale: 1.35, hp: 3, dmg: 2 }, // a raised elite: multiplies its variant
+  recoil: 0.3, bossRecoil: 0.5, // a melee hit costs the minion this share of its target's contact damage
+  bossEngage: 24, // at most this many minions fight Gravemaw at once; the rest fight adds or orbit
+  capHeal: 0.5, // a raise roll at the legion cap heals the weakest minion by this share of its max HP
+};
+
 // ---------------------------------------------------------------- Relics (gear)
 export const RELICS = {
   lantern:   { name: 'Lantern of the Lost', stat: 'raise', base: 0.03, fmt: 'pct', text: 'Raise Chance' },

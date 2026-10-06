@@ -286,14 +286,17 @@ export class Run {
       if (r < 0.006) this.pickups.dropSpecial('heart', e.x, e.z);
       else if (r < 0.009) this.pickups.dropSpecial('magnet', e.x, e.z);
     }
-    if (!noRaise && this.legion.count < this.stats.cap) {
+    if (!noRaise) {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
       if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
       if (source === 'skull' && this.evolved.boneCrown) chance = 1;
       if (Math.random() < chance) {
-        this.legion.raise(e.x, e.z);
-        this.counters.raised++;
-        if (this.counters.raised === 1) this.hint('raise', 'Slain foes rise to fight for you. This is your LEGION!');
+        if (this.legion.count < this.stats.cap) {
+          // the minion keeps the identity of what it was (variant by type; elites rise as Champions)
+          this.legion.raise(e.x, e.z, { kind: e.type, elite: e.elite });
+          this.counters.raised++;
+          if (this.counters.raised === 1) this.hint('raise', 'Slain foes rise to fight for you. This is your LEGION!');
+        } else this.legion.healWeakest(); // at the cap the roll mends the weakest minion instead
       }
     }
     this.audio.sfx('kill', { volume: 0.35 });
