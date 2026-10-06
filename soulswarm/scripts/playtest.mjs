@@ -85,12 +85,24 @@ errs = await session(async (page) => {
   check('chapter 1: gates passed', s.gates >= 3, `gates=${s.gates}`);
   check('chapter 1: soul nova used', s.novas >= 2, `novas=${s.novas}`);
   check('chapter 1: Gravemaw defeated', s.bossDead, `t=${s.t}`);
-  // the victory beat runs on rendered frames; poll so a slow (software-GL) machine doesn't fail it
-  await page.waitForFunction(() => document.querySelector('.res-head b'), null, { timeout: 40000 }).catch(() => {});
-  const head = await page.evaluate(() => document.querySelector('.res-head b')?.textContent);
-  check('chapter 1: victory screen', head === 'VICTORY', head);
-  await page.evaluate(() => document.querySelector('.modal .btn-primary')?.click());
-  await page.waitForTimeout(800);
+  // The victory beat needs 3.2 s of real frame time, and rendered frames add at most 0.1 s each, so a loaded
+  // software-GL machine can stretch it past any timeout. Step it here instead (picking any open card, as the bot
+  // does) and report the run state if it still hasn't ended.
+  const beat = await page.evaluate(() => {
+    const app = window.__soulswarm, r = app.run;
+    if (!r) return { run: false };
+    app.engine.manual = true;
+    for (let i = 0; i < 160 && !r.ended; i++) {
+      if (r.levelPending) document.querySelector('.lvl-back .card')?.click();
+      r.update(0.05);
+    }
+    return { ended: r.ended, bossDead: r.bossDead, paused: r.paused, levelPending: r.levelPending, beat: r.victory ? +r.victory.t.toFixed(2) : null };
+  });
+  const head = await page.waitForFunction(() => document.querySelector('.res-head b')?.textContent, null, { timeout: 15000 })
+    .then((x) => x.jsonValue()).catch(() => null);
+  check('chapter 1: victory screen', head === 'VICTORY', `${head} ${JSON.stringify(beat)}`);
+  await page.evaluate(() => { window.__soulswarm.engine.manual = false; document.querySelector('.modal .btn-primary')?.click(); });
+  await page.waitForFunction(() => !window.__soulswarm.run && !window.__soulswarm.meta.el.hidden, null, { timeout: 15000 }).catch(() => {});
   const back = await page.evaluate(() => ({ menu: !window.__soulswarm.meta.el.hidden, run: !!window.__soulswarm.run, unlocked: window.__soulswarm.profile.chapter.unlocked }));
   check('returns to menu and unlocks chapter 2', back.menu && !back.run && back.unlocked === 2, JSON.stringify(back));
 });
