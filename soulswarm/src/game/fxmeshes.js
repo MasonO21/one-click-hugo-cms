@@ -295,10 +295,10 @@ export function makeSlamRings() {
 /** Bullet-ring telegraph around the King: danger fan with two clear gaps per wave (later waves ghosted). */
 export function makeGapFan() {
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(0xff3df0) }, uTime: { value: 0 }, uP: { value: 0 }, uA: { value: new THREE.Vector4() }, uN: { value: 1 }, uGw: { value: 0.4 }, uAlpha: { value: 1 } },
+    uniforms: { uColor: { value: new THREE.Color(0xff3df0) }, uTime: { value: 0 }, uP: { value: 0 }, uA: { value: new THREE.Vector4() }, uN: { value: 1 }, uGw: { value: 0.4 }, uAlpha: { value: 1 }, uFill: { value: 1 } },
     vertexShader: /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */`
-      uniform vec3 uColor; uniform float uTime; uniform float uP; uniform vec4 uA; uniform float uN; uniform float uGw; uniform float uAlpha; varying vec2 vUv;
+      uniform vec3 uColor; uniform float uTime; uniform float uP; uniform vec4 uA; uniform float uN; uniform float uGw; uniform float uAlpha; uniform float uFill; varying vec2 vUv;
       float gapD(float a, float g) { float d = abs(mod(a - g + 3.14159, 6.28318) - 3.14159); return min(d, 3.14159 - d) - uGw; } // two gaps, opposite
       void main() {
         vec2 c = vUv * 2.0 - 1.0; float r = length(c);
@@ -308,17 +308,20 @@ export function makeGapFan() {
         float reach = smoothstep(0.17 + 0.83 * uP + 0.02, 0.17 + 0.83 * uP - 0.02, r);
         float danger = step(0.0, d0);
         float streak = pow(fract(r * 5.0 - uTime * 2.6), 4.0);
-        float fill = danger * (0.4 + 0.3 * streak) * reach;
-        float rim = smoothstep(0.018, 0.0, abs(r - 1.0)) * danger * 0.8;
-        float gapEdge = smoothstep(0.05, 0.0, abs(d0) * r) * reach;
+        float stripes = step(0.55, fract((vUv.x + vUv.y) * 14.0 - uTime * 2.0));
+        float fill = danger * (0.13 + 0.12 * streak + 0.08 * stripes) * reach * uFill;
+        float rim = smoothstep(0.016, 0.0, abs(r - 1.0)) * danger * 0.75;
+        // safe corridors: dashed white guides on the gap edges (same language as the slam's safe lanes)
         float dash = step(0.45, fract(r * 9.0 - uTime * 1.5));
+        float gapEdge = smoothstep(0.03, 0.0, abs(d0) * r) * dash * reach;
         float next = 0.0;
-        if (uN > 1.5) next += smoothstep(0.035, 0.0, abs(gapD(a, uA.y)) * r) * 0.75;
-        if (uN > 2.5) next += smoothstep(0.035, 0.0, abs(gapD(a, uA.z)) * r) * 0.5;
-        if (uN > 3.5) next += smoothstep(0.035, 0.0, abs(gapD(a, uA.w)) * r) * 0.35;
-        next *= dash * reach;
-        float alpha = clamp(fill + rim + gapEdge * 0.95 + next, 0.0, 1.0) * uAlpha * smoothstep(0.17, 0.26, r);
-        vec3 col = mix(uColor * 1.7, vec3(2.2, 2.2, 2.4), clamp(gapEdge + next, 0.0, 1.0));
+        if (uN > 1.5) next += smoothstep(0.022, 0.0, abs(gapD(a, uA.y)) * r) * 0.6;
+        if (uN > 2.5) next += smoothstep(0.022, 0.0, abs(gapD(a, uA.z)) * r) * 0.4;
+        if (uN > 3.5) next += smoothstep(0.022, 0.0, abs(gapD(a, uA.w)) * r) * 0.3;
+        next *= step(0.5, fract(r * 14.0 - uTime * 1.5)) * reach;
+        float safe = (1.0 - danger) * 0.09 * reach; // a faint cool wash marks the corridor to stand in
+        float alpha = clamp(fill + rim + gapEdge * 0.8 + next + safe, 0.0, 1.0) * uAlpha * smoothstep(0.17, 0.26, r);
+        vec3 col = mix(uColor * 1.5, vec3(1.6, 1.7, 1.9), clamp(gapEdge + next + (1.0 - danger), 0.0, 1.0));
         gl_FragColor = vec4(col, alpha);
       }`,
     transparent: true, depthWrite: false,

@@ -53,7 +53,7 @@ export class Boss {
     if (this.mesh) { run.scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mat.dispose(); this.mesh = null; }
     this.build();
     const x = P.x, z = P.z - 11;
-    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + 0.15 * (ch.id - 1)) * scale, dmgMul: (1 + 0.3 * (ch.id - 1)) * Math.sqrt(scale) });
+    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * scale, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) });
     this.e = e;
     run.bossEnemy = e;
     this.color = new THREE.Color(ch.boss);
@@ -203,7 +203,7 @@ export class Boss {
       this.next = Math.max(BP.minTele, R.tele);
       this.spin = spin;
       this.setFan();
-      this.fan.material.uniforms.uP.value = 0; this.fan.material.uniforms.uAlpha.value = 1;
+      this.fan.material.uniforms.uP.value = 0; this.fan.material.uniforms.uAlpha.value = 1; this.fan.material.uniforms.uFill.value = 1;
       this.fan.position.set(e.x, 0.05, e.z); this.fan.visible = true;
       this.state = 'ring';
       run.audio.sfx('summon', { volume: 0.4, pitch: 1.3 });
@@ -251,7 +251,7 @@ export class Boss {
       run.audio.sfx('explosion', { volume: 0.5, pitch: 0.7 });
       run.particles.burst(e.x, 2.2, e.z, 30, this.col, { speed: 6, life: 0.5, size: 0.6 });
       run.fx.shockwave(e.x, e.z, 2.4, this.color.getHex(), 0.3, 0.2);
-      if (this.waveI >= this.waves) this.fan.visible = false; else this.setFan();
+      if (this.waveI >= this.waves) this.fan.visible = false; else { this.setFan(); u.uFill.value = 0.4; } // the orbs are the danger now
     }
     if (this.waveI >= this.waves && this.t >= this.next) this.recover(this.spin ? BP.rings.recover : R.recover);
   }
@@ -585,7 +585,7 @@ export class Boss {
     this.mesh.position.set(e.x, this.y + (roar ? Math.abs(Math.sin(this.t * 18)) * 0.12 : 0), e.z);
     this.mesh.rotation.y = e.rot;
     this.mesh.scale.setScalar(roar ? 1 + 0.1 * Math.sin(Math.min(1, this.t * 2) * Math.PI) : 1);
-    const windup = this.state === 'ring' || this.state === 'summon' || (this.state === 'spiral' && this.t < this.tele) ? 0.18 + 0.14 * Math.sin(this.t * 25) : 0;
+    const windup = this.state === 'ring' || this.state === 'summon' || (this.state === 'spiral' && this.t < this.tele) ? 0.12 + 0.1 * Math.sin(this.t * 25) : 0;
     const shield = (this.immune > 0 && this.state !== 'enter') || this.held ? 0.25 + 0.15 * Math.sin(this.t * 30) : 0;
     this.mat.uniforms.uFlash.value = Math.max(e.flash * 0.15, windup, shield); // capped: he is hit constantly and must stay magenta
     this.mat.uniforms.uTime.value += dt;

@@ -60,13 +60,14 @@ export const ENEMIES = {
              lob: { flight: 1.0, lead: 0.3, radius: 1.1, height: 3.2 } }, // gentler lead: slow movers were hit far more (+76% Ch1)
   bloater: { name: 'Bloater',      hp: 28,  speed: 2.0, dmg: 26, radius: 0.62, xp: 2, mass: 2.0, scale: 1.0, explode: { radius: 2.6, fuse: 1.0 } },
 };
-export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 12000, speed: 2.3, dmg: 22, radius: 1.9, mass: 999 };
+// HP = hp × chapter hpMul × (1 + chHp × (c − 1)) × Endless scale; damage = dmg × (1 + chDmg × (c − 1)) × √scale
+export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 12500, speed: 2.3, dmg: 22, radius: 1.9, mass: 999, chHp: 0.05, chDmg: 0.3 };
 // Gravemaw's three-phase fight (boss.js). Seconds, metres, radians; dmg values are × the King's touch damage.
 // Every damaging telegraph is >= minTele (accessibility floor) in every chapter, phase and enrage state.
 export const BOSS_PHASES = {
   minTele: 1.0,
   rise: 1.4,                      // rises out of the ground, immune
-  minPhase: [16, 13],             // phases I and II play at least this long; hit the tick sooner and he is warded (IMMUNE) there until then
+  minPhase: [18, 14],             // phases I and II play at least this long; hit the tick sooner and he is warded (IMMUNE) there until then
   arena: { radius: 18, closeTo: 12, closeTime: 4, seal: 1.2, soft: 1.1, push: 14, hard: 0.35, cull: 0.6 },
   // from = HP fraction where the phase begins. speed = chase speed ×, rate = attack rate × (recoveries ÷ rate).
   phases: [
@@ -90,7 +91,7 @@ export const BOSS_PHASES = {
   dirge: { at: 180, dmg: 1.5, rate: 1.5 }, // "Hollow Dirge" soft enrage, seconds after he rises
   // chapter twists: 2 fire rings, 3 frost shards, 4 one extra ring per volley, 5 phase III at 50%
   fire: { life: 3, dmg: 0.35 },
-  frost: { life: 4, n: [4, 7, 10], r: 0.75, dmg: 0.5 },
+  frost: { life: 3.5, n: [4, 7, 10], r: 0.75, dmg: 0.35 },
   extraRing: 1,
   ch5Crown: 0.5,
 };
