@@ -35,8 +35,15 @@ export const HEROES = {
     hp: 130, speed: 6.0,
     lore: 'He has died nine hundred times. Each time, he brought someone back with him.',
   },
+  liora: {
+    id: 'liora', name: 'Liora', title: 'Bellwraith', rarity: 'epic', weapon: 'gravePulse',
+    color: 0xc9bcff, css: '#b4a6ff', body: 0x2a2442, legion: 0x9fb4ff,
+    passive: { pulseRaise: 2 }, passiveText: 'Grave Pulse kills have ×2 Raise Chance',
+    hp: 105, speed: 6.3,
+    lore: 'She tolled the funeral bell for forty years. Then, one night, the dead began to answer.',
+  },
 };
-export const HERO_ORDER = ['vael', 'nyx', 'seraphine', 'mordrake'];
+export const HERO_ORDER = ['vael', 'nyx', 'seraphine', 'liora', 'mordrake'];
 export const HERO_UNLOCK_SHARDS = 10;
 export const HERO_STAR_COST = [0, 10, 20, 40, 80]; // shards to go from star i to i+1 (index = current stars)
 export const HERO_MAX_STARS = 5;
@@ -318,7 +325,7 @@ export const GEM_SHOP = {
 export const ALTAR = {
   odds: { common: 0.60, rare: 0.28, epic: 0.10, legendary: 0.02 },
   cost1: 150, cost10: 1350, pityLegendary: 60,
-  shardDrops: { epic: { seraphine: 4, nyx: 6 }, legendary: { mordrake: 5, seraphine: 6 } },
+  shardDrops: { epic: { seraphine: 4, nyx: 6, liora: 5 }, legendary: { mordrake: 5, seraphine: 6 } },
 };
 
 // ---------------------------------------------------------------- Soul Pass

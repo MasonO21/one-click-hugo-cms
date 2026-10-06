@@ -81,6 +81,21 @@ export function heroGeometry(id, body = 0x1b2a44) {
       ...mirror((x) => P(Tor(0.09, 0.025, 3, 6), metal, { p: [0.38 * x, 1.0, 0.12], r: [0, 1.2, 0] })),
       ...mirror((x) => P(Tor(0.09, 0.025, 3, 6), 0, { p: [0.45 * x, 0.82, 0.18], r: [1.2, 0, 0], e: 1 })),
     );
+  } else if (id === 'liora') {
+    const veil = 0xb9b2cc, bronze = 0x8a6a3a;
+    parts.push(
+      P(Cone(0.52, 1.32, 8), body, { p: [0, 0.66, 0] }),                                        // robe
+      P(Cone(0.58, 0.7, 8), veil, { p: [0, 0.36, -0.02], s: [1, 1, 0.92] }),                    // tattered hem layer
+      P(Cyl(0.48, 0.56, 0.08, 8), 0, { p: [0, 0.05, 0], e: 1 }),
+      P(Sph(0.3, 7, 5), lighter, { p: [0, 1.24, 0], s: [1.15, 0.85, 1] }),
+      P(Sph(0.2, 7, 5), 0xe6e0f4, { p: [0, 1.56, 0.03] }),                                      // pale face
+      P(Cone(0.34, 1.05, 8), veil, { p: [0, 1.36, -0.1], r: [-0.12, 0, 0], s: [1, 1, 0.75] }),  // long veil
+      ...mirror((x) => P(Sph(0.042, 5, 3), 0, { p: [0.07 * x, 1.58, 0.19], e: 1 })),
+      P(Cyl(0.02, 0.02, 0.9, 4), metal, { p: [0.42, 1.25, 0.16], r: [0, 0, 0.35] }),             // chain
+      P(Cone(0.26, 0.36, 9, true), bronze, { p: [0.62, 0.78, 0.2] }),                          // the funeral bell
+      P(Tor(0.24, 0.035, 4, 12), 0, { p: [0.62, 0.61, 0.2], r: [Math.PI / 2, 0, 0], e: 1 }),   // glowing lip
+      ...[-0.22, 0, 0.22].map((z) => P(Sph(0.055, 5, 3), 0xd8d0b0, { p: [0.3 * Math.cos(z * 4), 0.86, 0.26 + z * 0.4] })), // belt bells
+    );
   } else { // mordrake
     const bone = 0xcfc6a8;
     parts.push(

@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 A=store/art W=src/assets/art
 mkdir -p "$W"
 
-for h in vael nyx seraphine mordrake; do
+for h in vael nyx seraphine mordrake liora; do
   convert "$A/hero-$h.jpg" -resize 540x720 -quality 80 -define webp:method=6 "$W/hero-$h.webp"
 done
 convert "$A/boss-gravemaw.jpg" -crop 1792x1000+0+60 +repage -resize 900x -quality 78 -define webp:method=6 "$W/boss-band.webp"

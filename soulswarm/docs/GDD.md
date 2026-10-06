@@ -14,7 +14,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests, gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, overflow fade, Nova wind-up, adaptive music stems (§15), the remaining accessibility options (§17) |
-| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
+| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
@@ -451,11 +451,12 @@ K = total kills (player and minions), T = seconds survived including the boss fi
 | Vael, the Gravecaller | Common | 100 | 6.2 | Soul Bolt | +10% Raise Chance (pp) | Free (starter) |
 | Nyx Hollowborn | Rare | 110 | 6.5 | Spectral Scythe | Minions +20% speed and damage | Starter Pack / Epic summon shards |
 | Seraphine Ashveil | Epic | 95 | 6.4 | Ashen Chains | Soul Nova charges 30% faster | Epic and Legendary summon shards, Soul Pass S1 premium |
+| Liora Bellwraith | Epic | 105 | 6.3 | Grave Pulse | Grave Pulse kills have ×2 Raise Chance (85% cap) | Epic summon shards |
 | Mordrake the Undying | Legendary | 130 | 6.0 | Bone Spears | Legion cap +25%; revive once per run at full HP | Legendary summon shards |
 
 **Stars.** Unlocking takes 10 shards (1★). Star costs: 10 / 20 / 40 / 80 shards for 2★ / 3★ / 4★ / 5★ (160 shards from first shard to 5★). Each star above 1★ adds +12% damage and +8% HP, so 5★ = +48% damage, +32% HP.
 
-**Shard sources:** an Epic Soul Altar roll gives 4 Seraphine or 6 Nyx shards (50/50). A Legendary roll gives 5 Mordrake or 6 Seraphine shards (50/50). The Soul Pass S1 premium track gives 25 Seraphine shards (10 at tier 10, 5 each at tiers 5, 15 and 25). Duplicate hero grants (for example, owning Nyx and then buying the Starter Pack) convert to 20 shards of that hero. *(Planned: in Endless Abyss, the top 10 of each Abyssal-league group earn 2 Mordrake shards per week.)*
+**Shard sources:** an Epic Soul Altar roll gives 4 Seraphine, 6 Nyx or 5 Liora shards (equal chance). A Legendary roll gives 5 Mordrake or 6 Seraphine shards (50/50). The Soul Pass S1 premium track gives 25 Seraphine shards (10 at tier 10, 5 each at tiers 5, 15 and 25). Duplicate hero grants (for example, owning Nyx and then buying the Starter Pack) convert to 20 shards of that hero. *(Planned: in Endless Abyss, the top 10 of each Abyssal-league group earn 2 Mordrake shards per week.)*
 
 ---
 

@@ -64,7 +64,7 @@ let errs = await session(async (page) => {
 check('no errors on boot', !errs.length, errs[0] || '');
 
 // 2. Every hero survives a minute and grows a legion
-for (const hero of ['vael', 'nyx', 'seraphine', 'mordrake']) {
+for (const hero of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake']) {
   errs = await session(async (page) => {
     const s = await page.evaluate((h) => {
       const p = window.__soulswarm.profile; p.heroes[h].owned = true; p.heroes[h].stars = 1; p.selectedHero = h;
