@@ -188,12 +188,14 @@
   // Foe art: one illustration per archetype, tinted by class
   // ======================================================================
   const ARCH = [
-    [/sunheart/i, 'sun'],
+    [/sunheart|ember throne/i, 'sun'],
+    [/saltborn|crystal|husk/i, 'crystal'],
+    [/drake|wyvern|raven/i, 'drake'],
     [/scorpion|crawler|crab|glassback/i, 'scorpion'],
-    [/viper|serpent|sandshark|shark/i, 'serpent'],
-    [/wraith|mirage|seraph|choir|shade|herald|matron|queen|vulture|harp/i, 'spirit'],
+    [/viper|serpent|sandshark|shark|leviathan/i, 'serpent'],
+    [/wraith|mirage|seraph|choir|shade|herald|matron|matriarch|queen|vulture|harp|witch|prophet/i, 'spirit'],
     [/golem|colossus|sentinel|titan|tortoise|basalt|behemoth/i, 'construct'],
-    [/jackal|hound|lion|oryx|alpha|fox|bear|pack/i, 'beast'],
+    [/jackal|hound|lion|oryx|alpha|fox|bear|pack|crocodile/i, 'beast'],
   ];
   const CLS_COL = { guard: ['#c27a3a', '#6e3a18'], bow: ['#8a6ad0', '#3d2a6e'], lancer: ['#2fa89a', '#155a52'] };
   function archetype(name) {
@@ -213,6 +215,26 @@
         body = `<circle cx="60" cy="62" r="38" fill="#ff8a2a" opacity=".25"/><circle cx="60" cy="62" r="30" fill="#ffb347"/><circle cx="60" cy="62" r="22" fill="#fff0b0"/>
           <path d="M44 48 L56 60 L50 72 M70 44 L64 58 L76 66 M58 80 L62 70" stroke="#c2410c" stroke-width="2.4" fill="none" stroke-linecap="round"/>
           ${Array.from({ length: 12 }, (_, i) => { const t = (i / 12) * Math.PI * 2; return `<path d="M${60 + Math.cos(t) * 33} ${62 + Math.sin(t) * 33} L${60 + Math.cos(t + 0.13) * 46} ${62 + Math.sin(t + 0.13) * 46} L${60 + Math.cos(t + 0.26) * 33} ${62 + Math.sin(t + 0.26) * 33}" fill="#ff9a3a"/>`; }).join('')}`;
+        break;
+      case 'crystal':
+        body = `<path d="M34 106 L40 66 L30 40 L46 52 L52 20 L60 46 L70 14 L74 50 L90 34 L82 70 L88 106 Z" fill="url(#${fid}-b)"/>
+          <path d="M52 20 L60 46 L56 60 Z M70 14 L74 50 L66 58 Z M30 40 L46 52 L42 62 Z M90 34 L82 70 L76 60 Z" fill="#f4fbff" opacity=".5"/>
+          <path d="M40 66 L60 74 L82 70 M46 90 L60 82 L76 92" stroke="#ffffff" stroke-width="1.2" fill="none" opacity=".45"/>
+          <path d="M44 62 C50 58 70 58 76 62 L74 72 C66 76 54 76 46 72 Z" fill="#0d1a24" opacity=".75"/>
+          <ellipse cx="53" cy="67" rx="3.6" ry="2.2" fill="${eye}"/><ellipse cx="67" cy="67" rx="3.6" ry="2.2" fill="${eye}"/>
+          <path d="M26 106 L22 92 L30 96 Z M94 106 L98 90 L90 96 Z" fill="${colD}"/>`;
+        break;
+      case 'drake':
+        body = `<path d="M56 60 C40 40 20 30 4 34 C14 40 18 46 18 54 C26 50 34 52 40 58 C30 58 24 64 22 72 C34 66 46 66 56 70 Z" fill="${colD}"/>
+          <path d="M64 60 C80 40 100 30 116 34 C106 40 102 46 102 54 C94 50 86 52 80 58 C90 58 96 64 98 72 C86 66 74 66 64 70 Z" fill="${colD}"/>
+          <path d="M18 54 L40 58 M102 54 L80 58" stroke="${shade(col, 0.3)}" stroke-width="1.2" opacity=".6"/>
+          <path d="M44 104 C40 86 46 70 60 66 C74 70 80 86 76 104 Z" fill="url(#${fid}-b)"/>
+          <path d="M60 66 C58 52 56 40 60 30 C64 40 62 52 60 66 Z" fill="url(#${fid}-b)"/>
+          <path d="M60 30 C50 28 46 20 50 12 C56 16 64 16 70 12 C74 20 70 28 60 30 Z" fill="url(#${fid}-b)"/>
+          <path d="M50 12 L44 4 L52 9 Z M70 12 L76 4 L68 9 Z" fill="${shade(col, 0.4)}"/>
+          <ellipse cx="54" cy="20" rx="2.4" ry="1.6" fill="${eye}"/><ellipse cx="66" cy="20" rx="2.4" ry="1.6" fill="${eye}"/>
+          <path d="M52 86 C56 90 64 90 68 86 M50 96 C56 100 64 100 70 96" stroke="${shade(col, 0.35)}" stroke-width="1.4" fill="none" opacity=".6"/>
+          ${f.boss ? '' : '<path d="M56 30 C58 26 62 26 64 30" stroke="#ffb347" stroke-width="1.6" fill="none"/>'}`;
         break;
       case 'scorpion':
         body = `<path d="M64 76 C86 74 98 58 94 40 C92 30 84 24 76 28 C84 30 88 38 86 46 C84 58 74 64 62 64 Z" fill="url(#${fid}-b)"/>

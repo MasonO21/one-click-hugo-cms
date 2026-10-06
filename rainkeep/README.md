@@ -1,6 +1,6 @@
 # Rainkeep
 
-A complete desert water-survival strategy game for phones, in 3D. The rain stopped a generation ago. You raise the last Rainwyrm, a water dragon whose cooling mist keeps your keep alive. You dig wells so your people have water to drink and the wyrm has water to breathe, read the horizon for sandstorms and heatwaves, shelter survivors, recruit heroes, send caravans across the Dunes, ride with your Caravan and push six chapters of story to the Sunheart, the fallen shard of sun that boiled the sky dry.
+A complete desert water-survival strategy game for phones, in 3D. The rain stopped a generation ago. You raise the last Rainwyrm, a water dragon whose cooling mist keeps your keep alive. You dig wells so your people have water to drink and the wyrm has water to breathe, read the horizon for sandstorms and heatwaves, shelter survivors, recruit heroes, send caravans across the Dunes and ride with your Caravan. The story runs in two acts: six chapters to the Sunheart, the fallen shard of sun that boiled the sky dry, then four more through the floods and salt marshes of The Long Rains to the Ember Throne.
 
 - **Play:** open `index.html` in any browser, or install it to your phone's home screen (see below).
 - **Design and business plan:** [DESIGN.md](DESIGN.md)
@@ -12,16 +12,18 @@ A complete desert water-survival strategy game for phones, in 3D. The rain stopp
 | Area | Contents |
 |---|---|
 | **3D world** | The keep and the Dunes are real-time 3D scenes (three.js, vendored): low-poly desert architecture that changes with building level, a day and night cycle, sandstorms, dust haze, heatwaves and rain showers, villagers walking to work, camels, palms swaying in the wind, an animated oasis and the Rainwyrm itself. Drag to orbit, pinch to zoom. Falls back to a 2D renderer on devices without WebGL, and can be switched off in Settings |
-| **The Rainwyrm** | 15 levels, 7 forms that grow fins, horns, whiskers and finally a rain cloud of its own, 3 mist settings and Attuned mist (the wyrm sets its own from Lv 6), **Call the Rain** (from Lv 3: a shower that fills the wells, cools the keep and calms sandstorms, on a recharge, with Rain Charms for emergencies), petting and naming, an Ascension choice at Lv 12 (Monsoon, Mistveil or Floodheart), Wyrm's Torrent that opens every battle, 6 skins |
+| **The Rainwyrm** | 20 levels, 9 forms that grow fins, horns, whiskers, a rain cloud of its own, a crown of storm horns (Stormcrowned) and finally a halo and river of living water (Skyriver), 3 mist settings and Attuned mist (the wyrm sets its own from Lv 6), **Call the Rain** (from Lv 3: a shower that fills the wells, cools the keep and calms sandstorms, on a recharge, with Rain Charms for emergencies), petting and naming, an Ascension choice at Lv 12 (Monsoon, Mistveil or Floodheart), Wyrm's Torrent that opens every battle, 6 skins |
 | **Survival** | Water is life: survivors drink it and the wyrm breathes it as cooling mist. If the wells run dry, the wyrm sleeps, the heat pours in and families leave. Forecast weather (dust haze, sandstorms, heatwaves) gets hotter as the wyrm grows, middays are hotter and desert nights cold; heat bands drive sickness and productivity; food, housing, raider attacks with a Storehouse to protect stock, offline protection |
-| **The keep** | 12 buildings on fixed plots (Deep Well, Date Grove, Sandstone Quarry, Copper Mine, Mudbrick Houses, Healer's House, Barracks, Watchtower, Archive of Rains, Caravan Hall, Storehouse), worker assignment (auto or manual), 10 research lines with 10 levels each, 3 troop types in a counter triangle |
+| **The keep** | 13 buildings on fixed plots (Deep Well, Date Grove, Sandstone Quarry, Copper Mine, Mudbrick Houses, Healer's House, Barracks, Watchtower, Archive of Rains, Caravan Hall, Storehouse, Sunsteel Forge), worker assignment (auto or manual), 12 research lines with 15 levels each, 3 troop types in a counter triangle |
+| **Warden's Gear** | The Sunsteel Forge (from Rainwyrm Lv 12) smelts copper into Sunsteel. Six pieces of gear (blade, shield, cloak and one for each troop class) climb 50 levels through five tiers and strengthen every squad you send out |
 | **Keep life** | Surplus bubbles to tap over working buildings, 16 keep incidents (travellers at the gate, a fever, a buried cistern, a wedding under the palms) with choices that cost something and pay off in boosts, survivors or setbacks, and travelling merchant caravans that camp by the gate and swap what you have too much of for what you're short on |
-| **Heroes** | 18 illustrated heroes in 3 rarities and 3 classes, levels, stars from duplicates, skills that grow with stars, Steward posts that boost buildings, recruitment with published odds, a 40-pull Legendary guarantee and a rotating featured hero |
-| **Expedition** | 60 story stages in 6 chapters with 12 bosses, chapter story cards, an ending ("The Rains"), then the endless Burning Line. A patrol cache pays out while you're away |
+| **Heroes** | 22 illustrated heroes in 3 rarities and 3 classes (4 arrive with Act II), levels, stars from duplicates, skills that grow with stars, Steward posts that boost buildings, recruitment with published odds, a 40-pull Legendary guarantee and a rotating featured hero |
+| **Expedition** | 100 story stages in 10 chapters and two acts, with 20 bosses, chapter story cards and two endings ("The Rains" and "The Long Rains"), then the endless Burning Line. A patrol cache pays out while you're away |
+| **Trials** | The **Mirage Spire**: a tower of single fights from stage 30, each floor with a twist (heat, sandstorm, glass floor, mirage, rising tide) and a Warden every tenth floor. The **Dune Duels**: a 1,000-rank ladder of rival wardens with tickets, three challengers at a time, rank rewards, seasons and a Glory shop |
 | **The Dunes** | A seeded 21×21 world map whose dust haze recedes as the wyrm grows: resource nodes and gathering caravans, beasts, Scorpion raider camps, and 12 story ruins whose choices change what you bring home |
 | **Caravan** | Three simulated alliances to choose from: members help your timers, fund 5 Caravan techs, send gift chests, chat and react to what happens, and fight a Colossus raid boss with you on a timer |
-| **Meta** | 49 chapter quests, daily duties with 5 chests, a 7-day gift calendar, 33 achievements, mail, a 30-tier season pass, a backpack with speedups, crates and shard pouches, and 4 rotating events including **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket |
-| **Store** | Founder's Cache, Oasis Stipend, Ledger Premium, Growth Fund, Sandstorm Kit, War Chest, Starglass packs, wyrm skins and supply crates. Purchases are simulated on the web and go through Apple/Google in the app build |
+| **Meta** | 71 chapter quests, 17 daily duties with 5 chests, a 7-day gift calendar, 40 achievements, mail, a 30-tier season pass, a backpack with speedups, crates and shard pouches, and 4 rotating events including **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket |
+| **Store** | Founder's Cache, Oasis Stipend, Ledger Premium, Growth Fund, Sandstorm Kit, Forge Kit, War Chest, Starglass packs, wyrm skins and supply crates. Purchases are simulated on the web and go through Apple/Google in the app build |
 | **Polish** | Procedural music on a Hijaz scale, desert wind and spring ambience and sound effects (no audio files), haptics, a quest-driven tutorial pointer, notifications in the app build, save codes to move progress between devices, offline play when hosted, bundled fonts |
 
 Caravan members and Oasis Wars rivals are simulated, so the whole game works offline with no server. DESIGN.md explains what a live multiplayer version would add.
@@ -53,6 +55,8 @@ Progress saves in the browser. Settings (gear icon) has sound toggles, the 3D gr
 | `world.js` | The Dunes rules: tiles, marches, beasts, camps, ruins and raids on the keep; 2D map fallback |
 | `events.js` | Backpack, speedups, daily duties, gift calendar, achievements, mail, timed events, Oasis Wars |
 | `keep.js` | Keep life: Call the Rain, surplus bubbles, keep incidents, travelling merchants, timed boosts |
+| `forge.js` | The Sunsteel Forge: smelting, Warden's Gear and its panel |
+| `trials.js` | The Mirage Spire and the Dune Duels |
 | `caravan.js` | The simulated alliance: help, tech, shop, gifts, chat, Colossus raid |
 | `audio.js` | Procedural Web Audio engine (`KHAudio`) |
 | `native.js` | App-store bridge (`KHNative`): RevenueCat purchases, notifications, haptics, sharing, service worker |
@@ -74,8 +78,8 @@ rainkeep.state()                                 // the full save object
 KH.town3d.zoom(1.5); KH.town3d.drag(0, -100)     // move the 3D camera
 ```
 
-The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties, surplus, rain, incidents, merchants) for 8-13 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
+The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties, surplus, rain, incidents, merchants, gear, the Spire, Duels) for up to 24 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
 
 ## Shipping it
 
-Purchases are simulated on the web. The App Store build uses Apple in-app purchase through RevenueCat. [NATIVE.md](NATIVE.md) covers the whole path: building the iOS project on a Mac, creating the 14 products in App Store Connect, connecting RevenueCat, sandbox testing, TestFlight and review.
+Purchases are simulated on the web. The App Store build uses Apple in-app purchase through RevenueCat. [NATIVE.md](NATIVE.md) covers the whole path: building the iOS project on a Mac, creating the 15 products in App Store Connect, connecting RevenueCat, sandbox testing, TestFlight and review.

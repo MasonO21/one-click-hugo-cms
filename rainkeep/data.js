@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '2.0.0',
+  version: '3.0.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -59,7 +59,7 @@ const DATA = {
 
   // ---------- The Rainwyrm ----------
   wyrm: {
-    maxLevel: 15,
+    maxLevel: 20,
     stages: [
       { from: 1, name: 'Hatchling', size: 0.62, line: 'small, thirsty and very curious' },
       { from: 3, name: 'Whelp', size: 0.76, line: 'has unfurled its fins. Its mist now drifts to the edge of the keep.' },
@@ -68,6 +68,8 @@ const DATA = {
       { from: 9, name: 'Elder Rainwyrm', size: 1.15, line: 'has become an Elder Rainwyrm. The old songs speak of wyrms like this one.' },
       { from: 12, name: 'Ascended Rainwyrm', size: 1.25, line: 'has ascended. Choose the storm it will carry.' },
       { from: 15, name: 'Primordial Rainwyrm', size: 1.34, line: 'trails a small cloud wherever it flies. The Sunheart can feel it from here.' },
+      { from: 17, name: 'Stormcrowned Rainwyrm', size: 1.42, line: 'wears a crown of storm horns, and its cloud carries thunder. The Saltborn stop at the edge of its shadow.' },
+      { from: 20, name: 'Skyriver', size: 1.5, line: 'has become a Skyriver: a river that flies. Wherever it passes, the rain follows for days.' },
     ],
     cool: (L) => 8 + 1.75 * L, // degrees of shade the mist takes off the town
     drink: (L) => 0.25 + 0.25 * L, // water per second at a Steady mist
@@ -161,12 +163,19 @@ const DATA = {
       desc: 'Deep sandstone vaults. Resources up to the protected amount can never be stolen by raiders.',
       protect: (L) => Math.round(400 * Math.pow(L, 1.7)),
     },
+    forge: {
+      name: 'Sunsteel Forge', cost: { stone: 2500, copper: 900, water: 900 }, time: 30, growth: 1.3,
+      desc: "A furnace hot enough to work the glassy metal the Sunheart left behind. It smelts sandstone and copper into Sunsteel for the Warden's Gear, and every level lets the gear climb higher.",
+    },
   },
-  copperShareFrom: 4, // levels >= this also cost copper (22% of the stone cost)
+  copperShareFrom: 4, // levels >= this also cost copper (22% of the stone cost, 16% past the end level)
   lateLevel: 10, // past this level costs and timers grow more gently
   lateCostGrowth: 1.7,
   buildTimeGrowth: 1.42,
   lateTimeGrowth: 1.12,
+  endLevel: 15, // Act II levels (16-20) grow more gently again
+  endCostGrowth: 1.18,
+  endTimeGrowth: 1.07,
   workerSlots: (L) => 3 + L,
   workerGrowth: 0.15, // per-worker output gain per building level
 
@@ -184,6 +193,7 @@ const DATA = {
     { id: 'shelter2', type: 'shelter', unlock: 2 },
     { id: 'grove', type: 'grove', unlock: 1 },
     { id: 'mine', type: 'mine', unlock: 3 },
+    { id: 'forge', type: 'forge', unlock: 12 },
   ],
   wyrmReqs: (to) => {
     if (to < 2) return [];
@@ -192,6 +202,7 @@ const DATA = {
     if (to >= 8) r.push({ plot: 'storehouse', lvl: to - 3 });
     if (to >= 11) r.push({ plot: 'barracks', lvl: to - 2 });
     if (to >= 13) r.push({ plot: 'archive', lvl: to - 4 });
+    if (to >= 16) r.push({ plot: 'forge', lvl: to - 4 });
     return r;
   },
 
@@ -207,10 +218,15 @@ const DATA = {
     { id: 'mirrors', name: 'Signal Mirrors', desc: '+30s storm and raider warning per level', cost: { stone: 200, copper: 30 }, time: 18 },
     { id: 'camels', name: 'Camel Trains', desc: '+10% gathering speed and load per level', cost: { stone: 260, copper: 50 }, time: 22 },
     { id: 'tactics', name: 'Hero Tactics', desc: '+5% hero attack, defense and health per level', cost: { food: 300, copper: 80 }, time: 28 },
+    { id: 'tempering', name: 'Sunsteel Tempering', desc: '+2% Warden\'s Gear bonuses and +5% Sunsteel smelting per level', cost: { stone: 400, copper: 150 }, time: 30, needs: 'forge' },
+    { id: 'rainlore', name: 'Rain Lore', desc: 'Call the Rain recharges 4% faster and lasts 2s longer per level', cost: { water: 300, food: 300 }, time: 26, needs: 'forge' },
   ],
-  techMaxLevel: 10,
+  techMaxLevel: 15,
   techGrowth: 1.65,
   techTimeGrowth: 1.5,
+  techLateLevel: 10, // research past this level grows more gently
+  techLateGrowth: 1.38,
+  techLateTimeGrowth: 1.22,
 
   // ---------- Troops ----------
   troops: {
@@ -244,6 +260,7 @@ const DATA = {
     heal: { plot: 'infirmary', label: (v) => `+${v}% healing` },
     train: { plot: 'barracks', label: (v) => `+${v}% training speed` },
     gather: { plot: 'watchtower', label: (v) => `+${v}% gathering speed` },
+    sunsteel: { plot: 'forge', label: (v) => `+${v}% Sunsteel smelting` },
   },
   // look: portrait details. skin 0-5, hair/cloth colors, wrap = head covering style
   heroes: [
@@ -337,6 +354,27 @@ const DATA = {
       look: { skin: 0, hair: '#b0542a', wrap: 'goggles', cloth: '#2a7a8a', trim: '#b0f0ff' },
       skill: { name: 'Gust Lance', desc: 'Opening strike deals {burst} extra damage.', fx: { burst: 0.15 } },
       bio: 'Builds windcatcher towers that pull the breeze down cool through the houses. Claims she has never once been too hot.' },
+    // Act II arrivals: they join the Beacon's pool once the Sunheart is quenched
+    { id: 'imani', name: 'Imani Floodwarden', rarity: 'legendary', cls: 'guard', hue: 175, act: 2,
+      title: 'She Held the Wadi Gate', steward: { kind: 'water', val: 30 },
+      look: { skin: 4, hair: '#120c08', wrap: 'helm', cloth: '#1f6a6a', trim: '#e8d39a', mark: 'scar' },
+      skill: { name: 'Floodwall', desc: 'Your side takes {dr} less damage and recovers {heal} of its health each round.', fx: { dr: 0.12, heal: 0.03 } },
+      bio: 'When the first flood came down the wadi, she stood in the gate with forty shields and did not move until the water did.' },
+    { id: 'kaveh', name: 'Kaveh Stormglass', rarity: 'legendary', cls: 'bow', hue: 205, act: 2,
+      title: 'Reader of Thunder', steward: { kind: 'sunsteel', val: 30 },
+      look: { skin: 2, hair: '#e8e4dc', wrap: 'goggles', cloth: '#2f5a7a', trim: '#9fd8ff', beard: '#d8d4cc' },
+      skill: { name: 'Glass Thunder', desc: 'Your side ignores {pierce} of enemy defense and hits {atk} harder.', fx: { pierce: 0.2, atk: 0.06 } },
+      bio: 'He flew a kite into a storm cloud to see where the lightning lives. He came down with white hair and a plan.' },
+    { id: 'tomas', name: 'Tomás Brinehook', rarity: 'epic', cls: 'lancer', hue: 95, act: 2,
+      title: 'Ferryman of the Salt Marches', steward: { kind: 'gather', val: 25 },
+      look: { skin: 1, hair: '#3a2414', wrap: 'cap', cloth: '#5a7a3a', trim: '#f0d9a8', beard: '#3a2414' },
+      skill: { name: 'Undertow', desc: 'Opening strike deals {burst} extra damage and ignores {pierce} of enemy defense.', fx: { burst: 0.3, pierce: 0.08 } },
+      bio: 'He poled a reed boat across the dry salt marsh for twenty years, waiting. Now there is finally water under the oar.' },
+    { id: 'sefa', name: 'Sefa Embersong', rarity: 'epic', cls: 'bow', hue: 18, act: 2,
+      title: 'Deserter of the Cinder Choir', steward: { kind: 'sunsteel', val: 20 },
+      look: { skin: 3, hair: '#5a1a10', wrap: 'veil', cloth: '#7a2a1a', trim: '#ffb347' },
+      skill: { name: 'Cinder Hymn', desc: 'Your side hits {atk} harder.', fx: { atk: 0.12 } },
+      bio: 'She sang to the embers for ten years. Then she heard the rain on the crater roof, and stopped singing.' },
   ],
   heroLevelCapPerStar: 10,
   heroCapPerWyrm: 5, // each Rainwyrm level past 9 raises every hero's level cap by this much
@@ -368,16 +406,29 @@ const DATA = {
       story: 'A city swallowed by the dunes, only its bell towers still above the sand. Somebody down there rings the bells every noon.' },
     { from: 51, name: 'The Sunheart', foes: [['Sun Hounds', 'lancer'], ['Hollow Knights', 'guard'], ['Ashen Archers', 'bow'], ['Burning Seraphs', 'bow']],
       story: 'At the end of every road lies the reason the sky forgot how to rain: a fallen shard of the sun the size of a mountain, pulsing once an hour. Your wyrm can feel it. It can feel your wyrm.' },
-    { from: 61, name: 'The Burning Line', foes: [['Sunborn Host', 'guard'], ['Scorchline Riders', 'lancer'], ['Pale Archers', 'bow'], ['Glass Titans', 'guard']],
-      story: 'The Sunheart is quenched, but its heat still bakes the far south. Push the Burning Line back as far as your keep can reach.' },
+    // Act II: The Long Rains
+    { from: 61, act: 2, name: 'The Flooded Wadis', foes: [['Flood Raiders', 'lancer'], ['Mudback Crocodiles', 'guard'], ['Reed Archers', 'bow'], ['Silt Serpents', 'lancer']],
+      story: 'The rain came back, all of it at once. Riverbeds that had been dry for a generation roar with brown water, and the raiders who lived in them have nowhere left to go but up, toward your keep. Something else came down with the floods: white footprints of salt that dry before anyone can follow them.' },
+    { from: 71, act: 2, name: 'The Salt Marches', foes: [['Saltborn Husks', 'guard'], ['Brine Witches', 'bow'], ['Crystal Stalkers', 'lancer'], ['Salt Golems', 'guard']],
+      story: 'Where the old inland sea dried out, the salt remembers it. The Saltborn walk out of the white flats in their hundreds: crystal husks that drink every drop they touch and leave the ground dry behind them. They are marching on the new rivers.' },
+    { from: 81, act: 2, name: 'The Ember Reaches', foes: [['Cinder Monks', 'bow'], ['Obsidian Knights', 'guard'], ['Ember Drakes', 'lancer'], ['Ash Ravens', 'bow']],
+      story: 'The Sunheart did not die alone. Its last embers fled south into a country of black glass and rivers of ash, where the Cinder Choir tends them like a hearth. Every ember they keep alive steals a little rain from the sky.' },
+    { from: 91, act: 2, name: 'The Ember Throne', foes: [['Throne Guard', 'guard'], ['Sunlance Riders', 'lancer'], ['Choir of Embers', 'bow'], ['Flame Seraphs', 'bow']],
+      story: 'At the bottom of a crater of black glass sits a throne cut from the last ember of the sun, and on it sits something that was once a warden like you. It wants the rain gone for good. Your wyrm has been dreaming about this place for weeks.' },
+    { from: 101, name: 'The Burning Line', foes: [['Sunborn Host', 'guard'], ['Scorchline Riders', 'lancer'], ['Pale Archers', 'bow'], ['Glass Titans', 'guard']],
+      story: 'The Ember Throne is cold, but the far south still smoulders. Push the Burning Line back as far as your keep can reach.' },
   ],
   bosses: {
     5: ['Jackal Alpha', 'lancer'], 10: ['Salt Behemoth', 'guard'], 15: ['Dust Matron', 'bow'],
     20: ['Basalt Tortoise', 'guard'], 25: ['The Pale Herald', 'bow'], 30: ['The Sand Colossus', 'guard'],
     35: ['Shatterjaw Sandshark', 'lancer'], 40: ['The Mirage Queen', 'bow'], 45: ['The Buried Bellringer', 'guard'],
     50: ['Spire Colossus', 'guard'], 55: ['The Hollow King', 'lancer'], 60: ['The Sunheart', 'guard'],
+    65: ['The Wadi King', 'lancer'], 70: ['The Drowned Colossus', 'guard'], 75: ['The Brine Matriarch', 'bow'],
+    80: ['The Salt Leviathan', 'guard'], 85: ['The Ash Prophet', 'bow'], 90: ['The Obsidian Wyvern', 'lancer'],
+    95: ['The Sunwarden', 'lancer'], 100: ['The Ember Throne', 'guard'],
   },
-  finalStage: 60, // beating this ends the story; stages past it are the endless Burning Line
+  actOneStage: 60, // beating this ends Act I ("The Rains") and opens Act II
+  finalStage: 100, // beating this ends the story ("The Long Rains"); stages past it are the endless Burning Line
   // stage n foe: base x growth^(n-1) through stage 30, then gentler late growth to 60, then the endless curve
   enemy: { atk: 72, def: 42, hp: 820, gAtk: 1.13, gDef: 1.12, gHp: 1.14, lateFrom: 30, lAtk: 1.027, lDef: 1.022, lHp: 1.032, endAtk: 1.03, endDef: 1.025, endHp: 1.035, boss: 1.5 },
   maxRounds: 12,
@@ -387,16 +438,32 @@ const DATA = {
     lines: [
       'The Sunheart dims like an ember dropped into a well, and then, all at once, it goes dark.',
       'That night, clouds gather over the keep for the first time in a generation. When the first drops hit the sand, the children run outside. They have never felt rain. They stand in the square with their faces turned up, laughing.',
-      "It isn't the old world yet. The Burning Line still bakes the far south. But the wells are rising, and the sky is a little softer than it was yesterday.",
-      '{wyrm} curls up beside the deepest well and sleeps a long, cool sleep.',
+      "It isn't the old world yet. Far to the south, something still burns. But the wells are rising, and the sky is a little softer than it was yesterday.",
+      '{wyrm} curls up beside the deepest well and sleeps a long, cool sleep. When it wakes, the rivers have started to run.',
     ],
     reward: { starglass: 2000, beacons: 10, skin: 'firstrain' },
+    badge: 'Rainbringer',
+    note: 'Act I is over. Act II, The Long Rains, starts at stage 61.',
+  },
+  ending2: {
+    title: 'The Long Rains',
+    lines: [
+      'The Ember Throne cracks down the middle, and the last light of the fallen sun pours out of it like water from a broken jar. {wyrm} breathes once, and the light goes out.',
+      'For forty days it rains. The wadis run, the salt flats turn to marsh, and the green comes back to the dunes faster than anyone remembered it could.',
+      'Caravans arrive from keeps you thought were lost. Children who were born in the drought learn to swim in the oasis.',
+      'The Burning Line still smoulders at the edge of the world. But for the first time in a long time, people talk about the future as if it is coming.',
+    ],
+    reward: { starglass: 3000, beacons: 15, sunsteel: 2000, skin: 'longrains' },
+    badge: 'Keeper of the Long Rains',
+    note: "You finished Rainkeep's story. The Burning Line, the Mirage Spire and the Dune Duels stay open for as long as you want to play.",
   },
 
   // ---------- Chapter quests ----------
   // check(S) returns true when done. go: 'plot:<id>' | 'tab:<tab>' | 'sheet:<kind>'
   // where the keep-life quests were inserted in 2.1 (core.js migrates older saves)
   questsAdded21: [5, 15, 18, 25],
+  // where the Forge, Spire and Duels quests were inserted in 3.0
+  questsAdded30: [41, 44, 46, 47, 50, 52],
   quests: [
     { text: 'Dig the Deep Well. The Rainwyrm is thirsty.', go: 'plot:well', check: (S) => S.lv.well >= 1, reward: { water: 150 } },
     { text: 'Upgrade the Date Grove to Lv 2', go: 'plot:grove', check: (S) => S.lv.grove >= 2, reward: { food: 150 } },
@@ -439,14 +506,37 @@ const DATA = {
     { text: 'Repel a raider attack on the keep', go: 'plot:watchtower', check: (S) => S.stats.raidsRepelled >= 1, reward: { starglass: 200 } },
     { text: 'Grow the Rainwyrm to Lv 8', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 8, reward: { beacons: 5 } },
     { text: 'Clear Expedition stage 20', go: 'tab:expedition', check: (S) => S.stage > 20, reward: { starglass: 400 } },
+    { text: 'Win a Dune Duel', go: 'tab:duels', check: (S) => S.stats.duelWins >= 1, reward: { starglass: 150, speed15: 2 } },
     { text: 'Grow the Rainwyrm to Lv 10', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 10, reward: { beacons: 6, shard_epic: 1 } },
     { text: 'Defeat the Sand Colossus (stage 30)', go: 'tab:expedition', check: (S) => S.stage > 30, reward: { starglass: 600, shard_legendary: 1 } },
+    { text: 'Climb the Mirage Spire to floor 5', go: 'tab:spire', check: (S) => S.spire.floor > 5, reward: { starglass: 200, sunsteel: 150 } },
     { text: "Choose your Rainwyrm's Ascension (Lv 12)", go: 'plot:wyrm', check: (S) => !!S.wyrm.element, reward: { beacons: 8 } },
+    { text: 'Build the Sunsteel Forge', go: 'plot:forge', check: (S) => S.lv.forge >= 1, reward: { sunsteel: 150, crate_copper: 2 } },
+    { text: "Forge a piece of Warden's Gear", go: 'tab:gear', check: (S) => S.stats.gearUps >= 1, reward: { sunsteel: 150, starglass: 100 } },
     { text: 'Destroy a Scorpion raider camp', go: 'tab:world', check: (S) => S.stats.camps >= 1, reward: { starglass: 300 } },
     { text: 'Clear Expedition stage 40', go: 'tab:expedition', check: (S) => S.stage > 40, reward: { starglass: 600 } },
+    { text: 'Raise a piece of gear to Fine (Lv 11)', go: 'tab:gear', check: (S) => Math.max(...Object.values(S.gear)) >= 11, reward: { sunsteel: 300, beacons: 3 } },
     { text: 'Clear Expedition stage 50', go: 'tab:expedition', check: (S) => S.stage > 50, reward: { beacons: 10 } },
+    { text: 'Reach rank 300 in the Dune Duels', go: 'tab:duels', check: (S) => S.duels.best <= 300, reward: { starglass: 400, sunsteel: 200 } },
     { text: 'Raise the Primordial Rainwyrm (Lv 15)', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 15, reward: { starglass: 1000, shard_legendary: 1 } },
     { text: 'Quench the Sunheart (stage 60)', go: 'tab:expedition', check: (S) => S.stage > 60, reward: { starglass: 1500 } },
+    // Act II: The Long Rains
+    { text: 'Defeat the Wadi King (stage 65)', go: 'tab:expedition', check: (S) => S.stage > 65, reward: { starglass: 500, sunsteel: 300 } },
+    { text: 'Climb the Mirage Spire to floor 20', go: 'tab:spire', check: (S) => S.spire.floor > 20, reward: { beacons: 6, sunsteel: 300 } },
+    { text: 'Grow the Rainwyrm to Lv 16', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 16, reward: { starglass: 800, shard_epic: 1 } },
+    { text: 'Defeat the Drowned Colossus (stage 70)', go: 'tab:expedition', check: (S) => S.stage > 70, reward: { starglass: 600, sunsteel: 400 } },
+    { text: "Raise the Warden's Gear to 60 levels in all", go: 'tab:gear', check: (S) => Object.values(S.gear).reduce((a, b) => a + b, 0) >= 60, reward: { sunsteel: 500, crate_copper: 4 } },
+    { text: 'Reach rank 150 in the Dune Duels', go: 'tab:duels', check: (S) => S.duels.best <= 150, reward: { starglass: 600, beacons: 4 } },
+    { text: 'Defeat the Salt Leviathan (stage 80)', go: 'tab:expedition', check: (S) => S.stage > 80, reward: { starglass: 800, shard_legendary: 1 } },
+    { text: 'Raise the Stormcrowned Rainwyrm (Lv 17)', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 17, reward: { starglass: 1000, sunsteel: 500 } },
+    { text: 'Climb the Mirage Spire to floor 40', go: 'tab:spire', check: (S) => S.spire.floor > 40, reward: { beacons: 8, sunsteel: 500 } },
+    { text: 'Defeat the Obsidian Wyvern (stage 90)', go: 'tab:expedition', check: (S) => S.stage > 90, reward: { starglass: 1000, beacons: 6 } },
+    { text: 'Raise a piece of gear to Superior (Lv 21)', go: 'tab:gear', check: (S) => Math.max(...Object.values(S.gear)) >= 21, reward: { sunsteel: 800, shard_epic: 1 } },
+    { text: 'Break the Ember Throne (stage 100)', go: 'tab:expedition', check: (S) => S.stage > 100, reward: { starglass: 2000, shard_legendary: 1 } },
+    { text: 'Grow the Rainwyrm to Lv 18', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 18, reward: { starglass: 1200, beacons: 8 } },
+    { text: 'Reach rank 25 in the Dune Duels', go: 'tab:duels', check: (S) => S.duels.best <= 25, reward: { starglass: 1000, sunsteel: 800 } },
+    { text: 'Climb the Mirage Spire to floor 60', go: 'tab:spire', check: (S) => S.spire.floor > 60, reward: { shard_legendary: 1, sunsteel: 1000 } },
+    { text: 'Raise the Skyriver (Lv 20)', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 20, reward: { starglass: 3000, beacons: 15 } },
   ],
   questPassXp: 60,
 
@@ -496,6 +586,7 @@ const DATA = {
     sapphire: { name: 'Deepwater Sapphire', body: ['#1b3a96', '#5aa2ff'], belly: '#d6ecff', eye: '#ffffff', mist: ['#6cb8ff', '#e6f4ff'], fin: '#9fd0ff', horn: '#eaf4ff', starglass: 1500, note: 'Earnable with free Starglass' },
     sandglass: { name: 'Sandglass', body: ['#7e5f34', '#e2c287'], belly: '#fff3d6', eye: '#ff9a4a', mist: ['#ffd9a0', '#fff6e4'], fin: '#ffb35c', horn: '#fffaf0', note: 'Final Ledger Premium reward', locked: true },
     firstrain: { name: 'First Rain', body: ['#4e3aa0', '#8fc8ff'], belly: '#f1f7ff', eye: '#ffffff', mist: ['#c9b6ff', '#ffffff'], fin: '#ffd6f2', horn: '#fff8e6', note: 'Quench the Sunheart', locked: true },
+    longrains: { name: 'Long Rains', body: ['#0e6b5a', '#7fe0c4'], belly: '#eafff7', eye: '#fff6c8', mist: ['#a8ffe0', '#ffffff'], fin: '#ffd36e', horn: '#fffbe8', note: 'Break the Ember Throne', locked: true },
   },
 
   // ---------- Store (simulated on the web; StoreKit via RevenueCat in the app) ----------
@@ -509,15 +600,18 @@ const DATA = {
     { id: 'ledger', name: 'Ledger Premium', usd: 9.99, once: true, tag: 'Season',
       grants: { ledger: 1 },
       desc: "Unlocks the premium track of the Wellkeeper's Ledger, including the Oasis Jade and Sandglass wyrm skins." },
-    { id: 'growth', name: 'Growth Fund', usd: 14.99, once: true, tag: '6,000 Starglass',
+    { id: 'growth', name: 'Growth Fund', usd: 14.99, once: true, tag: '10,000 Starglass',
       grants: { growth: 1 },
-      desc: 'Pays out Starglass each time your Rainwyrm reaches Lv 5, 8, 10, 12 and 15. 6,000 in total.' },
+      desc: 'Pays out Starglass each time your Rainwyrm reaches Lv 5, 8, 10, 12, 15, 18 and 20. 10,000 in total.' },
     { id: 'stormkit', name: 'Sandstorm Kit', usd: 2.99, daily: true, tag: 'Daily',
       grants: { speed15: 3, crate_water: 2, beacons: 2, rainCharm: 1 },
       desc: 'Three 15-minute speedups, two water crates, two Beacon Tokens and a Rain Charm. Once per day.' },
     { id: 'warchest', name: "Warden's War Chest", usd: 19.99, tag: 'Value',
       grants: { starglass: 1600, beacons: 10, shard_legendary: 1 },
       desc: '1,600 Starglass, 10 Beacon Tokens and a Legendary Shard Pouch.' },
+    { id: 'forgekit', name: 'Forge Kit', usd: 4.99, daily: true, tag: 'Daily', needs: 'forge',
+      grants: { sunsteel: 600, crate_copper: 3, speed15: 2 },
+      desc: "600 Sunsteel, three copper crates and two 15-minute speedups for the Warden's Gear. Once per day, after you build the Forge." },
     { id: 'sg1', name: 'Pouch of Starglass', usd: 1.99, grants: { starglass: 120 } },
     { id: 'sg2', name: 'Satchel of Starglass', usd: 4.99, grants: { starglass: 330 } },
     { id: 'sg3', name: 'Chest of Starglass', usd: 9.99, grants: { starglass: 700 } },
@@ -525,13 +619,95 @@ const DATA = {
     { id: 'sg5', name: 'Vault of Starglass', usd: 49.99, grants: { starglass: 4000 } },
     { id: 'sg6', name: 'Hoard of Starglass', usd: 99.99, grants: { starglass: 8500 } },
   ],
-  growthFund: [[5, 800], [8, 1000], [10, 1200], [12, 1400], [15, 1600]],
+  growthFund: [[5, 800], [8, 1000], [10, 1200], [12, 1400], [15, 1600], [18, 1800], [20, 2200]],
   crateCost: 100, // starglass per supply crate
   crateSize: (res, wyrmLvl) => Math.round({ stone: 500, food: 450, water: 350, copper: 150 }[res] * Math.pow(wyrmLvl, 1.4)),
   speedupSecondsPerStarglass: 10,
   freeFinishSeconds: 10,
 
   passXp: { stage: 30, upgrade: 10, research: 20, pull: 5, train10: 1, beast: 15, gather: 10, duty: 5 },
+
+  // ---------- Sunsteel Forge and Warden's Gear ----------
+  forge: {
+    smelt: (L) => 2 + 1.2 * L, // Sunsteel per minute
+    input: { stone: 8, copper: 3 }, // smelted from sandstone and copper, per Sunsteel
+    store: (L) => 800 + 400 * L, // smelting pauses when this much Sunsteel is waiting
+    gearCap: (L) => Math.min(50, 3 * L), // gear level cap from the Forge's level
+    tiers: [
+      { from: 0, name: 'Plain', color: '#b9a88a' },
+      { from: 1, name: 'Common', color: '#e8dcc4' },
+      { from: 11, name: 'Fine', color: '#7fd08a' },
+      { from: 21, name: 'Superior', color: '#5fb8ff' },
+      { from: 31, name: 'Epic', color: '#c39bff' },
+      { from: 41, name: 'Legendary', color: '#ffcf6e' },
+    ],
+    // bonus at gear level L: per-level share plus a step at each new tier
+    bonus: (per, L) => per * L + per * 2 * Math.floor(L / 10),
+    cost: (L) => ({ sunsteel: Math.round(12 + 6 * L + 0.15 * L * L), stone: Math.round(60 * Math.pow(L + 1, 1.4)) }),
+    gear: [
+      { id: 'blade', name: 'Sunsteel Blade', icon: 'i-sword', stat: 'atk', per: 0.007, desc: 'Squad attack' },
+      { id: 'shield', name: 'Mirror Shield', icon: 'i-guard', stat: 'def', per: 0.007, desc: 'Squad defense' },
+      { id: 'cloak', name: 'Raincloak', icon: 'i-water', stat: 'hp', per: 0.009, desc: 'Squad health' },
+      { id: 'helm', name: "Shieldbearer's Helm", icon: 'i-guard', troop: 'guard', per: 0.005, desc: 'Shieldbearer strength' },
+      { id: 'quiver', name: 'Glassfletch Quiver', icon: 'i-bow', troop: 'bow', per: 0.005, desc: 'Dune Archer strength' },
+      { id: 'saddle', name: 'Lancer Saddle', icon: 'i-lancer', troop: 'lancer', per: 0.005, desc: 'Camel Lancer strength' },
+    ],
+  },
+
+  // ---------- Mirage Spire: a tower of single fights, each floor with a twist ----------
+  spire: {
+    unlockStage: 31, // after the Sand Colossus
+    base: 24, per: 0.9, // floor f fights like expedition stage base + per x f
+    warden: 1.35, // every 10th floor is a Warden
+    foes: [['Mirror Knights', 'guard'], ['Glass Hounds', 'lancer'], ['Mirage Archers', 'bow'], ['Spire Sentinels', 'guard'], ['Echo Riders', 'lancer'], ['Choir of Mirrors', 'bow']],
+    mods: {
+      calm: { name: 'Still air', desc: 'No tricks on this floor.' },
+      heat: { name: 'Blistering heat', desc: "Your squad's defense is 20% lower.", defBonus: -0.2 },
+      sandstorm: { name: 'Sandstorm', desc: 'Your troops fight at half strength. Heroes carry this one.', troops: 0.5 },
+      glass: { name: 'Glass floor', desc: "Your wyrm's torrent can't reach this floor.", noBreath: true },
+      mirage: { name: 'Mirage', desc: 'The foe shifts shape: no class has the advantage.', noCounter: true },
+      tide: { name: 'Rising tide', desc: 'Water seeps in from below: your squad hits 15% harder.', atkBonus: 0.15 },
+      warden: { name: 'Spire Warden', desc: 'A Warden guards every tenth floor: 35% stronger than the floors around it.' },
+    },
+    cycle: ['calm', 'heat', 'tide', 'sandstorm', 'calm', 'glass', 'mirage', 'heat', 'tide'],
+    rewards: (f) => {
+      const r = { sunsteel: 15 + 2 * f, journals: 10 + 2 * f, starglass: f % 10 === 0 ? 100 : 10 + 2 * Math.floor(f / 5) };
+      if (f % 50 === 0) r.shard_legendary = 1;
+      else if (f % 20 === 0) r.shard_epic = 1;
+      else if (f % 10 === 0) r.beacons = 2;
+      else if (f % 5 === 0) r.beacons = 1;
+      return r;
+    },
+  },
+
+  // ---------- Dune Duels: a ladder of rival wardens (simulated) ----------
+  duels: {
+    unlockStage: 21,
+    ranks: 1000,
+    // rank r fights like expedition stage lo + (hi - lo) x (1 - (r - 1) / (ranks - 1)) ^ curve
+    lo: 6, hi: 105, curve: 1.4,
+    tickets: 5, ticketEvery: 720, // a ticket every 12 minutes of play, up to 5
+    ticketCost: 50, ticketBuys: 5, // Starglass per extra ticket, extra tickets per season
+    season: 10800, // a season lasts 3 hours of play
+    seasonGlory: [[1, 1000], [10, 650], [50, 450], [100, 320], [300, 180], [500, 100], [1000, 50]],
+    slip: 1.3, // at the end of a season your rank slips back (x1.3 + 20)
+    winGlory: [12, 18, 26], // easy, even, hard challenger
+    milestones: [
+      [900, { starglass: 50, sunsteel: 40 }], [750, { starglass: 80, sunsteel: 60 }], [500, { starglass: 120, beacons: 1, sunsteel: 100 }],
+      [300, { starglass: 150, beacons: 2, sunsteel: 150 }], [200, { starglass: 200, sunsteel: 200 }], [100, { shard_epic: 1, sunsteel: 250 }],
+      [50, { starglass: 300, beacons: 3 }], [20, { shard_epic: 1, sunsteel: 400 }], [10, { shard_legendary: 1 }],
+      [3, { starglass: 600, sunsteel: 600 }], [1, { starglass: 1000, beacons: 10, shard_legendary: 1 }],
+    ],
+    shop: [
+      { id: 'sunsteel', grants: { sunsteel: 120 }, cost: 60 },
+      { id: 'speed', grants: { speed15: 1 }, cost: 45 },
+      { id: 'charm', grants: { rainCharm: 1 }, cost: 70 },
+      { id: 'beacon', grants: { beacons: 1 }, cost: 90 },
+      { id: 'copper', grants: { crate_copper: 1 }, cost: 50 },
+      { id: 'epic', grants: { shard_epic: 1 }, cost: 650 },
+    ],
+    titles: ['Warden', 'Keeper', 'Sandwalker', 'Well-singer', 'Duneblade', 'Oathkeeper', 'Glassrider', 'Lanternbearer'],
+  },
 
   // ---------- Backpack items ----------
   items: {
@@ -544,6 +720,7 @@ const DATA = {
     crate_food: { name: 'Food Crate', kind: 'crate', res: 'food', icon: 'i-food' },
     crate_water: { name: 'Water Crate', kind: 'crate', res: 'water', icon: 'i-water' },
     crate_copper: { name: 'Copper Crate', kind: 'crate', res: 'copper', icon: 'i-copper' },
+    sunsteel_cache: { name: 'Sunsteel Cache', kind: 'cache', grants: { sunsteel: 150 }, icon: 'i-sunsteel', desc: '150 Sunsteel for the Warden\'s Gear.' },
     shard_epic: { name: 'Epic Shard Pouch', kind: 'shards', rarity: 'epic', n: 10, icon: 'i-star', desc: 'Pick any Epic hero: recruit them, or add 10 shards if you have them.' },
     shard_legendary: { name: 'Legendary Shard Pouch', kind: 'shards', rarity: 'legendary', n: 10, icon: 'i-star', desc: 'Pick any Legendary hero: recruit them, or add 10 shards if you have them.' },
   },
@@ -564,6 +741,9 @@ const DATA = {
     { id: 'rain', text: 'Call the rain', n: 1, pts: 10 },
     { id: 'surplus', text: 'Collect 5 surplus bubbles', n: 5, pts: 10 },
     { id: 'incident', text: 'Settle a matter in the keep', n: 1, pts: 10 },
+    { id: 'duel', text: 'Fight 3 Dune Duels', n: 3, pts: 15 },
+    { id: 'spire', text: 'Clear a Mirage Spire floor', n: 1, pts: 10 },
+    { id: 'gear', text: "Forge the Warden's Gear 3 times", n: 3, pts: 10 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1 }],
@@ -619,6 +799,13 @@ const DATA = {
     { id: 'rain25', text: 'Call the rain 25 times', stat: 'rains', n: 25, reward: { starglass: 150 } },
     { id: 'inc20', text: 'Settle 20 matters in the keep', stat: 'incidents', n: 20, reward: { beacons: 3 } },
     { id: 'trade20', text: 'Trade with merchants 20 times', stat: 'trades', n: 20, reward: { starglass: 150 } },
+    { id: 'h20', text: 'Raise the Skyriver', stat: 'wyrm', n: 20, reward: { starglass: 800 } },
+    { id: 's100', text: 'Break the Ember Throne', stat: 'stages', n: 100, reward: { starglass: 600 } },
+    { id: 'spire25', text: 'Clear 25 floors of the Mirage Spire', stat: 'spireWins', n: 25, reward: { starglass: 200 } },
+    { id: 'spire75', text: 'Clear 75 floors of the Mirage Spire', stat: 'spireWins', n: 75, reward: { shard_epic: 1 } },
+    { id: 'duel50', text: 'Win 50 Dune Duels', stat: 'duelWins', n: 50, reward: { starglass: 250 } },
+    { id: 'gear100', text: "Raise the Warden's Gear to 100 levels in all", stat: 'gear', n: 100, reward: { sunsteel: 800 } },
+    { id: 'smelt5k', text: 'Smelt 5,000 Sunsteel', stat: 'smelted', n: 5000, reward: { starglass: 300 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

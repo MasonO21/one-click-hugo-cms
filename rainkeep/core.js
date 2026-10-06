@@ -84,14 +84,17 @@
   const PROD = { stone: 'quarry', food: 'grove', water: 'well', copper: 'mine' };
   const TECH_FOR = { stone: 'chisels', food: 'irrigation', water: 'boring', copper: 'smelt' };
   const RES = ['stone', 'food', 'water', 'copper'];
-  const ICON = { stone: 'i-stone', food: 'i-food', water: 'i-water', copper: 'i-copper', starglass: 'i-gem', beacons: 'i-beacon', journals: 'i-journal' };
-  const NAME = { stone: 'Stone', food: 'Food', water: 'Water', copper: 'Copper', starglass: 'Starglass', beacons: 'Beacon Tokens', journals: 'Field Journals' };
+  const ICON = { stone: 'i-stone', food: 'i-food', water: 'i-water', copper: 'i-copper', starglass: 'i-gem', beacons: 'i-beacon', journals: 'i-journal', sunsteel: 'i-sunsteel', glory: 'i-glory' };
+  const NAME = { stone: 'Stone', food: 'Food', water: 'Water', copper: 'Copper', starglass: 'Starglass', beacons: 'Beacon Tokens', journals: 'Field Journals', sunsteel: 'Sunsteel', glory: 'Glory' };
   const SHORT = {
     wyrm: 'Rainwyrm', well: 'Deep Well', quarry: 'Quarry', shelter1: 'Houses', shelter2: 'Houses',
     infirmary: 'Healers', archive: 'Archive', watchtower: 'Watchtower', barracks: 'Barracks', grove: 'Date Grove',
-    mine: 'Copper Mine', hall: 'Caravan Hall', storehouse: 'Storehouse',
+    mine: 'Copper Mine', hall: 'Caravan Hall', storehouse: 'Storehouse', forge: 'Forge',
   };
   const plotName = (pid) => DATA.buildings[PLOT[pid].type].name + (pid === 'shelter2' ? ' II' : '');
+  // Where plot i sits on the ring (radians; pi/2 is the front, toward the camera). Plots are spread a
+  // little wider at the back, where perspective squeezes them, and a little tighter at the front.
+  KH.plotAngle = (i) => { const f = (i * Math.PI * 2) / DATA.plots.length; return Math.PI / 2 + f - 0.16 * Math.sin(f); };
   Object.assign(KH, { HERO, PLOT, PROD, RES, ICON, NAME, SHORT, plotName });
 
   // ======================================================================
@@ -109,7 +112,7 @@
     const st = DATA.start;
     const s = {
       v: 2, time: 0, savedAt: Date.now(),
-      res: { ...st.res }, starglass: st.starglass, beacons: st.beacons, journals: st.journals,
+      res: { ...st.res }, starglass: st.starglass, beacons: st.beacons, journals: st.journals, sunsteel: 0, glory: 0,
       pop: st.survivors, sick: 0, acc: { sick: 0, heal: 0, lost: 0, arrive: 0, leave: 0 },
       workers: { quarry: 0, grove: 0, well: 0, mine: 0 }, autoWork: true,
       lv: { wyrm: 0 }, mist: 'steady', autoMist: false, dormant: false, thirsty: false,
@@ -132,7 +135,7 @@
         donations: 0, dutyChests: 0, raidAttacks: 0, raidsRepelled: 0, camps: 0, cleanStorms: 0, sickTotal: 0,
         raidKills: 0, warWins: 0, gathered: 0,
       },
-      endingSeen: false, seenIntro: false,
+      endingSeen: false, ending2Seen: false, seenIntro: false,
     };
     DATA.plots.forEach((p) => { s.lv[p.id] = 0; });
     Object.assign(s.lv, st.levels);
@@ -163,6 +166,8 @@
   // Saves from before keep life (2.1) point at quest numbers that have since moved: step over the quests added then.
   function migrate(obj) {
     if (!obj.keep && typeof obj.quest === 'number') for (const i of DATA.questsAdded21) if (obj.quest >= i) obj.quest++;
+    // and before 3.0 (no Forge state yet): step over the Forge, Spire and Duels quests
+    if (!obj.gear && typeof obj.quest === 'number') for (const i of DATA.questsAdded30) if (obj.quest >= i) obj.quest++;
     return obj;
   }
   function load() {
@@ -266,13 +271,14 @@
   }
 
   // costs
-  function levelCurve(growth, late, to) {
-    const L = DATA.lateLevel;
-    return Math.pow(growth, Math.min(to, L) - 1) * Math.pow(late, Math.max(0, to - L));
+  // three bends: a building's own growth to Lv 10, steeper late growth to Lv 15, gentler Act II growth after
+  function levelCurve(growth, late, to, end = late) {
+    const L = DATA.lateLevel, E = DATA.endLevel;
+    return Math.pow(growth, Math.min(to, L) - 1) * Math.pow(late, clamp(to - L, 0, E - L)) * Math.pow(end, Math.max(0, to - E));
   }
   function buildCost(pid, to) {
     const b = DATA.buildings[PLOT[pid].type];
-    const m = levelCurve(b.growth, DATA.lateCostGrowth, to);
+    const m = levelCurve(b.growth, DATA.lateCostGrowth, to, DATA.endCostGrowth);
     const c = {};
     for (const k in b.cost) c[k] = Math.round(b.cost[k] * m);
     // higher levels draw on every resource (mudbrick needs water), so water, food and copper stay useful
@@ -280,10 +286,10 @@
       c.water = Math.max(c.water || 0, Math.round((c.stone || 0) * 0.45));
       c.food = Math.max(c.food || 0, Math.round((c.stone || 0) * 0.35));
     }
-    if (to >= DATA.copperShareFrom) c.copper = (c.copper || 0) + Math.round((c.stone || 0) * 0.22);
+    if (to >= DATA.copperShareFrom) c.copper = (c.copper || 0) + Math.round((c.stone || 0) * (to > DATA.endLevel ? 0.16 : 0.22));
     return c;
   }
-  const buildTime = (pid, to) => Math.round((DATA.buildings[PLOT[pid].type].time * levelCurve(DATA.buildTimeGrowth, DATA.lateTimeGrowth, to)) / (1 + KH.bonus('build')));
+  const buildTime = (pid, to) => Math.round((DATA.buildings[PLOT[pid].type].time * levelCurve(DATA.buildTimeGrowth, DATA.lateTimeGrowth, to, DATA.endTimeGrowth)) / (1 + KH.bonus('build')));
   const maxLevel = () => DATA.wyrm.maxLevel;
   function upgradeBlock(pid) {
     const L = S.lv[pid], to = L + 1;
@@ -306,8 +312,9 @@
       else S[k] -= v;
     }
   }
-  const techCost = (t, lvl) => Object.fromEntries(Object.entries(t.cost).map(([k, v]) => [k, Math.round(v * Math.pow(DATA.techGrowth, lvl))]));
-  const techTime = (t, lvl) => Math.round((t.time * Math.pow(DATA.techTimeGrowth, lvl)) / (1 + KH.bonus('build')));
+  const techCurve = (g, late, lvl) => Math.pow(g, Math.min(lvl, DATA.techLateLevel)) * Math.pow(late, Math.max(0, lvl - DATA.techLateLevel));
+  const techCost = (t, lvl) => Object.fromEntries(Object.entries(t.cost).map(([k, v]) => [k, Math.round(v * techCurve(DATA.techGrowth, DATA.techLateGrowth, lvl))]));
+  const techTime = (t, lvl) => Math.round((t.time * techCurve(DATA.techTimeGrowth, DATA.techLateTimeGrowth, lvl)) / (1 + KH.bonus('build')));
   const techMax = () => Math.min(DATA.techMaxLevel, S.lv.archive);
 
   // ======================================================================
@@ -359,13 +366,16 @@
       for (const [key, v] of Object.entries(HERO[id].skill.fx)) fx[key] += v * k;
     }
     const m = opts.troops || marchTroops(), um = troopMult();
+    // Warden's Gear (forge.js): squad-wide bonuses plus a bonus per troop class
+    const gb = !opts.noGear && KH.gearBonus ? KH.gearBonus() : null;
     for (const type in m) {
-      const t = DATA.troops[type];
-      atk += m[type] * t.atk * um * counterMult(type, enemyCls);
-      def += m[type] * t.def * um; hp += m[type] * t.hp * um;
+      const t = DATA.troops[type], tb = gb ? 1 + (gb.troop[type] || 0) : 1;
+      atk += m[type] * t.atk * um * tb * counterMult(type, enemyCls);
+      def += m[type] * t.def * um * tb; hp += m[type] * t.hp * um * tb;
     }
-    atk *= 1 + fx.atk + KH.bonus('teamAtk') + (opts.atkBonus || 0);
-    def *= 1 + (opts.defBonus || 0);
+    atk *= 1 + fx.atk + KH.bonus('teamAtk') + (opts.atkBonus || 0) + (gb ? gb.atk : 0);
+    def *= 1 + (opts.defBonus || 0) + (gb ? gb.def : 0);
+    hp *= 1 + (gb ? gb.hp : 0);
     fx.dr = Math.min(fx.dr, 0.4);
     fx.pierce = Math.min(fx.pierce, 0.5);
     return { atk, def, hp, fx, troops: m, heroes };
@@ -374,8 +384,8 @@
   function enemyGrowth(n, g1, g2, g3) {
     const E = DATA.enemy;
     const a = Math.min(n, E.lateFrom) - 1;
-    const b = clamp(n - E.lateFrom, 0, DATA.finalStage - E.lateFrom);
-    const c = Math.max(0, n - DATA.finalStage);
+    const b = clamp(n - E.lateFrom, 0, DATA.actOneStage - E.lateFrom);
+    const c = Math.max(0, n - DATA.actOneStage);
     return Math.pow(g1, a) * Math.pow(g2, b) * Math.pow(g3, c);
   }
   // Stats for "a foe as strong as expedition stage n" (fractional n allowed).
@@ -392,22 +402,27 @@
     const foe = boss || ch.foes[(n - ch.from) % ch.foes.length];
     const isBoss = !!boss || (n > DATA.finalStage && n % 10 === 0);
     const name = n > DATA.finalStage ? `${foe[0]} · depth ${n - DATA.finalStage}` : foe[0];
-    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, ...foeStats(n, isBoss ? DATA.enemy.boss : 1) };
+    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 3 : 1), ...foeStats(n, isBoss ? DATA.enemy.boss : 1) };
   }
   function stageRewards(n) {
     const boss = !!DATA.bosses[n];
-    if (n > DATA.finalStage) return { starglass: n % 10 === 0 ? 100 : 20, journals: 20 + Math.round(n / 2), stone: 60 * n, food: 40 * n, copper: 10 * n };
+    if (n > DATA.finalStage) return { starglass: n % 10 === 0 ? 120 : 25, journals: 25 + Math.round(n / 2), stone: 60 * n, food: 40 * n, copper: 10 * n, sunsteel: n % 10 === 0 ? 60 : 15 };
+    if (n > DATA.actOneStage) {
+      const r = { starglass: boss ? 120 : 30, journals: 10 + 2 * n, stone: 60 * n, food: 40 * n, copper: 9 * n, sunsteel: boss ? 50 : 12 };
+      if (boss) r.beacons = 2;
+      return r;
+    }
     const r = { starglass: boss ? 100 : 25, journals: 5 + 2 * n, stone: 60 * n, food: 40 * n };
     if (n > 30) r.copper = 8 * n;
     if (boss) r.beacons = n >= 30 ? 2 : 1;
     return r;
   }
   const dmgOf = (a, d) => (a * 3 * a) / (a + d);
-  function simulateBattle(team, foe) {
+  function simulateBattle(team, foe, opts = {}) {
     let th = team.hp, eh = foe.hp;
     const rounds = [];
     let breath = 0;
-    if (!S.dormant) {
+    if (!S.dormant && !opts.noBreath) {
       breath = foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath'));
       eh = Math.max(0, eh - breath);
     }
@@ -436,7 +451,7 @@
   }
 
   function patrolPreview() {
-    const c = Math.min(S.stage - 1, 80);
+    const c = Math.min(S.stage - 1, 110);
     if (c < 1) return null;
     const mins = Math.min((S.time - S.patrolSince) / 60, DATA.patrolCapMinutes);
     const g = {
@@ -458,7 +473,7 @@
   function grant(g) {
     for (const [k, v] of Object.entries(g)) {
       if (k in S.res) S.res[k] += v;
-      else if (k === 'starglass' || k === 'beacons' || k === 'journals') S[k] += v;
+      else if (k === 'starglass' || k === 'beacons' || k === 'journals' || k === 'sunsteel' || k === 'glory') S[k] += v;
       else if (k in DATA.items) S.items[k] = (S.items[k] || 0) + v;
       else if (k === 'builder2') S.builders = Math.max(S.builders, 2);
       else if (k === 'stipend') S.stipend.left += v;
@@ -804,6 +819,7 @@
   ACT.research = (id) => {
     if (S.research) return toast('The scholars are already busy.', 'warn');
     const t = DATA.techs.find((x) => x.id === id), lvl = S.tech[id];
+    if (t.needs && !S.lv[t.needs]) return toast(`Build the ${DATA.buildings[PLOT[t.needs].type].name} first.`, 'warn');
     if (lvl >= techMax()) return toast(lvl >= DATA.techMaxLevel ? 'Fully researched.' : 'Upgrade the Archive to research further.', 'warn');
     const c = techCost(t, lvl);
     if (!canAfford(c)) return toast('Not enough resources yet.', 'warn');
@@ -915,7 +931,8 @@
     KH.emit('battle', { kind: 'stage', win: result.win, foe });
     if (result.win) KH.emit('stage', { n: foe.n });
     const after = [];
-    if (result.win && foe.n === DATA.finalStage && !S.endingSeen) after.push({ kind: 'ending' });
+    if (result.win && foe.n === DATA.actOneStage && !S.endingSeen) after.push({ kind: 'ending' });
+    else if (result.win && foe.n === DATA.finalStage && !S.ending2Seen) after.push({ kind: 'ending', act: 2 });
     else if (result.win && chapterOf(S.stage).from !== chapterBefore && !S.story.chapters.includes(chapterOf(S.stage).from)) after.push({ kind: 'story', from: chapterOf(S.stage).from });
     KH.startBattle({ title: `Stage ${foe.n} · ${foe.chapter}`, foe, team, result, rewards, after });
   };
@@ -938,8 +955,10 @@
     UI.sheet = { kind: 'results', results };
     KH.emit('pull', { n, results });
   };
+  // Act II heroes join the pool once the Sunheart is quenched
+  const heroAvailable = (h) => !h.act || S.stage > DATA.actOneStage;
   const featured = () => {
-    const legs = DATA.heroes.filter((h) => h.rarity === 'legendary');
+    const legs = DATA.heroes.filter((h) => h.rarity === 'legendary' && heroAvailable(h));
     return legs[Math.floor(S.time / DATA.events.length) % legs.length].id;
   };
   function addHero(id, shards = DATA.shardsPerDupe[HERO[id].rarity]) {
@@ -965,7 +984,7 @@
         rarity = x < o.legendary ? 'legendary' : x < o.legendary + o.epic ? 'epic' : 'rare';
       }
       if (minEpic && rarity === 'rare') rarity = 'epic';
-      const pool = DATA.heroes.filter((h) => h.rarity === rarity).map((h) => h.id);
+      const pool = DATA.heroes.filter((h) => h.rarity === rarity && heroAvailable(h)).map((h) => h.id);
       id = rarity === 'legendary' && Math.random() < DATA.recruit.featuredShare ? featured() : pick(pool);
     }
     if (HERO[id].rarity === 'legendary') S.pity = 0;
@@ -990,6 +1009,7 @@
     if (!item) return true;
     if (item.once && S.bought[id]) return 'Already purchased.';
     if (item.daily && S.boughtDay[id] === today()) return 'Already bought today. Back tomorrow.';
+    if (item.needs && !S.lv[item.needs]) return `Build the ${DATA.buildings[PLOT[item.needs].type].name} first.`;
     return true;
   }
   function completePurchase(ref, opts = {}) {
@@ -1148,7 +1168,7 @@
     heroStats, heroCap, skillScale, skillText, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
     teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, power, patrolPreview, passTier, addPassXp,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
-    batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem,
+    batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable,
   });
 
   // Ascension bonuses

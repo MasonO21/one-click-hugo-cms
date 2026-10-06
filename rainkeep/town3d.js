@@ -21,12 +21,12 @@
   const RX = 9.6, RZ = 12.6;
   const plotPos = {};
   DATA.plots.forEach((p, i) => {
-    const a = Math.PI / 2 + (i * Math.PI * 2) / DATA.plots.length;
+    const a = KH.plotAngle(i);
     plotPos[p.id] = new V3(RX * Math.cos(a), 0, RZ * Math.sin(a));
   });
   plotPos.wyrm = new V3(0, 0, 0);
 
-  let renderer, scene, cam, sun, hemi, sky, terrain, wyrm, mist, dust, fx, aura, cloud, rain;
+  let renderer, scene, cam, sun, hemi, sky, terrain, wyrm, mist, dust, fx, aura, cloud, rain, bolt, skyriver, nextBolt = 0;
   let VW = 0, VH = 0, DPR = 1, fitD = 60;
   const view = { az: 0, el: 0.84, zoom: 1, flyStart: 0 };
   const plots = {};
@@ -217,7 +217,8 @@
       scene.add(A.bake(post));
     }
     // market stalls and shade sails near the plaza
-    for (const [x, z, c, ry] of [[-6.6, 7.4, A.P.cloth3, 0.4], [6.8, 7.0, A.P.cloth4, -0.4]]) {
+    // (between the plots: the ring has 13 plots since the Forge)
+    for (const [x, z, c, ry] of [[-4.97, 7.36, A.P.cloth3, 0.6], [4.97, 7.36, A.P.cloth4, -0.6]]) {
       const st = A.grp(A.box(1.3, 0.55, 0.6, A.mat(A.P.wood, { flat: true }), 0, 0, 0));
       for (const [px, pz] of [[-0.6, -0.3], [0.6, -0.3], [-0.6, 0.3], [0.6, 0.3]]) st.add(A.cyl(0.03, 0.03, 1.4, lampM, px, 0, pz, 4));
       const roof = A.box(1.5, 0.04, 0.9, A.mat(c, { map: A.tex.stripes(c, A.P.cloth2, 6) }), 0, 1.4, 0);
@@ -266,7 +267,9 @@
     scene.add(aura);
     // the Primordial wyrm's own little rain cloud
     cloud = new THREE.Group();
-    const cm = A.mat('#f4f7fb', { flat: true });
+    // its own material, so the Stormcrowned wyrm's lightning can light it from inside
+    const cm = new THREE.MeshStandardMaterial({ color: '#f4f7fb', flatShading: true, roughness: 0.9, emissive: '#bfe6ff', emissiveIntensity: 0 });
+    cloud.userData.mat = cm;
     for (const [x, y, z, s] of [[0, 0, 0, 0.75], [0.7, -0.1, 0.1, 0.6], [-0.7, -0.08, 0, 0.62], [0.3, 0.3, -0.2, 0.55], [-0.3, 0.25, 0.2, 0.5]]) cloud.add(A.sph(s, cm, x, y, z, 8));
     cloud.visible = false;
     scene.add(cloud);
@@ -276,6 +279,18 @@
     rain.frustumCulled = false;
     rain.visible = false;
     scene.add(rain);
+    // Stormcrowned: a jagged bolt from the cloud now and then
+    bolt = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(8 * 3), 3)), new THREE.LineBasicMaterial({ color: '#eaf8ff', transparent: true, opacity: 0.95 }));
+    bolt.frustumCulled = false;
+    bolt.visible = false;
+    scene.add(bolt);
+    // Skyriver: a ribbon of water spiralling up around the wyrm
+    const pts = [];
+    for (let i = 0; i <= 80; i++) { const u = i / 80, a = u * Math.PI * 5; pts.push(new V3(Math.cos(a) * (2.6 - u * 1.2), 0.4 + u * 4.2, Math.sin(a) * (2.6 - u * 1.2))); }
+    skyriver = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.09, 6), new THREE.MeshStandardMaterial({ color: '#7fe8ff', emissive: '#4ac8ff', emissiveIntensity: 0.55, roughness: 0.1, transparent: true, opacity: 0.6, map: A.tex.scales || null }));
+    skyriver.castShadow = false;
+    skyriver.visible = false;
+    scene.add(skyriver);
   }
 
   // ======================================================================
@@ -672,6 +687,24 @@
       }
       rain.geometry.attributes.position.needsUpdate = true;
     }
+    // Stormcrowned and beyond: lightning inside the cloud, now and then a bolt
+    const storm = cloud.visible && wyrm.stage >= 7;
+    if (storm && t > nextBolt) {
+      nextBolt = t + 3 + Math.random() * 5;
+      const a = bolt.geometry.attributes.position.array, from = cloud.position, to = wyrm.headWorld;
+      for (let i = 0; i < 8; i++) {
+        const u = i / 7, j = i === 0 || i === 7 ? 0 : 0.35;
+        a.set([from.x + (to.x - from.x) * u * 0.8 + (Math.random() - 0.5) * j, from.y - 0.3 + (to.y + 0.6 - from.y) * u, from.z + (to.z - from.z) * u * 0.8 + (Math.random() - 0.5) * j], i * 3);
+      }
+      bolt.geometry.attributes.position.needsUpdate = true;
+      bolt.userData.at = t;
+    }
+    const flashK = storm && bolt.userData.at ? Math.max(0, 1 - (t - bolt.userData.at) / 0.25) : 0;
+    bolt.visible = flashK > 0;
+    bolt.material.opacity = flashK;
+    cloud.userData.mat.emissiveIntensity = storm ? 0.15 + flashK * 1.2 + 0.1 * Math.max(0, Math.sin(t * 5.3) * Math.sin(t * 1.1)) : 0;
+    skyriver.visible = wyrm.stage >= 8 && !S.dormant;
+    if (skyriver.visible) { skyriver.rotation.y = t * 0.25; skyriver.material.emissiveIntensity = 0.45 + 0.15 * Math.sin(t * 1.7); }
     for (const p of DATA.plots) { const b = plots[p.id].model && plots[p.id].model.userData.b; if (b) b.userData.update(t, T3.wind); }
     for (const p of props) A.swayPalm(p, t, T3.wind);
     animPeople(t, posts);

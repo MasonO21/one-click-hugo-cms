@@ -466,6 +466,7 @@ textarea.code { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, m
   background: radial-gradient(60% 70% at 50% 100%, #ffb34a55, transparent 70%), linear-gradient(#24142e, #6a3418 75%, #b0602a); border: 1px solid #a8742c; box-shadow: inset 0 -24px 40px #0007; }
 .story-art span { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--rime); font-weight: 700; }
 .story-art h1 { font-size: 36px; color: #fff0d0; text-align: center; text-shadow: 0 2px 0 #0009; }
+.story-art.act2 { background: radial-gradient(60% 70% at 50% 100%, #5fd0ff44, transparent 70%), linear-gradient(#0d1a2e, #1b4a5a 70%, #2f7f7a); border-color: #4aa6b0; }
 .card.asc { display: grid; grid-template-columns: 120px 1fr auto; gap: 10px; align-items: center; }
 .card.asc .wyrm-portrait { aspect-ratio: 16 / 10; }
 .floaty.torrent { color: #8ff0ff; font-size: 26px; text-shadow: 0 0 12px #4fd0ff; }
@@ -558,3 +559,23 @@ textarea.code { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, m
 .card.trade { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .card.trade .arrow { transform: rotate(90deg); color: var(--water); display: inline-flex; }
 .card.trade.sold { opacity: .5; }
+
+/* ---------- Act II: Warden's Gear, Mirage Spire, Dune Duels ---------- */
+.card.gear { display: flex; gap: 12px; align-items: center; border-left: 3px solid var(--tier, var(--line)); }
+.card.gear h3 { font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.card.gear .tier { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.card.gear .bar { margin: 6px 0; }
+.gear-ic { width: 52px; height: 52px; flex: none; border-radius: 12px; display: grid; place-items: center; position: relative;
+  background: radial-gradient(70% 70% at 50% 40%, color-mix(in srgb, var(--tier) 35%, transparent), #1a0f08); border: 1px solid var(--tier); color: var(--tier); }
+.gear-ic .ic { width: 28px; height: 28px; }
+.gear-ic span { position: absolute; right: -6px; bottom: -6px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 10px; background: #1a0f08; border: 1px solid var(--tier); font-size: 11px; font-weight: 700; display: grid; place-items: center; color: #fff4dc; }
+.stage-card.spire { background: var(--grain), linear-gradient(160deg, #1d3a44, #12202a); border-color: #4a8a9a; }
+.stage-card.spire.boss { background: var(--grain), linear-gradient(160deg, #3a1d44, #1a1024); border-color: #9a6ad0; }
+.mod-chip { margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: #0006; border: 1px solid #ffffff1c; font-size: 13px; display: flex; gap: 6px; align-items: flex-start; line-height: 1.35; }
+.mod-chip .ic { width: 16px; height: 16px; flex: none; margin-top: 1px; color: var(--gold); }
+.card.duel { display: flex; gap: 12px; align-items: center; }
+.duel-pt { width: 58px; height: 64px; flex: none; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.duel-pt .portrait { width: 100%; height: 100%; display: block; }
+.card.duel .row { gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.b-rival { width: 112px; height: 124px; border-radius: 14px; overflow: hidden; border: 2px solid #b0442c; box-shadow: 0 0 24px #ff5a2a44; }
+.b-rival .portrait { width: 100%; height: 100%; display: block; }

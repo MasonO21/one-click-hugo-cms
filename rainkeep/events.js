@@ -65,6 +65,14 @@
       KH.sfx('coin');
       return true;
     }
+    if (it.kind === 'cache') {
+      S.items[id] -= n;
+      const g = Object.fromEntries(Object.entries(it.grants).map(([k, v]) => [k, v * n]));
+      KH.grant(g);
+      KH.toast(`+${Object.entries(g).map(([k, v]) => `${fmt(v)} ${KH.NAME[k] || k}`).join(', ')}.`, 'good');
+      KH.sfx('coin');
+      return true;
+    }
     return false;
   }
   ACT.useitem = (arg) => {
@@ -79,7 +87,7 @@
   ACT.pouch = (arg) => {
     const [itemId, hero] = arg.split(':');
     const it = DATA.items[itemId];
-    if (!it || !(S.items[itemId] > 0) || !HERO[hero] || HERO[hero].rarity !== it.rarity) return;
+    if (!it || !(S.items[itemId] > 0) || !HERO[hero] || HERO[hero].rarity !== it.rarity || !KH.heroAvailable(HERO[hero])) return;
     S.items[itemId]--;
     const isNew = KH.addHero(hero, it.n);
     KH.toast(isNew ? `${HERO[hero].name} joins your keep!` : `+${it.n} shards for ${HERO[hero].name}.`, 'good');
@@ -91,7 +99,7 @@
     const rows = ids.map((k) => {
       const it = DATA.items[k];
       let btn = '';
-      if (it.kind === 'crate') btn = `<button class="btn small" data-act="useitem" data-arg="${k}:1">Open</button>${S.items[k] > 1 ? `<button class="btn small alt" data-act="useitem" data-arg="${k}:all">All</button>` : ''}`;
+      if (it.kind === 'crate' || it.kind === 'cache') btn = `<button class="btn small" data-act="useitem" data-arg="${k}:1">Open</button>${S.items[k] > 1 ? `<button class="btn small alt" data-act="useitem" data-arg="${k}:all">All</button>` : ''}`;
       else if (it.kind === 'shards') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Choose hero</button>`;
       else if (it.kind === 'charm') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Call the Rain</button>`;
       const desc = it.kind === 'crate' ? `${fmt(DATA.crateSize(it.res, S.lv.wyrm))} ${KH.NAME[it.res].toLowerCase()} each` : it.kind === 'speed' ? 'Use from any building, research or training timer' : it.desc;
@@ -101,7 +109,7 @@
   };
   KH.sheets.pouch = () => {
     const it = DATA.items[UI.sheet.id];
-    const heroes = DATA.heroes.filter((h) => h.rarity === it.rarity);
+    const heroes = DATA.heroes.filter((h) => h.rarity === it.rarity && KH.heroAvailable(h));
     return {
       title: it.name, lvl: `×${S.items[UI.sheet.id] || 0}`,
       body: `<p class="muted small">${esc(it.desc)}</p><div class="hero-grid">${heroes.map((h) => {
@@ -243,6 +251,7 @@
       case 'heroes': return Object.keys(S.heroes).length;
       case 'stars': return Object.values(S.heroes).reduce((a, h) => a + h.stars, 0);
       case 'pop': return Math.max(S.pop, S.stats.maxPop || 0);
+      case 'gear': return S.gear ? Object.values(S.gear).reduce((a, b) => a + b, 0) : 0;
       default: return S.stats[stat] || 0;
     }
   }
@@ -318,6 +327,9 @@
   KH.on('mist', (e) => addPts('rainfest', e.seconds * (e.high ? 2 : 1)));
   KH.on('rain', (e) => { addPts('rainfest', 2 * e.duration); addPts('oasis', 40); });
   KH.on('incidentDone', () => addPts('oasis', 30));
+  KH.on('duel', (e) => { if (e.win) addPts('oasis', 40); });
+  KH.on('spire', (e) => { if (e.win) addPts('oasis', 50); });
+  KH.on('gear', () => addPts('builder', 6));
   KH.on('beast', (e) => { addPts('hunt', 10 * e.lvl); addPts('oasis', TP.beast * e.lvl); });
   KH.on('upgrade', (e) => { addPts('builder', 10 * e.to); addPts('oasis', TP.upgrade * e.to); });
   KH.on('research', (e) => { addPts('builder', 5 * e.to); addPts('oasis', TP.research * e.to); });

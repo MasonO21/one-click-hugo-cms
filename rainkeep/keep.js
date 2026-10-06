@@ -11,6 +11,9 @@
   const { UI, ACT, PLOT, NAME, ICON } = KH;
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
+  // Rain Lore research: faster recharge, longer showers
+  const rainDur = (L) => DATA.rain.duration(L) + 2 * ((S && S.tech.rainlore) || 0);
+  const rainCd = (L) => Math.round(DATA.rain.cooldown(L) * (1 - 0.04 * ((S && S.tech.rainlore) || 0)));
 
   KH.hooks.defaults.push((s) => {
     s.keep = {
@@ -68,14 +71,14 @@
   };
   function startRain() {
     const L = S.lv.wyrm, R = DATA.rain;
-    S.keep.rainUntil = S.time + R.duration(L);
-    S.keep.rainReady = S.time + R.cooldown(L);
+    S.keep.rainUntil = S.time + rainDur(L);
+    S.keep.rainReady = S.time + rainCd(L);
     const burst = KH.scaleReward({ water: R.burst });
     KH.grant(burst);
     S.stats.rains++;
     UI.petT = performance.now();
     KH.toast(`${S.wyrm.name} calls the rain! +${fmt(burst.water)} water. The wells fill and the keep cools.`, 'good');
-    KH.emit('rain', { duration: R.duration(L) });
+    KH.emit('rain', { duration: rainDur(L) });
     if (KH.duty) KH.duty('rain');
   }
 
@@ -291,7 +294,7 @@
       const btn = raining() ? `<button class="btn wide off">Raining · ${fmtTime(S.keep.rainUntil - S.time)}</button>`
         : rainLeft() > 0 ? `<button class="btn wide ${charms ? 'gold' : 'off'}" data-act="rain">${charms ? `Use a Rain Charm (${charms})` : `Clouds gathering · ${fmtTime(rainLeft())}`}</button>`
           : `<button class="btn wide gold" data-act="rain" data-primary>${icon('i-water')}Call the Rain</button>`;
-      rain = `${btn}<p class="muted small">Rain lasts ${fmtTime(R.duration(L))}: +${Math.round((R.water - 1) * 100)}% water from the wells, −${R.cool}°C in the keep, no sandstorm slowdown outdoors, faster healing, and an instant ${fmt(KH.scaleReward({ water: R.burst }).water)} water. It can wake a dormant wyrm. Recharges in ${fmtTime(R.cooldown(L))}.</p>`;
+      rain = `${btn}<p class="muted small">Rain lasts ${fmtTime(rainDur(L))}: +${Math.round((R.water - 1) * 100)}% water from the wells, −${R.cool}°C in the keep, no sandstorm slowdown outdoors, faster healing, and an instant ${fmt(KH.scaleReward({ water: R.burst }).water)} water. It can wake a dormant wyrm. Recharges in ${fmtTime(rainCd(L))}.</p>`;
     }
     const auto = L >= DATA.wyrm.autoMistLevel
       ? `<div class="row"><div class="grow"><b>Attuned mist</b><div class="muted small">${esc(S.wyrm.name)} pours before storms, drizzles at night and saves water when the cisterns run low.</div></div><button class="switch ${S.autoMist ? 'on' : ''}" data-act="automist" role="switch" aria-checked="${S.autoMist}" aria-label="Attuned mist"><i></i></button></div>`

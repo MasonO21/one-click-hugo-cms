@@ -16,6 +16,9 @@
   KH.sheets = KH.sheets || {};
   KH.side = KH.side || [];
   KH.chips = KH.chips || [];
+  KH.plotRows = KH.plotRows || {}; // type -> (pid, L, N, up) => [[label, value, next], ...] for the building sheet
+  KH.plotExtras = KH.plotExtras || {}; // type -> (pid, R) => extra HTML on the building sheet
+  KH.worldTabs = KH.worldTabs || []; // extra World subtabs: { id, label, panel(), dot() }
   KH.renderHooks = KH.renderHooks || [];
   UI.prices = {};
 
@@ -169,10 +172,11 @@
   // Panels
   // ======================================================================
   function panelHeroes() {
-    const tabs = subtabs('heroes', [['roster', 'Roster'], ['beacon', 'The Beacon', S.beacons >= 1]]);
+    const tabs = subtabs('heroes', [['roster', 'Roster'], ['beacon', 'The Beacon', S.beacons >= 1], ...(KH.panelGear ? [['gear', 'Gear', KH.gearDot && KH.gearDot()]] : [])]);
     if (UI.sub.heroes === 'beacon') return tabs + panelRecruit();
+    if (UI.sub.heroes === 'gear' && KH.panelGear) return tabs + KH.panelGear();
     const owned = Object.keys(S.heroes).sort((a, b) => KH.heroPower(b) - KH.heroPower(a));
-    const missing = DATA.heroes.filter((h) => !S.heroes[h.id]);
+    const missing = DATA.heroes.filter((h) => !S.heroes[h.id]).sort((a, b) => (KH.heroAvailable(a) ? 0 : 1) - (KH.heroAvailable(b) ? 0 : 1));
     const team = KH.teamStats(null);
     const card = (id) => {
       const d = HERO[id], h = S.heroes[id];
@@ -187,7 +191,7 @@
       <div class="card stack"><div class="row"><div class="grow"><b>Expedition squad</b><div class="muted small">Up to 3 heroes march with your troops and defend the keep. Tap a hero to swap.</div></div></div>
       <div class="squad">${[0, 1, 2].map((i) => S.squad[i] ? `<button class="slot" data-act="hero" data-arg="${S.squad[i]}">${portrait(S.squad[i])}</button>` : '<div class="slot">+</div>').join('')}</div></div>
       <div class="row"><span class="section-label grow">Roster · ${owned.length}/${DATA.heroes.length}</span><span class="chip muted small">${icon('i-journal')}${fmt(S.journals)} journals</span></div>
-      <div class="hero-grid">${owned.map(card).join('')}${missing.map((d) => `<button class="hcard ${d.rarity} missing" data-act="hero" data-arg="${d.id}">${portrait(d.id)}<span class="meta"><span class="nm">${esc(d.name.split(' ')[0])}</span><span class="sub"><span class="r-${d.rarity}">${DATA.rarities[d.rarity].name}</span></span></span></button>`).join('')}</div>`;
+      <div class="hero-grid">${owned.map(card).join('')}${missing.map((d) => `<button class="hcard ${d.rarity} missing" data-act="hero" data-arg="${d.id}">${portrait(d.id)}<span class="meta"><span class="nm">${esc(d.name.split(' ')[0])}</span><span class="sub"><span class="r-${d.rarity}">${KH.heroAvailable(d) ? DATA.rarities[d.rarity].name : 'Act II'}</span></span></span></button>`).join('')}</div>`;
   }
 
   function panelRecruit() {
@@ -212,7 +216,9 @@
   }
 
   function panelExpedition() {
-    const tabs = subtabs('world', [['map', 'Dunes'], ['expedition', 'Expedition']]);
+    const tabs = subtabs('world', [['map', 'Dunes'], ['expedition', 'Expedition'], ...KH.worldTabs.map((w) => [w.id, w.label, w.dot && w.dot()])]);
+    const extra = KH.worldTabs.find((w) => w.id === UI.sub.world);
+    if (extra) return tabs + extra.panel();
     const n = S.stage;
     const p = KH.patrolPreview();
     let patrol;
@@ -236,7 +242,7 @@
     const breath = S.dormant ? 0 : DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath'));
     const odds = ours * (1 + breath) >= theirs * 1.15 ? ['Favored', 'var(--good)'] : ours * (1 + breath) >= theirs * 0.9 ? ['Even fight', 'var(--gold)'] : ['Risky', 'var(--bad)'];
     const home = KH.squadHome();
-    return `${tabs}<div class="panel-head"><h2>${endless ? 'The Burning Line' : 'Expedition'}</h2><p>${esc(ch.name)}</p></div>
+    return `${tabs}<div class="panel-head"><h2>${endless ? 'The Burning Line' : ch.act === 2 ? 'Expedition · Act II' : 'Expedition'}</h2><p>${esc(ch.name)}</p></div>
       ${patrol}
       <div class="section-label">Next stage</div>
       <div class="stage-card ${foe.boss ? 'boss' : ''}">
@@ -253,7 +259,7 @@
   }
 
   function panelShop() {
-    const offers = DATA.shop.filter((x) => !x.id.startsWith('sg'));
+    const offers = DATA.shop.filter((x) => !x.id.startsWith('sg') && (!x.needs || S.lv[x.needs]));
     const offer = (o) => {
       const done = o.once && S.bought[o.id];
       const daily = o.daily && S.boughtDay[o.id] === today();
@@ -368,7 +374,7 @@
       rows.push(['Donation charges', `${L ? 5 + L : 0}`, up(5 + N)]);
     } else if (type === 'storehouse') {
       rows.push(['Protected per resource', fmt(KH.protectOf()), up(fmt(b.protect(N)))]);
-    }
+    } else if (KH.plotRows[type]) rows.push(...KH.plotRows[type](pid, L, N, up));
     if (!rows.length) return '';
     return `<dl class="kv">${rows.map(([k, v, u]) => `<dt>${k}</dt><dd>${v}${u}</dd>`).join('')}</dl>`;
   }
@@ -462,6 +468,7 @@
       let right;
       if (isActive) right = '<span class="muted small">In progress</span>';
       else if (lvl >= DATA.techMaxLevel) right = '<span class="muted small">Complete</span>';
+      else if (t.needs && !S.lv[t.needs]) right = `<span class="muted small">${icon('i-lock')}Needs the ${esc(plotName(t.needs))}</span>`;
       else right = `<button class="btn small ${S.research || lvl >= max || !KH.canAfford(KH.techCost(t, lvl)) ? 'off' : ''}" data-act="research" data-arg="${t.id}">Research</button>`;
       return `<div class="card tech"><div class="grow"><h3>${esc(t.name)} <span class="muted small">${lvl}/${DATA.techMaxLevel}</span></h3><div class="muted small">${esc(t.desc)}</div>
         ${lvl < DATA.techMaxLevel && !isActive ? `<div class="row wrap" style="margin-top:6px">${costHTML(KH.techCost(t, lvl))}<span class="chip muted small">${icon('i-clock')}${fmtTime(KH.techTime(t, lvl))}</span></div>` : ''}</div>${right}</div>`;
@@ -504,6 +511,7 @@
       if (!locked) body += upgradeHTML(pid);
       if (L && type === 'barracks') body += trainingHTML();
       if (L && type === 'archive') body += researchHTML();
+      if (L && KH.plotExtras[type]) body += KH.plotExtras[type](pid, R);
       if (L && type === 'watchtower') body += `${KH.raidInfo ? KH.raidInfo() : ''}<div class="section-label">What the lookouts see</div>${forecastHTML()}`;
     }
     return { title: plotName(pid), lvl: L ? `Lv ${L}` : locked ? 'Locked' : 'Not built', body };
@@ -518,7 +526,7 @@
     const post = DATA.stewardPosts[d.steward.kind];
     if (!h) {
       return { title: d.name, lvl: 'Not recruited', body: `${head}${skill}<div class="card"><b>Steward: ${plotName(post.plot)}</b><div class="muted small">${post.label(d.steward.val)}</div></div>
-        <p class="notice heat">Recruit ${esc(d.name.split(' ')[0])} at the Beacon, or with a ${DATA.rarities[d.rarity].name} Shard Pouch.</p><button class="btn wide" data-act="tab" data-arg="recruit">Go to the Beacon</button>` };
+        ${KH.heroAvailable(d) ? `<p class="notice heat">Recruit ${esc(d.name.split(' ')[0])} at the Beacon, or with a ${DATA.rarities[d.rarity].name} Shard Pouch.</p><button class="btn wide" data-act="tab" data-arg="recruit">Go to the Beacon</button>` : `<p class="notice">${esc(d.name.split(' ')[0])} arrives at the Beacon when Act II begins, after you quench the Sunheart (stage ${DATA.actOneStage}).</p>`}` };
     }
     const s = KH.heroStats(id), cap = KH.heroCap(id), cost = 2 * h.lvl;
     const isSteward = S.stewards[d.steward.kind] === id;
@@ -582,7 +590,7 @@
         <p class="muted small">Progress saves on this device. To move it to another device or browser, copy your save code there.</p>
         <div class="row wrap"><button class="btn small alt" data-act="sheet" data-arg="savecode">Copy save code</button><button class="btn small alt" data-act="sheet" data-arg="loadcode">Load a save code</button>${native ? '<button class="btn small alt" data-act="restore">Restore purchases</button>' : ''}</div>
         <div class="section-label">About</div>
-        ${DATA.privacyUrl ? `<p class="small"><a href="${esc(DATA.privacyUrl)}" target="_blank" rel="noopener">Privacy policy</a></p>` : ''}<p class="muted small">Rainkeep ${DATA.version}. Timers and production run about 30× faster than a typical live-service strategy game, so the whole story fits in a handful of evenings. Caravan members and rival keeps are simulated.</p>
+        ${DATA.privacyUrl ? `<p class="small"><a href="${esc(DATA.privacyUrl)}" target="_blank" rel="noopener">Privacy policy</a></p>` : ''}<p class="muted small">Rainkeep ${DATA.version}. Timers and production run about 30× faster than a typical live-service strategy game, so the whole story fits in a couple of weeks of evenings. Caravan members and rival keeps are simulated.</p>
         <button class="btn alt wide" data-act="reset">Start a new keep</button>`,
     };
   }
@@ -617,8 +625,9 @@
 
   function sheetOdds() {
     const o = DATA.recruit.odds;
-    const list = (r) => DATA.heroes.filter((h) => h.rarity === r).map((h) => esc(h.name)).join(', ');
-    const nOf = (r) => DATA.heroes.filter((h) => h.rarity === r).length;
+    const pool = DATA.heroes.filter((h) => KH.heroAvailable(h)), later = DATA.heroes.filter((h) => !KH.heroAvailable(h));
+    const list = (r) => pool.filter((h) => h.rarity === r).map((h) => esc(h.name)).join(', ');
+    const nOf = (r) => pool.filter((h) => h.rarity === r).length;
     const per = (r) => (o[r] * 100) / nOf(r);
     const feat = KH.featured();
     return {
@@ -627,7 +636,7 @@
         <p class="small"><b class="r-legendary">Legendary:</b> ${esc(HERO[feat].name)} (featured) ${((o.legendary * DATA.recruit.featuredShare + (o.legendary * (1 - DATA.recruit.featuredShare)) / nOf('legendary')) * 100).toFixed(2)}%, every other Legendary ${((o.legendary * (1 - DATA.recruit.featuredShare)) / nOf('legendary') * 100).toFixed(2)}% each. <span class="muted">${list('legendary')}</span></p>
         <p class="small"><b class="r-epic">Epic:</b> ${per('epic').toFixed(2)}% each. <span class="muted">${list('epic')}</span></p>
         <p class="small"><b class="r-rare">Rare:</b> ${per('rare').toFixed(2)}% each. <span class="muted">${list('rare')}</span></p>
-        <p class="muted small">Your first recruit is ${HERO[DATA.recruit.firstPull].name}. A Legendary is guaranteed on or before the ${DATA.recruit.pity}th recruit since your last one. Every ×10 includes at least one Epic or better. The featured hero changes with each event.</p>`,
+        <p class="muted small">Your first recruit is ${HERO[DATA.recruit.firstPull].name}. A Legendary is guaranteed on or before the ${DATA.recruit.pity}th recruit since your last one. Every ×10 includes at least one Epic or better. The featured hero changes with each event.${later.length ? ` ${later.map((h) => esc(h.name)).join(', ')} join the pool when Act II begins (after stage ${DATA.actOneStage}), and the odds above are then shared among more heroes.` : ''}</p>`,
     };
   }
 
@@ -663,7 +672,7 @@
     const idx = DATA.chapters.indexOf(ch) + 1;
     return {
       title: '', lvl: '',
-      body: `<div class="story-art"><span>${idx <= 6 ? `Chapter ${idx}` : 'Endless'}</span><h1>${esc(ch.name)}</h1></div>
+      body: `<div class="story-art ${ch.act === 2 ? 'act2' : ''}"><span>${ch.from > DATA.finalStage ? 'Endless' : `${ch.act === 2 ? 'Act II · ' : ''}Chapter ${idx}`}</span><h1>${esc(ch.name)}</h1></div>
         <p class="lore">${esc(ch.story)}</p>
         <button class="btn wide" data-act="close">${UI.tab === 'world' ? 'Set out' : 'Continue'}</button>`,
     };
@@ -699,14 +708,14 @@
   }
 
   function sheetEnding() {
-    const E = DATA.ending;
+    const two = UI.sheet.act === 2, E = two ? DATA.ending2 : DATA.ending;
     return {
       title: '', lvl: '',
-      body: `<div class="evolve">${wyrmCanvas({ cls: 'big' })}<span class="section-label">Epilogue</span><h1>${esc(E.title)}</h1></div>
+      body: `<div class="evolve">${wyrmCanvas({ cls: 'big' })}<span class="section-label">${two ? 'Epilogue' : 'End of Act I'}</span><h1>${esc(E.title)}</h1></div>
         ${E.lines.map((l) => `<p class="lore">${esc(l.replace('{wyrm}', S.wyrm.name))}</p>`).join('')}
-        <div class="card"><b>Rainbringer</b><div class="muted small">You beat Rainkeep's story. The Burning Line stays open for as long as you want to push it.</div><div class="costs" style="margin-top:8px">${rewardHTML(E.reward)}</div></div>
-        <button class="btn wide gold" data-act="close">Claim and continue</button>
-        <p class="muted small" style="text-align:center">Made with care. Thank you for keeping the water flowing.</p>`,
+        <div class="card"><b>${esc(E.badge)}</b><div class="muted small">${esc(E.note)}</div><div class="costs" style="margin-top:8px">${rewardHTML(E.reward)}</div></div>
+        <button class="btn wide gold" data-act="close">${two ? 'Claim and continue' : 'Claim and begin Act II'}</button>
+        ${two ? '<p class="muted small" style="text-align:center">Made with care. Thank you for keeping the water flowing.</p>' : ''}`,
     };
   }
 
@@ -793,7 +802,7 @@
     el.innerHTML = `
       <div class="b-title"><span class="stage-num">${esc(b.title)}</span><h2>${esc(foe.name)}</h2></div>
       <div class="b-field">
-        <div class="b-side" id="b-foe">${foeArt(foe)}
+        <div class="b-side" id="b-foe">${foe.portrait ? `<div class="b-rival">${portrait(foe.portrait)}</div>` : foeArt(foe)}
           <div class="b-hp"><div class="lbl"><span>${esc(foe.name)}</span><span id="b-eh">${fmt(foe.hp)}</span></div><div class="bar foe"><i id="b-ehb" style="width:100%"></i></div></div>
         </div>
         <div class="b-log" id="b-log">${esc(b.intro || 'Your squad marches out across the sand…')}</div>
@@ -886,7 +895,7 @@
   // ======================================================================
   // UI actions
   // ======================================================================
-  const TAB_ALIAS = { recruit: ['heroes', 'beacon'], roster: ['heroes', 'roster'], expedition: ['world', 'expedition'], map: ['world', 'map'] };
+  const TAB_ALIAS = { recruit: ['heroes', 'beacon'], roster: ['heroes', 'roster'], gear: ['heroes', 'gear'], expedition: ['world', 'expedition'], map: ['world', 'map'], spire: ['world', 'spire'], duels: ['world', 'duels'] };
   ACT.tab = (tab) => {
     let sub = null;
     if (TAB_ALIAS[tab]) [tab, sub] = TAB_ALIAS[tab];
@@ -916,10 +925,16 @@
       if (sh.kind === 'intro') S.seenIntro = true;
       if (sh.kind === 'story' && !S.story.chapters.includes(sh.from)) S.story.chapters.push(sh.from);
       if (sh.kind === 'evolve' && !S.story.forms.includes(sh.from)) S.story.forms.push(sh.from);
-      if (sh.kind === 'ending' && !S.endingSeen) {
+      if (sh.kind === 'ending' && sh.act !== 2 && !S.endingSeen) {
         S.endingSeen = true;
         KH.grant(DATA.ending.reward);
         S.skins.on = DATA.ending.reward.skin;
+      }
+      if (sh.kind === 'ending' && sh.act === 2 && !S.ending2Seen) {
+        S.ending2Seen = true;
+        KH.grant(DATA.ending2.reward);
+        S.skins.on = DATA.ending2.reward.skin;
+        KH.emit('ending2');
       }
     }
     UI.sheet = null;
@@ -1013,7 +1028,8 @@
     // story beats that must never be skipped: bring them back if something replaced them
     if (!UI.sheet && !UI.battle) {
       const queued = (k) => UI.sheetQueue.some((s) => s.kind === k);
-      if (S.stage > DATA.finalStage && !S.endingSeen && !queued('ending')) KH.queueSheet({ kind: 'ending' });
+      if (S.stage > DATA.actOneStage && !S.endingSeen && !queued('ending')) KH.queueSheet({ kind: 'ending' });
+      else if (S.stage > DATA.finalStage && S.endingSeen && !S.ending2Seen && !queued('ending')) KH.queueSheet({ kind: 'ending', act: 2 });
     }
     const R = KH.rates(false);
     lastR = R;
@@ -1117,7 +1133,7 @@
         renderAll(true);
       }).catch(() => {});
     }
-    if (S.stage > DATA.finalStage && !S.endingSeen) KH.queueSheet({ kind: 'ending' });
+    if (S.stage > DATA.actOneStage && !S.endingSeen) KH.queueSheet({ kind: 'ending' });
     if (S.lv.wyrm >= DATA.ascension.level && !S.wyrm.element) KH.queueSheet({ kind: 'ascend' });
   });
 })();

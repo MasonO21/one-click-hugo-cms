@@ -47,7 +47,7 @@
     T.ry = groundH * 0.39;
     T.rx = Math.min(VW * 0.385, T.ry * 1.9, 250);
     DATA.plots.forEach((p, i) => {
-      const a = Math.PI / 2 + (i * Math.PI * 2) / DATA.plots.length;
+      const a = KH.plotAngle(i);
       const x = T.cx + T.rx * Math.cos(a), y = T.cy + T.ry * Math.sin(a);
       const depth = (y - (T.cy - T.ry)) / (2 * T.ry);
       T.pos[p.id] = { x, y, s: T.k * (0.8 + 0.22 * depth) };
@@ -170,6 +170,29 @@
         ctx.fillStyle = '#0d1014'; ctx.beginPath(); ctx.moveTo(x - 8 * s, y); ctx.lineTo(x - 8 * s, y - 11 * s); ctx.quadraticCurveTo(x, y - 19 * s, x + 8 * s, y - 11 * s); ctx.lineTo(x + 8 * s, y); ctx.fill();
         ctx.strokeStyle = '#7a5434'; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.moveTo(x - 9 * s, y); ctx.lineTo(x - 9 * s, y - 12 * s); ctx.lineTo(x + 9 * s, y - 12 * s); ctx.lineTo(x + 9 * s, y); ctx.stroke();
         if (lit) { ctx.fillStyle = '#ffc56a'; ctx.shadowColor = '#ff9a3c'; ctx.shadowBlur = 10; ell(x + 12 * s, y - 10 * s, 1.8 * s, 1.8 * s); ctx.fill(); ctx.shadowBlur = 0; }
+        break;
+      }
+      case 'forge': {
+        ctx.fillStyle = 'rgba(8,16,30,.35)'; ell(x, y + 2, 30 * s, 8 * s); ctx.fill();
+        // chimney and smoke
+        ctx.fillStyle = '#7a5a3e'; ctx.fillRect(x - 18 * s, y - 46 * s, 8 * s, 30 * s);
+        ctx.fillStyle = '#9a7650'; ctx.fillRect(x - 19 * s, y - 48 * s, 10 * s, 3 * s);
+        for (let i = 0; i < 3; i++) {
+          const k = (t * 0.35 + i / 3) % 1;
+          ctx.fillStyle = `rgba(150,138,126,${0.45 * (1 - k)})`; ell(x - 14 * s + k * 8 * s, y - 52 * s - k * 22 * s, (3 + k * 6) * s, (3 + k * 5) * s); ctx.fill();
+        }
+        // furnace dome
+        ctx.fillStyle = '#c8955a'; ctx.beginPath(); ctx.moveTo(x - 20 * s, y); ctx.lineTo(x - 20 * s, y - 16 * s); ctx.quadraticCurveTo(x - 20 * s, y - 34 * s, x - 2 * s, y - 34 * s); ctx.quadraticCurveTo(x + 16 * s, y - 34 * s, x + 16 * s, y - 16 * s); ctx.lineTo(x + 16 * s, y); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#a8764a'; ctx.beginPath(); ctx.moveTo(x + 4 * s, y - 34 * s); ctx.quadraticCurveTo(x + 16 * s, y - 33 * s, x + 16 * s, y - 16 * s); ctx.lineTo(x + 16 * s, y); ctx.lineTo(x + 6 * s, y); ctx.closePath(); ctx.fill();
+        // glowing mouth
+        const fl = 0.75 + 0.25 * Math.sin(t * 7.1) * Math.sin(t * 2.3 + 1);
+        ctx.fillStyle = `rgba(255,${150 + 40 * fl | 0},60,1)`; ctx.shadowColor = '#ff7a1a'; ctx.shadowBlur = 16 * fl;
+        ctx.beginPath(); ctx.moveTo(x - 9 * s, y); ctx.lineTo(x - 9 * s, y - 9 * s); ctx.quadraticCurveTo(x - 2 * s, y - 18 * s, x + 5 * s, y - 9 * s); ctx.lineTo(x + 5 * s, y); ctx.fill(); ctx.shadowBlur = 0;
+        // anvil and ingots
+        ctx.fillStyle = '#6a4a2e'; ctx.fillRect(x + 20 * s, y - 7 * s, 6 * s, 7 * s);
+        ctx.fillStyle = '#4a4a52'; ctx.fillRect(x + 17 * s, y - 11 * s, 13 * s, 4 * s); ctx.fillRect(x + 21 * s, y - 14 * s, 6 * s, 3 * s);
+        ctx.fillStyle = '#e8b54a'; for (let i = 0; i < 3; i++) ctx.fillRect(x + 18 * s + i * 5 * s, y + 3 * s, 4 * s, 2.4 * s);
+        if (S.lv.forge >= 8) { ctx.fillStyle = '#ffe08a'; ctx.shadowColor = '#ffb347'; ctx.shadowBlur = 8; ell(x - 26 * s, y - 2 * s, 5 * s, 2 * s); ctx.fill(); ctx.shadowBlur = 0; }
         break;
       }
       case 'infirmary': {
@@ -443,6 +466,22 @@
     ctx.beginPath(); ctx.moveTo(3, -5); ctx.quadraticCurveTo(10, -10, 15, -16); ctx.moveTo(6, -3); ctx.quadraticCurveTo(13, -6, 18, -9);
     if (stIdx >= 4) { ctx.moveTo(0, -6); ctx.quadraticCurveTo(4, -14, 7, -20); }
     ctx.stroke();
+    if (stIdx >= 7 && !dorm) {
+      // Stormcrowned: a ring of storm horns with glowing tips
+      for (let i = 0; i < 5; i++) {
+        const bx = -6 + i * 3.6, by = -7 - Math.sin((i / 4) * Math.PI) * 2.5, tip = by - 7 - Math.sin((i / 4) * Math.PI) * 3;
+        ctx.strokeStyle = horn; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 1.2, tip); ctx.stroke();
+        ctx.fillStyle = '#bfeaff'; ctx.shadowColor = '#8fd8ff'; ctx.shadowBlur = 6 + 4 * Math.max(0, Math.sin(t * 3.1 + i));
+        ell(bx + 1.2, tip, 1.2, 1.2); ctx.fill(); ctx.shadowBlur = 0;
+      }
+    }
+    if (stIdx >= 8 && !dorm) {
+      // Skyriver: a halo of living water over the head
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = skin.mist[0]; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.lineDashOffset = -t * 12;
+      ctx.beginPath(); ctx.ellipse(2, -24 + Math.sin(t * 1.4), 13, 3.6, -0.1, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore();
+    }
     if (elem && !dorm) {
       ctx.fillStyle = elem.color;
       ctx.beginPath(); ctx.moveTo(-3, -7); ctx.lineTo(1, -15 - Math.sin(t * 5) * 1.5); ctx.lineTo(4, -7); ctx.fill();

@@ -881,8 +881,60 @@
     for (let i = 0; i < 5; i++) g.add(at(A.jar(0.95, i % 2 ? '#9a4a2a' : '#b0603a'), -0.9 + i * 0.36, 0, 0.75));
     g.add(at(cratePile(4, 12), 0.2, 0, 0.1));
   };
+  // The Sunsteel Forge: a sandstone furnace with a living glow, anvil, ingots and smoke.
+  B.forge = (tier, g, U) => {
+    const stone = mat(P.sandstone, { flat: true }), stoneD = mat(P.stoneD, { flat: true }), iron = mat('#4a4a52', { m: 0.6, r: 0.45 });
+    const glow = new THREE.MeshStandardMaterial({ color: '#ffb347', emissive: '#ff7a1a', emissiveIntensity: 1.6, roughness: 0.5 });
+    const ingot = mat(P.gold, { m: 0.7, r: 0.3, e: '#a8641c', ei: 0.35 });
+    // furnace: a squat drum with a dome and a glowing arched mouth
+    g.add(cyl(0.95, 1.05, 1.1, stone, -0.2, 0, -0.45, 12));
+    g.add(dome(0.98, stoneD, -0.2, 1.1, -0.45, 14));
+    g.add(box(0.5, 0.42, 0.08, glow, -0.2, 0.18, 0.55), arch(0.25, 0.08, glow, -0.2, 0.6, 0.55));
+    g.add(box(0.8, 0.12, 0.2, stoneD, -0.2, 0, 0.62));
+    const chH = tier >= 2 ? 1.9 : 1.2;
+    g.add(cyl(0.2, 0.26, chH, stoneD, -0.55, 1.4, -0.75, 8), cyl(0.27, 0.27, 0.12, stone, -0.55, 1.4 + chH, -0.75, 8));
+    // anvil on a stump, ingots, quench trough
+    g.add(cyl(0.2, 0.24, 0.42, mat(P.wood, { flat: true }), 0.95, 0, 0.55, 8));
+    g.add(box(0.5, 0.14, 0.22, iron, 0.95, 0.42, 0.55), box(0.24, 0.12, 0.16, iron, 0.95, 0.56, 0.55), cone(0.08, 0.26, iron, 1.28, 0.6, 0.55, 4).rotateZ(-Math.PI / 2));
+    for (let i = 0; i < 2 + tier; i++) g.add(box(0.26, 0.08, 0.12, ingot, 0.75 + (i % 3) * 0.18, Math.floor(i / 3) * 0.08, 1.15));
+    g.add(box(0.9, 0.26, 0.38, mat(P.woodD, { flat: true }), -0.95, 0, 0.75), box(0.8, 0.02, 0.3, mat('#2f7f9a', { r: 0.15 }), -0.95, 0.24, 0.75));
+    if (tier >= 2) {
+      // bellows and an awning over the anvil, a rack of blades
+      const bel = box(0.55, 0.12, 0.34, mat('#6a3a1e', { flat: true }), 0.55, 0.4, -0.35);
+      bel.rotation.z = 0.25;
+      g.add(bel, rod(new V3(0.3, 0.45, -0.35), new V3(-0.05, 0.4, -0.35), 0.03, iron));
+      g.add(at(awning(1.3, 0.9, P.cloth1, 1.45, 0.05), 0.95, 0, 0));
+      for (let i = 0; i < 3; i++) g.add(box(0.05, 0.75, 0.02, mat('#d8dde2', { m: 0.8, r: 0.25 }), 1.55, 0.2, 0.15 - i * 0.18));
+      g.add(box(0.08, 0.06, 0.6, mat(P.woodD), 1.55, 0.78, -0.03));
+    }
+    if (tier >= 3) {
+      // a crucible of molten Sunsteel and a banner
+      const molten = new THREE.MeshStandardMaterial({ color: '#ffe08a', emissive: '#ffb347', emissiveIntensity: 1.4, roughness: 0.3 });
+      g.add(cyl(0.34, 0.26, 0.42, iron, 0.55, 0, -1.2, 10), cyl(0.3, 0.3, 0.03, molten, 0.55, 0.4, -1.2, 10));
+      const b = A.banner('#e8b54a', 2.3, 0.6, 0.42, { map: tex.stripes('#e8b54a', P.cloth1, 4) });
+      b.position.set(-1.25, 0, -1.1);
+      g.add(b); U.push(b.userData.update);
+      U.push((t) => { molten.emissiveIntensity = 1.2 + 0.35 * Math.sin(t * 2.3); });
+    }
+    // smoke puffs rising from the chimney
+    const smokeM = new THREE.MeshStandardMaterial({ color: '#8a8078', transparent: true, opacity: 0.5, depthWrite: false, roughness: 1 });
+    const puffs = new THREE.Group();
+    puffs.userData.dyn = true;
+    puffs.position.set(-0.55, 1.55 + chH, -0.75);
+    for (let i = 0; i < 4; i++) puffs.add(sph(0.16, smokeM, 0, 0, 0, 7));
+    g.add(puffs);
+    U.push((t, wind = 1) => {
+      glow.emissiveIntensity = 1.35 + 0.35 * Math.sin(t * 7.1) * Math.sin(t * 2.3 + 1);
+      puffs.children.forEach((p, i) => {
+        const k = ((t * 0.35 + i / 4) % 1);
+        p.position.set(k * 0.5 * wind, k * 1.4, k * 0.15);
+        p.scale.setScalar(0.6 + k * 1.6);
+      });
+      smokeM.opacity = 0.45;
+    });
+  };
   // Mark where to draw the 2D label and how tall the building is (for overlay badges).
-  const TOP = { shelter: 1.6, quarry: 2.4, grove: 3.0, well: 1.7, mine: 2.0, infirmary: 1.9, barracks: 1.9, watchtower: 4.2, archive: 2.6, hall: 2.3, storehouse: 1.7 };
+  const TOP = { shelter: 1.6, quarry: 2.4, grove: 3.0, well: 1.7, mine: 2.0, infirmary: 1.9, barracks: 1.9, watchtower: 4.2, archive: 2.6, hall: 2.3, storehouse: 1.7, forge: 2.4 };
   A.building = (type, tier, seed = 1) => {
     const g = new THREE.Group(), U = [];
     (B[type] || (() => g.add(box(1.5, 1, 1.5, mat(P.adobe)))))(tier, g, U, seed);
@@ -1019,6 +1071,28 @@
         f.scale.setScalar(0.28 - i * 0.04);
         h.add(f); this.crest.push(f);
       }
+      // Stormcrowned (Lv 17+): a ring of storm horns with glowing tips
+      this.stormMat = new THREE.MeshStandardMaterial({ color: '#e8f6ff', emissive: '#8fd8ff', emissiveIntensity: 0.9, roughness: 0.3 });
+      this.crown = new THREE.Group();
+      for (let i = 0; i < 7; i++) {
+        const a = -1.1 + (i / 6) * 2.2;
+        const c = mesh(geo('crownh', () => new THREE.ConeGeometry(0.035, 0.32, 5).translate(0, 0.16, 0)), this.hornMat);
+        c.position.set(Math.sin(a) * 0.24, 0.24 + Math.cos(a) * 0.05, -0.12 - Math.cos(a) * 0.08);
+        c.rotation.set(-0.5, 0, -a * 0.55);
+        const tip = sph(0.03, this.stormMat, 0, 0.33, 0, 6);
+        c.add(tip);
+        this.crown.add(c);
+      }
+      this.crown.visible = false;
+      h.add(this.crown);
+      // Skyriver (Lv 20): a slow halo of living water above the head
+      this.haloMat = new THREE.MeshStandardMaterial({ color: '#7fe8ff', emissive: '#4ac8ff', emissiveIntensity: 0.7, roughness: 0.15, transparent: true, opacity: 0.75 });
+      this.halo = mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 40), this.haloMat);
+      this.halo.position.set(0, 0.62, -0.1);
+      this.halo.rotation.x = Math.PI / 2 - 0.25;
+      this.halo.castShadow = false;
+      this.halo.visible = false;
+      h.add(this.halo);
       this.whiskers = [];
       for (const s of [1, -1]) {
         const curve = new THREE.CatmullRomCurve3([new V3(0, 0, 0), new V3(0.18 * s, -0.08, -0.05), new V3(0.34 * s, -0.25, -0.2), new V3(0.42 * s, -0.48, -0.35)]);
@@ -1053,7 +1127,10 @@
       this.horns.forEach((c, i) => { c.visible = i < 2 || stIdx >= 4; c.scale.setScalar(c.userData.s * (0.45 + stIdx * 0.12)); });
       this.ears.forEach((e) => e.scale.setScalar(0.3 + stIdx * 0.04));
       this.whiskers.forEach((w) => { w.scale.setScalar(0.55 + stIdx * 0.1); });
-      this.crest.forEach((c, i) => { c.visible = stIdx >= 1 || i === 0; });
+      this.crest.forEach((c, i) => { c.visible = (stIdx >= 1 || i === 0) && stIdx < 7; });
+      this.crown.visible = stIdx >= 7;
+      this.halo.visible = stIdx >= 8;
+      if (stIdx >= 8) { this.haloMat.color.set(sk.mist[0]); this.haloMat.emissive.set(elem ? elem.color : sk.mist[0]); }
       this.group.scale.setScalar(Math.max(1.2, this.size * 1.7));
     }
     radius(s) {
@@ -1167,6 +1244,8 @@
       this.eyeMat.emissiveIntensity = dorm ? 0.1 : 0.9;
       this.ears.forEach((e, k) => { e.rotation.z = (k ? 0.6 : -0.6) + Math.sin(t * 3 + k) * 0.12; });
       this.whiskers.forEach((w, k) => { w.rotation.x = Math.sin(t * 1.3 + k) * 0.15; w.rotation.y = Math.sin(t * 0.9 + k * 2) * 0.12; });
+      if (this.halo.visible) { this.halo.rotation.z = t * 0.6; this.halo.position.y = 0.62 + Math.sin(t * 1.4) * 0.03; }
+      if (this.crown.visible) this.stormMat.emissiveIntensity = 0.6 + 0.5 * Math.max(0, Math.sin(t * 3.1) * Math.sin(t * 1.7));
       this.group.updateMatrixWorld(true);
       this.headWorld.copy(this.head.position).applyMatrix4(this.group.matrixWorld);
       this.mouthWorld.set(0, -0.05, 0.85).applyMatrix4(this.head.matrixWorld);
