@@ -41,7 +41,7 @@ Requires Node 22+.
 ```bash
 cd sunup
 npm install
-npm run dev        # server on :8787 + web app on http://localhost:5173
+npm run dev        # server on :8787 + web app on http://localhost:5173 (scripts/dev.mjs)
 npm run demo       # web app only, in on-device demo mode
 npm run check      # typecheck + tests
 ```
@@ -70,6 +70,9 @@ Any Node host with a persistent disk works. Push notifications need HTTPS.
 | `VAPID_SUBJECT` | Contact for web push, e.g. `mailto:you@yourdomain.com`. VAPID keys are generated on first run and saved in the data file. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Texts, calls and sign-in codes. Without them, texts and calls are logged to the console (and in development, sign-in codes are shown on screen). |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Paid subscriptions. Without them, Premium is a card-free 7-day trial. |
+| `FIREBASE_SERVICE_ACCOUNT` | Push to the Android app: the Firebase service-account JSON (raw or base64). |
+| `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_ENV` | Push to the iPhone app: the APNs `.p8` key (raw or base64), its key ID, your team ID, the app's bundle ID, and `development` for builds run from Xcode (default `production`). |
+| `IOS_APP_ID`, `ANDROID_PACKAGE`, `ANDROID_CERT_SHA256` | Let invite links open the installed apps: `TEAMID.bundle.id`, the Android package name, and the app signing certificate's SHA-256 fingerprint(s), comma-separated. |
 
 ### Twilio setup
 
@@ -84,6 +87,41 @@ Any Node host with a persistent disk works. Push notifications need HTTPS.
 3. Turn on the customer portal (Settings > Billing > Customer portal) so people can cancel or change plans from "Manage subscription".
 
 New subscribers get a 7-day trial through Checkout. Anyone who already used a trial is charged right away.
+
+## iPhone and Android apps
+
+`android/` and `ios/` are [Capacitor](https://capacitorjs.com) projects that bundle the same app and add native push notifications, invite links that open the app, haptics, and the Sunup icon and splash screen.
+
+### Build
+
+1. Build the app bundle pointed at your server, and copy it into both projects:
+   `VITE_SUNUP_API=https://sunup.example.com npm run build:native`
+   Without `VITE_SUNUP_API`, the apps run the on-device demo.
+2. **Android:** `npx cap open android` opens Android Studio. From the command line, `cd android && ./gradlew assembleDebug` writes `android/app/build/outputs/apk/debug/app-debug.apk`. You need JDK 21 and the Android SDK (platform 36).
+3. **iPhone:** on a Mac with Xcode 16 or later, run `npx cap open ios`, choose your team under Signing & Capabilities, and run it on a phone.
+
+Re-run `npm run build:native` after changing the app. `node scripts/native-assets.mjs` regenerates the icons and splash screens from `public/icon.svg`.
+
+### Before the first store upload
+
+- **App ID.** The projects use `app.sunup.checkin`. Change it to a reverse-domain ID you own in `capacitor.config.ts`, in `android/app/build.gradle` (`namespace` and `applicationId`, then move `MainActivity.java` to the matching folder and update its `package` line), and in Xcode (Bundle Identifier).
+- **Invite links.** Put your domain in `android/gradle.properties` (`sunupAppLinkHost=your.domain`) and in `ios/App/App/App.entitlements` (`applinks:your.domain`), then set `IOS_APP_ID`, `ANDROID_PACKAGE` and `ANDROID_CERT_SHA256` on the server.
+- **Signing.** Android: create an upload key and build a release bundle with `./gradlew bundleRelease` for Google Play. iPhone: Product > Archive in Xcode, then upload to App Store Connect.
+
+### Push notifications
+
+- **Android:** create a Firebase project, add an Android app with your app ID, and save its `google-services.json` in `android/app/`. On the server, set `FIREBASE_SERVICE_ACCOUNT` (Firebase console > Project settings > Service accounts > Generate new private key). Missed check-ins and SOS use a high-importance "Safety alerts" channel; reminders use a quieter "Check-in reminders" channel.
+- **iPhone:** in your Apple Developer account, create a key with Apple Push Notifications service enabled and download the `.p8` file. Set the `APNS_*` variables on the server. `App.entitlements` already turns on push and time-sensitive notifications, so alerts get through Focus modes.
+- **Ringing on silent.** That needs Apple's Critical Alerts entitlement, which Apple grants on request for safety apps. Once approved, add it to `App.entitlements` and send a critical sound from `server/native-push.ts`.
+
+### Store rules for subscriptions
+
+App builds hide purchasing by default. People can still start the free trial in the app, and a subscription bought on your website unlocks Premium in the app. To sell inside the apps, either add Apple and Google in-app purchases (RevenueCat makes this simpler; `applyBilling` already accepts a provider's subscription status), or, where a store's current rules allow linking out to web purchases, build with `VITE_SUNUP_STORE_PURCHASES=web` so the paywall opens Stripe in the browser. Check the store rules for each country before you submit.
+
+### Not in the apps yet
+
+- The "I'm up" button on notifications works for web push only; in the apps, tapping a notification opens Sunup.
+- Smart check-in from phone motion (rather than opening the app) needs native background code.
 
 ## Website
 
@@ -115,7 +153,7 @@ Every rule lives in `src/shared/service.ts`, so the demo and the server behave i
 
 This is a working prototype. Before charging money or promising safety to real people:
 
-- **Native apps.** iOS web push only works after "Add to Home Screen". Native iOS/Android apps are needed for reliable alarms (critical alerts), true smart check-in from phone activity, and app-store distribution. Inside an iOS app, subscriptions must go through Apple's in-app purchase (RevenueCat is the usual shortcut); the engine's `applyBilling` already takes a provider's status.
+- **Native apps.** The Android app builds here and has been checked for its package, permissions and links, but neither app has been run on a real phone yet. Test both on devices, set up Firebase and the APNs key, and apply for Critical Alerts so alarms ring on silent. Selling inside the apps needs in-app purchases or a store that allows web links (see "Store rules for subscriptions").
 - **Wellness checks.** The last ladder step gives advice; a dispatch partner (e.g. a monitoring-center API) would let Sunup request in-person checks directly.
 - **Data.** Packets are encrypted at rest and photos are stored as separate files, but everything else lives in one JSON file. Move to Postgres once there are more than a few thousand users.
 - **Legal.** Finish the draft terms and privacy policy with a lawyer, and confirm the texting consent flow with your SMS provider.

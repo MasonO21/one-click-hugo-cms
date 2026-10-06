@@ -39,3 +39,19 @@ services:
         sync: false
       - key: STRIPE_PRICE_YEARLY
         sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: APNS_KEY
+        sync: false
+      - key: APNS_KEY_ID
+        sync: false
+      - key: APNS_TEAM_ID
+        sync: false
+      - key: APNS_BUNDLE_ID
+        sync: false
+      - key: IOS_APP_ID
+        sync: false
+      - key: ANDROID_PACKAGE
+        sync: false
+      - key: ANDROID_CERT_SHA256
+        sync: false
