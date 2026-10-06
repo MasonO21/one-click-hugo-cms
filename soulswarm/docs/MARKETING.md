@@ -194,11 +194,11 @@ All scripts are 9:16 first, with 1:1 and 16:9 cut-downs. Every script ends on th
 - 17–20 s: end card.
 - **Variants:** with and without the music-stem explanation caption.
 
-### Ad 6: "Turn Their Bomb on Them" (15 s) (Planned: needs Soul Bomb minions, GDD §4.2. Do not produce until they ship.)
+### Ad 6: "Turn Their Bomb on Them" (15 s) (Soul Bombs are in the build, GDD §4.2.)
 
 - **Hook (0–3 s):** a Bloater swells and flashes red right next to Vael. Caption: **"DON'T let it touch you!"**
 - 3–6 s: Soul Bolt kills it early. It rises as a **cyan Soul Bomb**.
-- 6–11 s: the Soul Bomb sprints into the densest pack and explodes. 30+ enemies drop, and many of them rise. Caption: "Their bomb. My army."
+- 6–11 s: the Soul Bomb dives into the densest pack and explodes (2.4 m blast). The pack drops, and some of them rise. Caption: "Their bomb. My army." Capture a real dense moment; never stage a kill count the blast can't reach.
 - 11–15 s: end card.
 
 ### Ad 7: "Legion vs the Hollow King" (25 s)
