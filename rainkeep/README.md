@@ -80,7 +80,7 @@ rainkeep.state()                                 // the full save object
 KH.town3d.zoom(1.5); KH.town3d.drag(0, -100)     // move the 3D camera
 ```
 
-**Balance bot.** `tools/balance-bot.cjs` plays the whole game headless and prints milestones, resource sources, builder idle time and errors. Install Playwright once (`npm i -D playwright && npx playwright install chromium`), then run `npm run balance -- f2p 36` (modes: `f2p`, `founder`, `dolphin` at about $80, `whale` at about $1,000; purchases are simulated). Compare several runs: gacha luck moves results by an hour or more.
+**Balance bot.** `tools/balance-bot.cjs` plays the whole game headless and prints milestones, resource sources, builder idle time and errors. Install Playwright once (`npm i -D playwright && npx playwright install chromium`), then run `npm run balance -- f2p 36` (modes: `f2p`, `founder`, `dolphin` at about $150, `whale` at about $1,150; purchases are simulated). It also prints where Starglass went, by action, and what blocked each next Rainwyrm level. `npm run balance -- f2p 36 5 sgspend` makes it spend Starglass only on recruits. Compare several runs: gacha luck moves results by an hour or more.
 
 The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties, surplus, rain, incidents, merchants, gear, the Spire, Duels) for 36 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
 

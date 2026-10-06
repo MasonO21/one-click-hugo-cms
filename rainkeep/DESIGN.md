@@ -180,16 +180,18 @@ Every run forged all six pieces of gear to Lv 50 by 36 hours.
 
 **Trials pay out without replacing the story.** The Spire's floor f fights like expedition stage 24 + 0.9f, and its twists make some floors harder than the stage they match. Both trials pay mostly in Sunsteel, Starglass, journals and occasional shard pouches. Their first drafts (an Epic pouch every 10 floors, generous early milestones) pulled Act I down to about 3.3 hours and were cut back.
 
-**What spending buys.** The same bot can play as a paying player: buying through the simulated store, so Patron points count, and spending Starglass on resource crates for whatever the next Rainwyrm level is short of and on speedups for long builds (and on recruits only until every hero is fully starred). Measured over 36 hours:
+**What spending buys.** The same bot can play as a paying player, buying through the simulated store so Patron points count, and spending Starglass the same way as the free bot above (crates, then speedups, then recruits). Measured over 36 hours of version 3.2:
 
-| Milestone | Free | Founder's Cache ($1, Patron 1) | Dolphin (about $80, Patron 5) | Whale (about $1,000, Patron 10) |
+| Milestone | Free (two runs) | Founder's Cache ($1, Patron 1; two runs) | Dolphin (about $150, Patron 6; two runs) | Whale (about $1,150, Patron 10; two runs) |
 |---|---|---|---|---|
-| Stage 60, end of Act I | 4.6-5.2 h | 4.5-6.0 h | 1.8-2.1 h | 1.5-1.7 h |
-| Dune Duels rank 1 | 14.5-14.8 h | 13.9-16.2 h | 10.6-11.2 h | 8.6-9.0 h |
-| Stage 100, end of the story | 13.8-16.2 h | 13.1-16.5 h | 9.2 h | 7.3-7.7 h |
-| Rainwyrm Lv 20 | 34.3-34.9 h | about 33 h | 21.4-21.8 h | 16.1-17.1 h |
+| Stage 60, end of Act I | 3.3-3.6 h | 2.0-2.5 h | 1.5-1.7 h | 1.2 h |
+| Dune Duels rank 1 | 12.4-13.9 h | 11.0-11.2 h | 10.3 h | 8.6 h |
+| Stage 100, end of the story | 11.5-11.7 h | 9.0-10.0 h | 7.4-8.4 h | 4.9-5.5 h |
+| Rainwyrm Lv 20 | 24.9-25.2 h | 21.9-23.5 h | 17.9-19.1 h | 13.4-13.5 h |
 
-The dolphin buys the Founder's Cache, the Growth Fund, the Oasis Stipend, the two daily kits and Ledger Premium every season; the whale adds a War Chest and a Hoard of Starglass every two hours up to about $1,000. Spending buys time (about 1.7× faster to the end of the story for $80, about 2× for $1,000) through resources and speedups, never combat stats: a whale's squad at a given stage is no stronger than a free player's, it just gets there sooner. The Founder's Cache alone barely moves late pacing: its second builder mostly waits on resources from mid-game. It is a cheap first purchase, not a speed-up.
+The dolphin buys the Founder's Cache, the Growth Fund, the Oasis Stipend, the two daily kits, Ledger Premium every season and the $4.99 Growth Pack at each Rainwyrm level (about $70 of its $150). The whale adds the Grand Growth Pack at each level, plus a War Chest and a Hoard of Starglass every two hours until it has spent about $1,000. Spending buys time: the story ends about 1.5× sooner for $150 and about 2.2× sooner for $1,150. The Founder's Cache alone brings it about 2 hours closer, mostly through the second builder. Nothing in the store sells combat stats directly. A paying player's squad is stronger only through more recruits and faster growth, the same routes a free player has.
+
+**Why Growth Packs exist.** Before them, the whale bot finished the story at the same time as the $80 dolphin (about 9 hours) and reached Lv 20 no sooner. A crate grows with the Rainwyrm's level more slowly than building costs do: a late Rainwyrm level (the wyrm plus the six buildings it needs) costs about 45,000 Starglass in crates, so $1,000 of Starglass bought about two levels, and the whale bot spent much of it on recruits instead. Growth Packs are sized to the next level, so money keeps buying progress all the way to Lv 20. That is the spend ladder a high-grossing game in this genre needs. They also give every level-up a buying moment.
 
 Run-to-run spread is wide (gacha luck and raid timing move stage 60 and stage 100 by an hour or more), so tune with several seeds, not one.
 
