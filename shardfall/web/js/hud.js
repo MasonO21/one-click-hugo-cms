@@ -19,6 +19,8 @@
     sprint: '<svg viewBox="0 0 24 24"><path d="M2 8h6M3 12h6M2 16h6M12 5l7 7-7 7"/></svg>',
     purify: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.8 2.8L16.5 9"/></svg>',
     shatter: '<svg viewBox="0 0 24 24"><path d="M12 2l7 10-7 10-7-10z"/><path d="M12 2l-1.5 7 3 3-2.5 3.5L12 22"/></svg>',
+    turret: '<svg viewBox="0 0 24 24"><path d="M7 21h10M9 21l1.5-7h3L15 21"/><path d="M12 3l4 4-4 4-4-4z"/></svg>',
+    wall: '<svg viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M5 19V10l2-4 2 4v9M10 19V8l2-5 2 5v11M15 19V10l2-4 2 4v9"/></svg>',
     passive: '<svg viewBox="0 0 24 24"><path d="M12 2l8 7-8 13L4 9z"/><path d="M4 9h16M12 2l-3 7 3 13 3-13z"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
     skull: '<svg viewBox="0 0 24 24"><path d="M4 20l16-16M4 4l16 16"/></svg>',

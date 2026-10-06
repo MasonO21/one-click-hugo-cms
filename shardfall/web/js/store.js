@@ -58,6 +58,8 @@
           base[k] = b && r && typeof b === 'object' && typeof r === 'object' && !Array.isArray(b) && !Array.isArray(r) && Object.keys(b).length ? Object.assign(b, r) : r;
         }
       }
+      // Every hero's Classic look is always owned, including heroes added after this save was made.
+      for (const h of SF.HEROES) if (!base.skins.includes(SF.defaultSkin(h.id))) base.skins.push(SF.defaultSkin(h.id));
       memory = base;
       SF.gfx = { low: memory.settings.gfx === 'low', numbers: memory.settings.numbers !== false };
       S.rollover();

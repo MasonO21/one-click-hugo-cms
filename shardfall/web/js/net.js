@@ -3,7 +3,7 @@
 (function (SF) {
   const W = SF.WORLD;
   const INTERP = 0.1;   // render this many seconds behind the newest snapshot, for smooth motion
-  const KIND = { h: 'hero', m: 'minion', t: 'tower', c: 'core', n: 'monster' };
+  const KIND = { h: 'hero', m: 'minion', t: 'tower', c: 'core', n: 'monster', s: 'summon' };
   const NET_KEY = 'shardfall.net.v1';
   const read = () => { try { return JSON.parse(localStorage.getItem(NET_KEY) || '{}'); } catch (e) { return {}; } };
   const write = o => { try { localStorage.setItem(NET_KEY, JSON.stringify(o)); } catch (e) { /* storage blocked */ } };
@@ -31,7 +31,7 @@
       this.teamStats = [{ towers: 0, shards: 0 }, { towers: 0, shards: 0 }];
       this.fountains = [{ x: 110, y: W.laneY, r: 230 }, { x: W.w - 110, y: W.laneY, r: 230 }];
       this.bushes = (info.bushes || []).map(b => Object.assign({}, b, { x: this.mx(b.x) }));
-      this.camps = []; this.shard = null; this.wyrm = null; this.signals = []; this.runes = [];
+      this.camps = []; this.shard = null; this.wyrm = null; this.signals = []; this.runes = []; this.walls = [];
       this.map = new Map(); this.snaps = []; this.pending = []; this.lastInput = ''; this.inputT = 0; this.endInfo = null;
       for (const r of info.roster) {
         const h = this.unit(r.i);
@@ -84,6 +84,7 @@
         u.alive = e.al !== 0; u.deadT = 0;
         u.face = { x: this.mirror ? -e.fx : e.fx, y: e.fy }; u.moving = !!e.mv; u.flash = e.fl ? 0.1 : 0;
         u.stunT = e.st || 0; u.slowT = e.sl ? 1 : 0; u.shield = e.sh || 0;
+        if (u.kind === 'summon') { u.life = e.lf; u.color = e.co; }
         if (u.kind === 'tower' || u.kind === 'core') { u.range = e.rg; u.guard = e.g ? this.unit(e.g) : null; u.target = e.tg ? this.unit(e.tg) : null; }
         if (u.kind === 'hero') {
           u.def0 = SF.HERO[e.h]; u.skin = e.sk; u.name = e.n; u.bush = e.bu; u.invisT = e.iv ? 1 : 0; u.pstack = e.ps || 0; u.aegis = !!e.ag; u.reborn = !!e.rb;
@@ -93,7 +94,7 @@
         if (!u.placed) { u.x = this.mx(e.x); u.y = e.y; u.placed = true; }
       }
       // Units that left the snapshot: minions/monsters died (fade out), enemy heroes went out of sight.
-      this.units = this.units.filter(u => seen.has(u) || ((u.kind === 'minion' || u.kind === 'monster') && (u.alive = false, u.deadT < 0.6)));
+      this.units = this.units.filter(u => seen.has(u) || ((u.kind === 'minion' || u.kind === 'monster' || u.kind === 'summon') && (u.alive = false, u.deadT < 0.6)));
       for (const u of seen) if (!this.units.includes(u)) this.units.push(u);
       for (const h of this.heroes) if (!seen.has(h)) { h.vis = [h.team === 0, true, true]; h.placed = h.team === 0 && h.placed; }
       for (const [id, lv, k, d, a, items, alive, rs] of s.hs) {
@@ -104,6 +105,10 @@
       this.shard = s.sd ? this.unit(s.sd) : null;
       this.wyrm = s.wy ? this.unit(s.wy) : null;
       this.runes = (s.rn || []).map(([id, x, y, type]) => ({ id, x: this.mx(x), y, type }));
+      this.walls = (s.wl || []).map(([x, y, dx, dy, half, thick, team, t, dur, color]) => {
+        const d = { x: this.mirror ? -dx : dx, y: dy };
+        return { x: this.mx(x), y, d, n: { x: -d.y, y: d.x }, half, thick, team: this.mt(team), t, dur, color };
+      });
       const p = this.player, me = s.me;
       if (me) {
         p.gold = me.gold; p.xp = me.xp; p.xpNeed = me.xn; p.level = me.lv; p.items = me.items; p.skillCd = me.cd; p.cdr = me.cdr;

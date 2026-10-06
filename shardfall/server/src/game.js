@@ -22,7 +22,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 const finite = v => typeof v === 'number' && Number.isFinite(v);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const KIND = { hero: 'h', minion: 'm', tower: 't', core: 'c', monster: 'n' };
+const KIND = { hero: 'h', minion: 'm', tower: 't', core: 'c', monster: 'n', summon: 's' };
 const isStructure = u => u.kind === 'tower' || u.kind === 'core';
 
 // Reads a direction vector from client input: finite numbers only, length capped at `max`.
@@ -186,6 +186,7 @@ export class Room {
       if (x.slowT > 0) e.sl = 1;
       if (x.shield > 0) e.sh = Math.round(x.shield);
       if (x.mtype) e.mt = x.mtype;
+      if (x.kind === 'summon') { e.lf = r1(x.life); e.co = x.color; }
       if (structure) { e.rg = x.range; if (x.guard) e.g = x.guard.id; if (x.target) e.tg = x.target.id; }
       if (x.kind === 'hero') {
         e.h = x.def0.id; e.sk = x.skin; e.n = x.name; e.bu = x.bush;
@@ -207,6 +208,7 @@ export class Room {
       sd: m.shard && m.shard.alive ? m.shard.id : 0,
       wy: m.wyrm && m.wyrm.alive ? m.wyrm.id : 0,
       rn: m.runes.map(r => [r.id, r.x, r.y, r.type]),
+      wl: m.walls.map(w => [r1(w.x), r1(w.y), r2(w.d.x), r2(w.d.y), w.half, w.thick, w.team, r2(w.t), w.dur, w.color]),
       ev: events
     };
     if (me) {

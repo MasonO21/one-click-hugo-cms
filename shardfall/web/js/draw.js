@@ -13,6 +13,7 @@
     spire: [[0, -1.45], [0.22, -0.7], [0.4, -0.1], [0.26, 0.55], [0, 0.8], [-0.26, 0.55], [-0.4, -0.1], [-0.22, -0.7]],
     axe:   [[0, -1.05], [0.6, -0.7], [0.66, 0.1], [0.36, 0.75], [-0.36, 0.75], [-0.66, 0.1], [-0.6, -0.7]],
     prism: [[0, -1.35], [0.34, -0.35], [0.62, 0.7], [-0.62, 0.7], [-0.34, -0.35]],
+    gear:  [[0, -1.3], [0.38, -0.9], [0.7, -0.5], [0.62, 0.1], [0.72, 0.55], [0.3, 0.8], [-0.3, 0.8], [-0.72, 0.55], [-0.62, 0.1], [-0.7, -0.5], [-0.38, -0.9]],
     shell: [[0, -0.95], [0.45, -0.82], [0.75, -0.35], [0.8, 0.2], [0.55, 0.72], [-0.55, 0.72], [-0.8, 0.2], [-0.75, -0.35], [-0.45, -0.82]]
   };
   // Graphics settings (set from the lobby): low = no glow blur and fewer cosmetic particles.
@@ -379,6 +380,45 @@
     if (u.flash > 0) { g.globalAlpha = 0.4; g.beginPath(); g.arc(u.x, u.y - r, r, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.globalAlpha = 1; }
   }
 
+  // Quarra's constructions: a crystal turret (or the bigger bastion) on a team-coloured base.
+  function drawSummon(g, u, t) {
+    const big = u.mtype === 'bastion', r = u.r, col = u.color || '#7dffd8', team = SF.TEAM_COLORS[u.team];
+    ellipse(g, u.x, u.y + 2, r * 1.1, r * 0.42); g.fillStyle = 'rgba(0,0,0,.35)'; g.fill();
+    ellipse(g, u.x, u.y, r * 1.05, r * 0.42); g.fillStyle = team + '44'; g.fill(); g.strokeStyle = team; g.lineWidth = 2; g.stroke();
+    const h = big ? r * 2.6 : r * 1.9, top = u.y - h;
+    // pillar
+    poly(g, [[-0.55, 0], [-0.35, -1], [0.35, -1], [0.55, 0]], u.x, u.y - 4, h * 0.62);
+    const gr = g.createLinearGradient(u.x - r, top, u.x + r, u.y); gr.addColorStop(0, '#f4fbff'); gr.addColorStop(0.5, '#b7c4d6'); gr.addColorStop(1, '#5d6b80');
+    g.fillStyle = gr; g.fill(); g.strokeStyle = '#2a3346'; g.lineWidth = 1.5; g.stroke();
+    // floating core that turns toward its target
+    const a = u.target ? Math.atan2(u.target.y - u.y, u.target.x - u.x) : t;
+    const cy = top + Math.sin(t * 3 + u.id) * 3;
+    const glow = g.createRadialGradient(u.x, cy, 0, u.x, cy, r * 1.3); glow.addColorStop(0, col + 'aa'); glow.addColorStop(1, col + '00');
+    g.fillStyle = glow; g.beginPath(); g.arc(u.x, cy, r * 1.3, 0, TAU); g.fill();
+    poly(g, [[0, -1.2], [0.8, -0.2], [0.55, 0.8], [-0.55, 0.8], [-0.8, -0.2]], u.x, cy, r * (big ? 0.62 : 0.55));
+    g.fillStyle = col; g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.stroke();
+    g.beginPath(); g.arc(u.x + Math.cos(a) * r * 0.22, cy + Math.sin(a) * r * 0.12, r * 0.14, 0, TAU); g.fillStyle = '#ffffff'; g.fill();
+    if (big) for (let i = 0; i < 3; i++) { const b = t * 1.4 + i * TAU / 3; poly(g, [[0, -1], [0.5, 0], [0, 1], [-0.5, 0]], u.x + Math.cos(b) * r * 1.1, cy + Math.sin(b) * r * 0.4, 8); g.fillStyle = col; g.fill(); }
+    // remaining life, as a thin arc under the base
+    if (u.life != null) { g.beginPath(); g.ellipse(u.x, u.y, r * 1.05, r * 0.42, 0, Math.PI * 0.15, Math.PI * (0.15 + 1.7 * Math.max(0, u.life) / (big ? 8 : 12))); g.strokeStyle = '#ffffffcc'; g.lineWidth = 2.5; g.stroke(); }
+    if (u.flash > 0) { g.globalAlpha = 0.45; g.beginPath(); g.arc(u.x, cy, r * 0.7, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.globalAlpha = 1; }
+  }
+  // Prism Wall: a row of crystal spires along the line, rising in and fading out.
+  function drawWall(g, w, t) {
+    const k = Math.min(1, w.t / 0.15) * Math.min(1, (w.dur - w.t) / 0.3), n = 9;
+    if (k <= 0) return;
+    g.save(); g.globalAlpha = Math.max(0, k);
+    g.beginPath(); g.moveTo(w.x - w.n.x * w.half, w.y - w.n.y * w.half); g.lineTo(w.x + w.n.x * w.half, w.y + w.n.y * w.half);
+    g.strokeStyle = w.color + '66'; g.lineWidth = w.thick * 2; g.lineCap = 'round'; g.stroke();
+    for (let i = 0; i < n; i++) {
+      const f = (i / (n - 1)) * 2 - 1, x = w.x + w.n.x * w.half * f, y = w.y + w.n.y * w.half * f, h = (34 + (i % 2) * 14) * k;
+      poly(g, [[0, -1], [0.32, -0.2], [0.24, 0.12], [-0.24, 0.12], [-0.32, -0.2]], x, y - 2, h);
+      const gr = g.createLinearGradient(x, y - h, x, y); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, w.color); gr.addColorStop(1, '#25415a');
+      g.fillStyle = gr; g.fill(); g.strokeStyle = '#ffffffaa'; g.lineWidth = 1; g.stroke();
+    }
+    g.restore();
+  }
+
   // River power-up: a floating, spinning crystal in the shard's colour with its symbol inside.
   function drawRune(g, r, t) {
     const col = SF.RUNES[r.type].color, y = r.y - 34 + Math.sin(t * 3 + r.id) * 5, k = 0.5 + 0.5 * Math.sin(t * 4);
@@ -559,6 +599,7 @@
       // zones
       for (const zn of m.zones) this.drawZone(g, zn, t);
       this.drawSignals(g, m);
+      for (const w of m.walls || []) drawWall(g, w, t);
       for (const r of m.runes || []) if (inView(r.x, r.y)) drawRune(g, r, t);
       // player indicators
       if (p.alive) {
@@ -619,6 +660,7 @@
           if (u.shield > 0) { const ry = (u.y - top) / 2 + 10; g.beginPath(); g.ellipse(u.x, u.y - ry + 12, 36, ry, 0, 0, TAU); g.strokeStyle = 'rgba(230,240,255,.5)'; g.lineWidth = 2; g.stroke(); }
         } else if (u.kind === 'minion') drawMinion(g, u, t);
         else if (u.kind === 'monster') drawMonster(g, u, t);
+        else if (u.kind === 'summon') drawSummon(g, u, t);
         else drawStructure(g, u, t);
         g.restore();
       }
@@ -820,6 +862,7 @@
       if (m.shard && m.shard.alive) dot(m.shard.x, m.shard.y, px * 2, '#4fe3d3', '#fff');
       if (m.wyrm && m.wyrm.alive) dot(m.wyrm.x, m.wyrm.y, px * 2.2, '#9b6bff', '#fff');
       for (const r of m.runes || []) dot(r.x, r.y, px * 1.4, SF.RUNES[r.type].color, '#0b1029');
+      for (const u of m.units) if (u.alive && u.kind === 'summon') dot(u.x, u.y, px * (u.mtype === 'bastion' ? 1.4 : 1), SF.TEAM_COLORS[u.team], '#fff');
       for (const u of m.units) {
         if (!u.alive) continue;
         if (u.kind === 'tower' || u.kind === 'core') { const s = u.kind === 'core' ? px * 3.2 : px * 2.4; g.fillStyle = SF.TEAM_COLORS[u.team]; g.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s); }

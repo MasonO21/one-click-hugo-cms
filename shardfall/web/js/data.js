@@ -227,6 +227,20 @@ window.SF = window.SF || {};
         { id: 'barnacle_guard', name: 'Barnacle Guard', cd: 12, range: 450, kind: 'heal', ai: 'fight', desc: 'Shield yourself and the most injured nearby ally.' },
         { id: 'riptide_dome', name: 'Riptide Dome', cd: 48, range: 260, kind: 'ult', ai: 'fight', desc: 'Raise a water dome for 3 seconds. Enemies inside are slowed and battered; allies inside take less damage.' }
       ]
+    },
+    {
+      id: 'quarra', name: 'Quarra', title: 'Shard Artificer', role: 'Mage', shape: 'gear', ranged: true,
+      lore: 'An inventor who builds her own battlefield out of living crystal: turrets, walls and a bastion.',
+      price: { coins: 4800, gems: 488 },
+      base: { hp: 640, atk: 46, power: 34, def: 16, ms: 295, range: 460, as: 0.75, regen: 4 },
+      grow: { hp: 82, atk: 3, power: 12.5, def: 2 },
+      build: B.Mage,
+      passive: { id: 'masterwork', name: 'Masterwork', desc: 'Her constructions grow with her ability power, and her attacks deal 25% more damage to enemies her turrets hit in the last 3 seconds.' },
+      skills: [
+        { id: 'shard_turret', name: 'Shard Turret', cd: 8, range: 520, kind: 'turret', ai: 'turret', ground: true, desc: 'Build a crystal turret that shoots nearby enemies for 12 seconds. Up to two stand at once; a third replaces the oldest.' },
+        { id: 'prism_wall', name: 'Prism Wall', cd: 13, range: 460, kind: 'wall', ai: 'wall', ground: true, desc: 'Raise a crystal wall across the aimed spot for 3 seconds. Enemies cannot walk through it, and enemies caught as it rises are thrown to the far side and slowed.' },
+        { id: 'crystal_bastion', name: 'Crystal Bastion', cd: 55, range: 480, kind: 'ult', ai: 'bastion', ground: true, desc: 'Summon a bastion for 8 seconds that fires heavy bolts at two enemies at once and shields nearby allies every second.' }
+      ]
     }
   ];
   SF.HERO = {};
@@ -266,6 +280,7 @@ window.SF = window.SF || {};
     { id: 'rhea_classic', hero: 'rhea', name: 'Classic', tier: 'Classic', c1: '#ffe58a', c2: '#8a6a12', c3: '#fffbe6' },
     { id: 'rhea_dawn', hero: 'rhea', name: 'Dawnbreaker', tier: 'Legendary', c1: '#ffd0f0', c2: '#8a2f5a', c3: '#ffffff', aura: 'gold', crown: true, price: { gems: 888 } },
     { id: 'oska_classic', hero: 'oska', name: 'Classic', tier: 'Classic', c1: '#4fc7b0', c2: '#14423a', c3: '#d9fff6' },
+    { id: 'quarra_classic', hero: 'quarra', name: 'Classic', tier: 'Classic', c1: '#7dffd8', c2: '#3a4a5e', c3: '#f2fbff' },
     { id: 'oska_reef', hero: 'oska', name: 'Reef Guardian', tier: 'Rare', c1: '#ff9d7a', c2: '#5a2a1f', c3: '#fff0e8', aura: 'bubbles', price: { gems: 288 } },
     { id: 'oska_storm', hero: 'oska', name: 'Stormshell', tier: 'Event', c1: '#7cc8ff', c2: '#1a2a6b', c3: '#eaf6ff', aura: 'storm', crown: true, lock: 'event' }
   ];
@@ -277,14 +292,14 @@ window.SF = window.SF || {};
   // Illustrated splash art (made with Higgsfield, see art/manifest.json). Classic skins use the hero's
   // splash; other skins only have art if listed here. Anything without art is drawn procedurally.
   SF.ART = {
-    heroes: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska'],
+    heroes: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra'],
     skins: ['kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
       'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm'],
     key: 'assets/art/key-art.webp',
     // In-match sprites, one per look, made from that look's splash. Same naming as the splash art:
     // classic skins by hero id, other skins by skin id. All share one 400x400 frame (feet 8px above
     // the bottom, body centred, facing right), so the game draws them all the same way.
-    sprites: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska',
+    sprites: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra',
       'kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
       'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm']
   };

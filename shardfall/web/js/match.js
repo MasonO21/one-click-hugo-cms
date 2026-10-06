@@ -327,6 +327,38 @@
       m.ring(h.x, h.y, 70, skinC(h), 0.3, 5);
       return true;
     },
+    // Quarra: constructions. Turrets and the bastion are 'summon' units owned by her.
+    shard_turret(m, h, a, s) {
+      const p = a.point || { x: h.x + a.dir.x * s.range * 0.6, y: h.y + a.dir.y * s.range * 0.6 };
+      const mine = m.units.filter(u => u.alive && u.owner === h && u.mtype === 'turret').sort((x, y) => x.born - y.born);
+      if (mine.length >= 2) m.unsummon(mine[0]);
+      m.summon(h, 'turret', p.x, p.y, { r: 22, maxHp: 520 + 45 * h.level, atk: 28 + 0.4 * h.power, def: 18, range: 380, as: 1.1, life: 12 });
+      m.burst(p.x, p.y - 20, skinC(h), 16, 180);
+      return true;
+    },
+    prism_wall(m, h, a, s) {
+      const p = a.point || { x: h.x + a.dir.x * s.range * 0.7, y: h.y + a.dir.y * s.range * 0.7 };
+      const d = norm(p.x - h.x, p.y - h.y), n = { x: -d.y, y: d.x }, half = 150, thick = 16;
+      const wall = { x: p.x, y: p.y, d, n, half, thick, team: h.team, t: 0, dur: 3, color: skinC(h), owner: h };
+      // Enemies standing on the line are thrown to the far side and slowed.
+      for (const e of m.enemiesIn(h.team, p.x, p.y, half + 30)) {
+        if (isStructure(e) || e.kind === 'summon') continue;
+        const along = (e.x - p.x) * n.x + (e.y - p.y) * n.y, across = (e.x - p.x) * d.x + (e.y - p.y) * d.y;
+        if (Math.abs(along) > half + e.r || Math.abs(across) > thick + e.r) continue;
+        const side = across >= 0 ? 1 : -1, k = (thick + e.r + 4) * side - across;
+        e.x += d.x * k; e.y += d.y * k;
+        m.slow(e, 0.4, 1.5); m.applyDamage(h, e, 60 + 0.5 * h.power, { skill: s });
+      }
+      m.walls.push(wall);
+      for (let i = -3; i <= 3; i++) m.burst(p.x + n.x * i * 45, p.y + n.y * i * 45, skinC(h), 4, 120);
+      return true;
+    },
+    crystal_bastion(m, h, a, s) {
+      const p = a.point || { x: h.x, y: h.y };
+      m.summon(h, 'bastion', p.x, p.y, { r: 34, maxHp: 1400 + 90 * h.level, atk: 70 + 0.7 * h.power, def: 40, range: 450, as: 0.9, life: 8, shieldAmt: 45 + 0.25 * h.power });
+      m.ring(p.x, p.y, 350, skinC(h), 0.6, 6); m.burst(p.x, p.y - 30, skinC(h), 30, 260); m.shake(5);
+      return true;
+    },
     riptide_dome(m, h, a, s) {
       const p = { x: h.x, y: h.y };
       m.zone({ x: p.x, y: p.y, r: s.range, team: h.team, dur: 3, color: skinC(h), kind: 'dome', acc: 0, tick: (dt, z) => {
@@ -347,7 +379,8 @@
       this.opts = opts;
       this.t = 0; this.units = []; this.heroes = []; this.projs = []; this.fx = []; this.parts = []; this.floats = []; this.zones = [];
       this.feed = []; this.later_ = []; this.listeners = {};
-      this.signals = []; this.orders = [null, null];   // quick signals: on-map markers, and the order each team's bots follow
+      this.signals = []; this.orders = [null, null];
+      this.walls = [];   // Prism Walls: block enemy movement for a few seconds   // quick signals: on-map markers, and the order each team's bots follow
       this.kills = [0, 0]; this.over = false; this.winner = -1;
       this.nextWave = 4; this.waveN = 0; this.firstBlood = false;
       this.shard = null; this.shardAt = 90; this.shardSpawnedT = 0; this.siegeBonus = [0, 0];
@@ -478,7 +511,9 @@
         if (u.kind === 'minion') this.minionAI(u, dt);
         else if (isStructure(u)) this.towerAI(u, dt);
         else if (u.kind === 'monster') this.monsterAI(u, dt);
+        else if (u.kind === 'summon') this.summonAI(u, dt);
       }
+      if (this.walls.length) { for (const w of this.walls) w.t += dt; this.walls = this.walls.filter(w => w.t < w.dur); }
       for (const u of this.units) if (u.alive) this.combat(u, dt);
       for (const u of this.units) if (u.alive) this.move(u, dt);
       this.separate();
@@ -864,6 +899,57 @@
       this.emit('buy', h, id);
       return true;
     }
+    // ---- constructions (Quarra) -------------------------------------------------------
+    summon(owner, mtype, x, y, o) {
+      return this.add(new Unit(this, Object.assign({
+        kind: 'summon', mtype, team: owner.team, owner, x: clamp(x, 40, W.w - 40), y: clamp(y, 60, W.h - 60), ms: 0, born: this.t,
+        color: skinC(owner), name: mtype === 'bastion' ? 'Crystal Bastion' : 'Shard Turret'
+      }, o)));
+    }
+    unsummon(u) { if (!u.alive) return; u.alive = false; u.deadT = 0; u.target = null; this.burst(u.x, u.y - 20, u.color || '#fff', 12, 160); }
+    summonAI(u, dt) {
+      u.life -= dt;
+      if (u.life <= 0) { this.unsummon(u); return; }
+      const R = u.range + 8, o = u.owner;
+      // Shoot what the owner is fighting if it's in reach, else keep the current target, else the nearest enemy.
+      const want = o && o.alive && o.target && this.valid(u, o.target) && d2(o.target, u) < (R + o.target.r) ** 2 ? o.target : null;
+      if (want) u.target = want;
+      else if (!this.valid(u, u.target) || d2(u, u.target) > (R + u.target.r) ** 2) {
+        let best = null, bs = 1e18;
+        for (const e of this.units) {
+          if (!e.alive || e.team === u.team || e.team === 2 && e.kind !== 'monster' || !this.targetable(e) || !this.visible(e, u.team)) continue;
+          if (e.kind === 'monster' && !e.aggro) continue;   // don't wake jungle camps
+          const dd = d2(e, u); if (dd > (R + e.r) ** 2) continue;
+          const sc = dd - (e.kind === 'hero' ? 120000 : 0);
+          if (sc < bs) { bs = sc; best = e; }
+        }
+        u.target = best;
+      }
+      if (u.mtype === 'bastion') {
+        u.pulse = (u.pulse || 0) - dt;
+        if (u.pulse <= 0) {
+          u.pulse = 1;
+          for (const a of this.heroes) if (a.alive && a.team === u.team && d2(a, u) < 350 * 350 && a.shield < u.shieldAmt * 3) this.shieldUnit(a, u.shieldAmt, 1.6);
+          this.ring(u.x, u.y, 350, u.color, 0.4, 2);
+        }
+      }
+    }
+    // Prism Wall: enemies of the wall's team can't cross its line (walking, dashing or knocked back).
+    wallBlock(u, ox, oy) {
+      for (const w of this.walls) {
+        if (w.team === u.team) continue;
+        const along = (u.x - w.x) * w.n.x + (u.y - w.y) * w.n.y;
+        if (Math.abs(along) > w.half + u.r) continue;
+        const was = (ox - w.x) * w.d.x + (oy - w.y) * w.d.y, now = (u.x - w.x) * w.d.x + (u.y - w.y) * w.d.y, gap = w.thick + u.r;
+        const side = was >= 0 ? 1 : -1;
+        if (now * side < gap) {   // would cross or press into it: stop at our own face of the wall
+          const k = gap * side - now;
+          u.x += w.d.x * k; u.y += w.d.y * k;
+          if (u.dash) u.dash.left = 0;
+        }
+      }
+    }
+
     // ---- hero passives ----------------------------------------------------------------
     // Basic-attack passives. Returns the attack's damage; may tag the hit (opt.gale).
     passiveAttack(u, t, dmg, opt) {
@@ -874,6 +960,9 @@
         case 'galewind':   // Sylva: every 4th attack
           u.pstack = (u.pstack || 0) + 1;
           if (u.pstack >= 4) { u.pstack = 0; dmg *= 1.4; opt.gale = true; this.burst(u.x, u.y - 20, '#c8ffe0', 10, 200); }
+          break;
+        case 'masterwork': // Quarra: bonus on enemies her turrets recently hit
+          if (t.markBy === u && t.markT > this.t) dmg *= 1.25;
           break;
         case 'predator':   // Nyx
           if (t.kind === 'hero' && t.hpPct < 0.5) dmg *= 1.15;
@@ -1095,12 +1184,16 @@
         const src = isStructure(u) ? { x: u.x, y: u.y - (u.kind === 'core' ? 90 : 80) } : { x: u.x + u.face.x * u.r, y: u.y + u.face.y * u.r };
         this.projs.push({
           homing: t, x: src.x, y: src.y, speed: isStructure(u) ? 950 : 1150, dmg, src: u, team: u.team, basic: true, opt,
-          color: u.kind === 'hero' ? skinC(u) : SF.TEAM_COLORS[u.team], r: isStructure(u) ? 10 : u.kind === 'hero' ? 6 : 4,
+          color: u.kind === 'hero' ? skinC(u) : u.color || SF.TEAM_COLORS[u.team], r: isStructure(u) ? 10 : u.kind === 'hero' ? 6 : u.kind === 'summon' ? (u.mtype === 'bastion' ? 9 : 6) : 4,
           kind: isStructure(u) ? 'bolt' : 'basic'
         });
       } else {
         this.applyDamage(u, t, dmg, opt);
         if (u.kind === 'hero' || u.kind === 'monster') this.slashFx(t.x, t.y, Math.atan2(u.face.y, u.face.x), u.kind === 'hero' ? skinC(u) : '#e8d9a8');
+      }
+      if (u.mtype === 'bastion') {   // Crystal Bastion fires at two enemies at once
+        const t2 = this.units.find(e => e.alive && e !== t && e.team !== u.team && e.team !== 2 && this.targetable(e) && this.visible(e, u.team) && d2(e, u) < (u.range + e.r) ** 2);
+        if (t2) this.projs.push({ homing: t2, x: u.x, y: u.y - 30, speed: 1000, dmg, src: u, team: u.team, basic: true, opt: { basic: true }, color: u.color, r: 9, kind: 'basic' });
       }
       if (u === this.player || t === this.player) this.emit('hit', u, t);
     }
@@ -1146,6 +1239,10 @@
         if (src && src.kind === 'hero') src.heroDmg = (src.heroDmg || 0) + dealt;
       }
       t.hp -= amt; t.flash = 0.1;
+      if (src && src.kind === 'summon' && src.owner) {
+        if (t.kind === 'hero') { t.hitBy.set(src.owner, this.t); src.owner.aggroT = this.t; }
+        if (src.owner.def0.passive.id === 'masterwork') { t.markT = this.t + 3; t.markBy = src.owner; }
+      }
       if (src && src.kind === 'hero') {
         src.dmgDealt += amt;
         const ls = src.lifesteal + (src.def0.passive.id === 'bloodrage' ? 0.15 * (src.rage || 0) : 0);   // Bloodrage (Drace)
@@ -1201,7 +1298,8 @@
     }
     kill(t, src) {
       t.alive = false; t.hp = 0; t.deadT = 0; t.target = null; t.dash = null; t.knock = null; t.want = null;
-      const killer = src && src.kind === 'hero' ? src : (t.kind === 'hero' ? this.lastHero(t) : null);
+      const killer = src && src.kind === 'hero' ? src : src && src.owner && src.owner.kind === 'hero' ? src.owner : (t.kind === 'hero' ? this.lastHero(t) : null);
+      if (t.kind === 'summon') { this.burst(t.x, t.y - 20, t.color || '#fff', 14, 180); return; }
       if (t.kind === 'minion') {
         if (killer) { this.addGold(killer, t.gold); if (killer === this.player) this.float(t.x, t.y - 30, '+' + t.gold, '#ffc84a', 1); }
         const near = this.heroes.filter(h => h.alive && h.team !== t.team && d2(h, t) < 900 * 900);
@@ -1350,7 +1448,7 @@
 
     // ---- movement ------------------------------------------------------------
     move(u, dt) {
-      if (isStructure(u)) return;
+      if (isStructure(u) || u.kind === 'summon') return;
       const ox = u.x, oy = u.y;
       if (u.dash) {
         const D = u.dash, step = Math.min(D.left, D.speed * dt);
@@ -1386,6 +1484,7 @@
         }
       }
       u.x = clamp(u.x, 40, W.w - 40); u.y = clamp(u.y, 60, W.h - 60);
+      if (this.walls.length) this.wallBlock(u, ox, oy);
       u.vx = (u.x - ox) / dt; u.vy = (u.y - oy) / dt;
       u.moving = Math.abs(u.vx) + Math.abs(u.vy) > 5;
     }
@@ -1404,7 +1503,7 @@
           b.x += dx * push * (2 - wa); b.y += dy * push * (2 - wa);
         }
         for (const s of this.units) {
-          if (!s.alive || !isStructure(s)) continue;
+          if (!s.alive || !(isStructure(s) || s.kind === 'summon')) continue;
           const dx = a.x - s.x, dy = a.y - s.y, rr = a.r + s.r * 0.8, dd = dx * dx + dy * dy;
           if (dd < rr * rr && dd > 0.01) { const D = Math.sqrt(dd); a.x = s.x + dx / D * rr; a.y = s.y + dy / D * rr; }
         }
@@ -1529,10 +1628,18 @@
         return;
       }
 
+      // Team-fight targeting: low health and close first, then by job. Divers reach for the squishy
+      // backline, tanks and supports peel whoever is hitting a teammate, and everyone leans toward
+      // the enemy their team is already focusing.
+      const role = h.def0.role, diver = role === 'Assassin' || role === 'Fighter', guard = role === 'Tank' || role === 'Support';
       let best = null, bs = -1e9;
       for (const e of foes) {
         const D = dist(e, h); if (D > 620) continue;
-        const sc = -e.hpPct * 100 - D / 8 + (e.hp < h.atk * 3 ? 40 : 0);
+        let sc = -e.hpPct * 100 - D / 8 + (e.hp < h.atk * 3 ? 40 : 0);
+        if (diver && (e.def0.role === 'Marksman' || e.def0.role === 'Mage' || e.def0.role === 'Support')) sc += 25;
+        const victim = e.target && e.target.kind === 'hero' && e.target.team === h.team ? e.target : null;
+        if (guard && victim && victim !== h && d2(victim, h) < 600 * 600) sc += 45;
+        if (m.heroes.some(a => a !== h && a.alive && a.team === h.team && a.target === e)) sc += 15;
         if (sc > bs) { bs = sc; best = e; }
       }
       if (best) {
@@ -1692,6 +1799,9 @@
           case 'self': if (mode === 'fight' && e && D < h.range + 260) aim = { dir: h.face, point: { x: h.x, y: h.y }, target: null }; break;
           case 'heal': if (m.heroes.some(a => a.alive && a.team === h.team && a.hpPct < 0.6 && d2(a, h) < s.range * s.range)) aim = { dir: h.face, point: { x: h.x, y: h.y }, target: null }; break;
           case 'fight': if (mode === 'fight' && e && D < 360) aim = { dir: norm(e.x - h.x, e.y - h.y), point: { x: h.x, y: h.y }, target: e }; break;
+          case 'turret': if (e && D < s.range + 160) { const k = Math.min(1, (s.range * 0.85) / Math.max(1, D)); aim = { dir: norm(e.x - h.x, e.y - h.y), point: { x: h.x + (e.x - h.x) * k, y: h.y + (e.y - h.y) * k }, target: e }; } break;
+          case 'wall': if (mode === 'fight' && e && e.kind === 'hero' && D < 380) { const dd = norm(e.x - h.x, e.y - h.y); aim = { dir: dd, point: { x: e.x - dd.x * 40, y: e.y - dd.y * 40 }, target: e }; } break;
+          case 'bastion': if (mode === 'fight' && e && D < 520) { const dd = norm(e.x - h.x, e.y - h.y); aim = { dir: dd, point: { x: h.x + dd.x * 120, y: h.y + dd.y * 120 }, target: e }; } break;
         }
         if (s.needsTarget && aim && (!aim.target || (aim.target.kind !== 'hero' && !s.anyTarget))) aim = null;
         if (aim && m.castSkill(h, i, aim) === true) return true;

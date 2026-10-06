@@ -58,7 +58,15 @@ Keep it this way as you add content: your own names, art, sounds and hero design
   - Nothing is earned or recorded, so it's a safe place to learn a kit, a spell or a build.
 
 **In a match**
-- 10 heroes across 6 roles, with 30 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals and executes.
+- 11 heroes across 6 roles, with 33 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals, executes, summons and walls.
+- **Quarra, the Shard Artificer** (Mage, the newest hero) builds her own battlefield:
+  - **Shard Turret:** a turret that shoots for 12 seconds; up to two stand at once.
+  - **Prism Wall:** a wall enemies can't walk or dash through. Enemies caught on its line are thrown to the far side and slowed.
+  - **Crystal Bastion:** an ultimate that fires at two enemies and shields allies every second.
+  - **Masterwork passive:** her attacks hit turret-marked enemies harder.
+
+  Turret kills and assists count for Quarra, and bots play all three of her tools.
+- **Smarter bot team fights:** divers reach past the frontline for squishy carries, tanks and supports peel whoever is attacking a teammate, and the whole team leans toward a shared focus target.
 - **Hero passives:** every hero has one, and four of them show stacks over the hero's head so both teams can read them:
   - **Kaida:** Kindling. Skill hits charge an erupting, healing attack.
   - **Orin:** Undertow. Soaked enemies take more from his skills.
@@ -70,6 +78,7 @@ Keep it this way as you add content: your own names, art, sounds and hero design
   - **Drace:** Bloodrage. More attack speed and lifesteal the lower he gets.
   - **Rhea:** Focus. Attacks ramp up on one target.
   - **Oska:** Tidewall. Allies near him take less damage.
+  - **Quarra:** Masterwork. Her constructions scale with power, and her attacks punish turret-marked enemies.
 - **Skill ranks:** every level gives a skill point. You start with one skill and choose which to learn and max. Basic skills go to rank 4 and the ultimate to rank 3 (at levels 4, 7 and 10). Each rank hits harder and recharges faster.
 - **One jungler per team:** you, if you bring Shard Smite, or otherwise the bot best suited to it. Both sides get the same treatment.
 - Towers that punish diving, with backdoor protection.
@@ -114,9 +123,9 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 - **Settings:** a monthly spending limit, purchase history, cloud save (online) and in-app account deletion.
 
 **Art.** All of it was made with Higgsfield:
-- **Splash art** for the lobby, hero roster, skin shop and loading screen: one portrait for each of the 10 heroes and each of the 15 skins.
+- **Splash art** for the lobby, hero roster, skin shop and loading screen: one portrait for each of the 11 heroes and each of the 15 skins.
 - **Key art** behind the menus.
-- **In-match sprites** for all 25 looks. Each sprite was generated from its own splash, so a skin looks the same in the shop and in a match. Every sprite faces right, and the game mirrors it when a hero turns. A hero leans into a run, breathes when idle and flashes white when hit. The small hero pictures in menus use them too.
+- **In-match sprites** for all 26 looks. Each sprite was generated from its own splash, so a skin looks the same in the shop and in a match. Every sprite faces right, and the game mirrors it when a hero turns. A hero leans into a run, breathes when idle and flashes white when hit. The small hero pictures in menus use them too.
 
 Run `node tools/fetch-art.mjs` to download everything into `web/assets/art/` as WebP (about 4.5 MB). Sprites are trimmed to the figure and placed on a shared 400×400 frame with the feet on one baseline. If any file is missing, that picture falls back to the drawn crystal hero, so the game always works. Check Higgsfield's terms for commercial use before shipping.
 
@@ -174,7 +183,7 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 - **Commission art and audio.** The procedural crystal art and generated music are consistent and shippable, but professional assets raise conversion.
 - **Plan content.** Ship a new hero or skin line every 2–4 weeks, a new pass each season, and rotating festivals. In this genre, content cadence and spending on user acquisition drive revenue far more than any single feature.
 - **Animate the sprites.** Heroes are single still poses today. Next up are attack and skill pose frames for each hero (from the same Higgsfield references), swapped in while attacking or casting.
-- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins 37–62%. Brakka (62%) leads, and the melee divers Kaida (37%) and Nyx (39%) trail: bots play them worse than ranged heroes. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
+- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins 40–56%. Smarter team-fight targeting closed most of the old gap, but the melee divers Kaida (40%) and Nyx (42%) still trail in bot-only play. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
 
 ## 5. File map
 

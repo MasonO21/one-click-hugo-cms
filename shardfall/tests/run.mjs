@@ -94,7 +94,7 @@ section('Bot matches finish (classic + brawl, every difficulty)', () => {
     for (const h of m.heroes) { games[h.def0.id] = (games[h.def0.id] || 0) + 1; if (h.team === m.winner) wins[h.def0.id] = (wins[h.def0.id] || 0) + 1; }
   }
   for (let i = 0; i < 8; i++) {
-    const m = run(botMatch(SF, { mode: 'brawl' }), 12 * 60);
+    const m = run(botMatch(SF, { mode: 'brawl' }), 16 * 60);   // every match times out at 15:00
     check(`brawl match ${i} ends`, m.over, `t=${Math.round(m.t)}`);
     check(`brawl heroes start at level 5`, m.heroes.every(h => h.level >= 5));
     brawl.push(m.t);
@@ -302,6 +302,104 @@ section('Abyssal Wyrm', () => {
   check('bots fight over the Wyrm', took > 0, `${took} slain in 6 matches`);
 });
 
+section('Quarra: turrets, walls and the bastion', () => {
+  const setup = () => {
+    const m = new SF.Match({ hero: 'quarra', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A1' }, { id: 'oska', name: 'A2' }], enemies: [{ id: 'brakka', name: 'E1' }, { id: 'nyx', name: 'E2' }, { id: 'lumen', name: 'E3' }] });
+    for (const h of m.heroes) if (h !== m.player) { h.brain = null; h.human = true; h.x = h.team ? 3100 : 100; h.y = 600; }
+    m.nextWave = 1e9; m.camps.forEach(c => { c.respawnAt = 1e9; });
+    const p = m.player; p.level = 8; p.recalc(); p.hp = p.maxHp; p.ranks = [4, 4, 2]; p.points = 0; p.x = 1400; p.y = 600;
+    const foe = m.heroes.find(h => h.team === 1); foe.x = 1700; foe.y = 600;
+    m.updateVisibility();
+    return { m, p, foe };
+  };
+  const turrets = (m, p) => m.units.filter(u => u.alive && u.owner === p && u.mtype === 'turret');
+  {
+    const { m, p, foe } = setup();
+    check('Shard Turret builds a turret at the spot', m.castSkill(p, 0, { dir: { x: 1, y: 0 }, point: { x: 1550, y: 600 } }) === true && turrets(m, p).length === 1);
+    const hp0 = foe.hp;
+    for (let k = 0; k < 60; k++) m.update(1 / 30);
+    check('the turret shoots nearby enemies', foe.hp < hp0, `${Math.round(hp0 - foe.hp)} dmg`);
+    const plain = (() => { const q = setup(); q.foe.x = q.p.x + 200; const h = q.foe.hp; q.m.attack(q.p, q.foe); q.m.updateProjs(1); return h - q.foe.hp; })();
+    foe.x = p.x + 200; foe.markT = m.t + 3; foe.markBy = p; const h1 = foe.hp; p.atkCd = 0;
+    m.attack(p, foe); m.updateProjs(1);
+    check('Masterwork: attacks hit turret-marked enemies 25% harder', Math.abs((h1 - foe.hp) / plain - 1.25) < 0.03, `x${((h1 - foe.hp) / plain).toFixed(2)}`);
+    p.skillCd[0] = 0; m.castSkill(p, 0, { dir: { x: 1, y: 0 }, point: { x: 1500, y: 650 } });
+    const first = turrets(m, p).sort((a, b) => a.born - b.born)[0];
+    p.skillCd[0] = 0; m.castSkill(p, 0, { dir: { x: 1, y: 0 }, point: { x: 1500, y: 550 } });
+    check('at most two turrets: a third replaces the oldest', turrets(m, p).length === 2 && !first.alive);
+    for (let k = 0; k < 30 * 13; k++) m.update(1 / 30);
+    check('turrets crumble after 12 seconds', turrets(m, p).length === 0);
+  }
+  {
+    const { m, p, foe } = setup();
+    foe.hp = 30; foe.x = 1600; foe.y = 600; m.updateVisibility();
+    m.castSkill(p, 0, { dir: { x: 1, y: 0 }, point: { x: 1500, y: 600 } });
+    const k0 = p.k;
+    for (let k = 0; k < 60 && foe.alive; k++) m.update(1 / 30);
+    check('a turret kill is credited to Quarra', !foe.alive && p.k === k0 + 1);
+  }
+  {
+    const { m, p, foe } = setup();
+    foe.x = 1640; foe.y = 600; m.updateVisibility();
+    m.castSkill(p, 1, { dir: { x: 1, y: 0 }, point: { x: 1640, y: 600 } });
+    check('Prism Wall throws enemies on the line to the far side and slows them', foe.x > 1640 + 16 && foe.slowT > 0, `x=${Math.round(foe.x)}`);
+    foe.wantDir = { x: -1, y: 0 };
+    for (let k = 0; k < 30; k++) m.update(1 / 30);
+    check('enemies cannot walk through the wall', foe.x > 1640, `x=${Math.round(foe.x)}`);
+    const ally = m.heroes.find(h => h.team === 0 && h !== p); ally.x = 1600; ally.y = 700; ally.wantDir = { x: 1, y: 0 };   // off the enemy's line
+    for (let k = 0; k < 20; k++) m.update(1 / 30);
+    check('allies walk through it', ally.x > 1680, `x=${Math.round(ally.x)}`);
+    for (let k = 0; k < 30 * 3; k++) m.update(1 / 30);
+    foe.wantDir = { x: -1, y: 0 };
+    for (let k = 0; k < 30; k++) m.update(1 / 30);
+    check('the wall falls after 3 seconds', m.walls.length === 0 && foe.x < 1600);
+  }
+  {
+    const { m, p, foe } = setup();
+    const foe2 = m.heroes.find(h => h.team === 1 && h !== foe); foe2.x = 1700; foe2.y = 700; foe.y = 520;
+    const ally = m.heroes.find(h => h.team === 0 && h !== p); ally.x = 1420; ally.y = 650;
+    m.updateVisibility();
+    p.ranks[2] = 2;
+    check('Crystal Bastion summons a bastion', m.castSkill(p, 2, { dir: { x: 1, y: 0 }, point: { x: 1480, y: 600 } }) === true && m.units.some(u => u.alive && u.mtype === 'bastion'));
+    const a0 = foe.hp, b0 = foe2.hp;
+    for (let k = 0; k < 75; k++) m.update(1 / 30);
+    check('the bastion hits two enemies at once', foe.hp < a0 && foe2.hp < b0);
+    check('the bastion shields nearby allies', ally.shield > 0 && p.shield > 0);
+  }
+  {
+    const casts = [0, 0, 0];
+    for (let i = 0; i < 4; i++) {
+      const ids = SF.HEROES.map(h => h.id).filter(x => x !== 'quarra').sort(() => Math.random() - 0.5);
+      const m = new SF.Match({ hero: ids[0], difficulty: 'hard', autoplay: true, allies: [{ id: 'quarra' }, { id: ids[1] }], enemies: [{ id: ids[2] }, { id: ids[3] }, { id: ids[4] }] });
+      m.on('cast', (h, sk) => { if (h.def0.id === 'quarra') casts[h.def0.skills.indexOf(sk)]++; });
+      run(m, 9 * 60);
+    }
+    check('bots play Quarra: turrets, walls and the bastion all get used', casts.every(n => n > 0), casts.join('/'));
+  }
+});
+
+section('Bot team-fight targeting', () => {
+  // A bot's pick when it can see two enemies at the same distance.
+  const pick = (botId, a, b, setup) => {
+    const m = new SF.Match({ hero: 'lumen', difficulty: 'hard', allies: [{ id: botId, name: 'Bot' }, { id: 'sylva', name: 'Ally' }], enemies: [{ id: a, name: 'A' }, { id: b, name: 'B' }, { id: 'orin', name: 'Far' }] });
+    m.nextWave = 1e9;
+    const bot = m.heroes.find(h => h.def0.id === botId), ally = m.heroes.find(h => h.def0.id === 'sylva');
+    const A = m.heroes.find(h => h.def0.id === a), B = m.heroes.find(h => h.def0.id === b), far = m.heroes.find(h => h.def0.id === 'orin');
+    for (const h of m.heroes) if (h !== bot) { h.brain = null; h.human = true; }
+    bot.brain.jungler = false;
+    m.player.x = 100; far.x = 3100;
+    bot.x = 1250; bot.y = 600; ally.x = 1210; ally.y = 640;   // clear of the enemy tower, so diving isn't the question
+    A.x = 1520; A.y = 520; B.x = 1520; B.y = 680;
+    setup({ m, bot, ally, A, B });
+    m.updateVisibility();
+    bot.brain.tick = 0; bot.brain.think(0.05);
+    return bot.target === A ? 'A' : bot.target === B ? 'B' : String(bot.target && bot.target.name);
+  };
+  check('divers reach past the tank for the squishy carry', pick('kaida', 'brakka', 'rhea', ({ A, B }) => { A.hp = A.maxHp * 0.75; B.hp = B.maxHp * 0.85; }) === 'B');
+  check('tanks peel the enemy attacking a teammate', pick('brakka', 'nyx', 'vexa', ({ A, B, ally }) => { A.hp = A.maxHp * 0.85; B.hp = B.maxHp * 0.65; A.target = ally; }) === 'A');
+  check('without a reason, the lowest-health enemy is the pick', pick('drace', 'nyx', 'vexa', ({ A, B }) => { A.hp = A.maxHp * 0.9; B.hp = B.maxHp * 0.5; }) === 'B');
+});
+
 section('Post-match stats', () => {
   const m = new SF.Match({ hero: 'lumen', spell: 'mend', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A1' }, { id: 'sylva', name: 'A2' }], enemies: [{ id: 'brakka', name: 'E1' }, { id: 'nyx', name: 'E2' }, { id: 'vexa', name: 'E3' }] });
   for (const h of m.heroes) if (h !== m.player) { h.brain = null; h.human = true; }
@@ -324,6 +422,7 @@ section('Post-match stats', () => {
 section('Training Grounds', () => {
   const m = new SF.Match({ hero: 'vexa', spell: 'blink', difficulty: 'easy', mode: 'practice', allies: [], enemies: [{ id: 'kaida', name: 'D1' }, { id: 'brakka', name: 'D2' }, { id: 'rhea', name: 'D3' }], practice: { cd: true, gold: true, max: true } });
   const p = m.player, dummies = m.heroes.filter(h => h.team === 1);
+  m.nextWave = 1e9;   // no minions wandering into the dummies mid-test
   check('practice mode builds a solo hero and three dummies', m.mode === 'practice' && m.heroes.filter(h => h.team === 0).length === 1 && dummies.every(d => d.dummy && !d.brain));
   check('max level: level 12 with every point to spend', p.level === 12 && p.points === 12);
   check('free gold', p.gold >= 99999 && m.buy(p, 'starfire_codex') && (m.update(1 / 30), p.gold >= 99999));

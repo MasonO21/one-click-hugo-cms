@@ -82,6 +82,14 @@
       "quality": 82
     },
     {
+      "file": "heroes/quarra.webp",
+      "job": "0781b8d2-ed6e-4a00-9cb0-f35a951a8173",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_225504_0781b8d2-ed6e-4a00-9cb0-f35a951a8173.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
       "file": "skins/kaida_solar.webp",
       "job": "5412be9a-464e-4ace-b526-c6a400f1f608",
       "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000121_5412be9a-464e-4ace-b526-c6a400f1f608.png",
@@ -302,6 +310,15 @@
       "file": "sprites/oska.webp",
       "job": "50d78bc8-5595-49d5-b6c9-02c05ff5a67f",
       "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_002829_50d78bc8-5595-49d5-b6c9-02c05ff5a67f.png",
+      "sprite": true,
+      "width": 400,
+      "height": 400,
+      "quality": 86
+    },
+    {
+      "file": "sprites/quarra.webp",
+      "job": "13df0223-e7a0-4823-b9a8-5f36d466327e",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_225944_13df0223-e7a0-4823-b9a8-5f36d466327e.png",
       "sprite": true,
       "width": 400,
       "height": 400,
