@@ -593,7 +593,7 @@ const DATA = {
   shop: [
     { id: 'founder', name: "Founder's Cache", usd: 0.99, once: true, tag: 'Best first buy',
       grants: { starglass: 300, beacons: 5, journals: 30, builder2: 1 },
-      desc: '300 Starglass, 5 Beacon Tokens, 30 Field Journals and a permanent second builder.' },
+      desc: '300 Starglass, 5 Beacon Tokens, 30 Field Journals, a permanent second builder and Patron 1.' },
     { id: 'stipend', name: 'Oasis Stipend', usd: 4.99, tag: '30 days',
       grants: { starglass: 300, stipend: 30 },
       desc: '300 Starglass now, then 90 Starglass every day you log in for 30 days.' },
@@ -707,6 +707,25 @@ const DATA = {
       { id: 'epic', grants: { shard_epic: 1 }, cost: 650 },
     ],
     titles: ['Warden', 'Keeper', 'Sandwalker', 'Well-singer', 'Duneblade', 'Oathkeeper', 'Glassrider', 'Lanternbearer'],
+  },
+
+  // ---------- Patron program: levels from lifetime spend (and a little from daily logins) ----------
+  // Perks are production and convenience only, never combat stats, so Duels and Oasis Wars stay fair.
+  patron: {
+    perDollar: 100, // Patron points per US dollar spent
+    daily: 15, // points for the first visit each day, so free players reach Patron 1 in about a week
+    levels: [
+      { at: 90, prod: 0.02, chest: { speed5: 1, crate_stone: 1 } },
+      { at: 500, prod: 0.04, build: 0.05, chest: { speed5: 2, crate_stone: 1, crate_water: 1 } },
+      { at: 1000, prod: 0.06, build: 0.05, freeFinish: 60, offlineCap: 3600, chest: { speed15: 1, crate_stone: 1, crate_water: 1, starglass: 20 } },
+      { at: 2000, prod: 0.08, build: 0.1, freeFinish: 60, offlineCap: 3600, tickets: 1, chest: { speed15: 1, crate_copper: 1, starglass: 30 } },
+      { at: 4000, prod: 0.1, build: 0.1, freeFinish: 180, offlineCap: 3600, tickets: 1, smelt: 0.1, chest: { speed15: 2, crate_copper: 1, starglass: 40, sunsteel_cache: 1 } },
+      { at: 8000, prod: 0.12, build: 0.15, freeFinish: 180, offlineCap: 7200, tickets: 1, smelt: 0.1, chest: { speed15: 2, crate_copper: 2, starglass: 50, sunsteel_cache: 1 } },
+      { at: 15000, prod: 0.14, build: 0.15, freeFinish: 300, offlineCap: 7200, tickets: 1, smelt: 0.15, chest: { speed60: 1, crate_copper: 2, starglass: 60, sunsteel_cache: 1, beacons: 1 } },
+      { at: 30000, prod: 0.16, build: 0.2, freeFinish: 300, offlineCap: 7200, tickets: 2, smelt: 0.15, chest: { speed60: 1, crate_copper: 2, starglass: 80, sunsteel_cache: 2, beacons: 1 } },
+      { at: 50000, prod: 0.18, build: 0.2, freeFinish: 600, offlineCap: 10800, tickets: 2, smelt: 0.2, chest: { speed60: 2, crate_copper: 3, starglass: 100, sunsteel_cache: 2, beacons: 1 } },
+      { at: 100000, prod: 0.2, build: 0.25, freeFinish: 600, offlineCap: 10800, tickets: 2, smelt: 0.2, chest: { speed60: 2, crate_copper: 3, starglass: 150, sunsteel_cache: 3, beacons: 2 } },
+    ],
   },
 
   // ---------- Backpack items ----------

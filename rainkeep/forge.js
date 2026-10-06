@@ -21,7 +21,7 @@
   });
 
   const tempering = () => (S && S.tech.tempering) || 0;
-  const smeltRate = (L = S.lv.forge) => (L ? F.smelt(L) * (1 + 0.05 * tempering() + KH.stewardVal('sunsteel') / 100) : 0); // per minute
+  const smeltRate = (L = S.lv.forge) => (L ? F.smelt(L) * (1 + 0.05 * tempering() + KH.stewardVal('sunsteel') / 100 + KH.bonus('smelt')) : 0); // per minute
   const gearCap = () => (S.lv.forge ? F.gearCap(S.lv.forge) : 0);
   const tierOf = (L) => F.tiers.filter((t) => L >= t.from).pop();
   const gearValue = (g, L) => F.bonus(g.per, L) * (1 + 0.02 * tempering());

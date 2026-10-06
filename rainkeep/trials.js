@@ -97,6 +97,7 @@
   // Dune Duels
   // ======================================================================
   const duelsOpen = () => S.stage >= DU.unlockStage;
+  const ticketCap = () => DU.tickets + KH.bonus('tickets'); // Patron perks add ticket slots
   const rankStage = (r) => DU.lo + (DU.hi - DU.lo) * Math.pow(1 - (clamp(r, 1, DU.ranks) - 1) / (DU.ranks - 1), DU.curve);
   // A rival warden at rank r. Seeded by rank and season so the ladder holds still while you look at it.
   function rival(r) {
@@ -116,7 +117,7 @@
     const picks = [Math.max(1, r - Math.max(1, Math.round(r * 0.02))), Math.max(1, r - Math.max(2, Math.round(r * 0.06))), Math.max(1, r - Math.max(4, Math.round(r * 0.13)))];
     return [...new Set(picks)].filter((x) => x < r).map((x) => rival(x));
   }
-  const nextTicket = () => (S.duels.tickets >= DU.tickets ? 0 : Math.max(0, S.duels.tixAt + DU.ticketEvery - S.time));
+  const nextTicket = () => (S.duels.tickets >= ticketCap() ? 0 : Math.max(0, S.duels.tixAt + DU.ticketEvery - S.time));
   function milestoneCheck() {
     for (const [rk, g] of DU.milestones) {
       if (S.duels.best <= rk && !S.duels.milestones.includes(rk)) {
@@ -133,7 +134,7 @@
     if (S.duels.tickets < 1) return KH.toast('No duel tickets left. One comes back every 12 minutes.', 'warn');
     if (!KH.squadHome().length) return KH.toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
     const foe = list[idx], team = KH.teamStats(foe.cls);
-    if (S.duels.tickets >= DU.tickets) S.duels.tixAt = S.time;
+    if (S.duels.tickets >= ticketCap()) S.duels.tixAt = S.time;
     S.duels.tickets--;
     S.stats.duels++;
     const result = KH.simulateBattle(team, foe);
@@ -156,7 +157,7 @@
     KH.startBattle({ title: `Dune Duel · rank ${foe.n}`, foe, team, result, rewards, sideLabel: 'Your squad', intro: `${foe.title} ${foe.name} rides out to meet you.`, resultTitle: result.win ? `Rank ${foe.n}` : null, loseLine: `${foe.name} holds the rank. You keep yours.`, noTips: false });
   };
   ACT.duelticket = () => {
-    if (S.duels.tickets >= DU.tickets) return KH.toast('Your tickets are full.', 'warn');
+    if (S.duels.tickets >= ticketCap()) return KH.toast('Your tickets are full.', 'warn');
     if (S.duels.bought >= DU.ticketBuys) return KH.toast('No more extra tickets this season.', 'warn');
     if (S.starglass < DU.ticketCost) return KH.toast('Not enough Starglass.', 'warn');
     S.starglass -= DU.ticketCost;
@@ -185,8 +186,8 @@
   KH.hooks.tick.push((dt) => {
     if (!S || !S.duels || !dt) return;
     const d = S.duels;
-    if (d.tickets < DU.tickets) {
-      while (d.tickets < DU.tickets && S.time - d.tixAt >= DU.ticketEvery) { d.tickets++; d.tixAt += DU.ticketEvery; }
+    if (d.tickets < ticketCap()) {
+      while (d.tickets < ticketCap() && S.time - d.tixAt >= DU.ticketEvery) { d.tickets++; d.tixAt += DU.ticketEvery; }
     } else d.tixAt = S.time;
     if (duelsOpen() && S.time >= d.seasonEnd) endSeason();
     else if (!duelsOpen()) d.seasonEnd = Math.max(d.seasonEnd, S.time + DU.season);
@@ -210,15 +211,15 @@
     return `${head}
       <div class="card stack"><div class="row"><div class="grow"><b>Rank ${fmt(d.rank)}</b><div class="muted small">Best ${fmt(d.best)} · season ${d.season} ends in ${fmtTime(Math.max(0, d.seasonEnd - S.time))}</div></div>
         <span class="chip">${icon('i-glory')}${fmt(S.glory)}</span></div>
-        <div class="row"><div class="grow small">${icon('i-duel')}<b>${d.tickets}/${DU.tickets}</b> tickets${nt ? ` · next in ${fmtTime(nt)}` : ''}</div>
-        <button class="btn small alt ${d.tickets < DU.tickets && d.bought < DU.ticketBuys ? '' : 'off'}" data-act="duelticket">+1 ${icon('i-gem')}${DU.ticketCost}</button></div>
+        <div class="row"><div class="grow small">${icon('i-duel')}<b>${d.tickets}/${ticketCap()}</b> tickets${nt ? ` · next in ${fmtTime(nt)}` : ''}</div>
+        <button class="btn small alt ${d.tickets < ticketCap() && d.bought < DU.ticketBuys ? '' : 'off'}" data-act="duelticket">+1 ${icon('i-gem')}${DU.ticketCost}</button></div>
         ${next ? `<div class="muted small">Reach rank ${next[0]}: ${KH.rewardHTML(next[1])}</div>` : ''}</div>
       <div class="section-label">Challengers</div><div class="stack">${cards}</div>
       <p class="muted small">Win and you take the rival's rank. Lose and you keep yours. Pick rivals your heroes counter: a ${DATA.classes.guard.name} lead is weak to ${DATA.classes.lancer.name}s, and so on.</p>
       <div class="section-label">Glory trades</div><div class="sg-grid">${shop}</div>
       <p class="muted small">Seasons last ${fmtTime(DU.season)} of play. At the end you earn Glory by rank, and everyone slips back down the ladder a little.</p>`;
   }
-  KH.worldTabs.push({ id: 'duels', label: 'Duels', panel: panelDuels, dot: () => duelsOpen() && S.duels.tickets >= DU.tickets });
+  KH.worldTabs.push({ id: 'duels', label: 'Duels', panel: panelDuels, dot: () => duelsOpen() && S.duels.tickets >= ticketCap() });
 
   KH.trials = { spireFoe, spireTeam, modOf, rival, challengers, rankStage, spireOpen, duelsOpen };
 })();

@@ -165,7 +165,7 @@
     if (S.bought.growth && DATA.growthFund.some(([l]) => S.lv.wyrm >= l && !S.growthClaimed.includes(l))) return true;
     const tier = KH.passTier();
     for (let i = 0; i < tier; i++) if (!S.pass.free.includes(i) || (S.pass.premium && !S.pass.prem.includes(i))) return true;
-    return false;
+    return !!(KH.patronDot && KH.patronDot());
   }
 
   // ======================================================================
@@ -305,6 +305,7 @@
     const native = window.KHNative && window.KHNative.purchasesAvailable;
     return `<div class="panel-head"><h2>Store</h2><p>${native ? '' : `Simulated spend so far: $${S.spentUsd.toFixed(2)}`}</p></div>
       ${native ? '' : '<p class="proto-note">Web version: purchases are simulated and nothing is charged. In the App Store version these buttons use Apple in-app purchase.</p>'}
+      ${KH.patronCard ? KH.patronCard() : ''}
       <div class="section-label">Offers</div><div class="stack">${offers.map(offer).join('')}</div>
       <div class="section-label">Wellkeeper's Ledger · Season 1</div>
       <div class="card stack"><div class="row"><div class="grow"><b>Tier ${tier} of ${DATA.pass.tiers.length}</b><div class="muted small">Earn Ledger XP from quests, upgrades, battles, beasts, gathering and recruits.</div></div>
@@ -615,7 +616,7 @@
     const mins = Math.round(o.capped / 60);
     return {
       title: 'While you were away', lvl: '',
-      body: `<p>Your keep kept working for ${mins >= 120 ? `${(mins / 60).toFixed(1)} hours` : `${mins} minute${mins === 1 ? '' : 's'}`}${o.seconds > o.capped ? ` (it banks up to ${Math.round(DATA.offline.capSeconds / 3600)} hours of production)` : ''}. ${esc(S.wyrm.name)} kept a gentle mist over the keep, so no one fell ill.</p>
+      body: `<p>Your keep kept working for ${mins >= 120 ? `${(mins / 60).toFixed(1)} hours` : `${mins} minute${mins === 1 ? '' : 's'}`}${o.seconds > o.capped ? ` (it banks up to ${Math.round((DATA.offline.capSeconds + KH.bonus('offlineCap')) / 3600)} hours of production)` : ''}. ${esc(S.wyrm.name)} kept a gentle mist over the keep, so no one fell ill.</p>
         ${Object.keys(gains).length ? `<div class="costs">${rewardHTML(gains)}</div>` : '<p class="muted">Production was balanced out by what the keep consumed.</p>'}
         ${l.arrived ? `<p class="notice good">${l.arrived} survivor${l.arrived > 1 ? 's' : ''} found their way to the keep.</p>` : ''}
         ${l.built ? `<p class="notice good">Finished: ${l.built.map(esc).join(', ')}.</p>` : ''}

@@ -726,7 +726,7 @@
   }
 
   function catchUp(seconds) {
-    const capped = Math.min(seconds, DATA.offline.capSeconds);
+    const capped = Math.min(seconds, DATA.offline.capSeconds + KH.bonus('offlineCap'));
     const log = {};
     S.wx = [];
     S.storm = null;
@@ -760,7 +760,7 @@
   }
   function speedCost(end) {
     const left = end - S.time;
-    return left <= DATA.freeFinishSeconds ? 0 : Math.ceil(left / DATA.speedupSecondsPerStarglass);
+    return left <= DATA.freeFinishSeconds + KH.bonus('freeFinish') ? 0 : Math.ceil(left / DATA.speedupSecondsPerStarglass);
   }
   function cutJob(job, secs) {
     job.end = Math.max(S.time, job.end - secs);
@@ -1013,11 +1013,12 @@
     return true;
   }
   function completePurchase(ref, opts = {}) {
+    let usd = 0;
     if (ref.skin) {
       const sk = DATA.skins[ref.skin];
       if (!S.skins.owned.includes(ref.skin)) S.skins.owned.push(ref.skin);
       S.skins.on = ref.skin;
-      if (!opts.restore) S.spentUsd += sk.usd || 0;
+      if (!opts.restore) { usd = sk.usd || 0; S.spentUsd += usd; }
       toast(`${sk.name} unlocked and equipped.${opts.simulated ? ' (Simulated purchase)' : ''}`, 'good');
     } else {
       const item = shopItem(ref.id);
@@ -1025,10 +1026,10 @@
       grant(item.grants);
       S.bought[item.id] = (S.bought[item.id] || 0) + 1;
       if (item.daily) S.boughtDay[item.id] = today();
-      if (!opts.restore) S.spentUsd += item.usd;
+      if (!opts.restore) { usd = item.usd; S.spentUsd += usd; }
       toast(`${item.name} delivered.${opts.simulated ? ' (Simulated purchase)' : ''}`, 'good');
     }
-    KH.emit('purchase', ref);
+    KH.emit('purchase', { ...ref, usd });
     save();
   }
   KH.completePurchase = completePurchase;
