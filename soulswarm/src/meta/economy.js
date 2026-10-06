@@ -367,8 +367,8 @@ export function claimFreeChest(p) {
 export const accountXpFor = (lv) => 80 + lv * 40;
 
 /**
- * result: { chapter, time, kills, raised, bestLegion, novas, gates, victory, level }
- * Grants rewards once and returns { rewards, items, firstClear, newBest, levelUps }.
+ * result: { chapter, time, kills, raised, bestLegion, novas, gates, victory, level, bestStreak }
+ * Grants rewards once and returns { rewards, items, firstClear, newBest, levelUps, streakRecord }.
  */
 // ---------------------------------------------------------------- Daily Trial
 const hashStr = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
@@ -412,6 +412,8 @@ export function applyRunResult(p, result) {
   const s = p.stats;
   s.runs += 1; s.kills += result.kills; s.raised += result.raised;
   s.bestLegion = Math.max(s.bestLegion, result.bestLegion);
+  const streakRecord = (result.bestStreak || 0) > (s.bestStreak || 0);
+  s.bestStreak = Math.max(s.bestStreak || 0, result.bestStreak || 0);
   if (result.victory) s.clears += 1;
 
   // chapter progress (a Daily Trial plays a cleared chapter under mutators: it never changes records)
@@ -439,7 +441,7 @@ export function applyRunResult(p, result) {
   p.xp += passXp;
   while (p.xp >= accountXpFor(p.level)) { p.xp -= accountXpFor(p.level); p.level += 1; levelUps += 1; p.gems += 20; }
 
-  return { rewards, items, firstClear, newBest, levelUps };
+  return { rewards, items, firstClear, newBest, levelUps, streakRecord };
 }
 /** Rewarded-ad "double rewards": repeat the gold and gems only. */
 export function doubleRunRewards(p, rewards) {

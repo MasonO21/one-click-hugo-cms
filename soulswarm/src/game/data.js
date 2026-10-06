@@ -265,6 +265,35 @@ export const MINIONS = {
   capHeal: 0.5, // a raise roll at the legion cap heals the weakest minion by this share of its max HP
 };
 
+// ---------------------------------------------------------------- Kill streaks and game feel (GDD §4.7)
+// Kill streak (streak.js): kills from any source chain while each lands within the window of the one before. The window
+// tightens as the streak grows, window / (1 + n / tighten), never under floor (sim seconds: slow-mo and hit-stop never break
+// a streak). Crossing a tier starts an 8 s Soul Frenzy at that tier (a lower tier never downgrades a running one): XP gain
+// ×(1 + xp) and minion attack speed ×(1 + haste). nova = Soul Nova charge in kill-equivalents; a tier reached mid-detonation
+// banks it until the chain ends. The HUD counter shows from showAt kills; the stinger rises `semis` semitones per tier.
+// Tuned on bot kill traces (Ch1/2/4): ordinary fights reach tier 1–2, a Nova of 100+ souls tier 3–4.
+export const STREAK = {
+  window: 1.2, tighten: 120, floor: 0.3, showAt: 10, frenzy: 8, stingGap: 0.12,
+  tiers: [
+    { at: 30,  name: 'CARNAGE',      xp: 0.10, haste: 0.10, nova: 0,  semis: 0 },
+    { at: 75,  name: 'MASSACRE',     xp: 0.15, haste: 0.20, nova: 0,  semis: 3 },
+    { at: 150, name: 'ANNIHILATION', xp: 0.20, haste: 0.30, nova: 15, semis: 5 },
+    { at: 300, name: 'SOUL HARVEST', xp: 0.25, haste: 0.40, nova: 30, semis: 7 },
+    { at: 500, name: 'APOCALYPSE',   xp: 0.30, haste: 0.50, nova: 45, semis: 12 },
+  ],
+};
+// Hit-stop (effects.js): the simulation dips to `scale` speed for this many real seconds (× the screen-shake setting), easing
+// back over the last `recover` share. It multiplies a running slow-mo instead of replacing it; real-time timers keep going.
+export const HITSTOP = { scale: 0.04, recover: 0.35, elite: 0.075, phase: 0.09, gate: 0.065, nova: 0.08 };
+// Soul Nova wind-up (sim seconds): the tap grants the invulnerability and clears enemy shots at once, the souls flare and
+// stream into the Shepherd, then his blast fires and the detonation chain ripples outward.
+export const NOVA = { windup: 0.25 };
+// Overflow fade (legion.js): once the legion has been over the cap for `grace` s (a gate that adds souls restarts it), the
+// excess dissolves at `rate` of itself per second (at least `min` per second), each soul fading out over `dissolve` s.
+export const OVERFLOW = { grace: 15, rate: 0.02, min: 0.4, dissolve: 1.2 };
+// Level-up pulse: when the cards appear, soul shards within `vacuum` m fly to the Shepherd.
+export const LEVEL_PULSE = { vacuum: 6 };
+
 // ---------------------------------------------------------------- Relics (gear)
 export const RELICS = {
   lantern:   { name: 'Lantern of the Lost', stat: 'raise', base: 0.03, fmt: 'pct', text: 'Raise Chance' },

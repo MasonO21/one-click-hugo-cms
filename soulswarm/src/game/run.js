@@ -15,7 +15,9 @@ import { Gates } from './gates.js';
 import { Boss } from './boss.js';
 import { Hazards } from './hazards.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
+import { Streak } from './streak.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON } from './data.js';
+import { HITSTOP, NOVA, LEVEL_PULSE } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -79,8 +81,9 @@ export class Run {
 
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
-    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0 };
-    this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0;
+    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, bestStreak: 0 };
+    this.streak = new Streak(this);
+    this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0; this.novaSize = 0;
     this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
     this.bonusGold = 0;
     this.spawnAcc = 0; this.nextGate = 28; this.nextSwarm = 50; this.eliteIdx = 0;
@@ -277,7 +280,8 @@ export class Run {
 
   onEnemyKilled(e, source, noRaise) {
     this.counters.kills++;
-    if (e.elite) this.counters.elites++;
+    this.streak.onKill();
+    if (e.elite) { this.counters.elites++; this.fx.hitStop(HITSTOP.elite); }
     this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
     this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1));
@@ -308,7 +312,7 @@ export class Run {
   }
 
   addXp(v) {
-    this.xp += v;
+    this.xp += v * this.streak.xpMul; // Soul Frenzy
     while (this.xp >= this.xpNeed) {
       this.xp -= this.xpNeed;
       this.level++;
@@ -330,6 +334,8 @@ export class Run {
     if (!chest) {
       this.particles.burst(P.x, 1, P.z, 50, hdr(0xffd04a, 3), { speed: 6, life: 0.8, size: 0.4, up: 1.5 });
       this.fx.shockwave(P.x, P.z, 4, 0xffd04a, 0.5, 0.1);
+      this.fx.shockwave(P.x, P.z, LEVEL_PULSE.vacuum, this.heroColor, 0.6, 0.06); // the pulse that draws the shards in
+      this.pickups.magnetNear(P.x, P.z, LEVEL_PULSE.vacuum);
       this.audio.sfx('levelup');
       this.app.haptic('success');
     }
@@ -380,23 +386,41 @@ export class Run {
   }
 
   // ---------------------------------------------------------------- Soul Nova
+  /** The tap: invulnerability and cleared shots at once, then a short wind-up (the souls flare and stream into the
+   *  Shepherd with a rising tone) before novaRelease() fires his blast and the chain ripples out. */
   triggerNova() {
     if (this.nova < 1 || this.ended || this.paused || this.levelPending || this.player.dead) return false;
     this.nova = 0;
     this.counters.novas++;
-    const P = this.player;
-    P.invuln = Math.max(P.invuln, 1.5); // the Shepherd stands untouchable inside the blast
-    const size = this.legion.count;
+    const P = this.player, W = NOVA.windup;
+    P.invuln = Math.max(P.invuln, 1.5 + W); // the Shepherd stands untouchable from the tap through the blast
+    const size = this.novaSize = this.legion.count;
     const pts = this.legion.detonateAll();
     pts.sort((a, b) => ((a.x - P.x) ** 2 + (a.z - P.z) ** 2) - ((b.x - P.x) ** 2 + (b.z - P.z) ** 2));
     const span = Math.min(0.75, 0.15 + pts.length * 0.003);
-    this.novaQueue = pts.map((p, i) => ({ ...p, t: (i / Math.max(1, pts.length)) * span }));
+    // the Shepherd's blast leads the queue (so it fires even with no legion); a non-empty queue is "mid-detonation"
+    this.novaQueue = [{ x: P.x, y: 1, z: P.z, t: W, self: true }];
+    for (let i = 0; i < pts.length; i++) { const p = pts[i]; p.t = W + (i / pts.length) * span; this.novaQueue.push(p); }
     this.novaT = 0;
     this.novaDmg = (35 + size * 0.5) * this.stats.dmgMul * (1 + 0.45 * (this.chapter.id - 1));
-    // the Shepherd's own blast
-    const R = 7;
-    this.enemies.query(P.x, P.z, R, (e) => { this.enemies.damage(e, this.novaDmg * 1.2, { kx: e.x - P.x, kz: e.z - P.z, knock: 14, source: 'nova' }); });
     this.projectiles.clearEnemyShots();
+    const c = hdr(this.heroColor, 2.6), k = W > 0 ? Math.max(1, Math.round(this.particles.budget * 2)) : 0;
+    for (const p of pts) for (let j = 0; j < k; j++) { // each soul streams into the Shepherd, arriving as the blast fires
+      const a = W * (0.75 + Math.random() * 0.25);
+      this.particles.emit(p.x, p.y, p.z, (P.x - p.x) / a, (1.1 - p.y) / a, (P.z - p.z) / a, a, 0.5, 0.15, c[0], c[1], c[2], 1, 0, 0);
+    }
+    for (let j = 0; j < 36 && k; j++) { const a = (j / 36) * Math.PI * 2, ca = Math.cos(a) * 3.4, sa = Math.sin(a) * 3.4; this.particles.emit(P.x + ca, 0.4, P.z + sa, -ca / W, 2, -sa / W, W, 0.55, 0.2, c[0], c[1], c[2], 1, 0, 0); }
+    this.fx.light(P.x, P.z, 7, 1.8, this.heroColorObj, W + 0.15);
+    this.audio.sfx('nova_charge');
+    this.app.haptic('medium');
+    return true;
+  }
+
+  novaRelease() {
+    const P = this.player, size = this.novaSize, R = 7;
+    this.enemies.query(P.x, P.z, R, (e) => { this.enemies.damage(e, this.novaDmg * 1.2, { kx: e.x - P.x, kz: e.z - P.z, knock: 14, source: 'nova' }); });
+    this.projectiles.clearEnemyShots(); // anything fired during the wind-up
+    this.fx.hitStop(HITSTOP.nova);
     this.fx.shockwave(P.x, P.z, R * 1.5, this.heroColor, 0.6, 0.08);
     this.particles.ring(P.x, P.z, R, 90, hdr(this.heroColor, 3.5), { life: 0.5, size: 0.8 });
     this.particles.burst(P.x, 1, P.z, 80, [3, 3, 3.2], { speed: 12, life: 0.6, size: 0.6, up: 0.6 });
@@ -408,7 +432,6 @@ export class Run {
     this.audio.sfx('nova');
     this.app.haptic('heavy');
     if (this.ui) this.ui.bigNumber(size ? `${size} SOULS` : 'NOVA', size ? 'DETONATED' : 'UNLEASHED', true);
-    return true;
   }
 
   updateNova(dt) {
@@ -418,6 +441,7 @@ export class Run {
     let i = 0;
     while (i < this.novaQueue.length && this.novaQueue[i].t <= this.novaT) {
       const p = this.novaQueue[i++];
+      if (p.self) { this.novaRelease(); continue; }
       this.enemies.query(p.x, p.z, 2.6, (e) => { this.enemies.damage(e, this.novaDmg, { kx: e.x - p.x, kz: e.z - p.z, knock: 6, source: 'nova', silent: Math.random() < 0.6 }); });
       this.particles.burst(p.x, p.y, p.z, 14, col, { speed: 7, life: 0.5, size: 0.55, up: 0.8 });
       this.particles.burst(p.x, p.y, p.z, 4, [3, 3, 3], { speed: 2, life: 0.3, size: 1.0 });
@@ -426,6 +450,14 @@ export class Run {
       if (i % 10 === 0) this.audio.sfx('explosion', { volume: 0.35, pitch: 1.2 + Math.random() * 0.4 });
     }
     this.novaQueue.splice(0, i);
+  }
+
+  /** Souls waiting in the Nova chain glow where they stood, swelling and flickering through the wind-up. */
+  renderNova() {
+    const Q = this.novaQueue, g = this.glow, c = this.heroColorObj, P = this.player, k = NOVA.windup ? Math.min(1, this.novaT / NOVA.windup) : 1;
+    const s = 0.55 + 0.6 * k, a = 0.3 + 0.4 * k, w = 1.6, t = this.t * 40;
+    for (let i = 0; i < Q.length; i++) { const p = Q[i]; if (!p.self) g.add(p.x, p.y, p.z, s * (1 + 0.18 * Math.sin(t + i)), c.r * w, c.g * w, c.b * w, a); }
+    if (k < 1) g.add(P.x, 1.1, P.z, 1.2 + 3.5 * k, c.r * 2.5 * k, c.g * 2.5 * k, c.b * 2.5 * k, 0.9); // the Shepherd gathers them
   }
 
   /** Souls lost to a −N / ÷2 gate detonate at half Nova power, rippling out from the gate. */
@@ -556,6 +588,7 @@ export class Run {
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
       trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon,
       chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length,
+      bestStreak: this.counters.bestStreak,
     };
     if (this.onEnd) this.onEnd(result);
   }
@@ -604,6 +637,7 @@ export class Run {
       this.gates.update(dt);
       this.updateNova(dt);
       this.updateBursts(dt);
+      this.streak.update(dt);
       if (this.tutorial && this.time > 1.5 && !this.input.moved) this.hint('move', 'Drag anywhere to move. Your Shepherd attacks automatically.');
     }
     this.updateVictory(realDt);
@@ -635,6 +669,7 @@ export class Run {
     const P = this.player;
     this.glow.begin();
     this.legion.render();
+    if (this.novaQueue.length) this.renderNova();
     this.projectiles.render();
     this.weapons.render();
     this.pickups.render();

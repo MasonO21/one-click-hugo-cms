@@ -3,7 +3,7 @@
 // taunting Bulwarks, ranged Soul Witches and Soul Bombs. Raised elites become Champions of their variant.
 // Every variant except the Shade renders as a spectral ghost of its source enemy, one InstancedMesh each.
 import * as THREE from 'three';
-import { BASE, MINIONS, ENEMIES } from './data.js';
+import { BASE, MINIONS, ENEMIES, OVERFLOW } from './data.js';
 import { wispGeometry, enemyGeometry } from '../engine/models.js';
 import { makeSpectralMaterial, addInstanceAttrs } from '../engine/materials.js';
 
@@ -30,6 +30,7 @@ const FX_ORB = { speed: 4, life: 0.3, size: 0.32 }, FX_FIZZLE = { speed: 1.5, li
 const FX_TAUNT_HIT = { speed: 3.5, life: 0.3, size: 0.3 };
 const BLAST_RING = { speed: 10, life: 0.38, size: 0.42, sizeEnd: 0.08, y: 0.3 }, BLAST_FIRE = { speed: 12, life: 0.42, size: 0.32, up: 0.6 };
 const BLAST_CORE = { speed: 1.5, life: 0.16, size: 0.8 }, BLAST_SPARKS = { speed: 4, life: 1.0, size: 0.26, up: 2.6, grav: 6, drag: 1 };
+const FX_FADE = { speed: 1.2, life: 0.8, size: 0.34, up: 2.2, drag: 1 }; // an overflow soul lets go
 
 export class Legion {
   constructor(run) {
@@ -64,6 +65,7 @@ export class Legion {
     this.uidSeq = 0;
     this.raiseSfxT = 0; this.orbSfxT = 0; this.blastSfxT = 0;
     this.peak = 0;
+    this.overT = 0; this.fadeAcc = 0; // overflow fade: seconds spent over the cap, souls owed to the fade
     // search state for the pre-bound callbacks below, so the hot loops create no closures
     this._px = 0; this._pz = 0; this._leash2 = 0; this._bossFull = false; this._seen = 0;
     this._bx = 0; this._bz = 0; this._bdmg = 0;
@@ -113,7 +115,7 @@ export class Legion {
     m.radius = RADIUS[key] * (elite ? C.scale : 1);
     m.target = null; m.tuid = 0; m.retarget = Math.random() * 0.3; m.atkCd = 0.2;
     m.born = 0; m.phase = Math.random() * 6.28; m.slot = this.slotSeq++;
-    m.rot = Math.random() * TAU; m.flash = 0; m.fuse = -1; m.idle = 0; m.gone = false; m.trailT = Math.random() * 0.1;
+    m.rot = Math.random() * TAU; m.flash = 0; m.fuse = -1; m.idle = 0; m.gone = false; m.trailT = Math.random() * 0.1; m.fade = 0;
     this.list.push(m);
     if (key === 'bulwark') this.taunters.push(m);
     if (this.list.length > this.peak) this.peak = this.list.length;
@@ -141,6 +143,7 @@ export class Legion {
   /** Gate bonus: many minions (Shades) burst out of a point. */
   addMany(n, x, z) {
     const c = this.coreHdr;
+    this.overT = 0; // a gate's souls get the full overflow grace
     for (let i = 0; i < n; i++) {
       const m = this.raise(x + (Math.random() - 0.5) * 2.5, z + (Math.random() - 0.5) * 1.0, { fx: false, burstY: 1.5 });
       if (!m) break;
@@ -227,9 +230,9 @@ export class Legion {
     const boss = run.bossEnemy && run.bossEnemy.active ? run.bossEnemy : null;
     const list = this.list;
     const n = list.length;
-    let alive = 0, engaged = 0;
+    let alive = 0, engaged = 0, fading = 0;
     const trailEvery = 0.1 / Math.max(0.05, run.particles.budget); // ~10 trail sparks per second per minion
-    const c = this.coreHdr, T = this.taunters;
+    const c = this.coreHdr, T = this.taunters, haste = run.streak.haste; // Soul Frenzy: minions strike faster
     let tn = 0; // taunters are refilled in place (no reallocation from emptying the array)
     this._px = P.x; this._pz = P.z;
     for (let i = 0; i < n; i++) {
@@ -242,9 +245,10 @@ export class Legion {
         continue;
       }
       list[alive++] = m;
+      if (m.fade > 0) { if (this.dissolve(m, dt)) { alive--; this.pool.push(m); } else fading++; continue; }
       const v = m.v, kind = m.kind;
       m.born += dt;
-      m.atkCd -= dt;
+      m.atkCd -= dt * haste;
       m.retarget -= dt;
       if (m.flash > 0) m.flash = Math.max(0, m.flash - dt * 6);
       const leash = BASE.minionLeash + (v.leash || 0);
@@ -351,7 +355,32 @@ export class Legion {
     for (let j = n; j < list.length; j++) { const m = list[j]; list[alive++] = m; if (m.kind === 'bulwark') T[tn++] = m; }
     list.length = alive;
     T.length = tn;
+    this.fadeOverflow(dt, fading);
     this.updateOrbs(dt);
+  }
+
+  /** Overflow fade: once the legion has been over the cap for OVERFLOW.grace s, the excess dissolves, newest souls first
+   *  (gate souls sit at the end of the list); Champions and fusing Soul Bombs are spared. */
+  fadeOverflow(dt, fading) {
+    const O = OVERFLOW, L = this.list, over = L.length - fading - this.run.stats.cap;
+    if (over <= 0) { this.overT = 0; this.fadeAcc = 0; return; }
+    if ((this.overT += dt) < O.grace) return;
+    this.fadeAcc = Math.min(2, this.fadeAcc + Math.max(O.min, over * O.rate) * dt);
+    for (let j = L.length - 1, n = Math.min(over, Math.floor(this.fadeAcc)); j >= 0 && n > 0; j--) {
+      const m = L[j];
+      if (m.fade > 0 || m.champ || m.fuse >= 0 || !(m.hp > 0)) continue;
+      m.fade = O.dissolve; m.target = null; n--; this.fadeAcc--;
+    }
+  }
+
+  /** A fading overflow soul rises, sheds wisps and shrinks away (it no longer fights). Returns true once it is gone. */
+  dissolve(m, dt) {
+    const P = this.run.particles, c = this.coreHdr;
+    if ((m.fade -= dt) <= 0) { P.burst(m.x, m.y + 0.2, m.z, 5, c, FX_FADE); return true; }
+    const k = Math.min(1, dt * 3);
+    m.vx -= m.vx * k; m.vz -= m.vz * k; m.x += m.vx * dt; m.z += m.vz * dt; m.y += dt * 1.3;
+    if (Math.random() < dt * 10) P.emit(m.x + (Math.random() - 0.5) * 0.4, m.y, m.z + (Math.random() - 0.5) * 0.4, 0, 1.4, 0, 0.6, 0.32, 0.02, c[0] * 0.8, c[1] * 0.8, c[2] * 0.8, 0.8, 0.5, 0);
+    return false;
   }
 
   /** Soul Bomb target: the enemy at the centre of the densest cluster within seek (throttled by the caller). */
@@ -467,7 +496,7 @@ export class Legion {
     for (let li = 0; li < list.length; li++) {
       const m = list[li];
       const sp = Math.sqrt(m.vx * m.vx + m.vz * m.vz);
-      const born = Math.min(1, m.born * 3);
+      const born = Math.min(1, m.born * 3) * (m.fade > 0 ? m.fade / OVERFLOW.dissolve : 1); // overflow souls shrink away
       const hurt = m.hp / m.maxHp;
       const V = m.kind === 'shade' ? null : G[m.kind];
       if (!V || V.n >= V.max) {

@@ -375,6 +375,25 @@ const SFX = {
     for (let k = 0; k < 10; k++) tone(o, t + 0.15 + k * 0.09, { f: rand(1800, 5200), d: 0.25, v: 0.05 });
     return 3.2;
   } },
+  // the Nova wind-up: a 0.25 s inhale as the souls rush into the Shepherd (the drop above lands on its peak)
+  nova_charge: { gap: 300, max: 1, vol: 0.85, rev: 0.45, big: true, play(o, t, p) {
+    const L = 0.26;
+    noise(o, t, { type: 'bandpass', f: 400 * p, to: 7000 * p, q: 2.2, a: L, d: 0.03, v: 0.4 });
+    for (const det of [-12, 12]) tone(o, t, { type: 'sawtooth', f: 98 * p, to: 392 * p, glide: L, det, a: L * 0.9, d: 0.04, v: 0.07 });
+    tone(o, t, { f: 196 * p, to: 1568 * p, glide: L, a: L * 0.85, d: 0.05, v: 0.12 });
+    [62, 65, 69, 74, 77].forEach((n, k) => tone(o, t + k * 0.045, { type: 'triangle', f: mtof(n + 12) * p, d: 0.07, v: 0.035 }));
+    return L + 0.1;
+  } },
+  // kill-streak tier: a stone thump, a D-minor brass stab and a bell, pitched up a step per tier (APOCALYPSE adds the choir)
+  streak: { gap: 100, max: 2, vol: 0.75, rev: 0.4, big: true, play(o, t, p) {
+    const sh = semis(p);
+    tone(o, t, { f: 95 * p, to: 38, d: 0.28, v: 0.6 });
+    noise(o, t, { type: 'bandpass', f: 1900 * p, to: 500, q: 1.1, d: 0.12, v: 0.28 });
+    for (const n of [62, 65, 69]) brass(o, t + 0.015, n + sh, 0.16, 0.05);
+    bell(o, t + 0.03, mtof(81 + sh), 0.07, 1.1);
+    if (p > 1.9) choir(o, [62 + sh, 65 + sh, 69 + sh], t, 0.5, { vowel: 'ah', v: 0.12, a: 0.05, r: 0.8 });
+    return 1.1;
+  } },
 
   // ---- soul gates ----
   gate_good: { gap: 300, max: 2, vol: 0.8, rev: 0.35, big: true, play(o, t, p) {
