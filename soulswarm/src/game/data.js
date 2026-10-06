@@ -78,8 +78,8 @@ export const SKILLS = {
   // Weapons
   soulBolt: {
     type: 'weapon', name: 'Soul Bolt', icon: 'bolt', max: 5,
-    dmg: L([12, 15, 18, 22, 28]), count: L([1, 2, 2, 3, 4]), cd: L([0.7, 0.66, 0.6, 0.55, 0.48]), pierce: L([0, 0, 1, 1, 2]),
-    desc: (lv) => [`Homing bolts strike the nearest foe.`, `+1 bolt`, `Bolts pierce 1 enemy`, `+1 bolt, faster casting`, `+1 bolt, pierce 2`][lv - 1],
+    dmg: L([13, 17, 22, 30, 40]), count: L([1, 2, 2, 3, 5]), cd: L([0.7, 0.66, 0.6, 0.55, 0.48]), pierce: L([0, 1, 1, 2, 3]),
+    desc: (lv) => [`Homing bolts strike the nearest foe.`, `+1 bolt, pierce 1`, `+Damage`, `+1 bolt, pierce 2, faster`, `+2 bolts, pierce 3`][lv - 1],
   },
   scythe: {
     type: 'weapon', name: 'Spectral Scythe', icon: 'scythe', max: 5,
@@ -88,8 +88,9 @@ export const SKILLS = {
   },
   chains: {
     type: 'weapon', name: 'Ashen Chains', icon: 'chain', max: 5,
-    dmg: L([14, 17, 21, 26, 33]), jumps: L([3, 4, 5, 6, 8]), cd: L([1.5, 1.4, 1.25, 1.1, 0.95]), range: 7.5,
-    desc: (lv) => [`Burning chains leap between foes.`, `+1 jump`, `+1 jump, +damage`, `+1 jump, faster`, `+2 jumps, searing damage`][lv - 1],
+    dmg: L([18, 23, 29, 37, 48]), jumps: L([3, 4, 5, 6, 8]), cd: L([1.5, 1.4, 1.25, 1.1, 0.95]), range: 7.5,
+    splash: 1.4, splashDmg: 0.5, // each link also scorches foes within 1.4 m of its target for 50%
+    desc: (lv) => [`Burning chains leap between foes, scorching those beside them.`, `+1 jump`, `+1 jump, +damage`, `+1 jump, faster`, `+2 jumps, searing damage`][lv - 1],
   },
   spears: {
     type: 'weapon', name: 'Bone Spears', icon: 'spear', max: 5,
@@ -129,7 +130,8 @@ export const EVOLUTIONS = {
   },
   chainsOfPerdition: {
     name: 'Chains of Perdition', from: 'chains', needs: 'frenzy', icon: 'chain', desc: 'EVOLVED: 12-jump chains set foes ablaze. The burning rise more often.',
-    dmg: 30, jumps: 12, minHop: 1.6,        // links prefer targets at least 1.6 m apart (max jump 4.5 m, as Lv5)
+    dmg: 54, jumps: 12, minHop: 1.6,        // links prefer targets at least 1.6 m apart (max jump 4.5 m, as Lv5)
+    splash: 1.7,                            // scorch radius around each link (50% damage, as the base chains)
     burn: 0.4, burnTime: 2, burnTick: 0.25, // burn deals 40% of each hit over 2 s (re-hits add to the pool and refresh the timer)
     raise: 0.25,                            // +25 pp Raise Chance for kills while burning (still capped at 85%)
   },

@@ -20,7 +20,7 @@ Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag
 ## What's in the game
 
 - **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded.
-- **4 heroes** with signature weapons, plus **6 weapons, 8 passives and 2 evolutions** drafted on level-up cards.
+- **4 heroes** with signature weapons, plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
 - **The legion:** raise slain enemies, multiply them through **Soul Gates**, and detonate them with **Soul Nova**.
 - **Meta progression:** talents, relics (8 types × 4 rarities), hero stars, the Soul Altar gacha (odds and pity shown in-game), a 30-tier Soul Pass, daily quests, a 7-day login calendar, energy, and a shop with simulated IAP and rewarded ads.
 

@@ -13,8 +13,8 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
-| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 2 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
+| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | — | Blood Moon, Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
@@ -178,7 +178,7 @@ Pickup radius is 2.8 m (Soul Magnet +30% per level). Hearts, magnets and chests 
 
 - Choose 1 of 3 cards per level. **Loadout: 4 weapons (the hero's signature weapon is slot 1, at Lv1), plus any of the 8 passives** (there is no passive slot limit). Max skill level is 5.
 - **Card weighting:** every skill below Lv5 is in the pool (new weapons only while a weapon slot is free). Base weight 1.0 for a new skill and 1.5 for an upgrade; ×1.3 for Raise Dead, Legion Cap and Minion Fury; ×1.5 for a new weapon while fewer than 2 are owned; an eligible evolution has weight 1,000. The 3 cards are drawn without repeats.
-- Maxing everything takes 61 picks (19 weapon upgrades, 40 passive levels, 2 evolutions). With 4 Relic Chests per run that is about 57 level-ups (player Lv58). A Chapter 1 clear reaches about Lv22, so builds involve real trade-offs.
+- Maxing everything takes 63 picks (19 weapon upgrades, 40 passive levels, 4 evolutions, one per owned weapon). With 4 Relic Chests per run that is about 59 level-ups (player Lv60). A Chapter 1 clear reaches about Lv22, so builds involve real trade-offs.
 - When nothing is left to upgrade, the cards are "Second Wind" (heal 50% HP) and "Grave Gold" (+150 gold this run).
 - 1 reroll per run, through an optional rewarded ad. No other ads inside a run except the revive offer on death.
 - **Revive:** one paid revive per run (rewarded ad or 60 gems), offered for 10 s on the death screen. It restores full HP, gives 2.5 s of invulnerability and blasts every enemy within 8 m for 50% of its max HP. Mordrake's free revive triggers automatically on his first death and does not use up the paid one.
@@ -234,10 +234,10 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 
 | Stat | Lv1 | Lv2 | Lv3 | Lv4 | Lv5 |
 |---|---|---|---|---|---|
-| Damage | 12 | 15 | 18 | 22 | 28 |
-| Bolts per volley | 1 | 2 | 2 | 3 | 4 |
+| Damage | 13 | 17 | 22 | 30 | 40 |
+| Bolts per volley | 1 | 2 | 2 | 3 | 5 |
 | Cooldown (s) | 0.70 | 0.66 | 0.60 | 0.55 | 0.48 |
-| Pierce | 0 | 0 | 1 | 1 | 2 |
+| Pierce | 0 | 1 | 1 | 2 | 3 |
 
 **Spectral Scythe** (full-circle sweeps, 0.3 s each, starting from the facing direction; knockback; each sweep hits an enemy once). Nyx's signature weapon.
 
@@ -248,11 +248,11 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 | Radius (m) | 2.6 | 2.8 | 3.0 | 3.3 | 3.7 |
 | Cooldown (s) | 1.60 | 1.50 | 1.35 | 1.20 | 1.00 |
 
-**Ashen Chains** (chain lightning: first target within 7.5 m, then jumps to the nearest new enemy within 4.5 m). Seraphine's signature weapon.
+**Ashen Chains** (chain lightning: first target within 7.5 m, then jumps to the nearest new enemy within 4.5 m). Each link also **scorches** every other enemy within 1.4 m of its target for 50% damage. Seraphine's signature weapon.
 
 | Stat | Lv1 | Lv2 | Lv3 | Lv4 | Lv5 |
 |---|---|---|---|---|---|
-| Damage per hit | 14 | 17 | 21 | 26 | 33 |
+| Damage per hit | 18 | 23 | 29 | 37 | 48 |
 | Targets hit | 3 | 4 | 5 | 6 | 8 |
 | Cooldown (s) | 1.50 | 1.40 | 1.25 | 1.10 | 0.95 |
 
@@ -300,14 +300,20 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 
 ### 7.3 Evolutions
 
-Both evolutions are in the build. An evolution card enters the pool when the weapon is Lv5 **and** the paired passive is owned (any level). With weight 1,000 it is almost always the next card offered, at a level-up or from a Relic Chest. The weapon keeps its slot and is upgraded in place.
+All six evolutions are in the build, one per weapon. An evolution card enters the pool when the weapon is Lv5 **and** the paired passive is owned (any level). With weight 1,000 it is almost always the next card offered, at a level-up or from a Relic Chest. The weapon keeps its slot and is upgraded in place.
 
 | Evolution | Recipe | Effect |
 |---|---|---|
-| **Soul Storm** | Soul Bolt Lv5 + Might | 6 bolts per volley (Lv5 cooldown), 34 damage, pierce 3. Each hit explodes for 60% damage in a 1.9 m radius. |
+| **Soul Storm** | Soul Bolt Lv5 + Might | 6 bolts per volley (Lv5 cooldown), 44 damage, pierce 4. Each hit explodes for 60% damage in a 1.5 m radius. |
 | **Bone Crown** | Skull Halo Lv5 + Minion Fury | 8 skulls, 26 damage, 3.2 m radius, always on. Every skull kill raises a soul (while below the cap). |
+| **Harvest Moon** | Spectral Scythe Lv5 + Haste | The sweep becomes 3 sweeps of 46 damage every 0.9 s at the Lv5 reach (3.7 m). Two crescent blades also orbit at that reach (5.2 rad/s), dealing 58 per hit in a 1.3 m radius, each enemy at most once per 0.3 s, knocking foes along the spin. Every scythe kill heals 1 HP from a bank that refills at 6 HP/s (cap 6). |
+| **Chains of Perdition** | Ashen Chains Lv5 + Frenzy | 12 links of 54 damage; links prefer targets at least 1.6 m apart and no closer to the Shepherd, so the chain lashes outward. Each link scorches within 1.7 m for 50%. Targets burn for 40% of the hit over 2 s (ticks every 0.25 s; re-hits add to the pool and refresh the timer). Kills while burning get **+25 pp Raise Chance** (still capped at 85%). |
+| **Ossuary Barrage** | Bone Spears Lv5 + Vitality | A fan of 5 spears (0.2 rad apart), 56 damage, unlimited pierce. Each flies 3.5 m past its target (5–16 m; odd spears 1.2 m further) and bursts into bone shrapnel: 55% damage in 2 m with knockback. |
+| **Requiem** | Grave Pulse Lv5 + Soul Magnet | Every 1.4 s: a 0.3 s drag pulls enemies inward (70 m/s², with a swirl; never the boss), then a 46-damage blast in 6.5 m with strong knockback. Each blast also pulls every soul shard within 12 m to the Shepherd. |
 
-*(Planned extras from the original design: Soul Storm kills split the bolt into 2 mini-bolts; Bone Crown gives minions within 6 m +30% damage and heals them 20% every 4 s.)*
+Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s, the Shepherd kiting, no legion), effective DPS at Lv5 → evolved: Soul Bolt 1,730 → 4,350 · Skull Halo 2,100 → 2,560 (its payoff is the raises) · Scythe 3,130 → 4,020 · Chains 2,590 → 3,590 · Spears 2,680 → 3,360 · Grave Pulse 2,010 → 2,840.
+
+*(Planned extras: Soul Storm kills split the bolt into 2 mini-bolts; Bone Crown gives minions within 6 m +30% damage and heals them 20% every 4 s.)*
 
 ---
 
@@ -521,7 +527,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 
 1. The build's Raise Chance cap is 85% (base 25%). Is that too high for Chapter 5 challenge? Test 60% vs 85%.
 2. Overflow minions above the cap persist in the build. Should they fade (the original design) or persist until the next Nova?
-3. Both evolutions shipped in the build. Does a third recipe ship in Season 2?
+3. Every weapon now has one evolution. Do second recipes (a weapon + a different passive) ship in Season 2?
 4. Auto-Nova (Planned) could reduce the skill expression of Nova timing. Monitor Nova-timing win rates for players who use it.
 5. **Resolved: boss HP.** Gravemaw's base HP is now 9,000 (was 3,400), scaled by chapter as in §6. A measured Chapter 1 fight with a typical build and a player who engages lasts about 45 s; at 3,400 HP he died in about 16 s.
 6. **Resolved: Soul Pass pacing.** XP per tier is now 500 (was 100), so 30 tiers take 15,000 XP. A player who does all quests and 3 runs a day finishes in about 3 weeks; a casual player (quests plus 1 run) reaches roughly tier 15–20 (§2).

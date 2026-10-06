@@ -169,8 +169,8 @@ export class Weapons {
       if (!targets.length) return false;
       for (let i = 0; i < count; i++) {
         const t = targets[i % targets.length];
-        const [dmg, crit] = this.roll(evolved ? 34 : SKILLS.soulBolt.dmg(level));
-        run.projectiles.bolt(P.x, P.z, t, dmg, SKILLS.soulBolt.pierce(level) + (evolved ? 1 : 0), { spread: (i - (count - 1) / 2) * 0.22, explode: evolved ? 1.9 : 0, crit });
+        const [dmg, crit] = this.roll(evolved ? 44 : SKILLS.soulBolt.dmg(level));
+        run.projectiles.bolt(P.x, P.z, t, dmg, SKILLS.soulBolt.pierce(level) + (evolved ? 1 : 0), { spread: (i - (count - 1) / 2) * 0.22, explode: evolved ? 1.5 : 0, crit });
       }
       run.audio.sfx('shoot', { volume: 0.55 });
       return true;
@@ -205,6 +205,8 @@ export class Weapons {
         const dmg = this.hit(base);
         const from = pts[pts.length - 2];
         const killed = E.damage(cur, dmg, this.opts(cur.x - from.x, cur.z - from.z, 2, this.crit, 'chain', hell && j >= 4)); // Perdition: numbers on the first 4 links only
+        const hx = cur.x, hz = cur.z, sd = dmg * SKILLS.chains.splashDmg; // scorch the foes packed around the struck one
+        E.query(hx, hz, hell ? CP.splash : SKILLS.chains.splash, (o) => { if (o !== cur && o.active) E.damage(o, sd, { kx: o.x - hx, kz: o.z - hz, knock: 1, source: 'chain', silent: true }); });
         if (hell) {
           if (!killed) this.ignite(cur, dmg);
           run.particles.burst(cur.x, 1.2, cur.z, 6, this.cols.flame, { speed: 4, life: 0.4, size: 0.4, up: 1.5 });
