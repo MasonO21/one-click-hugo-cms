@@ -112,7 +112,7 @@
       res: { ...st.res }, starglass: st.starglass, beacons: st.beacons, journals: st.journals,
       pop: st.survivors, sick: 0, acc: { sick: 0, heal: 0, lost: 0, arrive: 0, leave: 0 },
       workers: { quarry: 0, grove: 0, well: 0, mine: 0 }, autoWork: true,
-      lv: { wyrm: 0 }, mist: 'steady', dormant: false, thirsty: false,
+      lv: { wyrm: 0 }, mist: 'steady', autoMist: false, dormant: false, thirsty: false,
       builds: [], builders: 1, research: null, tech: {}, training: null,
       troops: { guard: 0, bow: 0, lancer: 0 },
       heroes: {}, squad: [], stewards: {},
@@ -160,10 +160,15 @@
     S.savedAt = Date.now();
     try { localStorage.setItem(DATA.saveKey, JSON.stringify(S)); } catch (e) { /* storage unavailable: play continues unsaved */ }
   }
+  // Saves from before keep life (2.1) point at quest numbers that have since moved: step over the quests added then.
+  function migrate(obj) {
+    if (!obj.keep && typeof obj.quest === 'number') for (const i of DATA.questsAdded21) if (obj.quest >= i) obj.quest++;
+    return obj;
+  }
   function load() {
     try {
       const raw = localStorage.getItem(DATA.saveKey);
-      if (raw) return mergeDefaults(newState(), JSON.parse(raw));
+      if (raw) return mergeDefaults(newState(), migrate(JSON.parse(raw)));
     } catch (e) { /* corrupt or blocked storage: start fresh */ }
     return null;
   }
@@ -178,7 +183,7 @@
   KH.importSave = (code) => {
     const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
     if (!obj || typeof obj !== 'object' || !obj.lv || !obj.res) throw new Error('not a Rainkeep save');
-    replaceState(mergeDefaults(newState(), obj));
+    replaceState(mergeDefaults(newState(), migrate(obj)));
     S.wx = [];
     ensureWeather();
     save();
@@ -200,7 +205,21 @@
   const drinkRate = () => DATA.wyrm.drink(S.lv.wyrm) * mist().drink;
   const marchCap = () => DATA.marchCap(S.lv.barracks);
   const troopCap = () => marchCap() * 2;
-  const outsideTemp = (wx) => wx.temp + wx.scorch * (S.lv.wyrm - 1);
+  // Day and night: f is the phase of the day (0..1), night 0 (midday) .. 1 (deep night).
+  function dayNight(t = S.time) {
+    const D = DATA.day, f = (((t + D.offset) / D.length) % 1 + 1) % 1, K = D.keys;
+    let i = 0;
+    while (i < K.length - 2 && f > K[i + 1][0]) i++;
+    const k = clamp((f - K[i][0]) / Math.max(1e-6, K[i + 1][0] - K[i][0]), 0, 1), e = k * k * (3 - 2 * k);
+    const night = K[i][1] + (K[i + 1][1] - K[i][1]) * e;
+    const name = night > 0.6 ? 'Night' : night > 0.05 ? (f < 0.3 ? 'Dawn' : 'Dusk') : 'Day';
+    // seconds until the next sunrise (f = 0.07) or nightfall (f = 0.72)
+    const goal = name === 'Night' || name === 'Dawn' ? 0.07 : 0.72;
+    const next = (((goal - f) % 1 + 1) % 1) * D.length;
+    return { f, night, name, next, shift: D.noon + (D.night - D.noon) * night };
+  }
+  // now=false gives the weather's own temperature (used for the forecast list)
+  const outsideTemp = (wx, now = true) => wx.temp + wx.scorch * (S.lv.wyrm - 1) + (now ? dayNight().shift : 0);
   const troopMult = () => Math.pow(1 + DATA.troopLevelBonus, Math.max(0, S.lv.barracks - 1)) * (1 + 0.06 * (S.tech.drills || 0) + KH.bonus('troop'));
   const protectOf = () => (S.lv.storehouse ? DATA.buildings.storehouse.protect(S.lv.storehouse) : 0);
 
@@ -211,8 +230,8 @@
     if (!S.lv[post.plot]) return 0;
     return HERO[id].steward.val * (1 + 0.2 * (S.heroes[id].stars - 1));
   }
-  function townTemp(wx) {
-    return outsideTemp(wx) - (S.dormant ? 0 : coolOf(S.lv.wyrm)) - (S.tech.shade || 0) - stewardVal('cool') - KH.bonus('cool');
+  function townTemp(wx, offline) {
+    return outsideTemp(wx, !offline) - (S.dormant ? 0 : coolOf(S.lv.wyrm)) - (S.tech.shade || 0) - stewardVal('cool') - KH.bonus('cool');
   }
   // lower is better: the first band whose max the town stays under
   const comfortOf = (t) => DATA.comfort.find((b) => t <= b.max);
@@ -220,11 +239,11 @@
     const L = S.lv[pid];
     if (!L) return 0;
     const b = DATA.buildings[PLOT[pid].type];
-    return b.perWorker * (1 + DATA.workerGrowth * (L - 1)) * (1 + 0.12 * (S.tech[TECH_FOR[b.prod]] || 0) + stewardVal(b.prod) / 100 + KH.bonus('prod'));
+    return b.perWorker * (1 + DATA.workerGrowth * (L - 1)) * Math.max(0.2, 1 + 0.12 * (S.tech[TECH_FOR[b.prod]] || 0) + stewardVal(b.prod) / 100 + KH.bonus('prod') + KH.bonus(`prod_${b.prod}`));
   }
   function rates(offline) {
     const wx = offline ? DATA.weather.clear : DATA.weather[curWx().type];
-    const temp = townTemp(wx);
+    const temp = townTemp(wx, offline);
     const band = comfortOf(temp);
     const healthy = S.pop > 0 ? (S.pop - S.sick) / S.pop : 0;
     const prod = {};
@@ -232,10 +251,10 @@
       const pid = PROD[r];
       const b = DATA.buildings[PLOT[pid].type];
       const w = Math.min(S.workers[pid] || 0, slotsOf(pid));
-      prod[r] = workerRate(pid) * w * healthy * band.prod * (b.outdoor ? wx.outdoor : 1);
+      prod[r] = workerRate(pid) * w * healthy * band.prod * (b.outdoor ? Math.min(1, wx.outdoor + KH.bonus('outdoor')) : 1) * (1 + KH.bonus(`mult_${r}`));
     }
     const eat = S.pop * DATA.foodPerSurvivor;
-    const thirst = S.pop * DATA.waterPerSurvivor;
+    const thirst = S.pop * DATA.waterPerSurvivor * Math.max(0.1, 1 - KH.bonus('drinkCut'));
     const burn = S.dormant ? 0 : drinkRate();
     const net = { stone: prod.stone, food: prod.food - eat, water: prod.water - burn - thirst, copper: prod.copper };
     return { wx, temp, band, healthy, prod, eat, thirst, burn, net };
@@ -243,7 +262,7 @@
   function healRate(temp) {
     const base = temp <= DATA.comfort[2].max && !S.thirsty ? DATA.baseRecovery : DATA.baseRecovery * 0.3;
     const inf = S.lv.infirmary ? DATA.infirmaryRate * S.lv.infirmary * (1 + 0.3 * (S.tech.medicine || 0) + stewardVal('heal') / 100) : 0;
-    return base + inf;
+    return (base + inf) * (1 + KH.bonus('heal'));
   }
 
   // costs
@@ -538,6 +557,7 @@
       if (log) log[r] = (log[r] || 0) + (S.res[r] - before);
     }
     if (!offline && R.burn > 0) KH.emit('mist', { seconds: dt, high: S.mist === 'high' });
+    if (S.autoMist && S.lv.wyrm >= DATA.wyrm.autoMistLevel) autoMist(R);
 
     if (!S.dormant && S.res.water <= 0) {
       S.dormant = true;
@@ -617,6 +637,14 @@
 
     for (const f of KH.hooks.tick) f(dt, offline, log);
     if (!offline) announceWeather();
+  }
+
+  // An attuned wyrm sets its own mist: pour for storms, drizzle at night or when water runs low.
+  function autoMist(R) {
+    const soon = S.wx.some((w) => isStorm(w.type) && w.start - S.time < 20 && w.end > S.time);
+    const low = S.res.water < 40 || (R.net.water < 0 && S.res.water / -R.net.water < 60);
+    const want = soon && !low ? 'high' : low || (dayNight().night > 0.6 && R.band !== DATA.comfort[DATA.comfort.length - 1]) ? 'low' : 'steady';
+    if (S.mist !== want) { S.mist = want; if (S.autoWork) autoAssign(); }
   }
 
   function announceWeather() {
@@ -728,6 +756,11 @@
   // Actions (invoked from data-act attributes)
   // ======================================================================
   const ACT = (KH.ACT = {});
+  ACT.automist = () => {
+    if (S.lv.wyrm < DATA.wyrm.autoMistLevel) return toast(`Your wyrm learns to set its own mist at Lv ${DATA.wyrm.autoMistLevel}.`, 'warn');
+    S.autoMist = !S.autoMist;
+    if (S.autoMist) autoMist(rates(false));
+  };
 
   ACT.build = (pid) => {
     const why = upgradeBlock(pid);
@@ -752,6 +785,7 @@
   ACT.mist = (m) => {
     if (!DATA.wyrm.mist[m]) return;
     S.mist = m;
+    S.autoMist = false;
     if (S.autoWork) autoAssign();
   };
   ACT.work = (arg) => {
@@ -1108,7 +1142,7 @@
   // Public surface for the other scripts
   // ======================================================================
   Object.assign(KH, {
-    newStateFn: newState, load, tick, catchUp, rates, stageOf, stageIndex, mist, slotsOf, housing, curWx, forecastRange,
+    newStateFn: newState, load, tick, catchUp, rates, stageOf, stageIndex, mist, slotsOf, housing, curWx, forecastRange, dayNight,
     coolOf, coolAt, drinkRate, marchCap, troopCap, outsideTemp, troopMult, protectOf, stewardVal, townTemp, comfortOf,
     workerRate, healRate, buildCost, buildTime, maxLevel, upgradeBlock, canAfford, pay, have, techCost, techTime, techMax,
     heroStats, heroCap, skillScale, skillText, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,

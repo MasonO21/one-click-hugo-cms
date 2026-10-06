@@ -2,7 +2,7 @@
 
 **Pitch:** The rain stopped a generation ago. Raise the last Rainwyrm, a water dragon whose cooling mist keeps a desert keep alive, and dig the wells that keep your people drinking. Rainkeep is a 3D survival city-builder with heroes, expeditions and alliances, aimed at the same audience as Whiteout Survival, with the survival game that its ads promise kept at the center of play.
 
-This document covers what the game in this folder (version 2.0) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
+This document covers what the game in this folder (version 2.1) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
 
 ---
 
@@ -32,10 +32,10 @@ These six pillars are all in the game. Each one answers a complaint above.
 
 1. **A new world: the desert that forgot the rain.** Sun-baked sandstone, palm groves, turquoise water, sandstorms and heatwaves. It is instantly distinguishable from the snow games in an ad feed, but the survival logic is just as primal: water is life. The setting also gives the game a natural day and night cycle, warm and cool palettes, and a hopeful ending (the rain coming back) that a frozen setting struggles to deliver.
 2. **A living water source: the Rainwyrm.** Your "furnace" is a water dragon coiled in the keep's spring, rendered in real-time 3D. It grows through seven forms (Hatchling, Whelp, Drake, Tidewyrm, Elder, Ascended, Primordial), visibly gets bigger, sprouts fins, horns and whiskers, and at the end trails a small rain cloud of its own. It blinks, hums when petted, calls a torrent to open every battle, and goes dormant if the wells run dry. Players name it, and at Lv 12 they choose its Ascension (Monsoon, Mistveil or Floodheart). It gives players a pet to protect and a canvas for cosmetic spending (skins), revenue that doesn't add pay-to-win pressure.
-3. **Survival that stays real all game.** Water has two jobs: survivors drink it and the wyrm breathes it as cooling mist. Weather is forecast ahead of time (Dust Haze, Sandstorm, Heatwave), and the sun "hunts water", so every time the wyrm grows, storms run hotter. Players choose the mist (Drizzle, Steady, Downpour), trading water for cooling. Heat makes survivors sick, the Healer's House treats them, and in a Scorching keep the sick can be lost. If the cisterns run dry, the wyrm sleeps and families leave to find water elsewhere.
+3. **Survival that stays real all game.** Water has two jobs: survivors drink it and the wyrm breathes it as cooling mist. Weather is forecast ahead of time (Dust Haze, Sandstorm, Heatwave), and the sun "hunts water", so every time the wyrm grows, storms run hotter. Middays run hotter and desert nights run cold, so the right mist changes through the day. Players choose the mist (Drizzle, Steady, Downpour), trading water for cooling, and from Lv 6 can let an Attuned wyrm set it for them. From Lv 3 the wyrm can **Call the Rain**: a short shower on a long recharge that refills the wells, cools the keep and calms a sandstorm, so the big storm of the day becomes a decision about when to spend it. Heat makes survivors sick, the Healer's House treats them, and in a Scorching keep the sick can be lost. If the cisterns run dry, the wyrm sleeps and families leave to find water elsewhere.
 4. **A real 3D keep and world.** The keep and the Dunes are 3D scenes, not static backdrops: buildings change shape as they level up, villagers carry water jars between the well and their work, camels circle the walls, palms sway harder in a sandstorm, lanterns come on at night, and caravans visibly cross the Dunes. You can orbit and zoom. This is the screenshot and the ad.
 5. **Heroes matter at home, not just in fights.** Every hero can be stationed as a Steward of one building (Bashir boosts the wells, Halima speeds healing, Zahra cools the keep). Collecting heroes improves your keep as well as your squad, which deepens the gacha without adding more combat power. The cast is illustrated, diverse and original.
-6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 2.0 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
+6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 2.1 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
 
 ### Naming and IP
 
@@ -44,7 +44,8 @@ Everything is original: the setting (the Long Noon, the Rainwyrm, the Sunheart),
 ## 3. Core loop
 
 ```
-Minute to minute:  check forecast → set the mist → assign workers → start an upgrade → send a caravan
+Minute to minute:  check forecast → set the mist → tap surplus bubbles → start an upgrade → send a caravan
+Every few minutes: settle a keep incident → trade with a visiting merchant → Call the Rain before the storm
 Session (5-10 min): claim quest → clear an expedition stage → level heroes → recruit → strike the Colossus
 Day:               gift calendar, daily duties, patrol cache, Oasis Stipend, Caravan help and donations
 Event (20 min*):   Rain Festival → Beast Hunt → Builder's Rush → Oasis Wars, on rotation
@@ -52,21 +53,22 @@ Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burnin
 ```
 *Game time. Timers and rates run about 30× faster than a typical live-service game.
 
-### Systems in version 2.0
+### Systems in version 2.1
 
 | System | What it does | Where |
 |---|---|---|
 | Rainwyrm | Cooling, water drinking, 3 mist settings, 15 levels and 7 forms, naming, petting, Ascension branch, Wyrm's Torrent in battle | `core.js`, `art3d.js` |
-| Water + survival | Survivors drink water, the wyrm breathes it; forecast queue, storms that scale with wyrm level, heat bands, sickness, healing, losses, thirst, food, housing, offline protection | `core.js` tick |
+| Water + survival | Survivors drink water, the wyrm breathes it; forecast queue, storms that scale with wyrm level, hot middays and cold nights, Attuned mist, heat bands, sickness, healing, losses, thirst, food, housing, offline protection | `core.js` tick |
 | Keep | 12 buildings, auto/manual workers, 10 research lines × 10 levels, Storehouse protection | `DATA.buildings`, `DATA.techs` |
-| 3D presentation | Procedural low-poly models in three detail tiers per building, day and night, weather (fog, dust, heat), villagers, camels, mist particles, camera fitting, orbit and zoom, picking; 2D fallback | `art3d.js`, `town3d.js`, `world3d.js`, `town.js` |
+| Keep life | Call the Rain (an active wyrm ability with a recharge and Rain Charms), surplus bubbles over working buildings, 16 keep incidents with priced choices and random outcomes (boosts, survivors, Starglass, setbacks), travelling merchants whose offers follow what the keep has too much of, timed boosts | `keep.js`, `DATA.incidents`, `DATA.merchant` |
+| 3D presentation | Procedural low-poly models in three detail tiers per building, day and night, weather (fog, dust, heat, rain), a merchant camp, incident and surplus markers, villagers, camels, mist particles, camera fitting, orbit and zoom, picking; 2D fallback | `art3d.js`, `town3d.js`, `world3d.js`, `town.js` |
 | Troops | 3 classes in a counter triangle, Barracks-scaled strength, march cap, housing cap | `DATA.troops` |
 | Heroes | 18 illustrated heroes, 3 rarities, levels capped by stars and Rainwyrm level, skills that grow with stars, Steward posts | `DATA.heroes`, `art2d.js` |
 | Recruitment | Published odds, 40-pull Legendary pity, 10-pull Epic guarantee, featured hero rotating each event, shard pouches | `DATA.recruit` |
 | Expedition | 60 stages in 6 chapters with story, 12 bosses, an ending ("The Rains"), the endless Burning Line, patrol cache | `DATA.chapters` |
 | The Dunes | Seeded 21×21 map, dust haze, gathering caravans, beasts, raider camps, 12 story ruins with choices, raids on the keep | `world.js`, `world3d.js` |
 | Caravan | 3 alliances, AI members who help timers, 5 Caravan techs, donations, points shop, gift chests, reactive chat, Colossus raid | `caravan.js` |
-| Meta | 45 chapter quests, daily duties + chests, 7-day gift calendar, 30 achievements, mail, backpack, 4 rotating events including Oasis Wars | `events.js` |
+| Meta | 49 chapter quests, daily duties + chests, 7-day gift calendar, 33 achievements, mail, backpack, 4 rotating events including Oasis Wars | `events.js` |
 | Season pass | 30-tier free and premium Ledger with two skins | `DATA.pass` |
 | Store | Starter offer, monthly card, pass, growth fund, daily kit, value chest, Starglass, skins, crates | `DATA.shop`, `native.js` |
 | Polish | Procedural audio on a Hijaz scale, haptics, notifications, tutorial pointer, save codes, offline play, bundled fonts | `audio.js`, `native.js`, `sw.js` |
@@ -107,9 +109,9 @@ Target: match the genre's spending ladder while putting more of the spend into b
 5. **Returning-veteran onboarding.** Skip-tutorial for experienced 4X players and a "Warden's Welcome" catch-up event for anyone who joins a server late.
 6. **Creator program** with mid-size strategy and Whiteout Survival YouTubers and streamers at soft launch. Give them early access, custom wyrm skins and Caravan-founder codes.
 
-## 6. From 2.0 to a live multiplayer game
+## 6. From 2.1 to a live multiplayer game
 
-Version 2.0 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
+Version 2.1 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
 
 - **Real Caravans:** shared help requests, donations and Colossus raids backed by a server, plus chat with moderation.
 - **Shared Dunes:** one map per server, where caravans can meet rival keeps.
@@ -122,7 +124,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 
 | Phase | Goal | Typical team / time |
 |---|---|---|
-| Version 2.0 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
+| Version 2.1 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
 | Live multiplayer | Hand-authored hero art and wyrm animation pass, server-authoritative backend, real Caravans, shared Dunes, analytics | 6-12 people, 4-6 months |
 | Soft launch | 1-3 test markets (commonly Canada, Australia, Philippines). Hit retention and payer gates before scaling spend | 15-30 people, 3-6 months |
 | Global launch | Paid user acquisition at scale, live ops, alliances and PvP | 30-80+ people, ongoing |
@@ -133,7 +135,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 - A payer conversion rate of a few percent in the first 30 days
 - Projected 180-day revenue per install above cost per install with margin. 4X installs in tier-1 markets commonly cost well into double-digit dollars
 
-**What a live backend adds that 2.0 doesn't have:** accounts and cloud saves (2.0 has on-device saves and save codes), server-authoritative timers and economy (2.0 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
+**What a live backend adds that 2.1 doesn't have:** accounts and cloud saves (2.1 has on-device saves and save codes), server-authoritative timers and economy (2.1 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
 
 **Performance.** The 3D scenes are built for phones: static geometry is merged per material so a fully built keep is a few hundred draw calls, there is one shadow-casting light, the shadow map drops to 1024 px on small screens, the pixel ratio is capped at 2, and rendering stops whenever the tab is hidden or another screen is open. Players on older devices can switch 3D off in Settings; the 2D renderer plays the same game.
 
@@ -145,20 +147,24 @@ Most 4X and survival-strategy launches never reach top-grossing charts, regardle
 
 ## 8. Balance and pacing (measured)
 
-The game was tuned with an automated player that plays every system the way a strong, active player would: it builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan, claims every reward, sets the mist before storms and fights the next stage whenever the odds look good. The desert version keeps the tuned curves of 1.0 and adds drinking water on top of what the wyrm needs; these are the measured results (game time, which runs about 30× faster than a live-service game):
+The game was tuned with an automated player that plays every system the way a strong, active player would: it builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan, claims every reward, sets the mist before storms (Attuned mist from Lv 6) and fights the next stage whenever the odds look good. Since 2.1 it also taps every surplus bubble, calls the rain whenever it's ready, settles every incident with the first choice it can afford and takes every merchant trade it can pay for. Over 13 hours that is about 130 showers, 610 bubbles, 70 incidents and 240 trades. These are the measured results (game time, which runs about 30× faster than a live-service game):
 
-| Milestone | Free player (two runs) | With the Founder's Cache |
+| Milestone | Free player (four runs) | With the Founder's Cache (two runs) |
 |---|---|---|
-| Rainwyrm Lv 5 | 10-30 min | 30 min |
-| Rainwyrm Lv 10 | 3.5 h | 3.5 h |
-| Stage 30, the Sand Colossus | 2.5-2.7 h | 2 h |
-| Stage 60, the Sunheart (story ending) | 6.9-7.3 h | 6 h |
-| Burning Line depth 10 | 7.5-9.6 h | 8.3 h |
-| Rainwyrm Lv 14 | 10.9 h | 9.5 h |
-| Rainwyrm Lv 15, Primordial form | past 13 h | 11.9 h |
-| All 45 chapter quests | 13+ h | ~12 h |
+| Rainwyrm Lv 5 | 12-29 min | 7-17 min |
+| Rainwyrm Lv 10 | 2.9-3.3 h | 2.5-2.6 h |
+| Stage 30, the Sand Colossus | 1.3-3.1 h | 1.5-2.1 h |
+| Stage 60, the Sunheart (story ending) | 4.9-5.7 h | 4.1-5.2 h |
+| Burning Line depth 10 | 6.8-8.3 h | 5.5-7.3 h |
+| Rainwyrm Lv 14 | 9.8-10.8 h | 8 h |
+| Rainwyrm Lv 15, Primordial form | 12.3 h (one run), past 13 h (three) | 11.1 h |
+| All 49 chapter quests | 13+ h | 12-13+ h |
 
-In every run the keep never ran dry (zero minutes thirsty or dormant) and sickness stayed under 0.1% of survivor-time: a player who digs the wells and sets the mist before storms stays safe, while one who ignores water loses survivors and production.
+Keep life rewards attention without replacing the core economy. A player who ignores it, or taps bubbles only every 10 minutes, reaches the Sunheart in about 6.5 h, roughly the pre-2.1 pace. Late levels (past Rainwyrm Lv 10) cost more since 2.1 (`lateCostGrowth` 1.7), so the extra income speeds up the story but not the endgame: Lv 14 still lands near 10 hours, as before. Measured in resources, an always-attentive player gets about 15% more output from bubbles and 10-15% more water from showers. Incidents roughly break even on stone and food: they cost resources up front and pay back in boosts, water, Starglass and survivors. Merchants mostly turn surplus food into journals, Rain Charms and the scarce resource. Earlier drafts were much more generous: a 2-minute bubble every 4 minutes, two 15-minute speedups per merchant and big rain bursts brought the ending down to under 3 hours, and they were cut back.
+
+Run-to-run spread is wide (gacha luck and raid timing move stage 60 by up to an hour), so tune with several seeds, not one.
+
+In every run the keep never ran dry (zero minutes thirsty or dormant) and sickness stayed under 0.05% of survivor-time: a player who digs the wells and sets the mist before storms stays safe, while one who ignores water loses survivors and production.
 
 A human player is less efficient than the bot, so expect the story to take roughly two to three times as long: a handful of evenings.
 
@@ -166,6 +172,8 @@ Other measured outcomes:
 
 - **Water is the first lesson.** A new keep loses water every minute until the first quest (dig the Deep Well) is done, so players learn the core mechanic in the first minute.
 - **Every resource is used.** Building costs draw on stone, water (mudbrick and mortar), food and copper from level 3 up. Stone and copper are the late-game constraints; food piles up for training and donations.
+- **Nights matter.** Desert nights run 7°C colder and middays 2°C hotter, so a wyrm left on Steady wastes water after dark. Attuned mist drizzles at night and pours before storms. That alone saves enough water to speed the free player's story by about a tenth.
+- **Old saves carry over.** Saves from 2.0 load into 2.1 at the same chapter quest (the four new quests are stepped over), and the keep's new systems start up on the first tick.
 - **No errors** across all automated runs.
 
 ## 9. Next steps
@@ -173,6 +181,6 @@ Other measured outcomes:
 1. Playtest with 20+ genre players; watch the first 10 minutes, the first sandstorm and the first caravan across the Dunes.
 2. Ship to TestFlight using NATIVE.md, with real purchases in the App Store sandbox. Check frame rate on a 3-4 year old iPhone and Android mid-ranger.
 3. Commission hand-painted key art of the Rainwyrm and the six Legendary heroes for the store page and ads.
-4. Add analytics hooks (tutorial funnel, first purchase view, storm outcomes, day-1/7/30 retention).
+4. Add analytics hooks (tutorial funnel, first purchase view, storm outcomes, when players call the rain, which incident choices they pick, day-1/7/30 retention).
 5. Soft-launch in one or two test markets and check the retention gates in section 7 before spending on user acquisition.
 6. If retention holds, start the live multiplayer backend in section 6.

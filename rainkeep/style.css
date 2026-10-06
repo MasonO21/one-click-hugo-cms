@@ -540,3 +540,21 @@ textarea.code { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, m
 /* ---------- 3D scene loading veil ---------- */
 .scene-veil { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(60% 50% at 50% 60%, #4a2a14, #1a0e07); color: var(--rime); font-family: var(--font-display); font-size: 18px; z-index: 0; pointer-events: none; transition: opacity .6s; }
 .scene-veil.gone { opacity: 0; }
+
+/* ---------- Keep life: incidents, rain, boosts, merchant ---------- */
+.qchip.incident { color: #fff0c8; border-color: var(--gold); background: #4a2a10e6; animation: breathe 1.6s ease-in-out infinite; }
+.qchip.incident .ic { color: var(--gold); }
+.qchip.rain { color: #dff8ff; border-color: #2f8aa0; background: #0e2e3ae6; }
+.qchip.rain .ic { color: var(--water); }
+.qchip.buff { color: #d0f5dc; border-color: #3c7a50; }
+.qchip.buff .ic { color: var(--good); }
+.qchip.buff.neg, .chip.neg { color: #ffd0c0; border-color: #b0442c; }
+.qchip.buff.neg .ic { color: var(--bad); }
+.climate .tod { color: var(--gold); }
+.incident-art { display: flex; gap: 10px; align-items: center; justify-content: center; }
+.incident-art span { font-family: var(--font-display); color: #ffe0b0; font-size: 18px; }
+.btn.choice .costs { flex: none; }
+.btn.choice .cost { padding: 2px 6px 2px 4px; font-size: 12px; }
+.card.trade { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card.trade .arrow { transform: rotate(90deg); color: var(--water); display: inline-flex; }
+.card.trade.sold { opacity: .5; }

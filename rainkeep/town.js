@@ -12,7 +12,18 @@
   const { PLOT, SHORT, UI, ACT } = KH;
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
-  KH.on('booted', () => { S = KH.S; resize(); requestAnimationFrame(frame); });
+  KH.on('booted', () => { S = KH.S; makeIcons(); resize(); requestAnimationFrame(frame); });
+  // resource icons as images, for surplus bubbles drawn on the canvas
+  const icons = {};
+  function makeIcons() {
+    for (const r of KH.RES) {
+      const sym = document.getElementById(KH.ICON[r]);
+      if (!sym) continue;
+      const img = new Image();
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">${sym.innerHTML}</svg>`)}`;
+      icons[r] = img;
+    }
+  }
 
   const cv = $('#town');
   const townCtx = cv.getContext('2d');
@@ -579,7 +590,74 @@
     T.embers = T.embers.filter((e) => e.age < e.life);
     UI.floaters = UI.floaters.filter((f) => now - f.t0 < 1600);
 
+    keepMarks(t, (pid) => {
+      const P = pid === 'gate' ? { x: T.cx, y: T.cy + T.ry + 30 * T.k, s: T.k } : T.pos[pid];
+      return P ? { x: P.x, y: P.y - 36 * P.s, s: P.s } : null;
+    });
+    if (KH.keep && KH.keep.merchantHere()) merchantCamp(T.cx + T.rx * 0.8, T.cy + T.ry * 0.9, T.k, t);
+    if (KH.keep && KH.keep.raining()) rainStreaks(t, KH.keep.rainK());
     screenFx(t, dt, R, wxType, true);
+  }
+
+  // Surplus bubbles and the incident marker, over either renderer. at(pid) gives a screen point above a plot.
+  T.hits = [];
+  function keepMarks(t, at) {
+    T.hits = [];
+    if (!KH.keep) return;
+    for (const b of KH.keep.bubbles()) {
+      const p = at(b.pid);
+      if (!p) continue;
+      const x = p.x - 16 * p.s, y = p.y - 8 * p.s + Math.sin(t * 2.4 + b.pid.length) * 3, r = 15 * p.s;
+      const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.4, r * 0.1, x, y, r);
+      g.addColorStop(0, '#fffbe8'); g.addColorStop(1, '#ffd36e');
+      ctx.fillStyle = 'rgba(40,20,6,.35)'; ell(x, y + r * 0.9, r * 0.7, r * 0.2); ctx.fill();
+      ctx.fillStyle = g; ell(x, y, r, r); ctx.fill();
+      ctx.strokeStyle = '#a8641c'; ctx.lineWidth = 1.5; ell(x, y, r, r); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 4 * p.s, y + r - 1); ctx.lineTo(x, y + r + 6 * p.s); ctx.lineTo(x + 4 * p.s, y + r - 1); ctx.fillStyle = '#ffd36e'; ctx.fill();
+      const img = icons[b.res];
+      if (img && img.complete) ctx.drawImage(img, x - r * 0.62, y - r * 0.62, r * 1.24, r * 1.24);
+      T.hits.push({ kind: 'collect', arg: b.pid, x, y, r: r + 8 });
+    }
+    const where = KH.keep.incidentAt();
+    if (where) {
+      const p = at(where);
+      if (p) {
+        const pulse = 1 + 0.12 * Math.sin(t * 5), r = 15 * p.s * pulse, x = p.x, y = p.y - 30 * p.s - Math.abs(Math.sin(t * 2.2)) * 5;
+        ctx.fillStyle = 'rgba(255,207,110,.25)'; ell(x, y, r * 1.6, r * 1.6); ctx.fill();
+        ctx.fillStyle = '#c0391c'; ell(x, y, r, r); ctx.fill();
+        ctx.strokeStyle = '#ffe0b0'; ctx.lineWidth = 2; ell(x, y, r, r); ctx.stroke();
+        ctx.fillStyle = '#fff4dc'; ctx.font = `800 ${19 * p.s}px 'Barlow Semi Condensed', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('!', x, y + 1);
+        T.hits.push({ kind: 'incident', x, y, r: r + 10 });
+      }
+    }
+  }
+  function rainStreaks(t, k) {
+    ctx.fillStyle = `rgba(40,70,100,${0.2 * k})`; ctx.fillRect(0, 0, VW, VH);
+    ctx.strokeStyle = `rgba(225,244,255,${0.6 * k})`; ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    for (let i = 0; i < 240; i++) {
+      const x = ((i * 73.7 + t * 60) % (VW + 40)) - 20, y = ((i * 41.3 + t * 520 * (0.8 + (i % 5) * 0.08)) % (VH + 40)) - 20;
+      ctx.moveTo(x, y); ctx.lineTo(x - 4, y + 18);
+    }
+    ctx.stroke();
+  }
+
+  // a visiting merchant's striped tent, camel and goods just inside the gate
+  function merchantCamp(x, y, s, t) {
+    tent(x, y, 30 * s, 30 * s, '#7a3f8a');
+    ctx.fillStyle = 'rgba(240,217,168,.85)';
+    for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x + i * 7 * s, y - 2); ctx.lineTo(x + i * 3 * s, y - 24 * s); ctx.lineTo(x + i * 3 * s + 2 * s, y - 24 * s); ctx.lineTo(x + i * 7 * s + 3 * s, y - 2); ctx.fill(); }
+    const cx = x + 26 * s, cy = y + 2 * s, bob = Math.sin(t * 1.6) * 0.8 * s;
+    ctx.fillStyle = 'rgba(8,16,30,.3)'; ell(cx, cy + 1, 14 * s, 3 * s); ctx.fill();
+    ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 2.4 * s;
+    ctx.beginPath(); for (const lx of [-8, -4, 5, 9]) { ctx.moveTo(cx + lx * s, cy - 10 * s); ctx.lineTo(cx + lx * s, cy); } ctx.stroke();
+    ctx.fillStyle = '#c8945a'; ell(cx, cy - 13 * s + bob, 12 * s, 6 * s); ctx.fill(); ell(cx - 1 * s, cy - 18 * s + bob, 6 * s, 4.5 * s); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx + 10 * s, cy - 14 * s + bob); ctx.quadraticCurveTo(cx + 15 * s, cy - 20 * s, cx + 16 * s, cy - 24 * s + bob); ctx.lineWidth = 3.4 * s; ctx.strokeStyle = '#c8945a'; ctx.stroke();
+    ell(cx + 18 * s, cy - 24 * s + bob, 4 * s, 2.4 * s); ctx.fill();
+    ctx.fillStyle = '#2f7f9a'; ctx.fillRect(cx - 7 * s, cy - 17 * s + bob, 10 * s, 5 * s);
+    for (const [j, c] of [[-14, '#b0603a'], [-9, '#c9a24a']]) { ctx.fillStyle = c; ell(x + j * s - 6 * s, y - 4 * s, 3.5 * s, 4.5 * s); ctx.fill(); }
+    T.hits.push({ kind: 'merchant', x: x + 10 * s, y: y - 12 * s, r: 30 * s });
   }
 
   // heat vignette, raid warning and blowing sand (shared by both renderers)
@@ -693,10 +771,15 @@
         for (let i = 0; i < 3; i++) heart(W.mx - 14 + i * 14, W.my - 20 - (1 - k) * 40 - i * 6, (4 + i * 0.6) * W.s);
       }
     }
+    keepMarks(t, (pid) => {
+      const a = AN[pid];
+      return a ? { x: a.tx, y: a.ty, s: a.s } : null;
+    });
     screenFx(t, dt, R, wxType, false);
   }
 
   function hitTest(px, py) {
+    for (const h of T.hits) if (Math.hypot(px - h.x, py - h.y) < h.r) return `@${h.kind}:${h.arg || ''}`;
     if (KH.town3d && KH.town3d.active) return KH.town3d.pick(px, py);
     const W = T.pos.wyrm, f = DATA.wyrm.stages[KH.stageIndex(S.lv.wyrm)].size * T.k * 1.3;
     if (Math.hypot(px - W.x, (py - (W.y - 12 * f)) * 1.1) < 44 * f + 10) return 'wyrm';
@@ -741,6 +824,16 @@
     if (cancel || !g || g.moved || !S) return;
     const pid = hitTest(e.offsetX, e.offsetY);
     if (!pid) return;
+    if (pid[0] === '@') {
+      const [kind, arg] = pid.slice(1).split(':');
+      if (kind === 'collect') ACT.collect(arg);
+      else if (kind === 'incident') { KH.sfx('tap'); ACT.incident(); }
+      else if (kind === 'merchant') { KH.sfx('tap'); ACT.merchant(); }
+      KH.save();
+      KH.renderAll(true);
+      return;
+    }
+    if (pid === 'merchant') { KH.sfx('tap'); ACT.merchant(); KH.renderAll(true); return; }
     if (pid !== 'wyrm' && S.lv.wyrm < PLOT[pid].unlock) {
       KH.toast(`The ${KH.plotName(pid)} unlocks at Rainwyrm Lv ${PLOT[pid].unlock}.`, 'heat');
       return;

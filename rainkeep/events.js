@@ -72,6 +72,7 @@
     const it = DATA.items[id];
     if (!it) return;
     if (it.kind === 'shards') { UI.sheet = { kind: 'pouch', id }; return; }
+    if (it.kind === 'charm') { UI.sheet = null; return ACT.rain(); }
     if (it.kind === 'speed') return KH.toast('Use speedups from any timer: tap a building that is being upgraded.', '');
     useItem(id, mode === 'all' ? S.items[id] : 1);
   };
@@ -92,6 +93,7 @@
       let btn = '';
       if (it.kind === 'crate') btn = `<button class="btn small" data-act="useitem" data-arg="${k}:1">Open</button>${S.items[k] > 1 ? `<button class="btn small alt" data-act="useitem" data-arg="${k}:all">All</button>` : ''}`;
       else if (it.kind === 'shards') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Choose hero</button>`;
+      else if (it.kind === 'charm') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Call the Rain</button>`;
       const desc = it.kind === 'crate' ? `${fmt(DATA.crateSize(it.res, S.lv.wyrm))} ${KH.NAME[it.res].toLowerCase()} each` : it.kind === 'speed' ? 'Use from any building, research or training timer' : it.desc;
       return `<div class="card bag-row">${icon(it.icon)}<div class="grow"><b>${esc(it.name)} <span class="muted">×${S.items[k]}</span></b><div class="muted small">${esc(desc)}</div></div>${btn}</div>`;
     }).join('');
@@ -314,6 +316,8 @@
   const addPts = (key, n) => { if (S && S.ev.idx === cycle() && evKey(S.ev.idx) === key) S.ev.pts += n; };
   const TP = EV.warPoints;
   KH.on('mist', (e) => addPts('rainfest', e.seconds * (e.high ? 2 : 1)));
+  KH.on('rain', (e) => { addPts('rainfest', 2 * e.duration); addPts('oasis', 40); });
+  KH.on('incidentDone', () => addPts('oasis', 30));
   KH.on('beast', (e) => { addPts('hunt', 10 * e.lvl); addPts('oasis', TP.beast * e.lvl); });
   KH.on('upgrade', (e) => { addPts('builder', 10 * e.to); addPts('oasis', TP.upgrade * e.to); });
   KH.on('research', (e) => { addPts('builder', 5 * e.to); addPts('oasis', TP.research * e.to); });

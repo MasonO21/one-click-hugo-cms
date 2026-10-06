@@ -11,15 +11,16 @@ A complete desert water-survival strategy game for phones, in 3D. The rain stopp
 
 | Area | Contents |
 |---|---|
-| **3D world** | The keep and the Dunes are real-time 3D scenes (three.js, vendored): low-poly desert architecture that changes with building level, a day and night cycle, sandstorms, dust haze and heatwaves, villagers walking to work, camels, palms swaying in the wind, an animated oasis and the Rainwyrm itself. Drag to orbit, pinch to zoom. Falls back to a 2D renderer on devices without WebGL, and can be switched off in Settings |
-| **The Rainwyrm** | 15 levels, 7 forms that grow fins, horns, whiskers and finally a rain cloud of its own, 3 mist settings, petting and naming, an Ascension choice at Lv 12 (Monsoon, Mistveil or Floodheart), Wyrm's Torrent that opens every battle, 6 skins |
-| **Survival** | Water is life: survivors drink it and the wyrm breathes it as cooling mist. If the wells run dry, the wyrm sleeps, the heat pours in and families leave. Forecast weather (dust haze, sandstorms, heatwaves) gets hotter as the wyrm grows; heat bands drive sickness and productivity; food, housing, raider attacks with a Storehouse to protect stock, offline protection |
+| **3D world** | The keep and the Dunes are real-time 3D scenes (three.js, vendored): low-poly desert architecture that changes with building level, a day and night cycle, sandstorms, dust haze, heatwaves and rain showers, villagers walking to work, camels, palms swaying in the wind, an animated oasis and the Rainwyrm itself. Drag to orbit, pinch to zoom. Falls back to a 2D renderer on devices without WebGL, and can be switched off in Settings |
+| **The Rainwyrm** | 15 levels, 7 forms that grow fins, horns, whiskers and finally a rain cloud of its own, 3 mist settings and Attuned mist (the wyrm sets its own from Lv 6), **Call the Rain** (from Lv 3: a shower that fills the wells, cools the keep and calms sandstorms, on a recharge, with Rain Charms for emergencies), petting and naming, an Ascension choice at Lv 12 (Monsoon, Mistveil or Floodheart), Wyrm's Torrent that opens every battle, 6 skins |
+| **Survival** | Water is life: survivors drink it and the wyrm breathes it as cooling mist. If the wells run dry, the wyrm sleeps, the heat pours in and families leave. Forecast weather (dust haze, sandstorms, heatwaves) gets hotter as the wyrm grows, middays are hotter and desert nights cold; heat bands drive sickness and productivity; food, housing, raider attacks with a Storehouse to protect stock, offline protection |
 | **The keep** | 12 buildings on fixed plots (Deep Well, Date Grove, Sandstone Quarry, Copper Mine, Mudbrick Houses, Healer's House, Barracks, Watchtower, Archive of Rains, Caravan Hall, Storehouse), worker assignment (auto or manual), 10 research lines with 10 levels each, 3 troop types in a counter triangle |
+| **Keep life** | Surplus bubbles to tap over working buildings, 16 keep incidents (travellers at the gate, a fever, a buried cistern, a wedding under the palms) with choices that cost something and pay off in boosts, survivors or setbacks, and travelling merchant caravans that camp by the gate and swap what you have too much of for what you're short on |
 | **Heroes** | 18 illustrated heroes in 3 rarities and 3 classes, levels, stars from duplicates, skills that grow with stars, Steward posts that boost buildings, recruitment with published odds, a 40-pull Legendary guarantee and a rotating featured hero |
 | **Expedition** | 60 story stages in 6 chapters with 12 bosses, chapter story cards, an ending ("The Rains"), then the endless Burning Line. A patrol cache pays out while you're away |
 | **The Dunes** | A seeded 21×21 world map whose dust haze recedes as the wyrm grows: resource nodes and gathering caravans, beasts, Scorpion raider camps, and 12 story ruins whose choices change what you bring home |
 | **Caravan** | Three simulated alliances to choose from: members help your timers, fund 5 Caravan techs, send gift chests, chat and react to what happens, and fight a Colossus raid boss with you on a timer |
-| **Meta** | 45 chapter quests, daily duties with 5 chests, a 7-day gift calendar, 30 achievements, mail, a 30-tier season pass, a backpack with speedups, crates and shard pouches, and 4 rotating events including **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket |
+| **Meta** | 49 chapter quests, daily duties with 5 chests, a 7-day gift calendar, 33 achievements, mail, a 30-tier season pass, a backpack with speedups, crates and shard pouches, and 4 rotating events including **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket |
 | **Store** | Founder's Cache, Oasis Stipend, Ledger Premium, Growth Fund, Sandstorm Kit, War Chest, Starglass packs, wyrm skins and supply crates. Purchases are simulated on the web and go through Apple/Google in the app build |
 | **Polish** | Procedural music on a Hijaz scale, desert wind and spring ambience and sound effects (no audio files), haptics, a quest-driven tutorial pointer, notifications in the app build, save codes to move progress between devices, offline play when hosted, bundled fonts |
 
@@ -51,6 +52,7 @@ Progress saves in the browser. Settings (gear icon) has sound toggles, the 3D gr
 | `world3d.js` | The Dunes in 3D: tile models, dust haze, caravans, badges, panning and picking |
 | `world.js` | The Dunes rules: tiles, marches, beasts, camps, ruins and raids on the keep; 2D map fallback |
 | `events.js` | Backpack, speedups, daily duties, gift calendar, achievements, mail, timed events, Oasis Wars |
+| `keep.js` | Keep life: Call the Rain, surplus bubbles, keep incidents, travelling merchants, timed boosts |
 | `caravan.js` | The simulated alliance: help, tech, shop, gifts, chat, Colossus raid |
 | `audio.js` | Procedural Web Audio engine (`KHAudio`) |
 | `native.js` | App-store bridge (`KHNative`): RevenueCat purchases, notifications, haptics, sharing, service worker |
@@ -72,7 +74,7 @@ rainkeep.state()                                 // the full save object
 KH.town3d.zoom(1.5); KH.town3d.drag(0, -100)     // move the 3D camera
 ```
 
-The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties) for 8-13 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
+The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties, surplus, rain, incidents, merchants) for 8-13 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
 
 ## Shipping it
 

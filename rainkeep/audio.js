@@ -36,7 +36,8 @@
     clear:      { g: 0.02, f: 380,  q: 0.8, fd: 110, qd: 0.2, gust: [0.85, 1.15] },
     haze:       { g: 0.04, f: 480,  q: 1.0, fd: 170, qd: 0.3, gust: [0.75, 1.3] },
     sandstorm:   { g: 0.11, f: 640,  q: 0.9, fd: 300, qd: 0.4, gust: [0.5, 1.9] },
-    heatwave: { g: 0.07, f: 1350, q: 3.2, fd: 420, qd: 1.0, gust: [0.7, 1.35] }
+    heatwave: { g: 0.07, f: 1350, q: 3.2, fd: 420, qd: 1.0, gust: [0.7, 1.35] },
+    rain:       { g: 0.06, f: 2600, q: 0.45, fd: 500, qd: 0.1, gust: [0.85, 1.2] }
   };
   var MIST = {
     //        drips/s  drip level  stream  stream centre (Hz)
@@ -416,7 +417,13 @@
       noise({ t: t, a: 0.02, h: 0.1, d: 0.7, g: 0.08, type: 'bandpass', f: 2600, f2: 600, q: 0.6, src: 'pink', send: true });
       tone({ f: 70, f2: 45, t: t, a: 0.08, h: 0.2, d: 0.9, g: 0.08 });
     },
-    raid: function (t) { drum(t, 0.42); drum(t + 0.3, 0.5); }
+    raid: function (t) { drum(t, 0.42); drum(t + 0.3, 0.5); },
+    chime: function (t) { bell(81, t, 0.07, 0.9); bell(86, t + 0.11, 0.06, 1.1); },
+    thunder: function (t) {                                     // a soft crack, then a long rolling rumble
+      noise({ t: t, a: 0.005, d: 0.25, g: 0.12, type: 'lowpass', f: 2400, f2: 400 });
+      noise({ t: t + 0.08, a: 0.25, h: 0.5, d: 2.2, g: 0.2, type: 'lowpass', f: 260, f2: 70, src: 'brown' });
+      tone({ f: 55, f2: 38, t: t + 0.1, a: 0.3, h: 0.4, d: 1.6, g: 0.07 });
+    }
   };
 
   // ---------- public API ----------

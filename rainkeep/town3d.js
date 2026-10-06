@@ -110,9 +110,49 @@
       scene.add(c);
       camels.push({ c, phase: i * Math.PI, speed: 0.032 + i * 0.006 });
     }
+    buildMerchant();
+    // rain: streaks falling through a box around the keep
+    const n = 900, rg = new THREE.BufferGeometry();
+    rg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 6), 3));
+    showers = new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: '#eef8ff', transparent: true, opacity: 0, depthWrite: false }));
+    showers.frustumCulled = false;
+    showers.userData.drops = Array.from({ length: n }, () => ({ x: (Math.random() - 0.5) * 56, y: Math.random() * 26, z: (Math.random() - 0.5) * 56 + 3, v: 26 + Math.random() * 10 }));
+    scene.add(showers);
     T3.ready = true;
     return true;
   }
+
+  // a merchant caravan camped just inside the front gate while one is visiting
+  let merchant = null, showers = null, flashAt = -9;
+  function buildMerchant() {
+    const g = new THREE.Group();
+    const tent = A.grp(A.cone(1.1, 1.3, A.mat(A.P.cloth4, { flat: true, map: A.tex.stripes('#7a3f8a', '#f0d9a8', 8) }), 0, 0, 0, 8));
+    tent.position.set(0.4, 0, -0.6);
+    g.add(tent);
+    g.add(A.box(1.2, 0.5, 0.55, A.mat(A.P.wood, { flat: true }), -0.9, 0, 0.5));
+    for (let k = 0; k < 4; k++) g.add(A.jar(0.6, ['#b0603a', '#2f7f9a', '#c9a24a', '#9a4a2a'][k]).translateX(-1.35 + k * 0.3).translateY(0.5).translateZ(0.5));
+    const trader = A.person(77, { robe: '#7a3f8a', wrap: '#e8b54a' });
+    trader.scale.setScalar(1.2);
+    trader.position.set(-0.2, 0, 1.0);
+    g.add(trader);
+    for (let i = 0; i < 2; i++) {
+      const c = A.camel(60 + i, { cloth: i ? A.P.cloth4 : A.P.cloth3, load: true });
+      c.scale.setScalar(0.8);
+      c.position.set(1.6 + i * 0.9, 0, 0.6 + i * 0.9);
+      c.rotation.y = -1.9 + i * 0.4;
+      g.add(c);
+    }
+    g.position.set(3.9, 0, RZ + 2.1);
+    g.visible = false;
+    const proxy = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 2.5, 10), new THREE.MeshBasicMaterial());
+    proxy.position.set(0, 1.2, 0);
+    proxy.visible = false;
+    proxy.userData.pid = 'merchant';
+    g.add(proxy);
+    scene.add(g);
+    merchant = g;
+  }
+  KH.on('rain', () => { flashAt = performance.now(); });
 
   function buildDecor() {
     const r = seeded(19);
@@ -344,7 +384,6 @@
     dusk: { top: '#3c3a7c', hor: '#ff9a5a', bot: '#b0703a', sun: '#ffaa62', sunI: 2.0, hs: '#ffbe94', hg: '#8a5030', hI: 0.9, fog: '#dd9a6c', exp: 1.08, night: 0.35 },
     night: { top: '#0b1438', hor: '#2c3670', bot: '#2a1c18', sun: '#b0c4ff', sunI: 1.15, hs: '#7080c8', hg: '#4a3628', hI: 0.85, fog: '#2c3260', exp: 1.3, night: 1 },
   };
-  const CYCLE = 420;
   const KEYS = [[0, 'dusk'], [0.07, 'day'], [0.56, 'day'], [0.64, 'dusk'], [0.72, 'night'], [0.93, 'night'], [1, 'dusk']];
   const cA = new Col(), cB = new Col();
   function palAt(f) {
@@ -360,16 +399,18 @@
     return o;
   }
   T3.palAt = palAt;
-  T3.phase = () => ((S.time + 50) / CYCLE) % 1;
-  const wxNow = { haze: 0, storm: 0, heat: 0 };
+  T3.phase = () => KH.dayNight().f;
+  const wxNow = { haze: 0, storm: 0, heat: 0, rain: 0 };
   function lighting(t, dt) {
-    const f = ((S.time + 50) / CYCLE) % 1;
+    const f = KH.dayNight().f;
     const p = palAt(f);
     const w = KH.curWx().type;
-    const goal = { haze: w === 'haze' ? 1 : 0, storm: w === 'sandstorm' ? 1 : 0, heat: w === 'heatwave' ? 1 : 0 };
+    const wet = KH.keep && KH.keep.raining();
+    const goal = { haze: w === 'haze' && !wet ? 1 : 0, storm: w === 'sandstorm' && !wet ? 1 : 0, heat: w === 'heatwave' && !wet ? 1 : 0, rain: wet ? 1 : 0 };
     for (const k in wxNow) wxNow[k] += (goal[k] - wxNow[k]) * Math.min(1, dt * 0.6);
     T3.wxNow = wxNow;
-    const { haze, storm, heat } = wxNow;
+    const { haze, storm, heat, rain: wetK } = wxNow;
+    const flash = Math.max(0, 1 - (performance.now() - flashAt) / 350);
     // the sun crosses the sky during the day; at night a cool moon lights from the other side
     const dayF = clamp(f / 0.68, 0, 1);
     const isNight = p.night > 0.6;
@@ -380,18 +421,21 @@
     sun.target.position.set(0, 0, 0);
     const sunCol = p.sun.clone().lerp(cA.set('#ffb070'), storm * 0.5).lerp(cA.set('#fff8e6'), heat * 0.4);
     sun.color.copy(sunCol);
-    sun.intensity = p.sunI * (1 - storm * 0.55 - haze * 0.12 + heat * 0.25);
-    hemi.color.copy(p.hs).lerp(cA.set('#f0c890'), storm * 0.6 + haze * 0.3);
-    hemi.groundColor.copy(p.hg);
-    hemi.intensity = p.hI * (1 + storm * 0.2 + haze * 0.1);
-    const fogCol = p.fog.clone().lerp(cA.set('#c98a4a'), storm * 0.85).lerp(cA.set('#e9c48e'), haze * 0.55).lerp(cA.set('#fff1d6'), heat * 0.35);
+    sun.intensity = p.sunI * (1 - storm * 0.55 - haze * 0.12 + heat * 0.25 - wetK * 0.6);
+    hemi.color.copy(p.hs).lerp(cA.set('#f0c890'), storm * 0.6 + haze * 0.3).lerp(cA.set('#a8c4d8'), wetK * 0.7);
+    hemi.groundColor.copy(p.hg).lerp(cA.set('#5a4a3a'), wetK * 0.5);
+    hemi.intensity = p.hI * (1 + storm * 0.2 + haze * 0.1 + wetK * 0.15) + flash * 3;
+    const fogCol = p.fog.clone().lerp(cA.set('#c98a4a'), storm * 0.85).lerp(cA.set('#e9c48e'), haze * 0.55).lerp(cA.set('#fff1d6'), heat * 0.35).lerp(cA.set('#8a9aa8'), wetK * 0.7);
     scene.fog.color.copy(fogCol);
     // fog distances scale with the camera so the keep stays readable in a storm
     const cd = T3.camD || 60;
-    scene.fog.near = lerp(lerp(cd + 15, cd * 0.75, haze), cd * 0.5, storm);
-    scene.fog.far = lerp(lerp(cd + 140, cd * 2.4, haze), cd * 1.7, storm);
+    scene.fog.near = lerp(lerp(lerp(cd + 15, cd * 0.75, haze), cd * 0.5, storm), cd * 0.8, wetK);
+    scene.fog.far = lerp(lerp(lerp(cd + 140, cd * 2.4, haze), cd * 1.7, storm), cd * 2.6, wetK);
+    // rain darkens the sand
+    terrain.material.color.setRGB(1 - wetK * 0.4, 1 - wetK * 0.38, 1 - wetK * 0.3);
+    terrain.material.roughness = 0.96 - wetK * 0.3;
     const u = sky.material.uniforms;
-    u.uTop.value.copy(p.top).lerp(cA.set('#c8b09a'), storm * 0.8 + haze * 0.35).lerp(cA.set('#a8d0ee'), heat * 0.5);
+    u.uTop.value.copy(p.top).lerp(cA.set('#c8b09a'), storm * 0.8 + haze * 0.35).lerp(cA.set('#a8d0ee'), heat * 0.5).lerp(cA.set('#5a6a7c'), wetK * 0.8);
     u.uHorizon.value.copy(p.hor).lerp(fogCol, storm * 0.9 + haze * 0.5);
     u.uBottom.value.copy(p.bot);
     u.uSunDir.value.copy(dir);
@@ -402,7 +446,21 @@
     A.setNight(p.night);
     A.setWater(t, dir, sunCol, u.uTop.value);
     T3.night = p.night;
-    T3.wind = 1 + storm * 2.5 + haze * 0.4;
+    T3.wind = 1 + storm * 2.5 + haze * 0.4 + wetK * 0.8;
+  }
+  function animRain(dt) {
+    const k = wxNow.rain;
+    showers.visible = k > 0.01;
+    if (!showers.visible) return;
+    showers.material.opacity = 0.8 * k;
+    const a = showers.geometry.attributes.position.array, drops = showers.userData.drops;
+    drops.forEach((d, i) => {
+      d.y -= d.v * dt;
+      if (d.y < 0) { d.y += 26; d.x = (Math.random() - 0.5) * 56; d.z = (Math.random() - 0.5) * 56 + 3; }
+      a[i * 6] = d.x; a[i * 6 + 1] = d.y; a[i * 6 + 2] = d.z;
+      a[i * 6 + 3] = d.x - 0.15; a[i * 6 + 4] = d.y + 1.3; a[i * 6 + 5] = d.z;
+    });
+    showers.geometry.attributes.position.needsUpdate = true;
   }
 
   // ======================================================================
@@ -549,7 +607,7 @@
   T3.pick = (px, py) => {
     if (!T3.active) return null;
     ray.setFromCamera(new THREE.Vector2((px / VW) * 2 - 1, -(py / VH) * 2 + 1), cam);
-    const h = ray.intersectObjects(hit, false);
+    const h = ray.intersectObjects(merchant && merchant.visible ? [...hit, merchant.children[merchant.children.length - 1]] : hit, false);
     return h.length ? h[0].object.userData.pid : null;
   };
   function toScreen(v) {
@@ -568,6 +626,8 @@
     }
     const hw = wyrm.headWorld;
     const h = toScreen(hw);
+    const gate = toScreen(new V3(0, 2.4, RZ + 4.6));
+    out.gate = { x: gate.x, y: gate.y, tx: gate.x, ty: gate.y, mx: gate.x, my: gate.y, s: out.well ? out.well.s : 1 };
     out.wyrm = { x: h.x, y: h.y + 40, tx: h.x, ty: h.y - 26, mx: h.x, my: h.y, s: clamp(pxPerUnit(hw) / 17, 0.7, 1.35) };
     T3.head = h;
     T3.anchors = out;
@@ -617,6 +677,8 @@
     animPeople(t, posts);
     animCamels(t);
     animParticles(t, dt);
+    animRain(rdt);
+    merchant.visible = !!(KH.keep && KH.keep.merchantHere());
     // highlight rings: the current quest target and the plot whose sheet is open
     const qp = UI.questTarget && plotPos[UI.questTarget];
     ringSel.quest.visible = !!qp && !(UI.sheet && UI.sheet.kind === 'plot');

@@ -101,8 +101,10 @@
       const sev = S.wx.find((x) => x.start > S.time && KH.isStorm(x.type) && x.start - S.time <= range);
       next = sev ? `${icon('i-storm')}<span>${DATA.weather[sev.type].name}</span> <b>${fmtTime(sev.start - S.time)}</b>` : `<span>Clear skies ahead</span>`;
     }
+    if (KH.keep && KH.keep.raining()) next = `${icon('i-water')}<span>Rain</span> <b>${fmtTime(S.keep.rainUntil - S.time)} left</b>`;
     const warn = KH.isStorm(w.type) || next.includes('i-storm');
-    setHTML($('#hud-climate'), `<span class="temp t-${cls}">${icon('i-temp')}${fmtTemp(R.temp)}</span><span class="band t-${cls}">${band.name}</span>
+    const dn = KH.dayNight();
+    setHTML($('#hud-climate'), `<span class="temp t-${cls}">${icon(dn.night > 0.6 ? 'i-moon' : 'i-sun', 'tod')}${fmtTemp(R.temp)}</span><span class="band t-${cls}">${band.name}</span>
       <span class="pop">${icon('i-people')}${S.pop}/${KH.housing()}${S.sick ? ` · ${S.sick} sick` : ''}${S.thirsty ? ' · <b class="thirst">thirsty</b>' : ''}</span><span class="next ${warn ? 'warn' : ''}">${next}</span>`);
   }
 
@@ -420,6 +422,7 @@
       <p class="muted small">Your survivors drink ${perMin(R.thirst).replace('+', '')} on top of what the wyrm needs. A Downpour doubles the wyrm's drinking for 45% more cooling. Let it drizzle on calm days and pour before a sandstorm or heatwave.</p>
       <div class="row wrap"><button class="btn small ${petReady ? 'gold' : 'alt'}" data-act="pet">${icon('i-heart')}Pet ${esc(S.wyrm.name)}${petReady ? ' (daily gift)' : ''}</button><button class="btn small alt" data-act="sheet" data-arg="rename">Rename</button></div>
       ${asc ? `<p class="notice good">${esc(asc.name)} wyrm: ${esc(asc.desc)}</p>` : S.lv.wyrm >= DATA.ascension.level ? '<button class="btn wide gold" data-act="sheet" data-arg="ascend">Choose the Ascension</button>' : `<p class="muted small">At Lv ${DATA.ascension.level} ${esc(S.wyrm.name)} ascends, and you choose the storm it carries.</p>`}
+      ${KH.wyrmExtras ? KH.wyrmExtras() : ''}
       <div class="section-label">Scales</div><div class="row wrap">${skins}<button class="btn small alt" data-act="tab" data-arg="shop">More skins</button></div>`;
   }
 
@@ -472,7 +475,7 @@
       const visible = now || w.start - S.time <= range;
       const d = DATA.weather[w.type];
       if (!visible) return `<div class="fc unknown">${icon('i-storm')}<span>Beyond sight</span><span class="muted small">${fmtTime(w.start - S.time)}</span></div>`;
-      return `<div class="fc ${w.type} ${now ? 'now' : ''}">${icon(w.type === 'clear' ? 'i-temp' : 'i-storm')}<span><b>${d.name}</b> <span class="muted small">${fmtTemp(KH.outsideTemp(d))} outside${d.outdoor < 1 ? ` · outdoor work ${Math.round(d.outdoor * 100)}%` : ''}</span></span>
+      return `<div class="fc ${w.type} ${now ? 'now' : ''}">${icon(w.type === 'clear' ? 'i-temp' : 'i-storm')}<span><b>${d.name}</b> <span class="muted small">${fmtTemp(KH.outsideTemp(d, false))} by day${d.outdoor < 1 ? ` · outdoor work ${Math.round(d.outdoor * 100)}%` : ''}</span></span>
         <span class="muted small">${now ? `now · ends ${fmtTime(w.end - S.time)}` : `in ${fmtTime(w.start - S.time)}`}</span></div>`;
     });
     return `<div class="forecast">${items.join('')}</div>`;
@@ -540,18 +543,22 @@
   }
 
   function sheetForecast(R) {
+    const dn = KH.dayNight();
     const cool = S.dormant ? 0 : KH.coolOf(S.lv.wyrm);
     const kc = KH.bonus('cool');
     const deg = (v) => `−${Math.round(v * 10) / 10}°C`;
     const [pleasant, warm, hot] = DATA.comfort.map((b) => Math.ceil(b.max));
     return {
       title: 'Forecast', lvl: `Sight ${fmtTime(KH.forecastRange())}`,
-      body: `<dl class="kv"><dt>Outside</dt><dd>${fmtTemp(KH.outsideTemp(R.wx))}</dd><dt>${esc(S.wyrm.name)} (${KH.mist().name})</dt><dd>${deg(cool)}</dd>
+      body: `<dl class="kv"><dt>Outside</dt><dd>${fmtTemp(KH.outsideTemp(R.wx))}</dd>
+        <dt>${dn.name}</dt><dd>${dn.shift > 0 ? '+' : '−'}${Math.abs(Math.round(dn.shift))}°C · ${dn.name === 'Night' || dn.name === 'Dawn' ? 'sunrise' : 'nightfall'} in ${fmtTime(dn.next)}</dd>
+        <dt>${esc(S.wyrm.name)} (${KH.mist().name}${S.autoMist ? ', attuned' : ''})</dt><dd>${deg(cool)}</dd>
         ${S.tech.shade ? `<dt>Shade Sails</dt><dd>${deg(S.tech.shade)}</dd>` : ''}${KH.stewardVal('cool') ? `<dt>Steward</dt><dd>${deg(KH.stewardVal('cool'))}</dd>` : ''}
-        ${kc ? `<dt>Caravan and Ascension</dt><dd>${deg(kc)}</dd>` : ''}
+        ${kc ? `<dt>${KH.keep && KH.keep.raining() ? 'Rain, Caravan and Ascension' : 'Caravan and Ascension'}</dt><dd>${deg(kc)}</dd>` : ''}
         <dt>In the keep</dt><dd class="t-${R.band.name.toLowerCase()}">${fmtTemp(R.temp)} · ${R.band.name}</dd></dl>
+        ${KH.keep && KH.keep.activeBuffs().length ? `<div class="section-label">Boosts</div><div class="row wrap">${KH.keep.activeBuffs().map((b) => `<span class="chip small ${b.val < 0 ? 'neg' : ''}">${esc(b.label)} · ${fmtTime(b.until - S.time)}</span>`).join('')}</div>` : ''}
         ${forecastHTML()}
-        <div class="card small"><b>How the heat works</b><div class="muted">The sun hunts water: every time your wyrm grows, storms come for it a little hotter. Under ${pleasant}°C the keep is Pleasant and works 10% faster. Above ${warm}°C people start falling ill, and above ${hot}°C the sick can be lost. If the wells run dry, the wyrm sleeps and people leave to find water. The Watchtower and Signal Mirrors research let you see storms sooner.</div></div>
+        <div class="card small"><b>How the heat works</b><div class="muted">The sun hunts water: every time your wyrm grows, storms come for it a little hotter. Under ${pleasant}°C the keep is Pleasant and works 10% faster. Above ${warm}°C people start falling ill, and above ${hot}°C the sick can be lost. Nights are ${Math.abs(DATA.day.night)}°C cooler and middays ${DATA.day.noon}°C hotter, so the wyrm can drizzle after dark. If the wells run dry, the wyrm sleeps and people leave to find water. The Watchtower and Signal Mirrors research let you see storms sooner.</div></div>
         <button class="btn wide" data-act="plot" data-arg="wyrm">Tend ${esc(S.wyrm.name)}</button>`,
     };
   }
@@ -924,6 +931,9 @@
   };
   ACT.go = (target) => {
     const [kind, arg] = target.split(':');
+    if (kind === 'surplus') { ACT.tab('town'); if (KH.keep && !KH.keep.bubbles().length) toast('Surplus builds up over working buildings. Tap the bubble when it appears.', ''); return; }
+    if (kind === 'sheet' && arg === 'incident') return ACT.incident ? ACT.incident() : null;
+    if (kind === 'sheet' && arg === 'merchant') return ACT.merchant ? ACT.merchant() : null;
     if (kind === 'plot') ACT.plot(arg);
     else if (kind === 'sheet') ACT.sheet(arg);
     else ACT.tab(arg);
@@ -973,6 +983,7 @@
     if (UI.sheet) {
       if (kind === 'plot' && UI.sheet.kind === 'plot' && UI.sheet.pid === arg) {
         if (arg === 'wyrm' && /Pet/.test(q.text)) mark('#sheet [data-act="pet"]');
+        else if (arg === 'wyrm' && /rain/i.test(q.text)) mark('#sheet [data-act="rain"]');
         else if (/Train/.test(q.text)) mark('#sheet [data-act="train"]');
         else if (/research/i.test(q.text)) mark('#sheet [data-act="research"]:not(.off)');
         else mark('#sheet [data-act="build"]');
@@ -981,6 +992,9 @@
       return;
     }
     if (kind === 'plot') { if (UI.tab !== 'town') mark('#tabs [data-arg="town"]'); return; }
+    if (kind === 'surplus') { if (UI.tab !== 'town') mark('#tabs [data-arg="town"]'); return; }
+    if (kind === 'sheet' && arg === 'incident') { mark('#queue .qchip.incident'); return; }
+    if (kind === 'sheet' && arg === 'merchant') { mark('#side [data-act="merchant"]'); return; }
     if (kind === 'sheet') { mark(`#side [data-arg="${arg}"]`); return; }
     const [tab, sub] = TAB_ALIAS[arg] || [arg, null];
     if (UI.tab !== tab) { mark(`#tabs [data-arg="${tab}"]`); return; }
@@ -1016,7 +1030,7 @@
       }
     }
     applyHints();
-    if (window.KHAudio) window.KHAudio.setAmbience({ weather: KH.curWx().type, mist: S.dormant ? 'off' : S.mist, active: UI.tab === 'town' && !document.hidden });
+    if (window.KHAudio) window.KHAudio.setAmbience({ weather: KH.keep && KH.keep.raining() ? 'rain' : KH.curWx().type, mist: S.dormant ? 'off' : S.mist, active: UI.tab === 'town' && !document.hidden });
   }
   KH.renderAll = renderAll;
 
@@ -1067,6 +1081,7 @@
   });
   KH.on('stormSighted', () => audio('storm'));
   KH.on('pet', () => audio('pet'));
+  KH.on('rain', () => { audio('thunder'); haptic('medium'); });
   KH.on('evolve', () => { audio('roar'); haptic('heavy'); });
   KH.on('ascend', () => audio('roar'));
 

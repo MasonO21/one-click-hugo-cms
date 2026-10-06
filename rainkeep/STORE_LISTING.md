@@ -30,7 +30,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 2612 characters
+## Description (4,000 max) · 2988 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -42,11 +42,14 @@ SURVIVAL THAT STAYS REAL
 • Read the forecast and prepare. Sandstorms and heatwaves arrive on a schedule you can see coming.
 • Let the wyrm drizzle on calm days to save water, then set it to Downpour when the storm hits.
 • The sun hunts water. The bigger your wyrm grows, the hotter the storms come for it.
+• Call the Rain. Your wyrm can summon a shower that fills the wells, cools the keep and calms a sandstorm.
 
 BUILD YOUR KEEP IN 3D
 • Twelve buildings around the wyrm's spring, from Deep Wells and Date Groves to the Archive of Rains and the Caravan Hall, each changing shape as it levels up.
 • Watch your villagers carry water jars to work, camels circle the walls and lanterns come on at night. Orbit and zoom around your keep.
 • Assign workers, research ten technologies and guard your stores against raiders.
+• Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms. Every choice costs something and pays off in its own way.
+• Trade with merchant caravans that camp by the gate, swapping what you have too much of for what you're short on.
 
 HEROES WITH A JOB AT HOME
 • Recruit 18 illustrated heroes across three classes: Shieldbearers, Dune Archers and Camel Lancers.

@@ -42,6 +42,15 @@ const DATA = {
     { max: 37.5, name: 'Hot', prod: 0.85, sick: 0.008, lost: 0 },
     { max: 999, name: 'Scorching', prod: 0.7, sick: 0.015, lost: 0.003 },
   ],
+  // Day and night (game seconds). Desert nights are cold: the keep runs cooler after dark
+  // and hotter at midday, so the mist can be lowered at night to save water.
+  day: {
+    length: 420, offset: 50,
+    // [phase, night factor]: 0 = full day, 1 = full night; values between blend
+    keys: [[0, 0.35], [0.07, 0], [0.56, 0], [0.64, 0.35], [0.72, 1], [0.93, 1], [1, 0.35]],
+    noon: 2, // degrees added at midday
+    night: -7, // degrees added at night
+  },
   foodPerSurvivor: 0.1,
   waterPerSurvivor: 0.02, // everyone drinks, on top of what the wyrm needs
   arrivalEvery: 10,
@@ -69,7 +78,24 @@ const DATA = {
     },
     // Wyrm's Torrent: at the start of every battle the wyrm strikes this share of the foe's health.
     breath: (L) => 0.012 * L,
+    autoMistLevel: 6, // from this level the wyrm can set its own mist
   },
+  // Call the Rain: the wyrm's active ability
+  rain: {
+    unlock: 3,
+    cooldown: (L) => Math.round(540 - 15 * L),
+    duration: (L) => 40 + 2 * L,
+    cool: 6, // degrees off the keep while it rains
+    water: 1.5, // well output multiplier (rain fills the cisterns)
+    burst: 0.4, // instant water, in quarter-crates
+    heal: 1.5, // extra recovery while it rains
+  },
+  // Production buildings slowly fill a surplus bubble you tap to collect.
+  surplus: { fill: 300, minutes: 0.75, plots: ['quarry', 'grove', 'well', 'mine'] },
+  // Travelling merchants stop at the gate with trades sized to your keep.
+  merchant: { first: 420, every: [600, 900], stay: 300, value: { stone: 1, food: 0.9, water: 1.3, copper: 3 }, rate: 0.4 },
+  // Incidents in the keep: a new one every few minutes of play, one at a time.
+  incidentEvery: [480, 840],
   ascension: {
     level: 12,
     branches: {
@@ -138,7 +164,7 @@ const DATA = {
   },
   copperShareFrom: 4, // levels >= this also cost copper (22% of the stone cost)
   lateLevel: 10, // past this level costs and timers grow more gently
-  lateCostGrowth: 1.45,
+  lateCostGrowth: 1.7,
   buildTimeGrowth: 1.42,
   lateTimeGrowth: 1.12,
   workerSlots: (L) => 3 + L,
@@ -369,12 +395,15 @@ const DATA = {
 
   // ---------- Chapter quests ----------
   // check(S) returns true when done. go: 'plot:<id>' | 'tab:<tab>' | 'sheet:<kind>'
+  // where the keep-life quests were inserted in 2.1 (core.js migrates older saves)
+  questsAdded21: [5, 15, 18, 25],
   quests: [
     { text: 'Dig the Deep Well. The Rainwyrm is thirsty.', go: 'plot:well', check: (S) => S.lv.well >= 1, reward: { water: 150 } },
     { text: 'Upgrade the Date Grove to Lv 2', go: 'plot:grove', check: (S) => S.lv.grove >= 2, reward: { food: 150 } },
     { text: 'Upgrade the Deep Well to Lv 2', go: 'plot:well', check: (S) => S.lv.well >= 2, reward: { stone: 200 } },
     { text: 'Grow the Rainwyrm to Lv 2', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 2, reward: { beacons: 2, starglass: 100 } },
     { text: 'Pet your Rainwyrm', go: 'plot:wyrm', check: (S) => S.stats.pets >= 1, reward: { journals: 10 } },
+    { text: 'Tap a surplus bubble over a building', go: 'surplus', check: (S) => (S.stats.surplus || 0) >= 1, reward: { stone: 200 } },
     { text: "Build the Healer's House", go: 'plot:infirmary', check: (S) => S.lv.infirmary >= 1, reward: { journals: 15 } },
     { text: 'Recruit a hero at the Beacon', go: 'tab:recruit', check: (S) => S.stats.pulls >= 1, reward: { journals: 20 } },
     { text: 'Raise any hero to Lv 3', go: 'tab:heroes', check: (S) => Object.values(S.heroes).some((h) => h.lvl >= 3), reward: { stone: 300, food: 200 } },
@@ -384,14 +413,17 @@ const DATA = {
     { text: 'Send a gathering march out on the Dunes', go: 'tab:world', check: (S) => S.stats.gathers >= 1, reward: { stone: 400, speed5: 1 } },
     { text: 'Build a second block of Mudbrick Houses', go: 'plot:shelter2', check: (S) => S.lv.shelter2 >= 1, reward: { stone: 400 } },
     { text: 'Grow the Rainwyrm to Lv 3', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 3, reward: { beacons: 2, water: 300 } },
+    { text: 'Call the Rain', go: 'plot:wyrm', check: (S) => (S.stats.rains || 0) >= 1, reward: { journals: 20, rainCharm: 1 } },
     { text: 'Build the Copper Mine', go: 'plot:mine', check: (S) => S.lv.mine >= 1, reward: { copper: 100 } },
     { text: 'Build the Watchtower', go: 'plot:watchtower', check: (S) => S.lv.watchtower >= 1, reward: { starglass: 100 } },
+    { text: 'Settle a matter in the keep', go: 'sheet:incident', check: (S) => (S.stats.incidents || 0) >= 1, reward: { journals: 25 } },
     { text: 'Explore a ruin on the Dunes', go: 'tab:world', check: (S) => S.stats.ruins >= 1, reward: { journals: 25 } },
     { text: 'Clear Expedition stage 5', go: 'tab:expedition', check: (S) => S.stage > 5, reward: { beacons: 2 } },
     { text: 'Station a hero as Steward', go: 'tab:heroes', check: (S) => Object.keys(S.stewards).length >= 1, reward: { journals: 30 } },
     { text: 'Grow the Rainwyrm to Lv 4', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 4, reward: { starglass: 150, copper: 200 } },
     { text: 'Build the Caravan Hall', go: 'plot:hall', check: (S) => S.lv.hall >= 1, reward: { food: 500 } },
     { text: 'Join a Caravan', go: 'tab:caravan', check: (S) => !!S.caravan.joined, reward: { beacons: 2, speed15: 1 } },
+    { text: 'Trade with a travelling merchant', go: 'sheet:merchant', check: (S) => (S.stats.trades || 0) >= 1, reward: { starglass: 100 } },
     { text: 'Build the Archive of Rains', go: 'plot:archive', check: (S) => S.lv.archive >= 1, reward: { journals: 30 } },
     { text: 'Complete any research', go: 'plot:archive', check: (S) => S.stats.researched >= 1, reward: { beacons: 2 } },
     { text: 'Slay a beast on the Dunes', go: 'tab:world', check: (S) => S.stats.beasts >= 1, reward: { journals: 30 } },
@@ -481,8 +513,8 @@ const DATA = {
       grants: { growth: 1 },
       desc: 'Pays out Starglass each time your Rainwyrm reaches Lv 5, 8, 10, 12 and 15. 6,000 in total.' },
     { id: 'stormkit', name: 'Sandstorm Kit', usd: 2.99, daily: true, tag: 'Daily',
-      grants: { speed15: 3, crate_water: 2, beacons: 2 },
-      desc: 'Three 15-minute speedups, two water crates and two Beacon Tokens. Once per day.' },
+      grants: { speed15: 3, crate_water: 2, beacons: 2, rainCharm: 1 },
+      desc: 'Three 15-minute speedups, two water crates, two Beacon Tokens and a Rain Charm. Once per day.' },
     { id: 'warchest', name: "Warden's War Chest", usd: 19.99, tag: 'Value',
       grants: { starglass: 1600, beacons: 10, shard_legendary: 1 },
       desc: '1,600 Starglass, 10 Beacon Tokens and a Legendary Shard Pouch.' },
@@ -507,6 +539,7 @@ const DATA = {
     speed5: { name: '5-minute Speedup', kind: 'speed', secs: 300, icon: 'i-clock' },
     speed15: { name: '15-minute Speedup', kind: 'speed', secs: 900, icon: 'i-clock' },
     speed60: { name: '1-hour Speedup', kind: 'speed', secs: 3600, icon: 'i-clock' },
+    rainCharm: { name: 'Rain Charm', kind: 'charm', icon: 'i-water', desc: 'Lets the Rainwyrm call the rain again right away.' },
     crate_stone: { name: 'Stone Crate', kind: 'crate', res: 'stone', icon: 'i-stone' },
     crate_food: { name: 'Food Crate', kind: 'crate', res: 'food', icon: 'i-food' },
     crate_water: { name: 'Water Crate', kind: 'crate', res: 'water', icon: 'i-water' },
@@ -528,6 +561,9 @@ const DATA = {
     { id: 'storm', text: 'Ride out a storm with no one falling ill', n: 1, pts: 15 },
     { id: 'patrol', text: 'Collect the patrol cache', n: 1, pts: 5 },
     { id: 'research', text: 'Finish a research', n: 1, pts: 10 },
+    { id: 'rain', text: 'Call the rain', n: 1, pts: 10 },
+    { id: 'surplus', text: 'Collect 5 surplus bubbles', n: 5, pts: 10 },
+    { id: 'incident', text: 'Settle a matter in the keep', n: 1, pts: 10 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1 }],
@@ -541,7 +577,7 @@ const DATA = {
   login: [
     { beacons: 2 },
     { speed15: 2, journals: 20 },
-    { starglass: 100 },
+    { starglass: 100, rainCharm: 1 },
     { crate_copper: 1, journals: 40 },
     { beacons: 3 },
     { speed60: 1, starglass: 100 },
@@ -580,6 +616,9 @@ const DATA = {
     { id: 'titan5', text: 'Help bring down 5 Colossus raids', stat: 'raidKills', n: 5, reward: { starglass: 200 } },
     { id: 'war1', text: 'Finish first in an Oasis Wars bracket', stat: 'warWins', n: 1, reward: { starglass: 300 } },
     { id: 'pets30', text: 'Pet your Rainwyrm 30 times', stat: 'pets', n: 30, reward: { starglass: 100 } },
+    { id: 'rain25', text: 'Call the rain 25 times', stat: 'rains', n: 25, reward: { starglass: 150 } },
+    { id: 'inc20', text: 'Settle 20 matters in the keep', stat: 'incidents', n: 20, reward: { beacons: 3 } },
+    { id: 'trade20', text: 'Trade with merchants 20 times', stat: 'trades', n: 20, reward: { starglass: 150 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------
@@ -662,6 +701,108 @@ const DATA = {
     campRespawn: 600,
     raids: { fromWyrm: 5, every: [900, 1300], warn: 90 },
   },
+
+  // ---------- Incidents in the keep ----------
+  // Small decisions at home. `at` is the plot the marker appears over ('gate' = the front gate).
+  // Costs and resource rewards are in quarter-crates (they scale with the keep); buff = a timed bonus;
+  // sick = share of healthy survivors who fall ill; troopsLost = share of troops at home.
+  incidents: [
+    { id: 'travelers', name: 'Travelers at the Gate', at: 'gate', text: 'A family of six, lips cracked from the sun, asks for water. The youngest can barely stand.',
+      choices: [
+        { label: 'Share our water', cost: { water: 1 }, outcomes: [{ p: 1, text: 'They drink, cry a little, and ask if they can stay. Of course they can.', reward: { survivors: 4 } }] },
+        { label: 'Give them a waterskin and directions', cost: { water: 0.3 }, outcomes: [{ p: 1, text: 'They thank you and walk on toward the next keep. One of them leaves a journal behind.', reward: { journals: 1 } }] },
+        { label: 'Turn them away', outcomes: [{ p: 1, text: 'They walk on. Nobody speaks much at dinner.', reward: {} }] },
+      ] },
+    { id: 'brackish', name: 'Brackish Water', at: 'well', needs: (S) => S.lv.well >= 1, text: 'The Deep Well tastes of salt this morning. The diggers think a seam broke open below.',
+      choices: [
+        { label: 'Dig past the salt seam', cost: { stone: 1.5 }, outcomes: [{ p: 1, text: 'Two days of hard work, and the water runs sweeter than ever.', reward: { buff: { key: 'prod_water', val: 0.2, secs: 360, label: '+20% water' } } }] },
+        { label: 'Boil it before drinking', cost: { food: 1 }, outcomes: [{ p: 1, text: 'Cooking fires burn day and night, but nobody gets sick.', reward: {} }] },
+        { label: 'Drink it anyway', outcomes: [
+          { p: 0.5, text: 'It tastes awful, but everyone is fine.', reward: {} },
+          { p: 0.5, text: 'By evening, the Healer\'s House is full.', reward: { sick: 0.15 } }] },
+      ] },
+    { id: 'buried', name: 'Buried Quarry', at: 'quarry', needs: (S) => S.lv.quarry >= 1, text: 'The wind filled the quarry cut with sand overnight. The crews are standing around the edge with shovels.',
+      choices: [
+        { label: 'Everyone digs together', cost: { food: 1 }, outcomes: [{ p: 1, text: 'By noon the cut is clear, and the crews have found a better face of stone.', reward: { buff: { key: 'prod_stone', val: 0.25, secs: 300, label: '+25% stone' } } }] },
+        { label: 'Leave it for the quarry crew', outcomes: [{ p: 1, text: 'They get there in the end. It takes a while.', reward: { buff: { key: 'prod_stone', val: -0.2, secs: 240, label: '−20% stone' } } }] },
+      ] },
+    { id: 'scorpions', name: 'Scorpions in the Granary', at: 'grove', needs: (S) => S.lv.grove >= 1, text: 'A nest of scorpions has moved into the date stores. Nobody wants to reach into the baskets.',
+      choices: [
+        { label: 'Send in troops with torches', needs: (S) => KH.troopsAll() >= 10, outcomes: [
+          { p: 0.8, text: 'Every scorpion is swept out. The troops are rather proud of themselves.', reward: { journals: 2 } },
+          { p: 0.2, text: 'The nest is cleared, but a few soldiers are stung badly.', reward: { troopsLost: 0.03, journals: 1 } }] },
+        { label: 'Smoke them out with wet palm fronds', cost: { water: 0.8 }, outcomes: [{ p: 1, text: 'The granary smells of smoke for a week, but the scorpions are gone.', reward: {} }] },
+        { label: 'Leave them be', outcomes: [{ p: 1, text: 'They eat more than you would think.', reward: { foodCost: 3 } }] },
+      ] },
+    { id: 'wedding', name: 'A Wedding Under the Palms', at: 'shelter1', text: 'Two of your quarry workers want to marry under the palms by the spring.',
+      choices: [
+        { label: 'Throw a feast for the whole keep', cost: { food: 2 }, outcomes: [{ p: 1, text: 'There is music until dawn. The next day everyone works as if they slept a week.', reward: { buff: { key: 'prod', val: 0.12, secs: 360, label: '+12% production' } } }] },
+        { label: 'A small ceremony', outcomes: [{ p: 1, text: 'It is short and lovely. Your Rainwyrm hums through the whole thing.', reward: { journals: 2 } }] },
+      ] },
+    { id: 'childspring', name: 'The Children\'s Spring', at: 'grove', needs: (S) => S.lv.grove >= 1, text: 'Children playing behind the palms found sand that stays damp in the midday sun.',
+      choices: [
+        { label: 'Dig a new spring', cost: { stone: 1 }, outcomes: [
+          { p: 0.7, text: 'Clear water wells up. The children name it after themselves.', reward: { water: 3, buff: { key: 'prod_water', val: 0.1, secs: 600, label: '+10% water' } } },
+          { p: 0.3, text: 'Only a seep, but every bucket counts.', reward: { water: 1.5 } }] },
+        { label: 'Fill it in before someone falls', outcomes: [{ p: 1, text: 'The children are furious. Their parents are relieved.', reward: {} }] },
+      ] },
+    { id: 'fever', name: 'Heat Fever', at: 'infirmary', needs: (S) => S.pop >= 12, text: 'A fever is spreading through the houses. It always comes with the hottest weeks.',
+      choices: [
+        { label: 'Brew aloe tonic for everyone', cost: { water: 1, food: 1 }, outcomes: [{ p: 1, text: 'Bitter, but it works. The fever breaks in a day.', reward: { heal: 1 } }] },
+        { label: 'Quarantine the sick houses', cost: { food: 0.6 }, outcomes: [{ p: 1, text: 'The fever stays where it started.', reward: { sick: 0.04 } }] },
+        { label: 'Hope it passes', outcomes: [{ p: 1, text: 'It does pass, eventually, through half the keep first.', reward: { sick: 0.22 } }] },
+      ] },
+    { id: 'camels', name: 'Wild Camels', at: 'gate', text: 'A herd of wild camels wandered up to the walls, following the smell of water.',
+      choices: [
+        { label: 'Tame them for the caravans', cost: { food: 1.2 }, outcomes: [{ p: 1, text: 'It takes a week and a lot of dates. Your gatherers can carry more now.', reward: { buff: { key: 'gather', val: 0.25, secs: 600, label: '+25% gathering' } } }] },
+        { label: 'Let them drink and go', cost: { water: 0.6 }, outcomes: [{ p: 1, text: 'An old saying goes that a watered camel brings luck. Someone finds starglass in the sand the next morning.', reward: { starglass: 40 } }] },
+        { label: 'Drive them off', outcomes: [{ p: 1, text: 'They lope off into the haze, offended.', reward: {} }] },
+      ] },
+    { id: 'mirage', name: 'The Mirage Chaser', at: 'watchtower', needs: (S) => S.lv.watchtower >= 1, text: 'A lookout swears he saw a city of glass shimmering to the south, with water in its streets.',
+      choices: [
+        { label: 'Send scouts to look', needs: (S) => KH.troopsAll() >= 10, outcomes: [
+          { p: 0.5, text: 'There is no city, but the scouts find an old cache half-buried in the glass.', reward: { journals: 3, starglass: 40 } },
+          { p: 0.5, text: 'Just shimmer. The scouts come home sunburnt and annoyed.', reward: { troopsLost: 0.02 } }] },
+        { label: 'Give the lookout a day off', outcomes: [{ p: 1, text: 'He sleeps for fourteen hours and stops seeing cities.', reward: {} }] },
+      ] },
+    { id: 'oldmap', name: 'An Old Map', at: 'archive', needs: (S) => S.lv.archive >= 1, text: 'Behind a loose tile in the Archive, your scholars found a map of the old water tunnels under the keep.',
+      choices: [
+        { label: 'Open the tunnels', cost: { stone: 1.5, copper: 0.5 }, outcomes: [{ p: 1, text: 'Cool, clean water runs in the dark under your feet. It has been there the whole time.', reward: { water: 4, buff: { key: 'prod_water', val: 0.2, secs: 480, label: '+20% water' } } }] },
+        { label: 'Study it', outcomes: [{ p: 1, text: 'Your scholars fill three notebooks.', reward: { journals: 3 } }] },
+      ] },
+    { id: 'riders', name: 'Riders on the Ridge', at: 'watchtower', needs: (S) => S.lv.barracks >= 1 && S.lv.wyrm >= 4, text: 'Two riders have been watching the keep from the ridge since dawn.',
+      choices: [
+        { label: 'Chase them off', needs: (S) => KH.troopsAll() >= 20, outcomes: [
+          { p: 0.7, text: 'They flee, dropping a saddlebag full of stolen starglass.', reward: { starglass: 50, journals: 1 } },
+          { p: 0.3, text: 'It was a trap. Your riders fight their way back.', reward: { troopsLost: 0.05 } }] },
+        { label: 'Double the watch', outcomes: [{ p: 1, text: 'Every wall is manned day and night. The troops grumble but stay sharp.', reward: { buff: { key: 'troop', val: 0.08, secs: 600, label: '+8% troop strength' } } }] },
+      ] },
+    { id: 'lostcaravan', name: 'Lost in the Storm', at: 'gate', needs: (S) => KH.isStorm(KH.curWx().type), text: 'Through the storm you hear camel bells. A caravan is lost just outside the walls.',
+      choices: [
+        { label: 'Flash the signal mirrors', cost: { water: 0.5 }, outcomes: [{ p: 1, text: 'They follow the light to the gate. The traders pay in copper and promises.', reward: { survivors: 2, copper: 1.5 } }] },
+        { label: 'Bar the gates until it passes', outcomes: [{ p: 1, text: 'The bells fade. In the morning there are only tracks.', reward: {} }] },
+      ] },
+    { id: 'scales', name: 'Shed Scales', at: 'wyrm', needs: (S) => S.lv.wyrm >= 3, text: 'The Rainwyrm shed a few scales overnight. They shimmer like moving water.',
+      choices: [
+        { label: 'Sell them to a jeweler', outcomes: [{ p: 1, text: 'A traveling jeweler pays more than you expected.', reward: { starglass: 60 } }] },
+        { label: 'Give them to the scholars', outcomes: [{ p: 1, text: 'The scholars study them for days and learn a great deal about wyrms.', reward: { journals: 4 } }] },
+      ] },
+    { id: 'watertable', name: 'Falling Water Table', at: 'well', needs: (S) => S.lv.well >= 3, text: 'The well rope comes up a little shorter every day. The water table is falling.',
+      choices: [
+        { label: 'Sink a second shaft', cost: { stone: 2, copper: 0.6 }, outcomes: [{ p: 1, text: 'The new shaft hits a fresh vein. The water runs strong again.', reward: { buff: { key: 'prod_water', val: 0.25, secs: 600, label: '+25% water' } } }] },
+        { label: 'Ration drinking water', outcomes: [{ p: 1, text: 'Everyone drinks half. They do the work, slowly and thirsty.', reward: { buff: { key: 'drinkCut', val: 0.5, secs: 300, label: 'Half rations' }, buff2: { key: 'prod', val: -0.1, secs: 300, label: '−10% production' } } }] },
+      ] },
+    { id: 'healer', name: 'A Healer Passing Through', at: 'infirmary', needs: (S) => S.lv.infirmary >= 1, text: 'A traveling healer with a cart of herbs offers to work in your Healer\'s House for a while.',
+      choices: [
+        { label: 'Pay her in copper', cost: { copper: 0.8 }, outcomes: [{ p: 1, text: 'She treats everyone and teaches your healers a few tricks.', reward: { heal: 1, buff: { key: 'heal', val: 0.5, secs: 600, label: '+50% healing' } } }] },
+        { label: 'Offer food and a bed', cost: { food: 0.5 }, outcomes: [{ p: 1, text: 'She stays two nights and leaves her notes behind.', reward: { journals: 2 } }] },
+      ] },
+    { id: 'storyteller', name: 'The Storyteller', at: 'hall', needs: (S) => S.lv.hall >= 1, text: 'An old storyteller arrived with a caravan and offers to tell the keep about the time before the Long Noon.',
+      choices: [
+        { label: 'Gather everyone in the square', outcomes: [{ p: 1, text: 'She tells them about rivers, and rain, and green hills. Nobody wants to go to bed.', reward: { buff: { key: 'prod', val: 0.08, secs: 480, label: '+8% production' } } }] },
+        { label: 'Record her stories', outcomes: [{ p: 1, text: 'Your scholars write until their hands cramp.', reward: { journals: 3 } }] },
+      ] },
+  ],
   ruins: [
     { id: 'cart', name: 'Overturned Cart', text: 'A cargo cart lies on its side, half buried in sand. Footprints lead off toward the rocks.',
       choices: [
