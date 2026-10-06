@@ -13,8 +13,8 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests, gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, overflow fade, Nova wind-up, adaptive music stems (§15), the remaining accessibility options (§17) |
-| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests, gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), five first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, overflow fade, Nova wind-up, adaptive music stems (§15), the remaining accessibility options (§17) |
+| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
@@ -83,11 +83,12 @@ Everything below describes the build unless it is marked **Planned**.
 | **Floating joystick** | Touch anywhere on the battlefield to spawn the stick base at your thumb. Drag to move. Release to stop. WASD / arrow keys on desktop. | Radius 58 px. Dead zone 12% of the radius (~7 px), then analog speed rises linearly to 100% at full deflection. The base follows the thumb if it is dragged beyond 1.6× radius ("leash"). |
 | **Auto-attack** | All weapons fire on their own cooldowns. | Soul Bolt targets the nearest enemies within 11.5 m, Ashen Chains the nearest within 7.5 m, Bone Spears aim at the nearest within 13 m (or straight ahead). The Scythe sweeps a full circle starting from the facing direction; Grave Pulse and Skull Halo hit around the player. A weapon with no target retries after 0.12 s. *(Planned: elites and Bloaters within 3 m get priority.)* |
 | **NOVA button** | 88 px circle in the bottom-right (Space on desktop). Works at 100% charge with any legion size. | Pulses when ready. A tap fires immediately with 0.55 s of slow motion. A touch on the button never starts the joystick. *(Planned: 0.4 s wind-up, disabled below 10 minions, left-handed mirror.)* |
+| **RITE button** | 64 px circle above-left of NOVA, in the hero's colour, with the Rite's icon and short name (Shift or E on desktop). Mirrored with NOVA in left-handed mode. | The hero's signature active ability (§11.1). Ready from the start of every run. A radial ring refills over the cooldown with a seconds counter; the button pulses and chimes when ready and glows while the Rite is working. Like NOVA, it fires on touch-down and never starts the joystick. |
 | **Pause** | Top-left, 36 px. Also auto-pauses when the app goes to the background. | The pause screen shows time, kills, legion size and the current build, plus a sound toggle and "Abandon run". *(Planned: Nova charge on the pause screen.)* |
 | **Level-up / chest cards** | 3 large cards. Tap to pick. Gameplay is paused. | Taps in the first 0.3 s are ignored (no accidental picks from a swipe). After a pick the Shepherd gets 0.6 s of invulnerability. A Relic Chest uses the same three cards under a gold "Relic Chest" header; chests are offered before queued level-ups. |
 | **Haptics** | Success on level-up, Relic Chest and a good gate; warning on a bad gate and the boss warning; medium when hit; heavy on Nova, boss slam, death and boss kill. | Toggle in settings. *(Planned: a light tick on raise, throttled to 10/s.)* |
 
-There are no other in-run buttons. The reroll (1 per run, through an optional rewarded ad, free with Soul Pact) sits inside the level-up screen.
+There are no other in-run buttons beyond NOVA and RITE. The reroll (1 per run, through an optional rewarded ad, free with Soul Pact) sits inside the level-up screen.
 
 ---
 
@@ -108,7 +109,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 ### 4.2 The Legion (Raise Chance and minions)
 
-- **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating, except for kills by Seraphine's own Nova (×2 instead).
+- **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating, except for kills by Seraphine's own Nova (×2 instead). During Vael's **Grave Call** (§11.1) every kill rises (100%).
 - Every kill rolls Raise Chance, whether the Shepherd, a minion, the Nova or a Bloater blast made the kill. Elites can be raised. The Bloater that explodes does not rise, and Gravemaw cannot be raised (killing him adds 30 minions instead).
 - **Legion cap:** base 30. Flat bonuses: the Legion Cap skill (+10 per level, +50 at Lv5), the Dominion talent (+2 per level, +40 at L20), the Bone Idol relic (+3 to +18, up to +42 at Legendary Lv10). Mordrake multiplies the total by 1.25, then it is rounded. **Technical hard ceiling: 400 minions** on every device, for performance and leaderboard fairness.
 - Kills only roll while the legion is below the cap. A successful roll **at** the cap heals the weakest minion by 50% of its max HP instead.
@@ -530,7 +531,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 ## 15. Audio direction
 
-*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The stem system below is Planned.*
+*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. Each Hero Rite has its own signature sound (a funeral bell and rising souls for Grave Call, a tearing whoosh and ringing blade for Shadow Step, a hymn and a cascade of chain strikes for Ashfall, a great bell for Death Knell, heaving earth and splintering bone for Ossuary Wall) plus a soft rising chime when a Rite is ready again; rendered offline, every one is clearly audible and none clips (all peak below the Soul Nova going into the master limiter). The stem system below is Planned.*
 
 - **Music:** dark synthwave with choir and pipe organ. **Stems are added as the legion grows** (25 / 100 / 200 / 300 minions): percussion, then bass, choir and lead. The player *hears* the army getting bigger. Boss tracks are separate, with a phase-3 key change.
 - **SFX priorities** (voice limit 32): 1) player hit and telegraphs, 2) Nova, 3) gates, 4) level-up, 5) raises (pooled into a shimmering chord, at most 10 voices), 6) weapons, 7) enemy deaths (heavily pooled).
@@ -543,7 +544,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 Goal: the player experiences all three hooks (raise, gate, Nova) and a boss kill inside 4 minutes, before any shop or currency screen.
 
-**Status:** the build has no separate tutorial run. The first Chapter 1 run (5 energy) doubles as the tutorial and shows four one-time hints. Each hint appears once per profile.
+**Status:** the build has no separate tutorial run. The first Chapter 1 run (5 energy) doubles as the tutorial and shows five one-time hints. Each hint appears once per profile.
 
 | Trigger (build) | Hint |
 |---|---|
@@ -551,6 +552,7 @@ Goal: the player experiences all three hooks (raise, gate, Nova) and a boss kill
 | First minion raised | "Slain foes rise to fight for you. This is your LEGION!" |
 | First Soul Gate pair (0:28) | "Walk through a Soul Gate to grow your legion!" (with the banner "SOUL GATES: Walk through one to reshape your legion") |
 | Nova meter first reaches 100% (after ~300 kills, around 2:30–3:00) | "Soul Nova is ready! Tap NOVA to detonate your legion." |
+| The Rite is ready and 8 s have passed (it is ready from the start, so this is 0:08, once no other hint is showing) | "Your Rite is ready! Tap CALL to unleash Grave Call." (the hero's short name and Rite; hint key `rite`) |
 
 The scripted beats below are **Planned**. Times are session times from app open (the planned tutorial run starts at 0:20). Where a beat uses run systems, the build's run time is given in brackets.
 
@@ -581,7 +583,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 
 ## 17. Accessibility
 
-*Status: the build has music and SFX volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA button and the skill bar. Everything else in this table is Planned.*
+*Status: the build has music and SFX volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA and RITE buttons and the skill bar. Rite effects respect Reduce flashes and the shake slider, and their haptics follow the haptics toggle. Everything else in this table is Planned.*
 
 | Area | Feature |
 |---|---|

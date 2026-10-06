@@ -90,6 +90,7 @@ export class Enemies {
     e.shootCd = d.ranged ? d.ranged.cooldown * (0.5 + Math.random()) : 0;
     e.moveCd = 0; e.lx = 0; e.lz = 1; e.flank = 0; // signature move: cooldown, locked direction, pack flank angle
     e.lastHitBy = null;
+    e.stunT = 0; e.riteId = 0; e.riteT = 0; // Hero Rites: stun timer, per-cast hit mark, per-foe hit cooldown
     this.active.push(e);
     this.counts[type]++;
     return e;
@@ -159,6 +160,7 @@ export class Enemies {
       e.haloCd -= dt;
       e.moveCd -= dt;
       if (e.type === 'boss') { run.boss.update(e, dt); continue; }
+      if (e.stunT > 0) { e.stunT -= dt; this.drift(e, dt); continue; } // stunned: no steering and no attacks
       const pdist = Math.hypot(P.x - e.x, P.z - e.z) || 0.001;
       // taunt: the nearest taunter within range replaces the Shepherd as the target
       let tm = null;
@@ -330,6 +332,26 @@ export class Enemies {
     }
   }
 
+  /** Stun (Hero Rites): t s without steering or attacking; knockback still carries it. A wind-up or fuse in progress is
+   *  called off (a Brute's cone follows its state; a Bloater's fuse circle is put out). Gravemaw is never stunned: his
+   *  next attack only slips back by RITES.bossStagger. */
+  stun(e, t) {
+    if (!e.active || !(t > 0)) return;
+    if (e.type === 'boss') { const B = this.run.boss; if (B.state === 'chase') B.cd += DATA.RITES.bossStagger; return; }
+    if (e.state && e.type !== 'witch') {
+      if (e.type === 'bloater') for (const T of this.run.fx.teles) if (T.active && !T.onDone && (T.mesh.position.x - e.x) ** 2 + (T.mesh.position.z - e.z) ** 2 < 1.5) { T.active = false; T.mesh.visible = false; }
+      e.state = 0; e.stateT = 0;
+    }
+    e.stunT = Math.max(e.stunT, t);
+  }
+
+  /** A stunned enemy only drifts on its knockback, which fades as usual. */
+  drift(e, dt) {
+    const k = Math.exp(-8 * dt);
+    e.kx *= k; e.kz *= k; e.vx = e.kx; e.vz = e.kz;
+    e.x += e.vx * dt; e.z += e.vz * dt;
+  }
+
   /** Drop dead entries and only now return them to the pool, so a spawn can never re-add an object still listed. */
   compact() {
     const a = this.active;
@@ -439,7 +461,11 @@ export class Enemies {
       M.attrs.tint.setXYZ(i, col.r, col.g, col.b);
       // during a crouch or wind-up, cap hit flashes so the squash / rear-back silhouette stays readable
       M.attrs.flash.setX(i, e.state === 1 && (e.type === 'brute' || e.type === 'ghoul') ? Math.min(e.flash, 0.5) : e.flash);
-      M.attrs.anim.setXY(i, e.phase, e.type === 'brute' ? 0.6 : 1);
+      M.attrs.anim.setXY(i, e.phase, e.stunT > 0 ? 0 : e.type === 'brute' ? 0.6 : 1); // stunned: the waddle stops
+      if (e.stunT > 0) { // and three daze motes circle its head
+        const y = HEAD[e.type] * sy + 0.3, a = this.time * 7 + e.phase, rr = 0.34 * e.scale;
+        for (let k = 0; k < 3; k++) { const b = a + k * 2.094; g.add(e.x + Math.cos(b) * rr, y + Math.sin(b * 2) * 0.06, e.z + Math.sin(b) * rr, 0.42, 1.5, 1.35, 2.3, 0.9); }
+      }
       // elite crown: floats over the head, tilted toward the camera so the spikes read in silhouette
       if (e.elite && nc < MAX_CROWNS) {
         const y = HEAD[e.type] * sy + 0.55 + Math.sin(this.time * 3 + e.phase) * 0.07, cs = 1.3 * pop;

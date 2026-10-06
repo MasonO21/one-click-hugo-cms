@@ -5,6 +5,7 @@ import { icon } from './icons.js';
 import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART } from './art.js';
+import { RiteButton } from './riteui.js';
 
 export class RunUI {
   constructor(app, run) {
@@ -44,6 +45,8 @@ export class RunUI {
     };
     $(this.el, '.hud-pause').addEventListener('click', () => { app.audio.sfx('click'); run.pause(true); });
     this.q.nova.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.wantsNova = true; });
+    this.wantsRite = false;
+    this.rite = new RiteButton(this, run); // the hero's Rite, above-left of NOVA
     this.last = {};
     this.acc = 0;
     this.skillKey = '';
@@ -80,6 +83,7 @@ export class RunUI {
       q.novaFg.style.strokeDashoffset = String(289 * (1 - v / 100));
       q.nova.classList.toggle('ready', v >= 100);
     });
+    this.rite.update(run);
     const key = JSON.stringify(run.skillLv) + JSON.stringify(run.evolved);
     if (key !== this.skillKey) {
       this.skillKey = key;

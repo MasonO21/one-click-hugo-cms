@@ -3,8 +3,9 @@ import { h, $, fmt, toast, modal } from '../dom.js';
 import { icon, RELIC_ICON } from '../icons.js';
 import {
   HEROES, HERO_ORDER, HERO_MAX_STARS, SKILLS, RARITY_COLOR, RARITY_LABEL, RARITIES, RELICS, RELIC_SLOTS,
-  relicValue, formatRelicValue, TALENTS, talentCost, SKINS,
+  relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES,
 } from '../../game/data.js';
+import { riteIcon } from '../riteui.js';
 import {
   onChange, commit, computeLoadout, heroAction, heroNextCost, selectHero, equipRelic, upgradeTalent, notifications,
   starterAvailable, equipSkin } from '../../meta/economy.js';
@@ -121,6 +122,7 @@ export function createHeroes(ctx) {
         <div class="hd-rows">
           <div class="hd-row"><span class="hd-ri" style="color:${hero.css}">${icon(w.icon)}</span><div><small class="t-label">Signature weapon</small><b>${w.name}</b><span class="t-dim">${w.desc(1)}</span></div></div>
           <div class="hd-row"><span class="hd-ri" style="color:${hero.css}">${icon('raise')}</span><div><small class="t-label">Passive</small><b>${hero.passiveText}</b></div></div>
+          ${RITES[id] ? `<div class="hd-row hd-rite"><span class="hd-ri" style="color:${hero.css}">${riteIcon(id)}</span><div><small class="t-label">Rite · ${RITES[id].cd} s cooldown</small><b>${RITES[id].name}</b><span class="t-dim">${RITES[id].desc}</span></div></div>` : ''}
         </div>
         <div class="hd-stats">
           <div><small class="t-label">HP</small><b class="tnum">${fmt(L.hpMax)}</b></div>

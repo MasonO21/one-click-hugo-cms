@@ -123,7 +123,7 @@ export class Projectiles {
       }
       if (!dead) em[w++] = s;
     }
-    em.length = w;
+    em.length = Math.min(w, em.length); // a hit can revive Mordrake, whose revive clears every shot mid-loop
   }
 
   render() {

@@ -576,6 +576,68 @@ const SFX = {
     tone(o, t, { f: 2400 * p, d: 0.08, v: 0.05 });
     return 0.6;
   } },
+
+  // ---- Hero Rites (game/rites.js): one signature sound per hero, plus the cooldown-ready cue ----
+  rite_vael: { gap: 500, max: 1, vol: 0.9, rev: 0.6, big: true, duck: [0.45, 1.2], play(o, t, p) { // Grave Call: a funeral bell, and the dead answer
+    tone(o, t, { f: 95 * p, to: 42, glide: 0.6, d: 0.8, v: 0.55 });
+    bell(o, t, mtof(50) * p, 0.13, 2.6);
+    choir(o, [62, 69, 74], t + 0.05, 1.1, { vowel: 'oo', v: 0.15, a: 0.35, r: 1.2 });
+    [0, 7, 12, 19].forEach((k, i) => { // souls rising: beating pairs gliding up an octave
+      const f = mtof(74 + k) * p;
+      for (const det of [-10, 10]) tone(o, t + 0.12 + i * 0.07, { f: f * 0.5, to: f, glide: 0.9, a: 0.25, d: 0.8, v: 0.035, det });
+    });
+    noise(o, t, { type: 'bandpass', f: 500, to: 6500, q: 4, a: 0.7, d: 0.5, v: 0.16 });
+    return 2.6;
+  } },
+  rite_nyx: { gap: 150, max: 2, vary: 0.04, vol: 1, rev: 0.3, play(o, t, p) { // Shadow Step: the air tears, the scythe rings
+    noise(o, t, { type: 'bandpass', f: 400 * p, to: 5200 * p, q: 2.2, a: 0.03, d: 0.2, v: 0.75 });
+    noise(o, t + 0.04, { buf: brownBuf, type: 'lowpass', f: 900, to: 200, d: 0.25, v: 0.45 });
+    tone(o, t, { f: 180 * p, to: 55, d: 0.2, v: 0.6 });
+    tone(distort(o, 6, 2400, 0.12), t, { type: 'sawtooth', f: 90 * p, to: 360 * p, glide: 0.18, d: 0.2, v: 0.4 });
+    const s = t + 0.17;
+    for (const [r, v] of [[1, 0.11], [2.76, 0.06], [5.4, 0.035]]) tone(o, s, { f: 1250 * r * p, to: 1150 * r * p, a: 0.002, d: 0.5, v });
+    noise(o, s, { type: 'highpass', f: 6000, d: 0.08, v: 0.18 });
+    return 0.8;
+  } },
+  rite_seraphine: { gap: 500, max: 1, vol: 0.9, rev: 0.55, big: true, duck: [0.45, 1.0], play(o, t, p) { // Ashfall: a hymn, a fire, chains striking one after another
+    choir(o, [57, 64, 69, 73], t, 0.5, { vowel: 'ah', v: 0.16, a: 0.03, r: 1.0 });
+    noise(o, t, { type: 'lowpass', f: 300, to: 3200, a: 0.25, d: 0.9, v: 0.32 });
+    for (let k = 0; k < 12; k++) {
+      const s = t + 0.05 + k * 0.042 + rand(0, 0.015);
+      noise(o, s, { type: 'bandpass', f: rand(2500, 5000) * p, q: 3, d: 0.05, v: 0.2 });
+      tone(o, s, { type: 'square', f: rand(700, 1100) * p, to: 300 * p, d: 0.05, v: 0.035 });
+      if (k % 3 === 0) tone(o, s, { f: 140 * p, to: 50, d: 0.18, v: 0.28 });
+    }
+    [81, 85, 88].forEach((n, k) => bell(o, t + 0.1 + k * 0.08, mtof(n) * p, 0.045, 1.2));
+    return 1.8;
+  } },
+  rite_liora: { gap: 600, max: 1, vol: 0.8, rev: 0.8, big: true, duck: [0.3, 1.6], play(o, t, p) { // Death Knell: the great bell
+    tone(o, t, { f: 70 * p, to: 32, glide: 1.2, d: 1.6, v: 0.75 });
+    bell(o, t, mtof(41) * p, 0.22, 3.4);
+    bell(o, t, mtof(53) * p, 0.11, 3.0);
+    bell(o, t + 0.005, mtof(60) * p * 1.003, 0.06, 2.4);
+    for (const det of [-6, 6]) tone(o, t, { type: 'triangle', f: mtof(41) * p, det, a: 0.004, d: 3.0, v: 0.1 }); // the hum note
+    noise(o, t, { type: 'bandpass', f: 1800, to: 400, q: 1.2, d: 0.6, v: 0.22 }); // clang
+    choir(o, [53, 57, 60], t + 0.25, 1.0, { vowel: 'oo', v: 0.08, a: 0.5, r: 1.3 });
+    return 3.6;
+  } },
+  rite_mordrake: { gap: 500, max: 1, vol: 0.95, rev: 0.45, big: true, duck: [0.5, 0.9], play(o, t, p) { // Ossuary Wall: the earth heaves and bone splinters up
+    noise(o, t, { buf: brownBuf, type: 'lowpass', f: 220, a: 0.03, h: 0.3, d: 0.9, v: 0.85 });
+    tone(o, t, { f: 75 * p, to: 30, glide: 0.5, d: 0.7, v: 0.65 });
+    for (let k = 0; k < 14; k++) {
+      const s = t + 0.04 + k * 0.022 + rand(0, 0.012);
+      noise(o, s, { type: 'bandpass', f: rand(1400, 3200) * p, q: 4, d: 0.035, v: 0.32 });
+      tone(o, s, { type: 'triangle', f: rand(350, 600) * p, to: 120, d: 0.06, v: 0.11 });
+    }
+    for (const n of [38, 45, 50]) brass(o, t + 0.05, n + semis(p), 0.6, 0.045);
+    return 1.6;
+  } },
+  rite_ready: { gap: 800, max: 1, vol: 0.75, rev: 0.4, play(o, t, p) { // the Rite is ready again: a soft rising chime
+    [69, 76, 81].forEach((n, k) => tone(o, t + k * 0.07, { type: 'triangle', f: mtof(n) * p, a: 0.01, h: 0.04, d: 0.35, v: 0.12 }));
+    bell(o, t + 0.14, mtof(88) * p, 0.04, 0.9);
+    noise(o, t, { type: 'highpass', f: 6000, a: 0.1, d: 0.25, v: 0.05 });
+    return 1.0;
+  } },
 };
 for (const k in SFX) { SFX[k].last = -1e9; SFX[k].ends = []; }
 
