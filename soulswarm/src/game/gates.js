@@ -1,7 +1,7 @@
 // Soul Gates: pairs of glowing arches that multiply (or cull) the legion. Walk through one to choose.
 import * as THREE from 'three';
 import { makeGate, disposeGroup } from './fxmeshes.js';
-import { BASE } from './data.js';
+import { BASE, HITSTOP } from './data.js';
 
 const WIDTH = 3.4;
 
@@ -116,7 +116,7 @@ export class Gates {
     const before = L.count;
     const good = isGood(op);
     if (op.type === 'add') L.addMany(Math.min(op.n, BASE.hardLegionMax - before), G.x, G.z);
-    else if (op.type === 'mul') L.addMany(Math.min(before * (op.n - 1), BASE.hardLegionMax - before), G.x, G.z);
+    else if (op.type === 'mul') { L.addMany(Math.min(before * (op.n - 1), BASE.hardLegionMax - before), G.x, G.z); run.fx.hitStop(HITSTOP.gate); }
     else run.soulBurst(L.removeMany(-gain(op, before)), before, G.x, G.z); // lost souls detonate: ÷2 doubles as an escape
     const delta = L.count - before;
     run.addNovaCharge(3);

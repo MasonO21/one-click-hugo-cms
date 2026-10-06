@@ -172,9 +172,11 @@ errs = await session(async (page) => {
     Object.assign(st, { autoNova: true, lefty: true, reduceFlash: true, shake: 0 }); app.applySettings(); app.engine.manual = true;
     app.startRun(1); const r = app.run; r.player.hurt = () => {};
     r.legion.addMany(60, r.player.x, r.player.z); r.nova = 1; app.engine.step(1 / 30);
-    return { novas: r.counters.novas, lefty: app.runUI.el.classList.contains('lefty'), flash: app.engine.post.uFlash.value.w };
+    const novas = r.counters.novas; // the tap; the blast (and its whiteout) lands after the 0.25 s wind-up
+    let white = 0; for (let i = 0; i < 10; i++) { app.engine.step(1 / 30); white = Math.max(white, app.engine.post.uWhite.value); }
+    return { novas, released: r.fx.white > 0.5, white, lefty: app.runUI.el.classList.contains('lefty'), flash: app.engine.post.uFlash.value.w };
   });
-  check('accessibility: auto-nova, left-handed, reduced flashes', s.novas === 1 && s.lefty && s.flash <= 0.2, JSON.stringify(s));
+  check('accessibility: auto-nova, left-handed, reduced flashes', s.novas === 1 && s.released && s.white <= 0.15 && s.lefty && s.flash <= 0.2, JSON.stringify(s));
 });
 check('accessibility: no runtime errors', !errs.length, errs[0] || '');
 
@@ -702,6 +704,136 @@ errs = await session(async (page) => {
   check('seraphine: her Nova kills rise ×2 (others are halved mid-Nova)', s.sera.rose === 1 && s.vaelNova.rose === 0, JSON.stringify(s));
 });
 check('hero passives: no runtime errors', !errs.length, errs[0] || '');
+
+// 17. Kill streaks and game feel (GDD §4.7): every kill chains the streak until its window lapses; tiers start a Soul Frenzy
+//     (XP and minion attack speed, Nova charge banked mid-detonation) that expires; the best streak reaches the results and
+//     the profile; an elite kill dips the time scale (on top of slow-mo, HUD still ticking) and it recovers; the Nova wind-up
+//     holds the chain while invulnerability and shot-clearing are immediate; overflow fades to the cap; level-up vacuum.
+//     Frame-stepped in a quiet arena (no director, no weapons); raise rolls pinned off where they would add minions.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; p.settings.shake = 1;
+    app.engine.manual = true;
+    const start = () => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.energy = 30; app.startRun(1);
+      const r = app.run; r.player.hurt = () => {}; r.director = () => {}; r.weapons.update = () => {}; r.stats.raise = 0;
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const SRC = ['bolt', 'minion', 'nova', 'soulbomb'];
+    const kill = (r, n, elite = false) => {
+      for (let i = 0; i < n; i++) { const e = r.enemies.spawn('husk', r.player.x + 25, r.player.z, { hpMul: 1, elite }); r.enemies.damage(e, 1e9, { source: SRC[i % 4], silent: true }); }
+      r.enemies.compact();
+    };
+    const out = {};
+
+    // tiers and Soul Frenzy: 29 kills (any source) is no tier, 30 is CARNAGE; the bonuses act; 75 is MASSACRE; it expires
+    let r = start(), S = r.streak, P = r.player;
+    kill(r, 29); out.t0 = { n: S.n, tier: S.tier, frenzy: S.frenzy };
+    kill(r, 1);
+    r.xpNeed = 1e9; const xp0 = r.xp; r.addXp(10);
+    const m = r.legion.raise(P.x + 30, P.z, { fx: false }); m.atkCd = 1; r.legion.update(0.1);
+    out.t1 = { n: S.n, tier: S.tier, frenzy: S.frenzy, xp: +(r.xp - xp0).toFixed(3), atk: +(1 - m.atkCd).toFixed(3) };
+    r.update(1 / 30); r.update(1 / 30);
+    out.call = document.querySelector('.stk-call b')?.textContent || '';
+    out.hudOn = document.querySelector('.stk-c')?.classList.contains('on');
+    kill(r, 45); out.t2 = { n: S.n, tier: S.tier, frenzy: S.frenzy, xpMul: S.xpMul, haste: S.haste };
+    step(r, 8.5);
+    out.expired = { n: S.n, lastN: S.lastN, frenzy: S.frenzy, xpMul: S.xpMul, haste: S.haste, best: r.counters.bestStreak };
+
+    // the window: a kill just inside it chains, then the streak breaks once it lapses (and the counter fades)
+    r = start(); S = r.streak;
+    kill(r, 12); const w = S.win;
+    step(r, w - 0.1); kill(r, 1); const chained = S.n;
+    step(r, 0.1); const hudLive = document.querySelector('.stk-c').classList.contains('on');
+    step(r, S.win + 0.1);
+    out.window = { w: +w.toFixed(3), chained, after: S.n, lastN: S.lastN, breaks: S.breaks, hudLive, hudBroken: document.querySelector('.stk-c').classList.contains('broken') };
+
+    // top tiers add Nova charge, banked while a detonation runs (nothing charges mid-detonation) and paid when it ends
+    r = start(); S = r.streak; r.nova = 0;
+    r.novaQueue = [{ x: 0, y: 0, z: 0, t: 99 }];
+    kill(r, 150); out.bank = { tier: S.tier, nova: r.nova, bank: S.novaBank };
+    r.novaQueue.length = 0; r.update(1 / 30);
+    out.bank.paid = Math.round(r.nova * 300 / r.stats.novaMul);
+
+    // best streak: run result, results screen row and the profile record
+    r = start(); p.stats.bestStreak = 0;
+    kill(r, 160); step(r, 2); kill(r, 20);
+    let res = null; const onEnd = r.onEnd; r.onEnd = (x) => { res = x; onEnd(x); };
+    r.end(false);
+    await new Promise((ok) => setTimeout(ok, 900));
+    out.best = { counter: r.counters.bestStreak, result: res && res.bestStreak, profile: p.stats.bestStreak,
+      row: document.querySelector('.res-streak b')?.textContent, tier: document.querySelector('.res-streak span')?.textContent, record: !!document.querySelector('.res-streak .pill') };
+    // an old save without the field still loads (migrated to 0)
+    const save = await import('/src/meta/save.js');
+    const old = save.newProfile(); delete old.stats.bestStreak;
+    localStorage.setItem('soulswarm.save.v1', JSON.stringify(old));
+    out.best.migrated = save.loadProfile().stats.bestStreak;
+
+    // hit-stop: an elite kill dips the time scale, sim time crawls while the HUD keeps ticking, then it recovers
+    r = start(); step(r, 0.3);
+    const F = r.fx, ts0 = F.timeScale();
+    kill(r, 1, true); kill(r, 5);
+    const dip = F.timeScale(), t0 = r.time;
+    r.update(1 / 30); r.update(1 / 30);
+    const crawl = r.time - t0, hudKills = document.querySelector('.hud-stat.k span').textContent;
+    let frames = 2; while (F.timeScale() < 1 && frames < 30) { r.update(1 / 30); frames++; }
+    out.hit = { ts0, dip: +dip.toFixed(3), crawl: +crawl.toFixed(4), hudKills, kills: r.counters.kills, frames, after: F.timeScale() };
+    F.slowMo(0.3, 1); kill(r, 1, true);
+    out.hit.inSlow = +F.timeScale().toFixed(4);
+    for (let i = 0; i < 6; i++) r.update(1 / 30);
+    out.hit.slowAfter = +F.timeScale().toFixed(3);
+    p.settings.shake = 0; kill(r, 1, true); out.hit.shakeOff = F.timeScale(); p.settings.shake = 1;
+
+    // Nova wind-up: invulnerable, shots cleared and the legion committed on the tap; the blast and chain wait ~0.25 s
+    r = start(); P = r.player;
+    r.legion.addMany(40, P.x, P.z); step(r, 0.5);
+    const tough = r.enemies.spawn('husk', P.x + 3, P.z, { hpMul: 1e5 }); tough.speed = 0; // inside the 7 m blast, not yet engaged
+    r.projectiles.enemyShot(P.x + 8, P.z, -1, 0, 4, 10);
+    P.invuln = 0; r.nova = 1; const hp0 = tough.hp, tap = r.time;
+    r.triggerNova();
+    const atTap = { invuln: +P.invuln.toFixed(2), shots: r.projectiles.embers.length, legion: r.legion.count, queued: r.novaQueue.length, hurt: hp0 - tough.hp };
+    step(r, 0.2); const mid = { hurt: hp0 - tough.hp, queued: r.novaQueue.length };
+    let hitAt = -1; for (let i = 0; i < 30 && hitAt < 0; i++) { r.update(1 / 30); if (tough.hp < hp0) hitAt = r.time - tap; }
+    step(r, 1.5);
+    out.nova = { atTap, mid, hitAt: +hitAt.toFixed(3), done: r.novaQueue.length, big: document.querySelector('.bignum b')?.textContent || '' };
+
+    // overflow: 100 over the cap holds through the grace, then fades toward the cap (never below; Champions spared);
+    // a gate that adds souls restarts the grace
+    r = start(); P = r.player; r.stats.cap = 30;
+    const champ = r.legion.raise(P.x, P.z, { kind: 'brute', elite: true, fx: false });
+    r.legion.addMany(129, P.x, P.z);
+    step(r, 14); const grace = r.legion.count, overHud = document.querySelector('.legion').classList.contains('over');
+    step(r, 20); const mid2 = r.legion.count;
+    r.legion.addMany(10, P.x, P.z); step(r, 2); const regate = r.legion.count; step(r, 10); const held = r.legion.count;
+    step(r, 170);
+    out.overflow = { grace, overHud, mid: mid2, regate, held, final: r.legion.count, champ: r.legion.list.includes(champ) };
+
+    // level-up pulse: shards within 6 m fly in when the cards appear, farther ones stay
+    r = start(); P = r.player; r.pickups.gems.length = 0;
+    r.pickups.dropGem(P.x + 4.5, P.z, 1); r.pickups.dropGem(P.x - 9, P.z, 1);
+    const [g1, g2] = r.pickups.gems; g1.vx = g1.vz = g2.vx = g2.vz = 0;
+    r.levelQueue = 1; r.showLevelUp();
+    out.vacuum = { near: g1.pulled, far: g2.pulled, cards: document.querySelectorAll('.lvl-back .card').length };
+    app.exitRun();
+    return out;
+  });
+  const { t0, t1, t2, expired, window: W, bank, best, hit, nova, overflow, vacuum } = s;
+  check('streak: every kill counts; 30 is CARNAGE with a Soul Frenzy (XP +10%, minions strike 10% faster)', t0.n === 29 && t0.tier === 0 && t1.n === 30 && t1.tier === 1 && t1.frenzy === 1 && t1.xp === 11 && t1.atk === 0.11 && s.call === 'CARNAGE' && s.hudOn, JSON.stringify({ t0, t1, call: s.call, hudOn: s.hudOn }));
+  check('streak: 75 is MASSACRE; the Frenzy expires after 8 s', t2.tier === 2 && t2.frenzy === 2 && t2.xpMul === 1.15 && t2.haste === 1.2 && expired.n === 0 && expired.lastN === 75 && expired.frenzy === 0 && expired.xpMul === 1 && expired.haste === 1 && expired.best === 75, JSON.stringify({ t2, expired }));
+  check('streak: a kill inside the window chains, then it breaks and the counter fades', W.w > 1 && W.w < 1.2 && W.chained === 13 && W.hudLive && W.after === 0 && W.lastN === 13 && W.breaks === 1 && W.hudBroken, JSON.stringify(W));
+  check('streak: ANNIHILATION Nova charge is banked mid-detonation, paid after', bank.tier === 3 && bank.nova === 0 && bank.bank === 15 && bank.paid === 15, JSON.stringify(bank));
+  check('streak: best streak reaches the result, results screen and profile (old saves migrate)', best.counter === 160 && best.result === 160 && best.profile === 160 && best.row === '160' && best.tier === 'ANNIHILATION' && best.record && best.migrated === 0, JSON.stringify(best));
+  check('hit-stop: an elite kill dips the time scale, the HUD keeps ticking, then it recovers', hit.ts0 === 1 && hit.dip < 0.1 && hit.crawl < 0.01 && hit.hudKills === String(hit.kills) && hit.frames <= 4 && hit.after === 1, JSON.stringify(hit));
+  check('hit-stop: composes with slow-mo (and is off with screen shake at 0)', hit.inSlow < 0.03 && hit.slowAfter === 0.3 && hit.shakeOff === 0.3, JSON.stringify(hit));
+  check('nova: wind-up holds the blast ~0.25 s; invulnerable, shots cleared and legion committed on the tap', nova.atTap.invuln >= 1.5 && nova.atTap.shots === 0 && nova.atTap.legion === 0 && nova.atTap.queued === 41 && nova.atTap.hurt === 0 && nova.mid.hurt === 0 && nova.mid.queued === 41 && nova.hitAt >= 0.25 && nova.hitAt < 0.3 && nova.done === 0 && nova.big === '40 SOULS', JSON.stringify(nova));
+  check('overflow: holds through the grace, fades to the cap (not below), gates restart the grace', overflow.grace === 130 && overflow.overHud && overflow.mid < 120 && overflow.mid > 60 && overflow.held === overflow.regate && overflow.final === 30 && overflow.champ, JSON.stringify(overflow));
+  check('level-up: the pulse draws in shards within 6 m', vacuum.near && !vacuum.far && vacuum.cards === 3, JSON.stringify(vacuum));
+});
+check('streaks and game feel: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

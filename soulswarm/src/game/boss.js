@@ -2,7 +2,7 @@
 // I Hollow Tread: ring slams, a gap ring, summons. II Ember Liturgy: faster, rotating gap rings, waves from the edge.
 // III Crown of Cinders: spiral stream, the arena closes, Brutes join the waves, enraged. Immune 2 s roars between phases.
 import * as THREE from 'three';
-import { BOSS, BOSS_PHASES as BP } from './data.js';
+import { BOSS, BOSS_PHASES as BP, HITSTOP } from './data.js';
 import { bossGeometry } from '../engine/models.js';
 import { makeCharMaterial } from '../engine/materials.js';
 import { hdr } from '../engine/particles.js';
@@ -331,7 +331,7 @@ export class Boss {
     this.cancelAttacks();
     this.state = 'roar'; this.t = 0; this.y = 0; this.immune = T.dur;
     run.projectiles.clearEnemyShots();
-    run.fx.slowMo(T.slow, T.slowDur); run.fx.flash(T.flash); run.fx.aberration(0.9); run.fx.shake(0.8);
+    run.fx.slowMo(T.slow, T.slowDur); run.fx.hitStop(HITSTOP.phase); run.fx.flash(T.flash); run.fx.aberration(0.9); run.fx.shake(0.8);
     run.fx.shockwave(e.x, e.z, 14, this.color.getHex(), 0.9, 0.06);
     run.fx.shockwave(e.x, e.z, T.pushR, 0xffffff, 0.5, 0.12);
     run.fx.light(e.x, e.z, 14, 3.5, this.color, 1.2);

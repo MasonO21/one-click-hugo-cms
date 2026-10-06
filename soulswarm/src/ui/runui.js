@@ -5,6 +5,7 @@ import { icon } from './icons.js';
 import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART } from './art.js';
+import { StreakHUD, streakRow } from './streakui.js';
 
 export class RunUI {
   constructor(app, run) {
@@ -36,6 +37,7 @@ export class RunUI {
       </button>
     </div>`);
     document.getElementById('ui').appendChild(this.el);
+    this.streak = new StreakHUD(this.el);
     this.q = {
       xp: $(this.el, '.xp i'), lv: $(this.el, '.xp b'), kills: $(this.el, '.k span'), gold: $(this.el, '.g span'),
       timer: $(this.el, '.hud-timer b'), timerSub: $(this.el, '.hud-timer small'), legion: $(this.el, '.legion'), num: $(this.el, '.legion .num'), cap: $(this.el, '.legion .cap'),
@@ -76,6 +78,8 @@ export class RunUI {
       q.legion.classList.remove('pop'); void q.legion.offsetWidth; q.legion.classList.add('pop');
     });
     this.set('cap', run.stats.cap, (v) => { q.cap.textContent = '/ ' + v; });
+    this.set('over', n > run.stats.cap, (v) => q.legion.classList.toggle('over', v)); // overflow souls are fading
+    this.streak.update(run, run.t);
     this.set('nova', Math.round(run.nova * 100), (v) => {
       q.novaFg.style.strokeDashoffset = String(289 * (1 - v / 100));
       q.nova.classList.toggle('ready', v >= 100);
@@ -274,6 +278,7 @@ export class RunUI {
         <div><b>${result.level}</b><small>Level</small></div>
         <div><b>${result.gates}</b><small>Gates</small></div>
       </div>
+      ${streakRow(result, outcome, p)}
       <div class="res-build">${this.buildTiles()}</div>
       <div class="res-sub">Rewards</div>
       <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>
