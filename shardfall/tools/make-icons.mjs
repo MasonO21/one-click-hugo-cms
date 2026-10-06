@@ -36,7 +36,8 @@ const WEB_ASSETS = [
   { file: 'android/ic_launcher_background.png', size: 432, art: 'adaptiveBackground', alpha: false },
   { file: 'android/ic_launcher_monochrome.png', size: 432, art: 'adaptiveMonochrome' },
   { file: 'store/play-icon-512.png', size: 512, art: 'icon', alpha: false },       // Play Console listing icon
-  { file: 'store/feature-graphic-1024x500.png', w: 1024, h: 500, art: 'splash', opts: { shards: true, hK: 0.62 }, alpha: false }
+  { file: 'store/feature-graphic-1024x500.png', w: 1024, h: 500, art: 'featureArt', fallback: { art: 'splash', opts: { shards: true, hK: 0.62 } }, alpha: false },
+  { file: 'store/promo-1920x1080.png', w: 1920, h: 1080, art: 'featureArt', fallback: { art: 'splash', opts: { shards: true } }, alpha: false }
 ];
 
 const DENSITIES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
@@ -83,16 +84,24 @@ async function main() {
   if (!fontOk) console.warn('! Saira Condensed failed to load, using a system fallback font');
   for (const f of ['web/js/data.js', 'web/js/draw.js', 'tools/icon-art.js']) await page.addScriptTag({ path: join(root, f) });
   if (!(await page.evaluate(() => !!(window.SF && SF.drawHero && window.ART)))) throw new Error('art scripts failed to load');
+  // Store graphics use the Higgsfield key art when it has been downloaded (node tools/fetch-art.mjs).
+  const keyArtFile = join(web, 'assets/art/key-art.webp');
+  const hasKeyArt = existsSync(keyArtFile) && await page.evaluate(async b64 => {
+    const img = new Image(); img.src = 'data:image/webp;base64,' + b64;
+    try { await img.decode(); window.KEY_ART = img; return true; } catch (e) { return false; }
+  }, readFileSync(keyArtFile).toString('base64'));
+  if (!hasKeyArt) console.warn('! key art not found: store graphics use the drawn splash instead');
 
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(e.message));
 
-  async function render({ art, size, w, h, opts, alpha = true }) {
+  async function render({ art, size, w, h, opts, alpha = true, fallback }) {
     w = w || size; h = h || size;
+    if (art === 'featureArt' && !hasKeyArt) ({ art, opts } = fallback);
     const n = await page.evaluate(({ art, w, h, opts }) => {
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       const g = c.getContext('2d', { willReadFrequently: true });
-      if (art === 'splash') ART.splash(g, w, h, opts || {}); else ART[art](g, w, opts || {});
+      if (art === 'splash' || art === 'featureArt') ART[art](g, w, h, opts || {}); else ART[art](g, w, opts || {});
       window.__px = g.getImageData(0, 0, w, h).data;
       return window.__px.length;
     }, { art, w, h, opts });
@@ -115,10 +124,12 @@ async function main() {
   for (const a of WEB_ASSETS) {
     if (only.length && !only.includes(a.file)) continue;
     const png = await render(a);
-    write(join(out, a.file), png);
+    // Store listing graphics are uploaded by hand, so they stay out of web/ (which ships inside the app).
+    const rel = a.file.startsWith('store/') ? join('store-assets', a.file.slice(6)) : join('web/assets', a.file);
+    write(join(root, rel), png);
     written[a.file] = png;
     const i = pngInfo(png);
-    console.log(`  web/assets/${a.file}  ${i.width}x${i.height}  ${i.hasAlpha ? 'RGBA' : 'RGB'}  ${(png.length / 1024).toFixed(0)} KB`);
+    console.log(`  ${rel}  ${i.width}x${i.height}  ${i.hasAlpha ? 'RGBA' : 'RGB'}  ${(png.length / 1024).toFixed(0)} KB`);
   }
   if (!only.length || only.includes('favicon.ico')) {
     const ico = encodeICO(['icons/favicon-16.png', 'icons/favicon-32.png', 'icons/favicon-48.png'].map(f => written[f] || readFileSync(join(out, f))));

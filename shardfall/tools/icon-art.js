@@ -218,5 +218,21 @@
     }
   }
 
-  window.ART = { icon, roundedIcon, favicon, adaptiveBackground, adaptiveForeground, adaptiveMonochrome, splash };
+  // Store feature graphic / promo: the Higgsfield key art (window.KEY_ART), cover-fitted and darkened
+  // through the middle so the wordmark reads on top.
+  function featureArt(g, W, H) {
+    const img = window.KEY_ART, k = Math.max(W / img.width, H / img.height);
+    const dw = img.width * k, dh = img.height * k;
+    g.drawImage(img, (W - dw) / 2, (H - dh) * 0.35, dw, dh);
+    const v = g.createRadialGradient(W / 2, H * 0.42, 0, W / 2, H * 0.42, W * 0.42);
+    v.addColorStop(0, 'rgba(11,16,41,0.62)'); v.addColorStop(0.6, 'rgba(11,16,41,0.25)'); v.addColorStop(1, 'rgba(11,16,41,0)');
+    g.fillStyle = v; g.fillRect(0, 0, W, H);
+    const edge = g.createLinearGradient(0, 0, 0, H);
+    edge.addColorStop(0, 'rgba(11,16,41,0.35)'); edge.addColorStop(0.25, 'rgba(11,16,41,0)'); edge.addColorStop(0.8, 'rgba(11,16,41,0)'); edge.addColorStop(1, 'rgba(11,16,41,0.55)');
+    g.fillStyle = edge; g.fillRect(0, 0, W, H);
+    const size = Math.min(H * 0.17, W * 0.075);
+    wordmark(g, W / 2, H * 0.42 - size * 0.9, size, { align: 'center' });
+  }
+
+  window.ART = { icon, roundedIcon, favicon, adaptiveBackground, adaptiveForeground, adaptiveMonochrome, splash, featureArt };
 })();

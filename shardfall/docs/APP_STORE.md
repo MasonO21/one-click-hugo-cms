@@ -65,8 +65,9 @@ Notes:
 
 | Item | Apple | Google |
 |---|---|---|
-| Icon | `web/assets/icon-1024.png` (no transparency) | `web/assets/store/play-icon-512.png` |
-| Feature graphic | – | `web/assets/store/feature-graphic-1024x500.png` |
+| Icon | `web/assets/icon-1024.png` (no transparency) | `store-assets/play-icon-512.png` |
+| Feature graphic | – | `store-assets/feature-graphic-1024x500.png` (Higgsfield key art + logo) |
+| Promo image | Optional for marketing | `store-assets/promo-1920x1080.png` |
 | Screenshots | iPhone 6.9" landscape (2868×1320 or 2796×1290), iPad 13" if you support iPad | At least 2 phone screenshots; 7" and 10" tablet sets are recommended |
 | Category | Games → Action (secondary: Strategy) | Game → Action |
 | Privacy policy URL | Required | Required |

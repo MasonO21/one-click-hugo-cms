@@ -1,5 +1,5 @@
 // Offline cache for the installable web version. Bump VERSION whenever files change.
-const VERSION = 'shardfall-v4';
+const VERSION = 'shardfall-v5';
 const SHELL = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/data.js', 'js/store.js', 'js/audio.js', 'js/match.js', 'js/draw.js', 'js/hud.js', 'js/net.js', 'js/platform.js', 'js/lobby.js',
