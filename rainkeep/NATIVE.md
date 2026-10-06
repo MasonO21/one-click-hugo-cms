@@ -55,6 +55,8 @@ After any change to the game files, run `npm run cap:sync` and rebuild in Xcode.
 | Sandstorm Kit | `com.rainkeep.stormkit` | Consumable | $2.99 |
 | Warden's War Chest | `com.rainkeep.warchest` | Consumable | $19.99 |
 | Forge Kit | `com.rainkeep.forgekit` | Consumable | $4.99 |
+| Growth Pack (each Rainwyrm level) | `com.rainkeep.growthpack` | Consumable | $4.99 |
+| Grand Growth Pack (each Rainwyrm level) | `com.rainkeep.growthpack.grand` | Consumable | $19.99 |
 | Pouch of Starglass | `com.rainkeep.starglass.120` | Consumable | $1.99 |
 | Satchel of Starglass | `com.rainkeep.starglass.330` | Consumable | $4.99 |
 | Chest of Starglass | `com.rainkeep.starglass.700` | Consumable | $9.99 |

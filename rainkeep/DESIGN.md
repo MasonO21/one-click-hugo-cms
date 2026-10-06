@@ -93,6 +93,7 @@ Target: match the genre's spending ladder while putting more of the spend into b
 | Sandstorm Kit: speedups, water crates and tokens | $2.99, once a day | Low-friction daily impulse buy |
 | Forge Kit: 600 Sunsteel, copper crates and speedups | $4.99, once a day after the Forge is built | The Act II daily buy: gear is the long sink, so this keeps mid-spenders paying after the story's first ending |
 | Warden's War Chest: Starglass, tokens and a Legendary Shard Pouch | $19.99 | High-value anchor for heavier spenders |
+| Growth Packs: resources for 15% (Growth Pack) or 40% (Grand Growth Pack) of the next Rainwyrm level, plus speedups | $4.99 and $19.99, once each per level, for 3 hours after each Rainwyrm level-up from Lv 6 | The genre's level-up offer. Each level-up is a natural buying moment, and because the pack is sized to the next level (the wyrm plus every building it needs) it stays worth buying late in the game, when a Starglass crate covers only a few percent of a level |
 | Caravan gift chests | n/a | Every purchase by a Caravan member sends everyone a small gift: social proof that spending helps the group |
 | Hero-specific banners and event packs *(live ops)* | $4.99 to $99.99 | High-spender depth, tied to live events |
 | Patron program: 10 levels from lifetime spend (100 points per $1, 15 for each daily visit) | n/a | The genre's VIP ladder. Each level adds production, build speed, free finishes, a longer offline bank, faster smelting or Duel ticket slots, plus a daily chest. The Founder's Cache unlocks Patron 1, $10 reaches Patron 3, $40 Patron 5 and $1,000 Patron 10. Never combat stats, so Duels and Oasis Wars stay fair |
@@ -153,24 +154,27 @@ Most 4X and survival-strategy launches never reach top-grossing charts, regardle
 
 ## 8. Balance and pacing (measured)
 
-The game was tuned with an automated player that plays every system the way a strong, active player would. It builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan and claims every reward. It sets the mist before storms (Attuned mist from Lv 6), taps every surplus bubble, calls the rain whenever it's ready, settles incidents, trades with merchants and fights the next stage whenever the odds look good. Since 3.0 it also lights the Forge and forges the cheapest gear piece it can afford, climbs the Mirage Spire when a floor looks winnable, spends every Duel ticket on the best challenger it can beat, and trades Glory for Sunsteel and Epic pouches. These are the measured results from 36-hour runs of version 3.1, which also has the Act II Dunes, the six-event rotation and the Patron program (game time, which runs about 30× faster than a live-service game):
+The game was tuned with an automated player that plays every system the way a strong, active player would. It builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan and claims every reward. It sets the mist before storms (Attuned mist from Lv 6), taps every surplus bubble, calls the rain whenever it's ready, settles incidents, trades with merchants and fights the next stage whenever the odds look good. Since 3.0 it also lights the Forge and forges the cheapest gear piece it can afford, climbs the Mirage Spire when a floor looks winnable, spends every Duel ticket on the best challenger it can beat, and trades Glory for Sunsteel and Epic pouches. Since 3.2 it also spends spare Starglass on supply crates for whatever the next Rainwyrm level is short of and on speedups for long builds, keeping a reserve, and recruits with what is left. A free player can spend Starglass either way, and it makes a big difference, so the table shows both. These are the measured results from 36-hour runs of version 3.2 (game time, which runs about 30× faster than a live-service game):
 
-| Milestone | Free player (three runs) | With the Founder's Cache (one run) |
-|---|---|---|
-| Rainwyrm Lv 5 | 12 min | 8 min |
-| Rainwyrm Lv 10 | 2.3-3.0 h | 4.5 h |
-| Stage 30, the Sand Colossus | 1.5-2.0 h | 1.8 h |
-| Stage 60, the Sunheart (end of Act I) | 4.6-5.2 h | 6.0 h |
-| Rainwyrm Lv 15, Primordial | 11.6-12.5 h | 14.1 h |
-| Dune Duels rank 100 / rank 1 | 7.7-8.4 h / 14.5-14.8 h | 9.8 h / 16.2 h |
-| Stage 100, the Ember Throne (end of the story) | 13.8-16.2 h | 16.5 h |
-| Mirage Spire floor 100 | 19.0-20.6 h | 18.9 h |
-| Rainwyrm Lv 18 | 22.9-25.7 h | 29.8 h |
-| Rainwyrm Lv 20, Skyriver | 34.3-34.9 h (two runs), Lv 19 at 33 h (one) | Lv 19 at 35 h |
-| All six pieces of gear at Lv 50 | about 35 h | about 35 h |
-| All 71 chapter quests | all 71 in two runs, 70 in one, by 36 h | 70 of 71 |
+| Milestone | Free, Starglass on crates and speedups (two runs) | Free, Starglass on recruits (three runs) | With the Founder's Cache (two runs, crates and speedups) |
+|---|---|---|---|
+| Rainwyrm Lv 5 | 11-12 min | 13-25 min | 7 min |
+| Rainwyrm Lv 10 | 1.3 h | 2.0-3.0 h | 53 min |
+| Stage 30, the Sand Colossus | 1.4-1.5 h | 1.4-1.5 h | 54 min |
+| Stage 60, the Sunheart (end of Act I) | 3.3-3.6 h | 4.0-5.3 h | 2.0-2.5 h |
+| Rainwyrm Lv 15, Primordial | 8.3-8.9 h | 12.0-13.8 h | 6.3-7.2 h |
+| Dune Duels rank 100 / rank 1 | 7.4-7.9 h / 12.4-13.9 h | 7.6-8.7 h / 14.2-15.1 h | 5.2-5.4 h / 11.0-11.2 h |
+| Stage 100, the Ember Throne (end of the story) | 11.5-11.7 h | 14.5-16.3 h | 9.0-10.0 h |
+| Mirage Spire floor 100 | 15.1-16.1 h | 19.9-24.0 h | 13.2-14.1 h |
+| Rainwyrm Lv 18 | 18.0-18.4 h | 26.1-29.2 h | 14.3-15.3 h |
+| Rainwyrm Lv 20, Skyriver | 24.9-25.2 h | Lv 19 at 32-35 h, Lv 20 not reached by 36 h | 21.9-23.5 h |
+| All 71 chapter quests | by 25 h | 70 of 71 by 36 h | by 23 h |
 
-**How 3.0 made the game longer.** The story used to end at stage 60 after about 5 hours. Act II adds four chapters to stage 100, so the story now ends after 14-16 hours, about three times longer, and the endgame (Lv 20, gear, the Spire) runs to about 35 hours. Act I keeps roughly its old pace (4-5 hours to the Sunheart). Past stage 60 the enemy curve is the old Burning Line curve, so players already in the Burning Line drop straight into Act II at a fair difficulty. What carries a player through Act II is Rainwyrm Lv 16-20 (higher hero level caps, troops and research to Lv 15) and the Warden's Gear.
+Every run forged all six pieces of gear to Lv 50 by 36 hours.
+
+**Crates or recruits.** A supply crate holds a fixed amount that grows with the Rainwyrm's level, so 100 Starglass pays for most of an early building and still a useful slice of a late one. Recruits make the squad stronger but don't make the keep grow. Players who put Starglass into crates finish the story about 3-4 hours sooner and reach Lv 20 about 10 hours sooner, while Duel and Spire pacing barely changes. That is the intended trade: gacha for collectors and fighters, crates for builders. A player who wants both has a reason to buy more Starglass.
+
+**How 3.0 made the game longer.** The story used to end at stage 60 after about 5 hours. Act II adds four chapters to stage 100, so the story now ends after 11-16 hours (depending on how Starglass is spent), two to three times longer, and the endgame (Lv 20, gear, the Spire) runs to 25-36 hours or more. Act I keeps roughly its old pace (3.5-5 hours to the Sunheart). Past stage 60 the enemy curve is the old Burning Line curve, so players already in the Burning Line drop straight into Act II at a fair difficulty. What carries a player through Act II is Rainwyrm Lv 16-20 (higher hero level caps, troops and research to Lv 15) and the Warden's Gear.
 
 **The gear and the copper economy.** The first draft of gear doubled the squad's power and drew so much copper that building stalled: Act II ended at 10 hours and the wyrm stopped growing. The shipped version gives at most +42% squad attack and defense, +54% health and +30% to each troop class at gear Lv 50, and about a third more with Sunsteel Tempering at Lv 15. Sunsteel is smelted from stone, which piles up late, plus a little copper. Gear upgrades cost Sunsteel and stone. The Forge's racks cap how much Sunsteel waits unspent, so smelting stops instead of draining copper. Copper is still the late-game constraint: stone and food reach the millions while copper stays under 200k. Buildings past Lv 15 take a smaller copper share (13% of their stone cost instead of 22%) to keep the wyrm growing.
 
@@ -191,7 +195,7 @@ Run-to-run spread is wide (gacha luck and raid timing move stage 60 and stage 10
 
 In every run the keep never ran dry (zero minutes thirsty or dormant) and sickness stayed under 0.01% of survivor-time.
 
-A human player is less efficient than the bot, so expect the story to take roughly two to three times as long: about 30-60 hours of play to the Ember Throne, and 70-100 to a Skyriver with fully forged gear.
+A human player is less efficient than the bot, so expect the story to take roughly two to three times as long: about 25-50 hours of play to the Ember Throne, and 50-100 to a Skyriver with fully forged gear.
 
 Other measured outcomes:
 

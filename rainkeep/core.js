@@ -123,6 +123,7 @@
       quest: 0, pass: { xp: 0, premium: false, free: [], prem: [], season: 1, end: 0 },
       pity: 0, firstPull: true,
       stipend: { left: 0, last: -1 },
+      lvPack: { lvl: 0, until: 0, bought: [], seen: true },
       skins: { owned: ['river'], on: 'river' },
       bought: {}, boughtDay: {}, growthClaimed: [], spentUsd: 0,
       items: {},
@@ -493,6 +494,7 @@
       else if (k === 'stipend') S.stipend.left += v;
       else if (k === 'ledger') S.pass.premium = true;
       else if (k === 'growth') S.bought.growth = 1;
+      else if (k === 'lvpack') for (const [r, n] of Object.entries(levelPackRes(v))) S.res[r] += n;
       else if (k === 'skin' && !S.skins.owned.includes(v)) S.skins.owned.push(v);
       else if (k === 'cpoints' && S.caravan) S.caravan.points += v;
     }
@@ -508,6 +510,30 @@
     }
     return out;
   }
+
+  // Growth Packs: resources to take the Rainwyrm from Lv L to L + 1 (the wyrm plus each building that level needs),
+  // and a share of it rounded to two significant figures.
+  function levelPath(L) {
+    const need = {};
+    const add = (c) => { for (const [k, v] of Object.entries(c)) if (k in S.res) need[k] = (need[k] || 0) + v; };
+    add(buildCost('wyrm', L + 1));
+    for (const r of DATA.wyrmReqs(L + 1)) add(buildCost(r.plot, r.lvl));
+    return need;
+  }
+  function levelPackRes(share) {
+    const out = {};
+    for (const [k, v] of Object.entries(levelPath(S.lvPack.lvl || S.lv.wyrm))) {
+      const n = v * share, mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(n)) - 1));
+      out[k] = Math.round(n / mag) * mag;
+    }
+    return out;
+  }
+  const levelPackOpen = () => !!(S.lvPack && S.lvPack.lvl && S.time < S.lvPack.until);
+  const levelPackGrants = (id) => {
+    const g = { ...shopItem(id).grants }, share = g.lvpack;
+    delete g.lvpack;
+    return { ...levelPackRes(share), ...g };
+  };
 
   // ======================================================================
   // Workers
@@ -710,6 +736,10 @@
         KH.emit('evolve', { stage: st.name, level: b.to });
       }
       if (b.to >= DATA.ascension.level && !S.wyrm.element) KH.queueSheet({ kind: 'ascend' });
+      if (b.to >= DATA.levelPacks.from && b.to < maxLevel('wyrm')) {
+        S.lvPack = { lvl: b.to, until: S.time + DATA.levelPacks.window, bought: [], seen: false };
+        if (!offline) toast(`Growth Packs for Rainwyrm Lv ${b.to + 1} are in the Store for the next ${fmtTime(DATA.levelPacks.window)}.`, '', 'lvpack', 4);
+      }
     }
     if (offline) return;
     UI.floaters.push({ plot: b.plot, text: b.to === 1 ? 'Built!' : `Lv ${b.to}!`, t0: performance.now() });
@@ -1025,6 +1055,10 @@
     if (item.daily && S.boughtDay[id] === today()) return 'Already bought today. Back tomorrow.';
     if (item.needs && !S.lv[item.needs]) return `Build the ${DATA.buildings[PLOT[item.needs].type].name} first.`;
     if (id === 'ledger' && S.pass.premium) return 'Premium is already active this season.';
+    if (item.levelPack) {
+      if (!levelPackOpen()) return S.lvPack && S.lvPack.lvl ? 'This Growth Pack has ended. New ones open at your next Rainwyrm level.' : `Growth Packs go on sale each time your Rainwyrm levels up, from Lv ${DATA.levelPacks.from}.`;
+      if (S.lvPack.bought.includes(id)) return 'Already bought for this level.';
+    }
     return true;
   }
   function completePurchase(ref, opts = {}) {
@@ -1039,6 +1073,7 @@
       const item = shopItem(ref.id);
       if (opts.restore && S.bought[item.id]) return;
       grant(item.grants);
+      if (item.levelPack && S.lvPack && !S.lvPack.bought.includes(item.id)) S.lvPack.bought.push(item.id);
       S.bought[item.id] = (S.bought[item.id] || 0) + 1;
       if (item.daily) S.boughtDay[item.id] = today();
       if (!opts.restore) { usd = item.usd; S.spentUsd += usd; }
@@ -1184,7 +1219,7 @@
     heroStats, heroCap, skillScale, skillText, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
     teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, power, patrolPreview, passTier, addPassXp, passReward,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
-    batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable,
+    batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable, levelPath, levelPackOpen, levelPackGrants,
   });
 
   // Ascension bonuses

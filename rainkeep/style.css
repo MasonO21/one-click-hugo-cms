@@ -297,6 +297,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 700; margin: 0; text
 .offer h3 { font-size: 20px; }
 .offer .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 5px; background: #4fd0ff22; color: var(--water); margin-left: 6px; vertical-align: middle; font-family: var(--font-ui); }
 .offer.featured { background: var(--grain), radial-gradient(80% 120% at 0% 0%, #ffb34a44, transparent 60%), linear-gradient(150deg, #5a3414, #2a190e 70%); border-color: #c98a2c; box-shadow: 0 0 20px #ffb34a22, inset 0 1px 0 #ffe0a044; }
+.offer.lvpack { background: var(--grain), radial-gradient(80% 120% at 0% 0%, #4fd0c044, transparent 60%), linear-gradient(150deg, #11444a, #0f262b 70%); border-color: #3fb8b0; box-shadow: 0 0 20px #3fd0c022, inset 0 1px 0 #a0fff044; }
+.offer.lvpack .tag { background: #3fb8b033; color: #bff6ee; }
 .sg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .sg { display: grid; justify-items: center; gap: 4px; padding: 12px 6px; text-align: center; }
 .sg .ic { width: 34px; height: 34px; }

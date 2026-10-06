@@ -23,7 +23,7 @@ A complete desert water-survival strategy game for phones, in 3D. The rain stopp
 | **The Dunes** | A seeded 21×21 world map whose dust haze recedes as the wyrm grows: resource nodes and gathering caravans, beasts, Scorpion raider camps, and 12 story ruins whose choices change what you bring home. In Act II the springs flood, Sunsteel veins surface on the washed-out sand and Saltborn Hives rise far from the keep |
 | **Caravan** | Three simulated alliances to choose from: members help your timers, fund 5 Caravan techs, send gift chests, chat and react to what happens, and fight a Colossus raid boss with you on a timer |
 | **Meta** | 71 chapter quests, 17 daily duties with 5 chests, a 7-day gift calendar, 40 achievements, mail, a 30-tier season pass whose seasons roll over every 8 hours of play (each with a new premium wyrm skin), a backpack with speedups, crates and shard pouches, and 6 rotating events (Rain Festival, Beast Hunt, Forge Festival, Builder's Rush, Spire Rush and **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket) |
-| **Store** | Founder's Cache, Oasis Stipend, Ledger Premium, Growth Fund, Sandstorm Kit, Forge Kit, War Chest, Starglass packs, wyrm skins and supply crates. Purchases are simulated on the web and go through Apple/Google in the app build |
+| **Store** | Founder's Cache, Oasis Stipend, Ledger Premium, Growth Fund, Sandstorm Kit, Forge Kit, War Chest, Growth Packs (two tiers on sale for 3 hours after each Rainwyrm level-up, sized to the next level), Starglass packs, wyrm skins and supply crates. Purchases are simulated on the web and go through Apple/Google in the app build |
 | **Patron program** | Ten Patron levels from lifetime spend (and a few points for each daily visit): more production, faster building and smelting, free finishes on short timers, a longer offline bank, extra Duel ticket slots and a daily chest. Never combat stats |
 | **Polish** | Procedural music on a Hijaz scale, desert wind and spring ambience and sound effects (no audio files), haptics, a quest-driven tutorial pointer, notifications in the app build, save codes to move progress between devices, offline play when hosted, bundled fonts |
 
@@ -82,8 +82,8 @@ KH.town3d.zoom(1.5); KH.town3d.drag(0, -100)     // move the 3D camera
 
 **Balance bot.** `tools/balance-bot.cjs` plays the whole game headless and prints milestones, resource sources, builder idle time and errors. Install Playwright once (`npm i -D playwright && npx playwright install chromium`), then run `npm run balance -- f2p 36` (modes: `f2p`, `founder`, `dolphin` at about $80, `whale` at about $1,000; purchases are simulated). Compare several runs: gacha luck moves results by an hour or more.
 
-The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties, surplus, rain, incidents, merchants, gear, the Spire, Duels) for up to 24 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
+The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties, surplus, rain, incidents, merchants, gear, the Spire, Duels) for 36 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
 
 ## Shipping it
 
-Purchases are simulated on the web. The App Store build uses Apple in-app purchase through RevenueCat. [NATIVE.md](NATIVE.md) covers the whole path: building the iOS project on a Mac, creating the 15 products in App Store Connect, connecting RevenueCat, sandbox testing, TestFlight and review.
+Purchases are simulated on the web. The App Store build uses Apple in-app purchase through RevenueCat. [NATIVE.md](NATIVE.md) covers the whole path: building the iOS project on a Mac, creating the 17 products in App Store Connect, connecting RevenueCat, sandbox testing, TestFlight and review.

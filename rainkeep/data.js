@@ -632,6 +632,14 @@ const DATA = {
     { id: 'forgekit', name: 'Forge Kit', usd: 4.99, daily: true, tag: 'Daily', needs: 'forge',
       grants: { sunsteel: 600, crate_copper: 3, speed15: 2 },
       desc: "600 Sunsteel, three copper crates and two 15-minute speedups for the Warden's Gear. Once per day, after you build the Forge." },
+    // Growth Packs: on sale for a few hours after each Rainwyrm level-up, once per level. `lvpack` is the share
+    // of the next level's resources (the wyrm plus each building it needs), counted when the pack opens.
+    { id: 'lvpack', name: 'Growth Pack', usd: 4.99, tag: 'Limited', levelPack: true,
+      grants: { lvpack: 0.15, speed60: 2 },
+      desc: 'Resources for 15% of your next Rainwyrm level (the wyrm and every building it needs) and two 60-minute speedups.' },
+    { id: 'lvpack2', name: 'Grand Growth Pack', usd: 19.99, tag: 'Limited', levelPack: true,
+      grants: { lvpack: 0.4, speed60: 5, starglass: 500 },
+      desc: 'Resources for 40% of your next Rainwyrm level, five 60-minute speedups and 500 Starglass.' },
     { id: 'sg1', name: 'Pouch of Starglass', usd: 1.99, grants: { starglass: 120 } },
     { id: 'sg2', name: 'Satchel of Starglass', usd: 4.99, grants: { starglass: 330 } },
     { id: 'sg3', name: 'Chest of Starglass', usd: 9.99, grants: { starglass: 700 } },
@@ -639,6 +647,7 @@ const DATA = {
     { id: 'sg5', name: 'Vault of Starglass', usd: 49.99, grants: { starglass: 4000 } },
     { id: 'sg6', name: 'Hoard of Starglass', usd: 99.99, grants: { starglass: 8500 } },
   ],
+  levelPacks: { from: 6, window: 3 * 3600 }, // Growth Packs open at each Rainwyrm level from Lv 6, for 3 hours of play
   growthFund: [[5, 800], [8, 1000], [10, 1200], [12, 1400], [15, 1600], [18, 1800], [20, 2200]],
   crateCost: 100, // starglass per supply crate
   crateSize: (res, wyrmLvl) => Math.round({ stone: 500, food: 450, water: 350, copper: 150 }[res] * Math.pow(wyrmLvl, 1.4)),

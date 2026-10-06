@@ -161,6 +161,7 @@
     document.querySelectorAll('#tabs .tab').forEach((t) => t.classList.toggle('on', t.dataset.arg === UI.tab));
   }
   function shopDot() {
+    if (KH.levelPackOpen() && !S.lvPack.seen && UI.tab !== 'shop') return true;
     if (S.stipend.left > 0 && S.stipend.last !== today()) return true;
     if (S.bought.growth && DATA.growthFund.some(([l]) => S.lv.wyrm >= l && !S.growthClaimed.includes(l))) return true;
     const tier = KH.passTier();
@@ -259,8 +260,16 @@
   }
 
   function panelShop() {
-    const offers = DATA.shop.filter((x) => !x.id.startsWith('sg') && (!x.needs || S.lv[x.needs]));
+    const packs = KH.levelPackOpen() ? DATA.shop.filter((x) => x.levelPack) : [];
+    if (packs.length) S.lvPack.seen = true;
+    const offers = [...packs, ...DATA.shop.filter((x) => !x.id.startsWith('sg') && !x.levelPack && (!x.needs || S.lv[x.needs]))];
     const offer = (o) => {
+      if (o.levelPack) {
+        const got = S.lvPack.bought.includes(o.id);
+        return `<div class="card offer featured lvpack"><div class="grow"><h3>${esc(o.name)}<span class="tag">Rainwyrm Lv ${S.lvPack.lvl + 1}</span><span class="tag">Ends in ${fmtTime(S.lvPack.until - S.time)}</span></h3>
+          <p class="muted small" style="margin:4px 0 6px">${esc(o.desc)}</p><div class="costs">${rewardHTML(KH.levelPackGrants(o.id))}</div></div>
+          ${got ? '<span class="muted small">Bought</span>' : `<button class="btn small" data-act="buy" data-arg="${o.id}">${price(o.id, o.usd)}</button>`}</div>`;
+      }
       const done = o.once && S.bought[o.id];
       const daily = o.daily && S.boughtDay[o.id] === today();
       let extra = '';
@@ -651,7 +660,8 @@
       name = sk.name; desc = 'A cosmetic wyrm skin. It changes how your Rainwyrm looks and nothing else.'; usd = sk.usd; id = sh.skin;
     } else {
       const it = KH.shopItem(sh.id);
-      name = it.name; desc = it.desc || `${fmt(it.grants.starglass)} Starglass.`; usd = it.usd; grants = it.grants; id = it.id;
+      name = it.name; desc = it.desc || `${fmt(it.grants.starglass)} Starglass.`; usd = it.usd; id = it.id;
+      grants = it.levelPack ? KH.levelPackGrants(it.id) : it.grants;
     }
     return {
       title: name, lvl: price(id, usd),

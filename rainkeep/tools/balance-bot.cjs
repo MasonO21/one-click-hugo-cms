@@ -7,8 +7,8 @@
  *   node tools/balance-bot.cjs <mode> <hours> [collect] [no]
  *
  *   mode     f2p | founder | dolphin | whale   (founder buys the Founder's Cache; dolphin also buys the
- *            season pass, Growth Fund, Stipend and daily kits, about $80; whale adds chests and
- *            Starglass hoards up to about $1,000). Purchases are simulated through the store.
+ *            season pass, Growth Fund, Stipend, daily kits and a Growth Pack at each Rainwyrm level;
+ *            whale adds Grand Growth Packs, chests and Starglass hoards). Purchases are simulated through the store.
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
@@ -42,6 +42,9 @@ const HOURS = Number(process.argv[3] || 8);
     const log = [], ms = {}, errs = [];
     const order = ['wyrm', 'well', 'shelter1', 'grove', 'quarry', 'shelter2', 'mine', 'forge', 'barracks', 'storehouse', 'infirmary', 'hall', 'watchtower', 'archive'];
     const NO = (new URLSearchParams(location.search).get('no') || '').split(',');
+    // Starglass flow by action (negative = spent), to see where each spend level's Starglass goes
+    const SG = {};
+    for (const k of Object.keys(A)) { const f = A[k]; if (typeof f !== 'function') continue; A[k] = (...args) => { const sg = S.starglass, r = f(...args); if (S.starglass !== sg) SG[k] = (SG[k] || 0) + S.starglass - sg; return r; }; }
     // resource accounting: where stone, food, water and copper came from
     const SRC = {}; const addSrc = (src, d) => { SRC[src] = SRC[src] || {}; for (const [k, v] of Object.entries(d)) if (['stone', 'food', 'water', 'copper'].includes(k)) SRC[src][k] = (SRC[src][k] || 0) + v; };
     const snap = () => ({ ...S.res });
@@ -92,6 +95,9 @@ const HOURS = Number(process.argv[3] || 8);
         for (let i = 0; i < D.pass.tiers.length; i++) { if (!S.pass.free.includes(i) && KH.passTier() > i) A.passclaim('free:' + i); if (S.pass.premium && !S.pass.prem.includes(i) && KH.passTier() > i) A.passclaim('prem:' + i); }
         // spending: the dolphin buys the season pass, the fund, the stipend and the daily kits; the whale adds chests and hoards
         if (DOLPHIN && S.time > 1800) { buy('growth'); if (S.stipend.left <= 0) buy('stipend'); buy('stormkit'); buy('forgekit'); if (!S.pass.premium) buy('ledger'); }
+        // Growth Packs after each Rainwyrm level: dolphins take the small one, whales both
+        if (DOLPHIN) buy('lvpack');
+        if (WHALE) buy('lvpack2');
         if (WHALE && S.spentUsd < CAP && S.time - lastBig > 7200) { lastBig = S.time; buy('warchest'); buy('sg6'); }
         for (const [l] of D.growthFund) A.growth(l);
         A.stipend();
@@ -200,13 +206,14 @@ const HOURS = Number(process.argv[3] || 8);
       if (step % 360 === 0) { const tm = KH.teamStats(null, { heroes: S.squad.filter((id) => S.heroes[id]) }); team_log.push([Math.round(S.time / 60), S.lv.wyrm, S.stage, Math.round(tm.atk), Math.round(tm.def), Math.round(tm.hp)]); }
       const k3 = 'spire' + Math.floor((S.spire.floor - 1) / 10) * 10; if (S.spire.floor > 1 && !ms[k3]) ms[k3] = Math.round(S.time / 60);
       for (const rk of [500, 300, 100, 25, 1]) if (S.duels.best <= rk && !ms['duel' + rk]) ms['duel' + rk] = Math.round(S.time / 60);
-      if (step % 360 === 0) log.push(`t=${Math.round(S.time / 60)}m H${S.lv.wyrm} st${S.stage} sp${S.spire.floor - 1} du${S.duels.rank} gear${Object.values(S.gear).reduce((a, b) => a + b, 0)} ss${S.sunsteel} forge${S.lv.forge} pop${S.pop} heroes${Object.keys(S.heroes).length} stars${Object.values(S.heroes).reduce((a, h) => a + h.stars, 0)} lvls[${S.squad.map((id) => S.heroes[id].lvl).join(',')}] troops${KH.troopsAll()} pop${S.pop}/${KH.housing()} wnet${Math.round(KH.rates(false).net.water*60)} res=${['stone', 'food', 'water', 'copper'].map((r) => Math.round(S.res[r])).join('/')} sg${S.starglass} bc${S.beacons} jr${S.journals} q${S.quest} pass${KH.passTier()} ktech${Object.values(S.caravan.tech).reduce((a, b) => a + b, 0)} kpts${S.caravan.points} ev${Math.round(S.ev.pts)} ach${S.ach.claimed.length} gath${S.stats.gathers} beasts${S.stats.beasts} ruins${S.stats.ruins} camps${S.stats.camps} raids${S.stats.raidsRepelled}/${S.stats.raidKills} war${S.stats.warWins}`);
+      if (step % 360 === 0) log.push(`t=${Math.round(S.time / 60)}m H${S.lv.wyrm} st${S.stage} sp${S.spire.floor - 1} du${S.duels.rank} gear${Object.values(S.gear).reduce((a, b) => a + b, 0)} ss${S.sunsteel} forge${S.lv.forge} pop${S.pop} heroes${Object.keys(S.heroes).length} stars${Object.values(S.heroes).reduce((a, h) => a + h.stars, 0)} lvls[${S.squad.map((id) => S.heroes[id].lvl).join(',')}] troops${KH.troopsAll()} pop${S.pop}/${KH.housing()} wnet${Math.round(KH.rates(false).net.water*60)} res=${['stone', 'food', 'water', 'copper'].map((r) => Math.round(S.res[r])).join('/')} sg${S.starglass} bc${S.beacons} jr${S.journals} q${S.quest} pass${KH.passTier()} ktech${Object.values(S.caravan.tech).reduce((a, b) => a + b, 0)} kpts${S.caravan.points} ev${Math.round(S.ev.pts)} ach${S.ach.claimed.length} gath${S.stats.gathers} beasts${S.stats.beasts} ruins${S.stats.ruins} camps${S.stats.camps} raids${S.stats.raidsRepelled}/${S.stats.raidKills} war${S.stats.warWins} next=${(() => { if (S.lv.wyrm >= D.wyrm.maxLevel) return 'max'; const blk = KH.upgradeBlock('wyrm'); if (blk) return blk.replace(/ /g, '_'); const c = KH.buildCost('wyrm', S.lv.wyrm + 1); const short = Object.entries(c).filter(([k, v]) => (S.res[k] ?? 0) < v).map(([k, v]) => k + Math.round(100 * (S.res[k] ?? 0) / v) + '%'); return S.builds.some((b) => b.plot === 'wyrm') ? 'building' : short.length ? 'short:' + short.join(',') : 'affordable'; })()}`);
     }
-    return { spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
+    return { SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
   }, { MODE, HOURS });
   console.log('SRC', JSON.stringify(out.SRC));
   console.log('builder idle % per 30 min', out.idleLog.join(' '));
   console.log('SPEND', JSON.stringify({ usd: Math.round(out.spent), patron: out.patron }));
+  console.log('STARGLASS by action', JSON.stringify(Object.fromEntries(Object.entries(out.SG).sort((x, y) => x[1] - y[1]))));
   console.log('ACT2', JSON.stringify({ gear: out.gear, spire: out.spire, duelRank: out.duels.rank, duelBest: out.duels.best, ending2: out.ending2, sunsteel: out.sunsteel }));
   console.log('quests claimed (index@seconds):', out.qLog.join(' '));
   console.log('MODE', MODE, 'sick%', out.sick, 'thirsty min', out.thirst, 'dormant min', out.dorm, 'keep', JSON.stringify(out.keep));

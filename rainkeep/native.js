@@ -47,6 +47,8 @@
     stormkit: 'com.rainkeep.stormkit',        // consumable, once per day (game enforces)
     warchest: 'com.rainkeep.warchest',        // consumable
     forgekit: 'com.rainkeep.forgekit',        // consumable, once per day (game enforces)
+    lvpack: 'com.rainkeep.growthpack',        // consumable, once per Rainwyrm level (game enforces)
+    lvpack2: 'com.rainkeep.growthpack.grand', // consumable, once per Rainwyrm level (game enforces)
   });
   var NON_CONSUMABLE = { founder: 1, oasis: 1, obsidian: 1, growth: 1 };
   var BY_STORE_ID = {};
