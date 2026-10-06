@@ -3,7 +3,7 @@
 // taunting Bulwarks, ranged Soul Witches and Soul Bombs. Raised elites become Champions of their variant.
 // Every variant except the Shade renders as a spectral ghost of its source enemy, one InstancedMesh each.
 import * as THREE from 'three';
-import { BASE, MINIONS } from './data.js';
+import { BASE, MINIONS, ENEMIES } from './data.js';
 import { wispGeometry, enemyGeometry } from '../engine/models.js';
 import { makeSpectralMaterial, addInstanceAttrs } from '../engine/materials.js';
 
@@ -18,6 +18,9 @@ const GHOST_KINDS = Object.keys(GHOSTS);
 // hover height of each variant's soul core; ghosts float with their feet LIFT metres above the ground
 const HOVER = { shade: 0.95, runner: 0.8, bulwark: 1.2, soulWitch: 1.05, soulBomb: 0.9 };
 const LIFT = 0.3;
+// body radius (enemies hit a taunter on contact at e.radius + m.radius): the source enemy's, scaled to the ghost
+const RADIUS = { shade: 0.35 };
+for (const k of GHOST_KINDS) { const E = ENEMIES[GHOSTS[k].model]; RADIUS[k] = E.radius * (MINIONS[k].scale || 1) / (E.scale || 1); }
 const MAX_ORBS = 120, MAX_CAND = 40;
 const GOLD = new THREE.Color(0xffd04a), GOLD_HDR = [3.2, 2.3, 0.6], WHITE_HDR = [3.2, 3.3, 3.5], HEAL_HDR = [1.0, 3.2, 2.2], SHADE_DIE_HDR = [2.5, 2.5, 2.8];
 // shared option objects: enemies.damage and particles.burst read them at once and keep no reference
@@ -34,7 +37,7 @@ export class Legion {
     this.max = BASE.hardLegionMax;
     this.list = [];
     this.pool = [];
-    // live Bulwarks ({x, z, hp, maxHp, uid}), rebuilt every update; enemies within MINIONS.bulwark.taunt attack
+    // live Bulwarks ({x, z, hp, maxHp, radius, uid}), rebuilt every update; enemies within MINIONS.bulwark.taunt attack
     // them via hitMinion(). An entry killed since the last update has hp <= 0 and should be skipped.
     this.taunters = [];
     this.orbs = []; this.orbPool = [];
@@ -107,6 +110,7 @@ export class Legion {
     m.x = x; m.z = z; m.y = burstY; m.vx = 0; m.vz = 0; m.vy = 0;
     m.maxHp = m.hp = run.stats.minionHp * v.hp * (elite ? C.hp : 1);
     m.scale = (v.scale || 1) * (elite ? C.scale : 1);
+    m.radius = RADIUS[key] * (elite ? C.scale : 1);
     m.target = null; m.tuid = 0; m.retarget = Math.random() * 0.3; m.atkCd = 0.2;
     m.born = 0; m.phase = Math.random() * 6.28; m.slot = this.slotSeq++;
     m.rot = Math.random() * TAU; m.flash = 0; m.fuse = -1; m.idle = 0; m.gone = false; m.trailT = Math.random() * 0.1;
