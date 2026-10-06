@@ -4,8 +4,10 @@
 import type { Action } from '../../shared/service';
 import type { Snapshot } from '../../shared/snapshot';
 import { ApiError, type Api, type SignupInput } from './api';
+import { API_BASE, IS_NATIVE, PLATFORM, apiUrl, openExternal, registerNativePush, unregisterNativePush } from '../native';
 
 const TOKEN_KEY = 'sunup.token';
+const NATIVE_PUSH_KEY = 'sunup.nativePushToken';
 const POLL_MS = 10_000;
 
 function readToken(): string | null {
@@ -41,14 +43,27 @@ async function shareSessionWithWorker(session: { token: string; userId: string }
   }
 }
 
-/** Stops push to this browser for the signed-in account (on sign-out or deletion). */
+/** Stops push to this browser or device for the signed-in account (on sign-out or deletion). */
 async function dropPush(token: string | null) {
+  if (IS_NATIVE) {
+    const device = localStorage.getItem(NATIVE_PUSH_KEY);
+    if (device && token) {
+      await fetch(apiUrl('/api/push/native/remove'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ token: device }),
+      }).catch(() => undefined);
+    }
+    localStorage.removeItem(NATIVE_PUSH_KEY);
+    await unregisterNativePush();
+    return;
+  }
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     const sub = await reg?.pushManager.getSubscription();
     if (!sub) return;
     if (token) {
-      await fetch('/api/push/unsubscribe', {
+      await fetch(apiUrl('/api/push/unsubscribe'), {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ endpoint: sub.endpoint }),
@@ -79,7 +94,7 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
   const photos = new Map<string, Promise<string>>();
 
   async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const res = await fetch(path, {
+    const res = await fetch(apiUrl(path), {
       ...init,
       headers: {
         'content-type': 'application/json',
@@ -115,6 +130,7 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
   navigator.serviceWorker?.addEventListener('message', (event) => {
     if (event.data?.type === 'sunup:refresh') void refresh();
   });
+  window.addEventListener('sunup:refresh', () => void refresh());
 
   return {
     mode: 'server',
@@ -153,14 +169,15 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
     },
 
     inviteUrl(code) {
-      return `${location.origin}/?join=${code}`;
+      // In the app, the page origin is local; invites point at the public site.
+      return `${API_BASE || location.origin}/?join=${code}`;
     },
 
     photo(ref) {
       if (ref.startsWith('data:')) return Promise.resolve(ref);
       let p = photos.get(ref);
       if (!p) {
-        p = fetch(ref, { headers: token ? { authorization: `Bearer ${token}` } : {} })
+        p = fetch(apiUrl(ref), { headers: token ? { authorization: `Bearer ${token}` } : {} })
           .then((r) => (r.ok ? r.blob() : Promise.reject(new Error('photo'))))
           .then((blob) => URL.createObjectURL(blob));
         p.catch(() => photos.delete(ref));
@@ -175,6 +192,17 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
     },
 
     async enablePush() {
+      if (IS_NATIVE) {
+        const result = await registerNativePush();
+        if (result.status !== 'granted' || !result.token) return result.status;
+        try {
+          await call('/api/push/native', { method: 'POST', body: JSON.stringify({ token: result.token, platform: PLATFORM }) });
+          localStorage.setItem(NATIVE_PUSH_KEY, result.token);
+          return 'granted';
+        } catch {
+          return 'unsupported';
+        }
+      }
       if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') return 'unsupported';
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') return 'denied';
@@ -200,12 +228,12 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
       };
       if (!old) return done();
       dropPush(old)
-        .then(() => fetch('/api/auth/logout', { method: 'POST', headers: { authorization: `Bearer ${old}` } }))
+        .then(() => fetch(apiUrl('/api/auth/logout'), { method: 'POST', headers: { authorization: `Bearer ${old}` } }))
         .finally(done);
     },
 
     async exportData() {
-      const res = await fetch('/api/export', { headers: token ? { authorization: `Bearer ${token}` } : {} });
+      const res = await fetch(apiUrl('/api/export'), { headers: token ? { authorization: `Bearer ${token}` } : {} });
       if (!res.ok) throw new ApiError('export', 'Couldn\'t download your data. Try again.');
       return res.blob();
     },
@@ -222,11 +250,11 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
       ? {
           async checkout(interval) {
             const { url } = await call<{ url: string }>('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ interval }) });
-            location.assign(url);
+            await openExternal(url);
           },
           async portal() {
             const { url } = await call<{ url: string }>('/api/billing/portal', { method: 'POST', body: '{}' });
-            location.assign(url);
+            await openExternal(url);
           },
         }
       : undefined,

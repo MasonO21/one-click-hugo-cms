@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app';
+import { decodeSecret, parseServiceAccount } from './native-push';
 
 const port = Number(process.env.PORT ?? 8787);
 const publicUrl = (process.env.PUBLIC_URL ?? `http://localhost:${process.env.NODE_ENV === 'production' ? port : 5173}`).replace(/\/$/, '');
@@ -12,11 +13,27 @@ const { app, close } = createApp({
   vapidSubject: process.env.VAPID_SUBJECT,
   devCodes: process.env.NODE_ENV !== 'production',
   dataKey: process.env.SUNUP_DATA_KEY,
+  fcm: parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT),
+  apns:
+    process.env.APNS_KEY && process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_BUNDLE_ID
+      ? {
+          key: decodeSecret(process.env.APNS_KEY)!,
+          keyId: process.env.APNS_KEY_ID,
+          teamId: process.env.APNS_TEAM_ID,
+          bundleId: process.env.APNS_BUNDLE_ID,
+          production: process.env.APNS_ENV !== 'development',
+        }
+      : undefined,
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     priceMonthly: process.env.STRIPE_PRICE_MONTHLY,
     priceYearly: process.env.STRIPE_PRICE_YEARLY,
+  },
+  appLinks: {
+    iosAppId: process.env.IOS_APP_ID,
+    androidPackage: process.env.ANDROID_PACKAGE,
+    androidSha256: process.env.ANDROID_CERT_SHA256?.split(',').map((v) => v.trim()).filter(Boolean),
   },
 });
 

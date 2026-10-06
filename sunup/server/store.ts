@@ -14,11 +14,19 @@ export interface PushSubscriptionRecord {
   keys: { p256dh: string; auth: string };
 }
 
+/** A phone running the iOS or Android app. */
+export interface NativeDevice {
+  token: string;
+  platform: 'ios' | 'android';
+}
+
 interface FileShape {
   state: State;
   /** sha256(token) -> user id */
   tokens: Record<string, Id>;
   push: Record<Id, PushSubscriptionRecord[]>;
+  /** Native app push tokens per user. */
+  native?: Record<Id, NativeDevice[]>;
   vapid: { publicKey: string; privateKey: string };
   /** state.packets, encrypted with AES-256-GCM. On disk, state.packets is always empty. */
   sealedPackets?: { iv: string; tag: string; data: string };
@@ -123,6 +131,25 @@ export class Store {
   forgetUser(userId: Id) {
     for (const [hash, id] of Object.entries(this.data.tokens)) if (id === userId) delete this.data.tokens[hash];
     delete this.data.push[userId];
+    if (this.data.native) delete this.data.native[userId];
+    this.save();
+  }
+
+  nativeDevices(userId: Id): NativeDevice[] {
+    return this.data.native?.[userId] ?? [];
+  }
+
+  /** Like web push, a device token belongs to whoever registered it last. */
+  addNativeDevice(userId: Id, device: NativeDevice) {
+    const all = (this.data.native ??= {});
+    for (const [id, list] of Object.entries(all)) all[id] = list.filter((d) => d.token !== device.token);
+    all[userId] = [...(all[userId] ?? []), device].slice(-5);
+    this.save();
+  }
+
+  removeNativeDevice(userId: Id, token: string) {
+    if (!this.data.native?.[userId]) return;
+    this.data.native[userId] = this.data.native[userId].filter((d) => d.token !== token);
     this.save();
   }
 

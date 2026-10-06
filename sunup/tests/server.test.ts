@@ -177,4 +177,18 @@ describe('server', () => {
     const tooSoon = await call<{ code: string }>('/api/auth/start', { body: { phone: '555-201-0099' } });
     expect(tooSoon.status).toBe(429);
   });
+
+  it('lets the iOS and Android apps call the API, and no other origins', async () => {
+    const preflight = await fetch(`${base}/api/state`, {
+      method: 'OPTIONS',
+      headers: { origin: 'capacitor://localhost', 'access-control-request-method': 'GET', 'access-control-request-headers': 'authorization' },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('access-control-allow-origin')).toBe('capacitor://localhost');
+    expect(preflight.headers.get('access-control-allow-headers')).toContain('authorization');
+    const android = await fetch(`${base}/api/health`, { headers: { origin: 'https://localhost' } });
+    expect(android.headers.get('access-control-allow-origin')).toBe('https://localhost');
+    const other = await fetch(`${base}/api/health`, { headers: { origin: 'https://evil.example' } });
+    expect(other.headers.get('access-control-allow-origin')).toBeNull();
+  });
 });

@@ -3,3 +3,4 @@ node_modules
 /dist-demo
 /data
 *.log
+/dist-native

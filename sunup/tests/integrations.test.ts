@@ -8,11 +8,12 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createApp } from '../server/app';
 import { twilioSignature } from '../server/twilio';
-import { createHmac } from 'node:crypto';
+import { createHmac, generateKeyPairSync } from 'node:crypto';
 import type { Snapshot } from '../src/shared/snapshot';
 
 const PUBLIC = 'https://sunup.test';
 const TWILIO = { sid: 'AC123', token: 'twilio-secret', from: '+15550001111' };
+const FCM_KEY = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
 const STRIPE = { secretKey: 'sk_test_123', webhookSecret: 'whsec_test', priceMonthly: 'price_month', priceYearly: 'price_year' };
 
 interface Sent {
@@ -34,13 +35,19 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
   const body = new URLSearchParams(String(init?.body ?? ''));
   sent.push({ url, body, method: init?.method ?? 'GET' });
   if (failStripeCancel && init?.method === 'DELETE') return new Response('{}', { status: 500 });
-  const reply = url.includes('api.stripe.com') ? { url: `https://stripe.test/${url.split('/v1/')[1]}` } : { sid: 'SM1' };
+  const reply = url.includes('api.stripe.com')
+    ? { url: `https://stripe.test/${url.split('/v1/')[1]}` }
+    : url.includes('oauth2.googleapis.com')
+      ? { access_token: 'ya29.test', expires_in: 3600 }
+      : { sid: 'SM1' };
   return new Response(JSON.stringify(reply), { status: 200, headers: { 'content-type': 'application/json' } });
 }) as typeof fetch;
 
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'sunup-int-'));
-  const created = createApp({ dataDir: dir, publicUrl: PUBLIC, tickMs: 60_000, twilio: TWILIO, stripe: STRIPE, fetch: fakeFetch, log: () => undefined });
+  const created = createApp({ dataDir: dir, publicUrl: PUBLIC, tickMs: 60_000, twilio: TWILIO, stripe: STRIPE, fetch: fakeFetch,
+    appLinks: { iosAppId: 'TEAM123456.app.sunup.checkin', androidPackage: 'app.sunup.checkin', androidSha256: ['AB:CD'] },
+    fcm: { projectId: 'sunup-app', clientEmail: 'push@sunup-app.iam.gserviceaccount.com', privateKey: FCM_KEY }, log: () => undefined });
   close = created.close;
   server = created.app.listen(0);
   await new Promise((r) => server.once('listening', r));
@@ -206,5 +213,40 @@ describe('account deletion', () => {
     expect(deleted.body.ok).toBe(true);
     expect(sent.some((s) => s.method === 'DELETE' && s.url.endsWith('/v1/subscriptions/sub_9'))).toBe(true);
     expect((await json('/api/state', undefined, user.body.token)).status).toBe(401);
+  });
+});
+
+describe('native push', () => {
+  it('delivers a circle alert to the watcher\'s Android phone through Firebase', async () => {
+    const maya = await json<{ token: string; snapshot: Snapshot }>('/api/signup', { name: 'Maya', timezone: 'America/Chicago' });
+    const jordan = await json<{ token: string; snapshot: Snapshot }>('/api/signup', { name: 'Jordan', timezone: 'America/Chicago' });
+    await json('/api/action', { type: 'acceptInvite', code: maya.body.snapshot.me.inviteCode, watch: true, mutual: false }, jordan.body.token);
+
+    expect((await json('/api/push/native', { token: 'short', platform: 'android' }, jordan.body.token)).status).toBe(400);
+    const deviceToken = 'fcm-device-token-for-jordan-0123456789';
+    expect((await json('/api/push/native', { token: deviceToken, platform: 'android' }, jordan.body.token)).status).toBe(200);
+    expect((await json<{ push: { android: boolean } }>('/api/health')).body.push.android).toBe(true);
+
+    sent.length = 0;
+    await json('/api/action', { type: 'sos' }, maya.body.token);
+    await settle();
+    const fcmSend = sent.find((s) => s.url.endsWith('/v1/projects/sunup-app/messages:send'));
+    expect(fcmSend).toBeDefined();
+
+    // Signing out on that phone stops its pushes.
+    await json('/api/push/native/remove', { token: deviceToken }, jordan.body.token);
+    sent.length = 0;
+    await json('/api/action', { type: 'sos' }, maya.body.token);
+    await settle();
+    expect(sent.some((s) => s.url.includes('messages:send'))).toBe(false);
+  });
+});
+
+describe('app links', () => {
+  it('publishes the files that let invite links open the apps', async () => {
+    const apple = (await (await fetch(`${base}/.well-known/apple-app-site-association`)).json()) as { applinks: { details: { appIDs: string[] }[] } };
+    expect(apple.applinks.details[0].appIDs).toEqual(['TEAM123456.app.sunup.checkin']);
+    const google = (await (await fetch(`${base}/.well-known/assetlinks.json`)).json()) as { target: { package_name: string } }[];
+    expect(google[0].target.package_name).toBe('app.sunup.checkin');
   });
 });

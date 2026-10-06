@@ -10,6 +10,7 @@ import { Ladder } from '../components/Ladder';
 import { CodeInput } from '../components/CodeInput';
 import type { CodeSent } from '../store/api';
 import { HAS_SITE, ago, when } from '../lib/format';
+import { IS_NATIVE } from '../native';
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -89,6 +90,12 @@ export function You() {
     setNotifications(result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'unsupported');
     if (result === 'granted') toast({ title: 'Alerts are on', tone: 'ok' });
     else if (result === 'denied') toast({ title: 'Notifications are blocked', body: 'Turn them on in your browser or phone settings.', tone: 'error' });
+    else if (IS_NATIVE)
+      toast({
+        title: 'Alerts aren\'t available here',
+        body: api.mode === 'demo' ? 'The demo runs only on this phone, so it can\'t send notifications.' : 'Try again in a moment.',
+        tone: 'info',
+      });
     else toast({ title: 'This browser can\'t receive alerts', body: 'On iPhone, add Sunup to your Home Screen first.', tone: 'info' });
   }
 
@@ -313,7 +320,7 @@ export function You() {
         </div>
         <div className="card pad stack">
           <p className="muted">Sunup keeps check-ins and alerts for 60 days. You can take a copy of everything, or erase it all.</p>
-          {HAS_SITE && (
+          {HAS_SITE && !IS_NATIVE && (
             <button className="btn" onClick={downloadData}>
               <Download size={18} /> Download my data
             </button>

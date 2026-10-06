@@ -10,6 +10,7 @@ import { Ladder } from '../components/Ladder';
 import { MOOD_INFO, ago, clock, countdown, dayName, dayWord, greeting, when } from '../lib/format';
 import { statusLine } from '../lib/status';
 import { photoToDataUrl } from '../lib/media';
+import { hapticTap } from '../native';
 
 export function Today({ onSos }: { onSos: () => void }) {
   const { snap, run } = useStore();
@@ -28,7 +29,7 @@ export function Today({ onSos }: { onSos: () => void }) {
 
   async function checkIn() {
     if (await run({ type: 'checkIn' })) {
-      navigator.vibrate?.(30);
+      void hapticTap();
       setComposing({ id: '', userId: me.id, at: Date.now(), source: 'tap' });
     }
   }

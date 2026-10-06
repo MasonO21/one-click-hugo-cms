@@ -3,3 +3,6 @@ dist
 dist-demo
 data
 *.log
+dist-native
+android
+ios

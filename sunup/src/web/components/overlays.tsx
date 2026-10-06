@@ -4,6 +4,7 @@ import { PREMIUM_FEATURES, PRICE_MONTHLY, PRICE_YEARLY, TRIAL_DAYS } from '../..
 import { Sheet, SunMark, Toggle } from './ui';
 import { useStore } from '../store/StoreContext';
 import { startRingtone } from '../lib/media';
+import { CAN_PURCHASE } from '../native';
 
 export function Paywall() {
   const { paywall, closePaywall, snap, run, api, attempt, toast } = useStore();
@@ -33,8 +34,11 @@ export function Paywall() {
       }
       return;
     }
-    toast({ title: 'Payments aren\'t connected yet', body: 'This prototype doesn\'t take payments.', tone: 'info' });
+    toast({ title: 'Payments aren\'t connected yet', body: 'This server doesn\'t take payments yet.', tone: 'info' });
   }
+
+  // App-store builds without in-app purchasing: offer the free trial only.
+  const canBuy = CAN_PURCHASE || !trialUsed;
 
   return (
     <Sheet open={paywall !== null} onClose={closePaywall} tall>
@@ -58,26 +62,36 @@ export function Paywall() {
           ))}
         </ul>
         <div className="paywall-cta">
-        <div className="price-toggle" role="radiogroup" aria-label="Billing period">
-          <button role="radio" aria-checked={!yearly} className={!yearly ? 'on' : ''} onClick={() => setYearly(false)}>
-            <strong>${PRICE_MONTHLY}</strong>
-            <span>per month</span>
-          </button>
-          <button role="radio" aria-checked={yearly} className={yearly ? 'on' : ''} onClick={() => setYearly(true)}>
-            <em>Save 33%</em>
-            <strong>${PRICE_YEARLY}</strong>
-            <span>per year</span>
-          </button>
-        </div>
-        <button className="btn primary block lg" onClick={start}>
-          {trialUsed ? `Subscribe for $${yearly ? PRICE_YEARLY : PRICE_MONTHLY}` : `Start ${TRIAL_DAYS}-day free trial`}
-        </button>
-        <p className="fine center">
-          {trialUsed
-            ? 'Cancel anytime.'
-            : `Free for ${TRIAL_DAYS} days, then $${yearly ? `${PRICE_YEARLY}/year` : `${PRICE_MONTHLY}/month`}.${api.billing ? ' You won\'t be charged before the trial ends.' : ''} Cancel anytime.`}{' '}
-          SOS and your daily check-in stay free forever.
-        </p>
+          {CAN_PURCHASE && (
+            <div className="price-toggle" role="radiogroup" aria-label="Billing period">
+              <button role="radio" aria-checked={!yearly} className={!yearly ? 'on' : ''} onClick={() => setYearly(false)}>
+                <strong>${PRICE_MONTHLY}</strong>
+                <span>per month</span>
+              </button>
+              <button role="radio" aria-checked={yearly} className={yearly ? 'on' : ''} onClick={() => setYearly(true)}>
+                <em>Save 33%</em>
+                <strong>${PRICE_YEARLY}</strong>
+                <span>per year</span>
+              </button>
+            </div>
+          )}
+          {canBuy ? (
+            <button className="btn primary block lg" onClick={start}>
+              {trialUsed ? `Subscribe for $${yearly ? PRICE_YEARLY : PRICE_MONTHLY}` : `Start ${TRIAL_DAYS}-day free trial`}
+            </button>
+          ) : (
+            <p className="muted center">Premium can't be purchased in this app yet.</p>
+          )}
+          <p className="fine center">
+            {trialUsed
+              ? CAN_PURCHASE
+                ? 'Cancel anytime.'
+                : ''
+              : api.billing
+                ? `Free for ${TRIAL_DAYS} days, then $${yearly ? `${PRICE_YEARLY}/year` : `${PRICE_MONTHLY}/month`}. You won't be charged before the trial ends. Cancel anytime.`
+                : `Free for ${TRIAL_DAYS} days. No card needed, and nothing is charged when it ends.`}{' '}
+            SOS and your daily check-in stay free forever.
+          </p>
         </div>
       </div>
     </Sheet>

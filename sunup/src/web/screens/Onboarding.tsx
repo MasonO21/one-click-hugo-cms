@@ -7,6 +7,7 @@ import { useStore } from '../store/StoreContext';
 import { Avatar, SunMark, Toggle } from '../components/ui';
 import { CodeInput } from '../components/CodeInput';
 import { HAS_SITE } from '../lib/format';
+import { IS_NATIVE } from '../native';
 
 const PRESETS = [
   { label: 'Early bird', start: '06:00', deadline: '09:00' },
@@ -377,8 +378,8 @@ export function Setup({ invite, inviteCode, onInviteHandled }: { invite: InviteI
       </div>
       <h1 className="display">Turn on alerts</h1>
       <p className="muted">
-        Sunup reminds you before your window closes, and tells you right away if someone in your circle needs you. On iPhone, add Sunup to your Home Screen
-        first (Share, then Add to Home Screen).
+        Sunup reminds you before your window closes, and tells you right away if someone in your circle needs you.
+        {!IS_NATIVE && ' On iPhone, add Sunup to your Home Screen first (Share, then Add to Home Screen).'}
       </p>
       <button className="btn primary block lg" onClick={() => finish(true)}>
         Turn on alerts

@@ -10,6 +10,7 @@ import { createNotifier, escapeXml, type Notifier } from './notify';
 import { twilioSignatureValid } from './twilio';
 import { applyStripeEvent, cancelSubscription, createCheckout, createPortal, requireStripe, stripeEnabled, stripeSignatureValid, type StripeConfig } from './billing';
 import { PhoneCodes } from './auth';
+import type { ApnsConfig, FcmConfig } from './native-push';
 
 export interface AppOptions {
   dataDir: string;
@@ -27,7 +28,16 @@ export interface AppOptions {
   stripe?: StripeConfig;
   /** Base64 32-byte key for encrypting packets at rest (SUNUP_DATA_KEY). Generated if missing. */
   dataKey?: string;
+  /** Origins allowed to call the API from another origin: the iOS and Android apps by default. */
+  corsOrigins?: string[];
+  fcm?: FcmConfig;
+  apns?: ApnsConfig;
+  /** Lets invite links on this domain open the installed apps. */
+  appLinks?: { iosAppId?: string; androidPackage?: string; androidSha256?: string[] };
 }
+
+/** Where the Capacitor apps' web views run (iOS, Android, and older Android builds). */
+const APP_ORIGINS = ['capacitor://localhost', 'https://localhost', 'http://localhost'];
 
 const STATUS: Record<string, number> = { unauthorized: 401, forbidden: 403, not_found: 404, rate_limited: 429, billing: 502, sms_failed: 502 };
 
@@ -60,6 +70,8 @@ export function createApp(options: AppOptions) {
     vapidSubject: options.vapidSubject ?? 'mailto:alerts@example.com',
     log,
     fetch: options.fetch,
+    fcm: options.fcm,
+    apns: options.apns,
   });
   const signupLimit = limiter(20, 60 * 60_000);
   const actionLimit = limiter(120, 60_000);
@@ -108,6 +120,27 @@ export function createApp(options: AppOptions) {
     });
     next();
   });
+  // The native apps load their screens locally and call this server from another origin.
+  // Sign-in is a Bearer token, not a cookie, so allowing these origins doesn't expose sessions.
+  const corsOrigins = new Set(options.corsOrigins ?? APP_ORIGINS);
+  app.use('/api', (req, res, next) => {
+    const origin = req.get('origin');
+    if (origin && corsOrigins.has(origin)) {
+      res.set({
+        'Access-Control-Allow-Origin': origin,
+        Vary: 'Origin',
+        'Access-Control-Allow-Headers': 'content-type, authorization',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Max-Age': '600',
+      });
+      if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
+      }
+    }
+    next();
+  });
+
   // Stripe needs the exact bytes it signed, so this route reads the raw body before the JSON parser.
   app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), (req, res) => {
     const cfg = requireStripe(options.stripe);
@@ -138,7 +171,7 @@ export function createApp(options: AppOptions) {
   };
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, sunup: true, twilio: notifier.twilio, billing: stripeEnabled(options.stripe) });
+    res.json({ ok: true, sunup: true, twilio: notifier.twilio, billing: stripeEnabled(options.stripe), push: { web: true, ...notifier.native } });
   });
 
   app.post('/api/signup', (req, res) => {
@@ -330,6 +363,22 @@ export function createApp(options: AppOptions) {
     res.json({ ok: true });
   });
 
+  // The iOS and Android apps register their device push token here.
+  app.post('/api/push/native', auth, (req, res) => {
+    const token = req.body?.token;
+    const platform = req.body?.platform;
+    if (typeof token !== 'string' || !/^[A-Za-z0-9:_\-.]{20,4096}$/.test(token) || (platform !== 'ios' && platform !== 'android')) {
+      throw new SunupError('invalid', 'That device token isn\'t valid.');
+    }
+    store.addNativeDevice(res.locals.userId, { token, platform });
+    res.json({ ok: true });
+  });
+
+  app.post('/api/push/native/remove', auth, (req, res) => {
+    if (typeof req.body?.token === 'string') store.removeNativeDevice(res.locals.userId, req.body.token);
+    res.json({ ok: true });
+  });
+
   app.post('/api/push/unsubscribe', auth, (req, res) => {
     if (typeof req.body?.endpoint === 'string') store.removeSubscription(res.locals.userId, req.body.endpoint);
     res.json({ ok: true });
@@ -338,6 +387,24 @@ export function createApp(options: AppOptions) {
   app.use('/api', (_req, res) => {
     res.status(404).json({ code: 'not_found', message: 'Not found.' });
   });
+
+  // Universal links (iOS) and App Links (Android): invite links open the app when it's installed.
+  const links = options.appLinks;
+  if (links?.iosAppId) {
+    app.get('/.well-known/apple-app-site-association', (_req, res) => {
+      res.json({ applinks: { details: [{ appIDs: [links.iosAppId], components: [{ '/': '/*', '?': { join: '?*' } }] }] } });
+    });
+  }
+  if (links?.androidPackage && links.androidSha256?.length) {
+    app.get('/.well-known/assetlinks.json', (_req, res) => {
+      res.json([
+        {
+          relation: ['delegate_permission/common.handle_all_urls'],
+          target: { namespace: 'android_app', package_name: links.androidPackage, sha256_cert_fingerprints: links.androidSha256 },
+        },
+      ]);
+    });
+  }
 
   if (options.staticDir && existsSync(join(options.staticDir, 'index.html'))) {
     const dir = options.staticDir;
@@ -379,6 +446,7 @@ export function createApp(options: AppOptions) {
     tick,
     close() {
       clearInterval(timer);
+      notifier.close();
       try {
         store.flush();
       } catch (e) {
