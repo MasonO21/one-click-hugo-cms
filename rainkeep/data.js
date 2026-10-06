@@ -543,6 +543,20 @@ const DATA = {
   // ---------- Wellkeeper's Ledger (season pass) ----------
   pass: {
     xpPerTier: 250,
+    seasonLength: 8 * 3600, // a Ledger season lasts 8 hours of play; then a new one starts
+    // Season 2 onward: small numbers are scaled to the keep when claimed (resources in quarter-crates,
+    // journals x (5 + 2 x wyrm level)); the premium capstone is that season's skin.
+    seasonSkins: ['monsoonbloom', 'saltglass', 'embertide', 'nightrain', 'goldenwadi', 'stormcoral'],
+    seasonTiers: [
+      [{ stone: 2 }, { starglass: 100 }], [{ journals: 1 }, { beacons: 2 }], [{ food: 2 }, { starglass: 150 }], [{ speed15: 1 }, { journals: 3 }],
+      [{ water: 2 }, { speed60: 1 }], [{ beacons: 1 }, { beacons: 3 }], [{ copper: 2 }, { sunsteel_cache: 2 }], [{ journals: 2 }, { starglass: 250 }],
+      [{ sunsteel_cache: 1 }, { rainCharm: 2 }], [{ speed15: 2 }, { shard_epic: 1 }], [{ stone: 4 }, { copper: 6 }], [{ food: 4 }, { beacons: 5 }],
+      [{ beacons: 2 }, { starglass: 400 }], [{ starglass: 100 }, { speed60: 2 }], [{ speed60: 1 }, { sunsteel_cache: 3, starglass: 200 }], [{ water: 6 }, { starglass: 300 }],
+      [{ journals: 3 }, { beacons: 5 }], [{ beacons: 2 }, { journals: 8 }], [{ copper: 4 }, { shard_epic: 2 }], [{ starglass: 150 }, { starglass: 500 }],
+      [{ sunsteel_cache: 1 }, { beacons: 6 }], [{ stone: 8 }, { speed60: 3 }], [{ journals: 4 }, { starglass: 500 }], [{ beacons: 3 }, { sunsteel_cache: 4 }],
+      [{ food: 8 }, { shard_legendary: 1 }], [{ starglass: 200 }, { beacons: 8 }], [{ speed60: 2 }, { starglass: 600 }], [{ copper: 8 }, { shard_epic: 2 }],
+      [{ beacons: 4 }, { starglass: 800 }], [{ shard_epic: 1 }, { skin: 'season' }],
+    ],
     tiers: [
       [{ stone: 300 }, { starglass: 100 }],
       [{ journals: 10 }, { beacons: 2 }],
@@ -586,6 +600,12 @@ const DATA = {
     sapphire: { name: 'Deepwater Sapphire', body: ['#1b3a96', '#5aa2ff'], belly: '#d6ecff', eye: '#ffffff', mist: ['#6cb8ff', '#e6f4ff'], fin: '#9fd0ff', horn: '#eaf4ff', starglass: 1500, note: 'Earnable with free Starglass' },
     sandglass: { name: 'Sandglass', body: ['#7e5f34', '#e2c287'], belly: '#fff3d6', eye: '#ff9a4a', mist: ['#ffd9a0', '#fff6e4'], fin: '#ffb35c', horn: '#fffaf0', note: 'Final Ledger Premium reward', locked: true },
     firstrain: { name: 'First Rain', body: ['#4e3aa0', '#8fc8ff'], belly: '#f1f7ff', eye: '#ffffff', mist: ['#c9b6ff', '#ffffff'], fin: '#ffd6f2', horn: '#fff8e6', note: 'Quench the Sunheart', locked: true },
+    monsoonbloom: { name: 'Monsoon Bloom', body: ['#2a5a8a', '#8ad0ff'], belly: '#f0f8ff', eye: '#ffe6f2', mist: ['#ffc8e6', '#ffffff'], fin: '#ff9ad0', horn: '#fff0f6', note: 'Ledger Season 2 premium', locked: true },
+    saltglass: { name: 'Saltglass', body: ['#7d8c9a', '#e6f2fa'], belly: '#ffffff', eye: '#3fb8ff', mist: ['#dff3ff', '#ffffff'], fin: '#a8dcff', horn: '#ffffff', note: 'Ledger Season 3 premium', locked: true },
+    embertide: { name: 'Ember Tide', body: ['#5a1a10', '#ff7a3a'], belly: '#ffe0c0', eye: '#fff4b8', mist: ['#ffb347', '#fff0d0'], fin: '#ffcf6e', horn: '#3a2010', note: 'Ledger Season 4 premium', locked: true },
+    nightrain: { name: 'Night Rain', body: ['#0c1030', '#3a4aa0'], belly: '#c8d0ff', eye: '#ffe08a', mist: ['#8a9aff', '#e0e6ff'], fin: '#ffe08a', horn: '#e8e0ff', note: 'Ledger Season 5 premium', locked: true },
+    goldenwadi: { name: 'Golden Wadi', body: ['#7a5a10', '#ffd36e'], belly: '#fff6d8', eye: '#2a8a70', mist: ['#ffe8a0', '#fffaf0'], fin: '#4fc0a0', horn: '#fff8e0', note: 'Ledger Season 6 premium', locked: true },
+    stormcoral: { name: 'Storm Coral', body: ['#7a2a4a', '#ff8aa0'], belly: '#fff0f2', eye: '#9ff0ff', mist: ['#ffc0cc', '#ffffff'], fin: '#5fd0ff', horn: '#ffe8ee', note: 'Ledger Season 7 premium', locked: true },
     longrains: { name: 'Long Rains', body: ['#0e6b5a', '#7fe0c4'], belly: '#eafff7', eye: '#fff6c8', mist: ['#a8ffe0', '#ffffff'], fin: '#ffd36e', horn: '#fffbe8', note: 'Break the Ember Throne', locked: true },
   },
 
@@ -597,9 +617,9 @@ const DATA = {
     { id: 'stipend', name: 'Oasis Stipend', usd: 4.99, tag: '30 days',
       grants: { starglass: 300, stipend: 30 },
       desc: '300 Starglass now, then 90 Starglass every day you log in for 30 days.' },
-    { id: 'ledger', name: 'Ledger Premium', usd: 9.99, once: true, tag: 'Season',
+    { id: 'ledger', name: 'Ledger Premium', usd: 9.99, tag: 'Season',
       grants: { ledger: 1 },
-      desc: "Unlocks the premium track of the Wellkeeper's Ledger, including the Oasis Jade and Sandglass wyrm skins." },
+      desc: "Unlocks the premium track of this season's Wellkeeper's Ledger, including its wyrm skin. Each season has its own premium track." },
     { id: 'growth', name: 'Growth Fund', usd: 14.99, once: true, tag: '10,000 Starglass',
       grants: { growth: 1 },
       desc: 'Pays out Starglass each time your Rainwyrm reaches Lv 5, 8, 10, 12, 15, 18 and 20. 10,000 in total.' },

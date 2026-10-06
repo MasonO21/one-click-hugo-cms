@@ -34,7 +34,7 @@
   var SKUS = Object.freeze({
     founder: 'com.rainkeep.founder',          // non-consumable
     stipend: 'com.rainkeep.stipend30',        // consumable (game tracks the 30 days)
-    ledger: 'com.rainkeep.ledger.s1',         // non-consumable, one per season
+    ledger: 'com.rainkeep.ledger.season',     // consumable: one premium track per Ledger season (game enforces)
     sg1: 'com.rainkeep.starglass.120',        // consumables
     sg2: 'com.rainkeep.starglass.330',
     sg3: 'com.rainkeep.starglass.700',
@@ -48,7 +48,7 @@
     warchest: 'com.rainkeep.warchest',        // consumable
     forgekit: 'com.rainkeep.forgekit',        // consumable, once per day (game enforces)
   });
-  var NON_CONSUMABLE = { founder: 1, ledger: 1, oasis: 1, obsidian: 1, growth: 1 };
+  var NON_CONSUMABLE = { founder: 1, oasis: 1, obsidian: 1, growth: 1 };
   var BY_STORE_ID = {};
   Object.keys(SKUS).forEach(function (k) { BY_STORE_ID[SKUS[k]] = k; });
 
@@ -263,7 +263,7 @@
       }).then(done, function (e) { return done({ ok: false, error: errText(e) }); });
     }, function () { state.buying = false; return { ok: false, error: 'unavailable' }; }),
 
-    // Returns the game's internal ids (founder, ledger, oasis, obsidian) the store says this player owns.
+    // Returns the game's internal ids (founder, growth, oasis, obsidian) the store says this player owns.
     restore: safe(function () {
       var P = plugin('Purchases');
       if (!state.configured || !has(P, 'restorePurchases')) return { ok: false, skus: [], error: 'unavailable' };

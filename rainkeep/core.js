@@ -120,7 +120,7 @@
       troops: { guard: 0, bow: 0, lancer: 0 },
       heroes: {}, squad: [], stewards: {},
       stage: 1, patrolSince: 0,
-      quest: 0, pass: { xp: 0, premium: false, free: [], prem: [] },
+      quest: 0, pass: { xp: 0, premium: false, free: [], prem: [], season: 1, end: 0 },
       pity: 0, firstPull: true,
       stipend: { left: 0, last: -1 },
       skins: { owned: ['river'], on: 'river' },
@@ -467,6 +467,20 @@
   }
 
   const passTier = () => Math.min(DATA.pass.tiers.length, Math.floor(S.pass.xp / DATA.pass.xpPerTier));
+  // A Ledger reward for this season. Season 1 keeps its original table; later seasons scale to the keep,
+  // and their premium capstone is the season's skin (Starglass instead if you already own it).
+  function passReward(i, track, season = S.pass.season || 1) {
+    const t = track === 'free' ? 0 : 1;
+    if (season <= 1) return DATA.pass.tiers[i][t];
+    const g = { ...DATA.pass.seasonTiers[i][t] };
+    if (g.skin) {
+      const sk = DATA.pass.seasonSkins[(season - 2) % DATA.pass.seasonSkins.length];
+      delete g.skin;
+      if (season - 2 < DATA.pass.seasonSkins.length && !S.skins.owned.includes(sk)) g.skin = sk;
+      else g.starglass = (g.starglass || 0) + 800;
+    }
+    return scaleReward(g);
+  }
   const addPassXp = (n) => { S.pass.xp = Math.min(S.pass.xp + n, DATA.pass.tiers.length * DATA.pass.xpPerTier); };
 
   // Reward bundles: resources, currencies, backpack items and a few special keys.
@@ -998,7 +1012,7 @@
     if (track === 'prem' && !S.pass.premium) return ACT.buy('ledger');
     if (S.pass[track].includes(i)) return;
     S.pass[track].push(i);
-    grant(DATA.pass.tiers[i][track === 'free' ? 0 : 1]);
+    grant(passReward(i, track));
     toast('Ledger reward collected.', 'good');
   };
 
@@ -1010,6 +1024,7 @@
     if (item.once && S.bought[id]) return 'Already purchased.';
     if (item.daily && S.boughtDay[id] === today()) return 'Already bought today. Back tomorrow.';
     if (item.needs && !S.lv[item.needs]) return `Build the ${DATA.buildings[PLOT[item.needs].type].name} first.`;
+    if (id === 'ledger' && S.pass.premium) return 'Premium is already active this season.';
     return true;
   }
   function completePurchase(ref, opts = {}) {
@@ -1167,7 +1182,7 @@
     coolOf, coolAt, drinkRate, marchCap, troopCap, outsideTemp, troopMult, protectOf, stewardVal, townTemp, comfortOf,
     workerRate, healRate, buildCost, buildTime, maxLevel, upgradeBlock, canAfford, pay, have, techCost, techTime, techMax,
     heroStats, heroCap, skillScale, skillText, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
-    teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, power, patrolPreview, passTier, addPassXp,
+    teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, power, patrolPreview, passTier, addPassXp, passReward,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
     batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable,
   });

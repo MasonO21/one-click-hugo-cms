@@ -275,6 +275,31 @@
   };
 
   // ======================================================================
+  // Ledger seasons: the pass rolls over every few hours of play
+  // ======================================================================
+  function endLedgerSeason() {
+    const p = S.pass, tier = KH.passTier(), missed = {};
+    const add = (g) => { for (const [k, v] of Object.entries(g)) missed[k] = k === 'skin' ? v : (missed[k] || 0) + v; };
+    for (let i = 0; i < tier; i++) {
+      if (!p.free.includes(i)) add(KH.passReward(i, 'free'));
+      if (p.premium && !p.prem.includes(i)) add(KH.passReward(i, 'prem'));
+    }
+    KH.mail(`Ledger Season ${p.season} is over`, `You reached tier ${tier} of ${DATA.pass.tiers.length}.${Object.keys(missed).length ? ' Here is everything you earned but did not collect.' : ''} Season ${p.season + 1} has begun.`, Object.keys(missed).length ? missed : null);
+    const len = DATA.pass.seasonLength;
+    S.pass = { xp: 0, premium: false, free: [], prem: [], season: p.season + 1, end: Math.max(p.end + len, S.time + len / 2) };
+    KH.emit('ledgerSeason', { season: S.pass.season });
+  }
+  KH.hooks.tick.push((dt, offline) => {
+    if (!S || !S.pass) return;
+    if (!S.pass.season) S.pass.season = 1;
+    if (!S.pass.end) S.pass.end = S.time + DATA.pass.seasonLength; // older saves start their first countdown now
+    if (S.time >= S.pass.end) {
+      endLedgerSeason();
+      if (!offline) KH.toast(`Ledger Season ${S.pass.season} has begun: a new premium skin and 30 new tiers.`, 'good', 'ledger', 5);
+    }
+  });
+
+  // ======================================================================
   // Timed events
   // ======================================================================
   const EV = DATA.events;

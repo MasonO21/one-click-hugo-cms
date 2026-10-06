@@ -50,7 +50,7 @@ After any change to the game files, run `npm run cap:sync` and rebuild in Xcode.
 |---|---|---|---|
 | Founder's Cache | `com.rainkeep.founder` | Non-Consumable | $0.99 |
 | Oasis Stipend | `com.rainkeep.stipend30` | Consumable | $4.99 |
-| Ledger Premium (Season 1) | `com.rainkeep.ledger.s1` | Non-Consumable | $9.99 |
+| Ledger Premium (each season) | `com.rainkeep.ledger.season` | Consumable | $9.99 |
 | Growth Fund | `com.rainkeep.growthfund` | Non-Consumable | $14.99 |
 | Sandstorm Kit | `com.rainkeep.stormkit` | Consumable | $2.99 |
 | Warden's War Chest | `com.rainkeep.warchest` | Consumable | $19.99 |
@@ -87,7 +87,7 @@ Each product needs a display name, a description and a review screenshot (any in
 1. In App Store Connect, under **Users and Access**, then **Sandbox**, create a sandbox tester with a fresh email address.
 2. On your iPhone, open **Settings**, then **App Store**, then **Sandbox Account**, and sign in as that tester.
 3. Run the app from Xcode and buy the Founder's Cache. You should see a "[Sandbox]" purchase sheet, then a second builder in the keep.
-4. Delete and reinstall the app, then use **Settings → Restore purchases** in the game. The Founder's Cache, Ledger, Growth Fund and skins should come back.
+4. Delete and reinstall the app, then use **Settings → Restore purchases** in the game. The Founder's Cache, Growth Fund and skins should come back. (Ledger Premium is a per-season consumable, so it is not restored; the season it was bought for stays unlocked in the save.)
 
 ## 6. TestFlight
 

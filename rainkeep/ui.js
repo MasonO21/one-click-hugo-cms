@@ -280,7 +280,8 @@
         ${done ? '<span class="muted small">Owned</span>' : daily ? '<span class="muted small">Tomorrow</span>' : `<button class="btn small" data-act="buy" data-arg="${o.id}">${price(o.id, o.usd)}</button>`}</div>`;
     };
     const tier = KH.passTier(), xpIn = S.pass.xp - tier * DATA.pass.xpPerTier;
-    const passRows = DATA.pass.tiers.map((t, i) => {
+    const season = S.pass.season || 1;
+    const passRows = DATA.pass.tiers.map((_, i) => {
       const reached = tier > i;
       const cell = (track, g) => {
         const claimed = S.pass[track].includes(i);
@@ -291,7 +292,7 @@
         else if (locked) btn = icon('i-lock');
         return `<div class="pass-cell ${track === 'prem' ? 'prem' : ''} ${claimed ? 'claimed' : ''}"><span class="costs">${rewardHTML(g)}</span>${btn}</div>`;
       };
-      return `<div class="pass-row"><span class="tier ${reached ? 'reached' : ''}">${i + 1}</span>${cell('free', t[0])}${cell('prem', t[1])}</div>`;
+      return `<div class="pass-row"><span class="tier ${reached ? 'reached' : ''}">${i + 1}</span>${cell('free', KH.passReward(i, 'free'))}${cell('prem', KH.passReward(i, 'prem'))}</div>`;
     }).join('');
     const skins = Object.entries(DATA.skins).map(([id, sk]) => {
       const own = S.skins.owned.includes(id), on = S.skins.on === id;
@@ -307,8 +308,8 @@
       ${native ? '' : '<p class="proto-note">Web version: purchases are simulated and nothing is charged. In the App Store version these buttons use Apple in-app purchase.</p>'}
       ${KH.patronCard ? KH.patronCard() : ''}
       <div class="section-label">Offers</div><div class="stack">${offers.map(offer).join('')}</div>
-      <div class="section-label">Wellkeeper's Ledger · Season 1</div>
-      <div class="card stack"><div class="row"><div class="grow"><b>Tier ${tier} of ${DATA.pass.tiers.length}</b><div class="muted small">Earn Ledger XP from quests, upgrades, battles, beasts, gathering and recruits.</div></div>
+      <div class="section-label">Wellkeeper's Ledger · Season ${season}${S.pass.end ? ` · ends in ${fmtTime(Math.max(0, S.pass.end - S.time))}` : ''}</div>
+      <div class="card stack"><div class="row"><div class="grow"><b>Tier ${tier} of ${DATA.pass.tiers.length}</b><div class="muted small">Earn Ledger XP from quests, upgrades, battles, beasts, gathering and recruits. A new season, with new rewards and a new premium skin, starts every ${Math.round(DATA.pass.seasonLength / 3600)} hours of play; anything you earned but did not claim arrives by mail.</div></div>
         ${S.pass.premium ? '<span class="chip r-epic">Premium active</span>' : `<button class="btn small" data-act="buy" data-arg="ledger">Unlock premium</button>`}</div>
         <div class="bar xp"><i style="width:${tier >= DATA.pass.tiers.length ? 100 : (xpIn / DATA.pass.xpPerTier) * 100}%"></i></div>
         <div class="pass-row"><span></span><span class="muted small">Free</span><span class="muted small">Premium</span></div>${passRows}</div>
