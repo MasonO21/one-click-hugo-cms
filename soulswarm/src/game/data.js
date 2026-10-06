@@ -68,7 +68,7 @@ export const BOSS_PHASES = {
   minTele: 1.0,
   rise: 1.4,                      // rises out of the ground, immune
   minPhase: [18, 14],             // phases I and II play at least this long; hit the tick sooner and he is warded (IMMUNE) there until then
-  arena: { radius: 18, closeTo: 12, closeTime: 4, seal: 1.2, soft: 1.1, push: 14, hard: 0.35, cull: 0.6 },
+  arena: { radius: 18, closeTo: 12, closeTime: 4, seal: 1.2, soft: 1.1, push: 14, hard: 0.35 }, // soft: push-back zone, hard: closest approach to the wall
   // from = HP fraction where the phase begins. speed = chase speed ×, rate = attack rate × (recoveries ÷ rate).
   phases: [
     { name: 'HOLLOW TREAD', sub: 'Phase I · Step between the slam rings', from: 1, speed: 1, rate: 1, slamTele: 1.2, orb: 1,
