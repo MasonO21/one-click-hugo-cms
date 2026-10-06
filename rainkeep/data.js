@@ -2,7 +2,7 @@
  * Rainkeep content tables.
  * Every number a designer would want to tune lives here; the game scripts only read it.
  * Timers and production run ~30x faster than a live-service version would, so the
- * whole game can be played through in a handful of evenings.
+ * two-act story can be played through in a couple of weeks of evenings.
  */
 'use strict';
 

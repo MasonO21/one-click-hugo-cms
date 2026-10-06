@@ -68,7 +68,7 @@ Progress saves in the browser. Settings (gear icon) has sound toggles, the 3D gr
 
 ## Tuning and testing
 
-Change numbers in `data.js` and reload. Timers and production run about 30× faster than a typical live-service strategy game, so the full story takes a handful of evenings. For quick testing, open the browser console:
+Change numbers in `data.js` and reload. Timers and production run about 30× faster than a typical live-service strategy game, so the two-act story takes a couple of weeks of evenings and the endgame a good while longer. For quick testing, open the browser console:
 
 ```js
 rainkeep.advance(600)                            // fast-forward 10 minutes of game time

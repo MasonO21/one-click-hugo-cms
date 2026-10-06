@@ -152,33 +152,44 @@ Most 4X and survival-strategy launches never reach top-grossing charts, regardle
 
 ## 8. Balance and pacing (measured)
 
-The game was tuned with an automated player that plays every system the way a strong, active player would: it builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan, claims every reward, sets the mist before storms (Attuned mist from Lv 6) and fights the next stage whenever the odds look good. Since 2.1 it also taps every surplus bubble, calls the rain whenever it's ready, settles every incident with the first choice it can afford and takes every merchant trade it can pay for. Over 13 hours that is about 130 showers, 610 bubbles, 70 incidents and 240 trades. These are the measured results (game time, which runs about 30× faster than a live-service game):
+The game was tuned with an automated player that plays every system the way a strong, active player would. It builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan and claims every reward. It sets the mist before storms (Attuned mist from Lv 6), taps every surplus bubble, calls the rain whenever it's ready, settles incidents, trades with merchants and fights the next stage whenever the odds look good. Since 3.0 it also lights the Forge and forges the cheapest gear piece it can afford, climbs the Mirage Spire when a floor looks winnable, spends every Duel ticket on the best challenger it can beat, and trades Glory for Sunsteel and Epic pouches. These are the measured results from 36-hour runs (game time, which runs about 30× faster than a live-service game):
 
-| Milestone | Free player (four runs) | With the Founder's Cache (two runs) |
+| Milestone | Free player (three runs) | With the Founder's Cache (one run) |
 |---|---|---|
-| Rainwyrm Lv 5 | 12-29 min | 7-17 min |
-| Rainwyrm Lv 10 | 2.9-3.3 h | 2.5-2.6 h |
-| Stage 30, the Sand Colossus | 1.3-3.1 h | 1.5-2.1 h |
-| Stage 60, the Sunheart (story ending) | 4.9-5.7 h | 4.1-5.2 h |
-| Burning Line depth 10 | 6.8-8.3 h | 5.5-7.3 h |
-| Rainwyrm Lv 14 | 9.8-10.8 h | 8 h |
-| Rainwyrm Lv 15, Primordial form | 12.3 h (one run), past 13 h (three) | 11.1 h |
-| All 49 chapter quests | 13+ h | 12-13+ h |
+| Rainwyrm Lv 5 | 12-22 min | 8 min |
+| Rainwyrm Lv 10 | 2.0-2.5 h | 3.5 h |
+| Stage 30, the Sand Colossus | 1.4-1.5 h | 1.3 h |
+| Stage 60, the Sunheart (end of Act I) | 4.2-5.0 h | 5.5 h |
+| Rainwyrm Lv 15, Primordial | 13.3-15.8 h | 12.6 h |
+| Dune Duels rank 100 / rank 1 | 7.7-9.1 h / 15-16.7 h | 8.7 h / 14.9 h |
+| Stage 100, the Ember Throne (end of the story) | 15.1-19.2 h | 15.2 h |
+| Mirage Spire floor 100 | 19.6-23.3 h | 21.2 h |
+| Rainwyrm Lv 18 | 26-29.5 h | 25.3 h |
+| Rainwyrm Lv 20, Skyriver | 35.7 h (one run), Lv 19 at 34-34.5 h (two) | Lv 19 at 34.4 h |
+| All six pieces of gear at Lv 50 | about 36 h | about 36 h |
+| All 71 chapter quests | 70 of 71 by 36 h (the last is Lv 20) | 70 of 71 |
 
-Keep life rewards attention without replacing the core economy. A player who ignores it, or taps bubbles only every 10 minutes, reaches the Sunheart in about 6.5 h, roughly the pre-2.1 pace. Late levels (past Rainwyrm Lv 10) cost more since 2.1 (`lateCostGrowth` 1.7), so the extra income speeds up the story but not the endgame: Lv 14 still lands near 10 hours, as before. Measured in resources, an always-attentive player gets about 15% more output from bubbles and 10-15% more water from showers. Incidents roughly break even on stone and food: they cost resources up front and pay back in boosts, water, Starglass and survivors. Merchants mostly turn surplus food into journals, Rain Charms and the scarce resource. Earlier drafts were much more generous: a 2-minute bubble every 4 minutes, two 15-minute speedups per merchant and big rain bursts brought the ending down to under 3 hours, and they were cut back.
+**How 3.0 made the game longer.** The story used to end at stage 60 after about 5 hours. Act II adds four chapters to stage 100, so the story now ends after 15-19 hours, three to four times longer, and the endgame (Lv 20, gear, the Spire) runs to about 36 hours. Act I keeps roughly its old pace (4-5 hours to the Sunheart). Past stage 60 the enemy curve is the old Burning Line curve, so players already in the Burning Line drop straight into Act II at a fair difficulty. What carries a player through Act II is Rainwyrm Lv 16-20 (higher hero level caps, troops and research to Lv 15) and the Warden's Gear.
 
-Run-to-run spread is wide (gacha luck and raid timing move stage 60 by up to an hour), so tune with several seeds, not one.
+**The gear and the copper economy.** The first draft of gear doubled the squad's power and drew so much copper that building stalled: Act II ended at 10 hours and the wyrm stopped growing. The shipped version gives at most +42% squad attack and defense, +54% health and +30% to each troop class at gear Lv 50, and about a third more with Sunsteel Tempering at Lv 15. Sunsteel is smelted from stone, which piles up late, plus a little copper. Gear upgrades cost Sunsteel and stone. The Forge's racks cap how much Sunsteel waits unspent, so smelting stops instead of draining copper. Copper is still the late-game constraint: stone and food reach the millions while copper stays under 200k. Buildings past Lv 15 take a smaller copper share (13% of their stone cost instead of 22%) to keep the wyrm growing.
 
-In every run the keep never ran dry (zero minutes thirsty or dormant) and sickness stayed under 0.05% of survivor-time: a player who digs the wells and sets the mist before storms stays safe, while one who ignores water loses survivors and production.
+**Trials pay out without replacing the story.** The Spire's floor f fights like expedition stage 24 + 0.9f, and its twists make some floors harder than the stage they match. Both trials pay mostly in Sunsteel, Starglass, journals and occasional shard pouches. Their first drafts (an Epic pouch every 10 floors, generous early milestones) pulled Act I down to about 3.3 hours and were cut back.
 
-A human player is less efficient than the bot, so expect the story to take roughly two to three times as long: a handful of evenings.
+**The Founder's Cache.** The second builder speeds up the early game, but from mid-game both builders wait on resources most of the time (the bot measured 70-100% builder idle), so a founder is not meaningfully faster late. A live version should give paying players something that helps late as well (a resource-side perk, not more power in PvP).
+
+Run-to-run spread is wide (gacha luck and raid timing move stage 60 and stage 100 by an hour or more), so tune with several seeds, not one.
+
+In every run the keep never ran dry (zero minutes thirsty or dormant) and sickness stayed under 0.01% of survivor-time.
+
+A human player is less efficient than the bot, so expect the story to take roughly two to three times as long: about 30-60 hours of play to the Ember Throne, and 70-100 to a Skyriver with fully forged gear.
 
 Other measured outcomes:
 
 - **Water is the first lesson.** A new keep loses water every minute until the first quest (dig the Deep Well) is done, so players learn the core mechanic in the first minute.
-- **Every resource is used.** Building costs draw on stone, water (mudbrick and mortar), food and copper from level 3 up. Stone and copper are the late-game constraints; food piles up for training and donations.
+- **Every resource is used.** Building costs draw on stone, water (mudbrick and mortar), food and copper from level 3 up. The Forge turns late-game stone into Sunsteel. Copper is the late-game constraint; food piles up for training and donations.
 - **Nights matter.** Desert nights run 7°C colder and middays 2°C hotter, so a wyrm left on Steady wastes water after dark. Attuned mist drizzles at night and pours before storms. That alone saves enough water to speed the free player's story by about a tenth.
-- **Old saves carry over.** Saves from 2.0 load into 2.1 at the same chapter quest (the four new quests are stepped over), and the keep's new systems start up on the first tick.
+- **Keep life rewards attention.** An always-attentive player gets about 15% more output from surplus bubbles and 10-15% more water from showers. Incidents roughly break even, and merchants turn surplus food into journals, Rain Charms and the scarce resource.
+- **Old saves carry over.** Saves from 2.0 and 2.1 load into 3.0 at the same chapter quest (quests added since are stepped over). A finished 2.x game continues straight into the Act II quests, and a save already in the Burning Line becomes Act II progress.
 - **No errors** across all automated runs.
 
 ## 9. Next steps
