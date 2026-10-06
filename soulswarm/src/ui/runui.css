@@ -85,6 +85,11 @@
 /* level up */
 .lvl-back { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px;
   background: radial-gradient(80% 60% at 50% 45%, rgba(40,30,4,.55), rgba(2,3,8,.86)); animation: fadein .2s ease; }
+.lvl-back.chest { background: radial-gradient(80% 60% at 50% 45%, rgba(80,52,6,.7), rgba(2,3,8,.9)); }
+.lvl-back.chest::before { content: ''; position: absolute; left: 50%; top: 45%; width: 620px; height: 620px; margin: -310px 0 0 -310px; pointer-events: none;
+  background: repeating-conic-gradient(rgba(255,207,74,.13) 0 7deg, transparent 7deg 18deg); -webkit-mask: radial-gradient(circle, #000 12%, transparent 62%); mask: radial-gradient(circle, #000 12%, transparent 62%); animation: chestspin 30s linear infinite; }
+@keyframes chestspin { to { transform: rotate(360deg); } }
+.lvl-back.chest > * { position: relative; }
 .lvl-title { text-align: center; }
 .lvl-title b { display: block; font-family: var(--f-display); font-weight: 900; font-size: 34px; letter-spacing: .08em; color: #fff3c8; text-shadow: 0 0 22px var(--gold), 0 2px 0 #4a2a00; animation: banin .5s cubic-bezier(.2,1.5,.4,1) both; }
 .lvl-title span { font-size: 12px; letter-spacing: .2em; color: var(--ink-dim); text-transform: uppercase; }

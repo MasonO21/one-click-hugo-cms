@@ -71,9 +71,10 @@ export class Run {
     this.input = new Input(engine.canvas);
 
     this.time = 0; this.t = 0;
-    this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0;
+    this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
     this.counters = { kills: 0, raised: 0, novas: 0, gates: 0 };
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0;
+    this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
     this.bonusGold = 0;
     this.spawnAcc = 0; this.nextGate = 28; this.nextSwarm = 50; this.eliteIdx = 0;
     this.warned = false; this.bossSpawned = false; this.bossDead = false;
@@ -203,10 +204,15 @@ export class Run {
   }
 
   // ---------------------------------------------------------------- kills, xp, chests
+  /** Soul Nova charge in kill-equivalents (an elite is worth 6 kills, a gate 3). Nothing charges mid-detonation. */
+  addNovaCharge(kills) {
+    if (this.novaQueue.length === 0) this.nova = Math.min(1, this.nova + kills * this.stats.novaMul / BASE.novaKills);
+    if (this.nova >= 1 && !this.hintsShown.nova) this.hint('nova', 'Soul Nova is ready! Tap NOVA to detonate your legion.');
+  }
+
   onEnemyKilled(e, source, noRaise) {
     this.counters.kills++;
-    if (this.novaQueue.length === 0) this.nova = Math.min(1, this.nova + this.stats.novaMul / BASE.novaKills);
-    if (this.nova >= 1 && !this.hintsShown.nova) this.hint('nova', 'Soul Nova is ready! Tap NOVA to detonate your legion.');
+    this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
     this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1));
     if (e.elite) this.pickups.dropSpecial('chest', e.x, e.z);
@@ -238,37 +244,43 @@ export class Run {
     if (this.levelQueue > 0 && !this.levelPending && !this.ended) this.showLevelUp();
   }
 
+  /** Shows the next pending pick: Relic Chests first, then level-ups. Gameplay pauses until a card is chosen. */
   showLevelUp() {
     if (this.levelPending || this.ended) return;
-    if (this.bossDead && !this.endless) { this.levelQueue = 0; return; } // the chapter is won; no more cards
+    if (this.bossDead && !this.endless) { this.levelQueue = this.chestQueue = 0; return; } // the chapter is won; no more cards
+    const chest = this.chestQueue > 0;
+    if (!chest && this.levelQueue <= 0) return;
     this.levelPending = true;
     this.recomputeStats();
     const P = this.player;
-    this.particles.burst(P.x, 1, P.z, 50, hdr(0xffd04a, 3), { speed: 6, life: 0.8, size: 0.4, up: 1.5 });
-    this.fx.shockwave(P.x, P.z, 4, 0xffd04a, 0.5, 0.1);
-    this.audio.sfx('levelup');
-    this.app.haptic('success');
+    if (!chest) {
+      this.particles.burst(P.x, 1, P.z, 50, hdr(0xffd04a, 3), { speed: 6, life: 0.8, size: 0.4, up: 1.5 });
+      this.fx.shockwave(P.x, P.z, 4, 0xffd04a, 0.5, 0.1);
+      this.audio.sfx('levelup');
+      this.app.haptic('success');
+    }
     this.input.reset();
     const choices = rollChoices(this, 3);
     this.ui.showLevelUp(choices, this.level, (c) => {
       applyChoice(this, c);
       this.audio.sfx('select');
-      this.levelQueue--;
+      if (chest) this.chestQueue--; else this.levelQueue--;
       this.levelPending = false;
       this.player.invuln = Math.max(this.player.invuln, 0.6);
-      if (this.levelQueue > 0) setTimeout(() => { if (!this.ended && !this.levelPending && this.levelQueue > 0) this.showLevelUp(); }, 120);
-    });
+      if (this.levelQueue > 0 || this.chestQueue > 0) setTimeout(() => { if (!this.ended && !this.levelPending) this.showLevelUp(); }, 120);
+    }, { chest });
   }
 
+  /** Elites drop a Relic Chest: a free pick of 3 cards. */
   openChest() {
-    const c = rollChoices(this, 1)[0];
-    applyChoice(this, c);
+    if (this.ended) return;
     const P = this.player;
     this.particles.burst(P.x, 1, P.z, 80, hdr(0xffd04a, 3.5), { speed: 8, life: 1, size: 0.5, up: 2 });
     this.fx.flash(0.3);
     this.audio.sfx('chest');
     this.app.haptic('success');
-    this.ui.banner('RELIC CHEST', `${c.name}${c.level ? ' · Lv ' + c.level : ''}`, 'gold');
+    this.chestQueue++;
+    this.showLevelUp();
   }
 
   // ---------------------------------------------------------------- Soul Nova
@@ -277,6 +289,7 @@ export class Run {
     this.nova = 0;
     this.counters.novas++;
     const P = this.player;
+    P.invuln = Math.max(P.invuln, 1.5); // the Shepherd stands untouchable inside the blast
     const size = this.legion.count;
     const pts = this.legion.detonateAll();
     pts.sort((a, b) => ((a.x - P.x) ** 2 + (a.z - P.z) ** 2) - ((b.x - P.x) ** 2 + (b.z - P.z) ** 2));
@@ -317,6 +330,31 @@ export class Run {
       if (i % 10 === 0) this.audio.sfx('explosion', { volume: 0.35, pitch: 1.2 + Math.random() * 0.4 });
     }
     this.novaQueue.splice(0, i);
+  }
+
+  /** Souls lost to a −N / ÷2 gate detonate at half Nova power, rippling out from the gate. */
+  soulBurst(points, legionSize, x, z) {
+    if (!points || !points.length) return;
+    const pts = points.map((p) => ({ x: p.x, y: p.y, z: p.z, d: (p.x - x) ** 2 + (p.z - z) ** 2 })).sort((a, b) => a.d - b.d);
+    const span = Math.min(0.6, 0.12 + pts.length * 0.003);
+    this.burstQueue = pts.map((p, i) => ({ ...p, t: (i / pts.length) * span }));
+    this.burstT = 0;
+    this.burstDmg = 0.5 * (35 + legionSize * 0.5) * this.stats.dmgMul * (1 + 0.45 * (this.chapter.id - 1));
+  }
+
+  updateBursts(dt) {
+    if (!this.burstQueue.length) return;
+    this.burstT += dt;
+    const col = hdr(this.heroColor, 2.6);
+    let i = 0;
+    while (i < this.burstQueue.length && this.burstQueue[i].t <= this.burstT) {
+      const p = this.burstQueue[i++];
+      this.enemies.query(p.x, p.z, 2.6, (e) => { this.enemies.damage(e, this.burstDmg, { kx: e.x - p.x, kz: e.z - p.z, knock: 5, source: 'nova', silent: Math.random() < 0.6 }); });
+      this.particles.burst(p.x, p.y, p.z, 10, col, { speed: 6, life: 0.45, size: 0.5, up: 0.8 });
+      if (i % 4 === 0) this.fx.shockwave(p.x, p.z, 2.6, this.heroColor, 0.3, 0.14);
+      if (i % 12 === 0) this.audio.sfx('explosion', { volume: 0.3, pitch: 1.4 + Math.random() * 0.3 });
+    }
+    this.burstQueue.splice(0, i);
   }
 
   // ---------------------------------------------------------------- death, revive, victory
@@ -466,6 +504,7 @@ export class Run {
       this.pickups.update(dt);
       this.gates.update(dt);
       this.updateNova(dt);
+      this.updateBursts(dt);
       if (this.tutorial && this.time > 1.5 && !this.input.moved) this.hint('move', 'Drag anywhere to move. Your Shepherd attacks automatically.');
     }
     this.updateVictory(realDt);

@@ -127,15 +127,16 @@ export class RunUI {
   bossHp(f) { this.q.bossHp.style.transform = `scaleX(${f})`; }
 
   // ---------------------------------------------------------------- level up
-  showLevelUp(choices, level, onPick) {
-    const back = h(`<div class="lvl-back">
-      <div class="lvl-title"><b>LEVEL ${level}</b><span>Choose a power</span></div>
+  showLevelUp(choices, level, onPick, { chest = false } = {}) {
+    const back = h(`<div class="lvl-back ${chest ? 'chest' : ''}">
+      <div class="lvl-title">${chest ? '<b>RELIC CHEST</b><span>Claim one treasure</span>' : `<b>LEVEL ${level}</b><span>Choose a power</span>`}</div>
       <div class="cards"></div>
       <div class="lvl-actions"></div>
     </div>`);
     const cards = $(back, '.cards');
-    let picked = false;
+    let picked = false, shownT = 0;
     const render = (list) => {
+      shownT = this.run.t; // run time keeps ticking while paused: ignore taps in the first 0.3 s (stray swipes)
       cards.innerHTML = '';
       list.forEach((c, i) => {
         const evo = c.kind === 'evolution';
@@ -146,7 +147,7 @@ export class RunUI {
           <div class="ic">${icon(c.icon)}</div>
           <div><h3>${c.name} ${tag}</h3><p>${c.desc}</p>${pips ? `<div class="pips">${pips}</div>` : ''}</div></button>`);
         card.addEventListener('click', () => {
-          if (picked) return;
+          if (picked || this.run.t - shownT < 0.3) return;
           picked = true;
           this.app.haptic('light');
           back.remove();

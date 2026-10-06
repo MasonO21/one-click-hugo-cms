@@ -29,7 +29,7 @@ const BOT = `window.__bot = (secs, god) => {
     const l = Math.hypot(fx, fz) || 1;
     r.input.keys.clear(); r.input.tx = fx / l; r.input.tz = fz / l; r.input.moved = true;
     if (r.levelPending) { const c = document.querySelector('.lvl-back .card'); if (c) c.click(); }
-    if (!r.levelPending && r.levelQueue > 0) r.showLevelUp();
+    if (!r.levelPending && (r.levelQueue > 0 || r.chestQueue > 0)) r.showLevelUp();
     if (r.nova >= 1 && r.legion.count > 25) r.ui.wantsNova = true;
     if (r.paused && r.player.dead) { r.revive(false); document.querySelectorAll('.modal-back').forEach((n) => n.remove()); }
     r.update(1 / 30);
@@ -130,6 +130,39 @@ errs = await session(async (page) => {
   check('soul pass tiers from XP', s.pass === 3, `tier=${s.pass}`);
 });
 check('economy: no runtime errors', !errs.length, errs[0] || '');
+
+// 6. Run systems: Relic Chest pick, Nova invulnerability and charge, gate guards and soul bursts
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm; app.startRun(1);
+    const r = app.run, P = r.player; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99;
+    window.__bot(2, true);
+    r.addXp = () => {}; // isolate the chest from level-ups triggered by the magnetised shards
+    // an elite's chest opens a 1-of-3 pick instead of a random card
+    const e = r.enemies.spawn('husk', P.x + 1, P.z, { elite: true, hpMul: 1 });
+    r.enemies.damage(e, 1e6, { source: 'bolt' });
+    r.pickups.magnetAll(); for (let i = 0; i < 90 && !r.levelPending; i++) r.update(1 / 30);
+    const chestCards = document.querySelectorAll('.lvl-back.chest .card').length;
+    const lvBefore = JSON.stringify(r.skillLv);
+    for (let i = 0; i < 15; i++) { document.querySelector('.lvl-back.chest .card')?.click(); r.update(1 / 30); }
+    const chestPicked = !r.levelPending && r.chestQueue === 0 && JSON.stringify(r.skillLv) !== lvBefore;
+    // Nova: 1.5 s of invulnerability; gates add 3 kills of charge
+    r.nova = 1; P.invuln = 0; r.triggerNova(); const invuln = P.invuln;
+    r.nova = 0; r.gates.spawnPair([{ type: 'add', n: 5 }, { type: 'add', n: 10 }]);
+    const G = r.gates.pair.gates[0]; r.gates.choose(G);
+    const gateCharge = Math.round(r.nova * 300 / r.stats.novaMul);
+    // from 2:00 the better gate can be guarded
+    r.gates.despawn(); r.time = 150; const before = r.enemies.count; const rnd = Math.random; Math.random = () => 0.1;
+    r.gates.spawnPair(); Math.random = rnd;
+    const guards = r.enemies.count - before;
+    return { chestCards, chestPicked, invuln, gateCharge, guards };
+  });
+  check('relic chest: pick 1 of 3', s.chestCards === 3 && s.chestPicked, JSON.stringify(s));
+  check('nova: 1.5 s invulnerability', s.invuln >= 1.45, `invuln=${s.invuln}`);
+  check('gates: +3 kills of nova charge', s.gateCharge === 3, `charge=${s.gateCharge}`);
+  check('gates: better gate guarded from 2:00', s.guards >= 3, `guards=${s.guards}`);
+});
+check('run systems: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();
