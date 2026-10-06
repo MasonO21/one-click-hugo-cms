@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Sunup: a daily check-in for people who live alone</title>
+    <meta name="description" content="One tap every morning tells the people who love you that you're okay. Miss it, and they find out fast. Free to start." />
+    <meta property="og:title" content="If something happened to you today, who would know?" />
+    <meta property="og:description" content="Sunup is a one-tap morning check-in. Miss it, and the people you choose find out fast." />
+    <meta property="og:image" content="screens/today.webp" />
+    <meta name="theme-color" content="#FFF6EC" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="brand" href="welcome.html"><img src="icon-192.png" alt="" /> Sunup</a>
+        <a class="btn primary sm" href="./">Open Sunup</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap">
+          <div class="hero-copy">
+            <p class="eyebrow">For people who live alone, and everyone who worries about them</p>
+            <h1>If something happened to you today, who would know?</h1>
+            <p class="lead">
+              Sunup is a one-tap morning check-in. If you miss it, Sunup checks on you, then tells the people you chose, step by step, until someone
+              reaches you.
+            </p>
+            <div class="ctas">
+              <a class="btn primary" href="./">Start free</a>
+              <a class="btn" href="#how">How it works</a>
+            </div>
+            <p class="fine">Free daily check-in and SOS. Works in your phone's browser. No location tracking.</p>
+          </div>
+          <div class="phone"><img src="screens/today.webp" alt="Sunup's Today screen: a large sunrise button that says I'm up, with the check-in deadline and your circle's morning below." width="780" height="1628" /></div>
+        </div>
+      </section>
+
+      <section class="facts" aria-label="Who lives alone">
+        <div class="wrap">
+          <p class="fact"><strong>39.7M</strong><span>US households are one person living alone, a record 29.5%</span></p>
+          <p class="fact"><strong>15.8M</strong><span>of those are people 65 or older</span></p>
+          <p class="source">Source: U.S. Census Bureau, Current Population Survey, 2025. Living alone is common. Being unnoticed shouldn't be.</p>
+        </div>
+      </section>
+
+      <section class="block" id="how">
+        <div class="wrap">
+          <div class="block-head">
+            <p class="eyebrow">How it works</p>
+            <h2>Ten seconds a morning</h2>
+            <p>No tracking, no wearables, no cameras. Just a daily "I'm up" that the people who care about you can count on.</p>
+          </div>
+          <ol class="steps">
+            <li>
+              <h3>Pick your window</h3>
+              <p>Say, 7 to 10 AM. Early bird or late riser, weekdays or every day. Pause it when you're traveling with friends.</p>
+            </li>
+            <li>
+              <h3>Tap "I'm up"</h3>
+              <p>One tap and you're checked in. Add a mood, a line or a photo, and your circle gets a little postcard from your morning.</p>
+            </li>
+            <li>
+              <h3>Miss it, and we check</h3>
+              <p>A reminder, an alarm, a call to you. If you still don't answer, the people you chose get a text and a call.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="block night" aria-labelledby="ladder-title">
+        <div class="wrap split">
+          <div>
+            <div class="block-head">
+              <p class="eyebrow">If you miss your check-in</p>
+              <h2 id="ladder-title">From "Still with us?" to someone at your door</h2>
+              <p>Every step is timed from your deadline. Tap "I'm okay" at any point and everything stops, and anyone already alerted hears that you're fine.</p>
+            </div>
+            <ol class="timeline">
+              <li><time>0 min</time><div><strong>Reminder <span class="who you">you</span></strong><span>A notification: "Still with us?"</span></div></li>
+              <li><time>15 min</time><div><strong>Alarm <span class="who you">you</span></strong><span>An urgent alert and a text to your phone.</span></div></li>
+              <li><time>30 min</time><div><strong>Phone call <span class="who you">you</span></strong><span>An automated call asking you to check in.</span></div></li>
+              <li><time>40 min</time><div><strong>Your circle is alerted <span class="who">circle</span></strong><span>Texts and app alerts with your number, so they can call you.</span></div></li>
+              <li><time>60 min</time><div><strong>Calls, and your emergency info <span class="who">circle</span></strong><span>Sunup calls them, and releases your pet care, door code and meds to the people you chose.</span></div></li>
+              <li><time>90 min</time><div><strong>Wellness check <span class="who">circle</span></strong><span>If nobody has reached you, they're told how to get someone to your door.</span></div></li>
+            </ol>
+            <p class="note">Timings shown for Premium with a 30-minute grace period. The free plan reminds you, sounds an alarm, then alerts your circle.</p>
+          </div>
+          <div class="phone full"><img src="screens/missed.webp" alt="A missed check-in in Sunup: a large I'm okay button above the escalation steps, each with its time." width="780" height="1628" loading="lazy" /></div>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="circle-title">
+        <div class="wrap split flip">
+          <div class="phone full"><img src="screens/circle-alert.webp" alt="What a circle member sees when someone goes quiet: their number, Call and Text buttons, and the emergency info they shared." width="780" height="1628" loading="lazy" /></div>
+          <div>
+            <div class="block-head">
+              <p class="eyebrow">For the people who worry</p>
+              <h2 id="circle-title">Your kid moved to a new city. Your dad lives alone now.</h2>
+              <p>
+                Sunup gives you a quiet daily signal that they're okay, without tracking where they go. If the signal doesn't come, you'll know within the
+                hour, with what you need to act.
+              </p>
+            </div>
+            <ul class="checks">
+              <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>No app needed for family.</strong> Add anyone by phone number. They get a text to confirm, then texts and calls only if you go quiet.</span></li>
+              <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Watch over each other.</strong> Friends and family can share mornings both ways, with a feed of everyone's check-ins.</span></li>
+              <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>"I reached them."</strong> One tap tells everyone else to stand down.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="block tight" aria-labelledby="features-title">
+        <div class="wrap">
+          <div class="block-head">
+            <p class="eyebrow">Everything in Sunup</p>
+            <h2 id="features-title">Built for the quiet emergencies</h2>
+            <p>A fall in the shower. A bad reaction at 2 AM. A date that goes wrong. The danger is that nobody notices, so Sunup makes sure someone does.</p>
+          </div>
+          <div class="features">
+            <div class="feature"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg><h3>"If I go dark" packet</h3><p>Who feeds the dog, the door code, your medications. Sealed until an alert gets that far, then only released to the people you picked.</p></div>
+            <div class="feature"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg><h3>Moments</h3><p>Safety timers for first dates, runs, nights out and travel. Run out without checking in, and your circle gets the details you saved.</p></div>
+            <div class="feature"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/></svg><h3>SOS</h3><p>Hold one button to alert everyone at once, with your location if you choose. Free on every plan.</p></div>
+            <div class="feature"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2a9 9 0 0 1 9 9"/><path d="M13 6a5 5 0 0 1 5 5"/><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg><h3>Fake call</h3><p>A realistic incoming call when you need a polite reason to leave.</p></div>
+            <div class="feature"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg><h3>Away mode</h3><p>Staying with family or traveling with friends? Pause check-ins for a few days. SOS keeps working.</p></div>
+            <div class="feature"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.75 7.09a3 3 0 0 1 2.16 2.16"/><path d="M17.072 17.072c-1.634 2.17-3.527 3.912-4.471 4.727a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 1.432-4.568"/><path d="m2 2 20 20"/><path d="M8.475 2.818A8 8 0 0 1 20 10c0 1.183-.31 2.377-.81 3.533"/><path d="M9.13 9.13a3 3 0 0 0 3.74 3.74"/></svg><h3>No location tracking</h3><p>Sunup never follows you around. Your location is only shared if you send an SOS and say so.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block tight" id="pricing" aria-labelledby="pricing-title">
+        <div class="wrap">
+          <div class="block-head">
+            <p class="eyebrow">Pricing</p>
+            <h2 id="pricing-title">Free to start. Less than a coffee a week for the full net.</h2>
+          </div>
+          <div class="plans">
+            <div class="plan">
+              <h3>Free</h3>
+              <p class="price">$0</p>
+              <ul>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Daily check-in with postcards</li>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Reminder, alarm, then your circle is alerted</li>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Up to 2 people in your circle</li>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>SOS and away mode</li>
+              </ul>
+              <a class="btn" href="./">Start free</a>
+            </div>
+            <div class="plan best">
+              <h3>Premium</h3>
+              <p class="price">$9.99 <small>/ month, or $79.99 / year</small></p>
+              <ul>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Phone calls to you, then to your circle</li>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>"If I go dark" packet released during an alert</li>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Moments and fake call</li>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Unlimited circle, up to 3 check-ins a day</li>
+                <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Smart check-in when you open the app</li>
+              </ul>
+              <a class="btn primary" href="./">Try it free for 7 days</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block tight" aria-labelledby="faq-title">
+        <div class="wrap">
+          <div class="block-head">
+            <h2 id="faq-title">Questions</h2>
+          </div>
+          <div class="faq">
+            <details>
+              <summary>Is Sunup an emergency service?</summary>
+              <p>No. Sunup makes sure the people you trust find out when you've gone quiet. If you're in danger, call 911.</p>
+            </details>
+            <details>
+              <summary>Do the people in my circle need the app?</summary>
+              <p>No. Add anyone by phone number. They'll get one text asking them to reply YES, and after that they only hear from Sunup if you miss a check-in. With the app, they also see your daily postcards.</p>
+            </details>
+            <details>
+              <summary>What if I just forget to check in?</summary>
+              <p>You'll get a reminder and an alarm before anyone else is told, and you choose how long the grace period is (15, 30 or 60 minutes). If your circle was alerted, tapping "I'm okay" tells them right away.</p>
+            </details>
+            <details>
+              <summary>Does Sunup track my location?</summary>
+              <p>No. The only time your location is shared is when you send an SOS and leave "Include my location" on.</p>
+            </details>
+            <details>
+              <summary>Who can see my "If I go dark" packet?</summary>
+              <p>Nobody, until a missed check-in reaches the release step. Then only the people you marked can see it, and it seals again once you're okay.</p>
+            </details>
+            <details>
+              <summary>Can I cancel Premium?</summary>
+              <p>Any time, from the app. The daily check-in and SOS stay free forever.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing">
+        <div class="wrap">
+          <h2>Ten seconds tomorrow morning. Someone who'd notice.</h2>
+          <a class="btn primary" href="./">Start free</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>Sunup isn't an emergency service. If you're in danger, call 911.</p>
+        <nav aria-label="Legal"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a></nav>
+      </div>
+    </footer>
+  </body>
+</html>

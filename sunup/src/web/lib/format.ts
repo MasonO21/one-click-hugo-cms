@@ -76,3 +76,6 @@ export function initials(name: string): string {
 export function plural(n: number, word: string, many = `${word}s`): string {
   return `${n} ${n === 1 ? word : many}`;
 }
+
+/** The single-file demo ships without the website pages (terms, privacy, landing). */
+export const HAS_SITE = import.meta.env.VITE_SUNUP_SINGLE !== '1';

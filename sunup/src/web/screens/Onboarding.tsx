@@ -6,6 +6,7 @@ import { ApiError, type Api, type CodeSent, type InviteInfo } from '../store/api
 import { useStore } from '../store/StoreContext';
 import { Avatar, SunMark, Toggle } from '../components/ui';
 import { CodeInput } from '../components/CodeInput';
+import { HAS_SITE } from '../lib/format';
 
 const PRESETS = [
   { label: 'Early bird', start: '06:00', deadline: '09:00' },
@@ -117,7 +118,13 @@ export function Welcome({ api, invite, onSignedUp }: { api: Api; invite: InviteI
             </button>
           )}
           <p className="fine center">
-            Free daily check-in and SOS. No location tracking, ever. <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a>
+            Free daily check-in and SOS. No location tracking, ever.
+            {HAS_SITE && (
+              <>
+                {' '}
+                <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -329,7 +336,7 @@ export function Setup({ invite, inviteCode, onInviteHandled }: { invite: InviteI
       <form className="onboard step" onSubmit={saveCircle}>
         <p className="eyebrow">Step 3 of 4</p>
         <h1 className="display">Who should we tell if you go quiet?</h1>
-        <p className="muted">Add someone by phone. They don't need the app: Sunup texts them, then calls.</p>
+        <p className="muted">Add someone by phone. They don't need the app. We'll text them to confirm, and if you ever go quiet, Sunup texts them, then calls.</p>
         {snap.watchers.length > 0 && (
           <div className="invite-banner">
             <Users size={18} /> Already in your circle: {snap.watchers.map((w) => firstName(w.name)).join(', ')}

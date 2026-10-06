@@ -55,22 +55,38 @@ npm run check      # typecheck + tests
 
 ## Deploy
 
-Any Node host with a persistent disk works (Render, Railway, Fly.io, a VPS). Push notifications need HTTPS.
+Any Node host with a persistent disk works. Push notifications need HTTPS.
 
-```bash
-npm run build
-npm start
-```
+**Render (one click):** the repo root has a `render.yaml` blueprint. In Render, choose New > Blueprint, pick this repo and branch, and fill in the environment variables below. It runs on the Starter plan with a 1 GB disk for the data file.
 
-Or with Docker: `docker build -t sunup . && docker run -p 8787:8787 -v sunup-data:/data sunup`.
+**Anywhere else:** `npm run build && npm start`, or Docker: `docker build -t sunup . && docker run -p 8787:8787 -v sunup-data:/data sunup`.
 
 | Variable | Purpose |
 | --- | --- |
 | `PORT` | HTTP port (default 8787) |
-| `PUBLIC_URL` | The app's public URL, used in texts |
+| `PUBLIC_URL` | The app's public URL, e.g. `https://sunup.example.com`. Used in texts and webhooks. |
 | `DATA_DIR` | Where `sunup.json` is stored (default `./data`) |
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Real texts and calls. Without them, texts and calls are logged to the console. |
 | `VAPID_SUBJECT` | Contact for web push, e.g. `mailto:you@yourdomain.com`. VAPID keys are generated on first run and saved in the data file. |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Texts, calls and sign-in codes. Without them, texts and calls are logged to the console (and in development, sign-in codes are shown on screen). |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Paid subscriptions. Without them, Premium is a card-free 7-day trial. |
+
+### Twilio setup
+
+1. Buy a phone number that can send SMS and make calls, and put its number in `TWILIO_FROM`.
+2. In the number's settings, set "A message comes in" to a webhook: `PUBLIC_URL/api/twilio/sms` (HTTP POST). This is how contacts' YES / STOP / START replies reach Sunup. Requests are checked against Twilio's signature.
+3. For US texting, register the number for A2P 10DLC in the Twilio console (required by carriers).
+
+### Stripe setup
+
+1. Create a product "Sunup Premium" with two recurring prices: $9.99 monthly and $79.99 yearly. Put their price IDs in `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_YEARLY`.
+2. Add a webhook endpoint at `PUBLIC_URL/api/stripe/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated` and `customer.subscription.deleted`. Put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+3. Turn on the customer portal (Settings > Billing > Customer portal) so people can cancel or change plans from "Manage subscription".
+
+New subscribers get a 7-day trial through Checkout. Anyone who already used a trial is charged right away.
+
+## Website
+
+The server also serves the marketing site from `public/`: the landing page at `/welcome` (point ads here), plus `terms.html` and `privacy.html`. The terms and privacy pages are drafts: fill in the bracketed company details and have a lawyer review them.
 
 ## How it's built
 
@@ -80,21 +96,25 @@ src/shared/   The engine: schedules, time zones, the escalation ladder, circles,
 src/web/      React app (Vite). store/demo.ts runs the engine locally; store/server.ts
               talks to the API. Screens: Today, Circle, Moments, If I go dark, You.
 server/       Express API, JSON-file store, alert clock (ticks every 15s), web push,
-              Twilio texts and calls.
-tests/        Engine tests (time zones, ladder timing, limits, moments, SOS) and API tests.
-public/       PWA manifest, service worker (offline shell + push), icons.
+              Twilio texts and calls, phone sign-in codes, Stripe billing.
+tests/        Engine tests (time zones, ladder timing, limits, moments, SOS, consent),
+              API tests, and Twilio/Stripe tests against a recording fake.
+public/       PWA manifest, service worker (offline shell + push), icons, and the website
+              (landing page, terms, privacy, app screenshots).
 ```
 
 Every rule lives in `src/shared/service.ts`, so the demo and the server behave identically. The server exposes one `POST /api/action` endpoint that feeds the same validated actions into the engine.
 
+## Accounts and contacts
+
+- **Sign-in:** people sign up with their mobile number and a texted 6-digit code, and sign back in on any device the same way. A number can only be confirmed on one account. People can also skip the number, but then they can't sign back in.
+- **Contacts added by phone** get a consent text. YES confirms; STOP stops every text and call from Sunup (START turns them back on). The person who added them is told either way.
+
 ## Before a real launch
 
-This is a working prototype, not a finished product. Before charging money or promising safety to real people:
+This is a working prototype. Before charging money or promising safety to real people:
 
-- **Payments.** "Start free trial" works; subscribing needs Stripe (web) or RevenueCat (app stores) wired to `Sunup.setPlan`.
-- **Native apps.** iOS web push only works after "Add to Home Screen". Native iOS/Android apps are needed for reliable alarms (critical alerts), true smart check-in from phone activity, and app-store distribution. The engine and API can stay as they are.
-- **Accounts.** Sign-in is a device token. Add phone-number verification (SMS code) and account recovery.
-- **Messaging compliance.** US texting needs A2P 10DLC registration, and contacts added by phone should get an opt-in text before they're relied on.
+- **Native apps.** iOS web push only works after "Add to Home Screen". Native iOS/Android apps are needed for reliable alarms (critical alerts), true smart check-in from phone activity, and app-store distribution. Inside an iOS app, subscriptions must go through Apple's in-app purchase (RevenueCat is the usual shortcut); the engine's `applyBilling` already takes a provider's status.
 - **Wellness checks.** The last ladder step gives advice; a dispatch partner (e.g. a monitoring-center API) would let Sunup request in-person checks directly.
-- **Data.** Move from the JSON file to Postgres, and encrypt "If I go dark" packets at rest.
-- **Legal.** Clear terms that Sunup isn't an emergency service and can't guarantee delivery.
+- **Data.** Move from the JSON file to Postgres once there are more than a few thousand users, and encrypt "If I go dark" packets at rest.
+- **Legal.** Finish the draft terms and privacy policy with a lawyer, and confirm the texting consent flow with your SMS provider.

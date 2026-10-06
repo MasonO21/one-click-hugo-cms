@@ -292,6 +292,8 @@ export function createApp(options: AppOptions) {
 
   if (options.staticDir && existsSync(join(options.staticDir, 'index.html'))) {
     const dir = options.staticDir;
+    // The landing page ads point at.
+    app.get('/welcome', (_req, res) => res.sendFile(join(dir, 'welcome.html')));
     app.get('/sw.js', (_req, res) => {
       res.set('Cache-Control', 'no-cache');
       res.sendFile(join(dir, 'sw.js'));

@@ -9,7 +9,7 @@ import { Avatar, PremiumBadge, Sheet, Toggle } from '../components/ui';
 import { Ladder } from '../components/Ladder';
 import { CodeInput } from '../components/CodeInput';
 import type { CodeSent } from '../store/api';
-import { ago, when } from '../lib/format';
+import { HAS_SITE, ago, when } from '../lib/format';
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -308,6 +308,12 @@ export function You() {
 
       <p className="fine center legal">
         Sunup is not an emergency service and can't guarantee a message is delivered. If you're in danger, call 911.
+        {HAS_SITE && (
+          <>
+            <br />
+            <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a>
+          </>
+        )}
       </p>
 
       <ProfileSheet open={editing} onClose={() => setEditing(false)} />
