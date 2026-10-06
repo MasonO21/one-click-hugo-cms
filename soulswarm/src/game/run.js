@@ -13,11 +13,14 @@ import { Weapons } from './weapons.js';
 import { Pickups } from './pickups.js';
 import { Gates } from './gates.js';
 import { Boss } from './boss.js';
+import { Hazards } from './hazards.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
-import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS } from './data.js';
+import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
+const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
+const CHAPTER_NAMES = CHAPTERS.map((c) => c.name);
 const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
@@ -87,6 +90,12 @@ export class Run {
     this.hintsShown = {};
     this.tutorial = !this.profile.flags.tutorialDone;
     this.minionLightIdx = 0;
+    // chapter identity (CHAPTERS[].mods; Endless rotates it by depth), ground hazards, Witch lobs, Ghoul packs
+    this.mods = chapterMods(chapter); this.modDepth = 0; this.modBannerAt = 0.6;
+    this.eliteTimes = (!this.endless && this.mods.elites) || ELITE_TIMES;
+    this.packAcc = 0; this.packN = 0;
+    this.hazards = new Hazards(this);
+    this.projectiles.initLobs();
     this.resize(engine.w, engine.h);
     this.camPos.copy(this.desiredCam());
   }
@@ -128,10 +137,26 @@ export class Run {
       : m < 3 ? [0.55, 0.25, 0, 0.1, 0.1]
       : m < 4 ? [0.45, 0.2, 0.13, 0.12, 0.1]
       : [0.4, 0.2, 0.17, 0.13, 0.1];
-    const types = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
-    let r = Math.random();
-    for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return types[i]; }
+    // chapter modifiers re-weight the mix (e.g. Ember Wastes ×1.8 Witches)
+    const mul = this.mods.weights;
+    let total = 0;
+    if (mul) for (let i = 0; i < 5; i++) { w[i] *= mul[TYPES[i]] || 1; total += w[i]; }
+    let r = Math.random() * (mul ? total : 1);
+    for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return TYPES[i]; }
     return 'husk';
+  }
+
+  /** Ghouls arrive in packs from one direction (almost always ahead), each member flanking at its own angle across ±flank. */
+  spawnPack(n) {
+    const P = this.player, G = ENEMIES.ghoul;
+    let c = this.spawnPoint();
+    for (let k = 0; k < 2 && (c.x - P.x) * P.vx + (c.z - P.z) * P.vz < 0; k++) c = this.spawnPoint();
+    const ax = c.x - P.x, az = c.z - P.z, l = Math.hypot(ax, az) || 1, px = -az / l, pz = ax / l;
+    for (let i = 0; i < n && this.enemies.count < this.maxEnemies; i++) {
+      const u = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;
+      const e = this.spawnEnemy('ghoul', { at: { x: c.x + px * u * 1.8 + (Math.random() - 0.5) * 0.6, z: c.z + pz * u * 1.8 + (Math.random() - 0.5) * 0.6 } });
+      if (e) e.flank = -u * G.flank; // the left of the pack swings left, the right swings right
+    }
   }
 
   spawnPoint(bias = true) {
@@ -156,19 +181,40 @@ export class Run {
   director(dt) {
     const m = this.minute;
     if (!this.bossSpawned) {
+      // Endless: each depth (Gravemaw kill) rotates the chapter modifiers; announce once the depth banner has played
+      if (this.endless && this.modDepth !== this.bossKills) {
+        this.modDepth = this.bossKills;
+        this.mods = chapterMods(this.chapter, this.modDepth);
+        this.hazards.setMods(this.mods);
+        this.modBannerAt = this.time + 3;
+      }
+      if (this.modBannerAt && this.time >= this.modBannerAt) {
+        this.modBannerAt = 0;
+        const src = this.endless ? this.chapter.mods.rotate[this.modDepth % this.chapter.mods.rotate.length] - 1 : -1;
+        const title = !this.endless ? this.chapter.name.toUpperCase() : this.modDepth ? 'THE ABYSS SHIFTS' : 'ENDLESS ABYSS';
+        if (this.mods.tag) this.ui.banner(title, src >= 0 ? `${CHAPTER_NAMES[src]}: ${this.mods.tag}` : this.mods.tag, 'ember');
+      }
       const rate = (1.1 + 0.85 * m + 0.22 * m * m) * this.chapter.rate;
       this.spawnAcc = Math.min(6, this.spawnAcc + rate * dt);
       while (this.spawnAcc >= 1) {
         this.spawnAcc -= 1;
-        if (this.enemies.count < this.maxEnemies) this.spawnEnemy(this.pickType());
+        if (this.enemies.count >= this.maxEnemies) continue;
+        const t = this.pickType();
+        if (t !== 'ghoul') { this.spawnEnemy(t); continue; }
+        // Ghouls bank up and arrive as a pack, so the mix per enemy stays the same
+        const pk = this.mods.pack || ENEMIES.ghoul.pack;
+        if (!this.packN) this.packN = pk[0] + Math.floor(Math.random() * (pk[1] - pk[0] + 1));
+        if (++this.packAcc >= this.packN) { this.spawnPack(this.packN); this.packAcc = this.packN = 0; }
       }
       if (this.time >= this.nextGate) { this.nextGate += 40; this.gates.spawnPair(); }
       if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
-      const eliteDue = this.eliteIdx < ELITE_TIMES.length ? this.time >= ELITE_TIMES[this.eliteIdx]
+      const times = this.eliteTimes;
+      const eliteDue = this.eliteIdx < times.length ? this.time >= times[this.eliteIdx]
         : this.endless && this.time >= this.nextElite;
       if (eliteDue) {
         const t = ['husk', 'brute', 'witch', 'brute'][this.eliteIdx++ % 4];
-        if (this.eliteIdx >= ELITE_TIMES.length) this.nextElite = this.time + 70;
+        // Endless keeps them coming; a modifier set with more elites (Crimson Throne) shortens the gap
+        if (this.eliteIdx >= times.length) this.nextElite = this.time + 70 * ELITE_TIMES.length / (this.mods.elites || ELITE_TIMES).length;
         this.spawnEnemy(t, { elite: true });
         this.ui.banner('ELITE', 'A gilded horror has risen. It carries a Relic Chest!', 'gold');
         this.audio.sfx('warning', { volume: 0.5 });
@@ -589,6 +635,7 @@ export class Run {
     this.input.dispose();
     this.gates.dispose();
     this.boss.dispose();
+    this.hazards.dispose(); this.projectiles.disposeLobs(); // also restores the fog vignette
     for (const sys of [this.player, this.enemies, this.legion, this.projectiles, this.weapons, this.pickups, this.world]) sys.dispose();
     this.particles.points.geometry.dispose(); this.particles.material.dispose();
     this.glow.points.geometry.dispose(); this.glow.material.dispose();

@@ -131,6 +131,130 @@ errs = await session(async (page) => {
 });
 check('economy: no runtime errors', !errs.length, errs[0] || '');
 
+// ---------------------------------------------------------------- 6. Horde behaviours and chapter identities
+// Frame-stepped staged checks: the enemy signature moves (Ghoul lunge, Brute slam, Witch lob), the chapter
+// modifiers (Ch2 burning ground, Ch3 ice, Ch4 vignette, Ch5 elites, Endless rotation) and the Bulwark taunt
+// contract (run.legion.taunters / hitMinion), using a fake taunter so it runs before the Legion branch lands.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, prof = app.profile, post = app.engine.post;
+    app.engine.manual = true;
+    prof.flags.tutorialDone = true; prof.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+    // a quiet arena: no director spawns, gates, swarms, elites, weapons or level-ups; the Shepherd stands still
+    const start = (ch) => {
+      if (app.run) app.exitRun();
+      prof.energy = 30; prof.chapter.unlocked = 6; app.startRun(ch);
+      const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0;
+      r.weapons.update = () => {}; r.addXp = () => {}; r.player.invuln = 0; r.input.tx = r.input.tz = 0;
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const near = (r, type, dx, dz) => { const e = r.enemies.spawn(type, r.player.x + dx, r.player.z + dz, { hpMul: 50 }); e.spawnT = 1; return e; };
+    const out = {};
+
+    // Ghoul: crouch at 3 m (0.4 s), lunge at ~11 m/s along the locked direction, recover
+    let r = start(1), P = r.player;
+    const g = near(r, 'ghoul', 2.6, 0);
+    const states = new Set(); let crouch = 0, vmax = 0;
+    for (let i = 0; i < 45; i++) { r.update(1 / 30); states.add(g.state); if (g.state === 1) crouch += 1 / 30; if (g.state === 2) vmax = Math.max(vmax, Math.hypot(g.vx, g.vz)); }
+    out.lunge = { states: [...states].sort().join(''), crouch: +crouch.toFixed(2), vmax: +vmax.toFixed(1) };
+
+    // Brute: cone telegraph for the full 1.0 s wind-up, then 1.4× damage with knockback
+    r = start(1); P = r.player;
+    const b = near(r, 'brute', 0, -1.9);
+    let hp0 = P.hp, windAt = -1, hitAt = -1, cone = false, knock = 0;
+    for (let i = 0; i < 60 && hitAt < 0; i++) {
+      r.update(1 / 30);
+      if (b.state === 1 && windAt < 0) windAt = r.time;
+      if (r.hazards.teles.some((t) => t.owner === b)) cone = true;
+      if (P.hp < hp0) { hitAt = r.time; knock = Math.hypot(P.kx, P.kz); }
+    }
+    out.slam = { cone, delay: +(hitAt - windAt).toFixed(3), dmg: +(hp0 - P.hp).toFixed(1), want: +(b.dmg * 1.4).toFixed(1), knock: +knock.toFixed(1) };
+
+    // Witch: the lob lands where its telegraph circle sits, after a 1.0 s flight, for its damage (no fire in Ch1)
+    r = start(1); P = r.player;
+    const w = near(r, 'witch', 0, -7); w.shootCd = 0;
+    r.update(1 / 30);
+    const L = r.projectiles.lobs[0], tele = L && r.hazards.teles.find((t) => t.kind === 0);
+    const at = L ? { x: L.tx, z: L.tz } : { x: NaN, z: NaN };
+    hp0 = P.hp; let frames = 0;
+    while (L && r.projectiles.lobs.includes(L) && frames < 60) { r.update(1 / 30); frames++; }
+    out.lob = { thrown: !!L, tele: !!tele && Math.hypot(tele.x - at.x, tele.z - at.z) < 0.01, off: L ? +Math.hypot(L.x - at.x, L.z - at.z).toFixed(3) : -1,
+      flight: +(frames / 30).toFixed(2), dmg: +(hp0 - P.hp).toFixed(1), want: +w.dmg.toFixed(1), burns: r.hazards.burns.length };
+
+    // Ch2: a landed lob leaves burning ground that hurts while the Shepherd stands in it
+    r = start(2); P = r.player;
+    const w2 = near(r, 'witch', 0, -7); w2.shootCd = 0;
+    step(r, 1.2);
+    const patch = r.hazards.burns[0];
+    P.invuln = 0; hp0 = P.hp;
+    step(r, 1.0);
+    out.burn = { patches: r.hazards.burns.length, dps: patch ? +patch.dps.toFixed(2) : 0, lost: +(hp0 - P.hp).toFixed(2) };
+
+    // Ch3: on an ice patch the Shepherd takes far longer to reach speed
+    r = start(3); P = r.player;
+    const H = r.hazards, ring5 = [[0, 0], [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5]];
+    const find = (want) => { for (let R = 3; R < 90; R += 0.5) for (let a = 0; a < 6.28; a += 0.15) { const x = Math.cos(a) * R, z = Math.sin(a) * R; if (ring5.every(([u, v]) => H.iceAt(x + u, z + v) === want)) return { x, z }; } return null; };
+    const iceSpot = find(true), dry = find(false);
+    const speedAfter = (p) => { P.x = p.x - 0.4; P.z = p.z; P.vx = P.vz = 0; r.input.tx = 1; step(r, 0.2); r.input.tx = 0; return Math.hypot(P.vx, P.vz); };
+    const vIce = iceSpot ? speedAfter(iceSpot) : -1, onIce = P.onIce, vDry = dry ? speedAfter(dry) : -1;
+    out.ice = { found: !!iceSpot && !!dry, onIce, vIce: +vIce.toFixed(2), vDry: +vDry.toFixed(2), ch1: (start(1), app.run.hazards.iceAt(iceSpot ? iceSpot.x : 0, iceSpot ? iceSpot.z : 0)) };
+
+    // Ch4: a tighter fog vignette during the run, restored afterwards
+    r = start(4);
+    const vigIn = post.uVignette.value;
+    app.exitRun();
+    out.vignette = { during: vigIn, after: post.uVignette.value };
+
+    // Ch5 schedules 8 elites; Ch1 keeps 4
+    const elitesBy300 = (ch) => {
+      const rr = start(ch); rr.eliteIdx = 0; let n = 0;
+      const sp = rr.spawnEnemy.bind(rr); rr.spawnEnemy = (t, o = {}) => { if (o.elite) n++; return sp(t, o); };
+      for (let t = 0; t <= 300; t += 0.5) { rr.time = t; rr.director(0); }
+      return n;
+    };
+    out.elites = { ch5: elitesBy300(5), ch1: elitesBy300(1) };
+
+    // Endless: the modifier set rotates Ch2 → Ch3 → … with each Gravemaw kill
+    r = start(6);
+    const d1 = r.mods.burn ? 'ch2' : '?';
+    r.bossKills = 1; r.director(0);
+    out.endless = { d1, d2: r.mods.ice ? 'ch3' : '?' };
+
+    // Taunt: inert without taunters (undefined or empty) …
+    r = start(1); P = r.player;
+    let calls = 0; r.legion.hitMinion = () => { calls++; };
+    const h1 = near(r, 'husk', 5, 0);
+    r.legion.taunters = undefined; step(r, 0.5);
+    r.legion.taunters = []; step(r, 0.5);
+    out.inert = { calls, approach: +Math.hypot(h1.x - P.x, h1.z - P.z).toFixed(2) };
+    r.enemies.clearAll(false);
+    // … and with a (fake) taunter in range, enemies steer to it and hit it instead of the Shepherd
+    const fake = { x: P.x + 7, z: P.z, hp: 100, vx: 0, vz: 0 };
+    let hits = 0; r.legion.hitMinion = (m, dmg) => { hits++; m.hp -= dmg; };
+    r.legion.taunters = [fake];
+    const h2 = near(r, 'husk', 9, 1);
+    hp0 = P.hp; P.invuln = 0;
+    step(r, 2.5);
+    out.taunt = { toTaunter: +Math.hypot(h2.x - fake.x, h2.z - fake.z).toFixed(2), toShepherd: +Math.hypot(h2.x - P.x, h2.z - P.z).toFixed(2), hits, fakeHp: +fake.hp.toFixed(1), shepherdHurt: +(hp0 - P.hp).toFixed(1) };
+    app.exitRun();
+    return out;
+  });
+  const { lunge, slam, lob, burn, ice, vignette, elites, endless, inert, taunt } = s;
+  check('horde: Ghoul crouches 0.4 s, lunges ~11 m/s, recovers', lunge.states === '0123' && lunge.crouch >= 0.36 && lunge.crouch <= 0.45 && lunge.vmax >= 9.5, JSON.stringify(lunge));
+  check('horde: Brute slam hits for 1.4× after its 1.0 s wind-up', slam.cone && slam.delay >= 0.99 && Math.abs(slam.dmg - slam.want) < 0.6 && slam.knock > 3, JSON.stringify(slam));
+  check('horde: Witch lob lands on its telegraph after 1.0 s', lob.thrown && lob.tele && lob.off < 0.01 && lob.flight >= 0.99 && Math.abs(lob.dmg - lob.want) < 0.6 && lob.burns === 0, JSON.stringify(lob));
+  check('horde: Ch2 burning ground hurts', burn.patches >= 1 && burn.lost >= burn.dps * 0.5, JSON.stringify(burn));
+  check('horde: Ch3 ice slows Shepherd acceleration', ice.found && ice.onIce && ice.vIce > 0 && ice.vIce < ice.vDry * 0.75 && !ice.ch1, JSON.stringify(ice));
+  check('horde: Ch4 vignette tightens, restored after', vignette.during > 1 && Math.abs(vignette.after - 0.85) < 1e-6, JSON.stringify(vignette));
+  check('horde: Ch5 spawns 8 elites (Ch1 keeps 4)', elites.ch5 === 8 && elites.ch1 === 4, JSON.stringify(elites));
+  check('horde: Endless rotates chapter modifiers by depth', endless.d1 === 'ch2' && endless.d2 === 'ch3', JSON.stringify(endless));
+  check('horde: taunt is inert without taunters', inert.calls === 0 && inert.approach < 3.5, JSON.stringify(inert));
+  check('horde: taunt pulls enemies onto a taunter', taunt.toTaunter < 1 && taunt.hits >= 1 && taunt.fakeHp < 100 && taunt.shepherdHurt === 0, JSON.stringify(taunt));
+});
+check('horde: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

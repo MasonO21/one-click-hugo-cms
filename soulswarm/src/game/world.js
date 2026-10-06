@@ -7,7 +7,8 @@ const CELL = 6.5;
 const RANGE = 5; // cells around the centre
 const PER_TYPE = 70;
 
-function hash2(x, y, s = 0) {
+/** Deterministic 0..1 hash of an integer cell (also places ground hazards in hazards.js). */
+export function hash2(x, y, s = 0) {
   let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
