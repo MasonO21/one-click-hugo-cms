@@ -508,10 +508,14 @@
       const next = DATA.wyrm.stages.find((s) => s.from > L);
       body += `<div class="wyrm-head">${wyrmCanvas()}<div><div class="wyrm-name">${esc(S.wyrm.name)}</div><div class="chip" style="color:var(--gold)">${esc(st.name)}</div><p class="muted small">${next ? `Next form at Lv ${next.from}` : 'Final form'}</p></div></div>`;
       body += `<p class="muted">${esc(b.desc)}</p>`;
+      if (KH.wyrmTop) body += KH.wyrmTop(R);
       body += wyrmControls(R) + effectRows(pid) + upgradeHTML(pid);
     } else {
       if (locked) body += `<p class="notice heat">Unlocks when your Rainwyrm reaches Lv ${p.unlock}.</p>`;
       body += `<p class="muted">${esc(b.desc)}</p>`;
+      // raiders on the way: the defense card comes first
+      const raidFirst = L && type === 'watchtower' && KH.raidNear && KH.raidNear();
+      if (raidFirst) body += KH.raidInfo();
       if (L && b.prod) body += workerControls(pid, R);
       if (L && type === 'shelter') body += `<p class="notice good">${S.pop} survivors housed across ${KH.housing()} beds${S.sick ? `, ${S.sick} sick` : ''}.</p>`;
       if (L && type === 'well') body += `<p class="notice ${R.net.water < 0 ? 'heat' : 'good'}">The keep drinks ${perMin(R.thirst).replace('+', '')} and ${esc(S.wyrm.name)} drinks ${perMin(R.burn).replace('+', '')}. Net ${perMin(R.net.water)}.</p>`;
@@ -523,7 +527,7 @@
       if (L && type === 'barracks') body += trainingHTML();
       if (L && type === 'archive') body += researchHTML();
       if (L && KH.plotExtras[type]) body += KH.plotExtras[type](pid, R);
-      if (L && type === 'watchtower') body += `${KH.raidInfo ? KH.raidInfo() : ''}<div class="section-label">What the lookouts see</div>${forecastHTML()}`;
+      if (L && type === 'watchtower') body += `${KH.raidInfo && !raidFirst ? KH.raidInfo() : ''}<div class="section-label">What the lookouts see</div>${forecastHTML()}`;
     }
     return { title: plotName(pid), lvl: L ? `Lv ${L}` : locked ? 'Locked' : 'Not built', body };
   }

@@ -12,8 +12,9 @@
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
   // Rain Lore research: faster recharge, longer showers
-  const rainDur = (L) => DATA.rain.duration(L) + 2 * ((S && S.tech.rainlore) || 0);
-  const rainCd = (L) => Math.round(DATA.rain.cooldown(L) * (1 - 0.04 * ((S && S.tech.rainlore) || 0)));
+  // (and the Rainwyrm's bond: a longer shower, a faster recharge)
+  const rainDur = (L) => DATA.rain.duration(L) + 2 * ((S && S.tech.rainlore) || 0) + KH.bonus('rainDur');
+  const rainCd = (L) => Math.round(DATA.rain.cooldown(L) * Math.max(0.5, 1 - 0.04 * ((S && S.tech.rainlore) || 0) - KH.bonus('rainCd')));
 
   KH.hooks.defaults.push((s) => {
     s.keep = {

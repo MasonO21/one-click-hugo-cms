@@ -731,6 +731,21 @@
         T.hits.push({ kind: 'incident', x, y, r: r + 10 });
       }
     }
+    // the Rainwyrm's wish: a thought bubble beside its head
+    if (KH.bondWish && KH.bondWish()) {
+      const p = at('wyrm');
+      if (p) {
+        const x = p.x + 34 * p.s, y = p.y - 24 * p.s + Math.sin(t * 2) * 3, r = 14 * p.s;
+        ctx.fillStyle = 'rgba(255,244,248,.92)';
+        ell(p.x + 12 * p.s, p.y - 6 * p.s, 3 * p.s, 3 * p.s); ctx.fill();
+        ell(p.x + 21 * p.s, p.y - 13 * p.s, 4.6 * p.s, 4.6 * p.s); ctx.fill();
+        ctx.fillStyle = 'rgba(40,20,6,.25)'; ell(x, y + 2, r * 1.3, r * 1.05); ctx.fill();
+        ctx.fillStyle = '#fff4f8'; ell(x, y, r * 1.3, r * 1.05); ctx.fill();
+        ctx.strokeStyle = '#d0587e'; ctx.lineWidth = 1.6; ell(x, y, r * 1.3, r * 1.05); ctx.stroke();
+        ctx.fillStyle = '#d0587e'; heart(x, y + 1, 5.5 * p.s * (1 + 0.08 * Math.sin(t * 4)));
+        T.hits.push({ kind: 'wish', x, y, r: r + 10 });
+      }
+    }
   }
   function rainStreaks(t, k) {
     ctx.fillStyle = `rgba(40,70,100,${0.2 * k})`; ctx.fillRect(0, 0, VW, VH);
@@ -969,11 +984,13 @@
       if (kind === 'collect') ACT.collect(arg);
       else if (kind === 'incident') { KH.sfx('tap'); ACT.incident(); }
       else if (kind === 'merchant') { KH.sfx('tap'); ACT.merchant(); }
+      else if (kind === 'wish') { KH.sfx('tap'); KH.bondTap(); }
       KH.save();
       KH.renderAll(true);
       return;
     }
     if (pid === 'merchant') { KH.sfx('tap'); ACT.merchant(); KH.renderAll(true); return; }
+    if (pid === 'channels') { KH.sfx('tap'); ACT.channels(); KH.renderAll(true); return; }
     if (pid !== 'wyrm' && S.lv.wyrm < PLOT[pid].unlock) {
       KH.toast(`The ${KH.plotName(pid)} unlocks at Rainwyrm Lv ${PLOT[pid].unlock}.`, 'heat');
       return;

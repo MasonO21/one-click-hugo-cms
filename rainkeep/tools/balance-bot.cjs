@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups)
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -101,6 +101,18 @@ const HOURS = Number(process.argv[3] || 8);
         if (WHALE && S.spentUsd < CAP && S.time - lastBig > 7200) { lastBig = S.time; buy('warchest'); buy('sg6'); }
         for (const [l] of D.growthFund) A.growth(l);
         A.stipend();
+        // raiders sighted: boil water for the walls when the cisterns can spare it
+        if (KH.raidNear && KH.raidNear() && !S.map.raid.pour && !NO.includes('raidprep')) { const c = KH.scaleReward(D.world.raids.pour); if (S.res.water > c.water * 4) A.raidpour(); }
+        // the Rainwyrm's wishes: feed it and pet it when it asks (the rest come from normal play)
+        if (S.bond && S.bond.wish && !NO.includes('bond')) { if (S.bond.wish.id === 'dates') A.bondfeed(); else if (S.bond.wish.id === 'pet') A.pet(); }
+        // Channels: a player who keeps up with the water puzzles, three stars each
+        const CHN = KH.channels;
+        if (CHN && CHN.unlocked() && !NO.includes('channels')) {
+          for (let n = 1; n <= CHN.open(); n++) if (!S.chan.stars[n]) CHN.autoSolve(n, 3);
+          if (S.chan.daily !== KH.u.today()) CHN.autoSolve('daily', 3);
+          D.channels.starChests.forEach((c, i) => A.chanchest(i));
+          UI.sheet = null;
+        }
         if (PAYS) A.patronchest();
         // spare Starglass (every mode, so spend levels compare like for like): crates for whatever the next
         // Rainwyrm level (and the buildings it needs) is short of, then speedups on long builds, keeping a reserve

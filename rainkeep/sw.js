@@ -22,7 +22,7 @@ const NETWORK_TIMEOUT_MS = 4000;
 
 const SHELL = [
   'index.html', 'style.css', 'data.js', 'audio.js', 'native.js', 'core.js', 'art2d.js', 'ui.js',
-  'vendor/three.min.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'world3d.js',
+  'vendor/three.min.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'world3d.js',
   'manifest.webmanifest', 'icon.svg',
   'fonts/el-messiri-latin-500-normal.woff2', 'fonts/el-messiri-latin-600-normal.woff2', 'fonts/el-messiri-latin-700-normal.woff2',
   'fonts/barlow-semi-condensed-latin-400-normal.woff2', 'fonts/barlow-semi-condensed-latin-500-normal.woff2',

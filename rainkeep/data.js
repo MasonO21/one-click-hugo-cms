@@ -830,6 +830,7 @@ const DATA = {
     { id: 'duel', text: 'Fight 3 Dune Duels', n: 3, pts: 15 },
     { id: 'spire', text: 'Clear a Mirage Spire floor', n: 1, pts: 10 },
     { id: 'gear', text: "Forge the Warden's Gear 3 times", n: 3, pts: 10 },
+    { id: 'channel', text: 'Solve a channel puzzle', n: 1, pts: 10 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1 }],
@@ -851,6 +852,62 @@ const DATA = {
   ],
 
   // ---------- Achievements ----------
+  // ---------- The Rainwyrm's bond ----------
+  // Every few minutes the wyrm wants something. Granting a wish adds bond points; each bond level
+  // adds a small lasting perk. Wishes you miss simply fade. {n} is the wyrm's name.
+  bond: {
+    unlock: 2, // Rainwyrm level
+    every: [300, 600], // seconds between wishes
+    lasts: 1500, // a wish fades after this long
+    levels: [0, 40, 100, 180, 280, 400, 540, 700, 880, 1080],
+    reward: { journals: 1 }, // each granted wish, scaled to the keep
+    wishes: [
+      { id: 'rain', text: '{n} wants to feel the rain on its scales.', how: 'Call the Rain', ev: 'rain', need: 1, pts: 25, act: 'rain', label: 'Call the Rain', needs: (S) => S.lv.wyrm >= 3 },
+      { id: 'pet', text: '{n} keeps nudging your hand with its nose.', how: 'Pet {n} three times', ev: 'pet', need: 3, pts: 12, act: 'pet', label: 'Pet' },
+      { id: 'dates', text: '{n} is hungry for fresh dates.', how: 'Feed {n} dates from the stores', feed: { food: 2 }, need: 1, pts: 18 },
+      { id: 'downpour', text: '{n} wants to stretch and breathe a Downpour.', how: 'Keep the mist on Downpour for 30 seconds', mist: 'high', need: 30, pts: 12, act: 'mist', arg: 'high', label: 'Downpour' },
+      { id: 'tale', text: '{n} wants to hear what lies out on the Dunes.', how: 'Bring home a gathering march', ev: 'gatherDone', need: 1, pts: 20, go: 'world', label: 'To the Dunes', needs: (S) => S.quest >= 12 },
+      { id: 'splash', text: '{n} wants to splash in the old channels.', how: 'Solve a channel puzzle', ev: 'channel', need: 1, pts: 20, act: 'channels', label: 'Open Channels', needs: (S) => S.lv.wyrm >= 2 },
+      { id: 'storm', text: '{n} wants to watch a storm roll past, safe in its spring.', how: 'Ride out a sandstorm or heatwave', ev: 'stormEnd', need: 1, pts: 22 },
+      { id: 'battle', text: '{n} wants a story of a battle won.', how: 'Win an expedition battle', ev: 'stage', need: 1, pts: 18, go: 'world', label: 'To the expedition' },
+      { id: 'friend', text: '{n} wants to meet someone new.', how: 'Recruit a hero', ev: 'pull', need: 1, pts: 15, go: 'heroes', label: 'To the Beacon' },
+      { id: 'build', text: '{n} likes to watch the builders work.', how: 'Finish an upgrade', ev: 'upgrade', need: 1, pts: 15 },
+      { id: 'surplus', text: '{n} wants to see the keep busy.', how: 'Collect 3 surplus bubbles', ev: 'surplus', need: 3, pts: 15 },
+      { id: 'forge', text: "{n} loves the forge's glow.", how: "Forge the Warden's Gear", ev: 'gear', need: 1, pts: 20, go: 'plot:forge', label: 'To the Forge', needs: (S) => S.lv.forge > 0 },
+      { id: 'spire', text: '{n} wants to see the Mirage Spire shimmer.', how: 'Clear a Mirage Spire floor', ev: 'spire', win: true, need: 1, pts: 20, go: 'world', label: 'To the Spire', needs: (S) => S.stage > 30 },
+    ],
+    // a lasting perk for each bond level from 2 (bonus keys, read through KH.bonus)
+    perks: [
+      null,
+      { key: 'mult_water', val: 0.04, text: '+4% water from the wells' },
+      { key: 'cool', val: 0.5, text: '+0.5°C of cooling over the keep' },
+      { key: 'rainCd', val: 0.08, text: 'Call the Rain recharges 8% faster' },
+      { key: 'prod', val: 0.03, text: '+3% production' },
+      { key: 'breath', val: 0.1, text: "+10% Rainwyrm's breath in battle" },
+      { key: 'wishx', val: 1, text: 'Granted wishes pay double' },
+      { key: 'mult_water', val: 0.06, text: '+6% more water from the wells' },
+      { key: 'rainDur', val: 6, text: 'Call the Rain lasts 6 seconds longer' },
+      { key: 'prod', val: 0.05, text: '+5% more production, and a bond-light over the spring' },
+    ],
+  },
+
+  // ---------- Channels: the water puzzle ----------
+  // Turn the stone channel pieces until the spring's water reaches every hut, palm and field with
+  // nothing spilling. Puzzles are generated from their number, so every player gets the same Channel 12.
+  channels: {
+    unlock: 2, // Rainwyrm level
+    base: 8, perLevel: 4, // puzzles open: base, then 4 more for every Rainwyrm level after unlock
+    // from puzzle n: columns, rows, share of rock cells
+    sizes: [[1, 4, 4, 0], [4, 4, 5, 0], [11, 5, 5, 0.04], [21, 5, 6, 0.06], [36, 6, 6, 0.08], [56, 6, 7, 0.08], [81, 7, 8, 0.1]],
+    // first clear (resources in quarter-crates, scaled to the keep)
+    reward: (n) => (n % 10 === 0 ? { starglass: 60, water: 2 } : n % 5 === 0 ? { starglass: 25, stone: 2 } : { water: 2, food: 1 }),
+    daily: { size: [6, 7, 0.08], reward: { starglass: 60, journals: 6, water: 4 } },
+    hintsPerDay: 3,
+    starChests: [
+      [12, { starglass: 80, speed15: 2 }], [30, { beacons: 2, water: 4 }], [54, { starglass: 150, speed60: 1 }], [84, { shard_epic: 1, journals: 10 }],
+      [120, { starglass: 250, rainCharm: 1 }], [160, { beacons: 4, stone: 6 }], [200, { shard_epic: 1, starglass: 300 }], [240, { shard_legendary: 1 }],
+    ],
+  },
   achievements: [
     { id: 'h3', text: 'Raise a Whelp', stat: 'wyrm', n: 3, reward: { starglass: 50 } },
     { id: 'h6', text: 'Raise a Drake to Lv 6', stat: 'wyrm', n: 6, reward: { starglass: 100 } },
@@ -892,6 +949,10 @@ const DATA = {
     { id: 'duel50', text: 'Win 50 Dune Duels', stat: 'duelWins', n: 50, reward: { starglass: 250 } },
     { id: 'gear100', text: "Raise the Warden's Gear to 100 levels in all", stat: 'gear', n: 100, reward: { sunsteel: 800 } },
     { id: 'smelt5k', text: 'Smelt 5,000 Sunsteel', stat: 'smelted', n: 5000, reward: { starglass: 300 } },
+    { id: 'chan20', text: 'Clear 20 channel puzzles', stat: 'chanClears', n: 20, reward: { starglass: 120 } },
+    { id: 'chan150', text: 'Earn 150 channel stars', stat: 'chanStars', n: 150, reward: { starglass: 300 } },
+    { id: 'bond5', text: 'Reach bond Lv 5 with your Rainwyrm', stat: 'bond', n: 5, reward: { starglass: 150 } },
+    { id: 'bond10', text: 'Reach bond Lv 10 with your Rainwyrm', stat: 'bond', n: 10, reward: { starglass: 400 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------
@@ -982,7 +1043,9 @@ const DATA = {
     campStageBonus: 3,
     campScale: 1.25,
     campRespawn: 600,
-    raids: { fromWyrm: 5, every: [900, 1300], warn: 90 },
+    // raids: rain when they arrive weakens them; boiling water poured from the walls (quarter-crates of
+    // water, scaled) steadies the defenders
+    raids: { fromWyrm: 5, every: [900, 1300], warn: 90, rainWeaken: 0.2, pour: { water: 3 }, pourBonus: 0.2 },
   },
 
   // ---------- Incidents in the keep ----------

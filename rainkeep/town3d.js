@@ -109,7 +109,7 @@
   }
   T3.groundAt = groundAt;
 
-  let renderer, scene, cam, sun, hemi, sky, terrain, wyrm, mist, dust, fx, aura, cloud, rain, bolt, skyriver, nextBolt = 0;
+  let renderer, scene, cam, sun, hemi, sky, terrain, wyrm, mist, dust, fx, bondFx, aura, cloud, rain, bolt, skyriver, nextBolt = 0;
   let VW = 0, VH = 0, DPR = 1, fitD = 60;
   const plots = {};
   const props = [];
@@ -167,6 +167,10 @@
     dust = A.particles(520, { color: '#f0c98a', opacity: 0.6 });
     fx = A.particles(90, { color: '#ffe08a', additive: true });
     scene.add(mist, dust, fx);
+    // bond Lv 10: motes of light circling the spring
+    bondFx = A.particles(28, { color: '#ffb6dc', additive: true });
+    bondFx.visible = false;
+    scene.add(bondFx);
     for (const p of DATA.plots) {
       const l = K.plots[p.id];
       const g = new THREE.Group();
@@ -204,6 +208,7 @@
       camels.push({ c, off: i * 1.9 + (i === 2 ? 14 : 0), speed: 1.1 + i * 0.06 });
     }
     buildMerchant();
+    buildRaiders();
     // rain: streaks falling through a box that follows the camera's target
     const n = 900, rg = new THREE.BufferGeometry();
     rg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 6), 3));
@@ -448,6 +453,17 @@
     const r = route(CHANNEL);
     const water = ribbon(r.pts, 0.62, 0.05, A.waterMat({ alpha: 0.92, shallow: '#4fd4d0' }));
     scene.add(water);
+    // tapping the channel opens the Channels puzzle
+    for (let i = 0; i < r.pts.length - 6; i += 6) {
+      const p = r.pts[i], q = r.pts[i + 6], len = Math.hypot(q.x - p.x, q.z - p.z);
+      const pr = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.7, len), new THREE.MeshBasicMaterial());
+      pr.position.set((p.x + q.x) / 2, 0.3, (p.z + q.z) / 2);
+      pr.rotation.y = Math.atan2(q.x - p.x, q.z - p.z);
+      pr.visible = false;
+      pr.userData.pid = 'channels';
+      scene.add(pr);
+      hit.push(pr);
+    }
     const g = new THREE.Group();
     // stone curbs on both banks
     for (const s of [-1, 1]) {
@@ -510,7 +526,57 @@
     scene.add(g);
     merchant = g;
   }
-  let merchant = null, showers = null, flashAt = -9;
+  let merchant = null, showers = null, flashAt = -9, raiders = null;
+  // Scorpion raiders: a band that crosses the dunes toward the gate while the watchtower has them in sight
+  function buildRaiders() {
+    const g = new THREE.Group(), list = [];
+    const robe = '#2e1e1a', wrap = '#b8331c';
+    const flameM = new THREE.MeshStandardMaterial({ color: '#ffb040', emissive: '#ff8020', emissiveIntensity: 2.2 });
+    // wedge formation: [side offset, back offset]
+    const spots = [[0, 0], [-1.1, 1.0], [1.1, 1.0], [-2.2, 2.0], [0, 2.0], [2.2, 2.0], [-1.1, 3.0], [1.1, 3.0], [-3.2, 3.2], [3.2, 3.2]];
+    spots.forEach(([sx, sz], i) => {
+      const o = A.person(300 + i, { robe, wrap });
+      o.scale.setScalar(1.25);
+      if (i === 1 || i === 2 || i === 7) {
+        const torch = A.grp(A.cyl(0.03, 0.035, 0.8, A.mat(A.P.woodD), 0.22, 0.35, 0.1, 5), A.sph(0.1, flameM, 0.22, 1.2, 0.1, 6));
+        o.add(torch);
+      }
+      g.add(o);
+      list.push({ o, sx, sz, ph: i * 1.7 });
+    });
+    for (let i = 0; i < 2; i++) {
+      const c = A.camel(320 + i, { cloth: '#5a1a1a', load: false });
+      c.scale.setScalar(0.9);
+      g.add(c);
+      list.push({ o: c, sx: i ? 3.6 : -3.6, sz: 0.6, ph: i * 3, camel: true });
+    }
+    const flag = A.banner('#4a1410', 2.6, 0.75, 0.5);
+    g.add(flag);
+    list.push({ o: flag, sx: 0.4, sz: 1.2, ph: 0, flag: true });
+    g.visible = false;
+    scene.add(g);
+    raiders = { g, list, flame: flameM };
+  }
+  const RAID_FROM = new V3(-12, 0, 36), RAID_TO = new V3(0, 0, 19.2);
+  function animRaiders(t) {
+    const k = KH.raidProgress ? KH.raidProgress() : null;
+    raiders.g.visible = k != null;
+    if (k == null) return;
+    const e = smooth(0, 1, k);
+    const hx = RAID_TO.x - RAID_FROM.x, hz = RAID_TO.z - RAID_FROM.z, hl = Math.hypot(hx, hz);
+    const fx = hx / hl, fz = hz / hl, ry = Math.atan2(fx, fz);
+    // a little curve through the dunes
+    const cx = lerp(RAID_FROM.x, RAID_TO.x, e) + Math.sin(e * Math.PI) * 4, cz = lerp(RAID_FROM.z, RAID_TO.z, e);
+    for (const r of raiders.list) {
+      const x = cx + -fz * r.sx - fx * r.sz, z = cz + fx * r.sx - fz * r.sz;
+      const walking = k < 0.995;
+      r.o.position.set(x, landH(x, z) + (walking && !r.camel && !r.flag ? Math.abs(Math.sin(t * 6 + r.ph)) * 0.06 : 0), z);
+      r.o.rotation.y = r.flag ? ry - Math.PI / 2 : ry;
+      if (r.camel && walking) A.walkCamel(r.o, t + r.ph, 0.8);
+      if (r.flag) r.o.userData.update(t, T3.wind || 1);
+    }
+    raiders.flame.emissiveIntensity = 1.8 + 0.7 * Math.sin(t * 13) * Math.sin(t * 7.3);
+  }
   KH.on('rain', () => { flashAt = performance.now(); });
 
   function tower(r, h, m, roof) {
@@ -1191,6 +1257,14 @@
     // element aura and the Primordial rain cloud
     aura.visible = !!wyrm.elem && !S.dormant;
     if (aura.visible) { aura.material.color.set(wyrm.elem.color); aura.material.opacity = 0.45 + 0.3 * Math.sin(t * 2); aura.scale.setScalar(1 + 0.02 * Math.sin(t * 1.3)); }
+    bondFx.visible = !!(KH.bondLevel && KH.bondLevel() >= 10 && !S.dormant);
+    if (bondFx.visible) {
+      bondFx.userData.list.forEach((p, i) => {
+        const a = t * 0.25 + (i / 28) * Math.PI * 2, rr = 4.3 + Math.sin(t * 0.7 + i) * 0.5;
+        Object.assign(p, { x: SPRING.x + Math.cos(a) * rr, y: SPRING.y + 1.3 + Math.sin(t * 1.3 + i * 1.7) * 0.6, z: SPRING.z + Math.sin(a) * rr, s: 2.6 + 0.9 * Math.sin(t * 3 + i), a: 1, life: 2, age: 1 });
+      });
+      bondFx.userData.flush();
+    }
     cloud.visible = rain.visible = wyrm.stage >= 6 && !S.dormant;
     if (cloud.visible) {
       cloud.position.set(SPRING.x + (wyrm.headWorld.x - SPRING.x) * 0.6, wyrm.headWorld.y + 2.2 + Math.sin(t * 0.7) * 0.15, SPRING.z + (wyrm.headWorld.z - SPRING.z) * 0.5 - 0.6);
@@ -1228,6 +1302,7 @@
     animParticles(t, dt);
     animRain(rdt);
     merchant.visible = !!(KH.keep && KH.keep.merchantHere());
+    animRaiders(t);
     // highlight rings: the current quest target and the plot whose sheet is open
     const qp = UI.questTarget && plotPos[UI.questTarget];
     ringSel.quest.visible = !!qp && !(UI.sheet && UI.sheet.kind === 'plot');

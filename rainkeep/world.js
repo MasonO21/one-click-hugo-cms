@@ -321,30 +321,47 @@
   const RD = W.raids;
   const warnTime = () => RD.warn + 10 * S.lv.watchtower + 30 * (S.tech.mirrors || 0) + KH.bonus('forecast') / 2;
   KH.raidNear = () => !!S && S.lv.wyrm >= RD.fromWyrm && S.map.raid.next > 0 && S.map.raid.next - S.time <= warnTime() && S.map.raid.next > S.time;
+  // how far the sighted raiders have come (0 just sighted, 1 at the gate), for the 3D keep
+  KH.raidProgress = () => (KH.raidNear() ? clamp(1 - (S.map.raid.next - S.time) / warnTime(), 0, 1) : null);
   function raidFoe() {
     const st = Math.max(2, Math.min(S.stage * 0.9, S.lv.wyrm * 3));
     return { n: Math.round(st), name: 'Scorpion Raiders', cls: pick(['guard', 'bow', 'lancer']), boss: false, chapter: 'Raid', ...KH.foeStats(st, 1.1) };
   }
+  // ready the walls while raiders are sighted: rain turns the approach to mud, boiling water steadies the walls
+  const rainingNow = () => !!(KH.keep && KH.keep.raining());
+  ACT.raidpour = () => {
+    if (!KH.raidNear()) return KH.toast('No raiders in sight.', 'warn');
+    if (S.map.raid.pour) return KH.toast('The cauldrons are already steaming on the walls.', '');
+    const cost = KH.scaleReward(RD.pour);
+    if (!KH.canAfford(cost)) return KH.toast('Not enough water to spare for the walls.', 'warn');
+    KH.pay(cost);
+    S.map.raid.pour = true;
+    KH.sfx('build');
+    KH.toast('Cauldrons of boiling water stand ready on the walls.', 'good');
+  };
   function resolveRaid() {
     const foe = raidFoe();
-    const wt = 0.03 * S.lv.watchtower;
+    const wet = rainingNow(), pour = !!S.map.raid.pour;
+    if (wet) for (const k of ['atk', 'def', 'hp']) foe[k] *= 1 - RD.rainWeaken;
+    S.map.raid.pour = false;
+    const wt = 0.03 * S.lv.watchtower + (pour ? RD.pourBonus : 0);
     const team = KH.teamStats(foe.cls, { troops: { ...S.troops }, atkBonus: wt, defBonus: wt });
     const result = KH.simulateBattle(team, foe);
-    let rewards = null, extra = '';
+    let rewards = null, extra = [wet ? 'The rain turned the dunes to mud under their feet.' : '', pour ? 'Boiling water poured from the walls.' : ''].filter(Boolean).join(' ');
     if (result.win) {
       rewards = KH.scaleReward({ stone: 2, food: 2, copper: 1 });
       KH.grant(rewards);
       S.stats.raidsRepelled++;
       KH.emit('raidRepelled');
       S.map.raid.last = { win: true, t: S.time };
-      extra = 'The raiders scatter into the dunes, dropping what they carried.';
+      extra = `${extra ? `${extra} ` : ''}The raiders scatter into the dunes, dropping what they carried.`;
     } else {
       const prot = KH.protectOf(), stolen = {};
       for (const r of KH.RES) { const n = Math.floor(Math.max(0, S.res[r] - prot) * 0.15); if (n > 0) { S.res[r] -= n; stolen[r] = n; } }
       let lost = 0;
       for (const k in S.troops) { const l = Math.round(S.troops[k] * 0.1); S.troops[k] -= l; lost += l; }
       S.map.raid.last = { win: false, t: S.time, stolen, lost };
-      extra = `They made off with ${Object.entries(stolen).map(([k, v]) => `${fmt(v)} ${k}`).join(', ') || 'nothing'}${lost ? ` and ${lost} troops fell` : ''}. A bigger Storehouse protects more.`;
+      extra = `${extra ? `${extra} ` : ''}They made off with ${Object.entries(stolen).map(([k, v]) => `${fmt(v)} ${k}`).join(', ') || 'nothing'}${lost ? ` and ${lost} troops fell` : ''}. A bigger Storehouse protects more.`;
       KH.mail('Raiders broke into the keep', extra);
     }
     KH.emit('battle', { kind: 'raid', win: result.win, foe });
@@ -357,7 +374,11 @@
     if (S.lv.wyrm < RD.fromWyrm) return `<p class="muted small">Raiders start testing your walls once your Rainwyrm reaches Lv ${RD.fromWyrm}.</p>`;
     const near = KH.raidNear();
     const last = S.map.raid.last;
-    return `<div class="card stack"><b>${near ? `Raiders arrive in ${fmtTime(S.map.raid.next - S.time)}` : 'No raiders sighted'}</b>
+    const rainLeft = KH.keep && KH.keep.rainLeft ? KH.keep.rainLeft() : 0;
+    const prep = near ? `<div class="row wrap">${S.map.raid.pour ? '<span class="chip r-epic">Cauldrons ready (+20%)</span>' : `<button class="btn small" data-act="raidpour">Boil water for the walls · ${icon('i-water')}${fmt(KH.scaleReward(RD.pour).water)}</button>`}
+        ${rainingNow() ? '<span class="chip r-epic">Raining: raiders 20% weaker</span>' : KH.keep && S.lv.wyrm >= DATA.rain.unlock ? (rainLeft > 0 ? `<span class="chip">Rain in ${fmtTime(rainLeft)}</span>` : '<button class="btn small" data-act="rain">Call the Rain on them</button>') : ''}</div>
+        <div class="muted small">If it is raining when they arrive, the raiders fight 20% weaker. Boiling water from the wells gives your defenders +20% attack and defense for this raid.</div>` : '';
+    return `<div class="card stack"><b>${near ? `Raiders arrive in ${fmtTime(S.map.raid.next - S.time)}` : 'No raiders sighted'}</b>${prep}
       <div class="muted small">Your defenders are every troop at home plus your squad. Each Watchtower level steadies them by 3% and spots raiders 10s sooner. Troops out gathering can't defend. The Storehouse protects ${fmt(KH.protectOf())} of each resource.</div>
       ${last ? `<div class="small ${last.win ? 'r-epic' : ''}">Last raid: ${last.win ? 'repelled' : 'they broke through'}.</div>` : ''}</div>`;
   };
