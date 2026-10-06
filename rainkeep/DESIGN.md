@@ -2,7 +2,7 @@
 
 **Pitch:** The rain stopped a generation ago. Raise the last Rainwyrm, a water dragon whose cooling mist keeps a desert keep alive, and dig the wells that keep your people drinking. Rainkeep is a 3D survival city-builder with heroes, expeditions and alliances, aimed at the same audience as Whiteout Survival, with the survival game that its ads promise kept at the center of play.
 
-This document covers what the game in this folder (version 3.0) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
+This document covers what the game in this folder (version 3.1) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
 
 ---
 
@@ -35,7 +35,7 @@ These six pillars are all in the game. Each one answers a complaint above.
 3. **Survival that stays real all game.** Water has two jobs: survivors drink it and the wyrm breathes it as cooling mist. Weather is forecast ahead of time (Dust Haze, Sandstorm, Heatwave), and the sun "hunts water", so every time the wyrm grows, storms run hotter. Middays run hotter and desert nights run cold, so the right mist changes through the day. Players choose the mist (Drizzle, Steady, Downpour), trading water for cooling, and from Lv 6 can let an Attuned wyrm set it for them. From Lv 3 the wyrm can **Call the Rain**: a short shower on a long recharge that refills the wells, cools the keep and calms a sandstorm, so the big storm of the day becomes a decision about when to spend it. Heat makes survivors sick, the Healer's House treats them, and in a Scorching keep the sick can be lost. If the cisterns run dry, the wyrm sleeps and families leave to find water elsewhere.
 4. **A real 3D keep and world.** The keep and the Dunes are 3D scenes, not static backdrops: buildings change shape as they level up, villagers carry water jars between the well and their work, camels circle the walls, palms sway harder in a sandstorm, lanterns come on at night, and caravans visibly cross the Dunes. You can orbit and zoom. This is the screenshot and the ad.
 5. **Heroes matter at home, not just in fights.** Every hero can be stationed as a Steward of one building (Bashir boosts the wells, Halima speeds healing, Zahra cools the keep). Collecting heroes improves your keep as well as your squad, which deepens the gacha without adding more combat power. The cast is illustrated, diverse and original.
-6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 3.0 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
+6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 3.1 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
 
 ### Naming and IP
 
@@ -49,13 +49,13 @@ Every few minutes: settle a keep incident → trade with a visiting merchant →
 Session (5-10 min): claim quest → clear an expedition stage → level heroes → recruit → strike the Colossus
                    → climb a Mirage Spire floor → spend Duel tickets → forge the Warden's Gear
 Day:               gift calendar, daily duties, patrol cache, Oasis Stipend, Caravan help and donations
-Event (20 min*):   Rain Festival → Beast Hunt → Builder's Rush → Oasis Wars, on rotation
+Event (20 min*):   Rain Festival → Beast Hunt → Forge Festival → Builder's Rush → Spire Rush → Oasis Wars, on rotation
 Duel season (3 h*): climb the ladder, earn Glory by rank, slip back and climb again
 Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burning Line
 ```
 *Game time. Timers and rates run about 30× faster than a typical live-service game.
 
-### Systems in version 3.0
+### Systems in version 3.1
 
 | System | What it does | Where |
 |---|---|---|
@@ -70,11 +70,12 @@ Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burnin
 | Recruitment | Published odds, 40-pull Legendary pity, 10-pull Epic guarantee, featured hero rotating each event, shard pouches | `DATA.recruit` |
 | Expedition | 100 stages in 10 chapters and two acts, 20 bosses, two endings ("The Rains", "The Long Rains"), the endless Burning Line from stage 101, patrol cache | `DATA.chapters` |
 | Trials | Mirage Spire: endless floors from stage 30, a rule twist on each floor (heat, sandstorm, glass floor, mirage, rising tide), a Warden every tenth floor, first-clear rewards. Dune Duels: 1,000-rank simulated ladder, tickets that refill with play, three challengers, rank milestones, 3-hour seasons, Glory shop | `trials.js`, `DATA.spire`, `DATA.duels` |
-| The Dunes | Seeded 21×21 map, dust haze, gathering caravans, beasts, raider camps, 12 story ruins with choices, raids on the keep | `world.js`, `world3d.js` |
+| The Dunes | Seeded 21×21 map, dust haze, gathering caravans, beasts, raider camps, 12 story ruins with choices, raids on the keep; in Act II flooded oases (twice the water), Sunsteel veins and Saltborn Hives (tougher camps that pay Sunsteel) appear on top of the Act I layout | `world.js`, `world3d.js` |
 | Caravan | 3 alliances, AI members who help timers, 5 Caravan techs, donations, points shop, gift chests, reactive chat, Colossus raid | `caravan.js` |
-| Meta | 71 chapter quests, 17 daily duties + chests, 7-day gift calendar, 40 achievements, mail, backpack, 4 rotating events including Oasis Wars | `events.js` |
+| Meta | 71 chapter quests, 17 daily duties + chests, 7-day gift calendar, 40 achievements, mail, backpack, 6 rotating events including Oasis Wars (Forge Festival and Spire Rush fall back to older events until the Forge and Spire are open) | `events.js` |
 | Season pass | 30-tier free and premium Ledger with two skins | `DATA.pass` |
-| Store | Starter offer, monthly card, pass, growth fund, daily kit, value chest, Starglass, skins, crates | `DATA.shop`, `native.js` |
+| Store | Starter offer, monthly card, pass, growth fund, daily kits, value chest, Starglass, skins, crates | `DATA.shop`, `native.js` |
+| Patron program | 10 levels from lifetime spend (100 points per $1) plus 15 points a day for visiting; production, build and research speed, free finishes, offline bank, smelting, Duel ticket slots, daily chest; no combat stats | `patron.js`, `DATA.patron` |
 | Polish | Procedural audio on a Hijaz scale, haptics, notifications, tutorial pointer, save codes, offline play, bundled fonts | `audio.js`, `native.js`, `sw.js` |
 
 ## 4. Monetization
@@ -94,7 +95,7 @@ Target: match the genre's spending ladder while putting more of the spend into b
 | Warden's War Chest: Starglass, tokens and a Legendary Shard Pouch | $19.99 | High-value anchor for heavier spenders |
 | Caravan gift chests | n/a | Every purchase by a Caravan member sends everyone a small gift: social proof that spending helps the group |
 | Hero-specific banners and event packs *(live ops)* | $4.99 to $99.99 | High-spender depth, tied to live events |
-| VIP levels from lifetime spend *(planned)* | n/a | Convenience perks; never PvP stats |
+| Patron program: 10 levels from lifetime spend (100 points per $1, 15 for each daily visit) | n/a | The genre's VIP ladder. Each level adds production, build speed, free finishes, a longer offline bank, faster smelting or Duel ticket slots, plus a daily chest. The Founder's Cache unlocks Patron 1, $10 reaches Patron 3, $40 Patron 5 and $1,000 Patron 10. Never combat stats, so Duels and Oasis Wars stay fair |
 
 **Pricing anchors in the game:** a single recruit costs 150 Starglass. The $9.99 pack buys about 4.7 recruits, and a 10-pull costs 1,350 Starglass, about $19. That is in line with genre norms; tune it in soft launch.
 
@@ -114,9 +115,9 @@ Target: match the genre's spending ladder while putting more of the spend into b
 5. **Returning-veteran onboarding.** Skip-tutorial for experienced 4X players and a "Warden's Welcome" catch-up event for anyone who joins a server late.
 6. **Creator program** with mid-size strategy and Whiteout Survival YouTubers and streamers at soft launch. Give them early access, custom wyrm skins and Caravan-founder codes.
 
-## 6. From 3.0 to a live multiplayer game
+## 6. From 3.1 to a live multiplayer game
 
-Version 3.0 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
+Version 3.1 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
 
 - **Real Caravans:** shared help requests, donations and Colossus raids backed by a server, plus chat with moderation.
 - **Shared Dunes:** one map per server, where caravans can meet rival keeps.
@@ -129,7 +130,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 
 | Phase | Goal | Typical team / time |
 |---|---|---|
-| Version 3.0 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
+| Version 3.1 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
 | Live multiplayer | Hand-authored hero art and wyrm animation pass, server-authoritative backend, real Caravans, shared Dunes, analytics | 6-12 people, 4-6 months |
 | Soft launch | 1-3 test markets (commonly Canada, Australia, Philippines). Hit retention and payer gates before scaling spend | 15-30 people, 3-6 months |
 | Global launch | Paid user acquisition at scale, live ops, alliances and PvP | 30-80+ people, ongoing |
@@ -140,7 +141,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 - A payer conversion rate of a few percent in the first 30 days
 - Projected 180-day revenue per install above cost per install with margin. 4X installs in tier-1 markets commonly cost well into double-digit dollars
 
-**What a live backend adds that 3.0 doesn't have:** accounts and cloud saves (3.0 has on-device saves and save codes), server-authoritative timers and economy (3.0 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
+**What a live backend adds that 3.1 doesn't have:** accounts and cloud saves (3.1 has on-device saves and save codes), server-authoritative timers and economy (3.1 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
 
 **Performance.** The 3D scenes are built for phones: static geometry is merged per material so a fully built keep is a few hundred draw calls, there is one shadow-casting light, the shadow map drops to 1024 px on small screens, the pixel ratio is capped at 2, and rendering stops whenever the tab is hidden or another screen is open. Players on older devices can switch 3D off in Settings; the 2D renderer plays the same game.
 
@@ -189,7 +190,7 @@ Other measured outcomes:
 - **Every resource is used.** Building costs draw on stone, water (mudbrick and mortar), food and copper from level 3 up. The Forge turns late-game stone into Sunsteel. Copper is the late-game constraint; food piles up for training and donations.
 - **Nights matter.** Desert nights run 7°C colder and middays 2°C hotter, so a wyrm left on Steady wastes water after dark. Attuned mist drizzles at night and pours before storms. That alone saves enough water to speed the free player's story by about a tenth.
 - **Keep life rewards attention.** An always-attentive player gets about 15% more output from surplus bubbles and 10-15% more water from showers. Incidents roughly break even, and merchants turn surplus food into journals, Rain Charms and the scarce resource.
-- **Old saves carry over.** Saves from 2.0 and 2.1 load into 3.0 at the same chapter quest (quests added since are stepped over). A finished 2.x game continues straight into the Act II quests, and a save already in the Burning Line becomes Act II progress.
+- **Old saves carry over.** Saves from 2.0 and 2.1 load into 3.1 at the same chapter quest (quests added since are stepped over). A finished 2.x game continues straight into the Act II quests, and a save already in the Burning Line becomes Act II progress.
 - **No errors** across all automated runs.
 
 ## 9. Next steps

@@ -20,10 +20,11 @@ A complete desert water-survival strategy game for phones, in 3D. The rain stopp
 | **Heroes** | 22 illustrated heroes in 3 rarities and 3 classes (4 arrive with Act II), levels, stars from duplicates, skills that grow with stars, Steward posts that boost buildings, recruitment with published odds, a 40-pull Legendary guarantee and a rotating featured hero |
 | **Expedition** | 100 story stages in 10 chapters and two acts, with 20 bosses, chapter story cards and two endings ("The Rains" and "The Long Rains"), then the endless Burning Line. A patrol cache pays out while you're away |
 | **Trials** | The **Mirage Spire**: a tower of single fights from stage 30, each floor with a twist (heat, sandstorm, glass floor, mirage, rising tide) and a Warden every tenth floor. The **Dune Duels**: a 1,000-rank ladder of rival wardens with tickets, three challengers at a time, rank rewards, seasons and a Glory shop |
-| **The Dunes** | A seeded 21×21 world map whose dust haze recedes as the wyrm grows: resource nodes and gathering caravans, beasts, Scorpion raider camps, and 12 story ruins whose choices change what you bring home |
+| **The Dunes** | A seeded 21×21 world map whose dust haze recedes as the wyrm grows: resource nodes and gathering caravans, beasts, Scorpion raider camps, and 12 story ruins whose choices change what you bring home. In Act II the springs flood, Sunsteel veins surface on the washed-out sand and Saltborn Hives rise far from the keep |
 | **Caravan** | Three simulated alliances to choose from: members help your timers, fund 5 Caravan techs, send gift chests, chat and react to what happens, and fight a Colossus raid boss with you on a timer |
-| **Meta** | 71 chapter quests, 17 daily duties with 5 chests, a 7-day gift calendar, 40 achievements, mail, a 30-tier season pass, a backpack with speedups, crates and shard pouches, and 4 rotating events including **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket |
+| **Meta** | 71 chapter quests, 17 daily duties with 5 chests, a 7-day gift calendar, 40 achievements, mail, a 30-tier season pass, a backpack with speedups, crates and shard pouches, and 6 rotating events (Rain Festival, Beast Hunt, Forge Festival, Builder's Rush, Spire Rush and **Oasis Wars**, a leaderboard against 9 rival keeps matched by spending bracket) |
 | **Store** | Founder's Cache, Oasis Stipend, Ledger Premium, Growth Fund, Sandstorm Kit, Forge Kit, War Chest, Starglass packs, wyrm skins and supply crates. Purchases are simulated on the web and go through Apple/Google in the app build |
+| **Patron program** | Ten Patron levels from lifetime spend (and a few points for each daily visit): more production, faster building and smelting, free finishes on short timers, a longer offline bank, extra Duel ticket slots and a daily chest. Never combat stats |
 | **Polish** | Procedural music on a Hijaz scale, desert wind and spring ambience and sound effects (no audio files), haptics, a quest-driven tutorial pointer, notifications in the app build, save codes to move progress between devices, offline play when hosted, bundled fonts |
 
 Caravan members and Oasis Wars rivals are simulated, so the whole game works offline with no server. DESIGN.md explains what a live multiplayer version would add.
@@ -57,6 +58,7 @@ Progress saves in the browser. Settings (gear icon) has sound toggles, the 3D gr
 | `keep.js` | Keep life: Call the Rain, surplus bubbles, keep incidents, travelling merchants, timed boosts |
 | `forge.js` | The Sunsteel Forge: smelting, Warden's Gear and its panel |
 | `trials.js` | The Mirage Spire and the Dune Duels |
+| `patron.js` | The Patron program: levels, perks, daily chest and the Store card |
 | `caravan.js` | The simulated alliance: help, tech, shop, gifts, chat, Colossus raid |
 | `audio.js` | Procedural Web Audio engine (`KHAudio`) |
 | `native.js` | App-store bridge (`KHNative`): RevenueCat purchases, notifications, haptics, sharing, service worker |
