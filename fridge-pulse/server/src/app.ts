@@ -183,7 +183,10 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     return fail(c, 429, 'rate_limited', day.ok ? 'Too many requests. Please wait a minute.' : 'You have reached today\'s limit. Try again tomorrow.');
   }
 
-  /** A call that failed on our side (the AI service was down) does not use up the person's allowance. */
+  /**
+   * A call that failed on our side (the AI service was down or too slow) does not use up the
+   * person's allowance, and neither does one they cancelled before it answered.
+   */
   function refund(c: Context<Env>, bucket: keyof typeof BURST_PER_MINUTE, e: unknown) {
     if (e instanceof UpstreamError && e.kind === 'refused') return;
     const userId = c.get('userId');
@@ -221,7 +224,7 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     if (blocked) return blocked;
 
     try {
-      const out = await claude.scan(req);
+      const out = await claude.scan(req, c.req.raw.signal);
       return c.json(out);
     } catch (e) {
       refund(c, 'scan', e);
@@ -243,7 +246,7 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     if (blocked) return blocked;
 
     try {
-      const out = await claude.meals(parsed.data);
+      const out = await claude.meals(parsed.data, c.req.raw.signal);
       return c.json(out);
     } catch (e) {
       refund(c, 'meals', e);
@@ -270,7 +273,7 @@ export function createApp({ config, claude, entitlements, pictures = noPictures,
     if (blocked) return blocked;
 
     try {
-      const report = await claude.identify(req);
+      const report = await claude.identify(req, c.req.raw.signal);
       return c.json(await withPictures(report, pictures));
     } catch (e) {
       refund(c, 'identify', e);

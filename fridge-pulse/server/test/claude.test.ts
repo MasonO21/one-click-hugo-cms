@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import Anthropic from '@anthropic-ai/sdk';
 import { countryFromLocale, createClaude, IDENTIFY_MAX_SEARCHES, UpstreamError } from '../src/claude.js';
@@ -296,5 +298,62 @@ describe('countryFromLocale', () => {
     assert.equal(countryFromLocale('fr_CA'), 'CA');
     assert.equal(countryFromLocale('en'), null);
     assert.equal(countryFromLocale(undefined), null);
+  });
+});
+
+describe('claude service deadlines and hang-ups (real SDK against an API that never answers)', () => {
+  let server: Server;
+  let baseURL = '';
+  let opened = 0;
+  let closed = 0;
+
+  before(async () => {
+    server = createServer((req, res) => {
+      opened += 1;
+      res.on('close', () => (closed += 1));
+      req.resume();
+    });
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    baseURL = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+  after(async () => {
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
+  });
+
+  // Retries on, as in production: the deadline has to hold across them.
+  const svc = (deadlines: { scan?: number; meals?: number; identify?: number }) =>
+    createClaude({ model: 'claude-opus-5-5', scanEffort: 'medium', mealsEffort: 'low', client: new Anthropic({ apiKey: 'test-key', baseURL, maxRetries: 2 }), deadlines });
+  const settled = async () => {
+    for (let i = 0; i < 50 && closed < opened; i += 1) await new Promise((r) => setTimeout(r, 10));
+  };
+
+  it('gives up at the deadline with a clear message instead of waiting out the SDK’s timeout and retries', async () => {
+    opened = 0;
+    closed = 0;
+    const started = Date.now();
+    await assert.rejects(svc({ meals: 300 }).meals(mealsReq), (e: unknown) => e instanceof UpstreamError && e.kind === 'unavailable' && /took too long/.test(e.message));
+    assert.ok(Date.now() - started < 3000);
+    await settled();
+    assert.equal(opened, 1);
+    assert.equal(closed, 1, 'the connection to the API is closed');
+  });
+
+  it('stops the model call as soon as the phone hangs up', async () => {
+    opened = 0;
+    closed = 0;
+    const phone = new AbortController();
+    setTimeout(() => phone.abort(), 100);
+    const started = Date.now();
+    await assert.rejects(svc({}).scan(scanReq, phone.signal), (e: unknown) => e instanceof UpstreamError && e.kind === 'unavailable' && /cancelled/.test(e.message));
+    assert.ok(Date.now() - started < 3000);
+    await settled();
+    assert.equal(closed, opened);
+  });
+
+  it('a lookup’s deadline covers all of its rounds', async () => {
+    opened = 0;
+    await assert.rejects(svc({ identify: 300 }).identify(identifyReq), (e: unknown) => e instanceof UpstreamError && /took too long/.test(e.message));
+    assert.equal(opened, 1);
   });
 });

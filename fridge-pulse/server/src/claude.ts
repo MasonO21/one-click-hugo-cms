@@ -34,12 +34,24 @@ export class UpstreamError extends Error {
   }
 }
 
+/**
+ * `signal` is the phone's request: when it hangs up (the person cancelled, left the screen or the
+ * app gave up waiting) the model call stops too.
+ */
 export interface ClaudeService {
-  scan(req: ScanRequest): Promise<ScanOutput>;
-  meals(req: MealsRequest): Promise<MealsOutput>;
+  scan(req: ScanRequest, signal?: AbortSignal): Promise<ScanOutput>;
+  meals(req: MealsRequest, signal?: AbortSignal): Promise<MealsOutput>;
   /** Looks one unrecognised item up on the web. An empty list means no confident match. */
-  identify(req: IdentifyRequest): Promise<ReportFood>;
+  identify(req: IdentifyRequest, signal?: AbortSignal): Promise<ReportFood>;
 }
+
+/**
+ * How long each kind of call may take, retries included. Each is below the app's own wait for that
+ * request (src/lib/api.ts: 90 s scan, 60 s meals, 120 s lookup) with room for uploading photos and,
+ * for a lookup, finding pictures afterwards, so the person sees "took too long" rather than a
+ * connection error while the call carries on here.
+ */
+export const DEADLINES_MS = { scan: 75_000, meals: 50_000, identify: 100_000 } as const;
 
 /** Web searches allowed per lookup. Each costs money (see README), and a few focused ones suffice. */
 export const IDENTIFY_MAX_SEARCHES = 4;
@@ -101,6 +113,8 @@ interface Options {
   identifyEffort?: Effort;
   /** Injected in tests. Defaults to a client that reads ANTHROPIC_API_KEY (or an `ant auth` profile). */
   client?: Anthropic;
+  /** Shorter deadlines for tests. */
+  deadlines?: Partial<Record<keyof typeof DEADLINES_MS, number>>;
 }
 
 /** Shared request settings. Thinking is always on for these models, so effort is the depth control. */
@@ -116,14 +130,19 @@ function common(model: string, effort: Effort) {
   };
 }
 
-export function createClaude({ model, scanEffort, mealsEffort, identifyEffort = 'medium', client }: Options): ClaudeService {
+export function createClaude({ model, scanEffort, mealsEffort, identifyEffort = 'medium', client, deadlines = {} }: Options): ClaudeService {
   // Web searches make identify slower than a scan.
   const anthropic = client ?? new Anthropic({ timeout: 120_000 });
 
-  async function run<T>(fn: () => Promise<T>): Promise<T> {
+  async function run<T>(kind: keyof typeof DEADLINES_MS, caller: AbortSignal | undefined, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    const deadline = AbortSignal.timeout(deadlines[kind] ?? DEADLINES_MS[kind]);
+    const signal = caller ? AbortSignal.any([caller, deadline]) : deadline;
     try {
-      return await fn();
+      return await fn(signal);
     } catch (e) {
+      // Checked first: an abort surfaces as whatever the SDK was doing at the time.
+      if (caller?.aborted) throw new UpstreamError('unavailable', 'The request was cancelled.');
+      if (deadline.aborted) throw new UpstreamError('unavailable', 'That took too long. Please try again.');
       if (e instanceof UpstreamError) throw e;
       if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.InternalServerError) {
         throw new UpstreamError('unavailable', 'The analysis service is busy. Please try again shortly.');
@@ -147,8 +166,8 @@ export function createClaude({ model, scanEffort, mealsEffort, identifyEffort = 
   }
 
   return {
-    scan: (req) =>
-      run(async () => {
+    scan: (req, caller) =>
+      run('scan', caller, async (signal) => {
         const { effort, ...base } = common(model, scanEffort);
         const receipt = req.mode === 'receipt';
         const content: Anthropic.Beta.BetaContentBlockParam[] = [];
@@ -163,24 +182,24 @@ export function createClaude({ model, scanEffort, mealsEffort, identifyEffort = 
           output_config: { effort, format: zodOutputFormat(ScanOutputSchema) },
           system: receipt ? RECEIPT_SYSTEM : SCAN_SYSTEM,
           messages: [{ role: 'user', content }],
-        });
+        }, { signal });
         return usable(res, 'scan');
       }),
 
-    meals: (req) =>
-      run(async () => {
+    meals: (req, caller) =>
+      run('meals', caller, async (signal) => {
         const { effort, ...base } = common(model, mealsEffort);
         const res = await anthropic.beta.messages.parse({
           ...base,
           output_config: { effort, format: zodOutputFormat(MealsOutputSchema) },
           system: MEALS_SYSTEM,
           messages: [{ role: 'user', content: mealsUserText(req) }],
-        });
+        }, { signal });
         return usable(res, 'meals');
       }),
 
-    identify: (req) =>
-      run(async () => {
+    identify: (req, caller) =>
+      run('identify', caller, async (signal) => {
         const { effort, ...base } = common(model, identifyEffort);
         const content: Anthropic.Beta.BetaContentBlockParam[] = [];
         if (req.image) {
@@ -210,7 +229,7 @@ export function createClaude({ model, scanEffort, mealsEffort, identifyEffort = 
             // Forced tool choice is not available on this model family: ask in the prompt, check below.
             tool_choice: { type: 'auto' },
             messages,
-          });
+          }, { signal });
           if (res.stop_reason === 'refusal') {
             throw new UpstreamError('refused', 'This item could not be looked up. Try editing its name.');
           }

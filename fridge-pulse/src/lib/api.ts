@@ -36,28 +36,48 @@ export class ApiError extends Error {
 
 async function post<T>(path: string, userId: string, body: unknown, timeoutMs: number, signal?: AbortSignal, method: 'POST' | 'GET' = 'POST'): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  // The caller can cancel too (the person tapped Cancel or left the screen).
-  signal?.addEventListener('abort', () => controller.abort());
-  let res: Response;
-  try {
-    res = await fetch(`${BASE_URL}${path}`, {
-      method,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userId}` },
-      ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
-      signal: controller.signal,
-    });
-  } catch {
-    throw new ApiError('network', 'Could not reach Fridge Pulse. Check your connection and try again.');
-  } finally {
-    clearTimeout(timer);
-  }
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  // The caller can cancel too (the person tapped Cancel or left the screen), even before we get here.
+  const cancel = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', cancel);
+  const lost = () =>
+    new ApiError('network', timedOut ? 'That took too long. Check your connection and try again.' : 'Could not reach Fridge Pulse. Check your connection and try again.');
+  // Settles only by rejecting, once the request is given up on.
+  const givenUp = new Promise<never>((_, reject) => controller.signal.addEventListener('abort', () => reject(lost()), { once: true }));
 
+  let res: Response;
   let json: unknown = null;
   try {
-    json = await res.json();
-  } catch {
-    // Non-JSON error bodies fall through to status handling below.
+    // A request the caller already gave up on is never sent (it would still use up the day's scans).
+    if (controller.signal.aborted) throw lost();
+    try {
+      res = await Promise.race([
+        fetch(`${BASE_URL}${path}`, {
+          method,
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userId}` },
+          ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
+          signal: controller.signal,
+        }),
+        givenUp,
+      ]);
+    } catch {
+      throw lost();
+    }
+    try {
+      // The wait covers the body too: the headers can arrive and the rest stall.
+      json = await Promise.race([res.json(), givenUp]);
+    } catch {
+      if (controller.signal.aborted) throw lost();
+      // Non-JSON error bodies fall through to status handling below.
+    }
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', cancel);
   }
 
   if (!res.ok) {
@@ -107,7 +127,8 @@ export async function scanPhotos({ userId, mode = 'shelf', location, images, kno
   if (!Array.isArray(res.items)) throw new ApiError('bad_response', 'Unexpected response from the server.');
   return {
     items: res.items,
-    notes: res.notes ?? null,
+    // An empty note is no note, so the screen shows its own message rather than a blank one.
+    notes: typeof res.notes === 'string' && res.notes.trim() !== '' ? res.notes : null,
     purchaseDate: typeof res.purchaseDate === 'string' ? res.purchaseDate : null,
     currency: typeof res.currency === 'string' ? res.currency : null,
   };
@@ -174,6 +195,9 @@ const strings = (v: unknown, max: number): string[] =>
 
 /** The server accepts at most this many ingredients per request (server/src/schemas.ts). */
 export const MAX_MEAL_ITEMS = 80;
+/** And at most this many titles to avoid, each at most this long. */
+const MAX_EXCLUDE = 20;
+const MAX_EXCLUDE_LENGTH = 120;
 
 export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: MealsRequest): Promise<Meal[]> {
   if (isDemoMode) return demoMeals(all, prefs, exclude);
@@ -187,7 +211,11 @@ export async function fetchMeals({ userId, items: all, prefs, exclude = [] }: Me
       today: todayISO(now),
       diet: prefs.diet,
       servings: prefs.servings,
-      exclude,
+      // A meal the AI gave a very long title must not make "More ideas" fail.
+      exclude: exclude
+        .map((t) => t.trim().slice(0, MAX_EXCLUDE_LENGTH))
+        .filter((t) => t !== '')
+        .slice(0, MAX_EXCLUDE),
       items: items.map((i) => ({
         name: i.name,
         category: i.category,

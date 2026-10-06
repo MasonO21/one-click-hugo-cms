@@ -166,6 +166,8 @@ export default function Scan() {
       // Demo mode returns sample items and never uploads, so skip the (pointless) photo encoding.
       const images = sample || isDemoMode ? [] : await Promise.all(photos.map(encodePhoto));
       const userId = await getProvider().getUserId();
+      // Cancelled while the photos were being prepared: nothing is sent.
+      if (controller.signal.aborted) return;
       const known = knownForScan(useFoods.getState().foods);
       const res = await scanPhotos({ userId, mode, location, images, known, signal: controller.signal });
       if (controller.signal.aborted) return;
