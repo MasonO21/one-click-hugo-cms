@@ -44,7 +44,23 @@ The hero and boss splashes were generated with the vertical poster as an image r
 | `soulswarm-ad-vertical-9x16.mp4` | 1080×1920, 30 fps, H.264 + AAC 48 kHz stereo | 34.8 s | 0–8 s cinematic: souls erupt from the graves and the crown ignites (Kling 3.0 Pro from the poster). 8–23.8 s actual gameplay, with the game's own music and SFX recorded from the build. 23.8–30.3 s cinematic: Gravemaw rises (Kling 3.0 Pro from the boss splash). 30.3–34.8 s end card. |
 | `soulswarm-ad-landscape-16x9.mp4` | 1920×1080, same codecs | 28.3 s | 0–8 s cinematic: the soul wave hits the horde (Kling 3.0 Pro from the wide key art). 8–23.8 s actual gameplay, pillarboxed over the blurred key art. 23.8–28.3 s end card. |
 
-**Gameplay footage:** comes from `store/trailer-9x16.mp4` (`npm run trailer`).
+**Gameplay footage:** the first 15.8 s of `store/trailer-9x16.mp4` (`npm run trailer`). The current cut (v2) shows the gameplay update: the shepherd alone, the dead rising, a guarded gate, a 301-soul Nova, and the Hollow King's arena closing in.
+
+**Beats in the gameplay segment** (trailer time; add 8 s for ad time):
+- 0 s: "One shepherd against the horde";
+- about 4 s: "But every enemy you kill…" as the dead rise;
+- 10.3 s: the gate pick;
+- 13.4 s: the Nova detonation;
+- 15.0 s: Gravemaw's arena wall rises.
+
+**Re-cutting:** `scripts/ads/render.sh` rebuilds both ads in a Higgsfield sandbox. It fetches the Kling clips, the painted art, the trailer and `src/audio/audio.js`, records the game's music and SFX in headless Chromium from the cue list in `cues.py`, then renders the overlays, segments and end cards. Cue times in `cues.py` must match the trailer beats above.
+
+To run it:
+1. Push the branch, so the sandbox can fetch the files from GitHub.
+2. Request two upload slots with `media_upload`.
+3. Run `render.sh` in the sandbox in the background, with `UPLOAD_V` and `UPLOAD_L` set to the presigned URLs.
+4. Poll the job with short calls. A sandbox call that times out discards the sandbox and the job with it.
+5. Call `media_confirm` once both PUTs return 200.
 
 **End card:** the painted logo and poster, a PLAY FREE button, "iOS · Android", "Free to play · In-app purchases" and "Cinematic sequences are not actual gameplay."
 
@@ -55,8 +71,11 @@ The hero and boss splashes were generated with the vertical poster as an image r
 - They are **not App Store app previews or the Play promo video.** Previews must be footage captured in the app. Use `store/trailer-9x16.mp4` there.
 
 **File quality:**
-- The repo copies are re-encoded at CRF 23 (21 MB and 12 MB).
-- Full-quality masters (CRF 19), confirmed in the Higgsfield media library:
+- The repo copies are re-encoded at CRF 23 (22 MB and 12 MB).
+- Full-quality v2 masters (CRF 19), confirmed in the Higgsfield media library:
+  - vertical: https://d2ol7oe51mr4n9.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/1f31c88c-19de-4f99-a35f-72b05742628f.mp4
+  - landscape: https://d2ol7oe51mr4n9.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/55230719-5786-4354-a79c-85aa57920f21.mp4
+- The v1 masters (cut from the gameplay before the update) are kept for A/B comparison:
   - vertical: https://d2ol7oe51mr4n9.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/9f1a1167-ff55-4e34-a795-8c3715f37184.mp4
   - landscape: https://d2ol7oe51mr4n9.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/acefac00-a0d1-48b1-907d-e59d1642b140.mp4
 
@@ -67,9 +86,11 @@ The hero and boss splashes were generated with the vertical poster as an image r
 | soul wave | 16:9 | `928ba105-1d39-4972-af06-320d3bb8419f` |
 | boss reveal | 9:16 | `75879ac8-4a9d-497f-832d-1a48cd4b3457` |
 
-**Generation cost:** 78.75 credits in total:
+**Generation cost:** 80.75 credits in total:
 - 3 Kling clips at 20 credits each;
-- 8 Nano Banana Pro 2K images at 2 credits each;
+- 9 Nano Banana Pro 2K images at 2 credits each, including Liora's splash;
 - 1 GPT Image 2.5 high image at 2.75 credits.
+
+Re-cutting the ads in the sandbox costs no credits.
 
 New clips for the creative-testing rotation (`MARKETING.md` §6) cost about 20 credits per 8 s shot.
