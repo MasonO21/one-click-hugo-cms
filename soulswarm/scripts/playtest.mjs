@@ -703,6 +703,173 @@ errs = await session(async (page) => {
 });
 check('hero passives: no runtime errors', !errs.length, errs[0] || '');
 
+// 17. Nightmare and Torment: per-chapter unlocks, run.diff scaling (horde HP, damage and spawns, extra elites, Gravemaw,
+//     palette, HUD), rewards (gold, pass XP, one-time first-clear gems, the Hoard floor), records per difficulty,
+//     old-save migration, late quests and the home-screen selector.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const eco = await import('/src/meta/economy.js'), D = await import('/src/meta/difficulty.js'), { DIFFICULTY } = await import('/src/game/data.js');
+    const app = window.__soulswarm, p = app.profile; app.engine.manual = true;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; p.flags.bloodMoon = 'off';
+    const out = { D: DIFFICULTY };
+    const win = (ch, difficulty, extra = {}) => eco.applyRunResult(p, { chapter: ch, time: 400, kills: 2000, raised: 300, bestLegion: 120, novas: 5, gates: 8, victory: true, level: 20, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, chests: 6, elites: 6, evolutions: 0, difficulty, ...extra });
+    const runAt = (ch, opts) => { if (app.run) app.exitRun(); p.energy = 30; const ok = app.startRun(ch, opts); if (!ok) return null; const r = app.run; r.player.hurt = () => {}; return r; };
+    // unlocks: Nightmare after a Normal clear of that chapter, Torment after a Nightmare clear; a Nightmare clear never moves chapter unlocks
+    const e0 = p.energy;
+    out.unlock = { fresh: D.difficultyUnlocked(p, 1, 'nightmare'), startLocked: app.startRun(1, { difficulty: 'nightmare' }), energyKept: p.energy === e0 };
+    win(1, 'normal');
+    out.unlock.afterNormal = [D.difficultyUnlocked(p, 1, 'nightmare'), D.difficultyUnlocked(p, 1, 'torment'), D.difficultyUnlocked(p, 2, 'nightmare')];
+    win(1, 'nightmare');
+    out.unlock.afterNightmare = [D.difficultyUnlocked(p, 1, 'torment'), p.chapter.unlocked, D.highestCleared(p, 1)];
+    // Endless and the Daily Trial stay Normal; a default run is Normal and run.diff is the identity
+    const t = runAt(0, { trial: true, difficulty: 'nightmare' });
+    out.modes = { trial: t && t.diff.id };
+    p.chapter.unlocked = 6; p.chapter.best[6] = { time: 900, cleared: true, kills: 0 };
+    out.modes.endlessOpen = D.difficultyUnlocked(p, 6, 'nightmare'); out.modes.endlessStart = !!runAt(6, { difficulty: 'nightmare' });
+    out.modes.endless = runAt(6, {}).diff.id;
+    const n = runAt(1, {}).diff;
+    out.identity = { id: n.id, hp: n.hp, ramp: n.ramp, xp: n.xp, bossHp: n.bossHp, dmg: n.dmg, spawn: n.spawn, extraElites: n.extraElites, eliteAffixes: n.eliteAffixes, gold: n.gold, passXp: n.passXp, firstClearGems: n.firstClearGems, hoard: n.hoard, tint: n.tint };
+    // run scaling on Chapter 2 at 3:20 (past the HP ramp): a Brute's HP and damage, the director's spawn accrual, elites, Gravemaw and
+    // an arena add, the sky; plus a Brute at 0:00 (the ramp starts at Normal HP)
+    p.chapter.best[2] = { time: 420, cleared: true, kills: 0 }; p.diff.best[2] = { nightmare: { time: 420, legion: 0, kills: 0, cleared: true } };
+    const probe = (difficulty, bm) => {
+      p.flags.bloodMoon = bm ? 'on' : 'off';
+      const r = runAt(2, { difficulty }); const e0 = r.spawnEnemy('brute', { at: { x: r.player.x + 9, z: r.player.z + 2 } }); r.time = 200;
+      const e = r.spawnEnemy('brute', { at: { x: r.player.x + 9, z: r.player.z } });
+      r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = r.trialBannerAt = 0; r.spawnAcc = 0; r.director(0.02);
+      const acc = r.spawnAcc, hp = e.maxHp, dmg = e.dmg;
+      r.enemies.kill(e, 'bolt'); const shard = r.pickups.gems[r.pickups.gems.length - 1].value; // a Brute's 4 XP × diff.xp
+      r.boss.spawn(); r.bossSpawned = true; const b = r.bossEnemy;
+      const add = r.spawnEnemy('brute', { at: { x: r.player.x - 9, z: r.player.z } }); // an arena add has Normal HP
+      p.flags.bloodMoon = 'off';
+      return { id: r.diff.id, affixes: r.diff.eliteAffixes, hp, dmg, shard, acc, elites: r.eliteTimes.length, bossHp: b.maxHp, bossDmg: b.dmg, addHp: add.maxHp, hp0: e0.maxHp, sky: '#' + r.scene.background.getHexString(), badge: document.querySelector('.hud-diff')?.textContent || '' };
+    };
+    out.probe = { normal: probe('normal'), nightmare: probe('nightmare'), torment: probe('torment'), bmNormal: probe('normal', true), bmNightmare: probe('nightmare', true) };
+    // the run-start banner names the difficulty
+    const rb = runAt(1, { difficulty: 'nightmare' }); rb.time = 3.5; for (let i = 0; i < 8; i++) rb.update(1 / 30);
+    out.banner = { title: document.querySelector('.banner b')?.textContent, cls: document.querySelector('.banner')?.className };
+    app.exitRun();
+    // rewards on Chapter 3 (cleared on Normal): gold ×1.75 / ×2.5, pass XP ×1.5 / ×2, first-clear gems once; account XP stays at the Normal amount
+    p.chapter.best[3] = { time: 420, cleared: true, kills: 0 };
+    const accXp = () => { let x = p.xp; for (let l = 1; l < p.level; l++) x += eco.accountXpFor(l); return x; };
+    const rw = (difficulty, extra) => { const a0 = accXp(), o = win(3, difficulty, extra); return { gold: o.rewards.gold, gems: o.rewards.gems, xp: o.rewards.passXp, acc: accXp() - a0, first: o.firstClear, sigils: o.rewards.sigils || 0, rewards: o.rewards }; };
+    const nr = rw('normal'), nm1 = rw('nightmare'), nm2 = rw('nightmare'), tm1 = rw('torment'), tm2 = rw('torment');
+    const g0 = p.gems; eco.doubleRunRewards(p, nm1.rewards); const doubled = p.gems - g0;
+    p.chapter.best[4] = { time: 420, cleared: true, kills: 0 };
+    const bm = win(4, 'nightmare', { bloodMoon: true }).rewards.gems;
+    for (const o of [nr, nm1, nm2, tm1, tm2]) delete o.rewards;
+    out.rewards = { nr, nm1, nm2, tm1, tm2, doubled, bm };
+    // Gravemaw's Hoard: Nightmare never drops below Rare, Torment never below Epic (Legendary kept rare)
+    const hoard = (difficulty) => { const c = {}; for (let i = 0; i < 400; i++) { const it = win(3, difficulty).items.find((x) => x.kind === 'relic'); c[it.rarity] = (c[it.rarity] || 0) + 1; } return c; };
+    out.hoard = { nightmare: hoard('nightmare'), torment: hoard('torment') };
+    // records per difficulty: best time, best legion, kills and cleared; Normal's chapter record is left alone
+    p.chapter.best[5] = { time: 420, cleared: true, kills: 2000 }; delete p.diff.best[5];
+    const base = { chapter: 5, raised: 100, novas: 2, gates: 4, level: 15, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0 };
+    const r1 = eco.applyRunResult(p, { ...base, time: 250, kills: 900, bestLegion: 95, victory: false, difficulty: 'nightmare' });
+    const r2 = eco.applyRunResult(p, { ...base, time: 180, kills: 700, bestLegion: 140, victory: false, difficulty: 'nightmare' });
+    eco.applyRunResult(p, { ...base, time: 300, kills: 1200, bestLegion: 60, victory: false, difficulty: 'normal' });
+    out.records = { nm: p.diff.best[5].nightmare, normal: p.diff.best[5].normal, chapter: p.chapter.best[5], newBest: [r1.newBest, r2.newBest], highest: D.highestCleared(p, 5) };
+    // quests: late-gated, and they count Nightmare clears and elites
+    const pool = new Set(); for (let d = 1; d <= 28; d++) for (const id of eco.pickQuests({ chapter: { unlocked: 1 } }, `2026-12-${String(d).padStart(2, '0')}`)) pool.add(id);
+    p.quests = { day: p.quests.day, progress: {}, claimed: [], ids: ['nmClear', 'nmElite', 'kill', 'raise', 'gate'] };
+    win(3, 'torment');
+    out.quests = { earlyPool: [...pool].filter((id) => id.startsWith('nm')), done: eco.questList(p).filter((q) => q.done).map((q) => q.id) };
+    return out;
+  });
+  const { unlock: u, modes, identity, probe: P, banner, rewards: R, hoard, records: rec, quests, D: { nightmare: NM, torment: TM } } = s;
+  const near = (got, want) => got.every((g, i) => Math.abs(g - want[i]) < 0.011); // ratios rounded to 2 decimals
+  check('difficulty: Nightmare opens with a Normal clear, Torment with a Nightmare clear (per chapter)',
+    !u.fresh && u.startLocked === false && u.energyKept && u.afterNormal.join() === 'true,false,false' && u.afterNightmare.join() === 'true,2,nightmare', JSON.stringify(u));
+  check('difficulty: Endless Abyss and the Daily Trial always play Normal', modes.trial === 'normal' && !modes.endlessOpen && !modes.endlessStart && modes.endless === 'normal', JSON.stringify(modes));
+  check('difficulty: run.diff always defined, Normal is the identity', JSON.stringify(identity) === JSON.stringify({ id: 'normal', hp: 1, ramp: 0, xp: 1, bossHp: 1, dmg: 1, spawn: 1, extraElites: 0, eliteAffixes: 0, gold: 1, passXp: 1, firstClearGems: 0, hoard: null, tint: null }), JSON.stringify(identity));
+  const ratio = (k, d) => Math.round(P[d][k] / P.normal[k] * 100) / 100;
+  const sc = { hp: [ratio('hp', 'nightmare'), ratio('hp', 'torment')], dmg: [ratio('dmg', 'nightmare'), ratio('dmg', 'torment')], spawn: [ratio('acc', 'nightmare'), ratio('acc', 'torment')], affixes: [P.normal.affixes, P.nightmare.affixes, P.torment.affixes] };
+  sc.hp0 = [ratio('hp0', 'nightmare'), ratio('hp0', 'torment')]; sc.xp = [ratio('shard', 'nightmare'), ratio('shard', 'torment')];
+  check('difficulty: enemy HP (after its ramp), damage, spawn rate and shard XP scale by run.diff (Nightmare, Torment)',
+    near(sc.hp, [NM.hp, TM.hp]) && sc.hp0.join() === '1,1' && NM.ramp > 0 && near(sc.xp, [NM.xp, TM.xp]) && near(sc.dmg, [NM.dmg, TM.dmg]) && near(sc.spawn, [NM.spawn, TM.spawn]) && sc.affixes.join() === `0,${NM.eliteAffixes},${TM.eliteAffixes}` && NM.hp > 1 && TM.hp > NM.hp, JSON.stringify(sc));
+  const el = [P.normal.elites, P.nightmare.elites, P.torment.elites, P.bmNormal.elites, P.bmNightmare.elites];
+  check('difficulty: extra elites join the schedule (Blood Moon stacks on top)', el.join() === [4, 4 + NM.extraElites, 4 + TM.extraElites, 8, 8 + NM.extraElites].join() && NM.extraElites > 0, JSON.stringify(el));
+  const bs = { hp: [ratio('bossHp', 'nightmare'), ratio('bossHp', 'torment')], dmg: [ratio('bossDmg', 'nightmare'), ratio('bossDmg', 'torment')], adds: [ratio('addHp', 'nightmare'), ratio('addHp', 'torment')] };
+  check('difficulty: Gravemaw HP and damage scale; his arena adds keep Normal HP', near(bs.hp, [NM.bossHp, TM.bossHp]) && near(bs.dmg, [NM.dmg, TM.dmg]) && bs.adds.join() === '1,1' && NM.bossHp > 1, JSON.stringify(bs));
+  const look = { skies: [P.normal.sky, P.nightmare.sky, P.torment.sky, P.bmNormal.sky, P.bmNightmare.sky], badges: [P.normal.badge, P.nightmare.badge, P.torment.badge], banner };
+  check('difficulty: tinted palette (over Blood Moon too), HUD badge and run-start banner',
+    new Set(look.skies).size === 5 && look.badges.join() === ',Nightmare,Torment' && banner.title === 'NIGHTMARE' && /diff-nightmare/.test(banner.cls), JSON.stringify(look));
+  const rr = (a, b) => Math.round(a / b * 100) / 100;
+  const mul = { gold: [rr(R.nm1.gold, R.nr.gold), rr(R.tm1.gold, R.nr.gold)], xp: [rr(R.nm1.xp, R.nr.xp), rr(R.tm1.xp, R.nr.xp)], acc: [R.nr.acc, R.nm1.acc, R.tm1.acc] };
+  check('difficulty rewards: gold and pass XP multiplied (×1.75 / ×2.5, ×1.5 / ×2); account XP unchanged',
+    near(mul.gold, [NM.gold, TM.gold]) && near(mul.xp, [NM.passXp, TM.passXp]) && NM.gold === 1.75 && TM.gold === 2.5 && NM.passXp === 1.5 && TM.passXp === 2 && mul.acc[0] === R.nr.xp && mul.acc[1] === R.nr.xp && mul.acc[2] === R.nr.xp, JSON.stringify(mul));
+  const gems = { normal: R.nr.gems, nm: [R.nm1.gems, R.nm2.gems, R.nm1.first, R.nm2.first], tm: [R.tm1.gems, R.tm2.gems, R.tm1.first, R.tm2.first], sigils: [R.nm1.sigils, R.tm1.sigils], doubled: R.doubled, bm: R.bm };
+  check('difficulty rewards: first-clear gems (+60 / +120) once per chapter and difficulty, never doubled',
+    gems.normal === 16 && gems.nm.join() === `${16 + NM.firstClearGems},16,true,false` && gems.tm.join() === `${16 + TM.firstClearGems},16,true,false` && NM.firstClearGems === 60 && TM.firstClearGems === 120
+    && gems.sigils.join() === '0,0' && gems.doubled === 16 && gems.bm === 36 + NM.firstClearGems, JSON.stringify(gems));
+  const hn = hoard.nightmare, ht = hoard.torment;
+  check('difficulty rewards: Hoard floor (Nightmare Rare+ with ~40% Epic, Torment Epic+ with a rare Legendary)',
+    !hn.common && !hn.legendary && hn.epic / 400 > 0.3 && hn.epic / 400 < 0.5 && !ht.common && !ht.rare && ht.epic > 360 && (ht.legendary || 0) <= 24, JSON.stringify(hoard));
+  check('difficulty records: best time, legion and kills per difficulty; Normal chapter record untouched',
+    JSON.stringify(rec.nm) === JSON.stringify({ time: 250, legion: 140, kills: 900, cleared: false }) && rec.normal.time === 300 && rec.normal.legion === 60 && rec.normal.cleared
+    && rec.chapter.time === 420 && rec.chapter.kills === 2000 && rec.newBest.join() === 'true,false' && rec.highest === 'normal', JSON.stringify(rec));
+  check('difficulty quests: Nightmare quests are late-gated and count Nightmare+ clears and elites', !quests.earlyPool.length && quests.done.includes('nmClear') && quests.done.includes('nmElite'), JSON.stringify(quests));
+
+  // an old-format save (no difficulty block) loads, seeds Normal records from the chapter records and plays a Nightmare run
+  const m = await page.evaluate(async () => {
+    const save = await import('/src/meta/save.js'), eco = await import('/src/meta/economy.js'), D = await import('/src/meta/difficulty.js');
+    const old = { v: 1, gold: 4321, gems: 99, selectedHero: 'vael', chapter: { unlocked: 3, selected: 2, best: { 1: { time: 431, cleared: true, kills: 2100 }, 2: { time: 250, cleared: false, kills: 800 } } },
+      heroes: { vael: { owned: true, stars: 2, shards: 3 } }, quests: { day: '2026-01-01', progress: {}, claimed: [] } };
+    localStorage.setItem('soulswarm.save.v1', JSON.stringify(old));
+    const q = save.loadProfile();
+    const out = { gold: q.gold, block: !!q.diff && typeof q.diff.sel === 'object' && typeof q.diff.best === 'object', n1: q.diff.best[1]?.normal, n2: q.diff.best[2]?.normal,
+      open: [D.difficultyUnlocked(q, 1, 'nightmare'), D.difficultyUnlocked(q, 2, 'nightmare'), D.difficultyUnlocked(q, 1, 'torment')], sel: D.selectedDifficulty(q, 1) };
+    const o = eco.applyRunResult(q, { chapter: 1, time: 400, kills: 1800, raised: 200, bestLegion: 110, novas: 4, gates: 8, victory: true, level: 20, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, difficulty: 'nightmare' });
+    out.played = { first: o.firstClear, gems: o.rewards.gems, cleared: q.diff.best[1].nightmare.cleared, torment: D.difficultyUnlocked(q, 1, 'torment') };
+    localStorage.removeItem('soulswarm.save.v1');
+    return out;
+  });
+  const NM60 = s.D.nightmare.firstClearGems;
+  check('difficulty: an old save without the block migrates and plays Nightmare',
+    m.gold === 4321 && m.block && m.n1?.cleared && m.n1?.time === 431 && m.n2?.time === 250 && !m.n2?.cleared && m.open.join() === 'true,false,false' && m.sel === 'normal'
+    && m.played.first && m.played.gems === 12 + NM60 && m.played.cleared && m.played.torment, JSON.stringify(m));
+
+  // the home-screen selector: locks, remembered choice per chapter, BATTLE starts it; HUD, pause and results show it
+  const ui = await page.evaluate(async () => {
+    // app.meta.refresh() re-renders from the live profile (a test-side import of economy.js can be a separate module instance)
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel);
+    if (app.run) app.exitRun();
+    document.querySelectorAll('.modal-back, .toast').forEach((x) => x.remove());
+    Object.assign(p.chapter, { unlocked: 3, selected: 1, best: { 1: { time: 420, cleared: true, kills: 2000 } } }); p.diff = { sel: {}, best: {} }; p.energy = 30;
+    app.meta.show('battle');
+    const seg = () => [...document.querySelectorAll('.dsel-b')].map((b) => b.dataset.d + (b.classList.contains('on') ? '*' : '') + (b.classList.contains('lk') ? '!' : '')).join(',');
+    const out = { initial: seg() };
+    q('.dsel-b[data-d="torment"]').click();
+    out.lockedTap = seg(); out.toast = [...document.querySelectorAll('.toast')].pop()?.textContent || '';
+    q('.dsel-b[data-d="nightmare"]').click();
+    out.picked = seg(); out.sel = p.diff.sel[1]; out.battle = q('.btn-battle').classList.contains('d-nightmare');
+    q('.chap [data-act="next"]').click(); out.ch2 = seg();
+    q('.chap [data-act="prev"]').click(); out.back = seg();
+    p.chapter.selected = 6; p.chapter.unlocked = 6; app.meta.refresh(); out.endless = document.querySelectorAll('.dsel').length;
+    p.chapter.unlocked = 3; p.chapter.selected = 4; app.meta.refresh(); out.locked = document.querySelectorAll('.dsel').length;
+    p.chapter.selected = 1; app.meta.refresh();
+    const e0 = p.energy; q('.btn-battle').click();
+    const r = app.run; out.started = { diff: r && r.diff.id, energy: e0 - p.energy, badge: q('.hud-diff')?.textContent };
+    r.player.hurt = () => {};
+    r.pause(true); out.pause = q('.modal .pill-diff')?.textContent || '';
+    q('.modal .btn-primary').click();
+    r.end(true);
+    await new Promise((res) => setTimeout(res, 600));
+    out.results = q('.res-badges .pill-diff')?.textContent || '';
+    q('.modal .btn-primary')?.click();
+    await new Promise((res) => setTimeout(res, 300));
+    out.after = { menu: !app.meta.el.hidden, sel: seg(), cleared: !!p.diff.best[1]?.nightmare?.cleared };
+    return out;
+  });
+  check('difficulty UI: selector shows locks, a locked tap explains, the choice is remembered per chapter',
+    ui.initial === 'normal*,nightmare,torment!' && ui.lockedTap === ui.initial && /Nightmare/.test(ui.toast) && ui.picked === 'normal,nightmare*,torment!' && ui.sel === 'nightmare' && ui.battle
+    && ui.ch2 === 'normal*,nightmare!,torment!' && ui.back === ui.picked && ui.endless === 0 && ui.locked === 0, JSON.stringify(ui));
+  check('difficulty UI: BATTLE starts the chosen difficulty; HUD, pause and results show it',
+    ui.started.diff === 'nightmare' && ui.started.energy === 5 && ui.started.badge === 'Nightmare' && /Nightmare/.test(ui.pause) && /Nightmare/.test(ui.results)
+    && ui.after.menu && ui.after.cleared && ui.after.sel === 'normal,nightmare*,torment', JSON.stringify(ui));
+});
+check('difficulty: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -53,7 +53,7 @@ export class Boss {
     if (this.mesh) { run.scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mat.dispose(); this.mesh = null; }
     this.build();
     const x = P.x, z = P.z - 11;
-    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * (run.tutorial ? BOSS.firstRun : 1) * scale, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) });
+    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * (run.tutorial ? BOSS.firstRun : 1) * scale * run.diff.bossHp, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) * run.diff.dmg });
     this.e = e;
     run.bossEnemy = e;
     this.color = new THREE.Color(ch.boss);

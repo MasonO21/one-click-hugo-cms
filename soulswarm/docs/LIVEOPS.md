@@ -2,7 +2,7 @@
 
 **Status:** v1.0 · **Owner:** Live Ops Producer + Lead Game Designer · **Source of truth:** `DESIGN_BRIEF.md`
 **Assumed global launch:** Monday 14 June 2027 (see `PRODUCTION_ROADMAP.md`). If launch moves, the calendar shifts with it. Seasons are always 28 days and always start on a Monday at 00:00 UTC.
-**Implementation status:** mostly **Planned**. The prototype build has the daily layer (6 rotating daily quests, the 7-day login, the Daily Trial, energy, rewarded-ad placements), the weekend **Blood Moon** and the **weekly quest chest**, one Soul Pass season ("Season I: The Waking Legion" in `data.js`) and the Soul Pact. Boss Rush, Endless leaderboards, holiday events, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
+**Implementation status:** mostly **Planned**. The prototype build has the daily layer (6 rotating daily quests, the 7-day login, the Daily Trial, energy, rewarded-ad placements), the weekend **Blood Moon** and the **weekly quest chest**, the **Nightmare** and **Torment** difficulties (pulled forward from S4 and S12, GDD §8.2), one Soul Pass season ("Season I: The Waking Legion" in `data.js`) and the Soul Pact. Boss Rush, Endless leaderboards, holiday events, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
 
 ---
 
@@ -16,7 +16,7 @@
 | **Monthly (once per season)** | **Limited Boss Rush** (72 h) | Monthly limited boss rush | Light (new modifiers / variant) |
 | **Every 1–2 seasons** | **New hero** (Shepherd) | New hero every 1–2 seasons | Yes (heavy) |
 | **Holidays** | Halloween, Winter, Lunar New Year, Spring, Anniversary | — | Medium (reskins + event track) |
-| **Roadmap features** | Clans ("Covens"), co-op **Legion Raids**, new difficulty tiers | Clans and Legion Raids on roadmap | Yes (heavy) |
+| **Roadmap features** | Clans ("Covens"), co-op **Legion Raids**, difficulty tiers beyond Torment | Clans and Legion Raids on roadmap (Nightmare and Torment are in the build) | Yes (heavy) |
 
 ### Weekly rhythm (UTC)
 
@@ -36,7 +36,7 @@
 | **S1** | 14 Jun – 11 Jul | **The Waking Legion** (launch) | — (launch roster: Vael, Nyx, Seraphine, Mordrake) | *Hollow Court*: Gravemaw Ch1→Ch5 back-to-back | Launch week: 2× login rewards for 7 days | Global launch. Premium pass skin: **Eclipse Vael** |
 | **S2** | 12 Jul – 8 Aug | Embers of Midsummer | **Liora Bellwraith** (Epic) | *Ember Gauntlet*: burning ground in every chapter | Summer weekend: Blood Moon extended to 4 days | Endless Abyss leagues v2 (6 leagues) |
 | **S3** | 9 Aug – 5 Sep | The Drowned Choir | — | *Tidal Gravemaw*: slams leave water that slows | — | Hero loadout presets; replay sharing (10 s clip) |
-| **S4** | 6 Sep – 3 Oct | Bone Abbey | **Osric the Bone Abbot** (Legendary) | *Ossuary Rush*: Skull Halo pre-equipped for all | — | **Nightmare difficulty** (Ch1–5 remix). **Relic Ascension** (gold sink) |
+| **S4** | 6 Sep – 3 Oct | Bone Abbey | **Osric the Bone Abbot** (Legendary) | *Ossuary Rush*: Skull Halo pre-equipped for all | — | **Nightmare difficulty** (Ch1–5 remix; already in the prototype build, so S4 is its launch announcement). **Relic Ascension** (gold sink) |
 | **S5** | 4 Oct – 31 Oct | Harvest of Souls | **Grimsby Lanternjaw** (Epic) | *Pumpkin King*: Gravemaw in a jack-o'-lantern crown | **Night of a Thousand Souls** (Halloween, 21–31 Oct) | Halloween cosmetics (minion tints, gate skins) |
 | **S6** | 1 Nov – 28 Nov | The Hollow Court | — | *Court of Echoes*: 3 Gravemaw Echoes at once | Harvest weekend (Black Friday, 26–28 Nov). Honest bundles only, see §4.5. | **Clans ("Covens")**: 30 members, coven chat with filters, coven quests |
 | **S7** | 29 Nov – 26 Dec | Frostfall Vigil | **Isolde Frostveil** (Epic) | *Gravemaw in Ice*: frozen arena, ice patches | **Frostfall Vigil** winter event (17 Dec – 2 Jan) | Winter map variant of Ch3 |
@@ -44,7 +44,7 @@
 | **S9** | 24 Jan – 20 Feb | Lantern Legion | **Kaida Emberfang** (Legendary) | *Lantern Dance*: bullet rings form lantern patterns | **Lunar New Year** (from 26 Jan); **Bound Souls** Valentine weekend (12–14 Feb) | Coven gifting (sigils to coven mates, capped) |
 | **S10** | 21 Feb – 19 Mar | The Thorned Choir | — | *Thorn Crown*: reflected damage modifier | — | **Legion Raids v1** (asynchronous co-op): covens fight a shared raid boss over 3 days |
 | **S11** | 20 Mar – 16 Apr | Rebirth of Ash | **Thessaly of the Thorn** (Rare) | *Spring Reaping*: double gates | Spring event (around Easter, 16 Apr) | New-player boost for returning and lapsed players |
-| **S12** | 17 Apr – 14 May | Torment | — | *True Form*: Gravemaw with a 4th phase | — | **Torment difficulty**. Legion Raids v2 (real-time 2-player co-op, beta) |
+| **S12** | 17 Apr – 14 May | Torment | — | *True Form*: Gravemaw with a 4th phase | — | **Torment difficulty** (already in the prototype build, so S12 is its launch announcement). Legion Raids v2 (real-time 2-player co-op, beta) |
 | **S13** | 15 May – 11 Jun | The First Shepherd | **Malachar, the First Shepherd** (Legendary) | *Shepherd's Trial*: every hero's signature weapon is available | **Anniversary** (7–20 Jun 2028, runs into S14) | Year-2 roadmap reveal |
 
 **Hero cadence check:** new heroes in S2, S4, S5, S7, S9, S11 and S13. That is 7 heroes in 13 seasons, and the gap is never more than 2 seasons (matches "a new hero every 1–2 seasons").
@@ -75,6 +75,7 @@
 - **Effect:** elites ×2 (8 per chapter run instead of the build's 4), all run rewards ×2 (stacks with the rewarded-ad double, so up to ×4 gold).
 - **Why:** it gives weekends a reason to play and supplies extra Relic Chests, which make better builds and more evolutions. It costs no new art: it is a red sky preset, an audio filter and config.
 - **Guardrail:** Blood Moon must not raise difficulty past the player's current chapter. Elite HP stays at 6× normal.
+- **With Nightmare and Torment:** Blood Moon stacks on top of the difficulty the player chose (8 elites plus 2 or 4, rewards ×2 on top of the difficulty's ×1.75 / ×2.5 gold). The one-time difficulty first-clear gems are never doubled. A Torment Blood Moon weekend is the endgame's best gold farm by design; watch the D60+ gold balance (MONETIZATION §2.1).
 
 ### 3.2 Boss Rush (monthly, limited)
 
@@ -167,6 +168,7 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | | Runs per DAU · minutes per DAU | | 4.0 · 32 min | −15% week-on-week |
 | | Chapter clear rates | Share of attempts that kill Gravemaw, per chapter | Ch1 70%, Ch2 55%, Ch3 45%, Ch4 35%, Ch5 25% | ±10 pp from target |
 | | Death-minute heatmap | Distribution of death time per chapter | Peak at 4:30–6:00 | Peak before 2:30 (unfair spike) |
+| | Nightmare / Torment uptake | Share of D30+ players with a Nightmare clear · Torment clear; share of their runs on each tier | 40% · 15%; 50%+ of D30+ runs above Normal | < 20% Nightmare (too hard or unseen) |
 | Gameplay | Skill pick rates | Share of offers taken, per card | No card < 10% or > 60% | Outside the band |
 | | Gate "correct" rate | Share choosing the higher-value gate | 65–80% | > 90% (too easy) or < 50% (unclear) |
 | | Novas per run | | ~6–7 per Ch1 clear (the build's 300-kill meter; GDD §4.4) | < 2 |

@@ -26,7 +26,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 
 | Sources | Typical amount | Sinks | Amount |
 |---|---|---|---|
-| Run rewards (formula in GDD §10) | 3,124 (Ch1 clear) to 5,714 (Ch5 clear); ~1,300–1,750 for a death at 4:00 | **Talents** (6 talents, 125 levels) | 1,358,940 to max everything |
+| Run rewards (formula in GDD §10) | 3,124 (Ch1 clear) to 5,714 (Ch5 clear); ~1,300–1,750 for a death at 4:00. Nightmare ×1.75, Torment ×2.5 (a Ch5 Torment clear ≈ 14,300) | **Talents** (6 talents, 125 levels) | 1,358,940 to max everything |
 | Daily quests | 2,700 / day | Talent level cap = 10 + 6 × chapters cleared (Planned) | Paces spending |
 | 7-day login | 7,000 / cycle | | |
 | Soul Pass free track | 20,800 / season | | |
@@ -36,7 +36,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Soul Pact | +20% run gold | | |
 | New account | 1,500 (one-time) | | |
 
-**Risk:** an engaged player (4–6 runs a day) maxes all talents in roughly 2–3 months, after which gold has no sink. Post-launch sinks (Relic Ascension, legion cosmetics bought with gold) are on the live-ops roadmap for Season 4 (see `LIVEOPS.md`). Watch the median gold balance of D60+ players. If it climbs without stopping, the sink is late.
+**Risk:** an engaged player (4–6 runs a day) maxes all talents in roughly 2–3 months, after which gold has no sink. Nightmare and Torment (GDD §8.2) pay ×1.75 / ×2.5 run gold, and that stacks with Blood Moon (×2) and the rewarded-ad double, so a Torment Blood Moon clear with the ad pays ×10 the Normal base. That is acceptable only because Torment players are endgame players whose talents are mostly bought already; it makes the Season 4 gold sink more urgent, not less. Post-launch sinks (Relic Ascension, legion cosmetics bought with gold) are on the live-ops roadmap for Season 4 (see `LIVEOPS.md`). Watch the median gold balance of D60+ players. If it climbs without stopping, the sink is late.
 
 ### 2.2 Soul Gems (premium)
 
@@ -49,6 +49,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Account level-ups | 20 each | Altar Sigils (gem shop) | 150 each · 1,350 for 10 |
 | Soul Pass free / premium | 340 / 1,140 per season | Soul Pass catch-up tiers (Planned) | 100 per tier, last 7 days of a season only |
 | Chapter first clears | 70 / 90 / 110 / 130 / 150 for Ch1–5 (one-time, 550 total) | | |
+| Nightmare / Torment first clears | +60 / +120 per chapter on top of the 12–20 clear gems (one-time, 300 + 600 = 900 total; never doubled by Blood Moon or the ad) | | |
 | Soul Pact | 300 now + 100 / day | | |
 | Starter Pack | 300 | | |
 | Daily free chest (rewarded ad) | 10 / day | | |
@@ -61,7 +62,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 
 | Currency | Sources | Sinks | Design intent |
 |---|---|---|---|
-| **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10, 3/day), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run. Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
+| **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10, 3/day), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run, on every difficulty (Nightmare and Torment cost the same: a harder run is not a reason to spend more of the session pacer). Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
 | **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
 | **Hero Shards** | Epic rolls (4 Seraphine or 6 Nyx, 50/50), Legendary rolls (5 Mordrake or 6 Seraphine, 50/50), premium pass S1 (25 Seraphine), duplicate hero grants (20). Planned: Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week). | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
 
@@ -80,7 +81,22 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Rewarded daily free chest (10 gems × 28) | 280 | — | +2 |
 | **Total** | | | **≈ 105 pulls ≈ 3.0 Legendaries per season** (≈ 2.1 without ads) |
 
-One-time sources are not included: chapter first clears (550 gems + 5 sigils) and the new-account balance (150 gems + 1 sigil).
+One-time sources are not included: chapter first clears (550 gems + 5 sigils), Nightmare and Torment first clears (900 gems, spread over months of endgame play, see §2.5) and the new-account balance (150 gems + 1 sigil).
+
+### 2.5 Nightmare and Torment (endgame difficulty)
+
+Each campaign chapter can be replayed on Nightmare (after a Normal clear) and Torment (after a Nightmare clear); see GDD §8.2. The rewards are built so endgame players keep earning without inflating premium currency:
+
+| | Normal | Nightmare | Torment | Why |
+|---|---|---|---|---|
+| Run gold | ×1 | ×1.75 | ×2.5 | Gold is the soft currency; endgame players have little left to buy with it (see §2.1 risk) |
+| Pass XP | ×1 | ×1.5 | ×2 | Pass XP is capped at 15,000 a season, so it only moves *when* an endgame player finishes the pass. Account XP stays at the Normal amount, so the 20-gem account level-ups keep their pace |
+| Run gems | 12–20 per clear | same | same | No per-run gem multiplier: repeat farming never prints premium currency |
+| First clear (one-time per chapter) | 70–150 gems + 1 sigil | +60 gems | +120 gems | 900 gems in total, about 7 pulls, earned over months. Flat: Blood Moon and the rewarded-ad double skip it |
+| Gravemaw's Hoard relic | Ch1–2 Common/Rare, Ch3–5 up to Epic 35% | Rare 60% / Epic 40% | Epic 98% / Legendary 2% | Relics only, never hero shards, so Mordrake and Seraphine still come from the Altar |
+| Energy | 5 | 5 | 5 | |
+
+**Legendary relics from Torment.** Campaign runs never dropped Legendaries before (the Endless Abyss Epic+ relic at depth 4+ already could, at 20%). Torment's Hoard has a 2% Legendary chance, the same as one Altar pull. An endgame player clearing Torment 2–3 times a day finds roughly 1–2 Legendary relics a season this way, against ≈ 3 from a free player's pulls. That deepens relic collection (§6.5: a specific Legendary at Lv10 needs ~80 copies) without competing with the Altar's hero shards. Watch the share of Legendary relics that come from Torment; if it passes ~35% of all Legendaries for D90+ players, lower it to 1%.
 
 That is generous by design. A free player unlocks Mordrake (10 shards = two Mordrake drops, ≈ 4 Legendary rolls, because half of Legendary rolls give Seraphine shards instead) in about 5–8 weeks, and the whole story is clearable with Vael. Spending buys *speed* (more pulls now), *depth* (stars and relic levels) and *cosmetics*.
 
@@ -196,6 +212,7 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 ## 7. Soul Pass economics
 
 - 30 tiers × 500 XP = 15,000 XP per 28-day season. Daily quests give 220 pass XP a day and each run gives round(20 + T/6 + K/40 + 40 on a clear), about 80–210. A daily player (all quests, ~3 runs) earns ~700 XP/day and finishes in about 3 weeks, leaving a week of slack. A casual player (quests plus 1 run a day) reaches roughly tier 15–20.
+- Nightmare and Torment runs give ×1.5 / ×2 pass XP, so an endgame player on Torment (~1,300 XP a day) can finish in about 12 days. That is the intended reward for mastery: the premium track's contents do not change, and the target that matters (60–70% of premium buyers reach tier 30) only gets easier. Watch for premium buyers who finish in week 2 and then stop playing; if that shows up, cap the difficulty bonus at Nightmare's ×1.5.
 - **Free track (30 tiers):** 20,800 gold, 340 gems, 6 sigils.
 - **Premium track ($9.99):** 1,140 gems, 12 sigils, 1 Epic relic (tier 10), 1 Legendary relic (tier 20), 25 Seraphine shards (S1: 10 at tier 10, 5 at tiers 5, 15 and 25), "Eclipse Vael" skin + 300 gems (tier 30). Premium unlocks retroactively. Buying on day 20 grants every premium reward already earned.
 - **Honest value badge:** 1,140 gems + 12 sigils = 2,940 gem-equivalent, versus 1,200 gems for the $9.99 gem pack → **"2.4× the gems of the $9.99 pack"**, plus relics, shards and the skin, which we list but do not price.

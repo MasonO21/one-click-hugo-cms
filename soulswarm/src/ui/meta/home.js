@@ -2,7 +2,8 @@
 // The middle of the screen stays empty so the 3D hero showcase reads through.
 import { h, $, fmt, fmtTime, toast, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
-import { CHAPTERS, ENERGY_COST, SKUS, HEROES } from '../../game/data.js';
+import { CHAPTERS, ENERGY_COST, SKUS, HEROES, DIFFICULTY, DIFFICULTY_ORDER } from '../../game/data.js';
+import { difficultyUnlocked, selectedDifficulty, selectDifficulty, difficultyRecord, clearedOn } from '../../meta/difficulty.js';
 import {
   commit, computeLoadout, notifications, starterAvailable, pactActive, pactDailyAvailable,
   freeChestAvailable, claimFreeChest, canPlay, trialState, bloodMoon, bloodMoonTimes,
@@ -49,6 +50,20 @@ export function createHome(ctx) {
     else if (best) status = `<span class="chap-best">${icon('hourglass')} Best ${fmtTime(best.time)} <span class="t-dim">/ 06:00</span></span>`;
     else status = '<span class="chap-best t-dim">Survive 6:00 and slay Gravemaw</span>';
 
+    // Nightmare / Torment selector (campaign chapters only): records, first-clear bonus and locks for the chosen tier
+    const dsel = locked || ch.endless ? 'normal' : selectedDifficulty(p, sel), D = DIFFICULTY[dsel];
+    if (dsel !== 'normal') {
+      const rec = difficultyRecord(p, sel, dsel);
+      status = rec?.cleared
+        ? `<span class="pill pill-diff" style="--dc:${D.css}">${icon('check')} Cleared</span><span class="chap-best t-dim">Best ${fmtTime(rec.time)} · Legion ${rec.legion}</span>`
+        : `<span class="chap-best">${rec ? `${icon('hourglass')} Best ${fmtTime(rec.time)} <span class="t-dim">·</span> ` : ''}<span class="d-first">${icon('gems')} +${D.firstClearGems} first clear</span></span>`;
+    }
+    const dselHtml = locked || ch.endless ? '' : `<div class="dsel" role="group" aria-label="Difficulty">${DIFFICULTY_ORDER.map((id, i) => {
+      const d = DIFFICULTY[id], open = difficultyUnlocked(p, sel, id), won = id !== 'normal' && clearedOn(p, sel, id);
+      const sub = open ? `×${d.gold} gold` : `${icon('lock')} Beat ${DIFFICULTY[DIFFICULTY_ORDER[i - 1]].name}`;
+      return `<button class="dsel-b${id === dsel ? ' on' : ''}${open ? '' : ' lk'}" data-act="diff" data-d="${id}" style="--dc:${d.css}" aria-pressed="${id === dsel}"${open ? '' : ' aria-disabled="true"'}><b>${d.name}${won ? icon('check') : ''}</b><small>${sub}</small></button>`;
+    }).join('')}</div>`;
+
     const ftue = !p.flags.tutorialDone && !locked;
     const lowEnergy = !canPlay(p);
     const trial = trialState(p);
@@ -78,11 +93,12 @@ export function createHome(ctx) {
             <div class="chap-status">${status}</div>
           </div>
           <button class="chap-arrow" data-act="next" ${sel >= CHAPTERS.length ? 'disabled' : ''} aria-label="Next chapter">${icon('right')}</button>
+          ${dselHtml}
         </div>
         ${bloodMoon(p) ? `<div class="bm"><i class="bm-moon"></i><div><b>BLOOD MOON</b><span>2× elites · 2× gold and gems</span></div>${cd(bloodMoonTimes().ends, 0, 'bm-cd')}</div>` : ''}
         ${ftue ? `<div class="ftue"><span>Your legion awaits, Shepherd.</span><i class="ftue-arrow">${icon('right')}</i></div>` : ''}
-        <div class="battle-wrap ${ftue ? 'is-ftue' : ''}">
-          <button class="btn btn-primary btn-battle ${locked ? 'is-locked' : ''}" data-act="battle">
+        <div class="battle-wrap ${ftue ? 'is-ftue' : ''} d-${dsel}">
+          <button class="btn btn-primary btn-battle ${locked ? 'is-locked' : ''} d-${dsel}" data-act="battle">
             <span class="bb-shine"></span>
             <span class="bb-label t-display">${locked ? `${icon('lock')} Locked` : 'Battle'}</span>
             ${locked ? '' : `<span class="bb-cost ${lowEnergy ? 'is-low' : ''}">${icon('energy')}<b class="tnum">${ENERGY_COST}</b></span>`}
@@ -122,6 +138,14 @@ export function createHome(ctx) {
       } finally { busy = false; }
     },
     chestDone: () => { tap(app); toast(`Next free chest in ${fmtTime((nextMidnight() - Date.now()) / 1000)}`); },
+    diff: (b) => {
+      const p = app.profile, sel = p.chapter.selected || 1, id = b.dataset.d, i = DIFFICULTY_ORDER.indexOf(id);
+      if (!difficultyUnlocked(p, sel, id)) { tap(app, 'warning', null); toast(`Clear ${CHAPTERS[sel - 1].name} on ${DIFFICULTY[DIFFICULTY_ORDER[i - 1]].name} to unlock ${DIFFICULTY[id].name}`); return; }
+      if (selectedDifficulty(p, sel) === id) return;
+      tap(app);
+      selectDifficulty(p, sel, id);
+      commit(p); // onChange re-renders
+    },
     prev: () => setChapter(-1),
     next: () => setChapter(1),
     battle: () => {
@@ -129,7 +153,7 @@ export function createHome(ctx) {
       if (sel > p.chapter.unlocked) { tap(app, 'warning', null); toast(`Clear Chapter ${sel - 1} to unlock`); return; }
       tap(app, 'medium', 'select');
       if (!canPlay(p)) { openEnergy(ctx); return; }
-      const ok = app.startRun(sel);
+      const ok = app.startRun(sel, { difficulty: selectedDifficulty(p, sel) });
       if (ok === false) { if (!canPlay(p)) openEnergy(ctx); else toast('Unable to start this chapter'); }
     },
   });

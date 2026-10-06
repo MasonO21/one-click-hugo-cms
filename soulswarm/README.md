@@ -20,6 +20,7 @@ Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag
 ## What's in the game
 
 - **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded.
+- **Nightmare and Torment:** clear a chapter on Normal to replay it on Nightmare, then clear Nightmare for Torment. Tougher, deadlier hordes, more elites and a darker world pay ×1.75 / ×2.5 gold, ×1.5 / ×2 pass XP, one-time first-clear gems and a richer Gravemaw's Hoard (Torment can drop a Legendary relic). Pick the difficulty on the chapter card; Endless and the Daily Trial stay Normal.
 - **5 heroes** with signature weapons (Vael, Nyx, Seraphine, Liora, Mordrake), plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
 - **The legion:** every slain enemy can rise as its own kind (Shades, Wisp Runners, taunting Bulwarks, Soul Witches, Soul Bombs, gold Champions). Multiply it through **Soul Gates** and detonate it with **Soul Nova**.
 - **A living horde:** Ghoul packs lunge, Brutes slam, Witches lob fire. Each chapter has its own twist: burning ground, sliding ice, abyssal hands, an elite parade.

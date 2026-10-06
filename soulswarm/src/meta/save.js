@@ -1,6 +1,7 @@
 // Player profile persistence. localStorage can be unavailable (private mode, sandboxed previews),
 // so every access is guarded and the game still runs from in-memory state.
 import { HERO_ORDER, ENERGY_MAX, STARTER_PACK_HOURS } from '../game/data.js';
+import { migrateDifficulty } from './difficulty.js';
 
 const KEY = 'soulswarm.save.v1';
 
@@ -32,6 +33,7 @@ export function newProfile() {
     relicSeq: 3,
     talents: { might: 0, vitality: 0, raise: 0, cap: 0, greed: 0, swift: 0 },
     chapter: { unlocked: 1, selected: 1, best: {} },
+    diff: { sel: {}, best: {} }, // Nightmare / Torment: last choice and records per chapter (meta/difficulty.js)
     pass: { season: 1, xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
     quests: { day: todayKey(now), progress: {}, claimed: [] },
     login: { streak: 0, lastClaim: null },
@@ -56,6 +58,7 @@ function migrate(p) {
   for (const id of HERO_ORDER) out.heroes[id] = { ...base.heroes[id], ...(out.heroes[id] || {}) };
   if (!Array.isArray(out.relics)) out.relics = base.relics;
   if (!Array.isArray(out.equipped)) out.equipped = base.equipped;
+  migrateDifficulty(out);
   return out;
 }
 

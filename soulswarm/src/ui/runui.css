@@ -15,6 +15,10 @@
 .hud-timer { text-align: center; line-height: 1; }
 .hud-timer b { display: block; font-size: 22px; font-weight: 800; letter-spacing: .04em; text-shadow: 0 0 10px rgba(78,242,255,.4), 0 2px 3px #000; }
 .hud-timer small { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
+/* Nightmare / Torment badge under the timer, and their run-start banners (--dc = DIFFICULTY[].css) */
+.hud-diff { display: block; margin-top: 3px; font-style: normal; font-size: 9px; font-weight: 900; letter-spacing: .24em; text-transform: uppercase; color: color-mix(in srgb, var(--dc) 70%, #fff); text-shadow: 0 0 8px var(--dc), 0 1px 2px #000; }
+.banner.diff-nightmare b { color: #f1e0ff; text-shadow: 0 0 22px #b46bff, 0 2px 0 #23003a; }
+.banner.diff-torment b { color: #ffdcdf; text-shadow: 0 0 22px #ff3b4e, 0 2px 0 #3a0008; }
 .legion { align-self: center; display: flex; align-items: center; gap: 8px; padding: 4px 14px 4px 8px; margin-top: 2px;
   background: linear-gradient(90deg, rgba(0,0,0,0), rgba(8,30,44,.85) 20%, rgba(8,30,44,.85) 80%, rgba(0,0,0,0)); }
 .legion svg { width: 26px; height: 26px; color: var(--lc, var(--soul)); filter: drop-shadow(0 0 6px var(--lc, var(--soul))); }

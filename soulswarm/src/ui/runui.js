@@ -2,9 +2,12 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART } from './art.js';
+
+/** Nightmare / Torment pill with its gold multiplier (empty on Normal). */
+const diffPill = (id) => { const D = DIFFICULTY[id]; return D && id !== 'normal' ? `<span class="pill pill-diff" style="--dc:${D.css}">${D.name} · ×${D.gold} gold</span>` : ''; };
 
 export class RunUI {
   constructor(app, run) {
@@ -22,7 +25,7 @@ export class RunUI {
         </div>
         <div class="hud-stats">
           <div class="hud-stat k">${icon('skull')}<span>0</span></div>
-          <div class="hud-timer"><b>00:00</b><small>${run.chapter.name}</small></div>
+          <div class="hud-timer"><b>00:00</b><small>${run.chapter.name}</small>${run.diff.id !== 'normal' ? `<em class="hud-diff" style="--dc:${run.diff.css}">${run.diff.name}</em>` : ''}</div>
           <div class="hud-stat r g">${icon('gold')}<span>0</span></div>
         </div>
         <div class="legion"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${'<path d="M12 3c-3.5 0-6 2.7-6 6v11l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5V9c0-3.3-2.5-6-6-6z"/><path d="M9.6 9.8h.01M14.4 9.8h.01" stroke-width="3"/>'}</svg>
@@ -205,6 +208,7 @@ export class RunUI {
       body: `<div style="display:flex;flex-direction:column;gap:10px">
         <div class="res-stats"><div><b>${fmtTime(run.time)}</b><small>Time</small></div><div><b>${fmt(run.counters.kills)}</b><small>Kills</small></div><div><b>${run.legion.count}</b><small>Legion</small></div></div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${build}</div>
+        ${run.diff.id !== 'normal' ? `<div style="display:flex;justify-content:center">${diffPill(run.diff.id)}</div>` : ''}
         ${run.trial ? `<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${run.mut.ids.map((id) => `<span class="pill ${MUTATORS[id].kind === 'boon' ? 'pill-soul' : 'pill-hot'}">${MUTATORS[id].name}</span>`).join(' ')}</div>` : ''}
       </div>`,
       actions: [
@@ -265,7 +269,7 @@ export class RunUI {
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
       <div class="res-head ${win || result.endless ? 'win' : 'lose'}"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} Gravemaw slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
-      <div class="res-badges">${result.bloodMoon ? '<span class="pill pill-hot">Blood Moon ×2</span>' : ''}${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
+      <div class="res-badges">${diffPill(result.difficulty)}${result.bloodMoon ? '<span class="pill pill-hot">Blood Moon ×2</span>' : ''}${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
       <div class="res-stats">
         <div><b>${fmtTime(result.time)}</b><small>Survived</small></div>
         <div><b>${fmt(result.kills)}</b><small>Kills</small></div>

@@ -16,6 +16,7 @@ import { Boss } from './boss.js';
 import { Hazards } from './hazards.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON } from './data.js';
+import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -25,7 +26,7 @@ const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
 export class Run {
-  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false }) {
+  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal' }) {
     this.isRun = true;
     this.engine = engine;
     this.app = app;
@@ -38,7 +39,10 @@ export class Run {
 
     this.scene = new THREE.Scene();
     this.bloodMoon = !!bloodMoon; // weekend event: 8 elites, double rewards, a blood-red sky
-    const look = this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim } : chapter;
+    // Nightmare / Torment: always defined, Normal is the identity. Endless and the Daily Trial play Normal.
+    this.diff = { ...(!chapter.endless && !(mutators && mutators.length) && DIFFICULTY[difficulty]) || DIFFICULTY.normal };
+    let look = this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim } : chapter;
+    if (this.diff.tint) look = difficultyLook(look, this.diff.tint); // over the Blood Moon sky too
     this.scene.background = new THREE.Color(look.fog);
     this.camera = new THREE.PerspectiveCamera(45, 0.5, 0.5, 220);
 
@@ -101,7 +105,8 @@ export class Run {
     if (this.mut.eliteEvery) this.eliteTimes = Array.from({ length: Math.floor((RUN_LENGTH - 10) / this.mut.eliteEvery) }, (_, i) => (i + 1) * this.mut.eliteEvery);
     this.gateEvery = this.mut.gateEvery || 40;
     if (this.bloodMoon && !this.endless) this.eliteTimes = BLOOD_MOON.elites;
-    this.trialBannerAt = this.trial || this.bloodMoon ? 3.6 : 0;
+    if (this.diff.extraElites) this.eliteTimes = this.eliteTimes.concat(DIFFICULTY_ELITES.slice(0, this.diff.extraElites)).sort((a, b) => a - b);
+    this.trialBannerAt = this.trial || this.bloodMoon || this.diff.id !== 'normal' ? 3.6 : 0;
     this.packAcc = 0; this.packN = 0;
     this.hazards = new Hazards(this);
     this.projectiles.initLobs();
@@ -114,9 +119,12 @@ export class Run {
   hpMul() {
     const m = this.minute;
     // Endless Abyss runs far past 6:00, so it uses a flatter curve than the campaign.
-    return this.chapter.hpMul * (this.endless ? 1 + 0.32 * m + 0.025 * m * m : 1 + 0.28 * m + 0.04 * m * m);
+    // Nightmare / Torment: the extra toughness ramps in over diff.ramp minutes (the opening stays winnable), and Gravemaw's
+    // arena adds have Normal HP, or they pile up at the alive cap and soak his fight (scripts/balance.mjs GOD=1)
+    const D = this.diff, dh = this.bossSpawned ? 1 : 1 + (D.hp - 1) * Math.min(1, D.ramp ? m / D.ramp : 1);
+    return this.chapter.hpMul * (this.endless ? 1 + 0.32 * m + 0.025 * m * m : 1 + 0.28 * m + 0.04 * m * m) * dh;
   }
-  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)); }
+  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)) * this.diff.dmg; }
   recomputeStats() {
     this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
     const ms = this.mut.stats, S = this.stats;
@@ -211,7 +219,7 @@ export class Run {
         const title = !this.endless ? this.chapter.name.toUpperCase() : this.modDepth ? 'THE ABYSS SHIFTS' : 'ENDLESS ABYSS';
         if (this.mods.tag) this.ui.banner(title, src >= 0 ? `${CHAPTER_NAMES[src]}: ${this.mods.tag}` : this.mods.tag, 'ember');
       }
-      const rate = (1.1 + 0.85 * m + 0.22 * m * m) * this.chapter.rate * this.mut.spawn;
+      const rate = (1.1 + 0.85 * m + 0.22 * m * m) * this.chapter.rate * this.mut.spawn * this.diff.spawn;
       this.spawnAcc = Math.min(6, this.spawnAcc + rate * dt);
       while (this.spawnAcc >= 1) {
         this.spawnAcc -= 1;
@@ -226,7 +234,8 @@ export class Run {
       if (this.trialBannerAt && this.time >= this.trialBannerAt) {
         this.trialBannerAt = 0;
         if (this.trial) this.ui.banner('DAILY TRIAL', this.mut.ids.map((id) => MUTATORS[id].name).join('  ·  '), 'soul');
-        else this.ui.banner('BLOOD MOON', 'Twice the elites · double gold and gems', 'ember');
+        else if (this.bloodMoon) this.ui.banner('BLOOD MOON', `Twice the elites · double gold and gems${this.diff.id !== 'normal' ? ' · ' + this.diff.name : ''}`, 'ember');
+        else this.ui.banner(this.diff.name.toUpperCase(), `More elites, deadlier foes · ×${this.diff.gold} gold`, 'diff-' + this.diff.id);
       }
       if (this.time >= this.nextGate) { this.nextGate += this.gateEvery; this.gates.spawnPair(); }
       if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
@@ -280,7 +289,7 @@ export class Run {
     if (e.elite) this.counters.elites++;
     this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
-    this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1));
+    this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1) * this.diff.xp); // harder foes, richer souls
     if (e.elite) this.pickups.dropSpecial('chest', e.x, e.z);
     else {
       const r = Math.random();
@@ -554,7 +563,7 @@ export class Run {
       chapter: this.chapter.id, time: this.endless ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
-      trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon,
+      trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
       chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length,
     };
     if (this.onEnd) this.onEnd(result);
