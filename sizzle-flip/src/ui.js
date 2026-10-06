@@ -5,6 +5,7 @@ import { SKINS, drawSausage, makeFaceState } from './art/sausage.js';
 import { renderLevelThumb } from './thumbs.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { PRIVACY_HTML } from './privacy.js';
+import { ITEMS, ITEM_BY_ID, drawItem } from './art/items.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -41,6 +42,7 @@ export class UI {
     if (id === 'scr-worlds') this.renderWorlds();
     if (id === 'scr-levels') this.renderLevels();
     if (id === 'scr-skins') this.renderSkins();
+    if (id === 'scr-shop') this.renderShop();
     if (id === 'scr-settings') { this.syncToggles(); this.renderAim(); this.renderAdTest(); $('privacy-choices').hidden = !this.app.ads.privacyOptionsAvailable; }
   }
 
@@ -88,6 +90,9 @@ export class UI {
         else this.show('scr-worlds');
         break;
       case 'skins': this.show('scr-skins'); break;
+      case 'shop': this.show('scr-shop'); break;
+      case 'restore': this.restorePurchases(); break;
+      case 'shop-reset-test': app.shop.resetTestPurchases(); this.toast('Test purchases cleared'); break;
       case 'settings': this.show('scr-settings'); break;
       case 'back': { const prev = this.stack.pop() || 'scr-title'; this.show(prev, false); break; }
       case 'pause': app.pause(true); this.syncToggles(); this.renderAim(); $('scr-pause').hidden = false; break;
@@ -209,6 +214,7 @@ export class UI {
   renderAdTest() {
     const box = $('ad-test');
     box.hidden = !this.app.ads.testing;
+    $('shop-reset-test').hidden = this.app.shop.kind !== 'test';
     if (!box.hidden) $('ad-status').textContent = this.app.ads.status();
   }
 
@@ -332,12 +338,13 @@ export class UI {
       const unlocked = stars >= s.stars;
       if (unlocked) app.save.seenSkins[s.id] = true;
       const d = document.createElement('div');
-      d.className = 'skin' + (app.save.skin === s.id ? ' on' : '') + (unlocked ? '' : ' locked');
-      d.innerHTML = `<canvas width="240" height="120"></canvas><div class="nm">${unlocked ? s.name : '???'}</div><div class="req">${unlocked ? (app.save.skin === s.id ? '' : 'Tap to equip') : `<span class="star">★</span> ${s.stars} stars`}</div>`;
+      const on = app.save.skin === s.id && !app.shop.characterItem();
+      d.className = 'skin' + (on ? ' on' : '') + (unlocked ? '' : ' locked');
+      d.innerHTML = `<canvas width="240" height="120"></canvas><div class="nm">${unlocked ? s.name : '???'}</div><div class="req">${unlocked ? (on ? '' : 'Tap to equip') : `<span class="star">★</span> ${s.stars} stars`}</div>`;
       drawSkinPreview(d.querySelector('canvas'), s);
       d.addEventListener('click', () => {
         if (!unlocked) { app.audio.play('tap'); this.toast(`Collect ${s.stars - stars} more ★`); return; }
-        app.save.skin = s.id; app.persist(); app.audio.play('unlock'); this.renderSkins();
+        app.save.skin = s.id; app.shop.equip('sausage'); app.audio.play('unlock'); this.renderSkins();
       });
       grid.appendChild(d);
     });
@@ -347,6 +354,68 @@ export class UI {
     document.getElementById('trophy-count').textContent = `${Object.keys(got).length} / ${ACHIEVEMENTS.length}`;
     tl.innerHTML = ACHIEVEMENTS.map(a => `<div class="trophy-row${got[a.id] ? ' got' : ''}"><span class="ti">${got[a.id] ? a.icon : '🔒'}</span><span><b>${a.name}</b><small>${a.desc}</small></span></div>`).join('');
     app.persist();
+  }
+
+  // ------------------------------------------------------------ shop
+  renderShop() {
+    const app = this.app, shop = app.shop;
+    const grid = $('shop-grid');
+    grid.innerHTML = '';
+    $('shop-restore').hidden = !shop.available;
+    $('shop-note').textContent = shop.available
+      ? 'Same size and bounce as the sausage — every level plays exactly the same.'
+      : 'Items can be bought in the Sizzle Flip app. Same size and bounce as the sausage — every level plays the same.';
+    const current = app.shop.characterItem();
+    const card = (id, name, desc, draw, state) => {
+      const d = document.createElement('div');
+      d.className = 'skin shop-card' + (state === 'equipped' ? ' on' : '') + (state === 'equip' ? ' owned' : '');
+      d.dataset.item = id;
+      const label = state === 'equipped' ? '' : state === 'equip' ? 'EQUIP' : state === 'buy' ? shop.price(id) : 'IN THE APP';
+      d.innerHTML = `<canvas width="240" height="120"></canvas><div class="nm">${name}</div><div class="ds">${desc}</div>` +
+        (label ? `<button class="btn ${state === 'buy' ? 'btn-relish' : state === 'equip' ? 'btn-sky' : 'btn-ghost'} shop-btn"${state === 'app' ? ' disabled' : ''}><span>${label}</span></button>` : '');
+      draw(d.querySelector('canvas'));
+      const btn = d.querySelector('.shop-btn');
+      if (btn && state !== 'app') btn.addEventListener('click', (e) => { e.stopPropagation(); app.audio.play('click'); this.shopAction(id, state); });
+      grid.appendChild(d);
+    };
+    const skin = SKINS.find(s => s.id === app.save.skin) || SKINS[0];
+    card('sausage', 'Sausage', 'The original. Change its skin in the Locker.', (c) => drawSkinPreview(c, skin), current ? 'equip' : 'equipped');
+    for (const it of ITEMS) {
+      const owned = shop.isOwned(it.id);
+      const state = owned ? (current && current.id === it.id ? 'equipped' : 'equip') : shop.available ? 'buy' : 'app';
+      card(it.id, it.name, it.desc, (c) => drawSkinPreview(c, null, it), state);
+    }
+  }
+
+  async shopAction(id, state) {
+    const app = this.app;
+    if (state === 'equip') { app.shop.equip(id); app.audio.play('unlock'); this.renderShop(); return; }
+    if (state !== 'buy' || this._buying) return;
+    this._buying = true;
+    const btn = document.querySelector(`.shop-card[data-item="${id}"] .shop-btn`);
+    if (btn) { btn.disabled = true; btn.querySelector('span').textContent = '…'; }
+    const r = await app.shop.buy(id).finally(() => { this._buying = false; });
+    const it = ITEM_BY_ID[id];
+    if (r === 'bought') { app.audio.play('unlock'); app.haptic([10, 30, 10]); this.toast(`🎉 ${it.name} unlocked and equipped!`, 2600); }
+    else if (r === 'pending') this.toast('Payment pending — it unlocks as soon as it completes', 3200);
+    else if (r === 'error') this.toast('Purchase didn\'t go through — please try again', 2600);
+    else if (r === 'unavailable') this.toast('The store isn\'t available right now', 2400);
+    if (!$('scr-shop').hidden) this.renderShop();
+  }
+
+  async restorePurchases() {
+    if (this._restoring) return;
+    this._restoring = true;
+    this.toast('Restoring purchases…', 1500);
+    const n = await this.app.shop.restore().finally(() => { this._restoring = false; });
+    this.toast(n > 0 ? `Restored ${n} item${n > 1 ? 's' : ''}` : n === 0 ? 'Your purchases are all here' : 'Couldn\'t reach the store — try again', 2400);
+    if (!$('scr-shop').hidden) this.renderShop();
+  }
+
+  // the store granted something outside a tap (pending payment cleared, restore on launch)
+  onShopChanged() {
+    if (!$('scr-shop').hidden) this.renderShop();
+    if (!$('scr-skins').hidden) this.renderSkins();
   }
 
   // ------------------------------------------------------------ HUD
@@ -437,16 +506,17 @@ export class UI {
   }
 }
 
-export function drawSkinPreview(c, skin) {
+export function drawSkinPreview(c, skin, item = null) {
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, c.width, c.height);
   const s = c.width / 240;
   ctx.save();
   ctx.scale(s * 1.25, s * 1.25);
   const N = 10, px = new Float64Array(N), py = new Float64Array(N);
-  for (let i = 0; i < N; i++) { px[i] = 46 + i * 11; py[i] = 52 - Math.sin(i / (N - 1) * Math.PI) * 8; }
+  for (let i = 0; i < N; i++) { px[i] = 42 + i * 11; py[i] = 52 - Math.sin(i / (N - 1) * Math.PI) * 8; }
   const face = makeFaceState(); face.expr = 'idle'; face.lookX = 1; face.lookY = 0.2;
-  drawSausage(ctx, px, py, { R: 15, skin, face, t: 0.4 });
+  if (item) drawItem(ctx, px, py, { R: 15, item, face, t: 0.4 });
+  else drawSausage(ctx, px, py, { R: 15, skin, face, t: 0.4 });
   ctx.restore();
 }
 

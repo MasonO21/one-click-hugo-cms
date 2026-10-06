@@ -9,6 +9,7 @@ import { PRIVACY_CONTACT } from '../src/privacy.js';
 import { LEVELS } from '../src/levels/data.js';
 import { makeSim } from './solver.mjs';
 import { PHYS } from '../src/physics.js';
+import { ITEMS } from '../src/art/items.js';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (f) => { try { return fs.readFileSync(path.join(root, f), 'utf8'); } catch (e) { return null; } };
@@ -48,6 +49,14 @@ LEVELS.forEach((L, i) => {
 });
 if (LEVELS.length !== 200) fail(`expected 200 levels, found ${LEVELS.length}`);
 if (bad.length) fail(`level routes: ${bad.join(', ')}`); else ok('all 200 level routes win under the game rules');
+
+// --- shop: 30 one-time products, ids valid for both stores, and the product list handed to the store consoles matches
+const pids = ITEMS.map(i => 'item_' + i.id);
+const badPid = pids.filter(p => !/^[a-z0-9][a-z0-9_.]{0,99}$/.test(p));
+if (ITEMS.length !== 30 || new Set(pids).size !== 30 || badPid.length) fail(`shop products: ${ITEMS.length} items, ${new Set(pids).size} unique ids${badPid.length ? ', invalid: ' + badPid.join(' ') : ''}`);
+else ok('30 shop products with valid ids (item_<name>)');
+const csv = (read('store/iap-products.csv') || '').split('\n').slice(1).filter(Boolean).map(l => l.split(',')[1]);
+if (csv.join() !== pids.join()) fail('store/iap-products.csv is out of date with src/art/items.js'); else ok('store/iap-products.csv lists every product');
 
 // --- android project
 const vars = read('android/variables.gradle') || '';

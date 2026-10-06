@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Shop items gallery</title>
+<style>body{margin:0;background:#cfe6f5;font:12px system-ui}#g{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px}.c{background:#fff8ec;border-radius:8px;text-align:center}.c b{display:block;padding:2px}</style></head><body>
+<div id="g"></div>
+<script type="module">
+// QA sheet for src/art/items.js: every item straight, bent and curled (open tools/items-gallery.html?only=butter for one)
+import { ITEMS, drawItem } from '../src/art/items.js';
+import { makeFaceState } from '../src/art/sausage.js';
+const Q = new URLSearchParams(location.search), only = Q.get('only'), S = +(Q.get('scale') || 1);
+document.getElementById('g').style.gridTemplateColumns = `repeat(${Q.get('cols') || 6},1fr)`;
+const N = 10, SP = 11;
+function pose(kind) {
+  const px = new Float64Array(N), py = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    if (kind === 0) { px[i] = 40 + i * SP; py[i] = 50; }
+    else if (kind === 1) { const a = -0.9 + i / (N - 1) * 1.8, r = 85; px[i] = 90 + Math.sin(a) * r; py[i] = 125 - Math.cos(a) * r; }
+    else { const a = -2.1 + i / (N - 1) * 3.1, r = 32; px[i] = 90 + Math.cos(a) * r; py[i] = 60 + Math.sin(a) * r; }
+  }
+  return [px, py];
+}
+const exprs = ['idle', 'aim', 'win'];
+const from = +(Q.get('from') || 0), cnt = +(Q.get('n') || 99);
+for (const it of ITEMS.filter(i => !only || i.id === only).slice(from, from + cnt)) {
+  const d = document.createElement('div'); d.className = 'c';
+  const c = document.createElement('canvas'); c.width = 540 * S; c.height = 150 * S; c.style.width = '100%';
+  const ctx = c.getContext('2d'); ctx.scale(S, S);
+  [0, 1, 2].forEach((k) => {
+    ctx.save(); ctx.translate(k * 180, 0);
+    const [px, py] = pose(k);
+    const face = makeFaceState(); face.expr = exprs[k]; face.power = 0.4;
+    drawItem(ctx, px, py, { R: 15, item: it, face, t: 0.3 });
+    ctx.restore();
+  });
+  d.appendChild(c);
+  const b = document.createElement('b'); b.textContent = it.name; d.appendChild(b);
+  document.getElementById('g').appendChild(d);
+}
+window.__done = true;
+</script></body></html>

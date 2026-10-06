@@ -20,6 +20,23 @@ const MOCK = () => {
     showRewardVideoAd: () => { calls.push('showRewardVideoAd'); setTimeout(() => emit('onRewardedVideoAdShowed'), 20); return new Promise(res => { rewardResolve = res; }); },
     addListener: on,
   };
+  // @capgo/native-purchases (Google Play Billing / StoreKit): one prior purchase on this account (banana)
+  window.__store = { owned: [{ productIdentifier: 'item_banana', purchaseState: '1' }], next: {} };
+  const NativePurchases = {
+    getProducts: async ({ productIdentifiers }) => ({ products: productIdentifiers.map(id => ({ identifier: id, priceString: '1,09 €', price: 1.09 })) }),
+    getPurchases: async () => ({ purchases: window.__store.owned.slice() }),
+    restorePurchases: async () => { calls.push('restorePurchases'); },
+    purchaseProduct: async ({ productIdentifier }) => {
+      calls.push('purchase:' + productIdentifier);
+      const how = window.__store.next[productIdentifier] || 'ok';
+      if (how === 'cancel') throw new Error('User cancelled the purchase');
+      if (how === 'error') throw new Error('Billing service unavailable');
+      const tx = { productIdentifier, transactionId: 't' + Date.now(), purchaseState: how === 'pending' ? '0' : '1' };
+      if (how === 'ok') window.__store.owned.push(tx);
+      return tx;
+    },
+    addListener: on,
+  };
   const App = { addListener: (ev, fn) => { if (ev === 'backButton') window.__back = fn; return on(ev, fn); }, minimizeApp: async () => { calls.push('minimizeApp'); } };
   window.__mock = {
     listeners: () => Object.fromEntries(Object.entries(L).map(([k, v]) => [k, v.size]).filter(([, n]) => n)),
@@ -27,10 +44,11 @@ const MOCK = () => {
     closeReward: () => emit('onRewardedVideoAdDismissed'),
     failReward: () => emit('onRewardedVideoAdFailedToShow', {}),
     closeInterstitial: () => emit('interstitialAdDismissed'),
+    storeEvent: (tx) => emit('transactionUpdated', tx),
   };
   window.Capacitor = {
     isNativePlatform: () => true, getPlatform: () => 'android',
-    registerPlugin: (n) => n === 'AdMob' ? AdMob : n === 'App' ? App : { hide: () => Promise.resolve(), impact: () => Promise.resolve() },
+    registerPlugin: (n) => n === 'AdMob' ? AdMob : n === 'App' ? App : n === 'NativePurchases' ? NativePurchases : { hide: () => Promise.resolve(), impact: () => Promise.resolve() },
   };
 };
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -116,6 +134,33 @@ await page.waitForTimeout(200);
 check(!(await hidden('scr-privacy')) && await ev(() => /AdMob/.test(document.getElementById('privacy-text').textContent)), 'privacy policy opens in the app');
 await ev(() => window.__back());
 check(await hidden('scr-privacy'), 'back closes the policy');
+// 8. shop with real store billing (mocked plugin)
+await ev(() => window.__app.shop.ready);
+check(await ev(() => window.__app.shop.kind === 'store'), 'app build uses the store (Google Play / App Store)');
+check(await ev(() => window.__app.shop.isOwned('banana')), 'earlier purchase restored from the store at launch');
+await ev(() => { document.getElementById('scr-privacy').hidden = true; window.__app.ui.show('scr-shop'); });
+await page.waitForTimeout(300);
+check(await ev(() => document.querySelector('.shop-card[data-item="carrot"] .shop-btn span').textContent === '1,09 €'), 'prices come from the store, localized (1,09 €)');
+await page.click('.shop-card[data-item="carrot"] .shop-btn', { force: true }); await page.waitForTimeout(400);
+check(await ev(() => window.__app.shop.isOwned('carrot') && window.__app.save.character === 'carrot'), 'buying through the store unlocks and equips');
+await ev(() => { window.__store.next.item_pickle = 'pending'; });
+await page.click('.shop-card[data-item="pickle"] .shop-btn', { force: true }); await page.waitForTimeout(400);
+check(await ev(() => !window.__app.shop.isOwned('pickle') && /pending/.test(document.getElementById('toast').textContent)), 'pending payment: not unlocked yet, player told');
+await ev(() => window.__mock.storeEvent({ productIdentifier: 'item_pickle', purchaseState: '1' }));
+await page.waitForTimeout(200);
+check(await ev(() => window.__app.shop.isOwned('pickle') && document.querySelector('.shop-card[data-item="pickle"] .shop-btn span').textContent === 'EQUIP'), 'pending payment unlocks when it completes');
+await ev(() => { window.__store.next.item_corn = 'cancel'; });
+await page.click('.shop-card[data-item="corn"] .shop-btn', { force: true }); await page.waitForTimeout(400);
+check(await ev(() => !window.__app.shop.isOwned('corn') && !/didn/.test(document.getElementById('toast').textContent)), 'cancelled purchase: nothing unlocked, no error message');
+await ev(() => { window.__store.next.item_corn = 'error'; });
+await page.click('.shop-card[data-item="corn"] .shop-btn', { force: true }); await page.waitForTimeout(400);
+check(await ev(() => !window.__app.shop.isOwned('corn') && /didn/.test(document.getElementById('toast').textContent)), 'store error: player asked to try again');
+await ev(() => { window.__store.owned.push({ productIdentifier: 'item_rocket', purchaseState: '1' }); window.__app.save.owned = { banana: {}, carrot: {}, pickle: {} }; });
+await page.click('#shop-restore', { force: true }); await page.waitForTimeout(500);
+check(await ev(() => window.__calls.includes('restorePurchases') && window.__app.shop.isOwned('rocket')), 'Restore purchases brings back items bought on another device');
+await ev(() => window.__mock.storeEvent({ productIdentifier: 'item_carrot', revocationDate: '2026-10-06' }));
+check(await ev(() => !window.__app.shop.isOwned('carrot') && window.__app.save.character === 'sausage'), 'refunded (revoked) purchase is removed, sausage re-equipped');
+
 // 7. no-fill retry loops stay bounded
 await ev(() => { window.__failPrepare = true; window.__calls.length = 0; const a = window.__app.ads.provider; a.ready.interstitial = a.ready.rewarded = false; });
 for (let k = 0; k < 12; k++) await ev((kind) => { window.__app.ads.provider.preload(kind); }, k % 2 ? 'interstitial' : 'rewarded');

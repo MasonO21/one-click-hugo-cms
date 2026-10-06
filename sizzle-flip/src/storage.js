@@ -8,6 +8,8 @@ const defaults = () => ({
   skipped: {},      // levelIndex -> true when skipped with a reward ad (no stars until beaten)
   unlocked: 1,      // number of unlocked levels (sequential)
   skin: 'classic',
+  character: 'sausage', // equipped character: 'sausage' (with `skin`) or a shop item id
+  owned: {},        // shop item id -> { at, source } (purchases; restored from the store in the app)
   sfx: true,
   music: true,
   haptics: true,
@@ -29,7 +31,7 @@ export function loadSave() {
     const d = JSON.parse(raw);
     const base = defaults();
     delete d.longAim; // was a free toggle before it became a reward
-    return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
+    return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, owned: d.owned && typeof d.owned === 'object' ? d.owned : {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
   } catch (e) {
     return defaults();
   }

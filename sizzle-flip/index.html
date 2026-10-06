@@ -29,6 +29,7 @@
       <div class="menu-buttons">
         <button class="btn btn-big btn-ketchup" data-act="play"><span>PLAY</span></button>
         <div class="row">
+          <button class="btn btn-relish" data-act="shop"><span class="ico">🛒</span><span>SHOP</span></button>
           <button class="btn btn-mustard" data-act="skins"><span class="ico">🌭</span><span>SKINS</span><i class="badge" id="skin-badge" hidden>NEW</i></button>
           <button class="btn btn-sky" data-act="settings"><span class="ico">⚙️</span><span>OPTIONS</span></button>
         </div>
@@ -142,9 +143,23 @@
         <div class="pill"><span class="star">★</span> <b id="skins-stars">0</b></div>
       </header>
       <div class="locker-scroll">
+        <button class="shop-banner" data-act="shop"><span class="sb-ico">🛒</span><span><b>Shop</b><small>30 more things to flip · $1 each</small></span><span class="sb-go">▶</span></button>
         <div class="skin-grid" id="skin-grid"></div>
         <h3 class="section-title">Trophies <span id="trophy-count"></span></h3>
         <div class="trophy-list" id="trophy-list"></div>
+      </div>
+    </section>
+
+    <!-- Shop -->
+    <section class="screen" id="scr-shop" hidden>
+      <header class="bar">
+        <button class="btn btn-round" data-act="back" aria-label="Back">◀</button>
+        <h2>Shop</h2>
+        <button class="btn btn-ghost restore-btn" data-act="restore" id="shop-restore"><span>Restore</span></button>
+      </header>
+      <p class="shop-note" id="shop-note">Same size and bounce as the sausage — every level plays exactly the same.</p>
+      <div class="locker-scroll">
+        <div class="skin-grid shop-grid" id="shop-grid"></div>
       </div>
     </section>
 
@@ -177,6 +192,7 @@
             <button class="btn btn-ghost" data-act="ad-preview" data-kind="interstitial"><span>Forced ad</span></button>
             <button class="btn btn-ghost" data-act="ad-preview" data-kind="rewarded"><span>Reward ad</span></button>
           </div>
+          <button class="btn btn-ghost" data-act="shop-reset-test" id="shop-reset-test" hidden><span>Reset test purchases</span></button>
           <p class="ad-status" id="ad-status"></p>
         </div>
         <div class="credits">

@@ -18,6 +18,8 @@ export const PRIVACY_HTML = `
 <li>On Android you can reset or delete your advertising ID in your device settings (Settings → Privacy → Ads).</li>
 </ul>
 <p>Optional "reward" ads unlock hints, level skips and the long aim guide. Watching them is never required to play.</p>
+<h4>Purchases</h4>
+<p>The Shop sells optional cosmetic characters as one-time in-app purchases. Payment is handled entirely by <b>Google Play</b> or the <b>App Store</b> under their terms; we never see your card or payment details. The app asks the store which items your account owns so it can restore them on a new device or after reinstalling, and keeps that list on your device.</p>
 <h4>Children</h4>
 <p>Sizzle Flip is not directed at children under 13, and we do not knowingly collect information from them. Ads are limited to content rated suitable for general audiences with parental guidance.</p>
 <h4>Changes and contact</h4>

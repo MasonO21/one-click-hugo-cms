@@ -9,7 +9,7 @@
     "levels": "node tools/generate.mjs --workers 4",
     "cap:sync": "node tools/build.mjs && npx cap sync",
     "release:check": "node tools/release-check.mjs",
-    "test": "node tools/e2e-ads.mjs && node tools/e2e-native.mjs && node tools/e2e-recover.mjs && node tools/e2e-all.mjs"
+    "test": "node tools/e2e-ads.mjs && node tools/e2e-native.mjs && node tools/e2e-shop.mjs && node tools/e2e-recover.mjs && node tools/e2e-all.mjs && node tools/e2e-all.mjs --items"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +29,7 @@
     "@capacitor/core": "^8.0.0",
     "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
-    "@capacitor/status-bar": "^8.0.0"
+    "@capacitor/status-bar": "^8.0.0",
+    "@capgo/native-purchases": "^8.8.1"
   }
 }

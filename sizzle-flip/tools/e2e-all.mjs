@@ -1,9 +1,11 @@
 // Plays every level through the real game in Chromium: the verified route is fed through the game's own
 // pointer handlers (pointerDown/Move/Up) at the exact physics step the solver used, then the real UI is
 // used to continue (NEXT, world-complete card, forced ads). Runs ranges in parallel pages.
-// node tools/e2e-all.mjs [from=1] [to=200] [pages=4]      (needs the dev server on :8123)
+// node tools/e2e-all.mjs [from=1] [to=200] [pages=4] [--items]      (needs the dev server on :8123)
 import { chromium } from '/opt/node-tools/node_modules/playwright/index.mjs';
-const from = +(process.argv[2] || 1), to = +(process.argv[3] || 200), pages = +(process.argv[4] || 4);
+const argv = process.argv.slice(2).filter(a => !a.startsWith('--'));
+const from = +(argv[0] || 1), to = +(argv[1] || 200), pages = +(argv[2] || 4);
+const ITEMS_MODE = process.argv.includes('--items'); // equip a different shop item on every level (cycles all 30)
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
 
 // in-page driver: hooks the level's Sim.step so a shot fires exactly N steps after the sausage is ready,
@@ -57,6 +59,12 @@ async function run(range, k) {
   await page.reload(); await page.waitForTimeout(1500);
   await page.evaluate(async () => { const m = await import('/src/physics.js'); window.__PHYS = m.PHYS; });
   await page.evaluate(DRIVER);
+  if (ITEMS_MODE) await page.evaluate(async () => {
+    const { ITEMS } = await import('/src/art/items.js');
+    const a = window.__app, start = a.startLevel;
+    ITEMS.forEach(it => { a.save.owned[it.id] = { at: 1, source: 'test' }; });
+    a.startLevel = (i, f) => { a.save.character = ITEMS[i % ITEMS.length].id; start(i, f); };
+  });
   const res = [];
   let ads = 0, worldDone = 0;
   await page.evaluate((i) => window.__app.startLevel(i), range[0] - 1);
@@ -76,7 +84,8 @@ async function run(range, k) {
       } catch (e) { why = 'timeout waiting for win'; }
       if (!won) { await page.evaluate(() => { document.querySelector('#hud [data-act=restart]').click(); }); await page.waitForTimeout(200); }
     }
-    const info = await page.evaluate(() => { const a = window.__app, g = a.game; return { flips: g.flips, par: g.info.par, stars: a.save.stars[g.info.index] || 0, unlocked: a.save.unlocked }; });
+    if (ITEMS_MODE && won && n % 20 === 6) await page.screenshot({ path: `/tmp/claude-0/shots/all/item-L${n}.png` });
+    const info = await page.evaluate(() => { const a = window.__app, g = a.game; return { item: a.shop.characterItem()?.id || 'sausage', flips: g.flips, par: g.info.par, stars: a.save.stars[g.info.index] || 0, unlocked: a.save.unlocked }; });
     res.push({ n, won, attempts, why: won ? '' : why, ...info, secs: ((Date.now() - t0) / 1000).toFixed(1) });
     if (!won) { console.log(`[p${k}] L${n} FAILED: ${why}`); await page.screenshot({ path: `/tmp/claude-0/shots/all/fail-${n}.png` }); await page.evaluate((i) => window.__app.startLevel(i), n); continue; }
     if (n % 20 === 0 || n === range[1]) console.log(`[p${k}] reached L${n} (${res.filter(r => r.won).length}/${res.length} won, ads ${ads}, worlds ${worldDone})`);
@@ -117,6 +126,7 @@ for (const r of retried) console.log(`  retry L${r.n}: won on attempt ${r.attemp
 const noNext = all.filter(r => r.why === 'NEXT did not open the next level');
 if (noNext.length) console.log('  NEXT problems:', noNext.map(r => r.n).join(','));
 console.log(`stars: ${all.reduce((s, r) => s + r.stars, 0)} / ${all.length * 3}; over par: ${all.filter(r => r.won && r.flips > r.par).map(r => r.n).join(',') || 'none'}`);
+if (ITEMS_MODE) { const used = new Set(all.map(r => r.item)); console.log(`characters used: ${used.size} different shop items (${[...used].slice(0, 6).join(', ')}, …)`); }
 out.forEach((o, k) => console.log(`page ${k} ${ranges[k].join('-')}: forced ads ${o.ads}, world-complete cards ${o.worldDone}, heap ${o.end.heapMB} MB, ended on title ${o.end.title}`));
 const errs = [...new Set(out.flatMap(o => o.errors))];
 console.log(errs.length ? 'PAGE ERRORS:\n' + errs.join('\n') : 'no page errors');

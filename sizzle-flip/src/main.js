@@ -10,6 +10,7 @@ import { SKINS, SKIN_BY_ID } from './art/sausage.js';
 import { PHYS } from './physics.js';
 import { Trophies } from './achievements.js';
 import { AdManager } from './ads.js';
+import { Shop } from './shop.js';
 
 const params = new URLSearchParams(location.search);
 // Native shell (Capacitor) bridges — absent on the web.
@@ -32,6 +33,7 @@ class App {
     this.ui = new UI(this);
     this.trophies = new Trophies(this);
     this.ads = new AdManager(this);
+    this.shop = new Shop(this);
     this.game = null;
     this.levelIndex = 0;
     this.last = performance.now();
@@ -303,8 +305,8 @@ class App {
 
   resetProgress() {
     const keep = this.save;
-    // ad pacing and a "remove ads" purchase survive a progress reset; free hints come back
-    this.save = { ...resetSave(), sfx: keep.sfx, music: keep.music, haptics: keep.haptics, adsRemoved: keep.adsRemoved, adFast: keep.adFast, longAimUntil: keep.longAimUntil, ads: keep.ads ? { ...keep.ads, freeHints: {} } : null };
+    // purchases (shop items, "remove ads"), ad pacing and the long aim timer survive a progress reset
+    this.save = { ...resetSave(), sfx: keep.sfx, music: keep.music, haptics: keep.haptics, adsRemoved: keep.adsRemoved, adFast: keep.adFast, longAimUntil: keep.longAimUntil, owned: keep.owned, character: keep.character, ads: keep.ads ? { ...keep.ads, freeHints: {} } : null };
     this.persist();
     this.ui._worldsBuilt = false;
     document.getElementById('world-list').innerHTML = '';

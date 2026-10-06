@@ -11,6 +11,8 @@ Everything in the code is release-ready. What is left needs **your** accounts, k
 | Contact email for the privacy policy | `src/privacy.js` → `PRIVACY_CONTACT` |
 | If the game is aimed at children under 13 | `src/ads-config.js` → `childDirected: true` (and Play's Families policy applies) |
 
+**Shop (in-app purchases).** The 30 characters are one-time products with ids `item_<name>`, for example `item_butter`. The full list, with titles, descriptions and the $1.00 price, is in `store/iap-products.csv`. The ids are fixed in code, so create them in the store consoles exactly as listed (sections 3 and 4). The game shows each store's own localized price.
+
 Test mode (test ads plus the **Settings → Ad testing** panel) switches off by itself once no Google test id is left.
 
 ## 2. Host two small files
@@ -45,6 +47,16 @@ keyAlias=upload
 keyPassword=…
 ```
 
+**Shop products in Google Play.**
+1. Set up a payments profile (Play Console → Setup → Payments profile).
+2. Upload a first build with the shop to a testing track. Play only lets you add products to an app that uses billing; the billing permission is already included through the purchases plugin.
+3. Go to **Monetize → Products → One-time products** and create the 30 products from `store/iap-products.csv`:
+   - same product id,
+   - the title and description from the file,
+   - price **US$1.00**, with "convert" for other countries,
+   - then **Activate** each one.
+4. To make free test purchases, add your Google account under **Setup → License testing**.
+
 **Build the bundle:** run `cd android && ./gradlew bundleRelease`. The output is `android/app/build/outputs/bundle/release/app-release.aab`. Enrol in **Play App Signing** when you upload it.
 
 **For every later update,** raise `versionCode` (and `versionName`) in `android/app/build.gradle`.
@@ -53,6 +65,7 @@ keyPassword=…
 
 - **App category:** Game → Casual.
 - **Contains ads:** Yes.
+- **In-app purchases:** Yes, optional cosmetic characters. Payment data is handled by Google Play, so nothing extra goes in Data safety. In the IARC questionnaire, answer "yes" to digital purchases.
 - **Advertising ID:** Yes, used for Advertising or marketing. The permission is already in the manifest.
 - **Data safety:**
   - Data is collected and shared by the AdMob SDK:
@@ -82,10 +95,17 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 
 **Then:**
 
-1. Set the bundle id `com.sizzleflip.game`, your team, the version and the build number.
+1. Set the bundle id `com.sizzleflip.game`, your team, the version and the build number, and add the **In-App Purchase** capability (Signing & Capabilities).
 2. Choose **Product → Archive**, then upload it to App Store Connect.
 
 **App Store Connect:**
+
+- **Shop products:**
+  1. Sign the **Paid Apps** agreement and add your banking and tax details (Business section).
+  2. Under the app → **Monetization → In-App Purchases**, create the 30 products from `store/iap-products.csv` as **Non-Consumable**: same product id, display name and description, price **$0.99** (Apple's standard first tier; choose $1.00 instead if your price list offers it).
+  3. Each product needs a review screenshot. Use `store/iap-review.jpg` for all of them.
+  4. Submit the products together with the app version.
+  5. For testing, use Sandbox testers (Users and Access → Sandbox).
 
 - **Icon:** `icons/ios-icon-1024.png` (opaque).
 - **Screenshots:** `store/ios/` (1290×2796).
@@ -102,6 +122,7 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 - [ ] Install the release build on a real phone:
   - The consent form appears (use a VPN to an EU country, or AdMob's test-device geography setting).
   - After level 5 and 5 minutes of play, a forced ad appears on NEXT.
+  - A test purchase works with a license tester (Android) or a Sandbox tester (iOS), and **Restore** brings items back after reinstalling.
   - Hints, skip and the long aim guide show reward ads.
   - Back works on every screen.
 - [ ] Test ads are gone (real ads may take a few hours to start serving after the app is linked in AdMob).
@@ -110,6 +131,10 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 
 - **All 200 levels played through the real game** in a browser, using the game's own touch handlers and real UI (NEXT, world-complete cards, forced ads), with no errors: `tools/e2e-all.mjs`.
 - **Every stored route** replays and wins under the game's launch rule (only from rest), and holds up under human-sized error: `tools/qa.mjs`.
+- **Shop:**
+  - The 30 items are drawn over the sausage's own physics body, so the hitbox, mass and bounce are identical. All 200 levels were played through the real game with a different item equipped on each level: `tools/e2e-all.mjs --items`.
+  - Buying, equipping, the Locker, reloads, "Reset progress" (which keeps purchases) and the test store are covered by `tools/e2e-shop.mjs`, 20 checks.
+  - Store billing (localized prices, pending payments, cancels, store errors, restore, refunds) is covered with a mocked plugin in `tools/e2e-native.mjs`.
 - **Ads:**
   - The pacing rules, reward ads, skip and the long aim guide in the browser: `tools/e2e-ads.mjs`, 42 checks.
   - The native AdMob event handling (an early close, failure to show, no-fill retries, consent and privacy options) and the Android back button on every screen, using mocked plugins: `tools/e2e-native.mjs`, 24 checks.

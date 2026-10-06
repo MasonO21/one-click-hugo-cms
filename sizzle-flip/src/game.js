@@ -6,6 +6,7 @@ import { drawObject, hasFront, drawCollisionDebug } from './art/objects/index.js
 import { drawBackground } from './art/backgrounds.js';
 import { drawSausage, drawSausageShadow, makeFaceState, updateFace, centreline, SKINS, SKIN_BY_ID } from './art/sausage.js';
 import { INK, rgba, circlePath } from './art/common.js';
+import { drawItem } from './art/items.js';
 
 const W = PHYS.W;
 const NOOP = () => {};
@@ -711,8 +712,11 @@ export class Game {
     const showSausage = !(this.phase === 'fail' && ['dog', 'cat', 'gull', 'space', 'heaven', 'flush', 'shred', 'blend'].includes(s.failReason) && this.phaseT > 0.15);
     if (showSausage) {
       drawSausageShadow(ctx, cx, cy, this.groundBelow(cx, cy), 130);
-      const skin = SKIN_BY_ID[app.save.skin] || SKINS[0];
-      drawSausage(ctx, px, py, { R: PHYS.R, skin, face: this.face, t: this.t, squash: this.aim && this.aim.valid ? this.aim.power : 0, burnt: this.phase === 'fail' && s.failReason === 'burn' });
+      const squash = this.aim && this.aim.valid ? this.aim.power : 0;
+      // a shop item is only a different drawing of the same physics body (same hitbox, mass, bounce)
+      const item = app.shop && app.shop.characterItem();
+      if (item) drawItem(ctx, px, py, { R: PHYS.R, item, face: this.face, t: this.t, squash });
+      else drawSausage(ctx, px, py, { R: PHYS.R, skin: SKIN_BY_ID[app.save.skin] || SKINS[0], face: this.face, t: this.t, squash });
     }
     // front layers
     for (let i = 0; i < s.bodies.length; i++) {

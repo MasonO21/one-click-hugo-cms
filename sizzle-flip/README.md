@@ -42,7 +42,7 @@ Dev URL flags: `?level=37` jump to a level · `?debug` collision overlay + all w
 
 ```bash
 npm run dev &               # serve on :8123, then:
-npm test                    # e2e-ads (42 checks), e2e-native (24), e2e-recover (20), e2e-all (plays all 200 levels)
+npm test                    # e2e-ads, e2e-native, e2e-shop, e2e-recover, e2e-all (plays all 200 levels)
 node tools/qa.mjs           # every route replayed with human-sized error
 npm run release:check       # pre-publish gate (see RELEASE.md)
 ```
@@ -91,6 +91,10 @@ If no ad is available (no fill, offline), the reward is granted anyway. A taken 
 
 Google's public test ids are configured now, so a debug build shows real test ads right away. Players in the EEA/UK can reopen the consent form from **Options → Privacy choices**.
 
+## Shop
+
+Thirty cosmetic characters (`src/art/items.js`), from a stick of butter to a rocket, cost $1 each as one-time in-app purchases (`src/shop.js`). Every item is drawn over the sausage's own soft-body particle chain: a width profile along the same centreline, painted details, small attachments (stems, sticks, flames, fins) and the same expressive face. The physics, and so every level, are unchanged. In the app, purchases go through Google Play Billing or StoreKit (`@capgo/native-purchases`), are acknowledged automatically, and are restored from the store at launch and with **Restore**. Test builds use a clearly labelled test store. The plain web build shows the items as "In the app". `tools/items-gallery.html` shows every item in three poses.
+
 ## How the levels are made (and why they're all beatable)
 
 Levels are built by `tools/generate.mjs` from per-world *recipes* (which props, hazards and mechanics are unlocked at each level, with the tutorial tip that introduces them) and a difficulty curve (target par, level height, obstacle density).
@@ -124,6 +128,8 @@ src/art/                    procedural vector art: sausage + face, props per wor
 src/audio.js                synthesized SFX + per-world procedural music
 src/ads.js                  ad pacing rules, AdMob + placeholder providers
 src/ads-config.js           AdMob ids (edit before release)
+src/shop.js                 shop: store billing / test store, ownership, equip
+src/art/items.js            the 30 shop characters (art only — same physics body)
 src/privacy.js              privacy policy (in-app + dist/privacy.html)
 src/levels/data.js          the 200 generated & verified levels
 tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon & screenshot renderers

@@ -90,7 +90,9 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .tagline { margin-top: -6px; font-family: 'Fredoka'; font-weight: 700; color: #fff; font-size: 16px; text-shadow: 0 2px 0 var(--ink), 0 0 12px rgba(0,0,0,0.5); text-align: center; padding: 0 20px; }
 .menu-buttons { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-bottom: 4vh; width: 100%; }
 .menu-buttons .btn-big { width: min(80vw, 320px); font-size: 38px; min-height: 80px; animation: pulse 1.6s ease-in-out infinite; }
-.menu-buttons .row .btn { width: min(38vw, 150px); }
+.menu-buttons .row { flex-wrap: nowrap; gap: 10px; width: min(94vw, 470px); }
+.menu-buttons .row .btn { flex: 1 1 0; min-width: 0; padding: 12px 8px; font-size: 18px; gap: 6px; }
+@media (max-width: 400px) { .menu-buttons .row .btn .ico { display: none; } }
 .star-total { font-family: 'Lilita One'; font-size: 20px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
 .install-hint { position: absolute; bottom: calc(var(--sab) + 6px); left: 0; right: 0; text-align: center; color: #ffe9c2; font-size: 13px; text-shadow: 0 1px 0 var(--ink); }
 
@@ -252,6 +254,21 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .skin.on { background: #e9ffd9; box-shadow: 0 5px 0 var(--relish-d), 0 5px 0 3px var(--ink); }
 .skin.on::after { content: '✔ EQUIPPED'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--relish); color: #fff; font-family: 'Lilita One'; font-size: 12px; padding: 3px 10px; border-radius: 10px; border: 2px solid var(--ink); white-space: nowrap; }
 .skin.locked canvas { filter: brightness(0) opacity(0.35); }
+/* shop */
+.shop-note { margin: 0 0 6px; max-width: 520px; text-align: center; color: #fff; font-size: 14px; text-shadow: 0 1px 0 var(--ink), 0 0 8px rgba(0,0,0,0.5); padding: 0 8px; }
+.restore-btn { min-height: 40px; font-size: 14px; padding: 6px 12px; }
+.shop-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; cursor: default; }
+.shop-card .ds { font-size: 12px; color: #8a7262; min-height: 2.4em; line-height: 1.2; }
+.shop-card .shop-btn { min-height: 40px; font-size: 18px; padding: 6px 10px; margin-top: 2px; }
+.shop-card .shop-btn:disabled { opacity: 0.7; }
+.shop-card.owned { background: #f3f9ff; }
+.shop-banner { display: flex; align-items: center; gap: 12px; width: 100%; margin: 4px 0 14px; padding: 10px 14px; text-align: left; cursor: pointer; color: var(--ink); background: linear-gradient(135deg, #e9ffd9, #b9ef8f); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--relish-d), 0 5px 0 3px var(--ink); font-family: 'Fredoka'; }
+.shop-banner:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--relish-d), 0 1px 0 3px var(--ink); }
+.shop-banner .sb-ico { font-size: 30px; }
+.shop-banner b { display: block; font-family: 'Lilita One'; font-weight: 400; font-size: 21px; }
+.shop-banner small { display: block; font-size: 13px; font-weight: 700; color: var(--relish-d); }
+.shop-banner span:nth-child(2) { flex: 1; }
+.shop-banner .sb-go { font-family: 'Lilita One'; font-size: 20px; }
 .skin.locked .nm { color: #8a7262; }
 
 .settings-card { margin-top: 30px; padding-top: 22px; overflow-y: auto; max-height: 80vh; }
@@ -296,7 +313,7 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 
 .toast { position: absolute; top: calc(var(--sat) + 80px); left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 14px; font-family: 'Lilita One'; font-size: 17px; z-index: 50; pointer-events: none; animation: toastIn 0.3s; max-width: calc(100vw - 32px); width: max-content; text-align: center; }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
-.confirm p { text-align: center; font-size: 18px; margin: 0; }
+.confirm p { text-align: center; font-size: 18px; margin: 0; white-space: pre-line; }
 
 #rotate { position: absolute; inset: 0; background: var(--night); color: #fff; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 48px; z-index: 100; font-family: 'Lilita One'; }
 #rotate small { font-size: 18px; }

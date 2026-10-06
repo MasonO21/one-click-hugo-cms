@@ -88,7 +88,7 @@ function strokeLine(ctx, cl, ox, oy, f0 = 0, f1 = 1) {
 }
 
 // Visual squash: compress along main axis around the centre (aim anticipation).
-function squashPoints(px, py, k) {
+export function squashPoints(px, py, k) {
   const n = px.length;
   let cx = 0, cy = 0;
   for (let i = 0; i < n; i++) { cx += px[i]; cy += py[i]; }
@@ -291,7 +291,7 @@ function drawPattern(ctx, cl, R, skin, t) {
   }
 }
 
-function drawFace(ctx, cl, R, face, skin, t) {
+export function drawFace(ctx, cl, R, face, skin, t) {
   // face sits near the head end (particle N-1)
   const e1 = sampleAt(cl, 0.70), e2 = sampleAt(cl, 0.86), mid = sampleAt(cl, 0.78);
   // choose which side is "up" — smoothed sign keeps the face upright-ish

@@ -1,0 +1,31 @@
+item,product_id,title,description,price_usd
+butter,item_butter,Stick of Butter,Slippery when wet. And always.,1.00
+banana,item_banana,Banana,Peel-good physics.,1.00
+carrot,item_carrot,Carrot,Packed with vitamin A-erodynamics.,1.00
+pickle,item_pickle,Pickle,Kind of a big dill.,1.00
+baguette,item_baguette,Baguette,Oui oui. Flip flip.,1.00
+corn,item_corn,Corn on the Cob,All ears for a good landing.,1.00
+pencil,item_pencil,Pencil,Sharp moves only.,1.00
+crayon,item_crayon,Crayon,Stays inside the lines. Mostly.,1.00
+candle,item_candle,Candle,Lights up any level.,1.00
+churro,item_churro,Churro,Sugar-coated chaos.,1.00
+eclair,item_eclair,Éclair,Fancy. Flippable. French.,1.00
+icepop,item_icepop,Ice Pop,Cool under pressure.,1.00
+candycane,item_candycane,Candy Cane,Peppermint-powered.,1.00
+glowstick,item_glowstick,Glow Stick,Party in the pan.,1.00
+toothpaste,item_toothpaste,Toothpaste,Minty fresh landings.,1.00
+eggplant,item_eggplant,Eggplant,"Purple, proud and bouncy.",1.00
+rollingpin,item_rollingpin,Rolling Pin,Rolls with the punches.,1.00
+chocobar,item_chocobar,Chocolate Bar,"Snap, crackle, flip.",1.00
+sushi,item_sushi,Sushi Roll,Rolled for maximum roll.,1.00
+burrito,item_burrito,Burrito,Wrapped and ready to roll.,1.00
+chili,item_chili,Hot Chili,Handle with oven mitts.,1.00
+fish,item_fish,Sardine,Fresh out of the ocean world.,1.00
+caterpillar,item_caterpillar,Caterpillar,Very hungry. Very bouncy.,1.00
+battery,item_battery,Battery,Fully charged. Fully flipped.,1.00
+rocket,item_rocket,Rocket,Built for the space world.,1.00
+gummyworm,item_gummyworm,Gummy Worm,"Sour on the outside, sweet on the landing.",1.00
+bone,item_bone,Dog Bone,The good boy special.,1.00
+kebab,item_kebab,Kebab,Skewered for speed.,1.00
+croissant,item_croissant,Croissant,"Buttery, flaky, airborne.",1.00
+match,item_match,Matchstick,Strike a pose.,1.00
