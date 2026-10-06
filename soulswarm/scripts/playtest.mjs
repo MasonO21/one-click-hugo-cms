@@ -188,6 +188,14 @@ errs = await session(async (page) => {
     return { tutorial, ops, charge: Math.round(r.nova * 300 / r.stats.novaMul) };
   });
   check('first run: gate lesson and early Nova', s.tutorial && s.ops === 'add5,mul2' && s.charge === 25, JSON.stringify(s));
+  const k = await page.evaluate(() => {
+    const app = window.__soulswarm, r = app.run, P = r.player; r.player.hurt = () => {};
+    for (let i = 0; i < 5; i++) { const e = r.enemies.spawn('husk', P.x + 3, P.z, { hpMul: 1 }); r.enemies.damage(e, 1e6, { source: 'bolt' }); }
+    const raised = r.counters.raised; r.time = 359.9; for (let i = 0; i < 60; i++) r.update(1 / 30);
+    const b = r.bossEnemy;
+    return { raised, hpFrac: b ? Math.round(b.maxHp / 12500 * 100) / 100 : 0, crownTick: r.boss.thresholds[1] };
+  });
+  check('first run: first 5 kills rise, gentler King (60% HP, no phase III)', k.raised === 5 && k.hpFrac === 0.6 && k.crownTick < 0, JSON.stringify(k));
 });
 check('first run: no runtime errors', !errs.length, errs[0] || '');
 
@@ -577,7 +585,7 @@ const BOSS_QA = `
 window.__bossRun = (ch) => {
   const app = window.__soulswarm;
   if (app.run) app.exitRun();
-  app.profile.chapter.unlocked = 6; app.profile.energy = 30; app.startRun(ch);
+  app.profile.chapter.unlocked = 6; app.profile.energy = 30; app.profile.flags.tutorialDone = true; app.startRun(ch); // a veteran: the first run's King is gentler
   const r = app.run; r.player.hurt = () => {}; r.time = ch === 6 ? 299.9 : 359.9;
   for (let i = 0; i < 150 && !(r.bossEnemy && r.boss.state !== 'enter'); i++) r.update(1 / 30);
   return r;

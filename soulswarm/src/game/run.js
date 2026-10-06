@@ -291,6 +291,7 @@ export class Run {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
       if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
       if (source === 'skull' && this.evolved.boneCrown) chance = 1;
+      if (this.tutorial && this.counters.raised < 5) chance = 1; // first run: the first five kills always rise
       if (Math.random() < chance) {
         if (this.legion.count < this.stats.cap) {
           // the minion keeps the identity of what it was (variant by type; elites rise as Champions)

@@ -544,13 +544,13 @@ The scripted beats below are **Planned**. Times are session times from app open 
 | 0:15 | Cold open (Planned) | 6 s in-engine shot: Vael rises among graves. "Raise the Legion." | `ftue_intro` |
 | 0:20 | "The Waking" (Planned tutorial run, no energy cost) | Ghost thumb: "Drag anywhere to move." (Build: the move hint above, in a normal Ch1 run.) | `ftue_move` |
 | 0:30 | First kill | Soul Bolt fires automatically. Husk dies. | `ftue_first_kill` |
-| 0:35 | **Hook 1: Raise** | Planned: the first 5 kills raise at 100% (tutorial only). Caption: "The fallen rise for you." (Build: Vael's 35% Raise Chance usually raises one of the first 3 kills, and the raise hint fires.) | `ftue_first_raise` |
+| 0:35 | **Hook 1: Raise** | In the first run the first 5 kills always rise (build), and the raise hint fires. Planned caption: "The fallen rise for you." | `ftue_first_raise` |
 | 0:50 | First level-up | 3 cards. Planned: Raise Dead is highlighted, but any pick is allowed. (Build: the first level needs only 7 XP, so it comes ~0:08 into the run.) | `ftue_levelup` |
 | 1:20 | **Hook 2: Soul Gate** | Legion is about 12. Scripted pair: +5 vs ×2. After passing ×2, a caption explains the maths ("×2 turned 12 souls into 24"). A wrong pick gets no punishment. (Build: in the first run, the first pair after the legion reaches 10 is the scripted +5 vs ×2, sides random; earlier pairs are normal, usually two adds.) | `ftue_gate` (choice) |
 | 1:45 | First elite | Gold Brute (Planned script). It drops a Relic Chest → free pick. (Build: an Elite Husk at 1:15; its chest opens a 1-of-3 pick.) | `ftue_elite` |
 | 2:15 | **Hook 3: Soul Nova** | The meter charges 2.5× faster until the first Nova of the first run (build). Planned: a pulsing ring and finger point at NOVA. Screen wipe, slow-mo, legion count drops to 0 and starts climbing again. (Build: the meter fills after ~300 kills, around 2:30–3:00, and the Nova hint fires; 0.55 s slow-mo.) | `ftue_nova` |
 | 2:40 | Second gate | ×2 vs ÷2, where ×2 sits behind a Bloater (Planned placement). Teaches risk. (Build: pairs at 1:08, 1:48 and 2:28 can offer ×2 vs −N or ÷2.) | `ftue_gate2` |
-| 3:00 | Gravemaw (Planned tutorial boss) | 25% HP, Phase 1 only. Telegraph rings are shown slowly. (Build: Gravemaw arrives at 6:00 with full Ch1 HP, 12,500, and all three phases.) | `ftue_boss` |
+| 3:00 | Gravemaw (Planned tutorial boss at 3:00) | Planned: 25% HP, Phase 1 only. (Build: in the first run Gravemaw arrives at 6:00 with **60% HP (7,500)** and only phases I–II; the Crown of Cinders is held back for later runs.) | `ftue_boss` |
 | 3:45 | Victory | Results: time, kills, peak legion, raised, level, gates and rewards (a Ch1 first clear gives ~3,100 gold, 70 gems, 1 sigil and a relic). Planned line: "Your legion peaked at N." | `ftue_complete` |
 | 4:00 | Home screen | Planned: only **Play** and **Talents** are lit; other tabs show locked silhouettes. (Build: every tab is open.) | `home_first` |
 | 4:15 | First talent | Buy Might Lv1 (150 gold; new accounts start with 1,500 gold). Planned: guided. The gold sink is learned. | `talent_first` |

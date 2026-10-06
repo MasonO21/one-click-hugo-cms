@@ -63,7 +63,8 @@ export const ENEMIES = {
 // HP = hp × chapter hpMul × (1 + chHp × (c − 1)) × tune[c − 1] × Endless scale; damage = dmg × (1 + chDmg × (c − 1)) × √scale
 // tune evens the fight out at about a minute for a player with that chapter's typical progression (scripts/balance.mjs, GOD=1)
 export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 12500, speed: 2.3, dmg: 22, radius: 1.9, mass: 999, chHp: 0.05, chDmg: 0.3,
-  tune: [1, 0.8, 0.75, 1.15, 1.2, 1] };
+  tune: [1, 0.8, 0.75, 1.15, 1.2, 1],
+  firstRun: 0.6 }; // a player's very first run: 60% HP and no Crown of Cinders (phase III)
 // Gravemaw's three-phase fight (boss.js). Seconds, metres, radians; dmg values are × the King's touch damage.
 // Every damaging telegraph is >= minTele (accessibility floor) in every chapter, phase and enrage state.
 export const BOSS_PHASES = {

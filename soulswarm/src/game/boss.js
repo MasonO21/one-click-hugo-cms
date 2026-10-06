@@ -53,7 +53,7 @@ export class Boss {
     if (this.mesh) { run.scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mat.dispose(); this.mesh = null; }
     this.build();
     const x = P.x, z = P.z - 11;
-    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * scale, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) });
+    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * (run.tutorial ? BOSS.firstRun : 1) * scale, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) });
     this.e = e;
     run.bossEnemy = e;
     this.color = new THREE.Color(ch.boss);
@@ -72,7 +72,7 @@ export class Boss {
     // chapter twist: 2 fire rings, 3 frost shards, 4 extra ring, 5 early Crown; Endless follows its modifier rotation by depth
     const rot = ch.mods && ch.mods.rotate;
     this.twist = ch.endless ? (rot ? rot[run.bossKills % rot.length] : 0) : ch.id;
-    this.thresholds = [BP.phases[1].from, this.twist === 5 ? BP.ch5Crown : BP.phases[2].from];
+    this.thresholds = [BP.phases[1].from, this.run.tutorial ? -1 : this.twist === 5 ? BP.ch5Crown : BP.phases[2].from]; // first run: no phase III
     this.nextWave = Infinity; this.zones.length = 0; this.pending.length = 0; this.shards.count = 0;
     for (const S of this.slams) { S.on = false; S.mesh.visible = false; }
     for (const m of [this.slams[0].mesh, this.slams[1].mesh, this.slams[2].mesh, this.fan, this.sigil]) m.material.uniforms.uColor.value.copy(this.color).lerp(new THREE.Color(0xff2e55), 0.35);
@@ -87,7 +87,7 @@ export class Boss {
     run.audio.sfx('boss_roar');
     run.audio.sfx('arena');
     run.audio.playMusic('boss');
-    run.ui.bossBar(true, `${BOSS.name}, ${BOSS.title}`, this.thresholds);
+    run.ui.bossBar(true, `${BOSS.name}, ${BOSS.title}`, this.thresholds.filter((f) => f > 0));
     run.ui.bossImmune(true);
     run.fx.telegraph(x, z, 3.2, 1.4, ch.boss);
     run.particles.burst(x, 0.5, z, 120, this.col, { speed: 10, life: 1.2, size: 0.7, up: 1.5 });
