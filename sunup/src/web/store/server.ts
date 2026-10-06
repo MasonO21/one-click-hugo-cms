@@ -176,6 +176,19 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
       fetch('/api/auth/logout', { method: 'POST', headers: { authorization: `Bearer ${old}` } }).finally(done);
     },
 
+    async exportData() {
+      const res = await fetch('/api/export', { headers: token ? { authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) throw new ApiError('export', 'Couldn\'t download your data. Try again.');
+      return res.blob();
+    },
+
+    async deleteAccount() {
+      await call('/api/account/delete', { method: 'POST', body: JSON.stringify({ confirm: true }) });
+      token = null;
+      writeToken(null);
+      location.replace('/');
+    },
+
     billing: features.billing
       ? {
           async checkout(interval) {

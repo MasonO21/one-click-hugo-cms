@@ -18,6 +18,7 @@ const STRIPE = { secretKey: 'sk_test_123', webhookSecret: 'whsec_test', priceMon
 interface Sent {
   url: string;
   body: URLSearchParams;
+  method: string;
 }
 
 let dir: string;
@@ -26,10 +27,13 @@ let base: string;
 let close: () => void;
 const sent: Sent[] = [];
 
+let failStripeCancel = false;
+
 const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input);
   const body = new URLSearchParams(String(init?.body ?? ''));
-  sent.push({ url, body });
+  sent.push({ url, body, method: init?.method ?? 'GET' });
+  if (failStripeCancel && init?.method === 'DELETE') return new Response('{}', { status: 500 });
   const reply = url.includes('api.stripe.com') ? { url: `https://stripe.test/${url.split('/v1/')[1]}` } : { sid: 'SM1' };
   return new Response(JSON.stringify(reply), { status: 200, headers: { 'content-type': 'application/json' } });
 }) as typeof fetch;
@@ -159,5 +163,28 @@ describe('Stripe', () => {
     expect(second.body.get('subscription_data[trial_period_days]')).toBeNull();
     expect(second.body.get('customer')).toBe('cus_1');
     expect(second.body.get('line_items[0][price]')).toBe('price_month');
+  });
+});
+
+describe('account deletion', () => {
+  it('cancels the subscription before erasing the account, and refuses to erase if that fails', async () => {
+    const user = await json<{ token: string; snapshot: Snapshot }>('/api/signup', { name: 'Noor', timezone: 'America/Chicago' });
+    const userId = user.body.snapshot.me.id;
+    await stripeEvent({ type: 'checkout.session.completed', data: { object: { client_reference_id: userId, customer: 'cus_9', subscription: 'sub_9' } } });
+
+    failStripeCancel = true;
+    const blocked = await json<{ code: string }>('/api/account/delete', { confirm: true }, user.body.token);
+    expect(blocked.body.code).toBe('billing');
+    expect((await json('/api/state', undefined, user.body.token)).status).toBe(200);
+
+    failStripeCancel = false;
+    const exported = await fetch(`${base}/api/export`, { headers: { authorization: `Bearer ${user.body.token}` } });
+    expect(exported.headers.get('content-disposition')).toContain('sunup-my-data.json');
+    expect(((await exported.json()) as { account: { name: string } }).account.name).toBe('Noor');
+
+    const deleted = await json<{ ok: boolean }>('/api/account/delete', { confirm: true }, user.body.token);
+    expect(deleted.body.ok).toBe(true);
+    expect(sent.some((s) => s.method === 'DELETE' && s.url.endsWith('/v1/subscriptions/sub_9'))).toBe(true);
+    expect((await json('/api/state', undefined, user.body.token)).status).toBe(401);
   });
 });

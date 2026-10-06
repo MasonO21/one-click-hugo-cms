@@ -51,6 +51,16 @@ export function createPortal(cfg: Required<StripeConfig>, http: typeof fetch, cu
   return stripePost(cfg, http, 'billing_portal/sessions', { customer: customerId, return_url: `${publicUrl}/#you` });
 }
 
+/** Cancels a subscription right away (used when someone deletes their account). */
+export async function cancelSubscription(cfg: Required<StripeConfig>, http: typeof fetch, subscriptionId: string): Promise<void> {
+  const res = await http(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: 'DELETE',
+    headers: { authorization: `Bearer ${cfg.secretKey}` },
+  });
+  // 404: already gone.
+  if (!res.ok && res.status !== 404) throw new Error(`Stripe cancel ${res.status}`);
+}
+
 /** Checks the Stripe-Signature header: HMAC-SHA256 of `${t}.${payload}`, within five minutes. */
 export function stripeSignatureValid(payload: string, header: string | undefined, secret: string, now: number, toleranceSec = 300): boolean {
   if (!header) return false;

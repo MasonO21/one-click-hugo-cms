@@ -72,6 +72,13 @@ export class Store {
     return id && this.data.state.users[id] ? id : undefined;
   }
 
+  /** Signs a deleted user out everywhere and drops their push subscriptions. */
+  forgetUser(userId: Id) {
+    for (const [hash, id] of Object.entries(this.data.tokens)) if (id === userId) delete this.data.tokens[hash];
+    delete this.data.push[userId];
+    this.save();
+  }
+
   subscriptions(userId: Id): PushSubscriptionRecord[] {
     return this.data.push[userId] ?? [];
   }

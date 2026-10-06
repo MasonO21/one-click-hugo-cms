@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BadgeCheck, Bell, ChevronRight, Crown, MessageSquare, Pause, Phone, Plus, Smartphone, Sparkles, Trash2 } from 'lucide-react';
+import { BadgeCheck, Bell, ChevronRight, Download, Crown, MessageSquare, Pause, Phone, Plus, Smartphone, Sparkles, Trash2 } from 'lucide-react';
 import type { Schedule, Slot } from '../../shared/types';
 import type { AlertView } from '../../shared/snapshot';
 import { GRACE_OPTIONS, ladderFor } from '../../shared/ladder';
@@ -23,6 +23,36 @@ export function You() {
   const [notifications, setNotifications] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
   const paused = me.pause && me.pause.until > now;
   const trialLeft = me.trialEndsAt && me.trialEndsAt > now && me.plan !== 'premium' ? me.trialEndsAt - now : 0;
+
+  async function downloadData() {
+    try {
+      const blob = await api.exportData();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sunup-my-data.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      toast({ title: (e as Error).message, tone: 'error' });
+    }
+  }
+
+  async function deleteAccount() {
+    const yes = await ask({
+      title: 'Delete your account?',
+      body: `This erases your check-ins, circle, packet and history${me.billing?.subscriptionId ? ', and cancels your subscription' : ''}. Nobody will be alerted about you anymore. This can't be undone.`,
+      confirm: 'Delete my account',
+      cancel: 'Keep my account',
+      danger: true,
+    });
+    if (!yes) return;
+    try {
+      await api.deleteAccount();
+    } catch (e) {
+      toast({ title: (e as Error).message, tone: 'error' });
+    }
+  }
 
   function planLine(): string {
     const b = me.billing;
@@ -276,6 +306,23 @@ export function You() {
           </div>
         </section>
       )}
+
+      <section className="section">
+        <div className="section-head">
+          <h3>Your data</h3>
+        </div>
+        <div className="card pad stack">
+          <p className="muted">Sunup keeps check-ins and alerts for 60 days. You can take a copy of everything, or erase it all.</p>
+          {HAS_SITE && (
+            <button className="btn" onClick={downloadData}>
+              <Download size={18} /> Download my data
+            </button>
+          )}
+          <button className="btn danger-outline" onClick={deleteAccount}>
+            <Trash2 size={18} /> Delete my account
+          </button>
+        </div>
+      </section>
 
       {api.mode === 'server' && (
         <button className="btn ghost block" onClick={async () =>

@@ -8,7 +8,7 @@ import type { Id } from '../src/shared/types';
 import { Store } from './store';
 import { createNotifier, escapeXml, type Notifier } from './notify';
 import { twilioSignatureValid } from './twilio';
-import { applyStripeEvent, createCheckout, createPortal, requireStripe, stripeEnabled, stripeSignatureValid, type StripeConfig } from './billing';
+import { applyStripeEvent, cancelSubscription, createCheckout, createPortal, requireStripe, stripeEnabled, stripeSignatureValid, type StripeConfig } from './billing';
 import { PhoneCodes } from './auth';
 
 export interface AppOptions {
@@ -227,6 +227,31 @@ export function createApp(options: AppOptions) {
       log(`[billing] portal: ${String(e)}`);
       throw new SunupError('billing', 'Subscription settings aren\'t available right now. Try again in a minute.');
     }
+  });
+
+  app.get('/api/export', auth, (_req, res) => {
+    const data = service.exportUser(res.locals.userId, Date.now());
+    res.set('Content-Disposition', 'attachment; filename="sunup-my-data.json"');
+    res.json(data);
+  });
+
+  app.post('/api/account/delete', auth, async (req, res) => {
+    if (req.body?.confirm !== true) throw new SunupError('invalid', 'Confirm that you want to delete your account.');
+    const userId: Id = res.locals.userId;
+    const billing = service.user(userId).billing;
+    // Never keep charging someone whose account is gone: cancel first, and stop if that fails.
+    if (billing?.subscriptionId && !['canceled', 'incomplete_expired'].includes(billing.status ?? '') && stripeEnabled(options.stripe)) {
+      try {
+        await cancelSubscription(options.stripe, http, billing.subscriptionId);
+      } catch (e) {
+        log(`[billing] cancel on delete: ${String(e)}`);
+        throw new SunupError('billing', 'We couldn\'t cancel your subscription, so your account wasn\'t deleted. Try again in a minute.');
+      }
+    }
+    service.deleteUser(userId);
+    store.forgetUser(userId);
+    store.save();
+    res.json({ ok: true });
   });
 
   app.get('/api/invite/:code', (req, res) => {

@@ -295,6 +295,33 @@ describe('postcards', () => {
   });
 });
 
+describe('your data', () => {
+  it('exports everything about a person and deletes it all without touching others', () => {
+    const { svc, maya, jordan, act } = setup();
+    act(maya, { type: 'savePacket', packet: { pets: 'Biscuit' } }, T0);
+    act(jordan, { type: 'acceptInvite', code: maya.inviteCode, watch: false, mutual: true }, T0);
+    act(maya, { type: 'checkIn', note: 'hello' }, at('2026-03-04', '08:00'));
+    const data = svc.exportUser(maya.id, T0);
+    expect(data.account.name).toBe('Maya Chen');
+    expect(data.circle.watchingOverYou.map((w) => w.name).sort()).toEqual(['Jordan Lee', 'Mom']);
+    expect(data.circle.youreWatching).toEqual(['Jordan Lee']);
+    expect(data.packet?.pets).toBe('Biscuit');
+    expect(data.checkIns.some((c) => c.note === 'hello')).toBe(true);
+
+    svc.deleteUser(maya.id);
+    expect(svc.state.users[maya.id]).toBeUndefined();
+    expect(Object.values(svc.state.watches)).toHaveLength(0);
+    expect(Object.values(svc.state.contacts)).toHaveLength(0);
+    expect(svc.state.checkIns.every((c) => c.userId !== maya.id)).toBe(true);
+    expect(svc.state.packets[maya.id]).toBeUndefined();
+    expect(svc.state.outbox.every((o) => o.aboutUserId !== maya.id)).toBe(true);
+    // Jordan is untouched and the clock keeps running.
+    expect(svc.checkInsOf(jordan.id).length).toBeGreaterThan(0);
+    svc.tick(at('2026-03-04', '12:00'));
+    expect(buildSnapshot(svc, jordan.id, at('2026-03-04', '12:00')).watching).toHaveLength(0);
+  });
+});
+
 describe('validation', () => {
   it('rejects oversized and malformed input', () => {
     const { maya, act } = setup();

@@ -254,6 +254,14 @@ export function createDemoApi(): Api {
       api.demo!.reset();
     },
 
+    async exportData() {
+      return new Blob([JSON.stringify(svc.exportUser(file.meId!, now()), null, 2)], { type: 'application/json' });
+    },
+
+    async deleteAccount() {
+      api.demo!.reset();
+    },
+
     demo: {
       async addSampleCircle() {
         return addSampleCircle();

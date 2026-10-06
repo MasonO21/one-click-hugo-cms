@@ -209,6 +209,39 @@ export class Sunup {
     this.user(userId).plan = plan;
   }
 
+  /** Everything stored about one person, for "Download my data". */
+  exportUser(userId: Id, now: number) {
+    const user = this.user(userId);
+    const watching = this.watchedBy(userId).map((w) => this.state.users[w.watchedId]?.name).filter(Boolean);
+    return {
+      exportedAt: new Date(now).toISOString(),
+      account: user,
+      circle: {
+        watchingOverYou: this.watchersOf(userId).map((w) => ({ name: w.name, phone: w.phone, type: w.ref.type, receivesPacket: w.receivesPacket, consent: w.consent })),
+        youreWatching: watching,
+      },
+      checkIns: this.checkInsOf(userId),
+      packet: this.state.packets[userId] ?? null,
+      alerts: this.alertsOf(userId),
+      moments: Object.values(this.state.moments).filter((m) => m.userId === userId),
+      messages: this.state.outbox.filter((o) => o.aboutUserId === userId || (o.to.type === 'user' && o.to.id === userId)),
+    };
+  }
+
+  /** Erases a person and everything about them: check-ins, circle links, packet, alerts and message log. */
+  deleteUser(userId: Id): void {
+    this.user(userId);
+    const s = this.state;
+    delete s.users[userId];
+    delete s.packets[userId];
+    for (const [id, w] of Object.entries(s.watches)) if (w.watcherId === userId || w.watchedId === userId) delete s.watches[id];
+    for (const [id, c] of Object.entries(s.contacts)) if (c.ownerId === userId) delete s.contacts[id];
+    for (const [id, a] of Object.entries(s.alerts)) if (a.userId === userId) delete s.alerts[id];
+    for (const [id, m] of Object.entries(s.moments)) if (m.userId === userId) delete s.moments[id];
+    s.checkIns = s.checkIns.filter((c) => c.userId !== userId);
+    s.outbox = s.outbox.filter((o) => o.aboutUserId !== userId && !(o.to.type === 'user' && o.to.id === userId));
+  }
+
   userByCustomerId(customerId: string): User | undefined {
     return Object.values(this.state.users).find((u) => u.billing?.customerId === customerId);
   }

@@ -365,6 +365,11 @@ button.card {
   color: #fff;
 }
 
+.btn.danger-outline {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+}
+
 .btn.ghost {
   background: transparent;
   border-color: transparent;

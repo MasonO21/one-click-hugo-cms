@@ -64,6 +64,10 @@ export interface Api {
   watch(listener: (snap: Snapshot) => void): () => void;
   enablePush(): Promise<'granted' | 'denied' | 'unsupported'>;
   signOut(): void;
+  /** Everything Sunup stores about you, as a JSON file. */
+  exportData(): Promise<Blob>;
+  /** Erases the account (cancelling any subscription) and returns to the welcome screen. */
+  deleteAccount(): Promise<void>;
   auth?: PhoneAuth;
   billing?: BillingApi;
   demo?: DemoControls;
