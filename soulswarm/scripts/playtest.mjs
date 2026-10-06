@@ -1076,6 +1076,182 @@ errs = await session(async (page) => {
 });
 check('affixes and events: no runtime errors', !errs.length, errs[0] || '');
 
+// 19. Hero Rites (src/game/rites.js): the RITE button fires on pointerdown (never the joystick) and its cooldown gates
+// re-use; Grave Call raises every kill and pulls nearby shards; Shadow Step moves 7 m untouchable and cuts its path;
+// Death Knell stuns, marks for 5 s and silences shots; Ossuary Wall expels the horde, shatters Witch fire and mends the
+// legion; Ashfall strikes 20 foes (elites first), pins and burns them and feeds the Nova; Gravemaw keeps his rules; the
+// first run teaches it.
+// A quiet arena (no director, no weapons) frame-stepped at 30 fps; raise rolls pinned with Math.random where needed.
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random;
+    const { RITES } = await import('/src/game/data.js');
+    app.engine.manual = true;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    const start = (hero) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.heroes[hero].owned = true; p.heroes[hero].stars = Math.max(1, p.heroes[hero].stars); p.selectedHero = hero; p.energy = 30; app.startRun(1);
+      const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0;
+      r.weapons.update = () => {}; r.addXp = () => {}; r.player.hurt = () => {}; r.input.tx = r.input.tz = 0; r.pickups.dropSpecial = () => {};
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const foe = (r, dx, dz, o = {}) => { const e = r.enemies.spawn(o.type || 'husk', r.player.x + dx, r.player.z + dz, { hpMul: o.hp ?? 50, elite: !!o.elite }); e.spawnT = 1; return e; };
+    const dist = (a, b) => +Math.hypot(a.x - b.x, a.z - b.z).toFixed(2);
+    const tap = (el) => el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 7 }));
+    const out = { cd: RITES.vael.cd };
+
+    // the button: a tap casts at once without starting the joystick; taps during the cooldown do nothing; E casts once ready
+    let r = start('vael'), P = r.player;
+    const btn = document.querySelector('.hud .rite');
+    step(r, 0.1); // the HUD refreshes at 20 Hz
+    const B = out.button = { exists: !!btn, label: btn ? btn.textContent.trim() : '', ready: !!btn && btn.classList.contains('ready') };
+    tap(btn); r.update(1 / 30);
+    B.cast = r.counters.rites; B.cd = +r.rites.cd.toFixed(1); B.joystick = r.input.pointerId === null && !r.input.active;
+    tap(btn); step(r, 1); tap(btn); step(r, 0.2);
+    B.gated = r.counters.rites;
+    B.counter = btn.classList.contains('cooling') ? btn.querySelector('.cd').textContent : '';
+    r.rites.cd = 0.05; step(r, 0.1);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })); r.update(1 / 30); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' }));
+    B.key = r.counters.rites;
+
+    // Vael: during Grave Call every kill rises (a pinned 0.4 roll against 5% Raise Chance), the cap still holds,
+    // shards inside the pull radius fly in and those beyond stay put; afterwards kills roll normally again
+    r = start('vael'); P = r.player;
+    r.stats.raise = 0.05; r.stats.cap = 400; r.pickups.gems.length = 0;
+    const near = [], far = [], pull = RITES.vael.pull;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * 6.28;
+      r.pickups.dropGem(P.x + Math.cos(a) * (pull - 1.5), P.z + Math.sin(a) * (pull - 1.5), 1); near.push(r.pickups.gems[r.pickups.gems.length - 1]);
+      r.pickups.dropGem(P.x + Math.cos(a) * (pull + 4), P.z + Math.sin(a) * (pull + 4), 1); far.push(r.pickups.gems[r.pickups.gems.length - 1]);
+    }
+    step(r, 0.3);
+    Math.random = () => 0.4;
+    const kill = (dx, dz) => { const e = foe(r, dx, dz); r.enemies.damage(e, 1e9, { source: 'minion', silent: true }); };
+    let raised0 = r.counters.raised; kill(3, 0);
+    const V = out.vael = { before: r.counters.raised - raised0 };
+    r.rites.trigger();
+    V.near = near.filter((g) => g.pulled).length; V.far = far.filter((g) => g.pulled).length;
+    raised0 = r.counters.raised;
+    for (let i = 0; i < 12; i++) kill(3 + (i % 3), (i % 4) - 2);
+    V.rose = r.counters.raised - raised0; V.pillars = r.rites.pN;
+    r.stats.cap = r.legion.count; const atCap = r.legion.count; kill(3, 1); kill(3, -1);
+    V.capHeld = r.legion.count === atCap;
+    Math.random = rnd; step(r, 4.2); Math.random = () => 0.4;
+    r.stats.cap = 400; raised0 = r.counters.raised; kill(3, 0);
+    V.after = r.counters.raised - raised0;
+    Math.random = rnd;
+
+    // Nyx: Shadow Step carries her 7 m along the stick, untouchable, cutting (and knocking aside) the foe on her path,
+    // not the one off it; the legion runs +60% faster for 3 s, then back to normal
+    r = start('nyx'); P = r.player;
+    const p0 = { x: P.x, z: P.z }, onPath = foe(r, 3, 0), offPath = foe(r, 3, 6), speed0 = r.stats.minionSpeed;
+    step(r, 0.1); P.invuln = 0; // past the run-start grace
+    r.input.tx = 1; r.ui.wantsRite = true; r.update(1 / 30); r.input.tx = 0;
+    const N = out.nyx = { invuln: +P.invuln.toFixed(2) };
+    const hp0 = P.hp; Object.getPrototypeOf(P).hurt.call(P, 40); N.untouched = P.hp === hp0;
+    let knock = 0; for (let i = 0; i < 9; i++) { r.update(1 / 30); knock = Math.max(knock, Math.abs(onPath.kz)); }
+    Object.assign(N, { moved: dist(P, p0), cut: onPath.hp < onPath.maxHp, knock: +knock.toFixed(1), spared: offPath.hp === offPath.maxHp, haste: +(r.stats.minionSpeed / speed0).toFixed(2) });
+    step(r, 3);
+    N.hasteAfter = +(r.stats.minionSpeed / speed0).toFixed(2);
+
+    // Liora: Death Knell stuns a foe within 5 m (it holds still), not one outside; marks it for 5 s (a kill 4 s later
+    // still rises ×2: a pinned 0.4 roll against 25%); an ember in flight and a Witch 8 m out are silenced; the stun wears off
+    r = start('liora'); P = r.player;
+    const st = foe(r, 2.5, 0), outside = foe(r, 9, 0), br = foe(r, -2, 0, { type: 'brute' }), wf = foe(r, -1, -8, { type: 'witch' });
+    step(r, 0.2); br.state = 1; br.stateT = 0.3; // a Brute mid wind-up
+    r.projectiles.enemyShot(P.x + 6, P.z, -1, 0, 3, 5);
+    const at = { x: st.x, z: st.z }, out0 = dist(outside, P), shots = r.projectiles.embers.length;
+    r.rites.trigger();
+    const L = out.liora = { shots, cleared: r.projectiles.embers.length, bruteCalledOff: br.state === 0, witchSilenced: wf.stunT > 0 && wf.tollUid !== wf.uid };
+    step(r, 1.2);
+    Object.assign(L, { stunned: st.stunT > 0, still: dist(st, at), marked: st.tollUid === st.uid && +(st.tollT - r.time).toFixed(1), outsideMoved: +(out0 - dist(outside, P)).toFixed(2), outsideStun: outside.stunT > 0 });
+    step(r, 0.5); const at2 = { x: st.x, z: st.z }; step(r, 0.5);
+    L.freed = st.stunT <= 0 && dist(st, at2) > 0.3;
+    step(r, 2.6); r.stats.raise = 0.25; Math.random = () => 0.4;
+    const n0 = r.legion.count; st.hp = 1; r.enemies.damage(st, 5, { source: 'minion', silent: true });
+    Math.random = rnd; L.markRose = r.legion.count - n0;
+
+    // Mordrake: Ossuary Wall throws a foe inside out past the ring and cuts it; a wounded minion inside heals +50% over 5 s
+    r = start('mordrake'); P = r.player;
+    const inner = foe(r, 2, 0), bigOne = foe(r, 0, 3, { type: 'brute' });
+    r.legion.update = () => {}; // the minion holds its spot
+    const m = r.legion.raise(P.x - 2, P.z, { fx: false }); m.hp = m.maxHp * 0.2;
+    step(r, 0.1);
+    r.rites.trigger(); r.update(1 / 30);
+    const W = out.wall = { inner: dist(inner, P), brute: dist(bigOne, P), r: RITES.mordrake.r, cut: inner.hp < inner.maxHp };
+    // Witch fire falling inside the ring shatters before it lands; fire falling outside still lands
+    let landed = 0; const land = r.projectiles.landLob.bind(r.projectiles); r.projectiles.landLob = (F) => { landed++; land(F); };
+    const lobSpec = { flight: 1, radius: 1.1, height: 3.2 };
+    r.projectiles.lob(P.x + 7, P.z, P.x + 1, P.z, 10, lobSpec, false); r.projectiles.lob(P.x + 7, P.z, P.x + 8.5, P.z, 10, lobSpec, false);
+    step(r, 1.2); W.fireLanded = landed;
+    step(r, 4);
+    Object.assign(W, { heal: +(m.hp / m.maxHp - 0.2).toFixed(2), kept: dist(inner, P), over: r.rites.wallT <= 0 });
+
+    // Seraphine: Ashfall strikes exactly 20 of 27 foes on screen, the elite first even though it stands farthest;
+    // they burn; the Nova charge rises by 15%
+    r = start('seraphine'); P = r.player;
+    const crowd = []; for (let i = 0; i < 26; i++) { const a = (i / 26) * 6.28, R = 3 + (i % 3); crowd.push(foe(r, Math.cos(a) * R, Math.sin(a) * R * 0.8, { hp: 200 })); }
+    const elite = foe(r, 0, -7.5, { hp: 200, elite: true });
+    step(r, 0.1);
+    r.nova = 0.2;
+    r.rites.trigger();
+    const S = out.ash = { charged: +(r.nova - 0.2).toFixed(3), firstIsElite: r.rites.strikes[0].e === elite };
+    step(r, 0.7);
+    Object.assign(S, { struck: crowd.filter((e) => e.hp < e.maxHp).length + (elite.hp < elite.maxHp ? 1 : 0), elite: elite.hp < elite.maxHp, burning: r.weapons.burning.length, n: RITES.seraphine.n,
+      pinned: crowd.filter((e) => e.hp < e.maxHp && e.stunT > 0).length + (elite.stunT > 0 ? 1 : 0) });
+
+    // Gravemaw keeps his rules: the Knell never stuns him (his next attack slips 0.25 s), the Wall only leans on him while
+    // it throws a Husk out, Ashfall strikes him first; his damage goes through his own filter
+    p.selectedHero = 'liora'; r = window.__bossRun(1); P = r.player; let b = r.boss, e = r.bossEnemy;
+    e.x = P.x + 3; e.z = P.z; b.state = 'chase'; b.cd = 1; r.rites.cd = 0;
+    r.rites.trigger();
+    const G = out.boss = { stun: e.stunT, cd: +b.cd.toFixed(2) };
+    p.selectedHero = 'mordrake'; r = window.__bossRun(1); P = r.player; b = r.boss; e = r.bossEnemy;
+    e.x = P.x + 2; e.z = P.z; b.cd = 99; const hk = foe(r, -2, 0);
+    r.rites.trigger(); window.__step(r, 0.5);
+    Object.assign(G, { bossD: dist(e, P), huskD: dist(hk, P) });
+    p.selectedHero = 'seraphine'; r = window.__bossRun(1); P = r.player; e = r.bossEnemy;
+    e.x = P.x; e.z = P.z - 7; for (let i = 0; i < 25; i++) foe(r, Math.cos(i) * 3, Math.sin(i) * 3);
+    const bhp = e.hp; r.rites.cd = 0; r.rites.trigger();
+    G.ashFirst = r.rites.strikes[0].e === e; window.__step(r, 0.2); G.ashHurt = e.hp < bhp;
+
+    // the run result counts Rites; the hero screen lists the Rite under the passive
+    r = start('nyx'); let res = null; r.onEnd = (x) => { res = x; };
+    r.rites.trigger(); r.rites.cd = 0; r.rites.trigger(); r.end(false);
+    out.result = res && res.rites;
+    app.exitRun(); document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    app.meta.show('heroes'); document.querySelector('.hcard[data-id="mordrake"]')?.click();
+    out.screen = document.querySelector('.modal .hd-rite b')?.textContent || '';
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+
+    // first-ever run: once the Rite is ready and 8 s have passed, a one-time hint names it and is remembered
+    p.flags.tutorialDone = false; p.flags.hints = {};
+    r = start('vael'); r.input.moved = true;
+    step(r, 9);
+    out.hint = { tutorial: r.tutorial, flag: !!p.flags.hints.rite, text: document.querySelector('.hud .hint')?.textContent || '' };
+    app.exitRun();
+    return out;
+  });
+  const { button: B, vael: V, nyx: N, liora: L, wall: W, ash: S, boss: G, cd: RITES_CD } = s;
+  check('rites: RITE button fires on pointerdown, not the joystick', B.exists && B.ready && B.label === 'CALL' && B.cast === 1 && B.cd >= RITES_CD - 0.1 && B.joystick, JSON.stringify(B));
+  check('rites: the cooldown gates re-use (counter shown), E casts once ready', B.gated === 1 && +B.counter >= RITES_CD - 2 && B.key === 2, JSON.stringify(B));
+  check('rites: Vael Grave Call raises every kill (cap holds), pulls nearby shards', V.before === 0 && V.rose === 12 && V.pillars > 0 && V.capHeld && V.after === 0 && V.near === 8 && V.far === 0, JSON.stringify(V));
+  check('rites: Nyx Shadow Step moves 5+ m, invulnerable, cuts her path', N.moved >= 5 && N.invuln >= 0.35 && N.untouched && N.cut && N.knock > 2 && N.spared, JSON.stringify(N));
+  check('rites: Nyx Shadow Step hastes the legion +60% for 3 s', N.haste === 1.6 && N.hasteAfter === 1, JSON.stringify(N));
+  check('rites: Liora Death Knell stuns (holds still), marks for 5 s, silences fire and Witches', L.stunned && L.still < 0.05 && L.marked >= 3.5 && L.markRose === 1 && !L.outsideStun && L.outsideMoved > 1 && L.shots > 0 && L.cleared === 0 && L.bruteCalledOff && L.witchSilenced && L.freed, JSON.stringify(L));
+  check('rites: Mordrake Ossuary Wall pushes foes out and heals minions', W.inner >= W.r && W.brute >= W.r && W.cut && W.kept >= W.r - 0.5 && W.heal >= 0.45 && W.heal <= 0.55 && W.over, JSON.stringify(W));
+  check('rites: Ossuary Wall shatters Witch fire falling inside it', W.fireLanded === 1, JSON.stringify(W));
+  check('rites: Seraphine Ashfall strikes 20 foes (elite first), pins and burns, +15% Nova', S.struck === S.n && S.elite && S.firstIsElite && S.burning > 0 && S.pinned === S.n && Math.abs(S.charged - 0.15) < 0.001, JSON.stringify(S));
+  check('rites: Gravemaw is staggered not stunned, barely pushed, struck first', G.stun === 0 && G.cd === 1.25 && G.bossD < W.r && G.huskD >= W.r && G.ashFirst && G.ashHurt, JSON.stringify(G));
+  check('rites: run result counts Rites; hero screen lists the Rite', s.result === 2 && s.screen === 'Ossuary Wall', JSON.stringify({ result: s.result, screen: s.screen }));
+  check('rites: first run hints the Rite once it is ready', s.hint.tutorial && s.hint.flag && /Rite/.test(s.hint.text), JSON.stringify(s.hint));
+});
+check('rites: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
