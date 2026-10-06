@@ -23,12 +23,15 @@
   // ======================================================================
   // Tiles
   // ======================================================================
-  let layoutCache = {};
+  let layoutCache = {}, cacheAct = null;
+  const act2 = () => !!S && S.stage > DATA.actOneStage;
   const key = (x, y) => `${x},${y}`;
   const dist = (x, y) => Math.hypot(x - C, y - C);
   const sight = () => W.sight(S.lv.wyrm) + 0.5;
   const visible = (x, y) => dist(x, y) <= sight();
   function base(x, y) {
+    const A2 = act2();
+    if (A2 !== cacheAct) { layoutCache = {}; cacheAct = A2; } // Act II reshapes the Dunes
     const k = key(x, y);
     if (layoutCache[k]) return layoutCache[k];
     const r = seeded((S.map.seed ^ (x * 7919 + y * 104729)) >>> 0);
@@ -57,6 +60,14 @@
     }
     t.x = x; t.y = y; t.k = k;
     t.v = r(); // per-tile variation for drawing
+    // Act II: drawn after the base layout so the Act I map never changes
+    const a2 = r();
+    if (A2 && t.kind === 'empty' && !t.decor && d >= 3) {
+      const X = W.act2;
+      if (a2 < X.veinShare) t = { kind: 'node', res: 'sunsteel', lvl: clamp(Math.round(d / 1.5), 1, 10), x, y, k, v: t.v };
+      else if (a2 < X.veinShare + X.hiveShare && d >= X.hiveFrom) t = { kind: 'camp', salt: true, cls: ['guard', 'bow', 'lancer'][Math.floor(t.v * 3)], lvl: clamp(Math.round(d * 0.9) - 4, 1, 12), x, y, k, v: t.v };
+    }
+    if (A2 && t.kind === 'node' && t.res === 'water') t.flooded = true;
     layoutCache[k] = t;
     return t;
   }
@@ -66,7 +77,7 @@
     const t = { ...b, st };
     if (b.kind === 'node') {
       t.lvl = b.lvl + (st.lvlUp || 0);
-      t.cap = W.nodes[b.res].cap * t.lvl;
+      t.cap = W.nodes[b.res].cap * t.lvl * (b.flooded ? W.act2.floodCap : 1);
       t.left = st.until && S.time >= st.until ? t.cap : st.left == null ? t.cap : st.left;
       t.gone = !!(st.until && S.time < st.until);
       t.busy = st.busy && S.map.marches.some((m) => m.id === st.busy) ? st.busy : null;
@@ -82,12 +93,15 @@
   }
   const setTile = (k, patch) => { S.map.tiles[k] = { ...(S.map.tiles[k] || {}), ...patch }; };
   function beastFoe(t) {
+    if (t.kind === 'camp' && t.salt) {
+      return { name: 'Saltborn Hive', cls: t.cls, boss: true, ...KH.foeStats(W.act2.hiveStage(t.lvl), W.act2.hiveScale) };
+    }
     if (t.kind === 'camp') {
       return { name: `Scorpion Camp`, cls: 'guard', boss: true, ...KH.foeStats(W.beastStage(t.lvl) + W.campStageBonus, W.campScale) };
     }
     return { name: t.name, cls: t.cls, boss: false, ...KH.foeStats(W.beastStage(t.lvl), W.beastScale) };
   }
-  const tileName = (t) => (t.kind === 'node' ? W.nodes[t.res].name : t.kind === 'beast' ? t.name : t.kind === 'camp' ? 'Scorpion Camp' : t.kind === 'ruin' ? DATA.ruins.find((r) => r.id === t.ruin).name : t.kind === 'keep' ? 'Your keep' : 'Open sand');
+  const tileName = (t) => (t.kind === 'node' ? (t.flooded ? 'Flooded Oasis' : W.nodes[t.res].name) : t.kind === 'beast' ? t.name : t.kind === 'camp' ? (t.salt ? 'Saltborn Hive' : 'Scorpion Camp') : t.kind === 'ruin' ? DATA.ruins.find((r) => r.id === t.ruin).name : t.kind === 'keep' ? 'Your keep' : 'Open sand');
 
   // ======================================================================
   // Marches
@@ -212,6 +226,12 @@
         KH.addPassXp(DATA.passXp.beast);
         setTile(t.k, { until: S.time + W.beastRespawn, lvlUp: (t.st.lvlUp || 0) + (t.lvl < 14 && t.lvl <= L + 2 ? 1 : 0) });
         KH.emit('beast', { lvl: t.lvl });
+      } else if (t.salt) {
+        rewards = { sunsteel: 60 + 20 * t.lvl, starglass: 40 + 10 * t.lvl, journals: 20 + 6 * t.lvl, ...KH.scaleReward({ copper: 2, water: 2 }) };
+        if (Math.random() < 0.15) rewards.shard_epic = 1;
+        S.stats.hives = (S.stats.hives || 0) + 1;
+        setTile(t.k, { until: S.time + W.act2.hiveRespawn, lvlUp: (t.st.lvlUp || 0) + (t.lvl < 12 ? 1 : 0) });
+        KH.emit('hiveDestroyed', { lvl: t.lvl });
       } else {
         rewards = { starglass: 30 + 10 * t.lvl, beacons: 1, journals: 10 + 5 * t.lvl, ...KH.scaleReward({ stone: 2, water: 2, copper: 1.5 }) };
         S.stats.camps++;
@@ -376,7 +396,7 @@
         const k = key(m.x, m.y);
         if (S.map.tiles[k] && S.map.tiles[k].busy === m.id) setTile(k, { busy: null });
         if (m.kind === 'gather' && m.amount > 0) {
-          S.res[m.res] += m.amount;
+          KH.grant({ [m.res]: m.amount });
           S.stats.gathers++;
           S.stats.gathered += m.amount;
           KH.addPassXp(DATA.passXp.gather);
@@ -451,7 +471,8 @@
       const secs = n ? amount / (n * node.rate * gatherMult()) + tr * 2 : 0;
       return {
         title: name, lvl: `Lv ${t.lvl}`,
-        body: `${t.gone ? `<p class="notice heat">Picked clean. It recovers in ${fmtTime(t.st.until - S.time)}.</p>` : `<p class="muted">${fmt(t.left)} of ${fmt(t.cap)} ${KH.NAME[t.res].toLowerCase()} left. Each troop carries ${fmt(node.load * loadMult())}.</p>`}
+        body: `${t.res === 'sunsteel' ? '<p class="muted small">Since the rains came back, veins of Sunsteel lie exposed in the washed-out sand. Gatherers carry it home for the Warden\'s Gear.</p>' : t.flooded ? '<p class="muted small">The rains filled this spring to the brim: it holds twice the water it used to.</p>' : ''}
+          ${t.gone ? `<p class="notice heat">Picked clean. It recovers in ${fmtTime(t.st.until - S.time)}.</p>` : `<p class="muted">${fmt(t.left)} of ${fmt(t.cap)} ${KH.NAME[t.res].toLowerCase()} left. Each troop carries ${fmt(node.load * loadMult())}.</p>`}
           ${busyMsg}${slotLine}<div class="seg">${fracs}</div>
           ${n && !t.gone ? `<p class="small">Brings home <b>${fmt(amount)}</b> ${KH.NAME[t.res].toLowerCase()} in about ${fmtTime(secs)}.</p>` : ''}
           ${why ? `<p class="notice heat">${esc(why)}</p>` : ''}
@@ -467,12 +488,12 @@
       const counter = Object.keys(DATA.counters).find((c) => DATA.counters[c] === foe.cls);
       return {
         title: name, lvl: `Lv ${t.lvl}`,
-        body: `${t.gone ? `<p class="notice heat">${t.kind === 'camp' ? 'Burned out. Raiders return' : 'The den is empty. Something returns'} in ${fmtTime(t.st.until - S.time)}.</p>` : ''}
+        body: `${t.salt ? '<p class="muted small">A hive of the Saltborn, crusted white and humming. It drinks the ground dry around it.</p>' : ''}${t.gone ? `<p class="notice heat">${t.salt ? 'Shattered. The salt regrows' : t.kind === 'camp' ? 'Burned out. Raiders return' : 'The den is empty. Something returns'} in ${fmtTime(t.st.until - S.time)}.</p>` : ''}
           <div class="row">${KH.foeArt(foe, 'mini-foe')}<div class="grow"><div class="muted small">${icon(DATA.classes[foe.cls].icon)} Fights like ${DATA.classes[foe.cls].name}s. Weak to ${DATA.classes[counter].name}s.</div>
-          <div class="vs"><div class="side"><span class="muted small">Your march</span><b>${fmt(ours)}</b></div><span class="x">vs</span><div class="side right"><span class="muted small">${t.kind === 'camp' ? 'Camp' : 'Beast'}</span><b>${fmt(theirs)}</b></div></div>
+          <div class="vs"><div class="side"><span class="muted small">Your march</span><b>${fmt(ours)}</b></div><span class="x">vs</span><div class="side right"><span class="muted small">${t.salt ? 'Hive' : t.kind === 'camp' ? 'Camp' : 'Beast'}</span><b>${fmt(theirs)}</b></div></div>
           <b style="color:${odds[1]}">${odds[0]}</b></div></div>
           ${busyMsg}${slotLine}<div class="seg">${fracs}</div>
-          <p class="muted small">Your squad leads the march and is away until it returns. ${t.kind === 'camp' ? 'Camps pay out Starglass, a Beacon Token and supplies.' : 'Beasts drop journals, food and sometimes hero shards.'} A lost fight costs 15% of the troops sent.</p>
+          <p class="muted small">Your squad leads the march and is away until it returns. ${t.salt ? 'Hives pay out Sunsteel, Starglass, journals and sometimes an Epic Shard Pouch.' : t.kind === 'camp' ? 'Camps pay out Starglass, a Beacon Token and supplies.' : 'Beasts drop journals, food and sometimes hero shards.'} A lost fight costs 15% of the troops sent.</p>
           ${why ? `<p class="notice heat">${esc(why)}</p>` : ''}
           <button class="btn wide ${why || t.gone || t.busy ? 'off' : ''}" data-act="wattack" data-arg="${t.k}" data-primary>${icon('i-sword')}Attack</button>`,
       };
@@ -538,8 +559,8 @@
       img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
       return img;
     };
-    icons.stone = mk('i-stone'); icons.food = mk('i-food'); icons.water = mk('i-water'); icons.copper = mk('i-copper');
-    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.lock = mk('i-lock', '#e8d2b0');
+    icons.stone = mk('i-stone'); icons.food = mk('i-food'); icons.water = mk('i-water'); icons.copper = mk('i-copper'); icons.sunsteel = mk('i-sunsteel');
+    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.lock = mk('i-lock', '#e8d2b0'); icons.hive = mk('i-spire', '#eaf6ff');
   }
   function resize() {
     const r = cv.getBoundingClientRect();
@@ -615,13 +636,26 @@
         ctx.fillStyle = '#b07a48'; ctx.fillRect(sx - 14, sy + 2, 12, 12); ctx.fillRect(sx + 2, sy + 5, 12, 9);
         ctx.fillStyle = '#d9a56a'; ctx.fillRect(sx - 14, sy + 2, 12, 3); ctx.fillRect(sx + 2, sy + 5, 12, 3);
       } else if (tt.kind === 'node' && tt.res === 'water') {
-        ctx.fillStyle = '#5fb07a'; ell(sx, sy + 10, 14, 7); ctx.fill();
-        ctx.fillStyle = '#3cc8cf'; ell(sx, sy + 10, 10, 4.5); ctx.fill();
+        const fl = tt.flooded ? 1.45 : 1;
+        ctx.fillStyle = '#5fb07a'; ell(sx, sy + 10, 14 * fl, 7 * fl); ctx.fill();
+        ctx.fillStyle = '#3cc8cf'; ell(sx, sy + 10, 10 * fl, 4.5 * fl); ctx.fill();
+        if (tt.flooded) { ctx.strokeStyle = `rgba(220,250,255,${0.4 + 0.2 * Math.sin(t * 2 + tt.v * 5)})`; ctx.lineWidth = 1; ell(sx, sy + 10, 6 + 4 * ((t * 0.6 + tt.v) % 1) * fl, 2.7 + 2 * ((t * 0.6 + tt.v) % 1) * fl); ctx.stroke(); }
+      } else if (tt.kind === 'node' && tt.res === 'sunsteel') {
+        const gl = 0.6 + 0.4 * Math.sin(t * 2.4 + tt.v * 6);
+        ctx.fillStyle = '#8a6a44'; ell(sx, sy + 12, 13, 5); ctx.fill();
+        ctx.fillStyle = '#e8b54a'; ctx.shadowColor = '#ffb347'; ctx.shadowBlur = 8 * gl;
+        for (const [ox, h, w] of [[-7, 13, 4], [-1, 18, 5], [6, 11, 4]]) { ctx.beginPath(); ctx.moveTo(sx + ox - w, sy + 12); ctx.lineTo(sx + ox, sy + 12 - h); ctx.lineTo(sx + ox + w, sy + 12); ctx.fill(); }
+        ctx.shadowBlur = 0;
       } else if (tt.decor === 'rock' || (tt.kind === 'node' && tt.res === 'copper')) {
         ctx.fillStyle = tt.res === 'copper' ? '#9a5a34' : '#a87a4e'; ell(sx - 6, sy + 10, 9, 6); ctx.fill(); ell(sx + 8, sy + 12, 7, 5); ctx.fill();
         ctx.fillStyle = tt.res === 'copper' ? '#4fc0a0' : '#d9b07a'; ell(sx - 7, sy + 7, 4, 2); ctx.fill();
       } else if (tt.kind === 'node' && tt.res === 'food') {
         palm(sx - 8, sy + 12, 0.8); palm(sx + 8, sy + 14, 0.7);
+      } else if (tt.kind === 'camp' && tt.salt) {
+        ctx.fillStyle = '#d8d2c4'; ell(sx, sy + 13, 16, 5); ctx.fill();
+        ctx.fillStyle = '#f4f8fb';
+        for (const [ox, h, w] of [[-9, 14, 5], [0, 22, 6], [9, 16, 5]]) { ctx.beginPath(); ctx.moveTo(sx + ox - w, sy + 13); ctx.lineTo(sx + ox, sy + 13 - h); ctx.lineTo(sx + ox + w, sy + 13); ctx.fill(); }
+        ctx.fillStyle = '#b8c8d4'; ctx.beginPath(); ctx.moveTo(sx, sy - 9); ctx.lineTo(sx + 6, sy + 13); ctx.lineTo(sx + 1, sy + 13); ctx.fill();
       } else if (tt.kind === 'camp') {
         ctx.fillStyle = '#7a3a2a'; ctx.beginPath(); ctx.moveTo(sx - 16, sy + 14); ctx.lineTo(sx - 8, sy + 2); ctx.lineTo(sx, sy + 14); ctx.fill();
         ctx.beginPath(); ctx.moveTo(sx + 2, sy + 15); ctx.lineTo(sx + 10, sy + 4); ctx.lineTo(sx + 18, sy + 15); ctx.fill();
@@ -632,7 +666,7 @@
       const busy = marchTargets.has(tt.k);
       if (tt.kind === 'node') badge(sx, sy - 8, icons[tt.res], tt.lvl, '#ffcf6e', tt.gone);
       else if (tt.kind === 'beast') badge(sx, sy - 8, icons.paw, tt.lvl, '#ff8a7a', tt.gone);
-      else if (tt.kind === 'camp') badge(sx, sy - 8, icons.flag, tt.lvl, '#ff5e4e', tt.gone);
+      else if (tt.kind === 'camp') badge(sx, sy - 8, tt.salt ? icons.hive : icons.flag, tt.lvl, tt.salt ? '#9fd8ff' : '#ff5e4e', tt.gone);
       else if (tt.kind === 'ruin') {
         if (!tt.gone) {
           const a = 0.35 + 0.25 * Math.sin(t * 2.5 + tt.v * 6);

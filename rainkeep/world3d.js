@@ -78,6 +78,26 @@
     g.rotation.y = 0.6;
     return g;
   }
+  // a Saltborn Hive (Act II): white crystal spires around a dark mouth
+  function hiveModel(t) {
+    const g = new THREE.Group();
+    g.add(blob(1.7));
+    const salt = A.mat('#f1f5f8', { flat: true, r: 0.35 }), saltD = A.mat('#c4d2dc', { flat: true, r: 0.5 });
+    g.add(A.cyl(1.25, 1.45, 0.25, A.mat('#d8d2c4', { flat: true }), 0, 0, 0, 9));
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + t.v, rr = i % 3 === 0 ? 0.35 : 0.95, h = i % 3 === 0 ? 2.6 : 1.1 + ((i * 7) % 4) * 0.25;
+      const c = A.cone(0.2 + (i % 3 === 0 ? 0.12 : 0), h, i % 2 ? salt : saltD, Math.cos(a) * rr, 0.2, Math.sin(a) * rr, 5);
+      c.rotation.z = Math.cos(a) * 0.18; c.rotation.x = Math.sin(a) * 0.18;
+      g.add(c);
+    }
+    g.add(A.cyl(0.32, 0.38, 0.1, A.mat('#1a2630'), 0.6, 0.25, 0.6, 8));
+    const eye = new THREE.MeshBasicMaterial({ color: '#9fe0ff', transparent: true, opacity: 0.9 });
+    const glow = A.sph(0.22, eye, 0.6, 0.45, 0.6, 8);
+    glow.userData.dyn = true;
+    g.add(glow);
+    g.userData.hive = glow;
+    return g;
+  }
   function campModel() {
     const g = new THREE.Group();
     g.add(blob(1.6));
@@ -126,13 +146,23 @@
       pond.userData.keep = true;
       g.add(pond);
     } else if (t.res === 'water') {
-      const pool = new THREE.Mesh(A.geo('spring', () => new THREE.CircleGeometry(1.25, 24).rotateX(-Math.PI / 2)), A.waterMat({ radial: true, scale: 2 }));
+      // in Act II the rains flood the springs: a wider pool with reeds all round
+      const R = t.flooded ? 1.75 : 1.25;
+      const pool = new THREE.Mesh(A.geo(`spring${R}`, () => new THREE.CircleGeometry(R, 28).rotateX(-Math.PI / 2)), A.waterMat({ radial: true, scale: 2 }));
       pool.position.y = 0.1;
       pool.userData.keep = true;
       g.add(pool);
-      for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2; const rk = A.rock(0.28, i, '#b98a5a'); rk.position.set(Math.cos(a) * 1.35, 0.08, Math.sin(a) * 1.35); g.add(rk); }
+      for (let i = 0; i < (t.flooded ? 13 : 9); i++) { const a = (i / (t.flooded ? 13 : 9)) * Math.PI * 2; const rk = A.rock(0.28, i, '#b98a5a'); rk.position.set(Math.cos(a) * (R + 0.1), 0.08, Math.sin(a) * (R + 0.1)); g.add(rk); }
+      if (t.flooded) g.add(A.reeds(14, 1.7, seed + 5));
       g.add(A.reeds(10, 1.2, seed));
       const p = A.palm(2.4, seed); p.position.set(-1.3, 0, -0.9); g.add(p);
+    } else if (t.res === 'sunsteel') {
+      // a Sunsteel vein: golden crystals pushing out of washed-out sand
+      g.add(A.rock(0.7, 2, '#8a6a44'));
+      g.children[g.children.length - 1].position.set(0, 0.2, -0.3);
+      const gold = new THREE.MeshStandardMaterial({ color: '#ffd36e', emissive: '#e8a83a', emissiveIntensity: 0.6, roughness: 0.25, metalness: 0.6, flatShading: true });
+      for (let i = 0; i < 7; i++) { const h = 0.6 + ((i * 37) % 5) * 0.18; const c = A.cone(0.16, h, gold, Math.cos(i * 2.4) * 0.55, 0, Math.sin(i * 2.4) * 0.45 + 0.1, 5); c.rotation.z = Math.cos(i * 1.7) * 0.35; c.rotation.x = Math.sin(i * 1.3) * 0.3; g.add(c); }
+      g.userData.glow = gold;
     } else {
       g.add(A.rock(0.9, 1, '#9a6440'));
       g.children[g.children.length - 1].position.set(-0.3, 0.3, -0.2);
@@ -257,8 +287,8 @@
       img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
       return img;
     };
-    icons.stone = mk('i-stone'); icons.food = mk('i-food'); icons.water = mk('i-water'); icons.copper = mk('i-copper');
-    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1');
+    icons.stone = mk('i-stone'); icons.food = mk('i-food'); icons.water = mk('i-water'); icons.copper = mk('i-copper'); icons.sunsteel = mk('i-sunsteel');
+    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.hive = mk('i-spire', '#eaf6ff');
   }
 
   // ======================================================================
@@ -269,19 +299,19 @@
       const b = KH.world.base(x, y);
       if (b.kind === 'empty' || b.kind === 'keep') continue;
       const t = KH.world.tile(x, y);
-      const key = `${b.kind}:${t.gone ? 'g' : 'a'}`;
+      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}`;
       let e = tiles[b.k];
       if (e && e.key === key) continue;
       if (e) scene.remove(e.g);
       let g;
       if (b.kind === 'node') g = nodeModel(b);
       else if (b.kind === 'beast') g = beastModel(b);
-      else if (b.kind === 'camp') g = campModel();
+      else if (b.kind === 'camp') g = b.salt ? hiveModel(b) : campModel();
       else g = ruinModel(b);
       if (t.gone) {
         if (b.kind === 'node') { g.scale.setScalar(0.6); g.traverse((o) => { if (o.material && o.material.color && !o.material.uniforms) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.55); } }); }
         else if (b.kind === 'beast') { g = new THREE.Group(); g.add(A.rock(0.4, 3, '#a87a4e')); }
-        else if (b.kind === 'camp') { g.traverse((o) => { if (o.material && o.material.color && !o.material.uniforms) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.3); } }); if (g.userData.fire) g.userData.fire.visible = false; }
+        else if (b.kind === 'camp') { g.traverse((o) => { if (o.material && o.material.color && !o.material.uniforms) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.3); } }); if (g.userData.fire) g.userData.fire.visible = false; if (g.userData.hive) g.userData.hive.visible = false; }
         else if (g.userData.beam) g.userData.beam.visible = false;
       }
       g.position.set(wx(x), hAt(wx(x), wz(y)), wz(y));
@@ -408,7 +438,7 @@
       if (sz > 1 || sx < -30 || sy < -30 || sx > VW + 30 || sy > VH + 30) continue;
       if (b.kind === 'node') badge(sx, sy, icons[b.res], tt.lvl, '#ffcf6e', tt.gone);
       else if (b.kind === 'beast') badge(sx, sy, icons.paw, tt.lvl, '#ff8a7a', tt.gone);
-      else if (b.kind === 'camp') badge(sx, sy, icons.flag, tt.lvl, '#ff5e4e', tt.gone);
+      else if (b.kind === 'camp') badge(sx, sy, b.salt ? icons.hive : icons.flag, tt.lvl, b.salt ? '#9fd8ff' : '#ff5e4e', tt.gone);
       else badge(sx, sy, icons.ruin, null, '#8fe4ff', tt.gone);
       if (busy.has(b.k)) { g.strokeStyle = 'rgba(255,207,110,.95)'; g.lineWidth = 2; g.setLineDash([3, 3]); ell(sx, sy, 17, 17); g.stroke(); g.setLineDash([]); }
     }
@@ -475,6 +505,8 @@
       if (ud.fire) ud.fire.scale.set(1, 0.8 + Math.sin(t * 13 + e.t.v * 5) * 0.25, 1);
       if (ud.banner) ud.banner.userData.update(t, 1);
       if (ud.beam && ud.beam.visible) ud.beam.material.opacity = 0.16 + 0.12 * Math.sin(t * 2.4 + e.t.v * 6);
+      if (ud.glow) ud.glow.emissiveIntensity = 0.45 + 0.3 * Math.sin(t * 2.4 + e.t.v * 6);
+      if (ud.hive && ud.hive.visible) { ud.hive.material.opacity = 0.6 + 0.35 * Math.sin(t * 3 + e.t.v * 5); ud.hive.scale.setScalar(0.9 + 0.15 * Math.sin(t * 3 + e.t.v * 5)); }
     }
     syncMarches(t);
     const sk = UI.sheet && UI.sheet.kind === 'tile' ? UI.sheet.tile : null;

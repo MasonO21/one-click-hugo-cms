@@ -896,7 +896,10 @@ const DATA = {
       food: { name: 'Date Oasis', load: 15, rate: 0.15, cap: 1500 },
       water: { name: 'Hidden Spring', load: 11, rate: 0.11, cap: 1100 },
       copper: { name: 'Copper Vein', load: 7, rate: 0.08, cap: 700 },
+      sunsteel: { name: 'Sunsteel Vein', load: 1, rate: 0.012, cap: 90 }, // Act II only
     },
+    // Act II on the Dunes: springs flood, Sunsteel veins surface on bare sand, and Saltborn Hives rise far out
+    act2: { veinShare: 0.07, hiveShare: 0.04, hiveFrom: 5, floodCap: 2, hiveStage: (lvl) => 55 + 4 * lvl, hiveScale: 1.2, hiveRespawn: 900 },
     nodeRespawn: 300,
     beasts: [['Jackal Pack', 'lancer'], ['Sand Lion', 'guard'], ['Horned Oryx', 'lancer'], ['Dust Wraith', 'bow'], ['Ironback Tortoise', 'guard'], ['Vulture Flock', 'bow']],
     beastRespawn: 240,
