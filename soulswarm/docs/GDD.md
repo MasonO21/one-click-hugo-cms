@@ -108,7 +108,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 ### 4.2 The Legion (Raise Chance and minions)
 
-- **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating.
+- **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating, except for kills by Seraphine's own Nova (×2 instead).
 - Every kill rolls Raise Chance, whether the Shepherd, a minion, the Nova or a Bloater blast made the kill. Elites can be raised. The Bloater that explodes does not rise, and Gravemaw cannot be raised (killing him adds 30 minions instead).
 - **Legion cap:** base 30. Flat bonuses: the Legion Cap skill (+10 per level, +50 at Lv5), the Dominion talent (+2 per level, +40 at L20), the Bone Idol relic (+3 to +18, up to +42 at Legendary Lv10). Mordrake multiplies the total by 1.25, then it is rounded. **Technical hard ceiling: 400 minions** on every device, for performance and leaderboard fairness.
 - Kills only roll while the legion is below the cap. A successful roll **at** the cap heals the weakest minion by 50% of its max HP instead.
@@ -158,7 +158,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 - **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). An elite kill counts as 6 kills and passing a Soul Gate (good or bad) as 3. Kills during a detonation add nothing. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas.
 - **Activation:** tap NOVA at 100%. It fires at once with 0.55 s of slow motion (30% speed), a flash, and all enemy projectiles cleared. Every minion detonates in a chain that ripples outward from the player over min(0.75, 0.15 + 0.003N) s. Firing grants the Shepherd 1.5 s of invulnerability. *(Planned: 0.4 s wind-up with hit-stop.)*
 - **Damage per detonation** = (35 + 0.5 × N) × Damage multiplier × (1 + 0.45(c − 1)), radius 2.6 m, where N = legion size when NOVA was pressed and the Damage multiplier includes stars, the Might talent and skill, and Crown of Thorns. The Shepherd's own blast deals 1.2× that damage in a 7 m radius, with knockback. At N = 300, each blast deals 185 base damage, 300 times, overlapping.
-- **Cost:** the legion drops to 0, and Raise Chance is halved until the chain finishes, so the rebuild starts a beat later.
+- **Cost:** the legion drops to 0, and Raise Chance is halved until the chain finishes, so the rebuild starts a beat later. Seraphine is the exception: foes her Nova kills rise at ×2, so her detonations restock the legion.
 - **Bosses** take 50% damage from Nova, capped at 25% of their max HP per Nova (§6).
 
 ### 4.5 Pickups
@@ -450,9 +450,25 @@ K = total kills (player and minions), T = seconds survived including the boss fi
 |---|---|---|---|---|---|---|
 | Vael, the Gravecaller | Common | 100 | 6.2 | Soul Bolt | +10% Raise Chance (pp) | Free (starter) |
 | Nyx Hollowborn | Rare | 110 | 6.5 | Spectral Scythe | Minions +20% speed and damage | Starter Pack / Epic summon shards |
-| Seraphine Ashveil | Epic | 95 | 6.4 | Ashen Chains | Soul Nova charges 30% faster | Epic and Legendary summon shards, Soul Pass S1 premium |
-| Liora Bellwraith | Epic | 105 | 6.3 | Grave Pulse | Grave Pulse kills have ×2 Raise Chance (85% cap) | Epic summon shards |
+| Seraphine Ashveil | Epic | 105 | 6.4 | Ashen Chains | Soul Nova charges 30% faster, and foes her Nova kills rise at ×2 Raise Chance (not halved) | Epic and Legendary summon shards, Soul Pass S1 premium |
+| Liora Bellwraith | Epic | 105 | 6.3 | Grave Pulse | Her pulses mark foes for 3 s; marked foes rise at ×2 Raise Chance whoever kills them (85% cap). Her pulses push foes 75% less, so they stay inside her legion's reach | Epic summon shards |
 | Mordrake the Undying | Legendary | 130 | 6.0 | Bone Spears | Legion cap +25%; revive once per run at full HP | Legendary summon shards |
+
+**Balance check (2026-10-06).** The balance bot (`HERO=<id> npm run balance`) played every hero at equal progression on Chapters 2 and 4, 6 to 10 runs each. Average survival:
+
+| Hero | Survival | Note |
+|---|---|---|
+| Vael | 291 s | |
+| Mordrake | 299 s | plus his revive |
+| Seraphine | 268 s | 216 s before her Nova fix |
+| Liora | 251 s | 230 s before the toll and knockback fix |
+| Nyx | 246 s | |
+
+- **Seraphine's fix:** her faster Nova used to empty the legion more often, so she had the smallest army.
+- **Liora's fix:** her ×2 rarely fired, because pulses seldom land the killing blow. Her pulses also flung the horde out of her legion's reach.
+- **Spread:** results vary by about ±35 s between runs. For Liora, +15% base damage or +6 pp Raise Chance did not move her result outside that spread.
+- **Vael's lead:** most likely a bot artifact. The bot only flees, which favours Vael's homing Soul Bolt; he takes the least damage of any hero.
+- **Before nerfing Vael:** confirm with human playtest data first, because the chapters are tuned around him.
 
 **Stars.** Unlocking takes 10 shards (1★). Star costs: 10 / 20 / 40 / 80 shards for 2★ / 3★ / 4★ / 5★ (160 shards from first shard to 5★). Each star above 1★ adds +12% damage and +8% HP, so 5★ = +48% damage, +32% HP.
 

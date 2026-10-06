@@ -53,7 +53,7 @@
 
 | Hero | Rarity | Signature weapon | Passive | How to get |
 |---|---|---|---|---|
-| Liora Bellwraith | Epic | Grave Pulse | Enemies killed by pulses get ×2 Raise Chance | **In the build** (pulled forward from S2): Epic Altar rolls. Planned for S2: featured banner + S2 premium pass (10 shards) |
+| Liora Bellwraith | Epic | Grave Pulse | Pulse-struck foes stay close and rise at ×2 Raise Chance for 3 s | **In the build** (pulled forward from S2): Epic Altar rolls. Planned for S2: featured banner + S2 premium pass (10 shards) |
 | Osric the Bone Abbot | Legendary | Skull Halo | Start each run with 20 minions | Featured banner shards (Legendary rolls) |
 | Grimsby Lanternjaw | Epic | **Witchfire Lantern** (new: a lantern that leaves burning trails) | Gate + values are 25% higher | Halloween event track (10 shards free) + banner |
 | Isolde Frostveil | Epic | **Rime Shards** (new: freezing shards that shatter) | Frozen enemies have +15 pp Raise Chance | S7 premium pass + banner |

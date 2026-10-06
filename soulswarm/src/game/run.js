@@ -291,7 +291,9 @@ export class Run {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
       if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
       if (source === 'skull' && this.evolved.boneCrown) chance = 1;
-      if (source === 'pulse' && this.loadout.hero.passive.pulseRaise) chance = Math.min(0.85, chance * this.loadout.hero.passive.pulseRaise); // Liora
+      const HP = this.loadout.hero.passive;
+      if (HP.pulseRaise && (source === 'pulse' || (e.tollUid === e.uid && e.tollT > this.time))) chance = Math.min(0.85, chance * HP.pulseRaise); // Liora: the bell marks the dead
+      if (HP.novaRaise && source === 'nova') chance = Math.min(0.85, Math.max(chance, this.stats.raise * HP.novaRaise)); // Seraphine: what her Nova burns rises (never halved)
       if (this.tutorial && this.counters.raised < 5) chance = 1; // first run: the first five kills always rise
       if (Math.random() < chance) {
         if (this.legion.count < this.stats.cap) {

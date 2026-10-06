@@ -53,7 +53,7 @@ Keyword rules: no words already in the name or subtitle (Apple indexes those alr
 > Choose 1 of 3 skills each level: homing Soul Bolts, a Spectral Scythe, Ashen Chains, Bone Spears, Skull Halo, Grave Pulse and 8 passives. Max them out and discover evolutions like Soul Storm and Bone Crown.
 >
 > **FOUR SHEPHERDS OF THE DEAD**
-> Play as Vael the Gravecaller, Nyx Hollowborn, Seraphine Ashveil or the legendary Mordrake the Undying. Each has a signature weapon and a passive that changes how your legion fights.
+> Play as Vael the Gravecaller, Nyx Hollowborn, Seraphine Ashveil, Liora Bellwraith or the legendary Mordrake the Undying. Each has a signature weapon and a passive that changes how your legion fights.
 >
 > **CONQUER FIVE CURSED CHAPTERS**
 > From the Ashen Necropolis to the Crimson Throne, then climb the weekly Endless Abyss leaderboards. Blood Moon weekends double the elites AND the rewards.
@@ -97,7 +97,7 @@ Format: iOS 6.9" (1320 × 2868) is required, and the 6.5" set is derived from it
 | 2 | **PICK THE RIGHT GATE** | Two glowing gates, `+25` and `×2`, legion of 37 (a real 1:08 pair), a Brute lurking behind the ×2 gate | Large "?" between the gates. Thumb-shaped arrow toward ×2. |
 | 3 | **SACRIFICE THE SWARM. WIPE THE SCREEN.** | Mid-Nova: a chain of cyan explosions rippling out, enemies vaporising | Peak bloom frame. NOVA button visibly pressed. |
 | 4 | **TOPPLE THE HOLLOW KING** | Gravemaw, magenta, mid-slam with telegraph rings, legion charging him | Boss health bar visible. Strong diagonal composition. |
-| 5 | **4 SHEPHERDS. ENDLESS BUILDS.** | Hero line-up (Vael, Nyx, Seraphine, Mordrake) above a level-up screen showing 3 skill cards | Rarity frames (Common → Legendary) visible. |
+| 5 | **COLLECT LEGENDARY SHEPHERDS** | The heroes screen with all five painted hero cards (Vael, Nyx, Seraphine, Liora, Mordrake) | Rarity frames (Common → Legendary) and star rows visible. |
 | 6 | **CLIMB THE ENDLESS ABYSS** (Planned; needs Endless Abyss and Blood Moon to ship) | Endless Abyss run at 12:00 with the weekly leaderboard panel overlaid | "Blood Moon weekend: 2× rewards" banner along the bottom |
 
 **App preview video (iOS, 25 s):** 0–3 s legion growing (hook 1) → 3–9 s gate choice → 9–15 s Nova wipe → 15–21 s Gravemaw fight → 21–25 s logo + "Raise the Legion". In-game audio only. No device frames (per Apple's guidelines).

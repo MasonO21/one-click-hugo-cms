@@ -256,7 +256,8 @@ export class Weapons {
       run.fx.shockwave(P.x, P.z, R, run.heroColor, 0.4, 0.1);
       run.particles.ring(P.x, P.z, R, 48, this.cols.pulse, { life: 0.4, size: 0.5 });
       run.fx.light(P.x, P.z, R + 2, 1.4, run.heroColorObj, 0.35);
-      E.query(P.x, P.z, R, (e) => { E.damage(e, dmg, { kx: e.x - P.x, kz: e.z - P.z, knock: 10, crit, source: 'pulse' }); });
+      const knock = 10 * (run.loadout.hero.passive.pulseKnock ?? 1); // Liora's toll staggers foes instead of flinging them out of her legion's reach
+      E.query(P.x, P.z, R, (e) => { E.damage(e, dmg, { kx: e.x - P.x, kz: e.z - P.z, knock, crit, source: 'pulse' }); });
       run.audio.sfx('explosion', { volume: 0.4, pitch: 1.4 });
       run.fx.shake(0.08);
       return true;
@@ -583,7 +584,7 @@ export class Weapons {
 
   blastHit(e) {
     const P = this.run.player;
-    this.run.enemies.damage(e, this._bd, this.opts(e.x - P.x, e.z - P.z, 8, this._bc, 'pulse', this._shown++ >= 6)); // 6 numbers per blast
+    this.run.enemies.damage(e, this._bd, this.opts(e.x - P.x, e.z - P.z, 8 * (this.run.loadout.hero.passive.pulseKnock ?? 1), this._bc, 'pulse', this._shown++ >= 6)); // 6 numbers per blast
   }
 
   // ---------------------------------------------------------------- skull halo

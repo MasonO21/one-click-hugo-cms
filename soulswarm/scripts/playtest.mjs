@@ -667,6 +667,42 @@ errs = await session(async (page) => {
 });
 check('boss rework: no runtime errors', !errs.length, errs[0] || '');
 
+// 16. Epic hero passives: Liora's toll (Grave Pulse marks foes; any kill within 3 s rises at ×2, a recycled enemy
+// never inherits the mark) and Seraphine's Nova (her Nova's kills rise at ×2, not the halved mid-Nova rate).
+// Raise rolls are pinned with Math.random = 0.4 against a 0.25 Raise Chance.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+    const rises = (hero, fn) => {
+      p.heroes[hero].owned = true; p.selectedHero = hero; p.energy = 30; app.startRun(1);
+      const r = app.run; app.engine.manual = true; r.director = () => {}; r.stats.raise = 0.25;
+      const spawn = () => r.enemies.spawn('husk', r.player.x + 3, r.player.z, { hpMul: 50 });
+      Math.random = () => 0.4;
+      const n0 = r.legion.count; const out = fn(r, spawn); out.rose = r.legion.count - n0;
+      Math.random = rnd; app.exitRun(); return out;
+    };
+    const kill = (r, e, source) => { e.hp = 1; r.enemies.damage(e, 5, { source, silent: true }); };
+    return {
+      // marked then slain by a minion: rises (0.25 × 2 > 0.4)
+      liora: rises('liora', (r, spawn) => { const e = spawn(); r.enemies.damage(e, 1, { source: 'pulse', silent: true }); const marked = e.tollUid === e.uid; kill(r, e, 'minion'); return { marked }; }),
+      // mark expired after 3 s: no rise
+      lioraLate: rises('liora', (r, spawn) => { const e = spawn(); r.enemies.damage(e, 1, { source: 'pulse', silent: true }); r.time += 3.2; kill(r, e, 'minion'); return {}; }),
+      // the pooled object comes back as a new enemy without the mark
+      lioraPool: rises('liora', (r, spawn) => { const e = spawn(); r.enemies.damage(e, 1, { source: 'pulse', silent: true }); r.enemies.remove(e); r.enemies.compact(); const f = spawn(); kill(r, f, 'minion'); return { reused: e === f }; }),
+      // another hero's pulse leaves no mark
+      vaelPulse: rises('vael', (r, spawn) => { const e = spawn(); r.enemies.damage(e, 1, { source: 'pulse', silent: true }); const marked = e.tollUid === e.uid; kill(r, e, 'minion'); return { marked }; }),
+      // mid-Nova kills: Seraphine 0.25 × 2 > 0.4 rises, Vael's halved 0.125 does not
+      sera: rises('seraphine', (r, spawn) => { r.novaQueue = [{ x: 0, y: 0, z: 0, t: 99 }]; const e = spawn(); kill(r, e, 'nova'); return {}; }),
+      vaelNova: rises('vael', (r, spawn) => { r.novaQueue = [{ x: 0, y: 0, z: 0, t: 99 }]; const e = spawn(); kill(r, e, 'nova'); return {}; }),
+    };
+  });
+  check('liora: Grave Pulse marks foes, marked kills rise ×2 for 3 s', s.liora.marked && s.liora.rose === 1 && s.lioraLate.rose === 0, JSON.stringify(s));
+  check('liora: the toll never leaks to recycled enemies or other heroes', s.lioraPool.reused && s.lioraPool.rose === 0 && !s.vaelPulse.marked && s.vaelPulse.rose === 0, JSON.stringify(s));
+  check('seraphine: her Nova kills rise ×2 (others are halved mid-Nova)', s.sera.rose === 1 && s.vaelNova.rose === 0, JSON.stringify(s));
+});
+check('hero passives: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

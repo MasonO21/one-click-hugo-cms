@@ -24,8 +24,8 @@ export const HEROES = {
   seraphine: {
     id: 'seraphine', name: 'Seraphine', title: 'Ashveil', rarity: 'epic', weapon: 'chains',
     color: 0xffb347, css: '#ffb347', body: 0x3a2414, legion: 0x7cffd4,
-    passive: { nova: 0.30 }, passiveText: 'Soul Nova charges 30% faster',
-    hp: 95, speed: 6.4,
+    passive: { nova: 0.30, novaRaise: 2 }, passiveText: 'Nova charges 30% faster, its kills rise ×2',
+    hp: 105, speed: 6.4,
     lore: 'A fallen choir-saint whose chains still burn with the last hymn of a dead cathedral.',
   },
   mordrake: {
@@ -38,7 +38,7 @@ export const HEROES = {
   liora: {
     id: 'liora', name: 'Liora', title: 'Bellwraith', rarity: 'epic', weapon: 'gravePulse',
     color: 0xc9bcff, css: '#b4a6ff', body: 0x2a2442, legion: 0x9fb4ff,
-    passive: { pulseRaise: 2 }, passiveText: 'Grave Pulse kills have ×2 Raise Chance',
+    passive: { pulseRaise: 2, pulseMark: 3, pulseKnock: 0.25 }, passiveText: 'Pulse-struck foes stay close and rise ×2',
     hp: 105, speed: 6.3,
     lore: 'She tolled the funeral bell for forty years. Then, one night, the dead began to answer.',
   },

@@ -31,7 +31,7 @@ const SHOTS = [
     const rb = r.boss.render.bind(r.boss); r.boss.render = (dt) => { rb(dt); r.boss.mat.uniforms.uFlash.value = 0; };
     r.camPos.copy(r.desiredCam()); sim(0.25, 0, 0);` },
   { name: '05-heroes', caption: 'COLLECT <em>LEGENDARY SHEPHERDS</em>', menu: 'heroes', stage: `
-    const p = app.profile; for (const id of ['nyx', 'seraphine', 'mordrake']) { p.heroes[id].owned = true; p.heroes[id].stars = 1 + (id === 'mordrake' ? 2 : 1); }
+    const p = app.profile; for (const id of ['nyx', 'seraphine', 'liora', 'mordrake']) { p.heroes[id].owned = true; p.heroes[id].stars = 1 + (id === 'mordrake' ? 2 : 1); }
     p.heroes.vael.stars = 3; p.gold = 48200; p.gems = 2350; E.manual = false; app.meta.show('heroes'); app.meta.refresh();` },
   { name: '06-chapters', caption: 'FIVE CURSED <em>CHAPTERS</em>', stage: `
     app.profile.chapter.unlocked = 5; start(2, 200); give({ soulBolt: 3, chains: 3, gravePulse: 1 });

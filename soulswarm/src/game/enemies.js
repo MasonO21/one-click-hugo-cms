@@ -361,6 +361,7 @@ export class Enemies {
     e.hp -= amount;
     e.flash = 1;
     e.lastHitBy = o.source || null;
+    if (o.source === 'pulse') { const m = this.run.loadout.hero.passive.pulseMark; if (m) { e.tollUid = e.uid; e.tollT = this.run.time + m; } } // Liora's toll (uid-keyed: pooled enemies never inherit it)
     if (o.knock && e.mass < 50) {
       const l = Math.hypot(o.kx || 0, o.kz || 0) || 1;
       const k = o.knock / Math.max(1, e.mass * 0.6);

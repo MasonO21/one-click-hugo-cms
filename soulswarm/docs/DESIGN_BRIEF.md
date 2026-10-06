@@ -22,7 +22,8 @@
 |---|---|---|---|---|
 | Vael, the Gravecaller | Common | Soul Bolt (homing bolts) | +10% Raise Chance | Free (starter) |
 | Nyx Hollowborn | Rare | Spectral Scythe (sweeping arc) | Minions +20% speed & damage | Starter Pack / summon shards |
-| Seraphine Ashveil | Epic | Ashen Chains (chain lightning) | Soul Nova charges 30% faster | Summon shards (Epic+) |
+| Seraphine Ashveil | Epic | Ashen Chains (chain lightning) | Soul Nova charges 30% faster; her Nova's kills rise ×2 | Summon shards (Epic+) |
+| Liora Bellwraith | Epic | Grave Pulse (shockwave) | Pulse-struck foes stay close and rise ×2 for 3 s | Summon shards (Epic) |
 | Mordrake the Undying | Legendary | Bone Spears (piercing lances) | Legion cap +25%, revive once per run | Summon shards (Legendary) |
 
 Heroes rank up 1★ to 5★ using shards. Each star adds +12% damage and +8% HP. Unlocking takes 10 shards. Star costs: 10/20/40/80.

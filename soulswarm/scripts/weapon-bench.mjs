@@ -2,12 +2,13 @@
 // one weapon (+ its partner passive at Lv1), no legion, god mode. Reports effective DPS (HP actually removed, no overkill)
 // and kills/min for every weapon at Lv5 and evolved. Needs the dev server.
 // usage: HP=8 RATE=22 SECS=50 node scripts/weapon-bench.mjs http://localhost:5173/ [soulBolt,chains,...]
+//        LV=1 ... benches the bare weapon at that level instead (what a hero starts a run with), no evolution
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const pw = require(execSync('npm root -g').toString().trim() + '/playwright');
 const URL = process.argv[2]; const ONLY = process.argv[3] ? process.argv[3].split(',') : null;
-const HP = +(process.env.HP || 4), RATE = +(process.env.RATE || 9), SECS = +(process.env.SECS || 60);
+const HP = +(process.env.HP || 4), RATE = +(process.env.RATE || 9), SECS = +(process.env.SECS || 60), LV = +(process.env.LV || 0);
 const W = {
   soulBolt: [{ soulBolt: 5, might: 1 }, 'soulStorm'], skullHalo: [{ skullHalo: 5, minionFury: 1 }, 'boneCrown'],
   scythe: [{ scythe: 5, haste: 1 }, 'harvestMoon'], chains: [{ chains: 5, frenzy: 1 }, 'chainsOfPerdition'],
@@ -20,7 +21,7 @@ await p.goto(URL); await p.waitForTimeout(2500);
 const rows = [];
 for (const [id, [lv, evo]] of Object.entries(W)) {
   if (ONLY && !ONLY.includes(id)) continue;
-  for (const ev of [null, evo]) {
+  for (const ev of LV ? [null] : [null, evo]) {
     const res = await p.evaluate(({ lv, ev, HP, RATE, SECS }) => {
       let a = 1234; Math.random = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
       const app = window.__soulswarm; if (app.run) app.exitRun();
@@ -40,8 +41,8 @@ for (const [id, [lv, evo]] of Object.entries(W)) {
         r.update(1 / 30);
       }
       return { dps: Math.round(eff / SECS), kpm: Math.round(kills / SECS * 60), alive: r.enemies.count };
-    }, { lv, ev, HP, RATE, SECS });
-    rows.push({ id, ev: ev || 'Lv5', ...res }); console.log(JSON.stringify(rows[rows.length - 1]));
+    }, { lv: LV ? { [id]: LV } : lv, ev, HP, RATE, SECS });
+    rows.push({ id, ev: ev || (LV ? 'Lv' + LV : 'Lv5'), ...res }); console.log(JSON.stringify(rows[rows.length - 1]));
   }
 }
 console.log(`\nsupply ≈ ${RATE}/s at hpMul ${HP}`);

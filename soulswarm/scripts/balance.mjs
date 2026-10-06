@@ -2,6 +2,8 @@
 // (talents, relics, hero stars per GDD §8) and reports clears, deaths, boss time-to-kill and damage taken.
 // usage: node scripts/balance.mjs [url] [runsPerChapter] [chapters, e.g. 1,3,5]
 //        GOD=1 ... keeps the bot alive so every run reaches Gravemaw (measures fight length)
+//        HERO=liora ... plays another hero at the same progression (default vael)
+//        TUNE='{"liora":{"hp":115,"passive":{"raise":0.05}}}' ... trial hero data changes without editing data.js
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 
@@ -11,6 +13,7 @@ const URL = process.argv[2] || 'http://localhost:5173/';
 const RUNS = +(process.argv[3] || 3);
 const CHAPTERS = (process.argv[4] || '1,2,3,4,5').split(',').map(Number);
 const GOD = process.env.GOD === '1';
+const HERO = process.env.HERO || 'vael';
 
 // What a player typically owns when they reach chapter c (talent levels are spread over Might, Vitality, Necromancy, Dominion, Swiftness).
 const PROGRESSION = {
@@ -22,7 +25,7 @@ const PROGRESSION = {
 };
 
 // Flees the horde, circle-strafes the boss, takes the better gate, picks the first card. No god mode, no revives.
-const BOT = `window.__balance = (ch, prog, god) => {
+const BOT = `window.__balance = (ch, prog, god, hero) => {
   const app = window.__soulswarm, p = app.profile, E = app.engine;
   E.manual = true;
   const keys = ['might', 'vitality', 'raise', 'cap', 'swift'];
@@ -30,7 +33,7 @@ const BOT = `window.__balance = (ch, prog, god) => {
   for (let i = 0; i < prog.talents; i++) { const k = keys[i % keys.length]; p.talents[k] = Math.min(p.talents[k] + 1, k === 'swift' ? 15 : k === 'raise' || k === 'cap' ? 20 : 25); }
   p.relics = prog.relics.map(([type, rarity, level], i) => ({ uid: 'b' + i, type, rarity, level }));
   p.equipped = p.relics.map((r) => r.uid);
-  p.heroes.vael.stars = prog.stars; p.selectedHero = 'vael';
+  Object.assign(p.heroes[hero], { owned: true, stars: prog.stars }); p.selectedHero = hero;
   p.chapter.unlocked = Math.max(p.chapter.unlocked, ch); p.energy = 30;
   p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; p.flags.tutorialDone = true;
   app.startRun(ch);
@@ -68,7 +71,8 @@ for (const ch of CHAPTERS) {
     await page.goto(URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2500);
     await page.evaluate(BOT);
-    const res = await page.evaluate(([c, p, g]) => window.__balance(c, p, g), [ch, PROGRESSION[ch], GOD]);
+    if (process.env.TUNE) await page.evaluate(async (tune) => { const { HEROES } = await import('/src/game/data.js'); for (const [id, o] of Object.entries(tune)) { const { passive, ...rest } = o; Object.assign(HEROES[id], rest); if (passive) Object.assign(HEROES[id].passive, passive); } }, JSON.parse(process.env.TUNE));
+    const res = await page.evaluate(([c, p, g, h]) => window.__balance(c, p, g, h), [ch, PROGRESSION[ch], GOD, HERO]);
     res.errors = errors.length;
     rows.push(res);
     console.log(JSON.stringify(res));
@@ -76,7 +80,7 @@ for (const ch of CHAPTERS) {
   }
 }
 await browser.close();
-console.log('\nch | clears | deaths (avg time) | boss TTK avg | dmg taken avg | peak legion avg');
+console.log(`\n${HERO}${GOD ? ' (god mode)' : ''}\nch | clears | deaths (avg time) | boss TTK avg | dmg taken avg | peak legion avg`);
 for (const ch of CHAPTERS) {
   const R = rows.filter((r) => r.ch === ch), avg = (f) => { const v = R.map(f).filter((x) => x != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : '-'; };
   const deaths = R.filter((r) => r.died);
