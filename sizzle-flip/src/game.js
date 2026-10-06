@@ -12,6 +12,9 @@ const NOOP = () => {};
 const SILENT_AUDIO = { play: NOOP, impact: NOOP, charge: NOOP, stopCharge: NOOP, sizzle: NOOP };
 const FLOOR_SHOW = 90;
 const TAU = Math.PI * 2;
+// One background canvas shared by every level session: a fresh 30–50 MB canvas per level adds up on
+// iOS, which counts canvas memory against a global limit until garbage collection runs.
+let SHARED_BG = null;
 
 const IMPACT_COLORS = { wood: '#f3e3c8', metal: '#ffffff', soft: '#ffe0ea', plastic: '#ffffff', glass: '#e8fbff', ceramic: '#ffffff', food: '#ffe9c2', stone: '#e6e0d8', slick: '#fff6b0', sticky: '#ffc0e3', rubber: '#fff3b0', sand: '#f2deae', cloud: '#ffffff', floor: '#f3eadb', wall: '#ffffff', piano: '#ffffff', drum: '#ffffff', xylo: '#ffffff', ice: '#e6f9ff' };
 
@@ -94,6 +97,24 @@ export class Game {
     return { pose: s.savePose(), body: s.supportBody, pwx: b ? b.pwx : 0, pwy: b ? b.pwy : 0, ang: b ? b.ang : 0 };
   }
 
+  // Is it safe to respawn now? Not while a timed hazard touching the checkpoint is on, or will switch on
+  // before the player has had a fair chance to flip away (about 1.3 s, or most of its off-window).
+  respawnClear() {
+    const s = this.sim, cp = this.checkpoint;
+    if (this._respawnFor !== cp) {
+      this._respawnFor = cp;
+      const pad = PHYS.R + 4;
+      this._respawnHazards = s.shapes.filter(sh => sh.timed && sh.hazard && cp.pose.px.some((x, i) => s.pointInShape(sh, x, cp.pose.py[i], pad)));
+    }
+    for (const sh of this._respawnHazards) {
+      const tm = s.bodies[sh.body].timer;
+      if (!tm) continue;
+      const need = Math.min(1.3, 0.8 * tm.period * (1 - tm.on));
+      for (let dt = 0; dt <= need; dt += 0.05) if (timerOn(tm, s.t + dt)) return false;
+    }
+    return true;
+  }
+
   restoreCheckpoint() {
     const cp = this.checkpoint;
     const s = this.sim;
@@ -127,6 +148,7 @@ export class Game {
   }
 
   pointerMove(x, y) {
+    if (this.paused) { this.aim = null; return; }
     if (!this.aim) return;
     this.aim.x = x; this.aim.y = y;
     this.updateAim();
@@ -136,7 +158,8 @@ export class Game {
     const a = this.aim;
     this.aim = null;
     this.au.stopCharge();
-    if (!a || this.phase !== 'play') return;
+    // a drag released after the pause menu opened must not launch
+    if (!a || this.paused || this.phase !== 'play') return;
     if (!a.valid) return;
     if (!this.sim.canLaunch()) { this.fx.text('WAIT!', ...this.sim.com().map((v, i) => i ? v - 50 : v), { size: 30, color: '#ffffff', life: 0.6 }); return; }
     this.launch(a.vx, a.vy, a.power);
@@ -179,7 +202,7 @@ export class Game {
 
   // ---- hints: trace the verified solution from the start as a dotted route
   hintReady() {
-    return !this.attract && (this.level.solution || []).length > 0 && (this.fails >= 3 || this.flips >= this.info.par + 3) && !this.hintUnlocked;
+    return !this.attract && this.phase !== 'win' && (this.level.solution || []).length > 0 && (this.fails >= 3 || this.flips >= this.info.par + 3) && !this.hintUnlocked;
   }
 
   useHint() {
@@ -296,8 +319,12 @@ export class Game {
       // pan spring
       if (i === this.panBody) {
         const target = this.aim && s.supportBody === this.panBody ? -0.06 * this.aim.power : 0;
-        st.flipV += ((target - st.flipA) * 220 - st.flipV * 16) * dtReal;
-        st.flipA += st.flipV * dtReal;
+        // sub-stepped so the spring stays stable on slow devices (a single 0.1 s step diverges)
+        for (let rem = dtReal; rem > 1e-6; rem -= 1 / 60) {
+          const h = Math.min(rem, 1 / 60);
+          st.flipV += ((target - st.flipA) * 220 - st.flipV * 16) * h;
+          st.flipA += st.flipV * h;
+        }
       }
     }
 
@@ -341,7 +368,8 @@ export class Game {
 
     // fail / win flow
     if (this.phase === 'fail') {
-      if (this.phaseT > 1.0) { this.phase = 'play'; this.restoreCheckpoint(); this.face.expr = 'idle'; }
+      // respawn after a 1 s beat — later if a grill/burner at the checkpoint is on or about to switch on
+      if (this.phaseT > 1.0 && (this.phaseT > 8 || this.respawnClear())) { this.phase = 'play'; this.restoreCheckpoint(); this.face.expr = 'idle'; }
     } else if (this.phase === 'win') {
       this.winT += dtReal;
       this.timeScale = this.winT < 0.7 ? 0.35 : Math.min(1, this.timeScale + dtReal * 2);
@@ -425,6 +453,7 @@ export class Game {
   }
 
   onFail(reason, x, y) {
+    if (this.phase === 'intro') this.skipIntro(); // never drop a fail (it would leave the level unplayable)
     if (this.phase !== 'play') return;
     this.fails = (this.fails || 0) + 1;
     this.hud();
@@ -450,6 +479,8 @@ export class Game {
     this.phase = 'win';
     this.phaseT = 0;
     this.winT = 0;
+    this.aim = null;
+    this.hud(); // hides hint/skip: using them now would reset the level and lose the win
     this.winShown = false;
     const gb = this.sim.bodies[this.goalBody];
     const gx = gb ? gb.cx : x, gy = gb ? gb.cy : y;
@@ -565,12 +596,14 @@ export class Game {
     const app = this.app;
     const L = this.level;
     const base = app.baseScale();
-    const box = { x0: -420, x1: W + 420, y0: Math.min(this.levelTop() - 400, L.h + FLOOR_SHOW - 1700), y1: L.h + (this.attract ? 900 : 300) };
+    // wide enough for the screen's aspect (landscape tablets show far more than the 640-wide playfield)
+    const side = Math.min(1400, Math.max(420, (app.cw / base - W) / 2 + 80));
+    const box = { x0: -side, x1: W + side, y0: Math.min(this.levelTop() - 400, L.h + FLOOR_SHOW - 1700), y1: L.h + (this.attract ? 900 : 300) };
     const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
     let cs = Math.min(base * app.dpr, 2.2);
     const maxPx = 14e6;
     if (bw * bh * cs * cs > maxPx) cs = Math.sqrt(maxPx / (bw * bh));
-    const c = this.bgCanvas || document.createElement('canvas');
+    const c = this.bgCanvas || (SHARED_BG = SHARED_BG || document.createElement('canvas'));
     c.width = Math.ceil(bw * cs); c.height = Math.ceil(bh * cs);
     const ctx = c.getContext('2d');
     ctx.setTransform(cs, 0, 0, cs, -box.x0 * cs, -box.y0 * cs);

@@ -16,6 +16,7 @@ const params = new URLSearchParams(location.search);
 const Cap = window.Capacitor;
 const NATIVE = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
 const NativeHaptics = NATIVE && Cap.registerPlugin ? Cap.registerPlugin('Haptics') : null;
+const NativeApp = NATIVE && Cap.registerPlugin ? Cap.registerPlugin('App') : null;
 if (NATIVE && Cap.registerPlugin) { try { Cap.registerPlugin('StatusBar').hide(); } catch (e) { /* noop */ } }
 
 class App {
@@ -40,9 +41,9 @@ class App {
     this.bindInput();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        // a full-screen native ad hides the web view — that's not the player leaving
-        if (this.ads.showing) return;
-        if (this.game && !this.game.attract && this.ui && document.getElementById('scr-win').hidden) this.ui.action('pause');
+        // auto-pause a level in progress (not while an ad covers it, or a card/dialog is already up)
+        const $ = (id) => document.getElementById(id);
+        if (!this.ads.showing && this.game && !this.game.attract && this.ui && $('scr-win').hidden && $('scr-worlddone').hidden && $('scr-confirm').hidden) this.ui.action('pause');
         if (this.audio.ctx) this.audio.ctx.suspend();
       } else if (this.audio.ctx) this.audio.ctx.resume();
     });
@@ -140,12 +141,12 @@ class App {
       drawLogo(document.getElementById('logo'), SKIN_BY_ID[this.save.skin] || SKINS[0]);
       this.startAttract();
       this.ui.show('scr-title', false);
-      try { history.replaceState({ s: 'title' }, ''); } catch (e) { /* noop */ }
+      this.ui.initHistory();
       document.getElementById('loading').classList.add('done');
       setTimeout(() => { document.getElementById('loading').hidden = true; }, 500);
       if (params.has('level')) this.startLevel(Math.max(0, Math.min(199, parseInt(params.get('level'), 10) - 1)), true);
       const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-      document.getElementById('install-hint').hidden = standalone || !('ontouchstart' in window);
+      document.getElementById('install-hint').hidden = NATIVE || standalone || !('ontouchstart' in window);
     };
     const fonts = document.fonts ? Promise.race([document.fonts.load('40px "Lilita One"'), new Promise(r => setTimeout(r, 1500))]).then(() => document.fonts.load('16px Fredoka')).catch(() => {}) : Promise.resolve();
     fonts.then(done, done);
@@ -191,7 +192,6 @@ class App {
     this.ui.showHud(this.game);
     this.audio.playMusic(WORLDS[Math.floor(i / 20)].id);
     this.audio.play('whoosh');
-    try { history.pushState({ s: 'game' }, ''); } catch (e) { /* noop */ }
   }
 
   restartLevel() {
@@ -203,37 +203,43 @@ class App {
     this.audio.play('respawn');
   }
 
-  nextLevel() {
-    const i = this.levelIndex + 1;
-    if (i >= this.levels.length) { this.toMenu('scr-title'); return; }
+  // Leaving a level-complete card. `then` is where the player asked to go: 'next' or 'levels'.
+  // A first-time world clear (incl. the finale) shows its celebration card first.
+  nextLevel(then = 'next') {
     if (this.pendingWorldDone !== undefined) {
       const w = this.pendingWorldDone;
       this.pendingWorldDone = undefined;
+      this.afterWorldDoneGo = then;
       this.ui.showWorldDone(w, w === WORLDS.length - 1);
       return;
     }
-    this.startLevel(i);
+    this.continueTo(then);
   }
 
-  afterWorldDone() {
+  afterWorldDone() { this.continueTo(this.afterWorldDoneGo || 'next'); }
+
+  continueTo(then) {
     const i = this.levelIndex + 1;
+    if (then === 'levels') { this.toMenu('scr-levels', i < this.levels.length && i % 20 === 0 ? Math.floor(i / 20) : undefined); return; }
     if (i >= this.levels.length) { this.toMenu('scr-title'); return; }
-    this.ui.worldIndex = Math.floor(i / 20);
+    if (i % 20 === 0) this.ui.worldIndex = Math.floor(i / 20);
     this.startLevel(i);
   }
 
-  toMenu(screen) {
+  toMenu(screen, world) {
     this.pause(false);
+    this.pendingWorldDone = undefined;
     this.ui.hideHud();
     this.startAttract();
     this.ui.stack = screen === 'scr-title' ? [] : ['scr-title', 'scr-worlds'];
-    if (screen === 'scr-levels') this.ui.worldIndex = Math.floor(this.levelIndex / 20);
+    if (screen === 'scr-levels') this.ui.worldIndex = world ?? Math.floor(this.levelIndex / 20);
     this.ui.show(screen, false);
     this.audio.playMusic('menu');
   }
 
   pause(on) {
     if (this.game) this.game.paused = on;
+    if (on && this.game && this.game.aim) { this.game.aim = null; this.audio.stopCharge(); }
     if (!on) this.last = performance.now();
   }
 
@@ -252,7 +258,8 @@ class App {
     const newSkin = SKINS.find(s => s.stars > before && s.stars <= after);
     delete this.save.skipped[i];
     this.persist();
-    if (i % 20 === 19 && wasLocked) this.pendingWorldDone = Math.floor(i / 20);
+    // first clear of a world (kept if they replayed the boss level from its own win card)
+    this.pendingWorldDone = i % 20 === 19 && (wasLocked || this.pendingWorldDone === Math.floor(i / 20)) ? Math.floor(i / 20) : undefined;
     this.ads.onLevelComplete();
     // context for the forced-ad check when the player leaves the win screen
     this.lastWin = { index: i, fails: game.fails || 0, worldEnd: this.pendingWorldDone !== undefined || i === this.levels.length - 1 };
@@ -297,7 +304,7 @@ class App {
   resetProgress() {
     const keep = this.save;
     // ad pacing and a "remove ads" purchase survive a progress reset; free hints come back
-    this.save = { ...resetSave(), sfx: keep.sfx, music: keep.music, haptics: keep.haptics, adsRemoved: keep.adsRemoved, adFast: keep.adFast, ads: keep.ads ? { ...keep.ads, freeHints: {} } : null };
+    this.save = { ...resetSave(), sfx: keep.sfx, music: keep.music, haptics: keep.haptics, adsRemoved: keep.adsRemoved, adFast: keep.adFast, longAimUntil: keep.longAimUntil, ads: keep.ads ? { ...keep.ads, freeHints: {} } : null };
     this.persist();
     this.ui._worldsBuilt = false;
     document.getElementById('world-list').innerHTML = '';
@@ -310,6 +317,11 @@ class App {
 
 const app = new App();
 window.__app = app;
+// Android hardware/gesture back: same handling as the browser back button; on the title screen it
+// sends the app to the background (like the home button) instead of closing it.
+if (NativeApp) {
+  try { NativeApp.addListener('backButton', () => { if (!app.ui.onBack()) NativeApp.minimizeApp(); }); } catch (e) { /* noop */ }
+}
 // Live-update hook when hosted as a Claude artifact: keep the level being played across republishes.
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) { try { hot.snapshot(() => ({ level: app.game && !app.game.attract ? app.game.info.index : null })); } catch (e) { /* noop */ } }

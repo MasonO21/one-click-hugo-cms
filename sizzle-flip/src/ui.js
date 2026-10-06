@@ -4,6 +4,7 @@ import { totalStars } from './storage.js';
 import { SKINS, drawSausage, makeFaceState } from './art/sausage.js';
 import { renderLevelThumb } from './thumbs.js';
 import { ACHIEVEMENTS } from './achievements.js';
+import { PRIVACY_HTML } from './privacy.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +21,9 @@ export class UI {
     });
     // stop menu taps from reaching the canvas
     $('ui').addEventListener('pointerdown', (e) => { if (e.target !== $('ui')) e.stopPropagation(); });
-    window.addEventListener('popstate', () => this.onBack());
+    // Browser / PWA back: one guard history entry. Each handled back re-arms it; on the title screen
+    // back is not handled, so the next back leaves the page as expected.
+    window.addEventListener('popstate', () => { if (this.onBack()) this.armHistory(); });
     $('world-list').addEventListener('scroll', () => this.updateDots(), { passive: true });
     setInterval(() => this.tickAim(), 1000);
   }
@@ -32,13 +35,13 @@ export class UI {
   // ------------------------------------------------------------ navigation
   show(id, push = true) {
     for (const s of document.querySelectorAll('#ui > .screen')) s.hidden = s.id !== id;
-    if (push && this.current && this.current !== id) { this.stack.push(this.current); try { history.pushState({ s: id }, ''); } catch (e) { /* noop */ } }
+    if (push && this.current && this.current !== id) { this.stack.push(this.current); this.armHistory(); }
     this.current = id;
     if (id === 'scr-title') this.renderTitle();
     if (id === 'scr-worlds') this.renderWorlds();
     if (id === 'scr-levels') this.renderLevels();
     if (id === 'scr-skins') this.renderSkins();
-    if (id === 'scr-settings') { this.syncToggles(); this.renderAim(); this.renderAdTest(); }
+    if (id === 'scr-settings') { this.syncToggles(); this.renderAim(); this.renderAdTest(); $('privacy-choices').hidden = !this.app.ads.privacyOptionsAvailable; }
   }
 
   hideScreens() {
@@ -46,18 +49,38 @@ export class UI {
     this.current = null;
   }
 
+  initHistory() {
+    try { history.replaceState({ s: 'root' }, ''); } catch (e) { /* noop */ }
+    this.armed = false;
+    this.armHistory();
+  }
+
+  armHistory() {
+    if (this.armed && history.state && history.state.s === 'guard') return;
+    try { history.pushState({ s: 'guard' }, ''); this.armed = true; } catch (e) { /* noop */ }
+  }
+
+  // Android back / browser back. Returns false when there is nothing left to go back from (title screen).
   onBack() {
-    // Android back button / browser back
-    if (this.app.ads.showing) return;
-    if (!$('scr-confirm').hidden) { this.action('confirm-no'); return; }
-    if (!$('scr-pause').hidden) { this.action('resume'); return; }
-    if (this.app.game && !this.app.game.attract && $('scr-pause').hidden && $('scr-win').hidden) { this.action('pause'); try { history.pushState({ s: 'game' }, ''); } catch (e) { /* noop */ } return; }
+    this.armed = false;
+    const app = this.app;
+    if (app.ads.showing || this._leaving) return true;
+    if (!$('scr-confirm').hidden) { this.action('confirm-no'); return true; }
+    if (!$('scr-privacy').hidden) { this.action('privacy-close'); return true; }
+    if (!$('scr-worlddone').hidden) { this.action('wd-continue'); return true; }
+    if (!$('scr-win').hidden) { this.action('levels'); return true; }
+    if (!$('scr-pause').hidden) { this.action('resume'); return true; }
+    if (app.game && !app.game.attract) { this.action('pause'); return true; }
     const prev = this.stack.pop();
-    if (prev) this.show(prev, false);
+    if (prev) { this.show(prev, false); return true; }
+    if (this.current && this.current !== 'scr-title') { this.show('scr-title', false); return true; }
+    return false;
   }
 
   action(act, el) {
     const app = this.app;
+    // while a forced ad is starting after NEXT, the win card's other buttons must not act
+    if (this._leaving && (act === 'replay' || act === 'levels' || act === 'next')) return;
     switch (act) {
       case 'play':
         // brand-new players go straight into the first level
@@ -75,7 +98,7 @@ export class UI {
       case 'skip': this.offerSkip(); break;
       case 'long-aim': this.longAim(); break;
       case 'levels':
-        if (!$('scr-win').hidden) { this.leaveWin(() => app.toMenu('scr-levels')); break; }
+        if (!$('scr-win').hidden) { this.leaveWin(() => app.nextLevel('levels')); break; }
         $('scr-pause').hidden = true; app.toMenu('scr-levels'); break;
       case 'home': $('scr-pause').hidden = true; app.toMenu('scr-title'); break;
       case 'replay': $('scr-win').hidden = true; app.restartLevel(); break;
@@ -84,6 +107,9 @@ export class UI {
       case 'reset': this.confirm('Erase all stars and progress?', () => { app.resetProgress(); this.toast('Progress reset'); }); break;
       case 'confirm-yes': $('scr-confirm').hidden = true; this._confirmCb && this._confirmCb(); break;
       case 'confirm-no': $('scr-confirm').hidden = true; this._confirmNo && this._confirmNo(); break;
+      case 'privacy': $('privacy-text').innerHTML = PRIVACY_HTML; $('scr-privacy').hidden = false; $('privacy-text').scrollTop = 0; break;
+      case 'privacy-close': $('scr-privacy').hidden = true; break;
+      case 'privacy-choices': app.ads.showPrivacyOptions(); break;
       case 'ad-preview': app.ads.preview(el.dataset.kind).then(() => this.renderAdTest()); break;
     }
   }
@@ -109,7 +135,7 @@ export class UI {
   // The first hint in each world is free; later ones are unlocked with an opt-in reward ad.
   async hint() {
     const app = this.app, g = app.game;
-    if (!g || g.attract || this._adBusy) return;
+    if (!g || g.attract || this._adBusy || g.phase === 'win') return;
     const w = g.info.worldIndex;
     let msg = null;
     if (app.ads.enabled && !app.ads.hintIsFree(w)) {
@@ -139,9 +165,9 @@ export class UI {
       const r = viaAd ? await app.ads.rewarded('skip').finally(() => { this._adBusy = false; }) : 'nofill';
       this._adBusy = false;
       if (app.game !== g) return;
-      if (r === 'closed') { app.pause(false); this.toast('Watch the whole ad to skip', 2400); return; }
+      if (r === 'closed') { if ($('scr-pause').hidden) app.pause(false); this.toast('Watch the whole ad to skip', 2400); return; }
       app.skipLevel();
-    }, { yes: viaAd ? '▶ Watch ad' : 'Skip', no: () => app.pause(false) });
+    }, { yes: viaAd ? '▶ Watch ad' : 'Skip', no: () => { if ($('scr-pause').hidden) app.pause(false); } });
   }
 
   // Long aim guide: one reward ad turns it on for 10 minutes (real time).

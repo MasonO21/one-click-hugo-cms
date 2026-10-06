@@ -1,21 +1,21 @@
 {
   "name": "sizzle-flip",
   "version": "1.0.0",
-  "description": "Sizzle Flip — a sausage-flipping mobile physics game",
+  "description": "Sizzle Flip \u2014 a sausage-flipping mobile physics game",
   "scripts": {
     "dev": "python3 -m http.server 8123",
     "build": "node tools/build.mjs",
     "build:artifact": "node tools/build.mjs --artifact",
     "levels": "node tools/generate.mjs --workers 4",
-    "cap:sync": "node tools/build.mjs && npx cap sync"
+    "cap:sync": "node tools/build.mjs && npx cap sync",
+    "release:check": "node tools/release-check.mjs",
+    "test": "node tools/e2e-ads.mjs && node tools/e2e-native.mjs && node tools/e2e-recover.mjs && node tools/e2e-all.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@capacitor/android": "^7.6.9",
-    "@capacitor/cli": "^7.6.9",
-    "@capacitor/ios": "^7.6.9",
+    "@capacitor/cli": "^8.0.0",
     "@fontsource/fredoka": "^5.3.0",
     "@fontsource/lilita-one": "^5.3.0",
     "esbuild": "^0.25.12"
@@ -23,9 +23,12 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@capacitor-community/admob": "^7.2.0",
-    "@capacitor/core": "^7.6.9",
-    "@capacitor/haptics": "^7.0.5",
-    "@capacitor/status-bar": "^7.0.6"
+    "@capacitor-community/admob": "^8.2.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
   }
 }

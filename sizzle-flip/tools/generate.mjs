@@ -827,7 +827,7 @@ export function generateOne(index, opts = {}) {
     if (replaySolution(hand, w, solution) !== 'win') throw new Error('handmade replay mismatch ' + index);
     return { ...hand, name, par: hand.par || sol.par, solution, meta: { solverPar: sol.par, robust: sol.minRobust, ms: sol.ms, attempts: 0 } };
   }
-  const T = targetFor(index);
+  const T = { ...targetFor(index), ...(opts.target || {}) }; // opts.target: override the curve (e.g. an easier tutorial level)
   const maxAttempts = opts.maxAttempts || 18;
   let best = null;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {

@@ -607,9 +607,11 @@ export class Sim {
     } else this.goalTimer = 0;
 
     // settle (never while resting in the goal — that resolves as a win instead)
+    // Resting resets as soon as the sausage slides or leaves the surface again, so it can never be
+    // flipped mid-fall (which also saved a mid-air checkpoint and could loop respawns forever).
     if (contacts >= 2 && maxRel < PHYS.SETTLE_V && !(launchZone && launchCount >= 5) && goalCount < 6) this.restTimer += PHYS.DT;
-    if (this.restTimer >= PHYS.SETTLE_T) this.sinceLaunch = 0;
     else if (maxRel > PHYS.SETTLE_V * 2.2 || contacts < 2) this.restTimer = 0;
+    if (this.restTimer >= PHYS.SETTLE_T) this.sinceLaunch = 0;
   }
 
   _contact(i, sh, nx, ny, depth) {

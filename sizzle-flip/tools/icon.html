@@ -59,7 +59,7 @@ if (splash) {
   ctx.drawImage(lc, (sw - lw) / 2, (sh - lh) / 2 - sh * 0.04, lw, lh);
 } else if (fg) {
   ctx.clearRect(0, 0, size, size);
-  scene(size / 2, size * 0.53, size / 512 * 0.62);
+  scene(size / 2, size * 0.53, size / 512 * 0.5); // fits the 66dp safe circle of a 108dp adaptive icon
 } else if (round) {
   ctx.save(); ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); ctx.clip();
   bg(size, size, 0); scene(size / 2, size * 0.53, size / 512 * 0.8);

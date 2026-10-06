@@ -4,9 +4,12 @@
 //    (Next / Levels) — never during a level, on retry, on pause or after a fail.
 //  • Opt-in ("rewarded") ads unlock hints after the free one per world, let a stuck player skip, and turn on
 //    the long aim guide for 10 minutes.
-//  • The Capacitor app uses AdMob (Google's public TEST ids below — replace them before release).
+//  • The Capacitor app uses AdMob (ids in src/ads-config.js — Google's public TEST ids until you replace them).
 //  • The web build has no ad network. In test contexts (the Claude artifact, a localhost dev server, ?adtest)
 //    a clearly labelled placeholder ad stands in so the whole flow can be tried; a deployed web build shows none.
+
+import { ADMOB_UNITS } from './ads-config.js';
+export { ADMOB_UNITS, GOOGLE_TEST_PUB } from './ads-config.js';
 
 export const AD_RULES = {
   firstAdAfterWins: 5,      // no forced ad until 5 levels have been beaten…
@@ -21,16 +24,6 @@ export const AD_RULES = {
 
 // Fast pacing for trying the flow (Settings → Ad testing, or ?adtest in the URL).
 const FAST_RULES = { firstAdAfterWins: 1, firstAdAfterSeconds: 0, levelsBetween: 1, secondsBetween: 20, graceFails: 10, freeHintsPerWorld: 1, skipAfterFails: 2, longAimMinutes: 1 };
-
-export const ADMOB_UNITS = {
-  // Google's public test ad units (always fill, never pay). Swap in your own from the AdMob console.
-  android: { interstitial: 'ca-app-pub-3940256099942544/1033173712', rewarded: 'ca-app-pub-3940256099942544/5224354917' },
-  ios: { interstitial: 'ca-app-pub-3940256099942544/4411468910', rewarded: 'ca-app-pub-3940256099942544/1712485313' },
-  testing: true,          // set false for release (also hides Settings → Ad testing)
-  testingDevices: [],     // your phone's test-device id, to see real ads safely while testing
-  maxAdContentRating: 'ParentalGuidance', // cartoon game: keep ads family-friendly
-  childDirected: false,   // true if you target children (Google Play Families / COPPA)
-};
 
 const AD_TEST_URL = /(^|[?&#])adtest\b/.test(location.search + location.hash);
 const WEB_TEST_CONTEXT = !!window.__ARTIFACT || AD_TEST_URL || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
@@ -116,7 +109,7 @@ export class AdManager {
     const i = game.info.index;
     const s = this.app.save;
     // never the final level — that flip has to be earned
-    return i < this.app.levels.length - 1 && (game.fails || 0) >= this.rules.skipAfterFails && !s.stars[i] && !(s.skipped && s.skipped[i]);
+    return i < this.app.levels.length - 1 && game.phase !== 'win' && (game.fails || 0) >= this.rules.skipAfterFails && !s.stars[i] && !(s.skipped && s.skipped[i]);
   }
 
   // Long aim guide: a timed booster. The expiry is a timestamp in the save, so it survives reloads.
@@ -166,6 +159,9 @@ export class AdManager {
     return this.present(() => kind === 'rewarded' ? this.provider.showRewarded('preview') : this.provider.showInterstitial());
   }
 
+  get privacyOptionsAvailable() { return !!this.provider.privacyOptions; }
+  showPrivacyOptions() { return this.provider.showPrivacyOptions ? this.provider.showPrivacyOptions() : Promise.resolve(); }
+
   setRemoved(on) { this.app.setSetting('adsRemoved', !!on); }
 
   // One-line pacing summary for the ad-testing panel.
@@ -195,6 +191,10 @@ class AdMobProvider {
     this.platform = Cap.getPlatform ? Cap.getPlatform() : 'android';
     this.units = ADMOB_UNITS[this.platform === 'ios' ? 'ios' : 'android'];
     this.ready = { interstitial: false, rewarded: false };
+    this.loading = { interstitial: false, rewarded: false };
+    this.retry = {};
+    this.canRequest = false;
+    this.privacyOptions = false;
   }
 
   async init() {
@@ -203,46 +203,70 @@ class AdMobProvider {
       initializeForTesting: ADMOB_UNITS.testing, testingDevices: ADMOB_UNITS.testingDevices,
       maxAdContentRating: ADMOB_UNITS.maxAdContentRating, tagForChildDirectedTreatment: ADMOB_UNITS.childDirected,
     });
+    // GDPR/UMP consent first; ads are only requested once the SDK says it may.
+    let info = null;
     try {
-      // GDPR/UMP consent, then (iOS) App Tracking Transparency.
-      const info = await A.requestConsentInfo();
-      if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await A.showConsentForm();
-    } catch (e) { /* consent not configured for this app — fine for test ids */ }
+      info = await A.requestConsentInfo();
+      if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') info = await A.showConsentForm();
+    } catch (e) { /* no consent message configured (e.g. test ids) */ }
+    this.canRequest = !info || info.canRequestAds !== false;
+    this.privacyOptions = !!(info && info.privacyOptionsRequirementStatus === 'REQUIRED');
     if (this.platform === 'ios') { try { await A.requestTrackingAuthorization(); } catch (e) { /* noop */ } }
     this.preload('interstitial');
     this.preload('rewarded');
   }
 
-  async preload(kind) {
-    const A = this.plugin;
-    const opts = { adId: this.units[kind], isTesting: ADMOB_UNITS.testing };
+  // Settings → "Privacy choices" (required in the EEA/UK so players can change their consent).
+  async showPrivacyOptions() {
+    for (const k of ['interstitial', 'rewarded']) { clearTimeout(this.retry[k]); this.retry[k] = null; }
     try {
-      if (kind === 'interstitial') await A.prepareInterstitial(opts);
-      else await A.prepareRewardVideoAd(opts);
-      this.ready[kind] = true;
-    } catch (e) { this.ready[kind] = false; setTimeout(() => this.preload(kind), 30000); }
+      const info = await this.plugin.showPrivacyOptionsForm().then(() => this.plugin.requestConsentInfo());
+      if (info) this.canRequest = info.canRequestAds !== false;
+    } catch (e) { /* noop */ }
+    this.preload('interstitial');
+    this.preload('rewarded');
   }
 
-  // Resolve once the ad is dismissed (or failed), with a safety timeout.
-  waitFor(events, timeoutMs = 90000) {
-    return new Promise((resolve) => {
-      const handles = [];
-      const done = (name, data) => { handles.forEach(h => h && h.remove && h.remove()); clearTimeout(t); resolve({ name, data }); };
-      const t = setTimeout(() => done('timeout'), timeoutMs);
-      for (const ev of events) {
-        Promise.resolve(this.plugin.addListener(ev, (data) => done(ev, data))).then(h => handles.push(h));
-      }
-    });
+  // One load per ad type at a time, and a single 30 s retry timer after a failure.
+  async preload(kind) {
+    // skip while loaded, loading, or waiting for the scheduled retry after a failure
+    if (!this.canRequest || this.ready[kind] || this.loading[kind] || this.retry[kind]) return;
+    this.loading[kind] = true;
+    const opts = { adId: this.units[kind], isTesting: ADMOB_UNITS.testing };
+    try {
+      if (kind === 'interstitial') await this.plugin.prepareInterstitial(opts);
+      else await this.plugin.prepareRewardVideoAd(opts);
+      this.ready[kind] = true;
+    } catch (e) {
+      this.retry[kind] = setTimeout(() => { this.retry[kind] = null; this.preload(kind); }, 30000);
+    } finally { this.loading[kind] = false; }
+  }
+
+  // Resolves with the first end event. The safety timeout only covers an ad that never appears:
+  // once it is on screen the player may watch it (or visit the store) for as long as they like.
+  watch(endEvents, shownEvent) {
+    const handles = [];
+    let finish;
+    const done = new Promise((resolve) => { finish = resolve; });
+    let t = setTimeout(() => finish('timeout'), 15000);
+    const end = (name) => { clearTimeout(t); handles.forEach(h => h && h.remove && h.remove()); finish(name); };
+    const add = (ev, fn) => Promise.resolve(this.plugin.addListener(ev, fn)).then(h => handles.push(h));
+    const ready = Promise.all([
+      ...endEvents.map(ev => add(ev, () => end(ev))),
+      add(shownEvent, () => { clearTimeout(t); t = setTimeout(() => end('timeout'), 30 * 60 * 1000); }),
+    ]);
+    return { ready, done, end };
   }
 
   async showInterstitial() {
     if (!this.ready.interstitial) { this.preload('interstitial'); return false; }
     this.ready.interstitial = false;
-    const closed = this.waitFor(['interstitialAdDismissed', 'interstitialAdFailedToShow']);
-    try { await this.plugin.showInterstitial(); } catch (e) { this.preload('interstitial'); return false; }
-    const r = await closed;
+    const w = this.watch(['interstitialAdDismissed', 'interstitialAdFailedToShow'], 'interstitialAdShowed');
+    await w.ready;
+    this.plugin.showInterstitial().catch(() => w.end('error'));
+    const r = await w.done;
     this.preload('interstitial');
-    return r.name === 'interstitialAdDismissed';
+    return r === 'interstitialAdDismissed';
   }
 
   async showRewarded() {
@@ -250,12 +274,15 @@ class AdMobProvider {
     this.ready.rewarded = false;
     let rewarded = false;
     const h = await this.plugin.addListener('onRewardedVideoAdReward', () => { rewarded = true; });
-    const closed = this.waitFor(['onRewardedVideoAdDismissed', 'onRewardedVideoAdFailedToShow']);
-    try { await this.plugin.showRewardVideoAd(); } catch (e) { h.remove && h.remove(); this.preload('rewarded'); return 'nofill'; }
-    const r = await closed;
-    h.remove && h.remove();
+    const w = this.watch(['onRewardedVideoAdDismissed', 'onRewardedVideoAdFailedToShow'], 'onRewardedVideoAdShowed');
+    await w.ready;
+    // showRewardVideoAd() only resolves when the reward is earned — never if the ad is closed early —
+    // so don't wait on it: the dismiss event decides when the ad is over.
+    this.plugin.showRewardVideoAd().then(() => { rewarded = true; }, () => w.end('error'));
+    const r = await w.done;
+    if (h && h.remove) h.remove();
     this.preload('rewarded');
-    if (r.name === 'onRewardedVideoAdFailedToShow') return 'nofill';
+    if (r === 'onRewardedVideoAdFailedToShow' || r === 'error') return 'nofill';
     return rewarded ? 'rewarded' : 'closed';
   }
 }

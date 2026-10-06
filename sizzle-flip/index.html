@@ -24,7 +24,7 @@
       <div class="title-wrap">
         <canvas id="logo" width="720" height="420" aria-hidden="true"></canvas>
         <h1 class="sr-only">Sizzle Flip</h1>
-        <div class="tagline">a weird little game about flipping a sausage</div>
+        <div class="tagline">flip the sausage · land the bun</div>
       </div>
       <div class="menu-buttons">
         <button class="btn btn-big btn-ketchup" data-act="play"><span>PLAY</span></button>
@@ -162,6 +162,10 @@
           <label class="toggle"><input type="checkbox" data-set="haptics"><span>Vibration</span></label>
         </div>
         <button class="booster aim-booster" data-act="long-aim"><span class="bi">🎯</span><span class="bt"><b>Long aim guide</b><small class="aim-state">Longer aim line · 10 min</small></span><span class="bcta aim-cta">▶ AD</span></button>
+        <div class="row legal-row">
+          <button class="btn btn-ghost" data-act="privacy"><span>Privacy policy</span></button>
+          <button class="btn btn-ghost" data-act="privacy-choices" id="privacy-choices" hidden><span>Privacy choices</span></button>
+        </div>
         <button class="btn btn-ghost danger" data-act="reset"><span>Reset progress</span></button>
         <div class="ad-test" id="ad-test" hidden>
           <h4>Ad testing <small>(test builds only)</small></h4>
@@ -178,9 +182,16 @@
         <div class="credits">
           <b>SIZZLE FLIP</b><br>
           Design, code, art &amp; sound: built from scratch with canvas + Web Audio.<br>
-          Fonts: Lilita One &amp; Fredoka (SIL Open Font License).<br>
-          Inspired by the one-button chaos of “a weird game about sausage”.
+          Fonts: Lilita One &amp; Fredoka (SIL Open Font License).
         </div>
+      </div>
+    </section>
+
+    <!-- Privacy policy -->
+    <section class="modal" id="scr-privacy" hidden>
+      <div class="card privacy-card">
+        <div class="privacy-text" id="privacy-text"></div>
+        <button class="btn btn-relish" data-act="privacy-close"><span>Close</span></button>
       </div>
     </section>
 

@@ -38,21 +38,33 @@ Deploy `dist/` to any static host (Netlify, GitHub Pages, Vercel…). On a phone
 
 Dev URL flags: `?level=37` jump to a level · `?debug` collision overlay + all worlds unlocked · `?nosw` skip the service worker.
 
-## Native app store builds (Capacitor)
-
-The repo already contains a configured Android project (`android/`, portrait-locked, icons + splash generated from the game's own art). iOS is one command on a Mac.
+## Testing
 
 ```bash
-npm run build && npx cap sync           # copy the web build into the native projects
-npx cap open android                    # Android Studio → Build → Generate Signed Bundle (AAB)
+npm run dev &               # serve on :8123, then:
+npm test                    # e2e-ads (42 checks), e2e-native (24), e2e-recover (20), e2e-all (plays all 200 levels)
+node tools/qa.mjs           # every route replayed with human-sized error
+npm run release:check       # pre-publish gate (see RELEASE.md)
+```
+
+`tools/e2e-all.mjs` plays every level through the real game: each stored route is fed through the game's own touch handlers at the exact physics step the solver used, then NEXT, the world-complete cards and forced ads are handled through the real UI. `tools/e2e-native.mjs` mocks the Capacitor plugins (AdMob event semantics, Android back button) to test the app-only code paths.
+
+## Native app store builds (Capacitor)
+
+The repo contains a configured Android project (`android/`): Capacitor 8, **targets Android 16 (API 36)** as Google Play requires, portrait (Android 16 ignores the lock on tablets, and the game also plays in landscape there), adaptive icon and splash generated from the game's own art, and an optional release signing config. iOS is one command on a Mac. **Step-by-step publishing guide: [RELEASE.md](RELEASE.md).**
+
+```bash
+npm run cap:sync                        # build the web game and copy it into the native projects
+npm run release:check                   # pre-publish gate
+cd android && ./gradlew bundleRelease   # signed AAB (with android/keystore.properties), or use Android Studio
 npx cap add ios && npx cap open ios     # on macOS with Xcode → Archive → App Store Connect
 ```
 
-Native extras are wired in automatically when running inside Capacitor: real haptics (`@capacitor/haptics`) and a hidden status bar (`@capacitor/status-bar`).
+Native extras are wired in automatically when running inside Capacitor: real haptics (`@capacitor/haptics`), a hidden status bar (`@capacitor/status-bar`), the Android back button (`@capacitor/app`) and AdMob.
 
 ## Ads
 
-All ad logic lives in `src/ads.js`: the pacing rules (`AD_RULES`), the AdMob unit ids (`ADMOB_UNITS`) and the providers.
+Ad logic lives in `src/ads.js` (pacing rules `AD_RULES`, the AdMob and placeholder providers). The AdMob ids live in `src/ads-config.js`; while they are Google's test ids the app runs in test mode.
 
 **When ads appear**
 
@@ -70,14 +82,14 @@ If no ad is available (no fill, offline), the reward is granted anyway. A taken 
 **Going live with AdMob** (`@capacitor-community/admob` is installed and synced):
 
 1. Create the app and two ad units (Interstitial, Rewarded) per platform in the [AdMob console](https://apps.admob.com).
-2. Put the unit ids in `ADMOB_UNITS` in `src/ads.js` and set `testing: false`. To keep test ads on your own phone, add its test-device id to `testingDevices`.
+2. Put the unit ids in `ADMOB_UNITS` in `src/ads-config.js` (test mode switches off by itself once no Google test id is left). To keep test ads on your own phone, add its test-device id to `testingDevices`.
 3. Android: replace `admob_app_id` in `android/app/src/main/res/values/strings.xml` (it's read by `AndroidManifest.xml`).
 4. iOS (after `npx cap add ios`): add to `ios/App/App/Info.plist` the keys `GADApplicationIdentifier` (your iOS app id), `GADIsAdManagerApp` = `true`, `SKAdNetworkItems` (Google's list) and `NSUserTrackingUsageDescription` (for example "Used to show you more relevant ads.").
 5. Set up a GDPR consent message (AdMob → Privacy & messaging). The app asks for consent and App Tracking Transparency at launch.
 6. Store forms: declare that the app contains ads and fill in the data-safety section (advertising ID). If you target children, set `childDirected: true` and follow Google Play Families policy.
-7. `npm run build && npx cap sync`, then build.
+7. `npm run cap:sync`, then `npm run release:check`, then build (see [RELEASE.md](RELEASE.md)).
 
-Google's public test ids are configured now, so a debug build shows real test ads right away.
+Google's public test ids are configured now, so a debug build shows real test ads right away. Players in the EEA/UK can reopen the consent form from **Options → Privacy choices**.
 
 ## How the levels are made (and why they're all beatable)
 
@@ -111,9 +123,11 @@ src/objects.js              prop library: collision shapes, materials, roles (10
 src/art/                    procedural vector art: sausage + face, props per world, backgrounds, logo
 src/audio.js                synthesized SFX + per-world procedural music
 src/ads.js                  ad pacing rules, AdMob + placeholder providers
+src/ads-config.js           AdMob ids (edit before release)
+src/privacy.js              privacy policy (in-app + dist/privacy.html)
 src/levels/data.js          the 200 generated & verified levels
 tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon & screenshot renderers
-store/                      store screenshots (1290×2796) and feature graphic source in icons/
+store/                      listing.md (store text), ios/ (1290×2796) and play/ (1080×1920) screenshots; icons/ has store icons + feature graphic
 android/                    Capacitor Android project
 ```
 
