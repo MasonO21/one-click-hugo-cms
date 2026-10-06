@@ -153,30 +153,30 @@ Most 4X and survival-strategy launches never reach top-grossing charts, regardle
 
 ## 8. Balance and pacing (measured)
 
-The game was tuned with an automated player that plays every system the way a strong, active player would. It builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan and claims every reward. It sets the mist before storms (Attuned mist from Lv 6), taps every surplus bubble, calls the rain whenever it's ready, settles incidents, trades with merchants and fights the next stage whenever the odds look good. Since 3.0 it also lights the Forge and forges the cheapest gear piece it can afford, climbs the Mirage Spire when a floor looks winnable, spends every Duel ticket on the best challenger it can beat, and trades Glory for Sunsteel and Epic pouches. These are the measured results from 36-hour runs (game time, which runs about 30× faster than a live-service game):
+The game was tuned with an automated player that plays every system the way a strong, active player would. It builds, researches, trains, recruits, stations stewards, gathers, hunts, explores ruins, donates, raids with its Caravan and claims every reward. It sets the mist before storms (Attuned mist from Lv 6), taps every surplus bubble, calls the rain whenever it's ready, settles incidents, trades with merchants and fights the next stage whenever the odds look good. Since 3.0 it also lights the Forge and forges the cheapest gear piece it can afford, climbs the Mirage Spire when a floor looks winnable, spends every Duel ticket on the best challenger it can beat, and trades Glory for Sunsteel and Epic pouches. These are the measured results from 36-hour runs of version 3.1, which also has the Act II Dunes, the six-event rotation and the Patron program (game time, which runs about 30× faster than a live-service game):
 
 | Milestone | Free player (three runs) | With the Founder's Cache (one run) |
 |---|---|---|
-| Rainwyrm Lv 5 | 12-22 min | 8 min |
-| Rainwyrm Lv 10 | 2.0-2.5 h | 3.5 h |
-| Stage 30, the Sand Colossus | 1.4-1.5 h | 1.3 h |
-| Stage 60, the Sunheart (end of Act I) | 4.2-5.0 h | 5.5 h |
-| Rainwyrm Lv 15, Primordial | 13.3-15.8 h | 12.6 h |
-| Dune Duels rank 100 / rank 1 | 7.7-9.1 h / 15-16.7 h | 8.7 h / 14.9 h |
-| Stage 100, the Ember Throne (end of the story) | 15.1-19.2 h | 15.2 h |
-| Mirage Spire floor 100 | 19.6-23.3 h | 21.2 h |
-| Rainwyrm Lv 18 | 26-29.5 h | 25.3 h |
-| Rainwyrm Lv 20, Skyriver | 35.7 h (one run), Lv 19 at 34-34.5 h (two) | Lv 19 at 34.4 h |
-| All six pieces of gear at Lv 50 | about 36 h | about 36 h |
-| All 71 chapter quests | 70 of 71 by 36 h (the last is Lv 20) | 70 of 71 |
+| Rainwyrm Lv 5 | 12 min | 8 min |
+| Rainwyrm Lv 10 | 2.3-3.0 h | 4.5 h |
+| Stage 30, the Sand Colossus | 1.5-2.0 h | 1.8 h |
+| Stage 60, the Sunheart (end of Act I) | 4.6-5.2 h | 6.0 h |
+| Rainwyrm Lv 15, Primordial | 11.6-12.5 h | 14.1 h |
+| Dune Duels rank 100 / rank 1 | 7.7-8.4 h / 14.5-14.8 h | 9.8 h / 16.2 h |
+| Stage 100, the Ember Throne (end of the story) | 13.8-16.2 h | 16.5 h |
+| Mirage Spire floor 100 | 19.0-20.6 h | 18.9 h |
+| Rainwyrm Lv 18 | 22.9-25.7 h | 29.8 h |
+| Rainwyrm Lv 20, Skyriver | 34.3-34.9 h (two runs), Lv 19 at 33 h (one) | Lv 19 at 35 h |
+| All six pieces of gear at Lv 50 | about 35 h | about 35 h |
+| All 71 chapter quests | all 71 in two runs, 70 in one, by 36 h | 70 of 71 |
 
-**How 3.0 made the game longer.** The story used to end at stage 60 after about 5 hours. Act II adds four chapters to stage 100, so the story now ends after 15-19 hours, three to four times longer, and the endgame (Lv 20, gear, the Spire) runs to about 36 hours. Act I keeps roughly its old pace (4-5 hours to the Sunheart). Past stage 60 the enemy curve is the old Burning Line curve, so players already in the Burning Line drop straight into Act II at a fair difficulty. What carries a player through Act II is Rainwyrm Lv 16-20 (higher hero level caps, troops and research to Lv 15) and the Warden's Gear.
+**How 3.0 made the game longer.** The story used to end at stage 60 after about 5 hours. Act II adds four chapters to stage 100, so the story now ends after 14-16 hours, about three times longer, and the endgame (Lv 20, gear, the Spire) runs to about 35 hours. Act I keeps roughly its old pace (4-5 hours to the Sunheart). Past stage 60 the enemy curve is the old Burning Line curve, so players already in the Burning Line drop straight into Act II at a fair difficulty. What carries a player through Act II is Rainwyrm Lv 16-20 (higher hero level caps, troops and research to Lv 15) and the Warden's Gear.
 
 **The gear and the copper economy.** The first draft of gear doubled the squad's power and drew so much copper that building stalled: Act II ended at 10 hours and the wyrm stopped growing. The shipped version gives at most +42% squad attack and defense, +54% health and +30% to each troop class at gear Lv 50, and about a third more with Sunsteel Tempering at Lv 15. Sunsteel is smelted from stone, which piles up late, plus a little copper. Gear upgrades cost Sunsteel and stone. The Forge's racks cap how much Sunsteel waits unspent, so smelting stops instead of draining copper. Copper is still the late-game constraint: stone and food reach the millions while copper stays under 200k. Buildings past Lv 15 take a smaller copper share (13% of their stone cost instead of 22%) to keep the wyrm growing.
 
 **Trials pay out without replacing the story.** The Spire's floor f fights like expedition stage 24 + 0.9f, and its twists make some floors harder than the stage they match. Both trials pay mostly in Sunsteel, Starglass, journals and occasional shard pouches. Their first drafts (an Epic pouch every 10 floors, generous early milestones) pulled Act I down to about 3.3 hours and were cut back.
 
-**The Founder's Cache.** The second builder speeds up the early game, but from mid-game both builders wait on resources most of the time (the bot measured 70-100% builder idle), so a founder is not meaningfully faster late. A live version should give paying players something that helps late as well (a resource-side perk, not more power in PvP).
+**The Founder's Cache.** The second builder speeds up the early game, but from mid-game both builders wait on resources most of the time (the bot measured 70-100% builder idle), so a founder is not meaningfully faster late; in these runs gacha luck made the founder slower to stage 60 than two of the free runs. Since 3.1 the Cache also unlocks Patron 1 (+2% production), and higher Patron levels add up to +20% production and +25% build speed, which is where spending now helps late. Measuring the Patron ladder needs a bot that spends; that is the next balance job.
 
 Run-to-run spread is wide (gacha luck and raid timing move stage 60 and stage 100 by an hour or more), so tune with several seeds, not one.
 
