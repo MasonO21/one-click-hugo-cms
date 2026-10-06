@@ -1,0 +1,44 @@
+{
+  "name": "sunup",
+  "version": "0.1.0",
+  "description": "Sunup: a one-tap morning check-in that alerts the people who love you if you go quiet.",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c yellow,cyan \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:web": "vite",
+    "dev:server": "tsx watch server/index.ts",
+    "demo": "VITE_SUNUP_MODE=demo vite",
+    "build": "vite build",
+    "build:demo": "VITE_SUNUP_MODE=demo VITE_SUNUP_SINGLE=1 vite build --outDir dist-demo && node scripts/inline.mjs dist-demo",
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "typecheck": "tsc",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.2.1",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tsx": "^4.23.15",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/web-push": "^3.6.4",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.5",
+    "typescript": "~5.9",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  }
+}
