@@ -2,7 +2,7 @@
 
 **Pitch:** The rain stopped a generation ago. Raise the last Rainwyrm, a water dragon whose cooling mist keeps a desert keep alive, and dig the wells that keep your people drinking. Rainkeep is a 3D survival city-builder with heroes, expeditions and alliances, aimed at the same audience as Whiteout Survival, with the survival game that its ads promise kept at the center of play.
 
-This document covers what the game in this folder (version 3.2) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
+This document covers what the game in this folder (version 3.3) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
 
 ---
 
@@ -33,9 +33,9 @@ These six pillars are all in the game. Each one answers a complaint above.
 1. **A new world: the desert that forgot the rain.** Sun-baked sandstone, palm groves, turquoise water, sandstorms and heatwaves. It is instantly distinguishable from the snow games in an ad feed, but the survival logic is just as primal: water is life. The setting also gives the game a natural day and night cycle, warm and cool palettes, and a hopeful ending (the rain coming back) that a frozen setting struggles to deliver.
 2. **A living water source: the Rainwyrm.** Your "furnace" is a water dragon coiled in the keep's spring, rendered in real-time 3D. It grows through nine forms (Hatchling, Whelp, Drake, Tidewyrm, Elder, Ascended, Primordial, Stormcrowned, Skyriver), visibly gets bigger, sprouts fins, horns and whiskers, trails a rain cloud of its own, wears a crown of storm horns with lightning in its cloud, and finally becomes a river that flies. It blinks, hums when petted, calls a torrent to open every battle, and goes dormant if the wells run dry. Players name it, and at Lv 12 they choose its Ascension (Monsoon, Mistveil or Floodheart). It gives players a pet to protect and a canvas for cosmetic spending (skins), revenue that doesn't add pay-to-win pressure.
 3. **Survival that stays real all game.** Water has two jobs: survivors drink it and the wyrm breathes it as cooling mist. Weather is forecast ahead of time (Dust Haze, Sandstorm, Heatwave), and the sun "hunts water", so every time the wyrm grows, storms run hotter. Middays run hotter and desert nights run cold, so the right mist changes through the day. Players choose the mist (Drizzle, Steady, Downpour), trading water for cooling, and from Lv 6 can let an Attuned wyrm set it for them. From Lv 3 the wyrm can **Call the Rain**: a short shower on a long recharge that refills the wells, cools the keep and calms a sandstorm, so the big storm of the day becomes a decision about when to spend it. Heat makes survivors sick, the Healer's House treats them, and in a Scorching keep the sick can be lost. If the cisterns run dry, the wyrm sleeps and families leave to find water elsewhere.
-4. **A real 3D keep and world.** The keep and the Dunes are 3D scenes, not static backdrops: buildings change shape as they level up, villagers carry water jars between the well and their work, camels circle the walls, palms sway harder in a sandstorm, lanterns come on at night, and caravans visibly cross the Dunes. You can orbit and zoom. This is the screenshot and the ad.
+4. **A real 3D keep and world.** The keep and the Dunes are 3D scenes, not static backdrops: buildings change shape as they level up, villagers carry water jars between the well and their work, camels circle the walls, palms sway harder in a sandstorm, lanterns come on at night, and caravans visibly cross the Dunes. The keep has real height: it is a terraced oasis at the head of a canyon, with the spring sunk in a stepped basin, the houses and barracks on raised terraces, an upper town and a temple carved into the cliff, so every building has a place rather than a slot on a ring. You can pan across it, zoom from the whole canyon down to street level and turn it. This is the screenshot and the ad.
 5. **Heroes matter at home, not just in fights.** Every hero can be stationed as a Steward of one building (Bashir boosts the wells, Halima speeds healing, Zahra cools the keep). Collecting heroes improves your keep as well as your squad, which deepens the gacha without adding more combat power. The cast is illustrated, diverse and original.
-6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 3.2 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
+6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 3.3 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
 
 ### Naming and IP
 
@@ -55,7 +55,7 @@ Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burnin
 ```
 *Game time. Timers and rates run about 30× faster than a typical live-service game.
 
-### Systems in version 3.2
+### Systems in version 3.3
 
 | System | What it does | Where |
 |---|---|---|
@@ -64,7 +64,7 @@ Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burnin
 | Keep | 13 buildings, auto/manual workers, 12 research lines × 15 levels, Storehouse protection; costs bend three times (Lv 10, Lv 15) so each act has its own pace | `DATA.buildings`, `DATA.techs` |
 | Sunsteel Forge | Smelts stone and copper into Sunsteel while lit (racks cap the stock); six pieces of Warden's Gear, 50 levels in five tiers, capped by the Forge's level; squad attack, defense and health plus a bonus per troop class | `forge.js`, `DATA.forge` |
 | Keep life | Call the Rain (an active wyrm ability with a recharge and Rain Charms), surplus bubbles over working buildings, 16 keep incidents with priced choices and random outcomes (boosts, survivors, Starglass, setbacks), travelling merchants whose offers follow what the keep has too much of, timed boosts | `keep.js`, `DATA.incidents`, `DATA.merchant` |
-| 3D presentation | Procedural low-poly models in three detail tiers per building, day and night, weather (fog, dust, heat, rain), a merchant camp, incident and surplus markers, villagers, camels, mist particles, camera fitting, orbit and zoom, picking; 2D fallback | `art3d.js`, `town3d.js`, `world3d.js`, `town.js` |
+| 3D presentation | Procedural low-poly models in three detail tiers per building, day and night, weather (fog, dust, heat, rain), a merchant camp, incident and surplus markers, villagers, camels, mist particles, a terraced canyon layout shared by both renderers (`DATA.keep`), a free camera (pan, zoom toward the finger, turn and tilt, fling, collision with the canyon walls, home button), picking; 2D fallback | `art3d.js`, `town3d.js`, `world3d.js`, `town.js` |
 | Troops | 3 classes in a counter triangle, Barracks-scaled strength, march cap, housing cap | `DATA.troops` |
 | Heroes | 22 illustrated heroes (4 join the pool in Act II), 3 rarities, levels capped by stars and Rainwyrm level, skills that grow with stars, Steward posts | `DATA.heroes`, `art2d.js` |
 | Recruitment | Published odds, 40-pull Legendary pity, 10-pull Epic guarantee, featured hero rotating each event, shard pouches | `DATA.recruit` |
@@ -116,9 +116,9 @@ Target: match the genre's spending ladder while putting more of the spend into b
 5. **Returning-veteran onboarding.** Skip-tutorial for experienced 4X players and a "Warden's Welcome" catch-up event for anyone who joins a server late.
 6. **Creator program** with mid-size strategy and Whiteout Survival YouTubers and streamers at soft launch. Give them early access, custom wyrm skins and Caravan-founder codes.
 
-## 6. From 3.2 to a live multiplayer game
+## 6. From 3.3 to a live multiplayer game
 
-Version 3.2 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
+Version 3.3 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
 
 - **Real Caravans:** shared help requests, donations and Colossus raids backed by a server, plus chat with moderation.
 - **Shared Dunes:** one map per server, where caravans can meet rival keeps.
@@ -131,7 +131,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 
 | Phase | Goal | Typical team / time |
 |---|---|---|
-| Version 3.2 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
+| Version 3.3 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
 | Live multiplayer | Hand-authored hero art and wyrm animation pass, server-authoritative backend, real Caravans, shared Dunes, analytics | 6-12 people, 4-6 months |
 | Soft launch | 1-3 test markets (commonly Canada, Australia, Philippines). Hit retention and payer gates before scaling spend | 15-30 people, 3-6 months |
 | Global launch | Paid user acquisition at scale, live ops, alliances and PvP | 30-80+ people, ongoing |
@@ -142,7 +142,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 - A payer conversion rate of a few percent in the first 30 days
 - Projected 180-day revenue per install above cost per install with margin. 4X installs in tier-1 markets commonly cost well into double-digit dollars
 
-**What a live backend adds that 3.2 doesn't have:** accounts and cloud saves (3.2 has on-device saves and save codes), server-authoritative timers and economy (3.2 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
+**What a live backend adds that 3.3 doesn't have:** accounts and cloud saves (3.3 has on-device saves and save codes), server-authoritative timers and economy (3.3 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
 
 **Performance.** The 3D scenes are built for phones: static geometry is merged per material so a fully built keep is a few hundred draw calls, there is one shadow-casting light, the shadow map drops to 1024 px on small screens, the pixel ratio is capped at 2, and rendering stops whenever the tab is hidden or another screen is open. Players on older devices can switch 3D off in Settings; the 2D renderer plays the same game.
 
@@ -205,7 +205,7 @@ Other measured outcomes:
 - **Every resource is used.** Building costs draw on stone, water (mudbrick and mortar), food and copper from level 3 up. The Forge turns late-game stone into Sunsteel. Copper is the late-game constraint; food piles up for training and donations.
 - **Nights matter.** Desert nights run 7°C colder and middays 2°C hotter, so a wyrm left on Steady wastes water after dark. Attuned mist drizzles at night and pours before storms. That alone saves enough water to speed the free player's story by about a tenth.
 - **Keep life rewards attention.** An always-attentive player gets about 15% more output from surplus bubbles and 10-15% more water from showers. Incidents roughly break even, and merchants turn surplus food into journals, Rain Charms and the scarce resource.
-- **Old saves carry over.** Saves from 2.0 and 2.1 load into 3.2 at the same chapter quest (quests added since are stepped over). A finished 2.x game continues straight into the Act II quests, and a save already in the Burning Line becomes Act II progress.
+- **Old saves carry over.** Saves from 2.0 and 2.1 load into 3.3 at the same chapter quest (quests added since are stepped over). A finished 2.x game continues straight into the Act II quests, and a save already in the Burning Line becomes Act II progress.
 - **No errors** across all automated runs.
 
 ## 9. Next steps

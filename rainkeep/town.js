@@ -960,7 +960,7 @@
     if (!pid) {
       // double tap on open ground: back to the home view
       const now = performance.now();
-      if (T3 && lastTap && now - lastTap.t < 380 && Math.hypot(e.offsetX - lastTap.x, e.offsetY - lastTap.y) < 40) { T3.reset(); lastTap = null; } else lastTap = { t: now, x: e.offsetX, y: e.offsetY };
+      if (T3 && lastTap && now - lastTap.t < 400 && Math.hypot(e.offsetX - lastTap.x, e.offsetY - lastTap.y) < 40) { T3.reset(); lastTap = null; } else lastTap = { t: now, x: e.offsetX, y: e.offsetY };
       return;
     }
     lastTap = null;

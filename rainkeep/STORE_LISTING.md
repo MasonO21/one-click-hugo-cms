@@ -30,7 +30,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 3450 characters
+## Description (4,000 max) · 3496 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -45,8 +45,8 @@ SURVIVAL THAT STAYS REAL
 • Call the Rain. Your wyrm can summon a shower that fills the wells, cools the keep and calms a sandstorm.
 
 BUILD YOUR KEEP IN 3D
-• Thirteen buildings around the wyrm's spring, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
-• Watch your villagers carry water jars to work, camels circle the walls and lanterns come on at night. Orbit and zoom around your keep.
+• Thirteen buildings on the terraces of a canyon oasis, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
+• Watch your villagers carry water jars up the stone stairs, camels cross the dunes outside the gate and lanterns come on at night. Pan, zoom and turn anywhere in your keep.
 • Assign workers, research twelve technologies and guard your stores against raiders.
 • Light the Sunsteel Forge and forge the Warden's Gear: six pieces, five tiers, and every squad you send out gets stronger.
 • Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms. Every choice costs something and pays off in its own way.
