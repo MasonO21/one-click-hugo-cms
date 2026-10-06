@@ -6,13 +6,13 @@ import { SKUS, GEM_SHOP, ENERGY_MAX, ENERGY_REGEN_SEC, HEROES, CHAPTERS, MUTATOR
 import { todayKey } from '../../meta/save.js';
 import {
   onChange, commit, grant, questList, claimQuest, loginState, claimLogin, energyNextIn, buyGemShop,
-  starterAvailable, pactActive, pactDailyAvailable, claimPactDaily, trialState, grantTrialRetry,
+  starterAvailable, pactActive, pactDailyAvailable, claimPactDaily, trialState, grantTrialRetry, weeklyState, claimWeekly, nextWeek,
 } from '../../meta/economy.js';
 import { cd, nextMidnight, bundleItems, rewardChip, popRewards, bar, tap, portrait, delegate, energyFullIn } from './util.js';
 import { LOGO_ART } from '../art.js';
 
 const ENERGY_ADS_PER_DAY = 3;
-const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords' };
+const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords', chest: 'chest', elite: 'crown', legion: 'helm', evolve: 'star', boss: 'trophy', trial: 'star' };
 
 /** Open a modal whose body re-renders whenever the profile changes. */
 function liveModal(opts, render) {
@@ -125,8 +125,16 @@ export function openQuests(ctx) {
   lm = liveModal({ title: 'Daily Quests', cls: 'mm-quests scroll' }, (body) => {
     const list = questList(p);
     const ready = list.filter((q) => q.done && !q.claimed).length;
+    const W = weeklyState(p);
     body.innerHTML = `
       <div class="mm-sub"><span class="t-label">Resets in</span> ${cd(nextMidnight(), 0, 'cd-strong')}</div>
+      <div class="wk ${W.ready ? 'is-ready' : W.claimed ? 'is-claimed' : ''}">
+        <div class="wk-ic">${icon('chest')}</div>
+        <div class="wk-main"><div class="wk-tx">Weekly chest <small class="t-dim">· resets in ${cd(nextWeek(), 0)}</small></div>
+          <div class="q-prog">${bar(W.done / W.goal)}<span class="tnum">${W.done}/${W.goal}</span></div>
+          <div class="q-rw">${bundleItems(W.rewards).map((it) => rewardChip(it)).join('')}</div></div>
+        <div class="q-act">${W.claimed ? `<span class="q-done">${icon('check')}</span>` : W.ready ? '<button class="btn btn-sm btn-primary" data-wk="1">Open</button>' : ''}</div>
+      </div>
       <div class="qs">${list.map((q) => `
         <div class="q ${q.claimed ? 'is-claimed' : q.done ? 'is-ready' : ''}">
           <div class="q-ic">${icon(QUEST_ICON[q.id] || 'quest')}</div>
@@ -141,6 +149,7 @@ export function openQuests(ctx) {
       ${ready > 1 ? `<button class="btn btn-ad btn-block" data-q="*">Claim all (${ready})</button>` : ''}
       <div class="mm-foot t-dim">Quests track your runs. Pass XP also advances the Soul Pass.</div>`;
     $$(body, '[data-go]').forEach((b) => b.addEventListener('click', () => { tap(app); lm && lm.close(); ctx.go('battle'); }));
+    $(body, '[data-wk]')?.addEventListener('click', () => { const items = claimWeekly(p); if (!items) return; commit(p); popRewards(app, items, { title: 'Weekly chest!' }); });
     $$(body, '[data-q]').forEach((b) => b.addEventListener('click', () => {
       const ids = b.dataset.q === '*' ? list.filter((q) => q.done && !q.claimed).map((q) => q.id) : [b.dataset.q];
       let items = [];

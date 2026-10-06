@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { CHAPTERS, ENERGY_COST, SKUS, HEROES } from '../../game/data.js';
 import {
   commit, computeLoadout, notifications, starterAvailable, pactActive, pactDailyAvailable,
-  freeChestAvailable, claimFreeChest, canPlay, trialState,
+  freeChestAvailable, claimFreeChest, canPlay, trialState, bloodMoon, bloodMoonTimes,
 } from '../../meta/economy.js';
 import { hex, cd, nextMidnight, popRewards, tap, delegate } from './util.js';
 import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
@@ -79,6 +79,7 @@ export function createHome(ctx) {
           </div>
           <button class="chap-arrow" data-act="next" ${sel >= CHAPTERS.length ? 'disabled' : ''} aria-label="Next chapter">${icon('right')}</button>
         </div>
+        ${bloodMoon(p) ? `<div class="bm"><i class="bm-moon"></i><div><b>BLOOD MOON</b><span>2× elites · 2× gold and gems</span></div>${cd(bloodMoonTimes().ends, 0, 'bm-cd')}</div>` : ''}
         ${ftue ? `<div class="ftue"><span>Your legion awaits, Shepherd.</span><i class="ftue-arrow">${icon('right')}</i></div>` : ''}
         <div class="battle-wrap ${ftue ? 'is-ftue' : ''}">
           <button class="btn btn-primary btn-battle ${locked ? 'is-locked' : ''}" data-act="battle">

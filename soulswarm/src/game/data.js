@@ -364,6 +364,13 @@ export const LOGIN_REWARDS = [
   { gold: 2000 }, { gems: 30 }, { sigils: 1 }, { gold: 5000 }, { gems: 50 }, { sigils: 2 }, { gems: 100, relic: 'epic+' },
 ];
 
+// ---------------------------------------------------------------- Weekend and weekly
+// Blood Moon: every weekend (Fri 00:00 – Sun 23:59 UTC). 8 elites a run (so 8 Relic Chests), double run gold and gems,
+// and a blood-red sky. Endless elites come twice as often. Not applied to the Daily Trial.
+export const BLOOD_MOON = { days: [5, 6, 0], elites: [45, 75, 110, 150, 185, 225, 255, 290], rewardMul: 2, ground: 0x4a2228, groundB: 0x1c080c, fog: 0x12020a, rune: 0xff2e3a, rim: 0xff8a8a };
+// Weekly chest: claim 25 daily quests in a week (Monday to Sunday, local time).
+export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 100 } };
+
 // ---------------------------------------------------------------- Daily Trial
 // One free run a day (no energy) on a cleared chapter with one boon and one bane, seeded by date. Unlocks once Chapter 1 is cleared.
 export const TRIAL = {

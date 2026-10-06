@@ -54,7 +54,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Daily free chest (rewarded ad) | 10 / day | | |
 | Daily Trial clear (once a day; a rewarded ad buys one retry) | 40 / day, plus 1 Sigil every 3rd clear | | |
 | New account | 150 (one-time) | | |
-| Weekly quest chest (Planned) | 50 / week | | |
+| Weekly quest chest (25 daily quests) | 50 / week, plus 1 Sigil | | |
 | Events and leaderboards (Planned) | 50–500 per event | | |
 
 ### 2.3 Energy, Altar Sigils, Hero Shards
@@ -218,7 +218,7 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 | Placement | Reward | Cap | Surface |
 |---|---|---|---|
 | Revive | Revive at full HP, 2.5 s invulnerability, a blast that deals 50% max HP to enemies within 8 m, with knockback | 1 per run (shared with the 60-gem revive) | Death screen (10 s) |
-| Double run rewards | Run gold and gems granted again (Planned: stacks with Blood Moon) | 1 per run (Planned: 5 / day) | Results screen |
+| Double run rewards | Run gold and gems granted again (stacks with Blood Moon's ×2) | 1 per run (Planned: 5 / day) | Results screen |
 | Free daily summon | 1 single Soul Altar pull | 1 / day | Soul Altar |
 | Energy refill | +10 energy | 3 / day | Energy popup |
 | Daily free chest | 800–1,499 gold + 10 gems + 1 relic (Common 85% / Rare 15%; showing these odds is Planned) | 1 / day | Shop and home screen |

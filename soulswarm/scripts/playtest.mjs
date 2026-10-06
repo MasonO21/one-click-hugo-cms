@@ -548,6 +548,29 @@ errs = await session(async (page) => {
 });
 check('legion variants: no runtime errors', !errs.length, errs[0] || '');
 
+// 15. Weekend Blood Moon (8 elites, double gold and gems, red sky) and the weekly quest chest (25 quests)
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const eco = await import('/src/meta/economy.js');
+    const app = window.__soulswarm, p = app.profile;
+    const fri = eco.bloodMoon(p, Date.UTC(2026, 9, 9, 12)), tue = eco.bloodMoon(p, Date.UTC(2026, 9, 6, 12));
+    const T = eco.bloodMoonTimes(Date.UTC(2026, 9, 10, 12)); // a Saturday
+    p.flags.bloodMoon = 'on'; app.startRun(1); const r = app.run;
+    const run = { bloodMoon: r.bloodMoon, elites: r.eliteTimes.length, sky: '#' + r.scene.background.getHexString() };
+    app.exitRun(); p.flags.bloodMoon = 'off';
+    const base = { chapter: 1, time: 200, kills: 800, raised: 100, bestLegion: 60, novas: 2, gates: 4, victory: false, level: 12, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0 };
+    const goldA = eco.applyRunResult(p, { ...base }).rewards.gold, goldB = eco.applyRunResult(p, { ...base, bloodMoon: true }).rewards.gold;
+    // weekly chest: 25 claimed daily quests open it once
+    p.weekly = { week: null, done: 0, claimed: false }; eco.weeklyState(p); p.weekly.done = 24;
+    const early = eco.claimWeekly(p); p.weekly.done = 25;
+    const gems0 = p.gems, items = eco.claimWeekly(p), again = eco.claimWeekly(p);
+    return { fri, tue, ends: new Date(T.ends).toISOString(), starts: new Date(T.starts).toISOString(), ...run, double: goldB === goldA * 2, early: !!early, opened: !!items && p.gems - gems0 === 50, again: !!again };
+  });
+  check('blood moon: weekends only, 8 elites, red sky, double rewards', s.fri && !s.tue && s.ends === '2026-10-12T00:00:00.000Z' && s.starts === '2026-10-16T00:00:00.000Z' && s.bloodMoon && s.elites === 8 && s.sky === '#12020a' && s.double, JSON.stringify(s));
+  check('weekly chest: opens at 25 quests, once', !s.early && s.opened && !s.again, JSON.stringify(s));
+});
+check('weekend and weekly: no runtime errors', !errs.length, errs[0] || '');
+
 // 14. Gravemaw rework (src/game/boss.js): phases, immune roars, phase floor, sealed arena, edge adds, spiral,
 //    Hollow Dirge, chapter twists and the 1.0 s telegraph floor. Each run jumps straight to 6:00 in god mode.
 const BOSS_QA = `

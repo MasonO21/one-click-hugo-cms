@@ -16,7 +16,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests, gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, overflow fade, Nova wind-up, adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
-| Live ops and social | — | Blood Moon, Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
+| Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
 Everything below describes the build unless it is marked **Planned**.
 
@@ -48,7 +48,7 @@ Everything below describes the build unless it is marked **Planned**.
 | Run | 6–9 min | Clear the chapter (survive 6:00, kill Gravemaw) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
 | Meta | Days to months | Get strong enough for the next chapter | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Endless Abyss depth record |
 | Daily | 15–40 min/day | Finish quests, spend energy, beat the Daily Trial | 6 daily quests, 7-day login calendar, the Daily Trial (§8.1), rewarded ads, energy | Gems, gold, sigils, pass XP |
-| Weekly (Planned) | 7 days | Climb the leaderboard, farm Blood Moon | Blood Moon weekend, Endless Abyss weekly board, weekly quest chest | Sigils, gems, league rewards |
+| Weekly | 7 days | Farm Blood Moon, fill the weekly chest (Planned: climb the leaderboard) | Blood Moon weekend, weekly quest chest (Planned: Endless Abyss weekly board) | Sigils, gems (Planned: league rewards) |
 | Seasonal | 28 days | Finish the Soul Pass, collect the new hero | Soul Pass (30 tiers); Planned: monthly Boss Rush, new hero every 1–2 seasons | Skins, Epic/Legendary relics, hero shards |
 
 **Moment-to-moment.** Move → weapons fire automatically at the nearest threat → an enemy dies → it drops a soul shard and has a *Raise Chance* to rise as a cyan minion → minions orbit you and hunt nearby enemies → more kills → more shards and more minions. The player's only job is positioning: kite, collect, pick gates, avoid telegraphs.
@@ -70,7 +70,7 @@ Everything below describes the build unless it is marked **Planned**.
 
 **7-day login calendar** (does not reset if a day is missed; it pauses): D1 2,000 gold · D2 30 gems · D3 1 Altar Sigil · D4 5,000 gold · D5 50 gems · D6 2 Altar Sigils · D7 Legendary-chance relic chest (Epic 80% / Legendary 20%; showing these odds on the calendar is Planned) + 100 gems. One cycle = 7,000 gold, 180 gems, 3 sigils and 1 relic. The cycle then repeats.
 
-**Weekly (Planned).** Blood Moon runs every weekend (Fri 00:00 – Sun 23:59 UTC): 2× elites (8 per run instead of 4) and 2× run rewards. Endless Abyss leaderboards reset Monday 00:00 UTC. The weekly quest chest (finish 25 daily quests in a week) gives 1 Altar Sigil, 50 gems and 100 pass XP.
+**Weekly.** **Blood Moon** runs every weekend (Fri 00:00 – Sun 23:59 UTC) in the campaign and Endless (not the Daily Trial): 8 elites per run instead of 4 (at 45, 75, 110, 150, 185, 225, 255, 290 s; Endless elites twice as often), so 8 Relic Chests, and **double run gold and gems** (pass XP unchanged, to protect Soul Pass pacing). The ground, runes and sky turn blood red, a "BLOOD MOON" banner opens each run, the home screen shows a ribbon with the time left, and the results screen a "Blood Moon ×2" badge. The **weekly quest chest** (claim 25 daily quests between Monday and Sunday, local time) gives 1 Altar Sigil, 50 gems and 100 pass XP; it sits at the top of the quests panel. *(Planned: Endless Abyss leaderboards reset Monday 00:00 UTC.)*
 
 **Seasonal.** A Soul Pass season lasts 28 days with 30 tiers × 500 pass XP = 15,000 XP. Daily quests give 220 pass XP and a run gives about 80–210 (§10), so a player who does all quests and about 3 runs a day earns about 700 pass XP per day and reaches tier 30 in about 3 weeks. A casual player (quests plus 1 run a day) reaches roughly tier 15–20 by the end of the season.
 
@@ -429,7 +429,7 @@ A Chapter 1 clear produces about 2,000 kills at about 1 XP each, plus 132 XP fro
 
 **Gold** = round( (0.9 × K + 2.2 × T + 400 × c × B) × (1 + G) × P + bonus )
 
-K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if Gravemaw was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, bonus = 150 per "Grave Gold" card. The rewarded-ad "double rewards" grants the run's gold and gems a second time. *(Planned: Blood Moon doubles the result as well, and the two stack.)*
+K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if Gravemaw was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, bonus = 150 per "Grave Gold" card. Blood Moon doubles the run's gold and gems, and the rewarded-ad "double rewards" then grants the (doubled) gold and gems a second time, so the two stack to ×4.
 
 | Example (G = 0) | Full clear (T = 7:00) | Death at 4:00 (no boss) |
 |---|---|---|

@@ -15,7 +15,7 @@ import { Gates } from './gates.js';
 import { Boss } from './boss.js';
 import { Hazards } from './hazards.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
-import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators } from './data.js';
+import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -25,7 +25,7 @@ const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
 export class Run {
-  constructor(engine, { app, loadout, chapter, mutators = null }) {
+  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false }) {
     this.isRun = true;
     this.engine = engine;
     this.app = app;
@@ -37,7 +37,9 @@ export class Run {
     this.onEnd = null;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(chapter.fog);
+    this.bloodMoon = !!bloodMoon; // weekend event: 8 elites, double rewards, a blood-red sky
+    const look = this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim } : chapter;
+    this.scene.background = new THREE.Color(look.fog);
     this.camera = new THREE.PerspectiveCamera(45, 0.5, 0.5, 220);
 
     const skin = loadout.skin ? SKINS[loadout.skin] : null;
@@ -45,7 +47,7 @@ export class Run {
     this.heroColorObj = new THREE.Color(this.heroColor);
     this.weaponColorObj = this.heroColorObj.clone();
 
-    this.world = new World(this.scene, chapter, { maxLights: engine.maxGroundLights });
+    this.world = new World(this.scene, look, { maxLights: engine.maxGroundLights });
     this.particles = new Particles(9000);
     this.particles.budget = engine.particleBudget;
     this.glow = new GlowSprites(2800);
@@ -98,7 +100,8 @@ export class Run {
     this.eliteTimes = (!this.endless && this.mods.elites) || ELITE_TIMES;
     if (this.mut.eliteEvery) this.eliteTimes = Array.from({ length: Math.floor((RUN_LENGTH - 10) / this.mut.eliteEvery) }, (_, i) => (i + 1) * this.mut.eliteEvery);
     this.gateEvery = this.mut.gateEvery || 40;
-    this.trialBannerAt = this.trial ? 3.6 : 0;
+    if (this.bloodMoon && !this.endless) this.eliteTimes = BLOOD_MOON.elites;
+    this.trialBannerAt = this.trial || this.bloodMoon ? 3.6 : 0;
     this.packAcc = 0; this.packN = 0;
     this.hazards = new Hazards(this);
     this.projectiles.initLobs();
@@ -222,7 +225,8 @@ export class Run {
       }
       if (this.trialBannerAt && this.time >= this.trialBannerAt) {
         this.trialBannerAt = 0;
-        this.ui.banner('DAILY TRIAL', this.mut.ids.map((id) => MUTATORS[id].name).join('  ·  '), 'soul');
+        if (this.trial) this.ui.banner('DAILY TRIAL', this.mut.ids.map((id) => MUTATORS[id].name).join('  ·  '), 'soul');
+        else this.ui.banner('BLOOD MOON', 'Twice the elites · double gold and gems', 'ember');
       }
       if (this.time >= this.nextGate) { this.nextGate += this.gateEvery; this.gates.spawnPair(); }
       if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
@@ -232,7 +236,7 @@ export class Run {
       if (eliteDue) {
         const t = ['husk', 'brute', 'witch', 'brute'][this.eliteIdx++ % 4];
         // Endless keeps them coming; a modifier set with more elites (Crimson Throne) shortens the gap
-        if (this.eliteIdx >= times.length) this.nextElite = this.time + 70 * ELITE_TIMES.length / (this.mods.elites || ELITE_TIMES).length;
+        if (this.eliteIdx >= times.length) this.nextElite = this.time + 70 * ELITE_TIMES.length / (this.mods.elites || ELITE_TIMES).length / (this.bloodMoon ? 2 : 1);
         this.spawnEnemy(t, { elite: true });
         this.ui.banner('ELITE', 'A gilded horror has risen. It carries a Relic Chest!', 'gold');
         this.audio.sfx('warning', { volume: 0.5 });
@@ -546,7 +550,7 @@ export class Run {
       chapter: this.chapter.id, time: this.endless ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
-      trial: this.trial, mutators: this.mut.ids,
+      trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon,
       chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length,
     };
     if (this.onEnd) this.onEnd(result);

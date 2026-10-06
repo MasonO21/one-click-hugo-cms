@@ -4,7 +4,7 @@ import {
   HEROES, HERO_ORDER, HERO_UNLOCK_SHARDS, HERO_STAR_COST, HERO_MAX_STARS, heroStarBonus,
   RELICS, RELIC_TYPES, RELIC_SLOTS, relicValue, RARITIES,
   TALENTS, talentCost, SKUS, GEM_SHOP, ALTAR, PASS_TIERS, PASS_XP_PER_TIER, passReward,
-  QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS,
+  QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS, BLOOD_MOON, WEEKLY_CHEST,
 } from '../game/data.js';
 import { saveProfile, todayKey } from './save.js';
 
@@ -249,7 +249,29 @@ export function claimQuest(p, id) {
   const q = questList(p).find((x) => x.id === id);
   if (!q || !q.done || q.claimed) return null;
   p.quests.claimed.push(id);
+  weekly(p).done++;
   return grant(p, q.rewards);
+}
+
+// ---------------------------------------------------------------- weekly chest
+const weekKey = (t = Date.now()) => { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return todayKey(d.getTime()); };
+function weekly(p) { const k = weekKey(); if (!p.weekly || p.weekly.week !== k) p.weekly = { week: k, done: 0, claimed: false }; return p.weekly; }
+export function weeklyState(p) { const w = weekly(p); return { done: Math.min(w.done, WEEKLY_CHEST.goal), goal: WEEKLY_CHEST.goal, claimed: w.claimed, ready: !w.claimed && w.done >= WEEKLY_CHEST.goal, rewards: WEEKLY_CHEST.rewards }; }
+export function claimWeekly(p) { const w = weekly(p); if (w.claimed || w.done < WEEKLY_CHEST.goal) return null; w.claimed = true; return grant(p, WEEKLY_CHEST.rewards); }
+/** Next Monday 00:00 local time (the weekly chest resets then). */
+export function nextWeek(t = Date.now()) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + (8 - d.getDay()) % 7 || 7); return d.getTime(); }
+
+// ---------------------------------------------------------------- Blood Moon (weekends, UTC)
+/** profile.flags.bloodMoon = 'on' | 'off' overrides the calendar (QA). */
+export function bloodMoon(p, t = Date.now()) {
+  const o = p.flags && p.flags.bloodMoon;
+  if (o === 'on' || o === 'off') return o === 'on';
+  return BLOOD_MOON.days.includes(new Date(t).getUTCDay());
+}
+/** When the current Blood Moon ends (next Monday 00:00 UTC), or when the next one rises (Friday 00:00 UTC). */
+export function bloodMoonTimes(t = Date.now()) {
+  const d = new Date(t), day = d.getUTCDay(), base = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return { ends: base + ((8 - day) % 7 || 7) * 864e5, starts: base + ((5 - day + 7) % 7 || 7) * 864e5 };
 }
 export const questsClaimable = (p) => questList(p).filter((q) => q.done && !q.claimed).length;
 
@@ -378,7 +400,7 @@ export function applyRunResult(p, result) {
     : result.endless ? (result.bossKills || 0) * 15 + Math.floor(result.time / 60) * 2
     : result.victory ? (firstClear ? 50 + 20 * ch : 10 + 2 * ch) : Math.floor(result.time / 120) * 2;
   const passXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0) + (trial && result.victory ? TRIAL.clear.passXp : 0));
-  const rewards = { gold, gems, passXp };
+  const rewards = { gold: gold * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), gems: gems * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), passXp };
   if (firstClear) rewards.sigils = 1;
   if (trial && result.victory) { p.trial.clears = (p.trial.clears || 0) + 1; if (p.trial.clears % TRIAL.sigilEvery === 0) rewards.sigils = (rewards.sigils || 0) + 1; }
   if (result.victory) rewards.relic = ch >= 3 && rand() < 0.35 ? 'epic' : rand() < 0.5 ? 'rare' : 'common';
@@ -426,7 +448,7 @@ export function doubleRunRewards(p, rewards) {
 
 export function notifications(p) {
   return {
-    quests: questsClaimable(p),
+    quests: questsClaimable(p) + (weeklyState(p).ready ? 1 : 0),
     pass: passClaimable(p),
     login: loginState(p).canClaim ? 1 : 0,
     altar: freeSummonAvailable(p) ? 1 : 0,

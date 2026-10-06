@@ -265,7 +265,7 @@ export class RunUI {
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
       <div class="res-head ${win || result.endless ? 'win' : 'lose'}"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} Gravemaw slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
-      <div class="res-badges">${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
+      <div class="res-badges">${result.bloodMoon ? '<span class="pill pill-hot">Blood Moon ×2</span>' : ''}${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
       <div class="res-stats">
         <div><b>${fmtTime(result.time)}</b><small>Survived</small></div>
         <div><b>${fmt(result.kills)}</b><small>Kills</small></div>

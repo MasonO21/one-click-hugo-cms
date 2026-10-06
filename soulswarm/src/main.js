@@ -2,7 +2,7 @@
 import './ui/style.css';
 import { audio, loadAudio } from './audio/index.js';
 import { loadProfile, saveProfile, newProfile } from './meta/save.js';
-import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial } from './meta/economy.js';
+import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon } from './meta/economy.js';
 import { Store } from './meta/store.js';
 import { haptic, setHapticsEnabled } from './engine/platform.js';
 import { Engine } from './engine/engine.js';
@@ -71,7 +71,7 @@ function startRun(chapterId, opts = {}) {
   commit(profile);
   app.meta.hide();
   const loadout = computeLoadout(profile);
-  const run = new Run(app.engine, { app, loadout, chapter, mutators });
+  const run = new Run(app.engine, { app, loadout, chapter, mutators, bloodMoon: !opts.trial && bloodMoon(profile) });
   const runUI = new RunUI(app, run);
   app.run = run; app.runUI = runUI;
   app.engine.setController(run);

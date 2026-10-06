@@ -38,6 +38,7 @@ export function newProfile() {
     purchases: { first: {}, starterBought: false, starterExpires: now + STARTER_PACK_HOURS * 3600e3, pactUntil: 0, pactLastClaim: null, history: [] },
     altar: { pity: 0, pulls: 0, freeDate: null },
     trial: { day: null, done: false, ads: 0, clears: 0 },
+    weekly: { week: null, done: 0, claimed: false },
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0 },
     settings: { music: 0.5, sfx: 0.8, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
     flags: { tutorialDone: false, hints: {} },
@@ -49,7 +50,7 @@ export function newProfile() {
 function migrate(p) {
   const base = newProfile();
   const out = { ...base, ...p };
-  for (const k of ['heroes', 'talents', 'chapter', 'pass', 'quests', 'login', 'purchases', 'altar', 'trial', 'stats', 'settings', 'flags']) {
+  for (const k of ['heroes', 'talents', 'chapter', 'pass', 'quests', 'login', 'purchases', 'altar', 'trial', 'weekly', 'stats', 'settings', 'flags']) {
     out[k] = { ...base[k], ...(p[k] || {}) };
   }
   for (const id of HERO_ORDER) out.heroes[id] = { ...base.heroes[id], ...(out.heroes[id] || {}) };
