@@ -206,6 +206,7 @@ export class Run {
   // ---------------------------------------------------------------- kills, xp, chests
   /** Soul Nova charge in kill-equivalents (an elite is worth 6 kills, a gate 3). Nothing charges mid-detonation. */
   addNovaCharge(kills) {
+    if (this.tutorial && this.counters.novas === 0) kills *= 2.5; // first run: the first Nova comes early so it gets taught
     if (this.novaQueue.length === 0) this.nova = Math.min(1, this.nova + kills * this.stats.novaMul / BASE.novaKills);
     if (this.nova >= 1 && !this.hintsShown.nova) this.hint('nova', 'Soul Nova is ready! Tap NOVA to detonate your legion.');
   }

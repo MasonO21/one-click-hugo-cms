@@ -43,7 +43,10 @@ export class Gates {
     if (l < 0.5) { dx = 0; dz = -1; } else { dx /= l; dz /= l; }
     const rx = -dz, rz = dx; // right vector
     const cx = P.x + dx * 10.5, cz = P.z + dz * 10.5;
-    const ops = forcedOps || makeOps(run.legion.count, run.time / 60);
+    // first run: once the legion reaches 10, the next pair is a scripted maths lesson (+5 vs ×2, sides random)
+    const lesson = !forcedOps && run.tutorial && !this.lessonShown && run.legion.count >= 10;
+    if (lesson) this.lessonShown = true;
+    const ops = forcedOps || (lesson ? (Math.random() < 0.5 ? [{ type: 'add', n: 5 }, { type: 'mul', n: 2 }] : [{ type: 'mul', n: 2 }, { type: 'add', n: 5 }]) : makeOps(run.legion.count, run.time / 60));
     const gates = ops.map((op, i) => {
       const side = i === 0 ? -1 : 1;
       const g = makeGate(label(op), isGood(op), WIDTH);
@@ -54,7 +57,7 @@ export class Gates {
       const lab = g.userData.label;
       g.remove(lab);
       run.scene.add(lab);
-      return { g, op, x, z, lab, prev: null, born: 0 };
+      return { g, op, x, z, lab, prev: null, born: 0, lesson };
     });
     this.pair = { gates, nx: dx, nz: dz, rx, rz, t: 0, life: 15, done: false };
     if (!forcedOps && run.time / 60 >= GUARD.fromMinute && Math.random() < GUARD.chance) this.guard(gates, dx, dz);
@@ -116,6 +119,7 @@ export class Gates {
     else run.soulBurst(L.removeMany(-gain(op, before)), before, G.x, G.z); // lost souls detonate: ÷2 doubles as an escape
     const delta = L.count - before;
     run.addNovaCharge(3);
+    if (G.lesson && op.type === 'mul' && run.ui) run.ui.hint(`×${op.n} turned ${before} souls into ${L.count}. Multipliers grow with your legion!`);
     run.fx.shockwave(G.x, G.z, 6, good ? 0x4ef2ff : 0xff2e55, 0.5, 0.15);
     run.fx.flash(good ? 0.25 : 0.1);
     if (!good) run.fx.hurt(0.4);

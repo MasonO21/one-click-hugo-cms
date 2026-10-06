@@ -30,7 +30,7 @@ const BOT = `window.__balance = (ch, prog) => {
   p.equipped = p.relics.map((r) => r.uid);
   p.heroes.vael.stars = prog.stars; p.selectedHero = 'vael';
   p.chapter.unlocked = Math.max(p.chapter.unlocked, ch); p.energy = 30;
-  p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+  p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; p.flags.tutorialDone = true;
   app.startRun(ch);
   const r = app.run; let hurt = 0; const h0 = r.player.hurt.bind(r.player);
   r.player.hurt = (d) => { const before = r.player.hp; h0(d); hurt += Math.max(0, before - r.player.hp); };

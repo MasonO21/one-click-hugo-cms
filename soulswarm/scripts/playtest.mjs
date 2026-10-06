@@ -81,7 +81,7 @@ for (const hero of ['vael', 'nyx', 'seraphine', 'mordrake']) {
 errs = await session(async (page) => {
   await page.evaluate(() => window.__soulswarm.startRun(1));
   let s;
-  for (let i = 0; i < 50; i++) { s = await page.evaluate(() => window.__bot(10, true)); if (s.bossDead || s.t > 560) break; }
+  for (let i = 0; i < 70; i++) { s = await page.evaluate(() => window.__bot(10, true)); if (s.bossDead || s.t > 560) break; } // card picks take a few frames (0.3 s tap guard)
   check('chapter 1: gates passed', s.gates >= 3, `gates=${s.gates}`);
   check('chapter 1: soul nova used', s.novas >= 2, `novas=${s.novas}`);
   check('chapter 1: Gravemaw defeated', s.bossDead, `t=${s.t}`);
@@ -135,7 +135,7 @@ check('economy: no runtime errors', !errs.length, errs[0] || '');
 errs = await session(async (page) => {
   const s = await page.evaluate(() => {
     const app = window.__soulswarm; app.startRun(1);
-    const r = app.run, P = r.player; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99;
+    const r = app.run, P = r.player; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.tutorial = false;
     window.__bot(2, true);
     r.addXp = () => {}; // isolate the chest from level-ups triggered by the magnetised shards
     // an elite's chest opens a 1-of-3 pick instead of a random card
@@ -148,7 +148,7 @@ errs = await session(async (page) => {
     const chestPicked = !r.levelPending && r.chestQueue === 0 && JSON.stringify(r.skillLv) !== lvBefore;
     // Nova: 1.5 s of invulnerability; gates add 3 kills of charge
     r.nova = 1; P.invuln = 0; r.triggerNova(); const invuln = P.invuln;
-    r.nova = 0; r.gates.spawnPair([{ type: 'add', n: 5 }, { type: 'add', n: 10 }]);
+    r.nova = 0; r.novaQueue.length = 0; r.gates.spawnPair([{ type: 'add', n: 5 }, { type: 'add', n: 10 }]); // nothing charges mid-detonation
     const G = r.gates.pair.gates[0]; r.gates.choose(G);
     const gateCharge = Math.round(r.nova * 300 / r.stats.novaMul);
     // from 2:00 the better gate can be guarded
@@ -176,6 +176,19 @@ errs = await session(async (page) => {
   check('accessibility: auto-nova, left-handed, reduced flashes', s.novas === 1 && s.lefty && s.flash <= 0.2, JSON.stringify(s));
 });
 check('accessibility: no runtime errors', !errs.length, errs[0] || '');
+
+// 8. First run: the first gate pair is the scripted +5 vs ×2 lesson and the first Nova charges 2.5× faster
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm; app.startRun(1); const r = app.run;
+    const tutorial = r.tutorial; r.legion.addMany(12, r.player.x, r.player.z); r.gates.spawnPair();
+    const ops = r.gates.pair.gates.map((G) => G.op.type + G.op.n).sort().join(',');
+    r.addNovaCharge(10);
+    return { tutorial, ops, charge: Math.round(r.nova * 300 / r.stats.novaMul) };
+  });
+  check('first run: gate lesson and early Nova', s.tutorial && s.ops === 'add5,mul2' && s.charge === 25, JSON.stringify(s));
+});
+check('first run: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();
