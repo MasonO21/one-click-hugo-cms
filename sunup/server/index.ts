@@ -11,6 +11,7 @@ const { app, close } = createApp({
   twilio: { sid: process.env.TWILIO_ACCOUNT_SID, token: process.env.TWILIO_AUTH_TOKEN, from: process.env.TWILIO_FROM },
   vapidSubject: process.env.VAPID_SUBJECT,
   devCodes: process.env.NODE_ENV !== 'production',
+  dataKey: process.env.SUNUP_DATA_KEY,
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,

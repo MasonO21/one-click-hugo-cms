@@ -65,7 +65,8 @@ Any Node host with a persistent disk works. Push notifications need HTTPS.
 | --- | --- |
 | `PORT` | HTTP port (default 8787) |
 | `PUBLIC_URL` | The app's public URL, e.g. `https://sunup.example.com`. Used in texts and webhooks. |
-| `DATA_DIR` | Where `sunup.json` is stored (default `./data`) |
+| `DATA_DIR` | Where `sunup.json`, photos and the data key are stored (default `./data`) |
+| `SUNUP_DATA_KEY` | Encrypts "If I go dark" packets at rest. Create one with `openssl rand -base64 32` and keep a copy somewhere safe: without it the packets can't be read. If unset, a key is generated once and saved as `data.key` in `DATA_DIR`. |
 | `VAPID_SUBJECT` | Contact for web push, e.g. `mailto:you@yourdomain.com`. VAPID keys are generated on first run and saved in the data file. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Texts, calls and sign-in codes. Without them, texts and calls are logged to the console (and in development, sign-in codes are shown on screen). |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Paid subscriptions. Without them, Premium is a card-free 7-day trial. |
@@ -116,5 +117,5 @@ This is a working prototype. Before charging money or promising safety to real p
 
 - **Native apps.** iOS web push only works after "Add to Home Screen". Native iOS/Android apps are needed for reliable alarms (critical alerts), true smart check-in from phone activity, and app-store distribution. Inside an iOS app, subscriptions must go through Apple's in-app purchase (RevenueCat is the usual shortcut); the engine's `applyBilling` already takes a provider's status.
 - **Wellness checks.** The last ladder step gives advice; a dispatch partner (e.g. a monitoring-center API) would let Sunup request in-person checks directly.
-- **Data.** Move from the JSON file to Postgres once there are more than a few thousand users, and encrypt "If I go dark" packets at rest.
+- **Data.** Packets are encrypted at rest and photos are stored as separate files, but everything else lives in one JSON file. Move to Postgres once there are more than a few thousand users.
 - **Legal.** Finish the draft terms and privacy policy with a lawyer, and confirm the texting consent flow with your SMS provider.

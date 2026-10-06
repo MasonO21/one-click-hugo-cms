@@ -92,7 +92,7 @@ export interface CheckIn {
   source: CheckInSource;
   mood?: Mood;
   note?: string;
-  /** Small JPEG data URL. */
+  /** A small image data URL (the server later swaps it for a stored-file reference, "file:jpg"). */
   photo?: string;
 }
 

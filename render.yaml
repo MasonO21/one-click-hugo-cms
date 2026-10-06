@@ -20,6 +20,9 @@ services:
         value: /var/data
       - key: PUBLIC_URL
         sync: false
+      # Optional: if unset, a key is generated once and kept on the disk.
+      - key: SUNUP_DATA_KEY
+        sync: false
       - key: VAPID_SUBJECT
         sync: false
       - key: TWILIO_ACCOUNT_SID

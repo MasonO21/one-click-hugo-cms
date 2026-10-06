@@ -25,6 +25,8 @@ export interface AppOptions {
   /** Swappable for tests: used for Twilio and Stripe calls. */
   fetch?: typeof fetch;
   stripe?: StripeConfig;
+  /** Base64 32-byte key for encrypting packets at rest (SUNUP_DATA_KEY). Generated if missing. */
+  dataKey?: string;
 }
 
 const STATUS: Record<string, number> = { unauthorized: 401, forbidden: 403, not_found: 404, rate_limited: 429, billing: 502, sms_failed: 502 };
@@ -47,8 +49,10 @@ function limiter(max: number, windowMs: number) {
 
 export function createApp(options: AppOptions) {
   const log = options.log ?? ((line: string) => console.log(line));
-  const store = new Store(options.dataDir, options.publicUrl);
+  const store = new Store(options.dataDir, options.publicUrl, options.dataKey);
   const service = store.service;
+  store.externalizePhotos();
+  store.sweepPhotos();
   const notifier: Notifier = createNotifier(store, {
     twilioSid: options.twilio?.sid,
     twilioToken: options.twilio?.token,
@@ -73,10 +77,15 @@ export function createApp(options: AppOptions) {
     if (messages.length) void notifier.deliver(messages);
   }
 
+  let lastSweep = Date.now();
   function tick() {
     try {
       service.tick(Date.now());
       flushOutbox();
+      if (Date.now() - lastSweep > 60 * 60_000) {
+        lastSweep = Date.now();
+        store.sweepPhotos();
+      }
     } catch (e) {
       log(`[tick] ${String(e)}`);
     }
@@ -201,6 +210,7 @@ export function createApp(options: AppOptions) {
     if (!actionLimit(userId)) throw new SunupError('rate_limited', 'Slow down a little and try again.');
     service.dispatch(userId, req.body as Action, Date.now());
     service.tick(Date.now());
+    store.externalizePhotos();
     flushOutbox();
     res.json(snapshotFor(userId));
   });
@@ -231,6 +241,11 @@ export function createApp(options: AppOptions) {
 
   app.get('/api/export', auth, (_req, res) => {
     const data = service.exportUser(res.locals.userId, Date.now());
+    // Put stored photos back inline so the export is complete on its own.
+    data.checkIns = data.checkIns.map((c) => {
+      const photo = c.photo ? store.readPhoto(c.id, c.photo) : null;
+      return photo ? { ...c, photo: `data:${photo.type};base64,${photo.bytes.toString('base64')}` } : c;
+    });
     res.set('Content-Disposition', 'attachment; filename="sunup-my-data.json"');
     res.json(data);
   });
@@ -250,6 +265,7 @@ export function createApp(options: AppOptions) {
     }
     service.deleteUser(userId);
     store.forgetUser(userId);
+    store.sweepPhotos();
     store.save();
     res.json({ ok: true });
   });
@@ -267,10 +283,10 @@ export function createApp(options: AppOptions) {
     if (!checkIn?.photo || (checkIn.userId !== viewer && !service.isWatching(viewer, checkIn.userId))) {
       throw new SunupError('not_found', 'Photo not found.');
     }
-    const match = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(checkIn.photo);
-    if (!match) throw new SunupError('not_found', 'Photo not found.');
-    res.set({ 'Content-Type': match[1], 'Cache-Control': 'private, max-age=86400' });
-    res.send(Buffer.from(match[2], 'base64'));
+    const photo = store.readPhoto(checkIn.id, checkIn.photo);
+    if (!photo) throw new SunupError('not_found', 'Photo not found.');
+    res.set({ 'Content-Type': photo.type, 'Cache-Control': 'private, max-age=86400' });
+    res.send(photo.bytes);
   });
 
   // Replies to Sunup's texts (YES, STOP, HELP...). Point the Twilio number's
