@@ -49,7 +49,7 @@ function limiter(max: number, windowMs: number) {
 
 export function createApp(options: AppOptions) {
   const log = options.log ?? ((line: string) => console.log(line));
-  const store = new Store(options.dataDir, options.publicUrl, options.dataKey);
+  const store = new Store(options.dataDir, options.publicUrl, options.dataKey, log);
   const service = store.service;
   store.externalizePhotos();
   store.sweepPhotos();
@@ -71,16 +71,17 @@ export function createApp(options: AppOptions) {
   const http = options.fetch ?? fetch;
   const host = new URL(options.publicUrl).host;
 
+  /** Sends whatever the engine queued. Callers save state themselves. */
   function flushOutbox() {
     const messages = service.drain();
-    store.save();
     if (messages.length) void notifier.deliver(messages);
   }
 
   let lastSweep = Date.now();
   function tick() {
     try {
-      service.tick(Date.now());
+      // Only rewrite the data file when the clock actually changed something.
+      if (service.tick(Date.now())) store.save();
       flushOutbox();
       if (Date.now() - lastSweep > 60 * 60_000) {
         lastSweep = Date.now();
@@ -92,7 +93,7 @@ export function createApp(options: AppOptions) {
   }
   const timer = setInterval(tick, options.tickMs ?? 15_000);
 
-  const snapshotFor = (userId: Id) => buildSnapshot(service, userId, Date.now(), { photo: (c) => `/api/photos/${c.id}` });
+  const snapshotFor = (userId: Id) => buildSnapshot(service, userId, Date.now(), { photo: (c) => Store.photoUrl(c.id, c.photo!) });
 
   const app = express();
   app.disable('x-powered-by');
@@ -211,6 +212,7 @@ export function createApp(options: AppOptions) {
     service.dispatch(userId, req.body as Action, Date.now());
     service.tick(Date.now());
     store.externalizePhotos();
+    store.save();
     flushOutbox();
     res.json(snapshotFor(userId));
   });
@@ -306,6 +308,7 @@ export function createApp(options: AppOptions) {
       return;
     }
     const reply = service.contactReply(from, String(req.body.Body ?? ''), Date.now());
+    store.save();
     flushOutbox();
     res.type('text/xml').send(reply ? `<Response><Message>${escapeXml(reply)}</Message></Response>` : '<Response/>');
   });
@@ -324,6 +327,11 @@ export function createApp(options: AppOptions) {
       typeof sub.keys?.auth === 'string';
     if (!valid) throw new SunupError('invalid', 'That push subscription isn\'t valid.');
     store.addSubscription(res.locals.userId, { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } });
+    res.json({ ok: true });
+  });
+
+  app.post('/api/push/unsubscribe', auth, (req, res) => {
+    if (typeof req.body?.endpoint === 'string') store.removeSubscription(res.locals.userId, req.body.endpoint);
     res.json({ ok: true });
   });
 
@@ -371,7 +379,11 @@ export function createApp(options: AppOptions) {
     tick,
     close() {
       clearInterval(timer);
-      store.flush();
+      try {
+        store.flush();
+      } catch (e) {
+        log(`[store] final save failed: ${String(e)}`);
+      }
     },
   };
 }

@@ -1,5 +1,5 @@
 // Sunup service worker: offline app shell and push notifications.
-const CACHE = 'sunup-v2';
+const CACHE = 'sunup-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) =>
@@ -50,7 +50,7 @@ self.addEventListener('push', (event) => {
         vibrate: data.urgent ? [300, 150, 300, 150, 300] : [80],
         // Check in straight from the notification (browsers without action buttons ignore this).
         actions: data.action === 'checkin' ? [{ action: 'checkin', title: data.urgent ? "I'm okay" : "I'm up" }] : [],
-        data: { link: data.link || '' },
+        data: { link: data.link || '', userId: data.userId || '' },
       });
     })(),
   );
@@ -59,11 +59,18 @@ self.addEventListener('push', (event) => {
 // The page keeps a copy of its sign-in token here so the "I'm up" button works without opening the app.
 const TOKEN_URL = new URL('__sunup/token', self.registration.scope).href;
 
-async function checkInFromNotification() {
+async function checkInFromNotification(forUserId) {
   const cache = await caches.open('sunup-auth');
   const saved = await cache.match(TOKEN_URL);
-  const token = saved && (await saved.text());
-  if (!token) return false;
+  let session = null;
+  try {
+    session = saved ? JSON.parse(await saved.text()) : null;
+  } catch {
+    session = null;
+  }
+  // Only check in the account the notification was for (someone else may be signed in now).
+  if (!session?.token || (forUserId && session.userId !== forUserId)) return false;
+  const token = session.token;
   const res = await fetch(new URL('api/action', self.registration.scope).href, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
@@ -82,7 +89,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   if (event.action === 'checkin') {
     event.waitUntil(
-      checkInFromNotification().then((done) => {
+      checkInFromNotification(event.notification.data?.userId).then((done) => {
         if (!done) return self.clients.openWindow(new URL('./#today', self.registration.scope).href);
       }),
     );

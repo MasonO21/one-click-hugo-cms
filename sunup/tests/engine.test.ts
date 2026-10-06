@@ -295,6 +295,55 @@ describe('postcards', () => {
   });
 });
 
+describe('review regressions', () => {
+  it('does not treat paused windows as missed after resuming or extending the pause', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'pause', until: at('2026-03-10', '00:00') }, at('2026-03-03', '20:00'));
+    tickThrough(svc, at('2026-03-04', '09:00'), at('2026-03-04', '14:00'), 15 * MINUTE);
+    // Extend in the afternoon, then resume: this morning's paused window stays excused.
+    act(maya, { type: 'pause', until: at('2026-03-12', '00:00') }, at('2026-03-04', '15:00'));
+    expect(svc.user(maya.id).pause?.from).toBe(at('2026-03-03', '20:00'));
+    act(maya, { type: 'pause', until: null }, at('2026-03-04', '15:05'));
+    svc.drain();
+    tickThrough(svc, at('2026-03-04', '15:05'), at('2026-03-04', '16:00'));
+    expect(svc.alertsOf(maya.id)).toHaveLength(0);
+    expect(svc.drain()).toHaveLength(0);
+    // Tomorrow is enforced again.
+    svc.tick(at('2026-03-05', '10:01'));
+    expect(svc.alertsOf(maya.id)).toHaveLength(1);
+  });
+
+  it('alerts the whole circle if everyone a timer was shared with has left', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, at('2026-03-04', '08:00'));
+    act(maya, { type: 'checkIn' }, at('2026-03-04', '08:00'));
+    const mom = svc.watchersOf(maya.id).find((w) => w.name === 'Mom')!;
+    act(maya, { type: 'startMoment', kind: 'run', minutes: 60, shareWith: [mom.ref.id] }, at('2026-03-04', '18:00'));
+    act(maya, { type: 'removeContact', id: mom.ref.id }, at('2026-03-04', '18:10'));
+    svc.drain();
+    tickThrough(svc, at('2026-03-04', '19:00'), at('2026-03-04', '19:10'));
+    expect(svc.drain().some((o) => o.to.name === 'Jordan Lee' && o.title.includes('timer ran out'))).toBe(true);
+  });
+
+  it('texts the packet but keeps it out of the message log', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    act(maya, { type: 'savePacket', packet: { home: 'Door code 4417' } }, T0);
+    tickThrough(svc, at('2026-03-04', '10:00'), at('2026-03-04', '11:05'));
+    expect(svc.drain().some((o) => o.to.name === 'Mom' && o.body.includes('4417'))).toBe(true);
+    expect(svc.state.outbox.some((o) => o.body.includes('4417'))).toBe(false);
+    expect(svc.state.outbox.some((o) => o.to.name === 'Mom' && o.body.includes('emergency info (home access)'))).toBe(true);
+  });
+
+  it('reports whether a tick changed anything', () => {
+    const { svc } = setup();
+    expect(svc.tick(at('2026-03-04', '06:00'))).toBe(false);
+    // The window opens: a reminder goes out.
+    expect(svc.tick(at('2026-03-04', '07:00'))).toBe(true);
+    expect(svc.tick(at('2026-03-04', '07:01'))).toBe(false);
+  });
+});
+
 describe('your data', () => {
   it('exports everything about a person and deletes it all without touching others', () => {
     const { svc, maya, jordan, act } = setup();

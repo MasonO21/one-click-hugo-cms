@@ -1,7 +1,7 @@
 // What actually lands on disk: packets encrypted, photos as separate files.
 
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -57,16 +57,52 @@ describe('storage', () => {
       svc.dispatch(user.id, { type: 'checkIn', photo: PHOTO }, NOW);
       store.externalizePhotos();
       const checkIn = svc.checkInsOf(user.id)[0];
-      expect(checkIn.photo).toBe('file:jpg');
-      expect(readdirSync(join(dir, 'photos'))).toEqual([`${checkIn.id}.jpg`]);
+      expect(checkIn.photo).toMatch(/^file:jpg:[0-9a-f]{8}$/);
+      const version = checkIn.photo!.split(':')[2];
+      expect(readdirSync(join(dir, 'photos'))).toEqual([`${checkIn.id}.${version}.jpg`]);
       expect(store.readPhoto(checkIn.id, checkIn.photo!)?.type).toBe('image/jpeg');
+      const firstUrl = Store.photoUrl(checkIn.id, checkIn.photo!);
       store.flush();
       expect(readFileSync(join(dir, 'sunup.json'), 'utf8')).not.toContain('base64,');
+
+      // Replacing the photo gives it a new URL, and the old file is swept.
+      svc.dispatch(user.id, { type: 'updateCheckIn', id: checkIn.id, photo: PHOTO }, NOW + 30_000);
+      store.externalizePhotos();
+      expect(Store.photoUrl(checkIn.id, checkIn.photo!)).not.toBe(firstUrl);
+      store.sweepPhotos();
+      expect(readdirSync(join(dir, 'photos'))).toHaveLength(1);
 
       svc.dispatch(user.id, { type: 'updateCheckIn', id: checkIn.id, photo: '' }, NOW + 60_000);
       store.sweepPhotos();
       expect(readdirSync(join(dir, 'photos'))).toEqual([]);
       expect(store.readPhoto('../sunup', 'file:jpg')).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses to start over on top of a data file it does not understand', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sunup-store-'));
+    try {
+      writeFileSync(join(dir, 'sunup.json'), JSON.stringify({ state: { version: 2 } }));
+      expect(() => new Store(dir, 'https://sunup.test')).toThrow(/unknown format/);
+      writeFileSync(join(dir, 'sunup.json'), '{"state": ');
+      expect(() => new Store(dir, 'https://sunup.test')).toThrow(/valid JSON/);
+      expect(readFileSync(join(dir, 'sunup.json'), 'utf8')).toBe('{"state": ');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('gives a push endpoint to whoever subscribed with it last', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sunup-store-'));
+    try {
+      const store = new Store(dir, 'https://sunup.test');
+      const sub = { endpoint: 'https://push.example/device-1', keys: { p256dh: 'p', auth: 'a' } };
+      store.addSubscription('u_a', sub);
+      store.addSubscription('u_b', sub);
+      expect(store.subscriptions('u_a')).toHaveLength(0);
+      expect(store.subscriptions('u_b')).toHaveLength(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

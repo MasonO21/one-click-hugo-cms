@@ -53,7 +53,12 @@ export class Store {
   private key: Buffer;
   private timer: NodeJS.Timeout | null = null;
 
-  constructor(dataDir: string, baseUrl: string, dataKey?: string) {
+  constructor(
+    dataDir: string,
+    baseUrl: string,
+    dataKey?: string,
+    private log: (line: string) => void = (line) => console.error(line),
+  ) {
     mkdirSync(dataDir, { recursive: true });
     this.file = join(dataDir, 'sunup.json');
     this.photosDir = join(dataDir, 'photos');
@@ -64,17 +69,28 @@ export class Store {
   }
 
   private read(): FileShape {
+    let raw: string | null = null;
     try {
-      const parsed = JSON.parse(readFileSync(this.file, 'utf8')) as FileShape;
-      if (parsed?.state?.version === 1) {
-        if (parsed.sealedPackets) {
-          parsed.state.packets = JSON.parse(this.open(parsed.sealedPackets));
-          delete parsed.sealedPackets;
-        }
-        return parsed;
-      }
+      raw = readFileSync(this.file, 'utf8');
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+    }
+    if (raw !== null) {
+      // Never start over on top of a file we don't understand: that would erase everyone.
+      let parsed: FileShape;
+      try {
+        parsed = JSON.parse(raw) as FileShape;
+      } catch {
+        throw new Error(`${this.file} isn't valid JSON. Restore it from a backup; Sunup won't overwrite it.`);
+      }
+      if (parsed?.state?.version !== 1) {
+        throw new Error(`${this.file} has an unknown format (state version ${String(parsed?.state?.version)}). Sunup won't overwrite it.`);
+      }
+      if (parsed.sealedPackets) {
+        parsed.state.packets = JSON.parse(this.open(parsed.sealedPackets));
+        delete parsed.sealedPackets;
+      }
+      return parsed;
     }
     const vapid = webpush.generateVAPIDKeys();
     const fresh: FileShape = { state: emptyState(), tokens: {}, push: {}, vapid };
@@ -115,7 +131,12 @@ export class Store {
   }
 
   addSubscription(userId: Id, sub: PushSubscriptionRecord) {
-    const list = (this.data.push[userId] ?? []).filter((s) => s.endpoint !== sub.endpoint);
+    // A push endpoint is one browser on one device: it belongs to whoever subscribed last,
+    // so someone else's alerts never land on a shared phone after they sign out.
+    for (const [id, list] of Object.entries(this.data.push)) {
+      this.data.push[id] = list.filter((s) => s.endpoint !== sub.endpoint);
+    }
+    const list = this.data.push[userId] ?? [];
     list.push(sub);
     this.data.push[userId] = list.slice(-5);
     this.save();
@@ -145,26 +166,42 @@ export class Store {
 
   // ---------------------------------------------------------------- photos
 
-  /** Moves new check-in photos out of the state into files, leaving a "file:<ext>" reference. */
+  /**
+   * Moves new check-in photos out of the state into files, leaving a "file:<ext>:<version>"
+   * reference. Each upload gets a new version, so a replaced photo gets a new URL.
+   */
   externalizePhotos() {
     let moved = false;
     for (const c of this.data.state.checkIns) {
       const m = c.photo && /^data:image\/(jpeg|png|webp);base64,(.+)$/.exec(c.photo);
       if (!m) continue;
       const ext = PHOTO_TYPES[m[1]];
-      writeFileSync(join(this.photosDir, `${c.id}.${ext}`), Buffer.from(m[2], 'base64'));
-      c.photo = `file:${ext}`;
+      const version = randomBytes(4).toString('hex');
+      writeFileSync(join(this.photosDir, `${c.id}.${version}.${ext}`), Buffer.from(m[2], 'base64'));
+      c.photo = `file:${ext}:${version}`;
       moved = true;
     }
     if (moved) this.save();
   }
 
+  /** The URL a client fetches a stored photo from (changes whenever the photo does). */
+  static photoUrl(checkInId: string, ref: string): string {
+    const version = ref.split(':')[2];
+    return `/api/photos/${checkInId}${version ? `?v=${version}` : ''}`;
+  }
+
+  private photoFile(checkInId: string, ref: string): string | null {
+    const m = /^file:(jpg|png|webp)(?::([0-9a-f]{8}))?$/.exec(ref);
+    if (!m || !/^k_[a-z0-9]+$/.test(checkInId)) return null;
+    return m[2] ? `${checkInId}.${m[2]}.${m[1]}` : `${checkInId}.${m[1]}`;
+  }
+
   /** A stored photo's bytes and type, or null. */
   readPhoto(checkInId: string, ref: string): { type: string; bytes: Buffer } | null {
-    const ext = /^file:(jpg|png|webp)$/.exec(ref)?.[1];
-    if (!ext || !/^k_[a-z0-9]+$/.test(checkInId)) return null;
+    const name = this.photoFile(checkInId, ref);
+    if (!name) return null;
     try {
-      return { type: CONTENT_TYPES[ext], bytes: readFileSync(join(this.photosDir, `${checkInId}.${ext}`)) };
+      return { type: CONTENT_TYPES[name.split('.').pop()!], bytes: readFileSync(join(this.photosDir, name)) };
     } catch {
       return null;
     }
@@ -172,14 +209,29 @@ export class Store {
 
   /** Deletes photo files whose check-in was edited, pruned or deleted. */
   sweepPhotos() {
-    const keep = new Set(this.data.state.checkIns.filter((c) => c.photo?.startsWith('file:')).map((c) => `${c.id}.${c.photo!.slice(5)}`));
+    const keep = new Set(
+      this.data.state.checkIns
+        .map((c) => (c.photo ? this.photoFile(c.id, c.photo) : null))
+        .filter((name): name is string => !!name),
+    );
     for (const name of readdirSync(this.photosDir)) if (!keep.has(name)) unlinkSync(join(this.photosDir, name));
   }
 
-  /** Debounced atomic write. */
+  /** Debounced atomic write. A failed write is logged and retried, never fatal: the alert clock must keep running. */
   save() {
     if (this.timer) return;
-    this.timer = setTimeout(() => this.flush(), 300);
+    this.timer = setTimeout(() => {
+      try {
+        this.flush();
+      } catch (e) {
+        this.timer = null;
+        this.log(`[store] save failed, retrying in 5s: ${String(e)}`);
+        this.timer = setTimeout(() => {
+          this.timer = null;
+          this.save();
+        }, 5000);
+      }
+    }, 300);
   }
 
   flush() {

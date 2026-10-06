@@ -88,17 +88,27 @@ interface StripeSubscription {
 
 interface StripeEvent {
   type: string;
+  /** Unix seconds. Stripe doesn't guarantee delivery order, so this decides which event wins. */
+  created?: number;
   data: { object: Record<string, unknown> };
 }
 
 /** Applies one webhook event. Returns true if it changed a user. */
 export function applyStripeEvent(service: Sunup, event: StripeEvent, now: number): boolean {
   const obj = event.data?.object ?? {};
+  const created = event.created ?? Math.floor(now / 1000);
   if (event.type === 'checkout.session.completed') {
     const userId = (obj.client_reference_id as string) ?? (obj.metadata as { userId?: string })?.userId;
     const user = userId ? service.state.users[userId] : undefined;
     if (!user) return false;
-    service.applyBilling(user.id, { customerId: obj.customer as string, subscriptionId: obj.subscription as string }, now);
+    const subscriptionId = obj.subscription as string;
+    const isNew = user.billing?.subscriptionId !== subscriptionId;
+    service.applyBilling(
+      user.id,
+      // A new subscription starts fresh: an old one's "canceled" status must not carry over.
+      { customerId: obj.customer as string, subscriptionId, ...(isNew ? { status: undefined, cancelAtPeriodEnd: false, periodEnd: undefined } : {}), eventAt: created },
+      now,
+    );
     // The subscription events carry the exact status; until one arrives, a finished checkout means Premium.
     if (!user.billing?.status) service.setPlan(user.id, 'premium');
     return true;
@@ -107,6 +117,9 @@ export function applyStripeEvent(service: Sunup, event: StripeEvent, now: number
     const sub = obj as unknown as StripeSubscription;
     const user = (sub.metadata?.userId && service.state.users[sub.metadata.userId]) || service.userByCustomerId(sub.customer);
     if (!user) return false;
+    // Ignore events about an older subscription, and events older than the last one applied.
+    if (user.billing?.subscriptionId && user.billing.subscriptionId !== sub.id) return false;
+    if (user.billing?.eventAt && created < user.billing.eventAt) return false;
     const periodEnd = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end ?? sub.trial_end ?? undefined;
     service.applyBilling(
       user.id,
@@ -116,6 +129,7 @@ export function applyStripeEvent(service: Sunup, event: StripeEvent, now: number
         status: event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status,
         cancelAtPeriodEnd: !!sub.cancel_at_period_end,
         periodEnd: periodEnd ? periodEnd * 1000 : undefined,
+        eventAt: created,
       },
       now,
     );

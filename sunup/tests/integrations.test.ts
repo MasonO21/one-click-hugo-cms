@@ -166,6 +166,26 @@ describe('Stripe', () => {
   });
 });
 
+describe('Stripe event order', () => {
+  it('ignores late or stale events and starts a new subscription fresh', async () => {
+    const user = await json<{ token: string; snapshot: Snapshot }>('/api/signup', { name: 'Ivo', timezone: 'America/Chicago' });
+    const userId = user.body.snapshot.me.id;
+    const premium = async () => (await json('/api/state', undefined, user.body.token)).body.limits.premium;
+    await stripeEvent({ type: 'checkout.session.completed', created: 100, data: { object: { client_reference_id: userId, customer: 'cus_o', subscription: 'sub_a' } } });
+    await stripeEvent({ type: 'customer.subscription.deleted', created: 300, data: { object: { id: 'sub_a', customer: 'cus_o', status: 'canceled' } } });
+    // A retry of an older "active" update arrives after the cancellation: still canceled.
+    await stripeEvent({ type: 'customer.subscription.updated', created: 200, data: { object: { id: 'sub_a', customer: 'cus_o', status: 'active' } } });
+    expect(await premium()).toBe(false);
+
+    // They subscribe again: the old "canceled" status must not stick to the new subscription.
+    await stripeEvent({ type: 'checkout.session.completed', created: 400, data: { object: { client_reference_id: userId, customer: 'cus_o', subscription: 'sub_b' } } });
+    expect(await premium()).toBe(true);
+    // A late event about the old subscription changes nothing.
+    await stripeEvent({ type: 'customer.subscription.deleted', created: 500, data: { object: { id: 'sub_a', customer: 'cus_o', status: 'canceled' } } });
+    expect(await premium()).toBe(true);
+  });
+});
+
 describe('account deletion', () => {
   it('cancels the subscription before erasing the account, and refuses to erase if that fails', async () => {
     const user = await json<{ token: string; snapshot: Snapshot }>('/api/signup', { name: 'Noor', timezone: 'America/Chicago' });

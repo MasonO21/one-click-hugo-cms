@@ -28,7 +28,7 @@ import type {
 import { DEFAULT_GRACE, GRACE_OPTIONS, ladderFor, type LadderStep } from './ladder';
 import { TRIAL_MS, isPremium, limitsFor } from './plans';
 import { checkInFor, isEnforced, isPaused, scheduleProblem, slotsAround } from './schedule';
-import { DAY, MINUTE, isTimeZone } from './time';
+import { DAY, HOUR, MINUTE, isTimeZone } from './time';
 import {
   cleanText,
   colorFor,
@@ -104,6 +104,9 @@ export class Sunup {
   private pending: Outbound[] = [];
   /** The time of the action or tick being processed. */
   private now = 0;
+  /** Counts state changes, so a tick can report whether anything needs saving. */
+  private mutations = 0;
+  private lastPrune = 0;
 
   constructor(
     public state: State,
@@ -291,16 +294,21 @@ export class Sunup {
         if (!(GRACE_OPTIONS as readonly number[]).includes(action.minutes)) fail('invalid', 'Pick 15, 30 or 60 minutes.');
         user.graceMinutes = action.minutes;
         return;
-      case 'pause':
+      case 'pause': {
+        // Windows that fell inside a pause stay excused: resuming ends the pause now instead of
+        // erasing it, and extending keeps the original start. Otherwise the clock would treat
+        // this morning's paused window as missed and fire every alarm at once.
+        const active = user.pause && user.pause.from <= now && now <= user.pause.until ? user.pause : undefined;
         if (action.until === null) {
-          user.pause = undefined;
+          if (active) user.pause = { from: active.from, until: now };
           return;
         }
         if (typeof action.until !== 'number' || action.until <= now || action.until > now + 60 * DAY) {
           fail('invalid', 'Pause for up to 60 days.');
         }
-        user.pause = { from: now, until: action.until };
+        user.pause = { from: active?.from ?? now, until: action.until };
         return;
+      }
       case 'completeOnboarding':
         user.onboarded = true;
         user.scheduleSince = now;
@@ -649,6 +657,7 @@ export class Sunup {
   openAlert(user: User, kind: AlertKind, triggeredAt: number, extra: Partial<Alert> = {}): Alert {
     const alert: Alert = { id: `a_${randomId()}`, userId: user.id, kind, triggeredAt, steps: {}, ...extra };
     this.state.alerts[alert.id] = alert;
+    this.mutations++;
     return alert;
   }
 
@@ -663,19 +672,27 @@ export class Sunup {
     return alert.triggeredAt + (step.offset * MINUTE) / (alert.speed ?? 1);
   }
 
-  /** Runs the clock: opens alerts for missed windows and expired timers, then escalates. */
-  tick(now: number): void {
+  /** Runs the clock: opens alerts for missed windows and expired timers, then escalates. Returns whether anything changed. */
+  tick(now: number): boolean {
     this.now = now;
-    const users = Object.values(this.state.users);
-    for (const user of users) {
+    const before = this.mutations;
+    // Index once per tick instead of scanning every check-in for every user.
+    const checkInsBy = groupBy(this.state.checkIns, (c) => c.userId);
+    const alertsBy = groupBy(Object.values(this.state.alerts), (a) => a.userId);
+    const alertsFor = (userId: Id) => {
+      let list = alertsBy.get(userId);
+      if (!list) alertsBy.set(userId, (list = []));
+      return list;
+    };
+    for (const user of Object.values(this.state.users)) {
       if (!user.onboarded) continue;
-      const mine = this.checkInsOf(user.id);
-      const alerts = this.alertsOf(user.id);
+      const mine = checkInsBy.get(user.id) ?? [];
+      const alerts = alertsFor(user.id);
       for (const slot of slotsAround(user, now)) {
         if (slot.deadlineAt > now || slot.deadlineAt < now - DAY) continue;
         if (!isEnforced(user, slot) || checkInFor(slot, mine)) continue;
         if (alerts.some((a) => a.kind === 'missed' && a.slotKey === slot.key)) continue;
-        this.openAlert(user, 'missed', slot.deadlineAt, { slotKey: slot.key });
+        alerts.push(this.openAlert(user, 'missed', slot.deadlineAt, { slotKey: slot.key }));
       }
       this.remind(user, mine, now);
     }
@@ -683,13 +700,18 @@ export class Sunup {
       if (moment.endedAt || moment.endsAt > now) continue;
       const user = this.state.users[moment.userId];
       if (!user) continue;
-      const exists = this.alertsOf(user.id).some((a) => a.momentId === moment.id && (!a.resolvedAt || a.triggeredAt === moment.endsAt));
-      if (!exists) this.openAlert(user, 'moment', moment.endsAt, { momentId: moment.id });
+      const alerts = alertsFor(user.id);
+      const exists = alerts.some((a) => a.momentId === moment.id && (!a.resolvedAt || a.triggeredAt === moment.endsAt));
+      if (!exists) alerts.push(this.openAlert(user, 'moment', moment.endsAt, { momentId: moment.id }));
     }
     for (const alert of Object.values(this.state.alerts)) {
       if (!alert.resolvedAt) this.escalate(alert, now);
     }
-    this.prune(now);
+    if (now - this.lastPrune > HOUR) {
+      this.lastPrune = now;
+      this.prune(now);
+    }
+    return this.mutations !== before;
   }
 
   /** "Good morning" when a window opens, then a heads-up shortly before the deadline. */
@@ -697,7 +719,10 @@ export class Sunup {
     if (isPaused(user, now)) return;
     const slot = slotsAround(user, now).find((s) => s.openAt <= now && now < s.deadlineAt);
     if (!slot || !isEnforced(user, slot) || checkInFor(slot, mine)) return;
-    if (user.reminded?.key !== slot.key) user.reminded = { key: slot.key };
+    if (user.reminded?.key !== slot.key) {
+      user.reminded = { key: slot.key };
+      this.mutations++;
+    }
     const sent = user.reminded!;
     const me: Watcher = { ref: { type: 'user', id: user.id }, name: user.name, color: user.color, receivesPacket: false };
     const deadline = formatHM(slot.deadline);
@@ -722,6 +747,7 @@ export class Sunup {
     for (const step of this.ladder(alert, now)) {
       if (alert.steps[step.id] || this.stepTime(alert, step) > now) continue;
       alert.steps[step.id] = now;
+      this.mutations++;
       this.fire(alert, user, step.id, now);
     }
   }
@@ -731,7 +757,9 @@ export class Sunup {
     const watchers = this.watchersOf(alert.userId);
     const moment = alert.momentId ? this.state.moments[alert.momentId] : undefined;
     if (alert.kind === 'moment' && moment && moment.shareWith.length > 0) {
-      return watchers.filter((w) => moment.shareWith.includes(w.ref.id));
+      const shared = watchers.filter((w) => moment.shareWith.includes(w.ref.id));
+      // If everyone it was shared with has since left the circle, tell everyone rather than no one.
+      if (shared.length > 0) return shared;
     }
     return watchers;
   }
@@ -832,7 +860,14 @@ export class Sunup {
             this.notify(w, { ...base, urgent: true, link: '#circle', title: `${name}'s emergency info is unlocked`, body: `${name} chose you to receive pet care, home access and health details. Open Sunup to see them.` });
           } else {
             const text = sections.map((s) => `${s.label}: ${s.text}`).join('\n');
-            this.send(w, 'sms', { ...base, urgent: true, title: `${name}'s emergency info`, body: `Sunup: ${name} chose you to receive this if they went quiet.\n${text}`.slice(0, 1500) });
+            this.send(w, 'sms', {
+              ...base,
+              urgent: true,
+              title: `${name}'s emergency info`,
+              body: `Sunup: sent ${name}'s emergency info (${sections.map((s) => s.label.toLowerCase()).join(', ')}).`,
+              // The packet itself is texted but never stored in the message log.
+              deliverBody: `Sunup: ${name} chose you to receive this if they went quiet.\n${text}`.slice(0, 1500),
+            });
           }
         }
         break;
@@ -897,10 +932,22 @@ export class Sunup {
   private send(
     to: Watcher,
     channel: Outbound['channel'],
-    msg: { title: string; body: string; urgent: boolean; link?: string; aboutUserId: Id; alertId?: Id; kind?: Outbound['kind']; action?: Outbound['action'] },
+    msg: {
+      title: string;
+      body: string;
+      urgent: boolean;
+      link?: string;
+      aboutUserId: Id;
+      alertId?: Id;
+      kind?: Outbound['kind'];
+      action?: Outbound['action'];
+      /** What is actually sent, when it mustn't be kept in the log (the packet). */
+      deliverBody?: string;
+    },
   ): void {
     // People who replied STOP never get another text or call.
     if (to.consent === 'stopped') return;
+    this.mutations++;
     const out: Outbound = {
       id: `o_${randomId()}`,
       at: this.now || Date.now(),
@@ -916,25 +963,46 @@ export class Sunup {
       action: msg.action,
     };
     this.state.outbox.push(out);
-    this.pending.push(out);
+    this.pending.push(msg.deliverBody ? { ...out, body: msg.deliverBody } : out);
   }
 
   private prune(now: number): void {
     const keep = now - 60 * DAY;
-    if (this.state.checkIns.length && this.state.checkIns[0].at < keep) {
-      this.state.checkIns = this.state.checkIns.filter((c) => c.at >= keep);
+    const checkIns = this.state.checkIns.filter((c) => c.at >= keep);
+    if (checkIns.length !== this.state.checkIns.length) {
+      this.state.checkIns = checkIns;
+      this.mutations++;
     }
     for (const [id, alert] of Object.entries(this.state.alerts)) {
-      if (alert.resolvedAt && alert.resolvedAt < keep) delete this.state.alerts[id];
+      if (alert.resolvedAt && alert.resolvedAt < keep) {
+        delete this.state.alerts[id];
+        this.mutations++;
+      }
     }
     for (const [id, moment] of Object.entries(this.state.moments)) {
-      if (moment.endedAt && moment.endedAt < keep) delete this.state.moments[id];
+      if (moment.endedAt && moment.endedAt < keep) {
+        delete this.state.moments[id];
+        this.mutations++;
+      }
     }
     const outboxKeep = now - 30 * DAY;
-    if (this.state.outbox.length > 5000 || (this.state.outbox[0] && this.state.outbox[0].at < outboxKeep)) {
-      this.state.outbox = this.state.outbox.filter((o) => o.at >= outboxKeep).slice(-5000);
+    const outbox = this.state.outbox.filter((o) => o.at >= outboxKeep).slice(-5000);
+    if (outbox.length !== this.state.outbox.length) {
+      this.state.outbox = outbox;
+      this.mutations++;
     }
   }
+}
+
+function groupBy<T>(items: T[], key: (item: T) => Id): Map<Id, T[]> {
+  const map = new Map<Id, T[]>();
+  for (const item of items) {
+    const k = key(item);
+    const list = map.get(k);
+    if (list) list.push(item);
+    else map.set(k, [item]);
+  }
+  return map;
 }
 
 export const PACKET_LABELS: Record<(typeof PACKET_FIELDS)[number], string> = {

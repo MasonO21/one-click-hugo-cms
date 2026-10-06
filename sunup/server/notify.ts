@@ -51,6 +51,8 @@ export function createNotifier(store: Store, config: NotifierConfig): Notifier {
       urgent: o.urgent,
       link: o.link,
       action: o.action,
+      // The worker only acts on a notification's button for the account it belongs to.
+      userId: o.to.id,
       // One notification per alert (or per day's reminder) that updates in place.
       tag: o.alertId ?? (o.kind === 'reminder' ? 'sunup-reminder' : o.id),
     });

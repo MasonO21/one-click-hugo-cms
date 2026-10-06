@@ -23,18 +23,40 @@ function writeToken(token: string | null) {
   } catch {
     // Storage unavailable; the session lasts until reload.
   }
-  void shareTokenWithWorker(token);
+  if (!token) void shareSessionWithWorker(null);
 }
 
-/** The service worker can't read localStorage; it reads the token from here for the notification "I'm up" button. */
-async function shareTokenWithWorker(token: string | null) {
+/**
+ * The service worker can't read localStorage, so the notification "I'm up" button reads the
+ * session from here. It's tagged with the user id so a button meant for someone else is ignored.
+ */
+async function shareSessionWithWorker(session: { token: string; userId: string } | null) {
   try {
     const cache = await caches.open('sunup-auth');
     const key = new URL('__sunup/token', location.href).href;
-    if (token) await cache.put(key, new Response(token));
+    if (session) await cache.put(key, new Response(JSON.stringify(session)));
     else await cache.delete(key);
   } catch {
     // Cache Storage unavailable: the button falls back to opening the app.
+  }
+}
+
+/** Stops push to this browser for the signed-in account (on sign-out or deletion). */
+async function dropPush(token: string | null) {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return;
+    if (token) {
+      await fetch('/api/push/unsubscribe', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+    }
+    await sub.unsubscribe();
+  } catch {
+    // Best effort: the server also hands an endpoint to whoever subscribes with it next.
   }
 }
 
@@ -48,7 +70,11 @@ function base64ToBytes(base64url: string): Uint8Array<ArrayBuffer> {
 
 export function createServerApi(features: { billing?: boolean } = {}): Api {
   let token = readToken();
-  void shareTokenWithWorker(token);
+  /** Remembers the session for the worker whenever we learn who is signed in. */
+  const seen = <T extends Snapshot | null | undefined>(snap: T): T => {
+    if (snap && token) void shareSessionWithWorker({ token, userId: snap.me.id });
+    return snap;
+  };
   const listeners = new Set<(snap: Snapshot) => void>();
   const photos = new Map<string, Promise<string>>();
 
@@ -96,7 +122,7 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
     async load() {
       if (!token) return null;
       try {
-        return await call<Snapshot>('/api/state');
+        return seen(await call<Snapshot>('/api/state'));
       } catch (e) {
         if (e instanceof ApiError && e.code === 'unauthorized') {
           token = null;
@@ -111,7 +137,7 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
       const res = await call<{ token: string; snapshot: Snapshot }>('/api/signup', { method: 'POST', body: JSON.stringify(input) });
       token = res.token;
       writeToken(token);
-      return res.snapshot;
+      return seen(res.snapshot);
     },
 
     act(action: Action) {
@@ -173,7 +199,9 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
         location.replace('/');
       };
       if (!old) return done();
-      fetch('/api/auth/logout', { method: 'POST', headers: { authorization: `Bearer ${old}` } }).finally(done);
+      dropPush(old)
+        .then(() => fetch('/api/auth/logout', { method: 'POST', headers: { authorization: `Bearer ${old}` } }))
+        .finally(done);
     },
 
     async exportData() {
@@ -184,6 +212,7 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
 
     async deleteAccount() {
       await call('/api/account/delete', { method: 'POST', body: JSON.stringify({ confirm: true }) });
+      await dropPush(null);
       token = null;
       writeToken(null);
       location.replace('/');
@@ -215,7 +244,7 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
           token = res.token;
           writeToken(token);
         }
-        return { snapshot: res.snapshot, needsName: res.needsName };
+        return { snapshot: seen(res.snapshot), needsName: res.needsName };
       },
     },
   };

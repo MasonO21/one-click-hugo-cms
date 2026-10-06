@@ -57,6 +57,8 @@ export interface Billing {
   /** When the current period (or trial) ends. */
   periodEnd?: number;
   cancelAtPeriodEnd?: boolean;
+  /** Creation time (Unix seconds) of the newest provider event applied, to ignore late duplicates. */
+  eventAt?: number;
 }
 
 /** Someone without the app who watches over the user who added them, by text and phone call. */
