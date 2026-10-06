@@ -110,7 +110,7 @@
       el.innerHTML = `<div class="tut"><p class="eyebrow">Paused · ${m.mode === 'brawl' ? 'Shard Brawl' : m.remote ? 'Online' : 'Match'}</p><h3>${m.remote ? 'The match keeps running' : 'Take a breather'}</h3>
         <div class="actions"><button class="btn primary" data-hud="resume">Resume</button>
         <button class="btn ghost" data-hud="sound">Sound: ${SF.store.d.settings.sound ? 'On' : 'Off'}</button>
-        <button class="btn ghost" data-hud="surrender">Surrender</button></div></div>`;
+        <button class="btn ghost" data-hud="surrender">${m.practice ? 'Leave training' : 'Surrender'}</button></div></div>`;
     }
   }
   function showTutorial() {
@@ -343,6 +343,17 @@
     updateHud(paused ? 0 : dt);
   }
 
+  // Training Grounds: damage per second over the last 5 seconds, and the total.
+  let dpsLog = [];
+  function updateDps() {
+    const p = m.player, now = m.t;
+    dpsLog.push([now, p.dmgDealt]);
+    while (dpsLog.length > 2 && dpsLog[0][0] < now - 5) dpsLog.shift();
+    const [t0, d0] = dpsLog[0], span = Math.max(1, now - t0);
+    const el = $('dps');
+    el.hidden = false;
+    el.innerHTML = `<span>DPS <b class="num">${Math.round((p.dmgDealt - d0) / span)}</b></span><span>Total <b class="num">${Math.round(p.dmgDealt).toLocaleString()}</b></span>`;
+  }
   const skillEls = () => [...document.querySelectorAll('.pbtn.sk')];
   function updateHud(dt) {
     const p = m.player;
@@ -369,6 +380,7 @@
     fcd.style.setProperty('--cd', p.spellCd / SF.SPELLS[p.spell].cd);
     sb.classList.toggle('kill', !!(m.spellWouldKill && m.spellWouldKill(p)));
     $('death').hidden = p.alive || ended;
+    if (m.practice) updateDps();
     if (!p.alive) $('respawnT').textContent = Math.ceil(p.respawnT);
     $('game').classList.toggle('dead', !p.alive && !ended);
     $('xpFill').style.setProperty('--p', p.level >= SF.MAX_LEVEL ? 1 : p.xp / p.xpNeed);
@@ -387,7 +399,7 @@
         q.classList.toggle('ready', p.gold >= it.cost);
       }
       $('slots').innerHTML = Array.from({ length: 6 }, (_, i) => (p.items[i] ? SF.itemIcon(p.items[i]) : '<span class="empty"></span>')).join('');
-      $('buffs').innerHTML = p.buffs.filter(b => b.label).map(b => `<span class="buff" style="--c:${b.id === 'shard' ? '#4fe3d3' : b.id === 'aegis' ? '#c58bff' : '#ffb347'}">${b.label} ${Math.ceil(b.t)}s</span>`).join('');
+      $('buffs').innerHTML = p.buffs.filter(b => b.label).map(b => `<span class="buff" style="--c:${({ shard: '#4fe3d3', aegis: '#c58bff', haste: '#8fd3ff', fury: '#ff7a59' })[b.id] || '#ffb347'}">${b.label} ${Math.ceil(b.t)}s</span>`).join('');
       if (!$('shop').hidden) renderShop();
       if (!$('board').hidden) renderBoard();
       renderFeed();
@@ -433,6 +445,7 @@
       m.on('cast', h => { if (h === m.player) { SF.sfx.play('skill'); if (SF.haptics) SF.haptics.tap(); } });
       m.on('signal', s => { if (s.team === 0) { SF.sfx.play('ping'); renderFeed(); } });
       m.on('message', () => renderFeed());
+      m.on('rune', (h, type) => { renderFeed(); if (h === m.player && SF.RUNES[type]) { SF.sfx.play('level'); toast(`${SF.RUNES[type].name}: ${SF.RUNES[type].desc}`, 2.2); } });
       m.on('spell', h => { if (h === m.player) { SF.sfx.play('skill'); if (SF.haptics) SF.haptics.tap(); } });
       m.on('hit', () => { const n = performance.now(); if (n - lastHit > 90) { lastHit = n; SF.sfx.play('hit'); } });
       m.on('gold', () => { const n = performance.now(); if (n - lastCoin > 160) { lastCoin = n; SF.sfx.play('coin'); } });
@@ -446,7 +459,7 @@
       });
       $('shop').hidden = true; $('pause').hidden = true; $('tutorial').hidden = true; $('announce').hidden = true; $('toast').hidden = true; $('board').hidden = true;
       $('match').classList.toggle('lefty', !!(SF.store.d && SF.store.d.settings.lefty));
-      $('feed').innerHTML = ''; $('recap').innerHTML = '';
+      $('feed').innerHTML = ''; $('recap').innerHTML = ''; $('dps').hidden = true; dpsLog = [];
       if (opts.tutorial) showTutorial();
       last = performance.now();
       cancelAnimationFrame(raf);

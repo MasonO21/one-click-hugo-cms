@@ -70,6 +70,34 @@
       <p class="muted small">Your choice is saved for ${SF.HERO[heroId].name}. Junglers want Shard Smite. Press F in a match, or tap the small button by your skills.</p>
       <button class="btn ghost" data-act="close">Done</button>`);
   }
+  // Post-match breakdown: the team gold lead over time, and each hero's damage, damage taken and healing.
+  function battleStats(s) {
+    if (!s.rows.some(r => r.hd != null)) return '';
+    const rows = s.rows.slice().sort((a, b) => a.team - b.team);
+    const top = k => Math.max(1, ...rows.map(r => r[k] || 0));
+    const M = { hd: top('hd'), tk: top('tk'), hl: top('hl') };
+    const bar = (r, k) => `<span class="sbar ${k}"><i style="width:${Math.round((r[k] || 0) / M[k] * 100)}%"></i><em class="num">${fmt(r[k] || 0)}</em></span>`;
+    return `<div class="card battle-stats"><p class="eyebrow">Battle stats</p>${goldGraph(s)}
+      <div class="stats-grid"><span></span><span class="eyebrow">Hero damage</span><span class="eyebrow">Taken</span><span class="eyebrow">Healing</span>
+      ${rows.map(r => `<span class="sname ${r.team === 0 ? 'b' : 'r'}${r.isPlayer ? ' me' : ''}">${esc(r.name)}<small>${r.hero}</small></span>${bar(r, 'hd')}${bar(r, 'tk')}${bar(r, 'hl')}`).join('')}</div></div>`;
+  }
+  function goldGraph(s) {
+    const L = s.goldLine;
+    if (!L || L.length < 2) return '';
+    const W = 300, H = 70, T = Math.max(1, L[L.length - 1][0]);
+    const leads = L.map(([t, a, b]) => [t, a - b]);
+    const M = Math.max(500, ...leads.map(([, d]) => Math.abs(d)));
+    const X = t => (t / T * W).toFixed(1), Y = d => (H / 2 - d / M * (H / 2 - 4)).toFixed(1);
+    const pts = leads.map(([t, d]) => `${X(t)},${Y(d)}`).join(' '), area = `0,${H / 2} ${pts} ${W},${H / 2}`;
+    const final = leads[leads.length - 1][1], mm = Math.floor(T / 60), ss = String(Math.floor(T % 60)).padStart(2, '0');
+    return `<div class="gold-graph"><div class="gg-head"><span class="eyebrow">Team gold lead</span><b class="${final >= 0 ? 'b' : 'r'}">${final >= 0 ? 'Your team' : 'Enemy'} +${fmt(Math.abs(final))}</b></div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Team gold lead over the match">
+        <defs><clipPath id="ggTop"><rect x="0" y="0" width="${W}" height="${H / 2}"/></clipPath><clipPath id="ggBot"><rect x="0" y="${H / 2}" width="${W}" height="${H / 2}"/></clipPath></defs>
+        <polygon points="${area}" fill="rgba(79,179,255,.35)" clip-path="url(#ggTop)"/><polygon points="${area}" fill="rgba(255,93,108,.35)" clip-path="url(#ggBot)"/>
+        <line x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}" stroke="rgba(255,255,255,.3)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+        <polyline points="${pts}" fill="none" stroke="#e8ecff" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>
+      <div class="gg-axis"><span>0:00</span><span>${mm}:${ss}</span></div></div>`;
+  }
   function rewardIcon(r) {
     if (r.type === 'skin') return heroCanvas(SF.SKIN[r.id].hero, r.id);
     if (r.type === 'coins') return `<i class="ico ico-coin" style="width:28px;height:28px"></i><span>${fmt(r.n)}</span>`;
@@ -151,10 +179,11 @@
   // ---------- views ----------
   const VIEWS = {
     home() {
+      const mode = SF.MODES[S.d.mode] ? S.d.mode : 'quick';
       let id = S.d.selected; if (!S.playable(id)) id = S.d.selected = S.d.heroes[0];
+      if (mode === 'practice' && SF.HERO[S.d.train.hero]) id = S.d.train.hero;   // any hero can train
       const h = SF.HERO[id], sk = SF.SKIN[S.skinOf(id)];
       const tier = S.passTier(), into = tier >= SF.PASS.tiers ? 1 : (S.d.pass.xp % SF.PASS.xpPerTier) / SF.PASS.xpPerTier;
-      const mode = SF.MODES[S.d.mode] ? S.d.mode : 'quick';
       const offer = !S.d.starter ? `<button class="offer" data-act="starter">
           <div><p class="eyebrow" style="color:var(--gold)">One-time offer</p><h3>Starter Pack</h3></div>
           <p>300 gems, Frostbrand Kaida skin and 2,000 coins</p><span class="btn buy sm price">${usd(SF.OFFERS.starter.usd)}</span></button>` : '';
@@ -168,6 +197,11 @@
       } else if (mode === 'ranked') {
         if (!S.rankedUnlocked()) { ready = false; label = `Level ${SF.RANKS.unlockLevel}`; body = `<p class="muted small">Ranked unlocks at account level ${SF.RANKS.unlockLevel}. Play a few Quick Matches first.</p>`; }
         else { const r = S.rank(); body = `<div class="rank-row">${rankBadge(r)}<span class="muted small">Bots: ${SF.DIFFICULTY[r.diff].label}${S.d.rank.streak >= 2 ? ` · ${S.d.rank.streak} win streak` : ''}</span></div>`; }
+      } else if (mode === 'practice') {
+        const tr = S.d.train;
+        label = 'Start training';
+        body = `<div class="train"><select id="trainHero" aria-label="Hero to train">${SF.HEROES.map(x => `<option value="${x.id}" ${x.id === id ? 'selected' : ''}>${x.name} · ${x.role}${S.playable(x.id) ? '' : ' (trial)'}</option>`).join('')}</select>
+          <div class="train-opts">${[['cd', 'No cooldowns'], ['gold', 'Free gold'], ['max', 'Max level']].map(([k, l]) => `<button class="tog${tr[k] ? ' on' : ''}" data-act="trainOpt" data-k="${k}" aria-pressed="${!!tr[k]}">${l}</button>`).join('')}</div></div>`;
       } else if (mode === 'brawl') {
         body = `<p class="muted small">You get a random hero each match, including heroes you don't own yet.</p>`;
       } else {
@@ -192,7 +226,7 @@
           <div class="card mode">
             <div class="modes" role="tablist" aria-label="Game mode">${Object.keys(SF.MODES).map(k => `<button role="tab" aria-selected="${k === mode}" class="${k === mode ? 'on' : ''}" data-act="mode" data-m="${k}">${SF.MODES[k].tab}</button>`).join('')}</div>
             <h2>${SF.MODES[mode].name}</h2>
-            <p class="muted mode-sub">${SF.MODES[mode].sub} About ${SF.MODES[mode].minutes} minutes.</p>
+            <p class="muted mode-sub">${SF.MODES[mode].sub}${SF.MODES[mode].minutes ? ` About ${SF.MODES[mode].minutes} minutes.` : ''}</p>
             ${body}
           </div>
           <div class="battle-row">${spellPick(mode === 'brawl' ? S.d.selected : id)}<button class="btn-battle" data-act="battle" ${ready ? '' : 'disabled'}><span>${label}</span></button></div>
@@ -419,6 +453,7 @@
         <div><p class="eyebrow">${SF.MODES[rw.mode] ? SF.MODES[rw.mode].name : 'Match'} · ${mm}:${ss} · ${s.kills[0]} – ${s.kills[1]}</p><h1 class="verdict">${s.won ? 'Victory' : 'Defeat'}</h1></div>
         <div class="teams"><div class="card" style="display:grid;gap:6px"><p class="eyebrow" style="color:var(--ally)">Your team</p>${side(0)}</div>
           <div class="card" style="display:grid;gap:6px"><p class="eyebrow" style="color:var(--enemy)">Enemy team</p>${side(1)}</div></div>
+        ${battleStats(s)}
         <div class="pgrid">${rank}${mastery}</div>
         <div class="card" style="display:grid;gap:10px"><p class="eyebrow">Rewards</p>
           <div class="rewards">${chip({ type: 'coins', n: rw.coins * (rw.doubled ? 2 : 1) })}${chip({ type: 'passXp', n: rw.passXp })}${chip({ type: 'tokens', n: rw.tokens })}<span class="chip">+${rw.accXp} account XP</span>
@@ -495,6 +530,7 @@
   function startBattle(modeArg) {
     const mode = modeArg || S.d.mode || 'quick';
     if (mode === 'online') return startOnline();
+    if (mode === 'practice') return startPractice();
     if (mode === 'ranked' && !S.rankedUnlocked()) return infoModal('Ranked is locked', `Reach account level ${SF.RANKS.unlockLevel} to play Ranked.`);
     let heroId = S.d.selected; if (!S.playable(heroId)) heroId = S.d.heroes[0];
     if (mode === 'brawl') heroId = SF.HEROES[Math.floor(Math.random() * SF.HEROES.length)].id;
@@ -506,6 +542,13 @@
     const opts = { hero: heroId, skin: S.skinOf(heroId), spell: S.spellOf(mode === 'brawl' ? S.d.selected : heroId), playerName: S.d.name, difficulty, allies, enemies, mode: mode === 'brawl' ? 'brawl' : 'classic', tutorial: !S.d.tutorial && mode === 'quick' };
     const me = { id: heroId, skin: opts.skin };
     showLoading(SF.MODES[mode].name, [allies[0], me, allies[1]], enemies, 1, () => SF.hud.start(opts, sum => finishMatch(sum, { mode, heroId, skin: opts.skin })));
+  }
+  // Training Grounds: three random heroes stand in mid lane as dummies. Nothing is earned or recorded.
+  function startPractice() {
+    const tr = S.d.train, heroId = SF.HERO[tr.hero] ? tr.hero : S.d.selected;
+    const enemies = shuffle(SF.HEROES.map(h => h.id).filter(x => x !== heroId)).slice(0, 3).map((x, i) => ({ id: x, skin: SF.defaultSkin(x), name: 'Dummy ' + (i + 1) }));
+    const opts = { hero: heroId, skin: S.skinOf(heroId), spell: S.spellOf(heroId), playerName: S.d.name, difficulty: 'easy', allies: [], enemies, mode: 'practice', practice: { cd: tr.cd, gold: tr.gold, max: tr.max }, tutorial: false };
+    showLoading(SF.MODES.practice.name, [{ id: heroId, skin: opts.skin }], enemies, 0, () => SF.hud.start(opts, () => finishMatch(null, { mode: 'practice' })));
   }
   function showLoading(title, blue, red, meIndex, done) {
     const el = $('loading');
@@ -556,6 +599,7 @@
   function finishMatch(sum, ctx) {
     $('lobby').hidden = false;
     SF.music.play('lobby');
+    if (ctx.mode === 'practice') { view = 'home'; render(true); return; }
     if (SF.net && ctx.mode === 'online') { try { SF.net.close(); } catch (e) { /* ignore */ } }
     const me = sum.rows.find(r => r.isPlayer) || sum.rows[0];
     const won = sum.won, mvp = !!(sum.mvp && sum.mvp.isPlayer);
@@ -595,7 +639,8 @@
     mode(d) { S.d.mode = d.m; S.save(); render(); },
     diff(d) { S.d.difficulty = d.d; S.save(); render(); },
     battle() { startBattle(); },
-    spells() { spellModal(S.d.selected); },
+    spells() { spellModal(S.d.mode === 'practice' && SF.HERO[S.d.train.hero] ? S.d.train.hero : S.d.selected); },
+    trainOpt(d) { S.d.train[d.k] = !S.d.train[d.k]; S.save(); render(); },
     pickSpell(d) {
       if (!S.setSpell(d.h, d.s)) return;
       closeModal(); render();
@@ -867,6 +912,7 @@
     document.addEventListener('change', e => {
       if (e.target.id === 'capSel') { S.d.settings.cap = +e.target.value; S.save(); settingsModal(); }
       if (e.target.id === 'serverInput') { S.d.settings.server = e.target.value.trim(); S.save(); }
+      if (e.target.id === 'trainHero' && SF.HERO[e.target.value]) { S.d.train.hero = e.target.value; S.save(); render(); }
     });
     window.addEventListener('resize', () => { if (!$('lobby').hidden) paintCanvases($('view')); });
     requestAnimationFrame(tick);

@@ -26,6 +26,16 @@ window.SF = window.SF || {};
   };
   SF.SPELL_IDS = Object.keys(SF.SPELLS);
 
+  // River power-ups. Two spots in the river (above and below the lane) each get a random shard every
+  // 90 seconds from 2:00 (1:00 in Brawl). Walk over one to take it.
+  SF.RUNES = {
+    haste:   { name: 'Haste Shard',   color: '#8fd3ff', desc: '30% move speed for 20s' },
+    renewal: { name: 'Renewal Shard', color: '#7dffa0', desc: 'Heal 35% of max health' },
+    bulwark: { name: 'Bulwark Shard', color: '#ffe27a', desc: 'A shield worth 20% of max health for 20s' },
+    fury:    { name: 'Fury Shard',    color: '#ff7a59', desc: '15% more damage for 20s' }
+  };
+  SF.RUNE_SPOTS = [{ x: 1600, y: 405 }, { x: 1600, y: 790 }];
+
   // Quick signals a player sends to their team. Bots obey for `dur` seconds and one of them replies.
   SF.SIGNALS = {
     attack:  { label: 'Attack',   dur: 12, color: '#ff7a59', reply: 'On it!',       key: 'z' },
@@ -167,9 +177,9 @@ window.SF = window.SF || {};
       lore: 'A lightning-split shard that hums for a full minute before every storm.',
       price: { coins: 4000, gems: 388 },
       base: { hp: 620, atk: 46, power: 33, def: 15, ms: 295, range: 480, as: 0.75, regen: 4 },
-      grow: { hp: 80, atk: 3, power: 12, def: 2 },
+      grow: { hp: 80, atk: 3, power: 11.5, def: 2 },
       build: B.Mage,
-      passive: { id: 'overcharge', name: 'Overcharge', desc: 'Every 3rd skill hit on an enemy hero stuns it for 0.6 seconds (at most once every 4 seconds).' },
+      passive: { id: 'overcharge', name: 'Overcharge', desc: 'Every 3rd skill hit on an enemy hero stuns it for 0.6 seconds (at most once every 5 seconds).' },
       skills: [
         { id: 'chain_spark', name: 'Chain Spark', cd: 6, range: 640, kind: 'bolt', ai: 'enemy', desc: 'Hurl a spark that jumps from the first enemy hit to two more nearby.' },
         { id: 'static_field', name: 'Static Field', cd: 11, range: 560, kind: 'zone', ai: 'enemy', ground: true, desc: 'Charge an area for 3 seconds, shocking and slowing every enemy inside.' },
@@ -420,7 +430,8 @@ window.SF = window.SF || {};
     quick:  { name: 'Quick Match', tab: 'Quick', sub: '3v3 vs bots. Pick your difficulty.', minutes: 8 },
     ranked: { name: 'Ranked', tab: 'Ranked', sub: 'Climb from Bronze to Legend. Bots get tougher as you rise.', minutes: 8 },
     brawl:  { name: 'Shard Brawl', tab: 'Brawl', sub: 'Random hero, start at level 5 with gold, no jungle. Fast fights.', minutes: 5 },
-    online: { name: 'Online 3v3', tab: 'Online', sub: 'Real players, bots fill empty slots.', minutes: 8 }
+    online: { name: 'Online 3v3', tab: 'Online', sub: 'Real players, bots fill empty slots.', minutes: 8 },
+    practice: { name: 'Training Grounds', tab: 'Train', sub: 'Any hero, even ones you don\'t own, against target dummies. No rewards and no pressure.', minutes: 0 }
   };
 
   SF.BOT_NAMES = ['Valtor', 'Mirelle', 'Quill', 'Ashgrove', 'Tamsin', 'Rook', 'Juniper', 'Okoro', 'Pell', 'Sora', 'Bexley', 'Dax', 'Ilse', 'Marrow', 'Wren', 'Corvin', 'Hollis', 'Nadia', 'Teo', 'Briar', 'Kestrel', 'Lux', 'Moss', 'Ines'];

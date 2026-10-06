@@ -237,7 +237,7 @@ function finish(id, r) {
   for (const [pid, client] of r.members) {
     if (client.roomId !== id) continue;
     client.roomId = null;
-    out(client, { t: 'end', winner: sum.winner, summary: { winner: sum.winner, time: sum.time, kills: sum.kills, teamStats: sum.teamStats, rows: sum.rows, mvp: mvpIndex } });
+    out(client, { t: 'end', winner: sum.winner, summary: { winner: sum.winner, time: sum.time, kills: sum.kills, teamStats: sum.teamStats, rows: sum.rows, mvp: mvpIndex, goldLine: sum.goldLine } });
   }
   for (const t of r.takeover.values()) clearTimeout(t);
   rooms.delete(id);

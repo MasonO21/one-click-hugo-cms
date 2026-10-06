@@ -52,6 +52,10 @@ Keep it this way as you add content: your own names, art, sounds and hero design
   - Bots get tougher as you climb, and every tier has a one-time reward.
 - **Shard Brawl:** a random hero (including ones you don't own), level 5 start with gold, no jungle, about 5 minutes.
 - **Online 3v3:** real players on a server-authoritative match. Bots fill empty slots, and if you disconnect a bot takes over until you reconnect.
+- **Training Grounds:** any hero, including ones you don't own yet, against three target dummies in mid lane.
+  - Dummies stand still, heal to full a few seconds after the last hit, and stand back up 2 seconds after falling. Towers hold fire.
+  - Toggles for no cooldowns, free gold and max level, plus a live DPS meter.
+  - Nothing is earned or recorded, so it's a safe place to learn a kit, a spell or a build.
 
 **In a match**
 - 10 heroes across 6 roles, with 30 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals and executes.
@@ -70,6 +74,13 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 - **One jungler per team:** you, if you bring Shard Smite, or otherwise the bot best suited to it. Both sides get the same treatment.
 - Towers that punish diving, with backdoor protection.
 - Minion waves, siege minions, two jungle buffs, the Shard Colossus and the Abyssal Wyrm. Bots contest both objectives, and Group up calls the nearer one.
+- **River Power Shards:** from 2:00 (1:00 in Brawl), two spots in the river each hold a random shard, refilled every 90 seconds. Walk over one to take it:
+  - **Haste:** move faster.
+  - **Renewal:** heal 35%.
+  - **Bulwark:** a 20% shield.
+  - **Fury:** 15% more damage.
+
+  Both teams see who took what, and bots detour for a nearby shard.
 - Tall grass that hides heroes, plus invisibility. Recall to base.
 - **Battle spells.** Before a match, pick one of six for your hero:
   - **Blink:** a short teleport.
@@ -89,6 +100,7 @@ Keep it this way as you add content: your own names, art, sounds and hero design
   - **Nightglass Orb:** skill hits deal %-health damage.
 - Bots that lane, last-hit, jungle, fight over objectives, team-fight and retreat, at five strengths.
 - **Kill impact:** a zoom punch and gold flash on your kills, plus a beat of slow motion offline.
+- **Battle stats after every match:** the team gold lead over time, and each hero's damage to heroes, damage taken and healing done (online too).
 - Announcer calls (First Blood, multi-kills, Ace, Shutdown), a scoreboard, generated music and sound, a low-power graphics mode and left-handed controls.
 
 **Progression and economy**
@@ -162,7 +174,7 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 - **Commission art and audio.** The procedural crystal art and generated music are consistent and shippable, but professional assets raise conversion.
 - **Plan content.** Ship a new hero or skin line every 2–4 weeks, a new pass each season, and rotating festivals. In this genre, content cadence and spending on user acquisition drive revenue far more than any single feature.
 - **Animate the sprites.** Heroes are single still poses today. Next up are attack and skill pose frames for each hero (from the same Higgsfield references), swapped in while attacking or casting.
-- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins 41–62%; Vexa is the one to watch at the top. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
+- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins 37–62%. Brakka (62%) leads, and the melee divers Kaida (37%) and Nyx (39%) trail: bots play them worse than ranged heroes. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
 
 ## 5. File map
 

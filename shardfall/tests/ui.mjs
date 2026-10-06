@@ -46,7 +46,7 @@ try {
       await page.click(`[data-act=shopTab][data-tab=${tab}]`);
       await page.waitForTimeout(100);
     }
-    for (const m of ['quick', 'ranked', 'brawl', 'online']) {
+    for (const m of ['quick', 'ranked', 'brawl', 'online', 'practice']) {
       await page.evaluate(() => SF.lobby._test.go('home'));
       await page.click(`[data-act=mode][data-m=${m}]`);
       await page.waitForTimeout(100);
@@ -60,6 +60,17 @@ try {
     check(`${label} has no page errors in the lobby`, errors.length === 0, errors.join('; '));
 
     if (label === 'phone-landscape') {
+      // Training Grounds: starts any hero, shows the DPS meter, and leaving earns nothing.
+      await page.evaluate(() => { SF.store.d.train.hero = 'oska'; SF.lobby._test.startBattle('practice'); });
+      await page.waitForTimeout(3600);
+      const tr = await page.evaluate(() => ({ mode: SF.hud.match.mode, hero: SF.hud.match.player.def0.id, dps: !document.getElementById('dps').hidden, coins: SF.store.d.coins, matches: SF.store.d.stats.matches }));
+      check('training starts the chosen hero', tr.mode === 'practice' && tr.hero === 'oska', JSON.stringify(tr));
+      check('training shows the DPS meter', tr.dps);
+      await shot(page, 'match-practice');
+      await page.evaluate(() => SF.hud.match.end(1));
+      await page.waitForTimeout(3300);
+      const left = await page.evaluate(() => ({ coins: SF.store.d.coins, matches: SF.store.d.stats.matches, lobby: !document.getElementById('lobby').hidden }));
+      check('leaving training returns to the lobby with no rewards', left.lobby && left.coins === tr.coins && left.matches === tr.matches, JSON.stringify(left));
       for (const mode of ['quick', 'ranked', 'brawl']) {
         await page.evaluate(m => SF.lobby._test.startBattle(m), mode);
         await page.waitForFunction(() => SF.hud.match && !document.getElementById('match').hidden, null, { timeout: 8000 });

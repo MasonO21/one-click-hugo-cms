@@ -82,3 +82,18 @@ test('quick signals reach teammates only', () => {
   assert.equal(room.m.orders[0].kind, 'retreat');
   assert.equal(room.m.orders[1], null);
 });
+
+test('river power-ups are sent to everyone and pickups are announced to both teams', () => {
+  const room = new Room({ id: 'rn', mode: 'quick', players: [
+    { pid: 'p1', name: 'One', heroId: 'kaida', skinId: 'kaida_classic', team: 0 },
+    { pid: 'p2', name: 'Two', heroId: 'orin', skinId: 'orin_classic', team: 1 }
+  ] });
+  const m = room.m;
+  m.spawnRunes();
+  assert.equal(room.snapshotFor(1, 'p2', []).rn.length, 2);
+  const h = room.byPid.get('p1'), r = m.runes[0];
+  h.x = r.x; h.y = r.y;
+  m.runePickups();
+  assert.equal(m.runes.length, 1);
+  assert.ok(room.eventsFor('p2').some(e => e[0] === 'rune' && e[1] === h.id), 'the enemy sees who took it');
+});

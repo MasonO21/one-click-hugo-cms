@@ -31,7 +31,7 @@
       this.teamStats = [{ towers: 0, shards: 0 }, { towers: 0, shards: 0 }];
       this.fountains = [{ x: 110, y: W.laneY, r: 230 }, { x: W.w - 110, y: W.laneY, r: 230 }];
       this.bushes = (info.bushes || []).map(b => Object.assign({}, b, { x: this.mx(b.x) }));
-      this.camps = []; this.shard = null; this.wyrm = null; this.signals = [];
+      this.camps = []; this.shard = null; this.wyrm = null; this.signals = []; this.runes = [];
       this.map = new Map(); this.snaps = []; this.pending = []; this.lastInput = ''; this.inputT = 0; this.endInfo = null;
       for (const r of info.roster) {
         const h = this.unit(r.i);
@@ -63,7 +63,8 @@
       const rows = sum.rows.map(r => Object.assign({}, r, { team: this.mt(r.team), isPlayer: !!r.pid && r.pid === this.pid }));
       const k = this.mirror ? [sum.kills[1], sum.kills[0]] : sum.kills;
       const ts = sum.teamStats.map(x => ({ towers: x.towers, shards: x.shards }));
-      this.endInfo = { winner: this.mt(sum.winner), won: sum.winner === this.myTeam, time: sum.time, kills: k, rows, mvp: rows[sum.mvp] || null, teamStats: this.mirror ? [ts[1], ts[0]] : ts };
+      const goldLine = (sum.goldLine || []).map(([t, a, b]) => (this.mirror ? [t, b, a] : [t, a, b]));
+      this.endInfo = { goldLine, winner: this.mt(sum.winner), won: sum.winner === this.myTeam, time: sum.time, kills: k, rows, mvp: rows[sum.mvp] || null, teamStats: this.mirror ? [ts[1], ts[0]] : ts };
       this.flushEvents(Infinity);
       this.over = true; this.winner = this.endInfo.winner;
       this.emit('end', this.winner);
@@ -102,6 +103,7 @@
       this.camps = s.cp.map(([x, y, alive]) => ({ x: this.mx(x), y, unit: alive ? { alive: true } : null }));
       this.shard = s.sd ? this.unit(s.sd) : null;
       this.wyrm = s.wy ? this.unit(s.wy) : null;
+      this.runes = (s.rn || []).map(([id, x, y, type]) => ({ id, x: this.mx(x), y, type }));
       const p = this.player, me = s.me;
       if (me) {
         p.gold = me.gold; p.xp = me.xp; p.xpNeed = me.xn; p.level = me.lv; p.items = me.items; p.skillCd = me.cd; p.cdr = me.cdr;
@@ -143,6 +145,14 @@
             if (!SF.SIGNALS[s.kind]) break;
             this.signals = this.signals.filter(q => this.t - q.t < 6).concat(s);
             this.emit('signal', s);
+            break;
+          }
+          case 'rune': {
+            const h = U(e[1]), R = SF.RUNES[e[2]];
+            if (!h || !R) break;
+            this.feed.unshift({ msg: `took a ${R.name}`, from: h, team: h.team, t: this.t });
+            this.feed.length = Math.min(this.feed.length, 5);
+            this.emit('rune', h, e[2]);
             break;
           }
           case 'msg': {

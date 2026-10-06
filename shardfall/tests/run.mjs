@@ -302,6 +302,79 @@ section('Abyssal Wyrm', () => {
   check('bots fight over the Wyrm', took > 0, `${took} slain in 6 matches`);
 });
 
+section('Post-match stats', () => {
+  const m = new SF.Match({ hero: 'lumen', spell: 'mend', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A1' }, { id: 'sylva', name: 'A2' }], enemies: [{ id: 'brakka', name: 'E1' }, { id: 'nyx', name: 'E2' }, { id: 'vexa', name: 'E3' }] });
+  for (const h of m.heroes) if (h !== m.player) { h.brain = null; h.human = true; }
+  m.nextWave = 1e9;
+  const p = m.player, ally = m.heroes.find(h => h.team === 0 && h !== p), foe = m.heroes.find(h => h.team === 1);
+  p.x = ally.x = 1500; p.y = 600; ally.y = 650; foe.x = 1600; foe.y = 600;
+  m.applyDamage(p, foe, 100, { true: true });
+  foe.hp = 50; m.applyDamage(p, foe, 500, { true: true });
+  check('hero damage counts, overkill does not', Math.round(p.heroDmg) === 150, `${p.heroDmg}`);
+  check('damage taken is tracked', Math.round(foe.dmgTaken) === 150);
+  ally.hp = ally.maxHp * 0.5;
+  m.useSpell(p);
+  check('healing is credited to the healer', p.healed > ally.maxHp * 0.14 && !(ally.healed > 0));
+  for (let k = 0; k < 30 * 31; k++) m.update(1 / 30);
+  check('team gold is sampled every 15 seconds', m.goldLine.length === 3 && m.goldLine[2][0] === 30);
+  const sum = m.summary(), me = sum.rows.find(r => r.isPlayer);
+  check('the summary carries the new stats and a gold line', me.hd === 150 && me.hl > 0 && sum.goldLine.length === 4 && sum.goldLine[3][0] === Math.round(m.t));
+});
+
+section('Training Grounds', () => {
+  const m = new SF.Match({ hero: 'vexa', spell: 'blink', difficulty: 'easy', mode: 'practice', allies: [], enemies: [{ id: 'kaida', name: 'D1' }, { id: 'brakka', name: 'D2' }, { id: 'rhea', name: 'D3' }], practice: { cd: true, gold: true, max: true } });
+  const p = m.player, dummies = m.heroes.filter(h => h.team === 1);
+  check('practice mode builds a solo hero and three dummies', m.mode === 'practice' && m.heroes.filter(h => h.team === 0).length === 1 && dummies.every(d => d.dummy && !d.brain));
+  check('max level: level 12 with every point to spend', p.level === 12 && p.points === 12);
+  check('free gold', p.gold >= 99999 && m.buy(p, 'starfire_codex') && (m.update(1 / 30), p.gold >= 99999));
+  m.autoUpgrade(p);
+  const spot = dummies.map(d => [d.x, d.y]);
+  for (let k = 0; k < 90; k++) m.update(1 / 30);
+  check('dummies stand still', dummies.every((d, i) => Math.hypot(d.x - spot[i][0], d.y - spot[i][1]) < 30));
+  const d = dummies[0];
+  p.x = d.x - 150; p.y = d.y; m.updateVisibility();
+  check('no cooldowns', m.castSkill(p, 0, m.resolveAim(p, 0, { x: 1, y: 0, len: 1 })) === true && (m.update(1 / 30), p.skillCd[0] === 0));
+  d.hp = d.maxHp * 0.3; d.lastHurt = m.t;
+  for (let k = 0; k < 30 * 5; k++) m.update(1 / 30);
+  check('dummies heal to full a few seconds after the last hit', d.hp === d.maxHp);
+  m.applyDamage(p, d, 1e7, { true: true });
+  check('a fallen dummy stands back up after 2 seconds', !d.alive && d.respawnT <= 2);
+  for (let k = 0; k < 30 * 3; k++) m.update(1 / 30);
+  check('…at its spot', d.alive && Math.hypot(d.x - spot[0][0], d.y - spot[0][1]) < 30);
+  m.t = 1000; m.update(1 / 30);
+  check('training never times out', !m.over);
+  const off = new SF.Match({ hero: 'vexa', difficulty: 'easy', mode: 'practice', allies: [], enemies: [{ id: 'kaida' }, { id: 'brakka' }, { id: 'rhea' }], practice: { cd: false, gold: false, max: false } });
+  check('options can be switched off', off.player.level === 1 && off.player.gold < 1000);
+});
+
+section('River power-ups', () => {
+  const mk = mode => new SF.Match({ hero: 'kaida', mode, difficulty: 'normal', allies: [{ id: 'orin' }, { id: 'sylva' }], enemies: [{ id: 'brakka' }, { id: 'nyx' }, { id: 'lumen' }] });
+  check('shards first appear at 2:00 (1:00 in Brawl)', mk().runeAt === 120 && mk('brawl').runeAt === 60);
+  const m = mk();
+  for (const h of m.heroes) { h.brain = null; h.human = true; }
+  m.nextWave = 1e9; m.t = 119.98; m.update(0.05);
+  check('two shards spawn, one at each river spot', m.runes.length === 2 && SF.RUNE_SPOTS.every(sp => m.runes.some(r => r.x === sp.x && r.y === sp.y)));
+  const p = m.player, r0 = m.runes[0];
+  r0.type = 'haste'; m.runes[1].type = 'bulwark';
+  const ms0 = p.speed();
+  p.x = r0.x + 20; p.y = r0.y; m.update(0.05);
+  check('walking over a shard takes it', m.runes.length === 1 && !m.runes.includes(r0));
+  check('Haste Shard: 30% faster', Math.abs(p.speed() / ms0 - 1.3) < 0.01);
+  check('the pickup shows in the feed', m.feed.some(f => f.msg && /Haste Shard/.test(f.msg) && f.from === p));
+  m.t += 30; m.update(0.05);
+  check('spots refill only when empty', m.runes.length === 1 || m.t < m.runeAt);
+  p.x = 300; p.y = 600;   // step off the spot so the new shard isn't taken at once
+  m.t = m.runeAt; m.update(0.05);
+  check('the empty spot refills 90s later', m.runes.length === 2);
+  const take = type => { const q = mk(); q.nextWave = 1e9; const h = q.player; h.hp = h.maxHp * 0.5; const r = { id: 1, x: 0, y: 0, type }; q.takeRune(h, r); return h; };
+  check('Renewal Shard heals 35%', Math.abs(take('renewal').hpPct - 0.85) < 0.01);
+  check('Bulwark Shard shields 20% of max health', Math.abs(take('bulwark').shield / take('bulwark').maxHp - 0.2) < 0.01);
+  check('Fury Shard adds 15% damage', Math.abs(take('fury').dmgMul() - 1.15) < 0.001);
+  let grabbed = 0;
+  for (let i = 0; i < 4; i++) { const mm = botMatch(SF, {}); mm.on('rune', () => grabbed++); run(mm, 6 * 60); }
+  check('bots pick up shards', grabbed > 0, `${grabbed} in 4 matches`);
+});
+
 section('Item passives', () => {
   const duel = () => {
     const m = new SF.Match({ hero: 'drace', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A' }, { id: 'sylva', name: 'B' }], enemies: [{ id: 'lumen', name: 'C' }, { id: 'nyx', name: 'D' }, { id: 'vexa', name: 'E' }] });

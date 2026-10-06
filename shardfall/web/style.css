@@ -363,7 +363,7 @@ table.odds td:last-child, table.odds th:last-child { text-align: right; font-var
 .card.slim b { font: 700 16px/1.15 var(--f-display); letter-spacing: 0.02em; }
 .event-mini { border-color: #2a4f8a; background: linear-gradient(110deg, rgba(40, 90, 170, 0.35), var(--panel) 70%); }
 .modes { display: flex; gap: 4px; overflow-x: auto; margin: -2px 0 10px; padding-bottom: 2px; }
-.modes button { flex: 1 1 0; min-width: 0; white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; padding: 6px 4px; background: transparent; font: 700 12px/1 var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.modes button { flex: 1 1 auto; min-width: 0; white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; padding: 6px 1px; background: transparent; font: 700 11.5px/1 var(--f-display); letter-spacing: 0.01em; overflow: hidden; text-overflow: clip; text-transform: uppercase; color: var(--muted); }
 .modes button.on { background: var(--shard); border-color: var(--shard); color: var(--ink); }
 .mode h2 { margin-top: 0; }
 .btn-battle[disabled] { filter: grayscale(0.8) brightness(0.7); cursor: default; }
@@ -556,3 +556,30 @@ img.art { display: block; width: 100%; aspect-ratio: 1 / 1; max-width: 100%; obj
 /* Hero passive row in the hero screen */
 .skill.passive .ic { background: radial-gradient(circle at 35% 28%, #ffe9a8, #a8741a 75%); border-color: rgba(255, 230, 170, 0.6); }
 .skill.passive .ic svg { color: #2a1800; }
+
+/* Training Grounds: lobby options and the in-match DPS meter */
+.train { display: grid; gap: 10px; margin-top: 12px; }
+.train select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-2, #141b44); color: var(--text); font: 600 15px/1.2 var(--f-body); }
+.train-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.tog { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 700 12px/1 var(--f-display); letter-spacing: 0.06em; text-transform: uppercase; }
+.tog.on { background: rgba(79, 227, 211, 0.15); border-color: var(--shard); color: var(--text); }
+.dps { z-index: 3; position: absolute; top: calc(52px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; gap: 14px; padding: 4px 12px; border-radius: 8px; background: rgba(5, 8, 25, 0.7); font: 600 13px/1.2 var(--f-display); letter-spacing: 0.04em; color: var(--muted); pointer-events: none; }
+.dps b { color: #ffe27a; font-size: 16px; }
+
+/* Results: battle stats */
+.battle-stats { display: grid; gap: 12px; }
+.gold-graph { display: grid; gap: 4px; }
+.gg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.gg-head b { font: 700 15px/1.2 var(--f-display); }
+.gg-head .b, .stats-grid .sname.b { color: var(--ally); } .gg-head .r, .stats-grid .sname.r { color: var(--enemy); }
+.gold-graph svg { width: 100%; height: 70px; display: block; border-radius: 6px; background: rgba(0, 0, 0, 0.2); }
+.gg-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.stats-grid { display: grid; grid-template-columns: minmax(78px, 1.1fr) repeat(3, minmax(0, 1fr)); gap: 6px 8px; align-items: center; }
+.stats-grid > .eyebrow { font-size: 10px; }
+.stats-grid .sname { display: grid; font: 700 13px/1.15 var(--f-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats-grid .sname small { color: var(--muted); font-weight: 600; font-size: 11px; }
+.stats-grid .sname.me { text-decoration: underline; text-underline-offset: 3px; }
+.sbar { position: relative; height: 18px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.sbar i { position: absolute; inset: 0 auto 0 0; background: rgba(255, 179, 71, 0.55); }
+.sbar.tk i { background: rgba(255, 93, 108, 0.5); } .sbar.hl i { background: rgba(125, 255, 160, 0.45); }
+.sbar em { position: relative; padding-left: 6px; font: 700 11px/18px var(--f-display); font-style: normal; color: #fff; }

@@ -379,6 +379,24 @@
     if (u.flash > 0) { g.globalAlpha = 0.4; g.beginPath(); g.arc(u.x, u.y - r, r, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.globalAlpha = 1; }
   }
 
+  // River power-up: a floating, spinning crystal in the shard's colour with its symbol inside.
+  function drawRune(g, r, t) {
+    const col = SF.RUNES[r.type].color, y = r.y - 34 + Math.sin(t * 3 + r.id) * 5, k = 0.5 + 0.5 * Math.sin(t * 4);
+    ellipse(g, r.x, r.y + 2, 22, 8); g.fillStyle = 'rgba(0,0,0,.35)'; g.fill();
+    ellipse(g, r.x, r.y, 30 + k * 6, 12 + k * 2); g.strokeStyle = col; g.globalAlpha = 0.5; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
+    const glow = g.createRadialGradient(r.x, y, 0, r.x, y, 40); glow.addColorStop(0, col + '88'); glow.addColorStop(1, col + '00');
+    g.fillStyle = glow; g.beginPath(); g.arc(r.x, y, 40, 0, TAU); g.fill();
+    const w = 15 * Math.abs(Math.cos(t * 1.8 + r.id));   // spin: the crystal narrows and widens
+    poly(g, [[0, -1.45], [Math.max(0.25, w / 15) * 0.95, 0], [0, 1.25], [-Math.max(0.25, w / 15) * 0.95, 0]], r.x, y, 15);
+    g.fillStyle = col; g.fill(); g.lineWidth = 2; g.strokeStyle = '#fff'; g.stroke();
+    g.save(); g.strokeStyle = '#0b1029'; g.lineWidth = 2.6; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+    if (r.type === 'haste') { g.moveTo(r.x - 5, y - 5); g.lineTo(r.x, y); g.lineTo(r.x - 5, y + 5); g.moveTo(r.x + 1, y - 5); g.lineTo(r.x + 6, y); g.lineTo(r.x + 1, y + 5); }
+    else if (r.type === 'renewal') { g.moveTo(r.x, y - 6); g.lineTo(r.x, y + 6); g.moveTo(r.x - 6, y); g.lineTo(r.x + 6, y); }
+    else if (r.type === 'bulwark') { g.moveTo(r.x - 5, y - 5); g.lineTo(r.x + 5, y - 5); g.lineTo(r.x + 5, y); g.lineTo(r.x, y + 6); g.lineTo(r.x - 5, y); g.closePath(); }
+    else for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3 + Math.PI / 2; g.moveTo(r.x + Math.cos(a) * 6.5, y + Math.sin(a) * 6.5); g.lineTo(r.x - Math.cos(a) * 6.5, y - Math.sin(a) * 6.5); }
+    g.stroke(); g.restore();
+  }
+
   // ---- Map prerender ---------------------------------------------------------
   function rng(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
   function buildMap() {
@@ -541,6 +559,7 @@
       // zones
       for (const zn of m.zones) this.drawZone(g, zn, t);
       this.drawSignals(g, m);
+      for (const r of m.runes || []) if (inView(r.x, r.y)) drawRune(g, r, t);
       // player indicators
       if (p.alive) {
         if (p.attackHeld || p.target) { g.beginPath(); g.ellipse(p.x, p.y, p.range + p.r, (p.range + p.r) * 0.92, 0, 0, TAU); g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 2; g.stroke(); }
@@ -800,6 +819,7 @@
       for (const c of m.camps) if (c.unit && c.unit.alive) dot(c.x, c.y, px * 1.1, '#c9b27a');
       if (m.shard && m.shard.alive) dot(m.shard.x, m.shard.y, px * 2, '#4fe3d3', '#fff');
       if (m.wyrm && m.wyrm.alive) dot(m.wyrm.x, m.wyrm.y, px * 2.2, '#9b6bff', '#fff');
+      for (const r of m.runes || []) dot(r.x, r.y, px * 1.4, SF.RUNES[r.type].color, '#0b1029');
       for (const u of m.units) {
         if (!u.alive) continue;
         if (u.kind === 'tower' || u.kind === 'core') { const s = u.kind === 'core' ? px * 3.2 : px * 2.4; g.fillStyle = SF.TEAM_COLORS[u.team]; g.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s); }

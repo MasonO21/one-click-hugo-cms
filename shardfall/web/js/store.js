@@ -21,6 +21,7 @@
       heroes: ['kaida', 'orin', 'sylva'],
       skins: SF.HEROES.map(h => SF.defaultSkin(h.id)),
       equipped: {}, selected: 'kaida', difficulty: 'easy', spells: {},
+      train: { hero: 'kaida', cd: true, gold: true, max: true },
       account: { level: 1, xp: 0 },
       pass: { xp: 0, elite: false, free: [], elite_: [] },
       login: { last: null, day: 0 },

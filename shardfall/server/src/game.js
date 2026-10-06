@@ -80,7 +80,7 @@ export class Room {
       return n;
     };
     const heal = m.heal.bind(m);
-    m.heal = (u, amt, quiet) => { const b = u.hp; heal(u, amt, true); const d = u.hp - b; if (!quiet && d >= 1 && u.kind === 'hero') push('heal', u.id, Math.round(d)); };
+    m.heal = (u, amt, quiet, src) => { const b = u.hp; heal(u, amt, true, src); const d = u.hp - b; if (!quiet && d >= 1 && u.kind === 'hero') push('heal', u.id, Math.round(d)); };
     const addGold = m.addGold.bind(m);
     m.addGold = (h, n, passive) => { addGold(h, n, passive); if (!passive) push('gold', h.id, Math.round(n)); };
     const attack = m.attack.bind(m);
@@ -92,6 +92,7 @@ export class Room {
     m.on('tower', t => push('tower', t.id));
     m.on('signal', s => push('sig', s.kind, s.team, r1(s.x), r1(s.y), s.from.id, s.target ? s.target.id : 0, s.text));
     m.on('message', (h, text) => push('msg', h.id, h.team, text));
+    m.on('rune', (h, type) => push('rune', h.id, type));
     m.on('end', () => { this.ended = true; });
   }
 
@@ -205,6 +206,7 @@ export class Room {
       cp: m.camps.map(c => [c.x, c.y, c.unit && c.unit.alive ? 1 : 0]),
       sd: m.shard && m.shard.alive ? m.shard.id : 0,
       wy: m.wyrm && m.wyrm.alive ? m.wyrm.id : 0,
+      rn: m.runes.map(r => [r.id, r.x, r.y, r.type]),
       ev: events
     };
     if (me) {

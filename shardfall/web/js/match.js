@@ -178,7 +178,7 @@
     },
     veil(m, h) {
       h.invisT = 3; h.addBuff({ id: 'veil', t: 3, msMul: 0.3 }); h.addBuff({ id: 'veilstrike', t: 6 });
-      m.heal(h, h.maxHp * 0.1);
+      m.heal(h, h.maxHp * 0.1, false, h);
       m.burst(h.x, h.y, '#6b4bd6', 20, 160);
       if (h.brain) h.target = null;
       return true;
@@ -204,7 +204,7 @@
     },
     mending_light(m, h, a, s) {
       for (const al of m.heroes) if (al.alive && al.team === h.team && d2(al, h) < s.range * s.range) {
-        m.heal(al, 140 + 0.85 * h.power + 0.05 * al.maxHp); m.burst(al.x, al.y, '#9dffb0', 10, 120);
+        m.heal(al, 140 + 0.85 * h.power + 0.05 * al.maxHp, false, h); m.burst(al.x, al.y, '#9dffb0', 10, 120);
       }
       m.ring(h.x, h.y, s.range, '#9dffb0', 0.5, 3);
       return true;
@@ -212,7 +212,7 @@
     sanctuary(m, h, a, s) {
       const p = a.point;
       m.zone({ x: p.x, y: p.y, r: 220, team: h.team, dur: 4, color: skinC(h), kind: 'sanct', tick: (dt) => {
-        for (const al of m.heroes) if (al.alive && al.team === h.team && d2(al, p) < 220 * 220) { m.heal(al, (50 + 0.3 * h.power) * dt, true); al.addBuff({ id: 'sanct', t: 0.3, dmgRed: 0.25 }); }
+        for (const al of m.heroes) if (al.alive && al.team === h.team && d2(al, p) < 220 * 220) { m.heal(al, (50 + 0.3 * h.power) * dt, true, h); al.addBuff({ id: 'sanct', t: 0.3, dmgRed: 0.25 }); }
         for (const e of m.enemiesIn(h.team, p.x, p.y, 220)) m.slow(e, 0.3, 0.3);
       } });
       return true;
@@ -265,7 +265,7 @@
         const dealt = m.applyDamage(h, e, 85 + 1.05 * h.atk, { skill: s });
         if (e.kind === 'hero') healed += dealt * 0.35;
       }
-      if (healed) m.heal(h, healed);
+      if (healed) m.heal(h, healed, false, h);
       m.fx.push({ type: 'arc', x: h.x, y: h.y, ang: Math.atan2(dir.y, dir.x), r: s.range, color: skinC(h), t: 0, dur: 0.25 });
       return true;
     },
@@ -352,16 +352,20 @@
       this.nextWave = 4; this.waveN = 0; this.firstBlood = false;
       this.shard = null; this.shardAt = 90; this.shardSpawnedT = 0; this.siegeBonus = [0, 0];
       this.wyrm = null; this.wyrmAt = 360; this.wyrmSpawnedT = 0;   // late-game objective at the bottom river
+      this.runes = []; this.runeAt = 120; this.runeId = 1;          // river power-ups
+      this.goldLine = [[0, 0, 0]]; this.goldAt = 15;                 // [time, blue gold, red gold] every 15s, for the results graph
       this.overcharged = false; this.shakeT = 0; this.shakeMag = 0;
       this.teamStats = [{ towers: 0, shards: 0, wyrms: 0 }, { towers: 0, shards: 0, wyrms: 0 }];
       this.fountains = [{ x: 110, y: W.laneY, r: 230 }, { x: W.w - 110, y: W.laneY, r: 230 }];
       // 'classic' (quick / ranked / online) or 'brawl': start at level 5 with gold, no jungle, early Shard.
-      this.mode = opts.mode === 'brawl' ? 'brawl' : 'classic';
+      // 'practice' is the Training Grounds: dummy enemies, optional free cooldowns / gold / max level.
+      this.mode = opts.mode === 'brawl' ? 'brawl' : opts.mode === 'practice' ? 'practice' : 'classic';
       this.waveEvery = 30; this.overchargeAt = 480; this.respawnMul = 1;
       this.setupMap();
       this.setupHeroes();
+      if (this.mode === 'practice') this.setupPractice(opts.practice || {});
       if (this.mode === 'brawl') {
-        this.camps = []; this.shardAt = 45; this.wyrmAt = 150; this.nextWave = 2; this.waveEvery = 25; this.overchargeAt = 240; this.respawnMul = 0.6;
+        this.camps = []; this.shardAt = 45; this.wyrmAt = 150; this.runeAt = 60; this.nextWave = 2; this.waveEvery = 25; this.overchargeAt = 240; this.respawnMul = 0.6;
         for (const h of this.heroes) { h.level = 5; h.points = 5; h.recalc(); h.hp = h.maxHp; h.gold = 1800; }
         for (const u of this.units) if (isStructure(u)) { u.maxHp *= 0.7; u.hp = u.maxHp; }
       }
@@ -392,6 +396,28 @@
         { x: 820, y: 820, rx: 92, ry: 66 }, { x: 2380, y: 380, rx: 92, ry: 66 },
         { x: 1600, y: 870, rx: 110, ry: 56 }, { x: 1425, y: 300, rx: 78, ry: 58 }, { x: 1775, y: 300, rx: 78, ry: 58 }
       ];
+    }
+
+    // Training Grounds: the enemy heroes become target dummies in mid lane. They never act, heal to
+    // full a few seconds after the last hit and stand back up 2 seconds after falling.
+    setupPractice(o) {
+      this.practice = { cd: o.cd !== false, gold: o.gold !== false, max: o.max !== false };
+      this.shardAt = this.wyrmAt = 1e9; this.runeAt = 20;
+      const spots = [[1680, 540], [1790, 650], [1900, 540]], p = this.player;
+      this.heroes.filter(h => h.team === 1).forEach((h, i) => {
+        h.brain = null; h.human = true; h.dummy = true; h.name = 'Dummy ' + (i + 1);
+        h.x = spots[i][0]; h.y = spots[i][1]; h.spawn = { x: h.x, y: h.y };
+      });
+      if (this.practice.max) { p.level = p.points = MAX_LEVEL; p.xp = 0; }
+      for (const h of this.heroes) if (h.dummy) { h.level = p.level; h.recalc(); h.hp = h.maxHp; }
+      p.recalc(); p.hp = p.maxHp;
+      if (this.practice.gold) p.gold = 99999;
+    }
+    practiceTick() {
+      const p = this.player, o = this.practice;
+      if (o.cd) { p.skillCd = [0, 0, 0]; p.spellCd = 0; }
+      if (o.gold) p.gold = 99999;
+      for (const h of this.heroes) if (h.dummy && h.alive && this.t - (h.lastHurt || -9) > 4) { h.hp = h.maxHp; h.shield = 0; h.slowT = 0; h.stunT = 0; }
     }
 
     // Two ways to build a match:
@@ -459,8 +485,9 @@
       this.updateProjs(dt);
       this.updateZones(dt);
       this.fountainTick(dt);
+      if (this.practice) this.practiceTick();
       this.units = this.units.filter(u => u.alive || u.kind === 'hero' || isStructure(u) || (u.deadT += dt) < 0.6);
-      if (this.t > 900 && !this.over) this.timeoutEnd();
+      if (this.t > 900 && !this.over && !this.practice) this.timeoutEnd();
     }
 
     timers(dt) {
@@ -468,6 +495,9 @@
       for (const c of this.camps) if (!c.unit && this.t >= c.respawnAt) this.spawnCamp(c);
       if (!this.shard && this.t >= this.shardAt) this.spawnShard();
       if (!this.wyrm && this.t >= this.wyrmAt) this.spawnWyrm();
+      if (this.t >= this.runeAt) this.spawnRunes();
+      if (this.t >= this.goldAt) { this.goldAt += 15; this.goldLine.push([Math.round(this.t), ...[0, 1].map(tm => Math.round(this.heroes.reduce((a, h) => a + (h.team === tm ? h.goldEarned : 0), 0)))]); }
+      if (this.runes.length) this.runePickups();
       if (!this.overcharged && this.t >= this.overchargeAt) { this.overcharged = true; this.announce('Shards Overcharged', 2, 'Minions are empowered'); }
       for (const h of this.heroes) { this.addGold(h, 3.2 * dt, true); if (h.alive) this.giveXp(h, 2 * dt); }
       if (this.later_.length) {
@@ -581,6 +611,38 @@
       this.announce('The Abyssal Wyrm rises', 2, 'Slay it and your team cheats death once');
     }
 
+    // River power-ups: fill any empty spot with a random shard, then again in 90 seconds.
+    spawnRunes() {
+      this.runeAt = this.t + 90;
+      const ids = Object.keys(SF.RUNES);
+      let n = 0;
+      for (const s of SF.RUNE_SPOTS) {
+        if (this.runes.some(r => r.x === s.x && r.y === s.y)) continue;
+        this.runes.push({ id: this.runeId++, x: s.x, y: s.y, type: ids[Math.floor(Math.random() * ids.length)], at: this.t });
+        n++;
+      }
+      if (n) this.announce('Power Shards in the river', 2, 'Walk over one to take it');
+    }
+    runePickups() {
+      for (const r of this.runes) {
+        const h = this.heroes.find(x => x.alive && d2(x, r) < 48 * 48);
+        if (h) this.takeRune(h, r);
+      }
+      this.runes = this.runes.filter(r => !r.taken);
+    }
+    takeRune(h, r) {
+      r.taken = true;
+      const R = SF.RUNES[r.type];
+      if (r.type === 'haste') h.addBuff({ id: 'haste', t: 20, msMul: 0.3, label: 'Haste' });
+      else if (r.type === 'renewal') this.heal(h, h.maxHp * 0.35);
+      else if (r.type === 'bulwark') this.shieldUnit(h, h.maxHp * 0.2, 20);
+      else if (r.type === 'fury') h.addBuff({ id: 'fury', t: 20, dmgMul: 0.15, label: 'Fury' });
+      this.ring(r.x, r.y, 70, R.color, 0.5, 5); this.burst(r.x, r.y - 20, R.color, 18, 200);
+      this.feed.unshift({ msg: `took a ${R.name}`, from: h, team: h.team, t: this.t });
+      this.feed.length = Math.min(this.feed.length, 5);
+      this.emit('rune', h, r.type);
+    }
+
     // ---- visibility (bushes, invisibility) ---------------------------------
     bushAt(u) {
       for (let i = 0; i < this.bushes.length; i++) {
@@ -647,6 +709,7 @@
       return best;
     }
     towerAI(u, dt) {
+      if (this.practice) { u.target = null; return; }   // towers stand down in the Training Grounds
       u.think = (u.think || 0) - dt;
       if (u.think > 0) return;
       u.think = 0.25;
@@ -806,7 +869,7 @@
     passiveAttack(u, t, dmg, opt) {
       switch (u.def0.passive.id) {
         case 'kindling':   // Kaida: 2 stacks from skill hits -> an erupting, healing attack
-          if (u.pstack >= 2) { dmg *= 1.6; u.pstack = 0; this.heal(u, u.maxHp * 0.08); this.burst(t.x, t.y, '#ff8a3d', 18, 240); this.ring(t.x, t.y, 70, '#ffb347', 0.3, 5); }
+          if (u.pstack >= 2) { dmg *= 1.6; u.pstack = 0; this.heal(u, u.maxHp * 0.08, false, u); this.burst(t.x, t.y, '#ff8a3d', 18, 240); this.ring(t.x, t.y, 70, '#ffb347', 0.3, 5); }
           break;
         case 'galewind':   // Sylva: every 4th attack
           u.pstack = (u.pstack || 0) + 1;
@@ -823,7 +886,7 @@
           if (u.dawnT > this.t) break;
           let best = null;
           for (const a of this.heroes) if (a.alive && a.team === u.team && a.hpPct < 1 && d2(a, u) < 600 * 600 && (!best || a.hpPct < best.hpPct)) best = a;
-          if (best) { this.heal(best, best.maxHp * 0.04); this.beam(u, best, '#fff3b0'); this.burst(best.x, best.y - 20, '#fff3b0', 8, 120); u.dawnT = this.t + 6; }
+          if (best) { this.heal(best, best.maxHp * 0.04, false, u); this.beam(u, best, '#fff3b0'); this.burst(best.x, best.y - 20, '#fff3b0', 8, 120); u.dawnT = this.t + 6; }
           break;
         }
       }
@@ -837,7 +900,7 @@
         if (id === 'undertow') { if (t.soakT > this.t && t.soakBy === src) amt *= 1.2; t.soakT = this.t + 3; t.soakBy = src; }
         if (id === 'overcharge') {
           src.pstack = Math.min(3, (src.pstack || 0) + 1);
-          if (src.pstack >= 3 && !(src.ochT > this.t)) { this.stun(t, 0.6); src.pstack = 0; src.ochT = this.t + 4; this.bolt(t.x, t.y, '#d9b8ff'); }
+          if (src.pstack >= 3 && !(src.ochT > this.t)) { this.stun(t, 0.6); src.pstack = 0; src.ochT = this.t + 5; this.bolt(t.x, t.y, '#d9b8ff'); }
         }
       }
       // Tidewall (Oska): allies near an Oska take less damage from heroes.
@@ -953,7 +1016,7 @@
         case 'mend':
           for (const a of this.heroes) {
             if (!a.alive || a.team !== h.team || d2(a, h) > 520 * 520) continue;
-            this.heal(a, a.maxHp * 0.15);
+            this.heal(a, a.maxHp * 0.15, false, h);
             a.addBuff({ id: 'mend', t: 2, msMul: 0.2 });
             this.burst(a.x, a.y - 20, '#7dffa0', 12, 140);
           }
@@ -969,7 +1032,7 @@
           this.fx.push({ type: 'lightning', x: t.x, y: t.y, color: id === 'smite' ? '#ffe27a' : '#c8a2ff', dur: 0.35, t: 0 });
           this.burst(t.x, t.y, id === 'smite' ? '#ffe27a' : '#c8a2ff', 18, 240);
           this.applyDamage(h, t, SF.spellDamage(id, h, t), { true: true, skill: true });
-          if (id === 'smite') this.heal(h, h.maxHp * 0.05);
+          if (id === 'smite') this.heal(h, h.maxHp * 0.05, false, h);
           h.face = norm(t.x - h.x, t.y - h.y);
           if (t.kind === 'hero') { h.revealT = this.t + 1; h.invisT = 0; }
           break;
@@ -1076,7 +1139,12 @@
         this.ring(t.x, t.y, 80, '#c9b27a', 0.5, 5); this.burst(t.x, t.y - 30, '#e8d9a8', 16, 160);
       }
       if (t.shield > 0) { const s = Math.min(t.shield, amt); t.shield -= s; amt -= s; }
-      if (t.kind === 'hero' && amt > 0) this.took(t, src, Math.min(amt, t.hp), o.true ? 'true' : o.skill ? 'skill' : 'basic');   // overkill doesn't count
+      const dealt = Math.max(0, Math.min(amt, t.hp));   // overkill doesn't count in stats or the recap
+      if (t.kind === 'hero' && amt > 0) {
+        this.took(t, src, dealt, o.true ? 'true' : o.skill ? 'skill' : 'basic');
+        t.dmgTaken = (t.dmgTaken || 0) + dealt;
+        if (src && src.kind === 'hero') src.heroDmg = (src.heroDmg || 0) + dealt;
+      }
       t.hp -= amt; t.flash = 0.1;
       if (src && src.kind === 'hero') {
         src.dmgDealt += amt;
@@ -1096,6 +1164,7 @@
     }
     // Death recap: damage each hero took over the last few seconds, grouped by who dealt it.
     took(t, src, amt, kind) {
+      t.lastHurt = this.t;
       const log = t.taken || (t.taken = []);
       log.push({ at: this.t, src, amt, kind });
       while (log.length && log[0].at < this.t - 12) log.shift();
@@ -1181,7 +1250,7 @@
         if (t.kind === 'core') this.end(team);
         else this.announce(t.team === 0 ? 'Your tower has fallen' : 'Enemy tower destroyed', team);
       } else if (t.kind === 'hero') {
-        t.dth++; t.respawnT = (6 + t.level * 2 + Math.min(10, this.t / 60)) * this.respawnMul; t.recallT = 0; t.buffs = []; t.shield = 0; t.slowT = 0; t.stunT = 0; t.invisT = 0;
+        t.dth++; t.respawnT = this.practice ? 2 : (6 + t.level * 2 + Math.min(10, this.t / 60)) * this.respawnMul; t.recallT = 0; t.buffs = []; t.shield = 0; t.slowT = 0; t.stunT = 0; t.invisT = 0;
         const shutdown = t.streak >= 3;
         const bounty = 220 + (shutdown ? 50 * Math.min(6, t.streak) : 0);
         t.streak = 0;
@@ -1232,9 +1301,11 @@
     slow(u, amt, dur) { if (isStructure(u) || u.ccImmune > 0) return; if (u.slowT <= 0 || amt >= u.slowAmt) u.slowAmt = amt; u.slowT = Math.max(u.slowT, dur); }
     stun(u, dur) { if (isStructure(u) || u.stunImmune > 0 || u.ccImmune > 0) return; u.stunT = Math.max(u.stunT, dur); if (u.kind === 'hero') u.recallT = 0; }
     shieldUnit(u, amt, dur) { u.shield += amt; u.shieldT = Math.max(u.shieldT, dur); }
-    heal(u, amt, quiet) {
+    // src: the hero doing the healing, for the post-match healing stat.
+    heal(u, amt, quiet, src) {
       if (u.witherT > this.t) amt *= 0.5;   // Witherblade
       const before = u.hp; u.hp = Math.min(u.maxHp, u.hp + amt);
+      if (src && src.kind === 'hero') src.healed = (src.healed || 0) + (u.hp - before);
       if (!quiet && u === this.player && u.hp - before >= 1) this.float(u.x, u.y - 50, '+' + Math.round(u.hp - before), '#7dffa0', 1);
     }
     knockback(u, dir, d) { if (isStructure(u)) return; u.knock = { vx: dir.x * d / 0.22, vy: dir.y * d / 0.22, t: 0.22 }; }
@@ -1415,11 +1486,14 @@
       const rows = this.heroes.map(h => ({
         name: h.name, hero: h.def0.name, heroId: h.def0.id, skin: h.skin, team: h.team, isPlayer: h.isPlayer, pid: h.pid, human: !!h.human,
         k: h.k, d: h.dth, a: h.ast, multi: h.bestMulti || 0, gold: Math.round(h.goldEarned), dmg: Math.round(h.dmgDealt), level: h.level, towers: h.towers,
+        hd: Math.round(h.heroDmg || 0), tk: Math.round(h.dmgTaken || 0), hl: Math.round(h.healed || 0),
         score: h.k * 3 + h.ast * 2 - h.dth * 1.5 + h.dmgDealt / 1500 + h.towers * 2 + h.goldEarned / 1200
       }));
       const winners = rows.filter(r => r.team === this.winner);
       const mvp = winners.reduce((a, r) => (!a || r.score > a.score ? r : a), null);
-      return { winner: this.winner, won: this.winner === 0, time: this.t, kills: this.kills.slice(), rows, mvp, teamStats: this.teamStats };
+      const g0 = rows.reduce((a, r) => a + (r.team === 0 ? r.gold : 0), 0), g1 = rows.reduce((a, r) => a + (r.team === 1 ? r.gold : 0), 0);
+      const goldLine = this.goldLine.concat([[Math.round(this.t), g0, g1]]);
+      return { winner: this.winner, won: this.winner === 0, time: this.t, kills: this.kills.slice(), rows, mvp, teamStats: this.teamStats, goldLine };
     }
   }
 
@@ -1468,6 +1542,11 @@
         if (their > my * 1.2) { h.target = null; const s = m.frontStructure(h.team); h.want = { x: s.x - (h.team === 0 ? 1 : -1) * 60, y: s.y + this.yo * 0.5 }; return; }
       }
 
+      // A Power Shard close by is worth the detour (Renewal especially when hurt).
+      if (m.runes.length && hp > 0.25 && !this.jungler) {
+        const r = m.runes.find(q => d2(q, h) < (q.type === 'renewal' && hp < 0.6 ? 900 : 620) ** 2 && !foes.some(e => d2(e, q) < d2(h, q)));
+        if (r) { h.target = null; h.want = { x: r.x, y: r.y }; return; }
+      }
       // Objectives: the Colossus, and the tougher Wyrm (only with the whole team up and healthy).
       const up = m.heroes.filter(x => x.alive && x.team === h.team).length;
       const sh = m.shard, wy = m.wyrm;
