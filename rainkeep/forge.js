@@ -53,7 +53,11 @@
     for (const [r, n] of Object.entries(F.input)) S.res[r] -= n * want;
     S.forge.acc += want;
     const whole = Math.floor(S.forge.acc);
-    if (whole > 0) { S.sunsteel += whole; S.forge.acc -= whole; S.stats.smelted += whole; if (log) log.sunsteel = (log.sunsteel || 0) + whole; }
+    if (whole > 0) {
+      S.sunsteel += whole; S.forge.acc -= whole; S.stats.smelted += whole;
+      if (log) log.sunsteel = (log.sunsteel || 0) + whole;
+      if (!offline) KH.emit('smelted', { n: whole });
+    }
   });
 
   ACT.forgetoggle = () => {

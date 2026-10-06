@@ -830,7 +830,8 @@ const DATA = {
   // ---------- Timed events (rotate in game time) ----------
   events: {
     length: 1200,
-    rotation: ['rainfest', 'hunt', 'builder', 'oasis'],
+    rotation: ['rainfest', 'hunt', 'forgefest', 'builder', 'spirerush', 'oasis'],
+    rotation21: ['rainfest', 'hunt', 'builder', 'oasis'], // the 2.x rotation, for events already running in older saves
     defs: {
       rainfest: { name: 'Rain Festival', desc: 'Keep the Rainwyrm misting. Every second it breathes earns a point, two in a Downpour.',
         tiers: [[300, { water: 1 }], [700, { speed15: 1 }], [1100, { beacons: 1 }], [1500, { starglass: 150 }]] },
@@ -838,6 +839,12 @@ const DATA = {
         tiers: [[60, { journals: 1 }], [180, { speed15: 1 }], [350, { beacons: 1 }], [600, { starglass: 150 }]] },
       builder: { name: "Builder's Rush", desc: 'Finished upgrades earn 10 points per level, research 5 per level, and every 10 troops trained 1 point.',
         tiers: [[60, { stone: 1 }], [160, { speed15: 1 }], [300, { beacons: 1 }], [480, { starglass: 150 }]] },
+      forgefest: { name: 'Forge Festival', needs: (S) => S.lv.forge > 0, fallback: 'builder',
+        desc: 'Keep the forges roaring. Each piece of gear forged earns 25 points, every 2 Sunsteel smelted or gathered earns 1, and each Saltborn Hive you shatter earns 80.',
+        tiers: [[80, { sunsteel_cache: 1 }], [250, { speed15: 1 }], [500, { beacons: 1 }], [800, { starglass: 150, sunsteel_cache: 1 }]] },
+      spirerush: { name: 'Spire Rush', needs: (S) => S.stage >= DATA.spire.unlockStage, fallback: 'hunt',
+        desc: 'Climb and duel. Each Mirage Spire floor cleared earns 40 points, each Dune Duel won 25 and each duel lost 8.',
+        tiers: [[60, { journals: 1 }], [160, { speed15: 1 }], [320, { beacons: 1 }], [520, { starglass: 150 }]] },
       oasis: { name: 'Oasis Wars', desc: 'Everything you do earns points. Climb your bracket against nine rival keeps. Brackets are matched by spending, so spenders face spenders.',
         tiers: [[200, { journals: 1 }], [600, { speed15: 1 }], [1200, { beacons: 1 }]],
         ranks: [[1, { starglass: 400, beacons: 3 }], [3, { starglass: 250, beacons: 2 }], [6, { starglass: 120, beacons: 1 }], [10, { starglass: 60 }]] },

@@ -279,7 +279,13 @@
   // ======================================================================
   const EV = DATA.events;
   const cycle = () => Math.floor(S.time / EV.length);
-  const evKey = (idx) => EV.rotation[((idx % EV.rotation.length) + EV.rotation.length) % EV.rotation.length];
+  // the event for a cycle; an event whose system is still locked (no Forge yet, no Spire yet) gives way to its fallback
+  const evKey = (idx) => {
+    const id = EV.rotation[((idx % EV.rotation.length) + EV.rotation.length) % EV.rotation.length], d = EV.defs[id];
+    return d.needs && !d.needs(S) ? d.fallback : id;
+  };
+  // the running event is pinned when it starts, so it can't change underneath you
+  const curKey = () => S.ev.id || evKey(S.ev.idx);
   const bracket = () => (S.spentUsd >= 50 ? 'Patron' : S.spentUsd > 0 ? 'Supporter' : 'Free');
   function makeRivals() {
     const L = S.lv.wyrm;
@@ -299,7 +305,7 @@
   }
   const scaled = (g) => KH.scaleReward(g);
   function endEvent() {
-    const def = EV.defs[evKey(S.ev.idx)];
+    const def = EV.defs[curKey()];
     const missed = {};
     def.tiers.forEach(([p, g], i) => {
       if (S.ev.pts >= p && !S.ev.claimed.includes(i)) for (const [k, v] of Object.entries(scaled(g))) missed[k] = (missed[k] || 0) + v;
@@ -318,30 +324,36 @@
     if (S.ev.idx === c) return;
     const first = S.ev.idx < 0;
     if (!first && S.ev.idx < c) endEvent();
-    S.ev = { idx: c, start: c * EV.length, pts: 0, claimed: [], rivals: [], bracket: bracket() };
-    if (evKey(c) === 'oasis') S.ev.rivals = makeRivals();
-    if (!offline && !first) KH.toast(`New event: ${EV.defs[evKey(c)].name}.`, 'good', 'event', 5);
+    S.ev = { idx: c, id: evKey(c), start: c * EV.length, pts: 0, claimed: [], rivals: [], bracket: bracket() };
+    if (S.ev.id === 'oasis') S.ev.rivals = makeRivals();
+    if (!offline && !first) KH.toast(`New event: ${EV.defs[S.ev.id].name}.`, 'good', 'event', 5);
   }
-  const addPts = (key, n) => { if (S && S.ev.idx === cycle() && evKey(S.ev.idx) === key) S.ev.pts += n; };
+  // an event already running in a 2.x save keeps the event it started as
+  KH.hooks.boot.push(() => { if (S.ev && S.ev.idx >= 0 && !S.ev.id) S.ev.id = EV.rotation21[S.ev.idx % EV.rotation21.length]; });
+  const addPts = (key, n) => { if (S && S.ev.idx === cycle() && curKey() === key) S.ev.pts += n; };
   const TP = EV.warPoints;
   KH.on('mist', (e) => addPts('rainfest', e.seconds * (e.high ? 2 : 1)));
   KH.on('rain', (e) => { addPts('rainfest', 2 * e.duration); addPts('oasis', 40); });
   KH.on('incidentDone', () => addPts('oasis', 30));
   KH.on('duel', (e) => { if (e.win) addPts('oasis', 40); });
   KH.on('spire', (e) => { if (e.win) addPts('oasis', 50); });
-  KH.on('gear', () => addPts('builder', 6));
+  KH.on('gear', () => { addPts('builder', 6); addPts('forgefest', 25); });
+  KH.on('smelted', (e) => addPts('forgefest', e.n / 2));
+  KH.on('hiveDestroyed', () => { addPts('forgefest', 80); addPts('oasis', 60); });
+  KH.on('spire', (e) => { if (e.win) addPts('spirerush', 40); });
+  KH.on('duel', (e) => addPts('spirerush', e.win ? 25 : 8));
   KH.on('beast', (e) => { addPts('hunt', 10 * e.lvl); addPts('oasis', TP.beast * e.lvl); });
   KH.on('upgrade', (e) => { addPts('builder', 10 * e.to); addPts('oasis', TP.upgrade * e.to); });
   KH.on('research', (e) => { addPts('builder', 5 * e.to); addPts('oasis', TP.research * e.to); });
   KH.on('train', (e) => { addPts('builder', e.n / 10); addPts('oasis', TP.train * e.n); });
   KH.on('stage', () => addPts('oasis', TP.stage));
   KH.on('pull', (e) => addPts('oasis', TP.pull * e.n));
-  KH.on('gatherDone', (e) => addPts('oasis', (TP.gather * e.amount) / 100));
+  KH.on('gatherDone', (e) => { addPts('oasis', (TP.gather * e.amount) / 100); if (e.res === 'sunsteel') addPts('forgefest', e.amount / 2); });
   KH.on('raidRepelled', () => addPts('oasis', TP.raid));
   KH.on('campDestroyed', (e) => addPts('oasis', 40 * e.lvl));
   ACT.evclaim = (i) => {
     i = Number(i);
-    const def = EV.defs[evKey(S.ev.idx)];
+    const def = EV.defs[curKey()];
     const t = def.tiers[i];
     if (!t || S.ev.pts < t[0] || S.ev.claimed.includes(i)) return;
     S.ev.claimed.push(i);
@@ -349,9 +361,9 @@
     KH.toast(`${def.name} reward collected.`, 'good');
     KH.sfx('claim');
   };
-  const evReady = () => S.ev.idx >= 0 && EV.defs[evKey(S.ev.idx)].tiers.some(([p], i) => S.ev.pts >= p && !S.ev.claimed.includes(i));
+  const evReady = () => S.ev.idx >= 0 && EV.defs[curKey()].tiers.some(([p], i) => S.ev.pts >= p && !S.ev.claimed.includes(i));
   KH.sheets.events = () => {
-    const key = evKey(S.ev.idx), def = EV.defs[key];
+    const key = curKey(), def = EV.defs[key];
     const left = S.ev.start + EV.length - S.time;
     const max = def.tiers[def.tiers.length - 1][0];
     const tiers = def.tiers.map(([p, g], i) => {
