@@ -492,6 +492,7 @@ export class Run {
     this.input.update();
     if (this.ui && this.ui.wantsNova) { this.ui.wantsNova = false; this.triggerNova(); }
     if (this.input.keys.has('Space')) { this.input.keys.delete('Space'); this.triggerNova(); }
+    if (this.profile.settings.autoNova && this.nova >= 1 && this.legion.count >= 50) this.triggerNova(); // accessibility: Auto-Nova
 
     if (dt > 0) {
       this.time += dt;
@@ -524,8 +525,9 @@ export class Run {
     // camera
     const want = this.desiredCam();
     this.camPos.lerp(want, 1 - Math.exp(-realDt * 6));
-    this.camera.position.set(this.camPos.x + this.fx.shakeX, this.camPos.y, this.camPos.z + this.fx.shakeZ);
-    this.camera.lookAt(this.camTarget.x + this.fx.shakeX * 0.5, 0, this.camTarget.z + this.fx.shakeZ * 0.5);
+    const sk = this.profile.settings.shake ?? 1, sx = this.fx.shakeX * sk, sz = this.fx.shakeZ * sk;
+    this.camera.position.set(this.camPos.x + sx, this.camPos.y, this.camPos.z + sz);
+    this.camera.lookAt(this.camTarget.x + sx * 0.5, 0, this.camTarget.z + sz * 0.5);
 
     this.render(dt);
     if (this.ui) this.ui.update(this, realDt);

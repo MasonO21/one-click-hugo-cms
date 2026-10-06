@@ -14,7 +14,7 @@ export class RunUI {
     this.wantsNova = false;
     this.rerolled = false;
     const color = '#' + run.heroColorObj.getHexString();
-    this.el = h(`<div class="hud pass-through" style="--lc:${color}">
+    this.el = h(`<div class="hud pass-through ${app.profile.settings.lefty ? 'lefty' : ''}" style="--lc:${color}">
       <div class="hud-top pass-through">
         <div class="hud-row">
           <button class="hud-pause" aria-label="Pause">${icon('pause')}</button>

@@ -164,6 +164,19 @@ errs = await session(async (page) => {
 });
 check('run systems: no runtime errors', !errs.length, errs[0] || '');
 
+// 7. Accessibility: Auto-Nova, left-handed HUD, reduced flashes
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, st = app.profile.settings;
+    Object.assign(st, { autoNova: true, lefty: true, reduceFlash: true, shake: 0 }); app.applySettings(); app.engine.manual = true;
+    app.startRun(1); const r = app.run; r.player.hurt = () => {};
+    r.legion.addMany(60, r.player.x, r.player.z); r.nova = 1; app.engine.step(1 / 30);
+    return { novas: r.counters.novas, lefty: app.runUI.el.classList.contains('lefty'), flash: app.engine.post.uFlash.value.w };
+  });
+  check('accessibility: auto-nova, left-handed, reduced flashes', s.novas === 1 && s.lefty && s.flash <= 0.2, JSON.stringify(s));
+});
+check('accessibility: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
