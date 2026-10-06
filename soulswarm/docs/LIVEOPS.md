@@ -2,7 +2,7 @@
 
 **Status:** v1.0 · **Owner:** Live Ops Producer + Lead Game Designer · **Source of truth:** `DESIGN_BRIEF.md`
 **Assumed global launch:** Monday 14 June 2027 (see `PRODUCTION_ROADMAP.md`). If launch moves, the calendar shifts with it. Seasons are always 28 days and always start on a Monday at 00:00 UTC.
-**Implementation status:** this whole plan is **Planned**. The prototype build has the daily layer only (6 daily quests, the 7-day login, energy, rewarded-ad placements), one Soul Pass season ("Season I: The Waking Legion" in `data.js`) and the Soul Pact. Blood Moon, Boss Rush, Endless Abyss, holiday events, the weekly quest chest, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
+**Implementation status:** this whole plan is **Planned**. The prototype build has the daily layer only (6 rotating daily quests, the 7-day login, the Daily Trial, energy, rewarded-ad placements), one Soul Pass season ("Season I: The Waking Legion" in `data.js`) and the Soul Pact. Blood Moon, Boss Rush, Endless Abyss, holiday events, the weekly quest chest, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
 
 ---
 

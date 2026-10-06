@@ -55,7 +55,7 @@ Everything below describes the build unless it is marked **Planned**.
 
 **Run.** 0:00–6:00 survival with rising density, 9 Soul Gate pairs (0:28, then every 40 s), 6 swarm rings, 4 elites (1:15, 2:30, 3:45, 4:50) and roughly 21 level-ups (about Lv22, §9), then Gravemaw at 6:00. A full clear is 6:00 plus the boss fight. A failed run usually ends between 2:30 and 5:00.
 
-**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quest set: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Finish 2 runs.
+**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quests rotate: "Finish 2 runs" every day plus 5 drawn by date from a pool of 11: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Open 2 Relic Chests · Slay 3 elites · Lead a legion of 100, and after the first Chapter 1 clear also Evolve a weapon · Defeat Gravemaw · Clear the Daily Trial. Rewards belong to the 5 slots (in order: 20 gems · 1,500 gold · 15 gems · 1,200 gold · 1 sigil, each with pass XP), so the daily value never changes.
 
 | Daily quest reward | Gems | Gold | Sigils | Pass XP |
 |---|---|---|---|---|

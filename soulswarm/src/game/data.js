@@ -279,13 +279,24 @@ export function passReward(tier, premium) {
 }
 
 // ---------------------------------------------------------------- Daily quests & login
-export const QUESTS = [
-  { id: 'kill',  text: 'Slay 500 enemies',        key: 'kills',  goal: 500, rewards: { gems: 20, passXp: 40 } },
-  { id: 'raise', text: 'Raise 150 souls',         key: 'raised', goal: 150, rewards: { gold: 1500, passXp: 40 } },
-  { id: 'surv',  text: 'Survive 4 minutes',       key: 'survive',goal: 240, rewards: { gems: 15, passXp: 30 } },
-  { id: 'nova',  text: 'Unleash Soul Nova 3×',    key: 'novas',  goal: 3,   rewards: { gold: 1200, passXp: 30 } },
-  { id: 'gate',  text: 'Pass 3 Soul Gates',       key: 'gates',  goal: 3,   rewards: { sigils: 1, passXp: 30 } },
-  { id: 'runs',  text: 'Finish 2 runs',           key: 'runs',   goal: 2,   rewards: { gems: 25, passXp: 50 } },
+// Daily quests: "Finish 2 runs" every day, plus 5 drawn from the pool by date. Rewards belong to the slot, not the quest,
+// so the daily value never changes (60 gems, 2,700 gold, 1 sigil, 220 pass XP). `late` quests need a Chapter 1 clear.
+export const QUEST_DAILY = { id: 'runs', text: 'Finish 2 runs', key: 'runs', goal: 2, rewards: { gems: 25, passXp: 50 } };
+export const QUEST_SLOTS = [
+  { gems: 20, passXp: 40 }, { gold: 1500, passXp: 40 }, { gems: 15, passXp: 30 }, { gold: 1200, passXp: 30 }, { sigils: 1, passXp: 30 },
+];
+export const QUEST_POOL = [
+  { id: 'kill',   text: 'Slay 500 enemies',        key: 'kills',   goal: 500 },
+  { id: 'raise',  text: 'Raise 150 souls',         key: 'raised',  goal: 150 },
+  { id: 'surv',   text: 'Survive 4 minutes',       key: 'survive', goal: 240 },
+  { id: 'nova',   text: 'Unleash Soul Nova 3×',    key: 'novas',   goal: 3 },
+  { id: 'gate',   text: 'Pass 3 Soul Gates',       key: 'gates',   goal: 3 },
+  { id: 'chest',  text: 'Open 2 Relic Chests',     key: 'chests',  goal: 2 },
+  { id: 'elite',  text: 'Slay 3 elites',           key: 'elites',  goal: 3 },
+  { id: 'legion', text: 'Lead a legion of 100',    key: 'peak',    goal: 100 },
+  { id: 'evolve', text: 'Evolve a weapon',         key: 'evolve',  goal: 1, late: true },
+  { id: 'boss',   text: 'Defeat Gravemaw',         key: 'bosses',  goal: 1, late: true },
+  { id: 'trial',  text: 'Clear the Daily Trial',   key: 'trial',   goal: 1, late: true },
 ];
 export const LOGIN_REWARDS = [
   { gold: 2000 }, { gems: 30 }, { sigils: 1 }, { gold: 5000 }, { gems: 50 }, { sigils: 2 }, { gems: 100, relic: 'epic+' },

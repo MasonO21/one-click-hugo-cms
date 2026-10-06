@@ -434,6 +434,26 @@ errs = await session(async (page) => {
 });
 check('trial: no runtime errors', !errs.length, errs[0] || '');
 
+// 12. Daily quests rotate: 5 from the pool (seeded by date) plus "Finish 2 runs"; rewards stay with the slot
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const eco = await import('/src/meta/economy.js');
+    const p = window.__soulswarm.profile;
+    const fresh = eco.pickQuests(p, '2026-10-06');
+    p.chapter.unlocked = 3;
+    const a = eco.pickQuests(p, '2026-10-06'), b = eco.pickQuests(p, '2026-10-06');
+    const days = new Set(); for (let d = 1; d <= 28; d++) for (const id of eco.pickQuests(p, `2026-11-${String(d).padStart(2, '0')}`)) days.add(id);
+    p.quests = { day: p.quests.day, progress: {}, claimed: [], ids: ['chest', 'elite', 'legion', 'boss', 'evolve'] };
+    eco.applyRunResult(p, { chapter: 1, time: 380, kills: 2200, raised: 300, bestLegion: 140, novas: 6, gates: 9, victory: true, level: 22, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, chests: 4, elites: 4, evolutions: 1 });
+    const list = eco.questList(p);
+    return { n: list.length, freshLate: fresh.some((id) => ['evolve', 'boss', 'trial'].includes(id)), same: a.join() === b.join(), unique: new Set(a).size === 5, variety: days.size,
+      done: list.filter((q) => q.done).map((q) => q.id), sigilSlot: list[4].rewards.sigils === 1, runs: list[5].id === 'runs' };
+  });
+  check('quests: 6 a day, seeded, varied, late quests gated', s.n === 6 && !s.freshLate && s.same && s.unique && s.variety >= 10 && s.sigilSlot && s.runs, JSON.stringify(s));
+  check('quests: new keys track chests, elites, peak legion, Gravemaw, evolutions', ['chest', 'elite', 'legion', 'boss', 'evolve'].every((id) => s.done.includes(id)), JSON.stringify(s.done));
+});
+check('quests: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

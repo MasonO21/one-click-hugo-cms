@@ -4,7 +4,7 @@ import {
   HEROES, HERO_ORDER, HERO_UNLOCK_SHARDS, HERO_STAR_COST, HERO_MAX_STARS, heroStarBonus,
   RELICS, RELIC_TYPES, RELIC_SLOTS, relicValue, RARITIES,
   TALENTS, talentCost, SKUS, GEM_SHOP, ALTAR, PASS_TIERS, PASS_XP_PER_TIER, passReward,
-  QUESTS, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS,
+  QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS,
 } from '../game/data.js';
 import { saveProfile, todayKey } from './save.js';
 
@@ -34,7 +34,7 @@ export function upkeep(p) {
   }
   // daily quest reset
   const today = todayKey();
-  if (p.quests.day !== today) p.quests = { day: today, progress: {}, claimed: [] };
+  if (p.quests.day !== today) p.quests = { day: today, progress: {}, claimed: [], ids: pickQuests(p, today) };
 }
 export function energyNextIn(p) {
   if (p.energy >= ENERGY_MAX) return 0;
@@ -228,8 +228,18 @@ export function questProgress(p, key, amount, mode = 'add') {
   const cur = p.quests.progress[key] || 0;
   p.quests.progress[key] = mode === 'max' ? Math.max(cur, amount) : cur + amount;
 }
+/** The day's 5 pool quests (seeded by date, so a reload never reshuffles them). */
+export function pickQuests(p, day) {
+  let h = 0; for (const ch of 'quests:' + day) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const pool = QUEST_POOL.filter((q) => !q.late || p.chapter.unlocked >= 2).map((q) => q.id);
+  const out = [];
+  while (out.length < QUEST_SLOTS.length && pool.length) { h = Math.imul(h ^ (h >>> 13), 2246822507) >>> 0; out.push(pool.splice(h % pool.length, 1)[0]); }
+  return out;
+}
 export function questList(p) {
-  return QUESTS.map((q) => {
+  if (!p.quests.ids) p.quests.ids = pickQuests(p, p.quests.day); // saves from before the rotating pool
+  const list = p.quests.ids.map((id, i) => ({ ...QUEST_POOL.find((q) => q.id === id), rewards: QUEST_SLOTS[i] })).concat(QUEST_DAILY);
+  return list.map((q) => {
     const prog = Math.min(q.goal, p.quests.progress[q.key] || 0);
     const claimed = p.quests.claimed.includes(q.id);
     return { ...q, progress: prog, done: prog >= q.goal, claimed };
@@ -395,6 +405,12 @@ export function applyRunResult(p, result) {
   questProgress(p, 'novas', result.novas);
   questProgress(p, 'gates', result.gates);
   questProgress(p, 'runs', 1);
+  questProgress(p, 'chests', result.chests || 0);
+  questProgress(p, 'elites', result.elites || 0);
+  questProgress(p, 'peak', result.bestLegion || 0, 'max');
+  questProgress(p, 'evolve', result.evolutions || 0);
+  questProgress(p, 'bosses', (result.bossKills || 0) + (result.victory && !result.endless ? 1 : 0));
+  if (trial && result.victory) questProgress(p, 'trial', 1);
 
   // account level
   let levelUps = 0;

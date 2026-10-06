@@ -77,7 +77,7 @@ export class Run {
 
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
-    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0 };
+    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0 };
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0;
     this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
     this.bonusGold = 0;
@@ -276,6 +276,7 @@ export class Run {
 
   onEnemyKilled(e, source, noRaise) {
     this.counters.kills++;
+    if (e.elite) this.counters.elites++;
     this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
     this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1));
@@ -366,6 +367,7 @@ export class Run {
     this.audio.sfx('chest');
     this.app.haptic('success');
     this.chestQueue++;
+    this.counters.chests++;
     this.showLevelUp();
   }
 
@@ -545,6 +547,7 @@ export class Run {
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
       trial: this.trial, mutators: this.mut.ids,
+      chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length,
     };
     if (this.onEnd) this.onEnd(result);
   }
