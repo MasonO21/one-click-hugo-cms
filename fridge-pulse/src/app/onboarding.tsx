@@ -35,7 +35,10 @@ const STEPS = [
 export default function Onboarding() {
   const { c, scheme } = useTheme();
   // Short phones (an iPhone SE) get a smaller picture, and the page scrolls rather than overlapping.
-  const compact = useWindowDimensions().height < 700;
+  // The shortest (the first SE) also drop the tagline, so the last step's text clears the price line.
+  const height = useWindowDimensions().height;
+  const compact = height < 700;
+  const tight = height < 620;
   const [step, setStep] = useState(0);
   const last = step === STEPS.length - 1;
   const s = STEPS[step];
@@ -71,20 +74,23 @@ export default function Onboarding() {
       <View style={styles.brand}>
         <Logo size={compact ? 48 : 64} beat="calm" />
         <Wordmark size={compact ? 28 : 32} center />
-        <Text variant="label" muted style={{ textAlign: 'center' }}>
-          Your kitchen&apos;s vital sign
-        </Text>
+        {tight ? null : (
+          <Text variant="label" muted style={{ textAlign: 'center' }}>
+            Your kitchen&apos;s vital sign
+          </Text>
+        )}
       </View>
-      <FadeIn key={step} distance={16} style={styles.hero}>
+      <FadeIn key={step} distance={16} style={[styles.hero, tight ? styles.heroTight : null]}>
         <View
           style={[
             styles.emojiWrap,
             compact ? styles.emojiWrapCompact : null,
+            tight ? styles.emojiWrapTight : null,
             { backgroundColor: c.surface, borderColor: s.ring },
             scheme === 'dark' ? glow(s.ring, 26, 0.45) : null,
           ]}
         >
-          <Emoji size={compact ? 52 : 76}>{s.emoji}</Emoji>
+          <Emoji size={tight ? 40 : compact ? 52 : 76}>{s.emoji}</Emoji>
         </View>
         <Text variant="title" style={{ textAlign: 'center' }}>
           {s.title}
@@ -102,8 +108,10 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: 'space-between' },
   brand: { alignItems: 'center', gap: 6, paddingTop: 8 },
   hero: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  heroTight: { gap: 10 },
   emojiWrap: { width: 156, height: 156, borderRadius: 78, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   emojiWrapCompact: { width: 112, height: 112, borderRadius: 56, marginBottom: 4 },
+  emojiWrapTight: { width: 88, height: 88, borderRadius: 44, marginBottom: 0 },
   footerInner: { width: '100%', maxWidth: 600, gap: 20, alignItems: 'center' },
   dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot: { height: 8, borderRadius: 4 },
