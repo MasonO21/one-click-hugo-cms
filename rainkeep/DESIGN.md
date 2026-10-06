@@ -73,7 +73,7 @@ Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burnin
 | The Dunes | Seeded 21×21 map, dust haze, gathering caravans, beasts, raider camps, 12 story ruins with choices, raids on the keep; in Act II flooded oases (twice the water), Sunsteel veins and Saltborn Hives (tougher camps that pay Sunsteel) appear on top of the Act I layout | `world.js`, `world3d.js` |
 | Caravan | 3 alliances, AI members who help timers, 5 Caravan techs, donations, points shop, gift chests, reactive chat, Colossus raid | `caravan.js` |
 | Meta | 71 chapter quests, 17 daily duties + chests, 7-day gift calendar, 40 achievements, mail, backpack, 6 rotating events including Oasis Wars (Forge Festival and Spire Rush fall back to older events until the Forge and Spire are open) | `events.js` |
-| Season pass | 30-tier free and premium Ledger with two skins | `DATA.pass` |
+| Season pass | Ledger seasons: 30 free and premium tiers per season, a new season every 8 hours of play, Season 1 with two skins and every later season a new premium skin (six so far, then Starglass), rewards that scale with the keep, unclaimed rewards by mail | `DATA.pass`, `events.js` |
 | Store | Starter offer, monthly card, pass, growth fund, daily kits, value chest, Starglass, skins, crates | `DATA.shop`, `native.js` |
 | Patron program | 10 levels from lifetime spend (100 points per $1) plus 15 points a day for visiting; production, build and research speed, free finishes, offline bank, smelting, Duel ticket slots, daily chest; no combat stats | `patron.js`, `DATA.patron` |
 | Polish | Procedural audio on a Hijaz scale, haptics, notifications, tutorial pointer, save codes, offline play, bundled fonts | `audio.js`, `native.js`, `sw.js` |
@@ -86,7 +86,7 @@ Target: match the genre's spending ladder while putting more of the spend into b
 |---|---|---|
 | Founder's Cache: Starglass, tokens, journals, **permanent second builder** | $0.99, once | Converts a free player into a payer early. The second builder is the most useful thing in the game, so this is the single most important offer |
 | Oasis Stipend: 300 Starglass now and 90 a day for 30 days | $4.99 / 30 days | Daily login habit plus recurring revenue |
-| Wellkeeper's Ledger premium track | $9.99 / season | Mid-spender anchor; capstone is a wyrm skin |
+| Wellkeeper's Ledger premium track | $9.99 / season (a season is 8 hours of play) | Mid-spender anchor and the main recurring purchase across a long game; each season's capstone is a new wyrm skin |
 | Starglass packs | $1.99 to $99.99 | Speedups, recruits, crates |
 | Wyrm skins (Oasis Jade, Obsidian Tide; Deepwater Sapphire earnable with free Starglass) | $4.99 to $6.99 | Cosmetic only, and in 3D a skin is a showpiece players see every session |
 | Growth Fund: 10,000 Starglass paid out at Rainwyrm Lv 5, 8, 10, 12, 15, 18 and 20 | $14.99, once | Commits mid-spenders to the long game; pays back only if they keep playing |
