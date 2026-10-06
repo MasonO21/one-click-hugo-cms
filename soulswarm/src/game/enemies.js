@@ -366,12 +366,14 @@ export class Enemies {
       e.kx += (o.kx / l) * k; e.kz += (o.kz / l) * k;
     }
     const run = this.run;
-    if (!o.silent) {
+    // the King filters his own damage (Nova at 50% and capped, immunity): show what actually landed
+    let shown = amount;
+    if (e.type === 'boss') { const before = e.hp + amount; run.boss.onHit(e); shown = before - e.hp; }
+    if (!o.silent && shown >= 0.5) {
       const y = 1.4 * e.scale + (e.type === 'boss' ? 3 : 0);
-      if (o.source === 'minion') { if (Math.random() < 0.18) run.fx.text(e.x, y, e.z, Math.round(amount), 'minion'); }
-      else run.fx.text(e.x, y, e.z, Math.round(amount), o.crit ? 'crit' : 'dmg');
+      if (o.source === 'minion') { if (Math.random() < 0.18) run.fx.text(e.x, y, e.z, Math.round(shown), 'minion'); }
+      else run.fx.text(e.x, y, e.z, Math.round(shown), o.crit ? 'crit' : 'dmg');
     }
-    if (e.type === 'boss') run.boss.onHit(e);
     if (e.hp <= 0) { this.kill(e, o.source); return true; }
     return false;
   }

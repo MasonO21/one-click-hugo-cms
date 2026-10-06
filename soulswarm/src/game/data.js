@@ -60,7 +60,42 @@ export const ENEMIES = {
              lob: { flight: 1.0, lead: 0.3, radius: 1.1, height: 3.2 } }, // gentler lead: slow movers were hit far more (+76% Ch1)
   bloater: { name: 'Bloater',      hp: 28,  speed: 2.0, dmg: 26, radius: 0.62, xp: 2, mass: 2.0, scale: 1.0, explode: { radius: 2.6, fuse: 1.0 } },
 };
-export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 9000, speed: 2.3, dmg: 22, radius: 1.9, mass: 999 };
+// HP = hp × chapter hpMul × (1 + chHp × (c − 1)) × Endless scale; damage = dmg × (1 + chDmg × (c − 1)) × √scale
+export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 12500, speed: 2.3, dmg: 22, radius: 1.9, mass: 999, chHp: 0.05, chDmg: 0.3 };
+// Gravemaw's three-phase fight (boss.js). Seconds, metres, radians; dmg values are × the King's touch damage.
+// Every damaging telegraph is >= minTele (accessibility floor) in every chapter, phase and enrage state.
+export const BOSS_PHASES = {
+  minTele: 1.0,
+  rise: 1.4,                      // rises out of the ground, immune
+  minPhase: [18, 14],             // phases I and II play at least this long; hit the tick sooner and he is warded (IMMUNE) there until then
+  arena: { radius: 18, closeTo: 12, closeTime: 4, seal: 1.2, soft: 1.1, push: 14, hard: 0.35 }, // soft: push-back zone, hard: closest approach to the wall
+  // from = HP fraction where the phase begins. speed = chase speed ×, rate = attack rate × (recoveries ÷ rate).
+  phases: [
+    { name: 'HOLLOW TREAD', sub: 'Phase I · Step between the slam rings', from: 1, speed: 1, rate: 1, slamTele: 1.2, orb: 1,
+      weights: { slam: 0.42, ring: 0.33, summon: 0.25 } },
+    { name: 'EMBER LITURGY', sub: 'Phase II · Follow the gaps as the rings turn', from: 0.66, speed: 1.15, rate: 1.25, slamTele: 1.1, orb: 1.1,
+      weights: { slam: 0.4, rings: 0.6 } },
+    { name: 'CROWN OF CINDERS', sub: 'Phase III · Circle with the spiral', from: 0.33, speed: 1.35, rate: 1.35, slamTele: 1.0, orb: 1.2,
+      weights: { slam: 0.3, rings: 0.3, spiral: 0.4 } },
+  ],
+  transition: { dur: 2, slow: 0.3, slowDur: 0.45, flash: 0.55, push: 7, pushR: 9, knockR: 9, knock: 9 }, // push: Shepherd m/s, knock: horde impulse
+  slam: { radii: [3, 6, 9], halfW: 0.65, every: 0.3, dmg: 1.4, minionDmg: 0.7, range: 13, recover: 1.9 },
+  ring: { n: 24, gaps: 2, gapSlots: 3, speed: 6, dmg: 0.6, tele: 1.0, every: 0.45, waves: 1, recover: 1.6 },
+  rings: { waves: 3, every: 0.5, turn: 0.35, recover: 1.7 }, // rotating gap rings: each wave turns its gaps by `turn`
+  spiral: { arms: 4, dur: 2.5, every: 0.09, spin: 0.75, speed: 5.5, dmg: 0.55, tele: 1.0, recover: 1.5 },
+  // Hollow aura: he sears a swarm of minions this close (× his damage per second): none below `from` in reach, full at `full`
+  aura: { r: 3.2, dps: [0, 0, 1.5], from: 12, full: 32 },
+  summon: { n: 6, r: 3.2, tele: 1.0, recover: 1.4 },
+  waves: { first: 4, every: [12, 15], size: [12, 16], arc: 2.4, tele: 1.0, minDist: 7 }, // edge waves from phase II
+  trickle: { rate: 1.2, max: [70, 45, 45], minDist: 9 }, // the whole fight, from the arena edge; max alive per phase
+  dirge: { at: 180, dmg: 1.5, rate: 1.5 }, // "Hollow Dirge" soft enrage, seconds after he rises
+  nova: { mul: 0.5, cap: 0.25 }, // Soul Nova (and soul bursts) hurt him at 50%, at most 25% of his max HP per Nova
+  // chapter twists: 2 fire rings, 3 frost shards, 4 one extra ring per volley, 5 phase III at 50%
+  fire: { life: 3, dmg: 0.35 },
+  frost: { life: 3.5, n: [4, 7, 10], r: 0.75, dmg: 0.35 },
+  extraRing: 1,
+  ch5Crown: 0.5,
+};
 export const ELITE = { hpMul: 6, scale: 1.35, dmgMul: 1.5, crown: 0xffd04a };
 
 // ---------------------------------------------------------------- Chapters

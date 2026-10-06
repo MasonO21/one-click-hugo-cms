@@ -548,6 +548,94 @@ errs = await session(async (page) => {
 });
 check('legion variants: no runtime errors', !errs.length, errs[0] || '');
 
+// 14. Gravemaw rework (src/game/boss.js): phases, immune roars, phase floor, sealed arena, edge adds, spiral,
+//    Hollow Dirge, chapter twists and the 1.0 s telegraph floor. Each run jumps straight to 6:00 in god mode.
+const BOSS_QA = `
+window.__bossRun = (ch) => {
+  const app = window.__soulswarm;
+  if (app.run) app.exitRun();
+  app.profile.chapter.unlocked = 6; app.profile.energy = 30; app.startRun(ch);
+  const r = app.run; r.player.hurt = () => {}; r.time = ch === 6 ? 299.9 : 359.9;
+  for (let i = 0; i < 150 && !(r.bossEnemy && r.boss.state !== 'enter'); i++) r.update(1 / 30);
+  return r;
+};
+window.__step = (r, sec, ix = 0, iz = 0) => { for (let i = 0; i < Math.round(sec * 30); i++) { r.input.tx = ix; r.input.tz = iz; r.update(1 / 30); } };
+window.__hit = (r, f) => { const e = r.bossEnemy; e.hp = e.maxHp * (f + 0.01); r.enemies.damage(e, e.maxHp * 0.02, { silent: true }); };`;
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(() => {
+    const r = window.__bossRun(1), b = r.boss, e = r.bossEnemy, step = (t, x, z) => window.__step(r, t, x, z);
+    const out = { up: !!e && b.phase === 0, ticks: [...document.querySelectorAll('.bossbar .ticks b')].map((t) => t.style.left).join(',') };
+    window.__hit(r, 0.6); out.heldAt = Math.round(e.hp / e.maxHp * 100); out.held = b.held && b.phase === 0; // phase I cut short: warded at the tick
+    b.phaseT = 99; step(1 / 30); out.p2 = b.phase; out.roar = b.state; out.immune = b.immune > 0;
+    const hp0 = e.hp; r.enemies.damage(e, e.maxHp * 0.2, { silent: true }); out.invulnerable = e.hp === hp0;
+    step(2.7); out.resumed = b.state !== 'roar' && b.immune <= 0 && e.hp < e.maxHp * 0.67; // 2 s of sim time, stretched by the slow-mo
+    b.phaseT = 99; window.__hit(r, 0.32); step(1 / 30); out.p3 = b.phase;
+    step(6.5); out.arenaR = Math.round(b.arena.r * 10) / 10;
+    b.force('spiral'); step(1.6); out.orbs = r.projectiles.embers.filter((o) => o.boss).length;
+    return out;
+  });
+  check('boss: phases advance at 66% and 33% (bar ticks)', s.up && s.p2 === 1 && s.p3 === 2 && s.ticks === '66%,33%', JSON.stringify(s));
+  check('boss: phase I cut short is held at the 66% tick', s.held && s.heldAt === 66, JSON.stringify(s));
+  check('boss: invulnerable during the 2 s phase roar', s.roar === 'roar' && s.immune && s.invulnerable && s.resumed, JSON.stringify(s));
+  check('boss: phase III closes the arena to 12 m', s.arenaR === 12, `r=${s.arenaR}`);
+  check('boss: phase III spiral spawns orbs', s.orbs >= 20, `orbs=${s.orbs}`);
+  const a = await page.evaluate(() => {
+    const r = window.__bossRun(1), b = r.boss, A = b.arena; let maxD = 0, outside = 0;
+    for (let i = 0; i < 240; i++) { r.input.tx = 1; r.input.tz = 0.35; r.update(1 / 30); maxD = Math.max(maxD, Math.hypot(r.player.x - A.x, r.player.z - A.z)); }
+    for (const o of r.enemies.active) if (o.active && o.type !== 'boss' && Math.hypot(o.x - A.x, o.z - A.z) > A.r + 0.5) outside++;
+    return { maxD: Math.round(maxD * 100) / 100, r: A.r, outside, adds: r.enemies.count - 1 };
+  });
+  check('boss: the sealed arena keeps the Shepherd inside', a.maxD < a.r, JSON.stringify(a));
+  check('boss: adds come from the arena edge, none outside', a.adds > 0 && a.outside === 0, JSON.stringify(a));
+  const d = await page.evaluate(() => {
+    const r = window.__bossRun(1), b = r.boss, d0 = b.dmg; b.fightT = 179.5; window.__step(r, 1);
+    return { dirge: b.dirge, mul: Math.round(b.dmg / d0 * 100) / 100, rate: b.rate, banner: document.querySelector('.banner b')?.textContent };
+  });
+  check('boss: Hollow Dirge at 3:00 (+50% damage and attack rate)', d.dirge && d.mul === 1.5 && d.rate === 1.5 && d.banner === 'HOLLOW DIRGE', JSON.stringify(d));
+  const n = await page.evaluate(() => {
+    const out = {};
+    // the slam's landing kills every minion inside outright, however tough (a Champion Bulwark stand-in)
+    let r = window.__bossRun(1), b = r.boss, P = r.player;
+    r.weapons.update = () => {};
+    const m = r.legion.raise(P.x, P.z, { kind: 'brute', elite: true }); m.hp = m.maxHp = 1e5;
+    b.force('slam'); const S = b.slamS;
+    for (let i = 0; i < 60 && S.fired < 1; i++) { m.x = P.x + 0.5; m.z = P.z; m.vx = m.vz = 0; r.update(1 / 30); }
+    r.update(1 / 30); out.slamKill = !(m.hp > 0) || !r.legion.list.includes(m);
+    // a Nova with 300 minions on him takes at most 25% of his max HP; during a phase roar it does nothing
+    r = window.__bossRun(1); b = r.boss; const e = r.bossEnemy;
+    r.weapons.update = () => {}; b.cd = 99;
+    r.legion.addMany(300, e.x, e.z); for (const q of r.legion.list) { q.x = e.x + (Math.random() - 0.5) * 3; q.z = e.z + (Math.random() - 0.5) * 3; }
+    r.nova = 1; r.triggerNova(); window.__step(r, 1.5);
+    out.novaShare = Math.round((1 - e.hp / e.maxHp) * 1000) / 1000;
+    b.phaseT = 99; window.__hit(r, 0.6); window.__step(r, 1 / 30); const hp0 = e.hp;
+    r.legion.addMany(200, e.x, e.z); r.nova = 1; r.triggerNova(); window.__step(r, 0.5);
+    out.roarNova = { state: b.state, lost: Math.round(hp0 - e.hp) };
+    return out;
+  });
+  check('boss: the slam landing kills every minion inside outright', n.slamKill, JSON.stringify(n));
+  check('boss: a Nova deals at most 25% of his max HP, nothing mid-roar', n.novaShare > 0.05 && n.novaShare <= 0.2501 && n.roarNova.state === 'roar' && n.roarNova.lost === 0, JSON.stringify(n));
+  const t = await page.evaluate(async () => {
+    const { BOSS_PHASES: B } = await import('/src/game/data.js');
+    const teles = [B.ring.tele, B.spiral.tele, B.summon.tele, B.waves.tele, ...B.phases.map((p) => p.slamTele)].map((x) => Math.max(B.minTele, x));
+    const out = { minTele: Math.min(...teles) };
+    let r = window.__bossRun(5), b = r.boss, e = r.bossEnemy;
+    out.ticks5 = [...document.querySelectorAll('.bossbar .ticks b')].map((x) => x.style.left).join(',');
+    b.phaseT = 99; window.__hit(r, 0.6); window.__step(r, 2.7); b.phaseT = 99; window.__hit(r, 0.48); window.__step(r, 1 / 30); out.ch5 = b.phase;
+    r = window.__bossRun(2); b = r.boss; b.force('slam'); window.__step(r, 2); out.fire = b.zones.filter((z) => z.kind === 'fire').length;
+    r = window.__bossRun(3); b = r.boss; b.force('slam'); window.__step(r, 2); out.frost = b.zones.filter((z) => z.kind === 'frost').length;
+    r = window.__bossRun(4); b = r.boss; b.force('ring'); out.waves4 = b.waves;
+    r = window.__bossRun(6); b = r.boss; e = r.bossEnemy; e.hp = 1; r.enemies.damage(e, 50); window.__step(r, 1.5);
+    out.endless = { kills: r.bossKills, arena: b.arena.on, ended: r.ended, spawning: !r.bossSpawned };
+    return out;
+  });
+  check('boss: no damaging telegraph under 1.0 s', t.minTele >= 1, JSON.stringify(t));
+  check('boss: chapter 5 enters phase III at 50% (bar tick)', t.ch5 === 2 && t.ticks5 === '66%,50%', JSON.stringify(t));
+  check('boss: chapter twists (Ch2 fire rings, Ch3 frost shards, Ch4 extra ring)', t.fire === 3 && t.frost === 21 && t.waves4 === 2, JSON.stringify(t));
+  check('boss: endless kill drops the arena and the run continues', t.endless.kills === 1 && !t.endless.arena && !t.endless.ended && t.endless.spawning, JSON.stringify(t.endless));
+});
+check('boss rework: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

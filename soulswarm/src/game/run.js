@@ -248,10 +248,7 @@ export class Run {
         this.gates.despawn();
         this.boss.spawn(1 + 0.6 * this.bossKills);
       }
-    } else if (!this.bossDead) {
-      this.spawnAcc += 1.2 * dt * this.chapter.rate;
-      while (this.spawnAcc >= 1) { this.spawnAcc -= 1; if (this.enemies.count < 90) this.spawnEnemy(Math.random() < 0.7 ? 'husk' : 'ghoul'); }
-    }
+    } else if (!this.bossDead) this.boss.director(dt); // boss-time adds come from the arena edge (boss.js)
   }
 
   swarmRing() {

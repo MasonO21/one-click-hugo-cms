@@ -16,6 +16,7 @@ export class Effects {
     this.white = 0;
     this.red = 0;
     this.aberr = 0;
+    this.immuneT = 0;
     this.lights = [];
     this.texts = [];
     this.waves = [];
@@ -64,7 +65,16 @@ export class Effects {
     return t;
   }
 
-  /** Floating combat text. kind: 'dmg' | 'crit' | 'minion' | 'heal' | 'gold' | 'big' */
+  /** The boss shrugged a hit off: drop the damage number just spawned at (x, z) and show a throttled IMMUNE tag instead. */
+  immune(x, z, y) {
+    const tx = this.texts[this.texts.length - 1];
+    if (tx && tx.t === 0 && tx.z === z && Math.abs(tx.x - x) < 0.25 && tx.kind !== 'immune') this.texts.pop();
+    if (this.immuneT > 0) return;
+    this.immuneT = 0.4;
+    this.text(x, y, z, 'IMMUNE', 'immune');
+  }
+
+  /** Floating combat text. kind: 'dmg' | 'crit' | 'minion' | 'heal' | 'gold' | 'big' | 'immune' */
   text(x, y, z, str, kind = 'dmg') {
     if (this.texts.length > 70) {
       if (kind === 'minion') return;
@@ -84,6 +94,7 @@ export class Effects {
     this.white = Math.max(0, this.white - realDt * 2.2);
     this.red = Math.max(0, this.red - realDt * 1.8);
     this.aberr = Math.max(0, this.aberr - realDt * 2.5);
+    this.immuneT -= realDt;
 
     for (const w of this.waves) {
       if (!w.active) continue;
@@ -144,6 +155,7 @@ export class Effects {
       else if (tx.kind === 'gold') { size = 14; fill = '#ffcf4a'; }
       else if (tx.kind === 'big') { size = 30; fill = '#e9feff'; stroke = 'rgba(0,40,60,0.95)'; }
       else if (tx.kind === 'hurt') { size = 18; fill = '#ff5a6e'; }
+      else if (tx.kind === 'immune') { size = 17; fill = '#ffd6fb'; stroke = 'rgba(58,0,52,0.95)'; }
       ctx.globalAlpha = alpha;
       ctx.font = `800 ${Math.round(size * pop)}px Oxanium, "Segoe UI", sans-serif`;
       ctx.lineWidth = 4;
