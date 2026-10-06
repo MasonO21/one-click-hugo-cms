@@ -168,13 +168,13 @@ const DATA = {
       desc: "A furnace hot enough to work the glassy metal the Sunheart left behind. It smelts sandstone and copper into Sunsteel for the Warden's Gear, and every level lets the gear climb higher.",
     },
   },
-  copperShareFrom: 4, // levels >= this also cost copper (22% of the stone cost, 16% past the end level)
+  copperShareFrom: 4, // levels >= this also cost copper (22% of the stone cost, 13% past the end level)
   lateLevel: 10, // past this level costs and timers grow more gently
   lateCostGrowth: 1.7,
   buildTimeGrowth: 1.42,
   lateTimeGrowth: 1.12,
   endLevel: 15, // Act II levels (16-20) grow more gently again
-  endCostGrowth: 1.18,
+  endCostGrowth: 1.1,
   endTimeGrowth: 1.07,
   workerSlots: (L) => 3 + L,
   workerGrowth: 0.15, // per-worker output gain per building level

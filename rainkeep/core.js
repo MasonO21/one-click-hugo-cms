@@ -286,7 +286,7 @@
       c.water = Math.max(c.water || 0, Math.round((c.stone || 0) * 0.45));
       c.food = Math.max(c.food || 0, Math.round((c.stone || 0) * 0.35));
     }
-    if (to >= DATA.copperShareFrom) c.copper = (c.copper || 0) + Math.round((c.stone || 0) * (to > DATA.endLevel ? 0.16 : 0.22));
+    if (to >= DATA.copperShareFrom) c.copper = (c.copper || 0) + Math.round((c.stone || 0) * (to > DATA.endLevel ? 0.13 : 0.22));
     return c;
   }
   const buildTime = (pid, to) => Math.round((DATA.buildings[PLOT[pid].type].time * levelCurve(DATA.buildTimeGrowth, DATA.lateTimeGrowth, to, DATA.endTimeGrowth)) / (1 + KH.bonus('build')));
