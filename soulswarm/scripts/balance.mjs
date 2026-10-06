@@ -1,6 +1,7 @@
 // Balance harness: a bot plays every chapter with the progression a typical player has on arrival
 // (talents, relics, hero stars per GDD §8) and reports clears, deaths, boss time-to-kill and damage taken.
 // usage: node scripts/balance.mjs [url] [runsPerChapter] [chapters, e.g. 1,3,5]
+//        GOD=1 ... keeps the bot alive so every run reaches Gravemaw (measures fight length)
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 
@@ -9,6 +10,7 @@ const pw = require(execSync('npm root -g').toString().trim() + '/playwright');
 const URL = process.argv[2] || 'http://localhost:5173/';
 const RUNS = +(process.argv[3] || 3);
 const CHAPTERS = (process.argv[4] || '1,2,3,4,5').split(',').map(Number);
+const GOD = process.env.GOD === '1';
 
 // What a player typically owns when they reach chapter c (talent levels are spread over Might, Vitality, Necromancy, Dominion, Swiftness).
 const PROGRESSION = {
@@ -20,7 +22,7 @@ const PROGRESSION = {
 };
 
 // Flees the horde, circle-strafes the boss, takes the better gate, picks the first card. No god mode, no revives.
-const BOT = `window.__balance = (ch, prog) => {
+const BOT = `window.__balance = (ch, prog, god) => {
   const app = window.__soulswarm, p = app.profile, E = app.engine;
   E.manual = true;
   const keys = ['might', 'vitality', 'raise', 'cap', 'swift'];
@@ -33,7 +35,7 @@ const BOT = `window.__balance = (ch, prog) => {
   p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; p.flags.tutorialDone = true;
   app.startRun(ch);
   const r = app.run; let hurt = 0; const h0 = r.player.hurt.bind(r.player);
-  r.player.hurt = (d) => { const before = r.player.hp; h0(d); hurt += Math.max(0, before - r.player.hp); };
+  r.player.hurt = (d) => { const before = r.player.hp; h0(d); hurt += Math.max(0, before - r.player.hp); if (god) r.player.hp = r.player.maxHp; };
   let bossAt = -1, peakEnemies = 0;
   for (let i = 0; i < 30 * 960 && !r.ended && !r.player.dead; i++) {
     const P = r.player; let fx = 0, fz = 0;
@@ -66,7 +68,7 @@ for (const ch of CHAPTERS) {
     await page.goto(URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2500);
     await page.evaluate(BOT);
-    const res = await page.evaluate(([c, p]) => window.__balance(c, p), [ch, PROGRESSION[ch]]);
+    const res = await page.evaluate(([c, p, g]) => window.__balance(c, p, g), [ch, PROGRESSION[ch], GOD]);
     res.errors = errors.length;
     rows.push(res);
     console.log(JSON.stringify(res));
