@@ -13,7 +13,7 @@
 
 ### Ad truthfulness policy (non-negotiable)
 
-1. Every frame of every ad comes from the shipping build (or a dev build with identical content). There is no mocked-up gameplay. The "pick the right gate" mechanic is in the game, so we can run that creative honestly.
+1. Every gameplay frame of every ad comes from the shipping build (or a dev build with identical content). There is no mocked-up gameplay. The "pick the right gate" mechanic is in the game, so we can run that creative honestly. Painted cinematic footage (`docs/ART_AND_ADS.md`) is allowed only in paid UA and only under these conditions: it carries an on-screen CINEMATIC label, it never shows a mechanic, number or feature the game lacks, and the end card says "Cinematic sequences are not actual gameplay." Store app previews stay 100% in-app capture.
 2. Every number shown is achievable in-game: legion up to the 400 ceiling, gate values from the real generator (GDD §4.3), enemies alive at once ≤ 340 (the build's high-tier cap; 200 on low, 280 on mid). Features that are still Planned (GDD §0) cannot appear in an ad until they ship. "1 vs 1,000" refers to the **kill counter** in one run, not 1,000 enemies on screen at once.
 3. Sped-up footage carries a small "Gameplay sped up" label. Debug or cheat builds are used only for *camera* control, never to show results a player cannot get.
 4. No implied odds ("I always pull Legendary!"), no real-money gambling imagery, no ads aimed at children.
@@ -155,7 +155,8 @@ All scripts are 9:16 first, with 1:1 and 16:9 cut-downs. Every script ends on th
 - 10–13 s: the legion overwhelms the remaining horde. Caption: **"Now it's 300 vs them."**
 - 13–15 s: end card.
 - **Variants:** caption "Me vs the entire graveyard"; counter in red vs cyan.
-- **In-engine render:** `scripts/record-trailer.mjs` produces Ad 1-style creatives straight from the game. It renders a scripted 9:16 gameplay ad (1080×1920, 30 fps, 21 s by default) to MP4 with these beats: "They outnumber you 500 to 1" → every kill joins your army → pick the ×3 gate over ÷2 → Soul Nova wipe → Gravemaw → end card "PLAY FREE". Run `node scripts/record-trailer.mjs [out.mp4] [url]` against the dev server (`npm run dev`); it needs Playwright and ffmpeg with libx264. It steps a real Chapter 1 run frame by frame, but the beats are scripted (invulnerable Shepherd, Raise Chance at the 85% cap, a forced ×3 vs ÷2 pair, an instant Nova, Gravemaw called early), so check every cut against the truthfulness policy (§1) and add the standard end card's store badges and "Free to play · In-app purchases" line before it runs.
+- **In-engine render:** `scripts/record-trailer.mjs` produces Ad 1-style creatives straight from the game. It renders a scripted 9:16 gameplay ad (1080×1920, 30 fps, 21 s by default) to MP4 with these beats: "One Shepherd against the horde" → every kill joins your army → pick the ×3 gate over ÷2 → Soul Nova wipe → Gravemaw → end card "PLAY FREE" with "Free to play · In-app purchases". Run `node scripts/record-trailer.mjs [out.mp4] [url]` against the dev server (`npm run dev`); it needs Playwright and ffmpeg with libx264. It steps a real Chapter 1 run frame by frame and the Shepherd can take damage, but the beats are scripted (an upgraded account with Raise Chance at its 85% cap, a forced ×3 vs ÷2 pair, an instant Nova, Gravemaw called early), so check every cut against the truthfulness policy (§1) and add store badges before it runs.
+- **Cinematic cuts:** `store/ads/` holds a 34.8 s 9:16 and a 28.3 s 16:9 ad that wrap this gameplay in labelled, painted Kling cinematics (souls rising, Gravemaw's reveal). See `docs/ART_AND_ADS.md` for cuts, sources and where they may run.
 
 ### Ad 2: "Pick the Right Gate" (20 s)
 

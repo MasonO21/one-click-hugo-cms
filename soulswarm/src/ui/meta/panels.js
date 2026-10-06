@@ -9,6 +9,7 @@ import {
   starterAvailable, pactActive, pactDailyAvailable, claimPactDaily,
 } from '../../meta/economy.js';
 import { cd, nextMidnight, bundleItems, rewardChip, popRewards, bar, tap, portrait, delegate, energyFullIn } from './util.js';
+import { LOGO_ART } from '../art.js';
 
 const ENERGY_ADS_PER_DAY = 3;
 const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords' };
@@ -204,8 +205,8 @@ export function openSettings(ctx) {
       </div>
     </div>
     <div class="st-cred">
-      <div class="st-logo t-display">SOUL<span>SWARM</span></div>
-      <div>Raise the Legion · v0.1.0</div>
+      <img class="st-logo" src="${LOGO_ART}" alt="SOULSWARM: Raise the Legion" draggable="false">
+      <div>v0.1.0</div>
       <div class="t-dim">Built with Three.js and Capacitor. Fonts: Cinzel, Oxanium.</div>
     </div>
   </div>`);

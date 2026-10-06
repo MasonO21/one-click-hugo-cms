@@ -56,6 +56,12 @@
 .banner.gold b { color: #fff3c8; text-shadow: 0 0 18px var(--gold), 0 2px 0 #4a2a00; }
 .banner.boss b { color: #ffd6fb; text-shadow: 0 0 22px #ff3df0, 0 2px 0 #3a0034; }
 .banner.ember b { color: #ffe0cc; text-shadow: 0 0 18px var(--ember), 0 2px 0 #3a1000; }
+/* boss warning: the painted Hollow King looms above the title, clear of the player at screen centre */
+.banner.boss { top: 9%; }
+.banner-art { width: min(100%, 400px); aspect-ratio: 9 / 5; margin-bottom: -44px; background: 50% 30% / cover no-repeat;
+  -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 48%, transparent); mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 48%, transparent);
+  animation: banart 2.8s ease-out both; }
+@keyframes banart { 0% { opacity: 0; transform: scale(1.18); filter: brightness(2.4); } 18% { opacity: .92; transform: scale(1); filter: brightness(1); } 100% { opacity: .85; transform: scale(.96); } }
 @keyframes banin { from { opacity: 0; transform: scale(2.2); letter-spacing: .4em; } }
 @keyframes banout { to { opacity: 0; transform: translateY(-20px); } }
 

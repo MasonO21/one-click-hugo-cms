@@ -3,6 +3,7 @@ import { fmt, fmtTime, rewardPopup } from '../dom.js';
 import { icon, RELIC_ICON } from '../icons.js';
 import { HEROES, RARITY_COLOR, RARITY_LABEL, RELICS, SKINS, ENERGY_MAX, ENERGY_REGEN_SEC } from '../../game/data.js';
 import { energyNextIn } from '../../meta/economy.js';
+import { HERO_ART } from '../art.js';
 
 export const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
 export const clamp01 = (x) => Math.max(0, Math.min(1, x));
@@ -43,8 +44,13 @@ export function tap(app, kind = 'light', sfx = 'click') {
 const portraitCache = new Map();
 const portraitTried = new Map();
 
-/** Cached dataURL for a hero portrait, or '' while the renderer is not ready yet. */
+/** The painted splash stands in for the 3D render, except for a hero wearing a skin (only the render shows it). */
+export const paintedArt = (app, id) => (SKINS[app.profile.equippedSkin]?.hero === id ? '' : HERO_ART[id] || '');
+
+/** Portrait URL (painted splash or cached 3D render), or '' while the renderer is not ready yet. */
 export function portraitURL(app, id, force = false) {
+  const art = paintedArt(app, id);
+  if (art) return art;
   const key = id + ':' + (app.profile.equippedSkin || '');
   if (portraitCache.has(key)) return portraitCache.get(key);
   const last = portraitTried.get(key) || 0;
@@ -93,7 +99,8 @@ export function portrait(app, id, cls = '', opts = {}) {
   const color = opts.color || hero.css;
   const url = opts.noImg ? '' : portraitURL(app, id);
   const inner = url ? `<img src="${url}" alt="${hero.name}" draggable="false">` : silhouette(color, opts);
-  return `<div class="portrait ${cls}" ${url || opts.noImg ? '' : `data-portrait="${id}"`} style="--hc:${color}">${inner}</div>`;
+  const painted = !opts.noImg && !!paintedArt(app, id);
+  return `<div class="portrait ${cls}${painted ? ' is-painted' : ''}" ${url || opts.noImg ? '' : `data-portrait="${id}"`} style="--hc:${color}">${inner}</div>`;
 }
 
 /** Swap silhouettes for real portraits once the renderer can provide them (called by the ticker). */

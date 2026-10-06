@@ -4,6 +4,7 @@ import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js'
 import { icon } from './icons.js';
 import { SKILLS, EVOLUTIONS, RARITY_COLOR } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
+import { BOSS_ART } from './art.js';
 
 export class RunUI {
   constructor(app, run) {
@@ -92,7 +93,8 @@ export class RunUI {
   // ---------------------------------------------------------------- transient messages
   banner(title, sub = '', kind = 'soul') {
     if (this.bannerEl) this.bannerEl.remove();
-    const el = h(`<div class="banner ${kind}"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</div>`);
+    const art = kind === 'boss' ? `<i class="banner-art" style="background-image:url(${BOSS_ART})"></i>` : '';
+    const el = h(`<div class="banner ${kind}">${art}<b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</div>`);
     this.el.appendChild(el);
     this.bannerEl = el;
     setTimeout(() => el.classList.add('out'), 2200);

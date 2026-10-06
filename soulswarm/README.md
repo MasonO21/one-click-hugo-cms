@@ -2,7 +2,7 @@
 
 A top-down "legion survivor" for iOS and Android. Every enemy you kill can rise as a glowing soul that fights for you. You start alone and end the run leading hundreds. Soul Gates multiply your army, and Soul Nova detonates all of it in one screen-clearing blast.
 
-- **Engine:** HTML5 + WebGL ([Three.js](https://threejs.org)) with custom shaders, bloom, GPU particles and instanced hordes. No external art: every model, effect, icon and sound is generated in code.
+- **Engine:** HTML5 + WebGL ([Three.js](https://threejs.org)) with custom shaders, bloom, GPU particles and instanced hordes. Every 3D model, effect and sound is generated in code. The painted 2D art (key art, hero splashes, logo, icon) was made with Higgsfield; see `docs/ART_AND_ADS.md`.
 - **Store wrapper:** [Capacitor 7](https://capacitorjs.com). The native Xcode project is in `ios/` and the Android Studio project in `android/`.
 - **Docs:** [`docs/`](docs/) contains the design brief, GDD, monetization model, live-ops calendar, marketing plan and production roadmap.
 
@@ -27,9 +27,10 @@ Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot plays every hero, a full Chapter 1 clear, Endless and economy checks (23 checks)
+npm run playtest      # headless bot plays every hero, a full Chapter 1 clear, Endless and economy checks (28 checks)
 npm run trailer       # renders a 21 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
+npm run art           # rebuilds in-game art, icon, splash and native sets from the painted masters in store/art
 npm run build:web     # one-file web build, plus dist-single/soulswarm.html for embedding hosts
 ```
 
@@ -62,9 +63,9 @@ See `docs/PRODUCTION_ROADMAP.md` for the full checklist, team plan and budget.
 | `src/meta/` | Save, economy rules (gacha, pass, quests, rewards), store adapter |
 | `src/ui/` | Design system (`style.css`), HUD and run modals (`runui.js`), menus (`meta/`) |
 | `src/audio/audio.js` | Procedural Web Audio SFX and music, with no audio files |
-| `resources/` | Master icon and splash art |
-| `store/` | Rendered trailer and App Store screenshots |
-| `scripts/` | Playtest bot, trailer and screenshot renderers, icon generator, web build |
+| `resources/` | App icon and splash (built from the painted masters by `npm run art`) |
+| `store/` | Painted key art masters (`art/`), cinematic video ads (`ads/`), in-engine trailer and App Store screenshots; see `docs/ART_AND_ADS.md` |
+| `scripts/` | Playtest bot, trailer and screenshot renderers, painted-asset pipeline, web build |
 
 ## QA hooks
 

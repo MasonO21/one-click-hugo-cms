@@ -6,6 +6,7 @@ import { ALTAR, RARITY_COLOR, RARITY_LABEL, RARITY_MULT, RELICS, RELIC_TYPES, HE
 import { commit, summon, freeSummonAvailable } from '../../meta/economy.js';
 import { cd, nextMidnight, bar, tap, delegate } from './util.js';
 import { notEnough } from './panels.js';
+import { HERO_ART } from '../art.js';
 
 const ORDER = ['legendary', 'epic', 'rare', 'common'];
 const RUNES = [
@@ -191,6 +192,7 @@ export function reveal(app, results, { again, againCount = 1, payFor } = {}) {
       <div class="rv-in">
         <div class="rv-face rv-back"><span>${icon('altar')}</span></div>
         <div class="rv-face rv-front">
+          ${sh && HERO_ART[r.shards.hero] ? `<i class="rv-art" style="background-image:url(${HERO_ART[r.shards.hero]})"></i>` : ''}
           <span class="rv-ic">${icon(RELIC_ICON[r.relic.type])}</span>
           <span class="rv-name">${RELICS[r.relic.type].name}</span>
           <span class="rv-rar">${RARITY_LABEL[r.rarity]}</span>

@@ -1,5 +1,6 @@
-// Generates store art from the live game: app icon (1024), splash (2732) and
-// App Store screenshots (1290×2796, iPhone 6.7"). Requires the dev server: `npm run dev`.
+// Renders an app icon (1024) and splash (2732) from the live 3D hero. The shipped icon and splash now
+// come from the painted masters (`npm run art`); this stays as the fallback for new heroes and skins
+// that have no painted art yet. Requires the dev server: `npm run dev`.
 // usage: node scripts/make-icons.mjs [http://localhost:5173/]
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';

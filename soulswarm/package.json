@@ -10,6 +10,7 @@
     "preview": "vite preview --host",
     "playtest": "node scripts/playtest.mjs",
     "icons": "node scripts/make-icons.mjs",
+    "art": "bash scripts/painted-assets.sh",
     "cap:sync": "npm run build && npx cap sync",
     "cap:ios": "npm run cap:sync && npx cap open ios",
     "cap:android": "npm run cap:sync && npx cap open android",

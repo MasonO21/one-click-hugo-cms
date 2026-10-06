@@ -21,6 +21,11 @@
 /* Shared: portraits, progress bars, stars, chips, hints, section headers */
 .portrait { position: relative; overflow: hidden; }
 .portrait img, .portrait .sil { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; object-position: 50% 20%; }
+/* painted splashes carry their own backdrop: fill the art area and feather the edges */
+.portrait.is-painted img { object-position: 50% 28%; }
+.hd-portrait.is-painted { left: 0; right: 0; top: 0; }
+.sp-portrait.is-painted, .sp-banner-portrait.is-painted {
+  -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent); mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent); }
 .mbar { position: relative; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,.09); box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
 .mbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--soul-deep), var(--soul)); box-shadow: 0 0 8px rgba(78,242,255,.7); transition: width .45s cubic-bezier(.2,.8,.2,1); }
 .mbar-ok i { background: linear-gradient(90deg, #149a5c, #6dffb0); box-shadow: 0 0 8px rgba(109,255,176,.7); }
@@ -653,6 +658,8 @@
 .rv-front { transform: rotateY(180deg); gap: 2px; padding: 5px 3px;
   background: radial-gradient(85% 55% at 50% 32%, color-mix(in srgb, var(--rc) 50%, transparent), #0a0d18 82%);
   box-shadow: inset 0 0 0 2px var(--rc), inset 0 0 18px color-mix(in srgb, var(--rc) 55%, transparent); }
+.rv-art { position: absolute; inset: 0; background: 50% 18% / cover no-repeat; opacity: .55; -webkit-mask: linear-gradient(#000 35%, transparent 90%); mask: linear-gradient(#000 35%, transparent 90%); }
+.rv-front > :not(.rv-art) { position: relative; }
 .rv-ic { line-height: 0; color: var(--rc); }
 .rv-ic svg { width: 30px; height: 30px; filter: drop-shadow(0 0 8px var(--rc)); }
 .rv-name { font-size: 8.5px; font-weight: 800; line-height: 1.12; color: #fff; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -842,8 +849,7 @@
 .st-confirm .row { display: flex; gap: 8px; }
 .st-confirm .row > * { flex: 1; }
 .st-cred { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-top: 4px; font-size: 11px; text-align: center; }
-.st-logo { font-size: 20px; letter-spacing: .08em; color: #dffbff; text-shadow: 0 0 12px rgba(78,242,255,.6); }
-.st-logo span { color: var(--soul); }
+.st-logo { width: 200px; height: auto; }
 
 /* energy */
 .en-top { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
