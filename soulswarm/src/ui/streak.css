@@ -1,0 +1,55 @@
+/* Kill-streak HUD (streakui.js): counter at the left edge, decay bar, Soul Frenzy chip, tier call; results row. */
+.stk-t { --sc: #bfefff; }
+.stk-t[data-t="1"] { --sc: #4ef2ff; }
+.stk-t[data-t="2"] { --sc: #ffd04a; }
+.stk-t[data-t="3"] { --sc: #ff9a3d; }
+.stk-t[data-t="4"] { --sc: #ff2e55; }
+.stk-t[data-t="5"] { --sc: #e9a8ff; }
+
+/* a band between the banners (24%) and the Shepherd / Nova number (50%) */
+.stk { position: absolute; left: 0; right: 0; top: 33%; height: 0; pointer-events: none; font-family: var(--f-ui); }
+.stk-c { position: absolute; left: 10px; bottom: -64px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  opacity: 0; transform: translateX(-18px); transition: opacity .2s ease, transform .2s ease; }
+.stk-c.on { opacity: 1; transform: none; }
+.stk-c.broken { opacity: 0; transform: translateY(10px) scale(.92); filter: grayscale(.8); transition: opacity .75s ease-in, transform .75s ease-in, filter .25s; }
+.stk-c b { display: block; font-size: 32px; font-weight: 800; line-height: .9; color: #fff; font-variant-numeric: tabular-nums; transform-origin: 0 100%;
+  text-shadow: 0 0 14px var(--sc), 0 0 3px var(--sc), 0 2px 0 rgba(0,0,0,.85); }
+.stk-c[data-t="1"] b { font-size: 36px; }
+.stk-c[data-t="2"] b { font-size: 40px; }
+.stk-c[data-t="3"] b { font-size: 44px; }
+.stk-c[data-t="4"] b { font-size: 48px; }
+.stk-c[data-t="5"] b { font-size: 52px; text-shadow: 0 0 18px var(--sc), 0 0 40px var(--sc), 0 0 3px #fff, 0 2px 0 rgba(0,0,0,.85); }
+.stk-c b.pa { animation: stkpa .2s ease-out; }
+.stk-c b.pb { animation: stkpb .2s ease-out; }
+.stk-c b.ta { animation: stkta .5s cubic-bezier(.2,1.6,.4,1); }
+.stk-c b.tb { animation: stktb .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes stkpa { from { transform: scale(1.16); } }
+@keyframes stkpb { from { transform: scale(1.16); } }
+@keyframes stkta { from { transform: scale(1.9); filter: brightness(2.2); } }
+@keyframes stktb { from { transform: scale(1.9); filter: brightness(2.2); } }
+.stk-c small { font-size: 9px; font-weight: 800; letter-spacing: .22em; color: var(--sc); text-shadow: 0 1px 2px #000; }
+.stk-bar { width: 74px; height: 4px; background: rgba(0,0,0,.6); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); overflow: hidden; }
+.stk-bar i { display: block; height: 100%; transform-origin: 0 50%; transform: scaleX(0); background: var(--sc); box-shadow: 0 0 8px var(--sc); transition: transform 50ms linear; }
+
+.stk-fz { position: absolute; left: 10px; top: 72px; display: flex; flex-direction: column; gap: 3px; opacity: 0; transition: opacity .3s ease; }
+.stk-fz.on { opacity: 1; }
+.stk-fz span { font-size: 9.5px; font-weight: 800; letter-spacing: .16em; color: var(--sc); text-shadow: 0 0 8px var(--sc), 0 1px 2px #000; }
+.stk-fz em { font-style: normal; color: #fff; }
+.stk-fz .stk-bar { height: 3px; }
+
+/* tier call: slides out beside the counter, never over the screen centre */
+.stk-call { position: absolute; left: 112px; right: 10px; bottom: -58px; animation: stkcall 1.8s ease both; } /* left: set from the counter's width */
+.stk-call b { display: block; font-family: var(--f-display); font-weight: 900; font-size: clamp(19px, 6.2vw, 26px); letter-spacing: .05em; line-height: 1; white-space: nowrap;
+  color: #fff; transform: skewX(-9deg); transform-origin: 0 100%; text-shadow: 0 0 14px var(--sc), 0 0 32px var(--sc), 0 2px 0 rgba(0,0,0,.9); }
+.stk-call span { display: block; margin-top: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; line-height: 1.3; color: var(--sc); text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.8); }
+.stk-call[data-t="5"] b { font-size: clamp(22px, 7.4vw, 31px); }
+@keyframes stkcall { 0% { opacity: 0; transform: translateX(-34px) scale(1.3); } 10% { opacity: 1; transform: none; } 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(16px); } }
+
+/* results */
+.res-streak { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "l l r" "n t r"; align-items: baseline; column-gap: 8px; row-gap: 1px;
+  padding: 7px 12px; clip-path: var(--bevel-sm); background: linear-gradient(90deg, color-mix(in srgb, var(--sc) 20%, transparent), rgba(255,255,255,.03)); box-shadow: inset 2px 0 0 var(--sc); }
+.res-streak small { grid-area: l; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
+.res-streak b { grid-area: n; font-size: 22px; font-weight: 800; line-height: 1; color: #fff; text-shadow: 0 0 10px var(--sc); }
+.res-streak span { grid-area: t; font-family: var(--f-display); font-weight: 900; font-size: 13px; letter-spacing: .08em; color: var(--sc); }
+.res-streak em { grid-area: r; align-self: center; white-space: nowrap; font-style: normal; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); }
+.res-streak em.pill { color: inherit; }

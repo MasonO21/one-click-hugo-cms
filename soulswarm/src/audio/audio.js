@@ -375,6 +375,25 @@ const SFX = {
     for (let k = 0; k < 10; k++) tone(o, t + 0.15 + k * 0.09, { f: rand(1800, 5200), d: 0.25, v: 0.05 });
     return 3.2;
   } },
+  // the Nova wind-up: a 0.25 s inhale as the souls rush into the Shepherd (the drop above lands on its peak)
+  nova_charge: { gap: 300, max: 1, vol: 0.85, rev: 0.45, big: true, play(o, t, p) {
+    const L = 0.26;
+    noise(o, t, { type: 'bandpass', f: 400 * p, to: 7000 * p, q: 2.2, a: L, d: 0.03, v: 0.4 });
+    for (const det of [-12, 12]) tone(o, t, { type: 'sawtooth', f: 98 * p, to: 392 * p, glide: L, det, a: L * 0.9, d: 0.04, v: 0.07 });
+    tone(o, t, { f: 196 * p, to: 1568 * p, glide: L, a: L * 0.85, d: 0.05, v: 0.12 });
+    [62, 65, 69, 74, 77].forEach((n, k) => tone(o, t + k * 0.045, { type: 'triangle', f: mtof(n + 12) * p, d: 0.07, v: 0.035 }));
+    return L + 0.1;
+  } },
+  // kill-streak tier: a stone thump, a D-minor brass stab and a bell, pitched up a step per tier (APOCALYPSE adds the choir)
+  streak: { gap: 100, max: 2, vol: 0.75, rev: 0.4, big: true, play(o, t, p) {
+    const sh = semis(p);
+    tone(o, t, { f: 95 * p, to: 38, d: 0.28, v: 0.6 });
+    noise(o, t, { type: 'bandpass', f: 1900 * p, to: 500, q: 1.1, d: 0.12, v: 0.28 });
+    for (const n of [62, 65, 69]) brass(o, t + 0.015, n + sh, 0.16, 0.05);
+    bell(o, t + 0.03, mtof(81 + sh), 0.07, 1.1);
+    if (p > 1.9) choir(o, [62 + sh, 65 + sh, 69 + sh], t, 0.5, { vowel: 'ah', v: 0.12, a: 0.05, r: 0.8 });
+    return 1.1;
+  } },
 
   // ---- soul gates ----
   gate_good: { gap: 300, max: 2, vol: 0.8, rev: 0.35, big: true, play(o, t, p) {
@@ -575,6 +594,61 @@ const SFX = {
     bell(o, t, mtof(93) * p, 0.06, 0.6);
     tone(o, t, { f: 2400 * p, d: 0.08, v: 0.05 });
     return 0.6;
+  } },
+
+  // ---- elite affixes and run events (affixes.js, events.js) ----
+  ward_break: { gap: 200, max: 2, vary: 0.04, vol: 0.75, rev: 0.4, big: true, play(o, t, p) { // a soul ward shatters like glass
+    noise(o, t, { type: 'highpass', f: 2800, d: 0.22, v: 0.35 });
+    noise(o, t + 0.01, { type: 'bandpass', f: 7000 * p, to: 1800, q: 2, d: 0.45, v: 0.22 });
+    for (let k = 0; k < 10; k++) tone(o, t + k * 0.022 + rand(0, 0.02), { f: rand(2200, 5600) * p, d: rand(0.1, 0.32), v: 0.055 }); // falling shards
+    bell(o, t, mtof(88) * p, 0.07, 0.9);
+    tone(o, t, { f: 170 * p, to: 48, d: 0.3, v: 0.55 }); // the thump under it
+    return 1.0;
+  } },
+  splitter_pop: { gap: 120, max: 2, vary: 0.06, vol: 0.7, play(o, t, p) { // a wet pop, then the copies chirp out
+    tone(o, t, { f: 720 * p, to: 110 * p, glide: 0.09, d: 0.13, v: 0.5 });
+    noise(o, t, { type: 'lowpass', f: 1900, to: 280, d: 0.2, v: 0.45 });
+    for (let k = 0; k < 3; k++) tone(o, t + 0.09 + k * 0.05, { type: 'triangle', f: (300 + k * 95) * p, to: (540 + k * 130) * p, d: 0.07, v: 0.16 });
+    return 0.3;
+  } },
+  rout: { gap: 400, max: 1, vol: 0.65, rev: 0.3, play(o, t, p) { // the Commander falls: a sagging war-horn, a rattle of panic
+    brass(o, t, 50, 0.28, 0.07);
+    const f = filt(o, 'lowpass', 1600, 2);
+    for (const det of [-14, 14]) tone(f, t + 0.05, { type: 'sawtooth', f: mtof(57) * p, to: mtof(45) * p, glide: 0.5, det, a: 0.02, h: 0.2, d: 0.35, v: 0.08 });
+    for (let k = 0; k < 6; k++) noise(o, t + 0.1 + k * 0.05, { type: 'bandpass', f: rand(900, 1800), q: 3, d: 0.04, v: 0.12 });
+    return 0.8;
+  } },
+  thief_appear: { gap: 800, max: 1, vol: 0.95, rev: 0.35, play(o, t, p) { // a jingle of stolen coin and a sly cackle
+    const f = filt(o, 'lowpass', 6500, 0.7);
+    [88, 91, 95, 100].forEach((n, k) => tone(f, t + k * 0.06, { type: 'square', f: mtof(n) * p, h: 0.03, d: 0.18, v: 0.08 }));
+    for (let k = 0; k < 6; k++) tone(o, t + 0.05 + k * 0.045, { f: rand(3000, 6500), d: 0.08, v: 0.05 });
+    for (let k = 0; k < 3; k++) { // "heh heh heh": formant blips falling in pitch
+      const s = t + 0.32 + k * 0.11, bp = filt(o, 'bandpass', 1100, 4);
+      tone(bp, s, { type: 'sawtooth', f: (330 - k * 30) * p, to: (250 - k * 25) * p, a: 0.01, d: 0.07, v: 0.45 });
+    }
+    return 0.8;
+  } },
+  thief_escape: { gap: 800, max: 1, vol: 1, rev: 0.4, play(o, t, p) { // a whoosh into nothing, the jingle fading away
+    noise(o, t, { type: 'bandpass', f: 4500, to: 350, q: 2, a: 0.04, d: 0.55, v: 0.5 });
+    tone(o, t, { type: 'triangle', f: 950 * p, to: 180 * p, glide: 0.5, d: 0.5, v: 0.24 });
+    [95, 91, 88, 84].forEach((n, k) => tone(o, t + 0.12 + k * 0.08, { type: 'square', f: mtof(n) * p, d: 0.12, v: 0.05 / (1 + k * 0.6) }));
+    return 0.8;
+  } },
+  shrine_chime: { gap: 500, max: 1, vol: 0.75, rev: 0.6, play(o, t, p) { // a ring of bells over a soft choir breath
+    [62, 69, 74, 78, 81].forEach((n, k) => bell(o, t + k * 0.09, mtof(n) * p, 0.065, 2.0));
+    choir(o, [62, 66, 69], t, 0.5, { vowel: 'ah', v: 0.05, a: 0.25, r: 0.9 });
+    noise(o, t, { type: 'bandpass', f: 3000, to: 8000, q: 3, a: 0.3, d: 0.6, v: 0.06 });
+    return 2.3;
+  } },
+  coffin_break: { gap: 500, max: 1, vol: 0.85, rev: 0.45, big: true, duck: [0.6, 0.6], play(o, t, p) { // wood splits, a boom, the dead groan out
+    noise(o, t, { type: 'bandpass', f: 900, q: 0.9, d: 0.1, v: 0.6 });
+    noise(o, t + 0.06, { type: 'bandpass', f: 1500, q: 1.2, d: 0.08, v: 0.45 });
+    const cr = filt(o, 'bandpass', 600, 5); // the lid's creak
+    tone(cr, t, { type: 'sawtooth', f: 85 * p, to: 140 * p, glide: 0.2, a: 0.02, d: 0.2, v: 0.4 });
+    tone(o, t + 0.05, { f: 95 * p, to: 28, glide: 0.6, d: 0.8, v: 0.8 });
+    noise(o, t + 0.05, { buf: brownBuf, type: 'lowpass', f: 400, a: 0.01, h: 0.1, d: 0.9, v: 0.55 });
+    choir(o, [50, 51, 56], t + 0.12, 0.5, { vowel: 'oo', v: 0.09, a: 0.08, r: 0.8 });
+    return 1.6;
   } },
 };
 for (const k in SFX) { SFX[k].last = -1e9; SFX[k].ends = []; }

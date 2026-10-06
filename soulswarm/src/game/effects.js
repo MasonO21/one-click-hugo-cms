@@ -2,6 +2,7 @@
 // transient ground lights and floating combat text (drawn on the 2D overlay).
 import * as THREE from 'three';
 import { makeShockwave, makeTelegraph } from './fxmeshes.js';
+import { HITSTOP } from './data.js';
 
 const _v = new THREE.Vector3();
 const _s = { x: 0, y: 0 };
@@ -11,7 +12,7 @@ export class Effects {
     this.run = run;
     this.trauma = 0;
     this.shakeX = 0; this.shakeZ = 0;
-    this.hitStopT = 0;
+    this.hitStopT = 0; this.hitStopDur = 0;
     this.slowT = 0; this.slowScale = 1;
     this.white = 0;
     this.red = 0;
@@ -26,17 +27,23 @@ export class Effects {
   }
 
   shake(amount) { this.trauma = Math.min(1, this.trauma + amount); }
-  hitStop(t) { this.hitStopT = Math.max(this.hitStopT, t); }
+  /** A brief freeze (real seconds). A motion effect, so it scales with the screen-shake setting (0 turns it off). */
+  hitStop(t) {
+    t *= this.run.profile.settings.shake ?? 1;
+    if (t > this.hitStopT) this.hitStopT = this.hitStopDur = t;
+  }
   slowMo(scale, dur) { this.slowScale = Math.min(this.slowScale, scale); this.slowT = Math.max(this.slowT, dur); }
   flash(w) { this.white = Math.max(this.white, w); }
   hurt(a = 0.5) { this.red = Math.max(this.red, a); }
   aberration(a) { this.aberr = Math.max(this.aberr, a); }
 
-  /** Time scale for the simulation this frame (hit-stop beats slow-mo). */
+  /** Time scale for the simulation this frame. Hit-stop dips it (easing back over its last stretch) on top of any slow-mo:
+   *  a freeze inside a Nova's slow-mo stays a freeze, and the slow-mo carries on after it. */
   timeScale() {
-    if (this.hitStopT > 0) return 0.05;
-    if (this.slowT > 0) return this.slowScale;
-    return 1;
+    const s = this.slowT > 0 ? this.slowScale : 1;
+    if (this.hitStopT <= 0) return s;
+    const u = this.hitStopT / (this.hitStopDur * HITSTOP.recover); // > 1 while frozen, then 1 → 0 as it eases back
+    return s * (u >= 1 ? HITSTOP.scale : HITSTOP.scale + (1 - HITSTOP.scale) * (1 - u));
   }
 
   light(x, z, radius, intensity, color, life = 0.35) {

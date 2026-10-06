@@ -26,6 +26,7 @@
 .legion .num { font-size: 26px; font-weight: 800; color: #fff; text-shadow: 0 0 14px var(--lc, var(--soul)); line-height: 1; }
 .legion .cap { font-size: 12px; color: var(--ink-dim); font-weight: 700; }
 .legion.pop .num { animation: numpop .35s cubic-bezier(.2,1.8,.4,1); }
+.legion.over .cap { color: var(--gold); text-shadow: 0 0 8px rgba(255,207,74,.6); } /* over the cap: the excess fades */
 @keyframes numpop { 0% { transform: scale(1.6); } 100% { transform: scale(1); } }
 
 .bossbar { margin: 4px 6px 0; display: flex; flex-direction: column; gap: 3px; animation: popin .4s ease; }
@@ -99,6 +100,10 @@
   background: repeating-conic-gradient(rgba(255,207,74,.13) 0 7deg, transparent 7deg 18deg); -webkit-mask: radial-gradient(circle, #000 12%, transparent 62%); mask: radial-gradient(circle, #000 12%, transparent 62%); animation: chestspin 30s linear infinite; }
 @keyframes chestspin { to { transform: rotate(360deg); } }
 .lvl-back.chest > * { position: relative; }
+/* level-up pulse: a soul ring sweeps out from the Shepherd as the cards arrive (the shards within 6 m are drawn in) */
+.lvl-back:not(.chest)::after { content: ''; position: absolute; left: 50%; top: 55%; width: 120vmax; height: 120vmax; margin: -60vmax 0 0 -60vmax; border-radius: 50%; pointer-events: none; z-index: -1;
+  background: radial-gradient(circle, transparent 58%, rgba(78,242,255,.32) 66%, rgba(255,207,74,.18) 69%, transparent 72%); animation: lvlpulse .7s ease-out both; }
+@keyframes lvlpulse { from { transform: scale(.05); opacity: 1; } to { transform: scale(1); opacity: 0; } }
 .lvl-title { text-align: center; }
 .lvl-title b { display: block; font-family: var(--f-display); font-weight: 900; font-size: 34px; letter-spacing: .08em; color: #fff3c8; text-shadow: 0 0 22px var(--gold), 0 2px 0 #4a2a00; animation: banin .5s cubic-bezier(.2,1.5,.4,1) both; }
 .lvl-title span { font-size: 12px; letter-spacing: .2em; color: var(--ink-dim); text-transform: uppercase; }
@@ -122,6 +127,17 @@
 @keyframes cardin { from { opacity: 0; transform: translateY(30px) scale(.9); } }
 @keyframes blink { 50% { opacity: .3; } }
 .lvl-actions { display: flex; gap: 8px; }
+
+/* Shrine of Souls (events.js): the blessing pick and the timed blessing chips under the legion counter */
+.lvl-back.shrine { background: radial-gradient(80% 60% at 50% 45%, rgba(8,64,58,.62), rgba(2,4,8,.9)); }
+.lvl-back.shrine .lvl-title b { color: #e2fff6; text-shadow: 0 0 22px var(--soul-2), 0 2px 0 #00302a; }
+.hud-buffs { align-self: center; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 2px; }
+.buff { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 5px 6px; overflow: hidden;
+  background: rgba(6,28,30,.82); clip-path: var(--bevel-sm); box-shadow: inset 0 0 0 1px rgba(124,255,212,.45); animation: popin .35s ease; }
+.buff svg { width: 15px; height: 15px; color: var(--soul-2); filter: drop-shadow(0 0 4px var(--soul-2)); }
+.buff b { font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.buff small { font-size: 11px; font-weight: 800; color: var(--soul-2); min-width: 22px; text-align: right; }
+.buff i { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; transform-origin: 0 50%; background: var(--soul-2); box-shadow: 0 0 6px var(--soul-2); }
 
 /* revive */
 .rev { text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
