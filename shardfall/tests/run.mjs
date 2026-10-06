@@ -1,7 +1,7 @@
 // Headless game tests: loads the real game scripts into a Node VM (no browser) and checks
 // skills, full matches, ranked/mastery/economy rules and save migration.
 // Run: node tests/run.mjs   (add --balance for a longer hero win-rate report)
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -186,6 +186,17 @@ section('Old saves migrate without losing data', () => {
   const d = SF2.store.d;
   check('keeps old values', d.coins === 5000 && d.heroes.includes('nyx') && d.settings.sound === false && d.settings.cap === 25 && d.stats.matches === 12);
   check('adds new fields', d.settings.music === true && d.stats.mvps === 0 && d.rank.stars === 0 && Array.isArray(d.history) && d.event.tokens === 0);
+});
+
+section('Every look has splash art and an in-match sprite', () => {
+  const sw = readFileSync(join(web, 'sw.js'), 'utf8');
+  for (const sk of SF.SKINS) {
+    const art = SF.artFor(sk.hero, sk.id), sprite = SF.spriteFor(sk.hero, sk.id);
+    check(`${sk.id} has splash art`, art && existsSync(join(web, art)), art);
+    check(`${sk.id} has a sprite`, sprite && existsSync(join(web, sprite)), sprite);
+    if (sprite) check(`${sk.id} sprite is precached by the service worker`, sw.includes(`'${sprite.split('/').pop().replace('.webp', '')}'`));
+  }
+  check('unknown skins have no sprite', SF.spriteFor('kaida', 'nope') === null);
 });
 
 console.log(`\n${passes} passed, ${failures} failed`);

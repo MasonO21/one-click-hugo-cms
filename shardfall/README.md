@@ -9,7 +9,7 @@ An original mobile MOBA: fast 3v3 battles with crystal heroes. It's built to fee
 | `server/` | Online game server: matchmaking, authoritative matches, accounts, cloud save, leaderboard ([server/README.md](server/README.md)) |
 | `docs/APP_STORE.md` | **Step-by-step release checklist** for the App Store and Google Play |
 | `tests/`, `server/test/` | Automated tests. CI runs them on every push (`.github/workflows/shardfall.yml`) |
-| `art/manifest.json` | The Higgsfield splash and key art: each image's job id and source URL |
+| `art/manifest.json` | The Higgsfield splash art, key art and in-match sprites: each image's job id and source URL |
 | `tools/` | Icon/splash generator, art downloader (`fetch-art.mjs`), local server, platform check |
 
 ```bash
@@ -71,12 +71,12 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 - **Profile:** rank and rank rewards, career stats, most-played heroes, match history, and 13 achievements that pay gems.
 - **Settings:** a monthly spending limit, purchase history, cloud save (online) and in-app account deletion.
 
-**Art.** The lobby, hero roster, skin shop and loading screen use illustrated splash art made with Higgsfield:
-- one portrait for each of the 10 heroes
-- one portrait for every one of the 15 skins
-- wide key art behind the menus
+**Art.** All of it was made with Higgsfield:
+- **Splash art** for the lobby, hero roster, skin shop and loading screen: one portrait for each of the 10 heroes and each of the 15 skins.
+- **Key art** behind the menus.
+- **In-match sprites** for all 25 looks. Each sprite was generated from its own splash, so a skin looks the same in the shop and in a match. Every sprite faces right, and the game mirrors it when a hero turns. A hero leans into a run, breathes when idle and flashes white when hit. The small hero pictures in menus use them too.
 
-Run `node tools/fetch-art.mjs` to download it into `web/assets/art/` as WebP, about 3 MB in total. If a file is missing, the picture falls back to the drawn crystal hero, so the game always works. Matches keep the drawn crystals on purpose, because they stay readable at small sizes. Check Higgsfield's terms for commercial use before shipping.
+Run `node tools/fetch-art.mjs` to download everything into `web/assets/art/` as WebP (about 4.5 MB). Sprites are trimmed to the figure and placed on a shared 400×400 frame with the feet on one baseline. If any file is missing, that picture falls back to the drawn crystal hero, so the game always works. Check Higgsfield's terms for commercial use before shipping.
 
 ## 3. Monetization design
 
@@ -139,7 +139,7 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 |---|---|
 | `web/js/data.js` | Heroes, skills, items, skins, prices, pass, ranks, mastery, achievements, event, chest odds. **Tune the game here** |
 | `web/js/match.js` | Match simulation and bot AI. No DOM access, and the server runs this same file |
-| `web/js/draw.js` | All rendering: hero art, map, effects, minimap |
+| `web/js/draw.js` | All rendering: hero sprites (with the drawn crystal as fallback), map, effects, minimap |
 | `web/js/hud.js` | Touch and keyboard controls, in-match HUD, shop and scoreboard |
 | `web/js/lobby.js` | Menus, modes, economy screens, profile, results |
 | `web/js/store.js` | Save data, economy and ranked rules, and the test stand-ins for purchases and ads |

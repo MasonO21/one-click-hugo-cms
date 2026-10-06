@@ -42,12 +42,16 @@
       if (img.complete && img.naturalWidth === 0) artFallback(img);
       else img.addEventListener('error', () => artFallback(img), { once: true });
     });
-    root.querySelectorAll('canvas[data-hero]').forEach(c => {
-      const w = c.clientWidth || 64, h = c.clientHeight || 64;
-      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
-      const g = c.getContext('2d'); g.scale(dpr, dpr);
-      SF.drawHero(g, { heroId: c.dataset.hero, skinId: c.dataset.skin, x: w / 2, y: h * 0.86, t: 1.2, scale: Math.min(w, h) / 82, face: { x: 1, y: 0.2 } });
-    });
+    root.querySelectorAll('canvas[data-hero]').forEach(c => paintHero(c, dpr));
+  }
+  // Small hero pictures use the in-match sprite (repainted when it finishes loading), else the crystal.
+  function paintHero(c, dpr) {
+    const w = c.clientWidth || 64, h = c.clientHeight || 64, { hero, skin } = c.dataset;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    const g = c.getContext('2d'); g.scale(dpr, dpr);
+    const sprite = SF.sprites.get(hero, skin, () => { if (c.isConnected) paintHero(c, dpr); });
+    const scale = sprite ? Math.min(w * 0.8, h * 0.84) / 86 : Math.min(w, h) / 82;
+    SF.drawHero(g, { heroId: hero, skinId: skin, x: w / 2, y: sprite ? h * 0.93 : h * 0.86, t: 1.2, scale, face: { x: 1, y: 0.2 } });
   }
   function rewardIcon(r) {
     if (r.type === 'skin') return heroCanvas(SF.SKIN[r.id].hero, r.id);
@@ -493,6 +497,7 @@
     el.hidden = false;
     closeModal();
     paintCanvases(el);
+    SF.sprites.preload(blue.concat(red).map(s => [s.id, s.skin]));
     let p = 0;
     const iv = setInterval(() => {
       p = Math.min(1, p + 0.05 + Math.random() * 0.05);

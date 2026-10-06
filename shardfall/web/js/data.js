@@ -223,12 +223,22 @@ window.SF = window.SF || {};
     heroes: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska'],
     skins: ['kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
       'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm'],
-    key: 'assets/art/key-art.webp'
+    key: 'assets/art/key-art.webp',
+    // In-match sprites, one per look, made from that look's splash. Same naming as the splash art:
+    // classic skins by hero id, other skins by skin id. All share one 400x400 frame (feet 8px above
+    // the bottom, body centred, facing right), so the game draws them all the same way.
+    sprites: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska',
+      'kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
+      'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm']
   };
   SF.artFor = (heroId, skinId) => {
     if (skinId && SF.ART.skins.includes(skinId)) return `assets/art/skins/${skinId}.webp`;
     if ((!skinId || skinId === SF.defaultSkin(heroId)) && SF.ART.heroes.includes(heroId)) return `assets/art/heroes/${heroId}.webp`;
     return null;
+  };
+  SF.spriteFor = (heroId, skinId) => {
+    const key = !skinId || skinId === SF.defaultSkin(heroId) ? heroId : skinId;
+    return SF.ART.sprites.includes(key) ? `assets/art/sprites/${key}.webp` : null;
   };
 
   // ---- Economy -----------------------------------------------------------

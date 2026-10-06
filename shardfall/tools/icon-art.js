@@ -110,7 +110,7 @@
     // drawHero adds a sine bob; cancel it so the pose is exact.
     const t = o.t != null ? o.t : HERO.t;
     const bob = Math.sin(t * 3) * 2 * scale;
-    SF.drawHero(g, { heroId: o.id || HERO.id, skinId: sk.id, x: cx, y: gy - bob, t, scale, face: { x: 1, y: 0.2 } });
+    SF.drawHero(g, { heroId: o.id || HERO.id, skinId: sk.id, x: cx, y: gy - bob, t, scale, face: { x: 1, y: 0.2 }, sprite: false });
   }
 
   function wordmark(g, x, y, size, o = {}) {

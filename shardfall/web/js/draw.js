@@ -34,14 +34,58 @@
     g.lineTo(x2, y2);
   }
 
+  // Hero sprites (assets/art/sprites, made from the splash art). Each loads the first time it's
+  // asked for; until then, or if the file is missing, the hero is drawn as the procedural crystal.
+  const sprites = new Map();
+  SF.sprites = {
+    // Returns the loaded sprite, or null (and starts loading it). onReady runs once it loads.
+    get(heroId, skinId, onReady) {
+      const src = SF.spriteFor(heroId, skinId);
+      if (!src || typeof Image === 'undefined') return null;
+      let e = sprites.get(src);
+      if (!e) {
+        e = { img: new Image(), ok: false, waiting: [] };
+        e.img.decoding = 'async';
+        e.img.onload = () => { e.ok = true; const w = e.waiting; e.waiting = null; w.forEach(f => f()); };
+        e.img.onerror = () => { e.waiting = null; };
+        e.img.src = src;
+        sprites.set(src, e);
+      }
+      if (e.ok) return e;
+      if (onReady && e.waiting) e.waiting.push(onReady);
+      return null;
+    },
+    preload(list) { list.forEach(([heroId, skinId]) => this.get(heroId, skinId)); }
+  };
+  const SPRITE = { frame: 400, foot: 8, figure: 368 };   // must match tools/fetch-art.mjs
+  const SPRITE_H = 86;                                   // figure height in world units at scale 1
+  const facing = new WeakMap();
+  // White silhouette of a sprite for the hit flash, made once per sprite at half size.
+  function flashOf(sp) {
+    if (!sp.flash) {
+      const c = document.createElement('canvas'); c.width = c.height = SPRITE.frame / 2;
+      const x = c.getContext('2d'); x.drawImage(sp.img, 0, 0, c.width, c.height);
+      x.globalCompositeOperation = 'source-in'; x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+      sp.flash = c;
+    }
+    return sp.flash;
+  }
+
   // Draws a hero at ground point (x, y). Used both in matches and the lobby showcase.
+  // Returns the y of the top of the figure, for things drawn above the head.
+  // o.state: any object that lives as long as the hero (the match unit); it keeps the facing steady.
+  // o.sprite === false forces the procedural crystal.
   function drawHero(g, o) {
     const def = SF.HERO[o.heroId];
     const sk = SF.SKIN[o.skinId] || SF.SKIN[SF.defaultSkin(o.heroId)];
     const s = 24 * (o.scale || 1), t = o.t || 0, x = o.x, y = o.y;
     const face = o.face || { x: 1, y: 0.2 };
-    const fx = face.x >= 0 ? 1 : -1;
+    let fx = face.x >= 0 ? 1 : -1;
+    // Only turn round on a clear sideways move, so walking straight up or down doesn't flicker.
+    if (o.state) { const prev = facing.get(o.state); if (prev && Math.abs(face.x) < 0.3) fx = prev; else facing.set(o.state, fx); }
     const bob = Math.sin(t * 3 + (o.seed || 0)) * 2 * (o.scale || 1) + (o.moving ? Math.abs(Math.sin(t * 9)) * -3 * (o.scale || 1) : 0);
+    const sp = o.sprite !== false && SF.sprites.get(o.heroId, sk.id);
+    if (sp) return drawSprite(g, o, def, sk, sp, fx, bob);
     const cy = y - s * 1.3 + bob;
     g.save();
     g.globalAlpha = o.alpha == null ? 1 : o.alpha;
@@ -84,6 +128,42 @@
     }
     if (o.flash > 0) { poly(g, pts, x, cy, s); g.fillStyle = `rgba(255,255,255,${Math.min(0.7, o.flash * 7)})`; g.fill(); }
     g.restore();
+    return cy - s * 1.45;
+  }
+
+  function drawSprite(g, o, def, sk, sp, fx, bob) {
+    const sc = o.scale || 1, x = o.x, y = o.y, t = o.t || 0, s = 24 * sc;
+    const H = SPRITE_H * sc * (def.role === 'Tank' ? 1.06 : 1);   // figure height
+    const D = H * SPRITE.frame / SPRITE.figure;                   // whole frame, drawn square
+    const feet = y + 3 * sc;                                       // feet sit just inside the ring
+    const base = o.alpha == null ? 1 : o.alpha;
+    g.save();
+    g.globalAlpha *= base;
+    const a0 = g.globalAlpha;
+    if (o.ring) {
+      ellipse(g, x, y, s * 1.2, s * 0.5);
+      g.fillStyle = o.ring + '2e'; g.fill();
+      g.lineWidth = 2.5 * sc; g.strokeStyle = o.ring; g.stroke();
+    }
+    ellipse(g, x, y + 2, s * 0.85, s * 0.3); g.fillStyle = 'rgba(0,0,0,.35)'; g.fill();
+    const gy = feet - H * 0.45;
+    const glow = g.createRadialGradient(x, gy, 0, x, gy, H * 0.6);
+    glow.addColorStop(0, sk.c3 + '33'); glow.addColorStop(1, sk.c3 + '00');
+    g.fillStyle = glow; g.beginPath(); g.arc(x, gy, H * 0.6, 0, TAU); g.fill();
+    // Breathe while idle; lean into the step and bounce while moving. Pivot at the feet.
+    const breathe = 1 + Math.sin(t * 3 + (o.seed || 0)) * 0.012;
+    const lean = o.moving ? fx * (0.07 + Math.sin(t * 9) * 0.03) : 0;
+    g.translate(x, feet + Math.min(0, bob));
+    g.rotate(lean);
+    g.scale(fx / breathe, breathe);
+    const dx = -D / 2, dy = -D * (SPRITE.frame - SPRITE.foot) / SPRITE.frame;
+    g.drawImage(sp.img, dx, dy, D, D);
+    if (o.flash > 0) {
+      g.globalAlpha = a0 * Math.min(0.75, o.flash * 7);
+      g.drawImage(flashOf(sp), dx, dy, D, D);
+    }
+    g.restore();
+    return feet + Math.min(0, bob) - H;
   }
 
   function drawWeapon(g, shape, sk, x, cy, s, face, fx, t) {
@@ -458,9 +538,9 @@
           const ring = u === p ? '#5be38a' : SF.TEAM_COLORS[u.team];
           let alpha = 1;
           if (u.team === 0 && (u.invisT > 0 || (u.bush >= 0 && !u.vis[1]))) alpha = 0.55;
-          drawHero(g, { heroId: u.def0.id, skinId: u.skin, x: u.x, y: u.y, face: u.face, t: t + u.id, scale: 1, ring, moving: u.moving, alpha, flash: u.flash, seed: u.id });
-          if (u.stunT > 0) { for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; g.beginPath(); g.arc(u.x + Math.cos(a) * 16, u.y - 78 + Math.sin(a) * 5, 3.5, 0, TAU); g.fillStyle = '#ffe27a'; g.fill(); } }
-          if (u.shield > 0) { g.beginPath(); g.ellipse(u.x, u.y - 30, 34, 44, 0, 0, TAU); g.strokeStyle = 'rgba(230,240,255,.5)'; g.lineWidth = 2; g.stroke(); }
+          const top = drawHero(g, { heroId: u.def0.id, skinId: u.skin, x: u.x, y: u.y, face: u.face, t: t + u.id, scale: 1, ring, moving: u.moving, alpha, flash: u.flash, seed: u.id, state: u });
+          if (u.stunT > 0) { for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; g.beginPath(); g.arc(u.x + Math.cos(a) * 16, top - 8 + Math.sin(a) * 5, 3.5, 0, TAU); g.fillStyle = '#ffe27a'; g.fill(); } }
+          if (u.shield > 0) { const ry = (u.y - top) / 2 + 10; g.beginPath(); g.ellipse(u.x, u.y - ry + 12, 36, ry, 0, 0, TAU); g.strokeStyle = 'rgba(230,240,255,.5)'; g.lineWidth = 2; g.stroke(); }
         } else if (u.kind === 'minion') drawMinion(g, u, t);
         else if (u.kind === 'monster') drawMonster(g, u, t);
         else drawStructure(g, u, t);
