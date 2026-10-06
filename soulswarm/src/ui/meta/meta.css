@@ -281,6 +281,16 @@
 .dsel-b.lk b { color: #77809a; }
 .dsel-b.lk small { color: #8d96aa; opacity: 1; font-size: 9.5px; }
 @media (max-width: 370px) { .dsel { gap: 4px; padding: 7px 4px 1px; } .dsel-b b { font-size: 11px; letter-spacing: .02em; } .dsel-b small { font-size: 9px; } }
+/* short phones (iPhone SE): the selector would push the card into the side buttons, so it compacts and replaces the status line */
+@media (max-height: 700px) {
+  .chap.has-dsel { padding-top: 6px; padding-bottom: 6px; }
+  .chap.has-dsel .chap-status { display: none; }
+  .dsel { padding-top: 5px; }
+  .dsel-b { min-height: 32px; padding: 2px; }
+  .pane-home .hm-side { gap: 3px; } /* and the side buttons tighten to make room */
+  .pane-home .fab-ic { width: 40px; height: 40px; }
+  .pane-home .fab-ic svg { width: 22px; height: 22px; }
+}
 .dsel-b:active { transform: scale(.95); }
 .d-first { display: inline-flex; align-items: center; gap: 3px; color: #e8b6ff; }
 .btn-battle.d-nightmare:not(.is-locked) { background: linear-gradient(180deg, #f3e2ff 0%, #c98fff 30%, #8d3cf0 70%, #561799 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,.65), inset 0 -5px 0 rgba(40,0,80,.5); }

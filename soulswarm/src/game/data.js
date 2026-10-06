@@ -458,11 +458,12 @@ export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 
 // ---------------------------------------------------------------- Difficulty (Nightmare, Torment)
 // Per chapter: a Normal clear unlocks Nightmare, a Nightmare clear unlocks Torment. Campaign chapters only: Endless Abyss
 // and the Daily Trial always play Normal. Blood Moon stacks on top of any difficulty. Normal is the identity.
-//   hp / dmg / spawn: × enemy HP, enemy and hazard damage (Gravemaw's too), director spawn rate
+//   hp / dmg / spawn: × enemy HP, enemy and hazard damage, director spawn rate (once Gravemaw rises his arena adds are plain
+//   Normal adds: he alone carries the difficulty)
 //   ramp: minutes for the extra HP to build up from ×1 to ×hp, so the opening still lets you level (damage and spawns apply at once)
 //   xp: × soul-shard XP, so the build keeps pace with a horde that dies more slowly (Gravemaw arrives at 6:00 either way)
-//   bossHp: × Gravemaw's HP (his arena adds have Normal HP); lower than hp so his fight stays within ~1.6× its Normal length
-//   (scripts/balance.mjs GOD=1)
+//   bossHp / bossDmg: × Gravemaw's HP and damage; below the horde's so his fight stays within ~1.6× its Normal length
+//   (scripts/balance.mjs GOD=1: harder hits mostly shred the legion that fights him)
 //   extraElites: the first n of DIFFICULTY_ELITES join the elite schedule · eliteAffixes: affixes per elite (elite-affix system)
 //   gold / passXp: × run gold and pass XP (account XP stays at the Normal amount, so account-level gems don't speed up)
 //   firstClearGems: one-time gems for the first clear of each chapter at this difficulty (never doubled by Blood Moon or ads)
@@ -470,10 +471,10 @@ export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 
 //   these colours by `mix` (the Blood Moon look swap, blended) · css: UI colour
 export const DIFFICULTY_ORDER = ['normal', 'nightmare', 'torment'];
 export const DIFFICULTY = {
-  normal:    { id: 'normal', name: 'Normal', hp: 1, ramp: 0, xp: 1, bossHp: 1, dmg: 1, spawn: 1, extraElites: 0, eliteAffixes: 0, gold: 1, passXp: 1, firstClearGems: 0, hoard: null, tint: null, css: '#4ef2ff' },
-  nightmare: { id: 'nightmare', name: 'Nightmare', hp: 2.2, ramp: 2, xp: 1.5, bossHp: 1.4, dmg: 1.8, spawn: 1.25, extraElites: 2, eliteAffixes: 1, gold: 1.75, passXp: 1.5, firstClearGems: 60,
+  normal:    { id: 'normal', name: 'Normal', hp: 1, ramp: 0, xp: 1, bossHp: 1, bossDmg: 1, dmg: 1, spawn: 1, extraElites: 0, eliteAffixes: 0, gold: 1, passXp: 1, firstClearGems: 0, hoard: null, tint: null, css: '#4ef2ff' },
+  nightmare: { id: 'nightmare', name: 'Nightmare', hp: 2.2, ramp: 2, xp: 2, bossHp: 1.4, bossDmg: 1.4, dmg: 1.8, spawn: 1.25, extraElites: 2, eliteAffixes: 1, gold: 1.75, passXp: 1.5, firstClearGems: 60,
     hoard: { epic: 0.4, rare: 0.6 }, tint: { mix: 0.7, ground: 0x3a1f62, groundB: 0x140830, fog: 0x080312, rune: 0xb04bff, rim: 0xc89bff }, css: '#b46bff' },
-  torment:   { id: 'torment', name: 'Torment', hp: 3.5, ramp: 2.5, xp: 2, bossHp: 1.8, dmg: 2.4, spawn: 1.4, extraElites: 4, eliteAffixes: 2, gold: 2.5, passXp: 2, firstClearGems: 120,
+  torment:   { id: 'torment', name: 'Torment', hp: 3.5, ramp: 2.5, xp: 2.8, bossHp: 1.5, bossDmg: 1.6, dmg: 2.8, spawn: 1.4, extraElites: 4, eliteAffixes: 2, gold: 2.5, passXp: 2, firstClearGems: 120,
     hoard: { legendary: 0.02, epic: 0.98 }, tint: { mix: 0.85, ground: 0x2c0a0e, groundB: 0x0b0204, fog: 0x040001, rune: 0xff1a2e, rim: 0xff5a5a }, css: '#ff3b4e' },
 };
 export const DIFFICULTY_ELITES = [190, 320, 115, 260]; // extra elite times (s), taken in this order

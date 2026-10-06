@@ -85,7 +85,7 @@ export function createHome(ctx) {
       </div>
       <div class="hm-side hm-right">${right.join('')}</div>
       <div class="hm-bottom">
-        <div class="chap ${locked ? 'is-locked' : ''}" style="--cc:${cc}">
+        <div class="chap ${locked ? 'is-locked' : ''} ${dselHtml ? 'has-dsel' : ''}" style="--cc:${cc}">
           <button class="chap-arrow" data-act="prev" ${sel <= 1 ? 'disabled' : ''} aria-label="Previous chapter">${icon('left')}</button>
           <div class="chap-body">
             <div class="chap-no t-label">${ch.endless ? 'Endless' : `Chapter ${sel}`}<span class="chap-dots">${CHAPTERS.map((c) => `<i class="${c.id === sel ? 'on' : ''} ${c.id > p.chapter.unlocked ? 'lk' : ''}"></i>`).join('')}</span></div>

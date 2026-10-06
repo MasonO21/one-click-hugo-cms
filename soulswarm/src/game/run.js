@@ -131,7 +131,7 @@ export class Run {
     const D = this.diff, dh = this.bossSpawned ? 1 : 1 + (D.hp - 1) * Math.min(1, D.ramp ? m / D.ramp : 1);
     return this.chapter.hpMul * (this.endless ? 1 + 0.32 * m + 0.025 * m * m : 1 + 0.28 * m + 0.04 * m * m) * dh;
   }
-  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)) * this.diff.dmg; }
+  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)) * (this.bossSpawned ? 1 : this.diff.dmg); } // arena adds are plain adds: Gravemaw carries the difficulty
   recomputeStats() {
     this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
     const ms = this.mut.stats, S = this.stats;

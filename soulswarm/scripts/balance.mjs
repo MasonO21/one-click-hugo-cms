@@ -46,7 +46,8 @@ const BOT = `window.__balance = (ch, prog, god, hero, diff, dtune) => {
   app.startRun(ch, { difficulty: diff });
   const r = app.run; if (dtune) Object.assign(r.diff, dtune);
   let hurt = 0; const h0 = r.player.hurt.bind(r.player);
-  r.player.hurt = (d) => { const before = r.player.hp; h0(d); hurt += Math.max(0, before - r.player.hp); if (god) r.player.hp = r.player.maxHp; };
+  r.player.hurt = (d) => { const before = r.player.hp; h0(god ? Math.min(d, r.player.hp - 1) : d); // god: no hit can kill (Torment one-shots fragile builds)
+    hurt += Math.max(0, before - r.player.hp); if (god) r.player.hp = r.player.maxHp; };
   let bossAt = -1, peakEnemies = 0;
   for (let i = 0; i < 30 * 960 && !r.ended && !r.player.dead; i++) {
     const P = r.player; let fx = 0, fz = 0;

@@ -537,7 +537,7 @@ Every campaign chapter can be replayed on two harder difficulties for long-term 
 | Enemy damage (horde, hazards, Gravemaw) | ×1 | ×NM_DMG | ×TM_DMG |
 | Spawn rate (director; swarm rings unchanged) | ×1 | ×NM_SPAWN | ×TM_SPAWN |
 | Elites | 4 (8 in Ch5) | +2, at 3:10 and 5:20 | +4, also at 1:55 and 4:20 |
-| Elite affixes (`run.diff.eliteAffixes`, read by the elite-affix system) | 0 | 1 | 2 |
+| Affixes per elite (§5.1; `run.diff.eliteAffixes` is the extra) | 1 (2 from Ch4) | +1: 2 (3 from Ch4) | +2: 3 (4 from Ch4) |
 | Soul shard XP | ×1 | ×NM_XP | ×TM_XP |
 | Gravemaw HP (his arena adds keep Normal HP) | ×1 | ×NM_BOSS | ×TM_BOSS |
 | Run gold · pass XP | ×1 · ×1 | ×1.75 · ×1.5 | ×2.5 · ×2 |

@@ -1,5 +1,5 @@
 // Nightmare and Torment (GDD §8.2): per-chapter unlocks, the remembered choice, records and Gravemaw's Hoard odds.
-// Profile block: p.diff = { sel: { [chapter]: id }, best: { [chapter]: { [id]: { time, legion, kills, cleared } } } }.
+// Profile block: p.diff = { sel: { [chapter]: id }, best: { [chapter]: { [id]: { time, legion, kills, streak, cleared } } } }.
 // Normal's clear flag stays in p.chapter.best (it drives chapter unlocks and the Daily Trial).
 import { CHAPTERS, DIFFICULTY, DIFFICULTY_ORDER, RARITIES } from '../game/data.js';
 
@@ -35,12 +35,13 @@ export function selectDifficulty(p, ch, id) {
   return true;
 }
 
-/** Keeps best time, best legion, best kills and the cleared flag per chapter per difficulty. Returns true on a new best. */
+/** Keeps best time, legion, kills, kill streak and the cleared flag per chapter per difficulty. Returns true on a new best. */
 export function recordDifficulty(p, ch, id, result) {
   const all = p.diff.best[ch] || (p.diff.best[ch] = {});
-  const prev = all[id] || { time: 0, legion: 0, kills: 0, cleared: false };
+  const prev = all[id] || { time: 0, legion: 0, kills: 0, streak: 0, cleared: false };
   const cleared = !!(prev.cleared || result.victory || (id === 'normal' && clearedOn(p, ch, 'normal'))); // Normal's flag lives in p.chapter.best
-  all[id] = { time: Math.max(prev.time, result.time), legion: Math.max(prev.legion || 0, result.bestLegion || 0), kills: Math.max(prev.kills || 0, result.kills || 0), cleared };
+  all[id] = { time: Math.max(prev.time, result.time), legion: Math.max(prev.legion || 0, result.bestLegion || 0), kills: Math.max(prev.kills || 0, result.kills || 0),
+    streak: Math.max(prev.streak || 0, result.bestStreak || 0), cleared };
   return result.time > prev.time || (!!result.victory && !prev.cleared);
 }
 
@@ -56,7 +57,7 @@ export function migrateDifficulty(out) {
   d.sel = { ...(d.sel || {}) }; d.best = { ...(d.best || {}) };
   for (const [ch, b] of Object.entries(out.chapter.best || {})) {
     if (!b || (d.best[ch] && d.best[ch].normal)) continue;
-    d.best[ch] = { ...(d.best[ch] || {}), normal: { time: b.time || 0, legion: 0, kills: b.kills || 0, cleared: !!b.cleared } };
+    d.best[ch] = { ...(d.best[ch] || {}), normal: { time: b.time || 0, legion: 0, kills: b.kills || 0, streak: 0, cleared: !!b.cleared } };
   }
   return out;
 }

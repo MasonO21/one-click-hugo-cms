@@ -1101,7 +1101,7 @@ errs = await session(async (page) => {
     out.modes.endlessOpen = D.difficultyUnlocked(p, 6, 'nightmare'); out.modes.endlessStart = !!runAt(6, { difficulty: 'nightmare' });
     out.modes.endless = runAt(6, {}).diff.id;
     const n = runAt(1, {}).diff;
-    out.identity = { id: n.id, hp: n.hp, ramp: n.ramp, xp: n.xp, bossHp: n.bossHp, dmg: n.dmg, spawn: n.spawn, extraElites: n.extraElites, eliteAffixes: n.eliteAffixes, gold: n.gold, passXp: n.passXp, firstClearGems: n.firstClearGems, hoard: n.hoard, tint: n.tint };
+    out.identity = { id: n.id, hp: n.hp, ramp: n.ramp, xp: n.xp, bossHp: n.bossHp, bossDmg: n.bossDmg, dmg: n.dmg, spawn: n.spawn, extraElites: n.extraElites, eliteAffixes: n.eliteAffixes, gold: n.gold, passXp: n.passXp, firstClearGems: n.firstClearGems, hoard: n.hoard, tint: n.tint };
     // run scaling on Chapter 2 at 3:20 (past the HP ramp): a Brute's HP and damage, the director's spawn accrual, elites, Gravemaw and
     // an arena add, the sky; plus a Brute at 0:00 (the ramp starts at Normal HP)
     p.chapter.best[2] = { time: 420, cleared: true, kills: 0 }; p.diff.best[2] = { nightmare: { time: 420, legion: 0, kills: 0, cleared: true } };
@@ -1112,10 +1112,12 @@ errs = await session(async (page) => {
       r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = r.trialBannerAt = 0; r.spawnAcc = 0; r.director(0.02);
       const acc = r.spawnAcc, hp = e.maxHp, dmg = e.dmg;
       r.enemies.kill(e, 'bolt'); const shard = r.pickups.gems[r.pickups.gems.length - 1].value; // a Brute's 4 XP × diff.xp
+      const el = r.spawnEnemy('husk', { elite: true, at: { x: r.player.x, z: r.player.z + 9 } }); r.affixes.roll(el); // affixes.js reads run.diff.eliteAffixes
+      const affixRolled = el.aff ? el.aff.ids.length : 0;
       r.boss.spawn(); r.bossSpawned = true; const b = r.bossEnemy;
-      const add = r.spawnEnemy('brute', { at: { x: r.player.x - 9, z: r.player.z } }); // an arena add has Normal HP
+      const add = r.spawnEnemy('brute', { at: { x: r.player.x - 9, z: r.player.z } }); // an arena add is a plain Normal add
       p.flags.bloodMoon = 'off';
-      return { id: r.diff.id, affixes: r.diff.eliteAffixes, hp, dmg, shard, acc, elites: r.eliteTimes.length, bossHp: b.maxHp, bossDmg: b.dmg, addHp: add.maxHp, hp0: e0.maxHp, sky: '#' + r.scene.background.getHexString(), badge: document.querySelector('.hud-diff')?.textContent || '' };
+      return { id: r.diff.id, affixes: r.diff.eliteAffixes, affixRolled, hp, dmg, shard, acc, elites: r.eliteTimes.length, bossHp: b.maxHp, bossDmg: b.dmg, addHp: add.maxHp, addDmg: add.dmg, hp0: e0.maxHp, sky: '#' + r.scene.background.getHexString(), badge: document.querySelector('.hud-diff')?.textContent || '' };
     };
     out.probe = { normal: probe('normal'), nightmare: probe('nightmare'), torment: probe('torment'), bmNormal: probe('normal', true), bmNightmare: probe('nightmare', true) };
     // the run-start banner names the difficulty
@@ -1138,8 +1140,8 @@ errs = await session(async (page) => {
     // records per difficulty: best time, best legion, kills and cleared; Normal's chapter record is left alone
     p.chapter.best[5] = { time: 420, cleared: true, kills: 2000 }; delete p.diff.best[5];
     const base = { chapter: 5, raised: 100, novas: 2, gates: 4, level: 15, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0 };
-    const r1 = eco.applyRunResult(p, { ...base, time: 250, kills: 900, bestLegion: 95, victory: false, difficulty: 'nightmare' });
-    const r2 = eco.applyRunResult(p, { ...base, time: 180, kills: 700, bestLegion: 140, victory: false, difficulty: 'nightmare' });
+    const r1 = eco.applyRunResult(p, { ...base, time: 250, kills: 900, bestLegion: 95, bestStreak: 40, victory: false, difficulty: 'nightmare' });
+    const r2 = eco.applyRunResult(p, { ...base, time: 180, kills: 700, bestLegion: 140, bestStreak: 75, victory: false, difficulty: 'nightmare' });
     eco.applyRunResult(p, { ...base, time: 300, kills: 1200, bestLegion: 60, victory: false, difficulty: 'normal' });
     out.records = { nm: p.diff.best[5].nightmare, normal: p.diff.best[5].normal, chapter: p.chapter.best[5], newBest: [r1.newBest, r2.newBest], highest: D.highestCleared(p, 5) };
     // quests: late-gated, and they count Nightmare clears and elites
@@ -1154,16 +1156,16 @@ errs = await session(async (page) => {
   check('difficulty: Nightmare opens with a Normal clear, Torment with a Nightmare clear (per chapter)',
     !u.fresh && u.startLocked === false && u.energyKept && u.afterNormal.join() === 'true,false,false' && u.afterNightmare.join() === 'true,2,nightmare', JSON.stringify(u));
   check('difficulty: Endless Abyss and the Daily Trial always play Normal', modes.trial === 'normal' && !modes.endlessOpen && !modes.endlessStart && modes.endless === 'normal', JSON.stringify(modes));
-  check('difficulty: run.diff always defined, Normal is the identity', JSON.stringify(identity) === JSON.stringify({ id: 'normal', hp: 1, ramp: 0, xp: 1, bossHp: 1, dmg: 1, spawn: 1, extraElites: 0, eliteAffixes: 0, gold: 1, passXp: 1, firstClearGems: 0, hoard: null, tint: null }), JSON.stringify(identity));
+  check('difficulty: run.diff always defined, Normal is the identity', JSON.stringify(identity) === JSON.stringify({ id: 'normal', hp: 1, ramp: 0, xp: 1, bossHp: 1, bossDmg: 1, dmg: 1, spawn: 1, extraElites: 0, eliteAffixes: 0, gold: 1, passXp: 1, firstClearGems: 0, hoard: null, tint: null }), JSON.stringify(identity));
   const ratio = (k, d) => Math.round(P[d][k] / P.normal[k] * 100) / 100;
-  const sc = { hp: [ratio('hp', 'nightmare'), ratio('hp', 'torment')], dmg: [ratio('dmg', 'nightmare'), ratio('dmg', 'torment')], spawn: [ratio('acc', 'nightmare'), ratio('acc', 'torment')], affixes: [P.normal.affixes, P.nightmare.affixes, P.torment.affixes] };
+  const sc = { hp: [ratio('hp', 'nightmare'), ratio('hp', 'torment')], dmg: [ratio('dmg', 'nightmare'), ratio('dmg', 'torment')], spawn: [ratio('acc', 'nightmare'), ratio('acc', 'torment')], affixes: [P.normal.affixes, P.nightmare.affixes, P.torment.affixes], rolled: [P.normal.affixRolled, P.nightmare.affixRolled, P.torment.affixRolled] };
   sc.hp0 = [ratio('hp0', 'nightmare'), ratio('hp0', 'torment')]; sc.xp = [ratio('shard', 'nightmare'), ratio('shard', 'torment')];
-  check('difficulty: enemy HP (after its ramp), damage, spawn rate and shard XP scale by run.diff (Nightmare, Torment)',
-    near(sc.hp, [NM.hp, TM.hp]) && sc.hp0.join() === '1,1' && NM.ramp > 0 && near(sc.xp, [NM.xp, TM.xp]) && near(sc.dmg, [NM.dmg, TM.dmg]) && near(sc.spawn, [NM.spawn, TM.spawn]) && sc.affixes.join() === `0,${NM.eliteAffixes},${TM.eliteAffixes}` && NM.hp > 1 && TM.hp > NM.hp, JSON.stringify(sc));
+  check('difficulty: enemy HP (after its ramp), damage, spawn rate, shard XP and elite affixes scale by run.diff (Nightmare, Torment)',
+    near(sc.hp, [NM.hp, TM.hp]) && sc.hp0.join() === '1,1' && NM.ramp > 0 && near(sc.xp, [NM.xp, TM.xp]) && near(sc.dmg, [NM.dmg, TM.dmg]) && near(sc.spawn, [NM.spawn, TM.spawn]) && sc.affixes.join() === `0,${NM.eliteAffixes},${TM.eliteAffixes}` && sc.rolled.join() === `1,${1 + NM.eliteAffixes},${1 + TM.eliteAffixes}` && NM.hp > 1 && TM.hp > NM.hp, JSON.stringify(sc));
   const el = [P.normal.elites, P.nightmare.elites, P.torment.elites, P.bmNormal.elites, P.bmNightmare.elites];
   check('difficulty: extra elites join the schedule (Blood Moon stacks on top)', el.join() === [4, 4 + NM.extraElites, 4 + TM.extraElites, 8, 8 + NM.extraElites].join() && NM.extraElites > 0, JSON.stringify(el));
-  const bs = { hp: [ratio('bossHp', 'nightmare'), ratio('bossHp', 'torment')], dmg: [ratio('bossDmg', 'nightmare'), ratio('bossDmg', 'torment')], adds: [ratio('addHp', 'nightmare'), ratio('addHp', 'torment')] };
-  check('difficulty: Gravemaw HP and damage scale; his arena adds keep Normal HP', near(bs.hp, [NM.bossHp, TM.bossHp]) && near(bs.dmg, [NM.dmg, TM.dmg]) && bs.adds.join() === '1,1' && NM.bossHp > 1, JSON.stringify(bs));
+  const bs = { hp: [ratio('bossHp', 'nightmare'), ratio('bossHp', 'torment')], dmg: [ratio('bossDmg', 'nightmare'), ratio('bossDmg', 'torment')], adds: [ratio('addHp', 'nightmare'), ratio('addHp', 'torment'), ratio('addDmg', 'nightmare'), ratio('addDmg', 'torment')] };
+  check('difficulty: Gravemaw HP and damage scale; his arena adds stay plain Normal adds', near(bs.hp, [NM.bossHp, TM.bossHp]) && near(bs.dmg, [NM.bossDmg, TM.bossDmg]) && bs.adds.join() === '1,1,1,1' && NM.bossHp > 1, JSON.stringify(bs));
   const look = { skies: [P.normal.sky, P.nightmare.sky, P.torment.sky, P.bmNormal.sky, P.bmNightmare.sky], badges: [P.normal.badge, P.nightmare.badge, P.torment.badge], banner };
   check('difficulty: tinted palette (over Blood Moon too), HUD badge and run-start banner',
     new Set(look.skies).size === 5 && look.badges.join() === ',Nightmare,Torment' && banner.title === 'NIGHTMARE' && /diff-nightmare/.test(banner.cls), JSON.stringify(look));
@@ -1178,8 +1180,8 @@ errs = await session(async (page) => {
   const hn = hoard.nightmare, ht = hoard.torment;
   check('difficulty rewards: Hoard floor (Nightmare Rare+ with ~40% Epic, Torment Epic+ with a rare Legendary)',
     !hn.common && !hn.legendary && hn.epic / 400 > 0.3 && hn.epic / 400 < 0.5 && !ht.common && !ht.rare && ht.epic > 360 && (ht.legendary || 0) <= 24, JSON.stringify(hoard));
-  check('difficulty records: best time, legion and kills per difficulty; Normal chapter record untouched',
-    JSON.stringify(rec.nm) === JSON.stringify({ time: 250, legion: 140, kills: 900, cleared: false }) && rec.normal.time === 300 && rec.normal.legion === 60 && rec.normal.cleared
+  check('difficulty records: best time, legion, kills and kill streak per difficulty; Normal chapter record untouched',
+    JSON.stringify(rec.nm) === JSON.stringify({ time: 250, legion: 140, kills: 900, streak: 75, cleared: false }) && rec.normal.time === 300 && rec.normal.legion === 60 && rec.normal.cleared
     && rec.chapter.time === 420 && rec.chapter.kills === 2000 && rec.newBest.join() === 'true,false' && rec.highest === 'normal', JSON.stringify(rec));
   check('difficulty quests: Nightmare quests are late-gated and count Nightmare+ clears and elites', !quests.earlyPool.length && quests.done.includes('nmClear') && quests.done.includes('nmElite'), JSON.stringify(quests));
 
