@@ -12,39 +12,63 @@ import type { Diet, Meal, MealPrefs, PantryItem } from './types';
 type Tag = 'meat' | 'dairy' | 'egg' | 'gluten' | 'honey';
 
 const PLANT_MILK = /\b(oat|almond|soy|soya|coconut|plant|vegan|cashew|rice|hemp|pea|macadamia|hazelnut) (milk|drink|beverage|cream|yogh?urt|cheese|butter|creamer)\b/;
+/** Nut and seed butters are not dairy. */
+const NOT_BUTTER = /\b(peanut|almond|cashew|hazelnut|nut|seed|apple|cocoa) butter\b/g;
 
-/** Plant-based versions of meat and dairy foods ("veggie sausages", "vegan mayo", "Quorn mince"). */
-const PLANT_BASED = /\b(vegan|veggie|vegetarian|plant[- ]based|meatless|meat[- ]free|dairy[- ]free|quorn|beyond|impossible|tofu|soy|soya|seitan|tempeh|jackfruit)\b/;
+const MEAT_WORDS =
+  /\b(chicken|beef|pork|bacon|sausages?|ham|turkey|lamb|veal|venison|duck|steak|mince|salami|pepperoni|prosciutto|chorizo|pancetta|lardons|gelatine?|lard|bone broth|salmon|fish|shrimp|prawns?|tuna|sardines?|anchov(y|ies)|crab|lobster|scallops?|mussels|clams|oysters|squid|worcestershire|caesar)\b/g;
+const EGG_WORDS = /\b(eggs?|mayo|mayonnaise|aioli|ranch|carbonara|hollandaise|meringues?)\b/g;
+const DAIRY_WORDS =
+  /\b(milk|yogh?urt|cheese|butter|buttermilk|cream|kefir|ghee|custard|paneer|halloumi|mozzarella|feta|parmesan|ricotta|mascarpone|gelato|whey|ranch|tzatziki|raita|pesto|alfredo|carbonara|queso|chocolate spread|nutella|pizzas?(?! (dough|sauce|bases?))|lasagn[ae](?! (sheets|noodles))|cheesecakes?)\b/g;
+/** Baked sweets and pastries are made with eggs and butter or milk unless they say otherwise. */
+const BAKED_WORDS = /\b(cakes?|cupcakes?|brownies?|croissants?|brioche|waffles?|pancakes?|crepes?|donuts?|doughnuts?|cookies?|pastr(y|ies)|muffins?|scones?|eclairs?)\b/g;
+const GLUTEN_WORDS =
+  /\b(bread|breadcrumbs|panko|bagel|bun|roll|baguette|sourdough|ciabatta|focaccia|croissant|brioche|muffin|crumpet|naan|pita|pitta|flatbread|wrap|tortilla|pasta|spaghetti|penne|macaroni|linguine|fettuccine|fusilli|rigatoni|orzo|lasagn[ae]|ravioli|tortellini|gnocchi|noodle|ramen|udon|flour|dough|pizza|cereal|granola|cracker|pretzel|cookie|biscuit|cake|cupcake|brownie|pie|waffle|pancake|crepe|donut|doughnut|pastry|pastries|scone|couscous|bulgur|barley|farro|spelt|rye|seitan|beer|soy sauce|teriyaki|hoisin|dumpling|crouton|nugget|fish finger|fish stick|breaded|battered|tempura|schnitzel|katsu|semolina)s?\b/;
+/** Bread and crackers that share a name with a sweet bake. */
+const NOT_BAKED = /\b(english muffins?|rice cakes?|oat ?cakes?)\b/g;
+/** Sauces and corn chips named after a wheat food are not made of it. */
+const NOT_GLUTEN = /\b((pasta|pizza|lasagn[ae]) sauce|tortilla chips)\b/g;
+
+/**
+ * Words that turn the food named after them into a plant-based version: "veggie sausages",
+ * "Quorn mince", "vegan mayo", "dairy-free cheese". They only count for what follows them in the
+ * same part of the name, so "chicken and veggie skewers" and "honey soy chicken" are still meat.
+ */
+const PLANT_MEAT =
+  /\b(vegan|veggie|vegetarian|plant[- ]based|meatless|meat[- ]free|quorn|beyond|impossible|tofu|seitan|tempeh|jackfruit)\b|\bsoya? (?=(mince|chunks|chorizo|sausages?|burgers?|nuggets?)\b)/;
+const PLANT_DAIRY = /\b(vegan|plant[- ]based|dairy[- ]free)\b/;
+const PLANT_EGG = /\b(vegan|plant[- ]based|egg[- ]free)\b/;
+/** Where one food in a name ends and the next begins: "chicken and veggie skewers". */
+const PARTS = /,|&|\+|\/|\b(and|with|plus|n)\b/;
+
+/** The name mentions one of `words` that no plant-based word earlier in the same part qualifies. */
+function mentions(name: string, words: RegExp, plantVersion: RegExp): boolean {
+  return name.split(PARTS).some((part) => {
+    if (!part) return false;
+    const plant = part.search(plantVersion);
+    for (const m of part.matchAll(words)) if (plant === -1 || m.index < plant) return true;
+    return false;
+  });
+}
 
 function itemTags(item: PantryItem): Tag[] {
   const name = item.name.toLowerCase();
   const tags: Tag[] = [];
-  const plant = PLANT_BASED.test(name);
-  if ((item.category === 'meat' || item.category === 'seafood') && !plant) tags.push('meat');
-  if (
-    !plant &&
-    /\b(chicken|beef|pork|bacon|sausages?|ham|turkey|lamb|veal|venison|duck|steak|mince|salami|pepperoni|prosciutto|chorizo|pancetta|lardons|gelatine?|lard|bone broth|salmon|fish|shrimp|prawns?|tuna|sardines?|anchov(y|ies)|crab|lobster|scallops?|mussels|clams|oysters|squid|worcestershire|caesar)\b/.test(name)
-  ) {
-    tags.push('meat');
-  }
-  if (!plant && /\b(eggs?|mayo|mayonnaise|aioli)\b/.test(name)) tags.push('egg');
+  const animalCategory = item.category === 'meat' || item.category === 'seafood';
+  if (mentions(name, MEAT_WORDS, PLANT_MEAT) || (animalCategory && !PLANT_MEAT.test(name))) tags.push('meat');
+  const baked = name.replace(NOT_BAKED, ' ');
+  if (mentions(name, EGG_WORDS, PLANT_EGG) || mentions(baked, BAKED_WORDS, PLANT_EGG)) tags.push('egg');
   if (/\bhoney\b/.test(name) && !/\bhoneydew\b/.test(name)) tags.push('honey');
+  const dairyName = baked.replace(new RegExp(PLANT_MILK.source, 'g'), ' ').replace(NOT_BUTTER, ' ');
   if (
-    (item.category === 'dairy' || /\b(milk|yogh?urt|cheese|butter|cream|kefir|ghee|custard|paneer|halloumi|mozzarella|feta|parmesan|ricotta|mascarpone|gelato|whey)\b/.test(name)) &&
-    !/\beggs?\b/.test(name) &&
-    !PLANT_MILK.test(name) &&
-    !plant &&
-    // Nut and seed butters are not dairy.
-    !/\b(peanut|almond|cashew|hazelnut|nut|seed|apple|cocoa) butter\b/.test(name)
+    mentions(dairyName, DAIRY_WORDS, PLANT_DAIRY) ||
+    mentions(dairyName, BAKED_WORDS, PLANT_DAIRY) ||
+    // Eggs are filed under dairy, and so are plant milks; neither is dairy.
+    (item.category === 'dairy' && !/\beggs?\b/.test(name) && !PLANT_MILK.test(name) && !PLANT_DAIRY.test(name))
   ) {
     tags.push('dairy');
   }
-  if (
-    /\b(bread|breadcrumbs|panko|bagel|bun|roll|baguette|sourdough|ciabatta|focaccia|croissant|brioche|muffin|crumpet|naan|pita|pitta|flatbread|wrap|tortilla|pasta|spaghetti|penne|macaroni|linguine|fettuccine|fusilli|rigatoni|orzo|lasagn[ae]|ravioli|tortellini|gnocchi|noodle|ramen|udon|flour|dough|pizza|cereal|granola|cracker|pretzel|cookie|biscuit|cake|brownie|pie|waffle|pancake|couscous|bulgur|barley|farro|spelt|rye|seitan|beer|soy sauce|teriyaki|hoisin|dumpling|crouton)s?\b/.test(name) &&
-    !/\b(corn|rice|gluten.?free|buckwheat)\b/.test(name)
-  ) {
-    tags.push('gluten');
-  }
+  if (GLUTEN_WORDS.test(name.replace(NOT_GLUTEN, ' ')) && !/\b(corn|rice|gluten.?free|buckwheat)\b/.test(name)) tags.push('gluten');
   return tags;
 }
 
@@ -79,14 +103,40 @@ export function urgencyWeight(days: number): number {
   return 1;
 }
 
+/** The words of a food name, plurals made singular: "Eggs" and "egg" match, "Eggplant" does not. */
+function nameWords(name: string): Set<string> {
+  return new Set(
+    name
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean)
+      .map((w) => (w.length > 4 && w.endsWith('ies') ? `${w.slice(0, -3)}y` : w.endsWith('oes') ? w.slice(0, -2) : w.length > 3 && /[^s]s$/.test(w) ? w.slice(0, -1) : w)),
+  );
+}
+
+/**
+ * The tracked item an ingredient name means: the same name, then the same words ("Egg" for
+ * "Eggs"), then a name holding all of the other's words ("chicken" for "Chicken thighs"), closest
+ * first. Between copies of one food, the one that goes off soonest, as that is the one to use.
+ */
 export function matchTracked(name: string, items: PantryItem[]): PantryItem | undefined {
   const n = normalizeName(name);
   if (!n) return undefined;
-  const named = items.filter((i) => normalizeName(i.name) !== '');
-  return (
-    named.find((i) => normalizeName(i.name) === n) ??
-    named.find((i) => n.includes(normalizeName(i.name)) || normalizeName(i.name).includes(n))
-  );
+  const want = nameWords(n);
+  let best: { item: PantryItem; rank: number } | undefined;
+  for (const item of sortByExpiry(items)) {
+    const have = normalizeName(item.name);
+    if (!have) continue;
+    let rank: number;
+    if (have === n) rank = 0;
+    else {
+      const words = nameWords(have);
+      const [small, big] = words.size <= want.size ? [words, want] : [want, words];
+      if (small.size === 0 || ![...small].every((w) => big.has(w))) continue;
+      rank = 1 + big.size - small.size;
+    }
+    if (!best || rank < best.rank) best = { item, rank };
+  }
+  return best?.item;
 }
 
 /** A meal's ingredient list without repeats (the AI, or two tracked "Carrots", can name one twice). */

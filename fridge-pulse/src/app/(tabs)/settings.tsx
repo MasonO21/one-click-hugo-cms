@@ -25,7 +25,7 @@ import { useSettings, type Appearance } from '../../store/settings';
 import { useBarcodes } from '../../store/barcodes';
 import { useFoods } from '../../store/foods';
 import { useShopping } from '../../store/shopping';
-import { useFoodLog } from '../../store/foodLog';
+import { clearLog } from '../../store/logActions';
 import { getHealth, useHealth } from '../../store/health';
 import { isCovered, sponsorName, useHousehold } from '../../store/household';
 import { NO_PROFILE, targetsFor } from '../../lib/goals';
@@ -247,7 +247,7 @@ export default function Settings() {
   async function confirmDelete() {
     const ok = await confirm({
       title: 'Delete all data?',
-      message: 'This removes every tracked item, your shopping list, the foods you have taught the app, your food log, your goals and your impact history from this device. It cannot be undone.',
+      message: `This removes every tracked item, your shopping list, the foods you have taught the app, your food log${useHealth.getState().connected ? ` (and the meals it added to ${getHealth().name})` : ''}, your goals and your impact history from this device. It cannot be undone.`,
       confirmLabel: 'Delete',
       destructive: true,
     });
@@ -262,7 +262,7 @@ export default function Settings() {
     useShopping.getState().clear();
     useFoods.getState().clear();
     useBarcodes.getState().clear();
-    useFoodLog.getState().clear();
+    clearLog();
     useHealth.getState().disconnect();
     useSettings.getState().set({ profile: NO_PROFILE });
   }

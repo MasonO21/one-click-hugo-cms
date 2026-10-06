@@ -62,6 +62,11 @@ function draftFor(name: string, category: Category, location: StorageLocation, k
   };
 }
 
+/** Marks a draft headed somewhere other than the list's place, so moving the list leaves it there. */
+function ownPlaceIf(d: DraftItem, listLocation: StorageLocation): DraftItem {
+  return d.location !== listLocation ? { ...d, ownPlace: true } : d;
+}
+
 /** In-memory hand-off between the scan / shopping screens and the review screen. */
 export const useScanDraft = create<ScanDraftState>((set, get) => ({
   mode: 'scan',
@@ -69,14 +74,14 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
   drafts: [],
   notes: null,
   photos: [],
-  start: (location, drafts, notes, mode = 'scan', photos = []) => set({ location, drafts, notes, mode, photos }),
+  start: (location, drafts, notes, mode = 'scan', photos = []) => set({ location, drafts: drafts.map((d) => ownPlaceIf(d, location)), notes, mode, photos }),
   startPutAway: (items) =>
     set({
       mode: 'shopping',
       location: 'fridge',
       notes: null,
       photos: [],
-      drafts: items.map((i, n) => draftFor(i.name, i.category, i.keptIn ?? usualPlace(i.name, i.category), `shop-${i.id}-${n}`, { shoppingId: i.id })),
+      drafts: items.map((i, n) => ownPlaceIf(draftFor(i.name, i.category, i.keptIn ?? usualPlace(i.name, i.category), `shop-${i.id}-${n}`, { shoppingId: i.id }), 'fridge')),
     }),
   update: (key, patch) =>
     set((s) => ({
@@ -87,8 +92,9 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
     set((s) => ({
       drafts: s.drafts.map((d) => {
         if (d.key !== key) return d;
-        // A receipt's food goes where this food is kept; a photographed one is already somewhere.
-        const location = placesPerItem(s.mode) ? food.keptIn : d.location;
+        // A receipt's food goes where this food is kept; a photographed one is already somewhere, and
+        // one the person has put somewhere stays there.
+        const location = placesPerItem(s.mode) && !d.userPlaced ? food.keptIn : d.location;
         // A printed date or one the person set still wins; an estimate uses the food's own figure
         // (the registry already knows the food, see src/store/foods.ts).
         const expiresOn = d.expirySource === 'estimate' ? addDays(d.addedOn ?? todayISO(), estimateShelfLifeDays(food.name, food.category, location)) : d.expiresOn;
@@ -98,6 +104,7 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
           name: food.name,
           category: food.category,
           location,
+          ...(location !== d.location ? { ownPlace: true } : null),
           expiresOn,
           confidence: 'high',
           identified: true,
@@ -113,7 +120,7 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
     const category = opts.category ?? guessCategory(name);
     // On a receipt every item has its own place, so a forgotten one goes where it usually lives.
     const location = opts.keptIn ?? (placesPerItem(get().mode) ? usualPlace(name, category) : get().location);
-    const draft = draftFor(name, category, location, `manual-${Date.now()}-${get().drafts.length}`);
+    const draft = ownPlaceIf(draftFor(name, category, location, `manual-${Date.now()}-${get().drafts.length}`), get().location);
     set((s) => ({ drafts: [draft, ...s.drafts] }));
   },
   setLocation: (location) => {
@@ -122,8 +129,9 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
     set({
       location,
       drafts: drafts.map((d) => {
-        // Items deliberately kept elsewhere (ice cream in the freezer) stay where they are.
-        if (d.location !== previous) return d;
+        // Items kept elsewhere (ice cream in the freezer, or one the person moved) stay where they
+        // are, even when the list passes through their place and back.
+        if (d.ownPlace || d.location !== previous) return d;
         const duplicate = tracked(d.name, location);
         return {
           ...d,
@@ -139,10 +147,13 @@ export const useScanDraft = create<ScanDraftState>((set, get) => ({
   moveDraft: (key, location) =>
     set((s) => ({
       drafts: s.drafts.map((d) => {
-        if (d.key !== key || d.location === location) return d;
+        if (d.key !== key) return d;
+        if (d.location === location) return { ...d, ownPlace: true, userPlaced: true };
         return {
           ...d,
           location,
+          ownPlace: true,
+          userPlaced: true,
           expiresOn: d.expirySource === 'estimate' ? addDays(d.addedOn ?? todayISO(), estimateShelfLifeDays(d.name, d.category, location)) : d.expiresOn,
           duplicate: tracked(d.name, location),
         };

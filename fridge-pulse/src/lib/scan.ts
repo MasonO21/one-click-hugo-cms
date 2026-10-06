@@ -28,6 +28,10 @@ export interface DraftItem {
   duplicate: boolean;
   /** True once the person has ticked or unticked it themselves; their choice then sticks. */
   userSelected?: boolean;
+  /** Headed somewhere other than the list's place (ice cream on a fridge list), so it stays put when the list moves. */
+  ownPlace?: boolean;
+  /** The person picked its place themselves; a lookup's "kept in" no longer moves it. */
+  userPlaced?: boolean;
   /** Came from the shopping list; removed from the list when saved. */
   shoppingId?: string;
   /** What the scan saw when it could not tell exactly what the item is. */

@@ -41,6 +41,14 @@ export function removeFromLog(id: string): LogEntry | undefined {
   return gone;
 }
 
+/** Empties the log, and takes what it added to the health app back out (Delete all my data). */
+export function clearLog(): void {
+  const ids = useFoodLog.getState().entries.flatMap((e) => e.healthIds ?? []);
+  useFoodLog.getState().clear();
+  // A write still in flight finds its entry gone and removes its own samples.
+  void useHealth.getState().removeFood(ids);
+}
+
 /** "Logged 1 medium banana (105 kcal)". */
 export function loggedMessage(entry: Pick<LogEntry, 'title' | 'perServing' | 'servings'>): string {
   return `Logged ${entry.title} (${entryTotals(entry).kcal} kcal)`;
