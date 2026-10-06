@@ -46,7 +46,8 @@ export class Gates {
     // first run: once the legion reaches 10, the next pair is a scripted maths lesson (+5 vs ×2, sides random)
     const lesson = !forcedOps && run.tutorial && !this.lessonShown && run.legion.count >= 10;
     if (lesson) this.lessonShown = true;
-    const ops = forcedOps || (lesson ? (Math.random() < 0.5 ? [{ type: 'add', n: 5 }, { type: 'mul', n: 2 }] : [{ type: 'mul', n: 2 }, { type: 'add', n: 5 }]) : makeOps(run.legion.count, run.time / 60));
+    let ops = forcedOps || (lesson ? (Math.random() < 0.5 ? [{ type: 'add', n: 5 }, { type: 'mul', n: 2 }] : [{ type: 'mul', n: 2 }, { type: 'add', n: 5 }]) : makeOps(run.legion.count, run.time / 60));
+    if (run.mut.noBadGates && !forcedOps) ops = ops.map((op) => (isGood(op) ? op : { type: 'add', n: Math.max(5, Math.round((12 + run.time / 60 * 7 + run.legion.count * 0.2) / 5) * 5) })); // Gilded Gates
     const gates = ops.map((op, i) => {
       const side = i === 0 ? -1 : 1;
       const g = makeGate(label(op), isGood(op), WIDTH);

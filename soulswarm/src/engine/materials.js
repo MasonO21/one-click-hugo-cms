@@ -94,7 +94,7 @@ export function makeCharMaterial(opts = {}) {
       uKey: { value: new THREE.Color(opts.key ?? 0x7d90b8) },
       uAmbient: { value: new THREE.Color(opts.ambient ?? 0x29324a) },
       uRim: { value: new THREE.Color(opts.rim ?? 0x6fd8ff) },
-      uEmit: { value: opts.emit ?? 2.4 },
+      uEmit: { value: opts.emit ?? 2.2 },
       uPLPos: { value: new THREE.Vector3(0, 1.2, 0) },
       uPLColor: { value: new THREE.Color(opts.plColor ?? 0x4ef2ff) },
       uPLRadius: { value: opts.plRadius ?? 7 },
@@ -117,6 +117,111 @@ export function addInstanceAttrs(mesh, max) {
   g.setAttribute('iTint', tint); g.setAttribute('iFlash', flash); g.setAttribute('iAnim', anim);
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   return { tint, flash, anim };
+}
+
+// ---------------------------------------------------------------- spectral ghosts (legion variants)
+// Instanced (uses addInstanceAttrs) and unlit: a body in the instance tint with a hot fresnel rim and an
+// energy ripple flowing up it, white-hot emissive parts (gold when iAnim.y = 1, for champions), a sway along
+// the body and a lower body that narrows into a tail and dissolves (dithered) toward the ground.
+// Opaque on purpose: additive ghosts wash out to white where the model's parts overlap. iAnim.x = sway phase.
+const spectralVert = /* glsl */`
+attribute vec3 aCol;
+attribute float aEmit;
+#ifdef USE_INSTANCING
+attribute vec3 iTint;
+attribute float iFlash;
+attribute vec2 iAnim;
+#else
+uniform vec3 uTint;
+uniform float uFlash;
+uniform vec2 uAnim;
+#endif
+uniform float uTime;
+varying vec3 vN;
+varying vec3 vV;
+varying vec3 vCol;
+varying vec3 vTint;
+varying float vEmit;
+varying float vFlash;
+varying float vH;
+varying float vGold;
+varying float vWave;
+void main() {
+  #ifdef USE_INSTANCING
+  vec3 tint = iTint; float flash = iFlash; vec2 anim = iAnim;
+  mat4 m = modelMatrix * instanceMatrix;
+  #else
+  vec3 tint = uTint; float flash = uFlash; vec2 anim = uAnim;
+  mat4 m = modelMatrix;
+  #endif
+  vec3 p = position;
+  float t = uTime * 2.6 + anim.x;
+  float h = max(p.y, 0.0);
+  p.x += sin(t + p.y * 2.2) * 0.05 * h;
+  p.z += cos(t * 0.7 + p.y * 1.7) * 0.04 * h;
+  float tail = 1.0 - smoothstep(0.0, 0.7, p.y);
+  p.xz *= 1.0 - 0.45 * tail;
+  p.x += tail * sin(t * 1.6 + p.z * 5.0) * 0.06;
+  vec4 wp = m * vec4(p, 1.0);
+  vN = normalize(mat3(m) * normal);
+  vV = cameraPosition - wp.xyz;
+  vCol = aCol; vEmit = aEmit; vTint = tint; vFlash = flash; vH = position.y; vGold = anim.y;
+  vWave = position.y * 5.0 - uTime * 4.0 + anim.x;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}`;
+
+const spectralFrag = /* glsl */`
+uniform float uBody;
+uniform float uRim;
+uniform float uEmit;
+uniform vec3 uGold;
+varying vec3 vN;
+varying vec3 vV;
+varying vec3 vCol;
+varying vec3 vTint;
+varying float vEmit;
+varying float vFlash;
+varying float vH;
+varying float vGold;
+varying float vWave;
+void main() {
+  // the tail dissolves into the ground mist
+  float fade = smoothstep(-0.05, 0.55, vH);
+  float dither = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453);
+  if (fade < dither) discard;
+  vec3 N = normalize(vN);
+  vec3 V = normalize(vV);
+  float fr = 1.0 - abs(dot(N, V));
+  float rim = pow(fr, 2.5);
+  // a hint of the source model's shading keeps heads, limbs and weapons readable
+  float shade = 0.5 + 0.5 * (N.y * 0.5 + 0.5);
+  float alb = clamp(dot(vCol, vec3(0.3, 0.55, 0.15)) * 8.0, 0.45, 1.0);
+  float wave = 0.82 + 0.18 * sin(vWave);
+  // a deeper, more saturated body under a hot rim reads as neon at phone size; champions get a gold-tinged rim
+  vec3 deep = pow(vTint, vec3(1.6));
+  vec3 rimCol = mix(vTint, uGold, vGold * 0.45);
+  vec3 body = deep * uBody * shade * alb * wave + rimCol * rim * uRim + vec3(pow(fr, 8.0) * 0.15);
+  vec3 hot = mix(vTint * 0.6 + vec3(0.55), uGold * 1.25, vGold) * uEmit;
+  vec3 col = mix(body, hot, min(vEmit, 1.0));
+  col += vFlash * vec3(1.6, 1.7, 1.9);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+export function makeSpectralMaterial(opts = {}) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uBody: { value: opts.body ?? 0.85 },
+      uRim: { value: opts.rim ?? 1.4 },
+      uEmit: { value: opts.emit ?? 2.2 },
+      uGold: { value: new THREE.Color(opts.gold ?? 0xffd04a) },
+      uTint: { value: new THREE.Color(opts.tint ?? 0x4ef2ff) },
+      uFlash: { value: 0 },
+      uAnim: { value: new THREE.Vector2(0, 0) },
+    },
+    vertexShader: spectralVert,
+    fragmentShader: spectralFrag,
+  });
 }
 
 // ---------------------------------------------------------------- ground

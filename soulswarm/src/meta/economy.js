@@ -4,7 +4,7 @@ import {
   HEROES, HERO_ORDER, HERO_UNLOCK_SHARDS, HERO_STAR_COST, HERO_MAX_STARS, heroStarBonus,
   RELICS, RELIC_TYPES, RELIC_SLOTS, relicValue, RARITIES,
   TALENTS, talentCost, SKUS, GEM_SHOP, ALTAR, PASS_TIERS, PASS_XP_PER_TIER, passReward,
-  QUESTS, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE,
+  QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS,
 } from '../game/data.js';
 import { saveProfile, todayKey } from './save.js';
 
@@ -34,7 +34,7 @@ export function upkeep(p) {
   }
   // daily quest reset
   const today = todayKey();
-  if (p.quests.day !== today) p.quests = { day: today, progress: {}, claimed: [] };
+  if (p.quests.day !== today) p.quests = { day: today, progress: {}, claimed: [], ids: pickQuests(p, today) };
 }
 export function energyNextIn(p) {
   if (p.energy >= ENERGY_MAX) return 0;
@@ -228,8 +228,18 @@ export function questProgress(p, key, amount, mode = 'add') {
   const cur = p.quests.progress[key] || 0;
   p.quests.progress[key] = mode === 'max' ? Math.max(cur, amount) : cur + amount;
 }
+/** The day's 5 pool quests (seeded by date, so a reload never reshuffles them). */
+export function pickQuests(p, day) {
+  let h = 0; for (const ch of 'quests:' + day) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const pool = QUEST_POOL.filter((q) => !q.late || p.chapter.unlocked >= 2).map((q) => q.id);
+  const out = [];
+  while (out.length < QUEST_SLOTS.length && pool.length) { h = Math.imul(h ^ (h >>> 13), 2246822507) >>> 0; out.push(pool.splice(h % pool.length, 1)[0]); }
+  return out;
+}
 export function questList(p) {
-  return QUESTS.map((q) => {
+  if (!p.quests.ids) p.quests.ids = pickQuests(p, p.quests.day); // saves from before the rotating pool
+  const list = p.quests.ids.map((id, i) => ({ ...QUEST_POOL.find((q) => q.id === id), rewards: QUEST_SLOTS[i] })).concat(QUEST_DAILY);
+  return list.map((q) => {
     const prog = Math.min(q.goal, p.quests.progress[q.key] || 0);
     const claimed = p.quests.claimed.includes(q.id);
     return { ...q, progress: prog, done: prog >= q.goal, claimed };
@@ -338,16 +348,39 @@ export const accountXpFor = (lv) => 80 + lv * 40;
  * result: { chapter, time, kills, raised, bestLegion, novas, gates, victory, level }
  * Grants rewards once and returns { rewards, items, firstClear, newBest, levelUps }.
  */
+// ---------------------------------------------------------------- Daily Trial
+const hashStr = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
+const trialToday = (p) => { const t = todayKey(); if (p.trial.day !== t) Object.assign(p.trial, { day: t, done: false, ads: 0 }); return p.trial; };
+/** Today's trial: a chapter the player has cleared, one boon and one bane, picked from the date. */
+export function dailyTrial(p, day = todayKey()) {
+  const h = hashStr('trial:' + day);
+  const cleared = Math.max(1, Math.min(5, p.chapter.unlocked - 1));
+  const of = (kind) => Object.keys(MUTATORS).filter((k) => MUTATORS[k].kind === kind);
+  const boons = of('boon'), banes = of('bane');
+  return { day, chapter: 1 + (h % cleared), boon: boons[(h >>> 8) % boons.length], bane: banes[(h >>> 16) % banes.length] };
+}
+export function trialState(p) {
+  const t = trialToday(p), unlocked = p.chapter.unlocked >= TRIAL.unlockAt;
+  return { ...dailyTrial(p), unlocked, available: unlocked && !t.done, retry: unlocked && t.done && t.ads < TRIAL.adRetries, clears: t.clears };
+}
+/** Uses today's attempt. */
+export function beginTrial(p) { const t = trialToday(p); if (t.done || p.chapter.unlocked < TRIAL.unlockAt) return false; t.done = true; return true; }
+/** A rewarded ad buys one more attempt per day. */
+export function grantTrialRetry(p) { const t = trialToday(p); if (!t.done || t.ads >= TRIAL.adRetries) return false; t.ads++; t.done = false; return true; }
+
 export function applyRunResult(p, result) {
   const L = computeLoadout(p);
   const ch = result.chapter;
-  const firstClear = result.victory && !result.endless && !p.chapter.best[ch]?.cleared;
+  const trial = !!result.trial;
+  const firstClear = result.victory && !result.endless && !trial && !p.chapter.best[ch]?.cleared;
   const gold = Math.round((result.kills * 0.9 + result.time * 2.2 + (result.victory ? 400 * ch : 0)) * L.goldMul + (result.bonusGold || 0));
-  const gems = result.endless ? (result.bossKills || 0) * 15 + Math.floor(result.time / 60) * 2
+  const gems = trial ? (result.victory ? TRIAL.clear.gems : Math.min(TRIAL.failGemsMax, Math.floor(result.time / 60) * TRIAL.failGemsPerMin))
+    : result.endless ? (result.bossKills || 0) * 15 + Math.floor(result.time / 60) * 2
     : result.victory ? (firstClear ? 50 + 20 * ch : 10 + 2 * ch) : Math.floor(result.time / 120) * 2;
-  const passXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0));
+  const passXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0) + (trial && result.victory ? TRIAL.clear.passXp : 0));
   const rewards = { gold, gems, passXp };
   if (firstClear) rewards.sigils = 1;
+  if (trial && result.victory) { p.trial.clears = (p.trial.clears || 0) + 1; if (p.trial.clears % TRIAL.sigilEvery === 0) rewards.sigils = (rewards.sigils || 0) + 1; }
   if (result.victory) rewards.relic = ch >= 3 && rand() < 0.35 ? 'epic' : rand() < 0.5 ? 'rare' : 'common';
   if (result.endless && result.bossKills) rewards.relic = result.bossKills >= 3 ? 'epic+' : result.bossKills >= 2 ? 'epic' : 'rare';
 
@@ -359,11 +392,11 @@ export function applyRunResult(p, result) {
   s.bestLegion = Math.max(s.bestLegion, result.bestLegion);
   if (result.victory) s.clears += 1;
 
-  // chapter progress
+  // chapter progress (a Daily Trial plays a cleared chapter under mutators: it never changes records)
   const prev = p.chapter.best[ch] || { time: 0, cleared: false, kills: 0 };
-  const newBest = result.time > prev.time || (result.victory && !prev.cleared);
-  p.chapter.best[ch] = { time: Math.max(prev.time, result.time), cleared: prev.cleared || result.victory, kills: Math.max(prev.kills || 0, result.kills), depth: Math.max(prev.depth || 0, (result.bossKills || 0) + 1) };
-  if (result.victory && ch === p.chapter.unlocked && ch < CHAPTERS.length) p.chapter.unlocked = ch + 1;
+  const newBest = !trial && (result.time > prev.time || (result.victory && !prev.cleared));
+  if (!trial) p.chapter.best[ch] = { time: Math.max(prev.time, result.time), cleared: prev.cleared || result.victory, kills: Math.max(prev.kills || 0, result.kills), depth: Math.max(prev.depth || 0, (result.bossKills || 0) + 1) };
+  if (!trial && result.victory && ch === p.chapter.unlocked && ch < CHAPTERS.length) p.chapter.unlocked = ch + 1;
 
   // quests
   questProgress(p, 'kills', result.kills);
@@ -372,6 +405,12 @@ export function applyRunResult(p, result) {
   questProgress(p, 'novas', result.novas);
   questProgress(p, 'gates', result.gates);
   questProgress(p, 'runs', 1);
+  questProgress(p, 'chests', result.chests || 0);
+  questProgress(p, 'elites', result.elites || 0);
+  questProgress(p, 'peak', result.bestLegion || 0, 'max');
+  questProgress(p, 'evolve', result.evolutions || 0);
+  questProgress(p, 'bosses', (result.bossKills || 0) + (result.victory && !result.endless ? 1 : 0));
+  if (trial && result.victory) questProgress(p, 'trial', 1);
 
   // account level
   let levelUps = 0;

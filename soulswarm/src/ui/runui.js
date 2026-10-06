@@ -2,7 +2,7 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, RARITY_COLOR } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART } from './art.js';
 
@@ -198,6 +198,7 @@ export class RunUI {
       body: `<div style="display:flex;flex-direction:column;gap:10px">
         <div class="res-stats"><div><b>${fmtTime(run.time)}</b><small>Time</small></div><div><b>${fmt(run.counters.kills)}</b><small>Kills</small></div><div><b>${run.legion.count}</b><small>Legion</small></div></div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${build}</div>
+        ${run.trial ? `<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${run.mut.ids.map((id) => `<span class="pill ${MUTATORS[id].kind === 'boon' ? 'pill-soul' : 'pill-hot'}">${MUTATORS[id].name}</span>`).join(' ')}</div>` : ''}
       </div>`,
       actions: [
         { label: 'Resume', cls: 'btn-primary btn-lg', onClick: () => { app.audio.sfx('click'); run.pause(false); } },

@@ -15,7 +15,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
 | Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
-| Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | — | Blood Moon, Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
 Everything below describes the build unless it is marked **Planned**.
@@ -47,7 +47,7 @@ Everything below describes the build unless it is marked **Planned**.
 | Moment-to-moment | 1–10 s | Survive, kill, collect | Floating joystick, auto-attack, raises, pickups | Soul shards (XP), new minions |
 | Run | 6–9 min | Clear the chapter (survive 6:00, kill Gravemaw) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
 | Meta | Days to months | Get strong enough for the next chapter | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Endless Abyss depth record |
-| Daily | 15–40 min/day | Finish quests, spend energy | 6 daily quests, 7-day login calendar, rewarded ads, energy | Gems, gold, sigils, pass XP |
+| Daily | 15–40 min/day | Finish quests, spend energy, beat the Daily Trial | 6 daily quests, 7-day login calendar, the Daily Trial (§8.1), rewarded ads, energy | Gems, gold, sigils, pass XP |
 | Weekly (Planned) | 7 days | Climb the leaderboard, farm Blood Moon | Blood Moon weekend, Endless Abyss weekly board, weekly quest chest | Sigils, gems, league rewards |
 | Seasonal | 28 days | Finish the Soul Pass, collect the new hero | Soul Pass (30 tiers); Planned: monthly Boss Rush, new hero every 1–2 seasons | Skins, Epic/Legendary relics, hero shards |
 
@@ -55,7 +55,7 @@ Everything below describes the build unless it is marked **Planned**.
 
 **Run.** 0:00–6:00 survival with rising density, 9 Soul Gate pairs (0:28, then every 40 s), 6 swarm rings, 4 elites (1:15, 2:30, 3:45, 4:50) and roughly 21 level-ups (about Lv22, §9), then Gravemaw at 6:00. A full clear is 6:00 plus the boss fight. A failed run usually ends between 2:30 and 5:00.
 
-**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quest set: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Finish 2 runs.
+**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quests rotate: "Finish 2 runs" every day plus 5 drawn by date from a pool of 11: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Open 2 Relic Chests · Slay 3 elites · Lead a legion of 100, and after the first Chapter 1 clear also Evolve a weapon · Defeat Gravemaw · Clear the Daily Trial. Rewards belong to the 5 slots (in order: 20 gems · 1,500 gold · 15 gems · 1,200 gold · 1 sigil, each with pass XP), so the daily value never changes.
 
 | Daily quest reward | Gems | Gold | Sigils | Pass XP |
 |---|---|---|---|---|
@@ -192,11 +192,11 @@ Base values are for Chapter 1 at minute 0. Scaling is in §8. Each enemy deals i
 | Enemy | Role | Base HP | Speed (m/s) | Damage | XP | Behaviour | Counterplay |
 |---|---|---|---|---|---|---|---|
 | **Husk** | Basic chaser | 14 | 2.4 | 6 per touch | 1 | Walks straight at the player with flocking separation and a slight weave. Spawns just off-screen and in swarm rings. 40–100% of the horde. | Anything works. Husks are raise fodder. |
-| **Ghoul** | Runner | 8 | 4.4 | 5 per touch | 1 | A fast chaser; every 3rd swarm-ring enemy after 2:00. *(Planned: packs of 4–6 that flank in a ±30° arc and lunge at 3 m after a 0.4 s crouch telegraph.)* | Keep moving. Skull Halo and Grave Pulse shred packs. |
-| **Brute** | Tank | 75 | 1.7 | 18 per touch | 4 | Mass 5: shrugs off most knockback and shoves smaller enemies aside. Soaks minion attacks. *(Planned: a 1.5 m cone slam after a 0.8 s wind-up.)* | Bone Spears pierce. |
-| **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and fires a straight ember orb (6.5 m/s) about every 2.6 s. *(Planned: arcing orbs onto a telegraphed circle; burning ground from Chapter 2.)* | Ashen Chains and homing Soul Bolts reach her. Sidestep the orbs. |
+| **Ghoul** | Runner | 8 | 4.4 | 5 per touch | 1 | Spawns in **packs of 4–6** (Ch3: 6–8) from one point, usually ahead of the Shepherd; members fan out 1.8 m apart and flank at their own angle within ±30° (full swing beyond 6.5 m, none at 3 m). Within 3 m: a 0.4 s crouch (squash and flash), aimed 0.4 s ahead, then a **lunge** at 11 m/s for 0.3 s, 0.6 s recovery at 35% speed, then 1.5 s before it can lunge again. Ghoul share of the horde is unchanged (packs bank the director's picks). Every 3rd swarm-ring enemy after 2:00 is a single Ghoul. | Keep moving; sidestep the lunge. Skull Halo and Grave Pulse shred packs. |
+| **Brute** | Tank | 75 | 1.7 | 18 per touch | 4 | Mass 5: shrugs off most knockback and shoves smaller enemies aside. Within 2.2 m it rears back for **1.0 s** with a ground cone telegraph (2.4 m, ±40°; both × elite scale), then **slams** for 1.4× damage to the Shepherd and every minion in the cone, with 9 m/s knockback. 0.8 s recovery, 2.4 s between slams. | Step out of the cone. Bone Spears pierce. |
+| **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and **lobs** an ember orb about every 3.0 s (±15%) at the Shepherd's position 0.3 s ahead. The orb arcs for 1.0 s onto a 1.1 m telegraph circle (with a closing outer ring) and hits the Shepherd and minions inside. From Chapter 2 the landing leaves **burning ground** for 3 s (25% of the orb damage per second, ticks every 0.3 s, patches don't stack). | Ashen Chains and homing Soul Bolts reach her. Keep moving when a circle appears. |
 | **Bloater** | Bomber | 28 | 2.0 | 26 AoE (2.6 m) | 2 | Within 2.4 m of the player it slows to 25%, flashes and shows a 2.6 m telegraph, then explodes after 1.0 s. The blast also deals 60 to minions and 1.2× its max HP to other *enemies*. Killed early, it just dies (and can rise). | Kill it early, or let it detonate inside a crowd. Never let it reach you. |
-| **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass. Can be raised. *(Planned: crown-shaped silhouette marker.)* | Drops a **Relic Chest**. |
+| **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass, and a floating gold **crown** marker. Can be raised. | Drops a **Relic Chest**. |
 | **Gravemaw, the Hollow King** | Boss | 9,000 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing him clears the chapter. | See §6. |
 
 Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a), boss magenta/violet (#ff3df0). Every enemy has an emissive core so it reads against the dark ground.
@@ -319,16 +319,16 @@ Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s,
 
 ## 8. Chapters and difficulty scaling
 
-| # | Chapter | Palette | HP mult | Spawn mult | Modifier (Planned) | Recommended talents |
+| # | Chapter | Palette | HP mult | Spawn mult | Modifier | Recommended talents |
 |---|---|---|---|---|---|---|
 | 1 | Ashen Necropolis | Teal / ember | 1.00 | 1.00 | None (teaching chapter) | 0 |
-| 2 | Ember Wastes | Orange | 1.90 | 1.15 | More Cinder Witches; burning ground | ~8 levels total |
-| 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul packs of 6–8; ice patches | ~25 |
-| 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | 2× Bloaters; tighter fog vignette | ~60 |
-| 5 | Crimson Throne | Blood red | 7.50 | 1.60 | Extra elites | ~110 |
-| ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time | Endgame |
+| 2 | Ember Wastes | Orange | 1.90 | 1.15 | Cinder Witch weight ×1.8; lobs leave burning ground; **ember vents** (15 m grid, 32% of cells, 1.6 m radius, a puff every 6.5–9 s after a 1.2 s telegraph, 12 base damage scaled like enemy damage) | ~8 levels total |
+| 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul weight ×1.5, packs of 6–8; **ice patches** (12 m grid, 50% of cells, radius 2.6–4.4 m): on ice the Shepherd accelerates at 30% of normal, stops with 20% of normal friction and gets +8% top speed | ~25 |
+| 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | Bloater weight ×2; vignette 1.25 and ground fog pulled in from 26 to 17 m; **abyssal hands** every 6–9 s aimed 0.6 s ahead (1.3 m, 1.0 s telegraph, 0.6 s root) | ~60 |
+| 5 | Crimson Throne | Blood red | 7.50 | 1.60 | **8 elites** (45, 75, 110, 150, 185, 225, 255, 290 s); Brute weight ×1.6 | ~110 |
+| ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
 
-In the build, chapters differ only in palette, HP mult, spawn mult and the chapter terms below; every chapter has the same 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N. Endless Abyss unlocks after the first Chapter 5 clear.
+Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with a banner naming the chapter and its twist. Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N. Endless Abyss unlocks after the first Chapter 5 clear.
 
 **Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
 
@@ -355,6 +355,24 @@ In the build, chapters differ only in palette, HP mult, spawn mult and the chapt
 These are upper bounds: when the alive limit is reached, the director skips spawns.
 
 **Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). Gravemaw returns every 5:00 with HP `9,000 × 4.0 × 1.75 × (1 + 0.6k)` (63,000 for the first, k = kills so far) and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per Gravemaw plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
+
+### 8.1 Daily Trial
+
+One free run a day (no energy) that twists the core loop. It unlocks once Chapter 1 is cleared (home screen, left column, gold "Trial" button with a badge while today's attempt is unused).
+
+- **Seeded by date.** The day's hash picks a chapter the player has cleared (1 to unlocked − 1, max 5), one **boon** and one **bane**. Everyone at the same progress sees the same trial; it resets at local midnight.
+- **One attempt a day,** plus one more through a rewarded ad (`trial_retry`). Starting the trial uses the attempt.
+- **Rewards:** the normal run gold and pass XP, plus on a clear **40 gems and +150 pass XP**; every 3rd clear also gives **1 Altar Sigil** (the panel counts down to it). A failed attempt pays 8 gems per full minute survived (max 40) instead of the normal run gems. Trials never change chapter records, unlocks or first-clear rewards.
+- **Announced** in-run by a "DAILY TRIAL" banner at 0:03.6 naming both mutators; the pause screen lists them.
+
+| Boon | Effect | Bane | Effect |
+|---|---|---|---|
+| Soul Harvest | +20 pp Raise Chance (85% cap) | Swarming Dark | +50% enemy spawns |
+| Overflowing Cup | +40 legion cap (400 ceiling) | Iron Hides | Enemies have +60% HP |
+| Nova Font | Soul Nova charges ×2 | Witching Hour | Cinder Witch spawn weight ×4 (from 2:00) |
+| Gilded Gates | A gate pair every 25 s; bad gates become +N | Gilded Horrors | An elite every 40 s (8 per run, so 8 Relic Chests) |
+| Awakened | Signature weapon starts at Lv3 | Brittle Legion | Minions have half HP |
+| Legion Fury | Minions deal +60% damage | Restless Dead | Enemies move 30% faster |
 
 ---
 

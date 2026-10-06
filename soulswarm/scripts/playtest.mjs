@@ -375,7 +375,8 @@ errs = await session(async (page) => {
     out.endless = { d1, d2: r.mods.ice ? 'ch3' : '?' };
 
     // Taunt: inert without taunters (undefined or empty) …
-    r = start(1); P = r.player;
+    // (the real Legion rebuilds taunters every update, so it is frozen here; section 11 taunts with real Bulwarks)
+    r = start(1); P = r.player; r.legion.update = () => {};
     let calls = 0; r.legion.hitMinion = () => { calls++; };
     const h1 = near(r, 'husk', 5, 0);
     r.legion.taunters = undefined; step(r, 0.5);
@@ -407,7 +408,147 @@ errs = await session(async (page) => {
 });
 check('horde: no runtime errors', !errs.length, errs[0] || '');
 
-// 11. Gravemaw rework (src/game/boss.js): phases, immune roars, phase floor, sealed arena, edge adds, spiral,
+// 11. Daily Trial: seeded by date, free, one attempt (+1 by ad), mutators applied, records untouched
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const eco = await import('/src/meta/economy.js');
+    const app = window.__soulswarm, p = app.profile;
+    const lockedAtStart = !eco.trialState(p).unlocked;
+    p.chapter.unlocked = 3; p.chapter.best = {};
+    const a = eco.dailyTrial(p, '2026-10-06'), b = eco.dailyTrial(p, '2026-10-06'), c = eco.dailyTrial(p, '2026-10-07');
+    const same = JSON.stringify(a) === JSON.stringify(b), varies = JSON.stringify(a) !== JSON.stringify(c);
+    const energy = p.energy, t = eco.dailyTrial(p);
+    const started = app.startRun(0, { trial: true }), r = app.run;
+    const mut = r.mut, S = r.stats;
+    const second = (app.exitRun(), app.startRun(0, { trial: true }));
+    const retry = eco.grantTrialRetry(p), third = app.startRun(0, { trial: true });
+    const r3 = app.run; r3.player.hurt = () => {};
+    const e = r3.spawnEnemy('husk', { at: { x: r3.player.x + 9, z: r3.player.z } });
+    const hpRatio = e.maxHp / (14 * r3.hpMul());
+    const out = eco.applyRunResult(p, { chapter: t.chapter, time: 400, kills: 2000, raised: 300, bestLegion: 120, novas: 5, gates: 8, victory: true, level: 20, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, trial: true });
+    return { lockedAtStart, same, varies, chapterOk: t.chapter >= 1 && t.chapter <= 2, started, energyKept: p.energy === energy, trialFlag: r.trial, ids: mut.ids, second, retry, third,
+      hpRatio: Math.round(hpRatio * 100) / 100, hpExpected: mut.hp, gems: out.rewards.gems, sigils: out.rewards.sigils, bestUntouched: !p.chapter.best[t.chapter], unlocked: p.chapter.unlocked };
+  });
+  check('trial: locked until Chapter 1 is cleared, seeded by date', s.lockedAtStart && s.same && s.varies && s.chapterOk, JSON.stringify(s));
+  check('trial: free, one attempt, an ad buys one more', s.started && s.energyKept && s.trialFlag && s.ids.length === 2 && s.second === false && s.retry && s.third, JSON.stringify(s));
+  check('trial: mutators reach the horde, rewards paid, records untouched', Math.abs(s.hpRatio - s.hpExpected) < 0.02 && s.gems === 40 && !s.sigils && s.bestUntouched && s.unlocked === 3, JSON.stringify(s));
+});
+check('trial: no runtime errors', !errs.length, errs[0] || '');
+
+// 12. Daily quests rotate: 5 from the pool (seeded by date) plus "Finish 2 runs"; rewards stay with the slot
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const eco = await import('/src/meta/economy.js');
+    const p = window.__soulswarm.profile;
+    const fresh = eco.pickQuests(p, '2026-10-06');
+    p.chapter.unlocked = 3;
+    const a = eco.pickQuests(p, '2026-10-06'), b = eco.pickQuests(p, '2026-10-06');
+    const days = new Set(); for (let d = 1; d <= 28; d++) for (const id of eco.pickQuests(p, `2026-11-${String(d).padStart(2, '0')}`)) days.add(id);
+    p.quests = { day: p.quests.day, progress: {}, claimed: [], ids: ['chest', 'elite', 'legion', 'boss', 'evolve'] };
+    eco.applyRunResult(p, { chapter: 1, time: 380, kills: 2200, raised: 300, bestLegion: 140, novas: 6, gates: 9, victory: true, level: 22, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, chests: 4, elites: 4, evolutions: 1 });
+    const list = eco.questList(p);
+    return { n: list.length, freshLate: fresh.some((id) => ['evolve', 'boss', 'trial'].includes(id)), same: a.join() === b.join(), unique: new Set(a).size === 5, variety: days.size,
+      done: list.filter((q) => q.done).map((q) => q.id), sigilSlot: list[4].rewards.sigils === 1, runs: list[5].id === 'runs' };
+  });
+  check('quests: 6 a day, seeded, varied, late quests gated', s.n === 6 && !s.freshLate && s.same && s.unique && s.variety >= 10 && s.sigilSlot && s.runs, JSON.stringify(s));
+  check('quests: new keys track chests, elites, peak legion, Gravemaw, evolutions', ['chest', 'elite', 'legion', 'boss', 'evolve'].every((id) => s.done.includes(id)), JSON.stringify(s.done));
+});
+check('quests: no runtime errors', !errs.length, errs[0] || '');
+
+// 13. Legion variants (GDD §4.2): with Raise Chance forced to 1, every kill rises as its own kind.
+//    Covers variant mapping, Champions, Soul Bomb blasts, Soul Witch orbs, taunters, removeMany,
+//    the cap heal and the boss engagement limit, then renders every ghost kind to catch shader errors.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, E = app.engine; E.manual = true;
+    app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+    app.startRun(1);
+    const r = app.run, P = r.player, L = r.legion, EN = r.enemies;
+    r.player.hurt = () => {}; r.addXp = () => {}; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.spawnAcc = -1e9;
+    r.weapons.update = () => {}; // only minions deal damage here
+    r.stats.raise = 1; r.stats.cap = 400;
+    const step = (sec, each) => { for (let i = 0; i < Math.round(sec * 30); i++) { r.update(1 / 30); if (each) each(); } };
+    const newest = () => L.list[L.list.length - 1];
+    const out = {};
+    // each enemy type rises as its matching variant; an elite rises as a Champion
+    out.kinds = {};
+    for (const t of ['husk', 'ghoul', 'brute', 'witch', 'bloater']) { EN.kill(EN.spawn(t, P.x + 6, P.z + 6, {}), 'bolt'); out.kinds[t] = newest().kind; }
+    EN.kill(EN.spawn('witch', P.x + 6, P.z - 6, { elite: true }), 'bolt');
+    const ch = newest();
+    out.champ = { kind: ch.kind, champ: ch.champ, hpMul: +(ch.maxHp / r.stats.minionHp).toFixed(2), scale: +ch.scale.toFixed(3) };
+    // render every ghost kind (shader compile / runtime errors surface as console errors)
+    for (let i = 0; i < 6; i++) E.step(1 / 30);
+    // taunters: the live Bulwarks; hitMinion damages one
+    const t0 = L.taunters[0];
+    out.taunt = { n: L.taunters.length, fields: !!t0 && ['x', 'z', 'hp', 'maxHp'].every((k) => typeof t0[k] === 'number') };
+    const hp0 = t0.hp; out.taunt.hit = L.hitMinion(t0, 5) === false && Math.abs(t0.hp - (hp0 - 5)) < 1e-6;
+    out.taunt.kill = L.hitMinion(t0, 1e9) === true;
+    step(1 / 30);
+    out.taunt.after = L.taunters.length;
+    // Soul Bomb: dives into a tight crowd, blasts it and leaves the legion; blast kills take the normal kill path
+    L.detonateAll(); EN.clearAll(false);
+    const crowd = [];
+    for (let i = 0; i < 10; i++) crowd.push(EN.spawn('husk', P.x + 6 + Math.cos(i * 0.63) * 0.5, P.z + Math.sin(i * 0.63) * 0.5, { hpMul: i < 4 ? 0.05 : 80 }));
+    const tanky = crowd.slice(4), hpA = tanky.reduce((a, e) => a + e.hp, 0);
+    const sources = [], onKill = r.onEnemyKilled.bind(r);
+    r.onEnemyKilled = (e, src, nr) => { sources.push(src); onKill(e, src, nr); };
+    const raised0 = r.counters.raised, bomb = L.raise(P.x + 2, P.z, { kind: 'bloater' }), uid = bomb.uid;
+    let tb = 0;
+    while (tb < 5 && L.list.some((m) => m.uid === uid)) { step(1 / 30); tb += 1 / 30; }
+    out.bomb = { gone: !L.list.some((m) => m.uid === uid), t: +tb.toFixed(2), dmg: Math.round(hpA - tanky.reduce((a, e) => a + e.hp, 0)), expect: Math.round(6 * r.stats.minionDmg * 6),
+      soulbombKills: sources.filter((x) => x === 'soulbomb').length, raised: r.counters.raised - raised0 };
+    r.onEnemyKilled = onKill;
+    // Soul Witch: shoots homing orbs from range
+    L.detonateAll(); EN.clearAll(false);
+    const foe = EN.spawn('husk', P.x + 5, P.z, { hpMul: 80 }); foe.speed = 0;
+    const witch = L.raise(P.x, P.z, { kind: 'witch' });
+    let orbs = 0, minD = 99;
+    step(3, () => { orbs = Math.max(orbs, L.orbs.length); minD = Math.min(minD, Math.hypot(witch.x - foe.x, witch.z - foe.z)); });
+    out.witch = { orbs, hurt: Math.round(foe.maxHp - foe.hp), minDist: +minD.toFixed(2) };
+    // removeMany returns the lost souls' positions
+    L.detonateAll(); EN.clearAll(false);
+    L.addMany(12, P.x, P.z);
+    const lost = L.removeMany(5);
+    out.remove = { n: lost.length, left: L.count, finite: lost.every((p) => [p.x, p.y, p.z].every(Number.isFinite)) };
+    // a raise roll at the cap heals the weakest minion by 50% instead of raising
+    r.stats.cap = L.count;
+    const weak = L.list[3]; weak.hp = weak.maxHp * 0.1;
+    EN.kill(EN.spawn('husk', P.x + 7, P.z, {}), 'bolt');
+    out.capHeal = { count: L.count, cap: r.stats.cap, frac: +(weak.hp / weak.maxHp).toFixed(2) };
+    // taunting end to end (enemies.js side): foes next to a real Bulwark steer to it and strike it
+    L.detonateAll(); EN.clearAll(false); r.stats.cap = 400;
+    const bw = L.raise(P.x + 2.3, P.z, { kind: 'brute', fx: false }); bw.hp = bw.maxHp *= 50; bw.born = 1;
+    let onBw = 0, onShep = 0;
+    const hm = L.hitMinion.bind(L); L.hitMinion = (m, d) => { if (m === bw) onBw++; return hm(m, d); };
+    P.hurt = () => { onShep++; };
+    for (let i = 0; i < 4; i++) EN.spawn('husk', bw.x + 1.5 + i * 0.3, bw.z + (i - 1.5) * 0.6, { hpMul: 200 }).spawnT = 1;
+    step(3);
+    out.taunt2 = { hitsOnBulwark: onBw, hitsOnShepherd: onShep, bulwarkHurt: bw.hp < bw.maxHp, radius: +bw.radius.toFixed(2) };
+    L.hitMinion = hm; P.hurt = () => {};
+    // at most 24 minions engage Gravemaw at once
+    L.detonateAll(); EN.clearAll(false); r.stats.cap = 400;
+    L.addMany(150, P.x, P.z);
+    r.boss.spawn(); const B = r.bossEnemy;
+    let maxEngaged = 0;
+    step(5, () => { B.x = P.x + 3; B.z = P.z; let n = 0; for (const m of L.list) if (m.target === B) n++; maxEngaged = Math.max(maxEngaged, n); });
+    out.boss = { maxEngaged, legion: L.count };
+    for (let i = 0; i < 4; i++) E.step(1 / 30);
+    return out;
+  });
+  check('legion: each enemy type rises as its variant', JSON.stringify(s.kinds) === JSON.stringify({ husk: 'shade', ghoul: 'runner', brute: 'bulwark', witch: 'soulWitch', bloater: 'soulBomb' }), JSON.stringify(s.kinds));
+  check('legion: an elite rises as a Champion', s.champ.champ && s.champ.kind === 'soulWitch' && s.champ.hpMul === 2.4 && s.champ.scale === 1.08, JSON.stringify(s.champ));
+  check('legion: taunters list live Bulwarks; hitMinion damages and kills', s.taunt.n === 1 && s.taunt.fields && s.taunt.hit && s.taunt.kill && s.taunt.after === 0, JSON.stringify(s.taunt));
+  check('legion: Soul Bomb detonates, damages enemies and leaves the legion', s.bomb.gone && s.bomb.dmg >= s.bomb.expect * 0.5, JSON.stringify(s.bomb));
+  check('legion: Soul Bomb kills take the kill path and roll raises', s.bomb.soulbombKills >= 3 && s.bomb.raised >= 3, JSON.stringify(s.bomb));
+  check('legion: Soul Witch hits with orbs from range', s.witch.orbs > 0 && s.witch.hurt > 0 && s.witch.minDist > 2.5, JSON.stringify(s.witch));
+  check('legion: removeMany returns the lost positions', s.remove.n === 5 && s.remove.left === 7 && s.remove.finite, JSON.stringify(s.remove));
+  check('legion: a raise at the cap heals the weakest minion', s.capHeal.count === s.capHeal.cap && s.capHeal.frac === 0.6, JSON.stringify(s.capHeal));
+  check('legion: enemies taunted by a real Bulwark strike it', s.taunt2.hitsOnBulwark >= 2 && s.taunt2.bulwarkHurt, JSON.stringify(s.taunt2));
+  check('legion: at most 24 minions engage the boss',s.boss.maxEngaged > 0 && s.boss.maxEngaged <= 24, JSON.stringify(s.boss));
+});
+check('legion variants: no runtime errors', !errs.length, errs[0] || '');
+
+// 14. Gravemaw rework (src/game/boss.js): phases, immune roars, phase floor, sealed arena, edge adds, spiral,
 //    Hollow Dirge, chapter twists and the 1.0 s telegraph floor. Each run jumps straight to 6:00 in god mode.
 const BOSS_QA = `
 window.__bossRun = (ch) => {
@@ -452,6 +593,28 @@ errs = await session(async (page) => {
     return { dirge: b.dirge, mul: Math.round(b.dmg / d0 * 100) / 100, rate: b.rate, banner: document.querySelector('.banner b')?.textContent };
   });
   check('boss: Hollow Dirge at 3:00 (+50% damage and attack rate)', d.dirge && d.mul === 1.5 && d.rate === 1.5 && d.banner === 'HOLLOW DIRGE', JSON.stringify(d));
+  const n = await page.evaluate(() => {
+    const out = {};
+    // the slam's landing kills every minion inside outright, however tough (a Champion Bulwark stand-in)
+    let r = window.__bossRun(1), b = r.boss, P = r.player;
+    r.weapons.update = () => {};
+    const m = r.legion.raise(P.x, P.z, { kind: 'brute', elite: true }); m.hp = m.maxHp = 1e5;
+    b.force('slam'); const S = b.slamS;
+    for (let i = 0; i < 60 && S.fired < 1; i++) { m.x = P.x + 0.5; m.z = P.z; m.vx = m.vz = 0; r.update(1 / 30); }
+    r.update(1 / 30); out.slamKill = !(m.hp > 0) || !r.legion.list.includes(m);
+    // a Nova with 300 minions on him takes at most 25% of his max HP; during a phase roar it does nothing
+    r = window.__bossRun(1); b = r.boss; const e = r.bossEnemy;
+    r.weapons.update = () => {}; b.cd = 99;
+    r.legion.addMany(300, e.x, e.z); for (const q of r.legion.list) { q.x = e.x + (Math.random() - 0.5) * 3; q.z = e.z + (Math.random() - 0.5) * 3; }
+    r.nova = 1; r.triggerNova(); window.__step(r, 1.5);
+    out.novaShare = Math.round((1 - e.hp / e.maxHp) * 1000) / 1000;
+    b.phaseT = 99; window.__hit(r, 0.6); window.__step(r, 1 / 30); const hp0 = e.hp;
+    r.legion.addMany(200, e.x, e.z); r.nova = 1; r.triggerNova(); window.__step(r, 0.5);
+    out.roarNova = { state: b.state, lost: Math.round(hp0 - e.hp) };
+    return out;
+  });
+  check('boss: the slam landing kills every minion inside outright', n.slamKill, JSON.stringify(n));
+  check('boss: a Nova deals at most 25% of his max HP, nothing mid-roar', n.novaShare > 0.05 && n.novaShare <= 0.2501 && n.roarNova.state === 'roar' && n.roarNova.lost === 0, JSON.stringify(n));
   const t = await page.evaluate(async () => {
     const { BOSS_PHASES: B } = await import('/src/game/data.js');
     const teles = [B.ring.tele, B.spiral.tele, B.summon.tele, B.waves.tele, ...B.phases.map((p) => p.slamTele)].map((x) => Math.max(B.minTele, x));

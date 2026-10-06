@@ -89,6 +89,7 @@ export const BOSS_PHASES = {
   waves: { first: 4, every: [12, 15], size: [12, 16], arc: 2.4, tele: 1.0, minDist: 7 }, // edge waves from phase II
   trickle: { rate: 1.2, max: [70, 45, 45], minDist: 9 }, // the whole fight, from the arena edge; max alive per phase
   dirge: { at: 180, dmg: 1.5, rate: 1.5 }, // "Hollow Dirge" soft enrage, seconds after he rises
+  nova: { mul: 0.5, cap: 0.25 }, // Soul Nova (and soul bursts) hurt him at 50%, at most 25% of his max HP per Nova
   // chapter twists: 2 fire rings, 3 frost shards, 4 one extra ring per volley, 5 phase III at 50%
   fire: { life: 3, dmg: 0.35 },
   frost: { life: 3.5, n: [4, 7, 10], r: 0.75, dmg: 0.35 },
@@ -229,6 +230,30 @@ export const BASE = {
 };
 export const xpForLevel = (lv) => Math.floor(4 + 3.2 * lv + 0.38 * lv * lv);
 
+// ---------------------------------------------------------------- Legion variants (GDD §4.2)
+// A raised minion keeps the identity of the enemy it was (`from`). hp / dmg / speed multiply the run's
+// minion stats (stats.minionHp / minionDmg / minionSpeed), so chapter, level, Nyx and Minion Fury scaling apply.
+// interval = seconds between attacks · seek = target search radius (m) · leash = metres added to (or taken from)
+// BASE.minionLeash · contact = melee reach beyond the target's radius · scale = ghost model scale (Shades stay wisps).
+// Tuned with bot sims so the Ch1 Gravemaw time-to-kill stays within ±25% of the all-Shade legion (see the GDD).
+export const MINIONS = {
+  shade:     { from: 'husk',    hp: 1,    dmg: 1,    interval: 0.5,  speed: 1,    seek: 6.5, contact: 0.4 },
+  runner:    { from: 'ghoul',   hp: 0.55, dmg: 0.75, interval: 0.32, speed: 1.3,  seek: 6.5, contact: 0.4, leash: 3, scale: 1.15 },
+  // taunt: enemies within this many metres attack the Bulwark instead of the Shepherd · guard: idle ring radius
+  // · a bodyguard: it only engages foes within 5 m of the Shepherd (leash -4), so it holds the line instead of hunting
+  bulwark:   { from: 'brute',   hp: 3,    dmg: 1.0,  interval: 1.1,  speed: 0.7,  seek: 6.5, contact: 0.7, leash: -4, taunt: 3, guard: 2.3, knock: 3, scale: 0.8 },
+  // ranged: one orb per interval within range, holding `keep` metres from the target; an orb costs recoilMul × melee recoil
+  soulWitch: { from: 'witch',   hp: 0.8,  dmg: 1.1,  interval: 1.1,  speed: 0.9,  seek: 7,   range: 6, keep: 4, orbSpeed: 12, recoilMul: 0.75, scale: 0.8 },
+  // dives into the densest cluster within seek (at least minCluster enemies, any after `patience` idle seconds),
+  // flashes for `fuse` s on contact, then blasts `blast` × minionDmg in `radius` m and leaves the legion
+  soulBomb:  { from: 'bloater', hp: 0.7,  speed: 1.15, seek: 8,   radius: 2.4, blast: 6, fuse: 0.25, knock: 9,
+               minCluster: 3, patience: 5, searchEvery: 0.6, eliteWeight: 2, bossWeight: 2, scale: 0.75 },
+  champion:  { scale: 1.35, hp: 3, dmg: 2 }, // a raised elite: multiplies its variant
+  recoil: 0.3, bossRecoil: 0.5, // a melee hit costs the minion this share of its target's contact damage
+  bossEngage: 24, // at most this many minions fight Gravemaw at once; the rest fight adds or orbit
+  capHeal: 0.5, // a raise roll at the legion cap heals the weakest minion by this share of its max HP
+};
+
 // ---------------------------------------------------------------- Relics (gear)
 export const RELICS = {
   lantern:   { name: 'Lantern of the Lost', stat: 'raise', base: 0.03, fmt: 'pct', text: 'Raise Chance' },
@@ -313,17 +338,65 @@ export function passReward(tier, premium) {
 }
 
 // ---------------------------------------------------------------- Daily quests & login
-export const QUESTS = [
-  { id: 'kill',  text: 'Slay 500 enemies',        key: 'kills',  goal: 500, rewards: { gems: 20, passXp: 40 } },
-  { id: 'raise', text: 'Raise 150 souls',         key: 'raised', goal: 150, rewards: { gold: 1500, passXp: 40 } },
-  { id: 'surv',  text: 'Survive 4 minutes',       key: 'survive',goal: 240, rewards: { gems: 15, passXp: 30 } },
-  { id: 'nova',  text: 'Unleash Soul Nova 3×',    key: 'novas',  goal: 3,   rewards: { gold: 1200, passXp: 30 } },
-  { id: 'gate',  text: 'Pass 3 Soul Gates',       key: 'gates',  goal: 3,   rewards: { sigils: 1, passXp: 30 } },
-  { id: 'runs',  text: 'Finish 2 runs',           key: 'runs',   goal: 2,   rewards: { gems: 25, passXp: 50 } },
+// Daily quests: "Finish 2 runs" every day, plus 5 drawn from the pool by date. Rewards belong to the slot, not the quest,
+// so the daily value never changes (60 gems, 2,700 gold, 1 sigil, 220 pass XP). `late` quests need a Chapter 1 clear.
+export const QUEST_DAILY = { id: 'runs', text: 'Finish 2 runs', key: 'runs', goal: 2, rewards: { gems: 25, passXp: 50 } };
+export const QUEST_SLOTS = [
+  { gems: 20, passXp: 40 }, { gold: 1500, passXp: 40 }, { gems: 15, passXp: 30 }, { gold: 1200, passXp: 30 }, { sigils: 1, passXp: 30 },
+];
+export const QUEST_POOL = [
+  { id: 'kill',   text: 'Slay 500 enemies',        key: 'kills',   goal: 500 },
+  { id: 'raise',  text: 'Raise 150 souls',         key: 'raised',  goal: 150 },
+  { id: 'surv',   text: 'Survive 4 minutes',       key: 'survive', goal: 240 },
+  { id: 'nova',   text: 'Unleash Soul Nova 3×',    key: 'novas',   goal: 3 },
+  { id: 'gate',   text: 'Pass 3 Soul Gates',       key: 'gates',   goal: 3 },
+  { id: 'chest',  text: 'Open 2 Relic Chests',     key: 'chests',  goal: 2 },
+  { id: 'elite',  text: 'Slay 3 elites',           key: 'elites',  goal: 3 },
+  { id: 'legion', text: 'Lead a legion of 100',    key: 'peak',    goal: 100 },
+  { id: 'evolve', text: 'Evolve a weapon',         key: 'evolve',  goal: 1, late: true },
+  { id: 'boss',   text: 'Defeat Gravemaw',         key: 'bosses',  goal: 1, late: true },
+  { id: 'trial',  text: 'Clear the Daily Trial',   key: 'trial',   goal: 1, late: true },
 ];
 export const LOGIN_REWARDS = [
   { gold: 2000 }, { gems: 30 }, { sigils: 1 }, { gold: 5000 }, { gems: 50 }, { sigils: 2 }, { gems: 100, relic: 'epic+' },
 ];
+
+// ---------------------------------------------------------------- Daily Trial
+// One free run a day (no energy) on a cleared chapter with one boon and one bane, seeded by date. Unlocks once Chapter 1 is cleared.
+export const TRIAL = {
+  unlockAt: 2, adRetries: 1,
+  clear: { gems: 40, passXp: 150 }, sigilEvery: 3, // on top of the normal gold and pass XP; every 3rd clear also gives a Sigil
+  failGemsPerMin: 8, failGemsMax: 40,
+};
+// stats: raise/cap add; nova/minionDmg/minionHp multiply. spawn/hp/speed multiply the horde; weights re-weight the spawn mix.
+export const MUTATORS = {
+  soulHarvest: { kind: 'boon', name: 'Soul Harvest',    icon: 'raise',  desc: '+20% Raise Chance',                stats: { raise: 0.2 } },
+  overflow:    { kind: 'boon', name: 'Overflowing Cup', icon: 'banner', desc: '+40 legion cap',                    stats: { cap: 40 } },
+  novaFont:    { kind: 'boon', name: 'Nova Font',       icon: 'nova',   desc: 'Soul Nova charges twice as fast',   stats: { nova: 2 } },
+  gildedGates: { kind: 'boon', name: 'Gilded Gates',    icon: 'plus',   desc: 'Gates every 25 s, and none cull',  gateEvery: 25, noBadGates: true },
+  awakened:    { kind: 'boon', name: 'Awakened',        icon: 'star',   desc: 'Start with your weapon at Lv3',     startLv: 3 },
+  legionFury:  { kind: 'boon', name: 'Legion Fury',     icon: 'fang',   desc: 'Minions deal +60% damage',          stats: { minionDmg: 1.6 } },
+  swarming:    { kind: 'bane', name: 'Swarming Dark',   icon: 'skull',  desc: '+50% enemy spawns',                 spawn: 1.5 },
+  ironHides:   { kind: 'bane', name: 'Iron Hides',      icon: 'helm',   desc: 'Enemies have +60% HP',              hp: 1.6 },
+  witching:    { kind: 'bane', name: 'Witching Hour',   icon: 'eye',    desc: 'Cinder Witches everywhere',         weights: { witch: 4 } },
+  gilded:      { kind: 'bane', name: 'Gilded Horrors',  icon: 'crown',  desc: 'An elite every 40 s (more chests!)', eliteEvery: 40 },
+  brittle:     { kind: 'bane', name: 'Brittle Legion',  icon: 'shard',  desc: 'Minions have half HP',              stats: { minionHp: 0.5 } },
+  restless:    { kind: 'bane', name: 'Restless Dead',   icon: 'wing',   desc: 'Enemies move 30% faster',           speed: 1.3 },
+};
+/** Folds a list of mutator ids into one modifier set for a run. */
+export function mergeMutators(ids = []) {
+  const m = { ids, stats: {}, spawn: 1, hp: 1, speed: 1, weights: null, eliteEvery: 0, gateEvery: 0, noBadGates: false, startLv: 0 };
+  for (const id of ids) {
+    const d = MUTATORS[id];
+    if (!d) continue;
+    for (const [k, v] of Object.entries(d.stats || {})) m.stats[k] = k === 'raise' || k === 'cap' ? (m.stats[k] || 0) + v : (m.stats[k] || 1) * v;
+    for (const k of ['spawn', 'hp', 'speed']) if (d[k]) m[k] *= d[k];
+    if (d.weights) { m.weights = m.weights || {}; for (const [t, w] of Object.entries(d.weights)) m.weights[t] = (m.weights[t] || 1) * w; }
+    for (const k of ['eliteEvery', 'gateEvery', 'startLv']) if (d[k]) m[k] = d[k];
+    if (d.noBadGates) m.noBadGates = true;
+  }
+  return m;
+}
 
 export const SKINS = {
   eclipse_vael: { hero: 'vael', name: 'Eclipse Vael', color: 0xffd04a, body: 0x1a1020, legion: 0xffe9a0 },

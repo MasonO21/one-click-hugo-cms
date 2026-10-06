@@ -361,8 +361,8 @@ export function makeSpiralSigil() {
 
 /** Instanced ice crystals for Chapter 3's frost-shard slam zones. */
 export function makeShards(max) {
-  const g = new THREE.OctahedronGeometry(0.42, 0); g.scale(0.55, 1.9, 0.55); g.translate(0, 0.55, 0);
-  const mesh = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xbfe6ff).multiplyScalar(2.2) }), max);
+  const g = new THREE.OctahedronGeometry(0.42, 0); g.scale(0.6, 2.7, 0.6); g.translate(0, 0.85, 0); // tall spikes, unlike the low XP shards
+  const mesh = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xd8f0ff).multiplyScalar(1.7) }), max);
   mesh.count = 0; mesh.frustumCulled = false;
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   return mesh;

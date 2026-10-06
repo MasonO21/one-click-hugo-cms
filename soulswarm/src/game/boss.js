@@ -66,7 +66,8 @@ export class Boss {
     this.orb = { col: this.color.clone().lerp(WHITE, 0.3).multiplyScalar(3.4), glow: hdr(ch.boss, 3.2), sc: 1.35, hr: 0.22, life: 4 };
     // fight state
     this.state = 'enter'; this.t = 0; this.cd = 2.5; this.y = -5;
-    this.phase = 0; this.pendingPhase = 0; this.immune = BP.rise; this.lockHp = e.maxHp;
+    this.phase = 0; this.pendingPhase = 0; this.immune = BP.rise; this.lockHp = this.lastHp = e.maxHp;
+    this.novaId = -1; this.novaDealt = 0;
     this.fightT = 0; this.phaseT = 0; this.held = false; this.dirge = false; this.baseDmg = this.dmg = e.dmg; this.rate = 1; this.last = '';
     // chapter twist: 2 fire rings, 3 frost shards, 4 extra ring, 5 early Crown; Endless follows its modifier rotation by depth
     const rot = ch.mods && ch.mods.rotate;
@@ -94,6 +95,7 @@ export class Boss {
 
   // ---------------------------------------------------------------- per frame (called by Enemies.update after the Shepherd moved)
   update(e, dt) {
+    this.lastHp = e.hp;
     this.t += dt; this.cd -= dt; this.fightT += dt; this.phaseT += dt;
     if (this.immune > 0) this.immune -= dt;
     if (!this.dirge && this.fightT >= BP.dirge.at) this.hollowDirge();
@@ -142,13 +144,13 @@ export class Boss {
     // it only bites a swarm: none below `from` minions in reach, full strength at `full`
     const L = run.legion.list, r2 = C.r * C.r;
     let n = 0;
-    for (let i = 0; i < L.length; i++) if ((L[i].x - e.x) ** 2 + (L[i].z - e.z) ** 2 <= r2) n++;
+    for (let i = 0; i < L.length; i++) if (L[i].hp > 0 && (L[i].x - e.x) ** 2 + (L[i].z - e.z) ** 2 <= r2) n++;
     const k = Math.min(1, (n - C.from) / (C.full - C.from));
     if (k <= 0) return;
     const dmg = this.dmg * C.dps[this.phase] * k * dt;
     for (let i = 0; i < L.length; i++) {
       const m = L[i];
-      if ((m.x - e.x) ** 2 + (m.z - e.z) ** 2 > r2) continue;
+      if (!(m.hp > 0) || (m.x - e.x) ** 2 + (m.z - e.z) ** 2 > r2) continue;
       m.hp -= dmg;
       if (Math.random() < dt * 4) run.particles.emit(m.x, m.y, m.z, 0, 1.5, 0, 0.35, 0.35, 0.05, c[0], c[1], c[2], 0.9);
     }
@@ -297,6 +299,12 @@ export class Boss {
   // ---------------------------------------------------------------- phases
   onHit(e) {
     const run = this.run;
+    // Soul Nova hurts him at 50%, at most 25% of max HP per Nova (run.counters.novas names the current one)
+    if (e.lastHitBy === 'nova') {
+      if (this.novaId !== run.counters.novas) { this.novaId = run.counters.novas; this.novaDealt = 0; }
+      const take = Math.min(Math.max(0, this.lastHp - e.hp) * BP.nova.mul, Math.max(0, e.maxHp * BP.nova.cap - this.novaDealt));
+      this.novaDealt += take; e.hp = this.lastHp - take;
+    }
     if (e.hp > 0) {
       if (this.immune > 0) { e.hp = this.lockHp; run.fx.immune(e.x, e.z, 4.6); }
       else {
@@ -309,6 +317,7 @@ export class Boss {
         } else if (n > this.phase) { this.pendingPhase = n; this.immune = BP.transition.dur; this.lockHp = e.hp; } // the roar starts next frame
       }
     }
+    this.lastHp = e.hp;
     run.ui.bossHp(Math.max(0, e.hp / e.maxHp));
   }
 
@@ -385,10 +394,13 @@ export class Boss {
     // fair hitbox: the Shepherd's centre must be inside the band (+0.2 m grace)
     const d = Math.hypot(P.x - S.x, P.z - S.z);
     if ((k === 0 ? d < R + W + 0.2 : Math.abs(d - R) < W + 0.2) && !P.dead) P.hurt(this.dmg * T.dmg);
+    // the landing kills every minion inside outright (Champion Bulwarks included); the outer rings only hurt them
     const L = run.legion.list, md = this.dmg * T.dmg * T.minionDmg;
     for (let i = 0; i < L.length; i++) {
-      const m = L[i], dm = Math.hypot(m.x - S.x, m.z - S.z);
-      if (k === 0 ? dm < R + W : Math.abs(dm - R) < W) m.hp -= k === 0 ? 999 : md;
+      const m = L[i];
+      if (m.gone || !(m.hp > 0)) continue;
+      const dm = Math.hypot(m.x - S.x, m.z - S.z);
+      if (k === 0 ? dm < R + W : Math.abs(dm - R) < W) { m.hp = k === 0 ? 0 : m.hp - md; m.flash = 1; }
     }
     // a wall of sparks erupts along the band
     const c = this.hot, n = Math.round((20 + 10 * k) * run.particles.budget);
@@ -585,7 +597,7 @@ export class Boss {
     this.mesh.position.set(e.x, this.y + (roar ? Math.abs(Math.sin(this.t * 18)) * 0.12 : 0), e.z);
     this.mesh.rotation.y = e.rot;
     this.mesh.scale.setScalar(roar ? 1 + 0.1 * Math.sin(Math.min(1, this.t * 2) * Math.PI) : 1);
-    const windup = this.state === 'ring' || this.state === 'summon' || (this.state === 'spiral' && this.t < this.tele) ? 0.12 + 0.1 * Math.sin(this.t * 25) : 0;
+    const windup = this.state === 'ring' || this.state === 'summon' || (this.state === 'spiral' && this.t < this.tele) ? 0.08 + 0.06 * Math.sin(this.t * 25) : 0;
     const shield = (this.immune > 0 && this.state !== 'enter') || this.held ? 0.25 + 0.15 * Math.sin(this.t * 30) : 0;
     this.mat.uniforms.uFlash.value = Math.max(e.flash * 0.15, windup, shield); // capped: he is hit constantly and must stay magenta
     this.mat.uniforms.uTime.value += dt;
@@ -627,7 +639,8 @@ export class Boss {
       _q.setFromAxisAngle(_up, z.a); _p.set(z.x, 0, z.z); _s.set(grow, grow * (0.85 + 0.15 * Math.sin(z.a * 7)), grow);
       _m.compose(_p, _q, _s);
       this.shards.setMatrixAt(n++, _m);
-      g.add(z.x, 0.6, z.z, 2.2 * grow, 0.35, 0.6, 1.0, 0.8);
+      g.add(z.x, 0.15, z.z, 2.4 * grow, c[0] * 0.3, c[1] * 0.3, c[2] * 0.3, 0.9); // boss-palette danger halo at the base
+      g.add(z.x, 1.2, z.z, 1.4 * grow, 0.3, 0.5, 0.9, 0.6);
     }
     this.shards.count = n;
     if (n) this.shards.instanceMatrix.needsUpdate = true;
