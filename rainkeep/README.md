@@ -80,6 +80,8 @@ rainkeep.state()                                 // the full save object
 KH.town3d.zoom(1.5); KH.town3d.drag(0, -100)     // move the 3D camera
 ```
 
+**Balance bot.** `tools/balance-bot.cjs` plays the whole game headless and prints milestones, resource sources, builder idle time and errors. Install Playwright once (`npm i -D playwright && npx playwright install chromium`), then run `npm run balance -- f2p 36` (modes: `f2p`, `founder`, `dolphin` at about $80, `whale` at about $1,000; purchases are simulated). Compare several runs: gacha luck moves results by an hour or more.
+
 The game was balanced with an automated player that plays every system (building, research, troops, heroes, gacha, marches, ruins, Caravan, raids, events, duties, surplus, rain, incidents, merchants, gear, the Spire, Duels) for up to 24 hours of game time. See DESIGN.md, section 8, for the resulting pacing.
 
 ## Shipping it

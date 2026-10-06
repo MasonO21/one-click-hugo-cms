@@ -176,7 +176,16 @@ The game was tuned with an automated player that plays every system the way a st
 
 **Trials pay out without replacing the story.** The Spire's floor f fights like expedition stage 24 + 0.9f, and its twists make some floors harder than the stage they match. Both trials pay mostly in Sunsteel, Starglass, journals and occasional shard pouches. Their first drafts (an Epic pouch every 10 floors, generous early milestones) pulled Act I down to about 3.3 hours and were cut back.
 
-**The Founder's Cache.** The second builder speeds up the early game, but from mid-game both builders wait on resources most of the time (the bot measured 70-100% builder idle), so a founder is not meaningfully faster late; in these runs gacha luck made the founder slower to stage 60 than two of the free runs. Since 3.1 the Cache also unlocks Patron 1 (+2% production), and higher Patron levels add up to +20% production and +25% build speed, which is where spending now helps late. Measuring the Patron ladder needs a bot that spends; that is the next balance job.
+**What spending buys.** The same bot can play as a paying player: buying through the simulated store, so Patron points count, and spending Starglass on resource crates for whatever the next Rainwyrm level is short of and on speedups for long builds (and on recruits only until every hero is fully starred). Measured over 36 hours:
+
+| Milestone | Free | Founder's Cache ($1, Patron 1) | Dolphin (about $80, Patron 5) | Whale (about $1,000, Patron 10) |
+|---|---|---|---|---|
+| Stage 60, end of Act I | 4.6-5.2 h | 4.5-6.0 h | 1.8-2.1 h | 1.5-1.7 h |
+| Dune Duels rank 1 | 14.5-14.8 h | 13.9-16.2 h | 10.6-11.2 h | 8.6-9.0 h |
+| Stage 100, end of the story | 13.8-16.2 h | 13.1-16.5 h | 9.2 h | 7.3-7.7 h |
+| Rainwyrm Lv 20 | 34.3-34.9 h | about 33 h | 21.4-21.8 h | 16.1-17.1 h |
+
+The dolphin buys the Founder's Cache, the Growth Fund, the Oasis Stipend, the two daily kits and Ledger Premium every season; the whale adds a War Chest and a Hoard of Starglass every two hours up to about $1,000. Spending buys time (about 1.7× faster to the end of the story for $80, about 2× for $1,000) through resources and speedups, never combat stats: a whale's squad at a given stage is no stronger than a free player's, it just gets there sooner. The Founder's Cache alone barely moves late pacing: its second builder mostly waits on resources from mid-game. It is a cheap first purchase, not a speed-up.
 
 Run-to-run spread is wide (gacha luck and raid timing move stage 60 and stage 100 by an hour or more), so tune with several seeds, not one.
 
