@@ -172,7 +172,7 @@ export function buildSnapshot(service: Sunup, userId: Id, now: number, options: 
     .map((a) => alertView(a, false));
 
   const outbox = state.outbox
-    .filter((o) => o.aboutUserId === me.id || (o.to.type === 'user' && o.to.id === me.id))
+    .filter((o) => o.kind !== 'reminder' && (o.aboutUserId === me.id || (o.to.type === 'user' && o.to.id === me.id)))
     .slice(-60)
     .reverse();
 

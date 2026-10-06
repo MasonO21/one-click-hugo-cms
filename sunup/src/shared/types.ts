@@ -45,6 +45,8 @@ export interface User {
   graceMinutes: number;
   pause?: Pause;
   inviteCode: string;
+  /** Which reminders went out for the current window, so each is sent once. */
+  reminded?: { key: string; open?: boolean; soon?: boolean };
 }
 
 export interface Billing {
@@ -171,6 +173,10 @@ export interface Outbound {
   link?: string;
   aboutUserId: Id;
   alertId?: Id;
+  /** Daily reminders are sent but kept out of the activity log. */
+  kind?: 'reminder';
+  /** A button on the notification: "checkin" checks you in without opening the app. */
+  action?: 'checkin';
 }
 
 export interface State {

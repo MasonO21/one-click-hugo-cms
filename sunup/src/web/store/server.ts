@@ -23,6 +23,19 @@ function writeToken(token: string | null) {
   } catch {
     // Storage unavailable; the session lasts until reload.
   }
+  void shareTokenWithWorker(token);
+}
+
+/** The service worker can't read localStorage; it reads the token from here for the notification "I'm up" button. */
+async function shareTokenWithWorker(token: string | null) {
+  try {
+    const cache = await caches.open('sunup-auth');
+    const key = new URL('__sunup/token', location.href).href;
+    if (token) await cache.put(key, new Response(token));
+    else await cache.delete(key);
+  } catch {
+    // Cache Storage unavailable: the button falls back to opening the app.
+  }
 }
 
 function base64ToBytes(base64url: string): Uint8Array<ArrayBuffer> {
@@ -35,6 +48,7 @@ function base64ToBytes(base64url: string): Uint8Array<ArrayBuffer> {
 
 export function createServerApi(features: { billing?: boolean } = {}): Api {
   let token = readToken();
+  void shareTokenWithWorker(token);
   const listeners = new Set<(snap: Snapshot) => void>();
   const photos = new Map<string, Promise<string>>();
 

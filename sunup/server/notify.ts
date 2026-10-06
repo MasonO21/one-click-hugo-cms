@@ -45,7 +45,15 @@ export function createNotifier(store: Store, config: NotifierConfig): Notifier {
   }
 
   async function push(o: Outbound) {
-    const payload = JSON.stringify({ title: o.title, body: o.body, urgent: o.urgent, link: o.link, tag: o.alertId ?? o.id });
+    const payload = JSON.stringify({
+      title: o.title,
+      body: o.body,
+      urgent: o.urgent,
+      link: o.link,
+      action: o.action,
+      // One notification per alert (or per day's reminder) that updates in place.
+      tag: o.alertId ?? (o.kind === 'reminder' ? 'sunup-reminder' : o.id),
+    });
     for (const sub of store.subscriptions(o.to.id)) {
       try {
         await webpush.sendNotification(sub, payload, { TTL: 3600, urgency: o.urgent ? 'high' : 'normal' });

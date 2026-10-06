@@ -27,7 +27,7 @@ import type {
 } from './types';
 import { DEFAULT_GRACE, GRACE_OPTIONS, ladderFor, type LadderStep } from './ladder';
 import { TRIAL_MS, isPremium, limitsFor } from './plans';
-import { checkInFor, isEnforced, scheduleProblem, slotsAround } from './schedule';
+import { checkInFor, isEnforced, isPaused, scheduleProblem, slotsAround } from './schedule';
 import { DAY, MINUTE, isTimeZone } from './time';
 import {
   cleanText,
@@ -644,6 +644,7 @@ export class Sunup {
         if (alerts.some((a) => a.kind === 'missed' && a.slotKey === slot.key)) continue;
         this.openAlert(user, 'missed', slot.deadlineAt, { slotKey: slot.key });
       }
+      this.remind(user, mine, now);
     }
     for (const moment of Object.values(this.state.moments)) {
       if (moment.endedAt || moment.endsAt > now) continue;
@@ -656,6 +657,30 @@ export class Sunup {
       if (!alert.resolvedAt) this.escalate(alert, now);
     }
     this.prune(now);
+  }
+
+  /** "Good morning" when a window opens, then a heads-up shortly before the deadline. */
+  private remind(user: User, mine: CheckIn[], now: number): void {
+    if (isPaused(user, now)) return;
+    const slot = slotsAround(user, now).find((s) => s.openAt <= now && now < s.deadlineAt);
+    if (!slot || !isEnforced(user, slot) || checkInFor(slot, mine)) return;
+    if (user.reminded?.key !== slot.key) user.reminded = { key: slot.key };
+    const sent = user.reminded!;
+    const me: Watcher = { ref: { type: 'user', id: user.id }, name: user.name, color: user.color, receivesPacket: false };
+    const deadline = formatHM(slot.deadline);
+    const lead = Math.min(30 * MINUTE, Math.round((slot.deadlineAt - slot.openAt) / 2));
+    const base = { aboutUserId: user.id, urgent: false, link: '#today', kind: 'reminder' as const, action: 'checkin' as const };
+    if (now >= slot.deadlineAt - lead) {
+      if (!sent.soon) {
+        sent.soon = sent.open = true;
+        this.send(me, 'push', { ...base, title: `${Math.round(lead / MINUTE)} minutes left to check in`, body: `Your circle is expecting you by ${deadline}.` });
+      }
+      return;
+    }
+    if (!sent.open) {
+      sent.open = true;
+      this.send(me, 'push', { ...base, title: `Good morning, ${firstName(user.name)}`, body: `Tap "I'm up" to check in. Your window closes at ${deadline}.` });
+    }
   }
 
   private escalate(alert: Alert, now: number): void {
@@ -705,7 +730,7 @@ export class Sunup {
       const title = moment.title;
       if (step === 'nudge') {
         const names = circle.map((w) => firstName(w.name)).join(', ') || 'your circle';
-        this.notify(me, { ...base, urgent: true, link: '#moments', title: `Your "${title}" timer is up`, body: `Are you safe? Tap "I'm safe" or add time. We'll alert ${names} in 10 minutes.` });
+        this.notify(me, { ...base, urgent: true, link: '#moments', action: 'checkin', title: `Your "${title}" timer is up`, body: `Are you safe? Tap "I'm safe" or add time. We'll alert ${names} in 10 minutes.` });
       } else if (step === 'circle') {
         const d = moment.details;
         const facts = [d.who && `With: ${d.who}`, d.where && `Where: ${d.where}`, d.link && `Link: ${d.link}`, d.notes && `Notes: ${d.notes}`].filter(Boolean).join('. ');
@@ -733,13 +758,14 @@ export class Sunup {
     const circleAt = circleStep ? formatClock(this.stepTime(alert, circleStep), user.timezone) : '';
     switch (step) {
       case 'nudge':
-        this.notify(me, { ...base, urgent: false, link: '#today', title: `Still with us, ${name}?`, body: `Tap to check in. Your circle is expecting you by ${deadline}.` });
+        this.notify(me, { ...base, urgent: false, link: '#today', action: 'checkin', title: `Still with us, ${name}?`, body: `Tap to check in. Your circle is expecting you by ${deadline}.` });
         break;
       case 'alarm':
         this.notify(me, {
           ...base,
           urgent: true,
           link: '#today',
+          action: 'checkin',
           title: 'You missed your check-in',
           body: `Open Sunup and tap "I'm okay". We'll alert your circle at ${circleAt}.`,
           sms: `Sunup: you missed your ${deadline} check-in. Tap ${this.options.baseUrl} to tell your circle you're OK. We'll alert them at ${circleAt}.`,
@@ -818,7 +844,10 @@ export class Sunup {
   // ---------------------------------------------------------------- delivery
 
   /** App users get a push (plus a text if urgent); contacts get a text. */
-  private notify(to: Watcher, msg: { title: string; body: string; urgent: boolean; link?: string; sms?: string; aboutUserId: Id; alertId?: Id }): void {
+  private notify(
+    to: Watcher,
+    msg: { title: string; body: string; urgent: boolean; link?: string; sms?: string; aboutUserId: Id; alertId?: Id; action?: Outbound['action'] },
+  ): void {
     if (to.ref.type === 'user') {
       this.send(to, 'push', msg);
       if (msg.urgent && to.phone) this.send(to, 'sms', { ...msg, body: msg.sms ?? `Sunup: ${msg.title}. ${msg.body}` });
@@ -832,7 +861,11 @@ export class Sunup {
     this.send(to, 'call', { ...base, urgent: true, title: `Call to ${to.name}`, body: script });
   }
 
-  private send(to: Watcher, channel: Outbound['channel'], msg: { title: string; body: string; urgent: boolean; link?: string; aboutUserId: Id; alertId?: Id }): void {
+  private send(
+    to: Watcher,
+    channel: Outbound['channel'],
+    msg: { title: string; body: string; urgent: boolean; link?: string; aboutUserId: Id; alertId?: Id; kind?: Outbound['kind']; action?: Outbound['action'] },
+  ): void {
     // People who replied STOP never get another text or call.
     if (to.consent === 'stopped') return;
     const out: Outbound = {
@@ -846,6 +879,8 @@ export class Sunup {
       link: msg.link,
       aboutUserId: msg.aboutUserId,
       alertId: msg.alertId,
+      kind: msg.kind,
+      action: msg.action,
     };
     this.state.outbox.push(out);
     this.pending.push(out);

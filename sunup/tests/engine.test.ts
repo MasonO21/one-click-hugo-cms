@@ -187,6 +187,39 @@ describe('circle', () => {
   });
 });
 
+describe('daily reminders', () => {
+  it('says good morning when the window opens and warns before the deadline, once each', () => {
+    const { svc, maya } = setup();
+    svc.tick(at('2026-03-04', '06:59'));
+    expect(svc.drain()).toHaveLength(0);
+    tickThrough(svc, at('2026-03-04', '07:00'), at('2026-03-04', '07:10'));
+    const morning = svc.drain();
+    expect(morning.map((o) => o.title)).toEqual(['Good morning, Maya']);
+    expect(morning[0]).toMatchObject({ channel: 'push', kind: 'reminder', action: 'checkin' });
+    tickThrough(svc, at('2026-03-04', '09:29'), at('2026-03-04', '09:40'));
+    expect(svc.drain().map((o) => o.title)).toEqual(['30 minutes left to check in']);
+    // Reminders don't clutter the activity log.
+    expect(buildSnapshot(svc, maya.id, at('2026-03-04', '09:41')).outbox.some((o) => o.kind === 'reminder')).toBe(false);
+  });
+
+  it('stays quiet once you have checked in, and while paused', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'checkIn' }, at('2026-03-04', '06:30'));
+    tickThrough(svc, at('2026-03-04', '07:00'), at('2026-03-04', '10:30'), 10 * MINUTE);
+    expect(svc.drain().filter((o) => o.to.id === maya.id)).toHaveLength(0);
+    act(maya, { type: 'pause', until: at('2026-03-06', '00:00') }, at('2026-03-04', '12:00'));
+    tickThrough(svc, at('2026-03-05', '07:00'), at('2026-03-05', '10:30'), 10 * MINUTE);
+    expect(svc.drain().filter((o) => o.to.id === maya.id)).toHaveLength(0);
+  });
+
+  it('puts an "I\'m okay" button on the alarm for a missed check-in', () => {
+    const { svc } = setup();
+    tickThrough(svc, at('2026-03-04', '10:00'), at('2026-03-04', '10:15'));
+    const alarm = svc.drain().find((o) => o.title === 'You missed your check-in' && o.channel === 'push');
+    expect(alarm?.action).toBe('checkin');
+  });
+});
+
 describe('contact consent', () => {
   it('texts new contacts for consent and never contacts someone who replied STOP', () => {
     const { svc, maya, act } = setup();
