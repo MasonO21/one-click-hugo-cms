@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -105,6 +105,8 @@ const HOURS = Number(process.argv[3] || 8);
         if (KH.raidNear && KH.raidNear() && !S.map.raid.pour && !NO.includes('raidprep')) { const c = KH.scaleReward(D.world.raids.pour); if (S.res.water > c.water * 4) A.raidpour(); }
         // the Rainwyrm's wishes: feed it and pet it when it asks (the rest come from normal play)
         if (S.bond && S.bond.wish && !NO.includes('bond')) { if (S.bond.wish.id === 'dates') A.bondfeed(); else if (S.bond.wish.id === 'pet') A.pet(); }
+        // keep gardens: build with what the stores can easily spare (never Starglass)
+        if (KH.decor && KH.decor.unlocked() && !NO.includes('decor')) for (const d of D.decor.items) { if (d.starglass) continue; const c = KH.decor.costOf(d.id); if (KH.decor.level(d.id) < D.decor.maxLevel && Object.entries(c).every(([k, v]) => (k in S.res ? S.res[k] : S[k]) >= v * 3)) A.decor(d.id); }
         // Cloud Run: three decent flights a day
         if (KH.cloudRun && !NO.includes('cloudrun')) while (KH.cloudRun.unlocked() && KH.cloudRun.left() > 0) KH.cloudRun.auto(32, 1);
         // Channels: a player who keeps up with the water puzzles, three stars each

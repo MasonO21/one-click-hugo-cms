@@ -66,6 +66,21 @@
   // the irrigation channel from the spring past the date grove and out under the wall
   const CHANNEL = [[5.0, 4.2], [6.4, 6.4], [7.5, 9.0], [8.2, 12.6], [8.6, 17.2]];
   const BRIDGE = { x: 7.3, z: 8.45, ry: 0.9 };
+  // scenery: homes that fill out each quarter [x, z, y, w, h, d, ry], palms, market stalls, jars
+  const HOMES = [
+    [-14.1, -4.0, 1.4, 1.3, 1.1, 1.2, 0.5], [-14.2, 0.6, 1.4, 1.1, 1.4, 1.1, 0.4], [-14.0, 5.0, 1.4, 1.4, 1.0, 1.2, 0.3],
+    [14.1, -4.0, 1.4, 1.3, 1.2, 1.2, -0.5], [14.2, 0.6, 1.4, 1.2, 1.0, 1.1, -0.4], [14.0, 5.0, 1.4, 1.3, 1.3, 1.2, -0.3],
+    [-8.6, -15.6, 2.8, 1.4, 1.5, 1.2, 0.1], [8.4, -15.4, 2.8, 1.5, 1.2, 1.2, -0.1],
+    [-12.6, -16.2, 2.8, 1.3, 1.6, 1.3, 0.3], [14.0, -16.0, 2.8, 1.3, 1.1, 1.2, -0.3], [-13.6, -8.4, 2.8, 1.2, 1.0, 1.1, 0.6],
+    [-15.0, 12.6, 0, 1.4, 1.2, 1.3, 0.6], [15.0, 13.4, 0, 1.3, 1.1, 1.2, -0.6], [-9.6, 14.0, 0, 1.2, 1.0, 1.1, 0.2],
+  ];
+  const PALMS = [
+    [-6.0, -4.6], [6.0, -4.6], [-3.4, -6.6], [3.4, -6.6], [-2.4, 9.6], [2.4, 9.6], [-2.4, 13.4], [2.6, 12.0],
+    [-13.2, 2.0], [13.2, 2.0], [-12.9, -5.2], [12.9, -5.2], [-7.4, -12.8], [0.2, -13.0], [7.2, -12.8], [-13.4, -10.6], [14.4, -7.6],
+    [-8.4, 15.0], [11.0, 15.0], [-14.4, 9.0], [14.4, 8.8],
+  ];
+  const STALLS = [[-3.0, 14.8, '#2f7f9a', 0.2], [2.9, 10.6, '#b5452a', -0.5]];
+  const JARS = [[-8.6, 11.4], [-8.2, 13.6], [-4.4, 11.0], [11.4, 7.6], [13.6, 13.2]];
   // camels plod a loop on the dunes outside the gate
   const TRAIL = [[0, 18.2], [5, 20.5], [11, 23.5], [13.5, 29], [5, 32.5], [-6, 30.5], [-12.5, 24.5], [-6.5, 20]];
 
@@ -614,7 +629,7 @@
       g.add(A.at(A.grp(A.cyl(0.04, 0.05, 1.5, lampM, 0, 0, 0, 5), A.box(0.18, 0.22, 0.18, cu, 0, 1.45, 0), A.sph(0.08, A.lamp, 0, 1.56, 0, 8)), x, 0, z));
     }
     // market stalls by the gate
-    for (const [x, z, c, ry] of [[-3.0, 14.8, A.P.cloth3, 0.2], [2.9, 10.6, A.P.cloth1, -0.5]]) {
+    for (const [x, z, c, ry] of STALLS) {
       const st = A.grp(A.box(1.3, 0.55, 0.6, A.mat(A.P.wood, { flat: true }), 0, 0, 0));
       for (const [px, pz] of [[-0.6, -0.3], [0.6, -0.3], [-0.6, 0.3], [0.6, 0.3]]) st.add(A.cyl(0.03, 0.03, 1.4, lampM, px, 0, pz, 4));
       const roof = A.box(1.5, 0.04, 0.9, A.mat(c, { map: A.tex.stripes(c, A.P.cloth2, 6) }), 0, 1.4, 0);
@@ -624,15 +639,8 @@
       g.add(A.at(st, x, 0, z, ry));
     }
     // homes that fill out each quarter (scenery only)
-    const homes = [
-      [-14.1, -4.0, 1.4, 1.3, 1.1, 1.2, 0.5], [-14.2, 0.6, 1.4, 1.1, 1.4, 1.1, 0.4], [-14.0, 5.0, 1.4, 1.4, 1.0, 1.2, 0.3],
-      [14.1, -4.0, 1.4, 1.3, 1.2, 1.2, -0.5], [14.2, 0.6, 1.4, 1.2, 1.0, 1.1, -0.4], [14.0, 5.0, 1.4, 1.3, 1.3, 1.2, -0.3],
-      [-8.6, -15.6, 2.8, 1.4, 1.5, 1.2, 0.1], [8.4, -15.4, 2.8, 1.5, 1.2, 1.2, -0.1],
-      [-12.6, -16.2, 2.8, 1.3, 1.6, 1.3, 0.3], [14.0, -16.0, 2.8, 1.3, 1.1, 1.2, -0.3], [-13.6, -8.4, 2.8, 1.2, 1.0, 1.1, 0.6],
-      [-15.0, 12.6, 0, 1.4, 1.2, 1.3, 0.6], [15.0, 13.4, 0, 1.3, 1.1, 1.2, -0.6], [-9.6, 14.0, 0, 1.2, 1.0, 1.1, 0.2],
-    ];
     const walls = [A.P.adobe, A.P.plaster, A.P.adobeL, A.P.sandstone];
-    homes.forEach(([x, z, y, w, h, d, ry], i) => {
+    HOMES.forEach(([x, z, y, w, h, d, ry], i) => {
       const hz = A.house(w, h, d, { wall: walls[i % walls.length], side: i % 2 === 0 });
       if (i % 3 === 0) hz.add(A.box(w * 0.55, h * 0.5, d * 0.6, A.mat(walls[(i + 1) % walls.length]), -w * 0.12, h, -d * 0.15));
       g.add(A.at(hz, x, y, z, ry));
@@ -695,7 +703,7 @@
       g.add(rk);
     }
     // jars and crates around the storehouse and quarry yards
-    for (const [x, z] of [[-8.6, 11.4], [-8.2, 13.6], [-4.4, 11.0], [11.4, 7.6], [13.6, 13.2]]) g.add(A.at(A.jar(1.0, r() < 0.5 ? '#b0603a' : '#9a4a2a'), x, 0, z));
+    for (const [x, z] of JARS) g.add(A.at(A.jar(1.0, r() < 0.5 ? '#b0603a' : '#9a4a2a'), x, 0, z));
     scene.add(A.bake(g));
     // banners on the gate and the terraces
     for (const [x, y, z, c] of [[-2.2, 3.76, 16.1, A.P.cloth3], [2.2, 3.76, 16.1, A.P.cloth3], [-8.0, 1.4, 4.4, A.P.cloth1], [8.0, 1.4, 4.4, A.P.cloth1], [-2.4, 2.8, -8.6, A.P.cloth4], [2.4, 2.8, -8.6, A.P.cloth4]]) {
@@ -706,12 +714,7 @@
       banners.push(b);
     }
     // palms by the water and in the courtyards
-    const spots = [
-      [-6.0, -4.6], [6.0, -4.6], [-3.4, -6.6], [3.4, -6.6], [-2.4, 9.6], [2.4, 9.6], [-2.4, 13.4], [2.6, 12.0],
-      [-13.2, 2.0], [13.2, 2.0], [-12.9, -5.2], [12.9, -5.2], [-7.4, -12.8], [0.2, -13.0], [7.2, -12.8], [-13.4, -10.6], [14.4, -7.6],
-      [-8.4, 15.0], [11.0, 15.0], [-14.4, 9.0], [14.4, 8.8],
-    ];
-    spots.forEach(([x, z], i) => {
+    PALMS.forEach(([x, z], i) => {
       const p = A.palm(2.5 + r() * 1.3, 40 + i);
       p.position.set(x, groundAt(x, z), z);
       scene.add(p);
@@ -828,6 +831,119 @@
       }
     }
   }
+
+  // ======================================================================
+  // Keep gardens: each decoration rises at its own spot as it levels (decor.js owns the rules)
+  // ======================================================================
+  const decor = {};
+  function decorModel(id, L) {
+    const g = new THREE.Group(), tier = L >= 5 ? 3 : L >= 3 ? 2 : 1;
+    const stone = A.mat('#e6c393', { flat: true }), stoneD = A.mat('#c9a070', { flat: true }), gold = A.mat(A.P.gold, { m: 0.6, r: 0.35 });
+    const leaf = A.mat('#4f8f36', { flat: true }), leafD = A.mat('#3d6e2a', { flat: true });
+    const pool = (r, y) => { const w = new THREE.Mesh(new THREE.CircleGeometry(r, 28).rotateX(-Math.PI / 2), A.waterMat({ radial: true, alpha: 0.95 })); w.position.y = y; w.userData.keep = true; return w; };
+    if (id === 'fountain') {
+      g.add(A.cyl(1.5, 1.6, 0.45, stone, 0, 0, 0, 20), pool(1.32, 0.46));
+      g.add(A.cyl(0.18, 0.24, 1.1, stoneD, 0, 0.45, 0, 10), A.cyl(0.75, 0.6, 0.18, stone, 0, 1.4, 0, 16), pool(0.66, 1.59));
+      if (tier >= 2) g.add(A.cyl(0.1, 0.14, 0.6, stoneD, 0, 1.58, 0, 8), A.cyl(0.38, 0.3, 0.12, stone, 0, 2.15, 0, 12), pool(0.32, 2.28));
+      if (tier >= 3) g.add(A.sph(0.16, gold, 0, 2.45, 0, 10));
+      for (let i = 0; i < 4 + tier * 2; i++) { const a = (i / (4 + tier * 2)) * Math.PI * 2; g.add(A.at(A.jar(0.7, '#b0603a'), Math.cos(a) * 1.85, 0, Math.sin(a) * 1.85)); }
+    } else if (id === 'palms') {
+      g.add(A.cyl(1.0, 1.05, 0.2, stone, 0, 0, 0, 18), pool(0.88, 0.21));
+      const n = 2 + tier;
+      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + 0.4, p = A.palm(2.4 + (i % 2) * 0.6, 90 + i); p.position.set(Math.cos(a) * 1.5, 0, Math.sin(a) * 1.5); g.add(p); g.userData.palms = (g.userData.palms || []).concat(p); }
+    } else if (id === 'pergola') {
+      const wood = A.mat(A.P.wood, { flat: true });
+      for (const [x, z] of [[-1, -0.7], [1, -0.7], [-1, 0.7], [1, 0.7]]) g.add(A.cyl(0.06, 0.07, 1.7, wood, x, 0, z, 6));
+      for (let i = 0; i < 7; i++) g.add(A.box(0.1, 0.08, 1.7, wood, -0.9 + i * 0.3, 1.7, 0));
+      g.add(A.box(2.3, 0.08, 0.12, wood, 0, 1.66, -0.7), A.box(2.3, 0.08, 0.12, wood, 0, 1.66, 0.7));
+      for (let i = 0; i < 4 * tier; i++) g.add(A.sph(0.22, i % 2 ? leaf : leafD, -1 + (i % 4) * 0.66, 1.8, -0.7 + Math.floor(i / 4) * 0.7, 6));
+      g.add(A.box(1.3, 0.12, 0.35, wood, 0, 0.42, 0), A.box(0.08, 0.42, 0.3, wood, -0.55, 0, 0), A.box(0.08, 0.42, 0.3, wood, 0.55, 0, 0));
+    } else if (id === 'herbs') {
+      for (let i = 0; i < 1 + tier; i++) {
+        const z = -0.8 + i * 0.85;
+        g.add(A.box(2.0, 0.35, 0.6, stoneD, 0, 0, z));
+        for (let k = 0; k < 5; k++) g.add(A.sph(0.17 + (k % 2) * 0.05, k % 2 ? leaf : leafD, -0.8 + k * 0.4, 0.42, z, 6));
+      }
+      if (tier >= 3) g.add(A.at(A.house(0.9, 0.8, 0.7, { wall: A.P.plaster }), 1.5, 0, -0.2, -0.6));
+    } else if (id === 'statues') {
+      for (const sx of [-2.2, 2.2]) {
+        const st = new THREE.Group(), m = tier >= 3 ? gold : stone;
+        st.add(A.box(1.0, 0.6 + tier * 0.15, 1.0, stoneD, 0, 0, 0));
+        const y0 = 0.6 + tier * 0.15;
+        const coil = new THREE.Mesh(A.geo('statcoil', () => new THREE.TorusGeometry(0.34, 0.13, 8, 20)), m); coil.rotation.x = Math.PI / 2; coil.position.y = y0 + 0.13; st.add(coil);
+        st.add(A.cyl(0.11, 0.14, 0.75, m, 0.2, y0 + 0.1, 0.1, 8), A.sph(0.2, m, 0.2, y0 + 0.95, 0.12, 10), A.cone(0.06, 0.25, m, 0.13, y0 + 1.08, 0.08, 6), A.cone(0.06, 0.25, m, 0.29, y0 + 1.08, 0.08, 6));
+        st.position.x = sx; st.rotation.y = sx > 0 ? -0.35 : 0.35;
+        g.add(st);
+      }
+    } else if (id === 'beacon') {
+      const flame = new THREE.MeshStandardMaterial({ color: '#ffb040', emissive: '#ff8020', emissiveIntensity: 2 });
+      const h = 1.2 + tier * 0.6;
+      g.add(A.cyl(0.55, 0.7, h, stone, 0, 0, 0, 8), A.cyl(0.7, 0.55, 0.3, A.mat(A.P.copper, { m: 0.5, r: 0.4 }), 0, h, 0, 10));
+      const f = A.cone(0.4, 0.8, flame, 0, h + 0.25, 0, 7); f.userData.keep = true; f.userData.flame = true; g.add(f);
+      g.userData.flame = f;
+      if (tier >= 2) { const b = A.banner(A.P.cloth1, h + 0.9, 0.6, 0.4); b.position.set(0.7, 0, 0); g.add(b); g.userData.banner = b; }
+    } else if (id === 'sculpture') {
+      const ss = A.mat('#f0c060', { m: 0.85, r: 0.25 });
+      g.add(A.box(1.0, 0.5, 1.0, stoneD, 0, 0, 0));
+      const knot = new THREE.Mesh(A.geo(`knot${tier}`, () => new THREE.TorusKnotGeometry(0.42 + tier * 0.08, 0.09 + tier * 0.02, 64, 8, 2, 3)), ss);
+      knot.position.y = 1.2 + tier * 0.12; knot.userData.keep = true; knot.castShadow = true;
+      g.add(knot); g.userData.spin = knot;
+    } else if (id === 'obelisk') {
+      const h = 2.6 + tier * 0.9;
+      g.add(A.box(1.4, 0.4, 1.4, stoneD, 0, 0, 0));
+      const ob = new THREE.Mesh(A.geo(`obelisk${tier}`, () => new THREE.CylinderGeometry(0.22, 0.42, h, 4).rotateY(Math.PI / 4)), A.mat('#d9b07a', { flat: true }));
+      ob.position.y = 0.4 + h / 2; g.add(ob);
+      g.add(A.cone(0.24, 0.45, gold, 0, 0.4 + h, 0, 4));
+      if (tier >= 2) { const band = new THREE.Mesh(A.geo(`obband${tier}`, () => new THREE.CylinderGeometry(0.36, 0.38, 0.12, 4).rotateY(Math.PI / 4)), new THREE.MeshStandardMaterial({ color: '#5fd0ff', emissive: '#3ab0ff', emissiveIntensity: 0.8 })); band.position.y = 0.4 + h * 0.3; band.userData.keep = true; g.add(band); }
+    } else if (id === 'mosaic') {
+      const tex = A.canvasTex(128, 128, (c, w, h) => { const r = KH.u.seeded(5); for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { const v = r(); c.fillStyle = v < 0.4 ? '#2c78bc' : v < 0.75 ? '#3fc0d8' : v < 0.9 ? '#a8f0ff' : '#e8b54a'; c.fillRect(x * 16 + 1, y * 16 + 1, 14, 14); } });
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(1.7, 32).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3, metalness: 0.2 }));
+      disc.position.y = 0.04; disc.receiveShadow = true; disc.userData.keep = true; g.add(disc);
+      g.add(A.cyl(0.4, 0.45, 0.35, stone, 0, 0, 0, 12), pool(0.34, 0.36));
+      for (let i = 0; i < tier * 2; i++) { const a = (i / (tier * 2)) * Math.PI * 2; g.add(A.cyl(0.08, 0.1, 1.6, A.mat(A.P.white, { flat: true }), Math.cos(a) * 1.55, 0, Math.sin(a) * 1.55, 8)); }
+    }
+    return A.bake(g);
+  }
+  function plinth() {
+    const g = A.grp(A.cyl(0.55, 0.62, 0.25, A.mat('#d9b98a', { flat: true }), 0, 0, 0, 8), A.cyl(0.3, 0.3, 0.06, A.mat('#c9a070', { flat: true }), 0, 0.25, 0, 8));
+    return A.bake(g);
+  }
+  function syncDecor() {
+    if (!KH.decorItems) return;
+    const open = S.lv.wyrm >= DATA.decor.unlock;
+    for (const d of KH.decorItems()) {
+      const L = KH.decorLevel(d.id), key = `${open}:${L}`;
+      let rec = decor[d.id];
+      if (!rec) {
+        const g = new THREE.Group();
+        g.position.set(d.at[0], d.at[2], d.at[1]);
+        scene.add(g);
+        const proxy = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 2.4, 10), new THREE.MeshBasicMaterial());
+        proxy.position.y = 1.2; proxy.visible = false; proxy.userData.pid = 'gardens';
+        g.add(proxy); hit.push(proxy);
+        rec = decor[d.id] = { g, key: '', model: null, proxy };
+      }
+      if (rec.key === key) continue;
+      rec.key = key;
+      if (rec.model) { rec.g.remove(rec.model); rec.model = null; }
+      rec.proxy.userData.pid = open ? 'gardens' : null;
+      rec.g.visible = open;
+      if (!open) continue;
+      rec.model = L ? decorModel(d.id, L) : plinth();
+      rec.g.add(rec.model);
+    }
+  }
+  function animDecor(t) {
+    for (const id in decor) {
+      const m = decor[id].model;
+      if (!m) continue;
+      if (m.userData.spin) m.userData.spin.rotation.y = t * 0.5;
+      if (m.userData.flame) m.userData.flame.scale.set(1, 0.85 + 0.25 * Math.sin(t * 11) * Math.sin(t * 6.3), 1);
+      if (m.userData.banner) m.userData.banner.userData.update(t, T3.wind || 1);
+      if (m.userData.palms) for (const p of m.userData.palms) A.swayPalm(p, t, T3.wind || 1);
+    }
+  }
+  KH.on('decor', (e) => { const d = KH.decorItems && KH.decorItems().find((x) => x.id === e.id); if (d && T3.ready) { const c = new V3(d.at[0], d.at[2], d.at[1]); plotPos[`decor_${d.id}`] = c; burst(`decor_${d.id}`, '#ffe08a', 40); } });
 
   // ======================================================================
   // People and camels
@@ -1165,6 +1281,39 @@
   };
   T3.drag = (dx, dy) => T3.pan(dx, dy);
   T3.az = () => view.az;
+  // screen position of a world point (tests and tools)
+  T3.project = (x, y, z) => { const p = toScreen(new V3(x, y, z)); return { x: p.x, y: p.y }; };
+  T3.setView = (o) => { Object.assign(view, o); view.tween = null; };
+  // open ground around a point: distance to the nearest plot, lane, stair, home, palm, stall,
+  // terrace edge, wall or cliff (used to place the keep's decorations; negative means blocked)
+  let chanPts = null;
+  T3.clearance = (x, z) => {
+    if (landH(x, z) > 0.2 || z > 15.3 || z < -17.2) return -1;
+    let d = 99;
+    const near = (px, pz, r) => { d = Math.min(d, Math.hypot(x - px, z - pz) - r); };
+    for (const p of DATA.plots) { const c = plotPos[p.id]; near(c.x, c.z, 2.2); }
+    near(SPRING.x, SPRING.z, 7.1);
+    for (const id in routes) for (const q of routes[id].pts) near(q.x, q.z, 0.6);
+    for (const [hx, hz, , w] of HOMES) near(hx, hz, w * 0.8);
+    for (const [px, pz] of PALMS) near(px, pz, 0.5);
+    for (const [sx, sz] of STALLS) near(sx, sz, 1.0);
+    for (const [jx, jz] of JARS) near(jx, jz, 0.4);
+    for (const st of STAIRS) for (let i = 0; i <= 6; i++) near(lerp(st.a[0], st.b[0], i / 6), lerp(st.a[1], st.b[1], i / 6), st.w / 2 + 0.3);
+    near(0, -10.4, 1.8); near(4.2, 13.6, 2.6); near(CRAG.x, CRAG.z, CRAG.r + 0.6);
+    if (!chanPts) chanPts = route(CHANNEL).pts;
+    for (const q of chanPts) near(q.x, q.z, 0.6);
+    for (const [fx, fz, w, dd] of [[9.6, 12.0, 2.2, 3.6], [6.4, 11.2, 1.8, 2.2]]) d = Math.min(d, Math.max(Math.abs(x - fx) - w / 2, Math.abs(z - fz) - dd / 2) - 0.3);
+    for (const t of TERR) {
+      const P = t.pts;
+      for (let i = 0; i < P.length; i++) {
+        const [ax, az] = P[i], [bx, bz] = P[(i + 1) % P.length], vx = bx - ax, vz = bz - az, L2 = vx * vx + vz * vz;
+        const u = clamp(((x - ax) * vx + (z - az) * vz) / (L2 || 1), 0, 1);
+        d = Math.min(d, Math.hypot(x - ax - vx * u, z - az - vz * u) - 0.5);
+      }
+    }
+    d = Math.min(d, 15.3 - z);
+    return d;
+  };
   T3.stats = () => renderer && { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, scene };
   // let go of a drag: the view glides on and settles
   T3.fling = (vx, vy) => { view.vx = clamp(vx, -2500, 2500); view.vy = clamp(vy, -2500, 2500); };
@@ -1182,6 +1331,9 @@
     tmpV.copy(c).project(cam);
     if (Math.abs(tmpV.x) < 0.8 && tmpV.y > -0.5 && tmpV.y < 0.85 && view.zoom < 1.6) return;
     view.tween = { t0: performance.now(), from: { az: view.az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz }, to: { az: view.az, el: view.el, zoom: Math.max(1.3, Math.min(view.zoom, 2)), tx: c.x, tz: c.z + 2 } };
+  };
+  T3.focusAt = (x, z) => {
+    view.tween = { t0: performance.now(), from: { az: view.az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz }, to: { az: view.az, el: view.el, zoom: 2.2, tx: x, tz: z + 1.5 } };
   };
   function camStep(now, dt) {
     if (view.tween) {
@@ -1245,7 +1397,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);
@@ -1303,6 +1455,7 @@
     animRain(rdt);
     merchant.visible = !!(KH.keep && KH.keep.merchantHere());
     animRaiders(t);
+    animDecor(t);
     // highlight rings: the current quest target and the plot whose sheet is open
     const qp = UI.questTarget && plotPos[UI.questTarget];
     ringSel.quest.visible = !!qp && !(UI.sheet && UI.sheet.kind === 'plot');

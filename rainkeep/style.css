@@ -652,3 +652,8 @@ textarea.code { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, m
 .cr-card[hidden], .cr-card:empty { display: none; }
 .cr-score b { display: block; font-size: 54px; color: #fff; line-height: 1; }
 .cr-score span { color: var(--dim); }
+
+/* Keep gardens */
+.decor-pips { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 4px; }
+.decor-pips i { width: 8px; height: 8px; border-radius: 50%; background: #3a2616; border: 1px solid #a8742c; }
+.decor-pips i.on { background: var(--gold); box-shadow: 0 0 6px #ffcf6e88; }
