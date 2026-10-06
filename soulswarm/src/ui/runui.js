@@ -80,6 +80,7 @@ export class RunUI {
       q.novaFg.style.strokeDashoffset = String(289 * (1 - v / 100));
       q.nova.classList.toggle('ready', v >= 100);
     });
+    if (run.events) this.buffs(run.events);
     const key = JSON.stringify(run.skillLv) + JSON.stringify(run.evolved);
     if (key !== this.skillKey) {
       this.skillKey = key;
@@ -87,6 +88,22 @@ export class RunUI {
         const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
         return `<div class="hud-skill ${evo ? 'evo' : ''}" style="--rc:${evo ? '' : '#4ef2ff'}">${icon(SKILLS[id].icon)}<small>${evo ? '★' : lv}</small></div>`;
       }).join('');
+    }
+  }
+
+  /** Shrine blessing chips under the legion counter: icon, name and a draining timer (events.js owns the list). */
+  buffs(ev) {
+    if (ev.buffKey !== (this.buffKey || '')) {
+      this.buffKey = ev.buffKey;
+      if (!this.buffEl) { this.buffEl = h('<div class="hud-buffs"></div>'); $(this.el, '.hud-top').appendChild(this.buffEl); }
+      this.buffEl.innerHTML = ev.buffs.map((b) => `<div class="buff">${icon(b.icon)}<b>${b.name}</b><small></small><i></i></div>`).join('');
+    }
+    if (!this.buffEl) return;
+    const chips = this.buffEl.children;
+    for (let i = 0; i < ev.buffs.length && i < chips.length; i++) {
+      const b = ev.buffs[i], c = chips[i], s = String(Math.ceil(b.left));
+      if (c.dataset.s !== s) { c.dataset.s = s; c.children[2].textContent = s + 's'; }
+      c.lastElementChild.style.transform = `scaleX(${(b.left / b.dur).toFixed(3)})`;
     }
   }
 
@@ -137,9 +154,10 @@ export class RunUI {
   }
 
   // ---------------------------------------------------------------- level up
-  showLevelUp(choices, level, onPick, { chest = false } = {}) {
-    const back = h(`<div class="lvl-back ${chest ? 'chest' : ''}">
-      <div class="lvl-title">${chest ? '<b>RELIC CHEST</b><span>Claim one treasure</span>' : `<b>LEVEL ${level}</b><span>Choose a power</span>`}</div>
+  /** shrine: a Shrine of Souls blessing pick (events.js): its own title, no reroll. */
+  showLevelUp(choices, level, onPick, { chest = false, shrine = false } = {}) {
+    const back = h(`<div class="lvl-back ${chest ? 'chest' : ''} ${shrine ? 'shrine' : ''}">
+      <div class="lvl-title">${shrine ? '<b>SHRINE OF SOULS</b><span>Accept one blessing</span>' : chest ? '<b>RELIC CHEST</b><span>Claim one treasure</span>' : `<b>LEVEL ${level}</b><span>Choose a power</span>`}</div>
       <div class="cards"></div>
       <div class="lvl-actions"></div>
     </div>`);
@@ -152,7 +170,7 @@ export class RunUI {
         const evo = c.kind === 'evolution';
         const rc = evo ? RARITY_COLOR.legendary : RARITY_COLOR[c.rarity] || RARITY_COLOR.common;
         const pips = c.max ? Array.from({ length: c.max }, (_, k) => `<i class="${k < c.level - 1 ? 'on' : k === c.level - 1 ? 'next' : ''}"></i>`).join('') : '';
-        const tag = evo ? '<span class="pill pill-gold">Evolution</span>' : c.isNew ? '<span class="pill pill-soul">New</span>' : c.kind === 'weapon' || c.kind === 'passive' ? `<span class="pill">Lv ${c.level}</span>` : '';
+        const tag = evo ? '<span class="pill pill-gold">Evolution</span>' : c.isNew ? '<span class="pill pill-soul">New</span>' : c.kind === 'weapon' || c.kind === 'passive' ? `<span class="pill">Lv ${c.level}</span>` : c.tag ? `<span class="pill pill-soul">${c.tag}</span>` : '';
         const card = h(`<button class="card ${evo ? 'evo' : ''}" style="--rc:${rc}; animation-delay:${i * 70}ms">
           <div class="ic">${icon(c.icon)}</div>
           <div><h3>${c.name} ${tag}</h3><p>${c.desc}</p>${pips ? `<div class="pips">${pips}</div>` : ''}</div></button>`);
@@ -168,7 +186,7 @@ export class RunUI {
     };
     render(choices);
     const actions = $(back, '.lvl-actions');
-    if (!this.rerolled) {
+    if (!this.rerolled && !shrine) {
       const rr = h(`<button class="btn btn-ad btn-sm">${icon('ad')} Reroll</button>`);
       rr.addEventListener('click', async () => {
         const ok = await watchAd(this.app, 'reroll');

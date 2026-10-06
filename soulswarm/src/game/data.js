@@ -109,6 +109,50 @@ export const BOSS_PHASES = {
 };
 export const ELITE = { hpMul: 6, scale: 1.35, dmgMul: 1.5, crown: 0xffd04a };
 
+// ---------------------------------------------------------------- Elite affixes and run events (affixes.js, events.js)
+// Every elite the director raises rolls `count` affixes (`late` from Chapter `lateFrom` and in Endless), plus
+// run.diff.eliteAffixes when a difficulty sets it. Each affix pays `gold` bonus gold on the kill. A first run's
+// elites roll only from `tutorial`. Champions raised from affixed elites keep none of them.
+//   warded: a soul ward worth `share` × max HP soaks `cut` of every hit until it breaks, then a `stagger` s stagger
+//   splitter: on death, n [min, max] non-elite, chest-less copies with `hp` × the type's normal HP, `speed` ×, `scale` ×
+//   vampiric: heals `heal` × max HP whenever another enemy dies within `r` m (at most once per `cd` s)
+//   hasted: move speed ×
+//   commander: enemies within `r` m move and hit `speed` / `dmg` × harder; its death routs them
+//     (a `knock` m/s shove, then `slow` × speed for `rout` s)
+export const AFFIXES = {
+  count: 1, late: 2, lateFrom: 4, gold: 40, tutorial: ['warded', 'hasted'],
+  warded:    { name: 'Warded',    color: '#9ff0ff', desc: 'Shatter its soul ward',      share: 0.35, cut: 0.7, stagger: 0.9 },
+  splitter:  { name: 'Splitter',  color: '#ffa25a', desc: 'Splits apart in death',      n: [3, 4], hp: 0.9, speed: 1.35, scale: 0.78 },
+  vampiric:  { name: 'Vampiric',  color: '#ff4a62', desc: 'Feeds on nearby deaths',     heal: 0.04, r: 6, cd: 0.35 },
+  hasted:    { name: 'Hasted',    color: '#ffc46a', desc: 'Unnaturally swift',          speed: 1.45 },
+  commander: { name: 'Commander', color: '#ffe07a', desc: 'Rallies the horde, slay it to rout them', r: 6, speed: 1.25, dmg: 1.25, rout: 2, slow: 0.4, knock: 7 },
+};
+export const AFFIX_IDS = ['warded', 'splitter', 'vampiric', 'hasted', 'commander'];
+// Mid-run events: one at a time, the first at `first` [min, max] s, then every `every` [min, max] s, inside [from, to]
+// (Endless keeps rolling: no `to`). Never within `clear` s of a gate pair or an elite, `swarm` s of a swarm ring, or
+// `bossGap` s before Gravemaw; a first run waits until `tutorialFrom`. Each appears `dist` m from the Shepherd, clear
+// of hazards and gates, and simply lapses if ignored.
+//   thief: flees for `life` s at `speed` m/s (idle `wake` s unless the Shepherd comes within `alert` m; beyond `far` m
+//     it dawdles at `dawdle` ×); hp × husk-scaled HP; the kill pays gold[0] + gold[1] × chapter and `xp` × a level of XP
+//   shrine: stand inside `r` m for `hold` s (progress drains at `drain` × when outside) for a 1-of-3 blessing lasting `buff` s
+//   coffin: `hp` (husk-scaled); breaking it releases `wave` foes `ring` m around it and a chest-less mini-elite
+//     (`mini`: HP and size × an elite's); clear them, or last `reward` s, for a Relic Chest
+export const RUN_EVENTS = {
+  from: 60, to: 320, first: [62, 80], every: [80, 110], clear: 8, swarm: 5, bossGap: 40, tutorialFrom: 150, dist: 12,
+  weights: { thief: 1, shrine: 1, coffin: 1 },
+  thief:  { name: 'Soul Thief', life: 18, hp: 125, speed: 5.0, wake: 1.2, alert: 8, far: 15, dawdle: 0.55, escape: 40, gold: [100, 40], xp: 1 },
+  shrine: { name: 'Shrine of Souls', life: 28, r: 1.9, hold: 2.5, drain: 1.5, buff: 60 },
+  coffin: { name: 'Cursed Coffin', life: 30, hp: 150, wave: 20, ring: [2.2, 4.6], mini: { hp: 0.5, scale: 0.85, types: ['husk', 'brute', 'witch'] }, reward: 20 },
+};
+// Shrine of Souls blessings (a pick of 3): xp ×, minionDmg ×, speed ×, magnet (every shard and pickup flies in), raise +pp
+export const BLESSINGS = {
+  feast:  { name: 'Soul Feast',    icon: 'star',   desc: 'Double XP from soul shards',           xp: 2 },
+  wrath:  { name: 'Legion Wrath',  icon: 'fang',   desc: 'Minions deal +50% damage',             minionDmg: 1.5 },
+  stride: { name: 'Wraith Stride', icon: 'wing',   desc: '+30% move speed',                      speed: 1.3 },
+  tide:   { name: 'Soul Tide',     icon: 'magnet', desc: 'Every shard and treasure flies to you', magnet: true },
+  call:   { name: 'Grave Call',    icon: 'raise',  desc: '+20% Raise Chance',                    raise: 0.2 },
+};
+
 // ---------------------------------------------------------------- Chapters
 // Each chapter re-tints the world. Colors are hex ints for three.js.
 // mods = the chapter's identity, read by the director (run.js), enemies.js, hazards.js and player.js:

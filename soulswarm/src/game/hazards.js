@@ -11,6 +11,14 @@ const VIEW2 = 26 * 26;     // decals farther than this from the Shepherd are ski
 const K_CIRCLE = 0, K_CONE = 1, K_BURN = 2, K_ICE = 3, K_VENT = 4, K_HANDS = 5;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const _ice = { x: 0, z: 0, rx: 1, rz: 1, rot: 0, seed: 0 };
+const _vent = { x: 0, z: 0 };
+/** The ember vent in grid cell (cx, cz), written to _vent; false when the cell has none. */
+function ventAt(cx, cz) {
+  const V = HAZARDS.vents, C = V.cell;
+  if ((cx === 0 && cz === 0) || hash2(cx, cz, 31) > V.chance) return false;
+  _vent.x = (cx + 0.25 + hash2(cx, cz, 32) * 0.5) * C; _vent.z = (cz + 0.25 + hash2(cx, cz, 33) * 0.5) * C;
+  return true;
+}
 
 const decalVert = /* glsl */`
 attribute vec4 iData;   // x: progress 0..1 · y: alpha · z: per-kind extra (cone half-angle, seed, flare) · w: kind
@@ -207,6 +215,24 @@ export class Hazards {
     return false;
   }
 
+  /** True when a circle (x, z, r) touches no vent, ice patch, burning ground or pending grab (run-event placement). */
+  isClear(x, z, r) {
+    const M = this.mods;
+    if (M.vents) {
+      const V = HAZARDS.vents, cx0 = Math.floor(x / V.cell), cz0 = Math.floor(z / V.cell);
+      for (let cx = cx0 - 1; cx <= cx0 + 1; cx++) for (let cz = cz0 - 1; cz <= cz0 + 1; cz++) {
+        if (ventAt(cx, cz) && (x - _vent.x) ** 2 + (z - _vent.z) ** 2 < (r + V.radius) ** 2) return false;
+      }
+    }
+    if (M.ice) { // the centre, 16 points on the rim and 8 halfway in: a patch can't slip between them
+      if (this.iceAt(x, z)) return false;
+      for (let k = 0; k < 24; k++) { const a = k < 16 ? k * 0.3927 : k * 0.785, rr = k < 16 ? r : r * 0.5; if (this.iceAt(x + Math.cos(a) * rr, z + Math.sin(a) * rr)) return false; }
+    }
+    for (const b of this.burns) if ((x - b.x) ** 2 + (z - b.z) ** 2 < (r + b.r) ** 2) return false;
+    const g = this.grab;
+    return !(g.on && (x - g.x) ** 2 + (z - g.z) ** 2 < (r + HAZARDS.hands.radius) ** 2);
+  }
+
   // ---------------------------------------------------------------- simulation
   update(dt) {
     this.time += dt;
@@ -244,8 +270,8 @@ export class Hazards {
     let n = 0;
     for (let cx = cx0 - 2; cx <= cx0 + 2; cx++) {
       for (let cz = cz0 - 2; cz <= cz0 + 2; cz++) {
-        if ((cx === 0 && cz === 0) || hash2(cx, cz, 31) > V.chance) continue;
-        const x = (cx + 0.25 + hash2(cx, cz, 32) * 0.5) * C, z = (cz + 0.25 + hash2(cx, cz, 33) * 0.5) * C;
+        if (!ventAt(cx, cz)) continue;
+        const x = _vent.x, z = _vent.z;
         // each vent loops idle → warn (telegraph) → puff on its own period and phase
         const period = V.period[0] + hash2(cx, cz, 34) * (V.period[1] - V.period[0]);
         const off = hash2(cx, cz, 35) * period;

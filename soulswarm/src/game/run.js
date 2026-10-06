@@ -14,6 +14,8 @@ import { Pickups } from './pickups.js';
 import { Gates } from './gates.js';
 import { Boss } from './boss.js';
 import { Hazards } from './hazards.js';
+import { Affixes } from './affixes.js';
+import { Events } from './events.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON } from './data.js';
 
@@ -79,7 +81,7 @@ export class Run {
 
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
-    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0 };
+    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, events: 0 };
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0;
     this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
     this.bonusGold = 0;
@@ -104,6 +106,8 @@ export class Run {
     this.trialBannerAt = this.trial || this.bloodMoon ? 3.6 : 0;
     this.packAcc = 0; this.packN = 0;
     this.hazards = new Hazards(this);
+    this.affixes = new Affixes(this); // elite affixes (affixes.js)
+    this.events = new Events(this);   // mid-run events and shrine blessings (events.js)
     this.projectiles.initLobs();
     this.resize(engine.w, engine.h);
     this.camPos.copy(this.desiredCam());
@@ -125,6 +129,7 @@ export class Run {
     if (ms.nova) S.novaMul *= ms.nova;
     if (ms.minionDmg) S.minionDmg *= ms.minionDmg;
     if (ms.minionHp) S.minionHp *= ms.minionHp;
+    if (this.events) this.events.applyStats(S); // Shrine of Souls blessings
   }
 
   onQuality(q) {
@@ -237,8 +242,8 @@ export class Run {
         const t = ['husk', 'brute', 'witch', 'brute'][this.eliteIdx++ % 4];
         // Endless keeps them coming; a modifier set with more elites (Crimson Throne) shortens the gap
         if (this.eliteIdx >= times.length) this.nextElite = this.time + 70 * ELITE_TIMES.length / (this.mods.elites || ELITE_TIMES).length / (this.bloodMoon ? 2 : 1);
-        this.spawnEnemy(t, { elite: true });
-        this.ui.banner('ELITE', 'A gilded horror has risen. It carries a Relic Chest!', 'gold');
+        const b = this.affixes.roll(this.spawnEnemy(t, { elite: true })); // e.g. "WARDED BRUTE"
+        this.ui.banner(b.title, b.sub, 'gold');
         this.audio.sfx('warning', { volume: 0.5 });
       }
       if (!this.warned && this.time >= this.nextBossAt - 8) {
@@ -247,6 +252,7 @@ export class Run {
         this.audio.sfx('warning');
         this.app.haptic('warning');
       }
+      this.events.director();
       if (this.time >= this.nextBossAt) {
         this.bossSpawned = true;
         this.gates.despawn();
@@ -276,12 +282,14 @@ export class Run {
   }
 
   onEnemyKilled(e, source, noRaise) {
+    if (e.ev && this.events.onKill(e)) return; // the Soul Thief or the Cursed Coffin: events.js pays out
+    this.affixes.onKill(e);
     this.counters.kills++;
     if (e.elite) this.counters.elites++;
     this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
     this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1));
-    if (e.elite) this.pickups.dropSpecial('chest', e.x, e.z);
+    if (e.elite) { if (!(e.aff && e.aff.noChest)) this.pickups.dropSpecial('chest', e.x, e.z); } // a coffin's mini-elite carries none
     else {
       const r = Math.random();
       if (r < 0.006) this.pickups.dropSpecial('heart', e.x, e.z);
@@ -308,7 +316,7 @@ export class Run {
   }
 
   addXp(v) {
-    this.xp += v;
+    this.xp += v * this.events.xpMul; // Soul Feast blessing
     while (this.xp >= this.xpNeed) {
       this.xp -= this.xpNeed;
       this.level++;
@@ -555,7 +563,7 @@ export class Run {
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
       trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon,
-      chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length,
+      chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events,
     };
     if (this.onEnd) this.onEnd(result);
   }
@@ -597,7 +605,9 @@ export class Run {
       if (!this.ended) this.director(dt);
       this.player.update(dt, this.input);
       if (!this.player.dead) this.weapons.update(dt);
+      this.events.update(dt);
       this.enemies.update(dt);
+      this.affixes.update(dt); // after the horde moves: the Commander aura queries a fresh grid
       this.legion.update(dt);
       this.projectiles.update(dt);
       this.pickups.update(dt);
@@ -639,6 +649,7 @@ export class Run {
     this.weapons.render();
     this.pickups.render();
     this.enemies.render();
+    this.affixes.render(); this.events.render();
     this.boss.render(dt);
     this.player.render(this.t);
 
@@ -721,6 +732,7 @@ export class Run {
         ctx.restore();
       }
     }
+    this.affixes.draw2d(ctx); this.events.draw2d(ctx);
     this.fx.draw2d(ctx, this.camera, this.engine);
     if (!this.paused && !this.levelPending) this.input.draw(ctx);
   }
@@ -730,7 +742,7 @@ export class Run {
     this.gates.dispose();
     this.boss.dispose();
     this.hazards.dispose(); this.projectiles.disposeLobs(); // also restores the fog vignette
-    for (const sys of [this.player, this.enemies, this.legion, this.projectiles, this.weapons, this.pickups, this.world]) sys.dispose();
+    for (const sys of [this.player, this.enemies, this.legion, this.projectiles, this.weapons, this.pickups, this.world, this.affixes, this.events]) sys.dispose();
     this.particles.points.geometry.dispose(); this.particles.material.dispose();
     this.glow.points.geometry.dispose(); this.glow.material.dispose();
     this.shadowMesh.geometry.dispose(); this.shadowMesh.material.dispose();

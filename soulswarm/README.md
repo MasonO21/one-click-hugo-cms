@@ -23,12 +23,14 @@ Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag
 - **5 heroes** with signature weapons (Vael, Nyx, Seraphine, Liora, Mordrake), plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
 - **The legion:** every slain enemy can rise as its own kind (Shades, Wisp Runners, taunting Bulwarks, Soul Witches, Soul Bombs, gold Champions). Multiply it through **Soul Gates** and detonate it with **Soul Nova**.
 - **A living horde:** Ghoul packs lunge, Brutes slam, Witches lob fire. Each chapter has its own twist: burning ground, sliding ice, abyssal hands, an elite parade.
+- **Elite affixes:** every elite rolls one affix, or two from Chapter 4 and in Endless. **Warded** elites carry a soul ward that shatters, **Splitters** burst into copies, **Vampiric** elites feed on nearby deaths, **Hasted** elites trail embers, and **Commanders** drive the horde around them until their death routs it. Affixed elites still drop their Relic Chest, plus bonus gold.
+- **Mid-run events:** about three per run, all optional, with an edge arrow while they're off screen. Chase down a **Soul Thief** for gold and XP before it escapes. Hold a **Shrine of Souls** for a 60-second blessing. Break a **Cursed Coffin** to unleash a horde and survive it for a Relic Chest.
 - **Meta progression:** talents, relics (8 types × 4 rarities), hero stars, the Soul Altar gacha (odds and pity shown in-game), a 30-tier Soul Pass, rotating daily quests, the **Daily Trial** (a free daily run with a boon and a bane), **Blood Moon** weekends (double rewards, more elites), a weekly chest, a 7-day login calendar, energy, and a shop with simulated IAP and rewarded ads.
 
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, meta and economy (104 checks)
+npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, elite affixes, run events, meta and economy (124 checks)
 npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server)
 npm run trailer       # renders a 22 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
