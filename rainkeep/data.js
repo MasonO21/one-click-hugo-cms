@@ -912,18 +912,19 @@ const DATA = {
   },
 
   // ---------- Keep gardens: monuments and gardens with their own place in the keep ----------
-  // Each climbs 5 levels. Resource costs are quarter-crates scaled to the keep when you build (where
-  // late-game stone goes); a few take Sunsteel or Starglass instead. Every level adds `per` to a bonus.
+  // Each climbs 5 levels. Resource costs are quarter-crates scaled to the keep when you build, in food
+  // and stone, which pile up late (water and copper stay for buildings); a few take Sunsteel or
+  // Starglass instead. Every level adds `per` to a bonus.
   // at: [x, z, y] in the keep (DATA.keep coordinates).
   decor: {
-    unlock: 6, maxLevel: 5, growth: 2.2,
+    unlock: 6, maxLevel: 5, growth: 1.7,
     items: [
-      { id: 'fountain', name: 'Spring Fountain', at: [0, 13.3, 0], cost: { stone: 5, water: 4 }, key: 'cool', per: 0.25, unit: '°C of cooling', desc: 'A tiered fountain inside the gate, where every caravan stops to drink.' },
-      { id: 'palms', name: 'Palm Court', at: [-15.4, 10.4, 0], cost: { food: 5, water: 3 }, key: 'prod_food', per: 0.02, pct: true, unit: 'dates', desc: 'Date palms around a reflecting pool, below the quarry cliffs.' },
-      { id: 'pergola', name: 'Shade Pergola', at: [-15.3, 2.6, 1.4], cost: { stone: 4, copper: 2 }, key: 'drinkCut', per: 0.02, pct: true, unit: 'less water drunk by survivors', desc: 'Vines over slatted shade, where the houses quarter rests at noon.' },
-      { id: 'herbs', name: 'Herb Garden', at: [15.3, 2.6, 1.4], cost: { food: 4, water: 4 }, key: 'heal', per: 0.06, pct: true, unit: 'faster healing', desc: "Raised beds of aloe and mint beside the Healer's House." },
-      { id: 'statues', name: 'Twin Wyrm Statues', at: [0, -15.8, 2.8], cost: { stone: 8, copper: 3 }, key: 'breath', per: 0.03, pct: true, unit: "Rainwyrm's breath", desc: 'Two stone wyrms guard the steps of the Temple of Rains.' },
-      { id: 'beacon', name: 'Watchfire Beacon', at: [15.0, -12.6, 2.8], cost: { stone: 4, food: 3 }, key: 'forecast', per: 20, unit: 's earlier warning of storms and raiders', desc: 'A fire basket on the upper terrace that the lookouts light at the first dust.' },
+      { id: 'fountain', name: 'Spring Fountain', at: [0, 13.3, 0], cost: { stone: 2, food: 4 }, key: 'cool', per: 0.25, unit: '°C of cooling', desc: 'A tiered fountain inside the gate, where every caravan stops to drink.' },
+      { id: 'palms', name: 'Palm Court', at: [-15.4, 10.4, 0], cost: { food: 5, stone: 1 }, key: 'prod_food', per: 0.02, pct: true, unit: 'dates', desc: 'Date palms around a reflecting pool, below the quarry cliffs.' },
+      { id: 'pergola', name: 'Shade Pergola', at: [-15.3, 2.6, 1.4], cost: { stone: 2, food: 3 }, key: 'drinkCut', per: 0.02, pct: true, unit: 'less water drunk by survivors', desc: 'Vines over slatted shade, where the houses quarter rests at noon.' },
+      { id: 'herbs', name: 'Herb Garden', at: [15.3, 2.6, 1.4], cost: { food: 5, stone: 1 }, key: 'heal', per: 0.06, pct: true, unit: 'faster healing', desc: "Raised beds of aloe and mint beside the Healer's House." },
+      { id: 'statues', name: 'Twin Wyrm Statues', at: [0, -15.8, 2.8], cost: { stone: 3, food: 3 }, key: 'breath', per: 0.03, pct: true, unit: "Rainwyrm's breath", desc: 'Two stone wyrms guard the steps of the Temple of Rains.' },
+      { id: 'beacon', name: 'Watchfire Beacon', at: [15.0, -12.6, 2.8], cost: { stone: 1, food: 4 }, key: 'forecast', per: 20, unit: 's earlier warning of storms and raiders', desc: 'A fire basket on the upper terrace that the lookouts light at the first dust.' },
       { id: 'sculpture', name: 'Sunsteel Sculpture', at: [-14.3, -13.2, 2.8], sunsteel: 400, needs: 'forge', key: 'teamAtk', per: 0.01, pct: true, unit: 'squad attack', desc: 'A coil of forged Sunsteel that catches the morning light by the forge.' },
       { id: 'obelisk', name: 'Obelisk of the Rains', at: [-5.0, -16.3, 2.8], starglass: 250, key: 'prod', per: 0.01, pct: true, unit: 'production', desc: 'Carved with the names of every rain the keep remembers.' },
       { id: 'mosaic', name: 'Glass Mosaic Court', at: [5.0, -16.3, 2.8], starglass: 200, key: 'mult_water', per: 0.015, pct: true, unit: 'water from the wells', desc: 'A courtyard of blue and turquoise glass tiles that shimmers like water.' },
