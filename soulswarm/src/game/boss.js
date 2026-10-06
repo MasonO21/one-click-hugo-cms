@@ -85,7 +85,7 @@ export class Boss {
     for (const m of [this.ring, this.wall]) { const u = m.material.uniforms; u.uColor.value.copy(this.color); u.uAlpha.value = 1; u.uSeal.value = 0; }
     run.fx.shake(0.6);
     run.audio.sfx('boss_roar');
-    run.audio.sfx('summon', { volume: 0.6, pitch: 0.6 });
+    run.audio.sfx('arena');
     run.audio.playMusic('boss');
     run.ui.bossBar(true, `${BOSS.name}, ${BOSS.title}`, this.thresholds);
     run.ui.bossImmune(true);
@@ -100,6 +100,7 @@ export class Boss {
     if (this.immune > 0) this.immune -= dt;
     if (!this.dirge && this.fightT >= BP.dirge.at) this.hollowDirge();
     if (this.held && this.phaseT >= BP.minPhase[this.phase]) { this.held = false; this.pendingPhase = this.phase + 1; this.immune = BP.transition.dur; this.lockHp = e.hp; }
+    this.run.ui.bossWard(this.held ? BP.minPhase[this.phase] - this.phaseT : 0);
     // minions that strike him while he is immune (rising, roaring) are unharmed; held at a tick he still bites back
     e.dmg = this.immune > 0 ? 1e-4 : this.dmg;
     if (this.pendingPhase > this.phase && this.state !== 'enter') this.startRoar(e);
@@ -306,14 +307,16 @@ export class Boss {
       this.novaDealt += take; e.hp = this.lastHp - take;
     }
     if (e.hp > 0) {
-      if (this.immune > 0) { e.hp = this.lockHp; run.fx.immune(e.x, e.z, 4.6); }
+      if (this.immune > 0) { e.hp = this.lockHp; run.fx.immune(e.x, e.z, 4.6); run.audio.sfx('ward', { volume: 0.35 }); }
       else {
         let n = this.phase;
         while (n < 2 && e.hp <= e.maxHp * this.thresholds[n]) n++;
         if (n > this.phase && (this.held || this.phaseT < BP.minPhase[this.phase])) { // too soon: warded at the tick until the phase has played out
-          e.hp = e.maxHp * this.thresholds[this.phase];
+          const floor = e.maxHp * this.thresholds[this.phase];
+          if (this.held) this.phaseT += (floor - e.hp) / (e.maxHp * BP.wardBreak); // hammering the ward shatters it sooner
+          e.hp = floor;
           if (!this.held) { this.held = true; run.ui.bossImmune(true); }
-          run.fx.immune(e.x, e.z, 4.6);
+          run.fx.immune(e.x, e.z, 4.6); run.audio.sfx('ward', { volume: 0.35 });
         } else if (n > this.phase) { this.pendingPhase = n; this.immune = BP.transition.dur; this.lockHp = e.hp; } // the roar starts next frame
       }
     }
@@ -334,13 +337,13 @@ export class Boss {
     run.fx.light(e.x, e.z, 14, 3.5, this.color, 1.2);
     run.particles.burst(e.x, 3, e.z, 160, this.col, { speed: 9, life: 1.1, size: 0.7, up: 1.6 });
     run.particles.burst(e.x, 1, e.z, 60, this.hot, { speed: 3, life: 1.4, size: 0.5, up: 4 });
-    run.audio.sfx('boss_roar'); run.app.haptic('heavy');
+    run.audio.sfx('boss_roar'); run.audio.sfx('phase'); run.app.haptic('heavy');
     run.ui.banner(ph.name, ph.sub, 'boss');
     run.ui.bossImmune(true);
     // knock the nearby horde back (no damage)
     run.enemies.query(e.x, e.z, T.knockR, (o) => { if (o === e) return; const dx = o.x - e.x, dz = o.z - e.z, l = Math.hypot(dx, dz) || 1; o.kx += (dx / l) * T.knock; o.kz += (dz / l) * T.knock; });
     if (this.nextWave === Infinity) this.nextWave = this.fightT + T.dur + BP.waves.first;
-    if (this.phase === 2) { A.from = A.r; A.to = BP.arena.closeTo; A.closeT = 1e-6; run.audio.sfx('summon', { volume: 0.7, pitch: 0.5 }); }
+    if (this.phase === 2) { A.from = A.r; A.to = BP.arena.closeTo; A.closeT = 1e-6; run.audio.sfx('summon', { volume: 0.7, pitch: 0.5 }); run.audio.playMusic('boss3'); }
   }
 
   roarStep(e, dt, dx, dz, dist) {
@@ -472,7 +475,7 @@ export class Boss {
       if (pen > 0.25 && A.sparkT <= 0) {
         A.sparkT = 0.16;
         this.spark(A.x + nx * A.r, A.z + nz * A.r, 10);
-        run.audio.sfx('hit', { volume: 0.55, pitch: 0.45 });
+        run.audio.sfx('wall', { volume: 0.8 });
         if (A.hapT <= 0) { A.hapT = 0.6; run.app.haptic('light'); }
       }
     }

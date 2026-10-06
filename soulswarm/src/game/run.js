@@ -477,7 +477,7 @@ export class Run {
     this.particles.ring(P.x, P.z, 8, 80, hdr(0xffd04a, 3), { life: 0.5, size: 0.8 });
     this.fx.flash(0.6);
     this.audio.sfx('heal');
-    this.audio.playMusic(this.bossSpawned ? 'boss' : 'battle');
+    this.audio.playMusic(!this.bossSpawned ? 'battle' : this.boss.phase === 2 ? 'boss3' : 'boss');
   }
 
   onBossKilled(x, z) {

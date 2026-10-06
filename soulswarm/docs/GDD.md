@@ -246,7 +246,7 @@ A three-phase fight in a sealed arena. All numbers live in `BOSS` and `BOSS_PHAS
   - The Shepherd is pushed back gently, and adds within 9 m are knocked back.
   - The phase banner shows his painted portrait. Unfinished telegraphs are withdrawn.
   - Minions that hit him while he's immune take no recoil.
-- **Phase floor:** phase I lasts at least 18 s and phase II at least 14 s. Reach the tick sooner and he is held there (IMMUNE, white bar) until the phase has played out, so a huge legion can't skip phases.
+- **Phase floor:** phase I lasts at least 18 s and phase II at least 14 s. Reach the tick sooner and he is held there (IMMUNE, white bar with a "WARD n" countdown) until the phase has played out, so a huge legion can't skip phases. Damage poured into the ward shortens it by 1 s per 5% of his max HP, so strong builds shatter it faster.
 - **Soul Nova** and gate soul bursts hurt him at **50%, capped at 25% of max HP per Nova**. Damage numbers show what actually landed.
 - **Hollow Dirge (soft enrage):** 180 s after he spawns he gains +50% damage and attack rate, with a banner. Telegraphs never shorten.
 - **Chapter twists:**
@@ -513,7 +513,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 ## 15. Audio direction
 
-*Status: the build has separate menu, battle and boss music tracks and procedural SFX. The stem system below is Planned.*
+*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The stem system below is Planned.*
 
 - **Music:** dark synthwave with choir and pipe organ. **Stems are added as the legion grows** (25 / 100 / 200 / 300 minions): percussion, then bass, choir and lead. The player *hears* the army getting bigger. Boss tracks are separate, with a phase-3 key change.
 - **SFX priorities** (voice limit 32): 1) player hit and telegraphs, 2) Nova, 3) gates, 4) level-up, 5) raises (pooled into a shimmering chord, at most 10 voices), 6) weapons, 7) enemy deaths (heavily pooled).

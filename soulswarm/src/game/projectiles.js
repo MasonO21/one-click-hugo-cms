@@ -216,7 +216,7 @@ export class Projectiles {
     L.flight = spec.flight; L.r = spec.radius; L.h = spec.height; L.dmg = dmg; L.burn = !!burn;
     this.lobs.push(L);
     this.run.hazards.circle(tx, tz, L.r, L.flight, this.lobTele, 1.8); // plus a ring closing in as the orb falls
-    this.run.audio.sfx('shoot', { volume: 0.3, pitch: 0.45 });
+    this.run.audio.sfx('lob', { volume: 0.8 });
     return L;
   }
 
@@ -248,7 +248,7 @@ export class Projectiles {
     run.particles.burst(x, 0.3, z, 8, this.lobHot, { speed: 2, life: 0.35, size: 0.9, up: 0.4 });
     run.fx.shockwave(x, z, L.r * 1.25, 0xff7a2e, 0.3, 0.2);
     run.fx.light(x, z, 3.5, 1.4, this.lobLight, 0.35);
-    if ((P.x - x) ** 2 + (P.z - z) ** 2 < 200) run.audio.sfx('explosion', { volume: 0.3, pitch: 1.3 });
+    if ((P.x - x) ** 2 + (P.z - z) ** 2 < 200) run.audio.sfx('lob_land', { volume: 0.45 });
   }
 
   renderLobs() {

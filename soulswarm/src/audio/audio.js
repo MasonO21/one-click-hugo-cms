@@ -503,6 +503,79 @@ const SFX = {
     bell(o, t + 0.05, mtof(74 + sh), 0.15, 3);
     return 4.6;
   } },
+
+  // ---- horde moves (gameplay update) ----
+  lunge: { gap: 90, max: 3, vary: 0.08, vol: 0.5, play(o, t, p) { // a Ghoul springs: rasping hiss sweeping up
+    noise(o, t, { type: 'bandpass', f: 900 * p, to: 4200 * p, q: 3, a: 0.02, d: 0.22, v: 0.45 });
+    tone(o, t, { type: 'sawtooth', f: 160 * p, to: 420 * p, d: 0.16, v: 0.08 });
+    return 0.25;
+  } },
+  growl: { gap: 250, max: 2, vary: 0.06, vol: 0.55, play(o, t, p) { // a Brute rears back: low growl rising into the slam
+    const f = filt(o, 'lowpass', 260, 4);
+    f.frequency.setValueAtTime(260, t); f.frequency.exponentialRampToValueAtTime(900, t + 0.9);
+    for (const det of [-18, 18]) tone(f, t, { type: 'sawtooth', f: 55 * p, to: 82 * p, glide: 0.9, det, a: 0.15, h: 0.6, d: 0.25, v: 0.22 });
+    noise(o, t, { type: 'lowpass', f: 400, to: 1200, a: 0.3, d: 0.6, v: 0.12 });
+    return 1.0;
+  } },
+  slam: { gap: 120, max: 3, vary: 0.05, vol: 0.7, rev: 0.15, play(o, t, p) { // the Brute's fists hit stone
+    tone(o, t, { f: 95 * p, to: 32, d: 0.4, v: 0.75 });
+    noise(o, t, { type: 'lowpass', f: 2200, to: 180, d: 0.35, v: 0.55 });
+    noise(o, t + 0.02, { type: 'bandpass', f: 600, q: 0.8, d: 0.18, v: 0.3 }); // gravel
+    return 0.45;
+  } },
+  lob: { gap: 110, max: 3, vary: 0.07, vol: 0.45, play(o, t, p) { // a Witch hurls fire: whoompf
+    noise(o, t, { type: 'lowpass', f: 300 * p, to: 1800 * p, a: 0.03, d: 0.25, v: 0.45 });
+    tone(o, t, { type: 'triangle', f: 180 * p, to: 360 * p, d: 0.2, v: 0.12 });
+    return 0.3;
+  } },
+  lob_land: { gap: 90, max: 4, vary: 0.08, vol: 0.5, play(o, t, p) { // fire splashes onto the ground and crackles
+    noise(o, t, { type: 'bandpass', f: 1100 * p, to: 220, q: 0.9, d: 0.3, v: 0.5 });
+    tone(o, t, { f: 140 * p, to: 50, d: 0.22, v: 0.35 });
+    for (let k = 0; k < 4; k++) noise(o, t + 0.05 + k * 0.045, { type: 'highpass', f: 3500, d: 0.03, v: 0.12 });
+    return 0.35;
+  } },
+
+  // ---- the legion ----
+  soul_bomb: { gap: 140, max: 3, vary: 0.05, vol: 0.7, rev: 0.35, play(o, t, p) { // implosion, then a spectral boom
+    tone(o, t, { f: 300 * p, to: 1500 * p, glide: 0.22, a: 0.02, d: 0.24, v: 0.12 });
+    noise(o, t, { type: 'bandpass', f: 6000, to: 800, q: 4, a: 0.2, d: 0.05, v: 0.2 });
+    const b = t + 0.24;
+    tone(o, b, { f: 110 * p, to: 30, d: 0.55, v: 0.8 });
+    noise(o, b, { type: 'lowpass', f: 7000, to: 300, d: 0.5, v: 0.55 });
+    for (const det of [-12, 12]) tone(o, b, { f: 523 * p, to: 262 * p, det, a: 0.005, d: 0.6, v: 0.06 }); // ghostly ring-out
+    return 0.9;
+  } },
+  champion: { gap: 400, max: 1, vol: 0.7, rev: 0.45, play(o, t, p) { // a gilded soul rises: bright rising chime
+    [74, 78, 81, 86].forEach((n, k) => bell(o, t + k * 0.06, mtof(n) * p, 0.07, 1.4));
+    noise(o, t, { type: 'highpass', f: 7000, a: 0.2, d: 0.6, v: 0.06 });
+    return 1.4;
+  } },
+
+  // ---- Gravemaw's arena ----
+  arena: { gap: 1000, max: 1, vol: 0.85, rev: 0.6, big: true, play(o, t) { // the rune seal closes: drone swells under a ring of bells
+    const f = filt(o, 'lowpass', 200, 3);
+    f.frequency.setValueAtTime(200, t); f.frequency.exponentialRampToValueAtTime(2400, t + 1.2);
+    for (const det of [-9, 0, 9]) tone(f, t, { type: 'sawtooth', f: mtof(38), det, a: 0.6, h: 0.6, d: 1.0, v: 0.08 });
+    [62, 65, 69, 74, 77, 81].forEach((n, k) => bell(o, t + k * 0.2, mtof(n), 0.06, 1.6));
+    return 2.4;
+  } },
+  wall: { gap: 160, max: 2, vary: 0.1, vol: 0.45, play(o, t, p) { // rune wall pushes back: electric zap
+    noise(o, t, { type: 'bandpass', f: 4200 * p, q: 6, d: 0.12, v: 0.4 });
+    tone(o, t, { type: 'square', f: 1900 * p, to: 880 * p, d: 0.1, v: 0.06 });
+    return 0.15;
+  } },
+  phase: { gap: 1500, max: 1, vol: 0.9, rev: 0.7, big: true, duck: [0.3, 1.6], play(o, t) { // a new phase: choir stab over a sub drop
+    tone(o, t, { f: 80, to: 28, glide: 1.0, d: 1.3, v: 0.75 });
+    choir(o, [50, 53, 57, 62], t, 1.4, { vowel: 'ah', v: 0.22, a: 0.04, r: 1.2 });
+    for (const n of [38, 45, 50]) brass(o, t, n, 0.9, 0.05);
+    noise(o, t, { type: 'lowpass', f: 6000, to: 250, d: 1.0, v: 0.35 });
+    return 2.2;
+  } },
+  ward: { gap: 160, max: 2, vary: 0.05, vol: 0.4, rev: 0.3, play(o, t, p) { // hits ring off the King's ward
+    bell(o, t, mtof(93) * p, 0.06, 0.6);
+    tone(o, t, { f: 2400 * p, d: 0.08, v: 0.05 });
+    return 0.6;
+  } },
 };
 for (const k in SFX) { SFX[k].last = -1e9; SFX[k].ends = []; }
 
@@ -639,6 +712,29 @@ const TRACKS = {
         pluck(p.lead, t, (k === 3 ? 63 : ch[k]) + 12, sd * 1.5, 'square', 0.09, 2400);
       }
       if (s === 0 && !(bar & 3)) bell(p.bell, t, mtof(ch[0] + 12), 0.12, 3); // death toll
+    },
+  },
+
+  // Gravemaw's last phase (Crown of Cinders): faster, double-time kicks, harsher bass, the arp an octave up, brass stabs
+  boss3: {
+    bpm: 156,
+    level: 0.72,
+    chords: [[50, 53, 57], [51, 55, 58], [49, 52, 57], [50, 53, 57]], // Dm – Eb – A – Dm
+    roots: [38, 39, 33, 38],
+    setup(p) { p.dist = distort(p.bass, 12, 1400, 0.22); p.nodes.push(p.dist); },
+    step(p, i, t) {
+      const s = i & 15, bar = (i >> 4) & 7, c = bar >> 1, ch = this.chords[c], sd = p.stepDur;
+      if (!(s & 1)) kick(p.drums, t, s & 3 ? 0.6 : 0.95, 170, 0.28);
+      if (s === 4 || s === 12) snare(p.drums, t, 0.36);
+      if (bar & 1 && s >= 8 && !(s & 1)) tom(p.drums, t, 320 - (s - 8) * 30, 0.35);
+      hat(p.drums, t, s & 1 ? 0.04 : 0.08, s === 14);
+      bassNote(p.dist, t, this.roots[c] + (s % 3 === 2 ? 12 : 0), sd * 0.9, 0.26, 1100);
+      if (s === 0 && !(bar & 1)) {
+        choir(p.pad, ch, t, sd * 32 - 0.1, { vowel: 'ah', v: 0.16, a: 0.2, r: 0.6 });
+        for (const n of ch) brass(p.lead, t, n, sd * 3, 0.05);
+      }
+      pluck(p.lead, t, ch[[0, 1, 2, 1][s & 3]] + 24, sd * 1.2, 'square', 0.07, 3200);
+      if (s === 0 && !(bar & 1)) bell(p.bell, t, mtof(ch[0] + 24), 0.12, 2);
     },
   },
 };

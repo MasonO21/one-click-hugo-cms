@@ -133,7 +133,7 @@ export class Legion {
       P.burst(m.x, 0.6, m.z, m.champ ? 34 : 16, col, { speed: 6, life: 0.7, size: 0.45, up: 1.4 });
       run.fx.shockwave(m.x, m.z, m.champ ? 3.6 : 2.6, m.champ ? 0xffd04a : run.heroColor, 0.45, 0.12);
       run.fx.light(m.x, m.z, m.champ ? 6 : 4, m.champ ? 2 : 1.3, m.champ ? GOLD : run.heroColorObj, 0.45);
-      if (m.champ) { run.fx.text(m.x, 2.4, m.z, 'CHAMPION', 'gold'); run.fx.shake(0.15); }
+      if (m.champ) { run.fx.text(m.x, 2.4, m.z, 'CHAMPION', 'gold'); run.fx.shake(0.15); run.audio.sfx('champion'); }
       run.audio.sfx('raise', { volume: 0.8, pitch: m.champ ? 0.6 : 0.75 });
     } else if (this.raiseSfxT <= 0) { run.audio.sfx('raise', { volume: 0.5 }); this.raiseSfxT = 0.09; }
   }
@@ -407,7 +407,7 @@ export class Legion {
     run.fx.shockwave(x, z, R * 1.35, run.heroColor, 0.4, 0.16);
     run.fx.light(x, z, 3.5, 0.9 * k, run.heroColorObj, 0.3);
     run.fx.shake(0.16 * k);
-    if (this.blastSfxT <= 0) { run.audio.sfx('explosion', { volume: 0.55, pitch: 1.35 }); this.blastSfxT = 0.08; }
+    if (this.blastSfxT <= 0) { run.audio.sfx('soul_bomb', { volume: 0.65 }); this.blastSfxT = 0.08; }
   }
 
   // ---------------------------------------------------------------- Soul Witch orbs (pooled, homing)

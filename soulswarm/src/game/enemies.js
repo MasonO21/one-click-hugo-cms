@@ -198,7 +198,7 @@ export class Enemies {
           if (e.state === 1) {
             speed = 0;
             e.flash = Math.max(e.flash, 0.3 + 0.2 * Math.sin(e.stateT * 45));
-            if (e.stateT >= L.crouch - 1e-6) { e.state = 2; e.stateT = 0; }
+            if (e.stateT >= L.crouch - 1e-6) { e.state = 2; e.stateT = 0; if (pdist < 14) run.audio.sfx('lunge', { volume: 0.85 }); }
           } else if (e.state === 2) {
             speed = L.speed;
             if (e.stateT >= L.dur) { e.state = 3; e.stateT = 0; }
@@ -213,6 +213,7 @@ export class Enemies {
         if (e.state === 0 && dist < S.range * e.scale && e.moveCd <= 0 && e.spawnT > 0.5) {
           e.state = 1; e.stateT = -dt; e.lx = dx; e.lz = dz;
           run.hazards.cone(e, 1, dx, dz, S.reach * e.scale, S.arc, S.windup, CONE_COL);
+          if (pdist < 14) run.audio.sfx('growl', { volume: 0.55 });
         }
         if (e.state) {
           e.stateT += dt; wobble = false; sx = e.lx; sz = e.lz; speed = 0;
@@ -325,7 +326,7 @@ export class Enemies {
     run.fx.light(cx, cz, 5, 1.8, this.slamLight, 0.35);
     if (pd < 12) {
       run.fx.shake(0.06 + 0.3 * (1 - pd / 12));
-      run.audio.sfx('explosion', { volume: 0.55, pitch: 0.55 });
+      run.audio.sfx('slam', { volume: 0.6 });
     }
   }
 
