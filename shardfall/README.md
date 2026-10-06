@@ -73,10 +73,10 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 
 **Art.** The lobby, hero roster, skin shop and loading screen use illustrated splash art made with Higgsfield:
 - one portrait for each of the 10 heroes
-- portraits for 3 Legendary skins
+- one portrait for every one of the 15 skins
 - wide key art behind the menus
 
-Run `node tools/fetch-art.mjs` to download it into `web/assets/art/` as WebP, about 1 MB in total. Any picture without art, or whose file is missing, falls back to the drawn crystal hero, so the game always works. Matches keep the drawn crystals on purpose, because they stay readable at small sizes. Check Higgsfield's terms for commercial use before shipping.
+Run `node tools/fetch-art.mjs` to download it into `web/assets/art/` as WebP, about 3 MB in total. If a file is missing, the picture falls back to the drawn crystal hero, so the game always works. Matches keep the drawn crystals on purpose, because they stay readable at small sizes. Check Higgsfield's terms for commercial use before shipping.
 
 ## 3. Monetization design
 

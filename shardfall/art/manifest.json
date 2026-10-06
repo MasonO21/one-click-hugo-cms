@@ -106,6 +106,102 @@
       "quality": 82
     },
     {
+      "file": "skins/kaida_frost.webp",
+      "job": "81367f33-c221-45aa-899d-376df86d37e0",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001929_81367f33-c221-45aa-899d-376df86d37e0.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/orin_abyss.webp",
+      "job": "c5db00a6-fb28-47e6-bb12-cc018ba725d9",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001929_c5db00a6-fb28-47e6-bb12-cc018ba725d9.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/orin_coral.webp",
+      "job": "02505550-3d5d-4e30-a293-917ad366fb83",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001930_02505550-3d5d-4e30-a293-917ad366fb83.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/sylva_autumn.webp",
+      "job": "3b05ab04-9add-4e53-b1ea-310a913a72e9",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001930_3b05ab04-9add-4e53-b1ea-310a913a72e9.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/sylva_storm.webp",
+      "job": "5ee90e7e-5bee-4c00-8cb1-8b55c418075d",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001929_5ee90e7e-5bee-4c00-8cb1-8b55c418075d.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/brakka_magma.webp",
+      "job": "7be91dfb-252a-4cb6-b2fe-a6bffa6b76da",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001930_7be91dfb-252a-4cb6-b2fe-a6bffa6b76da.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/lumen_aurora.webp",
+      "job": "baf94cc0-9ceb-440d-989b-3d9625dc0379",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001931_baf94cc0-9ceb-440d-989b-3d9625dc0379.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/lumen_laureate.webp",
+      "job": "bd89c32c-0615-4e59-bdc1-ae201f9314a1",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001931_bd89c32c-0615-4e59-bdc1-ae201f9314a1.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/vexa_neon.webp",
+      "job": "f07b62dc-f368-4733-b59d-31b468026974",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001931_f07b62dc-f368-4733-b59d-31b468026974.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/drace_obsidian.webp",
+      "job": "a6f6f2ce-c61b-4e76-8a05-d9bb38fed7eb",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001931_a6f6f2ce-c61b-4e76-8a05-d9bb38fed7eb.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/oska_reef.webp",
+      "job": "36cd2cae-cff1-4ab8-95c4-28d83de85a29",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001930_36cd2cae-cff1-4ab8-95c4-28d83de85a29.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/oska_storm.webp",
+      "job": "f9e1c47d-2fa8-4f08-a2cb-939944b3dd57",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_001929_f9e1c47d-2fa8-4f08-a2cb-939944b3dd57.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
       "file": "key-art.webp",
       "job": "12a133a5-3f03-4a97-86de-9815293724f8",
       "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000131_12a133a5-3f03-4a97-86de-9815293724f8.png",

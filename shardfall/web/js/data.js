@@ -221,7 +221,8 @@ window.SF = window.SF || {};
   // splash; other skins only have art if listed here. Anything without art is drawn procedurally.
   SF.ART = {
     heroes: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska'],
-    skins: ['kaida_solar', 'nyx_bloodmoon', 'rhea_dawn'],
+    skins: ['kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
+      'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm'],
     key: 'assets/art/key-art.webp'
   };
   SF.artFor = (heroId, skinId) => {
