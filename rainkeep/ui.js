@@ -611,6 +611,7 @@
     const o = UI.sheet.data, l = o.log;
     const gains = {};
     for (const r of RES) if (l[r] > 0.5) gains[r] = Math.floor(l[r]);
+    if (l.sunsteel) gains.sunsteel = l.sunsteel;
     const mins = Math.round(o.capped / 60);
     return {
       title: 'While you were away', lvl: '',

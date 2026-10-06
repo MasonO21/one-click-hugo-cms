@@ -43,7 +43,7 @@
   KH.hooks.power.push(() => (S && S.gear ? Object.values(S.gear).reduce((a, b) => a + b, 0) * 30 : 0));
 
   // Smelting: stone and copper in, Sunsteel out, while the Forge is lit and its racks have room.
-  KH.hooks.tick.push((dt, offline) => {
+  KH.hooks.tick.push((dt, offline, log) => {
     if (!S || !S.lv.forge || !S.forge.on || !dt) return;
     if (S.sunsteel >= F.store(S.lv.forge)) { S.forge.full = true; return; }
     S.forge.full = false;
@@ -53,7 +53,7 @@
     for (const [r, n] of Object.entries(F.input)) S.res[r] -= n * want;
     S.forge.acc += want;
     const whole = Math.floor(S.forge.acc);
-    if (whole > 0) { S.sunsteel += whole; S.forge.acc -= whole; S.stats.smelted += whole; }
+    if (whole > 0) { S.sunsteel += whole; S.forge.acc -= whole; S.stats.smelted += whole; if (log) log.sunsteel = (log.sunsteel || 0) + whole; }
   });
 
   ACT.forgetoggle = () => {
@@ -119,7 +119,7 @@
   };
 
   KH.plotRows.forge = (pid, L, N, up) => {
-    const r = (lv) => F.smelt(lv) * (1 + 0.05 * tempering());
+    const r = (lv) => smeltRate(lv);
     return [
       ['Sunsteel smelted', L ? `${r(L).toFixed(1)}/min` : '—', up(`${r(N).toFixed(1)}/min`)],
       ['Stone and copper used', L ? `${fmt(r(L) * F.input.stone)} + ${fmt(r(L) * F.input.copper)}/min` : '—', up(`${fmt(r(N) * F.input.stone)} + ${fmt(r(N) * F.input.copper)}/min`)],
