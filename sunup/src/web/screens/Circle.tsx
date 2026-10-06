@@ -10,7 +10,7 @@ import { MOOD_INFO, ago, clock } from '../lib/format';
 import { statusLine } from '../lib/status';
 
 export function Circle() {
-  const { snap, run, api, attempt, toast, openPaywall } = useStore();
+  const { snap, run, api, attempt, toast, openPaywall, ask } = useStore();
   const now = useNow();
   const [adding, setAdding] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -19,13 +19,15 @@ export function Circle() {
   const alerting = new Set(snap.circleAlerts.filter((a) => !a.alert.resolvedAt).map((a) => a.subject.id));
 
   async function removeWatcher(w: WatcherView) {
-    if (!confirm(`Remove ${w.name} from your circle? They won't be alerted if you go quiet.`)) return;
+    const yes = await ask({ title: `Remove ${firstName(w.name)}?`, body: `${firstName(w.name)} won't be alerted if you go quiet.`, confirm: 'Remove', danger: true });
+    if (!yes) return;
     if (w.kind === 'contact') await run({ type: 'removeContact', id: w.id });
     else if (w.watchId) await run({ type: 'removeWatch', id: w.watchId });
   }
 
   async function stopWatching(w: WatchedView) {
-    if (!confirm(`Stop watching over ${w.person.name}? You won't hear if they go quiet.`)) return;
+    const yes = await ask({ title: `Stop watching ${firstName(w.person.name)}?`, body: `You won't hear about it if ${firstName(w.person.name)} goes quiet.`, confirm: 'Stop watching', danger: true });
+    if (!yes) return;
     await run({ type: 'removeWatch', id: w.watchId });
   }
 
@@ -223,6 +225,11 @@ function WatcherAlert({ view, now }: { view: AlertView; now: number }) {
           <MapPin size={18} /> See {name}'s location
         </a>
       )}
+      {subject.phone && (
+        <p className="reach">
+          {name}'s number: <strong>{formatPhone(subject.phone)}</strong>
+        </p>
+      )}
       <div className="row-btns">
         {subject.phone && (
           <a className="btn primary" href={`tel:${subject.phone}`}>
@@ -307,8 +314,9 @@ function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
         await navigator.share({ title: 'Join my Sunup circle', text, url });
         return;
       }
-    } catch {
-      return;
+    } catch (e) {
+      // Dismissing the share sheet is fine; anything else (e.g. sharing blocked) falls back to copying.
+      if ((e as Error).name === 'AbortError') return;
     }
     copy();
   }

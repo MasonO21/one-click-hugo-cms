@@ -13,7 +13,7 @@ const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function You() {
-  const { snap, run, api, attempt, openPaywall, toast } = useStore();
+  const { snap, run, api, attempt, openPaywall, toast, ask } = useStore();
   const now = useNow(10_000);
   const { me, limits } = snap;
   const [editing, setEditing] = useState(false);
@@ -264,7 +264,7 @@ export function You() {
                 Switch back to the free plan
               </button>
             )}
-            <button className="btn ghost block" onClick={() => confirm('Erase the demo and start over?') && api.demo!.reset()}>
+            <button className="btn ghost block" onClick={async () => (await ask({ title: 'Reset the demo?', body: 'This erases everything in the demo on this device.', confirm: 'Reset', danger: true })) && api.demo!.reset()}>
               Reset demo
             </button>
           </div>
@@ -272,12 +272,12 @@ export function You() {
       )}
 
       {api.mode === 'server' && (
-        <button className="btn ghost block" onClick={() => confirm('Sign out on this device? You\'ll need a new account to sign back in.') && api.signOut()}>
+        <button className="btn ghost block" onClick={async () => (await ask({ title: 'Sign out?', body: 'Sign-in by phone number isn\'t built yet, so you\'d need a new account on this device.', confirm: 'Sign out', cancel: 'Stay signed in', danger: true })) && api.signOut()}>
           Sign out
         </button>
       )}
       {me.plan === 'premium' && api.mode === 'server' && (
-        <button className="btn ghost block" onClick={() => confirm('Cancel Premium?') && run({ type: 'cancelPremium' })}>
+        <button className="btn ghost block" onClick={async () => (await ask({ title: 'Cancel Premium?', body: 'Your circle goes back to 2 people and the full escalation ladder turns off.', confirm: 'Cancel Premium', cancel: 'Keep Premium', danger: true })) && run({ type: 'cancelPremium' })}>
           Cancel Premium
         </button>
       )}

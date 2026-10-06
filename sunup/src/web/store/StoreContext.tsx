@@ -13,6 +13,14 @@ export interface Toast {
   link?: string;
 }
 
+export interface Question {
+  title: string;
+  body?: string;
+  confirm: string;
+  cancel?: string;
+  danger?: boolean;
+}
+
 interface Store {
   api: Api;
   snap: Snapshot;
@@ -27,6 +35,10 @@ interface Store {
   paywall: string | null;
   openPaywall: (reason?: string) => void;
   closePaywall: () => void;
+  /** An in-app confirmation (native confirm() is unavailable in some embeds and ugly on phones). */
+  ask: (q: Question) => Promise<boolean>;
+  question: Question | null;
+  answer: (yes: boolean) => void;
 }
 
 const StoreContext = createContext<Store | null>(null);
@@ -67,6 +79,22 @@ export function StoreProvider({ api, initial, children }: { api: Api; initial: S
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [paywall, setPaywall] = useState<string | null>(null);
   const seen = useRef(readSeen());
+  const [question, setQuestion] = useState<Question | null>(null);
+  const pending = useRef<((yes: boolean) => void) | null>(null);
+
+  const ask = useCallback((q: Question) => {
+    pending.current?.(false);
+    setQuestion(q);
+    return new Promise<boolean>((resolve) => {
+      pending.current = resolve;
+    });
+  }, []);
+
+  const answer = useCallback((yes: boolean) => {
+    pending.current?.(yes);
+    pending.current = null;
+    setQuestion(null);
+  }, []);
 
   const toast = useCallback((t: Omit<Toast, 'id'>) => {
     const id = Math.random().toString(36).slice(2);
@@ -142,6 +170,9 @@ export function StoreProvider({ api, initial, children }: { api: Api; initial: S
     paywall,
     openPaywall: (reason) => setPaywall(reason ?? ''),
     closePaywall: () => setPaywall(null),
+    ask,
+    question,
+    answer,
   };
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

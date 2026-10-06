@@ -73,6 +73,7 @@ function Main({ invite, joinCode, onInviteHandled }: { invite: InviteInfo | null
       )}
       <Toasts />
       <Paywall />
+      <Confirm />
     </>
   );
 }
@@ -167,6 +168,23 @@ function JoinSheet({ invite, code, onDone }: { invite: InviteInfo; code: string;
           </button>
         </div>
       )}
+    </Sheet>
+  );
+}
+
+function Confirm() {
+  const { question, answer } = useStore();
+  return (
+    <Sheet open={!!question} onClose={() => answer(false)} title={question?.title}>
+      {question?.body && <p className="muted">{question.body}</p>}
+      <div className="row-btns">
+        <button className="btn" onClick={() => answer(false)}>
+          {question?.cancel ?? 'Never mind'}
+        </button>
+        <button className={`btn ${question?.danger ? 'danger' : 'primary'}`} onClick={() => answer(true)}>
+          {question?.confirm}
+        </button>
+      </div>
     </Sheet>
   );
 }

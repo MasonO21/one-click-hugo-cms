@@ -22,3 +22,18 @@ html = html
 const out = join(dir, 'sunup-demo.html');
 writeFileSync(out, html);
 console.log(`wrote ${out} (${Math.round(html.length / 1024)} KB)`);
+
+// Variant for hosts that wrap the page in their own document skeleton (and already pad
+// the root for the phone's safe areas): no html/head/body tags, title first.
+const pick = (re) => html.match(re)?.[0] ?? '';
+const fragment = [
+  pick(/<title>[^<]*<\/title>/),
+  ...(html.match(/<link [^>]*>/g) ?? []),
+  pick(/<style>[\s\S]*?<\/style>/),
+  '<style>.screen{padding-top:18px}.demo-ribbon{padding-top:6px}.onboard.step{padding-top:28px}</style>',
+  '<div id="root"></div>',
+  pick(/<script type="module">[\s\S]*<\/script>/),
+].join('\n');
+const embedOut = join(dir, 'sunup-embed.html');
+writeFileSync(embedOut, fragment);
+console.log(`wrote ${embedOut}`);

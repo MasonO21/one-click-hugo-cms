@@ -276,7 +276,7 @@ export function createDemoApi(): Api {
         } catch {
           // Nothing stored.
         }
-        location.replace(baseUrl);
+        location.reload();
       },
     },
   };

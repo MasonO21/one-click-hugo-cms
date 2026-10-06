@@ -132,13 +132,18 @@ export function Setup({ invite, inviteCode, onInviteHandled }: { invite: InviteI
   async function shareInvite() {
     const url = api.inviteUrl(snap.me.inviteCode);
     try {
-      if (navigator.share) await navigator.share({ title: 'Join my Sunup circle', text: 'Join my Sunup circle so you know I\'m okay each morning:', url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast({ title: 'Invite link copied', tone: 'ok' });
+      if (navigator.share) {
+        await navigator.share({ title: 'Join my Sunup circle', text: 'Join my Sunup circle so you know I\'m okay each morning:', url });
+        return;
       }
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Invite link copied', tone: 'ok' });
     } catch {
-      // Share sheet dismissed.
+      toast({ title: 'Copy this link', body: url, tone: 'info' });
     }
   }
 

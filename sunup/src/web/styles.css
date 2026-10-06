@@ -1312,6 +1312,14 @@ textarea.input {
   min-height: 52px;
 }
 
+.reach {
+  font-size: 15px;
+}
+
+.reach strong {
+  user-select: all;
+}
+
 .facts {
   display: grid;
   grid-template-columns: 64px 1fr;
