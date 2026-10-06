@@ -53,7 +53,8 @@ section('Every hero can cast every skill', () => {
     const others = SF.HEROES.filter(h => h.id !== hero.id).map(h => h.id);
     const m = new SF.Match({ hero: hero.id, difficulty: 'normal', allies: [{ id: others[0], name: 'A' }, { id: others[1], name: 'B' }], enemies: [{ id: others[2], name: 'C' }, { id: others[3], name: 'D' }, { id: others[4], name: 'E' }] });
     const p = m.player, foe = m.heroes.find(h => h.team === 1);
-    p.level = 12; p.recalc(); p.hp = p.maxHp;
+    p.level = 12; p.points = 12; p.recalc(); p.hp = p.maxHp;
+    m.autoUpgrade(p);
     // Isolate the duel: park every other hero far away and freeze the bots.
     for (const o of m.heroes) if (o !== p) { o.brain = null; o.human = true; if (o !== foe) { o.x = o.team ? 3100 : 100; o.y = 600; } }
     m.nextWave = 1e9;
@@ -106,6 +107,108 @@ section('Bot matches finish (classic + brawl, every difficulty)', () => {
   if (BALANCE) {
     console.log('  hero win rates:');
     for (const h of SF.HEROES) console.log(`    ${h.name.padEnd(8)} ${String(Math.round((wins[h.id] || 0) / games[h.id] * 100)).padStart(3)}% of ${games[h.id]}`);
+  }
+});
+
+section('Skill ranks', () => {
+  const dummy = () => {
+    const m = new SF.Match({ hero: 'orin', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A' }, { id: 'sylva', name: 'B' }], enemies: [{ id: 'brakka', name: 'C' }, { id: 'nyx', name: 'D' }, { id: 'lumen', name: 'E' }] });
+    const p = m.player, foe = m.heroes.find(h => h.team === 1);
+    for (const o of m.heroes) if (o !== p) { o.brain = null; o.human = true; o.x = o.team ? 3100 : 100; o.y = 600; }
+    m.nextWave = 1e9; p.x = 1500; p.y = 600; foe.x = 1700; foe.y = 600;
+    m.updateVisibility();
+    return { m, p, foe };
+  };
+  {
+    const { m, p } = dummy();
+    check('heroes start with one skill point and no skills learned', p.points === 1 && p.ranks.every(r => r === 0));
+    check('an unlearned skill cannot be cast', m.castSkill(p, 0) === 'unranked');
+    check('the ultimate stays locked before level 4', m.castSkill(p, 2) === 'locked' && !m.canUpgrade(p, 2));
+    check('a point learns a skill', m.upgradeSkill(p, 0) && p.ranks[0] === 1 && p.points === 0);
+    check('no point, no upgrade', !m.upgradeSkill(p, 1));
+    m.giveXp(p, 150);
+    check('levelling up gives a point', p.level === 2 && p.points === 1);
+    check('basic rank is capped at half your level', !m.canUpgrade(p, 0) && m.canUpgrade(p, 1));
+  }
+  {
+    const { m, p } = dummy();
+    p.level = 12; p.points = 12;
+    m.autoUpgrade(p);
+    check('auto-upgrade maxes everything by level 12', p.ranks.join() === '4,4,3' && p.points === 1, p.ranks.join() + ' left ' + p.points);
+    const q = dummy().p, m2 = q.m;
+    q.level = 4; q.points = 4; q.m.autoUpgrade(q);
+    check('auto-upgrade takes the ultimate at 4 and unlocks both basics', q.ranks[2] === 1 && q.ranks[0] >= 1 && q.ranks[1] >= 1, q.ranks.join());
+  }
+  {
+    // The same skill hits harder and comes back sooner at a higher rank.
+    const hit = rank => {
+      const { m, p, foe } = dummy();
+      p.level = 8; p.recalc(); p.ranks = [rank, 0, 0]; p.points = 0;
+      const hp0 = foe.hp;
+      m.castSkill(p, 0, m.resolveAim(p, 0, { x: 1, y: 0, len: 1 }));
+      for (let k = 0; k < 60; k++) m.update(1 / 30);
+      return { dmg: hp0 - foe.hp, cd: SF.skillCdOf(p, 0) };
+    };
+    const r1 = hit(1), r4 = hit(4);
+    check('rank 4 deals more damage than rank 1', r4.dmg > r1.dmg * 1.4, `${Math.round(r1.dmg)} vs ${Math.round(r4.dmg)}`);
+    check('rank 4 has a shorter cooldown', r4.cd < r1.cd);
+  }
+  {
+    const m = run(botMatch(SF, {}), 6 * 60);
+    check('bots spend their skill points', m.heroes.filter(h => h.brain).every(h => h.points <= 1 && h.ranks[0] > 0), m.heroes.map(h => h.ranks.join('') + '/' + h.points).join(' '));
+    const b = new SF.Match({ hero: 'kaida', mode: 'brawl', difficulty: 'normal', allies: [{ id: 'orin' }, { id: 'sylva' }], enemies: [{ id: 'brakka' }, { id: 'nyx' }, { id: 'lumen' }] });
+    check('Shard Brawl starts with five points', b.player.points === 5);
+  }
+});
+
+section('Item passives', () => {
+  const duel = () => {
+    const m = new SF.Match({ hero: 'drace', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A' }, { id: 'sylva', name: 'B' }], enemies: [{ id: 'lumen', name: 'C' }, { id: 'nyx', name: 'D' }, { id: 'vexa', name: 'E' }] });
+    const p = m.player, foe = m.heroes.find(h => h.def0.id === 'lumen');
+    for (const o of m.heroes) if (o !== p) { o.brain = null; o.human = true; if (o !== foe) { o.x = o.team ? 3100 : 100; o.y = 600; } }
+    m.nextWave = 1e9; p.x = 1500; p.y = 600; foe.x = 1600; foe.y = 600;
+    m.updateVisibility();
+    return { m, p, foe };
+  };
+  check('every passive item says what it does', Object.values(SF.ITEMS).filter(i => i.passive).every(i => /Passive:/.test(i.desc)));
+  check('every recommended build only uses real items', SF.HEROES.every(h => h.build.every(id => SF.ITEMS[id])));
+  {
+    const { m, p, foe } = duel();
+    p.items = ['witherblade']; p.recalc();
+    foe.hp = foe.maxHp * 0.5;
+    m.applyDamage(p, foe, 10, { basic: true });
+    const before = foe.hp; m.heal(foe, 200, true);
+    check('Witherblade halves healing', Math.abs((foe.hp - before) - 100) < 0.01, `healed ${foe.hp - before}`);
+    m.t += 3; const b2 = foe.hp; m.heal(foe, 200, true);
+    check('…for 2.5 seconds', Math.abs((foe.hp - b2) - 200) < 0.01);
+  }
+  {
+    const { m, p, foe } = duel();
+    p.items = ['rimefang']; p.recalc();
+    m.applyDamage(p, foe, 10, { basic: true });
+    check('Rimefang attacks slow', foe.slowT > 0 && Math.abs(foe.slowAmt - 0.2) < 1e-9);
+    foe.slowT = 0; foe.slowAmt = 0;
+    m.applyDamage(p, foe, 10, { skill: p.def0.skills[0] });
+    check('…but only attacks, not skills', foe.slowT === 0);
+  }
+  {
+    const { m, p, foe } = duel();
+    foe.items = ['spined_carapace']; foe.recalc();
+    const hp0 = p.hp;
+    m.applyDamage(p, foe, 200, { basic: true });
+    check('Spined Carapace reflects attack damage as true damage', Math.abs((hp0 - p.hp) - 50) < 0.01, `reflected ${hp0 - p.hp}`);
+    const hp1 = p.hp;
+    m.applyDamage(p, foe, 200, { skill: p.def0.skills[0] });
+    check('…but not skill damage', p.hp === hp1);
+  }
+  {
+    const plain = duel(), glass = duel();
+    glass.p.items = ['nightglass']; glass.p.recalc(); plain.p.items = ['nightglass']; plain.p.recalc(); plain.p.passives.clear();
+    const sk = glass.p.def0.skills[0];
+    const d0 = plain.m.applyDamage(plain.p, plain.foe, 100, { skill: sk }), d1 = glass.m.applyDamage(glass.p, glass.foe, 100, { skill: sk });
+    check('Nightglass adds max-health damage to skill hits', d1 > d0 + 0.04 * glass.foe.maxHp * 0.5, `${Math.round(d0)} vs ${Math.round(d1)}`);
+    const d2 = glass.m.applyDamage(glass.p, glass.foe, 100, { skill: sk });
+    check('…once per 1.5 seconds', Math.abs(d2 - d0) < 0.01);
   }
 });
 
@@ -232,8 +335,8 @@ section('Quick signals', () => {
   }
   {
     const { m, p, allies } = setup();
-    allies.forEach(a => { a.x = 2000; a.y = 600; });
-    p.x = 1500;
+    allies.forEach((a, i) => { a.x = 1720; a.y = 560 + i * 80; });   // pushing, inside the enemy tower's range
+    p.x = 1300;
     m.signal(p, 'retreat');
     const d0 = allies.map(a => a.x);
     for (let k = 0; k < 45; k++) m.update(1 / 30);

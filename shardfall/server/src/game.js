@@ -122,6 +122,7 @@ export class Room {
       }
       case 'recall': m.startRecall(h); break;
       case 'signal': if (typeof msg.k === 'string') m.signal(h, msg.k); break;
+      case 'up': if (msg.i === 0 || msg.i === 1 || msg.i === 2) m.upgradeSkill(h, msg.i); break;
       case 'surrender': this.surrender(h); break;
     }
   }
@@ -205,7 +206,7 @@ export class Room {
     if (me) {
       snap.me = {
         id: me.id, gold: Math.floor(me.gold), xp: Math.round(me.xp), xn: me.xpNeed, lv: me.level, items: me.items.slice(),
-        cd: me.skillCd.map(r2), cdr: me.cdr, fcd: r1(me.spellCd), rc: r1(me.recallT), rg: me.range, ms: Math.round(me.speed()),
+        cd: me.skillCd.map(r2), cdr: me.cdr, fcd: r1(me.spellCd), rk: me.ranks.slice(), pt: me.points, rc: r1(me.recallT), rg: me.range, ms: Math.round(me.speed()),
         tg: me.target ? me.target.id : 0, rs: r1(Math.max(0, me.respawnT)),
         b: me.buffs.filter(b => b.label || b.id === 'tailwind' || b.id === 'warcry').map(b => [b.id, r1(b.t), b.label || ''])
       };

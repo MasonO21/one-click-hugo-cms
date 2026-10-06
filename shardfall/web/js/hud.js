@@ -30,7 +30,7 @@
 
   let m = null, R = null, raf = 0, last = 0, paused = false, onEnd = null, ended = false, bound = false;
   let aim = null, mouse = null, mouseT = 0, annT = 0, toastT = 0, slowT = 0, lastHit = 0, lastCoin = 0, shopSig = '';
-  let annQ = [];
+  let annQ = [], upWait = 0;
   const keys = new Set();
   const joy = { id: null, ox: 0, oy: 0, dir: null };
 
@@ -49,6 +49,7 @@
     const p = m.player;
     const r = m.castSkill(p, i, manual ? m.resolveAim(p, i, manual) : null);
     if (r === 'locked') toast('Ultimate unlocks at level 4');
+    else if (r === 'unranked') toast(m.canUpgrade(p, i) ? 'Tap + to learn this skill' : 'Learn this skill at your next level');
     else if (r === 'notarget') toast('No target in range');
   }
   function mouseAim(i) {
@@ -72,6 +73,10 @@
     if (r === 'cooldown' && p.alive) toast(`${S.name} recharging`);
     else if (r === 'stunned') toast('Stunned');
     else if (r === 'notarget') toast(p.spell === 'smite' ? 'No monster or minion in range' : 'No enemy hero in range');
+  }
+  function upgrade(i) {
+    if (!m || paused || ended) return;
+    if (m.upgradeSkill(m.player, i)) { SF.sfx.play('level'); if (SF.haptics) SF.haptics.tap(); upWait = 0; }
   }
   function doSignal(kind) {
     if (!m || paused || ended) return;
@@ -114,7 +119,7 @@
     el.innerHTML = `<div class="tut"><p class="eyebrow">First match</p><h3>Destroy the enemy Heartstone</h3><ol>
       <li><b>Move</b> by dragging anywhere on the left half of the screen (WASD on a keyboard).</li>
       <li><b>Attack</b> by holding the red button (Space). It picks the best target for you.</li>
-      <li><b>Skills:</b> tap to auto-aim, or drag the button to aim it yourself (Q, E, R). Your ultimate unlocks at level 4.</li>
+      <li><b>Skills:</b> tap to auto-aim, or drag the button to aim it yourself (Q, E, R). Every level gives a point: tap the <b>+</b> on a skill to learn or upgrade it (or wait and it's spent for you). Your ultimate opens at level 4.</li>
       <li><b>Gold</b> comes from landing the final hit on minions. Tap the glowing item on the left to buy it.</li>
       <li><b>Towers</b> take less damage unless your minions are beside them. The <b>Shard Colossus</b> by the river empowers your whole team.</li>
       <li>The small button by Recall is your <b>battle spell</b> (F). The buttons at the top right <b>signal your team</b>: bots follow Attack, Retreat and Group up.</li>
@@ -232,6 +237,9 @@
     const inRect = (e, el) => { const r = el.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
     document.querySelectorAll('.pbtn.sk').forEach(btn => {
       const i = +btn.dataset.i;
+      btn.insertAdjacentHTML('beforeend', '<span class="up" aria-hidden="true">+</span><span class="pips"></span>');
+      // The + badge upgrades instead of casting.
+      btn.querySelector('.up').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); upgrade(i); });
       btn.addEventListener('pointerdown', e => {
         if (!m || !m.player.alive || paused) return;
         SF.sfx.unlock();
@@ -299,7 +307,8 @@
       if (paused) return;
       if (k === ' ' || k === 'j') m.player.attackHeld = true;
       const si = { q: 0, 1: 0, e: 1, 2: 1, r: 2, 3: 2 }[k];
-      if (si != null) cast(si, mouseAim(si));
+      if (si != null && e.shiftKey) upgrade(si);
+      else if (si != null) cast(si, mouseAim(si));
       if (k === 'f') doSpell();
       const sig = Object.keys(SF.SIGNALS).find(id => SF.SIGNALS[id].key === k);
       if (sig) doSignal(sig);
@@ -338,11 +347,20 @@
     $('clock').textContent = `${mm}:${String(ss).padStart(2, '0')}`;
     $('kBlue').textContent = m.kills[0]; $('kRed').textContent = m.kills[1];
     skillEls().forEach((b, i) => {
-      const s = p.def0.skills[i], cd = p.skillCd[i], max = s.cd * (1 - p.cdr), el = b.querySelector('.cd');
+      const cd = p.skillCd[i], max = SF.skillCdOf(p, i), el = b.querySelector('.cd'), rank = p.ranks[i] || 0;
       el.textContent = cd > 0 ? Math.ceil(cd) : '';
       el.style.setProperty('--cd', cd > 0 ? cd / max : 0);
-      b.classList.toggle('locked', i === 2 && p.level < 4);
+      b.classList.toggle('locked', !rank);
+      b.dataset.lock = !rank && i === 2 && p.level < 4 ? 'LV 4' : '';
+      b.classList.toggle('can-up', p.alive !== false && m.canUpgrade(p, i));
+      const pips = b.querySelector('.pips'), sig = rank + '/' + SF.SKILL_RANK.max[i];
+      if (pips.dataset.s !== sig) { pips.dataset.s = sig; pips.innerHTML = Array.from({ length: SF.SKILL_RANK.max[i] }, (_, k) => `<i class="${k < rank ? 'on' : ''}"></i>`).join(''); }
     });
+    // Auto-upgrade (Settings, on by default): spend a point the player hasn't used within 3 seconds.
+    if (p.points > 0 && dt > 0 && SF.store.d.settings.autoSkill !== false) {
+      upWait += dt;
+      if (upWait >= 3 && m.autoUpgrade(p)) { SF.sfx.play('level'); upWait = 0; }
+    } else if (!p.points) upWait = 0;
     const sb = $('btnFlash'), fcd = sb.querySelector('.cd');
     fcd.textContent = p.spellCd > 0 ? Math.ceil(p.spellCd) : '';
     fcd.style.setProperty('--cd', p.spellCd / SF.SPELLS[p.spell].cd);
@@ -383,7 +401,7 @@
   SF.hud = {
     start(opts, cb) {
       bind();
-      onEnd = cb; ended = false; paused = false; annQ = []; annT = 0; aim = null; keys.clear();
+      onEnd = cb; ended = false; paused = false; annQ = []; annT = 0; aim = null; upWait = 0; keys.clear();
       joy.id = null; joy.dir = null; $('joy').hidden = true; $('joyHint').hidden = false;
       $('match').hidden = false;
       // opts.remote: an online match object with the same interface as SF.Match (see net.js).
@@ -407,7 +425,7 @@
         if (ev.victim === m.player) renderRecap(ev.victim.recapInfo || (m.recap ? m.recap(ev.victim, ev.killer) : null));
         if (ev.killer === m.player || ev.victim === m.player || ev.assists.includes(m.player)) { SF.sfx.play('kill'); if (SF.haptics) SF.haptics.impact(); }
       });
-      m.on('levelup', h => { if (h === m.player) { toast(h.level === 4 ? 'Ultimate unlocked' : 'Level ' + h.level); SF.sfx.play('level'); } });
+      m.on('levelup', h => { if (h === m.player) { toast(h.level === 4 ? 'Level 4: learn your ultimate (+)' : `Level ${h.level}: skill point ready`); SF.sfx.play('level'); } });
       m.on('cast', h => { if (h === m.player) { SF.sfx.play('skill'); if (SF.haptics) SF.haptics.tap(); } });
       m.on('signal', s => { if (s.team === 0) { SF.sfx.play('ping'); renderFeed(); } });
       m.on('message', () => renderFeed());

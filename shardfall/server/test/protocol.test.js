@@ -36,8 +36,12 @@ test('two players are matched together, play, and surrender', async () => {
 
   a.send({ t: 'in', d: null, a: false });
   a.send({ t: 'buy', id: 'swift_boots' });
+  a.send({ t: 'cast', i: 1, dir: null });   // not learned yet: ignored
+  a.send({ t: 'up', i: 1 });
+  a.send({ t: 'up', i: 1 });                 // only one point at level 1
   a.send({ t: 'cast', i: 1, dir: null });
   const s2 = await a.snapshotAfter(600);
+  assert.deepEqual([s2.me.rk[1], s2.me.pt], [1, 0], 'one point spent on the skill');
   assert.ok(s2.me.items.includes('swift_boots'), 'purchase applied');
   assert.ok(s2.me.cd[1] > 0, 'skill went on cooldown');
 

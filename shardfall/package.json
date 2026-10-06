@@ -12,6 +12,7 @@
     "test": "node tests/run.mjs",
     "test:ui": "node tests/ui.mjs",
     "test:platform": "node tools/verify-platform.mjs",
+    "balance": "node tools/balance.mjs",
     "icons": "node tools/make-icons.mjs",
     "cap:sync": "cap sync",
     "cap:ios": "cap sync ios && cap open ios",

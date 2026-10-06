@@ -321,7 +321,7 @@ table.odds td:last-child, table.odds th:last-child { text-align: right; font-var
 .pbtn .cd:empty { background: none; }
 .pbtn .key { position: absolute; right: -4px; top: -4px; padding: 1px 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.6); font: 700 10px/1.3 var(--f-display); font-style: normal; color: var(--muted); }
 .pbtn.locked { filter: grayscale(1) brightness(0.6); }
-.pbtn.locked::after { content: 'LV 4'; position: absolute; bottom: -8px; padding: 1px 6px; border-radius: 4px; background: #000a; font: 800 11px/1.3 var(--f-display); color: #fff; }
+.pbtn.locked::after { content: attr(data-lock); position: absolute; bottom: -8px; padding: 1px 6px; border-radius: 4px; background: #000a; font: 800 11px/1.3 var(--f-display); color: #fff; }
 .mini-row { z-index: 3; position: absolute; right: calc(280px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; }
 .mini-row .pbtn { position: relative; width: 50px; height: 50px; }
 .mini-row .pbtn.kill { border-color: #ffe27a; box-shadow: 0 0 0 3px rgba(255, 226, 122, 0.35), 0 0 18px rgba(255, 226, 122, 0.8); animation: killglow 0.7s ease-in-out infinite alternate; }
@@ -540,3 +540,15 @@ img.art { display: block; width: 100%; aspect-ratio: 1 / 1; max-width: 100%; obj
 .death .recap-row .rv { font: 800 14px/1 var(--f-display); text-align: right; }
 .recap-row .rp { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
 @media (max-height: 460px) and (orientation: landscape) { .death { top: 40%; padding: 8px 18px; } .death b { font-size: 34px; } .recap-row .rp { display: none; } }
+
+/* Skill ranks: + badge to upgrade, pips for the current rank */
+.pbtn.locked[data-lock=""]::after { display: none; }
+.pbtn.locked:not([data-lock=""]) .pips { display: none; }
+.pbtn .up { position: absolute; top: -6px; left: -6px; width: 26px; height: 26px; display: none; place-items: center; border-radius: 50%; border: 2px solid #fff3c2; background: radial-gradient(circle at 35% 30%, #ffe27a, #d08a12); color: #3a2200; font: 900 20px/1 var(--f-display); box-shadow: 0 0 12px rgba(255, 210, 90, 0.8); animation: uppulse 0.9s ease-in-out infinite alternate; z-index: 2; touch-action: none; }
+.pbtn.can-up .up { display: grid; }
+.pbtn.locked.can-up { filter: grayscale(0.4) brightness(0.85); }
+@keyframes uppulse { to { transform: scale(1.12); } }
+.pbtn .pips { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; pointer-events: none; }
+.pbtn .pips i { width: 7px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.22); }
+.pbtn .pips i.on { background: #ffe27a; box-shadow: 0 0 4px rgba(255, 226, 122, 0.8); }
+.pbtn.s2 .pips { bottom: -10px; }

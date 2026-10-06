@@ -36,7 +36,18 @@ window.SF = window.SF || {};
   // What bots bring: the jungler takes Smite, everyone else a spell that suits the role.
   SF.SPELL_FOR_ROLE = { Fighter: 'sprint', Mage: 'purify', Tank: 'mend', Marksman: 'blink', Assassin: 'shatter', Support: 'mend' };
 
-  // In-match items. `stats` are flat adds except as/cdr/lifesteal (fractions).
+  // Skill ranks. Every hero level gives one skill point. Basic skills go to rank 4, the ultimate to
+  // rank 3. A basic skill's rank can't exceed half your level (rounded up); ultimate ranks open at
+  // levels 4, 7 and 10. Rank scales skill damage and shortens the cooldown.
+  SF.SKILL_RANK = {
+    max: [4, 4, 3], ultAt: [4, 7, 10],
+    dmg: [[0.8, 0.95, 1.1, 1.25], [0.8, 0.95, 1.1, 1.25], [0.9, 1.1, 1.3]],
+    cd:  [[1, 0.95, 0.9, 0.85],   [1, 0.95, 0.9, 0.85],   [1, 0.85, 0.7]]
+  };
+  SF.skillCdOf = (h, i) => h.def0.skills[i].cd * SF.SKILL_RANK.cd[i][Math.max(0, (h.ranks ? h.ranks[i] : 1) - 1)] * (1 - (h.cdr || 0));
+
+  // In-match items. `stats` are flat adds except as/cdr/lifesteal (fractions). `passive` names a
+  // unique effect handled in match.js (owning two copies is impossible, so passives never stack).
   SF.ITEMS = {
     swift_boots:    { name: 'Swift Boots',      cost: 300,  stats: { ms: 40 },               desc: '+40 move speed',               c: '#8fd3ff' },
     iron_edge:      { name: 'Iron Edge',        cost: 450,  stats: { atk: 20 },              desc: '+20 attack',                   c: '#ffb36b' },
@@ -49,16 +60,20 @@ window.SF = window.SF || {};
     titan_heart:    { name: 'Titan Heart',      cost: 1300, stats: { hp: 800, regen: 8 },    desc: '+800 health, +8 regen/s',      c: '#ff9db0' },
     wardens_aegis:  { name: "Warden's Aegis",   cost: 1250, stats: { hp: 450, def: 35 },     desc: '+450 health, +35 defense',     c: '#e3d27a' },
     starfire_codex: { name: 'Starfire Codex',   cost: 1600, stats: { power: 130 },           desc: '+130 ability power',           c: '#ffe27a' },
-    reaper_cleaver: { name: 'Reaper Cleaver',   cost: 1700, stats: { atk: 60, as: 0.2 },     desc: '+60 attack, +20% attack speed', c: '#d9e2ff' }
+    reaper_cleaver: { name: 'Reaper Cleaver',   cost: 1700, stats: { atk: 60, as: 0.2 },     desc: '+60 attack, +20% attack speed', c: '#d9e2ff' },
+    witherblade:    { name: 'Witherblade',      cost: 1100, stats: { atk: 35 }, passive: 'wither', desc: '+35 attack. Passive: damaging a hero halves their healing for 2.5s', c: '#9b6bff' },
+    rimefang:       { name: 'Rimefang Bow',     cost: 1250, stats: { atk: 25, as: 0.2 }, passive: 'frost', desc: '+25 attack, +20% attack speed. Passive: attacks slow by 20% for 1s', c: '#a8e8ff' },
+    spined_carapace:{ name: 'Spined Carapace',  cost: 1150, stats: { hp: 300, def: 40 }, passive: 'thorns', desc: '+300 health, +40 defense. Passive: reflects 25% of attack damage taken as true damage', c: '#c9a26b' },
+    nightglass:     { name: 'Nightglass Orb',   cost: 1450, stats: { power: 80 }, passive: 'glass', desc: '+80 power. Passive: a skill hit on a hero deals 6% of their max health (once per 1.5s)', c: '#6d7cff' }
   };
 
   const B = {
-    Fighter:  ['swift_boots', 'iron_edge', 'bloodfang', 'ember_saber', 'titan_heart', 'stoneplate'],
-    Mage:     ['swift_boots', 'arcane_tome', 'tidal_charm', 'starfire_codex', 'titan_heart', 'wardens_aegis'],
-    Tank:     ['swift_boots', 'stoneplate', 'titan_heart', 'wardens_aegis', 'ember_saber', 'bloodfang'],
-    Marksman: ['swift_boots', 'iron_edge', 'storm_bow', 'bloodfang', 'reaper_cleaver', 'wardens_aegis'],
-    Assassin: ['swift_boots', 'iron_edge', 'ember_saber', 'reaper_cleaver', 'bloodfang', 'stoneplate'],
-    Support:  ['swift_boots', 'arcane_tome', 'wardens_aegis', 'tidal_charm', 'titan_heart', 'stoneplate']
+    Fighter:  ['swift_boots', 'iron_edge', 'bloodfang', 'ember_saber', 'witherblade', 'spined_carapace'],
+    Mage:     ['swift_boots', 'arcane_tome', 'tidal_charm', 'starfire_codex', 'nightglass', 'wardens_aegis'],
+    Tank:     ['swift_boots', 'stoneplate', 'titan_heart', 'spined_carapace', 'wardens_aegis', 'witherblade'],
+    Marksman: ['swift_boots', 'iron_edge', 'storm_bow', 'rimefang', 'reaper_cleaver', 'bloodfang'],
+    Assassin: ['swift_boots', 'iron_edge', 'ember_saber', 'reaper_cleaver', 'witherblade', 'bloodfang'],
+    Support:  ['swift_boots', 'arcane_tome', 'wardens_aegis', 'tidal_charm', 'nightglass', 'titan_heart']
   };
 
   // Skill `kind` picks the button icon. `ai` tells bots when to use it.
@@ -67,8 +82,8 @@ window.SF = window.SF || {};
       id: 'kaida', name: 'Kaida', title: 'Ember Duelist', role: 'Fighter', shape: 'blade',
       lore: 'A shard-knight whose crystal heart burns hotter with every duel.',
       price: { coins: 0 },
-      base: { hp: 840, atk: 64, power: 0, def: 24, ms: 310, range: 105, as: 0.95, regen: 5 },
-      grow: { hp: 105, atk: 6, power: 0, def: 3 },
+      base: { hp: 960, atk: 66, power: 0, def: 30, ms: 310, range: 105, as: 0.95, regen: 5 },
+      grow: { hp: 118, atk: 6, power: 0, def: 3.5 },
       build: B.Fighter,
       skills: [
         { id: 'flare_step', name: 'Flare Step', cd: 7, range: 270, kind: 'dash', ai: 'enemy', desc: 'Dash forward, scorching every enemy you pass.' },
@@ -93,8 +108,8 @@ window.SF = window.SF || {};
       id: 'sylva', name: 'Sylva', title: 'Galewind Ranger', role: 'Marksman', shape: 'leaf', ranged: true,
       lore: 'A wind-carved splinter that never misses the same target twice.',
       price: { coins: 0 },
-      base: { hp: 660, atk: 62, power: 0, def: 16, ms: 300, range: 520, as: 1.0, regen: 4 },
-      grow: { hp: 84, atk: 7, power: 0, def: 2 },
+      base: { hp: 660, atk: 54, power: 0, def: 16, ms: 300, range: 490, as: 1.0, regen: 4 },
+      grow: { hp: 84, atk: 6, power: 0, def: 2 },
       build: B.Marksman,
       skills: [
         { id: 'piercing_gale', name: 'Piercing Gale', cd: 6, range: 820, kind: 'bolt', ai: 'enemy', desc: 'Loose an arrow that pierces through every enemy in a line.' },
@@ -119,8 +134,8 @@ window.SF = window.SF || {};
       id: 'nyx', name: 'Nyx', title: 'Veilblade', role: 'Assassin', shape: 'star',
       lore: 'A shard of the eclipse, seen only in the instant before it strikes.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 840, atk: 76, power: 0, def: 24, ms: 325, range: 100, as: 1.0, regen: 6 },
-      grow: { hp: 96, atk: 7.5, power: 0, def: 3 },
+      base: { hp: 1000, atk: 84, power: 0, def: 32, ms: 325, range: 100, as: 1.0, regen: 6 },
+      grow: { hp: 116, atk: 8, power: 0, def: 4 },
       build: B.Assassin,
       skills: [
         { id: 'shadow_lunge', name: 'Shadow Lunge', cd: 7, range: 380, kind: 'dash', ai: 'enemy', needsTarget: true, anyTarget: true, desc: 'Blink behind an enemy and strike.' },
@@ -145,8 +160,8 @@ window.SF = window.SF || {};
       id: 'vexa', name: 'Vexa', title: 'Stormweaver', role: 'Mage', shape: 'spire', ranged: true,
       lore: 'A lightning-split shard that hums for a full minute before every storm.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 620, atk: 46, power: 45, def: 15, ms: 295, range: 480, as: 0.75, regen: 4 },
-      grow: { hp: 80, atk: 3, power: 15, def: 2 },
+      base: { hp: 620, atk: 46, power: 35, def: 15, ms: 295, range: 480, as: 0.75, regen: 4 },
+      grow: { hp: 80, atk: 3, power: 12.5, def: 2 },
       build: B.Mage,
       skills: [
         { id: 'chain_spark', name: 'Chain Spark', cd: 6, range: 640, kind: 'bolt', ai: 'enemy', desc: 'Hurl a spark that jumps from the first enemy hit to two more nearby.' },

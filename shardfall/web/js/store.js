@@ -36,7 +36,7 @@
       event: { tokens: 0, week: weekKey(), bought: {} },
       purchases: [], firstPack: {}, starter: false,
       monthly: { until: null, last: null },
-      settings: { sound: true, music: true, cap: 0, gfx: 'high', numbers: true, lefty: false },
+      settings: { sound: true, music: true, cap: 0, gfx: 'high', numbers: true, lefty: false, autoSkill: true },
       tutorial: false
     };
   }

@@ -765,6 +765,7 @@
       if (d.k === 'gfx') s.gfx = s.gfx === 'low' ? 'high' : 'low';
       if (d.k === 'numbers') s.numbers = !s.numbers;
       if (d.k === 'lefty') s.lefty = !s.lefty;
+      if (d.k === 'autoSkill') s.autoSkill = !s.autoSkill;
       SF.gfx.low = s.gfx === 'low'; SF.gfx.numbers = s.numbers;
       S.save(); settingsModal();
     },
@@ -786,6 +787,7 @@
       ${tog('sound', 'Sound effects', s.sound)}${tog('music', 'Music', s.music)}
       ${tog('gfx', 'Graphics quality', s.gfx !== 'low', 'High', 'Battery saver')}${tog('numbers', 'Damage numbers', s.numbers)}
       ${tog('lefty', 'Controls', !s.lefty, 'Joystick left', 'Joystick right')}
+      ${tog('autoSkill', 'Skill upgrades', s.autoSkill !== false, 'Auto after 3s', 'Manual only')}
       <div class="field"><label for="capSel">Monthly spending limit</label>
         <select id="capSel">${caps.map(c => `<option value="${c}" ${s.cap === c ? 'selected' : ''}>${c ? usd(c) + ' per month' : 'No limit'}</option>`).join('')}</select>
         <p class="muted small">Spent this month: ${usd(S.monthSpent())}. Purchases that would go over the limit are blocked.</p></div>

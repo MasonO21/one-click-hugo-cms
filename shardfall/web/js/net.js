@@ -11,7 +11,7 @@
   class RUnit {
     constructor(m, id) {
       this.m = m; this.id = id; this.alive = true; this.deadT = 0; this.vis = [true, true, true];
-      this.buffs = []; this.items = []; this.skillCd = [0, 0, 0]; this.face = { x: 1, y: 0 };
+      this.buffs = []; this.items = []; this.skillCd = [0, 0, 0]; this.ranks = [0, 0, 0]; this.points = 0; this.face = { x: 1, y: 0 };
       this.anim = Math.random() * 10; this.flash = 0; this.shield = 0; this.stunT = 0; this.slowT = 0; this.invisT = 0; this.bush = -1;
       this.k = 0; this.dth = 0; this.ast = 0; this.level = 1; this.respawnT = 0; this.recallT = 0; this.gold = 0; this.xp = 0; this.xpNeed = 140;
       this.cdr = 0; this.spellCd = 0; this.spell = 'blink'; this.range = 0; this.x = 0; this.y = 0; this.hp = 1; this.maxHp = 1; this.r = 20;
@@ -104,7 +104,7 @@
       const p = this.player, me = s.me;
       if (me) {
         p.gold = me.gold; p.xp = me.xp; p.xpNeed = me.xn; p.level = me.lv; p.items = me.items; p.skillCd = me.cd; p.cdr = me.cdr;
-        p.spellCd = me.fcd; p.recallT = me.rc; p.range = me.rg; p.ms = me.ms; p.respawnT = me.rs;
+        p.spellCd = me.fcd; if (me.rk) { p.ranks = me.rk; p.points = me.pt; } p.recallT = me.rc; p.range = me.rg; p.ms = me.ms; p.respawnT = me.rs;
         p.target = me.tg ? this.unit(me.tg) : null;
         p.buffs = me.b.map(([id, t, label]) => ({ id, t, label: label || undefined }));
       }
@@ -229,7 +229,7 @@
     castSkill(h, i, aim) {
       const s = h.def0.skills[i];
       if (!h.alive || h.stunT > 0 || h.skillCd[i] > 0) return 'cooldown';
-      if (i === 2 && h.level < 4) return 'locked';
+      if (!h.ranks[i]) return i === 2 && h.level < 4 ? 'locked' : 'unranked';
       if (s.needsTarget) { aim = aim || this.resolveAim(h, i, null); if (!aim.target) return 'notarget'; }
       this.net.send({ t: 'cast', i, dir: aim ? this.out(aim.dir) : null, p: aim && aim.point ? this.outP(aim.point) : null, tg: aim && aim.target ? aim.target.id : null });
       h.skillCd[i] = Math.max(h.skillCd[i], 0.25);
@@ -253,6 +253,12 @@
       return true;
     }
     startRecall(h) { if (!h.alive) return; this.net.send({ t: 'recall' }); h.recallT = 3; }
+    upgradeSkill(h, i) {
+      if (!this.canUpgrade(h, i)) return false;
+      this.net.send({ t: 'up', i });
+      h.ranks = h.ranks.slice(); h.ranks[i]++; h.points--;   // shown at once; the next snapshot confirms
+      return true;
+    }
     signal(h, kind) {
       if (!SF.SIGNALS[kind] || this.t - (h.sigT == null ? -9 : h.sigT) < 1.5) return false;
       h.sigT = this.t;
@@ -262,7 +268,7 @@
     end() { this.net.send({ t: 'surrender' }); }
   }
   // Local-only helpers come straight from the offline match so aiming and effects behave the same.
-  for (const k of ['resolveAim', 'autoTarget', 'spellTarget', 'spellWouldKill', 'took', 'recap', 'visible', 'targetable', 'ring', 'slashFx', 'float', 'shake', 'beam', 'bolt', 'updateFx', 'inFountain']) {
+  for (const k of ['resolveAim', 'autoTarget', 'spellTarget', 'spellWouldKill', 'took', 'recap', 'rankCap', 'canUpgrade', 'autoUpgrade', 'visible', 'targetable', 'ring', 'slashFx', 'float', 'shake', 'beam', 'bolt', 'updateFx', 'inFountain']) {
     RemoteMatch.prototype[k] = SF.Match.prototype[k];
   }
 

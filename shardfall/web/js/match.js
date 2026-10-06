@@ -51,7 +51,7 @@
     constructor(m, def, o) {
       super(m, Object.assign({ kind: 'hero', r: 24, maxHp: 1 }, o));
       this.def0 = def; this.level = 1; this.xp = 0; this.gold = 300; this.goldEarned = 0; this.items = [];
-      this.skillCd = [0, 0, 0]; this.k = 0; this.dth = 0; this.ast = 0; this.towers = 0;
+      this.skillCd = [0, 0, 0]; this.ranks = [0, 0, 0]; this.points = 1; this.passives = new Set(); this.k = 0; this.dth = 0; this.ast = 0; this.towers = 0;
       this.streak = 0; this.multiN = 0; this.multiT = 0; this.respawnT = 0; this.recallT = 0; this.spellCd = 0; this.ccImmune = 0;
       this.hitBy = new Map(); this.dmgDealt = 0; this.aggroT = -9; this.revealT = -9; this.invisT = 0;
       this.vis = [true, true, true]; this.bush = -1;
@@ -75,6 +75,7 @@
       this.regen = b.regen + lv * 0.6 + add.regen;
       this.lifesteal = add.lifesteal;
       this.cdr = Math.min(0.4, add.cdr);
+      this.passives = new Set(this.items.map(id => SF.ITEMS[id].passive).filter(Boolean));
     }
     nextItem() { return this.items.length >= 6 ? null : this.def0.build.find(id => !this.items.includes(id)) || null; }
     get xpNeed() { return xpNeed(this.level); }
@@ -86,11 +87,13 @@
   const skinC = h => (SF.SKIN[h.skin] || {}).c1 || '#fff';
   const SK = {
     flare_step(m, h, a, s) {
-      m.dashTo(h, a.dir, s.range, 1500, { trail: skinC(h), onPass: e => m.applyDamage(h, e, 80 + 0.95 * h.atk, { skill: true }) });
+      // Aimed at a target: stop just past it. Drag-aimed (no target): the full distance.
+      const len = a.target ? clamp(dist(h, a.target) + 60, 120, s.range) : s.range;
+      m.dashTo(h, a.dir, len, 1500, { trail: skinC(h), onPass: e => m.applyDamage(h, e, 80 + 0.95 * h.atk, { skill: s }) });
       return true;
     },
     cinder_whirl(m, h, a, s) {
-      for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) { m.applyDamage(h, e, 90 + 1.0 * h.atk, { skill: true }); m.slow(e, 0.3, 1.5); }
+      for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) { m.applyDamage(h, e, 90 + 1.0 * h.atk, { skill: s }); m.slow(e, 0.3, 1.5); }
       m.ring(h.x, h.y, s.range, skinC(h), 0.35, 6); m.burst(h.x, h.y, '#ffb347', 18, 260);
       return true;
     },
@@ -99,33 +102,33 @@
       const dir = norm(t.x - h.x, t.y - h.y);
       m.dashTo(h, dir, Math.max(0, dist(h, t) - (h.r + t.r)), 1900, { trail: '#ffb347', onEnd: () => {
         if (!t.alive) return;
-        m.applyDamage(h, t, 170 + 1.2 * h.atk + 0.22 * (t.maxHp - t.hp), { skill: true });
+        m.applyDamage(h, t, 170 + 1.2 * h.atk + 0.22 * (t.maxHp - t.hp), { skill: s });
         m.ring(t.x, t.y, 130, '#ffb347', 0.4, 8); m.burst(t.x, t.y, '#ffd29a', 26, 320); m.shake(7);
         if (!t.alive) h.skillCd[2] *= 0.2;
       } });
       return true;
     },
     riptide_bolt(m, h, a, s) {
-      m.shoot(h, a.dir, { speed: 950, r: 16, max: s.range, color: skinC(h), kind: 'orb', onHit: e => { m.applyDamage(h, e, 100 + 0.7 * h.power, { skill: true }); m.slow(e, 0.35, 1.5); m.burst(e.x, e.y, skinC(h), 10, 160); } });
+      m.shoot(h, a.dir, { speed: 950, r: 16, max: s.range, color: skinC(h), kind: 'orb', onHit: e => { m.applyDamage(h, e, 100 + 0.7 * h.power, { skill: s }); m.slow(e, 0.35, 1.5); m.burst(e.x, e.y, skinC(h), 10, 160); } });
       return true;
     },
     whirlpool(m, h, a, s) {
       const p = a.point;
       m.zone({ x: p.x, y: p.y, r: 130, team: h.team, delay: 0.7, dur: 0.4, color: skinC(h), kind: 'whirl', onStart: z => {
-        for (const e of m.enemiesIn(h.team, z.x, z.y, z.r)) { m.applyDamage(h, e, 150 + 0.9 * h.power, { skill: true }); m.stun(e, 0.8); }
+        for (const e of m.enemiesIn(h.team, z.x, z.y, z.r)) { m.applyDamage(h, e, 150 + 0.9 * h.power, { skill: s }); m.stun(e, 0.8); }
         m.ring(z.x, z.y, z.r, skinC(h), 0.4, 6); m.shake(3);
       } });
       return true;
     },
     leviathan_surge(m, h, a, s) {
       m.shoot(h, a.dir, { speed: 760, r: 62, max: s.range, pierce: true, color: skinC(h), kind: 'wave', onHit: e => {
-        m.applyDamage(h, e, 280 + 1.3 * h.power, { skill: true }); m.knockback(e, a.dir, 150);
+        m.applyDamage(h, e, 280 + 1.3 * h.power, { skill: s }); m.knockback(e, a.dir, 150);
       } });
       m.shake(4);
       return true;
     },
     piercing_gale(m, h, a, s) {
-      m.shoot(h, a.dir, { speed: 1450, r: 14, max: s.range, pierce: true, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 90 + 1.1 * h.atk, { skill: true }) });
+      m.shoot(h, a.dir, { speed: 1450, r: 14, max: s.range, pierce: true, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 90 + 1.1 * h.atk, { skill: s }) });
       return true;
     },
     tailwind(m, h) {
@@ -137,19 +140,19 @@
       const base = Math.atan2(a.dir.y, a.dir.x);
       for (let i = -3; i <= 3; i++) {
         const ang = base + i * 0.13;
-        m.shoot(h, { x: Math.cos(ang), y: Math.sin(ang) }, { speed: 1250, r: 12, max: s.range, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 70 + 0.6 * h.atk, { skill: true }) });
+        m.shoot(h, { x: Math.cos(ang), y: Math.sin(ang) }, { speed: 1250, r: 12, max: s.range, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 70 + 0.6 * h.atk, { skill: s }) });
       }
       return true;
     },
     boulder_charge(m, h, a, s) {
       m.dashTo(h, a.dir, s.range, 1150, { stopOnHero: true, trail: '#d8c7a0', onPass: e => {
-        m.applyDamage(h, e, 80 + 0.06 * h.maxHp, { skill: true });
+        m.applyDamage(h, e, 80 + 0.06 * h.maxHp, { skill: s });
         if (e.kind === 'hero') { m.stun(e, 1.0); m.shake(4); }
       } });
       return true;
     },
     quake(m, h, a, s) {
-      for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) { m.applyDamage(h, e, 70 + 0.05 * h.maxHp, { skill: true }); m.slow(e, 0.4, 2); }
+      for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) { m.applyDamage(h, e, 70 + 0.05 * h.maxHp, { skill: s }); m.slow(e, 0.4, 2); }
       m.ring(h.x, h.y, s.range, '#e3d27a', 0.45, 8); m.shake(4);
       return true;
     },
@@ -157,7 +160,7 @@
       const amt = 250 + 0.25 * h.maxHp;
       m.shieldUnit(h, amt, 5);
       for (const al of m.heroes) if (al !== h && al.alive && al.team === h.team && d2(al, h) < 420 * 420) m.shieldUnit(al, amt * 0.5, 5);
-      for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) { m.stun(e, 0.7); m.applyDamage(h, e, 100 + 0.04 * h.maxHp, { skill: true }); }
+      for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) { m.stun(e, 0.7); m.applyDamage(h, e, 100 + 0.04 * h.maxHp, { skill: s }); }
       m.ring(h.x, h.y, s.range, '#e3d27a', 0.5, 10); m.ring(h.x, h.y, 420, '#e3d27a', 0.6, 2); m.shake(6);
       return true;
     },
@@ -167,13 +170,14 @@
       m.burst(h.x, h.y, '#6b4bd6', 12, 140);
       h.x = clamp(t.x + dir.x * (t.r + h.r + 6), 40, W.w - 40); h.y = clamp(t.y + dir.y * (t.r + h.r + 6), 60, W.h - 60);
       h.face = { x: -dir.x, y: -dir.y };
-      m.applyDamage(h, t, 95 + 1.1 * h.atk, { skill: true });
+      m.applyDamage(h, t, 110 + 1.2 * h.atk, { skill: s });
       m.burst(h.x, h.y, skinC(h), 14, 180);
       h.target = t;
       return true;
     },
     veil(m, h) {
       h.invisT = 3; h.addBuff({ id: 'veil', t: 3, msMul: 0.3 }); h.addBuff({ id: 'veilstrike', t: 6 });
+      m.heal(h, h.maxHp * 0.08);
       m.burst(h.x, h.y, '#6b4bd6', 20, 160);
       if (h.brain) h.target = null;
       return true;
@@ -187,14 +191,14 @@
         m.later(i * 0.2, () => {
           if (!t.alive || !h.alive) return;
           const extra = i === 2 ? 0.25 * (t.maxHp - t.hp) : 0;
-          m.applyDamage(h, t, 80 + 0.8 * h.atk + extra, { skill: true });
+          m.applyDamage(h, t, 80 + 0.8 * h.atk + extra, { skill: s });
           m.slashFx(t.x, t.y, Math.random() * 6.28, skinC(h)); if (i === 2) { m.shake(6); m.burst(t.x, t.y, skinC(h), 24, 280); }
         });
       }
       return true;
     },
     radiant_orb(m, h, a, s) {
-      m.shoot(h, a.dir, { speed: 1000, r: 16, max: s.range, color: skinC(h), kind: 'orb', onHit: e => { m.applyDamage(h, e, 100 + 0.7 * h.power, { skill: true }); m.slow(e, 0.2, 1); } });
+      m.shoot(h, a.dir, { speed: 1000, r: 16, max: s.range, color: skinC(h), kind: 'orb', onHit: e => { m.applyDamage(h, e, 100 + 0.7 * h.power, { skill: s }); m.slow(e, 0.2, 1); } });
       return true;
     },
     mending_light(m, h, a, s) {
@@ -215,7 +219,7 @@
     chain_spark(m, h, a, s) {
       m.shoot(h, a.dir, { speed: 1100, r: 15, max: s.range, color: skinC(h), kind: 'orb', onHit: e => {
         const dmg = 95 + 0.65 * h.power;
-        m.applyDamage(h, e, dmg, { skill: true });
+        m.applyDamage(h, e, dmg, { skill: s });
         const hit = new Set([e]);
         let from = e;
         for (let k = 0; k < 2; k++) {
@@ -224,7 +228,7 @@
           if (!next) break;
           hit.add(next); m.beam(from, next, skinC(h));
           const target = next, mul = 0.75 - k * 0.15;
-          m.later(0.08 * (k + 1), () => { if (target.alive) m.applyDamage(h, target, dmg * mul, { skill: true }); });
+          m.later(0.08 * (k + 1), () => { if (target.alive) m.applyDamage(h, target, dmg * mul, { skill: s }); });
           from = next;
         }
       } });
@@ -236,7 +240,7 @@
         const inside = m.enemiesIn(h.team, z.x, z.y, z.r);
         for (const e of inside) m.slow(e, 0.35, 0.4);
         z.acc += dt;
-        if (z.acc >= 0.5) { z.acc -= 0.5; for (const e of inside) m.applyDamage(h, e, 40 + 0.25 * h.power, { skill: true }); }
+        if (z.acc >= 0.5) { z.acc -= 0.5; for (const e of inside) m.applyDamage(h, e, 40 + 0.25 * h.power, { skill: s }); }
       } });
       return true;
     },
@@ -245,7 +249,7 @@
       m.zone({ x: p.x, y: p.y, r: 160, team: h.team, dur: 2, color: skinC(h), kind: 'tempest' });
       for (let i = 0; i < 3; i++) {
         m.later(0.6 + i * 0.6, () => {
-          for (const e of m.enemiesIn(h.team, p.x, p.y, 160)) m.applyDamage(h, e, 130 + 0.6 * h.power, { skill: true });
+          for (const e of m.enemiesIn(h.team, p.x, p.y, 160)) m.applyDamage(h, e, 130 + 0.6 * h.power, { skill: s });
           m.bolt(p.x + (Math.random() - 0.5) * 90, p.y + (Math.random() - 0.5) * 60, skinC(h)); m.shake(4);
         });
       }
@@ -257,7 +261,7 @@
       for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) {
         const v = norm(e.x - h.x, e.y - h.y);
         if (v.x * dir.x + v.y * dir.y < 0.4 && d2(e, h) > (h.r + e.r) ** 2) continue;
-        const dealt = m.applyDamage(h, e, 85 + 1.05 * h.atk, { skill: true });
+        const dealt = m.applyDamage(h, e, 85 + 1.05 * h.atk, { skill: s });
         if (e.kind === 'hero') healed += dealt * 0.35;
       }
       if (healed) m.heal(h, healed);
@@ -274,7 +278,7 @@
       const d = a.dir, x0 = h.x, y0 = h.y, L = s.range;
       m.zone({ x: x0, y: y0, r: 45, team: h.team, dur: 0.45, kind: 'fissure', dir: d, len: L, color: skinC(h) });
       m.later(0.45, () => {
-        for (const e of m.unitsOnLine(h.team, x0, y0, d, L, 45)) { m.applyDamage(h, e, 220 + 1.1 * h.atk, { skill: true }); m.stun(e, 1); }
+        for (const e of m.unitsOnLine(h.team, x0, y0, d, L, 45)) { m.applyDamage(h, e, 220 + 1.1 * h.atk, { skill: s }); m.stun(e, 1); }
         m.fx.push({ type: 'fissure', x: x0, y: y0, dir: d, len: L, color: skinC(h), t: 0, dur: 0.7 }); m.shake(7);
       });
       return true;
@@ -283,7 +287,7 @@
       const base = Math.atan2(a.dir.y, a.dir.x);
       for (let i = -1; i <= 1; i++) {
         const ang = base + i * 0.1;
-        m.shoot(h, { x: Math.cos(ang), y: Math.sin(ang) }, { speed: 1300, r: 12, max: s.range, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 50 + 0.65 * h.atk, { skill: true }) });
+        m.shoot(h, { x: Math.cos(ang), y: Math.sin(ang) }, { speed: 1300, r: 12, max: s.range, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 50 + 0.65 * h.atk, { skill: s }) });
       }
       return true;
     },
@@ -298,14 +302,14 @@
       m.zone({ x: h.x, y: h.y, r: 30, team: h.team, dur: 0.5, kind: 'charge', dir: d, len: s.range, color: skinC(h), follow: h });
       m.later(0.5, () => {
         if (!h.alive) return;
-        for (const e of m.unitsOnLine(h.team, h.x, h.y, d, s.range, 32)) m.applyDamage(h, e, 260 + 1.25 * h.atk, { skill: true });
+        for (const e of m.unitsOnLine(h.team, h.x, h.y, d, s.range, 32)) m.applyDamage(h, e, 260 + 1.25 * h.atk, { skill: s });
         m.fx.push({ type: 'lance', x: h.x, y: h.y, dir: d, len: s.range, color: skinC(h), t: 0, dur: 0.45 }); m.shake(5);
       });
       return true;
     },
     anchor_hook(m, h, a, s) {
       m.shoot(h, a.dir, { speed: 1100, r: 18, max: s.range, color: skinC(h), kind: 'hook', onHit: e => {
-        m.applyDamage(h, e, 90 + 0.6 * h.power + 0.03 * h.maxHp, { skill: true });
+        m.applyDamage(h, e, 90 + 0.6 * h.power + 0.03 * h.maxHp, { skill: s });
         if (!e.alive) return;
         const D = dist(e, h) - (e.r + h.r + 10);
         if (D > 0) { const v = norm(h.x - e.x, h.y - e.y); e.knock = { vx: v.x * D / 0.25, vy: v.y * D / 0.25, t: 0.25 }; }
@@ -329,7 +333,7 @@
         for (const e of inside) m.slow(e, 0.5, 0.3);
         for (const al of m.heroes) if (al.alive && al.team === h.team && d2(al, z) < z.r * z.r) al.addBuff({ id: 'dome', t: 0.3, dmgRed: 0.2 });
         z.acc += dt;
-        if (z.acc >= 0.5) { z.acc -= 0.5; for (const e of inside) m.applyDamage(h, e, 35 + 0.012 * h.maxHp, { skill: true }); }
+        if (z.acc >= 0.5) { z.acc -= 0.5; for (const e of inside) m.applyDamage(h, e, 35 + 0.012 * h.maxHp, { skill: s }); }
       } });
       m.shake(4);
       return true;
@@ -356,7 +360,7 @@
       this.setupHeroes();
       if (this.mode === 'brawl') {
         this.camps = []; this.shardAt = 45; this.nextWave = 2; this.waveEvery = 25; this.overchargeAt = 240; this.respawnMul = 0.6;
-        for (const h of this.heroes) { h.level = 5; h.recalc(); h.hp = h.maxHp; h.gold = 1800; }
+        for (const h of this.heroes) { h.level = 5; h.points = 5; h.recalc(); h.hp = h.maxHp; h.gold = 1800; }
         for (const u of this.units) if (isStructure(u)) { u.maxHp *= 0.7; u.hp = u.maxHp; }
       }
     }
@@ -412,9 +416,13 @@
         o.enemies.forEach((s, i) => mk(s, 1, i, false));
       }
       if (this.player) this.player.isPlayer = true;
+      // Each team gets one jungler. A human who brought Shard Smite is it; otherwise the bot best
+      // suited to it (both teams get the same treatment, so neither side starts a camp behind).
+      const JUNGLE_ROLES = ['Assassin', 'Fighter', 'Tank', 'Mage', 'Support', 'Marksman'];
       for (const team of [0, 1]) {
+        if (this.heroes.some(h => h.team === team && h.human && h.spell === 'smite')) continue;
         const bots = this.heroes.filter(h => h.team === team && h.brain && !h.human);
-        const j = bots.find(b => b.def0.role === 'Assassin' || b.def0.role === 'Fighter') || (team === 1 ? bots[0] : null);
+        const j = JUNGLE_ROLES.map(r => bots.find(b => b.def0.role === r)).find(Boolean);
         if (j) j.brain.jungler = true;
       }
       // Bots without a chosen spell bring the one that suits their job.
@@ -472,7 +480,7 @@
       if (h.level >= MAX_LEVEL) return;
       h.xp += n;
       while (h.level < MAX_LEVEL && h.xp >= xpNeed(h.level)) {
-        h.xp -= xpNeed(h.level); h.level++; h.recalc();
+        h.xp -= xpNeed(h.level); h.level++; h.points++; h.recalc();
         this.emit('levelup', h);
         if (h === this.player || h.team === 0) this.ring(h.x, h.y, 60, '#ffe27a', 0.5, 3);
       }
@@ -748,14 +756,14 @@
     castSkill(h, i, aim) {
       const s = h.def0.skills[i];
       if (!h.alive || h.stunT > 0 || h.dash || h.skillCd[i] > 0) return 'cooldown';
-      if (i === 2 && h.level < 4) return 'locked';
+      if (!h.ranks[i]) return i === 2 && h.level < 4 ? 'locked' : 'unranked';
       aim = aim || this.resolveAim(h, i, null);
       if (s.needsTarget && !aim.target) return 'notarget';
       if (s.needsTarget && dist(aim.target, h) > s.range + aim.target.r + 10) return 'notarget';
       h.recallT = 0;
       if (h.invisT > 0 && s.id !== 'veil') h.invisT = 0;
       if (!SK[s.id](this, h, aim, s)) return 'notarget';
-      h.skillCd[i] = s.cd * (1 - h.cdr);
+      h.skillCd[i] = SF.skillCdOf(h, i);
       if (s.id !== 'veil') h.revealT = this.t + 1;
       if (aim.dir && !h.dash) h.face = { x: aim.dir.x, y: aim.dir.y };
       h.lockT = Math.max(h.lockT, 0.1);
@@ -769,6 +777,27 @@
       this.emit('buy', h, id);
       return true;
     }
+    // ---- skill ranks ------------------------------------------------------------------
+    rankCap(h, i) { const R = SF.SKILL_RANK; return i === 2 ? R.ultAt.filter(l => h.level >= l).length : Math.min(R.max[i], Math.ceil(h.level / 2)); }
+    canUpgrade(h, i) { return h.points > 0 && i >= 0 && i < 3 && h.ranks[i] < this.rankCap(h, i); }
+    upgradeSkill(h, i) {
+      if (!this.canUpgrade(h, i)) return false;
+      h.ranks[i]++; h.points--;
+      this.emit('upgrade', h, i);
+      return true;
+    }
+    // The order bots (and auto-upgrade) use: ultimate whenever possible, unlock both basic skills,
+    // then max the first one.
+    autoUpgrade(h) {
+      let n = 0;
+      while (h.points > 0) {
+        const i = [2, ...(h.ranks[0] ? [] : [0]), ...(h.ranks[1] ? [] : [1]), 0, 1].find(k => this.canUpgrade(h, k));
+        if (i == null || !this.upgradeSkill(h, i)) break;
+        n++;
+      }
+      return n;
+    }
+
     // ---- quick signals --------------------------------------------------------------
     // A human tells their team what to do. Bot allies follow the latest order for a while.
     //   attack:  the closest visible enemy hero, else the enemy's front structure
@@ -935,6 +964,18 @@
     applyDamage(src, t, amt, o = {}) {
       if (!t.alive) return 0;
       if (isStructure(t) && !this.targetable(t)) return 0;
+      if (o.skill && o.skill.id && src && src.ranks) {
+        const i = src.def0.skills.indexOf(o.skill);
+        if (i >= 0) amt *= SF.SKILL_RANK.dmg[i][Math.max(0, src.ranks[i] - 1)];
+      }
+      if (src && src.passives && src.passives.size && t.kind === 'hero') {
+        // Nightglass: a skill hit adds 6% of the target's max health, once per 1.5s per target.
+        if (o.skill && src.passives.has('glass') && !(t.glassT > this.t)) { amt += 0.06 * t.maxHp; t.glassT = this.t + 1.5; }
+        if (src.passives.has('wither')) t.witherT = this.t + 2.5;
+      }
+      if (o.basic && src && src.passives && src.passives.has('frost') && !isStructure(t)) this.slow(t, 0.2, 1);
+      // Spined Carapace: reflect a quarter of a hero's attack back as true damage.
+      if (o.basic && !o.reflect && t.passives && t.passives.has('thorns') && src && src.kind === 'hero' && src.alive) this.applyDamage(t, src, amt * 0.25, { true: true, reflect: true });
       if (src && src.dmgMul && !o.true) amt *= src.dmgMul();
       if (src && src.botDmg) amt *= src.botDmg;
       if (src && src.kind === 'hero' && isStructure(t)) {
@@ -952,7 +993,7 @@
       t.hp -= amt; t.flash = 0.1;
       if (src && src.kind === 'hero') {
         src.dmgDealt += amt;
-        if (o.basic && src.lifesteal) src.hp = Math.min(src.maxHp, src.hp + amt * src.lifesteal);
+        if (o.basic && src.lifesteal) src.hp = Math.min(src.maxHp, src.hp + amt * src.lifesteal * (src.witherT > this.t ? 0.5 : 1));
         if (t.kind === 'hero') { src.aggroT = this.t; t.hitBy.set(src, this.t); }
       }
       if (t.kind === 'hero' && t.recallT > 0) t.recallT = 0;
@@ -1082,6 +1123,7 @@
     stun(u, dur) { if (isStructure(u) || u.stunImmune > 0 || u.ccImmune > 0) return; u.stunT = Math.max(u.stunT, dur); if (u.kind === 'hero') u.recallT = 0; }
     shieldUnit(u, amt, dur) { u.shield += amt; u.shieldT = Math.max(u.shieldT, dur); }
     heal(u, amt, quiet) {
+      if (u.witherT > this.t) amt *= 0.5;   // Witherblade
       const before = u.hp; u.hp = Math.min(u.maxHp, u.hp + amt);
       if (!quiet && u === this.player && u.hp - before >= 1) this.float(u.x, u.y - 50, '+' + Math.round(u.hp - before), '#7dffa0', 1);
     }
@@ -1285,6 +1327,7 @@
       if (this.tick > 0) return;
       this.tick = this.D.react * (0.7 + Math.random() * 0.6);
       if (!h.alive || h.dash) return;
+      if (h.points > 0) m.autoUpgrade(h);
       const nxt = h.nextItem(); if (nxt && h.gold >= SF.ITEMS[nxt].cost) m.buy(h, nxt);
       if (h.recallT > 0) return;
       const hp = h.hpPct, f = m.fountains[h.team];
@@ -1370,6 +1413,14 @@
       }
       return false;
     }
+    // Worth dashing onto this hero? Not under their tower, and they're low, alone, or outnumbered.
+    safeDive(e) {
+      const m = this.m, h = this.h;
+      if (m.towerCovers(1 - h.team, e, 0) && e.hpPct > 0.2) return false;
+      const theirs = m.heroes.filter(x => x.alive && x.team === e.team && x !== e && d2(x, e) < 450 * 450).length;
+      const ours = m.heroes.filter(x => x.alive && x.team === h.team && x !== h && d2(x, e) < 600 * 600).length;
+      return e.hpPct < 0.45 || theirs === 0 || ours >= theirs;
+    }
     alliesNear(r) { return this.m.heroes.filter(a => a.alive && a.team === this.h.team && d2(a, this.h) < r * r).length; }
     strength(team, around) {
       let s = 0;
@@ -1422,7 +1473,7 @@
     escape() {
       const m = this.m, h = this.h, f = m.fountains[h.team];
       for (let i = 0; i < 3; i++) {
-        if (h.skillCd[i] > 0 || (i === 2 && h.level < 4)) continue;
+        if (h.skillCd[i] > 0 || !h.ranks[i]) continue;
         const s = h.def0.skills[i];
         let aim = null;
         if (s.kind === 'dash' && !s.needsTarget) aim = { dir: norm(f.x - h.x, f.y - h.y), point: null, target: null };
@@ -1433,13 +1484,16 @@
     useSkills(e, mode) {
       const m = this.m, h = this.h;
       for (const i of [2, 0, 1]) {
-        if (h.skillCd[i] > 0 || (i === 2 && (h.level < 4 || mode === 'farm'))) continue;
+        if (h.skillCd[i] > 0 || !h.ranks[i] || (i === 2 && mode === 'farm')) continue;
         if (Math.random() > this.D.skill) continue;
         const s = h.def0.skills[i];
         const D = e ? dist(e, h) : 1e9;
         let aim = null;
         switch (s.ai) {
-          case 'enemy': if (e && D <= s.range * 0.95 + e.r) aim = this.aimAt(e); break;
+          case 'enemy':
+            if (!e || D > s.range * 0.95 + e.r) break;
+            if (s.kind === 'dash' && e.kind === 'hero' && !this.safeDive(e)) break;   // don't jump into a crowd
+            aim = this.aimAt(e); break;
           case 'near': if (e && D <= s.range * 0.9 + e.r) aim = { dir: norm(e.x - h.x, e.y - h.y), point: { x: h.x, y: h.y }, target: e }; break;
           case 'execute': if (e && e.kind === 'hero' && D <= s.range && e.hpPct < 0.55) aim = { dir: norm(e.x - h.x, e.y - h.y), point: { x: e.x, y: e.y }, target: e }; break;
           case 'self': if (mode === 'fight' && e && D < h.range + 260) aim = { dir: h.face, point: { x: h.x, y: h.y }, target: null }; break;

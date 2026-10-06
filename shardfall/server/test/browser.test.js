@@ -24,7 +24,7 @@ test('two browsers play an online match end to end', { skip: !chromium && 'Playw
     await p.evaluate(url => {
       document.getElementById('modal')?.remove();
       SF.store.d.settings.server = url; SF.store.d.name = 'Player' + Math.floor(Math.random() * 90 + 10);
-      SF.store.d.tutorial = true;
+      SF.store.d.tutorial = true; SF.store.d.settings.autoSkill = false;
     }, srv.url);
     return p;
   };
@@ -44,6 +44,9 @@ test('two browsers play an online match end to end', { skip: !chromium && 'Playw
   const x1 = await serverX(A), dirA = teams[0].team === 0 ? 1 : -1;
   assert.ok((x1 - x0) * dirA > 150, `server-side movement ${x1 - x0}`);
 
+  await A.keyboard.press('Shift+E');   // learn the skill (sent to the server), then cast it
+  await A.waitForTimeout(400);
+  assert.equal(await A.evaluate(() => SF.hud.match.player.ranks[1]), 1, 'skill learned on the server');
   await A.keyboard.press('e');
   await A.waitForTimeout(500);
   assert.ok(await A.evaluate(() => SF.hud.match.player.skillCd[1] > 1), 'skill cast confirmed by the server');
