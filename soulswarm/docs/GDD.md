@@ -13,8 +13,8 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
-| Content | 5 chapters plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, new heroes (`LIVEOPS.md`) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), five first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
+| Content | 5 chapters plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents | Endless leaderboards, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
@@ -83,11 +83,12 @@ Everything below describes the build unless it is marked **Planned**.
 | **Floating joystick** | Touch anywhere on the battlefield to spawn the stick base at your thumb. Drag to move. Release to stop. WASD / arrow keys on desktop. | Radius 58 px. Dead zone 12% of the radius (~7 px), then analog speed rises linearly to 100% at full deflection. The base follows the thumb if it is dragged beyond 1.6× radius ("leash"). |
 | **Auto-attack** | All weapons fire on their own cooldowns. | Soul Bolt targets the nearest enemies within 11.5 m, Ashen Chains the nearest within 7.5 m, Bone Spears aim at the nearest within 13 m (or straight ahead). The Scythe sweeps a full circle starting from the facing direction; Grave Pulse and Skull Halo hit around the player. A weapon with no target retries after 0.12 s. *(Planned: elites and Bloaters within 3 m get priority.)* |
 | **NOVA button** | 88 px circle in the bottom-right (Space on desktop). Works at 100% charge with any legion size. | Pulses when ready. A tap commits at once (invulnerability, enemy shots cleared), then a 0.25 s wind-up before the blast, which lands with a hit-stop and 0.55 s of slow motion (§4.4). A touch on the button never starts the joystick. *(Planned: disabled below 10 minions, left-handed mirror.)* |
+| **RITE button** | 64 px circle above-left of NOVA, in the hero's colour, with the Rite's icon and short name (Shift or E on desktop). Mirrored with NOVA in left-handed mode. | The hero's signature active ability (§11.1). Ready from the start of every run. A radial ring refills over the cooldown with a seconds counter; the button pulses and chimes when ready and glows while the Rite is working. Like NOVA, it fires on touch-down and never starts the joystick. |
 | **Pause** | Top-left, 36 px. Also auto-pauses when the app goes to the background. | The pause screen shows time, kills, legion size and the current build, plus a sound toggle and "Abandon run". *(Planned: Nova charge on the pause screen.)* |
 | **Level-up / chest cards** | 3 large cards. Tap to pick. Gameplay is paused. | Taps in the first 0.3 s are ignored (no accidental picks from a swipe). After a pick the Shepherd gets 0.6 s of invulnerability. A Relic Chest uses the same three cards under a gold "Relic Chest" header; chests are offered before queued level-ups. |
 | **Haptics** | Success on level-up, Relic Chest and a good gate; warning on a bad gate and the boss warning; medium when hit, on the Nova tap and on a CARNAGE or MASSACRE streak tier; heavy on the Nova blast, ANNIHILATION and higher tiers, boss slam, death and boss kill. | Toggle in settings. *(Planned: a light tick on raise, throttled to 10/s.)* |
 
-There are no other in-run buttons. The reroll (1 per run, through an optional rewarded ad, free with Soul Pact) sits inside the level-up screen.
+There are no other in-run buttons beyond NOVA and RITE. The reroll (1 per run, through an optional rewarded ad, free with Soul Pact) sits inside the level-up screen.
 
 ---
 
@@ -108,7 +109,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 ### 4.2 The Legion (Raise Chance and minions)
 
-- **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating, except for kills by Seraphine's own Nova (×2 instead).
+- **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating, except for kills by Seraphine's own Nova (×2 instead). During Vael's **Grave Call** (§11.1) every kill rises (100%).
 - Every kill rolls Raise Chance, whether the Shepherd, a minion, the Nova or a Bloater blast made the kill. Elites can be raised. The Bloater that explodes does not rise, and Gravemaw cannot be raised (killing him adds 30 minions instead).
 - **Legion cap:** base 30. Flat bonuses: the Legion Cap skill (+10 per level, +50 at Lv5), the Dominion talent (+2 per level, +40 at L20), the Bone Idol relic (+3 to +18, up to +42 at Legendary Lv10). Mordrake multiplies the total by 1.25, then it is rounded. **Technical hard ceiling: 400 minions** on every device, for performance and leaderboard fairness.
 - Kills only roll while the legion is below the cap. A successful roll **at** the cap heals the weakest minion by 50% of its max HP instead.
@@ -162,7 +163,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 ### 4.4 Soul Nova
 
-- **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). An elite kill counts as 6 kills and passing a Soul Gate (good or bad) as 3. The top kill-streak tiers add 15 / 30 / 45 (§4.7). Kills during a detonation (wind-up included) add nothing; a streak tier reached mid-detonation is banked and paid when the chain ends. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas.
+- **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). An elite kill counts as 6 kills and passing a Soul Gate (good or bad) as 3. The top kill-streak tiers add 15 / 30 / 45 (§4.7), and Seraphine's Ashfall adds 15% of a full charge (§11.1). Kills during a detonation (wind-up included) add nothing; a streak tier reached mid-detonation is banked and paid when the chain ends. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas.
 - **Activation:** tap NOVA at 100%.
   - **On the tap:** the legion is committed (the count drops to 0), all enemy projectiles clear, and the Shepherd becomes invulnerable for 1.75 s (the 0.25 s wind-up plus the old 1.5 s).
   - **Wind-up (0.25 s):** every soul flares where it stands and streams light into the Shepherd, with a rising inhale.
@@ -610,15 +611,15 @@ Campaign runs never dropped Legendaries before Torment (the Endless Epic+ relic 
 
 ## 11. Heroes (Shepherds)
 
-| Hero | Rarity | Base HP | Move (m/s) | Signature weapon | Passive | How to get |
-|---|---|---|---|---|---|---|
-| Vael, the Gravecaller | Common | 100 | 6.2 | Soul Bolt | +10% Raise Chance (pp) | Free (starter) |
-| Nyx Hollowborn | Rare | 110 | 6.5 | Spectral Scythe | Minions +20% speed and damage | Starter Pack / Epic summon shards |
-| Seraphine Ashveil | Epic | 105 | 6.4 | Ashen Chains | Soul Nova charges 30% faster, and foes her Nova kills rise at ×2 Raise Chance (not halved) | Epic and Legendary summon shards, Soul Pass S1 premium |
-| Liora Bellwraith | Epic | 105 | 6.3 | Grave Pulse | Her pulses mark foes for 3 s; marked foes rise at ×2 Raise Chance whoever kills them (85% cap). Her pulses push foes 75% less, so they stay inside her legion's reach | Epic summon shards |
-| Mordrake the Undying | Legendary | 130 | 6.0 | Bone Spears | Legion cap +25%; revive once per run at full HP | Legendary summon shards |
+| Hero | Rarity | Base HP | Move (m/s) | Signature weapon | Passive | Rite (§11.1) | How to get |
+|---|---|---|---|---|---|---|---|
+| Vael, the Gravecaller | Common | 100 | 6.2 | Soul Bolt | +10% Raise Chance (pp) | **Grave Call** (20 s): for 4 s every kill rises; shards within 12 m fly in | Free (starter) |
+| Nyx Hollowborn | Rare | 110 | 6.5 | Spectral Scythe | Minions +20% speed and damage | **Shadow Step** (8 s): an invulnerable 7 m dash that cuts its path; the legion surges +60% for 3 s | Starter Pack / Epic summon shards |
+| Seraphine Ashveil | Epic | 105 | 6.4 | Ashen Chains | Soul Nova charges 30% faster, and foes her Nova kills rise at ×2 Raise Chance (not halved) | **Ashfall** (18 s): burning chains strike and pin 20 foes on screen (elites, then Witches, first); +15% Nova charge | Epic and Legendary summon shards, Soul Pass S1 premium |
+| Liora Bellwraith | Epic | 105 | 6.3 | Grave Pulse | Her pulses mark foes for 3 s; marked foes rise at ×2 Raise Chance whoever kills them (85% cap). Her pulses push foes 75% less, so they stay inside her legion's reach | **Death Knell** (15 s): a bell toll stuns foes within 5 m for 1.5 s and marks them for 5 s; it clears enemy fire and silences Witches within 10 m | Epic summon shards |
+| Mordrake the Undying | Legendary | 130 | 6.0 | Bone Spears | Legion cap +25%; revive once per run at full HP | **Ossuary Wall** (18 s): a 5 m ring of bone spikes for 5 s that throws foes out, shatters Witch fire and heals the legion inside | Legendary summon shards |
 
-**Balance check (2026-10-06).** The balance bot (`HERO=<id> npm run balance`) played every hero at equal progression on Chapters 2 and 4, 6 to 10 runs each. Average survival:
+**Balance check (2026-10-06, before Hero Rites).** The balance bot (`HERO=<id> npm run balance`) played every hero at equal progression on Chapters 2 and 4, 6 to 10 runs each. Average survival (§11.1 has the numbers with Rites):
 
 | Hero | Survival | Note |
 |---|---|---|
@@ -637,6 +638,50 @@ Campaign runs never dropped Legendaries before Torment (the Endless Epic+ relic 
 **Stars.** Unlocking takes 10 shards (1★). Star costs: 10 / 20 / 40 / 80 shards for 2★ / 3★ / 4★ / 5★ (160 shards from first shard to 5★). Each star above 1★ adds +12% damage and +8% HP, so 5★ = +48% damage, +32% HP.
 
 **Shard sources:** an Epic Soul Altar roll gives 4 Seraphine, 6 Nyx or 5 Liora shards (equal chance). A Legendary roll gives 5 Mordrake or 6 Seraphine shards (50/50). The Soul Pass S1 premium track gives 25 Seraphine shards (10 at tier 10, 5 each at tiers 5, 15 and 25). Duplicate hero grants (for example, owning Nyx and then buying the Starter Pack) convert to 20 shards of that hero. *(Planned: in Endless Abyss, the top 10 of each Abyssal-league group earn 2 Mordrake shards per week.)*
+
+### 11.1 Hero Rites
+
+Each hero has a signature active ability, a **Rite**, on its own RITE button (§3). It is ready from the first second of every run and then recharges on its own cooldown. The cooldown counts run time, so it waits while the game is paused or a card pick is open and slows down with slow motion. All numbers live in `RITES` (`data.js`); the code is `src/game/rites.js` and `src/ui/riteui.js`.
+
+**Rite damage** = base × the run's damage multiplier (stars, Might talent and skill, Crown of Thorns) × (1 + 0.45(c − 1)), the same chapter scaling as Soul Nova. Shadow Step and Ashfall can crit (10%, ×2) like a weapon.
+
+| Hero | Rite | Cooldown | What it does |
+|---|---|---|---|
+| Vael | **Grave Call** | 20 s | For 4 s every kill rises (Raise Chance 100%). The legion cap and its overflow rules still hold: a roll at the cap mends the weakest minion instead. Soul shards within 12 m fly to Vael for the whole call. |
+| Nyx | **Shadow Step** | 8 s | Dashes 7 m in 0.18 s along the stick (her facing when idle), invulnerable for 0.4 s. It slips abyssal hands and slam shoves. Foes within 1.5 m of the path take 90 and are knocked aside. The legion moves +60% faster for 3 s to catch up. |
+| Seraphine | **Ashfall** | 18 s | Burning chains fall on up to 20 foes on screen over 0.5 s: Gravemaw and elites first, then Cinder Witches, then the nearest. Each takes 120, is pinned (stunned) for 0.8 s and burns for 60% of the hit over 2 s; a kill while burning gets +15 pp Raise Chance (85% cap). If a struck foe dies first, its chain finds the nearest unstruck foe within 3 m. Adds +15% Soul Nova charge (not mid-detonation). |
+| Liora | **Death Knell** | 15 s | A great bell tolls around her. Every foe within 5 m is stunned for 1.5 s, takes 60 and carries her toll for 5 s (her passive's ×2 Raise Chance, whoever lands the kill; the passive's own mark lasts 3 s). Every enemy shot and Witch fire orb in flight is cleared, and Cinder Witches out to 10 m are stunned too, so their next fire waits. |
+| Mordrake | **Ossuary Wall** | 18 s | A ring of bone spikes (5 m) erupts around him for 5 s and moves with him. Foes inside are thrown out; every crossing cuts for 60 with knockback (at most once per 0.5 s per foe). Witch fire that would land inside shatters on the bone. Minions inside heal 50% of their max HP over the 5 s. |
+
+**Stun** (`Enemies.stun`): a stunned foe neither steers nor attacks, and only drifts on its knockback. A Brute wind-up, a Ghoul crouch or lunge and a Bloater fuse in progress are called off, and the Bloater's fuse circle goes out with it. Stunned foes stop waddling and three pale daze motes circle their heads.
+
+**Gravemaw keeps his rules.** Rite damage goes through his own filter (immune while rising, roaring or warded; phase floors). A stun never stops him: it only pushes his next attack back by 0.25 s while he is chasing. The Ossuary Wall only leans on him (1.2 m/s outward) instead of throwing him out. Ashfall strikes him first. Grave Call cannot raise him.
+
+**Look and feel.** Each Rite is meant to sell the hero in the Soul Altar:
+- *Grave Call:* a 12 m rune ring around Vael, a heartbeat pulse ring every second, souls streaming in from the rim, and a cyan soul pillar (in the legion colour) wherever a foe rises. Slow motion 0.25 s.
+- *Shadow Step:* four afterimages along the path, a shadow trail with a hot core, smoke, a scythe slash where she lands, and a speed streak behind the surging legion.
+- *Ashfall:* ash drifts down across the screen; each target gets a pulsing ember mark, then a jagged burning chain falls from the sky onto it with an ember burst.
+- *Death Knell:* a spectral bell drops over Liora, swings and tolls; the toll band runs down its body, three rings roll out to 5 m, and a brief hit-stop lands the strike.
+- *Ossuary Wall:* 44 bone spikes in two staggered rows erupt in a wave from where Mordrake faces, glowing marrow-green at the root, under a green rune ring. They tremble while up and sink back at the end.
+- Each Rite calls out its name over the battlefield, has its own sound (§15) and a haptic (medium for Shadow Step, heavy for the others; a light tick when the Rite is ready again). Flashes and shake go through the Reduce flashes and shake settings (§17).
+
+**Run result.** `counters.rites` counts casts; the run result carries it as `rites`.
+
+**Balance (balance bot, 2026-10-06).** `scripts/balance.mjs` casts the Rite on a simple rule per hero (`RITE=0` turns it off): Mordrake at 2+ foes within 3 m or 5+ within 6 m; Liora at 3+ within 3 m, 8+ within 6 m, or when a Witch's fire circle is about to land on her; Nyx the same, dashing straight away from the crowd or out of the circle; Vael at 12+ foes within 12 m; Seraphine at 14+ foes within 12 m, an elite or 2+ Witches in sight; Gravemaw within 8 m always counts. Every hero, equal progression, Chapters 2 and 4, 12 runs per chapter each, same build with the Rite off and on:
+
+| Hero | Rite off | Rite on | Gain | Ch2 off → on | Ch4 off → on | Casts per run | vs Mordrake (on) |
+|---|---|---|---|---|---|---|---|
+| Vael | 281 s | 331 s | +18.1% | 261 → 290 s | 300 → 372 s | 13.5 | -8.8% |
+| Nyx | 253 s | 283 s | +12.0% | 232 → 258 s | 273 → 308 s | 12.5 | -22.1% |
+| Seraphine | 273 s | 312 s | +14.4% | 245 → 269 s | 301 → 356 s | 14.4 | -13.9% |
+| Liora | 254 s | 285 s | +12.0% | 237 → 275 s | 271 → 294 s | 8.8 | -21.5% |
+| Mordrake | 337 s | 363 s | +7.8% | 309 → 348 s | 365 → 378 s | 9.8 | — |
+
+- **Why Witches matter:** damage-source tallies showed Witch fire orbs deal 60–75% of the damage the bot takes; melee contact is the rest. Rites that only answer melee or only add damage barely moved survival in testing (Ashfall at 110–170 damage changed nothing until its strikes pinned foes), which is why Ashfall targets and pins Witches right after elites, the Knell silences Witches out to 10 m, the Wall shatters their fire, and the bot rings the Knell or steps out when a fire circle is about to land.
+- **Power-creep rule** (`LIVEOPS.md`): no hero may beat Mordrake by more than 5%, measured against Mordrake with his own Rite. All pass: Vael comes closest at −8.8%.
+- **Mordrake's gain** is held down by the clear ceiling: a cleared run stops at about 400 s, and he already cleared 4 of 12 Chapter 4 runs without his Rite (6 of 12 with it). On Chapter 2, where nobody clears, he gains +12.6%.
+- **Spread:** a single run varies by about ±35 s, so each figure is the mean of 24 runs (standard error about ±10 s). Earlier 12-run passes of the same build moved by up to 10 points.
+- **Tuning history:** the brief's cooldowns (Vael 30, Nyx 10, Seraphine 24, Liora 22, Mordrake 28 s) gave −2% to +7%, so cooldowns came down and Grave Call's pull went from 9 to 12 m (more XP was what moved Vael). Raising Ashfall's damage to 170 or its Nova charge to 25% did nothing; pinning its targets did (+12% in the trial). The Knell's 10 m Witch silence and the Wall's fire shattering were added for the same reason.
 
 ---
 
@@ -696,7 +741,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 ## 15. Audio direction
 
-*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). Elite affixes and run events add a glass ward shatter, the Splitter's pop, the Commander's rout horn, the Soul Thief's jingle-and-cackle and its escape whoosh, the shrine's bell chime and the coffin's wood-splitting boom. Rendered offline, they peak between −19 and −7 dBFS before the master limiter, the same range as the existing SFX, so none of them clips. The stem system below is Planned.*
+*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). Elite affixes and run events add a glass ward shatter, the Splitter's pop, the Commander's rout horn, the Soul Thief's jingle-and-cackle and its escape whoosh, the shrine's bell chime and the coffin's wood-splitting boom. Rendered offline, they peak between −19 and −7 dBFS before the master limiter, the same range as the existing SFX, so none of them clips. Each Hero Rite has its own signature sound (a funeral bell and rising souls for Grave Call, a tearing whoosh and ringing blade for Shadow Step, a hymn and a cascade of chain strikes for Ashfall, a great bell for Death Knell, heaving earth and splintering bone for Ossuary Wall) plus a soft rising chime when a Rite is ready again (§11.1); rendered offline, all are clearly audible and none clips. The stem system below is Planned.*
 
 - **Music:** dark synthwave with choir and pipe organ. **Stems are added as the legion grows** (25 / 100 / 200 / 300 minions): percussion, then bass, choir and lead. The player *hears* the army getting bigger. Boss tracks are separate, with a phase-3 key change.
 - **SFX priorities** (voice limit 32): 1) player hit and telegraphs, 2) Nova, 3) gates, 4) level-up, 5) raises (pooled into a shimmering chord, at most 10 voices), 6) weapons, 7) enemy deaths (heavily pooled).
@@ -709,7 +754,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 Goal: the player experiences all three hooks (raise, gate, Nova) and a boss kill inside 4 minutes, before any shop or currency screen.
 
-**Status:** the build has no separate tutorial run. The first Chapter 1 run (5 energy) doubles as the tutorial and shows four one-time hints. Each hint appears once per profile.
+**Status:** the build has no separate tutorial run. The first Chapter 1 run (5 energy) doubles as the tutorial and shows five one-time hints. Each hint appears once per profile.
 
 | Trigger (build) | Hint |
 |---|---|
@@ -717,6 +762,7 @@ Goal: the player experiences all three hooks (raise, gate, Nova) and a boss kill
 | First minion raised | "Slain foes rise to fight for you. This is your LEGION!" |
 | First Soul Gate pair (0:28) | "Walk through a Soul Gate to grow your legion!" (with the banner "SOUL GATES: Walk through one to reshape your legion") |
 | Nova meter first reaches 100% (after ~300 kills, around 2:30–3:00) | "Soul Nova is ready! Tap NOVA to detonate your legion." |
+| The Rite is ready and 8 s have passed (it is ready from the start, so this is 0:08, once no other hint is showing) | "Your Rite is ready! Tap CALL to unleash Grave Call." (the hero's short name and Rite; hint key `rite`) |
 
 The scripted beats below are **Planned**. Times are session times from app open (the planned tutorial run starts at 0:20). Where a beat uses run systems, the build's run time is given in brackets.
 
@@ -747,7 +793,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 
 ## 17. Accessibility
 
-*Status: the build has music and SFX volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%, which also scales hit-stop; 0% turns it off), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA button and the skill bar. Everything else in this table is Planned.*
+*Status: the build has music and SFX volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%, which also scales hit-stop; 0% turns it off), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA and RITE buttons and the skill bar. Rite effects respect Reduce flashes and the shake slider, and their haptics follow the haptics toggle. Everything else in this table is Planned.*
 
 | Area | Feature |
 |---|---|

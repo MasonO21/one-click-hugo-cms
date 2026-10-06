@@ -14,6 +14,7 @@ import { Pickups } from './pickups.js';
 import { Gates } from './gates.js';
 import { Boss } from './boss.js';
 import { Hazards } from './hazards.js';
+import { Rites } from './rites.js';
 import { Affixes } from './affixes.js';
 import { Events } from './events.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
@@ -82,12 +83,13 @@ export class Run {
     this.pickups = new Pickups(this);
     this.gates = new Gates(this);
     this.boss = new Boss(this);
+    this.rites = new Rites(this); // the hero's signature active ability (RITE button)
     this.bossEnemy = null;
     this.input = new Input(engine.canvas);
 
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
-    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, bestStreak: 0, events: 0 };
+    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, bestStreak: 0, events: 0, rites: 0 };
     this.streak = new Streak(this);
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0; this.novaSize = 0;
     this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
@@ -316,11 +318,13 @@ export class Run {
       if (HP.pulseRaise && (source === 'pulse' || (e.tollUid === e.uid && e.tollT > this.time))) chance = Math.min(0.85, chance * HP.pulseRaise); // Liora: the bell marks the dead
       if (HP.novaRaise && source === 'nova') chance = Math.min(0.85, Math.max(chance, this.stats.raise * HP.novaRaise)); // Seraphine: what her Nova burns rises (never halved)
       if (this.tutorial && this.counters.raised < 5) chance = 1; // first run: the first five kills always rise
+      if (this.rites.graveCall) chance = 1; // Vael's Grave Call: every kill rises (the cap still holds)
       if (Math.random() < chance) {
         if (this.legion.count < this.stats.cap) {
           // the minion keeps the identity of what it was (variant by type; elites rise as Champions)
           this.legion.raise(e.x, e.z, { kind: e.type, elite: e.elite });
           this.counters.raised++;
+          if (this.rites.graveCall) this.rites.pillar(e.x, e.z);
           if (this.counters.raised === 1) this.hint('raise', 'Slain foes rise to fight for you. This is your LEGION!');
         } else this.legion.healWeakest(); // at the cap the roll mends the weakest minion instead
       }
@@ -604,7 +608,7 @@ export class Run {
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
       trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
-      chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events,
+      chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events, rites: this.counters.rites,
       bestStreak: this.counters.bestStreak,
     };
     if (this.onEnd) this.onEnd(result);
@@ -641,11 +645,13 @@ export class Run {
     if (this.ui && this.ui.wantsNova) { this.ui.wantsNova = false; this.triggerNova(); }
     if (this.input.keys.has('Space')) { this.input.keys.delete('Space'); this.triggerNova(); }
     if (this.profile.settings.autoNova && this.nova >= 1 && this.legion.count >= 50) this.triggerNova(); // accessibility: Auto-Nova
+    this.rites.poll(); // RITE button, Shift or E
 
     if (dt > 0) {
       this.time += dt;
       if (!this.ended) this.director(dt);
       this.player.update(dt, this.input);
+      this.rites.update(dt); // after the Shepherd moved: Shadow Step rides on top of her step
       if (!this.player.dead) this.weapons.update(dt);
       this.events.update(dt);
       this.enemies.update(dt);
@@ -691,6 +697,7 @@ export class Run {
     if (this.novaQueue.length) this.renderNova();
     this.projectiles.render();
     this.weapons.render();
+    this.rites.render();
     this.pickups.render();
     this.enemies.render();
     this.affixes.render(); this.events.render();
@@ -783,6 +790,7 @@ export class Run {
 
   dispose() {
     this.input.dispose();
+    this.rites.dispose();
     this.gates.dispose();
     this.boss.dispose();
     this.hazards.dispose(); this.projectiles.disposeLobs(); // also restores the fog vignette

@@ -49,6 +49,38 @@ export const HERO_STAR_COST = [0, 10, 20, 40, 80]; // shards to go from star i t
 export const HERO_MAX_STARS = 5;
 export const heroStarBonus = (stars) => ({ dmg: 0.12 * Math.max(0, stars - 1), hp: 0.08 * Math.max(0, stars - 1) });
 
+// ---------------------------------------------------------------- Hero Rites (rites.js, ui/riteui.js)
+// Each hero's signature active ability on the RITE button (Shift / E on desktop). Ready at the start of every run.
+// cd = cooldown in seconds of run time (it waits while paused). Seconds, metres; dmg = base damage × the run's damage
+// multiplier × (1 + ch × (chapter − 1)), the same chapter scaling as Soul Nova and the legion.
+export const RITES = {
+  ch: 0.45,
+  hintAt: 8,          // first-ever run: the Rite hint shows once this many seconds have passed (it is ready from the start)
+  bossStagger: 0.25,  // a stun never stops Gravemaw: it only pushes his next attack back by this much
+  // every kill rises (Raise Chance 100%; the legion cap and overflow rules still hold); shards within `pull` m fly in
+  vael: { name: 'Grave Call', short: 'CALL', cd: 20, dur: 4, pull: 12,
+    desc: 'For 4 s every foe you slay rises, and soul shards within 12 m fly to you.' },
+  // dash `dist` m in `time` s along the stick (facing when idle), invulnerable; foes within `width` of the path take
+  // dmg and are knocked aside; the legion moves +haste for hasteT s to catch up
+  nyx: { name: 'Shadow Step', short: 'STEP', cd: 8, dist: 7, time: 0.18, invuln: 0.4, width: 1.5, dmg: 90, knock: 12, haste: 0.6, hasteT: 3,
+    desc: 'Dash 7 m through the horde, untouchable, slashing all in your path. Your legion surges after you.' },
+  // ash chains strike up to n foes on screen (Gravemaw and elites first, then Cinder Witches, then the nearest), `span` s
+// from first to last;
+  // each hit pins the foe (a stun) for `pin` s and ignites it (burn = share of the hit over 2 s; burning kills get +burnRaise
+// Raise Chance); +nova charge
+  seraphine: { name: 'Ashfall', short: 'ASHFALL', cd: 18, n: 20, range: 16, span: 0.5, dmg: 120, burn: 0.6, burnRaise: 0.15, nova: 0.15, pin: 0.8,
+    desc: 'Burning chains fall on 20 foes, elites then Witches first, pinning them for 0.8 s. They ignite, and your Nova charges +15%.' },
+  // a bell tolls `r` m around her: foes are stunned, take dmg, carry her toll for `mark` s; enemy shots are cleared and
+  // Cinder Witches within `silence` m are stunned too (their fire waits)
+  liora: { name: 'Death Knell', short: 'KNELL', cd: 15, r: 5, silence: 10, stun: 1.5, mark: 5, dmg: 60,
+    desc: 'A great bell tolls: foes within 5 m are stunned and marked by the toll for 5 s. Enemy fire is silenced, and Witches within 10 m with it.' },
+  // a ring of bone spikes (`r` m) for `dur` s at the cast point: foes inside are thrown out and every crossing
+  // hurts (once per hitCd per foe); Witch fire falling inside shatters on the bone; minions inside heal `heal` of their
+  // max HP over the duration; Gravemaw is only shoved at bossPush m/s; the ring moves with him
+  mordrake: { name: 'Ossuary Wall', short: 'WALL', cd: 18, r: 5, dur: 5, dmg: 60, hitCd: 0.5, knock: 9, heal: 0.5, bossPush: 1.2, spikes: 44,
+    desc: 'A ring of bone spikes rises around you for 5 s. Foes are hurled out and cut on every crossing, Witch fire shatters on it, and your legion inside heals 50%.' },
+};
+
 // ---------------------------------------------------------------- Enemies
 // hp/dmg are chapter-1, minute-0 values. Scaling lives in run.js (see GDD).
 // Signature moves (seconds, metres, radians). Damaging telegraphs never go below 1.0 s (accessibility floor).

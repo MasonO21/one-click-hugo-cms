@@ -1,0 +1,33 @@
+/* The RITE button (ui/riteui.js): 64 px, above-left of NOVA; mirrored with .lefty */
+.rite { --rc: var(--soul); position: absolute; right: 112px; bottom: calc(var(--safe-b) + 60px); width: 64px; height: 64px; border: 0; padding: 0; border-radius: 50%; cursor: pointer; touch-action: none;
+  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--rc) 18%, #16203a), #060a14 72%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 30%, transparent), 0 6px 16px rgba(0,0,0,.6); }
+.rite.none { display: none; }
+.hud.lefty .rite { right: auto; left: 112px; }
+.rite svg.ring { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); transform: rotate(-90deg); pointer-events: none; }
+.rite svg.ring circle { fill: none; stroke-width: 7; }
+.rite svg.ring .bg { stroke: rgba(255,255,255,.08); }
+.rite svg.ring .fg { stroke: var(--rc); stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 0; filter: drop-shadow(0 0 5px var(--rc)); transition: stroke-dashoffset .1s linear; }
+.rite .core { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--rc); pointer-events: none; transition: opacity .2s; }
+.rite .core svg { width: 25px; height: 25px; filter: drop-shadow(0 0 6px var(--rc)); }
+.rite .core b { font-size: 9px; font-weight: 800; letter-spacing: .12em; line-height: 1; text-shadow: 0 0 6px var(--rc), 0 1px 2px #000; }
+.rite .cd { position: absolute; inset: 0; display: grid; place-items: center; padding-top: 1px; font-style: normal; font-size: 23px; font-weight: 800; color: #fff;
+  text-shadow: 0 0 10px var(--rc), 0 1px 3px #000, 0 0 2px #000; pointer-events: none; }
+.rite.cooling .core { opacity: .28; }
+.rite.cooling .core b { visibility: hidden; }
+.rite.cooling svg.ring .fg { opacity: .75; }
+.rite.ready { animation: ritepulse 1.15s ease-in-out infinite; }
+.rite.active { box-shadow: 0 0 0 2px var(--rc), 0 0 22px var(--rc), 0 0 46px color-mix(in srgb, var(--rc) 45%, transparent); }
+.rite.fire { animation: ritefire .4s cubic-bezier(.2,1.6,.4,1); }
+.rite.pop .core { animation: ritepop .5s cubic-bezier(.2,1.8,.4,1); }
+@keyframes ritepulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 2px var(--rc), 0 0 16px var(--rc); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rc) 50%, #fff), 0 0 34px var(--rc); } }
+@keyframes ritefire { 0% { transform: scale(.82); filter: brightness(2.6); } 100% { transform: scale(1); filter: none; } }
+@keyframes ritepop { 0% { transform: scale(1.5); filter: brightness(2.4); } 100% { transform: scale(1); filter: none; } }
+
+/* the Rite's name calls out over the battlefield on cast */
+.rite-call { position: absolute; left: 0; right: 0; top: 37%; display: flex; justify-content: center; pointer-events: none; }
+.rite-call b { font-family: var(--f-display); font-weight: 900; font-size: 21px; letter-spacing: .16em; color: #fff;
+  text-shadow: 0 0 14px var(--rc), 0 0 30px var(--rc), 0 2px 0 rgba(0,0,0,.7); animation: ritecall 1.1s ease-out both; }
+@keyframes ritecall { 0% { opacity: 0; transform: scale(1.7); letter-spacing: .5em; } 14% { opacity: 1; transform: scale(1); letter-spacing: .16em; }
+  70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
