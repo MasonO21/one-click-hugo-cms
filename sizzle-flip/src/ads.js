@@ -2,7 +2,8 @@
 //
 //  • Forced ("interstitial") ads only appear when the player leaves a level-complete screen
 //    (Next / Levels) — never during a level, on retry, on pause or after a fail.
-//  • Opt-in ("rewarded") ads unlock hints after the free one per world, and let a stuck player skip.
+//  • Opt-in ("rewarded") ads unlock hints after the free one per world, let a stuck player skip, and turn on
+//    the long aim guide for 10 minutes.
 //  • The Capacitor app uses AdMob (Google's public TEST ids below — replace them before release).
 //  • The web build has no ad network. In test contexts (the Claude artifact, a localhost dev server, ?adtest)
 //    a clearly labelled placeholder ad stands in so the whole flow can be tried; a deployed web build shows none.
@@ -15,10 +16,11 @@ export const AD_RULES = {
   graceFails: 10,           // no forced ad right after a level that took 10+ fails
   freeHintsPerWorld: 1,     // the first hint in each world is free; later ones cost an opt-in ad
   skipAfterFails: 8,        // offer "watch an ad to skip" after 8 fails on an unbeaten level
+  longAimMinutes: 10,       // one reward ad = 10 minutes (real time) of the long aim guide
 };
 
 // Fast pacing for trying the flow (Settings → Ad testing, or ?adtest in the URL).
-const FAST_RULES = { firstAdAfterWins: 1, firstAdAfterSeconds: 0, levelsBetween: 1, secondsBetween: 20, graceFails: 10, freeHintsPerWorld: 1, skipAfterFails: 2 };
+const FAST_RULES = { firstAdAfterWins: 1, firstAdAfterSeconds: 0, levelsBetween: 1, secondsBetween: 20, graceFails: 10, freeHintsPerWorld: 1, skipAfterFails: 2, longAimMinutes: 1 };
 
 export const ADMOB_UNITS = {
   // Google's public test ad units (always fill, never pay). Swap in your own from the AdMob console.
@@ -115,6 +117,20 @@ export class AdManager {
     const s = this.app.save;
     // never the final level — that flip has to be earned
     return i < this.app.levels.length - 1 && (game.fails || 0) >= this.rules.skipAfterFails && !s.stars[i] && !(s.skipped && s.skipped[i]);
+  }
+
+  // Long aim guide: a timed booster. The expiry is a timestamp in the save, so it survives reloads.
+  longAimLeft() { return Math.max(0, (this.app.save.longAimUntil || 0) - Date.now()); }
+  longAimActive() { return this.longAimLeft() > 0; }
+
+  // Resolves 'rewarded' / 'nofill' (both turn it on) or 'closed' (ad skipped early: nothing).
+  async unlockLongAim() {
+    if (this.longAimActive()) return 'active';
+    const r = await this.rewarded('aim');
+    if (r === 'closed' || r === false) return 'closed';
+    this.app.save.longAimUntil = Date.now() + this.rules.longAimMinutes * 60000;
+    this.app.persist();
+    return r;
   }
 
   // Opt-in ad. Resolves 'rewarded' | 'closed' | 'nofill' (no ad available — callers grant the reward anyway).
@@ -267,7 +283,7 @@ class TestAdProvider {
         <div class="ad-top"><span class="ad-pill">AD</span><span class="ad-kind">${kind === 'rewarded' ? 'Reward ad' : 'Ad'} · test placeholder</span>
           <button class="ad-close" aria-label="Close ad" disabled>5</button></div>
         <div class="ad-body"><div class="ad-emoji">${ad.emoji}</div><div class="ad-brand">${ad.brand}</div><div class="ad-line">${ad.line}</div></div>
-        ${kind === 'rewarded' ? `<div class="ad-reward"><div class="ad-why">${purpose === 'skip' ? 'Watch to skip this level' : purpose === 'hint' ? 'Watch to get a hint' : 'Watch to earn the reward'}</div><div class="ad-bar"><i></i></div><button class="btn btn-relish ad-collect" hidden><span>COLLECT ✓</span></button></div>` : ''}
+        ${kind === 'rewarded' ? `<div class="ad-reward"><div class="ad-why">${{ skip: 'Watch to skip this level', hint: 'Watch to get a hint', aim: 'Watch to unlock the long aim guide' }[purpose] || 'Watch to earn the reward'}</div><div class="ad-bar"><i></i></div><button class="btn btn-relish ad-collect" hidden><span>COLLECT ✓</span></button></div>` : ''}
         <div class="ad-foot">Real ads come from AdMob in the app build.</div>
       </div>`;
     document.getElementById('ui').appendChild(el);

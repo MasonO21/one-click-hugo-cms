@@ -58,7 +58,10 @@ class App {
   // ---------------------------------------------------------------- layout
   resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    const cw = window.innerWidth, ch = window.innerHeight;
+    let cw = window.innerWidth, ch = window.innerHeight;
+    // A hidden or collapsing panel (e.g. the artifact viewer opening) can briefly report 0×0.
+    // Keep the last real size: a zero-size view breaks the camera maths and the background canvas.
+    if (cw < 2 || ch < 2) { if (this.cw) return; cw = 390; ch = 844; }
     this.dpr = dpr; this.cw = cw; this.ch = ch;
     this.canvas.width = Math.round(cw * dpr);
     this.canvas.height = Math.round(ch * dpr);
@@ -113,15 +116,22 @@ class App {
 
   // ---------------------------------------------------------------- loop
   loop(t) {
-    const dt = Math.min(0.1, (t - this.last) / 1000);
+    // schedule the next frame first, so an error in one frame can never stop the game
+    requestAnimationFrame((tt) => this.loop(tt));
+    let dt = (t - this.last) / 1000;
     this.last = t;
-    if (this.game) {
+    // frame timestamps and performance.now() can disagree after a pause or an ad: never step backwards
+    if (!(dt > 0)) dt = 0; else if (dt > 0.1) dt = 0.1;
+    if (!this.game) return;
+    try {
       this.game.update(dt);
       if (this.game.attract) this.attractTick(dt);
       else if (!this.game.paused && !this.game.winShown && !document.hidden) this.ads.tickPlay(dt);
       this.game.render(this.ctx);
+    } catch (e) {
+      console.error(e);
+      this.game.recover();
     }
-    requestAnimationFrame((tt) => this.loop(tt));
   }
 
   // ---------------------------------------------------------------- flow

@@ -70,7 +70,9 @@ export class Game {
     this.winShown = false;
     this.timeScale = 1;
     this.acc = 0;
+    this.phaseT = 0;
     this.aim = null;
+    if (!first) { this.overview = false; this.zoom = this.zoomTarget = 1; this.fixCamera(); }
     this.face.expr = 'idle';
     if (!first) {
       this.phase = 'play';
@@ -259,7 +261,7 @@ export class Game {
   // ------------------------------------------------------------------ update
   update(dtReal) {
     if (this.paused) return;
-    dtReal = Math.min(dtReal, 0.1);
+    dtReal = dtReal > 0 ? Math.min(dtReal, 0.1) : 0;
     this.t += dtReal;
     this.phaseT += dtReal;
     const dt = dtReal * this.timeScale;
@@ -525,7 +527,9 @@ export class Game {
       this.zoomTarget = Math.min(1, this.app.ch / base / span);
     } else this.zoomTarget = 1;
     this.zoom += (this.zoomTarget - this.zoom) * (1 - Math.exp(-dt * 7));
+    if (!Number.isFinite(this.zoom)) this.zoom = 1;
     const ty = this.cameraTarget();
+    if (!Number.isFinite(ty)) return;
     if (this.camInit === undefined) {
       this.camInit = true;
       const [, vh] = this.viewSize();
@@ -535,7 +539,25 @@ export class Game {
     }
     const k = this.phase === 'intro' ? 1 : (1 - Math.exp(-dt * (this.overview ? 6 : 4.5)));
     this.camY += (ty - this.camY) * k;
+    if (!Number.isFinite(this.camY)) this.camY = ty;
     this.camX = W / 2;
+  }
+
+  // Put the camera back on the sausage if it ever ends up somewhere invalid.
+  fixCamera() {
+    if (!Number.isFinite(this.zoom)) this.zoom = 1;
+    if (Number.isFinite(this.camY)) return;
+    const [, vh] = this.viewSize();
+    const ty = Number.isFinite(vh) ? this.clampCamY(this.sim.com()[1] - vh * 0.1, vh) : this.sim.com()[1];
+    this.camY = Number.isFinite(ty) ? ty : this.level.h;
+  }
+
+  // Called by the app loop after an error in a frame: rebuild what a bad frame could have broken.
+  recover() {
+    this.acc = 0;
+    if (!Number.isFinite(this.phaseT)) this.phaseT = 0;
+    this.fixCamera();
+    this.bgDirty = true;
   }
 
   // ------------------------------------------------------------------ rendering
@@ -632,7 +654,7 @@ export class Game {
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (cw / 2 - camX * scale), dpr * (ch / 2 - camY * scale));
     ctx.imageSmoothingEnabled = true;
     const box = this.bgBox;
-    ctx.drawImage(this.bgCanvas, box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
+    if (this.bgCanvas.width && this.bgCanvas.height) ctx.drawImage(this.bgCanvas, box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
 
     const s = this.sim;
     const rt = s.t - PHYS.DT * (1 - this.alpha);
@@ -722,8 +744,11 @@ export class Game {
     const a = this.aim;
     const s = this.sim;
     const [svx, svy] = s.supportVelocity();
-    const dur = this.app.save.longAim ? 1.0 : 0.55;
-    const pts = previewArc(cx, cy, a.vx + svx, a.vy + svy, s.G / PHYS.G, dur, this.app.save.longAim ? 22 : 13);
+    const long = !!(this.app.ads && this.app.ads.longAimActive());
+    // the long guide (a reward-ad booster) shows more than twice as much of the flight, and stays bright
+    const dur = long ? 1.3 : 0.55;
+    const pts = previewArc(cx, cy, a.vx + svx, a.vy + svy, s.G / PHYS.G, dur, long ? 28 : 13);
+    const fade = long ? 0.45 : 0.75;
     const ready = s.canLaunch();
     // pull band
     const ang = Math.atan2(a.vy, a.vx);
@@ -743,7 +768,7 @@ export class Game {
     pts.forEach(([x, y], i) => {
       const u = i / pts.length;
       const r = 7.5 - u * 3.5;
-      ctx.globalAlpha = (ready ? 1 : 0.4) * (1 - u * 0.75);
+      ctx.globalAlpha = (ready ? 1 : 0.4) * (1 - u * fade);
       circlePath(ctx, x, y, r + 2.5); ctx.fillStyle = 'rgba(58,34,22,0.55)'; ctx.fill();
       circlePath(ctx, x, y, r); ctx.fillStyle = '#ffffff'; ctx.fill();
     });

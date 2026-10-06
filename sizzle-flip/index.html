@@ -69,6 +69,7 @@
           <div class="flips-stars" id="hud-stars">★★★</div>
         </div>
       </div>
+      <div class="aim-chip" id="hud-aim" hidden aria-label="Long aim guide time left">🎯 <b id="hud-aim-time">10:00</b></div>
       <div class="hud-bottom">
         <button class="btn btn-round" data-act="overview" aria-label="Look around">👁</button>
         <div class="hud-help">
@@ -85,6 +86,7 @@
       <div class="card">
         <div class="ribbon">PAUSED</div>
         <button class="btn btn-big btn-relish" data-act="resume"><span>RESUME</span></button>
+        <button class="booster aim-booster" data-act="long-aim"><span class="bi">🎯</span><span class="bt"><b>Long aim guide</b><small class="aim-state">Longer aim line · 10 min</small></span><span class="bcta aim-cta">▶ AD</span></button>
         <div class="row">
           <button class="btn btn-mustard" data-act="restart"><span>↻ RESTART</span></button>
           <button class="btn btn-sky" data-act="levels"><span>☰ LEVELS</span></button>
@@ -92,7 +94,6 @@
         <div class="toggles">
           <label class="toggle"><input type="checkbox" data-set="sfx"><span>Sound FX</span></label>
           <label class="toggle"><input type="checkbox" data-set="music"><span>Music</span></label>
-          <label class="toggle"><input type="checkbox" data-set="longAim"><span>Long aim guide</span></label>
         </div>
         <button class="btn btn-ghost" data-act="home"><span>Main menu</span></button>
       </div>
@@ -159,8 +160,8 @@
           <label class="toggle"><input type="checkbox" data-set="sfx"><span>Sound FX</span></label>
           <label class="toggle"><input type="checkbox" data-set="music"><span>Music</span></label>
           <label class="toggle"><input type="checkbox" data-set="haptics"><span>Vibration</span></label>
-          <label class="toggle"><input type="checkbox" data-set="longAim"><span>Long aim guide (easier)</span></label>
         </div>
+        <button class="booster aim-booster" data-act="long-aim"><span class="bi">🎯</span><span class="bt"><b>Long aim guide</b><small class="aim-state">Longer aim line · 10 min</small></span><span class="bcta aim-cta">▶ AD</span></button>
         <button class="btn btn-ghost danger" data-act="reset"><span>Reset progress</span></button>
         <div class="ad-test" id="ad-test" hidden>
           <h4>Ad testing <small>(test builds only)</small></h4>

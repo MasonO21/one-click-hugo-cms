@@ -61,10 +61,11 @@ All ad logic lives in `src/ads.js`: the pacing rules (`AD_RULES`), the AdMob uni
 | Forced (interstitial) | Tapping **Next** or **Levels** on the level-complete card | Not before 5 levels are beaten **and** 5 minutes are played · then at most every 3rd level beaten **and** 3+ minutes apart · skipped after a level that took 10+ fails · never on world-complete, the finale, retry, fail or pause |
 | Reward (opt-in) | 💡 hint | The first hint in each world is free; later ones show an **AD** badge and unlock after a reward ad |
 | Reward (opt-in) | ⏭ skip | Shows after 8 fails on an unbeaten level (never on level 200). The level is marked *skipped* (no stars) and the next one opens |
+| Reward (opt-in) | 🎯 Long aim guide (Pause menu and Options) | One ad turns it on for 10 minutes of real time (`longAimMinutes`). The aim line then shows 1.3 s of flight instead of 0.55 s. A countdown shows in the HUD, the timer survives reloads, and the player is told when it ends. A tip points to it after 5 fails |
 
 If no ad is available (no fill, offline), the reward is granted anyway. A taken hint stays on screen through restarts. The game pauses and its audio is muted while any ad is showing. There are no banners. Setting `save.adsRemoved` (wire it to a "Remove ads" purchase) stops forced ads and keeps the opt-in ones.
 
-**Testing the flow:** the Claude artifact, a `localhost` dev server and any URL with `?adtest` show clearly labelled placeholder ads. **Settings → Ad testing** (test builds only) has fast pacing, a "Remove ads" switch, buttons to preview both ad types, and a live readout of the pacing state. `node tools/e2e-ads.mjs` runs the whole flow in headless Chromium (31 checks). A deployed web build shows no ads.
+**Testing the flow:** the Claude artifact, a `localhost` dev server and any URL with `?adtest` show clearly labelled placeholder ads. **Settings → Ad testing** (test builds only) has fast pacing, a "Remove ads" switch, buttons to preview both ad types, and a live readout of the pacing state. `node tools/e2e-ads.mjs` runs the whole flow in headless Chromium (42 checks). `node tools/e2e-recover.mjs` checks that the game can't get stuck (camera parked, input dead) after the view shrinks to zero size or the frame clock jumps. A deployed web build shows no ads.
 
 **Going live with AdMob** (`@capacitor-community/admob` is installed and synced):
 

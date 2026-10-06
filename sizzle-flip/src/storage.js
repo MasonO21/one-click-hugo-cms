@@ -11,7 +11,7 @@ const defaults = () => ({
   sfx: true,
   music: true,
   haptics: true,
-  longAim: false,
+  longAimUntil: 0,  // long aim guide is on until this time (ms) — unlocked with a reward ad
   seenTips: {},
   totalFlips: 0,
   seenSkins: {},
@@ -28,6 +28,7 @@ export function loadSave() {
     if (!raw) return defaults();
     const d = JSON.parse(raw);
     const base = defaults();
+    delete d.longAim; // was a free toggle before it became a reward
     return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
   } catch (e) {
     return defaults();

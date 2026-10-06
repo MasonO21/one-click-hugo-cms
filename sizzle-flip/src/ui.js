@@ -22,6 +22,7 @@ export class UI {
     $('ui').addEventListener('pointerdown', (e) => { if (e.target !== $('ui')) e.stopPropagation(); });
     window.addEventListener('popstate', () => this.onBack());
     $('world-list').addEventListener('scroll', () => this.updateDots(), { passive: true });
+    setInterval(() => this.tickAim(), 1000);
   }
 
   syncToggles() {
@@ -37,7 +38,7 @@ export class UI {
     if (id === 'scr-worlds') this.renderWorlds();
     if (id === 'scr-levels') this.renderLevels();
     if (id === 'scr-skins') this.renderSkins();
-    if (id === 'scr-settings') { this.syncToggles(); this.renderAdTest(); }
+    if (id === 'scr-settings') { this.syncToggles(); this.renderAim(); this.renderAdTest(); }
   }
 
   hideScreens() {
@@ -66,12 +67,13 @@ export class UI {
       case 'skins': this.show('scr-skins'); break;
       case 'settings': this.show('scr-settings'); break;
       case 'back': { const prev = this.stack.pop() || 'scr-title'; this.show(prev, false); break; }
-      case 'pause': app.pause(true); this.syncToggles(); $('scr-pause').hidden = false; break;
+      case 'pause': app.pause(true); this.syncToggles(); this.renderAim(); $('scr-pause').hidden = false; break;
       case 'resume': $('scr-pause').hidden = true; app.pause(false); break;
       case 'restart': $('scr-pause').hidden = true; $('scr-win').hidden = true; app.restartLevel(); break;
       case 'overview': app.game && app.game.toggleOverview(); break;
       case 'hint': this.hint(); break;
       case 'skip': this.offerSkip(); break;
+      case 'long-aim': this.longAim(); break;
       case 'levels':
         if (!$('scr-win').hidden) { this.leaveWin(() => app.toMenu('scr-levels')); break; }
         $('scr-pause').hidden = true; app.toMenu('scr-levels'); break;
@@ -140,6 +142,42 @@ export class UI {
       if (r === 'closed') { app.pause(false); this.toast('Watch the whole ad to skip', 2400); return; }
       app.skipLevel();
     }, { yes: viaAd ? '▶ Watch ad' : 'Skip', no: () => app.pause(false) });
+  }
+
+  // Long aim guide: one reward ad turns it on for 10 minutes (real time).
+  async longAim() {
+    const app = this.app;
+    if (this._adBusy) return;
+    if (app.ads.longAimActive()) { this.toast(`🎯 Long aim guide is on — ${fmtTime(app.ads.longAimLeft())} left`); return; }
+    this._adBusy = true;
+    const r = await app.ads.unlockLongAim().finally(() => { this._adBusy = false; });
+    if (r === 'closed') { this.toast('Watch the whole ad to unlock the long aim guide', 2400); return; }
+    this._aimWasOn = true;
+    this.renderAim();
+    this.toast(`🎯 Long aim guide on for ${app.ads.rules.longAimMinutes} minutes!`, 2400);
+  }
+
+  tickAim() {
+    const ads = this.app.ads;
+    if (!ads) return;
+    const on = ads.longAimActive();
+    const g = this.app.game;
+    if (this._aimWasOn && !on && g && !g.attract) this.toast('🎯 Long aim guide ended — watch an ad to turn it back on', 2800);
+    this._aimWasOn = on;
+    this.renderAim();
+  }
+
+  renderAim() {
+    const ads = this.app.ads;
+    if (!ads) return;
+    const left = ads.longAimLeft(), on = left > 0, t = fmtTime(left);
+    document.querySelectorAll('.aim-booster').forEach(b => {
+      b.classList.toggle('on', on);
+      b.querySelector('.aim-state').textContent = on ? `On · ${t} left` : `Longer aim line · ${ads.rules.longAimMinutes} min`;
+      b.querySelector('.aim-cta').textContent = on ? '✓ ON' : ads.enabled ? '▶ AD' : 'TURN ON';
+    });
+    $('hud-aim').hidden = !on;
+    $('hud-aim-time').textContent = t;
   }
 
   renderAdTest() {
@@ -320,6 +358,10 @@ export class UI {
     $('hint-ad').hidden = !paidHint;
     if (ready && hint.hidden) { hint.hidden = false; this.toast(paidHint ? 'Stuck? Tap 💡 to watch an ad for a hint' : 'Stuck? Tap 💡 for a free hint'); }
     else if (!ready) hint.hidden = true;
+    if ((game.fails || 0) >= 5 && !this._aimTipShown && !ads.longAimActive()) {
+      this._aimTipShown = true;
+      this.toast('Tip: Pause ❚❚ → 🎯 Long aim guide shows more of your flip', 3200);
+    }
     const skip = $('hud-skip');
     const canSkip = ads.canOfferSkip(game);
     $('skip-ad').hidden = !ads.enabled;
@@ -380,6 +422,11 @@ export function drawSkinPreview(c, skin) {
   const face = makeFaceState(); face.expr = 'idle'; face.lookX = 1; face.lookY = 0.2;
   drawSausage(ctx, px, py, { R: 15, skin, face, t: 0.4 });
   ctx.restore();
+}
+
+function fmtTime(ms) {
+  const s = Math.ceil(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }

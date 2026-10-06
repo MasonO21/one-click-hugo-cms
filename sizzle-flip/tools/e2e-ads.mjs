@@ -151,12 +151,57 @@ await page.click('#hud-hint', { force: true });
 await page.waitForTimeout(300);
 check(!(await adUp()), 'first hint in world 2 is free');
 
+// ---- 8. long aim guide: a reward ad turns it on for 10 minutes
+await ev(() => { const a = window.__app; a.save.longAimUntil = 0; a.startLevel(22); });
+await page.waitForTimeout(1500);
+check(await hidden('hud-aim'), 'no long-aim timer in the HUD before unlocking');
+async function aimShot(name) {
+  // hold an aim (no release) so the trajectory guide is on screen
+  await page.waitForFunction(() => window.__app.game.phase === 'play' && window.__app.game.sim.canLaunch(), null, { timeout: 8000 });
+  await page.mouse.move(195, 480); await page.mouse.down();
+  for (let k = 1; k <= 6; k++) await page.mouse.move(195 + 6 * k, 480 + 22 * k);
+  await page.waitForTimeout(250);
+  await shot(name);
+  await ev(() => { window.__app.game.aim = null; window.__app.audio.stopCharge(); });
+  await page.mouse.up();
+}
+await aimShot('9-aim-short');
+await page.click('[data-act=pause]', { force: true });
+await page.waitForTimeout(400);
+check(await ev(() => document.querySelector('#scr-pause .aim-cta').textContent.includes('AD')), 'pause menu offers the long aim guide for an ad');
+await shot('10-pause-aim');
+await page.click('#scr-pause .aim-booster', { force: true });
+await page.waitForTimeout(400);
+check(await adUp(), 'reward ad opens for the long aim guide');
+await page.click('.ad-close');
+await page.waitForTimeout(300);
+check(!(await ev(() => window.__app.ads.longAimActive())), 'closing the ad early does not turn it on');
+await page.click('#scr-pause .aim-booster', { force: true });
+await page.waitForFunction(() => { const c = document.querySelector('.ad-collect'); return c && !c.hidden; }, null, { timeout: 9000 });
+await page.click('.ad-collect');
+await page.waitForTimeout(500);
+const left = await ev(() => window.__app.ads.longAimLeft());
+check(left > 595000 && left <= 600000, `watching it turns the guide on for 10 minutes (${Math.round(left / 1000)}s)`);
+check(await ev(() => document.querySelector('#scr-pause .aim-booster').classList.contains('on')), 'pause menu shows it as ON with time left');
+await shot('11-pause-aim-on');
+await page.click('[data-act=resume]', { force: true });
+await page.waitForTimeout(1200);
+check(!(await hidden('hud-aim')) && /^(10:00|9:5\d)$/.test(await ev(() => document.getElementById('hud-aim-time').textContent)), 'HUD shows the countdown');
+await aimShot('12-aim-long');
+await page.reload(); await page.waitForTimeout(1500);
+check(await ev(() => window.__app.ads.longAimActive()), 'still on after reloading the game');
+await ev(() => { window.__app.startLevel(22); window.__app.save.longAimUntil = Date.now() + 1500; });
+await page.waitForTimeout(3000);
+check(await hidden('hud-aim') && !(await ev(() => window.__app.ads.longAimActive())), 'turns itself off when the time runs out');
+check(await ev(() => /ended/.test(document.getElementById('toast').textContent)), 'player is told it ended');
+
 // ---- settings panel
 await ev(() => { window.__app.setSetting('adsRemoved', false); window.__app.toMenu('scr-title'); });
 await page.waitForTimeout(500);
 await page.click('[data-act=settings]', { force: true });
 await page.waitForTimeout(600);
 check(!(await hidden('ad-test')), 'Ad testing panel visible in a test build');
+check(await ev(() => !!document.querySelector('#scr-settings .aim-booster') && !document.querySelector('input[data-set=longAim]')), 'options offer the long aim booster (no free toggle)');
 await ev(() => { document.querySelector('.settings-card').scrollTop = 9999; });
 await page.waitForTimeout(200);
 await shot('8-settings');
