@@ -36,7 +36,7 @@ On a keyboard: WASD to move, Space to attack, Q/E/R for skills, Shift+Q/E/R to u
 |---|---|---|
 | Format | 5v5, three lanes, 15–20 min | **3v3, one lane plus two jungles, ~8 min** (simulated matches average 8 min) |
 | Heroes | Chinese history and myth, painted characters | **The "Shardborn": living crystal heroes** with a distinct faceted art style |
-| Big objective | Tyrant / Overlord | **Shard Colossus** at the river. Taking it empowers your team for 90 seconds and adds Shard Golem siege minions to your next three waves |
+| Big objectives | Tyrant / Overlord | **Shard Colossus** (top of the river, from 1:30): empowers your team for 90 seconds and adds Shard Golems to your next three waves. **Abyssal Wyrm** (bottom of the river, from 6:00): every hero on the team that slays it cheats death once in the next 150 seconds |
 | Early game | Tower plating | Towers are **fortified for the first 4 minutes** and take reduced damage without friendly minions nearby |
 | Kept on purpose | Virtual joystick, auto-target attack button, 3 skills + ultimate, drag-to-aim, quick-buy, kill announcer, ranked tiers, skins, battle pass, monthly card | Same. These are genre conventions players expect, not anyone's IP |
 
@@ -55,10 +55,21 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 
 **In a match**
 - 10 heroes across 6 roles, with 30 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals and executes.
+- **Hero passives:** every hero has one, and four of them show stacks over the hero's head so both teams can read them:
+  - **Kaida:** Kindling. Skill hits charge an erupting, healing attack.
+  - **Orin:** Undertow. Soaked enemies take more from his skills.
+  - **Sylva:** Galewind. Every 4th attack hits harder and slows.
+  - **Brakka:** Bedrock. An emergency shield when he drops low.
+  - **Nyx:** Predator. Bonus damage on wounded heroes, and takedowns reset her dash.
+  - **Lumen:** Dawnlight. Her attacks periodically heal the weakest ally.
+  - **Vexa:** Overcharge. Every 3rd skill hit stuns.
+  - **Drace:** Bloodrage. More attack speed and lifesteal the lower he gets.
+  - **Rhea:** Focus. Attacks ramp up on one target.
+  - **Oska:** Tidewall. Allies near him take less damage.
 - **Skill ranks:** every level gives a skill point. You start with one skill and choose which to learn and max. Basic skills go to rank 4 and the ultimate to rank 3 (at levels 4, 7 and 10). Each rank hits harder and recharges faster.
 - **One jungler per team:** you, if you bring Shard Smite, or otherwise the bot best suited to it. Both sides get the same treatment.
 - Towers that punish diving, with backdoor protection.
-- Minion waves, siege minions, two jungle buffs and the Shard Colossus.
+- Minion waves, siege minions, two jungle buffs, the Shard Colossus and the Abyssal Wyrm. Bots contest both objectives, and Group up calls the nearer one.
 - Tall grass that hides heroes, plus invisibility. Recall to base.
 - **Battle spells.** Before a match, pick one of six for your hero:
   - **Blink:** a short teleport.
@@ -71,12 +82,13 @@ Keep it this way as you add content: your own names, art, sounds and hero design
   Spells unlock with account level, and your choice is remembered per hero. Bots bring the spell that suits their role and use it when it pays off. The spell button glows when Smite or Shatter would land the kill.
 - **Quick signals:** Attack, Retreat and Group up. Bot teammates obey them for a few seconds and answer in the feed. "Group up" means "take the Colossus" while it's awake. Online, signals go to your team only.
 - **Death recap:** while you wait to respawn, see who killed you and what hurt most in your last 10 seconds, split into attacks and skills.
-- 16 items with recommended builds and one-tap quick-buy. Four have passive effects that counter specific threats:
+- 16 items with recommended builds and one-tap quick-buy. Storm Bow and Reaper Cleaver add critical strike chance (crits deal 175% and show as gold numbers). Four items have passive effects that counter specific threats:
   - **Witherblade:** halves enemy healing.
   - **Rimefang Bow:** attacks slow.
   - **Spined Carapace:** reflects attack damage.
   - **Nightglass Orb:** skill hits deal %-health damage.
 - Bots that lane, last-hit, jungle, fight over objectives, team-fight and retreat, at five strengths.
+- **Kill impact:** a zoom punch and gold flash on your kills, plus a beat of slow motion offline.
 - Announcer calls (First Blood, multi-kills, Ace, Shutdown), a scoreboard, generated music and sound, a low-power graphics mode and left-handed controls.
 
 **Progression and economy**
@@ -150,7 +162,7 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 - **Commission art and audio.** The procedural crystal art and generated music are consistent and shippable, but professional assets raise conversion.
 - **Plan content.** Ship a new hero or skin line every 2–4 weeks, a new pass each season, and rotating festivals. In this genre, content cadence and spending on user acquisition drive revenue far more than any single feature.
 - **Animate the sprites.** Heroes are single still poses today. Next up are attack and skill pose frames for each hero (from the same Higgsfield references), swapped in while attacking or casting.
-- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins 38–59%. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
+- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins about 39–58%. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
 
 ## 5. File map
 

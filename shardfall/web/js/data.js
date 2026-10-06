@@ -46,21 +46,21 @@ window.SF = window.SF || {};
   };
   SF.skillCdOf = (h, i) => h.def0.skills[i].cd * SF.SKILL_RANK.cd[i][Math.max(0, (h.ranks ? h.ranks[i] : 1) - 1)] * (1 - (h.cdr || 0));
 
-  // In-match items. `stats` are flat adds except as/cdr/lifesteal (fractions). `passive` names a
+  // In-match items. `stats` are flat adds except as/cdr/lifesteal/crit (fractions). Critical hits deal 175%. `passive` names a
   // unique effect handled in match.js (owning two copies is impossible, so passives never stack).
   SF.ITEMS = {
     swift_boots:    { name: 'Swift Boots',      cost: 300,  stats: { ms: 40 },               desc: '+40 move speed',               c: '#8fd3ff' },
     iron_edge:      { name: 'Iron Edge',        cost: 450,  stats: { atk: 20 },              desc: '+20 attack',                   c: '#ffb36b' },
     arcane_tome:    { name: 'Arcane Tome',      cost: 450,  stats: { power: 40 },            desc: '+40 ability power',            c: '#c78bff' },
     stoneplate:     { name: 'Stoneplate',       cost: 600,  stats: { def: 35 },              desc: '+35 defense',                  c: '#b8b8a0' },
-    storm_bow:      { name: 'Storm Bow',        cost: 900,  stats: { as: 0.35, atk: 10 },    desc: '+35% attack speed, +10 attack', c: '#7cf0c8' },
+    storm_bow:      { name: 'Storm Bow',        cost: 900,  stats: { as: 0.35, atk: 10, crit: 0.15 }, desc: '+35% attack speed, +10 attack, 15% critical chance', c: '#7cf0c8' },
     bloodfang:      { name: 'Bloodfang',        cost: 1000, stats: { atk: 30, lifesteal: 0.12 }, desc: '+30 attack, 12% lifesteal', c: '#ff6b7f' },
     tidal_charm:    { name: 'Tidal Charm',      cost: 1000, stats: { power: 60, cdr: 0.15 }, desc: '+60 power, 15% cooldown cut',  c: '#5fb8ff' },
     ember_saber:    { name: 'Ember Saber',      cost: 1150, stats: { atk: 45, cdr: 0.1 },    desc: '+45 attack, 10% cooldown cut', c: '#ff8a3d' },
     titan_heart:    { name: 'Titan Heart',      cost: 1300, stats: { hp: 800, regen: 8 },    desc: '+800 health, +8 regen/s',      c: '#ff9db0' },
     wardens_aegis:  { name: "Warden's Aegis",   cost: 1250, stats: { hp: 450, def: 35 },     desc: '+450 health, +35 defense',     c: '#e3d27a' },
     starfire_codex: { name: 'Starfire Codex',   cost: 1600, stats: { power: 130 },           desc: '+130 ability power',           c: '#ffe27a' },
-    reaper_cleaver: { name: 'Reaper Cleaver',   cost: 1700, stats: { atk: 60, as: 0.2 },     desc: '+60 attack, +20% attack speed', c: '#d9e2ff' },
+    reaper_cleaver: { name: 'Reaper Cleaver',   cost: 1700, stats: { atk: 60, as: 0.2, crit: 0.2 }, desc: '+60 attack, +20% attack speed, 20% critical chance', c: '#d9e2ff' },
     witherblade:    { name: 'Witherblade',      cost: 1100, stats: { atk: 35 }, passive: 'wither', desc: '+35 attack. Passive: damaging a hero halves their healing for 2.5s', c: '#9b6bff' },
     rimefang:       { name: 'Rimefang Bow',     cost: 1250, stats: { atk: 25, as: 0.2 }, passive: 'frost', desc: '+25 attack, +20% attack speed. Passive: attacks slow by 20% for 1s', c: '#a8e8ff' },
     spined_carapace:{ name: 'Spined Carapace',  cost: 1150, stats: { hp: 300, def: 40 }, passive: 'thorns', desc: '+300 health, +40 defense. Passive: reflects 25% of attack damage taken as true damage', c: '#c9a26b' },
@@ -82,9 +82,10 @@ window.SF = window.SF || {};
       id: 'kaida', name: 'Kaida', title: 'Ember Duelist', role: 'Fighter', shape: 'blade',
       lore: 'A shard-knight whose crystal heart burns hotter with every duel.',
       price: { coins: 0 },
-      base: { hp: 960, atk: 66, power: 0, def: 30, ms: 310, range: 105, as: 0.95, regen: 5 },
+      base: { hp: 960, atk: 70, power: 0, def: 36, ms: 310, range: 105, as: 0.95, regen: 8 },
       grow: { hp: 118, atk: 6, power: 0, def: 3.5 },
       build: B.Fighter,
+      passive: { id: 'kindling', name: 'Kindling', desc: 'Skill hits on enemy heroes stoke Kindling. At 2 stacks her next attack erupts for 60% more damage and heals her for 8% of max health. Stacks fade after 6 seconds.' },
       skills: [
         { id: 'flare_step', name: 'Flare Step', cd: 7, range: 270, kind: 'dash', ai: 'enemy', desc: 'Dash forward, scorching every enemy you pass.' },
         { id: 'cinder_whirl', name: 'Cinder Whirl', cd: 9, range: 165, kind: 'nova', ai: 'near', desc: 'Spin a ring of embers that damages and slows nearby enemies.' },
@@ -98,6 +99,7 @@ window.SF = window.SF || {};
       base: { hp: 620, atk: 48, power: 34, def: 16, ms: 295, range: 470, as: 0.75, regen: 4 },
       grow: { hp: 82, atk: 3, power: 14, def: 2 },
       build: B.Mage,
+      passive: { id: 'undertow', name: 'Undertow', desc: 'Skill hits leave enemies Soaked for 3 seconds. His skills deal 20% more damage to Soaked enemies.' },
       skills: [
         { id: 'riptide_bolt', name: 'Riptide Bolt', cd: 5, range: 680, kind: 'bolt', ai: 'enemy', desc: 'Fire a water bolt that damages and slows the first enemy hit.' },
         { id: 'whirlpool', name: 'Whirlpool', cd: 10, range: 560, kind: 'zone', ai: 'enemy', ground: true, desc: 'After a short delay, a whirlpool erupts, damaging and stunning enemies.' },
@@ -108,9 +110,10 @@ window.SF = window.SF || {};
       id: 'sylva', name: 'Sylva', title: 'Galewind Ranger', role: 'Marksman', shape: 'leaf', ranged: true,
       lore: 'A wind-carved splinter that never misses the same target twice.',
       price: { coins: 0 },
-      base: { hp: 660, atk: 54, power: 0, def: 16, ms: 300, range: 490, as: 1.0, regen: 4 },
-      grow: { hp: 84, atk: 6, power: 0, def: 2 },
+      base: { hp: 640, atk: 52, power: 0, def: 16, ms: 300, range: 470, as: 1.0, regen: 4 },
+      grow: { hp: 82, atk: 5.6, power: 0, def: 2 },
       build: B.Marksman,
+      passive: { id: 'galewind', name: 'Galewind', desc: 'Every 4th attack rides the wind: 40% more damage and a brief slow.' },
       skills: [
         { id: 'piercing_gale', name: 'Piercing Gale', cd: 6, range: 820, kind: 'bolt', ai: 'enemy', desc: 'Loose an arrow that pierces through every enemy in a line.' },
         { id: 'tailwind', name: 'Tailwind', cd: 12, range: 0, kind: 'buff', ai: 'self', desc: 'Gain 35% move speed and 60% attack speed for 4 seconds.' },
@@ -124,6 +127,7 @@ window.SF = window.SF || {};
       base: { hp: 1040, atk: 56, power: 0, def: 34, ms: 295, range: 100, as: 0.8, regen: 7 },
       grow: { hp: 135, atk: 4, power: 0, def: 4 },
       build: B.Tank,
+      passive: { id: 'bedrock', name: 'Bedrock', desc: 'Dropping below 40% health raises a stone shield worth 12% of max health for 4 seconds (once every 30 seconds).' },
       skills: [
         { id: 'boulder_charge', name: 'Boulder Charge', cd: 9, range: 300, kind: 'dash', ai: 'enemy', desc: 'Charge forward and stun the first enemy hero you hit.' },
         { id: 'quake', name: 'Quake', cd: 8, range: 185, kind: 'nova', ai: 'near', desc: 'Slam the ground, damaging and slowing nearby enemies. Scales with max health.' },
@@ -134,12 +138,13 @@ window.SF = window.SF || {};
       id: 'nyx', name: 'Nyx', title: 'Veilblade', role: 'Assassin', shape: 'star',
       lore: 'A shard of the eclipse, seen only in the instant before it strikes.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 1000, atk: 84, power: 0, def: 32, ms: 325, range: 100, as: 1.0, regen: 6 },
+      base: { hp: 1000, atk: 84, power: 0, def: 38, ms: 325, range: 100, as: 1.0, regen: 8 },
       grow: { hp: 116, atk: 8, power: 0, def: 4 },
       build: B.Assassin,
+      passive: { id: 'predator', name: 'Predator', desc: 'Attacks on heroes below half health deal 15% more damage. A takedown resets Shadow Lunge.' },
       skills: [
         { id: 'shadow_lunge', name: 'Shadow Lunge', cd: 7, range: 380, kind: 'dash', ai: 'enemy', needsTarget: true, anyTarget: true, desc: 'Blink behind an enemy and strike.' },
-        { id: 'veil', name: 'Veil', cd: 14, range: 0, kind: 'buff', ai: 'self', desc: 'Turn invisible and faster for 3 seconds. Your next attack deals double damage.' },
+        { id: 'veil', name: 'Veil', cd: 14, range: 0, kind: 'buff', ai: 'self', desc: 'Turn invisible and faster for 3 seconds and heal 10% of max health. Your next attack deals double damage.' },
         { id: 'eclipse', name: 'Eclipse', cd: 40, range: 320, kind: 'ult', ai: 'execute', needsTarget: true, desc: 'Strike an enemy hero three times; the final strike deals bonus damage based on missing health.' }
       ]
     },
@@ -150,6 +155,7 @@ window.SF = window.SF || {};
       base: { hp: 730, atk: 46, power: 36, def: 21, ms: 295, range: 450, as: 0.8, regen: 5 },
       grow: { hp: 92, atk: 3, power: 11, def: 3 },
       build: B.Support,
+      passive: { id: 'dawnlight', name: 'Dawnlight', desc: 'Every 6 seconds her next attack also heals the most wounded nearby ally for 4% of their max health.' },
       skills: [
         { id: 'radiant_orb', name: 'Radiant Orb', cd: 5, range: 700, kind: 'bolt', ai: 'enemy', desc: 'Throw an orb of light that damages and slows the first enemy hit.' },
         { id: 'mending_light', name: 'Mending Light', cd: 11, range: 460, kind: 'heal', ai: 'heal', desc: 'Heal yourself and nearby allied heroes.' },
@@ -160,9 +166,10 @@ window.SF = window.SF || {};
       id: 'vexa', name: 'Vexa', title: 'Stormweaver', role: 'Mage', shape: 'spire', ranged: true,
       lore: 'A lightning-split shard that hums for a full minute before every storm.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 620, atk: 46, power: 35, def: 15, ms: 295, range: 480, as: 0.75, regen: 4 },
-      grow: { hp: 80, atk: 3, power: 12.5, def: 2 },
+      base: { hp: 620, atk: 46, power: 33, def: 15, ms: 295, range: 480, as: 0.75, regen: 4 },
+      grow: { hp: 80, atk: 3, power: 12, def: 2 },
       build: B.Mage,
+      passive: { id: 'overcharge', name: 'Overcharge', desc: 'Every 3rd skill hit on an enemy hero stuns it for 0.6 seconds (at most once every 4 seconds).' },
       skills: [
         { id: 'chain_spark', name: 'Chain Spark', cd: 6, range: 640, kind: 'bolt', ai: 'enemy', desc: 'Hurl a spark that jumps from the first enemy hit to two more nearby.' },
         { id: 'static_field', name: 'Static Field', cd: 11, range: 560, kind: 'zone', ai: 'enemy', ground: true, desc: 'Charge an area for 3 seconds, shocking and slowing every enemy inside.' },
@@ -176,6 +183,7 @@ window.SF = window.SF || {};
       base: { hp: 900, atk: 66, power: 0, def: 26, ms: 305, range: 110, as: 0.9, regen: 6 },
       grow: { hp: 112, atk: 6, power: 0, def: 3 },
       build: B.Fighter,
+      passive: { id: 'bloodrage', name: 'Bloodrage', desc: 'The lower his health, the faster he swings and the more he heals from attacks: up to 40% attack speed and 15% lifesteal.' },
       skills: [
         { id: 'cleave', name: 'Cleave', cd: 6, range: 210, kind: 'nova', ai: 'near', desc: 'Swing in a wide arc in front of you. Heals you for part of the damage dealt to heroes.' },
         { id: 'war_cry', name: 'War Cry', cd: 14, range: 0, kind: 'buff', ai: 'self', desc: 'Gain 25% damage and 20% move speed for 4 seconds. Nearby allies gain 10% damage.' },
@@ -189,6 +197,7 @@ window.SF = window.SF || {};
       base: { hp: 610, atk: 58, power: 0, def: 14, ms: 295, range: 500, as: 0.92, regen: 4 },
       grow: { hp: 80, atk: 6.5, power: 0, def: 2 },
       build: B.Marksman,
+      passive: { id: 'focus', name: 'Focus', desc: 'Each attack on the same target deals 8% more damage, up to 32%. Switching targets resets it.' },
       skills: [
         { id: 'refraction', name: 'Refraction', cd: 6, range: 600, kind: 'bolt', ai: 'enemy', desc: 'Fire three bolts of light in a narrow fan.' },
         { id: 'mirror_step', name: 'Mirror Step', cd: 10, range: 220, kind: 'dash', ai: 'self', desc: 'Dash a short distance. Your next attack within 3 seconds deals 80% more damage.' },
@@ -202,6 +211,7 @@ window.SF = window.SF || {};
       base: { hp: 960, atk: 50, power: 20, def: 30, ms: 295, range: 110, as: 0.8, regen: 6 },
       grow: { hp: 120, atk: 4, power: 8, def: 4 },
       build: B.Tank,
+      passive: { id: 'tidewall', name: 'Tidewall', desc: 'Allied heroes near Oska (including himself) take 8% less damage from enemy heroes.' },
       skills: [
         { id: 'anchor_hook', name: 'Anchor Hook', cd: 10, range: 620, kind: 'bolt', ai: 'enemy', desc: 'Throw an anchor that drags the first enemy hit toward you and briefly stuns them.' },
         { id: 'barnacle_guard', name: 'Barnacle Guard', cd: 12, range: 450, kind: 'heal', ai: 'fight', desc: 'Shield yourself and the most injured nearby ally.' },

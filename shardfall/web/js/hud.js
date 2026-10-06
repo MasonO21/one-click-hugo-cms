@@ -19,6 +19,7 @@
     sprint: '<svg viewBox="0 0 24 24"><path d="M2 8h6M3 12h6M2 16h6M12 5l7 7-7 7"/></svg>',
     purify: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.8 2.8L16.5 9"/></svg>',
     shatter: '<svg viewBox="0 0 24 24"><path d="M12 2l7 10-7 10-7-10z"/><path d="M12 2l-1.5 7 3 3-2.5 3.5L12 22"/></svg>',
+    passive: '<svg viewBox="0 0 24 24"><path d="M12 2l8 7-8 13L4 9z"/><path d="M4 9h16M12 2l-3 7 3 13 3-13z"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
     skull: '<svg viewBox="0 0 24 24"><path d="M4 20l16-16M4 4l16 16"/></svg>',
     attack: '<svg viewBox="0 0 24 24"><path d="M4 4l9 9M4 4h4M4 4v4M20 4l-9 9M20 4h-4M20 4v4M7 17l-3 3M17 17l3 3M9 15l-3-3M15 15l3-3"/></svg>',
@@ -30,7 +31,7 @@
 
   let m = null, R = null, raf = 0, last = 0, paused = false, onEnd = null, ended = false, bound = false;
   let aim = null, mouse = null, mouseT = 0, annT = 0, toastT = 0, slowT = 0, lastHit = 0, lastCoin = 0, shopSig = '';
-  let annQ = [], upWait = 0;
+  let annQ = [], upWait = 0, slowmo = 0;
   const keys = new Set();
   const joy = { id: null, ox: 0, oy: 0, dir: null };
 
@@ -121,7 +122,7 @@
       <li><b>Attack</b> by holding the red button (Space). It picks the best target for you.</li>
       <li><b>Skills:</b> tap to auto-aim, or drag the button to aim it yourself (Q, E, R). Every level gives a point: tap the <b>+</b> on a skill to learn or upgrade it (or wait and it's spent for you). Your ultimate opens at level 4.</li>
       <li><b>Gold</b> comes from landing the final hit on minions. Tap the glowing item on the left to buy it.</li>
-      <li><b>Towers</b> take less damage unless your minions are beside them. The <b>Shard Colossus</b> by the river empowers your whole team.</li>
+      <li><b>Towers</b> take less damage unless your minions are beside them. The <b>Shard Colossus</b> by the river empowers your whole team, and from 6:00 the <b>Abyssal Wyrm</b> lets your team cheat death once.</li>
       <li>The small button by Recall is your <b>battle spell</b> (F). The buttons at the top right <b>signal your team</b>: bots follow Attack, Retreat and Group up.</li>
     </ol><button class="btn primary" data-hud="tutDone">Start the match</button></div>`;
   }
@@ -334,7 +335,9 @@
     if (!paused || m.remote) {
       const p = m.player;
       p.wantDir = keyDir() || joy.dir;
-      m.update(dt);
+      // Offline only: a beat of slow motion on your kills and on the final blow.
+      if (slowmo > 0) slowmo -= dt;
+      m.update(slowmo > 0 && !m.remote ? dt * 0.35 : dt);
     }
     R.draw(m, aim ? { i: aim.i, manual: aim.manual } : null);
     updateHud(paused ? 0 : dt);
@@ -384,7 +387,7 @@
         q.classList.toggle('ready', p.gold >= it.cost);
       }
       $('slots').innerHTML = Array.from({ length: 6 }, (_, i) => (p.items[i] ? SF.itemIcon(p.items[i]) : '<span class="empty"></span>')).join('');
-      $('buffs').innerHTML = p.buffs.filter(b => b.label).map(b => `<span class="buff" style="--c:${b.id === 'shard' ? '#4fe3d3' : '#ffb347'}">${b.label} ${Math.ceil(b.t)}s</span>`).join('');
+      $('buffs').innerHTML = p.buffs.filter(b => b.label).map(b => `<span class="buff" style="--c:${b.id === 'shard' ? '#4fe3d3' : b.id === 'aegis' ? '#c58bff' : '#ffb347'}">${b.label} ${Math.ceil(b.t)}s</span>`).join('');
       if (!$('shop').hidden) renderShop();
       if (!$('board').hidden) renderBoard();
       renderFeed();
@@ -401,7 +404,7 @@
   SF.hud = {
     start(opts, cb) {
       bind();
-      onEnd = cb; ended = false; paused = false; annQ = []; annT = 0; aim = null; upWait = 0; keys.clear();
+      onEnd = cb; ended = false; paused = false; annQ = []; annT = 0; aim = null; upWait = 0; slowmo = 0; keys.clear();
       joy.id = null; joy.dir = null; $('joy').hidden = true; $('joyHint').hidden = false;
       $('match').hidden = false;
       // opts.remote: an online match object with the same interface as SF.Match (see net.js).
@@ -422,6 +425,7 @@
       m.on('announce', (text, team, sub) => annQ.push({ text, team, sub }));
       m.on('kill', ev => {
         renderFeed();
+        if (ev.killer === m.player && R) { R.kick(ev.text ? 1.4 : 1); slowmo = Math.max(slowmo, ev.text ? 0.45 : 0.25); if (SF.haptics) SF.haptics.impact(); }
         if (ev.victim === m.player) renderRecap(ev.victim.recapInfo || (m.recap ? m.recap(ev.victim, ev.killer) : null));
         if (ev.killer === m.player || ev.victim === m.player || ev.assists.includes(m.player)) { SF.sfx.play('kill'); if (SF.haptics) SF.haptics.impact(); }
       });
@@ -434,7 +438,7 @@
       m.on('gold', () => { const n = performance.now(); if (n - lastCoin > 160) { lastCoin = n; SF.sfx.play('coin'); } });
       m.on('tower', () => SF.sfx.play('tower'));
       m.on('end', team => {
-        ended = true; annQ = [];
+        ended = true; annQ = []; slowmo = 1.2; if (R) R.kick(1.6);
         $('shop').hidden = true; $('board').hidden = true; $('death').hidden = true; $('game').classList.remove('dead');
         showAnnounce({ text: team === 0 ? 'Victory' : 'Defeat', team: team === 0 ? 2 : 1, sub: team === 0 ? 'The enemy Heartstone shatters' : 'Your Heartstone has fallen' });
         SF.sfx.play(team === 0 ? 'win' : 'lose');

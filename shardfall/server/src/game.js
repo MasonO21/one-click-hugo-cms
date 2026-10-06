@@ -76,7 +76,7 @@ export class Room {
     const applyDamage = m.applyDamage.bind(m);
     m.applyDamage = (src, t, amt, o = {}) => {
       const n = applyDamage(src, t, amt, o);
-      if (n >= 1 && ((src && src.kind === 'hero') || t.kind === 'hero')) push('dmg', src ? src.id : 0, t.id, Math.round(n), o.skill ? 1 : 0);
+      if (n >= 1 && ((src && src.kind === 'hero') || t.kind === 'hero')) push('dmg', src ? src.id : 0, t.id, Math.round(n), o.skill ? 1 : 0, o.crit ? 1 : 0);
       return n;
     };
     const heal = m.heal.bind(m);
@@ -188,6 +188,9 @@ export class Room {
       if (structure) { e.rg = x.range; if (x.guard) e.g = x.guard.id; if (x.target) e.tg = x.target.id; }
       if (x.kind === 'hero') {
         e.h = x.def0.id; e.sk = x.skin; e.n = x.name; e.bu = x.bush;
+        if (x.pstack) e.ps = x.pstack;
+        if (x.hasBuff('aegis')) e.ag = 1;
+        if (x.rebornT > m.t) e.rb = 1;
         if (x.invisT > 0) e.iv = 1;
         if (x.team === team) e.ev = m.visible(x, 1 - team) ? 1 : 0;
         if (x.recallT > 0) e.rc = r1(x.recallT);
@@ -201,6 +204,7 @@ export class Room {
       pj: m.projs.filter(p => !p.homing || p.homing.kind !== 'hero' || p.homing.team === team || m.visible(p.homing, team)).map(p => ({ x: r1(p.x), y: r1(p.y), vx: p.vx != null ? r2(p.vx) : undefined, vy: p.vy != null ? r2(p.vy) : undefined, sp: p.speed, kind: p.kind, c: p.color, r: p.r, ho: p.homing ? p.homing.id : undefined, src: p.kind === 'hook' ? p.src.id : undefined, ang: r2(p.ang || 0) })),
       cp: m.camps.map(c => [c.x, c.y, c.unit && c.unit.alive ? 1 : 0]),
       sd: m.shard && m.shard.alive ? m.shard.id : 0,
+      wy: m.wyrm && m.wyrm.alive ? m.wyrm.id : 0,
       ev: events
     };
     if (me) {

@@ -436,7 +436,9 @@
 
   function heroDetail(id) {
     const h = SF.HERO[id], owned = S.owns.hero(id), free = S.freeRotation().includes(id), m = S.masteryOf(id);
-    const skills = h.skills.map((s, i) => `<div class="skill"><span class="ic">${SF.ICONS[s.kind]}</span><div><b>${s.name}</b>
+    const passive = h.passive ? `<div class="skill passive"><span class="ic">${SF.ICONS.passive}</span><div><b>${h.passive.name}</b>
+      <span class="muted" style="font-size:12px"> Passive</span><p>${h.passive.desc}</p></div></div>` : '';
+    const skills = passive + h.skills.map((s, i) => `<div class="skill"><span class="ic">${SF.ICONS[s.kind]}</span><div><b>${s.name}</b>
       <span class="muted" style="font-size:12px"> ${i === 2 ? 'Ultimate · ' : ''}${s.cd}s cooldown</span><p>${s.desc}</p></div></div>`).join('');
     let actions;
     if (owned) actions = S.d.selected === id ? '<span class="tag sel-tag">Selected for battle</span>' : `<button class="btn primary" data-act="select" data-id="${id}">Select</button>`;

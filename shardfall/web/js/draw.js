@@ -18,6 +18,8 @@
   // Graphics settings (set from the lobby): low = no glow blur and fewer cosmetic particles.
   SF.gfx = SF.gfx || { low: false, numbers: true };
   const blur = v => (SF.gfx.low ? 0 : v);
+  // Passives that build stacks, and how many pips they show (Galewind: the 4th attack fires).
+  const PASSIVE_PIPS = { kindling: 2, galewind: 3, overcharge: 3, focus: 4 };
   const AURA = { frost: '#cfefff', gold: '#ffe27a', bubbles: '#8ff7ff', leaf: '#ffb35c', storm: '#c8d4ff', embers: '#ff8a3d', void: '#8a5bff' };
 
   function poly(g, pts, x, y, s) {
@@ -330,6 +332,29 @@
       gr.addColorStop(0, '#fff3c4'); gr.addColorStop(0.35, '#ff9d3d'); gr.addColorStop(1, 'rgba(255,90,40,0)');
       g.fillStyle = gr; g.beginPath(); g.arc(u.x, cy, r * 1.3, 0, TAU); g.fill();
       if (Math.random() < 0.4) u.m.parts.push({ x: u.x + (Math.random() - 0.5) * r, y: cy, vx: 0, vy: -50, life: 0.6, max: 0.6, color: '#ffb347', size: 3 });
+    } else if (u.mtype === 'wyrm') {
+      // A coiled crystal serpent: body segments trail behind a raised head.
+      const cy = u.y - r * 0.7, sway = Math.sin(t * 1.6) * 6;
+      const glow = g.createRadialGradient(u.x, cy, 0, u.x, cy, r * 2.4);
+      glow.addColorStop(0, 'rgba(180,140,255,.42)'); glow.addColorStop(1, 'rgba(180,140,255,0)');
+      g.fillStyle = glow; g.beginPath(); g.arc(u.x, cy, r * 2.4, 0, TAU); g.fill();
+      const segs = 11;
+      for (let i = segs; i >= 1; i--) {
+        const k = i / segs;
+        const sx = u.x - r * 0.2 + k * r * 2.1, sy = cy + r * 0.25 + Math.sin(k * 5 - t * 2) * r * 0.3 - (1 - k) * r * 0.2;
+        const sr = r * (0.5 - 0.3 * k);
+        poly(g, [[0, -1], [0.85, -0.2], [0.6, 0.8], [-0.6, 0.8], [-0.85, -0.2]], sx, sy, sr);
+        const gr = g.createLinearGradient(sx, sy - sr, sx, sy + sr); gr.addColorStop(0, '#e6d6ff'); gr.addColorStop(0.5, '#8a5bff'); gr.addColorStop(1, '#2a1660');
+        g.fillStyle = gr; g.fill(); g.strokeStyle = '#1c0f44'; g.lineWidth = 1.5; g.stroke();
+        if (i % 3 === 0) { poly(g, [[0, -1], [0.35, 0], [0, 0.4], [-0.35, 0]], sx, sy - sr * 0.9, sr * 0.7); g.fillStyle = '#4fe3d3'; g.fill(); }
+      }
+      const hx = u.x - r * 0.45 + sway * 0.3, hy = cy - r * 0.45 + sway * 0.2;
+      for (const s of [-1, 1]) { poly(g, [[0, -1], [0.3, 0], [0, 0.3], [-0.3, 0]], hx + s * r * 0.32, hy - r * 0.42, r * 0.38); g.fillStyle = '#4fe3d3'; g.fill(); }
+      poly(g, [[0, -0.9], [0.8, -0.35], [0.95, 0.35], [0.4, 0.95], [-0.4, 0.95], [-0.95, 0.35], [-0.8, -0.35]], hx, hy, r * 0.62);
+      const hg = g.createLinearGradient(hx - r, hy - r, hx + r, hy + r); hg.addColorStop(0, '#f2e8ff'); hg.addColorStop(0.45, '#9b6bff'); hg.addColorStop(1, '#331a7a');
+      g.fillStyle = hg; g.fill(); g.strokeStyle = '#1c0f44'; g.lineWidth = 2; g.stroke();
+      for (const s of [-1, 1]) { g.beginPath(); g.arc(hx + s * r * 0.22, hy - r * 0.02, r * 0.09, 0, TAU); g.fillStyle = '#7dfcf0'; g.shadowColor = '#4fe3d3'; g.shadowBlur = blur(12); g.fill(); g.shadowBlur = 0; }
+      if (!SF.gfx.low && Math.random() < 0.35) u.m.parts.push({ x: u.x + (Math.random() - 0.5) * r * 2, y: cy + (Math.random() - 0.5) * r, vx: 0, vy: -40, life: 0.8, max: 0.8, color: '#c9a6ff', size: 3, shape: 'diamond' });
     } else if (u.mtype === 'thorn') {
       const cy = u.y - r * 0.8;
       const pts = Array.from({ length: 14 }, (_, i) => { const a = i / 14 * TAU, k = i % 2 ? 0.75 : 1.08; return [Math.cos(a) * k, Math.sin(a) * k * 0.8]; });
@@ -409,6 +434,12 @@
     g.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.5; g.lineTo(Math.cos(a) * 95, Math.sin(a) * 64); } g.closePath();
     g.strokeStyle = '#4fe3d355'; g.lineWidth = 2; g.stroke();
     g.restore();
+    // wyrm abyss (bottom river): a dark rift ringed in violet
+    g.save(); g.translate(W.riverX, 1050);
+    g.beginPath(); g.ellipse(0, 0, 140, 92, 0, 0, TAU); g.fillStyle = '#1d1838'; g.fill(); g.strokeStyle = '#9b6bff88'; g.lineWidth = 4; g.stroke();
+    g.beginPath(); g.ellipse(0, 0, 96, 60, 0, 0, TAU); g.strokeStyle = '#9b6bff44'; g.lineWidth = 2; g.stroke();
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; g.beginPath(); g.moveTo(Math.cos(a) * 100, Math.sin(a) * 64); g.lineTo(Math.cos(a) * 132, Math.sin(a) * 86); g.strokeStyle = '#b48cff55'; g.lineWidth = 3; g.stroke(); }
+    g.restore();
     // camps
     [[1000, 270], [1000, 930], [2200, 930], [2200, 270]].forEach(([x, y]) => {
       for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; g.beginPath(); g.ellipse(x + Math.cos(a) * 70, y + Math.sin(a) * 34, 10, 7, 0, 0, TAU); g.fillStyle = i % 2 ? '#56604f' : '#424a3d'; g.fill(); }
@@ -463,11 +494,17 @@
       const mw = this.mm.clientWidth || 192;
       this.mm.width = Math.round(mw * dpr); this.mm.height = Math.round(mw * dpr * W.h / W.w);
     }
-    toScreen(x, y) { return { x: (x - this.x0) * this.zoom, y: (y - this.y0) * this.zoom }; }
-    toWorld(sx, sy) { return { x: this.x0 + sx / this.zoom, y: this.y0 + sy / this.zoom }; }
+    toScreen(x, y) { const z = this.zr || this.zoom; return { x: (x - this.x0) * z, y: (y - this.y0) * z }; }
+    toWorld(sx, sy) { const z = this.zr || this.zoom; return { x: this.x0 + sx / z, y: this.y0 + sy / z }; }
+    // Kill impact: a quick zoom punch and a gold flash at the screen edges.
+    kick(power = 1) { this.kickT = 0.4; this.kickP = power; }
 
     draw(m, aim) {
-      const g = this.g, z = this.zoom, dpr = this.dpr, t = m.t, p = m.player;
+      const g = this.g, dpr = this.dpr, t = m.t, p = m.player;
+      const now = performance.now(), fdt = Math.min(0.05, (now - (this.lastNow || now)) / 1000); this.lastNow = now;
+      if (this.kickT > 0) this.kickT = Math.max(0, this.kickT - fdt);
+      const kick = this.kickT > 0 ? Math.pow(this.kickT / 0.4, 2) * (this.kickP || 1) : 0;
+      const z = this.zr = this.zoom * (1 + 0.06 * kick);
       if (!this.bushImgs) this.bushImgs = m.bushes.map(buildBush);
       const vw = this.cw / z, vh = this.ch / z;
       const focus = p.alive ? p : p.spawn;
@@ -540,7 +577,26 @@
           let alpha = 1;
           if (u.team === 0 && (u.invisT > 0 || (u.bush >= 0 && !u.vis[1]))) alpha = 0.55;
           const top = drawHero(g, { heroId: u.def0.id, skinId: u.skin, x: u.x, y: u.y, face: u.face, t: t + u.id, scale: 1, ring, moving: u.moving, alpha, flash: u.flash, seed: u.id, state: u });
-          if (u.stunT > 0) { for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; g.beginPath(); g.arc(u.x + Math.cos(a) * 16, top - 8 + Math.sin(a) * 5, 3.5, 0, TAU); g.fillStyle = '#ffe27a'; g.fill(); } }
+          if (u.aegis || (u.hasBuff && u.hasBuff('aegis'))) {
+            // Wyrm Aegis: a violet ring with four turning shards around the feet.
+            g.save(); g.translate(u.x, u.y);
+            g.beginPath(); g.ellipse(0, 0, 40, 17, 0, 0, TAU); g.strokeStyle = 'rgba(197,139,255,.85)'; g.lineWidth = 3; g.shadowColor = '#c58bff'; g.shadowBlur = blur(12); g.stroke(); g.shadowBlur = 0;
+            for (let i = 0; i < 4; i++) { const a = t * 1.6 + i * TAU / 4; poly(g, [[0, -1], [0.55, 0], [0, 1], [-0.55, 0]], Math.cos(a) * 40, Math.sin(a) * 17 - 6, 7); g.fillStyle = '#efe0ff'; g.fill(); }
+            g.restore();
+          }
+          if (u.reborn || u.rebornT > m.t) { g.globalAlpha = 0.5; ellipse(g, u.x, u.y - 40, 40, 56); g.fillStyle = 'rgba(230,208,255,.35)'; g.fill(); g.globalAlpha = 1; }
+          const pv = u.def0 && u.def0.passive, pipN = pv && PASSIVE_PIPS[pv.id];
+          if (pipN && u.pstack > 0) {
+            // Passive stacks: small diamonds over the head, all lit (and glowing) when the next one fires.
+            const full = u.pstack >= pipN, col = (SF.SKIN[u.skin] || {}).c1 || '#fff';
+            for (let i = 0; i < pipN; i++) {
+              poly(g, [[0, -1], [0.62, 0], [0, 1], [-0.62, 0]], u.x + (i - (pipN - 1) / 2) * 13, top - 2, 6);
+              g.fillStyle = i < u.pstack ? (full ? '#ffe27a' : col) : 'rgba(10,14,30,.55)';
+              if (full) { g.shadowColor = '#ffe27a'; g.shadowBlur = blur(10); }
+              g.fill(); g.shadowBlur = 0; g.lineWidth = 1.2; g.strokeStyle = 'rgba(255,255,255,.6)'; g.stroke();
+            }
+          }
+          if (u.stunT > 0) { for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; g.beginPath(); g.arc(u.x + Math.cos(a) * 16, top - 18 + Math.sin(a) * 5, 3.5, 0, TAU); g.fillStyle = '#ffe27a'; g.fill(); } }
           if (u.shield > 0) { const ry = (u.y - top) / 2 + 10; g.beginPath(); g.ellipse(u.x, u.y - ry + 12, 36, ry, 0, 0, TAU); g.strokeStyle = 'rgba(230,240,255,.5)'; g.lineWidth = 2; g.stroke(); }
         } else if (u.kind === 'minion') drawMinion(g, u, t);
         else if (u.kind === 'monster') drawMonster(g, u, t);
@@ -603,6 +659,11 @@
 
       // ---- screen-space overlays (bars, names, numbers) ----
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (kick > 0.01) {
+        const vg = g.createRadialGradient(this.cw / 2, this.ch / 2, Math.min(this.cw, this.ch) * 0.35, this.cw / 2, this.ch / 2, Math.max(this.cw, this.ch) * 0.75);
+        vg.addColorStop(0, 'rgba(255,214,90,0)'); vg.addColorStop(1, `rgba(255,214,90,${0.35 * Math.min(1, kick)})`);
+        g.fillStyle = vg; g.fillRect(0, 0, this.cw, this.ch);
+      }
       for (const u of list) {
         if (!u.alive) continue;
         const s = this.toScreen(u.x, u.y);
@@ -622,7 +683,7 @@
     }
 
     heroBar(g, u, s, isMe) {
-      const z = this.zoom, y = s.y - 92 * z - 14, w = 64, h = 7;
+      const z = this.zr || this.zoom, y = s.y - 92 * z - 14, w = 64, h = 7;
       const col = isMe ? '#5be38a' : SF.TEAM_COLORS[u.team];
       this.bar(g, s.x + 6, y, w, h, u.hpPct, col, u.shield / u.maxHp, u.maxHp);
       g.beginPath(); g.arc(s.x - w / 2 - 4, y + h / 2, 9, 0, TAU); g.fillStyle = '#0d1230'; g.fill(); g.strokeStyle = col; g.lineWidth = 1.5; g.stroke();
@@ -738,6 +799,7 @@
       const px = Math.max(1.5, w / 130);
       for (const c of m.camps) if (c.unit && c.unit.alive) dot(c.x, c.y, px * 1.1, '#c9b27a');
       if (m.shard && m.shard.alive) dot(m.shard.x, m.shard.y, px * 2, '#4fe3d3', '#fff');
+      if (m.wyrm && m.wyrm.alive) dot(m.wyrm.x, m.wyrm.y, px * 2.2, '#9b6bff', '#fff');
       for (const u of m.units) {
         if (!u.alive) continue;
         if (u.kind === 'tower' || u.kind === 'core') { const s = u.kind === 'core' ? px * 3.2 : px * 2.4; g.fillStyle = SF.TEAM_COLORS[u.team]; g.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s); }

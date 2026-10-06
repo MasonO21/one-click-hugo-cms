@@ -552,3 +552,7 @@ img.art { display: block; width: 100%; aspect-ratio: 1 / 1; max-width: 100%; obj
 .pbtn .pips i { width: 7px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.22); }
 .pbtn .pips i.on { background: #ffe27a; box-shadow: 0 0 4px rgba(255, 226, 122, 0.8); }
 .pbtn.s2 .pips { bottom: -10px; }
+
+/* Hero passive row in the hero screen */
+.skill.passive .ic { background: radial-gradient(circle at 35% 28%, #ffe9a8, #a8741a 75%); border-color: rgba(255, 230, 170, 0.6); }
+.skill.passive .ic svg { color: #2a1800; }

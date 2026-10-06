@@ -61,7 +61,7 @@
     }
     recalc() {
       const b = this.def0.base, g = this.def0.grow, lv = this.level - 1;
-      const add = { hp: 0, atk: 0, power: 0, def: 0, ms: 0, as: 0, regen: 0, lifesteal: 0, cdr: 0 };
+      const add = { hp: 0, atk: 0, power: 0, def: 0, ms: 0, as: 0, regen: 0, lifesteal: 0, cdr: 0, crit: 0 };
       for (const id of this.items) { const s = SF.ITEMS[id].stats; for (const k in s) add[k] += s[k]; }
       const newMax = b.hp + g.hp * lv + add.hp;
       if (newMax > this.maxHp) this.hp += newMax - this.maxHp;
@@ -75,6 +75,7 @@
       this.regen = b.regen + lv * 0.6 + add.regen;
       this.lifesteal = add.lifesteal;
       this.cdr = Math.min(0.4, add.cdr);
+      this.crit = Math.min(0.6, add.crit);
       this.passives = new Set(this.items.map(id => SF.ITEMS[id].passive).filter(Boolean));
     }
     nextItem() { return this.items.length >= 6 ? null : this.def0.build.find(id => !this.items.includes(id)) || null; }
@@ -177,7 +178,7 @@
     },
     veil(m, h) {
       h.invisT = 3; h.addBuff({ id: 'veil', t: 3, msMul: 0.3 }); h.addBuff({ id: 'veilstrike', t: 6 });
-      m.heal(h, h.maxHp * 0.08);
+      m.heal(h, h.maxHp * 0.1);
       m.burst(h.x, h.y, '#6b4bd6', 20, 160);
       if (h.brain) h.target = null;
       return true;
@@ -350,8 +351,9 @@
       this.kills = [0, 0]; this.over = false; this.winner = -1;
       this.nextWave = 4; this.waveN = 0; this.firstBlood = false;
       this.shard = null; this.shardAt = 90; this.shardSpawnedT = 0; this.siegeBonus = [0, 0];
+      this.wyrm = null; this.wyrmAt = 360; this.wyrmSpawnedT = 0;   // late-game objective at the bottom river
       this.overcharged = false; this.shakeT = 0; this.shakeMag = 0;
-      this.teamStats = [{ towers: 0, shards: 0 }, { towers: 0, shards: 0 }];
+      this.teamStats = [{ towers: 0, shards: 0, wyrms: 0 }, { towers: 0, shards: 0, wyrms: 0 }];
       this.fountains = [{ x: 110, y: W.laneY, r: 230 }, { x: W.w - 110, y: W.laneY, r: 230 }];
       // 'classic' (quick / ranked / online) or 'brawl': start at level 5 with gold, no jungle, early Shard.
       this.mode = opts.mode === 'brawl' ? 'brawl' : 'classic';
@@ -359,7 +361,7 @@
       this.setupMap();
       this.setupHeroes();
       if (this.mode === 'brawl') {
-        this.camps = []; this.shardAt = 45; this.nextWave = 2; this.waveEvery = 25; this.overchargeAt = 240; this.respawnMul = 0.6;
+        this.camps = []; this.shardAt = 45; this.wyrmAt = 150; this.nextWave = 2; this.waveEvery = 25; this.overchargeAt = 240; this.respawnMul = 0.6;
         for (const h of this.heroes) { h.level = 5; h.points = 5; h.recalc(); h.hp = h.maxHp; h.gold = 1800; }
         for (const u of this.units) if (isStructure(u)) { u.maxHp *= 0.7; u.hp = u.maxHp; }
       }
@@ -388,7 +390,7 @@
       this.bushes = [
         { x: 1360, y: 452, rx: 120, ry: 46 }, { x: 1840, y: 748, rx: 120, ry: 46 },
         { x: 820, y: 820, rx: 92, ry: 66 }, { x: 2380, y: 380, rx: 92, ry: 66 },
-        { x: 1600, y: 905, rx: 110, ry: 60 }, { x: 1425, y: 300, rx: 78, ry: 58 }, { x: 1775, y: 300, rx: 78, ry: 58 }
+        { x: 1600, y: 870, rx: 110, ry: 56 }, { x: 1425, y: 300, rx: 78, ry: 58 }, { x: 1775, y: 300, rx: 78, ry: 58 }
       ];
     }
 
@@ -465,6 +467,7 @@
       if (this.t >= this.nextWave) { this.spawnWave(); this.nextWave += this.waveEvery; }
       for (const c of this.camps) if (!c.unit && this.t >= c.respawnAt) this.spawnCamp(c);
       if (!this.shard && this.t >= this.shardAt) this.spawnShard();
+      if (!this.wyrm && this.t >= this.wyrmAt) this.spawnWyrm();
       if (!this.overcharged && this.t >= this.overchargeAt) { this.overcharged = true; this.announce('Shards Overcharged', 2, 'Minions are empowered'); }
       for (const h of this.heroes) { this.addGold(h, 3.2 * dt, true); if (h.alive) this.giveXp(h, 2 * dt); }
       if (this.later_.length) {
@@ -495,6 +498,7 @@
       for (let i = 0; i < 3; i++) h.skillCd[i] = Math.max(0, h.skillCd[i] - dt);
       h.spellCd = Math.max(0, h.spellCd - dt);
       if (h.ccImmune > 0) h.ccImmune -= dt;
+      this.passiveTick(h);
       h.hp = Math.min(h.maxHp, h.hp + h.regen * dt);
       if (h.multiT > 0) { h.multiT -= dt; if (h.multiT <= 0) h.multiN = 0; }
       if (h.invisT > 0) h.invisT -= dt;
@@ -563,6 +567,18 @@
       }));
       this.shardSpawnedT = this.t;
       this.announce('The Shard Colossus awakens', 2, 'Defeat it to empower your team');
+    }
+
+    // The Abyssal Wyrm: tougher than the Colossus, later, at the opposite end of the river. Its reward
+    // is Wyrm Aegis: every hero on the team that slays it cheats death once in the next 150 seconds.
+    spawnWyrm() {
+      const mins = this.t / 60;
+      this.wyrm = this.add(new Unit(this, {
+        kind: 'monster', mtype: 'wyrm', team: 2, x: W.riverX, y: 1050, home: { x: W.riverX, y: 1050 },
+        name: 'Abyssal Wyrm', maxHp: 6000 + 200 * mins, atk: 110 + 7 * mins, r: 58, def: 45, range: 170, as: 0.55, ms: 190, breathCd: 5
+      }));
+      this.wyrmSpawnedT = this.t;
+      this.announce('The Abyssal Wyrm rises', 2, 'Slay it and your team cheats death once');
     }
 
     // ---- visibility (bushes, invisibility) ---------------------------------
@@ -661,6 +677,14 @@
       }
       if (u.aggro) u.target = u.aggro;
       else { u.target = null; u.want = d2(u, home) > 20 * 20 ? home : null; u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.05 * dt); }
+      if (u.mtype === 'wyrm' && u.aggro) {
+        u.breathCd -= dt;
+        if (u.breathCd <= 0) {
+          u.breathCd = 6;
+          for (const h of this.heroes) if (h.alive && d2(h, u) < 270 * 270) { this.applyDamage(u, h, 130 + 0.04 * h.maxHp); this.slow(h, 0.4, 1.5); }
+          this.ring(u.x, u.y, 270, '#b48cff', 0.6, 9); this.burst(u.x, u.y - 40, '#c9a6ff', 26, 300); this.shake(6);
+        }
+      }
       if (u.mtype === 'colossus' && u.aggro) {
         u.slamCd -= dt;
         if (u.slamCd <= 0) {
@@ -777,6 +801,59 @@
       this.emit('buy', h, id);
       return true;
     }
+    // ---- hero passives ----------------------------------------------------------------
+    // Basic-attack passives. Returns the attack's damage; may tag the hit (opt.gale).
+    passiveAttack(u, t, dmg, opt) {
+      switch (u.def0.passive.id) {
+        case 'kindling':   // Kaida: 2 stacks from skill hits -> an erupting, healing attack
+          if (u.pstack >= 2) { dmg *= 1.6; u.pstack = 0; this.heal(u, u.maxHp * 0.08); this.burst(t.x, t.y, '#ff8a3d', 18, 240); this.ring(t.x, t.y, 70, '#ffb347', 0.3, 5); }
+          break;
+        case 'galewind':   // Sylva: every 4th attack
+          u.pstack = (u.pstack || 0) + 1;
+          if (u.pstack >= 4) { u.pstack = 0; dmg *= 1.4; opt.gale = true; this.burst(u.x, u.y - 20, '#c8ffe0', 10, 200); }
+          break;
+        case 'predator':   // Nyx
+          if (t.kind === 'hero' && t.hpPct < 0.5) dmg *= 1.15;
+          break;
+        case 'focus':      // Rhea: ramps on one target
+          if (u.focusT === t) u.pstack = Math.min(4, (u.pstack || 0) + 1); else { u.focusT = t; u.pstack = 0; }
+          dmg *= 1 + 0.08 * u.pstack;
+          break;
+        case 'dawnlight': { // Lumen: every 6s an attack also heals the most wounded ally nearby
+          if (u.dawnT > this.t) break;
+          let best = null;
+          for (const a of this.heroes) if (a.alive && a.team === u.team && a.hpPct < 1 && d2(a, u) < 600 * 600 && (!best || a.hpPct < best.hpPct)) best = a;
+          if (best) { this.heal(best, best.maxHp * 0.04); this.beam(u, best, '#fff3b0'); this.burst(best.x, best.y - 20, '#fff3b0', 8, 120); u.dawnT = this.t + 6; }
+          break;
+        }
+      }
+      return dmg;
+    }
+    // Passives on hero-vs-hero hits (attacks and skills). Returns the damage.
+    passiveHit(src, t, amt, o) {
+      const id = src.def0.passive.id;
+      if (o.skill) {
+        if (id === 'kindling' && (src.pstack || 0) < 2) { src.pstack = (src.pstack || 0) + 1; src.pstackT = this.t + 6; }
+        if (id === 'undertow') { if (t.soakT > this.t && t.soakBy === src) amt *= 1.2; t.soakT = this.t + 3; t.soakBy = src; }
+        if (id === 'overcharge') {
+          src.pstack = Math.min(3, (src.pstack || 0) + 1);
+          if (src.pstack >= 3 && !(src.ochT > this.t)) { this.stun(t, 0.6); src.pstack = 0; src.ochT = this.t + 4; this.bolt(t.x, t.y, '#d9b8ff'); }
+        }
+      }
+      // Tidewall (Oska): allies near an Oska take less damage from heroes.
+      for (const a of this.heroes) if (a.alive && a.team === t.team && a.def0.passive.id === 'tidewall' && d2(a, t) < 450 * 450) { amt *= 0.92; break; }
+      return amt;
+    }
+    // Per-tick passive upkeep (stack timeouts, Bloodrage).
+    passiveTick(h) {
+      const id = h.def0.passive.id;
+      if (id === 'kindling' && h.pstack && this.t > h.pstackT) h.pstack = 0;
+      if (id === 'bloodrage') {
+        h.rage = clamp((1 - h.hpPct) / 0.8, 0, 1);
+        if (h.rage > 0.02) h.addBuff({ id: 'bloodrage', t: 0.3, asMul: 0.4 * h.rage }); else h.removeBuff('bloodrage');
+      }
+    }
+
     // ---- skill ranks ------------------------------------------------------------------
     rankCap(h, i) { const R = SF.SKILL_RANK; return i === 2 ? R.ultAt.filter(l => h.level >= l).length : Math.min(R.max[i], Math.ceil(h.level / 2)); }
     canUpgrade(h, i) { return h.points > 0 && i >= 0 && i < 3 && h.ranks[i] < this.rankCap(h, i); }
@@ -816,8 +893,8 @@
       } else if (kind === 'retreat') {
         target = this.frontStructure(h.team); text = 'Retreat!';
       } else {
-        const sh = this.shard && this.shard.alive ? this.shard : null;
-        target = sh || h; text = sh ? 'Take the Colossus!' : 'Group up!';
+        const obj = [this.shard, this.wyrm].filter(u => u && u.alive).sort((a, b) => d2(a, h) - d2(b, h))[0];
+        target = obj || h; text = obj ? (obj.mtype === 'wyrm' ? 'Take the Wyrm!' : 'Take the Colossus!') : 'Group up!';
       }
       if (kind !== 'retreat') { x = target.x; y = target.y; }
       const s = { kind, team: h.team, x, y, t: this.t, from: h, target, text, until: this.t + SF.SIGNALS[kind].dur };
@@ -847,7 +924,7 @@
         if (id === 'shatter' ? u.kind !== 'hero' : u.kind !== 'monster' && u.kind !== 'minion') continue;
         const D = dist(u, h) - u.r;
         if (D > R) continue;
-        const sc = id === 'shatter' ? u.hp : (u.mtype === 'colossus' ? 0 : u.kind === 'monster' ? 1e5 : 2e5) + D;
+        const sc = id === 'shatter' ? u.hp : (u.mtype === 'colossus' || u.mtype === 'wyrm' ? 0 : u.kind === 'monster' ? 1e5 : 2e5) + D;
         if (sc < bs) { bs = sc; best = u; }
       }
       return best;
@@ -943,26 +1020,29 @@
         else dmg *= 1.5;
         u.lastT = t;
       }
+      const opt = { basic: true };
       if (u.kind === 'hero') {
         u.revealT = this.t + 1; u.invisT = 0; u.recallT = 0;
         if (u.hasBuff('veilstrike')) { dmg *= 2; u.removeBuff('veilstrike'); this.burst(t.x, t.y, '#b49bff', 12, 200); }
         if (u.hasBuff('mirror')) { dmg *= 1.8; u.removeBuff('mirror'); this.burst(t.x, t.y, skinC(u), 12, 200); }
+        dmg = this.passiveAttack(u, t, dmg, opt);
+        if (u.crit > 0 && Math.random() < u.crit) { dmg *= 1.75; opt.crit = true; }
       }
       if (u.range > 200) {
         const src = isStructure(u) ? { x: u.x, y: u.y - (u.kind === 'core' ? 90 : 80) } : { x: u.x + u.face.x * u.r, y: u.y + u.face.y * u.r };
         this.projs.push({
-          homing: t, x: src.x, y: src.y, speed: isStructure(u) ? 950 : 1150, dmg, src: u, team: u.team, basic: true,
+          homing: t, x: src.x, y: src.y, speed: isStructure(u) ? 950 : 1150, dmg, src: u, team: u.team, basic: true, opt,
           color: u.kind === 'hero' ? skinC(u) : SF.TEAM_COLORS[u.team], r: isStructure(u) ? 10 : u.kind === 'hero' ? 6 : 4,
           kind: isStructure(u) ? 'bolt' : 'basic'
         });
       } else {
-        this.applyDamage(u, t, dmg, { basic: true });
+        this.applyDamage(u, t, dmg, opt);
         if (u.kind === 'hero' || u.kind === 'monster') this.slashFx(t.x, t.y, Math.atan2(u.face.y, u.face.x), u.kind === 'hero' ? skinC(u) : '#e8d9a8');
       }
       if (u === this.player || t === this.player) this.emit('hit', u, t);
     }
     applyDamage(src, t, amt, o = {}) {
-      if (!t.alive) return 0;
+      if (!t.alive || t.rebornT > this.t) return 0;
       if (isStructure(t) && !this.targetable(t)) return 0;
       if (o.skill && o.skill.id && src && src.ranks) {
         const i = src.def0.skills.indexOf(o.skill);
@@ -974,6 +1054,8 @@
         if (src.passives.has('wither')) t.witherT = this.t + 2.5;
       }
       if (o.basic && src && src.passives && src.passives.has('frost') && !isStructure(t)) this.slow(t, 0.2, 1);
+      if (o.gale && !isStructure(t)) this.slow(t, 0.3, 0.8);
+      if (src && src.kind === 'hero' && t.kind === 'hero' && t.team !== src.team) amt = this.passiveHit(src, t, amt, o);
       // Spined Carapace: reflect a quarter of a hero's attack back as true damage.
       if (o.basic && !o.reflect && t.passives && t.passives.has('thorns') && src && src.kind === 'hero' && src.alive) this.applyDamage(t, src, amt * 0.25, { true: true, reflect: true });
       if (src && src.dmgMul && !o.true) amt *= src.dmgMul();
@@ -988,20 +1070,27 @@
         amt *= 100 / (100 + Math.max(0, t.def));
         amt *= 1 - Math.min(0.6, t.bv('dmgRed'));
       }
+      // Bedrock (Brakka): falling below 40% raises a shield that already soaks this hit.
+      if (t.kind === 'hero' && t.def0.passive.id === 'bedrock' && !(t.bedrockT > this.t) && t.hp + t.shield - amt < t.maxHp * 0.4 && t.hp > t.maxHp * 0.4) {
+        this.shieldUnit(t, t.maxHp * 0.12, 4); t.bedrockT = this.t + 30;
+        this.ring(t.x, t.y, 80, '#c9b27a', 0.5, 5); this.burst(t.x, t.y - 30, '#e8d9a8', 16, 160);
+      }
       if (t.shield > 0) { const s = Math.min(t.shield, amt); t.shield -= s; amt -= s; }
       if (t.kind === 'hero' && amt > 0) this.took(t, src, Math.min(amt, t.hp), o.true ? 'true' : o.skill ? 'skill' : 'basic');   // overkill doesn't count
       t.hp -= amt; t.flash = 0.1;
       if (src && src.kind === 'hero') {
         src.dmgDealt += amt;
-        if (o.basic && src.lifesteal) src.hp = Math.min(src.maxHp, src.hp + amt * src.lifesteal * (src.witherT > this.t ? 0.5 : 1));
+        const ls = src.lifesteal + (src.def0.passive.id === 'bloodrage' ? 0.15 * (src.rage || 0) : 0);   // Bloodrage (Drace)
+        if (o.basic && ls) src.hp = Math.min(src.maxHp, src.hp + amt * ls * (src.witherT > this.t ? 0.5 : 1));
         if (t.kind === 'hero') { src.aggroT = this.t; t.hitBy.set(src, this.t); }
       }
       if (t.kind === 'hero' && t.recallT > 0) t.recallT = 0;
       if (t.kind === 'monster' && src && !t.resetting) t.aggro = src;
       if (amt >= 1 && (src === this.player || t === this.player) && !(SF.gfx && SF.gfx.numbers === false)) {
-        const col = t === this.player ? '#ff6b7a' : o.skill ? '#ffb347' : '#ffffff';
-        this.float(t.x + (Math.random() - 0.5) * 20, t.y - t.r - 26, Math.round(amt), col, o.skill ? 1.25 : 1);
+        const col = t === this.player ? '#ff6b7a' : o.crit ? '#ffd23f' : o.skill ? '#ffb347' : '#ffffff';
+        this.float(t.x + (Math.random() - 0.5) * 20, t.y - t.r - 26, o.crit ? Math.round(amt) + '!' : Math.round(amt), col, o.crit ? 1.55 : o.skill ? 1.25 : 1);
       }
+      if (t.hp <= 0 && t.kind === 'hero' && t.hasBuff('aegis')) this.aegisSave(t);
       if (t.hp <= 0) this.kill(t, src);
       return amt;
     }
@@ -1027,6 +1116,14 @@
       }
       const rows = [...groups.values()].sort((a, b) => b.total - a.total);
       return { total, rows, killer: killer || null };
+    }
+    // Wyrm Aegis: instead of dying, come back at 40% health, untouchable for 1.5 seconds.
+    aegisSave(t) {
+      t.removeBuff('aegis');
+      t.hp = t.maxHp * 0.4; t.rebornT = this.t + 1.5; t.stunT = 0; t.slowT = 0;
+      this.ring(t.x, t.y, 110, '#c58bff', 0.7, 7); this.burst(t.x, t.y - 30, '#e6d0ff', 30, 260); this.shake(5);
+      this.announce('Aegis', t.team, `${t.name} cheats death`);
+      this.emit('aegis', t);
     }
     lastHero(t) {
       let best = null, bt = this.t - 10;
@@ -1054,6 +1151,17 @@
             this.siegeBonus[team] = 3; this.teamStats[team].shards++;
             this.announce(team === 0 ? 'Your team took the Shard' : 'Enemy took the Shard', team, 'Empowered for 90s + Shard Golems join the next waves');
             this.shake(6);
+          }
+        } else if (t.mtype === 'wyrm') {
+          this.wyrm = null; this.wyrmAt = this.t + 240;
+          if (team >= 0) {
+            for (const h of this.heroes) if (h.team === team) {
+              this.addGold(h, 200); this.giveXp(h, 250);
+              if (h.alive) h.addBuff({ id: 'aegis', t: 150, label: 'Wyrm Aegis' });
+            }
+            this.teamStats[team].wyrms++;
+            this.announce(team === 0 ? 'Your team slew the Wyrm' : 'Enemy slew the Wyrm', team, 'Wyrm Aegis: cheat death once in the next 150s');
+            this.shake(8);
           }
         } else {
           t.camp.unit = null; t.camp.respawnAt = this.t + 70;
@@ -1086,6 +1194,8 @@
           killer.bestMulti = Math.max(killer.bestMulti || 0, killer.multiN);
         }
         assists.forEach(h => { h.ast++; this.addGold(h, 90); });
+        t.pstack = 0;
+        for (const h of [killer, ...assists]) if (h && h.alive && h.def0.passive.id === 'predator') { h.skillCd[0] = 0; this.burst(h.x, h.y, '#b49bff', 14, 200); }
         const near = this.heroes.filter(h => h.alive && h.team !== t.team && d2(h, t) < 1000 * 1000);
         near.forEach(h => this.giveXp(h, (140 + 30 * t.level) * (near.length > 1 ? 0.65 : 1)));
         t.recapInfo = this.recap(t, killer || src);
@@ -1237,7 +1347,7 @@
           if (!t.alive) { p.dead = true; continue; }
           const dx = t.x - p.x, dy = t.y - p.y, L = Math.hypot(dx, dy), step = p.speed * dt;
           p.ang = Math.atan2(dy, dx);
-          if (L <= step + t.r * 0.6) { p.dead = true; this.applyDamage(p.src, t, p.dmg, { basic: p.basic }); }
+          if (L <= step + t.r * 0.6) { p.dead = true; this.applyDamage(p.src, t, p.dmg, p.opt || { basic: p.basic }); }
           else { p.x += dx / L * step; p.y += dy / L * step; }
         } else {
           const step = p.speed * dt;
@@ -1358,8 +1468,12 @@
         if (their > my * 1.2) { h.target = null; const s = m.frontStructure(h.team); h.want = { x: s.x - (h.team === 0 ? 1 : -1) * 60, y: s.y + this.yo * 0.5 }; return; }
       }
 
-      const sh = m.shard;
-      if (sh && sh.alive && hp > 0.55 && m.t - m.shardSpawnedT > 8 && m.heroes.filter(x => x.alive && x.team === h.team).length >= 2) { this.hit(sh); return; }
+      // Objectives: the Colossus, and the tougher Wyrm (only with the whole team up and healthy).
+      const up = m.heroes.filter(x => x.alive && x.team === h.team).length;
+      const sh = m.shard, wy = m.wyrm;
+      const goSh = sh && sh.alive && hp > 0.55 && m.t - m.shardSpawnedT > 8 && up >= 2;
+      const goWy = wy && wy.alive && hp > 0.6 && m.t - m.wyrmSpawnedT > 10 && up >= 3;
+      if (goSh || goWy) { this.hit(goSh && (!goWy || d2(sh, h) < d2(wy, h)) ? sh : wy); return; }
       if (this.jungler && hp > 0.45) { const c = this.pickCamp(); if (c) { this.hit(c.unit); return; } }
       this.lane();
     }
@@ -1374,7 +1488,7 @@
         if (e && h.hpPct > 0.5) h.target = e;   // still swing at anyone in our face
         return true;
       }
-      if (o.kind === 'gather' && T && T.mtype === 'colossus') {
+      if (o.kind === 'gather' && T && (T.mtype === 'colossus' || T.mtype === 'wyrm')) {
         if (!T.alive) return false;
         this.hit(T); return true;
       }

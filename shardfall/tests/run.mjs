@@ -161,6 +161,147 @@ section('Skill ranks', () => {
   }
 });
 
+section('Hero passives', () => {
+  // A frozen duel between two chosen heroes; everyone else parked far away.
+  const duel = (me, them, extra = {}) => {
+    const rest = SF.HEROES.map(h => h.id).filter(id => id !== me && id !== them && id !== 'oska');
+    const enemies = [{ id: them, name: 'Foe' }, { id: rest[2], name: 'E2' }, { id: rest[3], name: 'E3' }];
+    const m = new SF.Match(Object.assign({ hero: me, difficulty: 'normal', allies: [{ id: rest[0], name: 'A1' }, { id: rest[1], name: 'A2' }], enemies }, extra));
+    const p = m.player, foe = m.heroes.find(h => h.def0.id === them);
+    for (const o of m.heroes) { if (o !== p) { o.brain = null; o.human = true; } if (o !== p && o !== foe) { o.x = o.team ? 3100 : 100; o.y = 600; } }
+    m.nextWave = 1e9; p.x = 1500; p.y = 600; foe.x = 1590; foe.y = 600;
+    p.level = 8; p.recalc(); p.hp = p.maxHp; p.ranks = [4, 4, 2]; p.points = 0;
+    m.updateVisibility();
+    return { m, p, foe };
+  };
+  const hit = (m, a, t) => { const hp = t.hp; m.attack(a, t); m.updateProjs(1); a.atkCd = 0; return hp - t.hp; };
+  check('every hero has a named passive', SF.HEROES.every(h => h.passive && h.passive.id && h.passive.name && h.passive.desc));
+  check('passives are all different', new Set(SF.HEROES.map(h => h.passive.id)).size === SF.HEROES.length);
+  {
+    const { m, p, foe } = duel('kaida', 'lumen');
+    const plain = hit(m, p, foe);
+    for (let i = 0; i < 3; i++) m.applyDamage(p, foe, 1, { skill: p.def0.skills[0] });
+    check('Kindling: skill hits build up to two stacks', p.pstack === 2);
+    p.hp = p.maxHp * 0.5; const hp0 = p.hp;
+    const big = hit(m, p, foe);
+    check('Kindling: the next attack erupts for 60% more and heals', Math.abs(big / plain - 1.6) < 0.02 && p.hp > hp0 && !p.pstack, `x${(big / plain).toFixed(2)}`);
+  }
+  {
+    const { m, p, foe } = duel('orin', 'lumen');
+    const a = m.applyDamage(p, foe, 100, { skill: p.def0.skills[0] }), b = m.applyDamage(p, foe, 100, { skill: p.def0.skills[0] });
+    check('Undertow: skills hit Soaked enemies 20% harder', Math.abs(b / a - 1.2) < 0.01, `x${(b / a).toFixed(2)}`);
+  }
+  {
+    const { m, p, foe } = duel('sylva', 'lumen');
+    const d = [hit(m, p, foe), hit(m, p, foe), hit(m, p, foe)];
+    check('Galewind: no slow before the 4th attack', foe.slowT <= 0);
+    const fourth = hit(m, p, foe);
+    check('Galewind: the 4th attack hits 40% harder and slows', Math.abs(fourth / d[0] - 1.4) < 0.02 && foe.slowT > 0, `x${(fourth / d[0]).toFixed(2)}`);
+  }
+  {
+    const { m, foe } = duel('kaida', 'brakka');
+    const src = m.player;
+    foe.hp = foe.maxHp * 0.6;
+    m.applyDamage(src, foe, foe.maxHp * 0.3, { true: true });   // 60% -> would be 30%
+    check('Bedrock: falling below 40% raises a shield that soaks the hit', Math.abs(foe.hpPct - 0.42) < 0.01, `hp ${Math.round(foe.hpPct * 100)}%`);
+    foe.hp = foe.maxHp; foe.shield = 0;
+    m.applyDamage(src, foe, foe.maxHp * 0.7, { true: true });
+    check('Bedrock: only once every 30 seconds', foe.shield === 0);
+  }
+  {
+    const { m, p, foe } = duel('nyx', 'lumen');
+    const full = hit(m, p, foe);
+    foe.hp = foe.maxHp * 0.4;
+    const low = hit(m, p, foe);
+    check('Predator: attacks hit wounded heroes 15% harder', Math.abs(low / full - 1.15) < 0.02, `x${(low / full).toFixed(2)}`);
+    p.skillCd[0] = 6;
+    m.applyDamage(p, foe, 1e6, { true: true });
+    check('Predator: a takedown resets Shadow Lunge', !foe.alive && p.skillCd[0] === 0);
+  }
+  {
+    const { m, p } = duel('lumen', 'kaida');
+    const foe = m.heroes.find(h => h.def0.id === 'kaida'), ally = m.heroes.find(h => h.team === 0 && h !== p);
+    ally.x = 1450; ally.y = 650; ally.hp = ally.maxHp * 0.5;
+    const h0 = ally.hp;
+    hit(m, p, foe);
+    check('Dawnlight: an attack heals the most wounded ally nearby', ally.hp > h0 + ally.maxHp * 0.035);
+    const h1 = ally.hp;
+    hit(m, p, foe);
+    check('Dawnlight: once every 6 seconds', ally.hp === h1);
+  }
+  {
+    const { m, p, foe } = duel('vexa', 'lumen');
+    m.applyDamage(p, foe, 1, { skill: p.def0.skills[0] }); m.applyDamage(p, foe, 1, { skill: p.def0.skills[0] });
+    check('Overcharge: no stun before the 3rd skill hit', foe.stunT <= 0 && p.pstack === 2);
+    m.applyDamage(p, foe, 1, { skill: p.def0.skills[0] });
+    check('Overcharge: the 3rd skill hit stuns', foe.stunT > 0.5);
+  }
+  {
+    const { m, p } = duel('drace', 'lumen');
+    m.passiveTick(p); const fast0 = p.atkSpeed();
+    p.hp = p.maxHp * 0.2; m.passiveTick(p);
+    check('Bloodrage: attack speed climbs as health drops', p.atkSpeed() > fast0 * 1.35, `${fast0.toFixed(2)} -> ${p.atkSpeed().toFixed(2)}`);
+  }
+  {
+    const { m, p, foe } = duel('rhea', 'lumen');
+    const d = []; for (let i = 0; i < 6; i++) d.push(hit(m, p, foe));
+    check('Focus: attacks on one target ramp up to 32%', Math.abs(d[5] / d[0] - 1.32) < 0.02, `x${(d[5] / d[0]).toFixed(2)}`);
+    const other = m.heroes.find(h => h.team === 1 && h !== foe); other.x = 1590; other.y = 640; m.updateVisibility();
+    hit(m, p, other);
+    check('Focus: switching targets resets it', p.pstack === 0);
+  }
+  {
+    const { m, p, foe } = duel('kaida', 'oska');
+    const lone = m.heroes.find(h => h.team === 1 && h !== foe);
+    lone.x = 1590; lone.y = 1120; lone.hp = lone.maxHp;   // out of the 450 aura
+    const far = m.applyDamage(p, lone, 300, { true: true });
+    lone.x = foe.x; lone.y = foe.y + 60; lone.hp = lone.maxHp;
+    const near = m.applyDamage(p, lone, 300, { true: true });
+    check('Tidewall: allies near Oska take 8% less hero damage', Math.abs(near / far - 0.92) < 0.005, `x${(near / far).toFixed(3)}`);
+  }
+  {
+    const { m, p, foe } = duel('sylva', 'lumen');
+    p.pstack = -99;   // keep Galewind out of the way
+    const plain = hit(m, p, foe);
+    p.crit = 1;
+    const crit = hit(m, p, foe);
+    check('critical hits deal 175%', Math.abs(crit / plain - 1.75) < 0.02, `x${(crit / plain).toFixed(2)}`);
+    check('crit items carry crit chance', SF.ITEMS.storm_bow.stats.crit > 0 && SF.ITEMS.reaper_cleaver.stats.crit > 0);
+  }
+});
+
+section('Abyssal Wyrm', () => {
+  const mk = mode => new SF.Match({ hero: 'kaida', mode, difficulty: 'normal', allies: [{ id: 'orin' }, { id: 'sylva' }], enemies: [{ id: 'brakka' }, { id: 'nyx' }, { id: 'lumen' }] });
+  check('the Wyrm wakes at 6:00 (2:30 in Brawl)', mk().wyrmAt === 360 && mk('brawl').wyrmAt === 150);
+  const m = mk();
+  for (const h of m.heroes) { h.brain = null; h.human = true; }
+  m.nextWave = 1e9; m.t = 359.9; for (let k = 0; k < 4; k++) m.update(0.05);
+  const w = m.wyrm;
+  check('the Wyrm spawns at the bottom of the river', w && w.alive && w.mtype === 'wyrm' && w.y > 900);
+  const p = m.player, ally = m.heroes.find(h => h.team === 0 && h !== p), foe = m.heroes.find(h => h.team === 1);
+  ally.alive = false;   // a dead teammate gets no Aegis
+  const gold = p.gold;
+  m.applyDamage(p, w, 1e7, { true: true });
+  check('slaying it pays the team and grants Wyrm Aegis', !w.alive && p.gold >= gold + 200 && p.hasBuff('aegis') && !ally.hasBuff('aegis') && !foe.hasBuff('aegis') && m.teamStats[0].wyrms === 1);
+  check('it comes back four minutes later', m.wyrm === null && Math.abs(m.wyrmAt - (m.t + 240)) < 0.01);
+  p.x = 1500; p.y = 600; foe.x = 1580; foe.y = 600; m.updateVisibility();
+  m.applyDamage(foe, p, 1e7, { true: true });
+  check('Aegis cheats death once', p.alive && Math.abs(p.hpPct - 0.4) < 0.01 && !p.hasBuff('aegis'));
+  check('…with a moment of invulnerability', m.applyDamage(foe, p, 1e7, { true: true }) === 0 && p.alive);
+  m.t += 2;
+  m.applyDamage(foe, p, 1e7, { true: true });
+  check('…and only once', !p.alive);
+  // Group up points at the closer objective; Smite takes objectives first.
+  const g = mk();
+  g.nextWave = 1e9; g.spawnShard(); g.spawnWyrm();
+  g.player.x = 1600; g.player.y = 900;
+  g.signal(g.player, 'gather');
+  check('Group up calls the nearer objective', g.orders[0].target === g.wyrm && g.orders[0].text === 'Take the Wyrm!');
+  let took = 0;
+  for (let i = 0; i < 6; i++) { const mm = run(botMatch(SF, { difficulty: 'hard' }), 14 * 60); took += mm.teamStats[0].wyrms + mm.teamStats[1].wyrms; }
+  check('bots fight over the Wyrm', took > 0, `${took} slain in 6 matches`);
+});
+
 section('Item passives', () => {
   const duel = () => {
     const m = new SF.Match({ hero: 'drace', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A' }, { id: 'sylva', name: 'B' }], enemies: [{ id: 'lumen', name: 'C' }, { id: 'nyx', name: 'D' }, { id: 'vexa', name: 'E' }] });

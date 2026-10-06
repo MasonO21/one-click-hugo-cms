@@ -31,7 +31,7 @@
       this.teamStats = [{ towers: 0, shards: 0 }, { towers: 0, shards: 0 }];
       this.fountains = [{ x: 110, y: W.laneY, r: 230 }, { x: W.w - 110, y: W.laneY, r: 230 }];
       this.bushes = (info.bushes || []).map(b => Object.assign({}, b, { x: this.mx(b.x) }));
-      this.camps = []; this.shard = null; this.signals = [];
+      this.camps = []; this.shard = null; this.wyrm = null; this.signals = [];
       this.map = new Map(); this.snaps = []; this.pending = []; this.lastInput = ''; this.inputT = 0; this.endInfo = null;
       for (const r of info.roster) {
         const h = this.unit(r.i);
@@ -85,7 +85,7 @@
         u.stunT = e.st || 0; u.slowT = e.sl ? 1 : 0; u.shield = e.sh || 0;
         if (u.kind === 'tower' || u.kind === 'core') { u.range = e.rg; u.guard = e.g ? this.unit(e.g) : null; u.target = e.tg ? this.unit(e.tg) : null; }
         if (u.kind === 'hero') {
-          u.def0 = SF.HERO[e.h]; u.skin = e.sk; u.name = e.n; u.bush = e.bu; u.invisT = e.iv ? 1 : 0;
+          u.def0 = SF.HERO[e.h]; u.skin = e.sk; u.name = e.n; u.bush = e.bu; u.invisT = e.iv ? 1 : 0; u.pstack = e.ps || 0; u.aegis = !!e.ag; u.reborn = !!e.rb;
           u.vis = [true, u.team === 0 ? !!e.ev : true, true];
           if (u !== this.player) u.recallT = e.rc || 0;
         }
@@ -101,6 +101,7 @@
       }
       this.camps = s.cp.map(([x, y, alive]) => ({ x: this.mx(x), y, unit: alive ? { alive: true } : null }));
       this.shard = s.sd ? this.unit(s.sd) : null;
+      this.wyrm = s.wy ? this.unit(s.wy) : null;
       const p = this.player, me = s.me;
       if (me) {
         p.gold = me.gold; p.xp = me.xp; p.xpNeed = me.xn; p.level = me.lv; p.items = me.items; p.skillCd = me.cd; p.cdr = me.cdr;
@@ -129,7 +130,7 @@
           }
           case 'burst': SF.Match.prototype.burst.call(this, this.mx(e[1]), e[2], e[3], e[4], e[5]); break;
           case 'shake': this.shake(e[1]); break;
-          case 'dmg': { const t = U(e[2]); if (t && t === p) this.took(p, U(e[1]) || null, Math.min(e[3], p.maxHp), e[4] ? 'skill' : 'basic'); if (t && !(SF.gfx && SF.gfx.numbers === false)) this.float(t.x + (Math.random() - 0.5) * 20, t.y - t.r - 26, e[3], t === p ? '#ff6b7a' : e[4] ? '#ffb347' : '#ffffff', e[4] ? 1.25 : 1); break; }
+          case 'dmg': { const t = U(e[2]); if (t && t === p) this.took(p, U(e[1]) || null, Math.min(e[3], p.maxHp), e[4] ? 'skill' : 'basic'); if (t && !(SF.gfx && SF.gfx.numbers === false)) this.float(t.x + (Math.random() - 0.5) * 20, t.y - t.r - 26, e[5] ? e[3] + '!' : e[3], t === p ? '#ff6b7a' : e[5] ? '#ffd23f' : e[4] ? '#ffb347' : '#ffffff', e[5] ? 1.55 : e[4] ? 1.25 : 1); break; }
           case 'heal': if (U(e[1]) === p) this.float(p.x, p.y - 50, '+' + e[2], '#7dffa0', 1); break;
           case 'gold': if (U(e[1]) === p) { this.float(p.x, p.y - 64, '+' + e[2], '#ffc84a', 1); this.emit('gold', e[2]); } break;
           case 'hit': this.emit('hit'); break;
