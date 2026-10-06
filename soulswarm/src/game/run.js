@@ -265,12 +265,33 @@ export class Run {
     const choices = rollChoices(this, 3);
     this.ui.showLevelUp(choices, this.level, (c) => {
       applyChoice(this, c);
-      this.audio.sfx('select');
+      if (c.kind === 'evolution') this.celebrateEvolution(c); else this.audio.sfx('select');
       if (chest) this.chestQueue--; else this.levelQueue--;
       this.levelPending = false;
       this.player.invuln = Math.max(this.player.invuln, 0.6);
       if (this.levelQueue > 0 || this.chestQueue > 0) setTimeout(() => { if (!this.ended && !this.levelPending) this.showLevelUp(); }, 120);
     }, { chest });
+  }
+
+  /** An evolution is the build's payoff: slow-mo, a gold shockwave that hurls the horde back, the legendary fanfare. */
+  celebrateEvolution(c) {
+    const P = this.player, gold = hdr(0xffd04a, 4);
+    this.fx.slowMo(0.35, 0.7);
+    this.fx.flash(0.45); this.fx.shake(0.4);
+    this.fx.shockwave(P.x, P.z, 9, 0xffd04a, 0.7, 0.08);
+    this.fx.shockwave(P.x, P.z, 6, this.heroColor, 0.5, 0.12);
+    this.fx.light(P.x, P.z, 12, 3, new THREE.Color(0xffd04a), 0.9);
+    this.particles.ring(P.x, P.z, 3, 90, gold, { life: 0.8, size: 0.7 });
+    this.particles.burst(P.x, 1.2, P.z, 140, gold, { speed: 10, life: 1.1, size: 0.6, up: 2.5 });
+    this.enemies.query(P.x, P.z, 8, (e) => {
+      if (e.type === 'boss') return;
+      const dx = e.x - P.x, dz = e.z - P.z, d = Math.hypot(dx, dz) || 1, k = 16 / Math.max(1, e.mass * 0.6);
+      e.kx += (dx / d) * k; e.kz += (dz / d) * k;
+    });
+    this.player.invuln = Math.max(this.player.invuln, 1.2);
+    this.audio.sfx('legendary');
+    this.app.haptic('heavy');
+    this.ui.banner(c.name.toUpperCase(), 'Weapon evolved', 'gold');
   }
 
   /** Elites drop a Relic Chest: a free pick of 3 cards. */

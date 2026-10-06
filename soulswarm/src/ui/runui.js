@@ -173,6 +173,15 @@ export class RunUI {
     this.el.appendChild(back);
   }
 
+  /** The run's weapons as tiles; evolved ones show their evolution in gold. */
+  buildTiles() {
+    const run = this.run;
+    return Object.entries(run.skillLv).filter(([id]) => SKILLS[id].type === 'weapon').map(([id, lv]) => {
+      const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
+      return `<span class="res-w ${evo ? 'evo' : ''}">${icon(SKILLS[id].icon)}<b>${evo ? evo[1].name : SKILLS[id].name}</b><small>${evo ? '★ Evolved' : 'Lv ' + lv}</small></span>`;
+    }).join('');
+  }
+
   // ---------------------------------------------------------------- pause
   showPause() {
     const app = this.app, run = this.run, s = app.profile.settings;
@@ -254,6 +263,7 @@ export class RunUI {
         <div><b>${result.level}</b><small>Level</small></div>
         <div><b>${result.gates}</b><small>Gates</small></div>
       </div>
+      <div class="res-build">${this.buildTiles()}</div>
       <div class="res-sub">Rewards</div>
       <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>
       ${result.endless ? '<div class="res-tip">Gravemaw returns every 5:00, stronger each time. How deep can your legion go?</div>' : !win ? '<div class="res-tip">Tip: Talents and Relics make every run stronger. Gravemaw waits at 6:00.</div>' : ''}
