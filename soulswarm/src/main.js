@@ -55,7 +55,8 @@ function applySettings() {
   audio.setVolumes({ music: s.music, sfx: s.sfx });
   audio.setMuted(!!s.muted);
   setHapticsEnabled(s.haptics);
-  if (app.engine) app.engine.setQuality(s.quality);
+  if (app.engine) { app.engine.setQuality(s.quality); app.engine.reduceFlash = !!s.reduceFlash; app.engine.fpsCap = s.fps30 ? 30 : 60; }
+  if (app.runUI) app.runUI.el.classList.toggle('lefty', !!s.lefty);
   saveProfile(profile);
 }
 
@@ -97,6 +98,7 @@ function boot() {
 
   const engine = new Engine(document.getElementById('game'), document.getElementById('fx2d'), { quality: profile.settings.quality });
   app.engine = engine;
+  engine.reduceFlash = !!profile.settings.reduceFlash; engine.fpsCap = profile.settings.fps30 ? 30 : 60;
   app.showcase = new Showcase(engine);
   app.showcase.setHero(profile.selectedHero);
   engine.setController(app.showcase);

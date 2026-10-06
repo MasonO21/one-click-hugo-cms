@@ -13,8 +13,8 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
-| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 2 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
+| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | — | Blood Moon, Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
@@ -84,7 +84,7 @@ Everything below describes the build unless it is marked **Planned**.
 | **Auto-attack** | All weapons fire on their own cooldowns. | Soul Bolt targets the nearest enemies within 11.5 m, Ashen Chains the nearest within 7.5 m, Bone Spears aim at the nearest within 13 m (or straight ahead). The Scythe sweeps a full circle starting from the facing direction; Grave Pulse and Skull Halo hit around the player. A weapon with no target retries after 0.12 s. *(Planned: elites and Bloaters within 3 m get priority.)* |
 | **NOVA button** | 88 px circle in the bottom-right (Space on desktop). Works at 100% charge with any legion size. | Pulses when ready. A tap fires immediately with 0.55 s of slow motion. A touch on the button never starts the joystick. *(Planned: 0.4 s wind-up, disabled below 10 minions, left-handed mirror.)* |
 | **Pause** | Top-left, 36 px. Also auto-pauses when the app goes to the background. | The pause screen shows time, kills, legion size and the current build, plus a sound toggle and "Abandon run". *(Planned: Nova charge on the pause screen.)* |
-| **Level-up / chest cards** | 3 large cards. Tap to pick. Gameplay is paused. | After a pick the Shepherd gets 0.6 s of invulnerability. *(Planned: a 0.3 s input guard against accidental picks.)* |
+| **Level-up / chest cards** | 3 large cards. Tap to pick. Gameplay is paused. | Taps in the first 0.3 s are ignored (no accidental picks from a swipe). After a pick the Shepherd gets 0.6 s of invulnerability. A Relic Chest uses the same three cards under a gold "Relic Chest" header; chests are offered before queued level-ups. |
 | **Haptics** | Success on level-up, Relic Chest and a good gate; warning on a bad gate and the boss warning; medium when hit; heavy on Nova, boss slam, death and boss kill. | Toggle in settings. *(Planned: a light tick on raise, throttled to 10/s.)* |
 
 There are no other in-run buttons. The reroll (1 per run, through an optional rewarded ad, free with Soul Pact) sits inside the level-up screen.
@@ -138,9 +138,9 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 - A pair spawns every **40 s** from 0:28 to 5:48 (9 per chapter, none during the boss). They appear 10.5 m ahead along the player's movement direction (straight up-screen if standing still), side by side (each 3.4 m wide, 0.9 m apart), rise in 0.6 s and last 15 s.
 - **The numbers are always the truth.** The values shown are exactly what happens. There are no hidden modifiers, and ×N is applied to the legion size at the moment you walk through. The only limit is the 400 ceiling.
-- The gate choice is a maths-and-risk puzzle. *(Planned: the better-looking gate is often placed behind a Brute or a Bloater cluster.)*
+- The gate choice is a maths-and-risk puzzle. From 2:00, 60% of pairs plant a guard 3.4 m in front of the gate with the bigger payoff (the larger legion change at that moment): a Brute with 3 Husks, or from 4:00 a 50/50 between that squad and a cluster of 3 Bloaters. Guards use the run's normal HP and damage scaling. Scripted pairs are never guarded.
 - **Overflow:** gate results can push the legion above the cap (up to the 400 ceiling). Overflow minions stay until they die or are detonated, but kills stop raising until the legion is back under the cap. *(Planned: overflow minions last 20 s, then fade at 2 per second.)*
-- **Negative gates:** −N removes N minions (all of them if the legion is smaller) and ÷2 removes half, rounded down. Lost minions simply vanish. *(Planned: minions lost to a negative gate detonate at 50% Nova power, making ÷2 an emergency escape.)*
+- **Negative gates:** −N removes N minions (all of them if the legion is smaller) and ÷2 removes half, rounded down. The lost souls **detonate** at half Nova power, rippling outward from the gate over min(0.6, 0.12 + 0.003n) s: each blast deals 0.5 × (35 + 0.5L) × Damage multiplier × (1 + 0.45(c − 1)) in 2.6 m, where L is the legion size before the gate. This makes ÷2 an emergency escape when the horde closes in.
 
 **How pairs are built** (L = legion size, m = minutes elapsed; values round to the nearest 5, minimum 5):
 
@@ -157,8 +157,8 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 ### 4.4 Soul Nova
 
-- **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). Kills during a detonation add nothing. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas. *(Planned: +5 per elite kill, +3 per gate.)*
-- **Activation:** tap NOVA at 100%. It fires at once with 0.55 s of slow motion (30% speed), a flash, and all enemy projectiles cleared. Every minion detonates in a chain that ripples outward from the player over min(0.75, 0.15 + 0.003N) s. *(Planned: 0.4 s wind-up with hit-stop and 1.5 s of invulnerability.)*
+- **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). An elite kill counts as 6 kills and passing a Soul Gate (good or bad) as 3. Kills during a detonation add nothing. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas.
+- **Activation:** tap NOVA at 100%. It fires at once with 0.55 s of slow motion (30% speed), a flash, and all enemy projectiles cleared. Every minion detonates in a chain that ripples outward from the player over min(0.75, 0.15 + 0.003N) s. Firing grants the Shepherd 1.5 s of invulnerability. *(Planned: 0.4 s wind-up with hit-stop.)*
 - **Damage per detonation** = (35 + 0.5 × N) × Damage multiplier × (1 + 0.45(c − 1)), radius 2.6 m, where N = legion size when NOVA was pressed and the Damage multiplier includes stars, the Might talent and skill, and Crown of Thorns. The Shepherd's own blast deals 1.2× that damage in a 7 m radius, with knockback. At N = 300, each blast deals 185 base damage, 300 times, overlapping.
 - **Cost:** the legion drops to 0, and Raise Chance is halved until the chain finishes, so the rebuild starts a beat later.
 - **Bosses** take full Nova damage in the build. *(Planned: bosses take 50% damage from Nova, capped at 25% of boss max HP per Nova.)*
@@ -170,7 +170,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 | Soul shard (XP) | Every kill | XP equal to the enemy's XP value (×12 for elites). At most 420 shards on the map; past ~416, new shards merge into the nearest shard within 3 m. Shards left 48 m behind are lost. |
 | Heart | 0.6% per non-elite kill | Heals 30% of max HP |
 | Magnet | 0.3% per non-elite kill | Pulls every shard on the map |
-| Relic Chest | Every elite | One weighted random card, applied automatically (an evolution if eligible). *(Planned: choose 1 of 3.)* |
+| Relic Chest | Every elite | Choose 1 of 3 cards, drawn like a level-up (an eligible evolution is almost always offered). Uses the run's single ad reroll if it is still unspent. |
 
 Pickup radius is 2.8 m (Soul Magnet +30% per level). Hearts, magnets and chests are pulled in at 80% of that radius and vanish after 40 s.
 
@@ -178,7 +178,7 @@ Pickup radius is 2.8 m (Soul Magnet +30% per level). Hearts, magnets and chests 
 
 - Choose 1 of 3 cards per level. **Loadout: 4 weapons (the hero's signature weapon is slot 1, at Lv1), plus any of the 8 passives** (there is no passive slot limit). Max skill level is 5.
 - **Card weighting:** every skill below Lv5 is in the pool (new weapons only while a weapon slot is free). Base weight 1.0 for a new skill and 1.5 for an upgrade; ×1.3 for Raise Dead, Legion Cap and Minion Fury; ×1.5 for a new weapon while fewer than 2 are owned; an eligible evolution has weight 1,000. The 3 cards are drawn without repeats.
-- Maxing everything takes 61 picks (19 weapon upgrades, 40 passive levels, 2 evolutions). With 4 Relic Chests per run that is about 57 level-ups (player Lv58). A Chapter 1 clear reaches about Lv22, so builds involve real trade-offs.
+- Maxing everything takes 63 picks (19 weapon upgrades, 40 passive levels, 4 evolutions, one per owned weapon). With 4 Relic Chests per run that is about 59 level-ups (player Lv60). A Chapter 1 clear reaches about Lv22, so builds involve real trade-offs.
 - When nothing is left to upgrade, the cards are "Second Wind" (heal 50% HP) and "Grave Gold" (+150 gold this run).
 - 1 reroll per run, through an optional rewarded ad. No other ads inside a run except the revive offer on death.
 - **Revive:** one paid revive per run (rewarded ad or 60 gems), offered for 10 s on the death screen. It restores full HP, gives 2.5 s of invulnerability and blasts every enemy within 8 m for 50% of its max HP. Mordrake's free revive triggers automatically on his first death and does not use up the paid one.
@@ -234,10 +234,10 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 
 | Stat | Lv1 | Lv2 | Lv3 | Lv4 | Lv5 |
 |---|---|---|---|---|---|
-| Damage | 12 | 15 | 18 | 22 | 28 |
-| Bolts per volley | 1 | 2 | 2 | 3 | 4 |
+| Damage | 13 | 17 | 22 | 30 | 40 |
+| Bolts per volley | 1 | 2 | 2 | 3 | 5 |
 | Cooldown (s) | 0.70 | 0.66 | 0.60 | 0.55 | 0.48 |
-| Pierce | 0 | 0 | 1 | 1 | 2 |
+| Pierce | 0 | 1 | 1 | 2 | 3 |
 
 **Spectral Scythe** (full-circle sweeps, 0.3 s each, starting from the facing direction; knockback; each sweep hits an enemy once). Nyx's signature weapon.
 
@@ -248,11 +248,11 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 | Radius (m) | 2.6 | 2.8 | 3.0 | 3.3 | 3.7 |
 | Cooldown (s) | 1.60 | 1.50 | 1.35 | 1.20 | 1.00 |
 
-**Ashen Chains** (chain lightning: first target within 7.5 m, then jumps to the nearest new enemy within 4.5 m). Seraphine's signature weapon.
+**Ashen Chains** (chain lightning: first target within 7.5 m, then jumps to the nearest new enemy within 4.5 m). Each link also **scorches** every other enemy within 1.4 m of its target for 50% damage. Seraphine's signature weapon.
 
 | Stat | Lv1 | Lv2 | Lv3 | Lv4 | Lv5 |
 |---|---|---|---|---|---|
-| Damage per hit | 14 | 17 | 21 | 26 | 33 |
+| Damage per hit | 18 | 23 | 29 | 37 | 48 |
 | Targets hit | 3 | 4 | 5 | 6 | 8 |
 | Cooldown (s) | 1.50 | 1.40 | 1.25 | 1.10 | 0.95 |
 
@@ -300,14 +300,20 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 
 ### 7.3 Evolutions
 
-Both evolutions are in the build. An evolution card enters the pool when the weapon is Lv5 **and** the paired passive is owned (any level). With weight 1,000 it is almost always the next card offered, at a level-up or from a Relic Chest. The weapon keeps its slot and is upgraded in place.
+All six evolutions are in the build, one per weapon. An evolution card enters the pool when the weapon is Lv5 **and** the paired passive is owned (any level). With weight 1,000 it is almost always the next card offered, at a level-up or from a Relic Chest. The weapon keeps its slot and is upgraded in place.
 
 | Evolution | Recipe | Effect |
 |---|---|---|
-| **Soul Storm** | Soul Bolt Lv5 + Might | 6 bolts per volley (Lv5 cooldown), 34 damage, pierce 3. Each hit explodes for 60% damage in a 1.9 m radius. |
+| **Soul Storm** | Soul Bolt Lv5 + Might | 6 bolts per volley (Lv5 cooldown), 44 damage, pierce 4. Each hit explodes for 60% damage in a 1.5 m radius. |
 | **Bone Crown** | Skull Halo Lv5 + Minion Fury | 8 skulls, 26 damage, 3.2 m radius, always on. Every skull kill raises a soul (while below the cap). |
+| **Harvest Moon** | Spectral Scythe Lv5 + Haste | The sweep becomes 3 sweeps of 46 damage every 0.9 s at the Lv5 reach (3.7 m). Two crescent blades also orbit at that reach (5.2 rad/s), dealing 58 per hit in a 1.3 m radius, each enemy at most once per 0.3 s, knocking foes along the spin. Every scythe kill heals 1 HP from a bank that refills at 6 HP/s (cap 6). |
+| **Chains of Perdition** | Ashen Chains Lv5 + Frenzy | 12 links of 54 damage; links prefer targets at least 1.6 m apart and no closer to the Shepherd, so the chain lashes outward. Each link scorches within 1.7 m for 50%. Targets burn for 40% of the hit over 2 s (ticks every 0.25 s; re-hits add to the pool and refresh the timer). Kills while burning get **+25 pp Raise Chance** (still capped at 85%). |
+| **Ossuary Barrage** | Bone Spears Lv5 + Vitality | A fan of 5 spears (0.2 rad apart), 56 damage, unlimited pierce. Each flies 3.5 m past its target (5–16 m; odd spears 1.2 m further) and bursts into bone shrapnel: 55% damage in 2 m with knockback. |
+| **Requiem** | Grave Pulse Lv5 + Soul Magnet | Every 1.4 s: a 0.3 s drag pulls enemies inward (70 m/s², with a swirl; never the boss), then a 46-damage blast in 6.5 m with strong knockback. Each blast also pulls every soul shard within 12 m to the Shepherd. |
 
-*(Planned extras from the original design: Soul Storm kills split the bolt into 2 mini-bolts; Bone Crown gives minions within 6 m +30% damage and heals them 20% every 4 s.)*
+Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s, the Shepherd kiting, no legion), effective DPS at Lv5 → evolved: Soul Bolt 1,730 → 4,350 · Skull Halo 2,100 → 2,560 (its payoff is the raises) · Scythe 3,130 → 4,020 · Chains 2,590 → 3,590 · Spears 2,680 → 3,360 · Grave Pulse 2,010 → 2,840.
+
+*(Planned extras: Soul Storm kills split the bolt into 2 mini-bolts; Bone Crown gives minions within 6 m +30% damage and heals them 20% every 4 s.)*
 
 ---
 
@@ -486,9 +492,9 @@ The scripted beats below are **Planned**. Times are session times from app open 
 | 0:30 | First kill | Soul Bolt fires automatically. Husk dies. | `ftue_first_kill` |
 | 0:35 | **Hook 1: Raise** | Planned: the first 5 kills raise at 100% (tutorial only). Caption: "The fallen rise for you." (Build: Vael's 35% Raise Chance usually raises one of the first 3 kills, and the raise hint fires.) | `ftue_first_raise` |
 | 0:50 | First level-up | 3 cards. Planned: Raise Dead is highlighted, but any pick is allowed. (Build: the first level needs only 7 XP, so it comes ~0:08 into the run.) | `ftue_levelup` |
-| 1:20 | **Hook 2: Soul Gate** | Legion is about 12. Planned scripted pair: +5 vs ×2. After passing, a short caption explains the maths ("×2 = +12!"). A wrong pick gets a gentle hint, not a punishment. (Build: the first pair arrives at 0:28 with the gate hint; at legion ~12 it is typically +20 vs ×2.) | `ftue_gate` (choice) |
-| 1:45 | First elite | Gold Brute (Planned script). It drops a Relic Chest → free pick. (Build: an Elite Husk at 1:15; the chest card is applied automatically.) | `ftue_elite` |
-| 2:15 | **Hook 3: Soul Nova** | Planned: the meter is accelerated in the tutorial, and a pulsing ring and finger point at NOVA. Screen wipe, slow-mo, legion count drops to 0 and starts climbing again. (Build: the meter fills after ~300 kills, around 2:30–3:00, and the Nova hint fires; 0.55 s slow-mo.) | `ftue_nova` |
+| 1:20 | **Hook 2: Soul Gate** | Legion is about 12. Scripted pair: +5 vs ×2. After passing ×2, a caption explains the maths ("×2 turned 12 souls into 24"). A wrong pick gets no punishment. (Build: in the first run, the first pair after the legion reaches 10 is the scripted +5 vs ×2, sides random; earlier pairs are normal, usually two adds.) | `ftue_gate` (choice) |
+| 1:45 | First elite | Gold Brute (Planned script). It drops a Relic Chest → free pick. (Build: an Elite Husk at 1:15; its chest opens a 1-of-3 pick.) | `ftue_elite` |
+| 2:15 | **Hook 3: Soul Nova** | The meter charges 2.5× faster until the first Nova of the first run (build). Planned: a pulsing ring and finger point at NOVA. Screen wipe, slow-mo, legion count drops to 0 and starts climbing again. (Build: the meter fills after ~300 kills, around 2:30–3:00, and the Nova hint fires; 0.55 s slow-mo.) | `ftue_nova` |
 | 2:40 | Second gate | ×2 vs ÷2, where ×2 sits behind a Bloater (Planned placement). Teaches risk. (Build: pairs at 1:08, 1:48 and 2:28 can offer ×2 vs −N or ÷2.) | `ftue_gate2` |
 | 3:00 | Gravemaw (Planned tutorial boss) | 25% HP, Phase 1 only. Telegraph rings are shown slowly. (Build: Gravemaw arrives at 6:00 with full Ch1 HP, 9,000.) | `ftue_boss` |
 | 3:45 | Victory | Results: time, kills, peak legion, raised, level, gates and rewards (a Ch1 first clear gives ~3,100 gold, 70 gems, 1 sigil and a relic). Planned line: "Your legion peaked at N." | `ftue_complete` |
@@ -504,7 +510,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 
 ## 17. Accessibility
 
-*Status: Planned. The build has music and SFX volume, mute, a haptics toggle and a quality setting (auto / low / mid / high).*
+*Status: the build has music and SFX volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA button and the skill bar. Everything else in this table is Planned.*
 
 | Area | Feature |
 |---|---|
@@ -521,7 +527,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 
 1. The build's Raise Chance cap is 85% (base 25%). Is that too high for Chapter 5 challenge? Test 60% vs 85%.
 2. Overflow minions above the cap persist in the build. Should they fade (the original design) or persist until the next Nova?
-3. Both evolutions shipped in the build. Does a third recipe ship in Season 2?
+3. Every weapon now has one evolution. Do second recipes (a weapon + a different passive) ship in Season 2?
 4. Auto-Nova (Planned) could reduce the skill expression of Nova timing. Monitor Nova-timing win rates for players who use it.
 5. **Resolved: boss HP.** Gravemaw's base HP is now 9,000 (was 3,400), scaled by chapter as in §6. A measured Chapter 1 fight with a typical build and a player who engages lasts about 45 s; at 3,400 HP he died in about 16 s.
 6. **Resolved: Soul Pass pacing.** XP per tier is now 500 (was 100), so 30 tiers take 15,000 XP. A player who does all quests and 3 runs a day finishes in about 3 weeks; a casual player (quests plus 1 run) reaches roughly tier 15–20 (§2).

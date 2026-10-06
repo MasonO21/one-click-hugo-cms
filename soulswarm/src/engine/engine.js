@@ -143,6 +143,7 @@ export class Engine {
     const loop = (now) => {
       requestAnimationFrame(loop);
       let dt = (now - last) / 1000;
+      if (this.fpsCap < 60 && dt < 1 / this.fpsCap - 0.004) return; // battery saver: draw every other vsync
       last = now;
       if (dt > 0.1) dt = 0.1;
       if (dt <= 0 || this.manual) return;
@@ -159,6 +160,9 @@ export class Engine {
     if (!c) return;
     c.update(dt);
     this.post.uTime.value = this.time;
+    if (this.reduceFlash) { // photosensitivity: cap full-screen flashes, whiteouts and chromatic aberration
+      const P = this.post; P.uFlash.value.w = Math.min(P.uFlash.value.w, 0.2); P.uWhite.value = Math.min(P.uWhite.value, 0.15); P.uAberr.value *= 0.25;
+    }
     this.composer.render(dt);
     const ctx = this.ctx2d;
     ctx.clearRect(0, 0, this.w, this.h);
@@ -167,7 +171,7 @@ export class Engine {
 
   // Drop quality if the device can't hold ~45fps (only in 'auto').
   autoQuality(dt) {
-    if (this.qualitySetting !== 'auto' || !this.ctrl || !this.ctrl.isRun) return;
+    if (this.qualitySetting !== 'auto' || !this.ctrl || !this.ctrl.isRun || this.fpsCap < 60) return;
     this.frameTimes.push(dt);
     if (this.frameTimes.length < 150) return;
     const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;

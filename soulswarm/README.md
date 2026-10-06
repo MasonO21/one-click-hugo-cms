@@ -20,7 +20,7 @@ Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag
 ## What's in the game
 
 - **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded.
-- **4 heroes** with signature weapons, plus **6 weapons, 8 passives and 2 evolutions** drafted on level-up cards.
+- **4 heroes** with signature weapons, plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
 - **The legion:** raise slain enemies, multiply them through **Soul Gates**, and detonate them with **Soul Nova**.
 - **Meta progression:** talents, relics (8 types × 4 rarities), hero stars, the Soul Altar gacha (odds and pity shown in-game), a 30-tier Soul Pass, daily quests, a 7-day login calendar, energy, and a shop with simulated IAP and rewarded ads.
 
@@ -28,6 +28,7 @@ Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag
 
 ```bash
 npm run playtest      # headless bot plays every hero, a full Chapter 1 clear, Endless and economy checks (28 checks)
+npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server)
 npm run trailer       # renders a 21 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
 npm run art           # rebuilds in-game art, icon, splash and native sets from the painted masters in store/art

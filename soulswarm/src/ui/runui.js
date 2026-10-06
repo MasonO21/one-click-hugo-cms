@@ -14,7 +14,7 @@ export class RunUI {
     this.wantsNova = false;
     this.rerolled = false;
     const color = '#' + run.heroColorObj.getHexString();
-    this.el = h(`<div class="hud pass-through" style="--lc:${color}">
+    this.el = h(`<div class="hud pass-through ${app.profile.settings.lefty ? 'lefty' : ''}" style="--lc:${color}">
       <div class="hud-top pass-through">
         <div class="hud-row">
           <button class="hud-pause" aria-label="Pause">${icon('pause')}</button>
@@ -127,15 +127,16 @@ export class RunUI {
   bossHp(f) { this.q.bossHp.style.transform = `scaleX(${f})`; }
 
   // ---------------------------------------------------------------- level up
-  showLevelUp(choices, level, onPick) {
-    const back = h(`<div class="lvl-back">
-      <div class="lvl-title"><b>LEVEL ${level}</b><span>Choose a power</span></div>
+  showLevelUp(choices, level, onPick, { chest = false } = {}) {
+    const back = h(`<div class="lvl-back ${chest ? 'chest' : ''}">
+      <div class="lvl-title">${chest ? '<b>RELIC CHEST</b><span>Claim one treasure</span>' : `<b>LEVEL ${level}</b><span>Choose a power</span>`}</div>
       <div class="cards"></div>
       <div class="lvl-actions"></div>
     </div>`);
     const cards = $(back, '.cards');
-    let picked = false;
+    let picked = false, shownT = 0;
     const render = (list) => {
+      shownT = this.run.t; // run time keeps ticking while paused: ignore taps in the first 0.3 s (stray swipes)
       cards.innerHTML = '';
       list.forEach((c, i) => {
         const evo = c.kind === 'evolution';
@@ -146,7 +147,7 @@ export class RunUI {
           <div class="ic">${icon(c.icon)}</div>
           <div><h3>${c.name} ${tag}</h3><p>${c.desc}</p>${pips ? `<div class="pips">${pips}</div>` : ''}</div></button>`);
         card.addEventListener('click', () => {
-          if (picked) return;
+          if (picked || this.run.t - shownT < 0.3) return;
           picked = true;
           this.app.haptic('light');
           back.remove();
@@ -172,10 +173,22 @@ export class RunUI {
     this.el.appendChild(back);
   }
 
+  /** The run's weapons as tiles; evolved ones show their evolution in gold. */
+  buildTiles() {
+    const run = this.run;
+    return Object.entries(run.skillLv).filter(([id]) => SKILLS[id].type === 'weapon').map(([id, lv]) => {
+      const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
+      return `<span class="res-w ${evo ? 'evo' : ''}">${icon(SKILLS[id].icon)}<b>${evo ? evo[1].name : SKILLS[id].name}</b><small>${evo ? '★ Evolved' : 'Lv ' + lv}</small></span>`;
+    }).join('');
+  }
+
   // ---------------------------------------------------------------- pause
   showPause() {
     const app = this.app, run = this.run, s = app.profile.settings;
-    const build = Object.entries(run.skillLv).map(([id, lv]) => `<span class="pill">${SKILLS[id].name} ${lv}</span>`).join(' ');
+    const build = Object.entries(run.skillLv).map(([id, lv]) => {
+      const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
+      return evo ? `<span class="pill pill-gold">★ ${evo[1].name}</span>` : `<span class="pill">${SKILLS[id].name} ${lv}</span>`;
+    }).join(' ');
     modal({
       title: 'Paused',
       dismissable: false,
@@ -250,6 +263,7 @@ export class RunUI {
         <div><b>${result.level}</b><small>Level</small></div>
         <div><b>${result.gates}</b><small>Gates</small></div>
       </div>
+      <div class="res-build">${this.buildTiles()}</div>
       <div class="res-sub">Rewards</div>
       <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>
       ${result.endless ? '<div class="res-tip">Gravemaw returns every 5:00, stronger each time. How deep can your legion go?</div>' : !win ? '<div class="res-tip">Tip: Talents and Relics make every run stronger. Gravemaw waits at 6:00.</div>' : ''}

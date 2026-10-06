@@ -29,7 +29,7 @@ const BOT = `window.__bot = (secs, god) => {
     const l = Math.hypot(fx, fz) || 1;
     r.input.keys.clear(); r.input.tx = fx / l; r.input.tz = fz / l; r.input.moved = true;
     if (r.levelPending) { const c = document.querySelector('.lvl-back .card'); if (c) c.click(); }
-    if (!r.levelPending && r.levelQueue > 0) r.showLevelUp();
+    if (!r.levelPending && (r.levelQueue > 0 || r.chestQueue > 0)) r.showLevelUp();
     if (r.nova >= 1 && r.legion.count > 25) r.ui.wantsNova = true;
     if (r.paused && r.player.dead) { r.revive(false); document.querySelectorAll('.modal-back').forEach((n) => n.remove()); }
     r.update(1 / 30);
@@ -81,11 +81,12 @@ for (const hero of ['vael', 'nyx', 'seraphine', 'mordrake']) {
 errs = await session(async (page) => {
   await page.evaluate(() => window.__soulswarm.startRun(1));
   let s;
-  for (let i = 0; i < 50; i++) { s = await page.evaluate(() => window.__bot(10, true)); if (s.bossDead || s.t > 560) break; }
+  for (let i = 0; i < 70; i++) { s = await page.evaluate(() => window.__bot(10, true)); if (s.bossDead || s.t > 560) break; } // card picks take a few frames (0.3 s tap guard)
   check('chapter 1: gates passed', s.gates >= 3, `gates=${s.gates}`);
   check('chapter 1: soul nova used', s.novas >= 2, `novas=${s.novas}`);
   check('chapter 1: Gravemaw defeated', s.bossDead, `t=${s.t}`);
-  await page.waitForTimeout(4500);
+  // the victory beat runs on rendered frames; poll so a slow (software-GL) machine doesn't fail it
+  await page.waitForFunction(() => document.querySelector('.res-head b'), null, { timeout: 40000 }).catch(() => {});
   const head = await page.evaluate(() => document.querySelector('.res-head b')?.textContent);
   check('chapter 1: victory screen', head === 'VICTORY', head);
   await page.evaluate(() => document.querySelector('.modal .btn-primary')?.click());
@@ -131,7 +132,283 @@ errs = await session(async (page) => {
 });
 check('economy: no runtime errors', !errs.length, errs[0] || '');
 
-// 6. Legion variants (GDD §4.2): with Raise Chance forced to 1, every kill rises as its own kind.
+// 6. Run systems: Relic Chest pick, Nova invulnerability and charge, gate guards and soul bursts
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm; app.startRun(1);
+    const r = app.run, P = r.player; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.tutorial = false;
+    window.__bot(2, true);
+    r.addXp = () => {}; // isolate the chest from level-ups triggered by the magnetised shards
+    // an elite's chest opens a 1-of-3 pick instead of a random card
+    const e = r.enemies.spawn('husk', P.x + 1, P.z, { elite: true, hpMul: 1 });
+    r.enemies.damage(e, 1e6, { source: 'bolt' });
+    r.pickups.magnetAll(); for (let i = 0; i < 90 && !r.levelPending; i++) r.update(1 / 30);
+    const chestCards = document.querySelectorAll('.lvl-back.chest .card').length;
+    const lvBefore = JSON.stringify(r.skillLv);
+    for (let i = 0; i < 15; i++) { document.querySelector('.lvl-back.chest .card')?.click(); r.update(1 / 30); }
+    const chestPicked = !r.levelPending && r.chestQueue === 0 && JSON.stringify(r.skillLv) !== lvBefore;
+    // Nova: 1.5 s of invulnerability; gates add 3 kills of charge
+    r.nova = 1; P.invuln = 0; r.triggerNova(); const invuln = P.invuln;
+    r.nova = 0; r.novaQueue.length = 0; r.gates.spawnPair([{ type: 'add', n: 5 }, { type: 'add', n: 10 }]); // nothing charges mid-detonation
+    const G = r.gates.pair.gates[0]; r.gates.choose(G);
+    const gateCharge = Math.round(r.nova * 300 / r.stats.novaMul);
+    // from 2:00 the better gate can be guarded
+    r.gates.despawn(); r.time = 150; const before = r.enemies.count; const rnd = Math.random; Math.random = () => 0.1;
+    r.gates.spawnPair(); Math.random = rnd;
+    const guards = r.enemies.count - before;
+    return { chestCards, chestPicked, invuln, gateCharge, guards };
+  });
+  check('relic chest: pick 1 of 3', s.chestCards === 3 && s.chestPicked, JSON.stringify(s));
+  check('nova: 1.5 s invulnerability', s.invuln >= 1.45, `invuln=${s.invuln}`);
+  check('gates: +3 kills of nova charge', s.gateCharge === 3, `charge=${s.gateCharge}`);
+  check('gates: better gate guarded from 2:00', s.guards >= 3, `guards=${s.guards}`);
+});
+check('run systems: no runtime errors', !errs.length, errs[0] || '');
+
+// 7. Accessibility: Auto-Nova, left-handed HUD, reduced flashes
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, st = app.profile.settings;
+    Object.assign(st, { autoNova: true, lefty: true, reduceFlash: true, shake: 0 }); app.applySettings(); app.engine.manual = true;
+    app.startRun(1); const r = app.run; r.player.hurt = () => {};
+    r.legion.addMany(60, r.player.x, r.player.z); r.nova = 1; app.engine.step(1 / 30);
+    return { novas: r.counters.novas, lefty: app.runUI.el.classList.contains('lefty'), flash: app.engine.post.uFlash.value.w };
+  });
+  check('accessibility: auto-nova, left-handed, reduced flashes', s.novas === 1 && s.lefty && s.flash <= 0.2, JSON.stringify(s));
+});
+check('accessibility: no runtime errors', !errs.length, errs[0] || '');
+
+// 8. First run: the first gate pair is the scripted +5 vs ×2 lesson and the first Nova charges 2.5× faster
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm; app.startRun(1); const r = app.run;
+    const tutorial = r.tutorial; r.legion.addMany(12, r.player.x, r.player.z); r.gates.spawnPair();
+    const ops = r.gates.pair.gates.map((G) => G.op.type + G.op.n).sort().join(',');
+    r.addNovaCharge(10);
+    return { tutorial, ops, charge: Math.round(r.nova * 300 / r.stats.novaMul) };
+  });
+  check('first run: gate lesson and early Nova', s.tutorial && s.ops === 'add5,mul2' && s.charge === 25, JSON.stringify(s));
+});
+check('first run: no runtime errors', !errs.length, errs[0] || '');
+
+// 9. Weapon evolutions (Harvest Moon, Chains of Perdition, Ossuary Barrage, Requiem): the card is offered only
+//    when eligible, each evolved weapon fires and deals damage, Requiem pulls shards, burning kills raise more often.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm;
+    let seed = 20261006; // seeded RNG so the statistical check is reproducible
+    Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const EVOS = { harvestMoon: ['scythe', 'haste', 'Harvest Moon'], chainsOfPerdition: ['chains', 'frenzy', 'Chains of Perdition'], ossuaryBarrage: ['spears', 'vitality', 'Ossuary Barrage'], requiem: ['gravePulse', 'soulMagnet', 'Requiem'] };
+    const start = (lv) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      app.profile.energy = 30; app.startRun(1);
+      const r = app.run; r.player.hurt = () => {}; r.addXp = () => {}; r.director = () => {};
+      r.pickups.dropSpecial = () => {}; // no hearts, so any healing comes from Harvest Moon
+      r.skillLv = { ...lv }; r.recomputeStats();
+      return r;
+    };
+    const ring = (r, n, R, hpMul) => { const P = r.player; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; r.enemies.spawn('husk', P.x + Math.cos(a) * R, P.z + Math.sin(a) * R, { hpMul }); } };
+    const cards = () => [...document.querySelectorAll('.lvl-back .card.evo')];
+    const out = {};
+    for (const [id, [w, p, name]] of Object.entries(EVOS)) {
+      const o = out[id] = {};
+      let r = start({ [w]: 5 });
+      r.levelQueue = 1; r.showLevelUp();
+      o.offeredWithout = cards().length;
+      r = start({ [w]: 5, [p]: 1 });
+      r.levelQueue = 1; r.showLevelUp();
+      const card = cards().find((c) => c.querySelector('h3').textContent.includes(name));
+      o.offered = !!card;
+      r.t += 0.31; // past the 0.3 s tap guard
+      if (card) card.click();
+      o.evolved = !!r.evolved[id];
+      // fire into a mixed horde: fragile Husks (kills, heals) and tough ones (burns, sustained hits)
+      ring(r, 30, 3.5, 3); ring(r, 40, 6, 400);
+      const dmg = {}, orig = r.enemies.damage.bind(r.enemies), W = r.weapons;
+      r.enemies.damage = (e, a, op = {}) => { if (e.active && a > 0) dmg[op.source] = (dmg[op.source] || 0) + a; return orig(e, a, op); };
+      let bursts = 0, blasts = 0, burning = 0, moons = 0, shards = 0;
+      const sh = W.shrapnel.bind(W); W.shrapnel = (...a) => { bursts++; return sh(...a); };
+      const dt = W.detonate.bind(W); W.detonate = (...a) => { blasts++; return dt(...a); };
+      r.player.hp = r.player.maxHp * 0.5; const hp0 = r.player.hp;
+      for (let i = 0; i < 180; i++) { r.update(1 / 30); burning = Math.max(burning, W.burning.length); moons = Math.max(moons, W.moons.count); shards = Math.max(shards, W.shardN); }
+      Object.assign(o, { healed: Math.round(r.player.hp - hp0), burning, moons, shards, bursts, blasts });
+      for (const k in dmg) o[k] = Math.round(dmg[k]);
+    }
+    // Requiem: each blast pulls the soul shards within 12 m to the Shepherd, and only those
+    let r = start({ gravePulse: 5, soulMagnet: 1 }); r.evolved.requiem = true;
+    const P = r.player, W = r.weapons, near = [], far = [];
+    W.timers.gravePulse = 99; r.pickups.gems.length = 0;
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.28; r.pickups.dropGem(P.x + Math.cos(a) * 8, P.z + Math.sin(a) * 8, 1); near.push(r.pickups.gems[r.pickups.gems.length - 1]); }
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.28; r.pickups.dropGem(P.x + Math.cos(a) * 18, P.z + Math.sin(a) * 18, 1); far.push(r.pickups.gems[r.pickups.gems.length - 1]); }
+    for (let i = 0; i < 20; i++) r.update(1 / 30);
+    const idle = near.filter((g) => g.pulled).length;
+    W.timers.gravePulse = 0;
+    for (let i = 0; i < 15; i++) r.update(1 / 30);
+    out.shards = { idle, near: near.filter((g) => g.pulled || !r.pickups.gems.includes(g)).length, far: far.filter((g) => g.pulled).length };
+    // Chains of Perdition: 600 kills each way at a fixed 25% Raise Chance; burning ones should rise ~50% of the time
+    r = start({ chains: 5, frenzy: 1 }); r.evolved.chainsOfPerdition = true;
+    r.stats.raise = 0.25; r.stats.cap = 1e9;
+    const rate = (burning) => {
+      const before = r.counters.raised;
+      for (let i = 0; i < 600; i++) {
+        const e = r.enemies.spawn('husk', r.player.x + 30, r.player.z, { hpMul: 1 });
+        if (burning) r.weapons.ignite(e, 10);
+        r.enemies.damage(e, 1e6, { source: 'minion', silent: true });
+        if (i % 100 === 99) r.enemies.compact();
+      }
+      return (r.counters.raised - before) / 600;
+    };
+    out.raise = { plain: rate(false), burning: rate(true) };
+    // the pause screen lists evolved weapons by their evolution name
+    r = start({ scythe: 5, chains: 5, spears: 5, gravePulse: 5 });
+    for (const id of Object.keys(EVOS)) r.evolved[id] = true;
+    r.pause(true);
+    out.pause = [...document.querySelectorAll('.modal .pill-gold')].map((n) => n.textContent.trim());
+    return out;
+  });
+  for (const [id, need, ok] of [
+    ['harvestMoon', 'haste', (o) => o.scythe > 0 && o.moons === 2 && o.healed > 0 && o.healed <= 6 * 6 + 6], // 6 s at <= 6 HP/s plus the bank
+    ['chainsOfPerdition', 'frenzy', (o) => o.chain > 0 && o.burn > 0 && o.burning > 0],
+    ['ossuaryBarrage', 'vitality', (o) => o.spear > 0 && o.bursts >= 5 && o.shards > 0],
+    ['requiem', 'soulMagnet', (o) => o.pulse > 0 && o.blasts >= 3],
+  ]) {
+    const o = s[id];
+    check(`evolution ${id}: card offered only with ${need}, picking it evolves`, o.offered && o.evolved && o.offeredWithout === 0, JSON.stringify({ offered: o.offered, evolved: o.evolved, without: o.offeredWithout }));
+    check(`evolution ${id}: fires and damages enemies`, ok(o), JSON.stringify(o));
+  }
+  check('requiem: blast pulls shards within 12 m, not beyond', s.shards.idle === 0 && s.shards.near === 12 && s.shards.far === 0, JSON.stringify(s.shards));
+  check('perdition: burning kills raise ~+25 pp more often', s.raise.burning - s.raise.plain > 0.15 && Math.abs(s.raise.plain - 0.25) < 0.07 && Math.abs(s.raise.burning - 0.5) < 0.08, JSON.stringify(s.raise));
+  check('pause screen lists evolved weapons', ['Harvest Moon', 'Chains of Perdition', 'Ossuary Barrage', 'Requiem'].every((n) => s.pause.some((t) => t.includes(n))), JSON.stringify(s.pause));
+});
+check('evolutions: no runtime errors', !errs.length, errs[0] || '');
+
+// ---------------------------------------------------------------- 10. Horde behaviours and chapter identities
+// Frame-stepped staged checks: the enemy signature moves (Ghoul lunge, Brute slam, Witch lob), the chapter
+// modifiers (Ch2 burning ground, Ch3 ice, Ch4 vignette, Ch5 elites, Endless rotation) and the Bulwark taunt
+// contract (run.legion.taunters / hitMinion), using a fake taunter so it runs before the Legion branch lands.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, prof = app.profile, post = app.engine.post;
+    app.engine.manual = true;
+    prof.flags.tutorialDone = true; prof.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+    // a quiet arena: no director spawns, gates, swarms, elites, weapons or level-ups; the Shepherd stands still
+    const start = (ch) => {
+      if (app.run) app.exitRun();
+      prof.energy = 30; prof.chapter.unlocked = 6; app.startRun(ch);
+      const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0;
+      r.weapons.update = () => {}; r.addXp = () => {}; r.player.invuln = 0; r.input.tx = r.input.tz = 0;
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const near = (r, type, dx, dz) => { const e = r.enemies.spawn(type, r.player.x + dx, r.player.z + dz, { hpMul: 50 }); e.spawnT = 1; return e; };
+    const out = {};
+
+    // Ghoul: crouch at 3 m (0.4 s), lunge at ~11 m/s along the locked direction, recover
+    let r = start(1), P = r.player;
+    const g = near(r, 'ghoul', 2.6, 0);
+    const states = new Set(); let crouch = 0, vmax = 0;
+    for (let i = 0; i < 45; i++) { r.update(1 / 30); states.add(g.state); if (g.state === 1) crouch += 1 / 30; if (g.state === 2) vmax = Math.max(vmax, Math.hypot(g.vx, g.vz)); }
+    out.lunge = { states: [...states].sort().join(''), crouch: +crouch.toFixed(2), vmax: +vmax.toFixed(1) };
+
+    // Brute: cone telegraph for the full 1.0 s wind-up, then 1.4× damage with knockback
+    r = start(1); P = r.player;
+    const b = near(r, 'brute', 0, -1.9);
+    let hp0 = P.hp, windAt = -1, hitAt = -1, cone = false, knock = 0;
+    for (let i = 0; i < 60 && hitAt < 0; i++) {
+      r.update(1 / 30);
+      if (b.state === 1 && windAt < 0) windAt = r.time;
+      if (r.hazards.teles.some((t) => t.owner === b)) cone = true;
+      if (P.hp < hp0) { hitAt = r.time; knock = Math.hypot(P.kx, P.kz); }
+    }
+    out.slam = { cone, delay: +(hitAt - windAt).toFixed(3), dmg: +(hp0 - P.hp).toFixed(1), want: +(b.dmg * 1.4).toFixed(1), knock: +knock.toFixed(1) };
+
+    // Witch: the lob lands where its telegraph circle sits, after a 1.0 s flight, for its damage (no fire in Ch1)
+    r = start(1); P = r.player;
+    const w = near(r, 'witch', 0, -7); w.shootCd = 0;
+    r.update(1 / 30);
+    const L = r.projectiles.lobs[0], tele = L && r.hazards.teles.find((t) => t.kind === 0);
+    const at = L ? { x: L.tx, z: L.tz } : { x: NaN, z: NaN };
+    hp0 = P.hp; let frames = 0;
+    while (L && r.projectiles.lobs.includes(L) && frames < 60) { r.update(1 / 30); frames++; }
+    out.lob = { thrown: !!L, tele: !!tele && Math.hypot(tele.x - at.x, tele.z - at.z) < 0.01, off: L ? +Math.hypot(L.x - at.x, L.z - at.z).toFixed(3) : -1,
+      flight: +(frames / 30).toFixed(2), dmg: +(hp0 - P.hp).toFixed(1), want: +w.dmg.toFixed(1), burns: r.hazards.burns.length };
+
+    // Ch2: a landed lob leaves burning ground that hurts while the Shepherd stands in it
+    r = start(2); P = r.player;
+    const w2 = near(r, 'witch', 0, -7); w2.shootCd = 0;
+    step(r, 1.2);
+    const patch = r.hazards.burns[0];
+    P.invuln = 0; hp0 = P.hp;
+    step(r, 1.0);
+    out.burn = { patches: r.hazards.burns.length, dps: patch ? +patch.dps.toFixed(2) : 0, lost: +(hp0 - P.hp).toFixed(2) };
+
+    // Ch3: on an ice patch the Shepherd takes far longer to reach speed
+    r = start(3); P = r.player;
+    const H = r.hazards, ring5 = [[0, 0], [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5]];
+    const find = (want) => { for (let R = 3; R < 90; R += 0.5) for (let a = 0; a < 6.28; a += 0.15) { const x = Math.cos(a) * R, z = Math.sin(a) * R; if (ring5.every(([u, v]) => H.iceAt(x + u, z + v) === want)) return { x, z }; } return null; };
+    const iceSpot = find(true), dry = find(false);
+    const speedAfter = (p) => { P.x = p.x - 0.4; P.z = p.z; P.vx = P.vz = 0; r.input.tx = 1; step(r, 0.2); r.input.tx = 0; return Math.hypot(P.vx, P.vz); };
+    const vIce = iceSpot ? speedAfter(iceSpot) : -1, onIce = P.onIce, vDry = dry ? speedAfter(dry) : -1;
+    out.ice = { found: !!iceSpot && !!dry, onIce, vIce: +vIce.toFixed(2), vDry: +vDry.toFixed(2), ch1: (start(1), app.run.hazards.iceAt(iceSpot ? iceSpot.x : 0, iceSpot ? iceSpot.z : 0)) };
+
+    // Ch4: a tighter fog vignette during the run, restored afterwards
+    r = start(4);
+    const vigIn = post.uVignette.value;
+    app.exitRun();
+    out.vignette = { during: vigIn, after: post.uVignette.value };
+
+    // Ch5 schedules 8 elites; Ch1 keeps 4
+    const elitesBy300 = (ch) => {
+      const rr = start(ch); rr.eliteIdx = 0; let n = 0;
+      const sp = rr.spawnEnemy.bind(rr); rr.spawnEnemy = (t, o = {}) => { if (o.elite) n++; return sp(t, o); };
+      for (let t = 0; t <= 300; t += 0.5) { rr.time = t; rr.director(0); }
+      return n;
+    };
+    out.elites = { ch5: elitesBy300(5), ch1: elitesBy300(1) };
+
+    // Endless: the modifier set rotates Ch2 → Ch3 → … with each Gravemaw kill
+    r = start(6);
+    const d1 = r.mods.burn ? 'ch2' : '?';
+    r.bossKills = 1; r.director(0);
+    out.endless = { d1, d2: r.mods.ice ? 'ch3' : '?' };
+
+    // Taunt: inert without taunters (undefined or empty) …
+    // (the real Legion rebuilds taunters every update, so it is frozen here; section 11 taunts with real Bulwarks)
+    r = start(1); P = r.player; r.legion.update = () => {};
+    let calls = 0; r.legion.hitMinion = () => { calls++; };
+    const h1 = near(r, 'husk', 5, 0);
+    r.legion.taunters = undefined; step(r, 0.5);
+    r.legion.taunters = []; step(r, 0.5);
+    out.inert = { calls, approach: +Math.hypot(h1.x - P.x, h1.z - P.z).toFixed(2) };
+    r.enemies.clearAll(false);
+    // … and with a (fake) taunter in range, enemies steer to it and hit it instead of the Shepherd
+    const fake = { x: P.x + 7, z: P.z, hp: 100, vx: 0, vz: 0 };
+    let hits = 0; r.legion.hitMinion = (m, dmg) => { hits++; m.hp -= dmg; };
+    r.legion.taunters = [fake];
+    const h2 = near(r, 'husk', 9, 1);
+    hp0 = P.hp; P.invuln = 0;
+    step(r, 2.5);
+    out.taunt = { toTaunter: +Math.hypot(h2.x - fake.x, h2.z - fake.z).toFixed(2), toShepherd: +Math.hypot(h2.x - P.x, h2.z - P.z).toFixed(2), hits, fakeHp: +fake.hp.toFixed(1), shepherdHurt: +(hp0 - P.hp).toFixed(1) };
+    app.exitRun();
+    return out;
+  });
+  const { lunge, slam, lob, burn, ice, vignette, elites, endless, inert, taunt } = s;
+  check('horde: Ghoul crouches 0.4 s, lunges ~11 m/s, recovers', lunge.states === '0123' && lunge.crouch >= 0.36 && lunge.crouch <= 0.45 && lunge.vmax >= 9.5, JSON.stringify(lunge));
+  check('horde: Brute slam hits for 1.4× after its 1.0 s wind-up', slam.cone && slam.delay >= 0.99 && Math.abs(slam.dmg - slam.want) < 0.6 && slam.knock > 3, JSON.stringify(slam));
+  check('horde: Witch lob lands on its telegraph after 1.0 s', lob.thrown && lob.tele && lob.off < 0.01 && lob.flight >= 0.99 && Math.abs(lob.dmg - lob.want) < 0.6 && lob.burns === 0, JSON.stringify(lob));
+  check('horde: Ch2 burning ground hurts', burn.patches >= 1 && burn.lost >= burn.dps * 0.5, JSON.stringify(burn));
+  check('horde: Ch3 ice slows Shepherd acceleration', ice.found && ice.onIce && ice.vIce > 0 && ice.vIce < ice.vDry * 0.75 && !ice.ch1, JSON.stringify(ice));
+  check('horde: Ch4 vignette tightens, restored after', vignette.during > 1 && Math.abs(vignette.after - 0.85) < 1e-6, JSON.stringify(vignette));
+  check('horde: Ch5 spawns 8 elites (Ch1 keeps 4)', elites.ch5 === 8 && elites.ch1 === 4, JSON.stringify(elites));
+  check('horde: Endless rotates chapter modifiers by depth', endless.d1 === 'ch2' && endless.d2 === 'ch3', JSON.stringify(endless));
+  check('horde: taunt is inert without taunters', inert.calls === 0 && inert.approach < 3.5, JSON.stringify(inert));
+  check('horde: taunt pulls enemies onto a taunter', taunt.toTaunter < 1 && taunt.hits >= 1 && taunt.fakeHp < 100 && taunt.shepherdHurt === 0, JSON.stringify(taunt));
+});
+check('horde: no runtime errors', !errs.length, errs[0] || '');
+
+// 11. Legion variants (GDD §4.2): with Raise Chance forced to 1, every kill rises as its own kind.
 //    Covers variant mapping, Champions, Soul Bomb blasts, Soul Witch orbs, taunters, removeMany,
 //    the cap heal and the boss engagement limit, then renders every ghost kind to catch shader errors.
 errs = await session(async (page) => {
@@ -191,6 +468,16 @@ errs = await session(async (page) => {
     const weak = L.list[3]; weak.hp = weak.maxHp * 0.1;
     EN.kill(EN.spawn('husk', P.x + 7, P.z, {}), 'bolt');
     out.capHeal = { count: L.count, cap: r.stats.cap, frac: +(weak.hp / weak.maxHp).toFixed(2) };
+    // taunting end to end (enemies.js side): foes next to a real Bulwark steer to it and strike it
+    L.detonateAll(); EN.clearAll(false); r.stats.cap = 400;
+    const bw = L.raise(P.x + 2.3, P.z, { kind: 'brute', fx: false }); bw.hp = bw.maxHp *= 50; bw.born = 1;
+    let onBw = 0, onShep = 0;
+    const hm = L.hitMinion.bind(L); L.hitMinion = (m, d) => { if (m === bw) onBw++; return hm(m, d); };
+    P.hurt = () => { onShep++; };
+    for (let i = 0; i < 4; i++) EN.spawn('husk', bw.x + 1.5 + i * 0.3, bw.z + (i - 1.5) * 0.6, { hpMul: 200 }).spawnT = 1;
+    step(3);
+    out.taunt2 = { hitsOnBulwark: onBw, hitsOnShepherd: onShep, bulwarkHurt: bw.hp < bw.maxHp, radius: +bw.radius.toFixed(2) };
+    L.hitMinion = hm; P.hurt = () => {};
     // at most 24 minions engage Gravemaw at once
     L.detonateAll(); EN.clearAll(false); r.stats.cap = 400;
     L.addMany(150, P.x, P.z);
@@ -209,7 +496,8 @@ errs = await session(async (page) => {
   check('legion: Soul Witch hits with orbs from range', s.witch.orbs > 0 && s.witch.hurt > 0 && s.witch.minDist > 2.5, JSON.stringify(s.witch));
   check('legion: removeMany returns the lost positions', s.remove.n === 5 && s.remove.left === 7 && s.remove.finite, JSON.stringify(s.remove));
   check('legion: a raise at the cap heals the weakest minion', s.capHeal.count === s.capHeal.cap && s.capHeal.frac === 0.6, JSON.stringify(s.capHeal));
-  check('legion: at most 24 minions engage the boss', s.boss.maxEngaged > 0 && s.boss.maxEngaged <= 24, JSON.stringify(s.boss));
+  check('legion: enemies taunted by a real Bulwark strike it', s.taunt2.hitsOnBulwark >= 2 && s.taunt2.bulwarkHurt, JSON.stringify(s.taunt2));
+  check('legion: at most 24 minions engage the boss',s.boss.maxEngaged > 0 && s.boss.maxEngaged <= 24, JSON.stringify(s.boss));
 });
 check('legion variants: no runtime errors', !errs.length, errs[0] || '');
 
