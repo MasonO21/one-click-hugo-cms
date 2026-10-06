@@ -30,7 +30,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 3275 characters
+## Description (4,000 max) · 3450 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -70,7 +70,8 @@ RIDE WITH YOUR CARAVAN
 
 PLAY YOUR WAY
 • Your keep keeps working while you're away, and your wyrm keeps a gentle mist so no one falls ill.
-• Daily duties, a gift calendar, achievements, events and the Wellkeeper's Ledger season pass.
+• Daily duties, a gift calendar, achievements, six rotating events and the Wellkeeper's Ledger season pass, with a new wyrm skin every season.
+• Patron levels reward loyal players with faster production, shorter timers and a daily chest. They never add combat strength.
 • Cosmetic dragon skins change how your wyrm looks and nothing else.
 
 Rainkeep is free to play with optional in-app purchases, including items that give random heroes. You can turn off in-app purchases in your device settings.
@@ -93,7 +94,7 @@ Take these in the iOS Simulator or on a device, then add a short caption band at
 |---|---|---|
 | 1 | A built-up keep at dusk, zoomed in on the Rainwyrm in its spring, villagers walking | **Raise the last water dragon** |
 | 2 | A sandstorm rolling over the keep, HUD showing "Sandstorm 1:12", the wyrm sheet on Downpour | **See the storm coming. Be ready.** |
-| 3 | Heroes roster with Legendary portraits and stars | **18 heroes. Every one has a job at home.** |
+| 3 | Heroes roster with Legendary portraits and stars | **22 heroes. Every one has a job at home.** |
 | 4 | The Dunes in 3D with caravans out to an oasis, a camp and a ruin beacon | **Cross the Dunes** |
 | 5 | Caravan tab with the Colossus raid open and the chat | **Ride with your Caravan against the Colossus** |
 | 6 | The evolution sheet showing the Skyriver with its halo of living water | **Nine forms. One storm to choose.** |
