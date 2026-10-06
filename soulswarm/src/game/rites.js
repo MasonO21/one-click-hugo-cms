@@ -37,7 +37,7 @@ function pillarMesh(color) {
       float rise = pow(fract(y * 2.2 - uTime * 2.4 + vD.y * 5.0), 4.0);
       float streak = pow(abs(sin((vUv.x + vD.y) * 18.85 + y * 4.0)), 12.0);
       float v = (0.5 + rise * 1.1 + streak * 0.7) * fade * vD.x;
-      gl_FragColor = vec4(uColor * v * 1.3, 1.0);
+      gl_FragColor = vec4(uColor * v * 0.8, 1.0);
     }`, THREE.DoubleSide);
   const mesh = new THREE.InstancedMesh(g, mat, MAX_PILLARS);
   mesh.count = 0; mesh.frustumCulled = false; mesh.renderOrder = 6;
@@ -103,6 +103,7 @@ export class Rites {
     this._cut = (e) => this.cutHit(e);
     this._wall = (e) => this.wallHit(e);
     this._knell = (e) => this.knellHit(e);
+    this._silence = (e) => { if (e.type === 'witch' && e.stunT <= 0) { this.run.enemies.stun(e, this.def.stun); this.run.particles.burst(e.x, 2.2, e.z, 4, this.hc, IMPACT); } };
     this._seen = (e) => { if (e.riteId === this.castId) return; if (this.onScreen(e)) { this.cand.push(e); } };
     this._struck = (e) => e.riteId === this.castId;
     if (this.def) this.build();
@@ -201,7 +202,7 @@ export class Rites {
     this.graveT = D.dur; this.pullT = 0; this.beatT = 0.5;
     run.pickups.magnetNear(P.x, P.z, D.pull);
     run.fx.shockwave(P.x, P.z, D.pull, run.heroColor, 0.6, 0.05);
-    run.fx.light(P.x, P.z, 10, 1.4, this.color, 0.9);
+    run.fx.light(P.x, P.z, 8, 0.9, this.color, 0.8);
     run.fx.flash(0.15); run.fx.shake(0.25); run.fx.slowMo(0.55, 0.25);
     run.particles.ring(P.x, P.z, D.pull * 0.6, 70, this.hc, { life: 0.55, size: 0.7 });
     run.particles.burst(P.x, 1.2, P.z, 18, WHITE, { speed: 7, life: 0.4, size: 0.35, up: 2 });
@@ -216,7 +217,7 @@ export class Rites {
       p.x = x; p.z = z; p.t = 0; p.seed = Math.random();
     }
     run.particles.burst(x, 0.3, z, 7, this.hc, SPARK);
-    if (this.lightT <= 0) { this.lightT = 0.08; run.fx.light(x, z, 3.5, 1.5, this.color, 0.45); }
+    if (this.lightT <= 0) { this.lightT = 0.2; run.fx.light(x, z, 3, 0.7, this.color, 0.4); }
   }
 
   updateVael(dt, D) {
@@ -396,6 +397,7 @@ export class Rites {
     if (!killed && e.active) {
       run.weapons.ignite(e, dmg * D.burn / BURN_SHARE);
       if (fresh) e.burnRaise = D.burnRaise;
+      if (D.pin) E.stun(e, D.pin); // the chain pins it where it stands
     }
   }
 
@@ -405,12 +407,13 @@ export class Rites {
     run.projectiles.clearEnemyShots();
     this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0;
     run.enemies.query(P.x, P.z, D.r, this._knell);
+    run.enemies.query(P.x, P.z, D.silence, this._silence); // the toll carries: Witches farther out lose their fire too
     this.bellT = 0; this.bellX = P.x; this.bellZ = P.z; this.waves = 1; this.waveT = 0;
     this.bell.visible = true;
     run.fx.shockwave(P.x, P.z, D.r, run.heroColor, 0.45, 0.06);
-    run.fx.light(P.x, P.z, D.r + 2, 0.9, this.color, 0.8);
+    run.fx.light(P.x, P.z, D.r + 2, 0.6, this.color, 0.8);
     run.fx.flash(0.2); run.fx.aberration(0.5); run.fx.shake(0.4); run.fx.hitStop(0.06);
-    run.particles.ring(P.x, P.z, D.r, 80, this.hc, { life: 0.5, size: 0.65 });
+    run.particles.ring(P.x, P.z, D.r, 60, this.soft, { life: 0.5, size: 0.6 });
     this.showRune(P.x, P.z, D.r, 1.3, false);
   }
 
@@ -465,8 +468,20 @@ export class Rites {
     // the wall: nothing stays inside; every crossing is cut (once per hitCd per foe); Gravemaw is only shoved
     this._dt = dt; this._shown = 0;
     run.enemies.query(cx, cz, R + 1, this._wall);
+    const r2 = R * R;
+    // Witch fire falling inside the ring shatters on the bone just before it lands (the horde's fire only: Gravemaw's
+    // orbs keep his rules)
+    const lobs = run.projectiles.lobs;
+    if (lobs) for (let i = lobs.length - 1; i >= 0; i--) {
+      const F = lobs[i];
+      if (F.flight - F.t > 0.12 || (F.tx - cx) ** 2 + (F.tz - cz) ** 2 > r2) continue;
+      lobs[i] = lobs[lobs.length - 1]; lobs.pop(); run.projectiles.lobPool.push(F);
+      run.particles.burst(F.x, F.y, F.z, 8, BONE_HDR, BONE);
+      run.particles.burst(F.x, F.y, F.z, 6, EMBER, IMPACT);
+      if (this.sfxT <= 0) { this.sfxT = 0.12; run.audio.sfx('hit', { volume: 0.5, pitch: 0.45 }); }
+    }
     // the legion inside mends: heal × max HP over the wall's life
-    const L = run.legion.list, r2 = R * R, k = (D.heal / D.dur) * dt;
+    const L = run.legion.list, k = (D.heal / D.dur) * dt;
     for (let i = 0; i < L.length; i++) {
       const m = L[i];
       if (!(m.hp > 0) || m.hp >= m.maxHp || (m.x - cx) ** 2 + (m.z - cz) ** 2 > r2) continue;
@@ -476,6 +491,7 @@ export class Rites {
   }
 
   wallHit(e) {
+    if (e.ev) return; // a Soul Thief or Cursed Coffin keeps its own script
     const D = this.def, run = this.run, cx = this.wallX, cz = this.wallZ;
     let dx = e.x - cx, dz = e.z - cz, d = Math.sqrt(dx * dx + dz * dz);
     const boss = e.type === 'boss', lim = D.r + (boss ? 0 : e.radius);

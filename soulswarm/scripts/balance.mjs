@@ -28,10 +28,10 @@ const PROGRESSION = {
 };
 
 // Flees the horde, circle-strafes the boss, takes the better gate, picks the first card. No god mode, no revives.
-// Casts the Rite on a simple rule per hero: Mordrake at 8+ foes within 6 m (3+ within 3 m at low HP); Liora the same, or
-// when a Witch's fire circle is about to land on her (the Knell clears it); Nyx at 3+ foes within 3 m, 8+ within 6 m or an
-// incoming fire circle, dashing straight away from the crowd (or out of the circle); Vael at 12+ foes within 12 m;
-// Seraphine at 14+ within 12 m, an elite or 2+ Witches in sight. Gravemaw in reach (8 m) always counts.
+// Casts the Rite on a simple rule per hero: Mordrake at 2+ foes within 3 m or 5+ within 6 m; Liora at 3+ within 3 m, 8+
+// within 6 m, or when a Witch's fire circle is about to land on her (the Knell clears it); Nyx the same, dashing straight
+// away from the crowd (or out of the circle); Vael at 12+ foes within 12 m; Seraphine at 14+ within 12 m, an elite or 2+
+// Witches in sight. Gravemaw in reach (8 m) always counts.
 const BOT = `window.__balance = (ch, prog, god, hero, rite) => {
   const app = window.__soulswarm, p = app.profile, E = app.engine;
   E.manual = true;
@@ -67,8 +67,8 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite) => {
       const go = hero === 'vael' ? wide >= 12 || boss                                    // Grave Call: plenty to raise (at the cap it mends the legion)
         : hero === 'nyx' ? !!lob || close >= 3 || near >= 8                               // Shadow Step: dodge the fire, slip out as they close in
         : hero === 'seraphine' ? wide >= 14 || elite || witches >= 2 || boss               // Ashfall: a field of targets, an elite, or the casters
-        : hero === 'liora' ? !!lob || near >= 8 || boss || (low && close >= 3)             // Death Knell: silence the falling fire, or ring when surrounded
-        : near >= 8 || boss || (low && close >= 3);                                        // Ossuary Wall: when they surround you
+        : hero === 'liora' ? !!lob || close >= 3 || near >= 8 || boss                      // Death Knell: silence the falling fire, or ring as they close in
+        : close >= 2 || near >= 5 || boss;                                                 // Ossuary Wall: as soon as they gather round
       if (go) {
         if (hero === 'nyx') { // straight away from the crowd, or out of the fire circle
           let dx = ax, dz = az;

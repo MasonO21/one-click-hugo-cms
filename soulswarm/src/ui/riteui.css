@@ -1,5 +1,5 @@
 /* The RITE button (ui/riteui.js): 64 px, above-left of NOVA; mirrored with .lefty */
-.rite { --rc: var(--soul); position: absolute; right: 112px; bottom: calc(var(--safe-b) + 70px); width: 64px; height: 64px; border: 0; padding: 0; border-radius: 50%; cursor: pointer; touch-action: none;
+.rite { --rc: var(--soul); position: absolute; right: 112px; bottom: calc(var(--safe-b) + 60px); width: 64px; height: 64px; border: 0; padding: 0; border-radius: 50%; cursor: pointer; touch-action: none;
   background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--rc) 18%, #16203a), #060a14 72%);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 30%, transparent), 0 6px 16px rgba(0,0,0,.6); }
 .rite.none { display: none; }

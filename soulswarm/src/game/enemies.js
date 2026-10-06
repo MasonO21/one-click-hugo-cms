@@ -90,6 +90,7 @@ export class Enemies {
     e.shootCd = d.ranged ? d.ranged.cooldown * (0.5 + Math.random()) : 0;
     e.moveCd = 0; e.lx = 0; e.lz = 1; e.flank = 0; // signature move: cooldown, locked direction, pack flank angle
     e.lastHitBy = null;
+    e.aff = null; e.ev = null; // elite affixes (affixes.js) and run-event ownership (events.js)
     e.stunT = 0; e.riteId = 0; e.riteT = 0; // Hero Rites: stun timer, per-cast hit mark, per-foe hit cooldown
     this.active.push(e);
     this.counts[type]++;
@@ -160,6 +161,7 @@ export class Enemies {
       e.haloCd -= dt;
       e.moveCd -= dt;
       if (e.type === 'boss') { run.boss.update(e, dt); continue; }
+      if (e.ev) { run.events.drive(e, dt); continue; } // the Soul Thief and the Cursed Coffin move on their own
       if (e.stunT > 0) { e.stunT -= dt; this.drift(e, dt); continue; } // stunned: no steering and no attacks
       const pdist = Math.hypot(P.x - e.x, P.z - e.z) || 0.001;
       // taunt: the nearest taunter within range replaces the Shepherd as the target
@@ -250,6 +252,7 @@ export class Enemies {
         }
       }
 
+      if (e.slowUid === e.uid && e.slowT > this.time) speed *= e.slowMul; // a broken ward's stagger, a Commander's rout (affixes.js)
       // steer toward the target (with a little orbiting wobble so packs flow around)
       if (wobble) {
         const wob = Math.sin(this.time * 1.3 + e.phase) * 0.35, wx = sx - sz * wob;
@@ -336,7 +339,7 @@ export class Enemies {
    *  called off (a Brute's cone follows its state; a Bloater's fuse circle is put out). Gravemaw is never stunned: his
    *  next attack only slips back by RITES.bossStagger. */
   stun(e, t) {
-    if (!e.active || !(t > 0)) return;
+    if (!e.active || !(t > 0) || e.ev) return; // event entities (Soul Thief, Cursed Coffin) keep their own script
     if (e.type === 'boss') { const B = this.run.boss; if (B.state === 'chase') B.cd += DATA.RITES.bossStagger; return; }
     if (e.state && e.type !== 'witch') {
       if (e.type === 'bloater') for (const T of this.run.fx.teles) if (T.active && !T.onDone && (T.mesh.position.x - e.x) ** 2 + (T.mesh.position.z - e.z) ** 2 < 1.5) { T.active = false; T.mesh.visible = false; }
@@ -380,6 +383,7 @@ export class Enemies {
   /** opts: {kx,kz,knock,crit,source,silent} */
   damage(e, amount, o = {}) {
     if (!e.active || amount <= 0) return false;
+    if (e.aff && e.aff.ward > 0) amount = this.run.affixes.absorb(e, amount); // a Warded elite's soul ward soaks most of it
     e.hp -= amount;
     e.flash = 1;
     e.lastHitBy = o.source || null;
@@ -436,7 +440,7 @@ export class Enemies {
     const c = this.color, ec = this.eliteColor, g = this.run.glow, cg = this.crownGlow;
     let nc = 0;
     for (const e of this.active) {
-      if (!e.active || e.type === 'boss') continue;
+      if (!e.active || e.type === 'boss' || e.ev) continue; // event-owned enemies draw their own mesh (events.js)
       const M = this.meshes[e.type];
       const i = M.n++;
       const pop = Math.min(1, e.spawnT * 4);

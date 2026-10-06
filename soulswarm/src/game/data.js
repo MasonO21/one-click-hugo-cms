@@ -58,24 +58,27 @@ export const RITES = {
   hintAt: 8,          // first-ever run: the Rite hint shows once this many seconds have passed (it is ready from the start)
   bossStagger: 0.25,  // a stun never stops Gravemaw: it only pushes his next attack back by this much
   // every kill rises (Raise Chance 100%; the legion cap and overflow rules still hold); shards within `pull` m fly in
-  vael: { name: 'Grave Call', short: 'CALL', cd: 30, dur: 4, pull: 9,
-    desc: 'For 4 s every foe you slay rises, and soul shards within 9 m fly to you.' },
+  vael: { name: 'Grave Call', short: 'CALL', cd: 20, dur: 4, pull: 12,
+    desc: 'For 4 s every foe you slay rises, and soul shards within 12 m fly to you.' },
   // dash `dist` m in `time` s along the stick (facing when idle), invulnerable; foes within `width` of the path take
   // dmg and are knocked aside; the legion moves +haste for hasteT s to catch up
-  nyx: { name: 'Shadow Step', short: 'STEP', cd: 10, dist: 7, time: 0.18, invuln: 0.4, width: 1.5, dmg: 60, knock: 12, haste: 0.6, hasteT: 3,
+  nyx: { name: 'Shadow Step', short: 'STEP', cd: 8, dist: 7, time: 0.18, invuln: 0.4, width: 1.5, dmg: 90, knock: 12, haste: 0.6, hasteT: 3,
     desc: 'Dash 7 m through the horde, untouchable, slashing all in your path. Your legion surges after you.' },
-  // ash chains strike up to n foes on screen (elites and Gravemaw first, then nearest), `span` s from first to last;
-  // each hit ignites (burn = share of the hit over 2 s; burning kills get +burnRaise Raise Chance); +nova charge
-  seraphine: { name: 'Ashfall', short: 'ASHFALL', cd: 24, n: 20, range: 16, span: 0.5, dmg: 110, burn: 0.6, burnRaise: 0.15, nova: 0.15,
-    desc: 'Burning chains fall on 20 foes, elites first. They ignite, and your Nova charges +15%.' },
-  // a bell tolls `r` m around her: foes are stunned, take dmg, carry her toll for `mark` s; enemy shots are cleared
-  liora: { name: 'Death Knell', short: 'KNELL', cd: 22, r: 5, stun: 1.5, mark: 5, dmg: 30,
-    desc: 'A great bell tolls: foes within 5 m are stunned and marked by the toll for 5 s. Enemy shots are silenced.' },
+  // ash chains strike up to n foes on screen (Gravemaw and elites first, then Cinder Witches, then the nearest), `span` s
+// from first to last;
+  // each hit pins the foe (a stun) for `pin` s and ignites it (burn = share of the hit over 2 s; burning kills get +burnRaise
+// Raise Chance); +nova charge
+  seraphine: { name: 'Ashfall', short: 'ASHFALL', cd: 18, n: 20, range: 16, span: 0.5, dmg: 120, burn: 0.6, burnRaise: 0.15, nova: 0.15, pin: 0.8,
+    desc: 'Burning chains fall on 20 foes, elites then Witches first, pinning them for 0.8 s. They ignite, and your Nova charges +15%.' },
+  // a bell tolls `r` m around her: foes are stunned, take dmg, carry her toll for `mark` s; enemy shots are cleared and
+  // Cinder Witches within `silence` m are stunned too (their fire waits)
+  liora: { name: 'Death Knell', short: 'KNELL', cd: 15, r: 5, silence: 10, stun: 1.5, mark: 5, dmg: 60,
+    desc: 'A great bell tolls: foes within 5 m are stunned and marked by the toll for 5 s. Enemy fire is silenced, and Witches within 10 m with it.' },
   // a ring of bone spikes (`r` m) for `dur` s at the cast point: foes inside are thrown out and every crossing
-  // hurts (once per hitCd per foe); minions inside heal `heal` of their max HP over the duration; Gravemaw is only
-  // shoved at bossPush m/s
-  mordrake: { name: 'Ossuary Wall', short: 'WALL', cd: 28, r: 5, dur: 5, dmg: 40, hitCd: 0.5, knock: 9, heal: 0.5, bossPush: 1.2, spikes: 44,
-    desc: 'A ring of bone spikes erupts for 5 s. Foes are hurled out and cut on every crossing; your legion inside heals 50%.' },
+  // hurts (once per hitCd per foe); Witch fire falling inside shatters on the bone; minions inside heal `heal` of their
+  // max HP over the duration; Gravemaw is only shoved at bossPush m/s; the ring moves with him
+  mordrake: { name: 'Ossuary Wall', short: 'WALL', cd: 18, r: 5, dur: 5, dmg: 60, hitCd: 0.5, knock: 9, heal: 0.5, bossPush: 1.2, spikes: 44,
+    desc: 'A ring of bone spikes rises around you for 5 s. Foes are hurled out and cut on every crossing, Witch fire shatters on it, and your legion inside heals 50%.' },
 };
 
 // ---------------------------------------------------------------- Enemies
@@ -137,6 +140,50 @@ export const BOSS_PHASES = {
   ch5Crown: 0.5,
 };
 export const ELITE = { hpMul: 6, scale: 1.35, dmgMul: 1.5, crown: 0xffd04a };
+
+// ---------------------------------------------------------------- Elite affixes and run events (affixes.js, events.js)
+// Every elite the director raises rolls `count` affixes (`late` from Chapter `lateFrom` and in Endless), plus
+// run.diff.eliteAffixes when a difficulty sets it. Each affix pays `gold` bonus gold on the kill. A first run's
+// elites roll only from `tutorial`. Champions raised from affixed elites keep none of them.
+//   warded: a soul ward worth `share` × max HP soaks `cut` of every hit until it breaks, then a `stagger` s stagger
+//   splitter: on death, n [min, max] non-elite, chest-less copies with `hp` × the type's normal HP, `speed` ×, `scale` ×
+//   vampiric: heals `heal` × max HP whenever another enemy dies within `r` m (at most once per `cd` s)
+//   hasted: move speed ×
+//   commander: enemies within `r` m move and hit `speed` / `dmg` × harder; its death routs them
+//     (a `knock` m/s shove, then `slow` × speed for `rout` s)
+export const AFFIXES = {
+  count: 1, late: 2, lateFrom: 4, gold: 40, tutorial: ['warded', 'hasted'],
+  warded:    { name: 'Warded',    color: '#9ff0ff', desc: 'Shatter its soul ward',      share: 0.35, cut: 0.7, stagger: 0.9 },
+  splitter:  { name: 'Splitter',  color: '#ffa25a', desc: 'Splits apart in death',      n: [3, 4], hp: 0.9, speed: 1.35, scale: 0.78 },
+  vampiric:  { name: 'Vampiric',  color: '#ff4a62', desc: 'Feeds on nearby deaths',     heal: 0.04, r: 6, cd: 0.35 },
+  hasted:    { name: 'Hasted',    color: '#ffc46a', desc: 'Unnaturally swift',          speed: 1.45 },
+  commander: { name: 'Commander', color: '#ffe07a', desc: 'Rallies the horde, slay it to rout them', r: 6, speed: 1.25, dmg: 1.25, rout: 2, slow: 0.4, knock: 7 },
+};
+export const AFFIX_IDS = ['warded', 'splitter', 'vampiric', 'hasted', 'commander'];
+// Mid-run events: one at a time, the first at `first` [min, max] s, then every `every` [min, max] s, inside [from, to]
+// (Endless keeps rolling: no `to`). Never within `clear` s of a gate pair or an elite, `swarm` s of a swarm ring, or
+// `bossGap` s before Gravemaw; a first run waits until `tutorialFrom`. Each appears `dist` m from the Shepherd, clear
+// of hazards and gates, and simply lapses if ignored.
+//   thief: flees for `life` s at `speed` m/s (idle `wake` s unless the Shepherd comes within `alert` m; beyond `far` m
+//     it dawdles at `dawdle` ×); hp × husk-scaled HP; the kill pays gold[0] + gold[1] × chapter and `xp` × a level of XP
+//   shrine: stand inside `r` m for `hold` s (progress drains at `drain` × when outside) for a 1-of-3 blessing lasting `buff` s
+//   coffin: `hp` (husk-scaled); breaking it releases `wave` foes `ring` m around it and a chest-less mini-elite
+//     (`mini`: HP and size × an elite's); clear them, or last `reward` s, for a Relic Chest
+export const RUN_EVENTS = {
+  from: 60, to: 320, first: [62, 80], every: [80, 110], clear: 8, swarm: 5, bossGap: 40, tutorialFrom: 150, dist: 12,
+  weights: { thief: 1, shrine: 1, coffin: 1 },
+  thief:  { name: 'Soul Thief', life: 18, hp: 125, speed: 5.0, wake: 1.2, alert: 8, far: 15, dawdle: 0.55, escape: 40, gold: [100, 40], xp: 1 },
+  shrine: { name: 'Shrine of Souls', life: 28, r: 1.9, hold: 2.5, drain: 1.5, buff: 60 },
+  coffin: { name: 'Cursed Coffin', life: 30, hp: 150, wave: 20, ring: [2.2, 4.6], mini: { hp: 0.5, scale: 0.85, types: ['husk', 'brute', 'witch'] }, reward: 20 },
+};
+// Shrine of Souls blessings (a pick of 3): xp ×, minionDmg ×, speed ×, magnet (every shard and pickup flies in), raise +pp
+export const BLESSINGS = {
+  feast:  { name: 'Soul Feast',    icon: 'star',   desc: 'Double XP from soul shards',           xp: 2 },
+  wrath:  { name: 'Legion Wrath',  icon: 'fang',   desc: 'Minions deal +50% damage',             minionDmg: 1.5 },
+  stride: { name: 'Wraith Stride', icon: 'wing',   desc: '+30% move speed',                      speed: 1.3 },
+  tide:   { name: 'Soul Tide',     icon: 'magnet', desc: 'Every shard and treasure flies to you', magnet: true },
+  call:   { name: 'Open Graves',   icon: 'raise',  desc: '+20% Raise Chance',                    raise: 0.2 },
+};
 
 // ---------------------------------------------------------------- Chapters
 // Each chapter re-tints the world. Colors are hex ints for three.js.
@@ -293,6 +340,35 @@ export const MINIONS = {
   bossEngage: 24, // at most this many minions fight Gravemaw at once; the rest fight adds or orbit
   capHeal: 0.5, // a raise roll at the legion cap heals the weakest minion by this share of its max HP
 };
+
+// ---------------------------------------------------------------- Kill streaks and game feel (GDD §4.7)
+// Kill streak (streak.js): kills from any source chain while each lands within the window of the one before. The window
+// tightens as the streak grows, window / (1 + n / tighten), never under floor (sim seconds: slow-mo and hit-stop never break
+// a streak). Crossing a tier starts an 8 s Soul Frenzy at that tier (a lower tier never downgrades a running one): XP gain
+// ×(1 + xp) and minion attack speed ×(1 + haste). nova = Soul Nova charge in kill-equivalents; a tier reached mid-detonation
+// banks it until the chain ends. The HUD counter shows from showAt kills; the stinger rises `semis` semitones per tier.
+// Tuned on bot kill traces (Ch1/2/4): ordinary fights reach tier 1–2, a Nova of 100+ souls tier 3–4.
+export const STREAK = {
+  window: 1.2, tighten: 120, floor: 0.3, showAt: 10, frenzy: 8, stingGap: 0.12,
+  tiers: [
+    { at: 30,  name: 'CARNAGE',      xp: 0.10, haste: 0.10, nova: 0,  semis: 0 },
+    { at: 75,  name: 'MASSACRE',     xp: 0.15, haste: 0.20, nova: 0,  semis: 3 },
+    { at: 150, name: 'ANNIHILATION', xp: 0.20, haste: 0.30, nova: 15, semis: 5 },
+    { at: 300, name: 'SOUL HARVEST', xp: 0.25, haste: 0.40, nova: 30, semis: 7 },
+    { at: 500, name: 'APOCALYPSE',   xp: 0.30, haste: 0.50, nova: 45, semis: 12 },
+  ],
+};
+// Hit-stop (effects.js): the simulation dips to `scale` speed for this many real seconds (× the screen-shake setting), easing
+// back over the last `recover` share. It multiplies a running slow-mo instead of replacing it; real-time timers keep going.
+export const HITSTOP = { scale: 0.04, recover: 0.35, elite: 0.075, phase: 0.09, gate: 0.065, nova: 0.08 };
+// Soul Nova wind-up (sim seconds): the tap grants the invulnerability and clears enemy shots at once, the souls flare and
+// stream into the Shepherd, then his blast fires and the detonation chain ripples outward.
+export const NOVA = { windup: 0.25 };
+// Overflow fade (legion.js): once the legion has been over the cap for `grace` s (a gate that adds souls restarts it), the
+// excess dissolves at `rate` of itself per second (at least `min` per second), each soul fading out over `dissolve` s.
+export const OVERFLOW = { grace: 15, rate: 0.02, min: 0.4, dissolve: 1.2 };
+// Level-up pulse: when the cards appear, soul shards within `vacuum` m fly to the Shepherd.
+export const LEVEL_PULSE = { vacuum: 6 };
 
 // ---------------------------------------------------------------- Relics (gear)
 export const RELICS = {

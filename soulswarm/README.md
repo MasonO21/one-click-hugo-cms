@@ -22,14 +22,17 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 - **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded.
 - **5 heroes** with signature weapons (Vael, Nyx, Seraphine, Liora, Mordrake), plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
 - **Hero Rites:** each hero has a signature active ability on its own RITE button, ready from the first second of every run: Vael's **Grave Call** (every kill rises), Nyx's **Shadow Step** (an untouchable dash that cuts through the horde), Seraphine's **Ashfall** (burning chains fall on 20 foes), Liora's **Death Knell** (a bell toll that stuns and marks) and Mordrake's **Ossuary Wall** (a ring of bone spikes).
-- **The legion:** every slain enemy can rise as its own kind (Shades, Wisp Runners, taunting Bulwarks, Soul Witches, Soul Bombs, gold Champions). Multiply it through **Soul Gates** and detonate it with **Soul Nova**.
+- **The legion:** every slain enemy can rise as its own kind (Shades, Wisp Runners, taunting Bulwarks, Soul Witches, Soul Bombs, gold Champions). Multiply it through **Soul Gates** and detonate it with **Soul Nova**, which winds up for a beat as every soul streams into the Shepherd. Souls pushed over the cap by a gate fade away after a grace period, so spend them.
+- **Kill streaks:** chain kills from any source (the legion and the Nova make the biggest) through CARNAGE, MASSACRE, ANNIHILATION, SOUL HARVEST and APOCALYPSE. Each tier starts a **Soul Frenzy**: faster XP and faster-striking minions, and Nova charge at the top tiers. Your best streak is on the results screen and kept as a record. Big hits land with a brief hit-stop.
 - **A living horde:** Ghoul packs lunge, Brutes slam, Witches lob fire. Each chapter has its own twist: burning ground, sliding ice, abyssal hands, an elite parade.
+- **Elite affixes:** every elite rolls one affix, or two from Chapter 4 and in Endless. **Warded** elites carry a soul ward that shatters, **Splitters** burst into copies, **Vampiric** elites feed on nearby deaths, **Hasted** elites trail embers, and **Commanders** drive the horde around them until their death routs it. Affixed elites still drop their Relic Chest, plus bonus gold.
+- **Mid-run events:** about three per run, all optional, with an edge arrow while they're off screen. Chase down a **Soul Thief** for gold and XP before it escapes. Hold a **Shrine of Souls** for a 60-second blessing. Break a **Cursed Coffin** to unleash a horde and survive it for a Relic Chest.
 - **Meta progression:** talents, relics (8 types × 4 rarities), hero stars, the Soul Altar gacha (odds and pity shown in-game), a 30-tier Soul Pass, rotating daily quests, the **Daily Trial** (a free daily run with a boon and a bane), **Blood Moon** weekends (double rewards, more elites), a weekly chest, a 7-day login calendar, energy, and a shop with simulated IAP and rewarded ads.
 
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, Hero Rites, meta and economy (116 checks)
+npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, meta and economy (148 checks)
 npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server)
 npm run trailer       # renders a 22 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
