@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview --host",
     "playtest": "node scripts/playtest.mjs",
+    "balance": "node scripts/balance.mjs",
     "icons": "node scripts/make-icons.mjs",
     "art": "bash scripts/painted-assets.sh",
     "cap:sync": "npm run build && npx cap sync",

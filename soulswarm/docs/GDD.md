@@ -84,7 +84,7 @@ Everything below describes the build unless it is marked **Planned**.
 | **Auto-attack** | All weapons fire on their own cooldowns. | Soul Bolt targets the nearest enemies within 11.5 m, Ashen Chains the nearest within 7.5 m, Bone Spears aim at the nearest within 13 m (or straight ahead). The Scythe sweeps a full circle starting from the facing direction; Grave Pulse and Skull Halo hit around the player. A weapon with no target retries after 0.12 s. *(Planned: elites and Bloaters within 3 m get priority.)* |
 | **NOVA button** | 88 px circle in the bottom-right (Space on desktop). Works at 100% charge with any legion size. | Pulses when ready. A tap fires immediately with 0.55 s of slow motion. A touch on the button never starts the joystick. *(Planned: 0.4 s wind-up, disabled below 10 minions, left-handed mirror.)* |
 | **Pause** | Top-left, 36 px. Also auto-pauses when the app goes to the background. | The pause screen shows time, kills, legion size and the current build, plus a sound toggle and "Abandon run". *(Planned: Nova charge on the pause screen.)* |
-| **Level-up / chest cards** | 3 large cards. Tap to pick. Gameplay is paused. | After a pick the Shepherd gets 0.6 s of invulnerability. *(Planned: a 0.3 s input guard against accidental picks.)* |
+| **Level-up / chest cards** | 3 large cards. Tap to pick. Gameplay is paused. | Taps in the first 0.3 s are ignored (no accidental picks from a swipe). After a pick the Shepherd gets 0.6 s of invulnerability. A Relic Chest uses the same three cards under a gold "Relic Chest" header; chests are offered before queued level-ups. |
 | **Haptics** | Success on level-up, Relic Chest and a good gate; warning on a bad gate and the boss warning; medium when hit; heavy on Nova, boss slam, death and boss kill. | Toggle in settings. *(Planned: a light tick on raise, throttled to 10/s.)* |
 
 There are no other in-run buttons. The reroll (1 per run, through an optional rewarded ad, free with Soul Pact) sits inside the level-up screen.
@@ -138,9 +138,9 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 - A pair spawns every **40 s** from 0:28 to 5:48 (9 per chapter, none during the boss). They appear 10.5 m ahead along the player's movement direction (straight up-screen if standing still), side by side (each 3.4 m wide, 0.9 m apart), rise in 0.6 s and last 15 s.
 - **The numbers are always the truth.** The values shown are exactly what happens. There are no hidden modifiers, and ×N is applied to the legion size at the moment you walk through. The only limit is the 400 ceiling.
-- The gate choice is a maths-and-risk puzzle. *(Planned: the better-looking gate is often placed behind a Brute or a Bloater cluster.)*
+- The gate choice is a maths-and-risk puzzle. From 2:00, 60% of pairs plant a guard 3.4 m in front of the gate with the bigger payoff (the larger legion change at that moment): a Brute with 3 Husks, or from 4:00 a 50/50 between that squad and a cluster of 3 Bloaters. Guards use the run's normal HP and damage scaling. Scripted pairs are never guarded.
 - **Overflow:** gate results can push the legion above the cap (up to the 400 ceiling). Overflow minions stay until they die or are detonated, but kills stop raising until the legion is back under the cap. *(Planned: overflow minions last 20 s, then fade at 2 per second.)*
-- **Negative gates:** −N removes N minions (all of them if the legion is smaller) and ÷2 removes half, rounded down. Lost minions simply vanish. *(Planned: minions lost to a negative gate detonate at 50% Nova power, making ÷2 an emergency escape.)*
+- **Negative gates:** −N removes N minions (all of them if the legion is smaller) and ÷2 removes half, rounded down. The lost souls **detonate** at half Nova power, rippling outward from the gate over min(0.6, 0.12 + 0.003n) s: each blast deals 0.5 × (35 + 0.5L) × Damage multiplier × (1 + 0.45(c − 1)) in 2.6 m, where L is the legion size before the gate. This makes ÷2 an emergency escape when the horde closes in.
 
 **How pairs are built** (L = legion size, m = minutes elapsed; values round to the nearest 5, minimum 5):
 
@@ -157,8 +157,8 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 
 ### 4.4 Soul Nova
 
-- **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). Kills during a detonation add nothing. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas. *(Planned: +5 per elite kill, +3 per gate.)*
-- **Activation:** tap NOVA at 100%. It fires at once with 0.55 s of slow motion (30% speed), a flash, and all enemy projectiles cleared. Every minion detonates in a chain that ripples outward from the player over min(0.75, 0.15 + 0.003N) s. *(Planned: 0.4 s wind-up with hit-stop and 1.5 s of invulnerability.)*
+- **Charge meter:** each kill (any source) adds 1/300 of a full charge, times the Nova charge multiplier (Seraphine +30%, Abyss Eye relic +5% to +30%, more with relic levels). An elite kill counts as 6 kills and passing a Soul Gate (good or bad) as 3. Kills during a detonation add nothing. A full charge takes 300 kills (≈231 for Seraphine), so a Chapter 1 clear (~2,000–2,500 kills) gives roughly 6–7 Novas.
+- **Activation:** tap NOVA at 100%. It fires at once with 0.55 s of slow motion (30% speed), a flash, and all enemy projectiles cleared. Every minion detonates in a chain that ripples outward from the player over min(0.75, 0.15 + 0.003N) s. Firing grants the Shepherd 1.5 s of invulnerability. *(Planned: 0.4 s wind-up with hit-stop.)*
 - **Damage per detonation** = (35 + 0.5 × N) × Damage multiplier × (1 + 0.45(c − 1)), radius 2.6 m, where N = legion size when NOVA was pressed and the Damage multiplier includes stars, the Might talent and skill, and Crown of Thorns. The Shepherd's own blast deals 1.2× that damage in a 7 m radius, with knockback. At N = 300, each blast deals 185 base damage, 300 times, overlapping.
 - **Cost:** the legion drops to 0, and Raise Chance is halved until the chain finishes, so the rebuild starts a beat later.
 - **Bosses** take full Nova damage in the build. *(Planned: bosses take 50% damage from Nova, capped at 25% of boss max HP per Nova.)*
@@ -170,7 +170,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 | Soul shard (XP) | Every kill | XP equal to the enemy's XP value (×12 for elites). At most 420 shards on the map; past ~416, new shards merge into the nearest shard within 3 m. Shards left 48 m behind are lost. |
 | Heart | 0.6% per non-elite kill | Heals 30% of max HP |
 | Magnet | 0.3% per non-elite kill | Pulls every shard on the map |
-| Relic Chest | Every elite | One weighted random card, applied automatically (an evolution if eligible). *(Planned: choose 1 of 3.)* |
+| Relic Chest | Every elite | Choose 1 of 3 cards, drawn like a level-up (an eligible evolution is almost always offered). Uses the run's single ad reroll if it is still unspent. |
 
 Pickup radius is 2.8 m (Soul Magnet +30% per level). Hearts, magnets and chests are pulled in at 80% of that radius and vanish after 40 s.
 
@@ -487,7 +487,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 | 0:35 | **Hook 1: Raise** | Planned: the first 5 kills raise at 100% (tutorial only). Caption: "The fallen rise for you." (Build: Vael's 35% Raise Chance usually raises one of the first 3 kills, and the raise hint fires.) | `ftue_first_raise` |
 | 0:50 | First level-up | 3 cards. Planned: Raise Dead is highlighted, but any pick is allowed. (Build: the first level needs only 7 XP, so it comes ~0:08 into the run.) | `ftue_levelup` |
 | 1:20 | **Hook 2: Soul Gate** | Legion is about 12. Planned scripted pair: +5 vs ×2. After passing, a short caption explains the maths ("×2 = +12!"). A wrong pick gets a gentle hint, not a punishment. (Build: the first pair arrives at 0:28 with the gate hint; at legion ~12 it is typically +20 vs ×2.) | `ftue_gate` (choice) |
-| 1:45 | First elite | Gold Brute (Planned script). It drops a Relic Chest → free pick. (Build: an Elite Husk at 1:15; the chest card is applied automatically.) | `ftue_elite` |
+| 1:45 | First elite | Gold Brute (Planned script). It drops a Relic Chest → free pick. (Build: an Elite Husk at 1:15; its chest opens a 1-of-3 pick.) | `ftue_elite` |
 | 2:15 | **Hook 3: Soul Nova** | Planned: the meter is accelerated in the tutorial, and a pulsing ring and finger point at NOVA. Screen wipe, slow-mo, legion count drops to 0 and starts climbing again. (Build: the meter fills after ~300 kills, around 2:30–3:00, and the Nova hint fires; 0.55 s slow-mo.) | `ftue_nova` |
 | 2:40 | Second gate | ×2 vs ÷2, where ×2 sits behind a Bloater (Planned placement). Teaches risk. (Build: pairs at 1:08, 1:48 and 2:28 can offer ×2 vs −N or ÷2.) | `ftue_gate2` |
 | 3:00 | Gravemaw (Planned tutorial boss) | 25% HP, Phase 1 only. Telegraph rings are shown slowly. (Build: Gravemaw arrives at 6:00 with full Ch1 HP, 9,000.) | `ftue_boss` |

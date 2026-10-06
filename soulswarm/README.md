@@ -28,6 +28,7 @@ Desktop controls are WASD/arrows to move and Space for Soul Nova. On touch, drag
 
 ```bash
 npm run playtest      # headless bot plays every hero, a full Chapter 1 clear, Endless and economy checks (28 checks)
+npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server)
 npm run trailer       # renders a 21 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
 npm run art           # rebuilds in-game art, icon, splash and native sets from the painted masters in store/art
