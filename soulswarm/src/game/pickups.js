@@ -46,6 +46,13 @@ export class Pickups {
 
   magnetAll() { for (const g of this.gems) g.pulled = true; }
 
+  /** Pull the shards within r of (x, z) to the Shepherd (Requiem). Returns how many started flying. */
+  magnetNear(x, z, r) {
+    let n = 0;
+    for (const g of this.gems) if (!g.pulled && (g.x - x) ** 2 + (g.z - z) ** 2 < r * r) { g.pulled = true; n++; }
+    return n;
+  }
+
   update(dt) {
     this.t += dt;
     const run = this.run, P = run.player, R = run.stats.pickup;

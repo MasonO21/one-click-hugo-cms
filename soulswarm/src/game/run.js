@@ -217,6 +217,7 @@ export class Run {
     }
     if (!noRaise && this.legion.count < this.stats.cap) {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
+      if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
       if (source === 'skull' && this.evolved.boneCrown) chance = 1;
       if (Math.random() < chance) {
         this.legion.raise(e.x, e.z);
@@ -497,6 +498,7 @@ export class Run {
     this.glow.begin();
     this.legion.render();
     this.projectiles.render();
+    this.weapons.render();
     this.pickups.render();
     this.enemies.render();
     this.boss.render(dt);

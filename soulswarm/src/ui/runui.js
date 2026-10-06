@@ -175,7 +175,10 @@ export class RunUI {
   // ---------------------------------------------------------------- pause
   showPause() {
     const app = this.app, run = this.run, s = app.profile.settings;
-    const build = Object.entries(run.skillLv).map(([id, lv]) => `<span class="pill">${SKILLS[id].name} ${lv}</span>`).join(' ');
+    const build = Object.entries(run.skillLv).map(([id, lv]) => {
+      const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
+      return evo ? `<span class="pill pill-gold">★ ${evo[1].name}</span>` : `<span class="pill">${SKILLS[id].name} ${lv}</span>`;
+    }).join(' ');
     modal({
       title: 'Paused',
       dismissable: false,

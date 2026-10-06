@@ -131,6 +131,97 @@ errs = await session(async (page) => {
 });
 check('economy: no runtime errors', !errs.length, errs[0] || '');
 
+// 6. Weapon evolutions (Harvest Moon, Chains of Perdition, Ossuary Barrage, Requiem): the card is offered only
+//    when eligible, each evolved weapon fires and deals damage, Requiem pulls shards, burning kills raise more often.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm;
+    let seed = 20261006; // seeded RNG so the statistical check is reproducible
+    Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const EVOS = { harvestMoon: ['scythe', 'haste', 'Harvest Moon'], chainsOfPerdition: ['chains', 'frenzy', 'Chains of Perdition'], ossuaryBarrage: ['spears', 'vitality', 'Ossuary Barrage'], requiem: ['gravePulse', 'soulMagnet', 'Requiem'] };
+    const start = (lv) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      app.profile.energy = 30; app.startRun(1);
+      const r = app.run; r.player.hurt = () => {}; r.addXp = () => {}; r.director = () => {};
+      r.pickups.dropSpecial = () => {}; // no hearts, so any healing comes from Harvest Moon
+      r.skillLv = { ...lv }; r.recomputeStats();
+      return r;
+    };
+    const ring = (r, n, R, hpMul) => { const P = r.player; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; r.enemies.spawn('husk', P.x + Math.cos(a) * R, P.z + Math.sin(a) * R, { hpMul }); } };
+    const cards = () => [...document.querySelectorAll('.lvl-back .card.evo')];
+    const out = {};
+    for (const [id, [w, p, name]] of Object.entries(EVOS)) {
+      const o = out[id] = {};
+      let r = start({ [w]: 5 });
+      r.levelQueue = 1; r.showLevelUp();
+      o.offeredWithout = cards().length;
+      r = start({ [w]: 5, [p]: 1 });
+      r.levelQueue = 1; r.showLevelUp();
+      const card = cards().find((c) => c.querySelector('h3').textContent.includes(name));
+      o.offered = !!card;
+      if (card) card.click();
+      o.evolved = !!r.evolved[id];
+      // fire into a mixed horde: fragile Husks (kills, heals) and tough ones (burns, sustained hits)
+      ring(r, 30, 3.5, 3); ring(r, 40, 6, 400);
+      const dmg = {}, orig = r.enemies.damage.bind(r.enemies), W = r.weapons;
+      r.enemies.damage = (e, a, op = {}) => { if (e.active && a > 0) dmg[op.source] = (dmg[op.source] || 0) + a; return orig(e, a, op); };
+      let bursts = 0, blasts = 0, burning = 0, moons = 0, shards = 0;
+      const sh = W.shrapnel.bind(W); W.shrapnel = (...a) => { bursts++; return sh(...a); };
+      const dt = W.detonate.bind(W); W.detonate = (...a) => { blasts++; return dt(...a); };
+      r.player.hp = r.player.maxHp * 0.5; const hp0 = r.player.hp;
+      for (let i = 0; i < 180; i++) { r.update(1 / 30); burning = Math.max(burning, W.burning.length); moons = Math.max(moons, W.moons.count); shards = Math.max(shards, W.shardN); }
+      Object.assign(o, { healed: Math.round(r.player.hp - hp0), burning, moons, shards, bursts, blasts });
+      for (const k in dmg) o[k] = Math.round(dmg[k]);
+    }
+    // Requiem: each blast pulls the soul shards within 12 m to the Shepherd, and only those
+    let r = start({ gravePulse: 5, soulMagnet: 1 }); r.evolved.requiem = true;
+    const P = r.player, W = r.weapons, near = [], far = [];
+    W.timers.gravePulse = 99; r.pickups.gems.length = 0;
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.28; r.pickups.dropGem(P.x + Math.cos(a) * 8, P.z + Math.sin(a) * 8, 1); near.push(r.pickups.gems[r.pickups.gems.length - 1]); }
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.28; r.pickups.dropGem(P.x + Math.cos(a) * 18, P.z + Math.sin(a) * 18, 1); far.push(r.pickups.gems[r.pickups.gems.length - 1]); }
+    for (let i = 0; i < 20; i++) r.update(1 / 30);
+    const idle = near.filter((g) => g.pulled).length;
+    W.timers.gravePulse = 0;
+    for (let i = 0; i < 15; i++) r.update(1 / 30);
+    out.shards = { idle, near: near.filter((g) => g.pulled || !r.pickups.gems.includes(g)).length, far: far.filter((g) => g.pulled).length };
+    // Chains of Perdition: 600 kills each way at a fixed 25% Raise Chance; burning ones should rise ~50% of the time
+    r = start({ chains: 5, frenzy: 1 }); r.evolved.chainsOfPerdition = true;
+    r.stats.raise = 0.25; r.stats.cap = 1e9;
+    const rate = (burning) => {
+      const before = r.counters.raised;
+      for (let i = 0; i < 600; i++) {
+        const e = r.enemies.spawn('husk', r.player.x + 30, r.player.z, { hpMul: 1 });
+        if (burning) r.weapons.ignite(e, 10);
+        r.enemies.damage(e, 1e6, { source: 'minion', silent: true });
+        if (i % 100 === 99) r.enemies.compact();
+      }
+      return (r.counters.raised - before) / 600;
+    };
+    out.raise = { plain: rate(false), burning: rate(true) };
+    // the pause screen lists evolved weapons by their evolution name
+    r = start({ scythe: 5, chains: 5, spears: 5, gravePulse: 5 });
+    for (const id of Object.keys(EVOS)) r.evolved[id] = true;
+    r.pause(true);
+    out.pause = [...document.querySelectorAll('.modal .pill-gold')].map((n) => n.textContent.trim());
+    return out;
+  });
+  for (const [id, need, ok] of [
+    ['harvestMoon', 'haste', (o) => o.scythe > 0 && o.moons === 2 && o.healed > 0 && o.healed <= 6 * 6 + 6], // 6 s at <= 6 HP/s plus the bank
+    ['chainsOfPerdition', 'frenzy', (o) => o.chain > 0 && o.burn > 0 && o.burning > 0],
+    ['ossuaryBarrage', 'vitality', (o) => o.spear > 0 && o.bursts >= 5 && o.shards > 0],
+    ['requiem', 'soulMagnet', (o) => o.pulse > 0 && o.blasts >= 3],
+  ]) {
+    const o = s[id];
+    check(`evolution ${id}: card offered only with ${need}, picking it evolves`, o.offered && o.evolved && o.offeredWithout === 0, JSON.stringify({ offered: o.offered, evolved: o.evolved, without: o.offeredWithout }));
+    check(`evolution ${id}: fires and damages enemies`, ok(o), JSON.stringify(o));
+  }
+  check('requiem: blast pulls shards within 12 m, not beyond', s.shards.idle === 0 && s.shards.near === 12 && s.shards.far === 0, JSON.stringify(s.shards));
+  check('perdition: burning kills raise ~+25 pp more often', s.raise.burning - s.raise.plain > 0.15 && Math.abs(s.raise.plain - 0.25) < 0.07 && Math.abs(s.raise.burning - 0.5) < 0.08, JSON.stringify(s.raise));
+  check('pause screen lists evolved weapons', ['Harvest Moon', 'Chains of Perdition', 'Ossuary Barrage', 'Requiem'].every((n) => s.pause.some((t) => t.includes(n))), JSON.stringify(s.pause));
+});
+check('evolutions: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
