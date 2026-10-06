@@ -27,7 +27,7 @@ export class RunUI {
         </div>
         <div class="legion"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${'<path d="M12 3c-3.5 0-6 2.7-6 6v11l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5V9c0-3.3-2.5-6-6-6z"/><path d="M9.6 9.8h.01M14.4 9.8h.01" stroke-width="3"/>'}</svg>
           <div><div class="lbl">LEGION</div><div><span class="num">0</span> <span class="cap">/ 30</span></div></div></div>
-        <div class="bossbar" hidden><div class="nm"></div><div class="bar"><i></i></div></div>
+        <div class="bossbar" hidden><div class="nm"></div><div class="bar"><i></i><span class="ticks"></span></div></div>
       </div>
       <div class="hud-skills"></div>
       <button class="nova" aria-label="Soul Nova">
@@ -39,7 +39,7 @@ export class RunUI {
     this.q = {
       xp: $(this.el, '.xp i'), lv: $(this.el, '.xp b'), kills: $(this.el, '.k span'), gold: $(this.el, '.g span'),
       timer: $(this.el, '.hud-timer b'), timerSub: $(this.el, '.hud-timer small'), legion: $(this.el, '.legion'), num: $(this.el, '.legion .num'), cap: $(this.el, '.legion .cap'),
-      boss: $(this.el, '.bossbar'), bossName: $(this.el, '.bossbar .nm'), bossHp: $(this.el, '.bossbar .bar i'), skills: $(this.el, '.hud-skills'),
+      boss: $(this.el, '.bossbar'), bossName: $(this.el, '.bossbar .nm'), bossHp: $(this.el, '.bossbar .bar i'), bossTicks: $(this.el, '.bossbar .ticks'), skills: $(this.el, '.hud-skills'),
       nova: $(this.el, '.nova'), novaFg: $(this.el, '.nova .fg'),
     };
     $(this.el, '.hud-pause').addEventListener('click', () => { app.audio.sfx('click'); run.pause(true); });
@@ -119,12 +119,15 @@ export class RunUI {
     setTimeout(() => el.remove(), 5100);
   }
 
-  bossBar(show, name) {
+  /** ticks: HP fractions where the boss changes phase. */
+  bossBar(show, name, ticks) {
     this.q.boss.hidden = !show;
     if (name) this.q.bossName.textContent = name.toUpperCase();
     this.q.bossHp.style.transform = 'scaleX(1)';
+    if (ticks) this.q.bossTicks.innerHTML = ticks.map((f) => `<b style="left:${f * 100}%"></b>`).join('');
   }
   bossHp(f) { this.q.bossHp.style.transform = `scaleX(${f})`; }
+  bossImmune(on) { this.q.boss.classList.toggle('immune', !!on); }
 
   // ---------------------------------------------------------------- level up
   showLevelUp(choices, level, onPick) {

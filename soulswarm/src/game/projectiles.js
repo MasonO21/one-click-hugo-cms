@@ -4,7 +4,8 @@ import { boltGeometry, spearGeometry, orbGeometry } from '../engine/models.js';
 import { hdr } from '../engine/particles.js';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
-const _fwd = new THREE.Vector3(0, 0, 1), _dir = new THREE.Vector3();
+const _fwd = new THREE.Vector3(0, 0, 1), _dir = new THREE.Vector3(), _sc = new THREE.Vector3();
+const ORB_MAX = 320; // ember orb instances (witch shots + Gravemaw's patterns)
 
 function instanced(geo, max, color) {
   const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color }), max);
@@ -20,7 +21,9 @@ export class Projectiles {
     this.embers = [];
     this.bolts = instanced(boltGeometry(), 240, new THREE.Color(0x9ff8ff).multiplyScalar(3));
     this.spears = instanced(spearGeometry(), 90, new THREE.Color(0xf2ffe8).multiplyScalar(2.4));
-    this.orbs = instanced(orbGeometry(), 160, new THREE.Color(0xff8a3d).multiplyScalar(3.2));
+    this.orbs = instanced(orbGeometry(), ORB_MAX, new THREE.Color(0xffffff));
+    this.orbCol = new THREE.Color(0xff8a3d).multiplyScalar(3.2); // per-instance colour: ember by default, boss orbs bring their own
+    this.orbs.setColorAt(0, this.orbCol); this.orbs.instanceColor.setUsage(THREE.DynamicDrawUsage);
     run.scene.add(this.bolts, this.spears, this.orbs);
     this.boltCol = hdr(0x4ef2ff, 3);
     this.spearCol = hdr(0x9dffb8, 2.5);
@@ -111,11 +114,12 @@ export class Projectiles {
       const s = em[i];
       s.life -= dt;
       s.x += s.vx * dt; s.z += s.vz * dt;
-      if (Math.random() < 0.6) parts.emit(s.x, s.y, s.z, 0, 0.4, 0, 0.3, 0.35, 0.05, this.emberCol[0], this.emberCol[1], this.emberCol[2], 0.8);
+      const ec = s.glow || this.emberCol;
+      if (Math.random() < 0.6) parts.emit(s.x, s.y, s.z, 0, 0.4, 0, 0.3, 0.35, 0.05, ec[0], ec[1], ec[2], 0.8);
       let dead = s.life <= 0;
-      if (!dead && (s.x - P.x) ** 2 + (s.z - P.z) ** 2 < (P.radius + 0.25) ** 2) {
+      if (!dead && (s.x - P.x) ** 2 + (s.z - P.z) ** 2 < (P.radius + (s.hr || 0.25)) ** 2) {
         P.hurt(s.dmg); dead = true;
-        parts.burst(s.x, s.y, s.z, 10, this.emberCol, { speed: 4, life: 0.3, size: 0.35 });
+        parts.burst(s.x, s.y, s.z, 10, ec, { speed: 4, life: 0.3, size: 0.35 });
       }
       if (!dead) em[w++] = s;
     }
@@ -137,15 +141,53 @@ export class Projectiles {
     _q.identity();
     for (const s of this.embers) {
       _p.set(s.x, s.y, s.z);
-      _m.compose(_p, _q, _s);
-      if (no < 160) this.orbs.setMatrixAt(no++, _m);
-      g.add(s.x, s.y, s.z, 1.3, this.emberCol[0] * 0.45, this.emberCol[1] * 0.45, this.emberCol[2] * 0.45, 0.9);
+      _m.compose(_p, _q, s.sc ? _sc.setScalar(s.sc) : _s);
+      if (no < ORB_MAX) { this.orbs.setMatrixAt(no, _m); this.orbs.setColorAt(no, s.col || this.orbCol); no++; }
+      const ec = s.glow || this.emberCol, gs = s.sc || 1;
+      g.add(s.x, s.y, s.z, 1.3 * gs, ec[0] * 0.45, ec[1] * 0.45, ec[2] * 0.45, 0.9);
     }
     this.bolts.count = nb; this.spears.count = ns; this.orbs.count = no;
-    this.bolts.instanceMatrix.needsUpdate = true; this.spears.instanceMatrix.needsUpdate = true; this.orbs.instanceMatrix.needsUpdate = true;
+    this.bolts.instanceMatrix.needsUpdate = true; this.spears.instanceMatrix.needsUpdate = true; this.orbs.instanceMatrix.needsUpdate = true; this.orbs.instanceColor.needsUpdate = true;
   }
 
   clearEnemyShots() { this.embers.length = 0; }
+
+  // ---------------------------------------------------------------- Gravemaw bullet patterns (boss.js)
+  // Boss orbs ride the ember pool (same update, collision and instancing) with their own colour, size and hitbox.
+  /** One boss orb leaving (x, z) along angle a. o: { col: THREE.Color, glow: [r,g,b], sc, hr, life, r0 } */
+  bossOrb(x, z, a, speed, dmg, o) {
+    if (this.embers.length >= ORB_MAX) return null;
+    const c = Math.cos(a), s = Math.sin(a), r0 = o.r0 ?? 1.6;
+    const b = { x: x + c * r0, z: z + s * r0, y: 1.4, vx: c * speed, vz: s * speed, dmg, life: o.life || 4, col: o.col, glow: o.glow, sc: o.sc || 1.35, hr: o.hr || 0.22, boss: true };
+    this.embers.push(b);
+    return b;
+  }
+
+  /** A ring of n orbs with `gaps` evenly spaced holes of `gapSlots` missing orbs each. a0 is the centre angle of the first hole. */
+  emberRingGaps(x, z, n, gaps, gapSlots, a0, speed, dmg, o = {}) {
+    const per = Math.round(n / gaps) + gapSlots, step = (Math.PI * 2) / (per * gaps);
+    for (let j = 0; j < gaps; j++) {
+      const start = a0 + (j * Math.PI * 2) / gaps - (gapSlots * step) / 2;
+      for (let k = gapSlots; k < per; k++) this.bossOrb(x, z, start + (k + 0.5) * step, speed, dmg, o);
+    }
+  }
+
+  /** One beat of a spiral stream: an orb down each of `arms` arms, the first at angle a. */
+  spiral(x, z, arms, a, speed, dmg, o = {}) {
+    for (let k = 0; k < arms; k++) this.bossOrb(x, z, a + (k * Math.PI * 2) / arms, speed, dmg, o);
+  }
+
+  /** The sealed arena swallows boss orbs that reach its wall. Returns how many it ate (sparks are the caller's). */
+  cullBossOrbs(cx, cz, R, onCull) {
+    let n = 0;
+    const R2 = R * R;
+    for (const s of this.embers) {
+      if (!s.boss || s.life <= 0 || (s.x - cx) ** 2 + (s.z - cz) ** 2 < R2) continue;
+      s.life = 0; n++;
+      if (onCull) onCull(s.x, s.z);
+    }
+    return n;
+  }
 
   dispose() {
     for (const m of [this.bolts, this.spears, this.orbs]) { m.geometry.dispose(); m.material.dispose(); }
