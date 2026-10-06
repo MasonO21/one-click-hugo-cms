@@ -349,7 +349,8 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .send{width:38px;height:38px;border-radius:50%;border:0;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;cursor:pointer;flex:none}
 .send .ic{transform:rotate(-90deg)}
 
-.notif{position:absolute;top:44px;left:10px;right:10px;z-index:6;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:18px;padding:10px 12px;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;font-size:12.5px;line-height:1.4;animation:drop .35s ease-out;cursor:pointer}
+/* sits just below the app header, so Back, Block and "Ghost Mode on" stay tappable */
+.notif{position:absolute;top:100px;left:10px;right:10px;z-index:6;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:18px;padding:10px 12px;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;font-size:12.5px;line-height:1.4;animation:drop .35s ease-out;cursor:pointer}
 .notif .g-logo{width:30px;height:30px}
 .notif b{font-size:12px}
 .notif time{color:var(--faint);font-weight:400;margin-left:4px}
@@ -1482,7 +1483,7 @@ function parentReceive(p,t){
     const prevSev=a?a.p.severity:null;
     if(a){a.p=p;a.updatedAt=t;a.status='new';a.checkIn=false;a.seq=P.seq=(P.seq||0)+1}
     else{a={id:p.alert_id,p,createdAt:t,updatedAt:t,status:'new',seq:P.seq=(P.seq||0)+1};P.alerts.push(a)}
-    if(!seeding){T.arrived=a.id;announce(L('New alert: {t}',{t:alertTitle(p)}));if(p.severity==='urgent')T.expanded.add(exKey(a.id))}
+    if(!seeding&&!background){T.arrived=a.id;announce(L('New alert: {t}',{t:alertTitle(p)}));if(p.severity==='urgent')T.expanded.add(exKey(a.id))}
     const kid=S.active;
     if(!prevSev||RANK[p.severity]>RANK[prevSev])notifyParent(p.alert,p.severity,()=>ALERTS[p.alert].title(kidNameOf(kid)),()=>p.contacts?joinList(p.contacts.map(showContact)):p.contact?showContact(p.contact):(p.site||''),a.id);
   }
@@ -1492,11 +1493,14 @@ function parentReceive(p,t){
 function deviceReceive(p,t){
   const D=S.device;
   if(p.type==='settings'){
+    const wasSync=!!(D.config&&D.config.homeSync&&D.config.phone==='iphone');
     D.config={kidName:p.child,quietStart:p.quiet_start,quietEnd:p.quiet_end,sensitivity:p.sensitivity,
       alerts:Object.fromEntries(Object.entries(ALERT_KEYS).map(([k,v])=>[k,p.alerts_on.includes(v)])),
       showNames:p.show_contact_names,tellKid:p.tell_child_about_alerts,latePausedNight:p.late_alerts_paused_night||null,kidAge:p.child_age||null,
       sources:p.sources_on?{texts:p.sources_on.includes('texts'),email:p.sources_on.includes('email'),social:p.sources_on.includes('social')}:{texts:true,email:true,social:true},
       phone:p.phone==='iphone'?'iphone':'android',webBlock:p.block_fake_websites!==false,pauseApps:!!p.pause_apps_at_night,homeSync:!!p.home_sync};
+    const cf=D.config;
+    if(cf.homeSync&&cf.phone==='iphone'){if(!wasSync)D.lastSync=t}else D.syncQueue=[];
   }else if(p.type==='trusted_adults'){D.trusted=p.names.map(n=>n.toLowerCase())}
   else if(p.type==='keyboard_request'){D.keyboardAsked=t;if(!seeding)kidNotice(L('Your parent asked if you want to try the Ghost Mode keyboard. It\'s your choice.'),L('From your parent'))}
   else if(p.type==='check_in'){D.notes.unshift({text:p.note,at:t});if(!seeding)kidNotice(L(p.note),L('From your parent'))}
@@ -1552,10 +1556,10 @@ function deliver(cid,from,text){
   transmit(ios?{type:'screen_time',night:nk,late_minutes:(D.nightCounts[nk]||0)*f,day,minutes_today:D.dayTotals[day]*f}
     :{type:'counts',night:nk,late_night:D.nightCounts[nk]||0,day,messages_today:D.dayTotals[day]},'up',t);
   const seen=visibility(c,from);
-  if(seen==='live')checkMessage(c,from,text,t);
-  else if(seen==='typed'){via='keyboard';try{checkTyped(c,text,t)}finally{via=null}}
-  else if(seen==='sync')(D.syncQueue=D.syncQueue||[]).push({cid,id:msg.id});
-  if(quiet&&seen==='live'&&c.ageBand==='adult'&&!isTrusted(c))D.nightSpan[nk].adult=true;
+  if(seen.live)checkMessage(c,from,text,t);
+  if(seen.typed){via='keyboard';try{checkTyped(c,text,t)}finally{via=null}}
+  if(seen.sync)(D.syncQueue=D.syncQueue||[]).push({cid,id:msg.id,typed:!!seen.typed});
+  if(quiet&&seen.live&&c.ageBand==='adult'&&!isTrusted(c))D.nightSpan[nk].adult=true;
   if(quiet)evalLate(nk,t);
   commit();
 }
@@ -1564,18 +1568,16 @@ function deliver(cid,from,text){
    iPhone: email through the account; what the child types, through the Ghost Mode keyboard if they turned it on;
    texts in Messages later, through the home computer sync. Nothing else. */
 function visibility(c,from){
-  if(!srcOn(c))return null;
-  if(!isIOS()||c.app==='Email')return 'live';
-  if(from==='me'&&S.device.keyboard)return 'typed';
-  if(c.app==='Messages'&&cfg().homeSync)return 'sync';
-  return null;
+  if(!isIOS()||c.app==='Email')return {live:srcOn(c)};
+  return {typed:from==='me'&&!!S.device.keyboard,sync:c.app==='Messages'&&!!cfg().homeSync};
 }
-/* The full check: Android, email on iPhone, and texts from the home sync. */
-function checkMessage(c,from,text,t){
+/* The full check: Android, email on iPhone, and texts from the home sync.
+   typedAlready: the keyboard already checked the child's words, so only the checks that need the contact run again. */
+function checkMessage(c,from,text,t,typedAlready){
   if(from==='them')analyzeIncoming(c,text,t);
   else if(riskyForSharing(c)&&sharedKinds(text).some(k=>k!=='your live location'))markSignal(c,'shared_personal_info',t);
   if(from==='them'){evalScam(c,text,t);evalBullying(c,text,t)}
-  else{evalDistress(c,text,t);evalLocation(c,text,t)}
+  else{if(!typedAlready)evalDistress(c,text,t);evalLocation(c,text,t)}
   evalAdult(c,t);evalGrooming(c,t);
 }
 /* The Ghost Mode keyboard on iPhone sees the words, but not who they go to or which app they're in. */
@@ -1591,16 +1593,18 @@ function checkTyped(c,text,t){
 function runSync(){
   const D=S.device,q=D.syncQueue||[];D.syncQueue=[];
   via='home_sync';
-  try{for(const it of q){const c=D.contacts[it.cid],m=(D.threads[it.cid]||[]).find(x=>x.id===it.id);if(c&&m&&!c.blocked)checkMessage(c,m.from,m.text,m.at)}}
+  try{for(const it of q){const c=D.contacts[it.cid],m=(D.threads[it.cid]||[]).find(x=>x.id===it.id);if(c&&m)checkMessage(c,m.from,m.text,m.at,it.typed)}}
   finally{via=null}
   D.lastSync=S.clock;
   transmit({type:'event',event:'home_sync',at:iso(S.clock)},'up');
 }
+/* Runs work for a kid who isn't on screen (their overnight sync). Their phone's notices stay on their phone. */
+let background=false;
 function withKid(id,fn){
   if(id===S.active)return fn();
   const k=S.kids.find(x=>x.id===id),keep=[S.active,S.parent,S.device,S.wall,S.stats];
-  S.active=k.id;S.parent=k.parent;S.device=k.device;S.wall=k.wall;S.stats=k.stats;
-  try{return fn()}finally{[S.active,S.parent,S.device,S.wall,S.stats]=keep}
+  S.active=k.id;S.parent=k.parent;S.device=k.device;S.wall=k.wall;S.stats=k.stats;background=true;
+  try{return fn()}finally{[S.active,S.parent,S.device,S.wall,S.stats]=keep;background=false}
 }
 function checkSyncs(){
   const d=new Date(S.clock);d.setHours(3,0,0,0);if(d.getTime()>S.clock)d.setDate(d.getDate()-1);
@@ -1767,10 +1771,12 @@ function brandOf(d){
   const e=Object.entries(OFFICIAL).find(([b])=>vs.some(v=>v.includes(b)));
   return e?{name:BRAND_NAME[e[0]]||e[0],site:e[1][0]}:null;
 }
-function openLink(d,cid){
-  if(cfg().webBlock!==false&&isLookalike(d)){T.site={d,cid};T.sheet='site';blockedSite(S.device.contacts[cid],d,S.clock)}
+function openLink(d,cid,auto){
+  const block=cfg().webBlock!==false&&isLookalike(d);
+  if(block){T.site={d,cid};T.sheet='site';blockedSite(S.device.contacts[cid],d,S.clock)}
   else kidNotice(L('Opening {d}…',{d}),L('Browser'));
   commit();
+  if(block&&!auto)focusSheet('#sheetSite');
 }
 /* Social apps and games can be paused during quiet hours (Screen Time on iPhone). Texts and calls still work. */
 const appPaused=c=>!!c&&!!cfg().pauseApps&&SOURCE_OF(c.app)==='social'&&inQuiet(S.clock,cfg());
@@ -1956,7 +1962,7 @@ function ensureContact(c){
   }
 }
 const SCENARIOS=[
-  {id:'stranger',primary:true,contact:'nova',title:'Stranger in a game',kind:'urgent',result:'Act today',
+  {id:'stranger',contact:'nova',title:'Stranger in a game',kind:'urgent',result:'Act today',
    blurb:'An adult from Roblox chat pushes for secrets, gifts and a photo, using disguised spellings.',
    steps:[['nova','them','yo you on tonight? that obby run was insane',3],['nova','me','haha yeah i got lucky',1],
      ['nova','them',"nah you're legit good. honestly you're really mature for your age",2],['nova','me','lol thanks',1],
@@ -1970,7 +1976,7 @@ const SCENARIOS=[
      ['nova','them','sí, pero el chat de roblox va lento. agrégame en sn@p, es más fácil',2],
      ['nova','them','y no le digas a tus papás, ¿ok? tus papás no te entenderían. es nuestro secreto',1],['nova','me','mmm ok',2],
      ['nova','them','genial. mándame una f0to para saber que eres tú \u{1F4F8}',1]]},
-  {id:'scam',primary:true,contact:'rbx',title:'Free Robux scam',kind:'urgent',result:'Act today',
+  {id:'scam',contact:'rbx',title:'Free Robux scam',kind:'urgent',result:'Act today',
    blurb:'A fake giveaway sends a lookalike link, then asks for a login code.',
    setup(){ensureContact({id:'rbx',name:'RBX Rewards',app:'Roblox chat',ageBand:'unknown',ageSource:'unknown'})},
    steps:[['rbx','them','\u{1F381} Congrats! You won 10,000 free Robux! Claim it at robux-gift-claim.xyz before it expires',2],
@@ -1981,14 +1987,14 @@ const SCENARIOS=[
      ['rbx','me','¿esto es real??',2],['rbx','tap','robux-gift-claim.xyz',1],
      ['rbx','them','¡Sí! Verifica tu cuenta: mándame el código que te enviamos.',1],
      ['rbx','me','mmm no creo',2]]},
-  {id:'bully',primary:true,contact:'kayla',title:'Bullying on Instagram',kind:'watch',result:'Check in',
+  {id:'bully',contact:'kayla',title:'Bullying on Instagram',kind:'watch',result:'Check in',
    blurb:'Two classmates send mean messages on the same day.',
    setup(){ensureContact({id:'kayla',name:'kayla.xo',app:'Instagram',ageBand:'teen',ageSource:'classmate'});ensureContact({id:'brooke',name:'brooke_b',app:'Instagram',ageBand:'teen',ageSource:'classmate'})},
    steps:[['kayla','them','lol did u see what she wore today',2],['brooke','them','ur so weird honestly',3],
      ['kayla','them','nobody likes you, just leave the group',2],['kayla','me','why are you being so mean',2],['brooke','them','everyone hates you lol',1]],
    es:[['kayla','them','jaja viste lo que se puso hoy',2],['brooke','them','eres tan inútil la verdad',3],
      ['kayla','them','nadie te quiere, sal del grupo',2],['kayla','me','¿por qué me tratan así?',2],['brooke','them','todos te odian jaja',1]]},
-  {id:'hard',primary:true,title:'A really hard day',kind:'urgent',result:'Act today',at:'21:40',
+  {id:'hard',title:'A really hard day',kind:'urgent',result:'Act today',at:'21:40',
    blurb:k=>L('{k} tells a friend things are bad. Ghost Mode shows {k} where to get support.',{k}),
    steps:[['jess','me','today was so bad',0],['jess','them','what happened?? u ok',2],['jess','me','everyone hates me. i hate my life',2],
      ['jess','them',"that's not true!! i don't hate u",1],['jess','me',"honestly i don't want to be here anymore",3],['jess','them','please talk to your mom. or call me ok? ❤️',1]],
@@ -2047,7 +2053,7 @@ const SCENARIOS=[
 /* On iPhone some scenarios can't be seen at all, and some need the Ghost Mode keyboard. */
 const IOS_RESULT={
   stranger:{result:'Not seen on iPhone',kind:'none',note:"Apple keeps Roblox chat private, so none of this reached Ghost Mode. Roblox's parental controls can turn off chat with people {k} doesn't know."},
-  scam:{result:'Check in',kind:'watch'},
+  scam:{result:'Check in',kind:'watch',web:true},
   bully:{result:'Not seen on iPhone',kind:'none',note:"Apple keeps Instagram messages private, so none of this reached Ghost Mode. Instagram supervision shows who {k} messages, and the Ghost Mode keyboard notices if {k} types that they're having a hard time."},
   hard:{result:'Act today',kind:'urgent',keyboard:true,sync:true},
   location:{result:'FYI',kind:'info',keyboard:true},
@@ -2057,11 +2063,23 @@ const IOS_RESULT={
   email:{result:'Act today',kind:'urgent'}
 };
 const KB_NOTE="On iPhone, this one needs the Ghost Mode keyboard. {k} can turn it on in the Ghost Mode app, and you can ask them from Settings.";
+const WEB_NOTE="On iPhone, Ghost Mode can't see the scam message itself. It catches this when {k} taps the fake link, so turn on \"Block fake websites\" in Settings.";
 const PRIMARY={android:['stranger','scam','bully','hard'],iphone:['email','scam','hard','latenight']};
 const isPrimary=sc=>PRIMARY[isIOS()?'iphone':'android'].includes(sc.id);
+const PAUSE_NOTE="Social apps and games are paused during quiet hours, so none of this could happen tonight.";
+/* Would this scenario start in an app that is paused for the night? */
+function scPaused(sc){
+  const cf=cfg();if(!cf.pauseApps)return false;
+  const first=scSteps(sc)[0],c=S.device.contacts[sc.contact||first[0]]||CONTACT_LIBRARY[sc.contact||first[0]];
+  if(!c||SOURCE_OF(c.app)!=='social'||scSteps(sc).some(st=>{const x=S.device.contacts[st[0]]||CONTACT_LIBRARY[st[0]];return x&&SOURCE_OF(x.app)!=='social'}))return false;
+  let t=S.clock;if(sc.at){const [h,m]=sc.at.split(':').map(Number),d=new Date(S.clock);d.setHours(h,m,0,0);t=d.getTime()}
+  return inQuiet(t,cf);
+}
 function scResult(sc){
+  if(scPaused(sc))return {label:'Paused at night',kind:'none',note:PAUSE_NOTE,title:'Paused for the night',to:'pause'};
   if(!isIOS())return {label:sc.result,kind:sc.kind};
   const o=IOS_RESULT[sc.id];
+  if(o.web&&cfg().webBlock===false)return {label:'Needs fake-site blocking',kind:'none',note:WEB_NOTE,to:'web'};
   if(o.keyboard&&!S.device.keyboard){
     if(o.sync&&cfg().homeSync)return {label:'Found at the next sync',kind:o.kind};
     return {label:'Needs the keyboard',kind:'none',note:KB_NOTE,to:'keyboard'};
@@ -2076,7 +2094,7 @@ async function play(id){
   const main=sc.contact&&S.device.contacts[sc.contact];
   if(main&&main.blocked)return;
   T.playingKid=S.active;
-  const steps=scSteps(sc),token=playing={id,i:0,n:steps.length,started:Date.now()};
+  const paused=scPaused(sc),steps=scSteps(sc),token=playing={id,i:0,n:steps.length,started:Date.now()};
   T.scnNote=null;
   if(sc.at)setClockTo(sc.at);
   if(sc.setup)sc.setup();
@@ -2093,7 +2111,7 @@ async function play(id){
     if(appPaused(c))continue;   // the app is paused for the night, so this step can't happen
     S.ui.screen='thread';S.ui.thread=cid;
     if(from==='tap'){
-      openLink(text,cid);
+      openLink(text,cid,true);
       await sleep(reduced?400:2600);
       if(playing!==token)return;
       if(T.sheet==='site'){T.sheet=null;T.site=null;commit()}
@@ -2109,7 +2127,7 @@ async function play(id){
     }else deliver(cid,from,text);
     await sleep(reduced?150:800);
   }
-  if(playing===token){playing=null;if(isIOS()&&scResult(sc).note)T.scnNote={id:sc.id,kid:S.active};commit()}
+  if(playing===token){playing=null;if(paused||scResult(sc).note)T.scnNote={id:sc.id,kid:S.active};commit()}
 }
 function answerShare(yes){
   const D=S.device,r=pendingShare();if(!r)return;
@@ -2396,7 +2414,7 @@ function renderAlerts(){
   const list=S.parent.alerts.slice().sort((a,b)=>(b.updatedAt-a.updatedAt)||((b.seq||0)-(a.seq||0)));
   const open=list.filter(a=>a.status==='new'),done=list.filter(a=>a.status!=='new');
   const sn=T.scnNote&&T.scnNote.kid===S.active&&SCENARIOS.find(x=>x.id===T.scnNote.id),r=sn&&scResult(sn);
-  const note=r&&r.note?`<div class="scn-note" role="status">${ghost()}<div><b>${L('Nothing came through on iPhone')}</b><p>${esc(L(r.note,{k:name()}))}</p><div class="actions"><button type="button" class="btn sm" data-action="goto-setup" data-id="${r.to}">${L('See what to turn on')}</button><button type="button" class="btn sm quiet" data-action="scn-note-x">${L('Dismiss')}</button></div></div></div>`:'';
+  const note=r&&r.note?`<div class="scn-note" role="status">${ghost()}<div><b>${L(r.title||'Nothing came through on iPhone')}</b><p>${esc(L(r.note,{k:name()}))}</p><div class="actions"><button type="button" class="btn sm" data-action="goto-setup" data-id="${r.to}">${L('See what to turn on')}</button><button type="button" class="btn sm quiet" data-action="scn-note-x">${L('Dismiss')}</button></div></div></div>`:'';
   let html=note+(open.length?open.map(alertCard).join(''):`<div class="empty">${ghost()}<p>${L('<b>All caught up.</b> Ghost Mode keeps watching for patterns.')}</p></div>`);
   if(done.length)html+=`<details class="reviewed-group"${T.showReviewed?' open':''}><summary>${L('Reviewed ({n})',{n:done.length})}</summary><div class="alerts">${done.map(alertCard).join('')}</div></details>`;
   $('#alertList').innerHTML=html;
@@ -2408,7 +2426,7 @@ function renderActivity(){
   const cur=nightKey(S.clock,s);
   const keys=[];for(let i=14;i>=0;i--)keys.push(shiftKey(cur,-i));
   const vals=keys.map(x=>P.rollups[x]||0);
-  const ios=parentIOS(),base=baselineFor(P.rollups,cur),thr=lateThreshold(base,s.sensitivity,unitF(ios));
+  const ios=parentIOS(),f=unitF(ios),base=baselineFor(P.rollups,cur),thr=f*lateThreshold(base/f,s.sensitivity);
   $('#actTitle').textContent=ios?L('Late-night screen time'):L('Late-night messages');
   $('#actSub').textContent=ios?L('Minutes in messaging and social apps during quiet hours ({a} to {b}), from Screen Time. Each night is compared with the 14 before it.',{a:fmtHM(s.quietStart),b:fmtHM(s.quietEnd)})
     :L('Counts only, for quiet hours ({a} to {b}). Each night is compared with the 14 before it.',{a:fmtHM(s.quietStart),b:fmtHM(s.quietEnd)});
@@ -2486,8 +2504,10 @@ function onSettings(){
   s.showNames=f.elements.showNames.checked;s.tellKid=f.elements.tellKid.checked;
   s.sources={texts:f.elements.srcTexts.checked,email:f.elements.srcEmail.checked,social:f.elements.srcSocial.checked};
   const ph=f.querySelector('[name="phone"]:checked');
-  if(ph&&ph.value!==s.phone){convertUnits(s.phone,ph.value);s.phone=ph.value}
+  const newPhone=ph&&ph.value!==s.phone;
+  if(newPhone){convertUnits(s.phone,ph.value);s.phone=ph.value}
   s.homeSync=f.elements.homeSync.checked;s.webBlock=f.elements.webBlock.checked;s.pauseApps=f.elements.pauseApps.checked;
+  if(newPhone){T.settingsDue=true;flushSettings();commit();return}
   $('#savedNote').textContent=L('Saving…');
   T.settingsDue=true;clearTimeout(T.settingsTimer);
   T.settingsTimer=setTimeout(()=>{flushSettings();commit()},600);
@@ -2669,7 +2689,7 @@ function renderSite(){
   $('#siteBody').innerHTML=`<div class="think-head">${ghost()}<h3>${L('Fake website blocked')}</h3></div>
     <p>${br?L('<b>{d}</b> is pretending to be {brand}. The real site is {real}.',{d:esc(st.d),brand:esc(br.name),real:esc(br.site)}):L('<b>{d}</b> looks like a fake website.',{d:esc(st.d)})}</p>
     <p>${L('Never type your password or a code on a site someone sent you in a chat.')}</p>
-    ${cfg().tellKid?`<p class="fine">${L('Your parent got an alert that a fake website was blocked. Not your messages.')}</p>`:''}
+    ${cfg().tellKid&&alertOn('scam')?`<p class="fine">${L('Your parent got an alert that a fake website was blocked. Not your messages.')}</p>`:''}
     <div class="sheet-actions"><button type="button" class="btn primary block" data-action="close-sheet">${L('Go back')}</button></div>`;
 }
 function renderThink(){
@@ -2729,6 +2749,7 @@ function renderPrivacy(){
       <button type="button" class="btn primary block" data-action="ask-help"${T.helpSent?' disabled':''}>${T.helpSent?ic('check','ic sm')+L('Sent. Your parent will come find you.'):L('Ask my parent to talk')}</button></div>`;
 }
 function kidNotice(text,from){
+  if(background)return;
   T.notif={text,from};
   clearTimeout(T.notifTimer);
   T.notifTimer=setTimeout(()=>{T.notif=null;renderKid()},6500);
@@ -2951,7 +2972,7 @@ document.addEventListener('click',e=>{
     case 'sync-now':runSync();commit();break;
     case 'goto-setup':{
       S.ui.view='parent';S.ui.tab='settings';T.scnNote=null;commit();
-      setTimeout(()=>{const el=$(id==='keyboard'?'.kb-row':'#setupTitle');if(el)el.scrollIntoView({block:'center',behavior:reduced?'auto':'smooth'})},30);break}
+      setTimeout(()=>{const el=$(id==='keyboard'?'.kb-row':id==='web'?'label:has(#webBlock)':id==='pause'?'label:has(#pauseApps)':'#setupTitle');if(el)el.scrollIntoView({block:'center',behavior:reduced?'auto':'smooth'})},30);break}
     case 'scn-note-x':T.scnNote=null;commit();break;
     case 'more-scenarios':T.moreScenarios=!T.moreScenarios;renderScenarios();break;
     case 'dismiss-how':S.ui.introDismissed=true;commit();break;
@@ -3032,7 +3053,7 @@ $('#newChatForm').addEventListener('submit',e=>{
     const band=isNaN(age)?'unknown':age>=18?'adult':age>=13?'teen':'kid';
     ensureContact({id,name:nm,app,ageBand:band,ageSource:isNaN(age)?'unknown':`profile age ${age}`});
     c=D.contacts[id];
-    evalAdult(c,S.clock);
+    if(visibility(c,'them').live)evalAdult(c,S.clock);
   }
   $('#newChatForm').reset();
   T.sheet=null;S.ui.screen='thread';S.ui.thread=c.id;S.ui.typeAs='them';
@@ -3753,6 +3774,11 @@ DICT.es={"Today":"Hoy",
 "Found at the next sync":"Se verá en la próxima sincronización",
 "Needs the keyboard":"Necesita el teclado",
 "Your parent got an alert that you shared your live location. None of your messages were shared.":"Tus padres recibieron una alerta de que compartiste tu ubicación en tiempo real. No se compartió ninguno de tus mensajes.",
+"Needs fake-site blocking":"Necesita el bloqueo de sitios falsos",
+"On iPhone, Ghost Mode can't see the scam message itself. It catches this when {k} taps the fake link, so turn on \"Block fake websites\" in Settings.":"En iPhone, Ghost Mode no puede ver el mensaje de estafa. Lo detecta cuando {k} toca el enlace falso, así que activa \"Bloquear sitios web falsos\" en Ajustes.",
+"Paused at night":"En pausa de noche",
+"Paused for the night":"En pausa por la noche",
+"Social apps and games are paused during quiet hours, so none of this could happen tonight.":"Las redes sociales y los juegos están en pausa durante las horas de silencio, así que nada de esto pudo pasar esta noche.",
 " Your parent got an alert, not your messages.":" Tus padres recibieron una alerta, no tus mensajes.",
 " Ghost Mode let your parent know to check in on you, but not what you wrote.":" Ghost Mode les avisó a tus padres que hablen contigo, pero no lo que escribiste.",
 " and ":" y ",
