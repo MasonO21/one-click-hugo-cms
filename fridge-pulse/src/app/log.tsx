@@ -18,7 +18,7 @@ import { useToday } from '../hooks/useToday';
 import { addDays, formatShortDate } from '../lib/dates';
 import { notify } from '../lib/dialogs';
 import { sortByExpiry } from '../lib/expiry';
-import { dayTotals, entryFromFood, entryTotals, formatServings, quickEntry } from '../lib/foodLog';
+import { dayTotals, entryFromFood, entryTotals, formatServings, LOG_HISTORY_DAYS, quickEntry } from '../lib/foodLog';
 import { parseNumber, targetsFor } from '../lib/goals';
 import { nutritionFor, portionMacros, type FoodNutrition } from '../lib/nutrition';
 import type { PantryItem } from '../lib/types';
@@ -94,7 +94,12 @@ function QuickAdd({ day, onDone }: { day: string; onDone: () => void }) {
 export default function FoodLog() {
   const { c } = useTheme();
   const today = useToday();
-  const [day, setDay] = useState(today);
+  // Null follows the clock, so a log left open over midnight shows (and adds to) the new day.
+  const [picked, setPicked] = useState<string | null>(null);
+  // The log keeps LOG_HISTORY_DAYS of history; anything added further back would vanish at once.
+  const oldest = addDays(today, -LOG_HISTORY_DAYS);
+  const day = picked === null ? today : picked < oldest ? oldest : picked;
+  const setDay = (next: string) => setPicked(next >= today ? null : next);
   const entries = useFoodLog((s) => s.entries);
   const profile = useSettings((s) => s.profile);
   const targets = targetsFor(profile);
@@ -133,7 +138,15 @@ export default function FoodLog() {
       <ModalTop title="Food log" />
 
       <View style={styles.dayRow}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Previous day" onPress={() => setDay(addDays(day, -1))} style={styles.dayBtn} testID="log-prev-day">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
+          accessibilityState={{ disabled: day <= oldest }}
+          disabled={day <= oldest}
+          onPress={() => setDay(addDays(day, -1))}
+          style={[styles.dayBtn, day <= oldest && { opacity: 0.3 }]}
+          testID="log-prev-day"
+        >
           <Ionicons name="chevron-back" size={22} color={c.ink} />
         </Pressable>
         <Text variant="heading" testID="log-day">

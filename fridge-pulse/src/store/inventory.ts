@@ -122,7 +122,8 @@ export const useInventory = create<InventoryState>()(
       // Version 1 had no running totals: rebuild them from the history that is still kept.
       migrate: (persisted, version) => {
         const state = (persisted ?? {}) as { items?: PantryItem[]; lifetime?: Lifetime };
-        const items = Array.isArray(state.items) ? state.items : [];
+        // Anything that is not an item (damaged storage) is dropped rather than stopping the app loading.
+        const items = Array.isArray(state.items) ? state.items.filter((i): i is PantryItem => !!i && typeof i === 'object' && typeof i.id === 'string') : [];
         if (version < 2) {
           let lifetime = { ...NO_LIFETIME };
           for (const i of items) if (i.status !== 'active') lifetime = count(lifetime, i, 1);

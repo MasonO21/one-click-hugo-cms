@@ -25,7 +25,7 @@ import { cleanPrice, deviceCurrency, formatMoney } from '../../lib/money';
 import { parseNumber } from '../../lib/goals';
 import { formatGrams, nutritionFor, portionMacros, quantityGrams, scaleMacros, type Macros } from '../../lib/nutrition';
 import { estimateShelfLifeDays, freezeRescueDays, freezesWell } from '../../lib/shelfLife';
-import { keepsLabel } from '../../lib/suggest';
+import { keepsLabel, resolveTyped } from '../../lib/suggest';
 import { storageTips } from '../../lib/tips';
 import type { PantryItem, StorageLocation } from '../../lib/types';
 import { resolveItems } from '../../store/actions';
@@ -42,14 +42,21 @@ import { radius, useTheme } from '../../theme';
 /**
  * A text field that edits a local copy and saves when you leave it, so clearing a name to retype it
  * never saves a blank item. Empty names go back to what they were; an empty quantity becomes "1".
+ * `onCommit` can return the text to show instead (a price it could not read goes back to the old one).
  */
-function CommitField({ value, onCommit, fallback, ...rest }: { value: string; onCommit: (v: string) => void; fallback: string } & Omit<React.ComponentProps<typeof Field>, 'value' | 'onChangeText'>) {
+function CommitField({
+  value,
+  onCommit,
+  fallback,
+  ...rest
+}: { value: string; onCommit: (v: string) => string | void; fallback: string } & Omit<React.ComponentProps<typeof Field>, 'value' | 'onChangeText'>) {
   const [draft, setDraft] = useState(value);
   const [lastValue, setLastValue] = useState(value);
-  // Follow outside changes (another screen renamed it) while not editing.
+  const [editing, setEditing] = useState(false);
+  // Follow outside changes (a housemate renamed it) while not editing; what is being typed wins.
   if (value !== lastValue) {
     setLastValue(value);
-    setDraft(value);
+    if (!editing) setDraft(value);
   }
   const latest = useRef({ draft, value, onCommit, fallback });
   useEffect(() => {
@@ -58,12 +65,13 @@ function CommitField({ value, onCommit, fallback, ...rest }: { value: string; on
   const commit = () => {
     const { draft: d, value: v, onCommit: save, fallback: fb } = latest.current;
     const clean = d.trim().replace(/\s+/g, ' ') || fb;
-    if (clean !== v) save(clean);
-    setDraft(clean);
+    const shown = clean !== v ? save(clean) : undefined;
+    setDraft(typeof shown === 'string' ? shown : clean);
+    setEditing(false);
   };
   // Leaving the screen with the keyboard still up also saves.
   useEffect(() => () => commit(), []);
-  return <Field {...rest} value={draft} onChangeText={setDraft} onEndEditing={commit} onBlur={commit} />;
+  return <Field {...rest} value={draft} onChangeText={setDraft} onFocus={() => setEditing(true)} onEndEditing={commit} onBlur={commit} />;
 }
 
 export default function ItemDetail() {
@@ -133,7 +141,8 @@ export default function ItemDetail() {
   };
 
   const addToList = () => {
-    const added = useShopping.getState().add({ name: item.name, category: item.category });
+    // Where it is kept comes from the food itself (frozen peas: freezer), as typing it on the list gives.
+    const added = useShopping.getState().add({ name: item.name, category: item.category, keptIn: resolveTyped(item.name).keptIn });
     useSnackbar.getState().show({ message: added ? `${item.name} added to your shopping list` : `${item.name} is already on your list` });
   };
 
@@ -314,9 +323,15 @@ export default function ItemDetail() {
           testID="item-price"
           maxLength={8}
           onCommit={(text) => {
-            const price = cleanPrice(parseNumber(text));
-            if (price === null) update(item.id, { price: undefined, currency: undefined });
-            else update(item.id, { price, currency: item.currency ?? deviceCurrency() });
+            if (text.trim() === '') {
+              update(item.id, { price: undefined, currency: undefined });
+              return '';
+            }
+            // A currency sign or code before or after the number is fine.
+            const price = cleanPrice(parseNumber(text.replace(/^[^\d.,]+|[^\d.,]+$/g, '')));
+            // Text that is not a price leaves the price as it was, rather than deleting it.
+            if (price === null) return item.price !== undefined ? String(item.price) : '';
+            update(item.id, { price, currency: item.currency ?? deviceCurrency() });
           }}
         />
         {item.price !== undefined ? (

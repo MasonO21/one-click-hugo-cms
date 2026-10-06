@@ -184,7 +184,7 @@ describe('logging food, with the health app', () => {
     useHealth.setState({ connected: true });
     let id = '';
     await act(async () => {
-      id = addToLog({ title: 'Omelette', kind: 'meal', portion: '1 serving', servings: 1, perServing: { kcal: 366, protein: 20, carbs: 4, fat: 30 } }).id;
+      id = addToLog({ title: 'Omelette', kind: 'meal', portion: '1 serving', servings: 1, perServing: { kcal: 366, protein: 20, carbs: 4, fat: 30 } })!.id;
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -347,7 +347,7 @@ describe('the health app while a write is slow', () => {
     });
     let id = '';
     act(() => {
-      id = addToLog({ title: 'Toast', kind: 'quick', portion: '1 serving', servings: 1, perServing: { kcal: 100, protein: 5, carbs: 10, fat: 2 } }).id;
+      id = addToLog({ title: 'Toast', kind: 'quick', portion: '1 serving', servings: 1, perServing: { kcal: 100, protein: 5, carbs: 10, fat: 2 } })!.id;
     });
     await act(async () => {
       await jest.advanceTimersByTimeAsync(200);

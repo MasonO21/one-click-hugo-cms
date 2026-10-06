@@ -47,7 +47,7 @@ Docs: https://docs.expo.dev/eas/index.md
 - `docs.expo.dev` and `api.expo.dev` can be blocked in cloud sessions, so `npx expo install` and `npx expo lint` auto-setup fail there. Use the installed packages' `.d.ts` files as the API reference, and take SDK-compatible versions from `node_modules/expo/bundledNativeModules.json`.
 - `EXPO_PUBLIC_*` values are inlined at build time; after changing them run Metro / `expo export` with `--clear`.
 - `Alert.alert` is a no-op on web and embedded viewers suppress `window.confirm`. Use `confirm()` / `notify()` from `src/lib/dialogs.ts` (native alert, or the in-app `DialogHost` on web) for any flow that awaits an answer.
-- Persisted stores use `persistStorage()` (`src/store/storage.ts`), which never rejects. A rejected read would leave a store un-hydrated and the app stuck on its splash screen.
+- Persisted stores use `persistStorage()` (`src/store/storage.ts`), which never rejects. A rejected read would leave a store un-hydrated and the app stuck on its splash screen; so would a `migrate` that throws, so migrations must drop what they cannot read rather than fail. A saved value that is not valid JSON is set aside under `<name>.unreadable` and the store starts afresh.
 - `npm run preview:build` builds the hosted web preview into `preview/` (git-ignored). Test it against a strict CSP, a nested path and a phone viewport; see the README.
 - Billing must fail closed: never make the local trial provider reachable in a production build (`src/billing/index.ts`).
 - The app and server share one JSON contract (`server/src/schemas.ts` <-> `src/lib/types.ts`, `src/lib/api.ts`). Change both together.
@@ -90,4 +90,7 @@ Docs: https://docs.expo.dev/eas/index.md
 - Review list places (`src/store/scanDraft.ts`): a draft headed somewhere other than the list's place gets `ownPlace`, and `setLocation` leaves it there however often the list moves; one the person moved gets `userPlaced` too, and a confirmed lookup's "kept in" no longer moves it.
 - `NotificationRouter` clears the response it handled (`clearLastNotificationResponse`): it is mounted again whenever access comes back, and an old tap must not open its screen twice.
 - "Delete all my data" empties the food log with `clearLog()` (`src/store/logActions.ts`), which also takes the log's samples back out of Apple Health / Health Connect before health is disconnected.
+- Food log screen: it shows today unless the person picked another day (so it moves on at midnight), and goes back at most `LOG_HISTORY_DAYS`, the history the log keeps; `addToLog` / `logWithUndo` return nothing for an older day rather than an entry that was dropped at once.
+- Item screen fields (`CommitField` in `src/app/item/[id].tsx`) take a housemate's change only while not being edited, and `onCommit` can return the text to show (a price it cannot read goes back to the old one; only an emptied field clears the price). Numbers like ".99" and "3." are read by `parseNumber`.
+- Searching items folds accents like the add field does (`fold` from `src/lib/suggest.ts`): "creme" finds "Crème fraîche".
 - `Screen` turns off keyboard dismissal on scroll on the web (React Native Web treats every scroll as a drag, and phone browsers scroll to the focused field).

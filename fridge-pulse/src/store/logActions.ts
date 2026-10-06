@@ -26,11 +26,14 @@ function sendToHealth(entry: LogEntry): void {
   });
 }
 
-/** Adds to the food log (and the health store) without a message; returns the new entry. */
-export function addToLog(entry: NewEntry): LogEntry {
+/**
+ * Adds to the food log (and the health store) without a message; returns the new entry, or
+ * nothing for a day older than the log keeps.
+ */
+export function addToLog(entry: NewEntry): LogEntry | undefined {
   const id = useFoodLog.getState().add(entry);
-  const saved = useFoodLog.getState().entries.find((e) => e.id === id)!;
-  sendToHealth(saved);
+  const saved = useFoodLog.getState().entries.find((e) => e.id === id);
+  if (saved) sendToHealth(saved);
   return saved;
 }
 
@@ -55,8 +58,9 @@ export function loggedMessage(entry: Pick<LogEntry, 'title' | 'perServing' | 'se
 }
 
 /** Logs food from a button press, with a message bar that offers Undo. */
-export function logWithUndo(entry: NewEntry): LogEntry {
+export function logWithUndo(entry: NewEntry): LogEntry | undefined {
   const saved = addToLog(entry);
+  if (!saved) return undefined;
   const message = loggedMessage(saved);
   AccessibilityInfo.announceForAccessibility?.(message);
   useSnackbar.getState().show({ message, tone: 'plain', action: { label: 'Undo', onPress: () => void removeFromLog(saved.id) } });

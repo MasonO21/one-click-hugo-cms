@@ -13,6 +13,7 @@ import { FadeIn, PressableScale, stagger } from '../../components/motion';
 import { useToday } from '../../hooks/useToday';
 import { resolveItems } from '../../store/actions';
 import { active, daysLeft, sortByExpiry, urgencyOf, URGENCY_ORDER, type Urgency } from '../../lib/expiry';
+import { fold } from '../../lib/suggest';
 import type { PantryItem, StorageLocation } from '../../lib/types';
 import { useInventory } from '../../store/inventory';
 import { FONT, glow, radius, useTheme } from '../../theme';
@@ -36,9 +37,10 @@ export default function Inventory() {
   const now = useMemo(() => new Date(), [today]); // eslint-disable-line react-hooks/exhaustive-deps
   const live = useMemo(() => active(items), [items]);
   const sections = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    // Accents do not matter, as when adding food: "creme" finds "Crème fraîche".
+    const q = fold(query).trim().replace(/\s+/g, ' ');
     const shown = sortByExpiry(
-      live.filter((i) => (filter === 'all' || i.location === filter) && (q === '' || i.name.toLowerCase().includes(q))),
+      live.filter((i) => (filter === 'all' || i.location === filter) && (q === '' || fold(i.name).replace(/\s+/g, ' ').includes(q))),
     );
     const groups: Record<Urgency, PantryItem[]> = { expired: [], today: [], soon: [], week: [], ok: [] };
     for (const item of shown) groups[urgencyOf(daysLeft(item, now))].push(item);

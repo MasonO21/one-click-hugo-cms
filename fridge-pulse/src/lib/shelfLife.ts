@@ -576,7 +576,8 @@ export function usualPlace(name: string, category: Category): StorageLocation {
   const taught = learnedFood(name);
   if (taught) return taught.keptIn;
   const lower = name.toLowerCase();
-  if (/\b(frozen|ice cream|gelato|sorbet|ice pops?|popsicles?|fish sticks|fish fingers)\b/.test(lower)) return 'freezer';
+  // Kept in step with the catalog's always-frozen foods (ALWAYS_FROZEN in src/lib/foodCatalog.ts).
+  if (/\b(frozen|ice cream|gelato|sorbet|ice pops?|popsicles?|fish sticks|fish fingers|veggie burgers?)\b/.test(lower)) return 'freezer';
   switch (category) {
     case 'produce':
       return COUNTER_PRODUCE.test(lower) && !/\b(cherry tomatoes|cut|sliced|chopped)\b/.test(lower) ? 'pantry' : 'fridge';

@@ -133,7 +133,8 @@ export const feetInchesToCm = (feet: number, inches: number) => (feet * 12 + inc
 /** A typed number ("72", "72.5", "72,5"), or null when it is not one. */
 export function parseNumber(text: string): number | null {
   const t = text.trim().replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(t)) return null;
+  // "3.49", ".99" and "3." are all numbers people type.
+  if (!/^(\d+(\.\d*)?|\.\d+)$/.test(t)) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }

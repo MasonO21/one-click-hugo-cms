@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createJSONStorage, type StateStorage } from 'zustand/middleware';
+import { createJSONStorage, type PersistStorage, type StateStorage } from 'zustand/middleware';
 
 const memory = new Map<string, string>();
 
@@ -35,4 +35,25 @@ export const safeStorage: StateStorage = {
   },
 };
 
-export const persistStorage = () => createJSONStorage(() => safeStorage);
+/**
+ * JSON storage for a persisted store that always finishes loading. A saved value that cannot be
+ * read (cut short, or damaged) would otherwise leave the store "not hydrated" and the app on its
+ * splash screen at every launch; instead it is set aside under `<name>.unreadable` and the store
+ * starts afresh.
+ */
+export function persistStorage<S>(): PersistStorage<S> {
+  const json = createJSONStorage<S>(() => safeStorage)!;
+  return {
+    getItem: async (name) => {
+      try {
+        return await json.getItem(name);
+      } catch {
+        const raw = await safeStorage.getItem(name);
+        if (raw != null) await safeStorage.setItem(`${name}.unreadable`, raw);
+        return null;
+      }
+    },
+    setItem: (name, value) => json.setItem(name, value),
+    removeItem: (name) => json.removeItem(name),
+  };
+}
