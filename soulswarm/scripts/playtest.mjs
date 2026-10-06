@@ -131,6 +131,88 @@ errs = await session(async (page) => {
 });
 check('economy: no runtime errors', !errs.length, errs[0] || '');
 
+// 6. Legion variants (GDD §4.2): with Raise Chance forced to 1, every kill rises as its own kind.
+//    Covers variant mapping, Champions, Soul Bomb blasts, Soul Witch orbs, taunters, removeMany,
+//    the cap heal and the boss engagement limit, then renders every ghost kind to catch shader errors.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, E = app.engine; E.manual = true;
+    app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+    app.startRun(1);
+    const r = app.run, P = r.player, L = r.legion, EN = r.enemies;
+    r.player.hurt = () => {}; r.addXp = () => {}; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.spawnAcc = -1e9;
+    r.weapons.update = () => {}; // only minions deal damage here
+    r.stats.raise = 1; r.stats.cap = 400;
+    const step = (sec, each) => { for (let i = 0; i < Math.round(sec * 30); i++) { r.update(1 / 30); if (each) each(); } };
+    const newest = () => L.list[L.list.length - 1];
+    const out = {};
+    // each enemy type rises as its matching variant; an elite rises as a Champion
+    out.kinds = {};
+    for (const t of ['husk', 'ghoul', 'brute', 'witch', 'bloater']) { EN.kill(EN.spawn(t, P.x + 6, P.z + 6, {}), 'bolt'); out.kinds[t] = newest().kind; }
+    EN.kill(EN.spawn('witch', P.x + 6, P.z - 6, { elite: true }), 'bolt');
+    const ch = newest();
+    out.champ = { kind: ch.kind, champ: ch.champ, hpMul: +(ch.maxHp / r.stats.minionHp).toFixed(2), scale: +ch.scale.toFixed(3) };
+    // render every ghost kind (shader compile / runtime errors surface as console errors)
+    for (let i = 0; i < 6; i++) E.step(1 / 30);
+    // taunters: the live Bulwarks; hitMinion damages one
+    const t0 = L.taunters[0];
+    out.taunt = { n: L.taunters.length, fields: !!t0 && ['x', 'z', 'hp', 'maxHp'].every((k) => typeof t0[k] === 'number') };
+    const hp0 = t0.hp; out.taunt.hit = L.hitMinion(t0, 5) === false && Math.abs(t0.hp - (hp0 - 5)) < 1e-6;
+    out.taunt.kill = L.hitMinion(t0, 1e9) === true;
+    step(1 / 30);
+    out.taunt.after = L.taunters.length;
+    // Soul Bomb: dives into a tight crowd, blasts it and leaves the legion; blast kills take the normal kill path
+    L.detonateAll(); EN.clearAll(false);
+    const crowd = [];
+    for (let i = 0; i < 10; i++) crowd.push(EN.spawn('husk', P.x + 6 + Math.cos(i * 0.63) * 0.5, P.z + Math.sin(i * 0.63) * 0.5, { hpMul: i < 4 ? 0.05 : 80 }));
+    const tanky = crowd.slice(4), hpA = tanky.reduce((a, e) => a + e.hp, 0);
+    const sources = [], onKill = r.onEnemyKilled.bind(r);
+    r.onEnemyKilled = (e, src, nr) => { sources.push(src); onKill(e, src, nr); };
+    const raised0 = r.counters.raised, bomb = L.raise(P.x + 2, P.z, { kind: 'bloater' }), uid = bomb.uid;
+    let tb = 0;
+    while (tb < 5 && L.list.some((m) => m.uid === uid)) { step(1 / 30); tb += 1 / 30; }
+    out.bomb = { gone: !L.list.some((m) => m.uid === uid), t: +tb.toFixed(2), dmg: Math.round(hpA - tanky.reduce((a, e) => a + e.hp, 0)), expect: Math.round(6 * r.stats.minionDmg * 6),
+      soulbombKills: sources.filter((x) => x === 'soulbomb').length, raised: r.counters.raised - raised0 };
+    r.onEnemyKilled = onKill;
+    // Soul Witch: shoots homing orbs from range
+    L.detonateAll(); EN.clearAll(false);
+    const foe = EN.spawn('husk', P.x + 5, P.z, { hpMul: 80 }); foe.speed = 0;
+    const witch = L.raise(P.x, P.z, { kind: 'witch' });
+    let orbs = 0, minD = 99;
+    step(3, () => { orbs = Math.max(orbs, L.orbs.length); minD = Math.min(minD, Math.hypot(witch.x - foe.x, witch.z - foe.z)); });
+    out.witch = { orbs, hurt: Math.round(foe.maxHp - foe.hp), minDist: +minD.toFixed(2) };
+    // removeMany returns the lost souls' positions
+    L.detonateAll(); EN.clearAll(false);
+    L.addMany(12, P.x, P.z);
+    const lost = L.removeMany(5);
+    out.remove = { n: lost.length, left: L.count, finite: lost.every((p) => [p.x, p.y, p.z].every(Number.isFinite)) };
+    // a raise roll at the cap heals the weakest minion by 50% instead of raising
+    r.stats.cap = L.count;
+    const weak = L.list[3]; weak.hp = weak.maxHp * 0.1;
+    EN.kill(EN.spawn('husk', P.x + 7, P.z, {}), 'bolt');
+    out.capHeal = { count: L.count, cap: r.stats.cap, frac: +(weak.hp / weak.maxHp).toFixed(2) };
+    // at most 24 minions engage Gravemaw at once
+    L.detonateAll(); EN.clearAll(false); r.stats.cap = 400;
+    L.addMany(150, P.x, P.z);
+    r.boss.spawn(); const B = r.bossEnemy;
+    let maxEngaged = 0;
+    step(5, () => { B.x = P.x + 3; B.z = P.z; let n = 0; for (const m of L.list) if (m.target === B) n++; maxEngaged = Math.max(maxEngaged, n); });
+    out.boss = { maxEngaged, legion: L.count };
+    for (let i = 0; i < 4; i++) E.step(1 / 30);
+    return out;
+  });
+  check('legion: each enemy type rises as its variant', JSON.stringify(s.kinds) === JSON.stringify({ husk: 'shade', ghoul: 'runner', brute: 'bulwark', witch: 'soulWitch', bloater: 'soulBomb' }), JSON.stringify(s.kinds));
+  check('legion: an elite rises as a Champion', s.champ.champ && s.champ.kind === 'soulWitch' && s.champ.hpMul === 2.4 && s.champ.scale === 1.08, JSON.stringify(s.champ));
+  check('legion: taunters list live Bulwarks; hitMinion damages and kills', s.taunt.n === 1 && s.taunt.fields && s.taunt.hit && s.taunt.kill && s.taunt.after === 0, JSON.stringify(s.taunt));
+  check('legion: Soul Bomb detonates, damages enemies and leaves the legion', s.bomb.gone && s.bomb.dmg >= s.bomb.expect * 0.5, JSON.stringify(s.bomb));
+  check('legion: Soul Bomb kills take the kill path and roll raises', s.bomb.soulbombKills >= 3 && s.bomb.raised >= 3, JSON.stringify(s.bomb));
+  check('legion: Soul Witch hits with orbs from range', s.witch.orbs > 0 && s.witch.hurt > 0 && s.witch.minDist > 2.5, JSON.stringify(s.witch));
+  check('legion: removeMany returns the lost positions', s.remove.n === 5 && s.remove.left === 7 && s.remove.finite, JSON.stringify(s.remove));
+  check('legion: a raise at the cap heals the weakest minion', s.capHeal.count === s.capHeal.cap && s.capHeal.frac === 0.6, JSON.stringify(s.capHeal));
+  check('legion: at most 24 minions engage the boss', s.boss.maxEngaged > 0 && s.boss.maxEngaged <= 24, JSON.stringify(s.boss));
+});
+check('legion variants: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
