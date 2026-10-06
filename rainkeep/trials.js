@@ -47,19 +47,24 @@
     if (!spireOpen()) return KH.toast(`The Mirage Spire appears after you beat stage ${SP.unlockStage - 1}.`, 'warn');
     if (!KH.squadHome().length) return KH.toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
     const f = S.spire.floor, foe = spireFoe(f), m = SP.mods[foe.mod], team = spireTeam(foe);
-    const result = KH.simulateBattle(team, foe, { noBreath: !!m.noBreath });
-    let rewards = null;
-    if (result.win) {
-      rewards = SP.rewards(f);
-      KH.grant(rewards);
-      S.spire.floor++;
-      S.stats.spireWins++;
-      KH.addPassXp(DATA.passXp.stage);
-      if (KH.duty) KH.duty('spire');
-    }
-    KH.emit('battle', { kind: 'spire', win: result.win, foe });
-    KH.emit('spire', { floor: f, win: result.win });
-    KH.startBattle({ title: `Mirage Spire · Floor ${f} · ${m.name}`, foe, team, result, rewards, intro: m.desc, loseLine: 'The mirage swallows the squad and spits them out at the gate.' });
+    KH.fightLive({
+      title: `Mirage Spire · Floor ${f} · ${m.name}`, foe, team, opts: { noBreath: !!m.noBreath }, intro: m.desc, loseLine: 'The mirage swallows the squad and spits them out at the gate.',
+      onEnd: (result) => {
+        let rewards = null;
+        if (result.win && S.spire.floor === f) {
+          rewards = SP.rewards(f);
+          KH.grant(rewards);
+          S.spire.floor++;
+          S.stats.spireWins++;
+          KH.addPassXp(DATA.passXp.stage);
+          if (KH.duty) KH.duty('spire');
+        }
+        KH.emit('battle', { kind: 'spire', win: result.win, foe });
+        KH.emit('spire', { floor: f, win: result.win });
+        KH.save();
+        return { rewards };
+      },
+    });
   };
   function panelSpire() {
     const head = '<div class="panel-head"><h2>Mirage Spire</h2><p>A tower that is only there at noon</p></div>';
@@ -137,24 +142,29 @@
     if (S.duels.tickets >= ticketCap()) S.duels.tixAt = S.time;
     S.duels.tickets--;
     S.stats.duels++;
-    const result = KH.simulateBattle(team, foe);
-    let rewards = null;
-    if (result.win) {
-      const glory = DU.winGlory[Math.min(2, idx)]; // near, even, long jump
-      rewards = { glory };
-      KH.grant(rewards);
-      S.duels.rank = foe.n;
-      S.duels.best = Math.min(S.duels.best, foe.n);
-      S.stats.duelWins++;
-      milestoneCheck();
-    } else {
-      KH.grant({ glory: 3 });
-      rewards = { glory: 3 };
-    }
-    if (KH.duty) KH.duty('duel');
-    KH.emit('battle', { kind: 'duel', win: result.win, foe });
-    KH.emit('duel', { win: result.win, rank: S.duels.rank });
-    KH.startBattle({ title: `Dune Duel · rank ${foe.n}`, foe, team, result, rewards, sideLabel: 'Your squad', intro: `${foe.title} ${foe.name} rides out to meet you.`, resultTitle: result.win ? `Rank ${foe.n}` : null, loseLine: `${foe.name} holds the rank. You keep yours.`, noTips: false });
+    KH.fightLive({
+      title: `Dune Duel · rank ${foe.n}`, foe, team, sideLabel: 'Your squad', intro: `${foe.title} ${foe.name} rides out to meet you.`, loseLine: `${foe.name} holds the rank. You keep yours.`, noTips: false,
+      onEnd: (result) => {
+        let rewards;
+        if (result.win) {
+          const glory = DU.winGlory[Math.min(2, idx)]; // near, even, long jump
+          rewards = { glory };
+          KH.grant(rewards);
+          if (foe.n < S.duels.rank) S.duels.rank = foe.n;
+          S.duels.best = Math.min(S.duels.best, foe.n);
+          S.stats.duelWins++;
+          milestoneCheck();
+        } else {
+          rewards = { glory: 3 };
+          KH.grant(rewards);
+        }
+        if (KH.duty) KH.duty('duel');
+        KH.emit('battle', { kind: 'duel', win: result.win, foe });
+        KH.emit('duel', { win: result.win, rank: S.duels.rank });
+        KH.save();
+        return { rewards, resultTitle: result.win ? `Rank ${foe.n}` : null };
+      },
+    });
   };
   ACT.duelticket = () => {
     if (S.duels.tickets >= ticketCap()) return KH.toast('Your tickets are full.', 'warn');

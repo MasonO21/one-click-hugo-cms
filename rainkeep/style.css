@@ -613,3 +613,27 @@ textarea.code { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, m
 .bond-bubble .ic { width: 18px; height: 18px; }
 .bond-perks summary { cursor: pointer; }
 .chip.off { opacity: .45; }
+
+/* Live battles: hero skills, the breath, wind-ups */
+.b-skills { display: flex; gap: 8px; justify-content: center; }
+.b-skill { position: relative; width: 66px; padding: 0; border-radius: 12px; border: 1px solid var(--line-2); background: #160c06; overflow: hidden; display: grid; grid-template-rows: 62px auto auto; transition: transform .12s, box-shadow .2s; }
+.b-skill svg.portrait { width: 100%; height: 62px; filter: grayscale(.55) brightness(.75); transition: filter .2s; }
+.b-skill .b-ring { display: block; height: 5px; background: #2a1a0e; }
+.b-skill .b-ring i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #5fd0ff, #a8f0ff); transition: width .3s; }
+.b-skill .b-skn { font-size: 10.5px; font-weight: 700; color: var(--dim); padding: 2px 0 3px; }
+.b-skill.ready { border-color: #ffcf6e; box-shadow: 0 0 14px #ffcf6e88; animation: skillpulse 1.2s infinite; }
+.b-skill.ready svg.portrait { filter: none; }
+.b-skill.ready .b-skn { color: var(--gold); }
+.b-skill.queued { transform: translateY(-6px); border-color: #8ff0ff; box-shadow: 0 0 16px #5fd0ffaa; animation: none; }
+@keyframes skillpulse { 50% { box-shadow: 0 0 22px #ffcf6ecc; } }
+.b-acts { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; }
+#b-breath.queued { box-shadow: 0 0 0 2px #8ff0ff, 0 0 16px #5fd0ffaa; }
+#b-breath.hint:not(:disabled) { animation: skillpulse .8s infinite; }
+#b-breath:disabled { opacity: .45; }
+.b-tip { text-align: center; margin-top: 6px; }
+.b-wind { position: absolute; top: 4px; right: 8px; padding: 3px 9px; border-radius: 8px; background: #c0391c; color: #fff4dc; font-weight: 800; font-size: 13px; opacity: 0; transform: scale(.8); transition: opacity .2s, transform .2s; pointer-events: none; }
+.b-wind.on { opacity: 1; transform: scale(1); animation: windpulse .6s infinite alternate; }
+@keyframes windpulse { to { box-shadow: 0 0 16px #ff6b3a; } }
+.floaty.skill { color: #8ff0ff; }
+.floaty.heal { color: #8fe08a; }
+.floaty.big { font-size: 30px; }

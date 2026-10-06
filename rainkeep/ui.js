@@ -596,7 +596,7 @@
     const native = window.KHNative && window.KHNative.isNative;
     return {
       title: 'Settings', lvl: '',
-      body: `<div class="card stack">${toggle('sfx', 'Sound effects')}${toggle('music', 'Music and ambience')}${toggle('haptics', 'Vibration')}${native ? toggle('notify', 'Notifications when builds finish') : ''}${KH.A3 && KH.A3.ok ? toggle('gfx3d', '3D graphics (turn off to save battery)') : ''}</div>
+      body: `<div class="card stack">${toggle('sfx', 'Sound effects')}${toggle('music', 'Music and ambience')}${toggle('haptics', 'Vibration')}${native ? toggle('notify', 'Notifications when builds finish') : ''}${KH.A3 && KH.A3.ok ? toggle('gfx3d', '3D graphics (turn off to save battery)') : ''}${toggle('liveBattle', 'Play battles round by round (off: they resolve at once)')}</div>
         <div class="section-label">Your keep</div>
         <dl class="kv"><dt>Time in the keep</dt><dd>${fmtTime(S.time)}</dd><dt>Survivors</dt><dd>${S.pop}</dd><dt>Stages cleared</dt><dd>${S.stage - 1}</dd>
         <dt>Heroes recruited</dt><dd>${Object.keys(S.heroes).length}/${DATA.heroes.length}</dd><dt>Storms survived cleanly</dt><dd>${S.stats.cleanStorms}</dd><dt>Buildings upgraded</dt><dd>${S.stats.upgrades}</dd>
@@ -850,8 +850,14 @@
       if (!r) return finishBattle();
       $('#b-ehb').style.width = `${(r.eh / foe.hp) * 100}%`;
       $('#b-eh').textContent = fmt(r.eh);
+      // breath and hero skills fired this round (auto-battle)
+      const lines = [];
+      for (const a of r.acts || []) {
+        if (a.kind === 'breath') { floaty('#b-foe', `−${fmt(a.dmg)}`, 'torrent'); lines.push(a.broke ? `${S.wyrm.name}'s breath breaks the wind-up!` : `${S.wyrm.name} breathes a torrent!`); audio('roar'); }
+        else { if (a.dmg) floaty('#b-foe', `−${fmt(a.dmg)}`, 'skill'); if (a.heal) floaty('#b-us', `+${fmt(a.heal)}`, 'heal'); lines.push(skillLine(a)); }
+      }
       if (r.ours) { floaty('#b-foe', `−${fmt(r.ours)}`, ''); audio('hit'); haptic('light'); }
-      $('#b-log').textContent = B.i === 0 && B.team.fx.burst ? 'Opening charge!' : `Round ${B.i + 1}`;
+      $('#b-log').textContent = lines.join(' ') || (B.i === 0 && B.team.fx.burst ? 'Opening charge!' : r.windup ? 'A heavy blow is coming!' : `Round ${B.i + 1}`);
       B.timer = setTimeout(() => {
         if (!UI.battle || UI.battle.done) return;
         if (r.theirs) {
@@ -867,6 +873,144 @@
     UI.battle.timer = setTimeout(step, 600);
   }
   KH.startBattle = startBattle;
+
+  // ======================================================================
+  // Live battles: the same engine stepped round by round. Tap a hero when its skill is charged,
+  // spend the Rainwyrm's breath once (best on a wind-up), or let Auto play it. cfg.onEnd(result)
+  // applies the outcome and returns { rewards, after, extra, resultTitle } for the result panel.
+  // ======================================================================
+  KH.quickBattles = /[?&]quick/.test(location.search);
+  KH.fightLive = (cfg) => {
+    if (KH.quickBattles || S.settings.liveBattle === false) {
+      const result = KH.simulateBattle(cfg.team, cfg.foe, cfg.opts || {});
+      return startBattle({ ...cfg, result, ...(cfg.onEnd(result) || {}) });
+    }
+    liveBattle(cfg);
+  };
+  function liveBattle(cfg) {
+    const st = KH.newBattle(cfg.team, cfg.foe, cfg.opts || {});
+    UI.battle = { ...cfg, live: true, st, q: { breath: false, skills: new Set() }, i: 0, timer: null, result: { win: false, rounds: [] } };
+    UI.sheet = null;
+    const el = $('#battle'), foe = cfg.foe, BT = DATA.battle;
+    const skills = st.skills.map((sk, i) => {
+      const d = BT.skills[sk.kind];
+      return `<button class="b-skill" data-act="bskill" data-arg="${i}" id="b-sk${i}" aria-label="${esc(HERO[sk.id].name)}: ${esc(d.name)}">${portrait(sk.id)}<span class="b-ring"><i></i></span><span class="b-skn">${esc(d.name)}</span></button>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="b-title"><span class="stage-num">${esc(cfg.title)}</span><h2>${esc(foe.name)}</h2></div>
+      <div class="b-field">
+        <div class="b-side" id="b-foe">${foe.portrait ? `<div class="b-rival">${portrait(foe.portrait)}</div>` : foeArt(foe)}<div class="b-wind" id="b-wind">Winding up!</div>
+          <div class="b-hp"><div class="lbl"><span>${esc(foe.name)}</span><span id="b-eh">${fmt(foe.hp)}</span></div><div class="bar foe"><i id="b-ehb" style="width:100%"></i></div></div>
+        </div>
+        <div class="b-log" id="b-log">${esc(cfg.intro || 'Your squad marches out across the sand…')}</div>
+        <div class="b-side" id="b-us">
+          <div class="squad b-skills">${skills || '<div class="slot">—</div>'}</div>
+          <div class="b-hp"><div class="lbl"><span>${esc(cfg.sideLabel || 'Your squad')} · ${fmt(sum(cfg.team.troops))} troops</span><span id="b-th">${fmt(cfg.team.hp)}</span></div><div class="bar"><i id="b-thb" style="width:100%"></i></div></div>
+        </div>
+      </div>
+      <div id="b-foot"><div class="b-acts">
+        ${st.breath > 0 ? `<button class="btn gold" data-act="bbreath" id="b-breath">${icon('i-water')}Breath</button>` : ''}
+        <button class="btn alt small" data-act="bauto" id="b-auto"></button><button class="btn alt small" data-act="bspeed" id="b-speed"></button><button class="btn alt small" data-act="bskip">Skip</button></div>
+        <p class="muted small b-tip">Tap a hero when their ring is full. Save the breath for a wind-up to break it.</p></div>`;
+    el.hidden = false;
+    liveUI();
+    UI.battle.timer = setTimeout(liveTick, 900);
+  }
+  const speed = () => (S.settings.battleSpeed === 2 ? 2 : 1);
+  function liveUI() {
+    const B = UI.battle;
+    if (!B || !B.live) return;
+    const st = B.st, BT = DATA.battle;
+    st.skills.forEach((sk, i) => {
+      const b = $(`#b-sk${i}`);
+      if (!b) return;
+      const k = Math.min(1, sk.charge / BT.charge);
+      b.querySelector('.b-ring i').style.width = `${k * 100}%`;
+      b.classList.toggle('ready', k >= 1 && !B.done);
+      b.classList.toggle('queued', B.q.skills.has(i));
+    });
+    const br = $('#b-breath');
+    if (br) { br.disabled = st.breathUsed || B.done; br.classList.toggle('queued', B.q.breath); br.classList.toggle('hint', st.windup && !st.breathUsed); }
+    const w = $('#b-wind');
+    if (w) w.classList.toggle('on', st.windup && !st.over);
+    const auto = $('#b-auto');
+    if (auto) { auto.textContent = S.settings.autoBattle ? 'Auto: on' : 'Auto: off'; auto.classList.toggle('gold', !!S.settings.autoBattle); }
+    const sp = $('#b-speed');
+    if (sp) sp.textContent = `${speed()}×`;
+  }
+  const skillLine = (a) => {
+    const d = DATA.battle.skills[a.kind], who = HERO[a.id].name.split(' ')[0];
+    if (a.kind === 'dr') return `${who} raises a ${d.name}!`;
+    if (a.kind === 'heal') return `${who} mends the line (+${fmt(a.heal)}).`;
+    if (a.kind === 'pierce') return `${who} sunders their guard!`;
+    return `${who}: ${d.name}!`;
+  };
+  function liveTick() {
+    const B = UI.battle;
+    if (!B || !B.live || B.done) return;
+    const st = B.st;
+    const acts = S.settings.autoBattle ? KH.autoActs(st) : { skills: [] };
+    if (B.q.breath) acts.breath = true;
+    for (const i of B.q.skills) if (!acts.skills.includes(i)) acts.skills.push(i);
+    B.q = { breath: false, skills: new Set() };
+    const rec = KH.battleStep(st, acts);
+    const sp = speed(), lines = [];
+    for (const a of rec.acts) {
+      if (a.kind === 'breath') { floaty('#b-foe', `−${fmt(a.dmg)}`, 'torrent'); audio('roar'); lines.push(a.broke ? `${S.wyrm.name}'s breath breaks the wind-up!` : `${S.wyrm.name} breathes a torrent!`); }
+      else { if (a.dmg) floaty('#b-foe', `−${fmt(a.dmg)}`, 'skill'); if (a.heal) floaty('#b-us', `+${fmt(a.heal)}`, 'heal'); lines.push(skillLine(a)); audio('upgrade'); }
+    }
+    const bars = () => {
+      $('#b-ehb').style.width = `${(st.eh / B.foe.hp) * 100}%`; $('#b-eh').textContent = fmt(st.eh);
+      $('#b-thb').style.width = `${(rec.th / B.team.hp) * 100}%`; $('#b-th').textContent = fmt(rec.th);
+    };
+    if (rec.ours) { setTimeout(() => { if (UI.battle === B) { floaty('#b-foe', `−${fmt(rec.ours)}`, ''); audio('hit'); haptic('light'); } }, lines.length ? 220 / sp : 0); }
+    $('#b-log').textContent = lines.join(' ') || (st.r === 1 && B.team.fx.burst ? 'Opening charge!' : rec.windup ? `Round ${st.r} · the heavy blow falls` : `Round ${st.r}`);
+    $('#b-ehb').style.width = `${(st.eh / B.foe.hp) * 100}%`; $('#b-eh').textContent = fmt(st.eh);
+    B.timer = setTimeout(() => {
+      if (UI.battle !== B || B.done) return;
+      if (rec.theirs) {
+        floaty('#b-us', `−${fmt(rec.theirs)}`, rec.windup ? 'hurt big' : 'hurt');
+        audio('hurt');
+        if (rec.windup) { $('#b-log').textContent = rec.guarded ? 'The heavy blow lands on raised shields.' : 'A heavy blow!'; haptic('medium'); }
+      }
+      bars();
+      if (st.over) return endLive();
+      if (rec.next === 'windup') $('#b-log').textContent = `${B.foe.name} is winding up a heavy blow!`;
+      liveUI();
+      B.timer = setTimeout(liveTick, 760 / sp);
+    }, 420 / sp);
+    liveUI();
+  }
+  function endLive() {
+    const B = UI.battle;
+    if (!B || !B.live || B.endedLive) return;
+    B.endedLive = true;
+    clearTimeout(B.timer);
+    const st = B.st;
+    while (!st.over) KH.battleStep(st, KH.autoActs(st));
+    const result = { win: st.win, rounds: st.rounds, breath: 0, timeout: st.timeout };
+    Object.assign(B, { result }, B.onEnd(result) || {});
+    B.live = false;
+    finishBattle();
+  }
+  ACT.bskill = (i) => {
+    const B = UI.battle;
+    if (!B || !B.live || B.done) return;
+    i = Number(i);
+    const sk = B.st.skills[i];
+    if (!sk) return;
+    if (sk.charge < DATA.battle.charge) return toast(`${HERO[sk.id].name.split(' ')[0]} is still gathering strength.`, '', 'skwait', 1);
+    if (B.q.skills.has(i)) B.q.skills.delete(i); else B.q.skills.add(i);
+    liveUI();
+  };
+  ACT.bbreath = () => {
+    const B = UI.battle;
+    if (!B || !B.live || B.done || B.st.breathUsed) return;
+    B.q.breath = !B.q.breath;
+    liveUI();
+  };
+  ACT.bauto = () => { S.settings.autoBattle = !S.settings.autoBattle; liveUI(); };
+  ACT.bspeed = () => { S.settings.battleSpeed = speed() === 2 ? 1 : 2; liveUI(); };
   function floaty(sel, text, cls) {
     const host = $(sel);
     if (!host) return;
@@ -900,7 +1044,7 @@
     B.done = true;
     B.timer = null;
   }
-  ACT.bskip = () => finishBattle();
+  ACT.bskip = () => (UI.battle && UI.battle.live ? endLive() : finishBattle());
   ACT.bclose = () => {
     const B = UI.battle;
     UI.battle = null;

@@ -127,7 +127,7 @@
       wx: [], storm: null,
       wyrm: { name: st.wyrmName, element: null, petDay: -1, lastPet: 0 },
       story: { chapters: [], forms: [1] },
-      settings: { sfx: true, music: true, haptics: true, notify: true },
+      settings: { sfx: true, music: true, haptics: true, notify: true, liveBattle: true, autoBattle: false, battleSpeed: 1 },
       stats: {
         pulls: 0, trained: 0, researched: 0, upgrades: 0, wins: 0, pets: 0, gathers: 0, ruins: 0, beasts: 0,
         donations: 0, dutyChests: 0, raidAttacks: 0, raidsRepelled: 0, camps: 0, cleanStorms: 0, sickTotal: 0,
@@ -416,27 +416,100 @@
     return r;
   }
   const dmgOf = (a, d) => (a * 3 * a) / (a + d);
+  // ======================================================================
+  // Battle engine: rounds of blows, the wyrm's breath, hero skills and the foe's wind-ups.
+  // simulateBattle plays a whole battle with the auto-battle policy; the live battle screen
+  // (ui.js) steps the same engine round by round with the player's taps.
+  // ======================================================================
+  const skillKind = (id) => Object.keys(HERO[id].skill.fx)[0];
+  function newBattle(team, foe, opts = {}) {
+    const BT = DATA.battle;
+    return {
+      team, foe, opts, th: team.hp, eh: foe.hp, r: 0, rounds: [], over: false, win: false, timeout: false,
+      fdef: foe.def * (1 - team.fx.pierce),
+      breath: !S.dormant && !opts.noBreath ? foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath')) : 0,
+      breathUsed: false,
+      skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge, k: 0.85 + 0.15 * skillScale(id) })),
+      guard: 0, sunder: 0,
+      windup: (foe.boss ? BT.boss.first : BT.windupFirst) === 1, // the coming round's blow is a wind-up
+    };
+  }
+  const roundHit = (st) => dmgOf(st.team.atk, st.fdef * (st.sunder ? 1 - DATA.battle.skills.pierce.cut : 1));
+  // acts: { breath: true, skills: [index, ...] } applied before the round's blows
+  function battleStep(st, acts = {}) {
+    if (st.over) return null;
+    const BT = DATA.battle, rec = { acts: [] };
+    const ready = (sk) => sk.charge >= BT.charge;
+    if (acts.breath && st.breath > 0 && !st.breathUsed) {
+      st.breathUsed = true;
+      const broke = st.windup;
+      st.eh = Math.max(0, st.eh - st.breath);
+      if (broke) st.windup = false;
+      rec.acts.push({ kind: 'breath', dmg: st.breath, broke });
+    }
+    for (const i of acts.skills || []) {
+      const sk = st.skills[i];
+      if (!sk || !ready(sk) || st.eh <= 0) continue;
+      sk.charge = 0;
+      const d = BT.skills[sk.kind];
+      const a = { kind: sk.kind, id: sk.id };
+      if (d.hit) { a.dmg = roundHit(st) * d.hit * sk.k; st.eh = Math.max(0, st.eh - a.dmg); }
+      if (d.heal) { a.heal = Math.min(st.team.hp - st.th, st.team.hp * d.heal * sk.k); st.th += a.heal; }
+      if (sk.kind === 'dr') st.guard = d.rounds;
+      if (sk.kind === 'pierce') st.sunder = d.rounds;
+      rec.acts.push(a);
+    }
+    st.r++;
+    if (st.eh > 0) {
+      rec.ours = roundHit(st) * (st.r === 1 ? 1 + st.team.fx.burst : 1) * rand(0.92, 1.08);
+      st.eh = Math.max(0, st.eh - rec.ours);
+    }
+    if (st.eh <= 0) {
+      Object.assign(rec, { theirs: 0, th: st.th, eh: 0 });
+      st.rounds.push(rec);
+      st.over = true; st.win = true;
+      return rec;
+    }
+    const wind = st.windup ? (st.foe.boss ? BT.boss.windup : BT.windup) : 1;
+    rec.windup = st.windup;
+    rec.guarded = st.guard > 0;
+    rec.theirs = dmgOf(st.foe.atk, st.team.def) * (1 - st.team.fx.dr) * wind * (st.guard ? 1 - BT.skills.dr.cut : 1) * rand(0.92, 1.08);
+    st.th = Math.max(0, st.th - rec.theirs);
+    if (st.th > 0) st.th = Math.min(st.team.hp, st.th + st.team.fx.heal * st.team.hp);
+    if (st.guard) st.guard--;
+    if (st.sunder) st.sunder--;
+    for (const sk of st.skills) sk.charge = Math.min(BT.charge, sk.charge + 1);
+    rec.th = st.th; rec.eh = st.eh;
+    st.rounds.push(rec);
+    if (st.th <= 0) { st.over = true; st.win = false; return rec; }
+    if (st.r >= DATA.maxRounds) { st.over = true; st.win = false; st.timeout = true; return rec; }
+    const nr = st.r + 1;
+    const first = st.foe.boss ? BT.boss.first : BT.windupFirst, every = st.foe.boss ? BT.boss.every : BT.windupEvery;
+    st.windup = nr >= first && (nr - first) % every === 0;
+    rec.next = st.windup ? 'windup' : '';
+    return rec;
+  }
+  // the auto-battle policy: what a sensible player would tap before the coming round
+  function autoActs(st) {
+    const BT = DATA.battle, acts = { skills: [] };
+    if (st.breath > 0 && !st.breathUsed) {
+      // finish the foe, break a wind-up, or burn early against ordinary foes
+      if (st.eh <= st.breath || st.windup || (!st.foe.boss && st.r === 0)) acts.breath = true;
+    }
+    const hpK = st.th / st.team.hp;
+    st.skills.forEach((sk, i) => {
+      if (sk.charge < BT.charge) return;
+      if (sk.kind === 'dr') { if (st.windup || hpK < 0.4) acts.skills.push(i); }
+      else if (sk.kind === 'heal') { if (hpK < 0.6) acts.skills.push(i); }
+      else if (sk.kind === 'pierce') { if (!st.sunder) acts.skills.push(i); }
+      else acts.skills.push(i);
+    });
+    return acts;
+  }
   function simulateBattle(team, foe, opts = {}) {
-    let th = team.hp, eh = foe.hp;
-    const rounds = [];
-    let breath = 0;
-    if (!S.dormant && !opts.noBreath) {
-      breath = foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath'));
-      eh = Math.max(0, eh - breath);
-    }
-    const fdef = foe.def * (1 - team.fx.pierce);
-    if (eh <= 0) return { win: true, rounds: [{ ours: 0, theirs: 0, th, eh: 0 }], breath };
-    for (let r = 1; r <= DATA.maxRounds; r++) {
-      const ours = dmgOf(team.atk, fdef) * (r === 1 ? 1 + team.fx.burst : 1) * rand(0.92, 1.08);
-      eh = Math.max(0, eh - ours);
-      if (eh <= 0) { rounds.push({ ours, theirs: 0, th, eh }); return { win: true, rounds, breath }; }
-      const theirs = dmgOf(foe.atk, team.def) * (1 - team.fx.dr) * rand(0.92, 1.08);
-      th = Math.max(0, th - theirs);
-      if (th > 0) th = Math.min(team.hp, th + team.fx.heal * team.hp);
-      rounds.push({ ours, theirs, th, eh });
-      if (th <= 0) return { win: false, rounds, breath };
-    }
-    return { win: false, rounds, breath, timeout: true };
+    const st = newBattle(team, foe, opts);
+    while (!st.over) battleStep(st, autoActs(st));
+    return { win: st.win, rounds: st.rounds, breath: 0, timeout: st.timeout };
   }
   function power() {
     let p = 0;
@@ -958,24 +1031,29 @@
   ACT.fight = () => {
     if (!squadHome().length) return toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
     const foe = enemyFor(S.stage), team = teamStats(foe.cls);
-    const result = simulateBattle(team, foe);
-    let rewards = null;
-    const chapterBefore = chapterOf(S.stage).from;
-    if (result.win) {
-      rewards = stageRewards(foe.n);
-      grant(rewards);
-      if (S.stage === 1) S.patrolSince = S.time;
-      S.stage++;
-      S.stats.wins++;
-      addPassXp(DATA.passXp.stage);
-    }
-    KH.emit('battle', { kind: 'stage', win: result.win, foe });
-    if (result.win) KH.emit('stage', { n: foe.n });
-    const after = [];
-    if (result.win && foe.n === DATA.actOneStage && !S.endingSeen) after.push({ kind: 'ending' });
-    else if (result.win && foe.n === DATA.finalStage && !S.ending2Seen) after.push({ kind: 'ending', act: 2 });
-    else if (result.win && chapterOf(S.stage).from !== chapterBefore && !S.story.chapters.includes(chapterOf(S.stage).from)) after.push({ kind: 'story', from: chapterOf(S.stage).from });
-    KH.startBattle({ title: `Stage ${foe.n} · ${foe.chapter}`, foe, team, result, rewards, after });
+    KH.fightLive({
+      title: `Stage ${foe.n} · ${foe.chapter}`, foe, team,
+      onEnd: (result) => {
+        let rewards = null;
+        const chapterBefore = chapterOf(S.stage).from;
+        if (result.win && S.stage === foe.n) {
+          rewards = stageRewards(foe.n);
+          grant(rewards);
+          if (S.stage === 1) S.patrolSince = S.time;
+          S.stage++;
+          S.stats.wins++;
+          addPassXp(DATA.passXp.stage);
+        }
+        KH.emit('battle', { kind: 'stage', win: result.win, foe });
+        if (result.win) KH.emit('stage', { n: foe.n });
+        const after = [];
+        if (result.win && foe.n === DATA.actOneStage && !S.endingSeen) after.push({ kind: 'ending' });
+        else if (result.win && foe.n === DATA.finalStage && !S.ending2Seen) after.push({ kind: 'ending', act: 2 });
+        else if (result.win && chapterOf(S.stage).from !== chapterBefore && !S.story.chapters.includes(chapterOf(S.stage).from)) after.push({ kind: 'story', from: chapterOf(S.stage).from });
+        save();
+        return { rewards, after };
+      },
+    });
   };
 
   ACT.pull = (n) => {
@@ -1214,7 +1292,7 @@
     coolOf, coolAt, drinkRate, marchCap, troopCap, outsideTemp, troopMult, protectOf, stewardVal, townTemp, comfortOf,
     workerRate, healRate, buildCost, buildTime, maxLevel, upgradeBlock, canAfford, pay, have, techCost, techTime, techMax,
     heroStats, heroCap, skillScale, skillText, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
-    teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, power, patrolPreview, passTier, addPassXp, passReward,
+    teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, power, patrolPreview, passTier, addPassXp, passReward,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
     batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable, levelPath, levelPackOpen, levelPackGrants,
   });

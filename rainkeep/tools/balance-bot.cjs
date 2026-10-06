@@ -27,7 +27,7 @@ const HOURS = Number(process.argv[3] || 8);
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message + ' ' + (e.stack || '').split('\n').slice(0, 4).join(' | ')));
   page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push('console: ' + m.text()); });
-  await page.goto('file://' + path.resolve(__dirname, '../index.html') + '?flat&collect=' + (process.argv[4] || 5) + '&no=' + (process.argv[5] || ''));
+  await page.goto('file://' + path.resolve(__dirname, '../index.html') + '?flat&quick&collect=' + (process.argv[4] || 5) + '&no=' + (process.argv[5] || ''));
   await page.waitForTimeout(600);
   await page.click('text=Open the keep');
   const out = await page.evaluate(({ MODE, HOURS }) => {

@@ -468,8 +468,27 @@ const DATA = {
   actOneStage: 60, // beating this ends Act I ("The Rains") and opens Act II
   finalStage: 100, // beating this ends the story ("The Long Rains"); stages past it are the endless Burning Line
   // stage n foe: base x growth^(n-1) through stage 30, then gentler late growth to 60, then the endless curve
-  enemy: { atk: 72, def: 42, hp: 820, gAtk: 1.13, gDef: 1.12, gHp: 1.14, lateFrom: 30, lAtk: 1.027, lDef: 1.022, lHp: 1.032, endAtk: 1.03, endDef: 1.025, endHp: 1.035, boss: 1.5 },
+  // (base stats raised 12% in 3.5, when hero skills and the breath's timing arrived)
+  enemy: { atk: 80.6, def: 47, hp: 918, gAtk: 1.13, gDef: 1.12, gHp: 1.14, lateFrom: 30, lAtk: 1.027, lDef: 1.022, lHp: 1.032, endAtk: 1.03, endDef: 1.025, endHp: 1.035, boss: 1.5 },
   maxRounds: 12,
+  // ---------- Battle tactics ----------
+  // Every foe winds up a heavy blow on round 3 and every 4th round after (bosses every 3rd), announced
+  // a round ahead.
+  // The Rainwyrm's breath is used once a battle: it burns the foe and, timed on a wind-up, breaks it.
+  // Each squad hero's skill (its kind follows the hero's passive skill) charges over `charge` rounds and
+  // fires on a tap, or by itself in auto-battle. Strength grows a little with the hero's stars.
+  battle: {
+    windupFirst: 3, windupEvery: 4, windup: 2.2,
+    boss: { first: 3, every: 3, windup: 3.0 }, // bosses wind up more often
+    charge: 3, startCharge: 1, // a skill is ready before round 3, then every 3 rounds
+    skills: {
+      dr: { name: 'Guard', desc: "Halves the damage your side takes this round and next.", rounds: 2, cut: 0.5 },
+      burst: { name: 'Charge', desc: 'An extra blow worth 60% of a round.', hit: 0.6 },
+      atk: { name: 'Volley', desc: 'An extra blow worth 45% of a round.', hit: 0.45 },
+      heal: { name: 'Mend', desc: "Restores 12% of your side's health.", heal: 0.12 },
+      pierce: { name: 'Sunder', desc: "Cuts the foe's defense by 30% for 2 rounds.", rounds: 2, cut: 0.3 },
+    },
+  },
   patrolCapMinutes: 120,
   ending: {
     title: 'The Rains',
