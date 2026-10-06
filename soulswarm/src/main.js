@@ -2,7 +2,7 @@
 import './ui/style.css';
 import { audio, loadAudio } from './audio/index.js';
 import { loadProfile, saveProfile, newProfile } from './meta/save.js';
-import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult } from './meta/economy.js';
+import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial } from './meta/economy.js';
 import { Store } from './meta/store.js';
 import { haptic, setHapticsEnabled } from './engine/platform.js';
 import { Engine } from './engine/engine.js';
@@ -20,7 +20,7 @@ const profile = loadProfile();
  *   app.profile, app.audio, app.store, app.haptic(kind), app.engine
  *   app.heroPortrait(heroId) -> dataURL of a rendered 3D portrait
  *   app.showcase.setHero(heroId)  (the 3D hero standing behind the home screen)
- *   app.startRun(chapterId) -> boolean (false when out of energy)
+ *   app.startRun(chapterId, { trial }) -> boolean (false when out of energy, or the trial is spent)
  *   app.applySettings()     (after changing profile.settings)
  */
 const app = {
@@ -60,15 +60,18 @@ function applySettings() {
   saveProfile(profile);
 }
 
-function startRun(chapterId) {
+/** opts.trial: today's Daily Trial (free; its chapter and mutators come from the date). */
+function startRun(chapterId, opts = {}) {
+  let mutators = null;
+  if (opts.trial) { const t = dailyTrial(profile); chapterId = t.chapter; mutators = [t.boon, t.bane]; }
   const chapter = CHAPTERS[chapterId - 1];
   if (!chapter || chapterId > profile.chapter.unlocked) return false;
-  if (!spendEnergy(profile)) return false;
-  profile.chapter.selected = chapterId;
+  if (opts.trial ? !beginTrial(profile) : !spendEnergy(profile)) return false;
+  if (!opts.trial) profile.chapter.selected = chapterId;
   commit(profile);
   app.meta.hide();
   const loadout = computeLoadout(profile);
-  const run = new Run(app.engine, { app, loadout, chapter });
+  const run = new Run(app.engine, { app, loadout, chapter, mutators });
   const runUI = new RunUI(app, run);
   app.run = run; app.runUI = runUI;
   app.engine.setController(run);

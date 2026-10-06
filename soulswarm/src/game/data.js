@@ -291,6 +291,43 @@ export const LOGIN_REWARDS = [
   { gold: 2000 }, { gems: 30 }, { sigils: 1 }, { gold: 5000 }, { gems: 50 }, { sigils: 2 }, { gems: 100, relic: 'epic+' },
 ];
 
+// ---------------------------------------------------------------- Daily Trial
+// One free run a day (no energy) on a cleared chapter with one boon and one bane, seeded by date. Unlocks once Chapter 1 is cleared.
+export const TRIAL = {
+  unlockAt: 2, adRetries: 1,
+  clear: { gems: 40, passXp: 150 }, sigilEvery: 3, // on top of the normal gold and pass XP; every 3rd clear also gives a Sigil
+  failGemsPerMin: 8, failGemsMax: 40,
+};
+// stats: raise/cap add; nova/minionDmg/minionHp multiply. spawn/hp/speed multiply the horde; weights re-weight the spawn mix.
+export const MUTATORS = {
+  soulHarvest: { kind: 'boon', name: 'Soul Harvest',    icon: 'raise',  desc: '+20% Raise Chance',                stats: { raise: 0.2 } },
+  overflow:    { kind: 'boon', name: 'Overflowing Cup', icon: 'banner', desc: '+40 legion cap',                    stats: { cap: 40 } },
+  novaFont:    { kind: 'boon', name: 'Nova Font',       icon: 'nova',   desc: 'Soul Nova charges twice as fast',   stats: { nova: 2 } },
+  gildedGates: { kind: 'boon', name: 'Gilded Gates',    icon: 'plus',   desc: 'Gates every 25 s, and none cull',  gateEvery: 25, noBadGates: true },
+  awakened:    { kind: 'boon', name: 'Awakened',        icon: 'star',   desc: 'Start with your weapon at Lv3',     startLv: 3 },
+  legionFury:  { kind: 'boon', name: 'Legion Fury',     icon: 'fang',   desc: 'Minions deal +60% damage',          stats: { minionDmg: 1.6 } },
+  swarming:    { kind: 'bane', name: 'Swarming Dark',   icon: 'skull',  desc: '+50% enemy spawns',                 spawn: 1.5 },
+  ironHides:   { kind: 'bane', name: 'Iron Hides',      icon: 'helm',   desc: 'Enemies have +60% HP',              hp: 1.6 },
+  witching:    { kind: 'bane', name: 'Witching Hour',   icon: 'eye',    desc: 'Cinder Witches everywhere',         weights: { witch: 4 } },
+  gilded:      { kind: 'bane', name: 'Gilded Horrors',  icon: 'crown',  desc: 'An elite every 40 s (more chests!)', eliteEvery: 40 },
+  brittle:     { kind: 'bane', name: 'Brittle Legion',  icon: 'shard',  desc: 'Minions have half HP',              stats: { minionHp: 0.5 } },
+  restless:    { kind: 'bane', name: 'Restless Dead',   icon: 'wing',   desc: 'Enemies move 30% faster',           speed: 1.3 },
+};
+/** Folds a list of mutator ids into one modifier set for a run. */
+export function mergeMutators(ids = []) {
+  const m = { ids, stats: {}, spawn: 1, hp: 1, speed: 1, weights: null, eliteEvery: 0, gateEvery: 0, noBadGates: false, startLv: 0 };
+  for (const id of ids) {
+    const d = MUTATORS[id];
+    if (!d) continue;
+    for (const [k, v] of Object.entries(d.stats || {})) m.stats[k] = k === 'raise' || k === 'cap' ? (m.stats[k] || 0) + v : (m.stats[k] || 1) * v;
+    for (const k of ['spawn', 'hp', 'speed']) if (d[k]) m[k] *= d[k];
+    if (d.weights) { m.weights = m.weights || {}; for (const [t, w] of Object.entries(d.weights)) m.weights[t] = (m.weights[t] || 1) * w; }
+    for (const k of ['eliteEvery', 'gateEvery', 'startLv']) if (d[k]) m[k] = d[k];
+    if (d.noBadGates) m.noBadGates = true;
+  }
+  return m;
+}
+
 export const SKINS = {
   eclipse_vael: { hero: 'vael', name: 'Eclipse Vael', color: 0xffd04a, body: 0x1a1020, legion: 0xffe9a0 },
 };

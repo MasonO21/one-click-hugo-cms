@@ -15,7 +15,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
 | Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
-| Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | — | Blood Moon, Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
 Everything below describes the build unless it is marked **Planned**.
@@ -47,7 +47,7 @@ Everything below describes the build unless it is marked **Planned**.
 | Moment-to-moment | 1–10 s | Survive, kill, collect | Floating joystick, auto-attack, raises, pickups | Soul shards (XP), new minions |
 | Run | 6–9 min | Clear the chapter (survive 6:00, kill Gravemaw) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
 | Meta | Days to months | Get strong enough for the next chapter | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Endless Abyss depth record |
-| Daily | 15–40 min/day | Finish quests, spend energy | 6 daily quests, 7-day login calendar, rewarded ads, energy | Gems, gold, sigils, pass XP |
+| Daily | 15–40 min/day | Finish quests, spend energy, beat the Daily Trial | 6 daily quests, 7-day login calendar, the Daily Trial (§8.1), rewarded ads, energy | Gems, gold, sigils, pass XP |
 | Weekly (Planned) | 7 days | Climb the leaderboard, farm Blood Moon | Blood Moon weekend, Endless Abyss weekly board, weekly quest chest | Sigils, gems, league rewards |
 | Seasonal | 28 days | Finish the Soul Pass, collect the new hero | Soul Pass (30 tiers); Planned: monthly Boss Rush, new hero every 1–2 seasons | Skins, Epic/Legendary relics, hero shards |
 
@@ -355,6 +355,24 @@ Chapters differ in palette, HP mult, spawn mult, the modifiers above and the cha
 These are upper bounds: when the alive limit is reached, the director skips spawns.
 
 **Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). Gravemaw returns every 5:00 with HP `9,000 × 4.0 × 1.75 × (1 + 0.6k)` (63,000 for the first, k = kills so far) and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per Gravemaw plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
+
+### 8.1 Daily Trial
+
+One free run a day (no energy) that twists the core loop. It unlocks once Chapter 1 is cleared (home screen, left column, gold "Trial" button with a badge while today's attempt is unused).
+
+- **Seeded by date.** The day's hash picks a chapter the player has cleared (1 to unlocked − 1, max 5), one **boon** and one **bane**. Everyone at the same progress sees the same trial; it resets at local midnight.
+- **One attempt a day,** plus one more through a rewarded ad (`trial_retry`). Starting the trial uses the attempt.
+- **Rewards:** the normal run gold and pass XP, plus on a clear **40 gems and +150 pass XP**; every 3rd clear also gives **1 Altar Sigil** (the panel counts down to it). A failed attempt pays 8 gems per full minute survived (max 40) instead of the normal run gems. Trials never change chapter records, unlocks or first-clear rewards.
+- **Announced** in-run by a "DAILY TRIAL" banner at 0:03.6 naming both mutators; the pause screen lists them.
+
+| Boon | Effect | Bane | Effect |
+|---|---|---|---|
+| Soul Harvest | +20 pp Raise Chance (85% cap) | Swarming Dark | +50% enemy spawns |
+| Overflowing Cup | +40 legion cap (400 ceiling) | Iron Hides | Enemies have +60% HP |
+| Nova Font | Soul Nova charges ×2 | Witching Hour | Cinder Witch spawn weight ×4 (from 2:00) |
+| Gilded Gates | A gate pair every 25 s; bad gates become +N | Gilded Horrors | An elite every 40 s (8 per run, so 8 Relic Chests) |
+| Awakened | Signature weapon starts at Lv3 | Brittle Legion | Minions have half HP |
+| Legion Fury | Minions deal +60% damage | Restless Dead | Enemies move 30% faster |
 
 ---
 

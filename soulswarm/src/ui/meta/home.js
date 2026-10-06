@@ -5,10 +5,10 @@ import { icon } from '../icons.js';
 import { CHAPTERS, ENERGY_COST, SKUS, HEROES } from '../../game/data.js';
 import {
   commit, computeLoadout, notifications, starterAvailable, pactActive, pactDailyAvailable,
-  freeChestAvailable, claimFreeChest, canPlay,
+  freeChestAvailable, claimFreeChest, canPlay, trialState,
 } from '../../meta/economy.js';
 import { hex, cd, nextMidnight, popRewards, tap, delegate } from './util.js';
-import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact } from './panels.js';
+import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
 
 export function createHome(ctx) {
   const { app } = ctx;
@@ -51,6 +51,7 @@ export function createHome(ctx) {
 
     const ftue = !p.flags.tutorialDone && !locked;
     const lowEnergy = !canPlay(p);
+    const trial = trialState(p);
 
     root.innerHTML = `
       <div class="hm-head">
@@ -64,6 +65,7 @@ export function createHome(ctx) {
       <div class="hm-side hm-left">
         ${fab('quests', icon('quest'), 'Quests', n.quests ? `<i class="badge-dot"></i>` : '')}
         ${fab('login', icon('calendar'), 'Login', n.login ? '<i class="badge-dot"></i>' : '')}
+        ${trial.unlocked ? fab('trial', icon('star'), 'Trial', trial.available ? '<i class="badge-dot"></i>' : '', trial.available ? 'fab-gold fab-offer' : '') : ''}
         ${fab('settings', icon('gear'), 'Settings')}
       </div>
       <div class="hm-side hm-right">${right.join('')}</div>
@@ -103,6 +105,7 @@ export function createHome(ctx) {
     hero: () => { tap(app); ctx.go('heroes'); },
     quests: () => { tap(app); openQuests(ctx); },
     login: () => { tap(app); openLogin(ctx); },
+    trial: () => { tap(app); openTrial(ctx); },
     settings: () => { tap(app); openSettings(ctx); },
     starter: () => { tap(app, 'medium'); openStarter(ctx); },
     pact: () => { tap(app); openPact(ctx); },

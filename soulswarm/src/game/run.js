@@ -15,7 +15,7 @@ import { Gates } from './gates.js';
 import { Boss } from './boss.js';
 import { Hazards } from './hazards.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
-import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods } from './data.js';
+import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -25,7 +25,7 @@ const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
 export class Run {
-  constructor(engine, { app, loadout, chapter }) {
+  constructor(engine, { app, loadout, chapter, mutators = null }) {
     this.isRun = true;
     this.engine = engine;
     this.app = app;
@@ -56,10 +56,12 @@ export class Run {
     this.scene.add(this.shadowMesh);
 
     this.fx = new Effects(this);
-    this.skillLv = { [loadout.hero.weapon]: 1 };
+    this.mut = mergeMutators(mutators || []); // Daily Trial boon and bane (empty for normal runs)
+    this.trial = !!(mutators && mutators.length);
+    this.skillLv = { [loadout.hero.weapon]: Math.max(1, this.mut.startLv) };
     this.evolved = {};
     this.level = 1; this.xp = 0; this.xpNeed = xpForLevel(1);
-    this.stats = computeStats(loadout, this.skillLv, chapter, this.level);
+    this.recomputeStats();
     this.player = new Player(this, loadout);
     this.enemies = new Enemies(this);
     this.legion = new Legion(this);
@@ -94,6 +96,9 @@ export class Run {
     // chapter identity (CHAPTERS[].mods; Endless rotates it by depth), ground hazards, Witch lobs, Ghoul packs
     this.mods = chapterMods(chapter); this.modDepth = 0; this.modBannerAt = 0.6;
     this.eliteTimes = (!this.endless && this.mods.elites) || ELITE_TIMES;
+    if (this.mut.eliteEvery) this.eliteTimes = Array.from({ length: Math.floor((RUN_LENGTH - 10) / this.mut.eliteEvery) }, (_, i) => (i + 1) * this.mut.eliteEvery);
+    this.gateEvery = this.mut.gateEvery || 40;
+    this.trialBannerAt = this.trial ? 3.6 : 0;
     this.packAcc = 0; this.packN = 0;
     this.hazards = new Hazards(this);
     this.projectiles.initLobs();
@@ -111,6 +116,12 @@ export class Run {
   dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)); }
   recomputeStats() {
     this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
+    const ms = this.mut.stats, S = this.stats;
+    if (ms.raise) S.raise = Math.min(0.85, S.raise + ms.raise);
+    if (ms.cap) S.cap = Math.min(BASE.hardLegionMax, S.cap + ms.cap);
+    if (ms.nova) S.novaMul *= ms.nova;
+    if (ms.minionDmg) S.minionDmg *= ms.minionDmg;
+    if (ms.minionHp) S.minionHp *= ms.minionHp;
   }
 
   onQuality(q) {
@@ -139,10 +150,10 @@ export class Run {
       : m < 4 ? [0.45, 0.2, 0.13, 0.12, 0.1]
       : [0.4, 0.2, 0.17, 0.13, 0.1];
     // chapter modifiers re-weight the mix (e.g. Ember Wastes ×1.8 Witches)
-    const mul = this.mods.weights;
+    const mul = this.mods.weights, mw = this.mut.weights; // Daily Trial banes can re-weight it too (Witching Hour)
     let total = 0;
-    if (mul) for (let i = 0; i < 5; i++) { w[i] *= mul[TYPES[i]] || 1; total += w[i]; }
-    let r = Math.random() * (mul ? total : 1);
+    if (mul || mw) for (let i = 0; i < 5; i++) { w[i] *= ((mul && mul[TYPES[i]]) || 1) * ((mw && mw[TYPES[i]]) || 1); total += w[i]; }
+    let r = Math.random() * (mul || mw ? total : 1);
     for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return TYPES[i]; }
     return 'husk';
   }
@@ -176,7 +187,9 @@ export class Run {
 
   spawnEnemy(type, opts = {}) {
     const p = opts.at || this.spawnPoint();
-    return this.enemies.spawn(type, p.x, p.z, { hpMul: this.hpMul(), dmgMul: this.dmgMul(), elite: !!opts.elite });
+    const e = this.enemies.spawn(type, p.x, p.z, { hpMul: this.hpMul() * this.mut.hp, dmgMul: this.dmgMul(), elite: !!opts.elite });
+    if (e && this.mut.speed !== 1) e.speed *= this.mut.speed;
+    return e;
   }
 
   director(dt) {
@@ -195,7 +208,7 @@ export class Run {
         const title = !this.endless ? this.chapter.name.toUpperCase() : this.modDepth ? 'THE ABYSS SHIFTS' : 'ENDLESS ABYSS';
         if (this.mods.tag) this.ui.banner(title, src >= 0 ? `${CHAPTER_NAMES[src]}: ${this.mods.tag}` : this.mods.tag, 'ember');
       }
-      const rate = (1.1 + 0.85 * m + 0.22 * m * m) * this.chapter.rate;
+      const rate = (1.1 + 0.85 * m + 0.22 * m * m) * this.chapter.rate * this.mut.spawn;
       this.spawnAcc = Math.min(6, this.spawnAcc + rate * dt);
       while (this.spawnAcc >= 1) {
         this.spawnAcc -= 1;
@@ -207,7 +220,11 @@ export class Run {
         if (!this.packN) this.packN = pk[0] + Math.floor(Math.random() * (pk[1] - pk[0] + 1));
         if (++this.packAcc >= this.packN) { this.spawnPack(this.packN); this.packAcc = this.packN = 0; }
       }
-      if (this.time >= this.nextGate) { this.nextGate += 40; this.gates.spawnPair(); }
+      if (this.trialBannerAt && this.time >= this.trialBannerAt) {
+        this.trialBannerAt = 0;
+        this.ui.banner('DAILY TRIAL', this.mut.ids.map((id) => MUTATORS[id].name).join('  ·  '), 'soul');
+      }
+      if (this.time >= this.nextGate) { this.nextGate += this.gateEvery; this.gates.spawnPair(); }
       if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
       const times = this.eliteTimes;
       const eliteDue = this.eliteIdx < times.length ? this.time >= times[this.eliteIdx]
@@ -527,6 +544,7 @@ export class Run {
       chapter: this.chapter.id, time: this.endless ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
+      trial: this.trial, mutators: this.mut.ids,
     };
     if (this.onEnd) this.onEnd(result);
   }

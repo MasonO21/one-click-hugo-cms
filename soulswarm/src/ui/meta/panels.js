@@ -2,11 +2,11 @@
 // Soul Pact, gem-shop confirmations and "not enough" prompts.
 import { h, $, $$, fmt, toast, modal, purchaseFlow, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
-import { SKUS, GEM_SHOP, ENERGY_MAX, ENERGY_REGEN_SEC, HEROES } from '../../game/data.js';
+import { SKUS, GEM_SHOP, ENERGY_MAX, ENERGY_REGEN_SEC, HEROES, CHAPTERS, MUTATORS, TRIAL } from '../../game/data.js';
 import { todayKey } from '../../meta/save.js';
 import {
   onChange, commit, grant, questList, claimQuest, loginState, claimLogin, energyNextIn, buyGemShop,
-  starterAvailable, pactActive, pactDailyAvailable, claimPactDaily,
+  starterAvailable, pactActive, pactDailyAvailable, claimPactDaily, trialState, grantTrialRetry,
 } from '../../meta/economy.js';
 import { cd, nextMidnight, bundleItems, rewardChip, popRewards, bar, tap, portrait, delegate, energyFullIn } from './util.js';
 import { LOGO_ART } from '../art.js';
@@ -311,5 +311,37 @@ export function openPact(ctx) {
     </div>`;
     $(body, '[data-act="claim"]')?.addEventListener('click', () => claimPact(ctx));
     $(body, '[data-act="buy"]')?.addEventListener('click', () => purchaseFlow(app, 'soul_pact'));
+  });
+}
+
+// ---------------------------------------------------------------- Daily Trial
+export function openTrial(ctx) {
+  const { app } = ctx; const p = app.profile;
+  let busy = false;
+  const lm = liveModal({ title: 'Daily Trial', cls: 'mm-trial' }, (body) => {
+    const t = trialState(p), ch = CHAPTERS[t.chapter - 1], B = MUTATORS[t.boon], N = MUTATORS[t.bane];
+    const mod = (m, kind) => `<div class="tr-mod ${kind}"><span class="tr-ic">${icon(m.icon)}</span><div><small>${kind === 'boon' ? 'Boon' : 'Bane'}</small><b>${m.name}</b><span>${m.desc}</span></div></div>`;
+    const rw = [{ kind: 'gems', amount: TRIAL.clear.gems }, { kind: 'passXp', amount: TRIAL.clear.passXp }];
+    const toSigil = TRIAL.sigilEvery - (t.clears % TRIAL.sigilEvery);
+    body.innerHTML = `<div class="tr">
+      <div class="tr-head"><span class="t-label">Chapter ${t.chapter}</span><b class="t-display">${ch.name}</b><small class="t-dim">New trial in ${cd(nextMidnight(), 0, 'cd-strong')}</small></div>
+      <div class="tr-mods">${mod(B, 'boon')}${mod(N, 'bane')}</div>
+      <div class="tr-rw"><span class="t-label">Clear reward</span><div class="tr-chips">${rw.map((it) => rewardChip(it)).join('')}</div>
+        <div class="tr-sig">${rewardChip({ kind: 'sigils', amount: 1 })}<span>${toSigil === 1 ? 'Your next clear also earns a Sigil!' : `A Sigil every ${TRIAL.sigilEvery} clears · ${toSigil} to go`}</span></div>
+        <small class="t-dim">Free: no energy. Falling early still pays ${TRIAL.failGemsPerMin} gems a minute (up to ${TRIAL.failGemsMax}). Records and chapter progress are unaffected.</small></div>
+      ${t.available ? '<button class="btn btn-primary btn-lg btn-block" data-act="go">Begin trial</button>'
+        : t.retry ? `<button class="btn btn-ad btn-lg btn-block" data-act="retry">${icon('ad')} One more attempt</button>`
+        : `<div class="tr-done">${icon('check')} Done for today</div>`}
+      ${t.clears ? `<div class="tr-count t-dim">Trials cleared: <b>${t.clears}</b></div>` : ''}
+    </div>`;
+    $(body, '[data-act="go"]')?.addEventListener('click', () => {
+      tap(app, 'medium', 'select');
+      lm.close();
+      if (!app.startRun(0, { trial: true })) toast('The trial could not start');
+    });
+    $(body, '[data-act="retry"]')?.addEventListener('click', async () => {
+      if (busy) return; busy = true;
+      try { if (await watchAd(app, 'trial_retry') && grantTrialRetry(p)) commit(p); } finally { busy = false; }
+    });
   });
 }

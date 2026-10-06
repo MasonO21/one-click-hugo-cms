@@ -52,6 +52,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Soul Pact | 300 now + 100 / day | | |
 | Starter Pack | 300 | | |
 | Daily free chest (rewarded ad) | 10 / day | | |
+| Daily Trial clear (once a day; a rewarded ad buys one retry) | 40 / day, plus 1 Sigil every 3rd clear | | |
 | New account | 150 (one-time) | | |
 | Weekly quest chest (Planned) | 50 / week | | |
 | Events and leaderboards (Planned) | 50–500 per event | | |

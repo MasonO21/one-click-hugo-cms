@@ -407,6 +407,33 @@ errs = await session(async (page) => {
 });
 check('horde: no runtime errors', !errs.length, errs[0] || '');
 
+// 11. Daily Trial: seeded by date, free, one attempt (+1 by ad), mutators applied, records untouched
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const eco = await import('/src/meta/economy.js');
+    const app = window.__soulswarm, p = app.profile;
+    const lockedAtStart = !eco.trialState(p).unlocked;
+    p.chapter.unlocked = 3; p.chapter.best = {};
+    const a = eco.dailyTrial(p, '2026-10-06'), b = eco.dailyTrial(p, '2026-10-06'), c = eco.dailyTrial(p, '2026-10-07');
+    const same = JSON.stringify(a) === JSON.stringify(b), varies = JSON.stringify(a) !== JSON.stringify(c);
+    const energy = p.energy, t = eco.dailyTrial(p);
+    const started = app.startRun(0, { trial: true }), r = app.run;
+    const mut = r.mut, S = r.stats;
+    const second = (app.exitRun(), app.startRun(0, { trial: true }));
+    const retry = eco.grantTrialRetry(p), third = app.startRun(0, { trial: true });
+    const r3 = app.run; r3.player.hurt = () => {};
+    const e = r3.spawnEnemy('husk', { at: { x: r3.player.x + 9, z: r3.player.z } });
+    const hpRatio = e.maxHp / (14 * r3.hpMul());
+    const out = eco.applyRunResult(p, { chapter: t.chapter, time: 400, kills: 2000, raised: 300, bestLegion: 120, novas: 5, gates: 8, victory: true, level: 20, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, trial: true });
+    return { lockedAtStart, same, varies, chapterOk: t.chapter >= 1 && t.chapter <= 2, started, energyKept: p.energy === energy, trialFlag: r.trial, ids: mut.ids, second, retry, third,
+      hpRatio: Math.round(hpRatio * 100) / 100, hpExpected: mut.hp, gems: out.rewards.gems, sigils: out.rewards.sigils, bestUntouched: !p.chapter.best[t.chapter], unlocked: p.chapter.unlocked };
+  });
+  check('trial: locked until Chapter 1 is cleared, seeded by date', s.lockedAtStart && s.same && s.varies && s.chapterOk, JSON.stringify(s));
+  check('trial: free, one attempt, an ad buys one more', s.started && s.energyKept && s.trialFlag && s.ids.length === 2 && s.second === false && s.retry && s.third, JSON.stringify(s));
+  check('trial: mutators reach the horde, rewards paid, records untouched', Math.abs(s.hpRatio - s.hpExpected) < 0.02 && s.gems === 40 && !s.sigils && s.bestUntouched && s.unlocked === 3, JSON.stringify(s));
+});
+check('trial: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
