@@ -46,7 +46,7 @@ export class Room {
   constructor({ id, mode, players }) {
     this.id = id; this.mode = mode;
     const roster = [[], []];
-    for (const p of players) roster[p.team].push({ id: p.heroId, skin: p.skinId, name: p.name, human: true, pid: p.pid });
+    for (const p of players) roster[p.team].push({ id: p.heroId, skin: p.skinId, name: p.name, human: true, pid: p.pid, spell: SF.SPELLS[p.spell] ? p.spell : 'blink' });
     const names = shuffle(SF.BOT_NAMES.slice());
     for (const team of [0, 1]) {
       while (roster[team].length < 3) {
@@ -90,11 +90,13 @@ export class Room {
     m.on('levelup', h => push('levelup', h.id));
     m.on('cast', (h, s) => push('cast', h.id, h.def0.skills.indexOf(s)));
     m.on('tower', t => push('tower', t.id));
+    m.on('signal', s => push('sig', s.kind, s.team, r1(s.x), r1(s.y), s.from.id, s.target ? s.target.id : 0, s.text));
+    m.on('message', (h, text) => push('msg', h.id, h.team, text));
     m.on('end', () => { this.ended = true; });
   }
 
   rosterInfo() {
-    return this.m.heroes.map(h => ({ i: h.id, tm: h.team, h: h.def0.id, sk: h.skin, n: h.name, hu: !!h.human, pid: h.pid || null }));
+    return this.m.heroes.map(h => ({ i: h.id, tm: h.team, h: h.def0.id, sk: h.skin, n: h.name, hu: !!h.human, pid: h.pid || null, sp: h.spell }));
   }
 
   unit(id) { return this.m.units.find(u => u.id === id) || null; }
@@ -111,8 +113,15 @@ export class Room {
         break;
       }
       case 'buy': if (typeof msg.id === 'string' && Object.prototype.hasOwnProperty.call(SF.ITEMS, msg.id)) m.buy(h, msg.id); break;
-      case 'flash': m.flash(h, readVec(msg.d) || h.face); break;
+      case 'flash':   // older clients
+      case 'spell': {
+        // The target is only a hint: useSpell checks team, visibility and range itself.
+        const tg = Number.isInteger(msg.tg) ? this.unit(msg.tg) : null;
+        m.useSpell(h, { dir: readVec(msg.d) || h.face, target: tg });
+        break;
+      }
       case 'recall': m.startRecall(h); break;
+      case 'signal': if (typeof msg.k === 'string') m.signal(h, msg.k); break;
       case 'surrender': this.surrender(h); break;
     }
   }
@@ -196,7 +205,7 @@ export class Room {
     if (me) {
       snap.me = {
         id: me.id, gold: Math.floor(me.gold), xp: Math.round(me.xp), xn: me.xpNeed, lv: me.level, items: me.items.slice(),
-        cd: me.skillCd.map(r2), cdr: me.cdr, fcd: r1(me.flashCd), rc: r1(me.recallT), rg: me.range, ms: Math.round(me.speed()),
+        cd: me.skillCd.map(r2), cdr: me.cdr, fcd: r1(me.spellCd), rc: r1(me.recallT), rg: me.range, ms: Math.round(me.speed()),
         tg: me.target ? me.target.id : 0, rs: r1(Math.max(0, me.respawnT)),
         b: me.buffs.filter(b => b.label || b.id === 'tailwind' || b.id === 'warcry').map(b => [b.id, r1(b.t), b.label || ''])
       };
@@ -210,6 +219,7 @@ export class Room {
     return this.events.filter(e => {
       if (e[0] === 'dmg' || e[0] === 'hit') return e[1] === id || e[2] === id;
       if (e[0] === 'heal' || e[0] === 'gold') return e[1] === id;
+      if (e[0] === 'sig' || e[0] === 'msg') return !!me && e[2] === me.team;   // team chat stays on the team
       return true;
     });
   }

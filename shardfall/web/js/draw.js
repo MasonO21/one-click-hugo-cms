@@ -503,6 +503,7 @@
       });
       // zones
       for (const zn of m.zones) this.drawZone(g, zn, t);
+      this.drawSignals(g, m);
       // player indicators
       if (p.alive) {
         if (p.attackHeld || p.target) { g.beginPath(); g.ellipse(p.x, p.y, p.range + p.r, (p.range + p.r) * 0.92, 0, 0, TAU); g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 2; g.stroke(); }
@@ -697,6 +698,35 @@
       }
       g.restore();
     }
+    // Your team's quick signals: pulsing rings and an icon on the spot (following a hero target).
+    drawSignals(g, m) {
+      for (const s of m.signals || []) {
+        const age = m.t - s.t;
+        if (s.team !== 0 || age > 4 || age < 0) continue;
+        const T = s.target, follow = s.kind !== 'retreat' && T && T.alive !== false && T.kind === 'hero';
+        const x = follow ? T.x : s.x, y = follow ? T.y : s.y, col = SF.SIGNALS[s.kind].color;
+        const fade = Math.min(1, (4 - age) / 0.6);
+        g.save();
+        for (let i = 0; i < 2; i++) {
+          const k = (age * 1.4 + i * 0.5) % 1;
+          g.globalAlpha = fade * (1 - k) * 0.9;
+          g.beginPath(); g.ellipse(x, y, 30 + 70 * k, (30 + 70 * k) * 0.45, 0, 0, TAU);
+          g.strokeStyle = col; g.lineWidth = 4; g.stroke();
+        }
+        // icon on a stalk above the spot
+        const iy = y - 118 - Math.sin(age * 6) * 4;
+        g.globalAlpha = fade;
+        g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x, iy + 22); g.stroke();
+        g.beginPath(); g.arc(x, iy, 22, 0, TAU); g.fillStyle = 'rgba(5,8,25,.85)'; g.fill(); g.lineWidth = 3; g.stroke();
+        g.lineWidth = 3.5; g.lineCap = 'round'; g.lineJoin = 'round';
+        g.beginPath();
+        if (s.kind === 'attack') { g.moveTo(x - 10, iy - 10); g.lineTo(x + 10, iy + 10); g.moveTo(x + 10, iy - 10); g.lineTo(x - 10, iy + 10); }
+        else if (s.kind === 'retreat') { g.moveTo(x - 9, iy - 6); g.lineTo(x, iy + 6); g.lineTo(x + 9, iy - 6); }
+        else { g.moveTo(x - 7, iy + 11); g.lineTo(x - 7, iy - 11); g.lineTo(x + 9, iy - 6); g.lineTo(x - 7, iy - 1); }
+        g.stroke();
+        g.restore();
+      }
+    }
     drawMinimap(m) {
       const g = this.mg, w = this.mm.width, h = this.mm.height, k = w / W.w;
       g.setTransform(1, 0, 0, 1, 0, 0);
@@ -716,6 +746,14 @@
       for (const hh of m.heroes) {
         if (!hh.alive || !m.visible(hh, 0)) continue;
         dot(hh.x, hh.y, px * 2, hh === m.player ? '#5be38a' : SF.TEAM_COLORS[hh.team], hh === m.player ? '#fff' : '#0b1029');
+      }
+      for (const s of m.signals || []) {
+        const age = m.t - s.t;
+        if (s.team !== 0 || age > 4 || age < 0) continue;
+        const r = px * (2 + 4 * ((age * 1.5) % 1));
+        g.globalAlpha = Math.max(0, 1 - age / 4);
+        g.beginPath(); g.arc(s.x * k, s.y * k, r, 0, TAU); g.strokeStyle = SF.SIGNALS[s.kind].color; g.lineWidth = Math.max(1.5, px * 0.7); g.stroke();
+        g.globalAlpha = 1;
       }
       g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = Math.max(1, px * 0.5);
       g.strokeRect(this.x0 * k, this.y0 * k, (this.cw / this.zoom) * k, (this.ch / this.zoom) * k);

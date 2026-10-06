@@ -14,6 +14,28 @@ window.SF = window.SF || {};
   };
   SF.CASUAL_DIFFS = ['easy', 'normal', 'hard'];
 
+  // Battle spells: every hero brings one, picked before the match (remembered per hero).
+  // `lvl` is the account level that unlocks it. Smite and Shatter deal true damage (ignore defense).
+  SF.SPELLS = {
+    blink:   { name: 'Blink',       cd: 90,  lvl: 1, icon: 'flash',   desc: 'Teleport a short distance the way you are moving. Escape a gank or close the gap.' },
+    mend:    { name: 'Mend',        cd: 100, lvl: 1, icon: 'mend',    desc: 'Heal yourself and allies near you for 15% of max health, and move faster for 2 seconds.' },
+    smite:   { name: 'Shard Smite', cd: 35,  lvl: 1, icon: 'smite',   range: 420, desc: 'Strike the nearest monster or minion for heavy true damage. Secures jungle camps and steals the Colossus.' },
+    sprint:  { name: 'Sprint',      cd: 100, lvl: 2, icon: 'sprint',  desc: 'Move 40% faster for 8 seconds. Chase, rotate or run.' },
+    purify:  { name: 'Purify',      cd: 110, lvl: 3, icon: 'purify',  desc: 'Break free of stuns and slows, and ignore new ones for 1.5 seconds. Works while stunned.' },
+    shatter: { name: 'Shatter',     cd: 90,  lvl: 4, icon: 'shatter', range: 450, desc: 'Strike the nearest enemy hero for true damage plus 15% of the health they are missing. A finisher.' }
+  };
+  SF.SPELL_IDS = Object.keys(SF.SPELLS);
+
+  // Quick signals a player sends to their team. Bots obey for `dur` seconds and one of them replies.
+  SF.SIGNALS = {
+    attack:  { label: 'Attack',   dur: 12, color: '#ff7a59', reply: 'On it!',       key: 'z' },
+    retreat: { label: 'Retreat',  dur: 6,  color: '#ffd166', reply: 'Falling back.', key: 'x' },
+    gather:  { label: 'Group up', dur: 15, color: '#4fe3d3', reply: 'On my way!',   key: 'c' }
+  };
+  SF.spellDamage = (id, h, t) => id === 'smite' ? 600 + 70 * h.level : id === 'shatter' ? 60 + 25 * h.level + 0.15 * (t.maxHp - t.hp) : 0;
+  // What bots bring: the jungler takes Smite, everyone else a spell that suits the role.
+  SF.SPELL_FOR_ROLE = { Fighter: 'sprint', Mage: 'purify', Tank: 'mend', Marksman: 'blink', Assassin: 'shatter', Support: 'mend' };
+
   // In-match items. `stats` are flat adds except as/cdr/lifesteal (fractions).
   SF.ITEMS = {
     swift_boots:    { name: 'Swift Boots',      cost: 300,  stats: { ms: 40 },               desc: '+40 move speed',               c: '#8fd3ff' },

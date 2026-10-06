@@ -23,9 +23,9 @@ npm run build             # single-file dist/shardfall.html
 cd server && npm ci && npm test   # online server, including a two-browser match
 ```
 
-**Controls.** Drag on the left half of the screen to move. Hold the red button to attack. Tap a skill to auto-aim it, or drag it to aim, and release over Cancel to call it off. Tap the score to open the scoreboard. Settings can move the joystick to the right side.
+**Controls.** Drag on the left half of the screen to move. Hold the red button to attack. Tap a skill to auto-aim it, or drag it to aim, and release over Cancel to call it off. The small button next to Recall is your battle spell. The three buttons at the top right signal your team. Tap the score to open the scoreboard. Settings can move the joystick to the right side.
 
-On a keyboard: WASD to move, Space to attack, Q/E/R for skills, F to blink, B to recall, P for the shop, G to quick-buy, O for the scoreboard and Esc to pause.
+On a keyboard: WASD to move, Space to attack, Q/E/R for skills, F for your battle spell, B to recall, Z/X/C to signal Attack/Retreat/Group up, P for the shop, G to quick-buy, O for the scoreboard and Esc to pause.
 
 ---
 
@@ -56,7 +56,18 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 - 10 heroes across 6 roles, with 30 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals and executes.
 - Towers that punish diving, with backdoor protection.
 - Minion waves, siege minions, two jungle buffs and the Shard Colossus.
-- Tall grass that hides heroes, plus invisibility. Recall and Blink.
+- Tall grass that hides heroes, plus invisibility. Recall to base.
+- **Battle spells.** Before a match, pick one of six for your hero:
+  - **Blink:** a short teleport.
+  - **Mend:** heals you and nearby allies.
+  - **Shard Smite:** true damage to a monster or minion. Junglers take it, and it can steal the Colossus.
+  - **Sprint:** move faster for a few seconds.
+  - **Purify:** breaks stuns and slows.
+  - **Shatter:** an execute that grows with the target's missing health.
+
+  Spells unlock with account level, and your choice is remembered per hero. Bots bring the spell that suits their role and use it when it pays off. The spell button glows when Smite or Shatter would land the kill.
+- **Quick signals:** Attack, Retreat and Group up. Bot teammates obey them for a few seconds and answer in the feed. "Group up" means "take the Colossus" while it's awake. Online, signals go to your team only.
+- **Death recap:** while you wait to respawn, see who killed you and what hurt most in your last 10 seconds, split into attacks and skills.
 - 12 items with recommended builds and one-tap quick-buy.
 - Bots that lane, last-hit, jungle, fight over objectives, team-fight and retreat, at five strengths.
 - Announcer calls (First Blood, multi-kills, Ace, Shutdown), a scoreboard, generated music and sound, a low-power graphics mode and left-handed controls.
@@ -131,7 +142,8 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 - **Add an analytics SDK** to measure D1/D7/D30 retention and payer conversion.
 - **Commission art and audio.** The procedural crystal art and generated music are consistent and shippable, but professional assets raise conversion.
 - **Plan content.** Ship a new hero or skin line every 2–4 weeks, a new pass each season, and rotating festivals. In this genre, content cadence and spending on user acquisition drive revenue far more than any single feature.
-- **Tune balance with real players.** In 120 simulated bot matches every hero wins 36–62% of the time, but bot results mostly show how well the AI plays each hero.
+- **Animate the sprites.** Heroes are single still poses today. Next up are attack and skill pose frames for each hero (from the same Higgsfield references), swapped in while attacking or casting.
+- **Tune balance with real players.** In 120 simulated bot matches every hero wins 38–63% of the time, but bot results mostly show how well the AI plays each hero.
 
 ## 5. File map
 

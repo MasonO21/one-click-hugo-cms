@@ -109,6 +109,183 @@ section('Bot matches finish (classic + brawl, every difficulty)', () => {
   }
 });
 
+section('Battle spells', () => {
+  // A quiet duel: player at x=1500, one enemy hero at 1700, everything else frozen and far away.
+  const duel = spell => {
+    const ids = SF.HEROES.map(h => h.id);
+    const m = new SF.Match({ hero: ids[0], spell, difficulty: 'normal', allies: [{ id: ids[1], name: 'A' }, { id: ids[2], name: 'B' }], enemies: [{ id: ids[3], name: 'C' }, { id: ids[4], name: 'D' }, { id: ids[5], name: 'E' }] });
+    const p = m.player, foe = m.heroes.find(h => h.team === 1), ally = m.heroes.find(h => h.team === 0 && h !== p);
+    for (const o of m.heroes) if (o !== p) { o.brain = null; o.human = true; o.x = o.team ? 3100 : 100; o.y = 600; }
+    m.nextWave = 1e9; m.camps.forEach(c => { c.respawnAt = 1e9; });
+    p.level = 8; p.recalc(); p.hp = p.maxHp; p.x = 1500; p.y = 600;
+    foe.x = 1700; foe.y = 600; ally.x = 1450; ally.y = 650;
+    m.updateVisibility();
+    return { m, p, foe, ally };
+  };
+  check('every spell has a name, cooldown, unlock level and icon', SF.SPELL_IDS.length === 6 && SF.SPELL_IDS.every(id => { const x = SF.SPELLS[id]; return x.name && x.cd > 0 && x.lvl >= 1 && x.icon && x.desc; }));
+  check('player defaults to Blink', new SF.Match({ hero: 'kaida', difficulty: 'easy', allies: [{ id: 'orin' }, { id: 'sylva' }], enemies: [{ id: 'brakka' }, { id: 'nyx' }, { id: 'lumen' }] }).player.spell === 'blink');
+  check('unknown spell ids fall back to Blink', duel('nope').p.spell === 'blink');
+  {
+    const { m, p } = duel('blink');
+    const x = p.x;
+    check('Blink casts', m.useSpell(p, { dir: { x: -1, y: 0 } }) === true);
+    check('Blink moves 250 units the chosen way', Math.abs(p.x - (x - 250)) < 1, `moved ${Math.round(p.x - x)}`);
+    check('Blink goes on cooldown', p.spellCd === SF.SPELLS.blink.cd && m.useSpell(p, { dir: { x: 1, y: 0 } }) === 'cooldown');
+    p.spellCd = 0; m.stun(p, 1);
+    check('Blink cannot be used while stunned', m.useSpell(p, { dir: { x: 1, y: 0 } }) === 'stunned');
+  }
+  {
+    const { m, p, foe, ally } = duel('mend');
+    p.hp = p.maxHp * 0.4; ally.hp = ally.maxHp * 0.4; foe.hp = foe.maxHp * 0.4;
+    const before = [p.hp, ally.hp, foe.hp];
+    check('Mend casts', m.useSpell(p) === true);
+    check('Mend heals you and nearby allies', p.hp > before[0] + p.maxHp * 0.14 && ally.hp > before[1] + ally.maxHp * 0.14);
+    check('Mend never heals enemies', foe.hp === before[2]);
+    check('Mend gives a burst of speed', p.speed() > p.ms * 1.15);
+  }
+  {
+    const { m, p } = duel('sprint');
+    const base = p.speed();
+    check('Sprint casts', m.useSpell(p) === true);
+    check('Sprint makes you 40% faster', Math.abs(p.speed() - base * 1.4) < 1, `${Math.round(base)} -> ${Math.round(p.speed())}`);
+    for (let k = 0; k < 30 * 9; k++) m.update(1 / 30);
+    check('Sprint wears off after 8s', !p.hasBuff('sprint'));
+  }
+  {
+    const { m, p } = duel('purify');
+    m.stun(p, 2); m.slow(p, 0.5, 2);
+    check('Purify works while stunned', m.useSpell(p) === true);
+    check('Purify clears stun and slow', p.stunT === 0 && p.slowT === 0);
+    m.stun(p, 1); m.slow(p, 0.5, 1);
+    check('Purify blocks new stuns and slows for a moment', p.stunT === 0 && p.slowT === 0);
+  }
+  {
+    const { m, p, foe } = duel('shatter');
+    foe.hp = foe.maxHp * 0.3;
+    const hp0 = foe.hp, want = SF.spellDamage('shatter', p, foe);
+    check('Shatter casts on a nearby enemy hero', m.useSpell(p) === true);
+    check('Shatter deals true damage (defense ignored)', Math.abs((hp0 - foe.hp) - want) < 1 || !foe.alive, `${Math.round(hp0 - foe.hp)} vs ${Math.round(want)}`);
+    const far = duel('shatter'); far.foe.x = 2300; far.m.updateVisibility();
+    check('Shatter needs a hero in range', far.m.useSpell(far.p) === 'notarget');
+    const low = duel('shatter'); low.foe.hp = 100; low.m.updateVisibility();
+    check('the HUD knows when Shatter would kill', low.m.spellWouldKill(low.p) === true);
+    low.foe.hp = low.foe.maxHp;
+    check('…and when it would not', low.m.spellWouldKill(low.p) === false);
+  }
+  {
+    const { m, p } = duel('smite');
+    check('Smite needs a monster or minion in range', m.useSpell(p) === 'notarget');
+    const camp = m.camps[0];
+    m.spawnCamp(camp);
+    const mon = camp.unit; mon.x = p.x + 150; mon.y = p.y;
+    mon.hp = SF.spellDamage('smite', p, mon) - 10;
+    const gold = p.gold;
+    check('Smite casts on a monster', m.useSpell(p) === true);
+    check('Smite kills a low monster and pays its bounty', !mon.alive && p.gold >= gold + mon.gold, `alive=${mon.alive}`);
+  }
+  {
+    const m = botMatch(SF, {});
+    const bots = m.heroes.filter(h => h.brain && !h.human);
+    check('bots bring battle spells', bots.every(h => SF.SPELLS[h.spell]));
+    check('each team\'s jungler bot brings Smite', bots.filter(h => h.brain.jungler).every(h => h.spell === 'smite'));
+    const casts = {};
+    for (let i = 0; i < 6; i++) { const mm = botMatch(SF, { difficulty: 'hard' }); mm.on('spell', (h, id) => { casts[id] = (casts[id] || 0) + 1; }); run(mm, 10 * 60); }
+    check('bots use their spells in real matches', (casts.smite || 0) > 0 && (casts.mend || 0) + (casts.purify || 0) + (casts.sprint || 0) + (casts.blink || 0) + (casts.shatter || 0) > 0, JSON.stringify(casts));
+  }
+  {
+    const S = SF.store; S.load();
+    const d = S.d; d.account.level = 1;
+    check('locked spells cannot be chosen', !S.setSpell('kaida', 'shatter') && S.spellOf('kaida') === 'blink');
+    check('unlocked spells are remembered per hero', S.setSpell('kaida', 'smite') && S.spellOf('kaida') === 'smite' && S.spellOf('orin') === 'blink');
+    d.account.level = 4;
+    check('Shatter unlocks at account level 4', S.setSpell('orin', 'shatter') && S.spellOf('orin') === 'shatter');
+  }
+});
+
+section('Quick signals', () => {
+  const setup = () => {
+    const m = new SF.Match({ hero: 'kaida', difficulty: 'normal', allies: [{ id: 'orin', name: 'A1' }, { id: 'lumen', name: 'A2' }], enemies: [{ id: 'brakka', name: 'E1' }, { id: 'nyx', name: 'E2' }, { id: 'vexa', name: 'E3' }] });
+    m.nextWave = 1e9;
+    const p = m.player, allies = m.heroes.filter(h => h.team === 0 && h !== p), foes = m.heroes.filter(h => h.team === 1);
+    for (const f of foes) { f.brain = null; f.human = true; f.x = 3000; f.y = 600; }
+    return { m, p, allies, foes };
+  };
+  {
+    const { m, p } = setup();
+    check('unknown signals are ignored', m.signal(p, 'dance') === false);
+    check('a signal is sent', m.signal(p, 'attack') === true);
+    check('signals are rate-limited', m.signal(p, 'retreat') === false);
+    check('the signal shows in the feed', m.feed[0] && m.feed[0].msg && m.feed[0].from === p);
+    for (let k = 0; k < 30; k++) m.update(1 / 30);
+    check('a bot ally answers', m.feed.some(f => f.msg === SF.SIGNALS.attack.reply && f.from !== p));
+  }
+  {
+    const { m, p, allies, foes } = setup();
+    const foe = foes[0]; foe.x = 1700; foe.y = 600; p.x = 1450; p.y = 600;
+    allies.forEach((a, i) => { a.x = 1200; a.y = 560 + i * 80; a.brain.jungler = false; });
+    m.updateVisibility();
+    m.signal(p, 'attack');
+    const order = m.orders[0];
+    check('Attack picks the nearby enemy hero', order.target === foe, order.text);
+    for (let k = 0; k < 20; k++) m.update(1 / 30);
+    check('bot allies go after the called target', allies.every(a => a.target === foe), allies.map(a => a.target && a.target.name).join());
+  }
+  {
+    const { m, p, allies } = setup();
+    allies.forEach(a => { a.x = 2000; a.y = 600; });
+    p.x = 1500;
+    m.signal(p, 'retreat');
+    const d0 = allies.map(a => a.x);
+    for (let k = 0; k < 45; k++) m.update(1 / 30);
+    check('Retreat pulls bot allies back toward our tower', allies.every((a, i) => a.x < d0[i] - 100), allies.map(a => Math.round(a.x)).join());
+  }
+  {
+    const { m, p, allies } = setup();
+    m.spawnShard();
+    p.x = 1500; p.y = 400;
+    m.signal(p, 'gather');
+    check('Group up with the Colossus awake means take it', m.orders[0].target === m.shard && /Colossus/.test(m.orders[0].text));
+    for (let k = 0; k < 20; k++) m.update(1 / 30);
+    check('bot allies head for the Colossus', allies.every(a => a.target === m.shard));
+  }
+  {
+    const { m, p, allies } = setup();
+    allies.forEach(a => { a.x = 400; a.y = 600; a.brain.jungler = false; });
+    p.x = 1300; p.y = 900;
+    m.signal(p, 'gather');
+    check('Group up without the Colossus gathers on you', m.orders[0].target === p && m.orders[0].text === 'Group up!');
+    for (let k = 0; k < 60; k++) m.update(1 / 30);
+    check('bot allies walk to you', allies.every(a => Math.hypot(a.x - p.x, a.y - p.y) < Math.hypot(400 - p.x, 600 - p.y) - 300));
+    m.t = m.orders[0].until + 1;
+    const o = m.orders[0];
+    check('orders expire', m.t >= o.until);
+  }
+});
+
+section('Death recap', () => {
+  const m = new SF.Match({ hero: 'sylva', difficulty: 'normal', allies: [{ id: 'orin', name: 'A1' }, { id: 'lumen', name: 'A2' }], enemies: [{ id: 'drace', name: 'Grim' }, { id: 'nyx', name: 'E2' }, { id: 'vexa', name: 'E3' }] });
+  m.nextWave = 1e9;
+  for (const h of m.heroes) if (h !== m.player) { h.brain = null; h.human = true; }
+  const p = m.player, drace = m.heroes.find(h => h.def0.id === 'drace'), tower = m.towers[1][0];
+  p.x = 1500; p.y = 600;
+  m.applyDamage(drace, p, 200, { basic: true });
+  m.applyDamage(drace, p, 300, { skill: true });
+  m.applyDamage(tower, p, 150);
+  let r = m.recap(p);
+  check('recap groups damage by source, biggest first', r.rows[0].src === drace && r.rows[1].src === tower && r.rows.length === 2);
+  check('recap splits attacks and skills', r.rows[0].basic > 0 && r.rows[0].skill > r.rows[0].basic);
+  check('recap names towers', r.rows[1].name === tower.name);
+  m.t += 11;
+  m.applyDamage(drace, p, 50, { basic: true });
+  r = m.recap(p);
+  check('recap only counts the last 10 seconds', r.rows.length === 1 && Math.round(r.rows[0].total) === Math.round(r.total));
+  let seen = null;
+  m.on('kill', e => { if (e.victim === p) seen = e.victim.recapInfo; });
+  m.applyDamage(drace, p, 1e6, { skill: true });
+  check('a death stores the recap with the killer', seen && seen.killer === drace && seen.rows[0].src === drace);
+  check('the damage log resets after a death', !p.taken.length);
+});
+
 section('Online-style roster with two humans', () => {
   const ids = SF.HEROES.map(h => h.id);
   const m = new SF.Match({ difficulty: 'normal', localPid: 'p2', roster: [

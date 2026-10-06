@@ -324,6 +324,8 @@ table.odds td:last-child, table.odds th:last-child { text-align: right; font-var
 .pbtn.locked::after { content: 'LV 4'; position: absolute; bottom: -8px; padding: 1px 6px; border-radius: 4px; background: #000a; font: 800 11px/1.3 var(--f-display); color: #fff; }
 .mini-row { z-index: 3; position: absolute; right: calc(280px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; }
 .mini-row .pbtn { position: relative; width: 50px; height: 50px; }
+.mini-row .pbtn.kill { border-color: #ffe27a; box-shadow: 0 0 0 3px rgba(255, 226, 122, 0.35), 0 0 18px rgba(255, 226, 122, 0.8); animation: killglow 0.7s ease-in-out infinite alternate; }
+@keyframes killglow { to { box-shadow: 0 0 0 5px rgba(255, 226, 122, 0.15), 0 0 26px rgba(255, 226, 122, 1); } }
 .cancel-zone { z-index: 3; position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(250px + env(safe-area-inset-bottom, 0px)); width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--enemy); background: rgba(255, 93, 108, 0.18); font: 800 11px/1 var(--f-display); letter-spacing: 0.08em; color: #ffd0d5; text-transform: uppercase; }
 .cancel-zone.hot { background: rgba(255, 93, 108, 0.55); color: #fff; }
 
@@ -494,3 +496,47 @@ img.art { display: block; width: 100%; aspect-ratio: 1 / 1; max-width: 100%; obj
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Battle spell: a square beside the Battle button, and the picker */
+.battle-row { display: flex; gap: 10px; align-items: stretch; }
+.battle-row .btn-battle { flex: 1; min-width: 0; }
+.spell-pick { flex: none; width: 72px; display: grid; place-items: center; align-content: center; gap: 3px; padding: 4px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3); color: var(--text); }
+.spell-pick:hover { border-color: rgba(255, 255, 255, 0.35); }
+.spell-pick .sp-name { font: 700 11px/1 var(--f-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.sp-ic { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.28); background: radial-gradient(circle at 35% 28%, #3c4ca8, #151d52 70%); }
+.sp-ic svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-height: 460px) and (orientation: landscape) { .spell-pick { width: 62px; } .sp-ic { width: 32px; height: 32px; } }
+.spell-grid { display: grid; gap: 8px; }
+.spell-opt { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--text); text-align: left; }
+.spell-opt.on { border-color: var(--shard); background: rgba(79, 227, 211, 0.1); box-shadow: inset 0 0 0 1px var(--shard); }
+.spell-opt:disabled { opacity: 0.45; }
+.sp-body { display: grid; gap: 2px; min-width: 0; }
+.sp-body b { font: 700 17px/1.1 var(--f-display); letter-spacing: 0.02em; }
+.sp-meta { font: 700 11px/1.2 var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.sp-desc { font-size: 13px; line-height: 1.35; color: var(--muted); }
+
+/* Quick signals (top right) and team messages in the feed */
+.signals { display: flex; gap: 6px; }
+.sig { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(5, 8, 25, 0.6); }
+.sig svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sig[data-sig="attack"] { color: #ff9a7a; } .sig[data-sig="retreat"] { color: #ffd166; } .sig[data-sig="gather"] { color: #4fe3d3; }
+.sig:active, .sig.sent { animation: sigsent 0.5s ease-out; }
+@keyframes sigsent { 0% { box-shadow: 0 0 0 0 currentColor; } 100% { box-shadow: 0 0 0 10px transparent; } }
+.feed li.msg { gap: 8px; color: #e8ecff; font-weight: 600; }
+@media (max-height: 460px) and (orientation: landscape) { .sig { width: 34px; height: 34px; } }
+
+/* Death recap, under the respawn timer */
+.recap { display: grid; gap: 6px; margin-top: 8px; width: min(340px, 70vw); }
+.recap:empty { display: none; }
+.death .recap-by { text-align: center; font: 600 14px/1.2 var(--f-body); letter-spacing: 0; text-transform: none; color: var(--text); }
+.recap-by b, .recap .b, .recap .r { font: 700 14px/1.2 var(--f-display); }
+.death .recap-by b { font-size: 15px; }
+.recap .b { color: var(--ally); } .recap .r { color: var(--enemy); }
+.recap-row { display: grid; grid-template-columns: 1fr 70px 44px; grid-template-rows: auto auto; column-gap: 8px; align-items: center; }
+.recap-row .rn { font: 700 13px/1.2 var(--f-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recap-row .rn small { color: var(--muted); font-weight: 600; }
+.recap-row .rb { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.recap-row .rb i { display: block; height: 100%; background: var(--enemy); }
+.death .recap-row .rv { font: 800 14px/1 var(--f-display); text-align: right; }
+.recap-row .rp { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+@media (max-height: 460px) and (orientation: landscape) { .death { top: 40%; padding: 8px 18px; } .death b { font-size: 34px; } .recap-row .rp { display: none; } }

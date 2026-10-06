@@ -20,7 +20,7 @@
       coins: 1200, gems: 60, fragments: 0, chests: 1,
       heroes: ['kaida', 'orin', 'sylva'],
       skins: SF.HEROES.map(h => SF.defaultSkin(h.id)),
-      equipped: {}, selected: 'kaida', difficulty: 'easy',
+      equipped: {}, selected: 'kaida', difficulty: 'easy', spells: {},
       account: { level: 1, xp: 0 },
       pass: { xp: 0, elite: false, free: [], elite_: [] },
       login: { last: null, day: 0 },
@@ -83,6 +83,10 @@
       hero: id => memory.heroes.includes(id),
       skin: id => memory.skins.includes(id)
     },
+    // Battle spell remembered per hero (Blink until the player picks another).
+    spellUnlocked: id => !!SF.SPELLS[id] && memory.account.level >= SF.SPELLS[id].lvl,
+    spellOf(heroId) { const id = memory.spells[heroId]; return id && S.spellUnlocked(id) ? id : 'blink'; },
+    setSpell(heroId, id) { if (!S.spellUnlocked(id)) return false; memory.spells[heroId] = id; S.save(); return true; },
     skinOf(heroId) {
       const s = memory.equipped[heroId];
       return s && memory.skins.includes(s) ? s : SF.defaultSkin(heroId);
@@ -375,7 +379,8 @@
       const P = {
         hit: [220, 120, 0.05, 'square', 0.04], skill: [520, 260, 0.14, 'sawtooth', 0.05], coin: [880, 1320, 0.12, 'triangle', 0.08],
         level: [440, 880, 0.35, 'triangle', 0.09], kill: [330, 660, 0.3, 'sawtooth', 0.07], click: [660, 660, 0.04, 'sine', 0.06],
-        win: [523, 1046, 0.7, 'triangle', 0.1], lose: [330, 165, 0.7, 'triangle', 0.08], tower: [140, 60, 0.4, 'square', 0.08]
+        win: [523, 1046, 0.7, 'triangle', 0.1], lose: [330, 165, 0.7, 'triangle', 0.08], tower: [140, 60, 0.4, 'square', 0.08],
+        ping: [988, 1480, 0.16, 'sine', 0.07]
       }[name];
       if (!P) return;
       const [f0, f1, dur, type, vol] = P, t = ac.currentTime;

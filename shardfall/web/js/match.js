@@ -52,9 +52,10 @@
       super(m, Object.assign({ kind: 'hero', r: 24, maxHp: 1 }, o));
       this.def0 = def; this.level = 1; this.xp = 0; this.gold = 300; this.goldEarned = 0; this.items = [];
       this.skillCd = [0, 0, 0]; this.k = 0; this.dth = 0; this.ast = 0; this.towers = 0;
-      this.streak = 0; this.multiN = 0; this.multiT = 0; this.respawnT = 0; this.recallT = 0; this.flashCd = 0;
+      this.streak = 0; this.multiN = 0; this.multiT = 0; this.respawnT = 0; this.recallT = 0; this.spellCd = 0; this.ccImmune = 0;
       this.hitBy = new Map(); this.dmgDealt = 0; this.aggroT = -9; this.revealT = -9; this.invisT = 0;
       this.vis = [true, true, true]; this.bush = -1;
+      this.spell = SF.SPELLS[o.spell] ? o.spell : 'blink';
       this.maxHp = 0; this.recalc(); this.hp = this.maxHp;
       this.spawn = { x: o.x, y: o.y };
     }
@@ -341,6 +342,7 @@
       this.opts = opts;
       this.t = 0; this.units = []; this.heroes = []; this.projs = []; this.fx = []; this.parts = []; this.floats = []; this.zones = [];
       this.feed = []; this.later_ = []; this.listeners = {};
+      this.signals = []; this.orders = [null, null];   // quick signals: on-map markers, and the order each team's bots follow
       this.kills = [0, 0]; this.over = false; this.winner = -1;
       this.nextWave = 4; this.waveN = 0; this.firstBlood = false;
       this.shard = null; this.shardAt = 90; this.shardSpawnedT = 0; this.siegeBonus = [0, 0];
@@ -395,7 +397,7 @@
       const mk = (spec, team, slot, human) => {
         const def = SF.HERO[spec.id];
         const f = this.fountains[team];
-        const h = new Hero(this, def, { team, x: f.x + (team === 0 ? 70 : -70), y: W.laneY + (slot - 1) * 70, skin: spec.skin || SF.defaultSkin(spec.id), name: spec.name, human, pid: spec.pid, isPlayer: false });
+        const h = new Hero(this, def, { team, x: f.x + (team === 0 ? 70 : -70), y: W.laneY + (slot - 1) * 70, skin: spec.skin || SF.defaultSkin(spec.id), name: spec.name, human, pid: spec.pid, isPlayer: false, spell: spec.spell });
         if (!human || o.autoplay) h.brain = new Brain(this, h, spec.difficulty || (o.roster || team === 0 ? 'normal' : o.difficulty));
         if (!human && team === 1 && !o.roster) h.botDmg = SF.DIFFICULTY[o.difficulty].dmg;
         this.add(h); this.heroes.push(h);
@@ -405,7 +407,7 @@
         o.roster.forEach((list, team) => list.forEach((spec, i) => mk(spec, team, i, !!spec.human)));
         this.player = this.heroes.find(h => h.human && h.pid != null && h.pid === o.localPid) || null;
       } else {
-        this.player = mk({ id: o.hero, skin: o.skin, name: o.playerName || 'You' }, 0, 1, true);
+        this.player = mk({ id: o.hero, skin: o.skin, name: o.playerName || 'You', spell: o.spell }, 0, 1, true);
         o.allies.forEach((s, i) => mk(s, 0, i === 0 ? 0 : 2, false));
         o.enemies.forEach((s, i) => mk(s, 1, i, false));
       }
@@ -414,6 +416,12 @@
         const bots = this.heroes.filter(h => h.team === team && h.brain && !h.human);
         const j = bots.find(b => b.def0.role === 'Assassin' || b.def0.role === 'Fighter') || (team === 1 ? bots[0] : null);
         if (j) j.brain.jungler = true;
+      }
+      // Bots without a chosen spell bring the one that suits their job.
+      const specOf = h => (o.roster ? o.roster[h.team].find(s => s.pid === h.pid && s.id === h.def0.id) : null);
+      for (const h of this.heroes) {
+        if (!h.brain || h.human || (specOf(h) && specOf(h).spell)) continue;
+        h.spell = h.brain.jungler ? 'smite' : SF.SPELL_FOR_ROLE[h.def0.role] || 'blink';
       }
     }
 
@@ -477,7 +485,8 @@
         return;
       }
       for (let i = 0; i < 3; i++) h.skillCd[i] = Math.max(0, h.skillCd[i] - dt);
-      h.flashCd = Math.max(0, h.flashCd - dt);
+      h.spellCd = Math.max(0, h.spellCd - dt);
+      if (h.ccImmune > 0) h.ccImmune -= dt;
       h.hp = Math.min(h.maxHp, h.hp + h.regen * dt);
       if (h.multiT > 0) { h.multiT -= dt; if (h.multiT <= 0) h.multiN = 0; }
       if (h.invisT > 0) h.invisT -= dt;
@@ -760,13 +769,117 @@
       this.emit('buy', h, id);
       return true;
     }
-    flash(h, dir) {
-      if (!h.alive || h.flashCd > 0 || h.stunT > 0) return false;
-      const d = norm(dir.x, dir.y);
-      this.burst(h.x, h.y, '#fff7c2', 12, 160);
-      h.x = clamp(h.x + d.x * 250, 40, W.w - 40); h.y = clamp(h.y + d.y * 250, 60, W.h - 60);
-      h.face = d; h.flashCd = 90; h.recallT = 0; h.dash = null;
-      this.burst(h.x, h.y, '#fff7c2', 12, 160);
+    // ---- quick signals --------------------------------------------------------------
+    // A human tells their team what to do. Bot allies follow the latest order for a while.
+    //   attack:  the closest visible enemy hero, else the enemy's front structure
+    //   retreat: fall back to our front structure
+    //   gather:  take the Colossus if it's up, else group up on the signaller
+    signal(h, kind) {
+      if (!SF.SIGNALS[kind] || this.over) return false;
+      if (this.t - (h.sigT == null ? -9 : h.sigT) < 1.5) return false;   // no spamming
+      h.sigT = this.t;
+      let target = null, x = h.x, y = h.y, text;
+      if (kind === 'attack') {
+        let bs = 900 * 900;
+        for (const e of this.heroes) if (e.alive && e.team !== h.team && this.visible(e, h.team) && d2(e, h) < bs) { bs = d2(e, h); target = e; }
+        if (!target) target = this.frontStructure(1 - h.team);
+        text = target.kind === 'hero' ? `Attack ${target.name}!` : target.kind === 'core' ? 'Hit the Heartstone!' : 'Push the tower!';
+      } else if (kind === 'retreat') {
+        target = this.frontStructure(h.team); text = 'Retreat!';
+      } else {
+        const sh = this.shard && this.shard.alive ? this.shard : null;
+        target = sh || h; text = sh ? 'Take the Colossus!' : 'Group up!';
+      }
+      if (kind !== 'retreat') { x = target.x; y = target.y; }
+      const s = { kind, team: h.team, x, y, t: this.t, from: h, target, text, until: this.t + SF.SIGNALS[kind].dur };
+      this.signals.push(s);
+      this.signals = this.signals.filter(q => this.t - q.t < 6);
+      this.orders[h.team] = s;
+      this.message(h, text);
+      this.emit('signal', s);
+      // One bot ally answers, so it's clear the call was heard.
+      const bot = this.heroes.find(b => b.team === h.team && b.alive && b.brain && !b.human);
+      if (bot) this.later(0.6, () => { if (bot.alive) this.message(bot, SF.SIGNALS[kind].reply); });
+      return true;
+    }
+    message(h, text) {
+      this.feed.unshift({ msg: text, from: h, team: h.team, t: this.t });
+      this.feed.length = Math.min(this.feed.length, 5);
+      this.emit('message', h, text);
+    }
+
+    // ---- battle spells ---------------------------------------------------------
+    // Smite: the Colossus first, then camps, then minions. Shatter: the enemy hero with the least health.
+    spellTarget(h, id) {
+      const R = SF.SPELLS[id].range || 0;
+      let best = null, bs = 1e18;
+      for (const u of this.units) {
+        if (!u.alive || u.team === h.team || !this.visible(u, h.team)) continue;
+        if (id === 'shatter' ? u.kind !== 'hero' : u.kind !== 'monster' && u.kind !== 'minion') continue;
+        const D = dist(u, h) - u.r;
+        if (D > R) continue;
+        const sc = id === 'shatter' ? u.hp : (u.mtype === 'colossus' ? 0 : u.kind === 'monster' ? 1e5 : 2e5) + D;
+        if (sc < bs) { bs = sc; best = u; }
+      }
+      return best;
+    }
+    // True when Smite or Shatter would land the killing blow right now (the HUD makes the button glow).
+    spellWouldKill(h) {
+      if (!h.alive || h.spellCd > 0 || (h.spell !== 'smite' && h.spell !== 'shatter')) return false;
+      const t = this.spellTarget(h, h.spell);
+      return !!t && SF.spellDamage(h.spell, h, t) >= t.hp + (t.shield || 0);
+    }
+    // aim.dir steers Blink; aim.target overrides the automatic Smite / Shatter target.
+    useSpell(h, aim = {}) {
+      const id = h.spell, S = SF.SPELLS[id];
+      if (!h.alive || h.spellCd > 0) return 'cooldown';
+      if (h.dash) return 'busy';
+      if (h.stunT > 0 && id !== 'purify') return 'stunned';
+      switch (id) {
+        case 'blink': {
+          const d = aim.dir ? norm(aim.dir.x, aim.dir.y) : h.face;
+          this.burst(h.x, h.y, '#fff7c2', 12, 160);
+          h.x = clamp(h.x + d.x * 250, 40, W.w - 40); h.y = clamp(h.y + d.y * 250, 60, W.h - 60);
+          h.face = { x: d.x, y: d.y }; h.dash = null;
+          this.burst(h.x, h.y, '#fff7c2', 12, 160);
+          break;
+        }
+        case 'mend':
+          for (const a of this.heroes) {
+            if (!a.alive || a.team !== h.team || d2(a, h) > 520 * 520) continue;
+            this.heal(a, a.maxHp * 0.15);
+            a.addBuff({ id: 'mend', t: 2, msMul: 0.2 });
+            this.burst(a.x, a.y - 20, '#7dffa0', 12, 140);
+          }
+          this.ring(h.x, h.y, 520, '#7dffa0', 0.5, 4);
+          break;
+        case 'smite':
+        case 'shatter': {
+          const a = aim.target;
+          const ok = a && a.alive && a.team !== h.team && this.visible(a, h.team) && dist(a, h) - a.r <= S.range + 30 &&
+            (id === 'shatter' ? a.kind === 'hero' : a.kind === 'monster' || a.kind === 'minion');
+          const t = ok ? a : this.spellTarget(h, id);
+          if (!t) return 'notarget';
+          this.fx.push({ type: 'lightning', x: t.x, y: t.y, color: id === 'smite' ? '#ffe27a' : '#c8a2ff', dur: 0.35, t: 0 });
+          this.burst(t.x, t.y, id === 'smite' ? '#ffe27a' : '#c8a2ff', 18, 240);
+          this.applyDamage(h, t, SF.spellDamage(id, h, t), { true: true, skill: true });
+          if (id === 'smite') this.heal(h, h.maxHp * 0.05);
+          h.face = norm(t.x - h.x, t.y - h.y);
+          if (t.kind === 'hero') { h.revealT = this.t + 1; h.invisT = 0; }
+          break;
+        }
+        case 'sprint':
+          h.addBuff({ id: 'sprint', t: 8, msMul: 0.4, label: 'Sprint' });
+          this.burst(h.x, h.y, '#8fd3ff', 10, 160);
+          break;
+        case 'purify':
+          h.stunT = 0; h.slowT = 0; h.ccImmune = 1.5;
+          this.ring(h.x, h.y, 70, '#ffffff', 0.4, 4);
+          this.burst(h.x, h.y - 20, '#ffffff', 14, 180);
+          break;
+      }
+      h.spellCd = S.cd; h.recallT = 0;
+      this.emit('spell', h, id);
       return true;
     }
     startRecall(h) {
@@ -822,7 +935,7 @@
     applyDamage(src, t, amt, o = {}) {
       if (!t.alive) return 0;
       if (isStructure(t) && !this.targetable(t)) return 0;
-      if (src && src.dmgMul) amt *= src.dmgMul();
+      if (src && src.dmgMul && !o.true) amt *= src.dmgMul();
       if (src && src.botDmg) amt *= src.botDmg;
       if (src && src.kind === 'hero' && isStructure(t)) {
         let covered = false;
@@ -830,9 +943,12 @@
         if (!covered) amt *= 0.4;
       }
       if (isStructure(t) && this.t < 240 && this.mode === 'classic') amt *= 0.5; // early-game fortification
-      amt *= 100 / (100 + Math.max(0, t.def));
-      amt *= 1 - Math.min(0.6, t.bv('dmgRed'));
+      if (!o.true) {   // true damage (Smite, Shatter) ignores defense and damage reduction
+        amt *= 100 / (100 + Math.max(0, t.def));
+        amt *= 1 - Math.min(0.6, t.bv('dmgRed'));
+      }
       if (t.shield > 0) { const s = Math.min(t.shield, amt); t.shield -= s; amt -= s; }
+      if (t.kind === 'hero' && amt > 0) this.took(t, src, Math.min(amt, t.hp), o.true ? 'true' : o.skill ? 'skill' : 'basic');   // overkill doesn't count
       t.hp -= amt; t.flash = 0.1;
       if (src && src.kind === 'hero') {
         src.dmgDealt += amt;
@@ -847,6 +963,29 @@
       }
       if (t.hp <= 0) this.kill(t, src);
       return amt;
+    }
+    // Death recap: damage each hero took over the last few seconds, grouped by who dealt it.
+    took(t, src, amt, kind) {
+      const log = t.taken || (t.taken = []);
+      log.push({ at: this.t, src, amt, kind });
+      while (log.length && log[0].at < this.t - 12) log.shift();
+    }
+    recap(t, killer) {
+      const since = this.t - 10, groups = new Map();
+      let total = 0;
+      for (const e of t.taken || []) {
+        if (e.at < since) continue;
+        const s = e.src, key = !s ? 'other' : s.kind === 'minion' ? 'minions' : s;
+        let g = groups.get(key);
+        if (!g) {
+          const named = s && (s.name || ({ tower: 'Tower', core: 'Heartstone', monster: s.mtype === 'colossus' ? 'Shard Colossus' : 'Jungle monster' })[s.kind]);
+          g = { name: !s ? 'Other' : s.kind === 'minion' ? 'Minions' : named || 'Unknown', hero: s && s.kind === 'hero' ? s.def0.id : null, skin: s && s.skin, team: s ? s.team : 2, total: 0, basic: 0, skill: 0, true: 0, src: s && s.kind !== 'minion' ? s : null };
+          groups.set(key, g);
+        }
+        g.total += e.amt; g[e.kind] += e.amt; total += e.amt;
+      }
+      const rows = [...groups.values()].sort((a, b) => b.total - a.total);
+      return { total, rows, killer: killer || null };
     }
     lastHero(t) {
       let best = null, bt = this.t - 10;
@@ -908,6 +1047,8 @@
         assists.forEach(h => { h.ast++; this.addGold(h, 90); });
         const near = this.heroes.filter(h => h.alive && h.team !== t.team && d2(h, t) < 1000 * 1000);
         near.forEach(h => this.giveXp(h, (140 + 30 * t.level) * (near.length > 1 ? 0.65 : 1)));
+        t.recapInfo = this.recap(t, killer || src);
+        t.taken = [];
         t.hitBy.clear();
         let text = null;
         if (!this.firstBlood) { this.firstBlood = true; text = 'First Blood'; }
@@ -937,8 +1078,8 @@
     }
 
     // ---- status helpers -----------------------------------------------------
-    slow(u, amt, dur) { if (isStructure(u)) return; if (u.slowT <= 0 || amt >= u.slowAmt) u.slowAmt = amt; u.slowT = Math.max(u.slowT, dur); }
-    stun(u, dur) { if (isStructure(u) || u.stunImmune > 0) return; u.stunT = Math.max(u.stunT, dur); if (u.kind === 'hero') u.recallT = 0; }
+    slow(u, amt, dur) { if (isStructure(u) || u.ccImmune > 0) return; if (u.slowT <= 0 || amt >= u.slowAmt) u.slowAmt = amt; u.slowT = Math.max(u.slowT, dur); }
+    stun(u, dur) { if (isStructure(u) || u.stunImmune > 0 || u.ccImmune > 0) return; u.stunT = Math.max(u.stunT, dur); if (u.kind === 'hero') u.recallT = 0; }
     shieldUnit(u, amt, dur) { u.shield += amt; u.shieldT = Math.max(u.shieldT, dur); }
     heal(u, amt, quiet) {
       const before = u.hp; u.hp = Math.min(u.maxHp, u.hp + amt);
@@ -1149,6 +1290,9 @@
       const hp = h.hpPct, f = m.fountains[h.team];
       if (m.inFountain(h) && hp < 0.9) { h.want = null; h.target = null; return; }
       const foes = m.heroes.filter(e => e.alive && e.team !== h.team && m.visible(e, h.team) && d2(e, h) < 760 * 760);
+      if (h.spellCd <= 0 && this.spellLogic(foes)) return;
+      const order = m.orders[h.team];
+      if (order && m.t < order.until && order.from !== h && hp > this.D.retreat + 0.05 && this.obey(order, foes)) return;
 
       if (hp < this.D.retreat || (hp < 0.5 && foes.length >= 2 && this.alliesNear(700) < foes.length)) {
         const close = foes.some(e => d2(e, h) < 620 * 620);
@@ -1175,6 +1319,56 @@
       if (sh && sh.alive && hp > 0.55 && m.t - m.shardSpawnedT > 8 && m.heroes.filter(x => x.alive && x.team === h.team).length >= 2) { this.hit(sh); return; }
       if (this.jungler && hp > 0.45) { const c = this.pickCamp(); if (c) { this.hit(c.unit); return; } }
       this.lane();
+    }
+    // Follows a teammate's quick signal. Returns false once there's nothing special to do, so the
+    // normal logic (fight what's near, farm) takes over on arrival.
+    obey(o, foes) {
+      const m = this.m, h = this.h, T = o.target;
+      if (o.kind === 'retreat') {
+        const s = m.frontStructure(h.team), back = h.team === 0 ? -1 : 1;
+        h.target = null; h.want = { x: s.x + back * 90, y: s.y + this.yo * 0.5 };
+        const e = foes.find(f => d2(f, h) < (h.range + 60) ** 2);
+        if (e && h.hpPct > 0.5) h.target = e;   // still swing at anyone in our face
+        return true;
+      }
+      if (o.kind === 'gather' && T && T.mtype === 'colossus') {
+        if (!T.alive) return false;
+        this.hit(T); return true;
+      }
+      if (o.kind === 'attack' && T && T.alive && T.team !== h.team && m.valid(h, T) && d2(T, h) < 1400 * 1400) {
+        if (T.kind === 'hero') this.useSkills(T, 'fight');
+        h.target = T; return true;
+      }
+      // Group up / attack the spot: walk over, then let the normal logic fight whatever is there.
+      const at = o.kind === 'gather' ? o.from : o;
+      if (!at || (at.alive === false)) return false;
+      if (d2(at, h) > 240 * 240) { h.target = null; h.want = { x: at.x, y: at.y + this.yo * 0.4 }; return true; }
+      return false;
+    }
+    // Bots use their battle spell when it clearly pays off. Returns true if it was cast.
+    spellLogic(foes) {
+      const m = this.m, h = this.h, hp = h.hpPct, f = m.fountains[h.team];
+      if (Math.random() > this.D.skill) return false;
+      const close = foes.filter(e => d2(e, h) < 520 * 520);
+      const danger = close.length > 0 && hp < 0.3;
+      switch (h.spell) {
+        case 'purify': return h.stunT > 0.5 && close.length > 0 && m.useSpell(h) === true;
+        case 'mend': {
+          const hurt = m.heroes.filter(a => a.alive && a.team === h.team && a.hpPct < 0.35 && d2(a, h) < 500 * 500 && foes.some(e => d2(e, a) < 600 * 600));
+          return (danger || hurt.length > 0) && m.useSpell(h) === true;
+        }
+        case 'sprint': return danger && m.useSpell(h) === true;
+        case 'blink': return danger && hp < 0.22 && m.useSpell(h, { dir: norm(f.x - h.x, f.y - h.y) }) === true;
+        case 'shatter':
+        case 'smite': {
+          const t = m.spellTarget(h, h.spell);
+          if (!t || SF.spellDamage(h.spell, h, t) < t.hp + (t.shield || 0)) return false;
+          // Smite: only for the Colossus and camps (bots don't waste it on minions).
+          if (h.spell === 'smite' && t.kind !== 'monster') return false;
+          return m.useSpell(h, { target: t }) === true;
+        }
+      }
+      return false;
     }
     alliesNear(r) { return this.m.heroes.filter(a => a.alive && a.team === this.h.team && d2(a, this.h) < r * r).length; }
     strength(team, around) {

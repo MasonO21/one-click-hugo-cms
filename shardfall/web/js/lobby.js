@@ -53,6 +53,23 @@
     const scale = sprite ? Math.min(w * 0.8, h * 0.84) / 86 : Math.min(w, h) / 82;
     SF.drawHero(g, { heroId: hero, skinId: skin, x: w / 2, y: sprite ? h * 0.93 : h * 0.86, t: 1.2, scale, face: { x: 1, y: 0.2 } });
   }
+  // Battle spell: a button on the home screen and a picker that remembers the choice per hero.
+  function spellPick(heroId) {
+    const sp = SF.SPELLS[S.spellOf(heroId)];
+    return `<button class="spell-pick" data-act="spells" title="Battle spell: ${sp.name}" aria-label="Battle spell: ${sp.name}. Change">
+      <span class="sp-ic">${SF.ICONS[sp.icon]}</span><span class="sp-name">${sp.name.replace('Shard ', '')}</span></button>`;
+  }
+  function spellModal(heroId) {
+    const cur = S.spellOf(heroId);
+    modal(`<p class="eyebrow">${SF.HERO[heroId].name} · ${SF.HERO[heroId].role}</p><h3>Battle spell</h3>
+      <div class="spell-grid">${SF.SPELL_IDS.map(id => {
+        const sp = SF.SPELLS[id], ok = S.spellUnlocked(id), on = id === cur;
+        return `<button class="spell-opt${on ? ' on' : ''}" data-act="pickSpell" data-h="${heroId}" data-s="${id}" aria-pressed="${on}" ${ok ? '' : 'disabled'}>
+          <span class="sp-ic">${SF.ICONS[sp.icon]}</span><span class="sp-body"><b>${sp.name}</b><span class="sp-meta">${ok ? `${sp.cd}s cooldown` : `Unlocks at account level ${sp.lvl}`}</span><span class="sp-desc">${sp.desc}</span></span></button>`;
+      }).join('')}</div>
+      <p class="muted small">Your choice is saved for ${SF.HERO[heroId].name}. Junglers want Shard Smite. Press F in a match, or tap the small button by your skills.</p>
+      <button class="btn ghost" data-act="close">Done</button>`);
+  }
   function rewardIcon(r) {
     if (r.type === 'skin') return heroCanvas(SF.SKIN[r.id].hero, r.id);
     if (r.type === 'coins') return `<i class="ico ico-coin" style="width:28px;height:28px"></i><span>${fmt(r.n)}</span>`;
@@ -178,7 +195,7 @@
             <p class="muted mode-sub">${SF.MODES[mode].sub} About ${SF.MODES[mode].minutes} minutes.</p>
             ${body}
           </div>
-          <button class="btn-battle" data-act="battle" ${ready ? '' : 'disabled'}><span>${label}</span></button>
+          <div class="battle-row">${spellPick(mode === 'brawl' ? S.d.selected : id)}<button class="btn-battle" data-act="battle" ${ready ? '' : 'disabled'}><span>${label}</span></button></div>
           <button class="card pass-mini" data-act="go" data-v="pass">
             <span class="row"><span>Shard Pass · Tier ${tier}</span><span class="muted">${tier >= SF.PASS.tiers ? 'Complete' : fmt(S.d.pass.xp % SF.PASS.xpPerTier) + ' / ' + fmt(SF.PASS.xpPerTier)}</span></span>
             <span class="bar" style="--p:${into}"><i></i></span>
@@ -406,6 +423,7 @@
         <div class="card" style="display:grid;gap:10px"><p class="eyebrow">Rewards</p>
           <div class="rewards">${chip({ type: 'coins', n: rw.coins * (rw.doubled ? 2 : 1) })}${chip({ type: 'passXp', n: rw.passXp })}${chip({ type: 'tokens', n: rw.tokens })}<span class="chip">+${rw.accXp} account XP</span>
           ${rw.ups.length ? `<span class="chip" style="color:var(--shard)">Account level ${S.d.account.level}! +${200 * rw.ups.length} coins</span>` : ''}
+          ${SF.SPELL_IDS.filter(id => rw.ups.includes(SF.SPELLS[id].lvl)).map(id => `<span class="chip" style="color:var(--gold)">New battle spell: ${SF.SPELLS[id].name}</span>`).join('')}
           ${rw.tierUp > 0 ? `<span class="chip" style="color:var(--gold)">Shard Pass tier ${S.passTier()} reached</span>` : ''}</div>
           ${ach ? `<p class="small" style="color:var(--gem)">${ach} achievement${ach > 1 ? 's' : ''} ready to claim in your profile.</p>` : ''}
           ${!S.d.pass.elite ? '<p class="muted small">Elite Pass holders earn 20% more pass XP per match.</p>' : ''}
@@ -483,7 +501,7 @@
     const allies = others.slice(0, 2).map((id, i) => ({ id, skin: pickSkin(id), name: names[i] }));
     const enemies = others.slice(2, 5).map((id, i) => ({ id, skin: pickSkin(id), name: names[2 + i] }));
     const difficulty = mode === 'ranked' ? S.rank().diff : mode === 'brawl' ? 'normal' : S.d.difficulty;
-    const opts = { hero: heroId, skin: S.skinOf(heroId), playerName: S.d.name, difficulty, allies, enemies, mode: mode === 'brawl' ? 'brawl' : 'classic', tutorial: !S.d.tutorial && mode === 'quick' };
+    const opts = { hero: heroId, skin: S.skinOf(heroId), spell: S.spellOf(mode === 'brawl' ? S.d.selected : heroId), playerName: S.d.name, difficulty, allies, enemies, mode: mode === 'brawl' ? 'brawl' : 'classic', tutorial: !S.d.tutorial && mode === 'quick' };
     const me = { id: heroId, skin: opts.skin };
     showLoading(SF.MODES[mode].name, [allies[0], me, allies[1]], enemies, 1, () => SF.hud.start(opts, sum => finishMatch(sum, { mode, heroId, skin: opts.skin })));
   }
@@ -517,7 +535,7 @@
     const fail = msg => { queueing = false; render(); infoModal('Could not join online', esc(msg || 'The game server did not respond.')); };
     try {
       SF.net.connect(serverUrl());
-      SF.net.queue({ mode: 'quick', heroId, skinId: S.skinOf(heroId), name: S.d.name }, {
+      SF.net.queue({ mode: 'quick', heroId, skinId: S.skinOf(heroId), spell: S.spellOf(heroId), name: S.d.name }, {
         onQueued() { /* searching state already shown */ },
         onError: e => fail(e && e.message ? e.message : e),
         onMatch: info => {
@@ -575,6 +593,11 @@
     mode(d) { S.d.mode = d.m; S.save(); render(); },
     diff(d) { S.d.difficulty = d.d; S.save(); render(); },
     battle() { startBattle(); },
+    spells() { spellModal(S.d.selected); },
+    pickSpell(d) {
+      if (!S.setSpell(d.h, d.s)) return;
+      closeModal(); render();
+    },
     again() { startBattle(lastRewards ? lastRewards.mode : S.d.mode); },
     cancelQueue() { try { SF.net.cancel(); } catch (e) { /* ignore */ } queueing = false; render(); },
     pickHero(d) { heroSel = d.id; render(); },

@@ -14,8 +14,16 @@
     atk: '<svg viewBox="0 0 24 24"><path d="M14.5 3.5H20v5.5L9.5 19.5l-5-5z"/><path d="M4.5 14.5L3 16l5 5 1.5-1.5M7 17l-3 3"/></svg>',
     recall: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v5h5"/></svg>',
     flash: '<svg viewBox="0 0 24 24"><path d="M13 2L5 14h6l-1 8 8-12h-6z"/></svg>',
+    mend: '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0 1 12 8a4 4 0 0 1 7 2.4C19 15.6 12 20 12 20z"/><path d="M12 11v5M9.5 13.5h5"/></svg>',
+    smite: '<svg viewBox="0 0 24 24"><path d="M12 2v10M8.5 8.5L12 12l3.5-3.5"/><path d="M4 20l4-5 4 3 4-3 4 5z"/></svg>',
+    sprint: '<svg viewBox="0 0 24 24"><path d="M2 8h6M3 12h6M2 16h6M12 5l7 7-7 7"/></svg>',
+    purify: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.8 2.8L16.5 9"/></svg>',
+    shatter: '<svg viewBox="0 0 24 24"><path d="M12 2l7 10-7 10-7-10z"/><path d="M12 2l-1.5 7 3 3-2.5 3.5L12 22"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
-    skull: '<svg viewBox="0 0 24 24"><path d="M4 20l16-16M4 4l16 16"/></svg>'
+    skull: '<svg viewBox="0 0 24 24"><path d="M4 20l16-16M4 4l16 16"/></svg>',
+    attack: '<svg viewBox="0 0 24 24"><path d="M4 4l9 9M4 4h4M4 4v4M20 4l-9 9M20 4h-4M20 4v4M7 17l-3 3M17 17l3 3M9 15l-3-3M15 15l3-3"/></svg>',
+    retreat: '<svg viewBox="0 0 24 24"><path d="M10 5l-6 6 6 6"/><path d="M4 11h10a6 6 0 0 1 0 12h-2"/></svg>',
+    gather: '<svg viewBox="0 0 24 24"><path d="M6 21V3"/><path d="M6 4h11l-2.5 4L17 12H6"/></svg>'
   };
   const abbr = id => SF.ITEMS[id].name.replace(/'/g, '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   SF.itemIcon = id => `<span class="item-ic" style="--c:${SF.ITEMS[id].c}">${abbr(id)}</span>`;
@@ -57,11 +65,19 @@
     if (keys.has('d') || keys.has('arrowright')) x += 1;
     return x || y ? norm(x, y) : null;
   }
-  function doFlash() {
-    if (!m) return;
-    const p = m.player, d = keyDir() || joy.dir || p.face;
-    if (p.flashCd > 0) toast('Blink recharging');
-    else m.flash(p, d);
+  function doSpell() {
+    if (!m || paused) return;
+    const p = m.player, S = SF.SPELLS[p.spell];
+    const r = m.useSpell(p, { dir: keyDir() || joy.dir || p.face });
+    if (r === 'cooldown' && p.alive) toast(`${S.name} recharging`);
+    else if (r === 'stunned') toast('Stunned');
+    else if (r === 'notarget') toast(p.spell === 'smite' ? 'No monster or minion in range' : 'No enemy hero in range');
+  }
+  function doSignal(kind) {
+    if (!m || paused || ended) return;
+    if (m.signal(m.player, kind) === false) return;
+    const b = document.querySelector(`.sig[data-sig="${kind}"]`);
+    if (b) { b.classList.remove('sent'); void b.offsetWidth; b.classList.add('sent'); }
   }
   function doRecall() {
     if (!m || !m.player.alive) return;
@@ -101,6 +117,7 @@
       <li><b>Skills:</b> tap to auto-aim, or drag the button to aim it yourself (Q, E, R). Your ultimate unlocks at level 4.</li>
       <li><b>Gold</b> comes from landing the final hit on minions. Tap the glowing item on the left to buy it.</li>
       <li><b>Towers</b> take less damage unless your minions are beside them. The <b>Shard Colossus</b> by the river empowers your whole team.</li>
+      <li>The small button by Recall is your <b>battle spell</b> (F). The buttons at the top right <b>signal your team</b>: bots follow Attack, Retreat and Group up.</li>
     </ol><button class="btn primary" data-hud="tutDone">Start the match</button></div>`;
   }
 
@@ -138,9 +155,27 @@
       <p class="muted small">Tap anywhere to close</p></div>`;
   }
 
+  // What killed you: the biggest damage sources in your last 10 seconds, split into attacks and skills.
+  function renderRecap(r) {
+    const el = $('recap');
+    if (!r || !r.rows.length || r.total < 1) { el.innerHTML = ''; return; }
+    const top = r.rows.slice(0, 3), k = r.killer;
+    const killer = k ? (k.kind === 'hero' ? `${k.name} · ${k.def0.name}` : k.name || 'a tower') : top[0].name;
+    el.innerHTML = `<p class="recap-by">Defeated by <b class="${(k || top[0]).team === 0 ? 'b' : 'r'}">${killer}</b></p>${top.map(g => {
+      const pct = Math.round(g.total / r.total * 100), sk = g.skill + g.true, parts = [];
+      if (g.basic >= 1) parts.push(`${Math.round(g.basic / g.total * 100)}% attacks`);
+      if (sk >= 1) parts.push(`${Math.round(sk / g.total * 100)}% skills`);
+      return `<div class="recap-row"><span class="rn ${g.team === 0 ? 'b' : g.team === 1 ? 'r' : ''}">${g.hero ? `${g.name} <small>${SF.HERO[g.hero].name}</small>` : g.name}</span>
+        <span class="rb"><i style="width:${pct}%"></i></span><span class="rv num">${Math.round(g.total)}</span><span class="rp">${parts.join(' · ')}</span></div>`;
+    }).join('')}`;
+  }
   function renderFeed() {
     const el = $('feed');
     el.innerHTML = m.feed.filter(f => m.t - f.t < 8).map(f => {
+      if (f.msg) {
+        const who = f.from === m.player ? 'You' : f.from ? f.from.name : '';
+        return `<li class="msg"><span class="${f.team === 0 ? 'b' : 'r'}">${who}</span>${f.msg}</li>`;
+      }
       const kc = f.team === 0 ? 'b' : 'r', vc = f.team === 0 ? 'r' : 'b';
       const k = f.killer ? `<span class="${kc}">${f.killer.name}</span>` : `<span class="${kc}">Tower</span>`;
       return `<li>${k}${SF.ICONS.skull}<span class="${vc}">${f.victim.name}</span></li>`;
@@ -151,7 +186,6 @@
     if (bound) return; bound = true;
     $('btnAtk').insertAdjacentHTML('afterbegin', SF.ICONS.atk);
     $('btnRecall').insertAdjacentHTML('afterbegin', SF.ICONS.recall);
-    $('btnFlash').insertAdjacentHTML('afterbegin', SF.ICONS.flash);
 
     const zone = $('joyZone'), base = $('joy'), knob = $('joyKnob');
     const moveJoy = e => {
@@ -223,7 +257,11 @@
       btn.addEventListener('pointercancel', e => finish(e, false));
     });
 
-    $('btnFlash').addEventListener('click', doFlash);
+    $('btnFlash').addEventListener('click', doSpell);
+    document.querySelectorAll('.sig').forEach(b => {
+      b.insertAdjacentHTML('afterbegin', SF.ICONS[b.dataset.sig]);
+      b.addEventListener('click', () => doSignal(b.dataset.sig));
+    });
     $('btnRecall').addEventListener('click', doRecall);
     $('btnShop').addEventListener('click', () => toggleShop());
     $('btnQuick').addEventListener('click', quickBuy);
@@ -262,7 +300,9 @@
       if (k === ' ' || k === 'j') m.player.attackHeld = true;
       const si = { q: 0, 1: 0, e: 1, 2: 1, r: 2, 3: 2 }[k];
       if (si != null) cast(si, mouseAim(si));
-      if (k === 'f') doFlash();
+      if (k === 'f') doSpell();
+      const sig = Object.keys(SF.SIGNALS).find(id => SF.SIGNALS[id].key === k);
+      if (sig) doSignal(sig);
       if (k === 'b') doRecall();
       if (k === 'p' || k === 'tab') toggleShop();
       if (k === 'g') quickBuy();
@@ -303,9 +343,10 @@
       el.style.setProperty('--cd', cd > 0 ? cd / max : 0);
       b.classList.toggle('locked', i === 2 && p.level < 4);
     });
-    const fcd = $('btnFlash').querySelector('.cd');
-    fcd.textContent = p.flashCd > 0 ? Math.ceil(p.flashCd) : '';
-    fcd.style.setProperty('--cd', p.flashCd / 90);
+    const sb = $('btnFlash'), fcd = sb.querySelector('.cd');
+    fcd.textContent = p.spellCd > 0 ? Math.ceil(p.spellCd) : '';
+    fcd.style.setProperty('--cd', p.spellCd / SF.SPELLS[p.spell].cd);
+    sb.classList.toggle('kill', !!(m.spellWouldKill && m.spellWouldKill(p)));
     $('death').hidden = p.alive || ended;
     if (!p.alive) $('respawnT').textContent = Math.ceil(p.respawnT);
     $('game').classList.toggle('dead', !p.alive && !ended);
@@ -349,6 +390,10 @@
       m = opts.remote || new SF.Match(opts);
       if (!R) R = new SF.Renderer($('game'), $('minimap')); else R.resize();
       R.bushImgs = null; R.cam = { x: m.player.x, y: m.player.y };
+      const sp = SF.SPELLS[m.player.spell] || SF.SPELLS.blink, sb = $('btnFlash');
+      sb.querySelectorAll('svg').forEach(n => n.remove());
+      sb.insertAdjacentHTML('afterbegin', SF.ICONS[sp.icon]);
+      sb.setAttribute('aria-label', sp.name); sb.title = sp.name;
       skillEls().forEach((b, i) => {
         const s = m.player.def0.skills[i];
         b.querySelectorAll('svg').forEach(n => n.remove());
@@ -359,10 +404,14 @@
       m.on('announce', (text, team, sub) => annQ.push({ text, team, sub }));
       m.on('kill', ev => {
         renderFeed();
+        if (ev.victim === m.player) renderRecap(ev.victim.recapInfo || (m.recap ? m.recap(ev.victim, ev.killer) : null));
         if (ev.killer === m.player || ev.victim === m.player || ev.assists.includes(m.player)) { SF.sfx.play('kill'); if (SF.haptics) SF.haptics.impact(); }
       });
       m.on('levelup', h => { if (h === m.player) { toast(h.level === 4 ? 'Ultimate unlocked' : 'Level ' + h.level); SF.sfx.play('level'); } });
       m.on('cast', h => { if (h === m.player) { SF.sfx.play('skill'); if (SF.haptics) SF.haptics.tap(); } });
+      m.on('signal', s => { if (s.team === 0) { SF.sfx.play('ping'); renderFeed(); } });
+      m.on('message', () => renderFeed());
+      m.on('spell', h => { if (h === m.player) { SF.sfx.play('skill'); if (SF.haptics) SF.haptics.tap(); } });
       m.on('hit', () => { const n = performance.now(); if (n - lastHit > 90) { lastHit = n; SF.sfx.play('hit'); } });
       m.on('gold', () => { const n = performance.now(); if (n - lastCoin > 160) { lastCoin = n; SF.sfx.play('coin'); } });
       m.on('tower', () => SF.sfx.play('tower'));
@@ -375,7 +424,7 @@
       });
       $('shop').hidden = true; $('pause').hidden = true; $('tutorial').hidden = true; $('announce').hidden = true; $('toast').hidden = true; $('board').hidden = true;
       $('match').classList.toggle('lefty', !!(SF.store.d && SF.store.d.settings.lefty));
-      $('feed').innerHTML = '';
+      $('feed').innerHTML = ''; $('recap').innerHTML = '';
       if (opts.tutorial) showTutorial();
       last = performance.now();
       cancelAnimationFrame(raf);

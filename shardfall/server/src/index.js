@@ -157,7 +157,8 @@ function handle(client, msg) {
     if (msg.name) client.account.name = cleanName(msg.name);
     const mode = msg.mode === 'ranked' ? 'ranked' : 'quick';
     removeFromQueue(client);
-    queue.push({ client, mode, heroId: hero.id, skinId: skin, since: Date.now() });
+    const spell = typeof msg.spell === 'string' && Object.prototype.hasOwnProperty.call(SF.SPELLS, msg.spell) ? msg.spell : 'blink';
+    queue.push({ client, mode, heroId: hero.id, skinId: skin, spell, since: Date.now() });
     return out(client, { t: 'queued', n: queue.filter(q => q.mode === mode).length, wait: QUEUE_WAIT });
   }
   if (msg.t === 'cancel') { removeFromQueue(client); return out(client, { t: 'cancelled' }); }
@@ -209,7 +210,7 @@ function matchmake() {
     group.forEach(g => removeFromQueue(g.client));
     const teams = assignTeams(group);
     const players = [];
-    teams.forEach((list, team) => list.forEach(e => players.push({ pid: e.client.pid, name: e.client.account.name, heroId: e.heroId, skinId: e.skinId, team })));
+    teams.forEach((list, team) => list.forEach(e => players.push({ pid: e.client.pid, name: e.client.account.name, heroId: e.heroId, skinId: e.skinId, spell: e.spell, team })));
     const room = new Room({ id: newId(), mode, players });
     const members = new Map(group.map(g => [g.client.pid, g.client]));
     rooms.set(room.id, { room, members, tick: 0, takeover: new Map() });

@@ -14,7 +14,7 @@
       this.buffs = []; this.items = []; this.skillCd = [0, 0, 0]; this.face = { x: 1, y: 0 };
       this.anim = Math.random() * 10; this.flash = 0; this.shield = 0; this.stunT = 0; this.slowT = 0; this.invisT = 0; this.bush = -1;
       this.k = 0; this.dth = 0; this.ast = 0; this.level = 1; this.respawnT = 0; this.recallT = 0; this.gold = 0; this.xp = 0; this.xpNeed = 140;
-      this.cdr = 0; this.flashCd = 0; this.range = 0; this.x = 0; this.y = 0; this.hp = 1; this.maxHp = 1; this.r = 20;
+      this.cdr = 0; this.spellCd = 0; this.spell = 'blink'; this.range = 0; this.x = 0; this.y = 0; this.hp = 1; this.maxHp = 1; this.r = 20;
     }
     get hpPct() { return this.maxHp ? this.hp / this.maxHp : 0; }
     bv(key) { let s = 0; for (const b of this.buffs) if (b[key]) s += b[key]; return s; }
@@ -31,11 +31,11 @@
       this.teamStats = [{ towers: 0, shards: 0 }, { towers: 0, shards: 0 }];
       this.fountains = [{ x: 110, y: W.laneY, r: 230 }, { x: W.w - 110, y: W.laneY, r: 230 }];
       this.bushes = (info.bushes || []).map(b => Object.assign({}, b, { x: this.mx(b.x) }));
-      this.camps = []; this.shard = null;
+      this.camps = []; this.shard = null; this.signals = [];
       this.map = new Map(); this.snaps = []; this.pending = []; this.lastInput = ''; this.inputT = 0; this.endInfo = null;
       for (const r of info.roster) {
         const h = this.unit(r.i);
-        Object.assign(h, { kind: 'hero', team: this.mt(r.tm), def0: SF.HERO[r.h], skin: r.sk, name: r.n, human: r.hu, pid: r.pid, r: 24, alive: true });
+        Object.assign(h, { kind: 'hero', team: this.mt(r.tm), def0: SF.HERO[r.h], skin: r.sk, name: r.n, human: r.hu, pid: r.pid, r: 24, alive: true, spell: SF.SPELLS[r.sp] ? r.sp : 'blink' });
         if (r.pid && r.pid === info.pid) { h.isPlayer = true; this.player = h; }
         this.heroes.push(h);
       }
@@ -104,7 +104,7 @@
       const p = this.player, me = s.me;
       if (me) {
         p.gold = me.gold; p.xp = me.xp; p.xpNeed = me.xn; p.level = me.lv; p.items = me.items; p.skillCd = me.cd; p.cdr = me.cdr;
-        p.flashCd = me.fcd; p.recallT = me.rc; p.range = me.rg; p.ms = me.ms; p.respawnT = me.rs;
+        p.spellCd = me.fcd; p.recallT = me.rc; p.range = me.rg; p.ms = me.ms; p.respawnT = me.rs;
         p.target = me.tg ? this.unit(me.tg) : null;
         p.buffs = me.b.map(([id, t, label]) => ({ id, t, label: label || undefined }));
       }
@@ -129,7 +129,7 @@
           }
           case 'burst': SF.Match.prototype.burst.call(this, this.mx(e[1]), e[2], e[3], e[4], e[5]); break;
           case 'shake': this.shake(e[1]); break;
-          case 'dmg': { const t = U(e[2]); if (t && !(SF.gfx && SF.gfx.numbers === false)) this.float(t.x + (Math.random() - 0.5) * 20, t.y - t.r - 26, e[3], t === p ? '#ff6b7a' : e[4] ? '#ffb347' : '#ffffff', e[4] ? 1.25 : 1); break; }
+          case 'dmg': { const t = U(e[2]); if (t && t === p) this.took(p, U(e[1]) || null, Math.min(e[3], p.maxHp), e[4] ? 'skill' : 'basic'); if (t && !(SF.gfx && SF.gfx.numbers === false)) this.float(t.x + (Math.random() - 0.5) * 20, t.y - t.r - 26, e[3], t === p ? '#ff6b7a' : e[4] ? '#ffb347' : '#ffffff', e[4] ? 1.25 : 1); break; }
           case 'heal': if (U(e[1]) === p) this.float(p.x, p.y - 50, '+' + e[2], '#7dffa0', 1); break;
           case 'gold': if (U(e[1]) === p) { this.float(p.x, p.y - 64, '+' + e[2], '#ffc84a', 1); this.emit('gold', e[2]); } break;
           case 'hit': this.emit('hit'); break;
@@ -137,9 +137,23 @@
           case 'levelup': { const h = U(e[1]); if (h) this.emit('levelup', h); break; }
           case 'cast': { const h = U(e[1]); if (h && h.def0) this.emit('cast', h, h.def0.skills[e[2]]); break; }
           case 'tower': this.emit('tower', U(e[1])); break;
+          case 'sig': {
+            const s = { kind: e[1], team: this.mt(e[2]), x: this.mx(e[3]), y: e[4], t: this.t, from: U(e[5]), target: e[6] ? U(e[6]) : null, text: e[7] };
+            if (!SF.SIGNALS[s.kind]) break;
+            this.signals = this.signals.filter(q => this.t - q.t < 6).concat(s);
+            this.emit('signal', s);
+            break;
+          }
+          case 'msg': {
+            this.feed.unshift({ msg: e[3], from: U(e[1]), team: this.mt(e[2]), t: this.t });
+            this.feed.length = Math.min(this.feed.length, 5);
+            this.emit('message', U(e[1]), e[3]);
+            break;
+          }
           case 'kill': {
             const killer = e[1] ? U(e[1]) : null, victim = U(e[2]);
             if (!victim) break;
+            if (victim === p) { victim.recapInfo = this.recap(victim, killer); victim.taken = []; }
             this.feed.unshift({ killer, victim, team: 1 - victim.team, t: this.t });
             this.feed.length = Math.min(this.feed.length, 4);
             this.emit('kill', { killer, victim, assists: e[3].map(U).filter(Boolean), text: e[4] });
@@ -173,7 +187,7 @@
       }
       if (this.player.recallT > 0) this.player.recallT = Math.max(0, this.player.recallT - dt);
       for (let i = 0; i < 3; i++) this.player.skillCd[i] = Math.max(0, this.player.skillCd[i] - dt);
-      this.player.flashCd = Math.max(0, this.player.flashCd - dt);
+      this.player.spellCd = Math.max(0, this.player.spellCd - dt);
       for (const q of this.projs) {
         if (q.homing) {
           const dx = q.homing.x - q.x, dy = q.homing.y - q.y, L = Math.hypot(dx, dy), st = q.speed * dt;
@@ -228,12 +242,27 @@
       h.gold -= it.cost; h.items = h.items.concat(id);
       return true;
     }
-    flash(h, dir) { if (h.flashCd > 0 || !h.alive) return false; this.net.send({ t: 'flash', d: this.out(dir) }); h.flashCd = 90; return true; }
+    useSpell(h, aim = {}) {
+      if (!h.alive || h.spellCd > 0) return 'cooldown';
+      if (h.stunT > 0 && h.spell !== 'purify') return 'stunned';
+      const target = h.spell === 'smite' || h.spell === 'shatter' ? aim.target || this.spellTarget(h, h.spell) : null;
+      if ((h.spell === 'smite' || h.spell === 'shatter') && !target) return 'notarget';
+      this.net.send({ t: 'spell', d: this.out(aim.dir || h.face), tg: target ? target.id : null });
+      h.spellCd = SF.SPELLS[h.spell].cd;
+      this.emit('spell', h, h.spell);
+      return true;
+    }
     startRecall(h) { if (!h.alive) return; this.net.send({ t: 'recall' }); h.recallT = 3; }
+    signal(h, kind) {
+      if (!SF.SIGNALS[kind] || this.t - (h.sigT == null ? -9 : h.sigT) < 1.5) return false;
+      h.sigT = this.t;
+      this.net.send({ t: 'signal', k: kind });
+      return true;
+    }
     end() { this.net.send({ t: 'surrender' }); }
   }
   // Local-only helpers come straight from the offline match so aiming and effects behave the same.
-  for (const k of ['resolveAim', 'autoTarget', 'visible', 'targetable', 'ring', 'slashFx', 'float', 'shake', 'beam', 'bolt', 'updateFx', 'inFountain']) {
+  for (const k of ['resolveAim', 'autoTarget', 'spellTarget', 'spellWouldKill', 'took', 'recap', 'visible', 'targetable', 'ring', 'slashFx', 'float', 'shake', 'beam', 'bolt', 'updateFx', 'inFountain']) {
     RemoteMatch.prototype[k] = SF.Match.prototype[k];
   }
 
@@ -283,7 +312,7 @@
     },
     queue(opts, callbacks) {
       cbs = callbacks || {}; match = null;
-      const msg = { t: 'queue', mode: opts.mode || 'quick', heroId: opts.heroId, skinId: opts.skinId, name: opts.name };
+      const msg = { t: 'queue', mode: opts.mode || 'quick', heroId: opts.heroId, skinId: opts.skinId, spell: opts.spell, name: opts.name };
       if (welcome) SF.net.send(msg); else queuedMsg = msg;
     },
     cancel() { queuedMsg = null; SF.net.send({ t: 'cancel' }); },

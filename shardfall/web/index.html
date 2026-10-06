@@ -57,6 +57,11 @@
       <button class="score" id="scoreBtn" aria-label="Scoreboard"><b id="kBlue" class="k-blue">0</b><span id="clock">0:00</span><b id="kRed" class="k-red">0</b></button>
       <div class="hud-top-right">
         <div id="buffs" class="buffs"></div>
+        <div class="signals" role="group" aria-label="Signal your team">
+          <button class="sig" data-sig="attack" aria-label="Signal: attack" title="Attack (Z)"></button>
+          <button class="sig" data-sig="retreat" aria-label="Signal: retreat" title="Retreat (X)"></button>
+          <button class="sig" data-sig="gather" aria-label="Signal: group up" title="Group up (C)"></button>
+        </div>
         <button id="btnPause" class="icon-btn" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
       </div>
     </div>
@@ -80,7 +85,7 @@
       <button class="pbtn sk s2" data-i="2"><span class="cd"></span><em class="key">R</em></button>
     </div>
     <div id="cancelZone" class="cancel-zone" hidden>Cancel</div>
-    <div id="death" class="death" hidden><p>Respawning in</p><b id="respawnT">0</b></div>
+    <div id="death" class="death" hidden><p>Respawning in</p><b id="respawnT">0</b><div id="recap" class="recap"></div></div>
     <div class="xp"><i id="xpFill"></i></div>
     <div id="rotate" class="rotate-hint" hidden>Turn your phone sideways for the full arena</div>
     <div id="board" class="board" hidden></div>
