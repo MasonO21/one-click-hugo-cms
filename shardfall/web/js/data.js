@@ -217,6 +217,19 @@ window.SF = window.SF || {};
   SF.skinsFor = id => SF.SKINS.filter(s => s.hero === id);
   SF.defaultSkin = id => id + '_classic';
 
+  // Illustrated splash art (made with Higgsfield, see art/manifest.json). Classic skins use the hero's
+  // splash; other skins only have art if listed here. Anything without art is drawn procedurally.
+  SF.ART = {
+    heroes: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska'],
+    skins: ['kaida_solar', 'nyx_bloodmoon', 'rhea_dawn'],
+    key: 'assets/art/key-art.webp'
+  };
+  SF.artFor = (heroId, skinId) => {
+    if (skinId && SF.ART.skins.includes(skinId)) return `assets/art/skins/${skinId}.webp`;
+    if ((!skinId || skinId === SF.defaultSkin(heroId)) && SF.ART.heroes.includes(heroId)) return `assets/art/heroes/${heroId}.webp`;
+    return null;
+  };
+
   // ---- Economy -----------------------------------------------------------
   // Real-money prices are USD tiers that map to App Store price points.
   SF.GEM_PACKS = [

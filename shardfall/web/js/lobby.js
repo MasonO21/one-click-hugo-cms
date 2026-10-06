@@ -25,8 +25,23 @@
     }
   }
   const heroCanvas = (heroId, skinId) => `<canvas data-hero="${heroId}" data-skin="${skinId}"></canvas>`;
+  // Splash art where it exists, otherwise the drawn crystal hero. A missing or broken image falls back too.
+  const heroArt = (heroId, skinId, cls = '') => {
+    const src = SF.artFor(heroId, skinId);
+    return src ? `<img class="art ${cls}" src="${src}" alt="" data-hero="${heroId}" data-skin="${skinId}" decoding="async">` : heroCanvas(heroId, skinId);
+  };
+  function artFallback(img) {
+    const c = document.createElement('canvas');
+    c.dataset.hero = img.dataset.hero; c.dataset.skin = img.dataset.skin;
+    img.replaceWith(c);
+    paintCanvases(c.parentElement);
+  }
   function paintCanvases(root) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
+    root.querySelectorAll('img.art[data-hero]').forEach(img => {
+      if (img.complete && img.naturalWidth === 0) artFallback(img);
+      else img.addEventListener('error', () => artFallback(img), { once: true });
+    });
     root.querySelectorAll('canvas[data-hero]').forEach(c => {
       const w = c.clientWidth || 64, h = c.clientHeight || 64;
       c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
@@ -142,6 +157,7 @@
       }
       return `<div class="home">
         <div class="stage" data-act="go" data-v="heroes" data-id="${id}" role="button" tabindex="0" aria-label="Change hero">
+          ${mode !== 'brawl' && SF.artFor(id, sk.id) ? `<img class="stage-art" id="stageArt" src="${SF.artFor(id, sk.id)}" alt="">` : ''}
           <canvas id="stageCanvas" aria-hidden="true"></canvas>
           <div class="stage-info">
             <p class="eyebrow">${h.role}</p>
@@ -173,7 +189,7 @@
         const owned = S.owns.hero(h.id), free = rot.includes(h.id);
         const status = owned ? (S.d.selected === h.id ? '<span class="tag sel-tag">Selected</span>' : '<span class="tag">Owned</span>')
           : free ? '<span class="tag" style="color:var(--good)">Free this week</span>' : `<span class="chip"><i class="ico ico-coin"></i>${fmt(h.price.coins)}</span>`;
-        return `<button class="tile ${sel === h.id ? 'sel' : ''}" data-act="pickHero" data-id="${h.id}">${heroCanvas(h.id, S.skinOf(h.id))}
+        return `<button class="tile ${sel === h.id ? 'sel' : ''}" data-act="pickHero" data-id="${h.id}">${heroArt(h.id, S.skinOf(h.id))}
           <h3>${h.name}</h3><div class="meta"><span>${h.role}</span>${status}</div>${masteryBadge(h.id)}</button>`;
       }).join('');
       return `<div class="page"><div class="page-head"><h2>Heroes</h2><p class="muted">Free this week: ${rot.map(id => SF.HERO[id].name).join(' and ')}</p></div>
@@ -198,7 +214,7 @@
             <ul><li>Abyssal Herald Orin right away</li><li>Obsidian Howl Drace at tier 15</li><li>Stormcrown Sylva at tier 30</li><li>+20% pass XP from every match</li><li>280 gems back across the season</li></ul>
             <button class="btn gem" data-act="go" data-v="pass"><i class="ico ico-gem"></i>${SF.PASS.elitePrice}</button></div>` : ''}
           <div class="feature"><p class="eyebrow" style="color:var(--gold)">Legendary skin</p><h3>${leg.name}</h3>
-            <div style="height:150px">${heroCanvas('kaida', leg.id).replace('<canvas', '<canvas style="width:100%;height:100%"')}</div>
+            <div class="feature-art">${heroArt('kaida', leg.id)}</div>
             ${S.owns.skin(leg.id) ? '<span class="tag">Owned</span>' : `<button class="btn gem" data-act="buySkin" data-id="${leg.id}"><i class="ico ico-gem"></i>${leg.price.gems}</button>`}</div>
         </div>`;
       } else if (shopTab === 'skins') {
@@ -419,7 +435,7 @@
     else if (s.lock === 'ranked') action = `<button class="btn sm ghost" data-act="go" data-v="profile" style="color:#ff9d5c">Ranked reward</button>`;
     else if (s.lock === 'event') action = `<button class="btn sm ghost" data-act="go" data-v="event" style="color:#7cc8ff">Event</button>`;
     else action = `<button class="btn sm gem" data-act="buySkin" data-id="${s.id}"><i class="ico ico-gem"></i>${s.price.gems}</button>`;
-    return `<div class="tile">${heroCanvas(s.hero, s.id)}${showHero ? `<h3>${s.name}</h3><div class="meta"><span>${SF.HERO[s.hero].name}</span>` : `<h4>${s.name}</h4><div class="meta">`}
+    return `<div class="tile">${heroArt(s.hero, s.id)}${showHero ? `<h3>${s.name}</h3><div class="meta"><span>${SF.HERO[s.hero].name}</span>` : `<h4>${s.name}</h4><div class="meta">`}
       <span class="tier" style="color:${SF.SKIN_TIERS[s.tier].color}">${s.tier}</span></div>${action}</div>`;
   }
   function oddsTable() {
@@ -432,6 +448,8 @@
   function render(scrollTop) {
     const v = $('view');
     v.innerHTML = VIEWS[view]();
+    const sa = $('stageArt');
+    if (sa) sa.addEventListener('error', () => sa.remove(), { once: true });
     if (scrollTop) v.scrollTop = 0;
     paintCanvases(v);
     refreshTop();
@@ -467,7 +485,7 @@
   }
   function showLoading(title, blue, red, meIndex, done) {
     const el = $('loading');
-    const card = (s, team, me, i) => `<div class="lcard" style="--c:${team === 0 ? 'var(--ally)' : 'var(--enemy)'};animation-delay:${i * 0.08}s">${heroCanvas(s.id, s.skin)}<b>${SF.HERO[s.id].name}</b><span>${me ? 'You' : esc(s.name)}</span>${me ? masteryBadge(s.id) : ''}</div>`;
+    const card = (s, team, me, i) => `<div class="lcard" style="--c:${team === 0 ? 'var(--ally)' : 'var(--enemy)'};animation-delay:${i * 0.08}s">${heroArt(s.id, s.skin)}<b>${SF.HERO[s.id].name}</b><span>${me ? 'You' : esc(s.name)}</span>${me ? masteryBadge(s.id) : ''}</div>`;
     el.innerHTML = `<h2>${title}</h2>
       <div class="vs"><div class="side">${blue.map((s, i) => card(s, 0, i === meIndex, i)).join('')}</div>
       <span class="vsmark">VS</span><div class="side">${red.map((e, i) => card(e, 1, false, i + 3)).join('')}</div></div>
@@ -776,8 +794,9 @@
       bg.g.save(); bg.g.translate(s.x * bg.w, s.y * bg.h); bg.g.rotate(s.r); bg.g.globalAlpha = s.a; bg.g.fillStyle = s.c;
       bg.g.beginPath(); bg.g.moveTo(0, -s.s); bg.g.lineTo(s.s * 0.5, 0); bg.g.lineTo(0, s.s * 0.8); bg.g.lineTo(-s.s * 0.5, 0); bg.g.closePath(); bg.g.fill(); bg.g.restore();
     }
-    const sc = $('stageCanvas');
-    if (sc && view === 'home') {
+    const sc = $('stageCanvas'), art = $('stageArt');
+    if (art && art.complete && art.naturalWidth > 0) { if (sc && sc.width) { sc.width = 0; } }
+    else if (sc && view === 'home') {
       const { g, w, h } = fit(sc);
       g.clearRect(0, 0, w, h);
       const brawl = S.d.mode === 'brawl';

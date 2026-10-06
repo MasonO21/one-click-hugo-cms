@@ -9,7 +9,8 @@ An original mobile MOBA: fast 3v3 battles with crystal heroes. It's built to fee
 | `server/` | Online game server: matchmaking, authoritative matches, accounts, cloud save, leaderboard ([server/README.md](server/README.md)) |
 | `docs/APP_STORE.md` | **Step-by-step release checklist** for the App Store and Google Play |
 | `tests/`, `server/test/` | Automated tests. CI runs them on every push (`.github/workflows/shardfall.yml`) |
-| `tools/` | Icon/splash generator, local server, platform check |
+| `art/manifest.json` | The Higgsfield splash and key art: each image's job id and source URL |
+| `tools/` | Icon/splash generator, art downloader (`fetch-art.mjs`), local server, platform check |
 
 ```bash
 cd shardfall
@@ -69,6 +70,13 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 - **Stormfront Festival:** an event that pays tokens from every match, spent in an exchange with an event-exclusive skin.
 - **Profile:** rank and rank rewards, career stats, most-played heroes, match history, and 13 achievements that pay gems.
 - **Settings:** a monthly spending limit, purchase history, cloud save (online) and in-app account deletion.
+
+**Art.** The lobby, hero roster, skin shop and loading screen use illustrated splash art made with Higgsfield:
+- one portrait for each of the 10 heroes
+- portraits for 3 Legendary skins
+- wide key art behind the menus
+
+Run `node tools/fetch-art.mjs` to download it into `web/assets/art/` as WebP, about 1 MB in total. Any picture without art, or whose file is missing, falls back to the drawn crystal hero, so the game always works. Matches keep the drawn crystals on purpose, because they stay readable at small sizes. Check Higgsfield's terms for commercial use before shipping.
 
 ## 3. Monetization design
 

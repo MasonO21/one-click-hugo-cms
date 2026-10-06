@@ -1,0 +1,125 @@
+{
+  "about": "Splash and key art generated with Higgsfield (model gpt_image_2_5, high quality). Kaida's job was the style reference for every other image. Run `node tools/fetch-art.mjs` to download and convert these into web/assets/art/.",
+  "assets": [
+    {
+      "file": "heroes/kaida.webp",
+      "job": "f2d6b790-59b9-4dd1-82c4-f43a4f5f61ba",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261005_235954_f2d6b790-59b9-4dd1-82c4-f43a4f5f61ba.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/orin.webp",
+      "job": "540e85fd-b742-4fb3-8c56-b3026197e244",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000121_540e85fd-b742-4fb3-8c56-b3026197e244.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/sylva.webp",
+      "job": "41d163d6-8c33-4de4-ac03-d39d5fcc439d",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000120_41d163d6-8c33-4de4-ac03-d39d5fcc439d.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/brakka.webp",
+      "job": "1c63afb8-bcc2-4d3a-91fa-d47c9bb0f064",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000121_1c63afb8-bcc2-4d3a-91fa-d47c9bb0f064.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/nyx.webp",
+      "job": "b87d5740-cccc-4703-a335-f71f4153cf91",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000121_b87d5740-cccc-4703-a335-f71f4153cf91.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/lumen.webp",
+      "job": "7313c4d4-90e4-49d6-92fc-4bf2e8963b1f",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000120_7313c4d4-90e4-49d6-92fc-4bf2e8963b1f.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/vexa.webp",
+      "job": "244418f2-706e-4a62-b816-12ea5d65d888",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000119_244418f2-706e-4a62-b816-12ea5d65d888.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/drace.webp",
+      "job": "02010671-2977-4cf1-a29b-4d145308148b",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000120_02010671-2977-4cf1-a29b-4d145308148b.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/rhea.webp",
+      "job": "bd533f1c-1979-4a63-b7c7-d0bd09a7420d",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000122_bd533f1c-1979-4a63-b7c7-d0bd09a7420d.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "heroes/oska.webp",
+      "job": "ea5d38d0-93cf-4824-a871-b8e656e1f325",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000120_ea5d38d0-93cf-4824-a871-b8e656e1f325.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/kaida_solar.webp",
+      "job": "5412be9a-464e-4ace-b526-c6a400f1f608",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000121_5412be9a-464e-4ace-b526-c6a400f1f608.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/nyx_bloodmoon.webp",
+      "job": "30668093-b4b7-4cb8-8890-22b64872d486",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000120_30668093-b4b7-4cb8-8890-22b64872d486.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "skins/rhea_dawn.webp",
+      "job": "7490676c-f9b6-4f64-aac6-3b297e3162d9",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000119_7490676c-f9b6-4f64-aac6-3b297e3162d9.png",
+      "width": 600,
+      "height": 800,
+      "quality": 82
+    },
+    {
+      "file": "key-art.webp",
+      "job": "12a133a5-3f03-4a97-86de-9815293724f8",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000131_12a133a5-3f03-4a97-86de-9815293724f8.png",
+      "width": 1920,
+      "height": 1080,
+      "quality": 80
+    },
+    {
+      "file": "key-art-small.webp",
+      "job": "12a133a5-3f03-4a97-86de-9815293724f8",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261006_000131_12a133a5-3f03-4a97-86de-9815293724f8.png",
+      "width": 960,
+      "height": 540,
+      "quality": 78
+    }
+  ]
+}
