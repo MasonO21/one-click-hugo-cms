@@ -1003,7 +1003,7 @@ errs = await session(async (page) => {
     out.shrine = { idle, early, pending: !!cards.length, cards: cards.length, frozen, ratio: +(r.stats.speed / speed0).toFixed(3), resumed: !r.levelPending, chip: document.querySelector('.hud-buffs .buff b')?.textContent, events: r.counters.events };
     r.recomputeStats(); out.shrine.survivesRecompute = +(r.stats.speed / speed0).toFixed(3); // a level-up recomputes stats: the blessing stays
     step(r, 60); out.shrine.expired = { ratio: +(r.stats.speed / speed0).toFixed(3), chips: document.querySelectorAll('.hud-buffs .buff').length, left: r.events.buffs.length };
-    // the other blessings: Soul Feast doubles XP, Grave Call +20 pp Raise Chance, Legion Wrath ×1.5 minion damage
+    // the other blessings: Soul Feast doubles XP, Open Graves +20 pp Raise Chance, Legion Wrath ×1.5 minion damage
     const raise0 = r.stats.raise, md0 = r.stats.minionDmg;
     r.events.bless('feast'); r.events.bless('call'); r.events.bless('wrath');
     const xp0 = r.xp; Object.getPrototypeOf(r).addXp.call(r, 1);
@@ -1057,7 +1057,7 @@ errs = await session(async (page) => {
   });
   check('event shrine: 2.5 s inside pauses on a 1-of-3 blessing pick', !c.shrine.idle.pending && c.shrine.idle.hold === 0 && !c.shrine.early && c.shrine.cards === 3 && c.shrine.frozen && c.shrine.resumed, JSON.stringify(c.shrine));
   check('event shrine: the blessing applies (+30% speed, HUD chip) and expires after 60 s', c.shrine.ratio === 1.3 && c.shrine.survivesRecompute === 1.3 && c.shrine.chip === 'Wraith Stride' && c.shrine.events === 1 && c.shrine.expired.ratio === 1 && c.shrine.expired.chips === 0 && c.shrine.expired.left === 0, JSON.stringify(c.shrine));
-  check('event shrine: Soul Feast ×2 XP, Grave Call +20 pp, Legion Wrath ×1.5; ignored, it lapses', c.blessings.xp === 2 && c.blessings.raise === 0.2 && c.blessings.minion === 1.5 && !c.lapse.cur && c.lapse.buffs === 0 && c.lapse.events === 0, JSON.stringify({ b: c.blessings, lapse: c.lapse }));
+  check('event shrine: Soul Feast ×2 XP, Open Graves +20 pp, Legion Wrath ×1.5; ignored, it lapses', c.blessings.xp === 2 && c.blessings.raise === 0.2 && c.blessings.minion === 1.5 && !c.lapse.cur && c.lapse.buffs === 0 && c.lapse.events === 0, JSON.stringify({ b: c.blessings, lapse: c.lapse }));
   check('event coffin: breaking it releases 20 foes and a chest-less mini-elite', c.coffin.still && c.coffin.drawn === 0 && c.coffin.state === 'burst' && c.coffin.after === 'wave' && c.coffin.wave === 21 && c.coffin.spawned === 21 && c.coffin.mini && c.coffin.banner === 'THE COFFIN BURSTS', JSON.stringify(c.coffin));
   check('event coffin: clearing the wave (or 20 s) gives a Relic Chest; unbroken it lapses', c.coffin.reward.notYet === 'wave' && c.coffin.reward.state === 'gone' && c.coffin.reward.chests === 1 && c.coffin.reward.flying && c.coffin.reward.opened === 1 && c.coffin.reward.events === 1 && Math.abs(c.coffin.timeout - 20) < 0.1 && !c.coffin.lapse.cur && !c.coffin.lapse.alive && c.coffin.lapse.events === 0, JSON.stringify(c.coffin));
   check('events: placed 12 m out, never on vents, ice or burning ground', c.place.ch2.n >= 30 && c.place.ch3.n >= 30 && !c.place.ch2.bad && !c.place.ch3.bad && c.place.ch2.d[0] > 11.9 && c.place.ch3.d[1] < 12.1 && c.place.burn, JSON.stringify(c.place));

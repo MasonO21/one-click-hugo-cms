@@ -150,7 +150,7 @@ export const BLESSINGS = {
   wrath:  { name: 'Legion Wrath',  icon: 'fang',   desc: 'Minions deal +50% damage',             minionDmg: 1.5 },
   stride: { name: 'Wraith Stride', icon: 'wing',   desc: '+30% move speed',                      speed: 1.3 },
   tide:   { name: 'Soul Tide',     icon: 'magnet', desc: 'Every shard and treasure flies to you', magnet: true },
-  call:   { name: 'Grave Call',    icon: 'raise',  desc: '+20% Raise Chance',                    raise: 0.2 },
+  call:   { name: 'Open Graves',   icon: 'raise',  desc: '+20% Raise Chance',                    raise: 0.2 },
 };
 
 // ---------------------------------------------------------------- Chapters
