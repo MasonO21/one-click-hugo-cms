@@ -13,7 +13,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions (one minion type), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, minion variants (§4.2), overflow fade, Nova wind-up and invulnerability, boss phases and sealed arena (§6), enemy special moves and chapter modifiers (§5, §8), adaptive music stems (§15), accessibility options (§17) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400, Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova, swarm rings, 4 elites with Relic Chests, Gravemaw (slam, ember rings, summons, enrage at 50%), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), four first-run hints | Scripted tutorial run, overflow fade, Nova wind-up, boss phases and sealed arena (§6), adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 4 heroes (1★–5★), 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | — | Blood Moon, Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
@@ -111,28 +111,26 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 - **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating.
 - Every kill rolls Raise Chance, whether the Shepherd, a minion, the Nova or a Bloater blast made the kill. Elites can be raised. The Bloater that explodes does not rise, and Gravemaw cannot be raised (killing him adds 30 minions instead).
 - **Legion cap:** base 30. Flat bonuses: the Legion Cap skill (+10 per level, +50 at Lv5), the Dominion talent (+2 per level, +40 at L20), the Bone Idol relic (+3 to +18, up to +42 at Legendary Lv10). Mordrake multiplies the total by 1.25, then it is rounded. **Technical hard ceiling: 400 minions** on every device, for performance and leaderboard fairness.
-- Kills only roll while the legion is below the cap; at the cap nothing happens. *(Planned: a successful roll at the cap heals the weakest minion by 50%.)*
-- **Minions (build):** one minion type, a soul wisp in the hero's legion colour (§14). Level = the Shepherd's in-run level, c = chapter.
+- Kills only roll while the legion is below the cap. A successful roll **at** the cap heals the weakest minion by 50% of its max HP instead.
+- **Minion variants:** every kill rises as **its own kind**, recoloured in the hero's legion colour. Base stats (Level = the Shepherd's in-run level, c = chapter):
 
-| Stat | Value |
+| Stat | Base value |
 |---|---|
 | HP | 34 × (1 + 0.08(level − 1)) × (1 + 0.4(c − 1)) |
 | Damage per hit | 7 × hero damage multiplier (stars, Might talent, Crown of Thorns) × Nyx 1.2 × (1 + 0.2 × Minion Fury level) × (1 + 0.04(level − 1)) × (1 + 0.45(c − 1)), ±15% per hit. The in-run Might skill does not apply. No crits. |
-| Attack interval | 0.5 s, on contact |
 | Speed | 9.5 m/s (Nyx +20%); 15% faster while returning to formation |
-| Damage taken | 30% of the target's damage per hit (50% against Gravemaw). Boss slams kill every minion in the slam radius. Bloater blasts deal 60. |
+| Damage taken | Each melee hit costs the minion 30% of its target's contact damage (50% against Gravemaw). Boss slams kill every minion in the slam radius. Bloater blasts deal 60. |
 
-- **Planned minion variants** (not in the build). Minion types inherit the silhouette of what they were, recoloured in the hero's legion colour:
-
-| Raised from | Minion | HP | Damage / hit | Attack interval | Speed (m/s) | Special |
+| Raised from | Minion | HP | Damage | Attack | Speed | Special |
 |---|---|---|---|---|---|---|
-| Husk | Shade | 30 | 3 | 1.0 s | 4.0 | — |
-| Ghoul | Wisp Runner | 15 | 2 | 0.6 s | 6.0 | Leashes farther (9 m) |
-| Brute | Bulwark | 120 | 6 | 1.4 s | 3.0 | Taunts enemies within 3 m |
-| Cinder Witch | Soul Witch | 25 | 5 (orb, 6 m range) | 1.5 s | 3.5 | Ranged |
-| Bloater | Soul Bomb | 20 | 30 AoE (2 m), once | — | 4.5 | Runs into the densest cluster and explodes |
+| Husk (and gate / boss souls) | **Shade** (the soul wisp) | ×1 | ×1 | 0.5 s | ×1 | — |
+| Ghoul | **Wisp Runner** | ×0.55 | ×0.75 | 0.32 s | ×1.3 | Hunts 3 m farther out |
+| Brute | **Bulwark** | ×3 | ×1.0 | 1.1 s | ×0.7 | **Taunts**: enemies within 3 m attack it instead of the Shepherd (Bloaters ignore taunts). A bodyguard: it guards a 2.3 m ring and only fights foes within 5 m of the Shepherd |
+| Cinder Witch | **Soul Witch** | ×0.8 | ×1.1 per orb | 1.1 s | ×0.9 | Ranged: a homing soul orb (12 m/s) at targets within 6 m, holding 4 m away |
+| Bloater | **Soul Bomb** | ×0.7 | 6 × minion damage in 2.4 m, once | — | ×1.15 | Dives into the densest cluster within 8 m (3+ foes; any after 5 s idle; elites and Gravemaw weigh double), flashes 0.25 s, detonates and leaves the legion. Its kills roll raises |
+| Any elite | **Champion** of its kind | ×3 more | ×2 more | — | — | ×1.35 size, gold rim and crown spark |
 
-- **AI:** idle minions orbit the player in up to 5 rings of 12 (radii 1.7 / 2.45 / 3.2 / 3.95 / 4.7 m, alternating direction). Every 0.25–0.45 s an idle minion looks for the nearest enemy within 6.5 m of itself that is inside the 9 m leash around the player. It drops the target when it dies or moves more than 12 m from the player. *(Planned: at most 24 minions engage a boss at once.)*
+- **AI:** idle minions orbit the player in up to 5 rings of 12 (radii 1.7 / 2.45 / 3.2 / 3.95 / 4.7 m, alternating direction). Every 0.25–0.45 s an idle minion looks for the nearest enemy within 6.5 m of itself that is inside the 9 m leash around the player. It drops the target when it dies or moves more than 12 m from the player. At most 24 minions engage Gravemaw at once; the rest fight adds or orbit.
 
 ### 4.3 Soul Gates
 
@@ -472,7 +470,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 | 5 Crimson Throne | #1a0608 | Blood red #c8102e | Enemy ember shifted to orange to avoid blending with red |
 
 - **Readability:** strong silhouettes, an emissive core on every unit, additive particles, screen shake (scalable), 40–80 ms hit-stop on elite kills and the Nova wind-up. Enemy telegraphs are ground decals that fill from the edge inward.
-- **Minions:** one instanced soul-wisp mesh with particle trails in the build. *(Planned: the same instanced meshes as their source enemy, cyan with a soft trail; at 300+ minions, trails switch to a shared ribbon per ring for performance.)*
+- **Minions:** Shades are instanced soul wisps with particle trails. Every other variant is a **spectral ghost of its source enemy's silhouette** in the legion colour: an opaque emissive body with a hot rim, a ripple running up the body and a tail that dissolves into the ground, plus a halo glow sprite and a trail (one instanced mesh per variant). Champions add a gold rim, eyes and halo. *(Planned: at 300+ minions, trails switch to a shared ribbon per ring for performance.)*
 - **UI:** obsidian panels with cyan rune trim. Premium currency and offers use gold. Display font is a gothic serif (e.g. Cinzel); body font is a clean sans (e.g. Inter). Numbers on gates and legion count are huge and outlined.
 
 ## 15. Audio direction
