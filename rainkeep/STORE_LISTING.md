@@ -30,12 +30,12 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 2988 characters
+## Description (4,000 max) · 3275 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
 
-Raise your Rainwyrm from a thirsty Hatchling to a Primordial wyrm that trails its own rain cloud. Dig the wells that keep it watered, choose how hard it mists, and watch it grow through seven forms in full 3D. At its Ascension, pick the storm it will carry for good.
+Raise your Rainwyrm from a thirsty Hatchling to a Skyriver, a river that flies. Dig the wells that keep it watered, choose how hard it mists, and watch it grow through nine forms in full 3D. At its Ascension, pick the storm it will carry for good.
 
 SURVIVAL THAT STAYS REAL
 • Water is life. Your people drink it and your wyrm breathes it. Let the wells run dry and the wyrm sleeps, the heat pours in and families leave.
@@ -45,21 +45,23 @@ SURVIVAL THAT STAYS REAL
 • Call the Rain. Your wyrm can summon a shower that fills the wells, cools the keep and calms a sandstorm.
 
 BUILD YOUR KEEP IN 3D
-• Twelve buildings around the wyrm's spring, from Deep Wells and Date Groves to the Archive of Rains and the Caravan Hall, each changing shape as it levels up.
+• Thirteen buildings around the wyrm's spring, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
 • Watch your villagers carry water jars to work, camels circle the walls and lanterns come on at night. Orbit and zoom around your keep.
-• Assign workers, research ten technologies and guard your stores against raiders.
+• Assign workers, research twelve technologies and guard your stores against raiders.
+• Light the Sunsteel Forge and forge the Warden's Gear: six pieces, five tiers, and every squad you send out gets stronger.
 • Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms. Every choice costs something and pays off in its own way.
 • Trade with merchant caravans that camp by the gate, swapping what you have too much of for what you're short on.
 
 HEROES WITH A JOB AT HOME
-• Recruit 18 illustrated heroes across three classes: Shieldbearers, Dune Archers and Camel Lancers.
+• Recruit 22 illustrated heroes across three classes: Shieldbearers, Dune Archers and Camel Lancers.
 • Station heroes as Stewards to boost a building, then lead them into battle.
 • Recruitment odds are always shown, with a guaranteed Legendary within 40 recruits.
 
 CROSS THE DUNES
 • Send caravans to gather stone, dates, water and copper.
 • Hunt beasts, burn Scorpion camps, and explore ruins where your choices decide what your scouts bring home.
-• Push through six chapters of story, from the Salt Flats to the Sunheart, then keep pushing the endless Burning Line.
+• Push through ten chapters of story in two acts: from the Salt Flats to the Sunheart, then through the floods and salt marshes of The Long Rains to the Ember Throne.
+• Climb the Mirage Spire, a tower where every floor has its own twist, and duel rival wardens up a ladder of a thousand ranks.
 
 RIDE WITH YOUR CARAVAN
 • Join a Caravan whose members speed up your upgrades, fund shared research and send gifts.
@@ -94,7 +96,7 @@ Take these in the iOS Simulator or on a device, then add a short caption band at
 | 3 | Heroes roster with Legendary portraits and stars | **18 heroes. Every one has a job at home.** |
 | 4 | The Dunes in 3D with caravans out to an oasis, a camp and a ruin beacon | **Cross the Dunes** |
 | 5 | Caravan tab with the Colossus raid open and the chat | **Ride with your Caravan against the Colossus** |
-| 6 | The evolution sheet showing the Primordial wyrm with its rain cloud | **Seven forms. One storm to choose.** |
+| 6 | The evolution sheet showing the Skyriver with its halo of living water | **Nine forms. One storm to choose.** |
 
 ## App Preview video (15-30 seconds)
 
