@@ -69,6 +69,19 @@
     } else KH.toast(`${S.wyrm.name} is delighted. +${d.pts} bond.`, 'good');
     KH.emit('wish', { id: d.id });
   }
+  // bond earned elsewhere (Cloud Run): level-ups announce themselves
+  KH.bondAdd = (n) => {
+    if (!S || !S.bond || !unlocked() || !n) return;
+    const before = level();
+    S.bond.pts += n;
+    const after = level();
+    S.stats.bond = after;
+    if (after > before) {
+      const p = B.perks[after - 1];
+      KH.toast(`Bond Lv ${after} with ${S.wyrm.name}!${p ? ` ${p.text}.` : ''}`, 'good');
+      KH.emit('bond', { level: after });
+    }
+  };
   function progress(n = 1) {
     const w = S.bond.wish;
     if (!w) return;

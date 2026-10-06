@@ -893,6 +893,7 @@ const DATA = {
       { id: 'build', text: '{n} likes to watch the builders work.', how: 'Finish an upgrade', ev: 'upgrade', need: 1, pts: 15 },
       { id: 'surplus', text: '{n} wants to see the keep busy.', how: 'Collect 3 surplus bubbles', ev: 'surplus', need: 3, pts: 15 },
       { id: 'forge', text: "{n} loves the forge's glow.", how: "Forge the Warden's Gear", ev: 'gear', need: 1, pts: 20, go: 'plot:forge', label: 'To the Forge', needs: (S) => S.lv.forge > 0 },
+      { id: 'fly', text: '{n} keeps looking up at the sky.', how: 'Take {n} on a Cloud Run', ev: 'cloudrun', need: 1, pts: 20, act: 'cloudrun', label: 'Fly out', needs: (S) => S.lv.wyrm >= 5 },
       { id: 'spire', text: '{n} wants to see the Mirage Spire shimmer.', how: 'Clear a Mirage Spire floor', ev: 'spire', win: true, need: 1, pts: 20, go: 'world', label: 'To the Spire', needs: (S) => S.stage > 30 },
     ],
     // a lasting perk for each bond level from 2 (bonus keys, read through KH.bonus)
@@ -908,6 +909,16 @@ const DATA = {
       { key: 'rainDur', val: 6, text: 'Call the Rain lasts 6 seconds longer' },
       { key: 'prod', val: 0.05, text: '+5% more production, and a bond-light over the spring' },
     ],
+  },
+
+  // ---------- Cloud Run: the Rainwyrm flies out to herd rain clouds home ----------
+  cloudRun: {
+    unlock: 5, // Rainwyrm level (a Drake can fly)
+    perDay: 3, // flights a day
+    seconds: 45, hearts: 3,
+    speed: [230, 430], // scroll speed at the start and the end of a flight (px per second)
+    // what a flight brings home: water per cloud (quarter-crates, scaled), Starglass per golden drop, bond per 5 clouds
+    water: 0.15, drop: 6, bondPer: 5,
   },
 
   // ---------- Channels: the water puzzle ----------
@@ -970,6 +981,7 @@ const DATA = {
     { id: 'smelt5k', text: 'Smelt 5,000 Sunsteel', stat: 'smelted', n: 5000, reward: { starglass: 300 } },
     { id: 'chan20', text: 'Clear 20 channel puzzles', stat: 'chanClears', n: 20, reward: { starglass: 120 } },
     { id: 'chan150', text: 'Earn 150 channel stars', stat: 'chanStars', n: 150, reward: { starglass: 300 } },
+    { id: 'cloud40', text: 'Herd 40 clouds in a single Cloud Run', stat: 'cloudBest', n: 40, reward: { starglass: 150 } },
     { id: 'bond5', text: 'Reach bond Lv 5 with your Rainwyrm', stat: 'bond', n: 5, reward: { starglass: 150 } },
     { id: 'bond10', text: 'Reach bond Lv 10 with your Rainwyrm', stat: 'bond', n: 10, reward: { starglass: 400 } },
   ],

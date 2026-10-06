@@ -637,3 +637,18 @@ textarea.code { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, m
 .floaty.skill { color: #8ff0ff; }
 .floaty.heal { color: #8fe08a; }
 .floaty.big { font-size: 30px; }
+
+/* Cloud Run */
+#cloudrun { position: absolute; inset: 0; z-index: 31; background: #d49a5c; touch-action: none; }
+#cloudrun[hidden] { display: none; }
+#cloudrun canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cr-hud { position: absolute; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; pointer-events: none; font-weight: 800; color: #fff; text-shadow: 0 2px 4px #0008; }
+.cr-clouds { font-size: 24px; }
+.cr-hearts { font-size: 22px; color: #ff6b7a; margin-left: auto; letter-spacing: 2px; }
+.cr-hearts i { font-style: normal; color: #00000044; }
+.cr-time { flex-basis: 100%; height: 8px; border-radius: 4px; background: #00000040; overflow: hidden; }
+.cr-time i { display: block; height: 100%; background: linear-gradient(90deg, #5fd0ff, #a8f0ff); }
+.cr-card { position: absolute; left: 16px; right: 16px; top: 50%; transform: translateY(-50%); padding: 18px; border-radius: 16px; text-align: center; background: var(--grain), linear-gradient(160deg, #3c2616, #1e1209); border: 1px solid #a8742c; box-shadow: 0 10px 40px #000a; display: grid; gap: 10px; }
+.cr-card[hidden], .cr-card:empty { display: none; }
+.cr-score b { display: block; font-size: 54px; color: #fff; line-height: 1; }
+.cr-score span { color: var(--dim); }
