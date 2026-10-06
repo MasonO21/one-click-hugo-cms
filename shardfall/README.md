@@ -162,7 +162,7 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 - **Commission art and audio.** The procedural crystal art and generated music are consistent and shippable, but professional assets raise conversion.
 - **Plan content.** Ship a new hero or skin line every 2–4 weeks, a new pass each season, and rotating festivals. In this genre, content cadence and spending on user acquisition drive revenue far more than any single feature.
 - **Animate the sprites.** Heroes are single still poses today. Next up are attack and skill pose frames for each hero (from the same Higgsfield references), swapped in while attacking or casting.
-- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins about 39–58%. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
+- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins 41–62%; Vexa is the one to watch at the top. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
 
 ## 5. File map
 
