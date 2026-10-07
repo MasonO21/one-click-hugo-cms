@@ -18,5 +18,7 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Android 12+ system splash: same dusk blue as capacitor.config.ts (BACKGROUND) and the web #boot screen -->
+        <item name="windowSplashScreenBackground">@color/nova_background</item>
     </style>
 </resources>

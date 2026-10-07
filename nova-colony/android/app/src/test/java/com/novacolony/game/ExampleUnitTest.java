@@ -1,4 +1,4 @@
-package com.getcapacitor.myapp;
+package com.novacolony.game;
 
 import static org.junit.Assert.*;
 

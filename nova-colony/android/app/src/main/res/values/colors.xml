@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep in sync with BACKGROUND in capacitor.config.ts (also the web page background in index.html). -->
+    <color name="nova_background">#1b2a3a</color>
+</resources>
