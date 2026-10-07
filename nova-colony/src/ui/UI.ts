@@ -623,6 +623,9 @@ export class UI {
     if (this.accSlow >= 0.25) {
       this.accSlow = 0;
       safe('ui slow', () => {
+        // the overlay roots are fixed layouts: undo any programmatic scroll (focus(), scrollIntoView, iOS
+        // keyboard) that would shift the whole HUD
+        for (const r of [this.ui, this.root]) if (r.scrollTop || r.scrollLeft) r.scrollTop = r.scrollLeft = 0;
         this.refreshBadges();
         this.guide.poll();
         if (this.toastQueue.length && !this.panels.anyModal()) for (const q of this.toastQueue.splice(0)) this.toasts.show(q.text, q.kind, q.icon);
