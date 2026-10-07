@@ -3,7 +3,7 @@
 // models. Serves the dev page thumbs.html with Vite on port 5343, renders every model in headless
 // Chromium (SwiftShader), then encodes the straight-alpha RGBA dumps to WebP with Pillow.
 //
-// Usage: npm run bake:thumbs [-- --only id,id,… --sheet <dir> --out <dir> --no-blob --quality 85]
+// Usage: npm run bake:thumbs [-- --only id,id,… --sheet <dir> --out <dir> --no-blob --quality 85 --size 192]
 //   --only    bake a subset (stale files are only pruned on a full bake)
 //   --sheet   also write labelled contact sheets (light card + dark HUD) into <dir>
 import fs from 'node:fs';
@@ -16,13 +16,13 @@ import { chromium } from 'playwright';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 5343;
-const SIZE = 192;
-
 const argv = process.argv.slice(2);
 const flag = (name) => {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
 };
+// --size renders bigger sources (e.g. 512 for art references); the shipped icons are 192
+const SIZE = Number(flag('--size') ?? 192);
 const only = flag('--only') ? new Set(flag('--only').split(',').filter(Boolean)) : null;
 const sheet = flag('--sheet') ? path.resolve(flag('--sheet')) : null;
 const out = path.resolve(flag('--out') ?? path.join(root, 'public', 'art'));

@@ -49,6 +49,14 @@ Toasts and the world tooltip accept an art URL (anything starting with `art/`) i
 **Deliberately still emoji:** floating "+3 🪵" numbers over the world, the live "Now: +3 🪵/min" line in the building
 inspector, the "Built X!" floating text, navigation glyphs (dock/rail/menu, the build-category tabs, the 🚙 "Open garage" button), empty equipment-slot glyphs and RP / XP / boost icons.
 
+## Painted building icons (paused)
+The build-menu icons in `public/art/buildings` + `public/art/vehicles` are baked from the in-game models
+(`npm run bake:thumbs`; `--size 512` renders bigger sources). A painted pass — each render repainted with Higgsfield
+`gpt_image_2_5` using the render as image reference, so the design still matches the model — looked clearly richer and
+was started, but stopped after 15 of 156 when the Higgsfield balance ran out. Progress, prompt template, reference URLs
+and post-processing are in `art/source/painted-building-icons.json`. Ship them only once all 156 are done (no mixed
+styles); re-run the painted pass for any model that changes afterwards.
+
 ## Style guide (for new art)
 Stylized low-poly 3D, flat-shaded chunky shapes, soft warm lighting, bright saturated but cozy palette,
 chibi characters with big friendly eyes; aliens are cute-creepy, never gory. Icons/portraits: three-quarter
