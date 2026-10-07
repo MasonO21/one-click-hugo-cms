@@ -109,6 +109,22 @@ export function wornColor(c: THREE.Color, amount: number): THREE.Color {
   return c;
 }
 
+/**
+ * Signature of everything the worn-ground field depends on — each building's def, min cell and
+ * rotation — and nothing else: a break / repair / level / status change bumps buildingsVersion but
+ * must not recolour the whole height field (it did, once per broken or repaired building in a raid).
+ */
+export function wearSignature(list: readonly { def: string; x: number; z: number; rot: number }[]): number {
+  let h = (list.length * 7919) | 0;
+  for (let i = 0; i < list.length; i++) {
+    const b = list[i];
+    let d = 0;
+    for (let k = 0; k < b.def.length; k++) d = (d * 31 + b.def.charCodeAt(k)) | 0;
+    h = (h * 31 + b.x * 131 + b.z * 137 + b.rot * 7 + d) | 0;
+  }
+  return h;
+}
+
 interface Chunk {
   mesh: THREE.Mesh;
   /** Vertex grid indices (vx0, vz0, count per side). */
@@ -334,13 +350,7 @@ export class Terrain {
 
   /** Cheap signature of what changes the wear field (footprints only, not status / hp). */
   private wearSignature(): number {
-    const list = this.ctx.game.state.buildings.list;
-    let h = (list.length * 7919 + this.ctx.game.derived.buildingsVersion * 104729) | 0;
-    for (let i = 0; i < list.length; i++) {
-      const b = list[i];
-      h = (h * 31 + b.x * 131 + b.z * 137 + b.rot * 7 + b.def.length * 17) | 0;
-    }
-    return h;
+    return wearSignature(this.ctx.game.state.buildings.list);
   }
 
   private buildChunks(perSide: number, step: number): void {

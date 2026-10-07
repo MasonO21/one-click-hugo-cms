@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Materials, patchLambert, LAMBERT_WRAP, NIGHT_DESAT } from '../src/render/core/materials';
-import { wornColor } from '../src/render/scene/Terrain';
+import { wornColor, wearSignature } from '../src/render/scene/Terrain';
 import { buildingTint } from '../src/render/actors/Buildings';
 import { natureTint } from '../src/render/actors/Nature';
 
@@ -105,5 +105,32 @@ describe('shading model', () => {
     // not all the same
     expect(new Set(Array.from({ length: 64 }, (_, i) => buildingTint(i).getHex())).size).toBeGreaterThan(3);
     expect(new Set(Array.from({ length: 64 }, (_, i) => natureTint(i).getHex())).size).toBeGreaterThan(5);
+  });
+});
+
+describe('worn ground signature (QA3: raids recoloured the whole terrain per broken / repaired building)', () => {
+  const colony = () => [
+    { def: 'command_center', x: 127, z: 127, rot: 0, status: 'active', hp: 100, level: 1 },
+    { def: 'shelter', x: 131, z: 127, rot: 1, status: 'active', hp: 50, level: 1 },
+    { def: 'wall', x: 120, z: 120, rot: 0, status: 'active', hp: 30, level: 1 },
+  ];
+  it('ignores status, hp and level', () => {
+    const a = colony();
+    const b = colony();
+    b[1].status = 'damaged';
+    b[1].hp = 0;
+    b[2].level = 3;
+    expect(wearSignature(b)).toBe(wearSignature(a));
+  });
+  it('changes when a footprint is added, moved, rotated or replaced by another building', () => {
+    const base = wearSignature(colony());
+    const moved = colony();
+    moved[1].x++;
+    const turned = colony();
+    turned[1].rot = 2;
+    const swapped = colony();
+    swapped[1].def = 'campfire';
+    const more = [...colony(), { def: 'campfire', x: 140, z: 140, rot: 0, status: 'building', hp: 1, level: 1 }];
+    for (const l of [moved, turned, swapped, more]) expect(wearSignature(l)).not.toBe(base);
   });
 });
