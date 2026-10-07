@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { World } from './world.js';
 import { makeCharMaterial, GlowSprites } from '../engine/materials.js';
 import { heroGeometry } from '../engine/models.js';
+import { heroModel, loadHeroModel, hasHeroModel } from '../engine/heromodels.js';
 import { Particles } from '../engine/particles.js';
 import { CHAPTERS, HEROES, SKINS } from './data.js';
 import { makeRuneCircle } from './fxmeshes.js';
@@ -18,6 +19,8 @@ export class Showcase {
     this.world = new World(this.scene, CHAPTERS[0], { maxLights: 12 });
     this.center = new THREE.Vector3();
     this.mat = makeCharMaterial({ rim: 0x4ef2ff, emit: 2.6, anim: 0, ambient: 0x2a3550, key: 0x9aaad0 });
+    this.pmat = null; // the painted-model material, made with the first model that loads
+    this.ownGeo = true; // the procedural geometry is ours to dispose; painted ones are shared
     this.hero = new THREE.Mesh(new THREE.BufferGeometry(), this.mat);
     this.scene.add(this.hero);
     this.circle = makeRuneCircle(2.2);
@@ -45,18 +48,38 @@ export class Showcase {
     const key = id + (skin ? skin.name : '');
     if (this.heroKey !== key) {
       this.heroKey = key;
-      this.hero.geometry.dispose();
-      this.hero.geometry = heroGeometry(id, skin ? skin.body : hero.body);
+      const mkey = skin ? (hasHeroModel(p.equippedSkin) ? p.equippedSkin : null) : id;
+      const ready = mkey && heroModel(mkey);
+      this.showModel(ready, id, skin ? skin.body : hero.body);
+      if (mkey && !ready) loadHeroModel(mkey).then((m) => { if (m && this.heroKey === key) this.showModel(m); });
       this.heroId = id;
       // arrival burst
       const c = new THREE.Color(color);
       this.particles.burst(0, 1, 0, 60, [c.r * 4, c.g * 4, c.b * 4], { speed: 5, life: 0.9, size: 0.35, up: 1.2 });
     }
     this.color.setHex(color);
-    this.mat.uniforms.uTint.value.setHex(color);
-    this.mat.uniforms.uRim.value.setHex(color);
-    this.mat.uniforms.uPLColor.value.setHex(color);
+    for (const m of [this.mat, this.pmat]) {
+      if (!m) continue;
+      m.uniforms.uTint.value.setHex(color); m.uniforms.uRim.value.setHex(color); m.uniforms.uPLColor.value.setHex(color);
+    }
     this.circle.material.uniforms.uColor.value.setHex(color);
+  }
+
+  /** Shows a painted model (`m` from heromodels.js), or the procedural one for hero `id` when there is none yet. */
+  showModel(m, id, body) {
+    if (this.ownGeo) this.hero.geometry.dispose();
+    if (m) {
+      if (!this.pmat) {
+        this.pmat = makeCharMaterial({ map: m.map, glow: m.glow, rim: 0x4ef2ff, emit: 2.6, anim: 0, ambient: 0xc4c6d2, key: 0xe2e4ee });
+        const u = this.mat.uniforms, v = this.pmat.uniforms;
+        v.uTint.value.copy(u.uTint.value); v.uRim.value.copy(u.uRim.value); v.uPLColor.value.copy(u.uPLColor.value);
+      }
+      this.pmat.uniforms.uMap.value = m.map;
+      this.pmat.uniforms.uGlow.value = m.glow;
+      this.hero.geometry = m.geometry; this.hero.material = this.pmat; this.ownGeo = false;
+    } else {
+      this.hero.geometry = heroGeometry(id, body); this.hero.material = this.mat; this.ownGeo = true;
+    }
   }
 
   setChapter(id) {
@@ -83,12 +106,12 @@ export class Showcase {
     this.t += dt;
     const t = this.t;
     this.world.update(this.center, t);
-    this.mat.uniforms.uTime.value = t;
+    this.hero.material.uniforms.uTime.value = t;
     this.hero.rotation.y = Math.sin(t * 0.4) * 0.5 + 0.2;
     this.hero.position.y = Math.sin(t * 1.6) * 0.04;
     this.circle.rotation.y = t * 0.25;
     this.circle.material.uniforms.uTime.value = t;
-    this.mat.uniforms.uPLPos.value.set(0.5, 2.0, 1.6);
+    this.hero.material.uniforms.uPLPos.value.set(0.5, 2.0, 1.6);
 
     const c = this.color;
     const g = this.glow;

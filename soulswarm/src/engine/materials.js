@@ -7,8 +7,12 @@ export const MAX_GROUND_LIGHTS = 24;
 
 // ---------------------------------------------------------------- characters (instanced or single)
 const charVert = /* glsl */`
+#ifdef USE_HEROMAP
+varying vec2 vUv;
+#else
 attribute vec3 aCol;
 attribute float aEmit;
+#endif
 #ifdef USE_INSTANCING
 attribute vec3 iTint;
 attribute float iFlash;
@@ -46,7 +50,12 @@ void main() {
   vec4 wp = m * vec4(p, 1.0);
   vWorld = wp.xyz;
   vN = normalize(mat3(m) * normal);
-  vCol = aCol; vEmit = aEmit; vTint = tint; vFlash = flash;
+  #ifdef USE_HEROMAP
+  vUv = uv; vCol = vec3(1.0); vEmit = 0.0;
+  #else
+  vCol = aCol; vEmit = aEmit;
+  #endif
+  vTint = tint; vFlash = flash;
   gl_Position = projectionMatrix * viewMatrix * wp;
 }`;
 
@@ -65,23 +74,45 @@ varying float vEmit;
 varying vec3 vTint;
 varying float vFlash;
 varying vec3 vWorld;
+#ifdef USE_HEROMAP
+uniform sampler2D uMap;
+uniform float uGlow;
+varying vec2 vUv;
+#endif
 void main() {
   vec3 N = normalize(vN);
   vec3 V = normalize(cameraPosition - vWorld);
   float lam = max(dot(N, uLightDir), 0.0);
   float hemi = N.y * 0.5 + 0.5;
+  #ifdef USE_HEROMAP
+  // painted hero texture: its own painted light is baked in, so the scene light only shapes it
+  vec3 base = texture2D(uMap, vUv).rgb;
+  vec3 lit = base * (uAmbient * (0.55 + 0.45 * hemi) + uKey * lam);
+  #else
   vec3 base = vCol;
   vec3 lit = base * (uAmbient * (0.5 + 0.8 * hemi) + uKey * lam);
+  #endif
   vec3 Lp = uPLPos - vWorld;
   float dp = max(length(Lp), 0.001);
   float att = clamp(1.0 - dp / max(uPLRadius, 0.001), 0.0, 1.0);
-  lit += base * uPLColor * att * att * (0.35 + max(dot(N, Lp / dp), 0.0)) * 2.2;
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.6); // pow of a negative is NaN on Apple GPUs; dot can exceed 1 by a rounding error
+  #ifdef USE_HEROMAP
+  // the painted colours lead: the hero's light and rim only accent them
+  lit += base * uPLColor * att * att * (0.35 + max(dot(N, Lp / dp), 0.0)) * 0.9;
+  lit += uRim * rim * 0.3;
+  #else
+  lit += base * uPLColor * att * att * (0.35 + max(dot(N, Lp / dp), 0.0)) * 2.2;
   lit += uRim * rim * 0.85;
+  #endif
   // aEmit: 0 = lit surface, 1 = glows in the instance tint, 2 = glows in its own vertex colour
   float e = min(vEmit, 1.0);
   vec3 ecol = vEmit > 1.5 ? vCol : vTint;
   vec3 col = mix(lit, ecol * uEmit, e);
+  #ifdef USE_HEROMAP
+  // bright, saturated paint (eyes, flames, glowing blades) glows into the bloom
+  float mx = max(base.r, max(base.g, base.b)), mn = min(base.r, min(base.g, base.b));
+  col += base * smoothstep(0.3, 0.75, mx) * smoothstep(0.45, 0.8, (mx - mn) / max(mx, 0.001)) * uGlow;
+  #endif
   col += vFlash * vec3(2.2, 2.1, 2.0);
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -101,7 +132,10 @@ export function makeCharMaterial(opts = {}) {
       uTint: { value: new THREE.Color(opts.tint ?? 0xffffff) },
       uFlash: { value: 0 },
       uAnim: { value: new THREE.Vector2(0, opts.anim ?? 0) },
+      uMap: { value: opts.map || null },
+      uGlow: { value: opts.glow ?? 2 },
     },
+    defines: opts.map ? { USE_HEROMAP: '' } : {},
     vertexShader: charVert,
     fragmentShader: charFrag,
   });

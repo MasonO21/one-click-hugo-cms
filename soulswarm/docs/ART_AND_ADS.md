@@ -207,3 +207,44 @@ The 32 lines total 612 KB. When and how the game plays them is in `GDD.md` §15.
 | `mordrake_greet` | I have died nine hundred times. Once more is nothing. | `a9c1d7bf-535c-4dc7-93ab-1d068f9e813f` |
 
 **Cost:** about 5 credits in total (32 lines and 2 re-takes at 0.15 credits each, plus casting previews). Adding a line for a new hero or event costs 0.15 credits: record it in the same preset voice, add it to the list in `scripts/voice-master.sh`, then add its rules to `VOICE` in `data.js`.
+
+## 4. 3D hero models (`src/assets/models/`)
+
+The five Shepherds and the Eclipse Vael skin are textured 3D models built from their painted art, made on 2026-10-07. They are used for the hero in a run and on the home screen. The old procedural models (`engine/models.js`) stand in only while a model loads, or for a skin without one.
+
+**How they were made:**
+1. **Turnaround sheet.** Nano Banana Pro painted each hero from its splash as the reference: front, left side and back views in one image, in a neutral pose on a plain grey ground, without the splash's ghosts, glows and particles. The masters are `store/art/turnaround-*.jpg`.
+2. **Crop.** Each sheet was split into its three views at the empty columns between the figures.
+3. **3D.** The views went into Tripo H3.1 multi-view-to-3D at detailed geometry and texture (18 credits each).
+   - **Mordrake:** his sheet's back and side views disagree about the glaive, so his model comes from the front view alone (Tripo H3.1 image-to-3D).
+   - **Nyx:** her first sheet swapped the scythe between hands, so it was re-taken.
+   - **Vael:** his model was made both ways for comparison. The multi-view one was clearly closer to the art in profile.
+4. **Optimise.** `scripts/hero-models.sh` downloads each result and processes it:
+   - simplifies the mesh by half, to 14k–18k triangles from about 29k;
+   - shrinks the 4096 px texture to a 1024 px WebP and moves it beside the model (`scripts/glb-split-texture.py`), so the web build never needs `blob:` URLs;
+   - quantizes the geometry (KHR_mesh_quantization, which three.js reads without a decoder).
+
+   The six heroes come to 2.5 MB in all, down from 3 MB per raw model.
+5. **In game.** `engine/heromodels.js` handles the model:
+   - loads it once and turns it to face +Z;
+   - stands it on the ground at a height close to the procedural model's;
+   - shades it with the character shader's painted branch: the texture's own painted light leads, the hero's rim and point light only accent it, and bright saturated paint (eyes, flames, blades) glows into the bloom.
+
+| Model | Turnaround sheet | 3D job | Input |
+|---|---|---|---|
+| `vael` | `ac52bd21-978f-484e-b90d-9e8a56df64b4` | `fc66c1ad-f4e9-454d-9849-e6cf13cb23d7` | front, side, back |
+| `nyx` | `89f97c92-20a7-4743-825a-6095b54a13f2` | `71ced1f2-6936-40f9-a261-0918c7915cfc` | front, side, back |
+| `seraphine` | `73f91e0b-6331-4f59-9c0d-2f7a4fb82359` | `d5804c07-48c9-4b4c-be00-83d92ac653f1` | front, side, back |
+| `liora` | `3db9baa4-3813-43f4-b76a-df5a89f417aa` | `61052ab1-616c-4d0c-a27e-13397583fc38` | front, side, back |
+| `mordrake` | `da921f7c-6b3c-4394-bb3c-d588513315d1` | `2355b7ab-2f5c-4e18-8295-fe113ba37492` | front only |
+| `eclipse_vael` | `bd4735ec-aca6-4fe4-8680-625963f50c49` (Vael's sheet and the Eclipse splash as references) | `6adb084d-ed13-4c73-bb5b-fadc55f4456e` | front, side, back |
+
+**Cost:** about 140 credits: 7 sheets and 7 models, including the re-taken Nyx sheet and Vael's front-only comparison model.
+
+**A new hero or skin:**
+1. Paint the sheet from its splash with the same prompt.
+2. Run the views through multi-view-to-3D.
+3. Add a line to `scripts/hero-models.sh`.
+4. Add a `FIT` entry (height and glow) in `heromodels.js`.
+
+**Planned:** the models are static and move with the game's procedural bob, lean and sway. Higgsfield can also auto-rig and animate them (a walk or run cycle, about 8 credits per clip). That is the next step if the heroes should walk instead of glide.

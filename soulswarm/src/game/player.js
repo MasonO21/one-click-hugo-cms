@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { makeCharMaterial } from '../engine/materials.js';
 import { heroGeometry } from '../engine/models.js';
+import { heroModel, loadHeroModel, hasHeroModel } from '../engine/heromodels.js';
 import { makeRuneCircle } from './fxmeshes.js';
 import { SKINS, HAZARDS } from './data.js';
 import { hdr } from '../engine/particles.js';
@@ -19,6 +20,11 @@ export class Player {
     this.mesh = new THREE.Mesh(heroGeometry(hero.id, skin ? skin.body : hero.body), this.mat);
     this.mesh.scale.setScalar(1.25);
     run.scene.add(this.mesh);
+    // the painted model (shared, loaded once) replaces the procedural one as soon as it is ready
+    const key = skin && hasHeroModel(loadout.skin) ? loadout.skin : skin ? null : hero.id;
+    const ready = key && heroModel(key);
+    if (ready) this.usePainted(ready);
+    else if (key) loadHeroModel(key).then((m) => { if (m && !this.disposed) this.usePainted(m); });
     this.circle = makeRuneCircle(1.05);
     this.circle.material.uniforms.uColor.value.copy(this.color);
     this.circle.position.y = 0.05;
@@ -119,6 +125,17 @@ export class Player {
     if (d > 0) { this.run.fx.text(this.x, 2.3, this.z, '+' + d, 'heal'); this.run.audio.sfx('heal'); }
   }
 
+  usePainted(m) {
+    const old = this.mat, c = this.color.getHex();
+    this.mesh.geometry.dispose();
+    this.mesh.geometry = m.geometry;
+    this.painted = true;
+    this.mat = makeCharMaterial({ map: m.map, glow: m.glow, rim: c, emit: 2.8, anim: 0, ambient: 0xc4c6d2, key: 0xe2e4ee, plColor: c, plRadius: 5 });
+    this.mat.uniforms.uTint.value.copy(this.color);
+    this.mesh.material = this.mat;
+    old.dispose();
+  }
+
   render(time) {
     const bob = this.moving ? Math.abs(Math.sin(this.t * 11)) * 0.08 : Math.sin(this.t * 2) * 0.03;
     this.mesh.position.set(this.x, bob, this.z);
@@ -135,7 +152,9 @@ export class Player {
   }
 
   dispose() {
-    this.mesh.geometry.dispose(); this.mat.dispose();
+    this.disposed = true;
+    if (!this.painted) this.mesh.geometry.dispose(); // painted geometry is shared (heromodels.js)
+    this.mat.dispose();
     this.circle.geometry.dispose(); this.circle.material.dispose();
   }
 }
