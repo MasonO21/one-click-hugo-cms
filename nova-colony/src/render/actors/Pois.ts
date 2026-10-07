@@ -1,11 +1,13 @@
 /**
- * POIs actor — points of interest from gen.pois (instanced per model) with a bobbing marker over
+ * POIs actor — points of interest from gen.pois (instanced per model, only the ones inside the
+ * camera frustum: rebuilt when the camera moves or turns) with a bobbing marker over
  * discovered-but-unlooted ones, plus beam markers for active world events (state.world.events).
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import { inView } from '../core/context';
 import { Batch, composeYaw, composeEuler } from '../core/Batch';
+import { ViewCull } from '../core/cull';
 import { poiGeometry, poiHeight, markerGeometry, eventMarkerGeometry } from '../models/pois';
 import type { WorldGen, WorldPoi } from '../../sim/world';
 import { raySphere } from './Nature';
@@ -24,6 +26,8 @@ export class Pois {
   private lastTerrain = -1;
   /** POI count when last built: runtime POIs (e.g. the tutorial survivor camp) are appended to gen.pois. */
   private lastPoiCount = -1;
+  private readonly cull = new ViewCull(10);
+  private refresh = 0;
   private readonly unsub: (() => void)[] = [];
 
   constructor(private readonly ctx: RenderContext) {
@@ -57,23 +61,45 @@ export class Pois {
 
   private setGen(gen: WorldGen | null): void {
     this.gen = gen;
-    for (const b of this.batches.values()) b.begin();
     this.models = [];
     if (gen?.pois) {
       const data = this.ctx.game.data;
-      for (const p of gen.pois) {
-        const model = data.poi(p.def)?.model ?? p.def;
-        this.models.push(model);
+      for (const p of gen.pois) this.models.push(data.poi(p.def)?.model ?? p.def);
+    }
+    this.rebuild();
+  }
+
+  /** Refill the static batches with the POIs the camera can see (landmarks: generous 220-unit range). */
+  private rebuild(): void {
+    const ctx = this.ctx;
+    const env = ctx.env;
+    this.cull.sync(env, ctx.camera);
+    for (const b of this.batches.values()) b.begin();
+    const pois = this.gen?.pois;
+    if (pois) {
+      for (let i = 0; i < pois.length; i++) {
+        const p = pois[i];
+        const dx = p.x - env.cx;
+        const dz = p.z - env.cz;
+        if (dx * dx + dz * dz > 220 * 220) continue;
+        const model = this.models[i];
+        const y = ctx.heightAt(p.x, p.z);
+        const h = poiHeight(model);
+        if (!this.cull.sphere(p.x, y + h * 0.5, p.z, Math.max(3, h))) continue;
         let b = this.batches.get(model);
         if (!b) {
-          b = new Batch(this.group, poiGeometry(model), this.ctx.mats.set, 8, { castShadow: true, receiveShadow: true });
+          b = new Batch(this.group, poiGeometry(model), ctx.mats.set, 8, { castShadow: true, receiveShadow: true });
           this.batches.set(model, b);
         }
-        composeYaw(_m, p.x, this.ctx.heightAt(p.x, p.z) - 0.05, p.z, p.rot || 0);
+        composeYaw(_m, p.x, y - 0.05, p.z, p.rot || 0);
         b.push(_m);
       }
     }
-    for (const b of this.batches.values()) b.end();
+    for (const b of this.batches.values()) {
+      b.end();
+      b.setVisible(b.count > 0);
+    }
+    this.refresh = 0;
   }
 
   update(dt: number): void {
@@ -86,6 +112,8 @@ export class Pois {
       this.lastPoiCount = poiCount;
       this.setGen(gen);
     }
+    this.refresh += dt;
+    if (this.refresh > 5 || this.cull.stale(env, ctx.camera)) this.rebuild();
     const t = env.t;
     const st = ctx.game.state.world;
 

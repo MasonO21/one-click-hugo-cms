@@ -20,6 +20,7 @@ import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import { sightTargets } from '../core/context';
 import { Batch, composeEuler, type BatchOpts } from '../core/Batch';
+import { ViewCull } from '../core/cull';
 import { nodeGeometry, nodeGeometryFar, propGeometry, nodeHeight, nodeChipColor } from '../models/nature';
 import type { WorldGen, WorldNode } from '../../sim/world';
 import { CELL, HALF_WORLD, WORLD_CELLS } from '../../core/constants';
@@ -52,10 +53,6 @@ const CHUNK_Y_MIN = -40;
 const CHUNK_Y_MAX = 60;
 
 const _m = new THREE.Matrix4();
-const _projView = new THREE.Matrix4();
-const _frustum = new THREE.Frustum();
-const _box = new THREE.Box3();
-const _sphere = new THREE.Sphere();
 const _targets = new Float64Array(6);
 /** How far an occluding node shrinks (fraction of its size). */
 const OCCLUDER_SHRINK = 0.78;
@@ -93,13 +90,7 @@ export class Nature {
   private dirty = true;
   private depletedCount = -1;
   private lastTerrain = -1;
-  private lastCamX = NaN;
-  private lastCamY = NaN;
-  private lastCamZ = NaN;
-  private lastFwdX = 0;
-  private lastFwdZ = 0;
-  private lastRadius = 0;
-  private lastAspect = 0;
+  private readonly cull = new ViewCull(FRUSTUM_MARGIN, REBUILD_MOVE, REBUILD_TURN);
   private wobbles = new Map<number, Wobble>();
   /** Node indices drawn by the last rebuild (occlusion scan). */
   private drawn: number[] = [];
@@ -224,25 +215,17 @@ export class Nature {
     return b;
   }
 
-  /** Camera frustum (expanded by FRUSTUM_MARGIN) from the rig's latest camera placement. */
-  private updateFrustum(): void {
-    const cam = this.ctx.camera;
-    cam.updateMatrixWorld();
-    _projView.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
-    _frustum.setFromProjectionMatrix(_projView);
-    for (const p of _frustum.planes) p.constant += FRUSTUM_MARGIN;
-  }
-
   private rebuild(): void {
     const g = this.gen;
     const ctx = this.ctx;
     const env = ctx.env;
+    const cull = this.cull;
+    cull.sync(env, ctx.camera);
     for (const b of this.batches.values()) b.begin();
     this.nodeSlot.fill(-1);
     this.nodeBatch.fill(null);
     this.drawn.length = 0;
     if (g) {
-      this.updateFrustum();
       const depleted = ctx.game.state.world.depleted;
       const { near, mid } = lodRadii(env.viewRadius, env.quality);
       const near2 = near * near;
@@ -257,9 +240,7 @@ export class Nature {
         const ddz = Math.max(c.minZ - env.cz, 0, env.cz - c.maxZ);
         const cd2 = ddx * ddx + ddz * ddz;
         if (cd2 > mid2) continue;
-        _box.min.set(c.minX, CHUNK_Y_MIN, c.minZ);
-        _box.max.set(c.maxX, CHUNK_Y_MAX, c.maxZ);
-        if (!_frustum.intersectsBox(_box)) continue;
+        if (!cull.box(c.minX, CHUNK_Y_MIN, c.minZ, c.maxX, CHUNK_Y_MAX, c.maxZ)) continue;
         const list = c.nodes;
         for (let k = 0; k < list.length; k++) {
           const i = list[k];
@@ -273,9 +254,7 @@ export class Nature {
           const model = this.nodeModel[i];
           const s = (n.scale || 1) * (data.node(n.def)?.scale ?? 1);
           const h = nodeHeight(model) * s;
-          _sphere.center.set(n.x, ctx.heightAt(n.x, n.z) + h * 0.5, n.z);
-          _sphere.radius = Math.max(h * 0.6, 1.4 * s);
-          if (!_frustum.intersectsSphere(_sphere)) continue;
+          if (!cull.sphere(n.x, ctx.heightAt(n.x, n.z) + h * 0.5, n.z, Math.max(h * 0.6, 1.4 * s))) continue;
           const far = d2 > near2;
           const batch = far ? this.batch('f:' + model, () => nodeGeometryFar(model), NODE_OPTS) : this.batch('n:' + model, () => nodeGeometry(model), NODE_OPTS);
           this.nodeSlot[i] = batch.count;
@@ -292,9 +271,7 @@ export class Nature {
           if (dx * dx + dz * dz > near2) continue;
           const s = p.scale || 1;
           const y = ctx.heightAt(p.x, p.z);
-          _sphere.center.set(p.x, y + s, p.z);
-          _sphere.radius = 1.8 * s;
-          if (!_frustum.intersectsSphere(_sphere)) continue;
+          if (!cull.sphere(p.x, y + s, p.z, 1.8 * s)) continue;
           const batch = this.batch('p:' + p.model, () => propGeometry(p.model), PROP_OPTS);
           composeEuler(_m, p.x, y - 0.03, p.z, 0, p.rot || 0, 0, s, s, s);
           batch.push(_m);
@@ -305,13 +282,6 @@ export class Nature {
       b.end();
       b.setVisible(b.count > 0);
     }
-    this.lastCamX = env.camX;
-    this.lastCamY = env.camY;
-    this.lastCamZ = env.camZ;
-    this.lastFwdX = env.fwdX;
-    this.lastFwdZ = env.fwdZ;
-    this.lastRadius = env.viewRadius;
-    this.lastAspect = this.ctx.camera.aspect;
     this.timer = 0;
     this.dirty = false;
   }
@@ -336,11 +306,8 @@ export class Nature {
         this.dirty = true;
       }
     }
-    const moved = (env.camX - this.lastCamX) ** 2 + (env.camY - this.lastCamY) ** 2 + (env.camZ - this.lastCamZ) ** 2 > REBUILD_MOVE * REBUILD_MOVE;
-    const turned = env.fwdX * this.lastFwdX + env.fwdZ * this.lastFwdZ < Math.cos(REBUILD_TURN);
-    const zoomed = Math.abs(env.viewRadius - this.lastRadius) > 10 || ctx.camera.aspect !== this.lastAspect;
     // the 4 s refresh covers a respawn and a depletion inside the same second (count unchanged)
-    if (this.dirty || moved || turned || zoomed || Number.isNaN(this.lastCamX) || this.timer > 4) this.rebuild();
+    if (this.dirty || this.timer > 4 || this.cull.stale(env, ctx.camera)) this.rebuild();
 
     this.updateOccluders(dt);
 
