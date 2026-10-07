@@ -12,6 +12,7 @@ import type { BuildingDef, ResourceBag } from '../../data/schema';
 import { CELL, WORLD_CELLS, cellOf, rotatedSize } from '../../core/constants';
 import { bagCovers, bagMissing } from '../../core/bag';
 import { clamp } from '../../core/math';
+import { buildingArt } from '../art';
 import { footprintCells, missingText, pointInRect, rectFrom, rotateOffset, scaleBag, snapFootprint, sumBags, type Cell } from '../logic/build';
 
 export type BuildMode = 'place' | 'select' | null;
@@ -442,7 +443,7 @@ export class BuildController implements BuildApi {
       msg = ok ? `${def.name} moved — nothing lost!` : "Can't move it there";
       if (ok) {
         this.exitBuild(true);
-        this.succeed(msg);
+        this.succeed(msg, buildingArt(def.id) ?? undefined);
         return;
       }
     } else if (def.piece) {
@@ -469,9 +470,9 @@ export class BuildController implements BuildApi {
     this.refresh();
   }
 
-  private succeed(msg: string): void {
+  private succeed(msg: string, icon = '🔨'): void {
     this.ctx.haptic('success');
-    if (msg) this.ctx.toast(msg, 'success', '🔨');
+    if (msg) this.ctx.toast(msg, 'success', icon);
     this.onFeedback(true, msg);
   }
 

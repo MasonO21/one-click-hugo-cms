@@ -1,6 +1,7 @@
 /**
- * Illustrated art generated with Higgsfield (see docs/ART.md). Files live in `public/art/` and are served
- * relative to the app root (vite `base: './'`), so they work on the web build and inside Capacitor.
+ * Illustrated art (see docs/ART.md): generated with Higgsfield, except the building and vehicle thumbnails, which
+ * are rendered from the game's own 3D models. Files live in `public/art/` and are served relative to the app root
+ * (vite `base: './'`), so they work on the web build and inside Capacitor.
  * Every helper returns null when no illustration exists, so callers fall back to the emoji in the data.
  */
 const ROOT = 'art/';
@@ -75,6 +76,48 @@ const ITEMS = new Set([
   'defense_crate', 'tech_crate', 'alloy_crate', 'nano_crate', 'titan_crate', 'mystery_crate',
 ]);
 
+/** Every BuildingDef.id (tests keep this equal to the data and to the files in public/art/buildings). */
+const BUILDINGS = new Set([
+  // utility
+  'command_center', 'spin_wheel', 'garage', 'radio_tower', 'med_bay', 'repair_bay', 'clinic', 'hangar', 'teleporter',
+  'repair_drone_bay', 'trauma_center', 'teleport_gateway', 'regen_center', 'titan_repair_array',
+  // structure
+  'floor', 'wall', 'door', 'window', 'fence', 'gate', 'platform', 'stairs', 'pillar', 'electric_door',
+  'reinforced_gate', 'auto_gate', 'glass_wall', 'phase_door',
+  // housing
+  'shelter', 'cabin', 'stone_lodge', 'steel_dorm', 'alloy_habitat', 'nano_residence', 'titan_skyscraper',
+  // food
+  'campfire', 'berry_patch', 'veggie_farm', 'greenhouse', 'kitchen', 'hydroponics', 'auto_farm', 'vertical_farm',
+  'bio_dome',
+  // storage
+  'storage_crate', 'storage_shed', 'water_tank', 'larder', 'warehouse', 'ore_silo', 'steel_vault', 'bulk_silo',
+  'crystal_vault', 'mega_warehouse', 'logistics_depot', 'nano_vault', 'quantum_storage', 'ai_logistics_hub',
+  // water
+  'rain_collector', 'water_pump', 'purifier', 'industrial_purifier', 'atmo_generator',
+  // crafting
+  'workbench', 'smelter', 'forge', 'workshop', 'electronics_lab', 'alloy_foundry', 'factory', 'fabricator',
+  'large_factory', 'cell_plant', 'nanoforge', 'titanium_refinery', 'nano_factory', 'titan_factory', 'titan_forge',
+  // production
+  'logging_camp', 'quarry', 'sawmill', 'iron_mine', 'copper_mine', 'coal_mine', 'bio_digester', 'auto_harvester',
+  'electric_drill', 'crystal_extractor', 'mining_rig', 'robot_bay', 'drone_hub', 'mining_drone_hub',
+  'matter_processor', 'titanium_drill',
+  // research
+  'research_desk', 'research_lab', 'observatory', 'advanced_lab', 'quantum_lab',
+  // decor
+  'lamp_post', 'flower_bed', 'log_bench', 'herb_garden', 'banner', 'fountain', 'stone_statue', 'arcade',
+  'cinema_pod', 'sculpture_garden', 'holo_theater', 'neon_park', 'titan_monument', 'sky_garden', 'zero_g_arena',
+  // defense
+  'barricade', 'spike_trap', 'scrap_turret', 'guard_tower', 'log_trap', 'stone_barricade', 'crossfire_tower',
+  'sentry_gun', 'mg_turret', 'electric_fence', 'flamethrower', 'missile_turret', 'heavy_sentry', 'cannon_turret',
+  'aa_gun', 'shield_generator', 'laser_turret', 'drone_pad', 'arc_barrier', 'flak_battery', 'energy_barrier',
+  'plasma_turret', 'railgun', 'titan_cannon', 'drone_swarm', 'sky_lance', 'titan_shield',
+  // power
+  'fuel_generator', 'wind_turbine', 'solar_panel', 'battery_bank', 'power_pylon', 'geothermal_plant', 'solar_array',
+  'fusion_reactor', 'fusion_core',
+]);
+/** Every VehicleDef.id (tests keep this equal to the data and to the files in public/art/vehicles). */
+const VEHICLES = new Set(['atv', 'buggy', 'mining_truck', 'hover_bike', 'armored_rover', 'titanium_hovercraft']);
+
 /** World event illustration by WorldEventDef.kind, 960×540. */
 export function eventArt(kind: string): string | null {
   return EVENTS.has(kind) ? `${ROOT}events/${kind}.webp` : null;
@@ -98,6 +141,26 @@ export function itemArt(id: string): string | null {
 /** Every id `itemArt` knows (for tests). */
 export function itemArtIds(): string[] {
   return [...ITEMS];
+}
+
+/**
+ * Building thumbnail by BuildingDef.id, 192 px with transparency, rendered from the in-game procedural model
+ * (`npm run bake:thumbs`). Structure pieces share one picture across their material tiers.
+ */
+export function buildingArt(id: string): string | null {
+  return BUILDINGS.has(id) ? `${ROOT}buildings/${id}.webp` : null;
+}
+/** Every id `buildingArt` knows (for tests). */
+export function buildingArtIds(): string[] {
+  return [...BUILDINGS];
+}
+/** Vehicle thumbnail by VehicleDef.id, 192 px with transparency, rendered from the in-game model. */
+export function vehicleArt(id: string): string | null {
+  return VEHICLES.has(id) ? `${ROOT}vehicles/${id}.webp` : null;
+}
+/** Every id `vehicleArt` knows (for tests). */
+export function vehicleArtIds(): string[] {
+  return [...VEHICLES];
 }
 
 /** Loading / key art (landscape or portrait). */
@@ -167,6 +230,16 @@ export function resIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLEle
 /** Icon for an item id, with the data's emoji as the fallback. */
 export function itemIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
   return iconEl(itemArt(id), emoji, cls, tag);
+}
+
+/** Thumbnail for a building id, with the data's emoji as the fallback. */
+export function buildingIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
+  return iconEl(buildingArt(id), emoji, cls, tag);
+}
+
+/** Thumbnail for a vehicle id, with the data's emoji as the fallback. */
+export function vehicleIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
+  return iconEl(vehicleArt(id), emoji, cls, tag);
 }
 
 /** Portrait <img> (or an emoji span) for a colonist profession. */

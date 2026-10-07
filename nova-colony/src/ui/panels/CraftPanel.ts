@@ -12,7 +12,7 @@ import { fmtHMS } from '../logic/time';
 import { CRAFT_CATEGORIES, metaOf } from '../logic/categories';
 import { adButton, btn, emptyState, recipeChips, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
-import { iconEl, itemArt, resIcon, resourceArt } from '../art';
+import { buildingArt, iconEl, itemArt, resIcon, resourceArt, vehicleArt } from '../art';
 
 export class CraftPanel extends Panel {
   readonly name = 'craft';
@@ -38,10 +38,11 @@ export class CraftPanel extends Panel {
     }
   }
 
-  private stationInfo(id: string): { icon: string; label: string } {
-    if (id === 'hand') return { icon: '✋', label: 'By hand' };
+  /** A station tab: the building that provides it (its thumbnail, emoji fallback). */
+  private stationInfo(id: string): { icon: string; art: string | null; label: string } {
+    if (id === 'hand') return { icon: '✋', art: null, label: 'By hand' };
     const d = this.data.buildings.find((b) => b.station === id || b.factory === id);
-    return { icon: d?.icon ?? '🛠️', label: d?.name ?? id };
+    return { icon: d?.icon ?? '🛠️', art: d ? buildingArt(d.id) : null, label: d?.name ?? id };
   }
 
   override signature(): string {
@@ -85,7 +86,7 @@ export class CraftPanel extends Panel {
       tabs(
         stations.map((id) => {
           const i = this.stationInfo(id);
-          return { id, icon: i.icon, label: i.label };
+          return { id, icon: i.icon, art: i.art, label: i.label };
         }),
         this.station,
         (id) => {
@@ -129,7 +130,7 @@ export class CraftPanel extends Panel {
       const d = this.data.resource(id);
       return { icon: d?.icon ?? '📦', art: resourceArt(id), text: `+${fmt(n ?? 0)} ${d?.name ?? id}` };
     }
-    if (o.vehicle) return { icon: this.data.vehicle(o.vehicle)?.icon ?? '🚙', text: this.data.vehicle(o.vehicle)?.name ?? o.vehicle };
+    if (o.vehicle) return { icon: this.data.vehicle(o.vehicle)?.icon ?? '🚙', art: vehicleArt(o.vehicle), text: this.data.vehicle(o.vehicle)?.name ?? o.vehicle };
     return { icon: '⚙️', text: r.name };
   }
 

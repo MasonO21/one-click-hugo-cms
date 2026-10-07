@@ -4,6 +4,7 @@
  */
 import type { UiCtx } from '../ctx';
 import { h, setClass, setText } from '../dom';
+import { buildingArt, iconEl } from '../art';
 
 export class InteractButton {
   readonly el: HTMLButtonElement;
@@ -51,7 +52,9 @@ export class InteractButton {
       }
       return;
     }
-    const key = it.kind + '|' + it.label + '|' + it.icon;
+    // near a building the button shows that building's picture instead of its emoji
+    const art = it.kind === 'building' ? buildingArt(this.ctx.game.sys.buildings.get(Number(it.target))?.def ?? '') : null;
+    const key = it.kind + '|' + it.label + '|' + it.icon + '|' + (art ?? '');
     if (this.el.hidden) {
       this.el.hidden = false;
       // restart the pop-in animation
@@ -61,7 +64,8 @@ export class InteractButton {
     }
     if (key === this.shownKey) return;
     this.shownKey = key;
-    setText(this.ic, it.icon);
+    if (art) this.ic.replaceChildren(iconEl(art, it.icon, 'ic-pic', 'span'));
+    else this.ic.textContent = it.icon;
     setText(this.lb, it.label);
     if (this.kind) setClass(this.el, 'k-' + this.kind, false);
     this.kind = it.kind;

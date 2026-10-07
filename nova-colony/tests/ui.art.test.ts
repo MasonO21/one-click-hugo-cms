@@ -7,9 +7,9 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createDataRegistry } from '../src/data';
-import { alienArt, biomeArt, eventArt, isArtSrc, itemArt, itemArtIds, keyArt, professionArt, resourceArt, rewardArt, shopArt, tierArt } from '../src/ui/art';
+import { alienArt, biomeArt, buildingArt, buildingArtIds, eventArt, isArtSrc, itemArt, itemArtIds, keyArt, professionArt, resourceArt, rewardArt, shopArt, tierArt, vehicleArt, vehicleArtIds } from '../src/ui/art';
 import { itemToast, rewardParts } from '../src/ui/logic/rewards';
-import { buildingEffects } from '../src/ui/logic/describe';
+import { buildingEffects, buildingUnlock, tierUnlocks, vehicleUnlock } from '../src/ui/logic/describe';
 import { threatGroups } from '../src/ui/hud/Threats';
 import { makeGame } from './world.helpers';
 
@@ -100,6 +100,33 @@ describe('ui art lookups', () => {
     expect(files.sort()).toEqual(wanted);
   });
 
+  it('every building has a thumbnail file', () => {
+    expect(data.buildings.length).toBeGreaterThan(100);
+    for (const b of data.buildings) {
+      const url = buildingArt(b.id);
+      expect(url, `building ${b.id}`).toBe(`art/buildings/${b.id}.webp`);
+      expect(exists(url), `${b.id} -> ${url}`).toBe(true);
+    }
+  });
+
+  it('every vehicle has a thumbnail file', () => {
+    expect(data.vehicles).toHaveLength(6);
+    for (const v of data.vehicles) {
+      const url = vehicleArt(v.id);
+      expect(url, `vehicle ${v.id}`).toBe(`art/vehicles/${v.id}.webp`);
+      expect(exists(url), `${v.id} -> ${url}`).toBe(true);
+    }
+  });
+
+  it('the building / vehicle art ids match the data exactly, and their folders have no orphans', () => {
+    expect([...buildingArtIds()].sort()).toEqual(data.buildings.map((b) => b.id).sort());
+    expect([...vehicleArtIds()].sort()).toEqual(data.vehicles.map((v) => v.id).sort());
+    for (const [dir, ids] of [['buildings', data.buildings.map((b) => b.id)], ['vehicles', data.vehicles.map((v) => v.id)]] as const) {
+      const files = fs.readdirSync(path.join(PUBLIC, 'art', dir));
+      expect(files.sort(), `public/art/${dir}`).toEqual(ids.map((id) => `${id}.webp`).sort());
+    }
+  });
+
   it('reward and key art exist', () => {
     for (const id of ['victory_chest', 'supply_crate', 'daily_gift']) expect(exists(rewardArt(id)), id).toBe(true);
     expect(exists(keyArt(false))).toBe(true);
@@ -116,10 +143,17 @@ describe('ui art lookups', () => {
     expect(rewardArt('nope')).toBeNull();
     expect(itemArt('unobtainium_axe')).toBeNull();
     expect(itemArt('')).toBeNull();
+    expect(buildingArt('death_star')).toBeNull();
+    expect(buildingArt('')).toBeNull();
+    expect(vehicleArt('tank')).toBeNull();
+    expect(vehicleArt('')).toBeNull();
+    // a vehicle id is not a building id (and vice versa): the two folders never answer for each other
+    expect(buildingArt('atv')).toBeNull();
+    expect(vehicleArt('garage')).toBeNull();
   });
 
   it('URLs are relative (vite base "./", Capacitor) and recognised as art', () => {
-    for (const url of [resourceArt('wood'), professionArt('cook'), alienArt('crawler'), tierArt(0), shopArt('nova_starter_pack'), itemArt('medkit')]) {
+    for (const url of [resourceArt('wood'), professionArt('cook'), alienArt('crawler'), tierArt(0), shopArt('nova_starter_pack'), itemArt('medkit'), buildingArt('wall'), vehicleArt('atv')]) {
       expect(url!.startsWith('/')).toBe(false);
       expect(url!.startsWith('art/')).toBe(true);
       expect(isArtSrc(url)).toBe(true);
@@ -141,6 +175,8 @@ describe('ui art lookups', () => {
     for (const p of data.products) add(shopArt(p.id));
     for (const id of ['victory_chest', 'supply_crate', 'daily_gift']) add(rewardArt(id));
     for (const it of data.items) add(itemArt(it.id));
+    for (const b of data.buildings) add(buildingArt(b.id));
+    for (const v of data.vehicles) add(vehicleArt(v.id));
     add(keyArt(false));
     add(keyArt(true));
     const root = path.join(PUBLIC, 'art');
@@ -152,7 +188,7 @@ describe('ui art lookups', () => {
       }
     };
     walk(root);
-    expect(files.length).toBeGreaterThanOrEqual(77 + data.items.length);
+    expect(files.length).toBeGreaterThanOrEqual(77 + data.items.length + data.buildings.length + data.vehicles.length);
     expect(files.filter((f) => !used.has(f))).toEqual([]);
   });
 });
@@ -233,6 +269,78 @@ describe('ui art wiring helpers', () => {
     expect(opened, seen.join(' | ')).toBeDefined();
     expect(itemToast(crafted!, data)?.icon).toBe(itemArt('bandage'));
     expect(itemToast(opened!, data)?.icon).toBe(itemArt('supply_crate'));
+  });
+
+  it('a vehicle reward carries the vehicle thumbnail, an unknown one keeps its emoji', () => {
+    const [v] = rewardParts({ vehicle: 'hover_bike' }, data);
+    expect(v.kind).toBe('vehicle');
+    expect(v.art).toBe(vehicleArt('hover_bike'));
+    expect(v.icon).toBe(data.vehicle('hover_bike')!.icon);
+    const [u] = rewardParts({ vehicle: 'tank' }, data);
+    expect(u.art).toBeNull();
+    expect(u.icon).toBe('🚙');
+  });
+
+  it('every vehicle granted by a mission, pack or craft recipe resolves to art', () => {
+    const rewards = [...data.missions.map((m) => m.reward), ...data.products.map((p) => p.grants), ...data.spinSegments.map((s) => s.reward), ...data.dailyRewards];
+    for (const r of rewards) {
+      for (const part of rewardParts(r, data)) if (part.kind === 'vehicle') expect(part.art, part.label).not.toBeNull();
+    }
+    expect(data.recipes.filter((r) => r.outputs.vehicle).length).toBe(data.vehicles.length);
+  });
+
+  it('vehicle craft toasts ("Crafted ATV!") get the vehicle illustration', () => {
+    expect(itemToast('Crafted ATV!', data)).toEqual({ text: 'Crafted ATV!', icon: vehicleArt('atv') });
+    for (const r of data.recipes.filter((x) => x.outputs.vehicle)) {
+      expect(itemToast(`Crafted ${r.name}!`, data)?.icon, r.id).toBe(vehicleArt(r.outputs.vehicle!));
+    }
+    // item crafts still resolve to their own item art
+    expect(itemToast('Crafted Medkit!', data)?.icon).toBe(itemArt('medkit'));
+  });
+
+  it('building / vehicle unlock entries carry the thumbnail and keep the emoji as the fallback', () => {
+    const b = buildingUnlock(data, 'guard_tower');
+    expect(b).toEqual({ kind: 'building', id: 'guard_tower', icon: data.building('guard_tower')!.icon, art: buildingArt('guard_tower'), name: data.building('guard_tower')!.name });
+    const v = vehicleUnlock(data, 'atv');
+    expect(v).toEqual({ kind: 'vehicle', id: 'atv', icon: data.vehicle('atv')!.icon, art: vehicleArt('atv'), name: 'ATV' });
+    // unknown ids degrade to a plain entry
+    expect(buildingUnlock(data, 'nope')).toEqual({ kind: 'building', id: 'nope', icon: '🏠', art: null, name: 'nope' });
+    expect(vehicleUnlock(data, 'nope')).toEqual({ kind: 'vehicle', id: 'nope', icon: '🚙', art: null, name: 'nope' });
+    // everything research can unlock has a picture
+    for (const r of data.research) {
+      for (const id of r.unlocks?.buildings ?? []) expect(buildingUnlock(data, id).art, `${r.id} -> ${id}`).not.toBeNull();
+      for (const id of r.unlocks?.vehicles ?? []) expect(vehicleUnlock(data, id).art, `${r.id} -> ${id}`).not.toBeNull();
+    }
+  });
+
+  it('tier unlock lists: pieces and the core are left out, ungated ones come first, freeOnly drops the research-gated', () => {
+    let sawGated = 0;
+    let sawFree = 0;
+    for (let t = 0; t < data.tiers.length; t++) {
+      const all = tierUnlocks(data, t);
+      const free = tierUnlocks(data, t, true);
+      const wantB = data.buildings.filter((b) => b.unlockTier === t && !b.piece && !b.core).map((b) => b.id).sort();
+      expect(all.filter((u) => u.kind === 'building').map((u) => u.id).sort(), `tier ${t}`).toEqual(wantB);
+      expect(all.filter((u) => u.kind === 'vehicle').map((u) => u.id).sort(), `tier ${t} vehicles`).toEqual(data.vehicles.filter((v) => v.unlockTier === t).map((v) => v.id).sort());
+      // the free list is the research-free subset of the full one, in the same order
+      const needsResearch = (u: { kind: string; id: string }) => !!(u.kind === 'building' ? data.building(u.id)!.research : data.vehicle(u.id)!.research);
+      expect(free.map((u) => u.id)).toEqual(all.filter((u) => !needsResearch(u)).map((u) => u.id));
+      // within each kind the ungated come before the gated
+      for (const kind of ['building', 'vehicle'] as const) {
+        const flags = all.filter((u) => u.kind === kind).map(needsResearch);
+        expect(flags, `tier ${t} ${kind} order`).toEqual([...flags].sort((a, z) => Number(a) - Number(z)));
+      }
+      for (const u of all) {
+        expect(u.art, u.id).not.toBeNull();
+        expect(data.building(u.id)?.piece, u.id).toBeFalsy();
+        expect(data.building(u.id)?.core, u.id).toBeFalsy();
+      }
+      sawGated += all.length - free.length;
+      sawFree += free.length;
+    }
+    expect(sawFree).toBeGreaterThan(0);
+    expect(sawGated).toBeGreaterThan(sawFree);
+    expect(tierUnlocks(data, 99)).toEqual([]);
   });
 
   it('building effect tags for production carry the resource icon', () => {
