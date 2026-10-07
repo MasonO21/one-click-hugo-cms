@@ -183,6 +183,8 @@ function pickProvider(app) {
 }
 
 // AdMob through @capacitor-community/admob (native plugin registered as "AdMob").
+const SMOKE_NO_PROMPTS = typeof window !== 'undefined' && !!window.__SMOKE_NO_PROMPTS; // set only by tools/smoke-flags.js
+
 class AdMobProvider {
   constructor() {
     this.kind = 'admob';
@@ -205,12 +207,13 @@ class AdMobProvider {
     // GDPR/UMP consent first; ads are only requested once the SDK says it may.
     let info = null;
     try {
-      info = await A.requestConsentInfo();
+      // self-test builds (tools/device-smoke.js) on emulators: no consent form or tracking prompt that nobody can tap
+      info = await (SMOKE_NO_PROMPTS ? A.requestConsentInfo({ debugGeography: 4 /* OTHER */ }) : A.requestConsentInfo());
       if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') info = await A.showConsentForm();
     } catch (e) { /* no consent message configured (e.g. test ids) */ }
     this.canRequest = !info || info.canRequestAds !== false;
     this.privacyOptions = !!(info && info.privacyOptionsRequirementStatus === 'REQUIRED');
-    if (this.platform === 'ios') { try { await A.requestTrackingAuthorization(); } catch (e) { /* noop */ } }
+    if (this.platform === 'ios' && !SMOKE_NO_PROMPTS) { try { await A.requestTrackingAuthorization(); } catch (e) { /* noop */ } }
     this.preload('interstitial');
     this.preload('rewarded');
   }

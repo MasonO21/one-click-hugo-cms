@@ -105,6 +105,8 @@ jobs:
             > "$RUNNER_TEMP/simulator.log" 2>&1 \
             || { grep -E "error:" -A4 "$RUNNER_TEMP/simulator.log" | head -120; tail -40 "$RUNNER_TEMP/simulator.log"; exit 1; }
           echo "Simulator build OK. Warnings: $(grep -c 'warning:' "$RUNNER_TEMP/simulator.log" || true)"
+      - name: ffmpeg (turns the screen recording into screenshots)
+        run: command -v ffmpeg || brew install ffmpeg
       - name: Run it on the iPhone Simulator
         run: bash tools/ci/ios-smoke.sh
       - name: Build for iPhone (Release, unsigned)

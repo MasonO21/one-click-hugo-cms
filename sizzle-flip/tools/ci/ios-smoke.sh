@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Installs the self-test build on an iPhone Simulator, starts it, takes the screenshots the self-test asks for and
-# collects its results from the app's console output. Run from sizzle-flip/ after the Debug simulator build.
+# Installs the self-test build on an iPhone Simulator, starts it, collects the self-test's results from the app's
+# console output and turns a screen recording into the screenshots the self-test asks for ("SMOKE SHOT <name> <ms>").
+# (A simulator screenshot can take up to a minute on a CI Mac, longer than each step lasts, so the frames are pulled
+# from the recording at the times the self-test reports instead.) Run from sizzle-flip/ after the Debug simulator build.
 set -u
 OUT=${OUT:-smoke-out}; mkdir -p "$OUT"
 BUNDLE=com.sizzleflip.game
@@ -16,25 +18,43 @@ xcrun simctl list devices | grep "$UDID"
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b > /dev/null
 xcrun simctl install "$UDID" "$APP" || { echo "::error::install failed"; exit 1; }
+
+# record the screen for the whole run
+xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$OUT/run.mov" > "$OUT/record.log" 2>&1 &
+REC=$!
+for i in $(seq 1 40); do grep -qi "recording started" "$OUT/record.log" && break; sleep 0.5; done
+REC_START=$(python3 -c 'import time; print(time.time())')
+
+# a pseudo-terminal (and NSUnbufferedIO) keep the app's output flowing; redirected to a file, Swift holds it back
 : > "$OUT/console.txt"
-# a pseudo-terminal keeps the app's output line-buffered (redirected to a file, Swift holds it back until exit)
-xcrun simctl launch --console-pty --terminate-running-process "$UDID" "$BUNDLE" > "$OUT/console.txt" 2>&1 &
+SIMCTL_CHILD_NSUnbufferedIO=YES xcrun simctl launch --console-pty --terminate-running-process "$UDID" "$BUNDLE" > "$OUT/console.txt" 2>&1 &
 LAUNCH=$!
-sleep 3
-end=$((SECONDS + 480))
+end=$((SECONDS + 600))
 while [ $SECONDS -lt $end ]; do
-  for name in $(grep -o 'SMOKE SHOT [0-9a-z-]*' "$OUT/console.txt" | awk '{print $3}'); do
-    [ -s "$OUT/$name.png" ] || xcrun simctl io "$UDID" screenshot "$OUT/$name.png" > /dev/null 2>&1
-  done
   grep -q 'SMOKE DONE' "$OUT/console.txt" && break
   if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "UIKitApplication:$BUNDLE"; then echo "::error::the app is not running any more"; break; fi
-  sleep 1
+  sleep 2
 done
+sleep 1
+kill -INT $REC 2>/dev/null; wait $REC 2>/dev/null
 kill $LAUNCH 2>/dev/null
+
 echo "----- self-test -----"
 grep -o 'SMOKE .*' "$OUT/console.txt" | grep -v 'SMOKE SHOT' | tee "$OUT/results.txt"
 echo "---------------------"
-find ~/Library/Logs/DiagnosticReports -name 'App*' -newer "$OUT/console.txt" -exec cp {} "$OUT/" \; 2>/dev/null
+
+# screenshots: the recorded frame 1 s after each SHOT marker (the self-test holds each screen for 2.5 s)
+if command -v ffmpeg > /dev/null && [ -s "$OUT/run.mov" ]; then
+  grep -o 'SMOKE SHOT [0-9a-z-]* [0-9]*' "$OUT/console.txt" | while read -r _ _ name ms; do
+    t=$(python3 -c "print(max(0, $ms / 1000 - $REC_START + 1.0))")
+    ffmpeg -loglevel error -ss "$t" -i "$OUT/run.mov" -frames:v 1 -y "$OUT/$name.png" < /dev/null && echo "screenshot $name at ${t}s"
+  done
+  rm -f "$OUT/run.mov"
+else
+  echo "no ffmpeg or no recording: screenshots skipped"; cat "$OUT/record.log"
+fi
+
+find ~/Library/Logs/DiagnosticReports -name 'App*' -newer "$OUT/record.log" -exec cp {} "$OUT/" \; 2>/dev/null
 if ls "$OUT"/App*.ips > /dev/null 2>&1; then echo "::error::the app crashed"; head -80 "$OUT"/App*.ips; exit 1; fi
 grep -E '\[error\]' "$OUT/console.txt" | head -20 || true
 grep -qE 'SMOKE DONE pass=[0-9]+ fail=0' "$OUT/console.txt" || { echo "::error::self-test did not pass"; tail -40 "$OUT/console.txt"; exit 1; }

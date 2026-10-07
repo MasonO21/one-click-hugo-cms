@@ -16,7 +16,9 @@ window.addEventListener('unhandledrejection', (e) => errors.push('unhandled reje
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const until = async (fn, ms) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (fn()) return true; } catch (e) { /* not yet */ } await sleep(100); } return false; };
 const within = (p, ms) => Promise.race([Promise.resolve(p).then(v => ({ ok: true, v }), e => ({ ok: true, e })), sleep(ms).then(() => ({ ok: false }))]);
-const shot = async (name) => { out('SHOT', name); await sleep(2500); };
+// settle first: slow emulators show a new screen a moment late
+// (the time lets the iOS script pull the frame from a screen recording; screenshots there take up to a minute)
+const shot = async (name) => { await sleep(1500); out('SHOT', name, Date.now()); await sleep(2500); };
 const $ = (id) => document.getElementById(id);
 
 // feed a level's stored route through pointerDown/Move/Up at the exact physics step the solver used
@@ -53,7 +55,8 @@ async function run() {
   await until(() => window.__app && window.__app.ui, 15000);
   const app = window.__app, Cap = window.Capacitor;
   info(`platform ${Cap && Cap.getPlatform ? Cap.getPlatform() : 'web'} · ${innerWidth}x${innerHeight} @${devicePixelRatio} · ${navigator.userAgent}`);
-  await sleep(2500);
+  await until(() => $('loading').classList.contains('done') || $('loading').hidden, 20000);
+  await sleep(1500);
   await shot('1-title');
 
   // --- native shell and plugins
@@ -108,17 +111,17 @@ async function run() {
   check(prices.length === 6, `Get Hot Dogs shows 6 packs (${prices.join(', ')})`);
   await shot('6-packs');
   // on an emulator / simulator without store products this must fail cleanly, not hang or crash
-  const t = Date.now();
+  const t = Date.now(), before = app.shop.balance;
   const buy = await within(app.shop.buyPack('hotdogs_100'), 90000);
   info(`test purchase → ${buy.ok ? JSON.stringify(buy.v || String(buy.e)) : 'no answer in 90 s'} after ${((Date.now() - t) / 1000).toFixed(1)} s`);
   check(buy.ok && !app.shop.busy, 'the purchase call returns and leaves the shop usable');
   const got = buy.ok && buy.v && buy.v.r === 'bought' ? buy.v.n : 0;
-  check(app.shop.balance === got, `credited exactly what was bought (${got} Hot Dogs)`);
+  check(app.shop.balance - before === got, `credited exactly what was bought (${got} Hot Dogs)`);
   app.ui.closePacks();
 
   // --- ads (network dependent: informational)
   await until(() => app.ads.provider.ready && app.ads.provider.ready.interstitial && app.ads.provider.ready.rewarded, 30000);
-  info(`AdMob test ads loaded: interstitial ${!!app.ads.provider.ready?.interstitial}, rewarded ${!!app.ads.provider.ready?.rewarded}, can request ${app.ads.provider.canRequest}`);
+  info(`consent (self-test: Google's debug region "other", no tracking prompt) · AdMob test ads loaded: interstitial ${!!app.ads.provider.ready?.interstitial}, rewarded ${!!app.ads.provider.ready?.rewarded}, can request ${app.ads.provider.canRequest}`);
 
   // --- result
   check(errors.length === 0, `no JavaScript errors${errors.length ? ': ' + [...new Set(errors)].join(' | ') : ''}`);

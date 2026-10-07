@@ -13,6 +13,8 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- what shows around the web view (e.g. the camera cutout strip on Android 15+): the game's night purple, not white -->
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 
 
