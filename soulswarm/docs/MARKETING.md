@@ -87,18 +87,22 @@ Google Play has no keyword field.
 
 ---
 
-## 4. Store screenshot storyboard (6 portrait screenshots)
+## 4. Store screenshot storyboard (8 portrait screenshots)
 
 Format: iOS 6.9" (1320 × 2868) is required, and the 6.5" set is derived from it. Android 1080 × 1920 (9:16). The **first 3 screenshots appear in search results**, so they carry all three hooks. Captions are 2–5 words, huge, at the top in the gothic display font, with cyan for allies and warm colours for enemies.
 
 | # | Caption | Scene | Composition notes |
 |---|---|---|---|
-| 1 | **RAISE THE LEGION** | End of a Ch1 run: Vael in the centre, ~300 cyan minions in orbit rings, a wall of ember Husks on the edges | Legion counter "LEGION 312" enlarged in the HUD. This is the hero shot. |
-| 2 | **PICK THE RIGHT GATE** | Two glowing gates, `+25` and `×2`, legion of 37 (a real 1:08 pair), a Brute lurking behind the ×2 gate | Large "?" between the gates. Thumb-shaped arrow toward ×2. |
-| 3 | **SACRIFICE THE SWARM. WIPE THE SCREEN.** | Mid-Nova: a chain of cyan explosions rippling out, enemies vaporising | Peak bloom frame. NOVA button visibly pressed. |
-| 4 | **TOPPLE THE HOLLOW KING** | Gravemaw, magenta, mid-slam with telegraph rings, legion charging him | Boss health bar visible. Strong diagonal composition. |
+| 1 | **EVERY KILL JOINS YOUR ARMY** | Chapter 1 at 2:30: Vael in a mixed legion (every minion kind plus gold Champions) inside two rings of the horde | The hero shot. The kill-streak counter shows at the left edge. |
+| 2 | **PICK THE RIGHT GATE** | A ×3 / ÷2 Soul Gate pair ahead of a 45-soul legion | Both gates readable; the legion heads for ×3. |
+| 3 | **DETONATE THE LEGION** | Mid-Nova: 180 souls detonating in a chain through two rings of the horde | Peak bloom frame, 0.45 s into the chain (after the 0.25 s wind-up). |
+| 4 | **SLAY THE HOLLOW KING** | Gravemaw mid Grave Slam telegraph, facing the camera, the legion around Vael | Ring bands and safe lanes visible. |
 | 5 | **COLLECT LEGENDARY SHEPHERDS** | The heroes screen with all five painted hero cards (Vael, Nyx, Seraphine, Liora, Mordrake) | Rarity frames (Common → Legendary) and star rows visible. |
-| 6 | **CLIMB THE ENDLESS ABYSS** (Planned; needs Endless Abyss and Blood Moon to ship) | Endless Abyss run at 12:00 with the weekly leaderboard panel overlaid | "Blood Moon weekend: 2× rewards" banner along the bottom |
+| 6 | **FIVE CURSED CHAPTERS** | Chapter 2 (Ember Wastes): a ring of Cinder Witches and their fire lobs | Chapter palette and hazards. |
+| 7 | **UNLEASH YOUR HERO'S RITE** | Seraphine casts Ashfall: ash chains rain on the horde | The RITE button and the Soul Frenzy chip visible. |
+| 8 | **DARE NIGHTMARE & TORMENT** | Chapter 5 on Torment: the blood-red floor, a Warded and Hasted elite with its tags, Vael's cyan legion | Shows the endgame tiers and elite affixes. |
+
+Rendered by `npm run screenshots` (`scripts/store-screenshots.mjs`) at 1290 × 2796. Order matters: 1–3 appear in search results.
 
 **App preview video (iOS, 25 s):** 0–3 s legion growing (hook 1) → 3–9 s gate choice → 9–15 s Nova wipe → 15–21 s Gravemaw fight → 21–25 s logo + "Raise the Legion". In-game audio only. No device frames (per Apple's guidelines).
 

@@ -22,7 +22,7 @@ const SHOTS = [
     r.player.vx = 0; r.player.vz = -1; r.gates.spawnPair([{ type: 'mul', n: 3 }, { type: 'div', n: 2 }]); sim(1.2, 0, -0.3);` },
   { name: '03-nova', caption: 'DETONATE <em>THE LEGION</em>', stage: `
     start(1, 200); give({ soulBolt: 3, gravePulse: 2 }); r.legion.addMany(180, r.player.x, r.player.z); ring(60, 10); ring(60, 13); sim(1.2);
-    r.nova = 1; r.triggerNova(); sim(0.45);` },
+    r.nova = 1; r.triggerNova(); sim(0.7);` }, // 0.25 s wind-up, then 0.45 s into the chain
   { name: '04-boss', caption: 'SLAY <em>THE HOLLOW KING</em>', stage: `
     start(1, 340); give({ soulBolt: 3, scythe: 2, skullHalo: 2 }); legion([['husk', 40], ['brute', 6], ['witch', 6]], 2); r.time = 359.9; sim(3.4, 0, 0);
     // pose the King mid Grave Slam telegraph (three ring bands and safe lanes), facing the camera
@@ -40,14 +40,27 @@ const SHOTS = [
     sim(3.2);` },
 ];
 
+SHOTS.push(
+  { name: '07-rites', caption: 'UNLEASH <em>YOUR HERO\'S RITE</em>', stage: `
+    hero('seraphine'); start(3, 170); give({ chains: 3, soulBolt: 2 }); legion([['husk', 26], ['ghoul', 8], ['brute', 6], ['witch', 6]], 2);
+    ring(40, 7.5); ring(36, 10.5); sim(1.0); r.ui.wantsRite = true; sim(0.5);` },
+  { name: '08-torment', caption: 'DARE <em>NIGHTMARE & TORMENT</em>', stage: `
+    const p = app.profile; p.chapter.unlocked = 5; p.chapter.best[5] = { ...(p.chapter.best[5] || {}), cleared: true, time: 400 };
+    p.diff.best[5] = { nightmare: { time: 400, legion: 120, kills: 2400, streak: 300, cleared: true } };
+    hero('vael'); start(5, 240, { difficulty: 'torment' }); give({ soulBolt: 3, scythe: 2, skullHalo: 2 }); legion([['husk', 22], ['brute', 6], ['witch', 6]], 2);
+    const P = r.player; r.affixes.roll(r.spawnEnemy('brute', { elite: true, at: { x: P.x + 2.5, z: P.z - 9.5 } }));
+    ring(44, 10.5); ring(30, 13.5); sim(1.2);` },
+);
+
 const helpers = `
   const app = window.__soulswarm, E = app.engine;
   E.manual = true;
   E.q = { ...E.q, pr: 3, bloomScale: 1, particles: 1, lights: 24 }; E.resize();
   let r = null;
-  app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
-  const start = (ch, t) => { app.profile.energy = 30; app.profile.chapter.unlocked = Math.max(ch, app.profile.chapter.unlocked); app.startRun(ch); r = app.run;
-    r.player.hurt = () => {}; r.addXp = () => {}; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.warned = t >= 352; r.time = t; };
+  app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+  const start = (ch, t, opts) => { app.profile.energy = 30; app.profile.chapter.unlocked = Math.max(ch, app.profile.chapter.unlocked); app.startRun(ch, opts); r = app.run;
+    r.player.hurt = () => {}; r.addXp = () => {}; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.warned = t >= 352; r.time = t; r.events.director = () => {}; };
+  const hero = (id) => { app.profile.heroes[id].owned = true; app.profile.selectedHero = id; };
   const give = (lv) => { Object.assign(r.skillLv, lv); r.recomputeStats(); r.stats.cap = 400; };
   // a mixed legion: every kind of minion, plus a few gold Champions (raised Brute elites)
   const legion = (kinds, champions = 0) => { const P = r.player, j = () => (Math.random() - 0.5) * 6;
