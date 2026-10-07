@@ -1339,7 +1339,10 @@
     if (el) rig.aura.material.color.set(el.color);
     rig.back.material.uniforms.c.value.set(el ? el.color : '#1e6f8a');
     rig.w.pose({ t: 2.2, dormant: false, pet: 0 });
-    const s = rig.w.size * 1.7;
+    // any canvas shape: the renderer follows it (taller ones frame the wyrm a little wider)
+    const size = `${c.width}x${c.height}`;
+    if (rig.size !== size) { rig.size = size; rig.r.setSize(c.width, c.height, false); rig.cam.aspect = c.width / c.height; rig.cam.updateProjectionMatrix(); }
+    const s = rig.w.size * 1.7 * (c.width / c.height < 1.2 ? 1.12 : 1);
     rig.cam.position.set(1.8 * s, 2.4 * s, 7.2 * s);
     rig.cam.lookAt(0.2 * s, 1.75 * s, 0);
     A.setWater(2.2);

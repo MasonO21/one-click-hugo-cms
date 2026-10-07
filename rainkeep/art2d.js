@@ -82,6 +82,7 @@
     }
   }
   function gearBack(cls, c) {
+    if (cls === 'none') return '';
     if (cls === 'bow') {
       return `<path d="M19 56 C8 74 9 96 21 110" stroke="#6b4426" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M19 56 C8 74 9 96 21 110" stroke="#a87444" stroke-width="1.2" fill="none" stroke-linecap="round"/>
         <path d="M19 56 L21 110" stroke="#efe2c9" stroke-width=".7"/>
@@ -98,6 +99,7 @@
       <circle cx="16" cy="92" r="16" fill="none" stroke="${c.metalL}" stroke-width=".8" opacity=".7"/><circle cx="16" cy="92" r="4.5" fill="${c.metalL}"/>`;
   }
   function gearFront(cls, c) {
+    if (cls === 'none') return '';
     if (cls === 'guard') {
       const pad = (dir) => {
         const m = (x) => (dir < 0 ? x : 100 - x);
@@ -111,13 +113,14 @@
     return `<path d="M36 78.5 C44 84 58 92 70 110 L60 110 C52 96 42 87 33 82 Z" fill="${c.trim}" opacity=".95"/><path d="M36.5 80.5 C45 86 56 94 65 110" stroke="${c.clothD}" stroke-width=".8" fill="none" opacity=".6"/>`;
   }
 
+  // id: a hero id, or a story character ({ id, rarity, cls, look } from DATA.cast; cls 'none' carries no gear)
   function portrait(id) {
-    const d = KH.HERO[id];
+    const d = typeof id === 'object' ? id : KH.HERO[id];
     if (!d) return '';
     const L = d.look || {};
-    const sc = SCENE[d.rarity];
+    const sc = SCENE[d.rarity] || SCENE.rare;
     const skin = SKIN[L.skin || 0];
-    const pid = `pt-${id}`;
+    const pid = `pt-${d.id || id}`;
     const c = {
       id: pid,
       skin, skinD: shade(skin, -0.22), skinDD: shade(skin, -0.4), skinL: shade(skin, 0.16),
@@ -127,7 +130,7 @@
       veil: mix(L.cloth || '#8a5a2b', '#ffffff', 0.45), veilD: mix(L.cloth || '#8a5a2b', '#000000', 0.15),
       metal: '#c7743a', metalD: '#7a3f1c', metalL: '#ffd0a0',
     };
-    const eye = L.eyes || EYES[(DATA.heroes.indexOf(d) * 3) % EYES.length];
+    const eye = L.eyes || EYES[(Math.max(0, DATA.heroes.indexOf(d)) * 3) % EYES.length];
     const lip = shade(mix(skin, '#b0504a', 0.45).replace(/rgb\((\d+),(\d+),(\d+)\)/, (_, r, g, b) => `#${[r, g, b].map((v) => Number(v).toString(16).padStart(2, '0')).join('')}`), -0.1);
 
     const eyeAt = (x, flip) => {
@@ -188,14 +191,15 @@
   // Foe art: one illustration per archetype, tinted by class
   // ======================================================================
   const ARCH = [
+    [/thirst/i, 'void'],
     [/sunheart|ember throne/i, 'sun'],
-    [/saltborn|crystal|husk/i, 'crystal'],
+    [/saltborn|crystal|husk|salt prison/i, 'crystal'],
     [/drake|wyvern|raven/i, 'drake'],
     [/scorpion|crawler|crab|glassback/i, 'scorpion'],
     [/viper|serpent|sandshark|shark|leviathan/i, 'serpent'],
-    [/wraith|mirage|seraph|choir|shade|herald|matron|matriarch|queen|vulture|harp|witch|prophet/i, 'spirit'],
-    [/golem|colossus|sentinel|titan|tortoise|basalt|behemoth/i, 'construct'],
-    [/jackal|hound|lion|oryx|alpha|fox|bear|pack|crocodile/i, 'beast'],
+    [/wraith|mirage|seraph|choir|shade|herald|matron|matriarch|queen|vulture|harp|witch|prophet|storm|shepherd/i, 'spirit'],
+    [/golem|colossus|sentinel|titan|tortoise|basalt|behemoth|tomb|cocoon|giant/i, 'construct'],
+    [/jackal|hound|lion|oryx|alpha|fox|bear|pack|crocodile|rams\b/i, 'beast'],
   ];
   const CLS_COL = { guard: ['#c27a3a', '#6e3a18'], bow: ['#8a6ad0', '#3d2a6e'], lancer: ['#2fa89a', '#155a52'] };
   function archetype(name) {
@@ -215,6 +219,13 @@
         body = `<circle cx="60" cy="62" r="38" fill="#ff8a2a" opacity=".25"/><circle cx="60" cy="62" r="30" fill="#ffb347"/><circle cx="60" cy="62" r="22" fill="#fff0b0"/>
           <path d="M44 48 L56 60 L50 72 M70 44 L64 58 L76 66 M58 80 L62 70" stroke="#c2410c" stroke-width="2.4" fill="none" stroke-linecap="round"/>
           ${Array.from({ length: 12 }, (_, i) => { const t = (i / 12) * Math.PI * 2; return `<path d="M${60 + Math.cos(t) * 33} ${62 + Math.sin(t) * 33} L${60 + Math.cos(t + 0.13) * 46} ${62 + Math.sin(t + 0.13) * 46} L${60 + Math.cos(t + 0.26) * 33} ${62 + Math.sin(t + 0.26) * 33}" fill="#ff9a3a"/>`; }).join('')}`;
+        break;
+      case 'void': // the Thirst: a hole where water should be, ringed with dry cracks
+        body = `<circle cx="60" cy="62" r="44" fill="#1a0e08" opacity=".55"/><circle cx="60" cy="62" r="34" fill="#0b0605"/>
+          ${Array.from({ length: 9 }, (_, i) => { const a = (i / 9) * Math.PI * 2 + 0.3; return `<path d="M${(60 + Math.cos(a) * 34).toFixed(1)} ${(62 + Math.sin(a) * 34).toFixed(1)} L${(60 + Math.cos(a + 0.12) * 48).toFixed(1)} ${(62 + Math.sin(a + 0.12) * 48).toFixed(1)} L${(60 + Math.cos(a - 0.05) * 54).toFixed(1)} ${(62 + Math.sin(a - 0.05) * 54).toFixed(1)}" stroke="#8a5a32" stroke-width="1.6" fill="none" opacity=".8"/>`; }).join('')}
+          <circle cx="60" cy="62" r="26" fill="none" stroke="#3a2418" stroke-width="3" opacity=".8"/><circle cx="60" cy="62" r="17" fill="none" stroke="#2a1810" stroke-width="2"/>
+          <path d="M42 70 Q60 84 78 70 Q60 78 42 70 Z" fill="#e8d8b8" opacity=".85"/>
+          <ellipse cx="50" cy="54" rx="3" ry="1.6" fill="#e8d8b8"/><ellipse cx="70" cy="54" rx="3" ry="1.6" fill="#e8d8b8"/>`;
         break;
       case 'crystal':
         body = `<path d="M34 106 L40 66 L30 40 L46 52 L52 20 L60 46 L70 14 L74 50 L90 34 L82 70 L88 106 Z" fill="url(#${fid}-b)"/>
@@ -289,7 +300,7 @@
             : f.cls === 'lancer' ? `<path d="M100 8 L104 110" stroke="#6b4426" stroke-width="3"/><path d="M100 8 C97 0 99 -4 101 -6 C104 -2 104 2 102 8 Z" fill="#dfe8ee"/>`
               : `<path d="M8 66 C8 54 18 46 30 48 L34 92 C22 94 8 84 8 66 Z" fill="${shade(col, 0.15)}" stroke="${colD}" stroke-width="2"/>`}`;
     }
-    const crown = f.boss && a !== 'sun' ? `<path d="M40 14 L46 24 L52 10 L60 22 L68 10 L74 24 L80 14 L78 28 L42 28 Z" fill="#ffcf6e" stroke="#a8641c" stroke-width="1"/><circle cx="60" cy="22" r="2" fill="#ff5a2a"/>` : '';
+    const crown = f.boss && a !== 'sun' && a !== 'void' ? `<path d="M40 14 L46 24 L52 10 L60 22 L68 10 L74 24 L80 14 L78 28 L42 28 Z" fill="#ffcf6e" stroke="#a8641c" stroke-width="1"/><circle cx="60" cy="22" r="2" fill="#ff5a2a"/>` : '';
     return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">${defs}<circle cx="60" cy="64" r="56" fill="url(#${fid}-g)"/>
       <ellipse cx="60" cy="110" rx="40" ry="6" fill="#000" opacity=".25"/>${body}${crown}</svg>`;
   }

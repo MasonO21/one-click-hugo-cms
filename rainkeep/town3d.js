@@ -943,6 +943,58 @@
       if (m.userData.palms) for (const p of m.userData.palms) A.swayPalm(p, t, T3.wind || 1);
     }
   }
+  // ======================================================================
+  // The kin of Act III (story.js says who is free): elder wyrms resting on the canyon rim
+  // ======================================================================
+  // [x, z, height above the rim or null to rest on it]
+  const KIN_AT = { nadaa: [-23.8, -9, null], seyl: [23.8, 0.5, null], barq: [13, -24.8, null], sahab: [-7.5, -15, 17.5], ghaitha: [0, -25.8, null] };
+  const kin = {};
+  let kinFrame = 0;
+  function syncKin() {
+    const free = KH.kinFreed ? KH.kinFreed() : [];
+    for (const k of free) {
+      const at = KIN_AT[k.id];
+      if (!at || kin[k.id]) continue;
+      const w = new A.Wyrm();
+      w.set({ level: k.level, skin: k.skin, element: null });
+      const fly = at[2] != null, y = fly ? at[2] : landH(at[0], at[1]);
+      w.group.position.set(at[0], y, at[1]);
+      w.group.rotation.y = Math.atan2(-at[0], -at[1] - 2); // look down into the keep
+      if (k.mother) w.group.scale.multiplyScalar(1.25);
+      scene.add(w.group);
+      kin[k.id] = { w, x: at[0], z: at[1], y, fly, ph: Object.keys(kin).length * 2.3 };
+      w.pose({ t: kin[k.id].ph, dormant: false, pet: 0 });
+    }
+  }
+  function animKin(t) {
+    kinFrame++;
+    let i = 0;
+    for (const id in kin) {
+      const o = kin[id];
+      // re-skin a third of them each frame: the kin are slow and many
+      if ((kinFrame + i++) % 3 === 0) o.w.pose({ t: t * 0.7 + o.ph, dormant: false, pet: 0 });
+      if (o.fly) {
+        const a = t * 0.05 + o.ph;
+        o.w.group.position.set(o.x + Math.sin(a) * 4, o.y + Math.sin(t * 0.4 + o.ph) * 0.7, o.z + Math.cos(a) * 2.5);
+        o.w.group.rotation.y = a + Math.PI / 2;
+      }
+    }
+  }
+  T3.kinCount = () => Object.keys(kin).length;
+  // for tuning the resting spots: T3.kinAt.nadaa = [x, z, null]; T3.kinReset()
+  T3.kinAt = KIN_AT;
+  // how the camera frames each of them (story.js "Show me"): looking out at their wall, aimed up
+  const KIN_VIEW = {
+    nadaa: { az: 1.3, el: 0.42, zoom: 1.5, tx: -14, tz: -8, lift: 7 },
+    seyl: { az: -1.3, el: 0.42, zoom: 1.5, tx: 14, tz: 1, lift: 7 },
+    barq: { az: -0.2, el: 0.42, zoom: 1.6, tx: 11, tz: -16.5, lift: 10 },
+    sahab: { az: 0.15, el: 0.4, zoom: 1.4, tx: -7, tz: -12, lift: 13 },
+    ghaitha: { az: 0, el: 0.42, zoom: 1.4, tx: 0, tz: -16.5, lift: 10 },
+  };
+  T3.kinView = (id) => KIN_VIEW[id];
+  T3.kinReset = () => { for (const id in kin) { scene.remove(kin[id].w.group); delete kin[id]; } };
+  T3.landH = (x, z) => landH(x, z);
+
   KH.on('decor', (e) => { const d = KH.decorItems && KH.decorItems().find((x) => x.id === e.id); if (d && T3.ready) { const c = new V3(d.at[0], d.at[2], d.at[1]); plotPos[`decor_${d.id}`] = c; burst(`decor_${d.id}`, '#ffe08a', 40); } });
 
   // ======================================================================
@@ -1161,7 +1213,7 @@
   // Camera: starts framed on every plot between the HUD strip and the quest card,
   // then pans (drag), zooms toward the finger (pinch or wheel) and turns (twist or right-drag)
   // ======================================================================
-  const HOME = { az: 0, el: 0.8, zoom: 1, tx: 0, tz: -0.2 };
+  const HOME = { az: 0, el: 0.8, zoom: 1, tx: 0, tz: -0.2, lift: 0 };
   const ZMIN = 0.55, ZMAX = 4.2;
   const view = { ...HOME, flyStart: 0, vx: 0, vy: 0, hold: false, tween: null };
   const camTarget = new V3(), nearPt = new V3();
@@ -1181,7 +1233,8 @@
   }
   function place(d, el = camEl(), az = view.az) {
     const zk = smooth(1.2, 2.6, view.zoom);
-    camTarget.set(view.tx, lerp(1.1, groundAt(view.tx, view.tz) + 0.9, zk), view.tz);
+    // lift raises the point the camera looks at (to frame the kin up on the canyon rim)
+    camTarget.set(view.tx, lerp(1.1, groundAt(view.tx, view.tz) + 0.9, zk) + (view.lift || 0), view.tz);
     // swung out over the canyon walls, the camera climbs until it can see past the rock
     for (let k = 0; k < 16; k++) {
       cam.position.set(camTarget.x + Math.sin(az) * Math.cos(el) * d, camTarget.y + Math.sin(el) * d, camTarget.z + Math.cos(az) * Math.cos(el) * d);
@@ -1320,7 +1373,7 @@
   T3.hold = (on) => { view.hold = on; if (on) { view.vx = 0; view.vy = 0; } };
   T3.reset = () => {
     const az = Math.atan2(Math.sin(view.az), Math.cos(view.az));
-    view.tween = { t0: performance.now(), from: { az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz } };
+    view.tween = { t0: performance.now(), from: { az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz, lift: view.lift } };
     view.vx = view.vy = 0;
   };
   T3.atHome = () => Math.hypot(view.tx - HOME.tx, view.tz - HOME.tz) < 1.5 && Math.abs(Math.atan2(Math.sin(view.az), Math.cos(view.az))) < 0.15 && Math.abs(view.zoom - 1) < 0.15 && Math.abs(view.el - HOME.el) < 0.12;
@@ -1330,17 +1383,23 @@
     if (!c || !cam) return;
     tmpV.copy(c).project(cam);
     if (Math.abs(tmpV.x) < 0.8 && tmpV.y > -0.5 && tmpV.y < 0.85 && view.zoom < 1.6) return;
-    view.tween = { t0: performance.now(), from: { az: view.az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz }, to: { az: view.az, el: view.el, zoom: Math.max(1.3, Math.min(view.zoom, 2)), tx: c.x, tz: c.z + 2 } };
+    view.tween = { t0: performance.now(), from: { az: view.az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz, lift: view.lift }, to: { az: view.az, el: view.el, zoom: Math.max(1.3, Math.min(view.zoom, 2)), tx: c.x, tz: c.z + 2 } };
   };
-  T3.focusAt = (x, z) => {
-    view.tween = { t0: performance.now(), from: { az: view.az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz }, to: { az: view.az, el: view.el, zoom: 2.2, tx: x, tz: z + 1.5 } };
+  // a full view to fly to: { az, el, zoom, tx, tz, lift }
+  T3.flyTo = (to) => {
+    view.tween = { t0: performance.now(), from: { az: view.az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz, lift: view.lift }, to: { ...HOME, ...to } };
+  };
+  T3.focusAt = (x, z, zoom = 2.2) => {
+    view.tween = { t0: performance.now(), from: { az: view.az, el: view.el, zoom: view.zoom, tx: view.tx, tz: view.tz, lift: view.lift }, to: { az: view.az, el: view.el, zoom, tx: x, tz: z + 1.5 } };
   };
   function camStep(now, dt) {
     if (view.tween) {
       const k = smooth(0, 1, (now - view.tween.t0) / 650), to = view.tween.to || HOME, fr = view.tween.from;
-      for (const key of ['az', 'el', 'zoom', 'tx', 'tz']) view[key] = lerp(fr[key], to[key], k);
+      for (const key of ['az', 'el', 'zoom', 'tx', 'tz', 'lift']) view[key] = lerp(fr[key] || 0, to[key] || 0, k);
       if (k >= 1) view.tween = null;
-    } else if (!view.hold && (Math.abs(view.vx) > 4 || Math.abs(view.vy) > 4)) {
+    } else if (view.lift && view.hold) view.lift = Math.max(0, view.lift - dt * 30); // touching the view brings it back down
+    if (view.tween) return;
+    if (!view.hold && (Math.abs(view.vx) > 4 || Math.abs(view.vy) > 4)) {
       T3.pan(view.vx * dt, view.vy * dt);
       const decay = Math.exp(-dt * 4.2);
       view.vx *= decay; view.vy *= decay;
@@ -1397,7 +1456,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);
@@ -1456,6 +1515,7 @@
     merchant.visible = !!(KH.keep && KH.keep.merchantHere());
     animRaiders(t);
     animDecor(t);
+    animKin(t);
     // highlight rings: the current quest target and the plot whose sheet is open
     const qp = UI.questTarget && plotPos[UI.questTarget];
     ringSel.quest.visible = !!qp && !(UI.sheet && UI.sheet.kind === 'plot');

@@ -453,8 +453,19 @@ const DATA = {
       story: 'The Sunheart did not die alone. Its last embers fled south into a country of black glass and rivers of ash, where the Cinder Choir tends them like a hearth. Every ember they keep alive steals a little rain from the sky.' },
     { from: 91, act: 2, name: 'The Ember Throne', foes: [['Throne Guard', 'guard'], ['Sunlance Riders', 'lancer'], ['Choir of Embers', 'bow'], ['Flame Seraphs', 'bow']],
       story: 'At the bottom of a crater of black glass sits a throne cut from the last ember of the sun, and on it sits something that was once a warden like you. It wants the rain gone for good. Your wyrm has been dreaming about this place for weeks.' },
-    { from: 101, name: 'The Burning Line', foes: [['Sunborn Host', 'guard'], ['Scorchline Riders', 'lancer'], ['Pale Archers', 'bow'], ['Glass Titans', 'guard']],
-      story: 'The Ember Throne is cold, but the far south still smoulders. Push the Burning Line back as far as your keep can reach.' },
+    // Act III: The Wyrmsong
+    { from: 101, act: 3, name: 'The Burning Line', foes: [['Sunborn Host', 'guard'], ['Scorchline Riders', 'lancer'], ['Pale Archers', 'bow'], ['Glass Titans', 'guard']],
+      story: 'Forty days of rain, and on the forty-first {wyrm} began to sing. Not its usual hum: a long, rising song that set every water jar in the keep ringing. And from the far south, past the smouldering Burning Line, something sang back.' },
+    { from: 111, act: 3, name: 'The Bone Coast', foes: [['Bonepickers', 'lancer'], ['Marrow Hounds', 'lancer'], ['Ribcage Golems', 'guard'], ['Gull Harpies', 'bow']],
+      story: 'South of the Burning Line the old sea left its shore behind: a white beach a hundred miles long, made of bones. Wyrm bones. The Bonepickers who live there grind them into charms and sell them as rain-luck. The song is louder here, and it comes from under the salt.' },
+    { from: 121, act: 3, name: 'The Thunderless Steppe', foes: [['Static Wraiths', 'bow'], ['Spark Jackals', 'lancer'], ['Iron Rams', 'guard'], ['Stormcaller Cultists', 'bow']],
+      story: 'A storm hangs over the steppe and has not moved in sixty years. Lightning stands frozen in the air like cracks in glass. The Stormcallers say they keep it still for everyone\'s good. {wyrm} says, in its way, that something inside the storm is trying to breathe.' },
+    { from: 131, act: 3, name: 'The Ashen Sky', foes: [['Ash Seraphs', 'bow'], ['Cinder Wardens', 'guard'], ['Smoke Riders', 'lancer'], ['Kiln Wyverns', 'lancer']],
+      story: 'Here the ash never settled. It floats in grey reefs above the land, and the last of the Cinder Choir live on them, singing the embers warm. Somewhere inside the thickest cloud of ash, a fourth voice joins the song.' },
+    { from: 141, act: 3, name: "The Mother's Well", foes: [['Thirstborn', 'guard'], ['Well Shades', 'bow'], ['Dry Lancers', 'lancer'], ['Hollow Sentinels', 'guard']],
+      story: 'At the bottom of the world is a well so deep its water is older than the fallen sun. The kin say their mother sleeps there, chained by the thing the Sunwarden served: the Thirst, which lives where water should be and drinks whatever comes near. It has waited a long time for a warden to bring it a wyrm.' },
+    { from: 151, name: 'The Far South', foes: [['Sunborn Host', 'guard'], ['Scorchline Riders', 'lancer'], ['Pale Archers', 'bow'], ['Glass Titans', 'guard']],
+      story: 'The Mother of Rains is awake, and the maps run out. Past the Well, the last embers of the Thirst still smoulder in the far south. Push them back as far as your keep can reach.' },
   ],
   bosses: {
     5: ['Jackal Alpha', 'lancer'], 10: ['Salt Behemoth', 'guard'], 15: ['Dust Matron', 'bow'],
@@ -464,9 +475,14 @@ const DATA = {
     65: ['The Wadi King', 'lancer'], 70: ['The Drowned Colossus', 'guard'], 75: ['The Brine Matriarch', 'bow'],
     80: ['The Salt Leviathan', 'guard'], 85: ['The Ash Prophet', 'bow'], 90: ['The Obsidian Wyvern', 'lancer'],
     95: ['The Sunwarden', 'lancer'], 100: ['The Ember Throne', 'guard'],
+    105: ['The Cinderwarden', 'guard'], 110: ['The Glass Tomb', 'guard'], 115: ['The Ossuary Matron', 'bow'],
+    120: ['The Salt Prison', 'guard'], 125: ['The Stillstorm Shepherd', 'lancer'], 130: ['The Dead Storm', 'bow'],
+    135: ['The Last Choirmaster', 'bow'], 140: ['The Ash Cocoon', 'guard'], 145: ['The Well-Warden', 'lancer'],
+    150: ['The Thirst', 'guard'],
   },
   actOneStage: 60, // beating this ends Act I ("The Rains") and opens Act II
-  finalStage: 100, // beating this ends the story ("The Long Rains"); stages past it are the endless Burning Line
+  actTwoStage: 100, // beating this ends Act II ("The Long Rains") and opens Act III
+  finalStage: 150, // beating this ends the story ("The Wyrmsong"); stages past it are the endless Far South
   // stage n foe: base x growth^(n-1) through stage 30, then gentler late growth to 60, then the endless curve
   // (base stats raised 12% in 3.5, when hero skills and the breath's timing arrived)
   enemy: { atk: 80.6, def: 47, hp: 918, gAtk: 1.13, gDef: 1.12, gHp: 1.14, lateFrom: 30, lAtk: 1.027, lDef: 1.022, lHp: 1.032, endAtk: 1.03, endDef: 1.025, endHp: 1.035, boss: 1.5 },
@@ -512,7 +528,19 @@ const DATA = {
     ],
     reward: { starglass: 3000, beacons: 15, sunsteel: 2000, skin: 'longrains' },
     badge: 'Keeper of the Long Rains',
-    note: "You finished Rainkeep's story. The Burning Line, the Mirage Spire and the Dune Duels stay open for as long as you want to play.",
+    note: 'Act II is over. Act III, The Wyrmsong, starts at stage 101.',
+  },
+  ending3: {
+    title: 'The Wyrmsong',
+    lines: [
+      'The Thirst does not die. It is pushed down, below the water, below the stone, below the places songs can reach. Ghaitha, the Mother of Rains, lifts her head out of the Well for the first time in three hundred years and breathes, and the whole south turns to fog.',
+      'The kin fly north together. Nadaa settles on the cliffs above the keep. Seyl takes the wadis, Barq the high storms, Sahab the long summer clouds. {wyrm} stays at the spring where it hatched, and Ghaitha settles on the cliff above it, like an old woman at her window.',
+      'That winter it rains on the keep the way it rained in the old stories: softly, often, for no reason at all. Nima, old enough now to stand a watch, writes it all down.',
+      'Elder Maram, who waited seventy years to see one wyrm, sits on the wall every evening and counts five.',
+    ],
+    reward: { starglass: 4000, beacons: 20, sunsteel: 3000, skin: 'wyrmsong' },
+    badge: 'Wyrmsinger',
+    note: "You finished Rainkeep's story. The Far South, the Mirage Spire and the Dune Duels stay open for as long as you want to play.",
   },
 
   // ---------- Chapter quests ----------
@@ -594,6 +622,16 @@ const DATA = {
     { text: 'Reach rank 25 in the Dune Duels', go: 'tab:duels', check: (S) => S.duels.best <= 25, reward: { starglass: 1000, sunsteel: 800 } },
     { text: 'Climb the Mirage Spire to floor 60', go: 'tab:spire', check: (S) => S.spire.floor > 60, reward: { shard_legendary: 1, sunsteel: 1000 } },
     { text: 'Raise the Skyriver (Lv 20)', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 20, reward: { starglass: 3000, beacons: 15 } },
+    // Act III: The Wyrmsong (and Hero Tales, tales.js)
+    { text: 'Read the first chapter of a Hero Tale', go: 'tab:roster', check: (S) => (S.stats.taleParts || 0) >= 1, reward: { journals: 120, starglass: 200 } },
+    { text: 'Free Nadaa from the Glass Tomb (stage 110)', go: 'tab:expedition', check: (S) => S.stage > 110, reward: { starglass: 1500, shard_legendary: 1 } },
+    { text: 'Finish 5 Hero Tale chapters', go: 'tab:roster', check: (S) => (S.stats.taleParts || 0) >= 5, reward: { beacons: 6 } },
+    { text: 'Free Seyl from the Salt Prison (stage 120)', go: 'tab:expedition', check: (S) => S.stage > 120, reward: { starglass: 1500, sunsteel: 1200 } },
+    { text: "Finish a hero's whole tale", go: 'tab:roster', check: (S) => (S.stats.talesDone || 0) >= 1, reward: { shard_legendary: 1 } },
+    { text: 'Free Barq from the Dead Storm (stage 130)', go: 'tab:expedition', check: (S) => S.stage > 130, reward: { starglass: 2000, beacons: 8 } },
+    { text: 'Finish 4 Hero Tales', go: 'tab:roster', check: (S) => (S.stats.talesDone || 0) >= 4, reward: { starglass: 1500, shard_epic: 2 } },
+    { text: 'Free Sahab from the Ash Cocoon (stage 140)', go: 'tab:expedition', check: (S) => S.stage > 140, reward: { starglass: 2000, sunsteel: 1500 } },
+    { text: 'Wake the Mother of Rains (stage 150)', go: 'tab:expedition', check: (S) => S.stage > 150, reward: { starglass: 3000, shard_legendary: 1 } },
   ],
   questPassXp: 60,
 
@@ -664,6 +702,13 @@ const DATA = {
     goldenwadi: { name: 'Golden Wadi', body: ['#7a5a10', '#ffd36e'], belly: '#fff6d8', eye: '#2a8a70', mist: ['#ffe8a0', '#fffaf0'], fin: '#4fc0a0', horn: '#fff8e0', note: 'Ledger Season 6 premium', locked: true },
     stormcoral: { name: 'Storm Coral', body: ['#7a2a4a', '#ff8aa0'], belly: '#fff0f2', eye: '#9ff0ff', mist: ['#ffc0cc', '#ffffff'], fin: '#5fd0ff', horn: '#ffe8ee', note: 'Ledger Season 7 premium', locked: true },
     longrains: { name: 'Long Rains', body: ['#0e6b5a', '#7fe0c4'], belly: '#eafff7', eye: '#fff6c8', mist: ['#a8ffe0', '#ffffff'], fin: '#ffd36e', horn: '#fffbe8', note: 'Break the Ember Throne', locked: true },
+    wyrmsong: { name: 'Wyrmsong', body: ['#23305e', '#9ab8ff'], belly: '#fff8ec', eye: '#ffd36e', mist: ['#c8d8ff', '#fff4dc'], fin: '#ffc8f0', horn: '#fff2c8', note: 'Wake the Mother of Rains', locked: true },
+    // the elder kin of Act III (lore.js); never offered in the Store
+    kin_nadaa: { name: 'Nadaa', hidden: true, body: ['#5a8a9a', '#dff6ff'], belly: '#ffffff', eye: '#bff4ff', mist: ['#e8fbff', '#ffffff'], fin: '#c8f0ff', horn: '#f4fbff' },
+    kin_seyl: { name: 'Seyl', hidden: true, body: ['#0e3a5a', '#2fa0c8'], belly: '#bfeaff', eye: '#ffe08a', mist: ['#6cd0ff', '#dff6ff'], fin: '#4fe0d0', horn: '#d8e8f0' },
+    kin_barq: { name: 'Barq', hidden: true, body: ['#2a2450', '#6a6ad8'], belly: '#e0e0ff', eye: '#fff36e', mist: ['#b0b8ff', '#fffbe0'], fin: '#ffe84a', horn: '#fff8c8' },
+    kin_sahab: { name: 'Sahab', hidden: true, body: ['#8a8aa0', '#f4f4fa'], belly: '#ffffff', eye: '#7ad0ff', mist: ['#ffffff', '#f0f4ff'], fin: '#ffd8e8', horn: '#ffffff' },
+    kin_ghaitha: { name: 'Ghaitha', hidden: true, body: ['#0e3a20', '#3fbf6e'], belly: '#f4ffe4', eye: '#ffe08a', mist: ['#c8ffd8', '#fffbe8'], fin: '#ffcf4a', horn: '#fff0b8' },
   },
 
   // ---------- Store (simulated on the web; StoreKit via RevenueCat in the app) ----------
@@ -1005,6 +1050,11 @@ const DATA = {
     { id: 'cloud40', text: 'Herd 40 clouds in a single Cloud Run', stat: 'cloudBest', n: 40, reward: { starglass: 150 } },
     { id: 'bond5', text: 'Reach bond Lv 5 with your Rainwyrm', stat: 'bond', n: 5, reward: { starglass: 150 } },
     { id: 'bond10', text: 'Reach bond Lv 10 with your Rainwyrm', stat: 'bond', n: 10, reward: { starglass: 400 } },
+    { id: 'kin4', text: 'Free all four of the kin', stat: 'kin', n: 4, reward: { starglass: 600 } },
+    { id: 's150', text: 'Wake the Mother of Rains', stat: 'stages', n: 150, reward: { starglass: 1000 } },
+    { id: 'tale12', text: 'Finish 12 Hero Tale chapters', stat: 'taleParts', n: 12, reward: { beacons: 5 } },
+    { id: 'tale8', text: 'Finish 8 Hero Tales', stat: 'talesDone', n: 8, reward: { shard_legendary: 1 } },
+    { id: 'scene20', text: 'Watch 20 story scenes', stat: 'scenes', n: 20, reward: { starglass: 200 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

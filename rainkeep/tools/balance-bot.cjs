@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -54,6 +54,7 @@ const HOURS = Number(process.argv[3] || 8);
     const qLog = []; { const f = A.claimquest; A.claimquest = () => { const q0 = S.quest; f(); if (S.quest > q0) qLog.push(`${q0}@${Math.round(S.time)}s`); }; }
     const COLLECT = NO.includes('surplus') ? 0 : Number(new URLSearchParams(location.search).get('collect') || 5); let lastCollect = -999; const incPicks = [];
     let idleSecs = 0; const idleLog = []; let lastSpire = -999, lastSpireTry = -999;
+    const taleTry = {};
     const team_log = []; let sickSecs = 0, popSecs = 0, thirstSecs = 0, dormSecs = 0, lastFightTry = -999, ttype = 0, lastWin = 0; const thaw = [];
     const W = KH.world;
     const steps = Math.round(HOURS * 3600 / 5);
@@ -63,7 +64,8 @@ const HOURS = Number(process.argv[3] || 8);
         // story sheets
         if (UI.sheet && UI.sheet.kind === 'ascend' || UI.sheetQueue.some((s) => s.kind === 'ascend') || (S.lv.wyrm >= 12 && !S.wyrm.element)) A.ascend('floodheart');
         if (S.stage > D.actOneStage && !S.endingSeen) { UI.sheet = { kind: 'ending' }; A.close(); }
-        if (S.stage > D.finalStage && !S.ending2Seen) { UI.sheet = { kind: 'ending', act: 2 }; A.close(); }
+        if (S.stage > D.actTwoStage && !S.ending2Seen) { UI.sheet = { kind: 'ending', act: 2 }; A.close(); }
+        if (S.stage > D.finalStage && !S.ending3Seen) { UI.sheet = { kind: 'ending', act: 3 }; A.close(); }
         if (S.map.pendingRuin) { if (!S.map.pendingRuin.outcome) A.ruinpick(0); A.ruindone(); }
         UI.sheet = null; UI.sheetQueue = [];
         A.pet();
@@ -107,6 +109,15 @@ const HOURS = Number(process.argv[3] || 8);
         if (S.bond && S.bond.wish && !NO.includes('bond')) { if (S.bond.wish.id === 'dates') A.bondfeed(); else if (S.bond.wish.id === 'pet') A.pet(); }
         // keep gardens: build with what the stores can easily spare (never Starglass)
         if (KH.decor && KH.decor.unlocked() && !NO.includes('decor')) for (const d of D.decor.items) { if (d.starglass) continue; const c = KH.decor.costOf(d.id); if (KH.decor.level(d.id) < D.decor.maxLevel && Object.entries(c).every(([k, v]) => (k in S.res ? S.res[k] : S[k]) >= v * 3)) A.decor(d.id); }
+        // Hero Tales: read every chapter as it opens (once a minute per hero after a loss); squad heroes
+        // take the battle ending, everyone else the steward one
+        if (KH.tales && !NO.includes('tales') && KH.squadHome().length) for (const id of Object.keys(S.heroes)) {
+          if (!KH.tales.ready(id) || (taleTry[id] && S.time - taleTry[id] < 60)) continue;
+          const tl = KH.tales.of(id);
+          if (tl.part >= 3) KH.tales.pick(`${id}:${S.squad.includes(id) ? 'a' : 'b'}`);
+          else { taleTry[id] = S.time; KH.tales.fight(id); A.bclose(); }
+          UI.sheet = null; UI.sheetQueue = [];
+        }
         // Cloud Run: three decent flights a day
         if (KH.cloudRun && !NO.includes('cloudrun')) while (KH.cloudRun.unlocked() && KH.cloudRun.left() > 0) KH.cloudRun.auto(32, 1);
         // Channels: a player who keeps up with the water puzzles, three stars each

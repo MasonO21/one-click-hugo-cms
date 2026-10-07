@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'www');
-const REQUIRED = ['index.html', 'style.css', 'data.js', 'audio.js', 'native.js', 'core.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js'];
+const REQUIRED = ['index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js'];
 const EXTRA_FILES = new Set(['manifest.webmanifest', 'icon.svg']);
 const DIRS = ['icons', 'fonts', 'vendor'];
 

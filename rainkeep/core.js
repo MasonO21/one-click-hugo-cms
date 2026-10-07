@@ -133,7 +133,7 @@
         donations: 0, dutyChests: 0, raidAttacks: 0, raidsRepelled: 0, camps: 0, cleanStorms: 0, sickTotal: 0,
         raidKills: 0, warWins: 0, gathered: 0,
       },
-      endingSeen: false, ending2Seen: false, seenIntro: false,
+      endingSeen: false, ending2Seen: false, ending3Seen: false, seenIntro: false,
     };
     DATA.plots.forEach((p) => { s.lv[p.id] = 0; });
     Object.assign(s.lv, st.levels);
@@ -231,8 +231,10 @@
     if (!id || !S.heroes[id]) return 0;
     const post = DATA.stewardPosts[kind];
     if (!S.lv[post.plot]) return 0;
-    return HERO[id].steward.val * (1 + 0.2 * (S.heroes[id].stars - 1));
+    return stewardOf(id);
   }
+  // a hero's steward bonus: grows 20% per star, and with a Hero Tale's choice (story.js)
+  const stewardOf = (id) => HERO[id].steward.val * (1 + 0.2 * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'steward') : 0));
   function townTemp(wx, offline) {
     return outsideTemp(wx, !offline) - (S.dormant ? 0 : coolOf(S.lv.wyrm)) - (S.tech.shade || 0) - stewardVal('cool') - KH.bonus('cool');
   }
@@ -323,7 +325,7 @@
     const m = (1 + 0.09 * (h.lvl - 1)) * (1 + 0.15 * (h.stars - 1)) * (1 + 0.05 * (S.tech.tactics || 0));
     return { atk: r.atk * m, def: r.def * m, hp: r.hp * m };
   }
-  const skillScale = (id) => 1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1);
+  const skillScale = (id) => (1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'skill') : 0));
   function skillText(id) {
     const d = HERO[id], k = skillScale(id);
     return d.skill.desc.replace(/\{(\w+)\}/g, (_, key) => `${Math.round(d.skill.fx[key] * k * 100)}%`);
@@ -400,11 +402,16 @@
     const foe = boss || ch.foes[(n - ch.from) % ch.foes.length];
     const isBoss = !!boss || (n > DATA.finalStage && n % 10 === 0);
     const name = n > DATA.finalStage ? `${foe[0]} · depth ${n - DATA.finalStage}` : foe[0];
-    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 3 : 1), ...foeStats(n, isBoss ? DATA.enemy.boss : 1) };
+    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 4 : 1), ...foeStats(n, isBoss ? DATA.enemy.boss : 1) };
   }
   function stageRewards(n) {
-    const boss = !!DATA.bosses[n];
-    if (n > DATA.finalStage) return { starglass: n % 10 === 0 ? 120 : 25, journals: 25 + Math.round(n / 2), stone: 60 * n, food: 40 * n, copper: 10 * n, sunsteel: n % 10 === 0 ? 60 : 15 };
+    const boss = !!DATA.bosses[n] || (n > DATA.finalStage && n % 10 === 0);
+    // Act III and the endless Far South
+    if (n > DATA.actTwoStage) {
+      const r = { starglass: boss ? 120 : 25, journals: 25 + Math.round(n / 2), stone: 60 * n, food: 40 * n, copper: 10 * n, sunsteel: boss ? 60 : 15 };
+      if (boss && n <= DATA.finalStage) r.beacons = 2;
+      return r;
+    }
     if (n > DATA.actOneStage) {
       const r = { starglass: boss ? 120 : 30, journals: 10 + 2 * n, stone: 60 * n, food: 40 * n, copper: 9 * n, sunsteel: boss ? 50 : 12 };
       if (boss) r.beacons = 2;
@@ -1048,7 +1055,8 @@
         if (result.win) KH.emit('stage', { n: foe.n });
         const after = [];
         if (result.win && foe.n === DATA.actOneStage && !S.endingSeen) after.push({ kind: 'ending' });
-        else if (result.win && foe.n === DATA.finalStage && !S.ending2Seen) after.push({ kind: 'ending', act: 2 });
+        else if (result.win && foe.n === DATA.actTwoStage && !S.ending2Seen) after.push({ kind: 'ending', act: 2 });
+        else if (result.win && foe.n === DATA.finalStage && !S.ending3Seen) after.push({ kind: 'ending', act: 3 });
         else if (result.win && chapterOf(S.stage).from !== chapterBefore && !S.story.chapters.includes(chapterOf(S.stage).from)) after.push({ kind: 'story', from: chapterOf(S.stage).from });
         save();
         return { rewards, after };
@@ -1291,7 +1299,7 @@
     newStateFn: newState, load, tick, catchUp, rates, stageOf, stageIndex, mist, slotsOf, housing, curWx, forecastRange, dayNight,
     coolOf, coolAt, drinkRate, marchCap, troopCap, outsideTemp, troopMult, protectOf, stewardVal, townTemp, comfortOf,
     workerRate, healRate, buildCost, buildTime, maxLevel, upgradeBlock, canAfford, pay, have, techCost, techTime, techMax,
-    heroStats, heroCap, skillScale, skillText, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
+    heroStats, heroCap, skillScale, skillText, stewardOf, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
     teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, power, patrolPreview, passTier, addPassXp, passReward,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
     batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable, levelPath, levelPackOpen, levelPackGrants,
