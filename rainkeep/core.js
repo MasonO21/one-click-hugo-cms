@@ -436,9 +436,10 @@
   function newBattle(team, foe, opts = {}) {
     const BT = DATA.battle;
     return {
-      team, foe, opts, th: team.hp, eh: foe.hp, r: 0, rounds: [], over: false, win: false, timeout: false,
+      // opts.startHp: a squad already worn down (the Crossing carries its losses from fight to fight)
+      team, foe, opts, th: opts.startHp != null ? clamp(opts.startHp, 1, team.hp) : team.hp, eh: foe.hp, r: 0, rounds: [], over: false, win: false, timeout: false,
       fdef: foe.def * (1 - team.fx.pierce),
-      breath: !S.dormant && !opts.noBreath ? foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath')) : 0,
+      breath: !S.dormant && !opts.noBreath ? foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0)) : 0,
       breathUsed: false,
       skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge, k: 0.85 + 0.15 * skillScale(id) })),
       guard: 0, sunder: 0,
@@ -520,7 +521,7 @@
   function simulateBattle(team, foe, opts = {}) {
     const st = newBattle(team, foe, opts);
     while (!st.over) battleStep(st, autoActs(st));
-    return { win: st.win, rounds: st.rounds, breath: 0, timeout: st.timeout };
+    return { win: st.win, rounds: st.rounds, breath: 0, timeout: st.timeout, th: st.th };
   }
   function power() {
     let p = 0;

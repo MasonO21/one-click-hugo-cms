@@ -22,7 +22,7 @@ const NETWORK_TIMEOUT_MS = 4000;
 
 const SHELL = [
   'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js',
-  'vendor/three.min.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'world3d.js',
+  'vendor/three.min.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'world3d.js',
   'manifest.webmanifest', 'icon.svg',
   'fonts/el-messiri-latin-500-normal.woff2', 'fonts/el-messiri-latin-600-normal.woff2', 'fonts/el-messiri-latin-700-normal.woff2',
   'fonts/barlow-semi-condensed-latin-400-normal.woff2', 'fonts/barlow-semi-condensed-latin-500-normal.woff2',
@@ -33,7 +33,7 @@ const SHELL = [
   ...'raider beast scorpion serpent drake spirit construct crystal sun void'.split(' ').map((n) => `art/foes/${n}.webp`),
   'art/scenes/act1.webp', 'art/scenes/act2.webp', 'art/scenes/act3.webp', 'art/title.webp',
   ...'shelter quarry grove well mine infirmary barracks watchtower archive hall storehouse forge deepspring'.split(' ').map((n) => `art/buildings/${n}.webp`),
-  ...'rainfest hunt builder forgefest spirerush oasis'.split(' ').map((n) => `art/events/${n}.webp`),
+  ...'rainfest hunt builder forgefest spirerush oasis crossing'.split(' ').map((n) => `art/events/${n}.webp`),
   ...'founder stipend ledger growth stormkit warchest forgekit tidekit lvpack lvpack2 sg1 sg2 sg3 sg4 sg5 sg6'.split(' ').map((n) => `art/offers/${n}.webp`),
   ...'cart wagons observatory bunker chapel airship den pool forge shrine scouts mine'.split(' ').map((n) => `art/ruins/${n}.webp`),
   'art/endings/act1.webp', 'art/endings/act2.webp', 'art/endings/act3.webp',

@@ -1006,6 +1006,61 @@ const DATA = {
   },
 
   // ---------- Cloud Run: the Rainwyrm flies out to herd rain clouds home ----------
+  // ---------- The Crossing: a roguelite run to a hidden oasis ----------
+  // Ten rows of a three-lane route across the deep desert. Each step goes to the same lane or one beside
+  // it. The squad's health carries from fight to fight; boons gathered on the way last the whole run.
+  crossing: {
+    unlockStage: 36, // after the Shatterjaw Sandshark
+    every: 8 * 3600, cap: 2, // a new route every 8 hours of keep time, up to 2 waiting
+    rows: 10,
+    odds: { fight: 36, elite: 12, oasis: 16, merchant: 10, mirage: 16, cache: 10 }, // rows 2-9 (row 1 is three fights, row 10 the Warden)
+    // foes measure themselves against your squad as it set out: row r fights at start + per x (r - 1) of its
+    // strength, elites and the Warden stronger still, so the route is as hard at stage 40 as at stage 140
+    foe: { start: 0.65, per: 0.055, elite: 1.2, boss: 1.15 },
+    rest: 0.08, // health back after every won fight
+    oasis: 0.35, // health back at an oasis
+    coins: { fight: 25, elite: 45, cache: 40 },
+    boons: [
+      { id: 'blades', name: 'Honed Blades', desc: 'Squad attack +15%', icon: 'i-duel', atk: 0.15 },
+      { id: 'ranks', name: 'Shaded Ranks', desc: 'Squad defense +15%', icon: 'i-power', def: 0.15 },
+      { id: 'skins', name: 'Full Waterskins', desc: 'Squad health +20%', icon: 'i-water', hp: 0.2 },
+      { id: 'medic', name: 'Field Medic', desc: '10% more health back after every win', icon: 'i-heart', rest: 0.1 },
+      { id: 'torrent', name: 'Second Wind', desc: "Wyrm's Torrent +30%", icon: 'i-raincloud', breath: 0.3 },
+      { id: 'bounty', name: 'Bounty Ledger', desc: '50% more coins from fights and caches', icon: 'i-chest', coins: 0.5 },
+      { id: 'fox', name: 'Desert Fox', desc: 'The first blow of every fight lands twice as hard', icon: 'i-compass', burst: 1 },
+      { id: 'ward', name: 'Sun Ward', desc: 'Squad defense +10% and health +10%', icon: 'i-glory', def: 0.1, hp: 0.1 },
+      { id: 'banner', name: 'War Banner', desc: 'Squad attack +10%, and +10% more against elites and the Warden', icon: 'i-flag', atk: 0.1, eliteAtk: 0.1 },
+    ],
+    merchant: { prices: [55, 70, 85], heal: 0.25, healCost: 35 },
+    // mirage events: two choices each; effects are health (a share of the squad's), coins and a boon; a gamble is
+    // an even chance of its `win` or `lose` outcome
+    events: [
+      { id: 'storm', title: 'A wall of sand', text: 'A sandstorm rolls in from the west. The guides say it will pass by nightfall.',
+        a: { label: 'Push through it', hp: -0.15, coins: 40, says: 'The squad comes out the far side coughing, and finds a lost trader\'s purse in the drift.' },
+        b: { label: 'Wait it out', says: 'You lose the afternoon, and nothing else.' } },
+      { id: 'seller', title: 'A stranded water-seller', text: 'His camel is dead and his skins are full. He would rather sell than carry them.',
+        a: { label: 'Buy his spare skins', coins: -30, hp: 0.25, says: 'Cool water, and the squad stands a little straighter.' },
+        b: { label: 'Help him to the next well', hp: -0.1, boon: true, says: 'He presses an old charm into your hand.' } },
+      { id: 'bones', title: 'Bones of an old caravan', text: 'Ribs of wagons stick out of the sand. Something glints in the nearest one.',
+        a: { label: 'Search the wagons', gamble: true, win: { boon: true, says: 'An old warden\'s kit, still good.' }, lose: { hp: -0.12, says: 'A scorpion nest. The glint was its shell.' } },
+        b: { label: 'Leave the dead in peace', says: 'The squad walks on in silence.' } },
+      { id: 'shrine', title: 'A shrine to the Mother of Rains', text: 'A ring of blue stones and a dry basin, older than the keep.',
+        a: { label: 'Pray for rain', hp: 0.15, says: 'A cloud no bigger than a hand crosses the sun, and it rains for a minute.' },
+        b: { label: 'Leave an offering', coins: -35, boon: true, says: 'The stones hum. Something walks with you now.' } },
+      { id: 'mirage', title: 'An oasis that should not be there', text: 'Palms and still water, a mile off the route. The scouts disagree about whether it is real.',
+        a: { label: 'Go and drink', gamble: true, win: { hp: 0.3, says: 'It was real. Everyone drinks their fill.' }, lose: { hp: -0.1, says: 'It was a mirage, and the sand was hot.' } },
+        b: { label: 'Keep to the route', says: 'The palms fade behind you.' } },
+    ],
+    // the chest at the end, by rows cleared (`won`: the Warden fell); journals scale with the keep
+    rewards: (d, won) => {
+      const r = { starglass: 10 * d, journals: 2 * d };
+      if (d >= 4) r.sunsteel = 30 * d;
+      if (d >= 7) r.beacons = 1;
+      if (won) { r.starglass += 80; r.beacons = 2; }
+      return r;
+    },
+  },
+
   // ---------- The Deepspring (endgame, from Rainwyrm Lv 20) ----------
   // Older water under the wyrm's pool. Tideglass (refined from water and copper, or won in the Far
   // South, high in the Mirage Spire and from Colossus raids) deepens it through 30 levels; base
@@ -1037,6 +1092,7 @@ const DATA = {
     farSouth: { stage: 1, boss: 10 }, // Tideglass for each Far South stage and each of its bosses
     raidKill: 1, // for each fallen Colossus, once the spring is open
     welcome: 20, // waiting in the mail when it opens
+    reserve: 8, // quarter-crates of water that refining and deepening always leave for the wyrm
   },
 
   cloudRun: {
@@ -1133,6 +1189,8 @@ const DATA = {
     { id: 'scene20', text: 'Watch 20 story scenes', stat: 'scenes', n: 20, reward: { starglass: 200 } },
     { id: 'bloom10', text: 'Grow 10 oases on the Dunes', stat: 'oases', n: 10, reward: { starglass: 300 } },
     { id: 'bloom30', text: 'Turn the Dunes green: 30 oases', stat: 'oases', n: 30, reward: { shard_legendary: 1 } },
+    { id: 'cross1', text: 'Reach the hidden oasis on the Crossing', stat: 'crossWins', n: 1, reward: { beacons: 3 } },
+    { id: 'cross10', text: 'Reach the hidden oasis 10 times', stat: 'crossWins', n: 10, reward: { shard_epic: 1 } },
     { id: 'deep5', text: 'Reach Springsong I in the Deepspring', stat: 'deepLv', n: 5, reward: { starglass: 500 } },
     { id: 'deep15', text: 'Reach Springsong III in the Deepspring', stat: 'deepLv', n: 15, reward: { shard_legendary: 1 } },
     { id: 'deep30', text: 'Become Keeper of the Deepspring', stat: 'deepLv', n: 30, reward: { starglass: 3000 } },

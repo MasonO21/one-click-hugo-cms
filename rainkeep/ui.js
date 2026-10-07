@@ -170,7 +170,7 @@
   // the side rail's hubs: tiles that open each member's own sheet (with a way back)
   const HUBS = {
     rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
-    play: { icon: 'i-kite', label: 'Play', ids: ['channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
+    play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
   };
   const MENU_IDS = ['bag'];
   KH.HUBS = HUBS;
@@ -890,6 +890,7 @@
     const el = $('#battle');
     const foe = b.foe;
     const heroes = (b.team.heroes || []).filter((id) => S.heroes[id]);
+    const h0 = b.opts && b.opts.startHp != null ? Math.min(b.team.hp, b.opts.startHp) : b.team.hp;
     el.innerHTML = `
       <div class="b-title"><span class="stage-num">${esc(b.title)}</span><h2>${esc(foe.name)}</h2></div>
       <div class="b-field">
@@ -899,7 +900,7 @@
         <div class="b-log" id="b-log">${esc(b.intro || 'Your squad marches out across the sand…')}</div>
         <div class="b-side" id="b-us">
           <div class="squad">${heroes.map((id) => `<div class="slot">${portrait(id)}</div>`).join('') || '<div class="slot">—</div>'}</div>
-          <div class="b-hp"><div class="lbl"><span>${esc(b.sideLabel || 'Your squad')} · ${fmt(sum(b.team.troops))} troops</span><span id="b-th">${fmt(b.team.hp)}</span></div><div class="bar"><i id="b-thb" style="width:100%"></i></div></div>
+          <div class="b-hp"><div class="lbl"><span>${esc(b.sideLabel || 'Your squad')} · ${fmt(sum(b.team.troops))} troops</span><span id="b-th">${fmt(h0)}</span></div><div class="bar"><i id="b-thb" style="width:${(h0 / b.team.hp) * 100}%"></i></div></div>
         </div>
       </div>
       <div id="b-foot"><button class="btn alt wide" data-act="bskip">Skip</button></div>`;
@@ -979,7 +980,7 @@
         <div class="b-log" id="b-log">${esc(cfg.intro || 'Your squad marches out across the sand…')}</div>
         <div class="b-side" id="b-us">
           <div class="squad b-skills">${skills || '<div class="slot">—</div>'}</div>
-          <div class="b-hp"><div class="lbl"><span>${esc(cfg.sideLabel || 'Your squad')} · ${fmt(sum(cfg.team.troops))} troops</span><span id="b-th">${fmt(cfg.team.hp)}</span></div><div class="bar"><i id="b-thb" style="width:100%"></i></div></div>
+          <div class="b-hp"><div class="lbl"><span>${esc(cfg.sideLabel || 'Your squad')} · ${fmt(sum(cfg.team.troops))} troops</span><span id="b-th">${fmt(st.th)}</span></div><div class="bar"><i id="b-thb" style="width:${(st.th / cfg.team.hp) * 100}%"></i></div></div>
         </div>
       </div>
       <div id="b-foot"><div class="b-acts">
@@ -1062,7 +1063,7 @@
     clearTimeout(B.timer);
     const st = B.st;
     while (!st.over) KH.battleStep(st, KH.autoActs(st));
-    const result = { win: st.win, rounds: st.rounds, breath: 0, timeout: st.timeout };
+    const result = { win: st.win, rounds: st.rounds, breath: 0, timeout: st.timeout, th: st.th };
     Object.assign(B, { result }, B.onEnd(result) || {});
     B.live = false;
     finishBattle();

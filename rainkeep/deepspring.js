@@ -34,7 +34,11 @@
   const levelCost = (L) => ({ tideglass: D.glass(L), ...D.res(L) });
   const refineCost = () => KH.scaleReward(RF.cost);
   const sgCost = () => RF.starglass + RF.starglassStep * (S.deep.sgDay === today() ? S.deep.sgN : 0);
-  const canDeepen = () => unlocked() && level() < D.max && KH.canAfford(levelCost(level() + 1));
+  // refining and deepening never take the stores below a little water for the wyrm to drink
+  const reserve = () => KH.scaleReward({ water: D.reserve }).water;
+  const leaves = (c) => KH.canAfford(c) && S.res.water - (c.water || 0) >= reserve();
+  const canRefine = () => unlocked() && S.deep.charges >= 1 && leaves(refineCost());
+  const canDeepen = () => unlocked() && level() < D.max && leaves(levelCost(level() + 1));
 
   // every level: troops and production; every rank: the hero level cap and its perk
   KH.hooks.bonus.push((k) => {
@@ -79,10 +83,10 @@
     if (!unlocked()) return KH.toast(`The Deepspring opens at Rainwyrm Lv ${D.unlock}.`, 'warn');
     const want = arg === '5' ? 5 : 1, c = refineCost();
     let done = 0, got = 0;
-    while (done < want && S.deep.charges >= 1 && KH.canAfford(c)) {
+    while (done < want && S.deep.charges >= 1 && leaves(c)) {
       KH.pay(c); S.deep.charges--; got += roll(); done++;
     }
-    if (!done) return KH.toast(S.deep.charges < 1 ? `No refine is ready. The next in ${fmtTime(RF.every - S.deep.acc)}.` : 'Not enough water or copper to refine.', 'warn');
+    if (!done) return KH.toast(S.deep.charges < 1 ? `No refine is ready. The next in ${fmtTime(RF.every - S.deep.acc)}.` : KH.canAfford(c) ? `The cisterns keep ${fmt(reserve())} water for ${S.wyrm.name} to drink.` : 'Not enough water or copper to refine.', 'warn');
     gain(got, done);
     KH.toast(`Refined ${got} Tideglass${done > 1 ? ` in ${done} refines` : ''}.`, 'good');
     KH.sfx(got >= 5 * done ? 'victory' : 'coin');
@@ -92,7 +96,7 @@
     if (!unlocked()) return;
     const d = S.deep, sg = sgCost(), c = refineCost();
     if (S.starglass < sg) return KH.toast(`A Starglass refine costs ${sg} Starglass.`, 'warn');
-    if (!KH.canAfford(c)) return KH.toast('Not enough water or copper to refine.', 'warn');
+    if (!leaves(c)) return KH.toast(KH.canAfford(c) ? `The cisterns keep ${fmt(reserve())} water for ${S.wyrm.name} to drink.` : 'Not enough water or copper to refine.', 'warn');
     KH.pay({ ...c, starglass: sg });
     if (d.sgDay !== today()) { d.sgDay = today(); d.sgN = 0; }
     d.sgN++;
@@ -105,7 +109,7 @@
     if (!unlocked()) return KH.toast(`The Deepspring opens at Rainwyrm Lv ${D.unlock}.`, 'warn');
     if (level() >= D.max) return KH.toast('The Deepspring is as deep as it goes.', 'warn');
     const c = levelCost(level() + 1);
-    if (!KH.canAfford(c)) return KH.toast(S.tideglass < c.tideglass ? 'Not enough Tideglass. Refine more, or win it in the Far South and the Spire.' : 'Not enough resources in the stores.', 'warn');
+    if (!leaves(c)) return KH.toast(S.tideglass < c.tideglass ? 'Not enough Tideglass. Refine more, or win it in the Far South and the Spire.' : KH.canAfford(c) ? `The cisterns keep ${fmt(reserve())} water for ${S.wyrm.name} to drink.` : 'Not enough resources in the stores.', 'warn');
     KH.pay(c);
     S.deep.lv++;
     S.stats.deepLv = S.deep.lv;
@@ -145,7 +149,7 @@
     let deepen;
     if (L >= D.max) deepen = `<div class="card"><p><b>The Deepspring is as deep as it goes.</b> ${esc(S.wyrm.name)} is Keeper of the Deepspring.</p></div>`;
     else {
-      const c = levelCost(L + 1), r = rankAt(L + 1), ok = KH.canAfford(c);
+      const c = levelCost(L + 1), r = rankAt(L + 1), ok = leaves(c);
       deepen = `<div class="card stack deep-next"><div class="row"><div class="grow"><b>Lv ${L + 1}</b><div class="muted small">Troops +${pct(D.troop)}, production +${pct(D.prod)}${r ? `, and <b class="deep-rank">${esc(r.name)}</b>: hero level cap +${r.bonus.heroCap}, ${esc(r.perk.charAt(0).toLowerCase() + r.perk.slice(1))}` : ''}</div></div></div>
         ${KH.costHTML(c)}
         <button class="btn wide ${ok ? 'gold' : 'off'}" data-act="deepen" data-primary>${icon('i-tideglass')}Deepen the spring</button></div>`;
@@ -159,8 +163,9 @@
       <p class="muted small">${d.charges >= RF.cap ? 'Every refine is ready. Charges stop building while they wait.' : `A refine charges every ${Math.round(RF.every / 60)} minutes. Next in ${fmtTime(waitFor)}.`}</p>
       ${KH.costHTML(cost)}
       ${d.charges >= 1
-        ? `<div class="row"><button class="btn grow ${KH.canAfford(cost) ? '' : 'off'}" data-act="refine" data-arg="1">Refine</button>${d.charges >= 2 ? `<button class="btn grow alt ${KH.canAfford(cost) ? '' : 'off'}" data-act="refine" data-arg="5">Refine ×${Math.min(5, d.charges)}</button>` : ''}</div>`
-        : `<button class="btn wide alt ${S.starglass >= sgCost() && KH.canAfford(cost) ? '' : 'off'}" data-act="refinesg">Refine now · ${icon('i-gem')}${sgCost()}</button>`}
+        ? `<div class="row"><button class="btn grow ${leaves(cost) ? '' : 'off'}" data-act="refine" data-arg="1">Refine</button>${d.charges >= 2 ? `<button class="btn grow alt ${leaves(cost) ? '' : 'off'}" data-act="refine" data-arg="5">Refine ×${Math.min(5, d.charges)}</button>` : ''}</div>`
+        : `<button class="btn wide alt ${S.starglass >= sgCost() && leaves(cost) ? '' : 'off'}" data-act="refinesg">Refine now · ${icon('i-gem')}${sgCost()}</button>`}
+      ${KH.canAfford(cost) && !leaves(cost) ? `<p class="muted small">The cisterns keep ${fmt(reserve())} water back for ${esc(S.wyrm.name)} to drink.</p>` : ''}
       ${last}</div>`;
     return {
       title: 'The Deepspring', lvl: `Lv ${L}/${D.max}`,
@@ -184,7 +189,7 @@
 
   // for town3d.js, tests and the balance bot
   KH.deep = {
-    unlocked, open: () => unlocked() && !!S.deep.open, level, rank, levelCost, refineCost, canDeepen,
+    unlocked, open: () => unlocked() && !!S.deep.open, level, rank, levelCost, refineCost, canDeepen, canRefine, reserve,
     charges: () => (S && S.deep ? S.deep.charges : 0), sgCost,
   };
 })();

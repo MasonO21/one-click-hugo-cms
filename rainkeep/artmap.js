@@ -67,6 +67,7 @@ window.RK_ART = {
     deepspring: 'art/buildings/deepspring.webp',
   },
   event: {
+    crossing: 'art/events/crossing.webp',
     rainfest: 'art/events/rainfest.webp',
     hunt: 'art/events/hunt.webp',
     builder: 'art/events/builder.webp',
