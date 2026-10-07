@@ -11,6 +11,14 @@ import { confetti } from '../fx/Confetti';
 import { artOrEmoji, isArtSrc } from '../art';
 import { fill, h, setVar } from '../dom';
 
+/** How many chips each list of the tier-up card shows before it folds the rest into a "+N more" chip. */
+export const CELEBRATE_READY_MAX = 8;
+export const CELEBRATE_RESEARCH_MAX = 6;
+/** The research list keeps to four chips on short screens (iPhone SE, landscape phones) so the Onward button stays in view. */
+export function celebrateResearchMax(): number {
+  return typeof window !== 'undefined' && window.innerHeight < 740 ? 4 : CELEBRATE_RESEARCH_MAX;
+}
+
 export interface CelebrateArg {
   title: string;
   text?: string;
@@ -19,6 +27,8 @@ export interface CelebrateArg {
   tier?: number;
   /** "Newly available" list: plain text, or a building / vehicle with its thumbnail. */
   unlocks?: (string | UnlockEntry)[];
+  /** Tier celebration: what the tier also opens up but only after research (shown muted under "Research to unlock"). */
+  researchUnlocks?: UnlockEntry[];
   big?: boolean;
   /** No confetti / fanfare (e.g. the crash-landing intro). */
   quiet?: boolean;
@@ -91,7 +101,18 @@ export class CelebratePanel extends Panel {
     if (a.unlocks?.length) {
       main.appendChild(h('div', { class: 'mute small center', text: 'Newly available:' }));
       const chips = h('div', { class: 'chips center-chips unlocks' });
-      for (const u of a.unlocks.slice(0, 8)) chips.appendChild(typeof u === 'string' ? h('span', { class: 'chip info', text: u }) : unlockChip(u));
+      for (const u of a.unlocks.slice(0, CELEBRATE_READY_MAX)) chips.appendChild(typeof u === 'string' ? h('span', { class: 'chip info', text: u }) : unlockChip(u));
+      if (a.unlocks.length > CELEBRATE_READY_MAX) chips.appendChild(h('span', { class: 'chip more', text: `+${a.unlocks.length - CELEBRATE_READY_MAX} more` }));
+      main.appendChild(chips);
+    }
+    if (a.researchUnlocks?.length) {
+      // the rest of the tier: usable once the matching research is done, so muted and marked with the microscope
+      const max = celebrateResearchMax();
+      const more = a.researchUnlocks.length - max;
+      main.appendChild(h('div', { class: 'mute small center cb-rlabel', text: '🔬 Research to unlock:' }));
+      const chips = h('div', { class: 'chips center-chips unlocks gated', data: { group: 'research' } });
+      for (const u of a.researchUnlocks.slice(0, max)) chips.appendChild(unlockChip(u));
+      if (more > 0) chips.appendChild(h('span', { class: 'chip more', text: `+${more} more` }));
       main.appendChild(chips);
     }
     main.appendChild(btn({ label: a.ok ?? (tier ? 'Onward!' : 'Awesome!'), cls: 'big good block', id: 'btn-celebrate-ok', onClick: () => this.ctx.close(this.name) }));

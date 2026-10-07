@@ -40,7 +40,7 @@ import { Threats } from './hud/Threats';
 import { alienArt, biomeArt, eventArt, itemArt, poiArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
 import { itemToast, RARITY_COLOR } from './logic/rewards';
-import { tierUnlocks } from './logic/describe';
+import { tierUnlockGroups } from './logic/describe';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -61,7 +61,7 @@ import { SettingsPanel } from './panels/SettingsPanel';
 import { WelcomePanel } from './panels/WelcomePanel';
 import { VictoryPanel } from './panels/VictoryPanel';
 import { MerchantPanel } from './panels/MerchantPanel';
-import { CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
+import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
 
 /** Minimum gap between production floats of the same resource. */
@@ -419,11 +419,13 @@ export class UI {
       const now = performance.now();
       this.lastTierCelebrate = now;
       const t = g.data.tier(e.tier);
-      const unlocks = tierUnlocks(g.data, e.tier, true);
+      // everything the tier opens: what can be built at once first, then what still needs research
+      const { ready, research } = tierUnlockGroups(g.data, e.tier, g.state.research.completed);
       // let the player watch the base transform first: close the colony sheet, frame the core and show the
       // colony boundary growing, then celebrate
       this.panels.closeSheets();
-      preloadArt([tierArt(e.tier), ...unlocks.slice(0, 8).map((u) => u.art)]); // decode the pictures while the base transforms
+      // decode the pictures while the base transforms
+      preloadArt([tierArt(e.tier), ...ready.slice(0, CELEBRATE_READY_MAX).map((u) => u.art), ...research.slice(0, CELEBRATE_RESEARCH_MAX).map((u) => u.art)]);
       const core = g.sys.buildings.core();
       if (core) {
         const c = g.sys.buildings.center(core);
@@ -441,7 +443,8 @@ export class UI {
         text: e.tier >= 6 ? 'You built a gleaming super-colony. What an incredible journey!' : t.description,
         icon: e.tier >= 6 ? '🌟' : '🏰',
         tier: e.tier,
-        unlocks,
+        unlocks: ready,
+        researchUnlocks: research,
         big: true,
         art: tierArt(e.tier),
         artKind: 'tier',

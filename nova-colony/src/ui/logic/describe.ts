@@ -126,6 +126,8 @@ export interface UnlockEntry {
   /** Thumbnail URL (null = show `icon`). */
   art: string | null;
   name: string;
+  /** Name of the research that still has to be finished before this can be built / driven (unset = usable at once). */
+  needs?: string;
 }
 
 export function buildingUnlock(data: DataRegistry, id: string): UnlockEntry {
@@ -138,19 +140,46 @@ export function vehicleUnlock(data: DataRegistry, id: string): UnlockEntry {
   return { kind: 'vehicle', id, icon: d?.icon ?? '🚙', art: vehicleArt(id), name: d?.name ?? id };
 }
 
-/**
- * The facilities and vehicles that come with a colony tier (exactly that `unlockTier`; structure pieces and the
- * Command Center are not listed), those usable at once first. `freeOnly` keeps just the ones that need no research
- * (what the tier-up celebration can honestly call "newly available"); without it the colony panel previews the whole
- * tier.
- */
-export function tierUnlocks(data: DataRegistry, tier: number, freeOnly = false): UnlockEntry[] {
-  const ok = (needs: string | undefined): boolean => !freeOnly || !needs;
-  const bs = data.buildings.filter((b) => b.unlockTier === tier && !b.piece && !b.core && ok(b.research));
-  const vs = data.vehicles.filter((v) => v.unlockTier === tier && ok(v.research));
+/** A tier's building / vehicle with the id of the research gating it (null = none), in display order. */
+function tierUnlockPairs(data: DataRegistry, tier: number): { entry: UnlockEntry; research: string | null }[] {
+  const bs = data.buildings.filter((b) => b.unlockTier === tier && !b.piece && !b.core);
+  const vs = data.vehicles.filter((v) => v.unlockTier === tier);
   const gated = (n: string | undefined): number => (n ? 1 : 0);
   return [
-    ...[...bs].sort((a, z) => gated(a.research) - gated(z.research)).map((b) => buildingUnlock(data, b.id)),
-    ...[...vs].sort((a, z) => gated(a.research) - gated(z.research)).map((v) => vehicleUnlock(data, v.id)),
+    ...[...bs].sort((a, z) => gated(a.research) - gated(z.research)).map((b) => ({ entry: buildingUnlock(data, b.id), research: b.research ?? null })),
+    ...[...vs].sort((a, z) => gated(a.research) - gated(z.research)).map((v) => ({ entry: vehicleUnlock(data, v.id), research: v.research ?? null })),
   ];
+}
+
+/**
+ * The facilities and vehicles that come with a colony tier (exactly that `unlockTier`; structure pieces and the
+ * Command Center are not listed), those usable at once first. `freeOnly` keeps just the ones that need no research;
+ * without it the colony panel previews the whole tier.
+ */
+export function tierUnlocks(data: DataRegistry, tier: number, freeOnly = false): UnlockEntry[] {
+  return tierUnlockPairs(data, tier)
+    .filter((p) => !freeOnly || !p.research)
+    .map((p) => p.entry);
+}
+
+/** What a tier opens up, split by whether the player can use it right now. */
+export interface TierUnlockGroups {
+  /** Buildable / drivable at once (no research needed, or the research is already done): "Newly available". */
+  ready: UnlockEntry[];
+  /** Still behind research; each entry carries the research name in `needs`. */
+  research: UnlockEntry[];
+}
+
+/**
+ * The whole tier for the tier-up celebration: what is usable the moment the tier is reached (nothing gating it, or
+ * its research is in `done`), then the research-gated rest, marked with the research each one needs.
+ */
+export function tierUnlockGroups(data: DataRegistry, tier: number, done: readonly string[] = []): TierUnlockGroups {
+  const ready: UnlockEntry[] = [];
+  const research: UnlockEntry[] = [];
+  for (const { entry, research: need } of tierUnlockPairs(data, tier)) {
+    if (!need || done.includes(need)) ready.push(entry);
+    else research.push({ ...entry, needs: data.researchDef(need)?.name ?? need });
+  }
+  return { ready, research };
 }

@@ -10,7 +10,8 @@ import { createDataRegistry } from '../src/data';
 import { alienArt, biomeArt, buildingArt, buildingArtIds, eventArt, hudArt, hudArtIds, isArtSrc, itemArt, itemArtIds, keyArt, phaseArt, poiArt, poiArtIds, professionArt, researchArt, researchArtIds, resourceArt, rewardArt, shopArt, tierArt, vehicleArt, vehicleArtIds } from '../src/ui/art';
 import { dayPhase } from '../src/ui/logic/time';
 import { itemToast, rewardParts } from '../src/ui/logic/rewards';
-import { buildingEffects, buildingUnlock, tierUnlocks, vehicleUnlock } from '../src/ui/logic/describe';
+import { buildingEffects, buildingUnlock, tierUnlockGroups, tierUnlocks, vehicleUnlock } from '../src/ui/logic/describe';
+import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, celebrateResearchMax } from '../src/ui/panels/CelebratePanel';
 import { threatGroups } from '../src/ui/hud/Threats';
 import { makeGame } from './world.helpers';
 
@@ -391,6 +392,65 @@ describe('ui art wiring helpers', () => {
     expect(sawFree).toBeGreaterThan(0);
     expect(sawGated).toBeGreaterThan(sawFree);
     expect(tierUnlocks(data, 99)).toEqual([]);
+  });
+
+  it('tier-up groups: usable-now first, the research-gated rest marked with the research they need', () => {
+    for (let t = 0; t < data.tiers.length; t++) {
+      const all = tierUnlocks(data, t);
+      const { ready, research } = tierUnlockGroups(data, t);
+      // with nothing researched, "ready" is exactly the research-free list and nothing is lost or repeated
+      expect(ready.map((u) => u.id), `tier ${t} ready`).toEqual(tierUnlocks(data, t, true).map((u) => u.id));
+      expect([...ready, ...research].map((u) => u.id).sort(), `tier ${t} total`).toEqual(all.map((u) => u.id).sort());
+      expect(ready.every((u) => u.needs === undefined)).toBe(true);
+      for (const u of research) {
+        const def = u.kind === 'building' ? data.building(u.id)! : data.vehicle(u.id)!;
+        expect(def.research, u.id).toBeTruthy();
+        expect(u.needs, u.id).toBe(data.researchDef(def.research!)!.name);
+        expect(u.art, u.id).not.toBeNull();
+      }
+    }
+    expect(tierUnlockGroups(data, 99)).toEqual({ ready: [], research: [] });
+  });
+
+  it('tier-up groups: the first tier-up lists its one research-free building, then the 12 gated ones', () => {
+    const { ready, research } = tierUnlockGroups(data, 1);
+    expect(ready.map((u) => u.id)).toEqual(['storage_shed']);
+    expect(research.length).toBeGreaterThan(CELEBRATE_RESEARCH_MAX); // the card has to fold the rest into "+N more"
+    expect(research.length).toBe(12);
+    expect(research.map((u) => u.id)).toContain('atv');
+    expect(research.find((u) => u.id === 'cabin')?.needs).toBe(data.researchDef('scaffolding')!.name);
+    // buildings come before vehicles, like the colony panel's preview of the same tier
+    const firstVehicle = research.findIndex((u) => u.kind === 'vehicle');
+    expect(research.slice(firstVehicle).every((u) => u.kind === 'vehicle')).toBe(true);
+  });
+
+  it('tier-up groups: an unlock whose research is already finished counts as usable at once', () => {
+    // Stone tier: the Water Pump is gated by Water Storage, a tier-2 tech the player may well have finished
+    const before = tierUnlockGroups(data, 2);
+    expect(before.ready.map((u) => u.id)).not.toContain('water_pump');
+    expect(before.research.find((u) => u.id === 'water_pump')?.needs).toBe(data.researchDef('water_storage')!.name);
+    const after = tierUnlockGroups(data, 2, ['water_storage']);
+    expect(after.ready.map((u) => u.id)).toEqual(['water_pump']);
+    expect(after.research.map((u) => u.id)).not.toContain('water_pump');
+    expect(after.ready.length + after.research.length).toBe(before.ready.length + before.research.length);
+  });
+
+  it('tier-up card caps: eight ready chips, six research chips (four on short screens)', () => {
+    expect(CELEBRATE_READY_MAX).toBe(8);
+    expect(CELEBRATE_RESEARCH_MAX).toBe(6);
+    // no window in the node test env: the full cap
+    expect(celebrateResearchMax()).toBe(6);
+    const w = globalThis as unknown as { window?: { innerHeight: number } };
+    try {
+      w.window = { innerHeight: 667 };
+      expect(celebrateResearchMax()).toBe(4);
+      w.window = { innerHeight: 393 };
+      expect(celebrateResearchMax()).toBe(4);
+      w.window = { innerHeight: 932 };
+      expect(celebrateResearchMax()).toBe(6);
+    } finally {
+      delete w.window;
+    }
   });
 
   it('building effect tags for production carry the resource icon', () => {

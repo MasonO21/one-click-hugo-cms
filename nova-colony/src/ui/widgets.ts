@@ -143,8 +143,14 @@ export function tabs(items: TabItem[], active: string, onSelect: (id: string) =>
   return wrap;
 }
 
-/** "Newly available" chip for a building / vehicle: its thumbnail (emoji fallback) and name. */
+/**
+ * "Newly available" chip for a building / vehicle: its thumbnail (emoji fallback) and name. One that still needs
+ * research (`u.needs`) is muted and ends in a 🔬 badge, its tooltip naming the research.
+ */
 export function unlockChip(u: UnlockEntry): HTMLElement {
+  if (u.needs) {
+    return h('span', { class: 'chip unlock gated', title: `${u.name} — needs research: ${u.needs}`, data: { unlock: u.id, needs: u.needs } }, iconEl(u.art, u.icon, 'uic'), u.name, h('i', { class: 'rp', 'aria-label': 'needs research', text: '🔬' }));
+  }
   return h('span', { class: 'chip info unlock', title: u.name, data: { unlock: u.id } }, iconEl(u.art, u.icon, 'uic'), u.name);
 }
 
