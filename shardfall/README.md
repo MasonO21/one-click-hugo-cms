@@ -210,7 +210,7 @@ Follow **[docs/APP_STORE.md](docs/APP_STORE.md)** step by step.
 - **Commission art and audio.** The procedural crystal art and generated music are consistent and shippable, but professional assets raise conversion.
 - **Plan content.** Ship a new hero or skin line every 2–4 weeks, a new pass each season, and rotating festivals. In this genre, content cadence and spending on user acquisition drive revenue far more than any single feature.
 - **Animate the sprites.** Heroes are single still poses today. Next up are attack and skill pose frames for each hero (from the same Higgsfield references), swapped in while attacking or casting.
-- **Tune balance with real players.** In `npm run balance -- 300` (300 bot matches per hero, ±6%), every hero wins 40–56%. Smarter team-fight targeting closed most of the old gap, but the melee divers Kaida (40%) and Nyx (42%) still trail in bot-only play. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
+- **Tune balance with real players.** Over two pooled runs of `npm run balance -- 300` (600 bot matches per hero), every hero wins 41–57%. Ranged carries lead (Quarra, Sylva and Vexa 56–57%), and the melee divers trail (Nyx 41%, Kaida and Drace 44%). A single 300-game run can swing a hero by up to 10 points, so pool at least two runs before changing numbers. Bot results mostly show how well the AI plays each hero, so real match data should drive the next pass.
 
 ## 5. File map
 

@@ -2,7 +2,8 @@
 // Per-hero win rates from bot-only matches:  node tools/balance.mjs [games per hero, default 200] [hero ...]
 // Each hero plays half its games on each side, always on Normal (so neither side gets the
 // difficulty damage bonus), with random teammates and opponents. One process per hero, run in
-// parallel. At 200 games a hero's rate is good to about ±7%, at 300 to about ±6%.
+// parallel. In practice one 300-game run can move a hero by up to 10 points (teammates and opponents
+// are random), so pool two or more runs before tuning on a difference.
 import { readFileSync } from 'node:fs';
 import { fork } from 'node:child_process';
 import { cpus } from 'node:os';
