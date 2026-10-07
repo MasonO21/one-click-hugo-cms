@@ -255,6 +255,8 @@ describe('daily life: attacks', () => {
     expect(h.game.sys.colonists.jobOf(guard)).toBe('guard');
     h.run(10);
 
+    // Drive the phase by hand: freeze the real combat system so it doesn't resolve the empty attack.
+    h.game.sys.combat.update = () => {};
     h.game.state.combat.phase = 'warning';
     h.game.bus.emit('combat:warning', { wave: 1, seconds: 120 });
     h.run(30);
