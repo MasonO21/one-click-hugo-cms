@@ -1,5 +1,6 @@
 /** Colonist presentation helpers: portrait palettes, happiness faces, rarity styling. */
 import type { Colonist, ColonistAppearance } from '../../core/state';
+import type { Game } from '../../core/Game';
 
 export const SKIN = ['#f7d6b8', '#ecbd94', '#d29a6a', '#a8704a', '#7a4c33', '#f3cba6'];
 export const HAIR = ['#2b1d16', '#5a3a22', '#a8742f', '#e0bb70', '#c4472f', '#9097a6', '#4b3a8c', '#1f6f55'];
@@ -46,4 +47,14 @@ export function happinessFace(h: number): { icon: string; label: string; color: 
 export function stars(n: number, max = 5): string {
   const k = Math.max(0, Math.min(max, Math.round(n)));
   return '★'.repeat(k) + '☆'.repeat(max - k);
+}
+
+/** The profession a colonist is doing right now (their workplace's job), else their specialty. */
+export function jobOf(game: Game, c: Pick<Colonist, 'workplace' | 'specialty'>): string {
+  if (c.workplace != null) {
+    const b = game.sys.buildings.get(c.workplace);
+    const job = b ? game.data.building(b.def)?.workers?.job : undefined;
+    if (job) return job;
+  }
+  return c.specialty;
 }

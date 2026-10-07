@@ -5,7 +5,8 @@
 import { Panel, type PanelTitle } from './Panel';
 import { easeOutQuart, segmentAtRotation, spinTarget } from '../logic/spin';
 import { rewardParts } from '../logic/rewards';
-import { adButton, btn, rewardChips } from '../widgets';
+import { adButton, btn, partIcon, rewardChips } from '../widgets';
+import { iconEl } from '../art';
 import { confetti } from '../fx/Confetti';
 import { fill, h } from '../dom';
 
@@ -70,7 +71,7 @@ export class SpinPanel extends Panel {
     const prizes = h('div', { class: 'chips prize-chips' });
     for (const s of segs) {
       const p = rewardParts(s.reward, this.data)[0];
-      prizes.appendChild(h('span', { class: 'chip', style: { background: s.color + '55' } }, h('i', { text: p?.icon ?? '🎁' }), s.label));
+      prizes.appendChild(h('span', { class: 'chip', style: { background: s.color + '55' } }, p ? partIcon(p) : iconEl(null, '🎁'), s.label));
     }
     side.appendChild(prizes);
     fill(this.body, h('div', { class: 'spin-layout' }, stage, side));
@@ -137,11 +138,42 @@ export class SpinPanel extends Panel {
   }
 
   private drawWheel(): HTMLCanvasElement {
-    const segs = this.data.spinSegments;
     const S = 640;
     const cv = h<HTMLCanvasElement>('canvas', { class: 'wheel', width: S, height: S });
+    this.paintWheel(cv);
+    // prize icons: repaint with the illustrations once they are decoded (the HUD has usually cached them already)
+    const srcs = new Set<string>();
+    for (const s of this.data.spinSegments) {
+      const art = rewardParts(s.reward, this.data)[0]?.art;
+      if (art) srcs.add(art);
+    }
+    if (srcs.size) {
+      const imgs = new Map<string, HTMLImageElement>();
+      void Promise.all(
+        [...srcs].map(async (src) => {
+          const img = new Image();
+          img.src = src;
+          try {
+            await img.decode();
+            imgs.set(src, img);
+          } catch {
+            /* keep the emoji for this one */
+          }
+        }),
+      ).then(() => {
+        if (imgs.size) this.paintWheel(cv, imgs);
+      });
+    }
+    return cv;
+  }
+
+  private paintWheel(cv: HTMLCanvasElement, imgs?: Map<string, HTMLImageElement>): void {
+    const segs = this.data.spinSegments;
+    const S = cv.width;
     const c = cv.getContext('2d')!;
     const R = S / 2;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, S, S);
     c.translate(R, R);
     const n = Math.max(1, segs.length);
     const a = (Math.PI * 2) / n;
@@ -186,10 +218,16 @@ export class SpinPanel extends Panel {
       c.fillStyle = '#fff';
       c.strokeText(s.label, R * 0.26, 0);
       c.fillText(s.label, R * 0.26, 0);
-      c.font = '52px system-ui, "Apple Color Emoji", "Segoe UI Emoji"';
-      c.textAlign = 'center';
-      c.fillStyle = '#000';
-      c.fillText(p?.icon ?? '🎁', R * 0.81, 3);
+      const img = p?.art ? imgs?.get(p.art) : undefined;
+      if (img) {
+        const sz = 70;
+        c.drawImage(img, R * 0.81 - sz / 2, -sz / 2, sz, sz);
+      } else {
+        c.font = '52px system-ui, "Apple Color Emoji", "Segoe UI Emoji"';
+        c.textAlign = 'center';
+        c.fillStyle = '#000';
+        c.fillText(p?.icon ?? '🎁', R * 0.81, 3);
+      }
       c.restore();
     });
     // rim lights
@@ -200,6 +238,5 @@ export class SpinPanel extends Panel {
       c.fillStyle = i % 2 ? '#fff6c8' : '#ff8a3d';
       c.fill();
     }
-    return cv;
   }
 }

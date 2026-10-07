@@ -5,6 +5,7 @@ import { Panel, type PanelTitle } from './Panel';
 import { fmtLong, msUntilLocalMidnight } from '../logic/time';
 import { btn, rewardChips } from '../widgets';
 import { fill, h } from '../dom';
+import { artOrEmoji, rewardArt } from '../art';
 
 export class DailyPanel extends Panel {
   readonly name = 'daily';
@@ -38,7 +39,7 @@ export class DailyPanel extends Panel {
         const r = lo.claimDaily();
         if (r) {
           this.ctx.haptic('success');
-          this.ctx.showReward(`Day ${nextIdx + 1} reward`, r, '🎁');
+          this.ctx.showReward(`Day ${nextIdx + 1} reward`, r, rewardArt('daily_gift') ?? '🎁');
         }
         this.rerender();
       },
@@ -47,6 +48,7 @@ export class DailyPanel extends Panel {
       h(
         'div',
         { class: 'card tint row daily-head' },
+        artOrEmoji(rewardArt('daily_gift'), '🎁', 'bi gift-img', 'Daily gift'),
         h(
           'div',
           { class: 'grow' },

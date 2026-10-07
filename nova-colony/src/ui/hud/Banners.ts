@@ -7,6 +7,7 @@ import type { UiCtx } from '../ctx';
 import { fmtClock } from '../../core/format';
 import { btn } from '../widgets';
 import { h, setClass, setHidden, setText } from '../dom';
+import { alienArt, artOrEmoji, rewardArt } from '../art';
 
 export class Banners {
   readonly el: HTMLElement;
@@ -20,6 +21,7 @@ export class Banners {
   private readonly hintTxt: HTMLElement;
   private readonly knocked: HTMLElement;
   private mode: 'none' | 'warning' | 'attack' | 'victory' = 'none';
+  private icKey = '';
 
   constructor(private readonly ctx: UiCtx) {
     this.abIc = h('div', { class: 'ab-ic' });
@@ -56,6 +58,7 @@ export class Banners {
       setClass(this.attack, 'attack', mode === 'attack');
       setClass(this.attack, 'victory', mode === 'victory');
       this.abBtn.hidden = mode === 'attack';
+      this.icKey = '';
       if (mode === 'warning') {
         setText(this.abIc, '🛸');
         setText(this.abSmall, '⚠ Alien activity detected');
@@ -72,6 +75,7 @@ export class Banners {
         this.abBtn.textContent = 'Open';
       }
     }
+    this.refreshIcon(mode);
     if (mode === 'warning') {
       let sec = game.sys.combat.secondsToAttack();
       const alt = c.nextAt - st.playTime;
@@ -94,6 +98,56 @@ export class Banners {
     setHidden(this.knocked, !(down > 0));
     if (down > 0) setText(this.knocked, `😵 Knocked out — waking up at the pod in ${Math.ceil(down)}s`);
     return mode !== 'none';
+  }
+
+  /**
+   * The banner's icon as illustrations: the alien types in the coming wave (invasion table of the colony tier,
+   * plus the boss when it is due), the types still on the field while attacking, the chest after victory.
+   * Falls back to the emoji set above when there is no art.
+   */
+  private refreshIcon(mode: Banners['mode']): void {
+    if (mode === 'none') return;
+    const { game } = this.ctx;
+    const c = game.state.combat;
+    let items: { model: string; boss: boolean }[] = [];
+    if (mode === 'victory') {
+      items = [{ model: 'chest', boss: false }];
+    } else {
+      const seen = new Set<string>();
+      const add = (alienId: string): void => {
+        const d = game.data.alien(alienId);
+        if (!d || seen.has(d.model) || !alienArt(d.model)) return;
+        seen.add(d.model);
+        items.push({ model: d.model, boss: !!d.boss });
+      };
+      if (mode === 'warning') {
+        const inv = game.data.invasions.length ? game.data.invasion(game.state.colony.tier) : null;
+        if (inv) {
+          for (const g of inv.groups) add(g.alien);
+          if (inv.boss && inv.boss.every > 0 && (c.waveAtTier + 1) % inv.boss.every === 0) add(inv.boss.alien);
+        }
+      } else {
+        for (const a of c.aliens) if (!a.wild && a.state !== 'dying') add(a.def);
+        for (const q of c.spawnQueue) add(q.alien);
+      }
+      items.sort((a, b) => Number(b.boss) - Number(a.boss));
+      items = items.slice(0, 3);
+    }
+    const key = mode + ':' + items.map((i) => i.model + (i.boss ? '!' : '')).join(',');
+    if (key === this.icKey) return;
+    this.icKey = key;
+    if (!items.length) {
+      this.abIc.classList.remove('art');
+      return;
+    }
+    this.abIc.classList.add('art');
+    this.abIc.replaceChildren(
+      ...items.map((i) => {
+        const src = i.model === 'chest' ? rewardArt('victory_chest') : alienArt(i.model);
+        const el = artOrEmoji(src, i.model === 'chest' ? '🏆' : '👾', 'ab-pic' + (i.boss ? ' boss' : '') + (i.model === 'chest' ? ' chest' : ''), i.model);
+        return el;
+      }),
+    );
   }
 
   /** Height of the visible banner stack in px (portrait layout pushes the rail/mission card down). */

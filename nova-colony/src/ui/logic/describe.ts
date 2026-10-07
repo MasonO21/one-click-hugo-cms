@@ -6,9 +6,12 @@ import type { BuildingDef, Modifier, ResourceBag } from '../../data/schema';
 import type { DataRegistry } from '../../data';
 import { fmt } from '../../core/format';
 import { bagEntries } from '../../core/bag';
+import { resourceArt } from '../art';
 
 export interface EffectTag {
   icon: string;
+  /** Illustration for `icon` (resource tags) — the emoji is the fallback. */
+  art?: string | null;
   text: string;
   tone?: 'good' | 'warn' | 'info';
 }
@@ -18,8 +21,8 @@ export function levelMult(def: BuildingDef, level: number): number {
   return 1 + (def.levelEffect ?? 0) * (Math.max(1, level) - 1);
 }
 
-function bagText(bag: ResourceBag | undefined, data: DataRegistry, mult: number, sign: string, suffix: string): string[] {
-  return bagEntries(bag).map(([id, v]) => `${data.resource(id)?.icon ?? '•'} ${sign}${fmt(v * mult)}${suffix}`);
+function bagTags(bag: ResourceBag | undefined, data: DataRegistry, mult: number, sign: string, suffix: string, tone: 'good' | 'warn'): EffectTag[] {
+  return bagEntries(bag).map(([id, v]) => ({ icon: data.resource(id)?.icon ?? '•', art: resourceArt(id), text: `${sign}${fmt(v * mult)}${suffix}`, tone }));
 }
 
 /** Effect chips for a building def at a given level. */
@@ -27,8 +30,8 @@ export function buildingEffects(def: BuildingDef, data: DataRegistry, level = 1)
   const m = levelMult(def, level);
   const out: EffectTag[] = [];
   if (def.housing) out.push({ icon: '🛏️', text: `${fmt(def.housing * m)} bed${def.housing * m === 1 ? '' : 's'}`, tone: 'good' });
-  for (const t of bagText(def.produces, data, m, '+', '/min')) out.push({ icon: '', text: t, tone: 'good' });
-  for (const t of bagText(def.consumes, data, 1, '−', '/min')) out.push({ icon: '', text: t, tone: 'warn' });
+  out.push(...bagTags(def.produces, data, m, '+', '/min', 'good'));
+  out.push(...bagTags(def.consumes, data, 1, '−', '/min', 'warn'));
   if (def.power) out.push({ icon: '⚡', text: def.power > 0 ? `+${fmt(def.power * m)} power` : `−${fmt(-def.power)} power`, tone: def.power > 0 ? 'good' : 'warn' });
   if (def.storage) {
     const e = bagEntries(def.storage);

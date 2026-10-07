@@ -4,6 +4,7 @@
  */
 import type { ToastKind } from '../ctx';
 import { h } from '../dom';
+import { artOrEmoji, isArtSrc } from '../art';
 
 interface Active {
   el: HTMLElement;
@@ -46,7 +47,11 @@ export class Toasts {
     const ic = el.querySelector('.t-ic') as HTMLElement;
     const tx = el.querySelector('.t-tx') as HTMLElement;
     const counter = el.querySelector('.t-x') as HTMLElement;
-    ic.textContent = icon ?? DEFAULT_ICON[kind];
+    // an illustration URL (resource icon, colonist portrait, event art) instead of an emoji
+    const art = isArtSrc(icon);
+    ic.className = 't-ic' + (art ? ' art' + (icon.includes('/professions/') ? ' face' : icon.includes('/events/') ? ' wide' : '') : '');
+    if (art) ic.replaceChildren(artOrEmoji(icon, DEFAULT_ICON[kind], 'ta'));
+    else ic.textContent = icon ?? DEFAULT_ICON[kind];
     tx.textContent = text;
     counter.hidden = true;
     const a: Active = { el, text, count: 1, counter, timer: 0 };

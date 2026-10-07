@@ -9,6 +9,7 @@ import { fmtDuration } from '../../core/format';
 import { btn } from '../widgets';
 import { confetti } from '../fx/Confetti';
 import { countUp, fill, h } from '../dom';
+import { iconEl, resourceArt } from '../art';
 
 export interface WelcomeArg {
   seconds: number;
@@ -63,16 +64,16 @@ export class WelcomePanel extends Panel {
     const entries = bagEntries(s.gains).sort((a, b) => (order.get(a[0]) ?? 99) - (order.get(b[0]) ?? 99));
     let i = 0;
     const rows: { el: HTMLElement; n: number; i: number }[] = [];
-    const addRow = (icon: string, name: string, n: number, color: string) => {
+    const addRow = (icon: string, name: string, n: number, color: string, art: string | null = null) => {
       const num = h('b', { class: 'gn num', text: this.animated ? `+${Math.round(n).toLocaleString()}` : '+0' });
-      const row = h('div', { class: 'gain-row', style: { '--gc': color, animationDelay: `${i * 90}ms` } }, h('span', { class: 'gi', text: icon }), h('span', { class: 'gl', text: name }), num);
+      const row = h('div', { class: 'gain-row', style: { '--gc': color, animationDelay: `${i * 90}ms` } }, iconEl(art, icon, 'gi', 'span'), h('span', { class: 'gl', text: name }), num);
       list.appendChild(row);
       rows.push({ el: num, n, i });
       i++;
     };
     for (const [id, n] of entries) {
       const d = this.data.resource(id);
-      addRow(d?.icon ?? '📦', d?.name ?? id, n, d?.color ?? '#999');
+      addRow(d?.icon ?? '📦', d?.name ?? id, n, d?.color ?? '#999', resourceArt(id));
     }
     if (s.rp > 0) addRow('🔬', 'Research points', s.rp, '#8fa8ff');
     if (!rows.length) list.appendChild(h('div', { class: 'mute center', text: 'Your colonists were resting — build production to earn while away!' }));

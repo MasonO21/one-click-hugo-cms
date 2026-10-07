@@ -8,6 +8,7 @@ import type { UiCtx } from '../ctx';
 import { edgePointRect, relativeScreenDir } from '../logic/input';
 import { h, setClass } from '../dom';
 import { CELL } from '../../core/constants';
+import { alienArt } from '../art';
 
 const SECTORS = 8;
 const MAX_MARKERS = 3;
@@ -17,15 +18,18 @@ interface Group {
   x: number;
   z: number;
   boss: boolean;
+  /** Per-model head count (AlienDef.model) — the most common one (a boss first) gets its portrait on the marker. */
+  models?: Map<string, number>;
+  model?: string;
 }
 
 /** Bucket invaders (and the next queued spawns) by direction from the colony center. Pure: exported for tests. */
 export function threatGroups(
-  aliens: readonly { x: number; z: number; boss?: boolean }[],
+  aliens: readonly { x: number; z: number; boss?: boolean; model?: string }[],
   cx: number,
   cz: number,
   sectors = SECTORS,
-): { n: number; x: number; z: number; boss: boolean }[] {
+): { n: number; x: number; z: number; boss: boolean; model?: string }[] {
   const g: Group[] = [];
   for (let i = 0; i < sectors; i++) g.push({ n: 0, x: 0, z: 0, boss: false });
   for (const a of aliens) {
@@ -36,18 +40,23 @@ export function threatGroups(
     b.x += a.x;
     b.z += a.z;
     if (a.boss) b.boss = true;
+    if (a.model) {
+      const m = (b.models ??= new Map());
+      // a boss outweighs any crowd so its portrait is the one shown
+      m.set(a.model, (m.get(a.model) ?? 0) + (a.boss ? 1e6 : 1));
+    }
   }
   return g
     .filter((b) => b.n > 0)
-    .map((b) => ({ n: b.n, x: b.x / b.n, z: b.z / b.n, boss: b.boss }))
+    .map((b) => ({ n: b.n, x: b.x / b.n, z: b.z / b.n, boss: b.boss, model: b.models ? [...b.models.entries()].sort((p, q) => q[1] - p[1])[0][0] : undefined }))
     .sort((a, b) => Number(b.boss) - Number(a.boss) || b.n - a.n);
 }
 
 export class Threats {
   readonly layer: HTMLElement;
-  private readonly markers: { el: HTMLElement; label: HTMLElement; arrow: HTMLElement; x: number; z: number; tr: string; text: string }[] = [];
+  private readonly markers: { el: HTMLElement; label: HTMLElement; arrow: HTMLElement; pic: HTMLImageElement; x: number; z: number; tr: string; text: string; model: string }[] = [];
   private groups: Group[] = [];
-  private readonly pts: { x: number; z: number; boss?: boolean }[] = [];
+  private readonly pts: { x: number; z: number; boss?: boolean; model?: string }[] = [];
 
   constructor(private readonly ctx: UiCtx) {
     this.layer = h('div', { class: 'nv-threats' });
@@ -57,8 +66,14 @@ export class Threats {
       // the pointer rotates (inline transform); the pulsing dot is a separate element, because a CSS
       // animation on the same element would override the rotation
       const arrow = h('i', { class: 'th-arrow' });
-      const el = h('button', { class: 'threat-edge', type: 'button', 'aria-label': 'Show attackers', data: { sfx: 'none' } }, arrow, h('i', { class: 'th-dot' }), label);
-      const m = { el, label, arrow, x: 0, z: 0, tr: '', text: '' };
+      const pic = h<HTMLImageElement>('img', { class: 'th-pic', alt: '', draggable: 'false', hidden: true });
+      pic.decoding = 'async';
+      pic.onerror = () => {
+        pic.hidden = true;
+      };
+      // the portrait replaces the dot when there is art for the leading alien type (see art.css)
+      const el = h('button', { class: 'threat-edge', type: 'button', 'aria-label': 'Show attackers', data: { sfx: 'none' } }, arrow, pic, h('i', { class: 'th-dot' }), label);
+      const m = { el, label, arrow, pic, x: 0, z: 0, tr: '', text: '', model: '' };
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         // look at the colony edge facing them (flat, built-up ground with the turrets firing) rather
@@ -84,11 +99,15 @@ export class Threats {
     if (c.phase === 'attack') {
       for (const a of c.aliens) {
         if (a.wild || a.retreat || a.hp <= 0) continue;
-        this.pts.push({ x: a.x, z: a.z, boss: !!game.data.alien(a.def)?.boss });
+        const d = game.data.alien(a.def);
+        this.pts.push({ x: a.x, z: a.z, boss: !!d?.boss, model: d?.model });
       }
       // where the next few arrive (the queue is sorted latest-first)
       const q = c.spawnQueue;
-      for (let i = q.length - 1, k = 0; i >= 0 && k < 8; i--, k++) this.pts.push({ x: q[i].x, z: q[i].z, boss: !!game.data.alien(q[i].alien)?.boss });
+      for (let i = q.length - 1, k = 0; i >= 0 && k < 8; i--, k++) {
+        const d = game.data.alien(q[i].alien);
+        this.pts.push({ x: q[i].x, z: q[i].z, boss: !!d?.boss, model: d?.model });
+      }
     }
     const center = game.sys.buildings.colonyCenter();
     this.groups = this.pts.length ? threatGroups(this.pts, center.x, center.z).slice(0, MAX_MARKERS) : [];
@@ -138,11 +157,22 @@ export class Threats {
         m.el.style.transform = tr;
         m.arrow.style.transform = `rotate(${e.angle.toFixed(3)}rad)`;
       }
-      const text = g.boss ? `💀 ${g.n}` : `👾 ${g.n}`;
+      // the marker wears the portrait of the most common (or boss) attacker; without art it keeps the emoji
+      const art = g.model ? alienArt(g.model) : null;
+      const text = art ? String(g.n) : g.boss ? `💀 ${g.n}` : `👾 ${g.n}`;
       if (text !== m.text) {
         m.text = text;
         m.label.textContent = text;
         setClass(m.el, 'boss', g.boss);
+      }
+      const model = art ? g.model! : '';
+      if (model !== m.model) {
+        m.model = model;
+        if (art) {
+          m.pic.src = art;
+          m.pic.hidden = false;
+        } else m.pic.hidden = true;
+        setClass(m.el, 'has-pic', !!art);
       }
     }
   }

@@ -5,14 +5,17 @@
 import { Panel, type PanelTitle } from './Panel';
 import type { Reward } from '../../data/schema';
 import { rewardParts } from '../logic/rewards';
-import { btn } from '../widgets';
+import { btn, partIcon } from '../widgets';
 import { confetti } from '../fx/Confetti';
 import { fill, h } from '../dom';
+import { alienArt, artOrEmoji, rewardArt } from '../art';
 
 export interface VictoryArg {
   wave: number;
   kills: number;
   reward: Reward;
+  /** Aliens beaten this wave by AlienDef.model, shown as small portraits. */
+  defeated?: { model: string; n: number; boss?: boolean }[];
 }
 
 export class VictoryPanel extends Panel {
@@ -66,13 +69,26 @@ export class VictoryPanel extends Panel {
     wrap.append(left, right, foot);
     left.appendChild(h('h2', { class: 'wb-title', text: 'Colony Defended!' }));
     left.appendChild(h('div', { class: 'wb-away', text: `Wave ${info.wave} · ${info.kills} alien${info.kills === 1 ? '' : 's'} defeated` }));
+    const beaten = (this.arg as VictoryArg | undefined)?.defeated?.filter((d) => alienArt(d.model)) ?? [];
+    // under the title while the chest is closed; above the loot once it is open (keeps the landscape card short)
+    const beatenRow = beaten.length
+      ? h(
+          'div',
+          { class: 'vic-aliens', 'aria-hidden': 'true' },
+          ...beaten.slice(0, 5).map((d) => h('span', { class: 'va' + (d.boss ? ' boss' : '') }, artOrEmoji(alienArt(d.model), '👾', 'va-img', d.model), h('b', { text: d.n > 1 ? `×${d.n}` : '' }))),
+        )
+      : null;
+    if (beatenRow && !this.opened) left.appendChild(beatenRow);
+    // the illustrated chest (the CSS-drawn one is the fallback): dark and wobbling until tapped, then it lights up
+    const chestArt = rewardArt('victory_chest');
     const chest = h(
       'button',
-      { class: 'chest' + (this.opened ? ' open' : ''), type: 'button', 'aria-label': 'Open the chest', id: 'chest' },
+      { class: 'chest' + (this.opened ? ' open' : '') + (chestArt ? ' has-art' : ''), type: 'button', 'aria-label': 'Open the chest', id: 'chest' },
       h('div', { class: 'chest-beams' }),
       h('div', { class: 'chest-glow' }),
-      h('div', { class: 'chest-body' }, h('div', { class: 'chest-band' }), h('div', { class: 'chest-lock' })),
-      h('div', { class: 'chest-lid' }),
+      ...(chestArt
+        ? [artOrEmoji(chestArt, '🏆', 'chest-img', 'Victory chest')]
+        : [h('div', { class: 'chest-body' }, h('div', { class: 'chest-band' }), h('div', { class: 'chest-lock' })), h('div', { class: 'chest-lid' })]),
     );
     chest.addEventListener('click', () => this.openChest());
     left.appendChild(chest);
@@ -83,8 +99,9 @@ export class VictoryPanel extends Panel {
       const parts = rewardParts(info.reward, this.data);
       const list = h('div', { class: 'reward-cards' });
       parts.forEach((p, i) => {
-        list.appendChild(h('div', { class: 'rcard pop-in', style: { animationDelay: `${i * 110}ms`, '--rc': p.color } }, h('div', { class: 'ri', text: p.icon }), h('b', { class: 'num', text: p.amount }), h('small', { text: p.label })));
+        list.appendChild(h('div', { class: 'rcard pop-in', style: { animationDelay: `${i * 110}ms`, '--rc': p.color } }, partIcon(p, 'ri', 'div'), h('b', { class: 'num', text: p.amount }), h('small', { text: p.label })));
       });
+      if (beatenRow) right.appendChild(beatenRow);
       right.appendChild(list);
       foot.appendChild(
         h(

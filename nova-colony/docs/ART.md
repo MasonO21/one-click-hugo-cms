@@ -21,6 +21,26 @@ game as style references so the art matches the in-game look.
 
 Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 3.8 MB (WebP).
 
+## Where the art appears in the UI
+Every lookup returns a relative URL or `null`; a missing/failed image falls back to the emoji from the data, so the UI
+never has a hole. Styles are in `src/ui/styles/art.css`. `tests/ui.art.test.ts` guards that every resource, profession,
+alien model, biome, tier, world-event kind and shop product has a file (and that no file is orphaned).
+
+| Art | Shown in | Shared helper |
+|---|---|---|
+| Resource / Nova icons | HUD chips + Nova chip (preloaded in `Hud`), resource popover, cost chips (build cards, upgrades, recipes, recruit, tier-up), reward chips (missions, daily, season, spin, merchant, shop), reward/victory cards, welcome-back rows, craft output rows, building effect tags, flying-to-HUD particles, "need more X" toast | `resIcon`/`iconEl` (`art.ts`), `resChip`/`rewardChips`/`tagChips`/`partIcon` (`widgets.ts`) |
+| Profession portraits | colonists list + detail, recruit candidates, worker slots + picker in the building inspector, "joined the colony" toast, first-colonist celebration. Chosen by the colonist's **job** (workplace's `workers.job`), else their specialty; the rarity colour is the ring | `portrait()` (`widgets.ts`), `jobOf()` (`logic/colonist.ts`) |
+| Tier illustrations | colony panel ladder (done = green ring, current = orange glow, next = gold, locked = greyscale), hero thumbnail, HUD tier badge, tier-up celebration (Titanium: gold title, glow pulse, sparkles, extra confetti) | `CelebratePanel` (`art`/`artKind` args) |
+| Biome postcards | region-discovered celebration, map: tap empty ground or a region row for postcard + name + status/lock reason | `MapPanel.regionCard` |
+| Alien portraits | invasion banner (types of the coming wave from the tier's invasion table + the boss when due; live types while attacking), off-screen threat markers, victory card (defeated types ×N), world tap tooltip | `Banners.refreshIcon`, `Threats` |
+| World events | spotted / reward-claimed toasts, ancient-structure celebration, merchant panel header, map marker card, world tap tooltip | `UI.artToast` / `UI.celebrateArt` |
+| Shop cards | product cards (Season Boost reuses the premium-pass card), Colony Pass hero | `ShopPanel` |
+| Reward art | victory chest (dim + wobbling until tapped, then lights up), free supply crate (shop card + reward card), daily gift (panel + claim card) | `rewardArt` |
+
+Toasts and the world tooltip accept an art URL (anything starting with `art/`) in place of their emoji icon.
+**Deliberately still emoji:** floating "+3 🪵" numbers over the world, the live "Now: +3 🪵/min" line in the building
+inspector, navigation glyphs (dock/rail/menu), item icons (no item art yet) and RP / XP / boost icons.
+
 ## Style guide (for new art)
 Stylized low-poly 3D, flat-shaded chunky shapes, soft warm lighting, bright saturated but cozy palette,
 chibi characters with big friendly eyes; aliens are cute-creepy, never gory. Icons/portraits: three-quarter

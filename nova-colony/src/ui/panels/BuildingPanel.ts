@@ -11,7 +11,7 @@ import { bagCovers, bagIsEmpty } from '../../core/bag';
 import { fmt } from '../../core/format';
 import { buildingEffects } from '../logic/describe';
 import { refundEstimate } from '../logic/build';
-import { stars } from '../logic/colonist';
+import { jobOf, stars } from '../logic/colonist';
 import { bar, btn, costChips, emptyState, portrait, recipeChips, section, tagChips } from '../widgets';
 import { fill, h, replay, setVar } from '../dom';
 
@@ -264,7 +264,7 @@ export class BuildingPanel extends Panel {
           h(
             'div',
             { class: 'row slot filled' },
-            portrait(c),
+            portrait(c, false, jobOf(this.game, c)),
             h('div', { class: 'grow' }, h('div', { class: 'h3', text: c.name }), h('div', { class: 'mute small' }, h('span', { class: 'stars', text: stars(c.skill) }), ` ${this.data.profession(c.specialty)?.name ?? ''}`)),
             btn({ label: '✕', cls: 'ghost small', onClick: () => this.unassign(c) }),
           ),
@@ -304,7 +304,7 @@ export class BuildingPanel extends Panel {
         h(
           'div',
           { class: 'row pick-row' },
-          portrait(c),
+          portrait(c, false, jobOf(this.game, c)),
           h('div', { class: 'grow' }, h('div', { class: 'h3', text: c.name }), h('div', { class: 'mute small' }, `${c.specialty === job ? '⭐ ' : ''}${this.data.profession(c.specialty)?.name ?? ''} · `, h('span', { class: 'stars', text: stars(c.skill) }), wpName ? ` · at ${wpName}` : ' · idle')),
           btn({ label: 'Assign', cls: 'good small', onClick: () => this.assign(c) }),
         ),

@@ -13,6 +13,7 @@ import './styles/fx.css';
 import './styles/build.css';
 import './styles/screens.css';
 import './styles/modals.css';
+import './styles/art.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -36,6 +37,9 @@ import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
 import { ConsentPrompt } from './ConsentPrompt';
 import { Threats } from './hud/Threats';
+import { alienArt, biomeArt, eventArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
+import { jobOf } from './logic/colonist';
+import { RARITY_COLOR } from './logic/rewards';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -90,6 +94,9 @@ export class UI {
   private lastClick = { x: 0, y: 0, t: -1e9 };
   private lastPanelSfx = 0;
   private lastTierCelebrate = -1e9;
+  private lastJoined: { id: number; t: number } = { id: -1, t: -1e9 };
+  /** Aliens defeated in the current invasion by AlienDef.model (shown small on the victory card). */
+  private waveKills = new Map<string, { n: number; boss: boolean }>();
   private lastAdFail = -1e9;
   private lastInsufficient = -1e9;
   private welcomeShown = false;
@@ -385,7 +392,8 @@ export class UI {
       // the attack banner already shows the warning / countdown / "defend!" state: the combat system's
       // matching 👾 toasts would only cover the player and the turret
       if (e.icon === '👾' && g.state.combat.phase !== 'peace') return;
-      this.eventToast(e.text, e.kind, e.icon);
+      const rich = this.artToast(e.text, e.icon);
+      this.eventToast(rich.text, e.kind, rich.icon);
     });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     bus.on('ui:open', (e) => {
@@ -396,7 +404,10 @@ export class UI {
       const now = performance.now();
       if (now - this.lastTierCelebrate < TIER_REVEAL_MS + 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
       if (e.title === 'Thank you!' && this.panels.isOpen('shop')) return; // the shop shows its own "what you got" reward
-      this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon } satisfies CelebrateArg);
+      this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon, ...this.celebrateArt(e.title) } satisfies CelebrateArg);
+    });
+    bus.on('colonist:recruited', (e) => {
+      this.lastJoined = { id: e.id, t: performance.now() };
     });
     bus.on('colony:tierUp', (e) => {
       const now = performance.now();
@@ -406,6 +417,7 @@ export class UI {
       // let the player watch the base transform first: close the colony sheet, frame the core and show the
       // colony boundary growing, then celebrate
       this.panels.closeSheets();
+      preloadArt([tierArt(e.tier)]); // decode the illustration while the base transforms
       const core = g.sys.buildings.core();
       if (core) {
         const c = g.sys.buildings.center(core);
@@ -425,6 +437,8 @@ export class UI {
         tier: e.tier,
         unlocks,
         big: true,
+        art: tierArt(e.tier),
+        artKind: 'tier',
       } satisfies CelebrateArg), TIER_REVEAL_MS);
     });
 
@@ -437,7 +451,19 @@ export class UI {
       this.panels.close('welcome');
       this.welcomeShown = false; // a later summary (new session) may show it again
     });
-    bus.on('combat:ended', (e) => this.panels.open('victory', { wave: e.wave, kills: e.kills, reward: e.reward }));
+    bus.on('combat:started', () => this.waveKills.clear());
+    bus.on('alien:killed', (e) => {
+      const d = g.data.alien(e.def);
+      const k = d?.model ?? e.def;
+      const cur = this.waveKills.get(k) ?? { n: 0, boss: false };
+      cur.n++;
+      if (d?.boss) cur.boss = true;
+      this.waveKills.set(k, cur);
+    });
+    bus.on('combat:ended', (e) => {
+      const defeated = [...this.waveKills.entries()].map(([model, v]) => ({ model, n: v.n, boss: v.boss })).sort((a, b) => Number(b.boss) - Number(a.boss) || b.n - a.n);
+      this.panels.open('victory', { wave: e.wave, kills: e.kills, reward: e.reward, defeated });
+    });
     bus.on('combat:rewardClaimed', () => this.panels.close('victory'));
 
     // flying resources + HUD pops
@@ -479,7 +505,7 @@ export class UI {
     });
     // every supply crate (free, ad, inventory) opens the same "what you got" reward card
     bus.on('reward:granted', (e) => {
-      if (e.source === 'crate') this.open('reward', { title: 'Supply crate!', reward: e.reward, icon: '📦' });
+      if (e.source === 'crate') this.open('reward', { title: 'Supply crate!', reward: e.reward, icon: rewardArt('supply_crate') ?? '📦' });
     });
     bus.on('reward:granted', (e) => {
       // resources/nova granted from a button press fly out of that button (resource:gained covers resources)
@@ -494,7 +520,7 @@ export class UI {
       const first = bagEntries(e.missing)[0];
       if (!first) return;
       const d = g.data.resource(first[0]);
-      this.toasts.show(`Need ${fmt(Math.ceil(first[1]))} more ${d?.name ?? first[0]}`, 'warning', d?.icon ?? '📦');
+      this.toasts.show(`Need ${fmt(Math.ceil(first[1]))} more ${d?.name ?? first[0]}`, 'warning', resourceArt(first[0]) ?? d?.icon ?? '📦');
     });
     bus.on('player:backpackFull', () => this.toasts.show('Backpack full! Walk back to the colony to unload.', 'warning', '🎒'));
     // the sim already explains an unavailable video; a skipped one needs no scolding toast at all
@@ -508,6 +534,39 @@ export class UI {
     });
     bus.on('season:levelUp', (e) => this.eventToast(`Season pass level ${e.level}!`, 'info', '🏆'));
     bus.on('building:changed', () => this.refreshBadges());
+  }
+
+  /** Illustration for a celebration, recognised from its title (the sim only sends text + an emoji). */
+  private celebrateArt(title: string): Partial<CelebrateArg> {
+    const g = this.game;
+    const biome = g.data.biomes.find((b) => title === `${b.name} discovered!`);
+    if (biome && biomeArt(biome.id)) return { art: biomeArt(biome.id), artKind: 'biome', ok: 'Explore!' };
+    const ev = g.data.worldEvents.find((d) => title === `${d.name} awakened!`);
+    if (ev && eventArt(ev.kind)) return { art: eventArt(ev.kind), artKind: 'event' };
+    // "Your first colonist joined!" right after a colonist arrived: show who it was
+    if (/joined/i.test(title) && performance.now() - this.lastJoined.t < 4000) {
+      const c = g.sys.colonists.get(this.lastJoined.id);
+      const src = c ? professionArt(jobOf(g, c)) : null;
+      if (c && src) return { art: src, artKind: 'colonist', ring: RARITY_COLOR[c.rarity] };
+    }
+    return {};
+  }
+
+  /** Toast text + icon with illustration: a colonist joining shows their portrait, world events their art. */
+  private artToast(text: string, icon?: string): { text: string; icon?: string } {
+    const g = this.game;
+    const m = /^(.+?) joined (?:the|your) colony!$/.exec(text);
+    if (m) {
+      const c = g.state.colonists.list.find((x) => x.name === m[1]);
+      const src = c ? professionArt(jobOf(g, c)) : null;
+      if (src) return { text, icon: src };
+    }
+    for (const d of g.data.worldEvents) {
+      const lead = `${d.icon} ${d.name}`;
+      const src = eventArt(d.kind);
+      if (src && text.startsWith(lead)) return { text: text.slice(d.icon.length + 1), icon: src };
+    }
+    return { text, icon };
   }
 
   private installGlobalHandlers(): void {
@@ -578,7 +637,7 @@ export class UI {
         const ev = g.state.world.events.find((e) => e.id === Number(sel.id));
         const def = ev ? g.data.worldEvent(ev.def) : undefined;
         if (ev && def?.kind === 'merchant') this.open('merchant', ev.id);
-        else if (ev && def) this.tip.show(def.icon, def.name, 'Walk up to it to take part!', ev.x, ev.z);
+        else if (ev && def) this.tip.show(eventArt(def.kind) ?? def.icon, def.name, 'Walk up to it to take part!', ev.x, ev.z);
         break;
       }
       case 'poi': {
@@ -596,7 +655,7 @@ export class UI {
       case 'alien': {
         const a = g.state.combat.aliens.find((q) => q.id === Number(sel.id));
         const def = a ? g.data.alien(a.def) : undefined;
-        if (a && def) this.tip.show('👾', def.name, `${Math.ceil(a.hp)} / ${Math.ceil(a.maxHp)} HP`, a.x, a.z);
+        if (a && def) this.tip.show(alienArt(def.model) ?? '👾', def.name, `${Math.ceil(a.hp)} / ${Math.ceil(a.maxHp)} HP`, a.x, a.z);
         break;
       }
     }

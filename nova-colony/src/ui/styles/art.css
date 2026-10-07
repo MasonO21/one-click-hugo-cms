@@ -1,0 +1,875 @@
+/* ==========================================================================
+   Illustrated art (see src/ui/art.ts, docs/ART.md). Every image has a fixed CSS box so nothing shifts
+   while it loads; `.emoji` is the fallback when an illustration is missing.
+   ========================================================================== */
+
+.nv-root img {
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ---------- icon box (resources / Nova) ---------- */
+.nv-root .aico {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 1.25em;
+  height: 1.25em;
+  font-style: normal;
+  line-height: 1;
+  vertical-align: -0.28em;
+}
+.nv-root .aico img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.05em 0.05em rgba(0, 0, 0, 0.28));
+}
+.nv-root .aico.emoji {
+  width: auto;
+  min-width: 1.25em;
+}
+
+/* HUD resource + Nova chips: a bigger icon, same slot */
+.rchip .ic.aico {
+  width: 1.7em;
+  height: 1.7em;
+  margin: -0.2em -0.1em -0.2em -0.15em;
+  font-size: 1em;
+  filter: none;
+}
+.rchip .ic.aico.emoji {
+  width: auto;
+  min-width: 1.7em;
+  font-size: 1.25em;
+  margin: 0;
+}
+.nova-chip .ic.aico {
+  width: 1.9em;
+  height: 1.9em;
+  margin: -0.3em -0.2em -0.3em -0.3em;
+  font-size: 1em;
+}
+.nova-chip .ic.aico.emoji {
+  width: auto;
+  min-width: 1.9em;
+  font-size: 1.2em;
+  margin: 0;
+}
+
+/* reward cards ("+120 Wood" tiles in celebrations / chests) */
+.rcard .ri.aico {
+  width: 2.4em;
+  height: 2.4em;
+  margin: -0.1em 0 0.05em;
+  font-size: 1em;
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  .rcard .ri.aico {
+    width: 2.1em;
+    height: 2.1em;
+  }
+}
+.rcard .ri.aico.emoji {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  font-size: 1.9em;
+}
+
+/* flying resource particles */
+.fly .aico {
+  width: 1em;
+  height: 1em;
+}
+.fly {
+  width: 1.7em;
+  height: 1.7em;
+  display: grid;
+  place-items: center;
+}
+.fly img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ---------- colonist avatars: illustrated bust in a rarity-coloured ring ---------- */
+.nv-root .portrait.art {
+  position: relative;
+  background: radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--rar, #fff) 8%, #fffdf6), color-mix(in srgb, var(--rar, #fff) 30%, #ffefc8));
+  box-shadow: 0 0.12em 0.4em rgba(0, 0, 0, 0.22), 0 0 0 0.1em rgba(255, 255, 255, 0.85);
+}
+.nv-root .portrait.art .pa {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 8%;
+  transform: scale(1.12);
+  transform-origin: 50% 20%;
+}
+.nv-root .portrait.art .pa.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 1.6em;
+  transform: none;
+}
+
+/* ---------- toast icons ---------- */
+.toast .t-ic.art {
+  background: transparent;
+  width: 2.1em;
+  height: 2.1em;
+}
+.toast .t-ic.art .ta {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.05em 0.08em rgba(0, 0, 0, 0.35));
+}
+.toast .t-ic.art .ta.emoji {
+  display: grid;
+  place-items: center;
+}
+.toast .t-ic.art.face {
+  width: 2.7em;
+  height: 2.7em;
+  margin: -0.35em 0 -0.35em -0.1em;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 30%, #fffdf6, color-mix(in srgb, var(--tk, #4fb3f6) 40%, #fff0c8));
+  box-shadow: 0 0 0 0.16em var(--tk, #4fb3f6), 0 0.1em 0.3em rgba(0, 0, 0, 0.3);
+}
+.toast .t-ic.art.face .ta {
+  object-fit: cover;
+  object-position: 50% 8%;
+  transform: scale(1.12);
+  transform-origin: 50% 20%;
+  filter: none;
+}
+.toast .t-ic.art.wide {
+  width: 4.2em;
+  height: 2.4em;
+  margin: -0.3em 0 -0.3em -0.2em;
+  border-radius: 0.8em;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.14em var(--tk, #4fb3f6);
+}
+.toast .t-ic.art.wide .ta {
+  object-fit: cover;
+  filter: none;
+}
+
+/* ---------- celebrations with a picture: tier-up, region postcard, world event, new colonist ---------- */
+.celebrate.has-art {
+  gap: 0.6em;
+}
+.celebrate .cb-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6em;
+  min-width: 0;
+}
+.celebrate .cb-main > .btn {
+  align-self: stretch;
+}
+.cb-art {
+  position: relative;
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+.cb-art .cb-rays {
+  width: 150%;
+  height: auto;
+  aspect-ratio: 1;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  animation: none;
+  opacity: 0.7;
+}
+.cb-art .cb-rays {
+  animation: nv-spin-c 16s linear infinite;
+}
+@keyframes nv-spin-c {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.cb-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 1.2em;
+  overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tc, #6fbf5a) 55%, #fff), color-mix(in srgb, var(--ta, #9bd66b) 55%, #fff));
+  box-shadow: 0 0 0 0.22em #fff, 0 0 0 0.4em color-mix(in srgb, var(--tc, #d29b17) 70%, #fff), 0 0.6em 1.4em rgba(30, 14, 50, 0.4);
+  animation: nv-pop-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.cb-art.biome .cb-frame,
+.cb-art.event .cb-frame {
+  aspect-ratio: 16 / 9;
+}
+.cb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: nv-fade 0.5s both;
+}
+.cb-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 4em;
+}
+.cb-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%);
+  transform: translateX(-120%);
+  animation: nv-sheen 3.2s 0.9s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes nv-sheen {
+  0% { transform: translateX(-120%); }
+  45%, 100% { transform: translateX(120%); }
+}
+.cb-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -0.9em;
+  transform: translateX(-50%);
+  padding: 0.18em 0.9em;
+  border-radius: 99px;
+  font-size: 0.8em;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tc, #d29b17) 85%, #fff), var(--tc, #d29b17));
+  box-shadow: 0 0.14em 0 rgba(0, 0, 0, 0.25), inset 0 0 0 0.14em rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0.08em 0 rgba(0, 0, 0, 0.3);
+  animation: nv-pop-in 0.5s 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.celebrate.has-art.art-tier,
+.celebrate.has-art.art-biome,
+.celebrate.has-art.art-event {
+  padding-bottom: 0.2em;
+}
+.celebrate.has-art.art-tier .cb-art {
+  margin-bottom: 0.8em;
+}
+
+/* a new colonist: round portrait in the rarity ring */
+.cb-art.colonist .cb-frame {
+  width: 8.6em;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 28%, #fffdf6, color-mix(in srgb, var(--ring, #9aa7b4) 35%, #ffefc8));
+  box-shadow: 0 0 0 0.3em var(--ring, #9aa7b4), 0 0 0 0.5em #fff, 0 0.6em 1.4em rgba(30, 14, 50, 0.4);
+}
+.cb-art.colonist .cb-img {
+  object-fit: cover;
+  object-position: 50% 8%;
+  transform: scale(1.1);
+  transform-origin: 50% 20%;
+}
+.cb-art.colonist {
+  padding: 0.9em 0 0.6em;
+}
+
+/* Titanium: the finale */
+.celebrate.titan .cb-title {
+  font-size: 2.1em;
+  background: linear-gradient(180deg, #fff6c2, #ffcf4a 55%, #e08a1e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 0.06em 0 #7a4a1d) drop-shadow(0 0 0.5em rgba(255, 207, 74, 0.6));
+  letter-spacing: 0.02em;
+  animation: nv-pulse 2.4s ease-in-out infinite;
+}
+.celebrate.titan .cb-frame {
+  box-shadow: 0 0 0 0.22em #fff, 0 0 0 0.45em #ffcf4a, 0 0 2.4em 0.5em rgba(255, 220, 110, 0.75), 0 0.6em 1.6em rgba(30, 14, 50, 0.45);
+  animation: nv-pop-in 0.8s cubic-bezier(0.2, 1.4, 0.4, 1) both, nv-titan-glow 2.4s 0.8s ease-in-out infinite;
+}
+@keyframes nv-titan-glow {
+  0%, 100% { box-shadow: 0 0 0 0.22em #fff, 0 0 0 0.45em #ffcf4a, 0 0 1.6em 0.2em rgba(255, 220, 110, 0.55), 0 0.6em 1.6em rgba(30, 14, 50, 0.45); }
+  50% { box-shadow: 0 0 0 0.22em #fff, 0 0 0 0.45em #ffe58a, 0 0 3em 0.9em rgba(255, 226, 120, 0.95), 0 0.6em 1.6em rgba(30, 14, 50, 0.45); }
+}
+.celebrate.titan .cb-shine {
+  animation-duration: 2.2s;
+  animation-delay: 0.6s;
+}
+.celebrate.titan .cb-tag {
+  background: linear-gradient(180deg, #ffe58a, #e0931a);
+  color: #4a2a00;
+  text-shadow: 0 0.06em 0 rgba(255, 255, 255, 0.6);
+}
+.celebrate.titan .cb-rays {
+  background: repeating-conic-gradient(rgba(255, 226, 120, 0.8) 0 8deg, transparent 8deg 18deg);
+  opacity: 0.9;
+}
+
+/* landscape phones: picture on the left, text on the right */
+@media (orientation: landscape) {
+  .celebrate.has-art.art-tier,
+  .celebrate.has-art.art-biome,
+  .celebrate.has-art.art-event {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.4em 1.4em;
+    text-align: left;
+  }
+  .celebrate.has-art .cb-main {
+    align-items: stretch;
+    text-align: center;
+  }
+  .celebrate.has-art.art-tier .cb-art,
+  .celebrate.has-art.art-biome .cb-art,
+  .celebrate.has-art.art-event .cb-art {
+    margin-bottom: 0.6em;
+  }
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  .celebrate.has-art .cb-title {
+    font-size: 1.5em;
+  }
+  .celebrate.titan .cb-title {
+    font-size: 1.7em;
+  }
+  .celebrate.has-art .cb-text {
+    font-size: 0.92em;
+  }
+}
+
+/* ---------- tier ladder + hero (colony panel) and the HUD tier badge ---------- */
+.tier-badge .sw {
+  overflow: hidden;
+}
+.tier-badge .sw .tier-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tier-hero.has-art .th-sw {
+  width: 5.6em;
+  height: 4.2em;
+  border-radius: 0.9em;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.16em #fff, 0 0.2em 0.5em rgba(0, 0, 0, 0.3);
+}
+.tier-hero .th-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ladder {
+  padding: 0.7em 0.6em 0.7em 0.6em;
+  margin: 0 -0.6em;
+}
+.ladder-node.has-art {
+  flex: 0 0 6.7em;
+  gap: 0.35em;
+}
+.ladder-node.has-art::before {
+  top: 2.4em;
+}
+.ln-art {
+  position: relative;
+  z-index: 1;
+  width: 6em;
+  height: 4.5em;
+  border-radius: 0.9em;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--tc), var(--ta));
+  box-shadow: 0 0 0 0.16em #fff, 0 0.18em 0.5em rgba(40, 20, 60, 0.35);
+  transition: transform 0.2s;
+}
+.ln-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ladder-node.has-art .ln-dot {
+  position: absolute;
+  top: -0.55em;
+  left: 0.2em;
+  z-index: 2;
+  width: 1.9em;
+  height: 1.9em;
+  font-size: 0.92em;
+  box-shadow: 0 0 0 0.14em #fff, 0 0.1em 0.3em rgba(0, 0, 0, 0.3);
+}
+.ladder-node.has-art.now .ln-dot {
+  transform: none;
+  box-shadow: 0 0 0 0.14em #fff, 0 0 0 0.3em var(--accent);
+}
+.ladder-node.has-art.next .ln-dot {
+  animation: none;
+}
+.ladder-node.has-art.now .ln-art {
+  transform: scale(1.1);
+  margin-bottom: 0.3em;
+  box-shadow: 0 0 0 0.2em #fff, 0 0 0 0.42em var(--accent), 0 0.3em 1em rgba(255, 138, 61, 0.55);
+}
+.ladder-node.has-art.next .ln-art {
+  box-shadow: 0 0 0 0.16em #fff, 0 0 0 0.3em var(--gold), 0 0.18em 0.5em rgba(40, 20, 60, 0.35);
+  filter: saturate(0.85) brightness(0.96);
+}
+.ladder-node.has-art.locked .ln-art {
+  filter: grayscale(1) brightness(0.78) contrast(0.95);
+  opacity: 0.72;
+}
+.ladder-node.has-art.locked .ln-dot {
+  background: #cfc6b0;
+  box-shadow: 0 0 0 0.14em #fff;
+}
+.ladder-node.has-art.done .ln-art {
+  box-shadow: 0 0 0 0.16em #fff, 0 0 0 0.3em var(--good), 0 0.18em 0.5em rgba(40, 20, 60, 0.3);
+}
+.ladder-node.has-art.now {
+  padding: 0 0.2em;
+}
+.ladder-node.has-art .ln-name {
+  font-size: 0.78em;
+}
+
+/* ---------- invasion: banner portraits, off-screen markers, victory chest ---------- */
+.attack-banner .ab-ic.art {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  font-size: 1em;
+  padding-left: 0.1em;
+}
+.ab-pic {
+  flex: 0 0 auto;
+  display: block;
+  width: 2.7em;
+  height: 2.7em;
+  margin-left: -0.9em;
+  padding: 0.12em;
+  border-radius: 50%;
+  object-fit: contain;
+  background: radial-gradient(circle at 50% 30%, #fffaf2, #ffc4b8 95%);
+  box-shadow: 0 0 0 0.14em #fff, 0 0.14em 0.35em rgba(0, 0, 0, 0.4);
+}
+.ab-pic:first-child {
+  margin-left: 0;
+}
+.ab-pic.boss {
+  background: radial-gradient(circle at 50% 30%, #fff4ff, #d9a8ff 95%);
+  box-shadow: 0 0 0 0.16em #ffcf4a, 0 0.14em 0.4em rgba(0, 0, 0, 0.45);
+}
+.ab-pic.chest {
+  width: 3em;
+  height: 3em;
+  margin-left: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: drop-shadow(0 0.14em 0.2em rgba(0, 0, 0, 0.4));
+}
+.ab-pic.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 1.6em;
+}
+.attack-banner.victory .ab-ic.art {
+  animation: nv-bounce 1.6s ease-in-out infinite;
+}
+
+.threat-edge .th-pic {
+  position: absolute;
+  inset: 0.12em;
+  z-index: 1;
+  width: calc(100% - 0.24em);
+  height: calc(100% - 0.24em);
+  object-fit: contain;
+  padding: 0.1em;
+  pointer-events: none;
+  filter: drop-shadow(0 0.08em 0.1em rgba(0, 0, 0, 0.4));
+}
+.threat-edge.has-pic .th-arrow {
+  background: radial-gradient(circle at 50% 30%, #ffe3dc, #f06a5c 85%);
+}
+.threat-edge.has-pic.boss .th-arrow {
+  background: radial-gradient(circle at 50% 30%, #f1dcff, #a85cc8 85%);
+}
+.threat-edge.has-pic b {
+  position: absolute;
+  right: -0.4em;
+  bottom: -0.3em;
+  z-index: 2;
+  display: block;
+  height: auto;
+  padding: 0.18em 0.5em;
+  border-radius: 99px;
+  background: #b81f2a;
+  box-shadow: 0 0 0 0.14em #fff;
+  font-size: 0.8em;
+}
+.threat-edge.has-pic.boss b {
+  background: #6a2480;
+}
+
+/* victory chest: the illustration replaces the CSS-drawn one, keeping the wobble / glow / beams */
+.chest.has-art {
+  width: 9em;
+  height: 8em;
+  margin: 0 0 0.2em;
+}
+.chest-img {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 2;
+  width: 8em;
+  height: 8em;
+  margin-left: -4em;
+  object-fit: contain;
+  transform-origin: 50% 90%;
+  filter: brightness(0.5) saturate(0.55) drop-shadow(0 0.4em 0.5em rgba(0, 0, 0, 0.35));
+  transform: scale(0.86);
+  transition: transform 0.7s cubic-bezier(0.3, 1.7, 0.5, 1), filter 0.5s ease-out;
+  pointer-events: none;
+}
+.chest.has-art.open .chest-img {
+  transform: scale(1.06) translateY(-0.2em);
+  filter: brightness(1.05) saturate(1.1) drop-shadow(0 0.4em 0.6em rgba(0, 0, 0, 0.35));
+}
+.chest.has-art .chest-glow {
+  top: 46%;
+  z-index: 1;
+}
+.chest.has-art .chest-beams {
+  top: 46%;
+  z-index: 0;
+}
+.chest.has-art:not(.open) .chest-glow {
+  opacity: 0.55;
+  animation: nv-pulse 1.2s ease-in-out infinite;
+}
+.chest-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 4em;
+  filter: none;
+  transform: none;
+}
+.vic-aliens {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.5em;
+  margin-top: -0.2em;
+}
+.vic-aliens .va {
+  position: relative;
+  display: block;
+  width: 2.5em;
+  height: 2.5em;
+}
+.vic-aliens .va-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0.08em;
+  object-fit: contain;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #fffaf2, #ffd9cf 95%);
+  box-shadow: 0 0 0 0.12em #fff, 0 0.1em 0.25em rgba(0, 0, 0, 0.25);
+}
+.vic-aliens .va.boss .va-img {
+  background: radial-gradient(circle at 50% 30%, #fff4ff, #e1bcff 95%);
+  box-shadow: 0 0 0 0.14em #ffcf4a, 0 0.1em 0.25em rgba(0, 0, 0, 0.25);
+}
+.vic-aliens .va b {
+  position: absolute;
+  right: -0.45em;
+  bottom: -0.35em;
+  min-width: 1.4em;
+  padding: 0 0.3em;
+  border-radius: 99px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.68em;
+  font-weight: 900;
+  text-align: center;
+  line-height: 1.6;
+  box-shadow: 0 0 0 0.12em #fff;
+}
+.vic-aliens .va b:empty {
+  display: none;
+}
+
+/* ---------- shop, daily gift, free crate ---------- */
+.pcard .pi.art {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 8.6em;
+  font-size: 1em;
+  filter: none;
+}
+.pcard .pi-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.25em 0.3em rgba(40, 20, 60, 0.3));
+}
+.pcard .pi-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 2.6em;
+}
+.vip-crown.art {
+  height: 9em;
+  font-size: 1em;
+  animation: none;
+}
+.vip-crown .vip-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.3em 0.4em rgba(60, 20, 120, 0.35));
+  animation: nv-bounce 3.2s ease-in-out infinite;
+}
+.vip-crown .vip-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 3em;
+}
+.nv-root img.bi {
+  width: 3.4em;
+  height: 3.4em;
+  object-fit: contain;
+  font-size: 1em;
+}
+.crate-card .crate-img,
+.daily-head .gift-img {
+  filter: drop-shadow(0 0.2em 0.25em rgba(80, 40, 0, 0.3));
+}
+.daily-head .gift-img {
+  width: 4.2em;
+  height: 4.2em;
+  animation: nv-wiggle 3s ease-in-out infinite;
+}
+.nv-root span.bi.emoji {
+  font-size: 2em;
+}
+.cb-ic.art {
+  font-size: 1em;
+  width: 6.4em;
+  height: 6.4em;
+}
+.cb-burst.small .cb-ic.art {
+  width: 5.4em;
+  height: 5.4em;
+  font-size: 1em;
+}
+.cb-ic .cb-ic-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.cb-ic .cb-ic-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 3em;
+}
+
+/* ---------- world events: header image (merchant panel, map card) ---------- */
+.ev-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 10em;
+  border-radius: 1.1em;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffe9bd, #f2dcae);
+  box-shadow: inset 0 0 0 0.14em rgba(255, 255, 255, 0.7), 0 0.2em 0.6em rgba(40, 20, 60, 0.25);
+}
+.ev-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.14em rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+.ev-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ev-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 3em;
+}
+
+/* ---------- map: region postcard card + event header ---------- */
+.ev-hero.small {
+  max-height: 7em;
+  margin-bottom: 0.5em;
+}
+.region-card {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+}
+.region-card .rc-pic {
+  position: relative;
+  flex: 0 0 11em;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.9em;
+  overflow: hidden;
+  background: linear-gradient(135deg, #cfe8b8, #8fc77a);
+  box-shadow: 0 0 0 0.14em #fff, 0 0.15em 0.5em rgba(40, 20, 60, 0.3);
+}
+.region-card .rc-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.region-card .rc-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 2.4em;
+}
+.region-card.locked .rc-img {
+  filter: grayscale(1) brightness(0.7);
+}
+.region-card .rc-lock {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.2em;
+  background: rgba(30, 20, 50, 0.28);
+}
+.region-card .rc-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25em;
+}
+.region.picked {
+  border-radius: 0.8em;
+  box-shadow: 0 0 0 0.14em var(--accent);
+  background: rgba(255, 138, 61, 0.1);
+}
+.map-side .region {
+  cursor: pointer;
+}
+@media (orientation: portrait) {
+  .region-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .region-card .rc-pic {
+    flex-basis: auto;
+    width: 100%;
+    max-height: 9em;
+  }
+}
+
+/* welcome-back rows, spin prize chips */
+.gain-row .gi.aico {
+  width: 2em;
+  height: 2em;
+  font-size: 1em;
+}
+.gain-row .gi.aico.emoji {
+  width: auto;
+  font-size: 1.5em;
+}
+
+/* resource art used as a row icon (`.bi` is normally a 2em emoji) */
+.nv-root .aico.bi {
+  width: 2.3em;
+  height: 2.3em;
+  font-size: 1em;
+  vertical-align: baseline;
+}
+.nv-root .aico.bi.emoji {
+  width: auto;
+  height: auto;
+  font-size: 2em;
+}
+
+/* Titanium sparkles */
+.cb-spark {
+  position: absolute;
+  width: 1.3em;
+  height: 1.3em;
+  background: radial-gradient(circle, #fff 0%, #fff3b0 45%, #ffcf4a 100%);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  pointer-events: none;
+  opacity: 0;
+  animation: nv-twinkle 1.9s ease-in-out infinite;
+  z-index: 3;
+}
+.cb-spark.s0 { left: -0.3em; top: 6%; animation-delay: 0.2s; }
+.cb-spark.s1 { right: -0.3em; top: 14%; width: 1em; height: 1em; animation-delay: 0.9s; }
+.cb-spark.s2 { left: 3%; bottom: 12%; width: 0.9em; height: 0.9em; animation-delay: 1.4s; }
+.cb-spark.s3 { right: 2%; bottom: 20%; width: 1.5em; height: 1.5em; animation-delay: 0.5s; }
+.cb-spark.s4 { left: 46%; top: -0.7em; width: 1.1em; height: 1.1em; animation-delay: 1.1s; }
+.cb-spark.s5 { left: 24%; top: 22%; width: 0.8em; height: 0.8em; animation-delay: 1.7s; }
+.cb-spark.s6 { right: 26%; bottom: 8%; width: 0.8em; height: 0.8em; animation-delay: 0.3s; }
+@keyframes nv-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  45% { opacity: 1; transform: scale(1.15) rotate(45deg); }
+  70% { opacity: 0.9; transform: scale(0.85) rotate(70deg); }
+}
+
+/* selection tip (tap an event / alien in the world) */
+.sel-tip .st-ic.art {
+  display: block;
+  width: 2.6em;
+  height: 2.6em;
+  font-size: 1em;
+}
+.sel-tip .st-ic.art.wide {
+  width: 4.4em;
+  height: 2.5em;
+  border-radius: 0.7em;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.12em rgba(255, 255, 255, 0.6);
+}
+.sel-tip .st-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.08em 0.1em rgba(0, 0, 0, 0.4));
+}
+.sel-tip .st-ic.wide .st-img {
+  object-fit: cover;
+  filter: none;
+}
+
+/* off-screen threat markers: the alien portrait takes the place of the plain dot */
+.threat-edge .th-pic:not([hidden]) + .th-dot {
+  display: none;
+}

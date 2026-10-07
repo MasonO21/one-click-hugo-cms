@@ -9,6 +9,7 @@ import { fmt, fmtSigned } from '../../core/format';
 import { clockText, dayPhase, fmtHMS } from '../logic/time';
 import { happinessFace } from '../logic/colonist';
 import { bigNum } from '../widgets';
+import { artOrEmoji, preloadResourceArt, resIcon, tierArt } from '../art';
 import { fill, h, replay, setClass, setHidden, setText, setVar, safe } from '../dom';
 import { ResourceBar } from './ResourceBar';
 import { InteractButton } from './Interact';
@@ -65,6 +66,7 @@ export class Hud {
   // top bar
   private readonly tierBtn: HTMLElement;
   private readonly tierSw: HTMLElement;
+  private tierSrc: string | null = null;
   private readonly tierName: HTMLElement;
   private readonly tierSub: HTMLElement;
   private readonly novaBtn: HTMLElement;
@@ -107,6 +109,8 @@ export class Hud {
   private bannerH = '';
 
   constructor(private readonly ctx: UiCtx) {
+    // the first frame must not show empty chips: fetch + decode every resource icon up front
+    preloadResourceArt();
     this.resources = new ResourceBar(ctx, (anchor, id) => this.showPop(anchor, () => this.resourcePop(id)));
     this.interact = new InteractButton(ctx);
     this.tracker = new MissionTracker(ctx);
@@ -119,7 +123,7 @@ export class Hud {
     this.tierBtn = h('button', { class: 'tier-badge tap', type: 'button', id: 'tier-badge', data: { sfx: 'ui_click' } }, this.tierSw, h('span', null, this.tierName, this.tierSub));
     this.tierBtn.addEventListener('click', () => ctx.open('colony'));
     this.novaAmt = h('span', { class: 'num', text: '0' });
-    this.novaBtn = h('button', { class: 'nova-chip tap', type: 'button', id: 'nova-chip', data: { sfx: 'ui_click' } }, h('span', { class: 'ic', text: '💎' }), this.novaAmt, h('span', { class: 'plus', text: '+' }));
+    this.novaBtn = h('button', { class: 'nova-chip tap', type: 'button', id: 'nova-chip', data: { sfx: 'ui_click' } }, resIcon('nova', '💎', 'ic', 'span'), this.novaAmt, h('span', { class: 'plus', text: '+' }));
     this.novaBtn.addEventListener('click', () => ctx.open('shop', { tab: 'crystals' }));
     const top = h('div', { class: 'hud-top' }, this.tierBtn, this.resources.el, this.novaBtn);
 
@@ -230,6 +234,11 @@ export class Hud {
     setText(this.tierSub, `Tier ${tier.index + 1}`);
     setVar(this.tierBtn, '--tc', tier.color);
     setVar(this.tierBtn, '--ta', tier.accent);
+    const src = tierArt(tier.index);
+    if (src !== this.tierSrc) {
+      this.tierSrc = src;
+      fill(this.tierSw, src ? artOrEmoji(src, '', 'tier-thumb') : null);
+    }
     this.nova.target = game.state.liveops.nova;
   }
 
@@ -355,10 +364,11 @@ export class Hud {
 
   private resourcePop(id: string): Node {
     const d = this.resources.describe(id);
+    const def = this.ctx.data.resource(id);
     return h(
       'div',
       null,
-      h('h4', { text: d.title }),
+      h('h4', null, resIcon(id, def?.icon ?? ''), ` ${def?.name ?? id}`),
       ...d.rows.map((r) => h('div', { class: 'kv' }, h('span', { text: r.k }), h('span', { class: r.cls ?? '', text: r.v }))),
     );
   }

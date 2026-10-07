@@ -4,6 +4,7 @@
  */
 import type { RendererApi } from '../../render/api';
 import { h } from '../dom';
+import { artOrEmoji, isArtSrc } from '../art';
 
 export class SelectionTip {
   readonly el: HTMLElement;
@@ -21,7 +22,14 @@ export class SelectionTip {
   }
 
   show(icon: string, title: string, sub: string, x: number, z: number, y = 2.2): void {
-    this.ic.textContent = icon;
+    // an illustration URL (event art, alien portrait) instead of an emoji
+    if (isArtSrc(icon)) {
+      this.ic.className = 'st-ic art' + (icon.includes('/events/') ? ' wide' : '');
+      this.ic.replaceChildren(artOrEmoji(icon, '✨', 'st-img'));
+    } else {
+      this.ic.className = 'st-ic';
+      this.ic.textContent = icon;
+    }
     this.title.textContent = title;
     this.sub.textContent = sub;
     this.sub.hidden = !sub;
