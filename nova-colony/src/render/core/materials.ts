@@ -62,13 +62,20 @@ void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometr
 #define RE_IndirectDiffuse    RE_IndirectDiffuse_Lambert
 `;
 
-/** Rim: sky light on grazing faces, half tinted by the surface so dark paint does not go chalky. */
+/**
+ * Rim: sky light on grazing faces, half tinted by the surface so dark paint does not go chalky.
+ * Added to the direct term so the night grade below leaves its blue alone.
+ */
 const RIM_FRAG = /* glsl */ `
 {
   float novaNV = 1.0 - saturate( dot( normal, geometryViewDir ) );
-  reflectedLight.indirectDiffuse += uRim * ( novaNV * novaNV * novaNV ) * ( 0.4 + 0.6 * diffuseColor.rgb );
+  reflectedLight.directDiffuse += uRim * ( novaNV * novaNV * novaNV ) * ( 0.4 + 0.6 * diffuseColor.rgb );
 }
 `;
+
+/** three's lit-sum line in meshlambert.glsl, replaced so only the indirect (sky / ambient) light is graded. */
+const OUTGOING_LINE = 'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;';
+const OUTGOING_GRADED = 'vec3 outgoingLight = reflectedLight.directDiffuse + mix( reflectedLight.indirectDiffuse, vec3( dot( reflectedLight.indirectDiffuse, vec3( 0.3, 0.59, 0.11 ) ) ), uDesat ) + totalEmissiveRadiance;';
 
 /** Night grade: lit surfaces lose this much saturation at deep night, so moonlit grass reads blue-grey, not green. */
 export const NIGHT_DESAT = 0.45;
@@ -83,7 +90,8 @@ export interface LambertUniforms {
 
 /**
  * Apply the shared shading model to a MeshLambertMaterial's compiled shader: wrapped N·L, the night
- * desaturation grade and, with `rim`, the sky rim term. Terrain and the slot-aware materials both go
+ * desaturation grade on the indirect light (sky / ambient — lamp pools, the campfire and the moon
+ * keep their colour) and, with `rim`, the sky rim term. Terrain and the slot-aware materials both go
  * through here so the ground and what stands on it are lit and graded the same way.
  */
 export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>; fragmentShader: string }, u: LambertUniforms, rim = true): void {
@@ -91,7 +99,7 @@ export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>;
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <lights_lambert_pars_fragment>', LAMBERT_WRAP_PARS)
     .replace('#include <common>', '#include <common>\nuniform float uDesat;')
-    .replace('#include <envmap_fragment>', 'outgoingLight = mix( outgoingLight, vec3( dot( outgoingLight, vec3( 0.3, 0.59, 0.11 ) ) ), uDesat );\n#include <envmap_fragment>');
+    .replace(OUTGOING_LINE, OUTGOING_GRADED);
   if (rim) {
     shader.uniforms.uRim = u.rim;
     shader.fragmentShader = shader.fragmentShader

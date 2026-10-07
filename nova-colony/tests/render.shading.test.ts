@@ -11,7 +11,7 @@ import { buildingTint } from '../src/render/actors/Buildings';
 import { natureTint } from '../src/render/actors/Nature';
 
 /** A stand-in for three's compiled Lambert fragment source: the includes the patch hooks into. */
-const FRAG = ['#include <common>', '#include <lights_lambert_pars_fragment>', 'void main() {', '#include <lights_fragment_end>', 'vec3 outgoingLight = reflectedLight.directDiffuse;', '#include <envmap_fragment>', '#include <opaque_fragment>', '}'].join('\n');
+const FRAG = ['#include <common>', '#include <lights_lambert_pars_fragment>', 'void main() {', '#include <lights_fragment_end>', 'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;', '#include <envmap_fragment>', '#include <opaque_fragment>', '}'].join('\n');
 
 describe('shading model', () => {
   it('patchLambert replaces the Lambert chunk with the wrapped N·L and adds the grade; rim only when asked', () => {
@@ -24,9 +24,13 @@ describe('shading model', () => {
     expect(full.fragmentShader).toContain('uniform float uDesat');
     expect(full.fragmentShader).toContain('uniform vec3 uRim');
     expect(full.fragmentShader.indexOf('uRim *')).toBeGreaterThan(full.fragmentShader.indexOf('#include <lights_fragment_end>'));
-    // the grade sits after the lit result exists and before the slot override / tone mapping
-    expect(full.fragmentShader.indexOf('uDesat )')).toBeGreaterThan(full.fragmentShader.indexOf('vec3 outgoingLight'));
-    expect(full.fragmentShader.indexOf('uDesat )')).toBeLessThan(full.fragmentShader.indexOf('#include <opaque_fragment>'));
+    // the grade desaturates only the indirect (sky / ambient) light: point-light pools and the moon keep their colour
+    expect(full.fragmentShader).not.toContain('vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;');
+    const graded = full.fragmentShader.slice(full.fragmentShader.indexOf('vec3 outgoingLight'), full.fragmentShader.indexOf('#include <envmap_fragment>'));
+    expect(graded).toContain('reflectedLight.directDiffuse +');
+    expect(graded).toContain('mix( reflectedLight.indirectDiffuse');
+    expect(graded).toContain('uDesat');
+    expect(graded).toContain('totalEmissiveRadiance');
     expect(full.uniforms.uRim).toBe(mats.lambert.rim);
     expect(full.uniforms.uDesat).toBe(mats.lambert.desat);
 
