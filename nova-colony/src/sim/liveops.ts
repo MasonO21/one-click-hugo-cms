@@ -487,7 +487,8 @@ export class LiveOpsSystem extends System {
       try {
         for (const c of cells.slice(0, 80)) {
           if (!g.sys.buildings.canPlace(def.id, c.x, c.z, 0).ok) continue;
-          if (g.sys.buildings.place(def.id, c.x, c.z, 0, { free: true, instant: true }) != null) {
+          // quiet: the very first thing a new player sees must not be "Built Lucky Wheel!" (they didn't)
+          if (g.sys.buildings.place(def.id, c.x, c.z, 0, { free: true, instant: true, quiet: true }) != null) {
             placed = true;
             break;
           }

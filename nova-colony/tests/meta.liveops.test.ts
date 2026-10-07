@@ -874,7 +874,7 @@ describe('liveops: fresh game setup', () => {
     const [def, x, z, rot, opts] = place.mock.calls[0];
     expect(def).toBe('spin_wheel');
     expect(rot).toBe(0);
-    expect(opts).toEqual({ free: true, instant: true });
+    expect(opts).toEqual({ free: true, instant: true, quiet: true });
     expect(Math.abs(x - 128)).toBeLessThan(14);
     expect(Math.abs(z - 128)).toBeLessThan(14);
     expect(game.state.liveops.wheelPlaced).toBe(true);

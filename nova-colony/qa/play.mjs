@@ -53,7 +53,8 @@ async function findSpot(def, cx, cz, minR = 3, prefer = null) {
         const x = cx + Math.cos(ang) * r * C, z = cz + Math.sin(ang) * r * C;
         const ix = cell(x), iz = cell(z);
         if (bs.canPlace(def, ix, iz, 0).ok) {
-          const wx = (ix + d.size[0] / 2) * C - HALF, wz = (iz + d.size[1] / 2) * C - HALF;
+          // tap the cell the build cursor snaps from (snapFootprint: min = cursor - floor((w-1)/2))
+          const wx = (ix + Math.floor((d.size[0] - 1) / 2) + 0.5) * C - HALF, wz = (iz + Math.floor((d.size[1] - 1) / 2) + 0.5) * C - HALF;
           let score = r;
           // a human picks a spot they can see: up-screen of the player, away from the HUD edges
           const sp = window.renderer.worldToScreen(wx, 0.5, wz);
@@ -69,7 +70,7 @@ async function findSpot(def, cx, cz, minR = 3, prefer = null) {
   }, [def, cx, cz, minR, prefer]);
 }
 
-async function placeViaUI(def, spot, tag) {
+async function placeViaUI(def, spot, tag, retry = 1) {
   await ensureAfford(def);
   await tap(page, '#btn-build', { after: 900 });
   await think(+(process.env.T_BROWSE || 5)); // browse the cards
@@ -90,6 +91,12 @@ async function placeViaUI(def, spot, tag) {
   await shot(page, `${tag}-placed`);
   // leave build mode
   if (await page.evaluate(() => window.game.view.mode === 'build')) { await tap(page, '#btn-build-cancel', { after: 600 }); }
+  const placed = await page.evaluate((d) => window.game.state.buildings.list.some((x) => x.def === d), def);
+  if (!placed && retry > 0) {
+    console.log('  !! placement failed, retrying elsewhere');
+    const p = await page.evaluate(() => window.game.state.player);
+    return placeViaUI(def, await findSpot(def, p.x, p.z, 3), tag + '-retry', retry - 1);
+  }
   return b;
 }
 
