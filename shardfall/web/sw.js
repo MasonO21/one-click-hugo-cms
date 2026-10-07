@@ -1,5 +1,5 @@
 // Offline cache for the installable web version. Bump VERSION whenever files change.
-const VERSION = 'shardfall-v13';
+const VERSION = 'shardfall-v14';
 const SHELL = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/data.js', 'js/store.js', 'js/audio.js', 'js/match.js', 'js/draw.js', 'js/hud.js', 'js/net.js', 'js/platform.js', 'js/lobby.js',
@@ -8,7 +8,7 @@ const SHELL = [
 ];
 // In-match hero sprites (same list as SF.ART.sprites in js/data.js), so offline matches have them.
 // Cached best-effort: a missing file just falls back to the drawn crystal hero.
-const SPRITES = ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra',
+const SPRITES = ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra', 'tolvar',
   'kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
   'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm'].map(id => `assets/art/sprites/${id}.webp`);
 

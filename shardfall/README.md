@@ -73,8 +73,15 @@ Keep it this way as you add content: your own names, art, sounds and hero design
   - Nothing is earned or recorded, so it's a safe place to learn a kit, a spell or a build.
 
 **In a match**
-- 11 heroes across 6 roles, with 33 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals, executes, summons and walls.
-- **Quarra, the Shard Artificer** (Mage, the newest hero) builds her own battlefield:
+- 12 heroes across 6 roles, with 36 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals, executes, summons, walls and taunts.
+- **Tolvar, the Bellwarden** (Tank, the newest hero) keeps enemies in the fight:
+  - **Iron Rush:** a charge that carries the first enemy hero to its end and stuns them there. Anyone else in the way is knocked aside.
+  - **Toll of Challenge:** taunts nearby enemy heroes for 1.25 seconds. They have to walk to Tolvar and attack him, and can't use skills. Battle spells still work, and Shard Purify cleanses it.
+  - **Great Bell:** an ultimate that drops a giant bell. Enemy heroes under it take heavy damage and can't leave its ring for 3 seconds. Only Shard Blink gets out.
+  - **Unbroken passive:** stuns and slows on him are 30% shorter, and heroes he has taunted deal 25% less damage to him.
+
+  Bots ring the bell in close fights and save the Great Bell for two grouped enemies or a wounded one with a teammate nearby.
+- **Quarra, the Shard Artificer** (Mage) builds her own battlefield:
   - **Shard Turret:** a turret that shoots for 12 seconds; up to two stand at once.
   - **Prism Wall:** a wall enemies can't walk or dash through. Enemies caught on its line are thrown to the far side and slowed.
   - **Crystal Bastion:** an ultimate that fires at two enemies and shields allies every second.
@@ -94,10 +101,15 @@ Keep it this way as you add content: your own names, art, sounds and hero design
   - **Rhea:** Focus. Attacks ramp up on one target.
   - **Oska:** Tidewall. Allies near him take less damage.
   - **Quarra:** Masterwork. Her constructions scale with power, and her attacks punish turret-marked enemies.
+  - **Tolvar:** Unbroken. Shorter crowd control on him, and taunted heroes hit him softer.
 - **Skill ranks:** every level gives a skill point. You start with one skill and choose which to learn and max. Basic skills go to rank 4 and the ultimate to rank 3 (at levels 4, 7 and 10). Each rank hits harder and recharges faster.
 - **One jungler per team:** you, if you bring Shard Smite, or otherwise the bot best suited to it. Both sides get the same treatment.
 - Towers that punish diving, with backdoor protection.
 - Minion waves, siege minions, two jungle buffs, the Shard Colossus and the Abyssal Wyrm. Bots contest both objectives, and Group up calls the nearer one.
+- **Jungle blessings,** each lasting 70 seconds, with a glowing mote at the holder's feet that both teams can see:
+  - **Ember Wisp:** Ember Blessing, 10% more damage.
+  - **Thornback:** Stoneward Blessing, 20% faster cooldowns and 0.4% of max health back every second.
+- **Comeback gold:** while a team trails by 1,500 gold or more, its kills pay 30% more, assists 50% more and tower takedowns 200 instead of 150 per hero. A gold "Comeback gold" tag shows in the HUD while it's on. A lost lane is not a lost match.
 - **River Power Shards:** from 2:00 (1:00 in Brawl), two spots in the river each hold a random shard, refilled every 90 seconds. Walk over one to take it:
   - **Haste:** move faster.
   - **Renewal:** heal 35%.
@@ -138,9 +150,9 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 - **Settings:** a monthly spending limit, purchase history, cloud save (online) and in-app account deletion.
 
 **Art.** All of it was made with Higgsfield:
-- **Splash art** for the lobby, hero roster, skin shop and loading screen: one portrait for each of the 11 heroes and each of the 15 skins.
+- **Splash art** for the lobby, hero roster, skin shop and loading screen: one portrait for each of the 12 heroes and each of the 15 skins.
 - **Key art** behind the menus.
-- **In-match sprites** for all 26 looks. Each sprite was generated from its own splash, so a skin looks the same in the shop and in a match. Every sprite faces right, and the game mirrors it when a hero turns. A hero leans into a run, breathes when idle and flashes white when hit. The small hero pictures in menus use them too.
+- **In-match sprites** for all 27 looks. Each sprite was generated from its own splash, so a skin looks the same in the shop and in a match. Every sprite faces right, and the game mirrors it when a hero turns. A hero leans into a run, breathes when idle and flashes white when hit. The small hero pictures in menus use them too.
 
 Run `node tools/fetch-art.mjs` to download everything into `web/assets/art/` as WebP (about 4.5 MB). Sprites are trimmed to the figure and placed on a shared 400×400 frame with the feet on one baseline. If any file is missing, that picture falls back to the drawn crystal hero, so the game always works. Check Higgsfield's terms for commercial use before shipping.
 

@@ -97,3 +97,23 @@ test('river power-ups are sent to everyone and pickups are announced to both tea
   assert.equal(m.runes.length, 1);
   assert.ok(room.eventsFor('p2').some(e => e[0] === 'rune' && e[1] === h.id), 'the enemy sees who took it');
 });
+
+test('taunts, the Great Bell and jungle blessings are sent to clients', () => {
+  const room = new Room({ id: 'bell', mode: 'quick', players: [{ pid: 'p1', name: 'One', heroId: 'tolvar', skinId: 'tolvar_classic', team: 0 }] });
+  const m = room.m, h = room.byPid.get('p1');
+  for (const x of m.heroes) { x.brain = null; x.human = true; x.x = x.team === 0 ? 300 : 2900; x.y = 600; }
+  m.nextWave = 1e9;
+  const foe = m.heroes.find(x => x.team === 1);
+  h.x = 1420; h.y = 900; foe.x = 1560; foe.y = 900; h.ranks = [1, 1, 1]; h.level = 6;
+  h.addBuff({ id: 'stoneward', t: 70, cdRate: 0.2, regenPct: 0.004, label: 'Stoneward Blessing' });
+  m.update(1 / 30);
+  assert.equal(m.castSkill(h, 1, { dir: { x: 1, y: 0 } }), true);
+  let snap = room.snapshotFor(1, null, []);
+  const fe = snap.u.find(u => u.i === foe.id), he = snap.u.find(u => u.i === h.id);
+  assert.ok(fe.tt > 0 && fe.tb === h.id, 'the taunted hero carries who taunted it');
+  assert.equal(he.bl, 2, 'the Stoneward Blessing is visible to the enemy');
+  assert.equal(m.castSkill(h, 2, { dir: { x: 1, y: 0 }, point: { x: 1560, y: 900 } }), true);
+  for (let i = 0; i < 15; i++) m.update(1 / 30);
+  snap = room.snapshotFor(0, 'p1', []);
+  assert.ok(snap.z.some(z => z.kind === 'bell' && z.started), 'the bell zone is sent');
+});

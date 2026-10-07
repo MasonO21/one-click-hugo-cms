@@ -378,6 +378,101 @@ section('Quarra: turrets, walls and the bastion', () => {
   }
 });
 
+section('Tolvar: taunt, Iron Rush and the Great Bell', () => {
+  const setup = (enemy = 'sylva') => {
+    const m = new SF.Match({ hero: 'tolvar', difficulty: 'normal', allies: [{ id: 'kaida', name: 'A1' }, { id: 'oska', name: 'A2' }], enemies: [{ id: enemy, name: 'E1' }, { id: 'nyx', name: 'E2' }, { id: 'lumen', name: 'E3' }] });
+    for (const h of m.heroes) if (h !== m.player) { h.brain = null; h.human = true; h.x = h.team ? 3100 : 100; h.y = 600; }
+    m.nextWave = 1e9; m.camps.forEach(c => { c.respawnAt = 1e9; });
+    const p = m.player; p.level = 8; p.recalc(); p.hp = p.maxHp; p.ranks = [4, 4, 2]; p.points = 0; p.x = 1400; p.y = 600;
+    const foe = m.heroes.find(h => h.team === 1); foe.x = 1600; foe.y = 600;
+    m.updateVisibility();
+    return { m, p, foe };
+  };
+  {
+    const { m, p, foe } = setup('drace');
+    check('Toll of Challenge casts', m.castSkill(p, 1, { dir: { x: 1, y: 0 } }) === true);
+    check('enemy heroes nearby are taunted by Tolvar', foe.tauntT > 0 && foe.tauntBy === p, `${foe.tauntT}`);
+    check('a taunted hero cannot use skills', m.castSkill(foe, 0, { dir: { x: -1, y: 0 } }) === 'taunted');
+    foe.wantDir = { x: 1, y: 0 };   // trying to run away
+    const d0 = Math.abs(foe.x - p.x);
+    for (let k = 0; k < 15; k++) m.update(1 / 30);
+    check('a taunted hero walks to Tolvar instead of away', Math.abs(foe.x - p.x) < d0 && foe.target === p, `${Math.round(d0)} -> ${Math.round(Math.abs(foe.x - p.x))}`);
+    for (let k = 0; k < 40; k++) m.update(1 / 30);
+    check('the taunt wears off after 1.25 seconds', !(foe.tauntT > 0) && foe.tauntBy === null);
+    check('Shard Purify cleanses a taunt', (() => { const q = setup(); q.m.castSkill(q.p, 1, { dir: { x: 1, y: 0 } }); q.foe.spell = 'purify'; q.m.useSpell(q.foe); return !(q.foe.tauntT > 0); })());
+  }
+  {
+    // Unbroken: shorter crowd control, and taunted heroes hit him softer.
+    const { m, p, foe } = setup();
+    m.stun(p, 1); check('Unbroken: stuns on Tolvar last 30% shorter', Math.abs(p.stunT - 0.7) < 1e-9, `${p.stunT}`);
+    p.stunT = 0;
+    const hit = taunted => { const q = setup(); if (taunted) q.m.taunt(q.foe, q.p, 2); q.p.shield = 0; const h0 = q.p.hp; q.m.applyDamage(q.foe, q.p, 300); return h0 - q.p.hp; };
+    check('Unbroken: taunted heroes deal 25% less damage to him', Math.abs(hit(true) / hit(false) - 0.75) < 0.01);
+  }
+  {
+    const { m, p, foe } = setup();
+    foe.x = 1560;
+    m.castSkill(p, 0, { dir: { x: 1, y: 0 }, target: foe });
+    for (let k = 0; k < 30 && (p.dash || foe.knock); k++) m.update(1 / 30);
+    check('Iron Rush carries the first hero to the end of the charge', foe.x > 1640 && Math.abs(foe.x - p.x) < 90, `foe ${Math.round(foe.x)}, Tolvar ${Math.round(p.x)}`);
+    m.update(1 / 30);
+    check('and stuns it there', foe.stunT > 0);
+  }
+  {
+    const { m, p, foe } = setup();
+    const foe2 = m.heroes.filter(h => h.team === 1)[1]; foe2.x = 1720; foe2.y = 640; m.updateVisibility();
+    const hp0 = foe.hp;
+    check('Great Bell casts on the aimed spot', m.castSkill(p, 2, { dir: { x: 1, y: 0 }, point: { x: 1650, y: 610 } }) === true);
+    for (let k = 0; k < 15; k++) m.update(1 / 30);
+    const z = m.zones.find(z => z.kind === 'bell');
+    check('the bell lands and damages the heroes under it', z && z.started && foe.hp < hp0 && z.trapped.has(foe) && z.trapped.has(foe2));
+    foe.wantDir = { x: 1, y: 0 }; foe2.wantDir = { x: 0, y: 1 };
+    for (let k = 0; k < 45; k++) m.update(1 / 30);
+    check('trapped heroes cannot walk out of the ring', Math.hypot(foe.x - z.x, foe.y - z.y) <= z.r && Math.hypot(foe2.x - z.x, foe2.y - z.y) <= z.r);
+    foe2.spell = 'blink'; foe2.spellCd = 0; m.useSpell(foe2, { dir: { x: 0, y: 1 } });
+    m.update(1 / 30);
+    check('Shard Blink escapes the bell', Math.hypot(foe2.x - z.x, foe2.y - z.y) > z.r, `${Math.round(Math.hypot(foe2.x - z.x, foe2.y - z.y))}`);
+    for (let k = 0; k < 30 * 3; k++) m.update(1 / 30);
+    check('the trap ends after 3 seconds', !m.zones.some(z => z.kind === 'bell'));
+    const wander = foe.x;
+    for (let k = 0; k < 30; k++) m.update(1 / 30);
+    check('and they can walk free again', foe.x > wander + 50, `${Math.round(wander)} -> ${Math.round(foe.x)}`);
+  }
+  {
+    // Bots: Tolvar taunts when enemies are close, and drops the bell on two heroes.
+    let tolls = 0, bells = 0;
+    for (let n = 0; n < 10; n++) {
+      const { m, p } = setup();
+      p.brain = new SF.Brain(m, p, 'hard'); p.human = false;
+      const foes = m.heroes.filter(h => h.team === 1);
+      // In the river, out of both towers' reach.
+      p.x = 1420; p.y = 900; foes[0].x = 1580; foes[0].y = 900; foes[1].x = 1640; foes[1].y = 960; foes[0].hp = foes[0].maxHp * 0.5;
+      const ally = m.heroes.find(h => h.team === 0 && h !== p); ally.x = 1380; ally.y = 920;
+      m.updateVisibility();
+      m.on('cast', (h, s) => { if (h === p && s.id === 'toll_of_challenge') tolls++; if (h === p && s.id === 'great_bell') bells++; });
+      for (let k = 0; k < 30 * 3; k++) m.update(1 / 30);
+    }
+    check('bot Tolvar uses Toll of Challenge in a fight', tolls >= 5, `${tolls}/10`);
+    check('bot Tolvar drops the Great Bell on grouped enemies', bells >= 5, `${bells}/10`);
+  }
+});
+
+section('Jungle blessings', () => {
+  const m = botMatch(SF), h = m.heroes[0];
+  const kill = type => { const c = m.camps.find(c => c.type === type); m.spawnCamp(c); const u = c.unit; u.hp = 1; m.applyDamage(h, u, 50, { true: true }); };
+  kill('wisp');
+  check('Ember Wisp grants the Ember Blessing', h.hasBuff('ember') && h.dmgMul() > 1.09);
+  kill('thorn');
+  check('Thornback grants the Stoneward Blessing', h.hasBuff('stoneward'));
+  h.skillCd = [10, 10, 10]; h.alive = true;
+  const before = h.skillCd[0];
+  m.heroTick(h, 1);
+  check('Stoneward: cooldowns recover 20% faster', Math.abs(before - h.skillCd[0] - 1.2) < 1e-9, `${before - h.skillCd[0]}`);
+  h.hp = h.maxHp * 0.5; const hp0 = h.hp;
+  m.heroTick(h, 1);
+  check('Stoneward: regenerates 0.4% of max health per second on top of regen', Math.abs(h.hp - hp0 - (h.regen + h.maxHp * 0.004)) < 0.5, `${(h.hp - hp0).toFixed(1)}`);
+});
+
 section('Bot team-fight targeting', () => {
   // A bot's pick when it can see two enemies at the same distance.
   const pick = (botId, a, b, setup) => {
@@ -398,6 +493,30 @@ section('Bot team-fight targeting', () => {
   check('divers reach past the tank for the squishy carry', pick('kaida', 'brakka', 'rhea', ({ A, B }) => { A.hp = A.maxHp * 0.75; B.hp = B.maxHp * 0.85; }) === 'B');
   check('tanks peel the enemy attacking a teammate', pick('brakka', 'nyx', 'vexa', ({ A, B, ally }) => { A.hp = A.maxHp * 0.85; B.hp = B.maxHp * 0.65; A.target = ally; }) === 'A');
   check('without a reason, the lowest-health enemy is the pick', pick('drace', 'nyx', 'vexa', ({ A, B }) => { A.hp = A.maxHp * 0.9; B.hp = B.maxHp * 0.5; }) === 'B');
+});
+
+section('Comeback gold', () => {
+  const setup = () => { const m = botMatch(SF); m.nextWave = 1e9; for (const h of m.heroes) h.brain = null; return { m, blue: m.heroes.filter(h => h.team === 0), red: m.heroes.filter(h => h.team === 1) }; };
+  {
+    const { m, blue, red } = setup();
+    m.comebackTick();
+    check('no bonus while the gold is close', !m.heroes.some(h => h.hasBuff('comeback')));
+    red.forEach(h => { h.goldEarned += 600; });
+    m.comebackTick();
+    check('the team 1,500+ gold behind gets comeback gold', blue.every(h => h.hasBuff('comeback')) && !red.some(h => h.hasBuff('comeback')));
+    blue.forEach(h => { h.goldEarned += 1300; });
+    m.comebackTick();
+    check('it moves when the lead flips', red.every(h => h.hasBuff('comeback')) && !blue.some(h => h.hasBuff('comeback')));
+  }
+  const pay = behind => {
+    const { m, blue, red } = setup();
+    if (behind) { red.forEach(h => { h.goldEarned += 700; }); m.comebackTick(); }
+    const k = blue[0], g0 = k.gold; red[0].streak = 0; red[0].x = k.x + 100; red[0].y = k.y;
+    m.applyDamage(k, red[0], 1e6, { true: true });
+    return k.gold - g0;
+  };
+  check('a comeback kill pays 30% more', pay(true) === Math.round(pay(false) * 1.3), `${pay(true)} vs ${pay(false)}`);
+  check('practice never gives comeback gold', (() => { const m = new SF.Match({ hero: 'kaida', mode: 'practice', difficulty: 'easy', allies: [], enemies: [{ id: 'orin' }, { id: 'sylva' }, { id: 'nyx' }] }); m.heroes[1].goldEarned = 9000; m.comebackTick(); return !m.player.hasBuff('comeback'); })());
 });
 
 section('Post-match stats', () => {
@@ -861,6 +980,8 @@ section('Every look has splash art and an in-match sprite', () => {
     if (sprite) check(`${sk.id} sprite is precached by the service worker`, sw.includes(`'${sprite.split('/').pop().replace('.webp', '')}'`));
   }
   check('unknown skins have no sprite', SF.spriteFor('kaida', 'nope') === null);
+  const draw = readFileSync(join(web, 'js', 'draw.js'), 'utf8'), shapes = draw.slice(draw.indexOf('const SHAPES'), draw.indexOf('};', draw.indexOf('const SHAPES')));
+  for (const h of SF.HEROES) check(`${h.id} has a drawn body shape (${h.shape}) for when art is missing`, new RegExp(`\\b${h.shape}:`).test(shapes));
 });
 
 console.log(`\n${passes} passed, ${failures} failed`);

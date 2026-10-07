@@ -183,6 +183,8 @@ export class Room {
       if (x.moving) e.mv = 1;
       if (x.flash > 0) e.fl = 1;
       if (x.stunT > 0) e.st = r1(x.stunT);
+      if (x.tauntT > 0 && x.tauntBy) { e.tt = r1(x.tauntT); e.tb = x.tauntBy.id; }
+      if (x.kind === 'hero') { const bl = (x.hasBuff('ember') ? 1 : 0) | (x.hasBuff('stoneward') ? 2 : 0); if (bl) e.bl = bl; }
       if (x.slowT > 0) e.sl = 1;
       if (x.shield > 0) e.sh = Math.round(x.shield);
       if (x.mtype) e.mt = x.mtype;

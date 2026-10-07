@@ -54,6 +54,7 @@
     if (r === 'locked') toast('Ultimate unlocks at level 4');
     else if (r === 'unranked') toast(m.canUpgrade(p, i) ? 'Tap + to learn this skill' : 'Learn this skill at your next level');
     else if (r === 'notarget') toast('No target in range');
+    else if (r === 'taunted') toast('Taunted! You can\'t use skills');
   }
   function mouseAim(i) {
     if (!mouse || performance.now() - mouseT > 4000) return null;
@@ -401,7 +402,7 @@
         q.classList.toggle('ready', p.gold >= it.cost);
       }
       $('slots').innerHTML = Array.from({ length: 6 }, (_, i) => (p.items[i] ? SF.itemIcon(p.items[i]) : '<span class="empty"></span>')).join('');
-      $('buffs').innerHTML = p.buffs.filter(b => b.label).map(b => `<span class="buff" style="--c:${({ shard: '#4fe3d3', aegis: '#c58bff', haste: '#8fd3ff', fury: '#ff7a59' })[b.id] || '#ffb347'}">${b.label} ${Math.ceil(b.t)}s</span>`).join('');
+      $('buffs').innerHTML = p.buffs.filter(b => b.label).map(b => `<span class="buff" style="--c:${({ shard: '#4fe3d3', aegis: '#c58bff', haste: '#8fd3ff', fury: '#ff7a59', stoneward: '#7dffb0', comeback: '#ffe27a' })[b.id] || '#ffb347'}">${b.label}${b.id === 'comeback' ? '' : ` ${Math.ceil(b.t)}s`}</span>`).join('');
       if (!$('shop').hidden) renderShop();
       if (!$('board').hidden) renderBoard();
       renderFeed();

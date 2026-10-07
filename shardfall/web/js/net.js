@@ -84,6 +84,8 @@
         u.alive = e.al !== 0; u.deadT = 0;
         u.face = { x: this.mirror ? -e.fx : e.fx, y: e.fy }; u.moving = !!e.mv; u.flash = e.fl ? 0.1 : 0;
         u.stunT = e.st || 0; u.slowT = e.sl ? 1 : 0; u.shield = e.sh || 0;
+        u.tauntT = e.tt || 0; u.tauntBy = e.tb ? this.unit(e.tb) : null;
+        u.bl = e.bl || 0;
         if (u.kind === 'summon') { u.life = e.lf; u.color = e.co; }
         if (u.kind === 'tower' || u.kind === 'core') { u.range = e.rg; u.guard = e.g ? this.unit(e.g) : null; u.target = e.tg ? this.unit(e.tg) : null; }
         if (u.kind === 'hero') {
@@ -218,7 +220,7 @@
     predict(p, sx, sy, last, dt) {
       const e = last.pos.get(p.id);
       const lx = e ? this.mx(e.x) : sx, ly = e ? e.y : sy;
-      const d = p.wantDir, canMove = p.alive && p.stunT <= 0;
+      const d = p.wantDir, canMove = p.alive && p.stunT <= 0 && !(p.tauntT > 0);
       if (d && canMove && Math.hypot(d.x, d.y) > 0.05) {
         const l = Math.hypot(d.x, d.y), sp = (p.ms || 300) * Math.min(1, l) * dt;
         p.x += d.x / l * sp; p.y += d.y / l * sp;
@@ -245,6 +247,7 @@
     castSkill(h, i, aim) {
       const s = h.def0.skills[i];
       if (!h.alive || h.stunT > 0 || h.skillCd[i] > 0) return 'cooldown';
+      if (h.tauntT > 0) return 'taunted';
       if (!h.ranks[i]) return i === 2 && h.level < 4 ? 'locked' : 'unranked';
       if (s.needsTarget) { aim = aim || this.resolveAim(h, i, null); if (!aim.target) return 'notarget'; }
       this.net.send({ t: 'cast', i, dir: aim ? this.out(aim.dir) : null, p: aim && aim.point ? this.outP(aim.point) : null, tg: aim && aim.target ? aim.target.id : null });

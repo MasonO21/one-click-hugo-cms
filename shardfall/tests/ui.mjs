@@ -64,9 +64,9 @@ try {
     await page.click('[data-act=battle]');
     await page.waitForFunction(() => { const d = SF.lobby._test.draft; return d && d.steps[d.i] === 'P'; }, null, { timeout: 8000 });
     await page.waitForTimeout(300);
-    const dr = await page.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, tiles: document.querySelectorAll('.dr-tile').length, phase: document.querySelector('.dr-title b').textContent,
+    const dr = await page.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, tiles: document.querySelectorAll('.dr-tile').length, heroes: SF.HEROES.length, phase: document.querySelector('.dr-title b').textContent,
       lock: document.querySelector('.dr-lock').getBoundingClientRect().bottom <= innerHeight, grid: document.querySelector('.dr-grid').scrollHeight <= document.querySelector('.dr-grid').clientHeight + 2 }));
-    check(`${label} draft shows every hero and your turn`, dr.tiles === 11 && dr.phase === 'Pick your hero', JSON.stringify(dr));
+    check(`${label} draft shows every hero and your turn`, dr.tiles === dr.heroes && dr.phase === 'Pick your hero', JSON.stringify(dr));
     check(`${label} draft fits the screen`, dr.over <= 0 && dr.lock, JSON.stringify(dr));
     await shot(page, `${label}-draft`);
     await page.click('[data-act=draftLeave]');

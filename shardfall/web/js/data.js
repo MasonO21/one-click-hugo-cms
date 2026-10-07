@@ -241,6 +241,20 @@ window.SF = window.SF || {};
         { id: 'prism_wall', name: 'Prism Wall', cd: 13, range: 460, kind: 'wall', ai: 'wall', ground: true, desc: 'Raise a crystal wall across the aimed spot for 3 seconds. Enemies cannot walk through it, and enemies caught as it rises are thrown to the far side and slowed.' },
         { id: 'crystal_bastion', name: 'Crystal Bastion', cd: 55, range: 480, kind: 'ult', ai: 'bastion', ground: true, desc: 'Summon a bastion for 8 seconds that fires heavy bolts at two enemies at once and shields nearby allies every second.' }
       ]
+    },
+    {
+      id: 'tolvar', name: 'Tolvar', title: 'Bellwarden', role: 'Tank', shape: 'bell',
+      lore: 'The bell that called the Shardborn home. When it rings, no one leaves the fight.',
+      price: { coins: 3500, gems: 348 },
+      base: { hp: 1060, atk: 54, power: 0, def: 35, ms: 290, range: 110, as: 0.78, regen: 7 },
+      grow: { hp: 132, atk: 4, power: 0, def: 4 },
+      build: B.Tank,
+      passive: { id: 'unbroken', name: 'Unbroken', desc: 'Stuns and slows on Tolvar last 30% shorter, and enemies he has taunted deal 25% less damage to him.' },
+      skills: [
+        { id: 'iron_rush', name: 'Iron Rush', cd: 10, range: 360, kind: 'dash', ai: 'enemy', desc: 'Charge forward. The first enemy hero you hit is carried along to the end of the charge and stunned for 0.5 seconds; everyone else in the way is knocked aside.' },
+        { id: 'toll_of_challenge', name: 'Toll of Challenge', cd: 12, range: 250, kind: 'nova', ai: 'near', desc: 'Ring the bell. Nearby enemies take damage, and enemy heroes are taunted for 1.25 seconds: they must walk to Tolvar and attack him, and can\'t use skills.' },
+        { id: 'great_bell', name: 'Great Bell', cd: 60, range: 420, kind: 'ult', ai: 'bell', ground: true, desc: 'Drop a giant bell on the aimed spot. Enemies under it take heavy damage and are trapped inside its ring for 3 seconds. Only Shard Blink gets out.' }
+      ]
     }
   ];
   SF.HERO = {};
@@ -281,6 +295,7 @@ window.SF = window.SF || {};
     { id: 'rhea_dawn', hero: 'rhea', name: 'Dawnbreaker', tier: 'Legendary', c1: '#ffd0f0', c2: '#8a2f5a', c3: '#ffffff', aura: 'gold', crown: true, price: { gems: 888 } },
     { id: 'oska_classic', hero: 'oska', name: 'Classic', tier: 'Classic', c1: '#4fc7b0', c2: '#14423a', c3: '#d9fff6' },
     { id: 'quarra_classic', hero: 'quarra', name: 'Classic', tier: 'Classic', c1: '#7dffd8', c2: '#3a4a5e', c3: '#f2fbff' },
+    { id: 'tolvar_classic', hero: 'tolvar', name: 'Classic', tier: 'Classic', c1: '#4fe3c1', c2: '#7a4a1e', c3: '#f6c27a' },
     { id: 'oska_reef', hero: 'oska', name: 'Reef Guardian', tier: 'Rare', c1: '#ff9d7a', c2: '#5a2a1f', c3: '#fff0e8', aura: 'bubbles', price: { gems: 288 } },
     { id: 'oska_storm', hero: 'oska', name: 'Stormshell', tier: 'Event', c1: '#7cc8ff', c2: '#1a2a6b', c3: '#eaf6ff', aura: 'storm', crown: true, lock: 'event' }
   ];
@@ -292,14 +307,14 @@ window.SF = window.SF || {};
   // Illustrated splash art (made with Higgsfield, see art/manifest.json). Classic skins use the hero's
   // splash; other skins only have art if listed here. Anything without art is drawn procedurally.
   SF.ART = {
-    heroes: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra'],
+    heroes: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra', 'tolvar'],
     skins: ['kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
       'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm'],
     key: 'assets/art/key-art.webp',
     // In-match sprites, one per look, made from that look's splash. Same naming as the splash art:
     // classic skins by hero id, other skins by skin id. All share one 400x400 frame (feet 8px above
     // the bottom, body centred, facing right), so the game draws them all the same way.
-    sprites: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra',
+    sprites: ['kaida', 'orin', 'sylva', 'brakka', 'nyx', 'lumen', 'vexa', 'drace', 'rhea', 'oska', 'quarra', 'tolvar',
       'kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
       'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm']
   };

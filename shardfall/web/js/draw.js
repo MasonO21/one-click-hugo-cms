@@ -14,7 +14,8 @@
     axe:   [[0, -1.05], [0.6, -0.7], [0.66, 0.1], [0.36, 0.75], [-0.36, 0.75], [-0.66, 0.1], [-0.6, -0.7]],
     prism: [[0, -1.35], [0.34, -0.35], [0.62, 0.7], [-0.62, 0.7], [-0.34, -0.35]],
     gear:  [[0, -1.3], [0.38, -0.9], [0.7, -0.5], [0.62, 0.1], [0.72, 0.55], [0.3, 0.8], [-0.3, 0.8], [-0.72, 0.55], [-0.62, 0.1], [-0.7, -0.5], [-0.38, -0.9]],
-    shell: [[0, -0.95], [0.45, -0.82], [0.75, -0.35], [0.8, 0.2], [0.55, 0.72], [-0.55, 0.72], [-0.8, 0.2], [-0.75, -0.35], [-0.45, -0.82]]
+    shell: [[0, -0.95], [0.45, -0.82], [0.75, -0.35], [0.8, 0.2], [0.55, 0.72], [-0.55, 0.72], [-0.8, 0.2], [-0.75, -0.35], [-0.45, -0.82]],
+    bell:  [[0, -1.2], [0.42, -0.95], [0.6, -0.5], [0.64, 0.1], [0.82, 0.72], [-0.82, 0.72], [-0.64, 0.1], [-0.6, -0.5], [-0.42, -0.95]]
   };
   // Graphics settings (set from the lobby): low = no glow blur and fewer cosmetic particles.
   SF.gfx = SF.gfx || { low: false, numbers: true };
@@ -169,6 +170,16 @@
     return feet + Math.min(0, bob) - H;
   }
 
+  // A bell whose mouth sits on y, s tall (Tolvar's weapon, his taunt mark and the Great Bell).
+  function bellPath(g, x, y, s) {
+    g.beginPath();
+    g.moveTo(x - s * 0.52, y);
+    g.quadraticCurveTo(x - s * 0.38, y - s * 0.12, x - s * 0.34, y - s * 0.55);
+    g.quadraticCurveTo(x - s * 0.32, y - s, x, y - s);
+    g.quadraticCurveTo(x + s * 0.32, y - s, x + s * 0.34, y - s * 0.55);
+    g.quadraticCurveTo(x + s * 0.38, y - s * 0.12, x + s * 0.52, y);
+    g.closePath();
+  }
   function drawWeapon(g, shape, sk, x, cy, s, face, fx, t) {
     g.save();
     g.lineCap = 'round';
@@ -243,6 +254,14 @@
         g.beginPath(); g.arc(ax, ay + s * 0.15, s * 0.32, 0.2, Math.PI - 0.2); g.stroke();
         g.beginPath(); g.moveTo(ax - s * 0.2, ay - s * 0.25); g.lineTo(ax + s * 0.2, ay - s * 0.25); g.stroke();
         g.beginPath(); g.arc(ax, ay - s * 0.52, s * 0.09, 0, TAU); g.stroke();
+        break;
+      }
+      case 'bell': {
+        const bx = x + fx * s * 0.8, by = cy + s * 0.55;
+        g.strokeStyle = sk.c3; g.lineWidth = s * 0.06;
+        g.beginPath(); g.moveTo(x + fx * s * 0.45, cy - s * 0.1); g.lineTo(bx, by - s * 0.55); g.stroke();
+        bellPath(g, bx, by, s * 0.6); g.fillStyle = sk.c2; g.shadowColor = sk.c1; g.shadowBlur = blur(10); g.fill();
+        g.shadowBlur = 0; g.lineWidth = 2; g.strokeStyle = sk.c3; g.stroke();
         break;
       }
       case 'halo': {
@@ -656,6 +675,19 @@
               g.fill(); g.shadowBlur = 0; g.lineWidth = 1.2; g.strokeStyle = 'rgba(255,255,255,.6)'; g.stroke();
             }
           }
+          // Jungle blessings: an ember mote (damage) and a green leaf mote (cooldowns) circling the feet.
+          const bl = u.bl != null ? u.bl : (u.hasBuff && u.hasBuff('ember') ? 1 : 0) | (u.hasBuff && u.hasBuff('stoneward') ? 2 : 0);
+          if (bl) for (const [bit, col, off] of [[1, '#ff8a3d', 0], [2, '#7dffb0', Math.PI]]) {
+            if (!(bl & bit)) continue;
+            const a = t * 2.4 + off, mx = u.x + Math.cos(a) * 30, my = u.y - 6 + Math.sin(a) * 10;
+            g.beginPath(); g.arc(mx, my, 4, 0, TAU); g.fillStyle = col; g.shadowColor = col; g.shadowBlur = blur(10); g.fill(); g.shadowBlur = 0;
+          }
+          if (u.tauntT > 0 && u.tauntBy) {
+            // Taunted: a moving dashed chain to Tolvar and a small bell over the head.
+            g.save(); g.setLineDash([6, 6]); g.lineDashOffset = -t * 40; g.strokeStyle = 'rgba(246,194,122,.75)'; g.lineWidth = 2;
+            g.beginPath(); g.moveTo(u.x, u.y - 20); g.lineTo(u.tauntBy.x, u.tauntBy.y - 20); g.stroke(); g.restore();
+            bellPath(g, u.x, top - 8 + Math.sin(t * 14) * 1.5, 18); g.fillStyle = '#f6c27a'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#7a4a1e'; g.stroke();
+          }
           if (u.stunT > 0) { for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; g.beginPath(); g.arc(u.x + Math.cos(a) * 16, top - 18 + Math.sin(a) * 5, 3.5, 0, TAU); g.fillStyle = '#ffe27a'; g.fill(); } }
           if (u.shield > 0) { const ry = (u.y - top) / 2 + 10; g.beginPath(); g.ellipse(u.x, u.y - ry + 12, 36, ry, 0, 0, TAU); g.strokeStyle = 'rgba(230,240,255,.5)'; g.lineWidth = 2; g.stroke(); }
         } else if (u.kind === 'minion') drawMinion(g, u, t);
@@ -767,6 +799,32 @@
           g.strokeStyle = zn.color; g.lineWidth = 2; g.setLineDash([8, 6]); g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.stroke(); g.setLineDash([]);
         } else {
           for (let i = 0; i < 3; i++) { g.beginPath(); g.ellipse(zn.x, zn.y, zn.r * (0.4 + i * 0.25), zn.r * 0.9 * (0.4 + i * 0.25), 0, t * 8 + i, t * 8 + i + 4); g.strokeStyle = zn.color; g.lineWidth = 4; g.stroke(); }
+        }
+      } else if (zn.kind === 'bell') {
+        const col = zn.color;
+        if (!zn.started) {
+          // Its shadow grows as the bell falls.
+          const k = Math.min(1, zn.t / (zn.delay || 0.4));
+          g.beginPath(); g.ellipse(zn.x, zn.y, zn.r * k, zn.r * 0.9 * k, 0, 0, TAU); g.fillStyle = 'rgba(0,0,0,.28)'; g.fill();
+          g.strokeStyle = col; g.lineWidth = 2; g.setLineDash([10, 8]); g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.stroke(); g.setLineDash([]);
+          g.globalAlpha = 0.5 + 0.5 * k;
+          bellPath(g, zn.x, zn.y - 20 - (1 - k * k) * 300, 170); g.fillStyle = '#7a4a1e'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#f6c27a'; g.stroke();
+          g.globalAlpha = 1;
+        } else {
+          const life = zn.t - (zn.delay || 0), fade = Math.max(0, Math.min(1, ((zn.dur || 3) - life) / 0.4));
+          g.save(); g.globalAlpha = fade;
+          g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.fillStyle = col + '1c'; g.fill();
+          g.lineWidth = 8; g.strokeStyle = '#f6c27a'; g.shadowColor = col; g.shadowBlur = blur(18); g.stroke(); g.shadowBlur = 0;
+          g.lineWidth = 2; g.strokeStyle = col; g.beginPath(); g.ellipse(zn.x, zn.y, zn.r - 12, (zn.r - 12) * 0.9, 0, 0, TAU); g.stroke();
+          for (let i = 0; i < 2; i++) {
+            const q = (life * 1.2 + i * 0.5) % 1;
+            g.globalAlpha = fade * (1 - q) * 0.6; g.beginPath(); g.ellipse(zn.x, zn.y, zn.r * q, zn.r * 0.9 * q, 0, 0, TAU); g.strokeStyle = col; g.lineWidth = 3; g.stroke();
+          }
+          // The bell sits where it landed for a moment, then rises away and fades, leaving the ring.
+          const lift = Math.max(0, life - 0.35);
+          g.globalAlpha = fade * Math.max(0, 1 - lift / 0.5) * 0.9;
+          bellPath(g, zn.x, zn.y - 20 - lift * 220, 170); g.fillStyle = '#7a4a1e'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#f6c27a'; g.stroke();
+          g.restore();
         }
       } else if (zn.kind === 'static') {
         g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.fillStyle = zn.color + '26'; g.fill();

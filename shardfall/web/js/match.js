@@ -371,6 +371,51 @@
       } });
       m.shake(4);
       return true;
+    },
+    // Tolvar: carries one hero on his charge, taunts with the bell, and traps a fight under the Great Bell.
+    iron_rush(m, h, a, s) {
+      const len = a.target ? clamp(dist(h, a.target) + 110, 180, s.range) : s.range, speed = 1250;
+      let carried = null;
+      m.dashTo(h, a.dir, len, speed, { trail: skinC(h), onPass: e => {
+        m.applyDamage(h, e, 70 + 0.05 * h.maxHp, { skill: s });
+        if (isStructure(e) || !e.alive) return;
+        if (!carried && e.kind === 'hero' && !(e.ccImmune > 0) && h.dash) {
+          // Pushed ahead of Tolvar at the charge's own speed, so it ends where he ends.
+          carried = e;
+          const T = h.dash.left / speed;
+          e.dash = null; e.recallT = 0;
+          e.knock = { vx: a.dir.x * speed, vy: a.dir.y * speed, t: T };
+          m.later(T, () => { if (e.alive) { m.stun(e, 0.5); m.burst(e.x, e.y - 20, skinC(h), 14, 220); } });
+        } else if (e !== carried) {
+          const side = (e.x - h.x) * -a.dir.y + (e.y - h.y) * a.dir.x >= 0 ? 1 : -1;
+          m.knockback(e, { x: -a.dir.y * side, y: a.dir.x * side }, 80);
+        }
+      }, onEnd: () => { m.ring(h.x, h.y, 90, skinC(h), 0.3, 5); m.shake(3); } });
+      return true;
+    },
+    toll_of_challenge(m, h, a, s) {
+      for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) {
+        m.applyDamage(h, e, 60 + 0.045 * h.maxHp, { skill: s });
+        if (e.kind === 'hero') m.taunt(e, h, 1.25);
+      }
+      h.addBuff({ id: 'toll', t: 2.5, dmgRed: 0.15 });
+      m.ring(h.x, h.y, s.range, skinC(h), 0.45, 7); m.ring(h.x, h.y, s.range * 0.55, '#f6c27a', 0.3, 4);
+      m.burst(h.x, h.y - 40, skinC(h), 16, 200); m.shake(3);
+      return true;
+    },
+    great_bell(m, h, a, s) {
+      const p = a.point || { x: h.x + a.dir.x * s.range * 0.6, y: h.y + a.dir.y * s.range * 0.6 };
+      const trapped = new Set();
+      m.zone({ x: p.x, y: p.y, r: 240, team: h.team, delay: 0.4, dur: 3, color: skinC(h), kind: 'bell', trapped, owner: h,
+        onStart: z => {
+          for (const e of m.enemiesIn(h.team, z.x, z.y, z.r)) {
+            if (isStructure(e)) continue;
+            m.applyDamage(h, e, 160 + 0.07 * h.maxHp, { skill: s });
+            if (e.kind === 'hero' && !(e.ccImmune > 0)) { trapped.add(e); m.slow(e, 0.3, 1); }
+          }
+          m.ring(z.x, z.y, z.r, skinC(h), 0.7, 9); m.burst(z.x, z.y - 40, '#f6c27a', 36, 320); m.shake(9);
+        } });
+      return true;
     }
   };
 
@@ -511,6 +556,7 @@
       this.updateVisibility();
       this.playerControl(dt);
       for (const h of this.heroes) if (h.alive && h.brain) h.brain.think(dt);
+      for (const h of this.heroes) if (h.alive && h.tauntT > 0) this.tauntTick(h);
       for (const u of this.units) {
         if (!u.alive) continue;
         this.statusTick(u, dt);
@@ -537,6 +583,7 @@
       if (!this.shard && this.t >= this.shardAt) this.spawnShard();
       if (!this.wyrm && this.t >= this.wyrmAt) this.spawnWyrm();
       if (this.t >= this.runeAt) this.spawnRunes();
+      if (this.t >= (this.cbAt || 0)) { this.cbAt = this.t + 1; this.comebackTick(); }
       if (this.t >= this.goldAt) { this.goldAt += 15; this.goldLine.push([Math.round(this.t), ...[0, 1].map(tm => Math.round(this.heroes.reduce((a, h) => a + (h.team === tm ? h.goldEarned : 0), 0)))]); }
       if (this.runes.length) this.runePickups();
       if (!this.overcharged && this.t >= this.overchargeAt) { this.overcharged = true; this.announce('Shards Overcharged', 2, 'Minions are empowered'); }
@@ -548,6 +595,17 @@
       }
     }
 
+    // Comeback gold: while a team trails by 1,500+ gold, its heroes carry a 'comeback' buff and their
+    // kills, assists and tower takedowns pay 30% more (assists 50% more).
+    comebackTick() {
+      if (this.practice) return;
+      const g = [0, 1].map(tm => this.heroes.reduce((a, h) => a + (h.team === tm ? h.goldEarned : 0), 0));
+      const behind = g[1] - g[0] >= 1500 ? 0 : g[0] - g[1] >= 1500 ? 1 : -1;
+      for (const h of this.heroes) {
+        if (h.team === behind) h.addBuff({ id: 'comeback', t: 1.6, label: 'Comeback gold' });
+        else if (h.hasBuff('comeback')) h.removeBuff('comeback');
+      }
+    }
     addGold(h, n, passive) { h.gold += n; h.goldEarned += n; if (!passive && h === this.player) this.emit('gold', n); }
 
     giveXp(h, n) {
@@ -566,11 +624,12 @@
         if (h.respawnT <= 0) this.respawn(h);
         return;
       }
-      for (let i = 0; i < 3; i++) h.skillCd[i] = Math.max(0, h.skillCd[i] - dt);
+      const cdDt = dt * (1 + h.bv('cdRate'));   // Stoneward Blessing speeds cooldowns up
+      for (let i = 0; i < 3; i++) h.skillCd[i] = Math.max(0, h.skillCd[i] - cdDt);
       h.spellCd = Math.max(0, h.spellCd - dt);
       if (h.ccImmune > 0) h.ccImmune -= dt;
       this.passiveTick(h);
-      h.hp = Math.min(h.maxHp, h.hp + h.regen * dt);
+      h.hp = Math.min(h.maxHp, h.hp + (h.regen + h.maxHp * h.bv('regenPct')) * dt);
       if (h.multiT > 0) { h.multiT -= dt; if (h.multiT <= 0) h.multiN = 0; }
       if (h.invisT > 0) h.invisT -= dt;
       if (h.stunImmune > 0) h.stunImmune -= dt;
@@ -593,6 +652,7 @@
       if (u.atkCd > 0) u.atkCd -= dt;
       if (u.slowT > 0) u.slowT -= dt;
       if (u.stunT > 0) u.stunT -= dt;
+      if (u.tauntT > 0) { u.tauntT -= dt; if (u.tauntT <= 0) u.tauntBy = null; }
       if (u.shieldT > 0) { u.shieldT -= dt; if (u.shieldT <= 0) u.shield = 0; }
       if (u.flash > 0) u.flash -= dt;
       if (u.buffs.length) {
@@ -884,6 +944,7 @@
     castSkill(h, i, aim) {
       const s = h.def0.skills[i];
       if (!h.alive || h.stunT > 0 || h.dash || h.skillCd[i] > 0) return 'cooldown';
+      if (h.tauntT > 0) return 'taunted';
       if (!h.ranks[i]) return i === 2 && h.level < 4 ? 'locked' : 'unranked';
       aim = aim || this.resolveAim(h, i, null);
       if (s.needsTarget && !aim.target) return 'notarget';
@@ -1104,6 +1165,7 @@
           const d = aim.dir ? norm(aim.dir.x, aim.dir.y) : h.face;
           this.burst(h.x, h.y, '#fff7c2', 12, 160);
           h.x = clamp(h.x + d.x * 250, 40, W.w - 40); h.y = clamp(h.y + d.y * 250, 60, W.h - 60);
+          for (const z of this.zones) if (z.trapped) z.trapped.delete(h);   // the one way out of the Great Bell
           h.face = { x: d.x, y: d.y }; h.dash = null;
           this.burst(h.x, h.y, '#fff7c2', 12, 160);
           break;
@@ -1137,7 +1199,7 @@
           this.burst(h.x, h.y, '#8fd3ff', 10, 160);
           break;
         case 'purify':
-          h.stunT = 0; h.slowT = 0; h.ccImmune = 1.5;
+          h.stunT = 0; h.slowT = 0; h.tauntT = 0; h.tauntBy = null; h.ccImmune = 1.5;
           this.ring(h.x, h.y, 70, '#ffffff', 0.4, 4);
           this.burst(h.x, h.y - 20, '#ffffff', 14, 180);
           break;
@@ -1232,6 +1294,8 @@
       if (!o.true) {   // true damage (Smite, Shatter) ignores defense and damage reduction
         amt *= 100 / (100 + Math.max(0, t.def));
         amt *= 1 - Math.min(0.6, t.bv('dmgRed'));
+        // Unbroken (Tolvar): heroes he has taunted hit him for 25% less.
+        if (src && src.tauntBy === t && src.tauntT > 0 && t.def0.passive.id === 'unbroken') amt *= 0.75;
       }
       // Bedrock (Brakka): falling below 40% raises a shield that already soaks this hit.
       if (t.kind === 'hero' && t.def0.passive.id === 'bedrock' && !(t.bedrockT > this.t) && t.hp + t.shield - amt < t.maxHp * 0.4 && t.hp > t.maxHp * 0.4) {
@@ -1342,12 +1406,14 @@
           if (killer) {
             this.addGold(killer, t.gold); this.giveXp(killer, t.xp);
             if (killer === this.player) this.float(t.x, t.y - 34, '+' + t.gold, '#ffc84a', 1.1);
+            // The two jungle blessings: Ember Wisp for damage, Thornback for cooldowns and regeneration.
             if (t.mtype === 'wisp') killer.addBuff({ id: 'ember', t: 70, dmgMul: 0.1, label: 'Ember Blessing' });
+            if (t.mtype === 'thorn') killer.addBuff({ id: 'stoneward', t: 70, cdRate: 0.2, regenPct: 0.004, label: 'Stoneward Blessing' });
           }
         }
       } else if (isStructure(t)) {
         const team = 1 - t.team;
-        for (const h of this.heroes) if (h.team === team) this.addGold(h, 150);
+        for (const h of this.heroes) if (h.team === team) this.addGold(h, h.hasBuff('comeback') ? 200 : 150);
         if (killer) { this.addGold(killer, 100); killer.towers++; }
         this.teamStats[team].towers++;
         this.burst(t.x, t.y - 40, SF.TEAM_COLORS[t.team], 40, 360); this.shake(10);
@@ -1355,7 +1421,7 @@
         if (t.kind === 'core') this.end(team);
         else this.announce(t.team === 0 ? 'Your tower has fallen' : 'Enemy tower destroyed', team);
       } else if (t.kind === 'hero') {
-        t.dth++; t.respawnT = this.practice ? 2 : (6 + t.level * 2 + Math.min(10, this.t / 60)) * this.respawnMul; t.recallT = 0; t.buffs = []; t.shield = 0; t.slowT = 0; t.stunT = 0; t.invisT = 0;
+        t.dth++; t.respawnT = this.practice ? 2 : (6 + t.level * 2 + Math.min(10, this.t / 60)) * this.respawnMul; t.recallT = 0; t.buffs = []; t.shield = 0; t.slowT = 0; t.stunT = 0; t.invisT = 0; t.tauntT = 0; t.tauntBy = null;
         const shutdown = t.streak >= 3;
         const bounty = 220 + (shutdown ? 50 * Math.min(6, t.streak) : 0);
         t.streak = 0;
@@ -1363,11 +1429,11 @@
         const assists = [];
         for (const [h, when] of t.hitBy) if (h !== killer && h.team !== t.team && this.t - when < 10) assists.push(h);
         if (killer) {
-          killer.k++; this.addGold(killer, bounty); killer.streak++;
+          killer.k++; this.addGold(killer, Math.round(bounty * (killer.hasBuff('comeback') ? 1.3 : 1))); killer.streak++;
           killer.multiN = killer.multiT > 0 ? killer.multiN + 1 : 1; killer.multiT = 10;
           killer.bestMulti = Math.max(killer.bestMulti || 0, killer.multiN);
         }
-        assists.forEach(h => { h.ast++; this.addGold(h, 90); });
+        assists.forEach(h => { h.ast++; this.addGold(h, h.hasBuff('comeback') ? 135 : 90); });
         t.pstack = 0;
         for (const h of [killer, ...assists]) if (h && h.alive && h.def0.passive.id === 'predator') { h.skillCd[0] = 0; this.burst(h.x, h.y, '#b49bff', 14, 200); }
         const near = this.heroes.filter(h => h.alive && h.team !== t.team && d2(h, t) < 1000 * 1000);
@@ -1403,8 +1469,32 @@
     }
 
     // ---- status helpers -----------------------------------------------------
-    slow(u, amt, dur) { if (isStructure(u) || u.ccImmune > 0) return; if (u.slowT <= 0 || amt >= u.slowAmt) u.slowAmt = amt; u.slowT = Math.max(u.slowT, dur); }
-    stun(u, dur) { if (isStructure(u) || u.stunImmune > 0 || u.ccImmune > 0) return; u.stunT = Math.max(u.stunT, dur); if (u.kind === 'hero') u.recallT = 0; }
+    slow(u, amt, dur) { if (isStructure(u) || u.ccImmune > 0) return; if (u.kind === 'hero' && u.def0.passive.id === 'unbroken') dur *= 0.7; if (u.slowT <= 0 || amt >= u.slowAmt) u.slowAmt = amt; u.slowT = Math.max(u.slowT, dur); }
+    stun(u, dur) {
+      if (isStructure(u) || u.stunImmune > 0 || u.ccImmune > 0) return;
+      if (u.kind === 'hero' && u.def0.passive.id === 'unbroken') dur *= 0.7;
+      u.stunT = Math.max(u.stunT, dur); if (u.kind === 'hero') u.recallT = 0;
+    }
+    // Taunt: the hero has to walk to `by` and attack it, and can't use skills or recall. Spells still work.
+    taunt(u, by, dur) {
+      if (u.kind !== 'hero' || u.ccImmune > 0 || u.stunImmune > 0) return;
+      if (u.def0.passive.id === 'unbroken') dur *= 0.7;
+      if (!(u.tauntT > 0) || u.tauntBy === by) { u.tauntT = Math.max(u.tauntT || 0, dur); u.tauntBy = by; u.recallT = 0; }
+    }
+    tauntTick(h) {
+      const by = h.tauntBy;
+      if (!by || !by.alive || !(h.tauntT > 0)) { h.tauntT = 0; h.tauntBy = null; return; }
+      if (h.dummy) return;   // Training Grounds dummies show the taunt but stay put
+      h.target = by; h.want = null; h.wantDir = null; h.attackHeld = false; h.recallT = 0;
+    }
+    // Great Bell: a trapped hero can't leave the ring.
+    bellBlock(u) {
+      for (const z of this.zones) {
+        if (z.kind !== 'bell' || !z.started || !z.trapped || !z.trapped.has(u)) continue;
+        const dx = u.x - z.x, dy = u.y - z.y, D = Math.hypot(dx, dy) || 1, max = z.r - u.r * 0.5;
+        if (D > max) { u.x = z.x + dx / D * max; u.y = z.y + dy / D * max; if (u.dash) u.dash.left = 0; u.knock = null; }
+      }
+    }
     shieldUnit(u, amt, dur) { u.shield += amt; u.shieldT = Math.max(u.shieldT, dur); }
     // src: the hero doing the healing, for the post-match healing stat.
     heal(u, amt, quiet, src) {
@@ -1492,6 +1582,7 @@
       }
       u.x = clamp(u.x, 40, W.w - 40); u.y = clamp(u.y, 60, W.h - 60);
       if (this.walls.length) this.wallBlock(u, ox, oy);
+      if (this.zones.length && u.kind === 'hero') this.bellBlock(u);
       u.vx = (u.x - ox) / dt; u.vy = (u.y - oy) / dt;
       u.moving = Math.abs(u.vx) + Math.abs(u.vy) > 5;
     }
@@ -1624,6 +1715,7 @@
       if (m.inFountain(h) && hp < 0.9) { h.want = null; h.target = null; return; }
       const foes = m.heroes.filter(e => e.alive && e.team !== h.team && m.visible(e, h.team) && d2(e, h) < 760 * 760);
       if (h.spellCd <= 0 && this.spellLogic(foes)) return;
+      if (h.tauntT > 0) return;   // taunted: the match walks it to Tolvar
       const order = m.orders[h.team];
       if (order && m.t < order.until && order.from !== h && hp > this.D.retreat + 0.05 && this.obey(order, foes)) return;
 
@@ -1702,7 +1794,7 @@
       const close = foes.filter(e => d2(e, h) < 520 * 520);
       const danger = close.length > 0 && hp < 0.3;
       switch (h.spell) {
-        case 'purify': return h.stunT > 0.5 && close.length > 0 && m.useSpell(h) === true;
+        case 'purify': return (h.stunT > 0.5 || h.tauntT > 0.6) && close.length > 0 && m.useSpell(h) === true;
         case 'mend': {
           const hurt = m.heroes.filter(a => a.alive && a.team === h.team && a.hpPct < 0.35 && d2(a, h) < 500 * 500 && foes.some(e => d2(e, a) < 600 * 600));
           return (danger || hurt.length > 0) && m.useSpell(h) === true;
@@ -1808,6 +1900,14 @@
           case 'fight': if (mode === 'fight' && e && D < 360) aim = { dir: norm(e.x - h.x, e.y - h.y), point: { x: h.x, y: h.y }, target: e }; break;
           case 'turret': if (e && D < s.range + 160) { const k = Math.min(1, (s.range * 0.85) / Math.max(1, D)); aim = { dir: norm(e.x - h.x, e.y - h.y), point: { x: h.x + (e.x - h.x) * k, y: h.y + (e.y - h.y) * k }, target: e }; } break;
           case 'wall': if (mode === 'fight' && e && e.kind === 'hero' && D < 380) { const dd = norm(e.x - h.x, e.y - h.y); aim = { dir: dd, point: { x: e.x - dd.x * 40, y: e.y - dd.y * 40 }, target: e }; } break;
+          case 'bell': if (mode === 'fight' && e && e.kind === 'hero' && D < s.range + 100) {
+            // Trap two or more heroes, or one wounded one with a teammate around to finish it.
+            const foes = m.heroes.filter(x => x.alive && x.team !== h.team && d2(x, e) < 220 * 220);
+            if (foes.length >= 2 || (e.hpPct < 0.55 && this.alliesNear(700) > 0)) {
+              const c = { x: foes.reduce((a, x) => a + x.x, 0) / foes.length, y: foes.reduce((a, x) => a + x.y, 0) / foes.length };
+              aim = { dir: norm(c.x - h.x, c.y - h.y), point: c, target: e };
+            }
+          } break;
           case 'bastion': if (mode === 'fight' && e && D < 520) { const dd = norm(e.x - h.x, e.y - h.y); aim = { dir: dd, point: { x: h.x + dd.x * 120, y: h.y + dd.y * 120 }, target: e }; } break;
         }
         if (s.needsTarget && aim && (!aim.target || (aim.target.kind !== 'hero' && !s.anyTarget))) aim = null;
