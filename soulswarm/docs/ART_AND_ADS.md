@@ -15,14 +15,34 @@ Generated with Higgsfield on 2026-10-06. The full-resolution masters are in `sto
 | `hero-mordrake.jpg` | 1792×2400 | Nano Banana Pro | Mordrake's hero card | `046be80a-f562-4eed-8802-d16db05fa70f` |
 | `hero-liora.jpg` | 1792×2400 | Nano Banana Pro | Liora's hero card (5th hero, Epic) | `0f2133d3-a67a-4317-9948-98231363c867` |
 | `skin-eclipse-vael.jpg` | 1792×2400 | Nano Banana Pro (Vael's splash as the reference) | Eclipse Vael, the Soul Pass skin: the premium card and Vael's portrait while the skin is equipped | `1f5e90b9-5d57-40d0-b258-376619880bab` |
-| `relic-lantern.jpg` | 2048×2048 | Nano Banana Pro (the poster as the style reference) | Lantern of the Lost icon; the style master for the other seven relic icons | `e80af38f-e5e2-4329-822d-265761ac8a88` |
-| `relic-crown.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Crown of Thorns icon | `a18fb124-9abf-42c1-b04a-168889c22483` |
-| `relic-idol.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Bone Idol icon | `1ed13b8d-a77b-4445-a985-849f3c457dfe` |
-| `relic-heart.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Ember Heart icon | `efb56fa7-e8fd-4dc2-8af3-c851dedc767a` |
-| `relic-boots.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Wraith Boots icon | `2fa15a6a-0497-4fff-9e36-95ffcdbe35ad` |
-| `relic-coin.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Grave Coin icon | `fbbe1faf-ae7b-4a92-ad28-d3b07af604bd` |
-| `relic-hourglass.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Hourglass of Ash icon | `c38905c6-eea5-440c-a700-d34a7f41f903` |
-| `relic-eye.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Abyss Eye icon | `cbf4a9c0-d7ea-4d5a-b45d-98e040a1e9e5` |
+| `relic-lantern.jpg` | 1024×1024 | Nano Banana Pro (the poster as the style reference) | Lantern of the Lost icon; the style master for the other seven relic icons | `e80af38f-e5e2-4329-822d-265761ac8a88` |
+| `relic-crown.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Crown of Thorns icon | `a18fb124-9abf-42c1-b04a-168889c22483` |
+| `relic-idol.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Bone Idol icon | `1ed13b8d-a77b-4445-a985-849f3c457dfe` |
+| `relic-heart.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Ember Heart icon | `efb56fa7-e8fd-4dc2-8af3-c851dedc767a` |
+| `relic-boots.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Wraith Boots icon | `2fa15a6a-0497-4fff-9e36-95ffcdbe35ad` |
+| `relic-coin.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grave Coin icon | `fbbe1faf-ae7b-4a92-ad28-d3b07af604bd` |
+| `relic-hourglass.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Hourglass of Ash icon | `c38905c6-eea5-440c-a700-d34a7f41f903` |
+| `relic-eye.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Abyss Eye icon | `cbf4a9c0-d7ea-4d5a-b45d-98e040a1e9e5` |
+| `skill-soulBolt.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Soul Bolt ability icon: level-up cards, results, hero detail | `5cf0ad5a-8f23-4d6a-b94a-9ddd43a4d1ee` |
+| `skill-scythe.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Spectral Scythe ability icon: level-up cards, results, hero detail | `955f83f9-8a40-4b0f-8ff9-2f8edc5d5759` |
+| `skill-chains.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Ashen Chains ability icon: level-up cards, results, hero detail | `5945f9c0-f67e-4a6a-87ec-15209e45156b` |
+| `skill-spears.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Bone Spears ability icon: level-up cards, results, hero detail | `da033423-5c79-4f3d-9d7f-9ad075e19dac` |
+| `skill-skullHalo.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Skull Halo (a stray artifact painted out) ability icon: level-up cards, results, hero detail | `ef198777-113d-45cd-838b-c18f90b46c56` |
+| `skill-gravePulse.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grave Pulse ability icon: level-up cards, results, hero detail | `39897c00-4dee-4ed8-a852-d7f0a126eadc` |
+| `skill-raiseDead.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Raise Dead ability icon: level-up cards, results | `f53d71a4-5e77-4d69-9619-9030c22df606` |
+| `skill-legionCap.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Legion Cap ability icon: level-up cards, results | `27771140-443b-496c-97e1-c6748361669a` |
+| `skill-minionFury.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Minion Fury ability icon: level-up cards, results | `968a2824-6bfd-42e9-94c6-0b7920d0f6dd` |
+| `skill-haste.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Haste ability icon: level-up cards, results | `51b2d0dc-26c6-4eac-8d42-da014ac88a00` |
+| `skill-vitality.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Vitality ability icon: level-up cards, results | `a121d5a5-3a03-438e-947c-b319eee5cbc5` |
+| `skill-soulMagnet.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Soul Magnet ability icon: level-up cards, results | `bf95a992-ccb7-42d5-9c7d-5a924bc671dd` |
+| `skill-might.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Might ability icon: level-up cards, results | `82694597-cf2e-463f-b999-ed5079b26649` |
+| `skill-frenzy.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Frenzy ability icon: level-up cards, results | `0b5c046a-8b1b-4b3d-b7c5-4c254c7ef8c3` |
+| `skill-soulStorm.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Soul Storm (evolution) ability icon: level-up cards, results | `1c5b5c77-e61f-404f-b418-be22b90c3908` |
+| `skill-boneCrown.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Bone Crown (evolution) ability icon: level-up cards, results | `51b2a962-a6ef-4eb6-b262-302aba69881a` |
+| `skill-harvestMoon.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Harvest Moon (evolution) ability icon: level-up cards, results | `01bd078e-a2e5-4e62-b3d5-89f99f11145b` |
+| `skill-chainsOfPerdition.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Chains of Perdition (evolution) ability icon: level-up cards, results | `cff6d7bc-d41d-478b-ba18-1cd6f50ddd70` |
+| `skill-ossuaryBarrage.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Ossuary Barrage (evolution) ability icon: level-up cards, results | `04f7b31c-5d39-498d-bf97-23d6bcdcd103` |
+| `skill-requiem.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Requiem (evolution) ability icon: level-up cards, results | `b6e7e36a-d31c-418c-a1c0-55f4f1e6d564` |
 | `boss-gravemaw.jpg` | 1792×2400 | Nano Banana Pro | "The Hollow King approaches" boss warning, boss reveal ad clip | `6899f0c9-8b53-4ca4-b052-df4279d237bb` |
 | `logo-transparent.png` | 2048×1360, alpha | GPT Image 2.5 | Boot screen, settings credits, ad end cards, store listing | `3cf6edf7-20d5-4d80-ac09-fd57074e79a9` |
 

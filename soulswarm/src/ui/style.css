@@ -178,3 +178,6 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Painted relic and ability icons (art.js): each has a dark square backdrop that fades into whatever frame holds it. */
+.relic-art, .skill-art { display: block; object-fit: contain; -webkit-mask: radial-gradient(circle, #000 54%, transparent 71%); mask: radial-gradient(circle, #000 54%, transparent 71%); }

@@ -4,7 +4,7 @@ import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js'
 import { icon } from './icons.js';
 import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
-import { BOSS_ART } from './art.js';
+import { BOSS_ART, skillArt } from './art.js';
 import { RiteButton } from './riteui.js';
 import { StreakHUD, streakRow } from './streakui.js';
 
@@ -183,7 +183,7 @@ export class RunUI {
         const pips = c.max ? Array.from({ length: c.max }, (_, k) => `<i class="${k < c.level - 1 ? 'on' : k === c.level - 1 ? 'next' : ''}"></i>`).join('') : '';
         const tag = evo ? '<span class="pill pill-gold">Evolution</span>' : c.isNew ? '<span class="pill pill-soul">New</span>' : c.kind === 'weapon' || c.kind === 'passive' ? `<span class="pill">Lv ${c.level}</span>` : c.tag ? `<span class="pill pill-soul">${c.tag}</span>` : '';
         const card = h(`<button class="card ${evo ? 'evo' : ''}" style="--rc:${rc}; animation-delay:${i * 70}ms">
-          <div class="ic">${icon(c.icon)}</div>
+          <div class="ic">${skillArt(c.id, c.icon)}</div>
           <div><h3>${c.name} ${tag}</h3><p>${c.desc}</p>${pips ? `<div class="pips">${pips}</div>` : ''}</div></button>`);
         card.addEventListener('click', () => {
           if (picked || this.run.t - shownT < 0.3) return;
@@ -221,7 +221,7 @@ export class RunUI {
     const run = this.run;
     return Object.entries(run.skillLv).filter(([id]) => SKILLS[id].type === 'weapon').map(([id, lv]) => {
       const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
-      return `<span class="res-w ${evo ? 'evo' : ''}">${icon(SKILLS[id].icon)}<b>${evo ? evo[1].name : SKILLS[id].name}</b><small>${evo ? '★ Evolved' : 'Lv ' + lv}</small></span>`;
+      return `<span class="res-w ${evo ? 'evo' : ''}">${skillArt(evo ? evo[0] : id, SKILLS[id].icon)}<b>${evo ? evo[1].name : SKILLS[id].name}</b><small>${evo ? '★ Evolved' : 'Lv ' + lv}</small></span>`;
     }).join('');
   }
 

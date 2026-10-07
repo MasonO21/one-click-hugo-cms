@@ -29,3 +29,11 @@ export const HERO_ART = { vael, nyx, seraphine, mordrake, liora };
 export const RELIC_ART = { lantern: rLantern, crown: rCrown, idol: rIdol, heart: rHeart, boots: rBoots, coin: rCoin, hourglass: rHourglass, eye: rEye };
 /** A relic's painted icon (its dark backdrop fades into whatever frame holds it), or the line icon for an unknown type. */
 export const relicArt = (type) => (RELIC_ART[type] ? `<img class="relic-art" src="${RELIC_ART[type]}" alt="" draggable="false">` : icon(RELIC_ICON[type] || 'chest'));
+
+/** Painted ability icons by skill or evolution id (src/assets/art/skill-<id>.webp). */
+export const SKILL_ART = {};
+for (const [path, url] of Object.entries(import.meta.glob('../assets/art/skill-*.webp', { eager: true, import: 'default' }))) {
+  SKILL_ART[path.slice(path.lastIndexOf('/skill-') + 7, -5)] = url;
+}
+/** A skill's painted icon, or the line icon `fallback` (heal / gold bonuses, blessings). */
+export const skillArt = (id, fallback) => (SKILL_ART[id] ? `<img class="skill-art" src="${SKILL_ART[id]}" alt="" draggable="false">` : icon(fallback));

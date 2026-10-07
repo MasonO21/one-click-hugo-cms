@@ -1,7 +1,7 @@
 // Heroes tab with three sub-tabs: Heroes (roster + detail), Relics (gear) and Talents (gold sink).
 import { h, $, fmt, toast, modal } from '../dom.js';
 import { icon } from '../icons.js';
-import { relicArt } from '../art.js';
+import { relicArt, skillArt } from '../art.js';
 import {
   HEROES, HERO_ORDER, HERO_MAX_STARS, SKILLS, RARITY_COLOR, RARITY_LABEL, RARITIES, RELICS, RELIC_SLOTS,
   relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES,
@@ -121,7 +121,7 @@ export function createHeroes(ctx) {
         </div>
         <p class="hd-lore">${hero.lore}</p>
         <div class="hd-rows">
-          <div class="hd-row"><span class="hd-ri" style="color:${hero.css}">${icon(w.icon)}</span><div><small class="t-label">Signature weapon</small><b>${w.name}</b><span class="t-dim">${w.desc(1)}</span></div></div>
+          <div class="hd-row"><span class="hd-ri" style="color:${hero.css}">${skillArt(hero.weapon, w.icon)}</span><div><small class="t-label">Signature weapon</small><b>${w.name}</b><span class="t-dim">${w.desc(1)}</span></div></div>
           <div class="hd-row"><span class="hd-ri" style="color:${hero.css}">${icon('raise')}</span><div><small class="t-label">Passive</small><b>${hero.passiveText}</b></div></div>
           ${RITES[id] ? `<div class="hd-row hd-rite"><span class="hd-ri" style="color:${hero.css}">${riteIcon(id)}</span><div><small class="t-label">Rite</small><b>${RITES[id].name}</b><span class="t-dim">${RITES[id].desc} Cooldown ${RITES[id].cd} s.</span></div></div>` : ''}
         </div>
