@@ -1,0 +1,274 @@
+/**
+ * ShopPanel — Nova Crystals, packs, the Colony Pass (VIP), the season pass and cosmetics. Prices come
+ * from the store through LiveOpsSystem.price(); the free crate lives at the top. Never blocks
+ * gameplay — everything is optional.
+ */
+import { Panel, type PanelTitle } from './Panel';
+import type { CosmeticDef, ProductDef } from '../../data/schema';
+import { fmtHMS } from '../logic/time';
+import { adButton, bigNum, btn, emptyState, rewardChips, tabs } from '../widgets';
+import { fill, h } from '../dom';
+
+type Tab = 'crystals' | 'packs' | 'vip' | 'season' | 'cosmetics';
+
+const TAG_TEXT: Record<string, string> = { best_value: 'BEST VALUE', popular: 'POPULAR', limited: 'LIMITED', new: 'NEW' };
+const SECTION_ICON: Record<string, string> = { crystals: '💎', packs: '🎁', vip: '👑', season: '🏆', cosmetics: '👕' };
+
+export class ShopPanel extends Panel {
+  readonly name = 'shop';
+  private tab: Tab = 'crystals';
+  private busy = '';
+  private acc = 0;
+
+  title(): PanelTitle {
+    return { icon: '💎', text: 'Shop' };
+  }
+
+  override onOpen(arg: unknown): void {
+    const t = this.pick<Tab>(arg, 'tab');
+    if (t) this.tab = t;
+  }
+
+  override onArg(arg: unknown): void {
+    const t = this.pick<Tab>(arg, 'tab');
+    if (t) {
+      this.tab = t;
+      this.rev++;
+    }
+  }
+
+  override extras() {
+    return h('div', { class: 'nova-bank' }, h('span', { text: '💎' }), h('b', { class: 'num', text: bigNum(this.st.liveops.nova) }));
+  }
+
+  override signature(): string {
+    const lo = this.st.liveops;
+    const crate = this.game.sys.liveops.freeCrateReady() ? 1 : 0;
+    return `${this.tab}|${lo.nova}|${lo.purchases.length}|${lo.vip.until}|${lo.cosmetics.owned.length}|${Object.values(lo.cosmetics.equipped).join(',')}|${crate}|${this.busy}|${lo.season.premium}`;
+  }
+
+  override live(dt: number): void {
+    this.acc += dt;
+    if (this.acc < 0.5) return;
+    this.acc = 0;
+    const el = this.body.querySelector('[data-crate-time]');
+    if (el) el.textContent = this.crateText();
+  }
+
+  private crateText(): string {
+    const ms = this.st.liveops.freeCrateAt - this.game.now();
+    return ms > 0 ? fmtHMS(ms / 1000) : 'Ready!';
+  }
+
+  private owned(p: ProductDef): boolean {
+    return p.limit > 0 && this.st.liveops.purchases.filter((x) => x.id === p.id).length >= p.limit;
+  }
+
+  render(): void {
+    const wrap = h('div', { class: 'stack-v' });
+    wrap.appendChild(
+      tabs(
+        (['crystals', 'packs', 'vip', 'season', 'cosmetics'] as Tab[]).map((id) => ({ id, icon: SECTION_ICON[id], label: id === 'vip' ? 'Colony Pass' : id === 'season' ? 'Season' : id[0].toUpperCase() + id.slice(1) })),
+        this.tab,
+        (id) => {
+          this.tab = id as Tab;
+          this.rerender();
+        },
+      ),
+    );
+    if (this.tab === 'crystals') wrap.appendChild(this.freeCrate());
+    if (this.tab === 'vip') wrap.appendChild(this.vip());
+    else if (this.tab === 'season') wrap.appendChild(this.season());
+    else if (this.tab === 'cosmetics') wrap.appendChild(this.cosmetics());
+    else {
+      const prods = this.data.products.filter((p) => p.section === this.tab);
+      if (!prods.length) wrap.appendChild(emptyState('🛍️', 'Nothing here right now', 'Check back soon for new goodies!'));
+      const grid = h('div', { class: 'grid shop-grid' });
+      for (const p of prods) grid.appendChild(this.productCard(p));
+      wrap.appendChild(grid);
+    }
+    wrap.appendChild(
+      h(
+        'div',
+        { class: 'row wrap center-row', style: 'margin-top:.8em' },
+        btn({
+          label: 'Restore purchases',
+          cls: 'ghost small',
+          onClick: async () => {
+            await this.game.sys.liveops.restorePurchases();
+            this.ctx.toast('Purchases restored!', 'success', '✅');
+            this.rerender();
+          },
+        }),
+        h('span', { class: 'mute small', text: 'Nothing in the shop is ever required to play or reach Titanium.' }),
+      ),
+    );
+    fill(this.body, wrap);
+  }
+
+  private productCard(p: ProductDef): HTMLElement {
+    const lo = this.game.sys.liveops;
+    const owned = this.owned(p);
+    const price = lo.price(p.id) || p.fallbackPrice;
+    const card = h('div', { class: 'card pcard' + (p.tag ? ' tagged' : ''), data: { product: p.id } });
+    if (p.tag) card.appendChild(h('div', { class: 'ribbon', text: TAG_TEXT[p.tag] ?? p.tag.toUpperCase() }));
+    card.append(
+      h('div', { class: 'pi', text: SECTION_ICON[p.section] ?? '🎁' }),
+      h('div', { class: 'h3', text: p.name }),
+      h('div', { class: 'mute small', text: p.description }),
+      rewardChips(this.data, p.grants, 'center'),
+      btn({
+        label: owned ? '✔ Owned' : price,
+        cls: owned ? 'ghost block' : p.section === 'vip' ? 'nova block' : 'good block',
+        disabled: owned ? 'You already have this!' : this.busy === p.id ? 'Working on it…' : false,
+        onClick: () => this.buy(p),
+      }),
+    );
+    return card;
+  }
+
+  private async buy(p: ProductDef): Promise<void> {
+    if (this.busy) return;
+    this.busy = p.id;
+    this.rerender();
+    let ok = false;
+    try {
+      ok = await this.game.sys.liveops.buy(p.id);
+    } finally {
+      this.busy = '';
+    }
+    if (ok) {
+      this.ctx.haptic('success');
+      this.ctx.showReward(`Thank you! ${p.name}`, p.grants, '🎉');
+    }
+    this.rerender();
+  }
+
+  private freeCrate(): HTMLElement {
+    const lo = this.game.sys.liveops;
+    const ready = lo.freeCrateReady();
+    const card = h('div', { class: 'card crate-card' });
+    card.append(
+      h('div', { class: 'row' }, h('span', { class: 'bi', text: '📦' }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: 'Free supply crate' }), h('div', { class: 'mute small' }, ready ? 'A crate is waiting for you!' : 'Next free crate in ', ready ? null : h('b', { 'data-crate-time': '1', text: this.crateText() })))),
+      h(
+        'div',
+        { class: 'row wrap', style: 'margin-top:.5em' },
+        btn({
+          label: '🎁 Open free crate',
+          cls: 'good grow',
+          disabled: ready ? false : 'Not ready yet — or watch a video!',
+          onClick: () => {
+            const r = lo.openFreeCrate(false);
+            if (r) this.ctx.showReward('Supply crate!', r, '📦');
+            else this.ctx.toast("The crate isn't ready yet", 'info', '📦');
+            this.rerender();
+          },
+        }),
+        adButton(this.ctx, 'free_crate', 'Extra crate', () => this.rerender(), { cls: 'grow' }),
+      ),
+    );
+    return card;
+  }
+
+  private vip(): HTMLElement {
+    const g = this.game;
+    const v = this.data.vip;
+    const lo = g.sys.liveops;
+    const active = lo.isVip();
+    const days = Math.ceil((g.state.liveops.vip.until - g.now()) / 86400000);
+    const prod = this.data.product(v.productId);
+    const wrap = h('div', { class: 'stack-v' });
+    wrap.appendChild(
+      h(
+        'div',
+        { class: 'card vip-card' },
+        h('div', { class: 'vip-crown', text: '👑' }),
+        h('div', { class: 'h3 center', text: active ? `Colony Pass active · ${days} day${days === 1 ? '' : 's'} left` : 'Colony Pass' }),
+        h('div', { class: 'stack-v tight' }, ...v.description.map((d) => h('div', { class: 'perk', text: '✔ ' + d }))),
+        prod
+          ? btn({
+              label: `${active ? 'Extend' : 'Join'} · ${lo.price(prod.id) || prod.fallbackPrice}`,
+              cls: 'nova block big',
+              disabled: this.busy === prod.id ? 'Working on it…' : false,
+              onClick: () => this.buy(prod),
+            })
+          : null,
+        h('div', { class: 'mute small center', text: 'Cancel anytime in your store settings. Never required.' }),
+      ),
+    );
+    return wrap;
+  }
+
+  private season(): HTMLElement {
+    const g = this.game;
+    const lo = g.sys.liveops;
+    const s = this.data.season;
+    const prod = this.data.products.find((p) => p.section === 'season');
+    return h(
+      'div',
+      { class: 'stack-v' },
+      h(
+        'div',
+        { class: 'card' },
+        h('div', { class: 'h3', text: s.name }),
+        h('div', { class: 'mute small', text: `Level ${lo.seasonLevel()} of ${s.levels.length} · ${g.state.liveops.season.premium ? 'Premium track unlocked' : 'Free track'}` }),
+        h('div', { class: 'row wrap', style: 'margin-top:.6em' }, btn({ label: '🏆 Open season pass', cls: 'info grow', onClick: () => this.ctx.open('season') })),
+      ),
+      prod && !g.state.liveops.season.premium
+        ? h('div', { class: 'grid shop-grid' }, this.productCard(prod))
+        : null,
+    );
+  }
+
+  private cosmetics(): HTMLElement {
+    const g = this.game;
+    const lo = g.state.liveops;
+    const wrap = h('div', { class: 'grid shop-grid' });
+    for (const c of this.data.cosmetics) wrap.appendChild(this.cosmeticCard(c));
+    if (!this.data.cosmetics.length) return emptyState('👕', 'Cosmetics coming soon') as HTMLElement;
+    return wrap;
+  }
+
+  private cosmeticCard(c: CosmeticDef): HTMLElement {
+    const g = this.game;
+    const lo = g.state.liveops;
+    const owned = lo.cosmetics.owned.includes(c.id);
+    const equipped = lo.cosmetics.equipped[c.kind] === c.id;
+    const card = h('div', { class: 'card pcard', data: { cosmetic: c.id } });
+    const sw = h('div', { class: 'cos-sw' });
+    sw.style.background = `linear-gradient(135deg, ${c.color}, ${c.accent ?? c.color})`;
+    card.append(sw, h('div', { class: 'h3', text: c.name }), h('div', { class: 'mute small', text: c.kind.replace(/_/g, ' ') }));
+    if (owned) {
+      card.appendChild(
+        btn({
+          label: equipped ? '✔ Equipped' : 'Equip',
+          cls: equipped ? 'ghost block' : 'info block',
+          disabled: equipped ? 'Already equipped' : false,
+          onClick: () => {
+            lo.cosmetics.equipped[c.kind] = c.id;
+            this.ctx.haptic('tap');
+            this.rerender();
+          },
+        }),
+      );
+    } else if (c.nova > 0) {
+      card.appendChild(
+        btn({
+          label: `💎 ${bigNum(c.nova)}`,
+          cls: 'nova block',
+          disabled: lo.nova >= c.nova ? false : 'Not enough Nova Crystals',
+          onClick: () => {
+            if (g.sys.liveops.spendNova(c.nova, 'cosmetic')) {
+              lo.cosmetics.owned.push(c.id);
+              lo.cosmetics.equipped[c.kind] = c.id;
+              this.ctx.toast(`${c.name} unlocked!`, 'reward', '👕');
+              this.ctx.haptic('success');
+            }
+            this.rerender();
+          },
+        }),
+      );
+    } else card.appendChild(h('div', { class: 'chip', text: 'Special pack reward' }));
+    return card;
+  }
+}

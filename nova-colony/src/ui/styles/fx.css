@@ -1,0 +1,296 @@
+/* ==========================================================================
+   Juice: toasts, floating world text, flying resources, tutorial guidance, confetti
+   ========================================================================== */
+
+.nv-toasts {
+  position: absolute;
+  z-index: 8;
+  top: calc(var(--mt) + 7.4em);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(26em, calc(100vw - 2 * var(--ml) - 8em));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
+  pointer-events: none;
+}
+@media (orientation: portrait) {
+  .nv-toasts {
+    top: auto;
+    bottom: calc(var(--mb) + 9em);
+    width: calc(100vw - 2 * var(--ml));
+    flex-direction: column-reverse;
+  }
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  max-width: 100%;
+  padding: 0.5em 0.95em 0.5em 0.6em;
+  border-radius: 99px;
+  color: var(--on-hud);
+  background: rgba(34, 26, 60, 0.94);
+  box-shadow: var(--shadow), inset 0 0 0 0.12em var(--hud-hi);
+  font-size: 1em;
+  font-weight: 800;
+  line-height: 1.2;
+  opacity: 0;
+  transform: translateY(-0.8em) scale(0.9);
+  transition: opacity 0.22s, transform 0.28s cubic-bezier(0.2, 1.3, 0.4, 1);
+  will-change: transform, opacity;
+}
+.toast.in {
+  opacity: 1;
+  transform: none;
+}
+.toast.out {
+  opacity: 0;
+  transform: translateY(-0.6em) scale(0.95);
+  transition-duration: 0.3s;
+}
+.toast .t-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  background: var(--tk, #4fb3f6);
+  font-size: 1.05em;
+}
+.toast .t-x {
+  margin-left: 0.2em;
+  padding: 0 0.5em;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.85em;
+  font-weight: 900;
+}
+.toast.success {
+  --tk: #3fc38a;
+}
+.toast.warning {
+  --tk: #ffb347;
+}
+.toast.danger {
+  --tk: #ef5a5a;
+  background: rgba(110, 28, 40, 0.95);
+}
+.toast.reward {
+  --tk: #ffcf4a;
+  color: #3a1d00;
+  background: linear-gradient(180deg, #fff0b8, #ffd45c);
+  box-shadow: var(--shadow), inset 0 0 0 0.14em #fff3c9;
+}
+
+/* ---- world layer: floating numbers, selection tip, guidance ---- */
+.nv-world {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.float {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 1.15em;
+  font-weight: 900;
+  color: #fff;
+  white-space: nowrap;
+  -webkit-text-stroke: 0.2em rgba(30, 14, 50, 0.85);
+  paint-order: stroke fill;
+  text-shadow: 0 0.1em 0.2em rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.float.big {
+  font-size: 1.7em;
+}
+
+.nv-fly {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 1.5em;
+  line-height: 1;
+  opacity: 0;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 0.1em 0.15em rgba(0, 0, 0, 0.4));
+}
+
+.sel-tip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  max-width: 17em;
+  padding: 0.45em 0.8em;
+  border-radius: 1em;
+  color: var(--on-hud);
+  background: rgba(34, 26, 60, 0.94);
+  box-shadow: var(--shadow), inset 0 0 0 0.12em var(--hud-hi);
+  font-size: 0.95em;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.18s;
+}
+.sel-tip.on {
+  opacity: 1;
+}
+.sel-tip .st-ic {
+  font-size: 1.5em;
+  line-height: 1;
+}
+.sel-tip small {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+/* tutorial: 3D-anchored arrow + off-screen edge pointer */
+.guide-arrow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3.2em;
+  height: 3.6em;
+  margin: -3.6em 0 0 -1.6em;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+.guide-arrow.on {
+  opacity: 1;
+}
+.guide-arrow .ga-in {
+  width: 100%;
+  height: 100%;
+  animation: nv-bounce 0.8s ease-in-out infinite;
+  filter: drop-shadow(0 0.25em 0.2em rgba(0, 0, 0, 0.4));
+}
+.guide-arrow svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.guide-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3em;
+  height: 3em;
+  margin: -1.5em 0 0 -1.5em;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+.guide-edge.on {
+  opacity: 1;
+}
+.guide-edge .ge-arrow {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffe08a, var(--gold));
+  box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.4), inset 0 0 0 0.16em #fff;
+  animation: nv-pulse 1s ease-in-out infinite;
+}
+.guide-edge .ge-arrow::before {
+  content: '';
+  width: 0;
+  height: 0;
+  margin-left: 0.2em;
+  border-top: 0.6em solid transparent;
+  border-bottom: 0.6em solid transparent;
+  border-left: 0.9em solid #b4650b;
+}
+.guide-edge small {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 0.2em;
+  padding: 0 0.5em;
+  border-radius: 99px;
+  background: rgba(34, 26, 60, 0.9);
+  color: #fff;
+  font-size: 0.75em;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+/* tutorial: pulsing ring around a UI element */
+.guide-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 9;
+  border-radius: 1.2em;
+  border: 0.28em solid var(--gold);
+  box-shadow: 0 0 0 0.25em rgba(255, 207, 74, 0.35), 0 0 1.4em 0.2em rgba(255, 207, 74, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, width, height;
+  animation: nv-ring-pulse 1.1s ease-in-out infinite;
+}
+.guide-ring.on {
+  opacity: 1;
+}
+@keyframes nv-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0.1em rgba(255, 207, 74, 0.5), 0 0 0.8em 0.1em rgba(255, 207, 74, 0.6); }
+  50% { box-shadow: 0 0 0 0.5em rgba(255, 207, 74, 0.15), 0 0 1.6em 0.3em rgba(255, 207, 74, 0.9); }
+}
+.guide-hand {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 9;
+  font-size: 2em;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 0.1em 0.15em rgba(0, 0, 0, 0.45));
+}
+.guide-hand.on {
+  opacity: 1;
+}
+.guide-hand span {
+  display: block;
+  animation: nv-bounce 0.7s ease-in-out infinite;
+}
+
+/* confetti */
+.confetti {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 0.6em;
+  height: 0.9em;
+  border-radius: 0.1em;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}

@@ -1,0 +1,225 @@
+/**
+ * BuildMenu — bottom drawer with category tabs and big building cards. Tapping a card enters build
+ * mode (the world stays visible). Includes the material picker for structure pieces and the
+ * Blueprints tab (saved layouts, rectangle-capture).
+ */
+import { Panel, type PanelTitle } from './Panel';
+import type { BuildingDef } from '../../data/schema';
+import { bagCovers } from '../../core/bag';
+import { BUILD_CATEGORIES } from '../logic/categories';
+import { buildingEffects, lockInfo } from '../logic/describe';
+import { btn, costChips, emptyState, tabs, tagChips } from '../widgets';
+import { fill, h, setVar } from '../dom';
+
+export class BuildMenuPanel extends Panel {
+  readonly name = 'build';
+  override readonly kind = 'drawer' as const;
+  override readonly hasHeader = false;
+  private static lastTab = '';
+  private tab = '';
+  private confirmDelete = '';
+
+  title(): PanelTitle {
+    return { icon: '🔨', text: 'Build' };
+  }
+
+  /** `arg` may be a tab id, a building id (opens its category) or `{ tab }`. */
+  private tabFromArg(arg: unknown): string | undefined {
+    const v = this.pick<string>(arg, 'tab') ?? this.pick<string>(arg, 'def');
+    if (!v) return undefined;
+    return this.data.building(v)?.category ?? v;
+  }
+
+  override onOpen(arg: unknown): void {
+    const cats = this.categories();
+    this.tab = this.tabFromArg(arg) ?? this.guideTab() ?? (BuildMenuPanel.lastTab && (cats.includes(BuildMenuPanel.lastTab) || BuildMenuPanel.lastTab === 'blueprints') ? BuildMenuPanel.lastTab : cats[0] ?? 'structure');
+  }
+
+  /** When the tutorial points at a build card, open its category so the highlight is visible. */
+  private guideTab(): string | undefined {
+    const m = /data-build="([^"]+)"/.exec(this.game.sys.tutorial.guide()?.ui ?? '');
+    return m ? this.data.building(m[1])?.category : undefined;
+  }
+
+  override onArg(arg: unknown): void {
+    const t = this.tabFromArg(arg);
+    if (t) {
+      this.tab = t;
+      this.rev++;
+    }
+  }
+
+  private categories(): string[] {
+    const present = new Set(this.data.buildings.filter((b) => !b.core).map((b) => b.category));
+    return BUILD_CATEGORIES.filter((c) => present.has(c.id as never)).map((c) => c.id);
+  }
+
+  private defsOf(cat: string): BuildingDef[] {
+    const bs = this.game.sys.buildings;
+    const list = this.data.buildings.filter((b) => b.category === cat && !b.core);
+    const open = list.filter((d) => bs.isUnlocked(d.id));
+    const locked = list.filter((d) => !bs.isUnlocked(d.id));
+    return [...open, ...locked];
+  }
+
+  override signature(): string {
+    const { game } = this;
+    const bs = game.sys.buildings;
+    let mask = '';
+    if (this.tab !== 'blueprints') {
+      for (const d of this.defsOf(this.tab)) {
+        mask += bagCovers(game.state.resources.amounts, this.costOf(d)) ? '1' : '0';
+        if (d.maxCount) mask += bs.countOf(d.id) >= d.maxCount ? 'm' : '-';
+      }
+    } else mask = String(game.state.buildings.blueprints.length);
+    return `${this.tab}|${game.state.colony.tier}|${game.state.research.completed.length}|${mask}|${this.ctx.build.pieceTier}`;
+  }
+
+  private costOf(d: BuildingDef) {
+    return this.game.sys.buildings.cost(d.id, d.piece ? this.ctx.build.pieceTier : undefined);
+  }
+
+  render(): void {
+    const cats = this.categories();
+    const items = BUILD_CATEGORIES.filter((c) => cats.includes(c.id)).map((c) => ({ id: c.id, icon: c.icon, label: c.label }));
+    items.push({ id: 'blueprints', icon: '📐', label: 'Blueprints' });
+    BuildMenuPanel.lastTab = this.tab;
+    const tabBar = tabs(items, this.tab, (id) => {
+      this.tab = id;
+      this.confirmDelete = '';
+      this.rerender();
+    });
+    const content = this.tab === 'blueprints' ? this.renderBlueprints() : this.renderCards(this.tab);
+    const close = h('button', { class: 'icon-btn pm-close', type: 'button', 'aria-label': 'Close', text: '✕', data: { sfx: 'none' } });
+    close.addEventListener('click', () => this.ctx.close(this.name));
+    fill(this.body, h('div', { class: 'drawer-top' }, tabBar, close), content);
+    this.body.classList.add('build-body');
+  }
+
+  private renderCards(cat: string): HTMLElement {
+    const defs = this.defsOf(cat);
+    const wrap = h('div', { class: 'stack-v' });
+    if (defs.some((d) => d.piece)) wrap.appendChild(this.tierRow());
+    if (!defs.length) return emptyState('🧱', 'Nothing here yet', 'Research and tier-ups unlock more.');
+    const grid = h('div', { class: 'grid build-grid' });
+    for (const d of defs) grid.appendChild(this.buildCard(d));
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  private tierRow(): HTMLElement {
+    const { game, data } = this;
+    const max = game.state.colony.tier;
+    const row = h('div', { class: 'tier-row' }, h('span', { class: 'mute', text: 'Material' }));
+    for (const t of data.tiers) {
+      const locked = t.index > max;
+      const b = h(
+        'button',
+        { class: 'tier-chip' + (t.index === this.ctx.build.pieceTier ? ' on' : '') + (locked ? ' locked' : ''), type: 'button', data: { tier: t.index, sfx: 'ui_tab' } },
+        h('i'),
+        t.name,
+        locked ? '🔒' : '',
+      );
+      setVar(b, '--tc', t.color);
+      setVar(b, '--ta', t.accent);
+      b.addEventListener('click', () => {
+        if (locked) {
+          this.ctx.toast(`Reach ${t.name} tier to build with it`, 'info', '🔒');
+          return;
+        }
+        this.ctx.build.pieceTier = t.index;
+        this.rerender();
+      });
+      row.appendChild(b);
+    }
+    return row;
+  }
+
+  private buildCard(d: BuildingDef): HTMLElement {
+    const { game, data } = this;
+    const bs = game.sys.buildings;
+    const lock = lockInfo(d, data, game.state.colony.tier, game.state.research.completed);
+    const maxed = !!d.maxCount && bs.countOf(d.id) >= d.maxCount;
+    const cost = this.costOf(d);
+    const tags = buildingEffects(d, data).slice(0, 2);
+    const reason = lock.locked ? lock.text! : maxed ? 'Already built' : '';
+    const el = h(
+      'button',
+      { class: 'bcard' + (lock.locked ? ' locked' : '') + (maxed ? ' maxed' : ''), type: 'button', title: d.description, data: { build: d.id, sfx: 'ui_click' } },
+      h('div', { class: 'top' }, h('span', { class: 'bi', text: d.icon }), h('span', { class: 'bn', text: d.name })),
+      tags.length ? tagChips(tags, 2) : h('div', { class: 'bdesc', text: d.description }),
+      lock.locked ? h('div', { class: 'lock' }, '🔒 ', lock.text) : maxed ? h('div', { class: 'lock ok' }, '✔ Already built') : costChips(data, cost, game.state.resources.amounts),
+    );
+    el.addEventListener('click', (e) => {
+      if (reason) {
+        e.stopPropagation();
+        this.ctx.toast(reason, 'info', lock.locked ? '🔒' : '✔');
+        this.ctx.sfx('ui_error');
+        return;
+      }
+      this.ctx.build.start(d.id);
+      this.ctx.close('build');
+    });
+    return el;
+  }
+
+  private renderBlueprints(): HTMLElement {
+    const { game, data } = this;
+    const bps = game.state.buildings.blueprints;
+    const wrap = h('div', { class: 'stack-v' });
+    wrap.appendChild(
+      btn({
+        label: '＋ Save a new blueprint',
+        sub: 'Drag a box over pieces you already built',
+        cls: 'info block',
+        onClick: () => {
+          this.ctx.close('build');
+          this.ctx.build.startSelect();
+        },
+      }),
+    );
+    if (!bps.length) {
+      wrap.appendChild(emptyState('📐', 'No blueprints yet', 'Build a cozy room, then save it to stamp it anywhere!'));
+      return wrap;
+    }
+    for (const bp of bps) {
+      const cost = game.sys.buildings.blueprintCost(bp.id);
+      const del = this.confirmDelete === bp.id;
+      wrap.appendChild(
+        h(
+          'div',
+          { class: 'card bp-row', data: { blueprint: bp.id } },
+          h('div', { class: 'row' }, h('span', { class: 'bi', text: '📐' }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: bp.name }), h('div', { class: 'mute', text: `${bp.parts.length} pieces` })), costChips(data, cost, game.state.resources.amounts)),
+          h(
+            'div',
+            { class: 'row', style: 'margin-top:.5em' },
+            btn({
+              label: 'Place',
+              cls: 'good small grow',
+              onClick: () => {
+                this.ctx.close('build');
+                this.ctx.build.startBlueprint(bp.id);
+              },
+            }),
+            btn({
+              label: del ? 'Really delete?' : '🗑',
+              cls: (del ? 'bad' : 'ghost') + ' small',
+              onClick: () => {
+                if (!del) {
+                  this.confirmDelete = bp.id;
+                  this.rerender();
+                  return;
+                }
+                const i = game.state.buildings.blueprints.findIndex((x) => x.id === bp.id);
+                if (i >= 0) game.state.buildings.blueprints.splice(i, 1);
+                this.confirmDelete = '';
+                this.rerender();
+              },
+            }),
+          ),
+        ),
+      );
+    }
+    return wrap;
+  }
+}

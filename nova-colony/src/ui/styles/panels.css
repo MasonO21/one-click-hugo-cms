@@ -1,0 +1,295 @@
+/* ==========================================================================
+   Panel frames: sheets, drawers, side cards and modals
+   ========================================================================== */
+
+.nv-panels,
+.nv-modals {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.nv-panels {
+  z-index: 5;
+}
+.nv-modals {
+  z-index: 7;
+}
+
+.pm-frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: auto;
+  touch-action: none;
+}
+.pm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 14, 48, 0.58);
+  opacity: 0;
+  transition: opacity 0.24s;
+}
+.pm-frame.open .pm-backdrop {
+  opacity: 1;
+}
+/* drawers and the inspector never block the world: only their card catches touches, so you can
+   keep walking, rotating the camera or tapping another building while they are open */
+.pm-frame.kind-drawer,
+.pm-frame.kind-side {
+  pointer-events: none;
+}
+.pm-frame.kind-drawer .pm-card,
+.pm-frame.kind-side .pm-card {
+  pointer-events: auto;
+}
+.pm-frame.kind-drawer .pm-backdrop,
+.pm-frame.kind-side .pm-backdrop {
+  display: none;
+}
+
+.pm-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  width: min(54em, calc(100% - var(--ml) - var(--mr)));
+  max-height: calc(100% - var(--mt) - var(--mb) - 0.4em);
+  overflow: hidden;
+  border-radius: 1.6em;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 1em 3em rgba(10, 4, 30, 0.55), inset 0 0 0 0.18em rgba(255, 255, 255, 0.6);
+  transform: translateY(8%) scale(0.96);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.2, 0.95, 0.25, 1.08), opacity 0.2s;
+  touch-action: manipulation;
+}
+.pm-frame.open .pm-card {
+  transform: none;
+  opacity: 1;
+}
+
+.pm-head {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.65em 0.8em 0.6em 1.1em;
+  background: linear-gradient(180deg, #ffe9bd, var(--paper-2));
+  border-bottom: 0.14em solid var(--line);
+}
+.pm-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 1.3em;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.pm-title .ti {
+  font-size: 1.15em;
+}
+.pm-title .tt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-extra {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.pm-close {
+  width: 2.9em;
+  height: 2.9em;
+  font-size: 1em;
+  color: var(--ink-soft);
+}
+.pm-body {
+  flex: 1 1 auto;
+  min-height: 8em;
+  padding: 0.8em 1em 1.1em;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+.pm-body.nopad {
+  padding: 0;
+}
+.pm-foot {
+  flex: 0 0 auto;
+  padding: 0.7em 1em calc(0.8em + var(--safe-b) * 0);
+  display: flex;
+  gap: 0.6em;
+  background: var(--paper-2);
+  border-top: 0.14em solid var(--line);
+}
+
+/* ---- drawer (build menu) ---- */
+.pm-frame.kind-drawer .pm-card {
+  margin: auto 0 0;
+  width: 100%;
+  max-height: min(58%, 26em);
+  border-radius: 1.6em 1.6em 0 0;
+  padding-bottom: var(--safe-b);
+  padding-left: var(--safe-l);
+  padding-right: var(--safe-r);
+  transform: translateY(104%);
+}
+.pm-frame.kind-drawer.open .pm-card {
+  transform: none;
+}
+
+.drawer-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  position: sticky;
+  top: -0.5em;
+  z-index: 2;
+  margin: -0.5em -0.2em 0.4em;
+  padding: 0.5em 0.2em 0.1em;
+  background: var(--paper);
+}
+.drawer-top .tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.drawer-top .pm-close {
+  flex: 0 0 auto;
+  width: 2.7em;
+  height: 2.7em;
+}
+
+/* ---- side card (building inspector) ---- */
+.pm-frame.kind-side .pm-card {
+  margin: var(--mt) var(--mr) var(--mb) auto;
+  width: min(23em, 46vw);
+  max-height: calc(100% - var(--mt) - var(--mb));
+  transform: translateX(110%);
+}
+.pm-frame.kind-side.open .pm-card {
+  transform: none;
+}
+
+/* ---- modal ---- */
+.pm-frame.kind-modal .pm-card {
+  width: min(28em, calc(100% - var(--ml) - var(--mr)));
+}
+.pm-frame.kind-modal .pm-backdrop {
+  background: rgba(20, 8, 40, 0.72);
+}
+
+/* ---- portrait phones: sheets become bottom sheets ---- */
+@media (orientation: portrait) {
+  .pm-frame.kind-sheet .pm-card {
+    margin: auto 0 0;
+    width: 100%;
+    max-height: calc(100% - var(--mt) - 1em);
+    border-radius: 1.6em 1.6em 0 0;
+    padding-bottom: var(--safe-b);
+    transform: translateY(104%);
+  }
+  .pm-frame.kind-sheet.open .pm-card {
+    transform: none;
+  }
+  .pm-frame.kind-side .pm-card {
+    margin: auto 0 0;
+    width: 100%;
+    max-height: 64%;
+    border-radius: 1.6em 1.6em 0 0;
+    padding-bottom: var(--safe-b);
+    transform: translateY(104%);
+  }
+  .pm-frame.kind-side.open .pm-card {
+    transform: none;
+  }
+}
+
+/* ---- landscape phones: give panels as much height as possible ---- */
+@media (orientation: landscape) and (max-height: 480px) {
+  .pm-card {
+    max-height: calc(100% - var(--mt) - var(--mb) + 0.3em);
+  }
+  .pm-head {
+    padding-top: 0.4em;
+    padding-bottom: 0.4em;
+  }
+  .pm-title {
+    font-size: 1.15em;
+  }
+  .pm-close {
+    width: 2.6em;
+    height: 2.6em;
+  }
+  .pm-body {
+    padding: 0.6em 0.9em 0.9em;
+  }
+  .pm-frame.kind-drawer .pm-card {
+    max-height: 72%;
+  }
+}
+
+/* ---- menu popover (the #btn-menu grid) ---- */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6em;
+}
+.menu-tile {
+  appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.8em 0.4em 0.65em;
+  border: 0.12em solid var(--line);
+  border-radius: 1.1em;
+  color: var(--ink);
+  background: #fffdf6;
+  box-shadow: 0 0.2em 0 var(--line);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.menu-tile:active {
+  transform: translateY(0.15em);
+  box-shadow: 0 0.05em 0 var(--line);
+}
+.menu-tile .ic {
+  font-size: 2em;
+  line-height: 1.1;
+}
+.menu-tile .lb {
+  font-size: 0.9em;
+}
+.menu-tile .badge {
+  position: absolute;
+  top: -0.4em;
+  right: -0.3em;
+}
+
+/* ---- narrow screens: header extras (RP bank, Nova balance, buttons) drop to their own row ---- */
+@media (max-width: 520px) {
+  .pm-head {
+    flex-wrap: wrap;
+    row-gap: 0.4em;
+  }
+  .pm-extra {
+    order: 5;
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .pm-extra:empty {
+    display: none;
+  }
+}
