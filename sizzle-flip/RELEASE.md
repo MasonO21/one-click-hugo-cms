@@ -145,6 +145,7 @@ The purchases plugin is patched (`patches/@capgo+native-purchases+8.8.1.patch`, 
 ## 5. Final check before you press publish
 
 - [ ] `npm run release:check` passes.
+- [ ] The latest run of the GitHub workflow **Sizzle Flip devices** (Actions tab) is green: the app built and passed its self-test on Android 13, Android 16 and the iPhone Simulator. Its screenshots are under the run's Artifacts. (Rebuild with `npm run cap:sync` afterwards if you ever made a `--smoke` build locally.)
 - [ ] Install the release build on a real phone:
   - The consent form appears (use a VPN to an EU country, or AdMob's test-device geography setting).
   - After level 5 and 5 minutes of play, a forced ad appears on NEXT.

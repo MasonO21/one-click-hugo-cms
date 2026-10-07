@@ -1,5 +1,6 @@
 // Build: bundles the game into a single self-contained dist/index.html (+ PWA files).
-// Usage: node tools/build.mjs [--artifact]   (artifact mode inlines icons and drops the SW/manifest links)
+// Usage: node tools/build.mjs [--artifact] [--smoke]   (artifact mode inlines icons and drops the SW/manifest links;
+// --smoke adds the on-device self-test, tools/device-smoke.js, for emulator/simulator runs — never ship it)
 import * as esbuild from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,11 +8,12 @@ import crypto from 'node:crypto';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const artifact = process.argv.includes('--artifact');
+const smoke = process.argv.includes('--smoke');
 const out = path.join(root, artifact ? 'dist-artifact' : 'dist');
 fs.mkdirSync(out, { recursive: true });
 
 const res = await esbuild.build({
-  entryPoints: [path.join(root, 'src/main.js')],
+  entryPoints: [path.join(root, smoke ? 'tools/smoke-entry.js' : 'src/main.js')],
   bundle: true, minify: true, format: 'esm', target: ['es2020', 'safari14'], write: false, legalComments: 'none',
 });
 const js = res.outputFiles[0].text;
@@ -46,4 +48,4 @@ if (artifact) {
   fs.writeFileSync(path.join(out, 'sw.js'), fs.readFileSync(path.join(root, 'sw.js'), 'utf8').replace("'sizzle-flip-dev'", `'sizzle-flip-${hash}'`));
 }
 fs.writeFileSync(path.join(out, 'index.html'), html);
-console.log(`built ${path.relative(root, out)}/index.html  ${(html.length / 1024).toFixed(0)} KB  (js ${(js.length / 1024).toFixed(0)} KB)  v${hash}`);
+console.log(`built ${path.relative(root, out)}/index.html${smoke ? ' WITH THE SELF-TEST (not for the stores)' : ''}  ${(html.length / 1024).toFixed(0)} KB  (js ${(js.length / 1024).toFixed(0)} KB)  v${hash}`);

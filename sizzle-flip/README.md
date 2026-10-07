@@ -47,6 +47,8 @@ node tools/qa.mjs           # every route replayed with human-sized error
 npm run release:check       # pre-publish gate (see RELEASE.md)
 ```
 
+**On Android and iPhone without owning either:** every push that touches `sizzle-flip/` runs the GitHub workflow *Sizzle Flip devices* (`.github/workflows/sizzle-flip-devices.yml`). It builds the real app with an on-device self-test (`node tools/build.mjs --smoke`, `tools/device-smoke.js`) and runs it on Android 13 and Android 16 emulators and an iPhone Simulator (Xcode on a GitHub Mac). The self-test checks that the AdMob, store-billing and storage plugins load, plays level 1 through the game's touch handlers, plays a level as a shop character, opens the shop and the Hot Dog packs, and checks that a purchase the store can't complete fails cleanly. It also compiles the unsigned store builds (Android release APK/AAB, iPhone release). Screenshots and device logs are on the run page under Artifacts. A self-test build can't be shipped by accident: `npm run release:check` fails on one.
+
 `tools/e2e-all.mjs` plays every level through the real game: each stored route is fed through the game's own touch handlers at the exact physics step the solver used, then NEXT, the world-complete cards and forced ads are handled through the real UI. `tools/e2e-native.mjs` mocks the Capacitor plugins (AdMob event semantics, Android back button, Google Play and StoreKit billing) to test the app-only code paths.
 
 ## Native app store builds (Capacitor)
