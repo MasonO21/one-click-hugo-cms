@@ -1428,6 +1428,98 @@ errs = await session(async (page) => {
 });
 check('difficulty: no runtime errors', !errs.length, errs[0] || '');
 
+// 21. Bug-test regressions (code review): interactions between the Update 3 systems found in review. Frame-stepped in a
+//     quiet arena (no director, no weapons) with rolls pinned where they matter.
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random, out = {};
+    const { RITES, EVOLUTIONS } = await import('/src/game/data.js');
+    app.engine.manual = true;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    const start = (hero) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.heroes[hero].owned = true; p.heroes[hero].stars = Math.max(1, p.heroes[hero].stars); p.selectedHero = hero; p.energy = 30; app.startRun(1);
+      const r = app.run; r.director = () => {}; r.weapons.update = () => {}; r.addXp = () => {};
+      return r;
+    };
+    const step = (r, n) => { for (let i = 0; i < n; i++) r.update(1 / 30); };
+    const foe = (r, dx, dz, hpMul) => { const e = r.enemies.spawn('husk', r.player.x + dx, r.player.z + dz, { hpMul }); e.spawnT = 1; return e; };
+
+    // the RITE button pulses again once its cooldown ends (the cast punch class stayed on and outranked the pulse)
+    let r = start('vael'); r.player.hurt = () => {};
+    const btn = document.querySelector('.hud .rite');
+    step(r, 3); r.ui.wantsRite = true; step(r, 3);
+    const cast = getComputedStyle(btn).animationName;
+    r.rites.cd = 0.05; step(r, 6);
+    out.rite = { cast, ready: btn.classList.contains('ready'), anim: getComputedStyle(btn).animationName };
+
+    // a Splitter elite slain in the same blow as Gravemaw bursts no copies into the cleared chapter's victory beat
+    p.selectedHero = 'vael'; r = window.__bossRun(1); let P = r.player;
+    r.weapons.update = () => {};
+    const sp = r.enemies.spawn('husk', P.x + 3, P.z, { elite: true, hpMul: 1 }); sp.spawnT = 1; r.affixes.apply(sp, ['splitter']);
+    r.enemies.kill(sp, 'nova');
+    const B = r.bossEnemy; B.hp = 1; r.boss.immune = 0; r.enemies.damage(B, 10, { source: 'bolt', silent: true });
+    step(r, 15);
+    out.split = { victory: !!r.victory, foes: r.enemies.active.filter((o) => o.active && o.type !== 'boss').length };
+
+    // a Witch orb kills Mordrake into his free revive as it lands: the revive clears the sky mid-loop without pooling an
+    // orb twice (two Witches then shared one orb: one telegraph lied, the other landed twice after 0.5 s)...
+    const spec = { flight: 1, radius: 1.1, height: 3.2 };
+    r = start('mordrake'); P = r.player; r.rites.cd = 99; step(r, 40);
+    let PR = r.projectiles;
+    PR.lob(P.x + 6, P.z, P.x, P.z, 50, spec, false); P.hp = 1; P.invuln = 0; step(r, 40);
+    const dupes = PR.lobPool.length - new Set(PR.lobPool).size;
+    step(r, 90); // past the revive's invulnerability
+    const t0 = r.time, landed = [], land = PR.landLob.bind(PR); PR.landLob = (L) => { landed.push([+(r.time - t0).toFixed(1), Math.round(L.tx - P.x)]); land(L); };
+    const L1 = PR.lob(P.x + 8, P.z, P.x + 4, P.z, 5, spec, false), L2 = PR.lob(P.x - 8, P.z, P.x - 4, P.z, 5, spec, false);
+    step(r, 45);
+    out.lob = { revived: r.freeRevives === 0 && !P.dead, dupes, shared: L1 === L2, landed };
+    // ...nor leave a hole when an orb still up sits ahead of the landing one (the next frame threw, every frame)
+    r = start('mordrake'); P = r.player; r.rites.cd = 99; step(r, 40); PR = r.projectiles;
+    PR.lob(P.x + 9, P.z, P.x + 20, P.z, 5, { flight: 3, radius: 1.1, height: 3.2 }, false);
+    PR.lob(P.x + 6, P.z, P.x, P.z, 50, spec, false); P.hp = 1; P.invuln = 0;
+    let err = ''; try { step(r, 60); } catch (e) { err = e.message; }
+    out.hole = { revived: r.freeRevives === 0, err, holes: PR.lobs.length - PR.lobs.filter(Boolean).length };
+
+    // Liora: her Grave Pulse never cuts a Death Knell toll short (a kill 4 s after the toll still rises ×2: 0.4 vs 0.25 × 2)
+    r = start('liora'); P = r.player; r.player.hurt = () => {}; step(r, 6);
+    const st = foe(r, 2.5, 0, 50); step(r, 1);
+    r.rites.trigger(); step(r, 15);
+    r.enemies.damage(st, 1, { source: 'pulse', silent: true });
+    const afterPulse = +(st.tollT - r.time).toFixed(2);
+    step(r, 105); r.stats.raise = 0.25; Math.random = () => 0.4;
+    let n0 = r.legion.count; st.hp = 1; r.enemies.damage(st, 5, { source: 'minion', silent: true });
+    Math.random = rnd;
+    out.toll = { afterPulse, rose: r.legion.count - n0 };
+
+    // Seraphine: a foe set alight by Ashfall and by her Chains of Perdition keeps Perdition's bigger raise bonus, in either
+    // order (a kill while burning: 0.3 + 0.25 rises against a 0.5 roll, 0.3 + 0.15 would not)
+    r = start('seraphine'); P = r.player; r.player.hurt = () => {}; step(r, 6);
+    const a = foe(r, 3, 0, 500), b = foe(r, 3, 1, 500);
+    r.weapons.ignite(b, 50); step(r, 1);
+    r.rites.trigger(); step(r, 3);
+    const ash = a.burnRaise; r.weapons.ignite(a, 50); const both = a.burnRaise;
+    r.stats.raise = 0.3; Math.random = () => 0.5;
+    n0 = r.legion.count; a.hp = 1; r.enemies.damage(a, 5, { source: 'minion', silent: true });
+    Math.random = rnd;
+    out.burn = { ash, both, chainsFirst: b.burnRaise, want: [RITES.seraphine.burnRaise, EVOLUTIONS.chainsOfPerdition.raise], rose: r.legion.count - n0 };
+    app.exitRun();
+    return out;
+  });
+  const { rite, split, lob, hole, toll, burn } = s;
+  check('regression: the RITE button pulses again once its cooldown ends', rite.cast === 'ritefire' && rite.ready && rite.anim === 'ritepulse', JSON.stringify(rite));
+  check('regression: a Splitter slain with Gravemaw bursts no copies into the victory beat', split.victory && split.foes === 0, JSON.stringify(split));
+  check('regression: a Witch orb that revives Mordrake as it lands is pooled once (later orbs keep their 1.0 s)',
+    lob.revived && lob.dupes === 0 && !lob.shared && lob.landed.length === 2 && lob.landed.every(([t]) => t >= 1) && lob.landed.map((x) => x[1]).sort((x, y) => x - y).join() === '-4,4', JSON.stringify(lob));
+  check('regression: that revive leaves no hole in the sky (the game loop threw every frame)', hole.revived && !hole.err && hole.holes === 0, JSON.stringify(hole));
+  check('regression: Grave Pulse never cuts a Death Knell toll short', toll.afterPulse > 4 && toll.rose === 1, JSON.stringify(toll));
+  check('regression: a foe burning from Ashfall and Perdition keeps the bigger raise bonus (either order)',
+    burn.ash === burn.want[0] && burn.both === burn.want[1] && burn.chainsFirst === burn.want[1] && burn.rose === 1, JSON.stringify(burn));
+});
+check('bug-test regressions: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
