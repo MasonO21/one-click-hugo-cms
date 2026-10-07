@@ -55,7 +55,7 @@ export const heroStarBonus = (stars) => ({ dmg: 0.12 * Math.max(0, stars - 1), h
 // multiplier × (1 + ch × (chapter − 1)), the same chapter scaling as Soul Nova and the legion.
 export const RITES = {
   ch: 0.45,
-  hintAt: 8,          // first-ever run: the Rite hint shows once this many seconds have passed (it is ready from the start)
+  hintAt: 8,          // the one-time Rite hint shows once this many seconds have passed (it is ready from the start)
   bossStagger: 0.25,  // a stun never stops Gravemaw: it only pushes his next attack back by this much
   // every kill rises (Raise Chance 100%; the legion cap and overflow rules still hold); shards within `pull` m fly in
   vael: { name: 'Grave Call', short: 'CALL', cd: 20, dur: 4, pull: 12,

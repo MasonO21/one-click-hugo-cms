@@ -516,8 +516,9 @@ export class Rites {
     const run = this.run;
     this.t += dt; this.lightT -= dt; this.sfxT -= dt;
     if (this.cd > 0) { this.cd -= dt; if (this.cd <= 0) { this.cd = 0; this.onReady(); } }
-    // first-ever run: introduce the Rite once the opening hints have had their moment
-    if (run.tutorial && !this.hinted && this.cd <= 0 && run.time >= RITES.hintAt && !(run.ui && run.ui.hintEl && run.ui.hintEl.isConnected)) {
+    // introduce the Rite once the opening hints have had their moment: in the first-ever run, and once for players who
+    // started before Rites existed (run.hint is a no-op after the first time)
+    if (!this.hinted && this.cd <= 0 && run.time >= RITES.hintAt && !(run.ui && run.ui.hintEl && run.ui.hintEl.isConnected)) {
       this.hinted = true;
       run.hint('rite', `Your Rite is ready! Tap <b>${D.short}</b> to unleash ${D.name}.`);
     }

@@ -1233,6 +1233,12 @@ errs = await session(async (page) => {
     r = start('vael'); r.input.moved = true;
     step(r, 9);
     out.hint = { tutorial: r.tutorial, flag: !!p.flags.hints.rite, text: document.querySelector('.hud .hint')?.textContent || '' };
+    // a player from before Rites gets the same hint once on their next run, and never again
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+    r = start('vael'); r.input.moved = true; step(r, 9);
+    out.veteran = { tutorial: r.tutorial, flag: !!p.flags.hints.rite, text: document.querySelector('.hud .hint')?.textContent || '' };
+    r = start('vael'); r.input.moved = true; step(r, 9);
+    out.veteranAgain = document.querySelector('.hud .hint')?.textContent || '';
     app.exitRun();
     return out;
   });
@@ -1249,6 +1255,7 @@ errs = await session(async (page) => {
   check('rites: Gravemaw is staggered not stunned, barely pushed, struck first', G.stun === 0 && G.cd === 1.25 && G.bossD < W.r && G.huskD >= W.r && G.ashFirst && G.ashHurt, JSON.stringify(G));
   check('rites: run result counts Rites; hero screen lists the Rite', s.result === 2 && s.screen === 'Ossuary Wall', JSON.stringify({ result: s.result, screen: s.screen }));
   check('rites: first run hints the Rite once it is ready', s.hint.tutorial && s.hint.flag && /Rite/.test(s.hint.text), JSON.stringify(s.hint));
+  check('rites: a returning player gets the Rite hint once, then never again', !s.veteran.tutorial && s.veteran.flag && /Rite/.test(s.veteran.text) && !/Rite/.test(s.veteranAgain), JSON.stringify({ v: s.veteran, again: s.veteranAgain }));
 });
 check('rites: no runtime errors', !errs.length, errs[0] || '');
 
