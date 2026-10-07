@@ -117,6 +117,8 @@ describe('daily life: working', () => {
     const fire = addBuilding(h.game, 'campfire', 133, 123);
     const fc = centerOf(h, fire);
     const cc = centerOf(h, camp);
+    // regular day speed: this is about daily life, not the slowed-down first day of the tutorial
+    h.game.state.tutorial.done = true;
     h.game.state.time.dayTime = 0.45;
     const c = addColonist(h.game, 'common', { specialty: 'gatherer' });
     let starts = 0;
