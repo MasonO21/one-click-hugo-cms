@@ -22,6 +22,7 @@
       skins: SF.HEROES.map(h => SF.defaultSkin(h.id)),
       equipped: {}, selected: 'kaida', difficulty: 'easy', spells: {},
       train: { hero: 'kaida', cd: true, gold: true, max: true },
+      raid: { diff: 'normal', week: weekKey(), cleared: [], best: {} },
       account: { level: 1, xp: 0 },
       pass: { xp: 0, elite: false, free: [], elite_: [] },
       login: { last: null, day: 0 },
@@ -80,6 +81,7 @@
       if (d.ads.key !== today) d.ads = { key: today, coins: 0, chest: 0, double: 0 };
       if (d.weekly.key !== wk) d.weekly = { key: wk, progress: 0, claimed: false };
       if (d.event.week !== wk) { d.event.week = wk; d.event.bought = {}; }
+      if (d.raid.week !== wk) { d.raid.week = wk; d.raid.cleared = []; }
     },
 
     owns: {
@@ -100,6 +102,20 @@
       const locked = SF.HEROES.filter(h => h.price.coins > 0).map(h => h.id);
       const seed = [...weekKey()].reduce((a, c) => a + c.charCodeAt(0), 0);
       return [locked[seed % locked.length], locked[(seed + 1) % locked.length]].filter((v, i, a) => a.indexOf(v) === i);
+    },
+    // Titan Raid result: the first clear of each difficulty each week pays gems; the best time is kept.
+    raidResult(diff, won, time) {
+      const D = SF.RAID.diffs[diff], r = memory.raid;
+      if (!D) return null;
+      S.rollover();
+      const out = { coins: won ? D.coins : 80, gems: 0, firstClear: false, newBest: false, best: r.best[diff] || null };
+      if (won) {
+        if (!r.cleared.includes(diff)) { r.cleared.push(diff); out.firstClear = true; out.gems = D.gems; memory.gems += D.gems; }
+        if (!r.best[diff] || time < r.best[diff]) { out.newBest = true; r.best[diff] = Math.round(time); }
+        out.best = r.best[diff];
+      }
+      S.save();
+      return out;
     },
     playable(id) { return S.owns.hero(id) || S.freeRotation().includes(id); },
 

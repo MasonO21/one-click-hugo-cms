@@ -66,6 +66,17 @@ Keep it this way as you add content: your own names, art, sounds and hero design
     - Gold Rush: triple passive gold.
     - Shard Storm: river power shards every 30 seconds.
   - The twist shows on the Brawl card and the loading screen, and is announced when the match starts.
+- **Titan Raid:** a co-op boss fight. You and two bot allies start at level 9 with 3,500 gold and take on the Shard Titan in the middle of the map. There are no towers, minions or jungle.
+  - The Titan's big attacks are telegraphed with red warnings that show exactly where they'll hit:
+    - **Shard Slam:** circles under two or three heroes, with a stun.
+    - **Prism Beam:** a line.
+    - **Shatter Ring:** below half health, a ring around it. Hug the Titan or get far away.
+  - Shardlings break off at 75% and 40% health. Renewal shards in the river heal you every 25 seconds.
+  - It swings at whoever has hurt it most recently, with tanks and fighters drawing double. Tolvar can taunt it.
+  - It enrages at 4:00 and wins at 5:00. Heroes respawn after 8 seconds, and if all three are down at once the raid is lost.
+  - Bot allies step out of most warnings (about 9 in 10), take a Renewal shard when hurt and clear Shardlings first.
+  - Normal, Hard and Nightmare. Over 30 simulated all-bot runs each, bots clear 97%, 70% and 30%, in a median 2:51, 3:41 and 4:02.
+  - The first clear of each difficulty each week pays 10, 20 or 40 gems, and your best time is kept. Raids give coins, pass XP and mastery, but don't touch your rank or PvP stats.
 - **Online 3v3:** real players on a server-authoritative match. Bots fill empty slots, and if you disconnect a bot takes over until you reconnect.
 - **Training Grounds:** any hero, including ones you don't own yet, against three target dummies in mid lane.
   - Dummies stand still, heal to full a few seconds after the last hit, and stand back up 2 seconds after falling. Towers hold fire.

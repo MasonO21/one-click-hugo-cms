@@ -5,6 +5,7 @@
   const fmt = n => Math.round(n).toLocaleString('en-US');
   const usd = n => '$' + n.toFixed(2);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
   let view = 'home', heroSel = null, shopTab = 'featured', lastSummary = null, lastRewards = null, bound = false, queueing = false;
@@ -73,12 +74,13 @@
   // Post-match breakdown: the team gold lead over time, and each hero's damage, damage taken and healing.
   function battleStats(s) {
     if (!s.rows.some(r => r.hd != null)) return '';
-    const rows = s.rows.slice().sort((a, b) => a.team - b.team);
+    // The Raid has no enemy heroes, so its first column is all damage dealt and there's no gold race.
+    const rows = s.rows.slice().sort((a, b) => a.team - b.team).map(r => (s.raid ? Object.assign({}, r, { hd: r.dmg }) : r));
     const top = k => Math.max(1, ...rows.map(r => r[k] || 0));
     const M = { hd: top('hd'), tk: top('tk'), hl: top('hl') };
     const bar = (r, k) => `<span class="sbar ${k}"><i style="width:${Math.round((r[k] || 0) / M[k] * 100)}%"></i><em class="num">${fmt(r[k] || 0)}</em></span>`;
-    return `<div class="card battle-stats"><p class="eyebrow">Battle stats</p>${goldGraph(s)}
-      <div class="stats-grid"><span></span><span class="eyebrow">Hero damage</span><span class="eyebrow">Taken</span><span class="eyebrow">Healing</span>
+    return `<div class="card battle-stats"><p class="eyebrow">Battle stats</p>${s.raid ? '' : goldGraph(s)}
+      <div class="stats-grid"><span></span><span class="eyebrow">${s.raid ? 'Damage' : 'Hero damage'}</span><span class="eyebrow">Taken</span><span class="eyebrow">Healing</span>
       ${rows.map(r => `<span class="sname ${r.team === 0 ? 'b' : 'r'}${r.isPlayer ? ' me' : ''}">${esc(r.name)}<small>${r.hero}</small></span>${bar(r, 'hd')}${bar(r, 'tk')}${bar(r, 'hl')}`).join('')}</div></div>`;
   }
   function goldGraph(s) {
@@ -202,6 +204,10 @@
         label = 'Start training';
         body = `<div class="train"><select id="trainHero" aria-label="Hero to train">${SF.HEROES.map(x => `<option value="${x.id}" ${x.id === id ? 'selected' : ''}>${x.name} · ${x.role}${S.playable(x.id) ? '' : ' (trial)'}</option>`).join('')}</select>
           <div class="train-opts">${[['cd', 'No cooldowns'], ['gold', 'Free gold'], ['max', 'Max level']].map(([k, l]) => `<button class="tog${tr[k] ? ' on' : ''}" data-act="trainOpt" data-k="${k}" aria-pressed="${!!tr[k]}">${l}</button>`).join('')}</div></div>`;
+      } else if (mode === 'raid') {
+        const rd = S.d.raid, D = SF.RAID.diffs[rd.diff] || SF.RAID.diffs.normal;
+        body = `<div class="seg" role="radiogroup" aria-label="Raid difficulty">${Object.keys(SF.RAID.diffs).map(k => `<button role="radio" aria-checked="${k === rd.diff}" data-act="raidDiff" data-d="${k}">${SF.RAID.diffs[k].label}</button>`).join('')}</div>
+          <p class="raid-note small">${rd.cleared.includes(rd.diff) ? '<span class="muted">Cleared<span class="rn-long"> this week</span></span>' : `<span class="rn-long">First clear this week: </span><b class="gem-t">+${D.gems} gems</b>`}${rd.best[rd.diff] ? ` <span class="muted">· Best ${mmss(rd.best[rd.diff])}</span>` : ''}</p>`;
       } else if (mode === 'brawl') {
         const mu = SF.MUTATOR[SF.mutatorOf(SF.weekKey())];
         body = `<div class="mutator"><span class="eyebrow">This week</span><b>${mu.name}</b><span class="muted small">${mu.desc}</span></div>`;
@@ -449,15 +455,19 @@
       const m = S.masteryOf(rw.heroId), mh = SF.HERO[rw.heroId];
       const mastery = `<div class="card"><p class="eyebrow">Mastery · ${mh.name}</p><p><b>${m.name}</b> <span class="muted small">+${rw.mastery.pts} points${rw.mastery.after > rw.mastery.before ? ' · level up!' : ''}</span></p>
         <div class="bar" style="--p:${m.next ? (m.pts - m.prev) / (m.next - m.prev) : 1}"><i></i></div>${rw.mastery.got.length ? `<div class="rewards" style="margin-top:8px">${rw.mastery.got.map(chip).join('')}</div>` : ''}</div>`;
-      const ach = S.achievementsReady().length;
+      const ach = S.achievementsReady().length, rr = rw.raid;
+      // Raid: the Titan's card replaces the enemy team.
+      const foe = rr ? `<div class="card raid-boss"><p class="eyebrow" style="color:var(--enemy)">${SF.RAID.boss} · ${SF.RAID.diffs[rr.diff].label}</p>${TITAN_SVG}
+          <p>${s.won ? `Defeated in <b>${mm}:${ss}</b>${rr.newBest ? ' <span class="chip" style="color:var(--gold)">New best</span>' : rr.best ? ` <span class="muted small">Best ${mmss(rr.best)}</span>` : ''}` : `Left at <b>${Math.ceil((s.raid ? s.raid.bossPct : 1) * 100)}%</b> health${s.raid && s.raid.phase === 2 ? ' · reached phase 2' : ''}`}</p></div>`
+        : `<div class="card" style="display:grid;gap:6px"><p class="eyebrow" style="color:var(--enemy)">Enemy team</p>${side(1)}</div>`;
       return `<div class="results ${s.won ? 'won' : 'lost'}">
-        <div><p class="eyebrow">${SF.MODES[rw.mode] ? SF.MODES[rw.mode].name : 'Match'} · ${mm}:${ss} · ${s.kills[0]} – ${s.kills[1]}</p><h1 class="verdict">${s.won ? 'Victory' : 'Defeat'}</h1></div>
+        <div><p class="eyebrow">${SF.MODES[rw.mode] ? SF.MODES[rw.mode].name : 'Match'} · ${mm}:${ss}${rr ? '' : ` · ${s.kills[0]} – ${s.kills[1]}`}</p><h1 class="verdict">${s.won ? 'Victory' : 'Defeat'}</h1></div>
         <div class="teams"><div class="card" style="display:grid;gap:6px"><p class="eyebrow" style="color:var(--ally)">Your team</p>${side(0)}</div>
-          <div class="card" style="display:grid;gap:6px"><p class="eyebrow" style="color:var(--enemy)">Enemy team</p>${side(1)}</div></div>
+          ${foe}</div>
         ${battleStats(s)}
         <div class="pgrid">${rank}${mastery}</div>
         <div class="card" style="display:grid;gap:10px"><p class="eyebrow">Rewards</p>
-          <div class="rewards">${chip({ type: 'coins', n: rw.coins * (rw.doubled ? 2 : 1) })}${chip({ type: 'passXp', n: rw.passXp })}${chip({ type: 'tokens', n: rw.tokens })}<span class="chip">+${rw.accXp} account XP</span>
+          <div class="rewards">${chip({ type: 'coins', n: rw.coins * (rw.doubled ? 2 : 1) })}${rr && rr.gems ? `${chip({ type: 'gems', n: rr.gems })}<span class="chip" style="color:var(--gem)">First clear this week</span>` : ''}${chip({ type: 'passXp', n: rw.passXp })}${chip({ type: 'tokens', n: rw.tokens })}<span class="chip">+${rw.accXp} account XP</span>
           ${rw.ups.length ? `<span class="chip" style="color:var(--shard)">Account level ${S.d.account.level}! +${200 * rw.ups.length} coins</span>` : ''}
           ${SF.SPELL_IDS.filter(id => rw.ups.includes(SF.SPELLS[id].lvl)).map(id => `<span class="chip" style="color:var(--gold)">New battle spell: ${SF.SPELLS[id].name}</span>`).join('')}
           ${rw.tierUp > 0 ? `<span class="chip" style="color:var(--gold)">Shard Pass tier ${S.passTier()} reached</span>` : ''}</div>
@@ -533,6 +543,7 @@
     const mode = modeArg || S.d.mode || 'quick';
     if (mode === 'online') return startOnline();
     if (mode === 'practice') return startPractice();
+    if (mode === 'raid') return startRaid();
     if (mode === 'ranked' && !S.rankedUnlocked()) return infoModal('Ranked is locked', `Reach account level ${SF.RANKS.unlockLevel} to play Ranked.`);
     // Quick and Ranked open with a draft, except the very first (tutorial) match.
     if ((mode === 'quick' || mode === 'ranked') && S.d.tutorial && o.draft !== false) return startDraft(mode);
@@ -709,17 +720,43 @@
     const opts = { hero: heroId, skin: S.skinOf(heroId), spell: S.spellOf(heroId), playerName: S.d.name, difficulty: 'easy', allies: [], enemies, mode: 'practice', practice: { cd: tr.cd, gold: tr.gold, max: tr.max }, tutorial: false };
     showLoading(SF.MODES.practice.name, [{ id: heroId, skin: opts.skin }], enemies, 0, () => SF.hud.start(opts, () => finishMatch(null, { mode: 'practice' })));
   }
+  // Titan Raid: your hero and two bot allies picked to round out the team (a frontliner, ranged damage).
+  function startRaid() {
+    let heroId = S.d.selected; if (!S.playable(heroId)) heroId = S.d.heroes[0];
+    const diff = SF.RAID.diffs[S.d.raid.diff] ? S.d.raid.diff : 'normal', names = shuffle(SF.BOT_NAMES.slice());
+    const st = { blue: [heroId], red: [], bans: [] };
+    const allies = [0, 1].map(i => { const id = SF.Draft.botPick('blue', st); st.blue.push(id); return { id, skin: pickSkin(id), name: names[i], difficulty: 'hard' }; });
+    const opts = { hero: heroId, skin: S.skinOf(heroId), spell: S.spellOf(heroId), playerName: S.d.name, difficulty: 'normal', allies, enemies: [], mode: 'raid', raid: diff, tutorial: false };
+    showLoading(`${SF.MODES.raid.name} · ${SF.RAID.diffs[diff].label}`, [allies[0], { id: heroId, skin: opts.skin }, allies[1]], [{ boss: true }], 1,
+      () => SF.hud.start(opts, sum => finishMatch(sum, { mode: 'raid', heroId, skin: opts.skin, diff })), 'Dodge the red warnings. When the ring flashes, hug the Titan or get far away.');
+  }
+  // The Titan's portrait for the loading screen and results (it has no splash art).
+  const TITAN_SVG = (() => {
+    const pts = (a, x, y, k) => a.map(([px, py]) => `${(x + px * k).toFixed(1)},${(y + py * k).toFixed(1)}`).join(' ');
+    const P = (a, x, y, k, fill) => `<polygon points="${pts(a, x, y, k)}" fill="${fill}" stroke="#2a0f2e" stroke-width="1.2"/>`;
+    const leg = [[-0.35, -1], [0.35, -1], [0.5, 1], [-0.5, 1]], arm = [[0, -1], [0.55, -0.3], [0.4, 1], [-0.4, 1], [-0.55, -0.3]];
+    const torso = [[0, -1.1], [0.85, -0.6], [0.95, 0.3], [0.5, 1], [-0.5, 1], [-0.95, 0.3], [-0.85, -0.6]], head = [[0, -1], [0.8, -0.2], [0.6, 0.8], [-0.6, 0.8], [-0.8, -0.2]];
+    return `<svg class="boss-art" viewBox="0 0 100 110" aria-hidden="true"><defs><linearGradient id="titanG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0f6"/><stop offset=".5" stop-color="#b35cff"/><stop offset="1" stop-color="#3a1650"/></linearGradient>
+      <linearGradient id="titanA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe0ea"/><stop offset=".5" stop-color="#ff8a9a"/><stop offset="1" stop-color="#5a1a3a"/></linearGradient>
+      <radialGradient id="titanGlow"><stop offset="0" stop-color="rgba(255,138,154,.5)"/><stop offset="1" stop-color="rgba(255,138,154,0)"/></radialGradient></defs>
+      <circle cx="50" cy="55" r="50" fill="url(#titanGlow)"/>
+      ${P(leg, 40, 92, 13, 'url(#titanG)')}${P(leg, 60, 92, 13, 'url(#titanG)')}${P(arm, 20, 60, 15, 'url(#titanA)')}${P(arm, 80, 60, 15, 'url(#titanA)')}
+      ${P(torso, 50, 58, 27, 'url(#titanG)')}${P(head, 50, 24, 12, 'url(#titanA)')}
+      ${[-2, -1, 0, 1, 2].map(i => P([[0, -1], [0.35, 0], [0, 0.3], [-0.35, 0]], 50 + i * 5, 12 - (2 - Math.abs(i)) * 2.5, 6, '#ffe27a')).join('')}
+      <circle cx="50" cy="55" r="6" fill="#fff"/><circle cx="46" cy="24" r="1.8" fill="#7dfcf0"/><circle cx="54" cy="24" r="1.8" fill="#7dfcf0"/></svg>`;
+  })();
   function showLoading(title, blue, red, meIndex, done, sub) {
     const el = $('loading');
     const card = (s, team, me, i) => `<div class="lcard" style="--c:${team === 0 ? 'var(--ally)' : 'var(--enemy)'};animation-delay:${i * 0.08}s">${heroArt(s.id, s.skin)}<b>${SF.HERO[s.id].name}</b><span>${me ? 'You' : esc(s.name)}</span>${me ? masteryBadge(s.id) : ''}</div>`;
+    const bossCard = i => `<div class="lcard boss" style="--c:var(--enemy);animation-delay:${i * 0.08}s">${TITAN_SVG}<b>${SF.RAID.boss}</b><span>Raid boss</span></div>`;
     el.innerHTML = `<h2>${title}${sub ? `<small class="load-sub">${esc(sub)}</small>` : ''}</h2>
       <div class="vs"><div class="side">${blue.map((s, i) => card(s, 0, i === meIndex, i)).join('')}</div>
-      <span class="vsmark">VS</span><div class="side">${red.map((e, i) => card(e, 1, false, i + 3)).join('')}</div></div>
+      <span class="vsmark">VS</span><div class="side${red.length === 1 ? ' solo' : ''}">${red.map((e, i) => (e.boss ? bossCard(i + 3) : card(e, 1, false, i + 3))).join('')}</div></div>
       <div class="bar loadbar"><i id="loadFill"></i></div><p class="muted" style="text-align:center">${TIPS[Math.floor(Math.random() * TIPS.length)]}</p>`;
     el.hidden = false;
     closeModal();
     paintCanvases(el);
-    SF.sprites.preload(blue.concat(red).map(s => [s.id, s.skin]));
+    SF.sprites.preload(blue.concat(red).filter(s => s.id).map(s => [s.id, s.skin]));
     let p = 0;
     const iv = setInterval(() => {
       p = Math.min(1, p + 0.05 + Math.random() * 0.05);
@@ -755,10 +792,34 @@
     } catch (e) { fail(e.message); }
   }
 
+  // Raid rewards: coins by difficulty (80 for a loss), gems for the week's first clear of each difficulty,
+  // pass and account XP, mastery. Raids don't touch PvP stats or rank.
+  function finishRaid(sum, ctx) {
+    const won = sum.won, me = sum.rows.find(r => r.isPlayer) || sum.rows[0];
+    const res = S.raidResult(ctx.diff, won, sum.time);
+    let passXp = won ? 400 : 250;
+    if (S.d.pass.elite) passXp = Math.round(passXp * 1.2);
+    const accXp = won ? 150 : 100, tokens = won ? SF.EVENT.perWin : SF.EVENT.perLoss;
+    S.rollover();
+    const tierBefore = S.passTier();
+    S.grant([{ type: 'coins', n: res.coins }, { type: 'passXp', n: passXp }]);
+    S.d.event.tokens += tokens;
+    const ups = S.addAccountXp(accXp);
+    if (ups.length) S.grant(ups.map(() => ({ type: 'coins', n: 200 })));
+    const pts = (won ? 100 : 50) + Math.min(40, Math.round(me.dmg / 2000));
+    const mastery = S.addMastery(ctx.heroId, pts); mastery.pts = pts;
+    S.track('matches', 1);
+    S.pushHistory({ mode: 'raid', hero: ctx.heroId, skin: ctx.skin, won, k: me.k, d: me.d, a: me.a, mvp: false, time: sum.time, at: new Date().toISOString() });
+    S.save();
+    lastSummary = sum;
+    lastRewards = { mode: 'raid', heroId: ctx.heroId, coins: res.coins, passXp, accXp, tokens, ups, ranked: null, mastery, tierUp: S.passTier() - tierBefore, doubled: false, raid: Object.assign({ diff: ctx.diff }, res) };
+    view = 'results'; render(true);
+  }
   function finishMatch(sum, ctx) {
     $('lobby').hidden = false;
     SF.music.play('lobby');
     if (ctx.mode === 'practice') { view = 'home'; render(true); return; }
+    if (ctx.mode === 'raid') return finishRaid(sum, ctx);
     if (SF.net && ctx.mode === 'online') { try { SF.net.close(); } catch (e) { /* ignore */ } }
     const me = sum.rows.find(r => r.isPlayer) || sum.rows[0];
     const won = sum.won, mvp = !!(sum.mvp && sum.mvp.isPlayer);
@@ -801,6 +862,7 @@
     draftHover(d) { if (!draft) return; if (draftStep() === 'PB') draft.banHover = d.id; else if (draftPickable(d.id)) draft.hover = d.id; renderDraft(); },
     draftLock() { if (draft) draftLock(); },
     draftLeave() { closeDraft(); },
+    raidDiff(d) { if (SF.RAID.diffs[d.d]) { S.d.raid.diff = d.d; S.save(); render(); } },
     spells() { spellModal(draft && draft.hover ? draft.hover : S.d.mode === 'practice' && SF.HERO[S.d.train.hero] ? S.d.train.hero : S.d.selected); },
     trainOpt(d) { S.d.train[d.k] = !S.d.train[d.k]; S.save(); render(); },
     pickSpell(d) {

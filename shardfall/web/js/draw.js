@@ -375,6 +375,43 @@
       g.fillStyle = hg; g.fill(); g.strokeStyle = '#1c0f44'; g.lineWidth = 2; g.stroke();
       for (const s of [-1, 1]) { g.beginPath(); g.arc(hx + s * r * 0.22, hy - r * 0.02, r * 0.09, 0, TAU); g.fillStyle = '#7dfcf0'; g.shadowColor = '#4fe3d3'; g.shadowBlur = blur(12); g.fill(); g.shadowBlur = 0; }
       if (!SF.gfx.low && Math.random() < 0.35) u.m.parts.push({ x: u.x + (Math.random() - 0.5) * r * 2, y: cy + (Math.random() - 0.5) * r, vx: 0, vy: -40, life: 0.8, max: 0.8, color: '#c9a6ff', size: 3, shape: 'diamond' });
+    } else if (u.mtype === 'titan') {
+      // The raid boss: a rose-violet crystal giant. Cracks glow in phase 2, everything turns red when enraged.
+      const rd = u.m.raid || {}, enr = rd.enraged, cracked = rd.phase === 2;
+      const cy = u.y - r * 1.25 + Math.sin(t * 1.2) * 3;
+      const glow = g.createRadialGradient(u.x, cy, 0, u.x, cy, r * 2.6);
+      glow.addColorStop(0, enr ? 'rgba(255,77,94,.55)' : 'rgba(255,138,154,.35)'); glow.addColorStop(1, 'rgba(255,138,154,0)');
+      g.fillStyle = glow; g.beginPath(); g.arc(u.x, cy, r * 2.6, 0, TAU); g.fill();
+      const part = (pts, x, y, sz, c0, c1, c2) => {
+        poly(g, pts, x, y, sz);
+        const gr = g.createLinearGradient(x - sz, y - sz, x + sz, y + sz); gr.addColorStop(0, c0); gr.addColorStop(0.5, c1); gr.addColorStop(1, c2);
+        g.fillStyle = gr; g.fill(); g.strokeStyle = '#2a0f2e'; g.lineWidth = 2; g.stroke();
+      };
+      const mid = enr ? '#ff5d6c' : '#b35cff';
+      for (const sg of [-1, 1]) part([[-0.35, -1], [0.35, -1], [0.5, 1], [-0.5, 1]], u.x + sg * r * 0.38, u.y - r * 0.42, r * 0.42, '#f6d6ff', mid, '#3a1650');
+      const sw = Math.sin(t * 2) * 0.12;
+      for (const sg of [-1, 1]) part([[0, -1], [0.55, -0.3], [0.4, 1], [-0.4, 1], [-0.55, -0.3]], u.x + sg * r * 1.08, cy + r * 0.2 + sg * sw * r, r * 0.52, '#ffe0ea', '#ff8a9a', '#5a1a3a');
+      part([[0, -1.1], [0.85, -0.6], [0.95, 0.3], [0.5, 1], [-0.5, 1], [-0.95, 0.3], [-0.85, -0.6]], u.x, cy, r * 0.95, '#fff0f6', mid, '#3a1650');
+      if (cracked) {
+        g.strokeStyle = enr ? '#ff4d5e' : '#ffd1dc'; g.lineWidth = 3; g.shadowColor = '#ff4d5e'; g.shadowBlur = blur(12);
+        g.beginPath(); g.moveTo(u.x - r * 0.45, cy - r * 0.6); g.lineTo(u.x - r * 0.12, cy - r * 0.1); g.lineTo(u.x - r * 0.32, cy + r * 0.45);
+        g.moveTo(u.x + r * 0.35, cy - r * 0.55); g.lineTo(u.x + r * 0.12, cy + r * 0.2); g.lineTo(u.x + r * 0.3, cy + r * 0.6); g.stroke(); g.shadowBlur = 0;
+      }
+      part([[0, -1], [0.8, -0.2], [0.6, 0.8], [-0.6, 0.8], [-0.8, -0.2]], u.x, cy - r * 1.18, r * 0.42, '#ffffff', '#ff9ac0', '#5a1a3a');
+      for (let i = -2; i <= 2; i++) { poly(g, [[0, -1], [0.35, 0], [0, 0.3], [-0.35, 0]], u.x + i * r * 0.17, cy - r * 1.55 - (2 - Math.abs(i)) * r * 0.08, r * 0.2); g.fillStyle = '#ffe27a'; g.fill(); }
+      for (const sg of [-1, 1]) { g.beginPath(); g.arc(u.x + sg * r * 0.15, cy - r * 1.18, r * 0.065, 0, TAU); g.fillStyle = enr ? '#ff4d5e' : '#7dfcf0'; g.fill(); }
+      g.beginPath(); g.arc(u.x, cy - r * 0.1, r * 0.22 * (1 + 0.08 * Math.sin(t * 5)), 0, TAU);
+      g.fillStyle = enr ? '#ff6b7a' : '#ffffff'; g.shadowColor = enr ? '#ff4d5e' : '#ff8a9a'; g.shadowBlur = blur(20); g.fill(); g.shadowBlur = 0;
+      for (let i = 0; i < 6; i++) {
+        const a = t * 0.9 + i * TAU / 6, sx = u.x + Math.cos(a) * r * 1.8, sy = cy + Math.sin(a) * r * 0.6;
+        poly(g, [[0, -1], [0.55, 0], [0, 1], [-0.55, 0]], sx, sy, 10); g.fillStyle = enr ? '#ff8a9a' : '#e2b8ff'; g.fill();
+      }
+    } else if (u.mtype === 'shardling') {
+      const cy = u.y - r * 0.9 - Math.abs(Math.sin(t * 8 + u.id)) * 3;
+      poly(g, [[0, -1.2], [0.55, -0.3], [0.8, 0.5], [0, 0.9], [-0.8, 0.5], [-0.55, -0.3]], u.x, cy, r);
+      const gr = g.createLinearGradient(u.x - r, cy - r, u.x + r, cy + r); gr.addColorStop(0, '#ffe0ea'); gr.addColorStop(0.5, '#ff8a9a'); gr.addColorStop(1, '#5a1a3a');
+      g.fillStyle = gr; g.fill(); g.strokeStyle = '#2a0f2e'; g.lineWidth = 1.5; g.stroke();
+      for (const sg of [-1, 1]) { g.beginPath(); g.arc(u.x + sg * r * 0.25, cy - r * 0.2, 2.5, 0, TAU); g.fillStyle = '#fff'; g.fill(); }
     } else if (u.mtype === 'thorn') {
       const cy = u.y - r * 0.8;
       const pts = Array.from({ length: 14 }, (_, i) => { const a = i / 14 * TAU, k = i % 2 ? 0.75 : 1.08; return [Math.cos(a) * k, Math.sin(a) * k * 0.8]; });
@@ -799,6 +836,28 @@
           g.strokeStyle = zn.color; g.lineWidth = 2; g.setLineDash([8, 6]); g.beginPath(); g.ellipse(zn.x, zn.y, zn.r, zn.r * 0.9, 0, 0, TAU); g.stroke(); g.setLineDash([]);
         } else {
           for (let i = 0; i < 3; i++) { g.beginPath(); g.ellipse(zn.x, zn.y, zn.r * (0.4 + i * 0.25), zn.r * 0.9 * (0.4 + i * 0.25), 0, t * 8 + i, t * 8 + i + 4); g.strokeStyle = zn.color; g.lineWidth = 4; g.stroke(); }
+        }
+      } else if (zn.kind === 'warn') {
+        // Titan Raid warnings: true circles/rings/lines (exactly the hit area). The darker fill grows until
+        // it lands, then the whole shape flashes.
+        const pre = !zn.started, k = pre ? Math.min(1, zn.t / (zn.delay || 1)) : 1;
+        const flash = pre ? 0 : Math.max(0, 1 - (zn.t - (zn.delay || 0)) / (zn.dur || 0.35));
+        const shape = q => {
+          g.beginPath();
+          if (zn.shape === 'circle') g.arc(zn.x, zn.y, zn.r * q, 0, TAU);
+          else if (zn.shape === 'ring') { g.arc(zn.x, zn.y, zn.r0 + (zn.r - zn.r0) * q, 0, TAU); g.moveTo(zn.x + zn.r0, zn.y); g.arc(zn.x, zn.y, zn.r0, 0, TAU, true); }
+          else {
+            const n = { x: -zn.dir.y * zn.width / 2, y: zn.dir.x * zn.width / 2 }, L = zn.len * q;
+            g.moveTo(zn.x + n.x, zn.y + n.y); g.lineTo(zn.x + n.x + zn.dir.x * L, zn.y + n.y + zn.dir.y * L);
+            g.lineTo(zn.x - n.x + zn.dir.x * L, zn.y - n.y + zn.dir.y * L); g.lineTo(zn.x - n.x, zn.y - n.y); g.closePath();
+          }
+        };
+        if (pre) {
+          shape(1); g.fillStyle = 'rgba(255,60,80,.16)'; g.fill('evenodd');
+          g.lineWidth = 2.5; g.strokeStyle = 'rgba(255,77,94,.9)'; g.setLineDash([12, 8]); g.lineDashOffset = -t * 30; g.stroke(); g.setLineDash([]);
+          shape(k); g.fillStyle = 'rgba(255,60,80,.3)'; g.fill('evenodd');
+        } else {
+          shape(1); g.fillStyle = `rgba(255,${Math.round(120 + 100 * flash)},${Math.round(130 + 100 * flash)},${0.55 * flash})`; g.fill('evenodd');
         }
       } else if (zn.kind === 'bell') {
         const col = zn.color;

@@ -396,7 +396,7 @@
     toll_of_challenge(m, h, a, s) {
       for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) {
         m.applyDamage(h, e, 60 + 0.045 * h.maxHp, { skill: s });
-        if (e.kind === 'hero') m.taunt(e, h, 1);
+        if (e.kind === 'hero' || e.raidBoss) m.taunt(e, h, 1);   // the Raid's Titan can be taunted too
       }
       h.addBuff({ id: 'toll', t: 2.5, dmgRed: 0.1 });
       m.ring(h.x, h.y, s.range, skinC(h), 0.45, 7); m.ring(h.x, h.y, s.range * 0.55, '#f6c27a', 0.3, 4);
@@ -438,7 +438,7 @@
       this.fountains = [{ x: 110, y: W.laneY, r: 230 }, { x: W.w - 110, y: W.laneY, r: 230 }];
       // 'classic' (quick / ranked / online) or 'brawl': start at level 5 with gold, no jungle, early Shard.
       // 'practice' is the Training Grounds: dummy enemies, optional free cooldowns / gold / max level.
-      this.mode = opts.mode === 'brawl' ? 'brawl' : opts.mode === 'practice' ? 'practice' : 'classic';
+      this.mode = opts.mode === 'brawl' ? 'brawl' : opts.mode === 'practice' ? 'practice' : opts.mode === 'raid' ? 'raid' : 'classic';
       // Brawl's weekly rule twist (see SF.MUTATORS).
       this.mutator = this.mode === 'brawl' && SF.MUTATOR[opts.mutator] ? opts.mutator : null;
       this.mut = this.mutator ? SF.MUTATOR[this.mutator].fx : {};
@@ -446,6 +446,7 @@
       this.setupMap();
       this.setupHeroes();
       if (this.mode === 'practice') this.setupPractice(opts.practice || {});
+      if (this.mode === 'raid') this.setupRaid(opts.raid);
       if (this.mode === 'brawl') {
         this.camps = []; this.shardAt = 45; this.wyrmAt = 150; this.runeAt = 60; this.nextWave = 2; this.waveEvery = 25; this.overchargeAt = 240; this.respawnMul = 0.6;
         for (const h of this.heroes) { h.level = 5; h.points = 5; h.recalc(); h.hp = h.maxHp; h.gold = 1800; h.cdMul = this.mut.cd || 1; }
@@ -496,6 +497,112 @@
       for (const h of this.heroes) if (h.dummy) { h.level = p.level; h.recalc(); h.hp = h.maxHp; }
       p.recalc(); p.hp = p.maxHp;
       if (this.practice.gold) p.gold = 99999;
+    }
+    // ---- Titan Raid ------------------------------------------------------------------
+    setupRaid(diffId) {
+      const R = SF.RAID, D = R.diffs[diffId] || R.diffs.normal, C = { x: W.riverX, y: W.laneY };
+      // The lanes fall silent: no towers, minions, jungle or river objectives. The fight is mid-map.
+      this.units = this.units.filter(u => !isStructure(u));
+      this.camps = []; this.nextWave = 1e9; this.shardAt = this.wyrmAt = 1e9; this.runeAt = 25;
+      const boss = this.add(new Unit(this, { kind: 'monster', mtype: 'titan', team: 1, x: C.x + 140, y: C.y, r: 74, maxHp: R.hp * D.hp, atk: R.atk * D.dmg, def: 40, range: 190, as: 0.55, ms: 150, name: R.boss }));
+      boss.raidBoss = boss.raidUnit = true; boss.ccImmune = 1e9; boss.xp = 0; boss.gold = 0;
+      const spawn = { x: C.x - 560, y: C.y };
+      this.raid = { diff: SF.RAID.diffs[diffId] ? diffId : 'normal', D, boss, C, spawn, arena: 600, phase: 1, slamAt: 6, beamAt: 11, ringAt: 1e9, adds: [0.75, 0.4], enraged: false };
+      this.heroes.filter(h => h.team === 0).forEach((h, i) => {
+        h.level = R.level; h.points = R.level; h.xp = 0; h.recalc(); h.hp = h.maxHp; h.gold = R.gold; h.threat = 0;
+        h.x = spawn.x; h.y = spawn.y + (i - 1) * 80; h.spawn = { x: h.x, y: h.y };
+        this.autoUpgrade(h);
+      });
+      this.later(1, () => this.announce('The Shard Titan awakens', 2, 'Watch the ground: dodge the red warnings'));
+    }
+    raidTick(dt) {
+      const r = this.raid, b = r.boss, D = r.D, R = SF.RAID;
+      if (this.over || !b.alive) return;
+      const live = this.heroes.filter(h => h.alive && h.team === 0);
+      if (!live.length) { this.announce('Wiped out', 1, 'The Titan stands'); this.end(1); return; }
+      if (this.t >= R.limit) { this.announce('The Titan overwhelms you', 1, 'Out of time'); this.end(1); return; }
+      for (const h of this.heroes) h.threat = (h.threat || 0) * Math.pow(0.85, dt);   // threat fades: recent damage counts
+      const pct = b.hp / b.maxHp;
+      if (r.phase === 1 && pct <= 0.5) {
+        r.phase = 2; r.ringAt = this.t + 3;
+        this.announce('The Titan cracks open', 2, 'Shatter Ring: stand right next to it or far away'); this.shake(8);
+      }
+      if (r.adds.length && pct <= r.adds[0]) { r.adds.shift(); this.raidAdds(); }
+      if (!r.enraged && this.t >= R.enrage) {
+        r.enraged = true; b.atk *= 1.5; b.as *= 1.4;
+        this.announce('The Titan is enraged', 1, 'One minute left'); this.shake(10);
+      }
+      const cdm = D.cd * (r.enraged ? 0.7 : 1) * (r.phase === 2 ? 0.85 : 1);
+      if (this.t >= r.slamAt) { r.slamAt = this.t + 7 * cdm; this.raidSlam(live); }
+      if (this.t >= r.beamAt) { r.beamAt = this.t + 11 * cdm; this.raidBeam(live); }
+      if (r.phase === 2 && this.t >= r.ringAt) { r.ringAt = this.t + 15 * cdm; this.raidRing(); }
+    }
+    raidDmg(base) { return base * this.raid.D.dmg * (this.raid.enraged ? 1.3 : 1); }
+    // A telegraphed attack: a red warning for `delay` seconds, then it hits every hero still inside.
+    warn(z) {
+      const hit = z.hit;
+      this.zone(Object.assign({ kind: 'warn', team: 1, color: '#ff4d5e', dur: 0.35 }, z, {
+        delay: z.delay * this.raid.D.tele,
+        onStart: zz => { for (const h of this.heroes) if (h.alive && h.team === 0 && this.inWarn(zz, h)) hit(h); this.shake(4); }
+      }));
+    }
+    inWarn(z, u, pad = 0) {
+      const dx = u.x - z.x, dy = u.y - z.y, k = u.r * 0.5 + pad;
+      if (z.shape === 'circle') return dx * dx + dy * dy < (z.r + k) * (z.r + k);
+      if (z.shape === 'ring') { const D = Math.hypot(dx, dy); return D > z.r0 - k && D < z.r + k; }
+      const a = dx * z.dir.x + dy * z.dir.y, c = Math.abs(-dx * z.dir.y + dy * z.dir.x);   // line
+      return a > -k && a < z.len + k && c < z.width / 2 + k;
+    }
+    raidSlam(live) {
+      const b = this.raid.boss, picks = live.slice().sort(() => Math.random() - 0.5).slice(0, this.raid.D.slam);
+      for (const h of picks) this.warn({ shape: 'circle', x: h.x, y: h.y, r: 150, delay: 1.3, hit: x => { this.applyDamage(b, x, this.raidDmg(320)); this.stun(x, 0.8); } });
+      this.ring(b.x, b.y, 120, '#ff8a9a', 0.4, 5);
+    }
+    raidBeam(live) {
+      const b = this.raid.boss, t = live[Math.floor(Math.random() * live.length)], dir = norm(t.x - b.x, t.y - b.y);
+      this.warn({ shape: 'line', x: b.x, y: b.y, dir, len: 1100, width: 130, delay: 1.5, hit: x => this.applyDamage(b, x, this.raidDmg(380)) });
+    }
+    raidRing() {
+      const b = this.raid.boss;
+      this.warn({ shape: 'ring', x: b.x, y: b.y, r0: 230, r: 560, delay: 1.8, hit: x => { this.applyDamage(b, x, this.raidDmg(320)); this.slow(x, 0.4, 2); } });
+    }
+    raidAdds() {
+      const r = this.raid, D = r.D;
+      for (let i = 0; i < D.adds; i++) {
+        const a = (i / D.adds) * Math.PI * 2 + Math.random() * 0.5, x = r.C.x + Math.cos(a) * 480, y = clamp(r.C.y + Math.sin(a) * 380, 120, W.h - 120);
+        const u = this.add(new Unit(this, { kind: 'monster', mtype: 'shardling', team: 1, x, y, r: 22, maxHp: 1300 * D.hp, atk: 42 * D.dmg, def: 15, range: 80, as: 1, ms: 270, name: 'Shardling', gold: 40, xp: 0 }));
+        u.raidUnit = true;
+        this.burst(x, y - 20, '#ff8a9a', 14, 200);
+      }
+      this.announce('Shardlings break off the Titan', 1, 'Clear them before they swarm your carries');
+    }
+    raidUnitAI(u, dt) {
+      const r = this.raid, live = this.heroes.filter(h => h.alive && h.team === 0);
+      if (!live.length) { u.target = null; u.want = null; return; }
+      u.think = (u.think || 0) - dt;
+      if (u.raidBoss) {
+        // The Titan swings at whoever holds its attention: recent damage, doubled for tanks and fighters.
+        if (u.tauntT > 0 && u.tauntBy && u.tauntBy.alive) u.target = u.tauntBy;
+        else if (u.think <= 0 || !u.target || !u.target.alive) {
+          u.think = 1;
+          u.target = live.reduce((a, h) => ((h.threat || 0) - dist(h, u) * 2 > (a.threat || 0) - dist(a, u) * 2 ? h : a));
+        }
+        if (d2(u, r.C) > (r.arena - 80) ** 2) u.want = { x: r.C.x, y: r.C.y };   // it never leaves the arena
+      } else if (u.think <= 0 || !u.target || !u.target.alive) {
+        u.think = 1;
+        u.target = live.reduce((a, h) => (d2(h, u) < d2(a, u) ? h : a));
+      }
+    }
+    raidKill(t, killer) {
+      if (t.raidBoss) {
+        for (const h of this.heroes) if (h.team === 0) this.addGold(h, 300);
+        this.burst(t.x, t.y - 60, '#ffe27a', 60, 420); this.burst(t.x, t.y - 60, '#ff8a9a', 40, 320); this.shake(14);
+        this.announce('Shard Titan defeated', 0, `Cleared in ${Math.floor(this.t / 60)}:${String(Math.floor(this.t % 60)).padStart(2, '0')}`);
+        this.later(0.8, () => this.end(0));
+      } else if (killer) {
+        this.addGold(killer, t.gold);
+        if (killer === this.player) this.float(t.x, t.y - 30, '+' + t.gold, '#ffc84a', 1);
+      }
     }
     practiceTick() {
       const p = this.player, o = this.practice;
@@ -574,7 +681,7 @@
       this.fountainTick(dt);
       if (this.practice) this.practiceTick();
       this.units = this.units.filter(u => u.alive || u.kind === 'hero' || isStructure(u) || (u.deadT += dt) < 0.6);
-      if (this.t > 900 && !this.over && !this.practice) this.timeoutEnd();
+      if (this.t > 900 && !this.over && !this.practice && !this.raid) this.timeoutEnd();
     }
 
     timers(dt) {
@@ -583,6 +690,7 @@
       if (!this.shard && this.t >= this.shardAt) this.spawnShard();
       if (!this.wyrm && this.t >= this.wyrmAt) this.spawnWyrm();
       if (this.t >= this.runeAt) this.spawnRunes();
+      if (this.raid) this.raidTick(dt);
       if (this.t >= (this.cbAt || 0)) { this.cbAt = this.t + 1; this.comebackTick(); }
       if (this.t >= this.goldAt) { this.goldAt += 15; this.goldLine.push([Math.round(this.t), ...[0, 1].map(tm => Math.round(this.heroes.reduce((a, h) => a + (h.team === tm ? h.goldEarned : 0), 0)))]); }
       if (this.runes.length) this.runePickups();
@@ -598,7 +706,7 @@
     // Comeback gold: while a team trails by 1,500+ gold, its heroes carry a 'comeback' buff and their
     // kills, assists and tower takedowns pay 30% more (assists 50% more).
     comebackTick() {
-      if (this.practice) return;
+      if (this.practice || this.raid) return;
       const g = [0, 1].map(tm => this.heroes.reduce((a, h) => a + (h.team === tm ? h.goldEarned : 0), 0));
       const behind = g[1] - g[0] >= 1500 ? 0 : g[0] - g[1] >= 1500 ? 1 : -1;
       for (const h of this.heroes) {
@@ -714,15 +822,15 @@
 
     // River power-ups: fill any empty spot with a random shard, then again in 90 seconds.
     spawnRunes() {
-      this.runeAt = this.t + (this.mut.rune || 90);
+      this.runeAt = this.t + (this.raid ? 25 : this.mut.rune || 90);
       const ids = Object.keys(SF.RUNES);
       let n = 0;
       for (const s of SF.RUNE_SPOTS) {
         if (this.runes.some(r => r.x === s.x && r.y === s.y)) continue;
-        this.runes.push({ id: this.runeId++, x: s.x, y: s.y, type: ids[Math.floor(Math.random() * ids.length)], at: this.t });
+        this.runes.push({ id: this.runeId++, x: s.x, y: s.y, type: this.raid ? 'renewal' : ids[Math.floor(Math.random() * ids.length)], at: this.t });
         n++;
       }
-      if (n) this.announce('Power Shards in the river', 2, 'Walk over one to take it');
+      if (n && !this.raid) this.announce('Power Shards in the river', 2, 'Walk over one to take it');
     }
     runePickups() {
       for (const r of this.runes) {
@@ -776,7 +884,7 @@
       }
     }
     visible(u, team) {
-      if (u.team === team || u.kind !== 'hero') return true;
+      if (u.team === team || u.kind !== 'hero' || this.raid) return true;
       return !!u.vis[team];
     }
     targetable(u) { return !isStructure(u) || !u.guard || !u.guard.alive; }
@@ -832,6 +940,7 @@
       u.target = best;
     }
     monsterAI(u, dt) {
+      if (u.raidUnit) return this.raidUnitAI(u, dt);
       const home = u.home;
       if (u.aggro && (!u.aggro.alive || d2(u, home) > 480 * 480 || (u.aggro.kind === 'hero' && !this.visible(u.aggro, 2)))) { u.aggro = null; u.resetting = true; }
       if (u.resetting) {
@@ -1209,7 +1318,7 @@
       return true;
     }
     startRecall(h) {
-      if (!h.alive || h.recallT > 0 || this.inFountain(h)) return;
+      if (!h.alive || h.recallT > 0 || this.inFountain(h) || this.raid) return;
       h.recallT = 3; h.target = null; h.want = null; h.wantDir = null;
     }
     inFountain(h) { const f = this.fountains[h.team]; return d2(h, f) < f.r * f.r; }
@@ -1322,6 +1431,7 @@
       }
       if (t.kind === 'hero' && t.recallT > 0) t.recallT = 0;
       if (t.kind === 'monster' && src && !t.resetting) t.aggro = src;
+      if (t.raidBoss && src) { const hh = src.kind === 'hero' ? src : src.owner; if (hh) hh.threat = (hh.threat || 0) + amt * ({ Tank: 2, Fighter: 2 }[hh.def0.role] || 1); }
       if (amt >= 1 && (src === this.player || t === this.player) && !(SF.gfx && SF.gfx.numbers === false)) {
         const col = t === this.player ? '#ff6b7a' : o.crit ? '#ffd23f' : o.skill ? '#ffb347' : '#ffffff';
         this.float(t.x + (Math.random() - 0.5) * 20, t.y - t.r - 26, o.crit ? Math.round(amt) + '!' : Math.round(amt), col, o.crit ? 1.55 : o.skill ? 1.25 : 1);
@@ -1401,6 +1511,8 @@
             this.announce(team === 0 ? 'Your team slew the Wyrm' : 'Enemy slew the Wyrm', team, 'Wyrm Aegis: cheat death once in the next 150s');
             this.shake(8);
           }
+        } else if (t.raidUnit) {
+          this.raidKill(t, killer);
         } else {
           t.camp.unit = null; t.camp.respawnAt = this.t + 70;
           if (killer) {
@@ -1421,7 +1533,7 @@
         if (t.kind === 'core') this.end(team);
         else this.announce(t.team === 0 ? 'Your tower has fallen' : 'Enemy tower destroyed', team);
       } else if (t.kind === 'hero') {
-        t.dth++; t.respawnT = this.practice ? 2 : (6 + t.level * 2 + Math.min(10, this.t / 60)) * this.respawnMul; t.recallT = 0; t.buffs = []; t.shield = 0; t.slowT = 0; t.stunT = 0; t.invisT = 0; t.tauntT = 0; t.tauntBy = null;
+        t.dth++; t.respawnT = this.practice ? 2 : this.raid ? SF.RAID.respawn : (6 + t.level * 2 + Math.min(10, this.t / 60)) * this.respawnMul; t.recallT = 0; t.buffs = []; t.shield = 0; t.slowT = 0; t.stunT = 0; t.invisT = 0; t.tauntT = 0; t.tauntBy = null;
         const shutdown = t.streak >= 3;
         const bounty = 220 + (shutdown ? 50 * Math.min(6, t.streak) : 0);
         t.streak = 0;
@@ -1477,8 +1589,8 @@
     }
     // Taunt: the hero has to walk to `by` and attack it, and can't use skills or recall. Spells still work.
     taunt(u, by, dur) {
-      if (u.kind !== 'hero' || u.ccImmune > 0 || u.stunImmune > 0) return;
-      if (u.def0.passive.id === 'unbroken') dur *= 0.7;
+      if (!u.raidBoss && (u.kind !== 'hero' || u.ccImmune > 0 || u.stunImmune > 0)) return;
+      if (u.def0 && u.def0.passive.id === 'unbroken') dur *= 0.7;
       if (!(u.tauntT > 0) || u.tauntBy === by) { u.tauntT = Math.max(u.tauntT || 0, dur); u.tauntBy = by; u.recallT = 0; }
     }
     tauntTick(h) {
@@ -1503,7 +1615,7 @@
       if (src && src.kind === 'hero') src.healed = (src.healed || 0) + (u.hp - before);
       if (!quiet && u === this.player && u.hp - before >= 1) this.float(u.x, u.y - 50, '+' + Math.round(u.hp - before), '#7dffa0', 1);
     }
-    knockback(u, dir, d) { if (isStructure(u)) return; u.knock = { vx: dir.x * d / 0.22, vy: dir.y * d / 0.22, t: 0.22 }; }
+    knockback(u, dir, d) { if (isStructure(u) || u.raidBoss) return; u.knock = { vx: dir.x * d / 0.22, vy: dir.y * d / 0.22, t: 0.22 }; }
     dashTo(u, dir, distance, speed, o = {}) {
       u.dash = { vx: dir.x, vy: dir.y, left: distance, speed, hit: new Set(), onPass: o.onPass, stopOnHero: o.stopOnHero, onEnd: o.onEnd, trail: o.trail };
       u.recallT = 0; u.face = { x: dir.x, y: dir.y };
@@ -1690,7 +1802,8 @@
       const mvp = winners.reduce((a, r) => (!a || r.score > a.score ? r : a), null);
       const g0 = rows.reduce((a, r) => a + (r.team === 0 ? r.gold : 0), 0), g1 = rows.reduce((a, r) => a + (r.team === 1 ? r.gold : 0), 0);
       const goldLine = this.goldLine.concat([[Math.round(this.t), g0, g1]]);
-      return { winner: this.winner, won: this.winner === 0, time: this.t, kills: this.kills.slice(), rows, mvp, teamStats: this.teamStats, goldLine };
+      const raid = this.raid ? { diff: this.raid.diff, bossPct: Math.max(0, this.raid.boss.hp / this.raid.boss.maxHp), phase: this.raid.phase } : undefined;
+      return { winner: this.winner, won: this.winner === 0, time: this.t, kills: this.kills.slice(), rows, mvp, teamStats: this.teamStats, goldLine, raid };
     }
   }
 
@@ -1710,6 +1823,7 @@
       if (!h.alive || h.dash) return;
       if (h.points > 0) m.autoUpgrade(h);
       const nxt = h.nextItem(); if (nxt && h.gold >= SF.ITEMS[nxt].cost) m.buy(h, nxt);
+      if (m.raid) return this.raidThink();
       if (h.recallT > 0) return;
       const hp = h.hpPct, f = m.fountains[h.team];
       if (m.inFountain(h) && hp < 0.9) { h.want = null; h.target = null; return; }
@@ -1811,6 +1925,57 @@
         }
       }
       return false;
+    }
+    // Titan Raid: step out of red warnings (bots notice about 9 in 10), take a Renewal shard when hurt,
+    // clear Shardlings near the team first, and otherwise hit the Titan. Ranged heroes keep their distance.
+    raidThink() {
+      const m = this.m, h = this.h, r = m.raid, b = r.boss;
+      const seen = this.seen || (this.seen = new Map());
+      if (seen.size > 24) for (const z of [...seen.keys()]) if (!m.zones.includes(z)) seen.delete(z);
+      const pending = m.zones.filter(z => z.kind === 'warn' && !z.started).filter(z => {
+        if (!seen.has(z)) seen.set(z, Math.random() < 0.9);
+        return seen.get(z);
+      });
+      const inside = pending.find(z => m.inWarn(z, h, 35));
+      if (inside) { h.target = null; h.wantDir = null; h.want = this.safeSpot(inside); return; }
+      const foes = m.units.filter(u => u.alive && u.raidUnit && d2(u, h) < 700 * 700);
+      if (h.spellCd <= 0 && this.spellLogic(foes)) return;
+      if (h.hpPct < 0.45 && m.runes.length) {
+        const rn = m.runes.reduce((a, x) => (d2(x, h) < d2(a, h) ? x : a));
+        if (!pending.some(z => m.inWarn(z, rn, 20))) { h.target = null; h.want = { x: rn.x, y: rn.y }; return; }
+      }
+      if (h.hpPct < 0.22) { this.escape(); h.target = null; h.want = { x: r.spawn.x, y: r.spawn.y }; return; }
+      // Shardlings chasing the team come first, then the Titan.
+      const adds = m.units.filter(u => u.alive && u.raidUnit && !u.raidBoss && m.heroes.some(a => a.alive && a.team === 0 && d2(a, u) < 380 * 380));
+      const t = adds.length ? adds.reduce((a, u) => (d2(u, h) < d2(a, h) ? u : a)) : b;
+      if (!t || !t.alive) return;
+      const reach = h.range + h.r + t.r, D = dist(h, t);
+      // Don't walk into a warning that's about to land.
+      if (D > reach) {
+        const step = { x: h.x + (t.x - h.x) / D * 80, y: h.y + (t.y - h.y) / D * 80 };
+        if (pending.some(z => m.inWarn(z, step, 35))) { h.target = null; h.want = null; return; }
+      }
+      if (h.def0.ranged && t.raidBoss && D < 280) { h.target = null; h.want = { x: h.x + (h.x - t.x) / D * 160, y: h.y + (h.y - t.y) / D * 160 }; return; }
+      h.target = t; h.want = null;
+      this.useSkills(t, 'fight');
+    }
+    safeSpot(z) {
+      const h = this.h, m = this.m, pad = h.r + 50;
+      let p;
+      if (z.shape === 'circle') {
+        const D = dist(h, z), d = D > 1 ? { x: (h.x - z.x) / D, y: (h.y - z.y) / D } : { x: 0, y: 1 };
+        p = { x: z.x + d.x * (z.r + pad), y: z.y + d.y * (z.r + pad) };
+      } else if (z.shape === 'ring') {
+        const D = dist(h, z) || 1, d = { x: (h.x - z.x) / D, y: (h.y - z.y) / D };
+        const inward = D - (z.r0 - pad), outward = z.r + pad - D;
+        const R = inward < outward ? z.r0 - pad : z.r + pad;
+        p = { x: z.x + d.x * R, y: z.y + d.y * R };
+      } else {
+        const n = { x: -z.dir.y, y: z.dir.x }, c = (h.x - z.x) * n.x + (h.y - z.y) * n.y, side = c >= 0 ? 1 : -1;
+        const move = z.width / 2 + pad - Math.abs(c);
+        p = { x: h.x + n.x * side * move, y: h.y + n.y * side * move };
+      }
+      return { x: clamp(p.x, 60, W.w - 60), y: clamp(p.y, 80, W.h - 80) };
     }
     // Worth dashing onto this hero? Not under their tower, and they're low, alone, or outnumbered.
     safeDive(e) {

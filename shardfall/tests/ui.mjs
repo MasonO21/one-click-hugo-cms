@@ -46,7 +46,7 @@ try {
       await page.click(`[data-act=shopTab][data-tab=${tab}]`);
       await page.waitForTimeout(100);
     }
-    for (const m of ['quick', 'ranked', 'brawl', 'online', 'practice']) {
+    for (const m of ['quick', 'ranked', 'brawl', 'raid', 'online', 'practice']) {
       await page.evaluate(() => SF.lobby._test.go('home'));
       await page.click(`[data-act=mode][data-m=${m}]`);
       await page.waitForTimeout(100);
@@ -142,7 +142,25 @@ try {
       check('Brawl match runs the twist', await page.evaluate(want => SF.hud.match.mutator === want, await page.evaluate(() => SF.mutatorOf(SF.weekKey()))));
       await page.evaluate(() => SF.hud.match.end(0));
       await page.waitForFunction(() => !SF.hud.match && SF.lobby._test.view === 'results', null, { timeout: 8000 });
-      check('no page errors in draft or Brawl', errors.length === 0, errors.join('; '));
+      // Titan Raid: the boss bar shows, warnings draw, and a clear pays the week's first-clear gems.
+      await page.evaluate(() => { SF.store.d.mode = 'raid'; SF.store.d.raid.diff = 'hard'; SF.lobby._test.go('home'); });
+      await shot(page, 'home-raid');
+      const gems0 = await page.evaluate(() => SF.store.d.gems);
+      await page.click('[data-act=battle]');
+      await page.waitForFunction(() => SF.hud.match && !document.getElementById('match').hidden, null, { timeout: 8000 });
+      const rs = await page.evaluate(() => ({ mode: SF.hud.match.mode, bar: !document.getElementById('bossbar').hidden, name: document.getElementById('bossName').textContent, heroes: SF.hud.match.heroes.length }));
+      check('the raid starts with the boss bar', rs.mode === 'raid' && rs.bar && rs.name.includes('Hard') && rs.heroes === 3, JSON.stringify(rs));
+      await page.evaluate(() => { const m = SF.hud.match; for (const h of m.heroes) { h.x = 1400 + Math.random() * 200; h.y = 520 + Math.random() * 160; } m.raid.slamAt = m.t; m.raid.beamAt = m.t; });
+      await page.waitForTimeout(700);
+      await shot(page, 'match-raid');
+      check('raid warnings appear', await page.evaluate(() => SF.hud.match.zones.some(z => z.kind === 'warn')));
+      await page.evaluate(() => { const m = SF.hud.match; m.raid.boss.hp = 1; m.applyDamage(m.player, m.raid.boss, 100, { true: true }); });
+      await page.waitForFunction(() => !SF.hud.match && SF.lobby._test.view === 'results', null, { timeout: 12000 });
+      await page.waitForTimeout(200);
+      await shot(page, 'results-raid');
+      const rr = await page.evaluate(() => ({ verdict: document.querySelector('.verdict').textContent, boss: !!document.querySelector('.raid-boss'), gems: SF.store.d.gems, cleared: SF.store.d.raid.cleared.slice(), best: SF.store.d.raid.best.hard }));
+      check('clearing the raid shows the Titan card and pays first-clear gems', rr.verdict === 'Victory' && rr.boss && rr.gems === gems0 + 20 && rr.cleared.includes('hard') && rr.best > 0, JSON.stringify(rr));
+      check('no page errors in draft, Brawl or Raid', errors.length === 0, errors.join('; '));
       check('no page errors during matches', errors.length === 0, errors.join('; '));
     }
     await ctx.close();

@@ -358,10 +358,20 @@
     el.innerHTML = `<span>DPS <b class="num">${Math.round((p.dmgDealt - d0) / span)}</b></span><span>Total <b class="num">${Math.round(p.dmgDealt).toLocaleString()}</b></span>`;
   }
   const skillEls = () => [...document.querySelectorAll('.pbtn.sk')];
+  const clock = t => `${Math.floor(Math.max(0, t) / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, '0')}`;
+  let bossLag = 1;
   function updateHud(dt) {
     const p = m.player;
-    const mm = Math.floor(m.t / 60), ss = Math.floor(m.t % 60);
-    $('clock').textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+    $('clock').textContent = clock(m.t);
+    const rd = m.raid;
+    if (rd) {
+      // Titan Raid: the boss bar (a pale trail shows recent damage) with the phase and enrage timer.
+      const pct = Math.max(0, rd.boss.hp / rd.boss.maxHp);
+      bossLag = Math.max(pct, bossLag - dt * 0.2);
+      $('bossFill').style.width = (pct * 100).toFixed(2) + '%'; $('bossLag').style.width = (bossLag * 100).toFixed(2) + '%';
+      $('bossInfo').textContent = rd.enraged ? `Enraged · ${clock(SF.RAID.limit - m.t)} left` : `Phase ${rd.phase} · ${Math.ceil(pct * 100)}% · Enrage in ${clock(SF.RAID.enrage - m.t)}`;
+      $('bossbar').classList.toggle('enraged', !!rd.enraged);
+    }
     $('kBlue').textContent = m.kills[0]; $('kRed').textContent = m.kills[1];
     skillEls().forEach((b, i) => {
       const cd = p.skillCd[i], max = SF.skillCdOf(p, i), el = b.querySelector('.cd'), rank = p.ranks[i] || 0;
@@ -456,13 +466,16 @@
       m.on('end', team => {
         ended = true; annQ = []; slowmo = 1.2; if (R) R.kick(1.6);
         $('shop').hidden = true; $('board').hidden = true; $('death').hidden = true; $('game').classList.remove('dead');
-        showAnnounce({ text: team === 0 ? 'Victory' : 'Defeat', team: team === 0 ? 2 : 1, sub: team === 0 ? 'The enemy Heartstone shatters' : 'Your Heartstone has fallen' });
+        const sub = m.raid ? (team === 0 ? 'The Shard Titan falls' : 'The Titan stands') : team === 0 ? 'The enemy Heartstone shatters' : 'Your Heartstone has fallen';
+        showAnnounce({ text: team === 0 ? 'Victory' : 'Defeat', team: team === 0 ? 2 : 1, sub });
         SF.sfx.play(team === 0 ? 'win' : 'lose');
         setTimeout(() => { const s = m.summary(); SF.hud.stop(); onEnd(s); }, 2800);
       });
       $('shop').hidden = true; $('pause').hidden = true; $('tutorial').hidden = true; $('announce').hidden = true; $('toast').hidden = true; $('board').hidden = true;
       $('match').classList.toggle('lefty', !!(SF.store.d && SF.store.d.settings.lefty));
       $('feed').innerHTML = ''; $('recap').innerHTML = ''; $('dps').hidden = true; dpsLog = [];
+      $('bossbar').hidden = !m.raid; $('match').classList.toggle('raid', !!m.raid); bossLag = 1;
+      if (m.raid) $('bossName').textContent = `${SF.RAID.boss} · ${SF.RAID.diffs[m.raid.diff].label}`;
       if (opts.tutorial) showTutorial();
       last = performance.now();
       cancelAnimationFrame(raf);

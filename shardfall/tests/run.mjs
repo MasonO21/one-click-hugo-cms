@@ -892,6 +892,104 @@ section('Weekly Brawl mutators', () => {
   }
 });
 
+section('Titan Raid', () => {
+  const raid = (diff = 'normal', ids = ['tolvar', 'sylva', 'lumen']) => new SF.Match({ hero: ids[0], difficulty: 'normal', mode: 'raid', raid: diff, allies: [{ id: ids[1], name: 'A1', difficulty: 'hard' }, { id: ids[2], name: 'A2', difficulty: 'hard' }], enemies: [] });
+  {
+    const m = raid(), b = m.raid.boss;
+    check('the raid has no towers, minions or jungle', !m.units.some(u => u.kind === 'tower' || u.kind === 'core' || u.kind === 'minion') && m.camps.length === 0);
+    check('the Titan stands in the arena', b.alive && b.mtype === 'titan' && b.maxHp === SF.RAID.hp && Math.abs(b.x - SF.WORLD.riverX) < 200);
+    check('heroes start at level 9 with gold and skills learned', m.heroes.every(h => h.level === 9 && h.gold === SF.RAID.gold && h.points === 0 && h.ranks[2] > 0));
+    check('Hard and Nightmare Titans are tougher', raid('hard').raid.boss.maxHp > b.maxHp && raid('nightmare').raid.boss.maxHp > raid('hard').raid.boss.maxHp);
+    check('no recalling in the raid', (m.startRecall(m.player), !(m.player.recallT > 0)));
+    check('the Titan ignores stuns and slows', (m.stun(b, 2), m.slow(b, 0.5, 2), !(b.stunT > 0) && !(b.slowT > 0)));
+  }
+  {
+    // A slam warning hits only heroes still inside when it lands.
+    const m = raid(), [p, a1, a2] = m.heroes;
+    for (const h of m.heroes) { h.brain = null; h.human = true; }
+    p.x = 1300; p.y = 600; a1.x = 1000; a1.y = 600; a2.x = 1300; a2.y = 900;
+    m.raid.slamAt = m.raid.beamAt = 1e9;
+    m.warn({ shape: 'circle', x: 1300, y: 600, r: 150, delay: 1, hit: x => m.applyDamage(m.raid.boss, x, 500) });
+    const hp = m.heroes.map(h => h.hp);
+    for (let k = 0; k < 40; k++) m.update(1 / 30);
+    check('a warning hits heroes inside it', p.hp < hp[0]);
+    check('and misses heroes outside it', a1.hp === hp[1] && a2.hp === hp[2]);
+    const ring = { shape: 'ring', x: 0, y: 0, r0: 230, r: 560 }, line = { shape: 'line', x: 0, y: 0, dir: { x: 1, y: 0 }, len: 1000, width: 130 };
+    check('ring warnings are safe right next to the Titan or far away', !m.inWarn(ring, { x: 100, y: 0, r: 24 }) && m.inWarn(ring, { x: 400, y: 0, r: 24 }) && !m.inWarn(ring, { x: 700, y: 0, r: 24 }));
+    check('beam warnings cover a line', m.inWarn(line, { x: 500, y: 40, r: 24 }) && !m.inWarn(line, { x: 500, y: 140, r: 24 }) && !m.inWarn(line, { x: -100, y: 0, r: 24 }));
+  }
+  {
+    // Bots step out of warnings: stand three allies in slam circles and see who's still there when they land.
+    let dodged = 0, total = 0;
+    for (let n = 0; n < 10; n++) {
+      const m = raid('normal', ['kaida', 'sylva', 'oska']);
+      m.raid.slamAt = m.raid.beamAt = 1e9;
+      for (const h of m.heroes) { h.brain = new SF.Brain(m, h, 'hard'); h.x = 1250 + Math.random() * 100; h.y = 500 + Math.random() * 200; }
+      m.updateVisibility();
+      const slams = m.heroes.map(h => { const z = { shape: 'circle', x: h.x, y: h.y, r: 150 }; m.warn(Object.assign({ delay: 1.3, hit: () => {} }, z)); return z; });
+      for (let k = 0; k < 39; k++) m.update(1 / 30);
+      m.heroes.forEach((h, i) => { total++; if (!m.inWarn(slams[i], h)) dodged++; });
+    }
+    check('bots step out of red warnings before they land', dodged >= total * 0.75, `${dodged}/${total}`);
+  }
+  {
+    const m = raid(), b = m.raid.boss;
+    for (const h of m.heroes) { h.brain = null; h.human = true; }
+    m.update(1 / 30);
+    b.hp = b.maxHp * 0.74; m.update(1 / 30);
+    check('Shardlings join at 75% health', m.units.filter(u => u.alive && u.mtype === 'shardling').length === SF.RAID.diffs.normal.adds);
+    b.hp = b.maxHp * 0.49; m.update(1 / 30);
+    check('phase 2 starts below half health', m.raid.phase === 2 && m.raid.ringAt < 1e9);
+    m.t = SF.RAID.enrage; m.update(1 / 30);
+    check('the Titan enrages at 4:00', m.raid.enraged);
+    m.t = SF.RAID.limit; m.update(1 / 30);
+    check('the raid is lost at 5:00', m.over && m.winner === 1);
+  }
+  {
+    const m = raid(), b = m.raid.boss;
+    for (const h of m.heroes) { h.brain = null; h.human = true; }
+    b.hp = 10; m.applyDamage(m.player, b, 100, { true: true });
+    for (let k = 0; k < 40 && !m.over; k++) m.update(1 / 30);
+    check('killing the Titan wins the raid', m.over && m.winner === 0 && m.summary().raid.bossPct === 0);
+    const w = raid();
+    for (const h of w.heroes) { h.brain = null; h.human = true; w.applyDamage(w.raid.boss, h, 1e6, { true: true }); }
+    w.update(1 / 30);
+    check('everyone down at once is a wipe', w.over && w.winner === 1);
+    const r = raid(); r.applyDamage(r.raid.boss, r.player, 1e6, { true: true });
+    check('heroes respawn after 8 seconds', r.player.respawnT === SF.RAID.respawn);
+  }
+  {
+    // Threat: the Titan swings at whoever has been hurting it most (tanks count double), and Tolvar can taunt it.
+    const m = raid('normal', ['tolvar', 'sylva', 'lumen']), b = m.raid.boss, [tank, adc] = m.heroes;
+    for (const h of m.heroes) { h.brain = null; h.human = true; }
+    tank.x = b.x - 150; tank.y = b.y; adc.x = b.x - 300; adc.y = b.y;
+    m.applyDamage(adc, b, 400); m.applyDamage(tank, b, 250);
+    b.think = 0; m.raidUnitAI(b, 1 / 30);
+    check('the Titan targets the hero holding its attention', b.target === tank);
+    m.applyDamage(adc, b, 4000); b.think = 0; m.raidUnitAI(b, 1 / 30);
+    check('a big enough hitter pulls it away', b.target === adc);
+    tank.skillCd[1] = 0; m.castSkill(tank, 1, { dir: { x: 1, y: 0 } }); b.think = 0; m.raidUnitAI(b, 1 / 30);
+    check('Tolvar can taunt the Titan', b.tauntT > 0 && b.target === tank);
+  }
+  {
+    // Full bot raids clear Normal most of the time, and Nightmare far less often.
+    const run = diff => { let w = 0; for (let n = 0; n < 6; n++) { const m = raid(diff, shuffle(SF.HEROES.map(h => h.id)).slice(0, 3)); m.player.brain = new SF.Brain(m, m.player, 'hard'); for (let k = 0; !m.over && k < 30 * 400; k++) m.update(1 / 30); if (m.winner === 0) w++; check(`a ${diff} raid ends`, m.over); } return w; };
+    const nn = run('normal'), nm = run('nightmare');
+    check('bots usually clear Normal', nn >= 4, `${nn}/6`);
+    check('Nightmare is harder than Normal', nm < nn, `${nm} vs ${nn}`);
+  }
+  {
+    // Rewards: the week's first clear of a difficulty pays gems once, best times are kept.
+    const SF2 = loadSF(); SF2.store.load(); const S = SF2.store, g0 = S.d.gems;
+    const a = S.raidResult('hard', true, 200), b = S.raidResult('hard', true, 180), c = S.raidResult('hard', false, 300);
+    check('first clear of the week pays gems', a.firstClear && a.gems === SF2.RAID.diffs.hard.gems && S.d.gems === g0 + a.gems);
+    check('later clears that week do not', !b.firstClear && b.gems === 0 && S.d.gems === g0 + a.gems);
+    check('a faster clear sets a new best', b.newBest && S.d.raid.best.hard === 180 && !c.newBest && c.coins === 80);
+    S.d.raid.week = 'old'; S.rollover();
+    check('a new week resets first clears', S.d.raid.cleared.length === 0 && S.d.raid.best.hard === 180);
+  }
+});
+
 section('Online-style roster with two humans', () => {
   const ids = SF.HEROES.map(h => h.id);
   const m = new SF.Match({ difficulty: 'normal', localPid: 'p2', roster: [

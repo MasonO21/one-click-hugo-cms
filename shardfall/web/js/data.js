@@ -460,6 +460,7 @@ window.SF = window.SF || {};
     quick:  { name: 'Quick Match', tab: 'Quick', sub: '3v3 vs bots. Pick your difficulty.', minutes: 8 },
     ranked: { name: 'Ranked', tab: 'Ranked', sub: 'Climb from Bronze to Legend. Bots get tougher as you rise.', minutes: 8 },
     brawl:  { name: 'Shard Brawl', tab: 'Brawl', sub: 'Random hero, start at level 5 with gold, no jungle. Fast fights.', minutes: 5 },
+    raid:   { name: 'Titan Raid', tab: 'Raid', sub: 'You and two allies against the Shard Titan. Dodge the red warnings. Your first clear each week pays gems.', minutes: 4 },
     online: { name: 'Online 3v3', tab: 'Online', sub: 'Real players, bots fill empty slots.', minutes: 8 },
     practice: { name: 'Training Grounds', tab: 'Train', sub: 'Any hero, even ones you don\'t own, against target dummies. No rewards and no pressure.', minutes: 0 }
   };
@@ -479,6 +480,20 @@ window.SF = window.SF || {};
   SF.mutatorOf = wk => {
     const m = /^(\d+)-W(\d+)$/.exec(String(wk)), n = m ? +m[1] * 53 + +m[2] : 0;
     return SF.MUTATORS[n % SF.MUTATORS.length].id;
+  };
+
+  // Titan Raid: a co-op boss fight. You and two bot allies start at level 9 with gold to spend and take
+  // on the Shard Titan in the middle of the map (no towers, minions or jungle). Its big attacks are
+  // telegraphed in red: Shard Slam (circles under heroes), Prism Beam (a line) and, below half health,
+  // Shatter Ring (a ring around it: hug the Titan or get far away). Shardlings join at 75% and 40%.
+  // It enrages at 4:00 and wins at 5:00. `tele` scales how long the warnings show.
+  SF.RAID = {
+    boss: 'Shard Titan', level: 9, gold: 3500, hp: 90000, atk: 200, respawn: 8, enrage: 240, limit: 300,
+    diffs: {
+      normal:    { label: 'Normal',    hp: 1,    dmg: 1.15, cd: 1,    tele: 1,    slam: 2, adds: 3, coins: 220, gems: 10 },
+      hard:      { label: 'Hard',      hp: 1.15, dmg: 1.3,  cd: 0.85, tele: 0.85, slam: 3, adds: 4, coins: 300, gems: 20 },
+      nightmare: { label: 'Nightmare', hp: 1.35, dmg: 1.5,  cd: 0.72, tele: 0.75, slam: 3, adds: 5, coins: 400, gems: 40 }
+    }
   };
 
   SF.BOT_NAMES = ['Valtor', 'Mirelle', 'Quill', 'Ashgrove', 'Tamsin', 'Rook', 'Juniper', 'Okoro', 'Pell', 'Sora', 'Bexley', 'Dax', 'Ilse', 'Marrow', 'Wren', 'Corvin', 'Hollis', 'Nadia', 'Teo', 'Briar', 'Kestrel', 'Lux', 'Moss', 'Ines'];
