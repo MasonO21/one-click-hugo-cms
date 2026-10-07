@@ -64,6 +64,7 @@ window.RK_ART = {
     hall: 'art/buildings/hall.webp',
     storehouse: 'art/buildings/storehouse.webp',
     forge: 'art/buildings/forge.webp',
+    deepspring: 'art/buildings/deepspring.webp',
   },
   event: {
     rainfest: 'art/events/rainfest.webp',
@@ -81,6 +82,7 @@ window.RK_ART = {
     stormkit: 'art/offers/stormkit.webp',
     warchest: 'art/offers/warchest.webp',
     forgekit: 'art/offers/forgekit.webp',
+    tidekit: 'art/offers/tidekit.webp',
     lvpack: 'art/offers/lvpack.webp',
     lvpack2: 'art/offers/lvpack2.webp',
     sg1: 'art/offers/sg1.webp',
@@ -154,6 +156,7 @@ window.RK_ART = {
     'i-star': 'art/ui/star.webp',
     'i-clock': 'art/ui/clock.webp',
     'i-calendar': 'art/ui/calendar.webp',
+    'i-tideglass': 'art/ui/tideglass.webp',
     'i-kite': 'art/ui/kite.webp',
     'i-hammer': 'art/ui/hammer.webp',
     'i-compass': 'art/ui/compass.webp',

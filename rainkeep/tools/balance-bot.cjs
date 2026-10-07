@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -122,6 +122,15 @@ const HOURS = Number(process.argv[3] || 8);
         if (KH.bloom && !NO.includes('bloom') && KH.bloom.unlocked() && KH.bloom.count() < KH.bloom.max) { const c = KH.bloom.costOf(); if (Object.entries(c).every(([k, v]) => S.res[k] >= v * 3)) A.plantnear(); }
         // Cloud Run: three decent flights a day
         if (KH.cloudRun && !NO.includes('cloudrun')) while (KH.cloudRun.unlocked() && KH.cloudRun.left() > 0) { KH.cloudRun.auto(32, 1); while (KH.cloudRun.buyCheapest && KH.cloudRun.buyCheapest()); }
+        // the Deepspring: refine whenever a charge waits, deepen whenever the stores allow; dolphins and
+        // whales take the daily Tideglass Kit, and whales spend spare Starglass on refines once charges run out
+        if (KH.deep && !NO.includes('deep') && KH.deep.unlocked() && S.deep.open) {
+          if (DOLPHIN) buy('tidekit');
+          while (KH.deep.charges() >= 1 && KH.canAfford(KH.deep.refineCost())) A.refine('5');
+          if (WHALE) while (KH.deep.charges() < 1 && S.starglass > 3000 + KH.deep.sgCost() && KH.canAfford(KH.deep.refineCost())) A.refinesg();
+          while (KH.deep.canDeepen()) A.deepen();
+          UI.sheet = null;
+        }
         // Channels: a player who keeps up with the water puzzles, three stars each
         const CHN = KH.channels;
         if (CHN && CHN.unlocked() && !NO.includes('channels')) {
@@ -237,7 +246,8 @@ const HOURS = Number(process.argv[3] || 8);
       if (step % 360 === 0) { const tm = KH.teamStats(null, { heroes: S.squad.filter((id) => S.heroes[id]) }); team_log.push([Math.round(S.time / 60), S.lv.wyrm, S.stage, Math.round(tm.atk), Math.round(tm.def), Math.round(tm.hp)]); }
       const k3 = 'spire' + Math.floor((S.spire.floor - 1) / 10) * 10; if (S.spire.floor > 1 && !ms[k3]) ms[k3] = Math.round(S.time / 60);
       for (const rk of [500, 300, 100, 25, 1]) if (S.duels.best <= rk && !ms['duel' + rk]) ms['duel' + rk] = Math.round(S.time / 60);
-      if (step % 360 === 0) log.push(`t=${Math.round(S.time / 60)}m H${S.lv.wyrm} st${S.stage} sp${S.spire.floor - 1} du${S.duels.rank} gear${Object.values(S.gear).reduce((a, b) => a + b, 0)} ss${S.sunsteel} forge${S.lv.forge} pop${S.pop} heroes${Object.keys(S.heroes).length} stars${Object.values(S.heroes).reduce((a, h) => a + h.stars, 0)} lvls[${S.squad.map((id) => S.heroes[id].lvl).join(',')}] troops${KH.troopsAll()} pop${S.pop}/${KH.housing()} wnet${Math.round(KH.rates(false).net.water*60)} res=${['stone', 'food', 'water', 'copper'].map((r) => Math.round(S.res[r])).join('/')} sg${S.starglass} bc${S.beacons} jr${S.journals} q${S.quest} pass${KH.passTier()} ktech${Object.values(S.caravan.tech).reduce((a, b) => a + b, 0)} kpts${S.caravan.points} ev${Math.round(S.ev.pts)} ach${S.ach.claimed.length} gath${S.stats.gathers} beasts${S.stats.beasts} ruins${S.stats.ruins} camps${S.stats.camps} raids${S.stats.raidsRepelled}/${S.stats.raidKills} war${S.stats.warWins} next=${(() => { if (S.lv.wyrm >= D.wyrm.maxLevel) return 'max'; const blk = KH.upgradeBlock('wyrm'); if (blk) return blk.replace(/ /g, '_'); const c = KH.buildCost('wyrm', S.lv.wyrm + 1); const short = Object.entries(c).filter(([k, v]) => (S.res[k] ?? 0) < v).map(([k, v]) => k + Math.round(100 * (S.res[k] ?? 0) / v) + '%'); return S.builds.some((b) => b.plot === 'wyrm') ? 'building' : short.length ? 'short:' + short.join(',') : 'affordable'; })()}`);
+      if (S.deep && [1, 5, 10, 15, 20, 25, 30].includes(S.deep.lv) && !ms['DS' + S.deep.lv]) ms['DS' + S.deep.lv] = Math.round(S.time / 60);
+      if (step % 360 === 0) log.push(`t=${Math.round(S.time / 60)}m H${S.lv.wyrm} st${S.stage} sp${S.spire.floor - 1} du${S.duels.rank} gear${Object.values(S.gear).reduce((a, b) => a + b, 0)} ss${S.sunsteel} forge${S.lv.forge} pop${S.pop} heroes${Object.keys(S.heroes).length} stars${Object.values(S.heroes).reduce((a, h) => a + h.stars, 0)} lvls[${S.squad.map((id) => S.heroes[id].lvl).join(',')}] troops${KH.troopsAll()} pop${S.pop}/${KH.housing()} wnet${Math.round(KH.rates(false).net.water*60)} res=${['stone', 'food', 'water', 'copper'].map((r) => Math.round(S.res[r])).join('/')} sg${S.starglass} bc${S.beacons} jr${S.journals} q${S.quest} pass${KH.passTier()} ktech${Object.values(S.caravan.tech).reduce((a, b) => a + b, 0)} kpts${S.caravan.points} ev${Math.round(S.ev.pts)} ach${S.ach.claimed.length} gath${S.stats.gathers} beasts${S.stats.beasts} ruins${S.stats.ruins} camps${S.stats.camps} raids${S.stats.raidsRepelled}/${S.stats.raidKills} war${S.stats.warWins} ds${S.deep ? S.deep.lv : 0}/tg${S.tideglass || 0} next=${(() => { if (S.lv.wyrm >= D.wyrm.maxLevel) return 'max'; const blk = KH.upgradeBlock('wyrm'); if (blk) return blk.replace(/ /g, '_'); const c = KH.buildCost('wyrm', S.lv.wyrm + 1); const short = Object.entries(c).filter(([k, v]) => (S.res[k] ?? 0) < v).map(([k, v]) => k + Math.round(100 * (S.res[k] ?? 0) / v) + '%'); return S.builds.some((b) => b.plot === 'wyrm') ? 'building' : short.length ? 'short:' + short.join(',') : 'affordable'; })()}`);
     }
     return { SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
   }, { MODE, HOURS });

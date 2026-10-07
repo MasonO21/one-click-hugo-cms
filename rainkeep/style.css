@@ -870,3 +870,14 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .pui #sheet::before { left: 3px; }
 .pui #sheet::after { right: 3px; transform: scaleX(-1); }
 .pui #sheet > * { position: relative; z-index: 1; }
+
+/* ---------- The Deepspring (deepspring.js) ---------- */
+.deep-head { border-color: #4fd8c866; background: var(--lattice), linear-gradient(#163838, #1b1329 75%); }
+.deep-rank { color: #7ff0e0; font-family: var(--font-display); font-size: 18px; font-weight: 400; }
+.deep-have { font-size: 16px; color: #c8fff6; }
+.deep-have .ic { width: 22px; height: 22px; }
+.deep-charges { font-size: 14px; color: var(--rime); white-space: nowrap; }
+.deep-charges b { font-size: 22px; color: #7ff0e0; }
+.deep-ms.done { border-color: #4fd8c888; background: #12302e; }
+.deep-ms.done > .ic { color: #7ff0e0; }
+.deep-refine .row .btn { flex: 1; }

@@ -125,7 +125,7 @@
   }
   T3.groundAt = groundAt;
 
-  let renderer, scene, cam, sun, hemi, sky, terrain, wyrm, mist, dust, fx, bondFx, aura, cloud, rain, bolt, skyriver, nextBolt = 0;
+  let renderer, scene, cam, sun, hemi, sky, terrain, wyrm, mist, dust, fx, bondFx, aura, cloud, rain, bolt, skyriver, deepGlow, deepFx, nextBolt = 0;
   let VW = 0, VH = 0, DPR = 1, fitD = 60;
   const plots = {};
   const props = [];
@@ -188,6 +188,10 @@
     bondFx = A.particles(28, { color: '#ffb6dc', additive: true });
     bondFx.visible = false;
     scene.add(bondFx);
+    // the Deepspring (deepspring.js): light welling up through the pool, and motes rising from it
+    deepFx = A.particles(48, { color: '#8ffff0', additive: true });
+    deepFx.visible = false;
+    scene.add(deepFx);
     for (const p of DATA.plots) {
       const l = K.plots[p.id];
       const g = new THREE.Group();
@@ -762,6 +766,10 @@
     aura.position.set(SPRING.x, SPRING.y + 0.32, SPRING.z);
     aura.visible = false;
     scene.add(aura);
+    deepGlow = new THREE.Mesh(new THREE.CircleGeometry(3.25, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#3ff0dc', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    deepGlow.position.set(SPRING.x, SPRING.y + 0.03, SPRING.z);
+    deepGlow.visible = false;
+    scene.add(deepGlow);
     // the Primordial wyrm's own little rain cloud
     cloud = new THREE.Group();
     // its own material, so the Stormcrowned wyrm's lightning can light it from inside
@@ -1506,6 +1514,20 @@
     bolt.visible = flashK > 0;
     bolt.material.opacity = flashK;
     cloud.userData.mat.emissiveIntensity = storm ? 0.15 + flashK * 1.2 + 0.1 * Math.max(0, Math.sin(t * 5.3) * Math.sin(t * 1.1)) : 0;
+    // the Deepspring glows brighter with each Springsong rank; from the second, motes rise from the pool
+    const dr = KH.deep && KH.deep.level() ? 1 + KH.deep.rank() : 0;
+    deepGlow.visible = dr > 0 && !S.dormant;
+    if (deepGlow.visible) deepGlow.material.opacity = (0.06 + 0.035 * dr) * (0.8 + 0.2 * Math.sin(t * 1.6));
+    deepFx.visible = dr >= 3 && !S.dormant;
+    if (deepFx.visible) {
+      const n = Math.min(48, 8 * (dr - 1));
+      deepFx.userData.list.forEach((p, i) => {
+        if (i >= n) { p.life = 0; return; }
+        const ph = (t * 0.3 + i * 0.618) % 1, a = i * 2.4 + t * 0.15, rr = 0.5 + ((i * 0.37) % 1) * 2.5;
+        Object.assign(p, { x: SPRING.x + Math.cos(a) * rr, y: SPRING.y + 0.1 + ph * 3.4, z: SPRING.z + Math.sin(a) * rr, s: 1.4 + 0.5 * Math.sin(i * 1.7), a: 0.85, life: 1, age: ph });
+      });
+      deepFx.userData.flush();
+    }
     skyriver.visible = wyrm.stage >= 8 && !S.dormant;
     if (skyriver.visible) { skyriver.rotation.y = t * 0.25; skyriver.material.emissiveIntensity = 0.45 + 0.15 * Math.sin(t * 1.7); }
     for (const p of DATA.plots) { const b = plots[p.id].model && plots[p.id].model.userData.b; if (b) b.userData.update(t, T3.wind); }

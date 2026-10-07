@@ -330,7 +330,8 @@
     const d = HERO[id], k = skillScale(id);
     return d.skill.desc.replace(/\{(\w+)\}/g, (_, key) => `${Math.round(d.skill.fx[key] * k * 100)}%`);
   }
-  const heroCap = (id) => DATA.heroLevelCapPerStar * S.heroes[id].stars + DATA.heroCapPerWyrm * Math.max(0, S.lv.wyrm - 9);
+  // stars, Rainwyrm levels past 9 and the Deepspring's Springsong ranks (deepspring.js) each raise it
+  const heroCap = (id) => DATA.heroLevelCapPerStar * S.heroes[id].stars + DATA.heroCapPerWyrm * Math.max(0, S.lv.wyrm - 9) + KH.bonus('heroCap');
   const statPower = (s) => Math.round(s.atk * 2 + s.def * 2 + s.hp / 5);
   const heroPower = (id) => statPower(heroStats(id));
   function unitPower(type) {
@@ -412,6 +413,7 @@
     if (n > DATA.actTwoStage) {
       const r = { starglass: boss ? 120 : 25, journals: 25 + Math.round(n / 2), stone: 60 * n, food: 40 * n, copper: 10 * n, sunsteel: boss ? 60 : 15 };
       if (boss && n <= DATA.finalStage) r.beacons = 2;
+      if (n > DATA.finalStage) r.tideglass = boss ? DATA.deepspring.farSouth.boss : DATA.deepspring.farSouth.stage;
       return r;
     }
     if (n > DATA.actOneStage) {
@@ -567,7 +569,7 @@
   function grant(g) {
     for (const [k, v] of Object.entries(g)) {
       if (k in S.res) S.res[k] += v;
-      else if (k === 'starglass' || k === 'beacons' || k === 'journals' || k === 'sunsteel' || k === 'glory') S[k] += v;
+      else if (k === 'starglass' || k === 'beacons' || k === 'journals' || k === 'sunsteel' || k === 'glory' || k === 'tideglass') S[k] = (S[k] || 0) + v;
       else if (k in DATA.items) S.items[k] = (S.items[k] || 0) + v;
       else if (k === 'builder2') S.builders = Math.max(S.builders, 2);
       else if (k === 'stipend') S.stipend.left += v;
@@ -982,7 +984,7 @@
   ACT.lvl = (arg) => {
     const [id, mode] = arg.split(':');
     const h = S.heroes[id], cap = heroCap(id);
-    if (h.lvl >= cap) return toast(h.stars >= DATA.heroMaxStars ? 'Level cap reached. Each Rainwyrm level past 9 raises it.' : 'Level cap reached. Add a star to raise it.', 'warn');
+    if (h.lvl >= cap) return toast(h.stars < DATA.heroMaxStars ? 'Level cap reached. Add a star to raise it.' : S.lv.wyrm >= DATA.wyrm.maxLevel ? 'Level cap reached. Each Springsong rank of the Deepspring raises it.' : 'Level cap reached. Each Rainwyrm level past 9 raises it.', 'warn');
     let n = 0;
     do {
       const c = 2 * h.lvl;
@@ -1139,6 +1141,7 @@
     if (item.once && S.bought[id]) return 'Already purchased.';
     if (item.daily && S.boughtDay[id] === today()) return 'Already bought today. Back tomorrow.';
     if (item.needs && !S.lv[item.needs]) return `Build the ${DATA.buildings[PLOT[item.needs].type].name} first.`;
+    if (item.needsWyrm && S.lv.wyrm < item.needsWyrm) return `Opens at Rainwyrm Lv ${item.needsWyrm}.`;
     if (id === 'ledger' && S.pass.premium) return 'Premium is already active this season.';
     if (item.levelPack) {
       if (!levelPackOpen()) return S.lvPack && S.lvPack.lvl ? 'This Growth Pack has ended. New ones open at your next Rainwyrm level.' : `Growth Packs go on sale each time your Rainwyrm levels up, from Lv ${DATA.levelPacks.from}.`;

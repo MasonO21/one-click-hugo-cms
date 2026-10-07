@@ -243,6 +243,7 @@
     if (r.killed) {
       S.stats.raidKills++;
       for (const [k, v] of Object.entries(KH.scaleReward(K.raidKillReward))) reward[k] = (reward[k] || 0) + v;
+      if (KH.deep && KH.deep.open()) reward.tideglass = (reward.tideglass || 0) + DATA.deepspring.raidKill;
     }
     KH.mail(`Colossus raid: ${r.killed ? 'the Shade fell' : 'the Shade escaped'}`, `You placed ${rank} of ${board.length} with ${fmt(r.mine)} damage.`, reward);
   }

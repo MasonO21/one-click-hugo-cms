@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.5.0',
+  version: '4.6.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -634,6 +634,11 @@ const DATA = {
     { text: 'Finish 3 Hero Tales', go: 'tab:roster', check: (S) => (S.stats.talesDone || 0) >= 3, reward: { starglass: 1500, shard_epic: 2 } },
     { text: 'Free Sahab from the Ash Cocoon (stage 140)', go: 'tab:expedition', check: (S) => S.stage > 140, reward: { starglass: 2000, sunsteel: 1500 } },
     { text: 'Wake the Mother of Rains (stage 150)', go: 'tab:expedition', check: (S) => S.stage > 150, reward: { starglass: 3000, shard_legendary: 1 } },
+    // the Deepspring, from Rainwyrm Lv 20
+    { text: 'Refine Tideglass at the Deepspring (Rainwyrm Lv 20)', go: 'sheet:deepspring', check: (S) => (S.stats.refines || 0) >= 1, reward: { tideglass: 10 } },
+    { text: 'Deepen the Deepspring to Lv 3', go: 'sheet:deepspring', check: (S) => !!S.deep && S.deep.lv >= 3, reward: { starglass: 1500 } },
+    { text: 'Reach Springsong I: Deepspring Lv 5', go: 'sheet:deepspring', check: (S) => !!S.deep && S.deep.lv >= 5, reward: { tideglass: 20, shard_legendary: 1 } },
+    { text: 'Push 10 stages into the Far South (stage 160)', go: 'tab:expedition', check: (S) => S.stage > 160, reward: { tideglass: 30, starglass: 1000 } },
   ],
   questPassXp: 60,
 
@@ -737,6 +742,9 @@ const DATA = {
     { id: 'forgekit', name: 'Forge Kit', usd: 4.99, daily: true, tag: 'Daily', needs: 'forge',
       grants: { sunsteel: 600, crate_copper: 3, speed15: 2 },
       desc: "600 Sunsteel, three copper crates and two 15-minute speedups for the Warden's Gear. Once per day, after you build the Forge." },
+    { id: 'tidekit', name: 'Tideglass Kit', usd: 4.99, daily: true, tag: 'Daily', needsWyrm: 20,
+      grants: { tideglass: 60, crate_copper: 3, speed60: 1 },
+      desc: 'Sixty Tideglass for the Deepspring, three copper crates and a 60-minute speedup. Once per day, from Rainwyrm Lv 20.' },
     // Growth Packs: on sale for a few hours after each Rainwyrm level-up, once per level. `lvpack` is the share
     // of the next level's resources (the wyrm plus each building it needs), counted when the pack opens.
     { id: 'lvpack', name: 'Growth Pack', usd: 4.99, tag: 'Limited', levelPack: true,
@@ -810,6 +818,7 @@ const DATA = {
       else if (f % 20 === 0) r.shard_epic = 1;
       else if (f % 10 === 0) r.beacons = 2;
       else if (f % 5 === 0) r.beacons = 1;
+      if (f > 100) r.tideglass = f % 10 === 0 ? 8 : 1; // the Deepspring's crystal, past floor 100
       return r;
     },
   },
@@ -997,6 +1006,39 @@ const DATA = {
   },
 
   // ---------- Cloud Run: the Rainwyrm flies out to herd rain clouds home ----------
+  // ---------- The Deepspring (endgame, from Rainwyrm Lv 20) ----------
+  // Older water under the wyrm's pool. Tideglass (refined from water and copper, or won in the Far
+  // South, high in the Mirage Spire and from Colossus raids) deepens it through 30 levels; base
+  // resources are the other half of each level, so the stores a finished keep piles up have a use.
+  deepspring: {
+    unlock: 20, // Rainwyrm level
+    max: 30,
+    glass: (L) => Math.round(8 * Math.pow(1.1, L - 1)), // Tideglass to reach level L (1,316 for all 30)
+    res: (L) => {
+      const g = 1 + 0.12 * (L - 1);
+      return { stone: Math.round(600000 * g), water: Math.round(420000 * g), food: Math.round(260000 * g), copper: Math.round(90000 * g) };
+    },
+    troop: 0.02, prod: 0.02, // troop strength and production per level
+    // every fifth level is a Springsong rank: every hero's level cap rises, plus a perk
+    ranks: [
+      { at: 5, name: 'Springsong I', perk: 'Gathering on the Dunes +10%', bonus: { heroCap: 5, gather: 0.1 } },
+      { at: 10, name: 'Springsong II', perk: "Wyrm's Torrent +20%", bonus: { heroCap: 5, breath: 0.2 } },
+      { at: 15, name: 'Springsong III', perk: 'The keep works 2 more hours while you are away', bonus: { heroCap: 5, offlineCap: 7200 } },
+      { at: 20, name: 'Springsong IV', perk: 'Squad attack +5%', bonus: { heroCap: 5, teamAtk: 0.05 } },
+      { at: 25, name: 'Springsong V', perk: 'Call the Rain recharges 15% faster', bonus: { heroCap: 5, rainCd: 0.15 } },
+      { at: 30, name: 'Keeper of the Deepspring', perk: 'Squad attack +5% more', bonus: { heroCap: 5, teamAtk: 0.05 } },
+    ],
+    refine: {
+      every: 1200, cap: 12, // a refine charge every 20 minutes of keep time, up to 12 waiting
+      cost: { water: 16, copper: 10 }, // quarter-crates of the keep's size, per refine
+      yield: [[1, 0.5], [2, 0.35], [3, 0.12], [5, 0.03]], // Tideglass per refine and its chance: 1.71 on average
+      starglass: 60, starglassStep: 15, // a refine bought with Starglass when no charge waits; each more that day costs 15 more
+    },
+    farSouth: { stage: 1, boss: 10 }, // Tideglass for each Far South stage and each of its bosses
+    raidKill: 1, // for each fallen Colossus, once the spring is open
+    welcome: 20, // waiting in the mail when it opens
+  },
+
   cloudRun: {
     unlock: 5, // Rainwyrm level (a Drake can fly)
     perDay: 3, // flights a day
@@ -1091,6 +1133,11 @@ const DATA = {
     { id: 'scene20', text: 'Watch 20 story scenes', stat: 'scenes', n: 20, reward: { starglass: 200 } },
     { id: 'bloom10', text: 'Grow 10 oases on the Dunes', stat: 'oases', n: 10, reward: { starglass: 300 } },
     { id: 'bloom30', text: 'Turn the Dunes green: 30 oases', stat: 'oases', n: 30, reward: { shard_legendary: 1 } },
+    { id: 'deep5', text: 'Reach Springsong I in the Deepspring', stat: 'deepLv', n: 5, reward: { starglass: 500 } },
+    { id: 'deep15', text: 'Reach Springsong III in the Deepspring', stat: 'deepLv', n: 15, reward: { shard_legendary: 1 } },
+    { id: 'deep30', text: 'Become Keeper of the Deepspring', stat: 'deepLv', n: 30, reward: { starglass: 3000 } },
+    { id: 'refine100', text: 'Refine Tideglass 100 times', stat: 'refines', n: 100, reward: { beacons: 5 } },
+    { id: 'far20', text: 'Push 20 stages into the Far South', stat: 'stages', n: 170, reward: { tideglass: 50 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

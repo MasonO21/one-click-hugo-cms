@@ -201,7 +201,7 @@
       title: 'Your stores', lvl: '',
       body: `<div class="card stack">${RES.map((r) => row(r, S.res[r], R.net[r], r === 'water' ? `${esc(S.wyrm.name)} and ${fmt(S.pop)} survivors drink from it` : r === 'copper' && !S.lv.mine ? 'Build the Copper Mine' : '')).join('')}</div>
         ${prot ? `<p class="muted small">The Storehouse keeps ${fmt(prot)} of each safe from raiders.</p>` : ''}
-        <div class="card stack">${row('starglass', S.starglass, null)}${row('beacons', S.beacons, null)}${row('journals', S.journals, null)}${S.lv.forge || S.sunsteel ? row('sunsteel', S.sunsteel, null) : ''}</div>
+        <div class="card stack">${row('starglass', S.starglass, null)}${row('beacons', S.beacons, null)}${row('journals', S.journals, null)}${S.lv.forge || S.sunsteel ? row('sunsteel', S.sunsteel, null) : ''}${S.tideglass || S.lv.wyrm >= DATA.deepspring.unlock ? row('tideglass', S.tideglass || 0, null) : ''}</div>
         <dl class="kv"><dt>Squad power</dt><dd>${fmt(KH.power())}</dd><dt>Survivors</dt><dd>${S.pop}/${KH.housing()}${S.sick ? ` (${S.sick} sick)` : ''}</dd></dl>`,
     };
   }
@@ -334,7 +334,7 @@
   function panelShop() {
     const packs = KH.levelPackOpen() ? DATA.shop.filter((x) => x.levelPack) : [];
     if (packs.length) S.lvPack.seen = true;
-    const offers = [...packs, ...DATA.shop.filter((x) => !x.id.startsWith('sg') && !x.levelPack && (!x.needs || S.lv[x.needs]))];
+    const offers = [...packs, ...DATA.shop.filter((x) => !x.id.startsWith('sg') && !x.levelPack && (!x.needs || S.lv[x.needs]) && (!x.needsWyrm || S.lv.wyrm >= x.needsWyrm))];
     const offerArt = (id) => (KH.art.painted('offer', id) ? `<div class="offer-art art-o-${id}"></div>` : '');
     const offer = (o) => {
       if (o.levelPack) {
