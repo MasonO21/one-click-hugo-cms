@@ -1,10 +1,10 @@
 // Shared helpers for the meta UI: countdown markup, reward-bundle visuals, hero portraits and small widgets.
 import { fmt, fmtTime, rewardPopup } from '../dom.js';
-import { icon, RELIC_ICON } from '../icons.js';
+import { icon } from '../icons.js';
 import { HEROES, RARITY_COLOR, RARITY_LABEL, RELICS, SKINS, ENERGY_MAX, ENERGY_REGEN_SEC } from '../../game/data.js';
 import { energyNextIn } from '../../meta/economy.js';
 import { now as clockNow } from '../../meta/clock.js';
-import { HERO_ART, SKIN_ART } from '../art.js';
+import { HERO_ART, SKIN_ART, relicArt } from '../art.js';
 
 export const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
 export const clamp01 = (x) => Math.max(0, Math.min(1, x));
@@ -147,7 +147,7 @@ export function itemVisual(it) {
     }
     case 'relic': {
       const c = RARITY_COLOR[it.rarity];
-      return { ic: `<span class="ic-tint" style="color:${c}">${icon(RELIC_ICON[it.relic.type])}</span>`, amt: RARITY_LABEL[it.rarity], name: RELICS[it.relic.type].name, color: c };
+      return { ic: relicArt(it.relic.type), amt: RARITY_LABEL[it.rarity], name: RELICS[it.relic.type].name, color: c };
     }
     case 'skin':
       return { ic: `<span class="ic-tint" style="color:#ffd04a">${icon('crown')}</span>`, amt: 'Skin', name: SKINS[it.skin]?.name || 'Skin', color: '#ffd04a' };

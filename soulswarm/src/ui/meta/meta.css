@@ -536,6 +536,14 @@
 @keyframes m-relicGlow { 50% { box-shadow: inset 0 0 0 2px var(--rc), inset 0 0 28px color-mix(in srgb, var(--rc) 65%, transparent); } }
 .relic-lg { width: 68px; }
 .relic-lg .relic-ic svg { width: 36px; height: 36px; }
+/* painted relic icons: the dark square backdrop fades into the frame */
+.relic-art { display: block; object-fit: contain; -webkit-mask: radial-gradient(circle, #000 54%, transparent 71%); mask: radial-gradient(circle, #000 54%, transparent 71%); }
+.relic .relic-art { position: absolute; left: 7%; top: 2%; width: 86%; height: 86%; }
+.rd-ic .relic-art { width: 124px; height: 124px; }
+.rv-ic .relic-art { width: 48px; height: 48px; margin: -4px 0; }
+.rv-single .rv-ic .relic-art { width: 120px; height: 120px; margin: -10px 0; }
+.rchip .relic-art { width: 26px; height: 26px; margin: -3px -1px; }
+.rchip-lg .relic-art { width: 36px; height: 36px; }
 .relic-tot { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 12px; font-size: 12px; }
 .relic-tot .pill { color: var(--soul-2); background: rgba(124,255,212,.1); }
 .relic-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }

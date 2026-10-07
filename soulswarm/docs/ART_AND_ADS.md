@@ -15,6 +15,14 @@ Generated with Higgsfield on 2026-10-06. The full-resolution masters are in `sto
 | `hero-mordrake.jpg` | 1792×2400 | Nano Banana Pro | Mordrake's hero card | `046be80a-f562-4eed-8802-d16db05fa70f` |
 | `hero-liora.jpg` | 1792×2400 | Nano Banana Pro | Liora's hero card (5th hero, Epic) | `0f2133d3-a67a-4317-9948-98231363c867` |
 | `skin-eclipse-vael.jpg` | 1792×2400 | Nano Banana Pro (Vael's splash as the reference) | Eclipse Vael, the Soul Pass skin: the premium card and Vael's portrait while the skin is equipped | `1f5e90b9-5d57-40d0-b258-376619880bab` |
+| `relic-lantern.jpg` | 2048×2048 | Nano Banana Pro (the poster as the style reference) | Lantern of the Lost icon; the style master for the other seven relic icons | `e80af38f-e5e2-4329-822d-265761ac8a88` |
+| `relic-crown.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Crown of Thorns icon | `a18fb124-9abf-42c1-b04a-168889c22483` |
+| `relic-idol.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Bone Idol icon | `1ed13b8d-a77b-4445-a985-849f3c457dfe` |
+| `relic-heart.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Ember Heart icon | `efb56fa7-e8fd-4dc2-8af3-c851dedc767a` |
+| `relic-boots.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Wraith Boots icon | `2fa15a6a-0497-4fff-9e36-95ffcdbe35ad` |
+| `relic-coin.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Grave Coin icon | `fbbe1faf-ae7b-4a92-ad28-d3b07af604bd` |
+| `relic-hourglass.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Hourglass of Ash icon | `c38905c6-eea5-440c-a700-d34a7f41f903` |
+| `relic-eye.jpg` | 2048×2048 | Nano Banana Pro (the lantern as the reference) | Abyss Eye icon | `cbf4a9c0-d7ea-4d5a-b45d-98e040a1e9e5` |
 | `boss-gravemaw.jpg` | 1792×2400 | Nano Banana Pro | "The Hollow King approaches" boss warning, boss reveal ad clip | `6899f0c9-8b53-4ca4-b052-df4279d237bb` |
 | `logo-transparent.png` | 2048×1360, alpha | GPT Image 2.5 | Boot screen, settings credits, ad end cards, store listing | `3cf6edf7-20d5-4d80-ac09-fd57074e79a9` |
 

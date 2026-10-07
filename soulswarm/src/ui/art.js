@@ -9,9 +9,23 @@ import liora from '../assets/art/hero-liora.webp';
 export { default as LOGO_ART } from '../assets/art/logo.webp';
 export { default as BOSS_ART } from '../assets/art/boss-band.webp';
 import eclipseVael from '../assets/art/skin-eclipse-vael.webp';
+import rLantern from '../assets/art/relic-lantern.webp';
+import rCrown from '../assets/art/relic-crown.webp';
+import rIdol from '../assets/art/relic-idol.webp';
+import rHeart from '../assets/art/relic-heart.webp';
+import rBoots from '../assets/art/relic-boots.webp';
+import rCoin from '../assets/art/relic-coin.webp';
+import rHourglass from '../assets/art/relic-hourglass.webp';
+import rEye from '../assets/art/relic-eye.webp';
+import { icon, RELIC_ICON } from './icons.js';
 
 /** Painted skin splashes by skin id (shown instead of the hero's splash while the skin is equipped). */
 export const SKIN_ART = { eclipse_vael: eclipseVael };
 
 /** Painted hero splashes by hero id. */
 export const HERO_ART = { vael, nyx, seraphine, mordrake, liora };
+
+/** Painted relic icons by relic type. */
+export const RELIC_ART = { lantern: rLantern, crown: rCrown, idol: rIdol, heart: rHeart, boots: rBoots, coin: rCoin, hourglass: rHourglass, eye: rEye };
+/** A relic's painted icon (its dark backdrop fades into whatever frame holds it), or the line icon for an unknown type. */
+export const relicArt = (type) => (RELIC_ART[type] ? `<img class="relic-art" src="${RELIC_ART[type]}" alt="" draggable="false">` : icon(RELIC_ICON[type] || 'chest'));

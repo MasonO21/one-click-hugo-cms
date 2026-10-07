@@ -1,6 +1,7 @@
 // Heroes tab with three sub-tabs: Heroes (roster + detail), Relics (gear) and Talents (gold sink).
 import { h, $, fmt, toast, modal } from '../dom.js';
-import { icon, RELIC_ICON } from '../icons.js';
+import { icon } from '../icons.js';
+import { relicArt } from '../art.js';
 import {
   HEROES, HERO_ORDER, HERO_MAX_STARS, SKILLS, RARITY_COLOR, RARITY_LABEL, RARITIES, RELICS, RELIC_SLOTS,
   relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES,
@@ -170,7 +171,7 @@ export function createHeroes(ctx) {
     const c = RARITY_COLOR[r.rarity];
     const eq = p.equipped.includes(r.uid);
     return `<button class="relic r-${r.rarity} ${cls} ${eq ? 'is-eq' : ''}" data-act="relic" data-uid="${r.uid}" style="--rc:${c}">
-      <span class="relic-ic">${icon(RELIC_ICON[r.type])}</span>
+      <span class="relic-ic">${relicArt(r.type)}</span>
       <span class="relic-lv tnum">Lv ${r.level || 1}</span>
       ${eq ? `<span class="relic-eq">${icon('check')}</span>` : ''}
     </button>`;
@@ -204,7 +205,7 @@ export function createHeroes(ctx) {
       const replaced = full ? p.relics.find((x) => x.uid === p.equipped[RELIC_SLOTS - 1]) : null;
       const next = { ...r, level: Math.min(10, (r.level || 1) + 1) };
       body.innerHTML = `
-        <div class="rd-art" style="--rc:${c}"><span class="rd-ic">${icon(RELIC_ICON[r.type])}</span></div>
+        <div class="rd-art" style="--rc:${c}"><span class="rd-ic">${relicArt(r.type)}</span></div>
         <div class="rd-name t-display">${d.name}</div>
         <div class="hd-tags">${rarityPill(r.rarity)}<span class="pill tnum">Lv ${r.level || 1}/10</span></div>
         <div class="rd-val" style="--rc:${c}">${formatRelicValue(r)}</div>

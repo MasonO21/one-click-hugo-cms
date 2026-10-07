@@ -1,5 +1,6 @@
 // Shared DOM helpers: element creation, modals, toasts, reward popups and the purchase flow.
-import { icon, RELIC_ICON } from './icons.js';
+import { icon } from './icons.js';
+import { relicArt } from './art.js';
 import { HEROES, RELICS, RARITY_COLOR, RARITY_LABEL, SKUS, SKINS, formatRelicValue } from '../game/data.js';
 import { Store } from '../meta/store.js';
 import { applyPurchase, commit, firstPurchaseBonus } from '../meta/economy.js';
@@ -76,7 +77,7 @@ export function rewardTile(it, i = 0) {
       color = HEROES[it.hero].css; break;
     case 'relic':
       color = RARITY_COLOR[it.rarity];
-      ic = `<span style="color:${color}">${icon(RELIC_ICON[it.relic.type])}</span>`;
+      ic = relicArt(it.relic.type);
       label = RELICS[it.relic.type].name; sub = `${RARITY_LABEL[it.rarity]}${it.merged ? ' · Lv ' + it.relic.level : ''}`; break;
     case 'skin':
       ic = `<span style="color:#ffd04a">${icon('crown')}</span>`; label = SKINS[it.skin].name; sub = 'Exclusive skin'; color = '#ffd04a'; break;
@@ -159,6 +160,7 @@ const css = `
   background: radial-gradient(80% 70% at 50% 30%, color-mix(in srgb, var(--rw) 28%, transparent), rgba(255,255,255,.03));
   clip-path: var(--bevel-sm); animation: rwpop .45s cubic-bezier(.2,1.6,.4,1) both; }
 .rw-tile .rw-ic svg { width:40px; height:40px; filter: drop-shadow(0 0 8px var(--rw)); }
+.rw-tile .rw-ic .relic-art { width:56px; height:56px; margin:-8px 0; }
 .rw-tile b { font-size:15px; color: var(--rw); }
 .rw-tile small { font-size:10px; color: var(--ink-dim); letter-spacing:.06em; text-transform:uppercase; }
 @keyframes rwpop { from { opacity:0; transform: scale(.4) translateY(10px); } }
