@@ -26,11 +26,17 @@ describe('shading model', () => {
     expect(full.fragmentShader.indexOf('uRim *')).toBeGreaterThan(full.fragmentShader.indexOf('#include <lights_fragment_end>'));
     // the grade desaturates only the indirect (sky / ambient) light: point-light pools and the moon keep their colour
     expect(full.fragmentShader).not.toContain('vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;');
-    const graded = full.fragmentShader.slice(full.fragmentShader.indexOf('vec3 outgoingLight'), full.fragmentShader.indexOf('#include <envmap_fragment>'));
+    const graded = full.fragmentShader.slice(full.fragmentShader.indexOf('vec3 novaLit'), full.fragmentShader.indexOf('#include <envmap_fragment>'));
+    expect(graded).toContain('vec3 outgoingLight');
     expect(graded).toContain('reflectedLight.directDiffuse +');
     expect(graded).toContain('mix( reflectedLight.indirectDiffuse');
     expect(graded).toContain('uDesat');
-    expect(graded).toContain('totalEmissiveRadiance');
+    // the daytime saturation grade wraps the whole lit result, clamped at 0, before emissive is added
+    expect(graded).toContain('uSat');
+    expect(graded).toContain('max( vec3( 0.0 )');
+    expect(graded.indexOf('uSat')).toBeLessThan(graded.indexOf('totalEmissiveRadiance'));
+    expect(full.fragmentShader).toContain('uniform float uSat');
+    expect(full.uniforms.uSat).toBe(mats.lambert.sat);
     expect(full.uniforms.uRim).toBe(mats.lambert.rim);
     expect(full.uniforms.uDesat).toBe(mats.lambert.desat);
 
@@ -56,6 +62,12 @@ describe('shading model', () => {
     expect(mats.lambert.rim.value.b).toBeCloseTo(0.4);
     mats.setRim(sky, -1);
     expect(mats.lambert.rim.value.b).toBe(0);
+    // day saturation: as painted by default, raised under a high sun, never negative
+    expect(mats.lambert.sat.value).toBe(1);
+    mats.setSaturation(1.16);
+    expect(mats.lambert.sat.value).toBeCloseTo(1.16);
+    mats.setSaturation(-2);
+    expect(mats.lambert.sat.value).toBe(0);
     // the shared lit material compiles the patch in (not just the terrain)
     expect(mats.lit.customProgramCacheKey()).toContain('nova-slot-lit');
   });

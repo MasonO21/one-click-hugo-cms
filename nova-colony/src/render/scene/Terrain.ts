@@ -31,10 +31,10 @@ const WEAR_REACH_PIECE = 1.0;
  * darkening right at the footprint grounds buildings that would otherwise float on the grass.
  */
 const CONTACT_SHADE = 0.2;
-/** Ground grade on top of the biome data: a little less saturated and a touch warmer / darker. */
-const GROUND_DESAT = 0.12;
-const GROUND_TINT = new THREE.Color(1.04, 1.0, 0.9);
-const GROUND_VALUE = 0.94;
+/** Ground grade on top of the biome data: a touch less saturated and warmer (the sun does the rest). */
+const GROUND_DESAT = 0.05;
+const GROUND_TINT = new THREE.Color(1.03, 1.01, 0.92);
+const GROUND_VALUE = 1.0;
 
 const WATER_VERT = /* glsl */ `
   #include <fog_pars_vertex>

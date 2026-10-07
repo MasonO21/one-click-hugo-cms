@@ -73,19 +73,27 @@ const RIM_FRAG = /* glsl */ `
 }
 `;
 
-/** three's lit-sum line in meshlambert.glsl, replaced so only the indirect (sky / ambient) light is graded. */
+/**
+ * three's lit-sum line in meshlambert.glsl, replaced by the grade: the indirect (sky / ambient) light
+ * is desaturated by `uDesat` (night), then the whole lit result is saturated by `uSat` (sunny
+ * daytime, > 1 extrapolates away from luminance, clamped at 0). Emissive is added afterwards, untouched.
+ */
 const OUTGOING_LINE = 'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;';
-const OUTGOING_GRADED = 'vec3 outgoingLight = reflectedLight.directDiffuse + mix( reflectedLight.indirectDiffuse, vec3( dot( reflectedLight.indirectDiffuse, vec3( 0.3, 0.59, 0.11 ) ) ), uDesat ) + totalEmissiveRadiance;';
+const OUTGOING_GRADED = /* glsl */ `
+vec3 novaLit = reflectedLight.directDiffuse + mix( reflectedLight.indirectDiffuse, vec3( dot( reflectedLight.indirectDiffuse, vec3( 0.3, 0.59, 0.11 ) ) ), uDesat );
+vec3 outgoingLight = max( vec3( 0.0 ), mix( vec3( dot( novaLit, vec3( 0.3, 0.59, 0.11 ) ) ), novaLit, uSat ) ) + totalEmissiveRadiance;`;
 
-/** Night grade: lit surfaces lose this much saturation at deep night, so moonlit grass reads blue-grey, not green. */
+/** Night grade: indirect light loses this much saturation at deep night, so moonlit grass reads blue-grey, not green. */
 export const NIGHT_DESAT = 0.45;
 
 /** Shared uniforms of the shading model, owned by Materials and handed to every patched shader. */
 export interface LambertUniforms {
   /** Sky rim light colour × strength (linear). */
   rim: THREE.IUniform<THREE.Color>;
-  /** Desaturation 0..1 applied to the lit result (night grade). */
+  /** Desaturation 0..1 of the indirect light (night grade). */
   desat: THREE.IUniform<number>;
+  /** Saturation of the lit result: 1 = as painted, > 1 more vivid (sunny daytime grade). */
+  sat: THREE.IUniform<number>;
 }
 
 /**
@@ -96,9 +104,10 @@ export interface LambertUniforms {
  */
 export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>; fragmentShader: string }, u: LambertUniforms, rim = true): void {
   shader.uniforms.uDesat = u.desat;
+  shader.uniforms.uSat = u.sat;
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <lights_lambert_pars_fragment>', LAMBERT_WRAP_PARS)
-    .replace('#include <common>', '#include <common>\nuniform float uDesat;')
+    .replace('#include <common>', '#include <common>\nuniform float uDesat;\nuniform float uSat;')
     .replace(OUTGOING_LINE, OUTGOING_GRADED);
   if (rim) {
     shader.uniforms.uRim = u.rim;
@@ -187,8 +196,8 @@ export class Materials {
   /** Shared shader uniforms (glow brightness, glass color, sky rim). */
   private readonly uGlow = { value: 1 };
   private readonly uGlass = { value: DAY_GLASS.clone() };
-  /** Shading-model uniforms (sky rim, night desaturation) shared with the terrain material. */
-  readonly lambert: LambertUniforms = { rim: { value: new THREE.Color(0, 0, 0) }, desat: { value: 0 } };
+  /** Shading-model uniforms (sky rim, night desaturation, day saturation) shared with the terrain material. */
+  readonly lambert: LambertUniforms = { rim: { value: new THREE.Color(0, 0, 0) }, desat: { value: 0 }, sat: { value: 1 } };
   /** LOD band uniforms: focus (x, z) and (near - band, 1 / band, mid - band, 1 / band). */
   private readonly uLodFocus = { value: new THREE.Vector2() };
   private readonly uLod = { value: new THREE.Vector4(1e9, 1, 1e9, 1) };
@@ -343,6 +352,11 @@ export class Materials {
   /** Sky rim light: `color` (linear) scaled by `strength`; Atmosphere feeds it the current sky. */
   setRim(color: THREE.Color, strength: number): void {
     this.lambert.rim.value.copy(color).multiplyScalar(Math.max(0, strength));
+  }
+
+  /** Saturation of lit surfaces (1 = as painted); Atmosphere raises it a little under a high sun. */
+  setSaturation(sat: number): void {
+    this.lambert.sat.value = Math.max(0, sat);
   }
 
   /** Force shader recompilation (shadow map toggles). */

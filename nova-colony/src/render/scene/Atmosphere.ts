@@ -34,9 +34,16 @@ const KEYS: Key[] = [
   { e: -0.3, top: '#0a1336', hor: '#283868', bot: '#0c1224', fog: '#1a2648', sun: '#92acee', sunI: 0.48, hemiSky: '#4f6cbc', hemiGround: '#161f3a', hemiI: 0.68, night: 1 },
   { e: -0.08, top: '#1c2d6a', hor: '#d0705c', bot: '#1a1f33', fog: '#5a4c70', sun: '#ff9c6b', sunI: 0.7, hemiSky: '#5868aa', hemiGround: '#3a3230', hemiI: 0.62, night: 0.78 },
   { e: 0.05, top: '#355ca6', hor: '#ffa860', bot: '#4a4a5a', fog: '#d9a386', sun: '#ffa45e', sunI: 1.7, hemiSky: '#8aa4dc', hemiGround: '#6a5a46', hemiI: 0.66, night: 0.32 },
-  { e: 0.25, top: '#3a84dc', hor: '#ffd4a0', bot: '#7a8a9a', fog: '#dcc4ac', sun: '#ffd49c', sunI: 2.0, hemiSky: '#b4cff4', hemiGround: '#7a8c56', hemiI: 0.64, night: 0.05 },
-  { e: 1.0, top: '#2a76dc', hor: '#bfe4ff', bot: '#8fa3b8', fog: '#c6e2ff', sun: '#fff1d8', sunI: 2.0, hemiSky: '#c8dfff', hemiGround: '#86985e', hemiI: 0.6, night: 0 },
+  { e: 0.25, top: '#3a84dc', hor: '#ffd4a0', bot: '#7a8a9a', fog: '#dcc4ac', sun: '#ffd8a4', sunI: 2.1, hemiSky: '#b8d2f6', hemiGround: '#7e9a54', hemiI: 0.7, night: 0.05 },
+  { e: 1.0, top: '#2a76dc', hor: '#bfe4ff', bot: '#8fa3b8', fog: '#c6e2ff', sun: '#fff2d2', sunI: 2.2, hemiSky: '#cfe4ff', hemiGround: '#8cab58', hemiI: 0.74, night: 0 },
 ];
+/**
+ * Sunny-day grade: lit surfaces gain this much saturation under a high sun (full above sun
+ * elevation DAY_SAT_FULL, nothing below DAY_SAT_FROM — the golden-hour keys keep their own look).
+ */
+const DAY_SAT = 0.16;
+const DAY_SAT_FROM = 0.12;
+const DAY_SAT_FULL = 0.4;
 
 /** Flat ambient on top of the hemisphere (day / deep night). */
 const AMBIENT_DAY = 0.1;
@@ -276,6 +283,9 @@ export class Atmosphere {
     this.amb.color.set(night > 0.5 ? '#92a4dc' : '#ffffff');
     // sky rim on grazing faces follows the hemisphere sky (blue by day, deep blue at night)
     ctx.mats.setRim(this.hemi.color, lerp(RIM_DAY, RIM_NIGHT, night) * this.hemi.intensity);
+    // a high sun makes the meadow and foliage a touch more vivid (toy-bright noon, untouched dawn / dusk)
+    const dayK = clamp((e - DAY_SAT_FROM) / (DAY_SAT_FULL - DAY_SAT_FROM), 0, 1);
+    ctx.mats.setSaturation(1 + DAY_SAT * dayK * dayK * (3 - 2 * dayK));
 
     // discs
     const far = 780;
