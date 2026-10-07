@@ -789,6 +789,7 @@ export class Run {
   }
 
   dispose() {
+    this.ended = true; // over for good: a queued card's follow-up timer must not wake it
     this.input.dispose();
     this.rites.dispose();
     this.gates.dispose();

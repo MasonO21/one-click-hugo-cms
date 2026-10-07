@@ -79,7 +79,7 @@ export class Player {
 
   /** dot: damage over time (burning ground). It respects invulnerability but grants none and stays quiet. */
   hurt(dmg, dot = false) {
-    if (this.invuln > 0 || this.dead || this.run.ended) return;
+    if (this.invuln > 0 || this.dead || this.run.ended || this.run.bossDead) return; // the chapter is won: no vent or burn tick may fell him in the victory beat
     const run = this.run;
     this.hp -= dmg;
     if (dot) {
