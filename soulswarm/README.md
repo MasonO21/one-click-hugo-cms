@@ -12,7 +12,7 @@ A top-down "legion survivor" for iOS and Android. Every enemy you kill can rise 
 npm install
 npm run dev          # http://localhost:5173. Use your phone on the same Wi-Fi for touch.
 npm run build        # production web build in dist/
-SINGLE=1 npm run build   # one self-contained HTML file in dist-single/
+SINGLE=1 npm run build   # one self-contained HTML file in dist-single/ (3D models inlined gzipped, ~11 MB)
 ```
 
 Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for your hero's Rite. On touch, drag anywhere to move and tap NOVA or RITE.
