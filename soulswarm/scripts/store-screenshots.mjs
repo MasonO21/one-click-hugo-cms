@@ -94,9 +94,15 @@ for (const shot of SHOTS.filter((x) => !ONLY || x.name.startsWith(ONLY))) {
   const page = await ctx.newPage();
   await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3500);
-  // the heroes' animated models load asynchronously; the staging below steps the game synchronously
-  await page.evaluate(async () => { const H = window.__soulswarm.heroModels; for (const k of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) await H.loadHeroModel(k); });
+  // the heroes' animated models, the painted floors and the props load asynchronously; the staging below steps the game synchronously
+  await page.evaluate(async () => {
+    const H = window.__soulswarm.heroModels; for (const k of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) await H.loadHeroModel(k);
+    const W = await import('/src/game/world.js');
+    await Promise.all([...Object.values(W.FLOORS).map((f) => W.floorTexture(f.tex)), ...Object.values(W.PROPS).flat().map(W.propModel)]);
+  });
   await page.evaluate(`(() => { ${helpers} ${shot.stage} })()`);
+  // the world puts the (now cached) floor and props in once their promises resolve, after the staging: draw one more frame
+  await page.evaluate(async () => { await new Promise((r) => setTimeout(r, 100)); window.__soulswarm.engine.step(1 / 1000); });
   console.log(shot.name, 'staged', Date.now() - t0, 'ms');
   if (shot.menu) await page.waitForTimeout(1500);
   else await page.evaluate(() => { for (const a of document.getAnimations()) { try { if (a.effect.getComputedTiming().iterations !== Infinity) a.finish(); } catch (e) { /* ignore */ } } });
