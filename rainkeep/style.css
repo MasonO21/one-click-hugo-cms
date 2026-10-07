@@ -927,5 +927,5 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .cx-maps b { font-size: 22px; color: var(--brass-2); }
 .cx-last { border-color: #c99a4b88; }
 /* a hinted painted button glows in its own shape instead of a box around it */
-@keyframes hint-plate { 50% { filter: drop-shadow(0 0 8px #ffd166) drop-shadow(0 0 2px #fff4c8) brightness(1.1); } }
+@keyframes hint-plate { 0%, 100% { filter: drop-shadow(0 0 3px #ffd166cc) drop-shadow(0 2px 2px #0009); } 50% { filter: drop-shadow(0 0 9px #ffd166) drop-shadow(0 0 2px #fff4c8) brightness(1.1); } }
 .pui .btn.hint:not(.choice) { animation: hint-plate 1.4s ease-in-out infinite !important; box-shadow: none !important; outline: none; }
