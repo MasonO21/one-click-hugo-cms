@@ -94,6 +94,19 @@ export class WorldSystem extends System {
     return {};
   }
 
+  /**
+   * Construction hook: harvest (grant drops for remaining hits) and deplete every node whose cell lies in
+   * the inclusive cell rect, so buildings can be placed over trees/rocks. Nodes under buildings don't respawn.
+   */
+  clearNodesInRect(_x0: number, _z0: number, _x1: number, _z1: number): ResourceBag {
+    return {};
+  }
+
+  /** Tutorial/mission hook: spawn a survivor-camp POI on walkable ground ~10-16 cells from (x, z). Returns POI id. */
+  spawnSurvivorNear(_x: number, _z: number): string | null {
+    return null;
+  }
+
   /** Loot / interact with a POI. */
   lootPoi(_poiId: string): boolean {
     return false;

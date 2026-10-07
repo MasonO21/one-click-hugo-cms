@@ -80,6 +80,30 @@ methods; do not rename/remove/change existing signatures.
   off-screen colonists/factories. Target 60 fps on mid-range phones with 300+ buildings, 50 colonists,
   100 aliens.
 
+## Camera & movement convention (render ⇄ player ⇄ UI)
+
+- `view.camera.yaw` (radians): the camera sits at `target + (sin(yaw)·d, h, cos(yaw)·d)` looking at the
+  target (the player in 'follow' mode, `(tx, tz)` in 'overview' mode). `view.camera.zoom` 0..1 → distance.
+- Ground-plane camera forward = `(-sin yaw, -cos yaw)`, camera right = `(cos yaw, -sin yaw)`.
+- Joystick (`input.moveX` right, `input.moveY` up) → world direction
+  `dx = moveX·cos(yaw) − moveY·sin(yaw)`, `dz = −moveX·sin(yaw) − moveY·cos(yaw)`.
+- Facing `rot` for characters/buildings: rotation about +Y, `rot = atan2(dx, dz)` (0 faces +Z).
+
+## Sound ids (emit `bus.emit('sfx', { id })`; audio also reacts to gameplay events directly)
+
+`ui_click ui_open ui_close ui_error ui_tab · gather_wood gather_stone gather_plant gather_crystal gather_metal ·
+place build_complete upgrade remove deposit collect coin reward crate_open · craft_start craft_done research_done ·
+mission_done level_up tier_up celebrate · alarm attack_start victory · turret_bullet turret_flame turret_missile
+turret_laser turret_plasma turret_rail turret_cannon · alien_hit alien_die explosion shield_hit player_hurt ·
+spin_tick spin_win door vehicle_start teleport recruit`
+
+## Panels (UI opens on `bus.emit('ui:open', { panel, arg })`)
+
+`build colonists recruit research craft inventory map missions shop season daily spin settings welcome victory
+building(arg=id) colony merchant(arg=eventId) vehicles`. UI element hooks for tutorial highlighting:
+`#btn-build #btn-colonists #btn-research #btn-craft #btn-map #btn-missions #btn-shop #btn-menu #btn-interact`,
+panels `[data-panel="<name>"]`, build cards `[data-build="<defId>"]`, research nodes `[data-research="<id>"]`.
+
 ## Cozy design rules (every system)
 
 1. Never punish: no permadeath, buildings are never destroyed (0 HP → "damaged", auto-repairs free),

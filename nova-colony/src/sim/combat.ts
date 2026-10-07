@@ -28,6 +28,19 @@ export class CombatSystem extends System {
     return false;
   }
 
+  /**
+   * Spawn "wild" aliens outside of invasions (alien nests, world events). They chase the player within a
+   * leash radius and never path to the colony. Returns spawned ids.
+   */
+  spawnWild(_alienId: string, _count: number, _x: number, _z: number): number[] {
+    return [];
+  }
+
+  /** Living wild aliens near a position (e.g. a nest is cleared when this reaches 0). */
+  wildNear(_x: number, _z: number, _radius: number): number {
+    return 0;
+  }
+
   /** Rough defense strength for UI ("Defense rating"). */
   defenseRating(): number {
     return 0;
