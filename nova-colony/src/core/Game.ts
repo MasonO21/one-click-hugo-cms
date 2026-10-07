@@ -51,6 +51,9 @@ export interface GameOptions {
   clock?: () => number;
 }
 
+/** Shorter absences are credited silently; longer ones get the Welcome Back screen (with the 2x ad offer). */
+export const WELCOME_BACK_MIN_AWAY = 300;
+
 /** Order in which systems update each frame. */
 const UPDATE_ORDER: (keyof Systems)[] = [
   'world',
@@ -133,7 +136,10 @@ export class Game {
       if (away >= 60) {
         const summary = this.sys.economy.computeOffline(away);
         const hasGains = Object.values(summary.gains).some((v) => (v ?? 0) > 0) || summary.rp > 0;
-        if (hasGains) {
+        if (hasGains && away < WELCOME_BACK_MIN_AWAY) {
+          // a short break (app switch, quick reload): credit it quietly instead of a Welcome Back modal for "+1"
+          this.sys.economy.applyOffline(summary);
+        } else if (hasGains) {
           this.pendingOffline = summary;
           this.bus.emit('offline:ready', { seconds: summary.seconds, gains: summary.gains, rp: summary.rp });
         }

@@ -1,0 +1,14 @@
+import { dismissWelcome, SP, launch, waitReady, shot, sleep, tap, tapXY, guide, res, w2s, mission } from './lib.mjs';
+const vp = process.argv[2] || 'phone';
+const { browser, context, page } = await launch(vp, { storage: SP + '/snap-wood.json' });
+await waitReady(page);
+await dismissWelcome(page);
+await tap(page, '#btn-build', { after: 1500 });
+await shot(page, vp + '-buildmenu');
+console.log('guide', JSON.stringify(await guide(page)));
+await tap(page, '[data-build="shelter"]', { after: 1500 });
+await shot(page, vp + '-ghost');
+console.log(await page.evaluate(() => JSON.stringify(window.game.view.build)));
+console.log('guide', JSON.stringify(await guide(page)));
+console.log(await page.evaluate(() => document.querySelector('#buildbar')?.innerText));
+await browser.close();

@@ -143,13 +143,15 @@ describe('BuildController', () => {
     expect(b.cost).toEqual({ wood: 16 });
   });
 
-  it('a facility confirm calls place() and stays in build mode', () => {
+  it('a facility confirm calls place() and returns to play (no red "space taken" ghost left behind)', () => {
     const { game, bc, calls, sfx } = setup();
     bc.start('storage_crate');
+    const { x, z } = game.view.build;
     bc.confirm();
     expect(calls.place).toHaveLength(1);
-    expect(calls.place[0].slice(0, 4)).toEqual(['storage_crate', game.view.build.x, game.view.build.z, 0]);
-    expect(game.view.mode).toBe('build');
+    expect(calls.place[0].slice(0, 4)).toEqual(['storage_crate', x, z, 0]);
+    expect(game.view.mode).toBe('play');
+    expect(game.view.build.def).toBeNull();
     expect(sfx).not.toContain('ui_error');
   });
 

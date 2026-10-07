@@ -82,14 +82,18 @@ describe('tutorial: guide target resolution', () => {
     expect(t.flag('buildPanelOpen')).toBe(true);
   });
 
-  it('build_menu while placing that building: points into the world next to the core instead', () => {
+  it('build_menu while placing that building: rings the confirm button once the spot is valid', () => {
     const g = makeGame();
     advanceMainTo(g, 'm02_shelter');
     g.game.view.mode = 'build';
     g.game.view.build.def = 'shelter';
-    const guide = guideNow(g)!;
+    g.game.view.build.valid = false;
+    let guide = guideNow(g)!;
     expect(guide.ui).toBeNull();
-    expect(guide.world).not.toBeNull();
+    expect(guide.world).toBeNull(); // no arrow at the core: it would read as "build it here"
+    g.game.view.build.valid = true;
+    guide = guideNow(g)!;
+    expect(guide.ui).toBe('#btn-build-confirm');
   });
 
   it('ui guide: #btn-<ref>; building guide: the instance, else the core', () => {

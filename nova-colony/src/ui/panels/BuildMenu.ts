@@ -38,7 +38,11 @@ export class BuildMenuPanel extends Panel {
   /** When the tutorial points at a build card, open its category so the highlight is visible. */
   private guideTab(): string | undefined {
     const m = /data-build="([^"]+)"/.exec(this.game.sys.tutorial.guide()?.ui ?? '');
-    return m ? this.data.building(m[1])?.category : undefined;
+    if (m) return this.data.building(m[1])?.category;
+    // the guide still points at #btn-build while the drawer is opening: use the mission's target directly
+    const cur = this.game.sys.missions.current();
+    if (cur?.guide?.kind !== 'build_menu' || !cur.guide.ref || this.game.sys.missions.progress(cur.id).done) return undefined;
+    return this.data.building(cur.guide.ref)?.category;
   }
 
   override onArg(arg: unknown): void {

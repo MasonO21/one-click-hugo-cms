@@ -60,6 +60,10 @@ export class BuildOverlay {
   private gridTerrain = -1;
   private ghostOk: Batch;
   private ghostBad: Batch;
+  /** Faint see-through copies drawn without depth test so a ghost behind a tree/boulder stays visible. */
+  private xrayOk: Batch;
+  private xrayBad: Batch;
+  private xrayMats: THREE.Material[];
   private cellsOk: Batch;
   private cellsBad: Batch;
   private ghostKey = '';
@@ -90,6 +94,15 @@ export class BuildOverlay {
     const empty = new THREE.BufferGeometry();
     this.ghostOk = new Batch(this.group, empty, ctx.mats.ghostOk, 16, { renderOrder: 20 });
     this.ghostBad = new Batch(this.group, empty, ctx.mats.ghostBad, 16, { renderOrder: 20 });
+    const xray = (m: THREE.MeshBasicMaterial) => {
+      const x = m.clone();
+      x.depthTest = false;
+      x.opacity = 0.22;
+      return x;
+    };
+    this.xrayMats = [xray(ctx.mats.ghostOk), xray(ctx.mats.ghostBad)];
+    this.xrayOk = new Batch(this.group, empty, this.xrayMats[0], 16, { renderOrder: 22 });
+    this.xrayBad = new Batch(this.group, empty, this.xrayMats[1], 16, { renderOrder: 22 });
     this.cellsOk = new Batch(this.group, quad, ctx.mats.ghostOk, 32, { renderOrder: 19 });
     this.cellsBad = new Batch(this.group, quad, ctx.mats.ghostBad, 32, { renderOrder: 19 });
     this.ringMat = new THREE.MeshBasicMaterial({ color: '#ffd84a', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
@@ -165,6 +178,8 @@ export class BuildOverlay {
     const b = view.build;
     this.ghostOk.begin();
     this.ghostBad.begin();
+    this.xrayOk.begin();
+    this.xrayBad.begin();
     this.cellsOk.begin();
     this.cellsBad.begin();
     if (view.mode === 'build' && b.def) {
@@ -177,8 +192,11 @@ export class BuildOverlay {
         const geo = def?.piece ? pieceGeometry(pieceFullKey(def.piece), style) : buildModel(def?.model ?? b.def, style, 1, def).geometry;
         this.ghostOk.setGeometry(geo);
         this.ghostBad.setGeometry(geo);
+        this.xrayOk.setGeometry(geo);
+        this.xrayBad.setGeometry(geo);
       }
       const ghost = b.valid ? this.ghostOk : this.ghostBad;
+      const xray = b.valid ? this.xrayOk : this.xrayBad;
       const cells = b.valid ? this.cellsOk : this.cellsBad;
       const yaw = -(b.rot | 0) * (Math.PI / 2);
       const m = _m;
@@ -198,6 +216,7 @@ export class BuildOverlay {
         const bob = Math.sin(env.t * 4) * 0.05 + 0.05;
         composeYaw(m, c.x, y + bob, c.z, yaw);
         ghost.push(m);
+        xray.push(m);
         const list = b.cells.length ? b.cells : [{ x: b.x, z: b.z }];
         for (const cc of list) {
           const x = cellCenter(cc.x);
@@ -209,6 +228,8 @@ export class BuildOverlay {
     }
     this.ghostOk.end();
     this.ghostBad.end();
+    this.xrayOk.end();
+    this.xrayBad.end();
     this.cellsOk.end();
     this.cellsBad.end();
 
@@ -228,6 +249,9 @@ export class BuildOverlay {
     this.grid?.geometry.dispose();
     this.ghostOk.dispose();
     this.ghostBad.dispose();
+    this.xrayOk.dispose();
+    this.xrayBad.dispose();
+    for (const m of this.xrayMats) m.dispose();
     this.cellsOk.dispose();
     this.cellsBad.dispose();
     this.ring.geometry.dispose();

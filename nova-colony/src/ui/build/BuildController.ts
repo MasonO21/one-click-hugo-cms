@@ -1,8 +1,9 @@
 /**
  * BuildController — drives build mode: keeps `view.build` (ghost cell, rotation, validity, cost) in
  * sync with BuildingSystem queries, turns touch input into ghost placement / drag-to-build lines,
- * confirms placements ("copy" behaviour: stays in build mode for quick repeats), supports moving an
+ * confirms placements, supports moving an
  * existing building, placing saved blueprints and rectangle-selecting pieces to save as a blueprint.
+ * Pieces and blueprints stay in build mode after a confirm for quick repeats; a facility returns to play.
  */
 import type { UiCtx, BuildApi } from '../ctx';
 import type { BuildPointer } from '../input/InputController';
@@ -424,6 +425,13 @@ export class BuildController implements BuildApi {
       const id = bs.place(def.id, b.x, b.z, b.rot, { tier: b.tier });
       ok = id != null;
       msg = ok ? '' : "Couldn't build there";
+      if (ok) {
+        // a facility is a one-off: staying in build mode would leave a red "Space taken" ghost on top of
+        // the new building (walls/floors/blueprints keep build mode for quick repeats)
+        this.exitBuild(true);
+        this.succeed(msg);
+        return;
+      }
     }
     this.key = '';
     if (ok) this.succeed(msg);

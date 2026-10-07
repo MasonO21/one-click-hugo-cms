@@ -7,7 +7,8 @@
  * ids are hard-coded here):
  *   node       -> nearest live resource node of that def
  *   building   -> the player's building of that def (nearest), else the colony core
- *   build_menu -> `[data-build="<def>"]` while the build panel is open, else `#btn-build`
+ *   build_menu -> `[data-build="<def>"]` while the build panel is open, else `#btn-build`; while placing
+ *                 that building: `#btn-build-confirm` once the ghost sits on a valid spot
  *   ui         -> `#btn-<ref>`
  *   poi        -> nearest un-looted POI of that def (includes the spawned survivor camp)
  *   region     -> centre of the biome
@@ -143,10 +144,18 @@ export class TutorialSystem extends System {
       case 'ui':
         base.ui = `#btn-${ref}`;
         break;
-      case 'build_menu':
-        if (this.game.view.mode === 'build' && this.game.view.build.def === ref) base.world = this.coreCenter();
-        else base.ui = this.buildPanelOpen() ? `[data-build="${ref}"]` : '#btn-build';
+      case 'build_menu': {
+        // placing it: the ghost is the focus — ring the ✔ button once the spot is valid (an arrow at the
+        // core would read as "build it here")
+        const site = this.underConstruction(ref);
+        if (this.game.view.mode === 'build' && this.game.view.build.def === ref) base.ui = this.game.view.build.valid ? '#btn-build-confirm' : null;
+        else if (site) {
+          // placed and going up: point at the site instead of sending the player back to the Build button
+          base.world = site;
+          base.text = `Your ${this.game.data.building(ref)?.name ?? 'building'} is going up…`;
+        } else base.ui = this.buildPanelOpen() ? `[data-build="${ref}"]` : '#btn-build';
         break;
+      }
       case 'node':
         base.world = this.pick(ref, this.nodeCandidates(ref));
         break;
@@ -166,6 +175,14 @@ export class TutorialSystem extends System {
       }
     }
     return base;
+  }
+
+  /** Centre of a building of `def` that is still under construction, if any. */
+  private underConstruction(def: string): { x: number; z: number } | null {
+    const d = this.game.data.building(def);
+    if (!d) return null;
+    for (const b of this.game.state.buildings.list) if (b.def === def && b.status === 'building') return footprintCenter(b.x, b.z, d.size, b.rot);
+    return null;
   }
 
   private coreCenter(): { x: number; z: number } | null {

@@ -162,6 +162,7 @@ export class UI {
 
     this.installGlobalHandlers();
     this.subscribe();
+    this.game.sys.tutorial.setFlag('buildPanelOpen', false); // a save made with the drawer open
     this.syncSettings();
     this.refreshBadges();
 
@@ -265,6 +266,11 @@ export class UI {
   private onPanelsChanged(): void {
     const covering = this.panels.anyCovering();
     this.game.view.panelOpen = covering;
+    // the tutorial points at the build card (not the Build button) while the build drawer is open
+    const tut = this.game.sys.tutorial;
+    const buildOpen = this.panels.isOpen('build');
+    if (tut.flag('buildPanelOpen') !== buildOpen) tut.setFlag('buildPanelOpen', buildOpen);
+    tut.notifyPanel(this.panels.topName());
     this.root.dataset.panelOpen = covering ? '1' : '0';
     if (covering || this.panels.anyOpen()) this.input.reset();
   }
