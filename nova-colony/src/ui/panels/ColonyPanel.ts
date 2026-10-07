@@ -6,7 +6,8 @@ import { Panel, type PanelTitle } from './Panel';
 import type { TierUpRequirements } from '../../sim/progression';
 import { fmt, fmtDuration } from '../../core/format';
 import { bagCovers } from '../../core/bag';
-import { btn, costChips, section } from '../widgets';
+import { btn, costChips, section, unlockChip } from '../widgets';
+import { tierUnlocks } from '../logic/describe';
 import { fill, h, setVar } from '../dom';
 import { artOrEmoji, tierArt } from '../art';
 
@@ -76,6 +77,13 @@ export class ColonyPanel extends Panel {
     } else {
       const nt = this.data.tier(req.tier);
       const card = h('div', { class: 'card next-tier' }, h('div', { class: 'h3', text: `Next: ${nt.name}` }), h('div', { class: 'mute small', text: nt.description }));
+      // what the next tier hands out: the buildings and vehicles' thumbnails
+      const news = tierUnlocks(this.data, req.tier);
+      if (news.length) {
+        const chips = h('div', { class: 'chips unlocks' }, news.slice(0, 8).map(unlockChip));
+        if (news.length > 8) chips.appendChild(h('span', { class: 'chip', text: `+${news.length - 8} more` }));
+        card.append(h('div', { class: 'mute small', style: 'margin-top:.6em', text: `New with ${nt.name}` }), chips);
+      }
       const rows = h('div', { class: 'stack-v tight', style: 'margin-top:.6em' });
       if (req.research) {
         const rd = this.data.researchDef(req.research);

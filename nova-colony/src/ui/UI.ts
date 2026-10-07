@@ -40,6 +40,7 @@ import { Threats } from './hud/Threats';
 import { alienArt, biomeArt, eventArt, itemArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
 import { itemToast, RARITY_COLOR } from './logic/rewards';
+import { tierUnlocks } from './logic/describe';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -413,11 +414,11 @@ export class UI {
       const now = performance.now();
       this.lastTierCelebrate = now;
       const t = g.data.tier(e.tier);
-      const unlocks = g.data.buildings.filter((b) => b.unlockTier === e.tier && !b.research && !b.piece).map((b) => `${b.icon} ${b.name}`);
+      const unlocks = tierUnlocks(g.data, e.tier, true);
       // let the player watch the base transform first: close the colony sheet, frame the core and show the
       // colony boundary growing, then celebrate
       this.panels.closeSheets();
-      preloadArt([tierArt(e.tier)]); // decode the illustration while the base transforms
+      preloadArt([tierArt(e.tier), ...unlocks.slice(0, 8).map((u) => u.art)]); // decode the pictures while the base transforms
       const core = g.sys.buildings.core();
       if (core) {
         const c = g.sys.buildings.center(core);

@@ -5,7 +5,8 @@
  */
 import type { UiCtx } from '../ctx';
 import type { BuildController, BuildMode } from './BuildController';
-import { costChips, btn, setDisabled } from '../widgets';
+import { blueprintThumb, costChips, btn, setDisabled } from '../widgets';
+import { buildingIcon } from '../art';
 import { fill, h, replay, setClass, setHidden, setText, setVar } from '../dom';
 
 export class BuildBar {
@@ -29,6 +30,7 @@ export class BuildBar {
   private dirty = true;
   private acc = 0;
   private lastKey = '';
+  private icKey = '';
   private cctx: CanvasRenderingContext2D | null;
 
   constructor(
@@ -131,7 +133,12 @@ export class BuildBar {
     const def = b.def ? data.building(b.def) : undefined;
     if (!def) return;
     const bp = b.blueprint ? game.state.buildings.blueprints.find((x) => x.id === b.blueprint) : null;
-    setText(this.ic, bp ? '📐' : def.icon);
+    // the picture only changes when what you are placing does (render() runs every few frames)
+    const icKey = bp ? `bp:${bp.id}:${bp.parts.length}` : def.id;
+    if (icKey !== this.icKey) {
+      this.icKey = icKey;
+      fill(this.ic, bp ? blueprintThumb(data, bp.parts) : buildingIcon(def.id, def.icon, 'bb-pic', 'span'));
+    }
     const moving = b.moveId != null;
     const lineN = def.piece && b.lineFrom ? this.bc.lineInfo.total : 0;
     setText(this.name, bp ? bp.name : moving ? `Move ${def.name}` : lineN > 1 ? `${def.name} × ${this.bc.lineInfo.ok}` : def.name);

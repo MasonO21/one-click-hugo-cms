@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nova Colony — Thumbnail Baker</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html, body { margin: 0; padding: 0; background: #e9e2d4; font: 12px/1.4 system-ui, sans-serif; color: #333; }
+      #help { padding: 8px 12px; background: #fff8ec; border-bottom: 1px solid #d9cfbb; }
+      #grid { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; }
+      .tile label { display: block; text-align: center; margin-top: 4px; }
+      .tile small { opacity: 0.6; }
+      .pair { display: flex; border-radius: 10px; overflow: hidden; }
+      .pair img { width: 96px; height: 96px; display: block; }
+      .pair .light { background: #fff8ec; }
+      .pair .dark { background: #262a3a; }
+    </style>
+  </head>
+  <body>
+    <div id="help">Build-menu thumbnails rendered from the game's own models (dev only). ?ids=a,b,c · blob=0 · size=192 · scale=4 · fill=0.86 · bake=1 (no preview; used by <code>npm run bake:thumbs</code>)</div>
+    <div id="grid"></div>
+    <script type="module" src="/src/render/dev/thumbs.ts"></script>
+  </body>
+</html>
