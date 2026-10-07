@@ -35,6 +35,8 @@ const config: CapacitorConfig = {
       launchFadeOutDuration: 250,
       backgroundColor: BACKGROUND,
       showSpinner: false,
+      // the default FIT_XY stretches the splash on tall phones
+      androidScaleType: 'CENTER_CROP',
       splashFullScreen: true,
       splashImmersive: true,
     },
