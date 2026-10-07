@@ -153,8 +153,10 @@
   // pickup words rise just ahead of the head, stacked so two at once stay readable
   const pop = (x, y, txt, col) => {
     if (G.pops.length >= 3) G.pops.shift();
-    const n = G.pops.filter((p) => p.t < 0.45).length;
-    G.pops.push({ x: clamp(x, 60, G.w - 60), y: Math.min(y, G.h * 0.72 - 48) - n * 24, t: 0, txt, col });
+    const used = G.pops.filter((p) => p.t < 0.45).map((p) => p.slot);
+    let slot = 0;
+    while (used.includes(slot)) slot++;
+    G.pops.push({ x: clamp(x, 60, G.w - 60), y: Math.min(y, G.h * 0.72 - 48) - slot * 24, slot, t: 0, txt, col });
   };
   function loop(now) {
     if (!G || !G.on) return;
