@@ -149,6 +149,7 @@ export function createHome(ctx) {
     prev: () => setChapter(-1),
     next: () => setChapter(1),
     battle: () => {
+      if (downAt > (app.exitedAt || 0) && downAt - app.exitedAt < 400) return; // the second tap of a double tap on the results' Continue lands here
       const p = app.profile; const sel = p.chapter.selected || 1;
       if (sel > p.chapter.unlocked) { tap(app, 'warning', null); toast(`Clear Chapter ${sel - 1} to unlock`); return; }
       tap(app, 'medium', 'select');
@@ -159,8 +160,8 @@ export function createHome(ctx) {
   });
 
   // Swipe left/right on the chapter card to change chapter.
-  let sx = null;
-  root.addEventListener('pointerdown', (e) => { if (e.target.closest('.chap')) sx = e.clientX; });
+  let sx = null, downAt = -1e9;
+  root.addEventListener('pointerdown', (e) => { downAt = performance.now(); if (e.target.closest('.chap')) sx = e.clientX; });
   root.addEventListener('pointerup', (e) => {
     if (sx == null) return;
     const dx = e.clientX - sx; sx = null;

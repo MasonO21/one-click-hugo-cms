@@ -49,7 +49,7 @@ export function modal({ title = '', body = '', actions = [], cls = '', dismissab
   const close = () => { if (closed) return; closed = true; back.remove(); onClose && onClose(); };
   for (const a of actions) {
     const b = h(`<button class="btn ${a.cls || 'btn-ghost'}">${a.label}</button>`);
-    b.addEventListener('click', () => { if (a.onClick && a.onClick(close) === false) return; close(); });
+    b.addEventListener('click', () => { if (closed) return; if (a.onClick && a.onClick(close) === false) return; close(); }); // a click after closing must not buy or pay again
     actEl.appendChild(b);
   }
   if (dismissable) {
@@ -96,8 +96,11 @@ export function rewardPopup(items, { title = 'Rewards', audio, onClose } = {}) {
   return modal({ title, body: el, cls: 'modal-rewards', actions: [{ label: 'Claim', cls: 'btn-primary btn-lg' }], onClose });
 }
 
+let buying = false; // one store sheet at a time: closing it mid-purchase must not let the same offer be bought again
+
 /** Confirm, run the (simulated) store purchase, grant, and celebrate. */
 export function purchaseFlow(app, skuId, { onDone } = {}) {
+  if (buying) { toast('A purchase is in progress'); return; }
   const sku = SKUS[skuId];
   const p = app.profile;
   const bonus = firstPurchaseBonus(p, skuId);
@@ -114,9 +117,12 @@ export function purchaseFlow(app, skuId, { onDone } = {}) {
     actions: [{
       label: `Buy ${Store.price(skuId)}`, cls: 'btn-primary btn-lg',
       onClick: (close) => {
+        if (buying) return false;
+        buying = true;
         const btn = document.querySelector('.modal-purchase .btn-primary');
         if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
-        Store.purchase(skuId).then((res) => {
+        Store.purchase(skuId).catch(() => ({ ok: false })).then((res) => {
+          buying = false;
           close();
           if (!res.ok) { toast('Purchase cancelled'); return; }
           const items = applyPurchase(p, skuId);

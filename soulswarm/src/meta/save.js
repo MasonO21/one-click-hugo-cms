@@ -1,6 +1,6 @@
 // Player profile persistence. localStorage can be unavailable (private mode, sandboxed previews),
 // so every access is guarded and the game still runs from in-memory state.
-import { HERO_ORDER, ENERGY_MAX, STARTER_PACK_HOURS } from '../game/data.js';
+import { HERO_ORDER, HEROES, HERO_MAX_STARS, ENERGY_MAX, STARTER_PACK_HOURS, RELICS, RARITIES, RELIC_SLOTS, TALENTS, CHAPTERS } from '../game/data.js';
 import { migrateDifficulty } from './difficulty.js';
 
 const KEY = 'soulswarm.save.v1';
@@ -48,25 +48,53 @@ export function newProfile() {
   };
 }
 
-// Fill missing keys when loading an older or partial save.
+const int = (v, d, lo = 0, hi = 1e9) => { const n = Math.floor(+v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+/** A loaded value coerced to the type of its default: a wrong type falls back to the default, objects recurse (unknown keys kept). */
+function like(v, d) {
+  if (typeof d === 'number') return v !== null && v !== '' && Number.isFinite(+v) ? +v : d;
+  if (typeof d === 'boolean' || typeof d === 'string') return typeof v === typeof d ? v : d;
+  if (Array.isArray(d)) return Array.isArray(v) ? v : d;
+  if (d && typeof d === 'object') {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return d;
+    const o = { ...v };
+    for (const k of Object.keys(d)) o[k] = like(v[k], d[k]);
+    return o;
+  }
+  return v === undefined ? d : v; // null defaults (dates, last claims) keep what was saved
+}
+
+// Fill missing keys when loading an older or partial save, and repair wrong types, out-of-range values and ids this
+// build does not know (a removed hero or relic would otherwise crash the boot or the home screen).
 function migrate(p) {
   const base = newProfile();
-  const out = { ...base, ...p };
-  for (const k of ['heroes', 'talents', 'chapter', 'pass', 'quests', 'login', 'purchases', 'altar', 'trial', 'weekly', 'stats', 'settings', 'flags']) {
-    out[k] = { ...base[k], ...(p[k] || {}) };
-  }
-  for (const id of HERO_ORDER) out.heroes[id] = { ...base.heroes[id], ...(out.heroes[id] || {}) };
-  if (!Array.isArray(out.relics)) out.relics = base.relics;
-  if (!Array.isArray(out.equipped)) out.equipped = base.equipped;
+  const out = like(p, base);
+  for (const k of ['gold', 'gems', 'sigils', 'xp']) out[k] = int(out[k], base[k]);
+  out.level = int(out.level, 1, 1, 999); out.energy = int(out.energy, ENERGY_MAX, 0, 99); out.pass.xp = int(out.pass.xp, 0);
+  for (const id of HERO_ORDER) { const h = out.heroes[id]; h.shards = int(h.shards, 0); h.stars = int(h.stars, 0, h.owned ? 1 : 0, HERO_MAX_STARS); }
+  out.heroes.vael.owned = true; out.heroes.vael.stars = Math.max(1, out.heroes.vael.stars);
+  if (!HEROES[out.selectedHero] || !out.heroes[out.selectedHero].owned) out.selectedHero = 'vael';
+  for (const k of Object.keys(TALENTS)) out.talents[k] = int(out.talents[k], 0, 0, TALENTS[k].max);
+  for (const k of Object.keys(out.quests.progress)) out.quests.progress[k] = int(out.quests.progress[k], 0);
+  const uids = new Set();
+  out.relics = out.relics.filter((r) => r && RELICS[r.type] && RARITIES.includes(r.rarity) && r.uid && !uids.has(r.uid) && uids.add(r.uid))
+    .map((r) => ({ ...r, level: int(r.level, 1, 1, 10) }));
+  out.equipped = Array.from({ length: RELIC_SLOTS }, (_, i) => { const u = out.equipped[i]; return uids.has(u) && out.equipped.indexOf(u) === i ? u : null; });
+  out.relicSeq = Math.max(int(out.relicSeq, 1, 1), ...out.relics.map((r) => (parseInt(String(r.uid).slice(1), 10) || 0) + 1)); // new relics never reuse an id
+  out.chapter.unlocked = int(out.chapter.unlocked, 1, 1, CHAPTERS.length); out.chapter.selected = int(out.chapter.selected, 1, 1, CHAPTERS.length);
   migrateDifficulty(out);
   return out;
 }
 
 export function loadProfile() {
+  let raw = null;
   try {
-    const raw = localStorage.getItem(KEY);
+    raw = localStorage.getItem(KEY);
     if (raw) return migrate(JSON.parse(raw));
-  } catch (e) { /* storage unavailable or corrupt: start fresh */ }
+  } catch (e) {
+    // storage unavailable or the save is unreadable: start fresh, but keep the unreadable bytes for support
+    console.warn('[save] unreadable save, starting fresh', e);
+    try { if (raw) localStorage.setItem(KEY + '.corrupt', raw); } catch (e2) { /* ignore */ }
+  }
   return newProfile();
 }
 

@@ -97,6 +97,7 @@ export function openEnergy(ctx) {
         </div>
       </div>`;
     $(body, '[data-act="refill"]')?.addEventListener('click', () => {
+      if (p.energy >= ENERGY_MAX) return; // already full (a second tap must not buy again)
       if (p.gems < GEM_SHOP.energy.cost) { notEnough(ctx, 'gems', GEM_SHOP.energy.cost); return; }
       const items = buyGemShop(p, 'energy');
       if (!items) return;

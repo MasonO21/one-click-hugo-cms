@@ -164,9 +164,11 @@ button { font: inherit; color: inherit; }
 
 .toast {
   position: absolute; left: 50%; top: calc(var(--safe-t) + 70px); transform: translateX(-50%); z-index: 60;
-  padding: 10px 16px; font-weight: 700; background: var(--panel-2); clip-path: var(--bevel-sm); white-space: nowrap;
+  width: max-content; max-width: calc(100% - 32px); text-align: center; /* long toasts wrap instead of running off a small screen */
+  padding: 10px 16px; font-weight: 700; background: var(--panel-2); clip-path: var(--bevel-sm);
   animation: toast 2.2s ease forwards; pointer-events: none;
 }
+#ui > .toast { pointer-events: none; } /* `#ui > *` would otherwise make every toast swallow taps on what is under it */
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, -10px); } 10%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
 
 /* Scroll areas (menus) */
