@@ -18,8 +18,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing is opt-in and never stored in the repo: pass the upload keystore on the command line,
+    // in ~/.gradle/gradle.properties or as environment variables (see docs/MOBILE.md, "Signing"):
+    //   NOVA_UPLOAD_STORE_FILE, NOVA_UPLOAD_STORE_PASSWORD, NOVA_UPLOAD_KEY_ALIAS, NOVA_UPLOAD_KEY_PASSWORD
+    // Without them `bundleRelease` / `assembleRelease` still work and just produce an UNSIGNED artifact.
+    def novaSigning = { String key -> (project.findProperty(key) ?: System.getenv(key)) as String }
+    def novaStoreFile = novaSigning('NOVA_UPLOAD_STORE_FILE')
+    if (novaStoreFile) {
+        signingConfigs {
+            release {
+                storeFile file(novaStoreFile)
+                storePassword novaSigning('NOVA_UPLOAD_STORE_PASSWORD')
+                keyAlias novaSigning('NOVA_UPLOAD_KEY_ALIAS')
+                keyPassword novaSigning('NOVA_UPLOAD_KEY_PASSWORD') ?: novaSigning('NOVA_UPLOAD_STORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (novaStoreFile) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

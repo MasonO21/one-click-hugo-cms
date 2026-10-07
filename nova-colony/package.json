@@ -13,7 +13,11 @@
     "test:watch": "vitest",
     "cap:sync": "npm run build && cap sync",
     "cap:android": "npm run cap:sync && cap open android",
-    "cap:ios": "npm run cap:sync && cap open ios"
+    "cap:ios": "npm run cap:sync && cap open ios",
+    "android:sync": "npm run build && cap sync android",
+    "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "android:lint": "cd android && ./gradlew lintDebug",
+    "android:release": "npm run android:sync && cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.2.1",

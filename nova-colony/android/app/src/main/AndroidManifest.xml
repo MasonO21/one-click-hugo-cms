@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- haptic feedback (@capacitor/haptics) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Google Play Billing (RevenueCat) -->
+    <uses-permission android:name="com.android.vending.BILLING" />
+    <!-- Advertising id for AdMob on Android 13+ (declare it in the Play Console data-safety form) -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -22,6 +33,7 @@
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
             android:screenOrientation="fullUser"
+            android:hardwareAccelerated="true"
             android:exported="true">
 
             <intent-filter>
@@ -41,15 +53,4 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
     </application>
-
-    <!-- Permissions -->
-
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- haptic feedback (@capacitor/haptics) -->
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Google Play Billing (RevenueCat) -->
-    <uses-permission android:name="com.android.vending.BILLING" />
-    <!-- Advertising id for AdMob on Android 13+ (declare it in the Play Console data-safety form) -->
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 </manifest>
