@@ -5,7 +5,8 @@
 import { Panel, type PanelTitle } from './Panel';
 import type { Reward } from '../../data/schema';
 import { rewardParts } from '../logic/rewards';
-import { btn, partIcon } from '../widgets';
+import { btn, partIcon, unlockChip } from '../widgets';
+import type { UnlockEntry } from '../logic/describe';
 import { confetti } from '../fx/Confetti';
 import { artOrEmoji, isArtSrc } from '../art';
 import { fill, h, setVar } from '../dom';
@@ -16,7 +17,8 @@ export interface CelebrateArg {
   icon?: string;
   /** Tier celebration: colours + unlock list. */
   tier?: number;
-  unlocks?: string[];
+  /** "Newly available" list: plain text, or a building / vehicle with its thumbnail. */
+  unlocks?: (string | UnlockEntry)[];
   big?: boolean;
   /** No confetti / fanfare (e.g. the crash-landing intro). */
   quiet?: boolean;
@@ -88,8 +90,8 @@ export class CelebratePanel extends Panel {
     if (a.text) main.appendChild(h('div', { class: 'cb-text', text: a.text }));
     if (a.unlocks?.length) {
       main.appendChild(h('div', { class: 'mute small center', text: 'Newly available:' }));
-      const chips = h('div', { class: 'chips center-chips' });
-      for (const u of a.unlocks.slice(0, 8)) chips.appendChild(h('span', { class: 'chip info', text: u }));
+      const chips = h('div', { class: 'chips center-chips unlocks' });
+      for (const u of a.unlocks.slice(0, 8)) chips.appendChild(typeof u === 'string' ? h('span', { class: 'chip info', text: u }) : unlockChip(u));
       main.appendChild(chips);
     }
     main.appendChild(btn({ label: a.ok ?? (tier ? 'Onward!' : 'Awesome!'), cls: 'big good block', id: 'btn-celebrate-ok', onClick: () => this.ctx.close(this.name) }));

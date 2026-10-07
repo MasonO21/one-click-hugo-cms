@@ -907,3 +907,263 @@
 .threat-edge .th-pic:not([hidden]) + .th-dot {
   display: none;
 }
+
+/* ---------- buildings & vehicles: rendered thumbnails (public/art/buildings, public/art/vehicles) ---------- */
+/* build menu cards + vehicle cards: the picture is the hero. Its box has a fixed height so the grid never jumps
+   while images load (or when one falls back to its emoji). */
+/* the box height lives on the wrapper (not on the picture): an emoji fallback changes the picture's font-size */
+.bhero,
+.veh-hero {
+  position: relative;
+  height: 5.8em;
+  border-radius: 0.8em;
+}
+.veh-hero {
+  height: 6.6em;
+}
+.bcard .bpic.aico,
+.veh .vpic.aico {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  vertical-align: top;
+  border-radius: inherit;
+  font-size: 1em;
+  background:
+    radial-gradient(ellipse 46% 9% at 50% 86%, rgba(90, 56, 20, 0.2), transparent 75%),
+    radial-gradient(circle at 50% 42%, #fffef6, #fbefd2);
+}
+.bcard .bpic.aico img,
+.veh .vpic.aico img {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 0.1em;
+  filter: drop-shadow(0 0.1em 0.12em rgba(60, 30, 10, 0.3));
+}
+.bcard .bpic.aico.emoji,
+.veh .vpic.aico.emoji {
+  font-size: 3em;
+  min-width: 0;
+}
+.bhero .bbadge,
+.veh-hero .bbadge {
+  position: absolute;
+  top: 0.3em;
+  right: 0.3em;
+  display: grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 50%;
+  font-size: 0.78em;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: #fff;
+  box-shadow: 0 0.1em 0.3em rgba(40, 20, 60, 0.3);
+}
+.bhero .bbadge.ok,
+.veh-hero .bbadge.ok {
+  color: #fff;
+  background: var(--good);
+}
+/* locked: greyscale + dim, like the tier ladder */
+.bcard.locked .bpic.aico,
+.veh.locked .vpic.aico {
+  background: radial-gradient(circle at 50% 42%, #f6f0e4, #e2d8c2);
+}
+.bcard.locked .bpic.aico img,
+.veh.locked .vpic.aico img {
+  filter: grayscale(1) brightness(0.8) contrast(0.95);
+  opacity: 0.72;
+}
+.bcard.locked .bpic.aico.emoji,
+.veh.locked .vpic.aico.emoji {
+  filter: grayscale(1) opacity(0.6);
+}
+/* landscape phones: the drawer is short, so the picture boxes shrink and the cards stay compact */
+@media (orientation: landscape) and (max-height: 480px) {
+  .bcard {
+    gap: 0.2em;
+    padding: 0.35em 0.5em 0.5em;
+  }
+  .bhero {
+    height: 4.1em;
+  }
+  .bcard .bpic.aico.emoji {
+    font-size: 2.2em;
+  }
+  .veh-hero {
+    height: 6em;
+  }
+}
+
+/* saved blueprints: a fan of the building types they are made of */
+.bp-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  display: block;
+  width: 4em;
+  height: 2.8em;
+}
+.bp-thumb .bpt.aico {
+  position: absolute;
+  bottom: 0;
+  width: 2.6em;
+  height: 2.6em;
+  font-size: 1em;
+}
+.bp-thumb.n1 .bpt.aico {
+  left: 50%;
+  margin-left: -1.3em;
+}
+.bp-thumb.n2 .bpt.aico:nth-child(1),
+.bp-thumb.n3 .bpt.aico:nth-child(1) {
+  left: 0;
+}
+.bp-thumb.n2 .bpt.aico:nth-child(2),
+.bp-thumb.n3 .bpt.aico:nth-child(3) {
+  right: 0;
+}
+.bp-thumb.n3 .bpt.aico:nth-child(2) {
+  left: 50%;
+  margin-left: -1.3em;
+  z-index: 1;
+}
+.bp-thumb .bpt.aico.emoji {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  font-size: 1.6em;
+}
+
+/* build bar (placement): the picture of what you are placing */
+.bb-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+.bb-ic .bb-pic.aico {
+  position: relative;
+  display: grid;
+  width: 1.55em;
+  height: 1.55em;
+  font-size: 1em;
+  border-radius: 0.3em;
+  background: radial-gradient(circle at 50% 42%, #fffef6, #fbefd2);
+  box-shadow: inset 0 0 0 0.04em rgba(214, 186, 130, 0.9), 0 0.04em 0.12em rgba(60, 30, 10, 0.2);
+}
+.bb-ic .bb-pic.aico img {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 0.06em;
+  filter: drop-shadow(0 0.04em 0.05em rgba(60, 30, 10, 0.35));
+}
+.bb-ic .bb-pic.aico.emoji {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  background: none;
+  box-shadow: none;
+}
+.bb-ic .bp-thumb {
+  font-size: 0.42em;
+}
+.bb-ic .bp-thumb .bpt.aico.emoji {
+  font-size: 1.4em;
+}
+
+/* building inspector: the building's hero picture next to the status chips and description (the header is name-only) */
+.pm-title .ti:empty {
+  display: none;
+}
+.insp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7em;
+}
+.insp-head .insp-pic.aico {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  width: 5.4em;
+  height: 5.4em;
+  font-size: 1em;
+  border-radius: 1em;
+  background: radial-gradient(circle at 50% 42%, #fffef6, #fbefd2);
+  box-shadow: inset 0 0 0 0.12em rgba(255, 255, 255, 0.75), 0 0.15em 0.4em rgba(60, 30, 10, 0.2);
+}
+.insp-head .insp-pic.aico img {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 0.25em;
+  filter: drop-shadow(0 0.1em 0.12em rgba(60, 30, 10, 0.3));
+}
+/* emoji fallback: the same 5.4em tile (the font-size scales the em box, so divide it back out) */
+.insp-head .insp-pic.aico.emoji {
+  width: calc(5.4em / 2.6);
+  height: calc(5.4em / 2.6);
+  min-width: 0;
+  font-size: 2.6em;
+  border-radius: calc(1em / 2.6);
+  box-shadow: inset 0 0 0 calc(0.12em / 2.6) rgba(255, 255, 255, 0.75), 0 calc(0.15em / 2.6) calc(0.4em / 2.6) rgba(60, 30, 10, 0.2);
+}
+
+/* "Unlocks" / "Newly available": a chip with the building or vehicle's thumbnail poking out of its left end */
+.nv-root .chip.unlock {
+  gap: 0.35em;
+  padding: 0.15em 0.7em 0.15em 0.2em;
+}
+.nv-root .chip.unlock .aico.uic {
+  width: 2.1em;
+  height: 2.1em;
+  margin: -0.35em 0;
+  font-size: 1em;
+  vertical-align: baseline;
+}
+.nv-root .chip.unlock .aico.uic.emoji {
+  width: auto;
+  height: auto;
+  min-width: 1.25em;
+  margin: 0;
+}
+.nv-root .chips.unlocks {
+  gap: 0.6em 0.4em;
+  margin-top: 0.2em;
+}
+
+/* crafting station tabs show the station building */
+.tabs .tab .aico.ico {
+  width: 1.9em;
+  height: 1.9em;
+  margin: -0.3em 0 -0.3em -0.35em;
+  font-size: 1em;
+}
+.tabs .tab .aico.ico.emoji {
+  width: auto;
+  height: auto;
+  min-width: 1.25em;
+  margin: 0;
+}
+
+/* the context button near a building shows that building */
+.interact .ic .aico.ic-pic {
+  width: 1.85em;
+  height: 1.85em;
+  margin: -0.2em 0 -0.15em;
+  font-size: 1em;
+  vertical-align: baseline;
+}
+.interact .ic .aico.ic-pic img {
+  filter: drop-shadow(0 0.06em 0.08em rgba(0, 0, 0, 0.4));
+}
+.interact .ic .aico.ic-pic.emoji {
+  width: auto;
+  height: auto;
+  margin: 0;
+}

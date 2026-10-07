@@ -8,8 +8,9 @@ import type { BuildingDef } from '../../data/schema';
 import { bagCovers } from '../../core/bag';
 import { BUILD_CATEGORIES } from '../logic/categories';
 import { buildingEffects, lockInfo } from '../logic/describe';
-import { btn, costChips, emptyState, tabs, tagChips } from '../widgets';
+import { blueprintThumb, btn, costChips, emptyState, tabs, tagChips } from '../widgets';
 import { fill, h, setVar } from '../dom';
+import { buildingIcon } from '../art';
 
 export class BuildMenuPanel extends Panel {
   readonly name = 'build';
@@ -150,7 +151,8 @@ export class BuildMenuPanel extends Panel {
     const el = h(
       'button',
       { class: 'bcard' + (lock.locked ? ' locked' : '') + (maxed ? ' maxed' : ''), type: 'button', title: d.description, data: { build: d.id, sfx: 'ui_click' } },
-      h('div', { class: 'top' }, h('span', { class: 'bi', text: d.icon }), h('span', { class: 'bn', text: d.name })),
+      this.hero(d, lock.locked, maxed),
+      h('span', { class: 'bn', text: d.name }),
       tags.length ? tagChips(tags, 2) : h('div', { class: 'bdesc', text: d.description }),
       lock.locked ? h('div', { class: 'lock' }, '🔒 ', lock.text) : maxed ? h('div', { class: 'lock ok' }, '✔ Already built') : costChips(data, cost, game.state.resources.amounts),
     );
@@ -165,6 +167,11 @@ export class BuildMenuPanel extends Panel {
       this.ctx.close('build');
     });
     return el;
+  }
+
+  /** The card's picture: the building's rendered thumbnail (emoji when there is none), with a lock / check badge. */
+  private hero(d: BuildingDef, locked: boolean, maxed: boolean): HTMLElement {
+    return h('div', { class: 'bhero' }, buildingIcon(d.id, d.icon, 'bpic', 'div'), locked ? h('span', { class: 'bbadge', text: '🔒' }) : maxed ? h('span', { class: 'bbadge ok', text: '✔' }) : null);
   }
 
   private renderBlueprints(): HTMLElement {
@@ -193,7 +200,7 @@ export class BuildMenuPanel extends Panel {
         h(
           'div',
           { class: 'card bp-row', data: { blueprint: bp.id } },
-          h('div', { class: 'row' }, h('span', { class: 'bi', text: '📐' }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: bp.name }), h('div', { class: 'mute', text: `${bp.parts.length} pieces` })), costChips(data, cost, game.state.resources.amounts)),
+          h('div', { class: 'row' }, blueprintThumb(data, bp.parts), h('div', { class: 'grow' }, h('div', { class: 'h3', text: bp.name }), h('div', { class: 'mute', text: `${bp.parts.length} pieces` })), costChips(data, cost, game.state.resources.amounts)),
           h(
             'div',
             { class: 'row', style: 'margin-top:.5em' },

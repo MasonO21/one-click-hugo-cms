@@ -8,6 +8,7 @@ import { RARITY_COLOR, cap } from '../logic/rewards';
 import { happinessFace, jobOf, stars } from '../logic/colonist';
 import { bar, btn, emptyState, portrait, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
+import { buildingIcon } from '../art';
 
 type Filter = 'all' | 'idle' | 'working';
 
@@ -233,7 +234,7 @@ export class ColonistsPanel extends Panel {
         h(
           'div',
           { class: 'row pick-row' },
-          h('span', { class: 'bi', text: d.icon }),
+          buildingIcon(d.id, d.icon, 'bi', 'span'),
           h('div', { class: 'grow' }, h('div', { class: 'h3', text: d.name }), h('div', { class: 'mute small', text: `${r.match ? '⭐ ' : ''}${prof?.name ?? ''} · ${r.free} open` })),
           btn({
             label: 'Assign',

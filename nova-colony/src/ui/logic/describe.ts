@@ -6,7 +6,7 @@ import type { BuildingDef, Modifier, ResourceBag } from '../../data/schema';
 import type { DataRegistry } from '../../data';
 import { fmt } from '../../core/format';
 import { bagEntries } from '../../core/bag';
-import { resourceArt } from '../art';
+import { buildingArt, resourceArt, vehicleArt } from '../art';
 
 export interface EffectTag {
   icon: string;
@@ -116,4 +116,41 @@ export function modifierText(m: Modifier, data: DataRegistry): string {
   if (m.add) parts.push(flat ? `+${fmt(m.add)}` : `${m.add >= 0 ? '+' : '−'}${Math.round(Math.abs(m.add) * 100)}%`);
   if (m.mult && m.mult !== 1) parts.push(`×${fmt(m.mult)}`);
   return `${label} ${parts.join(' ')}`.trim();
+}
+
+/** A building or vehicle in an "Unlocks" / "Newly available" list: its rendered thumbnail, emoji fallback and name. */
+export interface UnlockEntry {
+  kind: 'building' | 'vehicle';
+  id: string;
+  icon: string;
+  /** Thumbnail URL (null = show `icon`). */
+  art: string | null;
+  name: string;
+}
+
+export function buildingUnlock(data: DataRegistry, id: string): UnlockEntry {
+  const d = data.building(id);
+  return { kind: 'building', id, icon: d?.icon ?? '🏠', art: buildingArt(id), name: d?.name ?? id };
+}
+
+export function vehicleUnlock(data: DataRegistry, id: string): UnlockEntry {
+  const d = data.vehicle(id);
+  return { kind: 'vehicle', id, icon: d?.icon ?? '🚙', art: vehicleArt(id), name: d?.name ?? id };
+}
+
+/**
+ * The facilities and vehicles that come with a colony tier (exactly that `unlockTier`; structure pieces and the
+ * Command Center are not listed), those usable at once first. `freeOnly` keeps just the ones that need no research
+ * (what the tier-up celebration can honestly call "newly available"); without it the colony panel previews the whole
+ * tier.
+ */
+export function tierUnlocks(data: DataRegistry, tier: number, freeOnly = false): UnlockEntry[] {
+  const ok = (needs: string | undefined): boolean => !freeOnly || !needs;
+  const bs = data.buildings.filter((b) => b.unlockTier === tier && !b.piece && !b.core && ok(b.research));
+  const vs = data.vehicles.filter((v) => v.unlockTier === tier && ok(v.research));
+  const gated = (n: string | undefined): number => (n ? 1 : 0);
+  return [
+    ...[...bs].sort((a, z) => gated(a.research) - gated(z.research)).map((b) => buildingUnlock(data, b.id)),
+    ...[...vs].sort((a, z) => gated(a.research) - gated(z.research)).map((v) => vehicleUnlock(data, v.id)),
+  ];
 }

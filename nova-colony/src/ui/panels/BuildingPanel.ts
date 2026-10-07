@@ -14,7 +14,7 @@ import { refundEstimate } from '../logic/build';
 import { jobOf, stars } from '../logic/colonist';
 import { bar, btn, costChips, emptyState, portrait, recipeChips, section, tagChips } from '../widgets';
 import { fill, h, replay, setVar, type Child } from '../dom';
-import { iconEl, itemArt, itemIcon, resIcon, resourceArt } from '../art';
+import { buildingIcon, iconEl, itemArt, itemIcon, resIcon, resourceArt } from '../art';
 
 const IDLE = { text: 'Idle', cls: 'warn' };
 
@@ -35,7 +35,8 @@ export class BuildingPanel extends Panel {
   title(): PanelTitle {
     const b = this.inst();
     const d = b ? this.data.building(b.def) : undefined;
-    return { icon: d?.icon ?? '🏠', text: d?.name ?? 'Building' };
+    // the header carries the name only: the building's picture is the hero right below it (headSection)
+    return { icon: d ? '' : '🏠', text: d?.name ?? 'Building' };
   }
 
   override onOpen(arg: unknown): void {
@@ -122,7 +123,8 @@ export class BuildingPanel extends Panel {
     setVar(tierChip, '--ta', tier.accent);
     chips.appendChild(tierChip);
     chips.appendChild(h('span', { class: 'chip ' + st.cls, text: st.text }));
-    return h('div', null, chips, h('div', { class: 'mute small', style: 'margin-top:.4em', text: d.description }));
+    // the building's rendered picture next to its status chips and description
+    return h('div', { class: 'insp-head' }, buildingIcon(d.id, d.icon, 'insp-pic', 'div'), h('div', { class: 'grow' }, chips, h('div', { class: 'mute small', style: 'margin-top:.4em', text: d.description })));
   }
 
   private vitals(b: BuildingInstance, d: BuildingDef): HTMLElement {
