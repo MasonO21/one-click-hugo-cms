@@ -86,7 +86,7 @@ export class RunUI {
     this.set('cap', run.stats.cap, (v) => { q.cap.textContent = '/ ' + v; });
     this.set('over', n > run.stats.cap, (v) => q.legion.classList.toggle('over', v)); // overflow souls are fading
     this.streak.update(run, run.t);
-    this.set('nova', Math.round(run.nova * 100), (v) => {
+    this.set('nova', Math.floor(run.nova * 100), (v) => { // floor: never "ready" a kill short of a charge that can fire
       q.novaFg.style.strokeDashoffset = String(289 * (1 - v / 100));
       q.nova.classList.toggle('ready', v >= 100);
     });
@@ -260,6 +260,7 @@ export class RunUI {
     const fg = $(body, '.fg'), num = $(body, 'b');
     let iv = 0, adOpen = false;
     const finish = (choice, close) => { if (done) return; done = true; clearInterval(iv); close && close(); cb(choice); };
+    this.cancelRevive = () => { done = true; clearInterval(iv); }; // exitRun: no countdown or late ad may end or revive the run
     const actions = [];
     if (canRevive) {
       actions.push({ label: `${icon('ad')} Revive free`, cls: 'btn-ad btn-lg', onClick: (close) => {
@@ -330,12 +331,14 @@ export class RunUI {
     }
     actions.push({ label: 'Continue', cls: 'btn-primary btn-lg', onClick: () => { app.audio.sfx('click'); app.exitRun(); } });
     setTimeout(() => {
+      if (!this.el.isConnected) return; // exited before it showed: no results over the menu
       app.audio.sfx(win ? 'chest' : 'click');
       modal({ body, actions, dismissable: false, cls: 'modal-results' });
     }, win ? 200 : 600);
   }
 
   dispose() {
+    if (this.cancelRevive) this.cancelRevive();
     this.el.remove();
     document.querySelectorAll('.lvl-back, .modal-back').forEach((n) => n.remove());
   }

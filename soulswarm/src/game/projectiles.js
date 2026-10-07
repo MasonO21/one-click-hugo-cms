@@ -215,7 +215,7 @@ export class Projectiles {
     L.x0 = x; L.z0 = z; L.tx = tx; L.tz = tz; L.x = x; L.y = 1.6; L.z = z; L.t = 0; L.fresh = true;
     L.flight = spec.flight; L.r = spec.radius; L.h = spec.height; L.dmg = dmg; L.burn = !!burn;
     this.lobs.push(L);
-    this.run.hazards.circle(tx, tz, L.r, L.flight, this.lobTele, 1.8); // plus a ring closing in as the orb falls
+    L.tele = this.run.hazards.circle(tx, tz, L.r, L.flight, this.lobTele, 1.8); // plus a ring closing in as the orb falls
     this.run.audio.sfx('lob', { volume: 0.8 });
     return L;
   }
@@ -233,6 +233,7 @@ export class Projectiles {
       if (Math.random() < 0.85) parts.emit(L.x, L.y, L.z, 0, 0.3, 0, 0.4, 0.45, 0.05, c[0], c[1], c[2], 0.85);
       if (u < 1) { lobs[w++] = L; continue; }
       this.landLob(L);
+      if (!lobs.length) return; // its hit revived Mordrake, whose revive cleared the sky (and pooled every lob, this one too)
       this.lobPool.push(L);
     }
     lobs.length = w;
@@ -266,7 +267,9 @@ export class Projectiles {
     if (n) m.instanceMatrix.needsUpdate = true;
   }
 
-  clearLobs() { if (this.lobs) { for (const L of this.lobs) this.lobPool.push(L); this.lobs.length = 0; } }
+  clearLobs() { // a lob in flight still owns its circle (both run out on the same frame): it goes too, or it fills over nothing
+    if (this.lobs) { for (const L of this.lobs) { if (L.tele) L.tele.t = L.tele.dur; this.lobPool.push(L); } this.lobs.length = 0; }
+  }
 
   disposeLobs() { if (this.lobMesh) { this.lobMesh.geometry.dispose(); this.lobMesh.material.dispose(); } }
 }

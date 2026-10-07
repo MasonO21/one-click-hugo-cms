@@ -1428,6 +1428,87 @@ errs = await session(async (page) => {
 });
 check('difficulty: no runtime errors', !errs.length, errs[0] || '');
 
+// 22. Bug-test regressions (soak): invariants scripts/soak.mjs found broken, each reduced to a deterministic setup.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, p = app.profile, E = app.engine, out = {};
+    E.manual = true;
+    Object.assign(p.flags, { tutorialDone: true, hints: { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 } });
+    p.chapter.unlocked = 6;
+    const start = (ch, hero = 'vael') => {
+      if (app.run) app.exitRun();
+      p.heroes[hero].owned = true; p.selectedHero = hero; p.energy = 30; app.startRun(ch);
+      const r = app.run; r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.nextAt = 1e9;
+      return r;
+    };
+    // a Witch lob that kills Mordrake lands mid-updateLobs; his free revive clears the sky: no hole in the list, no lob pooled twice
+    let r = start(1, 'mordrake'), P = r.player, PR = r.projectiles;
+    r.weapons.update = () => {};
+    const spec = { flight: 1, radius: 1.2, height: 2 };
+    PR.lob(P.x + 30, P.z + 30, P.x + 30, P.z + 30, 1, spec, false); PR.lobs[0].t = -5; // still airborne, ahead of the lethal one
+    PR.lob(P.x + 3, P.z, P.x, P.z, 1e6, spec, false);
+    P.invuln = 0;
+    try { for (let i = 0; i < 40; i++) r.update(1 / 30); out.lob = { ok: true }; } catch (e) { out.lob = { ok: false, err: e.message }; }
+    Object.assign(out.lob, { revived: r.freeRevives === 0 && !P.dead, holes: PR.lobs.filter((L) => !L).length, poolDup: PR.lobPool.length - new Set(PR.lobPool).size });
+    // a lob the Nova tap clears takes its danger circle with it (it used to fill for a second over nothing)
+    r = start(1); P = r.player; P.hurt = () => {};
+    r.projectiles.lob(P.x + 6, P.z, P.x, P.z, 10, spec, false); r.update(1 / 30);
+    const circles = () => r.hazards.teles.filter((t) => t.kind === 0).length, c0 = circles();
+    r.nova = 1; r.triggerNova(); r.update(1 / 30);
+    out.tele = { before: c0, lobs: r.projectiles.lobs.length, after: circles() };
+    // once Gravemaw falls the chapter is won: an ember vent can't fell the Shepherd in the victory beat (it used to lead to a
+    // revive screen, then DEFEAT on "Give up" or a gem revive over the results), and pause (with its Abandon) is ignored
+    r = start(2); P = r.player;
+    let res = null, ends = 0; const oe = r.onEnd; r.onEnd = (x) => { ends++; res = x; oe(x); };
+    r.time = 359.9;
+    for (let i = 0; i < 150 && !(r.bossEnemy && r.boss.state !== 'enter'); i++) { P.hp = P.maxHp; r.update(1 / 30); }
+    const b = r.bossEnemy; b.hp = 1; r.enemies.damage(b, 50);
+    const H = r.hazards; let puffs = 0; const pf = H.puff.bind(H);
+    H.puff = (x, z, V) => { if ((P.x - x) ** 2 + (P.z - z) ** 2 < (V.radius + P.radius) ** 2) puffs++; return pf(x, z, V); }; // puffs on the Shepherd
+    r.pause(true);
+    const paused = r.paused;
+    if (paused) { r.pause(false); document.querySelectorAll('.modal-back').forEach((n) => n.remove()); } // keep going: the vent half is checked on its own
+    for (let i = 0; i < 200 && !r.ended; i++) {
+      let w = null; for (let k = 0; k < H.nv; k++) if (!w || H.vents[k].warn > w.warn) w = H.vents[k];
+      if (w && w.warn > 0) { P.x = w.x; P.z = w.z; } // stand on whichever vent is about to puff
+      P.hp = 1; P.invuln = 0; r.update(1 / 30);
+    }
+    for (let i = 0; i < 45; i++) r.update(1 / 30);
+    out.beat = { puffs, paused, dead: P.dead, revive: !!document.querySelector('.modal h2') && document.querySelector('.modal h2').textContent === 'You have fallen', ends, victory: res && res.victory };
+    // the NOVA button read "ready" from 99.5% charge (rounded), one kill before a tap could fire it
+    r = start(1); r.director = () => {}; r.player.hurt = () => {};
+    r.legion.addMany(40, r.player.x, r.player.z);
+    const nb = document.querySelector('.hud .nova'), readyAt = (c) => { r.nova = c; for (let i = 0; i < 4; i++) r.update(1 / 30); return nb.classList.contains('ready'); };
+    out.nova = { short: readyAt(299.5 / 300), full: readyAt(1) };
+    app.exitRun();
+    return out;
+  });
+  check('soak: a lob that frees Mordrake (free revive mid-updateLobs) leaves no hole and no double-pooled lob', s.lob.ok && s.lob.revived && !s.lob.holes && !s.lob.poolDup, JSON.stringify(s.lob));
+  check('soak: a Witch lob cleared by the Nova tap takes its danger circle with it', s.tele.before === 1 && s.tele.lobs === 0 && s.tele.after === 0, JSON.stringify(s.tele));
+  check('soak: nothing fells the Shepherd and no pause in the victory beat; the run ends VICTORY once', s.beat.puffs > 0 && !s.beat.paused && !s.beat.dead && !s.beat.revive && s.beat.ends === 1 && s.beat.victory === true, JSON.stringify(s.beat));
+  check('soak: the NOVA button reads ready only at a full charge', !s.nova.short && s.nova.full, JSON.stringify(s.nova));
+  // exitRun mid-run leaves nothing ticking: neither a card pick's 120 ms follow-up timer (it reopened a level-up on the
+  // disposed run), the revive screen's countdown (it ended the exited run ~10 s later: rewards, and a results screen over the
+  // menu) nor the results screen's own delay (the Ch2 run above ended and was exited at once)
+  await page.evaluate(() => {
+    const app = window.__soulswarm, p = app.profile; p.energy = 30; app.engine.manual = true;
+    app.startRun(1); const a = window.__exA = app.run;
+    a.levelQueue = 2; a.showLevelUp(); a.t += 0.31; document.querySelector('.lvl-back .card').click(); // the next card is 120 ms away
+    app.exitRun();
+    p.energy = 30; app.startRun(1); const b = window.__exB = app.run; b.__ends = 0; const oe = b.onEnd; b.onEnd = (x) => { b.__ends++; oe(x); };
+    b.player.invuln = 0; b.player.hurt(1e6);
+    for (let i = 0; i < 45; i++) b.update(1 / 30); // the revive screen and its 10 s countdown
+    window.__exNum = document.querySelector('.modal .rev b');
+    window.__exN0 = window.__exNum && window.__exNum.textContent;
+    app.exitRun();
+  });
+  await page.waitForTimeout(2600);
+  const x = await page.evaluate(() => ({ cardTimer: window.__exA.levelPending, revive: !!window.__exNum, countdown: [window.__exN0, window.__exNum && window.__exNum.textContent].join('>'),
+    ends: window.__exB.__ends, results: !!document.querySelector('.modal-results'), hud: !!document.querySelector('.hud') }));
+  check('soak: exitRun stops the run\'s timers (queued card follow-up, revive countdown, results delay)', !x.cardTimer && x.revive && x.countdown === '10>10' && !x.ends && !x.results && !x.hud, JSON.stringify(x));
+});
+check('soak regressions: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

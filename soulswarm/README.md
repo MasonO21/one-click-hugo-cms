@@ -33,8 +33,9 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy (164 checks)
+npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy, soak regressions (171 checks)
 npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server; DIFF=nightmare|torment, PROG=5, GOD=1, RITE=0)
+node scripts/soak.mjs http://localhost:5173/ 60 1   # seeded soak/fuzz: whole runs with chaos inputs and invariant checks (RUN=n replays one; LEAK=30, PERF=1)
 npm run trailer       # renders a 22 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
 npm run art           # rebuilds in-game art, icon, splash and native sets from the painted masters in store/art

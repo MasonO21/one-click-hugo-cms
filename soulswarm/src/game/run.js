@@ -616,7 +616,7 @@ export class Run {
 
   pause(on) {
     if (on) {
-      if (this.paused || this.levelPending || this.ended || this.player.dead) return;
+      if (this.paused || this.levelPending || this.ended || this.player.dead || this.bossDead) return; // no Abandon from the victory beat
       this.paused = true;
       this.input.reset();
       if (this.ui) this.ui.showPause();
@@ -789,6 +789,7 @@ export class Run {
   }
 
   dispose() {
+    this.ended = true; // over for good: a queued card's follow-up timer must not wake it
     this.input.dispose();
     this.rites.dispose();
     this.gates.dispose();
