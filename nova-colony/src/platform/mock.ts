@@ -19,6 +19,7 @@ export class MemoryStore implements KeyValueStore {
 
 export function createMockServices(opts: { adResult?: 'rewarded' | 'skipped' | 'unavailable' } = {}): PlatformServices {
   const owned = new Set<string>();
+  let txn = 0;
   let ids: string[] = [];
   return {
     platform: 'web',
@@ -34,7 +35,7 @@ export function createMockServices(opts: { adResult?: 'rewarded' | 'skipped' | '
       products: () => ids.map((id) => ({ id, price: '', available: true })),
       purchase: async (productId) => {
         owned.add(productId);
-        return { ok: true, productId, transactionId: `mock_${Date.now()}` };
+        return { ok: true, productId, transactionId: `mock_${Date.now()}_${++txn}` };
       },
       restore: async () => [...owned],
     },

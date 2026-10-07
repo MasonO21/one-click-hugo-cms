@@ -95,9 +95,10 @@ describe('tutorial: guide target resolution', () => {
   it('ui guide: #btn-<ref>; building guide: the instance, else the core', () => {
     const g = makeGame();
     advanceMainTo(g, 'm07_assign');
-    // m07 guides to a logging camp; none exists -> falls back to the core (origin)
+    // m07 guides to a logging camp; none exists -> falls back to the core (center of its 3x3 footprint)
     const t = g.game.sys.tutorial;
-    expect(guideNow(g)!.world).toEqual({ x: 0, z: 0 });
+    const core = g.game.sys.buildings.core();
+    expect(guideNow(g)!.world).toEqual(core ? g.game.sys.buildings.center(core) : { x: 0, z: 0 });
     g.game.state.buildings.list.push(fakeBuilding('logging_camp', 7, { x: 128 + 5, z: 128 }));
     const w = guideNow(g)!.world!;
     expect(w.x).toBeCloseTo((128 + 5 - 128) * 2 + 2, 5); // centre of a 2x2 footprint

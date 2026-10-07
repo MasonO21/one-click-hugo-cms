@@ -211,6 +211,7 @@ describe('missions: live (state-derived) types', () => {
     const g = liveGame();
     const { game } = g;
     const m = game.sys.missions;
+    game.state.buildings.list.length = 0; // count only the buildings this test adds (not the core / Lucky Wheel)
     expect(m.current()?.id).toBe('l1');
     game.state.colonists.list.push(fakeColonist(1), fakeColonist(2));
     tickMeta(g, 1.5);

@@ -81,7 +81,7 @@ describe('save: round trip', () => {
     const g2 = makeGame({ state: loaded, at: t.clock.now + 3600_000 });
     expect(g2.game.fresh).toBe(false);
     expect(g2.game.state.liveops.nova).toBe(77);
-    expect(g2.game.state.buildings.list.map((b) => b.def)).toEqual(['shelter', 'campfire']);
+    expect(g2.game.state.buildings.list.map((b) => b.def).slice(-2)).toEqual(['shelter', 'campfire']);
     expect(g2.game.state.stats.sessions).toBe(2);
   });
 

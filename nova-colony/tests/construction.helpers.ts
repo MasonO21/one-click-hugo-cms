@@ -36,6 +36,11 @@ export function makeGame(opts: TestGameOptions = {}) {
   let now = 1_700_000_000_000;
   const game = new Game({ seed: 7, data, services: createMockServices(), clock: () => (now += 16) });
   game.start();
+  // Start from just the core: other systems (e.g. live-ops' free Lucky Wheel) may place starter buildings.
+  const st = game.state;
+  st.buildings.list = st.buildings.list.filter((x) => x.id === st.colony.coreId);
+  st.stats.built = 0;
+  (game.sys.buildings as unknown as { rebuild(): void }).rebuild();
   isolate(game, opts.live);
   game.state.resources.amounts = { ...(opts.resources ?? {}) };
   const events: EventRecord[] = [];

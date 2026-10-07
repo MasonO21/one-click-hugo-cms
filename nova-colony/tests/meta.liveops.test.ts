@@ -130,6 +130,7 @@ describe('liveops: daily login (7-day cycle)', () => {
 
     const state = JSON.parse(JSON.stringify(fresh.game.state));
     const next = makeGame({ state, at: T0 + DAY });
+    next.game.pendingOffline = null; // no Welcome Back to wait for (covered by the next test)
     const opened2: string[] = [];
     next.game.bus.on('ui:open', (e) => opened2.push(e.panel));
     tickMeta(next, 6);
