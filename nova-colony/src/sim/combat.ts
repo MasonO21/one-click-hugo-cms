@@ -28,6 +28,7 @@ import { planWave, scaleReward, victoryReward, type SpawnItem } from './combat/w
 import { centerX, centerZ, footH, footW, type ShieldEntry, type TurretEntry } from './combat/buildingIndex';
 import type { FlowField } from './combat/flowField';
 import { TUNE, type VictoryInfo } from './combat/types';
+import { installCombatHints } from './combat/hints';
 
 export type { VictoryInfo } from './combat/types';
 
@@ -57,6 +58,7 @@ export class CombatSystem extends System {
 
   override init(): void {
     const bus = this.game.bus;
+    installCombatHints(this.game);
     const dirty = () => {
       this.ctx.index.dirty = true;
     };
