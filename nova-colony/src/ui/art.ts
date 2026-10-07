@@ -137,6 +137,19 @@ const RESEARCH = new Set([
 
 
 /** World event illustration by WorldEventDef.kind, 960×540. */
+/** Painted HUD icons: nav buttons, status chips, the day-phase clock and the map's home / teleporter markers. */
+const HUD = new Set([
+  'map', 'quests', 'shop', 'menu', 'crew', 'tech', 'craft', 'build',
+  'population', 'power', 'defense', 'backpack', 'health',
+  'night', 'sunrise', 'day', 'sunset', 'home', 'teleporter',
+]);
+/** Every PoiDef.id (tests keep this equal to the data and to the files in public/art/pois). */
+const POIS = new Set([
+  'supply_cache', 'hidden_stash', 'abandoned_cabin', 'mining_outpost', 'titanium_cache', 'survivor_camp',
+  'stranded_scientists', 'crashed_ship', 'derelict_freighter', 'alien_ruin', 'ancient_vault', 'research_outpost',
+  'frozen_lab', 'toxic_lab', 'alien_nest', 'hive_nest', 'beacon', 'supply_pod', 'meteor_crater', 'wreck_signal',
+  'distress_beacon', 'rogue_nest', 'merchant_caravan', 'ancient_obelisk',
+]);
 export function eventArt(kind: string): string | null {
   return EVENTS.has(kind) ? `${ROOT}events/${kind}.webp` : null;
 }
@@ -187,6 +200,27 @@ export function researchArt(id: string): string | null {
 /** Every id `researchArt` knows (for tests). */
 export function researchArtIds(): string[] {
   return [...RESEARCH];
+}
+
+/** Painted HUD icon (see HUD above), 128 px with transparency. */
+export function hudArt(id: string): string | null {
+  return HUD.has(id) ? `${ROOT}hud/${id}.webp` : null;
+}
+/** Every id `hudArt` knows (for tests). */
+export function hudArtIds(): string[] {
+  return [...HUD];
+}
+/** Day-phase clock icon by the phase name `dayPhase()` returns ('Night' | 'Sunrise' | 'Day' | 'Sunset'). */
+export function phaseArt(name: string): string | null {
+  return hudArt(name.toLowerCase());
+}
+/** Painted map / point-of-interest icon by PoiDef.id, 128 px with transparency. */
+export function poiArt(id: string): string | null {
+  return POIS.has(id) ? `${ROOT}pois/${id}.webp` : null;
+}
+/** Every id `poiArt` knows (for tests). */
+export function poiArtIds(): string[] {
+  return [...POIS];
 }
 
 /** Loading / key art (landscape or portrait). */
@@ -273,6 +307,11 @@ export function researchIcon(id: string, emoji: string, cls = '', tag = 'i'): HT
   return iconEl(researchArt(id), emoji, cls, tag);
 }
 
+/** Painted HUD icon, with the emoji as the fallback. */
+export function hudIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
+  return iconEl(hudArt(id), emoji, cls, tag);
+}
+
 /** Portrait <img> (or an emoji span) for a colonist profession. */
 export function professionIcon(id: string, emoji: string, cls = 'prof-art'): HTMLElement {
   return artOrEmoji(professionArt(id), emoji, cls, '');
@@ -295,7 +334,8 @@ export function preloadArt(srcs: (string | null)[]): void {
   }
 }
 
-/** The HUD's icons: every resource + Nova, preloaded at startup (item icons load on demand: they are 65 files). */
+/** The HUD's icons: every resource + Nova and the HUD set, preloaded at startup (item icons load on demand). */
 export function preloadResourceArt(): void {
   preloadArt([...RESOURCES].map((id) => resourceArt(id)));
+  preloadArt([...HUD].map((id) => hudArt(id)));
 }

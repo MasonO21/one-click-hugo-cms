@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createDataRegistry } from '../src/data';
-import { alienArt, biomeArt, buildingArt, buildingArtIds, eventArt, isArtSrc, itemArt, itemArtIds, keyArt, professionArt, researchArt, researchArtIds, resourceArt, rewardArt, shopArt, tierArt, vehicleArt, vehicleArtIds } from '../src/ui/art';
+import { alienArt, biomeArt, buildingArt, buildingArtIds, eventArt, hudArt, hudArtIds, isArtSrc, itemArt, itemArtIds, keyArt, phaseArt, poiArt, poiArtIds, professionArt, researchArt, researchArtIds, resourceArt, rewardArt, shopArt, tierArt, vehicleArt, vehicleArtIds } from '../src/ui/art';
+import { dayPhase } from '../src/ui/logic/time';
 import { itemToast, rewardParts } from '../src/ui/logic/rewards';
 import { buildingEffects, buildingUnlock, tierUnlocks, vehicleUnlock } from '../src/ui/logic/describe';
 import { threatGroups } from '../src/ui/hud/Threats';
@@ -139,6 +140,34 @@ describe('ui art lookups', () => {
     expect(files.sort()).toEqual(data.research.map((r) => `${r.id}.webp`).sort());
   });
 
+  it('every HUD icon has a file and public/art/hud has no orphans', () => {
+    expect(hudArtIds().length).toBe(19);
+    for (const id of hudArtIds()) expect(exists(hudArt(id)), id).toBe(true);
+    const files = fs.readdirSync(path.join(PUBLIC, 'art', 'hud'));
+    expect(files.sort()).toEqual(hudArtIds().map((id) => `${id}.webp`).sort());
+  });
+
+  it('every day phase the clock chip can show has a painted icon', () => {
+    const names = new Set<string>();
+    for (let t = 0; t < 1; t += 0.01) names.add(dayPhase(t).name);
+    expect(names.size).toBe(4);
+    for (const n of names) expect(exists(phaseArt(n)), n).toBe(true);
+  });
+
+  it('every point of interest has a painted icon, the ids match the data and the folder has no orphans', () => {
+    expect(data.pois.length).toBeGreaterThanOrEqual(24);
+    for (const p of data.pois) {
+      const url = poiArt(p.id);
+      expect(url, `poi ${p.id}`).toBe(`art/pois/${p.id}.webp`);
+      expect(exists(url), `${p.id} -> ${url}`).toBe(true);
+    }
+    expect([...poiArtIds()].sort()).toEqual(data.pois.map((p) => p.id).sort());
+    const files = fs.readdirSync(path.join(PUBLIC, 'art', 'pois'));
+    expect(files.sort()).toEqual(data.pois.map((p) => `${p.id}.webp`).sort());
+    // world events borrow the picture of the POI they spawn (map marker, interact button)
+    for (const e of data.worldEvents) if (e.poi) expect(poiArt(e.poi), `${e.id} -> ${e.poi}`).not.toBeNull();
+  });
+
   it('reward and key art exist', () => {
     for (const id of ['victory_chest', 'supply_crate', 'daily_gift']) expect(exists(rewardArt(id)), id).toBe(true);
     expect(exists(keyArt(false))).toBe(true);
@@ -164,6 +193,10 @@ describe('ui art lookups', () => {
     expect(vehicleArt('garage')).toBeNull();
     expect(researchArt('time_travel')).toBeNull();
     expect(researchArt('')).toBeNull();
+    expect(hudArt('jetpack')).toBeNull();
+    expect(phaseArt('Eclipse')).toBeNull();
+    expect(poiArt('death_star')).toBeNull();
+    expect(poiArt('')).toBeNull();
   });
 
   it('URLs are relative (vite base "./", Capacitor) and recognised as art', () => {
@@ -192,6 +225,8 @@ describe('ui art lookups', () => {
     for (const b of data.buildings) add(buildingArt(b.id));
     for (const v of data.vehicles) add(vehicleArt(v.id));
     for (const r of data.research) add(researchArt(r.id));
+    for (const id of hudArtIds()) add(hudArt(id));
+    for (const p of data.pois) add(poiArt(p.id));
     add(keyArt(false));
     add(keyArt(true));
     const root = path.join(PUBLIC, 'art');
@@ -203,7 +238,7 @@ describe('ui art lookups', () => {
       }
     };
     walk(root);
-    expect(files.length).toBeGreaterThanOrEqual(77 + data.items.length + data.buildings.length + data.vehicles.length + data.research.length);
+    expect(files.length).toBeGreaterThanOrEqual(77 + data.items.length + data.buildings.length + data.vehicles.length + data.research.length + hudArtIds().length + data.pois.length);
     expect(files.filter((f) => !used.has(f))).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@
  */
 import type { UiCtx } from '../ctx';
 import { h, setClass, setText } from '../dom';
-import { buildingArt, iconEl } from '../art';
+import { buildingArt, iconEl, poiArt } from '../art';
 
 export class InteractButton {
   readonly el: HTMLButtonElement;
@@ -52,8 +52,8 @@ export class InteractButton {
       }
       return;
     }
-    // near a building the button shows that building's picture instead of its emoji
-    const art = it.kind === 'building' ? buildingArt(this.ctx.game.sys.buildings.get(Number(it.target))?.def ?? '') : null;
+    // near a building or a point of interest the button shows its picture instead of the emoji
+    const art = this.artFor(it.kind, it.target);
     const key = it.kind + '|' + it.label + '|' + it.icon + '|' + (art ?? '');
     if (this.el.hidden) {
       this.el.hidden = false;
@@ -70,6 +70,27 @@ export class InteractButton {
     if (this.kind) setClass(this.el, 'k-' + this.kind, false);
     this.kind = it.kind;
     setClass(this.el, 'k-' + this.kind, true);
+  }
+
+  private artFor(kind: string, target: number | string | null): string | null {
+    const g = this.ctx.game;
+    switch (kind) {
+      case 'building':
+        return buildingArt(g.sys.buildings.get(Number(target))?.def ?? '');
+      case 'loot':
+      case 'rescue':
+      case 'beacon': {
+        const p = g.sys.world.gen?.pois.find((q) => q.id === target);
+        return p ? poiArt(p.def) : null;
+      }
+      case 'event': {
+        const ev = g.state.world.events.find((e) => e.id === target);
+        const poi = ev ? g.data.worldEvent(ev.def)?.poi : undefined;
+        return poi ? poiArt(poi) : null;
+      }
+      default:
+        return null;
+    }
   }
 
   get visible(): boolean {

@@ -10,7 +10,7 @@ import { clamp } from '../../core/math';
 import { MAP_MAX_ZOOM, MAP_MIN_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, regionCentroids, worldToMap, type MapMarker, type MapViewport } from '../logic/map';
 import { btn, section } from '../widgets';
 import { fill, h } from '../dom';
-import { artOrEmoji, biomeArt, eventArt } from '../art';
+import { artOrEmoji, biomeArt, eventArt, hudArt, iconEl, poiArt } from '../art';
 
 function hex(c: string): [number, number, number] {
   const v = parseInt(c.replace('#', ''), 16);
@@ -44,6 +44,7 @@ export class MapPanel extends Panel {
   private baseKey = '';
   private vp: MapViewport = { w: 400, h: 400, zoom: 1, cx: 0, cz: 0 };
   private markers: MapMarker[] = [];
+  private readonly markerImgs = new Map<string, HTMLImageElement>();
   private selected: MapMarker | null = null;
   /** A region picked by tapping empty ground or its row in the list (shows its postcard). */
   private selectedRegion: string | null = null;
@@ -125,22 +126,22 @@ export class MapPanel extends Panel {
   private collectMarkers(): void {
     const g = this.game;
     const out: MapMarker[] = [];
-    out.push({ id: 'base', kind: 'core', x: 0, z: 0, icon: '🏠', label: 'Your colony', travel: true });
+    out.push({ id: 'base', kind: 'core', x: 0, z: 0, icon: '🏠', art: hudArt('home'), label: 'Your colony', travel: true });
     const wst = g.state.world;
     for (const p of g.sys.world.gen?.pois ?? []) {
       const ps = wst.pois[p.id];
       if (!ps?.discovered) continue;
       const def = this.data.poi(p.def);
       const isBeacon = wst.beacons.includes(p.id);
-      out.push({ id: p.id, kind: isBeacon ? 'beacon' : 'poi', x: p.x, z: p.z, icon: def?.icon ?? '❓', label: def?.name ?? p.def, travel: isBeacon });
+      out.push({ id: p.id, kind: isBeacon ? 'beacon' : 'poi', x: p.x, z: p.z, icon: def?.icon ?? '❓', art: poiArt(p.def), label: def?.name ?? p.def, travel: isBeacon });
     }
     for (const t of g.sys.world.fastTravelTargets()) {
       if (t.id === 'base' || out.some((m) => m.id === t.id)) continue;
-      out.push({ id: t.id, kind: 'teleporter', x: t.x, z: t.z, icon: '🌀', label: t.name, travel: true });
+      out.push({ id: t.id, kind: 'teleporter', x: t.x, z: t.z, icon: '🌀', art: hudArt('teleporter'), label: t.name, travel: true });
     }
     for (const e of wst.events) {
       const def = this.data.worldEvent(e.def);
-      out.push({ id: `event_${e.id}`, kind: 'event', x: e.x, z: e.z, icon: def?.icon ?? '✨', label: def?.name ?? 'Event', travel: false });
+      out.push({ id: `event_${e.id}`, kind: 'event', x: e.x, z: e.z, icon: def?.icon ?? '✨', art: def?.poi ? poiArt(def.poi) : null, label: def?.name ?? 'Event', travel: false });
     }
     this.markers = out;
   }
@@ -170,7 +171,7 @@ export class MapPanel extends Panel {
       return;
     }
     const evArt = m.kind === 'event' ? this.eventArtFor(m) : null;
-    const card = h('div', { class: 'card tint' }, evArt ? h('div', { class: 'ev-hero small' }, artOrEmoji(evArt.src, m.icon, 'ev-img', m.label, true)) : null, h('div', { class: 'row' }, h('span', { class: 'bi', text: m.icon }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.label }), h('div', { class: 'mute small', text: m.kind === 'event' ? 'A world event — go take a look!' : m.kind === 'beacon' ? 'Fast-travel beacon' : m.kind === 'core' ? 'Home sweet home' : 'Point of interest' }))));
+    const card = h('div', { class: 'card tint' }, evArt ? h('div', { class: 'ev-hero small' }, artOrEmoji(evArt.src, m.icon, 'ev-img', m.label, true)) : null, h('div', { class: 'row' }, iconEl(m.art ?? null, m.icon, 'bi', 'span'), h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.label }), h('div', { class: 'mute small', text: m.kind === 'event' ? 'A world event — go take a look!' : m.kind === 'beacon' ? 'Fast-travel beacon' : m.kind === 'core' ? 'Home sweet home' : 'Point of interest' }))));
     const act = h('div', { style: 'margin-top:.5em' });
     if (m.travel) act.appendChild(btn({ label: '🌀 Fast travel here', cls: 'good block', onClick: () => this.travel(m.id, m.label) }));
     else if (m.kind !== 'core') {
@@ -190,6 +191,21 @@ export class MapPanel extends Panel {
   }
 
   /** Illustration for an event marker (`event_<id>`). */
+  /** A decoded marker picture, or null while it loads (the emoji stands in) or when it failed. */
+  private markerImage(src: string): HTMLImageElement | null {
+    let img = this.markerImgs.get(src);
+    if (!img) {
+      img = new Image();
+      img.decoding = 'async';
+      img.onload = () => {
+        this.dirty = true;
+      };
+      img.src = src;
+      this.markerImgs.set(src, img);
+    }
+    return img.complete && img.naturalWidth > 0 ? img : null;
+  }
+
   private eventArtFor(m: MapMarker): { src: string } | null {
     const ev = this.game.state.world.events.find((e) => `event_${e.id}` === m.id);
     const def = ev ? this.data.worldEvent(ev.def) : undefined;
@@ -526,9 +542,15 @@ export class MapPanel extends Panel {
       c.lineWidth = m.id === sel ? 4 : 2.5;
       c.strokeStyle = m.id === sel ? '#ff8a3d' : m.travel ? '#4fb3f6' : 'rgba(40,24,70,0.7)';
       c.stroke();
-      c.font = `${m.travel ? 17 : 14}px system-ui, "Apple Color Emoji", "Segoe UI Emoji"`;
-      c.fillStyle = '#000';
-      c.fillText(m.icon, p.x, p.y + 1);
+      const img = m.art ? this.markerImage(m.art) : null;
+      if (img) {
+        const s = r * 1.75;
+        c.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
+      } else {
+        c.font = `${m.travel ? 17 : 14}px system-ui, "Apple Color Emoji", "Segoe UI Emoji"`;
+        c.fillStyle = '#000';
+        c.fillText(m.icon, p.x, p.y + 1);
+      }
     }
 
     // player arrow

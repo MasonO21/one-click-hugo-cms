@@ -37,7 +37,7 @@ import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
 import { ConsentPrompt } from './ConsentPrompt';
 import { Threats } from './hud/Threats';
-import { alienArt, biomeArt, eventArt, itemArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
+import { alienArt, biomeArt, eventArt, itemArt, poiArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
 import { itemToast, RARITY_COLOR } from './logic/rewards';
 import { tierUnlocks } from './logic/describe';
@@ -570,6 +570,11 @@ export class UI {
       const src = eventArt(d.kind);
       if (src && text.startsWith(lead)) return { text: text.slice(d.icon.length + 1), icon: src };
     }
+    for (const d of g.data.pois) {
+      const lead = `${d.icon} ${d.name}`;
+      const src = poiArt(d.id);
+      if (src && text.startsWith(lead)) return { text: text.slice(d.icon.length + 1), icon: src };
+    }
     return itemToast(text, g.data) ?? { text, icon };
   }
 
@@ -647,7 +652,7 @@ export class UI {
       case 'poi': {
         const p = g.sys.world.gen?.pois.find((q) => q.id === sel.id);
         const def = p ? g.data.poi(p.def) : undefined;
-        if (p && def) this.tip.show(def.icon, def.name, def.description, p.x, p.z);
+        if (p && def) this.tip.show(poiArt(def.id) ?? def.icon, def.name, def.description, p.x, p.z);
         break;
       }
       case 'node': {

@@ -46,6 +46,8 @@ export interface MapMarker {
   x: number;
   z: number;
   icon: string;
+  /** Painted icon URL (art/pois, art/hud), drawn instead of the emoji once loaded. */
+  art?: string | null;
   label: string;
   /** Tapping offers fast travel. */
   travel: boolean;

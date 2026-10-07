@@ -1186,3 +1186,29 @@
   height: 3em;
   font-size: 1em;
 }
+
+/* HUD nav buttons + status chips: painted icons (art/hud) in the emoji's slot */
+.rail-btn .ic.aico,
+.dock-btn .ic.aico {
+  width: 1.3em;
+  height: 1.3em;
+}
+.rail-btn .ic.aico.emoji,
+.dock-btn .ic.aico.emoji {
+  width: auto;
+  height: auto;
+}
+.schip .ic.aico {
+  width: 1.6em;
+  height: 1.6em;
+  margin: -0.25em -0.1em -0.25em -0.2em;
+  filter: drop-shadow(0 0.06em 0.06em rgba(0, 0, 0, 0.3));
+}
+.schip .ic.aico.emoji {
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+.schip .clock-ic {
+  display: contents;
+}

@@ -9,7 +9,7 @@ import { fmt, fmtSigned } from '../../core/format';
 import { clockText, dayPhase, fmtHMS } from '../logic/time';
 import { happinessFace } from '../logic/colonist';
 import { bigNum } from '../widgets';
-import { artOrEmoji, preloadResourceArt, resIcon, tierArt } from '../art';
+import { artOrEmoji, hudIcon, phaseArt, iconEl, preloadResourceArt, resIcon, tierArt } from '../art';
 import { fill, h, replay, setClass, setHidden, setText, setVar, safe } from '../dom';
 import { ResourceBar } from './ResourceBar';
 import { InteractButton } from './Interact';
@@ -18,6 +18,8 @@ import { Banners } from './Banners';
 
 interface NavDef {
   id: string;
+  /** Painted icon id (art/hud), with `icon` as the emoji fallback. */
+  art: string;
   icon: string;
   label: string;
   panel: string;
@@ -25,16 +27,16 @@ interface NavDef {
 }
 
 const RAIL: NavDef[] = [
-  { id: 'btn-map', icon: '🗺️', label: 'Map', panel: 'map' },
-  { id: 'btn-missions', icon: '📜', label: 'Quests', panel: 'missions' },
-  { id: 'btn-shop', icon: '💎', label: 'Shop', panel: 'shop' },
-  { id: 'btn-menu', icon: '☰', label: 'Menu', panel: 'menu' },
+  { id: 'btn-map', art: 'map', icon: '🗺️', label: 'Map', panel: 'map' },
+  { id: 'btn-missions', art: 'quests', icon: '📜', label: 'Quests', panel: 'missions' },
+  { id: 'btn-shop', art: 'shop', icon: '💎', label: 'Shop', panel: 'shop' },
+  { id: 'btn-menu', art: 'menu', icon: '☰', label: 'Menu', panel: 'menu' },
 ];
 const DOCK: NavDef[] = [
-  { id: 'btn-colonists', icon: '🧑‍🚀', label: 'Crew', panel: 'colonists' },
-  { id: 'btn-research', icon: '🔬', label: 'Tech', panel: 'research' },
-  { id: 'btn-craft', icon: '🛠️', label: 'Craft', panel: 'craft' },
-  { id: 'btn-build', icon: '🔨', label: 'Build', panel: 'build', primary: true },
+  { id: 'btn-colonists', art: 'crew', icon: '🧑‍🚀', label: 'Crew', panel: 'colonists' },
+  { id: 'btn-research', art: 'tech', icon: '🔬', label: 'Tech', panel: 'research' },
+  { id: 'btn-craft', art: 'craft', icon: '🛠️', label: 'Craft', panel: 'craft' },
+  { id: 'btn-build', art: 'build', icon: '🔨', label: 'Build', panel: 'build', primary: true },
 ];
 
 /** Eases a displayed integer toward a target. */
@@ -81,6 +83,7 @@ export class Hud {
   private readonly chipPowerIc: HTMLElement;
   private readonly chipPowerV: HTMLElement;
   private readonly chipClockIc: HTMLElement;
+  private clockPhase = '';
   private readonly chipClockV: HTMLElement;
   private readonly chipClockS: HTMLElement;
   private readonly chipDef: HTMLElement;
@@ -130,10 +133,10 @@ export class Hud {
     // --- status row
     this.chipPopV = h('span', { class: 'v' });
     this.chipPopS = h('small');
-    this.chipPop = h('button', { class: 'schip tap', type: 'button', hidden: true, data: { sfx: 'ui_click' } }, h('span', { class: 'ic', text: '👥' }), this.chipPopV, this.chipPopS);
+    this.chipPop = h('button', { class: 'schip tap', type: 'button', hidden: true, data: { sfx: 'ui_click' } }, hudIcon('population', '👥', 'ic', 'span'), this.chipPopV, this.chipPopS);
     this.chipPop.addEventListener('click', () => ctx.open('colonists'));
 
-    this.chipPowerIc = h('span', { class: 'ic', text: '⚡' });
+    this.chipPowerIc = hudIcon('power', '⚡', 'ic', 'span');
     this.chipPowerV = h('span', { class: 'v' });
     this.chipPower = h('button', { class: 'schip tap', type: 'button', hidden: true, id: 'chip-power', data: { sfx: 'ui_click' } }, this.chipPowerIc, this.chipPowerV);
     this.chipPower.addEventListener('click', () => {
@@ -141,21 +144,21 @@ export class Hud {
       this.pollStatus();
     });
 
-    this.chipClockIc = h('span', { class: 'ic' });
+    this.chipClockIc = h('span', { class: 'clock-ic' });
     this.chipClockV = h('span', { class: 'v' });
     this.chipClockS = h('small');
     const chipClock = h('div', { class: 'schip static' }, this.chipClockIc, this.chipClockV, this.chipClockS);
 
     this.chipDefV = h('span', { class: 'v' });
-    this.chipDef = h('button', { class: 'schip tap', type: 'button', hidden: true, data: { sfx: 'ui_click' } }, h('span', { class: 'ic', text: '🛡️' }), this.chipDefV);
+    this.chipDef = h('button', { class: 'schip tap', type: 'button', hidden: true, data: { sfx: 'ui_click' } }, hudIcon('defense', '🛡️', 'ic', 'span'), this.chipDefV);
     this.chipDef.addEventListener('click', () => this.showPop(this.chipDef, () => this.defensePop()));
 
     this.chipPackV = h('span', { class: 'v' });
-    this.chipPack = h('button', { class: 'schip tap', type: 'button', hidden: true, data: { sfx: 'ui_click' } }, h('span', { class: 'ic', text: '🎒' }), this.chipPackV);
+    this.chipPack = h('button', { class: 'schip tap', type: 'button', hidden: true, data: { sfx: 'ui_click' } }, hudIcon('backpack', '🎒', 'ic', 'span'), this.chipPackV);
     this.chipPack.addEventListener('click', () => ctx.open('inventory'));
 
     this.hpFill = h('i');
-    this.chipHp = h('div', { class: 'schip hp static', hidden: true }, h('span', { class: 'ic', text: '❤️' }), h('div', { class: 'bar red' }, this.hpFill));
+    this.chipHp = h('div', { class: 'schip hp static', hidden: true }, hudIcon('health', '❤️', 'ic', 'span'), h('div', { class: 'bar red' }, this.hpFill));
     this.boostWrap = h('div', { class: 'row', style: 'display:contents' });
     const status = h('div', { class: 'hud-status' }, this.chipPop, this.chipPower, chipClock, this.chipDef, this.chipPack, this.chipHp, this.boostWrap);
     this.statusEl = status;
@@ -179,7 +182,7 @@ export class Hud {
 
   private navButton(n: NavDef, cls: string): HTMLElement {
     const badge = h('span', { class: 'badge', hidden: true });
-    const b = h('button', { class: cls + ' tap', id: n.id, type: 'button', 'aria-label': n.label, data: { sfx: 'ui_click' } }, h('span', { class: 'ic', text: n.icon }), h('span', { class: 'lb', text: n.label }), badge);
+    const b = h('button', { class: cls + ' tap', id: n.id, type: 'button', 'aria-label': n.label, data: { sfx: 'ui_click' } }, hudIcon(n.art, n.icon, 'ic', 'span'), h('span', { class: 'lb', text: n.label }), badge);
     b.addEventListener('click', () => {
       if (this.ctx.isOpen(n.panel)) this.ctx.close(n.panel);
       else this.ctx.open(n.panel);
@@ -271,7 +274,10 @@ export class Hud {
 
     // clock
     const ph = dayPhase(st.time.dayTime);
-    setText(this.chipClockIc, ph.icon);
+    if (ph.name !== this.clockPhase) {
+      this.clockPhase = ph.name;
+      this.chipClockIc.replaceChildren(iconEl(phaseArt(ph.name), ph.icon, 'ic', 'span'));
+    }
     setText(this.chipClockV, `Day ${st.time.day}`);
     setText(this.chipClockS, clockText(st.time.dayTime));
 
