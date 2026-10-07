@@ -323,6 +323,43 @@ describe('colonist pathfinding', { timeout: 90_000 }, () => {
     expect(ai.stats.fallbacks).toBe(0);
   });
 
+  it('a wall that closes the only gate while searches are running never yields a path through it', () => {
+    const h = makeGame();
+    addCore(h.game);
+    const walls = ring(h, 100, 100, 156, 156, [[128, 100]]);
+    const crowd: Colonist[] = [];
+    for (let i = 0; i < 8; i++) crowd.push(addColonist(h.game, 'common', {}, cellCenter(110 + i * 4), cellCenter(160)));
+    h.game.state.player.x = 0;
+    h.game.state.player.z = 20;
+    h.run(0.2);
+    const ai = aiOf(h);
+    for (const c of crowd) ai.brains.get(c.id)!.nextThink = 1e9;
+    const goals = crowd.map((c, i) => ({ x: cellCenter(116 + i * 3), z: cellCenter(120) }));
+    crowd.forEach((c, i) => {
+      const br = ai.brains.get(c.id)!;
+      br.moving = false;
+      ai.setGoal(c, br, goals[i].x, goals[i].z, -1, 'idle', 60, false, 0, 0);
+    });
+    expect(ai.pending).toBeGreaterThan(0); // searches still queued / running
+    // close the gate right now
+    const gate = walls.find((b) => b.def === 'door')!;
+    h.game.sys.buildings.remove(gate.id);
+    addBuilding(h.game, 'wall', 128, 100);
+    h.game.bus.emit('building:changed', {});
+    const trackers = crowd.map((c) => tracker(h, c));
+    let frames = 0;
+    const done = () => crowd.every((c, i) => dist(c.x, c.z, goals[i].x, goals[i].z) < 0.6);
+    while (!done() && frames < 60 * 90) {
+      h.clock.now += 16;
+      h.game.update(1 / 60);
+      trackers.forEach((t) => t.sample());
+      frames++;
+    }
+    expect(done()).toBe(true); // everybody got there in the end (last-resort teleports through the sealed ring)
+    for (const t of trackers) expect(t.t.inWall).toBe(false); // ... but nobody ever walked through a wall
+    expect(ai.stats.fallbacks).toBeGreaterThanOrEqual(1);
+  });
+
   it('routes around water / locked terrain (world.walkable) and never steps into it', () => {
     const h = makeGame();
     addCore(h.game);
@@ -374,6 +411,94 @@ describe('colonist pathfinding', { timeout: 90_000 }, () => {
     expect(c.activity).toBe('sleeping');
     expect(dist(c.x, c.z, sc.x, sc.z)).toBeLessThan(2.5);
     expect(aiOf(h).stats.searches).toBe(0);
+  });
+
+  it('soak: random walled bases never put anybody inside a wall and nothing goes NaN', () => {
+    for (const seed of [11, 12, 13]) {
+      const rnd = (() => {
+        let st = seed * 7919;
+        return () => ((st = (Math.imul(st, 1664525) + 1013904223) >>> 0) / 4294967296);
+      })();
+      const h = makeGame({ seed });
+      addCore(h.game);
+      const taken = new Set<string>();
+      const free = (x: number, z: number, w: number, d: number) => {
+        for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (taken.has(`${x + i},${z + j}`)) return false;
+        return true;
+      };
+      const mark = (x: number, z: number, w: number, d: number) => {
+        for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) taken.add(`${x + i},${z + j}`);
+      };
+      mark(121, 121, 14, 14); // the middle stays open (core and spawn area)
+      for (let t = 0, rooms = 0; t < 80 && rooms < 7; t++) {
+        const w = 5 + Math.floor(rnd() * 5);
+        const d = 5 + Math.floor(rnd() * 5);
+        const x = 108 + Math.floor(rnd() * 32);
+        const z = 108 + Math.floor(rnd() * 32);
+        if (!free(x, z, w, d)) continue;
+        mark(x, z, w, d);
+        rooms++;
+        const doorX = rnd() < 0.5 ? x + 1 + Math.floor(rnd() * (w - 2)) : rnd() < 0.5 ? x : x + w - 1;
+        const doorZ = doorX === x || doorX === x + w - 1 ? z + 1 + Math.floor(rnd() * (d - 2)) : rnd() < 0.5 ? z : z + d - 1;
+        for (let i = 0; i < w; i++) {
+          for (let j = 0; j < d; j++) {
+            if (i !== 0 && j !== 0 && i !== w - 1 && j !== d - 1) continue;
+            addBuilding(h.game, x + i === doorX && z + j === doorZ ? 'door' : 'wall', x + i, z + j);
+          }
+        }
+        addBuilding(h.game, 'shelter', x + 2, z + 2);
+      }
+      for (const kind of ['logging_camp', 'quarry', 'berry_patch', 'campfire', 'kitchen', 'guard_post']) {
+        for (let tries = 0; tries < 20; tries++) {
+          const def = h.game.data.building(kind)!;
+          const x = 108 + Math.floor(rnd() * 34);
+          const z = 108 + Math.floor(rnd() * 34);
+          if (!free(x, z, def.size[0], def.size[1])) continue;
+          mark(x, z, def.size[0], def.size[1]);
+          addBuilding(h.game, kind, x, z);
+          break;
+        }
+      }
+      fakeNodes(h.game, []);
+      // spawn everybody on open ground
+      const bs = h.game.sys.buildings;
+      const crowd: Colonist[] = [];
+      for (let i = 0; i < 24; i++) {
+        for (let tries = 0; tries < 50; tries++) {
+          const cx = 112 + Math.floor(rnd() * 30);
+          const cz = 112 + Math.floor(rnd() * 30);
+          if (bs.blocked(cx, cz, 'colonist')) continue;
+          crowd.push(addColonist(h.game, 'common', {}, cellCenter(cx), cellCenter(cz)));
+          break;
+        }
+      }
+      h.game.state.player.x = 0;
+      h.game.state.player.z = 0;
+      const core = h.game.state.colony.coreId;
+      let inWall = 0;
+      for (const [dayTime, seconds] of [[0.3, 30], [0.8, 30], [0.3, 30]] as const) {
+        h.game.state.time.dayTime = dayTime;
+        h.game.bus.emit(dayTime > 0.7 ? 'time:nightfall' : 'time:sunrise', {});
+        watch(
+          h,
+          seconds,
+          () => {
+            for (const c of crowd) {
+              if (!Number.isFinite(c.x) || !Number.isFinite(c.z) || !Number.isFinite(c.rot)) throw new Error('NaN colonist');
+              const cx = cellOf(c.x);
+              const cz = cellOf(c.z);
+              if (bs.blocked(cx, cz, 'colonist')) {
+                const at = bs.at(cx, cz);
+                if (!at || (at.id !== c.bed && at.id !== c.workplace && at.id !== core)) inWall++;
+              }
+            }
+          },
+          1 / 20,
+        );
+      }
+      expect(inWall).toBe(0);
+      expect(aiOf(h).stats.searches).toBeGreaterThan(5);
+    }
   });
 
   describe('performance', { timeout: 90_000 }, () => {

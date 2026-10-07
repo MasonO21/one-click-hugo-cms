@@ -831,15 +831,6 @@ export class ColonistAI {
       const c = this.actC;
       if (!c) continue; // served from the cache; look at the next one
       const sf = this.sf;
-      if (this.actEpoch !== this.epoch) {
-        // buildings changed under a running search: start it over on the new layout
-        const br = this.brains.get(c.id);
-        if (!br || br.pst !== P_WAIT) {
-          this.dropActive();
-          continue;
-        }
-        this.beginSearch(c, br);
-      }
       const kind = sf.advance(this.expandLeft);
       this.expandLeft -= sf.last + 4;
       this.stats.expanded += sf.last;
@@ -895,11 +886,17 @@ export class ColonistAI {
     if (!br) return;
     br.queued = false;
     const wp = this.sf.wp;
-    if (this.pathCache.size >= CACHE_MAX) this.pathCache.clear();
-    this.pathCache.set(this.actKey, { kind, wp, at: this.f.now, enter: this.actEnter });
+    // buildings may have changed while the search ran over several frames: then the result is not cached and the
+    // colonist re-validates the path (and re-plans if needed) on its first step
+    const stale = this.actEpoch !== this.epoch;
+    if (!stale) {
+      if (this.pathCache.size >= CACHE_MAX) this.pathCache.clear();
+      this.pathCache.set(this.actKey, { kind, wp, at: this.f.now, enter: this.actEnter });
+    }
     if (br.pst !== P_WAIT || !br.moving) return;
     this.probe.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
     this.adopt(c, br, kind, wp, false);
+    if (stale && (br.pst as number) === P_FOLLOW) br.pver = this.actEpoch;
   }
 
   /** Start following a path (or fall back to plain steering when there is none). false = rejected (cached path unusable here). */
