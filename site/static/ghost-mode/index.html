@@ -237,7 +237,16 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;font-size:14px;font-weight:400;color:var(--fg);width:100%;min-width:0}
 
 /* settings */
-.settings{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.settings{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.set-fold{border:1px solid var(--line);border-radius:14px;background:var(--surface);min-width:0;max-width:620px}
+.set-fold>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;padding:12px 14px;border-radius:13px}
+.set-fold>summary::-webkit-details-marker{display:none}
+.set-fold>summary:hover{background:var(--surface-2)}
+.set-fold>summary::after{content:"";grid-column:2;grid-row:1/span 2;width:8px;height:8px;margin:0 4px 4px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s}
+.set-fold[open]>summary::after{transform:rotate(225deg);margin:4px 4px 0}
+.sf-title{font-family:var(--font-display);font-weight:700;font-size:14.5px}
+.sf-sum{grid-column:1;font-size:12.5px;color:var(--muted)}
+.set-fold>.set-group{padding:2px 14px 14px}
 .set-group{border:0;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
 .set-group legend{font-family:var(--font-display);font-weight:700;font-size:14.5px;padding:0;margin-bottom:8px}
 .hint{font-size:12.5px;color:var(--muted);margin-top:-6px}
@@ -259,6 +268,7 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .switch input:checked{background:var(--lime)}
 .switch input:checked::after{transform:translateX(18px);background:#222222}
 .saved{font-size:12.5px;color:var(--ok);font-weight:600;min-height:1.4em}
+.settings>.saved:empty{min-height:0;margin-top:-14px}
 
 /* ---------- wall ---------- */
 .wall-card{background:var(--surface);border:1.5px dashed color-mix(in srgb,var(--ok) 45%,var(--line));border-radius:var(--r-lg);padding:16px;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 60px)}
@@ -309,8 +319,8 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .chat-row:hover{background:var(--surface-2)}
 .cr-main{display:grid;min-width:0}
 .cr-name{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;min-width:0}
-.cr-name>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
-.cr-name>.app-tag{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.cr-name>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto;min-width:2.2em}
+.cr-name>.app-tag{flex:none}
 .app-tag{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--surface-2);color:var(--muted);white-space:nowrap;border:1px solid var(--line)}
 .cr-prev{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cr-time{font-size:12px;color:var(--faint);align-self:start;padding-top:3px;white-space:nowrap}
@@ -644,7 +654,6 @@ button.stat:hover{border-color:var(--trust)}
 .setup-item b{font-size:14px}
 .setup-item small{display:block;font-size:12.5px;color:var(--muted);line-height:1.4}
 .setup-item.done{background:var(--ok-tint)}
-.setup-count{font-weight:700;color:var(--fg)}
 .how-plat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .how-plat>div{padding:12px 14px;border-radius:14px;background:var(--surface-2);display:grid;gap:4px}
 .how-plat b{font-family:var(--font-display);font-size:13.5px}
@@ -851,8 +860,10 @@ img{max-width:100%}
               </div>
               <div class="age-card" id="ageCard"></div>
             </fieldset>
+            <details class="set-fold" id="foldChecks">
+              <summary><span class="sf-title" data-t>What Ghost Mode checks</span><span class="sf-sum" id="sumChecks"></span></summary>
             <fieldset class="set-group">
-              <legend data-t>What Ghost Mode checks</legend>
+              <legend class="sr-only" data-t>What Ghost Mode checks</legend>
               <label class="switch" data-only="android"><span><b data-t>Text messages</b><small data-t="srcTextsHint">Texts and chats on <span class="kid-poss">Maya's</span> phone.</small></span><input type="checkbox" id="srcTexts" name="srcTexts"></label>
               <label class="switch"><span><b data-t>Email</b><small data-t="srcEmailHint" data-only="android"><span class="kid-poss">Maya's</span> email inbox.</small><small data-t="srcEmailHintIos" data-only="iphone">Connected once to <span class="kid-poss">Maya's</span> Gmail or Outlook, and checked on the phone.</small></span><input type="checkbox" id="srcEmail" name="srcEmail"></label>
               <label class="switch" data-only="android"><span><b data-t>Social media and games</b><small data-t>Instagram, TikTok, Snapchat, Discord, Roblox, WhatsApp and Minecraft.</small></span><input type="checkbox" id="srcSocial" name="srcSocial"></label>
@@ -863,8 +874,11 @@ img{max-width:100%}
               <label class="switch"><span><b data-t>Pause social apps and games at night</b><small data-t>During quiet hours. Texts and calls still work.</small></span><input type="checkbox" id="pauseApps" name="pauseApps"></label>
               <p class="hint plat-hint" data-only="iphone" data-t>Apple doesn't let any app read texts or other apps' messages on iPhone. Ghost Mode uses everything Apple allows.</p>
             </fieldset>
+            </details>
+            <details class="set-fold" id="foldAlerts">
+              <summary><span class="sf-title" data-t>Alerts</span><span class="sf-sum" id="sumAlerts"></span></summary>
             <fieldset class="set-group">
-              <legend data-t>Alerts</legend>
+              <legend class="sr-only" data-t>Alerts</legend>
               <label class="switch"><span><b data-t>New adult contacts</b><small data-t>Someone 18+ who isn't on your trusted list starts chatting.</small><small class="plat-note" data-only="iphone" data-t>On iPhone: email, and texts with home sync.</small></span><input type="checkbox" id="aAdult" name="aAdult"></label>
               <label class="switch"><span><b data-t>Busy late at night</b><small data-t>Much more messaging than usual during quiet hours.</small><small class="plat-note" data-only="iphone" data-t>On iPhone: minutes in messaging and social apps, from Screen Time.</small></span><input type="checkbox" id="aLate" name="aLate"></label>
               <label class="switch"><span><b data-t>Grooming warning signs</b><small data-t>Secrets, gifts, photo requests, moving to private apps and more.</small><small class="plat-note" data-only="iphone" data-t>On iPhone: email, and texts with home sync.</small></span><input type="checkbox" id="aGroom" name="aGroom"></label>
@@ -879,8 +893,11 @@ img{max-width:100%}
                 <label class="sens-opt"><input type="radio" name="sensitivity" value="high" id="sensHigh"><span><b data-t>High</b><small data-t>Flags early signs. Expect more alerts.</small></span></label>
               </div>
             </fieldset>
+            </details>
+            <details class="set-fold" id="foldQuiet">
+              <summary><span class="sf-title" data-t>Quiet hours</span><span class="sf-sum" id="sumQuiet"></span></summary>
             <fieldset class="set-group">
-              <legend data-t>Quiet hours</legend>
+              <legend class="sr-only" data-t>Quiet hours</legend>
               <p class="hint" data-only="android" data-t>Messages sent or received in this window count toward late-night alerts.</p>
               <p class="hint" data-only="iphone" data-t>Time in messaging and social apps in this window counts toward late-night alerts.</p>
               <div class="row2">
@@ -888,20 +905,27 @@ img{max-width:100%}
                 <label class="field"><span data-t>Ends</span><input type="time" id="setQe" name="quietEnd"></label>
               </div>
             </fieldset>
+            </details>
+            <details class="set-fold" id="foldPrivacy">
+              <summary><span class="sf-title" data-t>Privacy</span><span class="sf-sum" id="sumPrivacy"></span></summary>
             <fieldset class="set-group">
-              <legend data-t>Privacy</legend>
+              <legend class="sr-only" data-t>Privacy</legend>
               <label class="switch"><span><b data-t>Show contact names in alerts</b><small data-t>When off, alerts say "Contact #6" instead of a name.</small></span><input type="checkbox" id="showNames" name="showNames"></label>
               <label class="switch"><span><b data-t="tellKid">Tell <span class="kid-name">Maya</span> when an alert goes out</b><small data-t>They see which kind of alert was sent. Nothing more.</small></span><input type="checkbox" id="tellKid" name="tellKid"></label>
             </fieldset>
+            </details>
             <p class="saved" id="savedNote" aria-live="polite"></p>
           </form>
-          <section class="set-group setup-set" aria-labelledby="setupTitle">
-            <h3 class="set-title" id="setupTitle" data-t>Turn these on too</h3>
+          <details class="set-fold setup-set" id="foldSetup">
+            <summary><span class="sf-title" id="setupTitle" data-t>Turn these on too</span><span class="sf-sum" id="sumSetup"></span></summary>
+            <div class="set-group">
             <p class="hint" id="setupHint"></p>
-            <ul class="setup-list" id="setupList"></ul>
-          </section>
-          <section class="set-group notify-set" aria-labelledby="notifTitle">
-            <h3 class="set-title" id="notifTitle" data-t>Notifications on your phone</h3>
+            <ul class="setup-list" id="setupList" aria-labelledby="setupTitle"></ul>
+            </div>
+          </details>
+          <details class="set-fold notify-set" id="foldNotify">
+            <summary><span class="sf-title" id="notifTitle" data-t>Notifications on your phone</span><span class="sf-sum" id="sumNotify"></span></summary>
+            <div class="set-group">
             <p class="hint" data-t>Alerts always show up in the app. These choose which ones pop up on your phone. They apply to all your kids.</p>
             <form id="notifyForm" autocomplete="off">
               <div class="notify-grid" id="notifyList"></div>
@@ -911,7 +935,8 @@ img{max-width:100%}
                 <label class="field"><span data-t>Until</span><input type="time" id="nqEnd" name="nqEnd"></label>
               </div>
             </form>
-          </section>
+            </div>
+          </details>
           <section class="set-group" aria-labelledby="langTitle">
             <h3 class="set-title" id="langTitle" data-t>Language</h3>
             <div class="seg lang-seg" role="group" aria-labelledby="langTitle">
@@ -2375,7 +2400,7 @@ function renderParent(){
   if(S.ui.tab==='alerts')renderAlerts();
   if(S.ui.tab==='activity')renderActivity();
   if(S.ui.tab==='trusted')renderTrusted();
-  if(S.ui.tab==='settings'){renderAgeCard();renderPlanCard();renderSettingsExtras()}
+  if(S.ui.tab==='settings'){renderAgeCard();renderPlanCard();renderSettingsExtras();renderFoldSums()}
 }
 
 /* What Ghost Mode covers on an iPhone, for the parent's status line. */
@@ -2393,6 +2418,20 @@ function renderSettingsExtras(){
   if(!sr.hidden)sr.innerHTML=`<span>${esc(P.lastHomeSync?L('Last synced {w}',{w:when(P.lastHomeSync)}):L('Waiting for the first sync'))}</span><button type="button" class="btn sm" data-action="sync-now">${L('Sync now')}</button>`;
   renderSetup();
 }
+/* The one-line summaries on the folded Settings sections. */
+function renderFoldSums(){
+  const P=S.parent,s=P.settings,ios=s.phone==='iphone',so=s.sources||{},N=S.family.notify,k=name();
+  const on=(ios?[so.email!==false&&'Email',s.homeSync&&'Texts',P.keyboard&&'Keyboard',s.webBlock!==false&&'Websites',s.pauseApps&&'Night pause']
+    :[so.texts!==false&&'Texts',so.email!==false&&'Email',so.social!==false&&'Social and games',s.webBlock!==false&&'Websites',s.pauseApps&&'Night pause']).filter(Boolean);
+  const count=(n,t)=>n===t?L('All {t} on',{t}):L('{n} of {t} on',{n,t});
+  const AL=['adult','late','grooming','scam','bullying','distress','location'];
+  $('#sumChecks').textContent=on.length?on.map(x=>L(x)).join(' · '):L('Nothing on');
+  $('#sumAlerts').textContent=count(AL.filter(x=>s.alerts[x]!==false).length,AL.length)+' · '+L(SENS_LABEL[s.sensitivity]||'Balanced');
+  $('#sumQuiet').textContent=L('{a} to {b}',{a:fmtHM(s.quietStart),b:fmtHM(s.quietEnd)});
+  $('#sumPrivacy').textContent=(s.showNames?L('Names shown'):L('Names hidden'))+' · '+(s.tellKid?L('{k} gets a heads-up',{k}):L('No heads-up to {k}',{k}));
+  $('#sumSetup').textContent=L('{n} of {t} on',{n:SETUP.filter(x=>(s.setup||{})[x.id]).length,t:SETUP.length});
+  $('#sumNotify').textContent=count(NOTIFY_TYPES.filter(([x])=>N.types[x]!==false).length,NOTIFY_TYPES.length)+(N.quiet.on?' · '+L('Quiet time {a} to {b}',{a:fmtHM(N.quiet.start),b:fmtHM(N.quiet.end)}):'');
+}
 /* Built-in tools in the phone and in each app. Parents tick them off; nothing here is sent anywhere. */
 const SETUP=[
   {id:'safety',ios:['Communication Safety','Built into iPhone. Blurs nude photos in Messages, AirDrop and FaceTime. On {poss} iPhone: Settings › Screen Time › Communication Safety.'],
@@ -2406,7 +2445,7 @@ const SETUP=[
 function renderSetup(){
   const s=S.parent.settings,ios=s.phone==='iphone',k=name(),done=s.setup||{},v={k,poss:poss(k)};
   const n=SETUP.filter(x=>done[x.id]).length;
-  $('#setupHint').innerHTML=`${esc(ios?L('Apple keeps texts and other apps private, so these built-in tools fill the gaps.'):L('These add protection inside each app.'))} <span class="setup-count">${esc(L('{n} of {t} on',{n,t:SETUP.length}))}</span>`;
+  $('#setupHint').innerHTML=`${esc(ios?L('Apple keeps texts and other apps private, so these built-in tools fill the gaps.'):L('These add protection inside each app.'))}`;
   $('#setupList').innerHTML=SETUP.map(x=>{
     const [t,d]=x.all||x[ios?'ios':'android'],on=!!done[x.id];
     return `<li class="setup-item${on?' done':''}"><input type="checkbox" id="setup-${x.id}" data-setup="${x.id}"${on?' checked':''}><label for="setup-${x.id}"><b>${esc(L(t))}</b><small>${esc(L(d,v))}</small></label></li>`;
@@ -2635,7 +2674,7 @@ function renderKid(){
     $('#chatList').innerHTML=rows.length?'':`<p class="phone-empty">${L('No chats yet. Play a scenario above, or start a new chat.')}</p>`;
     if(rows.length)$('#chatList').innerHTML=rows.map(({c,last})=>`<button type="button" class="chat-row" data-action="open-thread" data-id="${esc(c.id)}">
       <span class="av av${c.ref%5}">${esc(initial(c.name))}</span>
-      <span class="cr-main"><span class="cr-name"><span>${esc(c.name)}</span>${c.app!=='Messages'?`<span class="app-tag">${esc(c.app==='Roblox chat'?'Roblox':L(c.app))}</span>`:''}${c.blocked?`<span class="app-tag blocked-tag">${L('Blocked')}</span>`:''}${appPaused(c)?`<span class="app-tag">${L('Paused')}</span>`:''}</span>
+      <span class="cr-main"><span class="cr-name"><span>${esc(c.name)}</span>${c.blocked?`<span class="app-tag blocked-tag">${L('Blocked')}</span>`:appPaused(c)?`<span class="app-tag">${L('Paused')}</span>`:c.app!=='Messages'?`<span class="app-tag">${esc(c.app==='Roblox chat'?'Roblox':L(c.app))}</span>`:''}</span>
       <span class="cr-prev">${last?esc((last.from==='me'?L('You: '):'')+shownText(last.text)):L('New conversation')}</span></span>
       <span class="cr-time">${last?shortWhen(last.at):''}</span></button>`).join('');
   }else renderThread();
@@ -2975,7 +3014,7 @@ document.addEventListener('click',e=>{
     case 'sync-now':runSync();commit();break;
     case 'goto-setup':{
       S.ui.view='parent';S.ui.tab='settings';T.scnNote=null;commit();
-      setTimeout(()=>{const el=$(id==='keyboard'?'.kb-row':id==='web'?'label:has(#webBlock)':id==='pause'?'label:has(#pauseApps)':'#setupTitle');if(el)el.scrollIntoView({block:'center',behavior:reduced?'auto':'smooth'})},30);break}
+      setTimeout(()=>{const el=$(id==='keyboard'?'.kb-row':id==='web'?'label:has(#webBlock)':id==='pause'?'label:has(#pauseApps)':'#setupTitle');if(el){const d=el.closest('.set-fold');if(d)d.open=true;el.scrollIntoView({block:'center',behavior:reduced?'auto':'smooth'})}},30);break}
     case 'scn-note-x':T.scnNote=null;commit();break;
     case 'more-scenarios':T.moreScenarios=!T.moreScenarios;renderScenarios();break;
     case 'dismiss-how':S.ui.introDismissed=true;commit();break;
@@ -3782,6 +3821,19 @@ DICT.es={"Today":"Hoy",
 "Paused at night":"En pausa de noche",
 "Paused for the night":"En pausa por la noche",
 "Social apps and games are paused during quiet hours, so none of this could happen tonight.":"Las redes sociales y los juegos están en pausa durante las horas de silencio, así que nada de esto pudo pasar esta noche.",
+"All {t} on":"Las {t} activadas",
+"Nothing on":"Nada activado",
+"Texts":"Mensajes",
+"Keyboard":"Teclado",
+"Websites":"Sitios web",
+"Night pause":"Pausa nocturna",
+"Social and games":"Redes y juegos",
+"{a} to {b}":"De {a} a {b}",
+"Names shown":"Nombres visibles",
+"Names hidden":"Nombres ocultos",
+"{k} gets a heads-up":"{k} recibe un aviso",
+"No heads-up to {k}":"Sin aviso para {k}",
+"Quiet time {a} to {b}":"Silencio de {a} a {b}",
 " Your parent got an alert, not your messages.":" Tus padres recibieron una alerta, no tus mensajes.",
 " Ghost Mode let your parent know to check in on you, but not what you wrote.":" Ghost Mode les avisó a tus padres que hablen contigo, pero no lo que escribiste.",
 " and ":" y ",
