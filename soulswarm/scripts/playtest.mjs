@@ -1544,6 +1544,137 @@ errs = await session(async (page) => {
 });
 check('abandon regression: no runtime errors', !errs.length, errs[0] || '');
 
+
+// 23. Bug-test regressions (menus, economy, save): found by scripts/ui-sweep.mjs. Saves with a hero or relic this build does
+//     not know, wrong types or out-of-range values boot and are repaired (an unreadable one is kept aside); a partial run
+//     result never writes NaN; negative prices and non-tiers never pay; energy keeps regenerating when the clock goes back;
+//     the ad double and a store sheet closed mid-purchase pay once; long toasts wrap on a 360 px phone and never block taps;
+//     the results actions stay on screen at 375×667; the top-bar chips, the hero chip and the settings toggles have 36 px
+//     targets; double taps buy once, and the second tap of a double tap on the results' Continue does not start a run.
+errs = await session(async (page, errors) => {
+  const s = await page.evaluate(async () => {
+    const save = await import('/src/meta/save.js'), eco = await import('/src/meta/economy.js');
+    const KEY = 'soulswarm.save.v1', out = {};
+    const load = (v) => { localStorage.setItem(KEY, typeof v === 'string' ? v : JSON.stringify(v)); const p = save.loadProfile(); localStorage.removeItem(KEY); return p; };
+    let p = load({ gold: 7777, selectedHero: 'ghost', relics: [{ uid: 'r1', type: 'bogus', rarity: 'mythic' }, { uid: 'r2', type: 'crown', rarity: 'rare', level: 2 }, { uid: 'r5', type: 'eye', rarity: 'rare', level: 1 }], equipped: ['r1', 'r2', 'r2', 'rX'], relicSeq: 2 });
+    out.ids = { sel: p.selectedHero, relics: p.relics.map((r) => r.uid).join(), eq: JSON.stringify(p.equipped), seq: p.relicSeq, gold: p.gold, power: (() => { try { return eco.computeLoadout(p).power > 0; } catch (e) { return e.message; } })() };
+    out.unowned = load({ selectedHero: 'mordrake' }).selectedHero;
+    p = load({ gold: '5000', gems: 'abc', sigils: -2, energy: 1e9, level: '7', talents: { might: '3', vitality: 1e9 }, pass: { xp: '1200', claimedFree: '1,2' }, chapter: { unlocked: 99, selected: '2' }, heroes: { vael: { owned: true, stars: 99, shards: '4' } }, relics: [{ uid: 'r1', type: 'crown', rarity: 'common', level: 1e9 }], equipped: ['r1', null, null] });
+    const gold = p.gold; eco.upgradeTalent(p, 'might');
+    out.types = { gold, gems: p.gems, sigils: p.sigils, energy: p.energy, level: p.level, might: p.talents.might, vit: p.talents.vitality, pass: p.pass.xp, cf: Array.isArray(p.pass.claimedFree), un: p.chapter.unlocked, sel: p.chapter.selected, stars: p.heroes.vael.stars, shards: p.heroes.vael.shards, rl: p.relics[0].level };
+    localStorage.setItem(KEY, '{"gold": 12'); p = save.loadProfile();
+    out.corrupt = { gold: p.gold, kept: localStorage.getItem(KEY + '.corrupt') }; localStorage.removeItem(KEY); localStorage.removeItem(KEY + '.corrupt');
+    p = save.newProfile(); p.flags.bloodMoon = 'off';
+    const o = eco.applyRunResult(p, { chapter: 1, victory: false, time: 200 });
+    out.partial = { xp: p.xp, kills: p.stats.kills, legion: p.stats.bestLegion, gold: o.rewards.gold, passXp: p.pass.xp };
+    p = save.newProfile(); p.pass.xp = 15000;
+    out.spend = [eco.spend(p, 'gems', -100), eco.spend(p, 'gold', NaN), p.gems, p.gold];
+    out.tiers = [0, -10, 1.5, '3', 31, NaN].map((t) => !!eco.claimPass(p, t, false)).join(); out.gems = p.gems;
+    const real = Date.now; let t = real(); Date.now = () => t;
+    p.energy = 10; p.energyTs = t; t -= 864e5; eco.upkeep(p); const next = eco.energyNextIn(p); t += 400e3; eco.upkeep(p); Date.now = real;
+    out.clock = { next, energy: p.energy };
+    return out;
+  });
+  check('bug-test: a save with an unknown hero, unknown relics and dangling equips is repaired (relic ids never reused)',
+    s.ids.sel === 'vael' && s.ids.relics === 'r2,r5' && s.ids.eq === '[null,"r2",null]' && s.ids.seq === 6 && s.ids.gold === 7777 && s.ids.power === true && s.unowned === 'vael', JSON.stringify(s.ids) + ' ' + s.unowned);
+  const T = s.types;
+  check('bug-test: wrong types and out-of-range save values are coerced and clamped (no string maths)',
+    T.gold === 5000 && T.gems === 150 && T.sigils === 0 && T.energy === 99 && T.level === 7 && T.might === 4 && T.vit === 25 && T.pass === 1200 && T.cf && T.un === 6 && T.sel === 2 && T.stars === 5 && T.shards === 4 && T.rl === 10, JSON.stringify(T));
+  check('bug-test: an unreadable save starts fresh and keeps its bytes aside', s.corrupt.gold === 1500 && s.corrupt.kept === '{"gold": 12', JSON.stringify(s.corrupt));
+  check('bug-test: a partial run result writes no NaN', s.partial.xp > 0 && s.partial.kills === 0 && s.partial.legion === 0 && s.partial.gold === 440 && s.partial.passXp > 0, JSON.stringify(s.partial));
+  check('bug-test: negative or NaN prices and non-existent pass tiers never pay', s.spend.join() === 'false,false,150,1500' && s.tiers === 'false,false,false,false,false,false' && s.gems === 150, JSON.stringify([s.spend, s.tiers, s.gems]));
+  check('bug-test: energy keeps regenerating after the clock is set back a day', s.clock.next <= 360 && s.clock.energy === 11, JSON.stringify(s.clock));
+
+  // boot with a save that names a hero and a relic this build does not have (it used to stop the boot)
+  await page.context().addInitScript(() => { if (!sessionStorage.getItem('bt23')) { sessionStorage.setItem('bt23', '1'); localStorage.setItem('soulswarm.save.v1', JSON.stringify({ v: 1, gold: 4242, selectedHero: 'ghost', heroes: { ghost: { owned: true, stars: 1, shards: 0 } }, relics: [{ uid: 'r1', type: 'bogus', rarity: 'rare', level: 1 }], equipped: ['r1', null, null] })); } });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(3000);
+  await page.evaluate(BOT);
+  const boot = await page.evaluate(() => ({ battle: !!document.querySelector('.btn-battle'), home: (document.querySelector('.hm')?.innerText || '').trim().length > 0, gold: window.__soulswarm.profile.gold, hero: window.__soulswarm.profile.selectedHero }));
+  check('bug-test: the game boots to a working home screen from a save with an unknown hero and relic', boot.battle && boot.home && boot.gold === 4242 && boot.hero === 'vael' && !errors.length, JSON.stringify(boot) + ' ' + (errors[0] || ''));
+
+  // UI races: the rewarded-ad double while the ad loads, and the Starter Pack sheet closed mid-purchase
+  const ui = await page.evaluate(async () => {
+    const a = window.__soulswarm, p = a.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const ad = a.store.rewardedAd, buy = a.store.purchase;
+    a.store.rewardedAd = () => new Promise((r) => setTimeout(() => r(true), 300)); // a real SDK takes a moment to cover the screen
+    p.energy = 30; p.flags.bloodMoon = 'off'; a.startRun(1); const r = a.run; r.player.hurt = () => {}; r.time = 300; r.counters.kills = 500;
+    const g0 = p.gold; r.end(false); await wait(900);
+    const base = p.gold - g0, b = q('.modal-results .btn-ad'); b.click(); b.click(); await wait(80); q('.modal-results .btn-ad')?.click(); await wait(600);
+    const doubled = p.gold - g0 - base;
+    q('.modal-results .btn-primary').click(); await wait(300);
+    a.store.purchase = () => new Promise((res) => setTimeout(() => res({ ok: true, simulated: true }), 400));
+    Object.assign(p.purchases, { starterBought: false, starterExpires: Date.now() + 864e5, history: [] }); Object.assign(p.heroes.nyx, { owned: false, stars: 0, shards: 0 }); a.meta.refresh();
+    const gems = p.gems;
+    q('.hm [data-act="starter"]').click(); await wait(30); q('.mm-starter [data-act="buy"]').click(); await wait(30);
+    q('.modal-purchase .btn-primary').click(); await wait(30); q('.modal-purchase').closest('.modal-back').querySelector('.modal-x').click();
+    q('.hm [data-act="starter"]')?.click(); await wait(30); q('.mm-starter [data-act="buy"]')?.click(); await wait(30); q('.modal-purchase .btn-primary')?.click();
+    await wait(1000);
+    const starter = { gems: p.gems - gems, buys: p.purchases.history.length, shards: p.heroes.nyx.shards, owned: p.heroes.nyx.owned };
+    document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove());
+    a.store.rewardedAd = ad; a.store.purchase = buy;
+    return { base, doubled, starter };
+  });
+  check('bug-test: "Double rewards" pays once when tapped again while the ad loads', ui.base > 0 && ui.doubled === ui.base, JSON.stringify(ui));
+  check('bug-test: closing the store sheet mid-purchase cannot buy the Starter Pack twice', ui.starter.gems === 300 && ui.starter.buys === 1 && ui.starter.owned && ui.starter.shards === 0, JSON.stringify(ui.starter));
+
+  // small phones: a long toast wraps inside a 360 px screen; the results actions are on screen at 375×667
+  await page.setViewportSize({ width: 360, height: 780 });
+  const toastBox = await page.evaluate(async () => {
+    const { toast } = await import('/src/ui/dom.js');
+    toast('Clear Ashen Necropolis on Nightmare to unlock Torment');
+    await new Promise((r) => setTimeout(r, 400));
+    const t = [...document.querySelectorAll('.toast')].pop(), r = t.getBoundingClientRect(), A = document.getElementById('app').getBoundingClientRect();
+    const under = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { left: Math.round(r.left - A.left), right: Math.round(A.right - r.right), through: !t.contains(under) };
+  });
+  check('bug-test: a long toast stays inside a 360 px screen and lets taps through to what is under it', toastBox.left >= 0 && toastBox.right >= 0 && toastBox.through, JSON.stringify(toastBox));
+  await page.setViewportSize({ width: 375, height: 667 });
+  const res = await page.evaluate(async () => {
+    const a = window.__soulswarm, p = a.profile, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    p.energy = 30; p.flags.bloodMoon = 'on'; a.startRun(1); const r = a.run; r.player.hurt = () => {}; r.time = 431; r.end(true); await wait(1200);
+    const vis = (sel) => { const e = document.querySelector(sel); if (!e) return 'missing'; const b = e.getBoundingClientRect(), h = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return b.bottom <= innerHeight && (h === e || e.contains(h)); };
+    const out = { double: vis('.modal-results .btn-ad'), cont: vis('.modal-results .btn-primary') };
+    p.flags.bloodMoon = 'off'; document.querySelector('.modal-results .btn-primary').click(); await wait(400);
+    // the 28 px top-bar chips, the 26 px hero chip and the settings toggles answer taps 16 px above and below their centre
+    const hits = (el) => { const b = el.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; return [y - 16, y + 16].every((yy) => { const h = document.elementFromPoint(x, yy); return h === el || el.contains(h); }); };
+    out.chips = [...document.querySelectorAll('.mt-cur'), document.querySelector('.hm-chip')].map(hits);
+    document.querySelector('[data-act="settings"]').click(); await wait(400);
+    out.toggles = [...document.querySelectorAll('.st .tgl')].map(hits);
+    document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove());
+    return out;
+  });
+  check('bug-test: the results "Double rewards" and "Continue" are on screen at 375×667', res.double === true && res.cont === true, JSON.stringify(res));
+  check('bug-test: top-bar chips, the hero chip and the settings toggles take taps within 16 px of their centre', res.chips.length === 4 && res.chips.every(Boolean) && res.toggles.length === 6 && res.toggles.every(Boolean), JSON.stringify(res));
+
+  // double taps: a dialog button clicked again after it closed, the energy refill, the reroll while its ad loads, and the
+  // second tap of a double tap on the results' Continue (it lands on BATTLE at 375×667)
+  const dt = await page.evaluate(async () => {
+    const a = window.__soulswarm, p = a.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const closeAll = () => document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove()), out = {};
+    p.gems = 500; a.meta.refresh(); q('[data-nav="shop"]').click(); q('.deal[data-key="gold_s"]').click();
+    const buy = q('.modal .btn-gem'), g0 = p.gold; buy.click(); buy.click(); out.gemShop = [p.gems, p.gold - g0]; closeAll();
+    p.energy = 0; p.gems = 500; a.meta.refresh(); q('[data-top="energy"]').click();
+    const rf = q('.mm-energy [data-act="refill"]'); rf.click(); rf.click(); out.refill = [p.gems, p.energy]; closeAll();
+    const ad = a.store.rewardedAd; a.store.rewardedAd = () => new Promise((r) => setTimeout(() => r(true), 300));
+    q('[data-nav="battle"]').click(); p.energy = 30; a.startRun(1); const r = a.run; r.player.hurt = () => {}; await wait(300);
+    r.levelQueue = 1; r.showLevelUp(); await wait(400);
+    let redraws = 0; new MutationObserver((ms) => { redraws += ms.filter((m) => m.removedNodes.length).length; }).observe(q('.lvl-back .cards'), { childList: true });
+    const rr = q('.lvl-actions .btn-ad'); rr.click(); rr.click(); await wait(800); out.rerolls = redraws; a.store.rewardedAd = ad;
+    r.end(false); await wait(1000);
+    const c = q('.modal-results .btn-primary').getBoundingClientRect(), x = c.left + c.width / 2, y = c.top + c.height / 2, e0 = p.energy;
+    const tapAt = () => { const e = document.elementFromPoint(x, y), b = e.closest('button') || e; for (const k of ['pointerdown', 'pointerup']) b.dispatchEvent(new PointerEvent(k, { bubbles: true, clientX: x, clientY: y })); b.click(); };
+    tapAt(); await wait(60); tapAt(); await wait(300);
+    out.cont = { run: !!a.run, energy: e0 - p.energy };
+    if (a.run) a.exitRun();
+    return out;
+  });
+  check('bug-test: double taps buy once (a dialog button after it closed, the energy refill) and reroll once while the ad loads',
+    dt.gemShop.join() === '440,5000' && dt.refill.join() === '450,30' && dt.rerolls === 1, JSON.stringify(dt));
+  check('bug-test: a double tap on the results\' Continue does not start another run from the home screen', !dt.cont.run && dt.cont.energy === 0, JSON.stringify(dt.cont));
+});
+check('menus, economy and save regressions: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -91,7 +91,7 @@ function startRun(chapterId, opts = {}) {
 function exitRun() {
   if (app.run) app.run.dispose();
   if (app.runUI) app.runUI.dispose();
-  app.run = null; app.runUI = null;
+  app.run = null; app.runUI = null; app.exitedAt = performance.now();
   app.engine.setController(app.showcase);
   app.showcase.setHero(profile.selectedHero);
   app.meta.show('battle');

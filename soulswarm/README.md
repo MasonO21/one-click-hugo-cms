@@ -33,7 +33,8 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy (164 checks)
+npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy, bug-test regressions (180 checks)
+node scripts/ui-sweep.mjs http://localhost:5173/   # menus sweep: every screen × 5 phones × 3 profiles (layout audit + screenshots), tap fuzzing, economy and gacha fuzzing, broken saves, lifecycle
 npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server; DIFF=nightmare|torment, PROG=5, GOD=1, RITE=0)
 npm run trailer       # renders a 22 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
