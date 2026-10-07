@@ -336,7 +336,12 @@ export class UI {
     const g = this.game;
     // game-event toasts wait while a modal (celebration, chest, welcome back) is up instead of covering
     // its title; toasts from the player's own taps (ctx.toast) still show at once
-    bus.on('ui:toast', (e) => this.eventToast(e.text, e.kind, e.icon));
+    bus.on('ui:toast', (e) => {
+      // the attack banner already shows the warning / countdown / "defend!" state: the combat system's
+      // matching 👾 toasts would only cover the player and the turret
+      if (e.icon === '👾' && g.state.combat.phase !== 'peace') return;
+      this.eventToast(e.text, e.kind, e.icon);
+    });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     bus.on('ui:open', (e) => this.open(e.panel, e.arg));
     bus.on('ui:celebrate', (e) => {

@@ -12,6 +12,8 @@ import { clamp, lerp } from '../../core/math';
 
 /** Aliens within this many world units of the player pull the follow camera toward the fight. */
 const COMBAT_FRAME_R = 26;
+/** During an attack the follow camera looks this fraction of its distance ahead of the player. */
+const COMBAT_LOOK_AHEAD = 0.14;
 
 export class CameraRig {
   private tx = 0;
@@ -93,18 +95,23 @@ export class CameraRig {
           n++;
         }
         if (n > 0) {
-          // a gentle lean only: the player must stay comfortably on screen
-          let ox = (sx / n) * 0.4;
-          let oz = (sz / n) * 0.4;
+          // mostly a pull-back (the fight fits on screen); only a slight lean so the player never slides
+          // up under the attack banner / hint bubble
+          let ox = (sx / n) * 0.3;
+          let oz = (sz / n) * 0.3;
           const l = Math.hypot(ox, oz);
-          if (l > 5) {
-            ox *= 5 / l;
-            oz *= 5 / l;
+          if (l > 3) {
+            ox *= 3 / l;
+            oz *= 3 / l;
           }
           gx += ox;
           gz += oz;
-          distMul = 1.22;
+          distMul = 1.35;
         }
+        // look a little past the player so they (and the turret beside them) sit below the attack banner
+        const wantD = lerp(9, 46, Math.pow(clamp(vc.zoom, 0, 1), 1.15)) * distMul;
+        gx -= Math.sin(vc.yaw) * wantD * COMBAT_LOOK_AHEAD;
+        gz -= Math.cos(vc.yaw) * wantD * COMBAT_LOOK_AHEAD;
       }
     }
     if (mode === 'overview') {
