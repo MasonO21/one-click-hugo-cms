@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b2a3a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>Nova Colony</title>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1b2a3a; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      #game { position: fixed; inset: 0; }
+      #ui { position: fixed; inset: 0; pointer-events: none; }
+      #boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font: 600 20px system-ui, sans-serif; background: linear-gradient(#24476b, #1b2a3a); z-index: 100; transition: opacity .5s; }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="ui"></div>
+    <div id="boot">Nova Colony</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
