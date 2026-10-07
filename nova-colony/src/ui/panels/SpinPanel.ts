@@ -6,7 +6,7 @@ import { Panel, type PanelTitle } from './Panel';
 import { easeOutQuart, segmentAtRotation, spinTarget } from '../logic/spin';
 import { rewardParts } from '../logic/rewards';
 import { adButton, btn, partIcon, rewardChips } from '../widgets';
-import { iconEl } from '../art';
+import { hudArt, iconEl } from '../art';
 import { confetti } from '../fx/Confetti';
 import { fill, h } from '../dom';
 
@@ -19,7 +19,7 @@ export class SpinPanel extends Panel {
   private raf = 0;
 
   title(): PanelTitle {
-    return { icon: '🎡', text: 'Lucky Wheel' };
+    return { icon: '🎡', art: hudArt('spin'), text: 'Lucky Wheel' };
   }
 
   override onClose(): void {

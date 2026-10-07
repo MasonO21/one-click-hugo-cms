@@ -12,7 +12,7 @@ import { NODE_H, NODE_W, RESEARCH_CATEGORIES, layoutTree } from '../logic/catego
 import { buildingUnlock, modifierText, vehicleUnlock, type UnlockEntry } from '../logic/describe';
 import { adButton, btn, costChips, emptyState, section, tabs, unlockChip } from '../widgets';
 import { fill, h, s } from '../dom';
-import { researchArt, researchIcon } from '../art';
+import { hudArt, researchArt, researchIcon } from '../art';
 
 export class ResearchPanel extends Panel {
   readonly name = 'research';
@@ -21,7 +21,7 @@ export class ResearchPanel extends Panel {
   private static lastCat = '';
 
   title(): PanelTitle {
-    return { icon: '🔬', text: 'Research' };
+    return { icon: '🔬', art: hudArt('tech'), text: 'Research' };
   }
 
   private categories(): string[] {

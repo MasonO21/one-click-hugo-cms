@@ -8,7 +8,7 @@ import { bagEntries } from '../../core/bag';
 import { fmt } from '../../core/format';
 import { bar, btn, emptyState, resChip, section } from '../widgets';
 import { fill, h } from '../dom';
-import { itemIcon } from '../art';
+import { hudArt, itemIcon } from '../art';
 
 const SLOTS: { id: EquipSlot; icon: string; label: string }[] = [
   { id: 'tool', icon: '🪓', label: 'Tool' },
@@ -38,7 +38,7 @@ export class InventoryPanel extends Panel {
   private slot: EquipSlot | null = null;
 
   title(): PanelTitle {
-    return { icon: '🎒', text: 'Inventory' };
+    return { icon: '🎒', art: hudArt('backpack'), text: 'Inventory' };
   }
 
   override signature(): string {

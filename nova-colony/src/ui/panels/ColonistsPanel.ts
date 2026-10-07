@@ -8,7 +8,7 @@ import { RARITY_COLOR, cap } from '../logic/rewards';
 import { happinessFace, jobOf, stars } from '../logic/colonist';
 import { bar, btn, emptyState, portrait, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
-import { buildingIcon } from '../art';
+import { buildingIcon, hudArt, professionArt } from '../art';
 
 type Filter = 'all' | 'idle' | 'working';
 
@@ -20,9 +20,9 @@ export class ColonistsPanel extends Panel {
   title(): PanelTitle {
     if (this.detail != null) {
       const c = this.game.sys.colonists.get(this.detail);
-      if (c) return { icon: this.data.profession(c.specialty)?.icon ?? '🧑‍🚀', text: c.name };
+      if (c) return { icon: this.data.profession(c.specialty)?.icon ?? '🧑‍🚀', art: professionArt(c.specialty), text: c.name };
     }
-    return { icon: '🧑‍🚀', text: 'Colonists' };
+    return { icon: '🧑‍🚀', art: hudArt('crew'), text: 'Colonists' };
   }
 
   override onOpen(arg: unknown): void {

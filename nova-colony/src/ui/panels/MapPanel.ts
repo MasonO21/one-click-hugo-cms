@@ -60,7 +60,7 @@ export class MapPanel extends Panel {
   private dpr = 1;
 
   title(): PanelTitle {
-    return { icon: '🗺️', text: 'World map' };
+    return { icon: '🗺️', art: hudArt('map'), text: 'World map' };
   }
 
   override onOpen(): void {

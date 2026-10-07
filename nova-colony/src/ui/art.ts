@@ -137,9 +137,9 @@ const RESEARCH = new Set([
 
 
 /** World event illustration by WorldEventDef.kind, 960×540. */
-/** Painted HUD icons: nav buttons, status chips, the day-phase clock and the map's home / teleporter markers. */
+/** Painted HUD icons: nav buttons, status chips, the day-phase clock, the map's home / teleporter markers, menu tiles. */
 const HUD = new Set([
-  'map', 'quests', 'shop', 'menu', 'crew', 'tech', 'craft', 'build',
+  'map', 'quests', 'shop', 'menu', 'crew', 'tech', 'craft', 'build', 'settings', 'season', 'spin',
   'population', 'power', 'defense', 'backpack', 'health',
   'night', 'sunrise', 'day', 'sunset', 'home', 'teleporter',
 ]);

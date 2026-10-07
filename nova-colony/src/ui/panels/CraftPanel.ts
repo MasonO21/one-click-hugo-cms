@@ -12,7 +12,7 @@ import { fmtHMS } from '../logic/time';
 import { CRAFT_CATEGORIES, metaOf } from '../logic/categories';
 import { adButton, btn, emptyState, recipeChips, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
-import { buildingArt, iconEl, itemArt, resIcon, resourceArt, vehicleArt } from '../art';
+import { buildingArt, hudArt, iconEl, itemArt, resIcon, resourceArt, vehicleArt } from '../art';
 
 export class CraftPanel extends Panel {
   readonly name = 'craft';
@@ -21,7 +21,7 @@ export class CraftPanel extends Panel {
   private acc = 0;
 
   title(): PanelTitle {
-    return { icon: '🛠️', text: 'Crafting' };
+    return { icon: '🛠️', art: hudArt('craft'), text: 'Crafting' };
   }
 
   override onOpen(arg: unknown): void {

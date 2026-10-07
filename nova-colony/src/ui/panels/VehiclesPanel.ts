@@ -11,7 +11,7 @@ export class VehiclesPanel extends Panel {
   readonly name = 'vehicles';
 
   title(): PanelTitle {
-    return { icon: '🚙', text: 'Vehicles' };
+    return { icon: '🚙', art: vehicleArt('buggy'), text: 'Vehicles' };
   }
 
   override signature(): string {

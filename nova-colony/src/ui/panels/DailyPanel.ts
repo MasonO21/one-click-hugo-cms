@@ -11,7 +11,7 @@ export class DailyPanel extends Panel {
   readonly name = 'daily';
 
   title(): PanelTitle {
-    return { icon: '🎁', text: 'Daily rewards' };
+    return { icon: '🎁', art: rewardArt('daily_gift'), text: 'Daily rewards' };
   }
 
   override signature(): string {

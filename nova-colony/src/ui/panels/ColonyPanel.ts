@@ -9,14 +9,14 @@ import { bagCovers } from '../../core/bag';
 import { btn, costChips, section, unlockChip } from '../widgets';
 import { tierUnlocks } from '../logic/describe';
 import { fill, h, setVar } from '../dom';
-import { artOrEmoji, tierArt } from '../art';
+import { artOrEmoji, buildingArt, tierArt } from '../art';
 
 export class ColonyPanel extends Panel {
   readonly name = 'colony';
   private laddered = false;
 
   title(): PanelTitle {
-    return { icon: '🛰️', text: this.st.colony.name || 'Your Colony' };
+    return { icon: '🛰️', art: buildingArt('command_center'), text: this.st.colony.name || 'Your Colony' };
   }
 
   override signature(): string {

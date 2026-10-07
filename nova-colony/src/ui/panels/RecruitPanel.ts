@@ -8,7 +8,7 @@ import { RARITY_COLOR, cap } from '../logic/rewards';
 import { stars } from '../logic/colonist';
 import { adButton, btn, costChips, emptyState, portrait } from '../widgets';
 import { fill, h } from '../dom';
-import { professionArt } from '../art';
+import { hudArt, professionArt } from '../art';
 import { bagCovers } from '../../core/bag';
 
 export class RecruitPanel extends Panel {
@@ -16,7 +16,7 @@ export class RecruitPanel extends Panel {
   private acc = 0;
 
   title(): PanelTitle {
-    return { icon: '🧑‍🤝‍🧑', text: 'Recruit survivors' };
+    return { icon: '🧑‍🤝‍🧑', art: hudArt('population'), text: 'Recruit survivors' };
   }
 
   override signature(): string {

@@ -7,13 +7,14 @@ import { fmt } from '../../core/format';
 import { bar, btn, rewardChips } from '../widgets';
 import { claimableSeason } from '../logic/badges';
 import { fill, h } from '../dom';
+import { hudArt } from '../art';
 
 export class SeasonPanel extends Panel {
   readonly name = 'season';
   private scrolled = false;
 
   title(): PanelTitle {
-    return { icon: '🏆', text: this.data.season.name };
+    return { icon: '🏆', art: hudArt('season'), text: this.data.season.name };
   }
 
   override signature(): string {

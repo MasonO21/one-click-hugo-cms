@@ -10,11 +10,14 @@ import type { GameState } from '../../core/state';
 import type { DataRegistry } from '../../data';
 import type { UiCtx } from '../ctx';
 import { append, clear, h, fill, safe, tryRun, type Child } from '../dom';
+import { iconEl } from '../art';
 
 export type PanelKind = 'sheet' | 'drawer' | 'side' | 'modal';
 
 export interface PanelTitle {
   icon: string;
+  /** Painted icon URL shown instead of the emoji (which stays as the fallback). */
+  art?: string | null;
   text: string;
 }
 
@@ -151,10 +154,11 @@ export abstract class Panel {
 
   private renderHeader(): void {
     const t = this.title();
-    const key = t.icon + t.text;
+    const key = t.icon + t.text + (t.art ?? '');
     if (key !== this.lastTitle) {
       this.lastTitle = key;
-      this.titleIcon.textContent = t.icon;
+      if (t.art) this.titleIcon.replaceChildren(iconEl(t.art, t.icon));
+      else this.titleIcon.textContent = t.icon;
       this.titleText.textContent = t.text;
     }
     const ex = this.extras();

@@ -10,7 +10,7 @@ import { BUILD_CATEGORIES } from '../logic/categories';
 import { buildingEffects, lockInfo } from '../logic/describe';
 import { blueprintThumb, btn, costChips, emptyState, tabs, tagChips } from '../widgets';
 import { fill, h, setVar } from '../dom';
-import { buildingIcon } from '../art';
+import { buildingIcon, hudArt } from '../art';
 
 export class BuildMenuPanel extends Panel {
   readonly name = 'build';
@@ -21,7 +21,7 @@ export class BuildMenuPanel extends Panel {
   private confirmDelete = '';
 
   title(): PanelTitle {
-    return { icon: '🔨', text: 'Build' };
+    return { icon: '🔨', art: hudArt('build'), text: 'Build' };
   }
 
   /** `arg` may be a tab id, a building id (opens its category) or `{ tab }`. */

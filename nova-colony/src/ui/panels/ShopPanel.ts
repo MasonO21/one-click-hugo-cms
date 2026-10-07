@@ -8,7 +8,7 @@ import type { CosmeticDef, ProductDef } from '../../data/schema';
 import { fmtHMS } from '../logic/time';
 import { adButton, bigNum, btn, emptyState, rewardChips, tabs } from '../widgets';
 import { fill, h } from '../dom';
-import { artOrEmoji, resIcon, rewardArt, shopArt } from '../art';
+import { artOrEmoji, hudArt, resIcon, rewardArt, shopArt } from '../art';
 
 type Tab = 'crystals' | 'packs' | 'vip' | 'season' | 'cosmetics';
 
@@ -22,7 +22,7 @@ export class ShopPanel extends Panel {
   private acc = 0;
 
   title(): PanelTitle {
-    return { icon: '💎', text: 'Shop' };
+    return { icon: '💎', art: hudArt('shop'), text: 'Shop' };
   }
 
   override onOpen(arg: unknown): void {

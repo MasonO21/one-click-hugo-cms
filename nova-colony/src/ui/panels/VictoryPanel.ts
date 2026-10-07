@@ -29,7 +29,7 @@ export class VictoryPanel extends Panel {
   private timer = 0;
 
   title(): PanelTitle {
-    return { icon: '🏆', text: 'Victory' };
+    return { icon: '🏆', art: rewardArt('victory_chest'), text: 'Victory' };
   }
 
   private info(): VictoryArg {

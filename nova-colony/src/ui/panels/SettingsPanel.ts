@@ -7,6 +7,7 @@ import { Panel, type PanelTitle } from './Panel';
 import type { SettingsState } from '../../core/state';
 import { btn, section } from '../widgets';
 import { fill, h } from '../dom';
+import { hudArt } from '../art';
 
 type Hooked = Record<string, (...a: unknown[]) => unknown>;
 
@@ -31,7 +32,7 @@ export class SettingsPanel extends Panel {
   private code = '';
 
   title(): PanelTitle {
-    return { icon: '⚙️', text: 'Settings' };
+    return { icon: '⚙️', art: hudArt('settings'), text: 'Settings' };
   }
 
   override signature(): string {

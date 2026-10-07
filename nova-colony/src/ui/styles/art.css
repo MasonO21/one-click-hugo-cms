@@ -1212,3 +1212,25 @@
 .schip .clock-ic {
   display: contents;
 }
+
+/* panel headers: a painted icon in the emoji's slot (a touch bigger, without growing the header) */
+.pm-title .ti .aico {
+  width: 1.4em;
+  height: 1.4em;
+  margin: -0.15em 0;
+}
+.pm-title .ti .aico.emoji {
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+/* menu grid tiles: painted icon in the emoji's slot */
+.menu-tile .ic.aico {
+  width: 1.15em;
+  height: 1.15em;
+}
+.menu-tile .ic.aico.emoji {
+  width: auto;
+  height: auto;
+}

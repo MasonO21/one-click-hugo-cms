@@ -1,5 +1,5 @@
 {
- "about": "Painted HUD icons (public/art/hud, 19) and point-of-interest icons (public/art/pois, 24): Higgsfield gpt_image_2_5, medium, transparent, text-to-image with the resource-icon sheet as style reference (same look as items/resources/research).",
+ "about": "Painted HUD icons (public/art/hud, 22) and point-of-interest icons (public/art/pois, 24): Higgsfield gpt_image_2_5, medium, transparent, text-to-image with the resource-icon sheet as style reference (same look as items/resources/research).",
  "prompts": {
   "hud": "Game HUD button icon: {subject}. Match the rendering style of the reference icons exactly (stylized 3D game icon, chunky shapes, soft warm lighting, bright saturated cozy colors, subtle rim light), but draw ONLY the new subject, none of the reference objects. Bold simple silhouette that reads clearly at very small size, front three-quarter view, centered, filling the frame, isolated on a transparent background. No text, no frame, no ground shadow.",
   "pois": "Game map location icon: {subject}. Match the rendering style of the reference icons exactly (stylized 3D game icon, chunky shapes, soft warm lighting, bright saturated cozy colors, subtle rim light), but draw ONLY the new subject, none of the reference objects. Compact diorama-style object, three-quarter view, centered, filling the frame, isolated on a transparent background. No text, no frame, no ground plane."
@@ -10,7 +10,6 @@
    "map": "a parchment treasure map, partly unrolled with curled edges, a red dotted trail and a red X, a tiny green island",
    "quests": "a rolled paper quest scroll tied with a red ribbon and a round red wax seal",
    "shop": "a chunky teal shopping bag with rope handles and a glowing purple gem badge on the front",
-   "menu": "a single chunky cog gear, brushed silver with an orange center hub",
    "crew": "a friendly cartoon colonist bust wearing an orange space suit and a round glass helmet, smiling",
    "tech": "a brass and teal microscope with a glowing cyan lens",
    "craft": "a steel wrench and a screwdriver with an orange handle crossed in an X",
@@ -25,7 +24,11 @@
    "day": "a bright cheerful yellow sun with chunky rounded rays, no face",
    "sunset": "a deep orange sun half-sunk behind a purple hill with a warm red-orange glow",
    "home": "a cozy little cabin house with a red roof, a chimney and a warm glowing window",
-   "teleporter": "a swirling cyan and violet teleporter portal ring standing on a small metal base"
+   "teleporter": "a swirling cyan and violet teleporter portal ring standing on a small metal base",
+   "settings": "a single chunky cog gear, brushed silver with an orange center hub",
+   "menu": "four chunky rounded square tiles arranged in a 2 by 2 grid, colored teal, orange, purple and yellow, slightly puffy like candy buttons",
+   "season": "a shiny golden trophy cup with two handles, a white star emblem on the front and a blue ribbon, on a small dark base",
+   "spin": "a round lucky prize wheel with eight bright rainbow-colored segments, a gold rim studded with little light bulbs and a red pointer on top, facing the viewer (front view; no text, no numbers)"
   },
   "pois": {
    "supply_cache": "a small olive-green metal drop-pod supply crate with orange stripes, lid ajar with supplies peeking out",
@@ -59,7 +62,6 @@
    "map": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215108_307d01c9-de01-4475-91c8-d6ec3d123d89.png",
    "quests": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215109_a6b42b31-428a-4fc7-8c58-fb87b40409bd.png",
    "shop": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215110_8c649775-2d87-4fa5-951d-e5642ccee2bc.png",
-   "menu": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215109_19289495-8490-41e7-b894-4dd74836d39d.png",
    "crew": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215109_19271a39-8cfa-414b-be9e-4a48a01a73d5.png",
    "tech": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215110_1255ffed-c436-4cbe-842a-5b0d63989140.png",
    "craft": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215109_26ff7705-4ef0-483c-b7d5-1e6a39edbb4c.png",
@@ -74,7 +76,11 @@
    "day": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215147_f6e8c696-e01d-446c-bc3e-e2e280187797.png",
    "sunset": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215147_3b76018e-d810-4229-b2bc-e26780bab540.png",
    "home": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215144_f343b984-8be0-468f-a8ca-caceee648e9f.png",
-   "teleporter": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215146_97db198f-0ddc-4d5c-af36-10c390fe5414.png"
+   "teleporter": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215146_97db198f-0ddc-4d5c-af36-10c390fe5414.png",
+   "settings": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215109_19289495-8490-41e7-b894-4dd74836d39d.png",
+   "menu": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_220402_a5296433-a437-46b8-bd92-800f92c0e3b1.png",
+   "season": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_220402_ec8d3be2-ac69-4f2d-b4d7-3e21a07662e0.png",
+   "spin": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_220402_90126147-4002-4d9c-8b70-31b568c3c902.png"
   },
   "pois": {
    "supply_cache": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_215147_2c589790-cad6-41d1-b10a-c88e3d48495b.png",

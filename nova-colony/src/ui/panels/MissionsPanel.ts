@@ -8,6 +8,7 @@ import { fmtLong, msUntilLocalMidnight } from '../logic/time';
 import { claimableMissions } from '../logic/badges';
 import { bar, btn, emptyState, rewardChips, tabs } from '../widgets';
 import { fill, h } from '../dom';
+import { hudArt } from '../art';
 
 type Tab = 'main' | 'side' | 'daily';
 
@@ -16,7 +17,7 @@ export class MissionsPanel extends Panel {
   private tab: Tab = 'main';
 
   title(): PanelTitle {
-    return { icon: '📜', text: 'Missions' };
+    return { icon: '📜', art: hudArt('quests'), text: 'Missions' };
   }
 
   override onOpen(arg: unknown): void {

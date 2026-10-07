@@ -6,7 +6,7 @@ import { bagCovers } from '../../core/bag';
 import { fmtHMS } from '../logic/time';
 import { btn, costChips, emptyState, rewardChips } from '../widgets';
 import { fill, h } from '../dom';
-import { artOrEmoji, eventArt } from '../art';
+import { artOrEmoji, eventArt, poiArt } from '../art';
 
 export class MerchantPanel extends Panel {
   readonly name = 'merchant';
@@ -15,7 +15,7 @@ export class MerchantPanel extends Panel {
 
   title(): PanelTitle {
     const def = this.event() ? this.data.worldEvent(this.event()!.def) : undefined;
-    return { icon: def?.icon ?? '🧳', text: def?.name ?? 'Wandering merchant' };
+    return { icon: def?.icon ?? '🧳', art: poiArt('merchant_caravan'), text: def?.name ?? 'Wandering merchant' };
   }
 
   override onOpen(arg: unknown): void {
