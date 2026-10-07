@@ -36,6 +36,34 @@ export function resolveGuideSelector(sel: string, query: (s: string) => Element 
   return null;
 }
 
+/**
+ * Scroll the element into view inside its closest scrollable container only (a panel body, a tab strip,
+ * the research tree). `scrollIntoView` also scrolls every overflow:hidden ancestor — while a drawer was
+ * still sliding in, that shifted the whole fixed HUD root up and left it there (top bar gone in portrait).
+ */
+export function revealInScroller(el: HTMLElement): void {
+  const view = el.ownerDocument?.defaultView;
+  if (!view) return;
+  for (let p = el.parentElement; p && p !== el.ownerDocument.body; p = p.parentElement) {
+    const cs = view.getComputedStyle(p);
+    const sy = /(auto|scroll)/.test(cs.overflowY) && p.scrollHeight > p.clientHeight + 1;
+    const sx = /(auto|scroll)/.test(cs.overflowX) && p.scrollWidth > p.clientWidth + 1;
+    if (!sy && !sx) continue;
+    const r = el.getBoundingClientRect();
+    const pr = p.getBoundingClientRect();
+    const pad = 8;
+    if (sy) {
+      if (r.top < pr.top) p.scrollTop -= pr.top - r.top + pad;
+      else if (r.bottom > pr.bottom) p.scrollTop += Math.min(r.top - pr.top - pad, r.bottom - pr.bottom + pad);
+    }
+    if (sx) {
+      if (r.left < pr.left) p.scrollLeft -= pr.left - r.left + pad;
+      else if (r.right > pr.right) p.scrollLeft += Math.min(r.left - pr.left - pad, r.right - pr.right + pad);
+    }
+    return;
+  }
+}
+
 function safeQuery(sel: string, query: (s: string) => Element | null): Element | null {
   try {
     return query(sel);
@@ -102,7 +130,7 @@ export class Guide {
       const el = resolveGuideSelector(this.uiSel, (q) => this.ctx.root.ownerDocument.querySelector(q));
       if (el !== this.uiEl) {
         this.uiEl = el;
-        if (el) safe('guide scroll', () => (el as HTMLElement).scrollIntoView?.({ block: 'nearest', inline: 'nearest' }));
+        if (el) safe('guide scroll', () => revealInScroller(el as HTMLElement));
       }
       this.covered = el ? this.isCovered(el as HTMLElement) : false;
     } else {
