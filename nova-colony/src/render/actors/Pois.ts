@@ -22,6 +22,8 @@ export class Pois {
   private models: string[] = [];
   private smokeAcc = 0;
   private lastTerrain = -1;
+  /** POI count when last built: runtime POIs (e.g. the tutorial survivor camp) are appended to gen.pois. */
+  private lastPoiCount = -1;
   private readonly unsub: (() => void)[] = [];
 
   constructor(private readonly ctx: RenderContext) {
@@ -78,8 +80,10 @@ export class Pois {
     const ctx = this.ctx;
     const gen = (ctx.game.sys.world.gen as WorldGen | undefined) ?? null;
     const env = ctx.env;
-    if (gen !== this.gen || env.terrainVersion !== this.lastTerrain) {
+    const poiCount = gen?.pois?.length ?? -1;
+    if (gen !== this.gen || env.terrainVersion !== this.lastTerrain || poiCount !== this.lastPoiCount) {
       this.lastTerrain = env.terrainVersion;
+      this.lastPoiCount = poiCount;
       this.setGen(gen);
     }
     const t = env.t;

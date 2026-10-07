@@ -148,7 +148,8 @@ function makeGen(game: Game, rng: Rng): WorldGen {
       }
     }
   }
-  return { regionMap, regionIds, heights, water, nodes, pois, props };
+  const regionCenters = regionIds.map((id, i) => ({ id, x: centers[i].x, z: centers[i].z }));
+  return { regionMap, regionIds, regionCenters, heights, water, nodes, pois, props, version: 1 };
 }
 
 // ------------------------------------------------------------------------------ scene builders
