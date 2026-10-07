@@ -2,7 +2,7 @@
  "about": "Painted (Higgsfield gpt_image_2_5, medium, transparent) build-menu icons for all 150 buildings + 6 vehicles, shipped in public/art/{buildings,vehicles}. Each is a repaint of the baked in-game render (art/source/renders, `npm run bake:thumbs`) used as image reference, so the design matches the 3D model. Re-paint an icon whenever its model changes.",
  "reference": "https://raw.githubusercontent.com/masono21/one-click-hugo-cms/<branch>/nova-colony/art/source/renders/{kind}/{id}.webp  (import with media_import_url; 192px refs work as well as 512px)",
  "prompt": "Repaint the {name} ({what}) in the reference image as a polished mobile game icon for a cozy sci-fi colony game. Keep its exact design, shapes, parts, colors and camera angle. Upgrade only the rendering: stylized 3D game icon, soft warm lighting, gentle rim light, subtle material textures, glowing lights where present, crisp edges. Centered, filling the frame, transparent background, no extra ground, no text.",
- "postprocess": "trim to alpha bounds (alpha>10), pad square 4%, resize 192x192 LANCZOS, WebP q85 -> public/art/{kind}/{id}.webp",
+ "postprocess": "remove border-connected background haze (flood fill below max border alpha + 24; no-op when the border is clean), trim to alpha bounds (alpha>10), pad square 4%, resize LANCZOS to 256x256 (buildings) / 384x384 (vehicles), WebP q82 -> public/art/{kind}/{id}.webp",
  "done": {
   "aa_gun": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_211022_ba37774f-9308-4117-8d0a-109fe2d09e26.png",
   "advanced_lab": "https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi/hf_20261007_210756_c216716f-a4b1-4f28-a3f1-8a9a30a79eca.png",

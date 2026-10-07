@@ -19,8 +19,8 @@ building only needs a rebake, not a prompt.
 | Shop | `public/art/shop/<ProductDef.id>.webp` (12) | 512×384 RGBA | Shop product cards |
 | Rewards | `public/art/rewards/{victory_chest,supply_crate,daily_gift}.webp` | 256² RGBA | Victory chest, free crate, daily reward |
 | Items | `public/art/items/<ItemDef.id>.webp` (65: tools, weapons, armor, backpacks, gear, consumables, components, crates) | 192² RGBA | Inventory + equipment slots, crafting, factory recipes, reward chips / cards, item toasts |
-| Buildings | `public/art/buildings/<BuildingDef.id>.webp` (150: every building, structure pieces included — one picture per piece, shared by its material tiers) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 192² RGBA | Build menu cards, placement bar, inspector, station tabs, unlock lists |
-| Vehicles | `public/art/vehicles/<VehicleDef.id>.webp` (6) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 192² RGBA | Vehicle cards, craft rows, vehicle rewards / toasts |
+| Buildings | `public/art/buildings/<BuildingDef.id>.webp` (150: every building, structure pieces included — one picture per piece, shared by its material tiers) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 256² RGBA | Build menu cards, placement bar, inspector, station tabs, unlock lists |
+| Vehicles | `public/art/vehicles/<VehicleDef.id>.webp` (6) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 384² RGBA | Vehicle cards, craft rows, vehicle rewards / toasts |
 | Research | `public/art/research/<ResearchDef.id>.webp` (90) — painted tech icons (prompts in `art/source/painted-research-icons.json`) | 128² RGBA | Research tree nodes (greyed while locked), research detail card, "Researched X!" toast |
 | HUD | `public/art/hud/<id>.webp` (22: the 8 nav buttons, the population / power / defense / backpack / health chips, the 4 day phases, the map's home + teleporter markers, settings / season / lucky-wheel tiles) — painted icons (prompts in `art/source/painted-hud-icons.json`) | 128² RGBA | Nav rail + dock, status chips, clock chip, map markers, menu tiles, panel headers (preloaded with the resource icons) |
 | Points of interest | `public/art/pois/<PoiDef.id>.webp` (24) — painted icons (same manifest) | 128² RGBA | Map markers + marker card, the context button next to a POI / event, world tap tooltip, "X discovered!" toast. World events use the icon of the POI they spawn |
@@ -28,7 +28,7 @@ building only needs a rebake, not a prompt.
 | Store | `art/store/feature-graphic-1024x500.jpg`, `key-art-*.jpg` | — | Google Play feature graphic, store/press (not shipped in the app) |
 | Promo video | `art/store/promo-flyover-10s.mp4` | 1920×1080, 10 s, silent | Store preview / social clip (Higgsfield `kling3_0` image-to-video from the key art); add game music when cutting a trailer |
 
-Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 7.6 MB (WebP; the painted building + vehicle icons are ≈ 1.45 MB, the research icons ≈ 0.6 MB and the HUD + POI icons ≈ 0.3 MB of it).
+Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 8.3 MB (WebP; the painted building + vehicle icons are ≈ 2.1 MB, the research icons ≈ 0.6 MB and the HUD + POI icons ≈ 0.3 MB of it).
 
 ## Where the art appears in the UI
 Every lookup returns a relative URL or `null`; a missing/failed image falls back to the emoji from the data, so the UI
@@ -62,7 +62,7 @@ models: `npm run bake:thumbs` renders every model from the game's own code into 
 bigger sources), and each render is repainted with Higgsfield `gpt_image_2_5` (medium, transparent) using the render as the
 image reference and a "keep its exact design, upgrade only the rendering" prompt — so the icon matches what the player
 builds. Prompt template, reference URLs, per-icon result URLs and the redo notes are in
-`art/source/painted-building-icons.json`. When a model changes: re-bake, re-paint that id, trim/pad/192 WebP q82.
+`art/source/painted-building-icons.json`. When a model changes: re-bake, re-paint that id, clean / trim / pad, resize to 256² (vehicles 384²), WebP q82.
 
 ## Style guide (for new art)
 Stylized low-poly 3D, flat-shaded chunky shapes, soft warm lighting, bright saturated but cozy palette,

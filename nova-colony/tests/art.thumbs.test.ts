@@ -1,7 +1,8 @@
 /**
- * Build-menu thumbnails baked from the game's own models (`npm run bake:thumbs`, scripts/bake-thumbs.mjs):
- * every building and vehicle id has exactly one 192² RGBA WebP under public/art/{buildings,vehicles},
- * nothing else lives there, and the whole set stays light.
+ * Building and vehicle pictures (painted over renders of the game's own models, see docs/ART.md): every building
+ * id has exactly one 256² and every vehicle id one 384² RGBA WebP under public/art/{buildings,vehicles} (sized so
+ * the build cards and the big vehicle cards are not upscaled on 3× phones), nothing else lives there, and the whole
+ * set stays light.
  */
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
@@ -10,7 +11,7 @@ import { createDataRegistry } from '../src/data';
 
 const data = createDataRegistry();
 const ART = path.resolve(__dirname, '..', 'public', 'art');
-const SIZE = 192;
+const SIZE: Record<string, number> = { buildings: 256, vehicles: 384 };
 
 /** Dimensions and alpha flag from a WebP header (VP8X extended, VP8L lossless or plain VP8 lossy). */
 function webpInfo(buf: Buffer): { w: number; h: number; alpha: boolean; chunk: string } {
@@ -37,7 +38,7 @@ function check(folder: string, ids: string[]): number {
   for (const id of ids) {
     const buf = fs.readFileSync(path.join(dir, `${id}.webp`));
     const info = webpInfo(buf);
-    expect([info.w, info.h], `${folder}/${id} size`).toEqual([SIZE, SIZE]);
+    expect([info.w, info.h], `${folder}/${id} size`).toEqual([SIZE[folder], SIZE[folder]]);
     expect(info.alpha, `${folder}/${id} has an alpha channel (${info.chunk})`).toBe(true);
     expect(buf.length, `${folder}/${id} is not empty`).toBeGreaterThan(200);
     bytes += buf.length;
@@ -46,18 +47,18 @@ function check(folder: string, ids: string[]): number {
 }
 
 describe('build-menu thumbnails', () => {
-  it('every building has a 192² transparent WebP thumbnail and public/art/buildings holds nothing else', () => {
+  it('every building has a 256² transparent WebP thumbnail and public/art/buildings holds nothing else', () => {
     expect(data.buildings.length).toBeGreaterThan(100);
     check('buildings', data.buildings.map((b) => b.id));
   });
 
-  it('every vehicle has a 192² transparent WebP thumbnail and public/art/vehicles holds nothing else', () => {
+  it('every vehicle has a 384² transparent WebP thumbnail and public/art/vehicles holds nothing else', () => {
     expect(data.vehicles.length).toBeGreaterThan(0);
     check('vehicles', data.vehicles.map((v) => v.id));
   });
 
-  it('the whole set stays light (the UI preloads the build menu)', () => {
+  it('the whole set stays light (tier-ups preload up to 8 of them)', () => {
     const total = check('buildings', data.buildings.map((b) => b.id)) + check('vehicles', data.vehicles.map((v) => v.id));
-    expect(total).toBeLessThan(2 * 1024 * 1024);
+    expect(total).toBeLessThan(2.5 * 1024 * 1024);
   });
 });
