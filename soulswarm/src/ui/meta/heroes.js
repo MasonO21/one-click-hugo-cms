@@ -1,7 +1,7 @@
 // Heroes tab with three sub-tabs: Heroes (roster + detail), Relics (gear) and Talents (gold sink).
 import { h, $, fmt, toast, modal } from '../dom.js';
 import { icon } from '../icons.js';
-import { relicArt, skillArt } from '../art.js';
+import { relicArt, skillArt, talentArt } from '../art.js';
 import {
   HEROES, HERO_ORDER, HERO_MAX_STARS, SKILLS, RARITY_COLOR, RARITY_LABEL, RARITIES, RELICS, RELIC_SLOTS,
   relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES,
@@ -235,7 +235,7 @@ export function createHeroes(ctx) {
         const lv = p.talents[k] || 0; const max = lv >= t.max; const cost = talentCost(lv);
         const poor = p.gold < cost;
         return `<div class="tal ${max ? 'is-max' : ''}" data-tal="${k}">
-          <span class="tal-ic">${icon(t.icon)}</span>
+          <span class="tal-ic">${talentArt(k, t.icon)}</span>
           <div class="tal-main">
             <div class="tal-top"><b>${t.name}</b><span class="tal-lv tnum">Lv ${lv}/${t.max}</span></div>
             ${bar(lv / t.max, 'mbar-thin')}

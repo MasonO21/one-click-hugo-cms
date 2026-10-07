@@ -40,3 +40,7 @@ export const skillArt = (id, fallback) => (SKILL_ART[id] ? `<img class="skill-ar
 
 /** Painted gem packs, smallest to largest (the six GEM_SKUS tiers). */
 export const GEM_ART = Object.values(import.meta.glob('../assets/art/gems-*.webp', { eager: true, import: 'default' }));
+
+/** Talents share the painted icon of the passive (or relic) with the same stat. */
+const TALENT_ART = { might: 'might', vitality: 'vitality', raise: 'raiseDead', cap: 'legionCap', swift: 'haste' };
+export const talentArt = (id, fallback) => (id === 'greed' ? relicArt('coin') : skillArt(TALENT_ART[id], fallback));

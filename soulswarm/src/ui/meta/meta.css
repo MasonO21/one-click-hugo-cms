@@ -571,6 +571,7 @@
   background: linear-gradient(90deg, rgba(32,46,78,.92), rgba(12,16,30,.92)); box-shadow: inset 0 0 0 1px rgba(126,226,255,.15); }
 .tal-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; clip-path: var(--bevel-sm); background: linear-gradient(160deg, #1f6f8a, #0a2333); color: var(--soul); box-shadow: inset 0 0 0 1px rgba(78,242,255,.4); }
 .tal-ic svg { width: 24px; height: 24px; filter: drop-shadow(0 0 5px rgba(78,242,255,.7)); }
+.tal-ic .skill-art, .tal-ic .relic-art { width: 58px; height: 58px; }
 .tal-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .tal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 .tal-top b { font-size: 14px; white-space: nowrap; }
