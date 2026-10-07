@@ -34,6 +34,7 @@ import { FloatText } from './fx/FloatText';
 import { FlyToHud } from './fx/FlyToHud';
 import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
+import { Threats } from './hud/Threats';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -71,6 +72,7 @@ export class UI {
   private fly!: FlyToHud;
   private tip!: SelectionTip;
   private guide!: Guide;
+  private threats!: Threats;
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
 
@@ -131,7 +133,8 @@ export class UI {
     this.floats = new FloatText(world, this.renderer);
     this.tip = new SelectionTip(this.renderer);
     this.guide = new Guide(ctx);
-    world.append(this.tip.el, this.guide.layer);
+    this.threats = new Threats(ctx);
+    world.append(this.tip.el, this.guide.layer, this.threats.layer);
 
     this.hud = new Hud(ctx);
     this.build = new BuildController(ctx);
@@ -277,6 +280,20 @@ export class UI {
     this.toasts.show(text, kind, icon);
   }
 
+  /**
+   * The login-gift popup must not yank away whatever the player opened in the first seconds of a
+   * session (build menu, an inspector, a placement): wait until the screen is free, else skip it
+   * (the HUD's Daily chip stays).
+   */
+  private autoDaily(tries: number): void {
+    if (!this.game.sys.liveops.dailyAvailable() || this.panels.isOpen('daily')) return;
+    if (this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play') {
+      if (tries < 20) window.setTimeout(() => this.autoDaily(tries + 1), 3000);
+      return;
+    }
+    this.open('daily');
+  }
+
   private flushToasts(): void {
     if (!this.deferredToasts.length || this.panels.anyModal()) return;
     const now = performance.now();
@@ -307,7 +324,10 @@ export class UI {
     const g = this.game;
     bus.on('ui:toast', (e) => this.simToast(e.text, e.kind ?? 'info', e.icon));
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
-    bus.on('ui:open', (e) => this.open(e.panel, e.arg));
+    bus.on('ui:open', (e) => {
+      if (e.panel === 'daily' && (e.arg as { auto?: boolean } | undefined)?.auto) this.autoDaily(0);
+      else this.open(e.panel, e.arg);
+    });
     bus.on('ui:celebrate', (e) => {
       const now = performance.now();
       if (now - this.lastTierCelebrate < 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
@@ -555,6 +575,7 @@ export class UI {
       this.fly.update(dt);
       this.tip.update(dt);
       this.guide.frame(dt);
+      this.threats.frame();
     });
 
     this.accSlow += dt;
@@ -563,6 +584,7 @@ export class UI {
       safe('ui slow', () => {
         this.refreshBadges();
         this.guide.poll();
+        this.threats.poll();
       });
     }
     this.accFps += dt;

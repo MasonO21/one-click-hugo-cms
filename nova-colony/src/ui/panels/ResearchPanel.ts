@@ -139,7 +139,6 @@ export class ResearchPanel extends Panel {
       return box;
     }
     const st = this.status(d.id);
-    const can = rs.canResearch(d.id);
     box.appendChild(h('div', { class: 'row' }, h('span', { class: 'bi', text: d.icon }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: d.name }), h('span', { class: 'chip ' + (st === 'done' ? 'good' : st === 'available' ? 'warn' : ''), text: st === 'done' ? 'Researched' : st === 'available' ? 'Ready to research' : st === 'locked_tier' ? 'Needs a higher tier' : 'Needs earlier tech' }))));
     box.appendChild(h('div', { class: 'small', style: 'margin:.4em 0', text: d.description }));
 
@@ -148,6 +147,8 @@ export class ResearchPanel extends Panel {
       const costRow = h('div', { class: 'chips' }, h('span', { class: 'chip ' + (have >= d.cost ? 'good' : 'bad') }, h('i', { text: '🔬' }), `${fmt(d.cost)} RP`));
       if (d.resources) costRow.appendChild(costChips(this.data, d.resources, g.state.resources.amounts));
       box.appendChild(costRow);
+      // the button sits right under the price: on a landscape phone the unlock list would push it below the fold
+      box.appendChild(this.action(d.id));
     }
     // prerequisites
     if (d.requires.length || d.tier > g.state.colony.tier) {
@@ -178,31 +179,34 @@ export class ResearchPanel extends Panel {
       for (const u of unlocks.slice(0, 10)) chips.appendChild(h('span', { class: 'chip info', text: u }));
       box.appendChild(chips);
     }
-    // action
     if (st === 'done') box.appendChild(h('div', { class: 'chip good', style: 'margin-top:.7em', text: '✔ Researched' }));
-    else {
-      const need = Math.max(0, Math.ceil(d.cost - g.state.research.points));
-      const reason = can ? false : st === 'locked_tier' ? 'Reach a higher colony tier first' : st === 'locked_prereq' ? 'Research the earlier tech first' : need > 0 ? `Need ${need} more research points` : d.resources && !bagCovers(g.state.resources.amounts, d.resources) ? 'Gather the extra resources first' : 'Not available yet';
-      box.appendChild(
-        h(
-          'div',
-          { style: 'margin-top:.7em' },
-          btn({
-            label: '🔬 Research',
-            cls: 'big good block',
-            disabled: reason,
-            data: { action: 'research' },
-            onClick: () => {
-              if (rs.research(d.id)) {
-                this.ctx.haptic('success');
-                this.ctx.toast(`Researched ${d.name}!`, 'success', d.icon);
-              } else this.ctx.toast("Couldn't research that yet", 'info', '🔬');
-              this.rerender();
-            },
-          }),
-        ),
-      );
-    }
     return box;
+  }
+
+  private action(id: string): HTMLElement {
+    const g = this.game;
+    const rs = g.sys.research;
+    const d = this.data.researchDef(id)!;
+    const st = this.status(d.id);
+    const can = rs.canResearch(d.id);
+    const need = Math.max(0, Math.ceil(d.cost - g.state.research.points));
+    const reason = can ? false : st === 'locked_tier' ? 'Reach a higher colony tier first' : st === 'locked_prereq' ? 'Research the earlier tech first' : need > 0 ? `Need ${need} more research points` : d.resources && !bagCovers(g.state.resources.amounts, d.resources) ? 'Gather the extra resources first' : 'Not available yet';
+    return h(
+      'div',
+      { style: 'margin:.6em 0 .2em' },
+      btn({
+        label: '🔬 Research',
+        cls: 'big good block',
+        disabled: reason,
+        data: { action: 'research' },
+        onClick: () => {
+          if (rs.research(d.id)) {
+            this.ctx.haptic('success');
+            this.ctx.toast(`Researched ${d.name}!`, 'success', d.icon);
+          } else this.ctx.toast("Couldn't research that yet", 'info', '🔬');
+          this.rerender();
+        },
+      }),
+    );
   }
 }
