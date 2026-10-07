@@ -145,6 +145,8 @@ export class PlayerSystem extends System {
   private refreshCaches(): void {
     this.speedCache = this.speed();
     this.maxHpCache = this.computeMaxHp();
+    // every way the carry limit can shrink (dismount, knock-out, backpack swapped out) passes through here
+    if (this.carried() > this.capacity() + 1e-9) this.trimPack();
   }
 
   // ================================================================== movement & collision
@@ -467,6 +469,37 @@ export class PlayerSystem extends System {
   /** Move everything in the backpack into colony storage (what does not fit stays in the pack). */
   depositBackpack(): void {
     this.deposit(false);
+  }
+
+  /**
+   * The carry limit dropped below what is carried (e.g. stepping off a vehicle that held 60 extra): the surplus is
+   * sent home to colony storage, so the pack can never exceed its capacity. Whatever storage cannot hold is left
+   * behind, exactly like a gather drop that does not fit.
+   */
+  private trimPack(): void {
+    const g = this.game;
+    const p = g.state.player;
+    const bp = p.backpack;
+    let excess = this.carried() - this.capacity();
+    const moved: Record<string, number> = {};
+    let total = 0;
+    for (const id of Object.keys(bp)) {
+      if (excess <= 1e-9) break;
+      const take = Math.min(bp[id], excess);
+      if (!(take > 0)) continue;
+      bp[id] -= take;
+      excess -= take;
+      if (bp[id] <= 1e-9) delete bp[id];
+      const added = g.sys.economy.add(id, take, 'gather', p.x, p.z);
+      if (added > 0) {
+        moved[id] = added;
+        total += added;
+      }
+    }
+    if (total > 0) {
+      g.bus.emit('player:deposit', { bag: moved });
+      g.toast('📦 Extra cargo was sent home to colony storage', 'info');
+    }
   }
 
   private deposit(quiet: boolean): number {
@@ -983,9 +1016,11 @@ export class PlayerSystem extends System {
     const p = g.state.player;
     if (!p.vehicles.includes(vehicleId) || !g.data.vehicle(vehicleId) || this.isDown()) return false;
     if (p.vehicle === vehicleId) return true;
-    if (p.vehicle) this.dismountNow();
+    // switching vehicles swaps directly (no stop in between), so cargo is not trimmed to on-foot capacity
+    const previous = p.vehicle;
     p.vehicle = vehicleId;
     this.refreshCaches();
+    if (previous) g.bus.emit('vehicle:dismounted', { vehicle: previous });
     g.bus.emit('vehicle:mounted', { vehicle: vehicleId });
     g.bus.emit('sfx', { id: 'vehicle_start', x: p.x, z: p.z });
     return true;

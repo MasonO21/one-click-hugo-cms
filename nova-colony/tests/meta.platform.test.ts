@@ -285,10 +285,12 @@ describe('analytics hooks', () => {
     (globalThis as Record<string, unknown>).window = new EventTarget();
     const r = rig();
     r.game.state.playTime = 125;
-    r.game.bus.emit('resource:gained', { id: 'wood', amount: 5, source: 'gather' }); // m01 33%
+    r.game.bus.emit('resource:gained', { id: 'wood', amount: 5, source: 'gather' }); // 5 of m01's wood target
+    const pct = Math.round((5 / r.game.data.mission('m01_wood')!.count) * 100);
+    expect(pct).toBeGreaterThan(0);
     doc.visibilityState = 'hidden';
     doc.dispatchEvent(new Event('visibilitychange'));
-    expect(r.named('quit_point')).toEqual([{ mission: 'm01_wood', mission_pct: 33, tier: 0, play_time_s: 125, tutorial_done: false }]);
+    expect(r.named('quit_point')).toEqual([{ mission: 'm01_wood', mission_pct: pct, tier: 0, play_time_s: 125, tutorial_done: false }]);
     expect(r.named('session_end')).toEqual([{ duration_s: 125, wall_s: 0, play_time_s: 125 }]);
     expect(r.analytics.flush).toHaveBeenCalled();
     // duplicate "hidden" signals (pagehide after visibilitychange) do not double-report

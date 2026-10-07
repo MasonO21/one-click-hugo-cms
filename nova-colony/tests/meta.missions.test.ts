@@ -81,7 +81,7 @@ describe('missions: the first 15 minutes', () => {
 
     const order = ['m01_wood', 'm02_shelter', 'm03_campfire', 'm04_storage', 'm05_rescue', 'm06_logging', 'm07_assign', 'm08_turret', 'm09_defend', 'm10_research', 'm11_tier1'];
     expect(missions.current()?.id).toBe(order[0]);
-    expect(missions.progress('m01_wood')).toEqual({ value: 0, target: 15, done: false });
+    expect(missions.progress('m01_wood')).toEqual({ value: 0, target: game.data.mission('m01_wood')!.count, done: false });
 
     for (let i = 0; i < order.length; i++) {
       const cur = missions.current()!;
@@ -99,17 +99,24 @@ describe('missions: the first 15 minutes', () => {
     }
 
     expect(claimed).toEqual(order);
-    expect(missions.current()).toBeNull();
+    // the guided arc ends at m11, but the main chain goes on: the next story mission is simply the next head
+    expect(game.data.mission('m11_tier1')!.next).toEqual(['m12_desk']);
+    expect(missions.current()?.id).toBe('m12_desk');
+    expect(missions.progress('m12_desk').done).toBe(false);
     expect(sfx.filter((s) => s === 'mission_done')).toHaveLength(order.length);
     expect(game.state.tutorial.done).toBe(true);
     // scripted triggers
     expect(spawn).toHaveBeenCalledTimes(1);
     expect(spawn).toHaveBeenCalledWith(0, 0);
     expect(schedule).toHaveBeenCalledTimes(1);
-    expect(schedule).toHaveBeenCalledWith(20, 60);
+    const attack = game.data.mission('m08_turret')!.onComplete!.attack!; // the content decides the countdown
+    expect(schedule).toHaveBeenCalledWith(attack.delay, attack.warning);
     expect(celebrations).toEqual(['Your first colonist joined!', 'Colony defended!', 'Reinforced Wood tier reached! The colony expands.']);
     // rewards were granted (m09: nova + rp; m11: nova)
-    expect(game.state.liveops.nova).toBe(10 + 15);
+    const novaOf = (id: string) => game.data.mission(id)!.reward.nova ?? 0;
+    expect(novaOf('m09_defend')).toBeGreaterThan(0);
+    expect(novaOf('m11_tier1')).toBeGreaterThan(0);
+    expect(game.state.liveops.nova).toBe(order.reduce((n, id) => n + novaOf(id), 0));
     expect(game.state.research.points).toBeGreaterThanOrEqual(25);
   });
 
@@ -266,17 +273,22 @@ describe('missions: daily missions', () => {
   });
 
   it('rolls over at local midnight: old dailies reset, finished-but-untapped ones are auto-collected', () => {
-    const g = makeGame();
+    // the real pool has 15 dailies and 3 are drawn per date, so pin the pool to exactly 3: the same three come
+    // back every day and the rollover itself (not the luck of the draw) is what is under test
+    const data = createDataRegistry({ ...defaultData(), dailyMissionPool: ['d_build', 'd_kill', 'd_gather_wood'] });
+    const g = makeGame({ data });
     const { game, clock } = g;
     const m = game.sys.missions;
-    fulfil(g, game.data.mission('d_build')!); // build 10 structures — done, not claimed
+    const build = game.data.mission('d_build')!;
+    expect(game.state.missions.daily).toContain('d_build');
+    fulfil(g, build); // done, not claimed
     expect(m.progress('d_build').done).toBe(true);
     const nova = game.state.liveops.nova;
     clock.now += DAY;
     tickMeta(g, 1.5);
     expect(game.state.missions.dailyDate).toBe('2026-06-16');
-    expect(game.state.liveops.nova).toBeGreaterThan(nova); // collected for the player
-    expect(m.progress('d_build')).toEqual({ value: 0, target: 10, done: false }); // fresh daily
+    expect(game.state.liveops.nova).toBe(nova + build.reward.nova!); // collected for the player
+    expect(m.progress('d_build')).toEqual({ value: 0, target: build.count, done: false }); // fresh daily
     expect(game.state.missions.active).toContain('d_build');
     expect(game.state.missions.completed).not.toContain('d_build');
   });

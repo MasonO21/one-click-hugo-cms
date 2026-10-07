@@ -76,7 +76,13 @@ describe('guide helpers', () => {
     expect(w.findNodeByDef('nope', 0, 0)).toBeNull();
     const camp = w.nearestPoi('survivor_camp', 0, 0)!;
     expect(camp.def).toBe('survivor_camp');
-    expect(w.nearestPoi('camp', 0, 0)!.id).toBe(camp.id); // by kind too
+    // by kind too: 'camp' is a kind shared by several defs (survivor camp, stranded scientists, distress signal, ...),
+    // so the nearest of the kind is the nearest of any def with that kind — never farther than the nearest survivor camp
+    const byKind = w.nearestPoi('camp', 0, 0)!;
+    expect(game.data.poi(byKind.def)!.kind).toBe('camp');
+    const nearestOfKind = Math.min(...w.gen.pois.filter((p) => game.data.poi(p.def)!.kind === 'camp').map((p) => Math.hypot(p.x, p.z)));
+    expect(Math.hypot(byKind.x, byKind.z)).toBeCloseTo(nearestOfKind, 9);
+    expect(Math.hypot(byKind.x, byKind.z)).toBeLessThanOrEqual(Math.hypot(camp.x, camp.z));
     w.lootPoi(camp.id);
     expect(w.nearestPoi('survivor_camp', 0, 0)!.id).not.toBe(camp.id);
     expect(w.nearestPoi('beacon', 0, 0)!.def).toBe('beacon');

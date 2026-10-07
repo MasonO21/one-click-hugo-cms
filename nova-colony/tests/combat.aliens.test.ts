@@ -107,8 +107,10 @@ describe('alien behaviour', () => {
 
   it('bosses join every Nth wave at a tier, from 1-3 directions', () => {
     const base = defaultData();
+    // a dedicated registry: one 4-crawler group and a steep 0.25 wave scaling so the scaled count is visibly > 4
     const data = testData({
       invasions: [{ tier: 0, groups: [{ alien: 'crawler', count: 4, delay: 0 }], boss: { alien: 't_brute', every: 2 }, reward: base.invasions[0].reward }],
+      balance: { ...base.balance, waveScaling: 0.25 },
     });
     const t = makeGame({ data });
     const { game } = t;
@@ -118,7 +120,8 @@ describe('alien behaviour', () => {
     c.waveAtTier = 1; // the next wave is the 2nd at this tier -> boss
     game.sys.combat.schedule(0, 0);
     t.step(0.05);
-    expect(started[0].aliens).toBe(Math.round(4 * 1.25) + 1);
+    expect(started[0].aliens).toBe(Math.round(4 * (1 + game.data.balance.waveScaling * c.waveAtTier)) + 1);
+    expect(started[0].aliens).toBe(6); // 4 crawlers x 1.25 + the boss
     expect(c.spawnQueue.some((q) => q.alien === 't_brute') || c.aliens.some((a) => a.def === 't_brute')).toBe(true);
     // all spawns on the ring: radius + 6 cells from the core
     const ring = (game.state.colony.radius + 6) * 2;
