@@ -49,7 +49,7 @@ export class Toasts {
     const counter = el.querySelector('.t-x') as HTMLElement;
     // an illustration URL (resource icon, colonist portrait, event art) instead of an emoji
     const art = isArtSrc(icon);
-    ic.className = 't-ic' + (art ? ' art' + (icon.includes('/professions/') ? ' portrait' : icon.includes('/events/') ? ' wide' : '') : '');
+    ic.className = 't-ic' + (art ? ' art' + (icon.includes('/professions/') ? ' face' : icon.includes('/events/') ? ' wide' : '') : '');
     if (art) ic.replaceChildren(artOrEmoji(icon, DEFAULT_ICON[kind], 'ta'));
     else ic.textContent = icon ?? DEFAULT_ICON[kind];
     tx.textContent = text;

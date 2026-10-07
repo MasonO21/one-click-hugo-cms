@@ -24,8 +24,8 @@ export interface CelebrateArg {
   ok?: string;
   /** Illustration shown big instead of the emoji burst (tier, biome postcard, world event, new colonist). */
   art?: string | null;
-  artKind?: 'tier' | 'biome' | 'event' | 'portrait';
-  /** Ring colour of a portrait (the colonist's rarity). */
+  artKind?: 'tier' | 'biome' | 'event' | 'colonist';
+  /** Ring colour of a colonist portrait (the colonist's rarity). */
   ring?: string;
 }
 
@@ -41,7 +41,7 @@ export class CelebratePanel extends Panel {
   override onOpen(): void {
     const a = this.arg as CelebrateArg;
     // landscape illustrations (tier, postcard, event) get the wide two-column card on a landscape phone
-    if (a.art && a.artKind !== 'portrait') this.card.classList.add('wide');
+    if (a.art && a.artKind !== 'colonist') this.card.classList.add('wide');
     if (a.quiet) return;
     if (a.tier == null) this.ctx.sfx('celebrate'); // tier-ups are voiced by the audio layer on colony:tierUp
     this.ctx.haptic('heavy');
@@ -64,8 +64,10 @@ export class CelebratePanel extends Panel {
     const img = artOrEmoji(a.art ?? null, a.icon ?? '🎉', 'cb-img', a.title);
     const frame = h('div', { class: 'cb-frame' }, img, h('i', { class: 'cb-shine' }));
     const hero = h('div', { class: 'cb-art ' + kind }, h('div', { class: 'cb-rays' }), frame);
-    if (kind === 'portrait' && a.ring) setVar(hero, '--ring', a.ring);
+    if (kind === 'colonist' && a.ring) setVar(hero, '--ring', a.ring);
     if (kind === 'tier' && tierIndex != null) hero.appendChild(h('span', { class: 'cb-tag', text: tierIndex >= 6 ? '★ FINAL TIER ★' : `TIER ${tierIndex + 1}` }));
+    // Titanium: sparkles twinkle around the illustration
+    if (kind === 'tier' && tierIndex != null && tierIndex >= 6) for (let i = 0; i < 7; i++) hero.appendChild(h('i', { class: `cb-spark s${i}` }));
     return hero;
   }
 

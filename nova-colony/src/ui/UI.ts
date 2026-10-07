@@ -37,7 +37,7 @@ import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
 import { ConsentPrompt } from './ConsentPrompt';
 import { Threats } from './hud/Threats';
-import { biomeArt, eventArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
+import { alienArt, biomeArt, eventArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
 import { RARITY_COLOR } from './logic/rewards';
 
@@ -547,7 +547,7 @@ export class UI {
     if (/joined/i.test(title) && performance.now() - this.lastJoined.t < 4000) {
       const c = g.sys.colonists.get(this.lastJoined.id);
       const src = c ? professionArt(jobOf(g, c)) : null;
-      if (c && src) return { art: src, artKind: 'portrait', ring: RARITY_COLOR[c.rarity] };
+      if (c && src) return { art: src, artKind: 'colonist', ring: RARITY_COLOR[c.rarity] };
     }
     return {};
   }
@@ -637,7 +637,7 @@ export class UI {
         const ev = g.state.world.events.find((e) => e.id === Number(sel.id));
         const def = ev ? g.data.worldEvent(ev.def) : undefined;
         if (ev && def?.kind === 'merchant') this.open('merchant', ev.id);
-        else if (ev && def) this.tip.show(def.icon, def.name, 'Walk up to it to take part!', ev.x, ev.z);
+        else if (ev && def) this.tip.show(eventArt(def.kind) ?? def.icon, def.name, 'Walk up to it to take part!', ev.x, ev.z);
         break;
       }
       case 'poi': {
@@ -655,7 +655,7 @@ export class UI {
       case 'alien': {
         const a = g.state.combat.aliens.find((q) => q.id === Number(sel.id));
         const def = a ? g.data.alien(a.def) : undefined;
-        if (a && def) this.tip.show('👾', def.name, `${Math.ceil(a.hp)} / ${Math.ceil(a.maxHp)} HP`, a.x, a.z);
+        if (a && def) this.tip.show(alienArt(def.model) ?? '👾', def.name, `${Math.ceil(a.hp)} / ${Math.ceil(a.maxHp)} HP`, a.x, a.z);
         break;
       }
     }

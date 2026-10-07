@@ -70,15 +70,15 @@ export class VictoryPanel extends Panel {
     left.appendChild(h('h2', { class: 'wb-title', text: 'Colony Defended!' }));
     left.appendChild(h('div', { class: 'wb-away', text: `Wave ${info.wave} · ${info.kills} alien${info.kills === 1 ? '' : 's'} defeated` }));
     const beaten = (this.arg as VictoryArg | undefined)?.defeated?.filter((d) => alienArt(d.model)) ?? [];
-    if (beaten.length) {
-      left.appendChild(
-        h(
+    // under the title while the chest is closed; above the loot once it is open (keeps the landscape card short)
+    const beatenRow = beaten.length
+      ? h(
           'div',
           { class: 'vic-aliens', 'aria-hidden': 'true' },
           ...beaten.slice(0, 5).map((d) => h('span', { class: 'va' + (d.boss ? ' boss' : '') }, artOrEmoji(alienArt(d.model), '👾', 'va-img', d.model), h('b', { text: d.n > 1 ? `×${d.n}` : '' }))),
-        ),
-      );
-    }
+        )
+      : null;
+    if (beatenRow && !this.opened) left.appendChild(beatenRow);
     // the illustrated chest (the CSS-drawn one is the fallback): dark and wobbling until tapped, then it lights up
     const chestArt = rewardArt('victory_chest');
     const chest = h(
@@ -101,6 +101,7 @@ export class VictoryPanel extends Panel {
       parts.forEach((p, i) => {
         list.appendChild(h('div', { class: 'rcard pop-in', style: { animationDelay: `${i * 110}ms`, '--rc': p.color } }, partIcon(p, 'ri', 'div'), h('b', { class: 'num', text: p.amount }), h('small', { text: p.label })));
       });
+      if (beatenRow) right.appendChild(beatenRow);
       right.appendChild(list);
       foot.appendChild(
         h(

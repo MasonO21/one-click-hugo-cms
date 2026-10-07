@@ -61,10 +61,16 @@
 
 /* reward cards ("+120 Wood" tiles in celebrations / chests) */
 .rcard .ri.aico {
-  width: 2.7em;
-  height: 2.7em;
+  width: 2.4em;
+  height: 2.4em;
   margin: -0.1em 0 0.05em;
   font-size: 1em;
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  .rcard .ri.aico {
+    width: 2.1em;
+    height: 2.1em;
+  }
 }
 .rcard .ri.aico.emoji {
   width: auto;
@@ -130,7 +136,7 @@
   display: grid;
   place-items: center;
 }
-.toast .t-ic.art.portrait {
+.toast .t-ic.art.face {
   width: 2.7em;
   height: 2.7em;
   margin: -0.35em 0 -0.35em -0.1em;
@@ -139,7 +145,7 @@
   background: radial-gradient(circle at 50% 30%, #fffdf6, color-mix(in srgb, var(--tk, #4fb3f6) 40%, #fff0c8));
   box-shadow: 0 0 0 0.16em var(--tk, #4fb3f6), 0 0.1em 0.3em rgba(0, 0, 0, 0.3);
 }
-.toast .t-ic.art.portrait .ta {
+.toast .t-ic.art.face .ta {
   object-fit: cover;
   object-position: 50% 8%;
   transform: scale(1.12);
@@ -261,20 +267,20 @@
 }
 
 /* a new colonist: round portrait in the rarity ring */
-.cb-art.portrait .cb-frame {
+.cb-art.colonist .cb-frame {
   width: 8.6em;
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 28%, #fffdf6, color-mix(in srgb, var(--ring, #9aa7b4) 35%, #ffefc8));
   box-shadow: 0 0 0 0.3em var(--ring, #9aa7b4), 0 0 0 0.5em #fff, 0 0.6em 1.4em rgba(30, 14, 50, 0.4);
 }
-.cb-art.portrait .cb-img {
+.cb-art.colonist .cb-img {
   object-fit: cover;
   object-position: 50% 8%;
   transform: scale(1.1);
   transform-origin: 50% 20%;
 }
-.cb-art.portrait {
+.cb-art.colonist {
   padding: 0.9em 0 0.6em;
 }
 
@@ -285,6 +291,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  text-shadow: none;
   filter: drop-shadow(0 0.06em 0 #7a4a1d) drop-shadow(0 0 0.5em rgba(255, 207, 74, 0.6));
   letter-spacing: 0.02em;
   animation: nv-pulse 2.4s ease-in-out infinite;
@@ -520,8 +527,8 @@
 
 /* victory chest: the illustration replaces the CSS-drawn one, keeping the wobble / glow / beams */
 .chest.has-art {
-  width: 10em;
-  height: 9em;
+  width: 9em;
+  height: 8em;
   margin: 0 0 0.2em;
 }
 .chest-img {
@@ -529,9 +536,9 @@
   left: 50%;
   bottom: 0;
   z-index: 2;
-  width: 9em;
-  height: 9em;
-  margin-left: -4.5em;
+  width: 8em;
+  height: 8em;
+  margin-left: -4em;
   object-fit: contain;
   transform-origin: 50% 90%;
   filter: brightness(0.5) saturate(0.55) drop-shadow(0 0.4em 0.5em rgba(0, 0, 0, 0.35));
@@ -808,4 +815,55 @@
   width: auto;
   height: auto;
   font-size: 2em;
+}
+
+/* Titanium sparkles */
+.cb-spark {
+  position: absolute;
+  width: 1.3em;
+  height: 1.3em;
+  background: radial-gradient(circle, #fff 0%, #fff3b0 45%, #ffcf4a 100%);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  pointer-events: none;
+  opacity: 0;
+  animation: nv-twinkle 1.9s ease-in-out infinite;
+  z-index: 3;
+}
+.cb-spark.s0 { left: -0.3em; top: 6%; animation-delay: 0.2s; }
+.cb-spark.s1 { right: -0.3em; top: 14%; width: 1em; height: 1em; animation-delay: 0.9s; }
+.cb-spark.s2 { left: 3%; bottom: 12%; width: 0.9em; height: 0.9em; animation-delay: 1.4s; }
+.cb-spark.s3 { right: 2%; bottom: 20%; width: 1.5em; height: 1.5em; animation-delay: 0.5s; }
+.cb-spark.s4 { left: 46%; top: -0.7em; width: 1.1em; height: 1.1em; animation-delay: 1.1s; }
+.cb-spark.s5 { left: 24%; top: 22%; width: 0.8em; height: 0.8em; animation-delay: 1.7s; }
+.cb-spark.s6 { right: 26%; bottom: 8%; width: 0.8em; height: 0.8em; animation-delay: 0.3s; }
+@keyframes nv-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  45% { opacity: 1; transform: scale(1.15) rotate(45deg); }
+  70% { opacity: 0.9; transform: scale(0.85) rotate(70deg); }
+}
+
+/* selection tip (tap an event / alien in the world) */
+.sel-tip .st-ic.art {
+  display: block;
+  width: 2.6em;
+  height: 2.6em;
+  font-size: 1em;
+}
+.sel-tip .st-ic.art.wide {
+  width: 4.4em;
+  height: 2.5em;
+  border-radius: 0.7em;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.12em rgba(255, 255, 255, 0.6);
+}
+.sel-tip .st-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.08em 0.1em rgba(0, 0, 0, 0.4));
+}
+.sel-tip .st-ic.wide .st-img {
+  object-fit: cover;
+  filter: none;
 }
