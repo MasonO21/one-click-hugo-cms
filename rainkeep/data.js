@@ -1016,7 +1016,7 @@ const DATA = {
     odds: { fight: 36, elite: 12, oasis: 16, merchant: 10, mirage: 16, cache: 10 }, // rows 2-9 (row 1 is three fights, row 10 the Warden)
     // foes measure themselves against your squad as it set out: row r fights at start + per x (r - 1) of its
     // strength, elites and the Warden stronger still, so the route is as hard at stage 40 as at stage 140
-    foe: { start: 0.65, per: 0.055, elite: 1.2, boss: 1.15 },
+    foe: { start: 0.65, per: 0.06, elite: 1.2, boss: 1.2 },
     rest: 0.08, // health back after every won fight
     oasis: 0.35, // health back at an oasis
     coins: { fight: 25, elite: 45, cache: 40 },
