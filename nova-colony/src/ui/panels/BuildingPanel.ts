@@ -241,9 +241,11 @@ export class BuildingPanel extends Panel {
     if (!e) return '';
     const parts: string[] = [];
     const num = (v: number) => (Math.abs(v) >= 10 ? fmt(Math.round(v)) : (Math.round(v * 10) / 10).toString());
-    for (const [id, v] of Object.entries(e.produces)) if ((v ?? 0) >= 0.05) parts.push(`+${num(v!)} ${this.data.resource(id)?.icon ?? id}/min`);
-    for (const [id, v] of Object.entries(e.consumes)) if ((v ?? 0) >= 0.05) parts.push(`−${num(v!)} ${this.data.resource(id)?.icon ?? id}/min`);
-    if (e.research >= 0.05) parts.push(`+${num(e.research)} 🔬/min`);
+    // an idle building moves nothing (the economy's smoothed factory activity is still fading out)
+    const idle = !!this.idleReason(b, this.data.building(b.def));
+    if (!idle) for (const [id, v] of Object.entries(e.produces)) if ((v ?? 0) >= 0.05) parts.push(`+${num(v!)} ${this.data.resource(id)?.icon ?? id}/min`);
+    if (!idle) for (const [id, v] of Object.entries(e.consumes)) if ((v ?? 0) >= 0.05) parts.push(`−${num(v!)} ${this.data.resource(id)?.icon ?? id}/min`);
+    if (!idle && e.research >= 0.05) parts.push(`+${num(e.research)} 🔬/min`);
     if (Math.abs(e.power) >= 0.5) parts.push(`${e.power > 0 ? '+' : '−'}${num(Math.abs(e.power))} ⚡`);
     return parts.length ? `Now: ${parts.join(' · ')}` : '';
   }

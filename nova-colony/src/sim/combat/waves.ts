@@ -88,10 +88,13 @@ export function planWave(game: Game, startAt: number, cx: number, cz: number, bi
     if (!data.alien(g.alien)) return;
     const count = Math.max(1, Math.round(g.count * scale));
     const dir = out.directions[gi % nDirs];
-    lastDelay = Math.max(lastDelay, g.delay + count * TUNE.STAGGER);
+    // big late-game groups arrive as a swarm (within GROUP_WINDOW seconds) instead of a one-by-one trickle
+    // that a fortified colony shreds before two aliens are ever on screen together
+    const stagger = Math.min(TUNE.STAGGER, TUNE.GROUP_WINDOW / count);
+    lastDelay = Math.max(lastDelay, g.delay + count * stagger);
     for (let i = 0; i < count; i++) {
       const p = ringPoint(game, cx, cz, ring, dir + rng.range(-0.22, 0.22));
-      out.queue.push({ alien: g.alien, at: startAt + g.delay + i * TUNE.STAGGER + rng.range(0, 0.6), x: p.x, z: p.z });
+      out.queue.push({ alien: g.alien, at: startAt + g.delay + i * stagger + rng.range(0, 0.6), x: p.x, z: p.z });
     }
   });
 

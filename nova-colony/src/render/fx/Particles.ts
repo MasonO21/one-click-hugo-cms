@@ -186,7 +186,10 @@ export class Particles {
     this.flash(x, y + 0.3, z, r * 1.4, '#ffb15c', 0.22);
     this.flash(x, y + 0.3, z, r * 0.7, '#fff6d0', 0.12);
     this.sparks(x, y + 0.3, z, 10 + r * 6, '#ffb347', 5 + r * 2);
-    for (let i = 0, k = this.count(4 + r * 3); i < k; i++) this.smoke(x + (Math.random() - 0.5) * r, y + 0.4, z + (Math.random() - 0.5) * r, 0.35 + r * 0.25, '#5a5560', 1 + Math.random());
+    // Smoke stays small and light: a late-game battery of splash turrets fires several shells a second, and
+    // big dark lit cubes piled up into a "rock heap" that hid the very aliens being shot.
+    const sr = Math.min(r, 3);
+    for (let i = 0, k = this.count(2 + sr * 1.5); i < k; i++) this.smoke(x + (Math.random() - 0.5) * r, y + 0.4, z + (Math.random() - 0.5) * r, 0.25 + sr * 0.12, '#9a93a0', 0.7 + Math.random() * 0.6);
     for (let i = 0, k = this.count(5 + r * 3); i < k; i++) this.fire(x + (Math.random() - 0.5) * r * 0.6, y + 0.2, z + (Math.random() - 0.5) * r * 0.6, 0.3 + r * 0.15);
   }
 

@@ -128,15 +128,17 @@ export const TUNE = {
   MAX_PROJECTILES: 700,
   /** The first N waves approach from the side the turrets cover (tutorial: the turret wins). */
   EARLY_WAVES: 3,
-  /** Seconds between aliens of the same group. */
+  /** Seconds between aliens of the same group... */
   STAGGER: 0.8,
+  /** ...but a whole group spawns within this many seconds (large late-game groups arrive as swarms). */
+  GROUP_WINDOW: 7,
   /** Victory celebration before returning to peace (s). */
   VICTORY_LINGER: 8,
   /** Safety net: after this long (once all spawned) remaining aliens flee and the wave counts as won. */
   ATTACK_TIMEOUT: 300,
   /**
-   * Stragglers: when only a few invaders remain (<= max(2, 25% of the wave)) and nothing was killed or
-   * spawned for this long, they flee and the wave counts as won (no minutes-long nibbling at the core).
+   * Stragglers: when only a few invaders remain (<= max(2, 25% of the wave)) and nothing was killed,
+   * spawned or hurt for this long, they flee and the wave counts as won (no minutes-long nibbling at the core).
    */
   STALL_SECONDS: 40,
   /** Manual turrets fire 2x while the player is this close (cells -> world). */
