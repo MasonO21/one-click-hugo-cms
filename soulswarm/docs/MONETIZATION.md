@@ -89,7 +89,7 @@ Each campaign chapter can be replayed on Nightmare (after a Normal clear) and To
 
 | | Normal | Nightmare | Torment | Why |
 |---|---|---|---|---|
-| Run gold | ×1 | ×1.75 | ×2.5 | Gold is the soft currency; endgame players have little left to buy with it (see §2.1 risk) |
+| Run gold | ×1 | ×1.75 | ×2.5 | Gold is the soft currency; endgame players have little left to buy with it (see §2.1 risk). The flat bounties (+40 per elite affix, Soul Thieves) are not multiplied, though harder elites carry 1–2 more affixes |
 | Pass XP | ×1 | ×1.5 | ×2 | Pass XP is capped at 15,000 a season, so it only moves *when* an endgame player finishes the pass. Account XP stays at the Normal amount, so the 20-gem account level-ups keep their pace |
 | Run gems | 12–20 per clear | same | same | No per-run gem multiplier: repeat farming never prints premium currency |
 | First clear (one-time per chapter) | 70–150 gems + 1 sigil | +60 gems | +120 gems | 900 gems in total, about 7 pulls, earned over months. Flat: Blood Moon and the rewarded-ad double skip it |

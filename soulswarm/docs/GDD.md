@@ -316,7 +316,7 @@ Runs spread by about ±60 s (standard error about 15 s). The one drop is Ch5 wit
 
 A three-phase fight in a sealed arena. All numbers live in `BOSS` and `BOSS_PHASES` (`data.js`). Damage values are × his touch damage.
 
-**HP and damage.** HP = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × Endless scale × difficulty boss HP (§8.2). The tune factors (1, 0.8, 0.75, 1.15, 1.2) even the fight out at about a minute for a player with that chapter's typical progression. That gives **Ch1 12,500 · Ch2 19,950 · Ch3 33,000 · Ch4 82,656 · Ch5 135,000**; the first Endless King has 62,500. Damage = 22 × (1 + 0.3(c−1)) × √scale × difficulty damage. Measured with typical progression (`scripts/balance.mjs`, `GOD=1`): Ch1 ≈ 54 s · Ch2 ≈ 51–60 s · Ch3 ≈ 70–76 s · Ch4 ≈ 64 s · Ch5 ≈ 68 s.
+**HP and damage.** HP = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × Endless scale × difficulty boss HP (§8.2). The tune factors (1, 0.8, 0.75, 1.15, 1.2) even the fight out at about a minute for a player with that chapter's typical progression. That gives **Ch1 12,500 · Ch2 19,950 · Ch3 33,000 · Ch4 82,656 · Ch5 135,000**; the first Endless King has 62,500. Damage = 22 × (1 + 0.3(c−1)) × √scale × difficulty boss damage (§8.2). Measured with typical progression (`scripts/balance.mjs`, `GOD=1`): Ch1 ≈ 54 s · Ch2 ≈ 51–60 s · Ch3 ≈ 70–76 s · Ch4 ≈ 64 s · Ch5 ≈ 68 s.
 
 **Rise and arena.**
 - **Rise:** 1.4 s, immune, with the boss bar white. He rises 11 m up-screen. His first attack comes 2.5 s after spawn.
@@ -480,7 +480,7 @@ Chapters differ in palette, HP mult, spawn mult, the modifiers above and the cha
 **Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
 
 - **Enemy HP** = BaseHP × chapter HP mult × (1 + 0.28m + 0.04m²) × difficulty HP (§8.2; 1 on Normal, ramping in from 1 over the first minutes, and 1 for Gravemaw's arena adds)
-- **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)) × difficulty damage. Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84 (on Normal).
+- **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)) × difficulty damage (1 for Gravemaw's arena adds). Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84 (on Normal).
 - **Spawn rate (enemies/s)** = (1.1 + 0.85m + 0.22m²) × chapter spawn mult × difficulty spawn, with a limit of 200 / 280 / 340 enemies alive at once (low / mid / high quality tier). Swarm rings and elites come on top and are not scaled by chapter.
 - **Elite HP** = 6 × Enemy HP · **Boss HP** = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × difficulty boss HP (§6, §8.2)
 - **The Shepherd's side:** minion damage ×(1 + 0.45(c−1)), minion HP ×(1 + 0.4(c−1)) and Nova damage ×(1 + 0.45(c−1)).
@@ -530,17 +530,17 @@ Every campaign chapter can be replayed on two harder difficulties for long-term 
 - **Normal only:** Endless Abyss (it already escalates without end) and the Daily Trial (its mutators are its twist). For those the selector is hidden, and a requested difficulty is ignored.
 - **Blood Moon stacks on top** of any difficulty: its 8 elites plus the difficulty's extra ones (10 on a Nightmare weekend), and ×2 gold and gems on top of the difficulty's gold.
 - **Energy:** 5 per run on every difficulty. A harder run is not a reason to spend more of the session pacer.
-- **Choosing:** the home screen's chapter card has a three-way selector (Normal · Nightmare · Torment) under the chapter name. Each button shows its gold multiplier, or a lock with "Beat Normal" / "Beat Nightmare" (a tap on a locked tier explains why). The choice is remembered per chapter (`profile.diff.sel`). BATTLE turns violet or crimson to match. The status line shows the chosen tier's record, or its first-clear bonus.
+- **Choosing:** the home screen's chapter card has a three-way selector (Normal · Nightmare · Torment) under the chapter name. Each button shows its gold multiplier, or a lock with "Beat Normal" / "Beat Nightmare" (a tap on a locked tier explains why). The choice is remembered per chapter (`profile.diff.sel`). BATTLE turns violet or crimson to match. The status line shows the chosen tier's record, or its first-clear bonus; on short phones (≤ 700 px tall) the selector compacts and takes the status line's place.
 
 | | Normal | Nightmare | Torment |
 |---|---|---|---|
-| Enemy HP (horde, elites, gate guards), reached after the ramp | ×1 | ×NM_HP, ramping in over NM_RAMP min | ×TM_HP, ramping in over TM_RAMP min |
-| Enemy damage (horde, hazards, Gravemaw) | ×1 | ×NM_DMG | ×TM_DMG |
-| Spawn rate (director; swarm rings unchanged) | ×1 | ×NM_SPAWN | ×TM_SPAWN |
+| Enemy HP (horde, elites, gate guards), reached after the ramp | ×1 | ×2.2, ramping in over 2 min | ×3.5, ramping in over 2.5 min |
+| Enemy damage (horde and hazards) | ×1 | ×2 | ×2.8 |
+| Spawn rate (director; swarm rings unchanged) | ×1 | ×1.25 | ×1.4 |
 | Elites | 4 (8 in Ch5) | +2, at 3:10 and 5:20 | +4, also at 1:55 and 4:20 |
 | Affixes per elite (§5.1; `run.diff.eliteAffixes` is the extra) | 1 (2 from Ch4) | +1: 2 (3 from Ch4) | +2: 3 (4 from Ch4) |
-| Soul shard XP | ×1 | ×NM_XP | ×TM_XP |
-| Gravemaw HP (his arena adds keep Normal HP) | ×1 | ×NM_BOSS | ×TM_BOSS |
+| Soul shard XP | ×1 | ×2 | ×2.8 |
+| Gravemaw HP · damage (his arena adds are plain Normal adds) | ×1 · ×1 | ×1.4 · ×1.4 | ×1.5 · ×1.6 |
 | Run gold · pass XP | ×1 · ×1 | ×1.75 · ×1.5 | ×2.5 · ×2 |
 | First clear (once per chapter) | 70–150 gems + 1 sigil | +60 gems | +120 gems |
 | Gravemaw's Hoard | §10 | Rare 60% / Epic 40% | Epic 98% / Legendary 2% |
@@ -549,12 +549,23 @@ Every campaign chapter can be replayed on two harder difficulties for long-term 
 - **Three rules keep the harder tiers fair rather than grindy.** Each came from the balance bot:
   - **HP ramp:** the extra HP builds up from ×1 at 0:00 to its full value over the ramp. Damage, spawns and elites apply at once. With a flat ×3.5–4.5, Chapter 5 Torment Husks had ~470 HP at 0:00, and the bot died at level 2 with ~100 kills: a wall, not a challenge.
   - **Richer souls:** shard XP is multiplied. A tougher horde dies more slowly, and without this the Shepherd met Gravemaw ~10 levels behind a Normal run.
-  - **Gravemaw scales less than the horde, and his arena adds keep Normal HP.** Tough adds piled up at the arena's alive cap, soaked the Shepherd's weapons and the legion, and stretched Nightmare fights past 8 minutes. The target is a fight no more than about 1.6× its Normal length.
+  - **Gravemaw scales less than the horde, and once he rises his arena adds are plain Normal adds (HP and damage).** Tough adds piled up at the arena's alive cap and soaked the Shepherd's weapons, and harder hits (his and theirs) shredded the legion that fights him, stretching Nightmare fights past 8 minutes. He alone carries the difficulty in his arena. The target is a fight no more than about 1.6× its Normal length.
 - **Look and feedback:** the ground, runes, rim light and fog are pulled toward the difficulty's palette, the same swap as the Blood Moon look and applied over it on Blood Moon weekends. Allies and enemies keep their colours (§14). The HUD shows a NIGHTMARE or TORMENT tag under the chapter name. A banner at 0:03.6 names the difficulty (the Blood Moon banner names it instead on weekends). The pause and results screens show a difficulty pill with its gold multiplier.
-- **Records:** best time, best legion, best kills and a cleared flag are kept per chapter per difficulty (`profile.diff.best`). Normal's clear flag stays in the chapter record. Old saves migrate safely: the block is added, Normal records are seeded from the chapter records, and Nightmare opens on every chapter already cleared.
+- **Records:** best time, best legion, best kills, best kill streak (§4.7) and a cleared flag are kept per chapter per difficulty (`profile.diff.best`). Normal's clear flag stays in the chapter record. Old saves migrate safely: the block is added, Normal records are seeded from the chapter records, and Nightmare opens on every chapter already cleared.
 - **Quests:** "Clear a chapter on Nightmare" and "Slay 5 elites on Nightmare" join the late daily-quest pool (Torment counts for both, §2).
 
-BAL_TABLE
+**Balance check (2026-10-07, `scripts/balance.mjs`).** The bot plays Vael on the build with kill streaks, elite affixes, run events and Rites (on, as players have them). Each row uses the bot's typical progression for that chapter. `PROG=5` plays Chapter 2 with Chapter 5's progression, because Nightmare players arrive stronger than that table assumes. The bot only flees and seldom clears, so mortal survival is the yardstick. Boss fights use `GOD=1` (no hit can kill). Rows are 5–18 runs each.
+
+| | Normal | Nightmare | Torment |
+|---|---|---|---|
+| Ch2 survival | 279 s | 180 s (65%) | 153 s (55%) |
+| Ch5 survival | 373 s (5 of 8 clear) | 205 s (55%) | 195 s (52%; median 165 s, 44%) |
+| Ch2 at Ch5 progression: survival · clears | 385 s · 6/6 | 367 s · 5/6 | 355 s · 5/6 |
+| Gravemaw fight (`GOD=1`), Ch2 · Ch5 | 33 s · 34 s | 31 s · 38 s (0.9× · 1.1×) | 67 s · 62 s (2.0× · 1.8×; Ch5 median 33 s) |
+| Gravemaw fight (`GOD=1`), Ch2 at Ch5 progression | 20 s | 17 s | 15 s |
+
+- **Survival clusters:** on Chapter 5 the bot's deaths bunch around the 2:30–3:10 elite wave (Ch5's own elites plus the 3:10 extra one) on both tiers. So Torment's extra edge shows in the median, in Chapter 2 and in its boss rather than in the Ch5 mean. More Torment damage (×3.2) did not move it and only slowed the build.
+- **Torment's Gravemaw** at chapter progression runs past the 1.6× target (about 2×), and fights are bimodal (a build that snowballs kills him as fast as on Normal). At Chapter 5 progression on Chapter 2 he falls as fast as on Normal. A Torment player is expected to arrive above the typical progression the bot can model.
 
 ---
 
