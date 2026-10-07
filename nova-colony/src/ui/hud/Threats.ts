@@ -54,8 +54,10 @@ export class Threats {
     this.layer.style.cssText = 'position:absolute;inset:0;pointer-events:none';
     for (let i = 0; i < MAX_MARKERS; i++) {
       const label = h('b');
+      // the pointer rotates (inline transform); the pulsing dot is a separate element, because a CSS
+      // animation on the same element would override the rotation
       const arrow = h('i', { class: 'th-arrow' });
-      const el = h('button', { class: 'threat-edge', type: 'button', 'aria-label': 'Show attackers', data: { sfx: 'none' } }, arrow, label);
+      const el = h('button', { class: 'threat-edge', type: 'button', 'aria-label': 'Show attackers', data: { sfx: 'none' } }, arrow, h('i', { class: 'th-dot' }), label);
       const m = { el, label, arrow, x: 0, z: 0, tr: '', text: '' };
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -90,7 +92,13 @@ export class Threats {
     }
     const center = game.sys.buildings.colonyCenter();
     this.groups = this.pts.length ? threatGroups(this.pts, center.x, center.z).slice(0, MAX_MARKERS) : [];
+    // keep the markers below the attack banner / hint bubble column
+    const banners = this.groups.length ? this.ctx.root.querySelector('.hud-banners') : null;
+    const bottom = banners ? banners.getBoundingClientRect().bottom : 0;
+    this.top = Math.max(130, window.innerHeight * 0.22, bottom + 30);
   }
+
+  private top = 130;
 
   /** Every frame: place the markers on the screen edge (hidden while the group is in view). */
   frame(): void {
@@ -102,6 +110,8 @@ export class Threats {
     const ox = follow ? game.state.player.x : cam.tx;
     const oz = follow ? game.state.player.z : cam.tz;
     const hidden = game.view.panelOpen || game.view.mode === 'build';
+    const placed: { x: number; y: number }[] = [];
+    const top = Math.min(this.top, vh - 140);
     for (let i = 0; i < this.markers.length; i++) {
       const m = this.markers[i];
       const g = this.groups[i];
@@ -115,7 +125,13 @@ export class Threats {
       m.x = g.x;
       m.z = g.z;
       const v = relativeScreenDir(g.x - ox, g.z - oz, cam.yaw);
-      const e = edgePointRect(v.x, v.y, { l: 40, t: Math.max(130, vh * 0.22), r: vw - 108, b: vh - 100 });
+      const e = edgePointRect(v.x, v.y, { l: 40, t: top, r: vw - 108, b: vh - 100 });
+      // neighbouring sectors can land on the same edge spot: show only the bigger group there
+      if (placed.some((q) => Math.abs(q.x - e.x) < 52 && Math.abs(q.y - e.y) < 52)) {
+        setClass(m.el, 'on', false);
+        continue;
+      }
+      placed.push({ x: e.x, y: e.y });
       const tr = `translate3d(${e.x.toFixed(0)}px, ${e.y.toFixed(0)}px, 0)`;
       if (tr !== m.tr) {
         m.tr = tr;

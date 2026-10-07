@@ -321,6 +321,10 @@
 .threat-edge .th-arrow {
   position: absolute;
   inset: 0;
+}
+.threat-edge .th-dot {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 40%, #ff8a7a, #e0413a 70%);
   box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.45), inset 0 0 0 0.16em #fff;
@@ -348,7 +352,7 @@
   white-space: nowrap;
   text-shadow: 0 0.08em 0.15em rgba(0, 0, 0, 0.5);
 }
-.threat-edge.boss .th-arrow {
+.threat-edge.boss .th-dot {
   background: radial-gradient(circle at 50% 40%, #c88aff, #7a2a8a 70%);
 }
 .threat-edge.boss .th-arrow::after {
