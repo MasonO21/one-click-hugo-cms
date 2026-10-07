@@ -14,26 +14,26 @@ export const TIERS: TierDef[] = [
   {
     index: 2, id: 'stone', name: 'Stone', description: 'Solid masonry. The colony starts to look permanent.',
     color: '#a6a39b', accent: '#e8d9a8', glow: 0.25, colonyRadius: 21, hpMult: 3,
-    pieceCost: { stone: 8, wood: 2 }, upgradeCost: { wood: 400, stone: 400, fiber: 150, food: 150 }, research: 'tier_stone', invasionInterval: 1000,
+    pieceCost: { stone: 8, wood: 2 }, upgradeCost: { wood: 1200, stone: 1200, fiber: 400, food: 400 }, research: 'tier_stone', invasionInterval: 1000,
   },
   {
     index: 3, id: 'steel', name: 'Steel', description: 'Riveted steel and humming power lines. Industry arrives.',
     color: '#7d8a99', accent: '#ffb347', glow: 0.45, colonyRadius: 27, hpMult: 5,
-    pieceCost: { steel: 4, stone: 4 }, upgradeCost: { stone: 1200, iron: 600, steel: 300, copper: 200 }, research: 'tier_steel', invasionInterval: 1100,
+    pieceCost: { steel: 4, stone: 4 }, upgradeCost: { stone: 2100, iron: 1050, steel: 500, copper: 400 }, research: 'tier_steel', invasionInterval: 1100,
   },
   {
     index: 4, id: 'alloy', name: 'Advanced Alloy', description: 'Sleek crystal-infused alloy panels and automated logistics.',
     color: '#5e7f99', accent: '#58d0ff', glow: 0.65, colonyRadius: 33, hpMult: 8,
-    pieceCost: { alloy: 3, steel: 4 }, upgradeCost: { steel: 2000, electronics: 600, crystal: 400, alloy: 200 }, research: 'tier_alloy', invasionInterval: 1200,
+    pieceCost: { alloy: 3, steel: 4 }, upgradeCost: { steel: 3500, electronics: 1000, crystal: 600, alloy: 400 }, research: 'tier_alloy', invasionInterval: 1200,
   },
   {
     index: 5, id: 'nano', name: 'Nano-Tech', description: 'Self-repairing nano surfaces, drones and fusion light.',
     color: '#3d4f6b', accent: '#7af7ff', glow: 0.85, colonyRadius: 40, hpMult: 13,
-    pieceCost: { nano: 2, alloy: 4 }, upgradeCost: { alloy: 2500, energy_cell: 800, nano: 300, electronics: 1500 }, research: 'tier_nano', invasionInterval: 1300,
+    pieceCost: { nano: 2, alloy: 4 }, upgradeCost: { alloy: 4500, energy_cell: 1500, nano: 500, electronics: 2500 }, research: 'tier_nano', invasionInterval: 1300,
   },
   {
     index: 6, id: 'titanium', name: 'Titanium', description: 'A gleaming titanium fortress — the pinnacle of colony technology.',
     color: '#dfe6ee', accent: '#45f0ff', glow: 1, colonyRadius: 48, hpMult: 20,
-    pieceCost: { titanium: 3, nano: 1 }, upgradeCost: { titanium: 1500, nano: 1200, energy_cell: 2000, alloy: 3000 }, research: 'tier_titanium', invasionInterval: 1400,
+    pieceCost: { titanium: 3, nano: 1 }, upgradeCost: { titanium: 7000, nano: 5000, energy_cell: 10500, alloy: 16500 }, research: 'tier_titanium', invasionInterval: 1400,
   },
 ];

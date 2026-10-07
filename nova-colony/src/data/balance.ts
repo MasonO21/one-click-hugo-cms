@@ -1,9 +1,14 @@
 import type { BalanceDef } from './schema';
 
+/**
+ * Global balance constants. Pacing targets (engaged player, online + offline) are validated in
+ * tests/data.pacing.test.ts: Reinforced ~15 min, Stone ~1 h, Steel ~3 h, Alloy ~6 h, Nano ~12 h, Titanium ~24-30 h.
+ */
 export const BALANCE: BalanceDef = {
   dayLength: 720,
   offlineHours: 8,
-  offlineEfficiency: 1,
+  /** Offline is slightly slower than online so playing still feels good, and the Welcome Back ad doubles it. */
+  offlineEfficiency: 0.8,
   autosaveSeconds: 20,
   playerSpeed: 7,
   playerHp: 100,
@@ -29,19 +34,20 @@ export const BALANCE: BalanceDef = {
   specialtyBonus: 0.5,
   skillBonusPerLevel: 0.15,
   recruitCandidates: 3,
-  recruitRefreshMinutes: 120,
+  recruitRefreshMinutes: 60,
   recruitCost: {
-    common: { food: 20 },
-    rare: { food: 60, water: 40 },
-    epic: { food: 200, water: 150, electronics: 20 },
-    legendary: { food: 600, water: 400, crystal: 50 },
+    common: { food: 25 },
+    rare: { food: 80, water: 50, wood: 40 },
+    epic: { food: 220, water: 150, electronics: 25 },
+    legendary: { food: 700, water: 450, crystal: 60 },
   },
   firstInvasionDelay: 1200,
   warningSeconds: 120,
   repairDelay: 3,
   repairRate: 0.08,
-  waveScaling: 0.25,
-  eventIntervalMin: 420,
+  /** Counts scale by 1 + waveScaling x wavesAtThisTier (kept gentle: long tiers must never snowball). */
+  waveScaling: 0.08,
+  eventIntervalMin: 480,
   eventIntervalMax: 900,
   removeRefund: 1,
   freeCrateHours: 4,
