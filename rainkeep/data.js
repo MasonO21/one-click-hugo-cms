@@ -985,7 +985,7 @@ const DATA = {
   // scaled to the keep, a little dearer for every grove already planted.
   bloom: {
     max: 30, reach: 5.6, // groves in all, and how far from the keep they can go (tiles)
-    cost: { water: 3, food: 2 }, costGrowth: 1.07,
+    cost: { water: 2, food: 1 }, costGrowth: 1.06, // all thirty cost about half the water and food of one late Rainwyrm level
     grow: [240, 720], // seconds from seedling to young grove, then to oasis
     per: [['prod_food', 0.006], ['mult_water', 0.004]], // each oasis
     milestones: [
