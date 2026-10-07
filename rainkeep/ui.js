@@ -802,7 +802,7 @@
     const art = last && KH.kinCanvas ? `<div class="kin-pair">${wyrmCanvas({ cls: 'big' })}${KH.kinCanvas('ghaitha', 'big')}</div>` : wyrmCanvas({ cls: 'big' });
     return {
       title: '', lvl: '',
-      body: `<div class="evolve">${art}<span class="section-label">${last ? 'Epilogue' : act === 2 ? 'End of Act II' : 'End of Act I'}</span><h1>${esc(E.title)}</h1></div>
+      body: `${KH.art.banner('ending', `act${act}`, '')}<div class="evolve">${art}<span class="section-label">${last ? 'Epilogue' : act === 2 ? 'End of Act II' : 'End of Act I'}</span><h1>${esc(E.title)}</h1></div>
         ${E.lines.map((l) => `<p class="lore">${esc(l.replace(/\{wyrm\}/g, S.wyrm.name))}</p>`).join('')}
         <div class="card"><b>${esc(E.badge)}</b><div class="muted small">${esc(E.note)}</div><div class="costs" style="margin-top:8px">${rewardHTML(E.reward)}</div></div>
         <button class="btn wide gold" data-act="close">${last ? 'Claim and continue' : act === 2 ? 'Claim and begin Act III' : 'Claim and begin Act II'}</button>

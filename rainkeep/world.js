@@ -336,7 +336,7 @@
     }
     return {
       title: ruin.name, lvl: 'Ruin', noClose: true,
-      body: `<div class="ruin-art">${icon('i-ruin')}</div><p class="lore">${esc(ruin.text)}</p>
+      body: `${KH.art.painted('ruin', ruin.id) ? KH.art.banner('ruin', ruin.id, esc(ruin.text)) : `<div class="ruin-art">${icon('i-ruin')}</div><p class="lore">${esc(ruin.text)}</p>`}
         <div class="stack">${ruin.choices.map((c, i) => `<button class="btn wide alt choice" data-act="ruinpick" data-arg="${i}" ${i === 0 ? 'data-primary' : ''}>${esc(c.label)}</button>`).join('')}</div>`,
     };
   };

@@ -34,6 +34,8 @@
     for (const [k, v] of Object.entries(ART.building || {})) css.push(`.art-b-${k}{background-image:${url(v)}}`);
     for (const [k, v] of Object.entries(ART.event || {})) css.push(`.art-e-${k}{background-image:${url(v)}}`);
     for (const [k, v] of Object.entries(ART.offer || {})) css.push(`.art-o-${k}{background-image:${url(v)}}`);
+    for (const [k, v] of Object.entries(ART.ruin || {})) css.push(`.art-r-${k}{background-image:${url(v)}}`);
+    for (const [k, v] of Object.entries(ART.ending || {})) css.push(`.art-n-${k}{background-image:${url(v)}}`);
     if (ART.title) css.push(`.intro-art.painted{background-image:linear-gradient(#120c1e00 40%,#120c1ee0),${url(ART.title)}}`);
     const st = document.createElement('style');
     st.id = 'rk-art'; st.textContent = css.join('\n');
@@ -333,7 +335,8 @@
   }
 
   // a sheet's painted header with its blurb over the foot of the painting; plain text when there is no painting
-  const banner = (kind, id, text) => (painted(kind, id) ? `<div class="art-banner art-${kind[0]}-${id}"><p>${text}</p></div>` : `<p class="muted">${text}</p>`);
+  const PREFIX = { building: 'b', event: 'e', offer: 'o', ruin: 'r', ending: 'n' };
+  const banner = (kind, id, text, plain = 'muted') => (painted(kind, id) ? `<div class="art-banner art-${PREFIX[kind]}-${id}">${text ? `<p>${text}</p>` : ''}</div>` : text ? `<p class="${plain}">${text}</p>` : '');
 
   KH.art = { portrait, foe, archetype, painted, banner };
 })();

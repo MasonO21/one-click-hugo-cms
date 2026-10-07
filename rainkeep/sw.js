@@ -35,6 +35,8 @@ const SHELL = [
   ...'shelter quarry grove well mine infirmary barracks watchtower archive hall storehouse forge'.split(' ').map((n) => `art/buildings/${n}.webp`),
   ...'rainfest hunt builder forgefest spirerush oasis'.split(' ').map((n) => `art/events/${n}.webp`),
   ...'founder stipend ledger growth stormkit warchest forgekit lvpack lvpack2 sg1 sg2 sg3 sg4 sg5 sg6'.split(' ').map((n) => `art/offers/${n}.webp`),
+  ...'cart wagons observatory bunker chapel airship den pool forge shrine scouts mine'.split(' ').map((n) => `art/ruins/${n}.webp`),
+  'art/endings/act1.webp', 'art/endings/act2.webp', 'art/endings/act3.webp',
 ];
 
 const SCOPE = new URL('./', self.location.href);

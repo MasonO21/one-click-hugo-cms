@@ -1,8 +1,9 @@
 /*
  * Rainkeep painted art: hero and cast portraits, one painting per foe family, a backdrop per act, the
- * title painting, building headers, event banners and store art, all made with Higgsfield (GPT Image 2)
- * and stored as WebP under art/. art2d.js turns this map into one stylesheet; anything missing here keeps
- * its drawn SVG art. The single-file build swaps each path for an inline data URI.
+ * title painting, building headers, event banners, store art, the twelve Dunes ruins and the three
+ * endings, all made with Higgsfield (GPT Image 2) and stored as WebP under art/. art2d.js turns this map
+ * into one stylesheet; anything missing here keeps its drawn SVG art. The single-file build swaps each
+ * path for an inline data URI.
  */
 'use strict';
 window.RK_ART = {
@@ -88,6 +89,25 @@ window.RK_ART = {
     sg4: 'art/offers/sg4.webp',
     sg5: 'art/offers/sg5.webp',
     sg6: 'art/offers/sg6.webp',
+  },
+  ruin: {
+    cart: 'art/ruins/cart.webp',
+    wagons: 'art/ruins/wagons.webp',
+    observatory: 'art/ruins/observatory.webp',
+    bunker: 'art/ruins/bunker.webp',
+    chapel: 'art/ruins/chapel.webp',
+    airship: 'art/ruins/airship.webp',
+    den: 'art/ruins/den.webp',
+    pool: 'art/ruins/pool.webp',
+    forge: 'art/ruins/forge.webp',
+    shrine: 'art/ruins/shrine.webp',
+    scouts: 'art/ruins/scouts.webp',
+    mine: 'art/ruins/mine.webp',
+  },
+  ending: {
+    act1: 'art/endings/act1.webp',
+    act2: 'art/endings/act2.webp',
+    act3: 'art/endings/act3.webp',
   },
   title: 'art/title.webp',
 };
