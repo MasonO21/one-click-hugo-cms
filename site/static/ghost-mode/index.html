@@ -1240,7 +1240,7 @@ const MARKERS=[
    re:[/\b(parents|mom|dad|family|friends|they) (don't|do not|never|wouldn't|won't) (understand|get) (you|it)\b/,/\bthey (wouldn't|won't|don't) understand\b/,/\bonly i (understand|get) you\b/,/\bi'm the only one who\b/,/\bnobody (else )?(understands|gets) you\b/,/\byou can trust me\b/,/\bunderstand you better\b/,/\b(parents|mom|dad) (is|are) (so |too |really )?(strict|controlling|unfair)\b/,/\b(they'd|they would|she'd|he'd) (freak|flip) out\b/,/\btus (papas|padres) no (te )?(entienden|entenderian|comprenden)\b/,/\bsolo yo te (entiendo|comprendo)\b/,/\bpuedes confiar en mi\b/,/\btus (papas|padres) son (muy |tan )?(estrictos|controladores)\b/]},
   {id:'gift_or_money',label:'Offered gifts or money',w:2,
    desc:'Offering Robux, V-Bucks, gift cards or money, often as "no big deal."',
-   talk:'"Has anyone offered you Robux, gift cards or money? What did they want back?"',
+   talk:'"Has anyone online offered you gifts, gift cards or money? What did they want back?"',
    re:[/\bgift ?cards?\b/,/\b(robux|vbucks|v bucks|nitro)\b/,/\bi('ll| will| can| could) (buy|give) you\b/,/\b(send|get) you (a |some |free )?(money|\$?\d+|robux|vbucks|nitro|gift|gifts|gift card|present|skins)\b/,/\b(venmo|cash ?app|paypal)\b/,/\bfree (money|robux|vbucks|skins)\b/,/\b(we|i)('ll| will| can| could)? pay (you )?\$?\d+/,/\b(we|i)('ll| will| can| could)? pay you\b/,/\bte (regalo|compro|doy|mando|pago) (robux|vbucks|dinero|una tarjeta|un regalo|\$?\d+)\b/,/\b(robux|vbucks|nitro|dinero) gratis\b/,/\btarjeta de regalo\b/,/\bte (pago|pagamos)\b/]},
   {id:'move_to_private_app',label:'Pushed to a private app',w:2,
    desc:'Pushing to switch to Snapchat, Telegram or another app that\'s harder for parents to see.',
@@ -2087,9 +2087,10 @@ const IOS_RESULT={
   location:{result:'FYI',kind:'info',keyboard:true},
   latenight:{result:'Check in',kind:'watch'},
   party:{result:'No alert',kind:'ok'},
-  older:{result:'Think-twice only',kind:'info',keyboard:true},
+  older:{result:'Think-twice only',kind:'info',keyboard:true,title:'{k} got a think-twice prompt',note:"Apple keeps Instagram messages private, so you won't get an alert about this chat. When {k} started to type the name of their school, the Ghost Mode keyboard asked them to think twice. Instagram supervision shows who {k} follows and messages."},
   email:{result:'Act today',kind:'urgent'}
 };
+const PARTY_NOTE="Friends asked {k} to keep a secret about a surprise party. Secrets between kids the same age count for much less than secrets an adult asks for, so Ghost Mode stayed quiet.";
 const KB_NOTE="On iPhone, this one needs the Ghost Mode keyboard. {k} can turn it on in the Ghost Mode app, and you can ask them from Settings.";
 const WEB_NOTE="On iPhone, Ghost Mode can't see the scam message itself. It catches this when {k} taps the fake link, so turn on \"Block fake websites\" in Settings.";
 const PRIMARY={android:['stranger','scam','bully','hard'],iphone:['email','scam','hard','latenight']};
@@ -2105,6 +2106,7 @@ function scPaused(sc){
 }
 function scResult(sc){
   if(scPaused(sc))return {label:'Paused at night',kind:'none',note:PAUSE_NOTE,title:'Paused for the night',to:'pause'};
+  if(sc.id==='party')return {label:sc.result,kind:sc.kind,note:PARTY_NOTE,title:'No alert, on purpose'};
   if(!isIOS())return {label:sc.result,kind:sc.kind};
   const o=IOS_RESULT[sc.id];
   if(o.web&&cfg().webBlock===false)return {label:'Needs fake-site blocking',kind:'none',note:WEB_NOTE,to:'web'};
@@ -2112,7 +2114,7 @@ function scResult(sc){
     if(o.sync&&cfg().homeSync)return {label:'Found at the next sync',kind:o.kind};
     return {label:'Needs the keyboard',kind:'none',note:KB_NOTE,to:'keyboard'};
   }
-  return {label:o.result,kind:o.kind,note:o.note,to:'setup'};
+  return {label:o.result,kind:o.kind,note:o.note,title:o.title,to:'setup'};
 }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function play(id){
@@ -2456,7 +2458,7 @@ function renderAlerts(){
   const list=S.parent.alerts.slice().sort((a,b)=>(b.updatedAt-a.updatedAt)||((b.seq||0)-(a.seq||0)));
   const open=list.filter(a=>a.status==='new'),done=list.filter(a=>a.status!=='new');
   const sn=T.scnNote&&T.scnNote.kid===S.active&&SCENARIOS.find(x=>x.id===T.scnNote.id),r=sn&&scResult(sn);
-  const note=r&&r.note?`<div class="scn-note" role="status">${ghost()}<div><b>${L(r.title||'Nothing came through on iPhone')}</b><p>${esc(L(r.note,{k:name()}))}</p><div class="actions"><button type="button" class="btn sm" data-action="goto-setup" data-id="${r.to}">${L('See what to turn on')}</button><button type="button" class="btn sm quiet" data-action="scn-note-x">${L('Dismiss')}</button></div></div></div>`:'';
+  const note=r&&r.note?`<div class="scn-note" role="status">${ghost()}<div><b>${esc(L(r.title||'Nothing came through on iPhone',{k:name()}))}</b><p>${esc(L(r.note,{k:name()}))}</p><div class="actions">${r.to?`<button type="button" class="btn sm" data-action="goto-setup" data-id="${r.to}">${L('See what to turn on')}</button>`:''}<button type="button" class="btn sm quiet" data-action="scn-note-x">${L('Dismiss')}</button></div></div></div>`:'';
   let html=note+(open.length?open.map(alertCard).join(''):`<div class="empty">${ghost()}<p>${L('<b>All caught up.</b> Ghost Mode keeps watching for patterns.')}</p></div>`);
   if(done.length)html+=`<details class="reviewed-group"${T.showReviewed?' open':''}><summary>${L('Reviewed ({n})',{n:done.length})}</summary><div class="alerts">${done.map(alertCard).join('')}</div></details>`;
   $('#alertList').innerHTML=html;
@@ -2993,7 +2995,7 @@ document.addEventListener('click',e=>{
     case 'choose-plan':choosePlan(id);commit();break;
     case 'cancel-trial':if(S.family.plan){S.family.plan.status='canceled'}commit();break;
     case 'switch-kid':if(id!==S.active){switchKid(id);commit()}break;
-    case 'add-kid':T.addKid=true;$('#newPhoneIos').checked=true;commit();setTimeout(()=>$('#newKidName').focus(),30);break;
+    case 'add-kid':T.addKid=true;$('#newPhoneIos').checked=true;commit();focusField('#kidForm','#newKidName',30);break;
     case 'close-kid':case 'kid-scrim':closeOverlay();break;
     case 'pn-close':T.pnotif=null;renderParentNotif();break;
     case 'pn-view':{
@@ -3045,7 +3047,7 @@ document.addEventListener('click',e=>{
     case 'back':S.ui.screen='list';commit();break;
     case 'as':S.ui.typeAs=id;commit();$('#composeInput').focus();break;
     case 'privacy':T.sheet='privacy';commit();focusSheet('#sheetPrivacy');break;
-    case 'new-chat':T.sheet='new';commit();setTimeout(()=>$('#ncName').focus(),50);break;
+    case 'new-chat':T.sheet='new';commit();focusField('#newChatForm','#ncName',50);break;
     case 'close-sheet':case 'sheet-scrim':closeSheet();break;
     case 'dismiss-notif':T.notif=null;renderKid();break;
     case 'ask-help':{
@@ -3672,7 +3674,7 @@ DICT.es={"Today":"Hoy",
 "\"Has anyone told you we wouldn't understand something? I'd always rather know.\"":"\"¿Alguien te ha dicho que nosotros no entenderíamos algo? Siempre prefiero saberlo.\"",
 "Offered gifts or money":"Ofreció regalos o dinero",
 "Offering Robux, V-Bucks, gift cards or money, often as \"no big deal.\"":"Ofrecer Robux, V-Bucks, tarjetas de regalo o dinero, muchas veces como si \"no fuera nada\".",
-"\"Has anyone offered you Robux, gift cards or money? What did they want back?\"":"\"¿Alguien te ha ofrecido Robux, tarjetas de regalo o dinero? ¿Qué quería a cambio?\"",
+"\"Has anyone online offered you gifts, gift cards or money? What did they want back?\"":"\"¿Alguien en internet te ha ofrecido regalos, tarjetas de regalo o dinero? ¿Qué quería a cambio?\"",
 "Pushed to a private app":"Insistió en pasar a una app privada",
 "Pushing to switch to Snapchat, Telegram or another app that's harder for parents to see.":"Insistir en pasar a Snapchat, Telegram u otra app que a los padres les cuesta más ver.",
 "\"Has someone asked you to switch to Snapchat or another app to keep talking?\"":"\"¿Alguien te ha pedido pasar a Snapchat u otra app para seguir hablando?\"",
@@ -3834,6 +3836,10 @@ DICT.es={"Today":"Hoy",
 "{k} gets a heads-up":"{k} recibe un aviso",
 "No heads-up to {k}":"Sin aviso para {k}",
 "Quiet time {a} to {b}":"Silencio de {a} a {b}",
+"{k} got a think-twice prompt":"{k} recibió un aviso para pensarlo dos veces",
+"Apple keeps Instagram messages private, so you won't get an alert about this chat. When {k} started to type the name of their school, the Ghost Mode keyboard asked them to think twice. Instagram supervision shows who {k} follows and messages.":"Apple mantiene privados los mensajes de Instagram, así que no recibirás una alerta sobre este chat. Cuando {k} empezó a escribir el nombre de su escuela, el teclado de Ghost Mode le pidió que lo pensara dos veces. La supervisión de Instagram muestra a quién sigue {k} y con quién habla.",
+"No alert, on purpose":"Sin alerta, a propósito",
+"Friends asked {k} to keep a secret about a surprise party. Secrets between kids the same age count for much less than secrets an adult asks for, so Ghost Mode stayed quiet.":"Unos amigos le pidieron a {k} guardar un secreto sobre una fiesta sorpresa. Los secretos entre niños de la misma edad cuentan mucho menos que los que pide un adulto, así que Ghost Mode no envió nada.",
 " Your parent got an alert, not your messages.":" Tus padres recibieron una alerta, no tus mensajes.",
 " Ghost Mode let your parent know to check in on you, but not what you wrote.":" Ghost Mode les avisó a tus padres que hablen contigo, pero no lo que escribiste.",
 " and ":" y ",
@@ -3949,7 +3955,8 @@ renderTester();
 $('#phraseInput').addEventListener('input',renderTester);
 /* Phone sheets that a button opens. The think-twice and share sheets wait for an answer instead. */
 const SHEET_OPENER={privacy:'[data-action="privacy"]',block:'#blockBtn',new:'[data-action="new-chat"]',site:'#threadBody'};
-function focusSheet(sel){setTimeout(()=>{const x=$$(`${sel} button,${sel} input`).find(b=>!b.disabled&&b.offsetParent!==null);if(x)x.focus()},30)}
+function focusSheet(sel){setTimeout(()=>{const box=$(sel);if(box&&box.contains(document.activeElement))return;const x=$$(`${sel} button,${sel} input`).find(b=>!b.disabled&&b.offsetParent!==null);if(x)x.focus()},30)}
+function focusField(form,field,ms){setTimeout(()=>{if(!$(form).contains(document.activeElement))$(field).focus()},ms)}
 function closeSheet(){
   const was=T.sheet;T.sheet=null;T.helpSent=false;T.site=null;commit();
   const o=SHEET_OPENER[was]&&$(SHEET_OPENER[was]);if(o&&o.offsetParent!==null)o.focus();
