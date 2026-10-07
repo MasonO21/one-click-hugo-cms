@@ -63,6 +63,17 @@
     return o;
   }
   const box = (w, h, d, m, x = 0, y = 0, z = 0) => mesh(geo(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d)), m, x, y + h / 2, z);
+  // a box whose UVs follow its size, so a texture keeps one scale on big walls and small (ts: units per tile)
+  const boxT = (w, h, d, m, x = 0, y = 0, z = 0, ts = 1) => mesh(geo(`bt${w},${h},${d},${ts}`, () => {
+    const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+    for (let f = 0; f < 6; f++) for (let k = 0; k < 4; k++) { const i = f * 4 + k; uv.setXY(i, (uv.getX(i) * dims[f][0]) / ts, (uv.getY(i) * dims[f][1]) / ts); }
+    return g;
+  }), m, x, y + h / 2, z);
+  const cylT = (rt, rb, h, m, x = 0, y = 0, z = 0, seg = 12, ts = 1) => mesh(geo(`ct${rt},${rb},${h},${seg},${ts}`, () => {
+    const g = new THREE.CylinderGeometry(rt, rb, h, seg), uv = g.attributes.uv, around = (Math.PI * (rt + rb)) / ts;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * around, (uv.getY(i) * h) / ts);
+    return g;
+  }), m, x, y + h / 2, z);
   const cyl = (rt, rb, h, m, x = 0, y = 0, z = 0, seg = 12) => mesh(geo(`c${rt},${rb},${h},${seg}`, () => new THREE.CylinderGeometry(rt, rb, h, seg)), m, x, y + h / 2, z);
   const sph = (r, m, x = 0, y = 0, z = 0, seg = 12) => mesh(geo(`s${r},${seg}`, () => new THREE.SphereGeometry(r, seg, Math.max(6, Math.round(seg * 0.7)))), m, x, y, z);
   const dome = (r, m, x = 0, y = 0, z = 0, seg = 16) => mesh(geo(`d${r},${seg}`, () => new THREE.SphereGeometry(r, seg, Math.ceil(seg / 2), 0, Math.PI * 2, 0, Math.PI / 2)), m, x, y, z);
@@ -79,7 +90,7 @@
     o.quaternion.setFromUnitVectors(new V3(0, 1, 0), d.normalize());
     return o;
   }
-  Object.assign(A, { mesh, box, cyl, sph, dome, cone, beamZ, arch, rod });
+  Object.assign(A, { mesh, box, boxT, cylT, cyl, sph, dome, cone, beamZ, arch, rod });
   const grp = (...kids) => { const g = new THREE.Group(); kids.forEach((k) => k && g.add(k)); return g; };
   const at = (o, x, y, z, ry = 0, s = 1) => { o.position.set(x, y, z); o.rotation.y = ry; if (s !== 1) o.scale.setScalar(s); return o; };
   A.grp = grp; A.at = at;
@@ -234,6 +245,104 @@
     gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.fillRect(0, 0, w, w);
   });
+
+  // ---- architecture textures (4.8) ----
+  // draw something at every wrapped offset so it crosses the tile's edges cleanly
+  const wrapAt = (w, h, x, y, rad, fn) => { for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) if (x + ox > -rad && x + ox < w + rad && y + oy > -rad && y + oy < h + rad) fn(x + ox, y + oy); };
+  // lime plaster: near-white mottling, speckle and hairline cracks that tint with the wall colour
+  tex.plaster = canvasTex(256, 256, (g, w, h) => {
+    const r = seeded(41);
+    g.fillStyle = '#f3ede4'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 70; i++) {
+      const x = r() * w, y = r() * h, rad = 12 + r() * 42, dark = r() < 0.55;
+      wrapAt(w, h, x, y, rad, (cx, cy) => {
+        const gr = g.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        gr.addColorStop(0, dark ? 'rgba(120,85,55,0.11)' : 'rgba(255,255,255,0.2)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, rad, 0, Math.PI * 2); g.fill();
+      });
+    }
+    for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${r() < 0.5 ? '90,60,40' : '255,255,255'},${0.05 + r() * 0.09})`; g.fillRect(r() * w, r() * h, 1.3, 1.3); }
+    g.strokeStyle = 'rgba(80,50,30,0.2)'; g.lineWidth = 0.8;
+    for (let i = 0; i < 5; i++) { let x = 20 + r() * (w - 40), y = 10 + r() * (h - 80); g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (r() - 0.5) * 14; y += 4 + r() * 8; g.lineTo(x, y); } g.stroke(); }
+  });
+  // sun-dried mudbrick courses with pale mortar (tints with the wall colour)
+  tex.brick = canvasTex(256, 256, (g, w, h) => {
+    const r = seeded(43), rows = 8, cols = 4, rh = h / rows, cw = w / cols;
+    g.fillStyle = '#e4dccd'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < rows; y++) for (let c = -1; c < cols; c++) {
+      const x = c * cw + (y % 2 ? cw / 2 : 0), v = 200 + r() * 42;
+      for (const ox of [0, w]) {
+        g.fillStyle = `rgb(${v},${v * 0.92},${v * 0.84})`; g.fillRect(x + 2.5 - ox, y * rh + 2.5, cw - 5, rh - 5);
+        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(x + 3 - ox, y * rh + 3, cw - 6, 2);
+        g.fillStyle = 'rgba(70,40,20,.13)'; g.fillRect(x + 3 - ox, y * rh + rh - 5, cw - 6, 2);
+      }
+    }
+    for (let i = 0; i < 600; i++) { g.fillStyle = `rgba(90,60,40,${0.05 + r() * 0.1})`; g.fillRect(r() * w, r() * h, 1.5, 1.5); }
+  });
+  // zellige: cobalt eight-point stars with turquoise hearts on white, and the grout between (keeps its colours)
+  tex.zellige = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#f4efe4'; g.fillRect(0, 0, w, h);
+    const n = 4, s = w / n;
+    const star = (cx, cy, R, rIn, fill) => { g.fillStyle = fill; g.beginPath(); for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2 + Math.PI / 16, rr = i % 2 ? rIn : R; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); g.fill(); };
+    for (let y = 0; y <= n; y++) for (let x = 0; x <= n; x++) {
+      const cx = x * s, cy = y * s;
+      star(cx, cy, s * 0.42, s * 0.3, '#1f5fa8');
+      star(cx, cy, s * 0.25, s * 0.17, '#3fb8b0');
+      g.fillStyle = '#f4efe4'; g.beginPath(); g.arc(cx, cy, s * 0.07, 0, Math.PI * 2); g.fill();
+      const dx = cx + s / 2, dy = cy + s / 2;
+      g.fillStyle = '#e8b54a'; g.beginPath(); g.moveTo(dx, dy - s * 0.12); g.lineTo(dx + s * 0.12, dy); g.lineTo(dx, dy + s * 0.12); g.lineTo(dx - s * 0.12, dy); g.closePath(); g.fill();
+    }
+    g.strokeStyle = 'rgba(110,100,85,.3)'; g.lineWidth = 1;
+    for (let i = 0; i <= 16; i++) { g.beginPath(); g.moveTo((i * w) / 16, 0); g.lineTo((i * w) / 16, h); g.stroke(); g.beginPath(); g.moveTo(0, (i * h) / 16); g.lineTo(w, (i * h) / 16); g.stroke(); }
+  });
+  // weathered planks with grain (tints with the wood colour)
+  tex.wood = canvasTex(128, 128, (g, w, h) => {
+    const r = seeded(47), n = 4;
+    g.fillStyle = '#cfc6b8'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < n; i++) {
+      const x0 = (i * w) / n, v = 212 + r() * 40;
+      g.fillStyle = `rgb(${v},${v * 0.95},${v * 0.9})`; g.fillRect(x0 + 1, 0, w / n - 2, h);
+      g.strokeStyle = 'rgba(70,40,20,.28)'; g.lineWidth = 0.8;
+      for (let k = 0; k < 5; k++) { const x = x0 + 3 + r() * (w / n - 6); g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + (r() - 0.5) * 6, h * 0.3, x + (r() - 0.5) * 6, h * 0.7, x, h); g.stroke(); }
+      g.fillStyle = 'rgba(40,20,8,.55)'; g.fillRect(x0, 0, 1, h);
+    }
+    // iron studs across the planks
+    g.fillStyle = 'rgba(30,20,12,.7)';
+    for (const y of [h * 0.18, h * 0.82]) for (let i = 0; i < n; i++) { g.beginPath(); g.arc(((i + 0.5) * w) / n, y, 2.2, 0, Math.PI * 2); g.fill(); }
+  });
+  // carved lattice (mashrabiya): warm light through dark wood; also the emissive map, so it glows at night
+  tex.lattice = canvasTex(64, 64, (g, w, h) => {
+    g.fillStyle = '#2e1a0e'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ffd38a';
+    const s = 32;
+    for (let y = 0; y < h; y += s) for (let x = 0; x < w; x += s) {
+      g.beginPath(); g.moveTo(x + s / 2, y + 4); g.lineTo(x + s - 4, y + s / 2); g.lineTo(x + s / 2, y + s - 4); g.lineTo(x + 4, y + s / 2); g.closePath(); g.fill();
+      g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill();
+    }
+  });
+  // a kilim: red field, indigo and cream diamonds, striped ends (keeps its colours)
+  tex.kilim = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#a8322a'; g.fillRect(0, 0, w, h);
+    for (const y of [6, h - 14]) { g.fillStyle = '#f0d9a8'; g.fillRect(0, y, w, 8); g.fillStyle = '#1f3a6a'; g.fillRect(0, y + 3, w, 2); }
+    for (let row = 0; row < 3; row++) for (let i = 0; i < 4; i++) {
+      const cx = (i + 0.5) * (w / 4), cy = 30 + row * 30, s = 11;
+      g.fillStyle = row % 2 ? '#f0d9a8' : '#1f3a6a';
+      g.beginPath(); g.moveTo(cx, cy - s); g.lineTo(cx + s, cy); g.lineTo(cx, cy + s); g.lineTo(cx - s, cy); g.closePath(); g.fill();
+      g.fillStyle = '#e8b54a'; g.fillRect(cx - 2, cy - 2, 4, 4);
+    }
+  });
+  // a repeated copy of a texture (shares the image)
+  const repCache = {};
+  const texRep = (t, rx, ry = rx) => {
+    const k = `${t.uuid}|${rx}|${ry}`;
+    if (!repCache[k]) { const c = t.clone(); c.needsUpdate = true; c.repeat.set(rx, ry); repCache[k] = c; }
+    return repCache[k];
+  };
+  A.texRep = texRep;
+  // night windows with a lattice screen: the holes glow
+  A.glowLattice = new THREE.MeshStandardMaterial({ color: '#ffffff', map: tex.lattice, emissive: '#ffb050', emissiveMap: tex.lattice, emissiveIntensity: 0.05, roughness: 0.7 });
+  const setNight0 = A.setNight;
+  A.setNight = (k) => { setNight0(k); A.glowLattice.emissiveIntensity = 0.05 + 1.5 * k; };
 
   // ======================================================================
   // Sky, water, terrain
@@ -458,22 +567,151 @@
   // ======================================================================
   // People, camels, flags
   // ======================================================================
-  const SKIN = ['#f0c8a0', '#d9a47c', '#b07850', '#8a5a3a', '#6a4028'];
-  const ROBES = ['#e8dcc4', '#c9b08a', '#8a5a3a', '#2f6f8a', '#a8452a', '#5a7a3a', '#d9c49a', '#6a4a8a'];
+  // A villager: the body (kaftan, sash, head, face, headwear and whatever they carry) is merged into one
+  // vertex-coloured mesh, and the arms and legs hang on pivots so they can walk and work (A.animPerson).
+  // The model faces +z, about 0.8 tall; o = { robe, wrap, sash, head, jar, carry, kind, child, scale }.
+  const SKIN = ['#f3cfa8', '#e0ad84', '#c4895c', '#a06a44', '#7c4c2e', '#5e3820'];
+  const ROBES = ['#e8dcc4', '#c9b08a', '#8a5a3a', '#2f6f8a', '#a8452a', '#5a7a3a', '#d9c49a', '#6a4a8a', '#c8553d', '#3f5f8f', '#e6c27a', '#7a3a2a'];
+  const SASHES = ['#e8b54a', '#b5452a', '#2f9a9a', '#f0d9a8', '#7a3f8a', '#5f9a3e', '#d86a3a'];
+  const HAIR = ['#120c08', '#2a1a10', '#3a2414', '#5a3a1e', '#8a8478'];
+  const personMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, flatShading: true });
+  A.personMat = personMat;
+  const pCol = new Col(), pM4 = new THREE.Matrix4(), pQ = new THREE.Quaternion(), pE = new THREE.Euler();
+  // one coloured, placed copy of a geometry
+  function pPart(g, color, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+    const out = g.index ? g.toNonIndexed() : g.clone();
+    out.applyMatrix4(pM4.compose(new V3(x, y, z), pQ.setFromEuler(pE.set(rx, ry, rz)), new V3(sx, sy, sz)));
+    pCol.set(color);
+    const n = out.attributes.position.count, c = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { c[i * 3] = pCol.r; c[i * 3 + 1] = pCol.g; c[i * 3 + 2] = pCol.b; }
+    out.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    return out;
+  }
+  function pMerge(parts) {
+    let n = 0;
+    for (const g of parts) n += g.attributes.position.count;
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    let o = 0;
+    for (const g of parts) {
+      pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); col.set(g.attributes.color.array, o * 3);
+      o += g.attributes.position.count;
+      g.dispose();
+    }
+    const out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    out.computeBoundingSphere();
+    return out;
+  }
+  const PG = {
+    robe: () => geo('p-robe', () => new THREE.LatheGeometry([[0, 0.16], [0.135, 0.16], [0.128, 0.24], [0.112, 0.34], [0.098, 0.41], [0.112, 0.49], [0.106, 0.56], [0.072, 0.61], [0.04, 0.635], [0, 0.635]].map(([x, y]) => new THREE.Vector2(x, y)), 10)),
+    hem: () => geo('p-hem', () => new THREE.CylinderGeometry(0.136, 0.14, 0.03, 10, 1, true)),
+    sash: () => geo('p-sash', () => new THREE.CylinderGeometry(0.104, 0.106, 0.045, 10)),
+    head: () => geo('p-head', () => new THREE.SphereGeometry(0.074, 10, 8)),
+    eye: () => geo('p-eye', () => new THREE.SphereGeometry(0.0115, 5, 4)),
+    nose: () => geo('p-nose', () => new THREE.ConeGeometry(0.012, 0.03, 4).rotateX(Math.PI / 2)),
+    turban: () => geo('p-turban', () => new THREE.TorusGeometry(0.066, 0.032, 6, 12).rotateX(Math.PI / 2)),
+    cap: () => geo('p-cap', () => new THREE.SphereGeometry(0.068, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2)),
+    // a headscarf covering the back and top of the head, open at the face
+    scarf: () => geo('p-scarf', () => new THREE.SphereGeometry(0.086, 12, 8, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, 0, Math.PI * 0.78)),
+    drape: () => geo('p-drape', () => new THREE.CylinderGeometry(0.07, 0.115, 0.15, 10, 1, true, Math.PI / 2 + 0.6, Math.PI * 2 - 1.2)),
+    ring: () => geo('p-ring', () => new THREE.TorusGeometry(0.07, 0.012, 5, 12).rotateX(Math.PI / 2)),
+    brim: () => geo('p-brim', () => new THREE.CylinderGeometry(0.16, 0.16, 0.012, 14)),
+    crown: () => geo('p-crown', () => new THREE.ConeGeometry(0.075, 0.09, 10)),
+    veil: () => geo('p-veil', () => new THREE.BoxGeometry(0.1, 0.05, 0.02)),
+    arm: () => geo('p-arm', () => new THREE.CylinderGeometry(0.03, 0.025, 0.21, 6).translate(0, -0.105, 0)),
+    hand: () => geo('p-hand', () => new THREE.SphereGeometry(0.026, 6, 5)),
+    leg: () => geo('p-leg', () => new THREE.CylinderGeometry(0.031, 0.027, 0.22, 6).translate(0, -0.11, 0)),
+    foot: () => geo('p-foot', () => new THREE.BoxGeometry(0.05, 0.028, 0.085)),
+    jar: () => geo('jar', () => new THREE.LatheGeometry([[0, 0], [0.1, 0.01], [0.17, 0.12], [0.16, 0.3], [0.08, 0.38], [0.065, 0.45], [0.09, 0.47]].map(([x, y]) => new THREE.Vector2(x, y)), 10)),
+    basket: () => geo('p-basket', () => new THREE.CylinderGeometry(0.07, 0.055, 0.08, 8)),
+    staff: () => geo('p-staff', () => new THREE.CylinderGeometry(0.01, 0.012, 0.85, 5)),
+    bundle: () => geo('p-bundle', () => new THREE.BoxGeometry(0.15, 0.17, 0.09)),
+    beard: () => geo('p-beard', () => new THREE.SphereGeometry(0.06, 8, 6, 0, Math.PI * 2, Math.PI * 0.45, Math.PI * 0.55)),
+    tail: () => geo('p-tail', () => new THREE.BoxGeometry(0.05, 0.16, 0.02)),
+  };
+  const HEADS = ['turban', 'turban', 'scarf', 'scarf', 'scarf', 'keffiyeh', 'cap', 'hat', 'hair'];
   A.person = (seed = 1, o = {}) => {
-    const r = seeded(seed * 71 + 3);
-    const robe = o.robe || ROBES[Math.floor(r() * ROBES.length)], wrap = o.wrap || ROBES[Math.floor(r() * ROBES.length)];
+    const r = seeded(seed * 71 + 3), pick = (a) => a[Math.floor(r() * a.length)];
+    const raider = o.kind === 'raider';
+    const robe = o.robe || pick(ROBES), wrap = o.wrap || pick(ROBES), sash = o.sash || pick(SASHES);
+    const skin = pick(SKIN), hair = pick(HAIR), trousers = raider ? '#1a1210' : pick(['#3a2a20', '#4a3a2a', '#2a2420', '#5a4632']);
+    const head = o.head || (raider ? 'keffiyeh' : pick(HEADS));
+    const sleeve = new Col(robe).multiplyScalar(0.88).getStyle();
+    const parts = [];
+    // kaftan, hem, sash and the head with its face
+    parts.push(pPart(PG.robe(), robe), pPart(PG.hem(), new Col(robe).multiplyScalar(0.7).getStyle(), 0, 0.175, 0), pPart(PG.sash(), sash, 0, 0.41, 0));
+    parts.push(pPart(PG.head(), skin, 0, 0.705, 0));
+    for (const s of [-1, 1]) parts.push(pPart(PG.eye(), '#1a0e08', s * 0.026, 0.715, 0.064));
+    parts.push(pPart(PG.nose(), new Col(skin).multiplyScalar(0.9).getStyle(), 0, 0.698, 0.075));
+    // some of the men wear beards (not under a scarf)
+    if (!o.child && head !== 'scarf' && r() < 0.42) parts.push(pPart(PG.beard(), r() < 0.2 ? '#d8d4cc' : hair, 0, 0.69, 0.018, 0.25, 0, 0, 1, 1.05, 0.95));
+    if (head === 'turban') {
+      parts.push(pPart(PG.turban(), wrap, 0, 0.752, -0.004, 0.08), pPart(PG.turban(), wrap, 0, 0.782, -0.008, -0.1, 0, 0, 0.86, 1, 0.86), pPart(PG.cap(), wrap, 0, 0.792, -0.006, 0, 0, 0, 0.82, 0.8, 0.82));
+      if (r() < 0.4) parts.push(pPart(PG.eye(), o.jewel || '#e8b54a', 0, 0.772, 0.07, 0, 0, 0, 1.4, 1.4, 1.4));
+      if (r() < 0.45) parts.push(pPart(PG.tail(), wrap, 0.03, 0.69, -0.085, 0.15, 0, -0.1)); // a loose end down the back
+    } else if (head === 'scarf' || head === 'keffiyeh') {
+      const c = head === 'keffiyeh' ? (raider ? wrap : pick(['#f1e6d2', '#e8dcc4', '#c8553d', '#f0d9a8'])) : wrap;
+      parts.push(pPart(PG.scarf(), c, 0, 0.71, -0.004), pPart(PG.drape(), c, 0, 0.6, -0.012));
+      if (head === 'keffiyeh') parts.push(pPart(PG.ring(), '#1a1210', 0, 0.775, -0.006));
+      if (raider) parts.push(pPart(PG.veil(), wrap, 0, 0.68, 0.068));
+    } else if (head === 'cap') {
+      parts.push(pPart(PG.cap(), hair, 0, 0.712, -0.008, 0, 0, 0, 1.04, 0.9, 1.06), pPart(PG.cap(), pick(['#f1e6d2', '#b5452a', '#2f6f8a']), 0, 0.745, -0.004, 0, 0, 0, 0.82, 0.55, 0.82));
+    } else if (head === 'hat') {
+      parts.push(pPart(PG.cap(), hair, 0, 0.712, -0.008, 0, 0, 0, 1.04, 0.9, 1.06), pPart(PG.brim(), '#d9b46a', 0, 0.76, 0), pPart(PG.crown(), '#c9a05a', 0, 0.8, 0));
+    } else {
+      parts.push(pPart(PG.cap(), hair, 0, 0.712, -0.01, 0, 0, 0, 1.05, 1.0, 1.08));
+      if (r() < 0.5) parts.push(pPart(PG.hand(), hair, 0, 0.75, -0.075, 0, 0, 0, 1.3, 1.3, 1.3)); // a bun
+    }
+    // carried on the head, the back or in a hand
+    const carry = o.carry || (o.jar ? 'jar' : raider ? null : r() < 0.18 ? 'bundle' : r() < 0.3 ? 'basket' : r() < 0.38 ? 'staff' : null);
+    if (carry === 'jar') parts.push(pPart(PG.jar(), pick(['#b0603a', '#9a4a2a', '#c9884a']), 0, 0.79, 0, 0, 0, 0, 0.5, 0.5, 0.5));
+    if (carry === 'bundle') parts.push(pPart(PG.bundle(), pick(['#c9a070', '#8a6a48', '#b5452a']), 0, 0.5, -0.11));
     const g = new THREE.Group();
-    g.add(cyl(0.07, 0.19, 0.6, mat(robe, { flat: true }), 0, 0, 0, 7));
-    g.add(cyl(0.075, 0.075, 0.12, mat(wrap, { flat: true }), 0, 0.42, 0, 7));
-    g.add(sph(0.095, mat(SKIN[Math.floor(r() * SKIN.length)]), 0, 0.68, 0.01, 8));
-    const hat = sph(0.105, mat(wrap, { flat: true }), 0, 0.72, -0.01, 8);
-    hat.scale.set(1, 0.75, 1.05);
-    g.add(hat);
-    if (o.jar) { const j = A.jar(0.5, '#b0603a'); j.position.set(0, 0.8, 0); g.add(j); }
-    bake(g);
-    g.scale.setScalar(o.scale || 1);
+    const body = new THREE.Mesh(pMerge(parts), personMat);
+    body.castShadow = true;
+    g.add(body);
+    // limbs on pivots: shoulders and hips
+    const limb = (geoms, x, y) => {
+      const pv = new THREE.Group();
+      pv.position.set(x, y, 0);
+      const m = new THREE.Mesh(pMerge(geoms), personMat);
+      m.castShadow = true;
+      pv.add(m);
+      g.add(pv);
+      return pv;
+    };
+    // the arms hang a little away from the body (+x is the figure's left)
+    const armL = limb([pPart(PG.arm(), sleeve, 0, 0, 0, 0, 0, 0.12), pPart(PG.hand(), skin, 0.026, -0.22, 0)].concat(carry === 'staff' ? [pPart(PG.staff(), '#6b4426', 0.03, -0.12, 0.02)] : []), 0.122, 0.575);
+    const armR = limb([pPart(PG.arm(), sleeve, 0, 0, 0, 0, 0, -0.12), pPart(PG.hand(), skin, -0.026, -0.22, 0)].concat(carry === 'basket' ? [pPart(PG.basket(), '#b08850', -0.03, -0.27, 0.02)] : []), -0.122, 0.575);
+    const legL = limb([pPart(PG.leg(), trousers), pPart(PG.foot(), '#3a2414', 0, -0.215, 0.018)], 0.05, 0.25);
+    const legR = limb([pPart(PG.leg(), trousers), pPart(PG.foot(), '#3a2414', 0, -0.215, 0.018)], -0.05, 0.25);
+    g.userData.limbs = { armL, armR, legL, legR };
+    g.userData.ph = r() * 6.28;
+    g.userData.jar = carry === 'jar';
+    const s = (o.scale || 1) * (o.child ? 0.68 : 0.94 + r() * 0.12);
+    g.scale.setScalar(s);
     return g;
+  };
+  // walk (stride with arms in counter-swing), work (arms busy in front) or idle (a little sway)
+  A.animPerson = (o, t, mode = 'walk', speed = 1) => {
+    const L = o.userData.limbs;
+    if (!L) return;
+    const ph = o.userData.ph || 0;
+    if (mode === 'walk') {
+      const s = Math.sin(t * 7.5 * speed + ph), a = 0.42 * Math.min(1.2, speed);
+      L.legL.rotation.x = s * a; L.legR.rotation.x = -s * a;
+      L.armL.rotation.x = -s * a * 0.9; L.armR.rotation.x = o.userData.jar ? -2.7 : s * a * 0.9;
+    } else if (mode === 'work') {
+      const s = Math.sin(t * 3.2 + ph);
+      L.legL.rotation.x = L.legR.rotation.x = 0;
+      L.armL.rotation.x = -0.95 + s * 0.45; L.armR.rotation.x = -0.95 - s * 0.45;
+    } else {
+      const s = Math.sin(t * 1.3 + ph);
+      L.legL.rotation.x = L.legR.rotation.x = 0;
+      L.armL.rotation.x = s * 0.06; L.armR.rotation.x = o.userData.jar ? -2.7 : -s * 0.06;
+    }
   };
   A.camel = (seed = 1, o = {}) => {
     const r = seeded(seed * 17 + 9);
@@ -534,36 +772,81 @@
   // ======================================================================
   // Architecture
   // ======================================================================
+  // plaster or mudbrick walls that tint with their colour; wood with grain
+  const wallMat = (c, brick) => mat(c, { map: brick ? tex.brick : tex.plaster });
+  const woodMat = (c = P.wood) => mat(c, { map: tex.wood });
+  A.wallMat = wallMat; A.woodMat = woodMat;
+  // things that live on a flat roof: jars, a rug over the parapet, a sunshade, potted plants, washing
+  function roofLife(g, w, h, d, r, n) {
+    const picks = ['jars', 'rug', 'shade', 'plant', 'wash'].sort(() => r() - 0.5).slice(0, n);
+    const top = h + 0.02;
+    for (const k of picks) {
+      if (k === 'jars') for (let i = 0; i < 2; i++) g.add(at(A.jar(0.55 + r() * 0.25, ['#b0603a', '#9a4a2a', '#c9884a'][i]), -w / 2 + 0.3 + r() * (w - 0.6), top, -d / 2 + 0.25 + r() * 0.25));
+      if (k === 'rug') g.add(box(0.46, 0.38, 0.015, mat('#ffffff', { map: tex.kilim }), -w / 4 + r() * (w / 2), h - 0.3, d / 2 + 0.02));
+      if (k === 'shade') {
+        const cw = Math.min(0.9, w * 0.55), cd = Math.min(0.7, d * 0.5), sx = -w / 2 + cw / 2 + 0.1, sz = -d / 2 + cd / 2 + 0.1, pole = mat(P.woodD);
+        for (const [px, pz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(cyl(0.018, 0.018, 0.5, pole, sx + (px * cw) / 2, top, sz + (pz * cd) / 2, 4));
+        const cloth = box(cw + 0.06, 0.02, cd + 0.06, mat('#ffffff', { map: tex.stripes(['#b5452a', '#2f7f9a', '#c98a2a', '#7a3f8a'][Math.floor(r() * 4)], P.cloth2, 6), ds: true }), sx, top + 0.5, sz);
+        cloth.rotation.z = 0.05;
+        g.add(cloth);
+      }
+      if (k === 'plant') for (let i = 0; i < 2; i++) {
+        const x = w / 2 - 0.22 - i * 0.28, z = d / 2 - 0.2;
+        g.add(cyl(0.08, 0.06, 0.13, mat('#a0583a', { flat: true }), x, top, z, 7), sph(0.12, mat(i ? '#d84a8a' : P.green, { flat: true }), x, top + 0.2, z, 6));
+      }
+      if (k === 'wash') {
+        const pole = mat(P.woodD), z = -d / 2 + 0.2, x0 = -w / 2 + 0.12, x1 = w / 2 - 0.12;
+        g.add(cyl(0.015, 0.015, 0.45, pole, x0, top, z, 4), cyl(0.015, 0.015, 0.45, pole, x1, top, z, 4));
+        g.add(rod(new V3(x0, top + 0.42, z), new V3(x1, top + 0.42, z), 0.006, mat(P.rope)));
+        const cols = ['#f1e6d2', '#2f7f9a', '#c8553d', '#e8b54a'];
+        for (let i = 0; i < 3; i++) g.add(box(0.16, 0.2, 0.01, mat(cols[(i + Math.floor(r() * 4)) % 4], { ds: true }), x0 + ((i + 1) * (x1 - x0)) / 4, top + 0.22, z));
+      }
+    }
+  }
+  A.roofLife = roofLife;
   function house(w, h, d, o = {}) {
-    const g = new THREE.Group();
-    const wall = mat(o.wall || P.adobe), trim = mat(o.trim || P.adobeL), wood = mat(P.woodD), door = mat(P.door);
-    g.add(box(w, h, d, wall));
+    const g = new THREE.Group(), r = seeded((o.seed || 1) * 37 + Math.round(w * 100 + h * 10 + d * 3));
+    const wall = wallMat(o.wall || P.adobe, o.brick), trim = mat(o.trim || P.adobeL, { map: tex.plaster }), wood = woodMat(P.woodD), door = woodMat(P.door);
+    g.add(boxT(w, h, d, wall, 0, 0, 0, 1.2));
+    // a stone plinth along the foot of the walls
+    g.add(boxT(w + 0.05, 0.12, d + 0.05, mat(P.stoneD, { map: tex.ashlar }), 0, 0, 0, 0.8));
     const p = 0.1, ph = 0.16;
     g.add(box(w + 0.04, ph, p, trim, 0, h, d / 2 - p / 2), box(w + 0.04, ph, p, trim, 0, h, -d / 2 + p / 2));
     g.add(box(p, ph, d, trim, w / 2 - p / 2, h, 0), box(p, ph, d, trim, -w / 2 + p / 2, h, 0));
     g.add(box(w - 0.2, 0.03, d - 0.2, mat(P.adobeD), 0, h - 0.02, 0));
+    // sawtooth merlons along the front of some roofs, as in the old Najd towns
+    if (o.merlons != null ? o.merlons : r() < 0.45) for (let x = -w / 2 + 0.11; x < w / 2 - 0.06; x += 0.2) g.add(cone(0.065, 0.13, trim, x, h + ph, d / 2 - 0.05, 4));
     const nv = Math.max(2, Math.round(w / 0.42));
-    for (let i = 0; i < nv; i++) g.add(beamZ(0.04, 0.3, wood, -w / 2 + ((i + 0.5) * w) / nv, h - 0.16, d / 2 + 0.1));
+    for (let i = 0; i < nv; i++) g.add(beamZ(0.035, 0.3, wood, -w / 2 + ((i + 0.5) * w) / nv, h - 0.16, d / 2 + 0.1));
     const dx = o.doorX || 0;
     if (!o.noDoor) {
-      g.add(box(0.32, 0.48, 0.06, door, dx, 0, d / 2 + 0.01));
-      g.add(arch(0.16, 0.06, door, dx, 0.48, d / 2 + 0.01));
+      // a carved frame, a planked door and a step
+      g.add(box(0.44, 0.58, 0.03, trim, dx, 0, d / 2 + 0.005), arch(0.22, 0.03, trim, dx, 0.58, d / 2 + 0.005));
+      g.add(box(0.32, 0.5, 0.05, door, dx, 0, d / 2 + 0.02), arch(0.16, 0.05, door, dx, 0.5, d / 2 + 0.02));
+      g.add(box(0.5, 0.05, 0.16, mat(P.stone, { flat: true }), dx, 0, d / 2 + 0.08));
+      if (r() < 0.5) g.add(rod(new V3(dx + 0.28, 0.66, d / 2), new V3(dx + 0.28, 0.66, d / 2 + 0.09), 0.012, mat(P.woodD)), sph(0.045, A.lamp, dx + 0.28, 0.6, d / 2 + 0.1, 6));
     }
     if (w > 1.05) {
-      const wy = h * 0.52;
+      const wy = h * 0.5;
       for (const s of [-1, 1]) {
-        g.add(box(0.17, 0.2, 0.05, A.glow, dx + s * w * 0.3, wy, d / 2 + 0.02));
-        g.add(arch(0.085, 0.05, A.glow, dx + s * w * 0.3, wy + 0.2, d / 2 + 0.02));
+        const x = dx + s * w * 0.3;
+        g.add(box(0.18, 0.22, 0.04, A.glowLattice, x, wy, d / 2 + 0.02), arch(0.09, 0.04, A.glowLattice, x, wy + 0.22, d / 2 + 0.02));
+        g.add(box(0.26, 0.03, 0.08, wood, x, wy - 0.03, d / 2 + 0.04));
       }
     }
-    if (o.side) g.add(box(0.05, 0.2, 0.17, A.glow, w / 2 + 0.02, h * 0.52, 0));
+    if (o.side) { g.add(box(0.04, 0.22, 0.18, A.glowLattice, w / 2 + 0.02, h * 0.5, 0), box(0.08, 0.03, 0.26, wood, w / 2 + 0.04, h * 0.5 - 0.03, 0)); }
+    if (!o.plain) roofLife(g, w, h, d, r, w > 1.15 ? 2 : 1);
     return g;
   }
   A.house = house;
+  // a dome's material: blue domes are tiled in zellige, the rest are plastered
+  const domeMat = (c) => (c === P.tile || c === P.tileL ? mat('#ffffff', { map: texRep(tex.zellige, 6, 3), r: 0.45 }) : mat(c, { map: tex.plaster }));
+  A.domeMat = domeMat;
   function domedHouse(r, h, color, domeColor) {
     const g = new THREE.Group();
-    g.add(cyl(r, r * 1.04, h, mat(color), 0, 0, 0, 14));
-    g.add(dome(r * 1.02, mat(domeColor), 0, h, 0, 16));
+    g.add(cylT(r, r * 1.04, h, wallMat(color), 0, 0, 0, 14, 1.2));
+    g.add(cyl(r * 1.06, r * 1.06, 0.08, mat(P.adobeL, { map: tex.plaster }), 0, h - 0.04, 0, 14));
+    g.add(dome(r * 1.02, domeMat(domeColor), 0, h, 0, 16));
     g.add(sph(0.06, mat(P.gold, { r: 0.35, m: 0.6 }), 0, h + r * 1.02, 0, 6));
     g.add(box(0.3, 0.46, 0.06, mat(P.door), 0, 0, r * 0.99));
     g.add(arch(0.15, 0.06, mat(P.door), 0, 0.46, r * 0.99));

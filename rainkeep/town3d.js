@@ -556,7 +556,7 @@
     // wedge formation: [side offset, back offset]
     const spots = [[0, 0], [-1.1, 1.0], [1.1, 1.0], [-2.2, 2.0], [0, 2.0], [2.2, 2.0], [-1.1, 3.0], [1.1, 3.0], [-3.2, 3.2], [3.2, 3.2]];
     spots.forEach(([sx, sz], i) => {
-      const o = A.person(300 + i, { robe, wrap });
+      const o = A.person(300 + i, { robe, wrap, kind: 'raider' });
       o.scale.setScalar(1.25);
       if (i === 1 || i === 2 || i === 7) {
         const torch = A.grp(A.cyl(0.03, 0.035, 0.8, A.mat(A.P.woodD), 0.22, 0.35, 0.1, 5), A.sph(0.1, flameM, 0.22, 1.2, 0.1, 6));
@@ -594,6 +594,7 @@
       r.o.position.set(x, landH(x, z) + (walking && !r.camel && !r.flag ? Math.abs(Math.sin(t * 6 + r.ph)) * 0.06 : 0), z);
       r.o.rotation.y = r.flag ? ry - Math.PI / 2 : ry;
       if (r.camel && walking) A.walkCamel(r.o, t + r.ph, 0.8);
+      else if (!r.camel && !r.flag) A.animPerson(r.o, t + r.ph, walking ? 'walk' : 'idle', 0.9);
       if (r.flag) r.o.userData.update(t, T3.wind || 1);
     }
     raiders.flame.emissiveIntensity = 1.8 + 0.7 * Math.sin(t * 13) * Math.sin(t * 7.3);
@@ -1016,8 +1017,7 @@
     const want = posts.length ? Math.min(S.pop - S.sick, 22) : Math.min(S.pop, 4);
     while (people.length < want) {
       const i = people.length;
-      const o = A.person(i + 1, { jar: i % 4 === 1 });
-      o.scale.setScalar(1.15);
+      const o = A.person(i + 1, { jar: i % 4 === 1, child: i % 9 === 5, scale: 1.15 });
       scene.add(o);
       people.push({ o, i, seed: seeded(i * 13 + 5)() });
     }
@@ -1034,6 +1034,7 @@
         const a = p.i * 1.7 + t * 0.05;
         p.o.position.set(SPRING.x + Math.cos(a) * 6.1, 0, SPRING.z + Math.sin(a) * 6.1);
         p.o.rotation.y = -a;
+        A.animPerson(p.o, t, 'walk', 0.45);
         continue;
       }
       // pace up and down the lane: out from the plaza, a pause at work, back again
@@ -1044,8 +1045,10 @@
       const q = along(r, Math.max(0.2, s));
       const off = (p.seed - 0.5) * 0.6, l = Math.hypot(q.dx, q.dz) || 1;
       p.o.position.set(q.p.x - (q.dz / l) * off, q.p.y + (go || (!at && back) ? Math.abs(Math.sin(t * 7 + p.i)) * 0.05 : 0), q.p.z + (q.dx / l) * off);
-      const dir = go ? 1 : -1;
-      if (go || (!at && back)) p.o.rotation.y = Math.atan2(q.dx * dir, q.dz * dir);
+      const dir = go ? 1 : -1, walking = go || (!at && back);
+      if (walking) p.o.rotation.y = Math.atan2(q.dx * dir, q.dz * dir);
+      // striding along the lane, busy at the work spot, idle once home
+      A.animPerson(p.o, t, walking ? 'walk' : at ? 'work' : 'idle', sp);
     }
   }
   function animCamels(t) {
