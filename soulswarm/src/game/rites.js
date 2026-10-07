@@ -392,11 +392,10 @@ export class Rites {
     if (k % 3 === 0) run.fx.light(S.x, S.z, 4, 1.4, this.color, 0.3);
     if (k % 4 === 0) run.fx.shockwave(S.x, S.z, 1.6, 0xff8a3d, 0.3, 0.18);
     if (!e) return;
-    const fresh = e.burnUid !== e.uid, dmg = this.dmg(D.dmg);
+    const dmg = this.dmg(D.dmg);
     const killed = E.damage(e, dmg, this.opts(e.x - run.player.x, e.z - run.player.z, 2, k >= 8));
     if (!killed && e.active) {
-      run.weapons.ignite(e, dmg * D.burn / BURN_SHARE);
-      if (fresh) e.burnRaise = D.burnRaise;
+      run.weapons.ignite(e, dmg * D.burn / BURN_SHARE, D.burnRaise); // a Perdition burn already on it keeps its bigger bonus
       if (D.pin) E.stun(e, D.pin); // the chain pins it where it stands
     }
   }
@@ -404,7 +403,7 @@ export class Rites {
   // ---------------------------------------------------------------- Liora: Death Knell
   liora(D, P) {
     const run = this.run;
-    run.projectiles.clearEnemyShots();
+    run.projectiles.clearEnemyShots(true); // Gravemaw keeps his rules: his ring and spiral orbs fly on, as through the wall
     this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0;
     run.enemies.query(P.x, P.z, D.r, this._knell);
     run.enemies.query(P.x, P.z, D.silence, this._silence); // the toll carries: Witches farther out lose their fire too

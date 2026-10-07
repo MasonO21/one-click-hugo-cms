@@ -199,9 +199,13 @@ export class RunUI {
     const actions = $(back, '.lvl-actions');
     if (!this.rerolled && !shrine) {
       const rr = h(`<button class="btn btn-ad btn-sm">${icon('ad')} Reroll</button>`);
+      let rolling = false;
       rr.addEventListener('click', async () => {
+        if (rolling) return;
+        rolling = true; // one ad, one reroll, however fast the taps
         const ok = await watchAd(this.app, 'reroll');
-        if (!ok || picked) return;
+        rolling = false;
+        if (!ok || picked || this.rerolled) return;
         this.rerolled = true;
         rr.remove();
         const { rollChoices } = await import('../game/skills.js');
@@ -245,7 +249,7 @@ export class RunUI {
           if (b) b.textContent = s.muted ? 'Sound: Off' : 'Sound: On';
           return false;
         } },
-        { label: 'Abandon run', cls: 'btn-danger', onClick: () => { run.paused = false; run.end(false); } },
+        { label: 'Abandon run', cls: 'btn-danger', onClick: () => { run.paused = false; run.end(run.bossDead && !run.endless); } }, // Gravemaw already fell: leaving during the victory beat still wins the chapter
       ],
     });
   }
@@ -292,7 +296,7 @@ export class RunUI {
   showResults(result, outcome) {
     const app = this.app, p = app.profile;
     const win = result.victory;
-    let doubled = false;
+    let doubled = false, adOpen = false;
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
       <div class="res-head ${win || result.endless ? 'win' : 'lose'}"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} Gravemaw slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
@@ -314,8 +318,10 @@ export class RunUI {
     const actions = [];
     if (outcome.rewards.gold > 0) {
       actions.push({ label: `${icon('ad')} Double rewards`, cls: 'btn-ad btn-lg', onClick: () => {
-        if (doubled) return false;
+        if (doubled || adOpen) return false;
+        adOpen = true; // a second tap while the ad loads must not pay twice
         watchAd(app, 'double').then((ok) => {
+          adOpen = false;
           if (!ok) return;
           doubled = true;
           const extra = doubleRunRewards(p, outcome.rewards);

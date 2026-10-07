@@ -1163,10 +1163,10 @@ errs = await session(async (page) => {
     r = start('liora'); P = r.player;
     const st = foe(r, 2.5, 0), outside = foe(r, 9, 0), br = foe(r, -2, 0, { type: 'brute' }), wf = foe(r, -1, -8, { type: 'witch' });
     step(r, 0.2); br.state = 1; br.stateT = 0.3; // a Brute mid wind-up
-    r.projectiles.enemyShot(P.x + 6, P.z, -1, 0, 3, 5);
+    r.projectiles.enemyShot(P.x + 6, P.z, -1, 0, 3, 5); r.projectiles.bossOrb(P.x - 12, P.z + 12, 0, 0.01, 1, { life: 9 });
     const at = { x: st.x, z: st.z }, out0 = dist(outside, P), shots = r.projectiles.embers.length;
     r.rites.trigger();
-    const L = out.liora = { shots, cleared: r.projectiles.embers.length, bruteCalledOff: br.state === 0, witchSilenced: wf.stunT > 0 && wf.tollUid !== wf.uid };
+    const L = out.liora = { shots, cleared: r.projectiles.embers.filter((b) => !b.boss).length, bossOrbs: r.projectiles.embers.filter((b) => b.boss).length, bruteCalledOff: br.state === 0, witchSilenced: wf.stunT > 0 && wf.tollUid !== wf.uid };
     step(r, 1.2);
     Object.assign(L, { stunned: st.stunT > 0, still: dist(st, at), marked: st.tollUid === st.uid && +(st.tollT - r.time).toFixed(1), outsideMoved: +(out0 - dist(outside, P)).toFixed(2), outsideStun: outside.stunT > 0 });
     step(r, 0.5); const at2 = { x: st.x, z: st.z }; step(r, 0.5);
@@ -1248,7 +1248,7 @@ errs = await session(async (page) => {
   check('rites: Vael Grave Call raises every kill (cap holds), pulls nearby shards', V.before === 0 && V.rose === 12 && V.pillars > 0 && V.capHeld && V.after === 0 && V.near === 8 && V.far === 0, JSON.stringify(V));
   check('rites: Nyx Shadow Step moves 5+ m, invulnerable, cuts her path', N.moved >= 5 && N.invuln >= 0.35 && N.untouched && N.cut && N.knock > 2 && N.spared, JSON.stringify(N));
   check('rites: Nyx Shadow Step hastes the legion +60% for 3 s', N.haste === 1.6 && N.hasteAfter === 1, JSON.stringify(N));
-  check('rites: Liora Death Knell stuns (holds still), marks for 5 s, silences fire and Witches', L.stunned && L.still < 0.05 && L.marked >= 3.5 && L.markRose === 1 && !L.outsideStun && L.outsideMoved > 1 && L.shots > 0 && L.cleared === 0 && L.bruteCalledOff && L.witchSilenced && L.freed, JSON.stringify(L));
+  check('rites: Liora Death Knell stuns (holds still), marks for 5 s, silences fire and Witches', L.stunned && L.still < 0.05 && L.marked >= 3.5 && L.markRose === 1 && !L.outsideStun && L.outsideMoved > 1 && L.shots > 1 && L.cleared === 0 && L.bossOrbs === 1 && L.bruteCalledOff && L.witchSilenced && L.freed, JSON.stringify(L));
   check('rites: Mordrake Ossuary Wall pushes foes out and heals minions', W.inner >= W.r && W.brute >= W.r && W.cut && W.kept >= W.r - 0.5 && W.heal >= 0.45 && W.heal <= 0.55 && W.over, JSON.stringify(W));
   check('rites: Ossuary Wall shatters Witch fire falling inside it', W.fireLanded === 1, JSON.stringify(W));
   check('rites: Seraphine Ashfall strikes 20 foes (elite first), pins and burns, +15% Nova', S.struck === S.n && S.elite && S.firstIsElite && S.burning > 0 && S.pinned === S.n && Math.abs(S.charged - 0.15) < 0.001, JSON.stringify(S));
@@ -1428,6 +1428,123 @@ errs = await session(async (page) => {
 });
 check('difficulty: no runtime errors', !errs.length, errs[0] || '');
 
+// 21. Bug-test regressions (code review): interactions between the Update 3 systems found in review. Frame-stepped in a
+//     quiet arena (no director, no weapons) with rolls pinned where they matter.
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random, out = {};
+    const { RITES, EVOLUTIONS } = await import('/src/game/data.js');
+    app.engine.manual = true;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    const start = (hero) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.heroes[hero].owned = true; p.heroes[hero].stars = Math.max(1, p.heroes[hero].stars); p.selectedHero = hero; p.energy = 30; app.startRun(1);
+      const r = app.run; r.director = () => {}; r.weapons.update = () => {}; r.addXp = () => {};
+      return r;
+    };
+    const step = (r, n) => { for (let i = 0; i < n; i++) r.update(1 / 30); };
+    const foe = (r, dx, dz, hpMul) => { const e = r.enemies.spawn('husk', r.player.x + dx, r.player.z + dz, { hpMul }); e.spawnT = 1; return e; };
+
+    // the RITE button pulses again once its cooldown ends (the cast punch class stayed on and outranked the pulse)
+    let r = start('vael'); r.player.hurt = () => {};
+    const btn = document.querySelector('.hud .rite');
+    step(r, 3); r.ui.wantsRite = true; step(r, 3);
+    const cast = getComputedStyle(btn).animationName;
+    r.rites.cd = 0.05; step(r, 6);
+    out.rite = { cast, ready: btn.classList.contains('ready'), anim: getComputedStyle(btn).animationName };
+
+    // a Splitter elite slain in the same blow as Gravemaw bursts no copies into the cleared chapter's victory beat
+    p.selectedHero = 'vael'; r = window.__bossRun(1); let P = r.player;
+    r.weapons.update = () => {};
+    const sp = r.enemies.spawn('husk', P.x + 3, P.z, { elite: true, hpMul: 1 }); sp.spawnT = 1; r.affixes.apply(sp, ['splitter']);
+    r.enemies.kill(sp, 'nova');
+    const B = r.bossEnemy; B.hp = 1; r.boss.immune = 0; r.enemies.damage(B, 10, { source: 'bolt', silent: true });
+    step(r, 15);
+    out.split = { victory: !!r.victory, foes: r.enemies.active.filter((o) => o.active && o.type !== 'boss').length };
+
+    // a Witch orb kills Mordrake into his free revive as it lands: the revive clears the sky mid-loop without pooling an
+    // orb twice (two Witches then shared one orb: one telegraph lied, the other landed twice after 0.5 s)...
+    const spec = { flight: 1, radius: 1.1, height: 3.2 };
+    r = start('mordrake'); P = r.player; r.rites.cd = 99; step(r, 40);
+    let PR = r.projectiles;
+    PR.lob(P.x + 6, P.z, P.x, P.z, 50, spec, false); P.hp = 1; P.invuln = 0; step(r, 40);
+    const dupes = PR.lobPool.length - new Set(PR.lobPool).size;
+    step(r, 90); // past the revive's invulnerability
+    const t0 = r.time, landed = [], land = PR.landLob.bind(PR); PR.landLob = (L) => { landed.push([+(r.time - t0).toFixed(1), Math.round(L.tx - P.x)]); land(L); };
+    const L1 = PR.lob(P.x + 8, P.z, P.x + 4, P.z, 5, spec, false), L2 = PR.lob(P.x - 8, P.z, P.x - 4, P.z, 5, spec, false);
+    step(r, 45);
+    out.lob = { revived: r.freeRevives === 0 && !P.dead, dupes, shared: L1 === L2, landed };
+    // ...nor leave a hole when an orb still up sits ahead of the landing one (the next frame threw, every frame)
+    r = start('mordrake'); P = r.player; r.rites.cd = 99; step(r, 40); PR = r.projectiles;
+    PR.lob(P.x + 9, P.z, P.x + 20, P.z, 5, { flight: 3, radius: 1.1, height: 3.2 }, false);
+    PR.lob(P.x + 6, P.z, P.x, P.z, 50, spec, false); P.hp = 1; P.invuln = 0;
+    let err = ''; try { step(r, 60); } catch (e) { err = e.message; }
+    out.hole = { revived: r.freeRevives === 0, err, holes: PR.lobs.length - PR.lobs.filter(Boolean).length };
+
+    // Liora: her Grave Pulse never cuts a Death Knell toll short (a kill 4 s after the toll still rises ×2: 0.4 vs 0.25 × 2)
+    r = start('liora'); P = r.player; r.player.hurt = () => {}; step(r, 6);
+    const st = foe(r, 2.5, 0, 50); step(r, 1);
+    r.rites.trigger(); step(r, 15);
+    r.enemies.damage(st, 1, { source: 'pulse', silent: true });
+    const afterPulse = +(st.tollT - r.time).toFixed(2);
+    step(r, 105); r.stats.raise = 0.25; Math.random = () => 0.4;
+    let n0 = r.legion.count; st.hp = 1; r.enemies.damage(st, 5, { source: 'minion', silent: true });
+    Math.random = rnd;
+    out.toll = { afterPulse, rose: r.legion.count - n0 };
+
+    // Seraphine: a foe set alight by Ashfall and by her Chains of Perdition keeps Perdition's bigger raise bonus, in either
+    // order (a kill while burning: 0.3 + 0.25 rises against a 0.5 roll, 0.3 + 0.15 would not)
+    r = start('seraphine'); P = r.player; r.player.hurt = () => {}; step(r, 6);
+    const a = foe(r, 3, 0, 500), b = foe(r, 3, 1, 500);
+    r.weapons.ignite(b, 50); step(r, 1);
+    r.rites.trigger(); step(r, 3);
+    const ash = a.burnRaise; r.weapons.ignite(a, 50); const both = a.burnRaise;
+    r.stats.raise = 0.3; Math.random = () => 0.5;
+    n0 = r.legion.count; a.hp = 1; r.enemies.damage(a, 5, { source: 'minion', silent: true });
+    Math.random = rnd;
+    out.burn = { ash, both, chainsFirst: b.burnRaise, want: [RITES.seraphine.burnRaise, EVOLUTIONS.chainsOfPerdition.raise], rose: r.legion.count - n0 };
+    app.exitRun();
+    return out;
+  });
+  const { rite, split, lob, hole, toll, burn } = s;
+  check('regression: the RITE button pulses again once its cooldown ends', rite.cast === 'ritefire' && rite.ready && rite.anim === 'ritepulse', JSON.stringify(rite));
+  check('regression: a Splitter slain with Gravemaw bursts no copies into the victory beat', split.victory && split.foes === 0, JSON.stringify(split));
+  check('regression: a Witch orb that revives Mordrake as it lands is pooled once (later orbs keep their 1.0 s)',
+    lob.revived && lob.dupes === 0 && !lob.shared && lob.landed.length === 2 && lob.landed.every(([t]) => t >= 1) && lob.landed.map((x) => x[1]).sort((x, y) => x - y).join() === '-4,4', JSON.stringify(lob));
+  check('regression: that revive leaves no hole in the sky (the game loop threw every frame)', hole.revived && !hole.err && hole.holes === 0, JSON.stringify(hole));
+  check('regression: Grave Pulse never cuts a Death Knell toll short', toll.afterPulse > 4 && toll.rose === 1, JSON.stringify(toll));
+  check('regression: a foe burning from Ashfall and Perdition keeps the bigger raise bonus (either order)',
+    burn.ash === burn.want[0] && burn.both === burn.want[1] && burn.chainsFirst === burn.want[1] && burn.rose === 1, JSON.stringify(burn));
+});
+check('bug-test regressions: no runtime errors', !errs.length, errs[0] || '');
+
+// 21b. Abandoning from the pause menu during the victory beat (Gravemaw already fell) still wins the chapter;
+//      abandoning a run in progress is still a defeat.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, p = app.profile, out = {};
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; app.engine.manual = true;
+    const abandon = (won) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+      p.energy = 30; app.startRun(1); const r = app.run; let res = null; const end0 = r.onEnd; r.onEnd = (x) => { res = x; end0(x); };
+      if (won) { r.onBossKilled(r.player.x, r.player.z + 5); r.update(0.5); }
+      r.pause(true);
+      [...document.querySelectorAll('.modal .modal-actions .btn')].find((b) => /Abandon/.test(b.textContent))?.click();
+      return { ended: r.ended, victory: res && res.victory }; // the results header is drawn from result.victory
+    };
+    out.won = abandon(true); out.mid = abandon(false);
+    app.exitRun();
+    return out;
+  });
+  check('regression: abandoning during the victory beat still wins; mid-run it is a defeat',
+    s.won.ended && s.won.victory === true && s.mid.ended && s.mid.victory === false, JSON.stringify(s));
+});
+check('abandon regression: no runtime errors', !errs.length, errs[0] || '');
+
+
 // 22. Bug-test regressions (soak): invariants scripts/soak.mjs found broken, each reduced to a deterministic setup.
 errs = await session(async (page) => {
   const s = await page.evaluate(() => {
@@ -1441,23 +1558,17 @@ errs = await session(async (page) => {
       const r = app.run; r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.nextAt = 1e9;
       return r;
     };
-    // a Witch lob that kills Mordrake lands mid-updateLobs; his free revive clears the sky: no hole in the list, no lob pooled twice
-    let r = start(1, 'mordrake'), P = r.player, PR = r.projectiles;
-    r.weapons.update = () => {};
-    const spec = { flight: 1, radius: 1.2, height: 2 };
-    PR.lob(P.x + 30, P.z + 30, P.x + 30, P.z + 30, 1, spec, false); PR.lobs[0].t = -5; // still airborne, ahead of the lethal one
-    PR.lob(P.x + 3, P.z, P.x, P.z, 1e6, spec, false);
-    P.invuln = 0;
-    try { for (let i = 0; i < 40; i++) r.update(1 / 30); out.lob = { ok: true }; } catch (e) { out.lob = { ok: false, err: e.message }; }
-    Object.assign(out.lob, { revived: r.freeRevives === 0 && !P.dead, holes: PR.lobs.filter((L) => !L).length, poolDup: PR.lobPool.length - new Set(PR.lobPool).size });
+    // (a Witch orb that kills Mordrake into his free revive as it lands: covered in section 21)
     // a lob the Nova tap clears takes its danger circle with it (it used to fill for a second over nothing)
-    r = start(1); P = r.player; P.hurt = () => {};
+    let r = start(1), P = r.player;
+    const spec = { flight: 1, radius: 1.2, height: 2 };
+    P.hurt = () => {};
     r.projectiles.lob(P.x + 6, P.z, P.x, P.z, 10, spec, false); r.update(1 / 30);
     const circles = () => r.hazards.teles.filter((t) => t.kind === 0).length, c0 = circles();
     r.nova = 1; r.triggerNova(); r.update(1 / 30);
     out.tele = { before: c0, lobs: r.projectiles.lobs.length, after: circles() };
     // once Gravemaw falls the chapter is won: an ember vent can't fell the Shepherd in the victory beat (it used to lead to a
-    // revive screen, then DEFEAT on "Give up" or a gem revive over the results), and pause (with its Abandon) is ignored
+    // revive screen, then DEFEAT on "Give up", or, in the beat's last 1.1 s, a revive screen over the results that spent gems)
     r = start(2); P = r.player;
     let res = null, ends = 0; const oe = r.onEnd; r.onEnd = (x) => { ends++; res = x; oe(x); };
     r.time = 359.9;
@@ -1465,16 +1576,13 @@ errs = await session(async (page) => {
     const b = r.bossEnemy; b.hp = 1; r.enemies.damage(b, 50);
     const H = r.hazards; let puffs = 0; const pf = H.puff.bind(H);
     H.puff = (x, z, V) => { if ((P.x - x) ** 2 + (P.z - z) ** 2 < (V.radius + P.radius) ** 2) puffs++; return pf(x, z, V); }; // puffs on the Shepherd
-    r.pause(true);
-    const paused = r.paused;
-    if (paused) { r.pause(false); document.querySelectorAll('.modal-back').forEach((n) => n.remove()); } // keep going: the vent half is checked on its own
     for (let i = 0; i < 200 && !r.ended; i++) {
       let w = null; for (let k = 0; k < H.nv; k++) if (!w || H.vents[k].warn > w.warn) w = H.vents[k];
       if (w && w.warn > 0) { P.x = w.x; P.z = w.z; } // stand on whichever vent is about to puff
       P.hp = 1; P.invuln = 0; r.update(1 / 30);
     }
     for (let i = 0; i < 45; i++) r.update(1 / 30);
-    out.beat = { puffs, paused, dead: P.dead, revive: !!document.querySelector('.modal h2') && document.querySelector('.modal h2').textContent === 'You have fallen', ends, victory: res && res.victory };
+    out.beat = { puffs, dead: P.dead, revive: !!document.querySelector('.modal h2') && document.querySelector('.modal h2').textContent === 'You have fallen', ends, victory: res && res.victory };
     // the NOVA button read "ready" from 99.5% charge (rounded), one kill before a tap could fire it
     r = start(1); r.director = () => {}; r.player.hurt = () => {};
     r.legion.addMany(40, r.player.x, r.player.z);
@@ -1483,9 +1591,8 @@ errs = await session(async (page) => {
     app.exitRun();
     return out;
   });
-  check('soak: a lob that frees Mordrake (free revive mid-updateLobs) leaves no hole and no double-pooled lob', s.lob.ok && s.lob.revived && !s.lob.holes && !s.lob.poolDup, JSON.stringify(s.lob));
   check('soak: a Witch lob cleared by the Nova tap takes its danger circle with it', s.tele.before === 1 && s.tele.lobs === 0 && s.tele.after === 0, JSON.stringify(s.tele));
-  check('soak: nothing fells the Shepherd and no pause in the victory beat; the run ends VICTORY once', s.beat.puffs > 0 && !s.beat.paused && !s.beat.dead && !s.beat.revive && s.beat.ends === 1 && s.beat.victory === true, JSON.stringify(s.beat));
+  check('soak: nothing fells the Shepherd in the victory beat; the run ends VICTORY once, with no revive screen', s.beat.puffs > 0 && !s.beat.dead && !s.beat.revive && s.beat.ends === 1 && s.beat.victory === true, JSON.stringify(s.beat));
   check('soak: the NOVA button reads ready only at a full charge', !s.nova.short && s.nova.full, JSON.stringify(s.nova));
   // exitRun mid-run leaves nothing ticking: neither a card pick's 120 ms follow-up timer (it reopened a level-up on the
   // disposed run), the revive screen's countdown (it ended the exited run ~10 s later: rewards, and a results screen over the
@@ -1508,6 +1615,136 @@ errs = await session(async (page) => {
   check('soak: exitRun stops the run\'s timers (queued card follow-up, revive countdown, results delay)', !x.cardTimer && x.revive && x.countdown === '10>10' && !x.ends && !x.results && !x.hud, JSON.stringify(x));
 });
 check('soak regressions: no runtime errors', !errs.length, errs[0] || '');
+
+// 23. Bug-test regressions (menus, economy, save): found by scripts/ui-sweep.mjs. Saves with a hero or relic this build does
+//     not know, wrong types or out-of-range values boot and are repaired (an unreadable one is kept aside); a partial run
+//     result never writes NaN; negative prices and non-tiers never pay; energy keeps regenerating when the clock goes back;
+//     the ad double and a store sheet closed mid-purchase pay once; long toasts wrap on a 360 px phone and never block taps;
+//     the results actions stay on screen at 375×667; the top-bar chips, the hero chip and the settings toggles have 36 px
+//     targets; double taps buy once, and the second tap of a double tap on the results' Continue does not start a run.
+errs = await session(async (page, errors) => {
+  const s = await page.evaluate(async () => {
+    const save = await import('/src/meta/save.js'), eco = await import('/src/meta/economy.js');
+    const KEY = 'soulswarm.save.v1', out = {};
+    const load = (v) => { localStorage.setItem(KEY, typeof v === 'string' ? v : JSON.stringify(v)); const p = save.loadProfile(); localStorage.removeItem(KEY); return p; };
+    let p = load({ gold: 7777, selectedHero: 'ghost', relics: [{ uid: 'r1', type: 'bogus', rarity: 'mythic' }, { uid: 'r2', type: 'crown', rarity: 'rare', level: 2 }, { uid: 'r5', type: 'eye', rarity: 'rare', level: 1 }], equipped: ['r1', 'r2', 'r2', 'rX'], relicSeq: 2 });
+    out.ids = { sel: p.selectedHero, relics: p.relics.map((r) => r.uid).join(), eq: JSON.stringify(p.equipped), seq: p.relicSeq, gold: p.gold, power: (() => { try { return eco.computeLoadout(p).power > 0; } catch (e) { return e.message; } })() };
+    out.unowned = load({ selectedHero: 'mordrake' }).selectedHero;
+    p = load({ gold: '5000', gems: 'abc', sigils: -2, energy: 1e9, level: '7', talents: { might: '3', vitality: 1e9 }, pass: { xp: '1200', claimedFree: '1,2' }, chapter: { unlocked: 99, selected: '2' }, heroes: { vael: { owned: true, stars: 99, shards: '4' } }, relics: [{ uid: 'r1', type: 'crown', rarity: 'common', level: 1e9 }], equipped: ['r1', null, null] });
+    const gold = p.gold; eco.upgradeTalent(p, 'might');
+    out.types = { gold, gems: p.gems, sigils: p.sigils, energy: p.energy, level: p.level, might: p.talents.might, vit: p.talents.vitality, pass: p.pass.xp, cf: Array.isArray(p.pass.claimedFree), un: p.chapter.unlocked, sel: p.chapter.selected, stars: p.heroes.vael.stars, shards: p.heroes.vael.shards, rl: p.relics[0].level };
+    localStorage.setItem(KEY, '{"gold": 12'); p = save.loadProfile();
+    out.corrupt = { gold: p.gold, kept: localStorage.getItem(KEY + '.corrupt') }; localStorage.removeItem(KEY); localStorage.removeItem(KEY + '.corrupt');
+    p = save.newProfile(); p.flags.bloodMoon = 'off';
+    const o = eco.applyRunResult(p, { chapter: 1, victory: false, time: 200 });
+    out.partial = { xp: p.xp, kills: p.stats.kills, legion: p.stats.bestLegion, gold: o.rewards.gold, passXp: p.pass.xp };
+    p = save.newProfile(); p.pass.xp = 15000;
+    out.spend = [eco.spend(p, 'gems', -100), eco.spend(p, 'gold', NaN), p.gems, p.gold];
+    out.tiers = [0, -10, 1.5, '3', 31, NaN].map((t) => !!eco.claimPass(p, t, false)).join(); out.gems = p.gems;
+    const real = Date.now; let t = real(); Date.now = () => t;
+    p.energy = 10; p.energyTs = t; t -= 864e5; eco.upkeep(p); const next = eco.energyNextIn(p); t += 400e3; eco.upkeep(p); Date.now = real;
+    out.clock = { next, energy: p.energy };
+    return out;
+  });
+  check('bug-test: a save with an unknown hero, unknown relics and dangling equips is repaired (relic ids never reused)',
+    s.ids.sel === 'vael' && s.ids.relics === 'r2,r5' && s.ids.eq === '[null,"r2",null]' && s.ids.seq === 6 && s.ids.gold === 7777 && s.ids.power === true && s.unowned === 'vael', JSON.stringify(s.ids) + ' ' + s.unowned);
+  const T = s.types;
+  check('bug-test: wrong types and out-of-range save values are coerced and clamped (no string maths)',
+    T.gold === 5000 && T.gems === 150 && T.sigils === 0 && T.energy === 99 && T.level === 7 && T.might === 4 && T.vit === 25 && T.pass === 1200 && T.cf && T.un === 6 && T.sel === 2 && T.stars === 5 && T.shards === 4 && T.rl === 10, JSON.stringify(T));
+  check('bug-test: an unreadable save starts fresh and keeps its bytes aside', s.corrupt.gold === 1500 && s.corrupt.kept === '{"gold": 12', JSON.stringify(s.corrupt));
+  check('bug-test: a partial run result writes no NaN', s.partial.xp > 0 && s.partial.kills === 0 && s.partial.legion === 0 && s.partial.gold === 440 && s.partial.passXp > 0, JSON.stringify(s.partial));
+  check('bug-test: negative or NaN prices and non-existent pass tiers never pay', s.spend.join() === 'false,false,150,1500' && s.tiers === 'false,false,false,false,false,false' && s.gems === 150, JSON.stringify([s.spend, s.tiers, s.gems]));
+  check('bug-test: energy keeps regenerating after the clock is set back a day', s.clock.next <= 360 && s.clock.energy === 11, JSON.stringify(s.clock));
+
+  // boot with a save that names a hero and a relic this build does not have (it used to stop the boot)
+  await page.context().addInitScript(() => { if (!sessionStorage.getItem('bt23')) { sessionStorage.setItem('bt23', '1'); localStorage.setItem('soulswarm.save.v1', JSON.stringify({ v: 1, gold: 4242, selectedHero: 'ghost', heroes: { ghost: { owned: true, stars: 1, shards: 0 } }, relics: [{ uid: 'r1', type: 'bogus', rarity: 'rare', level: 1 }], equipped: ['r1', null, null] })); } });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(3000);
+  await page.evaluate(BOT);
+  const boot = await page.evaluate(() => ({ battle: !!document.querySelector('.btn-battle'), home: (document.querySelector('.hm')?.innerText || '').trim().length > 0, gold: window.__soulswarm.profile.gold, hero: window.__soulswarm.profile.selectedHero }));
+  check('bug-test: the game boots to a working home screen from a save with an unknown hero and relic', boot.battle && boot.home && boot.gold === 4242 && boot.hero === 'vael' && !errors.length, JSON.stringify(boot) + ' ' + (errors[0] || ''));
+
+  // UI races: the rewarded-ad double while the ad loads, and the Starter Pack sheet closed mid-purchase
+  const ui = await page.evaluate(async () => {
+    const a = window.__soulswarm, p = a.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const ad = a.store.rewardedAd, buy = a.store.purchase;
+    a.store.rewardedAd = () => new Promise((r) => setTimeout(() => r(true), 300)); // a real SDK takes a moment to cover the screen
+    p.energy = 30; p.flags.bloodMoon = 'off'; a.startRun(1); const r = a.run; r.player.hurt = () => {}; r.time = 300; r.counters.kills = 500;
+    const g0 = p.gold; r.end(false); await wait(900);
+    const base = p.gold - g0, b = q('.modal-results .btn-ad'); b.click(); b.click(); await wait(80); q('.modal-results .btn-ad')?.click(); await wait(600);
+    const doubled = p.gold - g0 - base;
+    q('.modal-results .btn-primary').click(); await wait(300);
+    a.store.purchase = () => new Promise((res) => setTimeout(() => res({ ok: true, simulated: true }), 400));
+    Object.assign(p.purchases, { starterBought: false, starterExpires: Date.now() + 864e5, history: [] }); Object.assign(p.heroes.nyx, { owned: false, stars: 0, shards: 0 }); a.meta.refresh();
+    const gems = p.gems;
+    q('.hm [data-act="starter"]').click(); await wait(30); q('.mm-starter [data-act="buy"]').click(); await wait(30);
+    q('.modal-purchase .btn-primary').click(); await wait(30); q('.modal-purchase').closest('.modal-back').querySelector('.modal-x').click();
+    q('.hm [data-act="starter"]')?.click(); await wait(30); q('.mm-starter [data-act="buy"]')?.click(); await wait(30); q('.modal-purchase .btn-primary')?.click();
+    await wait(1000);
+    const starter = { gems: p.gems - gems, buys: p.purchases.history.length, shards: p.heroes.nyx.shards, owned: p.heroes.nyx.owned };
+    document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove());
+    a.store.rewardedAd = ad; a.store.purchase = buy;
+    return { base, doubled, starter };
+  });
+  check('bug-test: "Double rewards" pays once when tapped again while the ad loads', ui.base > 0 && ui.doubled === ui.base, JSON.stringify(ui));
+  check('bug-test: closing the store sheet mid-purchase cannot buy the Starter Pack twice', ui.starter.gems === 300 && ui.starter.buys === 1 && ui.starter.owned && ui.starter.shards === 0, JSON.stringify(ui.starter));
+
+  // small phones: a long toast wraps inside a 360 px screen; the results actions are on screen at 375×667
+  await page.setViewportSize({ width: 360, height: 780 });
+  const toastBox = await page.evaluate(async () => {
+    const { toast } = await import('/src/ui/dom.js');
+    toast('Clear Ashen Necropolis on Nightmare to unlock Torment');
+    await new Promise((r) => setTimeout(r, 400));
+    const t = [...document.querySelectorAll('.toast')].pop(), r = t.getBoundingClientRect(), A = document.getElementById('app').getBoundingClientRect();
+    const under = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { left: Math.round(r.left - A.left), right: Math.round(A.right - r.right), through: !t.contains(under) };
+  });
+  check('bug-test: a long toast stays inside a 360 px screen and lets taps through to what is under it', toastBox.left >= 0 && toastBox.right >= 0 && toastBox.through, JSON.stringify(toastBox));
+  await page.setViewportSize({ width: 375, height: 667 });
+  const res = await page.evaluate(async () => {
+    const a = window.__soulswarm, p = a.profile, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    p.energy = 30; p.flags.bloodMoon = 'on'; a.startRun(1); const r = a.run; r.player.hurt = () => {}; r.time = 431; r.end(true); await wait(1200);
+    const vis = (sel) => { const e = document.querySelector(sel); if (!e) return 'missing'; const b = e.getBoundingClientRect(), h = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return b.bottom <= innerHeight && (h === e || e.contains(h)); };
+    const out = { double: vis('.modal-results .btn-ad'), cont: vis('.modal-results .btn-primary') };
+    p.flags.bloodMoon = 'off'; document.querySelector('.modal-results .btn-primary').click(); await wait(400);
+    // the 28 px top-bar chips, the 26 px hero chip and the settings toggles answer taps 16 px above and below their centre
+    const hits = (el) => { const b = el.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; return [y - 16, y + 16].every((yy) => { const h = document.elementFromPoint(x, yy); return h === el || el.contains(h); }); };
+    out.chips = [...document.querySelectorAll('.mt-cur'), document.querySelector('.hm-chip')].map(hits);
+    document.querySelector('[data-act="settings"]').click(); await wait(400);
+    out.toggles = [...document.querySelectorAll('.st .tgl')].map(hits);
+    document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove());
+    return out;
+  });
+  check('bug-test: the results "Double rewards" and "Continue" are on screen at 375×667', res.double === true && res.cont === true, JSON.stringify(res));
+  check('bug-test: top-bar chips, the hero chip and the settings toggles take taps within 16 px of their centre', res.chips.length === 4 && res.chips.every(Boolean) && res.toggles.length === 6 && res.toggles.every(Boolean), JSON.stringify(res));
+
+  // double taps: a dialog button clicked again after it closed, the energy refill, the reroll while its ad loads, and the
+  // second tap of a double tap on the results' Continue (it lands on BATTLE at 375×667)
+  const dt = await page.evaluate(async () => {
+    const a = window.__soulswarm, p = a.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const closeAll = () => document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove()), out = {};
+    p.gems = 500; a.meta.refresh(); q('[data-nav="shop"]').click(); q('.deal[data-key="gold_s"]').click();
+    const buy = q('.modal .btn-gem'), g0 = p.gold; buy.click(); buy.click(); out.gemShop = [p.gems, p.gold - g0]; closeAll();
+    p.energy = 0; p.gems = 500; a.meta.refresh(); q('[data-top="energy"]').click();
+    const rf = q('.mm-energy [data-act="refill"]'); rf.click(); rf.click(); out.refill = [p.gems, p.energy]; closeAll();
+    const ad = a.store.rewardedAd; a.store.rewardedAd = () => new Promise((r) => setTimeout(() => r(true), 300));
+    q('[data-nav="battle"]').click(); p.energy = 30; a.startRun(1); const r = a.run; r.player.hurt = () => {}; await wait(300);
+    r.levelQueue = 1; r.showLevelUp(); await wait(400);
+    let redraws = 0; new MutationObserver((ms) => { redraws += ms.filter((m) => m.removedNodes.length).length; }).observe(q('.lvl-back .cards'), { childList: true });
+    const rr = q('.lvl-actions .btn-ad'); rr.click(); rr.click(); await wait(800); out.rerolls = redraws; a.store.rewardedAd = ad;
+    r.end(false); await wait(1000);
+    const c = q('.modal-results .btn-primary').getBoundingClientRect(), x = c.left + c.width / 2, y = c.top + c.height / 2, e0 = p.energy;
+    const tapAt = () => { const e = document.elementFromPoint(x, y), b = e.closest('button') || e; for (const k of ['pointerdown', 'pointerup']) b.dispatchEvent(new PointerEvent(k, { bubbles: true, clientX: x, clientY: y })); b.click(); };
+    tapAt(); await wait(60); tapAt(); await wait(300);
+    out.cont = { run: !!a.run, energy: e0 - p.energy };
+    if (a.run) a.exitRun();
+    return out;
+  });
+  check('bug-test: double taps buy once (a dialog button after it closed, the energy refill) and reroll once while the ad loads',
+    dt.gemShop.join() === '440,5000' && dt.refill.join() === '450,30' && dt.rerolls === 1, JSON.stringify(dt));
+  check('bug-test: a double tap on the results\' Continue does not start another run from the home screen', !dt.cont.run && dt.cont.energy === 0, JSON.stringify(dt.cont));
+});
+check('menus, economy and save regressions: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

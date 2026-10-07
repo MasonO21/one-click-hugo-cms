@@ -24,6 +24,7 @@ const pick = (arr) => arr[Math.floor(rand() * arr.length)];
 // ---------------------------------------------------------------- daily upkeep
 export function upkeep(p) {
   // energy regen
+  if (p.energyTs > now()) p.energyTs = now(); // the clock went back: restart the step rather than freeze regen until then
   if (p.energy >= ENERGY_MAX) p.energyTs = now();
   else {
     const step = ENERGY_REGEN_SEC * 1000;
@@ -52,7 +53,7 @@ export function spendEnergy(p) {
 // ---------------------------------------------------------------- currencies & grants
 export const canAfford = (p, cur, amt) => (p[cur] || 0) >= amt;
 export function spend(p, cur, amt) {
-  if (!canAfford(p, cur, amt)) return false;
+  if (!(amt >= 0) || !canAfford(p, cur, amt)) return false; // a negative or NaN price would pay out
   p[cur] -= amt;
   return true;
 }
@@ -306,7 +307,7 @@ export function passState(p) {
 }
 export function claimPass(p, tier, premium) {
   const s = passState(p);
-  if (tier > s.tier) return null;
+  if (!Number.isInteger(tier) || tier < 1 || tier > s.tier) return null;
   const list = premium ? p.pass.claimedPrem : p.pass.claimedFree;
   if (premium && !p.pass.premium) return null;
   if (list.includes(tier)) return null;
@@ -392,6 +393,9 @@ export function beginTrial(p) { const t = trialToday(p); if (t.done || p.chapter
 export function grantTrialRetry(p) { const t = trialToday(p); if (!t.done || t.ads >= TRIAL.adRetries) return false; t.ads++; t.done = false; return true; }
 
 export function applyRunResult(p, result) {
+  // a partial or malformed result must not write NaN into the profile (NaN currencies and XP are saved as null)
+  result = { ...result, chapter: Math.min(CHAPTERS.length, Math.max(1, Math.floor(result.chapter) || 1)) };
+  for (const k of ['time', 'kills', 'raised', 'bestLegion', 'novas', 'gates', 'bonusGold', 'bossKills', 'chests', 'elites', 'evolutions', 'bestStreak']) result[k] = Math.max(0, +result[k] || 0);
   const L = computeLoadout(p);
   const ch = result.chapter;
   const trial = !!result.trial;

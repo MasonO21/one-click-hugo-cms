@@ -387,7 +387,7 @@ export class Enemies {
     e.hp -= amount;
     e.flash = 1;
     e.lastHitBy = o.source || null;
-    if (o.source === 'pulse') { const m = this.run.loadout.hero.passive.pulseMark; if (m) { e.tollUid = e.uid; e.tollT = this.run.time + m; } } // Liora's toll (uid-keyed: pooled enemies never inherit it)
+    if (o.source === 'pulse') { const m = this.run.loadout.hero.passive.pulseMark; if (m) { e.tollT = Math.max(e.tollUid === e.uid ? e.tollT : 0, this.run.time + m); e.tollUid = e.uid; } } // Liora's toll (uid-keyed: pooled enemies never inherit it); never cuts a Death Knell's longer toll short
     if (o.knock && e.mass < 50) {
       const l = Math.hypot(o.kx || 0, o.kz || 0) || 1;
       const k = o.knock / Math.max(1, e.mass * 0.6);
@@ -430,9 +430,10 @@ export class Enemies {
     }
     this.compact();
     this.rebuildGrid();
-    // their lobs in flight and burning ground go with them
+    // their lobs in flight, burning ground and a Splitter's pending burst go with them
     this.run.projectiles.clearLobs();
     this.run.hazards.clear();
+    this.run.affixes.splits.length = 0;
   }
 
   render() {
