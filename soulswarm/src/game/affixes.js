@@ -30,7 +30,7 @@ uniform vec3 uColor; uniform float uTime;
 varying vec2 vA; varying vec3 vN; varying vec3 vW; varying float vY;
 void main() {
   vec3 V = normalize(cameraPosition - vW);
-  float f = pow(1.0 - abs(dot(normalize(vN), V)), 2.4);
+  float f = pow(1.0 - min(abs(dot(normalize(vN), V)), 1.0), 2.4);
   float bands = smoothstep(0.75, 1.0, sin(vY * 9.0 - uTime * 3.0)) * (0.25 + f);
   float a = (f * 0.75 + 0.025 + bands * 0.22) * vA.x;
   gl_FragColor = vec4(mix(uColor, vec3(1.3), vA.y * 0.5) * a * (1.0 + vA.y * 1.2), 1.0);

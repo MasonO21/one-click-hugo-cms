@@ -2088,6 +2088,46 @@ errs = await session(async (page) => {
 });
 check('bestiary and chapter art: no runtime errors', !errs.length, errs[0] || '');
 
+// 28. No black screens from NaN. Some GPUs (Apple's among them) return NaN for pow() of a negative, and the bloom blur
+//     smeared one such pixel row on the Hollow King's arena wall into a screen-wide blackout. Lint: every shader pow() of
+//     "1.0 - x" is guarded. Runtime: a 12 x 12 px quad of NaN (and one of Inf) in a live run must stay a speck.
+{
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const root = new globalThis.URL('../', import.meta.url).pathname, files = [];
+  const walk = (d) => { for (const f of readdirSync(root + d, { withFileTypes: true })) f.isDirectory() ? walk(d + f.name + '/') : f.name.endsWith('.js') && files.push(d + f.name); };
+  walk('src/');
+  const bad = [];
+  for (const f of files) readFileSync(root + f, 'utf8').split('\n').forEach((l, i) => { if (/pow\(\s*1\.0\s*-(?!\s*(?:clamp|min)\()/.test(l)) bad.push(`${f}:${i + 1}`); });
+  check('shaders: no unguarded pow(1.0 - x) (NaN on some GPUs when x creeps past 1)', !bad.length, bad.join(', '));
+}
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const T = await import('/node_modules/.vite/deps/three.js');
+    const app = window.__soulswarm, E = app.engine;
+    app.profile.flags.tutorialDone = true; app.startRun(1); E.manual = true;
+    const run = app.run; run.player.hurt = () => {};
+    for (let i = 0; i < 20; i++) E.step(1 / 30);
+    const gl = E.renderer.getContext(), out = {};
+    const black = () => { E.step(1 / 30); const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, S = 160, px = new Uint8Array(4 * S * S);
+      gl.readPixels((W >> 1) - S / 2, (H >> 1) - S / 2, S, S, gl.RGBA, gl.UNSIGNED_BYTE, px); let n = 0;
+      for (let i = 0; i < px.length; i += 4) if (px[i] + px[i + 1] + px[i + 2] < 4) n++; return n; };
+    out.base = black();
+    for (const [k, expr] of [['nan', 'uZ / uZ'], ['inf', '1.0 / uZ']]) {
+      const q = new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({ depthTest: false, depthWrite: false,
+        vertexShader: 'uniform vec2 uS; void main(){ gl_Position = vec4(position.xy * uS, 0.0, 1.0); }',
+        fragmentShader: `uniform float uZ; void main(){ gl_FragColor = vec4(vec3(${expr}), 1.0); }`,
+        uniforms: { uZ: { value: 0 }, uS: { value: new T.Vector2(12 / gl.drawingBufferWidth, 12 / gl.drawingBufferHeight) } } }));
+      q.frustumCulled = false; q.renderOrder = 99; run.scene.add(q);
+      out[k] = black(); run.scene.remove(q); q.geometry.dispose(); q.material.dispose();
+    }
+    out.after = black();
+    return out;
+  });
+  check('post: a NaN or Inf pixel patch stays a speck (bloom no longer spreads it into a black screen)',
+    s.base < 50 && s.nan <= 400 && s.inf <= 400 && s.after < 50, JSON.stringify(s));
+});
+check('NaN guard: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -33,7 +33,7 @@ function pillarMesh(color) {
     void main() { vUv = uv; vD = iData; gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0); }`, /* glsl */`
     uniform vec3 uColor; uniform float uTime; varying vec2 vUv; varying vec2 vD;
     void main() {
-      float y = vUv.y, fade = pow(1.0 - y, 1.4) * smoothstep(0.0, 0.05, y);
+      float y = vUv.y, fade = pow(max(1.0 - y, 0.0), 1.4) * smoothstep(0.0, 0.05, y);
       float rise = pow(fract(y * 2.2 - uTime * 2.4 + vD.y * 5.0), 4.0);
       float streak = pow(abs(sin((vUv.x + vD.y) * 18.85 + y * 4.0)), 12.0);
       float v = (0.5 + rise * 1.1 + streak * 0.7) * fade * vD.x;
@@ -54,7 +54,7 @@ function bellMesh(color) {
     void main() { vec4 wp = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = cameraPosition - wp.xyz; vY = position.y; gl_Position = projectionMatrix * viewMatrix * wp; }`, /* glsl */`
     uniform vec3 uColor; uniform float uAlpha; uniform float uRing; varying vec3 vN; varying vec3 vV; varying float vY;
     void main() {
-      float fr = 1.0 - abs(dot(normalize(vN), normalize(vV))), rim = pow(fr, 1.7);
+      float fr = 1.0 - min(abs(dot(normalize(vN), normalize(vV))), 1.0), rim = pow(fr, 1.7);
       float bands = smoothstep(0.035, 0.0, abs(vY - 0.34)) + smoothstep(0.035, 0.0, abs(vY - 1.3)) + smoothstep(0.06, 0.0, abs(vY - 0.03)) * 1.6;
       float ring = smoothstep(0.28, 0.0, abs(vY - uRing));
       vec3 c = uColor * (0.05 + rim * 0.9 + bands * 0.7 + ring * 0.7) + vec3(0.45) * (bands * 0.3 + ring * 0.5) * rim;

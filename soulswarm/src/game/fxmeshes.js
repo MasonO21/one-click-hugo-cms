@@ -222,7 +222,7 @@ export function makeArenaWall() {
       ${sealGlsl}
       void main() {
         float a = atan(vP.y, vP.x), u = a / 6.28318 + 0.5;
-        float fade = pow(1.0 - vY, 1.7);
+        float fade = pow(max(1.0 - vY, 0.0), 1.7); // vY can land a hair above 1 at the top edge: pow of a negative is NaN
         float streak = 0.0;
         for (int i = 0; i < 2; i++) {
           float fi = float(i), x = u * (110.0 + fi * 70.0), id = floor(x);

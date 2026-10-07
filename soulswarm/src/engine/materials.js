@@ -74,9 +74,9 @@ void main() {
   vec3 lit = base * (uAmbient * (0.5 + 0.8 * hemi) + uKey * lam);
   vec3 Lp = uPLPos - vWorld;
   float dp = max(length(Lp), 0.001);
-  float att = clamp(1.0 - dp / uPLRadius, 0.0, 1.0);
+  float att = clamp(1.0 - dp / max(uPLRadius, 0.001), 0.0, 1.0);
   lit += base * uPLColor * att * att * (0.35 + max(dot(N, Lp / dp), 0.0)) * 2.2;
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 2.6);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.6); // pow of a negative is NaN on Apple GPUs; dot can exceed 1 by a rounding error
   lit += uRim * rim * 0.85;
   // aEmit: 0 = lit surface, 1 = glows in the instance tint, 2 = glows in its own vertex colour
   float e = min(vEmit, 1.0);
@@ -191,14 +191,14 @@ void main() {
   if (fade < dither) discard;
   vec3 N = normalize(vN);
   vec3 V = normalize(vV);
-  float fr = 1.0 - abs(dot(N, V));
+  float fr = 1.0 - min(abs(dot(N, V)), 1.0);
   float rim = pow(fr, 2.5);
   // a hint of the source model's shading keeps heads, limbs and weapons readable
   float shade = 0.5 + 0.5 * (N.y * 0.5 + 0.5);
   float alb = clamp(dot(vCol, vec3(0.3, 0.55, 0.15)) * 8.0, 0.45, 1.0);
   float wave = 0.82 + 0.18 * sin(vWave);
   // a deeper, more saturated body under a hot rim reads as neon at phone size; champions get a gold-tinged rim
-  vec3 deep = pow(vTint, vec3(1.6));
+  vec3 deep = pow(max(vTint, vec3(0.0)), vec3(1.6));
   vec3 rimCol = mix(vTint, uGold, vGold * 0.45);
   vec3 body = deep * uBody * shade * alb * wave + rimCol * rim * uRim + vec3(pow(fr, 8.0) * 0.15);
   vec3 hot = mix(vTint * 0.6 + vec3(0.55), uGold * 1.25, vGold) * uEmit;
@@ -304,7 +304,7 @@ void main() {
   float pulse = 0.55 + 0.45 * sin(uTime * 1.7 + h * 6.283);
 
   float dc = length(p - uCenter.xz);
-  float wave = pow(0.5 + 0.5 * sin(dc * 0.5 - uTime * 2.0), 10.0);
+  float wave = pow(clamp(0.5 + 0.5 * sin(dc * 0.5 - uTime * 2.0), 0.0, 1.0), 10.0);
   col += uRune * groove * 0.16 * wave * smoothstep(18.0, 3.0, dc);
   col += uRune * glyph * (0.25 + 0.75 * pulse) * (0.5 + length(light));
   col += uRune * crack * 0.22 * pulse * step(0.92, hash(id + 1.3));
@@ -357,7 +357,7 @@ void main() {
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c) * 2.0;
   if (d > 1.0) discard;
-  float a = pow(1.0 - d, 1.8) + smoothstep(0.3, 0.0, d) * 0.9;
+  float a = pow(1.0 - min(d, 1.0), 1.8) + smoothstep(0.3, 0.0, d) * 0.9;
   gl_FragColor = vec4(vColor.rgb * a * vColor.a, 1.0);
 }`;
 

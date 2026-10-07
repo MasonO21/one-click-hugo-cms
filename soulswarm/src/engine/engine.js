@@ -10,6 +10,18 @@ import { makeCharMaterial } from './materials.js';
 import { heroGeometry } from './models.js';
 import { HEROES, SKINS } from '../game/data.js';
 
+// A NaN or Inf pixel (some GPUs, Apple's among them, return NaN for pow of a negative and the like) would be smeared by
+// the bloom blur into a black blotch and stay black through tone mapping. Bloom's input and the finish pass scrub them:
+// an integer test on the exponent bits, which fast-math shader compilers cannot fold away the way they can x != x.
+const SAFE_HDR = /* glsl */`
+  vec3 safeHdr(vec3 c) {
+    highp uvec3 e = floatBitsToUint(c) & 0x7f800000u;
+    c.r = e.r == 0x7f800000u ? 0.0 : c.r;
+    c.g = e.g == 0x7f800000u ? 0.0 : c.g;
+    c.b = e.b == 0x7f800000u ? 0.0 : c.b;
+    return clamp(c, 0.0, 4096.0);
+  }`;
+
 const FinishShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -26,6 +38,7 @@ const FinishShader = {
     uniform sampler2D tDiffuse; uniform float uVignette; uniform vec4 uFlash; uniform float uWhite;
     uniform float uAberr; uniform float uDesat; uniform float uTime; uniform vec2 uRes;
     varying vec2 vUv;
+    ${SAFE_HDR}
     void main() {
       vec2 uv = vUv; vec2 c = uv - 0.5;
       vec3 col;
@@ -33,6 +46,7 @@ const FinishShader = {
         vec2 off = c * uAberr * 0.025;
         col = vec3(texture2D(tDiffuse, uv + off).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - off).b);
       } else col = texture2D(tDiffuse, uv).rgb;
+      col = safeHdr(col);
       float v = smoothstep(0.95, 0.22, length(c * vec2(1.0, 0.8)));
       col *= mix(1.0, v, uVignette);
       float edge = smoothstep(0.2, 0.75, length(c));
@@ -74,6 +88,10 @@ export class Engine {
     this.composer = new EffectComposer(this.renderer);
     this.renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.8, 0.45, 0.92);
+    const hp = this.bloom.materialHighPassFilter; // bloom reads the scene here: scrub before the blur can spread anything
+    hp.fragmentShader = hp.fragmentShader.replace('void main() {', SAFE_HDR + '\nvoid main() {')
+      .replace('vec4 texel = texture2D( tDiffuse, vUv );', 'vec4 texel = texture2D( tDiffuse, vUv ); texel.rgb = safeHdr( texel.rgb );');
+    hp.needsUpdate = true;
     this.finish = new ShaderPass(FinishShader);
     this.output = new OutputPass();
     this.composer.addPass(this.renderPass);
