@@ -98,7 +98,7 @@ export interface GameEvents {
   'mission:completed': { id: string };
   'mission:claimed': { id: string };
   'tutorial:hint': { mission: string | null };
-  'reward:granted': { reward: Reward; source: string };
+  'reward:granted': { reward: Reward; source: string; /** Inventory item the reward came out of (an opened crate). */ item?: string };
   'nova:changed': { amount: number; delta: number };
   'season:xp': { xp: number; level: number };
   'season:levelUp': { level: number };

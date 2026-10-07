@@ -203,9 +203,9 @@ export class Game {
 
   /**
    * Central reward granting used by missions, chests, POIs, events, daily rewards, spin, IAP...
-   * x/z (world units) animates resources flying from a world position.
+   * x/z (world units) animates resources flying from a world position; `item` names the inventory item it came out of.
    */
-  grant(reward: Reward | null | undefined, source: string, x?: number, z?: number): void {
+  grant(reward: Reward | null | undefined, source: string, x?: number, z?: number, item?: string): void {
     if (!reward) return;
     const s = this.sys;
     if (reward.resources) s.economy.addBag(reward.resources, source === 'offline' ? 'offline' : 'reward', x, z);
@@ -222,7 +222,7 @@ export class Game {
       this.state.player.vehicles.push(reward.vehicle);
       this.bus.emit('vehicle:unlocked', { vehicle: reward.vehicle });
     }
-    this.bus.emit('reward:granted', { reward, source });
+    this.bus.emit('reward:granted', { reward, source, item });
   }
 
   toast(text: string, kind: 'info' | 'success' | 'warning' | 'reward' | 'danger' = 'info', icon?: string): void {

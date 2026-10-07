@@ -599,6 +599,16 @@ describe('equipment, items, health', () => {
     expect(pl.useItem('survival_tool')).toBe(false); // not consumable
   });
 
+  it('names the opened crate on its reward event (so the reward card shows that crate)', () => {
+    const { game } = makeGame();
+    const pl = game.sys.player;
+    const seen: { source: string; item?: string }[] = [];
+    game.bus.on('reward:granted', (e) => seen.push({ source: e.source, item: e.item }));
+    pl.addItem('titan_crate');
+    expect(pl.useItem('titan_crate')).toBe(true);
+    expect(seen).toEqual([{ source: 'crate', item: 'titan_crate' }]);
+  });
+
   it('regenerates health slowly out of combat', () => {
     const { game, step } = makeGame();
     const p = game.state.player;

@@ -998,7 +998,7 @@ export class PlayerSystem extends System {
     if (use.reward) {
       g.bus.emit('sfx', { id: 'crate_open' });
       g.toast(`${def.icon} ${def.name} opened!`, 'reward');
-      g.grant(use.reward, 'crate', p.x, p.z);
+      g.grant(use.reward, 'crate', p.x, p.z, def.id);
     }
     return true;
   }

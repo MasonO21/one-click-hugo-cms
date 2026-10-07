@@ -37,7 +37,7 @@ import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
 import { ConsentPrompt } from './ConsentPrompt';
 import { Threats } from './hud/Threats';
-import { alienArt, biomeArt, eventArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
+import { alienArt, biomeArt, eventArt, itemArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
 import { itemToast, RARITY_COLOR } from './logic/rewards';
 
@@ -503,9 +503,12 @@ export class UI {
       if (performance.now() - this.lastClick.t < 900) this.fly.add('nova', '💎', e.delta, this.lastClick.x, this.lastClick.y);
       else this.hud.popNova();
     });
-    // every supply crate (free, ad, inventory) opens the same "what you got" reward card
+    // every crate (free, ad, inventory) opens a "what you got" reward card; inventory crates show their own art
     bus.on('reward:granted', (e) => {
-      if (e.source === 'crate') this.open('reward', { title: 'Supply crate!', reward: e.reward, icon: rewardArt('supply_crate') ?? '📦' });
+      if (e.source !== 'crate') return;
+      const d = e.item && e.item !== 'supply_crate' ? g.data.item(e.item) : undefined;
+      if (d) this.open('reward', { title: `${d.name}!`, reward: e.reward, icon: itemArt(d.id) ?? d.icon });
+      else this.open('reward', { title: 'Supply crate!', reward: e.reward, icon: rewardArt('supply_crate') ?? '📦' });
     });
     bus.on('reward:granted', (e) => {
       // resources/nova granted from a button press fly out of that button (resource:gained covers resources)
