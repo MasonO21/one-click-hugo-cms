@@ -51,6 +51,53 @@ describe('render models', () => {
     }
   });
 
+  it('industry models stay inside their footprint at every tier and size they can be built in', () => {
+    const industry = ['fuel_generator', 'solar_panel', 'wind_turbine', 'geothermal', 'fusion_reactor', 'battery', 'power_pylon', 'logging_camp', 'quarry', 'mine', 'drill', 'harvester', 'drone_hub', 'robot_bay', 'workbench', 'forge', 'smelter', 'electronics_lab', 'factory', 'nanoforge', 'matter_processor', 'conveyor', 'research_desk', 'research_lab', 'advanced_lab', 'med_bay', 'medical_center', 'radio_tower', 'garage', 'hangar', 'teleporter', 'spin_wheel', 'beacon', 'repair_bay', 'shield_generator', 'lamp', 'plant', 'bench', 'fountain', 'banner', 'statue', 'arcade', 'garden'];
+    const bb = new THREE.Box3();
+    const off = new THREE.Vector3();
+    for (const key of industry) {
+      const defs = data.buildings.filter((b) => b.model === key);
+      const variants = defs.length ? [...new Map(defs.map((d) => [`${d.size[0]}x${d.size[1]}`, d])).values()] : [undefined];
+      for (const def of variants) for (let t = 0; t < data.tiers.length; t++) {
+        const spec = buildModel(key, tierStyle(data.tier(t)), 3, def);
+        spec.geometry.computeBoundingBox();
+        bb.copy(spec.geometry.boundingBox!);
+        for (const p of spec.parts) {
+          if (p.anim === 'spinZ' || p.anim === 'spinX') continue; // rotors turn high above the footprint
+          p.geometry.computeBoundingBox();
+          bb.union(p.geometry.boundingBox!.clone().translate(off.set(p.x, p.y, p.z)));
+        }
+        const label = `${key} ${spec.w}x${spec.d} tier ${t}`;
+        // roof overhangs / awnings may poke out a little, nothing may spill into the neighbouring cell
+        expect(Math.max(-bb.min.x, bb.max.x), label).toBeLessThanOrEqual(spec.w / 2 + 0.35);
+        expect(Math.max(-bb.min.z, bb.max.z), label).toBeLessThanOrEqual(spec.d / 2 + 0.35);
+        expect(bb.min.y, label).toBeGreaterThanOrEqual(-0.35);
+        expect(spec.height, label).toBeGreaterThan(0.4);
+      }
+    }
+  });
+
+  it('industry kit: sheds, stacks and furnaces build at every tier with the expected emitters and glow', () => {
+    for (let t = 0; t < data.tiers.length; t++) {
+      const s = tierStyle(data.tier(t));
+      for (const key of ['forge', 'smelter', 'factory', 'garage']) {
+        const spec = buildModel(key, s, 1, data.buildings.find((b) => b.model === key));
+        const slots = spec.geometry.attributes.aSlot.array as Float32Array;
+        let glow = 0;
+        for (let i = 0; i < slots.length; i++) if (slots[i] === SLOT_GLOW) glow++;
+        expect(glow, `${key} tier ${t} has glowing details`).toBeGreaterThan(0);
+        if (key !== 'garage') expect(spec.emitters.some((e) => e.kind === 'smoke'), `${key} tier ${t} smokes`).toBe(true);
+        if (key === 'forge' || key === 'smelter') expect(spec.emitters.some((e) => e.kind === 'fire'), `${key} tier ${t} has a fire`).toBe(true);
+      }
+      // the conveyor's two items are spaced exactly one wrap apart so the flow never jumps
+      const conv = buildModel('conveyor', s, 1, data.buildings.find((b) => b.model === 'conveyor'));
+      const scroll = conv.parts.filter((p) => p.anim === 'scroll');
+      expect(scroll.length).toBe(1);
+      scroll[0].geometry.computeBoundingBox();
+      expect(scroll[0].geometry.boundingBox!.max.x - scroll[0].geometry.boundingBox!.min.x).toBeLessThanOrEqual(scroll[0].amp * 2 + 0.4);
+    }
+  });
+
   it('command center looks different at every tier', () => {
     const counts = new Set<number>();
     for (let t = 0; t < 7; t++) counts.add(buildModel('command_center', tierStyle(data.tier(t)), 1, data.building('command_center')).geometry.attributes.position.count);
