@@ -285,7 +285,6 @@ export class Buildings {
     this.entries = [];
     this.byId.clear();
     this.constructing = [];
-    this.flashes.clear();
 
     // wall-like occupancy for connections
     this.wallMap.clear();
@@ -351,6 +350,17 @@ export class Buildings {
     for (const pb of this.pieceBatches.values()) {
       pb.end();
       pb.freeze();
+    }
+    // flashes outlive the rebuild that their own event triggers (completed / upgraded / tier-up change the
+    // status, level or tier): re-apply them to the new slots instead of dropping them before they are drawn
+    for (const [id, f] of this.flashes) {
+      const en = this.byId.get(id);
+      if (!en) {
+        this.flashes.delete(id);
+        continue;
+      }
+      f.base = en.col;
+      for (const sl of en.slots) sl.batch.setColor(sl.index, f.color);
     }
     // drop shields of removed buildings
     for (const [id, s] of this.shields) {
