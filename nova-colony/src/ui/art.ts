@@ -117,6 +117,24 @@ const BUILDINGS = new Set([
 ]);
 /** Every VehicleDef.id (tests keep this equal to the data and to the files in public/art/vehicles). */
 const VEHICLES = new Set(['atv', 'buggy', 'mining_truck', 'hover_bike', 'armored_rover', 'titanium_hovercraft']);
+const RESEARCH = new Set([
+  'tier_reinforced', 'tier_stone', 'scaffolding', 'mason_trade', 'tier_steel', 'steel_frames', 'tier_alloy',
+  'alloy_architecture', 'tier_nano', 'basic_circuits', 'geothermal_tech', 'fusion_theory', 'grid_optimization',
+  'titanium_fusion', 'crop_rotation', 'greenhouse_design', 'culinary_arts', 'hydroponics_tech', 'farm_automation',
+  'vertical_agri', 'bio_dome_tech', 'water_storage', 'filtration', 'industrial_filtration', 'atmospheric_harvest',
+  'watchtowers', 'crossfire_doctrine', 'machine_guns', 'electric_fencing', 'anti_air', 'heavy_ordnance',
+  'shield_tech', 'energy_weapons', 'barrier_tech', 'plasma_tech', 'railgun_tech', 'titan_shielding',
+  'shotgun_design', 'armor_plating', 'assault_rifle_tech', 'energy_rifle_tech', 'plasma_rifle_tech',
+  'titanium_rifle_tech', 'logging_efficiency', 'basic_mining', 'workshop_tools', 'electric_drilling', 'circuitry',
+  'alloy_smelting', 'assembly_lines', 'automated_mining', 'energy_cells', 'mass_production', 'nano_assembly',
+  'matter_conversion', 'field_robotics', 'automated_logistics', 'drone_workers', 'combat_drones', 'ai_core',
+  'drone_swarm_tech', 'sharper_tools', 'engine_basics', 'iron_tools', 'off_road', 'steel_tools', 'heavy_haulers',
+  'alloy_tools', 'hover_tech', 'nano_tools', 'teleportation', 'titan_hover', 'radio_comms', 'community_spirit',
+  'laboratory_science', 'recruitment_drive', 'medicine', 'team_building', 'recreation', 'advanced_science',
+  'trauma_medicine', 'nano_wellness', 'titan_living', 'titanium_extraction', 'tier_titanium', 'titan_alloys',
+  'quantum_computing', 'quantum_storage_tech', 'titan_manufacturing', 'colony_mastery',
+]);
+
 
 /** World event illustration by WorldEventDef.kind, 960×540. */
 export function eventArt(kind: string): string | null {
@@ -161,6 +179,14 @@ export function vehicleArt(id: string): string | null {
 /** Every id `vehicleArt` knows (for tests). */
 export function vehicleArtIds(): string[] {
   return [...VEHICLES];
+}
+/** Painted tech-tree icon by ResearchDef.id, 128 px with transparency. */
+export function researchArt(id: string): string | null {
+  return RESEARCH.has(id) ? `${ROOT}research/${id}.webp` : null;
+}
+/** Every id `researchArt` knows (for tests). */
+export function researchArtIds(): string[] {
+  return [...RESEARCH];
 }
 
 /** Loading / key art (landscape or portrait). */
@@ -240,6 +266,11 @@ export function buildingIcon(id: string, emoji: string, cls = '', tag = 'i'): HT
 /** Thumbnail for a vehicle id, with the data's emoji as the fallback. */
 export function vehicleIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
   return iconEl(vehicleArt(id), emoji, cls, tag);
+}
+
+/** Tech-tree icon for a research id, with the data's emoji as the fallback. */
+export function researchIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
+  return iconEl(researchArt(id), emoji, cls, tag);
 }
 
 /** Portrait <img> (or an emoji span) for a colonist profession. */

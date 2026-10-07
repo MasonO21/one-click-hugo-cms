@@ -21,10 +21,11 @@ building only needs a rebake, not a prompt.
 | Items | `public/art/items/<ItemDef.id>.webp` (65: tools, weapons, armor, backpacks, gear, consumables, components, crates) | 192² RGBA | Inventory + equipment slots, crafting, factory recipes, reward chips / cards, item toasts |
 | Buildings | `public/art/buildings/<BuildingDef.id>.webp` (150: every building, structure pieces included — one picture per piece, shared by its material tiers) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 192² RGBA | Build menu cards, placement bar, inspector, station tabs, unlock lists |
 | Vehicles | `public/art/vehicles/<VehicleDef.id>.webp` (6) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 192² RGBA | Vehicle cards, craft rows, vehicle rewards / toasts |
+| Research | `public/art/research/<ResearchDef.id>.webp` (90) — painted tech icons (prompts in `art/source/painted-research-icons.json`) | 128² RGBA | Research tree nodes (greyed while locked), research detail card, "Researched X!" toast |
 | Store | `art/store/feature-graphic-1024x500.jpg`, `key-art-*.jpg` | — | Google Play feature graphic, store/press (not shipped in the app) |
 | Promo video | `art/store/promo-flyover-10s.mp4` | 1920×1080, 10 s, silent | Store preview / social clip (Higgsfield `kling3_0` image-to-video from the key art); add game music when cutting a trailer |
 
-Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 5.8 MB (WebP; the building + vehicle thumbnails are ≈ 1.3 MB of it).
+Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 7.3 MB (WebP; the painted building + vehicle icons are ≈ 1.45 MB and the research icons ≈ 0.6 MB of it).
 
 ## Where the art appears in the UI
 Every lookup returns a relative URL or `null`; a missing/failed image falls back to the emoji from the data, so the UI

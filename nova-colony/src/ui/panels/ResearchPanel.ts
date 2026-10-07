@@ -12,6 +12,7 @@ import { NODE_H, NODE_W, RESEARCH_CATEGORIES, layoutTree } from '../logic/catego
 import { buildingUnlock, modifierText, vehicleUnlock, type UnlockEntry } from '../logic/describe';
 import { adButton, btn, costChips, emptyState, section, tabs, unlockChip } from '../widgets';
 import { fill, h, s } from '../dom';
+import { researchArt, researchIcon } from '../art';
 
 export class ResearchPanel extends Panel {
   readonly name = 'research';
@@ -121,7 +122,7 @@ export class ResearchPanel extends Panel {
     const can = rs.canResearch(d.id);
     const cls = ['rnode', st, can ? 'afford' : '', this.sel === d.id ? 'sel' : ''].join(' ');
     const badge = st === 'done' ? '✔' : st === 'locked_tier' ? `🔒 T${d.tier + 1}` : st === 'locked_prereq' ? '🔗' : `🔬 ${fmt(d.cost)}`;
-    const el = h('button', { class: cls, type: 'button', style: { left: `${x}px`, top: `${y}px`, width: `${NODE_W}px`, height: `${NODE_H}px` }, data: { research: d.id, sfx: 'ui_click' } }, h('span', { class: 'ri', text: d.icon }), h('span', { class: 'rn', text: d.name }), h('span', { class: 'rc', text: badge }));
+    const el = h('button', { class: cls, type: 'button', style: { left: `${x}px`, top: `${y}px`, width: `${NODE_W}px`, height: `${NODE_H}px` }, data: { research: d.id, sfx: 'ui_click' } }, researchIcon(d.id, d.icon, 'ri', 'span'), h('span', { class: 'rn', text: d.name }), h('span', { class: 'rc', text: badge }));
     el.addEventListener('click', () => {
       this.sel = d.id;
       this.rerender();
@@ -139,7 +140,7 @@ export class ResearchPanel extends Panel {
       return box;
     }
     const st = this.status(d.id);
-    box.appendChild(h('div', { class: 'row' }, h('span', { class: 'bi', text: d.icon }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: d.name }), h('span', { class: 'chip ' + (st === 'done' ? 'good' : st === 'available' ? 'warn' : ''), text: st === 'done' ? 'Researched' : st === 'available' ? 'Ready to research' : st === 'locked_tier' ? 'Needs a higher tier' : 'Needs earlier tech' }))));
+    box.appendChild(h('div', { class: 'row' }, researchIcon(d.id, d.icon, 'bi r-pic', 'span'), h('div', { class: 'grow' }, h('div', { class: 'h3', text: d.name }), h('span', { class: 'chip ' + (st === 'done' ? 'good' : st === 'available' ? 'warn' : ''), text: st === 'done' ? 'Researched' : st === 'available' ? 'Ready to research' : st === 'locked_tier' ? 'Needs a higher tier' : 'Needs earlier tech' }))));
     box.appendChild(h('div', { class: 'small', style: 'margin:.4em 0', text: d.description }));
 
     if (st !== 'done') {
@@ -203,7 +204,7 @@ export class ResearchPanel extends Panel {
         onClick: () => {
           if (rs.research(d.id)) {
             this.ctx.haptic('success');
-            this.ctx.toast(`Researched ${d.name}!`, 'success', d.icon);
+            this.ctx.toast(`Researched ${d.name}!`, 'success', researchArt(d.id) ?? d.icon);
           } else this.ctx.toast("Couldn't research that yet", 'info', '🔬');
           this.rerender();
         },

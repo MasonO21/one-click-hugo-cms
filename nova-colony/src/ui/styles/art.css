@@ -1167,3 +1167,22 @@
   height: auto;
   margin: 0;
 }
+
+/* ---------- research: painted tech icons in the tree nodes + detail card ---------- */
+.rnode .ri.aico {
+  width: 1.45em;
+  height: 1.45em;
+  font-size: 1.7em;
+}
+.rnode .ri.aico.emoji {
+  width: auto;
+}
+.rnode.locked_tier .ri.aico img,
+.rnode.locked_prereq .ri.aico img {
+  filter: grayscale(0.85) opacity(0.6);
+}
+.r-detail .aico.r-pic {
+  width: 3em;
+  height: 3em;
+  font-size: 1em;
+}
