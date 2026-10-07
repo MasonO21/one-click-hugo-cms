@@ -66,6 +66,13 @@ export class InputController {
     layer.addEventListener('pointermove', (e) => this.onMove(e));
     layer.addEventListener('pointerup', (e) => this.onUp(e));
     layer.addEventListener('pointercancel', (e) => this.onUp(e, true));
+    // A world tap can open a sheet right under the finger (tap the Command Center -> Colony). Unless the
+    // touch's default is cancelled, the browser follows up with compatibility mouse events and a click,
+    // hit-tested after the sheet mounted — on its backdrop, which closed it again at once on phones.
+    // All input here is pointer events, which still fire; audio unlock listens to touchend in capture.
+    layer.addEventListener('touchend', (e) => {
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
     layer.addEventListener('contextmenu', (e) => e.preventDefault());
     layer.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
     window.addEventListener('keydown', (e) => this.onKey(e, true));
