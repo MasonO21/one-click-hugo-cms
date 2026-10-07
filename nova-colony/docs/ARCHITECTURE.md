@@ -7,7 +7,9 @@ Read this fully before writing code. The full game spec is in `docs/SPEC.md`.
 - **TypeScript + Vite** web app, **three.js** stylized low-poly 3D, DOM/CSS overlay UI, procedural **WebAudio**.
 - Packaged for **iOS / Android with Capacitor** (`capacitor.config.ts`, native adapters in `src/platform`).
 - **Vitest** for headless simulation tests (`tests/`). Chromium + Playwright available for screenshots.
-- No binary art/audio assets: all models are procedural three.js geometry, all sounds are synthesized.
+- No binary audio or 3D model assets: all models are procedural three.js geometry, all sounds are synthesized. The only shipped
+  images are the 2D WebP illustrations in `public/art` (resource icons, portraits, tiers, …) — see `docs/ART.md`; the UI looks
+  them up through `src/ui/art.ts` and always falls back to the emoji in the data.
 
 ## Layers (strict)
 
