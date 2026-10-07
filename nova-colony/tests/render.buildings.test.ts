@@ -1,5 +1,7 @@
 /**
  * Buildings actor regressions from the QA3 pass (lighting / model upgrade):
+ *  - a colony tier-up re-tiers every facility at once, and every new look costs a model build plus the
+ *    baked AO; the rebuild now spreads those builds over frames instead of freezing on the tier-up;
  *  - completion / upgrade / tier-up flashes were wiped by the rebuild their own state change triggers.
  */
 import { describe, expect, it } from 'vitest';
@@ -47,6 +49,44 @@ function colony(game: Game, n: number): number[] {
   }
   return ids;
 }
+
+describe('Buildings: tier-up model builds are spread over frames', () => {
+  it('past the frame budget facilities keep their old look for a frame, then all catch up', () => {
+    const game = new Game({ seed: 5, services: createMockServices() });
+    game.start();
+    const ids = colony(game, 6);
+    expect(ids.length).toBeGreaterThanOrEqual(5);
+    game.update(0.1);
+    const buildings = new Buildings(makeCtx(game));
+    buildings.update(1 / 60);
+    for (const id of ids) expect(buildings.shownTier(id)).toBe(0);
+
+    // tier up the colony: every facility (and the core) switches to the Reinforced look at once
+    for (const d of game.data.research) if (d.tier === 0 && game.sys.research.status(d.id) === 'available') { rich(game); game.sys.research.research(d.id); }
+    rich(game);
+    expect(game.sys.progression.tierUp()).toBe(true);
+    for (const id of ids) expect(game.sys.buildings.get(id)!.tier).toBe(1);
+
+    buildings.modelBudgetMs = 0; // force the slow path: one new model per frame
+    buildings.update(1 / 60);
+    const first = ids.filter((id) => buildings.shownTier(id) === 1).length;
+    expect(first).toBeLessThan(ids.length);
+    let frames = 1;
+    while (ids.some((id) => buildings.shownTier(id) !== 1) && frames < 50) {
+      buildings.update(1 / 60);
+      frames++;
+    }
+    for (const id of ids) expect(buildings.shownTier(id)).toBe(1);
+    expect(frames).toBeGreaterThan(1);
+    expect(frames).toBeLessThanOrEqual(ids.length + 2);
+
+    // a fresh building never waits: it has no older look to fall back to
+    const extra = colony(game, 1);
+    buildings.update(1 / 60);
+    expect(buildings.shownTier(extra[0])).toBe(game.sys.buildings.get(extra[0])!.tier);
+    buildings.dispose();
+  });
+});
 
 describe('Buildings: flashes survive the rebuild their event triggers', () => {
   it('an upgrade flash is still on the building after the level change rebuilds the batches', () => {

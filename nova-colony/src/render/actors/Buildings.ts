@@ -20,7 +20,7 @@ import { inView, sightTargets } from '../core/context';
 import { Batch, composeYaw, composeEuler, type BatchOpts } from '../core/Batch';
 import { mergeCopies } from '../core/GeoBuilder';
 import { tierStyle, type TierStyle } from '../core/palette';
-import { buildModel, type ModelSpec } from '../models/spec';
+import { buildModel, modelCached, type ModelSpec } from '../models/spec';
 import { pieceGeometry, pieceFullKey, WALL_H, ROOF_Y, type PieceGeoKey } from '../models/pieces';
 import type { BuildingInstance, Id } from '../../core/state';
 import type { BuildingDef } from '../../data/schema';
@@ -127,6 +127,13 @@ const OCCLUDE_MARGIN = 0.6;
 const PIECE_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
 const BODY_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
 const PART_OPTS: BatchOpts = { color: true, castShadow: false, fade: true };
+/**
+ * Wall-clock budget (ms) per rebuild for building facility models that are not cached yet — each one is
+ * a GeoBuilder pass plus the AO bake (a few ms on a phone). A colony tier-up re-tiers every facility at
+ * once; past the budget a facility keeps the look it already had for a frame and the rest are built over
+ * the next frames (at least one per frame), so the tier-up is a short wave instead of a long freeze.
+ */
+export const MODEL_BUDGET_MS = 6;
 
 export class Buildings {
   private group = new THREE.Group();
@@ -154,6 +161,12 @@ export class Buildings {
   private lastTerrain = -1;
   private lastRoofVersion = -1;
   private lastRoofSize = -1;
+  /** Facility look (tier * 64 + level) each building was last drawn with: its fallback while a new model waits. */
+  private shown = new Map<Id, number>();
+  /** Some facilities still show an older look: rebuild again next frame. */
+  private modelsPending = false;
+  /** Model build budget per rebuild (ms); see MODEL_BUDGET_MS. */
+  modelBudgetMs = MODEL_BUDGET_MS;
   private wallMap = new Map<number, string>();
   private readonly unsub: (() => void)[] = [];
   /** Per-frame construction dust accumulator. */
@@ -273,7 +286,8 @@ export class Buildings {
     return h;
   }
 
-  private rebuild(): void {
+  /** Rebuild every instance buffer; `roofs` = false on a frame that only continues a tier-up wave (no piece changed). */
+  private rebuild(roofs = true): void {
     const ctx = this.ctx;
     const game = ctx.game;
     const list = game.state.buildings.list;
@@ -286,6 +300,11 @@ export class Buildings {
     this.byId.clear();
     this.constructing = [];
 
+    const t0 = performance.now();
+    let built = 0;
+    this.modelsPending = false;
+    const shown = new Map<Id, number>();
+
     // wall-like occupancy for connections
     this.wallMap.clear();
     for (const b of list) {
@@ -295,8 +314,23 @@ export class Buildings {
 
     for (const b of list) {
       const def = game.data.building(b.def);
-      const tier = clamp(b.tier | 0, 0, game.data.tiers.length - 1);
-      const style = tierStyle(game.data.tier(tier));
+      let tier = clamp(b.tier | 0, 0, game.data.tiers.length - 1);
+      let style = tierStyle(game.data.tier(tier));
+      let level = Math.max(1, b.level | 0);
+      if (!def?.piece) {
+        // a new look that still needs building: past the frame budget keep the previous one for now
+        const key = def?.model ?? b.def;
+        const prev = this.shown.get(b.id);
+        if (!modelCached(key, style, level, def)) {
+          if (prev !== undefined && prev !== tier * 64 + level && built > 0 && performance.now() - t0 > this.modelBudgetMs) {
+            tier = Math.floor(prev / 64);
+            level = prev % 64;
+            style = tierStyle(game.data.tier(tier));
+            this.modelsPending = true;
+          } else built++;
+        }
+        shown.set(b.id, tier * 64 + level);
+      }
       const size = def?.size ?? [1, 1];
       const c = footprintCenter(b.x, b.z, size, b.rot);
       const [rw, rd] = rotatedSize(size, b.rot);
@@ -329,10 +363,10 @@ export class Buildings {
         this.buildPiece(entry, def.piece, style, color);
       } else {
         const key = def?.model ?? b.def;
-        const spec = buildModel(key, style, Math.max(1, b.level | 0), def);
+        const spec = buildModel(key, style, level, def);
         entry.spec = spec;
         entry.height = spec.height;
-        const fb = this.facilityBatch(`${key}|${tier}|${Math.max(1, b.level | 0)}|${size[0]}x${size[1]}`, spec);
+        const fb = this.facilityBatch(`${key}|${tier}|${level}|${size[0]}x${size[1]}`, spec);
         composeYaw(_m, c.x, y, c.z, yaw);
         this.pushSlot(entry, fb.body, c.x, y, c.z, yaw, color);
         fb.entries.push(entry);
@@ -343,6 +377,7 @@ export class Buildings {
       this.entries.push(entry);
       this.byId.set(b.id, entry);
     }
+    this.shown = shown;
     for (const fb of this.facilityBatches.values()) {
       fb.body.end();
       fb.body.freeze();
@@ -370,7 +405,7 @@ export class Buildings {
         this.shields.delete(id);
       }
     }
-    this.rebuildRoofs();
+    if (roofs) this.rebuildRoofs();
   }
 
   private pushSlot(entry: Entry, batch: Batch, x: number, y: number, z: number, yaw: number, color: THREE.Color, sx = 1, sy = 1, sz = 1): void {
@@ -595,11 +630,12 @@ export class Buildings {
     const list = game.state.buildings.list;
     const version = game.derived.buildingsVersion;
     const h = this.hash(list);
-    if (version !== this.lastVersion || h !== this.lastHash || env.terrainVersion !== this.lastTerrain) {
+    const changed = version !== this.lastVersion || h !== this.lastHash || env.terrainVersion !== this.lastTerrain;
+    if (changed || this.modelsPending) {
       this.lastVersion = version;
       this.lastHash = h;
       this.lastTerrain = env.terrainVersion;
-      this.rebuild();
+      this.rebuild(changed);
       this.lastRoofVersion = version;
       this.lastRoofSize = game.derived.roofCells?.size ?? 0;
     } else if ((game.derived.roofCells?.size ?? 0) !== this.lastRoofSize || version !== this.lastRoofVersion) {
@@ -963,6 +999,12 @@ export class Buildings {
   }
 
   // ------------------------------------------------------------------------------ queries
+
+  /** Tier a facility is drawn with right now (lags its real tier while a tier-up wave is being built). */
+  shownTier(id: Id): number | undefined {
+    const v = this.shown.get(id);
+    return v === undefined ? undefined : Math.floor(v / 64);
+  }
 
   /** World-space info of a building for selection rings / focus. */
   centerOf(id: Id): { x: number; y: number; z: number; radius: number; height: number } | null {

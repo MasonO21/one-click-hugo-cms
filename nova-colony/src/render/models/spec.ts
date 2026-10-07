@@ -238,10 +238,20 @@ export function fallbackModel(c: ModelCtx): void {
 
 const specCache = new Map<string, ModelSpec>();
 
+function specKey(key: string, s: TierStyle, level: number, def: BuildingDef | undefined): string {
+  const sz = def?.size ?? [1, 1];
+  return `${key}|${s.index}|${level}|${sz[0]}x${sz[1]}`;
+}
+
+/** Is this model already built (buildModel returns at once), or would it cost a build + AO bake? */
+export function modelCached(key: string, s: TierStyle, level: number, def: BuildingDef | undefined): boolean {
+  return specCache.has(specKey(key, s, level, def));
+}
+
 /** Build (cached) the model for a key at a tier/level. Footprint from the def (default 1x1). */
 export function buildModel(key: string, s: TierStyle, level: number, def: BuildingDef | undefined): ModelSpec {
   const sz = def?.size ?? [1, 1];
-  const ck = `${key}|${s.index}|${level}|${sz[0]}x${sz[1]}`;
+  const ck = specKey(key, s, level, def);
   let spec = specCache.get(ck);
   if (spec) return spec;
   const w = sz[0] * CELL;
