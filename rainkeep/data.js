@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.8.0',
+  version: '4.9.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -764,8 +764,8 @@ const DATA = {
       grants: { sunsteel: 600, crate_copper: 3, speed15: 2 },
       desc: "600 Sunsteel, three copper crates and two 15-minute speedups for the Warden's Gear. Once per day, after you build the Forge." },
     { id: 'petkit', name: 'Companion Kit', usd: 2.99, daily: true, tag: 'Daily', needsWyrm: 7,
-      grants: { treats: 80, bells: 3, speed15: 1 },
-      desc: 'Eighty Honeyed Dates and three Camel Bells for your companions, and a 15-minute speedup. Once per day, from Rainwyrm Lv 7.' },
+      grants: { treats: 150, bells: 5, speed15: 1 },
+      desc: '150 Honeyed Dates and five Camel Bells for your companions, and a 15-minute speedup. Once per day, from Rainwyrm Lv 7.' },
     { id: 'tidekit', name: 'Tideglass Kit', usd: 4.99, daily: true, tag: 'Daily', needsWyrm: 20,
       grants: { tideglass: 60, crate_copper: 3, speed60: 1 },
       desc: 'Sixty Tideglass for the Deepspring, three copper crates and a 60-minute speedup. Once per day, from Rainwyrm Lv 20.' },
@@ -943,7 +943,7 @@ const DATA = {
     [40, { starglass: 40, crate_stone: 1, treats: 5 }],
     [60, { beacons: 1, speed15: 1 }],
     [80, { starglass: 60, crate_water: 1, journals: 30, treats: 10 }],
-    [100, { beacons: 2, speed60: 1 }],
+    [100, { beacons: 2, speed60: 1, bells: 2 }],
   ],
 
   // ---------- Login calendar (one claim per day, cycles every 7 claims) ----------
@@ -1144,12 +1144,12 @@ const DATA = {
   companions: {
     unlock: 7, // Rainwyrm level: Sahra the fennec arrives in the mail
     max: 30, tiers: [10, 20], // Advance needed to pass Lv 10 and Lv 20
-    treat: (L, r) => Math.round(4 * Math.pow(1.12, L - 2) * r), // treats from Lv L-1 to L (r: rarity factor)
+    treat: (L, r) => Math.round(6 * Math.pow(1.13, L - 2) * r), // treats from Lv L-1 to L (r: rarity factor): about 1,550 to grow a common one to Lv 30
     bells: [5, 15], // Camel Bells for each Advance (times the rarity factor, rounded)
     rarity: { common: 1, rare: 1.5, epic: 2 },
     forage: { every: 1800, cap: 16 }, // a treat forages every 30 minutes of keep time, up to 16 waiting
     welcome: { treats: 20, bells: 5 },
-    beast: (lvl) => 1 + Math.floor(lvl / 4), // treats from each beast slain on the Dunes
+    beast: { chance: 0.25, n: (lvl) => 1 + Math.floor(lvl / 5), bell: 0.03, bellLvl: 6 }, // a beast slain on the Dunes: a chance of treats, and from Lv 6 a small chance of a bell
     bossBells: 1, // bells from every tenth expedition stage (each boss) and every tenth Spire floor
     crossBells: 2, // bells for reaching the Crossing's hidden oasis
     power: 40, // keep power per companion level

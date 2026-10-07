@@ -6,7 +6,8 @@
  * the companion's keep bonus, and each has a skill on a cooldown in keep time: a cache of supplies,
  * hurried timers or an hour's boost. Treats forage on their own (one every 30 minutes, up to 16 waiting)
  * and come from beasts on the Dunes, daily duty chests and the Companion Kit; bells come from every
- * expedition boss, every tenth Mirage Spire floor and the Crossing's hidden oasis.
+ * expedition boss, every tenth Mirage Spire floor, the Crossing's hidden oasis, the last duty chest and
+ * now and then a strong beast.
  * Plugs into core through KH.hooks (defaults, tick, bonus, power), KH.sheets, KH.side and KH.on;
  * town3d.js shows the tamed companions about the keep through KH.pals.owned().
  */
@@ -208,7 +209,7 @@
     return {
       title: 'Companions', lvl: `${Object.keys(P.own).length}/${D.list.length}`,
       body: `${intro}<div class="row pal-have">${haveChips()}${boosts}</div>${forage}<div class="hero-grid">${cards}</div>
-        <p class="muted small">Honeyed Dates also come from every beast on the Dunes and from the daily duty chests. Camel Bells come from every expedition boss, every tenth Mirage Spire floor and the Crossing's hidden oasis.</p>`,
+        <p class="muted small">Honeyed Dates also come from beasts on the Dunes and the daily duty chests. Camel Bells come from every expedition boss, every tenth Mirage Spire floor, the Crossing's hidden oasis, the last duty chest and, now and then, a strong beast.</p>`,
     };
   };
 

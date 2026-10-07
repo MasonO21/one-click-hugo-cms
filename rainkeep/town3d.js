@@ -1177,6 +1177,12 @@
       const bird = id === 'falcon' || id === 'hoopoe';
       const o = bird ? A.bird(id, { scale: id === 'falcon' ? 1.8 : 2.2 }) : A.beast(id, { scale: { oryx: 1.15, caracal: 1.5 }[id] || 1.8 });
       o.rotation.order = 'YXZ';
+      // a generous invisible target, so a tap on the animal opens its sheet
+      if (id !== 'falcon') {
+        const pr = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 6), new THREE.MeshBasicMaterial());
+        pr.position.y = id === 'hoopoe' ? 0 : 0.3; pr.visible = false; pr.userData.pid = `pal:${id}`;
+        o.add(pr); hit.push(pr);
+      }
       scene.add(o);
       pals[id] = { o, a: (Object.keys(pals).length * 2.3) % 6.28, ph: Object.keys(pals).length * 1.9 };
     }
