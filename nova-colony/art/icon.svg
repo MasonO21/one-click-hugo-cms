@@ -79,7 +79,7 @@
     <use href="#spark" transform="translate(940 520) scale(0.24)"/>
     <circle cx="96" cy="470" r="9"/>
     <circle cx="560" cy="70" r="8"/>
-    <circle cx="470" cy="172" r="6"/>
+    <circle cx="506" cy="124" r="6"/>
     <circle cx="930" cy="330" r="6"/>
   </g>
 
