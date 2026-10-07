@@ -22,10 +22,10 @@ import { Materials } from '../core/materials';
 import { Particles } from '../fx/Particles';
 import { Buildings } from '../actors/Buildings';
 import type { Env, RenderContext } from '../core/context';
-import { vehicleGeometry, vehicleHovers } from '../models/characters';
+// the model library barrel registers every procedural building model and exposes the vehicle builders
+import { vehicleGeometry, vehicleHovers } from '../models';
 import { CENTER_CELL } from '../../core/constants';
 import { clamp } from '../../core/math';
-import '../models';
 
 export type ThumbKind = 'building' | 'vehicle';
 
