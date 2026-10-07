@@ -571,6 +571,9 @@ function patchSystems(game: Game): void {
   // ---- world
   const ws = s.world;
   ws.gen = makeWorld(game);
+  // the real WorldSystem indexed the generated world's nodes; re-index the stand-in (it has none), or the
+  // first gather lookup reads a stale node index, throws, and stops the preview's game loop
+  ws.indexWorld();
   ws.isUnlocked = (id: string) => st.world.regionsUnlocked.includes(id);
   ws.lockReason = (id: string) => {
     const b = data.biome(id);
