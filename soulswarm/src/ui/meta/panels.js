@@ -4,6 +4,7 @@ import { h, $, $$, fmt, toast, modal, purchaseFlow, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
 import { SKUS, GEM_SHOP, ENERGY_MAX, ENERGY_REGEN_SEC, HEROES, CHAPTERS, MUTATORS, TRIAL } from '../../game/data.js';
 import { todayKey } from '../../meta/save.js';
+import { now as clockNow } from '../../meta/clock.js';
 import {
   onChange, commit, grant, questList, claimQuest, loginState, claimLogin, energyNextIn, buyGemShop,
   starterAvailable, pactActive, pactDailyAvailable, claimPactDaily, trialState, grantTrialRetry, weeklyState, claimWeekly, nextWeek,
@@ -294,7 +295,7 @@ export function pactBenefits() {
     <li>${icon('gold')}<span><b>+20%</b> gold from every run</span></li>
   </ul>`;
 }
-export const pactDaysLeft = (p) => Math.max(0, Math.ceil(((p.purchases.pactUntil || 0) - Date.now()) / 864e5));
+export const pactDaysLeft = (p) => Math.max(0, Math.ceil(((p.purchases.pactUntil || 0) - clockNow()) / 864e5));
 
 export function claimPact(ctx) {
   const { app } = ctx; const p = app.profile;

@@ -2,22 +2,22 @@
 // so every access is guarded and the game still runs from in-memory state.
 import { HERO_ORDER, HEROES, HERO_MAX_STARS, ENERGY_MAX, STARTER_PACK_HOURS, RELICS, RARITIES, RELIC_SLOTS, TALENTS, CHAPTERS } from '../game/data.js';
 import { migrateDifficulty } from './difficulty.js';
+import { now as clockNow, today, dateKey, snapshot, restore } from './clock.js';
 
 const KEY = 'soulswarm.save.v1';
 
-export const todayKey = (t = Date.now()) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+/** today() for daily resets (meta/clock.js, never earlier than a day already seen), or the local day of t. */
+export const todayKey = (t) => (t === undefined ? today() : dateKey(t));
 
 export function newProfile() {
-  const now = Date.now();
+  const now = clockNow();
   const heroes = {};
   for (const id of HERO_ORDER) heroes[id] = { owned: id === 'vael', stars: id === 'vael' ? 1 : 0, shards: 0 };
   return {
     v: 1,
     createdAt: now,
     lastSeen: now,
+    clock: { t: 0, day: '' }, // meta/clock.js: last trusted time and latest day, so winding the clock back gains nothing
     name: 'Shepherd',
     level: 1, xp: 0,
     gold: 1500, gems: 150, sigils: 1,
@@ -89,7 +89,7 @@ export function loadProfile() {
   let raw = null;
   try {
     raw = localStorage.getItem(KEY);
-    if (raw) return migrate(JSON.parse(raw));
+    if (raw) { const p = migrate(JSON.parse(raw)); restore(p.clock); return p; }
   } catch (e) {
     // storage unavailable or the save is unreadable: start fresh, but keep the unreadable bytes for support
     console.warn('[save] unreadable save, starting fresh', e);
@@ -100,7 +100,7 @@ export function loadProfile() {
 
 let saveTimer = 0;
 export function saveProfile(p, immediate = false) {
-  p.lastSeen = Date.now();
+  p.lastSeen = clockNow(); p.clock = snapshot(); // the offline floor and the latest day (meta/clock.js)
   const write = () => {
     try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) { /* ignore */ }
   };

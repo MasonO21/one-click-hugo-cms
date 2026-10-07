@@ -1801,6 +1801,56 @@ errs = await session(async (page) => {
 });
 check('back button and first-clear gems: no runtime errors', !errs.length, errs[0] || '');
 
+// 25. Trusted clock (meta/clock.js): server time for daily resets. Sources are stubbed (window.fetch) and the device
+//     clock is a stand-in (clock.qa.device), so the protections stay on. Winding the clock back gains nothing, an
+//     offline wind-forward then a server correction re-grants nothing, and the latest day survives a reload.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const C = await import('/src/meta/clock.js'), eco = await import('/src/meta/economy.js');
+    const app = window.__soulswarm, p = app.profile, out = {}, realFetch = window.fetch;
+    const T0 = new Date(2026, 9, 7, 12).getTime(), DAY = 864e5;
+    const serve = (body, headers = {}) => { window.fetch = async () => new Response(body, { status: 200, headers }); };
+    serve('ts=0\n'); await C.sync(); // let any boot sync settle first
+    // each answer format sets the clock (server = T0 + 3 days, whatever the device says)
+    const formats = { trace: [`fl=1\nts=${(T0 + 3 * DAY) / 1000}\nvisit_scheme=https`], json: [JSON.stringify({ now: T0 + 3 * DAY })],
+      dateTime: [JSON.stringify({ dateTime: new Date(T0 + 3 * DAY).toISOString().slice(0, 23) })], header: ['', { date: new Date(T0 + 3 * DAY).toUTCString() }] };
+    out.formats = {};
+    for (const [k, [body, hd]] of Object.entries(formats)) {
+      C.qa.reset(); C.qa.device(() => T0); serve(body, hd);
+      const ok = await C.sync(); out.formats[k] = ok && C.isSynced() && Math.abs(C.now() - (T0 + 3 * DAY)) < 2500;
+    }
+    C.qa.reset(); serve(JSON.stringify({ now: 0 })); out.rejects = !(await C.sync()) && !C.isSynced();
+    // offline: winding the device clock back re-grants no daily reward and no energy
+    C.qa.reset(); window.fetch = realFetch; C.qa.device(() => T0);
+    p.energy = 5; p.energyTs = C.now(); eco.claimLogin(p); eco.claimFreeChest(p); const day0 = C.today();
+    C.qa.device(() => T0 - 2 * DAY); eco.upkeep(p);
+    out.back = { day: C.today() === day0, login: eco.loginState(p).canClaim, chest: eco.freeChestAvailable(p), energy: p.energy, now: C.now() === T0 };
+    C.qa.device(() => T0 + DAY + 3600e3); out.next = { login: eco.loginState(p).canClaim, day: C.today() > day0 };
+    // offline wind-forward (+3 days), claim, then the server says T0: the day stays put, nothing is claimable again
+    C.qa.reset(); C.qa.device(() => T0 + 3 * DAY); p.login.lastClaim = ''; eco.claimLogin(p); const fwd = C.today();
+    serve(JSON.stringify({ now: T0 })); await C.sync();
+    out.correction = { synced: C.isSynced(), now: Math.abs(C.now() - T0) < 2500, day: C.today() === fwd, login: eco.loginState(p).canClaim };
+    // the save keeps the latest day; after a reload (reset + restore) the device clock cannot pull it back
+    const snap = C.snapshot(); C.qa.reset(); C.qa.device(() => T0 - 2 * DAY); C.restore(snap);
+    out.reload = { day: C.today() === fwd, floor: C.now() >= snap.t };
+    // a failed sync on resume falls back to the (floored) device clock
+    serve(JSON.stringify({ now: T0 + 5 * DAY })); await C.sync(); const t1 = C.now();
+    window.fetch = async () => { throw new Error('offline'); }; await C.sync({ resume: true });
+    out.resume = { synced: C.isSynced(), floored: C.now() >= t1 - 5 };
+    window.fetch = realFetch; C.qa.reset();
+    return out;
+  });
+  check('clock: syncs from a Cloudflare trace, JSON (now / dateTime) or a Date header; rejects implausible answers',
+    Object.values(s.formats).every(Boolean) && s.rejects, JSON.stringify({ f: s.formats, r: s.rejects }));
+  check('clock: winding the device clock back re-grants nothing (login, free chest, energy); the next real day does',
+    s.back.day && !s.back.login && !s.back.chest && s.back.energy === 5 && s.back.now && s.next.login && s.next.day, JSON.stringify({ b: s.back, n: s.next }));
+  check('clock: an offline wind-forward, then server time: the day holds and nothing is claimable twice',
+    s.correction.synced && s.correction.now && s.correction.day && !s.correction.login, JSON.stringify(s.correction));
+  check('clock: the latest day survives a reload; a failed resume sync falls back to the floored device clock',
+    s.reload.day && s.reload.floor && !s.resume.synced && s.resume.floored, JSON.stringify({ r: s.reload, res: s.resume }));
+});
+check('clock: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

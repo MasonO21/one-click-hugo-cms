@@ -3,6 +3,7 @@ import { fmt, fmtTime, rewardPopup } from '../dom.js';
 import { icon, RELIC_ICON } from '../icons.js';
 import { HEROES, RARITY_COLOR, RARITY_LABEL, RELICS, SKINS, ENERGY_MAX, ENERGY_REGEN_SEC } from '../../game/data.js';
 import { energyNextIn } from '../../meta/economy.js';
+import { now as clockNow } from '../../meta/clock.js';
 import { HERO_ART } from '../art.js';
 
 export const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
@@ -10,7 +11,7 @@ export const clamp01 = (x) => Math.max(0, Math.min(1, x));
 export const pct = (a, b) => (b > 0 ? Math.round(clamp01(a / b) * 1000) / 10 : 100);
 
 /** Epoch ms of the next local midnight (daily resets use local dates, see save.todayKey). */
-export function nextMidnight(t = Date.now()) {
+export function nextMidnight(t = clockNow()) {
   const d = new Date(t);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
 }
@@ -30,7 +31,7 @@ export function fmtLeft(sec) {
  * The shared 1 s ticker in index.js updates every [data-cd] node inside #ui.
  */
 export function cd(target, initialSec, cls = '') {
-  const sec = typeof target === 'number' ? (target - Date.now()) / 1000 : initialSec || 0;
+  const sec = typeof target === 'number' ? (target - clockNow()) / 1000 : initialSec || 0;
   return `<span class="cd ${cls}" data-cd="${target}">${fmtLeft(sec)}</span>`;
 }
 

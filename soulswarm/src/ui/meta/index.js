@@ -5,6 +5,7 @@ import { h, $, $$, fmt, modal } from '../dom.js';
 import { icon } from '../icons.js';
 import { ENERGY_MAX } from '../../game/data.js';
 import { todayKey } from '../../meta/save.js';
+import { now as clockNow } from '../../meta/clock.js';
 import {
   onChange, commit, upkeep, notifications, energyNextIn, accountXpFor, starterAvailable, pactActive,
 } from '../../meta/economy.js';
@@ -132,7 +133,7 @@ export function createMeta(app) {
   let lastDay = todayKey();
   setInterval(() => {
     if (el.hidden) return;
-    const p = app.profile; const now = Date.now();
+    const p = app.profile; const now = clockNow();
     let expired = false;
     for (const n of document.querySelectorAll('#ui [data-cd]')) {
       const k = n.dataset.cd;

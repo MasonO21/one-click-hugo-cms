@@ -426,6 +426,18 @@ export const GEM_SHOP = {
   energy:    { label: 'Refill Energy',   cost: 50,   rewards: { energy: 30 } },
 };
 
+// ---------------------------------------------------------------- Trusted clock (meta/clock.js)
+// Daily resets, energy and timers run on server time when online. server: the game's own endpoint once the backend
+// exists (JSON { now } in ms, or any response with a Date header); until then two public sources that allow
+// cross-origin reads: Cloudflare's trace (ts=…) and timeapi.io (UTC dateTime).
+export const CLOCK = {
+  server: '',
+  sources: ['https://www.cloudflare.com/cdn-cgi/trace', 'https://timeapi.io/api/Time/current/zone?timeZone=UTC'],
+  timeoutMs: 6000, maxRtt: 15000, // a slower answer is too uncertain to trust
+  resyncMin: 10,                   // while the app stays open (it also re-syncs on every resume)
+  min: Date.UTC(2025, 0, 1), max: Date.UTC(2100, 0, 1), // sanity bounds on a server's answer
+};
+
 // ---------------------------------------------------------------- Soul Altar (gacha)
 export const ALTAR = {
   odds: { common: 0.60, rare: 0.28, epic: 0.10, legendary: 0.02 },

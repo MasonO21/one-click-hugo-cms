@@ -9,6 +9,7 @@ import {
   freeChestAvailable, claimFreeChest, canPlay, trialState, bloodMoon, bloodMoonTimes,
 } from '../../meta/economy.js';
 import { hex, cd, nextMidnight, popRewards, tap, delegate } from './util.js';
+import { now as clockNow } from '../../meta/clock.js';
 import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
 
 export function createHome(ctx) {
@@ -137,7 +138,7 @@ export function createHome(ctx) {
         }
       } finally { busy = false; }
     },
-    chestDone: () => { tap(app); toast(`Next free chest in ${fmtTime((nextMidnight() - Date.now()) / 1000)}`); },
+    chestDone: () => { tap(app); toast(`Next free chest in ${fmtTime((nextMidnight() - clockNow()) / 1000)}`); },
     diff: (b) => {
       const p = app.profile, sel = p.chapter.selected || 1, id = b.dataset.d, i = DIFFICULTY_ORDER.indexOf(id);
       if (!difficultyUnlocked(p, sel, id)) { tap(app, 'warning', null); toast(`Clear ${CHAPTERS[sel - 1].name} on ${DIFFICULTY[DIFFICULTY_ORDER[i - 1]].name} to unlock ${DIFFICULTY[id].name}`); return; }

@@ -7,6 +7,7 @@ import {
   QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS, BLOOD_MOON, WEEKLY_CHEST,
 } from '../game/data.js';
 import { saveProfile, todayKey } from './save.js';
+import { now, today, dayTime } from './clock.js';
 import { resultDifficulty, clearedOn, recordDifficulty, rollHoard } from './difficulty.js';
 
 // ---------------------------------------------------------------- change notification
@@ -17,7 +18,6 @@ export function commit(p) {
   for (const fn of listeners) { try { fn(p); } catch (e) { console.error(e); } }
 }
 
-const now = () => Date.now();
 const rand = Math.random;
 const pick = (arr) => arr[Math.floor(rand() * arr.length)];
 
@@ -256,22 +256,22 @@ export function claimQuest(p, id) {
 }
 
 // ---------------------------------------------------------------- weekly chest
-const weekKey = (t = Date.now()) => { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return todayKey(d.getTime()); };
+const weekKey = (t = dayTime(today())) => { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return todayKey(d.getTime()); };
 function weekly(p) { const k = weekKey(); if (!p.weekly || p.weekly.week !== k) p.weekly = { week: k, done: 0, claimed: false }; return p.weekly; }
 export function weeklyState(p) { const w = weekly(p); return { done: Math.min(w.done, WEEKLY_CHEST.goal), goal: WEEKLY_CHEST.goal, claimed: w.claimed, ready: !w.claimed && w.done >= WEEKLY_CHEST.goal, rewards: WEEKLY_CHEST.rewards }; }
 export function claimWeekly(p) { const w = weekly(p); if (w.claimed || w.done < WEEKLY_CHEST.goal) return null; w.claimed = true; return grant(p, WEEKLY_CHEST.rewards); }
 /** Next Monday 00:00 local time (the weekly chest resets then). */
-export function nextWeek(t = Date.now()) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + (8 - d.getDay()) % 7 || 7); return d.getTime(); }
+export function nextWeek(t = now()) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + (8 - d.getDay()) % 7 || 7); return d.getTime(); }
 
 // ---------------------------------------------------------------- Blood Moon (weekends, UTC)
 /** profile.flags.bloodMoon = 'on' | 'off' overrides the calendar (QA). */
-export function bloodMoon(p, t = Date.now()) {
+export function bloodMoon(p, t = now()) {
   const o = p.flags && p.flags.bloodMoon;
   if (o === 'on' || o === 'off') return o === 'on';
   return BLOOD_MOON.days.includes(new Date(t).getUTCDay());
 }
 /** When the current Blood Moon ends (next Monday 00:00 UTC), or when the next one rises (Friday 00:00 UTC). */
-export function bloodMoonTimes(t = Date.now()) {
+export function bloodMoonTimes(t = now()) {
   const d = new Date(t), day = d.getUTCDay(), base = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
   return { ends: base + ((8 - day) % 7 || 7) * 864e5, starts: base + ((5 - day + 7) % 7 || 7) * 864e5 };
 }

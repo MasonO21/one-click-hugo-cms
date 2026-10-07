@@ -122,6 +122,7 @@
 
 **Anti-cheat:**
 
+0. **Trusted time (in the build):** daily resets, energy and timers run on server time with a forward-only reset day (`src/meta/clock.js`, GDD §2). Until the backend exists it reads public time servers; set `CLOCK.server` to the backend's time endpoint. Offline, energy can still be gained by winding the clock forward (once per wind, never re-granted); server authority (1) closes that.
 1. **Server authority:** every currency grant happens on the server. The client only sends intents and run summaries.
 2. **Run tickets:** the server issues a run ID, a seed and a start time, and charges 5 energy. A result is accepted once per ticket, and only if wall-clock time ≥ game time.
 3. **Plausibility checks:** kills ≤ the maximum possible spawns for that chapter and duration (from GDD §8 formulas), level ≤ the XP possible, gold recomputed on the server from the run summary, damage and legion within the ceilings.

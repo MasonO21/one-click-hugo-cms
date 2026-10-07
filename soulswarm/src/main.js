@@ -8,12 +8,13 @@ import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
 import { haptic, setHapticsEnabled, isNative } from './engine/platform.js';
 import { App as NativeApp } from '@capacitor/app';
 import { handleBack } from './ui/back.js';
+import { sync as syncClock } from './meta/clock.js';
 import { Engine } from './engine/engine.js';
 import { Showcase } from './game/showcase.js';
 import { Run } from './game/run.js';
 import { RunUI } from './ui/runui.js';
 import { createMeta } from './ui/meta/index.js';
-import { CHAPTERS } from './game/data.js';
+import { CHAPTERS, CLOCK } from './game/data.js';
 import { toast } from './ui/dom.js';
 
 const profile = loadProfile();
@@ -141,8 +142,13 @@ function boot() {
 
   // Periodic upkeep (energy regen, daily resets).
   setInterval(() => { upkeep(profile); if (!app.run) commit(profile); }, 15000);
+  // Server time for daily resets and timers (meta/clock.js): at boot, on every resume and every few minutes
+  const timeSync = (resume) => syncClock({ resume }).then((ok) => { if (ok) { upkeep(profile); commit(profile); if (!app.run) app.meta.refresh(); } });
+  timeSync(false);
+  setInterval(() => timeSync(false), CLOCK.resyncMin * 60000);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { saveProfile(profile, true); if (app.run) app.run.pause(true); }
+    else timeSync(true);
   });
   // Android back: close, pause or step back a layer; at the home screen it sends the app to the background (state kept)
   if (isNative) NativeApp.addListener('backButton', () => { if (handleBack(app) === 'exit') NativeApp.minimizeApp(); });

@@ -3,11 +3,12 @@ import { h, $, purchaseFlow } from '../dom.js';
 import { icon } from '../icons.js';
 import { PASS_SEASON, PASS_TIERS, HEROES, SKINS } from '../../game/data.js';
 import { commit, passState, claimPass } from '../../meta/economy.js';
+import { now as clockNow } from '../../meta/clock.js';
 import { cd, bundleItems, rewardChip, popRewards, bar, tap, delegate, keepScroll, portrait } from './util.js';
 
 const DAY = 864e5;
 /** Season = 28 days counted from profile creation, repeating. */
-export function seasonEnd(p, now = Date.now()) {
+export function seasonEnd(p, now = clockNow()) {
   const len = PASS_SEASON.days * DAY;
   const start = p.createdAt || now;
   return start + (Math.floor(Math.max(0, now - start) / len) + 1) * len;
