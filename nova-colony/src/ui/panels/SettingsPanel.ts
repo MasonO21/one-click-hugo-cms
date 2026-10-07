@@ -148,7 +148,6 @@ export class SettingsPanel extends Panel {
           cls: 'ghost small grow',
           onClick: async () => {
             await g.sys.liveops.restorePurchases();
-            this.ctx.toast('Purchases restored!', 'success', '✅');
           },
         }),
       ),

@@ -840,7 +840,8 @@ export class LiveOpsSystem extends System {
     this.crateWasReady = this.freeCrateReady();
     g.grant(reward, 'crate');
     g.bus.emit('sfx', { id: 'crate_open' });
-    g.toast(`🎁 Crate opened: ${describeReward(reward, g.data)}`, 'reward');
+    // short: the UI shows the full contents on a reward card (a 16-resource list does not fit a toast)
+    g.toast('🎁 Supply crate opened!', 'reward');
     return reward;
   }
 

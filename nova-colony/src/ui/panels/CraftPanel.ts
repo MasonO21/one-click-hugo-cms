@@ -10,7 +10,7 @@ import { bagCovers } from '../../core/bag';
 import { fmt } from '../../core/format';
 import { fmtHMS } from '../logic/time';
 import { CRAFT_CATEGORIES, metaOf } from '../logic/categories';
-import { adButton, btn, costChips, emptyState, section, tabs } from '../widgets';
+import { adButton, btn, emptyState, recipeChips, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
 
 export class CraftPanel extends Panel {
@@ -47,7 +47,7 @@ export class CraftPanel extends Panel {
     const g = this.game;
     const cr = g.sys.crafting;
     const recipes = cr.recipes(this.station);
-    const mask = recipes.map((r) => (bagCovers(g.state.resources.amounts, r.inputs) ? 1 : 0)).join('');
+    const mask = recipes.map((r) => (g.sys.crafting.canCraft(r.id).ok ? 1 : bagCovers(g.state.resources.amounts, r.inputs) ? 2 : 0)).join('');
     const q = g.state.crafting.queue.map((j) => j.id).join('.');
     return `${this.station}|${this.cat}|${recipes.length}|${mask}|${q}|${cr.stations().join(',')}|${g.state.liveops.nova >= 1 ? 1 : 0}`;
   }
@@ -141,7 +141,7 @@ export class CraftPanel extends Panel {
       'div',
       { class: 'row recipe', data: { recipe: r.id } },
       h('span', { class: 'bi', text: out.icon }),
-      h('div', { class: 'grow' }, h('div', { class: 'h3', text: r.name }), h('div', { class: 'mute small', text: `${out.text}${owned ? ` · you have ${owned}` : ''} · ⏱ ${fmtHMS(r.time)}` }), costChips(this.data, r.inputs, g.state.resources.amounts)),
+      h('div', { class: 'grow' }, h('div', { class: 'h3', text: r.name }), h('div', { class: 'mute small', text: `${out.text}${owned ? ` · you have ${owned}` : ''} · ⏱ ${fmtHMS(r.time)}` }), recipeChips(this.data, r.inputs, r.itemInputs, g.state.resources.amounts, g.state.player.items)),
       btn({
         label: 'Craft',
         cls: 'good small',

@@ -5,7 +5,8 @@
 .nv-toasts {
   position: absolute;
   z-index: 8;
-  top: calc(var(--mt) + 7.4em);
+  /* below the attack banner / hint bubble column (its height is published as --banner-h) */
+  top: max(calc(var(--mt) + 7.4em), calc(var(--mt) + 4.4em + var(--status-h, 2.4em) + var(--banner-h, 0px)));
   left: 50%;
   transform: translateX(-50%);
   width: min(26em, calc(100vw - 2 * var(--ml) - 8em));

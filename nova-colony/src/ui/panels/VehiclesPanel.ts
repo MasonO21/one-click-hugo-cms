@@ -3,8 +3,7 @@
  */
 import { Panel, type PanelTitle } from './Panel';
 import type { VehicleDef } from '../../data/schema';
-import { bagCovers } from '../../core/bag';
-import { btn, costChips, emptyState } from '../widgets';
+import { btn, emptyState, recipeChips } from '../widgets';
 import { fill, h } from '../dom';
 
 export class VehiclesPanel extends Panel {
@@ -16,11 +15,21 @@ export class VehiclesPanel extends Panel {
 
   override signature(): string {
     const p = this.st.player;
-    return `${p.vehicles.join(',')}|${p.vehicle}|${this.st.colony.tier}|${this.st.research.completed.length}`;
+    const cr = this.game.sys.crafting;
+    const craftable = this.data.vehicles.map((v) => {
+      const r = this.recipeFor(v);
+      return r ? `${cr.canCraft(r.id).ok ? 1 : 0}${this.queued(r.id) ? 'q' : ''}` : '-';
+    });
+    return `${p.vehicles.join(',')}|${p.vehicle}|${this.st.colony.tier}|${this.st.research.completed.length}|${craftable.join('')}`;
   }
 
   private recipeFor(v: VehicleDef) {
     return this.data.recipes.find((r) => r.outputs.vehicle === v.id);
+  }
+
+  /** A craft job for this recipe is already running (a second one would only waste materials). */
+  private queued(recipeId: string): boolean {
+    return this.st.crafting.queue.some((j) => j.recipe === recipeId);
   }
 
   render(): void {
@@ -76,12 +85,14 @@ export class VehiclesPanel extends Panel {
         card.appendChild(h('div', { class: 'lock', text: '🔒 ' + why }));
       } else {
         const cost = recipe?.inputs ?? v.cost;
-        card.appendChild(costChips(this.data, cost, g.state.resources.amounts));
+        card.appendChild(recipeChips(this.data, cost, recipe?.itemInputs, g.state.resources.amounts, g.state.player.items));
+        const busy = !!recipe && this.queued(recipe.id);
+        const chk = recipe ? g.sys.crafting.canCraft(recipe.id) : null;
         card.appendChild(
           btn({
-            label: recipe ? 'Craft' : 'Build in a garage',
+            label: !recipe ? 'Build in a garage' : busy ? '🔧 Being built…' : 'Craft',
             cls: 'info block',
-            disabled: !recipe ? 'Build a Garage to craft vehicles' : bagCovers(g.state.resources.amounts, cost) ? false : 'Not enough resources yet',
+            disabled: !recipe ? 'Build a Garage to craft vehicles' : busy ? 'Already being built — check the Craft menu' : chk?.ok ? false : chk?.reason ?? 'Not enough resources yet',
             onClick: () => {
               if (recipe) {
                 const id = g.sys.crafting.craft(recipe.id);

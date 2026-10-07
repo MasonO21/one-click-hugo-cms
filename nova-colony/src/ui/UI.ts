@@ -83,6 +83,7 @@ export class UI {
   private lastAdFail = -1e9;
   private lastInsufficient = -1e9;
   private welcomeShown = false;
+  private deferredToasts: { text: string; kind: ToastKind; icon?: string; at: number }[] = [];
 
   constructor(
     private readonly game: Game,
@@ -262,7 +263,30 @@ export class UI {
     this.panels.open(panel, arg);
   }
 
+  /**
+   * Toasts from the simulation wait while a modal (celebration, reward, victory…) is up so they never
+   * cover it; they follow once it closes. Warnings and errors always show at once.
+   */
+  private simToast(text: string, kind: ToastKind, icon?: string): void {
+    if ((kind === 'info' || kind === 'success' || kind === 'reward') && this.panels?.anyModal()) {
+      this.deferredToasts = this.deferredToasts.filter((d) => d.text !== text);
+      this.deferredToasts.push({ text, kind, icon, at: performance.now() });
+      if (this.deferredToasts.length > 6) this.deferredToasts.shift();
+      return;
+    }
+    this.toasts.show(text, kind, icon);
+  }
+
+  private flushToasts(): void {
+    if (!this.deferredToasts.length || this.panels.anyModal()) return;
+    const now = performance.now();
+    const list = this.deferredToasts.filter((d) => now - d.at < 12000).slice(-3);
+    this.deferredToasts = [];
+    list.forEach((d, i) => window.setTimeout(() => this.simToast(d.text, d.kind, d.icon), 300 + i * 200));
+  }
+
   private onPanelsChanged(): void {
+    this.flushToasts();
     const covering = this.panels.anyCovering();
     this.game.view.panelOpen = covering;
     this.root.dataset.panelOpen = covering ? '1' : '0';
@@ -281,12 +305,13 @@ export class UI {
   private subscribe(): void {
     const bus = this.game.bus;
     const g = this.game;
-    bus.on('ui:toast', (e) => this.toasts.show(e.text, e.kind, e.icon));
+    bus.on('ui:toast', (e) => this.simToast(e.text, e.kind ?? 'info', e.icon));
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     bus.on('ui:open', (e) => this.open(e.panel, e.arg));
     bus.on('ui:celebrate', (e) => {
       const now = performance.now();
       if (now - this.lastTierCelebrate < 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
+      if (e.title === 'Thank you!' && this.panels.isOpen('shop')) return; // the shop shows its own "what you got" reward
       this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon } satisfies CelebrateArg);
     });
     bus.on('colony:tierUp', (e) => {
@@ -335,6 +360,10 @@ export class UI {
       if (performance.now() - this.lastClick.t < 900) this.fly.add('nova', '💎', e.delta, this.lastClick.x, this.lastClick.y);
       else this.hud.popNova();
     });
+    // every supply crate (free, ad, inventory) opens the same "what you got" reward card
+    bus.on('reward:granted', (e) => {
+      if (e.source === 'crate') this.open('reward', { title: 'Supply crate!', reward: e.reward, icon: '📦' });
+    });
     bus.on('reward:granted', (e) => {
       // resources/nova granted from a button press fly out of that button (resource:gained covers resources)
       if (e.reward.rp && performance.now() - this.lastClick.t < 900) this.fly.add('rp', '🔬', e.reward.rp, this.lastClick.x, this.lastClick.y);
@@ -355,9 +384,11 @@ export class UI {
       this.lastAdFail = performance.now();
       this.toasts.show('No video available right now — please try again soon!', 'info', '📺');
     });
-    bus.on('iap:purchased', () => this.toasts.show('Thank you for your support! 💜', 'reward', '🎉'));
-    bus.on('iap:failed', (e) => this.toasts.show(e.reason && e.reason !== 'cancelled' ? `Purchase didn't go through: ${e.reason}` : 'Purchase cancelled — no worries!', 'info', '🛍️'));
-    bus.on('season:levelUp', (e) => this.toasts.show(`Season pass level ${e.level}!`, 'reward', '🏆'));
+    // a purchase is thanked by the sim's celebration; real failures are explained by the sim's own toast
+    bus.on('iap:failed', (e) => {
+      if (e.reason === 'cancelled') this.toasts.show('Purchase cancelled — no worries!', 'info', '🛍️');
+      else if (e.reason === 'unknown_product') this.toasts.show("That item isn't available right now", 'info', '🛍️');
+    });
     bus.on('building:changed', () => this.refreshBadges());
   }
 
