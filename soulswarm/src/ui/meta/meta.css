@@ -409,6 +409,11 @@
   background: radial-gradient(circle, rgba(239,156,255,calc(var(--g) * 1.2)), transparent 70%); }
 .pile-gem { position: absolute; line-height: 0; transform: translate(-50%, -50%); filter: drop-shadow(0 0 6px rgba(211,107,255,.8)) drop-shadow(0 3px 2px rgba(0,0,0,.5)); animation: m-gemFloat 3.2s ease-in-out infinite; }
 .pile-gem svg { width: 1em; height: 1em; }
+.pile.is-painted { display: grid; place-items: center; }
+.gem-art { position: relative; width: 124px; height: 124px; margin: -14px 0; object-fit: contain; animation: m-gemBob 3.2s ease-in-out infinite;
+  -webkit-mask: radial-gradient(circle, #000 50%, transparent 70%); mask: radial-gradient(circle, #000 50%, transparent 70%); }
+.pile.is-painted .spark { z-index: 1; }
+@keyframes m-gemBob { 50% { transform: translateY(-3px); } }
 @keyframes m-gemFloat { 50% { transform: translate(-50%, calc(-50% - 3px)); } }
 .spark { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #fff, 0 0 12px #e48bff; opacity: 0; animation: m-twinkle 2.2s ease-in-out infinite; }
 @keyframes m-twinkle { 0%, 100% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1.2); } }

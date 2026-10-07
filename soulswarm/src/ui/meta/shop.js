@@ -1,6 +1,7 @@
 // Shop tab: starter pack, Soul Pact, daily gem deals and the six gem tiers.
 import { h, $, fmt, toast, purchaseFlow, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
+import { GEM_ART } from '../art.js';
 import { SKUS, GEM_SKUS, GEM_SHOP, HEROES } from '../../game/data.js';
 import {
   commit, starterAvailable, pactActive, pactDailyAvailable, firstPurchaseBonus, freeChestAvailable, claimFreeChest,
@@ -22,6 +23,7 @@ const DAILY_ICON = { sigil_1: ['sigils', 1], sigil_10: ['sigils', 3], gold_s: ['
 function gemPile(tier) {
   const pile = PILES[tier];
   const sparks = tier >= 3 ? Array.from({ length: tier }, (_, i) => `<i class="spark" style="left:${12 + ((i * 37) % 76)}%;top:${10 + ((i * 53) % 70)}%;animation-delay:${(i * 0.37).toFixed(2)}s"></i>`).join('') : '';
+  if (GEM_ART[tier]) return `<div class="pile t${tier + 1} is-painted"><img class="gem-art" src="${GEM_ART[tier]}" alt="" draggable="false">${sparks}</div>`;
   return `<div class="pile t${tier + 1}">${pile.map(([x, y, s], i) => `<span class="pile-gem" style="left:${x}%;top:${y}%;font-size:${s}em;z-index:${Math.round(y)};animation-delay:${i * 0.15}s">${icon('gems')}</span>`).join('')}${sparks}</div>`;
 }
 function stackIcon(name, n) {

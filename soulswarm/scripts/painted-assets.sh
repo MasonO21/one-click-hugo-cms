@@ -22,6 +22,9 @@ done
 for f in "$A"/skill-*.jpg; do # ability icons (level-up cards, results, hero detail)
   convert "$f" -resize 256x256 -quality 82 -define webp:method=6 "$W/$(basename "$f" .jpg).webp"
 done
+for i in 1 2 3 4 5 6; do # gem packs, smallest to largest (shop)
+  convert "$A/gems-$i.jpg" -resize 288x288 -quality 82 -define webp:method=6 "$W/gems-$i.webp"
+done
 convert "$A/skin-eclipse-vael.jpg" -resize 540x720 -quality 80 -define webp:method=6 "$W/skin-eclipse-vael.webp" # Soul Pass skin
 convert "$A/boss-gravemaw.jpg" -crop 1792x1000+0+60 +repage -resize 900x -quality 78 -define webp:method=6 "$W/boss-band.webp"
 convert "$A/logo-transparent.png" -resize 900x -quality 86 -define webp:method=6 -define webp:alpha-quality=90 "$W/logo.webp"

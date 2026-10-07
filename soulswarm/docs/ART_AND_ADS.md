@@ -43,6 +43,12 @@ Generated with Higgsfield on 2026-10-06. The full-resolution masters are in `sto
 | `skill-chainsOfPerdition.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Chains of Perdition (evolution) ability icon: level-up cards, results | `cff6d7bc-d41d-478b-ba18-1cd6f50ddd70` |
 | `skill-ossuaryBarrage.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Ossuary Barrage (evolution) ability icon: level-up cards, results | `04f7b31c-5d39-498d-bf97-23d6bcdcd103` |
 | `skill-requiem.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Requiem (evolution) ability icon: level-up cards, results | `b6e7e36a-d31c-418c-a1c0-55f4f1e6d564` |
+| `gems-1.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 80 gems: a cluster of three | `9e4256ce-2325-4df4-8093-807517dd2d19` |
+| `gems-2.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 500: a spilling pouch | `f997adfc-c818-4cc4-8835-3fa6e9943d96` |
+| `gems-3.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 1,200: a heap | `ee324ad4-462e-413e-a626-d14d187f0624` |
+| `gems-4.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 2,600: an overflowing chalice | `5163d878-1a48-42c0-863a-8830d30c95cb` |
+| `gems-5.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 7,000: a treasure chest | `fbd605a9-80bb-48d6-85bc-6ac4a9c0e3fb` |
+| `gems-6.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 15,000: a reliquary hoard | `91561947-00f1-45f5-bb27-6ef7d1215aa5` |
 | `boss-gravemaw.jpg` | 1792×2400 | Nano Banana Pro | "The Hollow King approaches" boss warning, boss reveal ad clip | `6899f0c9-8b53-4ca4-b052-df4279d237bb` |
 | `logo-transparent.png` | 2048×1360, alpha | GPT Image 2.5 | Boot screen, settings credits, ad end cards, store listing | `3cf6edf7-20d5-4d80-ac09-fd57074e79a9` |
 

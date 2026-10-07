@@ -37,3 +37,6 @@ for (const [path, url] of Object.entries(import.meta.glob('../assets/art/skill-*
 }
 /** A skill's painted icon, or the line icon `fallback` (heal / gold bonuses, blessings). */
 export const skillArt = (id, fallback) => (SKILL_ART[id] ? `<img class="skill-art" src="${SKILL_ART[id]}" alt="" draggable="false">` : icon(fallback));
+
+/** Painted gem packs, smallest to largest (the six GEM_SKUS tiers). */
+export const GEM_ART = Object.values(import.meta.glob('../assets/art/gems-*.webp', { eager: true, import: 'default' }));
