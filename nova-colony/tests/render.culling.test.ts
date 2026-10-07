@@ -1,20 +1,22 @@
 /**
- * Renderer culling / batching regressions: chunk bucketing, LOD radii, Batch cull + fade options and
- * the Nature actor drawing only what the camera frustum sees (no WebGL needed: three.js objects only).
+ * Renderer culling / batching regressions: chunk bucketing, LOD radii and the pop-free LOD band,
+ * Batch cull / fade / shadow-depth options, dithered shadows for fading buildings and roofs, and the
+ * Nature actor drawing only what the camera frustum sees (no WebGL needed: three.js objects only).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Game } from '../src/core/Game';
 import { createMockServices } from '../src/platform/mock';
 import { Batch } from '../src/render/core/Batch';
-import { Materials } from '../src/render/core/materials';
+import { Materials, SHADOW_FADE_GAIN } from '../src/render/core/materials';
 import type { Env, RenderContext } from '../src/render/core/context';
 import { sightTargets } from '../src/render/core/context';
-import { Nature, chunkOf, lodRadii, CHUNKS_PER_SIDE, CHUNK_CELLS } from '../src/render/actors/Nature';
+import { Nature, chunkOf, lodRadii, lodClass, lodWindows, lodShrink, LOD_BAND, LOD_MARGIN, LOD_HYST, LOD_NEAR, LOD_BAND_CLASS, LOD_FAR, CHUNKS_PER_SIDE, CHUNK_CELLS } from '../src/render/actors/Nature';
+import { Buildings } from '../src/render/actors/Buildings';
 import { Pois } from '../src/render/actors/Pois';
 import { ViewCull } from '../src/render/core/cull';
 import { nodeGeometry, nodeGeometryFar, NODE_FAR_MODELS } from '../src/render/models/nature';
-import { HALF_WORLD, WORLD_CELLS } from '../src/core/constants';
+import { HALF_WORLD, WORLD_CELLS, CENTER_CELL } from '../src/core/constants';
 
 function makeCtx(game: Game): RenderContext {
   const scene = new THREE.Scene();
@@ -233,6 +235,276 @@ describe('render culling', () => {
     expect(gen.pois.length).toBeGreaterThan(20);
     expect(drawn).toBeLessThan(gen.pois.length);
     pois.dispose();
+  });
+
+  it('LOD classes: near-only inside the band margin, both LODs across it, far-only beyond, band membership sticky', () => {
+    const near = 90;
+    const inner = near - LOD_BAND - LOD_MARGIN;
+    const outer = near + LOD_MARGIN;
+    expect(lodClass(inner - 1, near, LOD_NEAR)).toBe(LOD_NEAR);
+    expect(lodClass(inner + 0.5, near, LOD_NEAR)).toBe(LOD_BAND_CLASS);
+    expect(lodClass(near, near, LOD_NEAR)).toBe(LOD_BAND_CLASS);
+    expect(lodClass(outer, near, LOD_FAR)).toBe(LOD_BAND_CLASS);
+    expect(lodClass(outer + 0.5, near, LOD_NEAR)).toBe(LOD_FAR);
+    expect(lodClass(outer + 0.5, near, LOD_FAR)).toBe(LOD_FAR);
+    // hysteresis: a band node stays a band node until it is LOD_HYST past either boundary
+    expect(lodClass(inner - LOD_HYST / 2, near, LOD_BAND_CLASS)).toBe(LOD_BAND_CLASS);
+    expect(lodClass(inner - LOD_HYST - 0.01, near, LOD_BAND_CLASS)).toBe(LOD_NEAR);
+    expect(lodClass(outer + LOD_HYST / 2, near, LOD_BAND_CLASS)).toBe(LOD_BAND_CLASS);
+    expect(lodClass(outer + LOD_HYST + 0.01, near, LOD_BAND_CLASS)).toBe(LOD_FAR);
+    // camera jitter of +-1 unit around a boundary never churns a band node
+    for (const edge of [inner, outer]) {
+      let cls = lodClass(edge === inner ? edge + 0.5 : edge - 0.5, near, LOD_NEAR);
+      expect(cls).toBe(LOD_BAND_CLASS);
+      for (let i = 0; i < 60; i++) {
+        cls = lodClass(edge + Math.sin(i * 0.7), near, cls);
+        expect(cls).toBe(LOD_BAND_CLASS);
+      }
+    }
+    // the pure classes are only used where the live shader window is guaranteed fully open / closed:
+    // a near-only node never has far geometry showing before the next rebuild (drift <= LOD_MARGIN)
+    for (let d = 0; d <= inner; d += 0.25) {
+      expect(lodClass(d, near, LOD_NEAR)).toBe(LOD_NEAR);
+      expect(lodWindows(d + LOD_MARGIN, near, 140).near).toEqual([0, 1]);
+    }
+    for (let d = outer + 0.01; d < 140; d += 0.25) {
+      expect(lodClass(d, near, LOD_NEAR)).toBe(LOD_FAR);
+      expect(lodWindows(d - LOD_MARGIN, near, 140).far[1]).toBe(1);
+    }
+  });
+
+  it('LOD windows: near and far geometry cover every pixel exactly once across the band; far-only geometry and props shrink away at their cutoffs', () => {
+    const near = 90;
+    const mid = 140;
+    const bayer = Array.from({ length: 16 }, (_, i) => (i + 0.5) / 16);
+    const survives = ([lo, hi]: [number, number], b: number) => b >= lo && b < hi;
+    const shadow = ([lo, hi]: [number, number]): [number, number] => [Math.min(1, lo * SHADOW_FADE_GAIN), Math.min(1, hi * SHADOW_FADE_GAIN)];
+    let crossfadeSteps = 0;
+    let prevFar = 1;
+    let prevProp = 1;
+    for (let d = 0; d <= mid + 10; d += 0.25) {
+      const w = lodWindows(d, near, mid);
+      let nearPx = 0;
+      for (const b of bayer) {
+        const n = survives(w.near, b);
+        const f = survives(w.far, b);
+        expect(n !== f, `d=${d} b=${b}: exactly one LOD covers the pixel`).toBe(true);
+        if (d >= near) expect(n, `near geometry never shows past the near radius (d=${d})`).toBe(false);
+        // the shadow pass keeps the complement too (the same gain on both edges)
+        expect(survives(shadow(w.near), b) !== survives(shadow(w.far), b)).toBe(true);
+        if (n) nearPx++;
+      }
+      if (nearPx > 0 && nearPx < 16) crossfadeSteps++;
+      // discard-free shrink: full size until the band, monotonically down to exactly 0 at the cutoff
+      expect(w.farScale).toBeLessThanOrEqual(prevFar);
+      expect(w.propScale).toBeLessThanOrEqual(prevProp);
+      if (d <= mid - LOD_BAND) expect(w.farScale).toBe(1);
+      if (d >= mid) expect(w.farScale).toBe(0);
+      if (d <= near - LOD_BAND) expect(w.propScale).toBe(1);
+      if (d >= near) expect(w.propScale).toBe(0);
+      prevFar = w.farScale;
+      prevProp = w.propScale;
+    }
+    expect(crossfadeSteps).toBeGreaterThan(20); // a real band, not a switch
+    expect(lodWindows(near - LOD_BAND, near, mid).near).toEqual([0, 1]);
+    expect(lodWindows(near - LOD_BAND / 2, near, mid).near[0]).toBeCloseTo(0.5);
+    expect(lodWindows(near, near, mid).far).toEqual([0, 1]);
+    expect(lodWindows(mid - LOD_BAND / 2, near, mid).farScale).toBeCloseTo(0.5);
+    expect(lodShrink(0.25)).toBeGreaterThan(0.75); // eased: slow start, no kink entering the band
+    // building fades: the shadow is fully gone before the surface reaches its faint ghost stipple
+    expect(shadow([0.85, 1])[0]).toBe(1);
+    expect(shadow([0.4, 1])[0]).toBeCloseTo(0.5);
+  });
+
+  it('materials: only dither variants carry a discard, shrink variants scale the vertex toward the origin (lit and depth twins alike)', () => {
+    const mats = new Materials();
+    const compile = (m: THREE.Material) => {
+      const shader = { uniforms: {} as Record<string, THREE.IUniform>, vertexShader: '#include <common>\n#include <begin_vertex>\n#include <project_vertex>', fragmentShader: '#include <common>\n#include <clipping_planes_fragment>\n#include <opaque_fragment>' };
+      (m.onBeforeCompile as (s: typeof shader) => void)(shader);
+      return shader;
+    };
+    for (const m of [mats.lit, mats.lodShrinkMid, mats.lodShrinkNear, mats.lodShrinkMidDepth, mats.lodShrinkNearDepth]) {
+      expect(compile(m).fragmentShader, m.customProgramCacheKey()).not.toContain('discard');
+    }
+    for (const m of [mats.litFade, mats.lodNear, mats.lodFar, mats.litFadeDepth, mats.lodNearDepth, mats.lodFarDepth]) {
+      expect(compile(m).fragmentShader, m.customProgramCacheKey()).toContain('discard');
+    }
+    for (const m of [mats.lodShrinkMid, mats.lodShrinkMidDepth]) {
+      const s = compile(m);
+      expect(s.vertexShader).toContain('transformed *=');
+      expect(s.vertexShader).toContain('uLod.z'); // mid band
+      expect(s.uniforms.uLod).toBeDefined();
+    }
+    expect(compile(mats.lodShrinkNear).vertexShader).toContain('uLod.x'); // near band
+    expect(compile(mats.lodFar).vertexShader).toContain('vFade = vec2(0.0,'); // complement of lodNear
+    expect(compile(mats.lit).vertexShader).not.toContain('transformed *=');
+    mats.dispose();
+  });
+
+  it('materials: every dither variant has a shadow-depth twin with its own program cache key', () => {
+    const mats = new Materials();
+    const keys = new Set<string>();
+    const all = [mats.lit, mats.litFade, mats.lodNear, mats.lodFar, mats.lodShrinkMid, mats.lodShrinkNear, mats.litFadeDepth, mats.lodNearDepth, mats.lodFarDepth, mats.lodShrinkMidDepth, mats.lodShrinkNearDepth];
+    for (const m of all) keys.add(m.customProgramCacheKey());
+    expect(keys.size).toBe(all.length);
+    expect(mats.litFadeDepth).toBeInstanceOf(THREE.MeshDepthMaterial);
+    expect(mats.lodNearDepth).toBeInstanceOf(THREE.MeshDepthMaterial);
+    const fade = { value: 0 };
+    const roofDepth = mats.makeRoofDepth(fade);
+    expect(roofDepth).toBeInstanceOf(THREE.MeshDepthMaterial);
+    // disposing a per-room material forgets it (no growth across roof rebuilds)
+    const before = (mats as unknown as { all: THREE.Material[] }).all.length;
+    roofDepth.dispose();
+    expect((mats as unknown as { all: THREE.Material[] }).all.length).toBe(before - 1);
+    mats.dispose();
+  });
+
+  it('Batch attaches the shadow-depth material to shadow-casting batches only and keeps it across growth', () => {
+    const parent = new THREE.Group();
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const depth = new THREE.MeshDepthMaterial();
+    const b = new Batch(parent, geo, new THREE.MeshBasicMaterial(), 1, { castShadow: true, fade: true, depthMaterial: depth, name: 'test' });
+    expect(b.mesh.customDepthMaterial).toBe(depth);
+    expect(b.mesh.name).toBe('test');
+    const m = new THREE.Matrix4();
+    b.begin();
+    b.push(m.identity(), undefined, 0.3);
+    b.push(m.identity(), undefined, 0.6); // grows: a new InstancedMesh
+    b.end();
+    expect(b.mesh.customDepthMaterial).toBe(depth);
+    expect((b.mesh.geometry.getAttribute('aFade') as THREE.BufferAttribute).getX(1)).toBeCloseTo(0.6);
+    const noShadow = new Batch(parent, geo, new THREE.MeshBasicMaterial(), 1, { fade: true, depthMaterial: depth });
+    expect(noShadow.mesh.customDepthMaterial).toBeUndefined();
+    b.dispose();
+    noShadow.dispose();
+  });
+
+  it('Nature draws band nodes in both dither LOD batches, near and far-only nodes once on discard-free programs', () => {
+    const game = new Game({ seed: 11, services: createMockServices() });
+    game.start();
+    const ctx = makeCtx(game);
+    const mats = ctx.mats;
+    const nature = new Nature(ctx);
+    aim(ctx, 0, 0, 0);
+    nature.update(1 / 60);
+    const { near, mid } = lodRadii(ctx.env.viewRadius, ctx.env.quality);
+    const inner = near - LOD_BAND - LOD_MARGIN;
+    const outer = near + LOD_MARGIN;
+    expect(nature.bandCount).toBeGreaterThan(3);
+    const at = new Map<string, string[]>();
+    const mat = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    let nearOnly = 0;
+    let farOnly = 0;
+    ctx.scene.traverse((o) => {
+      const im = o as THREE.InstancedMesh;
+      if (!im.isInstancedMesh || !im.visible || im.count === 0) return;
+      const kind = im.name.split(' ')[1].split(':')[0];
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, mat);
+        pos.setFromMatrixPosition(mat);
+        const d = Math.hypot(pos.x - ctx.env.cx, pos.z - ctx.env.cz);
+        const key = `${pos.x.toFixed(3)},${pos.z.toFixed(3)}`;
+        const list = at.get(key) ?? [];
+        list.push(kind);
+        at.set(key, list);
+        if (kind === 'n') {
+          expect(d, 'near-only nodes stay inside the band margin').toBeLessThanOrEqual(inner);
+          expect(im.material, 'the discard-free shared material').toBe(mats.set);
+          expect(im.customDepthMaterial).toBeUndefined();
+          nearOnly++;
+        } else if (kind === 'tn' || kind === 'tf') {
+          expect(d).toBeGreaterThan(inner);
+          expect(d).toBeLessThanOrEqual(outer);
+          expect(im.material).toBe(kind === 'tn' ? mats.lodNear : mats.lodFar);
+          expect(im.customDepthMaterial).toBe(kind === 'tn' ? mats.lodNearDepth : mats.lodFarDepth);
+          expect(im.castShadow).toBe(true);
+        } else if (kind === 'f') {
+          expect(d, 'far-only nodes start past the band margin').toBeGreaterThan(outer);
+          expect(d).toBeLessThanOrEqual(mid + LOD_MARGIN);
+          expect(im.material, 'discard-free shrink toward the mid cutoff').toBe(mats.lodShrinkMid);
+          expect(im.customDepthMaterial).toBe(mats.lodShrinkMidDepth);
+          farOnly++;
+        } else if (kind === 'p') {
+          expect(d).toBeLessThanOrEqual(outer);
+          expect(im.material, 'props shrink away at the near radius').toBe(mats.lodShrinkNear);
+        }
+      }
+    });
+    expect(nearOnly).toBeGreaterThan(10);
+    expect(farOnly).toBeGreaterThan(3);
+    // every band node has exactly its near + far pair at the same position; near-only / far-only nodes are drawn once
+    let pairs = 0;
+    for (const kinds of at.values()) {
+      const tn = kinds.filter((k) => k === 'tn').length;
+      const tf = kinds.filter((k) => k === 'tf').length;
+      const single = kinds.filter((k) => k === 'n' || k === 'f').length;
+      expect(single + tn).toBeLessThanOrEqual(1);
+      expect(tf).toBe(tn);
+      if (tn) pairs++;
+    }
+    expect(pairs).toBe(nature.bandCount);
+    // the LOD uniforms follow the live camera every frame
+    const u = (mats as unknown as { uLod: { value: THREE.Vector4 }; uLodFocus: { value: THREE.Vector2 } });
+    expect(u.uLod.value.x).toBeCloseTo(near - LOD_BAND);
+    expect(u.uLod.value.z).toBeCloseTo(mid - LOD_BAND);
+    expect(u.uLodFocus.value.x).toBe(ctx.env.cx);
+    nature.dispose();
+  });
+
+  it('Buildings give shadow-casting fade batches the fade depth material and roofs a dithered shadow', () => {
+    const game = new Game({ seed: 3, services: createMockServices() });
+    game.start();
+    const ctx = makeCtx(game);
+    // a 6x6 walled room next to the core gets an automatic roof
+    const B = game.sys.buildings;
+    const x0 = CENTER_CELL + 3;
+    const z0 = CENTER_CELL + 3;
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) {
+      if (i !== 0 && j !== 0 && i !== 5 && j !== 5) continue;
+      expect(B.place(i === 0 && j === 2 ? 'door' : 'wall', x0 + i, z0 + j, 0, { free: true, instant: true, tier: 0 })).not.toBeNull();
+    }
+    game.update(0.1);
+    expect(game.derived.roofCells.size).toBeGreaterThan(0);
+    const buildings = new Buildings(ctx);
+    aim(ctx, 0, 0, 0);
+    buildings.update(1 / 60);
+    let casters = 0;
+    let roofs = 0;
+    ctx.scene.traverse((o) => {
+      const im = o as THREE.InstancedMesh;
+      if (im.isInstancedMesh) {
+        if (!im.castShadow || im.count === 0) return;
+        casters++;
+        expect(im.material).toBe(ctx.mats.litFade);
+        expect(im.customDepthMaterial).toBe(ctx.mats.litFadeDepth);
+        return;
+      }
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && (mesh.material as THREE.Material).transparent && mesh.castShadow) {
+        roofs++;
+        expect(mesh.customDepthMaterial).toBeInstanceOf(THREE.MeshDepthMaterial);
+      }
+    });
+    expect(casters).toBeGreaterThan(2); // core body + wall pieces + floors
+    expect(roofs).toBeGreaterThan(0);
+    // standing inside the room the roof turns see-through but keeps casting (dithered away in the depth pass)
+    const p = game.state.player;
+    p.x = (x0 + 2.5) * 2 - HALF_WORLD;
+    p.z = (z0 + 2.5) * 2 - HALF_WORLD;
+    for (let i = 0; i < 90; i++) buildings.update(1 / 60);
+    let fadedRoofs = 0;
+    ctx.scene.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || (o as THREE.InstancedMesh).isInstancedMesh || !(mesh.material as THREE.Material).transparent) return;
+      const mat = mesh.material as THREE.MeshLambertMaterial;
+      if (mat.opacity < 0.5) {
+        fadedRoofs++;
+        expect(mesh.castShadow).toBe(true);
+      }
+    });
+    expect(fadedRoofs).toBeGreaterThan(0);
+    buildings.dispose();
   });
 
   it('Nature hides depleted nodes after the pop and shrinks occluders between camera and player', () => {

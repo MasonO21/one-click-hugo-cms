@@ -9,7 +9,8 @@
  *  - shield bubbles, upgrade / completion / tier-up celebrations;
  *  - occlusion: buildings (and roofs) standing between the camera and the player / build ghost
  *    dither away via a per-instance fade attribute (see Batch `fade`), so a Titanium skyscraper never
- *    hides the player in the follow camera.
+ *    hides the player in the follow camera; their shadows dither away with them (Batch `depthMaterial`,
+ *    roofs through a per-room depth material), so no solid shadow of an invisible wall lingers.
  * Instance buffers are only rebuilt when derived.buildingsVersion or a cheap state hash changes; static
  * batches carry a bounding sphere so three.js frustum-culls whole batches off screen.
  */
@@ -70,6 +71,9 @@ interface FacilityBatch {
 interface Roof {
   mesh: THREE.Mesh;
   mat: THREE.MeshLambertMaterial;
+  /** Shadow-pass material dithering the roof's shadow away as it turns see-through. */
+  depth: THREE.MeshDepthMaterial;
+  fade: THREE.IUniform<number>;
   cells: Set<number>;
   opacity: number;
   /** XZ bounds (world) for the occlusion scan. */
@@ -107,6 +111,7 @@ const _targets = new Float64Array(6);
 const FADE_MAX = 0.85;
 /** Sight-line margin (world units) around a building's footprint. */
 const OCCLUDE_MARGIN = 0.6;
+/** Shadow casters get the fade-aware depth material in the constructor (needs the shared materials). */
 const PIECE_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
 const BODY_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
 const PART_OPTS: BatchOpts = { color: true, castShadow: false, fade: true };
@@ -141,10 +146,14 @@ export class Buildings {
   private readonly unsub: (() => void)[] = [];
   /** Per-frame construction dust accumulator. */
   private dustAcc = 0;
+  private readonly pieceOpts: BatchOpts;
+  private readonly bodyOpts: BatchOpts;
 
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
     ctx.scene.add(this.roofGroup);
+    this.pieceOpts = { ...PIECE_OPTS, depthMaterial: ctx.mats.litFadeDepth };
+    this.bodyOpts = { ...BODY_OPTS, depthMaterial: ctx.mats.litFadeDepth };
     const scaffoldGeo = pieceGeometry('scaffold', tierStyle(ctx.game.data.tier(0)));
     this.scaffold = new Batch(this.group, scaffoldGeo, ctx.mats.set, 8);
     const bus = ctx.game.bus;
@@ -352,7 +361,7 @@ export class Buildings {
     const k = `${key}|${style.index}`;
     let b = this.pieceBatches.get(k);
     if (!b) {
-      b = new Batch(this.group, pieceGeometry(key, style), this.ctx.mats.litFade, 32, PIECE_OPTS);
+      b = new Batch(this.group, pieceGeometry(key, style), this.ctx.mats.litFade, 32, this.pieceOpts);
       this.pieceBatches.set(k, b);
     }
     return b;
@@ -361,7 +370,7 @@ export class Buildings {
   private facilityBatch(key: string, spec: ModelSpec): FacilityBatch {
     let fb = this.facilityBatches.get(key);
     if (!fb) {
-      const body = new Batch(this.group, spec.geometry, this.ctx.mats.litFade, 8, BODY_OPTS);
+      const body = new Batch(this.group, spec.geometry, this.ctx.mats.litFade, 8, this.bodyOpts);
       const parts = spec.parts.map((p) => new Batch(this.group, p.geometry, this.ctx.mats.litFade, 8, PART_OPTS));
       fb = { spec, body, parts, entries: [] };
       this.facilityBatches.set(key, fb);
@@ -432,6 +441,7 @@ export class Buildings {
       this.roofGroup.remove(r.mesh);
       r.mesh.geometry.dispose();
       r.mat.dispose();
+      r.depth.dispose();
     }
     this.roofs = [];
     const roofCells = derived.roofCells;
@@ -498,12 +508,15 @@ export class Buildings {
       }
       const geo = mergeCopies(tile, offsets, ySum / cells.size);
       const mat = ctx.mats.makeRoof();
+      const fade = { value: 0 };
+      const depth = ctx.mats.makeRoofDepth(fade);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      mesh.customDepthMaterial = depth;
       mesh.matrixAutoUpdate = false;
       this.roofGroup.add(mesh);
-      this.roofs.push({ mesh, mat, cells, opacity: 1, minX: minX - CELL / 2, minZ: minZ - CELL / 2, maxX: maxX + CELL / 2, maxZ: maxZ + CELL / 2, y: ySum / cells.size, occluded: false });
+      this.roofs.push({ mesh, mat, depth, fade, cells, opacity: 1, minX: minX - CELL / 2, minZ: minZ - CELL / 2, maxX: maxX + CELL / 2, maxZ: maxZ + CELL / 2, y: ySum / cells.size, occluded: false });
     }
   }
 
@@ -527,7 +540,9 @@ export class Buildings {
       r.opacity += (target - r.opacity) * k;
       r.mat.opacity = r.opacity;
       r.mesh.visible = r.opacity > 0.02;
-      r.mesh.castShadow = r.opacity > 0.5;
+      // the shadow dithers away with the opacity (gone a little before the see-through state)
+      r.fade.value = 1 - r.opacity;
+      r.mesh.castShadow = r.mesh.visible;
     }
   }
 
@@ -959,6 +974,7 @@ export class Buildings {
     for (const r of this.roofs) {
       r.mesh.geometry.dispose();
       r.mat.dispose();
+      r.depth.dispose();
     }
     for (const s of this.shields.values()) s.mat.dispose();
     this.scaffold.dispose();

@@ -24,8 +24,9 @@ export class ViewCull {
    * @param margin  world units the frustum planes are pushed outward
    * @param move    camera translation (units) that makes the cull stale
    * @param turn    camera yaw change (radians) that makes the cull stale
+   * @param radius  view-radius change (units, zoom) that makes the cull stale
    */
-  constructor(private readonly margin: number, private readonly move = 3, private readonly turn = 0.08) {}
+  constructor(private readonly margin: number, private readonly move = 3, private readonly turn = 0.08, private readonly radius = 10) {}
 
   /** Has the camera moved / turned / zoomed enough since the last sync() to warrant a rebuild? */
   stale(env: Env, camera: THREE.PerspectiveCamera): boolean {
@@ -35,7 +36,7 @@ export class ViewCull {
     const dz = env.camZ - this.lastCamZ;
     if (dx * dx + dy * dy + dz * dz > this.move * this.move) return true;
     if (env.fwdX * this.lastFwdX + env.fwdZ * this.lastFwdZ < Math.cos(this.turn)) return true;
-    return Math.abs(env.viewRadius - this.lastRadius) > 10 || camera.aspect !== this.lastAspect;
+    return Math.abs(env.viewRadius - this.lastRadius) > this.radius || camera.aspect !== this.lastAspect;
   }
 
   /** Recompute the planes from the camera's current placement and remember it for stale(). */

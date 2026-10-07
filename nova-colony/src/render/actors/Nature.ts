@@ -6,11 +6,20 @@
  * chunks are tested individually (bounding sphere vs frustum + distance LOD), and only those are
  * written into one InstancedMesh per model and LOD. So the GPU only ever sees what is on screen (a
  * follow camera looks at a ~60-unit-deep trapezoid, not a 190-unit disc) while nature stays at
- * ~10–15 draw calls. Rebuilds happen when the camera moves a few units / turns a few degrees, when a
- * node depletes or respawns, when the terrain changes and as a 4 s safety refresh — never per frame.
+ * ~10–20 draw calls. Rebuilds happen when the camera moves a couple of units / turns a few degrees /
+ * zooms, when a node depletes or respawns, when the terrain changes and as a 4 s safety refresh —
+ * never per frame.
  *
- * Distance LOD per instance: near (nodes + props, full geometry), mid (nodes only, cheaper far
- * geometry for the heavy models), beyond mid nothing.
+ * Distance LOD per instance, without pops: inside `near - LOD_BAND` a node is drawn once from the
+ * discard-free near batch ('n:'). Across the band it is drawn twice — near geometry in 'tn:' with the
+ * `lodNear` material and far geometry in 'tf:' with `lodFar` — and the two shaders dither the pixels
+ * between them with complementary Bayer windows from the instance's live distance to the focus, so
+ * the cross-fade is continuous every frame (and invisible: the silhouettes overlap) while this actor
+ * only decides batch membership at rebuild time (`lodClass`, with a margin covering the camera drift
+ * between rebuilds plus hysteresis). Beyond the band a node is drawn once from the discard-free far
+ * batch ('f:', `lodShrinkMid`), whose vertex shader sinks it into the ground over the band below the
+ * mid cutoff instead of popping or stippling at the horizon; props (near only, `lodShrinkNear`)
+ * sink away the same way over the band below the near radius.
  *
  * Gather hits wobble the node and throw chips; depletion plays a shrink-pop before the node disappears.
  * Solid nodes standing between the camera and the player (or the build ghost) shrink out of the way
@@ -45,9 +54,21 @@ export const CHUNKS_PER_SIDE = WORLD_CELLS / CHUNK_CELLS;
 const CHUNK_SIZE = CHUNK_CELLS * CELL;
 /** Frustum planes are pushed outward by this much so nothing pops at the screen edge between rebuilds. */
 const FRUSTUM_MARGIN = 9;
-/** Camera movement (units) / turn (radians) that triggers a rebuild. */
-const REBUILD_MOVE = 3;
+/** Camera movement (units) / turn (radians) / zoom (view-radius units) that triggers a rebuild. */
+const REBUILD_MOVE = 1.5;
 const REBUILD_TURN = 0.08;
+const REBUILD_RADIUS = 1.5;
+/** Width (units) of the near→far cross-fade band below the near radius, and of the fade-out band below mid. */
+export const LOD_BAND = 8;
+/**
+ * Batch membership is decided at rebuild time but the shaders fade with the live camera, so the band
+ * batches extend this far past the band: it covers the focus drift (REBUILD_MOVE) plus the near-radius
+ * change (0.85 × REBUILD_RADIUS) that can happen before the next rebuild. (Rarer combined moves may
+ * exceed it; the shader then catches up at the next rebuild with a small stipple step, never a pop.)
+ */
+export const LOD_MARGIN = 3;
+/** Band membership sticks this far past its boundary so camera jitter does not churn batches. */
+export const LOD_HYST = 2;
 /** Vertical extent used for chunk boxes (terrain relief + tallest scaled tree). */
 const CHUNK_Y_MIN = -40;
 const CHUNK_Y_MAX = 60;
@@ -75,22 +96,60 @@ export function lodRadii(viewRadius: number, quality: string): { near: number; m
   return { near, mid };
 }
 
+/** LOD classes: near geometry only · cross-fade band (near + far geometry) · far geometry only. */
+export const LOD_NEAR = 0;
+export const LOD_BAND_CLASS = 1;
+export const LOD_FAR = 2;
+
+/**
+ * Batch class of a node at distance `d` from the focus for the near radius `near`, given its class
+ * from the previous rebuild (`prev`). Pure near/far classes are only used where the shader window is
+ * guaranteed fully open/closed until the next rebuild (LOD_MARGIN past the band); the band class is
+ * correct everywhere, so it is sticky by LOD_HYST on both sides.
+ */
+export function lodClass(d: number, near: number, prev: number): number {
+  const inner = near - LOD_BAND - LOD_MARGIN;
+  const outer = near + LOD_MARGIN;
+  if (prev === LOD_BAND_CLASS) return d < inner - LOD_HYST ? LOD_NEAR : d > outer + LOD_HYST ? LOD_FAR : LOD_BAND_CLASS;
+  return d <= inner ? LOD_NEAR : d > outer ? LOD_FAR : LOD_BAND_CLASS;
+}
+
+/** Smoothstep shrink of the LOD shaders: 1 = full size at the start of a band .. 0 = sunk away at its cutoff. */
+export function lodShrink(k: number): number {
+  const c = clamp(k, 0, 1);
+  return 1 - c * c * (3 - 2 * c);
+}
+
+/**
+ * CPU mirror of the LOD shaders for an instance at distance `d`: the complementary dither windows of
+ * the near / far geometry of a band node (a fragment with Bayer value b survives when lo <= b < hi),
+ * the discard-free scale of far-only geometry toward the mid cutoff and of props toward the near radius.
+ */
+export function lodWindows(d: number, near: number, mid: number, band = LOD_BAND): { near: [number, number]; far: [number, number]; farScale: number; propScale: number } {
+  const t = clamp((d - (near - band)) / band, 0, 1);
+  return { near: [t, 1], far: [0, t], farScale: lodShrink((d - (mid - band)) / band), propScale: lodShrink((d - (near - band)) / band) };
+}
+
 export class Nature {
   private group = new THREE.Group();
   private chunks: Chunk[] = [];
-  /** key: 'n:<model>' near nodes, 'f:<model>' far nodes, 'p:<model>' props. */
+  /** key: 'n:<model>' near nodes, 'tn:' / 'tf:' near and far geometry of band nodes, 'f:<model>' far-only nodes, 'p:<model>' props. */
   private batches = new Map<string, Batch>();
-  /** node index -> instance index within its batch (-1 = not drawn). */
+  /** node index -> instance index within its batch (-1 = not drawn); slot2/batch2 = far partner in the band. */
   private nodeSlot = new Int32Array(0);
   private nodeBatch: (Batch | null)[] = [];
+  private nodeSlot2 = new Int32Array(0);
+  private nodeBatch2: (Batch | null)[] = [];
   private nodeModel: string[] = [];
+  /** LOD class per node from the last rebuild (hysteresis). */
+  private lodCls = new Uint8Array(0);
   private gen: WorldGen | null = null;
   private timer = 0;
   private depletedAcc = 0;
   private dirty = true;
   private depletedCount = -1;
   private lastTerrain = -1;
-  private readonly cull = new ViewCull(FRUSTUM_MARGIN, REBUILD_MOVE, REBUILD_TURN);
+  private readonly cull = new ViewCull(FRUSTUM_MARGIN, REBUILD_MOVE, REBUILD_TURN, REBUILD_RADIUS);
   private wobbles = new Map<number, Wobble>();
   /** Node indices drawn by the last rebuild (occlusion scan). */
   private drawn: number[] = [];
@@ -99,9 +158,15 @@ export class Nature {
   private occluders = new Set<number>();
   private occAcc = 0;
   private readonly unsub: (() => void)[] = [];
+  private readonly nearBandOpts: BatchOpts;
+  private readonly farBandOpts: BatchOpts;
+  private readonly farOpts: BatchOpts;
 
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
+    this.nearBandOpts = { ...NODE_OPTS, depthMaterial: ctx.mats.lodNearDepth };
+    this.farBandOpts = { ...NODE_OPTS, depthMaterial: ctx.mats.lodFarDepth };
+    this.farOpts = { ...NODE_OPTS, depthMaterial: ctx.mats.lodShrinkMidDepth };
     const bus = ctx.game.bus;
     this.unsub.push(
       bus.on('gather:hit', (e) => this.onHit(e.node, e.model, e.x, e.z)),
@@ -124,6 +189,13 @@ export class Nature {
   /** Node instances drawn by the last rebuild (dev stats / tests). */
   get drawnCount(): number {
     return this.drawn.length;
+  }
+
+  /** Nodes drawn in both LOD batches by the last rebuild (dev stats / tests). */
+  get bandCount(): number {
+    let n = 0;
+    for (let k = 0; k < this.drawn.length; k++) if (this.nodeBatch2[this.drawn[k]]) n++;
+    return n;
   }
 
   private onHit(node: number, model: string, x: number, z: number): void {
@@ -154,7 +226,10 @@ export class Nature {
     const n = gen?.nodes?.length ?? 0;
     this.nodeSlot = new Int32Array(n).fill(-1);
     this.nodeBatch = new Array<Batch | null>(n).fill(null);
+    this.nodeSlot2 = new Int32Array(n).fill(-1);
+    this.nodeBatch2 = new Array<Batch | null>(n).fill(null);
     this.nodeModel = new Array(n);
+    this.lodCls = new Uint8Array(n);
     this.chunks = [];
     for (let i = 0; i < CHUNKS_PER_SIDE * CHUNKS_PER_SIDE; i++) {
       const cx = i % CHUNKS_PER_SIDE;
@@ -206,10 +281,18 @@ export class Nature {
     return composeEuler(out, node.x, y, node.z, rx, node.rot || 0, rz, s, sy, s);
   }
 
-  private batch(key: string, geo: () => THREE.BufferGeometry, opts: BatchOpts): Batch {
+  /** Rewrite a drawn node's matrix in its batch (and its far partner in the band). */
+  private setNodeMatrix(i: number, m: THREE.Matrix4): void {
+    const b = this.nodeBatch[i];
+    if (b && this.nodeSlot[i] >= 0) b.setMatrix(this.nodeSlot[i], m);
+    const b2 = this.nodeBatch2[i];
+    if (b2 && this.nodeSlot2[i] >= 0) b2.setMatrix(this.nodeSlot2[i], m);
+  }
+
+  private batch(key: string, geo: () => THREE.BufferGeometry, material: THREE.Material, opts: BatchOpts): Batch {
     let b = this.batches.get(key);
     if (!b) {
-      b = new Batch(this.group, geo(), this.ctx.mats.set, 32, opts);
+      b = new Batch(this.group, geo(), material, 32, { ...opts, name: 'nature ' + key });
       this.batches.set(key, b);
     }
     return b;
@@ -220,16 +303,23 @@ export class Nature {
     const ctx = this.ctx;
     const env = ctx.env;
     const cull = this.cull;
+    const mats = ctx.mats;
     cull.sync(env, ctx.camera);
     for (const b of this.batches.values()) b.begin();
     this.nodeSlot.fill(-1);
     this.nodeBatch.fill(null);
+    this.nodeSlot2.fill(-1);
+    this.nodeBatch2.fill(null);
     this.drawn.length = 0;
     if (g) {
       const depleted = ctx.game.state.world.depleted;
       const { near, mid } = lodRadii(env.viewRadius, env.quality);
-      const near2 = near * near;
-      const mid2 = mid * mid;
+      // the shaders fade with the live camera: keep instances that may still be (partly) visible
+      // before the next rebuild, i.e. up to the margin past the cutoffs
+      const drawR = mid + LOD_MARGIN;
+      const propR = near + LOD_MARGIN;
+      const drawR2 = drawR * drawR;
+      const propR2 = propR * propR;
       const nodes = g.nodes;
       const props = g.props;
       const data = ctx.game.data;
@@ -239,7 +329,7 @@ export class Nature {
         const ddx = Math.max(c.minX - env.cx, 0, env.cx - c.maxX);
         const ddz = Math.max(c.minZ - env.cz, 0, env.cz - c.maxZ);
         const cd2 = ddx * ddx + ddz * ddz;
-        if (cd2 > mid2) continue;
+        if (cd2 > drawR2) continue;
         if (!cull.box(c.minX, CHUNK_Y_MIN, c.minZ, c.maxX, CHUNK_Y_MAX, c.maxZ)) continue;
         const list = c.nodes;
         for (let k = 0; k < list.length; k++) {
@@ -248,31 +338,46 @@ export class Nature {
           const dx = n.x - env.cx;
           const dz = n.z - env.cz;
           const d2 = dx * dx + dz * dz;
-          if (d2 > mid2) continue;
+          if (d2 > drawR2) continue;
           const w = this.wobbles.get(i);
           if (depleted[i] !== undefined && !(w && w.pop)) continue;
           const model = this.nodeModel[i];
           const s = (n.scale || 1) * (data.node(n.def)?.scale ?? 1);
           const h = nodeHeight(model) * s;
           if (!cull.sphere(n.x, ctx.heightAt(n.x, n.z) + h * 0.5, n.z, Math.max(h * 0.6, 1.4 * s))) continue;
-          const far = d2 > near2;
-          const batch = far ? this.batch('f:' + model, () => nodeGeometryFar(model), NODE_OPTS) : this.batch('n:' + model, () => nodeGeometry(model), NODE_OPTS);
-          this.nodeSlot[i] = batch.count;
-          this.nodeBatch[i] = batch;
+          const cls = lodClass(Math.sqrt(d2), near, this.lodCls[i]);
+          this.lodCls[i] = cls;
+          this.nodeMatrix(n, _m, w, this.fades.get(i) ?? 0);
+          if (cls !== LOD_FAR) {
+            const batch = cls === LOD_NEAR ? this.batch('n:' + model, () => nodeGeometry(model), mats.set, NODE_OPTS) : this.batch('tn:' + model, () => nodeGeometry(model), mats.lodNear, this.nearBandOpts);
+            this.nodeSlot[i] = batch.count;
+            this.nodeBatch[i] = batch;
+            batch.push(_m);
+          }
+          if (cls === LOD_FAR) {
+            const far = this.batch('f:' + model, () => nodeGeometryFar(model), mats.lodShrinkMid, this.farOpts);
+            this.nodeSlot[i] = far.count;
+            this.nodeBatch[i] = far;
+            far.push(_m);
+          } else if (cls === LOD_BAND_CLASS) {
+            const far = this.batch('tf:' + model, () => nodeGeometryFar(model), mats.lodFar, this.farBandOpts);
+            this.nodeSlot2[i] = far.count;
+            this.nodeBatch2[i] = far;
+            far.push(_m);
+          }
           this.drawn.push(i);
-          batch.push(this.nodeMatrix(n, _m, w, this.fades.get(i) ?? 0));
         }
-        if (cd2 > near2) continue;
+        if (cd2 > propR2) continue;
         const plist = c.props;
         for (let k = 0; k < plist.length; k++) {
           const p = props[plist[k]];
           const dx = p.x - env.cx;
           const dz = p.z - env.cz;
-          if (dx * dx + dz * dz > near2) continue;
+          if (dx * dx + dz * dz > propR2) continue;
           const s = p.scale || 1;
           const y = ctx.heightAt(p.x, p.z);
           if (!cull.sphere(p.x, y + s, p.z, 1.8 * s)) continue;
-          const batch = this.batch('p:' + p.model, () => propGeometry(p.model), PROP_OPTS);
+          const batch = this.batch('p:' + p.model, () => propGeometry(p.model), mats.lodShrinkNear, PROP_OPTS);
           composeEuler(_m, p.x, y - 0.03, p.z, 0, p.rot || 0, 0, s, s, s);
           batch.push(_m);
         }
@@ -309,14 +414,16 @@ export class Nature {
     // the 4 s refresh covers a respawn and a depletion inside the same second (count unchanged)
     if (this.dirty || this.timer > 4 || this.cull.stale(env, ctx.camera)) this.rebuild();
 
+    // the LOD shaders cross-fade against the live camera (continuous between rebuilds)
+    const { near, mid } = lodRadii(env.viewRadius, env.quality);
+    ctx.mats.setLod(env.cx, env.cz, near, LOD_BAND, mid);
+
     this.updateOccluders(dt);
 
     // wobble / pop animations
     if (this.wobbles.size && this.gen) {
       for (const [i, w] of this.wobbles) {
         w.t += dt;
-        const slot = this.nodeSlot[i];
-        const batch = this.nodeBatch[i];
         if (w.pop && w.t > 0.36) {
           this.wobbles.delete(i);
           this.dirty = true;
@@ -324,10 +431,10 @@ export class Nature {
         }
         if (!w.pop && w.t > 0.9) {
           this.wobbles.delete(i);
-          if (slot >= 0 && batch) batch.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], _m, undefined, this.fades.get(i) ?? 0));
+          this.setNodeMatrix(i, this.nodeMatrix(this.gen.nodes[i], _m, undefined, this.fades.get(i) ?? 0));
           continue;
         }
-        if (slot >= 0 && batch) batch.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], _m, w, this.fades.get(i) ?? 0));
+        this.setNodeMatrix(i, this.nodeMatrix(this.gen.nodes[i], _m, w, this.fades.get(i) ?? 0));
       }
     }
   }
@@ -389,10 +496,8 @@ export class Nature {
       if (f === f0 && on) continue;
       if (f <= 0) this.fades.delete(i);
       else this.fades.set(i, f);
-      const slot = this.nodeSlot[i];
-      const batch = this.nodeBatch[i];
-      if (slot < 0 || !batch || this.wobbles.has(i)) continue; // the wobble animation writes this node's matrix
-      batch.setMatrix(slot, this.nodeMatrix(g.nodes[i], _m, undefined, f));
+      if (this.nodeSlot[i] < 0 || this.wobbles.has(i)) continue; // the wobble animation writes this node's matrix
+      this.setNodeMatrix(i, this.nodeMatrix(g.nodes[i], _m, undefined, f));
     }
   }
 

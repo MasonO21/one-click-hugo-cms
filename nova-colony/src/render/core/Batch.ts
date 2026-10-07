@@ -13,6 +13,7 @@
  * fade-capable lit material (screen-door dither) — used to see through buildings that stand between
  * the camera and the player. The batch then owns a thin geometry wrapper sharing the model's vertex
  * buffers, so the attribute never leaks into other users of the same geometry (ghost previews).
+ * `depthMaterial` gives such a batch a matching shadow-pass material so its shadow dithers too.
  */
 import * as THREE from 'three';
 
@@ -27,6 +28,14 @@ export interface BatchOpts {
   cull?: boolean;
   /** Per-instance fade attribute (needs the fade-capable material). */
   fade?: boolean;
+  /**
+   * Shadow-pass material for shadow-casting batches whose surface material dithers (fade / LOD
+   * variants): keeps the shadow in step with the surface instead of a solid shadow of an invisible
+   * caster. Omit it and three uses its shared (discard-free) depth material.
+   */
+  depthMaterial?: THREE.Material;
+  /** Mesh name (dev stats / scene inspection). */
+  name?: string;
 }
 
 export class Batch {
@@ -77,9 +86,12 @@ export class Batch {
   private create(): void {
     this.bound = this.wrap(this.geometry);
     const mesh = new THREE.InstancedMesh(this.bound, this.material, this.capacity);
+    if (this.opts.name) mesh.name = this.opts.name;
     mesh.frustumCulled = false;
     mesh.castShadow = !!this.opts.castShadow;
     mesh.receiveShadow = !!this.opts.receiveShadow;
+    // the sun is a DirectionalLight; point lights never cast here, so no customDistanceMaterial
+    if (mesh.castShadow && this.opts.depthMaterial) mesh.customDepthMaterial = this.opts.depthMaterial;
     mesh.renderOrder = this.opts.renderOrder ?? 0;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     if (this.opts.color) {
