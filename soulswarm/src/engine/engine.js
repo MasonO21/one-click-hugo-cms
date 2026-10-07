@@ -25,7 +25,7 @@ const SAFE_HDR = /* glsl */`
 const FinishShader = {
   uniforms: {
     tDiffuse: { value: null },
-    uVignette: { value: 0.85 },
+    uVignette: { value: 1.0 },
     uFlash: { value: new THREE.Vector4(1, 0, 0, 0) },
     uWhite: { value: 0 },
     uAberr: { value: 0 },

@@ -159,8 +159,9 @@ export class World {
   usePainted(ch, defs, models) {
     for (const { mesh } of this.fallback) mesh.count = 0;
     this.painted = defs.map((def, i) => {
-      const mat = makeCharMaterial({ map: models[i].map, glow: def.glow || 0, rim: ch.rim, emit: 0, anim: 0, ambient: 0x8a8f9e, key: 0xc2c6d4, plColor: ch.rune, plRadius: 8, sight: true });
-      mat.uniforms.uRim.value.multiplyScalar(0.35);
+      // dark shapes in the gloom, rim-lit, until the Shepherd's lantern reaches them
+      const mat = makeCharMaterial({ map: models[i].map, glow: def.glow || 0, rim: ch.rim, emit: 0, anim: 0, ambient: 0x2c3240, key: 0x58606f, plColor: ch.rune, plRadius: 9, sight: true });
+      mat.uniforms.uRim.value.multiplyScalar(0.5);
       mat.uniforms.uSightFog.value.setHex(ch.fog);
       const mesh = new THREE.InstancedMesh(models[i].geometry.clone(), mat, PER_TYPE); // own instance attributes, shared paint
       mesh.count = 0;
@@ -191,7 +192,7 @@ export class World {
     this.weather.update(center, time);
     for (const { mesh } of this.painted) {
       const v = mesh.material.uniforms;
-      v.uSightCenter.value.copy(center); v.uSightR.value = u.uSight.value + 4;
+      v.uSightCenter.value.copy(center); v.uSightR.value = u.uSight.value + 2;
       v.uPLPos.value.set(center.x + 0.6, 2.4, center.z + 1.4); // the Shepherd's lantern catches the props beside it
     }
     const cx = Math.floor(center.x / CELL), cz = Math.floor(center.z / CELL);

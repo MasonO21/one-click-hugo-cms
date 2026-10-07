@@ -271,7 +271,12 @@ Every chapter has its own painted floor and its own painted 3D props, made on 20
   - encodes WebP. The six come to 0.8 MB.
 - In game (`materials.js` ground shader, `world.js` `FLOORS`):
   - **No visible repeats.** Each copy covers 15–18 m. A slow noise picks one of eight offsets per area and blends neighbouring areas (Inigo Quilez's texture-repetition technique), and broad light and dark drifts break the tiling up further.
-  - **Light.** The paint sits under a near-neutral moonlight; the blue ambient turned the Crimson Throne teal. The lit faces of the stones catch the light pools more than the seams, and the soul pulse runs along the seams, found as pixels darker than their surroundings.
+  - **Gloom.** The maps stay as dark as the old procedural ones; the art is there to be found in the light, not to light the screen.
+    - The paint is drained to about half its colour and lies under a faint cold moonlight (`uMoon`, 0.42).
+    - Slow shadows creep across whatever the light doesn't reach.
+    - The light pools (the Shepherd's lantern, the legion's glow, flames) bring the paint out, and the lit faces of the stones catch them more than the seams.
+    - The soul pulse runs along the seams, found as pixels darker than their surroundings.
+    - The lantern's sight ends at 22 m, and the screen's vignette closes in (1.0).
   - **Glow.** Bright saturated paint glows where a chapter wants it: Ember Wastes lava, the Cathedral's violet cracks, the Abyss's starlit gaps.
   - **Recolouring.** A Blood Moon, Nightmare or Torment recolours the floor toward its palette and keeps the painted detail.
   - **Kept from before:** rune circles (now scattered freely), light pools and the lantern-sight fog.
@@ -287,7 +292,7 @@ Every chapter has its own painted floor and its own painted 3D props, made on 20
 
 **Props.** Each prop started as a Nano Banana Pro concept: one isolated hand-painted game asset, 3/4 view, on plain grey. Tripo H3.1 image-to-3D turned it into a model of about 3,800 triangles with a detailed texture (12 credits each). `scripts/props.sh` shrinks each texture to a 512 px WebP beside the model and quantizes the mesh. The 23 come to 2.7 MB.
 - `world.js` `PROPS` sets each prop's height, how often it turns up, its glow, and for flames and crystals the flickering pool of light it casts.
-- In a run, the props are scattered on a 6.5 m grid around the Shepherd and fade into the lantern-sight fog, and the Shepherd's lantern catches the ones beside it. The nearest six flames take the light pools the run's own effects leave free.
+- In a run, the props are scattered on a 6.5 m grid around the Shepherd. They stand as dark, rim-lit shapes in the gloom and fade into the lantern-sight fog until the Shepherd's lantern reaches them. The nearest six flames take the light pools the run's own effects leave free.
 - The home screen keeps the cells around its hero clear.
 
 | Chapter | Props (concept job → 3D job) |

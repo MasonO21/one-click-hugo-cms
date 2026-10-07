@@ -310,6 +310,8 @@ uniform float uTexGain;   // brightness of the paint under the ambient light
 uniform float uTexGlow;   // how much bright, saturated paint (lava, starlit cracks) glows
 uniform vec3 uRecolor;    // Blood Moon / Nightmare / Torment palette, kept at the paint's own brightness
 uniform float uRecolorAmt;
+uniform float uTexSat;    // how much of the paint's colour survives the gloom
+uniform float uMoon;      // how much cold moonlight reaches the floor outside the light pools
 varying vec3 vWorld;
 
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -364,13 +366,15 @@ void main() {
     vec4 tex = paintedFloor(p);
     vec3 t = tex.rgb;
     float lum = dot(t, vec3(0.299, 0.587, 0.114));
+    // gloom: the paint is drained toward grey and lies in cold darkness; the light pools (the lantern, the legion's
+    // glow, flames) bring it out, and slow shadows creep across whatever they don't reach
+    t = mix(vec3(lum), t, uTexSat);
     t = mix(t, lum * uRecolor / max(dot(uRecolor, vec3(0.299, 0.587, 0.114)), 1e-3), uRecolorAmt);
     float m = fbm(p * 0.06);
-    vec3 base = t * uTexGain * (0.78 + 0.44 * m); // broad light and dark drifts break the tiling up further
-    // the moonlight is near-neutral on paint (its blue would turn a red floor teal); the lit faces of the painted
-    // stones catch the light pools more than the seams between them
-    vec3 amb = mix(vec3(dot(uAmbient, vec3(0.3333))), uAmbient, 0.35);
-    vec3 lighting = amb * (0.8 + 0.4 * m) + light * (2.4 + 2.2 * smoothstep(0.08, 0.45, lum));
+    vec3 base = t * uTexGain * (0.75 + 0.5 * m); // broad light and dark drifts break the tiling up further
+    float creep = smoothstep(0.4, 0.75, fbm(p * 0.06 + vec2(uTime * 0.025, -uTime * 0.018)));
+    // the lit faces of the painted stones catch the light pools more than the seams between them
+    vec3 lighting = uAmbient * uMoon * (0.8 + 0.4 * m) * (1.0 - 0.6 * creep) + light * (2.4 + 2.2 * smoothstep(0.08, 0.45, lum));
     col = base * lighting;
     float seam = smoothstep(0.03, 0.12, tex.a);
     col += uRune * seam * 0.3 * wave;
@@ -435,7 +439,7 @@ export function makeGroundMaterial() {
       uAmbient: { value: new THREE.Color(0x8fa4c8) },
       uTime: { value: 0 },
       uCenter: { value: new THREE.Vector3() },
-      uSight: { value: 26 },
+      uSight: { value: 22 },
       uLights: { value: lights },
       uLightCol: { value: cols },
       uLightCount: { value: 0 },
@@ -446,6 +450,8 @@ export function makeGroundMaterial() {
       uTexGlow: { value: 0 },
       uRecolor: { value: new THREE.Color(1, 1, 1) },
       uRecolorAmt: { value: 0 },
+      uTexSat: { value: 0.55 },
+      uMoon: { value: 0.42 },
     },
     vertexShader: groundVert,
     fragmentShader: groundFrag,

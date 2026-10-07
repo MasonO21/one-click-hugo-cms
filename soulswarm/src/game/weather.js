@@ -5,11 +5,11 @@ import * as THREE from 'three';
 // n: flakes at full quality · size: metres · fall: m/s (negative falls, positive rises) · sway: side drift (m) ·
 // tumble: how fast they flicker/turn · glow: additive brightness (0 = soft, alpha-blended flakes) · a: opacity
 export const WEATHER = {
-  1: { n: 170, color: 0xa9b7c8, size: 0.17, fall: -0.45, sway: 0.7, tumble: 1.2, glow: 0, a: 0.5 },   // grey ash
-  2: { n: 210, color: 0xff7a26, size: 0.13, fall: 0.9, sway: 0.5, tumble: 6, glow: 2.6, a: 1 },       // rising embers
-  3: { n: 250, color: 0xe8f4ff, size: 0.16, fall: -0.9, sway: 0.6, tumble: 1.5, glow: 0, a: 0.75 },   // snow
+  1: { n: 170, color: 0xa9b7c8, size: 0.17, fall: -0.45, sway: 0.7, tumble: 1.2, glow: 0, a: 0.3 },   // grey ash
+  2: { n: 210, color: 0xff7a26, size: 0.13, fall: 0.9, sway: 0.5, tumble: 6, glow: 2.0, a: 1 },       // rising embers
+  3: { n: 250, color: 0xe8f4ff, size: 0.16, fall: -0.9, sway: 0.6, tumble: 1.5, glow: 0, a: 0.45 },   // snow
   4: { n: 130, color: 0xb57aff, size: 0.13, fall: 0.18, sway: 0.9, tumble: 2.5, glow: 2.0, a: 0.9 },  // violet motes
-  5: { n: 150, color: 0xffc46b, size: 0.11, fall: -0.12, sway: 0.8, tumble: 3, glow: 1.6, a: 0.8 },   // golden dust
+  5: { n: 150, color: 0xffc46b, size: 0.11, fall: -0.12, sway: 0.8, tumble: 3, glow: 1.3, a: 0.7 },   // golden dust
   6: { n: 170, color: 0x8fa2ff, size: 0.12, fall: 0.25, sway: 0.5, tumble: 4, glow: 2.2, a: 0.9 },    // star motes
 };
 const MAX = 260;

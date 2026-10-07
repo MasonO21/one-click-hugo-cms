@@ -190,7 +190,7 @@ export const BLESSINGS = {
 // mods = the chapter's identity, read by the director (run.js), enemies.js, hazards.js and player.js:
 //   tag: run-start banner line · weights: spawn-weight multiplier per enemy type · pack: Ghoul pack size [min, max]
 //   burn: Witch lobs leave burning ground · vents / ice / hands: ground hazards (tuning in HAZARDS below)
-//   vignette: fog vignette strength for the run (engine default 0.85) · sight: metres before the ground fades to fog (default 26)
+//   vignette: fog vignette strength for the run (engine default 1.0) · sight: metres before the ground fades to fog (default 22)
 //   elites: elite spawn times in seconds
 //   rotate (Endless): the chapter mods used at abyss depth 1, 2, 3… (cycles)
 export const CHAPTERS = [
