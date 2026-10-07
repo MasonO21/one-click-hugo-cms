@@ -29,9 +29,11 @@ async function boot() {
   game.start();
   saves.attach(game);
 
-  // expose for debugging / automated playtests
-  (window as any).game = game;
-  (window as any).renderer = renderer;
+  // expose for debugging / automated playtests (dev server, or production with ?debug)
+  if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
+    (window as any).game = game;
+    (window as any).renderer = renderer;
+  }
 
   const boot = document.getElementById('boot');
   if (boot) {
