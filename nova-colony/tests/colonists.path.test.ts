@@ -9,7 +9,7 @@ interface AiInternals {
   stats: { searches: number; cacheHits: number; replans: number; expanded: number; fallbacks: number };
   pathCache: Map<number, unknown>;
   pending: number;
-  brains: Map<number, { pst: number; wpn: number; wp: Float32Array | null; moving: boolean }>;
+  brains: Map<number, { pst: number; wpn: number; wp: Float32Array | null; moving: boolean; nextThink: number }>;
   setGoal(c: Colonist, br: unknown, x: number, z: number, enter: number, act: string, stay: number, face: boolean, fx: number, fz: number): void;
 }
 const aiOf = (h: Harness) => (h.game.sys.colonists as unknown as { ai: AiInternals }).ai;
@@ -68,7 +68,8 @@ function tracker(h: Harness, c: Colonist, allowId = -1) {
   };
 }
 
-describe('colonist pathfinding', () => {
+// generous timeouts: the full suite runs many workers in parallel on small machines
+describe('colonist pathfinding', { timeout: 90_000 }, () => {
   it('walks around a wall and through the door to reach a bed inside a closed room (no teleport)', () => {
     const h = makeGame();
     // 9x7 room, interior x 141..147, z 141..145; the only door is on the EAST side, the colonist comes from the west
@@ -260,5 +261,200 @@ describe('colonist pathfinding', () => {
     expect(tr.t.jumps).toBe(0);
     expect(minZ).toBeLessThan(cellCenter(125) - 1); // it did start north...
     expect(c.z).toBeGreaterThan(cellCenter(125) - 20);
+  });
+
+  it('spreads path requests over frames: bounded searches and expansions per frame, everybody still arrives without teleporting', () => {
+    const h = makeGame();
+    addCore(h.game);
+    // a big ring (cells 100..156) with its only gate on the NORTH side; the crowd starts south of it
+    ring(h, 100, 100, 156, 156, [[128, 100]]);
+    const crowd: Colonist[] = [];
+    for (let i = 0; i < 30; i++) crowd.push(addColonist(h.game, 'common', {}, cellCenter(106 + i * 1.5), cellCenter(160)));
+    h.game.state.player.x = 0;
+    h.game.state.player.z = 20;
+    h.run(0.2);
+    const ai = aiOf(h);
+    for (const c of crowd) ai.brains.get(c.id)!.nextThink = 1e9; // freeze their own decisions: we drive them
+    const goals = crowd.map((c, i) => ({ x: cellCenter(112 + (i % 15) * 2.3), z: cellCenter(112 + Math.floor(i / 15) * 5) }));
+    crowd.forEach((c, i) => {
+      const br = ai.brains.get(c.id)!;
+      br.moving = false;
+      ai.setGoal(c, br, goals[i].x, goals[i].z, -1, 'idle', 60, false, 0, 0);
+    });
+    expect(ai.pending).toBeGreaterThan(5); // not everybody got a path in the same instant
+    let maxSearches = 0;
+    let maxExpanded = 0;
+    let frames = 0;
+    let jumps = 0;
+    const last = crowd.map((c) => ({ x: c.x, z: c.z }));
+    while ((ai.pending > 0 || frames < 5) && frames < 1500) {
+      const s0 = { ...ai.stats };
+      h.clock.now += 16;
+      h.game.update(1 / 60);
+      frames++;
+      maxSearches = Math.max(maxSearches, ai.stats.searches - s0.searches);
+      maxExpanded = Math.max(maxExpanded, ai.stats.expanded - s0.expanded);
+      crowd.forEach((c, i) => {
+        if (dist(c.x, c.z, last[i].x, last[i].z) > 1) jumps++;
+        last[i] = { x: c.x, z: c.z };
+      });
+    }
+    expect(ai.pending).toBe(0);
+    expect(maxSearches).toBeLessThanOrEqual(4);
+    expect(maxExpanded).toBeLessThanOrEqual(1500);
+    expect(frames).toBeGreaterThan(10); // it really was spread out
+    // everyone walks around to the gate and arrives
+    const arrived = () => crowd.every((c, i) => dist(c.x, c.z, goals[i].x, goals[i].z) < 0.6);
+    expect(
+      until(
+        h,
+        () => {
+          crowd.forEach((c, i) => {
+            if (dist(c.x, c.z, last[i].x, last[i].z) > 1) jumps++;
+            last[i] = { x: c.x, z: c.z };
+          });
+          return arrived();
+        },
+        150,
+        1 / 20,
+      ),
+    ).toBe(true);
+    expect(jumps).toBe(0);
+    expect(ai.stats.fallbacks).toBe(0);
+  });
+
+  it('routes around water / locked terrain (world.walkable) and never steps into it', () => {
+    const h = makeGame();
+    addCore(h.game);
+    const camp = addBuilding(h.game, 'logging_camp', 150, 127);
+    const cc = centerOf(h, camp);
+    fakeNodes(h.game, []);
+    // a river at x cells 138..140, z cells 112..142 (with real world data present, so terrain checks are active)
+    const bs = h.game.sys.buildings;
+    const isWater = (x: number, z: number) => cellOf(x) >= 138 && cellOf(x) <= 140 && cellOf(z) >= 112 && cellOf(z) <= 142;
+    h.game.sys.world.walkable = (x: number, z: number) => !isWater(x, z);
+    (h.game.sys.world as unknown as { gen: unknown }).gen = { nodes: [], water: new Uint8Array(1), regionMap: new Uint8Array(1) }; // terrain-aware
+    void bs;
+    const c = addColonist(h.game, 'common', { specialty: 'gatherer' }, cellCenter(128), cellCenter(127));
+    expect(c.workplace).toBe(camp.id);
+    h.game.state.player.x = 20;
+    h.game.state.player.z = 0;
+    const tr = tracker(h, c);
+    let inWater = false;
+    const ok = until(
+      h,
+      () => {
+        tr.sample();
+        if (isWater(c.x, c.z)) inWater = true;
+        return c.activity === 'working' && dist(c.x, c.z, cc.x, cc.z) < 6;
+      },
+      90,
+    );
+    expect(ok).toBe(true);
+    expect(inWater).toBe(false);
+    expect(tr.t.jumps).toBe(0);
+  });
+
+  it('far colonists keep the simulation-LOD shortcut: they snap and never trigger a path search', () => {
+    const h = makeGame();
+    addCore(h.game);
+    ring(h, 140, 140, 148, 146); // sealed room: a search would be pointless (and would show up in the stats)
+    const shelter = addBuilding(h.game, 'shelter', 143, 143);
+    const sc = centerOf(h, shelter);
+    h.game.state.player.x = -300;
+    h.game.state.player.z = -300;
+    const c = addColonist(h.game, 'common', {}, cellCenter(120), cellCenter(143));
+    expect(c.bed).toBe(shelter.id);
+    h.game.state.time.dayTime = 0.8;
+    let walked = false;
+    watch(h, 6, () => {
+      if (c.activity === 'walking') walked = true;
+    });
+    expect(walked).toBe(false);
+    expect(c.activity).toBe('sleeping');
+    expect(dist(c.x, c.z, sc.x, sc.z)).toBeLessThan(2.5);
+    expect(aiOf(h).stats.searches).toBe(0);
+  });
+
+  describe('performance', { timeout: 90_000 }, () => {
+    it('80 colonists in a walled colony with rooms: well under 1 ms per frame (a full day, night and morning)', () => {
+      const h = makeGame();
+      addCore(h.game);
+      // outer wall ring with four gates, 12 walled houses (door facing the core) with two shelters each
+      ring(h, 108, 108, 148, 148, [[128, 108], [128, 148], [108, 128], [148, 128]]);
+      const houses: [number, number][] = [[112, 112], [120, 112], [134, 112], [140, 112], [112, 140], [120, 140], [134, 140], [140, 140], [112, 124], [140, 124], [112, 132], [140, 132]];
+      for (const [x, z] of houses) {
+        ring(h, x, z, x + 4, z + 4, [[x < 128 ? x + 4 : x, z + 2]]);
+        addBuilding(h.game, 'shelter', x + 1, z + 1);
+        addBuilding(h.game, 'shelter', x + 1, z + 3 - 0);
+      }
+      for (let i = 0; i < 4; i++) addBuilding(h.game, 'logging_camp', 118 + i * 5, 118);
+      for (let i = 0; i < 4; i++) addBuilding(h.game, 'quarry', 118 + i * 5, 136);
+      for (let i = 0; i < 4; i++) addBuilding(h.game, 'berry_patch', 117 + i * 4, 144);
+      for (let i = 0; i < 4; i++) addBuilding(h.game, 'shelter', 124 + i * 3, 121);
+      addBuilding(h.game, 'campfire', 133, 123);
+      addBuilding(h.game, 'kitchen', 134, 130);
+      addBuilding(h.game, 'guard_post', 146, 110);
+      const nodes: WorldNode[] = [];
+      for (let i = 0; i < 600; i++) nodes.push({ i, def: i % 3 ? 'tree_round' : 'rock', x: ((i * 37) % 76) - 38, z: ((i * 91) % 76) - 38, rot: 0, scale: 1, region: 'crash_valley', hits: 5 });
+      fakeNodes(h.game, nodes);
+      for (let i = 0; i < 80; i++) addColonist(h.game, 'common');
+      h.game.state.player.x = 0;
+      h.game.state.player.z = 0;
+      const cs = h.game.sys.colonists;
+      const ai = aiOf(h);
+      const list = h.game.state.colonists.list;
+      const bs = h.game.sys.buildings;
+      const last = list.map((c) => ({ x: c.x, z: c.z }));
+      let jumps = 0;
+      let inWall = 0;
+      let total = 0;
+      let worst = 0;
+      let frames = 0;
+      const frame = (measure: boolean) => {
+        h.clock.now += 16;
+        h.game.state.playTime += 1 / 60;
+        const t0 = performance.now();
+        cs.update(1 / 60);
+        const d = performance.now() - t0;
+        if (measure) {
+          total += d;
+          worst = Math.max(worst, d);
+          frames++;
+        }
+        for (let k = 0; k < list.length; k++) {
+          const c = list[k];
+          if (dist(c.x, c.z, last[k].x, last[k].z) > 1) jumps++;
+          last[k] = { x: c.x, z: c.z };
+          const cx = cellOf(c.x);
+          const cz = cellOf(c.z);
+          if (bs.blocked(cx, cz, 'colonist')) {
+            const at = bs.at(cx, cz);
+            if (!at || (c.bed !== at.id && c.workplace !== at.id && at.id !== h.game.state.colony.coreId)) inWall++;
+          }
+        }
+      };
+      // warm up (JIT) through the first morning, then measure day -> night -> morning
+      h.game.state.time.dayTime = 0.3;
+      for (let i = 0; i < 600; i++) frame(false);
+      jumps = inWall = 0;
+      const s0 = { ...ai.stats };
+      for (const [dayTime, event, seconds] of [[0.3, 'time:sunrise', 25], [0.8, 'time:nightfall', 35], [0.3, 'time:sunrise', 35]] as const) {
+        h.game.state.time.dayTime = dayTime;
+        h.game.bus.emit(event, {});
+        for (let i = 0; i < seconds * 60; i++) frame(true);
+      }
+      const avg = total / frames;
+      // eslint-disable-next-line no-console
+      console.log(
+        `colonists.update avg ${avg.toFixed(3)} ms, worst ${worst.toFixed(2)} ms over ${frames} frames (80 colonists, walled base with 12 rooms); ` +
+          `searches ${ai.stats.searches - s0.searches}, cache hits ${ai.stats.cacheHits - s0.cacheHits}, expanded ${ai.stats.expanded - s0.expanded}, fallbacks ${ai.stats.fallbacks - s0.fallbacks}`,
+      );
+      expect(avg).toBeLessThan(1);
+      expect(ai.stats.searches - s0.searches).toBeGreaterThan(20); // it did path (morning/night rush)
+      expect(jumps).toBe(0); // nobody popped through a wall
+      expect(inWall).toBe(0);
+      expect(ai.pending).toBeLessThan(80);
+    });
   });
 });
