@@ -9,6 +9,8 @@ export const BALANCE: BalanceDef = {
   offlineHours: 8,
   /** Offline is slightly slower than online so playing still feels good, and the Welcome Back ad doubles it. */
   offlineEfficiency: 0.8,
+  /** Welcome Back may overflow storage up to 3x capacity — returning should always feel generous. */
+  offlineStorageMult: 3,
   autosaveSeconds: 20,
   playerSpeed: 7,
   playerHp: 100,

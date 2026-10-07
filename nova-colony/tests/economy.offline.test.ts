@@ -31,6 +31,7 @@ describe('economy: offline progress', () => {
 
   it('clamps gains to free storage capacity', () => {
     const { game } = makeGame();
+    game.data.balance.offlineStorageMult = 1; // the shipped balance overflows on purpose (see next test)
     addBuilding(game, 't_mine');
     game.sys.economy.add('t_ore', 900, 'gather');
     expect(game.sys.economy.computeOffline(4 * H).gains.t_ore).toBe(100);
