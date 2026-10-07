@@ -89,6 +89,8 @@ export class BuildOverlay {
       polygonOffset: true,
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
+      // grid, ghosts and the selection ring are UI affordances: shown as designed, never graded by ACES
+      toneMapped: false,
     });
     const quad = new THREE.PlaneGeometry(CELL * 0.94, CELL * 0.94).rotateX(-Math.PI / 2);
     const empty = new THREE.BufferGeometry();
@@ -105,7 +107,7 @@ export class BuildOverlay {
     this.xrayBad = new Batch(this.group, empty, this.xrayMats[1], 16, { renderOrder: 22 });
     this.cellsOk = new Batch(this.group, quad, ctx.mats.ghostOk, 32, { renderOrder: 19 });
     this.cellsBad = new Batch(this.group, quad, ctx.mats.ghostBad, 32, { renderOrder: 19 });
-    this.ringMat = new THREE.MeshBasicMaterial({ color: '#ffd84a', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
+    this.ringMat = new THREE.MeshBasicMaterial({ color: '#ffd84a', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     this.ring = new THREE.Mesh(new THREE.RingGeometry(0.82, 1.0, 40).rotateX(-Math.PI / 2), this.ringMat);
     this.ring.renderOrder = 21;
     this.ring.visible = false;

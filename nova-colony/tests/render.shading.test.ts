@@ -169,3 +169,14 @@ describe('key light at dusk / dawn (QA3: every shadow flipped 180° in one frame
     atmo.dispose();
   });
 });
+
+describe('UI overlays are not graded (QA3: ACES washed the valid ghost to pale mint, hid the selection ring)', () => {
+  it('build ghosts skip tone mapping; scene materials keep it', () => {
+    const m = new Materials();
+    expect(m.ghostOk.toneMapped).toBe(false);
+    expect(m.ghostBad.toneMapped).toBe(false);
+    expect(m.ghostOk.clone().toneMapped).toBe(false); // the x-ray copies are clones
+    expect(m.lit.toneMapped).toBe(true);
+    expect(m.shield.toneMapped).toBe(true);
+  });
+});

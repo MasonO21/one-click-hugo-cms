@@ -221,9 +221,12 @@ export class Materials {
   /** Discard-free `lit` for props: sinks into the ground over the band below the near radius. */
   readonly lodShrinkNear: THREE.MeshLambertMaterial;
   readonly lodShrinkNearDepth: THREE.MeshDepthMaterial;
-  /** Build-mode ghosts. */
-  readonly ghostOk = new THREE.MeshBasicMaterial({ color: '#56ff9a', transparent: true, opacity: 0.55, depthWrite: false });
-  readonly ghostBad = new THREE.MeshBasicMaterial({ color: '#ff5c6a', transparent: true, opacity: 0.55, depthWrite: false });
+  /**
+   * Build-mode ghosts. UI affordances, not lit scene content: they skip tone mapping so the ACES grade
+   * cannot wash the valid-green out to pale mint (it did; they were picked under Neutral).
+   */
+  readonly ghostOk = new THREE.MeshBasicMaterial({ color: '#56ff9a', transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false });
+  readonly ghostBad = new THREE.MeshBasicMaterial({ color: '#ff5c6a', transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false });
   /** Soft particles (dust, smoke, chips, goo) — lit, tinted per instance. */
   readonly particleSoft = new THREE.MeshLambertMaterial({ color: '#ffffff' });
   /** Sparks / fire / magic — additive, unlit. */
