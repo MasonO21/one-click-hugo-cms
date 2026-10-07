@@ -485,7 +485,9 @@ const DATA = {
   finalStage: 150, // beating this ends the story ("The Wyrmsong"); stages past it are the endless Far South
   // stage n foe: base x growth^(n-1) through stage 30, then gentler late growth to 60, then the endless curve
   // (base stats raised 12% in 3.5, when hero skills and the breath's timing arrived)
-  enemy: { atk: 80.6, def: 47, hp: 918, gAtk: 1.13, gDef: 1.12, gHp: 1.14, lateFrom: 30, lAtk: 1.027, lDef: 1.022, lHp: 1.032, endAtk: 1.03, endDef: 1.025, endHp: 1.035, boss: 1.5 },
+  // past stage 100 (Act III and the Far South) a stage counts as 0.75 of a stage on that curve, so
+  // the third act's bosses every five stages still end the story within reach of a Skyriver keep
+  enemy: { atk: 80.6, def: 47, hp: 918, gAtk: 1.13, gDef: 1.12, gHp: 1.14, lateFrom: 30, lAtk: 1.027, lDef: 1.022, lHp: 1.032, endAtk: 1.03, endDef: 1.025, endHp: 1.035, boss: 1.5, act3Ease: 0.75 },
   maxRounds: 12,
   // ---------- Battle tactics ----------
   // Every foe winds up a heavy blow on round 3 and every 4th round after (bosses every 3rd), announced
@@ -629,7 +631,7 @@ const DATA = {
     { text: 'Free Seyl from the Salt Prison (stage 120)', go: 'tab:expedition', check: (S) => S.stage > 120, reward: { starglass: 1500, sunsteel: 1200 } },
     { text: "Finish a hero's whole tale", go: 'tab:roster', check: (S) => (S.stats.talesDone || 0) >= 1, reward: { shard_legendary: 1 } },
     { text: 'Free Barq from the Dead Storm (stage 130)', go: 'tab:expedition', check: (S) => S.stage > 130, reward: { starglass: 2000, beacons: 8 } },
-    { text: 'Finish 4 Hero Tales', go: 'tab:roster', check: (S) => (S.stats.talesDone || 0) >= 4, reward: { starglass: 1500, shard_epic: 2 } },
+    { text: 'Finish 3 Hero Tales', go: 'tab:roster', check: (S) => (S.stats.talesDone || 0) >= 3, reward: { starglass: 1500, shard_epic: 2 } },
     { text: 'Free Sahab from the Ash Cocoon (stage 140)', go: 'tab:expedition', check: (S) => S.stage > 140, reward: { starglass: 2000, sunsteel: 1500 } },
     { text: 'Wake the Mother of Rains (stage 150)', go: 'tab:expedition', check: (S) => S.stage > 150, reward: { starglass: 3000, shard_legendary: 1 } },
   ],

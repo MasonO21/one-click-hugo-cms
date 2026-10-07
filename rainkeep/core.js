@@ -397,12 +397,14 @@
       hp: E.hp * enemyGrowth(n, E.gHp, E.lHp, E.endHp) * mult,
     };
   }
+  // how strong expedition stage n fights: past Act II each stage climbs a little less steeply
+  const stageLevel = (n) => (n <= DATA.actTwoStage ? n : DATA.actTwoStage + (n - DATA.actTwoStage) * DATA.enemy.act3Ease);
   function enemyFor(n) {
     const boss = DATA.bosses[n], ch = chapterOf(n);
     const foe = boss || ch.foes[(n - ch.from) % ch.foes.length];
     const isBoss = !!boss || (n > DATA.finalStage && n % 10 === 0);
     const name = n > DATA.finalStage ? `${foe[0]} · depth ${n - DATA.finalStage}` : foe[0];
-    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 4 : 1), ...foeStats(n, isBoss ? DATA.enemy.boss : 1) };
+    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 4 : 1), ...foeStats(stageLevel(n), isBoss ? DATA.enemy.boss : 1) };
   }
   function stageRewards(n) {
     const boss = !!DATA.bosses[n] || (n > DATA.finalStage && n % 10 === 0);
@@ -1300,7 +1302,7 @@
     coolOf, coolAt, drinkRate, marchCap, troopCap, outsideTemp, troopMult, protectOf, stewardVal, townTemp, comfortOf,
     workerRate, healRate, buildCost, buildTime, maxLevel, upgradeBlock, canAfford, pay, have, techCost, techTime, techMax,
     heroStats, heroCap, skillScale, skillText, stewardOf, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
-    teamStats, chapterOf, foeStats, enemyFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, power, patrolPreview, passTier, addPassXp, passReward,
+    teamStats, chapterOf, foeStats, stageLevel, enemyFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, power, patrolPreview, passTier, addPassXp, passReward,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
     batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable, levelPath, levelPackOpen, levelPackGrants,
   });

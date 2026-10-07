@@ -2,7 +2,7 @@
 
 **Pitch:** The rain stopped a generation ago. Raise the last Rainwyrm, a water dragon whose cooling mist keeps a desert keep alive, and dig the wells that keep your people drinking. Rainkeep is a 3D survival city-builder with heroes, expeditions and alliances, aimed at the same audience as Whiteout Survival, with the survival game that its ads promise kept at the center of play.
 
-This document covers what the game in this folder (version 3.5) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
+This document covers what the game in this folder (version 4.0) contains, what makes it different enough to pull players away from Whiteout Survival, how it makes money, and what it would take to ship it.
 
 ---
 
@@ -28,14 +28,15 @@ Complaints that come up again and again in Whiteout Survival's store reviews and
 
 ## 2. What makes Rainkeep different
 
-These six pillars are all in the game. Each one answers a complaint above.
+These seven pillars are all in the game. Each one answers a complaint above.
 
 1. **A new world: the desert that forgot the rain.** Sun-baked sandstone, palm groves, turquoise water, sandstorms and heatwaves. It is instantly distinguishable from the snow games in an ad feed, but the survival logic is just as primal: water is life. The setting also gives the game a natural day and night cycle, warm and cool palettes, and a hopeful ending (the rain coming back) that a frozen setting struggles to deliver.
 2. **A living water source: the Rainwyrm.** Your "furnace" is a water dragon coiled in the keep's spring, rendered in real-time 3D. It grows through nine forms (Hatchling, Whelp, Drake, Tidewyrm, Elder, Ascended, Primordial, Stormcrowned, Skyriver), visibly gets bigger, sprouts fins, horns and whiskers, trails a rain cloud of its own, wears a crown of storm horns with lightning in its cloud, and finally becomes a river that flies. It blinks, hums when petted, calls a torrent to open every battle, and goes dormant if the wells run dry. Players name it, and at Lv 12 they choose its Ascension (Monsoon, Mistveil or Floodheart). It gives players a pet to protect and a canvas for cosmetic spending (skins), revenue that doesn't add pay-to-win pressure.
 3. **Survival that stays real all game.** Water has two jobs: survivors drink it and the wyrm breathes it as cooling mist. Weather is forecast ahead of time (Dust Haze, Sandstorm, Heatwave), and the sun "hunts water", so every time the wyrm grows, storms run hotter. Middays run hotter and desert nights run cold, so the right mist changes through the day. Players choose the mist (Drizzle, Steady, Downpour), trading water for cooling, and from Lv 6 can let an Attuned wyrm set it for them. From Lv 3 the wyrm can **Call the Rain**: a short shower on a long recharge that refills the wells, cools the keep and calms a sandstorm, so the big storm of the day becomes a decision about when to spend it. Heat makes survivors sick, the Healer's House treats them, and in a Scorching keep the sick can be lost. If the cisterns run dry, the wyrm sleeps and families leave to find water elsewhere.
 4. **A real 3D keep and world.** The keep and the Dunes are 3D scenes, not static backdrops: buildings change shape as they level up, villagers carry water jars between the well and their work, camels circle the walls, palms sway harder in a sandstorm, lanterns come on at night, and caravans visibly cross the Dunes. The keep has real height: it is a terraced oasis at the head of a canyon, with the spring sunk in a stepped basin, the houses and barracks on raised terraces, an upper town and a temple carved into the cliff, so every building has a place rather than a slot on a ring. You can pan across it, zoom from the whole canyon down to street level and turn it. This is the screenshot and the ad.
 5. **Heroes matter at home, not just in fights.** Every hero can be stationed as a Steward of one building (Bashir boosts the wells, Halima speeds healing, Zahra cools the keep). Collecting heroes improves your keep as well as your squad, which deepens the gacha without adding more combat power. The cast is illustrated, diverse and original.
-6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 3.5 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
+6. **Offline protection and fair competition.** While you're away, the wyrm keeps a gentle mist: production continues at a reduced rate and nobody gets sick. Oasis Wars, the leaderboard event, matches players into brackets by spending (Free, Supporter, Patron), so whales fight whales and newcomers fight newcomers. In 4.0 the nine rival keeps are simulated; in a live version they would be real players on bracketed servers.
+7. **A story worth following.** Genre leaders tell their story in a paragraph per chapter. Rainkeep has three acts and three endings, a scene with a recurring cast before every boss, the last wyrm's sealed kin to bring home one by one (each visible on the canyon rim of your keep), and a three-chapter tale for every hero. Story is retention: a scene at the next boss and a tale chapter at the next hero level are reasons to come back that cost nothing to run.
 
 ### Naming and IP
 
@@ -55,7 +56,7 @@ Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burnin
 ```
 *Game time. Timers and rates run about 30× faster than a typical live-service game.
 
-### Systems in version 3.5
+### Systems in version 4.0
 
 | System | What it does | Where |
 |---|---|---|
@@ -73,11 +74,14 @@ Season:            30-tier Wellkeeper's Ledger, new skins, more Dunes and Burnin
 | Troops | 3 classes in a counter triangle, Barracks-scaled strength, march cap, housing cap | `DATA.troops` |
 | Heroes | 22 illustrated heroes (4 join the pool in Act II), 3 rarities, levels capped by stars and Rainwyrm level, skills that grow with stars, Steward posts | `DATA.heroes`, `art2d.js` |
 | Recruitment | Published odds, 40-pull Legendary pity, 10-pull Epic guarantee, featured hero rotating each event, shard pouches | `DATA.recruit` |
-| Expedition | 100 stages in 10 chapters and two acts, 20 bosses, two endings ("The Rains", "The Long Rains"), the endless Burning Line from stage 101, patrol cache | `DATA.chapters` |
+| Expedition | 150 stages in 15 chapters and three acts, 30 bosses, three endings ("The Rains", "The Long Rains", "The Wyrmsong"), the endless Far South from stage 151, patrol cache. Past stage 100 each stage climbs at 0.75 of the Act II enemy curve, so the third act's bosses every five stages still end the story soon after a keep reaches Skyriver | `DATA.chapters`, `DATA.enemy.act3Ease` |
+| Story scenes | A short dialogue before every boss and at each act's opening (33 scenes), played full screen with portraits over a backdrop for each act: the keep's recurring cast (Elder Maram, who remembers the last rain; Captain Hadi of the scouts; Nima, a child born in the drought), the squad's lead hero, the wyrm, the kin and the boss. Tap to advance, Skip, a setting to turn them off, and a Chronicle that replays chapters, scenes and endings. Portraits are drawn by the same generator as the heroes | `story.js`, `lore.js` (`DATA.cast`, `DATA.scenes`) |
+| The kin | Act III's elder Rainwyrms, sealed in glass, salt, a frozen storm and ash and freed by its chapter bosses: Nadaa the Dew Wyrm (survivors drink 5% less), Seyl the Flood Wyrm (+6% well water), Barq the Storm Wyrm (+10% breath, +3% squad attack), Sahab the Cloud Wyrm (faster, longer rain), and Ghaitha, the Mother of Rains (+5% production, 1 °C cooler) at the story's end. Each rests on the canyon rim of the 3D keep, with a camera flight to it | `story.js`, `lore.js` (`DATA.kin`), `town3d.js` |
+| Hero Tales | Every hero has a three-chapter story (66 in all) about who they are at home: Zahra goes back for the door she left, Bashir answers a knocking from the deep shaft, Samira finally delivers a forty-year-old letter. Chapters open at hero Lv 1, Lv 15, and Lv 30 with 2 stars; each is a page and a fight with that hero leading, paying Starglass, journals and the hero's own shards. The ending is a choice: the hero's battle skill 25% stronger, or their steward post 50% stronger. A reason to level and star heroes beyond the squad | `story.js`, `lore.js` (`DATA.tales`) |
 | Trials | Mirage Spire: endless floors from stage 30, a rule twist on each floor (heat, sandstorm, glass floor, mirage, rising tide), a Warden every tenth floor, first-clear rewards. Dune Duels: 1,000-rank simulated ladder, tickets that refill with play, three challengers, rank milestones, 3-hour seasons, Glory shop | `trials.js`, `DATA.spire`, `DATA.duels` |
 | The Dunes | Seeded 21×21 map, dust haze, gathering caravans, beasts, raider camps, 12 story ruins with choices, raids on the keep (raiders march visibly to the gate; rain on arrival weakens them and boiling water from the walls steadies the defenders); in Act II flooded oases (twice the water), Sunsteel veins and Saltborn Hives (tougher camps that pay Sunsteel) appear on top of the Act I layout | `world.js`, `world3d.js` |
 | Caravan | 3 alliances, AI members who help timers, 5 Caravan techs, donations, points shop, gift chests, reactive chat, Colossus raid | `caravan.js` |
-| Meta | 71 chapter quests, 18 daily duties + chests, 7-day gift calendar, 46 achievements, mail, backpack, 6 rotating events including Oasis Wars (Forge Festival and Spire Rush fall back to older events until the Forge and Spire are open) | `events.js` |
+| Meta | 80 chapter quests, 18 daily duties + chests, 7-day gift calendar, 51 achievements, mail, backpack, 6 rotating events including Oasis Wars (Forge Festival and Spire Rush fall back to older events until the Forge and Spire are open) | `events.js` |
 | Season pass | Ledger seasons: 30 free and premium tiers per season, a new season every 8 hours of play, Season 1 with two skins and every later season a new premium skin (six so far, then Starglass), rewards that scale with the keep, unclaimed rewards by mail | `DATA.pass`, `events.js` |
 | Store | Starter offer, monthly card, pass, growth fund, daily kits, value chest, Starglass, skins, crates | `DATA.shop`, `native.js` |
 | Patron program | 10 levels from lifetime spend (100 points per $1) plus 15 points a day for visiting; production, build and research speed, free finishes, offline bank, smelting, Duel ticket slots, daily chest; no combat stats | `patron.js`, `DATA.patron` |
@@ -121,9 +125,9 @@ Target: match the genre's spending ladder while putting more of the spend into b
 5. **Returning-veteran onboarding.** Skip-tutorial for experienced 4X players and a "Warden's Welcome" catch-up event for anyone who joins a server late.
 6. **Creator program** with mid-size strategy and Whiteout Survival YouTubers and streamers at soft launch. Give them early access, custom wyrm skins and Caravan-founder codes.
 
-## 6. From 3.5 to a live multiplayer game
+## 6. From 4.0 to a live multiplayer game
 
-Version 3.5 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
+Version 4.0 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
 
 - **Real Caravans:** shared help requests, donations and Colossus raids backed by a server, plus chat with moderation.
 - **Shared Dunes:** one map per server, where caravans can meet rival keeps.
@@ -136,7 +140,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 
 | Phase | Goal | Typical team / time |
 |---|---|---|
-| Version 3.5 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
+| Version 4.0 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
 | Live multiplayer | Hand-authored hero art and wyrm animation pass, server-authoritative backend, real Caravans, shared Dunes, analytics | 6-12 people, 4-6 months |
 | Soft launch | 1-3 test markets (commonly Canada, Australia, Philippines). Hit retention and payer gates before scaling spend | 15-30 people, 3-6 months |
 | Global launch | Paid user acquisition at scale, live ops, alliances and PvP | 30-80+ people, ongoing |
@@ -147,7 +151,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 - A payer conversion rate of a few percent in the first 30 days
 - Projected 180-day revenue per install above cost per install with margin. 4X installs in tier-1 markets commonly cost well into double-digit dollars
 
-**What a live backend adds that 3.5 doesn't have:** accounts and cloud saves (3.5 has on-device saves and save codes), server-authoritative timers and economy (3.5 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
+**What a live backend adds that 4.0 doesn't have:** accounts and cloud saves (4.0 has on-device saves and save codes), server-authoritative timers and economy (4.0 trusts the device, which is normal for a single-player game but not for competitive multiplayer), anti-cheat, analytics events for every economy action, remote config for tuning, push notifications ("Sandstorm in 10 minutes"), chat and moderation.
 
 **Performance.** The 3D scenes are built for phones: static geometry is merged per material so a fully built keep is a few hundred draw calls, there is one shadow-casting light, the shadow map drops to 1024 px on small screens, the pixel ratio is capped at 2, and rendering stops whenever the tab is hidden or another screen is open. Players on older devices can switch 3D off in Settings; the 2D renderer plays the same game.
 
@@ -200,13 +204,15 @@ The dolphin buys the Founder's Cache, the Growth Fund, the Oasis Stipend, the tw
 
 **Version 3.5 (battle tactics, Cloud Run, keep gardens).** Battles now play round by round. The bot uses auto-battle, which follows the same rules as a player who fires each skill as it charges and saves the breath for a wind-up, and enemy stats rose 12% so that a tactical player meets the old difficulty. The bot also flies its three Cloud Runs a day and raises a resource-paid garden whenever it holds three times the price. Free pacing: story end at 9.8-11.7 h and Lv 20 at 24.8-25.0 h (two runs), about an hour later than 3.4. Founder's Cache 8.8 h / 21.6 h, dolphin 8.0-9.1 h / 19.5-20.9 h, whale 5.9-6.0 h / 13.2-15.0 h to the story end / Lv 20. The first garden prices (part water and copper, 2.2× a level) slowed the whale's Lv 20 from 13.4 h with gardens off to 14.5-15.7 h, so gardens now cost only food and stone, at about a third of the first price over five levels. Every run raised 35 of the 45 garden levels and stayed error-free.
 
+**Version 4.0 (Act III, story scenes, Hero Tales).** The story now ends at stage 150, not 100, so the bot's story-end milestone moved: the old one is now the end of Act II. The bot reads every Hero Tale chapter as it opens (squad heroes take the battle ending, others the steward one) and skips the scenes, as the instant battle mode does. Free pacing (two runs): Act I ends at 3.1-3.3 h, Act II at 10.4-11.7 h, Lv 20 at 23.2-24.4 h and Act III at 25.8-27.4 h. Founder's Cache: Act II 11.0 h, Lv 20 22.8 h, Act III 23.6 h. Dolphin: 8.7 h / 19.4-20.0 h / 20.7-21.7 h. Whale: 4.9-5.6 h / 12.9-14.3 h / 14.0-14.3 h. Spending finishes the whole story about 1.9× sooner for $1,150. Three more free runs agreed (Act III at 23.5-25.6 h). Every run freed all four kin, finished 28 tale chapters and 3 whole tales, and claimed all 80 quests. On the first pass nobody reached stage 150 in 36 hours (bosses every five stages on the endless curve); easing Act III's enemy growth to 0.75 brought it in. The bot also had two quest stalls of its own making, both fixed: it took a Saltborn Hive for the Scorpion-camp quest, and it tried the nearest camp instead of the weakest. A quest asking for four finished tales became three, since a free player levels about three heroes.
+
 **Why Growth Packs exist.** Before them, the whale bot finished the story at the same time as the $80 dolphin (about 9 hours) and reached Lv 20 no sooner. A crate grows with the Rainwyrm's level more slowly than building costs do: a late Rainwyrm level (the wyrm plus the six buildings it needs) costs about 45,000 Starglass in crates, so $1,000 of Starglass bought about two levels, and the whale bot spent much of it on recruits instead. Growth Packs are sized to the next level, so money keeps buying progress all the way to Lv 20. That is the spend ladder a high-grossing game in this genre needs. They also give every level-up a buying moment.
 
 Run-to-run spread is wide (gacha luck and raid timing move stage 60 and stage 100 by an hour or more), so tune with several seeds, not one.
 
 In every run the keep never ran dry (zero minutes thirsty or dormant) and sickness stayed under 0.01% of survivor-time.
 
-A human player is less efficient than the bot, so expect the story to take roughly two to three times as long: about 25-50 hours of play to the Ember Throne, and 50-100 to a Skyriver with fully forged gear.
+A human player is less efficient than the bot, so expect the story to take roughly two to three times as long: about 25-35 hours of play to the Ember Throne, 50-80 to wake the Mother of Rains, and longer still to tell every Hero Tale and forge the gear in full.
 
 Other measured outcomes:
 
@@ -214,7 +220,7 @@ Other measured outcomes:
 - **Every resource is used.** Building costs draw on stone, water (mudbrick and mortar), food and copper from level 3 up. The Forge turns late-game stone into Sunsteel. Copper is the late-game constraint; food piles up for training and donations.
 - **Nights matter.** Desert nights run 7°C colder and middays 2°C hotter, so a wyrm left on Steady wastes water after dark. Attuned mist drizzles at night and pours before storms. That alone saves enough water to speed the free player's story by about a tenth.
 - **Keep life rewards attention.** An always-attentive player gets about 15% more output from surplus bubbles and 10-15% more water from showers. Incidents roughly break even, and merchants turn surplus food into journals, Rain Charms and the scarce resource.
-- **Old saves carry over.** Saves from 2.0 and 2.1 load into 3.5 at the same chapter quest (quests added since are stepped over). A finished 2.x game continues straight into the Act II quests, and a save already in the Burning Line becomes Act II progress.
+- **Old saves carry over.** Saves from 2.0 and 2.1 load into 4.0 at the same chapter quest (quests added since are stepped over). A finished 2.x game continues straight into the Act II quests, and a save already in the Burning Line becomes Act II progress.
 - **No errors** across all automated runs.
 
 ## 9. Next steps

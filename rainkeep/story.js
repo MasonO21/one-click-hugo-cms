@@ -284,7 +284,7 @@
   };
   const foeFor = (id, p) => {
     const part = T[id].parts[p], n = Math.max(3, S.stage - 8), boss = p === 2;
-    return { n, name: part.foe[0], cls: part.foe[1], boss, chapter: T[id].name, ...KH.foeStats(n, boss ? 1.2 : 1) };
+    return { n, name: part.foe[0], cls: part.foe[1], boss, chapter: T[id].name, ...KH.foeStats(KH.stageLevel(n), boss ? 1.2 : 1) };
   };
 
   KH.heroTale = (id) => {

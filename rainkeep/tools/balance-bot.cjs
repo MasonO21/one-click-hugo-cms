@@ -215,7 +215,9 @@ const HOURS = Number(process.argv[3] || 8);
           const campQuest = D.quests[S.quest] && /camp/.test(D.quests[S.quest].text);
           const stuck = campQuest || (S.time - lastWin > 300 && KH.statPower(KH.teamStats(KH.enemyFor(S.stage).cls)) < KH.statPower(KH.enemyFor(S.stage)) * 0.9);
           if (free() && KH.squadHome().length && stuck) {
-            const tgt = tiles.find((t) => (campQuest ? t.kind === 'camp' : t.kind === 'beast' || t.kind === 'camp') && !t.gone && !t.busy && (() => { UI.wsend = 1; const s = KH.statPower; const foeP = s({ ...KH.foeStats(D.world.beastStage(t.lvl) + (t.kind === 'camp' ? D.world.campStageBonus : 0), t.kind === 'camp' ? D.world.campScale : D.world.beastScale) }); return s(KH.teamStats(t.cls || 'guard', { troops: KH.marchTroops() })) > foeP * 1.1; })());
+            // for the camp quest, the weakest Scorpion camp in sight (hives don't count for it)
+            const pool = campQuest ? tiles.filter((t) => t.kind === 'camp' && !t.salt).sort((a, b) => a.lvl - b.lvl) : tiles;
+            const tgt = pool.find((t) => (campQuest ? true : t.kind === 'beast' || t.kind === 'camp') && !t.gone && !t.busy && (() => { UI.wsend = 1; const s = KH.statPower; const foeP = s({ ...KH.foeStats(D.world.beastStage(t.lvl) + (t.kind === 'camp' ? D.world.campStageBonus : 0), t.kind === 'camp' ? D.world.campScale : D.world.beastScale) }); return s(KH.teamStats(t.cls || 'guard', { troops: KH.marchTroops() })) > foeP * 1.1; })());
             if (tgt) { UI.wsend = 0.5; A.wattack(tgt.k); }
           }
           if (free()) { const r = tiles.find((t) => t.kind === 'ruin' && !t.gone && !t.busy); if (r) { UI.wsend = 0.25; A.wexplore(r.k); } }

@@ -200,7 +200,7 @@
   const raidIdx = () => Math.floor(S.time / R.every);
   const raidOpen = () => S.caravan.joined && !S.caravan.raid.ended && S.time - S.caravan.raid.start < R.open;
   function raidFoe() {
-    const s = KH.foeStats(Math.max(1, S.stage + 2), DATA.enemy.boss);
+    const s = KH.foeStats(KH.stageLevel(Math.max(1, S.stage + 2)), DATA.enemy.boss);
     return { n: S.stage, name: R.boss, cls: 'guard', boss: true, chapter: KH.caravanName(), ...s };
   }
   function attackDamage() {
