@@ -401,10 +401,13 @@
   // how strong expedition stage n fights: past Act II each stage climbs a little less steeply
   const stageLevel = (n) => (n <= DATA.actTwoStage ? n : DATA.actTwoStage + (n - DATA.actTwoStage) * DATA.enemy.act3Ease);
   function enemyFor(n) {
-    const boss = DATA.bosses[n], ch = chapterOf(n);
+    const ch = chapterOf(n), depth = n - DATA.finalStage, FB = DATA.farSouthBosses;
+    // past the story, every tenth stage is one of the Far South's named warlords, a rank harder each time round
+    const far = depth > 0 && depth % 10 === 0 ? FB[(depth / 10 - 1) % FB.length] : null, round = far ? Math.floor((depth / 10 - 1) / FB.length) : 0;
+    const boss = DATA.bosses[n] || (far && [round ? `${far[0]} ${['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][Math.min(8, round - 1)]}` : far[0], far[1]]);
     const foe = boss || ch.foes[(n - ch.from) % ch.foes.length];
-    const isBoss = !!boss || (n > DATA.finalStage && n % 10 === 0);
-    const name = n > DATA.finalStage ? `${foe[0]} · depth ${n - DATA.finalStage}` : foe[0];
+    const isBoss = !!boss;
+    const name = depth > 0 && !far ? `${foe[0]} · depth ${depth}` : foe[0];
     return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 4 : 1), ...foeStats(stageLevel(n), isBoss ? DATA.enemy.boss : 1) };
   }
   function stageRewards(n) {

@@ -486,6 +486,10 @@
       h += `<div class="costs">${DATA.wyrmReqs(to).map((r) => `<span class="cost ${S.lv[r.plot] < r.lvl ? 'short' : ''}">${SHORT[r.plot]} Lv ${r.lvl}</span>`).join('')}</div>`;
     }
     h += `${costHTML(cost)}<div class="chip muted">${icon('i-clock')}${fmtTime(KH.buildTime(pid, to))}</div>`;
+    // when the block is another building's level, offer the way there instead of a dead button
+    let fix = null;
+    if (why && pid === 'wyrm') { const r = DATA.wyrmReqs(to).find((q) => S.lv[q.plot] < q.lvl); if (r) fix = r.plot; }
+    else if (why && S.lv.wyrm >= KH.PLOT[pid].unlock && to > S.lv.wyrm) fix = 'wyrm';
     if (why) h += `<p class="notice heat">${esc(why)}</p>`;
     else if (busy) {
       const b = S.builds[0];
@@ -494,7 +498,8 @@
       const short = Object.keys(cost).filter((k) => KH.have(k) < cost[k]);
       h += `<p class="muted small">Short on ${short.map((k) => NAME[k].toLowerCase()).join(' and ')}. Gather on the Dunes, open crates from your Backpack, or wait for production.</p>`;
     }
-    h += `<button class="btn wide ${why || busy || !afford ? 'off' : ''}" data-act="build" data-arg="${pid}">${icon('i-up')}${L ? 'Upgrade' : 'Build'}</button>`;
+    if (fix) h += `<button class="btn wide gold" data-act="plot" data-arg="${fix}">${icon(fix === 'wyrm' ? 'i-wyrm' : 'i-up')}${fix === 'wyrm' ? `Grow ${esc(S.wyrm.name)} first` : `Go to the ${esc(SHORT[fix])}`}</button>`;
+    else h += `<button class="btn wide ${why || busy || !afford ? 'off' : ''}" data-act="build" data-arg="${pid}">${icon('i-up')}${L ? 'Upgrade' : 'Build'}</button>`;
     return h;
   }
 

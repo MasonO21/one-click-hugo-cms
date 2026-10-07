@@ -480,6 +480,10 @@ const DATA = {
     135: ['The Last Choirmaster', 'bow'], 140: ['The Ash Cocoon', 'guard'], 145: ['The Well-Warden', 'lancer'],
     150: ['The Thirst', 'guard'],
   },
+  // the endless Far South: a named warlord every ten stages, in this order, then again a rank harder (II, III, ...)
+  farSouthBosses: [['Ashfang the Ember Drake', 'lancer'], ['The Glassback Matriarch', 'guard'], ['The Cinder Colossus', 'guard'], ['Mother of Mirages', 'bow'],
+    ['The Dune Leviathan', 'lancer'], ['Khamsin, the Storm Unending', 'bow'], ['The Obsidian Titan', 'guard'], ['The Pale Lion of the South', 'lancer'],
+    ['The Crystal Sultan', 'guard'], ['The Last Ember of the Thirst', 'bow']],
   actOneStage: 60, // beating this ends Act I ("The Rains") and opens Act II
   actTwoStage: 100, // beating this ends Act II ("The Long Rains") and opens Act III
   finalStage: 150, // beating this ends the story ("The Wyrmsong"); stages past it are the endless Far South
@@ -553,9 +557,10 @@ const DATA = {
   questsAdded30: [41, 44, 46, 47, 50, 52],
   quests: [
     { text: 'Dig the Deep Well. The Rainwyrm is thirsty.', go: 'plot:well', check: (S) => S.lv.well >= 1, reward: { water: 150 } },
+    // a building can't outgrow the wyrm, so the wyrm grows first
+    { text: 'Grow the Rainwyrm to Lv 2', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 2, reward: { beacons: 2, starglass: 100 } },
     { text: 'Upgrade the Date Grove to Lv 2', go: 'plot:grove', check: (S) => S.lv.grove >= 2, reward: { food: 150 } },
     { text: 'Upgrade the Deep Well to Lv 2', go: 'plot:well', check: (S) => S.lv.well >= 2, reward: { stone: 200 } },
-    { text: 'Grow the Rainwyrm to Lv 2', go: 'plot:wyrm', check: (S) => S.lv.wyrm >= 2, reward: { beacons: 2, starglass: 100 } },
     { text: 'Pet your Rainwyrm', go: 'plot:wyrm', check: (S) => S.stats.pets >= 1, reward: { journals: 10 } },
     { text: 'Tap a surplus bubble over a building', go: 'surplus', check: (S) => (S.stats.surplus || 0) >= 1, reward: { stone: 200 } },
     { text: "Build the Healer's House", go: 'plot:infirmary', check: (S) => S.lv.infirmary >= 1, reward: { journals: 15 } },
