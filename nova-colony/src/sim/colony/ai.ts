@@ -3,9 +3,11 @@
  *
  * Every colonist owns a tiny `Brain`. DECISIONS ("what should I be doing and where?") run on a staggered
  * schedule (~once per 1-1.5 s per colonist, randomly offset, so only a handful of colonists think per frame);
- * MOVEMENT is a few multiplications per frame (straight-line steering with one-axis wall sliding and a
- * teleport fallback when stuck > 3 s). Colonists far from the player/camera skip walking entirely and snap to
- * their destination.
+ * MOVEMENT is a few multiplications per frame: straight-line steering when the way is clear, otherwise a bounded grid
+ * A* (`path.ts`, string-pulled into a few waypoints, cached per start/goal cell, a couple of searches per frame) that
+ * routes around walls, rooms and big facilities through doors/gates. One-axis wall sliding stays as the safety net and
+ * a teleport to the goal is the last resort when no path exists (e.g. a bed in a sealed room) or the colonist is stuck
+ * > 3 s. Colonists far from the player/camera skip walking entirely and snap to their destination.
  *
  * Priorities each decision: combat (guards man their post, everyone else shelters) > night (sleep in bed, or
  * around the campfire/core) > midday meal break (once per day) > work (at the workplace, with visible
@@ -14,10 +16,11 @@
 import type { Game } from '../../core/Game';
 import type { Colonist, ColonistActivity, Id } from '../../core/state';
 import type { WorldNode } from '../world';
-import { cellCenter, cellOf } from '../../core/constants';
+import { WORLD_CELLS, cellCenter, cellOf } from '../../core/constants';
 import { approachAngle, clamp } from '../../core/math';
 import type { Layout, Place } from './layout';
 import { gainWorkXp } from './skills';
+import { PathFinder, R_BUDGET, R_FOUND, R_NONE } from './path';
 
 /** Colonists farther than this (world units) from the player (and overview camera focus) are simulated coarsely. */
 export const NEAR_RANGE = 60;
@@ -43,6 +46,32 @@ const PH_FIELD = 2;
 const ST_SITE = 0;
 const ST_NODES = 1;
 const ST_FIELD = 2;
+
+/** Movement routing state of a brain. */
+const P_DIRECT = 0; // straight-line steering (line of sight clear, or last-resort fallback)
+const P_WAIT = 1; // waiting for a path search (a frame or two)
+const P_FOLLOW = 2; // following waypoints
+
+/** Pathing budgets: real searches per frame, node expansions per frame, path re-validations per frame. */
+const MAX_SEARCHES = 3;
+const FRAME_EXPAND_BUDGET = 8000;
+const MAX_REVALIDATE = 8;
+/** Re-plans allowed per walk before falling back to plain steering. */
+const MAX_REPLANS = 4;
+/** Path cache lifetime (play seconds) and size cap. */
+const CACHE_TTL = 20;
+const CACHE_TTL_PARTIAL = 8;
+const CACHE_MAX = 400;
+/** No-progress seconds before the last-resort teleport (plain steering / after a partial path). */
+const STUCK_DIRECT = 3;
+const STUCK_FINAL = 1.5;
+
+interface CachedPath {
+  kind: number;
+  wp: Float32Array;
+  at: number;
+  enter: number;
+}
 
 /** Professions with outdoor routines (ProfessionId is a schema union, not free-form content). */
 const NODE_JOBS = new Set<string>(['gatherer', 'miner']);
@@ -72,6 +101,19 @@ interface Brain {
   /** Persistent slide direction (+1/-1) while skirting an obstacle. */
   slideDir: number;
   slideUntil: number;
+  /** Routing: P_* state, waypoint list (x,z pairs; shared with the cache, never mutated), cursor and count. */
+  pst: number;
+  wp: Float32Array | null;
+  wpi: number;
+  wpn: number;
+  /** R_* kind of the followed path (R_FOUND, or a partial path to the closest reachable cell). */
+  pkind: number;
+  replans: number;
+  /** Path epoch the waypoints were last validated against. */
+  pver: number;
+  queued: boolean;
+  /** Seconds without progress before the teleport fallback. */
+  stuckMax: number;
   speed: number;
   phase: number;
   node: number;
@@ -111,15 +153,58 @@ export class ColonistAI {
   private rx = 0;
   private rz = 0;
 
+  // ---- pathing
+  private readonly pf: PathFinder;
+  private readonly pathCache = new Map<number, CachedPath>();
+  /** Colonists waiting for a search (FIFO; `qHead` is the next one). */
+  private readonly queue: Colonist[] = [];
+  private qHead = 0;
+  /** Bumped whenever buildings change: cached paths die, followed paths get re-validated. */
+  private epoch = 1;
+  private seenVersion = -1;
+  private bound = false;
+  private searchesLeft = MAX_SEARCHES;
+  private expandLeft = FRAME_EXPAND_BUDGET;
+  private revalLeft = MAX_REVALIDATE;
+  /** Lifetime counters (tests / diagnostics). */
+  readonly stats = { searches: 0, cacheHits: 0, replans: 0, expanded: 0, fallbacks: 0 };
+
   constructor(
     private readonly game: Game,
     private readonly layout: Layout,
-  ) {}
+  ) {
+    this.pf = new PathFinder(game);
+  }
 
   /** Forget all runtime brains (after a load). */
   reset(): void {
     this.brains.clear();
     this.nodeCache.clear();
+    this.pathCache.clear();
+    this.queue.length = 0;
+    this.qHead = 0;
+    this.seenVersion = -1;
+    this.bind();
+  }
+
+  /** Drop cached paths and make every followed path re-validate itself (buildings changed). */
+  invalidatePaths(): void {
+    this.pathCache.clear();
+    this.epoch++;
+  }
+
+  /** Number of colonists currently waiting for a path search. */
+  get pending(): number {
+    return this.queue.length - this.qHead;
+  }
+
+  private bind(): void {
+    if (this.bound) return;
+    this.bound = true;
+    this.game.bus.on('building:changed', () => {
+      this.seenVersion = this.game.derived.buildingsVersion;
+      this.invalidatePaths();
+    });
   }
 
   /** Make everyone re-decide soon (night fell, an attack began...). Spread over `spread` seconds. */
@@ -155,6 +240,19 @@ export class ColonistAI {
     f.overview = cam.mode === 'overview';
     f.cx = cam.tx;
     f.cz = cam.tz;
+
+    // pathing housekeeping: invalidate on structural changes (also catches edits that bypass the event), spend this
+    // frame's search budget on queued requests first, then let new decisions use what is left
+    this.bind();
+    const ver = g.derived.buildingsVersion;
+    if (ver !== this.seenVersion) {
+      this.seenVersion = ver;
+      this.invalidatePaths();
+    }
+    this.searchesLeft = MAX_SEARCHES;
+    this.expandLeft = FRAME_EXPAND_BUDGET;
+    this.revalLeft = MAX_REVALIDATE;
+    if (this.qHead < this.queue.length) this.pump();
 
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
@@ -198,6 +296,15 @@ export class ColonistAI {
       walkMax: 30,
       slideDir: 0,
       slideUntil: 0,
+      pst: P_DIRECT,
+      wp: null,
+      wpi: 0,
+      wpn: 0,
+      pkind: R_FOUND,
+      replans: 0,
+      pver: 0,
+      queued: false,
+      stuckMax: STUCK_DIRECT,
       speed: this.game.data.balance.colonistSpeed,
       phase: PH_SITE,
       node: -1,
@@ -599,6 +706,11 @@ export class ColonistAI {
       br.walkT = 0;
       br.slideDir = 0;
       br.slideUntil = 0;
+      br.replans = 0;
+      br.stuckMax = STUCK_DIRECT;
+      br.pst = P_DIRECT;
+      br.wp = null;
+      br.wpi = br.wpn = 0;
     }
     c.tx = br.gx;
     c.tz = br.gz;
@@ -626,10 +738,181 @@ export class ColonistAI {
     br.walkMax = (Math.hypot(br.gx - c.x, br.gz - c.z) / Math.max(0.5, br.speed)) * 2.5 + 8;
     br.moving = true;
     c.activity = 'walking';
+    if (!same) this.route(c, br);
+  }
+
+  // ------------------------------------------------------------------ pathing
+
+  /** Decide how this walk gets to its goal: straight if the line is clear, otherwise via a (cached/queued) A* path. */
+  private route(c: Colonist, br: Brain): void {
+    const scx = cellOf(c.x);
+    const scz = cellOf(c.z);
+    const gcx = cellOf(br.gx);
+    const gcz = cellOf(br.gz);
+    if (scx === gcx && scz === gcz) return;
+    const pf = this.pf;
+    pf.begin(br.bld, scx, scz, gcx, gcz);
+    if (pf.lineClear(c.x, c.z, br.gx, br.gz)) return; // open ground: plain steering
+    br.pst = P_WAIT;
+    if (this.qHead < this.queue.length || !this.resolve(c, br, true)) this.enqueue(c, br);
+  }
+
+  private enqueue(c: Colonist, br: Brain): void {
+    if (br.queued) return;
+    br.queued = true;
+    this.queue.push(c);
+  }
+
+  /** Serve queued path requests, oldest first, within this frame's budget. */
+  private pump(): void {
+    const q = this.queue;
+    while (this.qHead < q.length) {
+      const c = q[this.qHead];
+      const br = this.brains.get(c.id);
+      if (!br || br.pst !== P_WAIT || !br.moving) {
+        if (br) br.queued = false;
+        this.qHead++;
+        continue;
+      }
+      const scx = cellOf(c.x);
+      const scz = cellOf(c.z);
+      this.pf.begin(br.bld, scx, scz, cellOf(br.gx), cellOf(br.gz));
+      if (!this.resolve(c, br, br.replans === 0)) break; // out of budget: the rest waits for the next frame
+      br.queued = false;
+      this.qHead++;
+    }
+    if (this.qHead >= q.length) {
+      q.length = 0;
+      this.qHead = 0;
+    }
+  }
+
+  /**
+   * Get waypoints for a colonist in P_WAIT (pf.begin() already called for its start/goal): from the cache, else a
+   * fresh search. Returns false when a search is needed but this frame's budget is spent.
+   */
+  private resolve(c: Colonist, br: Brain, useCache: boolean): boolean {
+    const scx = cellOf(c.x);
+    const scz = cellOf(c.z);
+    const key = (scz * WORLD_CELLS + scx) * (WORLD_CELLS * WORLD_CELLS) + cellOf(br.gz) * WORLD_CELLS + cellOf(br.gx);
+    const now = this.f.now;
+    if (useCache) {
+      const hit = this.pathCache.get(key);
+      if (hit && hit.enter === br.bld && now - hit.at <= (hit.kind === R_FOUND ? CACHE_TTL : CACHE_TTL_PARTIAL)) {
+        if (this.adopt(c, br, hit.kind, hit.wp, true)) {
+          this.stats.cacheHits++;
+          return true;
+        }
+      }
+    }
+    if (this.searchesLeft <= 0 || this.expandLeft <= 0) return false;
+    this.searchesLeft--;
+    const core = this.core();
+    const pf = this.pf;
+    const kind = pf.find(c.x, c.z, br.gx, br.gz, cellOf(core.x), cellOf(core.z), this.game.state.colony.radius);
+    this.expandLeft -= pf.expanded + 16;
+    this.stats.searches++;
+    this.stats.expanded += pf.expanded;
+    if (this.pathCache.size >= CACHE_MAX) this.pathCache.clear();
+    this.pathCache.set(key, { kind, wp: pf.wp, at: now, enter: br.bld });
+    this.adopt(c, br, kind, pf.wp, false);
+    return true;
+  }
+
+  /** Start following a path (or fall back to plain steering when there is none). false = rejected (cached path unusable here). */
+  private adopt(c: Colonist, br: Brain, kind: number, wp: Float32Array, validate: boolean): boolean {
+    const pf = this.pf;
+    const n = wp.length >> 1;
+    br.best = Infinity;
+    br.stuck = 0;
+    br.pver = this.epoch;
+    if (kind === R_NONE || n === 0) {
+      // nowhere to walk to: plain steering, short fuse before the last-resort teleport
+      this.stats.fallbacks++;
+      br.pst = P_DIRECT;
+      br.wp = null;
+      br.wpi = br.wpn = 0;
+      br.stuckMax = STUCK_FINAL;
+      return true;
+    }
+    if (validate && !pf.lineClear(c.x, c.z, wp[0], wp[1])) return false;
+    let m = n;
+    if (kind === R_FOUND) {
+      // the last waypoint is the goal cell's centre: drop it (and more) when the exact goal is visible sooner
+      while (m > 0) {
+        const px = m >= 2 ? wp[(m - 2) * 2] : c.x;
+        const pz = m >= 2 ? wp[(m - 2) * 2 + 1] : c.z;
+        if (!pf.lineClear(px, pz, br.gx, br.gz)) break;
+        m--;
+      }
+    }
+    br.pst = P_FOLLOW;
+    br.wp = wp;
+    br.wpi = 0;
+    br.wpn = m;
+    br.pkind = kind;
+    let len = 0;
+    let px = c.x;
+    let pz = c.z;
+    for (let i = 0; i < m; i++) {
+      len += Math.hypot(wp[i * 2] - px, wp[i * 2 + 1] - pz);
+      px = wp[i * 2];
+      pz = wp[i * 2 + 1];
+    }
+    len += Math.hypot(br.gx - px, br.gz - pz);
+    br.walkMax = br.walkT + (len / Math.max(0.5, br.speed)) * 2.5 + 8;
+    return true;
+  }
+
+  /** Is the remaining path still walkable (buildings changed since it was planned)? */
+  private pathValid(c: Colonist, br: Brain): boolean {
+    const wp = br.wp;
+    if (!wp) return false;
+    const pf = this.pf;
+    pf.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
+    let px = c.x;
+    let pz = c.z;
+    for (let i = br.wpi; i < br.wpn; i++) {
+      const x = wp[i * 2];
+      const z = wp[i * 2 + 1];
+      if (!pf.lineClear(px, pz, x, z, 0.3)) return false;
+      px = x;
+      pz = z;
+    }
+    return br.pkind !== R_FOUND || pf.lineClear(px, pz, br.gx, br.gz, 0.3);
+  }
+
+  /** The path is no good any more: plan again from where the colonist stands (never reusing cached paths). */
+  private replan(c: Colonist, br: Brain): void {
+    this.stats.replans++;
+    br.replans++;
+    br.pst = P_WAIT;
+    br.wp = null;
+    br.wpi = br.wpn = 0;
+    br.best = Infinity;
+    br.stuck = 0;
+    this.pf.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
+    if (this.qHead < this.queue.length || !this.resolve(c, br, false)) this.enqueue(c, br);
+  }
+
+  /** A partial path ran out of waypoints: budget-limited ones continue from here, unreachable goals go last-resort. */
+  private endOfPartial(c: Colonist, br: Brain): void {
+    if (br.pkind === R_BUDGET && br.replans < 2) {
+      this.replan(c, br);
+      return;
+    }
+    this.stats.fallbacks++;
+    br.pst = P_DIRECT;
+    br.wp = null;
+    br.stuckMax = STUCK_FINAL;
+    br.best = Infinity;
+    br.stuck = 0;
   }
 
   private arrive(c: Colonist, br: Brain): void {
     br.moving = false;
+    br.pst = P_DIRECT;
+    br.wp = null;
     br.stuck = 0;
     c.activity = br.act;
     c.tx = c.x;
@@ -643,17 +926,55 @@ export class ColonistAI {
       if (br.hasFace && c.activity !== 'sleeping') c.rot = approachAngle(c.rot, Math.atan2(br.fx - c.x, br.fz - c.z), 6 * dt);
       return;
     }
-    const dx = br.gx - c.x;
-    const dz = br.gz - c.z;
+    if (br.pst === P_WAIT) {
+      br.walkT += dt; // waiting a frame or two for a path search
+      return;
+    }
+    const maxStep = br.speed * dt * (this.f.combat ? 1.5 : 1);
+    // current steering target: the next waypoint of the path, or the goal itself
+    let tx = br.gx;
+    let tz = br.gz;
+    let mid = false;
+    if (br.pst === P_FOLLOW) {
+      if (br.pver !== this.epoch && this.revalLeft > 0) {
+        // buildings changed since this path was planned: make sure it is still walkable (a few per frame)
+        this.revalLeft--;
+        br.pver = this.epoch;
+        if (!this.pathValid(c, br)) {
+          this.replan(c, br);
+          return;
+        }
+      }
+      const wp = br.wp!;
+      const reach = Math.max(0.16, maxStep * maxStep * 2.25);
+      while (br.wpi < br.wpn) {
+        const wx = wp[br.wpi * 2] - c.x;
+        const wz = wp[br.wpi * 2 + 1] - c.z;
+        if (wx * wx + wz * wz > reach) break;
+        br.wpi++;
+        br.best = Infinity;
+        br.stuck = 0;
+      }
+      if (br.wpi < br.wpn) {
+        tx = wp[br.wpi * 2];
+        tz = wp[br.wpi * 2 + 1];
+        mid = true;
+      } else if (br.pkind !== R_FOUND) {
+        this.endOfPartial(c, br);
+        if ((br.pst as number) !== P_DIRECT) return; // re-planning: continue next frame
+      }
+    }
+    const dx = tx - c.x;
+    const dz = tz - c.z;
     const d2 = dx * dx + dz * dz;
-    if (d2 < 0.0625) {
+    if (!mid && d2 < 0.0625) {
       c.x = br.gx;
       c.z = br.gz;
       this.arrive(c, br);
       return;
     }
     const d = Math.sqrt(d2);
-    const stepLen = Math.min(d, br.speed * dt * (this.f.combat ? 1.5 : 1));
+    const stepLen = Math.min(d, maxStep);
     let nx = c.x + (dx / d) * stepLen;
     let nz = c.z + (dz / d) * stepLen;
 
@@ -663,19 +984,23 @@ export class ColonistAI {
     const ncx = cellOf(nx);
     const ncz = cellOf(nz);
     if ((ncx !== ocx || ncz !== ocz) && this.blocked(ncx, ncz, br.bld) && !this.blocked(ocx, ocz, br.bld)) {
+      if (br.pst === P_FOLLOW && br.replans < MAX_REPLANS) {
+        this.replan(c, br); // the way is blocked (unexpectedly): plan again instead of sliding
+        return;
+      }
       this.slide(c, br, dx, dz, stepLen, now, ocx, ocz, ncx, ncz);
       nx = this.rx;
       nz = this.rz;
     } else if (now >= br.slideUntil) br.slideDir = 0;
 
-    // stuck detection: no real progress toward the goal for 3 s (also catches sliding back and forth),
-    // or a walk that takes absurdly long -> teleport to the goal
+    // stuck detection: no real progress toward the target for a few seconds (also catches sliding back and forth),
+    // or a walk that takes absurdly long -> teleport to the goal (last resort)
     br.walkT += dt;
     if (d < br.best - 0.25) {
       br.best = d;
       br.stuck = 0;
     } else br.stuck += dt;
-    if (br.stuck > 3 || br.walkT > br.walkMax) {
+    if (br.stuck > br.stuckMax || br.walkT > br.walkMax) {
       c.x = br.gx;
       c.z = br.gz;
       this.arrive(c, br);
