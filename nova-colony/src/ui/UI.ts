@@ -92,6 +92,7 @@ export class UI {
   private lastProdFloat = new Map<string, number>();
   private lastGatherFloat = new Map<string, number>();
   private toastQueue: { text: string; kind?: ToastKind; icon?: string }[] = [];
+  private modalWasOpen = false;
 
   constructor(
     private readonly game: Game,
@@ -275,6 +276,10 @@ export class UI {
   private onPanelsChanged(): void {
     const covering = this.panels.anyCovering();
     this.game.view.panelOpen = covering;
+    // a modal (reward card, celebration, chest) opening replaces whatever toasts were saying a moment ago
+    const modal = this.panels.anyModal();
+    if (modal && !this.modalWasOpen) this.toasts.clear();
+    this.modalWasOpen = modal;
     // the tutorial points at the build card (not the Build button) while the build drawer is open
     const tut = this.game.sys.tutorial;
     const buildOpen = this.panels.isOpen('build');
@@ -299,8 +304,9 @@ export class UI {
     // game-event toasts wait while a modal (celebration, chest, welcome back) is up instead of covering
     // its title; toasts from the player's own taps (ctx.toast) still show at once
     bus.on('ui:toast', (e) => {
-      if (!this.panels.anyModal()) this.toasts.show(e.text, e.kind, e.icon);
-      else if (!this.toastQueue.some((q) => q.text === e.text) && this.toastQueue.push(e) > 6) this.toastQueue.shift();
+      if (!this.panels.anyModal() || performance.now() - this.lastClick.t < 1500) this.toasts.show(e.text, e.kind, e.icon);
+      // 'reward' toasts duplicate the reward card that is showing; the rest is still news afterwards
+      else if (e.kind !== 'reward' && !this.toastQueue.some((q) => q.text === e.text) && this.toastQueue.push(e) > 6) this.toastQueue.shift();
     });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     bus.on('ui:open', (e) => this.open(e.panel, e.arg));
@@ -404,9 +410,9 @@ export class UI {
       this.toasts.show(`Need ${fmt(Math.ceil(first[1]))} more ${d?.name ?? first[0]}`, 'warning', d?.icon ?? '📦');
     });
     bus.on('player:backpackFull', () => this.toasts.show('Backpack full! Walk back to the colony to unload.', 'warning', '🎒'));
+    // the sim already explains an unavailable video; a skipped one needs no scolding toast at all
     bus.on('ad:failed', () => {
       this.lastAdFail = performance.now();
-      this.toasts.show('No video available right now — please try again soon!', 'info', '📺');
     });
     bus.on('iap:purchased', () => this.toasts.show('Thank you for your support! 💜', 'reward', '🎉'));
     bus.on('iap:failed', (e) => this.toasts.show(e.reason && e.reason !== 'cancelled' ? `Purchase didn't go through: ${e.reason}` : 'Purchase cancelled — no worries!', 'info', '🛍️'));

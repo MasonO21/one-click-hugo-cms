@@ -6,6 +6,11 @@ const from = process.argv[3] || '';
 const until = process.argv[4] || 'end';
 const TS = +(process.env.TS || 2);
 const { browser, context, page, logs } = await launch(vp, from ? { storage: `${SP}/snap-${from}.json` } : {});
+/**
+ * HUMAN MODEL: a first-time player steers a virtual joystick less directly than this script and pauses to
+ * look around, so every bit of walking/gathering costs HUMAN_STEER x its scripted game time in total.
+ */
+const HUMAN_STEER = +(process.env.HUMAN_STEER || 1.6);
 await waitReady(page);
 await dismissWelcome(page);
 await timeScale(page, TS);
@@ -25,6 +30,14 @@ async function waitMission(id, maxGameSec = 600, onTick) {
     await sleep(400);
   }
   return false;
+}
+
+async function hwalk(x, z, opts) {
+  const t0 = await gameTime(page);
+  const ok = await walkTo(page, x, z, opts);
+  const dt = (await gameTime(page)) - t0;
+  if (HUMAN_STEER > 1) await advance(page, dt * (HUMAN_STEER - 1));
+  return ok;
 }
 
 /** Find an open spot near (cx, cz) for def (as a human eyeballing the ground). Returns world center. */
@@ -86,7 +99,7 @@ async function gatherNearest(nodeDef, resId, need) {
     if (have >= need) return true;
     const n = await page.evaluate((def) => { const g = window.game; const p = g.state.player; const n = g.sys.world.findNodeByDef(def, p.x, p.z); return n ? { x: n.x, z: n.z, i: n.i } : null; }, nodeDef);
     if (!n) return false;
-    await walkTo(page, n.x, n.z, { tol: 2.8 });
+    await hwalk(n.x, n.z, { tol: 2.8 });
     for (let k = 0; k < 40; k++) { const dep = await page.evaluate((i) => window.game.sys.world.isDepleted(i), n.i); const have2 = await page.evaluate((r) => window.game.state.resources.amounts[r] || 0, resId); if (dep || have2 >= need) break; await sleep(250); }
   }
   return false;
@@ -113,7 +126,7 @@ stages.wood = async () => {
   await think(6); // look around, read the hint
   for (let i = 0; i < 10; i++) {
     const g = await guide(page); if (!g?.world || (await mission(page))?.id !== 'm01_wood') break;
-    await walkTo(page, g.world.x, g.world.z, { tol: 2.6 });
+    await hwalk(g.world.x, g.world.z, { tol: 2.6 });
     for (let k = 0; k < 50; k++) { const g2 = await guide(page); if (!g2?.world || g2.world.x !== g.world.x) break; if (k === 4 && i === 1) await shot(page, 'chopping'); await sleep(200); }
   }
   await waitMission('m01_wood', 30);
@@ -135,7 +148,7 @@ stages.campfire = async () => {
   await ensureAfford('campfire');
   await mark('stone ok');
   const core = await page.evaluate(() => window.game.sys.buildings.colonyCenter());
-  await walkTo(page, core.x + 3, core.z + 5, { tol: 2 });
+  await hwalk(core.x + 3, core.z + 5, { tol: 2 });
   const spot = await findSpot('campfire', core.x, core.z, 4);
   await placeViaUI('campfire', spot, 'campfire');
   await waitMission('m03_campfire', 60);
@@ -156,7 +169,7 @@ stages.rescue = async () => {
   const g = await guide(page);
   console.log('  rescue guide', JSON.stringify(g));
   if (g?.world) {
-    await walkTo(page, g.world.x, g.world.z, { tol: 2.5, maxMs: 90000 });
+    await hwalk(g.world.x, g.world.z, { tol: 2.5, maxMs: 90000 });
     await sleep(800);
     await shot(page, 'rescue-near');
     console.log('  interact label:', await page.evaluate(() => document.querySelector('#btn-interact')?.innerText));
@@ -173,9 +186,9 @@ stages.rescue = async () => {
 stages.logging = async () => {
   await think(2);
   const core = await page.evaluate(() => window.game.sys.buildings.colonyCenter());
-  await walkTo(page, core.x, core.z + 4, { tol: 2, maxMs: 60000 });
+  await hwalk(core.x, core.z + 4, { tol: 2, maxMs: 60000 });
   await ensureAfford('logging_camp');
-  await walkTo(page, core.x, core.z + 4, { tol: 2, maxMs: 60000 });
+  await hwalk(core.x, core.z + 4, { tol: 2, maxMs: 60000 });
   const spot = await findSpot('logging_camp', core.x, core.z, 4, 'trees');
   await placeViaUI('logging_camp', spot, 'logging');
   await waitMission('m06_logging', 60);
@@ -189,7 +202,7 @@ stages.turret = async () => {
   await think(2);
   await ensureAfford('scrap_turret');
   const core = await page.evaluate(() => window.game.sys.buildings.colonyCenter());
-  await walkTo(page, core.x, core.z + 4, { tol: 2, maxMs: 60000 });
+  await hwalk(core.x, core.z + 4, { tol: 2, maxMs: 60000 });
   const spot = await findSpot('scrap_turret', core.x, core.z, 5);
   await placeViaUI('scrap_turret', spot, 'turret');
   await waitMission('m08_turret', 60);
@@ -199,7 +212,7 @@ stages.turret = async () => {
 };
 stages.defend = async () => {
   const tur = await page.evaluate(() => { const b = window.game.state.buildings.list.find((b) => b.def === 'scrap_turret'); return b ? window.game.sys.buildings.center(b) : null; });
-  if (tur) await walkTo(page, tur.x + 1.5, tur.z + 1.5, { tol: 1.5 });
+  if (tur) await hwalk(tur.x + 1.5, tur.z + 1.5, { tol: 1.5 });
   let shotAttack = 0;
   const t0 = await gameTime(page);
   while ((await gameTime(page)) - t0 < 400) {
@@ -248,7 +261,7 @@ stages.tier = async () => {
   console.log('  closed modals:', await closeModals(page));
   for (let i = 0; i < 3; i++) { const open = await openPanels(page); if (!open.length) break; console.log('  open:', open); await page.keyboard.press('Escape'); await sleep(600); }
   const core = await page.evaluate(() => window.game.sys.buildings.colonyCenter());
-  await walkTo(page, core.x + 2, core.z + 4, { tol: 2 });
+  await hwalk(core.x + 2, core.z + 4, { tol: 2 });
   await sleep(800);
   const p = await w2s(page, core.x, core.z, 1.5);
   await tapXY(page, p.x, p.y, 1200);

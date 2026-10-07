@@ -25,7 +25,7 @@ export const MISSIONS: MissionDef[] = [
   },
   {
     id: 'm02_shelter', chain: 'main', name: 'A Roof Overhead', description: 'Build a Lean-to Shelter.',
-    type: 'build', target: 'shelter', count: 1, reward: R({ resources: { wood: 15, fiber: 10 }, xp: 15 }), next: ['m03_campfire'],
+    type: 'build', target: 'shelter', count: 1, reward: R({ resources: { wood: 10, fiber: 10 }, xp: 15 }), next: ['m03_campfire'],
     hint: 'Open the Build menu and place a Lean-to Shelter.', guide: { kind: 'build_menu', ref: 'shelter' },
   },
   {
@@ -35,7 +35,7 @@ export const MISSIONS: MissionDef[] = [
   },
   {
     id: 'm04_storage', chain: 'main', name: 'Stash It', description: 'Build a Storage Crate.',
-    type: 'build', target: 'storage_crate', count: 1, reward: R({ resources: { wood: 25, fiber: 15 }, xp: 15 }), next: ['m05_rescue'],
+    type: 'build', target: 'storage_crate', count: 1, reward: R({ resources: { wood: 15, fiber: 15 }, xp: 15 }), next: ['m05_rescue'],
     hint: 'Storage increases how much you can hold.', guide: { kind: 'build_menu', ref: 'storage_crate' },
     onComplete: { spawnSurvivor: true },
   },
@@ -47,12 +47,12 @@ export const MISSIONS: MissionDef[] = [
   },
   {
     id: 'm06_logging', chain: 'main', name: 'Many Hands', description: 'Build a Logging Camp — your colonist will work it automatically.',
-    type: 'build', target: 'logging_camp', count: 1, reward: R({ resources: { stone: 20, fiber: 10, wood: 15 }, xp: 20 }), next: ['m07_assign'],
+    type: 'build', target: 'logging_camp', count: 1, reward: R({ resources: { stone: 10, fiber: 10, wood: 10 }, xp: 20 }), next: ['m07_assign'],
     hint: 'Build a Logging Camp near some trees.', guide: { kind: 'build_menu', ref: 'logging_camp' },
   },
   {
     id: 'm07_assign', chain: 'main', name: 'Put to Work', description: 'Have a colonist working a job.',
-    type: 'assign', target: '*', count: 1, reward: R({ resources: { wood: 15 }, xp: 15 }), next: ['m08_turret'],
+    type: 'assign', target: '*', count: 1, reward: R({ resources: { wood: 10 }, xp: 15 }), next: ['m08_turret'],
     hint: 'Colonists take free jobs automatically. Tap a building to manage workers.', guide: { kind: 'building', ref: 'logging_camp' },
   },
   {

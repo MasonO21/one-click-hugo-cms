@@ -54,6 +54,11 @@ export class Toasts {
     this.arm(a, kind);
   }
 
+  /** Dismiss everything on screen (a modal just opened and says it better). */
+  clear(): void {
+    for (const a of [...this.active]) this.dismiss(a);
+  }
+
   private make(): HTMLElement {
     return h('div', { class: 'toast', role: 'status' }, h('span', { class: 't-ic' }), h('span', { class: 't-tx' }), h('span', { class: 't-x', hidden: true }));
   }

@@ -14,7 +14,8 @@ export const BALANCE: BalanceDef = {
   autosaveSeconds: 20,
   playerSpeed: 7,
   playerHp: 100,
-  gatherInterval: 0.55,
+  /** Seconds between manual gather hits: snappy, but a tree still takes a few satisfying swings. */
+  gatherInterval: 0.7,
   interactRange: 3.2,
   backpackCapacity: 80,
   colonistSpeed: 3.2,
