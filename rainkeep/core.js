@@ -1091,7 +1091,8 @@
     KH.emit('pull', { n, results });
   };
   // Act II heroes join the pool once the Sunheart is quenched
-  const heroAvailable = (h) => !h.act || S.stage > DATA.actOneStage;
+  // Act II heroes answer the Beacon once the Sunheart is quenched, Act III heroes once the Ember Throne falls
+  const heroAvailable = (h) => !h.act || S.stage > (h.act >= 3 ? DATA.actTwoStage : DATA.actOneStage);
   const featured = () => {
     const legs = DATA.heroes.filter((h) => h.rarity === 'legendary' && heroAvailable(h));
     return legs[Math.floor(S.time / DATA.events.length) % legs.length].id;

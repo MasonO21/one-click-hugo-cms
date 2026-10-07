@@ -57,7 +57,7 @@ A STORY IN THREE ACTS
 • Every hero has a tale of their own in three chapters, and how it ends makes them stronger for good.
 
 HEROES WITH A JOB AT HOME
-• Recruit 22 illustrated heroes across three classes: Shieldbearers, Dune Archers and Camel Lancers.
+• Recruit 25 illustrated heroes across three classes: Shieldbearers, Dune Archers and Camel Lancers.
 • Station heroes as Stewards to boost a building, then lead them into battle.
 • Battles play out round by round: fire each hero's skill when it's ready, and time your wyrm's breath to break a foe's heaviest blow.
 • Recruitment odds are always shown, with a guaranteed Legendary within 40 recruits.
@@ -102,7 +102,7 @@ Take these in the iOS Simulator or on a device, then add a short caption band at
 |---|---|---|
 | 1 | A built-up keep at dusk, zoomed in on the Rainwyrm in its spring, villagers walking | **Raise the last water dragon** |
 | 2 | A sandstorm rolling over the keep, HUD showing "Sandstorm 1:12", the wyrm sheet on Downpour | **See the storm coming. Be ready.** |
-| 3 | Heroes roster with Legendary portraits and stars | **22 heroes. Every one has a job at home.** |
+| 3 | Heroes roster with Legendary portraits and stars | **25 heroes. Every one has a job at home.** |
 | 4 | The Dunes in 3D with caravans out to an oasis, a camp and a ruin beacon | **Cross the Dunes** |
 | 5 | Caravan tab with the Colossus raid open and the chat | **Ride with your Caravan against the Colossus** |
 | 6 | The evolution sheet showing the Skyriver with its halo of living water | **Nine forms. One storm to choose.** |

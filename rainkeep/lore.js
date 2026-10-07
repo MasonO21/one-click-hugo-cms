@@ -384,5 +384,26 @@ Object.assign(DATA, {
     ], choice: { prompt: 'The ember is out. Her choir-sister has nowhere to go.',
       a: { label: 'Teach her a new song', text: 'They sing together in battle now, and the embers answer to them instead of the Choir.' },
       b: { label: 'Bring her to the Forge', text: 'Two old choir-singers tend the Sunsteel Forge, and the metal has never run so pure.' } } },
+    yusra: { name: 'The Last Verse', parts: [
+      { title: 'A song with a gap in it', text: 'Yusra\'s grandmother taught her every wyrm-song but one, and died before the last verse. On the Bone Coast, the Bonepickers say they have it, carved on a skull, and will sell it to the highest bidder.', foe: ['Bonepickers', 'lancer'] },
+      { title: 'The skull', text: 'The skull is real. So is the verse. So are the gulls that roost in the skull\'s eyes, and they do not like visitors.', foe: ['Gull Harpies', 'bow'] },
+      { title: 'What the verse calls', text: 'Yusra sings the whole song for the first time. Out at the edge of the old sea, something enormous turns over in the sand and starts toward the sound.', foe: ['The Shoal-Wraith', 'bow'] },
+    ], choice: { prompt: 'The song is whole again. Yusra can sing it once more, for one purpose.',
+      a: { label: 'Sing it in battle', text: 'Every arrow she looses carries a note of the old sea, and the squad fights to its rhythm.' },
+      b: { label: 'Sing it to the wells', text: 'She sings at the bottom of the Deep Well, and the water rises to listen.' } } },
+    haroun: { name: 'Glass and Ash', parts: [
+      { title: 'The order', text: 'A captain of the Cinder Choir orders a hundred glass shields from Haroun\'s old workshop on the Burning Line. Haroun has not worked for the Choir in years. Someone is using his name.', foe: ['Ember Cultists', 'lancer'] },
+      { title: 'The workshop', text: 'His apprentice kept the furnace burning after Haroun left, and has learned to make glass that cuts like a blade. He is proud of it. He is making it for the wrong people.', foe: ['Glass Hounds', 'lancer'] },
+      { title: 'The kiln', text: 'The apprentice has built a kiln big enough to melt a wyrm\'s scales into glass. He means to try it on yours. Haroun breaks the first shield he ever made against its door.', foe: ['The Kiln-Warden', 'guard'] },
+    ], choice: { prompt: 'The kiln is cold. The apprentice kneels in the ash and waits.',
+      a: { label: 'Make him a shield-bearer', text: 'The apprentice carries Haroun\'s shield now, and Haroun carries a better one.' },
+      b: { label: 'Bring him to the quarry', text: 'Two glassmen at the quarry, and the stone comes out cut as clean as glass.' } } },
+    noor: { name: 'Every Charm Sold', parts: [
+      { title: 'The camel', text: 'Noor\'s camel was the price of every charm she ever carved. The man who sold it to her has come to take it back, with friends, because he says she paid in fake bone.', foe: ['Camel Rustlers', 'lancer'] },
+      { title: 'The fake bone', text: 'It was not fake. It was wyrm bone, real and old, and the man knows it. He wants to know where she found it, so he can dig up the rest.', foe: ['Grave Diggers', 'guard'] },
+      { title: 'The graveyard', text: 'Noor leads him to the place, because she wants to see who else is digging. The wyrm graveyard is not empty. Something guards it.', foe: ['The Bone Warden', 'guard'] },
+    ], choice: { prompt: 'The guardian is down, and the graveyard is quiet again.',
+      a: { label: 'Take a fang for her spear', text: 'Noor rides with a wyrm\'s fang on her spear, and her first charge hits like a falling dune.' },
+      b: { label: 'Leave a charm for the dead', text: 'Noor buries her last charm in the graveyard, and the copper seam under the keep runs richer since.' } } },
   },
 });

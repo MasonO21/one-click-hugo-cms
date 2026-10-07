@@ -33,6 +33,9 @@ window.RK_ART = {
     maram: 'art/portraits/maram.webp',
     hadi: 'art/portraits/hadi.webp',
     nima: 'art/portraits/nima.webp',
+    yusra: 'art/portraits/yusra.webp',
+    haroun: 'art/portraits/haroun.webp',
+    noor: 'art/portraits/noor.webp',
   },
   foe: {
     raider: 'art/foes/raider.webp',

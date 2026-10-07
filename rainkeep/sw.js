@@ -29,7 +29,7 @@ const SHELL = [
   'fonts/barlow-semi-condensed-latin-600-normal.woff2', 'fonts/barlow-semi-condensed-latin-700-normal.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
   // painted art (artmap.js)
-  ...'zahra tariq leila idris soraya nadia bashir amira kofi yara rashid samira omar nuri halima lio tamir mara imani kaveh tomas sefa maram hadi nima'.split(' ').map((n) => `art/portraits/${n}.webp`),
+  ...'zahra tariq leila idris soraya nadia bashir amira kofi yara rashid samira omar nuri halima lio tamir mara imani kaveh tomas sefa maram hadi nima yusra haroun noor'.split(' ').map((n) => `art/portraits/${n}.webp`),
   ...'raider beast scorpion serpent drake spirit construct crystal sun void'.split(' ').map((n) => `art/foes/${n}.webp`),
   'art/scenes/act1.webp', 'art/scenes/act2.webp', 'art/scenes/act3.webp', 'art/title.webp',
   ...'shelter quarry grove well mine infirmary barracks watchtower archive hall storehouse forge deepspring'.split(' ').map((n) => `art/buildings/${n}.webp`),

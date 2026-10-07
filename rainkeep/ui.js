@@ -619,7 +619,7 @@
     const post = DATA.stewardPosts[d.steward.kind];
     if (!h) {
       return { title: d.name, lvl: 'Not recruited', body: `${head}${skill}<div class="card"><b>Steward: ${plotName(post.plot)}</b><div class="muted small">${post.label(d.steward.val)}</div></div>
-        ${KH.heroAvailable(d) ? `<p class="notice heat">Recruit ${esc(d.name.split(' ')[0])} at the Beacon, or with a ${DATA.rarities[d.rarity].name} Shard Pouch.</p><button class="btn wide" data-act="tab" data-arg="recruit">Go to the Beacon</button>` : `<p class="notice">${esc(d.name.split(' ')[0])} arrives at the Beacon when Act II begins, after you quench the Sunheart (stage ${DATA.actOneStage}).</p>`}` };
+        ${KH.heroAvailable(d) ? `<p class="notice heat">Recruit ${esc(d.name.split(' ')[0])} at the Beacon, or with a ${DATA.rarities[d.rarity].name} Shard Pouch.</p><button class="btn wide" data-act="tab" data-arg="recruit">Go to the Beacon</button>` : `<p class="notice">${esc(d.name.split(' ')[0])} arrives at the Beacon when ${d.act >= 3 ? `Act III begins, after the Ember Throne falls (stage ${DATA.actTwoStage})` : `Act II begins, after you quench the Sunheart (stage ${DATA.actOneStage})`}.</p>`}` };
     }
     const s = KH.heroStats(id), cap = KH.heroCap(id), cost = 2 * h.lvl;
     const isSteward = S.stewards[d.steward.kind] === id;
