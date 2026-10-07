@@ -130,7 +130,7 @@
       return true;
     },
     piercing_gale(m, h, a, s) {
-      m.shoot(h, a.dir, { speed: 1450, r: 14, max: s.range, pierce: true, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 90 + 1.1 * h.atk, { skill: s }) });
+      m.shoot(h, a.dir, { speed: 1450, r: 14, max: s.range, pierce: true, color: skinC(h), kind: 'arrow', onHit: e => m.applyDamage(h, e, 80 + 1.0 * h.atk, { skill: s }) });
       return true;
     },
     tailwind(m, h) {
@@ -1022,7 +1022,7 @@
     passiveAttack(u, t, dmg, opt) {
       switch (u.def0.passive.id) {
         case 'kindling':   // Kaida: 2 stacks from skill hits -> an erupting, healing attack
-          if (u.pstack >= 2) { dmg *= 1.6; u.pstack = 0; this.heal(u, u.maxHp * 0.08, false, u); this.burst(t.x, t.y, '#ff8a3d', 18, 240); this.ring(t.x, t.y, 70, '#ffb347', 0.3, 5); }
+          if (u.pstack >= 2) { dmg *= 1.6; u.pstack = 0; this.heal(u, u.maxHp * 0.1, false, u); this.burst(t.x, t.y, '#ff8a3d', 18, 240); this.ring(t.x, t.y, 70, '#ffb347', 0.3, 5); }
           break;
         case 'galewind':   // Sylva: every 4th attack
           u.pstack = (u.pstack || 0) + 1;
