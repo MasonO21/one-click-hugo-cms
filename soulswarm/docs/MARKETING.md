@@ -87,7 +87,7 @@ Google Play has no keyword field.
 
 ---
 
-## 4. Store screenshot storyboard (8 portrait screenshots)
+## 4. Store screenshot storyboard (10 portrait screenshots)
 
 Format: iOS 6.9" (1320 × 2868) is required, and the 6.5" set is derived from it. Android 1080 × 1920 (9:16). The **first 3 screenshots appear in search results**, so they carry all three hooks. Captions are 2–5 words, huge, at the top in the gothic display font, with cyan for allies and warm colours for enemies.
 
@@ -101,8 +101,10 @@ Format: iOS 6.9" (1320 × 2868) is required, and the 6.5" set is derived from it
 | 6 | **FIVE CURSED CHAPTERS** | Chapter 2 (Ember Wastes): a ring of Cinder Witches and their fire lobs | Chapter palette and hazards. |
 | 7 | **UNLEASH YOUR HERO'S RITE** | Seraphine casts Ashfall: ash chains rain on the horde | The RITE button and the Soul Frenzy chip visible. |
 | 8 | **DARE NIGHTMARE & TORMENT** | Chapter 5 on Torment: the blood-red floor, a Warded and Hasted elite with its tags, Vael's cyan legion | Shows the endgame tiers and elite affixes. |
+| 9 | **HUNT EVERY HORROR** | The Bestiary: painted foe cards with kill counts and milestone pips, rewards waiting | The collection layer; App Store only. |
+| 10 | **FORGE YOUR BUILD** | A level-up over a live fight: the painted power cards, with the gold Soul Storm evolution on top | Painted ability icons; App Store only. |
 
-Rendered by `npm run screenshots` (`scripts/store-screenshots.mjs`) at 1290 × 2796. Order matters: 1–3 appear in search results.
+Rendered by `npm run screenshots` (`scripts/store-screenshots.mjs`) at 1290 × 2796. Order matters: 1–3 appear in search results. The App Store takes all 10; Google Play shows 8 phone screenshots, so it gets 1–8.
 
 **App preview video (iOS, 25 s):** 0–3 s legion growing (hook 1) → 3–9 s gate choice → 9–15 s Nova wipe → 15–21 s Gravemaw fight → 21–25 s logo + "Raise the Legion". In-game audio only. No device frames (per Apple's guidelines).
 

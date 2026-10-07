@@ -50,6 +50,14 @@ SHOTS.push(
     hero('vael'); start(5, 240, { difficulty: 'torment' }); give({ soulBolt: 3, scythe: 2, skullHalo: 2 }); legion([['husk', 22], ['brute', 6], ['witch', 6]], 2);
     const P = r.player; r.affixes.roll(r.spawnEnemy('brute', { elite: true, at: { x: P.x + 2.5, z: P.z - 9.5 } }));
     ring(44, 10.5); ring(30, 13.5); sim(1.2);` },
+  { name: '09-bestiary', caption: 'HUNT <em>EVERY HORROR</em>', menu: 'heroes', stage: `
+    const p = app.profile; p.chapter.unlocked = 4; p.gold = 48200; p.gems = 2350;
+    p.bestiary = { kills: { husk: 12840, ghoul: 3420, brute: 1260, witch: 860, bloater: 410, thief: 6, gravemaw: 0 }, claimed: { husk: 2, ghoul: 2, brute: 1, witch: 0, bloater: 0, thief: 1, gravemaw: 0 } };
+    E.manual = false; app.meta.show('heroes'); document.querySelector('[data-sub="bestiary"]').click(); app.meta.refresh();` },
+  // the level-up cards over a live fight, with a gold evolution on offer (Soul Bolt 5 + Might)
+  { name: '10-powers', caption: 'FORGE <em>YOUR BUILD</em>', cards: true, stage: `
+    hero('vael'); start(2, 150); give({ soulBolt: 5, might: 1, skullHalo: 3, chains: 2 }); legion([['husk', 24], ['ghoul', 8], ['brute', 6], ['witch', 4]], 2);
+    ring(40, 9); ring(30, 12.5); sim(1.0); r.levelQueue = 1; r.level = 14; r.showLevelUp(); E.step(1 / 30);` },
 );
 
 const helpers = `
@@ -70,9 +78,9 @@ const helpers = `
   const sim = (sec, ix = 0.3, iz = -0.4) => { for (let i = 0; i < Math.round(sec * 30); i++) { r.input.tx = ix; r.input.tz = iz; E.step(1 / 30); } };
 `;
 
-const caption = (html) => `(() => {
+const caption = (html, cards) => `(() => {
   const s = document.createElement('style');
-  s.textContent = '.hint,.banner,.run-intro,.lvl-back,.toast{display:none!important}.hud.intro-on .legion{opacity:1!important}.hud-top{visibility:hidden}.ss-cap{position:absolute;left:0;right:0;top:0;z-index:90;padding:calc(var(--safe-t) + 74px) 18px 26px;text-align:center;font-family:Cinzel,serif;font-weight:900;font-size:31px;line-height:1.08;letter-spacing:.03em;color:#fff;background:linear-gradient(180deg,rgba(3,5,12,.96) 55%,rgba(3,5,12,0));text-shadow:0 0 18px rgba(78,242,255,.85),0 3px 0 #00303a;pointer-events:none}.ss-cap em{font-style:normal;display:block;color:#ffcf4a;font-size:38px;text-shadow:0 0 20px rgba(255,207,74,.9),0 3px 0 #4a2a00}';
+  s.textContent = '.hint,.banner,.run-intro,${cards ? '' : '.lvl-back,'}.toast{display:none!important}.hud.intro-on .legion{opacity:1!important}.hud-top{visibility:hidden}.ss-cap{position:absolute;left:0;right:0;top:0;z-index:90;padding:calc(var(--safe-t) + 74px) 18px 26px;text-align:center;font-family:Cinzel,serif;font-weight:900;font-size:31px;line-height:1.08;letter-spacing:.03em;color:#fff;background:linear-gradient(180deg,rgba(3,5,12,.96) 55%,rgba(3,5,12,0));text-shadow:0 0 18px rgba(78,242,255,.85),0 3px 0 #00303a;pointer-events:none}.ss-cap em{font-style:normal;display:block;color:#ffcf4a;font-size:38px;text-shadow:0 0 20px rgba(255,207,74,.9),0 3px 0 #4a2a00}';
   document.head.appendChild(s);
   const d = document.createElement('div'); d.className = 'ss-cap'; d.innerHTML = ${JSON.stringify(html)};
   document.getElementById('ui').appendChild(d);
@@ -90,7 +98,7 @@ for (const shot of SHOTS.filter((x) => !ONLY || x.name.startsWith(ONLY))) {
   console.log(shot.name, 'staged', Date.now() - t0, 'ms');
   if (shot.menu) await page.waitForTimeout(1500);
   else await page.evaluate(() => { for (const a of document.getAnimations()) { try { if (a.effect.getComputedTiming().iterations !== Infinity) a.finish(); } catch (e) { /* ignore */ } } });
-  await page.evaluate(caption(shot.caption));
+  await page.evaluate(caption(shot.caption, shot.cards));
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/${shot.name}.jpg`, type: 'jpeg', quality: 92, timeout: 180000 });
   console.log('wrote', shot.name);
