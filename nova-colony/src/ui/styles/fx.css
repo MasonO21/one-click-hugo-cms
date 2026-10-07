@@ -24,6 +24,12 @@
     flex-direction: column-reverse;
   }
 }
+/* a sheet is open: keep toasts on its title row instead of over its content */
+.nv-root[data-panel-open='1'] .nv-toasts {
+  top: calc(var(--mt) + 0.2em);
+  bottom: auto;
+  flex-direction: column;
+}
 .toast {
   display: flex;
   align-items: center;
@@ -98,6 +104,7 @@
   position: absolute;
   left: 0;
   top: 0;
+  z-index: 3; /* above the bouncing guide arrow, which sits on the very tree being chopped */
   font-size: 1.15em;
   font-weight: 900;
   color: #fff;

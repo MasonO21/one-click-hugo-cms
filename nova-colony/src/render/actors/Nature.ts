@@ -20,6 +20,8 @@ interface Wobble {
 const _m = new THREE.Matrix4();
 /** How far an occluding node shrinks (fraction of its size). */
 const OCCLUDER_SHRINK = 0.78;
+/** Nodes this close to the player (≈ gather reach) are never treated as occluders. */
+const OCCLUDER_KEEP_R = 4;
 
 export class Nature {
   private group = new THREE.Group();
@@ -256,6 +258,8 @@ export class Nature {
           const n = g.nodes[i];
           const ox = n.x - p.x;
           const oz = n.z - p.z;
+          // the tree/rock right next to the player is what they are chopping: never shrink it
+          if (ox * ox + oz * oz < OCCLUDER_KEEP_R * OCCLUDER_KEEP_R) continue;
           // quick reject: behind the player or beyond the camera
           const along = (ox * dx + oz * dz) / h2;
           if (along <= 0 || along >= 1) continue;
