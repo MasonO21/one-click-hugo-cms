@@ -64,6 +64,8 @@ interface Brain {
   stay: number;
   until: number;
   stuck: number;
+  /** Closest distance to the goal reached on the current walk (oscillation-proof stuck detection). */
+  best: number;
   /** Seconds spent on the current walk and the most it may take before teleporting. */
   walkT: number;
   walkMax: number;
@@ -191,6 +193,7 @@ export class ColonistAI {
       stay: 0,
       until: 0,
       stuck: 0,
+      best: Infinity,
       walkT: 0,
       walkMax: 30,
       slideDir: 0,
@@ -580,6 +583,8 @@ export class ColonistAI {
     fz: number,
   ): void {
     this.place(x, z, enter);
+    // Re-issuing the walk already in progress must not reset the stuck/teleport timers.
+    const same = br.moving && Math.abs(br.gx - this.rx) < 0.5 && Math.abs(br.gz - this.rz) < 0.5;
     br.gx = this.rx;
     br.gz = this.rz;
     br.bld = enter;
@@ -588,10 +593,13 @@ export class ColonistAI {
     br.hasFace = hasFace;
     br.fx = fx;
     br.fz = fz;
-    br.stuck = 0;
-    br.walkT = 0;
-    br.slideDir = 0;
-    br.slideUntil = 0;
+    if (!same) {
+      br.stuck = 0;
+      br.best = Infinity;
+      br.walkT = 0;
+      br.slideDir = 0;
+      br.slideUntil = 0;
+    }
     c.tx = br.gx;
     c.tz = br.gz;
     const dx = br.gx - c.x;
@@ -660,12 +668,13 @@ export class ColonistAI {
       nz = this.rz;
     } else if (now >= br.slideUntil) br.slideDir = 0;
 
-    // stuck detection: barely moving for 3 s, or a walk that takes absurdly long -> teleport to the goal
-    const mdx = nx - c.x;
-    const mdz = nz - c.z;
+    // stuck detection: no real progress toward the goal for 3 s (also catches sliding back and forth),
+    // or a walk that takes absurdly long -> teleport to the goal
     br.walkT += dt;
-    if (mdx * mdx + mdz * mdz < stepLen * stepLen * 0.09) br.stuck += dt;
-    else br.stuck = Math.max(0, br.stuck - dt * 2);
+    if (d < br.best - 0.25) {
+      br.best = d;
+      br.stuck = 0;
+    } else br.stuck += dt;
     if (br.stuck > 3 || br.walkT > br.walkMax) {
       c.x = br.gx;
       c.z = br.gz;

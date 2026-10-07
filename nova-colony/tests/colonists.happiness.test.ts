@@ -40,6 +40,8 @@ describe('happiness', () => {
     const { h, c } = snug();
     const b = h.game.data.balance.happiness;
     const full = h.game.sys.colonists.happinessTarget(c);
+    // Judge shortages by stock here (the real economy flags them after an unpaid upkeep tick).
+    h.game.sys.economy.isShort = (r: string) => (h.game.state.resources.amounts[r] ?? 0) <= 0;
     h.game.state.resources.amounts.food = 0;
     expect(factor(h, c, 'Well fed')).toMatchObject({ value: 0, ok: false });
     expect(h.game.sys.colonists.happinessTarget(c)).toBeCloseTo(full - b.food, 5);

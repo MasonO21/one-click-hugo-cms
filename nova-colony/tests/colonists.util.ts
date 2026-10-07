@@ -69,7 +69,14 @@ export function makeGame(opts: { seed?: number; start?: boolean } = {}): Harness
   const d = defaultData();
   const data = createDataRegistry({ ...d, buildings: [...d.buildings, ...TEST_BUILDINGS], traits: [...d.traits, ...TEST_TRAITS] });
   const game = new Game({ seed: opts.seed ?? 4242, clock: () => clock.now, data });
-  if (opts.start !== false) game.start();
+  if (opts.start !== false) {
+    game.start();
+    // These tests control the colony layout themselves: drop the auto-placed core and the starter kit.
+    game.state.buildings.list.length = 0;
+    game.state.colony.coreId = null;
+    game.state.resources.amounts = {};
+    syncGrid(game);
+  }
   return {
     game,
     clock,
@@ -105,22 +112,35 @@ export function addBuilding(game: Game, defId: string, cx: number, cz: number, o
     eff: 1,
     ...over,
   };
+  if (over.status === 'building' && over.progress === undefined) b.progress = 0;
   game.state.buildings.list.push(b);
-  game.derived.buildingsVersion++;
+  syncGrid(game);
   return b;
+}
+
+/** Buildings pushed straight into state must be registered with the construction grid. */
+function syncGrid(game: Game): void {
+  const bs = game.sys.buildings as unknown as { rebuild(): void; recomputeRooms(): void };
+  bs.rebuild();
+  bs.recomputeRooms();
+  game.sys.economy.markDirty();
+  game.derived.buildingsVersion++;
 }
 
 /** Place the command center near the origin and register it as the core. */
 export function addCore(game: Game): BuildingInstance {
+  const existing = game.sys.buildings.core();
+  if (existing) return existing;
   const b = addBuilding(game, 'command_center', 127, 127);
   game.state.colony.coreId = b.id;
+  syncGrid(game);
   return b;
 }
 
 export function removeBuilding(game: Game, b: BuildingInstance): void {
   const i = game.state.buildings.list.indexOf(b);
   if (i >= 0) game.state.buildings.list.splice(i, 1);
-  game.derived.buildingsVersion++;
+  syncGrid(game);
   game.bus.emit('building:removed', { id: b.id, def: b.def });
 }
 

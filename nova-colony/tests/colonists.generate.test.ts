@@ -62,6 +62,8 @@ describe('colonist generation', () => {
 
   it('keeps names unique across the colony and the board, even past the name pool', () => {
     const { game } = makeGame();
+    // A tiny pool keeps this fast with the full 160x130 name content.
+    game.data.names = { first: ['Ava', 'Kai', 'Mara', 'Theo'], last: ['Reyes', 'Okafor', 'Tanaka'], bios: game.data.names.bios };
     const total = game.data.names.first.length * game.data.names.last.length + 30;
     for (let i = 0; i < total; i++) game.sys.colonists.grant('common');
     const names = [...game.sys.colonists.all().map((c) => c.name), ...game.state.colonists.candidates.map((k) => k.colonist.name)];
