@@ -170,7 +170,7 @@ export class Terrain {
     if (this.flat) {
       this.buildChunks(1, 8);
     } else {
-      this.buildChunks(4, 1);
+      this.buildChunks(8, 1); // 32x32-cell chunks: the frustum rejects most of the world off screen
       this.buildWater();
     }
     this.refreshLocked(true);
