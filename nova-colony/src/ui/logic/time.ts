@@ -42,3 +42,14 @@ export function fmtLong(seconds: number): string {
   if (m > 0) return `${m}m`;
   return `${seconds}s`;
 }
+
+/**
+ * Welcome Back sub-headline. `credited` is the offline summary's production time, which already
+ * includes the offline efficiency (credited = min(away, cap) × efficiency), so it is shorter than the
+ * absence even when nothing was capped. Only an absence past the offline cap gets the "kept busy for
+ * <cap>" line, with the capped wall-clock time (not the efficiency-scaled one).
+ */
+export function offlineWorkedText(away: number, credited: number, efficiency: number, fmt: (s: number) => string): string {
+  const worked = efficiency > 0 ? credited / efficiency : credited;
+  return away > worked + 60 ? `Your colony kept busy for ${fmt(worked)} while you were gone:` : 'Your colony produced:';
+}

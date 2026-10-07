@@ -5,7 +5,7 @@ import { CELL, HALF_WORLD, WORLD_CELLS, cellCenter } from '../src/core/constants
 import { edgePoint, inStickZone, isTap, relativeScreenDir, stickUpdate, worldDirection, yawAfterDrag, zoomAfterPinch, zoomAfterWheel } from '../src/ui/logic/input';
 import { footprintCells, missingText, pointInRect, rectFrom, refundEstimate, rotateOffset, scaleBag, snapFootprint, sumBags } from '../src/ui/logic/build';
 import { easeOutQuart, segmentAtRotation, spinTarget } from '../src/ui/logic/spin';
-import { clockText, dayPhase, fmtHMS, fmtLong, msUntilLocalMidnight } from '../src/ui/logic/time';
+import { clockText, dayPhase, fmtHMS, fmtLong, msUntilLocalMidnight, offlineWorkedText } from '../src/ui/logic/time';
 import { buildingEffects, levelMult, lockInfo, modifierText } from '../src/ui/logic/describe';
 import { RARITY_COLOR, rewardParts } from '../src/ui/logic/rewards';
 import { MAP_MAX_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, regionCentroids, worldToMap, type MapMarker } from '../src/ui/logic/map';
@@ -318,5 +318,17 @@ describe('ui badges', () => {
     g.state.liveops.season.claimedFree = [1, 2];
     g.state.liveops.season.premium = true;
     expect(claimableSeason(g)).toBe(1 + 3);
+  });
+});
+
+describe('Welcome Back worked-time line (QA3: "kept busy for 3h 37m" after a 4h 32m absence, no cap hit)', () => {
+  const fmt = (s: number) => `${Math.round(s / 60)}m`;
+  it('an absence under the offline cap just says the colony produced (efficiency is not a shorter shift)', () => {
+    const away = 4 * 3600 + 32 * 60;
+    expect(offlineWorkedText(away, away * 0.8, 0.8, fmt)).toBe('Your colony produced:');
+  });
+  it('an absence past the cap names the capped wall-clock time', () => {
+    const cap = 8 * 3600;
+    expect(offlineWorkedText(20 * 3600, cap * 0.8, 0.8, fmt)).toBe(`Your colony kept busy for ${cap / 60}m while you were gone:`);
   });
 });

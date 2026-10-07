@@ -10,6 +10,7 @@ import { btn } from '../widgets';
 import { confetti } from '../fx/Confetti';
 import { countUp, fill, h } from '../dom';
 import { iconEl, resourceArt } from '../art';
+import { offlineWorkedText } from '../logic/time';
 
 export interface WelcomeArg {
   seconds: number;
@@ -57,7 +58,7 @@ export class WelcomePanel extends Panel {
     left.appendChild(h('div', { class: 'wb-sun' }, h('div', { class: 'wb-rays' }), h('div', { class: 'wb-ic', text: '🌅' })));
     left.appendChild(h('h2', { class: 'wb-title', text: 'Welcome Back!' }));
     left.appendChild(h('div', { class: 'wb-away', text: `Away for ${fmtDuration(away)}` }));
-    right.appendChild(h('div', { class: 'mute small center', text: away > s.seconds + 60 ? `Your colony kept busy for ${fmtDuration(s.seconds)} while you were gone:` : 'Your colony produced:' }));
+    right.appendChild(h('div', { class: 'mute small center', text: offlineWorkedText(away, s.seconds, this.game.data.balance.offlineEfficiency, fmtDuration) }));
 
     const list = h('div', { class: 'gains' });
     const order = new Map(this.data.resources.map((r) => [r.id, r.sort]));
