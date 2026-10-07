@@ -544,7 +544,8 @@ export class UI {
       if (e.reason === 'cancelled') this.toasts.show('Purchase cancelled — no worries!', 'info', '🛍️');
       else if (e.reason === 'unknown_product') this.toasts.show("That item isn't available right now", 'info', '🛍️');
     });
-    bus.on('season:levelUp', (e) => this.eventToast(`Season pass level ${e.level}!`, 'info', '🏆'));
+    // (no toast on 'season:levelUp': the sim already announces a level-up with "Season level N! New rewards are
+    // waiting", once per jump even when one gain crosses several levels)
     bus.on('building:changed', () => this.refreshBadges());
   }
 

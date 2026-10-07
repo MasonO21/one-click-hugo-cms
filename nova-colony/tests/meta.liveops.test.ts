@@ -338,6 +338,26 @@ describe('liveops: season pass', () => {
     expect(game.state.liveops.season.xp).toBe(expected + per * 3);
   });
 
+  it('announces a level-up with one toast (the UI adds no second one), even when a gain crosses several levels', () => {
+    const g = makeGame();
+    const { game } = g;
+    const lo = game.sys.liveops;
+    const per = game.data.season.xpPerLevel;
+    const toasts: string[] = [];
+    game.bus.on('ui:toast', (e) => {
+      if (/season/i.test(e.text)) toasts.push(e.text);
+    });
+    lo.addXp(per * 0.4); // no new level: no toast
+    expect(toasts).toEqual([]);
+    lo.addXp(per * 0.7); // level 1
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0]).toContain('Season level 1!');
+    expect(toasts[0]).toContain('rewards are waiting');
+    lo.addXp(per * 2); // levels 2 and 3 in one go: still one toast, naming the level reached
+    expect(toasts).toHaveLength(2);
+    expect(toasts[1]).toContain('Season level 3!');
+  });
+
   it('keeps fractional gather XP (a hit is worth a fraction of a point) instead of rounding it away', () => {
     const g = makeGame();
     const { game } = g;
