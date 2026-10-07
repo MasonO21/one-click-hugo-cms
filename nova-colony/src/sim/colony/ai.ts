@@ -20,7 +20,7 @@ import { WORLD_CELLS, cellCenter, cellOf } from '../../core/constants';
 import { approachAngle, clamp } from '../../core/math';
 import type { Layout, Place } from './layout';
 import { gainWorkXp } from './skills';
-import { PathFinder, R_BUDGET, R_FOUND, R_NONE } from './path';
+import { PathFinder, R_BUDGET, R_FOUND, R_NONE, R_RUNNING } from './path';
 
 /** Colonists farther than this (world units) from the player (and overview camera focus) are simulated coarsely. */
 export const NEAR_RANGE = 60;
@@ -52,19 +52,24 @@ const P_DIRECT = 0; // straight-line steering (line of sight clear, or last-reso
 const P_WAIT = 1; // waiting for a path search (a frame or two)
 const P_FOLLOW = 2; // following waypoints
 
-/** Pathing budgets: real searches per frame, node expansions per frame, path re-validations per frame. */
-const MAX_SEARCHES = 3;
-const FRAME_EXPAND_BUDGET = 8000;
+/**
+ * Pathing budgets per frame: searches started, A* node expansions (a big detour is simply sliced over a few frames:
+ * 1500 expansions ~ 0.3-0.5 ms) and path re-validations.
+ */
+const MAX_SEARCHES = 4;
+const FRAME_EXPAND_BUDGET = 1500;
 const MAX_REVALIDATE = 8;
 /** Re-plans allowed per walk before falling back to plain steering. */
 const MAX_REPLANS = 4;
 /** Path cache lifetime (play seconds) and size cap. */
 const CACHE_TTL = 20;
-const CACHE_TTL_PARTIAL = 8;
+const CACHE_TTL_PARTIAL = 30;
 const CACHE_MAX = 400;
 /** No-progress seconds before the last-resort teleport (plain steering / after a partial path). */
 const STUCK_DIRECT = 3;
 const STUCK_FINAL = 1.5;
+/** Longest a colonist stands waiting for a path before walking straight instead (s). */
+const MAX_WAIT = 4;
 
 interface CachedPath {
   kind: number;
@@ -112,6 +117,8 @@ interface Brain {
   /** Path epoch the waypoints were last validated against. */
   pver: number;
   queued: boolean;
+  /** Seconds spent waiting for the current path request. */
+  waitT: number;
   /** Seconds without progress before the teleport fallback. */
   stuckMax: number;
   speed: number;
@@ -154,11 +161,18 @@ export class ColonistAI {
   private rz = 0;
 
   // ---- pathing
-  private readonly pf: PathFinder;
+  /** Line-of-sight probe (route / validate / adopt) and the resumable A* (one search at a time, sliced over frames). */
+  private readonly probe: PathFinder;
+  private readonly sf: PathFinder;
   private readonly pathCache = new Map<number, CachedPath>();
   /** Colonists waiting for a search (FIFO; `qHead` is the next one). */
   private readonly queue: Colonist[] = [];
   private qHead = 0;
+  /** The colonist whose search is in progress in `sf` (and what it was for). */
+  private actC: Colonist | null = null;
+  private actKey = 0;
+  private actEnter = -1;
+  private actEpoch = 0;
   /** Bumped whenever buildings change: cached paths die, followed paths get re-validated. */
   private epoch = 1;
   private seenVersion = -1;
@@ -173,7 +187,8 @@ export class ColonistAI {
     private readonly game: Game,
     private readonly layout: Layout,
   ) {
-    this.pf = new PathFinder(game);
+    this.probe = new PathFinder(game);
+    this.sf = new PathFinder(game);
   }
 
   /** Forget all runtime brains (after a load). */
@@ -183,6 +198,8 @@ export class ColonistAI {
     this.pathCache.clear();
     this.queue.length = 0;
     this.qHead = 0;
+    this.actC = null;
+    this.sf.cancel();
     this.seenVersion = -1;
     this.bind();
   }
@@ -195,7 +212,7 @@ export class ColonistAI {
 
   /** Number of colonists currently waiting for a path search. */
   get pending(): number {
-    return this.queue.length - this.qHead;
+    return this.queue.length - this.qHead + (this.actC ? 1 : 0);
   }
 
   private bind(): void {
@@ -252,7 +269,7 @@ export class ColonistAI {
     this.searchesLeft = MAX_SEARCHES;
     this.expandLeft = FRAME_EXPAND_BUDGET;
     this.revalLeft = MAX_REVALIDATE;
-    if (this.qHead < this.queue.length) this.pump();
+    this.drive();
 
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
@@ -304,6 +321,7 @@ export class ColonistAI {
       replans: 0,
       pver: 0,
       queued: false,
+      waitT: 0,
       stuckMax: STUCK_DIRECT,
       speed: this.game.data.balance.colonistSpeed,
       phase: PH_SITE,
@@ -707,10 +725,12 @@ export class ColonistAI {
       br.slideDir = 0;
       br.slideUntil = 0;
       br.replans = 0;
+      br.waitT = 0;
       br.stuckMax = STUCK_DIRECT;
       br.pst = P_DIRECT;
       br.wp = null;
       br.wpi = br.wpn = 0;
+      if (this.actC === c) this.dropActive(); // its search was for the previous goal
     }
     c.tx = br.gx;
     c.tz = br.gz;
@@ -735,7 +755,7 @@ export class ColonistAI {
         c.z = br.gz - (dz / d) * 30;
       }
     }
-    br.walkMax = (Math.hypot(br.gx - c.x, br.gz - c.z) / Math.max(0.5, br.speed)) * 2.5 + 8;
+    if (!same) br.walkMax = (Math.hypot(br.gx - c.x, br.gz - c.z) / Math.max(0.5, br.speed)) * 2.5 + 8;
     br.moving = true;
     c.activity = 'walking';
     if (!same) this.route(c, br);
@@ -750,11 +770,28 @@ export class ColonistAI {
     const gcx = cellOf(br.gx);
     const gcz = cellOf(br.gz);
     if (scx === gcx && scz === gcz) return;
-    const pf = this.pf;
-    pf.begin(br.bld, scx, scz, gcx, gcz);
-    if (pf.lineClear(c.x, c.z, br.gx, br.gz)) return; // open ground: plain steering
+    const probe = this.probe;
+    probe.begin(br.bld, scx, scz, gcx, gcz);
+    if (probe.lineClear(c.x, c.z, br.gx, br.gz)) return; // open ground: plain steering
     br.pst = P_WAIT;
-    if (this.qHead < this.queue.length || !this.resolve(c, br, true)) this.enqueue(c, br);
+    if (this.fromCache(c, br)) return;
+    this.enqueue(c, br);
+    this.drive(); // small searches finish right away within the frame budget
+  }
+
+  private key(c: Colonist, br: Brain): number {
+    const W = WORLD_CELLS;
+    return (cellOf(c.z) * W + cellOf(c.x)) * (W * W) + cellOf(br.gz) * W + cellOf(br.gx);
+  }
+
+  /** Adopt a fresh-enough cached path for this (start cell, goal cell), if one exists and fits from here. */
+  private fromCache(c: Colonist, br: Brain): boolean {
+    if (br.replans > 0) return false; // a re-plan wants a new look, not the path that just failed
+    const hit = this.pathCache.get(this.key(c, br));
+    if (!hit || hit.enter !== br.bld || this.f.now - hit.at > (hit.kind === R_FOUND ? CACHE_TTL : CACHE_TTL_PARTIAL)) return false;
+    if (!this.adopt(c, br, hit.kind, hit.wp, true)) return false; // probe context is the caller's
+    this.stats.cacheHits++;
+    return true;
   }
 
   private enqueue(c: Colonist, br: Brain): void {
@@ -763,8 +800,44 @@ export class ColonistAI {
     this.queue.push(c);
   }
 
-  /** Serve queued path requests, oldest first, within this frame's budget. */
-  private pump(): void {
+  private dropActive(): void {
+    const c = this.actC;
+    if (!c) return;
+    this.actC = null;
+    this.sf.cancel();
+    const br = this.brains.get(c.id);
+    if (br) br.queued = false;
+  }
+
+  /**
+   * Spend this frame's search budget: continue the search in progress, then start queued requests (oldest first).
+   * Big detours are sliced over frames; colonists waiting for a path just stand for a moment.
+   */
+  private drive(): void {
+    for (let guard = 0; guard < 24 && this.expandLeft > 0; guard++) {
+      if (!this.actC && !this.startNext()) return;
+      const c = this.actC;
+      if (!c) continue; // served from the cache; look at the next one
+      const sf = this.sf;
+      if (this.actEpoch !== this.epoch) {
+        // buildings changed under a running search: start it over on the new layout
+        const br = this.brains.get(c.id);
+        if (!br || br.pst !== P_WAIT) {
+          this.dropActive();
+          continue;
+        }
+        this.beginSearch(c, br);
+      }
+      const kind = sf.advance(this.expandLeft);
+      this.expandLeft -= sf.last + 4;
+      this.stats.expanded += sf.last;
+      if (kind === R_RUNNING) return;
+      this.finishActive(c, kind);
+    }
+  }
+
+  /** Pop the next live request: from the cache if possible, else start a search for it. false = queue empty / no budget. */
+  private startNext(): boolean {
     const q = this.queue;
     while (this.qHead < q.length) {
       const c = q[this.qHead];
@@ -774,54 +847,52 @@ export class ColonistAI {
         this.qHead++;
         continue;
       }
-      const scx = cellOf(c.x);
-      const scz = cellOf(c.z);
-      this.pf.begin(br.bld, scx, scz, cellOf(br.gx), cellOf(br.gz));
-      if (!this.resolve(c, br, br.replans === 0)) break; // out of budget: the rest waits for the next frame
-      br.queued = false;
+      this.probe.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
+      if (this.fromCache(c, br)) {
+        br.queued = false;
+        this.qHead++;
+        return true;
+      }
+      if (this.searchesLeft <= 0) return false;
+      this.searchesLeft--;
       this.qHead++;
+      this.actC = c;
+      this.beginSearch(c, br);
+      return true;
     }
-    if (this.qHead >= q.length) {
-      q.length = 0;
-      this.qHead = 0;
-    }
+    q.length = 0;
+    this.qHead = 0;
+    return false;
   }
 
-  /**
-   * Get waypoints for a colonist in P_WAIT (pf.begin() already called for its start/goal): from the cache, else a
-   * fresh search. Returns false when a search is needed but this frame's budget is spent.
-   */
-  private resolve(c: Colonist, br: Brain, useCache: boolean): boolean {
-    const scx = cellOf(c.x);
-    const scz = cellOf(c.z);
-    const key = (scz * WORLD_CELLS + scx) * (WORLD_CELLS * WORLD_CELLS) + cellOf(br.gz) * WORLD_CELLS + cellOf(br.gx);
-    const now = this.f.now;
-    if (useCache) {
-      const hit = this.pathCache.get(key);
-      if (hit && hit.enter === br.bld && now - hit.at <= (hit.kind === R_FOUND ? CACHE_TTL : CACHE_TTL_PARTIAL)) {
-        if (this.adopt(c, br, hit.kind, hit.wp, true)) {
-          this.stats.cacheHits++;
-          return true;
-        }
-      }
-    }
-    if (this.searchesLeft <= 0 || this.expandLeft <= 0) return false;
-    this.searchesLeft--;
+  private beginSearch(c: Colonist, br: Brain): void {
     const core = this.core();
-    const pf = this.pf;
-    const kind = pf.find(c.x, c.z, br.gx, br.gz, cellOf(core.x), cellOf(core.z), this.game.state.colony.radius);
-    this.expandLeft -= pf.expanded + 16;
+    const sf = this.sf;
+    sf.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
+    sf.startSearch(c.x, c.z, cellOf(core.x), cellOf(core.z), this.game.state.colony.radius);
+    this.actKey = this.key(c, br);
+    this.actEnter = br.bld;
+    this.actEpoch = this.epoch;
     this.stats.searches++;
-    this.stats.expanded += pf.expanded;
+  }
+
+  /** The search for `c` is done: cache the result and send the colonist on its way. */
+  private finishActive(c: Colonist, kind: number): void {
+    this.actC = null;
+    const br = this.brains.get(c.id);
+    if (!br) return;
+    br.queued = false;
+    const wp = this.sf.wp;
     if (this.pathCache.size >= CACHE_MAX) this.pathCache.clear();
-    this.pathCache.set(key, { kind, wp: pf.wp, at: now, enter: br.bld });
-    this.adopt(c, br, kind, pf.wp, false);
-    return true;
+    this.pathCache.set(this.actKey, { kind, wp, at: this.f.now, enter: this.actEnter });
+    if (br.pst !== P_WAIT || !br.moving) return;
+    this.probe.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
+    this.adopt(c, br, kind, wp, false);
   }
 
   /** Start following a path (or fall back to plain steering when there is none). false = rejected (cached path unusable here). */
   private adopt(c: Colonist, br: Brain, kind: number, wp: Float32Array, validate: boolean): boolean {
-    const pf = this.pf;
+    const pf = this.probe;
     const n = wp.length >> 1;
     br.best = Infinity;
     br.stuck = 0;
@@ -868,7 +939,7 @@ export class ColonistAI {
   private pathValid(c: Colonist, br: Brain): boolean {
     const wp = br.wp;
     if (!wp) return false;
-    const pf = this.pf;
+    const pf = this.probe;
     pf.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
     let px = c.x;
     let pz = c.z;
@@ -886,18 +957,19 @@ export class ColonistAI {
   private replan(c: Colonist, br: Brain): void {
     this.stats.replans++;
     br.replans++;
+    br.waitT = 0;
     br.pst = P_WAIT;
     br.wp = null;
     br.wpi = br.wpn = 0;
     br.best = Infinity;
     br.stuck = 0;
-    this.pf.begin(br.bld, cellOf(c.x), cellOf(c.z), cellOf(br.gx), cellOf(br.gz));
-    if (this.qHead < this.queue.length || !this.resolve(c, br, false)) this.enqueue(c, br);
+    this.enqueue(c, br);
+    this.drive();
   }
 
   /** A partial path ran out of waypoints: budget-limited ones continue from here, unreachable goals go last-resort. */
   private endOfPartial(c: Colonist, br: Brain): void {
-    if (br.pkind === R_BUDGET && br.replans < 2) {
+    if (br.pkind === R_BUDGET && br.replans < 1) {
       this.replan(c, br);
       return;
     }
@@ -910,6 +982,7 @@ export class ColonistAI {
   }
 
   private arrive(c: Colonist, br: Brain): void {
+    if (this.actC === c) this.dropActive();
     br.moving = false;
     br.pst = P_DIRECT;
     br.wp = null;
@@ -927,7 +1000,13 @@ export class ColonistAI {
       return;
     }
     if (br.pst === P_WAIT) {
-      br.walkT += dt; // waiting a frame or two for a path search
+      // waiting a few frames for a path search; if the queue is somehow clogged, just start walking
+      br.waitT += dt;
+      br.walkT += dt;
+      if (br.waitT > MAX_WAIT) {
+        br.pst = P_DIRECT;
+        br.waitT = 0;
+      }
       return;
     }
     const maxStep = br.speed * dt * (this.f.combat ? 1.5 : 1);

@@ -1,19 +1,21 @@
 /**
- * Colonist pathfinding — a bounded, allocation-light grid A* over the build grid.
+ * Colonist pathfinding — a bounded, resumable, allocation-light grid A* over the build grid.
  *
  *  - 8-connected, no corner cutting (a diagonal step needs both orthogonal cells free).
  *  - Passability = `BuildingSystem.blocked(cx, cz, 'colonist')` (doors / gates / floors are passable, walls and solid
  *    facilities are not) + `WorldSystem.walkable` (water, locked regions). The footprint of the destination building
  *    (a bed, the core...) and of the building the colonist currently stands in are passable too, as are the start and
  *    goal cells themselves.
- *  - The search window is the start/goal box plus a margin (united with the colony box when it touches the colony),
- *    with a hard expansion budget. Weighted heuristic (x1.2) keeps detours around big walled bases cheap.
+ *  - The search window is the start/goal box plus a margin (united with the colony box when the trip touches the
+ *    colony), with a hard expansion budget. Weighted heuristic (x1.2) keeps detours around bases cheap.
+ *  - The search is RESUMABLE: `advance(maxExpansions)` does a slice of work and returns R_RUNNING until it is done, so
+ *    the caller can spread big detours over several frames and keep every frame cheap.
  *  - The raw cell chain is string-pulled with a clearance-aware line-of-sight test into a handful of waypoints.
- *  - All big buffers are module-level typed arrays shared by every instance (searches never interleave), stamped with
- *    a generation counter so nothing is cleared between searches. The only per-search allocation is the waypoint list.
+ *  - All big buffers are per-instance typed arrays allocated lazily and stamped with a generation counter, so nothing
+ *    is cleared between searches. The only per-search allocation is the resulting waypoint list.
  *
- * Pure of rendering; the only game access is through `game.sys.buildings` / `game.sys.world` (looked up per call, so
- * test doubles are honoured).
+ * Pure of rendering; the only game access is through `game.sys.buildings` / `game.sys.world` (looked up per begin(),
+ * so test doubles are honoured).
  */
 import type { Game } from '../../core/Game';
 import { WORLD_CELLS, cellCenter, cellOf, rotatedSize } from '../../core/constants';
@@ -22,16 +24,17 @@ const N = WORLD_CELLS;
 const CELLS = N * N;
 
 /** Search outcome kinds. */
+export const R_RUNNING = -1; // advance(): not finished yet
 export const R_NONE = 0; // cannot move anywhere closer (enclosed start)
 export const R_FOUND = 1; // complete path to the goal cell
 export const R_BEST = 2; // goal unreachable inside the window: path to the closest reachable cell
 export const R_BUDGET = 3; // expansion budget hit: path to the most promising cell found so far
 
-/** Hard cap on node expansions per search (~0.3-0.6 ms worst case on a phone). */
-export const MAX_EXPAND = 6000;
+/** Hard cap on node expansions per search. */
+export const MAX_EXPAND = 12000;
 /** Cells added around the start/goal box. */
-const MARGIN = 10;
-/** Heuristic weight (numerator / 5): 6/5 = 1.2. */
+const MARGIN = 24;
+/** Heuristic weight HW_NUM / HW_DEN = 1.2. */
 const HW_NUM = 6;
 const HW_DEN = 5;
 /** Line-of-sight sampling step and body clearance, in world units. */
@@ -47,44 +50,32 @@ const COST = [10, 10, 10, 10, 14, 14, 14, 14];
 const HEAP_CAP = MAX_EXPAND * 8 + 16;
 const CHAIN_CAP = MAX_EXPAND + 8;
 
-// Shared scratch (lazily allocated: most games never need a path).
-let stamp: Uint32Array; // cell touched by the current search
-let closed: Uint32Array; // cell expanded by the current search
-let memo: Uint32Array; // (gen << 1) | passable
-let gScore: Int32Array;
-let parent: Int32Array;
-let heapKey: Int32Array;
-let heapVal: Int32Array;
-let chain: Int32Array;
-let turn: Int32Array;
-let scratchWp: Float32Array;
-let allocated = false;
-let GEN = 0;
-
-function alloc(): void {
-  if (allocated) return;
-  allocated = true;
-  stamp = new Uint32Array(CELLS);
-  closed = new Uint32Array(CELLS);
-  memo = new Uint32Array(CELLS);
-  gScore = new Int32Array(CELLS);
-  parent = new Int32Array(CELLS);
-  heapKey = new Int32Array(HEAP_CAP);
-  heapVal = new Int32Array(HEAP_CAP);
-  chain = new Int32Array(CHAIN_CAP);
-  turn = new Int32Array(CHAIN_CAP);
-  scratchWp = new Float32Array(CHAIN_CAP * 2);
-}
-
 const EMPTY = new Float32Array(0);
 
 export class PathFinder {
-  /** Waypoints (x,z pairs, cell centres, excluding the start, ending at the goal / closest cell) of the last find(). */
+  /** Waypoints (x,z pairs, cell centres, excluding the start, ending at the goal / closest cell) of the last search. */
   wp: Float32Array = EMPTY;
-  /** Node expansions spent by the last find(). */
+  /** Node expansions spent by the last / current search. */
   expanded = 0;
+  /** Node expansions done by the last advance() call. */
+  last = 0;
+  /** A search is in progress (startSearch() called, advance() has not finished it). */
+  active = false;
 
   private gen = 0;
+  private memo: Uint32Array | null = null; // (gen << 1) | passable
+  // search buffers (allocated by the first startSearch())
+  private stamp!: Uint32Array;
+  private closed!: Uint32Array;
+  private gScore!: Int32Array;
+  private parent!: Int32Array;
+  private heapKey!: Int32Array;
+  private heapVal!: Int32Array;
+  private chain!: Int32Array;
+  private turn!: Int32Array;
+  private scratchWp!: Float32Array;
+  private hn = 0;
+
   // context set by begin()
   private bs!: Game['sys']['buildings'];
   private world!: Game['sys']['world'];
@@ -102,12 +93,20 @@ export class PathFinder {
   private sx1 = 0;
   private sz0 = 1;
   private sz1 = 0;
-  // search window
+
+  // search state
   private wx0 = 0;
   private wx1 = 0;
   private wz0 = 0;
   private wz1 = 0;
-  private hn = 0;
+  private sx = 0;
+  private sz = 0;
+  private sExp = 0;
+  private slack = 0;
+  private bestI = 0;
+  private bestO = 0;
+  private bestG = 0;
+  private trivial = false;
 
   constructor(private readonly game: Game) {}
 
@@ -115,17 +114,17 @@ export class PathFinder {
 
   /**
    * Start a query context: which building footprint may be entered (`enter`, or -1), the start cell (always
-   * passable; the building under it is passable too, so colonists can leave a bed) and the goal cell.
+   * passable; the building under it is passable too, so colonists can leave a bed) and the goal cell (always
+   * passable). Invalidates earlier open()/lineClear() memoisation.
    */
   begin(enter: number, scx: number, scz: number, gcx: number, gcz: number): void {
-    alloc();
-    if (++GEN >= 0x3fffffff) {
-      GEN = 1;
-      stamp.fill(0);
-      closed.fill(0);
-      memo.fill(0);
+    if (!this.memo) this.memo = new Uint32Array(CELLS);
+    if (++this.gen >= 0x3fffffff) {
+      this.gen = 1;
+      this.memo.fill(0);
+      this.stamp?.fill(0);
+      this.closed?.fill(0);
     }
-    this.gen = GEN;
     const g = this.game;
     const bs = (this.bs = g.sys.buildings);
     const world = (this.world = g.sys.world);
@@ -169,6 +168,7 @@ export class PathFinder {
   /** Can a colonist stand on this cell (in the current context)? Memoised per context. */
   open(cx: number, cz: number): boolean {
     if (cx < 0 || cz < 0 || cx >= N || cz >= N) return false;
+    const memo = this.memo!;
     const i = cz * N + cx;
     const m = memo[i];
     if (m >>> 1 === this.gen) return (m & 1) === 1;
@@ -239,19 +239,37 @@ export class PathFinder {
 
   // ------------------------------------------------------------------ search
 
+  private allocSearch(): void {
+    if (this.stamp) return;
+    this.stamp = new Uint32Array(CELLS);
+    this.closed = new Uint32Array(CELLS);
+    this.gScore = new Int32Array(CELLS);
+    this.parent = new Int32Array(CELLS);
+    this.heapKey = new Int32Array(HEAP_CAP);
+    this.heapVal = new Int32Array(HEAP_CAP);
+    this.chain = new Int32Array(CHAIN_CAP);
+    this.turn = new Int32Array(CHAIN_CAP);
+    this.scratchWp = new Float32Array(CHAIN_CAP * 2);
+  }
+
   /**
-   * A* from the start position to the goal position (call begin() first). Returns an R_* kind and leaves the
-   * waypoints in `this.wp` (a fresh Float32Array the caller may keep).
-   * (ccx, ccz, radius): the colony box in cells — included in the window when the trip touches the colony.
+   * Begin an A* from the exact start position (sx, sz) to the goal cell of the current context (begin() must have
+   * been called on this instance with the start/goal cells and must not be called again until the search is done).
+   * (ccx, ccz, radius): the colony box in cells — included in the search window when the trip touches the colony.
+   * Drive it with advance().
    */
-  find(sx: number, sz: number, gx: number, gz: number, ccx: number, ccz: number, radius: number): number {
-    const scx = this.scx;
-    const scz = this.scz;
-    const gcx = this.gcx;
-    const gcz = this.gcz;
+  startSearch(sx: number, sz: number, ccx: number, ccz: number, radius: number): void {
+    this.allocSearch();
+    const { scx, scz, gcx, gcz } = this;
+    this.sx = sx;
+    this.sz = sz;
     this.wp = EMPTY;
     this.expanded = 0;
-    if (scx === gcx && scz === gcz) return R_NONE;
+    this.last = 0;
+    this.sExp = 0;
+    this.active = true;
+    this.trivial = scx === gcx && scz === gcz;
+    if (this.trivial) return;
 
     // window
     let x0 = Math.min(scx, gcx) - MARGIN;
@@ -271,32 +289,67 @@ export class PathFinder {
     this.wz0 = Math.max(0, z0);
     this.wz1 = Math.min(N - 1, z1);
 
-    const gen = this.gen;
-    const start = scz * N + scx;
-    const goal = gcz * N + gcx;
-    gScore[start] = 0;
-    parent[start] = -1;
-    stamp[start] = gen;
-    let bestI = start;
-    let bestH = this.heur(scx, scz, gcx, gcz);
-    const startH = bestH;
+    // Fallback target for unreachable goals: the explored cell closest to the goal among those that cost at most
+    // ~15% (+4 cells) more than the straight trip, i.e. "walk toward the goal until the wall stops you".
+    const startO = this.octile(scx, scz, gcx, gcz);
+    this.slack = startO + (((startO * 3) / 20) | 0) + 40;
+    this.bestI = scz * N + scx;
+    this.bestO = startO;
+    this.bestG = 0;
+    const start = this.bestI;
+    this.gScore[start] = 0;
+    this.parent[start] = -1;
+    this.stamp[start] = this.gen;
+    const startH = ((startO * HW_NUM) / HW_DEN) | 0;
     this.hn = 0;
-    this.push(start, bestH * 4096 + Math.min(bestH, 4095));
+    this.push(start, startH * 4096 + Math.min(startH, 4095));
+  }
 
+  /** Abandon the search in progress. */
+  cancel(): void {
+    this.active = false;
+  }
+
+  /**
+   * Run up to `maxExp` node expansions. Returns R_RUNNING while unfinished, otherwise the R_* kind (the waypoints
+   * are then in `this.wp`).
+   */
+  advance(maxExp: number): number {
+    if (!this.active) return R_NONE;
+    if (this.trivial) return this.finish(R_NONE, 0);
+    const { gcx, gcz } = this;
+    const gen = this.gen;
+    const stamp = this.stamp;
+    const closed = this.closed;
+    const gScore = this.gScore;
+    const parent = this.parent;
+    const goal = gcz * N + gcx;
+    const slack = this.slack;
+    let bestI = this.bestI;
+    let bestO = this.bestO;
+    let bestG = this.bestG;
+    let budget = maxExp;
     let kind = R_BEST;
-    let exp = 0;
+    let running = false;
+
     while (this.hn > 0) {
+      if (budget <= 0) {
+        running = true;
+        break;
+      }
       const cur = this.pop();
       if (closed[cur] === gen) continue;
       closed[cur] = gen;
       if (cur === goal) {
         kind = R_FOUND;
+        bestI = goal;
         break;
       }
-      if (++exp > MAX_EXPAND || this.hn > HEAP_CAP - 9) {
+      if (++this.sExp > MAX_EXPAND || this.hn > HEAP_CAP - 9) {
         kind = R_BUDGET;
         break;
       }
+      budget--;
       const cx = cur % N;
       const cz = (cur - cx) / N;
       const gc = gScore[cur];
@@ -313,40 +366,57 @@ export class PathFinder {
         stamp[ni] = gen;
         gScore[ni] = ng;
         parent[ni] = cur;
-        const h = this.heur(nx, nz, gcx, gcz);
-        if (h < bestH) {
-          bestH = h;
+        const o = this.octile(nx, nz, gcx, gcz);
+        if ((o < bestO || (o === bestO && ng < bestG)) && ng + o <= slack) {
+          bestO = o;
+          bestG = ng;
           bestI = ni;
         }
+        const h = ((o * HW_NUM) / HW_DEN) | 0;
         this.push(ni, (ng + h) * 4096 + Math.min(h, 4095));
       }
     }
-    this.expanded = exp;
-
-    let target = goal;
-    if (kind !== R_FOUND) {
-      target = bestI;
-      if (target === start || bestH >= startH) return R_NONE; // nowhere closer to go
+    this.bestI = bestI;
+    this.bestO = bestO;
+    this.bestG = bestG;
+    const done = maxExp - budget;
+    if (running) {
+      this.last = done;
+      this.expanded = this.sExp;
+      return R_RUNNING;
     }
+    return this.finish(kind, done);
+  }
 
-    // chain: target ... start
+  private finish(kind: number, done: number): number {
+    this.active = false;
+    this.last = done;
+    this.expanded = this.sExp;
+    this.wp = EMPTY;
+    if (this.trivial) return R_NONE;
+    const start = this.scz * N + this.scx;
+    const target = this.bestI;
+    if (kind !== R_FOUND && target === start) return R_NONE; // nowhere closer to go
+    const chain = this.chain;
+    const parent = this.parent;
     let n = 0;
     for (let i = target; i !== -1 && n < CHAIN_CAP; i = parent[i]) chain[n++] = i;
-    this.wp = this.pull(sx, sz, n);
+    this.wp = this.pull(n);
     return kind;
   }
 
-  /** Weighted octile distance (cost units). */
-  private heur(x: number, z: number, gx: number, gz: number): number {
+  /** Octile distance in cost units (10 per straight step, 14 per diagonal). */
+  private octile(x: number, z: number, gx: number, gz: number): number {
     let dx = x - gx;
     let dz = z - gz;
     if (dx < 0) dx = -dx;
     if (dz < 0) dz = -dz;
-    const mn = dx < dz ? dx : dz;
-    return (((dx + dz) * 10 - mn * 6) * HW_NUM) / HW_DEN | 0;
+    return (dx + dz) * 10 - (dx < dz ? dx : dz) * 6;
   }
 
   private push(node: number, key: number): void {
+    const heapKey = this.heapKey;
+    const heapVal = this.heapVal;
     let i = this.hn++;
     while (i > 0) {
       const p = (i - 1) >> 1;
@@ -360,6 +430,8 @@ export class PathFinder {
   }
 
   private pop(): number {
+    const heapKey = this.heapKey;
+    const heapVal = this.heapVal;
     const top = heapVal[0];
     const n = --this.hn;
     if (n > 0) {
@@ -385,7 +457,9 @@ export class PathFinder {
    * chain[n-1] is the start cell, chain[0] the target. Drop collinear nodes, then string-pull from the exact start
    * position: each waypoint is the farthest turning point still visible from the previous one.
    */
-  private pull(sx: number, sz: number, n: number): Float32Array {
+  private pull(n: number): Float32Array {
+    const chain = this.chain;
+    const turn = this.turn;
     // path order p[k] = chain[n-1-k], k = 0..m
     const m = n - 1;
     if (m < 1) return EMPTY;
@@ -405,9 +479,10 @@ export class PathFinder {
     }
     turn[t++] = chain[0]; // target
     // greedy visibility pull over the turning points
+    const out = this.scratchWp;
     let cnt = 0;
-    let ax = sx;
-    let az = sz;
+    let ax = this.sx;
+    let az = this.sz;
     let i = 0;
     while (i < t) {
       let j = i;
@@ -421,11 +496,11 @@ export class PathFinder {
       const cz = Math.floor(turn[j] / N);
       ax = cellCenter(cx);
       az = cellCenter(cz);
-      scratchWp[cnt * 2] = ax;
-      scratchWp[cnt * 2 + 1] = az;
+      out[cnt * 2] = ax;
+      out[cnt * 2 + 1] = az;
       cnt++;
       i = j + 1;
     }
-    return scratchWp.slice(0, cnt * 2);
+    return out.slice(0, cnt * 2);
   }
 }
