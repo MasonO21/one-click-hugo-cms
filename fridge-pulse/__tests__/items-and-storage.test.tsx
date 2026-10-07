@@ -62,14 +62,15 @@ function textOf(node: ReactTestRendererJSON | ReactTestRendererJSON[] | null): s
 }
 
 describe('saved data that cannot be read', () => {
-  const flush = async () => {
-    for (let i = 0; i < 10; i += 1) await new Promise((r) => setTimeout(r, 0));
+  /** Waits for the store to finish loading (or gives up after a few seconds, for the test to fail). */
+  const loaded = async (store: { persist: { hasHydrated: () => boolean } }) => {
+    for (let waited = 0; !store.persist.hasHydrated() && waited < 3000; waited += 10) await new Promise((r) => setTimeout(r, 10));
   };
 
   it('is set aside and the store starts afresh, instead of the app never loading', async () => {
     await AsyncStorage.setItem('test.damaged', '{"state":{"items":[{"id":"a"');
     const store = createStore(persist(() => ({ items: [] as unknown[] }), { name: 'test.damaged', version: 1, storage: persistStorage() }));
-    await flush();
+    await loaded(store);
     expect(store.persist.hasHydrated()).toBe(true);
     expect(store.getState().items).toEqual([]);
     expect(await AsyncStorage.getItem('test.damaged.unreadable')).toBe('{"state":{"items":[{"id":"a"');
@@ -78,7 +79,7 @@ describe('saved data that cannot be read', () => {
   it('readable data still loads as before', async () => {
     await AsyncStorage.setItem('test.fine', JSON.stringify({ state: { items: ['a'] }, version: 1 }));
     const store = createStore(persist(() => ({ items: [] as unknown[] }), { name: 'test.fine', version: 1, storage: persistStorage() }));
-    await flush();
+    await loaded(store);
     expect(store.persist.hasHydrated()).toBe(true);
     expect(store.getState().items).toEqual(['a']);
   });

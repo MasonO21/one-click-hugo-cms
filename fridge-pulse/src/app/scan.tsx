@@ -15,10 +15,12 @@ import { Emoji, Text } from '../components/Text';
 import { friendlyError, isDemoMode, scanPhotos } from '../lib/api';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { encodePhoto, MAX_PHOTOS, pickPhotos, takePhoto, type Photo } from '../lib/photos';
+import { focusFirstHeading } from '../lib/focus';
 import { goBack } from '../lib/nav';
 import { knownForScan } from '../lib/identify';
 import { toDrafts } from '../lib/scan';
 import type { ScanMode, StorageLocation } from '../lib/types';
+import { announce } from '../store/announcer';
 import { getProvider, useBilling } from '../store/billing';
 import { useFoods } from '../store/foods';
 import { useInventory } from '../store/inventory';
@@ -49,6 +51,15 @@ function Analyzing({ mode, location, photo, onCancel }: { mode: ScanMode; locati
   const sweep = useAnimatedValue(0);
   const [i, setI] = useState(0);
   const status = STATUS[mode];
+  const title = `Reading your ${mode === 'receipt' ? 'receipt' : location}`;
+  // The Analyze button that had focus is gone: say what is happening, and on the web move focus here.
+  const root = useRef<View>(null);
+  useEffect(() => {
+    announce(`${title}. This takes a few seconds.`);
+    focusFirstHeading(root.current);
+    // Once, when it appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setI((n) => Math.min(n + 1, STATUS.shelf.length - 1)), 2500);
@@ -67,7 +78,7 @@ function Analyzing({ mode, location, photo, onCancel }: { mode: ScanMode; locati
   }, [sweep, still, photo]);
 
   return (
-    <View style={[styles.analyzing, { backgroundColor: c.bg }]} testID="analyzing">
+    <View ref={root} style={[styles.analyzing, { backgroundColor: c.bg }]} testID="analyzing">
       {photo ? (
         <View style={[styles.scanFrame, { borderColor: c.primary }]}>
           <Image source={{ uri: photo.uri }} style={styles.scanPhoto} accessibilityLabel="Your photo" />
@@ -84,7 +95,9 @@ function Analyzing({ mode, location, photo, onCancel }: { mode: ScanMode; locati
           <Logo size={88} beat="quick" />
         </View>
       )}
-      <Text variant="heading">Reading your {mode === 'receipt' ? 'receipt' : location}</Text>
+      <Text variant="heading" accessibilityRole="header">
+        {title}
+      </Text>
       <FadeIn key={i} distance={4}>
         <Text muted>{status[i]}</Text>
       </FadeIn>

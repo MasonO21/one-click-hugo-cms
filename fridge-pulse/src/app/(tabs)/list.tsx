@@ -107,7 +107,7 @@ export default function ShoppingList() {
   };
 
   return (
-    <Screen>
+    <Screen focusOnOpen="if-lost">
       <Header
         title="Shopping"
         subtitle={list.length === 0 ? 'Nothing on your list' : toBuy.length === 0 ? 'Everything is in the basket' : `${toBuy.length} to buy`}

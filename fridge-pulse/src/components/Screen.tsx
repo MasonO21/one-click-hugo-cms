@@ -1,6 +1,7 @@
-import { useEffect, useId, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { focusFirstHeading, focusLost } from '../lib/focus';
 import { useSnackbar } from '../store/snackbar';
 import { useTheme } from '../theme';
 
@@ -12,12 +13,29 @@ interface Props {
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   contentStyle?: StyleProp<ViewStyle>;
   footer?: ReactNode;
+  /**
+   * On the web, take focus (its heading) when it opens. Tab screens say 'if-lost': switching tabs
+   * leaves focus on the tab, as tabs should, but arriving from a screen that closed (the paywall)
+   * does not leave it on the page itself.
+   */
+  focusOnOpen?: boolean | 'if-lost';
 }
 
+/** The first screen of a visit does not take focus: the page has only just loaded. */
+let opened = false;
+
 /** Page container: themed background, safe areas, and a readable max width on wide screens. */
-export function Screen({ children, scroll = true, edges = ['top'], contentStyle, footer }: Props) {
+export function Screen({ children, scroll = true, edges = ['top'], contentStyle, footer, focusOnOpen = true }: Props) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
+  const root = useRef<View>(null);
+  useEffect(() => {
+    const first = !opened;
+    opened = true;
+    if (!first && (focusOnOpen === true || (focusOnOpen === 'if-lost' && focusLost()))) focusFirstHeading(root.current);
+    // Once, when the screen opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // A screen with a bottom button bar tells the message bar to sit above it, and forgets on the way out.
   const footerId = hash(useId());
   const hasFooter = !!footer;
@@ -41,7 +59,9 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
   );
   return (
     <SafeAreaView style={[styles.flex, { backgroundColor: c.bg }]} edges={edges}>
-      <View style={[styles.flex, styles.center]}>{body}</View>
+      <View ref={root} style={[styles.flex, styles.center]}>
+        {body}
+      </View>
       {footer ? (
         <View
           onLayout={(e) => useSnackbar.getState().setFooter(footerId, e.nativeEvent.layout.height)}

@@ -92,7 +92,7 @@ export default function Pulse() {
           : { big: 'All fresh', sub: `${items_(summary.total)} tracked, nothing due in the next 3 days` };
 
   return (
-    <Screen>
+    <Screen focusOnOpen="if-lost">
       <View style={styles.top}>
         <View style={{ flex: 1, gap: 2 }}>
           <Wordmark size={26} />

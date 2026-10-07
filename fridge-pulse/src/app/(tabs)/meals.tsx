@@ -141,7 +141,7 @@ export default function Meals() {
 
   return (
     <>
-    <Screen>
+    <Screen focusOnOpen="if-lost">
       <Header title="Meals" subtitle={pool.length > 0 ? `Built from ${pool.length} items, soonest to expire first` : undefined} />
 
       {pool.length === 0 ? (

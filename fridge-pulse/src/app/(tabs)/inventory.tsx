@@ -50,7 +50,7 @@ export default function Inventory() {
   const countFor = (loc: StorageLocation) => live.filter((i) => i.location === loc).length;
 
   return (
-    <Screen scroll={false} contentStyle={{ paddingBottom: 0 }}>
+    <Screen scroll={false} contentStyle={{ paddingBottom: 0 }} focusOnOpen="if-lost">
       <Header
         title="Items"
         subtitle={`${live.length} tracked`}

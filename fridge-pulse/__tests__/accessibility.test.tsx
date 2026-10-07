@@ -11,6 +11,7 @@ import { ErrorText } from '../src/components/ErrorText';
 import { ItemRow } from '../src/components/ItemRow';
 import { SnackbarHost } from '../src/components/Snackbar';
 import { Stepper } from '../src/components/Stepper';
+import Onboarding from '../src/app/onboarding';
 import { addDays, todayISO } from '../src/lib/dates';
 import { useDialog } from '../src/store/dialog';
 import { useSnackbar } from '../src/store/snackbar';
@@ -88,6 +89,17 @@ describe('things that are read out', () => {
       more.props.onPress();
     });
     expect(spoken).toHaveBeenCalledWith('3 people');
+  });
+});
+
+describe('onboarding', () => {
+  it('reads out each new step, since Next keeps focus', async () => {
+    const tree = await render(<Onboarding />);
+    expect(spoken).not.toHaveBeenCalled();
+    await act(async () => {
+      tree.root.findAll((n: ReactTestInstance) => n.props.testID === 'onboarding-next' && typeof n.props.onPress === 'function')[0]!.props.onPress();
+    });
+    expect(spoken).toHaveBeenCalledWith(expect.stringMatching(/^Never miss a date\. /));
   });
 });
 

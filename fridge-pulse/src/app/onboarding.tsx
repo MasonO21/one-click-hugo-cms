@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
@@ -8,6 +8,7 @@ import { Emoji, Text } from '../components/Text';
 import { Wordmark } from '../components/Wordmark';
 import { TRIAL_SPAN } from '../billing/trial';
 import { planPriceLabel, useBilling } from '../store/billing';
+import { announce } from '../store/announcer';
 import { useSettings } from '../store/settings';
 import { BRAND, glow, useTheme } from '../theme';
 
@@ -42,6 +43,13 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const last = step === STEPS.length - 1;
   const s = STEPS[step];
+  // Next keeps focus, so the new step is read out instead (not the first, which is read in place).
+  const shownStep = useRef(0);
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    announce(`${s.title}. ${s.body}`);
+  }, [step, s]);
   // The store's localised price (the same one the paywall shows next), not a hard-coded one.
   const prices = useBilling((b) => b.prices);
 
@@ -92,7 +100,7 @@ export default function Onboarding() {
         >
           <Emoji size={tight ? 40 : compact ? 52 : 76}>{s.emoji}</Emoji>
         </View>
-        <Text variant="title" style={{ textAlign: 'center' }}>
+        <Text variant="title" accessibilityRole="header" style={{ textAlign: 'center' }}>
           {s.title}
         </Text>
         <Text muted style={{ textAlign: 'center', fontSize: 17, lineHeight: 25, maxWidth: 360 }}>

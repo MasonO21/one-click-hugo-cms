@@ -269,7 +269,7 @@ export default function Settings() {
 
   return (
     <>
-    <Screen>
+    <Screen focusOnOpen="if-lost">
       <Header title="Settings" />
 
       <Section title="Your plan">

@@ -179,6 +179,12 @@ export default function ItemDetail() {
         </View>
       }
     >
+      {/* The name is a field here, so the web gets a heading to land on when the item opens. */}
+      {Platform.OS === 'web' ? (
+        <Text accessibilityRole="header" style={styles.srOnly}>
+          {item.name}
+        </Text>
+      ) : null}
       <View style={styles.top}>
         <FadeIn distance={14}>
           <FoodPicture
@@ -362,6 +368,7 @@ function macroLine(m: Macros): string {
 }
 
 const styles = StyleSheet.create({
+  srOnly: { position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   hero: { width: 72, height: 72, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
   closeHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -4 },
