@@ -44,6 +44,8 @@
         emissive: o.e || '#000000', emissiveIntensity: o.ei == null ? 1 : o.ei, side: o.ds ? THREE.DoubleSide : THREE.FrontSide,
         transparent: o.o != null && o.o < 1, opacity: o.o == null ? 1 : o.o, map: o.map || null,
       });
+      // opaque materials that differ only in colour can share one draw call once baked (see bake)
+      MC[key].userData.vc = o.o != null && o.o < 1 ? null : key.slice(key.indexOf('|'));
     }
     return MC[key];
   }
@@ -97,16 +99,17 @@
 
   // Merge every static mesh in a group into one mesh per material: a whole building
   // becomes a handful of draw calls. Subtrees marked userData.dyn keep animating.
-  function mergeGeos(list) {
+  function mergeGeos(list, withColor) {
     let n = 0;
     for (const g of list) n += g.attributes.position.count;
-    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2), col = withColor ? new Float32Array(n * 3) : null;
     let o = 0;
     for (const g of list) {
       const c = g.attributes.position.count;
       pos.set(g.attributes.position.array, o * 3);
       if (g.attributes.normal) nor.set(g.attributes.normal.array, o * 3);
       if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+      if (col) col.set(g.attributes.color.array, o * 3);
       o += c;
       g.dispose();
     }
@@ -114,8 +117,20 @@
     out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    if (col) out.setAttribute('color', new THREE.BufferAttribute(col, 3));
     out.computeBoundingSphere();
     return out;
+  }
+  const VCM = {};
+  function vcMat(key, m) {
+    if (!VCM[key]) {
+      VCM[key] = new THREE.MeshStandardMaterial({
+        vertexColors: true, color: '#ffffff', roughness: m.roughness, metalness: m.metalness, flatShading: m.flatShading,
+        emissive: m.emissive, emissiveIntensity: m.emissiveIntensity, side: m.side, map: m.map,
+      });
+      VCM[key].userData.noShadow = !!m.userData.noShadow;
+    }
+    return VCM[key];
   }
   function bake(group) {
     group.updateMatrixWorld(true);
@@ -126,14 +141,22 @@
       for (let p = o; p && p !== group; p = p.parent) if (p.userData.dyn) return;
       const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
       for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
-      if (!buckets.has(o.material)) buckets.set(o.material, []);
-      buckets.get(o.material).push(g);
+      // materials from mat() that differ only in colour go into one vertex-coloured mesh
+      const m = o.material, vc = m.userData.vc;
+      const key = vc ? `vc${vc}|${m.userData.noShadow ? 1 : 0}` : m;
+      if (vc) {
+        const n = g.attributes.position.count, c = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) { c[i * 3] = m.color.r; c[i * 3 + 1] = m.color.g; c[i * 3 + 2] = m.color.b; }
+        g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+      }
+      if (!buckets.has(key)) buckets.set(key, { m: vc ? vcMat(key, m) : m, vc: !!vc, list: [] });
+      buckets.get(key).list.push(g);
       baked.push(o);
     });
     baked.forEach((o) => o.parent.remove(o));
-    for (const [m, list] of buckets) {
-      const mm = new THREE.Mesh(mergeGeos(list), m);
-      mm.castShadow = true; mm.receiveShadow = true;
+    for (const { m, vc, list } of buckets.values()) {
+      const mm = new THREE.Mesh(mergeGeos(list, vc), m);
+      mm.castShadow = !m.userData.noShadow; mm.receiveShadow = true;
       group.add(mm);
     }
     return group;
@@ -331,6 +354,19 @@
       g.fillStyle = '#e8b54a'; g.fillRect(cx - 2, cy - 2, 4, 4);
     }
   });
+  // turquoise glaze laid in scale rows, gold-flecked (the keep's domes, as in the paintings)
+  tex.scaleTile = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#1e7f88'; g.fillRect(0, 0, w, h);
+    const n = 8, s = w / n;
+    for (let y = -1; y <= n; y++) for (let x = -1; x <= n; x++) {
+      const cx = x * s + (y % 2 ? s / 2 : 0), cy = y * s;
+      const gr = g.createRadialGradient(cx, cy + s * 0.25, 0, cx, cy + s * 0.3, s * 0.7);
+      gr.addColorStop(0, '#7fe0d8'); gr.addColorStop(0.6, '#38aeb0'); gr.addColorStop(1, '#1f7f8a');
+      g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, s * 0.62, 0, Math.PI); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(10,50,60,.55)'; g.lineWidth = 1.2; g.beginPath(); g.arc(cx, cy, s * 0.62, 0, Math.PI); g.stroke();
+      g.fillStyle = '#e8c45a'; g.fillRect(cx - 1, cy + s * 0.5, 2, 2);
+    }
+  });
   // a repeated copy of a texture (shares the image)
   const repCache = {};
   const texRep = (t, rx, ry = rx) => {
@@ -341,6 +377,8 @@
   A.texRep = texRep;
   // night windows with a lattice screen: the holes glow
   A.glowLattice = new THREE.MeshStandardMaterial({ color: '#ffffff', map: tex.lattice, emissive: '#ffb050', emissiveMap: tex.lattice, emissiveIntensity: 0.05, roughness: 0.7 });
+  // small or glowing details (lanterns, lit windows, gilding, chains) cast no shadow once baked
+  for (const m of [A.glow, A.lamp, A.glowLattice]) m.userData.noShadow = true;
   const setNight0 = A.setNight;
   A.setNight = (k) => { setNight0(k); A.glowLattice.emissiveIntensity = 0.05 + 1.5 * k; };
 
@@ -668,25 +706,34 @@
     const carry = o.carry || (o.jar ? 'jar' : raider ? null : r() < 0.18 ? 'bundle' : r() < 0.3 ? 'basket' : r() < 0.38 ? 'staff' : null);
     if (carry === 'jar') parts.push(pPart(PG.jar(), pick(['#b0603a', '#9a4a2a', '#c9884a']), 0, 0.79, 0, 0, 0, 0, 0.5, 0.5, 0.5));
     if (carry === 'bundle') parts.push(pPart(PG.bundle(), pick(['#c9a070', '#8a6a48', '#b5452a']), 0, 0.5, -0.11));
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(pMerge(parts), personMat);
-    body.castShadow = true;
-    g.add(body);
-    // limbs on pivots: shoulders and hips
-    const limb = (geoms, x, y) => {
-      const pv = new THREE.Group();
-      pv.position.set(x, y, 0);
-      const m = new THREE.Mesh(pMerge(geoms), personMat);
-      m.castShadow = true;
-      pv.add(m);
-      g.add(pv);
-      return pv;
+    // the whole figure is one skinned mesh (one draw call): bone 0 carries the body, and the arms
+    // and legs swing on bones at the shoulders and hips
+    const sets = [parts], bones = [new THREE.Bone()];
+    const limb = (x, y, list) => {
+      const b = new THREE.Bone();
+      b.position.set(x, y, 0);
+      bones[0].add(b);
+      bones.push(b);
+      sets.push(list(x, y));
+      return b;
     };
     // the arms hang a little away from the body (+x is the figure's left)
-    const armL = limb([pPart(PG.arm(), sleeve, 0, 0, 0, 0, 0, 0.12), pPart(PG.hand(), skin, 0.026, -0.22, 0)].concat(carry === 'staff' ? [pPart(PG.staff(), '#6b4426', 0.03, -0.12, 0.02)] : []), 0.122, 0.575);
-    const armR = limb([pPart(PG.arm(), sleeve, 0, 0, 0, 0, 0, -0.12), pPart(PG.hand(), skin, -0.026, -0.22, 0)].concat(carry === 'basket' ? [pPart(PG.basket(), '#b08850', -0.03, -0.27, 0.02)] : []), -0.122, 0.575);
-    const legL = limb([pPart(PG.leg(), trousers), pPart(PG.foot(), '#3a2414', 0, -0.215, 0.018)], 0.05, 0.25);
-    const legR = limb([pPart(PG.leg(), trousers), pPart(PG.foot(), '#3a2414', 0, -0.215, 0.018)], -0.05, 0.25);
+    const armL = limb(0.122, 0.575, (x, y) => [pPart(PG.arm(), sleeve, x, y, 0, 0, 0, 0.12), pPart(PG.hand(), skin, x + 0.026, y - 0.22, 0)].concat(carry === 'staff' ? [pPart(PG.staff(), '#6b4426', x + 0.03, y - 0.12, 0.02)] : []));
+    const armR = limb(-0.122, 0.575, (x, y) => [pPart(PG.arm(), sleeve, x, y, 0, 0, 0, -0.12), pPart(PG.hand(), skin, x - 0.026, y - 0.22, 0)].concat(carry === 'basket' ? [pPart(PG.basket(), '#b08850', x - 0.03, y - 0.27, 0.02)] : []));
+    const legL = limb(0.05, 0.25, (x, y) => [pPart(PG.leg(), trousers, x, y, 0), pPart(PG.foot(), '#3a2414', x, y - 0.215, 0.018)]);
+    const legR = limb(-0.05, 0.25, (x, y) => [pPart(PG.leg(), trousers, x, y, 0), pPart(PG.foot(), '#3a2414', x, y - 0.215, 0.018)]);
+    const counts = sets.map((l) => l.reduce((n, gg) => n + gg.attributes.position.count, 0));
+    const geom = pMerge(sets.flat()), nv = geom.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4);
+    let v0 = 0;
+    counts.forEach((c, b) => { for (let i = v0; i < v0 + c; i++) { si[i * 4] = b; sw[i * 4] = 1; } v0 += c; });
+    geom.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+    geom.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    const body = new THREE.SkinnedMesh(geom, personMat);
+    body.castShadow = true;
+    body.add(bones[0]);
+    body.bind(new THREE.Skeleton(bones));
+    const g = new THREE.Group();
+    g.add(body);
     g.userData.limbs = { armL, armR, legL, legR };
     g.userData.ph = r() * 6.28;
     g.userData.jar = carry === 'jar';
@@ -839,17 +886,66 @@
     return g;
   }
   A.house = house;
+  // ---- pieces the buildings share (4.8): glazed domes, gold finials, lanterns, columns, arches ----
+  const goldM = () => { const m = mat(P.gold, { m: 0.65, r: 0.32 }); m.userData.noShadow = true; return m; };
+  const chainM = () => { const m = mat(P.dark); m.userData.noShadow = true; return m; };
+  const tealM = () => mat('#ffffff', { map: texRep(tex.scaleTile, 10, 3), r: 0.35, m: 0.1 });
+  const zelM = (rx, ry) => mat('#ffffff', { map: texRep(tex.zellige, rx, ry), r: 0.45 });
+  const plasterM = (c = P.plaster) => mat(c, { map: tex.plaster });
+  const ashlarM = (c = P.sandstone) => mat(c, { map: tex.ashlar });
+  function finial(x, y, z, s = 1) {
+    const m = goldM();
+    return grp(sph(0.06 * s, m, x, y + 0.05 * s, z, 6), sph(0.04 * s, m, x, y + 0.15 * s, z, 6), cone(0.022 * s, 0.2 * s, m, x, y + 0.18 * s, z, 5));
+  }
+  // a turquoise dome on a short white drum, crowned with a gold finial
+  function tealDome(r, x, y, z, drum = 0.12) {
+    return grp(cyl(r * 1.03, r * 1.03, drum, plasterM(P.white), x, y, z, 16), dome(r, tealM(), x, y + drum, z, 18), finial(x, y + drum + r, z, Math.max(0.7, r * 1.4)));
+  }
+  // a brass lantern hanging on a chain; it lights up at night
+  function lantern(x, y, z, drop = 0.12, s = 1) {
+    const brass = goldM(), b = y - drop;
+    const lid = cone(0.03 * s, 0.04 * s, brass, x, b - 0.25 * s, z, 6);
+    lid.rotation.x = Math.PI;
+    return grp(rod(new V3(x, y, z), new V3(x, b, z), 0.006, chainM()), cone(0.055 * s, 0.07 * s, brass, x, b - 0.07 * s, z, 6), cyl(0.045 * s, 0.035 * s, 0.12 * s, A.lamp, x, b - 0.19 * s, z, 6), lid);
+  }
+  // on an iron bracket out of a wall that faces +z
+  const wallLantern = (x, y, z, out = 0.12) => grp(rod(new V3(x, y, z), new V3(x, y, z + out), 0.01, chainM()), lantern(x, y, z + out, 0.03));
+  // a slender column with a square base and capital
+  const column = (h, m, x, z, r = 0.07, cap = m) => grp(box(r * 3, 0.08, r * 3, cap, x, 0, z), cyl(r, r * 1.15, h - 0.16, m, x, 0.08, z, 8), box(r * 3.4, 0.08, r * 3.4, cap, x, h - 0.08, z));
+  // the outline of an arch (a half ring) in the xy plane, springing at y
+  const archRing = (r, t, m, x, y, z) => mesh(geo(`ar${r},${t}`, () => new THREE.TorusGeometry(r, t, 5, 14, Math.PI)), m, x, y, z);
+  // grain sacks, a basket heaped with something, a potted plant
+  function sack(x, y, z, s = 1, c = '#c9a874') {
+    const m = mat(c, { flat: true }), b = sph(0.14 * s, m, x, y + 0.11 * s, z, 7);
+    b.scale.set(1, 0.8, 1);
+    return grp(b, cone(0.05 * s, 0.1 * s, m, x, y + 0.19 * s, z, 6));
+  }
+  const basket = (x, y, z, fill = '#a0461c', s = 1) => grp(cyl(0.16 * s, 0.12 * s, 0.14 * s, mat('#b08a4a', { map: tex.wood }), x, y, z, 9), sph(0.13 * s, mat(fill, { flat: true }), x, y + 0.12 * s, z, 7));
+  const potPlant = (x, y, z, flower) => grp(cyl(0.09, 0.07, 0.15, mat('#a0583a', { flat: true }), x, y, z, 7), sph(0.13, mat(P.green, { flat: true }), x, y + 0.24, z, 6), flower ? sph(0.06, mat(flower, { flat: true }), x + 0.06, y + 0.32, z + 0.06, 5) : null);
+  function shield(x, y, z, c, ry = 0) {
+    const s = grp(cyl(0.15, 0.15, 0.03, mat(c, { flat: true }), 0, -0.015, 0, 12), sph(0.04, goldM(), 0, 0.02, 0, 6));
+    s.rotation.x = Math.PI / 2;
+    return at(grp(s), x, y, z, ry);
+  }
+  // a surface of water inside a model (kept out of the bake, it ripples)
+  function pond(geomKey, mk, x, y, z, o) {
+    const w = new THREE.Mesh(geo(geomKey, mk), A.waterMat(o));
+    w.position.set(x, y, z);
+    w.userData.keep = true;
+    return w;
+  }
+  Object.assign(A, { lantern, tealDome, finial, column, archRing, sack, basket, potPlant });
   // a dome's material: blue domes are tiled in zellige, the rest are plastered
-  const domeMat = (c) => (c === P.tile || c === P.tileL ? mat('#ffffff', { map: texRep(tex.zellige, 6, 3), r: 0.45 }) : mat(c, { map: tex.plaster }));
+  const domeMat = (c) => (c === 'teal' ? tealM() : c === P.tile || c === P.tileL ? mat('#ffffff', { map: texRep(tex.zellige, 6, 3), r: 0.45 }) : mat(c, { map: tex.plaster }));
   A.domeMat = domeMat;
   function domedHouse(r, h, color, domeColor) {
     const g = new THREE.Group();
     g.add(cylT(r, r * 1.04, h, wallMat(color), 0, 0, 0, 14, 1.2));
     g.add(cyl(r * 1.06, r * 1.06, 0.08, mat(P.adobeL, { map: tex.plaster }), 0, h - 0.04, 0, 14));
     g.add(dome(r * 1.02, domeMat(domeColor), 0, h, 0, 16));
-    g.add(sph(0.06, mat(P.gold, { r: 0.35, m: 0.6 }), 0, h + r * 1.02, 0, 6));
-    g.add(box(0.3, 0.46, 0.06, mat(P.door), 0, 0, r * 0.99));
-    g.add(arch(0.15, 0.06, mat(P.door), 0, 0.46, r * 0.99));
+    g.add(finial(0, h + r * 1.02, 0, 0.9));
+    g.add(box(0.3, 0.46, 0.06, woodMat(P.door), 0, 0, r * 0.99), arch(0.15, 0.06, woodMat(P.door), 0, 0.46, r * 0.99));
+    for (const a of [-0.9, 0.9]) { const w = box(0.12, 0.2, 0.04, A.glowLattice, Math.sin(a) * r, h * 0.5, Math.cos(a) * r); w.rotation.y = a; g.add(w); }
     return g;
   }
   function crenels(w, d, h, m, step = 0.32) {
@@ -909,30 +1005,36 @@
   // Returns a group (static parts baked) whose userData.update(t, wind) animates the rest.
   const B = {};
   B.shelter = (tier, g, U) => {
-    g.add(at(house(1.6, 1.2, 1.4, { side: true }), -0.8, 0, 0.35, 0.1));
-    g.add(at(house(1.25, 0.95, 1.2, { wall: P.adobeL, trim: P.plaster }), 0.95, 0, -0.55, -0.15));
+    g.add(at(house(1.6, 1.2, 1.4, { side: true, seed: 1 }), -0.8, 0, 0.35, 0.1));
+    g.add(at(house(1.25, 0.95, 1.2, { wall: P.adobeL, trim: P.plaster, seed: 2, merlons: true }), 0.95, 0, -0.55, -0.15));
     g.add(at(awning(1.0, 0.5, P.cloth3, 0.75, 0.7), -0.8, 0, 0, 0.1));
     g.add(at(A.jar(0.9), 0.3, 0, 0.95), at(A.jar(0.7, '#9a4a2a'), 0.55, 0, 1.05));
+    // a plastered bench by the door, a potted bougainvillea and a basket of dates
+    g.add(box(0.62, 0.16, 0.2, plasterM(P.adobeL), -1.45, 0, 1.2), potPlant(-1.65, 0, 0.75, '#d84a8a'), basket(0.05, 0, 1.25));
     if (tier >= 2) {
-      g.add(at(house(1.3, 1.0, 1.2, { wall: P.adobeD }), 1.1, 0, 0.95, -0.3));
-      g.add(at(house(0.9, 0.7, 0.8, { noDoor: true, wall: P.adobe }), 1.05, 1.0, 0.85, -0.3));
+      g.add(at(house(1.3, 1.0, 1.2, { wall: P.adobeD, seed: 3 }), 1.1, 0, 0.95, -0.3));
+      g.add(at(house(0.9, 0.7, 0.8, { noDoor: true, wall: P.adobe, seed: 4, merlons: true }), 1.05, 1.0, 0.85, -0.3));
       const lad = grp(rod(new V3(0, 0, 0), new V3(0, 1.1, -0.25), 0.02, mat(P.wood)), rod(new V3(0.2, 0, 0), new V3(0.2, 1.1, -0.25), 0.02, mat(P.wood)));
+      for (let i = 1; i < 5; i++) lad.add(rod(new V3(0, i * 0.22, -i * 0.05), new V3(0.2, i * 0.22, -i * 0.05), 0.012, mat(P.wood)));
       g.add(at(lad, 0.35, 0, 1.6, -0.3));
+      // a little courtyard fountain
+      g.add(cylT(0.26, 0.28, 0.2, ashlarM(P.stone), -0.1, 0, -1.05, 8, 0.5), cyl(0.29, 0.29, 0.04, zelM(3, 0.3), -0.1, 0.2, -1.05, 8), cyl(0.04, 0.05, 0.32, mat(P.stone), -0.1, 0.1, -1.05, 6));
+      g.add(pond('fnt', () => new THREE.CircleGeometry(0.23, 12).rotateX(-Math.PI / 2), -0.1, 0.17, -1.05, { radial: true, scale: 4 }));
     }
     if (tier >= 3) {
-      g.add(at(domedHouse(0.62, 0.95, P.plaster, P.white), -0.9, 0, -0.95));
-      const sail = box(1.4, 0.03, 1.0, mat('#f0e2c4', { ds: true }), 0, 1.55, 0);
+      g.add(at(domedHouse(0.62, 0.95, P.plaster, 'teal'), -0.9, 0, -0.95));
+      const sail = box(1.4, 0.03, 1.0, mat('#ffffff', { map: tex.stripes('#f0e2c4', P.cloth3, 10), ds: true }), 0, 1.55, 0);
       sail.rotation.z = 0.12;
       g.add(at(grp(sail, cyl(0.03, 0.03, 1.6, mat(P.woodD), -0.65, 0, 0.45, 5), cyl(0.03, 0.03, 1.6, mat(P.woodD), 0.65, 0, -0.45, 5)), 0.1, 0, 0.1));
     }
   };
   B.quarry = (tier, g, U) => {
-    const stone = mat(P.sandstone, { flat: true }), stoneD = mat('#b8844e', { flat: true });
+    const stone = ashlarM(P.sandstone), stoneD = ashlarM('#c48c54');
     const steps = tier >= 3 ? 4 : tier >= 2 ? 3 : 2;
-    for (let i = 0; i < steps; i++) g.add(box(2.6 - i * 0.45, 0.55, 1.4 - i * 0.18, i % 2 ? stoneD : stone, -0.1 + i * 0.12, i * 0.55, -0.9 - i * 0.1));
-    const blocks = mat('#e0b47a', { flat: true });
+    for (let i = 0; i < steps; i++) g.add(boxT(2.6 - i * 0.45, 0.55, 1.4 - i * 0.18, i % 2 ? stoneD : stone, -0.1 + i * 0.12, i * 0.55, -0.9 - i * 0.1, 0.9));
+    const blocks = ashlarM('#e8be86');
     for (let i = 0; i < 3 + tier; i++) {
-      const b = box(0.42, 0.3, 0.3, blocks, 0.6 + (i % 3) * 0.46 - 0.4, Math.floor(i / 3) * 0.3, 0.75 - Math.floor(i / 3) * 0.1);
+      const b = boxT(0.42, 0.3, 0.3, blocks, 0.6 + (i % 3) * 0.46 - 0.4, Math.floor(i / 3) * 0.3, 0.75 - Math.floor(i / 3) * 0.1, 0.6);
       b.rotation.y = (i % 2) * 0.08;
       g.add(b);
     }
@@ -951,7 +1053,17 @@
     g.add(crane);
     U.push((t) => { crane.rotation.y = Math.sin(t * 0.35) * 0.7; hook.rotation.x = Math.sin(t * 1.4) * 0.06; });
     g.add(at(A.rock(0.35, 2, '#c99a62'), 1.2, 0.1, -0.1));
-    if (tier >= 2) g.add(at(cratePile(3, 9), 1.25, 0, 1.1));
+    // a sledge for hauling blocks, picks leaning on the stone, a water skin under a shade
+    const sled = grp(box(0.5, 0.06, 0.9, woodMat(P.wood), 0, 0.04, 0), box(0.06, 0.06, 1.0, mat(P.woodD), -0.22, 0, 0), box(0.06, 0.06, 1.0, mat(P.woodD), 0.22, 0, 0), boxT(0.4, 0.3, 0.4, blocks, 0, 0.1, 0.1, 0.6));
+    sled.add(rod(new V3(0, 0.08, -0.45), new V3(0.1, 0.02, -1.0), 0.012, mat(P.rope)));
+    g.add(at(sled, 1.45, 0, 0.35, 0.3));
+    for (const [x, rz] of [[0.25, 0.25], [0.45, -0.2]]) {
+      const pick = grp(cyl(0.015, 0.015, 0.6, mat(P.woodD), 0, 0, 0, 4), box(0.26, 0.04, 0.03, mat('#5a5a62', { m: 0.6, r: 0.4 }), 0, 0.6, 0));
+      pick.rotation.z = rz;
+      g.add(at(pick, x, 0, -0.1));
+    }
+    g.add(at(awning(0.7, 0.45, P.cloth3, 0.7, 0.85), -1.0, 0, 0.3), sack(-1.05, 0, 1.15, 0.9, '#8a5a34'));
+    if (tier >= 2) g.add(at(cratePile(3, 9), 1.25, 0, 1.25));
   };
   B.grove = (tier, g, U) => {
     const soil = mat('#7a5034', { flat: true }), crop = mat(P.green, { flat: true }), cropD = mat(P.greenD, { flat: true });
@@ -959,62 +1071,83 @@
       g.add(box(1.8, 0.08, 0.4, soil, 0.2, 0, 0.9 - i * 0.55));
       for (let k = 0; k < 6; k++) g.add(cone(0.1, 0.22, k % 2 ? crop : cropD, -0.55 + k * 0.3, 0.06, 0.9 - i * 0.55, 5));
     }
-    const ch = new THREE.Mesh(geo('chan', () => new THREE.PlaneGeometry(0.22, 2.4).rotateX(-Math.PI / 2)), A.waterMat({ scale: 2.5 }));
-    ch.position.set(-0.95, 0.05, 0.1);
-    ch.userData.keep = true;
-    g.add(ch, box(0.06, 0.1, 2.4, mat(P.stone), -1.1, 0, 0.1), box(0.06, 0.1, 2.4, mat(P.stone), -0.8, 0, 0.1));
+    g.add(pond('chan', () => new THREE.PlaneGeometry(0.22, 2.4).rotateX(-Math.PI / 2), -0.95, 0.05, 0.1, { scale: 2.5 }));
+    g.add(boxT(0.06, 0.1, 2.4, ashlarM(P.stone), -1.1, 0, 0.1, 0.5), boxT(0.06, 0.1, 2.4, ashlarM(P.stone), -0.8, 0, 0.1, 0.5));
     const palms = [[-0.6, -0.9, 2.4], [0.5, -1.1, 2.9], [1.3, -0.4, 2.2]];
     if (tier >= 2) palms.push([1.4, 0.8, 2.6]);
     if (tier >= 3) palms.push([-1.5, -0.6, 3.1], [0.1, -0.3, 2.0]);
-    palms.forEach(([x, z, h], i) => { const p = A.palm(h, i + 3); p.position.set(x, 0, z); g.add(p); U.push((t, w) => A.swayPalm(p, t, w)); });
-    g.add(at(A.jar(0.8, '#b0603a'), -1.3, 0, 1.2));
+    palms.forEach(([x, z, h], i) => {
+      const p = A.palm(h, i + 3);
+      p.position.set(x, 0, z);
+      g.add(p);
+      U.push((t, w) => A.swayPalm(p, t, w));
+      // hanging clusters of dates under each crown
+      const top = p.userData.crown.position, dm = mat('#a0461c', { flat: true }), dg = mat('#d07a2a', { flat: true });
+      for (let k = 0; k < 3; k++) { const a = k * 2.1 + i; const c = cone(0.1, 0.32, k % 2 ? dm : dg, x + top.x + Math.cos(a) * 0.17, top.y - 0.5, z + top.z + Math.sin(a) * 0.17, 6); c.rotation.x = Math.PI; g.add(c); }
+    });
+    // the harvest: baskets of dates, a woven mat of them drying, a low mudbrick wall at the back
+    g.add(at(A.jar(0.8, '#b0603a'), -1.3, 0, 1.2), basket(1.2, 0, 1.3), basket(1.45, 0, 1.05, '#c8702a', 0.85));
+    g.add(box(0.7, 0.015, 0.45, mat('#ffffff', { map: tex.stripes('#c9a46a', '#a8844a', 10) }), 0.8, 0, -1.45));
+    for (let k = 0; k < 10; k++) g.add(sph(0.04, mat('#8a3a18', { flat: true }), 0.55 + (k % 5) * 0.12, 0.03, -1.55 + Math.floor(k / 5) * 0.2, 4));
+    g.add(boxT(3.0, 0.4, 0.14, wallMat(P.adobe, true), 0, 0, -1.75, 0.8));
+    if (tier >= 2) {
+      // a vine arbour over a bench where the gardeners rest
+      const post = woodMat(P.woodD), vine = mat('#4f8f36', { flat: true });
+      for (const [x, z] of [[0.95, -0.25], [1.55, -0.25], [0.95, 0.35], [1.55, 0.35]]) g.add(cyl(0.03, 0.03, 1.0, post, x - 0.35, 0, z - 0.95, 5));
+      g.add(box(0.75, 0.04, 0.75, mat(P.woodD), 0.9, 1.0, -0.6), sph(0.3, vine, 0.75, 1.08, -0.6, 7), sph(0.26, vine, 1.05, 1.06, -0.5, 7), sph(0.06, mat('#7a2a5a', { flat: true }), 0.7, 0.9, -0.4, 5));
+    }
   };
   B.well = (tier, g, U) => {
-    const stone = mat(P.stone, { flat: true });
-    g.add(cyl(0.62, 0.68, 0.62, stone, 0, 0, 0, 14));
-    g.add(cyl(0.66, 0.66, 0.08, mat(P.sandstone), 0, 0.6, 0, 14));
-    const wsurf = new THREE.Mesh(geo('wsurf', () => new THREE.CircleGeometry(0.52, 20).rotateX(-Math.PI / 2)), A.waterMat({ radial: true, scale: 3 }));
-    wsurf.position.y = 0.5;
-    wsurf.userData.keep = true;
-    g.add(wsurf);
-    const wood = mat(P.wood, { flat: true });
-    g.add(cyl(0.05, 0.05, 1.5, wood, -0.6, 0, 0, 6), cyl(0.05, 0.05, 1.5, wood, 0.6, 0, 0, 6));
-    g.add(at(grp(mesh(geo('axle', () => new THREE.CylinderGeometry(0.06, 0.06, 1.3, 8).rotateZ(Math.PI / 2)), wood)), 0, 1.45, 0));
+    const stone = ashlarM(P.stone), rim = plasterM(P.sandstone), wood = woodMat(P.wood);
+    // the well-head: dressed stone with a band of zellige and a sandstone lip
+    g.add(cylT(0.66, 0.72, 0.56, stone, 0, 0, 0, 12, 0.7));
+    g.add(cyl(0.695, 0.715, 0.16, zelM(6, 0.6), 0, 0.3, 0, 12));
+    g.add(cyl(0.75, 0.75, 0.08, rim, 0, 0.56, 0, 12));
+    g.add(pond('wsurf', () => new THREE.CircleGeometry(0.6, 20).rotateX(-Math.PI / 2), 0, 0.5, 0, { radial: true, scale: 3 }));
+    const H = 1.55, rope = tier >= 2 ? 1.0 : 0.6;
+    if (tier >= 2) {
+      // the Deep Well's pavilion: four columns carry a turquoise dome over the shaft
+      const white = plasterM(P.white), C = 0.66;
+      for (const [x, z] of [[-C, -C], [C, -C], [-C, C], [C, C]]) g.add(column(H, white, x, z, 0.07, rim));
+      g.add(box(1.56, 0.2, 0.16, rim, 0, H, C), box(1.56, 0.2, 0.16, rim, 0, H, -C), box(0.16, 0.2, 1.56, rim, C, H, 0), box(0.16, 0.2, 1.56, rim, -C, H, 0));
+      g.add(box(1.5, 0.05, 1.5, zelM(3, 3), 0, H + 0.2, 0));
+      for (let i = 0; i < 4; i++) {
+        const a = archRing(0.52, 0.05, white, Math.sin((i * Math.PI) / 2) * C, H - 0.52, Math.cos((i * Math.PI) / 2) * C);
+        a.rotation.y = (i * Math.PI) / 2;
+        g.add(a);
+        g.add(lantern(Math.sin((i * Math.PI) / 2) * C, H, Math.cos((i * Math.PI) / 2) * C, 0.1));
+      }
+      g.add(tealDome(0.6, 0, H + 0.25, 0, 0.14));
+      g.add(mesh(geo('pulley', () => new THREE.TorusGeometry(0.1, 0.02, 5, 12)), mat(P.woodD), 0.1, H - 0.1, 0));
+    } else {
+      g.add(cyl(0.05, 0.05, 1.5, wood, -0.6, 0, 0, 6), cyl(0.05, 0.05, 1.5, wood, 0.6, 0, 0, 6));
+      g.add(at(grp(mesh(geo('axle', () => new THREE.CylinderGeometry(0.06, 0.06, 1.3, 8).rotateZ(Math.PI / 2)), wood)), 0, 1.45, 0));
+    }
     const bucket = new THREE.Group();
     bucket.userData.dyn = true;
-    bucket.add(rod(new V3(0, 0, 0), new V3(0, 0.6, 0), 0.01, mat(P.rope)));
-    bucket.add(cyl(0.11, 0.09, 0.16, mat('#7a5634'), 0, -0.16, 0, 8));
+    bucket.add(rod(new V3(0, 0, 0), new V3(0, rope, 0), 0.01, mat(P.rope)));
+    bucket.add(cyl(0.11, 0.09, 0.16, mat('#7a5634', { map: tex.wood }), 0, -0.16, 0, 8));
     bucket.position.set(0.1, 0.85, 0);
     g.add(bucket);
     U.push((t) => { bucket.position.y = 0.85 + Math.sin(t * 0.9) * 0.28; });
-    // stone cistern
-    g.add(box(1.1, 0.4, 0.75, stone, 0.2, 0, 1.0));
-    const cw = new THREE.Mesh(geo('cist', () => new THREE.PlaneGeometry(0.95, 0.6).rotateX(-Math.PI / 2)), A.waterMat({ scale: 3 }));
-    cw.position.set(0.2, 0.36, 1.0);
-    cw.userData.keep = true;
-    g.add(cw);
-    g.add(at(A.jar(0.75), -0.7, 0, 1.0), at(A.jar(0.65, '#9a4a2a'), -0.95, 0, 0.75));
-    if (tier >= 2) {
-      // shaduf: a counterweighted lever for lifting water
-      const post = cyl(0.06, 0.07, 1.2, wood, 1.2, 0, -0.6, 6);
-      g.add(post);
-      const lever = new THREE.Group();
-      lever.userData.dyn = true;
-      lever.position.set(1.2, 1.2, -0.6);
-      lever.add(mesh(geo('lev', () => new THREE.CylinderGeometry(0.035, 0.035, 2.4, 6).rotateZ(Math.PI / 2)), wood));
-      lever.add(sph(0.18, stone, -1.1, 0, 0, 6));
-      lever.add(rod(new V3(1.15, 0, 0), new V3(1.15, -0.6, 0), 0.01, mat(P.rope)));
-      lever.add(cyl(0.09, 0.07, 0.14, mat('#7a5634'), 1.15, -0.74, 0, 8));
-      g.add(lever);
-      U.push((t) => { lever.rotation.z = Math.sin(t * 0.7) * 0.32; });
-    }
+    // the stone cistern in front, banded with tile
+    g.add(boxT(1.1, 0.4, 0.75, stone, 0.2, 0, 1.05, 0.6), box(1.12, 0.08, 0.77, zelM(2, 0.4), 0.2, 0.22, 1.05));
+    g.add(pond('cist', () => new THREE.PlaneGeometry(0.95, 0.6).rotateX(-Math.PI / 2), 0.2, 0.36, 1.05, { scale: 3 }));
+    g.add(at(A.jar(0.75), -0.7, 0, 1.0), at(A.jar(0.65, '#9a4a2a'), -0.95, 0, 0.75), at(A.jar(0.6, '#2f8f94'), -0.75, 0, 1.3));
     if (tier >= 3) {
-      const tw = new THREE.Group();
-      for (const [x, z] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) tw.add(cyl(0.05, 0.06, 1.6, wood, x, 0, z, 5));
-      tw.add(cyl(0.62, 0.62, 0.8, mat('#9a6a3a', { flat: true }), 0, 1.6, 0, 12));
-      tw.add(cone(0.68, 0.35, mat(P.adobeD, { flat: true }), 0, 2.4, 0, 12));
-      tw.add(cyl(0.64, 0.64, 0.06, mat(P.copper, { r: 0.4, m: 0.5 }), 0, 1.85, 0, 12));
-      g.add(at(tw, -1.25, 0, -0.75));
+      // a noria: the great wheel lifts water in clay pots into a raised channel
+      const W = new THREE.Group(), pots = mat('#b0603a', { flat: true });
+      W.userData.dyn = true;
+      W.position.set(-1.05, 0.72, -1.1);
+      W.add(mesh(geo('noria', () => new THREE.TorusGeometry(0.58, 0.035, 5, 20)), wood), mesh(geo('noria2', () => new THREE.TorusGeometry(0.3, 0.025, 5, 14)), wood));
+      for (let i = 0; i < 8; i++) { const sp = box(0.03, 1.16, 0.03, wood, 0, -0.58, 0); sp.rotation.z = (i * Math.PI) / 8; W.add(sp); }
+      for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; W.add(cyl(0.05, 0.04, 0.1, pots, Math.cos(a) * 0.6, Math.sin(a) * 0.6 - 0.05, 0, 6)); }
+      g.add(W);
+      U.push((t) => { W.rotation.z = -t * 0.45; });
+      g.add(box(0.1, 0.85, 0.1, mat(P.woodD), -1.05, 0, -1.28), box(0.1, 0.85, 0.1, mat(P.woodD), -1.05, 0, -0.92));
+      g.add(boxT(0.3, 0.22, 1.2, stone, -0.4, 1.0, -1.1, 0.5), box(0.32, 1.0, 0.1, stone, -0.4, 0, -1.6), box(0.32, 1.0, 0.1, stone, -0.4, 0, -0.6));
+      g.add(pond('nch', () => new THREE.PlaneGeometry(0.18, 1.1).rotateX(-Math.PI / 2), -0.4, 1.21, -1.1, { scale: 2 }));
+      g.add(boxT(1.2, 0.18, 0.5, stone, -1.05, 0, -1.1, 0.5));
     }
   };
   B.mine = (tier, g, U) => {
@@ -1027,18 +1160,26 @@
     const dark = mat('#140a05');
     g.add(at(grp(mesh(geo('tun', () => new THREE.CylinderGeometry(0.42, 0.42, 0.4, 12, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2)), dark)), 0, 0.55, 0.15));
     g.add(box(0.84, 0.55, 0.4, dark, 0, 0, -0.05));
-    const tim = mat(P.wood, { flat: true });
+    const tim = woodMat(P.wood);
     g.add(box(0.1, 1.05, 0.1, tim, -0.48, 0, 0.3), box(0.1, 1.05, 0.1, tim, 0.48, 0, 0.3), box(1.15, 0.12, 0.14, tim, 0, 1.0, 0.3));
+    // a teal cloth over the lintel and lanterns at the mouth
+    const cloth = box(1.2, 0.02, 0.5, mat('#ffffff', { map: tex.stripes(P.cloth3, P.cloth2, 8), ds: true }), 0, 1.14, 0.55);
+    cloth.rotation.x = 0.35;
+    g.add(cloth, lantern(-0.48, 0.98, 0.42, 0.05), lantern(0.48, 0.98, 0.42, 0.05));
     g.add(box(0.08, 0.04, 1.6, mat('#6a6a6a', { m: 0.5, r: 0.5 }), -0.2, 0, 1.0), box(0.08, 0.04, 1.6, mat('#6a6a6a', { m: 0.5, r: 0.5 }), 0.2, 0, 1.0));
-    for (let i = 0; i < 6; i++) g.add(box(0.6, 0.03, 0.1, tim, 0, 0, 0.35 + i * 0.26));
-    const cart = grp(box(0.5, 0.3, 0.6, mat('#5a4030', { flat: true }), 0, 0.1, 0));
-    const ore = mat(P.copper, { flat: true, r: 0.5, m: 0.4 }), pat = mat(P.patina, { flat: true });
+    for (let i = 0; i < 6; i++) g.add(box(0.6, 0.03, 0.1, mat(P.woodD, { flat: true }), 0, 0, 0.35 + i * 0.26));
+    const cart = grp(box(0.5, 0.3, 0.6, woodMat('#6a4a30'), 0, 0.1, 0));
     for (let i = 0; i < 5; i++) cart.add(at(A.rock(0.12, i, i % 2 ? P.copper : P.patina), (i % 3 - 1) * 0.14, 0.44, (i % 2 - 0.5) * 0.2));
     for (const [x, z] of [[-0.22, -0.2], [0.22, -0.2], [-0.22, 0.2], [0.22, 0.2]]) cart.add(mesh(geo('whl', () => new THREE.CylinderGeometry(0.08, 0.08, 0.04, 10).rotateZ(Math.PI / 2)), mat('#333')).translateX(x).translateY(0.08).translateZ(z));
     g.add(at(cart, 0, 0, 1.25));
     g.add(at(A.rock(0.28, 2, P.copper), 0.9, 0.05, 1.0), at(A.rock(0.22, 5, P.patina), 1.15, 0.05, 1.25), at(A.rock(0.18, 3, P.copper), 0.75, 0.05, 1.35));
-    const lantern = sph(0.07, A.lamp, 0.62, 0.85, 0.42, 8);
-    g.add(lantern);
+    // crates of sorted ore and tools on a rack
+    for (const [x, z, c] of [[-0.95, 0.9, P.patina], [-1.3, 1.2, P.copper]]) {
+      g.add(box(0.36, 0.22, 0.3, woodMat('#8a6040'), x, 0, z));
+      for (let k = 0; k < 4; k++) g.add(sph(0.07, mat(c, { flat: true, r: 0.5, m: 0.3 }), x - 0.1 + (k % 2) * 0.2, 0.24, z - 0.06 + Math.floor(k / 2) * 0.12, 5));
+    }
+    g.add(box(0.7, 0.05, 0.06, mat(P.woodD), 0.95, 0.55, 0.45), cyl(0.02, 0.02, 0.6, mat(P.woodD), 0.65, 0, 0.45, 4), cyl(0.02, 0.02, 0.6, mat(P.woodD), 1.25, 0, 0.45, 4));
+    for (let k = 0; k < 3; k++) g.add(box(0.03, 0.45, 0.03, mat('#5a5a62', { m: 0.6, r: 0.4 }), 0.8 + k * 0.15, 0.1, 0.48));
     if (tier >= 3) {
       const hf = new THREE.Group();
       hf.add(rod(new V3(-0.4, 0, 0), new V3(0, 2.4, 0), 0.05, tim), rod(new V3(0.4, 0, 0), new V3(0, 2.4, 0), 0.05, tim), rod(new V3(0, 0, 0.5), new V3(0, 2.4, 0), 0.05, tim));
@@ -1048,64 +1189,82 @@
       wheel.add(mesh(geo('hw', () => new THREE.TorusGeometry(0.32, 0.03, 6, 16)), tim));
       for (let i = 0; i < 4; i++) { const sp = box(0.03, 0.62, 0.03, tim, 0, -0.31, 0); sp.rotation.z = (i * Math.PI) / 4; wheel.add(sp); }
       hf.add(wheel);
-      g.add(at(hf, -1.25, 0, 0.6));
+      g.add(at(hf, -1.25, 0, 0.3));
       U.push((t) => { wheel.rotation.z = t * 0.8; });
     }
-    void ore; void pat;
   };
   B.infirmary = (tier, g, U) => {
-    g.add(at(house(1.8, 1.15, 1.4, { wall: P.white, trim: '#e0d2b8', side: true }), 0, 0, 0));
-    g.add(at(grp(cyl(0.45, 0.45, 0.25, mat(P.white), 0, 0, 0, 14), dome(0.47, mat('#4fa89a', { r: 0.5 }), 0, 0.25, 0, 16), sph(0.05, mat(P.gold, { m: 0.6, r: 0.35 }), 0, 0.74, 0, 6)), 0, 1.15, 0));
+    g.add(at(house(1.8, 1.15, 1.4, { wall: P.white, trim: '#e0d2b8', side: true, seed: 5, plain: true }), 0, 0, 0));
+    g.add(tealDome(0.47, 0, 1.15, 0, 0.25));
     g.add(at(awning(1.2, 0.5, '#4fa89a', 0.85, 0.7), 0, 0, 0));
-    const pot = mat('#a0583a', { flat: true }), herb = mat('#5aa04a', { flat: true });
-    for (let i = 0; i < 3; i++) g.add(cyl(0.12, 0.09, 0.2, pot, -1.25 + i * 0.32, 0, 1.0, 7), sph(0.15, herb, -1.25 + i * 0.32, 0.3, 1.0, 6));
+    for (let i = 0; i < 3; i++) g.add(potPlant(-1.25 + i * 0.32, 0, 1.0, i === 1 ? '#f0e070' : null));
+    // a rack of herbs drying in the sun
+    const post = mat(P.woodD);
+    g.add(cyl(0.02, 0.02, 0.85, post, 0.95, 0, 1.05, 4), cyl(0.02, 0.02, 0.85, post, 1.45, 0, 1.05, 4), rod(new V3(0.95, 0.82, 1.05), new V3(1.45, 0.82, 1.05), 0.015, post));
+    for (let k = 0; k < 4; k++) g.add(cone(0.05, 0.22, mat(k % 2 ? '#7aa04a' : '#a8b860', { flat: true }), 1.02 + k * 0.13, 0.58, 1.05, 5));
     const b = A.banner('#4fa89a', 1.9, 0.5, 0.36);
     b.position.set(1.15, 0, 0.7);
     g.add(b);
     U.push((t, w) => b.userData.update(t, w));
-    if (tier >= 2) g.add(at(house(1.1, 0.9, 1.0, { wall: P.white, trim: '#e0d2b8' }), -1.35, 0, -0.6, 0.2));
+    if (tier >= 2) g.add(at(house(1.1, 0.9, 1.0, { wall: P.white, trim: '#e0d2b8', seed: 6 }), -1.35, 0, -0.6, 0.2));
     if (tier >= 3) {
-      for (let i = 0; i < 4; i++) g.add(cyl(0.06, 0.06, 0.9, mat(P.white), -0.75 + i * 0.5, 0, 1.25, 8));
-      g.add(box(1.9, 0.1, 0.3, mat(P.white), 0, 0.9, 1.25));
+      // a shaded arcade along the front
+      const white = plasterM(P.white);
+      for (let i = 0; i < 4; i++) g.add(column(0.9, white, -0.75 + i * 0.5, 1.25, 0.05));
+      for (let i = 0; i < 3; i++) g.add(archRing(0.2, 0.035, white, -0.5 + i * 0.5, 0.7, 1.25));
+      g.add(box(1.9, 0.12, 0.3, white, 0, 0.9, 1.25));
+      for (let i = 0; i < 3; i++) g.add(lantern(-0.5 + i * 0.5, 0.9, 1.25, 0.03, 0.8));
     }
   };
   B.barracks = (tier, g, U) => {
-    const wall = mat(P.adobeD), top = mat(P.adobe);
+    const wall = wallMat(P.adobeD, true), top = plasterM(P.adobe);
     const W = 2.8, D = 2.4, h = 0.8;
-    g.add(box(W, h, 0.2, wall, 0, 0, -D / 2), box(0.2, h, D, wall, -W / 2, 0, 0), box(0.2, h, D, wall, W / 2, 0, 0));
-    g.add(box(1.0, h, 0.2, wall, -0.9, 0, D / 2), box(1.0, h, 0.2, wall, 0.9, 0, D / 2));
+    g.add(boxT(W, h, 0.2, wall, 0, 0, -D / 2), boxT(0.2, h, D, wall, -W / 2, 0, 0), boxT(0.2, h, D, wall, W / 2, 0, 0));
+    g.add(boxT(1.0, h, 0.2, wall, -0.9, 0, D / 2), boxT(1.0, h, 0.2, wall, 0.9, 0, D / 2));
     g.add(crenels(W, D, h, top));
-    g.add(at(house(1.6, 1.1, 1.0, { wall: P.adobe }), 0, 0, -0.55));
+    // the gate: piers under an arch, studded doors swung open, a lantern each side
+    g.add(box(0.24, 1.15, 0.32, top, -0.42, 0, D / 2), box(0.24, 1.15, 0.32, top, 0.42, 0, D / 2), box(1.08, 0.24, 0.34, top, 0, 1.15, D / 2), archRing(0.3, 0.05, top, 0, 0.85, D / 2 + 0.12));
+    for (const s of [-1, 1]) {
+      g.add(at(grp(box(0.3, 0.82, 0.04, woodMat(P.door), s * 0.15, 0, 0)), s * 0.3, 0, D / 2 + 0.17, s * 1.2));
+      g.add(wallLantern(s * 0.42, 0.95, D / 2 + 0.16, 0.08));
+    }
+    g.add(at(house(1.6, 1.1, 1.0, { wall: P.adobe, seed: 7, brick: true }), 0, 0, -0.55));
     const spear = mat('#6b4426'), tip = mat('#d0d8de', { m: 0.7, r: 0.3 });
     for (let i = 0; i < 4; i++) { const x = -1.05 + i * 0.16; g.add(cyl(0.015, 0.015, 1.1, spear, x, 0, 0.55, 4), cone(0.03, 0.12, tip, x, 1.1, 0.55, 4)); }
     g.add(box(0.7, 0.06, 0.08, mat(P.woodD), -0.8, 0.7, 0.55));
-    // training dummy
+    // round shields hung on the inner wall
+    for (let i = 0; i < 3; i++) g.add(shield(-1.29, 0.48, -0.6 + i * 0.4, [P.cloth1, P.cloth3, P.gold][i], Math.PI / 2));
+    // training dummy and a sparring ring of sand
     g.add(cyl(0.04, 0.04, 0.9, mat(P.woodD), 0.8, 0, 0.6, 5), sph(0.17, mat('#c9a070', { flat: true }), 0.8, 0.95, 0.6, 7), box(0.6, 0.06, 0.06, mat(P.woodD), 0.8, 0.65, 0.6));
+    g.add(mesh(geo('ring', () => new THREE.RingGeometry(0.42, 0.47, 20).rotateX(-Math.PI / 2)), mat(P.rope), 0.8, 0.02, 0.6));
     const b = A.banner(P.cloth1, 2.6, 0.75, 0.5, { map: tex.stripes(P.cloth1, '#e8b54a', 4) });
     b.position.set(W / 2 - 0.1, 0, D / 2 - 0.1);
     g.add(b);
     U.push((t, w) => b.userData.update(t, w));
-    if (tier >= 2) {
-      for (const [x, z] of [[-W / 2, -D / 2], [W / 2, -D / 2]]) {
-        g.add(cyl(0.32, 0.36, 1.4, wall, x, 0, z, 8));
-        g.add(cone(0.4, 0.4, mat(P.cloth1, { flat: true }), x, 1.4, z, 8));
-      }
-    }
-    if (tier >= 3) for (const [x, z] of [[-W / 2, D / 2], [W / 2, D / 2]]) { g.add(cyl(0.32, 0.36, 1.4, wall, x, 0, z, 8)); g.add(cone(0.4, 0.4, mat(P.cloth1, { flat: true }), x, 1.4, z, 8)); }
+    const tower = (x, z) => { g.add(cylT(0.32, 0.36, 1.4, wall, x, 0, z, 8, 0.8), cyl(0.4, 0.4, 0.08, top, x, 1.4, z, 8)); g.add(cone(0.4, 0.45, mat('#ffffff', { map: tex.stripes(P.cloth1, P.cloth2, 8) }), x, 1.48, z, 8), finial(x, 1.93, z, 0.6)); };
+    if (tier >= 2) for (const [x, z] of [[-W / 2, -D / 2], [W / 2, -D / 2]]) tower(x, z);
+    if (tier >= 3) for (const [x, z] of [[-W / 2, D / 2], [W / 2, D / 2]]) tower(x, z);
   };
   B.watchtower = (tier, g, U) => {
     const H = tier >= 3 ? 4.3 : tier >= 2 ? 3.7 : 3.1;
-    const wall = mat(P.adobe, { flat: true });
-    const t = mesh(geo(`twr${H}`, () => new THREE.CylinderGeometry(0.62, 0.86, H, 4).rotateY(Math.PI / 4)), wall, 0, H / 2, 0);
+    const wall = wallMat(P.adobe, true), trim = plasterM(P.adobeL);
+    const t = cylT(0.62, 0.86, H, wall, 0, 0, 0, 4, 1);
+    t.rotation.y = Math.PI / 4;
     g.add(t);
-    g.add(box(1.5, 0.16, 1.5, mat(P.adobeL), 0, H, 0));
-    g.add(crenels(1.5, 1.5, H + 0.16, mat(P.adobeL), 0.36));
-    for (let i = 0; i < 3; i++) g.add(box(0.14, 0.26, 0.05, A.glow, 0, 0.6 + i * (H / 3.4), 0.66 - i * 0.06));
-    g.add(box(0.36, 0.55, 0.06, mat(P.door), 0, 0, 0.75), arch(0.18, 0.06, mat(P.door), 0, 0.55, 0.75));
-    const posts = mat(P.woodD);
-    for (const [x, z] of [[-0.55, -0.55], [0.55, -0.55], [-0.55, 0.55], [0.55, 0.55]]) g.add(cyl(0.03, 0.03, 0.75, posts, x, H + 0.16, z, 4));
-    const roof = cone(1.1, 0.5, mat(P.cloth2, { flat: true, map: tex.stripes(P.cloth2, P.cloth1, 8) }), 0, H + 0.9, 0, 8);
-    g.add(roof);
+    g.add(boxT(1.3, 0.3, 1.3, ashlarM(P.stoneD), 0, 0, 0, 0.6));
+    // string courses and lattice windows up the shaft
+    for (let i = 1; i < 3; i++) { const y = (H * i) / 3, r = 0.86 - (0.24 * i) / 3; g.add(box(r * 1.5, 0.06, r * 1.5, trim, 0, y, 0)); }
+    for (let i = 0; i < 3; i++) { const z = 0.63 - i * 0.07 + 0.04; g.add(box(0.14, 0.26, 0.04, A.glowLattice, 0, 0.75 + i * (H / 3.4), z), arch(0.07, 0.04, A.glowLattice, 0, 1.01 + i * (H / 3.4), z)); }
+    g.add(box(0.36, 0.55, 0.06, woodMat(P.door), 0, 0, 0.75), arch(0.18, 0.06, woodMat(P.door), 0, 0.55, 0.75), box(0.46, 0.04, 0.12, trim, 0, 0.74, 0.76));
+    // the lookout: a corbelled platform with sawtooth merlons and a turquoise cupola on posts
+    g.add(box(1.5, 0.16, 1.5, trim, 0, H, 0));
+    for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 2; for (const o of [-0.45, 0, 0.45]) g.add(box(0.1, 0.12, 0.1, trim, Math.sin(a) * 0.68 + Math.cos(a) * o, H - 0.12, Math.cos(a) * 0.68 - Math.sin(a) * o)); }
+    for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 2; for (let k = -2; k <= 2; k++) g.add(cone(0.09, 0.18, trim, Math.sin(a) * 0.7 + Math.cos(a) * k * 0.3, H + 0.16, Math.cos(a) * 0.7 - Math.sin(a) * k * 0.3, 4)); }
+    const posts = plasterM(P.white);
+    for (const [x, z] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) g.add(cyl(0.04, 0.04, 0.75, posts, x, H + 0.16, z, 6));
+    g.add(box(1.16, 0.1, 1.16, trim, 0, H + 0.9, 0));
+    g.add(tealDome(0.5, 0, H + 1.0, 0, 0.1));
+    g.add(lantern(0, H + 0.9, 0, 0.18, 1.2));
     const mirror = new THREE.Group();
     mirror.userData.dyn = true;
     mirror.position.set(0, H + 0.45, 0);
@@ -1114,25 +1273,28 @@
     mirror.add(disc);
     g.add(mirror);
     U.push((tt) => { mirror.rotation.y = Math.sin(tt * 0.5) * 1.2; disc.material.emissiveIntensity = 0.3 + Math.max(0, Math.sin(tt * 2.1)) ** 8 * 3; });
-    const b = A.banner('#e8b54a', 0.9, 0.5, 0.3);
-    b.position.set(0.55, H + 0.95, 0.55);
+    const b = A.banner(P.cloth3, 0.9, 0.5, 0.3);
+    b.position.set(0.55, H + 0.16, 0.55);
     g.add(b);
     U.push((tt, w) => b.userData.update(tt, w));
-    if (tier >= 2) g.add(at(house(0.9, 0.7, 0.8, { wall: P.adobeL }), 0.95, 0, 0.6, -0.4));
+    if (tier >= 2) g.add(at(house(0.9, 0.7, 0.8, { wall: P.adobeL, seed: 8, merlons: true }), 0.95, 0, 0.6, -0.4));
   };
   B.archive = (tier, g, U) => {
-    const wall = mat(P.plaster), tile = mat(P.tile, { r: 0.35, m: 0.15 });
-    g.add(box(2.2, 1.3, 1.7, wall, 0, 0, 0));
-    g.add(crenels(2.2, 1.7, 1.3, mat('#e0c08a'), 0.3));
-    g.add(cyl(0.68, 0.7, 0.42, wall, 0, 1.3, 0, 16));
-    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const w = box(0.1, 0.22, 0.05, A.glow, Math.sin(a) * 0.69, 1.38, Math.cos(a) * 0.69); w.rotation.y = a; g.add(w); }
-    g.add(dome(0.72, tile, 0, 1.72, 0, 20));
-    g.add(sph(0.08, mat(P.gold, { m: 0.7, r: 0.3 }), 0, 2.48, 0, 8), cone(0.04, 0.3, mat(P.gold, { m: 0.7, r: 0.3 }), 0, 2.5, 0, 6));
-    g.add(box(0.5, 0.75, 0.08, mat(P.tile, { r: 0.4 }), 0, 0, 0.86), arch(0.25, 0.08, mat(P.tile, { r: 0.4 }), 0, 0.75, 0.86), box(0.34, 0.6, 0.09, mat(P.door), 0, 0, 0.87));
-    for (const s of [-1, 1]) g.add(box(0.2, 0.32, 0.05, A.glow, s * 0.75, 0.55, 0.86), arch(0.1, 0.05, A.glow, s * 0.75, 0.87, 0.86));
+    const wall = plasterM(P.plaster), trim = plasterM('#e0c08a'), tile = domeMat(P.tile);
+    g.add(boxT(2.2, 1.3, 1.7, wall, 0, 0, 0, 1.2), boxT(2.26, 0.14, 1.76, ashlarM(P.stoneD), 0, 0, 0, 0.8));
+    g.add(crenels(2.2, 1.7, 1.3, trim, 0.3));
+    g.add(cylT(0.68, 0.7, 0.42, wall, 0, 1.3, 0, 16, 1));
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const w = box(0.1, 0.22, 0.05, A.glowLattice, Math.sin(a) * 0.69, 1.38, Math.cos(a) * 0.69); w.rotation.y = a; g.add(w); }
+    g.add(cyl(0.74, 0.74, 0.06, goldM(), 0, 1.7, 0, 16));
+    g.add(dome(0.72, tile, 0, 1.72, 0, 20), finial(0, 2.42, 0, 1.2));
+    // the portal: a tiled iwan around a tall arched door, with a gold band over it
+    g.add(box(0.78, 1.12, 0.1, zelM(1.5, 2), 0, 0, 0.88), box(0.84, 0.08, 0.14, goldM(), 0, 1.12, 0.88));
+    g.add(box(0.44, 0.66, 0.04, woodMat(P.door), 0, 0, 0.94), arch(0.22, 0.04, woodMat(P.door), 0, 0.66, 0.94), archRing(0.25, 0.03, goldM(), 0, 0.66, 0.95));
+    for (const s of [-1, 1]) g.add(box(0.2, 0.32, 0.05, A.glowLattice, s * 0.75, 0.55, 0.86), arch(0.1, 0.05, A.glowLattice, s * 0.75, 0.87, 0.86), wallLantern(s * 0.48, 0.9, 0.86, 0.08));
     // armillary sphere on a side tower
     const tw = new THREE.Group();
-    tw.add(cyl(0.3, 0.34, 1.9, wall, 0, 0, 0, 10), cyl(0.38, 0.38, 0.1, mat('#e0c08a'), 0, 1.9, 0, 10));
+    tw.add(cylT(0.3, 0.34, 1.9, wall, 0, 0, 0, 10, 1), cyl(0.38, 0.38, 0.1, trim, 0, 1.9, 0, 10));
+    for (let i = 0; i < 3; i++) { const w = box(0.08, 0.18, 0.04, A.glowLattice, 0, 0.5 + i * 0.5, 0.31); w.rotation.y = (i - 1) * 0.6; tw.add(w); }
     const arm = new THREE.Group();
     arm.userData.dyn = true;
     arm.position.y = 2.35;
@@ -1143,22 +1305,31 @@
     tw.add(arm);
     g.add(at(tw, 1.25, 0, -0.55));
     U.push((t) => { arm.rotation.y = t * 0.4; r1.rotation.x = t * 0.3; });
-    if (tier >= 2) g.add(at(grp(cyl(0.3, 0.34, 1.6, wall, 0, 0, 0, 10), dome(0.32, tile, 0, 1.6, 0, 12)), -1.25, 0, -0.55));
-    if (tier >= 3) g.add(at(house(1.0, 0.8, 0.9, { wall: P.plaster, trim: '#e0c08a' }), -1.2, 0, 0.75, 0.3));
+    // scrolls drying on a rack and a reading bench
+    g.add(box(0.6, 0.18, 0.22, woodMat(P.wood), -0.75, 0, 1.15));
+    for (let k = 0; k < 3; k++) { const s = mesh(geo('scroll', () => new THREE.CylinderGeometry(0.035, 0.035, 0.26, 6).rotateZ(Math.PI / 2)), mat('#f0e2c0'), -0.9 + k * 0.15, 0.22, 1.15); g.add(s); }
+    if (tier >= 2) g.add(at(grp(cylT(0.3, 0.34, 1.6, wall, 0, 0, 0, 10, 1), cyl(0.33, 0.33, 0.05, goldM(), 0, 1.6, 0, 10), dome(0.32, tile, 0, 1.63, 0, 12), finial(0, 1.95, 0, 0.7)), -1.25, 0, -0.55));
+    if (tier >= 3) g.add(at(house(1.0, 0.8, 0.9, { wall: P.plaster, trim: '#e0c08a', seed: 9 }), -1.2, 0, 0.75, 0.3));
   };
   B.hall = (tier, g, U) => {
     const R = tier >= 2 ? 1.55 : 1.3;
-    const pole = mat(P.woodD);
+    const pole = woodMat(P.woodD);
     g.add(cyl(0.06, 0.06, 2.2, pole, 0, 0, 0, 6));
     for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; g.add(cyl(0.04, 0.04, 1.0, pole, Math.cos(a) * R, 0, Math.sin(a) * R, 5)); }
     const canopy = mesh(geo(`can${R}`, () => new THREE.ConeGeometry(R * 1.12, 1.25, 12, 1, true)), mat(P.cloth1, { map: tex.stripes('#b5452a', '#f0d9a8', 12), ds: true, flat: true }), 0, 1.0 + 0.62, 0);
     g.add(canopy);
     const valance = mesh(geo(`val${R}`, () => new THREE.CylinderGeometry(R * 1.12, R * 1.12, 0.22, 12, 1, true)), mat('#e8b54a', { ds: true }), 0, 0.92, 0);
     g.add(valance);
-    g.add(sph(0.09, mat(P.gold, { m: 0.7, r: 0.3 }), 0, 2.3, 0, 8));
-    // carpet and cushions under the canopy
-    g.add(box(R * 1.4, 0.03, R * 1.1, mat('#8a2a3a', { map: tex.stripes('#8a2a3a', '#c9a24a', 10) }), 0, 0, 0));
-    g.add(cyl(0.16, 0.16, 0.12, mat(P.cloth3), -0.4, 0, 0.3, 8), cyl(0.16, 0.16, 0.12, mat(P.cloth4), 0.4, 0, 0.35, 8));
+    g.add(finial(0, 2.22, 0, 1.0));
+    // lanterns hung around the valance
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + Math.PI / 6; g.add(lantern(Math.cos(a) * R * 1.05, 0.92, Math.sin(a) * R * 1.05, 0.04, 0.9)); }
+    // kilims under the canopy, cushions, and the council's map table with a brass tray
+    g.add(box(R * 1.4, 0.03, R * 1.1, mat('#ffffff', { map: texRep(tex.kilim, 2, 1) }), 0, 0, 0));
+    g.add(box(0.9, 0.025, 0.6, mat('#ffffff', { map: tex.kilim }), -0.4, 0.03, 0.75));
+    const cush = [[P.cloth3, -0.55, 0.3], [P.cloth4, 0.55, 0.35], [P.gold, -0.2, -0.55], [P.cloth1, 0.45, -0.45]];
+    for (const [c, x, z] of cush) { const k = sph(0.17, mat(c, { flat: true }), x, 0.08, z, 8); k.scale.set(1, 0.45, 1); g.add(k); }
+    g.add(box(0.7, 0.05, 0.45, woodMat(P.wood), 0, 0.3, 0.05), box(0.05, 0.3, 0.05, mat(P.woodD), -0.3, 0, -0.13), box(0.05, 0.3, 0.05, mat(P.woodD), 0.3, 0, -0.13), box(0.05, 0.3, 0.05, mat(P.woodD), -0.3, 0, 0.23), box(0.05, 0.3, 0.05, mat(P.woodD), 0.3, 0, 0.23));
+    g.add(box(0.5, 0.008, 0.34, mat('#e9d6a6'), 0, 0.35, 0.05), cyl(0.09, 0.09, 0.02, goldM(), 0.24, 0.35, -0.08, 12));
     for (const [i, x, z] of [[0, -1.0, -1.6], [1, 1.25, -1.35]]) {
       const b = A.banner(i ? P.cloth3 : '#e8b54a', 2.4, 0.6, 0.42);
       b.position.set(x, 0, z);
@@ -1171,9 +1342,10 @@
     cam.scale.setScalar(0.8);
     g.add(cam);
     U.push((t) => { cam.userData.head.position.y = 1.5 + Math.sin(t * 0.8) * 0.04; });
+    g.add(sack(1.05, 0, 1.45, 0.9), sack(1.3, 0, 1.6, 0.8, '#b08a5a'));
     if (tier >= 3) {
       const t2 = mesh(geo('tent2', () => new THREE.ConeGeometry(0.75, 0.9, 8, 1, true)), mat(P.cloth3, { map: tex.stripes('#2f7f9a', '#f0d9a8', 8), ds: true, flat: true }), -1.5, 0.45, 0.9);
-      g.add(t2);
+      g.add(t2, finial(-1.5, 0.9, 0.9, 0.6));
       const cam2 = A.camel(7, { cloth: P.cloth1 });
       cam2.position.set(-0.4, 0, 1.75);
       cam2.rotation.y = 0.3;
@@ -1182,19 +1354,29 @@
     }
   };
   B.storehouse = (tier, g, U) => {
-    const mud = mat(P.adobe, { flat: true });
+    const mud = mat(P.adobe, { map: tex.plaster }), band = mat(P.adobeD, { map: tex.plaster });
     const granary = (s) => {
       const lg = geo(`gran`, () => new THREE.LatheGeometry([[0, 0], [0.55, 0], [0.6, 0.3], [0.58, 0.8], [0.45, 1.2], [0.25, 1.45], [0.08, 1.55], [0, 1.56]].map(([x, y]) => new THREE.Vector2(x, y)), 14));
-      const o = grp(mesh(lg, mud), box(0.24, 0.3, 0.06, mat(P.door), 0, 0.7, 0.56), cyl(0.06, 0.06, 0.06, mat(P.woodD), 0, 1.55, 0, 6));
+      const o = grp(mesh(lg, mud), cyl(0.6, 0.62, 0.08, band, 0, 0.3, 0, 14), cyl(0.59, 0.6, 0.06, band, 0, 0.78, 0, 14));
+      o.add(box(0.26, 0.32, 0.06, woodMat(P.door), 0, 0.7, 0.56), box(0.32, 0.04, 0.1, mat(P.woodD), 0, 0.68, 0.58), finial(0, 1.52, 0, 0.8));
+      // pegs for climbing, as on the real Sahel granaries
+      for (let k = 0; k < 3; k++) o.add(cyl(0.015, 0.015, 0.12, mat(P.woodD), 0.42 - k * 0.06, 0.45 + k * 0.3, 0.38 - k * 0.05, 4));
       o.scale.setScalar(s);
       return o;
     };
     g.add(at(granary(1.0), -0.6, 0, -0.4), at(granary(0.85), 0.75, 0, -0.6));
     if (tier >= 2) g.add(at(granary(0.75), 1.2, 0, 0.5));
     if (tier >= 3) g.add(at(granary(0.9), -1.35, 0, 0.55));
-    g.add(box(2.6, 0.45, 0.16, mat(P.adobeD), 0, 0, 1.25));
-    for (let i = 0; i < 5; i++) g.add(at(A.jar(0.95, i % 2 ? '#9a4a2a' : '#b0603a'), -0.9 + i * 0.36, 0, 0.75));
-    g.add(at(cratePile(4, 12), 0.2, 0, 0.1));
+    // a mudbrick yard wall with a gate, and the goods waiting to go in
+    g.add(boxT(1.0, 0.5, 0.16, wallMat(P.adobeD, true), -0.8, 0, 1.25, 0.8), boxT(1.0, 0.5, 0.16, wallMat(P.adobeD, true), 0.8, 0, 1.25, 0.8));
+    g.add(box(0.14, 0.75, 0.2, plasterM(P.adobeL), -0.3, 0, 1.25), box(0.14, 0.75, 0.2, plasterM(P.adobeL), 0.3, 0, 1.25), finial(-0.3, 0.75, 1.25, 0.6), finial(0.3, 0.75, 1.25, 0.6));
+    for (let i = 0; i < 5; i++) g.add(at(A.jar(0.95, ['#b0603a', '#9a4a2a', '#2f8f94'][i % 3]), -0.9 + i * 0.36, 0, 0.75));
+    for (const [x, z, s] of [[0.05, 0.25, 1], [0.3, 0.3, 0.9], [0.18, 0.05, 0.95], [-0.15, 0.1, 0.9]]) g.add(sack(x, 0, z, s, s < 0.95 ? '#b8956a' : '#c9a874'));
+    g.add(sack(0.18, 0.2, 0.2, 0.85));
+    g.add(at(cratePile(4, 12), 1.0, 0, 0.3));
+    // a merchant's scale under a little awning
+    g.add(at(awning(0.6, 0.4, P.cloth3, 0.75, 0.85), -1.0, 0, 0.1), cyl(0.015, 0.015, 0.5, mat(P.woodD), -1.0, 0, 0.95, 4), rod(new V3(-1.2, 0.5, 0.95), new V3(-0.8, 0.5, 0.95), 0.01, goldM()));
+    for (const x of [-1.2, -0.8]) g.add(cyl(0.07, 0.05, 0.02, goldM(), x, 0.36, 0.95, 8));
   };
   // The Sunsteel Forge: a sandstone furnace with a living glow, anvil, ingots and smoke.
   B.forge = (tier, g, U) => {
@@ -1202,14 +1384,14 @@
     const glow = new THREE.MeshStandardMaterial({ color: '#ffb347', emissive: '#ff7a1a', emissiveIntensity: 1.6, roughness: 0.5 });
     const ingot = mat(P.gold, { m: 0.7, r: 0.3, e: '#a8641c', ei: 0.35 });
     // furnace: a squat drum with a dome and a glowing arched mouth
-    g.add(cyl(0.95, 1.05, 1.1, stone, -0.2, 0, -0.45, 12));
-    g.add(dome(0.98, stoneD, -0.2, 1.1, -0.45, 14));
+    g.add(cylT(0.95, 1.05, 1.1, wallMat(P.sandstone, true), -0.2, 0, -0.45, 12, 0.7));
+    g.add(dome(0.98, mat(P.stoneD, { map: texRep(tex.brick, 4, 1) }), -0.2, 1.1, -0.45, 14));
     g.add(box(0.5, 0.42, 0.08, glow, -0.2, 0.18, 0.55), arch(0.25, 0.08, glow, -0.2, 0.6, 0.55));
     g.add(box(0.8, 0.12, 0.2, stoneD, -0.2, 0, 0.62));
     const chH = tier >= 2 ? 1.9 : 1.2;
     g.add(cyl(0.2, 0.26, chH, stoneD, -0.55, 1.4, -0.75, 8), cyl(0.27, 0.27, 0.12, stone, -0.55, 1.4 + chH, -0.75, 8));
     // anvil on a stump, ingots, quench trough
-    g.add(cyl(0.2, 0.24, 0.42, mat(P.wood, { flat: true }), 0.95, 0, 0.55, 8));
+    g.add(cyl(0.2, 0.24, 0.42, woodMat(P.wood), 0.95, 0, 0.55, 8), wallLantern(0.4, 0.95, 0.5, 0.1));
     g.add(box(0.5, 0.14, 0.22, iron, 0.95, 0.42, 0.55), box(0.24, 0.12, 0.16, iron, 0.95, 0.56, 0.55), cone(0.08, 0.26, iron, 1.28, 0.6, 0.55, 4).rotateZ(-Math.PI / 2));
     for (let i = 0; i < 2 + tier; i++) g.add(box(0.26, 0.08, 0.12, ingot, 0.75 + (i % 3) * 0.18, Math.floor(i / 3) * 0.08, 1.15));
     g.add(box(0.9, 0.26, 0.38, mat(P.woodD, { flat: true }), -0.95, 0, 0.75), box(0.8, 0.02, 0.3, mat('#2f7f9a', { r: 0.15 }), -0.95, 0.24, 0.75));
@@ -1218,7 +1400,7 @@
       const bel = box(0.55, 0.12, 0.34, mat('#6a3a1e', { flat: true }), 0.55, 0.4, -0.35);
       bel.rotation.z = 0.25;
       g.add(bel, rod(new V3(0.3, 0.45, -0.35), new V3(-0.05, 0.4, -0.35), 0.03, iron));
-      g.add(at(awning(1.3, 0.9, P.cloth1, 1.45, 0.05), 0.95, 0, 0));
+      g.add(at(awning(1.3, 0.9, P.cloth3, 1.45, 0.05), 0.95, 0, 0), lantern(0.95, 1.4, 0.9, 0.08));
       for (let i = 0; i < 3; i++) g.add(box(0.05, 0.75, 0.02, mat('#d8dde2', { m: 0.8, r: 0.25 }), 1.55, 0.2, 0.15 - i * 0.18));
       g.add(box(0.08, 0.06, 0.6, mat(P.woodD), 1.55, 0.78, -0.03));
     }
@@ -1255,7 +1437,7 @@
     (B[type] || (() => g.add(box(1.5, 1, 1.5, mat(P.adobe)))))(tier, g, U, seed);
     bake(g);
     g.userData.update = (t, wind = 1) => { for (const f of U) f(t, wind); };
-    g.userData.top = (TOP[type] || 2) + (type === 'watchtower' ? (tier - 1) * 0.6 : 0);
+    g.userData.top = (TOP[type] || 2) + (type === 'watchtower' ? (tier - 1) * 0.6 + 0.4 : type === 'well' && tier >= 2 ? 1.0 : 0);
     return g;
   };
   A.tierOf = (L) => (L >= 8 ? 3 : L >= 4 ? 2 : 1);

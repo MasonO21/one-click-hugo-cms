@@ -80,7 +80,8 @@
     [-13.2, 2.0], [13.2, 2.0], [-12.9, -5.2], [12.9, -5.2], [-7.4, -12.8], [0.2, -13.0], [7.2, -12.8], [-13.4, -10.6], [14.4, -7.6],
     [-8.4, 15.0], [11.0, 15.0], [-14.4, 9.0], [14.4, 8.8],
   ];
-  const STALLS = [[-3.0, 14.8, '#2f7f9a', 0.2], [2.9, 10.6, '#b5452a', -0.5]];
+  const STALLS = [[-3.0, 14.8, '#2f7f9a', 0.2], [2.9, 10.6, '#b5452a', -0.5], [-2.9, 10.9, '#7a3f8a', 0.45]];
+  const CARTS = [[-8.9, 12.5, 0.8], [12.6, 13.7, -0.6]];
   const JARS = [[-8.6, 11.4], [-8.2, 13.6], [-4.4, 11.0], [11.4, 7.6], [13.6, 13.2]];
   // camels plod a loop on the dunes outside the gate
   const TRAIL = [[0, 18.2], [5, 20.5], [11, 23.5], [13.5, 29], [5, 32.5], [-6, 30.5], [-12.5, 24.5], [-6.5, 20]];
@@ -129,6 +130,7 @@
   let VW = 0, VH = 0, DPR = 1, fitD = 60;
   const plots = {};
   const props = [];
+  const sellers = []; // villagers minding the market stalls
   const banners = [];
   const people = [];
   const camels = [];
@@ -376,12 +378,22 @@
     for (const s of STAIRS) g.add(stairs(s.a, s.b, s.w));
     for (const p of PARAPETS) wallRun(p.pts, p.y, 0.4, 0.22, g);
     // lanterns at the foot and head of every stair
-    const lampM = A.mat(A.P.woodD), cu = A.mat(A.P.copper, { m: 0.5, r: 0.4 });
     for (const s of STAIRS) for (const [x, z, y] of [s.a, s.b]) for (const k of [-1, 1]) {
       const ox = Math.abs(s.b[1] - s.a[1]) > Math.abs(s.b[0] - s.a[0]) ? k * (s.w / 2 + 0.35) : 0;
       if (Math.abs(x + ox) > 15.5) continue;
-      g.add(A.at(A.grp(A.cyl(0.04, 0.05, 1.3, lampM, 0, 0, 0, 5), A.box(0.16, 0.2, 0.16, cu, 0, 1.25, 0), A.sph(0.07, A.lamp, 0, 1.35, 0, 8)), x + ox, y, z));
+      g.add(A.at(lampPost(1.3), x + ox, y, z, k > 0 ? Math.PI : 0));
     }
+    // bougainvillea spilling over the parapets, and rugs hung out to air
+    const r = seeded(71);
+    PARAPETS.forEach((p, pi) => {
+      for (let i = 0; i < p.pts.length - 1; i++) {
+        const [x0, z0] = p.pts[i], [x1, z1] = p.pts[i + 1], len = Math.hypot(x1 - x0, z1 - z0), ry = -Math.atan2(z1 - z0, x1 - x0);
+        for (let u = 0.9; u < len - 0.5; u += 2.2 + r() * 1.6) {
+          const k = u / len, x = x0 + (x1 - x0) * k, z = z0 + (z1 - z0) * k;
+          g.add(A.at((i + pi + Math.round(u)) % 4 === 1 ? airingRug(r) : bougainvillea(r), x, p.y + 0.4, z, ry));
+        }
+      }
+    });
     scene.add(A.bake(g));
   }
 
@@ -608,6 +620,69 @@
     g.add(A.sph(0.08, A.lamp, 0, h * 0.62, r * 1.06, 6));
     return g;
   }
+  // a lamp post with a curled bracket and a hanging brass lantern
+  function lampPost(h = 1.5) {
+    const post = A.mat(A.P.woodD), iron = A.mat(A.P.dark);
+    return A.grp(A.cyl(0.08, 0.1, 0.14, A.mat(A.P.stone, { flat: true }), 0, 0, 0, 6), A.cyl(0.035, 0.045, h, post, 0, 0.1, 0, 6), A.box(0.32, 0.03, 0.03, iron, 0.13, h, 0), A.sph(0.04, A.mat(A.P.gold, { m: 0.6, r: 0.35 }), 0, h + 0.12, 0, 6), A.cyl(0.02, 0.02, 0.1, post, 0, h + 0.04, 0, 4), A.lantern(0.26, h, 0, 0.05, 1.25));
+  }
+  // a clump of bougainvillea on a wall top, trailing down both faces
+  function bougainvillea(r) {
+    const g = new THREE.Group(), leaf = A.mat('#3f7f2e', { flat: true }), flowers = [A.mat('#d8407e', { flat: true }), A.mat('#b8306a', { flat: true }), A.mat('#e870a0', { flat: true })];
+    for (let i = 0; i < 6; i++) {
+      const side = i % 2 ? 1 : -1, down = i < 2 ? 0 : 0.12 + r() * 0.3;
+      g.add(A.sph(0.14 + r() * 0.08, i % 3 ? flowers[i % 3] : leaf, (r() - 0.5) * 0.7, 0.06 - down, i < 2 ? 0 : side * 0.15, 6));
+    }
+    return g;
+  }
+  // a kilim folded over the parapet
+  function airingRug(r) {
+    const m = A.mat('#ffffff', { map: A.tex.kilim, ds: true }), w = 0.5 + r() * 0.2;
+    return A.grp(A.box(w, 0.02, 0.3, m, 0, 0.01, 0), A.box(w, 0.5, 0.02, m, 0, -0.48, 0.15), A.box(w, 0.3, 0.02, m, 0, -0.28, -0.15));
+  }
+  // a market stall: a striped awning over a counter of spices and pots, a rug hung at the back
+  function stall(c, r) {
+    const st = new THREE.Group(), post = A.mat(A.P.woodD), gold = A.mat(A.P.gold, { m: 0.6, r: 0.35 });
+    st.add(A.box(1.3, 0.5, 0.6, A.woodMat(A.P.wood), 0, 0, 0), A.box(1.38, 0.05, 0.68, post, 0, 0.5, 0));
+    for (const [px, pz] of [[-0.6, -0.3], [0.6, -0.3], [-0.6, 0.3], [0.6, 0.3]]) st.add(A.cyl(0.03, 0.03, 1.4, post, px, 0, pz, 4));
+    const cloth = A.mat('#ffffff', { map: A.tex.stripes(c, A.P.cloth2, 6), ds: true });
+    const roof = A.box(1.5, 0.04, 0.9, cloth, 0, 1.4, 0);
+    roof.rotation.x = 0.2;
+    st.add(roof);
+    for (let k = 0; k < 6; k++) st.add(A.cone(0.07, 0.12, cloth, -0.62 + k * 0.25, 1.15, 0.47, 3).rotateX(Math.PI));
+    st.add(A.box(0.95, 0.75, 0.02, A.mat('#ffffff', { map: A.tex.kilim, ds: true }), 0, 0.55, -0.31));
+    const spice = ['#c8553d', '#e8b54a', '#7a8a2a', '#a0461c', '#d88a2a', '#8a2a3a'];
+    for (let k = 0; k < 4; k++) {
+      const x = -0.45 + k * 0.3;
+      st.add(A.cyl(0.12, 0.08, 0.05, gold, x, 0.55, 0.1, 10), A.cone(0.1, 0.13, A.mat(spice[(k + Math.floor(r() * 6)) % 6], { flat: true }), x, 0.59, 0.1, 8));
+    }
+    st.add(A.at(A.jar(0.45, '#2f8f94'), -0.5, 0.55, -0.15), A.at(A.jar(0.4, '#b0603a'), 0.5, 0.55, -0.15));
+    st.add(A.basket(-0.4, 0, 0.55, '#e8b54a', 0.9), A.basket(0.1, 0, 0.6, '#5f9a3e', 0.8), A.sack(0.5, 0, 0.55, 0.9));
+    st.add(A.lantern(0.55, 1.3, 0.38, 0.08));
+    return st;
+  }
+  // a handcart loaded with jars and sacks
+  function cart() {
+    const wood = A.woodMat(A.P.wood), post = A.mat(A.P.woodD), g = new THREE.Group();
+    g.add(A.box(0.9, 0.08, 0.55, wood, 0, 0.32, 0), A.box(0.9, 0.18, 0.04, wood, 0, 0.4, 0.26), A.box(0.9, 0.18, 0.04, wood, 0, 0.4, -0.26));
+    for (const s of [-1, 1]) g.add(A.mesh(A.geo('cartw', () => new THREE.TorusGeometry(0.24, 0.035, 5, 14)), post, -0.1, 0.24, s * 0.32));
+    g.add(A.rod(new V3(0.45, 0.36, 0.18), new V3(1.15, 0.12, 0.2), 0.025, post), A.rod(new V3(0.45, 0.36, -0.18), new V3(1.15, 0.12, -0.2), 0.025, post));
+    g.add(A.at(A.jar(0.55, '#b0603a'), -0.2, 0.36, 0.08), A.at(A.jar(0.5, '#2f8f94'), 0.15, 0.36, -0.08), A.sack(0.3, 0.36, 0.12, 0.8));
+    return g;
+  }
+  // a string of lanterns (and bunting) sagging between two points
+  function stringLights(a, b, sag = 0.35, n = 7) {
+    const g = new THREE.Group(), rope = A.mat(A.P.rope), at = (t) => new V3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t - sag * 4 * t * (1 - t), a.z + (b.z - a.z) * t);
+    for (let i = 0; i < 10; i++) g.add(A.rod(at(i / 10), at((i + 1) / 10), 0.008, rope));
+    const cols = ['#b5452a', '#e8b54a', '#2f7f9a', '#7a3f8a', '#f0d9a8'].map((c) => A.mat(c, { ds: true })), ry = -Math.atan2(b.z - a.z, b.x - a.x);
+    for (let i = 1; i <= n; i++) {
+      const p = at(i / (n + 1));
+      g.add(A.sph(0.06, A.lamp, p.x, p.y - 0.08, p.z, 6));
+      const q = at((i - 0.5) / (n + 1)), f = A.mesh(A.geo('pennant', () => new THREE.ShapeGeometry(new THREE.Shape([new V2(-0.09, 0), new V2(0.09, 0), new V2(0, -0.2)]))), cols[i % 5], q.x, q.y, q.z);
+      f.rotation.y = ry;
+      g.add(f);
+    }
+    return g;
+  }
   function buildDecor() {
     const r = seeded(29);
     const g = new THREE.Group();
@@ -619,44 +694,56 @@
     wallRun(wallPts(2.1, 21), 0, 1.7, 0.6, g, wallM);
     for (let x = -20.6; x < 20.8; x += 0.55) if (Math.abs(x) > 2.3) g.add(A.box(0.28, 0.3, 0.66, capM, x, 1.77, WZ + 0.12 * Math.sin(x * 0.5)));
     for (const x of [-12.4, -6.6, 6.6, 12.4]) g.add(A.at(tower(0.75, 2.6, wallM, null), x, 0, WZ));
-    for (const s of [-1, 1]) g.add(A.at(tower(0.95, 3.6, wallM, A.P.cloth1), s * 2.2, 0, WZ + 0.1));
+    for (const s of [-1, 1]) g.add(A.at(A.grp(tower(0.95, 3.6, wallM, null), A.tealDome(0.82, 0, 3.76, 0, 0.3)), s * 2.2, 0, WZ + 0.1));
+    for (const dz of [-0.415, 0.415]) g.add(A.box(2.4, 0.26, 0.02, A.mat('#ffffff', { map: A.texRep(A.tex.zellige, 4, 0.45) }), 0, 2.68, WZ + 0.1 + dz));
+    // the great doors stand open, swung back into the keep
+    for (const s of [-1, 1]) g.add(A.at(A.grp(A.box(1.2, 2.3, 0.1, A.woodMat(A.P.door), s * 0.6, 0, 0), A.box(1.2, 0.08, 0.14, A.mat(A.P.dark), s * 0.6, 0.5, 0), A.box(1.2, 0.08, 0.14, A.mat(A.P.dark), s * 0.6, 1.8, 0)), s * 1.3, 0, WZ - 0.25, s * 1.35));
     const lintel = A.grp(A.box(3.4, 0.55, 0.8, wallM, 0, 2.55, 0), A.box(3.6, 0.1, 0.9, capM, 0, 3.1, 0), A.box(2.6, 0.12, 0.84, adobeD, 0, 2.45, 0));
     lintel.position.set(0, 0, WZ + 0.1);
     g.add(lintel);
-    for (const s of [-1, 1]) for (const x of [s * 1.0, s * 9.5]) g.add(A.at(A.grp(A.cyl(0.04, 0.05, 1.5, lampM, 0, 0, 0, 5), A.box(0.18, 0.22, 0.18, cu, 0, 1.45, 0), A.sph(0.08, A.lamp, 0, 1.56, 0, 8)), x, 0, WZ + 0.9));
+    for (const s of [-1, 1]) for (const x of [s * 1.0, s * 9.5]) g.add(A.at(lampPost(), x, 0, WZ + 0.9, s > 0 ? Math.PI : 0));
     // the paved avenue from the gate to the spring, lined with lamps
     const ave = ribbon(route([[0, WZ + 1.2], [0, 6.6]]).pts, 2.6, 0.03, new THREE.MeshStandardMaterial({ map: rep(A.tex.paving, 2.4, 2.4), roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
     scene.add(ave);
-    for (let z = 8.2; z < WZ - 0.5; z += 2.6) for (const s of [-1, 1]) g.add(A.at(A.grp(A.cyl(0.04, 0.05, 1.5, lampM, 0, 0, 0, 5), A.box(0.18, 0.22, 0.18, cu, 0, 1.45, 0), A.sph(0.08, A.lamp, 0, 1.56, 0, 8)), s * 1.6, 0, z));
+    for (let z = 8.2; z < WZ - 0.5; z += 2.6) for (const s of [-1, 1]) g.add(A.at(lampPost(), s * 1.6, 0, z, s > 0 ? Math.PI : 0));
+    // string lanterns and bunting across the avenue (clear of the fountain)
+    for (const z of [8.2, 10.8]) g.add(stringLights(new V3(-1.6, 1.62, z), new V3(1.6, 1.62, z), 0.3));
+    g.add(stringLights(new V3(-1.6, 1.62, 8.2), new V3(1.6, 1.62, 10.8), 0.4, 9), stringLights(new V3(-1.0, 1.62, WZ + 0.9), new V3(1.0, 1.62, WZ + 0.9), 0.2, 5));
     // lamps around the spring's plaza
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2 + 0.31;
       const x = SPRING.x + Math.cos(a) * 6.75, z = SPRING.z + Math.sin(a) * 6.75;
       if (Math.abs(x) > 6.6 && z < 5) continue;
-      g.add(A.at(A.grp(A.cyl(0.04, 0.05, 1.5, lampM, 0, 0, 0, 5), A.box(0.18, 0.22, 0.18, cu, 0, 1.45, 0), A.sph(0.08, A.lamp, 0, 1.56, 0, 8)), x, 0, z));
+      g.add(A.at(lampPost(), x, 0, z, Math.PI - a));
     }
     // market stalls by the gate
-    for (const [x, z, c, ry] of STALLS) {
-      const st = A.grp(A.box(1.3, 0.55, 0.6, A.mat(A.P.wood, { flat: true }), 0, 0, 0));
-      for (const [px, pz] of [[-0.6, -0.3], [0.6, -0.3], [-0.6, 0.3], [0.6, 0.3]]) st.add(A.cyl(0.03, 0.03, 1.4, lampM, px, 0, pz, 4));
-      const roof = A.box(1.5, 0.04, 0.9, A.mat(c, { map: A.tex.stripes(c, A.P.cloth2, 6) }), 0, 1.4, 0);
-      roof.rotation.x = 0.2;
-      st.add(roof);
-      for (let k = 0; k < 4; k++) st.add(A.sph(0.08, A.mat(['#c8553d', '#e8b54a', '#5f9a3e', '#a0461c'][k], { flat: true }), -0.45 + k * 0.3, 0.62, 0.05, 6));
-      g.add(A.at(st, x, 0, z, ry));
-    }
+    STALLS.forEach(([x, z, c, ry], i) => {
+      g.add(A.at(stall(c, r), x, 0, z, ry));
+      // the seller stands behind the counter
+      const p = A.person(500 + i * 7, { scale: 1.1 }), sg = A.at(new THREE.Group(), x, 0, z, ry);
+      p.position.set(0.95, 0, 0.2);
+      p.rotation.y = -0.4;
+      sg.add(p);
+      scene.add(sg);
+      sellers.push(p);
+    });
+    for (const [x, z, ry] of CARTS) g.add(A.at(cart(), x, 0, z, ry));
     // homes that fill out each quarter (scenery only)
     const walls = [A.P.adobe, A.P.plaster, A.P.adobeL, A.P.sandstone];
     HOMES.forEach(([x, z, y, w, h, d, ry], i) => {
-      const hz = A.house(w, h, d, { wall: walls[i % walls.length], side: i % 2 === 0 });
-      if (i % 3 === 0) hz.add(A.box(w * 0.55, h * 0.5, d * 0.6, A.mat(walls[(i + 1) % walls.length]), -w * 0.12, h, -d * 0.15));
+      const hz = A.house(w, h, d, { wall: walls[i % walls.length], side: i % 2 === 0, seed: 11 + i, brick: i % 4 === 3 });
+      if (i % 3 === 0) hz.add(A.boxT(w * 0.55, h * 0.5, d * 0.6, A.wallMat(walls[(i + 1) % walls.length]), -w * 0.12, h, -d * 0.15, 1.2));
       g.add(A.at(hz, x, y, z, ry));
     });
     // the Rain Altar: an open pavilion on the upper crescent, looking down on the spring
     const alt = new THREE.Group(), white = A.mat(A.P.white, { flat: true });
     alt.add(A.cyl(1.55, 1.7, 0.3, stoneM, 0, 0, 0, 12));
-    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; alt.add(A.cyl(0.11, 0.13, 1.7, white, Math.cos(a) * 1.15, 0.3, Math.sin(a) * 1.15, 8)); }
-    alt.add(A.cyl(1.4, 1.4, 0.18, capM, 0, 2.0, 0, 12), A.dome(1.3, A.mat(A.P.tileL, { flat: true }), 0, 2.18, 0, 14), A.sph(0.1, A.mat(A.P.gold, { m: 0.6, r: 0.35 }), 0, 3.5, 0, 8));
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2, b = a + Math.PI / 6;
+      alt.add(A.at(A.column(1.7, A.mat(A.P.white, { map: A.tex.plaster }), 0, 0, 0.11, capM), Math.cos(a) * 1.15, 0.3, Math.sin(a) * 1.15));
+      alt.add(A.lantern(Math.cos(b) * 1.05, 2.0, Math.sin(b) * 1.05, 0.12));
+    }
+    alt.add(A.cyl(1.4, 1.4, 0.18, capM, 0, 2.0, 0, 12), A.cyl(1.32, 1.32, 0.06, A.mat(A.P.gold, { m: 0.6, r: 0.35 }), 0, 2.18, 0, 12), A.dome(1.3, A.domeMat(A.P.tile), 0, 2.2, 0, 18), A.finial(0, 3.48, 0, 1.6));
     alt.add(A.cyl(0.45, 0.55, 0.5, stoneM, 0, 0.3, 0, 10));
     g.add(A.at(alt, 0, 2.8, -10.4));
     const bowl = new THREE.Mesh(new THREE.CircleGeometry(0.4, 16).rotateX(-Math.PI / 2), A.waterMat({ alpha: 0.95 }));
@@ -685,11 +772,18 @@
       }
       return null;
     };
+    let dwN = 0;
     for (const [side, at, y, ry] of [[-1, -9, 3.6, Math.PI / 2], [-1, 1, 6.2, Math.PI / 2], [1, -4, 3.6, -Math.PI / 2], [1, -12, 6.2, -Math.PI / 2], ['b', -9, 6.2, 0], ['b', 9, 3.6, 0], ['b', -13, 3.6, 0]]) {
       const f = face(side, at, y);
       if (!f) continue;
       const [x, z] = f;
       const dw = A.grp(A.box(1.5, 1.6, 0.5, carve, 0, 0, 0), A.box(0.5, 0.85, 0.1, dark, 0, 0.15, 0.24), A.arch(0.25, 0.1, dark, 0, 1.0, 0.24), A.box(1.7, 0.12, 0.7, rockD, 0, 1.6, 0));
+      // lit lattice windows, a cloth awning over the door and a pot of flowers on the ledge
+      for (const sx of [-0.5, 0.5]) dw.add(A.box(0.2, 0.3, 0.04, A.glowLattice, sx, 0.75, 0.26), A.arch(0.1, 0.04, A.glowLattice, sx, 1.05, 0.26));
+      const aw = A.box(0.8, 0.03, 0.4, A.mat('#ffffff', { map: A.tex.stripes([A.P.cloth3, A.P.cloth1, A.P.cloth4][dwN % 3], A.P.cloth2, 6), ds: true }), 0, 1.32, 0.42);
+      aw.rotation.x = 0.35;
+      dw.add(aw, A.potPlant(0.62, 1.72, 0.18, '#d84a8a'));
+      dwN++;
       g.add(A.at(dw, x, y, z, ry));
     }
     // boulders at the foot of the cliffs
@@ -743,6 +837,13 @@
     plaza.position.set(SPRING.x, 0.02, SPRING.z);
     plaza.receiveShadow = true;
     scene.add(plaza);
+    // a band of zellige around the basin's rim, and turquoise tiles along the plaza's edge
+    for (const [r0, r1, t, n] of [[5.3, 5.78, A.tex.zellige, 12], [6.88, 7.05, A.tex.scaleTile, 40]]) {
+      const band = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 96, 1).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: A.texRep(t, n, n), roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+      band.position.set(SPRING.x, 0.025, SPRING.z);
+      band.receiveShadow = true;
+      scene.add(band);
+    }
     const water = new THREE.Mesh(new THREE.CircleGeometry(3.3, 48).rotateX(-Math.PI / 2), A.waterMat({ radial: true, alpha: 0.95 }));
     water.position.copy(SPRING);
     scene.add(water);
@@ -1365,6 +1466,7 @@
     for (const [px, pz] of PALMS) near(px, pz, 0.5);
     for (const [sx, sz] of STALLS) near(sx, sz, 1.0);
     for (const [jx, jz] of JARS) near(jx, jz, 0.4);
+    for (const [cx, cz] of CARTS) near(cx, cz, 0.7);
     for (const st of STAIRS) for (let i = 0; i <= 6; i++) near(lerp(st.a[0], st.b[0], i / 6), lerp(st.a[1], st.b[1], i / 6), st.w / 2 + 0.3);
     near(0, -10.4, 1.8); near(4.2, 13.6, 2.6); near(CRAG.x, CRAG.z, CRAG.r + 0.6);
     if (!chanPts) chanPts = route(CHANNEL).pts;
@@ -1537,6 +1639,7 @@
     for (const p of props) A.swayPalm(p, t, T3.wind);
     for (const b of banners) b.userData.update(t, T3.wind);
     animPeople(t, posts);
+    sellers.forEach((p, i) => A.animPerson(p, t + i * 1.7, i % 2 ? 'work' : 'idle', 0.35));
     animCamels(t);
     animParticles(t, dt);
     animRain(rdt);
