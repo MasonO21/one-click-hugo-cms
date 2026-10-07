@@ -106,7 +106,8 @@ export class ModelCtx {
     const pb = new GeoBuilder(this.seed + this.parts.length * 17 + 3);
     build(pb);
     if (pb.isEmpty) return;
-    this.parts.push({ geometry: pb.build(), x, y, z, anim, speed, amp });
+    // parts move and float above their pivot: occlusion among their own pieces only, no ground plane
+    this.parts.push({ geometry: pb.build({ ground: false, strength: 0.4 }), x, y, z, anim, speed, amp });
   }
 
   emit(kind: EmitterKind, x: number, y: number, z: number, rate: number, color?: string): void {
@@ -256,7 +257,7 @@ export function buildModel(key: string, s: TierStyle, level: number, def: Buildi
     fallbackModel(c);
   }
   if (b.isEmpty) fallbackModel(c);
-  const geometry = b.build();
+  const geometry = b.build(true);
   let height = geometry.boundingBox ? geometry.boundingBox.max.y : 2;
   for (const p of c.parts) {
     p.geometry.computeBoundingBox();

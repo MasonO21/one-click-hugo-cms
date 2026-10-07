@@ -45,7 +45,8 @@ export function pieceGeometry(key: PieceGeoKey, s: TierStyle): THREE.BufferGeome
   if (g) return g;
   const b = new GeoBuilder(s.index * 31 + key.length);
   BUILDERS[key](b, s);
-  g = b.build();
+  // scaffolds are see-through frames and roof tiles float at ROOF_Y: no ground contact to bake
+  g = b.build(key === 'scaffold' ? false : key === 'roof_tile' ? { ground: false, strength: 0.4 } : true);
   cache.set(ck, g);
   return g;
 }

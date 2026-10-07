@@ -69,7 +69,9 @@ export class Renderer implements RendererApi {
   init(container: HTMLElement): void {
     this.container = container;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', alpha: false, stencil: false });
-    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    // ACES: deeper shadows and richer mid-tones than Neutral for the toy look (the palette and the
+    // Atmosphere keys are tuned against it); the thumbnail baker keeps its own flatter rig
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;

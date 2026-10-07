@@ -118,7 +118,7 @@ export function poiGeometry(model: string): THREE.BufferGeometry {
     b.cyl(0.03, 0.04, 1.6, 0.2, 2.6, 0, WOOD_DARK, 4);
     b.box(0.6, 0.4, 0.04, 0.5, 3.2, 0, '#ffd84a');
   }
-  g = b.build();
+  g = b.build(true);
   cache.set(model, g);
   return g;
 }

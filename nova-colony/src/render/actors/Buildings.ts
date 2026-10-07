@@ -50,6 +50,8 @@ interface Entry {
   hasTarget: boolean;
   /** Occlusion fade 0 (solid) .. FADE_MAX (dithered away). */
   fade: number;
+  /** Instance colour: status tint × a small per-building variation (so rows of one model never match exactly). */
+  col: THREE.Color;
 }
 
 interface Slot {
@@ -100,6 +102,16 @@ const COLOR_DAMAGED = new THREE.Color(0.42, 0.33, 0.33);
 const COLOR_FLASH = new THREE.Color(2.2, 2.2, 2.2);
 const COLOR_HIT = new THREE.Color(1.6, 0.6, 0.5);
 const COLOR_GHOST_BUILD = new THREE.Color(1.15, 1.15, 1.15);
+/** Per-building colour variation: ±5% value with a slight warm / cool lean, picked by id. */
+const TINTS = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+  const a = (i / 8) * Math.PI * 2;
+  const v = 1 + Math.sin(a) * 0.05;
+  const warm = Math.cos(a) * 0.035;
+  return new THREE.Color(v * (1 + warm), v, v * (1 - warm));
+});
+export function buildingTint(id: number): THREE.Color {
+  return TINTS[((id * 2654435761) >>> 0) % TINTS.length];
+}
 
 const _m = new THREE.Matrix4();
 const _m2 = new THREE.Matrix4();
@@ -235,7 +247,7 @@ export class Buildings {
   private flash(id: Id, color: THREE.Color, seconds: number): void {
     const en = this.byId.get(id);
     if (!en) return;
-    this.flashes.set(id, { until: this.ctx.env.t + seconds, color, base: this.statusColor(en.b) });
+    this.flashes.set(id, { until: this.ctx.env.t + seconds, color, base: en.col });
     for (const s of en.slots) s.batch.setColor(s.index, color);
   }
 
@@ -291,7 +303,7 @@ export class Buildings {
       const [rw, rd] = rotatedSize(size, b.rot);
       const y = ctx.heightAt(c.x, c.z);
       const yaw = -(b.rot | 0) * (Math.PI / 2);
-      const color = this.statusColor(b);
+      const color = this.statusColor(b).clone().multiply(buildingTint(b.id));
       const entry: Entry = {
         id: b.id,
         b,
@@ -312,6 +324,7 @@ export class Buildings {
         turretYaw: 0,
         hasTarget: false,
         fade: this.bfades.get(b.id) ?? 0,
+        col: color,
       };
       if (def?.piece) {
         this.buildPiece(entry, def.piece, style, color);
@@ -734,7 +747,7 @@ export class Buildings {
             composeYaw(_m, en.x, en.y, en.z, en.yaw, 1, buildingScale, 1);
             composeEuler(_m2, p.x + ox, p.y + oy, p.z, rx, ry, rz);
             _m.multiply(_m2);
-            const color = this.flashes.get(en.id)?.color ?? this.statusColor(b);
+            const color = this.flashes.get(en.id)?.color ?? en.col;
             fb.parts[pi].push(_m, color, en.fade);
           }
         }

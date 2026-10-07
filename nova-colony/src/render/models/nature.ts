@@ -302,6 +302,9 @@ const NODES_FAR: Record<string, (b: GeoBuilder) => void> = {
   },
 };
 
+/** Baked AO for nature: a slightly wider reach so canopies shade their own undersides and rock piles ground themselves. */
+const NODE_AO = { radius: 1.1, strength: 0.5 };
+
 const nodeCache = new Map<string, THREE.BufferGeometry>();
 const nodeFarCache = new Map<string, THREE.BufferGeometry>();
 const propCache = new Map<string, THREE.BufferGeometry>();
@@ -316,7 +319,7 @@ export function nodeGeometry(model: string): THREE.BufferGeometry {
     rock(b, 0.8);
     b.sphere(0.12, 0, 1.0, 0, '#ffd84a', 4, { slot: SLOT_GLOW });
   }
-  g = b.build();
+  g = b.build(NODE_AO);
   nodeCache.set(model, g);
   return g;
 }
@@ -331,7 +334,7 @@ export function nodeGeometryFar(model: string): THREE.BufferGeometry {
   } else {
     const b = new GeoBuilder(model.length * 17 + 5);
     fn(b);
-    g = b.build();
+    g = b.build(NODE_AO);
   }
   nodeFarCache.set(model, g);
   return g;
@@ -344,7 +347,7 @@ export function propGeometry(model: string): THREE.BufferGeometry {
   const fn = PROPS[model];
   if (fn) fn(b);
   else PROPS.pebble(b);
-  g = b.build();
+  g = b.build(NODE_AO);
   propCache.set(model, g);
   return g;
 }

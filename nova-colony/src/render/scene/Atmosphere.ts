@@ -23,15 +23,29 @@ interface Key {
   night: number;
 }
 
-/** Lighting keyframes by sun elevation (-1 midnight .. 1 noon). */
+/**
+ * Lighting keyframes by sun elevation (-1 midnight .. 1 noon). The look is "warm key, cool fill":
+ * a strong warm sun against a bluish hemisphere and very little flat ambient, so every box reads
+ * as a box (sunlit top, half-lit front, cool shadow side); golden sunrise / sunset keys with a
+ * low orange sun and blue sky fill; nights deep blue (not green) so warm window glow pops.
+ */
 const KEYS: Key[] = [
-  { e: -1.0, top: '#050a1a', hor: '#121d3a', bot: '#080d1a', fog: '#0f172c', sun: '#6f86c8', sunI: 0.24, hemiSky: '#34497c', hemiGround: '#1a2236', hemiI: 0.62, night: 1 },
-  { e: -0.3, top: '#0b1538', hor: '#2a3a68', bot: '#0d1324', fog: '#1d2a4c', sun: '#7f96d6', sunI: 0.26, hemiSky: '#3a4f86', hemiGround: '#1c2538', hemiI: 0.66, night: 1 },
-  { e: -0.08, top: '#1e2f6a', hor: '#c0665a', bot: '#1a1f33', fog: '#5d4d6c', sun: '#ff9c6b', sunI: 0.55, hemiSky: '#5a5a90', hemiGround: '#3a3230', hemiI: 0.75, night: 0.78 },
-  { e: 0.05, top: '#3a60a6', hor: '#ffac66', bot: '#4a4a5a', fog: '#c6907c', sun: '#ffb37a', sunI: 1.0, hemiSky: '#9ab0dc', hemiGround: '#6a6448', hemiI: 0.95, night: 0.32 },
-  { e: 0.25, top: '#3f88dc', hor: '#ffd6a6', bot: '#7a8a9a', fog: '#dcc7b2', sun: '#ffe3bf', sunI: 1.3, hemiSky: '#c4dcf8', hemiGround: '#7f9a62', hemiI: 1.2, night: 0.05 },
-  { e: 1.0, top: '#2f80e2', hor: '#c2e7ff', bot: '#8fa3b8', fog: '#c9e4ff', sun: '#fff6e6', sunI: 1.45, hemiSky: '#dbeeff', hemiGround: '#8ea86a', hemiI: 1.3, night: 0 },
+  { e: -1.0, top: '#040816', hor: '#101a38', bot: '#070b18', fog: '#0e1630', sun: '#8aa4ea', sunI: 0.46, hemiSky: '#4a66b8', hemiGround: '#141c38', hemiI: 0.66, night: 1 },
+  { e: -0.3, top: '#0a1336', hor: '#283868', bot: '#0c1224', fog: '#1a2648', sun: '#92acee', sunI: 0.48, hemiSky: '#4f6cbc', hemiGround: '#161f3a', hemiI: 0.68, night: 1 },
+  { e: -0.08, top: '#1c2d6a', hor: '#d0705c', bot: '#1a1f33', fog: '#5a4c70', sun: '#ff9c6b', sunI: 0.7, hemiSky: '#5868aa', hemiGround: '#3a3230', hemiI: 0.62, night: 0.78 },
+  { e: 0.05, top: '#355ca6', hor: '#ffa860', bot: '#4a4a5a', fog: '#d9a386', sun: '#ffa45e', sunI: 1.7, hemiSky: '#8aa4dc', hemiGround: '#6a5a46', hemiI: 0.66, night: 0.32 },
+  { e: 0.25, top: '#3a84dc', hor: '#ffd4a0', bot: '#7a8a9a', fog: '#dcc4ac', sun: '#ffd49c', sunI: 2.0, hemiSky: '#b4cff4', hemiGround: '#7a8c56', hemiI: 0.64, night: 0.05 },
+  { e: 1.0, top: '#2a76dc', hor: '#bfe4ff', bot: '#8fa3b8', fog: '#c6e2ff', sun: '#fff1d8', sunI: 2.0, hemiSky: '#c8dfff', hemiGround: '#86985e', hemiI: 0.6, night: 0 },
 ];
+
+/** Flat ambient on top of the hemisphere (day / deep night). */
+const AMBIENT_DAY = 0.1;
+const AMBIENT_NIGHT = 0.06;
+/** Sky rim strength (fraction of the hemisphere sky colour) by day and by night. */
+const RIM_DAY = 0.42;
+const RIM_NIGHT = 0.3;
+/** Shadowed ground still gets this much of the sun (a hair of bounce keeps shadows soft, not black). */
+const SHADOW_INTENSITY = 0.9;
 
 const keyColors = KEYS.map((k) => ({
   top: new THREE.Color(k.top),
@@ -161,13 +175,13 @@ export class Atmosphere {
     }
 
     // lights
-    this.sun = new THREE.DirectionalLight('#fff6e6', 2);
+    this.sun = new THREE.DirectionalLight('#fff1d8', 2);
     this.sun.position.set(60, 100, 40);
     scene.add(this.sun);
     scene.add(this.sun.target);
-    this.hemi = new THREE.HemisphereLight('#c2e3ff', '#6d8c4b', 0.9);
+    this.hemi = new THREE.HemisphereLight('#c8dfff', '#86985e', 0.6);
     scene.add(this.hemi);
-    this.amb = new THREE.AmbientLight('#ffffff', 0.28);
+    this.amb = new THREE.AmbientLight('#ffffff', AMBIENT_DAY);
     scene.add(this.amb);
     this.fog = new THREE.Fog(new THREE.Color('#c9e4ff'), 80, 400);
     scene.fog = this.fog;
@@ -190,6 +204,7 @@ export class Atmosphere {
       c.far = 320;
       this.sun.shadow.bias = -0.0006;
       this.sun.shadow.normalBias = 0.6;
+      this.sun.shadow.intensity = SHADOW_INTENSITY;
       c.updateProjectionMatrix();
     }
     this.clouds.setVisible(q !== 'low');
@@ -207,7 +222,9 @@ export class Atmosphere {
     const cam = ctx.camera;
     const t = ((dayTime % 1) + 1) % 1;
     const phi = (t - 0.25) * Math.PI * 2; // 0 at sunrise, PI/2 noon
-    this.sunDir.set(Math.cos(phi), Math.sin(phi), 0.35).normalize();
+    // the sun's arc leans toward +z (the default camera stands at +x,+z), so the faces the player
+    // sees most are the lit ones and the shadow sides fall away from the camera
+    this.sunDir.set(Math.cos(phi), Math.sin(phi), 0.42).normalize();
     const e = this.sunDir.y;
     env.sunElev = e;
 
@@ -255,8 +272,10 @@ export class Atmosphere {
     this.hemi.color.lerpColors(ca.hemiSky, cb.hemiSky, f);
     this.hemi.groundColor.lerpColors(ca.hemiGround, cb.hemiGround, f);
     this.hemi.intensity = lerp(a.hemiI, b.hemiI, f);
-    this.amb.intensity = 0.28 - night * 0.14;
-    this.amb.color.set(night > 0.5 ? '#aab8e8' : '#ffffff');
+    this.amb.intensity = lerp(AMBIENT_DAY, AMBIENT_NIGHT, night);
+    this.amb.color.set(night > 0.5 ? '#92a4dc' : '#ffffff');
+    // sky rim on grazing faces follows the hemisphere sky (blue by day, deep blue at night)
+    ctx.mats.setRim(this.hemi.color, lerp(RIM_DAY, RIM_NIGHT, night) * this.hemi.intensity);
 
     // discs
     const far = 780;

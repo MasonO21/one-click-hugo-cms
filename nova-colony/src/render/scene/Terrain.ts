@@ -7,14 +7,34 @@
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import type { WorldGen } from '../../sim/world';
-import { CELL, HALF_WORLD, WORLD_CELLS, cellIndex } from '../../core/constants';
+import { CELL, HALF_WORLD, WORLD_CELLS, cellIndex, footprintCenter, rotatedSize } from '../../core/constants';
 import { fbm } from '../../core/rng';
 import { clamp } from '../../core/math';
 import { dimColor } from '../core/palette';
+import { patchLambert } from '../core/materials';
 
 const VERTS = WORLD_CELLS + 1;
 const SHORE = new THREE.Color('#d9c98f');
 const FALLBACK_GROUND: [string, string] = ['#6fbf5a', '#9bd66b'];
+/**
+ * Worn ground around buildings: the biome colour is pulled this far toward its trampled version
+ * (darker, warmer, less saturated) right at a footprint, fading out over WEAR_REACH world units
+ * (per footprint side, so a shed wears a smaller ring than a warehouse) with a ragged noisy edge.
+ */
+const WEAR_MAX = 0.5;
+const WEAR_REACH = 1.9;
+const WEAR_REACH_PER_CELL = 0.35;
+/** Structure pieces (walls, fences, floors) wear a narrower ring than facilities. */
+const WEAR_REACH_PIECE = 1.0;
+/**
+ * Without a shadow map (medium / low) the worn ring doubles as the contact shadow: this much extra
+ * darkening right at the footprint grounds buildings that would otherwise float on the grass.
+ */
+const CONTACT_SHADE = 0.2;
+/** Ground grade on top of the biome data: a little less saturated and a touch warmer / darker. */
+const GROUND_DESAT = 0.12;
+const GROUND_TINT = new THREE.Color(1.04, 1.0, 0.9);
+const GROUND_VALUE = 0.94;
 
 const WATER_VERT = /* glsl */ `
   #include <fog_pars_vertex>
@@ -79,6 +99,16 @@ const WALL_FRAG = /* glsl */ `
   }
 `;
 
+const _worn = new THREE.Color();
+/** Pull a ground colour toward its trampled version in place: darker, warmer, less saturated (any biome). */
+export function wornColor(c: THREE.Color, amount: number): THREE.Color {
+  const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11;
+  // desaturate toward luminance, then tint toward dry earth (more red, less blue) and darken
+  _worn.setRGB(l * 1.12 + 0.01, l * 0.98, l * 0.64).multiplyScalar(0.8);
+  c.lerp(_worn, clamp(amount, 0, 1));
+  return c;
+}
+
 interface Chunk {
   mesh: THREE.Mesh;
   /** Vertex grid indices (vx0, vz0, count per side). */
@@ -93,6 +123,9 @@ export class Terrain {
   private group = new THREE.Group();
   private chunks: Chunk[] = [];
   private material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  /** Per-vertex wear 0..1 for the whole height field (worn ground around buildings). */
+  private wear = new Float32Array(VERTS * VERTS);
+  private wearKey = NaN;
   private waterMat: THREE.ShaderMaterial;
   private water: THREE.Mesh | null = null;
   private wallMat: THREE.ShaderMaterial;
@@ -109,6 +142,9 @@ export class Terrain {
 
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
+    // the ground is lit like everything standing on it (wrapped Lambert, no rim: it has no silhouette)
+    this.material.onBeforeCompile = (shader) => patchLambert(shader, ctx.mats.lambert, false);
+    this.material.customProgramCacheKey = () => 'nova-terrain';
     this.waterMat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([
         THREE.UniformsLib.fog,
@@ -245,10 +281,66 @@ export class Terrain {
     }
     out.multiplyScalar(0.25);
     if (shore > 0) out.lerp(SHORE, shore >= 4 ? 0.85 : 0.55);
-    // slight per-vertex brightness variation (hand-painted look)
-    const v = fbm(vx * 0.35, vz * 0.35, 77, 2);
-    const w = fbm(vx * 0.11, vz * 0.11, 91, 2);
-    out.multiplyScalar(0.9 + v * 0.14 + (w - 0.5) * 0.16);
+    // hand-painted meadow: broad warm (yellow-green) and cool (blue-green) patches, mid-size clumps
+    // of brighter / darker grass and fine per-vertex grain, so the ground never reads as one flat tone
+    const patch = fbm(vx * 0.05, vz * 0.05, 123, 2) - 0.5;
+    const clump = fbm(vx * 0.14, vz * 0.14, 91, 2) - 0.5;
+    const grain = fbm(vx * 0.37, vz * 0.37, 77, 2) - 0.5;
+    out.r *= 1 + patch * 0.42 + clump * 0.1;
+    out.g *= 1 + patch * 0.08;
+    out.b *= 1 - patch * 0.5 - clump * 0.1;
+    out.multiplyScalar(1 + clump * 0.28 + grain * 0.2);
+    // grade: the data colours were picked as UI chips; the meadow reads better a little less acid
+    const l = out.r * 0.3 + out.g * 0.59 + out.b * 0.11;
+    out.lerp(this.tmp2.setRGB(l, l, l), GROUND_DESAT).multiply(GROUND_TINT).multiplyScalar(GROUND_VALUE);
+  }
+
+  /**
+   * Rebuild the per-vertex wear field from the buildings: every footprint tramples the ground in and
+   * around it (facilities wider than structure pieces). Cheap (a few dozen vertices per building),
+   * only runs when the building set changes.
+   */
+  private rebuildWear(): void {
+    const wear = this.wear;
+    wear.fill(0);
+    if (this.flat) return;
+    const game = this.ctx.game;
+    for (const b of game.state.buildings.list) {
+      const def = game.data.building(b.def);
+      const size = def?.size ?? [1, 1];
+      const c = footprintCenter(b.x, b.z, size, b.rot);
+      const [rw, rd] = rotatedSize(size, b.rot);
+      const hw = (rw * CELL) / 2;
+      const hd = (rd * CELL) / 2;
+      const reach = def?.piece ? WEAR_REACH_PIECE : WEAR_REACH + WEAR_REACH_PER_CELL * (Math.max(rw, rd) - 1);
+      const vx0 = Math.max(0, Math.floor((c.x - hw - reach + HALF_WORLD) / CELL));
+      const vx1 = Math.min(VERTS - 1, Math.ceil((c.x + hw + reach + HALF_WORLD) / CELL));
+      const vz0 = Math.max(0, Math.floor((c.z - hd - reach + HALF_WORLD) / CELL));
+      const vz1 = Math.min(VERTS - 1, Math.ceil((c.z + hd + reach + HALF_WORLD) / CELL));
+      for (let vz = vz0; vz <= vz1; vz++) {
+        for (let vx = vx0; vx <= vx1; vx++) {
+          const dx = Math.max(0, Math.abs(vx * CELL - HALF_WORLD - c.x) - hw);
+          const dz = Math.max(0, Math.abs(vz * CELL - HALF_WORLD - c.z) - hd);
+          // ragged edge: the reach wobbles ±35% with a per-vertex noise so rings never look stamped
+          const r = reach * (0.75 + 0.5 * fbm(vx * 0.41, vz * 0.41, 57, 2));
+          const k = clamp(1 - Math.hypot(dx, dz) / r, 0, 1);
+          const w = k * k * (3 - 2 * k);
+          const i = vz * VERTS + vx;
+          if (w > wear[i]) wear[i] = w;
+        }
+      }
+    }
+  }
+
+  /** Cheap signature of what changes the wear field (footprints only, not status / hp). */
+  private wearSignature(): number {
+    const list = this.ctx.game.state.buildings.list;
+    let h = (list.length * 7919 + this.ctx.game.derived.buildingsVersion * 104729) | 0;
+    for (let i = 0; i < list.length; i++) {
+      const b = list[i];
+      h = (h * 31 + b.x * 131 + b.z * 137 + b.rot * 7 + b.def.length * 17) | 0;
+    }
+    return h;
   }
 
   private buildChunks(perSide: number, step: number): void {
@@ -379,12 +471,21 @@ export class Terrain {
     this.group.add(this.water);
   }
 
-  /** Re-apply locked-region dimming + rebuild the border wall when the unlock set changed. */
+  /**
+   * Re-apply locked-region dimming and worn ground, rebuild the border wall — when the unlock set or
+   * the building footprints changed (or on `force`, after a terrain rebuild).
+   */
   private refreshLocked(force = false): void {
     const world = this.ctx.game.state.world;
     const key = world.regionsUnlocked.join('|');
-    if (!force && key === this.unlockedKey) return;
+    const shadows = this.ctx.env.quality === 'high';
+    const wearKey = this.wearSignature() + (shadows ? 0.5 : 0);
+    if (!force && key === this.unlockedKey && wearKey === this.wearKey) return;
+    const wallDirty = force || key !== this.unlockedKey;
     this.unlockedKey = key;
+    this.wearKey = wearKey;
+    this.rebuildWear();
+    const contact = shadows ? 0 : CONTACT_SHADE;
     const g = this.gen;
     const W = WORLD_CELLS;
     const unlocked = new Set(world.regionsUnlocked);
@@ -422,6 +523,8 @@ export class Terrain {
             }
           }
           this.tmp3.setRGB(c.baseColors[o], c.baseColors[o + 1], c.baseColors[o + 2]);
+          const w = this.wear[vz * VERTS + vx];
+          if (w > 0) wornColor(this.tmp3, w * WEAR_MAX).multiplyScalar(1 - w * w * contact);
           if (lockedCount) dimColor(this.tmp3, 0.2 * lockedCount);
           arr[o] = this.tmp3.r;
           arr[o + 1] = this.tmp3.g;
@@ -430,7 +533,7 @@ export class Terrain {
       }
       attr.needsUpdate = true;
     }
-    this.buildWall(anyLocked);
+    if (wallDirty) this.buildWall(anyLocked);
   }
 
   private buildWall(anyLocked: boolean): void {

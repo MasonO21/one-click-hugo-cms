@@ -4,6 +4,7 @@
  * built with it so a whole building, tree or alien renders in 1–3 draw calls and can be instanced.
  */
 import * as THREE from 'three';
+import { bakeVertexAO, type AoOpts } from './ao';
 
 export const SLOT_LIT = 0;
 export const SLOT_GLOW = 1;
@@ -327,9 +328,10 @@ export class GeoBuilder {
   /**
    * Merge accumulated primitives into ONE geometry. Material slots are baked into the `aSlot`
    * vertex attribute (0 lit, 1 glow, 2 glass) and resolved by the shared slot-aware material, so a
-   * whole model is a single draw call.
+   * whole model is a single draw call. Pass `ao` to bake ambient occlusion into the vertex colours
+   * (see core/ao.ts): `true` for a model standing on the ground, or options for a detached part.
    */
-  build(): THREE.BufferGeometry {
+  build(ao?: AoOpts | boolean): THREE.BufferGeometry {
     const geo = new THREE.BufferGeometry();
     let total = 0;
     for (let s = 0; s < SLOT_COUNT; s++) total += this.pos[s].length / 3;
@@ -351,6 +353,7 @@ export class GeoBuilder {
     geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     geo.setAttribute('aSlot', new THREE.BufferAttribute(slot, 1));
+    if (ao) bakeVertexAO(geo, ao === true ? {} : ao);
     geo.computeBoundingSphere();
     geo.computeBoundingBox();
     return geo;

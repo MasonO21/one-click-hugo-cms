@@ -79,8 +79,22 @@ const _targets = new Float64Array(6);
 const OCCLUDER_SHRINK = 0.78;
 /** Nodes this close to the player (≈ gather reach) are never treated as occluders. */
 const OCCLUDER_KEEP_R = 4;
-const NODE_OPTS: BatchOpts = { castShadow: true, receiveShadow: true };
-const PROP_OPTS: BatchOpts = { receiveShadow: true };
+const NODE_OPTS: BatchOpts = { castShadow: true, receiveShadow: true, color: true };
+const PROP_OPTS: BatchOpts = { receiveShadow: true, color: true };
+/**
+ * Per-instance tint for nodes and props (±9% value, a yellow-green / blue-green lean), picked by
+ * index so a tree keeps its tint across LOD batches and rebuilds; a forest of one model stops
+ * looking stamped out.
+ */
+const TINTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => {
+  const a = (i / 12) * Math.PI * 2;
+  const v = 1 + Math.sin(a) * 0.09;
+  const warm = Math.cos(a * 1.7) * 0.06;
+  return new THREE.Color(v * (1 + warm), v * (1 + warm * 0.3), v * (1 - warm));
+});
+export function natureTint(index: number): THREE.Color {
+  return TINTS[((index * 2654435761 + 97) >>> 0) % TINTS.length];
+}
 
 /** Chunk index of a world position. */
 export function chunkOf(x: number, z: number): number {
@@ -348,22 +362,23 @@ export class Nature {
           const cls = lodClass(Math.sqrt(d2), near, this.lodCls[i]);
           this.lodCls[i] = cls;
           this.nodeMatrix(n, _m, w, this.fades.get(i) ?? 0);
+          const tint = natureTint(i);
           if (cls !== LOD_FAR) {
             const batch = cls === LOD_NEAR ? this.batch('n:' + model, () => nodeGeometry(model), mats.set, NODE_OPTS) : this.batch('tn:' + model, () => nodeGeometry(model), mats.lodNear, this.nearBandOpts);
             this.nodeSlot[i] = batch.count;
             this.nodeBatch[i] = batch;
-            batch.push(_m);
+            batch.push(_m, tint);
           }
           if (cls === LOD_FAR) {
             const far = this.batch('f:' + model, () => nodeGeometryFar(model), mats.lodShrinkMid, this.farOpts);
             this.nodeSlot[i] = far.count;
             this.nodeBatch[i] = far;
-            far.push(_m);
+            far.push(_m, tint);
           } else if (cls === LOD_BAND_CLASS) {
             const far = this.batch('tf:' + model, () => nodeGeometryFar(model), mats.lodFar, this.farBandOpts);
             this.nodeSlot2[i] = far.count;
             this.nodeBatch2[i] = far;
-            far.push(_m);
+            far.push(_m, tint);
           }
           this.drawn.push(i);
         }
@@ -379,7 +394,7 @@ export class Nature {
           if (!cull.sphere(p.x, y + s, p.z, 1.8 * s)) continue;
           const batch = this.batch('p:' + p.model, () => propGeometry(p.model), mats.lodShrinkNear, PROP_OPTS);
           composeEuler(_m, p.x, y - 0.03, p.z, 0, p.rot || 0, 0, s, s, s);
-          batch.push(_m);
+          batch.push(_m, natureTint(plist[k] + 31));
         }
       }
     }

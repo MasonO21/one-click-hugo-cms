@@ -28,11 +28,77 @@
  * caster and the near/far shadow stipples stay complementary. The shadow window is pushed a little
  * harder (`SHADOW_FADE_GAIN`), so a shadow is completely gone before its building reaches the faint
  * ghost stipple it keeps (Buildings FADE_MAX) — no sparse crawling stipple shadow under an invisible wall.
+ *
+ * Shading model (`patchLambert`, shared with the terrain): Lambert with a soft wrap so the sun bleeds
+ * a little past the terminator (chunky toy look, no pitch-black side faces), plus a sky-coloured
+ * fresnel rim (`uRim`, set per frame by Atmosphere from the sky) that lifts grazing faces on the
+ * shadow side. A handful of ALU ops, no texture fetch; contact darkening is baked into the vertex
+ * colours at build time (core/ao.ts) so the fragment shader stays as cheap as plain Lambert.
  */
 import * as THREE from 'three';
 
 const DAY_GLASS = new THREE.Color('#9fd8ff');
 const NIGHT_GLASS = new THREE.Color('#ffcf7a');
+
+/** Wrap-diffuse amount: a face edge-on to the sun still gets WRAP / (1 + WRAP) of its light. */
+export const LAMBERT_WRAP = 0.22;
+
+/** three's lights_lambert_pars_fragment with the wrapped N·L (kept verbatim otherwise). */
+const LAMBERT_WRAP_PARS = /* glsl */ `
+varying vec3 vViewPosition;
+struct LambertMaterial {
+  vec3 diffuseColor;
+  float specularStrength;
+};
+void RE_Direct_Lambert( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
+  float dotNL = saturate( ( dot( geometryNormal, directLight.direction ) + ${LAMBERT_WRAP.toFixed(3)} ) * ${(1 / (1 + LAMBERT_WRAP)).toFixed(4)} );
+  vec3 irradiance = dotNL * directLight.color;
+  reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
+}
+void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
+  reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
+}
+#define RE_Direct        RE_Direct_Lambert
+#define RE_IndirectDiffuse    RE_IndirectDiffuse_Lambert
+`;
+
+/** Rim: sky light on grazing faces, half tinted by the surface so dark paint does not go chalky. */
+const RIM_FRAG = /* glsl */ `
+{
+  float novaNV = 1.0 - saturate( dot( normal, geometryViewDir ) );
+  reflectedLight.indirectDiffuse += uRim * ( novaNV * novaNV * novaNV ) * ( 0.4 + 0.6 * diffuseColor.rgb );
+}
+`;
+
+/** Night grade: lit surfaces lose this much saturation at deep night, so moonlit grass reads blue-grey, not green. */
+export const NIGHT_DESAT = 0.45;
+
+/** Shared uniforms of the shading model, owned by Materials and handed to every patched shader. */
+export interface LambertUniforms {
+  /** Sky rim light colour × strength (linear). */
+  rim: THREE.IUniform<THREE.Color>;
+  /** Desaturation 0..1 applied to the lit result (night grade). */
+  desat: THREE.IUniform<number>;
+}
+
+/**
+ * Apply the shared shading model to a MeshLambertMaterial's compiled shader: wrapped N·L, the night
+ * desaturation grade and, with `rim`, the sky rim term. Terrain and the slot-aware materials both go
+ * through here so the ground and what stands on it are lit and graded the same way.
+ */
+export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>; fragmentShader: string }, u: LambertUniforms, rim = true): void {
+  shader.uniforms.uDesat = u.desat;
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <lights_lambert_pars_fragment>', LAMBERT_WRAP_PARS)
+    .replace('#include <common>', '#include <common>\nuniform float uDesat;')
+    .replace('#include <envmap_fragment>', 'outgoingLight = mix( outgoingLight, vec3( dot( outgoingLight, vec3( 0.3, 0.59, 0.11 ) ) ), uDesat );\n#include <envmap_fragment>');
+  if (rim) {
+    shader.uniforms.uRim = u.rim;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
+      .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>' + RIM_FRAG);
+  }
+}
 
 /** How a dither variant obtains its (lo, hi) window. */
 export type DitherMode = 'attr' | 'uniform' | 'lodNear' | 'lodFar';
@@ -110,9 +176,11 @@ function variantKey(v: LitVariant): string {
 }
 
 export class Materials {
-  /** Shared shader uniforms (glow brightness, glass color). */
+  /** Shared shader uniforms (glow brightness, glass color, sky rim). */
   private readonly uGlow = { value: 1 };
   private readonly uGlass = { value: DAY_GLASS.clone() };
+  /** Shading-model uniforms (sky rim, night desaturation) shared with the terrain material. */
+  readonly lambert: LambertUniforms = { rim: { value: new THREE.Color(0, 0, 0) }, desat: { value: 0 } };
   /** LOD band uniforms: focus (x, z) and (near - band, 1 / band, mid - band, 1 / band). */
   private readonly uLodFocus = { value: new THREE.Vector2() };
   private readonly uLod = { value: new THREE.Vector4(1e9, 1, 1e9, 1) };
@@ -193,6 +261,7 @@ export class Materials {
       shader.uniforms.uGlow = uGlow;
       shader.uniforms.uGlass = uGlass;
       this.variantUniforms(shader, variant);
+      patchLambert(shader, this.lambert);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nattribute float aSlot;\nvarying float vSlot;' + variantVertexPars(variant))
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSlot = aSlot;\n' + variantVertexMain(variant));
@@ -260,6 +329,12 @@ export class Materials {
     this.uGlow.value = 0.62 + night * 0.78; // dim neon by day, overdrive at night (tone mapping compresses it)
     this.uGlass.value.lerpColors(DAY_GLASS, NIGHT_GLASS, night);
     if (night > 0.5) this.uGlass.value.multiplyScalar(1 + (night - 0.5) * 0.9);
+    this.lambert.desat.value = NIGHT_DESAT * night * night;
+  }
+
+  /** Sky rim light: `color` (linear) scaled by `strength`; Atmosphere feeds it the current sky. */
+  setRim(color: THREE.Color, strength: number): void {
+    this.lambert.rim.value.copy(color).multiplyScalar(Math.max(0, strength));
   }
 
   /** Force shader recompilation (shadow map toggles). */

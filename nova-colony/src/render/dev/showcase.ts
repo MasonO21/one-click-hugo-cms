@@ -5,8 +5,10 @@
  * be judged visually without the simulation systems.
  *
  * URL params: scene=colony|tiers|all|battle|night · t=0..1 (time of day) · focus=x,z · yaw · zoom ·
- * q=low|medium|high · animate=1 · fx=1 (fire VFX events) · unlockall=1
+ * q=low|medium|high · animate=1 · fx=1 (fire VFX events) · unlockall=1 · tm=neutral|aces|agx|none ·
+ * exposure=1 (tone mapping experiments)
  */
+import * as THREE from 'three';
 import { Game } from '../../core/Game';
 import { createDataRegistry, defaultData } from '../../data';
 import { Renderer } from '../Renderer';
@@ -381,6 +383,9 @@ function boot() {
   renderer.init(document.getElementById('game')!);
   (window as any).game = game;
   (window as any).renderer = renderer;
+  const tm = params.get('tm');
+  if (tm) renderer.three.renderer.toneMapping = tm === 'aces' ? THREE.ACESFilmicToneMapping : tm === 'agx' ? THREE.AgXToneMapping : tm === 'none' ? THREE.NoToneMapping : THREE.NeutralToneMapping;
+  if (params.has('exposure')) renderer.three.renderer.toneMappingExposure = num('exposure', 1);
 
   // free camera
   const view = game.view;
