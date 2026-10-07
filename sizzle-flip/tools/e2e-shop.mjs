@@ -16,9 +16,20 @@ await page.reload(); await page.waitForTimeout(1500);
 
 await page.click('#scr-title [data-act=shop]', { force: true }); await page.waitForTimeout(500);
 check(!(await hidden('scr-shop')), 'title SHOP opens the shop');
-check(await ev(() => document.querySelectorAll('.shop-card').length) === 31, 'shop lists the sausage + 30 items');
-check(await ev(() => [...document.querySelectorAll('.shop-card .shop-btn span')].filter(s => s.textContent === '$1.00').length) === 30, 'every item costs $1.00');
-check(await ev(() => document.querySelector('.shop-card[data-item="sausage"]').classList.contains('on')), 'sausage equipped by default');
+const tab = async (name) => { await page.click(`.shop-tab:has-text("${name}")`, { force: true }); await page.waitForTimeout(250); };
+check(await ev(() => document.querySelectorAll('.shop-tab').length) === 8, '7 category tabs + Owned');
+let total = 0, priced = 0;
+for (const name of ['Food', 'Sweets', 'Stuff', 'Rides', 'Critters', 'Party', 'Colors']) {
+  await tab(name);
+  total += await ev(() => document.querySelectorAll('.shop-card').length);
+  priced += await ev(() => [...document.querySelectorAll('.shop-card .shop-btn span')].filter(s => s.textContent === '$1.00').length);
+}
+check(total === 130, `tabs list all 130 characters (${total})`);
+check(priced === 130, 'every character costs $1.00');
+check(!(await hidden('shop-bundle')) && await ev(() => document.querySelector('#shop-bundle-buy span').textContent === '$9.99'), 'Everything Bundle offered for $9.99');
+await tab('Owned');
+check(await ev(() => document.querySelectorAll('.shop-card').length === 1 && document.querySelector('.shop-card[data-item="sausage"]').classList.contains('on')), 'Owned tab: just the sausage, equipped');
+await tab('Food');
 // cancel
 await page.click(`${card('banana')} .shop-btn`, { force: true }); await page.waitForTimeout(300);
 check(!(await hidden('scr-confirm')) && /TEST PURCHASE/.test(await ev(() => document.getElementById('confirm-text').textContent)), 'test store asks to confirm (clearly marked as a test)');
@@ -31,6 +42,8 @@ check(await ev(() => window.__app.shop.isOwned('banana') && window.__app.save.ch
 check(await ev((s) => document.querySelector(s).classList.contains('on'), card('banana')), 'shop shows it as equipped');
 check(await ev(() => /unlocked/.test(document.getElementById('toast').textContent)), 'player gets a confirmation');
 // equip sausage, then item again
+await tab('Owned');
+check(await ev(() => document.querySelectorAll('.shop-card').length) === 2, 'Owned tab lists the sausage + the new item');
 await page.click(`${card('sausage')} .shop-btn`, { force: true }); await page.waitForTimeout(300);
 check(await ev(() => window.__app.save.character === 'sausage' && !window.__app.shop.characterItem()), 'switching back to the sausage');
 await page.click(`${card('banana')} .shop-btn`, { force: true }); await page.waitForTimeout(300);
@@ -72,6 +85,19 @@ await page.click('#shop-restore', { force: true }); await page.waitForTimeout(40
 check(await ev(() => /purchases/.test(document.getElementById('toast').textContent)), 'restore button responds');
 await ev(() => window.__app.shop.resetTestPurchases());
 check(await ev(() => !window.__app.shop.isOwned('banana') && window.__app.save.character === 'sausage'), 'testing panel can clear test purchases');
+// the Everything Bundle
+await ev(() => { window.__app.ui.shopTab = 'party'; window.__app.ui.show('scr-shop'); }); await page.waitForTimeout(300);
+await page.click('#shop-bundle-buy', { force: true }); await page.waitForTimeout(300);
+check(/Everything Bundle/.test(await ev(() => document.getElementById('confirm-text').textContent)), 'bundle purchase asks to confirm');
+await page.click('[data-act=confirm-yes]', { force: true }); await page.waitForTimeout(500);
+check(await ev(() => window.__app.shop.hasBundle && window.__app.shop.ownedCount() === 130), 'bundle unlocks all 130 characters');
+check(await ev(() => window.__app.ui.shopTab === 'owned' && document.querySelectorAll('.shop-card').length === 131), 'shop jumps to Owned with everything in it');
+check(await hidden('shop-bundle'), 'bundle banner gone once bought');
+await page.click(`${card('dragon')} .shop-btn`, { force: true }); await page.waitForTimeout(300);
+check(await ev(() => window.__app.shop.characterItem()?.id === 'dragon'), 'any character can then be equipped (Dragon)');
+await page.reload(); await page.waitForTimeout(1500);
+check(await ev(() => window.__app.shop.hasBundle && window.__app.shop.characterItem()?.id === 'dragon'), 'bundle and equipped character survive a reload');
+await ev(() => window.__app.shop.resetTestPurchases());
 console.log(fails ? `\n${fails} check(s) failed` : '\nall checks passed');
 if (errors.length) console.log('PAGE ERRORS:\n' + [...new Set(errors)].join('\n'));
 await browser.close();

@@ -143,7 +143,7 @@
         <div class="pill"><span class="star">★</span> <b id="skins-stars">0</b></div>
       </header>
       <div class="locker-scroll">
-        <button class="shop-banner" data-act="shop"><span class="sb-ico">🛒</span><span><b>Shop</b><small>30 more things to flip · $1 each</small></span><span class="sb-go">▶</span></button>
+        <button class="shop-banner" data-act="shop"><span class="sb-ico">🛒</span><span><b>Shop</b><small id="shop-banner-sub">130 more things to flip · $1 each</small></span><span class="sb-go">▶</span></button>
         <div class="skin-grid" id="skin-grid"></div>
         <h3 class="section-title">Trophies <span id="trophy-count"></span></h3>
         <div class="trophy-list" id="trophy-list"></div>
@@ -157,8 +157,14 @@
         <h2>Shop</h2>
         <button class="btn btn-ghost restore-btn" data-act="restore" id="shop-restore"><span>Restore</span></button>
       </header>
-      <p class="shop-note" id="shop-note">Same size and bounce as the sausage — every level plays exactly the same.</p>
-      <div class="locker-scroll">
+      <div class="shop-bundle" id="shop-bundle" hidden>
+        <span class="sb-ico">🎁</span>
+        <span class="sb-txt"><b>Everything Bundle</b><small id="shop-bundle-sub">All characters, plus every future one</small></span>
+        <button class="btn btn-relish shop-btn" id="shop-bundle-buy"><span>$9.99</span></button>
+      </div>
+      <div class="shop-tabs" id="shop-tabs" role="tablist"></div>
+      <div class="locker-scroll" id="shop-scroll">
+        <p class="shop-note" id="shop-note">Same size and bounce as the sausage — every level plays exactly the same.</p>
         <div class="skin-grid shop-grid" id="shop-grid"></div>
       </div>
     </section>

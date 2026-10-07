@@ -27,8 +27,8 @@ Pop up from toasters, slide on butter, bounce on trampolines and couches, ride c
 ⭐ 600 STARS TO COLLECT
 Land it in par for three stars. Unlock 12 sausage skins and 17 trophies along the way.
 
-🛒 30 MORE THINGS TO FLIP
-Bored of sausage? The Shop has 30 characters — a stick of butter, a banana, a pencil, a rocket, a gummy worm, a dog bone and more — $1 each. They're just for looks: same size, same bounce, so every level plays exactly the same.
+🛒 130 MORE THINGS TO FLIP
+Bored of sausage? The Shop has 130 characters in seven aisles — a stick of butter, a rubber chicken, a dachshund, a submarine, a laser sword, a narwhal, a dragon and lots more — $1 each, or grab the Everything Bundle. They're just for looks: same size, same bounce, so every level plays exactly the same.
 
 💡 NEVER STUCK FOR LONG
 Hints show you a route that works, and you can skip a level that's driving you mad and come back for the stars later.
@@ -39,4 +39,4 @@ No account, no sign-in. Your progress stays on your device.
 Sizzle Flip is free to play. It contains ads and optional in-app purchases (cosmetic characters).
 
 ## What's new (first release)
-The first sizzle! 200 levels, 10 worlds, 12 skins, 17 trophies and a shop with 30 characters.
+The first sizzle! 200 levels, 10 worlds, 12 skins, 17 trophies and a shop with 130 characters.

@@ -93,7 +93,7 @@ Google's public test ids are configured now, so a debug build shows real test ad
 
 ## Shop
 
-Thirty cosmetic characters (`src/art/items.js`), from a stick of butter to a rocket, cost $1 each as one-time in-app purchases (`src/shop.js`). Every item is drawn over the sausage's own soft-body particle chain: a width profile along the same centreline, painted details, small attachments (stems, sticks, flames, fins) and the same expressive face. The physics, and so every level, are unchanged. In the app, purchases go through Google Play Billing or StoreKit (`@capgo/native-purchases`), are acknowledged automatically, and are restored from the store at launch and with **Restore**. Test builds use a clearly labelled test store. The plain web build shows the items as "In the app". `tools/items-gallery.html` shows every item in three poses.
+130 cosmetic characters, from a stick of butter to a dragon, sit in seven shop tabs: Food, Sweets, Stuff, Rides, Critters, Party and Colors, plus an Owned tab. Each costs $1 as a one-time in-app purchase (`src/shop.js`), and the **Everything Bundle** ($9.99) unlocks all of them, including future ones. The characters are defined in `src/art/items.js` (the first 30) and `src/art/items-more.js` (100 more), and drawn by `src/art/itemkit.js` over the sausage's own soft-body particle chain: a width profile along the same centreline, painted details, attachments (stems, sticks, wheels, fins, wings) and the same expressive face. The physics, and so every level, are unchanged. In the app, purchases go through Google Play Billing or StoreKit (`@capgo/native-purchases`), are acknowledged automatically, and are restored from the store at launch and with **Restore**. Test builds use a clearly labelled test store. The plain web build shows the items as "In the app". `tools/items-gallery.html` shows every item in three poses.
 
 ## How the levels are made (and why they're all beatable)
 
@@ -129,7 +129,8 @@ src/audio.js                synthesized SFX + per-world procedural music
 src/ads.js                  ad pacing rules, AdMob + placeholder providers
 src/ads-config.js           AdMob ids (edit before release)
 src/shop.js                 shop: store billing / test store, ownership, equip
-src/art/items.js            the 30 shop characters (art only — same physics body)
+src/art/itemkit.js          shop character renderer (art only — same physics body as the sausage)
+src/art/items.js            shop characters 1–30, tabs; items-more.js: 100 more
 src/privacy.js              privacy policy (in-app + dist/privacy.html)
 src/levels/data.js          the 200 generated & verified levels
 tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon & screenshot renderers

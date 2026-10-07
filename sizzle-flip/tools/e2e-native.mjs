@@ -160,6 +160,13 @@ await page.click('#shop-restore', { force: true }); await page.waitForTimeout(50
 check(await ev(() => window.__calls.includes('restorePurchases') && window.__app.shop.isOwned('rocket')), 'Restore purchases brings back items bought on another device');
 await ev(() => window.__mock.storeEvent({ productIdentifier: 'item_carrot', revocationDate: '2026-10-06' }));
 check(await ev(() => !window.__app.shop.isOwned('carrot') && window.__app.save.character === 'sausage'), 'refunded (revoked) purchase is removed, sausage re-equipped');
+check(await ev(() => document.querySelector('#shop-bundle-buy span').textContent === '1,09 €'), 'bundle price comes from the store too');
+await page.click('#shop-bundle-buy', { force: true }); await page.waitForTimeout(500);
+check(await ev(() => window.__calls.includes('purchase:bundle_all') && window.__app.shop.hasBundle && window.__app.shop.ownedCount() === 130), 'Everything Bundle bought through the store unlocks all 130');
+await ev(() => { window.__app.save.owned = {}; window.__store.owned = [{ productIdentifier: 'bundle_all', purchaseState: '1' }]; });
+await page.click('#shop-restore', { force: true }).catch(() => ev(() => window.__app.ui.restorePurchases()));
+await page.waitForTimeout(500);
+check(await ev(() => window.__app.shop.hasBundle && window.__app.shop.isOwned('dragon')), 'Restore brings the bundle back on a new phone');
 
 // 7. no-fill retry loops stay bounded
 await ev(() => { window.__failPrepare = true; window.__calls.length = 0; const a = window.__app.ads.provider; a.ready.interstitial = a.ready.rewarded = false; });

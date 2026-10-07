@@ -3,13 +3,14 @@
 // node tools/e2e-recover.mjs   (needs the dev server on :8123)
 import { chromium } from '/opt/node-tools/node_modules/playwright/index.mjs';
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
-let fails = 0;
+let fails = 0, phase = '';
 const errors = [];
 const check = (cond, msg) => { console.log(`${cond ? 'PASS' : 'FAIL'}  ${msg}`); if (!cond) fails++; };
 
 async function open(height = 844) {
   const page = await browser.newPage({ viewport: { width: 390, height }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
   page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error' && phase === 'E') errors.push('[caught] ' + m.text()); });
   await page.goto('http://localhost:8123/?nosw');
   await page.evaluate(() => localStorage.setItem('sizzleflip.save.v1', JSON.stringify({ unlocked: 30, seenTips: { a: 1 } })));
   await page.reload(); await page.waitForTimeout(1200);
@@ -77,6 +78,14 @@ await page.click('[data-act=restart]', { force: true });
 await page.waitForTimeout(1200);
 await healthy(page, 'D restart after a broken camera');
 await page.screenshot({ path: '/tmp/claude-0/shots/recover-d.png' });
+await page.close();
+
+phase = 'E'; // from here, errors the game loop caught and logged count as failures
+// E — the title-screen demo restarting (it swaps in a new game mid-frame, which is drawn before its first update)
+page = await open();
+for (let k = 0; k < 3; k++) { await page.evaluate(() => { const g = window.__app.game; g.phase = 'win'; g.winT = 3; }); await page.waitForTimeout(400); }
+const st = await page.evaluate(() => { const g = window.__app.game; return { attract: g.attract, finite: Number.isFinite(g.sim.com()[1]) && Number.isFinite(g.camY) }; });
+check(st.attract && st.finite, 'E title demo restarts cleanly');
 await page.close();
 
 console.log(fails ? `\n${fails} check(s) failed` : '\nall checks passed');

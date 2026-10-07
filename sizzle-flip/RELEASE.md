@@ -11,7 +11,14 @@ Everything in the code is release-ready. What is left needs **your** accounts, k
 | Contact email for the privacy policy | `src/privacy.js` → `PRIVACY_CONTACT` |
 | If the game is aimed at children under 13 | `src/ads-config.js` → `childDirected: true` (and Play's Families policy applies) |
 
-**Shop (in-app purchases).** The 30 characters are one-time products with ids `item_<name>`, for example `item_butter`. The full list, with titles, descriptions and the $1.00 price, is in `store/iap-products.csv`. The ids are fixed in code, so create them in the store consoles exactly as listed (sections 3 and 4). The game shows each store's own localized price.
+**Shop (in-app purchases).** There are 131 one-time products:
+
+- the 130 characters, with ids `item_<name>` (for example `item_butter`) at $1.00 each;
+- the **Everything Bundle**, `bundle_all`, at $9.99. It unlocks every character, including ones you add in later updates.
+
+The full list, with titles, descriptions, prices and shop tabs, is in `store/iap-products.csv`. The ids are fixed in code, so create them in the store consoles exactly as listed (sections 3 and 4). Prices are set only in the consoles: change them there and the game shows each store's localized price.
+
+Creating 131 products by hand takes a while. Both consoles also have APIs for this (Google Play Developer API → monetization.onetimeproducts, and the App Store Connect API → inAppPurchases) if you'd rather script it.
 
 Test mode (test ads plus the **Settings → Ad testing** panel) switches off by itself once no Google test id is left.
 
@@ -50,10 +57,10 @@ keyPassword=…
 **Shop products in Google Play.**
 1. Set up a payments profile (Play Console → Setup → Payments profile).
 2. Upload a first build with the shop to a testing track. Play only lets you add products to an app that uses billing; the billing permission is already included through the purchases plugin.
-3. Go to **Monetize → Products → One-time products** and create the 30 products from `store/iap-products.csv`:
+3. Go to **Monetize → Products → One-time products** and create the 131 products from `store/iap-products.csv`:
    - same product id,
    - the title and description from the file,
-   - price **US$1.00**, with "convert" for other countries,
+   - price **US$1.00** (the bundle: US$9.99), with "convert" for other countries,
    - then **Activate** each one.
 4. To make free test purchases, add your Google account under **Setup → License testing**.
 
@@ -102,7 +109,7 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 
 - **Shop products:**
   1. Sign the **Paid Apps** agreement and add your banking and tax details (Business section).
-  2. Under the app → **Monetization → In-App Purchases**, create the 30 products from `store/iap-products.csv` as **Non-Consumable**: same product id, display name and description, price **$0.99** (Apple's standard first tier; choose $1.00 instead if your price list offers it).
+  2. Under the app → **Monetization → In-App Purchases**, create the 131 products from `store/iap-products.csv` as **Non-Consumable**: same product id, display name and description, price **$0.99** (Apple's standard first tier; choose $1.00 instead if your price list offers it). Set the bundle to **$9.99**.
   3. Each product needs a review screenshot. Use `store/iap-review.jpg` for all of them.
   4. Submit the products together with the app version.
   5. For testing, use Sandbox testers (Users and Access → Sandbox).
@@ -132,9 +139,9 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 - **All 200 levels played through the real game** in a browser, using the game's own touch handlers and real UI (NEXT, world-complete cards, forced ads), with no errors: `tools/e2e-all.mjs`.
 - **Every stored route** replays and wins under the game's launch rule (only from rest), and holds up under human-sized error: `tools/qa.mjs`.
 - **Shop:**
-  - The 30 items are drawn over the sausage's own physics body, so the hitbox, mass and bounce are identical. All 200 levels were played through the real game with a different item equipped on each level: `tools/e2e-all.mjs --items`.
-  - Buying, equipping, the Locker, reloads, "Reset progress" (which keeps purchases) and the test store are covered by `tools/e2e-shop.mjs`, 20 checks.
-  - Store billing (localized prices, pending payments, cancels, store errors, restore, refunds) is covered with a mocked plugin in `tools/e2e-native.mjs`.
+  - All 130 characters are drawn over the sausage's own physics body, so the hitbox, mass and bounce are identical. All 200 levels were played through the real game with a different character on each level, cycling through all 130: `tools/e2e-all.mjs --items`.
+  - Tabs, the Everything Bundle, buying, equipping, the Locker, reloads, "Reset progress" (which keeps purchases) and the test store are covered by `tools/e2e-shop.mjs`.
+  - Store billing (localized prices, pending payments, cancels, store errors, restore, refunds, the bundle) is covered with a mocked plugin in `tools/e2e-native.mjs`.
 - **Ads:**
   - The pacing rules, reward ads, skip and the long aim guide in the browser: `tools/e2e-ads.mjs`, 42 checks.
   - The native AdMob event handling (an early close, failure to show, no-fill retries, consent and privacy options) and the Android back button on every screen, using mocked plugins: `tools/e2e-native.mjs`, 24 checks.

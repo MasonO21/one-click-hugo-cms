@@ -32,6 +32,7 @@ export class Game {
     this.face = makeFaceState();
     this.t = 0; // real seconds
     this.acc = 0;
+    this.alpha = 0; // render interpolation; a game can be drawn before its first update (title demo restarts mid-frame)
     this.timeScale = 1;
     this.flips = 0;
     this.phase = 'intro';

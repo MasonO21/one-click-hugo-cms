@@ -50,11 +50,13 @@ LEVELS.forEach((L, i) => {
 if (LEVELS.length !== 200) fail(`expected 200 levels, found ${LEVELS.length}`);
 if (bad.length) fail(`level routes: ${bad.join(', ')}`); else ok('all 200 level routes win under the game rules');
 
-// --- shop: 30 one-time products, ids valid for both stores, and the product list handed to the store consoles matches
-const pids = ITEMS.map(i => 'item_' + i.id);
+// --- shop: one-time products (every character + the Everything Bundle), ids valid for both stores, and the
+// product list handed to the store consoles matches the code
+const pids = [...ITEMS.map(i => 'item_' + i.id), 'bundle_all'];
 const badPid = pids.filter(p => !/^[a-z0-9][a-z0-9_.]{0,99}$/.test(p));
-if (ITEMS.length !== 30 || new Set(pids).size !== 30 || badPid.length) fail(`shop products: ${ITEMS.length} items, ${new Set(pids).size} unique ids${badPid.length ? ', invalid: ' + badPid.join(' ') : ''}`);
-else ok('30 shop products with valid ids (item_<name>)');
+const noCat = ITEMS.filter(i => !i.cat).map(i => i.id);
+if (new Set(pids).size !== pids.length || badPid.length || noCat.length) fail(`shop products: ${pids.length} ids, ${new Set(pids).size} unique${badPid.length ? ', invalid: ' + badPid.join(' ') : ''}${noCat.length ? ', no tab: ' + noCat.join(' ') : ''}`);
+else ok(`${ITEMS.length} characters + bundle = ${pids.length} shop products with valid ids`);
 const csv = (read('store/iap-products.csv') || '').split('\n').slice(1).filter(Boolean).map(l => l.split(',')[1]);
 if (csv.join() !== pids.join()) fail('store/iap-products.csv is out of date with src/art/items.js'); else ok('store/iap-products.csv lists every product');
 

@@ -255,6 +255,18 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .skin.on::after { content: '✔ EQUIPPED'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--relish); color: #fff; font-family: 'Lilita One'; font-size: 12px; padding: 3px 10px; border-radius: 10px; border: 2px solid var(--ink); white-space: nowrap; }
 .skin.locked canvas { filter: brightness(0) opacity(0.35); }
 /* shop */
+.shop-tabs { width: 100%; max-width: 560px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 4px 10px; flex: none; touch-action: pan-x; }
+.shop-tabs::-webkit-scrollbar { display: none; }
+.shop-tab { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border: 3px solid var(--ink); border-radius: 999px; background: rgba(255,255,255,0.92); font-family: 'Lilita One'; font-size: 16px; color: var(--ink); cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.25); white-space: nowrap; }
+.shop-tab .ti { font-size: 16px; }
+.shop-tab small { font-family: 'Fredoka'; font-weight: 700; font-size: 11px; background: rgba(58,34,22,0.12); border-radius: 8px; padding: 1px 6px; }
+.shop-tab.on { background: var(--mustard); box-shadow: 0 3px 0 var(--mustard-d), 0 3px 0 2px var(--ink); }
+.shop-bundle { width: 100%; max-width: 560px; display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 8px 10px 8px 12px; border: 3px solid var(--ink); border-radius: 18px; background: linear-gradient(135deg, #fff6c8, #ffc93c); box-shadow: 0 5px 0 var(--mustard-d), 0 5px 0 3px var(--ink); flex: none; }
+.shop-bundle .sb-ico { font-size: 32px; }
+.shop-bundle .sb-txt { flex: 1; min-width: 0; }
+.shop-bundle b { display: block; font-family: 'Lilita One'; font-weight: 400; font-size: 20px; }
+.shop-bundle small { display: block; font-size: 12px; font-weight: 700; color: #8a5a10; }
+.shop-bundle .shop-btn { min-height: 44px; font-size: 18px; padding: 6px 12px; flex: none; }
 .shop-note { margin: 0 0 6px; max-width: 520px; text-align: center; color: #fff; font-size: 14px; text-shadow: 0 1px 0 var(--ink), 0 0 8px rgba(0,0,0,0.5); padding: 0 8px; }
 .restore-btn { min-height: 40px; font-size: 14px; padding: 6px 12px; }
 .shop-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; cursor: default; }

@@ -1,165 +1,12 @@
-// Shop characters: 30 things to flip instead of the sausage.
-// Purely cosmetic — every item is drawn over the SAME soft-body particle chain (same hitbox, mass and
-// bounce), so levels play identically. Each item is a width profile along the body's centreline plus
-// painted details, small attachments (stems, sticks, flames, fins) and the usual face.
-import { INK, rgba, darken, lighten, circlePath, ellipsePath } from './common.js';
-import { centreline, sampleAt, squashPoints, drawFace } from './sausage.js';
+// Shop characters — the first 30 (more in items-more.js). Each is purely cosmetic: drawn by itemkit.js over
+// the sausage's own physics body, so levels play identically.
+import { INK, rgba, circlePath, ellipsePath } from './common.js';
+import { TAU, sstep, capRound, capFlat, capPoint, round2, scatter, ink, leaf } from './itemkit.js';
+import { MORE_ITEMS } from './items-more.js';
+export { drawItem } from './itemkit.js';
 
-const TAU = Math.PI * 2;
-const M = 96; // samples along the body
-const clamp01 = (x) => Math.max(0, Math.min(1, x));
-const sstep = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
-// cap profiles: d = distance from that end (px), result = fraction of R
-const capRound = (d, r) => (d >= r ? 1 : Math.sqrt(Math.max(0, 1 - ((r - d) / r) ** 2)));
-const capFlat = (d, R, k) => (d >= k ? 1 : (1 - k / R) + (k / R) * Math.sqrt(Math.max(0, 1 - ((k - d) / k) ** 2)));
-const capPoint = (d, len, tip = 0.14) => (d >= len ? 1 : tip + (1 - tip) * Math.pow(d / len, 0.8));
-const round2 = (p, R) => Math.min(capRound(p.d0, R), capRound(p.d1, R));
-
-// deterministic scatter (cached per item) so speckles don't shimmer
-function scatter(it, key, n, seed) {
-  it._s = it._s || {};
-  if (!it._s[key]) {
-    let s = seed;
-    const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-    it._s[key] = Array.from({ length: n }, () => [r(), r() * 2 - 1, r()]);
-  }
-  return it._s[key];
-}
-
-// ------------------------------------------------------------------ spine + toolkit
-// The body's centreline extended by R at both ends (where the round caps of the physics capsule are),
-// resampled uniformly: u = 0 at the tail tip, u = 1 at the head tip (the face end).
-function makeSpine(cl, R) {
-  const a = sampleAt(cl, 0), b = sampleAt(cl, 1);
-  const L = cl.len + 2 * R;
-  const pts = [];
-  for (let i = 0; i <= M; i++) {
-    const d = (i / M) * L - R;
-    let p;
-    if (d <= 0) p = { x: a.x + a.tx * d, y: a.y + a.ty * d, tx: a.tx, ty: a.ty };
-    else if (d >= cl.len) { const e = d - cl.len; p = { x: b.x + b.tx * e, y: b.y + b.ty * e, tx: b.tx, ty: b.ty }; }
-    else { const s = sampleAt(cl, d / cl.len); p = { x: s.x, y: s.y, tx: s.tx, ty: s.ty }; }
-    p.nx = -p.ty; p.ny = p.tx; p.u = i / M; p.d0 = (i / M) * L; p.d1 = L - p.d0;
-    pts.push(p);
-  }
-  return { pts, L };
-}
-
-function spAt(sp, u) {
-  const f = clamp01(u) * M, i = Math.min(M - 1, Math.floor(f)), k = f - i;
-  const a = sp.pts[i], b = sp.pts[i + 1];
-  const tx = a.tx + (b.tx - a.tx) * k, ty = a.ty + (b.ty - a.ty) * k, l = Math.hypot(tx, ty) || 1;
-  return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, tx: tx / l, ty: ty / l, nx: -ty / l, ny: tx / l };
-}
-
-function kit(ctx, sp, R, t, it) {
-  const P = (u, o = 0) => {
-    // beyond the ends, keep going straight along the end tangent
-    const uu = clamp01(u), p = spAt(sp, uu), ex = (u - uu) * sp.L;
-    return [p.x + p.tx * ex + p.nx * o * R, p.y + p.ty * ex + p.ny * o * R];
-  };
-  const range = (u0, u1, n = Math.max(2, Math.ceil(Math.abs(u1 - u0) * M))) => Array.from({ length: n + 1 }, (_, k) => u0 + (u1 - u0) * k / n);
-  const g = {
-    ctx, R, t, it, sp, P,
-    fillAll(c) { ctx.fillStyle = c; ctx.fillRect(-1e5, -1e5, 2e5, 2e5); },
-    // region between u0..u1 (along) and o0..o1 (across, in R). zig*: jagged ends; w*: wavy long edges
-    strip(u0, u1, o0, o1, fill, o = {}) {
-      ctx.beginPath();
-      const A = range(u0, u1).map(u => P(u, o0 + (o.w0 ? o.w0(u) : 0)));
-      const B = range(u1, u0).map(u => P(u, o1 + (o.w1 ? o.w1(u) : 0)));
-      ctx.moveTo(...A[0]);
-      A.forEach(p => ctx.lineTo(...p));
-      const K = 10;
-      for (let k = 1; k < K; k++) { const oo = o0 + (o1 - o0) * k / K; ctx.lineTo(...P(u1 + (o.zig1 ? (k % 2 ? o.zig1 : -o.zig1) : 0), oo)); }
-      B.forEach(p => ctx.lineTo(...p));
-      for (let k = 1; k < K; k++) { const oo = o1 + (o0 - o1) * k / K; ctx.lineTo(...P(u0 + (o.zig0 ? (k % 2 ? o.zig0 : -o.zig0) : 0), oo)); }
-      ctx.closePath();
-      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-    },
-    // straight-ish line in body coordinates (follows the bend)
-    line(u0, o0, u1, o1, w, c, cap = 'round') {
-      ctx.beginPath();
-      for (let k = 0; k <= 8; k++) { const p = P(u0 + (u1 - u0) * k / 8, o0 + (o1 - o0) * k / 8); k ? ctx.lineTo(...p) : ctx.moveTo(...p); }
-      ctx.lineWidth = w; ctx.strokeStyle = c; ctx.lineCap = cap; ctx.stroke();
-    },
-    // line running along the body at offset o
-    along(o, u0, u1, w, c, wave) {
-      ctx.beginPath();
-      range(u0, u1).forEach((u, k) => { const p = P(u, o + (wave ? wave(u) : 0)); k ? ctx.lineTo(...p) : ctx.moveTo(...p); });
-      ctx.lineWidth = w; ctx.strokeStyle = c; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
-    },
-    dot(u, o, r, fill, stroke, lw = 1.4) {
-      const [x, y] = P(u, o); circlePath(ctx, x, y, r);
-      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-      if (stroke) { ctx.lineWidth = lw; ctx.strokeStyle = stroke; ctx.stroke(); }
-    },
-    grad(u0, u1, stops) {
-      const [x0, y0] = P(u0), [x1, y1] = P(u1);
-      const gr = ctx.createLinearGradient(x0, y0, x1, y1);
-      stops.forEach(([s, c]) => gr.addColorStop(s, c));
-      return gr;
-    },
-    // screen-space offset copy of the spine (lighting from the top-left, like the sausage)
-    offsetLine(ox, oy, u0 = 0, u1 = 1) {
-      ctx.beginPath();
-      range(u0, u1).forEach((u, k) => { const p = P(u); k ? ctx.lineTo(p[0] + ox, p[1] + oy) : ctx.moveTo(p[0] + ox, p[1] + oy); });
-    },
-    // draw in an end's local frame: x points outward along the body, y along the body normal
-    local(end, fn) {
-      const u = end ? 1 : 0, p = spAt(sp, u), [x, y] = P(u), s = end ? 1 : -1;
-      ctx.save();
-      ctx.transform(p.tx * s, p.ty * s, p.nx, p.ny, x, y);
-      fn(ctx, R);
-      ctx.restore();
-    },
-    // local frame at any point along the body (x along +tangent, y along normal)
-    at(u, o, fn) {
-      const p = spAt(sp, u), [x, y] = P(u, o);
-      ctx.save(); ctx.transform(p.tx, p.ty, p.nx, p.ny, x, y); fn(ctx, R); ctx.restore();
-    },
-  };
-  return g;
-}
-
-function profilePath(ctx, sp, R, prof, grow) {
-  const L = [], Rr = [];
-  for (const p of sp.pts) {
-    const h = Math.max(0, prof(p, R)) * R + grow;
-    L.push([p.x + p.nx * h, p.y + p.ny * h]);
-    Rr.push([p.x - p.nx * h, p.y - p.ny * h]);
-  }
-  ctx.beginPath();
-  ctx.moveTo(...L[0]);
-  for (let i = 1; i < L.length; i++) ctx.lineTo(...L[i]);
-  for (let i = Rr.length - 1; i >= 0; i--) ctx.lineTo(...Rr[i]);
-  ctx.closePath();
-}
-
-function shade(g, gloss = 0.6) {
-  const { ctx, R } = g;
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  g.offsetLine(R * 0.62, R * 0.86); ctx.lineWidth = R * 1.05; ctx.strokeStyle = 'rgba(40,14,4,0.30)'; ctx.stroke();
-  g.offsetLine(R * 0.95, R * 1.25); ctx.lineWidth = R * 0.9; ctx.strokeStyle = 'rgba(40,14,4,0.18)'; ctx.stroke();
-  g.offsetLine(-R * 0.24, -R * 0.42, 0.04, 0.96); ctx.lineWidth = R * 0.8; ctx.strokeStyle = `rgba(255,255,255,${0.08 + 0.14 * gloss})`; ctx.stroke();
-  g.offsetLine(R * 0.62, R * 0.86, 0.1, 0.9); ctx.lineWidth = R * 0.18; ctx.strokeStyle = `rgba(255,255,255,${0.1 + 0.12 * gloss})`; ctx.stroke();
-  if (gloss > 0.15) {
-    ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.92, 0.25 + 0.5 * gloss)})`; ctx.lineWidth = R * 0.2;
-    g.offsetLine(-R * 0.34, -R * 0.56, 0.18, 0.58); ctx.stroke();
-    g.offsetLine(-R * 0.34, -R * 0.56, 0.64, 0.7); ctx.stroke();
-  }
-}
-
-// outlined shape helper for attachments (local coordinates)
-function ink(ctx, fill, lw = 2.4) { ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = INK; ctx.lineJoin = 'round'; ctx.stroke(); }
-function leaf(ctx, x0, y0, x1, y1, w, fill) {
-  const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy) || 1, nx = -dy / l * w, ny = dx / l * w;
-  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(mx + nx, my + ny, x1, y1); ctx.quadraticCurveTo(mx - nx, my - ny, x0, y0); ctx.closePath();
-  ink(ctx, fill, 2.2);
-  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(mx + dx * 0.2, my + dy * 0.2); ctx.lineWidth = 1.3; ctx.strokeStyle = rgba(INK, 0.45); ctx.stroke();
-}
-
-// ------------------------------------------------------------------ the 30 items
-export const ITEMS = [
+// ------------------------------------------------------------------ the first 30
+const CLASSIC = [
   {
     id: 'butter', name: 'Stick of Butter', desc: 'Slippery when wet. And always.', lid: '#ffe27a', gloss: 0.45,
     prof: (p, R) => Math.min(capFlat(p.d0, R, 4), capFlat(p.d1, R, 4)),
@@ -571,29 +418,25 @@ export const ITEMS = [
     },
   },
 ];
-export const ITEM_BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 
-// Main draw — same signature as drawSausage. opts: {R, item, face, t, squash}
-export function drawItem(ctx, px, py, opts) {
-  const it = opts.item;
-  const k = opts.squash || 0;
-  let R = opts.R, X = px, Y = py;
-  if (k > 0) { [X, Y] = squashPoints(px, py, k * 0.16); R = R * (1 + k * 0.12); }
-  const cl = centreline(X, Y);
-  const sp = makeSpine(cl, R);
-  const g = kit(ctx, sp, R, opts.t || 0, it);
-  ctx.save();
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  if (it.back) { ctx.save(); it.back(g); ctx.restore(); }
-  profilePath(ctx, sp, R, it.prof, 2.2);
-  ctx.fillStyle = INK; ctx.fill();
-  ctx.save();
-  profilePath(ctx, sp, R, it.prof, 0);
-  ctx.clip();
-  it.paint(g);
-  shade(g, it.gloss);
-  ctx.restore();
-  if (it.front) { ctx.save(); it.front(g); ctx.restore(); }
-  ctx.restore();
-  if (opts.face) drawFace(ctx, cl, R, opts.face, { base: it.lid }, opts.t || 0);
-}
+// shop tabs; every item has a `cat`
+export const CATEGORIES = [
+  { id: 'food', name: 'Food', icon: '🍔' },
+  { id: 'sweets', name: 'Sweets', icon: '🍭' },
+  { id: 'stuff', name: 'Stuff', icon: '🔧' },
+  { id: 'rides', name: 'Rides', icon: '🚀' },
+  { id: 'critters', name: 'Critters', icon: '🐍' },
+  { id: 'party', name: 'Party', icon: '🎉' },
+  { id: 'colors', name: 'Colors', icon: '🎨' },
+];
+const CLASSIC_CAT = {
+  food: ['butter', 'banana', 'carrot', 'pickle', 'baguette', 'corn', 'eggplant', 'sushi', 'burrito', 'chili', 'kebab', 'croissant'],
+  sweets: ['churro', 'eclair', 'icepop', 'candycane', 'chocobar', 'gummyworm'],
+  stuff: ['pencil', 'crayon', 'candle', 'glowstick', 'toothpaste', 'rollingpin', 'battery', 'bone', 'match'],
+  rides: ['rocket'],
+  critters: ['fish', 'caterpillar'],
+};
+for (const [cat, ids] of Object.entries(CLASSIC_CAT)) for (const id of ids) CLASSIC.find(i => i.id === id).cat = cat;
+
+export const ITEMS = [...CLASSIC, ...MORE_ITEMS];
+export const ITEM_BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]));

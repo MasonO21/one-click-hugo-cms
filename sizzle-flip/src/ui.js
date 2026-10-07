@@ -5,7 +5,8 @@ import { SKINS, drawSausage, makeFaceState } from './art/sausage.js';
 import { renderLevelThumb } from './thumbs.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { PRIVACY_HTML } from './privacy.js';
-import { ITEMS, ITEM_BY_ID, drawItem } from './art/items.js';
+import { ITEMS, ITEM_BY_ID, CATEGORIES, drawItem } from './art/items.js';
+import { BUNDLE } from './shop.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -364,8 +365,29 @@ export class UI {
     $('shop-restore').hidden = !shop.available;
     $('shop-note').textContent = shop.available
       ? 'Same size and bounce as the sausage — every level plays exactly the same.'
-      : 'Items can be bought in the Sizzle Flip app. Same size and bounce as the sausage — every level plays the same.';
-    const current = app.shop.characterItem();
+      : 'Characters can be bought in the Sizzle Flip app. Same size and bounce as the sausage — every level plays the same.';
+    // Everything Bundle
+    const left = ITEMS.length - shop.ownedCount();
+    $('shop-bundle').hidden = !shop.available || shop.hasBundle || left === 0;
+    $('shop-bundle-sub').textContent = `All ${ITEMS.length} characters, plus every future one`;
+    $('shop-bundle-buy').querySelector('span').textContent = shop.price(BUNDLE);
+    if (!this._bundleBound) { this._bundleBound = true; $('shop-bundle-buy').addEventListener('click', (e) => { e.stopPropagation(); app.audio.play('click'); this.shopAction(BUNDLE, 'buy'); }); }
+    // tabs
+    const tabs = [...CATEGORIES.map(c => ({ ...c, n: ITEMS.filter(i => i.cat === c.id).length })), { id: 'owned', name: 'Owned', icon: '✓', n: shop.ownedCount() + 1 }];
+    if (!this.shopTab || !tabs.some(t => t.id === this.shopTab)) this.shopTab = 'food';
+    const bar = $('shop-tabs');
+    bar.innerHTML = '';
+    for (const t of tabs) {
+      const b = document.createElement('button');
+      b.className = 'shop-tab' + (t.id === this.shopTab ? ' on' : '');
+      b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t.id === this.shopTab);
+      b.innerHTML = `<span class="ti">${t.icon}</span>${t.name}<small>${t.n}</small>`;
+      b.addEventListener('click', (e) => { e.stopPropagation(); app.audio.play('tap'); this.shopTab = t.id; $('shop-scroll').scrollTop = 0; this.renderShop(); });
+      bar.appendChild(b);
+    }
+    requestAnimationFrame(() => { const on = bar.querySelector('.on'); if (on) bar.scrollLeft = on.offsetLeft - (bar.clientWidth - on.clientWidth) / 2; });
+    // cards
+    const current = shop.characterItem();
     const card = (id, name, desc, draw, state) => {
       const d = document.createElement('div');
       d.className = 'skin shop-card' + (state === 'equipped' ? ' on' : '') + (state === 'equip' ? ' owned' : '');
@@ -378,9 +400,12 @@ export class UI {
       if (btn && state !== 'app') btn.addEventListener('click', (e) => { e.stopPropagation(); app.audio.play('click'); this.shopAction(id, state); });
       grid.appendChild(d);
     };
-    const skin = SKINS.find(s => s.id === app.save.skin) || SKINS[0];
-    card('sausage', 'Sausage', 'The original. Change its skin in the Locker.', (c) => drawSkinPreview(c, skin), current ? 'equip' : 'equipped');
-    for (const it of ITEMS) {
+    const list = this.shopTab === 'owned' ? ITEMS.filter(i => shop.isOwned(i.id)) : ITEMS.filter(i => i.cat === this.shopTab);
+    if (this.shopTab === 'owned') {
+      const skin = SKINS.find(s => s.id === app.save.skin) || SKINS[0];
+      card('sausage', 'Sausage', 'The original. Change its skin in the Locker.', (c) => drawSkinPreview(c, skin), current ? 'equip' : 'equipped');
+    }
+    for (const it of list) {
       const owned = shop.isOwned(it.id);
       const state = owned ? (current && current.id === it.id ? 'equipped' : 'equip') : shop.available ? 'buy' : 'app';
       card(it.id, it.name, it.desc, (c) => drawSkinPreview(c, null, it), state);
@@ -392,11 +417,11 @@ export class UI {
     if (state === 'equip') { app.shop.equip(id); app.audio.play('unlock'); this.renderShop(); return; }
     if (state !== 'buy' || this._buying) return;
     this._buying = true;
-    const btn = document.querySelector(`.shop-card[data-item="${id}"] .shop-btn`);
+    const btn = id === BUNDLE ? $('shop-bundle-buy') : document.querySelector(`.shop-card[data-item="${id}"] .shop-btn`);
     if (btn) { btn.disabled = true; btn.querySelector('span').textContent = '…'; }
     const r = await app.shop.buy(id).finally(() => { this._buying = false; });
-    const it = ITEM_BY_ID[id];
-    if (r === 'bought') { app.audio.play('unlock'); app.haptic([10, 30, 10]); this.toast(`🎉 ${it.name} unlocked and equipped!`, 2600); }
+    const name = id === BUNDLE ? `All ${ITEMS.length} characters` : ITEM_BY_ID[id].name;
+    if (r === 'bought') { app.audio.play('unlock'); app.haptic([10, 30, 10]); this.toast(id === BUNDLE ? `🎁 ${name} unlocked! Pick one in the Owned tab` : `🎉 ${name} unlocked and equipped!`, 2800); if (id === BUNDLE) this.shopTab = 'owned'; }
     else if (r === 'pending') this.toast('Payment pending — it unlocks as soon as it completes', 3200);
     else if (r === 'error') this.toast('Purchase didn\'t go through — please try again', 2600);
     else if (r === 'unavailable') this.toast('The store isn\'t available right now', 2400);
