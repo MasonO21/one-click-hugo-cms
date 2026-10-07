@@ -1,5 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Action } from '../src/shared/service';
 import { buildSnapshot } from '../src/shared/snapshot';
@@ -420,8 +420,23 @@ export function createApp(options: AppOptions) {
 
   if (options.staticDir && existsSync(join(options.staticDir, 'index.html'))) {
     const dir = options.staticDir;
+    // Link previews need absolute URLs, so pages say __PUBLIC_URL__ and it's filled in here.
+    const pages = new Map<string, string>();
+    const page = (name: string) => {
+      let html = pages.get(name);
+      if (html === undefined) {
+        html = readFileSync(join(dir, name), 'utf8').replaceAll('__PUBLIC_URL__', options.publicUrl);
+        pages.set(name, html);
+      }
+      return html;
+    };
+    const sendPage = (res: Response, name: string, html = page(name)) => {
+      res.set('Cache-Control', 'no-cache');
+      res.type('html').send(html);
+    };
     // The landing page ads point at.
-    app.get('/welcome', (_req, res) => res.sendFile(join(dir, 'welcome.html')));
+    app.get(['/welcome', '/welcome.html'], (_req, res) => sendPage(res, 'welcome.html'));
+    app.get('/index.html', (_req, res) => sendPage(res, 'index.html'));
     app.get('/sw.js', (_req, res) => {
       res.set('Cache-Control', 'no-cache');
       res.sendFile(join(dir, 'sw.js'));
@@ -429,8 +444,16 @@ export function createApp(options: AppOptions) {
     app.use(express.static(dir, { index: false, maxAge: '1h' }));
     app.use((req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-      res.set('Cache-Control', 'no-cache');
-      res.sendFile(join(dir, 'index.html'));
+      // An invite link's preview says who sent it, as the invite screen does.
+      const code = typeof req.query.join === 'string' ? req.query.join : '';
+      const inviter = code && lookupLimit(req.ip ?? 'unknown') ? service.userByInviteCode(code) : undefined;
+      const html = inviter
+        ? page('index.html').replace(
+            /<meta property="og:title" content="[^"]*" \/>/,
+            `<meta property="og:title" content="${escapeXml(firstName(inviter.name))} invited you to their Sunup circle" />`,
+          )
+        : undefined;
+      sendPage(res, 'index.html', html);
     });
   }
 

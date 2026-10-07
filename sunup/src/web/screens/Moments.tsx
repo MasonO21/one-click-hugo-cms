@@ -8,6 +8,7 @@ import { useNow, useStore } from '../store/StoreContext';
 import { PremiumBadge, Sheet } from '../components/ui';
 import { FakeCall } from '../components/overlays';
 import { clock, countdown } from '../lib/format';
+import { SPOT_ART } from '../art';
 
 interface KindInfo {
   icon: LucideIcon;
@@ -174,9 +175,10 @@ export function Moments() {
 
   return (
     <div className="screen">
-      <header className="screen-head">
+      <header className="screen-head with-art">
         <h1 className="display">Moments</h1>
         <p className="muted">Safety timers for when you're out. If the timer runs out and you don't answer, your circle gets the details.</p>
+        <img className="spot-art" src={SPOT_ART.moments} alt="" width={84} height={84} />
       </header>
       <div className="kind-grid">
         {MOMENT_KINDS.map((k) => {

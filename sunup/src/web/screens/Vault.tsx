@@ -4,6 +4,7 @@ import type { Packet } from '../../shared/types';
 import { PACKET_LABELS } from '../../shared/service';
 import { firstName } from '../../shared/util';
 import { useStore } from '../store/StoreContext';
+import { SPOT_ART } from '../art';
 import { Avatar, PremiumBadge, Toggle } from '../components/ui';
 
 type Field = Exclude<keyof Packet, 'updatedAt'>;
@@ -38,12 +39,13 @@ export function Vault() {
 
   return (
     <div className="screen">
-      <header className="screen-head">
+      <header className="screen-head with-art">
         <h1 className="display">If I go dark</h1>
         <p className="muted">
           What someone would need if you couldn't answer: your pet, your door, your meds. It stays sealed and is only released, to the people you pick, if an
           alert gets that far.
         </p>
+        <img className="spot-art" src={SPOT_ART.vault} alt="" width={84} height={84} />
       </header>
 
       <div className={`seal ${active ? 'open' : ''}`}>

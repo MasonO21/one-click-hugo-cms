@@ -127,6 +127,10 @@ App builds hide purchasing by default. People can still start the free trial in 
 
 The server also serves the marketing site from `public/`: the landing page at `/welcome` (point ads here), plus `terms.html` and `privacy.html`. The terms and privacy pages are drafts: fill in the bracketed company details and have a lawyer review them.
 
+Links to the app and the landing page show a preview card (`public/og.jpg`); the server fills in absolute URLs from `PUBLIC_URL`, and an invite link's preview names who sent it.
+
+**Images.** The illustrations in the app (`src/web/art/`) and the lifestyle photos on the landing page (`public/photos/`) were generated with Higgsfield. The people in the photos aren't real customers, so don't present them as testimonials.
+
 ## How it's built
 
 ```

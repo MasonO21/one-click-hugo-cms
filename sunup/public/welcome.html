@@ -7,7 +7,12 @@
     <meta name="description" content="One tap every morning tells the people who love you that you're okay. Miss it, and they find out fast. Free to start." />
     <meta property="og:title" content="If something happened to you today, who would know?" />
     <meta property="og:description" content="Sunup is a one-tap morning check-in. Miss it, and the people you choose find out fast." />
-    <meta property="og:image" content="screens/today.webp" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="__PUBLIC_URL__/welcome" />
+    <meta property="og:image" content="__PUBLIC_URL__/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#FFF6EC" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon-180.png" />
@@ -40,7 +45,10 @@
             </div>
             <p class="fine">Free daily check-in and SOS. Works in your phone's browser. No location tracking.</p>
           </div>
-          <div class="phone"><img src="screens/today.webp" alt="Sunup's Today screen: a large sunrise button that says I'm up, with the check-in deadline and your circle's morning below." width="780" height="1628" /></div>
+          <div class="hero-visual">
+            <img class="hero-photo" src="photos/morning.webp" alt="A woman in her seventies in an armchair by a sunny window, smiling at her phone, her cat on her lap." width="900" height="1200" />
+            <div class="phone"><img src="screens/today.webp" alt="Sunup's Today screen: a large sunrise button that says I'm up, with the check-in deadline and your circle's morning below." width="780" height="1628" /></div>
+          </div>
         </div>
       </section>
 
@@ -100,7 +108,10 @@
 
       <section class="block" aria-labelledby="circle-title">
         <div class="wrap split flip">
-          <div class="phone full"><img src="screens/circle-alert.webp" alt="What a circle member sees when someone goes quiet: their number, Call and Text buttons, and the emergency info they shared." width="780" height="1628" loading="lazy" /></div>
+          <div class="collage">
+            <figure class="photo"><img src="photos/family.webp" alt="A woman at work in the morning, coffee in hand, smiling with relief at her phone." width="900" height="1200" loading="lazy" /></figure>
+            <div class="phone full"><img src="screens/circle-alert.webp" alt="What a circle member sees when someone goes quiet: their number, Call and Text buttons, and the emergency info they shared." width="780" height="1628" loading="lazy" /></div>
+          </div>
           <div>
             <div class="block-head">
               <p class="eyebrow">For the people who worry</p>
@@ -119,6 +130,26 @@
         </div>
       </section>
 
+      <section class="block" aria-labelledby="young-title">
+        <div class="wrap split">
+          <div>
+            <div class="block-head">
+              <p class="eyebrow">Not just for your grandparents</p>
+              <h2 id="young-title">New city, new apartment, nobody nearby yet</h2>
+              <p>
+                Six in ten people in the US who live alone are under 65. A fall, a fever or a bad night out shouldn't go unnoticed for days. Sunup is a
+                ten-second habit that makes sure it won't.
+              </p>
+            </div>
+            <ul class="checks">
+              <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Moments for nights out.</strong> Set a timer for a first date, a run or the last train home. If you don't check in when it ends, your circle gets the details.</span></li>
+              <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>A fake call when you need one.</strong> Your phone rings with an instant excuse to leave.</span></li>
+              <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>No tracking.</strong> Sunup never follows where you go. SOS shares your location only if you choose to.</span></li>
+            </ul>
+          </div>
+          <figure class="photo"><img src="photos/young.webp" alt="A man in his late twenties at the door of his apartment in the morning, checking his phone with his keys in hand." width="900" height="1200" loading="lazy" /></figure>
+        </div>
+      </section>
       <section class="block tight" aria-labelledby="features-title">
         <div class="wrap">
           <div class="block-head">

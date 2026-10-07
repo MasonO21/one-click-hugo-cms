@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
@@ -190,5 +190,39 @@ describe('server', () => {
     expect(android.headers.get('access-control-allow-origin')).toBe('https://localhost');
     const other = await fetch(`${base}/api/health`, { headers: { origin: 'https://evil.example' } });
     expect(other.headers.get('access-control-allow-origin')).toBeNull();
+  });
+});
+
+describe('pages', () => {
+  it('fills in absolute link-preview URLs and names the inviter on invite links', async () => {
+    const staticDir = mkdtempSync(join(tmpdir(), 'sunup-static-'));
+    const dataDir = mkdtempSync(join(tmpdir(), 'sunup-pages-'));
+    const head = (title: string) => `<meta property="og:title" content="${title}" /><meta property="og:image" content="__PUBLIC_URL__/og.jpg" />`;
+    writeFileSync(join(staticDir, 'index.html'), `<html><head>${head('Sunup: a daily check-in')}</head></html>`);
+    writeFileSync(join(staticDir, 'welcome.html'), `<html><head>${head('Who would know?')}</head></html>`);
+    const created = createApp({ dataDir, staticDir, publicUrl: 'https://sunup.example', tickMs: 60_000, log: () => undefined });
+    const srv = created.app.listen(0);
+    await new Promise((r) => srv.once('listening', r));
+    const url = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
+    try {
+      const maya = created.store.service.createUser({ name: 'Maya Chen', timezone: 'America/Chicago' }, Date.now());
+      const invite = await (await fetch(`${url}/?join=${maya.inviteCode}`)).text();
+      expect(invite).toContain('content="https://sunup.example/og.jpg"');
+      expect(invite).toContain('content="Maya invited you to their Sunup circle"');
+      const quoted = created.store.service.createUser({ name: 'D"Arcy Lee', timezone: 'America/Chicago' }, Date.now());
+      expect(await (await fetch(`${url}/?join=${quoted.inviteCode}`)).text()).toContain('content="D&quot;Arcy invited you');
+      const plain = await (await fetch(`${url}/?join=nosuchcode`)).text();
+      expect(plain).toContain('content="Sunup: a daily check-in"');
+      for (const path of ['/welcome', '/welcome.html']) {
+        const res = await fetch(url + path);
+        expect(res.headers.get('content-type')).toContain('text/html');
+        expect(await res.text()).not.toContain('__PUBLIC_URL__');
+      }
+    } finally {
+      created.close();
+      srv.close();
+      rmSync(staticDir, { recursive: true, force: true });
+      rmSync(dataDir, { recursive: true, force: true });
+    }
   });
 });

@@ -271,6 +271,78 @@ summary:focus-visible {
   max-height: none;
 }
 
+/* photos */
+
+.hero-visual {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.hero-photo {
+  width: min(400px, 86%);
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  margin-bottom: 96px;
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+}
+
+.hero-visual .phone {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: min(240px, 56%);
+  margin: 0;
+  padding: 9px 9px 0;
+  border-radius: 36px 36px 0 0;
+}
+
+.hero-visual .phone img {
+  border-radius: 28px 28px 0 0;
+  max-height: 440px;
+}
+
+.photo {
+  margin: 0;
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+}
+
+.collage {
+  position: relative;
+  padding: 0 0 40px;
+}
+
+.collage .photo {
+  width: 86%;
+}
+
+.collage .phone.full {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 44%;
+  margin: 0;
+  padding: 7px;
+  border-radius: 30px;
+}
+
+.collage .phone.full img {
+  border-radius: 24px;
+}
+
 /* facts */
 
 .facts {
@@ -398,6 +470,12 @@ section.block.tight {
 
 .split.flip {
   grid-template-columns: 340px 1fr;
+}
+
+@media (min-width: 861px) {
+  .split.flip:has(.collage) {
+    grid-template-columns: 400px 1fr;
+  }
 }
 
 .split > * {
@@ -713,8 +791,13 @@ footer nav {
   .hero-copy {
     padding-bottom: 8px;
   }
-  .split .phone {
+  .split .phone,
+  .split .collage {
     order: 2;
+  }
+  .collage,
+  .split > .photo {
+    max-width: 420px;
   }
   .steps,
   .features {

@@ -8,6 +8,7 @@ import { Avatar, Sheet, Toggle } from '../components/ui';
 import { Ladder } from '../components/Ladder';
 import { MOOD_INFO, ago, clock } from '../lib/format';
 import { statusLine } from '../lib/status';
+import { SPOT_ART } from '../art';
 
 export function Circle() {
   const { snap, run, api, attempt, toast, openPaywall, ask } = useStore();
@@ -47,6 +48,13 @@ export function Circle() {
           <h3>Watching over you</h3>
           <span className="count">{limit > 10 ? snap.watchers.length : `${snap.watchers.length} of ${limit}`}</span>
         </div>
+        {snap.watchers.length === 0 && (
+          <div className="card empty-art">
+            <img className="spot-art lg" src={SPOT_ART.circle} alt="" width={132} height={132} />
+            <strong>No one is watching over you yet</strong>
+            <p className="muted">Add someone by phone or send them your invite link. They only hear from Sunup if you go quiet.</p>
+          </div>
+        )}
         {snap.watchers.length > 0 && (
           <ul className="people card">
             {snap.watchers.map((w) => (

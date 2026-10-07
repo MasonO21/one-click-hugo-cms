@@ -2186,29 +2186,17 @@ textarea.input {
   height: 36vh;
   min-height: 220px;
   overflow: hidden;
-  background: linear-gradient(180deg, #ffe9d2 0%, #ffd5b2 55%, #ffbb8e 100%);
+  /* A sunrise over the neighbourhood; the bottom of the picture fades into the page. */
+  background: #fff3e6 url('./art/welcome-light.webp') center bottom / 160% auto no-repeat;
+  animation: dawn 1.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.welcome-sun {
+.welcome-art::after {
+  content: '';
   position: absolute;
-  left: 50%;
-  bottom: -120px;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  transform: translateX(-50%);
-  background: radial-gradient(circle at 50% 35%, #ffe28e, var(--sun-b) 55%, var(--sun-a) 100%);
-  box-shadow: 0 0 90px 36px rgba(255, 181, 71, 0.45);
-  animation: rise 2.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.welcome-horizon {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: rgba(34, 29, 51, 0.18);
+  inset: auto 0 0;
+  height: 32px;
+  background: linear-gradient(transparent, var(--bg));
 }
 
 .welcome-copy {
@@ -2312,15 +2300,69 @@ textarea.input {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .welcome-art {
-    background: linear-gradient(180deg, #1b1830 0%, #3b2b4f 55%, #8a4a4f 100%);
+    background: #2b1530 url('./art/welcome-dark.webp') center bottom / 160% auto no-repeat;
   }
-  :root:not([data-theme='light']) .welcome-horizon {
-    background: rgba(255, 255, 255, 0.15);
+  :root:not([data-theme='light']) .spot-art {
+    filter: brightness(0.9);
   }
 }
 
 :root[data-theme='dark'] .welcome-art {
-  background: linear-gradient(180deg, #1b1830 0%, #3b2b4f 55%, #8a4a4f 100%);
+  background: #2b1530 url('./art/welcome-dark.webp') center bottom / 160% auto no-repeat;
+}
+
+:root[data-theme='dark'] .spot-art {
+  filter: brightness(0.9);
+}
+
+/* ---------------------------------------------------------------- illustrations */
+
+.spot-art {
+  flex-shrink: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #ffe9d2;
+}
+
+.spot-art.lg {
+  width: 132px;
+  height: 132px;
+}
+
+.screen-head.with-art {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 14px;
+}
+
+.screen-head.with-art > :not(.spot-art) {
+  grid-column: 1;
+}
+
+.screen-head.with-art .spot-art {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.empty-art {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 20px 24px;
+  text-align: center;
+}
+
+.empty-art strong {
+  font-size: 16.5px;
+}
+
+.empty-art p {
+  margin: 0;
+  max-width: 30em;
 }
 
 /* ---------------------------------------------------------------- motion */
@@ -2394,9 +2436,10 @@ textarea.input {
   }
 }
 
-@keyframes rise {
+@keyframes dawn {
   from {
-    transform: translate(-50%, 120px);
+    opacity: 0;
+    background-position: center calc(100% + 40px);
   }
 }
 

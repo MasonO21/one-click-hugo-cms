@@ -92,10 +92,7 @@ export function Welcome({ api, invite, onSignedUp }: { api: Api; invite: InviteI
   if (step === 'hello') {
     return (
       <div className="onboard welcome">
-        <div className="welcome-art" aria-hidden="true">
-          <div className="welcome-sun" />
-          <div className="welcome-horizon" />
-        </div>
+        <div className="welcome-art" aria-hidden="true" />
         <div className="welcome-copy">
           <div className="brand">
             <SunMark size={30} /> Sunup
