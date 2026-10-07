@@ -58,6 +58,12 @@ import { MerchantPanel } from './panels/MerchantPanel';
 import { CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
 
+/** Minimum gap between production floats of the same resource. */
+const PROD_FLOAT_GAP_MS = 1200;
+const GATHER_FLOAT_GAP_MS = 300;
+/** Tier-up: how long the player watches the base transform before the celebration card opens. */
+const TIER_REVEAL_MS = 1800;
+
 export class UI {
   private root!: HTMLElement;
   private ui!: HTMLElement;
@@ -85,6 +91,10 @@ export class UI {
   private lastAdFail = -1e9;
   private lastInsufficient = -1e9;
   private welcomeShown = false;
+  private lastProdFloat = new Map<string, number>();
+  private lastGatherFloat = new Map<string, number>();
+  private toastQueue: { text: string; kind?: ToastKind; icon?: string }[] = [];
+  private modalWasOpen = false;
 
   constructor(
     private readonly game: Game,
@@ -166,15 +176,39 @@ export class UI {
 
     this.installGlobalHandlers();
     this.subscribe();
+    this.game.sys.tutorial.setFlag('buildPanelOpen', false); // a save made with the drawer open
     this.syncSettings();
     this.refreshBadges();
 
     // offline summary may already be waiting (game.start() ran before init in tests)
     if (this.game.pendingOffline) this.showWelcome();
+    if (this.game.fresh && this.game.state.playTime < 1) this.crashIntro();
 
     if (import.meta.env.DEV && /[?&]uidev\b/.test(location.search)) {
       void import('./dev/preview').then((m) => m.installPreview(this, this.game, this.ctx));
     }
+  }
+
+  /**
+   * Brand-new colony: the camera swoops down onto the smoking pod, then one card sets the scene
+   * ("Vulnerable Survivor" — spec §33 0-2 min: crash landing, exit the pod, gather wood).
+   */
+  private crashIntro(): void {
+    const cam = this.game.view.camera;
+    const zoom = cam.zoom;
+    cam.zoom = Math.min(1, zoom + 0.45);
+    window.setTimeout(() => {
+      if (cam.zoom > zoom) cam.zoom = zoom;
+    }, 500);
+    window.setTimeout(() => {
+      this.panels.open('celebrate', {
+        title: 'Crash Landing!',
+        text: 'Your escape pod came down on a beautiful alien world. Chop some wood, build a shelter — and make this place home.',
+        icon: '🛸',
+        quiet: true,
+        ok: "Let's go!",
+      } satisfies CelebrateArg);
+    }, 2400);
   }
 
   /** Dev/test access. */
@@ -269,8 +303,27 @@ export class UI {
   private onPanelsChanged(): void {
     const covering = this.panels.anyCovering();
     this.game.view.panelOpen = covering;
+    // a modal (reward card, celebration, chest) opening replaces whatever toasts were saying a moment ago
+    const modal = this.panels.anyModal();
+    if (modal && !this.modalWasOpen) this.toasts.clear();
+    this.modalWasOpen = modal;
+    // the tutorial points at the build card (not the Build button) while the build drawer is open
+    const tut = this.game.sys.tutorial;
+    const buildOpen = this.panels.isOpen('build');
+    if (tut.flag('buildPanelOpen') !== buildOpen) tut.setFlag('buildPanelOpen', buildOpen);
+    tut.notifyPanel(this.panels.topName());
     this.root.dataset.panelOpen = covering ? '1' : '0';
     if (covering || this.panels.anyOpen()) this.input.reset();
+  }
+
+  /**
+   * A toast caused by a game event (not by the player's tap). While a modal (celebration, chest, welcome
+   * back) is up it waits instead of covering the card's title; 'reward' toasts duplicate the reward card
+   * that is showing and are dropped. Toasts right after a tap still show at once (e.g. "no video").
+   */
+  private eventToast(text: string, kind?: ToastKind, icon?: string): void {
+    if (!this.panels.anyModal() || performance.now() - this.lastClick.t < 1500) this.toasts.show(text, kind, icon);
+    else if (kind !== 'reward' && !this.toastQueue.some((q) => q.text === text) && this.toastQueue.push({ text, kind, icon }) > 6) this.toastQueue.shift();
   }
 
   private showWelcome(): void {
@@ -285,12 +338,19 @@ export class UI {
   private subscribe(): void {
     const bus = this.game.bus;
     const g = this.game;
-    bus.on('ui:toast', (e) => this.toasts.show(e.text, e.kind, e.icon));
+    // game-event toasts wait while a modal (celebration, chest, welcome back) is up instead of covering
+    // its title; toasts from the player's own taps (ctx.toast) still show at once
+    bus.on('ui:toast', (e) => {
+      // the attack banner already shows the warning / countdown / "defend!" state: the combat system's
+      // matching 👾 toasts would only cover the player and the turret
+      if (e.icon === '👾' && g.state.combat.phase !== 'peace') return;
+      this.eventToast(e.text, e.kind, e.icon);
+    });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     bus.on('ui:open', (e) => this.open(e.panel, e.arg));
     bus.on('ui:celebrate', (e) => {
       const now = performance.now();
-      if (now - this.lastTierCelebrate < 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
+      if (now - this.lastTierCelebrate < TIER_REVEAL_MS + 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
       this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon } satisfies CelebrateArg);
     });
     bus.on('colony:tierUp', (e) => {
@@ -298,14 +358,29 @@ export class UI {
       this.lastTierCelebrate = now;
       const t = g.data.tier(e.tier);
       const unlocks = g.data.buildings.filter((b) => b.unlockTier === e.tier && !b.research && !b.piece).map((b) => `${b.icon} ${b.name}`);
-      this.panels.open('celebrate', {
+      // let the player watch the base transform first: close the colony sheet, frame the core and show the
+      // colony boundary growing, then celebrate
+      this.panels.closeSheets();
+      const core = g.sys.buildings.core();
+      if (core) {
+        const c = g.sys.buildings.center(core);
+        this.renderer.focus(c.x, c.z);
+      }
+      const view = g.view;
+      if (view.mode !== 'build') {
+        view.showGrid = true;
+        window.setTimeout(() => {
+          if (view.mode !== 'build') view.showGrid = false;
+        }, TIER_REVEAL_MS + 1600);
+      }
+      window.setTimeout(() => this.panels.open('celebrate', {
         title: e.tier >= 6 ? 'TITANIUM COLONY!' : `${t.name} Tier Reached!`,
         text: e.tier >= 6 ? 'You built a gleaming super-colony. What an incredible journey!' : t.description,
         icon: e.tier >= 6 ? '🌟' : '🏰',
         tier: e.tier,
         unlocks,
         big: true,
-      } satisfies CelebrateArg);
+      } satisfies CelebrateArg), TIER_REVEAL_MS);
     });
 
     bus.on('game:ready', () => {
@@ -323,7 +398,25 @@ export class UI {
     // flying resources + HUD pops
     bus.on('resource:gained', (e) => {
       this.hud.resources.gained(e.id, e.amount, e.source);
-      if (e.source === 'production' || e.source === 'offline') return;
+      if (e.source === 'production') {
+        // colonists / machines visibly produce: a small "+1 🪵" over the producing building (throttled)
+        if (e.x == null || e.z == null) return;
+        const now = performance.now();
+        if (now - (this.lastProdFloat.get(e.id) ?? -1e9) < PROD_FLOAT_GAP_MS) return;
+        this.lastProdFloat.set(e.id, now);
+        const def = g.data.resource(e.id);
+        this.floats.spawn(`+${fmt(e.amount)} ${def?.icon ?? ''}`, e.x, e.z, '#c8ffb0');
+        return;
+      }
+      if (e.source === 'offline') return;
+      // "+3 🪵" pops where it was gathered (alien drops too), next to the icons flying to the HUD
+      if ((e.source === 'gather' || e.source === 'drop') && e.x != null && e.z != null) {
+        const now = performance.now();
+        if (now - (this.lastGatherFloat.get(e.id) ?? -1e9) >= GATHER_FLOAT_GAP_MS) {
+          this.lastGatherFloat.set(e.id, now);
+          this.floats.spawn(`+${fmt(e.amount)} ${g.data.resource(e.id)?.icon ?? ''}`, e.x, e.z, '#fff6d8');
+        }
+      }
       let origin: { x: number; y: number } | null = null;
       if (e.x != null && e.z != null) {
         const p = this.renderer.worldToScreen(e.x, 1.2, e.z);
@@ -355,13 +448,13 @@ export class UI {
       this.toasts.show(`Need ${fmt(Math.ceil(first[1]))} more ${d?.name ?? first[0]}`, 'warning', d?.icon ?? '📦');
     });
     bus.on('player:backpackFull', () => this.toasts.show('Backpack full! Walk back to the colony to unload.', 'warning', '🎒'));
+    // the sim already explains an unavailable video; a skipped one needs no scolding toast at all
     bus.on('ad:failed', () => {
       this.lastAdFail = performance.now();
-      this.toasts.show('No video available right now — please try again soon!', 'info', '📺');
     });
     bus.on('iap:purchased', () => this.toasts.show('Thank you for your support! 💜', 'reward', '🎉'));
     bus.on('iap:failed', (e) => this.toasts.show(e.reason && e.reason !== 'cancelled' ? `Purchase didn't go through: ${e.reason}` : 'Purchase cancelled — no worries!', 'info', '🛍️'));
-    bus.on('season:levelUp', (e) => this.toasts.show(`Season pass level ${e.level}!`, 'reward', '🏆'));
+    bus.on('season:levelUp', (e) => this.eventToast(`Season pass level ${e.level}!`, 'info', '🏆'));
     bus.on('building:changed', () => this.refreshBadges());
   }
 
@@ -537,6 +630,7 @@ export class UI {
       safe('ui slow', () => {
         this.refreshBadges();
         this.guide.poll();
+        if (this.toastQueue.length && !this.panels.anyModal()) for (const q of this.toastQueue.splice(0)) this.toasts.show(q.text, q.kind, q.icon);
       });
     }
     this.accFps += dt;

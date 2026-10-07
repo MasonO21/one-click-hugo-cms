@@ -95,16 +95,18 @@ export class MissionTracker {
     this.offerKey = key;
     fill(this.offers);
     const mk = (icon: string, label: string, panel: string) =>
-      h('button', { class: 'offer tap', type: 'button', onclick: () => this.ctx.open(panel) }, h('span', { class: 'ic', text: icon }), label);
+      h('button', { class: 'offer tap', type: 'button', 'aria-label': label, onclick: () => this.ctx.open(panel) }, h('span', { class: 'ic', text: icon }), h('span', { class: 'lb', text: label }));
     const extra = this.extraClaims;
     if (extra.length) {
       const chain = this.ctx.data.mission(extra[0])?.chain ?? 'side';
       this.offers.append(
-        h('button', { class: 'offer tap', type: 'button', onclick: () => this.ctx.open('missions', { tab: chain }) }, h('span', { class: 'ic', text: '🎯' }), `Claim ${extra.length}`),
+        h('button', { class: 'offer tap', type: 'button', 'aria-label': `Claim ${extra.length}`, onclick: () => this.ctx.open('missions', { tab: chain }) }, h('span', { class: 'ic', text: '🎯' }), h('span', { class: 'lb', text: `Claim ${extra.length}` })),
       );
     }
     if (b.daily) this.offers.append(mk('🎁', 'Daily', 'daily'));
     if (b.spin) this.offers.append(mk('🎡', 'Spin', 'spin'));
     if (b.crate) this.offers.append(mk('📦', 'Crate', 'shop'));
+    // CSS turns 3+ pills into a compact icon row on short landscape phones (they wrapped into the joystick)
+    this.offers.dataset.n = String(this.offers.childElementCount);
   }
 }

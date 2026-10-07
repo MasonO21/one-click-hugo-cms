@@ -47,6 +47,16 @@ export class PanelManager {
     return this.open_.some((o) => !o.closing && (o.panel.kind === 'sheet' || o.panel.kind === 'modal'));
   }
 
+  /** A modal is showing (or waiting in the queue). */
+  anyModal(): boolean {
+    return this.modalQueue.length > 0 || this.open_.some((o) => !o.closing && o.panel.kind === 'modal');
+  }
+
+  /** Close every non-modal panel (sheets, drawers, side cards). */
+  closeSheets(): void {
+    for (const o of [...this.open_]) if (!o.closing && o.panel.kind !== 'modal') this.closePanel(o);
+  }
+
   anyOpen(): boolean {
     return this.open_.some((o) => !o.closing);
   }

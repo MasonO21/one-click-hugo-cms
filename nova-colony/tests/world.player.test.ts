@@ -317,7 +317,7 @@ describe('gathering, backpack and colony deposit', () => {
     expect(interacts).toEqual([{ kind: 'gather', target: tree.i }]);
     expect(game.input.interact).toBe(false); // one-frame flag consumed
     game.input.interactHeld = true;
-    step(1.2);
+    step(game.data.balance.gatherInterval * 2 + 0.1); // two more hits while held
     game.input.interactHeld = false;
     expect(hits.length).toBeGreaterThanOrEqual(3);
     step(2);

@@ -49,9 +49,10 @@ export function computeBadges(game: Game): Badges {
   return {
     missions: claimableMissions(game).length,
     research: rs.available().filter((r) => rs.canResearch(r.id)).length,
-    daily: lo.dailyAvailable(),
-    spin: lo.canSpinFree(),
-    crate: lo.freeCrateReady(),
+    // meta offers stay out of the way during the guided first session (see LiveOpsSystem.offersUnlocked)
+    daily: lo.dailyAvailable() && lo.offersUnlocked(),
+    spin: lo.canSpinFree() && lo.offersUnlocked(),
+    crate: lo.freeCrateReady() && lo.offersUnlocked(),
     season: claimableSeason(game),
     colonists: idleWithJobs(game),
   };

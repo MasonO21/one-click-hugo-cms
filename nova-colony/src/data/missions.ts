@@ -19,13 +19,13 @@ const R = (r: Reward): Reward => r;
 export const MISSIONS: MissionDef[] = [
   // ====================================================================== TIER 0 — the first 15 minutes
   {
-    id: 'm01_wood', chain: 'main', name: 'Timber!', description: 'Gather 60 Wood from the bubble trees near your pod.',
-    type: 'gather', target: 'wood', count: 60, reward: R({ resources: { wood: 20 }, xp: 10 }), next: ['m02_shelter'],
+    id: 'm01_wood', chain: 'main', name: 'Timber!', description: 'Gather 80 Wood from the bubble trees near your pod.',
+    type: 'gather', target: 'wood', count: 80, reward: R({ resources: { wood: 10 }, xp: 10 }), next: ['m02_shelter'],
     hint: 'Walk up to a tree — you will chop it automatically.', guide: { kind: 'node', ref: 'tree_round' },
   },
   {
     id: 'm02_shelter', chain: 'main', name: 'A Roof Overhead', description: 'Build a Lean-to Shelter.',
-    type: 'build', target: 'shelter', count: 1, reward: R({ resources: { wood: 25, stone: 15 }, xp: 15 }), next: ['m03_campfire'],
+    type: 'build', target: 'shelter', count: 1, reward: R({ resources: { wood: 10, fiber: 10 }, xp: 15 }), next: ['m03_campfire'],
     hint: 'Open the Build menu and place a Lean-to Shelter.', guide: { kind: 'build_menu', ref: 'shelter' },
   },
   {
@@ -35,7 +35,7 @@ export const MISSIONS: MissionDef[] = [
   },
   {
     id: 'm04_storage', chain: 'main', name: 'Stash It', description: 'Build a Storage Crate.',
-    type: 'build', target: 'storage_crate', count: 1, reward: R({ resources: { wood: 25, fiber: 15 }, xp: 15 }), next: ['m05_rescue'],
+    type: 'build', target: 'storage_crate', count: 1, reward: R({ resources: { wood: 15, fiber: 15 }, xp: 15 }), next: ['m05_rescue'],
     hint: 'Storage increases how much you can hold.', guide: { kind: 'build_menu', ref: 'storage_crate' },
     onComplete: { spawnSurvivor: true },
   },
@@ -47,19 +47,19 @@ export const MISSIONS: MissionDef[] = [
   },
   {
     id: 'm06_logging', chain: 'main', name: 'Many Hands', description: 'Build a Logging Camp — your colonist will work it automatically.',
-    type: 'build', target: 'logging_camp', count: 1, reward: R({ resources: { stone: 20, fiber: 10, wood: 15 }, xp: 20 }), next: ['m07_assign'],
+    type: 'build', target: 'logging_camp', count: 1, reward: R({ resources: { stone: 10, fiber: 10, wood: 10 }, xp: 20 }), next: ['m07_assign'],
     hint: 'Build a Logging Camp near some trees.', guide: { kind: 'build_menu', ref: 'logging_camp' },
   },
   {
     id: 'm07_assign', chain: 'main', name: 'Put to Work', description: 'Have a colonist working a job.',
-    type: 'assign', target: '*', count: 1, reward: R({ resources: { wood: 30 }, xp: 15 }), next: ['m08_turret'],
+    type: 'assign', target: '*', count: 1, reward: R({ resources: { wood: 10 }, xp: 15 }), next: ['m08_turret'],
     hint: 'Colonists take free jobs automatically. Tap a building to manage workers.', guide: { kind: 'building', ref: 'logging_camp' },
   },
   {
     id: 'm08_turret', chain: 'main', name: 'Something Stirs', description: 'Strange noises at night... Build a Scrap Turret.',
     type: 'build', target: 'scrap_turret', count: 1, reward: R({ resources: { wood: 30, stone: 25 }, xp: 20 }), next: ['m09_defend'],
     hint: 'Place the turret between your camp and the wilds.', guide: { kind: 'build_menu', ref: 'scrap_turret' },
-    onComplete: { attack: { delay: 25, warning: 75 } },
+    onComplete: { attack: { delay: 20, warning: 120 } },
   },
   {
     id: 'm09_defend', chain: 'main', name: 'First Contact', description: 'Defend the colony from the alien attack.',

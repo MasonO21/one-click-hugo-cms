@@ -159,7 +159,7 @@ describe('construction: blueprints', () => {
       { def: 'campfire', dx: 0, dz: 1, rot: 0, tier: 0 },
       { def: 'berry_patch', dx: 1, dz: 1, rot: 0, tier: 0 },
     ]);
-    expect(b.blueprintCost(bp)).toEqual({ wood: 37, stone: 5, fiber: 10 });
+    expect(b.blueprintCost(bp)).toEqual({ wood: 47, stone: 20, fiber: 10 });
     expect(b.saveBlueprint('nothing', [b.core()!.id])).toBeNull();
 
     // survives a save/load round trip
@@ -172,7 +172,7 @@ describe('construction: blueprints', () => {
   it('places a blueprint, paying the total once', () => {
     const { game, b, ids, events } = buildSample();
     const bp = b.saveBlueprint('hut', ids)!;
-    game.state.resources.amounts = { wood: 40, stone: 5, fiber: 10 };
+    game.state.resources.amounts = { wood: 50, stone: 20, fiber: 10 };
     events.length = 0;
     const placed = b.placeBlueprint(bp, C - 6, C - 6, 0);
     expect(placed).toHaveLength(5);
@@ -184,7 +184,7 @@ describe('construction: blueprints', () => {
     expect(count(events, 'building:placed')).toBe(5);
     expect(count(events, 'building:changed')).toBe(1);
     // each part refunds its own share
-    expect(b.refund(placed[3])).toEqual({ wood: 10, stone: 5 });
+    expect(b.refund(placed[3])).toEqual({ wood: 20, stone: 20 });
   });
 
   it('rotates the layout with the parts', () => {
@@ -215,11 +215,11 @@ describe('construction: blueprints', () => {
     expect(b.canPlaceBlueprint(bp, C - 1, C - 2, 0)).toMatchObject({ ok: false, code: 'occupied' });
     expect(b.placeBlueprint(bp, C - 1, C - 2, 0)).toEqual([]);
     // can't afford
-    game.state.resources.amounts = { wood: 36, stone: 5, fiber: 10 };
+    game.state.resources.amounts = { wood: 46, stone: 20, fiber: 10 };
     expect(b.placeBlueprint(bp, C - 6, C - 6, 0)).toEqual([]);
     expect(b.lastReason).toBe('Need 1 more Wood');
     expect(game.state.buildings.list.length).toBe(before);
-    expect(game.state.resources.amounts).toEqual({ wood: 36, stone: 5, fiber: 10 });
+    expect(game.state.resources.amounts).toEqual({ wood: 46, stone: 20, fiber: 10 });
     expect(b.deleteBlueprint(bp)).toBe(true);
     expect(b.placeBlueprint(bp, C - 6, C - 6, 0)).toEqual([]);
   });

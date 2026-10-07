@@ -55,7 +55,7 @@ describe('construction: core', () => {
     expect(b2.blocked(C + 3, C + 5, 'alien')).toBe(true); // door
     expect(g2.derived.rooms).toHaveLength(1);
     expect(g2.derived.rooms[0].cells).toHaveLength(16);
-    expect(b2.get(fire)?.spent).toEqual({ wood: 10, stone: 5 });
+    expect(b2.get(fire)?.spent).toEqual({ wood: 20, stone: 20 });
     // construction resumes after load
     expect(b2.get(fire)!.status).toBe('building');
     step(g2, 2.5);
@@ -70,9 +70,9 @@ describe('construction: core', () => {
 describe('construction: placement rules', () => {
   it('explains missing resources', () => {
     const { b } = makeGame();
-    expect(b.canPlace('campfire', C + 3, C, 0)).toEqual({ ok: false, code: 'cost', reason: 'Need 10 more Wood, 5 more Stone' });
+    expect(b.canPlace('campfire', C + 3, C, 0)).toEqual({ ok: false, code: 'cost', reason: 'Need 20 more Wood, 20 more Stone' });
     expect(b.place('campfire', C + 3, C, 0)).toBeNull();
-    expect(b.lastReason).toBe('Need 10 more Wood, 5 more Stone');
+    expect(b.lastReason).toBe('Need 20 more Wood, 20 more Stone');
   });
 
   it('requires the footprint to be inside the colony radius', () => {
@@ -83,7 +83,7 @@ describe('construction: placement rules', () => {
     expect(b.inColony(C + 9, C - 9)).toBe(false);
     const out = b.canPlace('wall', C + 13, C, 0, undefined, 0);
     expect(out.ok).toBe(false);
-    expect(out.reason).toBe('Outside colony — upgrade your colony tier to expand');
+    expect(out.reason).toBe('Outside the colony ring — build inside it (tier-ups make it bigger)');
     // a 2×2 shelter whose far column pokes outside
     expect(b.canPlace('shelter', C + 10, C, 0).ok).toBe(true);
     expect(b.canPlace('shelter', C + 11, C, 0).code).toBe('colony'); // (C+12, C+1) is 12.04 cells out
@@ -147,7 +147,7 @@ describe('construction: placement rules', () => {
     expect(b.cost('window', 0)).toEqual({ wood: 5, fiber: 2 });
     expect(b.cost('wall', 1)).toEqual({ wood: 6, fiber: 3 });
     expect(b.cost('wall', 2)).toEqual({ stone: 8, wood: 2 });
-    expect(b.cost('campfire')).toEqual({ wood: 10, stone: 5 });
+    expect(b.cost('campfire')).toEqual({ wood: 20, stone: 20 });
     // without an explicit tier, pieces follow the build preview's material (clamped to the colony tier)
     game.view.build.tier = 2;
     expect(b.cost('wall')).toEqual({ wood: 4 });
@@ -367,9 +367,9 @@ describe('construction: remove & refunds', () => {
 
   it('applies removeRefund and refunds construction sites', () => {
     const { game, b } = makeGame({ balance: { removeRefund: 0.5 }, resources: { wood: 100 } });
-    const s = b.place('shelter', C + 3, C, 0)!; // 20 wood, still building
+    const s = b.place('shelter', C + 3, C, 0)!; // 50 wood, still building
     expect(b.remove(s)).toBe(true);
-    expect(game.state.resources.amounts.wood).toBe(90);
+    expect(game.state.resources.amounts.wood).toBe(75);
   });
 
   it('unassigns colonists who worked or slept there', () => {

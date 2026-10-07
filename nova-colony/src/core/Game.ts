@@ -51,6 +51,15 @@ export interface GameOptions {
   clock?: () => number;
 }
 
+/** Shorter absences are credited silently; longer ones get the Welcome Back screen (with the 2x ad offer). */
+export const WELCOME_BACK_MIN_AWAY = 300;
+
+/**
+ * Day 1 runs this much slower while the tutorial is in progress, so the first ~13 minutes (crash landing to
+ * the first tier-up) play in daylight and end in a golden-hour sunset instead of pitch-dark night.
+ */
+export const FIRST_DAY_STRETCH = 2.5;
+
 /** Order in which systems update each frame. */
 const UPDATE_ORDER: (keyof Systems)[] = [
   'world',
@@ -133,7 +142,10 @@ export class Game {
       if (away >= 60) {
         const summary = this.sys.economy.computeOffline(away);
         const hasGains = Object.values(summary.gains).some((v) => (v ?? 0) > 0) || summary.rp > 0;
-        if (hasGains) {
+        if (hasGains && away < WELCOME_BACK_MIN_AWAY) {
+          // a short break (app switch, quick reload): credit it quietly instead of a Welcome Back modal for "+1"
+          this.sys.economy.applyOffline(summary);
+        } else if (hasGains) {
           this.pendingOffline = summary;
           this.bus.emit('offline:ready', { seconds: summary.seconds, gains: summary.gains, rp: summary.rp });
         }
@@ -152,9 +164,10 @@ export class Game {
     st.stats.online += dt;
     st.lastTickAt = this.now();
 
-    // day/night
+    // day/night — the guided first session stays in daylight: day 1 runs slower until the tutorial arc ends
     const prev = st.time.dayTime;
-    st.time.dayTime += dt / this.data.balance.dayLength;
+    const firstDay = st.time.day <= 1 && !st.tutorial.done;
+    st.time.dayTime += dt / (this.data.balance.dayLength * (firstDay ? FIRST_DAY_STRETCH : 1));
     if (st.time.dayTime >= 1) {
       st.time.dayTime -= 1;
       st.time.day++;

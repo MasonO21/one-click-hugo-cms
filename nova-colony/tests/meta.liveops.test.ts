@@ -136,6 +136,7 @@ describe('liveops: daily login (7-day cycle)', () => {
     expect(opened).not.toContain('daily');
 
     const state = JSON.parse(JSON.stringify(fresh.game.state));
+    state.tutorial.done = true; // past the guided first session
     const next = makeGame({ state, at: T0 + DAY });
     next.game.pendingOffline = null; // no Welcome Back to wait for (covered by the next test)
     const opened2: string[] = [];
@@ -144,9 +145,24 @@ describe('liveops: daily login (7-day cycle)', () => {
     expect(opened2).toContain('daily');
   });
 
+  it('does not pop the daily panel (or advertise offers) for a player still in the guided first session', () => {
+    const fresh = makeGame();
+    const state = JSON.parse(JSON.stringify(fresh.game.state));
+    const next = makeGame({ state, at: T0 + DAY });
+    next.game.pendingOffline = null;
+    const opened: string[] = [];
+    next.game.bus.on('ui:open', (e) => opened.push(e.panel));
+    tickMeta(next, 6);
+    expect(opened).not.toContain('daily');
+    expect(next.game.sys.liveops.offersUnlocked()).toBe(false);
+    next.game.state.stats.wavesWon = 1; // the first invasion won unlocks them
+    expect(next.game.sys.liveops.offersUnlocked()).toBe(true);
+  });
+
   it('waits for the Welcome Back panel before opening the daily panel', () => {
     const fresh = makeGame();
     const state = JSON.parse(JSON.stringify(fresh.game.state));
+    state.tutorial.done = true;
     const next = makeGame({ state, at: T0 + DAY, start: false });
     next.game.start();
     next.game.pendingOffline = { seconds: 60, away: 60, gains: { wood: 5 }, rp: 0 };
@@ -858,7 +874,7 @@ describe('liveops: fresh game setup', () => {
     const [def, x, z, rot, opts] = place.mock.calls[0];
     expect(def).toBe('spin_wheel');
     expect(rot).toBe(0);
-    expect(opts).toEqual({ free: true, instant: true });
+    expect(opts).toEqual({ free: true, instant: true, quiet: true });
     expect(Math.abs(x - 128)).toBeLessThan(14);
     expect(Math.abs(z - 128)).toBeLessThan(14);
     expect(game.state.liveops.wheelPlaced).toBe(true);

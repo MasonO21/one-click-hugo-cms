@@ -426,6 +426,17 @@
     padding: 0 0.6em 0 0.45em;
     font-size: 0.8em;
   }
+  /* 3+ offers: icons only, one row, so nothing wraps down into the joystick's thumb area */
+  .hud-left .offers[data-n='3'] .offer .lb,
+  .hud-left .offers[data-n='4'] .offer .lb,
+  .hud-left .offers[data-n='5'] .offer .lb {
+    display: none;
+  }
+  .hud-left .offers[data-n='3'] .offer,
+  .hud-left .offers[data-n='4'] .offer,
+  .hud-left .offers[data-n='5'] .offer {
+    padding: 0 0.55em;
+  }
 }
 .mission-card.done {
   box-shadow: var(--shadow), inset 0 0 0 0.16em var(--gold);
@@ -808,9 +819,11 @@
   left: auto;
   right: calc(var(--mr) + 3.2em);
 }
-.nv-root[data-panel-open='1'] .stick-hint,
-.nv-root[data-mode='build'] .stick-hint {
+.nv-root[data-panel-open='1'] .stick-hint {
   opacity: 0;
+}
+.nv-root[data-mode='build'] .stick-hint:not(.gone) {
+  opacity: 0.45;
 }
 
 /* ---------- left-handed layout ------------------------------------------ */
@@ -863,6 +876,16 @@
     order: 3;
     flex: 1 1 100%;
   }
+  /* five basic resources must fit a 390 px wide phone without the last chip being cut off */
+  .res-scroll {
+    gap: 0.25em;
+  }
+  .rchip {
+    flex: 1 0 auto;
+    min-width: 4.2em;
+    padding: 0 0.45em 0.2em 0.4em;
+    gap: 0.25em;
+  }
   .nova-chip {
     margin-left: auto;
   }
@@ -881,6 +904,10 @@
   }
   .hud-rail {
     top: calc(var(--mt) + 6.6em + var(--status-h, 2.4em) + 0.5em + var(--banner-h, 0px));
+  }
+  /* the dock spans the whole bottom edge on a narrow screen: keep the joystick hint above it */
+  .stick-hint {
+    bottom: calc(var(--mb) + 5.4em);
   }
 }
 

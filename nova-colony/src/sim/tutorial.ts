@@ -7,7 +7,9 @@
  * ids are hard-coded here):
  *   node       -> nearest live resource node of that def
  *   building   -> the player's building of that def (nearest), else the colony core
- *   build_menu -> `[data-build="<def>"]` while the build panel is open, else `#btn-build`
+ *   build_menu -> `[data-build="<def>"]` while the build panel is open, else `#btn-build`; while placing
+ *                 that building: `#btn-build-confirm` once the ghost sits on a valid spot; unaffordable:
+ *                 the nearest node dropping the missing resource ("Need 20 more Stone — mine a Boulder")
  *   ui         -> `#btn-<ref>`
  *   poi        -> nearest un-looted POI of that def (includes the spawned survivor camp)
  *   region     -> centre of the biome
@@ -31,6 +33,8 @@ export interface GuideTarget {
   /** Which kind of target was resolved (additive field for the UI). */
   kind?: NonNullable<MissionDef['guide']>['kind'];
 }
+
+const GATHER_VERB: Record<string, string> = { wood: 'chop', stone: 'mine', fiber: 'cut', food: 'pick' };
 
 /** Seconds a build/tier step may be unaffordable before a supply drone helps out. */
 export const SUPPLY_DRONE_AFTER = 60;
@@ -143,10 +147,20 @@ export class TutorialSystem extends System {
       case 'ui':
         base.ui = `#btn-${ref}`;
         break;
-      case 'build_menu':
-        if (this.game.view.mode === 'build' && this.game.view.build.def === ref) base.world = this.coreCenter();
-        else base.ui = this.buildPanelOpen() ? `[data-build="${ref}"]` : '#btn-build';
+      case 'build_menu': {
+        // placing it: the ghost is the focus — ring the ✔ button once the spot is valid (an arrow at the
+        // core would read as "build it here")
+        const site = this.underConstruction(ref);
+        if (this.game.view.mode === 'build' && this.game.view.build.def === ref) base.ui = this.game.view.build.valid ? '#btn-build-confirm' : null;
+        else if (site) {
+          // placed and going up: point at the site instead of sending the player back to the Build button
+          base.world = site;
+          base.text = `Your ${this.game.data.building(ref)?.name ?? 'building'} is going up…`;
+        } else if (!this.buildPanelOpen() && this.gatherFor(ref, base)) {
+          // can't afford it yet: point at the nearest node that drops what is missing (the gather -> build loop)
+        } else base.ui = this.buildPanelOpen() ? `[data-build="${ref}"]` : '#btn-build';
         break;
+      }
       case 'node':
         base.world = this.pick(ref, this.nodeCandidates(ref));
         break;
@@ -166,6 +180,51 @@ export class TutorialSystem extends System {
       }
     }
     return base;
+  }
+
+  /**
+   * The guided building is unaffordable: aim the guide at the nearest harvestable node for the first missing
+   * resource and say how much is still needed. Returns false when there is nothing to gather (affordable,
+   * not unlocked, or no node drops it), so the caller falls back to the Build button.
+   */
+  private gatherFor(def: string, out: GuideTarget): boolean {
+    const { buildings, economy, player, world } = this.game.sys;
+    if (!this.game.data.building(def) || !buildings.isUnlocked(def) || buildings.countOf(def) > 0) return false;
+    const missing = economy.missing(buildings.cost(def));
+    const tool = player.toolTier();
+    for (const [res, n] of Object.entries(missing)) {
+      if (!n || n <= 0) continue;
+      const cands: Candidate[] = [];
+      const nodeName = new Map<string, string>();
+      for (const d of this.game.data.nodes) {
+        if (!((d.drop[res] ?? 0) > 0) || d.toolTier > tool) continue;
+        for (const c of this.nodeCandidates(d.id)) {
+          if (!world.isUnlocked(this.nodeRegion(c.key))) continue;
+          cands.push(c);
+          nodeName.set(c.key, d.name);
+        }
+      }
+      const at = this.pick(`gather:${res}`, cands);
+      if (!at) continue;
+      const name = this.game.data.resource(res)?.name ?? res;
+      const node = this.sticky ? nodeName.get(this.sticky.key) : undefined;
+      out.world = at;
+      out.text = `Need ${Math.ceil(n)} more ${name} — ${GATHER_VERB[res] ?? 'gather from'} ${node ? `a ${node}` : 'nearby'}, then build.`;
+      return true;
+    }
+    return false;
+  }
+
+  private nodeRegion(key: string): string {
+    return this.game.sys.world.gen?.nodes[+key.slice(5)]?.region ?? '';
+  }
+
+  /** Centre of a building of `def` that is still under construction, if any. */
+  private underConstruction(def: string): { x: number; z: number } | null {
+    const d = this.game.data.building(def);
+    if (!d) return null;
+    for (const b of this.game.state.buildings.list) if (b.def === def && b.status === 'building') return footprintCenter(b.x, b.z, d.size, b.rot);
+    return null;
   }
 
   private coreCenter(): { x: number; z: number } | null {

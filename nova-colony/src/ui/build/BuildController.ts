@@ -1,14 +1,15 @@
 /**
  * BuildController — drives build mode: keeps `view.build` (ghost cell, rotation, validity, cost) in
  * sync with BuildingSystem queries, turns touch input into ghost placement / drag-to-build lines,
- * confirms placements ("copy" behaviour: stays in build mode for quick repeats), supports moving an
+ * confirms placements, supports moving an
  * existing building, placing saved blueprints and rectangle-selecting pieces to save as a blueprint.
+ * Pieces and blueprints stay in build mode after a confirm for quick repeats; a facility returns to play.
  */
 import type { UiCtx, BuildApi } from '../ctx';
 import type { BuildPointer } from '../input/InputController';
 import type { BuildingInstance } from '../../core/state';
 import type { BuildingDef, ResourceBag } from '../../data/schema';
-import { WORLD_CELLS, cellOf, rotatedSize } from '../../core/constants';
+import { CELL, WORLD_CELLS, cellOf, rotatedSize } from '../../core/constants';
 import { bagCovers, bagMissing } from '../../core/bag';
 import { clamp } from '../../core/math';
 import { footprintCells, missingText, pointInRect, rectFrom, rotateOffset, scaleBag, snapFootprint, sumBags, type Cell } from '../logic/build';
@@ -89,11 +90,36 @@ export class BuildController implements BuildApi {
     b.cost = {};
     b.valid = false;
     b.reason = null;
-    this.placeNearCenter();
+    if (!this.frameColony()) this.placeNearCenter();
     this.key = '';
     this.refresh();
     this.onChange();
   }
+
+  /**
+   * Started build mode while out in the wilds (e.g. right after the rescue): the screen centre is outside
+   * the colony ring, so every spot would be red. Swing the camera over the colony and start the ghost at
+   * its edge nearest to the player instead. Returns true when it did. Undone by exitBuild().
+   */
+  private frameColony(): boolean {
+    const { game } = this.ctx;
+    const p = game.state.player;
+    const bs = this.bs;
+    if (bs.inColony(cellOf(p.x), cellOf(p.z))) return false;
+    const c = bs.colonyCenter();
+    const cam = game.view.camera;
+    if (!this.framed) this.framed = { mode: cam.mode };
+    cam.mode = 'overview';
+    cam.tx = c.x;
+    cam.tz = c.z;
+    const d = Math.hypot(p.x - c.x, p.z - c.z) || 1;
+    const r = Math.max(3, game.state.colony.radius * 0.5) * CELL;
+    this.setCursorWorld(c.x + ((p.x - c.x) / d) * r, c.z + ((p.z - c.z) / d) * r);
+    return true;
+  }
+
+  /** Camera mode to restore when leaving a build mode that framed the colony. */
+  private framed: { mode: 'follow' | 'overview' } | null = null;
 
   startMove(id: number): void {
     const inst = this.bs.get(id);
@@ -165,6 +191,10 @@ export class BuildController implements BuildApi {
   private exitBuild(notify: boolean): void {
     const v = this.view;
     const b = v.build;
+    if (this.framed) {
+      v.camera.mode = this.framed.mode;
+      this.framed = null;
+    }
     if (v.mode === 'build') v.mode = 'play';
     v.showGrid = false;
     b.def = null;
@@ -359,7 +389,8 @@ export class BuildController implements BuildApi {
         if (chk.ok) ok++;
         else firstReason ??= chk.reason ?? null;
       }
-      cost = scaleBag(bs.cost(def.id, b.tier), ok);
+      // nothing placeable: still show what one piece costs (not a misleading "Free")
+      cost = scaleBag(bs.cost(def.id, b.tier), Math.max(ok, 1));
       placeOk = ok > 0;
       if (ok === 0) reason = firstReason ?? "Can't build here";
       else if (ok < cells.length) reason = null;
@@ -424,6 +455,13 @@ export class BuildController implements BuildApi {
       const id = bs.place(def.id, b.x, b.z, b.rot, { tier: b.tier });
       ok = id != null;
       msg = ok ? '' : "Couldn't build there";
+      if (ok) {
+        // a facility is a one-off: staying in build mode would leave a red "Space taken" ghost on top of
+        // the new building (walls/floors/blueprints keep build mode for quick repeats)
+        this.exitBuild(true);
+        this.succeed(msg);
+        return;
+      }
     }
     this.key = '';
     if (ok) this.succeed(msg);

@@ -1,13 +1,19 @@
 /**
  * CameraRig — third-person orbit camera following the player (view.camera.yaw / zoom), an
  * 'overview' mode targeting (tx, tz) for map/build, smooth damping, gentle tilt that flattens when
- * zooming in, terrain clearance, a transient focus() framing and camera shake.
+ * zooming in, terrain clearance, a transient focus() framing, combat framing (leans toward nearby
+ * attacking aliens) and camera shake.
  *
  * Convention (ARCHITECTURE.md): camera = target + (sin(yaw)·d, h, cos(yaw)·d), looking at target.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import { clamp, lerp } from '../../core/math';
+
+/** Aliens within this many world units of the player pull the follow camera toward the fight. */
+const COMBAT_FRAME_R = 26;
+/** During an attack the follow camera looks this fraction of its distance ahead of the player. */
+const COMBAT_LOOK_AHEAD = 0.14;
 
 export class CameraRig {
   private tx = 0;
@@ -72,6 +78,41 @@ export class CameraRig {
     } else {
       gx = game.state.player.x;
       gz = game.state.player.z;
+      // during an attack, lean toward the nearby alien front and pull back a little so the player sees
+      // the aliens coming and the turrets at work (instead of the fight happening under the HUD)
+      const combat = game.state.combat;
+      if (combat.phase === 'attack' && view.mode === 'play') {
+        let sx = 0;
+        let sz = 0;
+        let n = 0;
+        for (const a of combat.aliens) {
+          if (a.state === 'dying') continue;
+          const ax = a.x - gx;
+          const az = a.z - gz;
+          if (ax * ax + az * az > COMBAT_FRAME_R * COMBAT_FRAME_R) continue;
+          sx += ax;
+          sz += az;
+          n++;
+        }
+        if (n > 0) {
+          // mostly a pull-back (the fight fits on screen); only a slight lean so the player never slides
+          // up under the attack banner / hint bubble
+          let ox = (sx / n) * 0.3;
+          let oz = (sz / n) * 0.3;
+          const l = Math.hypot(ox, oz);
+          if (l > 3) {
+            ox *= 3 / l;
+            oz *= 3 / l;
+          }
+          gx += ox;
+          gz += oz;
+          distMul = 1.35;
+        }
+        // look a little past the player so they (and the turret beside them) sit below the attack banner
+        const wantD = lerp(9, 46, Math.pow(clamp(vc.zoom, 0, 1), 1.15)) * distMul;
+        gx -= Math.sin(vc.yaw) * wantD * COMBAT_LOOK_AHEAD;
+        gz -= Math.cos(vc.yaw) * wantD * COMBAT_LOOK_AHEAD;
+      }
     }
     if (mode === 'overview') {
       distMul = 1.55;

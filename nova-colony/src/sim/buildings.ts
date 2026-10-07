@@ -290,8 +290,8 @@ export class BuildingSystem extends System {
     return this.check(defId, x, z, rot, ignoreId, tier, false);
   }
 
-  /** Pay and place. Returns the new id or null (see lastReason). */
-  place(defId: string, x: number, z: number, rot: 0 | 1 | 2 | 3, opts?: { tier?: number; free?: boolean; instant?: boolean }): Id | null {
+  /** Pay and place. Returns the new id or null (see lastReason). `quiet` skips the "Built X!" announcement. */
+  place(defId: string, x: number, z: number, rot: 0 | 1 | 2 | 3, opts?: { tier?: number; free?: boolean; instant?: boolean; quiet?: boolean }): Id | null {
     const d = this.game.data.building(defId);
     if (!d) return this.reject('Unknown building');
     const tier = d.piece ? this.pieceTier(opts?.tier) : this.game.state.colony.tier;
@@ -301,7 +301,8 @@ export class BuildingSystem extends System {
     const price = free ? {} : this.cost(defId, tier);
     if (!bagIsEmpty(price) && !this.game.sys.economy.spend(price, 'build')) return this.reject(this.needText(price));
     this.lastReason = null;
-    const b = this.create(d, x, z, rot, tier, price, !!opts?.instant, true);
+    // quiet: system-placed content (the free Lucky Wheel) gets no "Built X!" float or build sound
+    const b = this.create(d, x, z, rot, tier, price, !!opts?.instant, !opts?.quiet);
     this.flushEconomy();
     return b.id;
   }
@@ -1133,7 +1134,7 @@ export class BuildingSystem extends System {
     for (let cz = z; cz < z + h; cz++) {
       for (let cx = x; cx < x + w; cx++) {
         if (!inWorld(cx, cz)) return fail('world', 'Outside the world');
-        if (!this.inColony(cx, cz)) return fail('colony', 'Outside colony — upgrade your colony tier to expand');
+        if (!this.inColony(cx, cz)) return fail('colony', 'Outside the colony ring — build inside it (tier-ups make it bigger)');
       }
     }
     for (let cz = z; cz < z + h; cz++) {

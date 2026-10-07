@@ -1,0 +1,11 @@
+import { launch, waitReady, shot, info, sleep } from './lib.mjs';
+const vp = process.argv[2] || 'phone';
+const { browser, page, logs } = await launch(vp);
+await waitReady(page);
+await shot(page, vp + '-boot');
+await sleep(3000);
+await shot(page, vp + '-boot2');
+console.log(JSON.stringify(await info(page)));
+console.log(await page.evaluate(() => JSON.stringify({ time: window.game.state.time, missions: window.game.state.missions, tut: window.game.state.tutorial, cam: window.game.view.camera })));
+console.log(logs.slice(-30).join('\n'));
+await browser.close();

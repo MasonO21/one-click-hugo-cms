@@ -1,7 +1,8 @@
 /**
  * InputController — touch-first world input.
  *
- *  - Dynamic left-side virtual joystick (left 40% of the screen) -> game.input.moveX/moveY
+ *  - Dynamic left-side virtual joystick (left 40% of the screen; only its lower part in build mode, where
+ *    drags place the ghost / draw wall lines) -> game.input.moveX/moveY
  *  - One-finger drag elsewhere rotates the camera (view.camera.yaw); two fingers pinch-zoom + twist
  *  - Mouse wheel zooms; WASD/arrows move, Q/E rotate, Space interacts (desktop testing)
  *  - Quick taps pick things in the world (renderer.pick) — or, in build mode, are forwarded to the
@@ -28,6 +29,9 @@ export interface InputHooks {
 }
 
 type Role = 'stick' | 'look' | 'place' | 'pinch' | 'right';
+
+/** Build mode: the joystick only starts below this fraction of the screen height. */
+const BUILD_STICK_TOP = 0.55;
 
 interface Ptr {
   id: number;
@@ -103,7 +107,13 @@ export class InputController {
 
     if (rightMouse) {
       p.role = 'right';
-    } else if (this.stickId == null && e.pointerType !== 'mouse' && inStickZone(e.clientX, window.innerWidth, this.leftHanded)) {
+    } else if (
+      this.stickId == null &&
+      e.pointerType !== 'mouse' &&
+      inStickZone(e.clientX, window.innerWidth, this.leftHanded) &&
+      // in build mode only the lower corner is the joystick: a drag anywhere else moves the ghost / draws walls
+      (!this.hooks.build.active() || e.clientY > window.innerHeight * BUILD_STICK_TOP)
+    ) {
       // (a mouse always orbits the camera — desktop players have WASD)
       p.role = 'stick';
       this.stickId = p.id;
