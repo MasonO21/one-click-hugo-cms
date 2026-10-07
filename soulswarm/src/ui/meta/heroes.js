@@ -1,4 +1,4 @@
-// Heroes tab with three sub-tabs: Heroes (roster + detail), Relics (gear) and Talents (gold sink).
+// Heroes tab with four sub-tabs: Heroes (roster + detail), Relics (gear), Talents (gold sink) and the Bestiary (bestiary.js).
 import { h, $, fmt, toast, modal } from '../dom.js';
 import { icon } from '../icons.js';
 import { relicArt, skillArt, talentArt } from '../art.js';
@@ -12,6 +12,7 @@ import {
   starterAvailable, equipSkin } from '../../meta/economy.js';
 import { portrait, bar, stars, tap, delegate, keepScroll } from './util.js';
 import { openStarter } from './panels.js';
+import { renderBestiary, openFoe } from './bestiary.js';
 
 const RANK = { legendary: 0, epic: 1, rare: 2, common: 3 };
 const rarityPill = (r) => `<span class="pill rpill" style="--rc:${RARITY_COLOR[r]}">${RARITY_LABEL[r]}</span>`;
@@ -44,11 +45,11 @@ export function createHeroes(ctx) {
   function render() {
     const p = app.profile;
     const n = notifications(p);
-    tabsEl.innerHTML = ['heroes', 'relics', 'talents'].map((k) =>
-      `<button class="subtab ${sub === k ? 'on' : ''}" data-sub="${k}">${{ heroes: 'Heroes', relics: 'Relics', talents: 'Talents' }[k]}${k === 'heroes' && n.heroes ? '<i class="badge-dot"></i>' : ''}</button>`).join('');
+    tabsEl.innerHTML = ['heroes', 'relics', 'talents', 'bestiary'].map((k) =>
+      `<button class="subtab ${sub === k ? 'on' : ''}" data-sub="${k}">${{ heroes: 'Heroes', relics: 'Relics', talents: 'Talents', bestiary: 'Bestiary' }[k]}${(k === 'heroes' && n.heroes) || (k === 'bestiary' && n.bestiary) ? '<i class="badge-dot"></i>' : ''}</button>`).join('');
     keepScroll(el, () => {
       root.className = 'hz hz-' + sub;
-      root.innerHTML = sub === 'heroes' ? renderRoster(p) : sub === 'relics' ? renderRelics(p) : renderTalents(p);
+      root.innerHTML = sub === 'heroes' ? renderRoster(p) : sub === 'relics' ? renderRelics(p) : sub === 'talents' ? renderTalents(p) : renderBestiary(p);
     });
     if (flash) { root.querySelector(`[data-tal="${flash}"]`)?.classList.add('flash'); flash = null; }
   }
@@ -257,6 +258,7 @@ export function createHeroes(ctx) {
   delegate(root, {
     hero: (b) => { tap(app); openHero(b.dataset.id); },
     relic: (b) => { tap(app); openRelic(b.dataset.uid); },
+    foe: (b) => { tap(app); openFoe(ctx, b.dataset.id); },
     talent: (b) => {
       const k = b.dataset.k;
       if (!upgradeTalent(app.profile, k)) { toast('Not enough gold'); return; }

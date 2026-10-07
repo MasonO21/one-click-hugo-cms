@@ -1937,6 +1937,157 @@ errs = await session(async (page) => {
 });
 check('voice: no runtime errors', !errs.length, errs[0] || '');
 
+// 27. The Bestiary and chapter art. Kills per foe type in a run (gilded elites count as their base type; the Soul Thief and
+//     Gravemaw too, Cursed Coffins never), carried in the run result and added up by applyRunResult; locked entries show a
+//     silhouette and "???" until the first kill; each milestone claims once, in order, for its reward; the Heroes tab dot;
+//     old saves migrate. The home chapter card wears the selected chapter's painting and cross-fades on a change; the run
+//     intro card names the chapter, its twist, the difficulty and Blood Moon in the top third, takes no input, and goes.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const eco = await import('/src/meta/economy.js'), save = await import('/src/meta/save.js'), { BESTIARY } = await import('/src/game/data.js');
+    const app = window.__soulswarm, p = app.profile, out = {}, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.bloodMoon = 'off'; p.chapter.unlocked = 6;
+    // a run: two of each foe, a gilded Brute, a Soul Thief, a Cursed Coffin, then Gravemaw; the result carries the tally
+    const start = (ch, opts = {}) => { p.energy = 30; app.engine.manual = true; app.startRun(ch, opts); const r = app.run; r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {}; r.player.hurt = () => {}; return r; };
+    let r = start(1); const P = r.player;
+    for (const t of ['husk', 'ghoul', 'brute', 'witch', 'bloater']) for (let i = 0; i < 2; i++) r.enemies.kill(r.spawnEnemy(t, { at: { x: P.x + 6, z: P.z + i } }), 'bolt');
+    r.enemies.kill(r.spawnEnemy('brute', { elite: true, at: { x: P.x - 6, z: P.z } }), 'bolt');
+    r.events.start('thief', { x: P.x + 5, z: P.z }); r.enemies.damage(r.events.cur.e, 1e9, { silent: true }); r.events.cur = null;
+    r.events.start('coffin', { x: P.x - 5, z: P.z }); r.enemies.damage(r.events.cur.e, 1e9, { silent: true }); r.events.cur = null; // broken (its wave never comes)
+    r.update(1 / 30);
+    const mid = { ...r.counters.byType, kills: r.counters.kills };
+    r.boss.spawn(); r.bossSpawned = true; r.enemies.kill(r.bossEnemy, 'bolt');
+    out.run = { mid, end: { ...r.counters.byType } };
+    const k0 = { ...p.bestiary.kills };
+    let result = null; const onEnd = r.onEnd; r.onEnd = (res) => { result = res; onEnd(res); };
+    for (let i = 0; i < 160 && !r.ended; i++) { if (r.levelPending) q('.lvl-back .card')?.click(); r.update(0.05); }
+    out.result = result && result.byType; out.added = Object.fromEntries(BESTIARY.order.map((id) => [id, p.bestiary.kills[id] - k0[id]]));
+    for (let i = 0; i < 40 && !q('.modal-results'); i++) await wait(50);
+    out.resArt = (q('.res-head.has-art')?.getAttribute('style') || '').includes('chapter-1');
+    q('.modal-results .btn-primary')?.click(); await wait(200);
+    // Endless: every Gravemaw kill counts, and the run goes on
+    r = start(6); r.boss.spawn(); r.bossSpawned = true; r.enemies.kill(r.bossEnemy, 'bolt');
+    out.endless = { gm: r.counters.byType.gravemaw, ended: r.ended, kills: r.bossKills }; app.exitRun();
+    // applyRunResult adds known ids only and ignores junk
+    const t = save.newProfile(); t.flags.bloodMoon = 'off';
+    eco.applyRunResult(t, { chapter: 1, time: 100, kills: 60, victory: false, byType: { husk: 50, ghoul: '7', brute: -3, witch: NaN, bloater: 1e12, thief: 1.9, gravemaw: 0, junk: 5 } });
+    eco.applyRunResult(t, { chapter: 1, time: 100, kills: 10, victory: false, byType: { husk: 10 } });
+    eco.applyRunResult(t, { chapter: 1, time: 100, kills: 10, victory: false });
+    out.acc = { ...t.bestiary.kills, junk: 'junk' in t.bestiary.kills };
+    // the sub-tab: silhouettes and "???" until the first kill; claims in order, each once; rewards; the nav dot
+    Object.assign(p.bestiary.kills, { husk: 10000, ghoul: 0, brute: 0, witch: 0, bloater: 0, thief: 0, gravemaw: 0 });
+    Object.assign(p.bestiary.claimed, { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, thief: 0, gravemaw: 0 });
+    for (const id of Object.keys(p.heroes)) p.heroes[id].shards = 0; // no hero rank-up dot
+    app.meta.show('heroes'); await wait(250); q('[data-sub="bestiary"]').click(); await wait(100);
+    const card = (id) => q(`.bcard[data-id="${id}"]`), img = card('husk').querySelector('img');
+    await img.decode().catch(() => {});
+    out.cards = { n: document.querySelectorAll('.bcard').length, husk: [card('husk').classList.contains('is-locked'), card('husk').querySelector('.bcard-name').textContent],
+      ghoul: [card('ghoul').classList.contains('is-locked'), card('ghoul').querySelector('.bcard-name').textContent, getComputedStyle(card('ghoul').querySelector('img')).filter !== 'none'],
+      img: img.naturalWidth > 0 };
+    out.dots = { nav: !q('[data-nav="heroes"] .badge-dot').hidden, sub: !!q('[data-sub="bestiary"] .badge-dot'), card: !!card('husk').querySelector('.badge-dot') };
+    p.bestiary.kills.ghoul = 1; eco.commit(p); await wait(50);
+    out.unlock = [card('ghoul').classList.contains('is-locked'), card('ghoul').querySelector('.bcard-name').textContent];
+    card('husk').click(); await wait(100);
+    const before = { gold: p.gold, sigils: p.sigils, gems: p.gems }, claims = [];
+    for (let i = 0; i < 3; i++) {
+      const b = q(`.mm-foe [data-tier="${i}"]`); if (!b) { claims.push('missing'); continue; }
+      b.click(); b.click(); await wait(60); // a double tap claims once
+      claims.push(p.bestiary.claimed.husk);
+      document.querySelectorAll('#ui > .modal-back').forEach((m) => { if (!m.querySelector('.mm-foe')) m.remove(); }); // the reward popup
+    }
+    out.claims = { claims, gained: { gold: p.gold - before.gold, sigils: p.sigils - before.sigils, gems: p.gems - before.gems }, again: eco.claimBestiary(p, 'husk'),
+      order: eco.claimBestiary(p, 'ghoul'), bogus: eco.claimBestiary(p, 'toString'), checks: document.querySelectorAll('.mm-foe .q-done').length };
+    document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove());
+    eco.commit(p); await wait(50);
+    out.dotsAfter = { nav: !q('[data-nav="heroes"] .badge-dot').hidden, sub: !!q('[data-sub="bestiary"] .badge-dot'), complete: !!card('husk').querySelector('.bcard-max') };
+    // old saves: a profile without the block migrates (Gravemaw seeded from clears); junk values are coerced
+    const KEY = 'soulswarm.save.v1', load = (v) => { localStorage.setItem(KEY, JSON.stringify(v)); const x = save.loadProfile(); localStorage.removeItem(KEY); return x; };
+    let o = load({ v: 1, gold: 999, stats: { runs: 12, kills: 9000, bestLegion: 80, raised: 100, clears: 7, bestStreak: 0 } });
+    out.migrate = { kills: o.bestiary.kills, claimed: o.bestiary.claimed, gold: o.gold, n: eco.notifications(o).bestiary };
+    o = load({ v: 1, bestiary: { kills: { husk: '250', ghoul: -4, brute: 'x', thief: 2 }, claimed: { husk: 9, ghoul: '1', witch: -1 } } });
+    out.coerce = { kills: o.bestiary.kills, claimed: o.bestiary.claimed };
+    out.nullSave = (() => { try { localStorage.setItem(KEY, 'null'); const x = save.loadProfile(); localStorage.removeItem(KEY); return x.bestiary.kills.gravemaw === 0; } catch (e) { return e.message; } })();
+    return out;
+  });
+  const R = s.run;
+  check('bestiary: a run counts kills per foe type (a gilded Brute as a Brute; the Soul Thief and Gravemaw; never a Cursed Coffin)',
+    R.mid.husk === 2 && R.mid.ghoul === 2 && R.mid.brute === 3 && R.mid.witch === 2 && R.mid.bloater === 2 && R.mid.thief === 1 && R.mid.gravemaw === 0 && R.end.gravemaw === 1
+    && R.mid.kills === 11 && s.endless.gm === 1 && !s.endless.ended && s.endless.kills === 1, JSON.stringify({ R, e: s.endless }));
+  check('bestiary: the run result carries the tally and applyRunResult adds it to the profile (junk ignored)',
+    JSON.stringify(s.result) === JSON.stringify(R.end) && JSON.stringify(s.added) === JSON.stringify(R.end)
+    && s.acc.husk === 60 && s.acc.ghoul === 7 && s.acc.brute === 0 && s.acc.witch === 0 && s.acc.bloater === 0 && s.acc.thief === 1 && s.acc.gravemaw === 0 && !s.acc.junk, JSON.stringify({ result: s.result, added: s.added, acc: s.acc }));
+  check('bestiary: 7 painted entries; silhouette and "???" until the first kill, then the name', s.cards.n === 7 && s.cards.husk.join() === 'false,Husk'
+    && s.cards.ghoul.join() === 'true,???,true' && s.cards.img && s.unlock.join() === 'false,Ghoul', JSON.stringify({ c: s.cards, u: s.unlock }));
+  check('bestiary: milestones claim in order and once each (double taps too) for 2,000 gold, 1 sigil and 50 gems',
+    s.claims.claims.join() === '1,2,3' && s.claims.gained.gold === 2000 && s.claims.gained.sigils === 1 && s.claims.gained.gems === 50
+    && s.claims.again === null && s.claims.order === null && s.claims.bogus === null && s.claims.checks === 3, JSON.stringify(s.claims));
+  check('bestiary: the Heroes tab, the BESTIARY sub-tab and the card show a dot while a milestone waits, and clear after',
+    s.dots.nav && s.dots.sub && s.dots.card && !s.dotsAfter.nav && !s.dotsAfter.sub && s.dotsAfter.complete, JSON.stringify({ d: s.dots, a: s.dotsAfter }));
+  const M = s.migrate, C = s.coerce;
+  check('bestiary: an old save without the block migrates (Gravemaw seeded from clears); junk values are coerced',
+    M.gold === 999 && M.kills.husk === 0 && M.kills.gravemaw === 7 && Object.values(M.claimed).every((v) => v === 0) && M.n === 1
+    && C.kills.husk === 250 && C.kills.ghoul === 0 && C.kills.brute === 0 && C.kills.thief === 2 && C.kills.gravemaw === 0 && C.claimed.husk === 3 && C.claimed.ghoul === 1 && C.claimed.witch === 0
+    && s.nullSave === true, JSON.stringify({ M, C, n: s.nullSave }));
+  check('results: a faint chapter painting behind the header', s.resArt, String(s.resArt));
+
+  // the home chapter card wears the selected chapter's painting and cross-fades when it changes; Endless is chapter-6
+  const h = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const art = () => { const c = q('.chap'), l = [...c.querySelectorAll('.chap-art')]; const top = l[l.length - 1], cr = c.getBoundingClientRect(), ar = top.getBoundingClientRect();
+      return { sel: c.dataset.art, url: getComputedStyle(top).backgroundImage, layers: l.length, fade: top.classList.contains('chap-art-in'), cover: Math.abs(cr.width - ar.width) < 1 && Math.abs(cr.height - ar.height) < 1 }; };
+    p.chapter.selected = 2; app.meta.show('battle'); await wait(200);
+    const a = art(), hgt = q('.chap').getBoundingClientRect().height;
+    q('.chap-arrow[data-act="next"]').click(); await wait(80);
+    const b = art(), hgt2 = q('.chap').getBoundingClientRect().height, low = q('.chap').querySelector('.chap-art:not(.chap-art-in)'), under = low ? getComputedStyle(low).backgroundImage : '';
+    p.chapter.selected = 6; app.meta.refresh(); await wait(80);
+    const e = art();
+    return { a, b, e, hgt, hgt2, under };
+  });
+  check('chapter art: the home card shows the selected chapter\'s painting and cross-fades to the next one (Endless: chapter-6)',
+    h.a.sel === '2' && /chapter-2/.test(h.a.url) && h.a.cover && h.b.sel === '3' && /chapter-3/.test(h.b.url) && h.b.layers === 2 && h.b.fade && /chapter-2/.test(h.under)
+    && /chapter-6/.test(h.e.url) && Math.abs(h.hgt - h.hgt2) < 1, JSON.stringify(h));
+
+  // the run intro card: chapter, twist, difficulty and Blood Moon, in the top third, no input, then gone; banners keep their slot
+  const ri = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms)), out = {};
+    for (let c = 1; c <= 5; c++) p.chapter.best[c] = { time: 420, cleared: true, kills: 0 };
+    p.diff.best[2] = { nightmare: { time: 420, legion: 0, kills: 0, cleared: true } }; p.flags.bloodMoon = 'on'; p.energy = 30;
+    app.startRun(2, { difficulty: 'nightmare' }); const r = app.run; app.engine.manual = true; r.player.hurt = () => {};
+    const el = q('.run-intro'), rc = el.getBoundingClientRect();
+    const pts = [[0.5, 0.2], [0.15, 0.5], [0.85, 0.5], [0.5, 0.85]].map(([fx, fy]) => document.elementFromPoint(rc.left + rc.width * fx, rc.top + rc.height * fy));
+    out.card = { ch: el.dataset.ch, name: q('.ri-name').textContent, tag: q('.ri-tag').textContent, kick: q('.ri-kick').textContent, pe: getComputedStyle(el).pointerEvents,
+      hits: pts.filter((n) => n && n.closest('.run-intro')).length, bottom: Math.round(rc.bottom), third: Math.round(innerHeight / 3), art: /chapter-2/.test(getComputedStyle(q('.ri-art')).backgroundImage), rf: el.classList.contains('rf') };
+    // no chapter banner at 0:00.6 any more; the Blood Moon banner still opens at 0:03.6
+    for (let i = 0; i < 30; i++) r.update(1 / 30);
+    out.at1 = q('.banner b')?.textContent || '';
+    for (let i = 0; i < 90; i++) r.update(1 / 30);
+    out.at4 = q('.banner b')?.textContent || '';
+    let gone = false; for (let i = 0; i < 80 && !gone; i++) { await wait(100); gone = !q('.run-intro'); }
+    out.gone = gone && !q('.hud').classList.contains('intro-on');
+    app.exitRun(); p.flags.bloodMoon = 'off';
+    // Endless names the first rotation's twist; Chapter 1 has its own line; Reduce flashes calms it; the Daily Trial keeps its banner
+    p.settings.reduceFlash = true; p.energy = 30; app.startRun(6);
+    out.endless = { name: q('.ri-name').textContent, tag: q('.ri-tag').textContent, kick: q('.ri-kick').textContent, rf: q('.run-intro').classList.contains('rf'), art: /chapter-6/.test(getComputedStyle(q('.ri-art')).backgroundImage) };
+    app.exitRun(); p.settings.reduceFlash = false; p.energy = 30; app.startRun(1);
+    out.ch1 = { tag: q('.ri-tag').textContent, pills: document.querySelectorAll('.ri-pill').length };
+    app.exitRun(); p.trial.done = false; app.startRun(0, { trial: true }); const tr = app.run; app.engine.manual = true; tr.player.hurt = () => {};
+    out.trial = { kick: q('.ri-kick').textContent };
+    for (let i = 0; i < 120; i++) tr.update(1 / 30);
+    out.trial.banner = q('.banner b')?.textContent || '';
+    app.exitRun(); app.engine.manual = false;
+    return out;
+  });
+  const K = ri.card;
+  check('run intro: names the chapter, its twist, Nightmare and Blood Moon over the painting, in the top third',
+    K.ch === '2' && K.name === 'Ember Wastes' && /fire lingers/.test(K.tag) && /Chapter II/.test(K.kick) && /Nightmare/.test(K.kick) && /Blood Moon/.test(K.kick) && K.art && !K.rf && K.bottom <= K.third, JSON.stringify(K));
+  check('run intro: takes no input (pointer-events off, taps fall through), then fades and goes; it replaces the chapter banner',
+    K.pe === 'none' && K.hits === 0 && ri.gone && ri.at1 === '' && ri.at4 === 'BLOOD MOON', JSON.stringify({ pe: K.pe, hits: K.hits, gone: ri.gone, at1: ri.at1, at4: ri.at4 }));
+  check('run intro: Endless (its first twist, chapter-6, Reduce flashes), Chapter 1 and the Daily Trial (its banner still opens at 0:03.6)',
+    ri.endless.name === 'Endless Abyss' && /^Ember Wastes: /.test(ri.endless.tag) && ri.endless.kick === 'Endless' && ri.endless.rf && ri.endless.art
+    && /Hollow King/.test(ri.ch1.tag) && ri.ch1.pills === 0 && /Daily Trial/.test(ri.trial.kick) && ri.trial.banner === 'DAILY TRIAL', JSON.stringify({ e: ri.endless, c: ri.ch1, t: ri.trial }));
+});
+check('bestiary and chapter art: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

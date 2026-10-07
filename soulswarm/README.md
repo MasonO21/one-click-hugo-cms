@@ -19,7 +19,7 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 
 ## What's in the game
 
-- **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded.
+- **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded. Every chapter has its own painted key art: it fills the chapter card on the home screen (cross-fading as you swipe) and opens each run on a cinematic intro card with the chapter's name, its twist and your difficulty.
 - **Nightmare and Torment:** clear a chapter on Normal to replay it on Nightmare, then clear Nightmare for Torment. Tougher, deadlier hordes, more elites with extra affixes and a darker world pay ×1.75 / ×2.5 gold, ×1.5 / ×2 pass XP, one-time first-clear gems and a richer Gravemaw's Hoard (Torment can drop a Legendary relic). Pick the difficulty on the chapter card; Endless and the Daily Trial stay Normal.
 - **5 heroes** with signature weapons (Vael, Nyx, Seraphine, Liora, Mordrake), plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
 - **Hero Rites:** each hero has a signature active ability on its own RITE button, ready from the first second of every run: Vael's **Grave Call** (every kill rises), Nyx's **Shadow Step** (an untouchable dash that cuts through the horde), Seraphine's **Ashfall** (burning chains fall on 20 foes), Liora's **Death Knell** (a bell toll that stuns and marks) and Mordrake's **Ossuary Wall** (a ring of bone spikes).
@@ -28,12 +28,13 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 - **A living horde:** Ghoul packs lunge, Brutes slam, Witches lob fire. Each chapter has its own twist: burning ground, sliding ice, abyssal hands, an elite parade.
 - **Elite affixes:** every elite rolls one affix, or two from Chapter 4 and in Endless. **Warded** elites carry a soul ward that shatters, **Splitters** burst into copies, **Vampiric** elites feed on nearby deaths, **Hasted** elites trail embers, and **Commanders** drive the horde around them until their death routs it. Affixed elites still drop their Relic Chest, plus bonus gold.
 - **Mid-run events:** about three per run, all optional, with an edge arrow while they're off screen. Chase down a **Soul Thief** for gold and XP before it escapes. Hold a **Shrine of Souls** for a 60-second blessing. Break a **Cursed Coffin** to unleash a horde and survive it for a Relic Chest.
+- **The Bestiary:** a painted entry for every foe (Husk, Ghoul, Brute, Cinder Witch, Bloater, the Soul Thief and Gravemaw) on the Heroes screen, with its lore, how it fights and your kill count. Entries stay dark silhouettes until your first kill. Each has three milestones (100 / 1,000 / 10,000 kills; 1 / 10 / 50 for the Soul Thief and Gravemaw) that pay 2,000 gold, an Altar Sigil and 50 gems.
 - **Meta progression:** talents, relics (8 types × 4 rarities), hero stars, the Soul Altar gacha (odds and pity shown in-game), a 30-tier Soul Pass, rotating daily quests, the **Daily Trial** (a free daily run with a boon and a bane), **Blood Moon** weekends (double rewards, more elites), a weekly chest, a 7-day login calendar, energy, and a shop with simulated IAP and rewarded ads.
 
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy, bug-test regressions (194 checks)
+npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy, bug-test regressions, the Bestiary and chapter art (216 checks)
 node scripts/ui-sweep.mjs http://localhost:5173/   # menus sweep: every screen × 5 phones × 3 profiles (layout audit + screenshots), tap fuzzing, economy and gacha fuzzing, broken saves, lifecycle
 npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server; DIFF=nightmare|torment, PROG=5, GOD=1, RITE=0)
 node scripts/soak.mjs http://localhost:5173/ 60 1   # seeded soak/fuzz: whole runs with chaos inputs and invariant checks (RUN=n replays one; LEAK=30, PERF=1)
@@ -71,7 +72,7 @@ See `docs/PRODUCTION_ROADMAP.md` for the full checklist, team plan and budget.
 | `src/game/data.js` | **All tunable content and numbers**: heroes, enemies, skills, chapters, relics, talents, shop, pass, quests |
 | `src/game/run.js` | One run: director (waves, gates, elites, boss), XP, Soul Nova, death/revive, camera |
 | `src/game/*.js` | Enemies, legion, weapons, projectiles, pickups, gates, boss, world, effects |
-| `src/meta/` | Save, economy rules (gacha, pass, quests, rewards), store adapter |
+| `src/meta/` | Save, economy rules (gacha, pass, quests, rewards, Bestiary), store adapter |
 | `src/ui/` | Design system (`style.css`), HUD and run modals (`runui.js`), menus (`meta/`) |
 | `src/audio/audio.js` | Procedural Web Audio SFX and music, plus the voice-line player (priorities, cooldowns, ducking) |
 | `src/assets/voice/` | 32 recorded announcer and hero lines (Higgsfield; `scripts/voice-master.sh`) |

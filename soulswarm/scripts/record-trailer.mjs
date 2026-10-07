@@ -37,7 +37,7 @@ window.__trailer = (() => {
   r.time = 170; r.level = 16; r.xp = Math.floor(r.xpNeed * 0.6); r.recomputeStats();
   app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
   const style = document.createElement('style');
-  style.textContent = '.hint,.banner{display:none!important}' +
+  style.textContent = '.hint,.banner,.run-intro{display:none!important}.hud.intro-on .legion{opacity:1!important}' +
     '.ad-cap{position:absolute;left:0;right:0;top:29%;z-index:20;text-align:center;font-family:Cinzel,serif;font-weight:900;color:#fff;font-size:30px;line-height:1.1;letter-spacing:.04em;padding:0 18px;text-shadow:0 0 18px rgba(78,242,255,.9),0 3px 0 #00303a;pointer-events:none;transition:opacity .25s}' +
     '.ad-cap em{font-style:normal;color:#ffcf4a;text-shadow:0 0 18px rgba(255,207,74,.9),0 3px 0 #4a2a00}' +
     '.ad-end{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(70% 50% at 50% 45%,rgba(10,40,55,.85),rgba(2,3,8,.96));opacity:0;transition:opacity .4s}' +

@@ -291,6 +291,7 @@ function pageHelpers() {
     mid.quests.ids = eco.pickQuests(mid, today);
     mid.quests.progress = { kills: 640, raised: 80, survive: 251, novas: 3, gates: 5, runs: 1, chests: 1, elites: 2, peak: 120 };
     eco.weeklyState(mid); mid.weekly.done = 12;
+    mid.bestiary = { kills: { husk: 3400, ghoul: 1200, brute: 380, witch: 260, bloater: 0, thief: 2, gravemaw: 6 }, claimed: { husk: 2, ghoul: 1, brute: 1, witch: 0, bloater: 0, thief: 1, gravemaw: 0 } };
 
     const late = save.newProfile();
     Object.assign(late, { level: 87, xp: 3020, gold: 12345678, gems: 98765, sigils: 250, energy: 99, selectedHero: 'vael', equippedSkin: 'eclipse_vael', skins: { eclipse_vael: true }, name: 'Shepherd' });
@@ -316,6 +317,7 @@ function pageHelpers() {
     late.quests.ids = eco.pickQuests(late, today);
     late.quests.progress = { kills: 9999, raised: 999, survive: 600, novas: 30, gates: 30, runs: 9, chests: 20, elites: 30, peak: 400, evolve: 3, bosses: 4, trial: 1, hardClears: 2, hardElites: 20 };
     eco.weeklyState(late); late.weekly.done = 25;
+    late.bestiary = { kills: { husk: 2345678, ghoul: 812345, brute: 123456, witch: 98765, bloater: 76543, thief: 412, gravemaw: 688 }, claimed: { husk: 3, ghoul: 3, brute: 3, witch: 2, bloater: 1, thief: 3, gravemaw: 2 } };
     for (const x of [fresh, mid, late]) x.settings.quality = 'low'; // cheaper frames under software WebGL; the menus look the same
     return { fresh, mid, late };
   };
@@ -360,6 +362,12 @@ function pageHelpers() {
     'relics-bottom': { states: ['late'], go: () => { nav('heroes'); click('[data-sub="relics"]'); scrollPane('.pane-heroes .sub-scroll', 'end'); } },
     'relic-detail': { go: () => { nav('heroes'); click('[data-sub="relics"]'); click(q('.relic-grid .relic:not(.is-eq)') || q('.relic-grid .relic')); } },
     'talents': { go: () => { nav('heroes'); click('[data-sub="talents"]'); } },
+    'bestiary': { go: () => { nav('heroes'); click('[data-sub="bestiary"]'); } },
+    'bestiary-bottom': { go: () => { nav('heroes'); click('[data-sub="bestiary"]'); scrollPane('.pane-heroes .sub-scroll', 'end'); } },
+    'bestiary-entry': { go: () => { nav('heroes'); click('[data-sub="bestiary"]'); click('.bcard[data-id="ghoul"]'); } },
+    'bestiary-locked': { states: ['fresh', 'mid'], go: () => { nav('heroes'); click('[data-sub="bestiary"]'); click('.bcard[data-id="bloater"]'); } },
+    'bestiary-boss': { go: () => { nav('heroes'); click('[data-sub="bestiary"]'); click('.bcard[data-id="gravemaw"]'); } },
+    'bestiary-claim': { states: ['mid', 'late'], wait: 300, go: async () => { nav('heroes'); click('[data-sub="bestiary"]'); click('.bcard.is-ready'); await sleep(60); click('.mm-foe [data-tier]'); } },
     'altar': { go: () => nav('altar') },
     'altar-odds': { go: () => { nav('altar'); click('[data-act="odds"]'); } },
     'altar-x1': { wait: 3600, go: () => { nav('altar'); click('[data-act="s1"]'); } },
@@ -383,6 +391,11 @@ function pageHelpers() {
     'run-hud': { go: () => run(1, { difficulty: 'normal' }) },
     'run-hud-hard': { states: ['late'], go: () => run(5, { difficulty: 'torment' }) },
     'run-hud-lefty': { states: ['mid'], go: () => { p().settings.lefty = true; app().applySettings(); return run(2); } },
+    // the run intro card held at its midpoint (its fade would otherwise finish before the audit)
+    'run-intro': { go: async () => { const lr = p().chapter.unlocked; await run(Math.min(4, lr), { difficulty: lr > 4 ? 'torment' : 'normal' }, 300);
+      for (const an of document.getAnimations()) if (an.effect && an.effect.target && an.effect.target.closest && an.effect.target.closest('.run-intro')) { an.pause(); an.currentTime = 1300; } } },
+    'run-intro-endless': { states: ['late'], go: async () => { await run(6, {}, 300);
+      for (const an of document.getAnimations()) if (an.effect && an.effect.target && an.effect.target.closest && an.effect.target.closest('.run-intro')) { an.pause(); an.currentTime = 1300; } } },
     'run-pause': { go: async () => { const r = await run(); r.pause(true); } },
     'run-levelup': { go: async () => { const r = await run(); r.levelQueue = 1; r.showLevelUp(); } },
     'run-chest': { go: async () => { const r = await run(); r.chestQueue = 1; r.showLevelUp(); } },

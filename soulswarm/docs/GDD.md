@@ -14,8 +14,8 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), five first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
-| Content | 5 chapters plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents | Endless leaderboards, new heroes (`LIVEOPS.md`) |
-| Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Content | 5 chapters plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, new heroes (`LIVEOPS.md`) |
+| Meta and economy | **The Bestiary** (§5.2: 7 painted entries, kills per foe, 21 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
 Everything below describes the build unless it is marked **Planned**.
@@ -46,7 +46,7 @@ Everything below describes the build unless it is marked **Planned**.
 |---|---|---|---|---|
 | Moment-to-moment | 1–10 s | Survive, kill, collect | Floating joystick, auto-attack, raises, pickups | Soul shards (XP), new minions |
 | Run | 6–9 min | Clear the chapter (survive 6:00, kill Gravemaw) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
-| Meta | Days to months | Get strong enough for the next chapter, then for Nightmare and Torment | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Nightmare and Torment clears (§8.2), Endless Abyss depth record |
+| Meta | Days to months | Get strong enough for the next chapter, then for Nightmare and Torment | Talents, relics, heroes and stars, Soul Altar, the Bestiary (§5.2) | Power, new chapters, Nightmare and Torment clears (§8.2), Endless Abyss depth record |
 | Daily | 15–40 min/day | Finish quests, spend energy, beat the Daily Trial | 6 daily quests, 7-day login calendar, the Daily Trial (§8.1), rewarded ads, energy | Gems, gold, sigils, pass XP |
 | Weekly | 7 days | Farm Blood Moon, fill the weekly chest (Planned: climb the leaderboard) | Blood Moon weekend, weekly quest chest (Planned: Endless Abyss weekly board) | Sigils, gems (Planned: league rewards) |
 | Seasonal | 28 days | Finish the Soul Pass, collect the new hero | Soul Pass (30 tiers); Planned: monthly Boss Rush, new hero every 1–2 seasons | Skins, Epic/Legendary relics, hero shards |
@@ -260,7 +260,7 @@ Optional side objectives that add a decision between the scripted beats. Numbers
 - **Spacing:** never within 8 s of a gate pair or an elite, 5 s of a swarm ring, or 40 s of Gravemaw's arrival, and never during his fight. If Gravemaw arrives anyway, the event lapses quietly (a pending coffin reward pays out at once). A first run gets none before 2:30.
 - **Placement:** 12 m from the Shepherd, ahead of him when possible. The spot must be at least 2.6 m clear of ember vents, ice patches, burning ground, a pending abyssal grab and a standing gate pair. With no clear spot, it retries 2 s later.
 - **Presentation:** a banner announces each event. While it is off screen, an arrow on the screen edge (kept clear of the HUD) points at it, with its distance. Each event is optional: ignored, it lapses.
-- **Counters:** `counters.events` counts events completed (thief slain, blessing taken, coffin cleared), and the run result carries it as `events`.
+- **Counters:** `counters.events` counts events completed (thief slain, blessing taken, coffin cleared), and the run result carries it as `events`. A slain Soul Thief also counts in the Bestiary (`counters.byType.thief`, §5.2).
 
 | Event | What happens | Reward | If ignored |
 |---|---|---|---|
@@ -313,6 +313,32 @@ Numbers live in `AFFIXES` (`data.js`), the logic in `affixes.js`.
 | Affixes and events | 271 s | 284 s | 289 s |
 
 Runs spread by about ±60 s (standard error about 15 s). The one drop is Ch5 with affixes only: 8 elites with 2 affixes each cost 5%. That is inside the noise and well inside the 10% budget for affixes. The bot never seeks out events, so events show up here only when it stumbles on one.
+
+### 5.2 The Bestiary
+
+A collection screen that turns the horde into long-term goals with painted rewards: the **BESTIARY** sub-tab of the Heroes screen, beside Heroes, Relics and Talents. Numbers live in `BESTIARY` (`data.js`), the rules in `src/meta/bestiary.js` (claims in `economy.claimBestiary`), the screen in `src/ui/meta/bestiary.js`.
+
+- **Entries:** Husk, Ghoul, Brute, Cinder Witch, Bloater, the Soul Thief (§4.8) and Gravemaw (a wide card across the row). Each has its painting (3:4, `src/assets/art/foe-*.webp`), its name and role, a line of lore, a "How it fights" line and its kill count. A summary panel counts entries discovered, milestones claimed and foes slain.
+- **Locked:** until its first kill an entry shows a dark, cold silhouette of its painting under a "?", named "???" and "Undiscovered". Its milestones are already listed, so the goal is visible.
+- **What counts:** every kill of a type, whoever lands it (the Shepherd, the legion, the Nova, gate bursts, Bloater blasts). Gilded elites count as their base type, and so do Splitter copies, gate guards, coffin waves and Gravemaw's arena adds. A slain Soul Thief counts as a Soul Thief; a broken Cursed Coffin never counts. Gravemaw counts once per campaign victory (also when the legion fells him while the Shepherd is down) and once per Endless kill. Daily Trial runs count too.
+- **How it is tracked:** the run keeps `run.counters.byType` (one integer increment per kill, no allocation; the Soul Thief in `events.js`, Gravemaw in `Run.onBossKilled`). The run result carries a copy as `byType`, and `applyRunResult` adds it to `profile.bestiary.kills`, ignoring unknown ids and junk values.
+- **Milestones:** three per entry, claimed in order with a button on the entry's sheet, each once. The Heroes tab, the BESTIARY sub-tab and the card show a red dot while one waits.
+
+| Milestone | I | II | III |
+|---|---|---|---|
+| Husk, Ghoul, Brute, Cinder Witch, Bloater | 100 kills | 1,000 | 10,000 |
+| Soul Thief, Gravemaw | 1 | 10 | 50 |
+| Reward | 2,000 gold | 1 Altar Sigil | 50 gems |
+
+All 21 milestones pay 14,000 gold, 7 sigils and 350 gems, once per account (budget check in `MONETIZATION.md` §2.6).
+
+- **Pacing:** a bot's Chapter 1 clear (2,511 kills) slew 1,335 Husks, 526 Ghouls, 252 Brutes, 207 Cinder Witches and 191 Bloaters (53 / 21 / 10 / 8 / 8%). Later chapters spawn more and tilt the mix (Ember Wastes ×1.8 Witches, Abyssal Cathedral ×2 Bloaters, Crimson Throne ×1.6 Brutes). For a daily player (about 3 runs, ~1,800 kills a run):
+  - for the five horde foes, tier I lands in the first run or two (Witches and Bloaters join the horde at 2:00, Brutes at 3:00) and tier II within one to three days;
+  - tier III takes about 4 days for Husks, about 10 for Ghouls and 3–4 weeks for Brutes, Witches and Bloaters;
+  - about one Soul Thief shows up per run (one event in three), so if most are caught its 50 take about a month; Gravemaw's 50 are 50 clears.
+  The last gems therefore arrive about a month in, and the Bestiary keeps paying out across the first season instead of in one day.
+- **Old saves:** the block is added with zeros. Gravemaw starts at the save's clear count, since every clear slew him, so a veteran opens the Bestiary with the Hollow King unlocked and his first milestones waiting. Wrong types and out-of-range values are coerced (`save.js`).
+- **Quests:** no Bestiary line joins the daily or weekly pool. "Slay 500 enemies" already rewards the same play, and a per-type quest ("Slay 50 Bloaters") would push players to farm one foe instead of playing the run.
 
 ---
 
@@ -479,7 +505,16 @@ Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s,
 | 5 | Crimson Throne | Blood red | 7.50 | 1.60 | **8 elites** (45, 75, 110, 150, 185, 225, 255, 290 s); Brute weight ×1.6 | ~110 |
 | ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
 
-Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with a banner naming the chapter and its twist. Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N (on Normal). Endless Abyss unlocks after the first Chapter 5 clear. Every campaign chapter can then be replayed on **Nightmare** and **Torment** (§8.2).
+Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with the intro card naming the chapter and its twist (below). Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N (on Normal). Endless Abyss unlocks after the first Chapter 5 clear. Every campaign chapter can then be replayed on **Nightmare** and **Torment** (§8.2).
+
+**Chapter art.** Each chapter has a painted 16:9 key art (`src/assets/art/chapter-N.webp`; Endless Abyss is chapter 6; style and jobs in `ART_AND_ADS.md`).
+- **Home chapter card:** the selected chapter's painting fills the card behind its content. Gradients darken the edges (behind the arrows), the centre (behind the name) and the bottom (behind the difficulty selector), with the chapter's rune colour glowing at the top, so the name, record line, selector and arrows stay readable. A new chapter's painting fades in over the last one in 0.45 s, and the neighbouring paintings are decoded ahead of a swipe. A locked chapter's painting is greyed. The card keeps its size and layout on every phone; the layers are absolutely positioned behind the content.
+- **Run intro card** (`src/ui/runintro.js`), replacing the old chapter banner at 0:00.6:
+  - **What it shows:** for about 2.4 s, the chapter's painting as a wide strip feathered at the edges, the chapter number (or "Endless", or "Daily Trial · Chapter N"), the chapter name in Cinzel under a glowing rule, and its twist (the modifier tagline; Chapter 1: "Survive 6:00, then slay the Hollow King"; Endless: the first rotation's twist, e.g. "Ember Wastes: The witches' fire lingers"). Nightmare or Torment and Blood Moon show as tags beside the chapter number.
+  - **Where:** in the top third, just under the timer (100 px from the top, 100–130 px tall), well clear of the Shepherd at screen centre. The legion counter, still 0, steps aside while it shows.
+  - **Input and timing:** it takes no input (pointer-events off, so the joystick starts anywhere, on it too). It fades in over 0.35 s and out over 0.4 s, and goes when its own fade ends, so a first-frame hitch never cuts it short. The Daily Trial, Blood Moon and Nightmare / Torment banners still open at 0:03.6, after it has gone. Endless depth changes keep their "THE ABYSS SHIFTS" banner.
+  - **Reduce flashes** (§17) drops its light flare and the glow on the rule.
+- **Results:** a faint strip of the chapter's painting sits behind the VICTORY / DEFEAT header.
 
 **Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
 
@@ -554,7 +589,7 @@ Every campaign chapter can be replayed on two harder difficulties for long-term 
   - **HP ramp:** the extra HP builds up from ×1 at 0:00 to its full value over the ramp. Damage, spawns and elites apply at once. With a flat ×3.5–4.5, Chapter 5 Torment Husks had ~470 HP at 0:00, and the bot died at level 2 with ~100 kills: a wall, not a challenge.
   - **Richer souls:** shard XP is multiplied. A tougher horde dies more slowly, and without this the Shepherd met Gravemaw ~10 levels behind a Normal run.
   - **Gravemaw scales less than the horde, and once he rises his arena adds are plain Normal adds (HP and damage).** Tough adds piled up at the arena's alive cap and soaked the Shepherd's weapons, and harder hits (his and theirs) shredded the legion that fights him, stretching Nightmare fights past 8 minutes. He alone carries the difficulty in his arena. The target is a fight no more than about 1.6× its Normal length.
-- **Look and feedback:** the ground, runes, rim light and fog are pulled toward the difficulty's palette, the same swap as the Blood Moon look and applied over it on Blood Moon weekends. Allies and enemies keep their colours (§14). The HUD shows a NIGHTMARE or TORMENT tag under the chapter name. A banner at 0:03.6 names the difficulty (the Blood Moon banner names it instead on weekends). The pause and results screens show a difficulty pill with its gold multiplier.
+- **Look and feedback:** the ground, runes, rim light and fog are pulled toward the difficulty's palette, the same swap as the Blood Moon look and applied over it on Blood Moon weekends. Allies and enemies keep their colours (§14). The HUD shows a NIGHTMARE or TORMENT tag under the chapter name. The run intro card tags it, and a banner at 0:03.6 names it (the Blood Moon banner names it instead on weekends). The pause and results screens show a difficulty pill with its gold multiplier.
 - **Records:** best time, best legion, best kills, best kill streak (§4.7) and a cleared flag are kept per chapter per difficulty (`profile.diff.best`). Normal's clear flag stays in the chapter record. Old saves migrate safely: the block is added, Normal records are seeded from the chapter records, and Nightmare opens on every chapter already cleared.
 - **Quests:** "Clear a chapter on Nightmare" and "Slay 5 elites on Nightmare" join the late daily-quest pool (Torment counts for both, §2).
 
@@ -752,7 +787,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 - **Readability:** strong silhouettes, an emissive core on every unit, additive particles, screen shake (scalable), 65–90 ms hit-stop on elite kills, Gravemaw's phase changes, ×2/×3 gates and the Nova blast (§4.7). Enemy telegraphs are ground decals that fill from the edge inward.
 - **Minions:** Shades are instanced soul wisps with particle trails. Every other variant is a **spectral ghost of its source enemy's silhouette** in the legion colour: an opaque emissive body with a hot rim, a ripple running up the body and a tail that dissolves into the ground, plus a halo glow sprite and a trail (one instanced mesh per variant). Champions add a gold rim, eyes and halo. *(Planned: at 300+ minions, trails switch to a shared ribbon per ring for performance.)*
-- **UI:** obsidian panels with cyan rune trim. Premium currency and offers use gold. Display font is a gothic serif (e.g. Cinzel); body font is a clean sans (e.g. Inter). Numbers on gates and legion count are huge and outlined.
+- **UI:** obsidian panels with cyan rune trim. Premium currency and offers use gold. Display font is a gothic serif (e.g. Cinzel); body font is a clean sans (e.g. Inter). Numbers on gates and legion count are huge and outlined. Painted art (heroes, chapters, Bestiary foes, the Hollow King) carries the menus; chapter paintings sit behind the chapter card, the run intro card and the results header, always darkened behind text (§8, §5.2). Every item the player collects or picks is painted too, in one shared style (an object glowing on a dark ground that fades into its frame): the 8 relics, the 20 abilities (6 weapons, 8 passives, 6 evolutions, also used by the talents with the same stat), the 6 gem packs and the Eclipse Vael skin. The HUD's 30 px skill slots keep line icons, which read better at that size (`ART_AND_ADS.md` §1).
 
 ## 15. Audio direction
 
@@ -828,7 +863,7 @@ The scripted beats below are **Planned**. Times are session times from app open 
 
 ## 17. Accessibility
 
-*Status: the build has music, SFX and voice volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%, which also scales hit-stop; 0% turns it off), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA and RITE buttons and the skill bar. Rite effects respect Reduce flashes and the shake slider, and their haptics follow the haptics toggle. Everything else in this table is Planned.*
+*Status: the build has music, SFX and voice volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%, which also scales hit-stop; 0% turns it off), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA and RITE buttons and the skill bar. Rite effects respect Reduce flashes and the shake slider, and their haptics follow the haptics toggle. Reduce flashes also drops the run intro card's light flare (§8). Everything else in this table is Planned.*
 
 | Area | Feature |
 |---|---|

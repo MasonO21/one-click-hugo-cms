@@ -2,6 +2,8 @@
 // so every access is guarded and the game still runs from in-memory state.
 import { HERO_ORDER, HEROES, HERO_MAX_STARS, ENERGY_MAX, STARTER_PACK_HOURS, RELICS, RARITIES, RELIC_SLOTS, TALENTS, CHAPTERS } from '../game/data.js';
 import { migrateDifficulty } from './difficulty.js';
+import { BESTIARY } from '../game/data.js';
+import { bestiaryGoals } from './bestiary.js';
 import { now as clockNow, today, dateKey, snapshot, restore } from './clock.js';
 
 const KEY = 'soulswarm.save.v1';
@@ -42,6 +44,7 @@ export function newProfile() {
     trial: { day: null, done: false, ads: 0, clears: 0 },
     weekly: { week: null, done: 0, claimed: false },
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0, bestStreak: 0 },
+    bestiary: { kills: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])), claimed: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])) }, // meta/bestiary.js
     settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
     flags: { tutorialDone: false, hints: {} },
     freeChestDate: null,
@@ -82,6 +85,8 @@ function migrate(p) {
   out.relicSeq = Math.max(int(out.relicSeq, 1, 1), ...out.relics.map((r) => (parseInt(String(r.uid).slice(1), 10) || 0) + 1)); // new relics never reuse an id
   out.chapter.unlocked = int(out.chapter.unlocked, 1, 1, CHAPTERS.length); out.chapter.selected = int(out.chapter.selected, 1, 1, CHAPTERS.length);
   migrateDifficulty(out);
+  for (const id of BESTIARY.order) { const b = out.bestiary; b.kills[id] = int(b.kills[id], 0); b.claimed[id] = int(b.claimed[id], 0, 0, bestiaryGoals(id).length); }
+  if (!(p && p.bestiary)) out.bestiary.kills.gravemaw = int(out.stats.clears, 0); // saves from before the Bestiary: every clear slew Gravemaw
   return out;
 }
 

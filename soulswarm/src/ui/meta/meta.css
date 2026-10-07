@@ -236,6 +236,23 @@
 .chap-best { white-space: nowrap; }
 .chap-lock { display: inline-flex; align-items: center; gap: 5px; color: #ffb3bf; }
 .chap.is-locked .chap-name { color: #8d98ad; text-shadow: none; }
+/* the chapter's painting fills the card behind its content (home.js), darkened so the name, record, selector and arrows read;
+   a new chapter fades in over the last one */
+.chap { isolation: isolate; }
+.chap-art { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: 50% 42% / cover no-repeat; }
+.chap-art::after { content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(70% 120% at 50% 0%, color-mix(in srgb, var(--cc) 22%, transparent), transparent 70%),
+    radial-gradient(46% 58% at 50% 36%, rgba(4,6,14,.55), transparent),
+    linear-gradient(90deg, rgba(5,8,16,.7), transparent 18%, transparent 82%, rgba(5,8,16,.7)),
+    linear-gradient(180deg, rgba(5,8,16,.3), rgba(5,8,16,.28) 40%, rgba(5,8,16,.82)); }
+.chap-art-in { animation: m-chapArt .45s ease both; }
+@keyframes m-chapArt { from { opacity: 0; } }
+.chap.is-locked .chap-art { filter: grayscale(.8) brightness(.6); }
+.chap-name, .chap-status { text-shadow: 0 1px 3px #000, 0 0 10px rgba(0,0,0,.85); }
+.chap-name { text-shadow: 0 0 14px color-mix(in srgb, var(--cc) 75%, transparent), 0 2px 3px #000, 0 0 12px rgba(0,0,0,.8); }
+.chap-no { text-shadow: 0 1px 2px #000, 0 0 8px #000; }
+.chap.is-locked .chap-name { text-shadow: 0 2px 3px #000; }
 .chap.slide-l .chap-body { animation: m-chapL .3s cubic-bezier(.2,.8,.2,1); }
 .chap.slide-r .chap-body { animation: m-chapR .3s cubic-bezier(.2,.8,.2,1); }
 @keyframes m-chapL { from { opacity: 0; transform: translateX(30px); } }
