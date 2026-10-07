@@ -29,11 +29,17 @@ if (stage === 'build') {
   await page.evaluate(() => { const a = window.game.state.resources.amounts; a.wood = Math.max(a.wood, 120); a.stone = Math.max(a.stone, 60); });
   await tap(page, '#btn-build', { after: 1500 });
   await save(page, 'build-menu');
-  await tap(page, '[data-build="logging_camp"]', { after: 1500 });
-  const spot = await page.evaluate(() => { const p = window.game.state.player; return { x: p.x - 4, z: p.z - 6 }; });
+  await tap(page, '[data-build="logging_camp"]', { after: 2500 });
+  await save(page, 'build-ghost-initial');
+  console.log(await page.evaluate(() => JSON.stringify({ v: window.game.view.build.valid, r: window.game.view.build.reason, cam: window.game.view.camera.mode })));
+  const spot = await page.evaluate(() => { const c = window.game.sys.buildings.colonyCenter(); return { x: c.x - 7, z: c.z + 9 }; });
   const sp = await w2s(page, spot.x, spot.z, 0);
   await tapXY(page, sp.x, sp.y, 2500);
   await save(page, 'build-ghost');
+  console.log(await page.evaluate(() => JSON.stringify({ v: window.game.view.build.valid, r: window.game.view.build.reason })));
+  await tap(page, '#btn-build-confirm', { after: 1500 });
+  await save(page, 'build-placed');
+  console.log(await page.evaluate(() => JSON.stringify({ mode: window.game.view.mode, cam: window.game.view.camera.mode })));
   await browser.close();
 }
 if (stage === 'colonist') {

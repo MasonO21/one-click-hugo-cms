@@ -83,7 +83,7 @@ describe('construction: placement rules', () => {
     expect(b.inColony(C + 9, C - 9)).toBe(false);
     const out = b.canPlace('wall', C + 13, C, 0, undefined, 0);
     expect(out.ok).toBe(false);
-    expect(out.reason).toBe('Outside colony — upgrade your colony tier to expand');
+    expect(out.reason).toBe('Outside the colony ring — build inside it (tier-ups make it bigger)');
     // a 2×2 shelter whose far column pokes outside
     expect(b.canPlace('shelter', C + 10, C, 0).ok).toBe(true);
     expect(b.canPlace('shelter', C + 11, C, 0).code).toBe('colony'); // (C+12, C+1) is 12.04 cells out

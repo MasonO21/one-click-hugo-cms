@@ -9,7 +9,7 @@ import type { UiCtx, BuildApi } from '../ctx';
 import type { BuildPointer } from '../input/InputController';
 import type { BuildingInstance } from '../../core/state';
 import type { BuildingDef, ResourceBag } from '../../data/schema';
-import { WORLD_CELLS, cellOf, rotatedSize } from '../../core/constants';
+import { CELL, WORLD_CELLS, cellOf, rotatedSize } from '../../core/constants';
 import { bagCovers, bagMissing } from '../../core/bag';
 import { clamp } from '../../core/math';
 import { footprintCells, missingText, pointInRect, rectFrom, rotateOffset, scaleBag, snapFootprint, sumBags, type Cell } from '../logic/build';
@@ -90,11 +90,36 @@ export class BuildController implements BuildApi {
     b.cost = {};
     b.valid = false;
     b.reason = null;
-    this.placeNearCenter();
+    if (!this.frameColony()) this.placeNearCenter();
     this.key = '';
     this.refresh();
     this.onChange();
   }
+
+  /**
+   * Started build mode while out in the wilds (e.g. right after the rescue): the screen centre is outside
+   * the colony ring, so every spot would be red. Swing the camera over the colony and start the ghost at
+   * its edge nearest to the player instead. Returns true when it did. Undone by exitBuild().
+   */
+  private frameColony(): boolean {
+    const { game } = this.ctx;
+    const p = game.state.player;
+    const bs = this.bs;
+    if (bs.inColony(cellOf(p.x), cellOf(p.z))) return false;
+    const c = bs.colonyCenter();
+    const cam = game.view.camera;
+    if (!this.framed) this.framed = { mode: cam.mode };
+    cam.mode = 'overview';
+    cam.tx = c.x;
+    cam.tz = c.z;
+    const d = Math.hypot(p.x - c.x, p.z - c.z) || 1;
+    const r = Math.max(3, game.state.colony.radius * 0.5) * CELL;
+    this.setCursorWorld(c.x + ((p.x - c.x) / d) * r, c.z + ((p.z - c.z) / d) * r);
+    return true;
+  }
+
+  /** Camera mode to restore when leaving a build mode that framed the colony. */
+  private framed: { mode: 'follow' | 'overview' } | null = null;
 
   startMove(id: number): void {
     const inst = this.bs.get(id);
@@ -166,6 +191,10 @@ export class BuildController implements BuildApi {
   private exitBuild(notify: boolean): void {
     const v = this.view;
     const b = v.build;
+    if (this.framed) {
+      v.camera.mode = this.framed.mode;
+      this.framed = null;
+    }
     if (v.mode === 'build') v.mode = 'play';
     v.showGrid = false;
     b.def = null;

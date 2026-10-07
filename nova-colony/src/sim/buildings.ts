@@ -1134,7 +1134,7 @@ export class BuildingSystem extends System {
     for (let cz = z; cz < z + h; cz++) {
       for (let cx = x; cx < x + w; cx++) {
         if (!inWorld(cx, cz)) return fail('world', 'Outside the world');
-        if (!this.inColony(cx, cz)) return fail('colony', 'Outside colony — upgrade your colony tier to expand');
+        if (!this.inColony(cx, cz)) return fail('colony', 'Outside the colony ring — build inside it (tier-ups make it bigger)');
       }
     }
     for (let cz = z; cz < z + h; cz++) {
