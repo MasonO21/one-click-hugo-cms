@@ -36,7 +36,7 @@ You emerge from your damaged escape pod with nothing but a basic tool, a small b
 
 - **Free-Form Building:** Drag-to-build on a touch-friendly grid. Automatic roofs over enclosed spaces, full refunds, move/rotate/copy buildings for free, and powerful mass-upgrade tools make construction fast and satisfying.
 
-- **150+ Buildings, 90 Research Nodes:** From humble farms and crafting tables to automated factories, drone hangars, laser turrets, and quantum storage, every building is data-driven and serves a purpose.
+- **150 Buildings, 90 Research Nodes:** From humble farms and crafting tables to automated factories, drone hangars, laser turrets, and quantum storage, every building is data-driven and serves a purpose.
 
 - **Colonists with Personality:** Recruit survivors with names, traits, and specialties. Farmers auto-harvest, engineers repair machinery, guards defend against invasions, scientists research new tech—and everyone's happiness matters.
 
@@ -92,7 +92,7 @@ base building,simulation,management,strategy,cozy,aliens,sci-fi,colonists,automa
 Welcome to Nova Colony!
 
 🚀 Crash-land on an alien planet and grow your colony from wood to titanium.
-🏗️  Build 150+ buildings, recruit colonists, and automate everything.
+🏗️  Build 150 buildings, recruit colonists, and automate everything.
 👽 Defend against periodic alien invasions (they're exciting but never punishing).
 🌍 Explore 8 beautiful biomes, each with unique resources and secrets.
 📱 Play offline—your colony produces while you're away.
@@ -165,7 +165,7 @@ Based on available screenshots in `docs/screenshots/`:
   - No banner ads, no interstitials, no forced ads.
   - Ads are gated behind player consent and are always optional.
 
-**Recommended Rating:** 4+ or 12+ (no graphic violence; fantasy alien combat only).
+**Recommended Rating:** 9+ — answer "Infrequent/Mild Cartoon or Fantasy Violence" (turrets and the player regularly defeat cartoon aliens; no blood, no gore).
 
 ---
 
@@ -385,7 +385,7 @@ Based on available screenshots in `docs/screenshots/`:
 - [ ] **Age Rating (IARC):**
   - Submitted questionnaire (required once, covers Apple/Google/Amazon/Windows Store).
   - Categories: Cartoon/Fantasy violence (alien combat), optional ads, optional IAP.
-  - Recommended rating: 4+ (iOS) / Everyone 10+ (Google) / PEGI 3/7.
+  - Recommended rating: 9+ (iOS) / Everyone 10+ (Google, IARC) / PEGI 7.
 
 - [ ] **AdMob Setup:**
   - [ ] **iOS:** Real app ID (ca-app-pub-…~…) in `ios/App/App/Info.plist` → `GADApplicationIdentifier`.
