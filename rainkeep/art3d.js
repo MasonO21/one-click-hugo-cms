@@ -1306,9 +1306,9 @@
       if (s < 0.8) return 0.325 + 0.02 * Math.sin(((s - 0.55) / 0.25) * Math.PI);
       return 0.325 - 0.12 * smooth(0.78, 1, s);
     }
-    // st: { t, dormant, pet (0..1), look (optional head direction) }
+    // st: { t, dormant, pet (0..1), roar (0..1, calling the rain), look (optional head direction) }
     pose(st) {
-      const t = st.t, dorm = !!st.dormant, pet = st.pet || 0, P = this.P;
+      const t = st.t, dorm = !!st.dormant, pet = st.pet || 0, roar = dorm ? 0 : st.roar || 0, P = this.P;
       const CE = 0.5, th0 = 0.55;
       const end = new V3(), tan = new V3();
       for (let i = 0; i <= SN; i++) {
@@ -1322,7 +1322,7 @@
         }
       }
       const i0 = Math.round(CE * SN);
-      const H = dorm ? new V3(0.55, 0.45, 1.35) : new V3(0.12 + Math.sin(t * 0.7) * 0.08, 2.75 + pet * 0.3, 0.55);
+      const H = dorm ? new V3(0.55, 0.45, 1.35) : new V3(0.12 + Math.sin(t * 0.7) * 0.08, 2.75 + pet * 0.3 + roar * 0.5, 0.55 - roar * 0.15);
       const c1 = end.clone().addScaledVector(tan, 0.9).add(new V3(0, dorm ? 0.2 : 1.1, 0));
       const c2 = dorm ? new V3(1.25, 0.55, 0.45) : new V3(0.75, 2.3, -0.25);
       for (let i = i0 + 1; i <= SN; i++) {
@@ -1376,7 +1376,7 @@
       }
       this.geo.attributes.position.needsUpdate = true; this.geo.attributes.normal.needsUpdate = true; this.geo.attributes.color.needsUpdate = true;
       // the back fin: scalloped rays, low on the tail, tallest on the neck where it becomes a mane
-      const fp = this.fpos, fnr = this.fnor, up = new V3(), sd = new V3(), b0 = new V3(), amp = this.finAmp;
+      const fp = this.fpos, fnr = this.fnor, up = new V3(), sd = new V3(), b0 = new V3(), amp = this.finAmp * (1 + roar * 0.3);
       for (let kf = 0; kf <= FM; kf++) {
         const s = 0.05 + (kf / FM) * 0.935, fi = s * SN, i = Math.min(SN - 1, Math.floor(fi)), f = fi - i;
         b0.copy(P[i]).lerp(P[i + 1], f);
@@ -1418,7 +1418,7 @@
       });
       // head: on the end of the spine, three-quarter to the viewer, the jaw breathing mist
       const hp = P[SN], ht = T[SN];
-      const look = st.look || new V3(0.95, -0.16 - pet * 0.1 + Math.sin(t * 0.6) * 0.04, 0.32 + Math.sin(t * 0.5) * 0.18);
+      const look = st.look || new V3(0.95, -0.16 - pet * 0.1 + roar * 0.95 + Math.sin(t * 0.6) * 0.04, 0.32 + Math.sin(t * 0.5) * 0.18);
       const fwd = new V3().copy(ht).lerp(dorm ? new V3(0.3, -0.35, 1) : look, 0.8).normalize();
       const xr = new V3().crossVectors(new V3(0, 1, 0), fwd).normalize(), yr = new V3().crossVectors(fwd, xr);
       m4.makeBasis(xr, yr, fwd);
@@ -1426,7 +1426,7 @@
       if (pet) this.head.rotateZ(Math.sin(t * 9) * 0.18 * pet);
       this.head.position.copy(hp).addScaledVector(fwd, 0.05).addScaledVector(yr, 0.04);
       this.head.scale.setScalar(1.5);
-      this.jaw.rotation.x = dorm ? 0 : 0.18 * Math.pow(Math.max(0, Math.sin(t * 0.8)), 8) + pet * 0.12;
+      this.jaw.rotation.x = dorm ? 0 : 0.18 * Math.pow(Math.max(0, Math.sin(t * 0.8)), 8) + pet * 0.12 + roar * 0.42;
       const blink = !dorm && (t % 4.7) < 0.13;
       const closed = dorm || blink || pet > 0.3;
       this.eyes.forEach((e) => { e.scale.y = closed ? 0.18 : 1; });

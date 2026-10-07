@@ -26,6 +26,7 @@
   // Layout
   // ======================================================================
   const K = DATA.keep;
+  let roarT = -1e9;
   const SPRING = new V3(K.spring.x, -1.0, K.spring.z); // the water surface in the basin
   const plotPos = {};
   for (const p of DATA.plots) { const l = K.plots[p.id]; plotPos[p.id] = new V3(l.x, l.y, l.z); }
@@ -175,6 +176,7 @@
     buildDecor();
     buildChannel();
     buildPool();
+    KH.on('rain', () => { roarT = performance.now(); }); // the wyrm rears up and roars as it calls the rain
     wyrm = new A.Wyrm();
     wyrm.group.position.set(SPRING.x, SPRING.y - 0.1, SPRING.z);
     scene.add(wyrm.group);
@@ -1463,8 +1465,8 @@
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);
     lighting(t, rdt);
     wyrm.set({ level: S.lv.wyrm, skin: S.skins.on, element: S.wyrm.element });
-    const petAge = UI.petT ? (performance.now() - UI.petT) / 1000 : 9;
-    wyrm.pose({ t, dormant: S.dormant, pet: petAge < 1.6 ? 1 - petAge / 1.6 : 0 });
+    const petAge = UI.petT ? (performance.now() - UI.petT) / 1000 : 9, roarAge = (performance.now() - roarT) / 1000;
+    wyrm.pose({ t, dormant: S.dormant, pet: petAge < 1.6 ? 1 - petAge / 1.6 : 0, roar: roarAge < 0.4 ? roarAge / 0.4 : Math.max(0, 1 - (roarAge - 0.4) / 2.2) });
     T3.water.position.y = SPRING.y - (S.dormant ? 0.12 : 0);
     // element aura and the Primordial rain cloud
     aura.visible = !!wyrm.elem && !S.dormant;
