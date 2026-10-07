@@ -14,7 +14,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), five first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
-| Content | 5 chapters plus Endless Abyss, 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents | Endless leaderboards, Nightmare and Torment difficulties, new heroes (`LIVEOPS.md`) |
+| Content | 5 chapters plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents | Endless leaderboards, new heroes (`LIVEOPS.md`) |
 | Meta and economy | Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
@@ -46,7 +46,7 @@ Everything below describes the build unless it is marked **Planned**.
 |---|---|---|---|---|
 | Moment-to-moment | 1–10 s | Survive, kill, collect | Floating joystick, auto-attack, raises, pickups | Soul shards (XP), new minions |
 | Run | 6–9 min | Clear the chapter (survive 6:00, kill Gravemaw) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
-| Meta | Days to months | Get strong enough for the next chapter | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Endless Abyss depth record |
+| Meta | Days to months | Get strong enough for the next chapter, then for Nightmare and Torment | Talents, relics, heroes and stars, Soul Altar | Power, new chapters, Nightmare and Torment clears (§8.2), Endless Abyss depth record |
 | Daily | 15–40 min/day | Finish quests, spend energy, beat the Daily Trial | 6 daily quests, 7-day login calendar, the Daily Trial (§8.1), rewarded ads, energy | Gems, gold, sigils, pass XP |
 | Weekly | 7 days | Farm Blood Moon, fill the weekly chest (Planned: climb the leaderboard) | Blood Moon weekend, weekly quest chest (Planned: Endless Abyss weekly board) | Sigils, gems (Planned: league rewards) |
 | Seasonal | 28 days | Finish the Soul Pass, collect the new hero | Soul Pass (30 tiers); Planned: monthly Boss Rush, new hero every 1–2 seasons | Skins, Epic/Legendary relics, hero shards |
@@ -55,7 +55,7 @@ Everything below describes the build unless it is marked **Planned**.
 
 **Run.** 0:00–6:00 survival with rising density, 9 Soul Gate pairs (0:28, then every 40 s), 6 swarm rings, 4 elites (1:15, 2:30, 3:45, 4:50) each with an affix (§5.1), about 3 optional mid-run events (§4.8) and roughly 21 level-ups (about Lv22, §9), then Gravemaw at 6:00. A full clear is 6:00 plus the boss fight. A failed run usually ends between 2:30 and 5:00.
 
-**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quests rotate: "Finish 2 runs" every day plus 5 drawn by date from a pool of 11: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Open 2 Relic Chests · Slay 3 elites · Lead a legion of 100, and after the first Chapter 1 clear also Evolve a weapon · Defeat Gravemaw · Clear the Daily Trial. Rewards belong to the 5 slots (in order: 20 gems · 1,500 gold · 15 gems · 1,200 gold · 1 sigil, each with pass XP), so the daily value never changes.
+**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quests rotate: "Finish 2 runs" every day plus 5 drawn by date from a pool of 13: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Open 2 Relic Chests · Slay 3 elites · Lead a legion of 100, and after the first Chapter 1 clear (which also opens Nightmare on Chapter 1) also Evolve a weapon · Defeat Gravemaw · Clear the Daily Trial · Clear a chapter on Nightmare · Slay 5 elites on Nightmare (Torment counts for both). Rewards belong to the 5 slots (in order: 20 gems · 1,500 gold · 15 gems · 1,200 gold · 1 sigil, each with pass XP), so the daily value never changes.
 
 | Daily quest reward | Gems | Gold | Sigils | Pass XP |
 |---|---|---|---|---|
@@ -70,9 +70,9 @@ Everything below describes the build unless it is marked **Planned**.
 
 **7-day login calendar** (does not reset if a day is missed; it pauses): D1 2,000 gold · D2 30 gems · D3 1 Altar Sigil · D4 5,000 gold · D5 50 gems · D6 2 Altar Sigils · D7 Legendary-chance relic chest (Epic 80% / Legendary 20%; showing these odds on the calendar is Planned) + 100 gems. One cycle = 7,000 gold, 180 gems, 3 sigils and 1 relic. The cycle then repeats.
 
-**Weekly.** **Blood Moon** runs every weekend (Fri 00:00 – Sun 23:59 UTC) in the campaign and Endless (not the Daily Trial): 8 elites per run instead of 4 (at 45, 75, 110, 150, 185, 225, 255, 290 s; Endless elites twice as often), so 8 Relic Chests, and **double run gold and gems** (pass XP unchanged, to protect Soul Pass pacing). The ground, runes and sky turn blood red, a "BLOOD MOON" banner opens each run, the home screen shows a ribbon with the time left, and the results screen a "Blood Moon ×2" badge. The **weekly quest chest** (claim 25 daily quests between Monday and Sunday, local time) gives 1 Altar Sigil, 50 gems and 100 pass XP; it sits at the top of the quests panel. *(Planned: Endless Abyss leaderboards reset Monday 00:00 UTC.)*
+**Weekly.** **Blood Moon** runs every weekend (Fri 00:00 – Sun 23:59 UTC) in the campaign and Endless (not the Daily Trial), on top of any difficulty (§8.2): 8 elites per run instead of 4 (at 45, 75, 110, 150, 185, 225, 255, 290 s; Endless elites twice as often), so 8 Relic Chests, and **double run gold and gems** (pass XP unchanged, to protect Soul Pass pacing). The ground, runes and sky turn blood red, a "BLOOD MOON" banner opens each run, the home screen shows a ribbon with the time left, and the results screen a "Blood Moon ×2" badge. The **weekly quest chest** (claim 25 daily quests between Monday and Sunday, local time) gives 1 Altar Sigil, 50 gems and 100 pass XP; it sits at the top of the quests panel. *(Planned: Endless Abyss leaderboards reset Monday 00:00 UTC.)*
 
-**Seasonal.** A Soul Pass season lasts 28 days with 30 tiers × 500 pass XP = 15,000 XP. Daily quests give 220 pass XP and a run gives about 80–210 (§10), so a player who does all quests and about 3 runs a day earns about 700 pass XP per day and reaches tier 30 in about 3 weeks. A casual player (quests plus 1 run a day) reaches roughly tier 15–20 by the end of the season.
+**Seasonal.** A Soul Pass season lasts 28 days with 30 tiers × 500 pass XP = 15,000 XP. Daily quests give 220 pass XP and a run gives about 80–210 (§10; ×1.5 on Nightmare, ×2 on Torment), so a player who does all quests and about 3 runs a day earns about 700 pass XP per day and reaches tier 30 in about 3 weeks (an endgame player on Torment in about 12 days). A casual player (quests plus 1 run a day) reaches roughly tier 15–20 by the end of the season.
 
 ---
 
@@ -316,7 +316,7 @@ Runs spread by about ±60 s (standard error about 15 s). The one drop is Ch5 wit
 
 A three-phase fight in a sealed arena. All numbers live in `BOSS` and `BOSS_PHASES` (`data.js`). Damage values are × his touch damage.
 
-**HP and damage.** HP = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × Endless scale. The tune factors (1, 0.8, 0.75, 1.15, 1.2) even the fight out at about a minute for a player with that chapter's typical progression. That gives **Ch1 12,500 · Ch2 19,950 · Ch3 33,000 · Ch4 82,656 · Ch5 135,000**; the first Endless King has 62,500. Damage = 22 × (1 + 0.3(c−1)) × √scale. Measured with typical progression (`scripts/balance.mjs`, `GOD=1`): Ch1 ≈ 54 s · Ch2 ≈ 51–60 s · Ch3 ≈ 70–76 s · Ch4 ≈ 64 s · Ch5 ≈ 68 s.
+**HP and damage.** HP = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × Endless scale × difficulty boss HP (§8.2). The tune factors (1, 0.8, 0.75, 1.15, 1.2) even the fight out at about a minute for a player with that chapter's typical progression. That gives **Ch1 12,500 · Ch2 19,950 · Ch3 33,000 · Ch4 82,656 · Ch5 135,000**; the first Endless King has 62,500. Damage = 22 × (1 + 0.3(c−1)) × √scale × difficulty boss damage (§8.2). Measured with typical progression (`scripts/balance.mjs`, `GOD=1`): Ch1 ≈ 54 s · Ch2 ≈ 51–60 s · Ch3 ≈ 70–76 s · Ch4 ≈ 64 s · Ch5 ≈ 68 s.
 
 **Rise and arena.**
 - **Rise:** 1.4 s, immune, with the boss bar white. He rises 11 m up-screen. His first attack comes 2.5 s after spawn.
@@ -475,14 +475,14 @@ Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s,
 | 5 | Crimson Throne | Blood red | 7.50 | 1.60 | **8 elites** (45, 75, 110, 150, 185, 225, 255, 290 s); Brute weight ×1.6 | ~110 |
 | ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
 
-Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with a banner naming the chapter and its twist. Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N. Endless Abyss unlocks after the first Chapter 5 clear.
+Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with a banner naming the chapter and its twist. Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N (on Normal). Endless Abyss unlocks after the first Chapter 5 clear. Every campaign chapter can then be replayed on **Nightmare** and **Torment** (§8.2).
 
 **Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
 
-- **Enemy HP** = BaseHP × chapter HP mult × (1 + 0.28m + 0.04m²)
-- **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)). Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84.
-- **Spawn rate (enemies/s)** = (1.1 + 0.85m + 0.22m²) × chapter spawn mult, with a limit of 200 / 280 / 340 enemies alive at once (low / mid / high quality tier). Swarm rings and elites come on top and are not scaled by chapter.
-- **Elite HP** = 6 × Enemy HP · **Boss HP** = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune (§6)
+- **Enemy HP** = BaseHP × chapter HP mult × (1 + 0.28m + 0.04m²) × difficulty HP (§8.2; 1 on Normal, ramping in from 1 over the first minutes, and 1 for Gravemaw's arena adds)
+- **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)) × difficulty damage (1 for Gravemaw's arena adds). Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84 (on Normal).
+- **Spawn rate (enemies/s)** = (1.1 + 0.85m + 0.22m²) × chapter spawn mult × difficulty spawn, with a limit of 200 / 280 / 340 enemies alive at once (low / mid / high quality tier). Swarm rings and elites come on top and are not scaled by chapter.
+- **Elite HP** = 6 × Enemy HP · **Boss HP** = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × difficulty boss HP (§6, §8.2)
 - **The Shepherd's side:** minion damage ×(1 + 0.45(c−1)), minion HP ×(1 + 0.4(c−1)) and Nova damage ×(1 + 0.45(c−1)).
 
 | Enemy HP multiplier | m=0 | m=1 | m=2 | m=3 | m=4 | m=5 | m=6 |
@@ -501,7 +501,7 @@ Chapters differ in palette, HP mult, spawn mult, the modifiers above and the cha
 
 These are upper bounds: when the alive limit is reached, the director skips spawns.
 
-**Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). Gravemaw returns every 5:00 with HP `12,500 × 4.0 × 1.25 × (1 + 0.6k)` (62,500 for the first, k = kills so far), and every return replays all three phases and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per Gravemaw plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
+**Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). Gravemaw returns every 5:00 with HP `12,500 × 4.0 × 1.25 × (1 + 0.6k)` (62,500 for the first, k = kills so far), and every return replays all three phases and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per Gravemaw plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. Endless is **Normal only**: it already escalates without end, so the chapter card hides the difficulty selector there (§8.2). *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
 
 ### 8.1 Daily Trial
 
@@ -510,6 +510,7 @@ One free run a day (no energy) that twists the core loop. It unlocks once Chapte
 - **Seeded by date.** The day's hash picks a chapter the player has cleared (1 to unlocked − 1, max 5), one **boon** and one **bane**. Everyone at the same progress sees the same trial; it resets at local midnight.
 - **One attempt a day,** plus one more through a rewarded ad (`trial_retry`). Starting the trial uses the attempt.
 - **Rewards:** the normal run gold and pass XP, plus on a clear **40 gems and +150 pass XP**; every 3rd clear also gives **1 Altar Sigil** (the panel counts down to it). A failed attempt pays 8 gems per full minute survived (max 40) instead of the normal run gems. Trials never change chapter records, unlocks or first-clear rewards.
+- **Always Normal difficulty.** The mutators are the trial's twist, so Nightmare and Torment (§8.2) never apply, whatever the chapter card is set to.
 - **Announced** in-run by a "DAILY TRIAL" banner at 0:03.6 naming both mutators; the pause screen lists them.
 
 | Boon | Effect | Bane | Effect |
@@ -520,6 +521,51 @@ One free run a day (no energy) that twists the core loop. It unlocks once Chapte
 | Gilded Gates | A gate pair every 25 s; bad gates become +N | Gilded Horrors | An elite every 40 s (8 per run, so 8 Relic Chests) |
 | Awakened | Signature weapon starts at Lv3 | Brittle Legion | Minions have half HP |
 | Legion Fury | Minions deal +60% damage | Restless Dead | Enemies move 30% faster |
+
+### 8.2 Nightmare and Torment
+
+Every campaign chapter can be replayed on two harder difficulties for long-term replayability. The tunables live in `DIFFICULTY` (`data.js`); the rules are in `src/meta/difficulty.js`. A run carries them as `run.diff`, which is always defined (Normal is the identity: every multiplier 1, no extra elites, no affixes).
+
+- **Unlocks, per chapter:** a Normal clear opens that chapter's Nightmare, and a Nightmare clear opens its Torment. Chapter unlocks, Endless Abyss and the Normal first-clear reward still come from Normal clears only.
+- **Normal only:** Endless Abyss (it already escalates without end) and the Daily Trial (its mutators are its twist). For those the selector is hidden, and a requested difficulty is ignored.
+- **Blood Moon stacks on top** of any difficulty: its 8 elites plus the difficulty's extra ones (10 on a Nightmare weekend), and ×2 gold and gems on top of the difficulty's gold.
+- **Energy:** 5 per run on every difficulty. A harder run is not a reason to spend more of the session pacer.
+- **Choosing:** the home screen's chapter card has a three-way selector (Normal · Nightmare · Torment) under the chapter name. Each button shows its gold multiplier, or a lock with "Beat Normal" / "Beat Nightmare" (a tap on a locked tier explains why). The choice is remembered per chapter (`profile.diff.sel`). BATTLE turns violet or crimson to match. The status line shows the chosen tier's record, or its first-clear bonus; on short phones (≤ 700 px tall) the selector compacts and takes the status line's place.
+
+| | Normal | Nightmare | Torment |
+|---|---|---|---|
+| Enemy HP (horde, elites, gate guards), reached after the ramp | ×1 | ×2.2, ramping in over 2 min | ×3.5, ramping in over 2.5 min |
+| Enemy damage (horde and hazards) | ×1 | ×2 | ×2.8 |
+| Spawn rate (director; swarm rings unchanged) | ×1 | ×1.25 | ×1.4 |
+| Elites | 4 (8 in Ch5) | +2, at 3:10 and 5:20 | +4, also at 1:55 and 4:20 |
+| Affixes per elite (§5.1; `run.diff.eliteAffixes` is the extra) | 1 (2 from Ch4) | +1: 2 (3 from Ch4) | +2: 3 (4 from Ch4) |
+| Soul shard XP | ×1 | ×2 | ×2.8 |
+| Gravemaw HP · damage (his arena adds are plain Normal adds) | ×1 · ×1 | ×1.4 · ×1.4 | ×1.5 · ×1.6 |
+| Run gold · pass XP | ×1 · ×1 | ×1.75 · ×1.5 | ×2.5 · ×2 |
+| First clear (once per chapter) | 70–150 gems + 1 sigil | +60 gems | +120 gems |
+| Gravemaw's Hoard | §10 | Rare 60% / Epic 40% | Epic 98% / Legendary 2% |
+| World palette | the chapter's | mixed 70% toward violet | mixed 85% toward blood red on black |
+
+- **Three rules keep the harder tiers fair rather than grindy.** Each came from the balance bot:
+  - **HP ramp:** the extra HP builds up from ×1 at 0:00 to its full value over the ramp. Damage, spawns and elites apply at once. With a flat ×3.5–4.5, Chapter 5 Torment Husks had ~470 HP at 0:00, and the bot died at level 2 with ~100 kills: a wall, not a challenge.
+  - **Richer souls:** shard XP is multiplied. A tougher horde dies more slowly, and without this the Shepherd met Gravemaw ~10 levels behind a Normal run.
+  - **Gravemaw scales less than the horde, and once he rises his arena adds are plain Normal adds (HP and damage).** Tough adds piled up at the arena's alive cap and soaked the Shepherd's weapons, and harder hits (his and theirs) shredded the legion that fights him, stretching Nightmare fights past 8 minutes. He alone carries the difficulty in his arena. The target is a fight no more than about 1.6× its Normal length.
+- **Look and feedback:** the ground, runes, rim light and fog are pulled toward the difficulty's palette, the same swap as the Blood Moon look and applied over it on Blood Moon weekends. Allies and enemies keep their colours (§14). The HUD shows a NIGHTMARE or TORMENT tag under the chapter name. A banner at 0:03.6 names the difficulty (the Blood Moon banner names it instead on weekends). The pause and results screens show a difficulty pill with its gold multiplier.
+- **Records:** best time, best legion, best kills, best kill streak (§4.7) and a cleared flag are kept per chapter per difficulty (`profile.diff.best`). Normal's clear flag stays in the chapter record. Old saves migrate safely: the block is added, Normal records are seeded from the chapter records, and Nightmare opens on every chapter already cleared.
+- **Quests:** "Clear a chapter on Nightmare" and "Slay 5 elites on Nightmare" join the late daily-quest pool (Torment counts for both, §2).
+
+**Balance check (2026-10-07, `scripts/balance.mjs`).** The bot plays Vael on the build with kill streaks, elite affixes, run events and Rites (on, as players have them). Each row uses the bot's typical progression for that chapter. `PROG=5` plays Chapter 2 with Chapter 5's progression, because Nightmare players arrive stronger than that table assumes. The bot only flees and seldom clears, so mortal survival is the yardstick. Boss fights use `GOD=1` (no hit can kill). Rows are 5–18 runs each.
+
+| | Normal | Nightmare | Torment |
+|---|---|---|---|
+| Ch2 survival | 279 s | 180 s (65%) | 153 s (55%) |
+| Ch5 survival | 373 s (5 of 8 clear) | 205 s (55%) | 195 s (52%; median 165 s, 44%) |
+| Ch2 at Ch5 progression: survival · clears | 385 s · 6/6 | 367 s · 5/6 | 355 s · 5/6 |
+| Gravemaw fight (`GOD=1`), Ch2 · Ch5 | 33 s · 34 s | 31 s · 38 s (0.9× · 1.1×) | 67 s · 62 s (2.0× · 1.8×; Ch5 median 33 s) |
+| Gravemaw fight (`GOD=1`), Ch2 at Ch5 progression | 20 s | 17 s | 15 s |
+
+- **Survival clusters:** on Chapter 5 the bot's deaths bunch around the 2:30–3:10 elite wave (Ch5's own elites plus the 3:10 extra one) on both tiers. So Torment's extra edge shows in the median, in Chapter 2 and in its boss rather than in the Ch5 mean. More Torment damage (×3.2) did not move it and only slowed the build.
+- **Torment's Gravemaw** at chapter progression runs past the 1.6× target (about 2×), and fights are bimodal (a build that snowballs kills him as fast as on Normal). At Chapter 5 progression on Chapter 2 he falls as fast as on Normal. A Torment player is expected to arrive above the typical progression the bot can model.
 
 ---
 
@@ -538,9 +584,9 @@ A Chapter 1 clear produces about 2,000 kills at about 1 XP each, plus 132 XP fro
 
 ## 10. Run rewards
 
-**Gold** = round( (0.9 × K + 2.2 × T + 400 × c × B) × (1 + G) × P + bonus )
+**Gold** = round( (0.9 × K + 2.2 × T + 400 × c × B) × (1 + G) × P × D + bonus )
 
-K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if Gravemaw was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, bonus = 150 per "Grave Gold" card + 40 per affix on each slain elite (§5.1) + 100 + 40c per slain Soul Thief (§4.8). Blood Moon doubles the run's gold and gems, and the rewarded-ad "double rewards" then grants the (doubled) gold and gems a second time, so the two stack to ×4.
+K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if Gravemaw was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, D = the difficulty's gold multiplier (Normal 1, Nightmare 1.75, Torment 2.5; §8.2; the flat bonus is not multiplied), bonus = 150 per "Grave Gold" card + 40 per affix on each slain elite (§5.1) + 100 + 40c per slain Soul Thief (§4.8). Blood Moon doubles the run's gold and gems, and the rewarded-ad "double rewards" then grants the (doubled) gold and gems a second time, so the two stack to ×4 (×10 the Normal base on a Torment Blood Moon run).
 
 | Example (G = 0) | Full clear (T = 7:00) | Death at 4:00 (no boss) |
 |---|---|---|
@@ -548,10 +594,29 @@ K = total kills (player and minions), T = seconds survived including the boss fi
 | Ch3 (~2,550 / ~1,110 kills) | 4,419 | 1,527 |
 | Ch5 (~3,100 / ~1,350 kills) | 5,714 | 1,743 |
 
-- **Gems per run:** a clear gives 10 + 2c (12–20). A defeat gives 2 gems per full 2 minutes survived (4 at 4:00).
-- **Pass XP per run** = round(20 + T/6 + K/40 + 40 × B): about 180 for a Ch1 clear and 82 for a death at 4:00. The same amount is added to account XP. Account level n → n+1 needs 80 + 40n XP, and every account level-up gives 20 gems.
-- **First-clear bonus** (replaces the clear gems): 50 + 20c gems (Ch1 70 · Ch2 90 · Ch3 110 · Ch4 130 · Ch5 150) + 1 Altar Sigil.
-- **Gravemaw's Hoard** (every boss kill): one relic of a random type. Ch1–2: Common 50 / Rare 50. Ch3–5: Epic 35 / Rare 32.5 / Common 32.5. Runs never drop Legendaries. *(Planned: odds shown on the results screen.)*
+- **Gems per run:** a clear gives 10 + 2c (12–20). A defeat gives 2 gems per full 2 minutes survived (4 at 4:00). The same on every difficulty.
+- **Pass XP per run** = round( round(20 + T/6 + K/40 + 40 × B) × X ), where X = 1 / 1.5 / 2 on Normal / Nightmare / Torment: about 180 for a Ch1 clear and 82 for a death at 4:00 on Normal. Account XP gets the Normal amount (without X). Account level n → n+1 needs 80 + 40n XP, and every account level-up gives 20 gems.
+- **First-clear bonus** (replaces the clear gems): 50 + 20c gems (Ch1 70 · Ch2 90 · Ch3 110 · Ch4 130 · Ch5 150) + 1 Altar Sigil. The first **Nightmare** clear of a chapter adds **+60 gems** and the first **Torment** clear **+120 gems** on top of the 12–20 clear gems, once per chapter per difficulty (900 gems in total). That bonus is flat: Blood Moon and the rewarded-ad double skip it.
+- **Gravemaw's Hoard** (every boss kill): one relic of a random type. Odds by difficulty:
+
+| Hoard rarity | Common | Rare | Epic | Legendary |
+|---|---|---|---|---|
+| Normal Ch1–2 | 50% | 50% | — | — |
+| Normal Ch3–5 | 32.5% | 32.5% | 35% | — |
+| Nightmare (any chapter) | — | 60% | 40% | — |
+| Torment (any chapter) | — | — | 98% | **2%** |
+
+Campaign runs never dropped Legendaries before Torment (the Endless Epic+ relic from depth 4 already could). Torment's 2% is the same rate as one Altar pull and gives a relic only, never hero shards (MONETIZATION §2.5). *(Planned: odds shown on the results screen.)*
+
+| Reward per run | Normal | Nightmare | Torment |
+|---|---|---|---|
+| Gold (D) | ×1 | ×1.75 | ×2.5 |
+| Pass XP (X) | ×1 | ×1.5 | ×2 |
+| Run gems | 12–20 per clear | same | same |
+| First clear, one-time per chapter | 70–150 gems + 1 sigil | +60 gems | +120 gems |
+| Hoard floor | Common | Rare | Epic |
+| Energy | 5 | 5 | 5 |
+| Example: Ch5 clear, G = 0 | 5,714 gold · ~210 XP | 10,000 gold · ~310 XP | 14,285 gold · ~415 XP |
 
 ---
 
@@ -678,6 +743,8 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 | 3 Frozen Ossuary | #0e141c frost | Pale ice #bfe6ff, desaturated | Kept low-saturation so cyan allies still pop |
 | 4 Abyssal Cathedral | #120c1e | Violet #9b5cff stained glass | Boss magenta gets a white core to stay distinct |
 | 5 Crimson Throne | #1a0608 | Blood red #c8102e | Enemy ember shifted to orange to avoid blending with red |
+| Nightmare (any chapter) | The chapter's colours mixed 70% toward #3a1f62 / #140830 | Violet runes #b04bff, near-black fog #080312 | Same swap as the Blood Moon look (§2), blended so each chapter stays recognisable; allies and enemies keep their colours |
+| Torment (any chapter) | Mixed 85% toward #2c0a0e / #0b0204 | Blood-red runes #ff1a2e, black fog #040001 | Darker than Blood Moon; enemies' emissive cores and gold elites still read against it |
 
 - **Readability:** strong silhouettes, an emissive core on every unit, additive particles, screen shake (scalable), 65–90 ms hit-stop on elite kills, Gravemaw's phase changes, ×2/×3 gates and the Nova blast (§4.7). Enemy telegraphs are ground decals that fill from the edge inward.
 - **Minions:** Shades are instanced soul wisps with particle trails. Every other variant is a **spectral ghost of its source enemy's silhouette** in the legion colour: an opaque emissive body with a hot rim, a ripple running up the body and a tail that dissolves into the ground, plus a halo glow sprite and a trail (one instanced mesh per variant). Champions add a gold rim, eyes and halo. *(Planned: at 300+ minions, trails switch to a shared ribbon per ring for performance.)*

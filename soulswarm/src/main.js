@@ -4,6 +4,7 @@ import { audio, loadAudio } from './audio/index.js';
 import { loadProfile, saveProfile, newProfile } from './meta/save.js';
 import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon } from './meta/economy.js';
 import { Store } from './meta/store.js';
+import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
 import { haptic, setHapticsEnabled } from './engine/platform.js';
 import { Engine } from './engine/engine.js';
 import { Showcase } from './game/showcase.js';
@@ -20,7 +21,7 @@ const profile = loadProfile();
  *   app.profile, app.audio, app.store, app.haptic(kind), app.engine
  *   app.heroPortrait(heroId) -> dataURL of a rendered 3D portrait
  *   app.showcase.setHero(heroId)  (the 3D hero standing behind the home screen)
- *   app.startRun(chapterId, { trial }) -> boolean (false when out of energy, or the trial is spent)
+ *   app.startRun(chapterId, { trial, difficulty }) -> boolean (false when out of energy, the trial is spent or the difficulty is locked)
  *   app.applySettings()     (after changing profile.settings)
  */
 const app = {
@@ -60,18 +61,21 @@ function applySettings() {
   saveProfile(profile);
 }
 
-/** opts.trial: today's Daily Trial (free; its chapter and mutators come from the date). */
+/** opts.trial: today's Daily Trial (free; its chapter and mutators come from the date).
+ *  opts.difficulty: 'normal' (default) | 'nightmare' | 'torment'; must be unlocked for the chapter. The trial always plays Normal. */
 function startRun(chapterId, opts = {}) {
   let mutators = null;
   if (opts.trial) { const t = dailyTrial(profile); chapterId = t.chapter; mutators = [t.boon, t.bane]; }
   const chapter = CHAPTERS[chapterId - 1];
   if (!chapter || chapterId > profile.chapter.unlocked) return false;
+  const difficulty = (!opts.trial && opts.difficulty) || 'normal';
+  if (!difficultyUnlocked(profile, chapterId, difficulty)) return false;
   if (opts.trial ? !beginTrial(profile) : !spendEnergy(profile)) return false;
-  if (!opts.trial) profile.chapter.selected = chapterId;
+  if (!opts.trial) { profile.chapter.selected = chapterId; selectDifficulty(profile, chapterId, difficulty); }
   commit(profile);
   app.meta.hide();
   const loadout = computeLoadout(profile);
-  const run = new Run(app.engine, { app, loadout, chapter, mutators, bloodMoon: !opts.trial && bloodMoon(profile) });
+  const run = new Run(app.engine, { app, loadout, chapter, mutators, bloodMoon: !opts.trial && bloodMoon(profile), difficulty });
   const runUI = new RunUI(app, run);
   app.run = run; app.runUI = runUI;
   app.engine.setController(run);

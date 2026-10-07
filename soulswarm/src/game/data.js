@@ -472,6 +472,9 @@ export const QUEST_POOL = [
   { id: 'evolve', text: 'Evolve a weapon',         key: 'evolve',  goal: 1, late: true },
   { id: 'boss',   text: 'Defeat Gravemaw',         key: 'bosses',  goal: 1, late: true },
   { id: 'trial',  text: 'Clear the Daily Trial',   key: 'trial',   goal: 1, late: true },
+  // Nightmare unlocks with the first Chapter 1 clear, the same gate as `late`; Torment counts too
+  { id: 'nmClear', text: 'Clear a chapter on Nightmare', key: 'hardClears', goal: 1, late: true },
+  { id: 'nmElite', text: 'Slay 5 elites on Nightmare',   key: 'hardElites', goal: 5, late: true },
 ];
 export const LOGIN_REWARDS = [
   { gold: 2000 }, { gems: 30 }, { sigils: 1 }, { gold: 5000 }, { gems: 50 }, { sigils: 2 }, { gems: 100, relic: 'epic+' },
@@ -483,6 +486,37 @@ export const LOGIN_REWARDS = [
 export const BLOOD_MOON = { days: [5, 6, 0], elites: [45, 75, 110, 150, 185, 225, 255, 290], rewardMul: 2, ground: 0x4a2228, groundB: 0x1c080c, fog: 0x12020a, rune: 0xff2e3a, rim: 0xff8a8a };
 // Weekly chest: claim 25 daily quests in a week (Monday to Sunday, local time).
 export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 100 } };
+
+// ---------------------------------------------------------------- Difficulty (Nightmare, Torment)
+// Per chapter: a Normal clear unlocks Nightmare, a Nightmare clear unlocks Torment. Campaign chapters only: Endless Abyss
+// and the Daily Trial always play Normal. Blood Moon stacks on top of any difficulty. Normal is the identity.
+//   hp / dmg / spawn: × enemy HP, enemy and hazard damage, director spawn rate (once Gravemaw rises his arena adds are plain
+//   Normal adds: he alone carries the difficulty)
+//   ramp: minutes for the extra HP to build up from ×1 to ×hp, so the opening still lets you level (damage and spawns apply at once)
+//   xp: × soul-shard XP, so the build keeps pace with a horde that dies more slowly (Gravemaw arrives at 6:00 either way)
+//   bossHp / bossDmg: × Gravemaw's HP and damage; below the horde's so his fight stays within ~1.6× its Normal length
+//   (scripts/balance.mjs GOD=1: harder hits mostly shred the legion that fights him)
+//   extraElites: the first n of DIFFICULTY_ELITES join the elite schedule · eliteAffixes: affixes per elite (elite-affix system)
+//   gold / passXp: × run gold and pass XP (account XP stays at the Normal amount, so account-level gems don't speed up)
+//   firstClearGems: one-time gems for the first clear of each chapter at this difficulty (never doubled by Blood Moon or ads)
+//   hoard: Gravemaw's Hoard relic odds by rarity (null: the chapter's Normal odds) · tint: the world palette is mixed toward
+//   these colours by `mix` (the Blood Moon look swap, blended) · css: UI colour
+export const DIFFICULTY_ORDER = ['normal', 'nightmare', 'torment'];
+export const DIFFICULTY = {
+  normal:    { id: 'normal', name: 'Normal', hp: 1, ramp: 0, xp: 1, bossHp: 1, bossDmg: 1, dmg: 1, spawn: 1, extraElites: 0, eliteAffixes: 0, gold: 1, passXp: 1, firstClearGems: 0, hoard: null, tint: null, css: '#4ef2ff' },
+  nightmare: { id: 'nightmare', name: 'Nightmare', hp: 2.2, ramp: 2, xp: 2, bossHp: 1.4, bossDmg: 1.4, dmg: 2, spawn: 1.25, extraElites: 2, eliteAffixes: 1, gold: 1.75, passXp: 1.5, firstClearGems: 60,
+    hoard: { epic: 0.4, rare: 0.6 }, tint: { mix: 0.7, ground: 0x3a1f62, groundB: 0x140830, fog: 0x080312, rune: 0xb04bff, rim: 0xc89bff }, css: '#b46bff' },
+  torment:   { id: 'torment', name: 'Torment', hp: 3.5, ramp: 2.5, xp: 2.8, bossHp: 1.5, bossDmg: 1.6, dmg: 2.8, spawn: 1.4, extraElites: 4, eliteAffixes: 2, gold: 2.5, passXp: 2, firstClearGems: 120,
+    hoard: { legendary: 0.02, epic: 0.98 }, tint: { mix: 0.85, ground: 0x2c0a0e, groundB: 0x0b0204, fog: 0x040001, rune: 0xff1a2e, rim: 0xff5a5a }, css: '#ff3b4e' },
+};
+export const DIFFICULTY_ELITES = [190, 320, 115, 260]; // extra elite times (s), taken in this order
+const mixHex = (a, b, t) => { let o = 0; for (let s = 0; s <= 16; s += 8) { const x = (a >> s) & 255; o |= Math.round(x + (((b >> s) & 255) - x) * t) << s; } return o; };
+/** A run's world palette pulled toward the difficulty tint (environment keys only: allies and enemies keep their colours). */
+export function difficultyLook(look, tint) {
+  const out = { ...look };
+  for (const k of ['ground', 'groundB', 'fog', 'rune', 'rim']) out[k] = mixHex(look[k], tint[k], tint.mix);
+  return out;
+}
 
 // ---------------------------------------------------------------- Daily Trial
 // One free run a day (no energy) on a cleared chapter with one boon and one bane, seeded by date. Unlocks once Chapter 1 is cleared.

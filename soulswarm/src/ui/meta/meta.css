@@ -264,6 +264,42 @@
 .ftue-arrow svg { width: 18px; height: 18px; stroke-width: 3; filter: drop-shadow(0 0 6px var(--gold)); }
 @keyframes m-ftueBob { 50% { transform: rotate(90deg) translateX(5px); } }
 
+/* difficulty selector on the chapter card (Normal / Nightmare / Torment); --dc = DIFFICULTY[].css */
+.chap { flex-wrap: wrap; }
+.dsel { flex: 1 0 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 7px 8px 1px; }
+.dsel-b { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 40px; padding: 4px 2px; border: 0; cursor: pointer; clip-path: var(--bevel-sm);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dc) 16%, rgba(10,14,28,.92)), rgba(5,7,14,.92)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dc) 38%, transparent); transition: transform .1s; }
+.dsel-b b { display: inline-flex; align-items: center; gap: 3px; font-family: var(--f-display); font-weight: 900; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; color: color-mix(in srgb, var(--dc) 60%, #fff); }
+.dsel-b b svg { width: 12px; height: 12px; stroke-width: 3; }
+.dsel-b small { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 800; white-space: nowrap; color: color-mix(in srgb, var(--dc) 65%, #fff); opacity: .8; }
+.dsel-b small svg { width: 10px; height: 10px; }
+.dsel-b.on { background: linear-gradient(180deg, color-mix(in srgb, var(--dc) 62%, #05020a), color-mix(in srgb, var(--dc) 24%, #05020a));
+  box-shadow: inset 0 0 0 1.5px var(--dc), inset 0 0 16px color-mix(in srgb, var(--dc) 50%, transparent), inset 0 2px 0 rgba(255,255,255,.25); }
+.dsel-b.on b { color: #fff; text-shadow: 0 0 10px var(--dc), 0 1px 2px #000; }
+.dsel-b.on small { color: #fff; opacity: 1; }
+.dsel-b.lk { background: rgba(8,10,18,.9); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.dsel-b.lk b { color: #77809a; }
+.dsel-b.lk small { color: #8d96aa; opacity: 1; font-size: 9.5px; }
+@media (max-width: 370px) { .dsel { gap: 4px; padding: 7px 4px 1px; } .dsel-b b { font-size: 11px; letter-spacing: .02em; } .dsel-b small { font-size: 9px; } }
+/* short phones (iPhone SE): the selector would push the card into the side buttons, so it compacts and replaces the status line */
+@media (max-height: 700px) {
+  .chap.has-dsel { padding-top: 6px; padding-bottom: 6px; }
+  .chap.has-dsel .chap-status { display: none; }
+  .dsel { padding-top: 5px; }
+  .dsel-b { min-height: 32px; padding: 2px; }
+  .pane-home .hm-side { gap: 3px; } /* and the side buttons tighten to make room */
+  .pane-home .fab-ic { width: 40px; height: 40px; }
+  .pane-home .fab-ic svg { width: 22px; height: 22px; }
+}
+.dsel-b:active { transform: scale(.95); }
+.d-first { display: inline-flex; align-items: center; gap: 3px; color: #e8b6ff; }
+.btn-battle.d-nightmare:not(.is-locked) { background: linear-gradient(180deg, #f3e2ff 0%, #c98fff 30%, #8d3cf0 70%, #561799 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,.65), inset 0 -5px 0 rgba(40,0,80,.5); }
+.btn-battle.d-nightmare:not(.is-locked) .bb-label { color: #1c0436; }
+.btn-battle.d-torment:not(.is-locked) { background: linear-gradient(180deg, #ffe0dc 0%, #ff7a72 30%, #d81a2c 70%, #7a0412 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,.6), inset 0 -5px 0 rgba(70,0,10,.55); }
+.btn-battle.d-torment:not(.is-locked) .bb-label { color: #2a0006; }
+.battle-wrap.d-nightmare { filter: drop-shadow(0 0 16px rgba(180,107,255,.6)) drop-shadow(0 4px 0 rgba(0,0,0,.55)); }
+.battle-wrap.d-torment { filter: drop-shadow(0 0 16px rgba(255,46,70,.6)) drop-shadow(0 4px 0 rgba(0,0,0,.55)); }
+
 /* ================================================================ Shop */
 .shop { padding-top: 4px; }
 .sp-banner {

@@ -20,6 +20,7 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 ## What's in the game
 
 - **5 campaign chapters** (6:00 survival, then the Gravemaw boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded.
+- **Nightmare and Torment:** clear a chapter on Normal to replay it on Nightmare, then clear Nightmare for Torment. Tougher, deadlier hordes, more elites with extra affixes and a darker world pay ×1.75 / ×2.5 gold, ×1.5 / ×2 pass XP, one-time first-clear gems and a richer Gravemaw's Hoard (Torment can drop a Legendary relic). Pick the difficulty on the chapter card; Endless and the Daily Trial stay Normal.
 - **5 heroes** with signature weapons (Vael, Nyx, Seraphine, Liora, Mordrake), plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
 - **Hero Rites:** each hero has a signature active ability on its own RITE button, ready from the first second of every run: Vael's **Grave Call** (every kill rises), Nyx's **Shadow Step** (an untouchable dash that cuts through the horde), Seraphine's **Ashfall** (burning chains fall on 20 foes), Liora's **Death Knell** (a bell toll that stuns and marks) and Mordrake's **Ossuary Wall** (a ring of bone spikes).
 - **The legion:** every slain enemy can rise as its own kind (Shades, Wisp Runners, taunting Bulwarks, Soul Witches, Soul Bombs, gold Champions). Multiply it through **Soul Gates** and detonate it with **Soul Nova**, which winds up for a beat as every soul streams into the Shepherd. Souls pushed over the cap by a gate fade away after a grace period, so spend them.
@@ -32,8 +33,8 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, meta and economy (148 checks)
-npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server)
+npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy (164 checks)
+npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server; DIFF=nightmare|torment, PROG=5, GOD=1, RITE=0)
 npm run trailer       # renders a 22 s 1080×1920 gameplay ad to store/trailer-9x16.mp4 (needs dev server + ffmpeg)
 npm run screenshots   # renders captioned 1290×2796 store screenshots to store/screenshots/ (needs dev server)
 npm run art           # rebuilds in-game art, icon, splash and native sets from the painted masters in store/art

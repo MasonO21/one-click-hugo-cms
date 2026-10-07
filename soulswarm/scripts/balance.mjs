@@ -4,6 +4,10 @@
 //        GOD=1 ... keeps the bot alive so every run reaches Gravemaw (measures fight length)
 //        HERO=liora ... plays another hero at the same progression (default vael)
 //        TUNE='{"liora":{"hp":115,"passive":{"raise":0.05}}}' ... trial hero data changes without editing data.js
+//        DIFF=nightmare|torment ... plays that difficulty (unlocked for the run); default normal
+//        PROG=5 ... uses chapter 5's progression on every chapter (a Nightmare player is stronger than PROGRESSION assumes)
+//        DTUNE='{"hp":3.5,"dmg":2}' ... trial run.diff changes for DIFF without editing data.js (patches the live run, so
+//          constructor-time fields such as extraElites and tint are not covered)
 //        RITE=0 ... the bot never casts the hero's Rite (a before/after comparison on the same build)
 //        RTUNE='{"nyx":{"dmg":80}}' ... trial Rite tunables (RITES in data.js)
 import { execSync } from 'node:child_process';
@@ -16,6 +20,8 @@ const RUNS = +(process.argv[3] || 3);
 const CHAPTERS = (process.argv[4] || '1,2,3,4,5').split(',').map(Number);
 const GOD = process.env.GOD === '1';
 const HERO = process.env.HERO || 'vael';
+const DIFF = process.env.DIFF || 'normal';
+const PROG = process.env.PROG ? +process.env.PROG : 0;
 const RITE = process.env.RITE !== '0';
 
 // What a player typically owns when they reach chapter c (talent levels are spread over Might, Vitality, Necromancy, Dominion, Swiftness).
@@ -32,7 +38,7 @@ const PROGRESSION = {
 // within 6 m, or when a Witch's fire circle is about to land on her (the Knell clears it); Nyx the same, dashing straight
 // away from the crowd (or out of the circle); Vael at 12+ foes within 12 m; Seraphine at 14+ within 12 m, an elite or 2+
 // Witches in sight. Gravemaw in reach (8 m) always counts.
-const BOT = `window.__balance = (ch, prog, god, hero, rite) => {
+const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune) => {
   const app = window.__soulswarm, p = app.profile, E = app.engine;
   E.manual = true;
   const keys = ['might', 'vitality', 'raise', 'cap', 'swift'];
@@ -42,10 +48,13 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite) => {
   p.equipped = p.relics.map((r) => r.uid);
   Object.assign(p.heroes[hero], { owned: true, stars: prog.stars }); p.selectedHero = hero;
   p.chapter.unlocked = Math.max(p.chapter.unlocked, ch); p.energy = 30;
+  p.chapter.best[ch] = { time: 420, cleared: true, kills: 0 }; p.diff.best[ch] = { nightmare: { time: 420, legion: 0, kills: 0, cleared: true } }; // open every difficulty
   p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; p.flags.tutorialDone = true;
-  app.startRun(ch);
-  const r = app.run; let hurt = 0; const h0 = r.player.hurt.bind(r.player);
-  r.player.hurt = (d) => { const before = r.player.hp; h0(d); hurt += Math.max(0, before - r.player.hp); if (god) r.player.hp = r.player.maxHp; };
+  app.startRun(ch, { difficulty: diff });
+  const r = app.run; if (dtune) Object.assign(r.diff, dtune);
+  let hurt = 0; const h0 = r.player.hurt.bind(r.player);
+  r.player.hurt = (d) => { const before = r.player.hp; h0(god ? Math.min(d, r.player.hp - 1) : d); // god: no hit can kill (Torment one-shots fragile builds)
+    hurt += Math.max(0, before - r.player.hp); if (god) r.player.hp = r.player.maxHp; };
   let bossAt = -1, peakEnemies = 0;
   for (let i = 0; i < 30 * 960 && !r.ended && !r.player.dead; i++) {
     const P = r.player; let fx = 0, fz = 0;
@@ -81,7 +90,7 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite) => {
     peakEnemies = Math.max(peakEnemies, r.enemies.count);
     r.update(1 / 30);
   }
-  const out = { ch, cleared: !!r.bossDead, died: !!r.player.dead, t: Math.round(r.time), bossTTK: r.bossDead && bossAt >= 0 ? Math.round(r.time - bossAt) : null,
+  const out = { ch, diff: r.diff.id, cleared: !!r.bossDead, died: !!r.player.dead, t: Math.round(r.time), bossTTK: r.bossDead && bossAt >= 0 ? Math.round(r.time - bossAt) : null,
     hurt: Math.round(hurt), maxHp: r.player.maxHp, level: r.level, kills: r.counters.kills, peakLegion: r.legion.peak, peakEnemies, novas: r.counters.novas, rites: r.counters.rites };
   app.exitRun();
   return out;
@@ -99,7 +108,7 @@ for (const ch of CHAPTERS) {
     await page.evaluate(BOT);
     if (process.env.RTUNE) await page.evaluate(async (tune) => { const { RITES } = await import('/src/game/data.js'); for (const [id, o] of Object.entries(tune)) Object.assign(RITES[id], o); }, JSON.parse(process.env.RTUNE));
     if (process.env.TUNE) await page.evaluate(async (tune) => { const { HEROES } = await import('/src/game/data.js'); for (const [id, o] of Object.entries(tune)) { const { passive, ...rest } = o; Object.assign(HEROES[id], rest); if (passive) Object.assign(HEROES[id].passive, passive); } }, JSON.parse(process.env.TUNE));
-    const res = await page.evaluate(([c, p, g, h, rt]) => window.__balance(c, p, g, h, rt), [ch, PROGRESSION[ch], GOD, HERO, RITE]);
+    const res = await page.evaluate(([c, p, g, h, rt, d, dt]) => window.__balance(c, p, g, h, rt, d, dt), [ch, PROGRESSION[PROG || ch], GOD, HERO, RITE, DIFF, process.env.DTUNE ? JSON.parse(process.env.DTUNE) : null]);
     res.errors = errors.length;
     rows.push(res);
     console.log(JSON.stringify(res));
@@ -107,7 +116,7 @@ for (const ch of CHAPTERS) {
   }
 }
 await browser.close();
-console.log(`\n${HERO}${GOD ? ' (god mode)' : ''}${RITE ? '' : ' (no Rite)'}\nch | clears | deaths (avg time) | survival avg | boss TTK avg | dmg taken avg | peak legion avg | Rites per run`);
+console.log(`\n${HERO} · ${DIFF}${PROG ? ` · chapter ${PROG} progression` : ''}${GOD ? ' (god mode)' : ''}${RITE ? '' : ' (no Rite)'}\nch | clears | deaths (avg time) | survival avg | boss TTK avg | dmg taken avg | peak legion avg | Rites per run`);
 for (const ch of CHAPTERS) {
   const R = rows.filter((r) => r.ch === ch), avg = (f) => { const v = R.map(f).filter((x) => x != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : '-'; };
   const deaths = R.filter((r) => r.died);
