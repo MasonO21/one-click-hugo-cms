@@ -7,8 +7,8 @@
  *
  * Everything is cheap on purpose: boxes (12 tris) and wedges (8) wherever possible, spheres only
  * for round things (seg 5 = 30 tris), rings as 10x4 tori (80) rather than high-segment ones.
- * Colours come from the tier palette SLOTS (s.base / s.light / s.trim / s.accent / …) except for
- * natural materials (wood, cloth, water, produce) which are fixed.
+ * Colours come from the tier palette SLOTS (s.base / s.light / s.trim / s.stripe / s.lamp / …)
+ * except for natural materials (wood, stone, cloth, water, produce) which are fixed.
  */
 import * as THREE from 'three';
 import { GeoBuilder, SLOT_GLASS, SLOT_GLOW } from '../core/GeoBuilder';
@@ -17,19 +17,14 @@ import type { ModelCtx } from './spec';
 import { WOOD, WOOD_DARK, LEAF, LEAF2, WATER } from './colors';
 
 // ---------------------------------------------------------------------------------- fixed colours
-/** Gold filigree on titanium-tier trims. */
-export const GOLD = '#e2b964';
-/** Cloth: banners, awnings, tarps, bedrolls. */
-export const BANNER = '#3e6fd8';
+// (natural materials only — painted trims use s.stripe, lamps s.lamp, gold is s.trim at titanium)
+/** Cloth: blankets and bedrolls. */
+export const BLANKET = '#3e6fd8';
 export const CANVAS = '#e7d6b4';
 export const CANVAS_DARK = '#c9b48c';
-/** Warm lamp glass. */
-export const LAMP = '#ffd27a';
 /** Grey fieldstone (chimneys, wells, foundations). */
 export const STONE = '#8e8a82';
 export const STONE_DARK = '#6d6962';
-/** Rust-orange hazard trims on steel / alloy machinery (non-glowing). */
-export const RUST = '#d2652b';
 /** Produce. */
 export const TOMATO = '#e9533d';
 export const PUMPKIN = '#f08c2e';
@@ -56,12 +51,9 @@ export function wallPoint(face: Face, u: number, hw: number, hd: number, off = 0
 export const isWood = (s: TierStyle): boolean => s.index <= 1;
 export const isStone = (s: TierStyle): boolean => s.index === 2;
 export const isTech = (s: TierStyle): boolean => s.index >= 3;
-/** Trim colour for posts / frames: timber for the early tiers, gold for titanium, tier trim otherwise. */
+/** Trim colour for posts / frames: dark timber at the wood tiers, the tier trim (timber at stone, gold at titanium) above. */
 export function trimOf(s: TierStyle): THREE.ColorRepresentation {
-  if (s.index <= 1) return WOOD_DARK;
-  if (s.index === 2) return WOOD_DARK;
-  if (s.index === 6) return GOLD;
-  return s.trim;
+  return s.index <= 1 ? WOOD_DARK : s.trim;
 }
 
 // ---------------------------------------------------------------------------------- walls
@@ -85,8 +77,8 @@ export function wallBlock(c: ModelCtx, w: number, h: number, d: number, x: numbe
     }
     if (t === 1) {
       // rope / iron bands and a diagonal brace on the front
-      b.box(w + 0.06, 0.1, d + 0.06, x, y + 0.42, z, s.accent);
-      b.box(w + 0.06, 0.1, d + 0.06, x, y + h - 0.42, z, s.accent);
+      b.box(w + 0.06, 0.1, d + 0.06, x, y + 0.42, z, s.stripe);
+      b.box(w + 0.06, 0.1, d + 0.06, x, y + h - 0.42, z, s.stripe);
       b.box(Math.hypot(w * 0.6, h * 0.6), 0.12, 0.1, x, y + h / 2, z + d / 2 + 0.03, WOOD_DARK, { rz: Math.atan2(h * 0.6, w * 0.6) });
     }
   } else if (t === 2) {
@@ -110,7 +102,7 @@ export function wallBlock(c: ModelCtx, w: number, h: number, d: number, x: numbe
     b.box(w, h, d, x, y + h / 2, z, col, { shade: 0.025 });
     b.box(w - 0.5, h - 0.6, d + 0.06, x, y + h / 2 - 0.04, z, s.light, { shade: 0.02 });
     b.box(w + 0.06, h - 0.6, d - 0.5, x, y + h / 2 - 0.04, z, s.light, { shade: 0.02 });
-    b.box(w + 0.1, 0.12, d + 0.1, x, y + h - 0.22, z, s.accent, { slot: SLOT_GLOW });
+    b.box(w + 0.1, 0.12, d + 0.1, x, y + h - 0.22, z, s.stripe);
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
       b.box(0.1, 0.1, 0.1, x + sx * (w / 2 - 0.16), y + 0.22, z + sz * (d / 2 + 0.02), s.metal);
       b.box(0.1, 0.1, 0.1, x + sx * (w / 2 + 0.02), y + h - 0.5, z + sz * (d / 2 - 0.16), s.metal);
@@ -121,7 +113,7 @@ export function wallBlock(c: ModelCtx, w: number, h: number, d: number, x: numbe
     b.box(w - 0.4, h - 0.8, d + 0.06, x, y + h / 2 + 0.1, z, s.light);
     b.box(w + 0.06, h - 0.8, d - 0.4, x, y + h / 2 + 0.1, z, s.light);
     b.box(w + 0.1, 0.07, d + 0.1, x, y + h - 0.3, z, s.accent, { slot: SLOT_GLOW });
-    b.box(w * 0.3, 0.3, d + 0.1, x, y + 0.32, z, RUST);
+    b.box(w * 0.3, 0.3, d + 0.1, x, y + 0.32, z, s.stripe);
   } else if (t === 5) {
     // dark nano shell with glowing corner seams and a light crown line
     b.box(w, h, d, x, y + h / 2, z, s.dark, { shade: 0.015 });
@@ -134,7 +126,7 @@ export function wallBlock(c: ModelCtx, w: number, h: number, d: number, x: numbe
     b.box(w, h, d, x, y + h / 2, z, col, { shade: 0.008 });
     b.box(w - 0.4, h - 0.7, d + 0.06, x, y + h / 2 + 0.05, z, s.light);
     b.box(w + 0.06, h - 0.7, d - 0.4, x, y + h / 2 + 0.05, z, s.light);
-    b.box(w + 0.1, 0.14, d + 0.1, x, y + h - 0.16, z, GOLD);
+    b.box(w + 0.1, 0.14, d + 0.1, x, y + h - 0.16, z, s.stripe);
     b.box(w + 0.08, 0.06, d + 0.08, x, y + 0.5, z, s.accent, { slot: SLOT_GLOW });
   }
   if (posts && t <= 2) {
@@ -185,7 +177,7 @@ export function flatRoof(c: ModelCtx, w: number, d: number, x: number, y: number
   const { b, s } = c;
   const lip = opts.lip ?? 0.26;
   b.box(w + lip, 0.22, d + lip, x, y + 0.11, z, s.roof, { shade: 0.015 });
-  b.box(w + lip + 0.06, 0.1, d + lip + 0.06, x, y + 0.27, z, s.index === 6 ? GOLD : s.roofEdge);
+  b.box(w + lip + 0.06, 0.1, d + lip + 0.06, x, y + 0.27, z, s.roofEdge);
   const vents = opts.vents ?? 2;
   for (let i = 0; i < vents; i++) {
     const vx = x - w / 2 + 0.6 + (i * (w - 1.2)) / Math.max(1, vents - 1);
@@ -243,7 +235,7 @@ export function casement(c: ModelCtx, x: number, y: number, z: number, face: Fac
 /** Small glowing lamp (wall lantern or hanging): glass cube with a cap, optional point light. */
 export function lamp(c: ModelCtx, x: number, y: number, z: number, opts: { light?: boolean; range?: number; cap?: boolean; color?: string } = {}): void {
   const { b, s } = c;
-  const col = opts.color ?? (s.index >= 4 ? s.accent.getStyle() : LAMP);
+  const col = opts.color ?? s.lamp.getStyle();
   b.box(0.2, 0.22, 0.2, x, y, z, col, { slot: SLOT_GLOW });
   if (opts.cap ?? true) b.box(0.28, 0.06, 0.28, x, y + 0.15, z, isTech(s) ? s.metal : WOOD_DARK);
   if (opts.light) c.setLight(x, y, z, col, 1.0, opts.range ?? 7);
@@ -255,7 +247,7 @@ export function door(c: ModelCtx, x: number, y: number, z: number, face: Face, o
   const w = opts.w ?? 0.9;
   const h = opts.h ?? 1.6;
   const ry = faceRot(face);
-  const frame = isTech(s) ? s.trim : trimOf(s);
+  const frame = trimOf(s);
   b.box(w + 0.24, h + 0.14, 0.1, x, y + h / 2 + 0.04, z, frame, { ry });
   if (s.index <= 2) {
     b.box(w, h, 0.14, x, y + h / 2, z, WOOD_DARK, { ry, shade: 0.05 });
@@ -360,14 +352,15 @@ export function lanternPost(c: ModelCtx, x: number, z: number, h = 1.9, light = 
 }
 
 /** Banner / flag on a pole (static cloth, slightly furled). */
-export function bannerPole(c: ModelCtx, x: number, z: number, h: number, color: THREE.ColorRepresentation = BANNER, face: Face = 0, y = 0): void {
+export function bannerPole(c: ModelCtx, x: number, z: number, h: number, color?: THREE.ColorRepresentation, face: Face = 0, y = 0): void {
   const { b, s } = c;
   const pole = isTech(s) ? s.metal : WOOD_DARK;
   const ry = faceRot(face);
+  const cloth = color ?? s.stripe;
   b.box(0.08, h, 0.08, x, y + h / 2, z, pole);
-  b.box(0.1, 0.1, 0.1, x, y + h + 0.05, z, s.index === 6 ? GOLD : s.accent);
+  b.box(0.1, 0.1, 0.1, x, y + h + 0.05, z, s.trim);
   const p = wallPoint(face, 0.02, 0, 0, 0.26);
-  b.box(0.06, h * 0.42, 0.5, x + p.x, y + h * 0.72, z + p.z, color, { ry: ry + Math.PI / 2, rz: 0.08 });
+  b.box(0.06, h * 0.42, 0.5, x + p.x, y + h * 0.72, z + p.z, cloth, { ry: ry + Math.PI / 2, rz: 0.08 });
   b.box(0.05, h * 0.18, 0.46, x + p.x, y + h * 0.44, z + p.z, s.index <= 2 ? '#f0e6cc' : s.accent, { ry: ry + Math.PI / 2, slot: s.index >= 3 ? SLOT_GLOW : 0 });
 }
 
@@ -392,11 +385,6 @@ export function glowRing(b: GeoBuilder, r: number, x: number, y: number, z: numb
 /** Flat non-glowing ring (low-segment torus). */
 export function ring(b: GeoBuilder, r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, seg = 10, th = 0.06): void {
   b.torus(r, th, x, y, z, color, seg, 4, { rx: Math.PI / 2 });
-}
-
-/** Flattened dome. */
-export function dome(b: GeoBuilder, r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, seg = 8, squash = 0.6, slot = 0): void {
-  b.sphere(r, x, y, z, color, seg, { sy: squash, slot });
 }
 
 /** Flat water surface. */

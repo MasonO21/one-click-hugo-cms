@@ -50,7 +50,7 @@ function pod(c: ModelCtx, x: number, y: number, z: number, tilt: number, scorche
   b.cyl(0.46, 0.46, 0.08, pw.x + Math.cos(0.4) * 1.08, pw.y, z + Math.sin(0.4) * 1.08 + 0.3, POD_DARK, 6, { rz: Math.PI / 2, ry: -0.4 });
   b.box(0.8, 1.0, 0.1, x - 0.2, y + 0.9, z + 1.15, POD_DARK, { ry: 0.4, rx: 0.9 });
   b.box(0.7, 0.9, 0.06, x - 0.1, y + 0.9, z + 1.1, '#2a2f38', { ry: 0.4 });
-  b.box(0.5, 0.6, 0.06, x - 0.1, y + 0.85, z + 1.06, K.LAMP, { ry: 0.4, slot: SLOT_GLOW });
+  b.box(0.5, 0.6, 0.06, x - 0.1, y + 0.85, z + 1.06, c.s.lamp, { ry: 0.4, slot: SLOT_GLOW });
   // landing struts
   for (let i = 0; i < 3; i++) {
     const a = 0.9 + i * 2.1;
@@ -71,8 +71,8 @@ function pod(c: ModelCtx, x: number, y: number, z: number, tilt: number, scorche
 /** Square tower with a crenellated top (stone keep). */
 function tower(c: ModelCtx, x: number, z: number, w: number, h: number): void {
   const { b, s } = c;
-  b.box(w, h, w, x, h / 2, z, s.trim, { shade: 0.06 });
-  b.box(w * 0.5, h * 0.9, w + 0.06, x, h / 2, z, s.dark, { shade: 0.06 });
+  b.box(w, h, w, x, h / 2, z, s.dark, { shade: 0.06 });
+  b.box(w * 0.5, h * 0.9, w + 0.06, x, h / 2, z, s.base, { shade: 0.06 });
   b.box(w + 0.2, 0.3, w + 0.2, x, h + 0.1, z, s.light, { shade: 0.05 });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.34, 0.4, 0.34, x + sx * (w / 2 - 0.1), h + 0.45, z + sz * (w / 2 - 0.1), s.light, { shade: 0.05 });
   b.box(0.3, 0.3, 0.1, x, h * 0.65, z + w / 2 + 0.02, '#2a2420');
@@ -139,11 +139,11 @@ const TIERS: ((c: ModelCtx) => void)[] = [
       b.cyl(0.13, 0.15, h, x, h / 2, -2.75, WOOD, 5, { shade: 0.05 });
       b.cone(0.13, 0.3, x, h + 0.15, -2.75, WOOD_DARK, 5);
     }
-    b.box(3.4, 0.1, 0.1, -1.1, 1.15, -2.56, s.accent);
+    b.box(3.4, 0.1, 0.1, -1.1, 1.15, -2.56, s.stripe);
     // flag (same pivot), banners, lantern, props
     b.cyl(0.04, 0.05, 3.2, 2.6, 1.6, -2.4, WOOD_DARK, 4);
     c.part('sway', 2.6, 3.1, -2.4, (pb) => pb.box(0.9, 0.55, 0.04, 0.45, -0.28, 0, '#e86f4d'), 2.5, 0.12);
-    K.bannerPole(c, -2.75, 2.0, 2.3, K.BANNER, 1, 0.16);
+    K.bannerPole(c, -2.75, 2.0, 2.3, undefined, 1, 0.16);
     K.lanternPost(c, 2.75, 0.6, 1.8, false);
     K.barrel(b, 2.7, 0.16, 2.6, 0.26, 0.65);
     K.crateProp(b, -2.6, 0.16, -2.0, 0.6, WOOD, WOOD_DARK, 0.2);
@@ -185,8 +185,8 @@ const TIERS: ((c: ModelCtx) => void)[] = [
       K.casement(c, -2.32, 1.9, sx * 1.0, 3, 0.6, 0.7);
     }
     c.setLight(0, 2.1, 2.7, '#ffc877', 1.0, 9);
-    K.bannerPole(c, -2.35, -2.35, 2.2, K.BANNER, 0, 4.3);
-    K.bannerPole(c, 2.35, -2.35, 2.2, K.BANNER, 0, 4.3);
+    K.bannerPole(c, -2.35, -2.35, 2.2, undefined, 0, 4.3);
+    K.bannerPole(c, 2.35, -2.35, 2.2, undefined, 0, 4.3);
     K.barrel(b, 2.8, 0.16, 1.4, 0.24, 0.6);
     K.crateProp(b, -2.8, 0.16, 1.5, 0.5, s.light, WOOD_DARK, 0.3);
   },
@@ -210,13 +210,13 @@ const TIERS: ((c: ModelCtx) => void)[] = [
     b.box(0.08, 1.9, 0.26, 0.6, 1.16, 2.68, s.accent, { slot: SLOT_GLOW });
     b.box(1.6, 0.06, 0.26, 0.6, 2.2, 2.68, s.accent, { slot: SLOT_GLOW });
     b.box(1.4, 0.36, 0.08, 0.6, 2.5, 2.72, s.accent, { slot: SLOT_GLOW });
-    b.box(2.6, 0.04, 0.5, 0.6, 0.18, 2.72, K.RUST);
+    b.box(2.6, 0.04, 0.5, 0.6, 0.18, 2.72, s.stripe);
     K.casement(c, -1.6, 1.6, 2.62, 0, 0.9, 0.6);
     K.casement(c, 2.62, 1.6, 0.4, 1, 0.9, 0.6);
     // gantry walkway around the upper block + ladder
     b.box(4.6, 0.1, 0.6, -0.4, 2.62, 1.8, s.floor);
     for (let i = 0; i < 4; i++) b.box(0.06, 0.7, 0.06, -2.5 + i * 1.4, 3.0, 2.08, s.metal);
-    b.box(4.4, 0.05, 0.05, -0.4, 3.35, 2.08, K.RUST);
+    b.box(4.4, 0.05, 0.05, -0.4, 3.35, 2.08, s.stripe);
     b.box(0.05, 2.4, 0.05, 2.3, 1.36, 2.72, s.metal);
     b.box(0.05, 2.4, 0.05, 2.7, 1.36, 2.72, s.metal);
     for (let i = 0; i < 4; i++) b.box(0.44, 0.05, 0.05, 2.5, 0.5 + i * 0.6, 2.72, s.metal);
@@ -252,7 +252,7 @@ const TIERS: ((c: ModelCtx) => void)[] = [
     K.glowRing(b, 2.9, 0, 1.78, 0, s.accent, 16, 0.07);
     b.cyl(2.0, 2.6, 4.2, 0, 3.86, 0, s.light, 12, { shade: 0.02 });
     for (let i = 0; i < 3; i++) b.cyl(2.36 - i * 0.2, 2.36 - i * 0.2, 0.4, 0, 2.76 + i * 1.2, 0, '#ffffff', 12, { slot: SLOT_GLASS });
-    for (let i = 0; i < 2; i++) b.cyl(2.48 - i * 0.2, 2.48 - i * 0.2, 0.08, 0, 3.4 + i * 1.2, 0, K.RUST, 12);
+    for (let i = 0; i < 2; i++) b.cyl(2.48 - i * 0.2, 2.48 - i * 0.2, 0.08, 0, 3.4 + i * 1.2, 0, s.stripe, 12);
     b.cyl(1.4, 2.0, 1.2, 0, 6.56, 0, s.trim, 12);
     K.glowRing(b, 1.45, 0, 7.1, 0, s.accent, 12, 0.06);
     b.sphere(1.0, 0, 7.6, 0, s.accent, 10, { slot: SLOT_GLOW });
@@ -263,7 +263,7 @@ const TIERS: ((c: ModelCtx) => void)[] = [
       const pz = Math.sin(a) * 2.65;
       b.box(0.5, 5.0, 0.5, px, 2.66, pz, s.trim, { ry: -a });
       b.box(0.12, 4.0, 0.56, px, 2.86, pz, s.accent, { ry: -a, slot: SLOT_GLOW });
-      b.box(0.6, 0.3, 0.6, px, 5.3, pz, K.RUST, { ry: -a });
+      b.box(0.6, 0.3, 0.6, px, 5.3, pz, s.stripe, { ry: -a });
       b.box(0.56, 0.4, 0.56, px, 0.36, pz, s.machineDark, { ry: -a });
     }
     c.part('spinY', 0, 5.2, 0, (pb) => {
@@ -275,7 +275,7 @@ const TIERS: ((c: ModelCtx) => void)[] = [
     b.box(1.6, 2.2, 0.3, 0, 1.26, 2.9, s.machineDark);
     b.box(0.08, 2.0, 0.36, 0, 1.26, 2.9, s.accent, { slot: SLOT_GLOW });
     b.box(1.3, 0.06, 0.36, 0, 2.3, 2.9, s.accent, { slot: SLOT_GLOW });
-    b.box(1.4, 0.3, 0.1, 0, 2.6, 2.86, K.RUST);
+    b.box(1.4, 0.3, 0.1, 0, 2.6, 2.86, s.stripe);
     b.box(2.4, 0.08, 0.8, 0, 0.2, 2.6, s.floor);
     K.planter(c, -2.45, 2.45, 0.6, LEAF2);
     K.planter(c, 2.45, 2.45, 0.6, LEAF);
@@ -310,7 +310,7 @@ const TIERS: ((c: ModelCtx) => void)[] = [
     b.box(0.4, 0.2, 1.3, -1.3, 3.4, 0.5, s.trim, { ry: 0.4 });
     b.box(1.4, 0.04, 0.1, 0.9, 4.12, -1.1, s.accent, { ry: -0.5, slot: SLOT_GLOW });
     // dark dome with a glowing seam ring, hex drone pads, entrance
-    b.sphere(1.0, 1.9, 1.56, 1.6, s.dark, 8, { sy: 0.6, shade: 0.015 });
+    b.dome(1.0, 1.9, 1.56, 1.6, s.dark, 8, { sy: 0.6, shade: 0.015 });
     K.glowRing(b, 0.8, 1.9, 1.9, 1.6, s.accent, 10, 0.05);
     b.sphere(0.3, 1.9, 2.1, 1.6, s.accent, 6, { slot: SLOT_GLOW });
     for (const [px, pz] of [[-2.2, -2.2], [2.3, -0.1]]) {
@@ -335,16 +335,16 @@ const TIERS: ((c: ModelCtx) => void)[] = [
     const { b, s } = c;
     K.pad(c, 5.9, 5.9);
     b.cyl(3.0, 3.2, 1.0, 0, 0.66, 0, s.light, 12, { shade: 0.01 });
-    K.ring(b, 3.05, 0, 1.18, 0, K.GOLD, 16, 0.08);
+    K.ring(b, 3.05, 0, 1.18, 0, s.trim, 16, 0.08);
     K.glowRing(b, 2.75, 0, 1.2, 0, s.accent, 16, 0.05);
     // tiered body
     b.cyl(2.2, 2.6, 3.0, 0, 2.66, 0, s.base, 12, { shade: 0.01 });
     b.cyl(2.3, 2.3, 0.5, 0, 2.76, 0, '#ffffff', 12, { slot: SLOT_GLASS });
-    K.ring(b, 2.3, 0, 4.18, 0, K.GOLD, 12, 0.08);
+    K.ring(b, 2.3, 0, 4.18, 0, s.trim, 12, 0.08);
     b.cyl(1.5, 2.0, 3.0, 0, 5.66, 0, s.light, 12, { shade: 0.01 });
     b.cyl(1.6, 1.6, 0.4, 0, 5.56, 0, '#ffffff', 12, { slot: SLOT_GLASS });
     K.glowRing(b, 1.95, 0, 4.3, 0, s.accent, 12, 0.06);
-    K.ring(b, 1.6, 0, 7.18, 0, K.GOLD, 12, 0.07);
+    K.ring(b, 1.6, 0, 7.18, 0, s.trim, 12, 0.07);
     b.cyl(0.9, 1.4, 2.6, 0, 8.46, 0, s.base, 12, { shade: 0.01 });
     K.glowRing(b, 1.35, 0, 7.3, 0, s.accent, 12, 0.05);
     // spire cluster: tall central cone and four small side spires with gold tips
@@ -356,7 +356,7 @@ const TIERS: ((c: ModelCtx) => void)[] = [
       const sz = Math.sin(a) * 1.25;
       b.cyl(0.22, 0.3, 2.4, sx, 8.2, sz, s.light, 6);
       b.cone(0.3, 1.2, sx, 10.0, sz, s.light, 6);
-      b.box(0.1, 0.5, 0.1, sx, 10.8, sz, K.GOLD);
+      b.box(0.1, 0.5, 0.1, sx, 10.8, sz, s.trim);
     }
     // energy pylons with gold caps and shards
     for (let i = 0; i < 4; i++) {
@@ -365,7 +365,7 @@ const TIERS: ((c: ModelCtx) => void)[] = [
       const pz = Math.sin(a) * 2.7;
       b.box(0.7, 5.3, 0.7, px, 2.81, pz, s.light, { ry: -a });
       b.box(0.16, 4.8, 0.76, px, 3.0, pz, s.accent, { ry: -a, slot: SLOT_GLOW });
-      b.box(0.9, 0.3, 0.9, px, 5.6, pz, K.GOLD, { ry: -a });
+      b.box(0.9, 0.3, 0.9, px, 5.6, pz, s.trim, { ry: -a });
       b.shard(0.3, 0.7, px, 6.3, pz, s.accent, { slot: SLOT_GLOW });
       b.box(0.06, 0.06, 1.6, px * 0.72, 6.0, pz * 0.72, s.accent, { ry: -a + Math.PI / 2, slot: SLOT_GLOW });
     }
@@ -373,16 +373,16 @@ const TIERS: ((c: ModelCtx) => void)[] = [
     c.part('bobSpin', 0, 9.9, 0, (pb) => {
       pb.shard(0.7, 1.6, 0, 0, 0, '#ffffff', { slot: SLOT_GLOW });
       pb.torus(1.3, 0.07, 0, 0, 0, s.accent, 14, 4, { rx: Math.PI / 2, slot: SLOT_GLOW });
-      pb.torus(1.1, 0.06, 0, 0.3, 0, K.GOLD, 14, 4, { rx: 1.0 });
+      pb.torus(1.1, 0.06, 0, 0.3, 0, s.trim, 14, 4, { rx: 1.0 });
     }, 0.8, 0.2);
     b.cyl(0.25, 0.45, 9.0, 0, 15.0, 0, s.accent, 8, { slot: SLOT_GLOW });
     // entrance with gold lintel, glass garden dome, reflecting pool and planters
-    b.box(1.6, 2.2, 0.4, 0, 1.26, 2.9, s.trim);
+    b.box(1.6, 2.2, 0.4, 0, 1.26, 2.9, s.light);
     b.box(0.1, 2.0, 0.5, 0, 1.26, 2.9, s.accent, { slot: SLOT_GLOW });
-    b.box(1.9, 0.16, 0.5, 0, 2.42, 2.9, K.GOLD);
+    b.box(1.9, 0.16, 0.5, 0, 2.42, 2.9, s.trim);
     b.box(2.6, 0.08, 0.8, 0, 0.2, 2.6, s.floor);
     b.cyl(0.95, 1.0, 0.3, 2.2, 0.31, 2.1, s.light, 8);
-    b.sphere(0.9, 2.2, 0.46, 2.1, '#ffffff', 8, { sy: 0.65, slot: SLOT_GLASS });
+    b.dome(0.9, 2.2, 0.46, 2.1, '#ffffff', 8, { sy: 0.65, slot: SLOT_GLASS });
     K.bush(b, 2.2, 0.46, 2.1, 0.42, LEAF);
     b.cyl(0.85, 0.9, 0.3, -2.2, 0.31, 2.1, s.light, 8);
     K.waterDisc(b, 0.72, -2.2, 0.45, 2.1, 8);

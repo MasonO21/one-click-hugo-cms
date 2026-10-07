@@ -18,7 +18,7 @@ function container(c: ModelCtx, x: number, y: number, z: number, w: number, h: n
   b.box(w, h, d, x, y + h / 2, z, s.machine, { ry, shade: 0.02 });
   b.box(w + 0.05, h * 0.55, d - 0.3, x, y + h / 2, z, s.machineDark, { ry });
   b.box(w - 0.3, h * 0.55, d + 0.05, x, y + h / 2, z, s.machineDark, { ry });
-  b.box(w * 0.5, 0.08, d + 0.08, x, y + h - 0.12, z, s.index === 3 ? K.RUST : s.accent, { ry, slot: s.index >= 4 ? SLOT_GLOW : 0 });
+  b.box(w * 0.5, 0.08, d + 0.08, x, y + h - 0.12, z, s.stripe, { ry });
 }
 
 /** Big barn / depot door (two leaves) on the +z face at (x, z), base y. */
@@ -37,7 +37,7 @@ function bigDoor(c: ModelCtx, x: number, y: number, z: number, dw: number, dh: n
     for (const sx of [-1, 1]) b.box(dw / 2 - 0.05, dh, 0.14, x + (sx * dw) / 4, y + dh / 2, z + 0.02, s.machine);
     b.box(0.08, dh - 0.2, 0.2, x, y + dh / 2, z + 0.04, s.accent, { slot: SLOT_GLOW });
     b.box(dw - 0.2, 0.06, 0.2, x, y + dh - 0.12, z + 0.04, s.accent, { slot: SLOT_GLOW });
-    b.box(dw + 0.4, 0.04, 0.3, x, y + 0.02, z + 0.3, t === 3 ? K.RUST : s.accent, { slot: t === 3 ? 0 : SLOT_GLOW });
+    b.box(dw + 0.4, 0.04, 0.3, x, y + 0.02, z + 0.3, s.stripe);
   }
 }
 
@@ -60,7 +60,7 @@ registerModel('crate', (c) => {
     if (level >= 2) container(c, -0.2, 1.0, 0.0, 0.9, 0.7, 0.8, 0.25);
     if (level >= 3) K.barrel(b, 0.62, 0.65, -0.5, 0.26, 0.65, s.machineDark, s.accent);
     if (level >= 4) container(c, -0.1, 1.7, 0.1, 0.6, 0.5, 0.6, -0.4);
-    if (level >= 5) K.lamp(c, 0.62, 1.55, -0.5, { color: s.accent.getStyle() });
+    if (level >= 5) K.lamp(c, 0.62, 1.55, -0.5);
   }
 });
 
@@ -97,7 +97,7 @@ registerModel('warehouse', (c) => {
     container(c, w / 2 - 0.6, 0.16, -d / 2 + 0.75, 0.9, 0.7, 0.8, -0.15);
     if (c.level >= 2) container(c, w / 2 - 0.6, 0.86, -d / 2 + 0.78, 0.8, 0.6, 0.7, 0.3);
     b.box(0.12, 3.0, 0.12, w / 2 - 0.35, 1.66, 0.05, s.metal);
-    K.lamp(c, w / 2 - 0.35, 3.3, 0.05, { light: true, color: s.index >= 4 ? s.accent.getStyle() : K.LAMP });
+    K.lamp(c, w / 2 - 0.35, 3.3, 0.05, { light: true });
   }
   c.levelPips();
 });
@@ -120,7 +120,7 @@ registerModel('silo', (c) => {
   } else {
     b.cyl(r, r, h, 0, 0.16 + h / 2, 0, s.machine, 10, { shade: 0.02 });
     for (const f of [0.3, 0.65]) b.cyl(r + 0.04, r + 0.04, 0.12, 0, 0.16 + h * f, 0, s.metal, 10);
-    b.cyl(r + 0.03, r + 0.03, 0.22, 0, 0.16 + h * 0.9, 0, t === 3 ? K.RUST : s.accent, 10, { slot: t === 3 ? 0 : SLOT_GLOW });
+    b.cyl(r + 0.03, r + 0.03, 0.22, 0, 0.16 + h * 0.9, 0, s.stripe, 10);
     b.cyl(r * 0.55, r * 1.02, 0.6, 0, 0.16 + h + 0.3, 0, s.light, 10, { shade: 0.02 });
     b.cyl(0.26, 0.26, 0.3, 0, 0.16 + h + 0.7, 0, s.metal, 7);
     b.box(0.16, h * 0.6, 0.08, 0, 0.16 + h * 0.5, r + 0.02, s.accent, { slot: SLOT_GLOW });
@@ -166,7 +166,7 @@ registerModel('tank', (c) => {
     b.cyl(r * 0.55, r + 0.02, 0.4, 0, top + 0.2, 0, s.light, 10, { shade: 0.02 });
     b.cyl(0.22, 0.22, 0.25, 0, top + 0.5, 0, s.metal, 7);
     b.box(0.14, h * 0.7, 0.08, 0, y0 + h / 2, r + 0.02, s.accent, { slot: SLOT_GLOW });
-    if (t === 3) b.cyl(r + 0.03, r + 0.03, 0.16, 0, y0 + h * 0.5, 0, K.RUST, 10);
+    b.cyl(r + 0.03, r + 0.03, 0.16, 0, y0 + h * 0.5, 0, s.stripe, 10);
     K.gauge(c, r * 0.5, y0 + 0.4, r + 0.04, 0);
     b.shard(0.16, 0.26, 0, top + 0.85, 0, WATER, { slot: SLOT_GLOW });
   }
@@ -200,7 +200,7 @@ registerModel('quantum_storage', (c) => {
     const px = sx * (w / 2 - 0.5);
     const pz = sz * (d / 2 - 0.5);
     b.box(0.3, 2.7, 0.3, px, 1.35, pz, s.trim);
-    b.box(0.36, 0.2, 0.36, px, 2.75, pz, t === 6 ? K.GOLD : s.metal);
+    b.box(0.36, 0.2, 0.36, px, 2.75, pz, t === 6 ? s.trim : s.metal);
     b.box(0.14, 0.3, 0.14, px, 3.0, pz, s.accent, { slot: SLOT_GLOW });
     b.box(0.08, 1.6, 0.08, px + (sx > 0 ? -0.2 : 0.2), 1.6, pz + (sz > 0 ? -0.2 : 0.2), s.accent, { slot: SLOT_GLOW });
     K.pipe(b, s, px, 0.55, pz, px * 0.55, 0.9, pz * 0.55, 0.07, s.metal, false);
@@ -296,7 +296,7 @@ registerModel('bunkhouse', (c) => {
     b.box(0.1, 0.1, bd - 0.2, bw / 2 - 0.12, 0.16 + 1.5, 0, WOOD_DARK);
     K.shedRoof(c, bw, bd, 0, 0.16 + 1.55, 0, { rise: 0.55, overhang: 0.42 });
     b.box(0.8, 0.22, 1.5, -0.55, 0.16 + 0.11, 0.15, '#e86f4d', { shade: 0.04 });
-    b.box(0.8, 0.22, 1.5, 0.45, 0.16 + 0.11, 0.15, K.BANNER, { shade: 0.04 });
+    b.box(0.8, 0.22, 1.5, 0.45, 0.16 + 0.11, 0.15, K.BLANKET, { shade: 0.04 });
     b.box(0.5, 0.14, 0.4, -0.55, 0.16 + 0.29, -0.4, '#fff5e6');
     b.box(0.5, 0.14, 0.4, 0.45, 0.16 + 0.29, -0.4, '#fff5e6');
     K.lamp(c, bw / 2 - 0.3, 0.16 + 1.25, bd / 2 - 0.3, { light: true });
@@ -335,10 +335,10 @@ registerModel('habitat', (c) => {
   const r = Math.min(w, d) * 0.37;
   const y0 = 0.16;
   b.cyl(r * 1.02, r * 1.07, 0.9, 0, y0 + 0.45, 0, s.trim, 10, { shade: 0.03 });
-  b.sphere(r, 0, y0 + 0.9, 0, t === 5 ? s.dark : s.base, 10, { sy: 0.78, shade: 0.012 });
+  b.dome(r, 0, y0 + 0.9, 0, t === 5 ? s.dark : s.base, 10, { sy: 0.78, shade: 0.012 });
   K.glowRing(b, r * 1.0, 0, y0 + 0.96, 0, s.accent, 10, 0.06);
   if (t === 5) K.glowRing(b, r * 0.78, 0, y0 + 0.9 + r * 0.45, 0, s.accent, 10, 0.05);
-  if (t === 6) b.cyl(r * 0.5, r * 0.5, 0.08, 0, y0 + 0.9 + r * 0.6, 0, K.GOLD, 10);
+  if (t === 6) K.ring(b, r * 0.5, 0, y0 + 0.9 + r * 0.6, 0, s.trim, 10, 0.05);
   b.sphere(r * 0.28, 0, y0 + 0.9 + r * 0.68, 0, '#ffffff', 6, { sy: 0.7, slot: SLOT_GLASS });
   // windows around the dome
   for (let i = 0; i < 3; i++) {
@@ -350,7 +350,7 @@ registerModel('habitat', (c) => {
   }
   // airlock tunnel + door with lamp
   b.box(1.3, 1.7, 1.2, 0, y0 + 0.85, r * 0.8, s.light, { shade: 0.02 });
-  b.box(1.4, 0.1, 1.3, 0, y0 + 1.72, r * 0.8, t === 6 ? K.GOLD : t === 4 ? K.RUST : s.accent, { slot: t === 4 || t === 6 ? 0 : SLOT_GLOW });
+  b.box(1.4, 0.1, 1.3, 0, y0 + 1.72, r * 0.8, t === 4 || t === 6 ? s.stripe : s.accent, { slot: t === 4 || t === 6 ? 0 : SLOT_GLOW });
   K.door(c, 0, y0, r * 0.8 + 0.62, 0, { w: 0.8, h: 1.4, light: true, lamp: 'above', steps: true });
   // external tank, solar cell, planters
   b.cyl(0.42, 0.42, 1.3, -r - 0.35, y0 + 0.65, -0.3, s.machine, 8, { shade: 0.02 });
@@ -377,7 +377,7 @@ registerModel('skyscraper', (c) => {
   const ph = 1.3;
   K.wallBlock(c, w - 0.7, ph, d - 0.7, 0, 0.16, 0, { posts: false });
   K.door(c, 0, 0.16, d / 2 - 0.35 + 0.05, 0, { w: 1.2, h: 1.1, light: true, lamp: 'above', steps: true });
-  b.box(2.2, 0.1, 0.7, 0, 0.16 + ph + 0.05, d / 2 - 0.4, t === 6 ? K.GOLD : s.trim);
+  b.box(2.2, 0.1, 0.7, 0, 0.16 + ph + 0.05, d / 2 - 0.4, s.trim);
   K.planter(c, -w / 2 + 0.55, d / 2 - 0.55, 0.6, LEAF2);
   K.planter(c, w / 2 - 0.55, d / 2 - 0.55, 0.6, LEAF);
   const y0 = 0.16 + ph;
@@ -396,7 +396,7 @@ registerModel('skyscraper', (c) => {
   }
   if (t >= 5) for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.08, (floors - 2) * fh, 0.08, sx * (bw / 2 + 0.02), y0 + ((floors - 2) * fh) / 2, sz * (bd / 2 + 0.02), s.accent, { slot: SLOT_GLOW });
   const top = y0 + floors * fh;
-  b.box(bw * 0.5, 0.4, bd * 0.5, 0, top + 0.2, 0, t === 6 ? K.GOLD : s.trim);
+  b.box(bw * 0.5, 0.4, bd * 0.5, 0, top + 0.2, 0, s.trim);
   b.cyl(bw * 0.3, bw * 0.3, 0.1, 0, top + 0.45, 0, s.floor, 8);
   K.glowRing(b, bw * 0.3, 0, top + 0.5, 0, s.accent, 8, 0.04);
   c.antenna(0, top + 0.5, 0, 2.2, t >= 4 ? s.accent.getStyle() : '#ff4d5e');
@@ -570,7 +570,6 @@ registerModel('hydroponics', (c) => {
   b.box(0.8, 0.9, 0.5, tx, 0.61, d / 2 - 0.7, s.machineDark);
   b.box(0.6, 0.4, 0.06, tx, 0.95, d / 2 - 0.44, s.accent, { rx: -0.4, slot: SLOT_GLOW });
   b.box(0.1, 0.1, 0.06, tx - 0.25, 0.55, d / 2 - 0.44, '#7cff6a', { slot: SLOT_GLOW });
-  if (t >= 4) b.box(w - 1.0, 0.06, d - 1.0, 0, 2.4, 0.15, '#ffffff', { slot: SLOT_GLASS });
   c.emit('drips', 0, 1.3, 0.15, 1.5, '#9fdcff');
   c.levelPips();
 });
@@ -688,7 +687,7 @@ registerModel('purifier', (c) => {
   // filter stack + pipes + gauge + valve wheel
   const fx = w / 4;
   b.box(0.7, 0.7, 0.7, fx, 1.75, 0, s.machine, { shade: 0.02 });
-  b.box(0.76, 0.1, 0.76, fx, 1.55, 0, t === 3 ? K.RUST : s.accent, { slot: t === 3 ? 0 : SLOT_GLOW });
+  b.box(0.76, 0.1, 0.76, fx, 1.55, 0, s.stripe);
   b.box(0.1, 0.1, 0.06, fx, 2.0, 0.37, '#7cff6a', { slot: SLOT_GLOW });
   K.pipe(b, s, tx + 0.46, 2.4, 0, fx - 0.35, 2.0, 0, 0.09, s.metal);
   K.pipe(b, s, fx + 0.35, 1.9, 0, w / 2 - 0.55, 1.9, 0, 0.08, s.metal, false);
@@ -723,7 +722,7 @@ registerModel('industrial_purifier', (c) => {
   K.pipe(b, s, -w / 4, 1.6, d / 2 - 0.6, w / 4, 1.6, d / 2 - 0.6, 0.1, s.metal, false);
   b.box(w - 1.2, 0.1, 0.6, 0, 1.25, -d / 2 + 0.75, s.floor);
   for (let i = 0; i < 3; i++) b.box(0.06, 0.6, 0.06, -w / 2 + 0.7 + (i * (w - 1.4)) / 2, 1.6, -d / 2 + 0.5, s.metal);
-  b.box(w - 1.2, 0.05, 0.05, 0, 1.88, -d / 2 + 0.5, t === 3 ? K.RUST : s.accent, { slot: t === 3 ? 0 : SLOT_GLOW });
+  b.box(w - 1.2, 0.05, 0.05, 0, 1.88, -d / 2 + 0.5, s.stripe);
   b.box(0.05, 1.2, 0.05, w / 2 - 0.5, 0.65, -d / 2 + 0.95, s.metal);
   b.box(0.05, 1.2, 0.05, w / 2 - 0.5, 0.65, -d / 2 + 0.55, s.metal);
   for (let i = 0; i < 3; i++) b.box(0.05, 0.05, 0.4, w / 2 - 0.5, 0.3 + i * 0.4, -d / 2 + 0.75, s.metal);
@@ -746,7 +745,7 @@ registerModel('atmo_generator', (c) => {
   b.cyl(0.9, 1.1, 2.6, 0, 2.9, 0, s.machine, 10, { shade: 0.02 });
   for (let i = 0; i < 3; i++) b.cyl(1.0 - i * 0.03, 1.0 - i * 0.03, 0.08, 0, 2.2 + i * 0.55, 0, s.machineDark, 10);
   K.glowRing(b, 0.96, 0, 4.2, 0, s.accent, 10, 0.08);
-  b.cyl(0.95, 0.95, 0.12, 0, 4.14, 0, t === 6 ? K.GOLD : s.metal, 10);
+  b.cyl(0.95, 0.95, 0.12, 0, 4.14, 0, t === 6 ? s.trim : s.metal, 10);
   c.part('spinY', 0, 4.25, 0, (pb) => {
     for (let i = 0; i < 4; i++) pb.box(1.5, 0.06, 0.3, 0, 0, 0, s.light, { ry: (i * Math.PI) / 4 });
     pb.cyl(0.2, 0.2, 0.2, 0, 0, 0, s.metal, 6);
@@ -762,7 +761,7 @@ registerModel('atmo_generator', (c) => {
   b.box(0.9, 0.9, 0.5, w / 2 - 0.7, 2.05, d / 2 - 0.6, s.machineDark);
   b.box(0.7, 0.4, 0.06, w / 2 - 0.7, 2.3, d / 2 - 0.34, s.accent, { slot: SLOT_GLOW });
   b.box(0.1, 0.1, 0.06, w / 2 - 1.0, 1.85, d / 2 - 0.34, '#7cff6a', { slot: SLOT_GLOW });
-  b.box(0.76, 0.1, 0.5, -w / 2 + 0.7, 1.65, d / 2 - 0.6, t === 3 ? K.RUST : s.accent, { slot: t === 3 ? 0 : SLOT_GLOW });
+  b.box(0.76, 0.1, 0.5, -w / 2 + 0.7, 1.65, d / 2 - 0.6, s.stripe);
   c.emit('steam', 0, 4.4, 0, 2);
   c.levelPips();
 });
