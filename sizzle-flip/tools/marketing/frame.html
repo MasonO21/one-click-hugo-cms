@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Store screenshot frame</title>
+<!-- Composition template for the store screenshots (tools/marketing/screens.mjs): a caption over a framed capture
+     of the game, in the game's own fonts and colours. Rendered by Playwright at each store's exact size. -->
+<style>
+  @font-face { font-family: 'Lilita One'; src: url('../../assets/fonts/lilita-one.woff2') format('woff2'); }
+  @font-face { font-family: 'Fredoka'; font-weight: 700; src: url('../../assets/fonts/fredoka-700.woff2') format('woff2'); }
+  :root { --ink: #3a2216; --u: 1px; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #2a1a2e; }
+  #slide { position: relative; width: 100vw; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+  #bg { position: absolute; inset: 0; }
+  #bg::after { content: ''; position: absolute; inset: 0; opacity: .13;
+    background-image: radial-gradient(#fff 18%, transparent 19%), radial-gradient(#fff 18%, transparent 19%);
+    background-size: calc(var(--u) * 64) calc(var(--u) * 64); background-position: 0 0, calc(var(--u) * 32) calc(var(--u) * 32); }
+  #rays { position: absolute; left: 50%; top: 9%; width: 260vmax; height: 260vmax; transform: translate(-50%, -50%); opacity: .14;
+    background: repeating-conic-gradient(from 0deg, #fff 0 9deg, transparent 9deg 22.5deg); border-radius: 50%; }
+  #cap { position: relative; z-index: 2; text-align: center; padding: 0 calc(var(--u) * 40); }
+  #head { font-family: 'Lilita One'; color: #fff; line-height: .98; letter-spacing: calc(var(--u) * .5);
+    text-shadow: 0 calc(var(--u) * 7) 0 var(--ink), 0 calc(var(--u) * -4) 0 var(--ink), calc(var(--u) * 4) 0 0 var(--ink), calc(var(--u) * -4) 0 0 var(--ink),
+      calc(var(--u) * 4) calc(var(--u) * 4) 0 var(--ink), calc(var(--u) * -4) calc(var(--u) * 4) 0 var(--ink), calc(var(--u) * 4) calc(var(--u) * -4) 0 var(--ink),
+      calc(var(--u) * -4) calc(var(--u) * -4) 0 var(--ink), 0 calc(var(--u) * 16) calc(var(--u) * 26) rgba(0,0,0,.3); }
+  #head em { font-style: normal; color: var(--hl, #ffc93c); }
+  #sub { display: inline-block; margin-top: calc(var(--u) * 22); font-family: 'Fredoka'; font-weight: 700; color: var(--ink); background: #fff8e8;
+    border: calc(var(--u) * 5) solid var(--ink); border-radius: 999px; padding: calc(var(--u) * 10) calc(var(--u) * 30); box-shadow: 0 calc(var(--u) * 7) 0 rgba(0,0,0,.25); }
+  #phone { position: relative; z-index: 1; border: calc(var(--u) * 12) solid var(--ink); border-radius: calc(var(--u) * 64); overflow: hidden; background: #000;
+    box-shadow: 0 0 0 calc(var(--u) * 7) rgba(255,255,255,.55), 0 calc(var(--u) * 30) calc(var(--u) * 60) rgba(0,0,0,.4); }
+  #cast { position: absolute; left: 0; z-index: 1; display: none; }
+  #phone img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+</style>
+</head>
+<body>
+<div id="slide"><div id="bg"><div id="rays"></div></div><div id="cap"><div id="head"></div><div id="sub"></div></div><div id="phone"><img id="shot" alt=""></div><canvas id="cast"></canvas></div>
+<script>
+// render({ W, H, head, sub, colors: [top, bottom], hl, img, layout: { capTop, headSize, subSize, phoneTop, phoneW, phoneH } })
+window.render = async (o) => {
+  const u = o.W / 1290;                                    // design unit: 1 px at the iPhone width
+  document.documentElement.style.setProperty('--u', u + 'px');
+  document.getElementById('bg').style.background = `linear-gradient(180deg, ${o.colors[0]} 0%, ${o.colors[1]} 100%)`;
+  document.documentElement.style.setProperty('--hl', o.hl || '#ffc93c');
+  const head = document.getElementById('head'), sub = document.getElementById('sub');
+  head.innerHTML = o.head; sub.textContent = o.sub || ''; sub.style.display = o.sub ? '' : 'none';
+  head.style.fontSize = o.layout.headSize + 'px'; sub.style.fontSize = o.layout.subSize + 'px';
+  const cap = document.getElementById('cap'); cap.style.marginTop = o.layout.capTop + 'px';
+  const phone = document.getElementById('phone');
+  Object.assign(phone.style, { width: o.layout.phoneW + 'px', height: o.layout.phoneH + 'px', marginTop: o.layout.phoneGap + 'px',
+    borderRadius: o.layout.radius + 'px', transform: `rotate(${o.tilt || 0}deg)` });
+  const img = document.getElementById('shot');
+  await new Promise((res) => { img.onload = img.onerror = res; img.src = o.img; });
+  await document.fonts.ready;
+};
+// The character line-up: the game's own character art (drawItem, as in the shop cards) drawn large under the caption.
+window.renderCast = async (o) => {
+  await window.render({ ...o, img: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', layout: { ...o.layout, phoneW: 1, phoneH: 1, radius: 0, phoneGap: 0 } });
+  document.getElementById('phone').style.display = 'none';
+  const { ITEM_BY_ID, drawItem } = await import('../../src/art/items.js');
+  const { drawSausage, makeFaceState } = await import('../../src/art/sausage.js');
+  const u = o.W / 1290, top = document.getElementById('cap').getBoundingClientRect().bottom + 40 * u;
+  const c = document.getElementById('cast');
+  c.width = o.W; c.height = o.H - top; c.style.top = top + 'px'; c.style.display = 'block';
+  const ctx = c.getContext('2d');
+  const cols = o.cols || 3, rows = Math.ceil(o.cast.length / cols);
+  const cw = o.W / cols, ch = c.height / rows;
+  const exprs = ['happy', 'wide', 'win', 'idle', 'aim', 'happy'];
+  o.cast.forEach((id, k) => {
+    const col = k % cols, row = Math.floor(k / cols);
+    const cx = cw * (col + 0.5) + (row % 2 ? 0.04 : -0.04) * cw, cy = ch * (row + 0.42);
+    const ang = ((k * 37) % 7 - 3) * 0.11, bend = ((k * 53) % 5 - 2) * 3;
+    const len = Math.min(cw * 0.8, ch * 1.25), s = len / 140;
+    const N = 10, px = new Float64Array(N), py = new Float64Array(N);
+    for (let i = 0; i < N; i++) { const x = (i - 4.5) * 11, y = -Math.sin(i / (N - 1) * Math.PI) * bend; px[i] = x * Math.cos(ang) - y * Math.sin(ang); py[i] = x * Math.sin(ang) + y * Math.cos(ang); }
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+    ctx.shadowColor = 'rgba(40,10,30,.35)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 10;
+    const face = makeFaceState(); face.expr = exprs[k % exprs.length]; face.lookX = Math.cos(ang); face.lookY = 0.2;
+    if (id === 'sausage') drawSausage(ctx, px, py, { R: 15, face, t: 0.4 + k * 0.3 });
+    else drawItem(ctx, px, py, { R: 15, item: ITEM_BY_ID[id], face, t: 0.4 + k * 0.3 });
+    ctx.restore();
+    if (o.labels !== false) {
+      const name = id === 'sausage' ? 'The original' : ITEM_BY_ID[id].name;
+      ctx.font = `700 ${34 * u}px Fredoka`; const w = ctx.measureText(name).width + 34 * u, h = 52 * u, y = cy + ch * 0.3;
+      ctx.fillStyle = '#fff8e8'; ctx.strokeStyle = '#3a2216'; ctx.lineWidth = 5 * u;
+      ctx.beginPath(); ctx.roundRect(cx - w / 2, y - h / 2, w, h, h / 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#3a2216'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name, cx, y + 2 * u);
+    }
+  });
+};
+</script>
+</body>
+</html>

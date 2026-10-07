@@ -112,6 +112,16 @@ All of these numbers live in `src/shop-config.js`. Spending asks for confirmatio
 
 **The characters** are defined in `src/art/items.js` (the first 30) and `src/art/items-more.js` (100 more), and drawn by `src/art/itemkit.js` over the sausage's own soft-body particle chain: a width profile along the same centreline, painted details, attachments (stems, sticks, wheels, fins, wings) and the same expressive face. The physics, and so every level, are unchanged. `tools/items-gallery.html` shows every character in three poses.
 
+## Store screenshots and video ad
+
+```bash
+npm run dev &
+node tools/marketing/screens.mjs   # store/ios (1290×2796), store/ipad (2064×2752), store/play (1080×1920): 8 captioned screenshots each
+node tools/marketing/ad.mjs        # store/video: a 30 s vertical ad (1080×1920) and the App Store app preview (886×1920, 29.5 s)
+```
+
+Both record the real game. Chromium runs it on a fake clock, so every frame is exact, and levels are played along their verified routes through the game's touch handlers, with the aim drag and a finger marker shown (`tools/marketing/kit.mjs`). Captions and scenes are listed at the top of each script. The ad's soundtrack is the game's own music and sound effects, rendered offline at the moments they happen in the footage. The App Store preview shows only in-app footage and doesn't mention other stores, as Apple requires.
+
 ## How the levels are made (and why they're all beatable)
 
 Levels are built by `tools/generate.mjs` from per-world *recipes* (which props, hazards and mechanics are unlocked at each level, with the tutorial tip that introduces them) and a difficulty curve (target par, level height, obstacle density).
@@ -151,8 +161,8 @@ src/art/itemkit.js          shop character renderer (art only — same physics b
 src/art/items.js            shop characters 1–30, tabs; items-more.js: 100 more
 src/privacy.js              privacy policy (in-app + dist/privacy.html)
 src/levels/data.js          the 200 generated & verified levels
-tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon & screenshot renderers
-store/                      listing.md (store text), iap-products.csv (the packs), ios/ (1290×2796) and play/ (1080×1920) screenshots; icons/ has store icons + feature graphic
+tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon renderer; marketing/: store screenshots + video ad
+store/                      listing.md (store text), iap-products.csv (the packs), captioned screenshots: ios/ (1290×2796), ipad/ (2064×2752), play/ (1080×1920); video/ (ad + App Store preview); icons/ has store icons + feature graphic
 android/                    Capacitor Android project
 ```
 

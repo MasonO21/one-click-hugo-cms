@@ -92,7 +92,8 @@ keyPassword=…
   - Users can't request deletion of data held by Google (it is tied to the resettable advertising ID). Game progress never leaves the device.
 - **Target audience:** 13+ recommended (otherwise set `childDirected: true`, see section 1).
 - **Content rating (IARC):** cartoon slapstick with no violence, gambling or user content; digital purchases: yes. Expect Everyone / PEGI 3, with an "In-app purchases" notice.
-- **Store listing:** use the text in `store/listing.md`, the screenshots in `store/play/` (1080×1920), the icon `icons/play-icon-512.png` and the feature graphic `icons/feature-1024x500.png`.
+- **Store listing:** use the text in `store/listing.md`, the 8 phone screenshots in `store/play/` (1080×1920, in order), the icon `icons/play-icon-512.png` and the feature graphic `icons/feature-1024x500.png`.
+- **Promo video (optional):** Play takes a YouTube link. Upload `store/video/sizzle-flip-ad-1080x1920.mp4` to YouTube (public or unlisted, ads off) and paste its URL.
 - **Closed testing first:** a new *personal* developer account must run a closed test with at least 12 testers for 14 days before production access is granted.
 
 ## 4. iOS (App Store) — needs a Mac with Xcode
@@ -134,8 +135,9 @@ The purchases plugin is patched (`patches/@capgo+native-purchases+8.8.1.patch`, 
   6. For testing, use Sandbox testers (Users and Access → Sandbox).
 
 - **Icon:** `icons/ios-icon-1024.png` (opaque).
-- **Screenshots:** `store/ios/` (1290×2796).
-- **iPad:** either add iPad screenshots (2064×2752) or limit the app to iPhone in Xcode.
+- **Screenshots:** `store/ios/` (1290×2796, 8 images, in order) for the 6.9" iPhone slot; App Store Connect scales them for smaller iPhones.
+- **iPad:** `store/ipad/` (2064×2752) for the 13" iPad slot. (Or limit the app to iPhone in Xcode and skip them.)
+- **App preview (optional):** `store/video/app-preview-886x1920.mp4` (29.5 s, H.264, 30 fps, in-app footage only) for the 6.9" iPhone slot. Pick the poster frame when you upload it.
 - **App Privacy:**
   - Identifiers: Device ID, used for third-party advertising, and *used to track* if the player allows tracking.
   - Usage data: product interaction, for advertising and analytics.
