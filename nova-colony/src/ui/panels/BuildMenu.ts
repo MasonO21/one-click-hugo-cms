@@ -210,8 +210,7 @@ export class BuildMenuPanel extends Panel {
                   this.rerender();
                   return;
                 }
-                const i = game.state.buildings.blueprints.findIndex((x) => x.id === bp.id);
-                if (i >= 0) game.state.buildings.blueprints.splice(i, 1);
+                game.sys.buildings.deleteBlueprint(bp.id);
                 this.confirmDelete = '';
                 this.rerender();
               },

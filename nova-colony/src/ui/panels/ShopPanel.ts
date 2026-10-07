@@ -245,7 +245,7 @@ export class ShopPanel extends Panel {
           cls: equipped ? 'ghost block' : 'info block',
           disabled: equipped ? 'Already equipped' : false,
           onClick: () => {
-            lo.cosmetics.equipped[c.kind] = c.id;
+            g.sys.liveops.equipCosmetic(c.id);
             this.ctx.haptic('tap');
             this.rerender();
           },
@@ -258,10 +258,8 @@ export class ShopPanel extends Panel {
           cls: 'nova block',
           disabled: lo.nova >= c.nova ? false : 'Not enough Nova Crystals',
           onClick: () => {
-            if (g.sys.liveops.spendNova(c.nova, 'cosmetic')) {
-              lo.cosmetics.owned.push(c.id);
-              lo.cosmetics.equipped[c.kind] = c.id;
-              this.ctx.toast(`${c.name} unlocked!`, 'reward', '👕');
+            if (g.sys.liveops.buyCosmetic(c.id)) {
+              g.sys.liveops.equipCosmetic(c.id);
               this.ctx.haptic('success');
             }
             this.rerender();

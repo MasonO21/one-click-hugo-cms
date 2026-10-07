@@ -138,7 +138,7 @@ export class SettingsPanel extends Panel {
           label: '💾 Save now',
           cls: 'info small grow',
           onClick: async () => {
-            const r = await callHook(['saveNow'], g);
+            const r = await callHook(['saveNow', 'flush'], g);
             const r2 = r.found ? r : await callHook(['save'], g, false);
             this.ctx.toast(r2.found ? 'Colony saved!' : 'Your colony autosaves as you play', 'success', '💾');
           },

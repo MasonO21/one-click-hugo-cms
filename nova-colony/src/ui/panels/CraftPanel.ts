@@ -175,12 +175,14 @@ export class CraftPanel extends Panel {
             cls: 'nova small',
             disabled: g.state.liveops.nova >= cost ? false : 'Not enough Nova Crystals',
             onClick: () => {
-              // finishNow may or may not charge Nova itself: only charge here if it did not
-              const before = g.state.liveops.nova;
-              if (g.sys.crafting.finishNow(job.id)) {
-                if (g.state.liveops.nova === before) g.sys.liveops.spendNova(cost, 'instant_craft');
-                this.ctx.haptic('success');
-              } else this.ctx.toast("Couldn't finish that right now", 'info', '🛠️');
+              // pay first, then finish (finishNow itself is free — ads and Nova both route through it)
+              if (g.sys.liveops.spendNova(cost, 'instant_craft')) {
+                if (g.sys.crafting.finishNow(job.id)) this.ctx.haptic('success');
+                else {
+                  g.sys.liveops.addNova(cost, 'refund');
+                  this.ctx.toast("Couldn't finish that right now", 'info', '🛠️');
+                }
+              }
               this.rerender();
             },
           })
