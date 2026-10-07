@@ -1536,9 +1536,20 @@ errs = await session(async (page) => {
       return { ended: r.ended, victory: res && res.victory }; // the results header is drawn from result.victory
     };
     out.won = abandon(true); out.mid = abandon(false);
+    // the legion slays Gravemaw while the Shepherd is down: no revive prompt, the victory beat plays out to a win
+    app.exitRun(); document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    p.selectedHero = 'vael'; p.energy = 30; app.startRun(1);
+    { const r = app.run; let res = null, prompted = false; const end0 = r.onEnd; r.onEnd = (x) => { res = x; end0(x); };
+      const sr = r.ui.showRevive.bind(r.ui); r.ui.showRevive = (...a) => { prompted = true; return sr(...a); };
+      r.player.invuln = 0; r.player.hurt(1e9); const dead = r.player.dead; r.update(0.5);
+      r.onBossKilled(r.player.x, r.player.z + 5);
+      for (let i = 0; i < 80 && !r.ended; i++) r.update(0.1);
+      out.downed = { dead, prompted, ended: r.ended, victory: res && res.victory }; }
     app.exitRun();
     return out;
   });
+  check('regression: Gravemaw slain while the Shepherd is down wins without a revive prompt',
+    s.downed.dead && !s.downed.prompted && s.downed.ended && s.downed.victory === true, JSON.stringify(s.downed));
   check('regression: abandoning during the victory beat still wins; mid-run it is a defeat',
     s.won.ended && s.won.victory === true && s.mid.ended && s.mid.victory === false, JSON.stringify(s));
 });

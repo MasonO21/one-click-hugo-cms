@@ -668,7 +668,8 @@ export class Run {
     this.updateVictory(realDt);
     if (this.deathT >= 0) {
       this.deathT += realDt;
-      if (this.deathT > 1.1 && !this.paused) {
+      // the legion slew Gravemaw while the Shepherd was down: the chapter is won, so no revive prompt; the beat plays out
+      if (this.deathT > 1.1 && !this.paused && !(this.bossDead && !this.endless)) {
         this.paused = true;
         this.ui.showRevive({ canRevive: this.revivesUsed < 1, gemCost: 60 }, (choice) => {
           if (choice === 'revive') this.revive(false);

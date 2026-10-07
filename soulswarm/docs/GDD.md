@@ -193,6 +193,7 @@ Pickup radius is 2.8 m (Soul Magnet +30% per level). Hearts, magnets and chests 
 - When nothing is left to upgrade, the cards are "Second Wind" (heal 50% HP) and "Grave Gold" (+150 gold this run).
 - 1 reroll per run, through an optional rewarded ad. No other ads inside a run except the revive offer on death.
 - **Revive:** one paid revive per run (rewarded ad or 60 gems), offered for 10 s on the death screen. It restores full HP, gives 2.5 s of invulnerability and blasts every enemy within 8 m for 50% of its max HP. Mordrake's free revive triggers automatically on his first death and does not use up the paid one.
+- **Gravemaw falls while the Shepherd is down** (the legion finishes him in the 1.1 s before the death screen): there is no revive prompt; the victory beat plays out and the chapter is won. Once he has fallen, nothing can hurt the Shepherd.
 
 ### 4.7 Kill streaks and Soul Frenzy
 
