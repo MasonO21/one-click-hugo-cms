@@ -150,7 +150,12 @@ export class Projectiles {
     this.bolts.instanceMatrix.needsUpdate = true; this.spears.instanceMatrix.needsUpdate = true; this.orbs.instanceMatrix.needsUpdate = true; this.orbs.instanceColor.needsUpdate = true;
   }
 
-  clearEnemyShots() { this.embers.length = 0; this.clearLobs(); }
+  /** Clears enemy fire in flight. spareBoss keeps Gravemaw's ring and spiral orbs (only the Nova wipes those). */
+  clearEnemyShots(spareBoss = false) {
+    if (spareBoss) { const E = this.embers; let n = 0; for (let i = 0; i < E.length; i++) if (E[i].boss) E[n++] = E[i]; E.length = n; }
+    else this.embers.length = 0;
+    this.clearLobs();
+  }
 
   // ---------------------------------------------------------------- Gravemaw bullet patterns (boss.js)
   // Boss orbs ride the ember pool (same update, collision and instancing) with their own colour, size and hitbox.

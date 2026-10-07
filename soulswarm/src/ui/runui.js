@@ -245,7 +245,7 @@ export class RunUI {
           if (b) b.textContent = s.muted ? 'Sound: Off' : 'Sound: On';
           return false;
         } },
-        { label: 'Abandon run', cls: 'btn-danger', onClick: () => { run.paused = false; run.end(false); } },
+        { label: 'Abandon run', cls: 'btn-danger', onClick: () => { run.paused = false; run.end(run.bossDead && !run.endless); } }, // Gravemaw already fell: leaving during the victory beat still wins the chapter
       ],
     });
   }

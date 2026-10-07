@@ -403,7 +403,7 @@ export class Rites {
   // ---------------------------------------------------------------- Liora: Death Knell
   liora(D, P) {
     const run = this.run;
-    run.projectiles.clearEnemyShots();
+    run.projectiles.clearEnemyShots(true); // Gravemaw keeps his rules: his ring and spiral orbs fly on, as through the wall
     this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0;
     run.enemies.query(P.x, P.z, D.r, this._knell);
     run.enemies.query(P.x, P.z, D.silence, this._silence); // the toll carries: Witches farther out lose their fire too

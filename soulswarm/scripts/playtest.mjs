@@ -1163,10 +1163,10 @@ errs = await session(async (page) => {
     r = start('liora'); P = r.player;
     const st = foe(r, 2.5, 0), outside = foe(r, 9, 0), br = foe(r, -2, 0, { type: 'brute' }), wf = foe(r, -1, -8, { type: 'witch' });
     step(r, 0.2); br.state = 1; br.stateT = 0.3; // a Brute mid wind-up
-    r.projectiles.enemyShot(P.x + 6, P.z, -1, 0, 3, 5);
+    r.projectiles.enemyShot(P.x + 6, P.z, -1, 0, 3, 5); r.projectiles.bossOrb(P.x - 12, P.z + 12, 0, 0.01, 1, { life: 9 });
     const at = { x: st.x, z: st.z }, out0 = dist(outside, P), shots = r.projectiles.embers.length;
     r.rites.trigger();
-    const L = out.liora = { shots, cleared: r.projectiles.embers.length, bruteCalledOff: br.state === 0, witchSilenced: wf.stunT > 0 && wf.tollUid !== wf.uid };
+    const L = out.liora = { shots, cleared: r.projectiles.embers.filter((b) => !b.boss).length, bossOrbs: r.projectiles.embers.filter((b) => b.boss).length, bruteCalledOff: br.state === 0, witchSilenced: wf.stunT > 0 && wf.tollUid !== wf.uid };
     step(r, 1.2);
     Object.assign(L, { stunned: st.stunT > 0, still: dist(st, at), marked: st.tollUid === st.uid && +(st.tollT - r.time).toFixed(1), outsideMoved: +(out0 - dist(outside, P)).toFixed(2), outsideStun: outside.stunT > 0 });
     step(r, 0.5); const at2 = { x: st.x, z: st.z }; step(r, 0.5);
@@ -1248,7 +1248,7 @@ errs = await session(async (page) => {
   check('rites: Vael Grave Call raises every kill (cap holds), pulls nearby shards', V.before === 0 && V.rose === 12 && V.pillars > 0 && V.capHeld && V.after === 0 && V.near === 8 && V.far === 0, JSON.stringify(V));
   check('rites: Nyx Shadow Step moves 5+ m, invulnerable, cuts her path', N.moved >= 5 && N.invuln >= 0.35 && N.untouched && N.cut && N.knock > 2 && N.spared, JSON.stringify(N));
   check('rites: Nyx Shadow Step hastes the legion +60% for 3 s', N.haste === 1.6 && N.hasteAfter === 1, JSON.stringify(N));
-  check('rites: Liora Death Knell stuns (holds still), marks for 5 s, silences fire and Witches', L.stunned && L.still < 0.05 && L.marked >= 3.5 && L.markRose === 1 && !L.outsideStun && L.outsideMoved > 1 && L.shots > 0 && L.cleared === 0 && L.bruteCalledOff && L.witchSilenced && L.freed, JSON.stringify(L));
+  check('rites: Liora Death Knell stuns (holds still), marks for 5 s, silences fire and Witches', L.stunned && L.still < 0.05 && L.marked >= 3.5 && L.markRose === 1 && !L.outsideStun && L.outsideMoved > 1 && L.shots > 1 && L.cleared === 0 && L.bossOrbs === 1 && L.bruteCalledOff && L.witchSilenced && L.freed, JSON.stringify(L));
   check('rites: Mordrake Ossuary Wall pushes foes out and heals minions', W.inner >= W.r && W.brute >= W.r && W.cut && W.kept >= W.r - 0.5 && W.heal >= 0.45 && W.heal <= 0.55 && W.over, JSON.stringify(W));
   check('rites: Ossuary Wall shatters Witch fire falling inside it', W.fireLanded === 1, JSON.stringify(W));
   check('rites: Seraphine Ashfall strikes 20 foes (elite first), pins and burns, +15% Nova', S.struck === S.n && S.elite && S.firstIsElite && S.burning > 0 && S.pinned === S.n && Math.abs(S.charged - 0.15) < 0.001, JSON.stringify(S));
@@ -1519,6 +1519,30 @@ errs = await session(async (page) => {
     burn.ash === burn.want[0] && burn.both === burn.want[1] && burn.chainsFirst === burn.want[1] && burn.rose === 1, JSON.stringify(burn));
 });
 check('bug-test regressions: no runtime errors', !errs.length, errs[0] || '');
+
+// 21b. Abandoning from the pause menu during the victory beat (Gravemaw already fell) still wins the chapter;
+//      abandoning a run in progress is still a defeat.
+errs = await session(async (page) => {
+  const s = await page.evaluate(() => {
+    const app = window.__soulswarm, p = app.profile, out = {};
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; app.engine.manual = true;
+    const abandon = (won) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+      p.energy = 30; app.startRun(1); const r = app.run; let res = null; const end0 = r.onEnd; r.onEnd = (x) => { res = x; end0(x); };
+      if (won) { r.onBossKilled(r.player.x, r.player.z + 5); r.update(0.5); }
+      r.pause(true);
+      [...document.querySelectorAll('.modal .modal-actions .btn')].find((b) => /Abandon/.test(b.textContent))?.click();
+      return { ended: r.ended, victory: res && res.victory }; // the results header is drawn from result.victory
+    };
+    out.won = abandon(true); out.mid = abandon(false);
+    app.exitRun();
+    return out;
+  });
+  check('regression: abandoning during the victory beat still wins; mid-run it is a defeat',
+    s.won.ended && s.won.victory === true && s.mid.ended && s.mid.victory === false, JSON.stringify(s));
+});
+check('abandon regression: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();
