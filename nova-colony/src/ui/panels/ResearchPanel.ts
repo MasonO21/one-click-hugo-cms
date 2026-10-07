@@ -9,8 +9,8 @@ import type { ResearchStatus } from '../../sim/research';
 import { fmt } from '../../core/format';
 import { bagCovers } from '../../core/bag';
 import { NODE_H, NODE_W, RESEARCH_CATEGORIES, layoutTree } from '../logic/categories';
-import { modifierText } from '../logic/describe';
-import { adButton, btn, costChips, emptyState, section, tabs } from '../widgets';
+import { buildingUnlock, modifierText, vehicleUnlock, type UnlockEntry } from '../logic/describe';
+import { adButton, btn, costChips, emptyState, section, tabs, unlockChip } from '../widgets';
 import { fill, h, s } from '../dom';
 
 export class ResearchPanel extends Panel {
@@ -167,16 +167,17 @@ export class ResearchPanel extends Panel {
       box.appendChild(req);
     }
     // unlocks
-    const unlocks: string[] = [];
-    for (const id of d.unlocks?.buildings ?? []) unlocks.push(`${this.data.building(id)?.icon ?? '🏠'} ${this.data.building(id)?.name ?? id}`);
+    // buildings and vehicles show their rendered thumbnail; everything else keeps its emoji
+    const unlocks: (string | UnlockEntry)[] = [];
+    for (const id of d.unlocks?.buildings ?? []) unlocks.push(buildingUnlock(this.data, id));
     for (const id of d.unlocks?.recipes ?? []) unlocks.push(`🛠️ ${this.data.recipe(id)?.name ?? id}`);
-    for (const id of d.unlocks?.vehicles ?? []) unlocks.push(`${this.data.vehicle(id)?.icon ?? '🚙'} ${this.data.vehicle(id)?.name ?? id}`);
+    for (const id of d.unlocks?.vehicles ?? []) unlocks.push(vehicleUnlock(this.data, id));
     for (const id of d.unlocks?.regions ?? []) unlocks.push(`🗺️ ${this.data.biome(id)?.name ?? id}`);
     for (const m of d.effects ?? []) unlocks.push(`📈 ${modifierText(m, this.data)}`);
     if (unlocks.length) {
       box.appendChild(section('Unlocks'));
-      const chips = h('div', { class: 'chips' });
-      for (const u of unlocks.slice(0, 10)) chips.appendChild(h('span', { class: 'chip info', text: u }));
+      const chips = h('div', { class: 'chips unlocks' });
+      for (const u of unlocks.slice(0, 10)) chips.appendChild(typeof u === 'string' ? h('span', { class: 'chip info', text: u }) : unlockChip(u));
       box.appendChild(chips);
     }
     if (st === 'done') box.appendChild(h('div', { class: 'chip good', style: 'margin-top:.7em', text: '✔ Researched' }));

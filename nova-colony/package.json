@@ -17,7 +17,8 @@
     "android:sync": "npm run build && cap sync android",
     "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "android:lint": "cd android && ./gradlew lintDebug",
-    "android:release": "npm run android:sync && cd android && ./gradlew bundleRelease"
+    "android:release": "npm run android:sync && cd android && ./gradlew bundleRelease",
+    "bake:thumbs": "node scripts/bake-thumbs.mjs"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.2.1",

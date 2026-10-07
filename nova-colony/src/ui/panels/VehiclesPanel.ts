@@ -5,6 +5,7 @@ import { Panel, type PanelTitle } from './Panel';
 import type { VehicleDef } from '../../data/schema';
 import { btn, emptyState, recipeChips } from '../widgets';
 import { fill, h } from '../dom';
+import { vehicleArt, vehicleIcon } from '../art';
 
 export class VehiclesPanel extends Panel {
   readonly name = 'vehicles';
@@ -47,7 +48,7 @@ export class VehiclesPanel extends Panel {
         h(
           'div',
           { class: 'card tint row' },
-          h('span', { class: 'bi', text: v?.icon ?? '🚙' }),
+          v ? vehicleIcon(v.id, v.icon, 'bi', 'span') : h('span', { class: 'bi', text: '🚙' }),
           h('div', { class: 'grow' }, h('div', { class: 'h3', text: `Riding ${v?.name ?? 'vehicle'}` }), h('div', { class: 'mute small', text: 'Tap Get off to walk again.' })),
           btn({ label: 'Get off', cls: 'ghost small', onClick: () => {
             g.sys.player.dismount();
@@ -63,9 +64,12 @@ export class VehiclesPanel extends Panel {
       const tierOk = v.unlockTier <= g.state.colony.tier;
       const resOk = !v.research || g.state.research.completed.includes(v.research);
       const recipe = this.recipeFor(v);
-      const card = h('div', { class: 'card veh' + (owned ? ' owned' : ''), data: { vehicle: v.id } });
+      const locked = !owned && (!tierOk || !resOk);
+      const card = h('div', { class: 'card veh' + (owned ? ' owned' : '') + (locked ? ' locked' : ''), data: { vehicle: v.id } });
       card.append(
-        h('div', { class: 'row' }, h('span', { class: 'bi', text: v.icon }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: v.name }), h('div', { class: 'chips' }, h('span', { class: 'chip good', text: `⚡ ${v.speed.toFixed(1)}× speed` }), h('span', { class: 'chip info', text: `🎒 +${v.storage}` })))),
+        // the vehicle's rendered picture is the hero of its card (greyscale while it is still locked)
+        h('div', { class: 'veh-hero' }, vehicleIcon(v.id, v.icon, 'vpic', 'div'), locked ? h('span', { class: 'bbadge', text: '🔒' }) : riding ? h('span', { class: 'bbadge ok', text: '✔' }) : null),
+        h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'h3', text: v.name }), h('div', { class: 'chips' }, h('span', { class: 'chip good', text: `⚡ ${v.speed.toFixed(1)}× speed` }), h('span', { class: 'chip info', text: `🎒 +${v.storage}` })))),
         h('div', { class: 'mute small', text: v.description }),
       );
       if (owned) {
@@ -75,7 +79,7 @@ export class VehiclesPanel extends Panel {
             cls: (riding ? 'ghost' : 'good') + ' block',
             onClick: () => {
               if (riding) g.sys.player.dismount();
-              else if (!g.sys.player.mount(v.id)) this.ctx.toast("Can't ride here right now", 'info', '🚙');
+              else if (!g.sys.player.mount(v.id)) this.ctx.toast("Can't ride here right now", 'info', vehicleArt(v.id) ?? '🚙');
               this.rerender();
             },
           }),
@@ -96,7 +100,7 @@ export class VehiclesPanel extends Panel {
             onClick: () => {
               if (recipe) {
                 const id = g.sys.crafting.craft(recipe.id);
-                if (id == null) this.ctx.toast("Couldn't start that right now", 'info', '🚙');
+                if (id == null) this.ctx.toast("Couldn't start that right now", 'info', vehicleArt(v.id) ?? '🚙');
                 else this.ctx.open('craft', { station: recipe.station });
               }
             },

@@ -149,6 +149,181 @@ export class GeoBuilder {
     return this.add(geo, color, x, y, z, { ...opts, sy: (opts?.sy ?? 1) * (h / r) });
   }
 
+  // ------------------------------------------------------------------ chunky low-poly detail kit
+  // (appended helpers; everything below is sugar over the primitives above)
+
+  /**
+   * Box with all 12 edges chamfered by `bv` — the "toy" look for hero bodies (turret heads, vehicle
+   * hulls, machine blocks). 44 triangles vs 12 for a plain box, so use it where it shows.
+   */
+  bevelBox(w: number, h: number, d: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, bv = 0.08, opts?: PrimOpts): this {
+    const b = Math.max(0.001, Math.min(bv, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001));
+    const hw = w / 2;
+    const hh = h / 2;
+    const hd = d / 2;
+    const iw = hw - b;
+    const ih = hh - b;
+    const id = hd - b;
+    const v: number[] = [];
+    // emit a convex polygon (fan) oriented outward from the box centre
+    const poly = (...p: number[]) => {
+      const n = p.length / 3;
+      const ax = p[3] - p[0], ay = p[4] - p[1], az = p[5] - p[2];
+      const bx = p[6] - p[0], by = p[7] - p[1], bz = p[8] - p[2];
+      const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+      const flip = nx * p[0] + ny * p[1] + nz * p[2] < 0;
+      for (let i = 1; i < n - 1; i++) {
+        const a = flip ? i + 1 : i;
+        const c = flip ? i : i + 1;
+        v.push(p[0], p[1], p[2], p[a * 3], p[a * 3 + 1], p[a * 3 + 2], p[c * 3], p[c * 3 + 1], p[c * 3 + 2]);
+      }
+    };
+    // 6 faces
+    poly(hw, -ih, -id, hw, ih, -id, hw, ih, id, hw, -ih, id);
+    poly(-hw, -ih, -id, -hw, ih, -id, -hw, ih, id, -hw, -ih, id);
+    poly(-iw, hh, -id, iw, hh, -id, iw, hh, id, -iw, hh, id);
+    poly(-iw, -hh, -id, iw, -hh, -id, iw, -hh, id, -iw, -hh, id);
+    poly(-iw, -ih, hd, iw, -ih, hd, iw, ih, hd, -iw, ih, hd);
+    poly(-iw, -ih, -hd, iw, -ih, -hd, iw, ih, -hd, -iw, ih, -hd);
+    // 12 edge chamfers
+    for (const sy of [-1, 1]) for (const sz of [-1, 1]) poly(-iw, sy * hh, sz * id, iw, sy * hh, sz * id, iw, sy * ih, sz * hd, -iw, sy * ih, sz * hd); // along X
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) poly(sx * hw, -ih, sz * id, sx * hw, ih, sz * id, sx * iw, ih, sz * hd, sx * iw, -ih, sz * hd); // along Y
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) poly(sx * hw, sy * ih, -id, sx * hw, sy * ih, id, sx * iw, sy * hh, id, sx * iw, sy * hh, -id); // along Z
+    // 8 corner triangles
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) poly(sx * hw, sy * ih, sz * id, sx * iw, sy * hh, sz * id, sx * iw, sy * ih, sz * hd);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+    geo.computeVertexNormals();
+    return this.add(geo, color, x, y, z, opts);
+  }
+
+  /**
+   * A w×h×d block split into `n` slats along `dir` with alternating colours — plank walls (dir 'y'),
+   * floor boards (dir 'x'), roof shingles (dir 'z'). `gap` leaves a dark seam between slats and
+   * `stagger` shifts every other slat outward along the perpendicular axis (overlapping shingles).
+   * Costs 12 triangles per slat.
+   */
+  planks(w: number, h: number, d: number, x: number, y: number, z: number, n: number, colA: THREE.ColorRepresentation, colB: THREE.ColorRepresentation, dir: 'x' | 'y' | 'z' = 'y', gap = 0.04, stagger = 0, opts: PrimOpts = {}): this {
+    const count = Math.max(1, n | 0);
+    const span = dir === 'x' ? w : dir === 'y' ? h : d;
+    const step = span / count;
+    const shade = opts.shade ?? 0.04;
+    for (let i = 0; i < count; i++) {
+      const o = -span / 2 + step * (i + 0.5);
+      const st = i % 2 ? stagger : 0;
+      const col = i % 2 ? colB : colA;
+      if (dir === 'x') this.box(step - gap, h, d, x + o, y, z + st, col, { ...opts, shade });
+      else if (dir === 'y') this.box(w, step - gap, d, x, y + o, z + st, col, { ...opts, shade });
+      else this.box(w, h, step - gap, x, y + st, z + o, col, { ...opts, shade });
+    }
+    return this;
+  }
+
+  /** Hazard / banding stripes: `n` alternating colour bands along `dir`, no seams (12 tris per band). */
+  stripes(w: number, h: number, d: number, x: number, y: number, z: number, n: number, colA: THREE.ColorRepresentation, colB: THREE.ColorRepresentation, dir: 'x' | 'y' | 'z' = 'x', opts: PrimOpts = {}): this {
+    return this.planks(w, h, d, x, y, z, n, colA, colB, dir, 0, 0, { shade: 0, ...opts });
+  }
+
+  /**
+   * Row of `n` chunky rivet studs starting at (x,y,z), stepping by (dx,dy,dz). Each stud is a small
+   * cube turned 45° about the face normal `axis` (12 tris — far cheaper than a sphere).
+   */
+  rivets(n: number, x: number, y: number, z: number, dx: number, dy: number, dz: number, r = 0.05, color: THREE.ColorRepresentation = '#44423e', axis: 'x' | 'y' | 'z' = 'z'): this {
+    const rot: PrimOpts = axis === 'x' ? { rx: Math.PI / 4 } : axis === 'y' ? { ry: Math.PI / 4 } : { rz: Math.PI / 4 };
+    for (let i = 0; i < n; i++) {
+      const sx = axis === 'x' ? r * 0.8 : r * 1.4;
+      const sy = axis === 'y' ? r * 0.8 : r * 1.4;
+      const sz = axis === 'z' ? r * 0.8 : r * 1.4;
+      this.box(sx, sy, sz, x + dx * i, y + dy * i, z + dz * i, color, rot);
+    }
+    return this;
+  }
+
+  /**
+   * Framed window: frame box proud of the wall + a glass pane (SLOT_GLASS, lit warm at night by the
+   * shared material) + optional cross mullions. `facing` is the outward wall normal; (x,y,z) is the
+   * window centre ON the wall surface. 24 tris (+24 with mullions).
+   */
+  windowPane(w: number, h: number, x: number, y: number, z: number, frame: THREE.ColorRepresentation, facing: 'x' | '-x' | 'z' | '-z' = 'z', opts: { frameW?: number; depth?: number; mullion?: boolean; glass?: THREE.ColorRepresentation; sill?: THREE.ColorRepresentation } = {}): this {
+    const fw = opts.frameW ?? 0.08;
+    const depth = opts.depth ?? 0.08;
+    const alongX = facing === 'x' || facing === '-x';
+    const sgn = facing === 'x' || facing === 'z' ? 1 : -1;
+    const ox = alongX ? sgn * depth * 0.5 : 0;
+    const oz = alongX ? 0 : sgn * depth * 0.5;
+    const bw = alongX ? depth : w + fw * 2;
+    const bd = alongX ? w + fw * 2 : depth;
+    this.box(bw, h + fw * 2, bd, x + ox, y, z + oz, frame);
+    const gx = alongX ? sgn * depth * 0.62 : 0;
+    const gz = alongX ? 0 : sgn * depth * 0.62;
+    this.box(alongX ? depth * 0.5 : w, h, alongX ? w : depth * 0.5, x + gx, y, z + gz, opts.glass ?? '#ffffff', { slot: SLOT_GLASS });
+    if (opts.mullion) {
+      const mx = alongX ? sgn * depth * 0.75 : 0;
+      const mz = alongX ? 0 : sgn * depth * 0.75;
+      this.box(alongX ? depth * 0.5 : fw * 0.7, h, alongX ? fw * 0.7 : depth * 0.5, x + mx, y, z + mz, frame);
+      this.box(alongX ? depth * 0.5 : w, fw * 0.7, alongX ? w : depth * 0.5, x + mx, y, z + mz, frame);
+    }
+    if (opts.sill) {
+      const sx = alongX ? sgn * depth * 0.9 : 0;
+      const sz = alongX ? 0 : sgn * depth * 0.9;
+      this.box(alongX ? depth * 1.8 : w + fw * 3, fw, alongX ? w + fw * 3 : depth * 1.8, x + sx, y - h / 2 - fw * 1.3, z + sz, opts.sill);
+    }
+    return this;
+  }
+
+  /**
+   * Pipe run through a polyline (flat array of x,y,z triples): one 6-sided cylinder per segment
+   * and a sphere joint at every interior point, so bends look like proper elbows.
+   */
+  pipe(points: ArrayLike<number>, r: number, color: THREE.ColorRepresentation, seg = 6, joints = true): this {
+    const n = points.length / 3;
+    const up = new THREE.Vector3(0, 1, 0);
+    const dir = new THREE.Vector3();
+    for (let i = 0; i < n - 1; i++) {
+      const ax = points[i * 3], ay = points[i * 3 + 1], az = points[i * 3 + 2];
+      const bx = points[i * 3 + 3], by = points[i * 3 + 4], bz = points[i * 3 + 5];
+      dir.set(bx - ax, by - ay, bz - az);
+      const len = dir.length();
+      if (len < 1e-4) continue;
+      dir.divideScalar(len);
+      _q.setFromUnitVectors(up, dir);
+      _e.setFromQuaternion(_q);
+      this.cyl(r, r, len, (ax + bx) / 2, (ay + by) / 2, (az + bz) / 2, color, seg, { rx: _e.x, ry: _e.y, rz: _e.z });
+      if (joints && i < n - 2) this.sphere(r * 1.15, bx, by, bz, color, 5);
+    }
+    return this;
+  }
+
+  /** Upper half-sphere (domes, rounded caps) — half the triangles of a full sphere. */
+  dome(r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, seg = 8, opts?: PrimOpts): this {
+    return this.add(new THREE.SphereGeometry(r, seg, Math.max(2, (seg >> 1) - 1), 0, Math.PI * 2, 0, Math.PI / 2), color, x, y, z, opts);
+  }
+
+  /** Vehicle wheel: fat tyre + hub cap + axle nut, axis along X. ~64 tris. */
+  wheel(r: number, w: number, x: number, y: number, z: number, tyre: THREE.ColorRepresentation = '#2a2a2e', hub: THREE.ColorRepresentation = '#aeb9c7', seg = 8): this {
+    this.cyl(r, r, w, x, y, z, tyre, seg, { rz: Math.PI / 2, shade: 0.03 });
+    this.cyl(r * 0.58, r * 0.58, w + 0.05, x, y, z, hub, 6, { rz: Math.PI / 2 });
+    this.box(r * 0.3, r * 0.3, r * 0.3, x, y, z, '#55595f', { rx: Math.PI / 4, sx: (w + 0.12) / (r * 0.3) });
+    return this;
+  }
+
+  /**
+   * Ring of `n` sandbags (chunky shaded boxes with jittered yaw) of radius `rad` around (x,y,z);
+   * `arc` < 2π leaves an opening on the −Z side (the back). 12 tris per bag.
+   */
+  sandbags(rad: number, n: number, x: number, y: number, z: number, color: THREE.ColorRepresentation = '#b89a6a', arc = Math.PI * 2, rows = 1): this {
+    for (let row = 0; row < rows; row++) {
+      const cnt = Math.max(2, n - row);
+      for (let i = 0; i < cnt; i++) {
+        const a = Math.PI / 2 - arc / 2 + (arc * (i + 0.5 + row * 0.5)) / cnt;
+        const px = x + Math.cos(a) * rad;
+        const pz = z + Math.sin(a) * rad;
+        this.box(0.5, 0.24, 0.3, px, y + 0.12 + row * 0.22, pz, color, { ry: -a + (this.rnd() - 0.5) * 0.25, shade: 0.08 });
+      }
+    }
+    return this;
+  }
+
   /**
    * Merge accumulated primitives into ONE geometry. Material slots are baked into the `aSlot`
    * vertex attribute (0 lit, 1 glow, 2 glass) and resolved by the shared slot-aware material, so a

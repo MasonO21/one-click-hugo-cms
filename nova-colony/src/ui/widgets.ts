@@ -10,7 +10,8 @@ import { bagEntries } from '../core/bag';
 import { h, type Child } from './dom';
 import { rewardParts, RARITY_COLOR, type RewardPart } from './logic/rewards';
 import { portraitSvg } from './logic/colonist';
-import { iconEl, itemIcon, professionArt, professionIcon, resIcon } from './art';
+import { buildingArt, iconEl, itemIcon, professionArt, professionIcon, resIcon } from './art';
+import type { UnlockEntry } from './logic/describe';
 
 export interface BtnOpts {
   label?: Child;
@@ -120,6 +121,8 @@ export function bar(v: number, cls = '', label?: string): BarEl {
 export interface TabItem {
   id: string;
   icon?: string;
+  /** Illustration for `icon` (a crafting station's building thumbnail) — the emoji is the fallback. */
+  art?: string | null;
   label: string;
   badge?: number;
 }
@@ -130,7 +133,7 @@ export function tabs(items: TabItem[], active: string, onSelect: (id: string) =>
     const b = h<HTMLButtonElement>(
       'button',
       { class: 'tab' + (t.id === active ? ' on' : ''), type: 'button', data: { tab: t.id, sfx: 'ui_tab' } },
-      t.icon ? h('span', { class: 'ico', text: t.icon }) : null,
+      t.art ? iconEl(t.art, t.icon ?? '', 'ico', 'span') : t.icon ? h('span', { class: 'ico', text: t.icon }) : null,
       t.label,
       t.badge ? h('span', { class: 'dot', text: String(t.badge) }) : null,
     );
@@ -138,6 +141,27 @@ export function tabs(items: TabItem[], active: string, onSelect: (id: string) =>
     wrap.appendChild(b);
   }
   return wrap;
+}
+
+/** "Newly available" chip for a building / vehicle: its thumbnail (emoji fallback) and name. */
+export function unlockChip(u: UnlockEntry): HTMLElement {
+  return h('span', { class: 'chip info unlock', title: u.name, data: { unlock: u.id } }, iconEl(u.art, u.icon, 'uic'), u.name);
+}
+
+/**
+ * A saved blueprint's picture: up to three thumbnails of the building types it is made of (most numerous first,
+ * overlapping like a fanned hand), or the 📐 emoji when none of them has art.
+ */
+export function blueprintThumb(data: DataRegistry, parts: readonly { def: string }[]): HTMLElement {
+  const n = new Map<string, number>();
+  for (const p of parts) n.set(p.def, (n.get(p.def) ?? 0) + 1);
+  const top = [...n.entries()]
+    .filter(([id]) => buildingArt(id))
+    .sort((a, z) => z[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => id);
+  if (!top.length) return h('span', { class: 'bi', text: '📐' });
+  return h('span', { class: `bp-thumb n${top.length}` }, ...top.map((id) => iconEl(buildingArt(id), data.building(id)?.icon ?? '📐', 'bpt')));
 }
 
 /**
