@@ -1,6 +1,6 @@
 {
   "name": "rainkeep",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
   "description": "Rainkeep: desert water-survival strategy game. Capacitor shell for the App Store and Google Play.",
   "scripts": {

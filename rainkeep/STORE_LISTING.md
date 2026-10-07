@@ -30,7 +30,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 3994 characters
+## Description (4,000 max) · 3987 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -45,7 +45,7 @@ SURVIVAL THAT STAYS REAL
 
 BUILD YOUR KEEP IN 3D
 • Thirteen buildings on the terraces of a canyon oasis, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
-• Watch villagers carry water jars up the stone stairs and lanterns come on at night. Pan, zoom and turn anywhere.
+• Pan, zoom and turn anywhere in your keep as villagers carry water up the stairs and lanterns come on at night.
 • Light the Sunsteel Forge and forge the Warden's Gear: six pieces, five tiers, and every squad you send out gets stronger.
 • Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms.
 • Raise fountains, wyrm statues and a glass mosaic court in the keep gardens. Each has its own place on the terraces and a lasting bonus.
@@ -64,12 +64,12 @@ HEROES WITH A JOB AT HOME
 
 CROSS THE DUNES
 • Send caravans to gather stone, dates, water and copper.
+• Once the rain returns, plant groves on the Dunes and watch the desert turn green, oasis by oasis.
 • Hunt beasts, burn Scorpion camps, and explore ruins where your choices decide what your scouts bring home.
 • Climb the Mirage Spire, a tower where every floor has its own twist, and duel rival wardens up a ladder of a thousand ranks.
 
 RIDE WITH YOUR CARAVAN
 • Join a Caravan whose members speed up your upgrades, fund shared research and send gifts.
-• Strike the Colossus in raids that open every few hours.
 • Climb the Oasis Wars bracket, matched so you face rivals who play like you.
 
 PLAY YOUR WAY
@@ -77,7 +77,7 @@ PLAY YOUR WAY
 • Guide the water in Channels: turn the stone channels until every hut, palm and field drinks. A new puzzle every day.
 • Fly your Rainwyrm through the sky in Cloud Run and herd the rain clouds home, three flights a day.
 • Your Rainwyrm makes wishes: a splash in the rain, fresh dates, a story from the Dunes. Grant them to deepen your bond.
-• Daily duties, a gift calendar, achievements, six rotating events and the Wellkeeper's Ledger season pass, with a new wyrm skin every season.
+• Daily duties, gifts, six rotating events and a season pass with a new wyrm skin every season.
 • Patron levels reward loyal players with faster production, shorter timers and a daily chest. They never add combat strength.
 
 Rainkeep is free to play with optional in-app purchases, including items that give random heroes. You can turn off in-app purchases in your device settings.
