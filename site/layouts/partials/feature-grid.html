@@ -6,7 +6,7 @@
     <div class="flex-ns flex-wrap mhn2-ns mb3">
       {{ range .items }}
       <div class="ph2-ns w-third-ns mb4">
-        <img src="{{ .image }}" alt="" class="center db mb3" style="width: 160px">
+        <img src="{{ .image }}" alt="" class="center db mb3" width="160" height="160" loading="lazy" decoding="async">
         {{ with .title }}<h3 class="f4 b lh-title mb2">{{ . }}</h3>{{ end }}
         <p>{{ .text }}</p>
       </div>

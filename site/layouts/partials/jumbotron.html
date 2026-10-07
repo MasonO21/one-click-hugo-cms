@@ -1,4 +1,4 @@
-<div class="pv5 pv6-l ph3 bg-center cover" style="background-image: url('{{.imageUrl}}')">
+<div class="jumbotron pv5 pv6-l ph3 bg-center cover" style="background-image: url('{{.imageUrl}}')">
   <div class="mw7 center ph3">
     <h1 class="f2 f1-l b lh-title mb3 black mw6">{{.title}}</h1>
     {{ if .subtitle }}
@@ -7,7 +7,7 @@
     {{ if .waitlist }}
     <div class="mw6">
       {{ partial "newsletter-form" (dict "id" "hero") }}
-      <p class="f6 grey-3 mb0">We’ll send one email when it’s ready, and nothing else. <a href="/privacy/" class="link b primary">Privacy policy</a></p>
+      <p class="f6 grey-4 mb0">We’ll send one email when it’s ready, and nothing else. <a href="/privacy/" class="link b primary">Privacy policy</a></p>
     </div>
     {{ end }}
   </div>

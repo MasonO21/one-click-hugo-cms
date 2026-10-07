@@ -1,0 +1,26 @@
+/* Page banners show an illustration behind the heading. A soft fade from the page
+   background keeps the heading and form readable over any part of the picture. */
+.jumbotron {
+  position: relative;
+  background-position: 70% center;
+}
+
+.jumbotron::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(180deg, rgba(251, 253, 251, 0.92) 0%, rgba(251, 253, 251, 0.74) 45%, rgba(251, 253, 251, 0.8) 100%);
+}
+
+.jumbotron > * {
+  position: relative;
+}
+
+@media (min-width: 60em) {
+  .jumbotron::before {
+    background: linear-gradient(90deg, rgba(251, 253, 251, 0.95) 0%, rgba(251, 253, 251, 0.8) 38%, rgba(251, 253, 251, 0) 68%);
+  }
+}

@@ -31,7 +31,14 @@ export default function Onboarding() {
   return (
     <Screen edges={['top', 'bottom', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Image source={require('../../assets/images/logo-mark.png')} style={styles.logo} accessibilityLabel="Trail Notes logo" />
+        {/* Decorative: the heading below says what the screen is about. */}
+        <Image
+          source={require('../../assets/images/welcome-trail.jpg')}
+          style={styles.art}
+          contentFit="cover"
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+        />
         <AppText variant="title">Journal with your voice on the trail</AppText>
 
         <View style={styles.points}>
@@ -64,8 +71,8 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.xl, padding: spacing.xl, paddingTop: spacing.xxl },
-  logo: { width: 64, height: 64, borderRadius: 16 },
+  content: { gap: spacing.xl, padding: spacing.xl, paddingTop: spacing.lg },
+  art: { width: '100%', aspectRatio: 1200 / 896, borderRadius: 20 },
   points: { gap: spacing.lg },
   point: { flexDirection: 'row', gap: spacing.lg, alignItems: 'flex-start' },
   pointText: { flex: 1 },

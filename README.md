@@ -22,6 +22,8 @@
 
 The site uses no analytics or tracking. Nunito Sans is self-hosted from `src/fonts` under the SIL Open Font License (`src/fonts/OFL.txt`).
 
+The banner images (`hero-ridge.jpg`, `features-trail.jpg`, `journal-notebook.jpg`), the feature illustrations (`illustration-*.png`), the share image (`og-image.jpg`), the app's welcome illustration and the Google Play banner were made with Higgsfield (GPT Image 2.5). Text over the banners sits on a soft fade (`src/css/imports/_jumbotron.css`) so it stays readable on any part of the picture.
+
 ---
 
 # Hugo template for Netlify CMS with Netlify Identity

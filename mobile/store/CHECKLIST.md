@@ -38,10 +38,10 @@ The app uses Open-Meteo. Its free API is for non-commercial use, and this produc
 - [ ] Apple "App Privacy" and Google Play "Data safety": see [listing.md](listing.md) for suggested answers. Check them against the final build.
 - [ ] Apple export compliance: `ITSAppUsesNonExemptEncryption` is set to `false` because the app only uses the encryption built into the operating system. Confirm this applies to you.
 
-## 5. Store listing (not done)
+## 5. Store listing
 
 - [ ] Screenshots from real phones (iPhone 6.9-inch and 6.5-inch sizes, Android phone).
-- [ ] Google Play feature graphic (1024 x 500).
+- [x] Google Play feature graphic (1024 x 500): [assets/play-feature-graphic.png](assets/play-feature-graphic.png). The illustration was made with Higgsfield (GPT Image 2.5) on your account; check that its terms cover commercial use on your plan.
 - [ ] Review the text in [listing.md](listing.md), category, age rating, and support URL.
 - [ ] Review notes for Apple: explain that the microphone is used for voice notes and location for tags and outings, and how to reach the Record button.
 
