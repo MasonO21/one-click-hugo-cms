@@ -1,6 +1,7 @@
-// Bakes the build-menu thumbnails: public/art/buildings/<BuildingDef.id>.webp and
-// public/art/vehicles/<VehicleDef.id>.webp (192², RGBA, transparent) from the game's own procedural
-// models. Serves the dev page thumbs.html with Vite on port 5343, renders every model in headless
+// Renders every building/vehicle from the game's own procedural models into
+// art/source/renders/{buildings,vehicles}/<id>.webp (192², RGBA, transparent). Those renders are the image
+// references for the painted build-menu icons shipped in public/art/{buildings,vehicles} (docs/ART.md);
+// pass --out public/art to ship plain renders instead. Serves the dev page thumbs.html with Vite on port 5343, renders every model in headless
 // Chromium (SwiftShader), then encodes the straight-alpha RGBA dumps to WebP with Pillow.
 //
 // Usage: npm run bake:thumbs [-- --only id,id,… --sheet <dir> --out <dir> --no-blob --quality 85 --size 192]
@@ -25,7 +26,8 @@ const flag = (name) => {
 const SIZE = Number(flag('--size') ?? 192);
 const only = flag('--only') ? new Set(flag('--only').split(',').filter(Boolean)) : null;
 const sheet = flag('--sheet') ? path.resolve(flag('--sheet')) : null;
-const out = path.resolve(flag('--out') ?? path.join(root, 'public', 'art'));
+// renders are the references for the painted icons in public/art/{buildings,vehicles} (docs/ART.md); --out public/art ships them directly
+const out = path.resolve(flag('--out') ?? path.join(root, 'art', 'source', 'renders'));
 const quality = flag('--quality') ?? '85';
 const blob = !argv.includes('--no-blob');
 

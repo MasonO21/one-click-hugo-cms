@@ -19,8 +19,8 @@ building only needs a rebake, not a prompt.
 | Shop | `public/art/shop/<ProductDef.id>.webp` (12) | 512×384 RGBA | Shop product cards |
 | Rewards | `public/art/rewards/{victory_chest,supply_crate,daily_gift}.webp` | 256² RGBA | Victory chest, free crate, daily reward |
 | Items | `public/art/items/<ItemDef.id>.webp` (65: tools, weapons, armor, backpacks, gear, consumables, components, crates) | 192² RGBA | Inventory + equipment slots, crafting, factory recipes, reward chips / cards, item toasts |
-| Buildings | `public/art/buildings/<BuildingDef.id>.webp` (150: every building, structure pieces included — one picture per piece, shared by its material tiers) — rendered from the in-game procedural models via `npm run bake:thumbs` | 192² RGBA | Build menu cards, placement bar, inspector, station tabs, unlock lists |
-| Vehicles | `public/art/vehicles/<VehicleDef.id>.webp` (6) — rendered from the in-game procedural models via `npm run bake:thumbs` | 192² RGBA | Vehicle cards, craft rows, vehicle rewards / toasts |
+| Buildings | `public/art/buildings/<BuildingDef.id>.webp` (150: every building, structure pieces included — one picture per piece, shared by its material tiers) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 192² RGBA | Build menu cards, placement bar, inspector, station tabs, unlock lists |
+| Vehicles | `public/art/vehicles/<VehicleDef.id>.webp` (6) — painted with Higgsfield over renders of the in-game procedural models (see "Painted building & vehicle icons" below) | 192² RGBA | Vehicle cards, craft rows, vehicle rewards / toasts |
 | Store | `art/store/feature-graphic-1024x500.jpg`, `key-art-*.jpg` | — | Google Play feature graphic, store/press (not shipped in the app) |
 | Promo video | `art/store/promo-flyover-10s.mp4` | 1920×1080, 10 s, silent | Store preview / social clip (Higgsfield `kling3_0` image-to-video from the key art); add game music when cutting a trailer |
 
@@ -49,13 +49,13 @@ Toasts and the world tooltip accept an art URL (anything starting with `art/`) i
 **Deliberately still emoji:** floating "+3 🪵" numbers over the world, the live "Now: +3 🪵/min" line in the building
 inspector, the "Built X!" floating text, navigation glyphs (dock/rail/menu, the build-category tabs, the 🚙 "Open garage" button), empty equipment-slot glyphs and RP / XP / boost icons.
 
-## Painted building icons (paused)
-The build-menu icons in `public/art/buildings` + `public/art/vehicles` are baked from the in-game models
-(`npm run bake:thumbs`; `--size 512` renders bigger sources). A painted pass — each render repainted with Higgsfield
-`gpt_image_2_5` using the render as image reference, so the design still matches the model — looked clearly richer and
-was started, but stopped after 15 of 156 when the Higgsfield balance ran out. Progress, prompt template, reference URLs
-and post-processing are in `art/source/painted-building-icons.json`. Ship them only once all 156 are done (no mixed
-styles); re-run the painted pass for any model that changes afterwards.
+## Painted building & vehicle icons
+The build-menu icons in `public/art/buildings` (150) + `public/art/vehicles` (6) are **painted** versions of the in-game
+models: `npm run bake:thumbs` renders every model from the game's own code into `art/source/renders/` (`--size 512` for
+bigger sources), and each render is repainted with Higgsfield `gpt_image_2_5` (medium, transparent) using the render as the
+image reference and a "keep its exact design, upgrade only the rendering" prompt — so the icon matches what the player
+builds. Prompt template, reference URLs, per-icon result URLs and the redo notes are in
+`art/source/painted-building-icons.json`. When a model changes: re-bake, re-paint that id, trim/pad/192 WebP q82.
 
 ## Style guide (for new art)
 Stylized low-poly 3D, flat-shaded chunky shapes, soft warm lighting, bright saturated but cozy palette,
