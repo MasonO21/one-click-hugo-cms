@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Nova Colony app icon, master art (1024x1024, opaque, no text).
+    Layers: #sky + #stars (background) and #hero (planet, dome, pod = foreground).
+    art/generate.mjs renders this file for every platform; for the Android adaptive icon it hides one
+    layer at a time and re-scales #hero into the 66dp safe circle. The hero is also spliced into splash.svg.
+  -->
+  <defs>
+    <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#262b78"/>
+      <stop offset="0.28" stop-color="#5d3a9c"/>
+      <stop offset="0.52" stop-color="#d04f8e"/>
+      <stop offset="0.76" stop-color="#ff8a5b"/>
+      <stop offset="1" stop-color="#ffc56e"/>
+    </linearGradient>
+    <path id="spark" d="M0,-100 Q18,-18 100,0 Q18,18 0,100 Q-18,18 -100,0 Q-18,-18 0,-100Z"/>
+
+    <!-- hero-defs:begin -->
+    <radialGradient id="gPlanet" cx="650" cy="500" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c9f47c"/>
+      <stop offset="0.3" stop-color="#63d06d"/>
+      <stop offset="0.58" stop-color="#1fa07b"/>
+      <stop offset="0.82" stop-color="#176f8d"/>
+      <stop offset="1" stop-color="#1b4a88"/>
+    </radialGradient>
+    <linearGradient id="gCres" x1="300" y1="380" x2="420" y2="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d4ffff"/>
+      <stop offset="0.5" stop-color="#5cf1ff"/>
+      <stop offset="1" stop-color="#1fc4ff"/>
+    </linearGradient>
+    <linearGradient id="gGlass" x1="0" y1="-140" x2="0" y2="-28" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6ffff"/>
+      <stop offset="0.5" stop-color="#a4ecf7"/>
+      <stop offset="1" stop-color="#49bfe0"/>
+    </linearGradient>
+    <radialGradient id="gWarm" cx="0" cy="-26" r="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff1b0" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="#ffd37a" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffd37a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gTitan" x1="-130" y1="0" x2="130" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7fafd"/>
+      <stop offset="0.55" stop-color="#d3dde8"/>
+      <stop offset="1" stop-color="#97a9bd"/>
+    </linearGradient>
+    <linearGradient id="gPod" x1="-65" y1="0" x2="65" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.5" stop-color="#e1e9f1"/>
+      <stop offset="1" stop-color="#a2b3c6"/>
+    </linearGradient>
+    <radialGradient id="gPort" cx="-6" cy="-104" r="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2ffff"/>
+      <stop offset="0.45" stop-color="#4fe6ff"/>
+      <stop offset="1" stop-color="#1696d6"/>
+    </radialGradient>
+    <clipPath id="cPlanet"><circle cx="512" cy="640" r="300"/></clipPath>
+    <clipPath id="cDome"><path d="M-112,-28 A112,112 0 0 1 112,-28 Z"/></clipPath>
+    <clipPath id="cSlab"><rect x="-132" y="-28" width="264" height="72" rx="14"/></clipPath>
+    <clipPath id="cPod"><path d="M-65,6 L-65,-50 C-65,-122 -34,-176 0,-176 C34,-176 65,-122 65,-50 L65,6 Q65,30 40,30 L-40,30 Q-65,30 -65,6 Z"/></clipPath>
+    <linearGradient id="gHaloFade" x1="250" y1="820" x2="640" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="0.7" stop-color="#fff" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="mHalo" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="url(#gHaloFade)"/></mask>
+    <filter id="fGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter>
+    <filter id="fSoft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
+    <!-- hero-defs:end -->
+  </defs>
+
+  <g id="sky">
+    <rect width="1024" height="1024" fill="url(#gSky)"/>
+  </g>
+
+  <g id="stars" fill="#fff6d6">
+    <use href="#spark" transform="translate(176 236) scale(0.5)"/>
+    <use href="#spark" transform="translate(716 124) scale(0.3)"/>
+    <use href="#spark" transform="translate(318 104) scale(0.22)"/>
+    <use href="#spark" transform="translate(940 520) scale(0.24)"/>
+    <circle cx="96" cy="470" r="9"/>
+    <circle cx="560" cy="70" r="8"/>
+    <circle cx="470" cy="172" r="6"/>
+    <circle cx="930" cy="330" r="6"/>
+  </g>
+
+  <g id="hero" transform="translate(538 520) scale(0.9) translate(-561.087 -550.744)">
+    <!-- hero:begin -->
+    <!-- cyan atmosphere glow (halo behind everything) -->
+    <circle cx="512" cy="640" r="306" fill="none" stroke="#37e8ff" stroke-width="30" opacity="0.95" filter="url(#fGlow)" mask="url(#mHalo)"/>
+
+
+    <!-- colony dome (stands on the planet, rotated to the local surface normal) -->
+    <g transform="translate(439.4 348.9) rotate(-14) scale(1.18) translate(0 -14)">
+      <rect x="-132" y="-28" width="264" height="72" rx="14" fill="url(#gTitan)"/>
+      <g clip-path="url(#cSlab)"><rect x="-140" y="-12" width="280" height="16" fill="#ffb02e"/></g>
+      <rect x="-132" y="-28" width="264" height="72" rx="14" fill="none" stroke="#14283a" stroke-width="18" stroke-linejoin="round"/>
+      <path d="M-112,-28 A112,112 0 0 1 112,-28 Z" fill="url(#gGlass)"/>
+      <g clip-path="url(#cDome)">
+        <ellipse cx="0" cy="-26" rx="96" ry="84" fill="url(#gWarm)"/>
+        <rect x="-70" y="-92" width="38" height="70" rx="10" fill="#1d6a8c" opacity="0.55"/>
+        <rect x="-18" y="-116" width="40" height="94" rx="10" fill="#1d6a8c" opacity="0.6"/>
+        <rect x="34" y="-76" width="34" height="54" rx="10" fill="#1d6a8c" opacity="0.5"/>
+        <rect x="-14" y="-98" width="12" height="14" rx="3" fill="#fff1b0"/>
+        <rect x="-14" y="-72" width="12" height="14" rx="3" fill="#fff1b0"/>
+      </g>
+      <path d="M-112,-28 A112,112 0 0 1 112,-28 Z" fill="none" stroke="#14283a" stroke-width="18" stroke-linejoin="round"/>
+      <path d="M-86,-76 A92,92 0 0 1 -38,-114" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" opacity="0.95"/>
+      <circle cx="-96" cy="-52" r="7" fill="#ffffff" opacity="0.95"/>
+    </g>
+
+    <!-- planet -->
+    <circle cx="512" cy="640" r="300" fill="url(#gPlanet)"/>
+    <g clip-path="url(#cPlanet)">
+      <!-- low-poly facets -->
+      <g>
+        <polygon points="512,340 700,420 600,560" fill="#ffffff" opacity="0.10"/>
+        <polygon points="700,420 790,600 600,560" fill="#000000" opacity="0.07"/>
+        <polygon points="600,560 790,600 700,780" fill="#ffffff" opacity="0.08"/>
+        <polygon points="330,520 512,340 480,600" fill="#000000" opacity="0.08"/>
+        <polygon points="480,600 600,560 560,800" fill="#ffffff" opacity="0.07"/>
+        <polygon points="330,520 480,600 300,740" fill="#ffffff" opacity="0.06"/>
+        <polygon points="560,800 700,780 640,940" fill="#000000" opacity="0.10"/>
+        <polygon points="300,740 480,600 440,860" fill="#000000" opacity="0.10"/>
+        <polygon points="440,860 560,800 520,940" fill="#ffffff" opacity="0.05"/>
+      </g>
+      <!-- lake -->
+      <ellipse cx="636" cy="750" rx="60" ry="28" fill="#6fdcf4" transform="rotate(-18 640 742)"/>
+      <ellipse cx="624" cy="743" rx="30" ry="9" fill="#c8f7ff" opacity="0.8" transform="rotate(-18 628 734)"/>
+      <!-- cyan crescent: planet minus an offset circle -->
+      <path d="M-100,-100 H1124 V1124 H-100 Z M268,610 A300,300 0 1 0 868,610 A300,300 0 1 0 268,610 Z"
+            fill="url(#gCres)" fill-rule="evenodd" transform="translate(0 0)"/>
+    </g>
+
+
+    <!-- crashed escape pod in its little crater -->
+    <g transform="translate(662.0 380.2) rotate(30)">
+      <ellipse cx="0" cy="2" rx="112" ry="32" fill="#e28d5b"/>
+      <ellipse cx="0" cy="5" rx="94" ry="23" fill="#7d3f48"/>
+      <circle cx="-112" cy="-6" r="11" fill="#b87a62" stroke="#14283a" stroke-width="7"/>
+      <circle cx="118" cy="2" r="8" fill="#b87a62" stroke="#14283a" stroke-width="6"/>
+    </g>
+    <g transform="translate(662.0 380.2) rotate(42) scale(1.1) translate(0 -24)">
+      <path d="M-65,6 L-65,-50 C-65,-122 -34,-176 0,-176 C34,-176 65,-122 65,-50 L65,6 Q65,30 40,30 L-40,30 Q-65,30 -65,6 Z" fill="url(#gPod)"/>
+      <g clip-path="url(#cPod)">
+        <rect x="-80" y="-66" width="160" height="28" fill="#ffb02e"/>
+        <rect x="-80" y="-4" width="160" height="40" fill="#4a3a3a" opacity="0.2"/>
+      </g>
+      <path d="M-65,6 L-65,-50 C-65,-122 -34,-176 0,-176 C34,-176 65,-122 65,-50 L65,6 Q65,30 40,30 L-40,30 Q-65,30 -65,6 Z" fill="none" stroke="#14283a" stroke-width="18" stroke-linejoin="round"/>
+      <circle cx="0" cy="-112" r="28" fill="url(#gPort)" stroke="#14283a" stroke-width="14"/>
+      <circle cx="-9" cy="-121" r="6.5" fill="#ffffff" opacity="0.95"/>
+    </g>
+
+    <!-- smoke from the crashed pod (decor: excluded from the safe-zone measurement) -->
+    <g id="smoke" fill="#fff3e6" opacity="0.92">
+      <circle cx="811" cy="203" r="18"/>
+      <circle cx="827" cy="173" r="13"/>
+      <circle cx="837" cy="149" r="8"/>
+    </g>
+    <!-- hero:end -->
+  </g>
+</svg>
