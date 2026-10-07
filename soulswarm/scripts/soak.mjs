@@ -530,23 +530,31 @@ function installSoak() {
   // ---------------------------------------------------------------- performance smoke
   function perf(hero) {
     start({ idx: 9000, seed: 7, kind: 'campaign', hero, ch: 3, diff: 'normal', god: true, prog: 5, chaos: 0, render: 1 });
-    const r = S.run, P = r.player, E = app.engine, q = E.qName;
+    const r = S.run, P = r.player, E = app.engine, gl = E.renderer.getContext(), q = E.qName, px = new Uint8Array(4);
+    const sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); // WebGL is async (finish() may not block): a pixel read waits for the frame
     r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.time = 200; r.events.nextAt = 1e9;
     r.stats.cap = 400;
     const types = ['husk', 'husk', 'ghoul', 'brute', 'witch', 'bloater'];
-    for (let i = 0; r.enemies.count < 280 && i < 600; i++) { const a = i * 2.39996, d = 4 + (i % 40) * 0.35; r.spawnEnemy(types[i % 6], { at: { x: P.x + Math.cos(a) * d, z: P.z + Math.sin(a) * d } }); }
-    r.legion.addMany(300, P.x, P.z);
-    const times = [];
-    for (let i = 0; i < 6; i++) E.step(DT); // shader warm-up
-    for (let i = 0; i < 150; i++) {
-      if (i === 20) { r.events.start('coffin', { x: P.x + 3, z: P.z }); r.rites.cd = 0; r.ui.wantsRite = true; r.nova = 1; r.ui.wantsNova = true; }
-      if (i === 24 && r.events.cur && r.events.cur.e) r.enemies.damage(r.events.cur.e, 1e6, { source: 'bolt' }); // the coffin bursts mid-Nova
+    const horde = () => { for (let i = 0; r.enemies.count < 280 && i < 600; i++) { const a = i * 2.39996, d = 4 + (i % 40) * 0.35; r.spawnEnemy(types[i % 6], { at: { x: P.x + Math.cos(a) * d, z: P.z + Math.sin(a) * d } }); } };
+    horde(); r.legion.addMany(300, P.x, P.z);
+    let simT = 0; const u0 = r.update.bind(r);
+    r.update = (dt) => { const a = realNow(); u0(dt); simT = realNow() - a; }; // the simulation alone, inside engine.step
+    for (let i = 0; i < 8; i++) E.step(DT);
+    sync();
+    const frame = [], sim = [];
+    let at = null, progs = 0;
+    for (let i = 0; i < 90; i++) {
+      if (i === 30) { // a Rite, a Nova and a Cursed Coffin at once, on the full horde and legion
+        horde(); at = { enemies: r.enemies.count, legion: r.legion.count }; progs = E.renderer.info.programs.length;
+        r.events.start('coffin', { x: P.x + 3, z: P.z }); r.rites.cd = 0; r.ui.wantsRite = true; r.nova = 1; r.ui.wantsNova = true;
+      }
+      if (i === 34 && r.events.cur && r.events.cur.e) r.enemies.damage(r.events.cur.e, 1e6, { source: 'bolt' }); // the coffin bursts mid-Nova
       if (r.levelPending) { const c = document.querySelector('.lvl-back .card'); r.t += 0.31; if (c) c.click(); }
-      const a = realNow(); E.step(DT); times.push(realNow() - a);
+      const a = realNow(); E.step(DT); sync(); frame.push(realNow() - a); sim.push(simT);
     }
-    const s = times.slice().sort((a, b) => a - b), med = s[s.length >> 1];
-    const out = { hero, quality: q, enemies: r.enemies.count, legion: r.legion.count, median: +med.toFixed(1), p95: +s[Math.floor(s.length * 0.95)].toFixed(1), max: +s[s.length - 1].toFixed(1),
-      spikes: times.map((t, i) => [i, +t.toFixed(1)]).filter(([, t]) => t > med * 10), violations: S.viol.splice(0) };
+    const stat = (v) => { const s = v.slice().sort((x, y) => x - y), med = s[s.length >> 1];
+      return { median: +med.toFixed(1), p95: +s[Math.floor(s.length * 0.95)].toFixed(1), max: +s[s.length - 1].toFixed(1), spikes: v.map((t, i) => [i, +t.toFixed(1)]).filter(([, t]) => t > med * 10) }; };
+    const out = { hero, quality: q, at, compiled: E.renderer.info.programs.length - progs, frame: stat(frame), sim: stat(sim), violations: S.viol.splice(0) };
     app.exitRun(); E.manual = false;
     return out;
   }
@@ -682,12 +690,13 @@ async function perfSmoke() {
   for (const hero of list('HERO', ['vael', 'nyx', 'seraphine', 'liora', 'mordrake'])) {
     const r = await page.evaluate((h) => window.__soak.perf(h), hero);
     out.push(r);
-    console.log(`perf ${hero} (${r.quality}, ${r.enemies} enemies, ${r.legion} minions): median ${r.median} ms, p95 ${r.p95} ms, max ${r.max} ms, >10x median: ${r.spikes.length ? JSON.stringify(r.spikes) : 'none'}`);
+    const f = (x) => `median ${x.median} ms, p95 ${x.p95} ms, max ${x.max} ms, >10x median: ${x.spikes.length ? JSON.stringify(x.spikes) : 'none'}`;
+    console.log(`perf ${hero} (${r.quality}; at the combo ${r.at.enemies} enemies, ${r.at.legion} minions; ${r.compiled} shaders compiled after it)\n  frame (step + sync): ${f(r.frame)}\n  simulation (update):  ${f(r.sim)}`);
     for (const v of r.violations) console.log(`  ! [${v.kind}] ${v.msg}`);
   }
   for (const e of page.errs) console.log('  ! [error] ' + e);
   await page.context().close();
-  return out.reduce((a, r) => a + r.spikes.length + r.violations.length, 0) + page.errs.length;
+  return out.reduce((a, r) => a + r.frame.spikes.length + r.sim.spikes.length + r.violations.length, 0) + page.errs.length;
 }
 
 let failures;
