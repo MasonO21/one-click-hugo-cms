@@ -53,6 +53,27 @@ const SHOP = new Set([
   'colony_pass_monthly', 'season_pass_premium',
 ]);
 const REWARDS = new Set(['victory_chest', 'supply_crate', 'daily_gift']);
+/** Every ItemDef.id (tests keep this equal to the data and to the files in public/art/items). */
+const ITEMS = new Set([
+  // tools
+  'survival_tool', 'stone_axe', 'reinforced_axe', 'iron_pickaxe', 'steel_harvester', 'alloy_drillpick', 'nano_cutter', 'titan_beamtool',
+  // weapons
+  'flare_pistol', 'makeshift_rifle', 'colony_shotgun', 'assault_rifle', 'energy_rifle', 'plasma_rifle', 'titanium_rifle',
+  // armor
+  'fiber_vest', 'braided_vest', 'plated_vest', 'steel_armor', 'alloy_suit', 'nano_suit', 'titanium_exosuit',
+  // backpacks
+  'small_backpack', 'canvas_pack', 'hiker_pack', 'frame_pack', 'alloy_pack', 'nano_pack', 'titan_haulpack',
+  // utility gear
+  'trail_boots', 'work_gloves', 'jet_boots', 'precision_gloves', 'nano_jetpack', 'grav_boots',
+  // consumables: medical, drones, chips
+  'bandage', 'herbal_salve', 'medkit', 'stim_pack', 'nano_injector', 'regen_gel',
+  'helper_drone', 'worker_drone', 'science_drone', 'swarm_drone', 'research_chip', 'data_core', 'quantum_chip',
+  // components
+  'machine_parts', 'robotic_core', 'nano_core', 'titan_plating',
+  // crates
+  'supply_crate', 'rations_crate', 'timber_bundle', 'stone_bundle', 'ore_bundle', 'steel_bundle', 'colonist_crate',
+  'defense_crate', 'tech_crate', 'alloy_crate', 'nano_crate', 'titan_crate', 'mystery_crate',
+]);
 
 /** World event illustration by WorldEventDef.kind, 960×540. */
 export function eventArt(kind: string): string | null {
@@ -68,6 +89,15 @@ export function shopArt(productId: string): string | null {
 /** Reward art ('victory_chest' | 'supply_crate' | 'daily_gift'), 256 px with transparency. */
 export function rewardArt(id: string): string | null {
   return REWARDS.has(id) ? `${ROOT}rewards/${id}.webp` : null;
+}
+
+/** Item icon by ItemDef.id (tools, weapons, armor, gear, consumables, components, crates), 192 px with transparency. */
+export function itemArt(id: string): string | null {
+  return ITEMS.has(id) ? `${ROOT}items/${id}.webp` : null;
+}
+/** Every id `itemArt` knows (for tests). */
+export function itemArtIds(): string[] {
+  return [...ITEMS];
 }
 
 /** Loading / key art (landscape or portrait). */
@@ -134,6 +164,11 @@ export function resIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLEle
   return iconEl(resourceArt(id), emoji, cls, tag);
 }
 
+/** Icon for an item id, with the data's emoji as the fallback. */
+export function itemIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
+  return iconEl(itemArt(id), emoji, cls, tag);
+}
+
 /** Portrait <img> (or an emoji span) for a colonist profession. */
 export function professionIcon(id: string, emoji: string, cls = 'prof-art'): HTMLElement {
   return artOrEmoji(professionArt(id), emoji, cls, '');
@@ -156,7 +191,7 @@ export function preloadArt(srcs: (string | null)[]): void {
   }
 }
 
-/** The HUD's icons: every resource + Nova, preloaded at startup. */
+/** The HUD's icons: every resource + Nova, preloaded at startup (item icons load on demand: they are 65 files). */
 export function preloadResourceArt(): void {
   preloadArt([...RESOURCES].map((id) => resourceArt(id)));
 }

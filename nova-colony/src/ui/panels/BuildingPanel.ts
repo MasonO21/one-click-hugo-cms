@@ -13,7 +13,8 @@ import { buildingEffects } from '../logic/describe';
 import { refundEstimate } from '../logic/build';
 import { jobOf, stars } from '../logic/colonist';
 import { bar, btn, costChips, emptyState, portrait, recipeChips, section, tagChips } from '../widgets';
-import { fill, h, replay, setVar } from '../dom';
+import { fill, h, replay, setVar, type Child } from '../dom';
+import { iconEl, itemArt, itemIcon, resIcon, resourceArt } from '../art';
 
 const IDLE = { text: 'Idle', cls: 'warn' };
 
@@ -342,7 +343,7 @@ export class BuildingPanel extends Panel {
           { class: 'row wrap recipe-io', style: 'margin-top:.4em;gap:.4em' },
           h('span', { class: 'mute small', text: 'Each cycle uses' }),
           recipeChips(this.data, cur.inputs, cur.itemInputs, g.state.resources.amounts, g.state.player.items),
-          h('span', { class: 'mute small', text: `→ ${this.outputText(cur)} · ⏱ ${Math.round(cur.time)}s` }),
+          h('span', { class: 'mute small' }, '→ ', ...this.outputNodes(cur), ` · ⏱ ${Math.round(cur.time)}s`),
         ),
       );
     } else if (recipes.length) wrap.appendChild(h('div', { class: 'mute small', style: 'margin-top:.3em', text: 'Tap a recipe to start automatic production.' }));
@@ -352,7 +353,7 @@ export class BuildingPanel extends Panel {
       const on = r.id === b.recipe;
       const out = r.outputs.items ? Object.keys(r.outputs.items)[0] : r.outputs.resources ? Object.keys(r.outputs.resources)[0] : '';
       const icon = this.data.item(out)?.icon ?? this.data.resource(out)?.icon ?? '⚙️';
-      const chip = h('button', { class: 'tab' + (on ? ' on' : ''), type: 'button', data: { recipe: r.id, sfx: 'ui_tab' } }, h('span', { class: 'ico', text: icon }), r.name);
+      const chip = h('button', { class: 'tab' + (on ? ' on' : ''), type: 'button', data: { recipe: r.id, sfx: 'ui_tab' } }, iconEl(itemArt(out) ?? resourceArt(out), icon, 'ico', 'span'), r.name);
       chip.addEventListener('click', () => {
         this.game.sys.buildings.setRecipe(b.id, on ? null : r.id);
         this.rerender();
@@ -363,12 +364,20 @@ export class BuildingPanel extends Panel {
     return wrap;
   }
 
-  private outputText(r: RecipeDef): string {
+  /** "1× 🧩 Machine Parts, +20 🔩 Steel" for a recipe's output, with the item / resource illustrations. */
+  private outputNodes(r: RecipeDef): Child[] {
     const o = r.outputs;
-    const parts: string[] = [];
-    for (const [id, n] of Object.entries(o.items ?? {})) parts.push(`${n}× ${this.data.item(id)?.icon ?? ''} ${this.data.item(id)?.name ?? id}`);
-    for (const [id, n] of Object.entries(o.resources ?? {})) parts.push(`+${fmt(n ?? 0)} ${this.data.resource(id)?.icon ?? ''} ${this.data.resource(id)?.name ?? id}`);
-    return parts.join(', ') || r.name;
+    const parts: Child[][] = [];
+    for (const [id, n] of Object.entries(o.items ?? {})) {
+      const d = this.data.item(id);
+      parts.push([`${n}× `, itemIcon(id, d?.icon ?? '', '', 'span'), ` ${d?.name ?? id}`]);
+    }
+    for (const [id, n] of Object.entries(o.resources ?? {})) {
+      const d = this.data.resource(id);
+      parts.push([`+${fmt(n ?? 0)} `, resIcon(id, d?.icon ?? '', '', 'span'), ` ${d?.name ?? id}`]);
+    }
+    if (!parts.length) return [r.name];
+    return parts.flatMap((p, i) => (i ? [', ', ...p] : p));
   }
 
   private shortcuts(b: BuildingInstance, d: BuildingDef): HTMLElement | null {

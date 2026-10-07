@@ -12,7 +12,7 @@ import { fmtHMS } from '../logic/time';
 import { CRAFT_CATEGORIES, metaOf } from '../logic/categories';
 import { adButton, btn, emptyState, recipeChips, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
-import { iconEl, resIcon, resourceArt } from '../art';
+import { iconEl, itemArt, resIcon, resourceArt } from '../art';
 
 export class CraftPanel extends Panel {
   readonly name = 'craft';
@@ -122,7 +122,7 @@ export class CraftPanel extends Panel {
     const o = r.outputs;
     if (o.items) {
       const [id, n] = Object.entries(o.items)[0];
-      return { icon: this.data.item(id)?.icon ?? '🎁', text: `${this.data.item(id)?.name ?? id} ×${n}` };
+      return { icon: this.data.item(id)?.icon ?? '🎁', art: itemArt(id), text: `${this.data.item(id)?.name ?? id} ×${n}` };
     }
     if (o.resources) {
       const [id, n] = Object.entries(o.resources)[0];
