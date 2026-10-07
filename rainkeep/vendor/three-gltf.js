@@ -1,6 +1,7 @@
 /*
  * three.js r158 GLTFLoader and SkeletonUtils (MIT, see THREE_LICENSE.txt), turned from ES modules into a
- * plain script on the global THREE, so the keep can load the Higgsfield-made GLB models.
+ * plain script on the global THREE, so the keep can load the Higgsfield-made GLB models. One change:
+ * textures always load through an <img> (see the GLTFParser constructor), never fetch().
  */
 (function () {
 const { AnimationClip, AnimationMixer, Bone, Box3, BufferAttribute, BufferGeometry, ClampToEdgeWrapping, Color, ColorManagement, DirectionalLight, DoubleSide, FileLoader, FrontSide, Group, ImageBitmapLoader, InstancedBufferAttribute, InstancedMesh, InterleavedBuffer, InterleavedBufferAttribute, Interpolant, InterpolateDiscrete, InterpolateLinear, Line, LineBasicMaterial, LineLoop, LineSegments, LinearFilter, LinearMipmapLinearFilter, LinearMipmapNearestFilter, LinearSRGBColorSpace, Loader, LoaderUtils, Material, MathUtils, Matrix4, Mesh, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial, MirroredRepeatWrapping, NearestFilter, NearestMipmapLinearFilter, NearestMipmapNearestFilter, NumberKeyframeTrack, Object3D, OrthographicCamera, PerspectiveCamera, PointLight, Points, PointsMaterial, PropertyBinding, Quaternion, QuaternionKeyframeTrack, RepeatWrapping, SRGBColorSpace, Skeleton, SkeletonHelper, SkinnedMesh, Sphere, SpotLight, Texture, TextureLoader, TriangleFanDrawMode, TriangleStripDrawMode, TrianglesDrawMode, Vector2, Vector3, VectorKeyframeTrack } = THREE;
@@ -2512,7 +2513,9 @@ class GLTFParser {
 
 		}
 
-		if ( typeof createImageBitmap === 'undefined' || isSafari || ( isFirefox && firefoxVersion < 98 ) ) {
+		// Rainkeep: always an <img> (TextureLoader). ImageBitmapLoader fetch()es the texture's blob: URL,
+		// which a page whose Content-Security-Policy limits connect-src to its own files refuses.
+		if ( true || typeof createImageBitmap === 'undefined' || isSafari || ( isFirefox && firefoxVersion < 98 ) ) {
 
 			this.textureLoader = new TextureLoader( this.options.manager );
 

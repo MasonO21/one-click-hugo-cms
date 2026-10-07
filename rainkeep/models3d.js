@@ -22,18 +22,30 @@
 
   // a page opened from disk cannot fetch files beside it (the single-file build carries its models inline)
   const local = location.protocol === 'file:';
+  // The model's GLB bytes, without fetching anything but the file itself: a .glb as it is; a .json (for hosts
+  // that serve no .glb) holding { glb: base64 }; or a data: URI in the single-file build, decoded here, since
+  // a page whose Content-Security-Policy limits connect-src to its own files cannot fetch() a data: URI
+  const unbase64 = (b64) => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; };
+  function bytes(src) {
+    if (src.startsWith('data:')) return Promise.resolve(unbase64(src.slice(src.indexOf(',') + 1)));
+    return fetch(src).then((r) => {
+      if (!r.ok) throw new Error(`${src}: ${r.status}`);
+      return /\.json$/.test(src) ? r.json().then((j) => unbase64(j.glb)) : r.arrayBuffer();
+    });
+  }
   function load(id) {
     if (!SRC[id] || MOD[id]) return;
     if (local && !SRC[id].startsWith('data:')) { MOD[id] = { failed: true }; return; }
     MOD[id] = { ok: false };
-    loader.load(SRC[id], (gltf) => {
-      try {
+    bytes(SRC[id])
+      .then((buf) => new Promise((res, rej) => loader.parse(buf, '', res, rej)))
+      .then((gltf) => {
         // companions (p-), Dunes beasts (b-) and the camel (a-) are animals; heroes, villagers and raiders people
         MOD[id] = /^[pba]-/.test(id) ? rigAnimal(gltf, BIRDS.has(id), id) : prepPerson(gltf);
         MOD[id].ok = true;
         epoch++;
-      } catch (e) { MOD[id] = { failed: true, err: String(e) }; }
-    }, undefined, () => { MOD[id] = { failed: true }; });
+      })
+      .catch((e) => { MOD[id] = { failed: true, err: String(e) }; });
   }
   const ready = (id) => !!(MOD[id] && MOD[id].ok);
   const tidy = (m) => { if (m && m.isMaterial) { m.metalness = 0; m.roughness = 0.85; if (m.map) m.map.anisotropy = 4; } };
