@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nova Colony - Sound Board</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 16px 16px 64px; background: #17212b; color: #e6eef6; font: 14px/1.4 system-ui, sans-serif; }
+      h1 { margin: 0 0 4px; font-size: 20px; }
+      h2 { margin: 22px 0 8px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #8fb4d6; }
+      p.hint { margin: 0 0 12px; color: #8a9bab; }
+      .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      button { font: inherit; color: #e6eef6; background: #26374a; border: 1px solid #355070; border-radius: 8px; padding: 7px 11px; cursor: pointer; }
+      button:hover { background: #2f4863; }
+      button:active { transform: translateY(1px); }
+      button.on { background: #3c7a5a; border-color: #5fb88a; }
+      label.slider { display: flex; align-items: center; gap: 8px; min-width: 240px; }
+      input[type=range] { width: 160px; }
+      #status { position: sticky; top: 0; margin: 12px -16px 0; padding: 8px 16px; background: #0f161d; border-bottom: 1px solid #26374a; font: 12px/1.5 ui-monospace, monospace; color: #9fe0b8; white-space: pre-wrap; z-index: 2; }
+    </style>
+  </head>
+  <body>
+    <h1>Nova Colony - Sound Board</h1>
+    <p class="hint">Dev page. Click anywhere to unlock audio (browser requirement). Every button plays through the real AudioManager.</p>
+    <div id="status">audio: locked - click any button</div>
+    <div id="app"></div>
+    <script type="module" src="/src/audio/dev/board.ts"></script>
+  </body>
+</html>
