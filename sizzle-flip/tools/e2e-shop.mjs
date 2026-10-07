@@ -58,7 +58,7 @@ check(await text('#hd-need') === 'You need 🌭100 more for Banana.', 'it says h
 const packs = await ev(() => [...document.querySelectorAll('.hd-pack')].map(b => [b.dataset.pack, b.querySelector('b').textContent, b.querySelector('.hp-price').textContent, b.classList.contains('fit')]));
 check(JSON.stringify(packs.map(p => p.slice(0, 3))) === JSON.stringify(PACKS.map(p => [p.id, n(p.hotdogs), '$' + p.usd])), `6 packs: ${packs.map(p => p[1] + ' ' + p[2]).join(', ')}`);
 check(packs.filter(p => p[3]).map(p => p[0]).join() === 'hotdogs_100', 'the smallest pack that covers it is highlighted');
-check(/\$1 = 100 Hot Dogs/.test(await text('#hd-note')), 'the exchange rate is shown ($1 = 100 Hot Dogs)');
+check(/^100 Hot Dogs = \$0\.99 · every character is 🌭100/.test(await text('#hd-note')), 'the exchange rate is shown in the store\'s currency (100 Hot Dogs = $0.99)');
 // cancel, then buy
 await tap('.hd-pack[data-pack="hotdogs_100"]');
 check(!(await hidden('scr-confirm')) && /TEST PURCHASE[\s\S]*100 Hot Dogs for \$0\.99/.test(await text('#confirm-text')), 'test store asks to confirm (clearly marked as a test)');
@@ -152,6 +152,18 @@ await ev((ids) => { const s = window.__app.shop; ids.forEach(id => { s.owned[id]
 await page.waitForTimeout(200);
 check(await ev(() => document.getElementById('shop-bundle-slot').children.length === 0), 'no Party bundle with only one character left');
 check(await ev(() => window.__app.shop.unlockBundle('party')) === 'unavailable', 'and it can\'t be bought');
+
+// --- the Everything Bundle costs more than the biggest pack: the biggest pack is suggested
+await ev(() => window.__app.shop.resetTestPurchases());
+await ev(() => { window.__app.ui.shopTab = 'bundles'; window.__app.ui.renderShop(); }); await page.waitForTimeout(200);
+await tap('.shop-bundle[data-bundle="all"] .shop-btn');
+check(await text('#hd-need') === 'You need 🌭10,400 more for the Everything Bundle.' && await ev(() => document.querySelector('.hd-pack.fit')?.dataset.pack) === 'hotdogs_10000', 'Everything Bundle (🌭10,400) from zero: the 10,000 pack is suggested');
+await tap('[data-act=hotdogs-close]');
+// a bundle quoted in the confirmation is not charged at a different price
+await ev(() => window.__app.shop.credit({ productIdentifier: 'hotdogs_2500', transactionId: 'e2e-quote' }));
+check(await ev(() => window.__app.shop.unlockBundle('rides', 640)) === 'changed' && await balance() === 2500, 'a bundle whose price changed after the player saw it is not charged');
+await ev(() => window.__app.shop.revoke({ productIdentifier: 'hotdogs_2500', transactionId: 'e2e-quote' }));
+await ev(() => { const s = window.__app.save; s.owned = { banana: { at: 1 } }; s.hotdogs = 320; s.txSeen = { 'e2e-keep': { p: 'hotdogs_500', n: 500 } }; window.__app.shop.saveWallet(); });
 
 // --- refunds, test reset, migration of the old $1 purchases
 const before = await balance();

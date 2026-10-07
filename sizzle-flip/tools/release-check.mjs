@@ -78,6 +78,10 @@ const h = (s) => s && crypto.createHash('sha1').update(s).digest('hex');
 if (!dist) fail('dist/ not built — run npm run build');
 else if (h(dist) !== h(shipped)) fail('android web assets differ from dist/ — run npm run cap:sync');
 else ok('android web assets match the current build');
+// the purchases plugin must leave transactions unfinished until the game has credited them (patches/)
+const swift = read('node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift') || '';
+if (!/Sizzle Flip patch/.test(swift) || /await transaction\.finish\(\)\s*\n\s*try\? await Task\.sleep/.test(swift) || pkg.scripts?.postinstall !== 'patch-package') fail('the purchases plugin patch is not applied — run npm install (postinstall: patch-package)');
+else ok('purchases plugin patched: StoreKit transactions stay unfinished until the game credits them');
 const plugins = read('android/capacitor.settings.gradle') || '';
 const missingPlugins = ['capgo-native-purchases', 'capacitor-preferences', 'capacitor-community-admob'].filter(n => !plugins.includes(`':${n}'`));
 if (missingPlugins.length) fail(`android is missing native plugins: ${missingPlugins.join(', ')} — run npm run cap:sync`); else ok('android has the store, storage and AdMob plugins');
@@ -91,8 +95,11 @@ try {
 // --- iOS (only once the Xcode project exists)
 const plist = read('ios/App/App/Info.plist');
 if (plist === null) warn('ios/ not created yet (npx cap add ios on a Mac) — see RELEASE.md');
-else for (const k of ['GADApplicationIdentifier', 'NSUserTrackingUsageDescription', 'SKAdNetworkItems', 'SKIncludeConsumableInAppPurchaseHistory']) {
-  if (!plist.includes(k)) fail(`ios Info.plist is missing ${k}`); else ok(`ios Info.plist has ${k}`);
+else {
+  for (const k of ['GADApplicationIdentifier', 'NSUserTrackingUsageDescription', 'SKAdNetworkItems']) {
+    if (!plist.includes(k)) fail(`ios Info.plist is missing ${k}`); else ok(`ios Info.plist has ${k}`);
+  }
+  if (plist.includes('SKIncludeConsumableInAppPurchaseHistory')) fail('ios Info.plist sets SKIncludeConsumableInAppPurchaseHistory — remove it (finished Hot Dog purchases would come back after a reinstall)');
 }
 
 for (const [s, m] of results) console.log(`${s === 'PASS' ? '✔' : s === 'WARN' ? '•' : '✘'} ${s.padEnd(4)} ${m}`);

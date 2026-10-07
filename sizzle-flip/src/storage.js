@@ -13,6 +13,7 @@ const defaults = () => ({
   hotdogs: 0,       // Hot Dogs balance (shop currency, bought with real money in packs)
   txSeen: {},       // store transaction id -> { p: product, n: Hot Dogs, f: finished, r: refunded } — credits each purchase once
   walletRev: 0,     // bumped on every wallet change; the newer of this save and the app's backup copy wins
+  walletId: '',     // random id of this install's wallet, sent with purchases (appAccountToken) so other devices skip them
   sfx: true,
   music: true,
   haptics: true,

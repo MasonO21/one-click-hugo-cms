@@ -1,0 +1,20 @@
+diff --git a/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift b/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift
+index e4ab9e1..b55a462 100644
+--- a/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift
++++ b/node_modules/@capgo/native-purchases/ios/Sources/NativePurchasesPlugin/NativePurchasesPlugin.swift
+@@ -52,10 +52,12 @@ public class NativePurchasesPlugin: CAPPlugin, CAPBridgedPlugin {
+                         jwsRepresentation: result.jwsRepresentation,
+                         alwaysIncludeWillCancel: true
+                     )
+-                    await transaction.finish()
+-                    try? await Task.sleep(nanoseconds: 500_000_000)
++                    // Sizzle Flip patch: don't finish here. The app credits the purchase first and then finishes it
++                    // with acknowledgePurchase(); until then StoreKit keeps it in Transaction.all, so a purchase
++                    // that arrives before the web app is listening (launch, Ask to Buy) can't be lost. The event is
++                    // kept until a listener is attached.
+                     await MainActor.run {
+-                        self?.notifyListeners("transactionUpdated", data: payload)
++                        self?.notifyListeners("transactionUpdated", data: payload, retainUntilConsumed: true)
+                     }
+                 case .unverified(let transaction, let error):
+                     await MainActor.run {

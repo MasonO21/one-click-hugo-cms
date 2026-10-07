@@ -461,8 +461,9 @@ export class UI {
   }
 
   // spend Hot Dogs after a confirmation, or offer Hot Dog packs when there aren't enough
-  spendOn(target) {
+  async spendOn(target) {
     const shop = this.app.shop;
+    await shop.walletReady;
     const t = shop.available && this.describeTarget(target);
     if (!t) return;
     if (shop.balance < t.cost) { this.openPacks(target); return; }
@@ -471,12 +472,13 @@ export class UI {
 
   async doSpend(target, t) {
     const app = this.app;
-    const r = target.bundle ? await app.shop.unlockBundle(target.bundle) : await app.shop.unlock(target.item);
+    const r = target.bundle ? await app.shop.unlockBundle(target.bundle, t.cost) : await app.shop.unlock(target.item);
     if (r === 'bought') {
       app.audio.play('unlock'); app.haptic([10, 30, 10]);
       this.toast(target.bundle ? `🎁 ${t.n} characters unlocked! Pick one in the Owned tab` : `🎉 ${t.name} unlocked and equipped!`, 2800);
       if (target.bundle === ALL) this.shopTab = 'owned';
     } else if (r === 'short') this.openPacks(target);
+    else if (r === 'changed') this.toast('That bundle changed. Take another look', 2400);
     if (!$('scr-shop').hidden) this.renderShop();
   }
 
@@ -498,7 +500,7 @@ export class UI {
     const need = $('hd-need');
     need.hidden = !short;
     if (short) need.textContent = `You need ${hd(short)} more for ${want.name}.`;
-    const fit = short ? PACKS.find(p => p.hotdogs >= short) : null;
+    const fit = short ? PACKS.find(p => p.hotdogs >= short) || PACKS[PACKS.length - 1] : null;
     const grid = $('hd-grid');
     grid.innerHTML = '';
     PACKS.forEach((p, i) => {
@@ -512,7 +514,7 @@ export class UI {
       grid.appendChild(b);
     });
     $('hd-note').textContent = shop.available
-      ? `$1 = ${HOTDOGS_PER_DOLLAR} Hot Dogs · every character is ${hd(SKIN_PRICE)}. Hot Dogs and characters are kept on this device.`
+      ? `${HOTDOGS_PER_DOLLAR} Hot Dogs = ${shop.packPrice(PACKS[0].id)} · every character is ${hd(SKIN_PRICE)}. Hot Dogs and characters are kept on this device.`
       : 'Hot Dogs can be bought in the Sizzle Flip app.';
   }
 
@@ -525,11 +527,12 @@ export class UI {
     const { r, n } = await shop.buyPack(pid).finally(() => { this._buying = false; });
     if (r === 'bought') {
       app.audio.play('unlock'); app.haptic([10, 30, 10]);
-      this.toast(`🌭 +${fmt(n || 0)} Hot Dogs!`, 2400);
+      this.toast(n ? `🌭 +${fmt(n)} Hot Dogs!` : '🌭 Your Hot Dogs are in', 2400);
       const want = this._want && this.describeTarget(this._want);
       // the player opened this to afford something: offer it right away
       if (want && shop.balance >= want.cost) { const t = this._want; this.closePacks(); this.spendOn(t); }
     } else if (r === 'pending') this.toast('Payment pending: your Hot Dogs arrive as soon as it completes', 3400);
+    else if (r === 'stuck') this.toast('Your last purchase of this pack is still being delivered. Try again in a moment', 3400);
     else if (r === 'error') this.toast('Purchase didn\'t go through. Please try again', 2600);
     else if (r === 'unavailable') this.toast('The store isn\'t available right now', 2400);
     if (!$('scr-hotdogs').hidden) this.renderPacks();

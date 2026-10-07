@@ -79,7 +79,9 @@ async function request(method, url, { token, json, form, raw, headers = {}, allo
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { /* not JSON */ }
     if (res.status === 404 && allow404) return null;
-    if ((res.status === 429 || res.status >= 500) && attempt < 3) { await sleep(1500 * 2 ** attempt); continue; }
+    // retry when the server says it did nothing (429), or on a server error for requests that are safe to repeat
+    // (a POST that failed with 5xx may still have created something; the next run picks that up instead)
+    if ((res.status === 429 || (res.status >= 500 && method !== 'POST')) && attempt < 3) { await sleep(1500 * 2 ** attempt); continue; }
     if (!res.ok) {
       const detail = data && data.error ? data.error.message
         : data && data.errors ? data.errors.map(e => [e.title, e.detail].filter(Boolean).join(': ')).join('; ')
@@ -107,20 +109,23 @@ async function googleToken(sa) {
   return r.access_token;
 }
 
-function playProduct(pkg, p, conv, purchaseOptionId) {
+// existing: the product as Play has it (or null). Its other purchase options (added in Play Console) are kept.
+function playProduct(pkg, p, conv, purchaseOptionId, existing) {
   const usd = money('USD', p.usd);
-  const regions = Object.values(conv.convertedRegionPrices || {})
-    .map(r => ({ regionCode: r.regionCode, price: r.regionCode === 'US' ? usd : r.price, availability: 'AVAILABLE' }));
+  const converted = Object.values(conv.convertedRegionPrices || {});
+  const regions = converted.map(r => ({ regionCode: r.regionCode, price: r.regionCode === 'US' ? usd : r.price, availability: 'AVAILABLE' }));
   const other = conv.convertedOtherRegionsPrice || {};
+  const eur = other.eurPrice || (converted.find(r => r.price && r.price.currencyCode === 'EUR') || {}).price || money('EUR', p.usd);
+  const keep = ((existing && existing.purchaseOptions) || []).filter(o => o.purchaseOptionId !== purchaseOptionId).map(({ state, ...o }) => o);
   return {
     packageName: pkg,
     productId: p.id,
     listings: [{ languageCode: LANG, title: p.title, description: p.description }],
-    purchaseOptions: [{
+    purchaseOptions: [...keep, {
       purchaseOptionId,
       buyOption: { legacyCompatible: true, multiQuantityEnabled: false },
       regionalPricingAndAvailabilityConfigs: regions,
-      newRegionsConfig: { usdPrice: other.usdPrice || usd, eurPrice: other.eurPrice || money('EUR', p.usd), availability: 'AVAILABLE' },
+      newRegionsConfig: { usdPrice: other.usdPrice || usd, eurPrice: eur, availability: 'AVAILABLE' },
     }],
   };
 }
@@ -140,9 +145,9 @@ async function runPlay() {
       const version = conv && conv.regionVersion && conv.regionVersion.version;
       if (!version) throw new Error('price conversion returned no regions version');
       const existing = await request('GET', `${app}/oneTimeProducts/${p.id}`, { token, allow404: true });
-      const oldOption = existing && (existing.purchaseOptions || []).find(o => o.buyOption);
+      const oldOption = existing && ((existing.purchaseOptions || []).find(o => o.buyOption && o.buyOption.legacyCompatible) || (existing.purchaseOptions || []).find(o => o.buyOption));
       const optionId = (oldOption && oldOption.purchaseOptionId) || 'buy';
-      const body = playProduct(pkg, p, conv, optionId);
+      const body = playProduct(pkg, p, conv, optionId, existing);
       const q = new URLSearchParams({ allowMissing: 'true', 'regionsVersion.version': version, updateMask: 'listings,purchaseOptions' });
       const saved = await request('PATCH', `${app}/onetimeproducts/${p.id}?${q}`, { token, json: body });
       const option = ((saved && saved.purchaseOptions) || []).find(o => o.purchaseOptionId === optionId);
@@ -153,7 +158,8 @@ async function runPlay() {
         });
         state = 'activated';
       } else state = 'already active';
-      log(`  ✔ ${p.id.padEnd(14)} ${existing ? 'updated' : 'created'} · ${p.title} · US$${p.usd} + ${body.purchaseOptions[0].regionalPricingAndAvailabilityConfigs.length - 1} countries · ${state}`);
+      const ours = body.purchaseOptions[body.purchaseOptions.length - 1];
+      log(`  ✔ ${p.id.padEnd(14)} ${existing ? 'updated' : 'created'} · ${p.title} · US$${p.usd} + ${ours.regionalPricingAndAvailabilityConfigs.length - 1} countries · ${state}`);
     } catch (e) { failures++; log(`  ✘ ${p.id.padEnd(14)} ${e.message}`); }
   }
 }
@@ -221,7 +227,7 @@ async function runApple() {
       if (!point) throw new Error(`the App Store has no US$${p.usd} price point — change usd in src/shop-config.js`);
       const schedule = await api('GET', `/v2/inAppPurchases/${id}/iapPriceSchedule`, { allow404: true });
       const current = schedule && schedule.data
-        ? ((await api('GET', `/v1/inAppPurchasePriceSchedules/${schedule.data.id}/manualPrices?filter[territory]=USA&limit=200`, { allow404: true })) || {}).data || []
+        ? ((await api('GET', `/v1/inAppPurchasePriceSchedules/${schedule.data.id}/manualPrices?filter[territory]=USA&include=inAppPurchasePricePoint&limit=200`, { allow404: true })) || {}).data || []
         : [];
       const priced = current.some(pr => !pr.attributes?.endDate && pr.relationships?.inAppPurchasePricePoint?.data?.id === point.id);
       if (!priced) {

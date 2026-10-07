@@ -117,6 +117,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && p === '/v1/apps/app-1/inAppPurchasesV2') return send(200, { data: [...asc.iaps.values()], links: {} });
     if (req.method === 'POST' && p === '/v2/inAppPurchases') {
       const d = body().data, at = d.attributes;
+      if (asc.fail500 === at.productId) { asc.fail500 = null; asc.creates500 = (asc.creates500 || 0) + 1; return E(500, 'internal error'); }
       if (d.relationships.app.data.id !== 'app-1' || at.inAppPurchaseType !== 'CONSUMABLE' || !at.name || at.name.length > 64 || 'familySharable' in at) problems.push('create iap ' + JSON.stringify(at));
       if ([...asc.iaps.values()].some(i => i.attributes.productId === at.productId)) return E(409, 'duplicate productId');
       const id = 'iap-' + ++seq;
@@ -152,7 +153,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && (mm = p.match(/^\/v1\/inAppPurchasePriceSchedules\/([^/]+)\/manualPrices$/))) {
       const s = asc.schedules.get(mm[1]);
-      return send(200, { data: s ? [{ type: 'inAppPurchasePrices', id: 'price-' + mm[1], attributes: { startDate: null, endDate: null, manual: true }, relationships: { inAppPurchasePricePoint: { data: { type: 'inAppPurchasePricePoints', id: s } } } }] : [] });
+      // like the real API: relationship data only when it's included
+      const rel = (url.searchParams.get('include') || '').split(',').includes('inAppPurchasePricePoint') ? { inAppPurchasePricePoint: { data: { type: 'inAppPurchasePricePoints', id: s } } } : { inAppPurchasePricePoint: {} };
+      return send(200, { data: s ? [{ type: 'inAppPurchasePrices', id: 'price-' + mm[1], attributes: { startDate: null, endDate: null, manual: true }, relationships: rel }] : [] });
     }
     if (req.method === 'POST' && p === '/v1/inAppPurchasePriceSchedules') {
       const b = body(), r = b.data.relationships, id = r.inAppPurchase.data.id, local = r.manualPrices.data[0].id;
@@ -217,13 +220,15 @@ check(iaps.every(i => asc.shots.get(i.id)?.attributes.assetDeliveryState.state =
 check(/READY_TO_SUBMIT/.test(r.out) && !/MISSING_METADATA/.test(r.out), 'App Store: every product ends READY_TO_SUBMIT');
 check(problems.length === 0, `requests are well-formed and signed (RS256 for Google, ES256 for Apple)${problems.length ? ': ' + problems.join('; ') : ''}`);
 
-// 3. second run: nothing new
+// 3. second run: nothing new (and a purchase option added by hand in Play Console survives)
+play.get('hotdogs_100').purchaseOptions.unshift({ purchaseOptionId: 'promo', buyOption: { legacyCompatible: false, multiQuantityEnabled: false }, regionalPricingAndAvailabilityConfigs: [], state: 'ACTIVE' });
 const mark = log.length;
 r = await run('--play', '--apple');
 const again = log.slice(mark);
 check(r.code === 0, 'second run succeeds');
 check(!again.some(l => /^POST \/v2\/inAppPurchases$|^POST \/v1\/(inAppPurchaseLocalizations|inAppPurchasePriceSchedules|inAppPurchaseAvailabilities|inAppPurchaseAppStoreReviewScreenshots)$|^PUT \/upload|batchUpdateStates/.test(l)), 'second run creates nothing (no duplicate products, prices, uploads or activations)');
 check(asc.iaps.size === PACKS.length && play.size === PACKS.length, 'still exactly 6 products in each store');
+check(play.get('hotdogs_100').purchaseOptions.map(o => o.purchaseOptionId).join() === 'promo,buy', 'a purchase option added in Play Console is kept');
 
 // 4. a changed description is updated in place
 asc.locs.get(iaps[0].id).attributes.description = 'old text';
@@ -235,7 +240,15 @@ asc.shots.get(iaps[1].id).attributes.assetDeliveryState.state = 'FAILED';
 r = await run('--apple');
 check(r.code === 0 && asc.shots.get(iaps[1].id)?.attributes.assetDeliveryState.state === 'COMPLETE' && count(/^DELETE \/v1\/inAppPurchaseAppStoreReviewScreenshots\//) === 1, 'a failed review screenshot is deleted and uploaded again');
 
-// 6. clear errors
+// 6. a create that fails with a server error isn't blindly repeated (it might have gone through); the next run makes it
+const lost = [...asc.iaps.values()].find(i => i.attributes.productId === 'hotdogs_500');
+asc.iaps.delete(lost.id); asc.fail500 = 'hotdogs_500';
+r = await run('--apple');
+check(r.code === 1 && asc.creates500 === 1 && /hotdogs_500.*500/.test(r.out), 'a create that hits a server error is reported, not retried');
+r = await run('--apple');
+check(r.code === 0 && [...asc.iaps.values()].some(i => i.attributes.productId === 'hotdogs_500'), 'the next run creates it');
+
+// 7. clear errors
 const badEnv = await new Promise((resolve) => execFile(process.execPath, [path.join(root, 'tools/create-store-products.mjs'), '--apple'], { env: { ...process.env, ASC_KEY_ID: '' } }, (err, stdout) => resolve({ code: err ? err.code : 0, out: stdout })));
 check(badEnv.code === 1 && /set ASC_KEY_ID/.test(badEnv.out), 'missing credentials: clear message, exit code 1');
 check(fs.readFileSync(path.join(root, 'store/iap-products.csv'), 'utf8').trim().split('\n').length === PACKS.length + 1, 'store/iap-products.csv lists the 6 packs');

@@ -10,7 +10,8 @@
     "cap:sync": "node tools/build.mjs && npx cap sync",
     "release:check": "node tools/release-check.mjs",
     "test": "node tools/e2e-ads.mjs && node tools/e2e-native.mjs && node tools/e2e-shop.mjs && node tools/e2e-recover.mjs && node tools/test-store-products.mjs && node tools/e2e-all.mjs && node tools/e2e-all.mjs --items",
-    "store:products": "node tools/create-store-products.mjs"
+    "store:products": "node tools/create-store-products.mjs",
+    "postinstall": "patch-package"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +20,8 @@
     "@capacitor/cli": "^8.0.0",
     "@fontsource/fredoka": "^5.3.0",
     "@fontsource/lilita-one": "^5.3.0",
-    "esbuild": "^0.25.12"
+    "esbuild": "^0.25.12",
+    "patch-package": "^8.0.1"
   },
   "type": "module",
   "private": true,

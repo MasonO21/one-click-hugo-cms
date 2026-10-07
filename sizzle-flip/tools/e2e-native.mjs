@@ -21,46 +21,63 @@ const MOCK = (platform) => {
     addListener: on,
   };
   // @capgo/native-purchases (Google Play Billing / StoreKit) with consumable semantics. The store's state
-  // survives reloads (like the real store). Android: getPurchases lists paid, unconsumed purchases.
-  // iOS: getPurchases lists every transaction (SKIncludeConsumableInAppPurchaseHistory), finished or not.
+  // survives reloads (like the real store). Android: getPurchases lists paid, unconsumed purchases; a cancel
+  // rejects with "Purchase is not purchased" / USER_CANCELED. iOS: getPurchases lists unfinished transactions,
+  // and transactionUpdated delivers them unfinished (patched plugin). Calls that overlap are recorded: on
+  // Android they would cut each other's billing connection.
   const ios = platform === 'ios';
   const S = window.__store = JSON.parse(localStorage.getItem('__store') || 'null') || {
-    unconsumed: ios ? [] : [{ productIdentifier: 'hotdogs_500', transactionId: 'tok-old', purchaseToken: 'tok-old', purchaseState: '1', quantity: 1 }],
-    history: ios ? [{ productIdentifier: 'hotdogs_100', transactionId: '1001', quantity: 1, finished: false }] : [],
+    unconsumed: ios ? [] : [{ productIdentifier: 'hotdogs_500', transactionId: 'tok-old', purchaseToken: 'tok-old', purchaseState: '1', quantity: 1, purchaseDate: new Date().toISOString() }],
+    history: ios ? [{ productIdentifier: 'hotdogs_100', transactionId: '1001', quantity: 1, finished: false, purchaseDate: new Date().toISOString() }] : [],
     next: {}, seq: 0,
   };
   const keep = () => localStorage.setItem('__store', JSON.stringify(S));
   const bal = () => (window.__app ? window.__app.shop.balance : '?');
   const price = (id) => ({ hotdogs_100: '1,09 €', hotdogs_500: '5,49 €', hotdogs_1000: '10,99 €' }[id] || '99,99 €');
-  const NativePurchases = {
+  let active = 0, gate = null;
+  window.__gate = () => { let open; gate = new Promise(r => { open = r; }); window.__openGate = () => { gate = null; open(); }; };
+  const err = (message, code) => Object.assign(new Error(message), code ? { code } : {});
+  const raw = {
     getProducts: async ({ productIdentifiers }) => ({ products: productIdentifiers.map(id => ({ identifier: id, priceString: price(id) })) }),
-    getPurchases: async () => ({ purchases: ios ? S.history.map(({ finished, ...tx }) => tx) : S.unconsumed.map(t => ({ ...t })) }),
-    purchaseProduct: async ({ productIdentifier: pid, isConsumable, autoAcknowledgePurchases }) => {
+    getPurchases: async () => ({ purchases: ios ? S.history.filter(h => !h.finished).map(({ finished, ...tx }) => tx) : S.unconsumed.map(t => ({ ...t })) }),
+    purchaseProduct: async ({ productIdentifier: pid, isConsumable, autoAcknowledgePurchases, appAccountToken }) => {
       calls.push(`purchase:${pid}:${isConsumable}:${autoAcknowledgePurchases}`);
+      window.__lastToken = appAccountToken;
+      if (gate) await gate;
       const how = S.next[pid] || 'ok'; delete S.next[pid];
-      if (how === 'cancel') throw new Error('User cancelled the purchase');
-      if (how === 'error') throw new Error('Billing service unavailable');
+      if (how === 'cancel') throw ios ? err('User cancelled') : err('Purchase is not purchased', 'USER_CANCELED');
+      if (how === 'error') throw err('Purchase is not purchased', 'SERVICE_UNAVAILABLE');
+      if (how === 'owned') throw err('Purchase is not purchased', 'ITEM_ALREADY_OWNED');
       const id = ios ? String(2000 + ++S.seq) : 'gpa-' + ++S.seq;
-      const tx = ios ? { productIdentifier: pid, transactionId: id, quantity: 1 } : { productIdentifier: pid, transactionId: id, purchaseToken: id, purchaseState: how === 'pending' ? '2' : '1', quantity: 1 };
+      const token = ios ? String(appAccountToken || '').toUpperCase() : appAccountToken;
+      const base = { productIdentifier: pid, transactionId: id, quantity: 1, purchaseDate: new Date().toISOString(), appAccountToken: token };
+      const tx = ios ? base : { ...base, purchaseToken: id, purchaseState: how === 'pending' ? '2' : '1' };
       if (ios) { if (how !== 'pending') S.history.push({ ...tx, finished: false }); } else S.unconsumed.push(tx);
       keep();
-      if (how === 'pending') throw new Error(ios ? 'Transaction pending' : 'Purchase is pending');
+      if (how === 'pending') throw err(ios ? 'Transaction pending' : 'Purchase is pending');
       return tx;
     },
     consumePurchase: async ({ purchaseToken }) => {
-      if (ios) throw new Error('consumePurchase is only available on Android');
+      if (ios) throw err('consumePurchase is only available on Android');
       calls.push(`consume:${purchaseToken}:${bal()}`);
-      if (S.failConsume) throw new Error('Service disconnected');
+      if (S.failConsume) throw err('Service disconnected');
       S.unconsumed = S.unconsumed.filter(t => t.purchaseToken !== purchaseToken); keep();
     },
     acknowledgePurchase: async ({ purchaseToken }) => {
       calls.push(`finish:${purchaseToken}:${bal()}`);
       const t = ios && S.history.find(h => h.transactionId === purchaseToken && !h.finished);
-      if (!t) throw new Error('Transaction not found or already finished');
+      if (!t) throw err('Transaction not found or already finished');
       t.finished = true; keep();
     },
-    addListener: on,
   };
+  const NativePurchases = { addListener: on };
+  for (const [name, fn] of Object.entries(raw)) {
+    NativePurchases[name] = async (o) => {
+      if (++active > 1) calls.push('OVERLAP:' + name);
+      await new Promise(r => setTimeout(r, 5));
+      try { return await fn(o); } finally { active--; }
+    };
+  }
   const Preferences = {
     get: async ({ key }) => ({ value: JSON.parse(localStorage.getItem('__prefs') || '{}')[key] ?? null }),
     set: async ({ key, value }) => { const p = JSON.parse(localStorage.getItem('__prefs') || '{}'); p[key] = value; localStorage.setItem('__prefs', JSON.stringify(p)); },
@@ -72,7 +89,7 @@ const MOCK = (platform) => {
     closeReward: () => emit('onRewardedVideoAdDismissed'),
     failReward: () => emit('onRewardedVideoAdFailedToShow', {}),
     closeInterstitial: () => emit('interstitialAdDismissed'),
-    storeEvent: (tx) => emit('transactionUpdated', tx),
+    storeEvent: (tx) => { if (!tx.revocationDate && !S.history.some(h => h.transactionId === tx.transactionId)) { S.history.push({ ...tx, finished: false }); keep(); } emit('transactionUpdated', tx); },
   };
   window.Capacitor = {
     isNativePlatform: () => true, getPlatform: () => platform || 'android',
@@ -89,6 +106,7 @@ const check = (c, m) => { console.log(`${c ? 'PASS' : 'FAIL'}  ${m}`); if (!c) f
 const ev = (fn, a) => page.evaluate(fn, a);
 const hidden = (id) => ev((id) => document.getElementById(id).hidden, id);
 await page.goto('http://localhost:8123/?nosw');
+await ev(() => window.__app.shop.ready); // the first page's launch sync must not write over the seeded save
 await ev(() => localStorage.clear());
 await ev(() => localStorage.setItem('sizzleflip.save.v1', JSON.stringify({ unlocked: 30, stars: { 0: 3 }, seenTips: { a: 1 }, ads: { wins: 9, levelsSinceAd: 9, lastShownAt: 0, playSeconds: 900, freeHints: { 0: 1 } } })));
 await page.reload(); await page.waitForTimeout(1500);
@@ -201,6 +219,25 @@ check(await bal() === 2100 && !/didn/.test(await toast()), 'cancelled purchase: 
 await ev(() => { window.__store.next.hotdogs_100 = 'error'; });
 await tapPack('hotdogs_100');
 check(await bal() === 2100 && /didn/.test(await toast()), 'store error: player asked to try again');
+check(await ev(() => /^[0-9a-f-]{36}$/.test(window.__lastToken) && window.__lastToken === window.__app.save.walletId), 'purchases carry this install\'s wallet id (appAccountToken)');
+// an earlier purchase of the same pack still waiting to be consumed → Play says ITEM_ALREADY_OWNED
+await ev(() => { const S = window.__store; S.unconsumed.push({ productIdentifier: 'hotdogs_100', transactionId: 'gpa-stuck', purchaseToken: 'gpa-stuck', purchaseState: '1', quantity: 1, purchaseDate: new Date().toISOString(), appAccountToken: window.__app.save.walletId }); S.next.hotdogs_100 = 'owned'; });
+await tapPack('hotdogs_100');
+check(await bal() === 2200 && /still being delivered/.test(await toast()) && await ev(() => !window.__store.unconsumed.length), '"already owned": the waiting purchase is credited and consumed, player told');
+// another phone on the same Google account, mid-purchase
+await ev(() => { window.__store.unconsumed.push({ productIdentifier: 'hotdogs_500', transactionId: 'gpa-other', purchaseToken: 'gpa-other', purchaseState: '1', quantity: 1, purchaseDate: new Date().toISOString(), appAccountToken: 'another-install' }); });
+await resume();
+check(await bal() === 2200 && await ev(() => window.__store.unconsumed.length === 1) && !(await calls('consume:gpa-other')).length, 'another device\'s purchase is left to that device');
+await ev(() => { window.__store.unconsumed[0].purchaseDate = new Date(Date.now() - 2 * 864e5).toISOString(); });
+await resume();
+check(await bal() === 2700 && await ev(() => !window.__store.unconsumed.length), '…unless it has waited over a day (that install is gone): then it is credited here');
+// returning from a bank app mid-purchase: the resume sync waits, so it can't cut off the purchase
+await ev(() => window.__gate());
+await page.click('.hd-pack[data-pack="hotdogs_500"]', { force: true }); await page.waitForTimeout(200);
+await resume();
+await ev(() => window.__openGate()); await page.waitForTimeout(500);
+check(await bal() === 3200 && !(await calls('OVERLAP')).length, 'no two store calls ever overlap (a resume during a purchase waits for it)');
+await ev(() => { window.__app.save.hotdogs = 2100; window.__app.shop.saveWallet(); });
 // spending: no store involved
 await page.click('[data-act=hotdogs-close]', { force: true }); await page.waitForTimeout(200);
 const buys = (await calls('purchase:')).length;
@@ -232,6 +269,7 @@ const ip = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTou
 ip.on('pageerror', e => errors.push('ios: ' + e.message));
 await ip.addInitScript(MOCK, 'ios');
 await ip.goto('http://localhost:8123/?nosw');
+await ip.evaluate(() => window.__app.shop.ready);
 await ip.evaluate(() => { localStorage.clear(); localStorage.setItem('sizzleflip.save.v1', JSON.stringify({ unlocked: 2, seenTips: { a: 1 } })); });
 await ip.reload(); await ip.waitForTimeout(1500);
 const iev = (fn, a) => ip.evaluate(fn, a);
@@ -239,20 +277,31 @@ const ibal = () => iev(() => window.__app.shop.balance);
 await iev(() => window.__app.shop.ready);
 check(await ibal() === 100 && await iev(() => window.__calls.includes('finish:1001:100')), 'iOS: an unfinished purchase is credited at launch, then finished');
 const r = await iev(() => window.__app.shop.buyPack('hotdogs_500'));
-check(r.r === 'bought' && r.n === 500 && await ibal() === 600 && await iev(() => window.__calls.includes('finish:2001:600')), 'iOS: buying credits, then finishes the transaction');
+check(r.r === 'bought' && r.n === 500 && await ibal() === 600 && await iev(() => window.__calls.includes('finish:2001:600')), 'iOS: buying credits, then finishes the transaction (its token comes back upper-case and still matches)');
 await ip.reload(); await ip.waitForTimeout(1500); await iev(() => window.__app.shop.ready);
 check(await ibal() === 600 && await iev(() => !window.__calls.some(c => c.startsWith('finish:'))), 'iOS relaunch: finished purchases in the history are not credited or finished again');
 await iev(() => window.__mock.storeEvent({ productIdentifier: 'hotdogs_1000', transactionId: '3001', quantity: 1 }));
 await ip.waitForTimeout(200);
-check(await ibal() === 1600 && await iev(() => /\+1,000 Hot Dogs added/.test(document.getElementById('toast').textContent) && !window.__calls.includes('finish:3001:1600')), 'iOS: an Ask to Buy approval (already finished by StoreKit) is credited, player told');
+check(await ibal() === 1600 && await iev(() => /\+1,000 Hot Dogs added/.test(document.getElementById('toast').textContent) && window.__calls.includes('finish:3001:1600')), 'iOS: an Ask to Buy approval is credited, then finished, player told');
 await iev(() => window.__mock.storeEvent({ productIdentifier: 'hotdogs_1000', transactionId: '3001', quantity: 1 }));
+await ip.waitForTimeout(200);
 check(await ibal() === 1600, 'iOS: the same transaction delivered twice is credited once');
 await iev(() => window.__mock.storeEvent({ productIdentifier: 'hotdogs_100', transactionId: '3002', quantity: 2 }));
+await ip.waitForTimeout(200);
 check(await ibal() === 1800, 'iOS: quantity 2 → 2 packs');
 await iev(() => window.__mock.storeEvent({ productIdentifier: 'hotdogs_1000', transactionId: '3001', revocationDate: '2026-10-07T10:00:00Z' }));
+await ip.waitForTimeout(200);
 check(await ibal() === 800, 'iOS: a refund takes those Hot Dogs back');
 await iev(() => window.__mock.storeEvent({ productIdentifier: 'hotdogs_1000', transactionId: '3001', revocationDate: '2026-10-07T10:00:00Z' }));
+await ip.waitForTimeout(200);
 check(await ibal() === 800, 'iOS: the refund is applied once');
+await iev(() => window.__mock.storeEvent({ productIdentifier: 'hotdogs_5000', transactionId: '3003', quantity: 1, appAccountToken: 'ANOTHER-DEVICE', purchaseDate: new Date().toISOString() }));
+await ip.waitForTimeout(200);
+check(await ibal() === 800 && await iev(() => !window.__calls.includes('finish:3003:800')), 'iOS: a purchase made on another device (same Apple ID) is not credited here');
+await iev(() => window.__mock.storeEvent({ productIdentifier: 'hotdogs_500', transactionId: '3004', quantity: 1, appAccountToken: window.__app.save.walletId.toUpperCase(), purchaseDate: new Date().toISOString() }));
+await ip.waitForTimeout(200);
+check(await ibal() === 1300, 'iOS: this install\'s own purchase (upper-case token) is credited');
+check(await iev(() => !window.__calls.some(c => c.startsWith('OVERLAP'))), 'iOS: no overlapping store calls');
 await ip.close();
 
 console.log(fails ? `\n${fails} check(s) failed` : '\nall checks passed');

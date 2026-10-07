@@ -107,7 +107,10 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 - `GADApplicationIdentifier`: your iOS AdMob app id.
 - `NSUserTrackingUsageDescription`: "Your data will be used to show you more relevant ads."
 - `SKAdNetworkItems`: Google's list from the AdMob iOS quick-start.
-- `SKIncludeConsumableInAppPurchaseHistory`: `YES` (Boolean). StoreKit then keeps finished Hot Dog purchases in the transaction history, so a purchase is still credited if it completes while the app is closed (iOS 18+). The game credits each transaction only once.
+
+Don't add `SKIncludeConsumableInAppPurchaseHistory`: it would make every finished Hot Dog purchase come back after a reinstall.
+
+The purchases plugin is patched (`patches/@capgo+native-purchases+8.8.1.patch`, applied by `npm ci` / `npm install` through `postinstall`) so that it leaves each purchase unfinished until the game has credited it. `npm run release:check` verifies the patch is in place.
 
 **Then:**
 
