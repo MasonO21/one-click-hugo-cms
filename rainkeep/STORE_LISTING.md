@@ -14,12 +14,12 @@ Rainkeep: Desert Wyrm
 Raise a water dragon. Survive.
 ```
 
-## Promotional text (170 max) · 151 characters
+## Promotional text (170 max) · 148 characters
 
 Promotional text can be changed at any time without a new review, so use it for the current event or season.
 
 ```
-A new keep is open. Raise your Rainwyrm, dig the wells before the cisterns run dry, and ride with your Caravan against the Colossus. Every drop counts.
+Act III, The Wyrmsong, is here. Past the Burning Line your wyrm's sleeping kin wait to be freed, and every hero now has a tale of their own to tell.
 ```
 
 ## Keywords (100 max) · 96 characters
@@ -30,7 +30,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 3983 characters
+## Description (4,000 max) · 3994 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -40,17 +40,21 @@ Raise your Rainwyrm from a thirsty Hatchling to a Skyriver, a river that flies. 
 SURVIVAL THAT STAYS REAL
 • Water is life. Your people drink it and your wyrm breathes it. Let the wells run dry and the wyrm sleeps, the heat pours in and families leave.
 • Read the forecast and prepare. Sandstorms and heatwaves arrive on a schedule you can see coming.
-• Let the wyrm drizzle on calm days to save water, then set it to Downpour when the storm hits.
 • Call the Rain. Your wyrm can summon a shower that fills the wells, cools the keep and calms a sandstorm.
 • Watch raiders march across the dunes to your gate, then time the rain to turn the sand to mud under their feet.
 
 BUILD YOUR KEEP IN 3D
 • Thirteen buildings on the terraces of a canyon oasis, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
-• Watch your villagers carry water jars up the stone stairs, camels cross the dunes outside the gate and lanterns come on at night. Pan, zoom and turn anywhere in your keep.
+• Watch villagers carry water jars up the stone stairs and lanterns come on at night. Pan, zoom and turn anywhere.
 • Light the Sunsteel Forge and forge the Warden's Gear: six pieces, five tiers, and every squad you send out gets stronger.
-• Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms. Every choice costs something and pays off in its own way.
-• Trade with merchant caravans that camp by the gate, swapping what you have too much of for what you're short on.
+• Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms.
 • Raise fountains, wyrm statues and a glass mosaic court in the keep gardens. Each has its own place on the terraces and a lasting bonus.
+
+A STORY IN THREE ACTS
+• Fifteen chapters: from the Salt Flats to the Sunheart, through the floods of The Long Rains, and past the Burning Line to wake the Mother of Rains.
+• Before every boss, your keep's people have their say: an elder who remembers the last rain, a wry scout captain, a child who has never seen it.
+• Free your wyrm's sleeping kin and watch them settle on the cliffs above your keep.
+• Every hero has a tale of their own in three chapters, and how it ends makes them stronger for good.
 
 HEROES WITH A JOB AT HOME
 • Recruit 22 illustrated heroes across three classes: Shieldbearers, Dune Archers and Camel Lancers.
@@ -61,7 +65,6 @@ HEROES WITH A JOB AT HOME
 CROSS THE DUNES
 • Send caravans to gather stone, dates, water and copper.
 • Hunt beasts, burn Scorpion camps, and explore ruins where your choices decide what your scouts bring home.
-• Push through ten chapters of story in two acts: from the Salt Flats to the Sunheart, then through the floods and salt marshes of The Long Rains to the Ember Throne.
 • Climb the Mirage Spire, a tower where every floor has its own twist, and duel rival wardens up a ladder of a thousand ranks.
 
 RIDE WITH YOUR CARAVAN
@@ -91,7 +94,7 @@ Expect **12+**. See NATIVE.md, section 7, for the questionnaire answers (paid ra
 
 ## Screenshots (6.7" and 6.5" iPhone, portrait)
 
-Take these in the iOS Simulator or on a device, then add a short caption band at the top of each. The 3D keep looks best at golden hour (dusk in the day cycle) or at night with the lanterns lit. Six screenshots, in this order:
+Take these in the iOS Simulator or on a device, then add a short caption band at the top of each. The 3D keep looks best at golden hour (dusk in the day cycle) or at night with the lanterns lit. Seven screenshots, in this order:
 
 | # | Screen | Caption |
 |---|---|---|
@@ -101,6 +104,7 @@ Take these in the iOS Simulator or on a device, then add a short caption band at
 | 4 | The Dunes in 3D with caravans out to an oasis, a camp and a ruin beacon | **Cross the Dunes** |
 | 5 | Caravan tab with the Colossus raid open and the chat | **Ride with your Caravan against the Colossus** |
 | 6 | The evolution sheet showing the Skyriver with its halo of living water | **Nine forms. One storm to choose.** |
+| 7 | A story scene before a boss: Elder Maram facing the Pale Herald over the Act I dunes | **Every boss has a story** |
 
 ## App Preview video (15-30 seconds)
 
