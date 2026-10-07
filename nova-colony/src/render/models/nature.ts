@@ -234,7 +234,76 @@ const PROPS: Record<string, (b: GeoBuilder) => void> = {
   boulder: (b) => rock(b, 1.3, 0, 0, ['#9aa6b4', '#b4c0cc', '#7f8b99']),
 };
 
+/** Two-lump rock for the far LOD (about half the triangles of `rock`). */
+function rockFar(b: GeoBuilder, r: number, colors: [string, string, string] = [ROCK_A, ROCK_B, ROCK_C]): void {
+  b.sphere(r, 0, r * 0.55, 0, colors[0], 5, { sy: 0.75, shade: 0.08 });
+  b.sphere(r * 0.65, r * 0.55, r * 0.42, -r * 0.2, colors[1], 4, { sy: 0.8, shade: 0.08 });
+}
+
+/**
+ * Far-LOD node builders (drawn in the mid distance ring): same silhouette and colours, fewer
+ * segments, no tiny details. Models without an entry reuse their near geometry.
+ */
+const NODES_FAR: Record<string, (b: GeoBuilder) => void> = {
+  tree_round: (b) => {
+    b.cyl(0.24, 0.32, 1.8, 0, 0.9, 0, TRUNK, 5, { shade: 0.05 });
+    b.sphere(1.45, 0, 2.75, 0, LEAF_A, 6, { shade: 0.06 });
+    b.sphere(0.85, 0.55, 3.35, 0.2, LEAF_B, 5, { shade: 0.06 });
+  },
+  tree_pine: (b) => {
+    b.cyl(0.2, 0.3, 2.0, 0, 1.0, 0, TRUNK_DARK, 5, { shade: 0.05 });
+    b.cone(1.5, 2.4, 0, 2.8, 0, PINE_A, 5, { shade: 0.06 });
+    b.cone(0.95, 2.4, 0, 4.5, 0, PINE_B, 5, { shade: 0.06 });
+  },
+  bush: (b) => {
+    b.sphere(0.75, 0, 0.6, 0, LEAF_C, 5, { shade: 0.07 });
+    b.sphere(0.5, 0.5, 0.5, 0.3, LEAF_A, 4, { shade: 0.07 });
+    b.sphere(0.12, 0.2, 1.0, -0.3, '#ff6f91', 4, { slot: SLOT_GLOW });
+  },
+  fiber_grass: (b) => {
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.3;
+      b.cone(0.11, 1.2 + (i % 2) * 0.2, Math.cos(a) * 0.3, 0.6, Math.sin(a) * 0.3, i % 2 ? '#a9d65a' : '#8fc95a', 4, { rz: Math.cos(a) * 0.25, rx: -Math.sin(a) * 0.25 });
+    }
+  },
+  rock: (b) => rockFar(b, 0.9),
+  ore_iron: (b) => {
+    rockFar(b, 0.9, ['#847a74', '#9a8f88', '#6b625c']);
+    for (let i = 0; i < 3; i++) b.box(0.3, 0.26, 0.3, Math.cos(i * 2.1) * 0.55, 0.6, Math.sin(i * 2.1) * 0.55, '#c9a48b', { ry: i, shade: 0.05 });
+  },
+  ore_copper: (b) => {
+    rockFar(b, 0.9, ['#8a7d70', '#a1948a', '#6e635a']);
+    for (let i = 0; i < 3; i++) b.box(0.28, 0.28, 0.28, Math.cos(i * 2.1 + 0.5) * 0.55, 0.6, Math.sin(i * 2.1 + 0.5) * 0.55, '#e08a4c', { ry: i, shade: 0.05 });
+  },
+  coal: (b) => {
+    rockFar(b, 0.9, ['#5f5c5a', '#737070', '#4a4848']);
+    for (let i = 0; i < 3; i++) b.box(0.34, 0.3, 0.34, Math.cos(i * 2.1) * 0.5, 0.55, Math.sin(i * 2.1) * 0.5, '#24242a', { ry: i, shade: 0.05 });
+  },
+  crystal: (b) => {
+    rockFar(b, 0.6, ['#6e6a8a', '#8a84a8', '#55506e']);
+    b.shard(0.35, 1.9, 0, 1.0, 0, CRYSTAL, { slot: SLOT_GLOW, rz: 0.1 });
+    b.shard(0.25, 1.3, 0.55, 0.7, 0.2, CRYSTAL_LIGHT, { slot: SLOT_GLOW, rz: -0.5 });
+  },
+  bio_pod: (b) => {
+    b.sphere(0.8, 0, 0.7, 0, '#6aa84a', 5, { sy: 1.1, shade: 0.06 });
+    b.sphere(0.5, 0.5, 0.4, 0.4, '#5a9a3c', 4, { shade: 0.06 });
+    b.sphere(0.16, 0.3, 1.1, -0.3, '#b7ff6a', 4, { slot: SLOT_GLOW });
+  },
+  ice_ore: (b) => {
+    rockFar(b, 0.8, [SNOW, '#e3eef8', '#c8d8e6']);
+    b.shard(0.3, 1.5, 0.1, 0.8, 0, ICE, { rz: 0.15 });
+    b.shard(0.22, 1.0, 0.55, 0.6, 0.3, '#dff2ff', { rz: -0.6 });
+  },
+  titanium: (b) => {
+    rockFar(b, 0.95, ['#9aa6b4', '#b4c0cc', '#7f8b99']);
+    b.shard(0.4, 1.6, 0, 0.9, 0, TITAN, { rz: 0.1 });
+    b.shard(0.28, 1.1, 0.6, 0.7, 0.2, TITAN, { rz: -0.5 });
+    b.box(0.08, 1.2, 0.08, 0, 1.0, 0.42, TITAN_GLOW, { slot: SLOT_GLOW, rx: 0.2 });
+  },
+};
+
 const nodeCache = new Map<string, THREE.BufferGeometry>();
+const nodeFarCache = new Map<string, THREE.BufferGeometry>();
 const propCache = new Map<string, THREE.BufferGeometry>();
 
 export function nodeGeometry(model: string): THREE.BufferGeometry {
@@ -249,6 +318,22 @@ export function nodeGeometry(model: string): THREE.BufferGeometry {
   }
   g = b.build();
   nodeCache.set(model, g);
+  return g;
+}
+
+/** Far-LOD geometry for a node model (the near geometry when no cheaper variant exists). */
+export function nodeGeometryFar(model: string): THREE.BufferGeometry {
+  let g = nodeFarCache.get(model);
+  if (g) return g;
+  const fn = NODES_FAR[model];
+  if (!fn) {
+    g = nodeGeometry(model);
+  } else {
+    const b = new GeoBuilder(model.length * 17 + 5);
+    fn(b);
+    g = b.build();
+  }
+  nodeFarCache.set(model, g);
   return g;
 }
 
@@ -299,3 +384,4 @@ export function nodeChipColor(model: string): string {
 
 export const KNOWN_NODE_MODELS = Object.keys(NODES);
 export const KNOWN_PROP_MODELS = Object.keys(PROPS);
+export const NODE_FAR_MODELS = Object.keys(NODES_FAR);

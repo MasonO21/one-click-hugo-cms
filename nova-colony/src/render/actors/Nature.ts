@@ -1,15 +1,28 @@
 /**
- * Nature actor — resource nodes (gen.nodes) and decorative props (gen.props) as InstancedMeshes
- * per model, distance-culled around the camera focus and rebuilt only when the focus moves, the
- * depletion set changes or a timer elapses. Gather hits wobble the node and throw chips; depletion
- * plays a shrink-pop before the node disappears. Solid nodes standing between the camera and the player
- * shrink out of the way (and grow back) so trees and boulders never hide the player.
+ * Nature actor — resource nodes (gen.nodes) and decorative props (gen.props).
+ *
+ * Culling: the world is bucketed into 8x8 spatial chunks (32x32 cells). On a rebuild every chunk's
+ * AABB is tested against the camera frustum (expanded by a margin), the nodes/props of the surviving
+ * chunks are tested individually (bounding sphere vs frustum + distance LOD), and only those are
+ * written into one InstancedMesh per model and LOD. So the GPU only ever sees what is on screen (a
+ * follow camera looks at a ~60-unit-deep trapezoid, not a 190-unit disc) while nature stays at
+ * ~10–15 draw calls. Rebuilds happen when the camera moves a few units / turns a few degrees, when a
+ * node depletes or respawns, when the terrain changes and as a 4 s safety refresh — never per frame.
+ *
+ * Distance LOD per instance: near (nodes + props, full geometry), mid (nodes only, cheaper far
+ * geometry for the heavy models), beyond mid nothing.
+ *
+ * Gather hits wobble the node and throw chips; depletion plays a shrink-pop before the node disappears.
+ * Solid nodes standing between the camera and the player (or the build ghost) shrink out of the way
+ * and grow back so trees and boulders never hide what matters.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
-import { Batch, composeEuler } from '../core/Batch';
-import { nodeGeometry, propGeometry, nodeHeight, nodeChipColor } from '../models/nature';
+import { sightTargets } from '../core/context';
+import { Batch, composeEuler, type BatchOpts } from '../core/Batch';
+import { nodeGeometry, nodeGeometryFar, propGeometry, nodeHeight, nodeChipColor } from '../models/nature';
 import type { WorldGen, WorldNode } from '../../sim/world';
+import { CELL, HALF_WORLD, WORLD_CELLS } from '../../core/constants';
 import { clamp } from '../../core/math';
 
 interface Wobble {
@@ -17,27 +30,76 @@ interface Wobble {
   pop: boolean;
 }
 
+interface Chunk {
+  minX: number;
+  minZ: number;
+  maxX: number;
+  maxZ: number;
+  nodes: number[];
+  props: number[];
+}
+
+export const CHUNK_CELLS = 32;
+export const CHUNKS_PER_SIDE = WORLD_CELLS / CHUNK_CELLS;
+const CHUNK_SIZE = CHUNK_CELLS * CELL;
+/** Frustum planes are pushed outward by this much so nothing pops at the screen edge between rebuilds. */
+const FRUSTUM_MARGIN = 9;
+/** Camera movement (units) / turn (radians) that triggers a rebuild. */
+const REBUILD_MOVE = 3;
+const REBUILD_TURN = 0.08;
+/** Vertical extent used for chunk boxes (terrain relief + tallest scaled tree). */
+const CHUNK_Y_MIN = -40;
+const CHUNK_Y_MAX = 60;
+
 const _m = new THREE.Matrix4();
+const _projView = new THREE.Matrix4();
+const _frustum = new THREE.Frustum();
+const _box = new THREE.Box3();
+const _sphere = new THREE.Sphere();
+const _targets = new Float64Array(6);
 /** How far an occluding node shrinks (fraction of its size). */
 const OCCLUDER_SHRINK = 0.78;
 /** Nodes this close to the player (≈ gather reach) are never treated as occluders. */
 const OCCLUDER_KEEP_R = 4;
+const NODE_OPTS: BatchOpts = { castShadow: true, receiveShadow: true };
+const PROP_OPTS: BatchOpts = { receiveShadow: true };
+
+/** Chunk index of a world position. */
+export function chunkOf(x: number, z: number): number {
+  const cx = clamp(Math.floor((x + HALF_WORLD) / CHUNK_SIZE), 0, CHUNKS_PER_SIDE - 1);
+  const cz = clamp(Math.floor((z + HALF_WORLD) / CHUNK_SIZE), 0, CHUNKS_PER_SIDE - 1);
+  return cz * CHUNKS_PER_SIDE + cx;
+}
+
+/** LOD radii for the current view (near = nodes + props with full geometry, mid = nodes only). */
+export function lodRadii(viewRadius: number, quality: string): { near: number; mid: number } {
+  const near = quality === 'low' ? Math.min(70, viewRadius * 0.7) : Math.min(110, viewRadius * 0.85);
+  const mid = Math.min(190, viewRadius + 30);
+  return { near, mid };
+}
 
 export class Nature {
   private group = new THREE.Group();
-  private nodeBatches = new Map<string, Batch>();
-  private propBatches = new Map<string, Batch>();
-  /** node index -> instance index within its model batch (-1 = not drawn). */
+  private chunks: Chunk[] = [];
+  /** key: 'n:<model>' near nodes, 'f:<model>' far nodes, 'p:<model>' props. */
+  private batches = new Map<string, Batch>();
+  /** node index -> instance index within its batch (-1 = not drawn). */
   private nodeSlot = new Int32Array(0);
+  private nodeBatch: (Batch | null)[] = [];
   private nodeModel: string[] = [];
   private gen: WorldGen | null = null;
-  private lastCx = NaN;
-  private lastCz = NaN;
-  private lastRadius = 0;
   private timer = 0;
+  private depletedAcc = 0;
   private dirty = true;
   private depletedCount = -1;
   private lastTerrain = -1;
+  private lastCamX = NaN;
+  private lastCamY = NaN;
+  private lastCamZ = NaN;
+  private lastFwdX = 0;
+  private lastFwdZ = 0;
+  private lastRadius = 0;
+  private lastAspect = 0;
   private wobbles = new Map<number, Wobble>();
   /** Node indices drawn by the last rebuild (occlusion scan). */
   private drawn: number[] = [];
@@ -59,6 +121,18 @@ export class Nature {
   /** The generation currently drawn (null when the world has nothing yet). */
   get current(): WorldGen | null {
     return this.gen;
+  }
+
+  /** Instanced meshes currently drawn (dev stats / tests). */
+  get batchCount(): number {
+    let n = 0;
+    for (const b of this.batches.values()) if (b.visible && b.count > 0) n++;
+    return n;
+  }
+
+  /** Node instances drawn by the last rebuild (dev stats / tests). */
+  get drawnCount(): number {
+    return this.drawn.length;
   }
 
   private onHit(node: number, model: string, x: number, z: number): void {
@@ -84,39 +158,40 @@ export class Nature {
     }
   }
 
-  private nodeBatch(model: string): Batch {
-    let b = this.nodeBatches.get(model);
-    if (!b) {
-      b = new Batch(this.group, nodeGeometry(model), this.ctx.mats.set, 64, { castShadow: true, receiveShadow: true });
-      this.nodeBatches.set(model, b);
-    }
-    return b;
-  }
-
-  private propBatch(model: string): Batch {
-    let b = this.propBatches.get(model);
-    if (!b) {
-      b = new Batch(this.group, propGeometry(model), this.ctx.mats.set, 64, { receiveShadow: true });
-      this.propBatches.set(model, b);
-    }
-    return b;
-  }
-
   private setGen(gen: WorldGen | null): void {
     this.gen = gen;
     const n = gen?.nodes?.length ?? 0;
     this.nodeSlot = new Int32Array(n).fill(-1);
+    this.nodeBatch = new Array<Batch | null>(n).fill(null);
     this.nodeModel = new Array(n);
+    this.chunks = [];
+    for (let i = 0; i < CHUNKS_PER_SIDE * CHUNKS_PER_SIDE; i++) {
+      const cx = i % CHUNKS_PER_SIDE;
+      const cz = (i / CHUNKS_PER_SIDE) | 0;
+      this.chunks.push({
+        minX: cx * CHUNK_SIZE - HALF_WORLD,
+        minZ: cz * CHUNK_SIZE - HALF_WORLD,
+        maxX: (cx + 1) * CHUNK_SIZE - HALF_WORLD,
+        maxZ: (cz + 1) * CHUNK_SIZE - HALF_WORLD,
+        nodes: [],
+        props: [],
+      });
+    }
     const data = this.ctx.game.data;
     for (let i = 0; i < n; i++) {
       const node = gen!.nodes[i];
       this.nodeModel[i] = data.node(node.def)?.model ?? node.def;
+      this.chunks[chunkOf(node.x, node.z)].nodes.push(i);
     }
+    const props = gen?.props ?? [];
+    for (let i = 0; i < props.length; i++) this.chunks[chunkOf(props[i].x, props[i].z)].props.push(i);
     this.wobbles.clear();
+    this.fades.clear();
+    this.occluders.clear();
     this.dirty = true;
   }
 
-  private nodeMatrix(node: WorldNode, model: string, out: THREE.Matrix4, wobble?: Wobble, fade = 0): THREE.Matrix4 {
+  private nodeMatrix(node: WorldNode, out: THREE.Matrix4, wobble?: Wobble, fade = 0): THREE.Matrix4 {
     const def = this.ctx.game.data.node(node.def);
     let s = (node.scale || 1) * (def?.scale ?? 1) * (1 - OCCLUDER_SHRINK * fade);
     let rx = 0;
@@ -140,49 +215,103 @@ export class Nature {
     return composeEuler(out, node.x, y, node.z, rx, node.rot || 0, rz, s, sy, s);
   }
 
+  private batch(key: string, geo: () => THREE.BufferGeometry, opts: BatchOpts): Batch {
+    let b = this.batches.get(key);
+    if (!b) {
+      b = new Batch(this.group, geo(), this.ctx.mats.set, 32, opts);
+      this.batches.set(key, b);
+    }
+    return b;
+  }
+
+  /** Camera frustum (expanded by FRUSTUM_MARGIN) from the rig's latest camera placement. */
+  private updateFrustum(): void {
+    const cam = this.ctx.camera;
+    cam.updateMatrixWorld();
+    _projView.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    _frustum.setFromProjectionMatrix(_projView);
+    for (const p of _frustum.planes) p.constant += FRUSTUM_MARGIN;
+  }
+
   private rebuild(): void {
     const g = this.gen;
-    const env = this.ctx.env;
-    for (const b of this.nodeBatches.values()) b.begin();
-    for (const b of this.propBatches.values()) b.begin();
+    const ctx = this.ctx;
+    const env = ctx.env;
+    for (const b of this.batches.values()) b.begin();
     this.nodeSlot.fill(-1);
+    this.nodeBatch.fill(null);
     this.drawn.length = 0;
     if (g) {
-      const depleted = this.ctx.game.state.world.depleted;
-      const nodeR = Math.min(190, env.viewRadius + 30);
-      const nodeR2 = nodeR * nodeR;
-      const nodes = g.nodes ?? [];
-      for (let i = 0; i < nodes.length; i++) {
-        const n = nodes[i];
-        const dx = n.x - env.cx;
-        const dz = n.z - env.cz;
-        if (dx * dx + dz * dz > nodeR2) continue;
-        const w = this.wobbles.get(i);
-        if (depleted[i] !== undefined && !(w && w.pop)) continue;
-        const batch = this.nodeBatch(this.nodeModel[i]);
-        this.nodeSlot[i] = batch.count;
-        this.drawn.push(i);
-        batch.push(this.nodeMatrix(n, this.nodeModel[i], _m, w, this.fades.get(i) ?? 0));
-      }
-      const propR = env.quality === 'low' ? Math.min(70, env.viewRadius * 0.7) : Math.min(120, env.viewRadius * 0.9);
-      const propR2 = propR * propR;
-      const props = g.props ?? [];
-      for (let i = 0; i < props.length; i++) {
-        const p = props[i];
-        const dx = p.x - env.cx;
-        const dz = p.z - env.cz;
-        if (dx * dx + dz * dz > propR2) continue;
-        const batch = this.propBatch(p.model);
-        const s = p.scale || 1;
-        composeEuler(_m, p.x, this.ctx.heightAt(p.x, p.z) - 0.03, p.z, 0, p.rot || 0, 0, s, s, s);
-        batch.push(_m);
+      this.updateFrustum();
+      const depleted = ctx.game.state.world.depleted;
+      const { near, mid } = lodRadii(env.viewRadius, env.quality);
+      const near2 = near * near;
+      const mid2 = mid * mid;
+      const nodes = g.nodes;
+      const props = g.props;
+      const data = ctx.game.data;
+      for (let ci = 0; ci < this.chunks.length; ci++) {
+        const c = this.chunks[ci];
+        // distance reject (nearest point of the chunk to the focus), then frustum reject
+        const ddx = Math.max(c.minX - env.cx, 0, env.cx - c.maxX);
+        const ddz = Math.max(c.minZ - env.cz, 0, env.cz - c.maxZ);
+        const cd2 = ddx * ddx + ddz * ddz;
+        if (cd2 > mid2) continue;
+        _box.min.set(c.minX, CHUNK_Y_MIN, c.minZ);
+        _box.max.set(c.maxX, CHUNK_Y_MAX, c.maxZ);
+        if (!_frustum.intersectsBox(_box)) continue;
+        const list = c.nodes;
+        for (let k = 0; k < list.length; k++) {
+          const i = list[k];
+          const n = nodes[i];
+          const dx = n.x - env.cx;
+          const dz = n.z - env.cz;
+          const d2 = dx * dx + dz * dz;
+          if (d2 > mid2) continue;
+          const w = this.wobbles.get(i);
+          if (depleted[i] !== undefined && !(w && w.pop)) continue;
+          const model = this.nodeModel[i];
+          const s = (n.scale || 1) * (data.node(n.def)?.scale ?? 1);
+          const h = nodeHeight(model) * s;
+          _sphere.center.set(n.x, ctx.heightAt(n.x, n.z) + h * 0.5, n.z);
+          _sphere.radius = Math.max(h * 0.6, 1.4 * s);
+          if (!_frustum.intersectsSphere(_sphere)) continue;
+          const far = d2 > near2;
+          const batch = far ? this.batch('f:' + model, () => nodeGeometryFar(model), NODE_OPTS) : this.batch('n:' + model, () => nodeGeometry(model), NODE_OPTS);
+          this.nodeSlot[i] = batch.count;
+          this.nodeBatch[i] = batch;
+          this.drawn.push(i);
+          batch.push(this.nodeMatrix(n, _m, w, this.fades.get(i) ?? 0));
+        }
+        if (cd2 > near2) continue;
+        const plist = c.props;
+        for (let k = 0; k < plist.length; k++) {
+          const p = props[plist[k]];
+          const dx = p.x - env.cx;
+          const dz = p.z - env.cz;
+          if (dx * dx + dz * dz > near2) continue;
+          const s = p.scale || 1;
+          const y = ctx.heightAt(p.x, p.z);
+          _sphere.center.set(p.x, y + s, p.z);
+          _sphere.radius = 1.8 * s;
+          if (!_frustum.intersectsSphere(_sphere)) continue;
+          const batch = this.batch('p:' + p.model, () => propGeometry(p.model), PROP_OPTS);
+          composeEuler(_m, p.x, y - 0.03, p.z, 0, p.rot || 0, 0, s, s, s);
+          batch.push(_m);
+        }
       }
     }
-    for (const b of this.nodeBatches.values()) b.end();
-    for (const b of this.propBatches.values()) b.end();
-    this.lastCx = env.cx;
-    this.lastCz = env.cz;
+    for (const b of this.batches.values()) {
+      b.end();
+      b.setVisible(b.count > 0);
+    }
+    this.lastCamX = env.camX;
+    this.lastCamY = env.camY;
+    this.lastCamZ = env.camZ;
+    this.lastFwdX = env.fwdX;
+    this.lastFwdZ = env.fwdZ;
     this.lastRadius = env.viewRadius;
+    this.lastAspect = this.ctx.camera.aspect;
     this.timer = 0;
     this.dirty = false;
   }
@@ -197,17 +326,21 @@ export class Nature {
       this.dirty = true;
     }
     this.timer += dt;
-    const depleted = ctx.game.state.world.depleted;
-    // detect respawns / depletions we did not hear about (cheap key count every ~1s)
-    if (this.timer > 1) {
-      const cnt = Object.keys(depleted).length;
+    this.depletedAcc += dt;
+    // detect respawns / depletions we did not hear about (cheap key count once per second)
+    if (this.depletedAcc > 1) {
+      this.depletedAcc = 0;
+      const cnt = Object.keys(ctx.game.state.world.depleted).length;
       if (cnt !== this.depletedCount) {
         this.depletedCount = cnt;
         this.dirty = true;
       }
     }
-    const moved = (env.cx - this.lastCx) ** 2 + (env.cz - this.lastCz) ** 2 > 36 || Math.abs(env.viewRadius - this.lastRadius) > 15;
-    if (this.dirty || moved || this.timer > 2.5) this.rebuild();
+    const moved = (env.camX - this.lastCamX) ** 2 + (env.camY - this.lastCamY) ** 2 + (env.camZ - this.lastCamZ) ** 2 > REBUILD_MOVE * REBUILD_MOVE;
+    const turned = env.fwdX * this.lastFwdX + env.fwdZ * this.lastFwdZ < Math.cos(REBUILD_TURN);
+    const zoomed = Math.abs(env.viewRadius - this.lastRadius) > 10 || ctx.camera.aspect !== this.lastAspect;
+    // the 4 s refresh covers a respawn and a depletion inside the same second (count unchanged)
+    if (this.dirty || moved || turned || zoomed || Number.isNaN(this.lastCamX) || this.timer > 4) this.rebuild();
 
     this.updateOccluders(dt);
 
@@ -216,6 +349,7 @@ export class Nature {
       for (const [i, w] of this.wobbles) {
         w.t += dt;
         const slot = this.nodeSlot[i];
+        const batch = this.nodeBatch[i];
         if (w.pop && w.t > 0.36) {
           this.wobbles.delete(i);
           this.dirty = true;
@@ -223,17 +357,17 @@ export class Nature {
         }
         if (!w.pop && w.t > 0.9) {
           this.wobbles.delete(i);
-          if (slot >= 0) this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], this.nodeModel[i], _m, undefined, this.fades.get(i) ?? 0));
+          if (slot >= 0 && batch) batch.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], _m, undefined, this.fades.get(i) ?? 0));
           continue;
         }
-        if (slot >= 0) this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], this.nodeModel[i], _m, w, this.fades.get(i) ?? 0));
+        if (slot >= 0 && batch) batch.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], _m, w, this.fades.get(i) ?? 0));
       }
     }
   }
 
   /**
-   * Shrink solid nodes that stand on the sight line camera -> player (scan at 10 Hz, animate every
-   * frame). Only the handful of fading nodes get their matrices rewritten.
+   * Shrink solid nodes that stand on a sight line camera -> player / build ghost (scan at 10 Hz,
+   * animate every frame). Only the handful of fading nodes get their matrices rewritten.
    */
   private updateOccluders(dt: number): void {
     const g = this.gen;
@@ -245,22 +379,25 @@ export class Nature {
     if (this.occAcc >= 0.1) {
       this.occAcc = 0;
       this.occluders.clear();
+      const nt = sightTargets(ctx, _targets);
       const p = game.state.player;
-      const show = game.view.mode !== 'map';
-      const py = ctx.heightAt(p.x, p.z) + 0.9;
-      const dx = env.camX - p.x;
-      const dy = env.camY - py;
-      const dz = env.camZ - p.z;
-      const h2 = dx * dx + dz * dz;
-      if (show && h2 > 1) {
+      for (let ti = 0; ti < nt; ti++) {
+        const tx = _targets[ti * 3];
+        const ty = _targets[ti * 3 + 1];
+        const tz = _targets[ti * 3 + 2];
+        const dx = env.camX - tx;
+        const dy = env.camY - ty;
+        const dz = env.camZ - tz;
+        const h2 = dx * dx + dz * dz;
+        if (h2 <= 1) continue;
         for (let k = 0; k < this.drawn.length; k++) {
           const i = this.drawn[k];
           const n = g.nodes[i];
-          const ox = n.x - p.x;
-          const oz = n.z - p.z;
+          const ox = n.x - tx;
+          const oz = n.z - tz;
           // the tree/rock right next to the player is what they are chopping: never shrink it
-          if (ox * ox + oz * oz < OCCLUDER_KEEP_R * OCCLUDER_KEEP_R) continue;
-          // quick reject: behind the player or beyond the camera
+          if (ti === 0 && (n.x - p.x) * (n.x - p.x) + (n.z - p.z) * (n.z - p.z) < OCCLUDER_KEEP_R * OCCLUDER_KEEP_R) continue;
+          // quick reject: behind the target or beyond the camera
           const along = (ox * dx + oz * dz) / h2;
           if (along <= 0 || along >= 1) continue;
           const def = game.data.node(n.def);
@@ -271,7 +408,7 @@ export class Nature {
           const r = 0.75 * s + 0.8;
           if (lx * lx + lz * lz > r * r) continue;
           // only when the node is tall enough to reach the sight line at that point
-          const rayH = py + dy * along - ctx.heightAt(n.x, n.z);
+          const rayH = ty + dy * along - ctx.heightAt(n.x, n.z);
           if (nodeHeight(this.nodeModel[i]) * s < rayH - 0.2) continue;
           this.occluders.add(i);
         }
@@ -286,8 +423,9 @@ export class Nature {
       if (f <= 0) this.fades.delete(i);
       else this.fades.set(i, f);
       const slot = this.nodeSlot[i];
-      if (slot < 0 || this.wobbles.has(i)) continue; // the wobble animation writes this node's matrix
-      this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(g.nodes[i], this.nodeModel[i], _m, undefined, f));
+      const batch = this.nodeBatch[i];
+      if (slot < 0 || !batch || this.wobbles.has(i)) continue; // the wobble animation writes this node's matrix
+      batch.setMatrix(slot, this.nodeMatrix(g.nodes[i], _m, undefined, f));
     }
   }
 
@@ -301,7 +439,7 @@ export class Nature {
     return { x: n.x, y: this.ctx.heightAt(n.x, n.z), z: n.z, radius: 0.9 * s, height: nodeHeight(model) * s };
   }
 
-  /** Ray/sphere picking over drawn (non-depleted, in-range) nodes. */
+  /** Ray/sphere picking over drawn (non-depleted, on-screen) nodes. */
   pick(ray: THREE.Ray, maxT: number): { index: number; t: number } | null {
     const g = this.gen;
     if (!g) return null;
@@ -309,8 +447,8 @@ export class Nature {
     let bestT = maxT;
     const o = ray.origin;
     const d = ray.direction;
-    for (let i = 0; i < g.nodes.length; i++) {
-      if (this.nodeSlot[i] < 0) continue;
+    for (let k = 0; k < this.drawn.length; k++) {
+      const i = this.drawn[k];
       const n = g.nodes[i];
       const def = this.ctx.game.data.node(n.def);
       const s = (n.scale || 1) * (def?.scale ?? 1);
@@ -328,8 +466,8 @@ export class Nature {
 
   dispose(): void {
     for (const u of this.unsub) u();
-    for (const b of this.nodeBatches.values()) b.dispose();
-    for (const b of this.propBatches.values()) b.dispose();
+    for (const b of this.batches.values()) b.dispose();
+    this.batches.clear();
     this.ctx.scene.remove(this.group);
   }
 }

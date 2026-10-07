@@ -6,13 +6,17 @@
  *    aim at aliens, rotors spin, pumps pump...), particle emitters and pooled point lights;
  *  - construction (rising piece + scaffold + dust), damaged (dark + smoke) and off (dim) states;
  *  - auto roofs per room (derived.roofCells / rooms) that fade when the player is inside;
- *  - shield bubbles, upgrade / completion / tier-up celebrations.
- * Instance buffers are only rebuilt when derived.buildingsVersion or a cheap state hash changes.
+ *  - shield bubbles, upgrade / completion / tier-up celebrations;
+ *  - occlusion: buildings (and roofs) standing between the camera and the player / build ghost
+ *    dither away via a per-instance fade attribute (see Batch `fade`), so a Titanium skyscraper never
+ *    hides the player in the follow camera.
+ * Instance buffers are only rebuilt when derived.buildingsVersion or a cheap state hash changes; static
+ * batches carry a bounding sphere so three.js frustum-culls whole batches off screen.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
-import { inView } from '../core/context';
-import { Batch, composeYaw, composeEuler } from '../core/Batch';
+import { inView, sightTargets } from '../core/context';
+import { Batch, composeYaw, composeEuler, type BatchOpts } from '../core/Batch';
 import { mergeCopies } from '../core/GeoBuilder';
 import { tierStyle, type TierStyle } from '../core/palette';
 import { buildModel, type ModelSpec } from '../models/spec';
@@ -43,6 +47,8 @@ interface Entry {
   emitAcc: Float32Array | null;
   turretYaw: number;
   hasTarget: boolean;
+  /** Occlusion fade 0 (solid) .. FADE_MAX (dithered away). */
+  fade: number;
 }
 
 interface Slot {
@@ -66,6 +72,13 @@ interface Roof {
   mat: THREE.MeshLambertMaterial;
   cells: Set<number>;
   opacity: number;
+  /** XZ bounds (world) for the occlusion scan. */
+  minX: number;
+  minZ: number;
+  maxX: number;
+  maxZ: number;
+  y: number;
+  occluded: boolean;
 }
 
 const WALL_LIKE = new Set(['wall', 'door', 'window', 'gate', 'pillar']);
@@ -87,6 +100,16 @@ const COLOR_GHOST_BUILD = new THREE.Color(1.15, 1.15, 1.15);
 const _m = new THREE.Matrix4();
 const _m2 = new THREE.Matrix4();
 const _c = new THREE.Color();
+const _o = new THREE.Vector3();
+const _d = new THREE.Vector3();
+const _targets = new Float64Array(6);
+/** Strongest occlusion fade (a faint stipple keeps the building readable). */
+const FADE_MAX = 0.85;
+/** Sight-line margin (world units) around a building's footprint. */
+const OCCLUDE_MARGIN = 0.6;
+const PIECE_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
+const BODY_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
+const PART_OPTS: BatchOpts = { color: true, castShadow: false, fade: true };
 
 export class Buildings {
   private group = new THREE.Group();
@@ -102,6 +125,10 @@ export class Buildings {
   private lightEntries: (Entry | null)[] = [];
   private lightTimer = 0;
   private flashes = new Map<Id, { until: number; color: THREE.Color; base: THREE.Color }>();
+  /** Buildings currently on a sight line and their animated fades (kept across rebuilds). */
+  private occluders = new Set<Id>();
+  private bfades = new Map<Id, number>();
+  private occAcc = 0;
   private shields = new Map<Id, { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; ripple: number }>();
   /** 0 = peace (faint shimmer) .. 1 = invasion (shields powered up). */
   private shieldAlert = 0;
@@ -275,6 +302,7 @@ export class Buildings {
         emitAcc: null,
         turretYaw: 0,
         hasTarget: false,
+        fade: this.bfades.get(b.id) ?? 0,
       };
       if (def?.piece) {
         this.buildPiece(entry, def.piece, style, color);
@@ -316,7 +344,7 @@ export class Buildings {
   private pushSlot(entry: Entry, batch: Batch, x: number, y: number, z: number, yaw: number, color: THREE.Color, sx = 1, sy = 1, sz = 1): void {
     composeYaw(_m, x, y, z, yaw, sx, sy, sz);
     const index = batch.count;
-    batch.push(_m, color);
+    batch.push(_m, color, entry.fade);
     entry.slots.push({ batch, index, x, y, z, yaw });
   }
 
@@ -324,7 +352,7 @@ export class Buildings {
     const k = `${key}|${style.index}`;
     let b = this.pieceBatches.get(k);
     if (!b) {
-      b = new Batch(this.group, pieceGeometry(key, style), this.ctx.mats.set, 32, { color: true, castShadow: true, receiveShadow: true });
+      b = new Batch(this.group, pieceGeometry(key, style), this.ctx.mats.litFade, 32, PIECE_OPTS);
       this.pieceBatches.set(k, b);
     }
     return b;
@@ -333,8 +361,8 @@ export class Buildings {
   private facilityBatch(key: string, spec: ModelSpec): FacilityBatch {
     let fb = this.facilityBatches.get(key);
     if (!fb) {
-      const body = new Batch(this.group, spec.geometry, this.ctx.mats.set, 8, { color: true, castShadow: true, receiveShadow: true });
-      const parts = spec.parts.map((p) => new Batch(this.group, p.geometry, this.ctx.mats.set, 8, { color: true, castShadow: false }));
+      const body = new Batch(this.group, spec.geometry, this.ctx.mats.litFade, 8, BODY_OPTS);
+      const parts = spec.parts.map((p) => new Batch(this.group, p.geometry, this.ctx.mats.litFade, 8, PART_OPTS));
       fb = { spec, body, parts, entries: [] };
       this.facilityBatches.set(key, fb);
     }
@@ -450,12 +478,22 @@ export class Buildings {
       const offsets = new Float32Array(cells.size * 2);
       let k = 0;
       let ySum = 0;
+      let minX = Infinity;
+      let minZ = Infinity;
+      let maxX = -Infinity;
+      let maxZ = -Infinity;
       for (const ci of cells) {
         const cx = ci % WORLD_CELLS;
         const cz = (ci / WORLD_CELLS) | 0;
-        offsets[k * 2] = cellCenter(cx);
-        offsets[k * 2 + 1] = cellCenter(cz);
-        ySum += ctx.heightAt(offsets[k * 2], offsets[k * 2 + 1]);
+        const wx = cellCenter(cx);
+        const wz = cellCenter(cz);
+        offsets[k * 2] = wx;
+        offsets[k * 2 + 1] = wz;
+        ySum += ctx.heightAt(wx, wz);
+        if (wx < minX) minX = wx;
+        if (wx > maxX) maxX = wx;
+        if (wz < minZ) minZ = wz;
+        if (wz > maxZ) maxZ = wz;
         k++;
       }
       const geo = mergeCopies(tile, offsets, ySum / cells.size);
@@ -465,7 +503,7 @@ export class Buildings {
       mesh.receiveShadow = true;
       mesh.matrixAutoUpdate = false;
       this.roofGroup.add(mesh);
-      this.roofs.push({ mesh, mat, cells, opacity: 1 });
+      this.roofs.push({ mesh, mat, cells, opacity: 1, minX: minX - CELL / 2, minZ: minZ - CELL / 2, maxX: maxX + CELL / 2, maxZ: maxZ + CELL / 2, y: ySum / cells.size, occluded: false });
     }
   }
 
@@ -484,7 +522,7 @@ export class Buildings {
           break;
         }
       }
-      const target = inside || camLow || view.mode === 'build' ? 0.12 : 1;
+      const target = inside || camLow || view.mode === 'build' || r.occluded ? 0.12 : 1;
       const k = 1 - Math.exp(-dt * 8);
       r.opacity += (target - r.opacity) * k;
       r.mat.opacity = r.opacity;
@@ -534,6 +572,7 @@ export class Buildings {
 
     this.updateConstruction(dt);
     this.updateFlashes();
+    this.updateOcclusion(dt);
     this.updateParts(dt);
     this.updateRoofs(dt);
     this.updateLights(dt);
@@ -681,7 +720,7 @@ export class Buildings {
             composeEuler(_m2, p.x + ox, p.y + oy, p.z, rx, ry, rz);
             _m.multiply(_m2);
             const color = this.flashes.get(en.id)?.color ?? this.statusColor(b);
-            fb.parts[pi].push(_m, color);
+            fb.parts[pi].push(_m, color, en.fade);
           }
         }
         // emitters
@@ -712,6 +751,64 @@ export class Buildings {
         if (b.status === 'damaged' && visible && Math.random() < dt * 2.5) ctx.particles.smoke(en.x + (Math.random() - 0.5) * 1.2, en.y + 0.8, en.z + (Math.random() - 0.5) * 1.2, 0.45, '#3f3a40', 1.6);
       }
       for (const pb of fb.parts) pb.end();
+    }
+  }
+
+  /**
+   * Dither away buildings that stand between the camera and the player (and the build ghost): scan
+   * at 10 Hz with a segment/AABB test, animate the per-instance fade every frame. Roofs on a sight
+   * line drop to their see-through opacity.
+   */
+  private updateOcclusion(dt: number): void {
+    const ctx = this.ctx;
+    const env = ctx.env;
+    this.occAcc += dt;
+    if (this.occAcc >= 0.1) {
+      this.occAcc = 0;
+      this.occluders.clear();
+      for (const r of this.roofs) r.occluded = false;
+      const nt = sightTargets(ctx, _targets);
+      for (let ti = 0; ti < nt; ti++) {
+        const tx = _targets[ti * 3];
+        const ty = _targets[ti * 3 + 1];
+        const tz = _targets[ti * 3 + 2];
+        _o.set(env.camX, env.camY, env.camZ);
+        _d.set(tx - env.camX, ty - env.camY, tz - env.camZ);
+        const len = _d.length();
+        if (len < 1) continue;
+        _d.divideScalar(len);
+        // XZ bounds of the sight line: cheap reject before the slab test
+        const bx0 = Math.min(tx, env.camX) - OCCLUDE_MARGIN;
+        const bx1 = Math.max(tx, env.camX) + OCCLUDE_MARGIN;
+        const bz0 = Math.min(tz, env.camZ) - OCCLUDE_MARGIN;
+        const bz1 = Math.max(tz, env.camZ) + OCCLUDE_MARGIN;
+        for (const en of this.entries) {
+          if (en.height < 1 || en.maxX < bx0 || en.minX > bx1 || en.maxZ < bz0 || en.minZ > bz1) continue;
+          const t = slabTest(_o, _d, en.minX - OCCLUDE_MARGIN, en.y - 0.3, en.minZ - OCCLUDE_MARGIN, en.maxX + OCCLUDE_MARGIN, en.y + en.height, en.maxZ + OCCLUDE_MARGIN);
+          if (t >= 0 && t < len) this.occluders.add(en.id);
+        }
+        for (const r of this.roofs) {
+          if (r.occluded || r.maxX < bx0 || r.minX > bx1 || r.maxZ < bz0 || r.minZ > bz1) continue;
+          const t = slabTest(_o, _d, r.minX, r.y + ROOF_Y - 0.2, r.minZ, r.maxX, r.y + ROOF_Y + 0.6, r.maxZ);
+          if (t >= 0 && t < len) r.occluded = true;
+        }
+      }
+      for (const id of this.occluders) if (!this.bfades.has(id)) this.bfades.set(id, 0);
+    }
+    if (!this.bfades.size) return;
+    for (const [id, f0] of this.bfades) {
+      const on = this.occluders.has(id);
+      const f = on ? Math.min(FADE_MAX, f0 + dt * 4) : Math.max(0, f0 - dt * 2.5);
+      if (f === f0 && on) continue;
+      if (f <= 0) this.bfades.delete(id);
+      else this.bfades.set(id, f);
+      const en = this.byId.get(id);
+      if (!en) {
+        this.bfades.delete(id);
+        continue;
+      }
+      en.fade = f;
+      for (const s of en.slots) s.batch.setFade(s.index, f);
     }
   }
 
