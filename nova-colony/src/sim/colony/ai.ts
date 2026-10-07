@@ -674,6 +674,18 @@ export class ColonistAI {
     return true;
   }
 
+  /**
+   * Moving from cell o into the blocked cell n: is the colonist already standing inside that very building (leaving a
+   * bed, pacing inside a footprint)? Then the move is fine. Anything else (a free cell or another building) means the
+   * colonist is about to walk into an obstacle.
+   */
+  private sameSolid(ocx: number, ocz: number, ncx: number, ncz: number, enter: number): boolean {
+    if (!this.blocked(ocx, ocz, enter)) return false;
+    const bs = this.game.sys.buildings;
+    const a = bs.at(ocx, ocz);
+    return !!a && a === bs.at(ncx, ncz);
+  }
+
   /** Nudge a target out of obstacles (writes this.rx / this.rz). */
   private place(x: number, z: number, enter: number): void {
     this.rx = x;
@@ -1062,7 +1074,7 @@ export class ColonistAI {
     const ocz = cellOf(c.z);
     const ncx = cellOf(nx);
     const ncz = cellOf(nz);
-    if ((ncx !== ocx || ncz !== ocz) && this.blocked(ncx, ncz, br.bld) && !this.blocked(ocx, ocz, br.bld)) {
+    if ((ncx !== ocx || ncz !== ocz) && this.blocked(ncx, ncz, br.bld) && !this.sameSolid(ocx, ocz, ncx, ncz, br.bld)) {
       if (br.pst === P_FOLLOW && br.replans < MAX_REPLANS) {
         this.replan(c, br); // the way is blocked (unexpectedly): plan again instead of sliding
         return;
