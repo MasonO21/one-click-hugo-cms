@@ -215,6 +215,9 @@ export class CombatContext {
   damageAlien(a: Alien, dmg: number, by: KillCredit): boolean {
     if (dmg <= 0 || a.state === 'dying' || a.hp <= 0 || a.retreat) return false;
     a.hp -= dmg;
+    // a big target being worn down is progress too: the straggler timeout must not let a titan walk
+    // off mid-fight just because nothing died for a while
+    if (!a.wild) this.lastProgressAt = this.game.state.playTime;
     if (this.budget.hit.take()) this.game.bus.emit('alien:hit', { id: a.id, x: a.x, z: a.z, damage: Math.round(dmg) });
     if (a.hp <= 0) {
       this.kill(a, by);
