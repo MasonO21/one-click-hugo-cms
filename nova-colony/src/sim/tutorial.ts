@@ -35,6 +35,8 @@ export interface GuideTarget {
 }
 
 const GATHER_VERB: Record<string, string> = { wood: 'chop', stone: 'mine', fiber: 'cut', food: 'pick' };
+/** "Go gather" guidance only considers nodes within this many world units (per axis) of the player. */
+const GATHER_SEARCH = 90;
 
 /** Seconds a build/tier step may be unaffordable before a supply drone helps out. */
 export const SUPPLY_DRONE_AFTER = 60;
@@ -194,29 +196,28 @@ export class TutorialSystem extends System {
     const tool = player.toolTier();
     for (const [res, n] of Object.entries(missing)) {
       if (!n || n <= 0) continue;
+      const names = new Map<string, string>();
+      for (const d of this.game.data.nodes) if ((d.drop[res] ?? 0) > 0 && d.toolTier <= tool) names.set(d.id, d.name);
+      // one pass over the world's nodes; only the nearby ones matter for "the nearest"
       const cands: Candidate[] = [];
-      const nodeName = new Map<string, string>();
-      for (const d of this.game.data.nodes) {
-        if (!((d.drop[res] ?? 0) > 0) || d.toolTier > tool) continue;
-        for (const c of this.nodeCandidates(d.id)) {
-          if (!world.isUnlocked(this.nodeRegion(c.key))) continue;
-          cands.push(c);
-          nodeName.set(c.key, d.name);
-        }
+      const nodes = world.gen?.nodes ?? [];
+      const depleted = this.game.state.world.depleted;
+      const p = this.game.state.player;
+      for (const n of nodes) {
+        if (!names.has(n.def) || depleted[n.i] !== undefined) continue;
+        if (Math.abs(n.x - p.x) > GATHER_SEARCH || Math.abs(n.z - p.z) > GATHER_SEARCH) continue;
+        if (!world.isUnlocked(n.region)) continue;
+        cands.push({ key: `node:${n.i}`, x: n.x, z: n.z });
       }
       const at = this.pick(`gather:${res}`, cands);
       if (!at) continue;
       const name = this.game.data.resource(res)?.name ?? res;
-      const node = this.sticky ? nodeName.get(this.sticky.key) : undefined;
+      const node = this.sticky ? names.get(nodes[+this.sticky.key.slice(5)]?.def ?? '') : undefined;
       out.world = at;
       out.text = `Need ${Math.ceil(n)} more ${name} — ${GATHER_VERB[res] ?? 'gather from'} ${node ? `a ${node}` : 'nearby'}, then build.`;
       return true;
     }
     return false;
-  }
-
-  private nodeRegion(key: string): string {
-    return this.game.sys.world.gen?.nodes[+key.slice(5)]?.region ?? '';
   }
 
   /** Centre of a building of `def` that is still under construction, if any. */
