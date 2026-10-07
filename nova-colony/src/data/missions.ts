@@ -20,12 +20,12 @@ export const MISSIONS: MissionDef[] = [
   // ====================================================================== TIER 0 — the first 15 minutes
   {
     id: 'm01_wood', chain: 'main', name: 'Timber!', description: 'Gather 60 Wood from the bubble trees near your pod.',
-    type: 'gather', target: 'wood', count: 60, reward: R({ resources: { wood: 20 }, xp: 10 }), next: ['m02_shelter'],
+    type: 'gather', target: 'wood', count: 60, reward: R({ resources: { wood: 10 }, xp: 10 }), next: ['m02_shelter'],
     hint: 'Walk up to a tree — you will chop it automatically.', guide: { kind: 'node', ref: 'tree_round' },
   },
   {
     id: 'm02_shelter', chain: 'main', name: 'A Roof Overhead', description: 'Build a Lean-to Shelter.',
-    type: 'build', target: 'shelter', count: 1, reward: R({ resources: { wood: 25, stone: 15 }, xp: 15 }), next: ['m03_campfire'],
+    type: 'build', target: 'shelter', count: 1, reward: R({ resources: { wood: 15, fiber: 10 }, xp: 15 }), next: ['m03_campfire'],
     hint: 'Open the Build menu and place a Lean-to Shelter.', guide: { kind: 'build_menu', ref: 'shelter' },
   },
   {
@@ -59,7 +59,7 @@ export const MISSIONS: MissionDef[] = [
     id: 'm08_turret', chain: 'main', name: 'Something Stirs', description: 'Strange noises at night... Build a Scrap Turret.',
     type: 'build', target: 'scrap_turret', count: 1, reward: R({ resources: { wood: 30, stone: 25 }, xp: 20 }), next: ['m09_defend'],
     hint: 'Place the turret between your camp and the wilds.', guide: { kind: 'build_menu', ref: 'scrap_turret' },
-    onComplete: { attack: { delay: 25, warning: 75 } },
+    onComplete: { attack: { delay: 20, warning: 100 } },
   },
   {
     id: 'm09_defend', chain: 'main', name: 'First Contact', description: 'Defend the colony from the alien attack.',

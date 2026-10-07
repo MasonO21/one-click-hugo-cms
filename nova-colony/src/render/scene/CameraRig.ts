@@ -1,13 +1,17 @@
 /**
  * CameraRig — third-person orbit camera following the player (view.camera.yaw / zoom), an
  * 'overview' mode targeting (tx, tz) for map/build, smooth damping, gentle tilt that flattens when
- * zooming in, terrain clearance, a transient focus() framing and camera shake.
+ * zooming in, terrain clearance, a transient focus() framing, combat framing (leans toward nearby
+ * attacking aliens) and camera shake.
  *
  * Convention (ARCHITECTURE.md): camera = target + (sin(yaw)·d, h, cos(yaw)·d), looking at target.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import { clamp, lerp } from '../../core/math';
+
+/** Aliens within this many world units of the player pull the follow camera toward the fight. */
+const COMBAT_FRAME_R = 34;
 
 export class CameraRig {
   private tx = 0;
@@ -72,6 +76,35 @@ export class CameraRig {
     } else {
       gx = game.state.player.x;
       gz = game.state.player.z;
+      // during an attack, lean toward the nearby alien front and pull back a little so the player sees
+      // the aliens coming and the turrets at work (instead of the fight happening under the HUD)
+      const combat = game.state.combat;
+      if (combat.phase === 'attack' && view.mode === 'play') {
+        let sx = 0;
+        let sz = 0;
+        let n = 0;
+        for (const a of combat.aliens) {
+          if (a.state === 'dying') continue;
+          const ax = a.x - gx;
+          const az = a.z - gz;
+          if (ax * ax + az * az > COMBAT_FRAME_R * COMBAT_FRAME_R) continue;
+          sx += ax;
+          sz += az;
+          n++;
+        }
+        if (n > 0) {
+          let ox = (sx / n) * 0.45;
+          let oz = (sz / n) * 0.45;
+          const l = Math.hypot(ox, oz);
+          if (l > 9) {
+            ox *= 9 / l;
+            oz *= 9 / l;
+          }
+          gx += ox;
+          gz += oz;
+          distMul = 1.22;
+        }
+      }
     }
     if (mode === 'overview') {
       distMul = 1.55;

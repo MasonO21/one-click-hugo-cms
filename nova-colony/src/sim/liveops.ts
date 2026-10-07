@@ -148,7 +148,7 @@ export class LiveOpsSystem extends System {
     // daily login popup shortly after launch (waits for the Welcome Back panel to be dealt with)
     if (this.dailyPopupIn > 0 && --this.dailyPopupIn <= 0) {
       if (g.pendingOffline && this.dailyPopupTries++ < 8) this.dailyPopupIn = 3;
-      else if (this.dailyAvailable()) g.bus.emit('ui:open', { panel: 'daily' });
+      else if (this.dailyAvailable() && this.offersUnlocked()) g.bus.emit('ui:open', { panel: 'daily' });
     }
 
     // retry placing the free wheel if the first attempt found no room
@@ -343,6 +343,16 @@ export class LiveOpsSystem extends System {
 
   dailyAvailable(): boolean {
     return this.game.state.liveops.daily.lastClaim !== dateKey(this.game.now());
+  }
+
+  /**
+   * Are the daily gift / free spin / free crate offered (HUD pills, launch popup)? Not during the guided
+   * first session until the first invasion is won: a 200-wood windfall in minute one would skip the whole
+   * gather -> build loop the tutorial teaches. The panels themselves stay reachable from the menu.
+   */
+  offersUnlocked(): boolean {
+    const st = this.game.state;
+    return st.tutorial.done || st.stats.wavesWon > 0;
   }
 
   /** The day (1..7) the next claim will pay out. */

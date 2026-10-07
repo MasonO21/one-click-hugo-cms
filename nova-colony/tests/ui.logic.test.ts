@@ -290,9 +290,14 @@ describe('ui tree layout', () => {
 describe('ui badges', () => {
   it('counts claimable missions, idle workers and season rewards from the game state', () => {
     const g = mkGame();
-    // badges mirror the live-ops state (a fresh colony has its daily reward, free spin and crate ready)
+    // a fresh colony has its daily reward, free spin and crate ready, but they are not advertised during
+    // the guided first session...
     const lo = g.sys.liveops;
-    expect(computeBadges(g)).toMatchObject({ missions: 0, research: 0, daily: lo.dailyAvailable(), spin: lo.canSpinFree(), crate: lo.freeCrateReady() });
+    expect(lo.dailyAvailable() && lo.canSpinFree() && lo.freeCrateReady()).toBe(true);
+    expect(computeBadges(g)).toMatchObject({ missions: 0, research: 0, daily: false, spin: false, crate: false });
+    // ...and the badges mirror the live-ops state once the first invasion is won
+    g.state.stats.wavesWon = 1;
+    expect(computeBadges(g)).toMatchObject({ missions: 0, research: 0, daily: true, spin: true, crate: true });
     // fake a claimable mission
     const m = g.data.missions[0];
     (g.sys.missions as any).active = () => [m];

@@ -55,12 +55,12 @@ export const BUILDINGS: BuildingDef[] = [
   // ================================================================== TIER 0 — Wood (the humble camp)
   d({
     id: 'shelter', name: 'Lean-to Shelter', icon: '⛺', category: 'housing', description: 'A cozy wooden shelter with two beds.',
-    size: [2, 2], unlockTier: 0, cost: { wood: 20 }, buildTime: 4, hp: 200, ...HOME, levelCostMult: 2, model: 'bunkhouse',
+    size: [2, 2], unlockTier: 0, cost: { wood: 40 }, buildTime: 4, hp: 200, ...HOME, levelCostMult: 2, model: 'bunkhouse',
     housing: 2, comfort: 1,
   }),
   d({
     id: 'campfire', name: 'Campfire', icon: '🔥', category: 'food', description: 'Warmth, light and roasted berries. Colonists love it.',
-    size: [1, 1], unlockTier: 0, cost: { wood: 10, stone: 5 }, buildTime: 3, hp: 100, model: 'campfire',
+    size: [1, 1], unlockTier: 0, cost: { wood: 15, stone: 15 }, buildTime: 3, hp: 100, model: 'campfire',
     entertainment: 2, comfort: 1, produces: { food: 2 }, station: 'campfire',
   }),
   d({
@@ -85,7 +85,7 @@ export const BUILDINGS: BuildingDef[] = [
   }),
   d({
     id: 'logging_camp', name: 'Logging Camp', icon: '🪓', category: 'production', description: 'A gatherer chops nearby trees for you, even while you are away.',
-    size: [2, 2], unlockTier: 0, cost: { wood: 25, stone: 10 }, buildTime: 5, hp: 150, ...PROD, model: 'logging_camp',
+    size: [2, 2], unlockTier: 0, cost: { wood: 50, stone: 20 }, buildTime: 5, hp: 150, ...PROD, model: 'logging_camp',
     produces: { wood: 6, fiber: 2 }, workers: { slots: 2, job: 'gatherer', required: true },
   }),
   d({
@@ -111,7 +111,7 @@ export const BUILDINGS: BuildingDef[] = [
   d({ id: 'spike_trap', name: 'Spike Trap', icon: '📌', category: 'defense', description: 'Hurts and slows aliens that walk over it.', size: [1, 1], unlockTier: 0, cost: { wood: 10, stone: 5 }, buildTime: 2, hp: 100, maxLevel: 3, levelCostMult: 1.8, levelEffect: 0.5, solid: false, model: 'spikes', trap: { dps: 8, slow: 0.3 } }),
   d({
     id: 'scrap_turret', name: 'Scrap Turret', icon: '🔫', category: 'defense', description: 'A hand-cranked turret built from pod scrap. Fires twice as fast when you stand next to it.',
-    size: [1, 1], unlockTier: 0, cost: { wood: 30, stone: 20 }, buildTime: 5, hp: 250, ...GUN, model: 'turret_basic',
+    size: [1, 1], unlockTier: 0, cost: { wood: 50, stone: 40 }, buildTime: 5, hp: 250, ...GUN, model: 'turret_basic',
     turret: { range: 7, damage: 9, fireRate: 1.6, projectile: 'bullet', manual: true },
   }),
 

@@ -57,6 +57,9 @@ import { MerchantPanel } from './panels/MerchantPanel';
 import { CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
 
+/** Minimum gap between production floats of the same resource. */
+const PROD_FLOAT_GAP_MS = 1200;
+
 export class UI {
   private root!: HTMLElement;
   private ui!: HTMLElement;
@@ -83,6 +86,7 @@ export class UI {
   private lastAdFail = -1e9;
   private lastInsufficient = -1e9;
   private welcomeShown = false;
+  private lastProdFloat = new Map<string, number>();
 
   constructor(
     private readonly game: Game,
@@ -325,7 +329,17 @@ export class UI {
     // flying resources + HUD pops
     bus.on('resource:gained', (e) => {
       this.hud.resources.gained(e.id, e.amount, e.source);
-      if (e.source === 'production' || e.source === 'offline') return;
+      if (e.source === 'production') {
+        // colonists / machines visibly produce: a small "+1 🪵" over the producing building (throttled)
+        if (e.x == null || e.z == null) return;
+        const now = performance.now();
+        if (now - (this.lastProdFloat.get(e.id) ?? -1e9) < PROD_FLOAT_GAP_MS) return;
+        this.lastProdFloat.set(e.id, now);
+        const def = g.data.resource(e.id);
+        this.floats.spawn(`+${fmt(e.amount)} ${def?.icon ?? ''}`, e.x, e.z, '#c8ffb0');
+        return;
+      }
+      if (e.source === 'offline') return;
       let origin: { x: number; y: number } | null = null;
       if (e.x != null && e.z != null) {
         const p = this.renderer.worldToScreen(e.x, 1.2, e.z);

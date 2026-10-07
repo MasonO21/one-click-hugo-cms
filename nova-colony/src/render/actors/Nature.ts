@@ -2,7 +2,8 @@
  * Nature actor — resource nodes (gen.nodes) and decorative props (gen.props) as InstancedMeshes
  * per model, distance-culled around the camera focus and rebuilt only when the focus moves, the
  * depletion set changes or a timer elapses. Gather hits wobble the node and throw chips; depletion
- * plays a shrink-pop before the node disappears.
+ * plays a shrink-pop before the node disappears. Solid nodes standing between the camera and the player
+ * shrink out of the way (and grow back) so trees and boulders never hide the player.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
@@ -17,6 +18,8 @@ interface Wobble {
 }
 
 const _m = new THREE.Matrix4();
+/** How far an occluding node shrinks (fraction of its size). */
+const OCCLUDER_SHRINK = 0.78;
 
 export class Nature {
   private group = new THREE.Group();
@@ -34,6 +37,12 @@ export class Nature {
   private depletedCount = -1;
   private lastTerrain = -1;
   private wobbles = new Map<number, Wobble>();
+  /** Node indices drawn by the last rebuild (occlusion scan). */
+  private drawn: number[] = [];
+  /** Occluder fade per node index, 0 (normal) .. 1 (shrunk out of the way). */
+  private fades = new Map<number, number>();
+  private occluders = new Set<number>();
+  private occAcc = 0;
   private readonly unsub: (() => void)[] = [];
 
   constructor(private readonly ctx: RenderContext) {
@@ -105,9 +114,9 @@ export class Nature {
     this.dirty = true;
   }
 
-  private nodeMatrix(node: WorldNode, model: string, out: THREE.Matrix4, wobble?: Wobble): THREE.Matrix4 {
+  private nodeMatrix(node: WorldNode, model: string, out: THREE.Matrix4, wobble?: Wobble, fade = 0): THREE.Matrix4 {
     const def = this.ctx.game.data.node(node.def);
-    let s = (node.scale || 1) * (def?.scale ?? 1);
+    let s = (node.scale || 1) * (def?.scale ?? 1) * (1 - OCCLUDER_SHRINK * fade);
     let rx = 0;
     let rz = 0;
     let sy = s;
@@ -135,6 +144,7 @@ export class Nature {
     for (const b of this.nodeBatches.values()) b.begin();
     for (const b of this.propBatches.values()) b.begin();
     this.nodeSlot.fill(-1);
+    this.drawn.length = 0;
     if (g) {
       const depleted = this.ctx.game.state.world.depleted;
       const nodeR = Math.min(190, env.viewRadius + 30);
@@ -149,7 +159,8 @@ export class Nature {
         if (depleted[i] !== undefined && !(w && w.pop)) continue;
         const batch = this.nodeBatch(this.nodeModel[i]);
         this.nodeSlot[i] = batch.count;
-        batch.push(this.nodeMatrix(n, this.nodeModel[i], _m, w));
+        this.drawn.push(i);
+        batch.push(this.nodeMatrix(n, this.nodeModel[i], _m, w, this.fades.get(i) ?? 0));
       }
       const propR = env.quality === 'low' ? Math.min(70, env.viewRadius * 0.7) : Math.min(120, env.viewRadius * 0.9);
       const propR2 = propR * propR;
@@ -196,6 +207,8 @@ export class Nature {
     const moved = (env.cx - this.lastCx) ** 2 + (env.cz - this.lastCz) ** 2 > 36 || Math.abs(env.viewRadius - this.lastRadius) > 15;
     if (this.dirty || moved || this.timer > 2.5) this.rebuild();
 
+    this.updateOccluders(dt);
+
     // wobble / pop animations
     if (this.wobbles.size && this.gen) {
       for (const [i, w] of this.wobbles) {
@@ -208,11 +221,69 @@ export class Nature {
         }
         if (!w.pop && w.t > 0.9) {
           this.wobbles.delete(i);
-          if (slot >= 0) this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], this.nodeModel[i], _m));
+          if (slot >= 0) this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], this.nodeModel[i], _m, undefined, this.fades.get(i) ?? 0));
           continue;
         }
-        if (slot >= 0) this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], this.nodeModel[i], _m, w));
+        if (slot >= 0) this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(this.gen.nodes[i], this.nodeModel[i], _m, w, this.fades.get(i) ?? 0));
       }
+    }
+  }
+
+  /**
+   * Shrink solid nodes that stand on the sight line camera -> player (scan at 10 Hz, animate every
+   * frame). Only the handful of fading nodes get their matrices rewritten.
+   */
+  private updateOccluders(dt: number): void {
+    const g = this.gen;
+    if (!g) return;
+    const ctx = this.ctx;
+    const env = ctx.env;
+    const game = ctx.game;
+    this.occAcc += dt;
+    if (this.occAcc >= 0.1) {
+      this.occAcc = 0;
+      this.occluders.clear();
+      const p = game.state.player;
+      const show = game.view.mode !== 'map';
+      const py = ctx.heightAt(p.x, p.z) + 0.9;
+      const dx = env.camX - p.x;
+      const dy = env.camY - py;
+      const dz = env.camZ - p.z;
+      const h2 = dx * dx + dz * dz;
+      if (show && h2 > 1) {
+        for (let k = 0; k < this.drawn.length; k++) {
+          const i = this.drawn[k];
+          const n = g.nodes[i];
+          const ox = n.x - p.x;
+          const oz = n.z - p.z;
+          // quick reject: behind the player or beyond the camera
+          const along = (ox * dx + oz * dz) / h2;
+          if (along <= 0 || along >= 1) continue;
+          const def = game.data.node(n.def);
+          if (!def?.solid) continue;
+          const s = (n.scale || 1) * (def.scale ?? 1);
+          const lx = ox - dx * along;
+          const lz = oz - dz * along;
+          const r = 0.75 * s + 0.8;
+          if (lx * lx + lz * lz > r * r) continue;
+          // only when the node is tall enough to reach the sight line at that point
+          const rayH = py + dy * along - ctx.heightAt(n.x, n.z);
+          if (nodeHeight(this.nodeModel[i]) * s < rayH - 0.2) continue;
+          this.occluders.add(i);
+        }
+      }
+      for (const i of this.occluders) if (!this.fades.has(i)) this.fades.set(i, 0);
+    }
+    if (!this.fades.size) return;
+    for (const [i, f0] of this.fades) {
+      const on = this.occluders.has(i);
+      const f = on ? Math.min(1, f0 + dt * 5) : Math.max(0, f0 - dt * 3);
+      if (f === f0 && on) continue;
+      if (f <= 0) this.fades.delete(i);
+      else this.fades.set(i, f);
+      const slot = this.nodeSlot[i];
+      if (slot < 0 || this.wobbles.has(i)) continue; // the wobble animation writes this node's matrix
+      this.nodeBatches.get(this.nodeModel[i])?.setMatrix(slot, this.nodeMatrix(g.nodes[i], this.nodeModel[i], _m, undefined, f));
     }
   }
 
