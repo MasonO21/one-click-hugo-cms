@@ -8,6 +8,10 @@ import liora from '../assets/art/hero-liora.webp';
 
 export { default as LOGO_ART } from '../assets/art/logo.webp';
 export { default as BOSS_ART } from '../assets/art/boss-band.webp';
+import eclipseVael from '../assets/art/skin-eclipse-vael.webp';
+
+/** Painted skin splashes by skin id (shown instead of the hero's splash while the skin is equipped). */
+export const SKIN_ART = { eclipse_vael: eclipseVael };
 
 /** Painted hero splashes by hero id. */
 export const HERO_ART = { vael, nyx, seraphine, mordrake, liora };

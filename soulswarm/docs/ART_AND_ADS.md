@@ -14,6 +14,7 @@ Generated with Higgsfield on 2026-10-06. The full-resolution masters are in `sto
 | `hero-seraphine.jpg` | 1792×2400 | Nano Banana Pro | Seraphine's hero card | `f13a35a8-8125-4c8f-b803-829bcf38d3ba` |
 | `hero-mordrake.jpg` | 1792×2400 | Nano Banana Pro | Mordrake's hero card | `046be80a-f562-4eed-8802-d16db05fa70f` |
 | `hero-liora.jpg` | 1792×2400 | Nano Banana Pro | Liora's hero card (5th hero, Epic) | `0f2133d3-a67a-4317-9948-98231363c867` |
+| `skin-eclipse-vael.jpg` | 1792×2400 | Nano Banana Pro (Vael's splash as the reference) | Eclipse Vael, the Soul Pass skin: the premium card and Vael's portrait while the skin is equipped | `1f5e90b9-5d57-40d0-b258-376619880bab` |
 | `boss-gravemaw.jpg` | 1792×2400 | Nano Banana Pro | "The Hollow King approaches" boss warning, boss reveal ad clip | `6899f0c9-8b53-4ca4-b052-df4279d237bb` |
 | `logo-transparent.png` | 2048×1360, alpha | GPT Image 2.5 | Boot screen, settings credits, ad end cards, store listing | `3cf6edf7-20d5-4d80-ac09-fd57074e79a9` |
 

@@ -1,10 +1,11 @@
 // Soul Pass tab: season header, premium upsell (Eclipse Vael), and the 30-tier free/premium track.
 import { h, $, purchaseFlow } from '../dom.js';
 import { icon } from '../icons.js';
+import { SKIN_ART } from '../art.js';
 import { PASS_SEASON, PASS_TIERS, HEROES, SKINS } from '../../game/data.js';
 import { commit, passState, claimPass } from '../../meta/economy.js';
 import { now as clockNow } from '../../meta/clock.js';
-import { cd, bundleItems, rewardChip, popRewards, bar, tap, delegate, keepScroll, portrait } from './util.js';
+import { cd, bundleItems, rewardChip, popRewards, bar, tap, delegate, keepScroll } from './util.js';
 
 const DAY = 864e5;
 /** Season = 28 days counted from profile creation, repeating. */
@@ -58,7 +59,7 @@ export function createPass(ctx) {
     const prem = s.premium
       ? `<div class="ps-premon"><span class="ic-tint" style="color:${eclipseColor}">${icon('crown')}</span><b>Premium track active</b><span class="t-dim">Eclipse Vael awaits at tier ${PASS_TIERS}</span></div>`
       : `<div class="ps-prem">
-        <div class="ps-prem-art">${portrait(app, 'vael', 'ps-eclipse', { color: eclipseColor, eye: '#fff3c4', noImg: true })}<span class="ps-prem-t30">Tier ${PASS_TIERS}</span></div>
+        <div class="ps-prem-art"><img src="${SKIN_ART.eclipse_vael}" alt="Eclipse Vael" draggable="false"><span class="ps-prem-t30">Tier ${PASS_TIERS}</span></div>
         <div class="ps-prem-body">
           <div class="t-label glow-gold">Exclusive skin</div>
           <div class="ps-prem-name t-display">Eclipse Vael</div>

@@ -748,9 +748,10 @@
 .ps-prem::before { content: ''; position: absolute; inset: 0; clip-path: var(--bevel); padding: 1.5px; pointer-events: none;
   background: linear-gradient(135deg, #fff1a8, #b5761a 50%, #ffcf4a);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-.ps-prem-art { position: relative; width: 104px; flex: none; }
-.ps-eclipse { position: absolute; inset: 0 0 18px; }
-.ps-prem-t30 { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); padding: 2px 8px; font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+.ps-prem-art { position: relative; width: 128px; flex: none; margin: -12px 0 -12px -6px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, #000 64%, transparent); mask-image: linear-gradient(90deg, #000 64%, transparent); }
+.ps-prem-art img { position: absolute; left: -38%; top: -4px; width: 176%; height: auto; display: block; } /* the hood, halo and staff */
+.ps-prem-t30 { position: absolute; left: 46%; bottom: 10px; transform: translateX(-50%); padding: 2px 8px; font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
   background: linear-gradient(90deg, #ffcf4a, #ff9a1f); color: #2a1300; clip-path: var(--bevel-sm); }
 .ps-prem-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .ps-prem-name { font-size: 23px; line-height: 1.05; color: #ffe9a8; text-transform: uppercase; letter-spacing: .04em; text-shadow: 0 0 14px rgba(255,190,60,.75), 0 2px 0 rgba(0,0,0,.6); }

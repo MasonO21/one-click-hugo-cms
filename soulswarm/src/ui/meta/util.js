@@ -4,7 +4,7 @@ import { icon, RELIC_ICON } from '../icons.js';
 import { HEROES, RARITY_COLOR, RARITY_LABEL, RELICS, SKINS, ENERGY_MAX, ENERGY_REGEN_SEC } from '../../game/data.js';
 import { energyNextIn } from '../../meta/economy.js';
 import { now as clockNow } from '../../meta/clock.js';
-import { HERO_ART } from '../art.js';
+import { HERO_ART, SKIN_ART } from '../art.js';
 
 export const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
 export const clamp01 = (x) => Math.max(0, Math.min(1, x));
@@ -45,8 +45,8 @@ export function tap(app, kind = 'light', sfx = 'click') {
 const portraitCache = new Map();
 const portraitTried = new Map();
 
-/** The painted splash stands in for the 3D render, except for a hero wearing a skin (only the render shows it). */
-export const paintedArt = (app, id) => (SKINS[app.profile.equippedSkin]?.hero === id ? '' : HERO_ART[id] || '');
+/** The painted splash stands in for the 3D render; a hero wearing a skin shows the skin's splash (or the render if it has none). */
+export const paintedArt = (app, id) => { const s = app.profile.equippedSkin; return SKINS[s]?.hero === id ? SKIN_ART[s] || '' : HERO_ART[id] || ''; };
 
 /** Portrait URL (painted splash or cached 3D render), or '' while the renderer is not ready yet. */
 export function portraitURL(app, id, force = false) {
