@@ -87,14 +87,17 @@
   // HUD + stage overlays
   // ======================================================================
   function renderHUD(R) {
-    $('#hud-power').textContent = fmt(KH.power());
-    setHTML($('#hud-wyrm'), `<b>Lv ${S.lv.wyrm}</b><span>${esc(S.wyrm.name)}</span>`);
+    // one bar: the wyrm's medallion, the four stores, Starglass and the menu; a sky ribbon under it
+    const dry = S.dormant || (R.net.water < 0 && S.res.water / -R.net.water < 45);
+    const medal = $('#hud-medal');
+    setHTML(medal, `${icon('i-wyrm')}<b>${S.lv.wyrm}</b>`);
+    medal.classList.toggle('dry', !!dry);
+    medal.title = `${S.wyrm.name}, Lv ${S.lv.wyrm}${S.dormant ? ' (dormant)' : ''}`;
     $('#hud-starglass').textContent = fmt(S.starglass);
-    $('#hud-beacons').textContent = fmt(S.beacons);
     setHTML($('#hud-res'), RES.map((r) => {
       const locked = r === 'copper' && !S.lv.mine && S.res.copper < 1;
-      const net = R.net[r];
-      return `<div class="res ${locked ? 'locked' : ''}" title="${NAME[r]}">${icon(ICON[r])}<div><b>${fmt(S.res[r])}</b><small class="${net < -0.004 ? 'neg' : ''}">${locked ? 'Locked' : perMin(net)}</small></div></div>`;
+      const neg = !locked && R.net[r] < -0.004;
+      return `<span class="r ${locked ? 'locked' : ''} ${neg ? 'neg' : ''}" title="${NAME[r]} ${locked ? '(locked)' : perMin(R.net[r])}">${icon(ICON[r])}<b>${fmt(S.res[r])}</b></span>`;
     }).join(''));
     const band = R.band, cls = band.name.toLowerCase();
     const w = KH.curWx(), range = KH.forecastRange();
@@ -102,22 +105,32 @@
     if (w.type !== 'clear') next = `${icon('i-storm')}<span>${esc(DATA.weather[w.type].name)}</span> <b>${fmtTime(w.end - S.time)} left</b>`;
     else {
       const sev = S.wx.find((x) => x.start > S.time && KH.isStorm(x.type) && x.start - S.time <= range);
-      next = sev ? `${icon('i-storm')}<span>${DATA.weather[sev.type].name}</span> <b>${fmtTime(sev.start - S.time)}</b>` : `<span>Clear skies ahead</span>`;
+      next = sev ? `${icon('i-storm')}<span>${DATA.weather[sev.type].name}</span> <b>${fmtTime(sev.start - S.time)}</b>` : `<span>Clear skies</span>`;
     }
     if (KH.keep && KH.keep.raining()) next = `${icon('i-water')}<span>Rain</span> <b>${fmtTime(S.keep.rainUntil - S.time)} left</b>`;
     const warn = KH.isStorm(w.type) || next.includes('i-storm');
     const dn = KH.dayNight();
-    setHTML($('#hud-climate'), `<span class="temp t-${cls}">${icon(dn.night > 0.6 ? 'i-moon' : 'i-sun', 'tod')}${fmtTemp(R.temp)}</span><span class="band t-${cls}">${band.name}</span>
-      <span class="pop">${icon('i-people')}${S.pop}/${KH.housing()}${S.sick ? ` · ${S.sick} sick` : ''}${S.thirsty ? ' · <b class="thirst">thirsty</b>' : ''}</span><span class="next ${warn ? 'warn' : ''}">${next}</span>`);
+    setHTML($('#hud-climate'), `<span class="temp t-${cls}" title="${band.name}">${icon(dn.night > 0.6 ? 'i-moon' : 'i-sun', 'tod')}${fmtTemp(R.temp)}</span><i class="sep"></i>
+      <span class="pop">${icon('i-people')}${S.pop}/${KH.housing()}${S.sick ? ` · ${S.sick} sick` : ''}${S.thirsty ? ' · <b class="thirst">thirsty</b>' : ''}</span><i class="sep"></i><span class="next ${warn ? 'warn' : ''}">${next}</span>`);
   }
 
   function renderStageOverlays() {
-    // side strip (events, duties, bag, ...)
-    const side = KH.side.filter((b) => !b.show || b.show()).map((b) => {
-      const dot = b.dot && b.dot();
+    // side rail: the event, two hubs (Rewards, Play) and whatever is visiting the keep right now
+    const vis = KH.side.filter((b) => !b.show || b.show());
+    const inHub = new Set(Object.values(HUBS).flatMap((h) => h.ids).concat(MENU_IDS));
+    let side = '';
+    const one = (b, ctx) => {
       const badge = b.badge ? b.badge() : '';
-      return `<button class="side-btn" data-act="${b.act}" data-arg="${b.arg || ''}" aria-label="${esc(b.label)}">${icon(b.icon)}${dot ? '<i class="dot"></i>' : ''}<span>${badge || esc(b.label)}</span></button>`;
-    }).join('');
+      return `<button class="side-btn ${ctx ? 'ctx' : ''}" data-act="${b.act}" data-arg="${b.arg || ''}" aria-label="${esc(b.label)}">${icon(b.icon)}${b.dot && b.dot() ? '<i class="dot"></i>' : ''}<span>${esc(b.label)}</span>${badge ? `<small>${esc(badge)}</small>` : ''}</button>`;
+    };
+    for (const b of vis) if (b.id === 'events') side += one(b);
+    for (const [id, h] of Object.entries(HUBS)) {
+      const members = vis.filter((b) => h.ids.includes(b.id));
+      if (!members.length) continue;
+      const dot = members.some((b) => b.dot && b.dot());
+      side += `<button class="side-btn" data-act="hub" data-arg="${id}" data-members="${members.map((b) => b.arg || b.act).join(' ')}" aria-label="${h.label}">${icon(h.icon)}${dot ? '<i class="dot"></i>' : ''}<span>${h.label}</span></button>`;
+    }
+    for (const b of vis) if (b.id !== 'events' && !inHub.has(b.id)) side += one(b, true);
     setHTML($('#side'), side);
 
     let q = '';
@@ -133,22 +146,81 @@
     }
     if (S.training) q += `<button class="qchip" data-act="plot" data-arg="barracks">${icon(DATA.classes[S.training.type].icon)}${S.training.n} ${DATA.troops[S.training.type].name} <time>${fmtTime(S.training.end - S.time)}</time></button>`;
     for (const f of KH.chips) q += f() || '';
-    setHTML($('#queue'), q);
+    // urgent chips first, and no more than four at a time
+    const chips = q.split(/(?=<(?:button|span) class="qchip)/).filter(Boolean);
+    const rank = (c) => (/qchip (raid|incident)/.test(c) ? 0 : /qchip idle/.test(c) ? 1 : 2);
+    chips.sort((a, b) => rank(a) - rank(b));
+    setHTML($('#queue'), chips.slice(0, 4).join('') + (chips.length > 4 ? `<span class="qchips-more">+${chips.length - 4} more</span>` : ''));
 
     const quest = DATA.quests[S.quest];
     let h = '';
     if (quest) {
       const done = quest.check(S);
       UI.questTarget = !done && quest.go.startsWith('plot:') ? quest.go.slice(5) : null;
-      h = `<div class="quest ${done ? 'done' : ''}"><div class="qtext"><div class="qlabel">Chapter quest ${S.quest + 1} of ${DATA.quests.length}</div>
+      h = `<div class="quest ${done ? 'done' : ''}"><span class="qnum" title="Chapter quest ${S.quest + 1} of ${DATA.quests.length}"><span>${S.quest + 1}</span></span><div class="qtext">
         <div class="qgoal">${esc(quest.text)}</div><div class="qrew">${rewardHTML(quest.reward)}</div></div>
         ${done ? '<button class="btn gold small" data-act="claimquest">Claim</button>' : `<button class="btn small alt" data-act="go" data-arg="${quest.go}">Go</button>`}</div>`;
     } else {
       UI.questTarget = null;
-      h = `<div class="quest"><div class="qtext"><div class="qlabel">Chapter quests</div><div class="qgoal">${S.stage > DATA.finalStage ? 'Every quest is done. Push into the Far South as far as your keep can reach.' : 'Every chapter quest is done.'}</div></div></div>`;
+      h = `<div class="quest"><span class="qnum"><span>✓</span></span><div class="qtext"><div class="qgoal">${S.stage > DATA.finalStage ? 'Every quest is done. Push into the Far South as far as your keep can reach.' : 'Every chapter quest is done.'}</div></div></div>`;
     }
     setHTML($('#quest'), h);
   }
+
+  // the side rail's hubs: tiles that open each member's own sheet (with a way back)
+  const HUBS = {
+    rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
+    play: { icon: 'i-kite', label: 'Play', ids: ['channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
+  };
+  const MENU_IDS = ['bag'];
+  KH.HUBS = HUBS;
+  const tile = (b, back) => {
+    const badge = b.badge ? b.badge() : '';
+    return `<button class="hub-tile" data-act="hubopen" data-arg="${back}|${b.act}|${b.arg || ''}">${icon(b.icon)}<b>${esc(b.label)}</b>${badge ? `<small>${esc(badge)}</small>` : ''}${b.dot && b.dot() ? '<i class="dot"></i>' : ''}</button>`;
+  };
+  function sheetHub() {
+    const h = HUBS[UI.sheet.id];
+    const items = KH.side.filter((b) => h.ids.includes(b.id) && (!b.show || b.show()));
+    return { title: h.label, lvl: '', body: `<p class="muted small">${esc(h.blurb)}</p><div class="hub-grid">${items.map((b) => tile(b, `hub:${UI.sheet.id}`)).join('')}</div>` };
+  }
+  function sheetMenu() {
+    const items = [
+      ...KH.side.filter((b) => MENU_IDS.includes(b.id) && (!b.show || b.show())),
+      { icon: 'i-stone', label: 'Stores', act: 'stores' },
+      { icon: 'i-sun', label: 'Forecast', act: 'forecast' },
+      ...(KH.sheets.tales ? [{ icon: 'i-scroll', label: 'Hero Tales', act: 'tales', dot: () => KH.taleAny && KH.taleAny() }] : []),
+      ...(KH.sheets.chronicle ? [{ icon: 'i-book', label: 'Chronicle', act: 'chronicle' }] : []),
+      { icon: 'i-gear', label: 'Settings', act: 'settings' },
+    ];
+    return { title: 'Menu', lvl: '', body: `<div class="hub-grid">${items.map((b) => tile(b, 'menu')).join('')}</div>` };
+  }
+  function sheetStores(R) {
+    const row = (k, v, rate, extra = '') => `<div class="store-row">${icon(ICON[k])}<div class="grow"><b>${NAME[k]}</b>${extra ? `<div class="muted small">${extra}</div>` : ''}</div><span class="amt">${fmt(v)}</span>${rate != null ? `<span class="rate ${rate < -0.004 ? 'neg' : ''}">${perMin(rate)}</span>` : '<span class="rate"></span>'}</div>`;
+    const prot = KH.protectOf ? KH.protectOf() : 0;
+    return {
+      title: 'Your stores', lvl: '',
+      body: `<div class="card stack">${RES.map((r) => row(r, S.res[r], R.net[r], r === 'water' ? `${esc(S.wyrm.name)} and ${fmt(S.pop)} survivors drink from it` : r === 'copper' && !S.lv.mine ? 'Build the Copper Mine' : '')).join('')}</div>
+        ${prot ? `<p class="muted small">The Storehouse keeps ${fmt(prot)} of each safe from raiders.</p>` : ''}
+        <div class="card stack">${row('starglass', S.starglass, null)}${row('beacons', S.beacons, null)}${row('journals', S.journals, null)}${S.lv.forge || S.sunsteel ? row('sunsteel', S.sunsteel, null) : ''}</div>
+        <dl class="kv"><dt>Squad power</dt><dd>${fmt(KH.power())}</dd><dt>Survivors</dt><dd>${S.pop}/${KH.housing()}${S.sick ? ` (${S.sick} sick)` : ''}</dd></dl>`,
+    };
+  }
+  ACT.hub = (id) => { UI.sheet = { kind: 'hub', id }; };
+  ACT.menu = () => { UI.sheet = { kind: 'menu' }; };
+  ACT.stores = () => { UI.sheet = { kind: 'stores' }; };
+  // open a hub member; its sheet gets a back arrow to the hub
+  ACT.hubopen = (arg) => {
+    const [back, act, a] = String(arg).split('|');
+    UI.sheet = null;
+    if (ACT[act]) ACT[act](a || undefined);
+    if (UI.sheet && !UI.sheet.back) UI.sheet.back = back;
+  };
+  ACT.sheetback = () => {
+    const b = UI.sheet && UI.sheet.back;
+    if (!b) return ACT.close();
+    const [kind, id] = b.split(':');
+    UI.sheet = id ? { kind, id } : { kind };
+  };
 
   function renderDots() {
     const dots = {
@@ -248,13 +320,12 @@
       ${patrol}
       <div class="section-label">Next stage</div>
       <div class="stage-card ${foe.boss ? 'boss' : ''}">
-        <span class="stage-num">Stage ${n}${foe.boss ? ' · Boss' : ''}</span>
-        <div class="foe">${esc(foe.name)}</div>
-        <div class="muted small">${icon(DATA.classes[foe.cls].icon)} Fights like ${DATA.classes[foe.cls].name}s. Weak to ${DATA.classes[counter].name}s.</div>
-        <div class="vs"><div class="side"><span class="muted small">Your squad</span><b>${fmt(ours)}</b></div><span class="x">vs</span><div class="side right"><span class="muted small">Enemy</span><b>${fmt(theirs)}</b></div></div>
+        <div class="row stage-top"><div class="grow"><span class="stage-num">Stage ${n}${foe.boss ? ' · Boss' : ''}</span><div class="foe">${esc(foe.name)}</div>
+          <div class="muted small">${icon(DATA.classes[foe.cls].icon)} Weak to ${DATA.classes[counter].name}s</div></div><div class="stage-foe">${foeArt(foe, 'b-enemy')}</div></div>
+        <div class="vs"><div class="side"><span class="muted small">Your squad</span><b>${fmt(ours)}</b></div><span class="odds" style="color:${odds[1]}">${odds[0]}</span><div class="side right"><span class="muted small">Enemy</span><b>${fmt(theirs)}</b></div></div>
         <div class="row wrap"><div class="squad">${home.map((id) => `<button class="slot" data-act="hero" data-arg="${id}">${portrait(id)}</button>`).join('') || '<div class="slot">—</div>'}</div>
-          <div class="grow small muted">${fmt(sum(team.troops))} troops march${S.lv.barracks ? ` (cap ${KH.marchCap()})` : '. Build Barracks to add troops.'}${breath ? `<br>${esc(S.wyrm.name)}'s torrent strikes ${Math.round(breath * 100)}% first.` : S.dormant ? '<br>Your wyrm is dormant and cannot call its torrent.' : ''}<br><b style="color:${odds[1]}">${odds[0]}</b></div></div>
-        <div style="margin-top:12px"><div class="muted small" style="margin-bottom:6px">First clear: ${rewardHTML(KH.stageRewards(n))}</div><button class="btn wide ${home.length ? '' : 'off'}" data-act="fight" data-primary>${home.length ? 'Fight' : 'Squad is away on the Dunes'}</button></div>
+          <div class="grow costs">${S.lv.barracks ? `<span class="cost" title="Troops marching (cap ${KH.marchCap()})">${icon('i-people')}${fmt(sum(team.troops))}</span>` : '<span class="muted small">Build Barracks to add troops</span>'}${breath ? `<span class="cost" title="${esc(S.wyrm.name)}'s torrent opens the fight">${icon('i-water')}${Math.round(breath * 100)}%</span>` : S.dormant ? '<span class="cost short">Wyrm dormant</span>' : ''}</div></div>
+        <div style="margin-top:12px"><div class="costs" style="margin-bottom:8px" title="First clear">${rewardHTML(KH.stageRewards(n))}</div><button class="btn wide ${home.length ? '' : 'off'}" data-act="fight" data-primary>${home.length ? 'Fight' : 'Squad is away on the Dunes'}</button></div>
       </div>
       <div class="section-label">${esc(ch.name)}</div><div class="stage-list">${cells}</div>
       <div class="row" style="margin-top:12px"><button class="btn alt small" data-act="story" data-arg="${ch.from}">Read the chapter</button>${KH.sheets.chronicle ? '<button class="btn alt small" data-act="chronicle">Chronicle</button>' : ''}</div>`;
@@ -615,11 +686,9 @@
   function sheetIntro() {
     return {
       title: '', lvl: '', noClose: true,
-      body: `<div class="intro-art"><h1>Rainkeep</h1></div>
-        <p class="lore">The sun swelled in the year they now call the Long Noon, and the rain never came back. Rivers turned to sand. Cities emptied.</p>
-        <p class="lore">At the bottom of a dry well you found something still cool to the touch: a cracked egg, and inside it a creature made of water. You named it ${esc(S.wyrm.name)}.</p>
-        <p class="lore">It is small and it is thirsty. As long as it drinks, its mist keeps the heat off the people sheltering around it.</p>
-        <p class="lore"><b>Dig the wells. Water the Rainwyrm. Watch the horizon.</b></p>
+      body: `<div class="intro-art"><span>The year of the Long Noon</span><h1>Rainkeep</h1></div>
+        <p class="lore">The rain stopped a generation ago. At the bottom of a dry well you found a cracked egg, and inside it a creature made of water. You named it ${esc(S.wyrm.name)}.</p>
+        <p class="lore">As long as it drinks, its mist keeps the heat off your people. <b>Dig the wells. Water the wyrm. Watch the horizon.</b></p>
         <button class="btn wide" data-act="close">Open the keep</button>`,
     };
   }
@@ -759,7 +828,7 @@
 
   const SHEETS = {
     plot: (R) => sheetPlot(UI.sheet.pid, R), hero: () => sheetHero(UI.sheet.id), forecast: sheetForecast, settings: sheetSettings,
-    intro: sheetIntro, offline: sheetOffline, odds: sheetOdds, buy: sheetBuy, results: sheetResults, story: sheetStory,
+    intro: sheetIntro, offline: sheetOffline, odds: sheetOdds, buy: sheetBuy, results: sheetResults, story: sheetStory, hub: sheetHub, menu: sheetMenu, stores: sheetStores,
     evolve: sheetEvolve, ascend: sheetAscend, rename: sheetRename, ending: sheetEnding, savecode: sheetSaveCode, loadcode: sheetLoadCode,
   };
 
@@ -776,7 +845,7 @@
     if (!fn) { UI.sheet = null; return; }
     const s = fn(R);
     if (UI.sheet !== sh) return renderSheet(R, true); // the sheet closed or replaced itself
-    const html = `${s.title || s.lvl ? `<div class="sheet-head"><h2>${esc(s.title)}</h2>${s.lvl ? `<span class="lvl">${esc(s.lvl)}</span>` : ''}
+    const html = `${s.title || s.lvl ? `<div class="sheet-head">${sh.back ? `<button class="icon-btn back" data-act="sheetback" aria-label="Back">${icon('i-up')}</button>` : ''}<h2>${esc(s.title)}</h2>${s.lvl ? `<span class="lvl">${esc(s.lvl)}</span>` : ''}
       ${s.noClose ? '' : `<button class="icon-btn" data-act="close" aria-label="Close">${icon('i-close')}</button>`}</div>` : ''}<div class="sheet-body">${s.body}</div>`;
     const key = `${k}:${sh.pid || sh.id || sh.skin || sh.from || sh.tile || ''}`;
     const fresh = el.hidden || el._key !== key;
@@ -1169,6 +1238,7 @@
     const [kind, arg] = q.go.split(':');
     const mark = (sel) => { const e = $(sel); if (e) e.classList.add('hint'); return !!e; };
     if (UI.sheet) {
+      if (kind === 'sheet' && (UI.sheet.kind === 'hub' || UI.sheet.kind === 'menu')) { mark(`#sheet .hub-tile[data-arg$="|${arg}"]`); return; }
       if (kind === 'plot' && UI.sheet.kind === 'plot' && UI.sheet.pid === arg) {
         if (arg === 'wyrm' && /Pet/.test(q.text)) mark('#sheet [data-act="pet"]');
         else if (arg === 'wyrm' && /rain/i.test(q.text)) mark('#sheet [data-act="rain"]');
@@ -1183,7 +1253,7 @@
     if (kind === 'surplus') { if (UI.tab !== 'town') mark('#tabs [data-arg="town"]'); return; }
     if (kind === 'sheet' && arg === 'incident') { mark('#queue .qchip.incident'); return; }
     if (kind === 'sheet' && arg === 'merchant') { mark('#side [data-act="merchant"]'); return; }
-    if (kind === 'sheet') { mark(`#side [data-arg="${arg}"]`); return; }
+    if (kind === 'sheet') { mark(`#side [data-arg="${arg}"]`) || mark(`#side [data-members~="${arg}"]`) || mark('#hud [data-act="menu"]'); return; }
     const [tab, sub] = TAB_ALIAS[arg] || [arg, null];
     if (UI.tab !== tab) { mark(`#tabs [data-arg="${tab}"]`); return; }
     if (sub && UI.sub[tab] !== sub) { mark(`.subtabs [data-arg="${tab}:${sub}"]`); return; }

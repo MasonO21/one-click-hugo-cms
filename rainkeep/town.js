@@ -813,9 +813,9 @@
     const tw = ctx.measureText(text).width, h = 17 * s, bw = lvl != null ? h : 0;
     const w = tw + 14 * s + bw;
     const x0 = x - w / 2;
-    ctx.fillStyle = 'rgba(30,16,8,.78)';
+    ctx.fillStyle = 'rgba(22,15,36,.82)';
     ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0, y - h / 2, w, h, h / 2) : ctx.rect(x0, y - h / 2, w, h); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,207,110,.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = 'rgba(201,154,75,.55)'; ctx.lineWidth = 1; ctx.stroke();
     if (lvl != null) {
       const g = ctx.createLinearGradient(0, y - h / 2, 0, y + h / 2);
       g.addColorStop(0, '#ffe39a'); g.addColorStop(1, '#e8a23a');
@@ -833,6 +833,28 @@
     ctx.beginPath(); ctx.arc(x, y - 2 * s, 3.4 * s, Math.PI, 0); ctx.stroke();
     ctx.fillStyle = 'rgba(232,210,176,.95)'; ctx.fillRect(x - 4.6 * s, y - 2 * s, 9.2 * s, 7 * s);
   }
+  // a building's level on an eight-point brass star; a turquoise chevron rides on top when it can be raised
+  function starBadge(x, y, lvl, s, up, t) {
+    const r = 11 * s;
+    const g = ctx.createLinearGradient(0, y - r, 0, y + r);
+    g.addColorStop(0, '#ffe7a6'); g.addColorStop(1, '#c98a2a');
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 4 * s; ctx.shadowOffsetY = 1.5 * s;
+    ctx.fillStyle = g;
+    for (const a of [0, Math.PI / 4]) { ctx.save(); ctx.rotate(a); ctx.fillRect(-r * 0.72, -r * 0.72, r * 1.44, r * 1.44); ctx.restore(); }
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = 'rgba(70,40,8,.55)'; ctx.lineWidth = 1;
+    for (const a of [0, Math.PI / 4]) { ctx.save(); ctx.rotate(a); ctx.strokeRect(-r * 0.72, -r * 0.72, r * 1.44, r * 1.44); ctx.restore(); }
+    ctx.fillStyle = '#3a2404'; ctx.font = `800 ${11 * s}px 'Barlow Semi Condensed', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(lvl), 0, 0.5 * s);
+    if (up) {
+      const b = -r - 5 * s - Math.abs(Math.sin(t * 3)) * 3 * s;
+      ctx.fillStyle = '#46d6d0'; ctx.strokeStyle = '#0f3a40'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(0, b - 5 * s); ctx.lineTo(6 * s, b + 1.5 * s); ctx.lineTo(3 * s, b + 1.5 * s); ctx.lineTo(0, b - 1.5 * s); ctx.lineTo(-3 * s, b + 1.5 * s); ctx.lineTo(-6 * s, b + 1.5 * s); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
   function upArrow(ax, ay, s) {
     ctx.fillStyle = '#2e9a55'; ell(ax, ay, 9 * s, 9 * s); ctx.fill();
     ctx.strokeStyle = '#bff5cf'; ctx.lineWidth = 1.4; ell(ax, ay, 9 * s, 9 * s); ctx.stroke();
@@ -840,6 +862,7 @@
   }
   function overlay3d(now, t, dt, R, wxType) {
     const AN = KH.town3d.anchors;
+    const zoomed = KH.town3d.zoomLevel && KH.town3d.zoomLevel() >= 1.45;
     const ids = DATA.plots.map((p) => p.id).filter((id) => AN[id] && AN[id].vis !== false).sort((a, b) => AN[a].y - AN[b].y);
     for (const pid of ids) {
       const a = AN[pid], s = a.s, p = PLOT[pid], L = S.lv[pid];
@@ -861,8 +884,11 @@
       }
       if (job) pill(a.tx, a.ty - 6 * s, fmtTime(job.end - S.time), s, clamp((S.time - job.start) / (job.end - job.start), 0, 1));
       if (L) {
-        plate(a.x, a.y, SHORT[pid], s, '#f7e8d0', L);
-        if (UI.upgradable.has(pid) && !job) upArrow(a.tx + 16 * s, a.ty - 2 * s - Math.abs(Math.sin(t * 3)) * 5 * s, s);
+        // close up, or when it matters, the name; otherwise just the level star
+        const named = zoomed || pid === UI.questTarget || (UI.sheet && UI.sheet.pid === pid);
+        if (named) plate(a.x, a.y, SHORT[pid], s, '#f7e8d0', L);
+        else starBadge(a.x, a.y, L, s, UI.upgradable.has(pid) && !job, t);
+        if (named && UI.upgradable.has(pid) && !job) upArrow(a.tx + 16 * s, a.ty - 2 * s - Math.abs(Math.sin(t * 3)) * 5 * s, s);
       }
       for (const f of UI.floaters) {
         if (f.plot !== pid) continue;

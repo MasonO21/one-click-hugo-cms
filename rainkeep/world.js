@@ -484,7 +484,10 @@
     const fracs = [[0.25, '¼'], [0.5, '½'], [1, 'All']].map(([f, l]) => `<button class="${UI.wsend === f ? 'on' : ''}" data-act="wfrac" data-arg="${f}">${l}<small>${fmt(Math.floor(avail * f))}</small></button>`).join('');
     const why = canSend(t.kind === 'beast' || t.kind === 'camp');
     const slotLine = `<p class="muted small">${S.map.marches.length}/${slots()} marches out · ${fmt(avail)} troops ready (march cap ${KH.marchCap()}) · ${fmtTime(tr)} away</p>`;
-    if (t.kind === 'empty') return { title: 'Open sand', lvl: '', body: `<p class="muted">${t.decor === 'palm' ? 'A few dry palms around a dead well. Nothing to take here.' : t.decor === 'rock' ? 'Wind-carved rocks.' : 'Empty, rippling sand.'}</p>` };
+    if (t.kind === 'empty') {
+      const grove = KH.bloom && KH.bloom.groves()[t.k];
+      return { title: grove ? 'Grove' : 'Open sand', lvl: '', body: `${grove ? '' : `<p class="muted">${t.decor === 'palm' ? 'A few dry palms around a dead well. Nothing to take here.' : t.decor === 'rock' ? 'Wind-carved rocks.' : 'Empty, rippling sand.'}</p>`}${KH.bloomTile ? KH.bloomTile(t) : ''}` };
+    }
     if (t.kind === 'node') {
       const node = W.nodes[t.res];
       const n = Math.floor(avail * UI.wsend);
@@ -556,8 +559,8 @@
       return `<div class="march"><span class="grow"><b>${lbl}</b><br><span class="muted small">${sum(m.troops)} troops · ${st}</span></span><time>${t === Infinity ? '' : fmtTime(t - S.time)}</time>${m.state !== 'back' && m.kind !== 'ruin' ? `<button class="btn small alt" data-act="recall" data-arg="${m.id}">Recall</button>` : m.kind === 'ruin' && m.state === 'work' ? '<button class="btn small gold" data-act="sheet" data-arg="ruin">Open</button>' : ''}</div>`;
     }).join('');
     const html = `<div class="world-top">${KH.subtabs('world', [['map', 'Dunes'], ['expedition', 'Expedition'], ...KH.worldTabs.map((w) => [w.id, w.label, w.dot && w.dot()])])}</div>
-      <div class="world-tools"><span class="chip">${icon('i-flag')}${S.map.marches.length}/${slots()} marches</span><span class="chip">${icon('i-people')}${fmt(sum(S.troops))} home</span><button class="btn small alt" data-act="wcenter">Center</button><button class="btn small gold" data-act="wnearest" data-primary>Find resources</button></div>
-      ${marches ? `<div class="marches">${marches}</div>` : `<div class="marches"><p class="muted small">${S.lv.barracks ? 'Tap a resource, beast, ruin or camp to send a march. Drag to look around.' : 'Build the Barracks to send marches onto the Dunes.'}</p></div>`}`;
+      <div class="world-tools"><span class="chip" title="Marches out, and troops at home">${icon('i-flag')}${S.map.marches.length}/${slots()}<i class="sep"></i>${icon('i-people')}${fmt(sum(S.troops))}</span><button class="btn small alt" data-act="wcenter" aria-label="Back to the keep" title="Back to the keep">${icon('i-compass')}</button>${KH.bloom && KH.bloom.unlocked() ? `<button class="chip bloom-chip" data-act="bloom" title="Bloom">${icon('i-sprout')}${KH.bloom.oases()}/${KH.bloom.max}</button>` : ''}<button class="btn small gold" data-act="wnearest" data-primary>Find resources</button></div>
+      ${marches ? `<div class="marches">${marches}</div>` : !S.lv.barracks ? '<div class="marches"><p class="muted small">Build the Barracks to send marches onto the Dunes.</p></div>' : S.stats.gathers < 3 ? '<div class="marches"><p class="muted small">Tap a resource, beast, ruin or camp to send a march. Drag to look around.</p></div>' : ''}`;
     KH.setHTML($('#world-ui'), html, force);
   }
   KH.renderHooks.push(renderOverlay);
@@ -651,7 +654,14 @@
         ctx.fillStyle = '#3cc8cf'; ell(sx, sy + 6, 6, 3); ctx.fill();
         continue;
       }
-      if (tt.decor === 'palm') {
+      const grove = tt.kind === 'empty' && KH.bloom && KH.bloom.groves()[tt.k];
+      if (grove) {
+        // Bloom: a green patch that fills in with palms and a pool as it grows
+        const st = KH.bloom.stageOf(grove);
+        ctx.fillStyle = '#6fa84a'; ell(sx, sy + 10, 9 + st * 5, 4 + st * 2.5); ctx.fill();
+        if (st === 2) { ctx.fillStyle = '#3cc8cf'; ell(sx + 5, sy + 11, 5, 2.2); ctx.fill(); }
+        if (st >= 1) { palm(sx - 7, sy + 11, 0.6 + st * 0.12); palm(sx + 2, sy + 13, 0.5 + st * 0.12); }
+      } else if (tt.decor === 'palm') {
         palm(sx - 10, sy + 12, 0.8 + tt.v * 0.3); palm(sx + 9, sy + 14, 0.7 + tt.v * 0.3);
       } else if (tt.kind === 'node' && tt.res === 'stone') {
         ctx.fillStyle = '#b07a48'; ctx.fillRect(sx - 14, sy + 2, 12, 12); ctx.fillRect(sx + 2, sy + 5, 12, 9);

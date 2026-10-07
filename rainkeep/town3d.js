@@ -981,6 +981,7 @@
     }
   }
   T3.kinCount = () => Object.keys(kin).length;
+  T3.zoomLevel = () => view.zoom; // town.js shows building names only when the camera is close
   // for tuning the resting spots: T3.kinAt.nadaa = [x, z, null]; T3.kinReset()
   T3.kinAt = KIN_AT;
   // how the camera frames each of them (story.js "Show me"): looking out at their wall, aimed up

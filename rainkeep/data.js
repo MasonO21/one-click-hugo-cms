@@ -704,6 +704,7 @@ const DATA = {
     goldenwadi: { name: 'Golden Wadi', body: ['#7a5a10', '#ffd36e'], belly: '#fff6d8', eye: '#2a8a70', mist: ['#ffe8a0', '#fffaf0'], fin: '#4fc0a0', horn: '#fff8e0', note: 'Ledger Season 6 premium', locked: true },
     stormcoral: { name: 'Storm Coral', body: ['#7a2a4a', '#ff8aa0'], belly: '#fff0f2', eye: '#9ff0ff', mist: ['#ffc0cc', '#ffffff'], fin: '#5fd0ff', horn: '#ffe8ee', note: 'Ledger Season 7 premium', locked: true },
     longrains: { name: 'Long Rains', body: ['#0e6b5a', '#7fe0c4'], belly: '#eafff7', eye: '#fff6c8', mist: ['#a8ffe0', '#ffffff'], fin: '#ffd36e', horn: '#fffbe8', note: 'Break the Ember Throne', locked: true },
+    bloom: { name: 'Desert Bloom', body: ['#2f6a2a', '#9ad86a'], belly: '#fbffe8', eye: '#ffe08a', mist: ['#d8ffb0', '#ffffff'], fin: '#ff9ad0', horn: '#fff4d8', note: 'Grow 30 oases on the Dunes', locked: true },
     wyrmsong: { name: 'Wyrmsong', body: ['#23305e', '#9ab8ff'], belly: '#fff8ec', eye: '#ffd36e', mist: ['#c8d8ff', '#fff4dc'], fin: '#ffc8f0', horn: '#fff2c8', note: 'Wake the Mother of Rains', locked: true },
     // the elder kin of Act III (lore.js); never offered in the Store
     kin_nadaa: { name: 'Nadaa', hidden: true, body: ['#5a8a9a', '#dff6ff'], belly: '#ffffff', eye: '#bff4ff', mist: ['#e8fbff', '#ffffff'], fin: '#c8f0ff', horn: '#f4fbff' },
@@ -978,6 +979,23 @@ const DATA = {
     ],
   },
 
+  // ---------- Bloom: green the Dunes once the rain is back (bloom.js) ----------
+  // Plant a grove on open sand near the keep; it grows into an oasis by itself. Each oasis adds a
+  // little food and well water; counts of oases unlock keep-wide gifts. Costs are quarter-crates
+  // scaled to the keep, a little dearer for every grove already planted.
+  bloom: {
+    max: 30, reach: 5.6, // groves in all, and how far from the keep they can go (tiles)
+    cost: { water: 3, food: 2 }, costGrowth: 1.07,
+    grow: [240, 720], // seconds from seedling to young grove, then to oasis
+    per: [['prod_food', 0.006], ['mult_water', 0.004]], // each oasis
+    milestones: [
+      { n: 5, perks: [['cool', 0.5]], text: '0.5 °C cooler in the keep', reward: { starglass: 300, journals: 60 } },
+      { n: 12, perks: [['prod', 0.03]], text: '+3% production', reward: { beacons: 4 } },
+      { n: 20, perks: [['rainDur', 8]], text: 'Called rain lasts 8 s longer', reward: { starglass: 800 } },
+      { n: 30, perks: [['cool', 0.5], ['prod', 0.02]], text: 'Another 0.5 °C cooler and +2% production', reward: { skin: 'bloom', starglass: 1000 } },
+    ],
+  },
+
   // ---------- Cloud Run: the Rainwyrm flies out to herd rain clouds home ----------
   cloudRun: {
     unlock: 5, // Rainwyrm level (a Drake can fly)
@@ -1057,6 +1075,8 @@ const DATA = {
     { id: 'tale12', text: 'Finish 12 Hero Tale chapters', stat: 'taleParts', n: 12, reward: { beacons: 5 } },
     { id: 'tale8', text: 'Finish 8 Hero Tales', stat: 'talesDone', n: 8, reward: { shard_legendary: 1 } },
     { id: 'scene20', text: 'Watch 20 story scenes', stat: 'scenes', n: 20, reward: { starglass: 200 } },
+    { id: 'bloom10', text: 'Grow 10 oases on the Dunes', stat: 'oases', n: 10, reward: { starglass: 300 } },
+    { id: 'bloom30', text: 'Turn the Dunes green: 30 oases', stat: 'oases', n: 30, reward: { shard_legendary: 1 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

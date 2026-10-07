@@ -320,6 +320,53 @@
       tiles[b.k] = { g, key, t: b };
     }
   }
+  // Bloom (bloom.js): groves on open sand, rebuilt as they grow from seedlings to an oasis
+  const groves = {};
+  let grassMat = null;
+  function groveModel(x, y, st) {
+    const g = new THREE.Group(), seed = x * 11 + y * 17;
+    grassMat = grassMat || A.mat('#6fa84a', { flat: true });
+    const R = [0.9, 1.45, 1.8][st];
+    const grass = new THREE.Mesh(A.geo(`grove${R}`, () => new THREE.CircleGeometry(R, 14).rotateX(-Math.PI / 2)), grassMat);
+    grass.position.y = 0.06;
+    g.add(grass);
+    if (st === 0) {
+      const leaf = A.mat('#8cc65a', { flat: true });
+      for (let i = 0; i < 5; i++) { const c = A.cone(0.09, 0.35 + (i % 2) * 0.15, leaf, Math.cos(i * 1.3) * 0.45, 0, Math.sin(i * 1.3) * 0.45, 4); g.add(c); }
+    } else {
+      // a tile that already has dry palms keeps them; the grove fills in around them
+      const own = KH.world.base(x, y).decor === 'palm' ? [] : null;
+      const palms = own || (st === 1 ? [[-0.4, -0.2, 1.5], [0.5, 0.3, 1.2]] : [[-0.8, -0.5, 2.4], [0.7, -0.7, 2.0], [-0.2, 0.9, 2.2]]);
+      palms.forEach(([px, pz, h], i) => { const p = A.palm(h, seed + i); p.position.set(px, 0, pz); g.add(p); });
+      if (st === 2) {
+        const pond = new THREE.Mesh(A.geo('grovepond', () => new THREE.CircleGeometry(0.62, 18).rotateX(-Math.PI / 2)), A.waterMat({ radial: true, scale: 2 }));
+        pond.position.set(0.5, 0.1, 0.45);
+        pond.userData.keep = true;
+        g.add(pond);
+        g.add(A.reeds(7, 0.9, seed));
+        g.children[g.children.length - 1].position.set(0.5, 0, 0.45);
+      }
+    }
+    return g;
+  }
+  function syncGroves() {
+    if (!KH.bloom) return;
+    const all = KH.bloom.groves();
+    for (const k in groves) if (!all[k]) { scene.remove(groves[k].g); delete groves[k]; }
+    for (const k in all) {
+      const st = KH.bloom.stageOf(all[k]);
+      if (groves[k] && groves[k].st === st) continue;
+      if (groves[k]) scene.remove(groves[k].g);
+      const [x, y] = k.split(',').map(Number);
+      const g = groveModel(x, y, st);
+      g.position.set(wx(x), hAt(wx(x), wz(y)), wz(y));
+      A.bake(g);
+      scene.add(g);
+      groves[k] = { g, st };
+    }
+  }
+  KH.on('plant', () => { if (W3.active) syncGroves(); });
+
   function syncMarches(t) {
     const live = new Set();
     const home = new V3(0, hAt(0, 0) + 0.2, 0);
@@ -479,7 +526,7 @@
     if (!VW) { resize(); if (!VW) return; }
     const t = now / 1000, dt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
-    if (now >= nextSync) { nextSync = now + 400; syncTiles(); }
+    if (now >= nextSync) { nextSync = now + 400; syncTiles(); syncGroves(); }
     // lighting follows the keep's day and night
     const T3 = KH.town3d;
     const p = T3 && T3.palAt ? T3.palAt(T3.phase()) : null;

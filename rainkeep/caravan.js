@@ -6,6 +6,7 @@
 (function () {
   const KH = window.KH;
   const { clamp, fmt, fmtTime, icon, esc, rand, pick, sum } = KH.u;
+  const CREST = { WEL: 'i-water', SUN: 'i-sun', PLM: 'i-garden' }; // each Caravan's banner
   const { UI, ACT } = KH;
   const K = DATA.caravan;
   let S = null;
@@ -358,7 +359,7 @@
         <button class="btn wide ${S.lv.wyrm < DATA.plots.find((p) => p.id === 'hall').unlock ? 'off' : 'gold'}" data-act="plot" data-arg="hall">${S.lv.wyrm < 4 ? 'Caravan Hall unlocks at Rainwyrm Lv 4' : 'Build the Caravan Hall'}</button></div>`;
     }
     return `<div class="panel-head"><h2>Caravan</h2><p>Choose who you stand with.</p></div><div class="stack">${K.options.map((o) => `<div class="card stack">
-      <div class="row"><span class="tagbox">${o.tag}</span><div class="grow"><h3>${esc(o.name)}</h3><div class="muted small">"${esc(o.motto)}"</div></div></div>
+      <div class="row"><span class="tagbox" title="${o.tag}">${CREST[o.tag] ? icon(CREST[o.tag]) : o.tag}</span><div class="grow"><h3>${esc(o.name)}</h3><div class="muted small">"${esc(o.motto)}"</div></div></div>
       <p class="small">${esc(o.style)}</p><button class="btn wide" data-act="kjoin" data-arg="${o.id}" data-primary>Join ${esc(o.name)}</button></div>`).join('')}</div>`;
   }
 

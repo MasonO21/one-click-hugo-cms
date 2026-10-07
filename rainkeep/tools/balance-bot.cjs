@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -118,6 +118,8 @@ const HOURS = Number(process.argv[3] || 8);
           else { taleTry[id] = S.time; KH.tales.fight(id); A.bclose(); }
           UI.sheet = null; UI.sheetQueue = [];
         }
+        // Bloom: plant a grove whenever the stores hold three times its price
+        if (KH.bloom && !NO.includes('bloom') && KH.bloom.unlocked() && KH.bloom.count() < KH.bloom.max) { const c = KH.bloom.costOf(); if (Object.entries(c).every(([k, v]) => S.res[k] >= v * 3)) A.plantnear(); }
         // Cloud Run: three decent flights a day
         if (KH.cloudRun && !NO.includes('cloudrun')) while (KH.cloudRun.unlocked() && KH.cloudRun.left() > 0) KH.cloudRun.auto(32, 1);
         // Channels: a player who keeps up with the water puzzles, three stars each
