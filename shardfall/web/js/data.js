@@ -92,12 +92,12 @@ window.SF = window.SF || {};
       id: 'kaida', name: 'Kaida', title: 'Ember Duelist', role: 'Fighter', shape: 'blade',
       lore: 'A shard-knight whose crystal heart burns hotter with every duel.',
       price: { coins: 0 },
-      base: { hp: 960, atk: 70, power: 0, def: 36, ms: 310, range: 105, as: 0.95, regen: 8 },
+      base: { hp: 990, atk: 70, power: 0, def: 36, ms: 310, range: 105, as: 0.95, regen: 8 },
       grow: { hp: 118, atk: 6, power: 0, def: 3.5 },
       build: B.Fighter,
       passive: { id: 'kindling', name: 'Kindling', desc: 'Skill hits on enemy heroes stoke Kindling. At 2 stacks her next attack erupts for 60% more damage and heals her for 8% of max health. Stacks fade after 6 seconds.' },
       skills: [
-        { id: 'flare_step', name: 'Flare Step', cd: 7, range: 270, kind: 'dash', ai: 'enemy', desc: 'Dash forward, scorching every enemy you pass.' },
+        { id: 'flare_step', name: 'Flare Step', cd: 6.5, range: 270, kind: 'dash', ai: 'enemy', desc: 'Dash forward, scorching every enemy you pass.' },
         { id: 'cinder_whirl', name: 'Cinder Whirl', cd: 9, range: 165, kind: 'nova', ai: 'near', desc: 'Spin a ring of embers that damages and slows nearby enemies.' },
         { id: 'phoenix_verdict', name: 'Phoenix Verdict', cd: 40, range: 430, kind: 'ult', ai: 'execute', needsTarget: true, desc: 'Leap onto an enemy hero. Deals bonus damage based on their missing health; refunds most of the cooldown on a takedown.' }
       ]
@@ -176,8 +176,8 @@ window.SF = window.SF || {};
       id: 'vexa', name: 'Vexa', title: 'Stormweaver', role: 'Mage', shape: 'spire', ranged: true,
       lore: 'A lightning-split shard that hums for a full minute before every storm.',
       price: { coins: 4000, gems: 388 },
-      base: { hp: 620, atk: 46, power: 33, def: 15, ms: 295, range: 480, as: 0.75, regen: 4 },
-      grow: { hp: 80, atk: 3, power: 11.5, def: 2 },
+      base: { hp: 600, atk: 46, power: 33, def: 15, ms: 295, range: 480, as: 0.75, regen: 4 },
+      grow: { hp: 80, atk: 3, power: 11, def: 2 },
       build: B.Mage,
       passive: { id: 'overcharge', name: 'Overcharge', desc: 'Every 3rd skill hit on an enemy hero stuns it for 0.6 seconds (at most once every 5 seconds).' },
       skills: [
