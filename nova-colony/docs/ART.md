@@ -17,6 +17,7 @@ game as style references so the art matches the in-game look.
 | Shop | `public/art/shop/<ProductDef.id>.webp` (12) | 512×384 RGBA | Shop product cards |
 | Rewards | `public/art/rewards/{victory_chest,supply_crate,daily_gift}.webp` | 256² RGBA | Victory chest, free crate, daily reward |
 | Store | `art/store/feature-graphic-1024x500.jpg`, `key-art-*.jpg` | — | Google Play feature graphic, store/press (not shipped in the app) |
+| Promo video | `art/store/promo-flyover-10s.mp4` | 1920×1080, 10 s, silent | Store preview / social clip (Higgsfield `kling3_0` image-to-video from the key art); add game music when cutting a trailer |
 
 Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 3.8 MB (WebP).
 
