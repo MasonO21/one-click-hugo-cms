@@ -5,11 +5,12 @@ import * as THREE from 'three';
 /** { name: url } from an import.meta.glob of asset URLs, keyed by file name without extension. */
 export const assetFiles = (glob) => Object.fromEntries(Object.entries(glob).map(([p, u]) => [p.slice(p.lastIndexOf('/') + 1).replace(/\.\w+$/, ''), u]));
 
-/** The file's bytes. */
+/** The file's bytes (a gzipped data: URI, as the single-file build inlines models, is unpacked). */
 export async function loadBytes(url) {
   if (url.startsWith('data:')) {
     const b = atob(url.slice(url.indexOf(',') + 1)), a = new Uint8Array(b.length);
     for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    if (url.startsWith('data:application/gzip')) return new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
     return a.buffer;
   }
   const r = await fetch(url);
