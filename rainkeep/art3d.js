@@ -1014,17 +1014,98 @@
   };
 
   // ======================================================================
-  // The Rainwyrm: a living tube spine with a sculpted head, fins and whiskers
+  // The Rainwyrm: a serpentine water dragon. A skinned tube spine with belly plates and a fin
+  // membrane down the back; a sculpted head with a hinged jaw, horns that sweep back and branch as
+  // it grows, long barbels, ear frills and a crest; fan fins at the shoulders and a tail fan.
   // ======================================================================
-  const SN = 84, RAD = 12;
-  function finGeo(kind) {
-    return geo(`fin${kind}`, () => {
-      const s = new THREE.Shape();
-      if (kind === 'dorsal') { s.moveTo(-0.5, 0); s.quadraticCurveTo(-0.55, 0.55, -0.85, 0.95); s.quadraticCurveTo(-0.1, 0.55, 0.5, 0); }
-      else if (kind === 'fan') { s.moveTo(0, 0); s.quadraticCurveTo(0.2, 0.55, 0.05, 1.0); s.quadraticCurveTo(0.45, 0.85, 0.7, 0.95); s.quadraticCurveTo(0.65, 0.6, 1.0, 0.55); s.quadraticCurveTo(0.6, 0.2, 0, 0); }
-      else { s.moveTo(0, -0.05); s.quadraticCurveTo(-0.4, 0.4, -1.0, 0.75); s.quadraticCurveTo(-0.7, 0.2, -1.05, -0.3); s.quadraticCurveTo(-0.4, -0.15, 0, 0.05); }
-      const g = new THREE.ShapeGeometry(s, 6);
-      g.rotateY(-Math.PI / 2);
+  const SN = 96, RAD = 16, FM = 72; // spine rings, ring sides, back-fin segments
+  // fin webbing: an opaque ray in the middle of each tile on a web that fades toward the tip (v = 1)
+  tex.fin = canvasTex(64, 128, (g, w, h) => {
+    const web = g.createLinearGradient(0, h, 0, 0);
+    web.addColorStop(0, 'rgba(255,255,255,0.9)'); web.addColorStop(0.55, 'rgba(255,255,255,0.5)'); web.addColorStop(1, 'rgba(255,255,255,0.22)');
+    g.fillStyle = web; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(205,215,225,1)'; g.fillRect(w / 2 - 4, 8, 8, h - 8);
+    g.fillStyle = 'rgba(255,255,255,1)'; g.fillRect(w / 2 - 2, 8, 4, h - 8);
+    g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillRect(0, 0, w, 3);
+  });
+  // a fan of rays in the YZ plane opening from the origin around `dir` (radians from +Y toward -Z)
+  function fanGeo(key, spread, len, rays, dir = Math.PI / 2, scallop = 0.25) {
+    return geo(`fan:${key}`, () => {
+      const segs = rays * 4, rows = 3, pos = [], uv = [], idx = [];
+      for (let a = 0; a <= segs; a++) {
+        const f = a / segs, ang = dir - spread / 2 + f * spread;
+        const k = Math.abs(Math.sin(f * rays * Math.PI));
+        const R = len * (1 - scallop + scallop * Math.sqrt(k)) * (0.8 + 0.2 * Math.sin(f * Math.PI));
+        for (let r = 0; r <= rows; r++) { const rr = (r / rows) * R; pos.push(0, Math.cos(ang) * rr, -Math.sin(ang) * rr); uv.push(f * rays, r / rows); }
+      }
+      for (let a = 0; a < segs; a++) for (let r = 0; r < rows; r++) { const i = a * (rows + 1) + r, j = i + rows + 1; idx.push(i, j, i + 1, i + 1, j, j + 1); }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.setIndex(idx); g.computeVertexNormals();
+      return g;
+    });
+  }
+  // a tube that tapers from r0 to r1 along a curve: horns, tines, barbels, legs and claws
+  function taperGeo(key, pts, r0, r1, seg = 12, rad = 7) {
+    return geo(`taper:${key}`, () => {
+      const curve = new THREE.CatmullRomCurve3(pts.map((p) => new V3(p[0], p[1], p[2])));
+      const fr = curve.computeFrenetFrames(seg, false), pos = [], idx = [];
+      for (let i = 0; i <= seg; i++) {
+        const u = i / seg, c = curve.getPointAt(u), r = lerp(r0, r1, Math.pow(u, 0.85));
+        for (let j = 0; j <= rad; j++) {
+          const a = (j / rad) * Math.PI * 2, nx = fr.normals[i].x * Math.cos(a) + fr.binormals[i].x * Math.sin(a);
+          const ny = fr.normals[i].y * Math.cos(a) + fr.binormals[i].y * Math.sin(a), nz = fr.normals[i].z * Math.cos(a) + fr.binormals[i].z * Math.sin(a);
+          pos.push(c.x + nx * r, c.y + ny * r, c.z + nz * r);
+        }
+      }
+      for (let i = 0; i < seg; i++) for (let j = 0; j < rad; j++) { const a = i * (rad + 1) + j, b = a + rad + 1; idx.push(a, a + 1, b, a + 1, b + 1, b); }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx); g.computeVertexNormals();
+      return g;
+    });
+  }
+  const mirror = (pts, s) => pts.map(([x, y, z]) => [x * s, y, z]);
+  const gauss = (dx, dy, dz, s) => Math.exp(-(dx * dx + dy * dy + dz * dz) / (2 * s * s));
+  // the skull, sculpted from a sphere in head units: +z is the snout (about 2.2 long), +y the brow
+  function headGeo() {
+    return geo('wyrmHead', () => {
+      const g = new THREE.SphereGeometry(1, 48, 32), p = g.attributes.position, n = p.count;
+      const top = new Float32Array(n), belly = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        z = z > 0 ? z * (1 + 1.4 * smooth(0, 1, z)) : z * 0.85;
+        const t = clamp(z / 2.4, 0, 1);
+        x *= 0.86 - 0.55 * Math.pow(t, 0.9);
+        y *= y > 0 ? 0.82 - 0.45 * t : 0.6 - 0.3 * t;
+        const ax = Math.abs(x), sx = Math.sign(x) || 1;
+        y += 0.24 * gauss(ax - 0.45, y - 0.5, z - 0.5, 0.19);             // brow ridges
+        y += 0.06 * gauss(ax - 0.14, y - 0.2, z - 2.1, 0.1);              // nostrils
+        x += sx * 0.12 * gauss(ax - 0.72, y + 0.05, z + 0.1, 0.28);       // cheeks
+        if (z > 0.15 && y < 0.02) x *= 1 - 0.1 * Math.exp(-((y + 0.12) ** 2) / 0.003) * smooth(0.15, 0.7, z); // mouth line
+        if (z < -0.5) y *= 0.92;
+        p.setXYZ(i, x, y, z);
+        top[i] = smooth(0.15, 0.55, y) * (z < 0.9 && y > 0.25 && Math.sin(z * 7.5 + 0.6) > 0.45 ? 1.35 : 1);
+        belly[i] = smooth(-0.02, -0.3, y);
+      }
+      g.setAttribute('aTop', new THREE.BufferAttribute(top, 1));
+      g.setAttribute('aBelly', new THREE.BufferAttribute(belly, 1));
+      g.computeVertexNormals();
+      return g;
+    });
+  }
+  // the lower jaw: the bottom half of a stretched sphere, hinged at its back
+  function jawGeo() {
+    return geo('wyrmJaw', () => {
+      const g = new THREE.SphereGeometry(1, 30, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        z = z > 0 ? z * 1.45 : z * 0.55;
+        const t = clamp(z / 1.45, 0, 1);
+        p.setXYZ(i, x * (0.56 - 0.36 * t), y * (0.28 - 0.12 * t), z);
+      }
+      g.computeVertexNormals();
       return g;
     });
   }
@@ -1036,7 +1117,7 @@
       const uv = new Float32Array(n * 2), idx = [];
       for (let i = 0; i <= SN; i++) for (let j = 0; j <= RAD; j++) {
         const k = i * (RAD + 1) + j;
-        uv[k * 2] = (i / SN) * 16; uv[k * 2 + 1] = (j / RAD) * 3;
+        uv[k * 2] = (i / SN) * 26; uv[k * 2 + 1] = (j / RAD) * 4;
         if (i < SN && j < RAD) idx.push(k, k + 1, k + RAD + 1, k + RAD + 1, k + 1, k + RAD + 2);
       }
       const g = (this.geo = new THREE.BufferGeometry());
@@ -1045,16 +1126,33 @@
       g.setAttribute('color', new THREE.BufferAttribute(this.col, 3).setUsage(THREE.DynamicDrawUsage));
       g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
       g.setIndex(idx);
-      this.bodyMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, map: tex.scales, roughness: 0.36, metalness: 0.05, clearcoat: 0.8, clearcoatRoughness: 0.22 });
+      const skin = { vertexColors: true, map: tex.scales, roughness: 0.3, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.16, iridescence: 0.3, iridescenceIOR: 1.3, iridescenceThicknessRange: [180, 520], sheen: 0.3, sheenRoughness: 0.4 };
+      this.bodyMat = new THREE.MeshPhysicalMaterial(skin);
       this.body = new THREE.Mesh(g, this.bodyMat);
       this.body.castShadow = true; this.body.receiveShadow = true; this.body.frustumCulled = false;
       this.group.add(this.body);
-      this.finMat = new THREE.MeshStandardMaterial({ color: '#7ff0e0', roughness: 0.4, side: THREE.DoubleSide, transparent: true, opacity: 0.86, emissive: '#7ff0e0', emissiveIntensity: 0.12 });
-      this.fins = [];
-      for (let i = 0; i < 24; i++) { const f = mesh(finGeo('dorsal'), this.finMat); f.receiveShadow = false; this.group.add(f); this.fins.push(f); }
-      this.tail = mesh(finGeo('tail'), this.finMat); this.group.add(this.tail);
-      this.pecs = [mesh(finGeo('fan'), this.finMat), mesh(finGeo('fan'), this.finMat)];
-      this.pecs.forEach((p) => this.group.add(p));
+      this.finMat = new THREE.MeshStandardMaterial({ color: '#7ff0e0', map: tex.fin, roughness: 0.35, side: THREE.DoubleSide, transparent: true, depthWrite: false, emissive: '#7ff0e0', emissiveIntensity: 0.15 });
+      this.hornMat = new THREE.MeshStandardMaterial({ color: '#f4e6c8', roughness: 0.45 });
+      // the fin membrane down the back: a ribbon rebuilt with the spine every pose
+      const fn = (FM + 1) * 3;
+      this.fpos = new Float32Array(fn * 3); this.fnor = new Float32Array(fn * 3);
+      const fuv = new Float32Array(fn * 2), fidx = [];
+      for (let k = 0; k <= FM; k++) for (let r = 0; r < 3; r++) {
+        const i = k * 3 + r;
+        fuv[i * 2] = k / 4; fuv[i * 2 + 1] = r / 2;
+        if (k < FM && r < 2) fidx.push(i, i + 3, i + 1, i + 1, i + 3, i + 4);
+      }
+      const fg = (this.finGeo = new THREE.BufferGeometry());
+      fg.setAttribute('position', new THREE.BufferAttribute(this.fpos, 3).setUsage(THREE.DynamicDrawUsage));
+      fg.setAttribute('normal', new THREE.BufferAttribute(this.fnor, 3).setUsage(THREE.DynamicDrawUsage));
+      fg.setAttribute('uv', new THREE.BufferAttribute(fuv, 2));
+      fg.setIndex(fidx);
+      this.ridge = new THREE.Mesh(fg, this.finMat);
+      this.ridge.frustumCulled = false; this.ridge.renderOrder = 2;
+      this.group.add(this.ridge);
+      this.tail = mesh(fanGeo('tail', 1.7, 1, 7, Math.PI / 2, 0.3), this.finMat); this.tail.renderOrder = 2; this.group.add(this.tail);
+      // fan fins at the shoulders, wider as the wyrm grows
+      this.pecs = [0, 1].map(() => { const f = mesh(fanGeo('pec', 1.6, 1, 6, Math.PI * 0.62, 0.3), this.finMat); f.renderOrder = 2; this.group.add(f); return f; });
       this.buildHead();
       this.P = Array.from({ length: SN + 1 }, () => new V3());
       this.T = Array.from({ length: SN + 1 }, () => new V3());
@@ -1066,72 +1164,97 @@
       this.mouthWorld = new V3();
     }
     buildHead() {
-      const h = (this.head = new THREE.Group());
-      this.headMat = new THREE.MeshPhysicalMaterial({ color: '#3cc8cf', map: tex.scales, roughness: 0.36, clearcoat: 0.8, clearcoatRoughness: 0.22 });
-      this.bellyMat = new THREE.MeshStandardMaterial({ color: '#c9f6ea', roughness: 0.5 });
-      this.hornMat = new THREE.MeshStandardMaterial({ color: '#f4e6c8', roughness: 0.5 });
-      this.eyeMat = new THREE.MeshStandardMaterial({ color: '#fff4b8', emissive: '#fff4b8', emissiveIntensity: 0.9, roughness: 0.2 });
-      const dark = new THREE.MeshStandardMaterial({ color: '#10141a', roughness: 0.3 });
-      const S = (r, m, x, y, z, sx, sy, sz, seg = 16) => { const o = sph(r, m, x, y, z, seg); o.scale.set(sx, sy, sz); h.add(o); return o; };
-      S(0.33, this.headMat, 0, 0.06, 0, 1, 0.86, 1.1);
-      S(0.24, this.headMat, 0, -0.01, 0.38, 0.88, 0.68, 1.55);
-      S(0.12, this.headMat, 0, 0.03, 0.7, 1.15, 0.82, 1);
-      S(0.205, this.bellyMat, 0, -0.15, 0.32, 0.84, 0.42, 1.48);
-      S(0.14, this.headMat, 0.19, -0.04, 0.1, 1, 1, 1.2, 10); S(0.14, this.headMat, -0.19, -0.04, 0.1, 1, 1, 1.2, 10);
-      S(0.09, this.headMat, 0.17, 0.21, 0.2, 1.35, 0.6, 1.1, 10); S(0.09, this.headMat, -0.17, 0.21, 0.2, 1.35, 0.6, 1.1, 10);
-      S(0.025, dark, 0.06, 0.07, 0.79, 1, 0.7, 1, 6); S(0.025, dark, -0.06, 0.07, 0.79, 1, 0.7, 1, 6);
-      this.eyes = [S(0.078, this.eyeMat, 0.21, 0.11, 0.25, 1, 1, 1, 12), S(0.078, this.eyeMat, -0.21, 0.11, 0.25, 1, 1, 1, 12)];
-      this.pupils = [S(0.05, dark, 0.262, 0.11, 0.28, 0.32, 1, 0.35, 8), S(0.05, dark, -0.262, 0.11, 0.28, 0.32, 1, 0.35, 8)];
-      this.horns = [];
-      for (const [x, y, z, rx, rz, s] of [[0.13, 0.27, -0.08, -1.05, -0.35, 1], [-0.13, 0.27, -0.08, -1.05, 0.35, 1], [0.21, 0.18, -0.2, -1.25, -0.6, 0.7], [-0.21, 0.18, -0.2, -1.25, 0.6, 0.7]]) {
-        const c = mesh(geo('horn', () => new THREE.ConeGeometry(0.055, 0.5, 6).translate(0, 0.25, 0)), this.hornMat);
-        c.position.set(x, y, z); c.rotation.set(rx, 0, rz); c.userData.s = s;
-        h.add(c); this.horns.push(c);
+      const h = (this.head = new THREE.Group()), k = (this.hk = new THREE.Group());
+      k.scale.setScalar(0.34);
+      h.add(k);
+      const base = headGeo(), hg = (this.headGeo = new THREE.BufferGeometry());
+      for (const a of ['position', 'normal', 'uv']) hg.setAttribute(a, base.attributes[a]);
+      hg.setIndex(base.index);
+      this.hcol = new Float32Array(base.attributes.position.count * 3);
+      hg.setAttribute('color', new THREE.BufferAttribute(this.hcol, 3));
+      this.headMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.16, iridescence: 0.3, iridescenceIOR: 1.3, sheen: 0.3, sheenRoughness: 0.4 });
+      const skull = new THREE.Mesh(hg, this.headMat);
+      skull.castShadow = true;
+      k.add(skull);
+      this.bellyMat = new THREE.MeshPhysicalMaterial({ color: '#c9f6ea', roughness: 0.4, clearcoat: 0.6 });
+      this.jaw = new THREE.Group();
+      this.jaw.position.set(0, -0.12, -0.35);
+      const jm = mesh(jawGeo(), this.bellyMat); jm.position.set(0, 0, 0.55); this.jaw.add(jm);
+      const mouthMat = new THREE.MeshStandardMaterial({ color: '#5a1e2c', roughness: 0.7, side: THREE.DoubleSide });
+      const palate = mesh(geo('palate', () => new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2)), mouthMat);
+      palate.scale.set(0.42, 1, 1.15); palate.position.set(0, -0.05, 0.62); this.jaw.add(palate);
+      const toothMat = new THREE.MeshStandardMaterial({ color: '#fff6e4', roughness: 0.35 });
+      this.fangs = [];
+      for (const s of [1, -1]) for (const [z, hgt] of [[1.25, 0.16], [0.95, 0.1], [0.7, 0.08]]) {
+        const tth = mesh(geo(`tooth${hgt}`, () => new THREE.ConeGeometry(0.035, hgt, 5).translate(0, hgt / 2, 0)), toothMat);
+        tth.position.set(s * (0.56 - 0.36 * (z / 1.45)) * 0.8, -0.04, z - 0.05); this.jaw.add(tth); this.fangs.push(tth);
       }
-      this.ears = [];
+      k.add(this.jaw);
+      this.upperFangs = [1, -1].map((s) => {
+        const f = mesh(geo('ufang', () => new THREE.ConeGeometry(0.04, 0.17, 5).rotateX(Math.PI).translate(0, -0.085, 0)), toothMat);
+        f.position.set(0.17 * s, -0.12, 1.85); k.add(f); return f;
+      });
+      this.eyeMat = new THREE.MeshStandardMaterial({ color: '#fff4b8', emissive: '#fff4b8', emissiveIntensity: 0.9, roughness: 0.15 });
+      const dark = new THREE.MeshStandardMaterial({ color: '#0c1016', roughness: 0.25 });
+      this.eyes = []; this.pupils = [];
       for (const s of [1, -1]) {
-        const e = mesh(finGeo('fan'), this.finMat);
-        e.position.set(0.27 * s, 0.1, -0.06);
-        e.rotation.set(0.3, s > 0 ? Math.PI * 0.85 : Math.PI * 0.15, s * -0.6);
-        e.scale.setScalar(0.42);
-        h.add(e); this.ears.push(e);
+        const rim = mesh(geo('eyerim', () => new THREE.TorusGeometry(0.155, 0.035, 6, 20)), dark);
+        rim.position.set(0.6 * s, 0.34, 0.63); rim.rotation.y = s * 1.2; k.add(rim);
+        const e = sph(0.16, this.eyeMat, 0.56 * s, 0.34, 0.62, 16);
+        k.add(sph(0.03, dark, 0.12 * s, 0.13, 2.2, 8));
+        const pu = sph(0.12, dark, 0.67 * s, 0.35, 0.7, 10); pu.scale.set(0.22, 0.95, 0.4);
+        k.add(e, pu); this.eyes.push(e); this.pupils.push(pu);
       }
-      this.crest = [];
-      for (let i = 0; i < 3; i++) {
-        const f = mesh(finGeo('dorsal'), this.finMat);
-        f.position.set(0, 0.32 - i * 0.03, -0.05 - i * 0.16);
-        f.scale.setScalar(0.28 - i * 0.04);
-        h.add(f); this.crest.push(f);
+      // horns sweep back from the crown; tines branch off them as the wyrm grows
+      this.hornGroup = new THREE.Group(); this.tines = []; this.tines2 = [];
+      for (const s of [1, -1]) {
+        const hn = mesh(taperGeo(`horn${s}`, mirror([[0, 0, 0], [0.06, 0.32, -0.32], [0.14, 0.48, -0.85], [0.2, 0.44, -1.38], [0.24, 0.3, -1.8]], s), 0.16, 0.016, 16, 8), this.hornMat);
+        hn.position.set(0.3 * s, 0.6, -0.05);
+        const t1 = mesh(taperGeo(`tine${s}`, mirror([[0, 0, 0], [0.04, 0.26, -0.1], [0.07, 0.5, -0.3]], s), 0.06, 0.01, 8, 6), this.hornMat);
+        t1.position.set(0.12 * s, 0.47, -0.72); hn.add(t1); this.tines.push(t1);
+        const t2 = mesh(taperGeo(`tineb${s}`, mirror([[0, 0, 0], [0.05, 0.2, -0.08], [0.09, 0.38, -0.22]], s), 0.045, 0.008, 8, 6), this.hornMat);
+        t2.position.set(0.19 * s, 0.44, -1.25); hn.add(t2); this.tines2.push(t2);
+        this.hornGroup.add(hn);
       }
+      k.add(this.hornGroup);
+      // long barbels from the snout, ear frills behind the cheeks, a beard frill under the jaw, a crest
+      this.barbels = [1, -1].map((s) => {
+        const b = mesh(taperGeo(`barbel${s}`, mirror([[0, 0, 0], [0.25, -0.05, -0.25], [0.55, -0.25, -0.8], [0.75, -0.6, -1.5], [0.8, -1.0, -2.3], [0.72, -1.38, -3.0]], s), 0.04, 0.008, 22, 5), this.hornMat);
+        b.position.set(0.2 * s, 0.0, 2.15); k.add(b); return b;
+      });
+      this.ears = [1, -1].map((s) => {
+        const e = mesh(fanGeo('ear', 1.5, 1, 5, Math.PI * 0.5, 0.32), this.finMat);
+        e.position.set(0.62 * s, 0.16, -0.2); e.rotation.y = -s * 0.85; e.renderOrder = 2; k.add(e); return e;
+      });
+      this.beard = [1, -1].map((s) => {
+        const e = mesh(fanGeo('beard', 0.9, 0.9, 5, Math.PI * 0.8, 0.18), this.finMat);
+        e.position.set(0.25 * s, -0.36, 0.0); e.rotation.y = s * 0.25; e.renderOrder = 2; k.add(e); return e;
+      });
+      this.crest = [[0.66, -0.2, 0.75], [0.6, -0.65, 0.68], [0.45, -1.05, 0.6]].map(([y, z, sc]) => {
+        const c = mesh(fanGeo('crest', 1.0, 1, 4, Math.PI * 0.32, 0.3), this.finMat);
+        c.position.set(0, y, z); c.scale.setScalar(sc); c.renderOrder = 2; k.add(c); return c;
+      });
       // Stormcrowned (Lv 17+): a ring of storm horns with glowing tips
       this.stormMat = new THREE.MeshStandardMaterial({ color: '#e8f6ff', emissive: '#8fd8ff', emissiveIntensity: 0.9, roughness: 0.3 });
       this.crown = new THREE.Group();
       for (let i = 0; i < 7; i++) {
         const a = -1.1 + (i / 6) * 2.2;
-        const c = mesh(geo('crownh', () => new THREE.ConeGeometry(0.035, 0.32, 5).translate(0, 0.16, 0)), this.hornMat);
-        c.position.set(Math.sin(a) * 0.24, 0.24 + Math.cos(a) * 0.05, -0.12 - Math.cos(a) * 0.08);
-        c.rotation.set(-0.5, 0, -a * 0.55);
-        const tip = sph(0.03, this.stormMat, 0, 0.33, 0, 6);
-        c.add(tip);
+        const c = mesh(geo('crownh2', () => new THREE.ConeGeometry(0.09, 0.8, 6).translate(0, 0.4, 0)), this.hornMat);
+        c.position.set(Math.sin(a) * 0.58, 0.72 + Math.cos(a) * 0.12, -0.4 - Math.cos(a) * 0.22);
+        c.rotation.set(-0.45, 0, -a * 0.6);
+        c.add(sph(0.08, this.stormMat, 0, 0.82, 0, 8));
         this.crown.add(c);
       }
       this.crown.visible = false;
-      h.add(this.crown);
+      k.add(this.crown);
       // Skyriver (Lv 20): a slow halo of living water above the head
       this.haloMat = new THREE.MeshStandardMaterial({ color: '#7fe8ff', emissive: '#4ac8ff', emissiveIntensity: 0.7, roughness: 0.15, transparent: true, opacity: 0.75 });
-      this.halo = mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 40), this.haloMat);
-      this.halo.position.set(0, 0.62, -0.1);
+      this.halo = mesh(new THREE.TorusGeometry(1.25, 0.09, 8, 48), this.haloMat);
+      this.halo.position.set(0, 1.9, -0.45);
       this.halo.rotation.x = Math.PI / 2 - 0.25;
       this.halo.castShadow = false;
       this.halo.visible = false;
-      h.add(this.halo);
-      this.whiskers = [];
-      for (const s of [1, -1]) {
-        const curve = new THREE.CatmullRomCurve3([new V3(0, 0, 0), new V3(0.18 * s, -0.08, -0.05), new V3(0.34 * s, -0.25, -0.2), new V3(0.42 * s, -0.48, -0.35)]);
-        const w = mesh(new THREE.TubeGeometry(curve, 12, 0.014, 4), this.hornMat);
-        w.position.set(0.1 * s, -0.02, 0.62);
-        h.add(w); this.whiskers.push(w);
-      }
+      k.add(this.halo);
       this.group.add(h);
     }
     // o: { level, skin, element }
@@ -1144,33 +1267,46 @@
       this.stage = stIdx;
       this.size = st.size;
       this.cTop.set(sk.body[0]); this.cSide.set(sk.body[1]); this.cBelly.set(sk.belly);
-      this.headMat.color.set(sk.body[1]).lerp(new Col(sk.body[0]), 0.35);
+      // the head: darker crown, the side colour on the cheeks, belly colour under the jaw
+      const hb = headGeo(), at = hb.attributes.aTop, ab = hb.attributes.aBelly, c = new Col();
+      for (let i = 0; i < at.count; i++) {
+        c.copy(this.cSide).lerp(this.cTop, Math.min(1, at.getX(i) * 0.8)).lerp(this.cBelly, ab.getX(i));
+        this.hcol[i * 3] = c.r; this.hcol[i * 3 + 1] = c.g; this.hcol[i * 3 + 2] = c.b;
+      }
+      this.headGeo.attributes.color.needsUpdate = true;
+      const fin = new Col(sk.fin || sk.mist[0]);
+      this.bodyMat.sheenColor.copy(fin); this.headMat.sheenColor.copy(fin);
       this.bellyMat.color.set(sk.belly);
       this.hornMat.color.set(sk.horn);
-      this.eyeMat.color.set(sk.eye); this.eyeMat.emissive.set(sk.eye);
+      this.eyeMat.color.set(sk.eye).lerp(new Col('#ffa020'), 0.7); this.eyeMat.emissive.copy(this.eyeMat.color);
       const elem = o.element ? DATA.ascension.branches[o.element] : null;
-      this.finMat.color.set(sk.fin || sk.mist[0]);
-      this.finMat.emissive.set(elem ? elem.color : sk.fin || sk.mist[0]);
-      this.finMat.emissiveIntensity = elem ? 0.5 : stIdx >= 3 ? 0.28 : 0.12;
+      this.finMat.color.copy(fin);
+      this.finMat.emissive.set(elem ? elem.color : fin);
+      this.finMat.emissiveIntensity = elem ? 0.45 : stIdx >= 3 ? 0.25 : 0.12;
       this.mist = [new Col(elem ? elem.crest : sk.mist[0]), new Col(sk.mist[1])];
       this.elem = elem;
-      this.finCount = Math.min(this.fins.length, 9 + stIdx * 2 + (stIdx >= 4 ? 2 : 0));
-      this.fins.forEach((f, i) => { f.visible = i < this.finCount; });
-      this.horns.forEach((c, i) => { c.visible = i < 2 || stIdx >= 4; c.scale.setScalar(c.userData.s * (0.45 + stIdx * 0.12)); });
-      this.ears.forEach((e) => e.scale.setScalar(0.3 + stIdx * 0.04));
-      this.whiskers.forEach((w) => { w.scale.setScalar(0.55 + stIdx * 0.1); });
-      this.crest.forEach((c, i) => { c.visible = (stIdx >= 1 || i === 0) && stIdx < 7; });
+      // growth: fins and frills widen, horns lengthen and branch, the jaw gains fangs
+      this.finAmp = 0.65 + stIdx * 0.1;
+      this.hornGroup.scale.setScalar(0.55 + Math.min(stIdx, 6) * 0.12);
+      this.tines.forEach((t) => { t.visible = stIdx >= 3; });
+      this.tines2.forEach((t) => { t.visible = stIdx >= 5; });
+      this.barbels.forEach((b) => b.scale.setScalar(0.45 + stIdx * 0.08));
+      this.ears.forEach((e) => e.scale.setScalar(0.75 + stIdx * 0.08));
+      this.beard.forEach((e) => { e.visible = stIdx >= 4; e.scale.setScalar(0.5 + stIdx * 0.06); });
+      this.crest.forEach((cr, i) => { cr.visible = stIdx < 7 && (i === 0 || stIdx >= 1); });
+      this.fangs.forEach((f, i) => { f.visible = stIdx >= 2 || i % 3 === 0; });
+      this.upperFangs.forEach((f) => { f.visible = stIdx >= 2; f.scale.setScalar(0.8 + stIdx * 0.05); });
       this.crown.visible = stIdx >= 7;
       this.halo.visible = stIdx >= 8;
       if (stIdx >= 8) { this.haloMat.color.set(sk.mist[0]); this.haloMat.emissive.set(elem ? elem.color : sk.mist[0]); }
       this.group.scale.setScalar(Math.max(1.2, this.size * 1.7));
     }
     radius(s) {
-      if (s < 0.5) return 0.05 + 0.27 * Math.pow(s / 0.5, 0.62);
-      if (s < 0.8) return 0.32 + 0.03 * Math.sin(((s - 0.5) / 0.3) * Math.PI);
-      return 0.32 - 0.11 * ((s - 0.8) / 0.2);
+      if (s < 0.55) return 0.035 + 0.29 * Math.pow(s / 0.55, 0.7);
+      if (s < 0.8) return 0.325 + 0.02 * Math.sin(((s - 0.55) / 0.25) * Math.PI);
+      return 0.325 - 0.12 * smooth(0.78, 1, s);
     }
-    // st: { t, dormant, pet (0..1) }
+    // st: { t, dormant, pet (0..1), look (optional head direction) }
     pose(st) {
       const t = st.t, dorm = !!st.dormant, pet = st.pet || 0, P = this.P;
       const CE = 0.5, th0 = 0.55;
@@ -1211,33 +1347,57 @@
         N[i].copy(N[i - 1]);
         if (l > 1e-6) { q.setFromAxisAngle(ax.multiplyScalar(1 / l), Math.acos(clamp(T[i - 1].dot(T[i]), -1, 1))); N[i].applyQuaternion(q); }
       }
-      const DOWN = new V3(0, -1, 0), FRONT = new V3(0, 0, 1);
+      // "down" is the belly side: below the body where it lies flat, behind the neck where it rears up
+      const DOWN = new V3(0, -1, 0), BELLY = new V3(-0.8, 0, 0.6).normalize();
       for (let i = 0; i <= SN; i++) {
         Bn[i].crossVectors(T[i], N[i]);
         const w = Math.abs(T[i].y);
-        const a = DOWN.clone().addScaledVector(T[i], -DOWN.dot(T[i])), b = FRONT.clone().addScaledVector(T[i], -FRONT.dot(T[i]));
+        const a = DOWN.clone().addScaledVector(T[i], -DOWN.dot(T[i])), b = BELLY.clone().addScaledVector(T[i], -BELLY.dot(T[i]));
         dn[i].copy(a.multiplyScalar(1 - w)).addScaledVector(b, w);
         if (dn[i].lengthSq() < 1e-6) dn[i].copy(N[i]);
         dn[i].normalize();
       }
-      // skin the tube
+      // skin the tube: dark back, bright flanks, pale belly plates
       const pos = this.pos, nor = this.nor, col = this.col, top = this.cTop, side = this.cSide, belly = this.cBelly;
       const dk = dorm ? 0.55 : 1, c = new Col(), nv = new V3();
       for (let i = 0; i <= SN; i++) {
-        const s = i / SN, r = this.radius(s) * (1 + (dorm ? 0 : 0.03 * Math.sin(t * 2.2 - s * 10)));
-        const shimmer = 0.95 + 0.08 * Math.sin(s * 50 + t * 0.6);
+        const s = i / SN, r = this.radius(s) * (1 + (dorm ? 0 : 0.025 * Math.sin(t * 2.2 - s * 10)));
+        const plate = i % 3 === 0 ? 0.78 : 1, spot = 0.9 + 0.1 * Math.sin(i * 0.55);
         for (let j = 0; j <= RAD; j++) {
           const a = (j / RAD) * Math.PI * 2, k = (i * (RAD + 1) + j) * 3;
           nv.copy(N[i]).multiplyScalar(Math.cos(a)).addScaledVector(Bn[i], Math.sin(a));
           pos[k] = P[i].x + nv.x * r; pos[k + 1] = P[i].y + nv.y * r; pos[k + 2] = P[i].z + nv.z * r;
           nor[k] = nv.x; nor[k + 1] = nv.y; nor[k + 2] = nv.z;
-          const bf = nv.dot(dn[i]);
-          c.copy(side).lerp(top, smooth(0.15, 0.9, -bf)).lerp(belly, smooth(0.3, 0.75, bf));
-          col[k] = c.r * dk * shimmer; col[k + 1] = c.g * dk * shimmer; col[k + 2] = c.b * dk * shimmer;
+          const bf = nv.dot(dn[i]), bel = smooth(0.5, 0.8, bf);
+          c.copy(side).lerp(top, smooth(0.0, 0.85, -bf)).lerp(belly, bel);
+          const m = dk * (bel > 0.5 ? plate : -bf > 0.55 ? spot : 1);
+          col[k] = c.r * m; col[k + 1] = c.g * m; col[k + 2] = c.b * m;
         }
       }
       this.geo.attributes.position.needsUpdate = true; this.geo.attributes.normal.needsUpdate = true; this.geo.attributes.color.needsUpdate = true;
-      // fins along the back
+      // the back fin: scalloped rays, low on the tail, tallest on the neck where it becomes a mane
+      const fp = this.fpos, fnr = this.fnor, up = new V3(), sd = new V3(), b0 = new V3(), amp = this.finAmp;
+      for (let kf = 0; kf <= FM; kf++) {
+        const s = 0.05 + (kf / FM) * 0.935, fi = s * SN, i = Math.min(SN - 1, Math.floor(fi)), f = fi - i;
+        b0.copy(P[i]).lerp(P[i + 1], f);
+        up.copy(dn[i]).lerp(dn[i + 1], f).negate().normalize();
+        const tg = T[i];
+        sd.crossVectors(up, tg).normalize();
+        const r = this.radius(s), ray = Math.pow(Math.sin(((kf % 4) + 0.5) / 4 * Math.PI), 0.6);
+        const env = 0.7 + 0.45 * smooth(0.05, 0.4, s) + 0.75 * smooth(0.78, 0.97, s) - 0.9 * smooth(0.975, 0.99, s);
+        const hh = r * amp * env * (0.6 + 0.4 * ray) * (dorm ? 0.6 : 1);
+        const wave = dorm ? 0 : Math.sin(t * 3 + s * 18) * 0.08;
+        for (let rr = 0; rr < 3; rr++) {
+          const v = rr / 2, k3 = (kf * 3 + rr) * 3;
+          const px = b0.x + up.x * (r * 0.75 + hh * v) - tg.x * hh * 0.42 * v * v + sd.x * hh * wave * v;
+          const py = b0.y + up.y * (r * 0.75 + hh * v) - tg.y * hh * 0.42 * v * v + sd.y * hh * wave * v;
+          const pz = b0.z + up.z * (r * 0.75 + hh * v) - tg.z * hh * 0.42 * v * v + sd.z * hh * wave * v;
+          fp[k3] = px; fp[k3 + 1] = py; fp[k3 + 2] = pz;
+          fnr[k3] = sd.x; fnr[k3 + 1] = sd.y; fnr[k3 + 2] = sd.z;
+        }
+      }
+      this.finGeo.attributes.position.needsUpdate = true; this.finGeo.attributes.normal.needsUpdate = true;
+      // the shoulder fins and the tail fan ride on the spine's frames
       const m4 = new THREE.Matrix4(), xs = new V3(), ys = new V3();
       const place = (o, i, lift, scale) => {
         ys.copy(dn[i]).negate();
@@ -1248,39 +1408,38 @@
         o.position.copy(P[i]).addScaledVector(ys, this.radius(i / SN) * lift);
         o.scale.setScalar(scale);
       };
-      for (let f = 0; f < this.finCount; f++) {
-        const s = 0.1 + (f / Math.max(1, this.finCount - 1)) * 0.82, i = Math.round(s * SN);
-        place(this.fins[f], i, 0.82, this.radius(s) * (1.2 + this.stage * 0.08) * (dorm ? 0.7 : 1 + 0.06 * Math.sin(t * 3 + f)));
-      }
-      place(this.tail, 1, 0.2, 0.55 + this.stage * 0.05);
-      this.tail.rotateZ(Math.sin(t * 2.4) * 0.25);
-      const ip = Math.round(0.66 * SN);
+      place(this.tail, 1, 0, (0.42 + this.stage * 0.045) * (dorm ? 0.8 : 1));
+      this.tail.rotateZ(Math.sin(t * 2.4) * 0.22);
+      const ip = Math.round(0.7 * SN), rp = this.radius(0.7);
       this.pecs.forEach((p, k) => {
-        place(p, ip, 0, 0.32 + this.stage * 0.03);
-        p.rotateZ((k ? -1 : 1) * (1.9 + Math.sin(t * 2 + k) * 0.25));
-        p.translateY(this.radius(0.66) * 0.6);
+        place(p, ip, 0, 0.55 + this.stage * 0.06);
+        p.rotateZ((k ? -1 : 1) * (1.75 + Math.sin(t * 2 + k) * 0.22));
+        p.translateY(rp * 0.6);
       });
-      // head: sits on the end of the spine, looks forward toward the camera side
+      // head: on the end of the spine, three-quarter to the viewer, the jaw breathing mist
       const hp = P[SN], ht = T[SN];
-      const fwd = new V3().copy(ht).lerp(dorm ? new V3(0.2, -0.25, 1) : new V3(Math.sin(t * 0.5) * 0.25, -0.12 - pet * 0.1, 1), 0.78).normalize();
+      const look = st.look || new V3(0.95, -0.16 - pet * 0.1 + Math.sin(t * 0.6) * 0.04, 0.32 + Math.sin(t * 0.5) * 0.18);
+      const fwd = new V3().copy(ht).lerp(dorm ? new V3(0.3, -0.35, 1) : look, 0.8).normalize();
       const xr = new V3().crossVectors(new V3(0, 1, 0), fwd).normalize(), yr = new V3().crossVectors(fwd, xr);
       m4.makeBasis(xr, yr, fwd);
       this.head.quaternion.setFromRotationMatrix(m4);
-      if (pet) this.head.rotateZ(Math.sin(t * 9) * 0.2 * pet);
-      this.head.position.copy(hp).addScaledVector(fwd, 0.08);
-      this.head.scale.setScalar(1.25);
+      if (pet) this.head.rotateZ(Math.sin(t * 9) * 0.18 * pet);
+      this.head.position.copy(hp).addScaledVector(fwd, 0.05).addScaledVector(yr, 0.04);
+      this.head.scale.setScalar(1.5);
+      this.jaw.rotation.x = dorm ? 0 : 0.18 * Math.pow(Math.max(0, Math.sin(t * 0.8)), 8) + pet * 0.12;
       const blink = !dorm && (t % 4.7) < 0.13;
       const closed = dorm || blink || pet > 0.3;
-      this.eyes.forEach((e) => { e.scale.y = closed ? 0.15 : 1; });
+      this.eyes.forEach((e) => { e.scale.y = closed ? 0.18 : 1; });
       this.pupils.forEach((p) => { p.visible = !closed; });
-      this.eyeMat.emissiveIntensity = dorm ? 0.1 : 0.9;
-      this.ears.forEach((e, k) => { e.rotation.z = (k ? 0.6 : -0.6) + Math.sin(t * 3 + k) * 0.12; });
-      this.whiskers.forEach((w, k) => { w.rotation.x = Math.sin(t * 1.3 + k) * 0.15; w.rotation.y = Math.sin(t * 0.9 + k * 2) * 0.12; });
-      if (this.halo.visible) { this.halo.rotation.z = t * 0.6; this.halo.position.y = 0.62 + Math.sin(t * 1.4) * 0.03; }
+      this.eyeMat.emissiveIntensity = dorm ? 0.1 : 0.55;
+      this.ears.forEach((e, k) => { e.rotation.z = (k ? 1 : -1) * (0.25 + Math.sin(t * 3 + k) * 0.1); });
+      this.barbels.forEach((b, k) => { b.rotation.x = Math.sin(t * 1.3 + k) * 0.14 - 0.05; b.rotation.y = (k ? -1 : 1) * (0.12 + Math.sin(t * 0.9 + k * 2) * 0.1); });
+      this.crest.forEach((c, i) => { c.rotation.x = Math.sin(t * 2.2 - i) * 0.08; });
+      if (this.halo.visible) { this.halo.rotation.z = t * 0.6; this.halo.position.y = 1.9 + Math.sin(t * 1.4) * 0.08; }
       if (this.crown.visible) this.stormMat.emissiveIntensity = 0.6 + 0.5 * Math.max(0, Math.sin(t * 3.1) * Math.sin(t * 1.7));
       this.group.updateMatrixWorld(true);
       this.headWorld.copy(this.head.position).applyMatrix4(this.group.matrixWorld);
-      this.mouthWorld.set(0, -0.05, 0.85).applyMatrix4(this.head.matrixWorld);
+      this.mouthWorld.set(0, -0.2, 2.35).applyMatrix4(this.hk.matrixWorld);
     }
   }
   A.Wyrm = Wyrm;
@@ -1289,17 +1448,26 @@
   // Wyrm portraits for sheets: one offscreen renderer paints every <canvas data-wyrm>
   // ======================================================================
   let PR = null;
+  // the painted grotto behind every portrait (artmap.js); until it loads, a shader backdrop stands in
+  let GROTTO = null;
+  const grottoSrc = window.RK_ART && window.RK_ART.wyrm && window.RK_ART.wyrm.grotto;
+  if (grottoSrc) {
+    const im = new Image();
+    im.onload = () => { GROTTO = im; if (KH.paintWyrms) KH.paintWyrms(document.body); };
+    im.src = grottoSrc;
+  }
   function portraitRig() {
     if (PR) return PR;
     try {
-      const r = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+      const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+      r.setClearColor(0x000000, 0);
       r.setPixelRatio(1);
       r.setSize(320, 200, false);
       r.outputColorSpace = THREE.SRGBColorSpace;
       r.toneMapping = THREE.ACESFilmicToneMapping;
       r.toneMappingExposure = 1.15;
       const scene = new THREE.Scene();
-      scene.background = new Col('#24150b');
+      const bgCol = new Col('#24150b');
       const cam = new THREE.PerspectiveCamera(30, 320 / 200, 0.1, 100);
       scene.add(new THREE.HemisphereLight('#e8f6ff', '#4a2a14', 1.5));
       const sun = new THREE.DirectionalLight('#fff0d8', 2.4);
@@ -1326,7 +1494,7 @@
       const aura = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.09, 6, 48).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#5fd0ff', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
       aura.position.y = 0.12;
       scene.add(aura);
-      PR = { r, scene, cam, w, back, aura };
+      PR = { r, scene, cam, w, back, aura, bgCol };
     } catch (e) { PR = false; }
     return PR;
   }
@@ -1342,12 +1510,24 @@
     // any canvas shape: the renderer follows it (taller ones frame the wyrm a little wider)
     const size = `${c.width}x${c.height}`;
     if (rig.size !== size) { rig.size = size; rig.r.setSize(c.width, c.height, false); rig.cam.aspect = c.width / c.height; rig.cam.updateProjectionMatrix(); }
-    const s = rig.w.size * 1.7 * (c.width / c.height < 1.2 ? 1.12 : 1);
-    rig.cam.position.set(1.8 * s, 2.4 * s, 7.2 * s);
-    rig.cam.lookAt(0.2 * s, 1.75 * s, 0);
+    // frame on the head so every form fits, from the Hatchling to the Skyriver's halo
+    const hw = rig.w.headWorld, tall = c.width / c.height < 1.2, z = o.zoom || 1, d = hw.y * (tall ? 3.3 : 2.85) / z, f = clamp(z - 1, 0, 1);
+    rig.cam.position.set(hw.x + d * 0.3, hw.y * lerp(0.85, 1, f), hw.z * 0.4 + d * 0.95);
+    rig.cam.lookAt(hw.x * lerp(0.55, 1, f), hw.y * lerp(tall ? 0.78 : 0.7, 1, f), hw.z * lerp(0.3, 1, f));
     A.setWater(2.2);
+    rig.scene.background = GROTTO ? null : rig.bgCol;
+    rig.back.visible = !GROTTO;
     rig.r.render(rig.scene, rig.cam);
     const g = c.getContext('2d');
+    if (GROTTO) {
+      // the grotto, cover-fitted, with a soft glow in the wyrm's colour (its storm's, once ascended)
+      g.clearRect(0, 0, c.width, c.height);
+      const k = Math.max(c.width / GROTTO.width, c.height / GROTTO.height), bw = GROTTO.width * k, bh = GROTTO.height * k;
+      g.drawImage(GROTTO, (c.width - bw) / 2, (c.height - bh) * 0.4, bw, bh);
+      const gl = g.createRadialGradient(c.width * 0.55, c.height * 0.45, 0, c.width * 0.55, c.height * 0.45, Math.max(c.width, c.height) * 0.6);
+      gl.addColorStop(0, `${el ? el.color : '#46d6d0'}50`); gl.addColorStop(1, '#46d6d000');
+      g.fillStyle = gl; g.fillRect(0, 0, c.width, c.height);
+    }
     g.drawImage(rig.r.domElement, 0, 0, c.width, c.height);
     return true;
   };

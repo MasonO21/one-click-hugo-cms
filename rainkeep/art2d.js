@@ -37,9 +37,13 @@
     for (const [k, v] of Object.entries(ART.ruin || {})) css.push(`.art-r-${k}{background-image:${url(v)}}`);
     for (const [k, v] of Object.entries(ART.ending || {})) css.push(`.art-n-${k}{background-image:${url(v)}}`);
     if (ART.title) css.push(`.intro-art.painted{background-image:linear-gradient(#120c1e00 40%,#120c1ee0),${url(ART.title)}}`);
+    if (ART.wyrm && ART.wyrm.emblem) css.push(`.medal.painted{background-image:${url(ART.wyrm.emblem)}}`);
     const st = document.createElement('style');
     st.id = 'rk-art'; st.textContent = css.join('\n');
     document.head.appendChild(st);
+    // the header medallion wears the wyrm's painted head
+    const medal = document.getElementById('hud-medal');
+    if (medal && ART.wyrm && ART.wyrm.emblem) medal.classList.add('painted');
   })();
 
   // ======================================================================

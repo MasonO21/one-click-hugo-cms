@@ -698,6 +698,8 @@ textarea.code { min-height: 110px; font-family: ui-monospace, Menlo, Consolas, m
    art2d.js injects the background-image rules; these use longhands only so a later stylesheet never resets them. */
 svg.painted { background-repeat: no-repeat; background-size: cover; background-position: center; }
 svg.portrait.painted { background-position: center 15%; border-radius: 6px; }
+.medal.painted { background-size: cover; background-position: center; background-repeat: no-repeat; }
+.medal.painted > svg { display: none; }
 svg.painted[class*="art-f-"] { border-radius: 50%; box-shadow: 0 6px 18px #0008; overflow: visible; }
 svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .intro-art.painted { height: 300px; background-size: cover; background-position: center 34%; }

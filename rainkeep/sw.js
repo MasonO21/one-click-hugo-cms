@@ -15,7 +15,7 @@
  */
 'use strict';
 
-const VERSION = 'rainkeep-v4.2'; // bump on every web deploy
+const VERSION = 'rainkeep-v4.3'; // bump on every web deploy
 const SHELL_CACHE = `${VERSION}-shell`;
 const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
@@ -37,6 +37,7 @@ const SHELL = [
   ...'founder stipend ledger growth stormkit warchest forgekit lvpack lvpack2 sg1 sg2 sg3 sg4 sg5 sg6'.split(' ').map((n) => `art/offers/${n}.webp`),
   ...'cart wagons observatory bunker chapel airship den pool forge shrine scouts mine'.split(' ').map((n) => `art/ruins/${n}.webp`),
   'art/endings/act1.webp', 'art/endings/act2.webp', 'art/endings/act3.webp',
+  'art/wyrm/grotto.webp', 'art/wyrm/emblem.webp',
 ];
 
 const SCOPE = new URL('./', self.location.href);

@@ -174,21 +174,69 @@
     g.fillStyle = shade; for (const [dx, dy, s] of [[-0.6, 0.25, 0.6], [0.55, 0.2, 0.65], [0, 0.32, 0.7]]) { g.beginPath(); g.arc(x + dx * r, y + dy * r + 4, r * s, 0, Math.PI * 2); g.fill(); }
     g.fillStyle = col; for (const [dx, dy, s] of [[-0.6, 0.1, 0.55], [0.55, 0.05, 0.6], [0, -0.2, 0.75], [0, 0.2, 0.6]]) { g.beginPath(); g.arc(x + dx * r, y + dy * r, r * s, 0, Math.PI * 2); g.fill(); }
   }
+  // the Rainwyrm seen from above, flying up the screen: the body trails the head's path
   function wyrm(g, x, y, t, blink) {
     const sk = DATA.skins[S.skins.on] || DATA.skins.river, n = 16, sp = 9;
+    g.save(); g.translate(x, y); g.scale(1.2, 1.2); g.translate(-x, -y);
     if (blink && Math.floor(t * 12) % 2) g.globalAlpha = 0.45;
-    // the body trails the head's path
-    for (let i = n; i >= 1; i--) {
-      const bx = G && G.segs ? G.segs[i - 1] : x, by = y + i * sp, rr = 13 - i * 0.55;
-      g.fillStyle = i % 2 ? sk.body[0] : sk.body[1];
-      g.beginPath(); g.arc(bx + Math.sin(t * 6 - i * 0.6) * 2, by, Math.max(3, rr), 0, Math.PI * 2); g.fill();
-      if (i === 5 || i === 9) { g.fillStyle = sk.fin; g.beginPath(); g.ellipse(bx - rr - 4, by, 9, 4, -0.5 + Math.sin(t * 8) * 0.3, 0, Math.PI * 2); g.ellipse(bx + rr + 4, by, 9, 4, 0.5 - Math.sin(t * 8) * 0.3, 0, Math.PI * 2); g.fill(); }
+    const pts = [[x, y]];
+    for (let i = 1; i <= n; i++) pts.push([(G && G.segs ? G.segs[i - 1] : x) + Math.sin(t * 6 - i * 0.6) * 2, y + i * sp]);
+    const rad = (i) => (i === 0 ? 10 : Math.max(1.8, 11.5 - i * 0.6));
+    const dir = (i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+    const fin = (fx, fy, ang, len, spread, rays) => {
+      g.fillStyle = sk.fin; g.globalAlpha *= 0.62;
+      g.beginPath(); g.moveTo(fx, fy);
+      for (let k = 0; k <= rays * 2; k++) {
+        const f = k / (rays * 2), a = ang - spread / 2 + f * spread, r = len * (k % 2 ? 0.78 : 1);
+        g.lineTo(fx + Math.cos(a) * r, fy + Math.sin(a) * r);
+      }
+      g.closePath(); g.fill();
+      g.globalAlpha /= 0.62;
+      g.strokeStyle = 'rgba(255,255,255,.65)'; g.lineWidth = 1;
+      for (let k = 0; k <= rays; k++) { const a = ang - spread / 2 + (k / rays) * spread; g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + Math.cos(a) * len, fy + Math.sin(a) * len); g.stroke(); }
+    };
+    const outline = (k) => {
+      const L = [], R = [];
+      for (let i = 0; i <= n; i++) { const [dx, dy] = dir(i), r = rad(i) * k, [px, py] = pts[i]; L.push([px - dy * r, py + dx * r]); R.push([px + dy * r, py - dx * r]); }
+      g.beginPath(); g.moveTo(L[0][0], L[0][1]);
+      for (const q of L) g.lineTo(q[0], q[1]);
+      for (const q of R.reverse()) g.lineTo(q[0], q[1]);
+      g.closePath();
+    };
+    // tail fan and shoulder fins under the body
+    const [tx, ty] = pts[n], [tdx, tdy] = dir(n);
+    fin(tx, ty, Math.atan2(tdy, tdx), 16, 1.6, 5);
+    const flap = Math.sin(t * 8) * 0.35, [sx, sy] = pts[3], [sdx, sdy] = dir(3), sa = Math.atan2(sdy, sdx);
+    fin(sx - sdy * 8, sy + sdx * 8, sa + Math.PI / 2 + 0.5 + flap, 18, 1.1, 4);
+    fin(sx + sdy * 8, sy - sdx * 8, sa - Math.PI / 2 - 0.5 - flap, 18, 1.1, 4);
+    // body: bright flanks, a dark stripe down the spine, scale dots, the back fin
+    g.fillStyle = sk.body[1]; outline(1); g.fill();
+    g.fillStyle = sk.body[0]; outline(0.48); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.18)';
+    for (let i = 1; i < n; i += 2) { const [px, py] = pts[i], r = rad(i) * 0.7; g.beginPath(); g.arc(px - r, py, 1.4, 0, Math.PI * 2); g.arc(px + r, py, 1.4, 0, Math.PI * 2); g.fill(); }
+    g.strokeStyle = sk.fin; g.lineWidth = 2.2; g.globalAlpha *= 0.85;
+    g.beginPath();
+    for (let i = 1; i <= n - 1; i++) { const [px, py] = pts[i], [dx, dy] = dir(i), w = Math.sin(t * 7 - i * 0.9) * 2.5; g.lineTo(px - dy * w, py + dx * w); }
+    g.stroke(); g.globalAlpha /= 0.85;
+    // head: horns and ear frills behind it, barbels streaming back
+    g.strokeStyle = sk.horn; g.lineWidth = 1.4;
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(x + s * 4, y - 26); g.quadraticCurveTo(x + s * (20 + Math.sin(t * 5) * 3), y - 8, x + s * (24 + Math.sin(t * 4 + s) * 4), y + 30); g.stroke(); }
+    for (const s of [-1, 1]) fin(x + s * 10, y + 2, Math.PI / 2 + s * 1.1, 15, 1.1, 4);
+    g.fillStyle = sk.horn;
+    for (const s of [-1, 1]) {
+      g.beginPath(); g.moveTo(x + s * 4, y - 6); g.quadraticCurveTo(x + s * 13, y - 2, x + s * 15, y + 20); g.quadraticCurveTo(x + s * 9, y + 2, x + s * 2, y - 1); g.fill();
     }
-    g.fillStyle = sk.body[1]; g.beginPath(); g.ellipse(x, y, 16, 18, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = sk.belly; g.beginPath(); g.ellipse(x, y - 6, 9, 8, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = sk.horn; g.beginPath(); g.moveTo(x - 9, y - 10); g.lineTo(x - 13, y - 26); g.lineTo(x - 4, y - 14); g.fill(); g.beginPath(); g.moveTo(x + 9, y - 10); g.lineTo(x + 13, y - 26); g.lineTo(x + 4, y - 14); g.fill();
-    g.fillStyle = '#1a0e07'; g.beginPath(); g.arc(x - 6, y - 4, 3, 0, Math.PI * 2); g.arc(x + 6, y - 4, 3, 0, Math.PI * 2); g.fill();
-    g.fillStyle = sk.eye; g.beginPath(); g.arc(x - 5, y - 5, 1.2, 0, Math.PI * 2); g.arc(x + 7, y - 5, 1.2, 0, Math.PI * 2); g.fill();
+    g.fillStyle = sk.body[1];
+    g.beginPath(); g.ellipse(x, y - 3, 12, 13, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.moveTo(x - 9, y - 8); g.quadraticCurveTo(x - 8, y - 26, x, y - 31); g.quadraticCurveTo(x + 8, y - 26, x + 9, y - 8); g.fill();
+    g.fillStyle = sk.body[0];
+    g.beginPath(); g.moveTo(x - 4, y + 6); g.quadraticCurveTo(x - 5, y - 16, x, y - 25); g.quadraticCurveTo(x + 5, y - 16, x + 4, y + 6); g.fill();
+    for (const s of [-1, 1]) {
+      g.fillStyle = '#1a0e07'; g.beginPath(); g.ellipse(x + s * 8.5, y - 9, 3.6, 4.2, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffb43a'; g.beginPath(); g.ellipse(x + s * 8.8, y - 9, 2.6, 3.2, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#1a0e07'; g.fillRect(x + s * 8.8 - 0.6, y - 11.6, 1.2, 5.2);
+    }
+    g.restore();
     g.globalAlpha = 1;
   }
   function draw(t) {

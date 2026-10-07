@@ -1,7 +1,7 @@
 /*
  * Rainkeep painted art: hero and cast portraits, one painting per foe family, a backdrop per act, the
- * title painting, building headers, event banners, store art, the twelve Dunes ruins and the three
- * endings, all made with Higgsfield (GPT Image 2) and stored as WebP under art/. art2d.js turns this map
+ * title painting, building headers, event banners, store art, the twelve Dunes ruins, the three endings,
+ * the grotto behind the Rainwyrm's portraits and its emblem, all made with Higgsfield (GPT Image 2) and stored as WebP under art/. art2d.js turns this map
  * into one stylesheet; anything missing here keeps its drawn SVG art. The single-file build swaps each
  * path for an inline data URI.
  */
@@ -108,6 +108,10 @@ window.RK_ART = {
     act1: 'art/endings/act1.webp',
     act2: 'art/endings/act2.webp',
     act3: 'art/endings/act3.webp',
+  },
+  wyrm: {
+    grotto: 'art/wyrm/grotto.webp',
+    emblem: 'art/wyrm/emblem.webp',
   },
   title: 'art/title.webp',
 };
