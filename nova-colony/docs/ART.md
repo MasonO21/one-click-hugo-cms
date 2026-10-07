@@ -13,9 +13,12 @@ game as style references so the art matches the in-game look.
 | Aliens | `public/art/aliens/<AlienDef.model>.webp` (7) | 384² RGBA | Invasion warning / victory / bestiary |
 | Resources | `public/art/resources/<resource id>.webp` (16 + `nova`) | 128² RGBA | HUD, costs, rewards |
 | Professions | `public/art/professions/<profession id>.webp` (13) | 256² RGBA | Colonist list & details |
+| World events | `public/art/events/<WorldEventDef.kind>.webp` (8) | 960×540 | Event popups & map markers |
+| Shop | `public/art/shop/<ProductDef.id>.webp` (12) | 512×384 RGBA | Shop product cards |
+| Rewards | `public/art/rewards/{victory_chest,supply_crate,daily_gift}.webp` | 256² RGBA | Victory chest, free crate, daily reward |
 | Store | `art/store/feature-graphic-1024x500.jpg`, `key-art-*.jpg` | — | Google Play feature graphic, store/press (not shipped in the app) |
 
-Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 2.5 MB (WebP).
+Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 3.8 MB (WebP).
 
 ## Style guide (for new art)
 Stylized low-poly 3D, flat-shaded chunky shapes, soft warm lighting, bright saturated but cozy palette,

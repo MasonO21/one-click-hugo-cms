@@ -41,6 +41,27 @@ export function biomeArt(id: string): string | null {
 export function tierArt(index: number): string | null {
   return TIERS[index] ? `${ROOT}tiers/${TIERS[index]}.webp` : null;
 }
+const EVENTS = new Set(['meteor', 'wreck', 'rescue', 'nest', 'drop', 'merchant', 'storm', 'ancient']);
+const SHOP = new Set([
+  'nova_starter_pack', 'nova_crystals_small', 'nova_colony_pack', 'nova_commander_pack', 'nova_ultimate_pack',
+  'nova_builder_pack', 'nova_colonist_pack', 'nova_defense_pack', 'nova_automation_pack', 'nova_titanium_founder',
+  'colony_pass_monthly', 'season_pass_premium',
+]);
+const REWARDS = new Set(['victory_chest', 'supply_crate', 'daily_gift']);
+
+/** World event illustration by WorldEventDef.kind, 960×540. */
+export function eventArt(kind: string): string | null {
+  return EVENTS.has(kind) ? `${ROOT}events/${kind}.webp` : null;
+}
+/** Shop product card art by ProductDef.id, 512×384 with transparency. */
+export function shopArt(productId: string): string | null {
+  return SHOP.has(productId) ? `${ROOT}shop/${productId}.webp` : null;
+}
+/** Reward art ('victory_chest' | 'supply_crate' | 'daily_gift'), 256 px with transparency. */
+export function rewardArt(id: string): string | null {
+  return REWARDS.has(id) ? `${ROOT}rewards/${id}.webp` : null;
+}
+
 /** Loading / key art (landscape or portrait). */
 export function keyArt(portrait: boolean): string {
   return `${ROOT}key/${portrait ? 'loading-portrait' : 'loading'}.webp`;
