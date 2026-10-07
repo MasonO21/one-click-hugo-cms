@@ -1494,7 +1494,9 @@
     cam.rotation.y = -0.8;
     cam.scale.setScalar(0.8);
     g.add(cam);
-    U.push((t) => { cam.userData.head.position.y = 1.5 + Math.sin(t * 0.8) * 0.04; });
+    // a painted camel (models3d.js) is skinned: it stays out of the bake and idles on its own rig
+    if (cam.userData.glbCamel) cam.userData.dyn = true;
+    U.push((t) => (cam.userData.head ? (cam.userData.head.position.y = 1.5 + Math.sin(t * 0.8) * 0.04) : A.walkCamel(cam, t, 0)));
     g.add(sack(1.05, 0, 1.45, 0.9), sack(1.3, 0, 1.6, 0.8, '#b08a5a'));
     if (tier >= 3) {
       const t2 = mesh(geo('tent2', () => new THREE.ConeGeometry(0.75, 0.9, 8, 1, true)), mat(P.cloth3, { map: tex.stripes('#2f7f9a', '#f0d9a8', 8), ds: true, flat: true }), -1.5, 0.45, 0.9);
@@ -1503,6 +1505,7 @@
       cam2.position.set(-0.4, 0, 1.75);
       cam2.rotation.y = 0.3;
       cam2.scale.setScalar(0.75);
+      if (cam2.userData.glbCamel) cam2.userData.dyn = true;
       g.add(cam2);
     }
   };

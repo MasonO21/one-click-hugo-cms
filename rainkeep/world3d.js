@@ -21,6 +21,7 @@
   let VW = 0, VH = 0, DPR = 1, octx = null;
   const view = { tx: 0, tz: 0, zoom: 1 };
   const tiles = {};
+  W3.tiles = tiles; // for tests
   const marches = {};
   const icons = {};
   const tmp = new V3();
@@ -32,7 +33,50 @@
   // ======================================================================
   const CLS = { guard: ['#c27a3a', '#7a3f1c'], bow: ['#8a6ad0', '#4a2f80'], lancer: ['#2fa89a', '#16605a'] };
   const blob = (r) => { const m = new THREE.Mesh(A.geo(`blob${r}`, () => new THREE.CircleGeometry(r, 16).rotateX(-Math.PI / 2)), new THREE.MeshBasicMaterial({ color: '#3a1a08', transparent: true, opacity: 0.28, depthWrite: false })); m.position.y = 0.04; return m; };
+  // the painted beasts (models3d.js), by name: [model, how many, size (body length, or wingspan)]; the Dust
+  // Wraith stays a drawn spirit, and the drawn beasts stand in until a model has loaded
+  const BEAST_GLB = [[/jackal/i, 'b-jackal', 3, 1.7], [/lion/i, 'b-lion', 1, 3.0], [/oryx/i, 'b-oryx', 1, 2.8], [/tortoise/i, 'b-tortoise', 1, 2.6], [/vulture/i, 'b-vulture', 3, 2.0]];
+  const beastGlb = (name) => (A.models ? BEAST_GLB.find((b) => b[0].test(name || '')) : null);
+  const glbReady = (t) => { const b = t.kind === 'beast' && beastGlb(t.name); return !!(b && A.models.want([b[1]])); };
+  function glbBeast(t) {
+    const [, id, n, size] = beastGlb(t.name), bird = id === 'b-vulture';
+    const g = new THREE.Group();
+    g.add(blob(1.1));
+    const body = new THREE.Group();
+    body.userData.dyn = true;
+    const list = [];
+    for (let i = 0; i < n; i++) {
+      const o = A.models.instance(id, size * (bird ? 1 : 1 - i * 0.08));
+      o.rotation.order = 'YXZ';
+      // a pack spreads out over the tile
+      if (n > 1 && !bird) { const a = i * 2.1 + 0.4; o.position.set(Math.cos(a) * 0.8, 0, Math.sin(a) * 0.8); o.rotation.y = a + 1.2; }
+      body.add(o);
+      list.push(o);
+    }
+    g.add(body);
+    g.userData.body = body;
+    g.userData.glb = { list, bird };
+    g.rotation.y = 0.6;
+    return g;
+  }
+  // a pack paces about (walking while it turns), vultures circle overhead with a few wingbeats now and then
+  function animGlbBeast(ud, t, v) {
+    const { list, bird } = ud.glb;
+    if (bird) {
+      list.forEach((o, i) => {
+        const a = t * 0.6 + i * 2.09 + v * 6;
+        o.position.set(Math.cos(a) * 1.1, 2.4 + Math.sin(t * 1.3 + i) * 0.25, Math.sin(a) * 1.1);
+        o.rotation.set(0, -a, -0.3);
+        A.animAnimal(o, t, (t + i * 1.7 + v * 5) % 5 < 1.4 ? 'flap' : 'glide');
+      });
+      return;
+    }
+    const turn = Math.cos(t * 0.5 + v * 9);
+    ud.body.rotation.y = Math.sin(t * 0.5 + v * 9) * 0.5;
+    list.forEach((o, i) => A.animAnimal(o, t + i * 0.7, Math.abs(turn) > 0.45 ? 'walk' : 'sit', 0.45));
+  }
   function beastModel(t) {
+    if (glbReady(t)) return glbBeast(t);
     const kind = KH.art.archetype(t.name || '');
     const [c1, c2] = CLS[t.cls] || CLS.guard;
     const m1 = A.mat(c1, { flat: true }), m2 = A.mat(c2, { flat: true }), eye = A.mat('#ffe08a', { e: '#ffcf6e', ei: 1.2 });
@@ -301,7 +345,7 @@
       const b = KH.world.base(x, y);
       if (b.kind === 'empty' || b.kind === 'keep') continue;
       const t = KH.world.tile(x, y);
-      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}`;
+      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}${glbReady(b) ? 'm' : ''}`;
       let e = tiles[b.k];
       if (e && e.key === key) continue;
       if (e) scene.remove(e.g);
@@ -550,7 +594,8 @@
     // idle animation for creatures, camp fires, ruin beacons
     for (const k in tiles) {
       const e = tiles[k], ud = e.g.userData;
-      if (ud.body) { ud.body.position.y = Math.abs(Math.sin(t * 2 + e.t.v * 6)) * 0.08; ud.body.rotation.y = Math.sin(t * 0.5 + e.t.v * 9) * 0.5; }
+      if (ud.glb) animGlbBeast(ud, t, e.t.v);
+      else if (ud.body) { ud.body.position.y = Math.abs(Math.sin(t * 2 + e.t.v * 6)) * 0.08; ud.body.rotation.y = Math.sin(t * 0.5 + e.t.v * 9) * 0.5; }
       if (ud.fire) ud.fire.scale.set(1, 0.8 + Math.sin(t * 13 + e.t.v * 5) * 0.25, 1);
       if (ud.banner) ud.banner.userData.update(t, 1);
       if (ud.beam && ud.beam.visible) ud.beam.material.opacity = 0.16 + 0.12 * Math.sin(t * 2.4 + e.t.v * 6);

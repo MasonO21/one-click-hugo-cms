@@ -182,7 +182,8 @@ window.RK_ART = {
   },
   // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
   // that frames sheets
-  // 3D models (models3d.js), made with Higgsfield from each painting: heroes (h-), companions (p-), sand dwellers (v-)
+  // 3D models (models3d.js), made with Higgsfield from each painting: heroes (h-), companions (p-), sand dwellers (v-),
+  // the beasts of the Dunes (b-), the camel (a-) and the Scorpion raiders (r-)
   model: {
     'h-zahra': 'models/heroes/zahra.glb',
     'h-tariq': 'models/heroes/tariq.glb',
@@ -225,6 +226,13 @@ window.RK_ART = {
     'v-carrier': 'models/villagers/carrier.glb',
     'v-boy': 'models/villagers/boy.glb',
     'v-girl': 'models/villagers/girl.glb',
+    'b-jackal': 'models/animals/jackal.glb',
+    'b-lion': 'models/animals/lion.glb',
+    'b-oryx': 'models/animals/oryx.glb',
+    'b-tortoise': 'models/animals/tortoise.glb',
+    'b-vulture': 'models/animals/vulture.glb',
+    'a-camel': 'models/animals/camel.glb',
+    'r-raider': 'models/foes/raider.glb',
   },
   ui: {
     btn: 'art/ui/btn-ember.webp',

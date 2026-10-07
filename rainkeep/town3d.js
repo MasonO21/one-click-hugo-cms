@@ -143,6 +143,29 @@
       sl.sg.remove(old); sl.sg.add(o); sellers[sl.i] = o; sl.glb = true;
     });
   }
+  // the painted camels and Scorpion raiders (models3d.js) take the drawn ones' places once they have loaded;
+  // the raiders' model is only fetched once a band is on its way
+  let glbCamels = false, glbRaiders = false;
+  T3.standIns = () => ({ camels, raiders, merchantCamels }); // for tests
+  function syncStandIns() {
+    if (!A.models) return;
+    if (!glbCamels && A.models.want(['a-camel'])) {
+      glbCamels = true;
+      for (const k of camels) k.c = A.models.swapCamel(k.c) || k.c;
+      for (const r of raiders.list) if (r.camel) r.o = A.models.swapCamel(r.o) || r.o;
+      merchantCamels.forEach((c) => A.models.swapCamel(c));
+    }
+    if (!glbRaiders && raiders.g.visible && A.models.want(['r-raider'])) {
+      glbRaiders = true;
+      for (const r of raiders.list) {
+        if (r.camel || r.flag) continue;
+        const o = A.models.instance('r-raider', 1.05);
+        o.position.copy(r.o.position); o.rotation.copy(r.o.rotation);
+        for (const c of [...r.o.children]) if (c.userData.torch) { c.scale.setScalar(1.25); o.add(c); }
+        raiders.g.remove(r.o); raiders.g.add(o); r.o = o;
+      }
+    }
+  }
   const banners = [];
   const people = [];
   T3.people = people; // for tests
@@ -561,6 +584,7 @@
       c.position.set(1.6 + i * 0.9, 0, 0.6 + i * 0.9);
       c.rotation.y = -1.9 + i * 0.4;
       g.add(c);
+      merchantCamels.push(c);
     }
     g.position.set(4.2, 0, 13.6);
     g.visible = false;
@@ -573,6 +597,7 @@
     merchant = g;
   }
   let merchant = null, showers = null, flashAt = -9, raiders = null;
+  const merchantCamels = [];
   // Scorpion raiders: a band that crosses the dunes toward the gate while the watchtower has them in sight
   function buildRaiders() {
     const g = new THREE.Group(), list = [];
@@ -585,6 +610,7 @@
       o.scale.setScalar(1.25);
       if (i === 1 || i === 2 || i === 7) {
         const torch = A.grp(A.cyl(0.03, 0.035, 0.8, A.mat(A.P.woodD), 0.22, 0.35, 0.1, 5), A.sph(0.1, flameM, 0.22, 1.2, 0.1, 6));
+        torch.userData.torch = true;
         o.add(torch);
       }
       g.add(o);
@@ -1721,7 +1747,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); syncPals(); syncHeroes(); syncSellers(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);

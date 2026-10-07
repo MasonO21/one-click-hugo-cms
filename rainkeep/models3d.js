@@ -1,7 +1,8 @@
 /*
- * Rainkeep: the painted 3D models. Every hero, companion and sand dweller has a model made with
- * Higgsfield (a full-body painting from their portrait, turned into a textured mesh by Meshy's
- * image-to-3D; people come rigged with a walk). artmap.js lists them under RK_ART.model.
+ * Rainkeep: the painted 3D models. Every hero, companion and sand dweller, the beasts of the Dunes, the
+ * raiders and the camels have a model made with Higgsfield (a full-body painting, from the portrait where
+ * there is one, turned into a textured mesh by Meshy's image-to-3D; people come rigged with a walk).
+ * artmap.js lists them under RK_ART.model.
  * Models load the first time something asks for them and are cloned for each use; until one arrives,
  * or where it cannot load (a page opened from disk), the procedural model in art3d.js stands in.
  * People keep their own rig and walk clip. The animals come as plain meshes, so they are rigged here:
@@ -17,6 +18,7 @@
   const MOD = {};
   const loader = new THREE.GLTFLoader();
   let epoch = 0; // bumps whenever a model arrives, so the keep can swap its stand-ins
+  const BIRDS = new Set(['p-falcon', 'p-hoopoe', 'b-vulture']);
 
   // a page opened from disk cannot fetch files beside it (the single-file build carries its models inline)
   const local = location.protocol === 'file:';
@@ -26,7 +28,8 @@
     MOD[id] = { ok: false };
     loader.load(SRC[id], (gltf) => {
       try {
-        MOD[id] = id.startsWith('p-') ? rigAnimal(gltf, id === 'p-falcon' || id === 'p-hoopoe') : prepPerson(gltf);
+        // companions (p-), Dunes beasts (b-) and the camel (a-) are animals; heroes, villagers and raiders people
+        MOD[id] = /^[pba]-/.test(id) ? rigAnimal(gltf, BIRDS.has(id), id) : prepPerson(gltf);
         MOD[id].ok = true;
         epoch++;
       } catch (e) { MOD[id] = { failed: true, err: String(e) }; }
@@ -50,7 +53,9 @@
   }
 
   // ---- the animals: one mesh, turned to face +z, with bones for legs and tail, or wings ----
-  function rigAnimal(gltf, bird) {
+  // where the highest points are not the head (a tortoise's shell stands above it), the model is turned round
+  const BACKWARD = new Set(['b-tortoise']);
+  function rigAnimal(gltf, bird, id) {
     gltf.scene.updateMatrixWorld(true);
     let mesh = null;
     gltf.scene.traverse((o) => { if (o.isMesh && (!mesh || o.geometry.attributes.position.count > mesh.geometry.attributes.position.count)) mesh = o; });
@@ -79,7 +84,7 @@
       for (let i = 0; i < n; i++) ymin = Math.min(ymin, P[i * 3 + 1]);
       const top = ymax - (ymax - ymin) * 0.12;
       for (let i = 0; i < n; i++) if (P[i * 3 + 1] > top) { zs += P[i * 3 + 2]; k++; }
-      if (k && zs / k < 0) turn(Math.PI);
+      if (k && (zs / k < 0) !== BACKWARD.has(id)) turn(Math.PI);
     }
     // feet on the ground, centred, one unit long (body length for a beast, wingspan for a bird)
     const bb = new THREE.Box3();
@@ -183,11 +188,35 @@
     if (mode === 'walk') mx.update(Math.max(0, Math.min(0.1, t - last)) * (0.6 + speed * 0.9));
     else if (U.act && U.act.time !== 0) { U.act.time = 0; mx.update(0); }
   };
+  // the painted camel, turned to face +x and as tall as the drawn one (A.camel), so it drops into the same places;
+  // camels made once it has loaded are painted, and swapCamel replaces a drawn one already in the scene
+  const CAMEL_H = 1.6;
+  function camel() {
+    const m = MOD['a-camel'];
+    if (!m || !m.ok) return null;
+    const o = instance('a-camel', CAMEL_H / m.H);
+    o.rotation.y = Math.PI / 2;
+    const g = new THREE.Group();
+    g.add(o);
+    g.userData.glbCamel = o;
+    return g;
+  }
+  function swapCamel(old) {
+    const g = camel();
+    if (!g) return null;
+    g.position.copy(old.position); g.rotation.copy(old.rotation); g.scale.copy(old.scale);
+    if (old.parent) { old.parent.add(g); old.parent.remove(old); }
+    return g;
+  }
+  const camel0 = A.camel, walkCamel0 = A.walkCamel;
+  A.camel = (seed, o) => camel() || camel0(seed, o);
+  A.walkCamel = (c, t, speed) => (c.userData.glbCamel ? A.animAnimal(c.userData.glbCamel, t, speed > 0 ? 'walk' : 'sit', speed * 0.7) : walkCamel0(c, t, speed));
+
   const animPerson0 = A.animPerson;
   A.animPerson = (o, t, mode, speed) => (o.userData.mixer ? A.animModel(o, t, mode, speed) : animPerson0(o, t, mode, speed));
 
   A.models = {
-    has: (id) => !!SRC[id], ready, load, instance, epoch: () => epoch, list: () => Object.keys(SRC),
+    has: (id) => !!SRC[id], ready, load, instance, swapCamel, epoch: () => epoch, list: () => Object.keys(SRC),
     // load a set and report how many are in
     want: (ids) => { ids.forEach(load); return ids.filter(ready).length; },
     info: (id) => MOD[id] && { ok: MOD[id].ok, failed: !!MOD[id].failed, kind: MOD[id].kind, err: MOD[id].err },
