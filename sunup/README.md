@@ -64,7 +64,7 @@ Any Node host with a persistent disk works. Push notifications need HTTPS.
 | Variable | Purpose |
 | --- | --- |
 | `PORT` | HTTP port (default 8787) |
-| `PUBLIC_URL` | The app's public URL, e.g. `https://sunup.example.com`. Used in texts and webhooks. |
+| `PUBLIC_URL` | The app's public URL, e.g. `https://sunup.example.com`. Used in texts and webhooks. On Render it defaults to the service's onrender.com address. |
 | `DATA_DIR` | Where `sunup.json`, photos and the data key are stored (default `./data`) |
 | `SUNUP_DATA_KEY` | Encrypts "If I go dark" packets at rest. Create one with `openssl rand -base64 32` and keep a copy somewhere safe: without it the packets can't be read. If unset, a key is generated once and saved as `data.key` in `DATA_DIR`. |
 | `VAPID_SUBJECT` | Contact for web push, e.g. `mailto:you@yourdomain.com`. VAPID keys are generated on first run and saved in the data file. |

@@ -18,6 +18,7 @@ services:
         value: "22"
       - key: DATA_DIR
         value: /var/data
+      # Optional: only for a custom domain. Otherwise the onrender.com address is used.
       - key: PUBLIC_URL
         sync: false
       # Optional: if unset, a key is generated once and kept on the disk.
