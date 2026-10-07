@@ -144,7 +144,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm23_tier2', chain: 'main', name: 'Solid Ground', description: 'Upgrade your colony to the Stone tier.',
     type: 'tier', target: '*', count: 2, reward: R({ nova: 25, xp: 100, resources: { stone: 250, wood: 200, iron: 60 }, items: { supply_crate: 2 } }), next: ['m24_forge'],
-    hint: 'Gather the materials and upgrade your Command Center.', guide: { kind: 'building', ref: 'command_center' },
+    hint: 'Gather the materials and upgrade your Command Center. Your storage has to hold the whole bill, so build a few Storage Sheds!', guide: { kind: 'building', ref: 'command_center' },
     onComplete: { celebrate: 'Stone tier reached! The colony looks permanent now.' },
   },
 
@@ -212,7 +212,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm35_tier3', chain: 'main', name: 'Steel Colony', description: 'Upgrade your colony to the Steel tier.',
     type: 'tier', target: '*', count: 3, reward: R({ nova: 40, xp: 160, resources: { steel: 120, iron: 200, copper: 100, stone: 300 }, items: { supply_crate: 3 } }), next: ['m36_power'],
-    hint: 'This one needs steel, iron, copper and a lot of stone. Check the tier-up panel for what is missing.', guide: { kind: 'building', ref: 'command_center' },
+    hint: 'This one needs steel, iron, copper and a lot of stone. Warehouses and ore silos raise your storage cap; the tier-up panel shows what is missing.', guide: { kind: 'building', ref: 'command_center' },
     onComplete: { celebrate: 'Steel tier reached! Power, factories and machine guns await.' },
   },
 
@@ -260,7 +260,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm44_tier4', chain: 'main', name: 'Alloy Colony', description: 'Upgrade your colony to the Advanced Alloy tier.',
     type: 'tier', target: '*', count: 4, reward: R({ nova: 60, xp: 240, resources: { alloy: 80, steel: 400, electronics: 120, crystal: 80 }, items: { tech_crate: 2 } }), next: ['m45_aa'],
-    hint: 'A big one: steel, electronics, crystal and alloy. Check the tier-up panel.', guide: { kind: 'building', ref: 'command_center' },
+    hint: 'A big one: steel, electronics, crystal and alloy. Steel Vaults raise your storage cap; the tier-up panel shows what is missing.', guide: { kind: 'building', ref: 'command_center' },
     onComplete: { celebrate: 'Advanced Alloy tier reached! Automation takes over.' },
   },
 
@@ -309,7 +309,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm53_tier5', chain: 'main', name: 'Nano Colony', description: 'Upgrade your colony to the Nano-Tech tier.',
     type: 'tier', target: '*', count: 5, reward: R({ nova: 90, xp: 360, resources: { alloy: 300, nano: 40, energy_cell: 100, electronics: 200 }, items: { nano_crate: 2 } }), next: ['m54_fusion'],
-    hint: 'Alloy, energy cells, nano-material and electronics. A real milestone.', guide: { kind: 'building', ref: 'command_center' },
+    hint: 'Alloy, energy cells, nano-material and electronics. Crystal Vaults and Mega Warehouses hold the bill. A real milestone.', guide: { kind: 'building', ref: 'command_center' },
     onComplete: { celebrate: 'Nano-Tech tier reached! The future is here.' },
   },
 
@@ -352,40 +352,40 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm61_tier6', chain: 'main', name: 'Titanium Colony', description: 'Upgrade your colony to the Titanium tier.',
     type: 'tier', target: '*', count: 6, reward: R({ nova: 200, xp: 800, resources: { titanium: 200, nano: 150, energy_cell: 250, alloy: 400 }, items: { titan_crate: 3 }, cosmetic: 'theme_titanium_dawn' }), next: ['m62_skyscraper'],
-    hint: 'The final tier. Titanium, nano-material, energy cells and alloy.', guide: { kind: 'building', ref: 'command_center' },
+    hint: 'The final tier: titanium, nano-material, energy cells and a mountain of alloy. Nano Vaults hold plenty, and upgrading a vault multiplies its space.', guide: { kind: 'building', ref: 'command_center' },
     onComplete: { celebrate: 'TITANIUM TIER REACHED! Your colony is now a gleaming titanium fortress.' },
   },
 
   // ====================================================================== TIER 6 — Titanium (~27 h →)
   {
     id: 'm62_skyscraper', chain: 'main', name: 'Reach for the Sky', description: 'Build a Titanium Skyscraper.',
-    type: 'build', target: 'titan_skyscraper', count: 1, reward: R({ resources: { titanium: 150, nano: 80, alloy: 300 }, rp: 4000, xp: 600 }), next: ['m63_railgun'],
+    type: 'build', target: 'titan_skyscraper', count: 1, reward: R({ resources: { titanium: 150, nano: 80, alloy: 300 }, rp: 4000, xp: 350 }), next: ['m63_railgun'],
     hint: 'Research Titanium Living. Sixty beds in one glittering tower.', guide: { kind: 'build_menu', ref: 'titan_skyscraper' },
   },
   {
     id: 'm63_railgun', chain: 'main', name: 'Rail Gun Party', description: 'Have two Railgun Towers defending your colony.',
-    type: 'have_building', target: 'railgun', count: 2, reward: R({ resources: { titanium: 150, nano: 100, energy_cell: 200 }, xp: 640 }), next: ['m64_quantum'],
+    type: 'have_building', target: 'railgun', count: 2, reward: R({ resources: { titanium: 150, nano: 100, energy_cell: 200 }, xp: 380 }), next: ['m64_quantum'],
     hint: 'Research Plasma Turrets then Railgun Towers. Rails punch through whole lines of aliens.', guide: { kind: 'build_menu', ref: 'railgun' },
   },
   {
     id: 'm64_quantum', chain: 'main', name: 'Beyond Storage', description: 'Build Quantum Storage.',
-    type: 'build', target: 'quantum_storage', count: 1, reward: R({ nova: 50, resources: { titanium: 200, nano: 120, energy_cell: 250 }, rp: 5000, xp: 680 }), next: ['m65_colonists30'],
+    type: 'build', target: 'quantum_storage', count: 1, reward: R({ nova: 50, resources: { titanium: 200, nano: 120, energy_cell: 250 }, rp: 5000, xp: 400 }), next: ['m65_colonists30'],
     hint: 'Research Quantum Storage. It holds enormous amounts of every resource.', guide: { kind: 'build_menu', ref: 'quantum_storage' },
   },
   {
     id: 'm65_colonists30', chain: 'main', name: 'Booming Town', description: 'Have 30 colonists living in your colony.',
-    type: 'colonists', target: '*', count: 30, reward: R({ nova: 50, items: { colonist_crate: 2 }, resources: { food: 1000, water: 800 }, xp: 720 }), next: ['m66_hovercraft'],
+    type: 'colonists', target: '*', count: 30, reward: R({ nova: 50, items: { colonist_crate: 2 }, resources: { food: 1000, water: 800 }, xp: 420 }), next: ['m66_hovercraft'],
     hint: 'Skyscrapers and nano residences hold plenty of beds. Recruit from the board or rescue survivors.', guide: { kind: 'ui', ref: 'recruit' },
   },
   {
     id: 'm66_hovercraft', chain: 'main', name: 'The Pinnacle of Travel', description: 'Craft a Titanium Hovercraft.',
-    type: 'craft', target: 'r_vehicle_titanium_hovercraft', count: 1, reward: R({ nova: 80, resources: { titanium: 250, nano: 150 }, xp: 800 }), next: ['m67_super_colony'],
+    type: 'craft', target: 'r_vehicle_titanium_hovercraft', count: 1, reward: R({ nova: 80, resources: { titanium: 250, nano: 150 }, xp: 450 }), next: ['m67_super_colony'],
     hint: 'Research Titanium Hover Drive, then craft the Hovercraft at the hangar.', guide: { kind: 'building', ref: 'hangar' },
     onComplete: { celebrate: 'The Titanium Hovercraft takes flight!' },
   },
   {
     id: 'm67_super_colony', chain: 'main', name: 'Titanium Super-Colony', description: 'Have 50 colonists thriving in your gleaming titanium colony.',
-    type: 'colonists', target: '*', count: 50, reward: R({ nova: 500, xp: 2000, resources: { titanium: 500, nano: 300, energy_cell: 500, alloy: 800 }, colonist: 'legendary', cosmetic: 'theme_titanium_dawn', items: { titan_crate: 5 } }), next: [],
+    type: 'colonists', target: '*', count: 50, reward: R({ nova: 500, xp: 1000, resources: { titanium: 500, nano: 300, energy_cell: 500, alloy: 800 }, colonist: 'legendary', cosmetic: 'theme_titanium_dawn', items: { titan_crate: 5 } }), next: [],
     hint: 'Keep recruiting and housing colonists. This is the moment you have been building toward.', guide: { kind: 'ui', ref: 'colonists' },
     onComplete: { celebrate: 'TITANIUM SUPER-COLONY! From a crashed pod to a city among the stars — you built all of this.' },
   },

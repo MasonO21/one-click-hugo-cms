@@ -7,7 +7,7 @@ import type { ItemDef } from './schema';
 export const ITEMS: ItemDef[] = [
   // ------------------------------------------------------------------ tools (toolTier 1 = basic, 2 = crystal/biomass/scrap, 3 = titanium)
   { id: 'survival_tool', name: 'Survival Multitool', icon: '🔧', category: 'tool', slot: 'tool', tier: 0, description: 'Chops, mines and pries. Better than nothing!', stats: { gatherYield: 0, gatherSpeed: 0, toolTier: 1 } },
-  { id: 'stone_axe', name: 'Stone Axe', icon: '🪓', category: 'tool', slot: 'tool', tier: 0, description: 'Gathers 50% more.', stats: { gatherYield: 0.5, gatherSpeed: 0.1, toolTier: 1 } },
+  { id: 'stone_axe', name: 'Stone Axe', icon: '🪓', category: 'tool', slot: 'tool', tier: 0, description: 'A sharp stone lashed to a stick. Gathers 50% more.', stats: { gatherYield: 0.5, gatherSpeed: 0.1, toolTier: 1 } },
   { id: 'reinforced_axe', name: 'Reinforced Axe', icon: '🪓', category: 'tool', slot: 'tool', tier: 1, description: 'Lashed and balanced. Gathers 80% more and swings faster.', stats: { gatherYield: 0.8, gatherSpeed: 0.15, toolTier: 1 } },
   { id: 'iron_pickaxe', name: 'Iron Pickaxe', icon: '⛏️', category: 'tool', slot: 'tool', tier: 2, description: 'Bites through crystal, bio-pods and scrap. Gathers 110% more.', stats: { gatherYield: 1.1, gatherSpeed: 0.2, toolTier: 2 } },
   { id: 'steel_harvester', name: 'Steel Harvester', icon: '🛠️', category: 'tool', slot: 'tool', tier: 3, description: 'A power-assisted steel tool that does half the swinging for you.', stats: { gatherYield: 1.5, gatherSpeed: 0.3, toolTier: 2 } },
@@ -25,7 +25,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'titanium_rifle', name: 'Titanium Rifle', icon: '🔫', category: 'weapon', slot: 'weapon', tier: 6, description: 'A gleaming rail rifle. One shot, one very surprised alien.', stats: { damage: 170, fireRate: 2.5, range: 28, projectile: 'rail' } },
 
   // ------------------------------------------------------------------ armor (max health)
-  { id: 'fiber_vest', name: 'Fiber Vest', icon: '🦺', category: 'armor', slot: 'armor', tier: 0, description: '+30 max health.', stats: { hp: 30 } },
+  { id: 'fiber_vest', name: 'Fiber Vest', icon: '🦺', category: 'armor', slot: 'armor', tier: 0, description: 'Woven fiber that is surprisingly sturdy. +30 max health.', stats: { hp: 30 } },
   { id: 'braided_vest', name: 'Braided Vest', icon: '🦺', category: 'armor', slot: 'armor', tier: 1, description: 'Tightly braided plant fiber. +60 max health.', stats: { hp: 60 } },
   { id: 'plated_vest', name: 'Plated Vest', icon: '🥋', category: 'armor', slot: 'armor', tier: 2, description: 'Stitched with iron plates. +100 max health.', stats: { hp: 100 } },
   { id: 'steel_armor', name: 'Steel Armor', icon: '🛡️', category: 'armor', slot: 'armor', tier: 3, description: 'Riveted steel plates with a surprisingly comfy lining. +160 max health.', stats: { hp: 160 } },
@@ -34,7 +34,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'titanium_exosuit', name: 'Titanium Exosuit', icon: '🦾', category: 'armor', slot: 'armor', tier: 6, description: 'A powered titanium exosuit. You feel unstoppable. +500 max health.', stats: { hp: 500, moveSpeed: 0.1 } },
 
   // ------------------------------------------------------------------ backpacks (total capacity)
-  { id: 'small_backpack', name: 'Small Backpack', icon: '🎒', category: 'backpack', slot: 'backpack', tier: 0, description: 'Carry up to 80 resources.', stats: { capacity: 80 } },
+  { id: 'small_backpack', name: 'Small Backpack', icon: '🎒', category: 'backpack', slot: 'backpack', tier: 0, description: 'Small but trusty. Carry up to 80 resources.', stats: { capacity: 80 } },
   { id: 'canvas_pack', name: 'Canvas Pack', icon: '🎒', category: 'backpack', slot: 'backpack', tier: 1, description: 'Roomy canvas rucksack. Carry up to 160 resources.', stats: { capacity: 160 } },
   { id: 'hiker_pack', name: 'Hiker Pack', icon: '🎒', category: 'backpack', slot: 'backpack', tier: 2, description: 'A frame pack with a dozen pockets. Carry up to 280 resources.', stats: { capacity: 280 } },
   { id: 'frame_pack', name: 'Steel Frame Pack', icon: '🎒', category: 'backpack', slot: 'backpack', tier: 3, description: 'Lightweight steel frame, enormous capacity. Carry up to 450 resources.', stats: { capacity: 450 } },
@@ -51,7 +51,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'grav_boots', name: 'Gravity Boots', icon: '👟', category: 'utility', slot: 'utility', tier: 6, description: 'Barely touch the ground. +50% move speed, +40% gather speed.', stats: { moveSpeed: 0.5, gatherSpeed: 0.4 } },
 
   // ------------------------------------------------------------------ consumables: medical
-  { id: 'bandage', name: 'Bandage', icon: '🩹', category: 'consumable', tier: 0, description: 'Restores 40 health.', use: { heal: 40 } },
+  { id: 'bandage', name: 'Bandage', icon: '🩹', category: 'consumable', tier: 0, description: 'A clean wrap for scrapes and bumps. Restores 40 health.', use: { heal: 40 } },
   { id: 'herbal_salve', name: 'Herbal Salve', icon: '🧴', category: 'consumable', tier: 1, description: 'Soothing alien herbs. Restores 80 health.', use: { heal: 80 } },
   { id: 'medkit', name: 'Medkit', icon: '🧰', category: 'consumable', tier: 2, description: 'A proper first-aid kit. Restores 150 health.', use: { heal: 150 } },
   { id: 'stim_pack', name: 'Stim Pack', icon: '💉', category: 'consumable', tier: 3, description: 'A jolt of get-up-and-go. Restores 250 health.', use: { heal: 250 } },
@@ -74,7 +74,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'titan_plating', name: 'Titanium Plating', icon: '🔷', category: 'utility', tier: 6, description: 'Gleaming titanium armor plates, perfectly smooth.' },
 
   // ------------------------------------------------------------------ crates (rewards + bundles; open for resources)
-  { id: 'supply_crate', name: 'Supply Crate', icon: '🎁', category: 'crate', tier: 0, description: 'Open for resources.', use: { reward: { resources: { wood: 60, stone: 40, fiber: 30, food: 30 } } } },
+  { id: 'supply_crate', name: 'Supply Crate', icon: '🎁', category: 'crate', tier: 0, description: 'A crate of useful odds and ends. Open it for resources.', use: { reward: { resources: { wood: 60, stone: 40, fiber: 30, food: 30 } } } },
   { id: 'rations_crate', name: 'Rations Crate', icon: '🥫', category: 'crate', tier: 0, description: 'Tinned goodies and clean water for a hungry colony.', use: { reward: { resources: { food: 120, water: 100 } } } },
   { id: 'timber_bundle', name: 'Timber Bundle', icon: '🪵', category: 'crate', tier: 0, description: 'A tidy bundle of 90 wood. Handy when storage is full.', use: { reward: { resources: { wood: 90 } } } },
   { id: 'stone_bundle', name: 'Stone Bundle', icon: '🪨', category: 'crate', tier: 0, description: 'A neat stack of 90 stone, ready to unpack.', use: { reward: { resources: { stone: 90 } } } },

@@ -455,6 +455,19 @@ describe('data.pacing — tier timeline of an engaged player', () => {
     }
   });
 
+  it('the build plan only uses real buildings, respects maxCount and never buys ahead of the tier', () => {
+    for (let tr = 0; tr < PLAN.length; tr++) {
+      for (const s of PLAN[tr]) {
+        if (!s.buy) continue;
+        const d = byId.get(s.buy.id);
+        expect(d, `plan references unknown building ${s.buy.id}`).toBeTruthy();
+        expect(d!.unlockTier, `${d!.id} is tier ${d!.unlockTier} but planned at tier ${tr}`).toBeLessThanOrEqual(tr);
+        if (d!.maxCount) expect(s.buy.n ?? 1, `${d!.id} maxCount`).toBeLessThanOrEqual(d!.maxCount);
+        expect(s.buy.lvl ?? 1, `${d!.id} level`).toBeLessThanOrEqual(d!.maxLevel);
+      }
+    }
+  });
+
   it('tiers are strictly increasing in time', () => {
     for (let i = 1; i < out.results.length; i++) expect(out.results[i].at).toBeGreaterThan(out.results[i - 1].at);
   });

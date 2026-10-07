@@ -14,7 +14,7 @@ export const TIERS: TierDef[] = [
   {
     index: 2, id: 'stone', name: 'Stone', description: 'Solid masonry. The colony starts to look permanent.',
     color: '#a6a39b', accent: '#e8d9a8', glow: 0.25, colonyRadius: 21, hpMult: 3,
-    pieceCost: { stone: 8, wood: 2 }, upgradeCost: { wood: 1200, stone: 1200, fiber: 400, food: 400 }, research: 'tier_stone', invasionInterval: 1000,
+    pieceCost: { stone: 8, wood: 2 }, upgradeCost: { wood: 1400, stone: 1400, fiber: 450, food: 450 }, research: 'tier_stone', invasionInterval: 1000,
   },
   {
     index: 3, id: 'steel', name: 'Steel', description: 'Riveted steel and humming power lines. Industry arrives.',

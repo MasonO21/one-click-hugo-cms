@@ -550,6 +550,76 @@ describe('data.integrity — buildings per tier & design rules', () => {
   });
 });
 
+describe('data.integrity — presentation', () => {
+  /** Models the renderer implements (schema.ts ModelKey). Unknown keys fall back to a generic block, so we avoid them. */
+  const MODEL_KEYS = new Set([
+    'floor', 'wall', 'door', 'window', 'stairs', 'platform', 'roof', 'gate', 'fence', 'pillar', 'command_center',
+    'crate', 'warehouse', 'silo', 'tank', 'quantum_storage', 'bed', 'bunkhouse', 'habitat', 'skyscraper',
+    'campfire', 'farm_plot', 'greenhouse', 'hydroponics', 'kitchen', 'food_storage', 'rain_collector', 'water_pump', 'purifier', 'industrial_purifier', 'atmo_generator',
+    'fuel_generator', 'solar_panel', 'wind_turbine', 'geothermal', 'fusion_reactor', 'battery', 'power_pylon',
+    'logging_camp', 'quarry', 'mine', 'drill', 'harvester', 'drone_hub', 'robot_bay', 'workbench', 'forge', 'smelter', 'electronics_lab', 'factory', 'nanoforge', 'matter_processor', 'conveyor',
+    'research_desk', 'research_lab', 'advanced_lab', 'med_bay', 'medical_center',
+    'radio_tower', 'garage', 'hangar', 'teleporter', 'spin_wheel', 'beacon', 'repair_bay', 'shield_generator',
+    'lamp', 'plant', 'bench', 'fountain', 'banner', 'statue', 'arcade', 'garden',
+    'barricade', 'spikes', 'guard_tower', 'turret_basic', 'turret_mg', 'turret_flame', 'turret_missile', 'turret_heavy', 'turret_laser', 'turret_plasma', 'turret_rail', 'turret_cannon', 'turret_aa', 'electric_fence', 'drone_pad',
+  ]);
+
+  it('every building uses a renderer-implemented model key', () => {
+    for (const b of data.buildings) expect(MODEL_KEYS.has(b.model), `building ${b.id} uses unknown model "${b.model}"`).toBe(true);
+  });
+
+  it('pieces use their own piece model; turrets use turret models matching their projectile family', () => {
+    for (const b of data.buildings) if (b.piece) expect(b.model, `piece ${b.id}`).toBe(b.piece);
+    for (const b of data.buildings) {
+      const t = b.turret;
+      if (!t) continue;
+      expect(b.model.startsWith('turret_') || b.model === 'guard_tower' || b.model === 'drone_pad', `${b.id} turret model ${b.model}`).toBe(true);
+      if (t.projectile === 'flame') expect(b.model).toBe('turret_flame');
+      if (t.projectile === 'missile') expect(['turret_missile', 'turret_aa']).toContain(b.model);
+      if (t.projectile === 'rail') expect(b.model).toBe('turret_rail');
+      if (t.projectile === 'plasma') expect(b.model).toBe('turret_plasma');
+      if (t.projectile === 'laser') expect(['turret_laser', 'turret_aa']).toContain(b.model);
+      if (t.projectile === 'drone') expect(b.model).toBe('drone_pad');
+      if (t.projectile === 'arrow') expect(b.model).toBe('guard_tower');
+      if (t.airOnly) expect(t.antiAir).toBe(true);
+    }
+  });
+
+  it('everything has a short name, an icon and a one-line description with some personality', () => {
+    const check = (id: string, name: string, desc: string | undefined, icon?: string, minDesc = 18) => {
+      expect(name.length, `${id} name`).toBeGreaterThan(2);
+      expect(name.length, `${id} name too long`).toBeLessThanOrEqual(34);
+      if (desc !== undefined) {
+        expect(desc.length, `${id} description too short`).toBeGreaterThanOrEqual(minDesc);
+        expect(desc.length, `${id} description too long`).toBeLessThanOrEqual(260);
+      }
+      if (icon !== undefined) expect(icon.length, `${id} icon`).toBeGreaterThan(0);
+    };
+    for (const b of data.buildings) check(b.id, b.name, b.description, b.icon);
+    for (const r of data.research) check(r.id, r.name, r.description, r.icon);
+    for (const i of data.items) check(i.id, i.name, i.description, i.icon);
+    for (const a of data.aliens) check(a.id, a.name, a.description);
+    for (const v of data.vehicles) check(v.id, v.name, v.description, v.icon);
+    for (const p of data.pois) check(p.id, p.name, p.description, p.icon);
+    for (const e of data.worldEvents) check(e.id, e.name, e.description, e.icon);
+    for (const m of data.missions) check(m.id, m.name, m.description, undefined, 10);
+    for (const t of data.tiers) check(t.id, t.name, t.description);
+    for (const r of data.resources) check(r.id, r.name, r.description, r.icon);
+  });
+
+  it('crafted-item recipes produce what they are named after', () => {
+    for (const r of data.recipes) {
+      const out = Object.keys(r.outputs.items ?? {});
+      if (out.length === 1 && !r.outputs.resources && !r.outputs.vehicle) {
+        const item = data.item(out[0])!;
+        const sameName = item.name.toLowerCase() === r.name.toLowerCase();
+        const idMatches = r.id === `r_${item.id}`;
+        expect(sameName || idMatches || /bundle|crate|kit|pack|core|chip|plating|parts/i.test(r.name), `recipe ${r.id} (${r.name}) vs item ${item.name}`).toBe(true);
+      }
+    }
+  });
+});
+
 describe('data.integrity — resource obtainability', () => {
   /** Resources renewably obtainable by the time the colony is at `tier` (nodes+tools, production buildings, recipes). */
   function obtainable(tier: number): Set<string> {
