@@ -234,7 +234,7 @@ export class RunUI {
     }).join(' ');
     modal({
       title: 'Paused',
-      dismissable: false,
+      dismissable: false, cls: 'modal-pause',
       body: `<div style="display:flex;flex-direction:column;gap:10px">
         <div class="res-stats"><div><b>${fmtTime(run.time)}</b><small>Time</small></div><div><b>${fmt(run.counters.kills)}</b><small>Kills</small></div><div><b>${run.legion.count}</b><small>Legion</small></div></div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${build}</div>
@@ -281,7 +281,7 @@ export class RunUI {
       } });
     }
     actions.push({ label: 'Give up', cls: 'btn-ghost', onClick: (close) => { finish('end', close); return false; } });
-    const m = modal({ title: 'You have fallen', body, actions, dismissable: false });
+    const m = modal({ title: 'You have fallen', body, actions, dismissable: false, cls: 'modal-revive' });
     iv = setInterval(() => {
       if (adOpen || document.hidden) return;
       left -= 1;

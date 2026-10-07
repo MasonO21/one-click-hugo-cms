@@ -20,6 +20,7 @@
     "build:web": "SINGLE=1 vite build && node scripts/build-artifact.mjs"
   },
   "dependencies": {
+    "@capacitor/app": "^7.1.2",
     "@capacitor/core": "^7.0.0",
     "@capacitor/haptics": "^7.0.0",
     "@capacitor/splash-screen": "^7.0.0",

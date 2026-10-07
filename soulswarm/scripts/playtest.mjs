@@ -1757,6 +1757,50 @@ errs = await session(async (page, errors) => {
 });
 check('menus, economy and save regressions: no runtime errors', !errs.length, errs[0] || '');
 
+// 24. Android back button (src/ui/back.js; Escape on desktop) and flat first-clear gems: back closes the top dialog,
+//     pauses and resumes a run, continues from the results, steps the menu back to BATTLE and only then leaves; it
+//     never skips a level-up card, the revive prompt or an ad. A Normal first clear pays 50 + 20c gems, and Blood Moon
+//     and the double-rewards ad double only the 10 + 2c clear gems in it.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const { handleBack } = await import('/src/ui/back.js');
+    const { modal } = await import('/src/ui/dom.js');
+    const eco = await import('/src/meta/economy.js');
+    const app = window.__soulswarm, p = app.profile, out = {}, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    out.homeExit = handleBack(app);
+    app.meta.show('shop'); out.tabBack = [handleBack(app), app.meta.tab];
+    modal({ title: 'x', body: 'y' }); out.close = [handleBack(app), document.querySelectorAll('.modal-back').length];
+    app.meta.show('heroes'); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); out.escape = app.meta.tab;
+    const ad = document.createElement('div'); ad.className = 'ad-sim'; document.body.appendChild(ad); out.ad = handleBack(app); ad.remove();
+    app.engine.manual = true; p.energy = 30; app.startRun(1); let r = app.run;
+    out.pause = [handleBack(app), r.paused, !!document.querySelector('.modal-pause')];
+    out.resume = [handleBack(app), r.paused, !!document.querySelector('.modal-pause')];
+    r.levelQueue = 1; r.showLevelUp(); out.card = [handleBack(app), r.levelPending, !!document.querySelector('.lvl-back')];
+    document.querySelector('.lvl-back .card')?.click(); r.t += 0.31; document.querySelector('.lvl-back .card')?.click();
+    r.player.invuln = 0; r.player.hurt(1e9); for (let i = 0; i < 40 && !document.querySelector('.modal-revive'); i++) r.update(0.05);
+    out.revive = [handleBack(app), !!document.querySelector('.modal-revive'), r.ended];
+    [...document.querySelectorAll('.modal-revive .modal-actions .btn')].find((b) => /Give up/.test(b.textContent))?.click();
+    for (let i = 0; i < 60 && !document.querySelector('.modal-results'); i++) await wait(50);
+    out.results = [handleBack(app), !app.run, !app.meta.el.hidden];
+    app.engine.manual = false;
+    // first-clear gems: Chapter 2, then a fresh profile with Blood Moon and the ad
+    const win = (q, bloodMoon) => eco.applyRunResult(q, { chapter: 2, time: 400, kills: 1200, raised: 200, bestLegion: 90, novas: 3, gates: 6, victory: true, level: 15, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, bloodMoon });
+    const plain = win(JSON.parse(JSON.stringify(p)), false);
+    const q = JSON.parse(JSON.stringify(p)); const bm = win(q, true); const g0 = q.gems; const extra = eco.doubleRunRewards(q, bm.rewards);
+    out.gems = { plain: plain.rewards.gems, first: plain.firstClear, bm: bm.rewards.gems, flat: bm.rewards.firstClearGems, adExtra: q.gems - g0, again: win(q, true).rewards.gems };
+    return out;
+  });
+  check('back: leaves only from the home screen; elsewhere it steps back to BATTLE or closes the dialog',
+    s.homeExit === 'exit' && s.tabBack.join() === 'home,battle' && s.close.join() === 'close,0' && s.escape === 'battle', JSON.stringify(s));
+  check('back: pauses and resumes a run, continues from the results, never skips a card, the revive prompt or an ad',
+    s.ad === 'ad' && s.pause.join() === 'pause,true,true' && s.resume.join() === 'resume,false,false' && s.card.join() === 'none,true,true'
+    && s.revive.join() === 'none,true,false' && s.results.join() === 'continue,true,true', JSON.stringify(s));
+  check('first-clear gems: 50 + 20c in all; Blood Moon and the ad double only the 10 + 2c clear gems',
+    s.gems.first && s.gems.plain === 90 && s.gems.bm === 14 * 2 + 76 && s.gems.flat === 76 && s.gems.adExtra === 28 && s.gems.again === 28, JSON.stringify(s.gems));
+});
+check('back button and first-clear gems: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

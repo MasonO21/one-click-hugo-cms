@@ -168,6 +168,7 @@ export function createMeta(app) {
       setTab(tab);
     },
     hide() { el.hidden = true; },
+    get tab() { return current; },
     refresh: () => refresh(true),
   };
 }

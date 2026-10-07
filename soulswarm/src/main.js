@@ -5,7 +5,9 @@ import { loadProfile, saveProfile, newProfile } from './meta/save.js';
 import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon } from './meta/economy.js';
 import { Store } from './meta/store.js';
 import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
-import { haptic, setHapticsEnabled } from './engine/platform.js';
+import { haptic, setHapticsEnabled, isNative } from './engine/platform.js';
+import { App as NativeApp } from '@capacitor/app';
+import { handleBack } from './ui/back.js';
 import { Engine } from './engine/engine.js';
 import { Showcase } from './game/showcase.js';
 import { Run } from './game/run.js';
@@ -142,6 +144,9 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { saveProfile(profile, true); if (app.run) app.run.pause(true); }
   });
+  // Android back: close, pause or step back a layer; at the home screen it sends the app to the background (state kept)
+  if (isNative) NativeApp.addListener('backButton', () => { if (handleBack(app) === 'exit') NativeApp.minimizeApp(); });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.repeat) handleBack(app); });
 
   const bootEl = document.getElementById('boot');
   requestAnimationFrame(() => { bootEl.classList.add('out'); setTimeout(() => bootEl.remove(), 600); });

@@ -404,11 +404,13 @@ export function applyRunResult(p, result) {
   const gold = Math.round((result.kills * 0.9 + result.time * 2.2 + (result.victory ? 400 * ch : 0)) * L.goldMul * D.gold + (result.bonusGold || 0));
   const gems = trial ? (result.victory ? TRIAL.clear.gems : Math.min(TRIAL.failGemsMax, Math.floor(result.time / 60) * TRIAL.failGemsPerMin))
     : result.endless ? (result.bossKills || 0) * 15 + Math.floor(result.time / 60) * 2
-    : result.victory ? (firstClear && !hard ? 50 + 20 * ch : 10 + 2 * ch) : Math.floor(result.time / 120) * 2;
+    : result.victory ? 10 + 2 * ch : Math.floor(result.time / 120) * 2;
   const baseXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0) + (trial && result.victory ? TRIAL.clear.passXp : 0));
   const passXp = Math.round(baseXp * D.passXp);
   const rewards = { gold: gold * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), gems: gems * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), passXp };
-  if (firstClear && hard) { rewards.gems += D.firstClearGems; rewards.firstClearGems = D.firstClearGems; } // flat: Blood Moon and the ad double skip it
+  // the first-clear bonus is flat: Blood Moon and the ad double only the clear gems (Normal: 40 + 18c on top, 50 + 20c in all)
+  const firstGems = firstClear ? (hard ? D.firstClearGems : 40 + 18 * ch) : 0;
+  if (firstGems) { rewards.gems += firstGems; rewards.firstClearGems = firstGems; }
   if (firstClear && !hard) rewards.sigils = 1;
   if (trial && result.victory) { p.trial.clears = (p.trial.clears || 0) + 1; if (p.trial.clears % TRIAL.sigilEvery === 0) rewards.sigils = (rewards.sigils || 0) + 1; }
   if (result.victory) rewards.relic = D.hoard ? rollHoard(D.hoard, rand()) : ch >= 3 && rand() < 0.35 ? 'epic' : rand() < 0.5 ? 'rare' : 'common';

@@ -58,7 +58,7 @@
 | Lifecycle | `App` plugin: pause the run and mute audio on background. Auto-pause on calls. Save a run checkpoint every 30 s so an OS kill can resume. |
 | Audio | Web Audio unlocked on first touch. Respect the iOS silent switch (ambient session). Duck on interruptions. |
 | Display | Portrait lock. Safe-area insets (notch, home indicator, Android cutouts). Immersive mode on Android. Keep the screen awake during runs only. |
-| Input | Touch events with `passive: false` on the game canvas. Disable double-tap zoom, text selection and overscroll bounce. Android back button = pause or back. |
+| Input | Touch events with `passive: false` on the game canvas. Disable double-tap zoom, text selection and overscroll bounce. Android back button = pause or back (built with `@capacitor/app`: `src/ui/back.js`). |
 | Haptics | Capacitor Haptics plugin, throttled (GDD §3). |
 | Build | Vite production build with meshopt geometry, KTX2/Basis textures and AAC audio. Android App Bundle with Play App Signing. iOS build and signing through Xcode Cloud or fastlane. |
 | Size | Install size target ≤ 150 MB (aim for < 100 MB). Optional chapter assets are downloaded after the tutorial. |

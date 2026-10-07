@@ -48,7 +48,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Run rewards | 12–20 per repeat clear; 2 per full 2 minutes survived on a defeat | Gold bundles | 60 / 300 gems |
 | Account level-ups | 20 each | Altar Sigils (gem shop) | 150 each · 1,350 for 10 |
 | Soul Pass free / premium | 340 / 1,140 per season | Soul Pass catch-up tiers (Planned) | 100 per tier, last 7 days of a season only |
-| Chapter first clears | 70 / 90 / 110 / 130 / 150 for Ch1–5 (one-time, 550 total) | | |
+| Chapter first clears | 70 / 90 / 110 / 130 / 150 for Ch1–5 (one-time, 550 total; only the 12–20 clear gems in it are doubled by Blood Moon or the ad) | | |
 | Nightmare / Torment first clears | +60 / +120 per chapter on top of the 12–20 clear gems (one-time, 300 + 600 = 900 total; never doubled by Blood Moon or the ad) | | |
 | Soul Pact | 300 now + 100 / day | | |
 | Starter Pack | 300 | | |
