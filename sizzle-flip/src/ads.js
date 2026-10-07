@@ -207,8 +207,9 @@ class AdMobProvider {
     // GDPR/UMP consent first; ads are only requested once the SDK says it may.
     let info = null;
     try {
-      // self-test builds (tools/device-smoke.js) on emulators: no consent form or tracking prompt that nobody can tap
-      info = await (SMOKE_NO_PROMPTS ? A.requestConsentInfo({ debugGeography: 4 /* OTHER */ }) : A.requestConsentInfo());
+      // self-test builds (tools/device-smoke.js) on emulators skip the consent form: nobody is there to answer it
+      // (Google's test app id asks for consent everywhere)
+      if (!SMOKE_NO_PROMPTS) info = await A.requestConsentInfo();
       if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') info = await A.showConsentForm();
     } catch (e) { /* no consent message configured (e.g. test ids) */ }
     this.canRequest = !info || info.canRequestAds !== false;

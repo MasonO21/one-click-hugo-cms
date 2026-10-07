@@ -121,7 +121,7 @@ async function run() {
 
   // --- ads (network dependent: informational)
   await until(() => app.ads.provider.ready && app.ads.provider.ready.interstitial && app.ads.provider.ready.rewarded, 30000);
-  info(`consent (self-test: Google's debug region "other", no tracking prompt) · AdMob test ads loaded: interstitial ${!!app.ads.provider.ready?.interstitial}, rewarded ${!!app.ads.provider.ready?.rewarded}, can request ${app.ads.provider.canRequest}`);
+  info(`self-test build: consent form and tracking prompt skipped · AdMob test ads loaded: interstitial ${!!app.ads.provider.ready?.interstitial}, rewarded ${!!app.ads.provider.ready?.rewarded}, can request ${app.ads.provider.canRequest}`);
 
   // --- result
   check(errors.length === 0, `no JavaScript errors${errors.length ? ': ' + [...new Set(errors)].join(' | ') : ''}`);
