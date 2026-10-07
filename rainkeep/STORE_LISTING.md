@@ -76,6 +76,7 @@ PLAY YOUR WAY
 • Your keep keeps working while you're away, and your wyrm keeps a gentle mist so no one falls ill.
 • Guide the water in Channels: turn the stone channels until every hut, palm and field drinks. A new puzzle every day.
 • Fly your Rainwyrm through the sky in Cloud Run: thread rain rings for combos, catch Rain Pearls, and spend them on Wyrm Gifts that make every flight better.
+• Lead your squad on the Crossing: a roguelite trek to a hidden oasis, with a new route of raiders, mirages, merchants and boons every few hours.
 • Finished the story? Wake the Deepspring beneath your wyrm's pool: refine glowing Tideglass and deepen the spring through 30 levels and six Springsong ranks.
 • Your Rainwyrm makes wishes: a splash in the rain, fresh dates, a story from the Dunes. Grant them to deepen your bond.
 • Daily duties, gifts, six rotating events and a season pass with a new wyrm skin every season.
