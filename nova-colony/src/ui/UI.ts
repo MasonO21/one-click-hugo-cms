@@ -289,6 +289,16 @@ export class UI {
     if (covering || this.panels.anyOpen()) this.input.reset();
   }
 
+  /**
+   * A toast caused by a game event (not by the player's tap). While a modal (celebration, chest, welcome
+   * back) is up it waits instead of covering the card's title; 'reward' toasts duplicate the reward card
+   * that is showing and are dropped. Toasts right after a tap still show at once (e.g. "no video").
+   */
+  private eventToast(text: string, kind?: ToastKind, icon?: string): void {
+    if (!this.panels.anyModal() || performance.now() - this.lastClick.t < 1500) this.toasts.show(text, kind, icon);
+    else if (kind !== 'reward' && !this.toastQueue.some((q) => q.text === text) && this.toastQueue.push({ text, kind, icon }) > 6) this.toastQueue.shift();
+  }
+
   private showWelcome(): void {
     const p = this.game.pendingOffline;
     if (!p || this.welcomeShown) return;
@@ -303,11 +313,7 @@ export class UI {
     const g = this.game;
     // game-event toasts wait while a modal (celebration, chest, welcome back) is up instead of covering
     // its title; toasts from the player's own taps (ctx.toast) still show at once
-    bus.on('ui:toast', (e) => {
-      if (!this.panels.anyModal() || performance.now() - this.lastClick.t < 1500) this.toasts.show(e.text, e.kind, e.icon);
-      // 'reward' toasts duplicate the reward card that is showing; the rest is still news afterwards
-      else if (e.kind !== 'reward' && !this.toastQueue.some((q) => q.text === e.text) && this.toastQueue.push(e) > 6) this.toastQueue.shift();
-    });
+    bus.on('ui:toast', (e) => this.eventToast(e.text, e.kind, e.icon));
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     bus.on('ui:open', (e) => this.open(e.panel, e.arg));
     bus.on('ui:celebrate', (e) => {
@@ -416,7 +422,7 @@ export class UI {
     });
     bus.on('iap:purchased', () => this.toasts.show('Thank you for your support! 💜', 'reward', '🎉'));
     bus.on('iap:failed', (e) => this.toasts.show(e.reason && e.reason !== 'cancelled' ? `Purchase didn't go through: ${e.reason}` : 'Purchase cancelled — no worries!', 'info', '🛍️'));
-    bus.on('season:levelUp', (e) => this.toasts.show(`Season pass level ${e.level}!`, 'reward', '🏆'));
+    bus.on('season:levelUp', (e) => this.eventToast(`Season pass level ${e.level}!`, 'info', '🏆'));
     bus.on('building:changed', () => this.refreshBadges());
   }
 

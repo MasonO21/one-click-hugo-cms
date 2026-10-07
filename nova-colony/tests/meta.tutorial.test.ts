@@ -3,6 +3,7 @@ import { SUPPLY_DRONE_AFTER } from '../src/sim/tutorial';
 import { createDataRegistry, defaultData } from '../src/data';
 import type { MissionDef } from '../src/data/schema';
 import type { WorldGen } from '../src/sim/world';
+import { footprintCenter } from '../src/core/constants';
 import { advanceMainTo, fakeBuilding, fulfil, makeGame, tickMeta, type TestGame } from './meta.helpers';
 
 /** The guide refreshes at 4 Hz in update(); step past one refresh before reading it. */
@@ -94,6 +95,17 @@ describe('tutorial: guide target resolution', () => {
     g.game.view.build.valid = true;
     guide = guideNow(g)!;
     expect(guide.ui).toBe('#btn-build-confirm');
+  });
+
+  it('build_menu after placing: points at the construction site instead of the Build button', () => {
+    const g = makeGame();
+    advanceMainTo(g, 'm02_shelter');
+    expect(guideNow(g)!.ui).toBe('#btn-build');
+    g.game.state.buildings.list.push(fakeBuilding('shelter', 50, { x: 130, z: 131, status: 'building', progress: 0.3 }));
+    const guide = guideNow(g)!;
+    expect(guide.ui).toBeNull();
+    expect(guide.world).toEqual(footprintCenter(130, 131, g.game.data.building('shelter')!.size, 0));
+    expect(guide.text).toMatch(/going up/);
   });
 
   it('ui guide: #btn-<ref>; building guide: the instance, else the core', () => {

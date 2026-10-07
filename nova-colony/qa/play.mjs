@@ -72,10 +72,10 @@ async function findSpot(def, cx, cz, minR = 3, prefer = null) {
 async function placeViaUI(def, spot, tag) {
   await ensureAfford(def);
   await tap(page, '#btn-build', { after: 900 });
-  await think(3); // browse the cards
+  await think(+(process.env.T_BROWSE || 5)); // browse the cards
   await shot(page, `${tag}-menu`);
   await tap(page, `[data-build="${def}"]`, { after: 900 });
-  await think(2.5); // look for a spot
+  await think(+(process.env.T_SPOT || 4)); // look for a spot
   // tap the ground where we want it
   if (spot) {
     const p = await w2s(page, spot.x, spot.z, 0);
@@ -123,7 +123,7 @@ async function ensureAfford(def) {
 const stages = {};
 stages.wood = async () => {
   await shot(page, 'start');
-  await think(6); // look around, read the hint
+  await think(8); // crash landing: look around, read the hint
   for (let i = 0; i < 10; i++) {
     const g = await guide(page); if (!g?.world || (await mission(page))?.id !== 'm01_wood') break;
     await hwalk(g.world.x, g.world.z, { tol: 2.6 });
@@ -277,7 +277,8 @@ stages.tier = async () => {
   await mark('tier up');
 };
 
-const READ = { wood: 3, shelter: 3, campfire: 3, storage: 3, rescue: 3, logging: 6, turret: 3, defend: 0, victory: 4, research: 3, tier: 4 };
+// reading the mission card / reward chips, plus a little curiosity (peeking at Quests / Crew / the new colonist)
+const READ = { wood: 4, shelter: 4, campfire: 4, storage: 4, rescue: 10, logging: 10, turret: 4, defend: 0, victory: 5, research: 8, tier: 5 };
 const order = ['wood', 'shelter', 'campfire', 'storage', 'rescue', 'logging', 'turret', 'defend', 'victory', 'research', 'tier'];
 let started = !from;
 for (const s of order) {
