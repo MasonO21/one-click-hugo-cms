@@ -7,7 +7,7 @@ import { VEHICLES } from '../src/data/vehicles';
 import type { BuildingDef, VehicleDef } from '../src/data/schema';
 import type { BuildingInstance } from '../src/core/state';
 import { createMockServices } from '../src/platform/mock';
-import { collectEvents, findClearSpot, makeGame, stubWalls, type Rig } from './world.helpers';
+import { collectEvents, findClearSpot, findOpenTree, makeGame, stubWalls, type Rig } from './world.helpers';
 
 /** Game with extra content (garage, recruit hall, teleporter, hover bike) without touching the shared data. */
 function makeRichGame(seed = 1234): Rig {
@@ -18,7 +18,12 @@ function makeRichGame(seed = 1234): Rig {
     { id: 'wall_piece', name: 'Wall', icon: '🧱', category: 'structure', piece: 'wall', description: '', size: [1, 1], unlockTier: 0, cost: {}, buildTime: 1, hp: 100, maxLevel: 1, solid: true, model: 'wall' },
   ];
   const hover: VehicleDef = { id: 'hover', name: 'Hover Bike', description: '', icon: '🚀', model: 'hover', speed: 2.2, storage: 40, hover: true, unlockTier: 0, cost: {} };
-  const data = createDataRegistry({ ...defaultData(), buildings: [...BUILDINGS, ...extraB], vehicles: [...VEHICLES, hover] });
+  // the test fixtures replace any real def with the same id (the full content now ships its own garage)
+  const data = createDataRegistry({
+    ...defaultData(),
+    buildings: [...BUILDINGS.filter((b) => !extraB.some((e) => e.id === b.id)), ...extraB],
+    vehicles: [...VEHICLES.filter((v) => v.id !== hover.id), hover],
+  });
   let now = 1_700_000_000_000;
   const game = new Game({ seed, data, services: createMockServices(), clock: () => now });
   game.start();
@@ -267,7 +272,8 @@ describe('gathering, backpack and colony deposit', () => {
     const { game, step } = makeGame();
     const w = game.sys.world;
     const hits = collectEvents(game, 'gather:hit');
-    const tree = w.gen.nodes.find((n) => n.def === 'tree_round')!;
+    // a tree with open ground both for the fly-by (2.6 to the side) and for the head-on run (the forest is dense now)
+    const tree = findOpenTree(game, [{ back: 12, side: 2.6, ahead: 10 }, { back: 14, side: 0, ahead: -3 }]);
     game.view.camera.yaw = 0;
     // running past at full speed, 2.6 units to the side (inside interact range): the tree is left alone
     game.sys.player.teleport(tree.x - 12, tree.z + 2.6);
@@ -337,11 +343,13 @@ describe('gathering, backpack and colony deposit', () => {
     expect(game.state.resources.amounts.wood ?? 0).toBe(wood);
     expect(game.state.player.backpack.wood).toBeGreaterThanOrEqual(4);
     expect(game.sys.player.carried()).toBe(game.state.player.backpack.wood);
-    // fill up from nearby trees
+    // keep chopping until the game says the pack is full (a drop that fits exactly, e.g. 20 x 4 wood = 80, only
+    // reports "full" when the next hit no longer fits), and never carry more than the capacity on the way
     for (const n of pine.slice(0, 40)) {
       game.sys.player.teleport(n.x + 2.2, n.z);
       step(4.5);
-      if (game.sys.player.carried() >= 80) break;
+      expect(game.sys.player.carried()).toBeLessThanOrEqual(80);
+      if (full.length > 0) break;
     }
     expect(game.sys.player.carried()).toBe(80);
     expect(full.length).toBeGreaterThanOrEqual(1);
@@ -405,7 +413,7 @@ describe('gathering, backpack and colony deposit', () => {
     const { game, step } = makeGame();
     const w = game.sys.world;
     const hits = collectEvents(game, 'gather:hit');
-    const tree = w.gen.nodes.find((n) => n.def === 'tree_round')!;
+    const tree = findOpenTree(game, [{ back: 6, side: 5, ahead: 16 }]);
     game.view.camera.yaw = 0;
     game.sys.player.teleport(tree.x - 6, tree.z + 5);
     game.input.moveX = 1;
@@ -424,7 +432,7 @@ describe('interaction', () => {
     const { game } = makeRichGame();
     const w = game.sys.world;
     const p = game.state.player;
-    const spot = findClearSpot(game, 12, 70);
+    const spot = findClearSpot(game, 12, 70, true);
     game.sys.player.teleport(spot.x, spot.z);
     expect(game.sys.player.interaction()).toBeNull();
 
@@ -460,7 +468,7 @@ describe('interaction', () => {
   it('maps buildings to the right panels and ignores structure pieces and buildings under construction', () => {
     const { game } = makeRichGame();
     const opened = collectEvents(game, 'ui:open');
-    const spot = findClearSpot(game, 12, 70);
+    const spot = findClearSpot(game, 12, 70, true);
     game.sys.player.teleport(spot.x, spot.z);
     const cx = cellOf(spot.x);
     const cz = cellOf(spot.z);
@@ -679,6 +687,64 @@ describe('vehicles', () => {
     expect(game.state.player.vehicle).toBeNull();
     pl.dismount(); // no-op
     expect(dismounted).toHaveLength(1);
+  });
+});
+
+describe('vehicle cargo never outlives the vehicle', () => {
+  function ridingFarFromHome(cargo: Record<string, number>) {
+    const rig = makeRichGame();
+    const { game } = rig;
+    game.state.player.vehicles.push('atv', 'hover');
+    const spot = findClearSpot(game, 6);
+    game.sys.player.teleport(spot.x, spot.z);
+    expect(game.sys.player.inColony()).toBe(false);
+    game.sys.player.mount('atv');
+    Object.assign(game.state.player.backpack, cargo);
+    expect(game.sys.player.capacity()).toBe(140); // 80 + the ATV's 60
+    return rig;
+  }
+
+  it('stepping off sends the surplus home to colony storage, so the pack never exceeds its capacity', () => {
+    const { game } = ridingFarFromHome({ wood: 60, stone: 70 }); // 130 carried
+    const pl = game.sys.player;
+    const deposits = collectEvents(game, 'player:deposit');
+    const toasts = collectEvents(game, 'ui:toast');
+    const have = () => (game.state.resources.amounts.wood ?? 0) + (game.state.resources.amounts.stone ?? 0);
+    const before = have();
+    pl.dismount();
+    expect(game.state.player.vehicle).toBeNull();
+    expect(pl.capacity()).toBe(80);
+    expect(pl.carried()).toBe(80);
+    expect(have() - before).toBe(50); // nothing was thrown away
+    expect(deposits).toHaveLength(1);
+    expect(toasts.some((t) => /sent home/.test(t.text))).toBe(true);
+  });
+
+  it('being knocked out (a forced dismount) trims the same way', () => {
+    const { game, step } = ridingFarFromHome({ wood: 120 });
+    game.sys.player.hurt(1000);
+    step(0.1);
+    expect(game.state.player.vehicle).toBeNull();
+    expect(game.sys.player.carried()).toBe(80);
+  });
+
+  it('swapping straight to another vehicle keeps cargo that still fits', () => {
+    const { game } = ridingFarFromHome({ wood: 110 });
+    const wood = game.state.resources.amounts.wood ?? 0;
+    expect(game.sys.player.mount('hover')).toBe(true); // 80 + 40 = 120 >= 110
+    expect(game.sys.player.capacity()).toBe(120);
+    expect(game.sys.player.carried()).toBe(110);
+    expect(game.state.resources.amounts.wood ?? 0).toBe(wood);
+  });
+
+  it('taking the backpack off trims to the pockets', () => {
+    const { game } = makeRichGame();
+    const spot = findClearSpot(game, 6);
+    game.sys.player.teleport(spot.x, spot.z);
+    game.state.player.backpack.wood = 70;
+    game.sys.player.unequip('backpack');
+    expect(game.sys.player.carried()).toBe(game.sys.player.capacity());
+    expect(game.sys.player.carried()).toBeLessThan(70);
   });
 });
 

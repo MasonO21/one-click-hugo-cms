@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addBuilding, cellWorld, makeGame } from './combat.helpers';
+import { addBuilding, cellWorld, expectedWaveSize, makeGame } from './combat.helpers';
 import { TUNE } from '../src/sim/combat/types';
 
 function withTurret(armed = true) {
@@ -127,11 +127,12 @@ describe('combat schedule & phases', () => {
     const t = withTurret();
     const { game, step } = t;
     const started = t.record('combat:started');
-    game.state.combat.waveAtTier = 4; // 1 + 0.25 * 4 = 2x
+    game.state.combat.waveAtTier = 4; // counts x (1 + waveScaling * 4)
     game.state.combat.wave = 4;
     game.sys.combat.schedule(0, 0);
     step(0.1);
-    expect(started[0].aliens).toBe(16);
+    expect(started[0].aliens).toBe(expectedWaveSize(game, 4));
+    expect(started[0].aliens).toBeGreaterThan(expectedWaveSize(game, 0)); // later waves really are bigger
   });
 
   it('never attacks while no attack is scheduled, and schedule() is ignored mid-attack', () => {

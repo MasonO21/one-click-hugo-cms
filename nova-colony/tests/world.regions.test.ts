@@ -149,6 +149,9 @@ describe('fog of war', () => {
     expect(w.revealed(0, 5)).toBe(true);
     expect(w.revealed(100, 100)).toBe(false);
     const start = w.explored();
+    // run due east from the pod along a lane with no trees/rocks in the way (the content is dense: an unobstructed
+    // run is what this test needs, the fog is what it checks)
+    w.clearNodesInRect(cellOf(0), cellOf(5) - 3, cellOf(0) + 30, cellOf(5) + 3);
     game.view.camera.yaw = 0;
     game.input.moveX = 1;
     rig.step(6);

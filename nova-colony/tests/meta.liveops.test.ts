@@ -101,24 +101,31 @@ describe('liveops: daily login (7-day cycle)', () => {
     const g = makeGame();
     const grant = vi.spyOn(g.game, 'grant');
     const lo = g.game.sys.liveops;
+    const rewards = g.game.data.dailyRewards;
     for (let i = 0; i < 4; i++) {
       lo.claimDaily();
       g.clock.now += DAY;
     }
     expect(grant).toHaveBeenCalledTimes(4);
-    expect(grant.mock.calls[2][0]).toEqual({ nova: 15 });
-    expect(grant.mock.calls[3][0]).toEqual({ colonist: 'rare' });
+    // the 7-day brief: D3 is a Nova day, D4 a colonist crate day (amounts come from the content)
+    expect(rewards[2].nova).toBeGreaterThan(0);
+    expect(rewards[3].colonist).toBeTruthy();
+    expect(grant.mock.calls[2][0]).toEqual(rewards[2]);
+    expect(grant.mock.calls[3][0]).toEqual(rewards[3]);
     expect(grant.mock.calls[3][1]).toBe('daily');
   });
 
   it('VIP doubles the daily reward', () => {
     const g = makeGame();
     const lo = g.game.sys.liveops;
-    g.game.state.liveops.daily.streak = 2; // D3: 15 Nova
+    const d3 = g.game.data.dailyRewards[2]; // D3 is a Nova-only day
+    expect(Object.keys(d3)).toEqual(['nova']);
+    expect(g.game.data.vip.dailyRewardMult).toBe(2);
+    g.game.state.liveops.daily.streak = 2; // D3
     g.game.state.liveops.vip.until = g.clock.now + DAY * 5;
     g.game.state.liveops.vip.lastDailyNova = '2026-06-15'; // isolate from the VIP daily Nova
-    expect(lo.claimDaily()).toEqual({ nova: 30 });
-    expect(lo.nova()).toBe(30);
+    expect(lo.claimDaily()).toEqual({ nova: d3.nova! * 2 });
+    expect(lo.nova()).toBe(d3.nova! * 2);
   });
 
   it('opens the daily panel shortly after launch on a returning player, not on a brand-new game', () => {
@@ -315,6 +322,30 @@ describe('liveops: season pass', () => {
     expect(game.state.liveops.season.xp).toBe(expected + per * 3);
   });
 
+  it('keeps fractional gather XP (a hit is worth a fraction of a point) instead of rounding it away', () => {
+    const g = makeGame();
+    const { game } = g;
+    const lo = game.sys.liveops;
+    const { gather } = game.data.season.xp;
+    const per = game.data.season.xpPerLevel;
+    expect(gather).toBeGreaterThan(0);
+    expect(Number.isInteger(gather)).toBe(false);
+    const hit = () => game.bus.emit('gather:hit', { node: 1, model: 'tree', x: 0, z: 0, drop: { wood: 1 } });
+    const hitsPerLevel = Math.ceil(per / gather);
+    for (let i = 0; i < hitsPerLevel - 1; i++) hit();
+    expect(game.state.liveops.season.xp).toBeCloseTo((hitsPerLevel - 1) * gather, 9);
+    expect(lo.seasonLevel()).toBe(0);
+    const p = lo.seasonProgress();
+    expect(p.xpInLevel).toBeCloseTo(p.xp, 9);
+    hit();
+    expect(lo.seasonLevel()).toBe(1);
+    // the fraction survives a save / load
+    const state = JSON.parse(JSON.stringify(game.state));
+    const g2 = makeGame({ state, at: g.clock.now });
+    expect(g2.game.state.liveops.season.xp).toBeCloseTo(hitsPerLevel * gather, 9);
+    expect(g2.game.sys.liveops.seasonLevel()).toBe(1);
+  });
+
   it('caps the level at the track length', () => {
     const g = makeGame();
     const lo = g.game.sys.liveops;
@@ -339,7 +370,10 @@ describe('liveops: season pass', () => {
     expect(lo.claimSeason(0, false)).toBe(false);
     expect(lo.claimSeason(999, false)).toBe(false);
     expect(lo.claimSeason(5, false)).toBe(true);
-    expect(game.state.liveops.nova).toBe(10); // level 5 free = 10 Nova
+    const lv5 = game.data.season.levels[4]; // every 5th level pays Nova on both tracks
+    expect(lv5.free.nova).toBeGreaterThan(0);
+    expect(lv5.premium.nova).toBeGreaterThan(0);
+    expect(game.state.liveops.nova).toBe(lv5.free.nova);
 
     expect(lo.claimSeason(1, true)).toBe(false); // premium locked
     expect(await lo.buy('season_pass_premium')).toBe(true);
@@ -347,7 +381,7 @@ describe('liveops: season pass', () => {
     expect(lo.claimSeason(1, true)).toBe(true);
     expect(lo.claimSeason(1, true)).toBe(false);
     expect(lo.claimSeason(5, true)).toBe(true);
-    expect(game.state.liveops.nova).toBe(10 + 40);
+    expect(game.state.liveops.nova).toBe(lv5.free.nova! + lv5.premium.nova!);
     expect(lo.claimAllSeason()).toBe(3 + 3); // levels 2-4 free + premium, level 5 both already claimed
     expect(lo.seasonClaimable()).toBe(0);
   });

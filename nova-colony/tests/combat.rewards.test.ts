@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addBuilding, cellWorld, makeGame, testData } from './combat.helpers';
+import { addBuilding, cellWorld, expectedWaveSize, makeGame, testData } from './combat.helpers';
 import { defaultData } from '../src/data';
 import type { Reward } from '../src/data/schema';
 import { TUNE } from '../src/sim/combat/types';
@@ -113,16 +113,19 @@ describe('victory rewards & core breach', () => {
     addBuilding(game, 'scrap_turret', 131, 128);
     game.state.player.x = cellWorld(132);
     game.state.player.z = cellWorld(129);
-    game.state.combat.waveAtTier = 2; // 1.5x aliens and reward
+    game.state.combat.waveAtTier = 2; // aliens and reward x (1 + waveScaling * 2)
     game.state.combat.wave = 2;
+    const base = game.data.invasion(0).reward;
+    const waveScale = 1 + game.data.balance.waveScaling * 2;
     const started = t.record('combat:started');
     game.sys.combat.schedule(0, 0);
     step(240, () => game.state.combat.phase === 'victory');
     const kills = game.state.combat.killsThisWave;
-    expect(started[0].aliens).toBe(13); // round(5 * 1.5) + round(3 * 1.5)
-    expect(kills).toBe(13);
-    const mult = 1.5 * (1 + kills * 0.015);
-    expect(game.state.combat.pendingReward?.resources?.wood).toBe(Math.round(120 * mult));
-    expect(game.state.combat.pendingReward?.nova).toBe(5); // premium currency is not inflated
+    expect(started[0].aliens).toBe(expectedWaveSize(game, 2)); // per group: round(count * waveScale)
+    expect(started[0].aliens).toBeGreaterThan(expectedWaveSize(game, 0));
+    expect(kills).toBe(started[0].aliens);
+    const mult = waveScale * (1 + kills * 0.015);
+    expect(game.state.combat.pendingReward?.resources?.wood).toBe(Math.round(base.resources!.wood! * mult));
+    expect(game.state.combat.pendingReward?.nova).toBe(base.nova); // premium currency is not inflated
   });
 });

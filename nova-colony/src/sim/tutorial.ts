@@ -265,11 +265,14 @@ export class TutorialSystem extends System {
   /**
    * If the current main step is a purchase the player cannot afford for a full minute, a supply drone
    * drops the missing materials. Nobody gets stuck in the first 15 minutes.
+   *
+   * Only during the guided arc: the main chain goes on to the Titanium tier, and a drone that kept
+   * covering every unaffordable build / colony-tier step would hand out whole tier upgrades for free.
    */
   private pacing(dt: number): void {
     const { missions, economy } = this.game.sys;
     const cur = missions.current();
-    if (!cur || missions.progress(cur.id).done) {
+    if (this.game.state.tutorial.done || !cur || missions.progress(cur.id).done) {
       this.stuck = 0;
       return;
     }

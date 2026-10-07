@@ -63,6 +63,15 @@ export function testData(extra: Partial<GameData> = {}) {
   });
 }
 
+/**
+ * Invader count the next wave must have (boss excluded), derived from the game's own data: every group's
+ * count scaled by `1 + balance.waveScaling x waveAtTier` and rounded (min 1), at the current colony tier.
+ */
+export function expectedWaveSize(game: Game, waveAtTier: number): number {
+  const scale = 1 + game.data.balance.waveScaling * waveAtTier;
+  return game.data.invasion(game.state.colony.tier).groups.reduce((n, g) => n + Math.max(1, Math.round(g.count * scale)), 0);
+}
+
 let nextTestId = 10_000;
 
 /** Push a building straight into state (min-corner cell x/z), active and at full HP. */

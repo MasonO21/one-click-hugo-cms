@@ -141,8 +141,33 @@ describe('tutorial: guide target resolution', () => {
     advanceMainTo(g, 'm11_tier1');
     fulfil(g, g.game.sys.missions.current()!);
     tickMeta(g, 2);
+    // the guided arc is over (see "completion" below) but the main chain continues with hinted missions,
+    // so guidance hands over to the next story step instead of vanishing
+    const next = g.game.data.mission('m11_tier1')!.next![0];
+    expect(g.game.sys.missions.current()?.id).toBe(next);
+    expect(hints.at(-1)).toBe(next);
+    expect(g.game.sys.tutorial.guide()?.mission).toBe(next);
+  });
+
+  it('clears the guide when the main chain itself has nothing left to show', () => {
+    const base = defaultData();
+    const chain: MissionDef[] = [
+      { id: 'x1', chain: 'main', name: 'One', description: '', type: 'gather', target: 'wood', count: 5, reward: {}, hint: 'Chop', guide: { kind: 'ui', ref: 'build' }, next: ['x2'] },
+      { id: 'x2', chain: 'main', name: 'Two', description: '', type: 'gather', target: 'wood', count: 5, reward: {}, hint: 'Chop more', guide: { kind: 'ui', ref: 'build' } },
+    ];
+    const data = createDataRegistry({ ...base, missions: [...base.missions.filter((m) => m.chain !== 'main'), ...chain], firstMission: 'x1' });
+    const g = makeGame({ data });
+    const hints: (string | null)[] = [];
+    g.game.bus.on('tutorial:hint', (e) => hints.push(e.mission));
+    expect(guideNow(g)?.mission).toBe('x1');
+    fulfil(g, g.game.sys.missions.current()!);
+    tickMeta(g, 2);
+    expect(hints.at(-1)).toBe('x2');
+    fulfil(g, g.game.sys.missions.current()!);
+    tickMeta(g, 2);
     expect(hints.at(-1)).toBeNull();
     expect(g.game.sys.tutorial.guide()).toBeNull();
+    expect(g.game.state.tutorial.done).toBe(true); // the end of the chain also ends the arc
   });
 });
 
@@ -226,6 +251,50 @@ describe('tutorial: pacing safeguard', () => {
     game.derived.capacity.wood = 1000;
     tickMeta(g, SUPPLY_DRONE_AFTER + 2);
     expect(game.state.resources.amounts.wood).toBeGreaterThanOrEqual(150);
+  });
+});
+
+describe('tutorial: pacing safeguard ends with the guided arc', () => {
+  it('never hands out materials for later build steps once the tutorial is done', () => {
+    const g = makeGame();
+    const { game } = g;
+    advanceMainTo(g, 'm11_tier1');
+    fulfil(g, game.sys.missions.current()!);
+    tickMeta(g, 1.5);
+    expect(game.state.tutorial.done).toBe(true);
+    const cur = game.sys.missions.current()!;
+    expect(cur.type).toBe('build'); // m12: a purchase step the drone would have covered during the arc
+    vi.spyOn(game.sys.buildings, 'isUnlocked').mockReturnValue(true);
+    vi.spyOn(game.sys.buildings, 'cost').mockReturnValue({ wood: 500, stone: 40 });
+    game.state.resources.amounts.wood = 0;
+    game.state.resources.amounts.stone = 0;
+    game.derived.capacity.wood = 1000;
+    game.derived.capacity.stone = 1000;
+    const toasts: string[] = [];
+    game.bus.on('ui:toast', (e) => toasts.push(e.text));
+    tickMeta(g, SUPPLY_DRONE_AFTER * 3);
+    expect(toasts).not.toContain('📦 A supply drone dropped off materials!');
+    expect(game.state.resources.amounts.wood).toBe(0);
+    expect(game.sys.tutorial.flag(`supplyDrone:${cur.id}`)).toBe(false);
+  });
+
+  it('never gives away a colony tier upgrade after the tutorial, however long the player is short', () => {
+    const g = makeGame();
+    const { game } = g;
+    advanceMainTo(g, 'm11_tier1');
+    fulfil(g, game.sys.missions.current()!);
+    tickMeta(g, 1.5);
+    expect(game.state.tutorial.done).toBe(true);
+    // pretend a later main step is a tier upgrade whose research is done but whose materials are missing
+    vi.spyOn(game.sys.missions, 'current').mockReturnValue({ id: 'later_tier', chain: 'main', name: '', description: '', type: 'tier', target: '*', count: 2, reward: {} });
+    vi.spyOn(game.sys.progression, 'next').mockReturnValue({ tier: 2, research: 'tier_stone', researchDone: true, cost: { wood: 1400, stone: 1400 }, affordable: false });
+    game.state.resources.amounts.wood = 0;
+    game.state.resources.amounts.stone = 0;
+    game.derived.capacity.wood = 5000;
+    game.derived.capacity.stone = 5000;
+    tickMeta(g, SUPPLY_DRONE_AFTER * 3);
+    expect(game.state.resources.amounts.wood).toBe(0);
+    expect(game.state.resources.amounts.stone).toBe(0);
   });
 });
 

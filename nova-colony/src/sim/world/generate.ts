@@ -634,13 +634,26 @@ function buildNodes(data: DataRegistry, seed: number, reg: RegionBuild, reserved
   // ---- Crash Valley tutorial guarantee: ~10 trees, 5 boulders, 4 berry bushes, fiber grass, 5-14 cells out
   const startBiome = biomes[reg.startIdx];
   const startNodes = startBiome.nodes.map((e) => data.node(e.node)).filter((d): d is NodeDef => !!d);
+  // The tutorial node for a resource is the start biome's *staple* for it: the purest source (most of its drop is
+  // the resource), then the most common one there, then the biggest drop. Without the density step a rare jumbo
+  // variant (Mega Boulder: pure stone, bigger drop) would beat the ordinary boulder and the guarantee would
+  // scatter five of the rare, sturdier nodes around the pod instead.
+  const startDensity = new Map(startBiome.nodes.map((e) => [e.node, e.density]));
   const pickFor = (resource: string): NodeDef | undefined => {
-    const score = (d: NodeDef) => {
+    const purity = (d: NodeDef) => {
       const v = d.drop[resource] ?? 0;
       const total = Object.values(d.drop).reduce<number>((s, a) => s + (a ?? 0), 0);
-      return d.toolTier === 0 && v > 0 ? v / Math.max(1, total) + v * 0.01 : -1;
+      return d.toolTier === 0 && v > 0 ? v / Math.max(1, total) : -1;
     };
-    const rank = (list: NodeDef[]) => list.filter((d) => score(d) > 0).sort((a, b) => score(b) - score(a))[0];
+    const rank = (list: NodeDef[]) =>
+      list
+        .filter((d) => purity(d) > 0)
+        .sort(
+          (a, b) =>
+            purity(b) - purity(a) ||
+            (startDensity.get(b.id) ?? 0) - (startDensity.get(a.id) ?? 0) ||
+            (b.drop[resource] ?? 0) - (a.drop[resource] ?? 0),
+        )[0];
     return rank(startNodes) ?? rank(data.nodes);
   };
   const tutorial: [string, number][] = [
