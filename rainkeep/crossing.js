@@ -100,7 +100,7 @@
   }
   const ODDS = { fav: 'Favored', even: 'Even', risky: 'Risky' };
 
-  function step(row, lane) { const R = run(); R.row = row; R.lane = lane; R.path.push([row, lane]); }
+  function step(row, lane) { const R = run(); R.row = row; R.lane = lane; R.path.push([row, lane]); KH.emit('crossStep', { row }); }
   function heal(v) { const R = run(); R.hp = clamp(R.hp + v, 0.05, 1); }
   function endRun(won) {
     const R = run(), d = won ? C.rows : R.row;

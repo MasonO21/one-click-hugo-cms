@@ -180,6 +180,8 @@
   KH.on('stormEnd', (e) => { if (e.clean) duty('storm'); });
   KH.on('patrol', () => duty('patrol'));
   KH.on('research', () => duty('research'));
+  KH.on('crossStep', () => duty('crossing'));
+  KH.on('refined', (e) => duty('refine', e.refines));
   const dutyChestReady = () => DATA.dutyChests.some(([p], i) => S.daily.pts >= p && !S.daily.chests.includes(i));
   ACT.dutychest = (i) => {
     i = Number(i);
@@ -200,7 +202,7 @@
       const got = S.daily.chests.includes(i), ready = S.daily.pts >= p;
       return `<button class="chest ${got ? 'got' : ready ? 'ready' : ''}" data-act="dutychest" data-arg="${i}" aria-label="Chest at ${p} points">${icon('i-bag')}<span>${p}</span></button>`;
     }).join('');
-    const rows = DATA.duties.map((d) => {
+    const rows = DATA.duties.filter((d) => !d.show || d.show(S)).map((d) => {
       const p = Math.min(S.daily.prog[d.id] || 0, d.n), done = S.daily.done.includes(d.id);
       return `<div class="duty ${done ? 'done' : ''}"><div class="grow"><b>${esc(d.text)}</b><div class="bar xp"><i style="width:${(p / d.n) * 100}%"></i></div></div><span class="muted small">${fmt(p)}/${fmt(d.n)}</span><span class="chip">+${d.pts}</span></div>`;
     }).join('');

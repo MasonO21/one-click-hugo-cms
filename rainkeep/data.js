@@ -912,6 +912,9 @@ const DATA = {
     { id: 'spire', text: 'Clear a Mirage Spire floor', n: 1, pts: 10 },
     { id: 'gear', text: "Forge the Warden's Gear 3 times", n: 3, pts: 10 },
     { id: 'channel', text: 'Solve a channel puzzle', n: 1, pts: 10 },
+    // shown only once their mode is open
+    { id: 'crossing', text: 'Cross 3 rows on the Crossing', n: 3, pts: 10, show: (S) => S.stage >= 36 },
+    { id: 'refine', text: 'Refine Tideglass twice', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 20 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1 }],
@@ -1055,6 +1058,18 @@ const DATA = {
       { id: 'mirage', title: 'An oasis that should not be there', text: 'Palms and still water, a mile off the route. The scouts disagree about whether it is real.',
         a: { label: 'Go and drink', gamble: true, win: { hp: 0.3, says: 'It was real. Everyone drinks their fill.' }, lose: { hp: -0.1, says: 'It was a mirage, and the sand was hot.' } },
         b: { label: 'Keep to the route', says: 'The palms fade behind you.' } },
+      { id: 'rope', title: 'A dry well with a rope in it', text: 'The rope is new. Someone climbed down here not long ago, and did not climb back up.',
+        a: { label: 'Climb down', gamble: true, win: { coins: 60, says: "A smuggler's stash, and no smuggler." }, lose: { hp: -0.12, says: 'The rope gives way halfway down.' } },
+        b: { label: 'Leave it alone', says: 'Some wells are better left dry.' } },
+      { id: 'pilgrims', title: 'Pilgrims bound for the oasis', text: 'Old men and children, walking the same route, with nothing to fight with.',
+        a: { label: 'Escort them', hp: -0.1, coins: 55, says: 'Raiders try them once. Not twice. The pilgrims pay what they can.' },
+        b: { label: 'Point the way and walk on', says: 'They thank you and fall behind.' } },
+      { id: 'glass', title: 'A field of black glass', text: 'The sand has melted into blades here, all the way to the next ridge.',
+        a: { label: 'Cross it carefully', hp: -0.08, says: 'Slow going, and sore feet.' },
+        b: { label: 'Pay a guide to go around', coins: -20, says: 'A boy with a goat knows a path. He is worth every coin.' } },
+      { id: 'skull', title: 'A wyrm\'s skull in the sand', text: 'Bigger than a house, and the wind sings through it. The squad goes quiet.',
+        a: { label: 'Rest in its shade', hp: 0.2, says: 'Cool air, and a sound like rain. Everyone sleeps well.' },
+        b: { label: 'Take a tooth for the road', boon: true, says: 'It hums in your hand.' } },
     ],
     // the chest at the end, by rows cleared (`won`: the Warden fell); journals scale with the keep
     rewards: (d, won) => {
