@@ -183,7 +183,7 @@ export class UI {
       moved: () => this.stickHint.classList.add('gone'),
     });
 
-    this.consent = new ConsentPrompt(ctx, el);
+    this.consent = new ConsentPrompt(ctx, el, () => this.screenBusy());
 
     this.installGlobalHandlers();
     this.subscribe();
@@ -332,11 +332,16 @@ export class UI {
    */
   private autoDaily(tries: number): void {
     if (!this.game.sys.liveops.dailyAvailable() || this.panels.isOpen('daily')) return;
-    if (this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play') {
+    if (this.screenBusy()) {
       if (tries < 20) window.setTimeout(() => this.autoDaily(tries + 1), 3000);
       return;
     }
     this.open('daily');
+  }
+
+  /** The player has something open (any panel or drawer, a placement, build mode): popups should wait. */
+  private screenBusy(): boolean {
+    return this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play';
   }
 
   private flushToasts(): void {

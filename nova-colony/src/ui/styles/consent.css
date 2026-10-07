@@ -23,6 +23,12 @@
   transform: translate(-50%, 0);
   opacity: 1;
 }
+/* stepped aside while a panel, the build drawer or build mode is up (it would cover the build cards) */
+.nv-root .consent-card.in.away {
+  transform: translate(-50%, 1.5em);
+  opacity: 0;
+  pointer-events: none;
+}
 .nv-root .consent-ico {
   font-size: 1.8em;
   line-height: 1;

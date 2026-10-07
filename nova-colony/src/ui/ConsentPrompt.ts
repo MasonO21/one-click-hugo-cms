@@ -1,7 +1,9 @@
 /**
  * First-launch analytics consent card. Analytics are opt-in: nothing is collected until the player taps
  * "Sure" here (or enables it in Settings). The card is small, non-blocking and waits a few seconds so it
- * never covers the crash-landing moment; it also waits while a full-screen panel/modal is open.
+ * never covers the crash-landing moment; it also waits while the screen is busy (any panel, the build
+ * drawer, build mode) and, once shown, steps aside whenever the player opens something — it sits at the
+ * bottom of the screen and would otherwise cover the build cards the tutorial points at.
  */
 import './styles/consent.css';
 import type { UiCtx } from './ctx';
@@ -9,13 +11,39 @@ import { h } from './dom';
 import { btn } from './widgets';
 
 /** Seconds of play before the card appears on a first launch. */
-const DELAY = 6;
+export const CONSENT_DELAY = 6;
+
+/** The card's timer: seconds left before it shows, whether it is up, and whether it has stepped aside. */
+export interface ConsentTimer {
+  wait: number;
+  shown: boolean;
+  away: boolean;
+}
+
+/**
+ * Advance the timer by one frame (in place): it only counts down while the screen is free; once the card is
+ * up it steps aside while the screen is busy and comes back when it is free again.
+ */
+export function stepConsent(t: ConsentTimer, busy: boolean, dt: number): void {
+  if (t.shown) {
+    t.away = busy;
+    return;
+  }
+  if (busy) return;
+  t.wait -= dt;
+  if (t.wait <= 0) {
+    t.wait = 0;
+    t.shown = true;
+    t.away = false;
+  }
+}
 
 export class ConsentPrompt {
   private el: HTMLElement | null = null;
-  private wait = DELAY;
+  private readonly timer: ConsentTimer = { wait: CONSENT_DELAY, shown: false, away: false };
 
-  constructor(private readonly ctx: UiCtx, private readonly parent: HTMLElement) {}
+  /** `busy`: a panel, the build drawer or build mode is up — the card must not cover it. */
+  constructor(private readonly ctx: UiCtx, private readonly parent: HTMLElement, private readonly busy: () => boolean) {}
 
   /** Call every frame. Shows the card once, until the player answers. */
   update(dt: number): void {
@@ -24,10 +52,10 @@ export class ConsentPrompt {
       if (this.el) this.hide();
       return;
     }
-    if (this.el) return;
-    if (this.ctx.game.view.panelOpen) return;
-    this.wait -= dt;
-    if (this.wait <= 0) this.show();
+    stepConsent(this.timer, this.busy(), dt);
+    if (!this.timer.shown) return;
+    if (!this.el) this.show();
+    this.el?.classList.toggle('away', this.timer.away);
   }
 
   private show(): void {
