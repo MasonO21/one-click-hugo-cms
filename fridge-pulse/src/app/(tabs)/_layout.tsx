@@ -41,6 +41,7 @@ export default function TabsLayout() {
           options={{
             title: t.title,
             tabBarButtonTestID: `tab-${t.name}`,
+            tabBarAccessibilityLabel: t.name === 'list' && toBuy > 0 ? `${t.title}, ${toBuy} to buy` : t.title,
             tabBarBadge: t.name === 'list' && toBuy > 0 ? toBuy : undefined,
             tabBarBadgeStyle: { backgroundColor: c.primaryFill, color: c.onPrimary, fontSize: 11, fontFamily: FONT.bodyBold },
             tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? t.iconOn : t.icon} size={size} color={color} />,

@@ -60,10 +60,11 @@ export function WeeklyScoreCard({ week }: { week: WeeklyScore }) {
         </View>
         {week.score !== null ? (
           <View style={[styles.badge, { borderColor: c.primaryFill }]} accessible accessibilityLabel={`Weekly score ${week.score} out of 100`}>
-            <Text variant="title" color={c.primary} testID="weekly-score-value">
+            {/* Inside a fixed ring: scales a little with large text, then stops before it spills out (the ring is read as a whole). */}
+            <Text variant="title" color={c.primary} testID="weekly-score-value" maxFontSizeMultiplier={1.2}>
               {week.score}
             </Text>
-            <Text variant="caption" muted style={{ marginTop: -4 }}>
+            <Text variant="caption" muted style={{ marginTop: -4 }} maxFontSizeMultiplier={1.2}>
               of 100
             </Text>
           </View>

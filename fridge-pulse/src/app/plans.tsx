@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 import { DEFAULT_PLAN, HOUSEHOLD_MAX_PEOPLE, isUnlocked, PLANS, planName, TRIAL_NAME, TRIAL_SPAN, type PlanId } from '../billing/trial';
+import { ErrorText } from '../components/ErrorText';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ModalTop } from '../components/ModalTop';
@@ -73,9 +74,7 @@ export default function Plans() {
           onPress={() => void go()}
         />
         {error ? (
-          <Text variant="caption" color={c.danger}>
-            {error}
-          </Text>
+          <ErrorText>{error}</ErrorText>
         ) : null}
         <Text variant="caption" faint style={{ fontSize: 12, lineHeight: 17 }}>
           {`${firstTime ? `Free for ${TRIAL_SPAN}, then ` : ''}${planPriceLabel(prices, plan)}, renewing automatically unless cancelled at least 24 hours before the end of the current period. ${

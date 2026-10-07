@@ -6,6 +6,7 @@ import { AppState, Platform } from 'react-native';
 import { SafeAreaInsetsContext, SafeAreaProvider } from 'react-native-safe-area-context';
 import { isUnlocked } from '../billing/trial';
 import { BurstLayer } from '../components/BurstLayer';
+import { Announcer } from '../components/Announcer';
 import { DialogHost } from '../components/DialogHost';
 import { ErrorScreen } from '../components/ErrorScreen';
 import { NotificationRouter } from '../components/NotificationRouter';
@@ -207,6 +208,7 @@ export default function RootLayout() {
         {unlocked ? <HouseholdSync /> : null}
         {unlocked ? <NotificationRouter /> : null}
         <DialogHost />
+        <Announcer />
         {/* Store screenshots should not catch a passing message. */}
         {SCREENSHOT_MODE ? null : <SnackbarHost />}
         <BurstLayer />

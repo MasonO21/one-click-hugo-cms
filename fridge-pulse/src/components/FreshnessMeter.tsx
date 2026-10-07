@@ -67,7 +67,8 @@ export function FreshnessMeter({ score, width = 124 }: Props) {
         ) : null}
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
-        <Text variant="title" color="#FFFFFF" style={[styles.number, { fontSize: Math.round(width * 0.24), lineHeight: Math.round(width * 0.28) }]}>
+        {/* Sized to the arc, so large text would push it into the arc; the meter's label says the number. */}
+        <Text variant="title" color="#FFFFFF" maxFontSizeMultiplier={1.15} style={[styles.number, { fontSize: Math.round(width * 0.24), lineHeight: Math.round(width * 0.28) }]}>
           {Math.round(shown)}
         </Text>
       </View>

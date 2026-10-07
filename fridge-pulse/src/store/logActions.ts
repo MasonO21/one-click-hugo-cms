@@ -1,4 +1,3 @@
-import { AccessibilityInfo } from 'react-native';
 import { entryTotals, type LogEntry, type NewEntry } from '../lib/foodLog';
 import { useFoodLog } from './foodLog';
 import { useHealth } from './health';
@@ -62,7 +61,6 @@ export function logWithUndo(entry: NewEntry): LogEntry | undefined {
   const saved = addToLog(entry);
   if (!saved) return undefined;
   const message = loggedMessage(saved);
-  AccessibilityInfo.announceForAccessibility?.(message);
   useSnackbar.getState().show({ message, tone: 'plain', action: { label: 'Undo', onPress: () => void removeFromLog(saved.id) } });
   return saved;
 }

@@ -26,7 +26,8 @@ interface Props extends TextProps {
 /** Emoji sized with a matching line height, so large glyphs do not overlap the text around them. */
 export function Emoji({ size, children }: { size: number; children: string }) {
   return (
-    <RNText accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ fontSize: size, lineHeight: Math.round(size * 1.25), textAlign: 'center' }}>
+    // Decoration next to a name that is already read: hidden from screen readers (aria-hidden for the web).
+    <RNText accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden style={{ fontSize: size, lineHeight: Math.round(size * 1.25), textAlign: 'center' }}>
       {children}
     </RNText>
   );

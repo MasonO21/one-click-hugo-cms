@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { ErrorText } from '../components/ErrorText';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
@@ -81,9 +82,7 @@ function NumberField({
         <Text muted>{unit}</Text>
       </View>
       {bad ? (
-        <Text variant="caption" color={c.danger}>
-          {`Between ${fmt(range[0])} and ${fmt(range[1])}`}
-        </Text>
+        <ErrorText>{`Between ${fmt(range[0])} and ${fmt(range[1])}`}</ErrorText>
       ) : null}
     </View>
   );
@@ -181,7 +180,7 @@ export default function Goals() {
                 key={a}
                 testID={`activity-${a}`}
                 accessibilityRole="radio"
-                accessibilityState={{ checked: on }}
+                aria-checked={on}
                 onPress={() => save({ activity: a })}
                 style={[styles.option, { borderColor: on ? c.primaryFill : c.border, backgroundColor: on ? c.primaryTint : c.surface }]}
               >

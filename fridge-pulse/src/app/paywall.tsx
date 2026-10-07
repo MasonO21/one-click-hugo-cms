@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { getProvider, planPriceLabel, useBilling } from '../store/billing';
 import { DEFAULT_PLAN, HOUSEHOLD_MAX_PEOPLE, PLANS, TRIAL_DAYS, TRIAL_NAME, TRIAL_SPAN, type PlanId } from '../billing/trial';
+import { ErrorText } from '../components/ErrorText';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Field } from '../components/Field';
@@ -77,9 +78,7 @@ function JoinHousehold() {
         onPress={() => void join()}
       />
       {error ? (
-        <Text variant="caption" color={c.danger} style={{ fontSize: 14 }}>
-          {error}
-        </Text>
+        <ErrorText style={{ fontSize: 14 }}>{error}</ErrorText>
       ) : null}
       <Text variant="caption" faint>
         {isDemoMode
@@ -173,7 +172,7 @@ export default function Paywall() {
     >
       <View style={styles.header}>
         <Logo size={64} beat="calm" />
-        <Text variant="title" style={{ textAlign: 'center' }}>
+        <Text variant="title" accessibilityRole="header" style={{ textAlign: 'center' }}>
           {returning
             ? entitlement.lapsed === 'paid'
               ? 'Your subscription has ended'
@@ -226,9 +225,9 @@ export default function Paywall() {
       {household ? null : <JoinHousehold />}
 
       {error ? (
-        <Text testID="paywall-error" variant="caption" color={c.danger} style={{ textAlign: 'center' }}>
+        <ErrorText testID="paywall-error" style={{ textAlign: 'center' }}>
           {error}
-        </Text>
+        </ErrorText>
       ) : null}
       {provider.kind === 'unconfigured' ? (
         <Text variant="caption" muted style={{ textAlign: 'center' }}>

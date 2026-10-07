@@ -48,6 +48,7 @@ export function HeartbeatLine({ pace = 'calm', height = 32 }: Props) {
       onLayout={onLayout}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
+      aria-hidden
       pointerEvents="none"
       style={{ height, overflow: 'hidden' }}
     >

@@ -43,7 +43,7 @@ export function MealCard({ meal, defaultOpen = false, onCooked, proteinToGo }: P
       <Pressable
         testID={`meal-${meal.id}`}
         accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
+        aria-expanded={open}
         onPress={toggle}
         style={({ pressed }) => [styles.head, pressed && { backgroundColor: c.surfaceAlt }]}
       >

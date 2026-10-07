@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { announce } from '../store/announcer';
 import { isDemoMode } from '../lib/api';
 import { SCREENSHOT_MODE } from '../lib/config';
 import { displayName, durationLabel } from '../lib/identify';
@@ -94,7 +95,7 @@ function Candidate({ draftKey, candidate, index, total, location }: { draftKey: 
     const food = useLookups.getState().confirm(draftKey);
     if (!food) return;
     if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    AccessibilityInfo.announceForAccessibility?.(`${food.name} saved to your foods`);
+    announce(`${food.name} saved to your foods`);
     yesRef.current?.measureInWindow((x, y, w, h) => {
       if (w > 0) useBurst.getState().emit(x + w / 2, y + h / 2);
     });

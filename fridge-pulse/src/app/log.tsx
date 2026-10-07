@@ -141,7 +141,7 @@ export default function FoodLog() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Previous day"
-          accessibilityState={{ disabled: day <= oldest }}
+          aria-disabled={day <= oldest}
           disabled={day <= oldest}
           onPress={() => setDay(addDays(day, -1))}
           style={[styles.dayBtn, day <= oldest && { opacity: 0.3 }]}
@@ -155,7 +155,7 @@ export default function FoodLog() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Next day"
-          accessibilityState={{ disabled: day >= today }}
+          aria-disabled={day >= today}
           disabled={day >= today}
           onPress={() => setDay(addDays(day, 1))}
           style={[styles.dayBtn, day >= today && { opacity: 0.3 }]}
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   entryTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   iconHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -10, marginTop: -10 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  kitchen: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, minHeight: 40, maxWidth: '100%' },
+  kitchen: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, minHeight: 44, maxWidth: '100%' },
   quickRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
 });

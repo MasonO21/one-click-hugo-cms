@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
+import { ErrorText } from '../components/ErrorText';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Field } from '../components/Field';
@@ -239,9 +240,7 @@ export default function Household() {
       )}
 
       {error ? (
-        <Text variant="caption" color={c.danger} style={{ fontSize: 14 }} testID="household-error">
-          {error}
-        </Text>
+        <ErrorText testID="household-error" style={{ fontSize: 14 }}>{error}</ErrorText>
       ) : null}
     </Screen>
   );

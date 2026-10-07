@@ -194,7 +194,9 @@ export default function Pulse() {
       ) : (
         <>
           <View style={styles.sectionHead}>
-            <Text variant="heading">Use these first</Text>
+            <Text variant="heading" accessibilityRole="header">
+              Use these first
+            </Text>
             <Pressable accessibilityRole="button" onPress={() => router.push('/inventory')} style={styles.seeAll}>
               <Text variant="bodyStrong" color={c.primary}>
                 See all

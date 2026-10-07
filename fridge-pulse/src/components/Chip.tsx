@@ -14,8 +14,10 @@ export function Chip({ label, selected, onPress, testID }: Props) {
   return (
     <Pressable
       testID={testID}
-      accessibilityRole="button"
-      accessibilityState={{ selected: !!selected }}
+      // Every chip row picks one of several (a place, a diet), so each chip is a radio button. The aria
+      // props carry the state on the web too, where react-native-web ignores accessibilityState.
+      accessibilityRole="radio"
+      aria-checked={!!selected}
       onPress={onPress}
       hitSlop={{ top: 4, bottom: 4 }}
       style={[
@@ -32,5 +34,6 @@ export function Chip({ label, selected, onPress, testID }: Props) {
 }
 
 const styles = StyleSheet.create({
-  chip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1 },
+  // At least 44 points tall: hitSlop does not reach this far on the web.
+  chip: { paddingHorizontal: 14, paddingVertical: 10, minHeight: 44, justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1 },
 });

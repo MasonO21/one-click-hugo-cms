@@ -2,6 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { getProvider, useBilling } from '../../store/billing';
+import { ErrorText } from '../../components/ErrorText';
 import { AiConsentModal } from '../../components/AiConsentModal';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -188,9 +189,7 @@ export default function Meals() {
 
           {error ? (
             <View style={{ gap: 8 }}>
-              <Text testID="meals-error" variant="caption" color={c.danger}>
-                {error} {showingFallback ? 'Showing quick ideas instead.' : ''}
-              </Text>
+              <ErrorText testID="meals-error">{`${error}${showingFallback ? ' Showing quick ideas instead.' : ''}`}</ErrorText>
               <Button label="Try again" variant="secondary" size="sm" onPress={() => void load(false)} style={{ alignSelf: 'flex-start' }} />
             </View>
           ) : null}

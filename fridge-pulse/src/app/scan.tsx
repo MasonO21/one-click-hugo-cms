@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Easing, Image, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ErrorText } from '../components/ErrorText';
 import { AiConsentModal } from '../components/AiConsentModal';
 import { Button } from '../components/Button';
 import { LOCATIONS, LOCATION_LABEL } from '../components/categories';
@@ -108,7 +109,7 @@ function ModeSwitch({ mode, onChange }: { mode: ScanMode; onChange: (mode: ScanM
             key={o.key}
             testID={`mode-${o.key}`}
             accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
+            aria-selected={on}
             onPress={() => onChange(o.key)}
             style={[styles.switchOption, on && { backgroundColor: c.primaryFill }]}
           >
@@ -318,9 +319,7 @@ export default function Scan() {
       </Card>
 
       {error ? (
-        <Text testID="scan-error" color={c.danger} variant="caption" style={{ fontSize: 14 }}>
-          {error}
-        </Text>
+        <ErrorText testID="scan-error" style={{ fontSize: 14 }}>{error}</ErrorText>
       ) : null}
     </Screen>
     <AiConsentModal

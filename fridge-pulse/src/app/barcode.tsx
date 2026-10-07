@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ErrorText } from '../components/ErrorText';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { emojiFor } from '../components/categories';
@@ -17,6 +18,7 @@ import { friendlyError, isDemoMode, lookupBarcode } from '../lib/api';
 import { barcodeDrafts, demoProduct, FOOD_BARCODES, normalizeBarcode, SAMPLE_BARCODES, type BarcodeProduct } from '../lib/barcode';
 import { confirm } from '../lib/dialogs';
 import { guessCategory } from '../lib/shelfLife';
+import { announce } from '../store/announcer';
 import { useBarcodes } from '../store/barcodes';
 import { getProvider, useBilling } from '../store/billing';
 import { useInventory } from '../store/inventory';
@@ -99,6 +101,7 @@ export default function Barcode() {
       const product = isDemoMode ? demoProduct(code) : await lookupBarcode(await getProvider().getUserId(), code);
       if (product) useBarcodes.getState().remember(product);
       patch(code, product ? { status: 'found', product } : { status: 'missing' });
+      announce(product ? `${product.name} added` : 'Product not found. Type its name.');
     } catch (e) {
       patch(code, { status: 'failed' });
       // The trial ran out mid-session: re-check, and the paywall takes over if so.
@@ -119,6 +122,7 @@ export default function Barcode() {
     tap();
     if (listed.current.has(code)) {
       setEntries((all) => all.map((e) => (e.code === code ? { ...e, count: e.count + 1 } : e)));
+      announce('One more of the same');
       return true;
     }
     listed.current.add(code);
@@ -221,9 +225,7 @@ export default function Barcode() {
           <Button testID="barcode-add" label="Add" size="sm" variant="secondary" disabled={typed.replace(/\D/g, '').length < 8} onPress={addTyped} />
         </View>
         {error ? (
-          <Text variant="caption" color={c.danger} testID="barcode-error" style={{ fontSize: 14 }}>
-            {error}
-          </Text>
+          <ErrorText testID="barcode-error" style={{ fontSize: 14 }}>{error}</ErrorText>
         ) : null}
         {isDemoMode ? (
           <View style={styles.row}>
@@ -344,5 +346,5 @@ const styles = StyleSheet.create({
   thumb: { width: 48, height: 48, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   count: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 1 },
   countText: { fontWeight: '700', fontSize: 12 },
-  removeHit: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  removeHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { AccessibilityInfo, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { daysBetween, todayISO } from '../lib/dates';
 import type { LogEntry } from '../lib/foodLog';
 import type { PantryItem } from '../lib/types';
@@ -48,7 +48,6 @@ export function resolveItems(items: PantryItem[], status: 'used' | 'wasted', opt
   }
   // "I made this" also logs a serving: the same message bar says so, and its Undo takes both back.
   const message = `${resolveMessage(live, status, opts.mealTitle)}${opts.logged ? `. ${loggedMessage(opts.logged)}` : ''}`;
-  AccessibilityInfo.announceForAccessibility?.(message);
   useSnackbar.getState().show({
     message,
     tone: status === 'wasted' ? 'waste' : rescued ? 'rescue' : 'plain',

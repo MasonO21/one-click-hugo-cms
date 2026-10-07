@@ -50,7 +50,8 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
       containerStyle={style}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: !!off, busy: !!loading }}
+      aria-disabled={!!off}
+      aria-busy={!!loading}
       disabled={off}
       onPress={() => {
         if (Platform.OS !== 'web') Haptics.impactAsync(variant === 'cta' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {});

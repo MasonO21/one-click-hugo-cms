@@ -47,7 +47,7 @@ function ShoppingRow({ item, index }: { item: ShoppingItem; index: number }) {
         <Pressable
           testID={`shop-${item.name}`}
           accessibilityRole="checkbox"
-          accessibilityState={{ checked: item.checked }}
+          aria-checked={item.checked}
           accessibilityLabel={item.name}
           onPress={toggle}
           style={styles.rowMain}

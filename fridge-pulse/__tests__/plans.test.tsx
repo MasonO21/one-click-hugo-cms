@@ -163,7 +163,7 @@ describe('PlanPicker', () => {
 
   it('marks the plan the person is on', () => {
     const { tree } = render('household-annual', 'annual');
-    expect(tree.root.findByProps({ testID: 'plan-household-annual' }).props.accessibilityState).toEqual({ checked: true });
+    expect(tree.root.findByProps({ testID: 'plan-household-annual' }).props['aria-checked']).toBe(true);
     const mine = render('annual', 'annual');
     expect(mine.text()).toContain('Your plan');
   });

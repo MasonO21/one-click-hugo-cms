@@ -36,7 +36,7 @@ export function PlanPicker({ selected, onSelect, prices, current }: Props) {
             key={plan.id}
             testID={`plan-${plan.id}`}
             accessibilityRole="radio"
-            accessibilityState={{ checked: on }}
+            aria-checked={on}
             accessibilityLabel={`${period === 'year' ? 'Yearly' : 'Monthly'}, ${priceLabel(prices[plan.id], period)}${saving ? `, save ${saving} percent` : ''}${current === plan.id ? ', your plan' : ''}`}
             onPress={() => onSelect(plan.id)}
             style={[styles.option, { borderColor: on ? c.primaryFill : c.border, backgroundColor: on ? c.primaryTint : c.surface }]}

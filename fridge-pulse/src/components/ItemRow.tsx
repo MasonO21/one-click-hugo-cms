@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Platform, Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
-import { daysLeft } from '../lib/expiry';
+import { daysLeft, expiryLabel } from '../lib/expiry';
 import type { PantryItem } from '../lib/types';
 import { useBurst } from '../store/burst';
 import { usePictureFor } from '../store/foods';
@@ -181,8 +181,10 @@ export function ItemRow({ item, onPress, onResolve, now }: Props) {
         <Pressable
           testID={`item-${item.id}`}
           accessibilityRole="button"
-          accessibilityLabel={`${item.name}, ${item.quantity}, ${LOCATION_LABEL[item.location]}`}
-          accessibilityHint={onResolve ? 'Swipe right if used, left if thrown out' : undefined}
+          // The date is the point of the row, so it is read too ("Milk, expires tomorrow, 1, Fridge").
+          accessibilityLabel={`${item.name}, ${expiryLabel(days)}, ${item.quantity}, ${LOCATION_LABEL[item.location]}`}
+          // Screen readers use swipes to move between items, so the actions menu stands in for them.
+          accessibilityHint={onResolve ? 'Opens it. Mark it used or thrown out from the actions.' : undefined}
           accessibilityActions={onResolve ? [{ name: 'activate' }, { name: 'used', label: 'Mark as used' }, { name: 'wasted', label: 'Threw it out' }] : undefined}
           onAccessibilityAction={onResolve ? onAction : undefined}
           onPress={onPress}

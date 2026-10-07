@@ -58,7 +58,7 @@ const APPEARANCES: { value: Appearance; label: string }[] = [
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={{ gap: 8 }}>
-      <Text variant="label" muted>
+      <Text variant="label" muted accessibilityRole="header">
         {title}
       </Text>
       <Card style={{ gap: 14 }}>{children}</Card>
@@ -299,6 +299,7 @@ export default function Settings() {
               right={
                 <Switch
                   style={WEB_SWITCH}
+                  accessibilityLabel="Expiry reminders"
                   testID="reminders-switch"
                   value={settings.remindersEnabled}
                   onValueChange={(v) => void toggleReminders(v)}
@@ -324,6 +325,8 @@ export default function Settings() {
                     label={formatHour(settings.reminderHour)}
                     onDecrement={() => settings.set({ reminderHour: (settings.reminderHour + 23) % 24 })}
                     onIncrement={() => settings.set({ reminderHour: (settings.reminderHour + 1) % 24 })}
+                    decrementLabel="Remind me an hour earlier"
+                    incrementLabel="Remind me an hour later"
                   />
                 }
               />
@@ -364,6 +367,8 @@ export default function Settings() {
               label={`${settings.servings} ${settings.servings === 1 ? 'person' : 'people'}`}
               onDecrement={() => settings.set({ servings: Math.max(1, settings.servings - 1) })}
               onIncrement={() => settings.set({ servings: Math.min(12, settings.servings + 1) })}
+              decrementLabel="One person fewer"
+              incrementLabel="One person more"
             />
           }
         />

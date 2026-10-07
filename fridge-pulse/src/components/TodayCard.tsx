@@ -30,7 +30,21 @@ export function TodayCard({ today }: { today: string }) {
   return (
     <Card style={{ gap: 12 }} testID="today-card">
       {/* Buttons cannot sit inside buttons on the web, so the link and the summary are pressed separately. */}
-      <PressableScale accessibilityRole="button" accessibilityLabel="Open your food log" testID="today-open-log" onPress={() => router.push('/log')} style={{ gap: 12 }}>
+      <PressableScale
+        accessibilityRole="button"
+        // The label replaces what the card shows, so it carries the day's figures too.
+        accessibilityLabel={`Today's food log: ${
+          targets
+            ? `${fmt(totals.protein)} of ${fmt(targets.protein)} g protein${targets.kcal !== null ? `, ${fmt(totals.kcal)} of ${fmt(targets.kcal)} kcal` : ''}`
+            : totals.entries > 0
+              ? `${fmt(totals.kcal)} kcal, ${fmt(totals.protein)} g protein so far`
+              : 'nothing logged yet'
+        }`}
+        accessibilityHint="Opens your food log"
+        testID="today-open-log"
+        onPress={() => router.push('/log')}
+        style={{ gap: 12 }}
+      >
         <View style={styles.head}>
           <Text variant="label" color={c.primary}>
             Today

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { announce } from '../store/announcer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnackbar, type Snack } from '../store/snackbar';
 import { glow, radius, useTheme } from '../theme';
@@ -10,6 +11,28 @@ import { Emoji, Text } from './Text';
 
 /** Height of the tab bar, so the message sits just above it on tab screens. */
 const TAB_BAR = Platform.select({ web: 78, ios: 49, default: 56 }) ?? 56;
+/** A screen reader reads the message and then has to find Undo, so the bar waits this much longer. */
+const SCREEN_READER_FACTOR = 3;
+
+/** Whether VoiceOver or TalkBack is on. Always false on the web, where react-native-web cannot tell. */
+function useScreenReader(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let live = true;
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((v) => {
+        if (live) setOn(v);
+      })
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', setOn);
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+  return on;
+}
 
 /**
  * The app's message bar: slides up, counts down its time with a thin line, and offers an action
@@ -22,6 +45,9 @@ export function SnackbarHost() {
   const segments = useSegments();
   const insets = useSafeAreaInsets();
   const still = useReducedMotion();
+  const screenReader = useScreenReader();
+  // Keyboard focus on the action (the web) holds the message until it moves on.
+  const [held, setHeld] = useState(false);
   const route = segments.join('/');
   const inTabs = segments[0] === '(tabs)';
   // Where each message first appeared. Opening another screen on top dismisses it; coming back to
@@ -38,16 +64,33 @@ export function SnackbarHost() {
   const enter = useAnimatedValue(0);
   const clock = useAnimatedValue(1);
 
+  // Every message is read out, with its action.
+  useEffect(() => {
+    if (snack) announce(snack.action ? `${snack.message}. ${snack.action.label} available.` : snack.message);
+  }, [snack]);
+
+  useEffect(() => {
+    if (!snack || held) {
+      clock.setValue(1);
+      return;
+    }
+    const countdown = Animated.timing(clock, {
+      toValue: 0,
+      duration: snack.durationMs * (screenReader ? SCREEN_READER_FACTOR : 1),
+      easing: Easing.linear,
+      useNativeDriver: NATIVE_DRIVER,
+    });
+    countdown.start(({ finished }) => {
+      if (finished) useSnackbar.getState().hide(snack.id);
+    });
+    return () => countdown.stop();
+  }, [snack, held, screenReader, clock]);
+
   useEffect(() => {
     if (snack) {
       enter.setValue(still ? 1 : 0);
-      clock.setValue(1);
       if (!still) Animated.spring(enter, { toValue: 1, useNativeDriver: NATIVE_DRIVER, speed: 16, bounciness: 7 }).start();
-      const countdown = Animated.timing(clock, { toValue: 0, duration: snack.durationMs, easing: Easing.linear, useNativeDriver: NATIVE_DRIVER });
-      countdown.start(({ finished }) => {
-        if (finished) useSnackbar.getState().hide(snack.id);
-      });
-      return () => countdown.stop();
+      return;
     }
     if (still) return;
     const leave = Animated.timing(enter, { toValue: 0, duration: 180, easing: Easing.in(Easing.quad), useNativeDriver: NATIVE_DRIVER });
@@ -55,7 +98,7 @@ export function SnackbarHost() {
       if (finished) setShown(null);
     });
     return () => leave.stop();
-  }, [snack, enter, clock, still]);
+  }, [snack, enter, still]);
 
   if (!shown) return null;
   const bottom = inTabs ? TAB_BAR + (Platform.OS === 'web' ? 0 : insets.bottom) + 12 : footer > 0 ? footer + 8 : insets.bottom + 12;
@@ -70,7 +113,6 @@ export function SnackbarHost() {
     <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
       <Animated.View
         testID="snackbar"
-        accessibilityLiveRegion="polite"
         style={[
           styles.bar,
           scheme === 'dark' ? { borderWidth: 1, borderColor: `${c.glow}80`, ...glow(c.glow, 18, 0.3) } : null,
@@ -82,7 +124,7 @@ export function SnackbarHost() {
         ]}
       >
         {icon}
-        <Text variant="body" color={c.snackText} style={{ flex: 1 }} numberOfLines={2}>
+        <Text variant="body" color={c.snackText} style={{ flex: 1 }} numberOfLines={4}>
           {shown.message}
         </Text>
         {shown.action ? (
@@ -92,9 +134,12 @@ export function SnackbarHost() {
             accessibilityLabel={shown.action.label}
             onPress={() => {
               const run = shown.action?.onPress;
+              setHeld(false);
               useSnackbar.getState().hide(shown.id);
               run?.();
             }}
+            onFocus={() => setHeld(true)}
+            onBlur={() => setHeld(false)}
             style={styles.action}
           >
             <Text variant="bodyStrong" color={c.snackAction}>

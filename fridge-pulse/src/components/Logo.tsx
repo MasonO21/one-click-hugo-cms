@@ -76,7 +76,7 @@ export function Logo({ size = 56, beat }: Props) {
   }, [beat, still, pulse]);
 
   return (
-    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: size, height: size }}>
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden style={{ width: size, height: size }}>
       {beat ? (
         // A magenta halo that flares with each beat.
         <Animated.View

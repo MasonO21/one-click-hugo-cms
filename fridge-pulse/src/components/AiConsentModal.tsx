@@ -31,14 +31,20 @@ export function AiConsentModal({ visible, onAgree, onClose }: Props) {
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Dismiss" />
+        {/* Tapping outside is "Not now"; keyboard and screen reader users have that button. */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessible={false} focusable={false} />
         <View
           testID="ai-consent"
           accessibilityViewIsModal
+          role="dialog"
+          aria-modal
+          aria-labelledby="ai-consent-title"
           style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}
         >
           <ScrollView contentContainerStyle={{ gap: 12 }} showsVerticalScrollIndicator={false}>
-            <Text variant="heading">Use AI to read your food?</Text>
+            <Text variant="heading" nativeID="ai-consent-title" role="heading">
+              Use AI to read your food?
+            </Text>
             <Text>
               To identify food in your photos, look up items it does not know and write meal ideas, Fridge Pulse sends them
               securely through our server to an AI service, Anthropic&apos;s Claude.

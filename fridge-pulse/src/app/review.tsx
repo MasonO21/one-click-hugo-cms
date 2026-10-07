@@ -85,7 +85,7 @@ function DraftRow({
       <View style={styles.rowTop}>
         <Pressable
           accessibilityRole="checkbox"
-          accessibilityState={{ checked: draft.selected }}
+          aria-checked={draft.selected}
           accessibilityLabel={`Include ${draft.name}`}
           onPress={() => update(draft.key, { selected: !draft.selected })}
           style={[styles.iconHit, { marginLeft: -8, marginRight: -4 }]}
@@ -149,7 +149,13 @@ function DraftRow({
           style={styles.qty}
           maxLength={30}
         />
-        <Stepper label={formatShortDate(draft.expiresOn)} onDecrement={() => shift(-1)} onIncrement={() => shift(1)} />
+        <Stepper
+          label={formatShortDate(draft.expiresOn)}
+          onDecrement={() => shift(-1)}
+          onIncrement={() => shift(1)}
+          decrementLabel={`One day earlier for ${draft.name}`}
+          incrementLabel={`One day later for ${draft.name}`}
+        />
       </View>
     </Card>
   );
