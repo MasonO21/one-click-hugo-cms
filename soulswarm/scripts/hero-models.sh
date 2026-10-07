@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
-# Rebuilds the painted 3D Shepherds in src/assets/models from their Higgsfield image-to-3D results (turnaround sheets,
-# models and job ids in docs/ART_AND_ADS.md §4): simplifies each mesh by half (~14k triangles), shrinks its painted
-# texture to a 1024 px WebP and moves it beside the model (so the web build never needs blob: URLs to decode it), and
-# quantizes the geometry (KHR_mesh_quantization, which three.js reads without a decoder).
+# Rebuilds the painted, animated 3D Shepherds in src/assets/models (docs/ART_AND_ADS.md §4).
+#
+# Where the rigs come from (done once, with the Higgsfield tools; job ids in the doc): each hero's image-to-3D model
+# (built from its turnaround sheet) was turned to face +Z (python3 scripts/glb-turn.py in.glb out.glb -90: the
+# generator faces +X, the rigging service assumes +Z and builds a sideways skeleton otherwise), uploaded and
+# auto-rigged (a 24-bone humanoid). Nyx's rig came with the run clip (run_fast_10_inplace) and Vael's with the idle
+# (Idle_3); the other rigs came bare. Their results are listed below.
+#
+# This script then, per hero:
+#  1. gives it both clips with glb-retarget.py: every bone moves around the clip's average pose, so the hero keeps
+#     the stance it was sculpted in (knees only bend, the lower foot meets the ground, the run leans 8 degrees); the
+#     arms add only the clip's swing (gains: left,right; a weapon arm swings less); staffs and spears are pinned to
+#     the hand that holds them (the rigger weighted their ends to a leg or the head);
+#  2. simplifies the mesh by half (~14k triangles), shrinks its painted texture to a 1024 px WebP and moves it beside
+#     the model (so the web build never needs blob: URLs to decode it), and quantizes the geometry
+#     (KHR_mesh_quantization, which three.js reads without a decoder; skins and clips survive every step).
 # usage: bash scripts/hero-models.sh   (needs curl, python3 and npx access to @gltf-transform/cli)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -10,19 +22,28 @@ B=https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi
 OUT=src/assets/models TMP=$(mktemp -d)
 GT="npx -y @gltf-transform/cli@4"
 mkdir -p "$OUT"
-while read -r id file; do
+# id, rigged result, arm gains for the run, weapon pins (BONE:x0,y0,z0,x1,y1,z1,radius[,fade] or BONE:box)
+LIST='
+nyx hf_20261007_200311_ef1a8223-2d19-4ae3-b397-b42cca2841ec.glb 0.5
+vael hf_20261007_200312_60b4e7eb-2a10-41ba-92d3-e38e45125b64.glb 0.5,0.2 RightHand:-0.277,0,0.221,-0.398,1.55,0.277,0.045,0.45 RightHand:-0.75,-0.29,1.5,2.05,0.19,0.45
+seraphine hf_20261007_200313_e0f7a16b-8831-4c8d-985a-d4ad8355eafe.glb 0.5
+liora hf_20261007_200315_bdf65170-6d69-458c-afb5-5aac3202a50b.glb 0.5
+mordrake hf_20261007_200316_a677c6d2-ae41-49a4-9313-c0b95aa5e608.glb 0.5,0.2 RightHand:-0.404,0.35,0.062,-0.508,1.25,0.212,0.05 RightHand:-0.508,1.25,0.212,-0.597,2.02,0.339,0.11
+eclipse_vael hf_20261007_200318_59e99133-fac7-404c-baec-bbcade22336d.glb 0.5,0.2 RightHand:-0.265,0,0.230,-0.397,1.55,0.283,0.045,0.45 RightHand:-0.75,-0.29,1.5,2.05,0.19,0.45
+'
+# every rig first: the run and idle sources must be the untouched downloads
+while read -r id file _; do
+  [ -z "$id" ] || curl -sSf -o "$TMP/$id.glb" "$B/$file"
+done <<< "$LIST"
+while read -r id file gains pins; do
   [ -z "$id" ] && continue
-  curl -sSf -o "$TMP/$id.glb" "$B/$file"
-  $GT optimize "$TMP/$id.glb" "$TMP/$id-1.glb" --compress false --texture-compress webp --texture-size 1024 --simplify-ratio 0.5 --simplify-error 0.0015 > /dev/null
+  args=()
+  for p in $pins; do args+=(--pin "$p"); done
+  python3 -I scripts/glb-retarget.py "$TMP/$id.glb" "$TMP/$id-0.glb" ${args[@]+"${args[@]}"} \
+    --clip "run=$TMP/nyx.glb@$gains~8" --clip "idle=$TMP/vael.glb" --drop-native
+  $GT optimize "$TMP/$id-0.glb" "$TMP/$id-1.glb" --compress false --texture-compress webp --texture-size 1024 --simplify-ratio 0.5 --simplify-error 0.0015 > /dev/null
   python3 -I scripts/glb-split-texture.py "$TMP/$id-1.glb" "$TMP/$id-2.glb" "$OUT/$id.webp"
   $GT quantize "$TMP/$id-2.glb" "$OUT/$id.glb" > /dev/null
-done <<'LIST'
-vael hf_20261007_191024_fc66c1ad-f4e9-454d-9849-e6cf13cb23d7.glb
-nyx hf_20261007_191738_71ced1f2-6936-40f9-a261-0918c7915cfc.glb
-seraphine hf_20261007_191731_d5804c07-48c9-4b4c-be00-83d92ac653f1.glb
-liora hf_20261007_191735_61052ab1-616c-4d0c-a27e-13397583fc38.glb
-mordrake hf_20261007_191742_2355b7ab-2f5c-4e18-8295-fe113ba37492.glb
-eclipse_vael hf_20261007_192343_6adb084d-ed13-4c73-bb5b-fadc55f4456e.glb
-LIST
+done <<< "$LIST"
 rm -rf "$TMP"
 ls -l "$OUT"

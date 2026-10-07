@@ -29,8 +29,18 @@ varying float vEmit;
 varying vec3 vTint;
 varying float vFlash;
 varying vec3 vWorld;
+#include <skinning_pars_vertex>
 void main() {
   vec3 p = position;
+  vec3 objectNormal = normal;
+  #ifdef USE_SKINNING
+  // an animated hero (heromodels.js HeroRig): pose the vertex and normal on the skeleton first
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  vec3 transformed = p;
+  #include <skinning_vertex>
+  p = transformed;
+  #endif
   #ifdef USE_INSTANCING
   vec3 tint = iTint; float flash = iFlash; vec2 anim = iAnim;
   #else
@@ -49,7 +59,7 @@ void main() {
   #endif
   vec4 wp = m * vec4(p, 1.0);
   vWorld = wp.xyz;
-  vN = normalize(mat3(m) * normal);
+  vN = normalize(mat3(m) * objectNormal);
   #ifdef USE_HEROMAP
   vUv = uv; vCol = vec3(1.0); vEmit = 0.0;
   #else

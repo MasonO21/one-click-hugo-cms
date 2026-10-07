@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { World } from './world.js';
 import { makeCharMaterial, GlowSprites } from '../engine/materials.js';
 import { heroGeometry } from '../engine/models.js';
-import { heroModel, loadHeroModel, hasHeroModel } from '../engine/heromodels.js';
+import { heroModel, loadHeroModel, hasHeroModel, HeroRig } from '../engine/heromodels.js';
 import { Particles } from '../engine/particles.js';
 import { CHAPTERS, HEROES, SKINS } from './data.js';
 import { makeRuneCircle } from './fxmeshes.js';
@@ -21,6 +21,7 @@ export class Showcase {
     this.mat = makeCharMaterial({ rim: 0x4ef2ff, emit: 2.6, anim: 0, ambient: 0x2a3550, key: 0x9aaad0 });
     this.pmat = null; // the painted-model material, made with the first model that loads
     this.ownGeo = true; // the procedural geometry is ours to dispose; painted ones are shared
+    this.rig = null; // the animated painted model (idling), when the hero has one
     this.hero = new THREE.Mesh(new THREE.BufferGeometry(), this.mat);
     this.scene.add(this.hero);
     this.circle = makeRuneCircle(2.2);
@@ -68,6 +69,7 @@ export class Showcase {
   /** Shows a painted model (`m` from heromodels.js), or the procedural one for hero `id` when there is none yet. */
   showModel(m, id, body) {
     if (this.ownGeo) this.hero.geometry.dispose();
+    if (this.rig) { this.rig.dispose(); this.rig = null; }
     if (m) {
       if (!this.pmat) {
         this.pmat = makeCharMaterial({ map: m.map, glow: m.glow, rim: 0x4ef2ff, emit: 2.6, anim: 0, ambient: 0xc4c6d2, key: 0xe2e4ee });
@@ -77,9 +79,11 @@ export class Showcase {
       this.pmat.uniforms.uMap.value = m.map;
       this.pmat.uniforms.uGlow.value = m.glow;
       this.hero.geometry = m.geometry; this.hero.material = this.pmat; this.ownGeo = false;
+      if (m.rig) { this.rig = new HeroRig(m, this.pmat); this.scene.add(this.rig.root); }
     } else {
       this.hero.geometry = heroGeometry(id, body); this.hero.material = this.mat; this.ownGeo = true;
     }
+    this.hero.visible = !this.rig;
   }
 
   setChapter(id) {
@@ -107,8 +111,10 @@ export class Showcase {
     const t = this.t;
     this.world.update(this.center, t);
     this.hero.material.uniforms.uTime.value = t;
-    this.hero.rotation.y = Math.sin(t * 0.4) * 0.5 + 0.2;
-    this.hero.position.y = Math.sin(t * 1.6) * 0.04;
+    const body = this.rig ? this.rig.root : this.hero;
+    body.rotation.y = Math.sin(t * 0.4) * 0.5 + 0.2;
+    body.position.y = this.rig ? 0 : Math.sin(t * 1.6) * 0.04; // a rig breathes with its idle
+    if (this.rig) this.rig.update(dt);
     this.circle.rotation.y = t * 0.25;
     this.circle.material.uniforms.uTime.value = t;
     this.hero.material.uniforms.uPLPos.value.set(0.5, 2.0, 1.6);

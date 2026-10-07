@@ -2,12 +2,13 @@
 import * as THREE from 'three';
 import { makeCharMaterial } from '../engine/materials.js';
 import { heroGeometry } from '../engine/models.js';
-import { heroModel, loadHeroModel, hasHeroModel } from '../engine/heromodels.js';
+import { heroModel, loadHeroModel, hasHeroModel, HeroRig } from '../engine/heromodels.js';
 import { makeRuneCircle } from './fxmeshes.js';
 import { SKINS, HAZARDS } from './data.js';
 import { hdr } from '../engine/particles.js';
 
 const FROST = hdr(0xcfeeff, 1.8), ROOT = hdr(0xb35bff, 2.6);
+const SCALE = 1.25; // the Shepherd's model scale in a run
 
 export class Player {
   constructor(run, loadout) {
@@ -15,10 +16,11 @@ export class Player {
     const hero = loadout.hero;
     const skin = loadout.skin ? SKINS[loadout.skin] : null;
     this.color = new THREE.Color(skin ? skin.color : hero.color);
+    this.rig = null; // the animated painted model, once loaded (heromodels.js; set by usePainted)
     this.mat = makeCharMaterial({ rim: this.color.getHex(), emit: 2.8, anim: 0, ambient: 0x3a4766, key: 0xa8b6d8, plColor: this.color.getHex(), plRadius: 5 });
     this.mat.uniforms.uTint.value.copy(this.color);
     this.mesh = new THREE.Mesh(heroGeometry(hero.id, skin ? skin.body : hero.body), this.mat);
-    this.mesh.scale.setScalar(1.25);
+    this.mesh.scale.setScalar(SCALE);
     run.scene.add(this.mesh);
     // the painted model (shared, loaded once) replaces the procedural one as soon as it is ready
     const key = skin && hasHeroModel(loadout.skin) ? loadout.skin : skin ? null : hero.id;
@@ -38,6 +40,7 @@ export class Player {
     this.dead = false;
     this.t = 0;
     this.moving = false;
+    this.speed = 0;
     this.kx = 0; this.kz = 0;           // knockback impulse (Brute slams)
     this.rootT = 0;                     // abyssal hands hold the Shepherd in place
     this.onIce = false;
@@ -66,6 +69,7 @@ export class Player {
     this.x += (this.vx + this.kx) * dt; this.z += (this.vz + this.kz) * dt;
     const sp = Math.hypot(this.vx, this.vz);
     this.moving = sp > 0.5;
+    this.speed = sp;
     const parts = this.run.particles;
     if (this.onIce && sp > 2 && Math.random() < dt * 14) parts.emit(this.x, 0.08, this.z, -this.vx * 0.15, 0.4, -this.vz * 0.15, 0.45, 0.32, 0.05, FROST[0], FROST[1], FROST[2], 0.8, 2, 0);
     if (this.rootT > 0 && Math.random() < dt * 30) {
@@ -81,6 +85,7 @@ export class Player {
       let d = target - this.facing; d = Math.atan2(Math.sin(d), Math.cos(d));
       this.facing += d * Math.min(1, dt * 12);
     }
+    if (this.rig) this.rig.update(dt, this.run.rites && this.run.rites.dashLeft > 0 ? 12 : sp, SCALE); // Nyx's dash moves her directly: run flat out
   }
 
   /** dot: damage over time (burning ground). It respects invulnerability but grants none and stays quiet. */
@@ -128,24 +133,32 @@ export class Player {
   usePainted(m) {
     const old = this.mat, c = this.color.getHex();
     this.mesh.geometry.dispose();
-    this.mesh.geometry = m.geometry;
+    this.mesh.geometry = m.geometry; // the bind pose (shared): what Nyx's dash afterimages copy
     this.painted = true;
     this.mat = makeCharMaterial({ map: m.map, glow: m.glow, rim: c, emit: 2.8, anim: 0, ambient: 0xc4c6d2, key: 0xe2e4ee, plColor: c, plRadius: 5 });
     this.mat.uniforms.uTint.value.copy(this.color);
     this.mesh.material = this.mat;
     old.dispose();
+    if (m.rig) { // it runs and idles: the rig stands in for the static mesh
+      this.rig = new HeroRig(m, this.mat);
+      this.rig.root.scale.setScalar(SCALE);
+      this.run.scene.add(this.rig.root);
+      this.mesh.visible = false;
+    }
   }
 
   render(time) {
-    const bob = this.moving ? Math.abs(Math.sin(this.t * 11)) * 0.08 : Math.sin(this.t * 2) * 0.03;
-    this.mesh.position.set(this.x, bob, this.z);
+    // the procedural and static models bob and wobble; the rig's own clips carry the motion
+    const body = this.rig ? this.rig.root : this.mesh, still = !!this.rig;
+    const bob = still ? 0 : this.moving ? Math.abs(Math.sin(this.t * 11)) * 0.08 : Math.sin(this.t * 2) * 0.03;
+    body.position.set(this.x, bob, this.z);
     // models face +Z; rotate so they face the movement direction
-    this.mesh.rotation.y = Math.PI / 2 - this.facing;
-    this.mesh.rotation.z = this.moving ? Math.sin(this.t * 11) * 0.05 : 0;
+    body.rotation.y = Math.PI / 2 - this.facing;
+    body.rotation.z = this.moving && !still ? Math.sin(this.t * 11) * 0.05 : 0;
     this.mat.uniforms.uFlash.value = this.flash * 0.8 + (this.invuln > 0 && this.invuln < 0.4 ? 0 : 0);
     this.mat.uniforms.uTime.value = time;
     this.mat.uniforms.uPLPos.value.set(this.x + 0.6, 2.2, this.z + 1.4);
-    this.mesh.visible = !this.dead && !(this.invuln > 0.45 && Math.floor(this.t * 20) % 2 === 0);
+    body.visible = !this.dead && !(this.invuln > 0.45 && Math.floor(this.t * 20) % 2 === 0);
     this.circle.position.set(this.x, 0.05, this.z);
     this.circle.rotation.y = -time * 0.8;
     this.circle.material.uniforms.uTime.value = time;
@@ -154,6 +167,7 @@ export class Player {
   dispose() {
     this.disposed = true;
     if (!this.painted) this.mesh.geometry.dispose(); // painted geometry is shared (heromodels.js)
+    if (this.rig) this.rig.dispose();
     this.mat.dispose();
     this.circle.geometry.dispose(); this.circle.material.dispose();
   }

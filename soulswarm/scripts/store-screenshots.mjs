@@ -94,6 +94,8 @@ for (const shot of SHOTS.filter((x) => !ONLY || x.name.startsWith(ONLY))) {
   const page = await ctx.newPage();
   await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3500);
+  // the heroes' animated models load asynchronously; the staging below steps the game synchronously
+  await page.evaluate(async () => { const H = window.__soulswarm.heroModels; for (const k of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) await H.loadHeroModel(k); });
   await page.evaluate(`(() => { ${helpers} ${shot.stage} })()`);
   console.log(shot.name, 'staged', Date.now() - t0, 'ms');
   if (shot.menu) await page.waitForTimeout(1500);

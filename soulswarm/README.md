@@ -2,7 +2,7 @@
 
 A top-down "legion survivor" for iOS and Android. Every enemy you kill can rise as a glowing soul that fights for you. You start alone and end the run leading hundreds. Soul Gates multiply your army, and Soul Nova detonates all of it in one screen-clearing blast.
 
-- **Engine:** HTML5 + WebGL ([Three.js](https://threejs.org)) with custom shaders, bloom, GPU particles and instanced hordes. Every 3D model, effect and sound is generated in code. The painted 2D art (key art, hero splashes, logo, icon) was made with Higgsfield; see `docs/ART_AND_ADS.md`.
+- **Engine:** HTML5 + WebGL ([Three.js](https://threejs.org)) with custom shaders, bloom, GPU particles and instanced hordes. The world, enemies, legion, effects, music and sound effects are generated in code. The painted art (key art, hero splashes, chapters, Bestiary, icons), the heroes' rigged and animated 3D models and the voice lines were made with Higgsfield; see `docs/ART_AND_ADS.md`.
 - **Store wrapper:** [Capacitor 7](https://capacitorjs.com). The native Xcode project is in `ios/` and the Android Studio project in `android/`.
 - **Docs:** [`docs/`](docs/) contains the design brief, GDD, monetization model, live-ops calendar, marketing plan and production roadmap.
 
@@ -76,10 +76,10 @@ See `docs/PRODUCTION_ROADMAP.md` for the full checklist, team plan and budget.
 | `src/ui/` | Design system (`style.css`), HUD and run modals (`runui.js`), menus (`meta/`) |
 | `src/audio/audio.js` | Procedural Web Audio SFX and music, plus the voice-line player (priorities, cooldowns, ducking) |
 | `src/assets/voice/` | 32 recorded announcer and hero lines (Higgsfield; `scripts/voice-master.sh`) |
-| `src/assets/models/` | The heroes' 3D models (and Eclipse Vael's), built from their painted art (Higgsfield; `scripts/hero-models.sh`, loaded by `src/engine/heromodels.js`) |
+| `src/assets/models/` | The heroes' rigged, animated 3D models (and Eclipse Vael's), built from their painted art (Higgsfield; `scripts/hero-models.sh`, loaded by `src/engine/heromodels.js`) |
 | `resources/` | App icon and splash (built from the painted masters by `npm run art`) |
 | `store/` | Painted key art masters (`art/`), cinematic video ads (`ads/`), in-engine trailer and App Store screenshots; see `docs/ART_AND_ADS.md` |
-| `scripts/` | Playtest bot, trailer and screenshot renderers, painted-asset pipeline, web build |
+| `scripts/` | Playtest bot, trailer and screenshot renderers, painted-asset and hero-model pipelines (`hero-models.sh`, `glb-*.py`), web build |
 
 ## QA hooks
 

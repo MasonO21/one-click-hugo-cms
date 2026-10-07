@@ -2167,6 +2167,72 @@ errs = await session(async (page) => {
 });
 check('3D heroes: no runtime errors', !errs.length, errs[0] || '');
 
+// 30. Animated Shepherds (engine/heromodels.js HeroRig; rigs and clips from scripts/hero-models.sh). Every model is
+//     skinned (24 bones, facing +Z) with a run and an idle; in a run the Shepherd runs while moving (the stride paced to
+//     the ground speed) and idles when still, its posed bounds stay sane, and the rig is freed with the run; the home
+//     showcase idles too and swaps rigs cleanly; Nyx's dash afterimages still copy the bind pose.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, H = app.heroModels, E = app.engine, out = { rigs: {} };
+    const V = (o) => o.getWorldPosition(new (o.position.constructor)());
+    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) {
+      const m = await H.loadHeroModel(id), r = m && m.rig;
+      if (!r) { out.rigs[id] = null; continue; }
+      let mesh = null; r.scene.traverse((o) => { if (o.isSkinnedMesh) mesh = o; });
+      const bone = (n) => mesh.skeleton.bones.find((b) => b.name === n);
+      r.scene.updateMatrixWorld(true);
+      out.rigs[id] = { bones: mesh ? mesh.skeleton.bones.length : 0, run: +r.clips.run.duration.toFixed(2), idle: +r.clips.idle.duration.toFixed(2),
+        facingZ: mesh ? V(bone('LeftUpLeg')).x > V(bone('RightUpLeg')).x : false };
+    }
+    const p = app.profile; p.heroes.mordrake.owned = true; p.selectedHero = 'mordrake'; p.equippedSkin = null; p.flags.tutorialDone = true;
+    app.startRun(1); E.manual = true;
+    const run = app.run, P = run.player, R = P.rig;
+    P.hurt = () => {}; run.nextGate = run.nextSwarm = 1e9;
+    out.run = { rig: !!R, inScene: !!R && R.root.parent === run.scene, meshHidden: !P.mesh.visible, skinned: !!R && R.mesh.isSkinnedMesh,
+      textured: !!R && 'USE_HEROMAP' in (R.mesh.material.defines || {}), mat: !!R && R.mesh.material === P.mat };
+    if (R) {
+      const foot = R.mesh.skeleton.bones.find((b) => b.name === 'LeftFoot');
+      for (let i = 0; i < 9; i++) { run.input.tx = 0; run.input.tz = -1; E.step(1 / 30); }
+      out.run.w = +R.w.toFixed(2); out.run.ts = +R.run.timeScale.toFixed(2);
+      const f0 = V(foot).sub(V(R.root)); E.step(1 / 30); E.step(1 / 30); E.step(1 / 30); run.input.tz = -1;
+      const f1 = V(foot).sub(V(R.root));
+      out.run.footMoves = +f0.distanceTo(f1).toFixed(3);
+      R.mesh.computeBoundingBox(); // posed through the skeleton
+      const bb = R.mesh.boundingBox.clone().applyMatrix4(R.mesh.matrixWorld), h = P.mesh.geometry.boundingBox.max.y * 1.25;
+      out.run.posedH = +((bb.max.y - bb.min.y) / h).toFixed(2); out.run.feet = +bb.min.y.toFixed(2);
+      out.run.faces = +Math.cos(R.root.rotation.y - (Math.PI / 2 - P.facing)).toFixed(2);
+      for (let i = 0; i < 9; i++) { run.input.tx = 0; run.input.tz = 0; E.step(1 / 30); }
+      out.run.idleW = +(1 - R.w).toFixed(2);
+    }
+    app.exitRun(); E.manual = false;
+    out.run.freed = !!R && R.root.parent === null;
+    // the showcase idles the selected hero's rig and swaps it cleanly
+    const sc = app.showcase;
+    sc.setHero('mordrake', p); await new Promise((r) => setTimeout(r, 30));
+    const r1 = sc.rig;
+    p.heroes.liora.owned = true; sc.setHero('liora', p); await new Promise((r) => setTimeout(r, 30));
+    out.show = { rig: !!sc.rig && sc.rig !== r1, inScene: !!sc.rig && sc.rig.root.parent === sc.scene, old: !!r1 && r1.root.parent === null, heroHidden: !sc.hero.visible };
+    const t0 = sc.rig && sc.rig.idle.time; sc.update(0.25);
+    out.show.idles = !!sc.rig && sc.rig.idle.time !== t0;
+    // Nyx's dash afterimages copy the Shepherd's bind pose
+    p.heroes.nyx.owned = true; p.selectedHero = 'nyx'; app.startRun(1); E.manual = true;
+    const ghosts = app.run.rites.ghosts;
+    out.nyx = { ghosts: !!ghosts && ghosts.every((g) => g.m.geometry === app.run.player.mesh.geometry), bind: app.run.player.mesh.geometry === H.heroModel('nyx').geometry };
+    app.exitRun(); E.manual = false;
+    return out;
+  });
+  const bad = Object.entries(s.rigs).filter(([, r]) => !r || r.bones !== 24 || r.run < 0.6 || r.run > 1 || r.idle < 5 || !r.facingZ);
+  check('animated heroes: every model is rigged (24 bones, facing +Z) with a run cycle and an idle', !bad.length, JSON.stringify(bad.length ? bad : s.rigs));
+  const r = s.run;
+  check('animated heroes: in a run the Shepherd is the skinned, painted rig; moving plays the run (stride paced), stopping the idle',
+    r.rig && r.inScene && r.meshHidden && r.skinned && r.textured && r.mat && r.w === 1 && r.ts >= 0.55 && r.ts <= 1.7 && r.idleW === 1 && r.faces > 0.99, JSON.stringify(r));
+  check('animated heroes: the pose really moves and stays sane (feet travel, posed height 0.7-1.3x, feet near the ground); the rig is freed with the run',
+    r.footMoves > 0.05 && r.posedH > 0.7 && r.posedH < 1.3 && Math.abs(r.feet) < 0.35 && r.freed, JSON.stringify(r));
+  check('animated heroes: the home showcase idles the hero\'s rig and swaps rigs cleanly; Nyx\'s afterimages copy the bind pose',
+    s.show.rig && s.show.inScene && s.show.old && s.show.heroHidden && s.show.idles && s.nyx.ghosts && s.nyx.bind, JSON.stringify({ show: s.show, nyx: s.nyx }));
+});
+check('animated heroes: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

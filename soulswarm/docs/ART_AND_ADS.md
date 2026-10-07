@@ -210,7 +210,7 @@ The 32 lines total 612 KB. When and how the game plays them is in `GDD.md` §15.
 
 ## 4. 3D hero models (`src/assets/models/`)
 
-The five Shepherds and the Eclipse Vael skin are textured 3D models built from their painted art, made on 2026-10-07. They are used for the hero in a run and on the home screen. The old procedural models (`engine/models.js`) stand in only while a model loads, or for a skin without one.
+The five Shepherds and the Eclipse Vael skin are textured, rigged and animated 3D models built from their painted art, made on 2026-10-07. Each one runs while the hero moves and idles while it stands, in a run and on the home screen. The old procedural models (`engine/models.js`) stand in only while a model loads, or for a skin without one.
 
 **How they were made:**
 1. **Turnaround sheet.** Nano Banana Pro painted each hero from its splash as the reference: front, left side and back views in one image, in a neutral pose on a plain grey ground, without the splash's ghosts, glows and particles. The masters are `store/art/turnaround-*.jpg`.
@@ -219,32 +219,43 @@ The five Shepherds and the Eclipse Vael skin are textured 3D models built from t
    - **Mordrake:** his sheet's back and side views disagree about the glaive, so his model comes from the front view alone (Tripo H3.1 image-to-3D).
    - **Nyx:** her first sheet swapped the scythe between hands, so it was re-taken.
    - **Vael:** his model was made both ways for comparison. The multi-view one was clearly closer to the art in profile.
-4. **Optimise.** `scripts/hero-models.sh` downloads each result and processes it:
+4. **Turn and rig.** The generator's models face +X, but the rigging service assumes the glTF convention (+Z) and otherwise builds a sideways skeleton (the first rigs had their "left and right" thighs at the front and back, and two failed outright). So each model was turned to face +Z (`scripts/glb-turn.py in.glb out.glb -90`), uploaded, and auto-rigged with Higgsfield 3D rigging: a 24-bone humanoid skeleton with skin weights.
+   - Nyx's rig was ordered with the run clip (`run_fast_10_inplace`, a 0.8 s loop) and Vael's with the idle (`Idle_3`, a 10 s loop). The other four came bare (5 credits each, against 8 with a clip).
+5. **Clips for everyone.** `scripts/glb-retarget.py` copies the run and the idle onto every rig by bone name. The auto-rigger places bones loosely (Nyx's thighs rest 40° forward in a model standing straight) and bakes that into its clips, and its own clips force the mocap's arm directions (Vael's staff turned upside down). So every bone moves around the clip's *average* pose, and each hero keeps the stance it was sculpted in:
+   - the hips, spine, head, thighs and feet take the clip's world-space rotation away from its average; the run leans the upper body 8° forward;
+   - the knees bend only by how much more the clip's knee bends than at its straightest moment, so they never hyperextend;
+   - the hips are raised or lowered every frame so the lower foot meets the ground when the source's does;
+   - the arms add only the clip's swing, relative to the chest: at half strength, and a fifth on a weapon arm;
+   - the hands stay as sculpted on the forearm;
+   - staffs and spears are pinned to the hand that holds them. The rigger had weighted a staff's foot to a leg and its head to the head bone, so it whipped about. A capsule along each shaft rebinds it, fading out where a staff's foot is fused with a robe's hem so the hem bends instead of tearing.
+6. **Optimise.** `scripts/hero-models.sh` downloads the six rigs, gives each its clips and processes it:
    - simplifies the mesh by half, to 14k–18k triangles from about 29k;
    - shrinks the 4096 px texture to a 1024 px WebP and moves it beside the model (`scripts/glb-split-texture.py`), so the web build never needs `blob:` URLs;
-   - quantizes the geometry (KHR_mesh_quantization, which three.js reads without a decoder).
+   - quantizes the geometry (KHR_mesh_quantization, which three.js reads without a decoder). Skins and clips survive every step.
 
-   The six heroes come to 2.5 MB in all, down from 3 MB per raw model.
-5. **In game.** `engine/heromodels.js` handles the model:
-   - loads it once and turns it to face +Z;
-   - stands it on the ground at a height close to the procedural model's;
-   - shades it with the character shader's painted branch: the texture's own painted light leads, the hero's rim and point light only accent it, and bright saturated paint (eyes, flames, blades) glows into the bloom.
+   The six heroes come to 3.8 MB in all, textures included.
+7. **In game.** `engine/heromodels.js` handles the model:
+   - loads it once, and keeps its bind pose as a plain mesh standing on the ground at a height close to the procedural model's (Nyx's dash afterimages copy it);
+   - gives every user (the hero in a run, the home showcase) its own skeleton and mixer (`HeroRig`), sharing the geometry, texture and clips;
+   - blends the idle into the run over 0.16 s when the hero moves, and paces the stride to the ground speed (1.05 body heights a second at 1x, up to 1.7x; Nyx runs flat out through her Rite dash);
+   - skins and shades it with the character shader's painted branch: the texture's own painted light leads, the hero's rim and point light only accent it, and bright saturated paint (eyes, flames, blades) glows into the bloom.
 
-| Model | Turnaround sheet | 3D job | Input |
-|---|---|---|---|
-| `vael` | `ac52bd21-978f-484e-b90d-9e8a56df64b4` | `fc66c1ad-f4e9-454d-9849-e6cf13cb23d7` | front, side, back |
-| `nyx` | `89f97c92-20a7-4743-825a-6095b54a13f2` | `71ced1f2-6936-40f9-a261-0918c7915cfc` | front, side, back |
-| `seraphine` | `73f91e0b-6331-4f59-9c0d-2f7a4fb82359` | `d5804c07-48c9-4b4c-be00-83d92ac653f1` | front, side, back |
-| `liora` | `3db9baa4-3813-43f4-b76a-df5a89f417aa` | `61052ab1-616c-4d0c-a27e-13397583fc38` | front, side, back |
-| `mordrake` | `da921f7c-6b3c-4394-bb3c-d588513315d1` | `2355b7ab-2f5c-4e18-8295-fe113ba37492` | front only |
-| `eclipse_vael` | `bd4735ec-aca6-4fe4-8680-625963f50c49` (Vael's sheet and the Eclipse splash as references) | `6adb084d-ed13-4c73-bb5b-fadc55f4456e` | front, side, back |
+| Model | Turnaround sheet | 3D job | Input | Rig job |
+|---|---|---|---|---|
+| `vael` | `ac52bd21-978f-484e-b90d-9e8a56df64b4` | `fc66c1ad-f4e9-454d-9849-e6cf13cb23d7` | front, side, back | `60b4e7eb-2a10-41ba-92d3-e38e45125b64` (with Idle_3) |
+| `nyx` | `89f97c92-20a7-4743-825a-6095b54a13f2` | `71ced1f2-6936-40f9-a261-0918c7915cfc` | front, side, back | `ef1a8223-2d19-4ae3-b397-b42cca2841ec` (with the run) |
+| `seraphine` | `73f91e0b-6331-4f59-9c0d-2f7a4fb82359` | `d5804c07-48c9-4b4c-be00-83d92ac653f1` | front, side, back | `e0f7a16b-8831-4c8d-985a-d4ad8355eafe` |
+| `liora` | `3db9baa4-3813-43f4-b76a-df5a89f417aa` | `61052ab1-616c-4d0c-a27e-13397583fc38` | front, side, back | `bdf65170-6d69-458c-afb5-5aac3202a50b` |
+| `mordrake` | `da921f7c-6b3c-4394-bb3c-d588513315d1` | `2355b7ab-2f5c-4e18-8295-fe113ba37492` | front only | `a677c6d2-ae41-49a4-9313-c0b95aa5e608` |
+| `eclipse_vael` | `bd4735ec-aca6-4fe4-8680-625963f50c49` (Vael's sheet and the Eclipse splash as references) | `6adb084d-ed13-4c73-bb5b-fadc55f4456e` | front, side, back | `59e99133-fac7-404c-baec-bbcade22336d` |
 
-**Cost:** about 140 credits: 7 sheets and 7 models, including the re-taken Nyx sheet and Vael's front-only comparison model.
+**Cost:** about 140 credits for the models (7 sheets and 7 models, including the re-taken Nyx sheet and Vael's front-only comparison model), and 57 for the rigs: the final six (36), plus a first round on the unturned models (21) that revealed the sideways skeletons.
 
 **A new hero or skin:**
 1. Paint the sheet from its splash with the same prompt.
 2. Run the views through multi-view-to-3D.
-3. Add a line to `scripts/hero-models.sh`.
-4. Add a `FIT` entry (height and glow) in `heromodels.js`.
+3. Turn the model to face +Z with `glb-turn.py`, upload it and rig it without a clip (5 credits).
+4. Add a line to `scripts/hero-models.sh` with its rig, arm gains and any weapon pins. A pin capsule runs along the weapon's shaft in the rig's rest pose; slice the mesh's vertices by height to find the shaft.
+5. Add a `FIT` entry (height and glow) in `heromodels.js`.
 
-**Planned:** the models are static and move with the game's procedural bob, lean and sway. Higgsfield can also auto-rig and animate them (a walk or run cycle, about 8 credits per clip). That is the next step if the heroes should walk instead of glide.
+More clips (a cast, a hit, a victory pose) cost one rig with that clip (8 credits) plus a `--clip` in `hero-models.sh`; every hero then shares them.
