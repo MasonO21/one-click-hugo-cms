@@ -486,7 +486,7 @@ export class PathFinder {
     let i = 0;
     while (i < t) {
       let j = i;
-      while (j + 1 < t) {
+      while (j + 1 < t && j - i < 24) {
         const nx = cellCenter(turn[j + 1] % N);
         const nz = cellCenter(Math.floor(turn[j + 1] / N));
         if (!this.lineClear(ax, az, nx, nz)) break;
