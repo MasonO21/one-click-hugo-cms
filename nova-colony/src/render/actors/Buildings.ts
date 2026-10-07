@@ -103,6 +103,8 @@ export class Buildings {
   private lightTimer = 0;
   private flashes = new Map<Id, { until: number; color: THREE.Color; base: THREE.Color }>();
   private shields = new Map<Id, { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; ripple: number }>();
+  /** 0 = peace (faint shimmer) .. 1 = invasion (shields powered up). */
+  private shieldAlert = 0;
   private lastVersion = -1;
   private lastHash = NaN;
   private lastTerrain = -1;
@@ -763,12 +765,18 @@ export class Buildings {
   private updateShields(dt: number): void {
     if (!this.shields.size) return;
     const env = this.ctx.env;
+    // shields idle as a faint shimmer (a late-game colony is covered by several huge domes — at full
+    // strength they tint the whole view) and power up while an invasion is announced or under way
+    const phase = this.ctx.game.state.combat.phase;
+    const want = phase === 'attack' || phase === 'warning' ? 1 : 0;
+    this.shieldAlert += (want - this.shieldAlert) * Math.min(1, dt * 1.5);
+    const base = 0.025 + this.shieldAlert * 0.045;
     for (const [id, s] of this.shields) {
       const en = this.byId.get(id);
       if (!en) continue;
       s.mesh.visible = en.b.status === 'active';
       s.ripple = Math.max(0, s.ripple - dt * 2.2);
-      const pulse = 0.06 + env.night * 0.05 + Math.sin(env.t * 1.5 + id) * 0.015;
+      const pulse = base + env.night * (0.02 + this.shieldAlert * 0.03) + Math.sin(env.t * 1.5 + id) * (0.008 + this.shieldAlert * 0.01);
       s.mat.opacity = pulse + s.ripple * 0.35;
       const r = (en.def?.shield?.radius ?? 4) * CELL * (1 + s.ripple * 0.04);
       s.mesh.scale.setScalar(r);

@@ -116,3 +116,15 @@ describe('QA mid/late: supply crate', () => {
     expect(grants).toContain('crate');
   });
 });
+
+describe('QA mid/late: number formatting', () => {
+  it('rolls over to the next suffix instead of printing "1000K"', async () => {
+    const { fmt } = await import('../src/core/format');
+    expect(fmt(999_600)).toBe('1M');
+    expect(fmt(999_999_999)).toBe('1B');
+    expect(fmt(999_400)).toBe('999K');
+    expect(fmt(1_250_000)).toBe('1.3M');
+    expect(fmt(12_340)).toBe('12.3K');
+    expect(fmt(-999_700)).toBe('-1M');
+  });
+});
