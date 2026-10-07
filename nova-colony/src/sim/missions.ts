@@ -419,6 +419,31 @@ export class MissionSystem extends System {
     if (def.type === 'rescue') this.ensureGuidePoi();
   }
 
+  /**
+   * Only offer dailies the player can finish today: fighting (and the Lucky Wheel, whose offers unlock after
+   * the first victory) waits for a won invasion; research, upgrades and the bigger "_big" variants wait for
+   * Reinforced Wood.
+   */
+  private dailyFeasible(id: string): boolean {
+    const def = this.game.data.mission(id);
+    if (!def) return false;
+    const st = this.game.state;
+    const won = st.stats.wavesWon > 0;
+    const settled = st.colony.tier >= 1;
+    if (id.endsWith('_big') && !settled) return false;
+    switch (def.type) {
+      case 'kill':
+      case 'defend':
+      case 'spin':
+        return won;
+      case 'research':
+      case 'upgrade':
+        return settled;
+      default:
+        return true;
+    }
+  }
+
   /** Switch to the current local day's daily missions (deterministic per date). */
   private rollDaily(): void {
     const m = this.game.state.missions;
@@ -438,7 +463,7 @@ export class MissionSystem extends System {
     }
     m.dailyDate = today;
     m.daily = pickDailies(
-      this.game.data.dailyMissionPool.filter((id) => this.game.data.mission(id)?.chain === 'daily'),
+      this.game.data.dailyMissionPool.filter((id) => this.game.data.mission(id)?.chain === 'daily' && this.dailyFeasible(id)),
       today,
       DAILY_COUNT,
     );

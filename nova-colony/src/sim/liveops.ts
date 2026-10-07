@@ -468,14 +468,15 @@ export class LiveOpsSystem extends System {
     const cz = core ? core.z : CENTER_CELL - 1;
     const w = cdef ? cdef.size[0] : 3;
     const h = cdef ? cdef.size[1] : 3;
-    // ring of cells around the core footprint, 3..7 cells out; prefer the side away from the player spawn (+x,+z)
+    // ring of cells around the core footprint, 5..7 cells out (far enough that taps on the core never hit the
+    // wheel); prefer the side away from the player spawn (+x,+z)
     const cells: { x: number; z: number; score: number }[] = [];
-    for (let dx = -7; dx <= w + 6; dx++) {
-      for (let dz = -7; dz <= h + 6; dz++) {
+    for (let dx = -8; dx <= w + 7; dx++) {
+      for (let dz = -8; dz <= h + 7; dz++) {
         const ox = dx < 0 ? -dx : dx >= w ? dx - w + 1 : 0;
         const oz = dz < 0 ? -dz : dz >= h ? dz - h + 1 : 0;
         const ring = Math.max(ox, oz);
-        if (ring < 3 || ring > 6) continue;
+        if (ring < 5 || ring > 7) continue;
         cells.push({ x: cx + dx, z: cz + dz, score: ring * 2 + Math.max(0, dx + dz) * 0.5 + Math.abs(ox - oz) * 0.1 });
       }
     }

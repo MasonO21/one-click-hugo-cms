@@ -3,7 +3,7 @@ import { AUTO_CLAIM_DELAY } from '../src/sim/missions';
 import { pickDailies } from '../src/sim/meta/missionRules';
 import { createDataRegistry, defaultData } from '../src/data';
 import type { MissionDef } from '../src/data/schema';
-import { DAY, advanceMainTo, fakeBuilding, fakeColonist, fulfil, makeGame, tickMeta } from './meta.helpers';
+import { DAY, T0, advanceMainTo, fakeBuilding, fakeColonist, fulfil, makeGame, tickMeta } from './meta.helpers';
 
 describe('missions: setup', () => {
   it('activates the first main mission, the head of every side chain and today\'s dailies on a fresh game', () => {
@@ -300,8 +300,14 @@ describe('missions: daily missions', () => {
   });
 
   it('counts a daily from its activation only and pays on tap', () => {
-    const g = makeGame();
+    const data = createDataRegistry({ ...defaultData(), dailyMissionPool: ['d_build', 'd_kill', 'd_gather_wood'] });
+    const g = makeGame({ data });
     const { game } = g;
+    // a veteran colony (first invasion won) can be offered fighting dailies: re-roll today's set
+    game.state.stats.wavesWon = 1;
+    game.state.missions.dailyDate = '';
+    tickMeta(g, 1.5); // the date check runs once per second
+    expect(game.state.missions.daily).toContain('d_kill');
     fulfil(g, game.data.mission('d_kill')!);
     expect(game.sys.missions.progress('d_kill').done).toBe(true);
     tickMeta(g, 3);
@@ -309,6 +315,21 @@ describe('missions: daily missions', () => {
     const nova = game.state.liveops.nova;
     expect(game.sys.missions.claim('d_kill')).toBe(true);
     expect(game.state.liveops.nova).toBe(nova + 3);
+  });
+});
+
+describe('missions: daily feasibility', () => {
+  it('never offers fighting, spin, research, upgrade or big dailies to a brand-new colony', () => {
+    for (let day = 0; day < 30; day++) {
+      const g = makeGame({ at: T0 + day * DAY });
+      const ids = g.game.state.missions.daily;
+      expect(ids.length).toBeGreaterThan(0);
+      for (const id of ids) {
+        const def = g.game.data.mission(id)!;
+        expect(['kill', 'defend', 'spin', 'research', 'upgrade']).not.toContain(def.type);
+        expect(id.endsWith('_big')).toBe(false);
+      }
+    }
   });
 });
 
