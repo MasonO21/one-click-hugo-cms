@@ -73,6 +73,11 @@ export abstract class Panel {
   /** Per-frame hook for live bits (progress bars, countdowns) — keep it light. */
   live(_dt: number): void {}
 
+  /** The argument the panel is currently showing (PanelManager compares modal contents). */
+  currentArg(): unknown {
+    return this.arg;
+  }
+
   setArg(arg: unknown): void {
     this.arg = arg;
   }

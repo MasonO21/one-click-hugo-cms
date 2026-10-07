@@ -37,7 +37,9 @@ export class Toasts {
       this.arm(dup, kind);
       return;
     }
-    while (this.active.length >= MAX_VISIBLE) this.dismiss(this.active[0], true);
+    // short (landscape phone) screens keep the stack small so the world stays visible
+    const max = typeof window !== 'undefined' && window.innerHeight < 500 ? MAX_VISIBLE - 1 : MAX_VISIBLE;
+    while (this.active.length >= max) this.dismiss(this.active[0], true);
 
     const el = this.pool.pop() ?? this.make();
     el.className = `toast ${kind}`;

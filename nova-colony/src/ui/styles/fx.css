@@ -5,8 +5,8 @@
 .nv-toasts {
   position: absolute;
   z-index: 8;
-  /* below the hint bubble / attack banner (never covering the tutorial hint) */
-  top: calc(var(--mt) + 3.55em + var(--status-h, 2.4em) + 0.8em + var(--banner-h, 0px));
+  /* below the attack banner / hint bubble column (its height is published as --banner-h) */
+  top: max(calc(var(--mt) + 7.4em), calc(var(--mt) + 4.4em + var(--status-h, 2.4em) + var(--banner-h, 0px)));
   left: 50%;
   transform: translateX(-50%);
   width: min(26em, calc(100vw - 2 * var(--ml) - 8em));
@@ -305,4 +305,63 @@
   opacity: 0;
   pointer-events: none;
   will-change: transform, opacity;
+}
+
+/* ---------- invasion: off-screen attacker markers ---------- */
+.threat-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3.1em;
+  height: 3.1em;
+  margin: -1.55em 0 0 -1.55em;
+  padding: 0;
+  border: 0;
+  background: none;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.2s;
+  font: inherit;
+  cursor: pointer;
+}
+.threat-edge.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.threat-edge .th-arrow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #ff8a7a, #e0413a 70%);
+  box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.45), inset 0 0 0 0.16em #fff;
+  animation: nv-pulse 0.9s ease-in-out infinite;
+}
+.threat-edge .th-arrow::after {
+  content: '';
+  position: absolute;
+  right: -0.55em;
+  top: 50%;
+  margin-top: -0.5em;
+  border-top: 0.5em solid transparent;
+  border-bottom: 0.5em solid transparent;
+  border-left: 0.7em solid #e0413a;
+}
+.threat-edge b {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #fff;
+  font-size: 0.78em;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 0.08em 0.15em rgba(0, 0, 0, 0.5);
+}
+.threat-edge.boss .th-arrow {
+  background: radial-gradient(circle at 50% 40%, #c88aff, #7a2a8a 70%);
+}
+.threat-edge.boss .th-arrow::after {
+  border-left-color: #7a2a8a;
 }

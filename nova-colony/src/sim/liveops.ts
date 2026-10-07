@@ -19,7 +19,7 @@ import type { Boost } from '../core/state';
 import type { AdResult, PurchaseResult } from '../platform/types';
 import { CENTER_CELL } from '../core/constants';
 import { dateKey } from '../core/format';
-import { crateReward, describeReward, researchGrantRp, scaleReward } from './meta/util';
+import { crateReward, researchGrantRp, scaleReward } from './meta/util';
 
 declare module '../core/state' {
   interface LiveOpsState {
@@ -148,7 +148,7 @@ export class LiveOpsSystem extends System {
     // daily login popup shortly after launch (waits for the Welcome Back panel to be dealt with)
     if (this.dailyPopupIn > 0 && --this.dailyPopupIn <= 0) {
       if (g.pendingOffline && this.dailyPopupTries++ < 8) this.dailyPopupIn = 3;
-      else if (this.dailyAvailable() && this.offersUnlocked()) g.bus.emit('ui:open', { panel: 'daily' });
+      else if (this.dailyAvailable() && this.offersUnlocked()) g.bus.emit('ui:open', { panel: 'daily', arg: { auto: true } });
     }
 
     // retry placing the free wheel if the first attempt found no room
@@ -851,7 +851,8 @@ export class LiveOpsSystem extends System {
     this.crateWasReady = this.freeCrateReady();
     g.grant(reward, 'crate');
     g.bus.emit('sfx', { id: 'crate_open' });
-    g.toast(`🎁 Crate opened: ${describeReward(reward, g.data)}`, 'reward');
+    // short: the UI shows the full contents on a reward card (a 16-resource list does not fit a toast)
+    g.toast('🎁 Supply crate opened!', 'reward');
     return reward;
   }
 

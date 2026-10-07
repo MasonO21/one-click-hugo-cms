@@ -35,6 +35,7 @@ import { FlyToHud } from './fx/FlyToHud';
 import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
 import { ConsentPrompt } from './ConsentPrompt';
+import { Threats } from './hud/Threats';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -79,6 +80,7 @@ export class UI {
   private tip!: SelectionTip;
   private guide!: Guide;
   private consent!: ConsentPrompt;
+  private threats!: Threats;
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
 
@@ -93,8 +95,8 @@ export class UI {
   private welcomeShown = false;
   private lastProdFloat = new Map<string, number>();
   private lastGatherFloat = new Map<string, number>();
-  private toastQueue: { text: string; kind?: ToastKind; icon?: string }[] = [];
   private modalWasOpen = false;
+  private deferredToasts: { text: string; kind: ToastKind; icon?: string; at: number }[] = [];
 
   constructor(
     private readonly game: Game,
@@ -142,7 +144,8 @@ export class UI {
     this.floats = new FloatText(world, this.renderer);
     this.tip = new SelectionTip(this.renderer);
     this.guide = new Guide(ctx);
-    world.append(this.tip.el, this.guide.layer);
+    this.threats = new Threats(ctx);
+    world.append(this.tip.el, this.guide.layer, this.threats.layer);
 
     this.hud = new Hud(ctx);
     this.build = new BuildController(ctx);
@@ -300,7 +303,44 @@ export class UI {
     this.panels.open(panel, arg);
   }
 
+  /**
+   * Toasts from the simulation wait while a modal (celebration, reward, victory…) is up so they never
+   * cover it; they follow once it closes. Warnings and errors always show at once.
+   */
+  private simToast(text: string, kind: ToastKind, icon?: string): void {
+    if ((kind === 'info' || kind === 'success' || kind === 'reward') && this.panels?.anyModal()) {
+      this.deferredToasts = this.deferredToasts.filter((d) => d.text !== text);
+      this.deferredToasts.push({ text, kind, icon, at: performance.now() });
+      if (this.deferredToasts.length > 6) this.deferredToasts.shift();
+      return;
+    }
+    this.toasts.show(text, kind, icon);
+  }
+
+  /**
+   * The login-gift popup must not yank away whatever the player opened in the first seconds of a
+   * session (build menu, an inspector, a placement): wait until the screen is free, else skip it
+   * (the HUD's Daily chip stays).
+   */
+  private autoDaily(tries: number): void {
+    if (!this.game.sys.liveops.dailyAvailable() || this.panels.isOpen('daily')) return;
+    if (this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play') {
+      if (tries < 20) window.setTimeout(() => this.autoDaily(tries + 1), 3000);
+      return;
+    }
+    this.open('daily');
+  }
+
+  private flushToasts(): void {
+    if (!this.deferredToasts.length || this.panels.anyModal()) return;
+    const now = performance.now();
+    const list = this.deferredToasts.filter((d) => now - d.at < 12000).slice(-3);
+    this.deferredToasts = [];
+    list.forEach((d, i) => window.setTimeout(() => this.simToast(d.text, d.kind, d.icon), 300 + i * 200));
+  }
+
   private onPanelsChanged(): void {
+    this.flushToasts();
     const covering = this.panels.anyCovering();
     this.game.view.panelOpen = covering;
     // a modal (reward card, celebration, chest) opening replaces whatever toasts were saying a moment ago
@@ -321,9 +361,10 @@ export class UI {
    * back) is up it waits instead of covering the card's title; 'reward' toasts duplicate the reward card
    * that is showing and are dropped. Toasts right after a tap still show at once (e.g. "no video").
    */
+  /** Game-event toast: shown at once right after the player's own tap, otherwise held while a modal is up. */
   private eventToast(text: string, kind?: ToastKind, icon?: string): void {
-    if (!this.panels.anyModal() || performance.now() - this.lastClick.t < 1500) this.toasts.show(text, kind, icon);
-    else if (kind !== 'reward' && !this.toastQueue.some((q) => q.text === text) && this.toastQueue.push({ text, kind, icon }) > 6) this.toastQueue.shift();
+    if (performance.now() - this.lastClick.t < 1500) this.toasts.show(text, kind, icon);
+    else this.simToast(text, kind ?? 'info', icon);
   }
 
   private showWelcome(): void {
@@ -347,10 +388,14 @@ export class UI {
       this.eventToast(e.text, e.kind, e.icon);
     });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
-    bus.on('ui:open', (e) => this.open(e.panel, e.arg));
+    bus.on('ui:open', (e) => {
+      if (e.panel === 'daily' && (e.arg as { auto?: boolean } | undefined)?.auto) this.autoDaily(0);
+      else this.open(e.panel, e.arg);
+    });
     bus.on('ui:celebrate', (e) => {
       const now = performance.now();
       if (now - this.lastTierCelebrate < TIER_REVEAL_MS + 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
+      if (e.title === 'Thank you!' && this.panels.isOpen('shop')) return; // the shop shows its own "what you got" reward
       this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon } satisfies CelebrateArg);
     });
     bus.on('colony:tierUp', (e) => {
@@ -432,6 +477,10 @@ export class UI {
       if (performance.now() - this.lastClick.t < 900) this.fly.add('nova', '💎', e.delta, this.lastClick.x, this.lastClick.y);
       else this.hud.popNova();
     });
+    // every supply crate (free, ad, inventory) opens the same "what you got" reward card
+    bus.on('reward:granted', (e) => {
+      if (e.source === 'crate') this.open('reward', { title: 'Supply crate!', reward: e.reward, icon: '📦' });
+    });
     bus.on('reward:granted', (e) => {
       // resources/nova granted from a button press fly out of that button (resource:gained covers resources)
       if (e.reward.rp && performance.now() - this.lastClick.t < 900) this.fly.add('rp', '🔬', e.reward.rp, this.lastClick.x, this.lastClick.y);
@@ -452,8 +501,11 @@ export class UI {
     bus.on('ad:failed', () => {
       this.lastAdFail = performance.now();
     });
-    bus.on('iap:purchased', () => this.toasts.show('Thank you for your support! 💜', 'reward', '🎉'));
-    bus.on('iap:failed', (e) => this.toasts.show(e.reason && e.reason !== 'cancelled' ? `Purchase didn't go through: ${e.reason}` : 'Purchase cancelled — no worries!', 'info', '🛍️'));
+    // a purchase is thanked by the sim's celebration; real failures are explained by the sim's own toast
+    bus.on('iap:failed', (e) => {
+      if (e.reason === 'cancelled') this.toasts.show('Purchase cancelled — no worries!', 'info', '🛍️');
+      else if (e.reason === 'unknown_product') this.toasts.show("That item isn't available right now", 'info', '🛍️');
+    });
     bus.on('season:levelUp', (e) => this.eventToast(`Season pass level ${e.level}!`, 'info', '🏆'));
     bus.on('building:changed', () => this.refreshBadges());
   }
@@ -622,6 +674,7 @@ export class UI {
       this.fly.update(dt);
       this.tip.update(dt);
       this.guide.frame(dt);
+      this.threats.frame();
     });
 
     this.accSlow += dt;
@@ -630,7 +683,7 @@ export class UI {
       safe('ui slow', () => {
         this.refreshBadges();
         this.guide.poll();
-        if (this.toastQueue.length && !this.panels.anyModal()) for (const q of this.toastQueue.splice(0)) this.toasts.show(q.text, q.kind, q.icon);
+        this.threats.poll();
       });
     }
     this.accFps += dt;

@@ -5,15 +5,17 @@
  */
 import { Panel, type PanelTitle } from './Panel';
 import type { BuildingInstance, Colonist } from '../../core/state';
-import type { BuildingDef, ResourceBag } from '../../data/schema';
+import type { BuildingDef, RecipeDef, ResourceBag } from '../../data/schema';
 import { WORLD_CELLS } from '../../core/constants';
 import { bagCovers, bagIsEmpty } from '../../core/bag';
 import { fmt } from '../../core/format';
 import { buildingEffects } from '../logic/describe';
 import { refundEstimate } from '../logic/build';
 import { stars } from '../logic/colonist';
-import { bar, btn, costChips, emptyState, portrait, section, tagChips } from '../widgets';
+import { bar, btn, costChips, emptyState, portrait, recipeChips, section, tagChips } from '../widgets';
 import { fill, h, replay, setVar } from '../dom';
+
+const IDLE = { text: 'Idle', cls: 'warn' };
 
 const STATUS: Record<string, { text: string; cls: string }> = {
   building: { text: 'Under construction', cls: 'info' },
@@ -74,7 +76,7 @@ export class BuildingPanel extends Panel {
     const afford = this.upgradeCosts(b)
       .map((c) => (c && bagCovers(g.state.resources.amounts, c) ? 1 : 0))
       .join('');
-    return [b.level, b.tier, b.status, Math.round(b.hp / Math.max(1, b.maxHp) * 50), b.workers.join('.'), b.recipe, Math.round(b.eff * 20), Math.round(b.progress * 50), Math.round(b.craft), idle, afford, g.state.colony.tier, g.derived.buildingsVersion].join('|');
+    return [b.level, b.tier, b.status, Math.round(b.hp / Math.max(1, b.maxHp) * 50), b.workers.join('.'), b.recipe, Math.round(b.eff * 20), Math.round(b.progress * 50), idle, afford, g.state.colony.tier, g.derived.buildingsVersion, this.idleReason(b, this.data.building(b.def))?.kind ?? ''].join('|');
   }
 
   /** Costs whose affordability affects button states. */
@@ -110,7 +112,7 @@ export class BuildingPanel extends Panel {
   // ---------------------------------------------------------------- sections
 
   private headSection(b: BuildingInstance, d: BuildingDef): HTMLElement {
-    const st = STATUS[b.status] ?? STATUS.active;
+    const st = b.status === 'active' && this.idleReason(b, d) ? IDLE : STATUS[b.status] ?? STATUS.active;
     const tier = this.data.tier(b.tier);
     const chips = h('div', { class: 'chips' });
     if (d.maxLevel > 1) chips.appendChild(h('span', { class: 'chip info', text: `Lv ${b.level}/${d.maxLevel}` }));
@@ -135,19 +137,115 @@ export class BuildingPanel extends Panel {
     if (hasEff && b.status !== 'off') {
       const e = Math.max(0, b.eff);
       wrap.appendChild(bar(Math.min(1, e), e >= 0.99 ? 'blue' : 'orange', `⚙ Efficiency ${Math.round(e * 100)}%`));
-      const why = this.efficiencyHint(b, d);
-      if (why && e < 0.99) wrap.appendChild(h('div', { class: 'hint-line', text: '💡 ' + why }));
+      const idle = this.idleReason(b, d);
+      const why = idle?.text ?? (e < 0.99 ? this.efficiencyHint(b, d) : null);
+      if (why) wrap.appendChild(h('div', { class: 'hint-line', data: { live: 'idle' }, text: '💡 ' + why }));
     }
+    // live numbers update in place (live()), so the panel never re-renders under the player's finger
+    if (b.status === 'active') wrap.appendChild(h('div', { class: 'mute small rates-line', data: { live: 'rates' }, text: this.rateText(b) }));
     return wrap;
   }
 
+  private liveAcc = 0;
+  private factoryBar: ReturnType<typeof bar> | null = null;
+
+  private factoryLabel(b: BuildingInstance, r: RecipeDef): string {
+    return `${r.name} · ${Math.round((b.craft / Math.max(1, r.time)) * 100)}%`;
+  }
+
+  override live(dt: number): void {
+    this.liveAcc += dt;
+    if (this.liveAcc < 0.5) return;
+    this.liveAcc = 0;
+    const b = this.inst();
+    const d = b && this.data.building(b.def);
+    if (!b || !d) return;
+    const r = b.recipe ? this.data.recipe(b.recipe) : undefined;
+    if (r && this.factoryBar?.isConnected) this.factoryBar.set(r.time > 0 ? b.craft / r.time : 0, this.factoryLabel(b, r));
+    const rates = this.body.querySelector<HTMLElement>('[data-live="rates"]');
+    if (rates) {
+      const t = this.rateText(b);
+      if (rates.textContent !== t) rates.textContent = t;
+    }
+    const hint = this.body.querySelector<HTMLElement>('[data-live="idle"]');
+    const idle = this.idleReason(b, d);
+    if (hint && idle) {
+      const t = '💡 ' + idle.text;
+      if (hint.textContent !== t) hint.textContent = t;
+    }
+  }
+
+  /** Generic slow-down explanation when nothing is outright blocking the building. */
   private efficiencyHint(b: BuildingInstance, d: BuildingDef): string {
     const g = this.game;
     if (b.status === 'damaged') return 'Damaged — it repairs itself for free.';
-    if (d.workers?.required && b.workers.length < d.workers.slots) return 'Needs workers — assign a colonist below.';
+    if (d.workers?.required && b.workers.length < d.workers.slots) return 'Short-staffed — assign another colonist below.';
     if ((d.power ?? 0) < 0 && g.derived.power.ratio < 1) return 'Low power — build more generators.';
-    if (d.consumes) return 'Waiting for ingredients.';
+    if (d.workers && !d.workers.required && b.workers.length < d.workers.slots) return 'Each worker you assign adds +25% speed.';
     return 'Running below full speed.';
+  }
+
+  /**
+   * Why an active building is producing nothing right now (null = running): factory without a recipe or
+   * waiting for ingredients, unstaffed, unpowered, or a consumer whose input storage is empty.
+   */
+  private idleReason(b: BuildingInstance, d: BuildingDef | undefined): { kind: string; text: string } | null {
+    if (!d || b.status !== 'active') return null;
+    const g = this.game;
+    if (d.factory) {
+      if (!b.recipe) return { kind: 'recipe', text: 'Idle — pick a recipe below to start production.' };
+      const r = this.data.recipe(b.recipe);
+      if (r && !b.cyclePaid) {
+        const miss = this.missingFor(r);
+        if (miss.length) return { kind: 'ingredients', text: `Waiting for ingredients: ${miss.join(', ')}.` };
+      }
+    }
+    const econ = g.sys.economy.buildingEconomy(b.id);
+    switch (econ?.idle) {
+      case 'no_workers':
+        return { kind: 'workers', text: 'Idle — it needs a worker. Assign a colonist below.' };
+      case 'no_power':
+        return { kind: 'power', text: 'No power — build generators (⚡ Power tab).' };
+      case 'no_inputs': {
+        if (d.factory) return null; // factory ingredients are explained above (and refill between cycles)
+        const short = Object.keys(d.consumes ?? {})
+          .filter((id) => g.sys.economy.amount(id) < 1)
+          .map((id) => this.data.resource(id)?.name ?? id);
+        return { kind: 'inputs', text: short.length ? `Waiting for ${short.join(', ')} — that storage is empty.` : 'Waiting for ingredients.' };
+      }
+      case 'low_power':
+        return { kind: 'lowpower', text: 'Low power — running slower. Build more generators.' };
+    }
+    return null;
+  }
+
+  /** "3 more Iron, 2× Medkit" for one factory cycle of a recipe. */
+  private missingFor(r: RecipeDef): string[] {
+    const g = this.game;
+    const out: string[] = [];
+    for (const [id, n] of Object.entries(r.inputs ?? {})) {
+      const lack = (n ?? 0) - g.sys.economy.amount(id);
+      if (lack > 1e-9) out.push(`${fmt(Math.ceil(lack))} more ${this.data.resource(id)?.name ?? id}`);
+    }
+    for (const [id, n] of Object.entries(r.itemInputs ?? {})) {
+      const have = g.state.player.items[id] ?? 0;
+      if (have < n) out.push(`${n}× ${this.data.item(id)?.name ?? id} (have ${have})`);
+    }
+    return out;
+  }
+
+  /** Live rates from the economy: "Now: +20 Iron/min · −5 Coal/min · +60 ⚡". */
+  private rateText(b: BuildingInstance): string {
+    if (b.status !== 'active') return '';
+    const e = this.game.sys.economy.buildingEconomy(b.id);
+    if (!e) return '';
+    const parts: string[] = [];
+    const num = (v: number) => (Math.abs(v) >= 10 ? fmt(Math.round(v)) : (Math.round(v * 10) / 10).toString());
+    for (const [id, v] of Object.entries(e.produces)) if ((v ?? 0) >= 0.05) parts.push(`+${num(v!)} ${this.data.resource(id)?.icon ?? id}/min`);
+    for (const [id, v] of Object.entries(e.consumes)) if ((v ?? 0) >= 0.05) parts.push(`−${num(v!)} ${this.data.resource(id)?.icon ?? id}/min`);
+    if (e.research >= 0.05) parts.push(`+${num(e.research)} 🔬/min`);
+    if (Math.abs(e.power) >= 0.5) parts.push(`${e.power > 0 ? '+' : '−'}${num(Math.abs(e.power))} ⚡`);
+    return parts.length ? `Now: ${parts.join(' · ')}` : '';
   }
 
   private workers(b: BuildingInstance, d: BuildingDef): HTMLElement {
@@ -232,7 +330,20 @@ export class BuildingPanel extends Panel {
     const wrap = h('div', { class: 'card tint' });
     wrap.appendChild(h('div', { class: 'h3', text: '🏭 Production recipe' }));
     const cur = b.recipe ? this.data.recipe(b.recipe) : undefined;
-    if (cur) wrap.appendChild(bar(cur.time > 0 ? b.craft / cur.time : 0, 'blue', `${cur.name} · ${Math.round((b.craft / Math.max(1, cur.time)) * 100)}%`));
+    if (cur) {
+      this.factoryBar = bar(cur.time > 0 ? b.craft / cur.time : 0, 'blue', this.factoryLabel(b, cur));
+      wrap.appendChild(this.factoryBar);
+      const g = this.game;
+      wrap.appendChild(
+        h(
+          'div',
+          { class: 'row wrap recipe-io', style: 'margin-top:.4em;gap:.4em' },
+          h('span', { class: 'mute small', text: 'Each cycle uses' }),
+          recipeChips(this.data, cur.inputs, cur.itemInputs, g.state.resources.amounts, g.state.player.items),
+          h('span', { class: 'mute small', text: `→ ${this.outputText(cur)} · ⏱ ${Math.round(cur.time)}s` }),
+        ),
+      );
+    } else if (recipes.length) wrap.appendChild(h('div', { class: 'mute small', style: 'margin-top:.3em', text: 'Tap a recipe to start automatic production.' }));
     const list = h('div', { class: 'chips recipe-list', style: 'margin-top:.5em' });
     if (!recipes.length) list.appendChild(h('span', { class: 'mute', text: 'No recipes unlocked for this machine yet.' }));
     for (const r of recipes) {
@@ -248,6 +359,14 @@ export class BuildingPanel extends Panel {
     }
     wrap.appendChild(list);
     return wrap;
+  }
+
+  private outputText(r: RecipeDef): string {
+    const o = r.outputs;
+    const parts: string[] = [];
+    for (const [id, n] of Object.entries(o.items ?? {})) parts.push(`${n}× ${this.data.item(id)?.icon ?? ''} ${this.data.item(id)?.name ?? id}`);
+    for (const [id, n] of Object.entries(o.resources ?? {})) parts.push(`+${fmt(n ?? 0)} ${this.data.resource(id)?.icon ?? ''} ${this.data.resource(id)?.name ?? id}`);
+    return parts.join(', ') || r.name;
   }
 
   private shortcuts(b: BuildingInstance, d: BuildingDef): HTMLElement | null {

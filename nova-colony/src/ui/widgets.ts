@@ -53,6 +53,29 @@ export function resChip(data: DataRegistry, id: string, amount: number, have?: n
   return h('span', { class: 'chip' + (bad ? ' bad' : ''), title: d?.name ?? id }, h('i', { text: d?.icon ?? '•' }), fmt(Math.ceil(amount)));
 }
 
+/**
+ * Item-ingredient chips ("🧩 ×2 Machine Parts"), red when the player holds fewer than needed. Appended to
+ * `into` (e.g. a costChips row) or returned in their own row. Recipes with `itemInputs` need these, or a
+ * Craft button looks affordable while it isn't.
+ */
+export function itemChips(data: DataRegistry, items: Record<string, number> | null | undefined, have: Record<string, number>, into?: HTMLElement): HTMLElement {
+  const wrap = into ?? h('div', { class: 'chips cost' });
+  for (const [id, n] of Object.entries(items ?? {})) {
+    if (!(n > 0)) continue;
+    const d = data.item(id);
+    const bad = (have[id] ?? 0) < n;
+    wrap.appendChild(h('span', { class: 'chip' + (bad ? ' bad' : ''), title: `${d?.name ?? id} (you have ${have[id] ?? 0})` }, h('i', { text: d?.icon ?? '🧩' }), `${n}× ${d?.name ?? id}`));
+  }
+  return wrap;
+}
+
+/** Resource + item ingredients of a recipe in one chip row ("Free" only when it needs nothing at all). */
+export function recipeChips(data: DataRegistry, inputs: ResourceBag | null | undefined, itemInputs: Record<string, number> | null | undefined, haveRes: Record<string, number>, haveItems: Record<string, number>): HTMLElement {
+  const hasItems = Object.values(itemInputs ?? {}).some((n) => n > 0);
+  if (hasItems && !bagEntries(inputs ?? {}).length) return itemChips(data, itemInputs, haveItems);
+  return itemChips(data, itemInputs, haveItems, costChips(data, inputs, haveRes));
+}
+
 /** Cost chips (red for what the player lacks). */
 export function costChips(data: DataRegistry, cost: ResourceBag | null | undefined, have: Record<string, number>): HTMLElement {
   const wrap = h('div', { class: 'chips cost' });

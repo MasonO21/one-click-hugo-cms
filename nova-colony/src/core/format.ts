@@ -12,6 +12,11 @@ export function fmt(n: number, digits = 1): string {
     n /= 1000;
     i++;
   }
+  // 999,600 must read "1M", not "1000K"
+  if (i < SUFFIXES.length - 1 && Number(n.toFixed(n < 100 ? digits : 0)) >= 1000) {
+    n /= 1000;
+    i++;
+  }
   return sign + n.toFixed(n < 100 ? digits : 0).replace(/\.0$/, '') + SUFFIXES[i];
 }
 

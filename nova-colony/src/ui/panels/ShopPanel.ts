@@ -96,7 +96,6 @@ export class ShopPanel extends Panel {
           cls: 'ghost small',
           onClick: async () => {
             await this.game.sys.liveops.restorePurchases();
-            this.ctx.toast('Purchases restored!', 'success', '✅');
             this.rerender();
           },
         }),
@@ -158,9 +157,8 @@ export class ShopPanel extends Panel {
           cls: 'good grow',
           disabled: ready ? false : 'Not ready yet — or watch a video!',
           onClick: () => {
-            const r = lo.openFreeCrate(false);
-            if (r) this.ctx.showReward('Supply crate!', r, '📦');
-            else this.ctx.toast("The crate isn't ready yet", 'info', '📦');
+            // the reward card opens from the crate's reward:granted event (same for ad crates)
+            if (!lo.openFreeCrate(false)) this.ctx.toast("The crate isn't ready yet", 'info', '📦');
             this.rerender();
           },
         }),

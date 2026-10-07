@@ -47,7 +47,7 @@ export class PanelManager {
     return this.open_.some((o) => !o.closing && (o.panel.kind === 'sheet' || o.panel.kind === 'modal'));
   }
 
-  /** A modal is showing (or waiting in the queue). */
+  /** A modal (celebration, reward, victory, welcome back…) is showing or waiting in the queue. */
   anyModal(): boolean {
     return this.modalQueue.length > 0 || this.open_.some((o) => !o.closing && o.panel.kind === 'modal');
   }
@@ -73,6 +73,11 @@ export class PanelManager {
       return;
     }
     const existing = this.get(name);
+    if (existing && existing.kind === 'modal' && !sameArg(existing.currentArg(), arg)) {
+      // a second celebration / reward while one is showing: queue it instead of replacing what the player is reading
+      if (!this.modalQueue.some((q) => q.name === name && sameArg(q.arg, arg))) this.modalQueue.push({ name, arg });
+      return;
+    }
     if (existing) {
       existing.setArg(arg);
       safe(`panel ${name} onArg`, () => existing.onArg(arg));
@@ -82,8 +87,8 @@ export class PanelManager {
     const panel = f(this.ctx);
     if (panel.kind === 'modal') {
       if (this.open_.some((o) => !o.closing && o.panel.kind === 'modal')) {
-        // queue (but never duplicate the same modal)
-        if (!this.modalQueue.some((q) => q.name === name)) this.modalQueue.push({ name, arg });
+        // queue (but never duplicate the same modal with the same content)
+        if (!this.modalQueue.some((q) => q.name === name && sameArg(q.arg, arg))) this.modalQueue.push({ name, arg });
         return;
       }
     } else {
@@ -157,5 +162,15 @@ export class PanelManager {
 
   update(dt: number): void {
     for (const o of this.open_) if (!o.closing) o.panel.tick(dt);
+  }
+}
+
+/** Same modal content (args are small plain objects: titles, rewards, ids). */
+function sameArg(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
   }
 }

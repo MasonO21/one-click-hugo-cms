@@ -143,6 +143,12 @@ export class CraftingSystem extends System {
       return { ok: false, reason: `Requires research: ${g.data.researchDef(r.research)?.name ?? r.research}` };
     }
     if (!this.stations().includes(r.station)) return { ok: false, reason: `Requires ${this.stationName(r.station)}` };
+    // A vehicle is granted once: a second build would only swallow the materials.
+    const veh = r.outputs.vehicle;
+    if (veh && !r.outputs.items && !r.outputs.resources) {
+      if (g.state.player.vehicles.includes(veh)) return { ok: false, reason: 'You already own this vehicle' };
+      if (g.state.crafting.queue.some((j) => j.recipe === r.id)) return { ok: false, reason: 'Already being built' };
+    }
     if (!g.sys.economy.canAfford(r.inputs)) return { ok: false, reason: 'Not enough resources' };
     for (const [id, n] of Object.entries(r.itemInputs ?? {})) {
       if ((g.state.player.items[id] ?? 0) < n) return { ok: false, reason: `Requires ${g.data.item(id)?.name ?? id}` };

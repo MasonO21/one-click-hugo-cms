@@ -371,13 +371,24 @@ export class CombatSystem extends System {
     if (left <= 0) this.beginAttack(false);
   }
 
+  /** Farthest point (cells from the colony center) any turret can hit — waves spawn beyond it. */
+  private turretReachCells(): number {
+    const ctx = this.ctx;
+    let reach = 0;
+    for (const t of ctx.index.turrets) {
+      const d = Math.hypot(t.x - ctx.coreX, t.z - ctx.coreZ) / CELL + t.spec.range * ctx.mods.turretRange;
+      if (d > reach) reach = d;
+    }
+    return reach > 0 ? Math.ceil(reach + 2) : 0;
+  }
+
   private beginAttack(early: boolean): void {
     const st = this.game.state;
     const c = st.combat;
     const ctx = this.ctx;
     ctx.index.refresh(true);
     ctx.updateCenter();
-    const plan = planWave(this.game, st.playTime, ctx.coreX, ctx.coreZ, c.wave < TUNE.EARLY_WAVES ? this.defenseBearing() : null);
+    const plan = planWave(this.game, st.playTime, ctx.coreX, ctx.coreZ, c.wave < TUNE.EARLY_WAVES ? this.defenseBearing() : null, this.turretReachCells());
     c.spawnQueue.length = 0;
     for (const it of plan.queue) c.spawnQueue.push(it);
     ctx.hpScale = plan.hpScale;

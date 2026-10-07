@@ -60,8 +60,9 @@ export function ringPoint(game: Game, cx: number, cz: number, radius: number, an
  * Groups keep their direction so attacks read clearly; 1–3 directions (more at higher tiers).
  * `bias` (radians, same convention as `directions`) orients the first direction, e.g. toward the
  * player's turrets during the first waves so the tutorial attack walks into the defenses.
+ * `minRingCells` pushes the spawn ring out to (at most) the flow-field edge, e.g. past the turrets' reach.
  */
-export function planWave(game: Game, startAt: number, cx: number, cz: number, bias: number | null = null): WavePlan {
+export function planWave(game: Game, startAt: number, cx: number, cz: number, bias: number | null = null, minRingCells = 0): WavePlan {
   const { data, rng } = game;
   const st = game.state;
   const c = st.combat;
@@ -78,7 +79,10 @@ export function planWave(game: Game, startAt: number, cx: number, cz: number, bi
   const base = bias ?? rng.range(0, Math.PI * 2);
   for (let i = 0; i < nDirs; i++) out.directions.push(base + (i * Math.PI * 2) / nDirs + rng.range(-0.35, 0.35));
 
-  const ring = (st.colony.radius + TUNE.SPAWN_RING_EXTRA) * CELL;
+  // Spawn just outside the turrets' reach (but inside the flow field) so attackers are seen walking in
+  // instead of melting on the spawn ring of a fully fortified late-game colony.
+  const baseRing = st.colony.radius + TUNE.SPAWN_RING_EXTRA;
+  const ring = Math.min(Math.max(baseRing, minRingCells), st.colony.radius + TUNE.FIELD_MARGIN - 1) * CELL;
   let lastDelay = 0;
   inv.groups.forEach((g, gi) => {
     if (!data.alien(g.alien)) return;
