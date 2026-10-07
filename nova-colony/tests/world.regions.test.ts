@@ -235,7 +235,7 @@ describe('points of interest', () => {
     expect(game.sys.world.lootPoi(camp.id)).toBe(false);
     rig.step(5000, 0.25);
     expect(game.sys.world.lootPoi(camp.id)).toBe(false); // camps never restock
-  });
+  }, 20_000); // 20k full-game updates: ~2 s alone, but it timed out at the 5 s default under a loaded parallel run
 
   it('activates beacons for fast travel; fast travel moves you next to the beacon and back to base', () => {
     const rig = makeGame();
