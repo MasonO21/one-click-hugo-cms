@@ -1,9 +1,12 @@
 /*
  * Rainkeep: Cloud Run. The Rainwyrm flies out over the dunes to herd rain clouds back to the keep.
- * Drag (or use the arrow keys) to steer: fly through clouds, storm clouds count triple, golden drops
- * are Starglass, and dust devils cost a heart. A flight lasts 45 seconds or three hearts, whichever
- * runs out first, and brings home water, Starglass and bond. Three flights a day, from Rainwyrm Lv 5.
- * Drawn on a full-screen canvas; the rest of the game waits while you fly.
+ * Drag (or use the arrow keys) to steer: fly through clouds (storm clouds count triple), thread the rain
+ * rings to build a combo that makes every cloud worth more, catch golden drops (Starglass) and the odd
+ * Rain Pearl, and dodge the dust devils. A flight lasts 45 seconds or three hearts, whichever runs out
+ * first, and brings home water, Starglass and bond. Rain Pearls buy Wyrm Gifts: more hearts, longer
+ * flights, a cloud magnet and more. Three flights a day, from Rainwyrm Lv 5.
+ * The desert, clouds and pickups are drawn on a 2D canvas; the wyrm itself is the 3D model in flight on
+ * a transparent canvas above it (art3d.js), or a 2D drawing where WebGL is missing.
  */
 'use strict';
 (function () {
@@ -13,31 +16,69 @@
   const CR = DATA.cloudRun;
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
-  KH.hooks.defaults.push((s) => { s.cloud = { day: -1, used: 0 }; s.stats.cloudRuns = 0; s.stats.cloudBest = 0; s.stats.clouds = 0; });
+  KH.hooks.defaults.push((s) => {
+    s.cloud = { day: -1, used: 0 };
+    s.cloudGifts = { pearls: 0, lv: {} };
+    s.stats.cloudRuns = 0; s.stats.cloudBest = 0; s.stats.clouds = 0; s.stats.pearls = 0; s.stats.rings = 0;
+  });
 
   const unlocked = () => !!S && S.lv.wyrm >= CR.unlock;
   const left = () => (S.cloud.day === today() ? Math.max(0, CR.perDay - S.cloud.used) : CR.perDay);
   function spend() { if (S.cloud.day !== today()) S.cloud = { day: today(), used: 0 }; S.cloud.used++; }
+  const gift = (id) => (S && S.cloudGifts.lv[id]) || 0;
+  const heartsMax = () => CR.hearts + gift('scales');
+  const flightSeconds = () => CR.seconds + 5 * gift('wind');
   function rewardsFor(clouds, drops) {
-    const g = clouds ? KH.scaleReward({ water: clouds * CR.water }) : {};
+    const g = clouds ? KH.scaleReward({ water: clouds * CR.water * (1 + 0.1 * gift('song')) }) : {};
     if (drops) g.starglass = drops * CR.drop;
     return g;
   }
-  function bankFlight(clouds, drops) {
+  function bankFlight(clouds, drops, pearls = 0) {
     const g = rewardsFor(clouds, drops);
     KH.grant(g);
+    S.cloudGifts.pearls += pearls;
+    S.stats.pearls += pearls;
     S.stats.cloudRuns++;
     S.stats.clouds += clouds;
     S.stats.cloudBest = Math.max(S.stats.cloudBest, clouds);
     if (KH.bondAdd) KH.bondAdd(Math.floor(clouds / CR.bondPer));
-    KH.emit('cloudrun', { clouds, drops });
+    KH.emit('cloudrun', { clouds, drops, pearls });
     KH.save();
     return g;
   }
 
   // ======================================================================
+  // Wyrm Gifts: lasting upgrades for the flight, bought with Rain Pearls
+  // ======================================================================
+  const giftCost = (d) => d.cost[gift(d.id)];
+  ACT.crgift = (id) => {
+    const d = CR.gifts.find((x) => x.id === id);
+    if (!d) return;
+    const c = giftCost(d);
+    if (c == null) return KH.toast(`${d.name} is already as strong as it gets.`, 'warn');
+    if (S.cloudGifts.pearls < c) return KH.toast(`${d.name} needs ${c} Rain Pearls.`, 'warn');
+    S.cloudGifts.pearls -= c;
+    S.cloudGifts.lv[id] = gift(id) + 1;
+    KH.sfx('complete');
+    KH.toast(`${d.name} ${gift(id) > 1 ? `rises to ${gift(id)}` : 'is yours'}.`, 'good');
+    KH.save();
+    if (!host().hidden) ACT.crgifts();
+  };
+  ACT.crgifts = () => {
+    const rows = CR.gifts.map((d) => {
+      const lv = gift(d.id), c = giftCost(d), max = d.cost.length;
+      return `<div class="cr-gift ${c == null ? 'done' : ''}">${icon(d.icon)}<div class="grow"><b>${esc(d.name)}</b> <span class="muted small">${lv}/${max}</span><div class="muted small">${esc(d.desc)}</div></div>
+        ${c == null ? icon('i-check') : `<button class="btn small ${S.cloudGifts.pearls >= c ? 'gold' : 'off'}" data-act="crgift" data-arg="${d.id}">${icon('i-pearl')}${c}</button>`}</div>`;
+    }).join('');
+    card(`<h2>Wyrm Gifts</h2><p class="muted small">Rain Pearls turn up once in every full flight, and now and then by luck. You have ${icon('i-pearl')}<b>${S.cloudGifts.pearls}</b>.</p>
+      <div class="cr-gifts">${rows}</div>
+      <div class="row" style="justify-content:center;gap:8px"><button class="btn alt" data-act="cloudrun">Back</button></div>`);
+  };
+
+  // ======================================================================
   // The flight
   // ======================================================================
+  const SEGS = 22, SP = 10; // body points trailing the head, and their spacing (px)
   let G = null; // the running flight
   function host() {
     let el = $('#cloudrun');
@@ -45,9 +86,9 @@
       el = document.createElement('div');
       el.id = 'cloudrun';
       el.hidden = true;
-      el.innerHTML = '<canvas></canvas><div class="cr-hud"></div><div class="cr-card"></div>';
+      el.innerHTML = '<canvas class="cr-2d"></canvas><canvas class="cr-3d"></canvas><div class="cr-hud"></div><div class="cr-card"></div>';
       $('#battle').parentNode.appendChild(el);
-      const cv = el.querySelector('canvas');
+      const cv = el.querySelector('.cr-2d');
       const steer = (e) => { if (G && G.on) { const r = cv.getBoundingClientRect(); G.tx = clamp(e.clientX - r.left, 24, r.width - 24); } };
       cv.addEventListener('pointerdown', (e) => { steer(e); if (cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
       cv.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') steer(e); });
@@ -64,8 +105,9 @@
     el.hidden = false;
     G = null;
     card(`<h2>Cloud Run</h2><p>${esc(S.wyrm.name)} is ready to fly out and herd the rain clouds home.</p>
-      <p class="muted small">Drag to steer. Fly through clouds (storm clouds count three), catch golden drops, and dodge the dust devils: three hits and ${esc(S.wyrm.name)} turns for home. ${CR.seconds} seconds a flight.</p>
-      <div class="row" style="justify-content:center;gap:8px">${left() ? `<button class="btn gold" data-act="crgo">Fly! (${left()} left today)</button>` : '<span class="chip">No flights left today</span>'}<button class="btn alt" data-act="crclose">Not now</button></div>`);
+      <p class="muted small">Drag to steer. Fly through clouds (storm clouds count ${gift('storm') ? 'four' : 'three'}) and thread the rain rings: every ring in a row makes each cloud worth more. Catch golden drops and Rain Pearls, and dodge the dust devils. ${flightSeconds()} seconds and ${heartsMax()} hearts a flight.</p>
+      <div class="row" style="justify-content:center;gap:8px">${left() ? `<button class="btn gold" data-act="crgo">Fly! (${left()} left today)</button>` : '<span class="chip">No flights left today</span>'}<button class="btn alt" data-act="crclose">Not now</button></div>
+      <button class="btn small alt cr-giftbtn" data-act="crgifts">${icon('i-pearl')}Wyrm Gifts · ${S.cloudGifts.pearls} pearl${S.cloudGifts.pearls === 1 ? '' : 's'}</button>`);
     drawIdle();
   };
   function card(html) { const c = host().querySelector('.cr-card'); c.innerHTML = html; c.hidden = !html; }
@@ -74,68 +116,108 @@
     if (!left()) return;
     spend();
     card('');
-    const cv = host().querySelector('canvas'), r = cv.getBoundingClientRect();
-    G = { on: true, t: 0, w: r.width, h: r.height, x: r.width / 2, tx: r.width / 2, hearts: CR.hearts, inv: 0, clouds: 0, drops: 0, objs: [], trail: [], dist: 0, spawn: 0, keys: {}, last: performance.now(), shake: 0, pops: [] };
-    G.segs = Array.from({ length: 16 }, () => G.x);
+    const cv = host().querySelector('.cr-2d'), r = cv.getBoundingClientRect(), dur = flightSeconds();
+    G = {
+      on: true, t: 0, dur, w: r.width, h: r.height, x: r.width / 2, tx: r.width / 2, hearts: heartsMax(), inv: 0,
+      clouds: 0, drops: 0, pearls: 0, objs: [], dist: 0, spawn: 0, keys: {}, last: performance.now(), shake: 0, pops: [],
+      combo: 0, comboT: 0, bestCombo: 0, rings: 0, ringAt: CR.ring.gap[0] * 0.6, shield: gift('storm') > 0, flash: 0,
+      pearlAt: CR.pearl.at[0] + Math.random() * (CR.pearl.at[1] - CR.pearl.at[0]), pearlDone: false,
+    };
+    G.segs = Array.from({ length: SEGS }, () => G.x);
     requestAnimationFrame(loop);
   };
   function finish() {
     G.on = false;
-    const g = bankFlight(G.clouds, G.drops);
-    const best = S.stats.cloudBest === G.clouds && G.clouds > 0;
+    const clouds = Math.floor(G.clouds);
+    const g = bankFlight(clouds, G.drops, G.pearls);
+    S.stats.rings += G.rings;
+    const best = S.stats.cloudBest === clouds && clouds > 0;
     card(`<h2>${G.hearts > 0 ? 'Home with the clouds!' : 'Back early'}</h2>
-      <div class="cr-score"><b>${G.clouds}</b><span>clouds${best ? ' · new best' : ''}</span></div>
-      ${Object.keys(g).length ? `<div class="costs" style="justify-content:center">${KH.rewardHTML(g)}</div>` : '<p class="muted">No clouds this time.</p>'}
+      <div class="cr-score"><b>${clouds}</b><span>clouds${best ? ' · new best' : ''}${G.bestCombo ? ` · best combo ×${(1 + CR.ring.step * G.bestCombo).toFixed(1)}` : ''}</span></div>
+      ${Object.keys(g).length ? `<div class="costs" style="justify-content:center">${KH.rewardHTML(g)}${G.pearls ? `<span class="chip">${icon('i-pearl')}${G.pearls}</span>` : ''}</div>` : '<p class="muted">No clouds this time.</p>'}
       <p class="muted small">${left() ? `${left()} flight${left() > 1 ? 's' : ''} left today.` : 'That was the last flight today.'}</p>
-      <div class="row" style="justify-content:center;gap:8px">${left() ? '<button class="btn gold" data-act="crgo">Fly again</button>' : ''}<button class="btn alt" data-act="crclose">Back to the keep</button></div>`);
+      <div class="row" style="justify-content:center;gap:8px">${left() ? '<button class="btn gold" data-act="crgo">Fly again</button>' : ''}<button class="btn alt" data-act="crclose">Back to the keep</button></div>
+      <button class="btn small alt cr-giftbtn" data-act="crgifts">${icon('i-pearl')}Wyrm Gifts · ${S.cloudGifts.pearls} pearl${S.cloudGifts.pearls === 1 ? '' : 's'}</button>`);
     KH.sfx('victory');
   }
 
   function spawn() {
-    const k = clamp(G.t / CR.seconds, 0, 1), roll = Math.random(), x = 30 + Math.random() * (G.w - 60);
-    if (roll < 0.05) G.objs.push({ kind: 'drop', x, y: -30, r: 13 });
-    else if (roll < 0.11) G.objs.push({ kind: 'storm', x, y: -40, r: 30 });
-    else if (roll < 0.11 + 0.14 + 0.26 * k) G.objs.push({ kind: 'devil', x, y: -40, r: 20, ph: Math.random() * 6, dx: (Math.random() - 0.5) * 60 });
+    const k = clamp(G.t / G.dur, 0, 1), roll = Math.random(), x = 30 + Math.random() * (G.w - 60);
+    const pDrop = 0.05 * (1 + 0.6 * gift('gold'));
+    if (Math.random() < CR.pearl.chance) G.objs.push({ kind: 'pearl', x, y: -30, r: 14, ph: 0 });
+    else if (roll < pDrop) G.objs.push({ kind: 'drop', x, y: -30, r: 13 });
+    else if (roll < pDrop + 0.06) G.objs.push({ kind: 'storm', x, y: -40, r: 30 });
+    else if (roll < pDrop + 0.06 + 0.14 + 0.26 * k) G.objs.push({ kind: 'devil', x, y: -40, r: 20, ph: Math.random() * 6, dx: (Math.random() - 0.5) * 60 });
     else G.objs.push({ kind: 'cloud', x, y: -30, r: 22 + Math.random() * 6 });
   }
+  // pickup words rise just ahead of the head, stacked so two at once stay readable
+  const pop = (x, y, txt, col) => {
+    const n = G.pops.filter((p) => p.t < 0.45).length;
+    G.pops.push({ x: clamp(x, 60, G.w - 60), y: Math.min(y, G.h * 0.72 - 48) - Math.min(3, n) * 24, t: 0, txt, col });
+  };
   function loop(now) {
     if (!G || !G.on) return;
     const dt = Math.min(0.05, (now - G.last) / 1000);
     G.last = now;
     G.t += dt;
-    const k = clamp(G.t / CR.seconds, 0, 1), v = CR.speed[0] + (CR.speed[1] - CR.speed[0]) * k;
+    const k = clamp(G.t / G.dur, 0, 1), v = CR.speed[0] + (CR.speed[1] - CR.speed[0]) * k;
     if (G.keys.ArrowLeft) G.tx = clamp(G.tx - 420 * dt, 24, G.w - 24);
     if (G.keys.ArrowRight) G.tx = clamp(G.tx + 420 * dt, 24, G.w - 24);
     G.x += (G.tx - G.x) * Math.min(1, dt * 9);
-    // each body segment follows the one ahead of it, so the body stays whole at any frame rate
+    // each body point follows the one ahead of it, so the body stays whole at any frame rate
     for (let i = 0; i < G.segs.length; i++) { const ahead = i ? G.segs[i - 1] : G.x; G.segs[i] += (ahead - G.segs[i]) * Math.min(1, dt * 14); }
     G.dist += v * dt;
     G.spawn -= v * dt;
     if (G.spawn <= 0) { spawn(); G.spawn = 70 + Math.random() * 60; }
-    const hy = G.h * 0.72;
+    // rain rings, and the pearl that waits in every long enough flight
+    if (G.dist >= G.ringAt) {
+      G.objs.push({ kind: 'ring', x: 50 + Math.random() * (G.w - 100), y: -40, r: 34 });
+      G.ringAt = G.dist + CR.ring.gap[0] + Math.random() * (CR.ring.gap[1] - CR.ring.gap[0]);
+    }
+    if (!G.pearlDone && G.t >= G.pearlAt) { G.pearlDone = true; G.objs.push({ kind: 'pearl', x: 50 + Math.random() * (G.w - 100), y: -30, r: 14, ph: 0 }); }
+    // the combo slips a step when no ring comes for a while
+    if (G.combo > 0) { G.comboT -= dt; if (G.comboT <= 0) { G.combo--; G.comboT = CR.ring.hold; } }
+    const hy = G.h * 0.72, pull = gift('call');
     for (const o of G.objs) {
       o.y += v * dt;
       if (o.kind === 'devil') { o.ph += dt * 6; o.x = clamp(o.x + o.dx * dt, 20, G.w - 20); }
+      if (o.kind === 'pearl') o.ph += dt * 3;
+      if (pull && !o.gone && o.kind !== 'devil' && o.kind !== 'ring' && o.y > hy - 240 && o.y < hy + 10) o.x += (G.x - o.x) * Math.min(1, dt * 0.9 * pull);
       if (o.gone) continue;
-      if (Math.hypot(o.x - G.x, o.y - hy) < o.r + 16) {
+      const d = Math.hypot(o.x - G.x, o.y - hy);
+      if (o.kind === 'ring') {
+        if (d < o.r) {
+          o.gone = true;
+          G.combo = Math.min(CR.ring.max, G.combo + 1); G.comboT = CR.ring.hold; G.rings++;
+          G.bestCombo = Math.max(G.bestCombo, G.combo);
+          pop(o.x, o.y, `combo ×${(1 + CR.ring.step * G.combo).toFixed(1)}`, '#7ff0ff');
+          KH.sfx('claim');
+        }
+        continue;
+      }
+      if (d < o.r + 16) {
         if (o.kind === 'devil') {
-          if (G.inv <= 0) { G.hearts--; G.inv = 1.3; G.shake = 0.35; KH.sfx('hurt'); if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) { /* ignore */ } }
+          if (G.inv > 0) continue;
+          if (G.shield) { G.shield = false; G.inv = 1; G.flash = 0.4; pop(G.x, hy - 30, 'glanced off', '#ffe08a'); KH.sfx('tap'); continue; }
+          G.hearts--; G.inv = 1.3; G.shake = 0.35; G.combo = 0; KH.sfx('hurt');
+          if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) { /* ignore */ }
         } else {
           o.gone = true;
-          const n = o.kind === 'storm' ? 3 : o.kind === 'cloud' ? 1 : 0;
-          G.clouds += n;
-          if (o.kind === 'drop') G.drops++;
-          G.pops.push({ x: o.x, y: o.y, t: 0, txt: o.kind === 'drop' ? `+${CR.drop}◆` : `+${n}` });
-          KH.sfx(o.kind === 'drop' ? 'coin' : 'tap');
+          if (o.kind === 'drop') { G.drops++; pop(o.x, o.y, `+${CR.drop}◆`, '#ffd36e'); KH.sfx('coin'); } else if (o.kind === 'pearl') { G.pearls++; pop(o.x, o.y, '+1 pearl', '#e6f8ff'); KH.sfx('complete'); } else {
+            const n = (o.kind === 'storm' ? (gift('storm') ? 4 : 3) : 1) * (1 + CR.ring.step * G.combo);
+            G.clouds += n;
+            pop(o.x, o.y, `+${Math.round(n * 10) / 10}`, '#ffffff');
+            KH.sfx('tap');
+          }
         }
       }
     }
     G.objs = G.objs.filter((o) => o.y < G.h + 60 && !(o.gone && o.kind !== 'devil'));
-    G.inv -= dt; G.shake = Math.max(0, G.shake - dt);
+    G.inv -= dt; G.shake = Math.max(0, G.shake - dt); G.flash = Math.max(0, G.flash - dt);
     for (const p of G.pops) p.t += dt;
     G.pops = G.pops.filter((p) => p.t < 0.8);
     draw(now / 1000);
-    if (G.hearts <= 0 || G.t >= CR.seconds) return finish();
+    if (G.hearts <= 0 || G.t >= G.dur) return finish();
     requestAnimationFrame(loop);
   }
 
@@ -143,7 +225,7 @@
   // Drawing
   // ======================================================================
   function canvasCtx() {
-    const cv = host().querySelector('canvas'), r = cv.getBoundingClientRect(), DPR = Math.min(2, window.devicePixelRatio || 1);
+    const cv = host().querySelector('.cr-2d'), r = cv.getBoundingClientRect(), DPR = Math.min(2, window.devicePixelRatio || 1);
     if (cv.width !== Math.round(r.width * DPR) || cv.height !== Math.round(r.height * DPR)) { cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR); }
     const g = cv.getContext('2d');
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -174,7 +256,7 @@
     g.fillStyle = shade; for (const [dx, dy, s] of [[-0.6, 0.25, 0.6], [0.55, 0.2, 0.65], [0, 0.32, 0.7]]) { g.beginPath(); g.arc(x + dx * r, y + dy * r + 4, r * s, 0, Math.PI * 2); g.fill(); }
     g.fillStyle = col; for (const [dx, dy, s] of [[-0.6, 0.1, 0.55], [0.55, 0.05, 0.6], [0, -0.2, 0.75], [0, 0.2, 0.6]]) { g.beginPath(); g.arc(x + dx * r, y + dy * r, r * s, 0, Math.PI * 2); g.fill(); }
   }
-  // the Rainwyrm seen from above, flying up the screen: the body trails the head's path
+  // where WebGL is missing: the Rainwyrm drawn in 2D from above, flying up the screen
   function wyrm(g, x, y, t, blink) {
     const sk = DATA.skins[S.skins.on] || DATA.skins.river, n = 16, sp = 9;
     g.save(); g.translate(x, y); g.scale(1.2, 1.2); g.translate(-x, -y);
@@ -239,17 +321,68 @@
     g.restore();
     g.globalAlpha = 1;
   }
+  function ring(g, o, t) {
+    g.save();
+    g.lineWidth = 7; g.strokeStyle = 'rgba(70,214,208,.35)';
+    g.beginPath(); g.ellipse(o.x, o.y, o.r + 3, (o.r + 3) * 0.42, 0, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = 4; g.strokeStyle = '#ffe08a';
+    g.beginPath(); g.ellipse(o.x, o.y, o.r, o.r * 0.42, 0, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = 1.5; g.strokeStyle = '#ffffff';
+    g.beginPath(); g.ellipse(o.x, o.y - 1, o.r - 2, (o.r - 2) * 0.4, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+    for (let k = 0; k < 4; k++) { const a = t * 3 + (k * Math.PI) / 2; g.fillStyle = '#7ff0ff'; g.beginPath(); g.arc(o.x + Math.cos(a) * o.r, o.y + Math.sin(a) * o.r * 0.42, 2.2, 0, Math.PI * 2); g.fill(); }
+    g.restore();
+  }
+  function pearl(g, o) {
+    const gl = g.createRadialGradient(o.x, o.y, 2, o.x, o.y, o.r * 2.4);
+    gl.addColorStop(0, 'rgba(220,250,255,.75)'); gl.addColorStop(1, 'rgba(120,220,255,0)');
+    g.fillStyle = gl; g.beginPath(); g.arc(o.x, o.y, o.r * 2.4, 0, Math.PI * 2); g.fill();
+    const b = g.createRadialGradient(o.x - o.r * 0.35, o.y - o.r * 0.35, 1, o.x, o.y, o.r);
+    b.addColorStop(0, '#ffffff'); b.addColorStop(0.6, '#d8f2fb'); b.addColorStop(1, '#8fc6dc');
+    g.fillStyle = b; g.beginPath(); g.arc(o.x, o.y + Math.sin(o.ph) * 2, o.r * 0.75, 0, Math.PI * 2); g.fill();
+  }
+  // the body's path on screen, head first: [x, y, height above the sand]
+  function bodyPath(t, x, hy, segs) {
+    const pts = [[x, hy, 34]];
+    // a swimming wave that grows toward the tail
+    segs.forEach((sx, i) => pts.push([sx + Math.sin(t * 5 - i * 0.45) * (1.5 + i * 0.42), hy + (i + 1) * SP, 30 - i * 0.5 + Math.sin(t * 5 - i * 0.7) * 5]));
+    return pts;
+  }
+  function shadow(g, pts) {
+    g.save();
+    g.strokeStyle = 'rgba(90,50,20,.2)'; g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const wd of [22, 13]) {
+      g.lineWidth = wd;
+      g.beginPath();
+      pts.forEach(([x, y], i) => { if (i) g.lineTo(x + 10, y + 16); else g.moveTo(x + 10, y + 16); });
+      g.stroke();
+    }
+    g.restore();
+  }
+  // the 3D wyrm in flight; false where WebGL is missing (the 2D drawing stands in)
+  function wyrm3d(pts, t, blink) {
+    const A = KH.A3, c3 = host().querySelector('.cr-3d');
+    if (!A || !A.ok || !A.enabled() || !A.flyer || !A.flyer(c3)) { c3.hidden = true; return false; }
+    c3.hidden = false;
+    const r = c3.getBoundingClientRect(), stIdx = KH.stageIndex(S.lv.wyrm);
+    c3.style.opacity = blink && Math.floor(t * 12) % 2 ? 0.45 : 1;
+    return A.flyRender({ w: r.width, h: r.height, dpr: Math.min(2, window.devicePixelRatio || 1), pts, t, level: S.lv.wyrm, skin: S.skins.on, element: S.wyrm.element, scale: 29 + stIdx * 1.6 });
+  }
   function draw(t) {
     const { g, w, h } = canvasCtx();
     g.save();
     if (G.shake > 0) g.translate((Math.random() - 0.5) * 10 * G.shake, (Math.random() - 0.5) * 10 * G.shake);
     ground(g, w, h, G.dist);
+    const hy = h * 0.72, pts = bodyPath(t, G.x, hy, G.segs);
+    shadow(g, pts);
     for (const o of G.objs) {
-      if (o.kind === 'cloud' && !o.gone) puff(g, o.x, o.y, o.r, '#ffffff', 'rgba(120,150,180,.35)');
-      else if (o.kind === 'storm' && !o.gone) {
+      if (o.gone && o.kind !== 'devil') continue;
+      if (o.kind === 'cloud') puff(g, o.x, o.y, o.r, '#ffffff', 'rgba(120,150,180,.35)');
+      else if (o.kind === 'ring') ring(g, o, t);
+      else if (o.kind === 'pearl') pearl(g, o);
+      else if (o.kind === 'storm') {
         puff(g, o.x, o.y, o.r, '#b8c4d4', 'rgba(60,70,90,.4)');
         if (Math.sin(t * 9 + o.x) > 0.7) { g.strokeStyle = '#fff4b8'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(o.x, o.y + 8); g.lineTo(o.x - 6, o.y + 22); g.lineTo(o.x + 3, o.y + 22); g.lineTo(o.x - 4, o.y + 38); g.stroke(); }
-      } else if (o.kind === 'drop' && !o.gone) {
+      } else if (o.kind === 'drop') {
         g.fillStyle = '#ffd36e'; g.beginPath(); g.moveTo(o.x, o.y - o.r); g.quadraticCurveTo(o.x + o.r, o.y + 2, o.x, o.y + o.r); g.quadraticCurveTo(o.x - o.r, o.y + 2, o.x, o.y - o.r); g.fill();
         g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(o.x - 3, o.y - 1, 3, 0, Math.PI * 2); g.fill();
       } else if (o.kind === 'devil') {
@@ -261,30 +394,46 @@
         g.fillStyle = 'rgba(150,96,50,.25)'; g.beginPath(); g.ellipse(o.x, o.y + 30, 18, 6, 0, 0, Math.PI * 2); g.fill();
       }
     }
-    wyrm(g, G.x, h * 0.72, t, G.inv > 0);
+    if (!wyrm3d(pts, t, G.inv > 0)) wyrm(g, G.x, hy, t, G.inv > 0);
+    if (G.flash > 0) { g.fillStyle = `rgba(255,224,138,${G.flash})`; g.beginPath(); g.arc(G.x, hy, 40, 0, Math.PI * 2); g.fill(); }
     g.font = "800 20px 'Barlow Semi Condensed', sans-serif"; g.textAlign = 'center';
-    for (const p of G.pops) { g.globalAlpha = 1 - p.t / 0.8; g.fillStyle = p.txt.includes('◆') ? '#ffd36e' : '#ffffff'; g.strokeStyle = 'rgba(40,20,6,.7)'; g.lineWidth = 3; g.strokeText(p.txt, p.x, p.y - p.t * 40); g.fillText(p.txt, p.x, p.y - p.t * 40); }
+    for (const p of G.pops) { g.globalAlpha = 1 - p.t / 0.8; g.fillStyle = p.col || '#ffffff'; g.strokeStyle = 'rgba(40,20,6,.7)'; g.lineWidth = 3; g.strokeText(p.txt, p.x, p.y - p.t * 40); g.fillText(p.txt, p.x, p.y - p.t * 40); }
     g.globalAlpha = 1;
     g.restore();
-    const hud = host().querySelector('.cr-hud');
-    const txt = `<span class="cr-clouds">☁ ${G.clouds}</span><span class="cr-hearts">${'♥'.repeat(Math.max(0, G.hearts))}<i>${'♥'.repeat(CR.hearts - Math.max(0, G.hearts))}</i></span><div class="cr-time"><i style="width:${(1 - G.t / CR.seconds) * 100}%"></i></div>`;
+    const hud = host().querySelector('.cr-hud'), hm = heartsMax();
+    const combo = G.combo ? `<span class="cr-combo">×${(1 + CR.ring.step * G.combo).toFixed(1)}<i style="width:${(G.comboT / CR.ring.hold) * 100}%"></i></span>` : '';
+    const txt = `<span class="cr-clouds">☁ ${Math.floor(G.clouds)}</span>${combo}<span class="cr-pearls">${G.pearls ? `${icon('i-pearl')}${G.pearls}` : ''}</span><span class="cr-hearts">${G.shield ? '<b class="cr-shield">◈</b>' : ''}${'♥'.repeat(Math.max(0, G.hearts))}<i>${'♥'.repeat(Math.max(0, hm - Math.max(0, G.hearts)))}</i></span><div class="cr-time"><i style="width:${(1 - G.t / G.dur) * 100}%"></i></div>`;
     if (hud._h !== txt) { hud.innerHTML = txt; hud._h = txt; }
   }
   function drawIdle() {
     const { g, w, h } = canvasCtx();
     ground(g, w, h, 0);
-    const saved = G;
-    G = { segs: Array.from({ length: 16 }, () => w / 2) };
-    wyrm(g, w / 2, h * 0.72, performance.now() / 1000, false);
-    G = saved;
+    const t = performance.now() / 1000, pts = bodyPath(t, w / 2, h * 0.72, Array.from({ length: SEGS }, () => w / 2));
+    shadow(g, pts);
+    if (!wyrm3d(pts, t, false)) {
+      const saved = G;
+      G = { segs: Array.from({ length: 16 }, () => w / 2) };
+      wyrm(g, w / 2, h * 0.72, t, false);
+      G = saved;
+    }
     const hud = host().querySelector('.cr-hud'); hud.innerHTML = ''; hud._h = '';
   }
 
   // entry points: a side button and the Rainwyrm's sheet
-  KH.side.push({ id: 'cloudrun', icon: 'i-storm', label: 'Cloud Run', act: 'cloudrun', show: () => unlocked(), dot: () => left() === CR.perDay, badge: () => `${left()}/${CR.perDay}` });
+  KH.side.push({ id: 'cloudrun', icon: 'i-storm', label: 'Cloud Run', act: 'cloudrun', show: () => unlocked(), dot: () => left() === CR.perDay || CR.gifts.some((d) => giftCost(d) != null && S.cloudGifts.pearls >= giftCost(d)), badge: () => `${left()}/${CR.perDay}` });
   const prevExtras = KH.wyrmExtras;
   KH.wyrmExtras = () => `${prevExtras ? prevExtras() : ''}${unlocked() ? `<button class="btn wide gold" data-act="cloudrun">${icon('i-storm')}Cloud Run · ${left()}/${CR.perDay} flights today</button>` : ''}`;
 
-  // for tests and the balance bot: a flight flown well
-  KH.cloudRun = { unlocked, left, auto: (clouds = 32, drops = 1) => { if (!unlocked() || !left()) return null; spend(); return bankFlight(clouds, drops); }, state: () => G };
+  // for tests and the balance bot: a flight flown well brings home its pearl too
+  KH.cloudRun = {
+    unlocked, left, gift, heartsMax, flightSeconds, state: () => G,
+    pearls: () => S.cloudGifts.pearls,
+    auto: (clouds = 32, drops = 1, pearls = 1) => { if (!unlocked() || !left()) return null; spend(); return bankFlight(clouds, drops, pearls); },
+    // buy the cheapest gift there are pearls for
+    buyCheapest: () => {
+      const d = CR.gifts.filter((x) => giftCost(x) != null).sort((a, b) => giftCost(a) - giftCost(b))[0];
+      if (d && S.cloudGifts.pearls >= giftCost(d)) { ACT.crgift(d.id); return d.id; }
+      return null;
+    },
+  };
 })();

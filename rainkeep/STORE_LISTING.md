@@ -75,7 +75,7 @@ RIDE WITH YOUR CARAVAN
 PLAY YOUR WAY
 • Your keep keeps working while you're away, and your wyrm keeps a gentle mist so no one falls ill.
 • Guide the water in Channels: turn the stone channels until every hut, palm and field drinks. A new puzzle every day.
-• Fly your Rainwyrm through the sky in Cloud Run and herd the rain clouds home, three flights a day.
+• Fly your Rainwyrm through the sky in Cloud Run: thread rain rings for combos, catch Rain Pearls, and spend them on Wyrm Gifts that make every flight better.
 • Your Rainwyrm makes wishes: a splash in the rain, fresh dates, a story from the Dunes. Grant them to deepen your bond.
 • Daily duties, gifts, six rotating events and a season pass with a new wyrm skin every season.
 • Patron levels reward loyal players with faster production, shorter timers and a daily chest. They never add combat strength.

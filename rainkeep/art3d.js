@@ -1335,6 +1335,19 @@
           p.y += Math.sin(t * 1.5) * 0.05 * u * u;
         } else p.y += Math.sin(t * 0.8) * 0.02 * u;
       }
+      this.dress(st);
+    }
+    // in flight (Cloud Run): st.path runs from the head back to the tail in the group's units, and the
+    // spine is sampled smoothly along it; the head looks where the body is going
+    poseFly(st) {
+      const c = this.flyCurve || (this.flyCurve = new THREE.CatmullRomCurve3(st.path, false, 'centripetal'));
+      c.points = st.path;
+      for (let i = 0; i <= SN; i++) c.getPoint(1 - i / SN, this.P[i]);
+      this.dress({ ...st, fly: true });
+    }
+    // everything that hangs off the spine: frames, skin, the back fin, fins, the head
+    dress(st) {
+      const t = st.t, dorm = !!st.dormant, pet = st.pet || 0, roar = dorm ? 0 : st.roar || 0, P = this.P, fly = !!st.fly;
       // tangents and parallel-transport frames
       const T = this.T, N = this.N, Bn = this.Bn, dn = this.down;
       for (let i = 0; i <= SN; i++) T[i].subVectors(P[Math.min(SN, i + 1)], P[Math.max(0, i - 1)]).normalize();
@@ -1413,13 +1426,13 @@
       const ip = Math.round(0.7 * SN), rp = this.radius(0.7);
       this.pecs.forEach((p, k) => {
         place(p, ip, 0, 0.55 + this.stage * 0.06);
-        p.rotateZ((k ? -1 : 1) * (1.75 + Math.sin(t * 2 + k) * 0.22));
+        p.rotateZ((k ? -1 : 1) * (1.75 + Math.sin(t * (fly ? 9 : 2) + k) * (fly ? 0.5 : 0.22)));
         p.translateY(rp * 0.6);
       });
       // head: on the end of the spine, three-quarter to the viewer, the jaw breathing mist
       const hp = P[SN], ht = T[SN];
-      const look = st.look || new V3(0.95, -0.16 - pet * 0.1 + roar * 0.95 + Math.sin(t * 0.6) * 0.04, 0.32 + Math.sin(t * 0.5) * 0.18);
-      const fwd = new V3().copy(ht).lerp(dorm ? new V3(0.3, -0.35, 1) : look, 0.8).normalize();
+      const look = fly ? T[SN].clone().add(new V3(0, -0.1, 0)) : st.look || new V3(0.95, -0.16 - pet * 0.1 + roar * 0.95 + Math.sin(t * 0.6) * 0.04, 0.32 + Math.sin(t * 0.5) * 0.18);
+      const fwd = fly ? look.normalize() : new V3().copy(ht).lerp(dorm ? new V3(0.3, -0.35, 1) : look, 0.8).normalize();
       const xr = new V3().crossVectors(new V3(0, 1, 0), fwd).normalize(), yr = new V3().crossVectors(fwd, xr);
       m4.makeBasis(xr, yr, fwd);
       this.head.quaternion.setFromRotationMatrix(m4);
@@ -1529,6 +1542,60 @@
       g.fillStyle = gl; g.fillRect(0, 0, c.width, c.height);
     }
     g.drawImage(rig.r.domElement, 0, 0, c.width, c.height);
+    return true;
+  };
+
+  // ======================================================================
+  // Cloud Run: the wyrm in flight on its own transparent canvas over the 2D desert. Screen points (CSS
+  // pixels) land on a plane at their height above the sand; the camera looks down from behind, so the
+  // wyrm flies away from it, up the screen.
+  // ======================================================================
+  let FL = null;
+  A.flyer = (canvas) => {
+    if (FL === false) return null;
+    if (FL && FL.canvas === canvas) return FL;
+    try {
+      const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      r.setClearColor(0x000000, 0);
+      r.outputColorSpace = THREE.SRGBColorSpace;
+      r.toneMapping = THREE.ACESFilmicToneMapping;
+      r.toneMappingExposure = 1.1;
+      const scene = new THREE.Scene();
+      scene.add(new THREE.HemisphereLight('#fff6e8', '#9a6a3a', 1.7));
+      const sun = new THREE.DirectionalLight('#fff0d0', 2.3); sun.position.set(-0.4, 1, 0.5); scene.add(sun);
+      const rim = new THREE.DirectionalLight('#7fe0ff', 1.1); rim.position.set(0.5, 0.6, -1); scene.add(rim);
+      const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, -5000, 5000);
+      const w = new Wyrm();
+      scene.add(w.group);
+      FL = { canvas, r, scene, cam, w, size: '', ray: new THREE.Raycaster(), plane: new THREE.Plane(new V3(0, 1, 0), 0), ndc: new THREE.Vector2(), path: [] };
+    } catch (e) { FL = false; return null; }
+    return FL;
+  };
+  // o: { w, h, dpr, pts: [[x, y, lift], ...] head first, t, level, skin, element, scale }
+  A.flyRender = (o) => {
+    const F = FL;
+    if (!F) return false;
+    const size = `${o.w}x${o.h}x${o.dpr}`;
+    if (F.size !== size) {
+      F.size = size;
+      F.r.setPixelRatio(o.dpr); F.r.setSize(o.w, o.h, false);
+      const c = F.cam;
+      c.left = -o.w / 2; c.right = o.w / 2; c.top = o.h / 2; c.bottom = -o.h / 2;
+      c.position.set(0, 1000, 560); c.lookAt(0, 0, 0); c.updateProjectionMatrix(); c.updateMatrixWorld();
+    }
+    F.w.set({ level: o.level, skin: o.skin, element: o.element });
+    F.w.group.scale.setScalar(o.scale);
+    while (F.path.length < o.pts.length) F.path.push(new V3());
+    F.path.length = o.pts.length;
+    o.pts.forEach(([x, y, lift], i) => {
+      F.ndc.set((x / o.w) * 2 - 1, -(y / o.h) * 2 + 1);
+      F.ray.setFromCamera(F.ndc, F.cam);
+      F.plane.constant = -lift;
+      if (!F.ray.ray.intersectPlane(F.plane, F.path[i])) F.path[i].set(0, lift, 0);
+      F.path[i].multiplyScalar(1 / o.scale);
+    });
+    F.w.poseFly({ t: o.t, path: F.path });
+    F.r.render(F.scene, F.cam);
     return true;
   };
 })();

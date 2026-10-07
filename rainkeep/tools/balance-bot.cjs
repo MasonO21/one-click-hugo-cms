@@ -121,7 +121,7 @@ const HOURS = Number(process.argv[3] || 8);
         // Bloom: plant a grove whenever the stores hold three times its price
         if (KH.bloom && !NO.includes('bloom') && KH.bloom.unlocked() && KH.bloom.count() < KH.bloom.max) { const c = KH.bloom.costOf(); if (Object.entries(c).every(([k, v]) => S.res[k] >= v * 3)) A.plantnear(); }
         // Cloud Run: three decent flights a day
-        if (KH.cloudRun && !NO.includes('cloudrun')) while (KH.cloudRun.unlocked() && KH.cloudRun.left() > 0) KH.cloudRun.auto(32, 1);
+        if (KH.cloudRun && !NO.includes('cloudrun')) while (KH.cloudRun.unlocked() && KH.cloudRun.left() > 0) { KH.cloudRun.auto(32, 1); while (KH.cloudRun.buyCheapest && KH.cloudRun.buyCheapest()); }
         // Channels: a player who keeps up with the water puzzles, three stars each
         const CHN = KH.channels;
         if (CHN && CHN.unlocked() && !NO.includes('channels')) {
