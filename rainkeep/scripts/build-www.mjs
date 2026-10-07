@@ -4,7 +4,7 @@
  * No dependencies. Run from anywhere: `npm run build` (or `node scripts/build-www.mjs`).
  *
  * Copied: top-level *.html, *.css, *.js, manifest.webmanifest, icon.svg, sw.js and the
- * icons/, fonts/, art/ (painted portraits, foes and backdrops) and vendor/ (three.js) folders.
+ * icons/, fonts/, art/ (painted portraits, foes and backdrops), models/ (3D models) and vendor/ (three.js) folders.
  * Not copied: docs, package files, scripts/, native projects, node_modules.
  * sw.js gets its cache VERSION stamped with a hash of the build, so a web deploy of www/
  * always ships a fresh offline cache.
@@ -16,9 +16,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'www');
-const REQUIRED = ['index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js'];
+const REQUIRED = ['index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'models3d.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js', 'vendor/three-gltf.js'];
 const EXTRA_FILES = new Set(['manifest.webmanifest', 'icon.svg']);
-const DIRS = ['icons', 'fonts', 'vendor', 'art'];
+const DIRS = ['icons', 'fonts', 'vendor', 'art', 'models'];
 
 if (relative(ROOT, OUT) !== 'www') throw new Error(`Refusing to clean unexpected path ${OUT}`);
 
@@ -49,7 +49,7 @@ for (const dir of DIRS) {
   cpSync(src, join(OUT, dir), { recursive: true });
   for (const f of readdirSync(src, { recursive: true }).sort()) {
     const p = join(src, f);
-    if (!statSync(p).isFile()) continue; // art/ has subfolders
+    if (!statSync(p).isFile()) continue; // art/ and models/ have subfolders
     hash.update(`${dir}/${f}`).update(readFileSync(p));
     dirCount++;
   }

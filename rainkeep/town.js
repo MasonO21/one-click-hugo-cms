@@ -1023,6 +1023,7 @@
     if (pid === 'channels') { KH.sfx('tap'); ACT.channels(); KH.renderAll(true); return; }
     if (pid === 'gardens') { KH.sfx('tap'); ACT.gardens(); KH.renderAll(true); return; }
     if (pid.startsWith('pal:')) { KH.sfx('tap'); ACT.pal(pid.slice(4)); KH.renderAll(true); return; }
+    if (pid.startsWith('hero:')) { KH.sfx('tap'); ACT.hero(pid.slice(5)); KH.renderAll(true); return; }
     if (pid !== 'wyrm' && S.lv.wyrm < PLOT[pid].unlock) {
       KH.toast(`The ${KH.plotName(pid)} unlocks at Rainwyrm Lv ${PLOT[pid].unlock}.`, 'heat');
       return;

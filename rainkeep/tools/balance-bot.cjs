@@ -143,10 +143,14 @@ const HOURS = Number(process.argv[3] || 8);
             if (KH.pals.skillReady(p) && (p.id !== 'hoopoe' || S.builds.length || (S.research && S.research.end > S.time))) A.palskill(p.id);
             while (KH.pals.canAdvance(p)) A.paladv(p.id);
           }
+          // save up for a companion that is ready to tame before feeding the others
+          const want = KH.pals.list.find((p) => !S.pals.own[p.id] && KH.pals.reqMet(p));
+          const keep = want ? (want.tame.treats || 0) : 0;
           for (let k = 0; k < 60; k++) {
             const next = (p) => KH.pals.feedCost(p, S.pals.own[p.id].lv + 1).treats;
+            if ((S.items.treats || 0) - keep < 1) break;
             const c = KH.pals.list.filter((p) => KH.pals.canFeed(p)).sort((a, b) => next(a) - next(b))[0];
-            if (!c) break;
+            if (!c || (S.items.treats || 0) - next(c) < keep) break;
             A.palfeed(`${c.id}:1`);
           }
           UI.sheet = null;

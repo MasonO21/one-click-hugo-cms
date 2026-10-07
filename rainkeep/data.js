@@ -1149,7 +1149,7 @@ const DATA = {
     rarity: { common: 1, rare: 1.5, epic: 2 },
     forage: { every: 1800, cap: 16 }, // a treat forages every 30 minutes of keep time, up to 16 waiting
     welcome: { treats: 20, bells: 5 },
-    beast: { chance: 0.25, n: (lvl) => 1 + Math.floor(lvl / 5), bell: 0.03, bellLvl: 6 }, // a beast slain on the Dunes: a chance of treats, and from Lv 6 a small chance of a bell
+    beast: { chance: 0.35, n: (lvl) => 1 + Math.floor(lvl / 5), bell: 0.03, bellLvl: 6 }, // a beast slain on the Dunes: a chance of treats, and from Lv 6 a small chance of a bell
     bossBells: 1, // bells from every tenth expedition stage (each boss) and every tenth Spire floor
     crossBells: 2, // bells for reaching the Crossing's hidden oasis
     power: 40, // keep power per companion level

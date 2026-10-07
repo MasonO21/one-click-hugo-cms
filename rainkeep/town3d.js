@@ -131,8 +131,21 @@
   const plots = {};
   const props = [];
   const sellers = []; // villagers minding the market stalls
+  const sellerSlots = [];
+  function syncSellers() {
+    if (!A.models) return;
+    sellerSlots.forEach((sl) => {
+      if (sl.glb || !A.models.ready(sl.id)) return;
+      const o = A.models.instance(sl.id, 0.95);
+      if (!o) return;
+      const old = sellers[sl.i];
+      o.position.copy(old.position); o.rotation.y = old.rotation.y;
+      sl.sg.remove(old); sl.sg.add(o); sellers[sl.i] = o; sl.glb = true;
+    });
+  }
   const banners = [];
   const people = [];
+  T3.people = people; // for tests
   const camels = [];
   const routes = {};
   const ringSel = { quest: null, sel: null };
@@ -726,6 +739,7 @@
       sg.add(p);
       scene.add(sg);
       sellers.push(p);
+      sellerSlots.push({ sg, i, id: ['v-trader', 'v-woman', 'v-elder'][i % 3] });
     });
     for (const [x, z, ry] of CARTS) g.add(A.at(cart(), x, 0, z, ry));
     // homes that fill out each quarter (scenery only)
@@ -1113,12 +1127,29 @@
   // ======================================================================
   // People and camels
   // ======================================================================
+  // the sand dwellers (models3d.js): Higgsfield models once they have loaded, the drawn villagers until then
+  const VILL = ['v-elder', 'v-woman', 'v-tuareg', 'v-bedouin', 'v-trader', 'v-farmer', 'v-grandma', 'v-carrier', 'v-boy', 'v-girl'];
+  const KIDS = { 'v-boy': 0.68, 'v-girl': 0.64 };
+  let villReady = -1;
+  function villager(i) {
+    const M = A.models, ok = M ? VILL.filter(M.ready) : [];
+    if (ok.length) {
+      const id = ok[(i * 7 + 3) % ok.length], o = M.instance(id, KIDS[id] || 0.93 + ((i * 37) % 9) / 100);
+      if (o) return o;
+    }
+    return A.person(i + 1, { jar: i % 4 === 1, child: i % 9 === 5, scale: 1.15 });
+  }
   function syncPeople() {
     const posts = Object.keys(S.workers).filter((p) => S.workers[p] > 0 && S.lv[p]);
     const want = posts.length ? Math.min(S.pop - S.sick, 22) : Math.min(S.pop, 4);
+    // as the models arrive, the drawn villagers make way for them
+    if (A.models) {
+      const n = A.models.want(VILL);
+      if (n !== villReady) { villReady = n; while (people.length) scene.remove(people.pop().o); syncSellers(); }
+    }
     while (people.length < want) {
       const i = people.length;
-      const o = A.person(i + 1, { jar: i % 4 === 1, child: i % 9 === 5, scale: 1.15 });
+      const o = villager(i);
       scene.add(o);
       people.push({ o, i, seed: seeded(i * 13 + 5)() });
     }
@@ -1170,21 +1201,84 @@
   T3.pals = pals; // for tests
   // ground animals trot round the plaza: ring radius, speed, direction
   const PAL_RING = { fennec: [5.95, 0.6, 1], sandcat: [6.2, 0.5, -1], caracal: [6.35, 0.75, 1], oryx: [6.45, 0.4, -1] };
+  // how big each companion's painted model is: body length (tail included) for a beast, wingspan for a bird
+  const PAL_SIZE = { fennec: 0.85, sandcat: 0.8, caracal: 1.15, oryx: 1.55, falcon: 1.35, hoopoe: 0.8 };
   function syncPals() {
     if (!KH.pals) return;
-    for (const id of KH.pals.owned()) {
-      if (pals[id]) continue;
+    const owned = KH.pals.owned();
+    if (A.models) A.models.want(owned.map((id) => `p-${id}`));
+    for (const id of owned) {
+      const glb = A.models && A.models.ready(`p-${id}`);
+      if (pals[id] && (pals[id].glb || !glb)) continue;
+      if (pals[id]) { scene.remove(pals[id].o); const k = hit.indexOf(pals[id].pr); if (k >= 0) hit.splice(k, 1); }
       const bird = id === 'falcon' || id === 'hoopoe';
-      const o = bird ? A.bird(id, { scale: id === 'falcon' ? 1.8 : 2.2 }) : A.beast(id, { scale: { oryx: 1.15, caracal: 1.5 }[id] || 1.8 });
+      const o = (glb && A.models.instance(`p-${id}`, PAL_SIZE[id])) || (bird ? A.bird(id, { scale: id === 'falcon' ? 1.8 : 2.2 }) : A.beast(id, { scale: { oryx: 1.15, caracal: 1.5 }[id] || 1.8 }));
       o.rotation.order = 'YXZ';
       // a generous invisible target, so a tap on the animal opens its sheet
+      let pr = null;
       if (id !== 'falcon') {
-        const pr = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 6), new THREE.MeshBasicMaterial());
+        pr = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 6), new THREE.MeshBasicMaterial());
         pr.position.y = id === 'hoopoe' ? 0 : 0.3; pr.visible = false; pr.userData.pid = `pal:${id}`;
         o.add(pr); hit.push(pr);
       }
       scene.add(o);
-      pals[id] = { o, a: (Object.keys(pals).length * 2.3) % 6.28, ph: Object.keys(pals).length * 1.9 };
+      const prev = pals[id];
+      pals[id] = { o, pr, glb: !!o.userData.glb, a: prev ? prev.a : (Object.keys(pals).length * 2.3) % 6.28, ph: prev ? prev.ph : Object.keys(pals).length * 1.9 };
+    }
+  }
+  // ======================================================================
+  // Heroes (models3d.js): every Steward stands by the building they look after, the squad waits in the
+  // plaza; each paces a few steps now and then. Tap one for their sheet.
+  // ======================================================================
+  const heroes = {};
+  T3.heroes = heroes; // for tests
+  function heroSpots() {
+    const out = [], taken = new Set();
+    for (const [kind, id] of Object.entries(S.stewards || {})) {
+      const post = DATA.stewardPosts[kind];
+      if (!post || !S.heroes[id] || (KH.heroBusy && KH.heroBusy(id))) continue;
+      let x, z;
+      if (post.plot === 'wyrm') { x = SPRING.x + 1.6; z = SPRING.z + 6.1; } else {
+        const P = plotPos[post.plot];
+        if (!P || !S.lv[post.plot]) continue;
+        const dx = SPRING.x - P.x, dz = SPRING.z - P.z, l = Math.hypot(dx, dz) || 1;
+        x = P.x + (dx / l) * 2.0; z = P.z + (dz / l) * 2.0;
+      }
+      out.push([id, x, z]); taken.add(id);
+    }
+    const sq = (KH.squadHome ? KH.squadHome() : S.squad).filter((id) => !taken.has(id));
+    sq.forEach((id, i) => out.push([id, SPRING.x - 1.4 + i * 1.4, SPRING.z + 6.4]));
+    return out;
+  }
+  function syncHeroes() {
+    if (!A.models) return;
+    const spots = heroSpots(), want = new Set(spots.map((s) => s[0]));
+    for (const id of Object.keys(heroes)) if (!want.has(id)) { scene.remove(heroes[id].o); const k = hit.indexOf(heroes[id].pr); if (k >= 0) hit.splice(k, 1); delete heroes[id]; }
+    A.models.want(spots.map((s) => `h-${s[0]}`));
+    spots.forEach(([id, x, z], i) => {
+      let h = heroes[id];
+      if (!h) {
+        const o = A.models.instance(`h-${id}`, 1.02);
+        if (!o) return;
+        const pr = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 1.1, 8), new THREE.MeshBasicMaterial());
+        pr.position.y = 0.55; pr.visible = false; pr.userData.pid = `hero:${id}`;
+        o.add(pr); hit.push(pr);
+        scene.add(o);
+        h = heroes[id] = { o, pr, ph: i * 5.3 };
+      }
+      h.x = x; h.z = z;
+    });
+  }
+  function animHeroes(t) {
+    for (const h of Object.values(heroes)) {
+      // face the spring; every so often step a little to one side and back
+      const fx = SPRING.x - h.x, fz = SPRING.z - h.z, fl = Math.hypot(fx, fz) || 1, sx = -fz / fl, sz = fx / fl;
+      const u = (t + h.ph) % 18, walk = (u > 6 && u < 9) || u > 15;
+      const s = u < 6 ? -0.6 : u < 9 ? -0.6 + ((u - 6) / 3) * 1.2 : u < 15 ? 0.6 : 0.6 - ((u - 15) / 3) * 1.2;
+      const x = h.x + sx * s, z = h.z + sz * s;
+      h.o.position.set(x, groundAt(x, z), z);
+      h.o.rotation.y = walk ? Math.atan2(sx * (u > 15 ? -1 : 1), sz * (u > 15 ? -1 : 1)) : Math.atan2(fx, fz);
+      A.animPerson(h.o, t, walk ? 'walk' : 'idle', 0.7);
     }
   }
   function animPals(t, dt) {
@@ -1581,7 +1675,10 @@
     if (!T3.active) return null;
     ray.setFromCamera(new V2((px / VW) * 2 - 1, -(py / VH) * 2 + 1), cam);
     const h = ray.intersectObjects(merchant && merchant.visible ? [...hit, merchant.children[merchant.children.length - 1]] : hit, false);
-    return h.length ? h[0].object.userData.pid : null;
+    if (!h.length) return null;
+    // a hero or companion standing in (or just behind) a building's tap box still gets the tap
+    const fig = h.find((x) => /^(hero|pal):/.test(x.object.userData.pid || ''));
+    return (fig && fig.distance - h[0].distance < 2.5 ? fig : h[0]).object.userData.pid;
   };
   function toScreen(v) {
     tmpV.copy(v).project(cam);
@@ -1624,7 +1721,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); syncPals(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); syncPals(); syncHeroes(); syncSellers(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);
@@ -1693,6 +1790,7 @@
     animPeople(t, posts);
     sellers.forEach((p, i) => A.animPerson(p, t + i * 1.7, i % 2 ? 'work' : 'idle', 0.35));
     animPals(t, dt);
+    animHeroes(t);
     animCamels(t);
     animParticles(t, dt);
     animRain(rdt);
