@@ -46,7 +46,7 @@ describe('economy: modifiers', () => {
     expect(game.derived.producePerMin.water).toBeCloseTo(6 * 1.2 * 1.25);
   });
 
-  it('equipment feeds gather/move/hp stats and gather boosts multiply yield', () => {
+  it('equipment feeds gather/move stats and gather boosts multiply yield', () => {
     const t = makeGame();
     const { game } = t;
     const eco = game.sys.economy;
@@ -55,7 +55,7 @@ describe('economy: modifiers', () => {
     expect(eco.modifier('gatherYield')).toBeCloseTo(1.5);
     expect(eco.modifier('gatherSpeed')).toBeCloseTo(1.1);
     expect(eco.modifier('moveSpeed')).toBeCloseTo(1.1);
-    expect(eco.modifier('playerHp')).toBeCloseTo(1.5); // +50 hp on a 100 hp base
+    expect(eco.modifier('playerHp')).toBeCloseTo(1); // armor hp is a flat add in PlayerSystem.maxHp, not a modifier
     game.sys.liveops.activateBoost('gather', 2, 5);
     expect(eco.modifier('gatherYield')).toBeCloseTo(3);
     game.bus.emit('player:equipped', { item: 't_super_tool', slot: 'tool' });

@@ -154,3 +154,14 @@ export function addColonist(game: Game, rarity: Rarity = 'common', over: Partial
 export function dist(ax: number, az: number, bx: number, bz: number): number {
   return Math.hypot(ax - bx, az - bz);
 }
+
+/**
+ * Replace the generated world with a hand-placed node list. The real world/player/event systems read the full
+ * generated map, so they are paused for these colonist-focused tests.
+ */
+export function fakeNodes(game: Game, nodes: unknown[]): void {
+  (game.sys.world as unknown as { gen: unknown }).gen = { nodes };
+  game.sys.world.update = () => {};
+  game.sys.player.update = () => {};
+  game.sys.worldEvents.update = () => {};
+}

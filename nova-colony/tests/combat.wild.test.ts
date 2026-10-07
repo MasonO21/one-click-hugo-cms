@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { cellWorld, makeGame } from './combat.helpers';
 import { TUNE } from '../src/sim/combat/types';
 
-// far from the colony and from the test player's parking spot (150, 150)
-const HX = cellWorld(215);
-const HZ = cellWorld(40);
+// inside Crash Valley (no water within 56 cells of the origin), far from the colony and from the test
+// player's parking spot (150, 150)
+const HX = cellWorld(168);
+const HZ = cellWorld(98);
 const dist = (ax: number, az: number, bx: number, bz: number) => Math.hypot(ax - bx, az - bz);
 
 describe('wild aliens', () => {

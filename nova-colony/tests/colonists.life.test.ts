@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cellOf, footprintCenter } from '../src/core/constants';
 import type { BuildingInstance, Colonist } from '../src/core/state';
 import type { WorldNode } from '../src/sim/world';
-import { addBuilding, addColonist, addCore, dist, makeGame, type Harness } from './colonists.util';
+import { addBuilding, addColonist, addCore, dist, makeGame, type Harness, fakeNodes } from './colonists.util';
 
 const centerOf = (h: Harness, b: BuildingInstance) => {
   const def = h.game.data.building(b.def)!;
@@ -52,7 +52,7 @@ describe('daily life: working', () => {
     const tree: WorldNode = { i: 0, def: 'tree_round', x: cc.x + 8, z: cc.z + 1, rot: 0, scale: 1, region: 'crash_valley', hits: 5 };
     const far: WorldNode = { i: 1, def: 'tree_round', x: cc.x + 80, z: cc.z, rot: 0, scale: 1, region: 'crash_valley', hits: 5 };
     const rock: WorldNode = { i: 2, def: 'rock', x: cc.x - 4, z: cc.z, rot: 0, scale: 1, region: 'crash_valley', hits: 5 };
-    (h.game.sys.world as unknown as { gen: unknown }).gen = { nodes: [tree, far, rock] };
+    fakeNodes(h.game, [tree, far, rock]);
     const hits: { node: number; model: string }[] = [];
     let gatherHits = 0;
     h.game.bus.on('colonist:workHit', (e) => hits.push({ node: e.node, model: e.model }));
@@ -79,7 +79,7 @@ describe('daily life: working', () => {
     const camp = addBuilding(h.game, 'logging_camp', 140, 127);
     const cc = centerOf(h, camp);
     const tree: WorldNode = { i: 7, def: 'tree_round', x: cc.x + 8, z: cc.z, rot: 0, scale: 1, region: 'crash_valley', hits: 5 };
-    (h.game.sys.world as unknown as { gen: unknown }).gen = { nodes: [tree] };
+    fakeNodes(h.game, [tree]);
     h.game.state.world.depleted[7] = 1e9;
     const hits: number[] = [];
     h.game.bus.on('colonist:workHit', (e) => hits.push(e.node));
@@ -111,6 +111,7 @@ describe('daily life: working', () => {
 
   it('takes one meal break a day at the campfire, then goes back to work', () => {
     const h = makeGame();
+    fakeNodes(h.game, []); // no trees nearby: the gatherer stays at the camp between meals
     addCore(h.game);
     const camp = addBuilding(h.game, 'logging_camp', 140, 127);
     const fire = addBuilding(h.game, 'campfire', 133, 123);
@@ -419,7 +420,7 @@ describe('robustness & performance', () => {
     addBuilding(h.game, 'campfire', 133, 123);
     const nodes: WorldNode[] = [];
     for (let i = 0; i < 4000; i++) nodes.push({ i, def: i % 3 ? 'tree_round' : 'rock', x: ((i * 37) % 400) - 200, z: ((i * 91) % 400) - 200, rot: 0, scale: 1, region: 'crash_valley', hits: 5 });
-    (h.game.sys.world as unknown as { gen: unknown }).gen = { nodes };
+    fakeNodes(h.game, nodes);
     for (let i = 0; i < 80; i++) addColonist(h.game, 'common');
     const cs = h.game.sys.colonists;
     // warm up (JIT) then measure

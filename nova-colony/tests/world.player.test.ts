@@ -34,9 +34,20 @@ function makeRichGame(seed = 1234): Rig {
 }
 
 function building(game: Game, id: number, def: string, x: number, z: number, status: BuildingInstance['status'] = 'active'): BuildingInstance {
-  const b: BuildingInstance = { id, def, x, z, rot: 0, level: 1, tier: 0, hp: 100, maxHp: 100, status, progress: 1, workers: [], recipe: null, craft: 0, eff: 1 };
+  const b: BuildingInstance = { id, def, x, z, rot: 0, level: 1, tier: 0, hp: 100, maxHp: 100, status, progress: status === 'building' ? 0 : 1, workers: [], recipe: null, craft: 0, eff: 1 };
   game.state.buildings.list.push(b);
+  syncBuildings(game);
   return b;
+}
+
+/** Buildings pushed into / cleared from state directly must be re-registered with the construction grid. */
+function syncBuildings(game: Game): void {
+  (game.sys.buildings as unknown as { rebuild(): void }).rebuild();
+}
+
+function clearBuildings(game: Game): void {
+  game.state.buildings.list.length = 0;
+  syncBuildings(game);
 }
 
 const dir = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -464,7 +475,7 @@ describe('interaction', () => {
     ];
     let id = 100;
     for (const [def, label, panel, arg] of cases) {
-      game.state.buildings.list.length = 0;
+      clearBuildings(game);
       const b = building(game, ++id, def, cx + 1, cz - 1);
       const it = game.sys.player.interaction();
       expect(it, def).toMatchObject({ kind: 'building', label, target: b.id });
@@ -472,13 +483,13 @@ describe('interaction', () => {
       expect(game.sys.player.interact()).toBe(true);
       expect(opened[0], def).toEqual({ panel, arg: arg ?? (panel === 'building' ? b.id : undefined) });
     }
-    game.state.buildings.list.length = 0;
+    clearBuildings(game);
     building(game, 200, 'wall_piece', cx + 1, cz - 1);
     expect(game.sys.player.interaction()).toBeNull();
-    game.state.buildings.list.length = 0;
+    clearBuildings(game);
     building(game, 201, 'workbench', cx + 1, cz - 1, 'building');
     expect(game.sys.player.interaction()).toBeNull();
-    game.state.buildings.list.length = 0;
+    clearBuildings(game);
     building(game, 202, 'workbench', cx + 12, cz - 1); // too far
     expect(game.sys.player.interaction()).toBeNull();
   });
@@ -487,10 +498,10 @@ describe('interaction', () => {
     const { game } = makeRichGame();
     const w = game.sys.world;
     game.sys.player.teleport(0, 5);
-    // the stub world has no core building: place one like the construction system will
-    building(game, 1, 'command_center', 127, 127);
+    // the construction system places the core at (127, 127) on a fresh game
+    if (!game.sys.buildings.core()) building(game, 1, 'command_center', 127, 127);
     expect(game.sys.player.interaction()).toMatchObject({ kind: 'building', label: 'Colony' });
-    game.state.buildings.list.length = 0;
+    clearBuildings(game);
     const label = (def: string) => {
       const n = w.gen.nodes.find((q) => q.def === def)!;
       game.sys.player.teleport(n.x + 0.4, n.z);

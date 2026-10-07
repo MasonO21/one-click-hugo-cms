@@ -97,6 +97,8 @@ export function makeGame(opts: { seed?: number; data?: ReturnType<typeof createD
     core = addBuilding(game, 'command_center', CORE_CELL, CORE_CELL);
     st.colony.coreId = core.id;
   }
+  // combat tests roam the whole map: open every region so the player system doesn't push the player back
+  st.world.regionsUnlocked = game.data.biomes.map((b) => b.id);
   // player parked far away and unarmed unless requested
   st.player.x = 150;
   st.player.z = 150;

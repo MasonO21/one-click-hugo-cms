@@ -3,8 +3,8 @@
  *
  * Sources:
  *  - completed research `effects`
- *  - equipped items (`ItemDef.stats`: gatherYield / gatherSpeed / moveSpeed as adds, hp as a
- *    'playerHp' add of hp / balance.playerHp; damage is handled by combat)
+ *  - equipped items (`ItemDef.stats`: gatherYield / gatherSpeed / moveSpeed as adds; armor hp is a flat
+ *    add applied by PlayerSystem.maxHp and damage is handled by combat, so neither is a modifier here)
  *  - Colony Pass VIP (production add, offlineHours add)
  *  - active timed boosts (production / research / gather mults; same-kind boosts don't stack —
  *    the strongest active one applies)
@@ -61,7 +61,6 @@ export class ModifierTable {
       if (s.gatherYield) this.add('gatherYield', s.gatherYield);
       if (s.gatherSpeed) this.add('gatherSpeed', s.gatherSpeed);
       if (s.moveSpeed) this.add('moveSpeed', s.moveSpeed);
-      if (s.hp && data.balance.playerHp > 0) this.add('playerHp', s.hp / data.balance.playerHp);
     }
 
     const now = game.now();
