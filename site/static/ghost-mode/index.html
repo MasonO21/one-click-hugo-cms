@@ -352,7 +352,7 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 .sys{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border-radius:14px;background:var(--soft-tint);font-size:12.5px;margin:8px 0;line-height:1.4}
 .sys .g-logo{width:28px;height:28px}
 .composer{padding:8px 12px 14px;border-top:1px solid var(--line);display:grid;gap:8px}
-.as-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);font-weight:600;min-width:0}
+.as-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:11.5px;color:var(--muted);font-weight:600;min-width:0}
 .as-row .seg{min-width:0;max-width:100%;overflow:hidden}
 .as-row .seg button{padding:4px 10px;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
 .compose-row{display:flex;gap:8px;align-items:center}
@@ -372,7 +372,7 @@ details.talk ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:
 @keyframes rise{from{transform:translateY(30px)}to{transform:none}}
 .sheet-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .sheet-top h3{font-size:18px}
-.pv-head{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center}
+.pv-head{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start}
 .pv-head .g-logo{width:44px;height:44px}
 .pv-head p{font-size:13px;color:var(--muted)}
 .pv-col{border-radius:14px;padding:12px 14px;display:grid;gap:6px}
@@ -640,7 +640,7 @@ button.stat:hover{border-color:var(--trust)}
 .seg-opt input:checked+span{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(20,25,50,.12)}
 .seg-opt input:focus-visible+span{outline:2px solid var(--soft-ink);outline-offset:2px}
 [data-phone="iphone"] [data-only="android"],[data-phone="android"] [data-only="iphone"]{display:none!important}
-.plat-note{color:var(--trust-ink)!important;font-weight:600}
+.plat-note{color:var(--fg)!important;font-weight:600}
 .plat-hint{margin-top:4px}
 .sync-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;margin-top:-4px;border-radius:12px;background:var(--surface-2);font-size:12.5px;color:var(--muted)}
 .kb-row{cursor:default}
@@ -1553,6 +1553,7 @@ const KID_NOTICE={
   late_night_spike:'Your parent got an alert that your phone has been busy late tonight. None of your messages were shared.',
   grooming_language_markers:'Your parent got an alert about warning signs in a chat. None of your messages were shared.',
   scam_link:'Your parent got an alert about a scam message. None of your messages were shared.',
+  scam_link_site:'Your parent got an alert that Ghost Mode blocked a fake website. None of your messages were shared.',
   bullying:'Your parent got an alert that someone may be bullying you. None of your messages were shared.',
   distress:'Ghost Mode let your parent know to check in on you. None of your messages were shared.',
   location_sharing:'Your parent got an alert that you shared your live location with someone new. None of your messages were shared.',
@@ -1562,7 +1563,8 @@ function sendAlert(p,t,notify){
   if(via){p=Object.assign({},p,{via});if(via==='home_sync')t=S.clock}
   transmit(Object.assign({type:'alert'},p,{message_text_included:false,sent_at:iso(t)}),'up',t);
   S.device.sentLog.unshift({alert:p.alert,at:t});
-  const note=KID_NOTICE[p.via==='keyboard'&&p.alert==='location_sharing'?'location_sharing_typed':p.alert];
+  const siteOnly=p.alert==='scam_link'&&p.signs&&p.signs.length===1&&p.signs[0]==='blocked_site';
+  const note=KID_NOTICE[p.via==='keyboard'&&p.alert==='location_sharing'?'location_sharing_typed':siteOnly?'scam_link_site':p.alert];
   if(notify&&!seeding&&cfg().tellKid&&note)kidNotice(L(note),'Ghost Mode');
 }
 
@@ -2743,7 +2745,8 @@ function renderThink(){
   const what=joinList(th.kinds.map(x=>esc(L(x)))),ios=isIOS();
   $('#thinkBody').innerHTML=`<div class="think-head">${ghost()}<h3>${L('Hold on a sec')}</h3></div>
     <p>${ios?L("You're about to share {what}. Only share it with people you know in real life. People online aren't always who they say they are.",{what})
-      :L("You're about to share {what} with <b>{c}</b>, who you know from {app}. People online aren't always who they say they are.",{what,c:esc(c.name),app:esc(L(c.app))})}</p>
+      :c.app==='Messages'||c.app==='Email'?L("You're about to share {what} with <b>{c}</b>. People online aren't always who they say they are.",{what,c:esc(c.name)})
+      :L("You're about to share {what} with <b>{c}</b>, who you know from {app}. People online aren't always who they say they are.",{what,c:esc(c.name),app:esc(c.app==='Roblox chat'?'Roblox':c.app)})}</p>
     <p class="draft">${esc(th.text)}</p>
     <div class="sheet-actions"><button type="button" class="btn primary block" data-action="think-edit"${th.auto?' disabled':''}>${L('Edit message')}</button><button type="button" class="btn block" data-action="think-send"${th.auto?' disabled':''}>${L('Send anyway')}</button></div>
     <p class="fine">${th.auto?esc(L('{k} is deciding… ',{k})):''}${ios?L('Only you can see this. The Ghost Mode keyboard checks what you type on your phone and never sends it.'):L("Only you can see this message. If it's sent, your parent may get an alert that personal details were shared, never the message itself.")}</p>`;
@@ -3756,7 +3759,7 @@ DICT.es={"Today":"Hoy",
 "Never type your password or a code on a site someone sent you in a chat.":"Nunca escribas tu contraseña ni un código en un sitio que alguien te mandó por chat.",
 "Your parent got an alert that a fake website was blocked. Not your messages.":"Tus padres recibieron una alerta de que se bloqueó un sitio web falso. No tus mensajes.",
 "Go back":"Volver",
-"You're about to share {what}. Only share it with people you know in real life. People online aren't always who they say they are.":"Estás por compartir {what}. Compártelo solo con personas que conoces en persona. En internet, la gente no siempre es quien dice ser.",
+"You're about to share {what}. Only share it with people you know in real life. People online aren't always who they say they are.":"Estás por compartir {what}. Comparte eso solo con gente que conoces en la vida real. En internet, la gente no siempre es quien dice ser.",
 "Only you can see this. The Ghost Mode keyboard checks what you type on your phone and never sends it.":"Solo tú ves esto. El teclado de Ghost Mode revisa lo que escribes en tu teléfono y nunca lo envía.",
 "On your iPhone, Ghost Mode checks your email, how long you use apps at night, and websites you open. With the Ghost Mode keyboard on, it also checks what you type. It all happens on your phone.":"En tu iPhone, Ghost Mode revisa tu correo, cuánto tiempo usas apps de noche y los sitios web que abres. Con el teclado de Ghost Mode activado, también revisa lo que escribes. Todo pasa en tu teléfono.",
 "Checks what you type, on your phone, for signs you might need help, and warns you before you share your address or location. It never sends what you type.":"Revisa lo que escribes, en tu teléfono, por si podrías necesitar ayuda, y te avisa antes de compartir tu dirección o ubicación. Nunca envía lo que escribes.",
@@ -3840,6 +3843,8 @@ DICT.es={"Today":"Hoy",
 "Apple keeps Instagram messages private, so you won't get an alert about this chat. When {k} started to type the name of their school, the Ghost Mode keyboard asked them to think twice. Instagram supervision shows who {k} follows and messages.":"Apple mantiene privados los mensajes de Instagram, así que no recibirás una alerta sobre este chat. Cuando {k} empezó a escribir el nombre de su escuela, el teclado de Ghost Mode le pidió que lo pensara dos veces. La supervisión de Instagram muestra a quién sigue {k} y con quién habla.",
 "No alert, on purpose":"Sin alerta, a propósito",
 "Friends asked {k} to keep a secret about a surprise party. Secrets between kids the same age count for much less than secrets an adult asks for, so Ghost Mode stayed quiet.":"Unos amigos le pidieron a {k} guardar un secreto sobre una fiesta sorpresa. Los secretos entre niños de la misma edad cuentan mucho menos que los que pide un adulto, así que Ghost Mode no envió nada.",
+"Your parent got an alert that Ghost Mode blocked a fake website. None of your messages were shared.":"Tus padres recibieron una alerta de que Ghost Mode bloqueó un sitio web falso. No se compartió ninguno de tus mensajes.",
+"You're about to share {what} with <b>{c}</b>. People online aren't always who they say they are.":"Estás por compartir {what} con <b>{c}</b>. En internet, la gente no siempre es quien dice ser.",
 " Your parent got an alert, not your messages.":" Tus padres recibieron una alerta, no tus mensajes.",
 " Ghost Mode let your parent know to check in on you, but not what you wrote.":" Ghost Mode les avisó a tus padres que hablen contigo, pero no lo que escribiste.",
 " and ":" y ",
