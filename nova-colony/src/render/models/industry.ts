@@ -43,6 +43,11 @@ registerModel('fuel_generator', (c) => {
   b.box(0.36, 0.44, 0.26, -1.1, 0.22, d / 2 - 0.55, SAFETY_RED);
   b.box(0.12, 0.08, 0.1, -1.1, 0.48, d / 2 - 0.55, s.metal);
   led(b, 0.2, 1.72, 0.9, RED_LED, 0.12);
+  // work lamp on a post so the generator reads at night
+  b.box(0.08, 2.2, 0.08, w / 2 - 0.35, 1.1, -d / 2 + 0.35, s.metal);
+  b.box(0.5, 0.06, 0.06, w / 2 - 0.55, 2.2, -d / 2 + 0.35, s.metal);
+  led(b, w / 2 - 0.8, 2.12, -d / 2 + 0.35, s.lamp, 0.16);
+  c.setLight(w / 2 - 0.8, 2.0, -d / 2 + 0.6, s.lamp.getStyle(), 0.8, 7);
   c.levelPips();
 });
 
@@ -89,10 +94,10 @@ registerModel('wind_turbine', (c) => {
     c.part('spinZ', 0, h - 0.1, 0.55, (pb) => {
       for (let i = 0; i < 4; i++) {
         const a = (i * Math.PI) / 2;
-        pb.box(0.08, 2.4, 0.06, Math.sin(-a) * 1.2 * 0, Math.cos(a) * 0, 0, WOOD, { rz: a });
-        const cx = 0.28 * Math.cos(a) - 1.35 * Math.sin(a);
-        const cy = 0.28 * Math.sin(a) + 1.35 * Math.cos(a);
-        pb.box(0.48, 1.7, 0.03, cx, cy, 0.04, '#e9dcc0', { rz: a, shade: 0.03 });
+        if (i < 2) pb.box(0.08, 2.6, 0.06, 0, 0, 0, WOOD, { rz: a });
+        const cx = 0.3 * Math.cos(a) - 0.95 * Math.sin(a);
+        const cy = 0.3 * Math.sin(a) + 0.95 * Math.cos(a);
+        pb.box(0.5, 1.1, 0.03, cx, cy, 0.04, '#e9dcc0', { rz: a, shade: 0.03 });
       }
       pb.cyl(0.14, 0.14, 0.2, 0, 0, 0, WOOD_DARK, 6, { rx: Math.PI / 2 });
     }, 1.2);
@@ -247,7 +252,7 @@ registerModel('logging_camp', (c) => {
     b.box(0.06, 1.5, 0.06, bx + 0.8, 0.85, -d / 2 + 0.6, WOOD_DARK, { rz: 0.25 });
     b.box(0.5, 0.06, 0.06, bx + 0.6, 1.6, -d / 2 + 0.6, IRON, { rz: 0.25 });
   }
-  lantern(b, bx - 0.8, 1.8, d / 2 - 0.45, frameColor(s), 0.22);
+  lantern(b, bx - 0.8, 1.8, d / 2 - 0.45, frameColor(s), 0.22, s.lamp);
   // chopping block, axe, chips and a plank stack
   stump(b, -w / 2 + 0.8, 0.1, d / 2 - 0.8);
   axe(b, -w / 2 + 0.72, 0.85, d / 2 - 0.9, 0.3, 0.5);
@@ -294,35 +299,39 @@ registerModel('quarry', (c) => {
 
 registerModel('mine', (c) => {
   const { b, s, w, d } = c;
-  b.sphere(Math.min(w, d) * 0.55, 0, 0.1, -0.3, '#6e6258', 8, { sy: 0.7, shade: 0.06 });
-  for (let i = 0; i < 3; i++) b.sphere(0.32, -1.1 + i * 1.1, 0.95 - (i % 2) * 0.3, -0.9 - (i % 2) * 0.5, i % 2 ? STONE : STONE_DARK, 5, { shade: 0.07 });
-  // timbered entrance with braces and a lantern
+  // spoil mound with rock outcrops
+  b.dome(2.1, 0, 0.0, -0.6, '#6e6258', 8, { sx: 0.95, sy: 0.7, sz: 0.65, shade: 0.06 });
+  for (let i = 0; i < 3; i++) b.sphere(0.32, -1.1 + i * 1.1, 0.8 - (i % 2) * 0.25, -1.1 - (i % 2) * 0.4, i % 2 ? STONE : STONE_DARK, 5, { shade: 0.07 });
+  // stone portal wall with a timbered entrance, braces and a lantern
   const fc = frameColor(s);
-  const ez = d / 2 - 0.5;
+  const ez = 1.0;
+  b.box(2.6, 1.8, 0.5, 0, 0.9, ez - 0.3, STONE_DARK, { shade: 0.07 });
+  b.box(2.7, 0.16, 0.56, 0, 1.85, ez - 0.3, STONE, { shade: 0.05 });
   for (const sx of [-1, 1]) {
     b.box(0.3, 1.7, 0.3, sx * 0.75, 0.85, ez, fc);
     b.box(0.12, 0.8, 0.12, sx * 0.55, 1.45, ez + 0.1, fc, { rz: sx * 0.6 });
   }
   b.box(2.0, 0.3, 0.36, 0, 1.8, ez, fc);
-  b.box(1.3, 1.5, 0.3, 0, 0.75, ez - 0.25, DARK);
-  lantern(b, 0.95, 2.18, ez, fc, 0.22);
-  // rails with sleepers, a bumper and a scrolling ore cart
-  for (const x of [-0.35, 0.35]) b.box(0.06, 0.06, d - 0.2, x, 0.03, 0, s.metal);
-  for (let i = 0; i < 4; i++) b.box(0.9, 0.05, 0.12, 0, 0.02, -d / 2 + 0.5 + i * ((d - 1.0) / 3), WOOD_DARK);
-  b.box(0.9, 0.2, 0.12, 0, 0.12, -d / 2 + 0.18, fc);
-  c.part('scroll', 0, 0.3, d / 2 - 0.2, (pb) => {
+  b.box(1.3, 1.5, 0.2, 0, 0.75, ez - 0.02, DARK);
+  lantern(b, 0.95, 2.18, ez, fc, 0.22, s.lamp);
+  // rails along the hillside with sleepers, a bumper and a scrolling ore cart
+  const rz = d / 2 - 0.45;
+  for (const z of [rz - 0.3, rz + 0.3]) b.box(w - 0.3, 0.06, 0.06, 0, 0.03, z, s.metal);
+  for (let i = 0; i < 5; i++) b.box(0.12, 0.05, 0.86, -w / 2 + 0.4 + i * ((w - 0.8) / 4), 0.02, rz, WOOD_DARK);
+  b.box(0.12, 0.2, 0.86, -w / 2 + 0.2, 0.12, rz, fc);
+  c.part('scroll', 0, 0.3, rz, (pb) => {
     pb.box(0.8, 0.5, 0.7, 0, 0, 0, s.machine, { shade: 0.03 });
-    for (const z of [-0.25, 0.25]) pb.cyl(0.14, 0.14, 0.9, 0, -0.22, z, s.metal, 6, { rz: Math.PI / 2 });
+    for (const x of [-0.25, 0.25]) pb.cyl(0.14, 0.14, 0.9, x, -0.22, 0, s.metal, 6, { rx: Math.PI / 2 });
     pb.sphere(0.24, 0, 0.3, 0, STONE, 4);
     pb.sphere(0.18, 0.2, 0.34, 0.15, '#c9a48b', 4);
     if (s.index >= 3) pb.shard(0.12, 0.28, -0.18, 0.4, -0.1, s.accent, { slot: SLOT_GLOW });
-  }, 0.6, 1.0);
-  // ore crate + pickaxe
-  crate(b, -w / 2 + 0.6, 0, d / 2 - 0.6, 0.5, WOOD, WOOD_DARK, 0.3);
-  b.shard(0.1, 0.24, -w / 2 + 0.6, 0.6, d / 2 - 0.6, s.index >= 3 ? s.accent : '#c9a48b', { slot: accentSlot(s) });
-  b.box(0.06, 0.8, 0.06, w / 2 - 0.5, 0.45, d / 2 - 0.6, WOOD, { rz: -0.45 });
-  b.box(0.5, 0.08, 0.06, w / 2 - 0.68, 0.8, d / 2 - 0.6, IRON, { rz: -0.45 });
-  c.setLight(0, 1.6, d / 2, '#ffb95c', 0.7, 6);
+  }, 0.6, w / 2 - 0.85);
+  // ore crate + pickaxe beside the portal
+  crate(b, -1.6, 0, 0.9, 0.5, WOOD, WOOD_DARK, 0.3);
+  b.shard(0.1, 0.24, -1.6, 0.6, 0.9, s.index >= 3 ? s.accent : '#c9a48b', { slot: accentSlot(s) });
+  b.box(0.06, 0.8, 0.06, 1.55, 0.45, 0.95, WOOD, { rz: -0.45 });
+  b.box(0.5, 0.08, 0.06, 1.37, 0.8, 0.95, IRON, { rz: -0.45 });
+  c.setLight(0, 1.6, ez + 0.4, '#ffb95c', 0.7, 6);
   c.levelPips();
 });
 
@@ -419,11 +428,11 @@ registerModel('robot_bay', (c) => {
   b.box(0.8, 0.4, 0.8, -w / 2 + 1.0, 2.95, -d / 2 + 0.9, s.light);
   b.cyl(0.3, 0.3, 0.06, -w / 2 + 1.0, 3.17, -d / 2 + 0.9, s.machineDark, 8);
   // welding arm
-  c.part('rock', w / 2 - 1.0, 0.6, d / 2 - 0.3, (pb) => {
+  c.part('rock', w / 2 - 1.0, 0.6, d / 2 - 0.62, (pb) => {
     pb.box(0.2, 1.2, 0.2, 0, 0.6, 0, s.metal);
-    pb.box(0.2, 0.2, 0.9, 0, 1.2, 0.35, s.metal);
-    pb.box(0.16, 0.5, 0.16, 0, 0.95, 0.75, s.metal);
-    pb.box(0.26, 0.2, 0.26, 0, 0.65, 0.75, s.accent, { slot: SLOT_GLOW });
+    pb.box(0.2, 0.2, 0.8, 0, 1.2, 0.3, s.metal);
+    pb.box(0.16, 0.5, 0.16, 0, 0.95, 0.65, s.metal);
+    pb.box(0.26, 0.2, 0.26, 0, 0.65, 0.65, s.accent, { slot: SLOT_GLOW });
   }, 0.9, 0.3);
   // robot chassis on a stand
   const rx = -w / 2 + 1.0;
@@ -434,7 +443,7 @@ registerModel('robot_bay', (c) => {
   led(b, rx - 0.08, 1.12, rz + 0.16, s.accent, 0.07);
   led(b, rx + 0.08, 1.12, rz + 0.16, s.accent, 0.07);
   for (const sx of [-1, 1]) b.box(0.12, 0.5, 0.12, rx + sx * 0.32, 0.65, rz, s.metal, { rz: sx * 0.2 });
-  c.emit('sparks', w / 2 - 1.0, 1.25, d / 2 + 0.45, 0.8, s.accent.getStyle());
+  c.emit('sparks', w / 2 - 1.0, 1.25, d / 2 + 0.05, 0.8, s.accent.getStyle());
   c.levelPips();
 });
 
@@ -466,7 +475,7 @@ registerModel('workbench', (c) => {
   b.box(0.05, 0.4, 0.05, 0.5, top + 0.6, pz + 0.06, IRON, { rz: -0.2 });
   if (glows(s)) {
     b.box(0.5, 0.05, 0.05, w / 2 - 0.9, top + 1.05, pz + 0.1, s.metal, { rz: -0.4 });
-    led(b, w / 2 - 0.7, top + 0.95, pz + 0.2, '#ffd27a', 0.12);
+    led(b, w / 2 - 0.7, top + 0.95, pz + 0.2, s.lamp, 0.12);
   } else {
     b.sphere(0.1, w / 2 - 0.5, top + 0.2, 0.3, s.accent, 5);
   }
@@ -510,7 +519,7 @@ registerModel('forge', (c) => {
   b.box(0.05, 0.9, 0.05, bx - bw / 2 - 0.08, 0.45, bz + 0.1, IRON, { rz: 0.2 });
   if (w >= 5) {
     awning(c, ax - 0.1, az - 0.2, 1.8, 1.5, 2.2);
-    lantern(b, ax - 0.9, 1.9, az - 0.9, frameColor(s), 0.22);
+    lantern(b, ax - 0.9, 1.9, az - 0.9, frameColor(s), 0.22, s.lamp);
   }
   c.emit('sparks', ax, 0.95, az, 0.6, '#ffb347');
   c.setLight(bx, 1.0, bz + bd / 2 + 0.3, '#ff8a3c', 1.1, 7);
@@ -583,7 +592,7 @@ registerModel('factory', (c) => {
   b.cyl(0.53, 0.53, 0.1, w / 2 - 1.0, 3.75, -d / 2 + 1.0, stripeColor(s), 8);
   for (const sx of [-1, 1]) b.box(0.1, 0.5, 0.1, w / 2 - 1.0 + sx * 0.35, 3.1, -d / 2 + 1.0, s.metal);
   // loading dock with crates, side conveyor stub, sign and flywheel
-  b.box(2.0, 0.5, 0.8, w / 2 - 1.5, 0.25, d / 2 - 0.55, s.trim, { shade: 0.03 });
+  b.box(2.0, 0.5, 0.8, w / 2 - 1.5, 0.25, d / 2 - 0.55, s.floorAlt, { shade: 0.03 });
   crate(b, w / 2 - 1.9, 0.5, d / 2 - 0.55, 0.5, s.index >= 3 ? s.machine : WOOD, s.index >= 3 ? s.machineDark : WOOD_DARK, 0.2);
   crate(b, w / 2 - 1.1, 0.5, d / 2 - 0.5, 0.4, s.index >= 3 ? s.machine : WOOD, s.index >= 3 ? s.machineDark : WOOD_DARK, -0.3);
   b.box(1.1, 0.14, 0.5, -w / 2 + 0.3, 0.9, 1.0, s.machineDark);
@@ -732,7 +741,8 @@ registerModel('advanced_lab', (c) => {
   b.box(w - 0.6, 0.6, d - 0.6, 0, 1.5, 0, '#ffffff', { slot: SLOT_GLASS });
   b.box(w - 0.9, 0.1, d - 0.9, 0, 1.85, 0, stripeColor(s));
   b.box(w - 1.0, 1.4, d - 1.0, 0, 2.5, 0, s.light, { shade: 0.015 });
-  b.box(w - 0.8, 0.16, d - 0.8, 0, 3.25, 0, s.trim);
+  b.box(w - 0.76, 0.1, d - 0.76, 0, 3.2, 0, s.roofEdge);
+  b.box(w - 0.9, 0.14, d - 0.9, 0, 3.3, 0, s.roof, { shade: 0.015 });
   b.box(w - 0.7, 0.05, 0.08, 0, 3.34, d / 2 - 0.4, s.accent, { slot: SLOT_GLOW });
   b.box(w - 0.7, 0.05, 0.08, 0, 3.34, -d / 2 + 0.4, s.accent, { slot: SLOT_GLOW });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
@@ -771,7 +781,7 @@ registerModel('med_bay', (c) => {
   b.box(0.9, 0.9, 0.1, 0.9, 3.05, fz - 0.3, WHITE);
   cross(b, 0.9, 3.05, fz - 0.24, 0.6, 0.18, RED_LED);
   cross(b, w / 2 - 0.38, 1.55, -0.2, 0.4, 0.12, RED_LED, Math.PI / 2);
-  led(b, 0.6, 1.5, fz + 0.06, '#ffd27a', 0.1);
+  led(b, 0.6, 1.5, fz + 0.06, s.lamp, 0.1);
   // first-aid crate + stretcher
   crate(b, -w / 2 + 0.7, 0, d / 2 - 0.5, 0.42, WHITE, SAFETY_RED, 0.2);
   cross(b, -w / 2 + 0.7, 0.21, d / 2 - 0.27, 0.2, 0.06, RED_LED, 0, 0.04);
@@ -856,7 +866,7 @@ registerModel('garage', (c) => {
   // vehicle nosing out of the doorway
   b.box(1.4, 0.5, 0.6, 0, 0.5, fz + 0.2, s.light, { shade: 0.03 });
   b.box(1.5, 0.16, 0.2, 0, 0.3, fz + 0.5, s.metal);
-  for (const sx of [-1, 1]) led(b, sx * 0.5, 0.6, fz + 0.5, '#ffe9a8', 0.12);
+  for (const sx of [-1, 1]) led(b, sx * 0.5, 0.6, fz + 0.5, s.lamp, 0.12);
   for (const sx of [-1, 1]) b.cyl(0.22, 0.22, 0.2, sx * 0.72, 0.22, fz + 0.1, '#2a2a2e', 7, { rz: Math.PI / 2 });
   // tyre stack, toolbox, drum, sign, lamp
   for (let i = 0; i < 2; i++) {
@@ -877,9 +887,10 @@ registerModel('hangar', (c) => {
   const { b, s, w, d } = c;
   c.foundation(0.1);
   const r = Math.min(w, d) * 0.42;
-  b.cyl(r, r, d - 0.8, 0, 0.6, 0, s.base, 12, { rx: Math.PI / 2, shade: 0.02 });
-  for (const z of [-d / 4 + 0.2, d / 4 - 0.2]) b.cyl(r + 0.04, r + 0.04, 0.14, 0, 0.6, z, stripeColor(s), 12, { rx: Math.PI / 2 });
-  b.box(w - 0.6, 0.7, d - 0.6, 0, 0.35, 0, s.trim);
+  // barrel vault: upper half-cylinder only (nothing wasted underground)
+  b.add(new THREE.CylinderGeometry(r, r, d - 0.8, 12, 1, false, Math.PI / 2, Math.PI), s.base, 0, 0.6, 0, { rx: Math.PI / 2, shade: 0.02 });
+  for (const z of [-d / 4 + 0.2, d / 4 - 0.2]) b.add(new THREE.CylinderGeometry(r + 0.04, r + 0.04, 0.14, 12, 1, false, Math.PI / 2, Math.PI), stripeColor(s), 0, 0.6, z, { rx: Math.PI / 2 });
+  b.box(w - 0.6, 0.7, d - 0.6, 0, 0.35, 0, s.dark, { shade: 0.02 });
   // front doors ajar with hazard edges, a craft nose inside
   const fz = d / 2 - 0.35;
   b.box(r * 1.4, r * 0.9, 0.2, 0, 0.6 + r * 0.45, fz - 0.1, DARK);
@@ -1044,7 +1055,7 @@ registerModel('lamp', (c) => {
     b.box(0.6, 0.06, 0.06, 0.25, 2.3, 0, WOOD_DARK);
     b.box(0.06, 0.45, 0.06, 0.2, 2.1, 0, WOOD_DARK, { rz: -0.6 });
     b.box(0.03, 0.2, 0.03, 0.5, 2.18, 0, '#55595f');
-    lantern(b, 0.5, 1.95, 0, WOOD_DARK, 0.28);
+    lantern(b, 0.5, 1.95, 0, WOOD_DARK, 0.28, s.lamp);
     c.setLight(0.5, 1.95, 0, '#ffc877', 1.0, 9);
   } else if (s.index === 2) {
     b.cyl(0.06, 0.08, 2.2, 0, 1.3, 0, s.metal, 6);
@@ -1060,7 +1071,7 @@ registerModel('lamp', (c) => {
     b.box(0.36, 0.1, 0.36, 0.45, 2.7, 0, s.metal);
     b.sphere(0.26, 0.45, 2.5, 0, '#ffffff', 7, { slot: SLOT_GLASS });
     b.box(0.06, 0.06, 0.4, 0, 2.3, 0.1, s.accent, { slot: SLOT_GLOW });
-    c.setLight(0.45, 2.5, 0, '#ffc877', 1.0, 9);
+    c.setLight(0.45, 2.5, 0, s.lamp.getStyle(), 1.0, 9);
   }
 });
 
@@ -1224,12 +1235,3 @@ registerModel('garden', (c) => {
   }
 });
 
-void FIRE_GLOW;
-void HAZARD;
-void BRICK;
-void BRICK_DARK;
-void postColor;
-void windowPane;
-void doorway;
-void valve;
-void axe;

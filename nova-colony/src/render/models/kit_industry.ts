@@ -40,11 +40,9 @@ export const FLOWERS = ['#ff6f91', '#ffd84a', '#ff9e5e', '#b48cff', '#5ef2ff', '
 
 // ------------------------------------------------------------------------- tier helpers
 
-/** Warm trim / stripe colour per tier: gold rope on timber, rust-orange on steel, orange on alloy, cyan on nano, gold on titanium. */
+/** Painted (non-glowing) trim / stripe colour: the palette's `stripe` slot (rope, banner blue, rust-orange, safety orange, cyan, gold). */
 export function stripeColor(s: TierStyle): THREE.ColorRepresentation {
-  if (s.index === 4) return ALLOY_ORANGE;
-  if (s.index === 6) return GOLD;
-  return s.accent;
+  return s.stripe;
 }
 
 /** Powered tiers (steel and up) have glowing accents; earlier tiers keep them as paint. */
@@ -68,11 +66,6 @@ export function deckColor(s: TierStyle): THREE.ColorRepresentation {
   return s.index <= 1 ? WOOD : s.index === 2 ? STONE_LIGHT : s.index === 6 ? s.light : s.trim;
 }
 
-const _dir = new THREE.Vector3();
-const _q = new THREE.Quaternion();
-const _e = new THREE.Euler();
-const _up = new THREE.Vector3(0, 1, 0);
-
 /** Rotate a local XZ offset by a yaw. */
 export function yawXZ(ry: number, lx: number, lz: number): [number, number] {
   const c = Math.cos(ry);
@@ -84,26 +77,16 @@ export function yawXZ(ry: number, lx: number, lz: number): [number, number] {
 
 /** Straight pipe between two points (any direction), optional ball joints at both ends. */
 export function pipe(b: GeoBuilder, color: THREE.ColorRepresentation, x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, r = 0.08, seg = 6, joints = false): void {
-  _dir.set(x2 - x1, y2 - y1, z2 - z1);
-  const len = _dir.length();
-  if (len < 1e-4) return;
-  _dir.divideScalar(len);
-  _q.setFromUnitVectors(_up, _dir);
-  _e.setFromQuaternion(_q, 'XYZ');
-  b.cyl(r, r, len, (x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2, color, seg, { rx: _e.x, ry: _e.y, rz: _e.z });
+  b.pipe([x1, y1, z1, x2, y2, z2], r, color, seg, false);
   if (joints) {
     b.sphere(r * 1.35, x1, y1, z1, color, 4);
     b.sphere(r * 1.35, x2, y2, z2, color, 4);
   }
 }
 
-/** Polyline pipe run `[x,y,z, x,y,z, ...]` with elbow balls at the interior joints. */
+/** Polyline pipe run `[x,y,z, x,y,z, ...]` with elbow balls at the interior joints (GeoBuilder.pipe). */
 export function pipeRun(b: GeoBuilder, color: THREE.ColorRepresentation, pts: number[], r = 0.08, seg = 6): void {
-  const n = pts.length / 3;
-  for (let i = 0; i < n - 1; i++) {
-    pipe(b, color, pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2], pts[i * 3 + 3], pts[i * 3 + 4], pts[i * 3 + 5], r, seg);
-    if (i > 0) b.sphere(r * 1.35, pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2], color, 4);
-  }
+  b.pipe(pts, r, color, seg, true);
 }
 
 /** Hand-wheel valve on a stem, wheel facing +Z (rotated by `ry`). */
@@ -245,8 +228,8 @@ export function anvil(b: GeoBuilder, x: number, y: number, z: number, ry = 0, co
 }
 
 /** Hanging lantern (glass cube, metal cap and ring); warm glow. */
-export function lantern(b: GeoBuilder, x: number, y: number, z: number, cap: THREE.ColorRepresentation, size = 0.26): void {
-  b.box(size, size, size, x, y, z, '#ffd27a', { slot: SLOT_GLOW });
+export function lantern(b: GeoBuilder, x: number, y: number, z: number, cap: THREE.ColorRepresentation, size = 0.26, glow: THREE.ColorRepresentation = '#ffd27a'): void {
+  b.box(size, size, size, x, y, z, glow, { slot: SLOT_GLOW });
   b.pyramid(size + 0.12, 0.12, size + 0.12, x, y + size / 2, z, cap);
   b.box(0.04, 0.12, 0.04, x, y + size / 2 + 0.17, z, cap);
 }
@@ -279,9 +262,7 @@ export function bush(b: GeoBuilder, x: number, y: number, z: number, r: number, 
 
 /** Window pane with a frame, facing +Z (rotated by `ry`). */
 export function windowPane(b: GeoBuilder, s: TierStyle, x: number, y: number, z: number, w: number, h: number, ry = 0): void {
-  b.box(w + 0.14, h + 0.14, 0.06, x, y, z, frameColor(s), { ry });
-  const [dx, dz] = yawXZ(ry, 0, 0.03);
-  b.box(w, h, 0.08, x + dx, y, z + dz, '#ffffff', { ry, slot: SLOT_GLASS });
+  b.windowPane(w, h, x, y, z, frameColor(s), ry === 0 ? 'z' : 'x', { frameW: 0.07, depth: 0.1, mullion: s.index <= 2 });
 }
 
 export interface DoorOpts {
@@ -321,17 +302,27 @@ export function roof(c: ModelCtx, kind: 'gable' | 'flat' | 'saw' | 'none', w: nu
     b.box(0.14, 0.12, d + 0.7, x, h + rh - 0.04, z, s.roofEdge);
     if (s.index <= 2) for (const sx of [-1, 1]) b.box(0.08, 0.1, d + 0.66, x + sx * (w / 2 + 0.26), h + 0.02, z, s.roofEdge);
   } else if (kind === 'flat') {
-    b.box(w + 0.4, 0.2, d + 0.4, x, h + 0.1, z, s.roof, { shade: 0.02 });
-    b.box(w + 0.44, 0.1, d + 0.44, x, h + 0.25, z, s.roofEdge);
-    if (s.index >= 5) b.box(w + 0.46, 0.04, d + 0.46, x, h + 0.31, z, s.accent, { slot: SLOT_GLOW });
+    // fascia band under a slightly smaller roof slab, so the roof colour stays visible from above
+    b.box(w + 0.46, 0.14, d + 0.46, x, h + 0.05, z, s.roofEdge);
+    b.box(w + 0.3, 0.16, d + 0.3, x, h + 0.18, z, s.roof, { shade: 0.02 });
+    if (s.index >= 5) {
+      // glowing parapet edge lines (nano / titanium)
+      b.box(w + 0.34, 0.04, 0.06, x, h + 0.27, z + d / 2 + 0.14, s.accent, { slot: SLOT_GLOW });
+      b.box(w + 0.34, 0.04, 0.06, x, h + 0.27, z - d / 2 - 0.14, s.accent, { slot: SLOT_GLOW });
+      b.box(0.06, 0.04, d + 0.34, x + w / 2 + 0.14, h + 0.27, z, s.accent, { slot: SLOT_GLOW });
+      b.box(0.06, 0.04, d + 0.34, x - w / 2 - 0.14, h + 0.27, z, s.accent, { slot: SLOT_GLOW });
+    }
   } else if (kind === 'saw') {
     const n = Math.max(2, Math.round(w / 2));
     const sw = (w + 0.3) / n;
+    const slope = Math.atan2(0.8, sw / 2);
     for (let i = 0; i < n; i++) {
       const sx = x - (w + 0.3) / 2 + sw * (i + 0.5);
       b.wedge(sw, 0.8, d + 0.3, sx, h, z, i % 2 ? s.roof : s.roofEdge, { shade: 0.03 });
-      b.box(sw - 0.3, 0.42, 0.06, sx, h + 0.32, z + d / 2 + 0.1, '#ffffff', { slot: SLOT_GLASS });
+      // skylight strip on the sun-facing slope
+      b.box(sw * 0.42, 0.05, d * 0.55, sx + sw * 0.25, h + 0.42, z, '#ffffff', { rz: -slope, slot: SLOT_GLASS });
     }
+    b.box(w + 0.3, 0.1, 0.12, x, h + 0.05, z + d / 2 + 0.1, s.roofEdge);
   }
 }
 
@@ -358,7 +349,7 @@ export function shed(c: ModelCtx, w: number, d: number, h: number, x: number, z:
   const wall = o.wall ?? s.base;
   b.box(w, h, d, x, h / 2, z, wall, { shade: t <= 2 ? 0.05 : 0.015 });
   const pw = t <= 1 ? 0.24 : 0.28;
-  const post = t <= 1 ? WOOD_DARK : t === 6 ? s.trim : s.trim;
+  const post = t <= 1 ? WOOD_DARK : s.trim;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(pw, h + 0.06, pw, x + sx * (w / 2 - pw / 2 + 0.03), (h + 0.06) / 2, z + sz * (d / 2 - pw / 2 + 0.03), post);
   if (t <= 1) {
     // plank courses
@@ -380,7 +371,7 @@ export function shed(c: ModelCtx, w: number, d: number, h: number, x: number, z:
   } else if (t === 4) {
     // blue-silver panel split with an orange stripe and a cyan light band
     b.box(w + 0.02, h * 0.42, d + 0.02, x, h * 0.74, z, s.light, { shade: 0.015 });
-    b.box(w + 0.08, 0.1, d + 0.08, x, h * 0.52, z, ALLOY_ORANGE);
+    b.box(w + 0.08, 0.1, d + 0.08, x, h * 0.52, z, s.stripe);
     b.box(w + 0.08, 0.07, d + 0.08, x, h - 0.2, z, s.accent, { slot: SLOT_GLOW });
   } else if (t === 5) {
     // dark teal with glowing cyan edge lines
@@ -391,8 +382,8 @@ export function shed(c: ModelCtx, w: number, d: number, h: number, x: number, z:
     b.box(0.06, 0.06, d + 0.1, x - w / 2 - 0.02, h - 0.08, z, s.accent, { slot: SLOT_GLOW });
   } else {
     // pearl white, gold trims, soft blue glow line
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(pw + 0.08, 0.34, pw + 0.08, x + sx * (w / 2 - pw / 2 + 0.03), h - 0.17, z + sz * (d / 2 - pw / 2 + 0.03), GOLD);
-    b.box(w + 0.1, 0.14, d + 0.1, x, 0.12, z, GOLD);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(pw + 0.08, 0.34, pw + 0.08, x + sx * (w / 2 - pw / 2 + 0.03), h - 0.17, z + sz * (d / 2 - pw / 2 + 0.03), s.stripe);
+    b.box(w + 0.1, 0.14, d + 0.1, x, 0.12, z, s.stripe);
     b.box(w + 0.08, 0.07, d + 0.08, x, h * 0.56, z, s.accent, { slot: SLOT_GLOW });
   }
   if (o.windows !== false) {
