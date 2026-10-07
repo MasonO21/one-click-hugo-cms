@@ -24,6 +24,7 @@ import { MissionSystem } from '../sim/missions';
 import { TutorialSystem } from '../sim/tutorial';
 import { LiveOpsSystem } from '../sim/liveops';
 import { createMockServices } from '../platform/mock';
+import { reportLoopError } from './guard';
 
 export interface Systems {
   world: WorldSystem;
@@ -176,7 +177,14 @@ export class Game {
     if (prev < 0.78 && st.time.dayTime >= 0.78) this.bus.emit('time:nightfall', {});
     if (prev < 0.22 && st.time.dayTime >= 0.22) this.bus.emit('time:sunrise', {});
 
-    for (const s of this.systemList()) s.update(dt);
+    // each system is isolated: one that throws is skipped for this frame, the others (and the loop) keep going
+    for (const k of UPDATE_ORDER) {
+      try {
+        this.sys[k].update(dt);
+      } catch (e) {
+        reportLoopError(`sim ${k}`, e);
+      }
+    }
 
     this.secondAcc += dt;
     if (this.secondAcc >= 1) {

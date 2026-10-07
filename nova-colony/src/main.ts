@@ -7,6 +7,7 @@ import { UI } from './ui/UI';
 import { AudioManager } from './audio/Audio';
 import { createPlatformServices } from './platform';
 import { SaveManager } from './platform/save';
+import { guarded } from './core/guard';
 
 async function boot() {
   const services = await createPlatformServices();
@@ -42,14 +43,15 @@ async function boot() {
   }
 
   let last = performance.now();
+  // the next frame is booked first and every step is guarded, so one exception can never stop the loop
   const frame = (t: number) => {
+    requestAnimationFrame(frame);
     const dt = Math.min(0.1, (t - last) / 1000);
     last = t;
-    game.update(dt);
-    renderer.render(dt);
-    ui.update(dt);
-    audio.update(dt);
-    requestAnimationFrame(frame);
+    guarded('game', () => game.update(dt));
+    guarded('render', () => renderer.render(dt));
+    guarded('ui', () => ui.update(dt));
+    guarded('audio', () => audio.update(dt));
   };
   requestAnimationFrame(frame);
 }

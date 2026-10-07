@@ -167,7 +167,13 @@ export class EventBus {
       }
     }
     const any = this.handlers.get('*');
-    if (any) for (const fn of [...any]) (fn as any)(type, payload);
+    if (any) for (const fn of [...any]) {
+      try {
+        (fn as any)(type, payload);
+      } catch (e) {
+        console.error(`[bus] onAny listener failed on ${String(type)}`, e);
+      }
+    }
   }
 
   clear(): void {
