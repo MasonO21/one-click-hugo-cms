@@ -21,6 +21,11 @@ const BIOMES = new Set([
 ]);
 const TIERS = ['tier-0-wood', 'tier-1-reinforced', 'tier-2-stone', 'tier-3-steel', 'tier-4-alloy', 'tier-5-nano', 'tier-6-titanium'];
 
+/** True for a URL returned by one of the lookups below (toasts accept those as their icon). */
+export function isArtSrc(s: string | null | undefined): s is string {
+  return !!s && s.startsWith(ROOT);
+}
+
 /** Resource (or 'nova') icon, 128 px with transparency. */
 export function resourceArt(id: string): string | null {
   return RESOURCES.has(id) ? `${ROOT}resources/${id}.webp` : null;
@@ -53,9 +58,12 @@ const REWARDS = new Set(['victory_chest', 'supply_crate', 'daily_gift']);
 export function eventArt(kind: string): string | null {
   return EVENTS.has(kind) ? `${ROOT}events/${kind}.webp` : null;
 }
+/** Products without a card of their own borrow another product's illustration. */
+const SHOP_ALIAS: Record<string, string> = { season_xp_boost: 'season_pass_premium' };
 /** Shop product card art by ProductDef.id, 512×384 with transparency. */
 export function shopArt(productId: string): string | null {
-  return SHOP.has(productId) ? `${ROOT}shop/${productId}.webp` : null;
+  const id = SHOP_ALIAS[productId] ?? productId;
+  return SHOP.has(id) ? `${ROOT}shop/${id}.webp` : null;
 }
 /** Reward art ('victory_chest' | 'supply_crate' | 'daily_gift'), 256 px with transparency. */
 export function rewardArt(id: string): string | null {
@@ -67,19 +75,88 @@ export function keyArt(portrait: boolean): string {
   return `${ROOT}key/${portrait ? 'loading-portrait' : 'loading'}.webp`;
 }
 
-/** An <img> for an art URL, or a span with the emoji fallback when there is no illustration. */
-export function artOrEmoji(src: string | null, emoji: string, cls = 'art', alt = ''): HTMLElement {
-  if (!src) {
+/**
+ * An <img> for an art URL, or a span with the emoji fallback when there is no illustration (or the file fails
+ * to load). `lazy` adds loading="lazy" for big panel art that is not on screen straight away.
+ */
+export function artOrEmoji(src: string | null, emoji: string, cls = 'art', alt = '', lazy = false): HTMLElement {
+  const fallback = (): HTMLElement => {
     const s = document.createElement('span');
     s.className = cls + ' emoji';
     s.textContent = emoji;
     return s;
-  }
+  };
+  if (!src) return fallback();
   const img = document.createElement('img');
   img.className = cls;
-  img.src = src;
   img.alt = alt;
   img.decoding = 'async';
   img.draggable = false;
+  if (lazy) img.loading = 'lazy';
+  img.onerror = () => img.replaceWith(fallback());
+  img.src = src;
   return img;
+}
+
+// ---------------------------------------------------------------------------------------------
+// DOM helpers shared by the UI (styles live in styles/art.css)
+// ---------------------------------------------------------------------------------------------
+
+/** Swap a broken image for its emoji (a missing/blocked file must never leave a hole in the UI). */
+function emojiFallback(host: HTMLElement, emoji: string): void {
+  host.classList.add('emoji');
+  host.textContent = emoji;
+}
+
+/**
+ * A fixed-box icon: `<i class="aico"><img></i>` for an illustration, `<i class="aico emoji">🪵</i>` when
+ * there is none (or it fails to load). The box is always 1.25em square so text never jumps.
+ */
+export function iconEl(src: string | null, emoji: string, cls = '', tag = 'i'): HTMLElement {
+  const host = document.createElement(tag);
+  host.className = 'aico' + (cls ? ' ' + cls : '');
+  if (!src) {
+    emojiFallback(host, emoji);
+    return host;
+  }
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = '';
+  img.decoding = 'async';
+  img.draggable = false;
+  img.onerror = () => emojiFallback(host, emoji);
+  host.appendChild(img);
+  return host;
+}
+
+/** Icon for a resource id (or 'nova'), with the data's emoji as the fallback. */
+export function resIcon(id: string, emoji: string, cls = '', tag = 'i'): HTMLElement {
+  return iconEl(resourceArt(id), emoji, cls, tag);
+}
+
+/** Portrait <img> (or an emoji span) for a colonist profession. */
+export function professionIcon(id: string, emoji: string, cls = 'prof-art'): HTMLElement {
+  return artOrEmoji(professionArt(id), emoji, cls, '');
+}
+
+const keep: HTMLImageElement[] = [];
+/**
+ * Warm the cache (fetch + decode) so these icons are on screen the first time a chip shows them. Safe to call
+ * repeatedly and outside a browser (tests): it only creates detached <img> elements.
+ */
+export function preloadArt(srcs: (string | null)[]): void {
+  if (typeof Image === 'undefined') return;
+  for (const src of srcs) {
+    if (!src || keep.some((i) => i.getAttribute('src') === src)) continue;
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = src;
+    keep.push(img);
+    void img.decode?.().catch(() => undefined);
+  }
+}
+
+/** The HUD's icons: every resource + Nova, preloaded at startup. */
+export function preloadResourceArt(): void {
+  preloadArt([...RESOURCES].map((id) => resourceArt(id)));
 }

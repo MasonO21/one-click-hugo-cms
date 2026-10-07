@@ -12,6 +12,7 @@ import { fmtHMS } from '../logic/time';
 import { CRAFT_CATEGORIES, metaOf } from '../logic/categories';
 import { adButton, btn, emptyState, recipeChips, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
+import { iconEl, resIcon, resourceArt } from '../art';
 
 export class CraftPanel extends Panel {
   readonly name = 'craft';
@@ -117,7 +118,7 @@ export class CraftPanel extends Panel {
     fill(this.body, wrap);
   }
 
-  private outputInfo(r: RecipeDef): { icon: string; text: string } {
+  private outputInfo(r: RecipeDef): { icon: string; text: string; art?: string | null } {
     const o = r.outputs;
     if (o.items) {
       const [id, n] = Object.entries(o.items)[0];
@@ -126,7 +127,7 @@ export class CraftPanel extends Panel {
     if (o.resources) {
       const [id, n] = Object.entries(o.resources)[0];
       const d = this.data.resource(id);
-      return { icon: d?.icon ?? '📦', text: `+${fmt(n ?? 0)} ${d?.name ?? id}` };
+      return { icon: d?.icon ?? '📦', art: resourceArt(id), text: `+${fmt(n ?? 0)} ${d?.name ?? id}` };
     }
     if (o.vehicle) return { icon: this.data.vehicle(o.vehicle)?.icon ?? '🚙', text: this.data.vehicle(o.vehicle)?.name ?? o.vehicle };
     return { icon: '⚙️', text: r.name };
@@ -140,7 +141,7 @@ export class CraftPanel extends Panel {
     return h(
       'div',
       { class: 'row recipe', data: { recipe: r.id } },
-      h('span', { class: 'bi', text: out.icon }),
+      out.art ? iconEl(out.art, out.icon, 'bi', 'span') : h('span', { class: 'bi', text: out.icon }),
       h('div', { class: 'grow' }, h('div', { class: 'h3', text: r.name }), h('div', { class: 'mute small', text: `${out.text}${owned ? ` · you have ${owned}` : ''} · ⏱ ${fmtHMS(r.time)}` }), recipeChips(this.data, r.inputs, r.itemInputs, g.state.resources.amounts, g.state.player.items)),
       btn({
         label: 'Craft',
@@ -159,7 +160,7 @@ export class CraftPanel extends Panel {
   private queueRow(job: CraftJob): HTMLElement {
     const g = this.game;
     const r = this.data.recipe(job.recipe);
-    const out = r ? this.outputInfo(r) : { icon: '⚙️', text: job.recipe };
+    const out: { icon: string; text: string; art?: string | null } = r ? this.outputInfo(r) : { icon: '⚙️', text: job.recipe };
     const frac = job.total > 0 ? 1 - job.remaining / job.total : 1;
     const cost = g.sys.crafting.finishCost(job.id);
     const row = h('div', { class: 'card qrow', data: { job: job.id } });
@@ -171,7 +172,7 @@ export class CraftPanel extends Panel {
       adButton(this.ctx, 'instant_craft', 'Finish free', () => this.rerender(), { context: job.id, cls: 'small', sub: undefined }),
       cost > 0
         ? btn({
-            label: `Finish 💎 ${fmt(cost)}`,
+            label: h('span', null, 'Finish ', resIcon('nova', '💎'), ` ${fmt(cost)}`),
             cls: 'nova small',
             disabled: g.state.liveops.nova >= cost ? false : 'Not enough Nova Crystals',
             onClick: () => {
@@ -192,7 +193,7 @@ export class CraftPanel extends Panel {
       h(
         'div',
         { class: 'row' },
-        h('span', { class: 'bi', text: out.icon }),
+        out.art ? iconEl(out.art, out.icon, 'bi', 'span') : h('span', { class: 'bi', text: out.icon }),
         h('div', { class: 'grow' }, h('div', { class: 'h3', text: r?.name ?? job.recipe }), b, h('div', { class: 'mute small' }, 'Ready in ', h('b', { 'data-time': '1', text: fmtHMS(job.remaining) }))),
         actions,
       ),

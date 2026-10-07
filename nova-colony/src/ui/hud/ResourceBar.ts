@@ -7,6 +7,7 @@ import type { UiCtx } from '../ctx';
 import type { GainSource } from '../../core/events';
 import { fmt, fmtSigned } from '../../core/format';
 import { h, replay, setClass, setText, setVar } from '../dom';
+import { resIcon } from '../art';
 
 interface Chip {
   id: string;
@@ -105,7 +106,7 @@ export class ResourceBar {
     const amt = h('span', { class: 'amt', text: '0' });
     const cap = h('i');
     const gain = h('span', { class: 'gain' });
-    const el = h('button', { class: 'rchip', type: 'button', data: { res: id, sfx: 'ui_click' } }, h('span', { class: 'ic', text: icon }), amt, h('span', { class: 'cap' }, cap), gain);
+    const el = h('button', { class: 'rchip', type: 'button', data: { res: id, sfx: 'ui_click' } }, resIcon(id, icon, 'ic', 'span'), amt, h('span', { class: 'cap' }, cap), gain);
     setVar(el, '--rc', color);
     el.addEventListener('click', () => this.onInfo(el, id));
     const real = this.ctx.game.state.resources.amounts[id] ?? 0;

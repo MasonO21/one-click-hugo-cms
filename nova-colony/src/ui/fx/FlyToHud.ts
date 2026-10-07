@@ -5,6 +5,7 @@
  * same resource are merged and flushed every ~120 ms.
  */
 import { h } from '../dom';
+import { artOrEmoji, resourceArt } from '../art';
 
 interface Pending {
   id: string;
@@ -72,7 +73,10 @@ export class FlyToHud {
 
   private particle(p: Pending, i: number, share: number, fx: number, fy: number, tx: number, ty: number): void {
     const el = this.pool.pop() ?? h('div', { class: 'fly' });
-    el.textContent = p.icon;
+    // the illustrated icon for resources / Nova (already preloaded by the HUD), the emoji for RP / XP
+    const src = resourceArt(p.id);
+    if (src) el.replaceChildren(artOrEmoji(src, p.icon, 'fly-img'));
+    else el.textContent = p.icon;
     this.el.appendChild(el);
     this.live++;
     const spread = 34;

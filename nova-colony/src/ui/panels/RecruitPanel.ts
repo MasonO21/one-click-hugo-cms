@@ -8,6 +8,7 @@ import { RARITY_COLOR, cap } from '../logic/rewards';
 import { stars } from '../logic/colonist';
 import { adButton, btn, costChips, emptyState, portrait } from '../widgets';
 import { fill, h } from '../dom';
+import { professionArt } from '../art';
 import { bagCovers } from '../../core/bag';
 
 export class RecruitPanel extends Panel {
@@ -88,7 +89,7 @@ export class RecruitPanel extends Panel {
           onClick: () => {
             if (g.sys.colonists.recruit(i)) {
               this.ctx.haptic('success');
-              this.ctx.toast(`${c.name} joined your colony!`, 'success', '🎉');
+              this.ctx.toast(`${c.name} joined your colony!`, 'success', professionArt(c.specialty) ?? '🎉');
             } else this.ctx.toast("They couldn't join just yet", 'info', '🧑‍🚀');
             this.rerender();
           },

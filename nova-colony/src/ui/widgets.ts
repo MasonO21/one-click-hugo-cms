@@ -8,8 +8,9 @@ import type { UiCtx } from './ctx';
 import { fmt } from '../core/format';
 import { bagEntries } from '../core/bag';
 import { h, type Child } from './dom';
-import { rewardParts, RARITY_COLOR } from './logic/rewards';
+import { rewardParts, RARITY_COLOR, type RewardPart } from './logic/rewards';
 import { portraitSvg } from './logic/colonist';
+import { iconEl, professionArt, professionIcon, resIcon } from './art';
 
 export interface BtnOpts {
   label?: Child;
@@ -50,7 +51,7 @@ export function setDisabled(el: HTMLElement, disabled: boolean | string | undefi
 export function resChip(data: DataRegistry, id: string, amount: number, have?: number): HTMLElement {
   const d = data.resource(id);
   const bad = have != null && have + 1e-9 < amount;
-  return h('span', { class: 'chip' + (bad ? ' bad' : ''), title: d?.name ?? id }, h('i', { text: d?.icon ?? '•' }), fmt(Math.ceil(amount)));
+  return h('span', { class: 'chip' + (bad ? ' bad' : ''), title: d?.name ?? id }, resIcon(id, d?.icon ?? '•'), fmt(Math.ceil(amount)));
 }
 
 /**
@@ -89,9 +90,14 @@ export function costChips(data: DataRegistry, cost: ResourceBag | null | undefin
 export function rewardChips(data: DataRegistry, reward: Reward | null | undefined, cls = ''): HTMLElement {
   const wrap = h('div', { class: 'chips reward ' + cls });
   for (const p of rewardParts(reward, data)) {
-    wrap.appendChild(h('span', { class: 'chip', title: p.label, style: { background: p.color + '33' } }, h('i', { text: p.icon }), p.amount));
+    wrap.appendChild(h('span', { class: 'chip', title: p.label, style: { background: p.color + '33' } }, partIcon(p), p.amount));
   }
   return wrap;
+}
+
+/** Icon of a reward part: the illustration for resources / Nova, the emoji for everything else. */
+export function partIcon(p: Pick<RewardPart, 'art' | 'icon'>, cls = '', tag = 'i'): HTMLElement {
+  return iconEl(p.art, p.icon, cls, tag);
 }
 
 export interface BarEl extends HTMLElement {
@@ -134,8 +140,18 @@ export function tabs(items: TabItem[], active: string, onSelect: (id: string) =>
   return wrap;
 }
 
-export function portrait(c: Pick<Colonist, 'appearance' | 'rarity'>, large = false): HTMLElement {
-  return h('div', { class: 'portrait' + (large ? ' lg' : ''), style: { '--rar': RARITY_COLOR[c.rarity] ?? '#fff' }, html: portraitSvg(c) });
+/**
+ * Colonist avatar: the profession's illustrated bust inside a ring in the rarity colour. `job` is the profession
+ * of the colonist's workplace (falls back to their specialty); without art it is the old SVG face.
+ */
+export function portrait(c: Pick<Colonist, 'appearance' | 'rarity'> & { specialty?: string }, large = false, job?: string | null): HTMLElement {
+  const style = { '--rar': RARITY_COLOR[c.rarity] ?? '#fff' };
+  const prof = job && professionArt(job) ? job : c.specialty;
+  if (prof && professionArt(prof)) {
+    const el = h('div', { class: 'portrait art' + (large ? ' lg' : ''), style, data: { prof } }, professionIcon(prof, '🧑‍🚀', 'pa'));
+    return el;
+  }
+  return h('div', { class: 'portrait' + (large ? ' lg' : ''), style, html: portraitSvg(c) });
 }
 
 export function emptyState(icon: string, text: string, sub?: string): HTMLElement {
@@ -174,10 +190,10 @@ export function adButton(ctx: UiCtx, placement: string, label: string, onDone?: 
 }
 
 /** Effect-tone chip row used by cards. */
-export function tagChips(tags: { icon: string; text: string; tone?: string }[], max = 3): HTMLElement {
+export function tagChips(tags: { icon: string; art?: string | null; text: string; tone?: string }[], max = 3): HTMLElement {
   const wrap = h('div', { class: 'chips tags' });
   for (const t of tags.slice(0, max)) {
-    wrap.appendChild(h('span', { class: 'chip ' + (t.tone ?? ''), }, t.icon ? h('i', { text: t.icon }) : null, t.text));
+    wrap.appendChild(h('span', { class: 'chip ' + (t.tone ?? ''), }, t.art ? iconEl(t.art, t.icon) : t.icon ? h('i', { text: t.icon }) : null, t.text));
   }
   return wrap;
 }

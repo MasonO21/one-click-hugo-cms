@@ -6,6 +6,7 @@ import { bagCovers } from '../../core/bag';
 import { fmtHMS } from '../logic/time';
 import { btn, costChips, emptyState, rewardChips } from '../widgets';
 import { fill, h } from '../dom';
+import { artOrEmoji, eventArt } from '../art';
 
 export class MerchantPanel extends Panel {
   readonly name = 'merchant';
@@ -56,6 +57,8 @@ export class MerchantPanel extends Panel {
       return;
     }
     const wrap = h('div', { class: 'stack-v' });
+    const hero = eventArt(def.kind);
+    if (hero) wrap.appendChild(h('div', { class: 'ev-hero' }, artOrEmoji(hero, def.icon, 'ev-img', def.name, true)));
     wrap.appendChild(h('div', { class: 'card tint' }, h('div', { class: 'mute', text: def.description }), h('div', { class: 'small', style: 'margin-top:.3em' }, 'Leaving in ', h('b', { 'data-left': '1', text: fmtHMS(Math.max(0, e.endsAt - g.state.playTime)) }))));
     const trades = def.trades ?? [];
     if (!trades.length) wrap.appendChild(emptyState('🧳', 'Nothing to trade today'));

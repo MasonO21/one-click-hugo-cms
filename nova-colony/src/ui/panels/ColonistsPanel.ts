@@ -5,7 +5,7 @@
 import { Panel, type PanelTitle } from './Panel';
 import type { Colonist } from '../../core/state';
 import { RARITY_COLOR, cap } from '../logic/rewards';
-import { happinessFace, stars } from '../logic/colonist';
+import { happinessFace, jobOf, stars } from '../logic/colonist';
 import { bar, btn, emptyState, portrait, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
 
@@ -129,7 +129,7 @@ export class ColonistsPanel extends Panel {
     const el = h(
       'button',
       { class: 'crow', type: 'button', data: { colonist: c.id, sfx: 'ui_click' } },
-      portrait(c),
+      portrait(c, false, jobOf(this.game, c)),
       h(
         'div',
         { class: 'grow ct' },
@@ -159,7 +159,7 @@ export class ColonistsPanel extends Panel {
       h(
         'div',
         { class: 'row cd-head' },
-        portrait(c, true),
+        portrait(c, true, jobOf(this.game, c)),
         h(
           'div',
           { class: 'grow' },

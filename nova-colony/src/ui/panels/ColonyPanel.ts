@@ -8,9 +8,11 @@ import { fmt, fmtDuration } from '../../core/format';
 import { bagCovers } from '../../core/bag';
 import { btn, costChips, section } from '../widgets';
 import { fill, h, setVar } from '../dom';
+import { artOrEmoji, tierArt } from '../art';
 
 export class ColonyPanel extends Panel {
   readonly name = 'colony';
+  private laddered = false;
 
   title(): PanelTitle {
     return { icon: '🛰️', text: this.st.colony.name || 'Your Colony' };
@@ -41,7 +43,8 @@ export class ColonyPanel extends Panel {
     const wrap = h('div', { class: 'stack-v' });
 
     // hero
-    const hero = h('div', { class: 'tier-hero' }, h('div', { class: 'th-sw' }), h('div', { class: 'grow' }, h('div', { class: 'th-name', text: `${tier.name} Colony` }), h('div', { class: 'mute', text: tier.description })));
+    const heroArt = tierArt(cur);
+    const hero = h('div', { class: 'tier-hero' + (heroArt ? ' has-art' : '') }, h('div', { class: 'th-sw' }, heroArt ? artOrEmoji(heroArt, '', 'th-img') : null), h('div', { class: 'grow' }, h('div', { class: 'th-name', text: `${tier.name} Colony` }), h('div', { class: 'mute', text: tier.description })));
     setVar(hero, '--tc', tier.color);
     setVar(hero, '--ta', tier.accent);
     wrap.appendChild(hero);
@@ -50,12 +53,21 @@ export class ColonyPanel extends Panel {
     const ladder = h('div', { class: 'ladder', data: { scroll: 'ladder' } });
     for (const t of this.data.tiers) {
       const state = t.index < cur ? 'done' : t.index === cur ? 'now' : t.index === cur + 1 ? 'next' : 'locked';
-      const node = h('div', { class: `ladder-node ${state}` }, h('div', { class: 'ln-dot' }, h('i'), state === 'done' ? '✔' : state === 'locked' ? '🔒' : String(t.index + 1)), h('div', { class: 'ln-name', text: t.name }));
+      const src = tierArt(t.index);
+      const node = h('div', { class: `ladder-node ${state}` + (src ? ' has-art' : ''), data: { tier: t.index } }, src ? h('div', { class: 'ln-art' }, artOrEmoji(src, '', 'ln-img', t.name, true)) : null, h('div', { class: 'ln-dot' }, h('i'), state === 'done' ? '✔' : state === 'locked' ? '🔒' : String(t.index + 1)), h('div', { class: 'ln-name', text: t.name }));
       setVar(node, '--tc', t.color);
       setVar(node, '--ta', t.accent);
       ladder.appendChild(node);
     }
     wrap.appendChild(ladder);
+    if (!this.laddered) {
+      // the ladder is wider than a phone: open it centred on where the colony is now
+      this.laddered = true;
+      requestAnimationFrame(() => {
+        const now = ladder.querySelector<HTMLElement>('.ladder-node.now');
+        if (now && ladder.isConnected) ladder.scrollLeft = now.offsetLeft - (ladder.clientWidth - now.offsetWidth) / 2;
+      });
+    }
 
     // next tier
     const req = this.requirements();

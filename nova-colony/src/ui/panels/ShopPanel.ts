@@ -8,6 +8,7 @@ import type { CosmeticDef, ProductDef } from '../../data/schema';
 import { fmtHMS } from '../logic/time';
 import { adButton, bigNum, btn, emptyState, rewardChips, tabs } from '../widgets';
 import { fill, h } from '../dom';
+import { artOrEmoji, resIcon, rewardArt, shopArt } from '../art';
 
 type Tab = 'crystals' | 'packs' | 'vip' | 'season' | 'cosmetics';
 
@@ -38,7 +39,7 @@ export class ShopPanel extends Panel {
   }
 
   override extras() {
-    return h('div', { class: 'nova-bank' }, h('span', { text: '💎' }), h('b', { class: 'num', text: bigNum(this.st.liveops.nova) }));
+    return h('div', { class: 'nova-bank' }, resIcon('nova', '💎', '', 'span'), h('b', { class: 'num', text: bigNum(this.st.liveops.nova) }));
   }
 
   override signature(): string {
@@ -111,8 +112,9 @@ export class ShopPanel extends Panel {
     const price = lo.price(p.id) || p.fallbackPrice;
     const card = h('div', { class: 'card pcard' + (p.tag ? ' tagged' : ''), data: { product: p.id } });
     if (p.tag) card.appendChild(h('div', { class: 'ribbon', text: TAG_TEXT[p.tag] ?? p.tag.toUpperCase() }));
+    const art = shopArt(p.id);
     card.append(
-      h('div', { class: 'pi', text: SECTION_ICON[p.section] ?? '🎁' }),
+      art ? h('div', { class: 'pi art' }, artOrEmoji(art, SECTION_ICON[p.section] ?? '🎁', 'pi-img', p.name, true)) : h('div', { class: 'pi', text: SECTION_ICON[p.section] ?? '🎁' }),
       h('div', { class: 'h3', text: p.name }),
       h('div', { class: 'mute small', text: p.description }),
       rewardChips(this.data, p.grants, 'center'),
@@ -148,7 +150,7 @@ export class ShopPanel extends Panel {
     const ready = lo.freeCrateReady();
     const card = h('div', { class: 'card crate-card' });
     card.append(
-      h('div', { class: 'row' }, h('span', { class: 'bi', text: '📦' }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: 'Free supply crate' }), h('div', { class: 'mute small' }, ready ? 'A crate is waiting for you!' : 'Next free crate in ', ready ? null : h('b', { 'data-crate-time': '1', text: this.crateText() })))),
+      h('div', { class: 'row' }, artOrEmoji(rewardArt('supply_crate'), '📦', 'bi crate-img', 'Supply crate'), h('div', { class: 'grow' }, h('div', { class: 'h3', text: 'Free supply crate' }), h('div', { class: 'mute small' }, ready ? 'A crate is waiting for you!' : 'Next free crate in ', ready ? null : h('b', { 'data-crate-time': '1', text: this.crateText() })))),
       h(
         'div',
         { class: 'row wrap', style: 'margin-top:.5em' },
@@ -180,7 +182,7 @@ export class ShopPanel extends Panel {
       h(
         'div',
         { class: 'card vip-card' },
-        h('div', { class: 'vip-crown', text: '👑' }),
+        shopArt(v.productId) ? h('div', { class: 'vip-crown art' }, artOrEmoji(shopArt(v.productId), '👑', 'vip-img', 'Colony Pass')) : h('div', { class: 'vip-crown', text: '👑' }),
         h('div', { class: 'h3 center', text: active ? `Colony Pass active · ${days} day${days === 1 ? '' : 's'} left` : 'Colony Pass' }),
         h('div', { class: 'stack-v tight' }, ...v.description.map((d) => h('div', { class: 'perk', text: '✔ ' + d }))),
         prod
@@ -252,7 +254,7 @@ export class ShopPanel extends Panel {
     } else if (c.nova > 0) {
       card.appendChild(
         btn({
-          label: `💎 ${bigNum(c.nova)}`,
+          label: h('span', null, resIcon('nova', '💎'), ` ${bigNum(c.nova)}`),
           cls: 'nova block',
           disabled: lo.nova >= c.nova ? false : 'Not enough Nova Crystals',
           onClick: () => {

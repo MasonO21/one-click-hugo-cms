@@ -7,9 +7,10 @@
 import { Panel, type PanelTitle } from './Panel';
 import { CELL, HALF_WORLD, WORLD_CELLS, cellCenter } from '../../core/constants';
 import { clamp } from '../../core/math';
-import { MAP_MAX_ZOOM, MAP_MIN_ZOOM, clampViewport, mapScale, nearestMarker, regionCentroids, worldToMap, type MapMarker, type MapViewport } from '../logic/map';
+import { MAP_MAX_ZOOM, MAP_MIN_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, regionCentroids, worldToMap, type MapMarker, type MapViewport } from '../logic/map';
 import { btn, section } from '../widgets';
 import { fill, h } from '../dom';
+import { artOrEmoji, biomeArt, eventArt } from '../art';
 
 function hex(c: string): [number, number, number] {
   const v = parseInt(c.replace('#', ''), 16);
@@ -44,6 +45,8 @@ export class MapPanel extends Panel {
   private vp: MapViewport = { w: 400, h: 400, zoom: 1, cx: 0, cz: 0 };
   private markers: MapMarker[] = [];
   private selected: MapMarker | null = null;
+  /** A region picked by tapping empty ground or its row in the list (shows its postcard). */
+  private selectedRegion: string | null = null;
   private pointers = new Map<number, { x: number; y: number }>();
   private pinch0 = 0;
   private zoom0 = 1;
@@ -75,7 +78,7 @@ export class MapPanel extends Panel {
 
   override signature(): string {
     const w = this.game.state.world;
-    return `${w.regionsUnlocked.length}|${w.regionsDiscovered.length}|${w.beacons.length}|${w.events.length}|${this.selected?.id}|${this.game.state.colony.tier}`;
+    return `${w.regionsUnlocked.length}|${w.regionsDiscovered.length}|${w.beacons.length}|${w.events.length}|${this.selected?.id}|${this.selectedRegion}|${this.game.state.colony.tier}`;
   }
 
   render(): void {
@@ -159,10 +162,15 @@ export class MapPanel extends Panel {
   private renderInfo(): void {
     const m = this.selected;
     if (!m) {
-      fill(this.info, h('div', { class: 'mute small', text: 'Tap a marker for details. Beacons let you fast travel!' }));
+      if (this.selectedRegion && this.data.biome(this.selectedRegion)) {
+        fill(this.info, this.regionCard(this.selectedRegion));
+        return;
+      }
+      fill(this.info, h('div', { class: 'mute small', text: 'Tap a region or marker for details. Beacons let you fast travel!' }));
       return;
     }
-    const card = h('div', { class: 'card tint' }, h('div', { class: 'row' }, h('span', { class: 'bi', text: m.icon }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.label }), h('div', { class: 'mute small', text: m.kind === 'event' ? 'A world event — go take a look!' : m.kind === 'beacon' ? 'Fast-travel beacon' : m.kind === 'core' ? 'Home sweet home' : 'Point of interest' }))));
+    const evArt = m.kind === 'event' ? this.eventArtFor(m) : null;
+    const card = h('div', { class: 'card tint' }, evArt ? h('div', { class: 'ev-hero small' }, artOrEmoji(evArt.src, m.icon, 'ev-img', m.label, true)) : null, h('div', { class: 'row' }, h('span', { class: 'bi', text: m.icon }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.label }), h('div', { class: 'mute small', text: m.kind === 'event' ? 'A world event — go take a look!' : m.kind === 'beacon' ? 'Fast-travel beacon' : m.kind === 'core' ? 'Home sweet home' : 'Point of interest' }))));
     const act = h('div', { style: 'margin-top:.5em' });
     if (m.travel) act.appendChild(btn({ label: '🌀 Fast travel here', cls: 'good block', onClick: () => this.travel(m.id, m.label) }));
     else if (m.kind !== 'core') {
@@ -179,6 +187,47 @@ export class MapPanel extends Panel {
     }
     if (act.childElementCount) card.appendChild(act);
     fill(this.info, card);
+  }
+
+  /** Illustration for an event marker (`event_<id>`). */
+  private eventArtFor(m: MapMarker): { src: string } | null {
+    const ev = this.game.state.world.events.find((e) => `event_${e.id}` === m.id);
+    const def = ev ? this.data.worldEvent(ev.def) : undefined;
+    const src = def ? eventArt(def.kind) : null;
+    return src ? { src } : null;
+  }
+
+  /** Postcard + name + status (or what unlocks it) for a tapped region. */
+  private regionCard(id: string): HTMLElement {
+    const world = this.game.sys.world;
+    const b = this.data.biome(id)!;
+    const unlocked = world.isUnlocked(id);
+    const disc = this.game.state.world.regionsDiscovered.includes(id);
+    const reason = world.lockReason(id);
+    const pic = h('div', { class: 'rc-pic' }, artOrEmoji(biomeArt(id), '🗺️', 'rc-img', b.name, true), unlocked ? null : h('div', { class: 'rc-lock', text: '🔒' }));
+    return h(
+      'div',
+      { class: 'card tint region-card' + (unlocked ? '' : ' locked'), data: { region: id } },
+      pic,
+      h(
+        'div',
+        { class: 'rc-txt' },
+        h('div', { class: 'h3', text: b.name }),
+        h('div', { class: 'mute small', text: unlocked || disc ? b.description : 'An unexplored region far from home.' }),
+        unlocked
+          ? h('span', { class: 'chip ' + (disc ? 'good' : 'info'), text: disc ? '✔ Explored' : 'Unlocked — go explore!' })
+          : h('div', { class: 'lock', text: `🔒 ${reason ?? 'Locked'}` }),
+      ),
+    );
+  }
+
+  private selectRegion(id: string | null): void {
+    this.selected = null;
+    this.selectedRegion = id;
+    this.ctx.sfx('ui_tab');
+    this.renderInfo();
+    this.dirty = true;
+    this.info?.scrollIntoView({ block: 'nearest' });
   }
 
   private travelList(): HTMLElement {
@@ -199,7 +248,9 @@ export class MapPanel extends Panel {
       const disc = g.state.world.regionsDiscovered.includes(b.id);
       const sw = h('i', { class: 'sw' });
       sw.style.background = `linear-gradient(135deg, ${b.ground[0]}, ${b.ground[1]})`;
-      list.appendChild(h('div', { class: 'row region' + (unlocked ? '' : ' locked') }, sw, h('div', { class: 'grow' }, h('div', { class: 'h3', text: unlocked || disc ? b.name : '???' }), h('div', { class: 'mute small', text: unlocked ? (disc ? 'Explored' : 'Unlocked — go explore!') : `🔒 ${reason ?? 'Locked'}` }))));
+      const row = h('div', { class: 'row region' + (unlocked ? '' : ' locked') + (this.selectedRegion === b.id ? ' picked' : ''), data: { region: b.id } }, sw, h('div', { class: 'grow' }, h('div', { class: 'h3', text: unlocked || disc ? b.name : '???' }), h('div', { class: 'mute small', text: unlocked ? (disc ? 'Explored' : 'Unlocked — go explore!') : `🔒 ${reason ?? 'Locked'}` })));
+      row.addEventListener('click', () => this.selectRegion(b.id));
+      list.appendChild(row);
     }
     wrap.appendChild(list);
     return wrap;
@@ -276,6 +327,12 @@ export class MapPanel extends Panel {
       return;
     }
     this.selected = m;
+    // empty ground: pick the region under the finger (postcard card)
+    this.selectedRegion = null;
+    if (!m) {
+      const w = mapToWorld(this.vp, cx - r.left, cy - r.top);
+      if (this.game.sys.world.gen && Math.abs(w.x) < HALF_WORLD && Math.abs(w.z) < HALF_WORLD) this.selectedRegion = this.game.sys.world.regionAt(w.x, w.z) ?? null;
+    }
     if (m?.travel) this.ctx.sfx('ui_tab');
     this.renderInfo();
     this.dirty = true;
