@@ -24,6 +24,7 @@ const cssMin = (await esbuild.transform(css, { loader: 'css', minify: true })).c
 
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 html = html.replace('<link rel="stylesheet" href="styles.css">', () => `<style>${cssMin}</style>`);
+html = html.replace(/\s*<script type="importmap">[\s\S]*?<\/script>/, ''); // dev-server only (unbundled source)
 html = html.replace('<script type="module" src="src/main.js"></script>', () => `<script type="module">${js.replace(/<\/script/g, '<\\/script')}</script>`);
 // cache version covers every shipped file (a change to only an icon or the manifest must still update the PWA)
 const hasher = crypto.createHash('sha1').update(html);

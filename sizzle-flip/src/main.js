@@ -1,4 +1,5 @@
 // Sizzle Flip — app shell: boot, loop, input routing, progression.
+import { NATIVE, nativePlugin } from './native.js';
 import { Game } from './game.js';
 import { AudioEngine } from './audio.js';
 import { loadSave, writeSave, resetSave, totalStars } from './storage.js';
@@ -14,11 +15,9 @@ import { Shop } from './shop.js';
 
 const params = new URLSearchParams(location.search);
 // Native shell (Capacitor) bridges — absent on the web.
-const Cap = window.Capacitor;
-const NATIVE = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
-const NativeHaptics = NATIVE && Cap.registerPlugin ? Cap.registerPlugin('Haptics') : null;
-const NativeApp = NATIVE && Cap.registerPlugin ? Cap.registerPlugin('App') : null;
-if (NATIVE && Cap.registerPlugin) { try { Cap.registerPlugin('StatusBar').hide(); } catch (e) { /* noop */ } }
+const NativeHaptics = nativePlugin('Haptics');
+const NativeApp = nativePlugin('App');
+if (NATIVE) { try { Promise.resolve(nativePlugin('StatusBar').hide()).catch(() => {}); } catch (e) { /* noop */ } }
 
 class App {
   constructor() {

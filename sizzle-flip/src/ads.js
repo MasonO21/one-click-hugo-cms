@@ -8,6 +8,7 @@
 //  • The web build has no ad network. In test contexts (the Claude artifact, a localhost dev server, ?adtest)
 //    a clearly labelled placeholder ad stands in so the whole flow can be tried; a deployed web build shows none.
 
+import { NATIVE, PLATFORM, nativePlugin } from './native.js';
 import { ADMOB_UNITS } from './ads-config.js';
 export { ADMOB_UNITS, GOOGLE_TEST_PUB } from './ads-config.js';
 
@@ -176,19 +177,17 @@ export class AdManager {
 // ------------------------------------------------------------------ providers
 
 function pickProvider(app) {
-  const Cap = window.Capacitor;
-  const native = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
-  if (native && Cap.registerPlugin) return new AdMobProvider(Cap);
+  if (NATIVE) return new AdMobProvider();
   if (WEB_ADS === 'test') return new TestAdProvider(app);
   return { kind: 'none', showInterstitial: async () => false, showRewarded: async () => 'nofill' };
 }
 
 // AdMob through @capacitor-community/admob (native plugin registered as "AdMob").
 class AdMobProvider {
-  constructor(Cap) {
+  constructor() {
     this.kind = 'admob';
-    this.plugin = Cap.registerPlugin('AdMob');
-    this.platform = Cap.getPlatform ? Cap.getPlatform() : 'android';
+    this.plugin = nativePlugin('AdMob');
+    this.platform = PLATFORM;
     this.units = ADMOB_UNITS[this.platform === 'ios' ? 'ios' : 'android'];
     this.ready = { interstitial: false, rewarded: false };
     this.loading = { interstitial: false, rewarded: false };

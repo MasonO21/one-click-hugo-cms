@@ -21,6 +21,7 @@
 // Characters are purely cosmetic: they are drawn over the sausage's own physics body, so every level plays the same.
 import { ITEMS, ITEM_BY_ID, CATEGORIES } from './art/items.js';
 import { WEB_ADS } from './ads.js';
+import { NATIVE, PLATFORM, nativePlugin } from './native.js';
 import { SKIN_PRICE, BUNDLE_MIN, PACKS, PACK_BY_ID, bundlePrice } from './shop-config.js';
 
 export const ALL = 'all';                         // the Everything Bundle (other bundle ids are tab ids)
@@ -48,10 +49,8 @@ export class Shop {
     this.busy = false;
     this.mirrorWrite = Promise.resolve();
     this.migrate();
-    const Cap = window.Capacitor;
-    const native = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform() && Cap.registerPlugin);
-    this.prefs = native ? Cap.registerPlugin('Preferences') : null;
-    this.provider = native ? new NativeStore(this, Cap.registerPlugin('NativePurchases'), Cap.getPlatform ? Cap.getPlatform() : 'android')
+    this.prefs = nativePlugin('Preferences');
+    this.provider = NATIVE ? new NativeStore(this, nativePlugin('NativePurchases'), PLATFORM)
       : WEB_ADS === 'test' ? new TestStore(this) : { kind: 'none' };
     this.walletReady = this.restoreMirror().catch((e) => console.warn('[shop] wallet', e)).then(() => this.ensureWalletId());
     this.ready = this.walletReady.then(() => this.provider.init && this.provider.init()).catch((e) => console.warn('[shop] init', e));

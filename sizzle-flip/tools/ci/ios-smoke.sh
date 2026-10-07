@@ -17,7 +17,10 @@ xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b > /dev/null
 xcrun simctl install "$UDID" "$APP" || { echo "::error::install failed"; exit 1; }
 : > "$OUT/console.txt"
-xcrun simctl launch --terminate-running-process --stdout="$PWD/$OUT/console.txt" --stderr="$PWD/$OUT/console.txt" "$UDID" "$BUNDLE"
+# a pseudo-terminal keeps the app's output line-buffered (redirected to a file, Swift holds it back until exit)
+xcrun simctl launch --console-pty --terminate-running-process "$UDID" "$BUNDLE" > "$OUT/console.txt" 2>&1 &
+LAUNCH=$!
+sleep 3
 end=$((SECONDS + 480))
 while [ $SECONDS -lt $end ]; do
   for name in $(grep -o 'SMOKE SHOT [0-9a-z-]*' "$OUT/console.txt" | awk '{print $3}'); do
@@ -27,6 +30,7 @@ while [ $SECONDS -lt $end ]; do
   if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "UIKitApplication:$BUNDLE"; then echo "::error::the app is not running any more"; break; fi
   sleep 1
 done
+kill $LAUNCH 2>/dev/null
 echo "----- self-test -----"
 grep -o 'SMOKE .*' "$OUT/console.txt" | grep -v 'SMOKE SHOT' | tee "$OUT/results.txt"
 echo "---------------------"

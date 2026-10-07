@@ -22,23 +22,37 @@ await page.reload();
 await page.waitForTimeout(1500);
 
 async function winCurrent() {
-  // play the verified route with real pointer drags (as tools/e2e.mjs does)
+  // play the verified route through the game's own pointer handlers, each shot fired at the exact physics step
+  // the solver used (wall-clock drags drift when the machine is busy)
   await page.waitForFunction(() => window.__app.game && window.__app.game.phase === 'play' && !window.__app.game.attract, null, { timeout: 10000 });
-  const info = await ev(() => ({ sol: window.__app.game.level.solution, maxDrag: window.__app.maxDrag() }));
   for (let attempt = 0; attempt < 3; attempt++) {
-    for (const [a, p, delay] of info.sol) {
-      await page.waitForFunction(() => { const g = window.__app.game; return g.phase !== 'play' || g.sim.canLaunch(); }, null, { timeout: 15000 });
-      if (await ev(() => window.__app.game.phase !== 'play')) break;
-      if (delay) await page.waitForTimeout(delay * 1000);
-      const len = 14 + p * (info.maxDrag - 14) + 0.5;
-      const sx = 195, sy = 420, ex = sx - Math.cos(a) * len, ey = sy - Math.sin(a) * len;
-      await page.mouse.move(sx, sy); await page.mouse.down();
-      for (let k = 1; k <= 6; k++) await page.mouse.move(sx + (ex - sx) * k / 6, sy + (ey - sy) * k / 6);
-      await page.mouse.up();
-      await page.waitForTimeout(300);
-    }
-    try { await page.waitForFunction(() => !document.getElementById('scr-win').hidden, null, { timeout: 12000 }); await page.waitForTimeout(900); return true; }
-    catch (e) { await ev(() => window.__app.restartLevel()); await page.waitForTimeout(400); }
+    const r = await ev(async () => {
+      const { PHYS } = await import('/src/physics.js');
+      const app = window.__app, game = app.game, sol = game.level.solution;
+      return new Promise((resolve) => {
+        let n = 0, wait = -1, t0 = 0, done = false;
+        const fire = (a, p) => {
+          const len = 14 + p * (app.maxDrag() - 14), sx = 195, sy = 420;
+          game.pointerDown(sx, sy); game.pointerMove(sx - Math.cos(a) * len, sy - Math.sin(a) * len); game.pointerUp();
+        };
+        const tick = () => {
+          const s = game.sim;
+          if (done || game.phase !== 'play' || n >= sol.length) return;
+          if (wait < 0) {
+            if (!(n === 0 ? s.canLaunch() : s.t - t0 > 0.15 && s.canLaunch())) return;
+            wait = Math.round((sol[n][2] || 0) / PHYS.DT);
+          } else wait--;
+          if (wait === 0) { fire(sol[n][0], sol[n][1]); t0 = s.t; n++; wait = -1; if (n >= sol.length) { done = true; resolve(true); } }
+        };
+        const s = game.sim, step = s.step.bind(s);
+        s.step = () => { step(); tick(); };
+        tick();
+        setTimeout(() => { if (!done) { done = true; resolve(false); } }, 30000);
+      });
+    });
+    try { if (r) { await page.waitForFunction(() => !document.getElementById('scr-win').hidden, null, { timeout: 15000 }); await page.waitForTimeout(900); return true; } }
+    catch (e) { /* retry below */ }
+    await ev(() => window.__app.restartLevel()); await page.waitForTimeout(400);
   }
   return false;
 }

@@ -77,6 +77,7 @@ const dist = read('dist/index.html'), shipped = read('android/app/src/main/asset
 const h = (s) => s && crypto.createHash('sha1').update(s).digest('hex');
 if (!dist) fail('dist/ not built — run npm run build');
 else if (/SMOKE SHOT|SELF-TEST/.test(dist)) fail('dist/ is a self-test build (--smoke) — run npm run cap:sync for a store build');
+else if (!/androidBridge/.test(dist)) fail('dist/ does not include @capacitor/core — the app could not reach its native plugins (ads, purchases) on a phone');
 else if (h(dist) !== h(shipped)) fail('android web assets differ from dist/ — run npm run cap:sync');
 else ok('android web assets match the current build');
 // the purchases plugin must leave transactions unfinished until the game has credited them (patches/)

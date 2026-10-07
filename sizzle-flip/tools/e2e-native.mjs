@@ -91,10 +91,14 @@ const MOCK = (platform) => {
     closeInterstitial: () => emit('interstitialAdDismissed'),
     storeEvent: (tx) => { if (!tx.revocationDate && !S.history.some(h => h.transactionId === tx.transactionId)) { S.history.push({ ...tx, finished: false }); keep(); } emit('transactionUpdated', tx); },
   };
-  window.Capacitor = {
+  // the app's @capacitor/core fills in window.Capacitor when it loads; these stay in place (writes are ignored)
+  const fixed = {
     isNativePlatform: () => true, getPlatform: () => platform || 'android',
-    registerPlugin: (n) => n === 'AdMob' ? AdMob : n === 'App' ? App : n === 'NativePurchases' ? NativePurchases : n === 'Preferences' ? Preferences : { hide: () => Promise.resolve(), impact: () => Promise.resolve() },
+    registerPlugin: (n) => { calls.push('register:' + n); return n === 'AdMob' ? AdMob : n === 'App' ? App : n === 'NativePurchases' ? NativePurchases : n === 'Preferences' ? Preferences : { hide: () => Promise.resolve(), impact: () => Promise.resolve() }; },
   };
+  const cap = {};
+  for (const [k, v] of Object.entries(fixed)) Object.defineProperty(cap, k, { get: () => v, set: () => {}, enumerable: true });
+  window.Capacitor = cap;
 };
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
