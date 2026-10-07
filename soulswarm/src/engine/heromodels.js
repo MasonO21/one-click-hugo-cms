@@ -4,10 +4,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { assetFiles, loadBytes, loadTexture } from './assets.js';
 
-const files = (glob) => Object.fromEntries(Object.entries(glob).map(([p, u]) => [p.slice(p.lastIndexOf('/') + 1).replace(/\.\w+$/, ''), u]));
-const GLB = files(import.meta.glob('../assets/models/*.glb', { eager: true, query: '?url', import: 'default' }));
-const TEX = files(import.meta.glob('../assets/models/*.webp', { eager: true, query: '?url', import: 'default' }));
+const GLB = assetFiles(import.meta.glob('../assets/models/*.glb', { eager: true, query: '?url', import: 'default' }));
+const TEX = assetFiles(import.meta.glob('../assets/models/*.webp', { eager: true, query: '?url', import: 'default' }));
 
 // Per model: height in model units after normalising, weapon included (close to the procedural heroes it replaces,
 // 1.9 to 2.8 before the run's 1.25 scale), and how much bright, saturated paint glows. The models face +Z like the
@@ -29,26 +29,6 @@ export const hasHeroModel = (key) => !!(GLB[key] && TEX[key]);
 export function heroModel(key) {
   const c = cache.get(key);
   return c && c.ready ? c.ready : null;
-}
-
-async function bytes(url) {
-  if (url.startsWith('data:')) { // single-file build: inlined, decoded here so no fetch (and no connect-src) is involved
-    const b = atob(url.slice(url.indexOf(',') + 1)), a = new Uint8Array(b.length);
-    for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
-    return a.buffer;
-  }
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('model ' + r.status);
-  return r.arrayBuffer();
-}
-
-function texture(url) {
-  return new Promise((res, rej) => new THREE.TextureLoader().load(url, (t) => {
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.flipY = false; // glTF texture coordinates
-    t.anisotropy = 4;
-    res(t);
-  }, undefined, rej));
 }
 
 /** The model's rest (bind) pose as a plain float geometry in scene space: the file is quantized (normalized 16-bit
@@ -89,7 +69,7 @@ export function loadHeroModel(key) {
   c = { ready: null };
   c.promise = (async () => {
     try {
-      const [buf, map] = await Promise.all([bytes(GLB[key]), texture(TEX[key])]);
+      const [buf, map] = await Promise.all([loadBytes(GLB[key]), loadTexture(TEX[key])]);
       const gltf = await new GLTFLoader().parseAsync(buf, '');
       let mesh = null;
       gltf.scene.traverse((o) => { if (!mesh && o.isMesh) mesh = o; });

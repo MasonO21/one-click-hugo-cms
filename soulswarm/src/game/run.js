@@ -46,7 +46,7 @@ export class Run {
     this.bloodMoon = !!bloodMoon; // weekend event: 8 elites, double rewards, a blood-red sky
     // Nightmare / Torment: always defined, Normal is the identity. Endless and the Daily Trial play Normal.
     this.diff = { ...(!chapter.endless && !(mutators && mutators.length) && DIFFICULTY[difficulty]) || DIFFICULTY.normal };
-    let look = this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim } : chapter;
+    let look = this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim, recolor: 0.6 } : chapter;
     if (this.diff.tint) look = difficultyLook(look, this.diff.tint); // over the Blood Moon sky too
     this.scene.background = new THREE.Color(look.fog);
     this.camera = new THREE.PerspectiveCamera(45, 0.5, 0.5, 220);
@@ -56,7 +56,7 @@ export class Run {
     this.heroColorObj = new THREE.Color(this.heroColor);
     this.weaponColorObj = this.heroColorObj.clone();
 
-    this.world = new World(this.scene, look, { maxLights: engine.maxGroundLights });
+    this.world = new World(this.scene, look, { maxLights: engine.maxGroundLights, budget: engine.particleBudget });
     this.particles = new Particles(9000);
     this.particles.budget = engine.particleBudget;
     this.glow = new GlowSprites(2800);
@@ -764,6 +764,7 @@ export class Run {
     const ps = this.engine.pointScale(this.camera);
     this.glow.material.uniforms.uScale.value = ps;
     this.particles.material.uniforms.uScale.value = ps;
+    this.world.setPointScale(ps);
     this.fx.applyPost(this.engine.post);
     this.engine.post.uDesat.value = P.dead ? Math.min(0.85, this.deathT * 0.9) : 0;
   }

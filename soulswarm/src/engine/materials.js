@@ -89,6 +89,12 @@ uniform sampler2D uMap;
 uniform float uGlow;
 varying vec2 vUv;
 #endif
+#ifdef USE_SIGHT
+// world props fade into the fog beyond the lantern's sight, like the ground under them
+uniform vec3 uSightFog;
+uniform vec3 uSightCenter;
+uniform float uSightR;
+#endif
 void main() {
   vec3 N = normalize(vN);
   vec3 V = normalize(cameraPosition - vWorld);
@@ -124,6 +130,9 @@ void main() {
   col += base * smoothstep(0.3, 0.75, mx) * smoothstep(0.45, 0.8, (mx - mn) / max(mx, 0.001)) * uGlow;
   #endif
   col += vFlash * vec3(2.2, 2.1, 2.0);
+  #ifdef USE_SIGHT
+  col = mix(uSightFog, col, smoothstep(uSightR, uSightR * 0.25, length(vWorld.xz - uSightCenter.xz)));
+  #endif
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -144,8 +153,11 @@ export function makeCharMaterial(opts = {}) {
       uAnim: { value: new THREE.Vector2(0, opts.anim ?? 0) },
       uMap: { value: opts.map || null },
       uGlow: { value: opts.glow ?? 2 },
+      uSightFog: { value: new THREE.Color(0) },
+      uSightCenter: { value: new THREE.Vector3() },
+      uSightR: { value: 26 },
     },
-    defines: opts.map ? { USE_HEROMAP: '' } : {},
+    defines: { ...(opts.map ? { USE_HEROMAP: '' } : {}), ...(opts.sight ? { USE_SIGHT: '' } : {}) },
     vertexShader: charVert,
     fragmentShader: charFrag,
   });
@@ -290,6 +302,14 @@ uniform float uSight;
 uniform vec4 uLights[MAX_LIGHTS];
 uniform vec3 uLightCol[MAX_LIGHTS];
 uniform int uLightCount;
+// the chapter's painted floor (world.js FLOORS); uTexOn = 0 keeps the procedural flagstones (while it loads)
+uniform sampler2D uTex;
+uniform float uTexOn;
+uniform float uTexScale;  // metres one copy of the texture covers
+uniform float uTexGain;   // brightness of the paint under the ambient light
+uniform float uTexGlow;   // how much bright, saturated paint (lava, starlit cracks) glows
+uniform vec3 uRecolor;    // Blood Moon / Nightmare / Torment palette, kept at the paint's own brightness
+uniform float uRecolorAmt;
 varying vec3 vWorld;
 
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -301,30 +321,33 @@ float noise(vec2 p) {
 }
 float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; } return v; }
 
+// The painted floor without visible repetition: a slow noise picks one of eight offsets per area and neighbouring
+// areas blend (after Inigo Quilez's "texture repetition", technique 3). .a = how much darker than its surroundings the
+// pixel is (a mip three levels down): the seams and cracks between stones.
+vec4 paintedFloor(vec2 p) {
+  vec2 x = p / uTexScale;
+  vec2 dx = dFdx(x), dy = dFdy(x);
+  float l = noise(p * 0.045) * 8.0;
+  float f = fract(l), ia = floor(l);
+  vec2 oa = sin(vec2(3.0, 7.0) * ia), ob = sin(vec2(3.0, 7.0) * (ia + 1.0));
+  vec3 a = textureGrad(uTex, x + oa, dx, dy).rgb, b = textureGrad(uTex, x + ob, dx, dy).rgb;
+  float w = smoothstep(0.2, 0.8, f - 0.1 * dot(a - b, vec3(1.0)));
+  vec3 c = mix(a, b, w);
+  vec3 blur = mix(textureGrad(uTex, x + oa, dx * 8.0, dy * 8.0).rgb, textureGrad(uTex, x + ob, dx * 8.0, dy * 8.0).rgb, w);
+  const vec3 Y = vec3(0.299, 0.587, 0.114);
+  return vec4(c, dot(blur, Y) - dot(c, Y));
+}
+
+// a rune circle: two rings and three spokes, r in tile units
+float runeGlyph(vec2 c, float h) {
+  float r = length(c), ang = atan(c.y, c.x);
+  float ring = smoothstep(0.025, 0.0, abs(r - 0.33)) + smoothstep(0.018, 0.0, abs(r - 0.27)) * 0.7;
+  float spokes = smoothstep(0.03, 0.0, abs(sin(ang * 3.0 + h * 6.283)) * r) * step(r, 0.27) * step(0.1, r);
+  return ring + spokes;
+}
+
 void main() {
   vec2 p = vWorld.xz;
-  // staggered flagstones
-  float s = 2.6;
-  vec2 g = p / s;
-  float row = floor(g.y);
-  g.x += mod(row, 2.0) * 0.5;
-  vec2 id = floor(g);
-  vec2 f = fract(g);
-  float h = hash(id);
-  vec2 e = min(f, 1.0 - f);
-  float edge = min(e.x, e.y);
-  float groove = 1.0 - smoothstep(0.0, 0.045, edge);
-  float bevel = smoothstep(0.045, 0.11, edge);
-
-  float n = fbm(p * 0.9);
-  vec3 base = mix(uBaseB, uBaseA, 0.35 + 0.65 * h);
-  base *= 0.7 + 0.6 * n;
-  // moss / ash patches
-  base = mix(base, base * vec3(0.75, 0.9, 0.85), smoothstep(0.55, 0.8, fbm(p * 0.25 + 3.1)) * 0.6);
-  // cracks
-  float crack = smoothstep(0.03, 0.0, abs(fbm(p * 1.7 + h * 10.0) - 0.5)) * step(0.7, hash(id + 3.7));
-  base *= 1.0 - crack * 0.5;
-
   // dynamic light pools (player, legion, explosions, boss)
   vec3 light = vec3(0.0);
   for (int i = 0; i < MAX_LIGHTS; i++) {
@@ -334,24 +357,65 @@ void main() {
     float a = clamp(1.0 - d / L.z, 0.0, 1.0);
     light += uLightCol[i] * (a * a) * L.w;
   }
-  vec3 lighting = uAmbient * (0.75 + 0.5 * n) + light * 3.2;
-  vec3 col = base * lighting * (0.5 + 0.5 * bevel) * (1.0 - groove * 0.85);
-
-  // rune glyph tiles
-  float runeTile = step(0.93, hash(id + 7.31));
-  vec2 c = f - 0.5;
-  float r = length(c);
-  float ang = atan(c.y, c.x);
-  float ring = smoothstep(0.025, 0.0, abs(r - 0.33)) + smoothstep(0.018, 0.0, abs(r - 0.27)) * 0.7;
-  float spokes = smoothstep(0.03, 0.0, abs(sin(ang * 3.0 + h * 6.283)) * r) * step(r, 0.27) * step(0.1, r);
-  float glyph = (ring + spokes) * runeTile;
-  float pulse = 0.55 + 0.45 * sin(uTime * 1.7 + h * 6.283);
-
   float dc = length(p - uCenter.xz);
-  float wave = pow(clamp(0.5 + 0.5 * sin(dc * 0.5 - uTime * 2.0), 0.0, 1.0), 10.0);
-  col += uRune * groove * 0.16 * wave * smoothstep(18.0, 3.0, dc);
-  col += uRune * glyph * (0.25 + 0.75 * pulse) * (0.5 + length(light));
-  col += uRune * crack * 0.22 * pulse * step(0.92, hash(id + 1.3));
+  float wave = pow(clamp(0.5 + 0.5 * sin(dc * 0.5 - uTime * 2.0), 0.0, 1.0), 10.0) * smoothstep(18.0, 3.0, dc);
+  vec3 col;
+  if (uTexOn > 0.5) {
+    vec4 tex = paintedFloor(p);
+    vec3 t = tex.rgb;
+    float lum = dot(t, vec3(0.299, 0.587, 0.114));
+    t = mix(t, lum * uRecolor / max(dot(uRecolor, vec3(0.299, 0.587, 0.114)), 1e-3), uRecolorAmt);
+    float m = fbm(p * 0.06);
+    vec3 base = t * uTexGain * (0.78 + 0.44 * m); // broad light and dark drifts break the tiling up further
+    // the moonlight is near-neutral on paint (its blue would turn a red floor teal); the lit faces of the painted
+    // stones catch the light pools more than the seams between them
+    vec3 amb = mix(vec3(dot(uAmbient, vec3(0.3333))), uAmbient, 0.35);
+    vec3 lighting = amb * (0.8 + 0.4 * m) + light * (2.4 + 2.2 * smoothstep(0.08, 0.45, lum));
+    col = base * lighting;
+    float seam = smoothstep(0.03, 0.12, tex.a);
+    col += uRune * seam * 0.3 * wave;
+    // painted glow: lava veins, starlit and violet fissures
+    float mx = max(t.r, max(t.g, t.b)), mn = min(t.r, min(t.g, t.b));
+    float hot = smoothstep(0.35, 0.75, mx) * smoothstep(0.45, 0.8, (mx - mn) / max(mx, 1e-3)) * uTexGlow;
+    col += t * hot * (1.6 + 0.8 * sin(uTime * 1.3 + m * 9.0));
+    // scattered rune circles, a few per screen
+    vec2 cell = floor(p / 11.0), q = fract(p / 11.0);
+    float h = hash(cell + 7.31);
+    vec2 c = (q - (0.3 + 0.4 * vec2(hash(cell + 1.7), hash(cell + 4.1)))) * 11.0 / 3.2;
+    float glyph = runeGlyph(c, h) * step(0.72, h);
+    float pulse = 0.55 + 0.45 * sin(uTime * 1.7 + h * 6.283);
+    col += uRune * glyph * (0.25 + 0.75 * pulse) * (0.5 + length(light));
+  } else {
+    // staggered flagstones
+    float s = 2.6;
+    vec2 g = p / s;
+    float row = floor(g.y);
+    g.x += mod(row, 2.0) * 0.5;
+    vec2 id = floor(g);
+    vec2 f = fract(g);
+    float h = hash(id);
+    vec2 e = min(f, 1.0 - f);
+    float edge = min(e.x, e.y);
+    float groove = 1.0 - smoothstep(0.0, 0.045, edge);
+    float bevel = smoothstep(0.045, 0.11, edge);
+
+    float n = fbm(p * 0.9);
+    vec3 base = mix(uBaseB, uBaseA, 0.35 + 0.65 * h);
+    base *= 0.7 + 0.6 * n;
+    // moss / ash patches
+    base = mix(base, base * vec3(0.75, 0.9, 0.85), smoothstep(0.55, 0.8, fbm(p * 0.25 + 3.1)) * 0.6);
+    // cracks
+    float crack = smoothstep(0.03, 0.0, abs(fbm(p * 1.7 + h * 10.0) - 0.5)) * step(0.7, hash(id + 3.7));
+    base *= 1.0 - crack * 0.5;
+    vec3 lighting = uAmbient * (0.75 + 0.5 * n) + light * 3.2;
+    col = base * lighting * (0.5 + 0.5 * bevel) * (1.0 - groove * 0.85);
+    // rune glyph tiles
+    float glyph = runeGlyph(f - 0.5, h) * step(0.93, hash(id + 7.31));
+    float pulse = 0.55 + 0.45 * sin(uTime * 1.7 + h * 6.283);
+    col += uRune * groove * 0.16 * wave;
+    col += uRune * glyph * (0.25 + 0.75 * pulse) * (0.5 + length(light));
+    col += uRune * crack * 0.22 * pulse * step(0.92, hash(id + 1.3));
+  }
 
   // lantern sight: the world fades to fog away from the player
   float vis = smoothstep(uSight, uSight * 0.25, dc);
@@ -375,6 +439,13 @@ export function makeGroundMaterial() {
       uLights: { value: lights },
       uLightCol: { value: cols },
       uLightCount: { value: 0 },
+      uTex: { value: null },
+      uTexOn: { value: 0 },
+      uTexScale: { value: 16 },
+      uTexGain: { value: 1 },
+      uTexGlow: { value: 0 },
+      uRecolor: { value: new THREE.Color(1, 1, 1) },
+      uRecolorAmt: { value: 0 },
     },
     vertexShader: groundVert,
     fragmentShader: groundFrag,

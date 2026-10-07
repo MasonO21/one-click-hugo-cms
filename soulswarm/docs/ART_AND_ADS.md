@@ -259,3 +259,59 @@ The five Shepherds and the Eclipse Vael skin are textured, rigged and animated 3
 5. Add a `FIT` entry (height and glow) in `heromodels.js`.
 
 More clips (a cast, a hit, a victory pose) cost one rig with that clip (8 credits) plus a `--clip` in `hero-models.sh`; every hero then shares them.
+
+## 5. Maps: painted floors, props and weather (`src/assets/floors/`, `src/assets/props/`)
+
+Every chapter has its own painted floor and its own painted 3D props, made on 2026-10-07. Before, all six chapters shared one procedural flagstone shader and seven low-poly props, told apart only by colour. The procedural floor and props still stand in while a chapter's art loads.
+
+**Floors.** Nano Banana Pro painted each floor as a seamless top-down texture, in 2 variants per chapter (2 credits each). The Frozen Ossuary was re-taken darker, because the first two were nearly white and busy with skulls.
+- `scripts/floors.sh` builds each one:
+  - feathers each edge into the opposite one over 32 px, which removes the last faint seam without ghosting the pattern;
+  - shrinks it to 1024 px with the wrap taken into account (tiled 3×3, scaled, middle kept);
+  - encodes WebP. The six come to 0.8 MB.
+- In game (`materials.js` ground shader, `world.js` `FLOORS`):
+  - **No visible repeats.** Each copy covers 15–18 m. A slow noise picks one of eight offsets per area and blends neighbouring areas (Inigo Quilez's texture-repetition technique), and broad light and dark drifts break the tiling up further.
+  - **Light.** The paint sits under a near-neutral moonlight; the blue ambient turned the Crimson Throne teal. The lit faces of the stones catch the light pools more than the seams, and the soul pulse runs along the seams, found as pixels darker than their surroundings.
+  - **Glow.** Bright saturated paint glows where a chapter wants it: Ember Wastes lava, the Cathedral's violet cracks, the Abyss's starlit gaps.
+  - **Recolouring.** A Blood Moon, Nightmare or Torment recolours the floor toward its palette and keeps the painted detail.
+  - **Kept from before:** rune circles (now scattered freely), light pools and the lantern-sight fog.
+
+| Chapter | Floor | Higgsfield job |
+|---|---|---|
+| 1 Ashen Necropolis | `necropolis`: slate flagstones, ash, moss, dead leaves | `d2253bb9-1a04-486e-874f-02eac4f9f62f` |
+| 2 Ember Wastes | `ember`: cracked basalt with glowing lava veins | `70729fa9-d4ca-4a61-9070-1de73fe8c864` |
+| 3 Frozen Ossuary | `ossuary`: dark ice over stone, frost cracks, frozen bones | `68806679-faec-437d-a1f5-5590694f8b76` |
+| 4 Abyssal Cathedral | `cathedral`: carved gothic tracery flagstones | `25f4ea1b-1074-4d53-b2d1-1aad09e0e916` |
+| 5 Crimson Throne | `throne`: crimson marble with gold inlay | `4f87c936-dd89-4bc2-a134-4451b64ebd52` |
+| 6 Endless Abyss | `abyss`: obsidian slabs over starlight | `9e11c334-8837-4406-a577-570f60669621` |
+
+**Props.** Each prop started as a Nano Banana Pro concept: one isolated hand-painted game asset, 3/4 view, on plain grey. Tripo H3.1 image-to-3D turned it into a model of about 3,800 triangles with a detailed texture (12 credits each). `scripts/props.sh` shrinks each texture to a 512 px WebP beside the model and quantizes the mesh. The 23 come to 2.7 MB.
+- `world.js` `PROPS` sets each prop's height, how often it turns up, its glow, and for flames and crystals the flickering pool of light it casts.
+- In a run, the props are scattered on a 6.5 m grid around the Shepherd and fade into the lantern-sight fog, and the Shepherd's lantern catches the ones beside it. The nearest six flames take the light pools the run's own effects leave free.
+- The home screen keeps the cells around its hero clear.
+
+| Chapter | Props (concept job → 3D job) |
+|---|---|
+| 1 | `graves` (`d377066e` → `46fa94f4`), `angel` (`4bb6304a` → `2e7e6733`), `lamp` with a soul flame (`77ac2e49` → `31f57b1f`), `deadtree` (`98f7e0b8` → `ebfe4061`) |
+| 2 | `spire` of lava-cracked obsidian (`7f26657e` → `44de25b2`), `charredtree` (`97269064` → `94876ad9`), `brazier` (`9975c370` → `55aca88a`), `skulls` (`7e5f535a` → `32297910`) |
+| 3 | `icecrystal` (`478a3684` → `8323d6ba`), `ribcage` (`3833ef0a` → `b9252667`), `icepillar` (`46556677` → `30ad4140`), `sarcophagus` (`db1fb8d1` → `07a2e23d`) |
+| 4 | `column` (`7795eb35` → `03e578a2`), `candelabra` (`19698466` → `61dcbfe8`), `gargoyle` (`c73dc022` → `88f6d317`), `altar` (`b6151d6a` → `d8af97c9`) |
+| 5 | `banner` (`f350bbea` → `eee80bf6`), `knight` statue (`672d3e79` → `96a718ae`), `candles` (`92dbaf48` → `5d5d8946`), `fountain` (`b755007b` → `657d678b`) |
+| 6 | `voidcrystal` (`bdca0665` → `68755fc9`), `obelisk` (`60f73aa9` → `759fc563`), `arch` (`9d44a040` → `677d1914`) |
+
+**Weather** (`game/weather.js`). Each chapter has its own air:
+- Ashen Necropolis: drifting ash;
+- Ember Wastes: rising embers;
+- Frozen Ossuary: falling snow;
+- Abyssal Cathedral: violet motes;
+- Crimson Throne: golden dust;
+- Endless Abyss: star motes.
+
+It is one draw call, with every flake moved in the vertex shader and wrapped around the Shepherd. The count follows the quality setting, and flakes fade into the lantern-sight fog.
+
+**Cost:** about 350 credits: 14 floor paintings (28), 23 prop concepts (46) and 23 prop models (276).
+
+**A new chapter:**
+1. Paint its floor with the same prompt and add a line to `floors.sh`.
+2. Make three or four props (concept, then 3D) and add them to `props.sh`.
+3. Add its `FLOORS`, `PROPS` and `WEATHER` entries.

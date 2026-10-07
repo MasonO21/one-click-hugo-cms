@@ -583,6 +583,7 @@ const mixHex = (a, b, t) => { let o = 0; for (let s = 0; s <= 16; s += 8) { cons
 export function difficultyLook(look, tint) {
   const out = { ...look };
   for (const k of ['ground', 'groundB', 'fog', 'rune', 'rim']) out[k] = mixHex(look[k], tint[k], tint.mix);
+  out.recolor = Math.max(look.recolor || 0, tint.mix); // the painted floor takes the palette too (world.js)
   return out;
 }
 

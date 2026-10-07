@@ -2233,6 +2233,53 @@ errs = await session(async (page) => {
 });
 check('animated heroes: no runtime errors', !errs.length, errs[0] || '');
 
+// 31. Painted maps (game/world.js FLOORS and PROPS, game/weather.js; scripts/floors.sh, scripts/props.sh). Every chapter
+//     walks on its own painted floor and among its own painted props (sane sizes, flames lighting the floor), with its
+//     weather; a Blood Moon or a harder difficulty recolours the floor; the home screen keeps its hero clear.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, E = app.engine, p = app.profile, out = { ch: {} };
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    p.chapter.unlocked = 6; p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    for (const id of [1, 2, 3, 4, 5, 6]) {
+      p.energy = 30; app.startRun(id); E.manual = true;
+      const r = app.run, W = r.world, u = W.groundMat.uniforms;
+      r.player.hurt = () => {}; r.nextGate = r.nextSwarm = 1e9;
+      for (let i = 0; i < 40 && !(u.uTexOn.value && W.painted.length); i++) await wait(50);
+      for (let i = 0; i < 90; i++) { r.input.tx = 0.6; r.input.tz = -0.8; E.step(1 / 30); } // walk past the spawn
+      const placed = W.painted.reduce((a, k) => a + k.mesh.count, 0);
+      const sizes = W.painted.map((k) => { const g = k.mesh.geometry; g.computeBoundingBox(); const b = g.boundingBox; return { tris: (g.index ? g.index.count : g.attributes.position.count) / 3, h: b.max.y - b.min.y, floor: b.min.y }; });
+      W.beginLights(); W.endLights();
+      out.ch[id] = { floor: u.uTexOn.value === 1 && !!u.uTex.value && u.uTex.value.image.width === 1024, kinds: W.painted.length, placed,
+        sane: sizes.every((z) => z.tris >= 1000 && z.tris <= 8000 && z.h > 0.5 && z.h < 4.5 && Math.abs(z.floor) < 0.02),
+        lamps: W.lamps.length, lit: u.uLightCount.value, weather: W.weather.points.visible ? W.weather.material.uniforms.uCount.value : 0,
+        fallbackHidden: W.fallback.every((k) => k.mesh.count === 0), recolor: u.uRecolorAmt.value };
+      app.exitRun(); E.manual = false;
+    }
+    // a harder difficulty recolours the painted floor toward its palette
+    p.diff = p.diff || {}; p.chapter.best[1] = { ...(p.chapter.best[1] || {}), cleared: true, time: 400 };
+    p.diff.best = p.diff.best || {}; p.diff.best[1] = { normal: { cleared: true }, nightmare: { cleared: true } };
+    p.energy = 30; app.startRun(1, { difficulty: 'nightmare' }); E.manual = true;
+    out.nightmare = app.run.world.groundMat.uniforms.uRecolorAmt.value;
+    app.exitRun(); E.manual = false;
+    // the home screen's world keeps the hero's cells clear and has the chapter's weather
+    const sw = app.showcase.world;
+    sw.lastCell = null; sw.update(app.showcase.center, 1);
+    let nearest = 1e9;
+    const m = new (sw.ground.matrix.constructor)(), v = new (sw.center.constructor)();
+    for (const k of sw.kinds) for (let i = 0; i < k.mesh.count; i++) { k.mesh.getMatrixAt(i, m); v.setFromMatrixPosition(m); nearest = Math.min(nearest, Math.hypot(v.x, v.z)); }
+    out.home = { nearest: +nearest.toFixed(1), weather: sw.weather.points.visible };
+    return out;
+  });
+  const bad = Object.entries(s.ch).filter(([, c]) => !c.floor || c.kinds < 3 || c.placed < 4 || !c.sane || !c.fallbackHidden || c.weather < 40 || c.recolor !== 0);
+  check('maps: every chapter walks on its painted floor among its own painted props (sane sizes), with its weather', !bad.length, JSON.stringify(bad.length ? bad : s.ch));
+  const lampCh = Object.values(s.ch).filter((c) => c.lamps > 0);
+  check('maps: flames and crystals light the floor around them', lampCh.length >= 4 && lampCh.every((c) => c.lit > 0), JSON.stringify(Object.fromEntries(Object.entries(s.ch).map(([k, c]) => [k, [c.lamps, c.lit]]))));
+  check('maps: Nightmare recolours the painted floor; the home screen keeps its hero clear and has weather',
+    s.nightmare >= 0.6 && s.home.nearest > 9 && s.home.weather, JSON.stringify({ nightmare: s.nightmare, home: s.home }));
+});
+check('maps: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

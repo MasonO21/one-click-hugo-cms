@@ -16,7 +16,7 @@ export class Showcase {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x05060b);
     this.camera = new THREE.PerspectiveCamera(34, 0.5, 0.1, 200);
-    this.world = new World(this.scene, CHAPTERS[0], { maxLights: 12 });
+    this.world = new World(this.scene, CHAPTERS[0], { maxLights: 12, clear: 1, budget: engine.particleBudget });
     this.center = new THREE.Vector3();
     this.mat = makeCharMaterial({ rim: 0x4ef2ff, emit: 2.6, anim: 0, ambient: 0x2a3550, key: 0x9aaad0 });
     this.pmat = null; // the painted-model material, made with the first model that loads
@@ -146,6 +146,7 @@ export class Showcase {
     const ps = this.engine.pointScale(this.camera);
     g.material.uniforms.uScale.value = ps;
     this.particles.material.uniforms.uScale.value = ps;
+    this.world.setPointScale(ps);
     this.particles.update(dt);
   }
 }
