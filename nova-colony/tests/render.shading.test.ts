@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Materials, patchLambert, LAMBERT_WRAP, NIGHT_DESAT } from '../src/render/core/materials';
 import { wornColor, wearSignature } from '../src/render/scene/Terrain';
+import { Atmosphere, KEY_SWAP_E } from '../src/render/scene/Atmosphere';
+import type { Env, RenderContext } from '../src/render/core/context';
 import { buildingTint } from '../src/render/actors/Buildings';
 import { natureTint } from '../src/render/actors/Nature';
 
@@ -132,5 +134,38 @@ describe('worn ground signature (QA3: raids recoloured the whole terrain per bro
     swapped[1].def = 'campfire';
     const more = [...colony(), { def: 'campfire', x: 140, z: 140, rot: 0, status: 'building', hp: 1, level: 1 }];
     for (const l of [moved, turned, swapped, more]) expect(wearSignature(l)).not.toBe(base);
+  });
+});
+
+describe('key light at dusk / dawn (QA3: every shadow flipped 180° in one frame)', () => {
+  it('sun-to-moon swap happens while the key light is off: the light vector never jumps', () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 1800);
+    const env: Env = { t: 0, dt: 1 / 60, night: 0, sunElev: 1, quality: 'high', cx: 0, cz: 0, viewRadius: 104, camX: 0, camY: 18, camZ: 26, fwdX: 0, fwdZ: -1, terrainVersion: 0 };
+    const ctx = { game: {} as RenderContext['game'], scene, camera, mats: new Materials(), env, heightAt: () => 0, particles: {} as RenderContext['particles'] } as RenderContext;
+    const atmo = new Atmosphere(ctx);
+    const key = (t: number) => {
+      atmo.update(t, 30);
+      const d = atmo.sun.position.clone().sub(atmo.sun.target.position).normalize();
+      return { v: d.multiplyScalar(atmo.sun.intensity), i: atmo.sun.intensity, e: env.sunElev };
+    };
+    let prev = key(0);
+    let worst = 0;
+    let swaps = 0;
+    for (let t = 0.0002; t <= 1; t += 0.0002) {
+      const k = key(t);
+      worst = Math.max(worst, k.v.distanceTo(prev.v));
+      if (Math.sign(k.e - KEY_SWAP_E) !== Math.sign(prev.e - KEY_SWAP_E)) {
+        swaps++;
+        expect(Math.max(k.i, prev.i)).toBeLessThan(0.05);
+      }
+      prev = k;
+    }
+    expect(swaps).toBe(2); // dawn and dusk
+    expect(worst).toBeLessThan(0.1);
+    // the look away from the swap is untouched: bright noon sun, a soft moon at midnight
+    expect(key(0.5).i).toBeCloseTo(2.2, 1);
+    expect(key(0).i).toBeCloseTo(0.46, 2);
+    atmo.dispose();
   });
 });

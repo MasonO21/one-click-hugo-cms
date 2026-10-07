@@ -53,6 +53,13 @@ const RIM_DAY = 0.42;
 const RIM_NIGHT = 0.3;
 /** Shadowed ground still gets this much of the sun (a hair of bounce keeps shadows soft, not black). */
 const SHADOW_INTENSITY = 0.9;
+/**
+ * The key light is the sun above this elevation and the moon (opposite direction) below it. Its
+ * intensity dips smoothly to 0 within ±KEY_SWAP_BAND of the swap, so the light direction — and every
+ * shadow — turns over while the light is off instead of jumping 180° at dusk and dawn.
+ */
+export const KEY_SWAP_E = -0.05;
+export const KEY_SWAP_BAND = 0.06;
 
 const keyColors = KEYS.map((k) => ({
   top: new THREE.Color(k.top),
@@ -266,8 +273,9 @@ export class Atmosphere {
     this.fog.far = camDist * 4.2 + 240;
 
     // lights
-    const sunUp = e > -0.05;
-    const dirI = lerp(a.sunI, b.sunI, f);
+    const sunUp = e > KEY_SWAP_E;
+    const swapK = clamp(Math.abs(e - KEY_SWAP_E) / KEY_SWAP_BAND, 0, 1);
+    const dirI = lerp(a.sunI, b.sunI, f) * swapK * swapK * (3 - 2 * swapK);
     this.sun.color.lerpColors(ca.sun, cb.sun, f);
     this.sun.intensity = dirI;
     const lx = sunUp ? this.sunDir.x : -this.sunDir.x;
