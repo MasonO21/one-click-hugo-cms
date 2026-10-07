@@ -11,12 +11,18 @@ import {
 import { hex, cd, nextMidnight, popRewards, tap, delegate } from './util.js';
 import { now as clockNow } from '../../meta/clock.js';
 import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
+import { CHAPTER_ART } from '../art.js';
+
+const warmed = new Set();
+/** Decode the neighbouring chapters' paintings ahead of a swipe, so the cross-fade never shows a blank card. */
+const warm = (id) => { const u = CHAPTER_ART[id]; if (!u || warmed.has(u)) return; warmed.add(u); const im = new Image(); im.decoding = 'async'; im.src = u; };
 
 export function createHome(ctx) {
   const { app } = ctx;
   const el = h('<section class="pane pane-home" data-tab="battle"><div class="hm"></div></section>');
   const root = $(el, '.hm');
   let busy = false; // guards async ad flows against double taps
+  let artShown = ''; // the painting on the chapter card: a change cross-fades from the last one
 
   const fab = (act, ic, label, extra = '', cls = '') =>
     `<button class="fab ${cls}" data-act="${act}"><span class="fab-ic">${ic}</span><span class="fab-lb">${label}</span>${extra}</button>`;
@@ -31,6 +37,8 @@ export function createHome(ctx) {
     const locked = sel > p.chapter.unlocked;
     const best = p.chapter.best[sel];
     const cc = hex(ch.rune);
+    const art = CHAPTER_ART[sel], prevArt = artShown && artShown !== art ? artShown : '';
+    artShown = art; warm(sel - 1); warm(sel + 1);
 
     // Right column offers
     const right = [];
@@ -86,7 +94,8 @@ export function createHome(ctx) {
       </div>
       <div class="hm-side hm-right">${right.join('')}</div>
       <div class="hm-bottom">
-        <div class="chap ${locked ? 'is-locked' : ''} ${dselHtml ? 'has-dsel' : ''}" style="--cc:${cc}">
+        <div class="chap ${locked ? 'is-locked' : ''} ${dselHtml ? 'has-dsel' : ''}" style="--cc:${cc}" data-art="${sel}">
+          ${prevArt ? `<i class="chap-art" style="background-image:url(${prevArt})"></i>` : ''}<i class="chap-art${prevArt ? ' chap-art-in' : ''}" style="background-image:url(${art})"></i>
           <button class="chap-arrow" data-act="prev" ${sel <= 1 ? 'disabled' : ''} aria-label="Previous chapter">${icon('left')}</button>
           <div class="chap-body">
             <div class="chap-no t-label">${ch.endless ? 'Endless' : `Chapter ${sel}`}<span class="chap-dots">${CHAPTERS.map((c) => `<i class="${c.id === sel ? 'on' : ''} ${c.id > p.chapter.unlocked ? 'lk' : ''}"></i>`).join('')}</span></div>

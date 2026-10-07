@@ -1,0 +1,62 @@
+/* Bestiary sub-tab and detail sheet (bestiary.js). --fc = the entry's accent colour (BESTIARY.foes[].color). */
+.pane-heroes .subtab { letter-spacing: .08em; } /* four sub-tabs now share the bar */
+.pane-heroes .subtab .badge-dot { top: 4px; right: 4px; width: 8px; height: 8px; }
+.bst-head { display: flex; justify-content: space-around; padding: 10px; text-align: center; }
+.bst-head b { font-size: 18px; }
+.bst-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; margin-top: 12px; }
+@media (min-width: 520px) { .bst-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.bcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; color: var(--ink); text-align: left; }
+.bcard:active { transform: scale(.97); }
+.bcard-frame { position: relative; display: block; aspect-ratio: 3 / 4; clip-path: var(--bevel);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--fc) 70%, #fff), color-mix(in srgb, var(--fc) 22%, #000) 50%, color-mix(in srgb, var(--fc) 60%, #000)); }
+.bcard-art { position: absolute; inset: 2px; overflow: hidden; clip-path: var(--bevel); background: #05070d; }
+.bcard-art img, .bd-art img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; object-position: 50% 30%; }
+/* Gravemaw: a wide card across the row, framed on his crowned skull */
+.bcard.is-boss { grid-column: 1 / -1; }
+.bcard.is-boss .bcard-frame { aspect-ratio: 16 / 9; }
+.bcard.is-boss .bcard-art img { object-position: 50% 18%; }
+.bcard-info { position: absolute; left: 2px; right: 2px; bottom: 2px; display: flex; flex-direction: column; gap: 2px; padding: 26px 10px 9px; clip-path: var(--bevel); background: linear-gradient(transparent, rgba(3,5,10,.94) 62%); }
+.bcard-name { font-size: clamp(15px, 4.3vw, 18px); line-height: 1.05; color: #fff; letter-spacing: .04em; text-transform: uppercase; text-wrap: balance;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--fc) 80%, transparent), 0 1px 2px #000; }
+.bcard-kills { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--ink-dim); white-space: nowrap; }
+.bcard-kills b { color: #fff; }
+.bcard .badge-dot { top: 7px; right: 7px; z-index: 2; }
+.bcard-prog { display: flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.bcard-prog .mbar { flex: 1; min-width: 20px; }
+.bcard-max { flex: 1; text-align: right; color: var(--gold); letter-spacing: .1em; font-size: 10.5px; }
+.b-pips { display: inline-flex; gap: 3px; flex: none; }
+.b-pips i { width: 7px; height: 7px; transform: rotate(45deg); background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+.b-pips i.on { background: var(--gold); box-shadow: 0 0 6px rgba(255,207,74,.8); }
+.b-pips i.rdy { background: var(--ok); box-shadow: 0 0 6px var(--ok); animation: b-pip 1s ease-in-out infinite; }
+@keyframes b-pip { 50% { opacity: .45; } }
+.bcard.is-ready .bcard-frame { box-shadow: 0 0 0 0 transparent; filter: drop-shadow(0 0 8px rgba(73,245,154,.55)); }
+
+/* Locked: a dark silhouette of the painting under a question mark, until the first kill */
+.bcard.is-locked .bcard-frame { background: linear-gradient(160deg, #3a4560, #0d111c 55%, #252c40); }
+.bcard.is-locked .bcard-art, .bd-art.is-locked { background: radial-gradient(60% 50% at 50% 42%, #1b2236, #05070d 80%); }
+.bcard.is-locked .bcard-art img, .bd-art.is-locked img { filter: grayscale(1) contrast(2) brightness(.3) sepia(.6) hue-rotate(180deg) saturate(1.6); }
+.bcard-q { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-family: var(--f-display); font-weight: 900; font-size: 46px; line-height: 1; color: rgba(190,210,240,.5);
+  text-shadow: 0 0 18px rgba(78,242,255,.35), 0 2px 4px #000; pointer-events: none; }
+.bcard.is-boss .bcard-q { top: 38%; }
+.bcard.is-locked .bcard-name { color: #8d98ad; text-shadow: 0 1px 2px #000; letter-spacing: .2em; }
+
+/* detail sheet */
+.mm-foe { padding-top: 0; }
+.bd { display: flex; flex-direction: column; gap: 10px; }
+.bd-art { position: relative; height: 250px; margin: 0 -14px -30px; overflow: hidden; background: #05070d;
+  -webkit-mask: linear-gradient(180deg, #000 70%, transparent); mask: linear-gradient(180deg, #000 70%, transparent); }
+.bd-art img { object-position: 50% 26%; }
+.bd-art .bcard-q { font-size: 64px; }
+@media (max-height: 700px) { .bd-art { height: 200px; } }
+.bd-name { font-size: 28px; line-height: 1; color: #fff; letter-spacing: .08em; text-transform: uppercase; text-shadow: 0 0 14px var(--fc), 0 2px 0 rgba(0,0,0,.6); }
+.bd-fights { color: var(--ink); line-height: 1.35; }
+.bd-kills { display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 8px; clip-path: var(--bevel-sm); background: linear-gradient(180deg, rgba(40,56,92,.6), rgba(14,20,36,.6)); }
+.bd-kills b { font-size: 20px; }
+.bd-tiers { margin-top: 0; }
+.bd-tier { font-family: var(--f-display); font-weight: 900; font-size: 15px; letter-spacing: .04em; }
+.bd-tiers .q-act .btn { min-height: 36px; } /* a full 36 px target */
+.bd-lock { display: grid; place-items: center; width: 62px; color: var(--ink-faint); }
+.bd-lock svg { width: 20px; height: 20px; }
+.bd-tiers .q.flash { animation: b-flash .8s ease; }
+@keyframes b-flash { 0% { filter: brightness(2); } }

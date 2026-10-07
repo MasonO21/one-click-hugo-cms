@@ -16,6 +16,7 @@ done
 for f in husk ghoul brute witch bloater thief; do # Bestiary portraits
   convert "$A/foe-$f.jpg" -resize 540x720 -quality 78 -define webp:method=6 "$W/foe-$f.webp"
 done
+convert "$A/boss-gravemaw.jpg" -resize 540x720 -quality 78 -define webp:method=6 "$W/foe-gravemaw.webp" # Gravemaw's Bestiary portrait
 convert "$A/boss-gravemaw.jpg" -crop 1792x1000+0+60 +repage -resize 900x -quality 78 -define webp:method=6 "$W/boss-band.webp"
 convert "$A/logo-transparent.png" -resize 900x -quality 86 -define webp:method=6 -define webp:alpha-quality=90 "$W/logo.webp"
 convert "$A/keyart-vertical.jpg" -resize 720x -quality 70 -define webp:method=6 "$W/boot.webp"

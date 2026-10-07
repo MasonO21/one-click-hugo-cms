@@ -224,6 +224,7 @@ export class Events {
     run.audio.sfx('coin'); run.audio.sfx('champion', { volume: 0.7 });
     run.app.haptic('success');
     run.counters.events++;
+    run.counters.byType.thief++; // Bestiary
     this.end(ev);
   }
 

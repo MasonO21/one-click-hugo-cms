@@ -9,6 +9,8 @@ import {
 import { saveProfile, todayKey } from './save.js';
 import { now, today, dayTime } from './clock.js';
 import { resultDifficulty, clearedOn, recordDifficulty, rollHoard } from './difficulty.js';
+import { BESTIARY } from '../game/data.js';
+import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
 
 // ---------------------------------------------------------------- change notification
 const listeners = new Set();
@@ -425,6 +427,7 @@ export function applyRunResult(p, result) {
   const streakRecord = (result.bestStreak || 0) > (s.bestStreak || 0);
   s.bestStreak = Math.max(s.bestStreak || 0, result.bestStreak || 0);
   if (result.victory) s.clears += 1;
+  addBestiaryKills(p, result.byType); // kills per foe (meta/bestiary.js)
 
   // chapter progress (a Daily Trial plays a cleared chapter under mutators: it never changes records)
   const prev = p.chapter.best[ch] || { time: 0, cleared: false, kills: 0 };
@@ -460,6 +463,15 @@ export function doubleRunRewards(p, rewards) {
   return grant(p, { gold: rewards.gold, gems: rewards.gems - (rewards.firstClearGems || 0) });
 }
 
+// ---------------------------------------------------------------- Bestiary milestones (meta/bestiary.js)
+/** Claims an entry's next milestone once its kills reach the goal. Tiers go in order and each pays once. */
+export function claimBestiary(p, id) {
+  const e = BESTIARY.order.includes(id) ? bestiaryEntry(p, id) : null, t = e && e.tiers[e.claimed];
+  if (!t || !t.ready) return null;
+  p.bestiary.claimed[id] = e.claimed + 1;
+  return grant(p, t.rewards);
+}
+
 export function notifications(p) {
   return {
     quests: questsClaimable(p) + (weeklyState(p).ready ? 1 : 0),
@@ -468,5 +480,6 @@ export function notifications(p) {
     altar: freeSummonAvailable(p) ? 1 : 0,
     shop: (freeChestAvailable(p) ? 1 : 0) + (pactDailyAvailable(p) ? 1 : 0),
     heroes: HERO_ORDER.filter((id) => { const c = heroNextCost(p, id); return c && p.heroes[id].shards >= c; }).length,
+    bestiary: bestiaryClaimable(p), // milestones ready (the Heroes tab dot)
   };
 }

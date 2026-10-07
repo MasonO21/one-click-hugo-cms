@@ -4,9 +4,10 @@ import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js'
 import { icon } from './icons.js';
 import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
-import { BOSS_ART } from './art.js';
+import { BOSS_ART, CHAPTER_ART } from './art.js';
 import { RiteButton } from './riteui.js';
 import { StreakHUD, streakRow } from './streakui.js';
+import { showRunIntro } from './runintro.js';
 
 /** Nightmare / Torment pill with its gold multiplier (empty on Normal). */
 const diffPill = (id) => { const D = DIFFICULTY[id]; return D && id !== 'normal' ? `<span class="pill pill-diff" style="--dc:${D.css}">${D.name} · ×${D.gold} gold</span>` : ''; };
@@ -42,6 +43,7 @@ export class RunUI {
     </div>`);
     document.getElementById('ui').appendChild(this.el);
     this.streak = new StreakHUD(this.el);
+    this.intro = showRunIntro(this.el, run, !!app.profile.settings.reduceFlash); // the chapter title card (replaces the chapter banner)
     this.q = {
       xp: $(this.el, '.xp i'), lv: $(this.el, '.xp b'), kills: $(this.el, '.k span'), gold: $(this.el, '.g span'),
       timer: $(this.el, '.hud-timer b'), timerSub: $(this.el, '.hud-timer small'), legion: $(this.el, '.legion'), num: $(this.el, '.legion .num'), cap: $(this.el, '.legion .cap'),
@@ -299,7 +301,7 @@ export class RunUI {
     let doubled = false, adOpen = false;
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
-      <div class="res-head ${win || result.endless ? 'win' : 'lose'}"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} Gravemaw slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
+      <div class="res-head has-art ${win || result.endless ? 'win' : 'lose'}" style="--art:url(${CHAPTER_ART[this.run.chapter.id]})"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} Gravemaw slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
       <div class="res-badges">${diffPill(result.difficulty)}${result.bloodMoon ? '<span class="pill pill-hot">Blood Moon ×2</span>' : ''}${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
       <div class="res-stats">
         <div><b>${fmtTime(result.time)}</b><small>Survived</small></div>

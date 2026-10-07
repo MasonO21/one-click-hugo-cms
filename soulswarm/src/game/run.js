@@ -90,6 +90,7 @@ export class Run {
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
     this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, bestStreak: 0, events: 0, rites: 0 };
+    this.counters.byType = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, thief: 0, gravemaw: 0 }; // Bestiary kills per foe (meta/bestiary.js)
     this.streak = new Streak(this);
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0; this.novaSize = 0;
     this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
@@ -107,7 +108,7 @@ export class Run {
     this.tutorial = !this.profile.flags.tutorialDone;
     this.minionLightIdx = 0;
     // chapter identity (CHAPTERS[].mods; Endless rotates it by depth), ground hazards, Witch lobs, Ghoul packs
-    this.mods = chapterMods(chapter); this.modDepth = 0; this.modBannerAt = 0.6;
+    this.mods = chapterMods(chapter); this.modDepth = 0; this.modBannerAt = 0; // the run intro card (runui.js) names the chapter and its twist
     this.eliteTimes = (!this.endless && this.mods.elites) || ELITE_TIMES;
     if (this.mut.eliteEvery) this.eliteTimes = Array.from({ length: Math.floor((RUN_LENGTH - 10) / this.mut.eliteEvery) }, (_, i) => (i + 1) * this.mut.eliteEvery);
     this.gateEvery = this.mut.gateEvery || 40;
@@ -299,6 +300,7 @@ export class Run {
     if (e.ev && this.events.onKill(e)) return; // the Soul Thief or the Cursed Coffin: events.js pays out
     this.affixes.onKill(e);
     this.counters.kills++;
+    this.counters.byType[e.type]++; // Bestiary: a gilded elite counts as its base type
     this.streak.onKill();
     if (e.elite) { this.counters.elites++; this.fx.hitStop(HITSTOP.elite); }
     this.addNovaCharge(e.elite ? 6 : 1);
@@ -542,6 +544,7 @@ export class Run {
   }
 
   onBossKilled(x, z) {
+    this.counters.byType.gravemaw++; // Bestiary: campaign victories and every Endless kill
     if (this.endless) return this.onEndlessBossKilled(x, z);
     this.bossDead = true;
     this.bossEnemy = null;
@@ -610,6 +613,7 @@ export class Run {
       trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
       chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events, rites: this.counters.rites,
       bestStreak: this.counters.bestStreak,
+      byType: { ...this.counters.byType }, // Bestiary kills per foe
     };
     if (this.onEnd) this.onEnd(result);
   }

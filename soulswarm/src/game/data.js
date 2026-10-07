@@ -499,6 +499,39 @@ export const BLOOD_MOON = { days: [5, 6, 0], elites: [45, 75, 110, 150, 185, 225
 // Weekly chest: claim 25 daily quests in a week (Monday to Sunday, local time).
 export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 100 } };
 
+// ---------------------------------------------------------------- Bestiary (meta/bestiary.js, ui/meta/bestiary.js)
+// A painted entry per foe. Kills add up over every run (gilded elites count as their base type; the Soul Thief and Gravemaw
+// count too). An entry unlocks with its first kill. Its three milestones are claimed in order, each once: goals = kill counts
+// (`rare` foes use rareGoals), rewards[i] = tier i + 1's bundle. In all: 14,000 gold, 7 sigils and 350 gems (MONETIZATION §2).
+export const BESTIARY = {
+  goals: [100, 1000, 10000], rareGoals: [1, 10, 50],
+  rewards: [{ gold: 2000 }, { sigils: 1 }, { gems: 50 }],
+  order: ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'thief', 'gravemaw'],
+  foes: {
+    husk: { name: 'Husk', role: 'Chaser', color: '#ff8a3d',
+      lore: 'Once they were mourners. Now they remember only the long walk to the grave, and they walk it toward you.',
+      fights: 'Shambles straight at you in endless numbers. Raise fodder: anything kills it.' },
+    ghoul: { name: 'Ghoul', role: 'Pack runner', color: '#9fd8ff',
+      lore: 'Starved things that run on all fours and hunt by the warmth of the living. They never hunt alone.',
+      fights: 'Hunts in packs of 4–6, crouches, then lunges. Sidestep the lunge and keep moving.' },
+    brute: { name: 'Brute', role: 'Tank', color: '#ff7a2e',
+      lore: 'Three dead soldiers stitched around a furnace heart. It has forgotten every name but the weight of its fists.',
+      fights: 'Rears back over a cone on the ground, then slams. Step out of the cone.' },
+    witch: { name: 'Cinder Witch', role: 'Ranged', color: '#ff5a3a',
+      lore: 'They burned her at the stake, and she kept the fire. Every orb she throws is an ember of her own pyre.',
+      fights: 'Keeps her distance and lobs fire onto a marked circle. Keep moving when one appears.' },
+    bloater: { name: 'Bloater', role: 'Bomber', color: '#c35cff',
+      lore: 'The plague pits fed it until it could hold no more. Now it waits for someone to come close.',
+      fights: 'Flashes when it reaches you, then bursts a second later. Kill it early, or let it pop inside the horde.' },
+    thief: { name: 'Soul Thief', role: 'Run event', color: '#ffcf4a', rare: true,
+      lore: 'It picks the pockets of the dying, coins and souls alike, and it has never once stood and fought.',
+      fights: 'Never attacks. Flees with its sack for 18 s, faster than the horde but slower than you. Run it down for gold.' },
+    gravemaw: { name: 'Gravemaw', role: 'The Hollow King', color: '#ff3df0', rare: true,
+      lore: 'The Hollow King wears a crown of cinders over a ribcage full of stolen souls, and he wants yours.',
+      fights: 'Three phases in a sealed arena: slam rings, turning gap rings, then a spiral. Step between them.' },
+  },
+};
+
 // ---------------------------------------------------------------- Difficulty (Nightmare, Torment)
 // Per chapter: a Normal clear unlocks Nightmare, a Nightmare clear unlocks Torment. Campaign chapters only: Endless Abyss
 // and the Daily Trial always play Normal. Blood Moon stacks on top of any difficulty. Normal is the identity.
