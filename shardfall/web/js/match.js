@@ -396,9 +396,9 @@
     toll_of_challenge(m, h, a, s) {
       for (const e of m.enemiesIn(h.team, h.x, h.y, s.range)) {
         m.applyDamage(h, e, 60 + 0.045 * h.maxHp, { skill: s });
-        if (e.kind === 'hero') m.taunt(e, h, 1.25);
+        if (e.kind === 'hero') m.taunt(e, h, 1);
       }
-      h.addBuff({ id: 'toll', t: 2.5, dmgRed: 0.15 });
+      h.addBuff({ id: 'toll', t: 2.5, dmgRed: 0.1 });
       m.ring(h.x, h.y, s.range, skinC(h), 0.45, 7); m.ring(h.x, h.y, s.range * 0.55, '#f6c27a', 0.3, 4);
       m.burst(h.x, h.y - 40, skinC(h), 16, 200); m.shake(3);
       return true;
@@ -410,7 +410,7 @@
         onStart: z => {
           for (const e of m.enemiesIn(h.team, z.x, z.y, z.r)) {
             if (isStructure(e)) continue;
-            m.applyDamage(h, e, 160 + 0.07 * h.maxHp, { skill: s });
+            m.applyDamage(h, e, 120 + 0.05 * h.maxHp, { skill: s });
             if (e.kind === 'hero' && !(e.ccImmune > 0)) { trapped.add(e); m.slow(e, 0.3, 1); }
           }
           m.ring(z.x, z.y, z.r, skinC(h), 0.7, 9); m.burst(z.x, z.y - 40, '#f6c27a', 36, 320); m.shake(9);

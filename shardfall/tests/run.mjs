@@ -398,7 +398,7 @@ section('Tolvar: taunt, Iron Rush and the Great Bell', () => {
     for (let k = 0; k < 15; k++) m.update(1 / 30);
     check('a taunted hero walks to Tolvar instead of away', Math.abs(foe.x - p.x) < d0 && foe.target === p, `${Math.round(d0)} -> ${Math.round(Math.abs(foe.x - p.x))}`);
     for (let k = 0; k < 40; k++) m.update(1 / 30);
-    check('the taunt wears off after 1.25 seconds', !(foe.tauntT > 0) && foe.tauntBy === null);
+    check('the taunt wears off after 1 second', !(foe.tauntT > 0) && foe.tauntBy === null);
     check('Shard Purify cleanses a taunt', (() => { const q = setup(); q.m.castSkill(q.p, 1, { dir: { x: 1, y: 0 } }); q.foe.spell = 'purify'; q.m.useSpell(q.foe); return !(q.foe.tauntT > 0); })());
   }
   {

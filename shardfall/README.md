@@ -76,7 +76,7 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 - 12 heroes across 6 roles, with 36 skills: dashes, skillshots, chain lightning, ground zones, hooks, shields, heals, executes, summons, walls and taunts.
 - **Tolvar, the Bellwarden** (Tank, the newest hero) keeps enemies in the fight:
   - **Iron Rush:** a charge that carries the first enemy hero to its end and stuns them there. Anyone else in the way is knocked aside.
-  - **Toll of Challenge:** taunts nearby enemy heroes for 1.25 seconds. They have to walk to Tolvar and attack him, and can't use skills. Battle spells still work, and Shard Purify cleanses it.
+  - **Toll of Challenge:** taunts nearby enemy heroes for 1 second. They have to walk to Tolvar and attack him, and can't use skills. Battle spells still work, and Shard Purify cleanses it.
   - **Great Bell:** an ultimate that drops a giant bell. Enemy heroes under it take heavy damage and can't leave its ring for 3 seconds. Only Shard Blink gets out.
   - **Unbroken passive:** stuns and slows on him are 30% shorter, and heroes he has taunted deal 25% less damage to him.
 

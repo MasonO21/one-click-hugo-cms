@@ -252,7 +252,7 @@ window.SF = window.SF || {};
       passive: { id: 'unbroken', name: 'Unbroken', desc: 'Stuns and slows on Tolvar last 30% shorter, and enemies he has taunted deal 25% less damage to him.' },
       skills: [
         { id: 'iron_rush', name: 'Iron Rush', cd: 10, range: 360, kind: 'dash', ai: 'enemy', desc: 'Charge forward. The first enemy hero you hit is carried along to the end of the charge and stunned for 0.5 seconds; everyone else in the way is knocked aside.' },
-        { id: 'toll_of_challenge', name: 'Toll of Challenge', cd: 12, range: 250, kind: 'nova', ai: 'near', desc: 'Ring the bell. Nearby enemies take damage, and enemy heroes are taunted for 1.25 seconds: they must walk to Tolvar and attack him, and can\'t use skills.' },
+        { id: 'toll_of_challenge', name: 'Toll of Challenge', cd: 13, range: 250, kind: 'nova', ai: 'near', desc: 'Ring the bell. Nearby enemies take damage, and enemy heroes are taunted for 1 second: they must walk to Tolvar and attack him, and can\'t use skills.' },
         { id: 'great_bell', name: 'Great Bell', cd: 60, range: 420, kind: 'ult', ai: 'bell', ground: true, desc: 'Drop a giant bell on the aimed spot. Enemies under it take heavy damage and are trapped inside its ring for 3 seconds. Only Shard Blink gets out.' }
       ]
     }
