@@ -4,6 +4,9 @@
 //   art/icon.svg             master app icon (sky + stars + hero); also the single source of the hero art
 //   art/splash.template.svg  splash lockup (hero + path-drawn wordmark) -> composed into art/splash.svg
 //   art/favicon.svg          tiny-size variant of the icon
+//   art/source/app-icon/     optional painted hero (hero-body.webp + hero-smoke.webp, 1024² RGBA, Higgsfield): when
+//                            present it replaces the vector hero everywhere (icons + splash); the composed master is
+//                            written to art/icon-painted.svg and icon.svg keeps the vector art untouched
 //
 // Outputs: Android launcher + adaptive icons + splash, iOS app icon + splash, web/PWA icons + manifest.
 // Rasterised with headless Chromium at the exact pixel size (deviceScaleFactor 1).
@@ -88,13 +91,32 @@ async function render(svg, w, h, { shape = null, prep = null } = {}) {
   return page.screenshot({ type: 'png', omitBackground: true, clip: { x: 0, y: 0, width: w, height: h } });
 }
 
+const PAINTED = path.join(ART, 'source', 'app-icon');
+
+/**
+ * icon.svg with its vector hero swapped for the painted layers. The smoke stays its own layer inside #smoke, so the
+ * safe-zone measurement ignores it exactly like the vector smoke.
+ */
+function withPaintedHero(svg) {
+  const uri = (f) => `data:image/webp;base64,${fs.readFileSync(path.join(PAINTED, f)).toString('base64')}`;
+  const body =
+    `\n    <image href="${uri('hero-body.webp')}" x="0" y="0" width="1024" height="1024"/>` +
+    `\n    <g id="smoke"><image href="${uri('hero-smoke.webp')}" x="0" y="0" width="1024" height="1024"/></g>\n    `;
+  return svg.replace(/<!-- hero:begin -->[\s\S]*<!-- hero:end -->/, `<!-- hero:begin -->${body}<!-- hero:end -->`);
+}
+
 const opaque = (buf) => encodePng(flatten(decodePng(buf)));
 const alpha = (buf) => encodePng(decodePng(buf)); // re-compressed, alpha kept
 
 // ---- main -------------------------------------------------------------------------------------------
 await launch();
 try {
+  const painted = fs.existsSync(path.join(PAINTED, 'hero-body.webp'));
   let icon = read(path.join(ART, 'icon.svg'));
+  if (painted) {
+    console.log('using the painted hero from art/source/app-icon');
+    icon = withPaintedHero(icon);
+  }
 
   // 1. measure the hero (planet + dome + pod) so every layout is computed, not eyeballed
   console.log('measuring hero');
@@ -105,7 +127,7 @@ try {
   // keep icon.svg standalone-correct: bake the master transform into the file
   const masterT = heroTransform(hero, MASTER_R, 512 + MASTER_DX, 512 + MASTER_DY);
   icon = icon.replace(/<g id="hero" transform="[^"]*">/, `<g id="hero" transform="${masterT}">`);
-  write(path.join(ART, 'icon.svg'), icon);
+  write(path.join(ART, painted ? 'icon-painted.svg' : 'icon.svg'), icon);
 
   // 2. app icon master + iOS
   console.log('master / iOS / web icons');
