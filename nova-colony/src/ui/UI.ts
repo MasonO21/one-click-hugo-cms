@@ -178,10 +178,33 @@ export class UI {
 
     // offline summary may already be waiting (game.start() ran before init in tests)
     if (this.game.pendingOffline) this.showWelcome();
+    if (this.game.fresh && this.game.state.playTime < 1) this.crashIntro();
 
     if (import.meta.env.DEV && /[?&]uidev\b/.test(location.search)) {
       void import('./dev/preview').then((m) => m.installPreview(this, this.game, this.ctx));
     }
+  }
+
+  /**
+   * Brand-new colony: the camera swoops down onto the smoking pod, then one card sets the scene
+   * ("Vulnerable Survivor" — spec §33 0-2 min: crash landing, exit the pod, gather wood).
+   */
+  private crashIntro(): void {
+    const cam = this.game.view.camera;
+    const zoom = cam.zoom;
+    cam.zoom = Math.min(1, zoom + 0.45);
+    window.setTimeout(() => {
+      if (cam.zoom > zoom) cam.zoom = zoom;
+    }, 500);
+    window.setTimeout(() => {
+      this.panels.open('celebrate', {
+        title: 'Crash Landing!',
+        text: 'Your escape pod came down on a beautiful alien world. Chop some wood, build a shelter — and make this place home.',
+        icon: '🛸',
+        quiet: true,
+        ok: "Let's go!",
+      } satisfies CelebrateArg);
+    }, 2400);
   }
 
   /** Dev/test access. */

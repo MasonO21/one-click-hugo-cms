@@ -130,7 +130,13 @@ async function ensureAfford(def) {
 const stages = {};
 stages.wood = async () => {
   await shot(page, 'start');
-  await think(8); // crash landing: look around, read the hint
+  // crash-landing intro card
+  await page.waitForFunction(() => !!document.querySelector('.nv-modals .pm-card'), null, { timeout: 15000 }).catch(() => {});
+  await sleep(800);
+  await shot(page, 'intro');
+  await think(5); // read it
+  console.log('  intro closed:', await closeModals(page));
+  await think(4); // look around, read the hint
   for (let i = 0; i < 10; i++) {
     const g = await guide(page); if (!g?.world || (await mission(page))?.id !== 'm01_wood') break;
     await hwalk(g.world.x, g.world.z, { tol: 2.6 });

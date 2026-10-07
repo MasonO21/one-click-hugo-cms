@@ -122,7 +122,8 @@ export class Guide {
   /** Every frame: follow the target. */
   frame(dt: number): void {
     this.acc += dt;
-    const ringOn = !!this.uiEl && this.uiEl.isConnected && !this.covered;
+    // never invite a tap on a disabled button (e.g. ✔ while the ghost is on a blocked spot)
+    const ringOn = !!this.uiEl && this.uiEl.isConnected && !this.covered && this.uiEl.getAttribute('aria-disabled') !== 'true';
     setClass(this.ring, 'on', ringOn);
     setClass(this.hand, 'on', ringOn);
     // read the target's rect at ~20 Hz (not every frame) and only write when it moved

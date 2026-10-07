@@ -17,6 +17,10 @@ export interface CelebrateArg {
   tier?: number;
   unlocks?: string[];
   big?: boolean;
+  /** No confetti / fanfare (e.g. the crash-landing intro). */
+  quiet?: boolean;
+  /** Button label (default "Awesome!" / "Onward!" for tiers). */
+  ok?: string;
 }
 
 export class CelebratePanel extends Panel {
@@ -30,6 +34,7 @@ export class CelebratePanel extends Panel {
 
   override onOpen(): void {
     const a = this.arg as CelebrateArg;
+    if (a.quiet) return;
     if (a.tier == null) this.ctx.sfx('celebrate'); // tier-ups are voiced by the audio layer on colony:tierUp
     this.ctx.haptic('heavy');
     window.setTimeout(() => {
@@ -54,7 +59,7 @@ export class CelebratePanel extends Panel {
       for (const u of a.unlocks.slice(0, 8)) chips.appendChild(h('span', { class: 'chip info', text: u }));
       wrap.appendChild(chips);
     }
-    wrap.appendChild(btn({ label: tier ? 'Onward!' : 'Awesome!', cls: 'big good block', id: 'btn-celebrate-ok', onClick: () => this.ctx.close(this.name) }));
+    wrap.appendChild(btn({ label: a.ok ?? (tier ? 'Onward!' : 'Awesome!'), cls: 'big good block', id: 'btn-celebrate-ok', onClick: () => this.ctx.close(this.name) }));
     fill(this.body, wrap);
   }
 }
