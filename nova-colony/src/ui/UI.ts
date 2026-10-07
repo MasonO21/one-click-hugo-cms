@@ -34,6 +34,7 @@ import { FloatText } from './fx/FloatText';
 import { FlyToHud } from './fx/FlyToHud';
 import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
+import { ConsentPrompt } from './ConsentPrompt';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -71,6 +72,7 @@ export class UI {
   private fly!: FlyToHud;
   private tip!: SelectionTip;
   private guide!: Guide;
+  private consent!: ConsentPrompt;
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
 
@@ -159,6 +161,8 @@ export class UI {
       shortcut: (e) => this.shortcut(e),
       moved: () => this.stickHint.classList.add('gone'),
     });
+
+    this.consent = new ConsentPrompt(ctx, el);
 
     this.installGlobalHandlers();
     this.subscribe();
@@ -512,6 +516,7 @@ export class UI {
   update(dt: number): void {
     if (!this.root) return;
     safe('ui input', () => this.input.update(dt));
+    safe('ui consent', () => this.consent.update(dt));
     safe('ui sync', () => this.syncSettings());
     safe('ui build', () => {
       this.build.update(dt);

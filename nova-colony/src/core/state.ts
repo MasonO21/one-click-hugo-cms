@@ -380,7 +380,10 @@ export interface SettingsState {
   quality: 'low' | 'medium' | 'high';
   haptics: boolean;
   autoGather: boolean;
+  /** Share anonymous gameplay analytics. Off until the player opts in. */
   analytics: boolean;
+  /** The player has answered the analytics consent prompt (or changed the setting). Nothing is collected before. */
+  analyticsAsked: boolean;
   showFps: boolean;
   /** Left-handed layout swaps joystick/buttons. */
   leftHanded: boolean;
@@ -442,7 +445,7 @@ export function createInitialState(seed: number, now: number): GameState {
       offersSeen: [],
     },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
-    settings: { music: 0.6, sfx: 0.8, quality: 'medium', haptics: true, autoGather: true, analytics: true, showFps: false, leftHanded: false },
+    settings: { music: 0.6, sfx: 0.8, quality: 'medium', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false },
   };
 }
 

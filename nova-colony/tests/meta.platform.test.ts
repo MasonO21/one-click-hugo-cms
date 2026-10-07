@@ -166,6 +166,9 @@ describe('analytics hooks', () => {
       flush: vi.fn(async () => {}),
     };
     g.game.services.analytics = analytics as never;
+    // the player opted in on the first-launch consent card
+    g.game.state.settings.analytics = true;
+    g.game.state.settings.analyticsAsked = true;
     const off = installAnalyticsHooks(g.game);
     const named = (n: string) => calls.filter((c) => c.name === n).map((c) => c.props);
     return { ...g, calls, analytics, off, named };

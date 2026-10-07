@@ -1,0 +1,63 @@
+/* First-launch analytics consent card — small, friendly, non-blocking. */
+.nv-root .consent-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 6.2em);
+  width: min(30em, calc(100% - 2 * var(--gut) - var(--safe-l) - var(--safe-r)));
+  transform: translate(-50%, 1.5em);
+  opacity: 0;
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.45em 0.7em;
+  padding: 0.8em 0.9em;
+  background: var(--paper);
+  color: var(--ink);
+  border: 0.15em solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  z-index: 6;
+}
+.nv-root .consent-card.in {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+.nv-root .consent-ico {
+  font-size: 1.8em;
+  line-height: 1;
+  align-self: center;
+}
+.nv-root .consent-title {
+  font-weight: 800;
+  font-size: 1.02em;
+}
+.nv-root .consent-text {
+  color: var(--ink-soft);
+  font-size: 0.86em;
+  margin-top: 0.15em;
+}
+.nv-root .consent-more {
+  all: unset;
+  cursor: pointer;
+  color: var(--info-d);
+  font-size: 0.8em;
+  font-weight: 700;
+  margin-top: 0.3em;
+  text-decoration: underline;
+}
+.nv-root .consent-details {
+  display: none;
+  font-size: 0.78em;
+  color: var(--ink-soft);
+  margin-top: 0.3em;
+}
+.nv-root .consent-card.open .consent-details {
+  display: block;
+}
+.nv-root .consent-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5em;
+}

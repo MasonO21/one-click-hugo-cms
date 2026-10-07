@@ -105,6 +105,7 @@ export class SettingsPanel extends Panel {
         'div',
         { class: 'card' },
         this.toggle('Help improve the game', 'Share anonymous usage data. Never personal info.', '📊', 'analytics', (on) => {
+          g.state.settings.analyticsAsked = true;
           g.services.analytics.setConsent(on);
         }),
       ),

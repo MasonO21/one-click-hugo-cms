@@ -196,7 +196,7 @@ Based on available screenshots in `docs/screenshots/`:
 
 ### Data We Collect (if analytics is enabled)
 
-**Collection is opt-in.** Players control analytics via in-game Settings → Privacy & Analytics. Disabling it immediately stops all tracking and deletes the install ID.
+**Collection is opt-in and off by default.** On first launch a small, non-blocking card asks "Help make Nova Colony even cozier? Share anonymous gameplay stats" with equally prominent **No thanks** / **Sure!** buttons; nothing is collected unless the player taps **Sure!**. Players can change the choice anytime in Settings → Privacy ("Help improve the game"). Disabling it immediately stops all tracking and deletes the install ID.
 
 **Type of Data Collected:**
 

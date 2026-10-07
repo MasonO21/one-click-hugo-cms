@@ -12,8 +12,9 @@
  *   quit points           quit_point                               (current main mission when the app is paused)
  *   slow progression      progression_stall                        (no mission completed for 10 min of play)
  *
- * Events carry game facts only (no PII). Consent is read from `settings.analytics` every second, so
- * toggling it in Settings takes effect immediately. OWNER: meta agent.
+ * Events carry game facts only (no PII). Consent is opt-in: `settings.analytics` must be true AND the player
+ * must have answered (`settings.analyticsAsked`, set by the first-launch prompt or the Settings toggle). It
+ * is re-read every second, so changes take effect immediately. OWNER: meta agent.
  */
 import type { Game } from '../core/Game';
 import type { GameEvents } from '../core/events';
@@ -45,7 +46,8 @@ export function installAnalyticsHooks(game: Game): () => void {
   // ---- consent follows the in-game setting
   let consent: boolean | null = null;
   const syncConsent = () => {
-    const v = !!st().settings.analytics;
+    // opt-in: collect only after the player explicitly said yes (older saves defaulted to `true` without asking)
+    const v = !!st().settings.analytics && !!st().settings.analyticsAsked;
     if (v !== consent) {
       consent = v;
       a.setConsent(v);
