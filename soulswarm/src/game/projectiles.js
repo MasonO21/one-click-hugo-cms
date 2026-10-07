@@ -199,6 +199,7 @@ export class Projectiles {
   initLobs() {
     this.lobs = [];
     this.lobPool = [];
+    this.landed = []; // this frame's landings (scratch)
     this.lobMesh = instanced(orbGeometry(), 64, new THREE.Color(0xffc070).multiplyScalar(3.4));
     this.run.scene.add(this.lobMesh);
     this.lobCol = hdr(0xff7a2a, 3.6);
@@ -222,7 +223,7 @@ export class Projectiles {
 
   updateLobs(dt) {
     if (!this.lobs) return;
-    const parts = this.run.particles, c = this.lobCol, lobs = this.lobs;
+    const parts = this.run.particles, c = this.lobCol, lobs = this.lobs, down = this.landed;
     let w = 0;
     for (let i = 0; i < lobs.length; i++) {
       const L = lobs[i];
@@ -231,11 +232,12 @@ export class Projectiles {
       L.x = L.x0 + (L.tx - L.x0) * u; L.z = L.z0 + (L.tz - L.z0) * u;
       L.y = 1.6 * (1 - u) + 0.25 * u + 4 * L.h * u * (1 - u);
       if (Math.random() < 0.85) parts.emit(L.x, L.y, L.z, 0, 0.3, 0, 0.4, 0.45, 0.05, c[0], c[1], c[2], 0.85);
-      if (u < 1) { lobs[w++] = L; continue; }
-      this.landLob(L);
-      this.lobPool.push(L);
+      if (u < 1) lobs[w++] = L; else down.push(L);
     }
     lobs.length = w;
+    // land once the sky is compacted: a hit can revive Mordrake, whose revive clears (and pools) every orb still up
+    for (let i = 0; i < down.length; i++) { this.landLob(down[i]); this.lobPool.push(down[i]); }
+    down.length = 0;
   }
 
   /** Area damage where the orb lands: the Shepherd and minions inside the circle; burning ground from Ch2. */

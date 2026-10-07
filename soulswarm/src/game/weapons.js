@@ -435,9 +435,11 @@ export class Weapons {
   }
 
   // ---------------------------------------------------------------- Chains of Perdition (burning)
-  ignite(e, dmg) {
+  /** raise: the igniter's Raise Chance bonus while it burns (Perdition's, or Ashfall's); a foe set alight by both keeps the bigger. */
+  ignite(e, dmg, raise = CP.raise) {
     this.touch(e);
-    if (e.burnUid !== e.uid) { e.burnUid = e.uid; e.burnPool = 0; e.burnTick = CP.burnTick; e.burnRaise = CP.raise; }
+    if (e.burnUid !== e.uid) { e.burnUid = e.uid; e.burnPool = 0; e.burnTick = CP.burnTick; e.burnRaise = raise; }
+    else if (raise > e.burnRaise) e.burnRaise = raise;
     if (!e.burnListed) { e.burnListed = true; this.burning.push(e); }
     e.burnPool += dmg * CP.burn;
     e.burnT = CP.burnTime;

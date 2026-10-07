@@ -392,11 +392,10 @@ export class Rites {
     if (k % 3 === 0) run.fx.light(S.x, S.z, 4, 1.4, this.color, 0.3);
     if (k % 4 === 0) run.fx.shockwave(S.x, S.z, 1.6, 0xff8a3d, 0.3, 0.18);
     if (!e) return;
-    const fresh = e.burnUid !== e.uid, dmg = this.dmg(D.dmg);
+    const dmg = this.dmg(D.dmg);
     const killed = E.damage(e, dmg, this.opts(e.x - run.player.x, e.z - run.player.z, 2, k >= 8));
     if (!killed && e.active) {
-      run.weapons.ignite(e, dmg * D.burn / BURN_SHARE);
-      if (fresh) e.burnRaise = D.burnRaise;
+      run.weapons.ignite(e, dmg * D.burn / BURN_SHARE, D.burnRaise); // a Perdition burn already on it keeps its bigger bonus
       if (D.pin) E.stun(e, D.pin); // the chain pins it where it stands
     }
   }

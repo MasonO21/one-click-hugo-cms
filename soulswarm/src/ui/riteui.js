@@ -39,6 +39,7 @@ export class RiteButton {
       this.cdEl.textContent = s ? s : '';
       this.el.classList.toggle('cooling', s > 0);
       this.el.classList.toggle('ready', !s);
+      if (!s) this.el.classList.remove('fire'); // a stale cast punch would outrank the ready pulse
     }
     if (on !== this.on) { this.on = on; this.el.classList.toggle('active', on); }
   }
