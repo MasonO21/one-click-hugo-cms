@@ -163,6 +163,18 @@ Keep it this way as you add content: your own names, art, sounds and hero design
 **Art.** All of it was made with Higgsfield:
 - **Splash art** for the lobby, hero roster, skin shop and loading screen: one portrait for each of the 12 heroes and each of the 15 skins.
 - **Key art** behind the menus.
+- **The battlefield** is painted by `npm run paint-map` (`tools/map-painter.js`), from the game's own layout, so it always lines up with the lane, river, towers, camps and tall grass. It renders in headless Chromium at 1.5 pixels per world unit, with a WebP of about 700 KB:
+  - The ground: noise-shaded grass, a cobbled lane with curb stones, a river with depth, caustics, foam and sandy banks, and stone plazas, tower pads and rune pads.
+  - The landmarks: the Shard altar island, the Wyrm's violet rift and trampled jungle camps with braziers and roots.
+  - The scenery: dirt paths, flowers, mushrooms, crystal sprouts and a border forest.
+  - Tall props stay in the strips nobody can walk on, so nothing looks like a wall that isn't one.
+  - Re-run it after moving anything on the map. If the image is missing, the match draws a simpler map itself.
+- **Drawn in code each frame:**
+  - Stone-and-crystal tower spires and Heartstone daises, with rubble when they fall.
+  - Crystal-soldier minions: shield-bearers, staff casters, crystal-cannon carts and stone Shard Golems.
+  - Tall grass that sways and rustles when someone moves through it, with reeds and cattails where it stands in the river.
+  - The jungle and river monsters: a fire-spirit Ember Wisp, a thorn-shelled Thornback and a crystal-golem Shard Colossus.
+  - Living-world effects: river light that flows downstream, drifting cloud shadows, jungle fireflies, glowing shots and sparks, and a soft vignette. The low graphics setting turns the extras off.
 - **In-match sprites** for all 27 looks. Each sprite was generated from its own splash, so a skin looks the same in the shop and in a match. Every sprite faces right, and the game mirrors it when a hero turns. A hero leans into a run, breathes when idle and flashes white when hit. The small hero pictures in menus use them too.
 
 Run `node tools/fetch-art.mjs` to download everything into `web/assets/art/` as WebP (about 4.5 MB). Sprites are trimmed to the figure and placed on a shared 400×400 frame with the feet on one baseline. If any file is missing, that picture falls back to the drawn crystal hero, so the game always works. Check Higgsfield's terms for commercial use before shipping.

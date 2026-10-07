@@ -1,9 +1,9 @@
 // Offline cache for the installable web version. Bump VERSION whenever files change.
-const VERSION = 'shardfall-v15';
+const VERSION = 'shardfall-v16';
 const SHELL = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/data.js', 'js/store.js', 'js/audio.js', 'js/match.js', 'js/draw.js', 'js/hud.js', 'js/net.js', 'js/platform.js', 'js/lobby.js',
-  'assets/icons/icon-192.png', 'assets/icons/icon-512.png', 'assets/icons/favicon-32.png', 'assets/icons/apple-touch-icon.png',
+  'assets/art/map.webp', 'assets/icons/icon-192.png', 'assets/icons/icon-512.png', 'assets/icons/favicon-32.png', 'assets/icons/apple-touch-icon.png',
   'legal/privacy.html', 'legal/terms.html'
 ];
 // In-match hero sprites (same list as SF.ART.sprites in js/data.js), so offline matches have them.

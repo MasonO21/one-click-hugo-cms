@@ -1078,6 +1078,7 @@ section('Every look has splash art and an in-match sprite', () => {
     if (sprite) check(`${sk.id} sprite is precached by the service worker`, sw.includes(`'${sprite.split('/').pop().replace('.webp', '')}'`));
   }
   check('unknown skins have no sprite', SF.spriteFor('kaida', 'nope') === null);
+  check('the painted battlefield exists and is precached for offline play', existsSync(join(web, SF.ART.map)) && sw.includes(`'${SF.ART.map}'`));
   const draw = readFileSync(join(web, 'js', 'draw.js'), 'utf8'), shapes = draw.slice(draw.indexOf('const SHAPES'), draw.indexOf('};', draw.indexOf('const SHAPES')));
   for (const h of SF.HEROES) check(`${h.id} has a drawn body shape (${h.shape}) for when art is missing`, new RegExp(`\\b${h.shape}:`).test(shapes));
 });

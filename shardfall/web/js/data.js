@@ -2,6 +2,10 @@
 window.SF = window.SF || {};
 (function (SF) {
   SF.WORLD = { w: 3200, h: 1200, laneY: 600, laneHalf: 130, riverX: 1600 };
+  // The painted lane and river wiggle a little around those straight lines (art only; gameplay uses the
+  // straight ones). Shared by tools/map-painter.js and the river shimmer in draw.js.
+  SF.laneCurve = x => SF.WORLD.laneY + 6 * Math.sin(x / 230) + 4 * Math.sin(x / 97 + 1.3);
+  SF.riverCurve = y => SF.WORLD.riverX + 14 * Math.sin(y / 90) + 6 * Math.sin(y / 37 + 2);
   SF.TEAM = { BLUE: 0, RED: 1, NEUTRAL: 2 };
   SF.TEAM_COLORS = ['#4fb3ff', '#ff5d6c', '#c9b27a'];
 
@@ -311,6 +315,9 @@ window.SF = window.SF || {};
     skins: ['kaida_frost', 'kaida_solar', 'orin_abyss', 'orin_coral', 'sylva_autumn', 'sylva_storm', 'brakka_magma', 'nyx_bloodmoon',
       'lumen_aurora', 'lumen_laureate', 'vexa_neon', 'drace_obsidian', 'rhea_dawn', 'oska_reef', 'oska_storm'],
     key: 'assets/art/key-art.webp',
+    // The painted battlefield (tools/paint-map.mjs), at `mapScale` pixels per world unit. Until it loads,
+    // or if it can't, the match draws a simpler map itself.
+    map: 'assets/art/map.webp', mapScale: 1.5,
     // In-match sprites, one per look, made from that look's splash. Same naming as the splash art:
     // classic skins by hero id, other skins by skin id. All share one 400x400 frame (feet 8px above
     // the bottom, body centred, facing right), so the game draws them all the same way.
