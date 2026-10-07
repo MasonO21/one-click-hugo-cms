@@ -16,15 +16,16 @@ game as style references so the art matches the in-game look.
 | World events | `public/art/events/<WorldEventDef.kind>.webp` (8) | 960×540 | Event popups & map markers |
 | Shop | `public/art/shop/<ProductDef.id>.webp` (12) | 512×384 RGBA | Shop product cards |
 | Rewards | `public/art/rewards/{victory_chest,supply_crate,daily_gift}.webp` | 256² RGBA | Victory chest, free crate, daily reward |
+| Items | `public/art/items/<ItemDef.id>.webp` (65: tools, weapons, armor, backpacks, gear, consumables, components, crates) | 192² RGBA | Inventory + equipment slots, crafting, factory recipes, reward chips / cards, item toasts |
 | Store | `art/store/feature-graphic-1024x500.jpg`, `key-art-*.jpg` | — | Google Play feature graphic, store/press (not shipped in the app) |
 | Promo video | `art/store/promo-flyover-10s.mp4` | 1920×1080, 10 s, silent | Store preview / social clip (Higgsfield `kling3_0` image-to-video from the key art); add game music when cutting a trailer |
 
-Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 3.8 MB (WebP).
+Lookups with emoji fallbacks live in `src/ui/art.ts`. Total in-app weight ≈ 4.5 MB (WebP).
 
 ## Where the art appears in the UI
 Every lookup returns a relative URL or `null`; a missing/failed image falls back to the emoji from the data, so the UI
 never has a hole. Styles are in `src/ui/styles/art.css`. `tests/ui.art.test.ts` guards that every resource, profession,
-alien model, biome, tier, world-event kind and shop product has a file (and that no file is orphaned).
+alien model, biome, tier, world-event kind, shop product and item has a file (and that no file is orphaned).
 
 | Art | Shown in | Shared helper |
 |---|---|---|
@@ -35,11 +36,12 @@ alien model, biome, tier, world-event kind and shop product has a file (and that
 | Alien portraits | invasion banner (types of the coming wave from the tier's invasion table + the boss when due; live types while attacking), off-screen threat markers, victory card (defeated types ×N), world tap tooltip | `Banners.refreshIcon`, `Threats` |
 | World events | spotted / reward-claimed toasts, ancient-structure celebration, merchant panel header, map marker card, world tap tooltip | `UI.artToast` / `UI.celebrateArt` |
 | Shop cards | product cards (Season Boost reuses the premium-pass card), Colony Pass hero | `ShopPanel` |
+| Item icons | inventory equipment slots (large) + item rows, craft recipe / queue rows, ingredient chips (recipes, vehicles, factory), factory recipe picker + "→ 1× Item" output line, reward chips and reward cards for items (missions, daily, season, spin wheel + prizes, merchant, shop packs, victory chest), "Crafted X!" / "X opened!" toasts. Empty equipment slots keep their slot emoji | `itemArt`/`itemIcon` (`art.ts`), `itemChips`/`rewardChips` (`widgets.ts`), `rewardParts`/`itemToast` (`logic/rewards.ts`) |
 | Reward art | victory chest (dim + wobbling until tapped, then lights up), free supply crate (shop card + reward card), daily gift (panel + claim card) | `rewardArt` |
 
 Toasts and the world tooltip accept an art URL (anything starting with `art/`) in place of their emoji icon.
 **Deliberately still emoji:** floating "+3 🪵" numbers over the world, the live "Now: +3 🪵/min" line in the building
-inspector, navigation glyphs (dock/rail/menu), item icons (no item art yet) and RP / XP / boost icons.
+inspector, navigation glyphs (dock/rail/menu), empty equipment-slot glyphs and RP / XP / boost icons.
 
 ## Style guide (for new art)
 Stylized low-poly 3D, flat-shaded chunky shapes, soft warm lighting, bright saturated but cozy palette,

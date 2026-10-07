@@ -8,6 +8,7 @@ import { bagEntries } from '../../core/bag';
 import { fmt } from '../../core/format';
 import { bar, btn, emptyState, resChip, section } from '../widgets';
 import { fill, h } from '../dom';
+import { itemIcon } from '../art';
 
 const SLOTS: { id: EquipSlot; icon: string; label: string }[] = [
   { id: 'tool', icon: '🪓', label: 'Tool' },
@@ -76,7 +77,7 @@ export class InventoryPanel extends Panel {
         'button',
         { class: 'slot-card' + (this.slot === s.id ? ' on' : '') + (d ? ' filled' : ''), type: 'button', data: { slot: s.id, sfx: 'ui_tab' } },
         h('div', { class: 'sl', text: s.label }),
-        h('div', { class: 'si', text: d?.icon ?? s.icon }),
+        id && d ? itemIcon(id, d.icon, 'si', 'div') : h('div', { class: 'si', text: s.icon }),
         h('div', { class: 'sn', text: d?.name ?? 'Empty' }),
       );
       el.addEventListener('click', () => {
@@ -131,7 +132,7 @@ export class InventoryPanel extends Panel {
           }),
         );
       }
-      list.appendChild(h('div', { class: 'row item-row', data: { item: id } }, h('span', { class: 'bi', text: d.icon }), h('div', { class: 'grow' }, h('div', { class: 'h3', text: `${d.name}${n > 1 ? ` ×${n}` : ''}` }), h('div', { class: 'mute small', text: itemStatText(d) })), actions));
+      list.appendChild(h('div', { class: 'row item-row', data: { item: id } }, itemIcon(id, d.icon, 'bi', 'span'), h('div', { class: 'grow' }, h('div', { class: 'h3', text: `${d.name}${n > 1 ? ` ×${n}` : ''}` }), h('div', { class: 'mute small', text: itemStatText(d) })), actions));
     }
     wrap.appendChild(list);
     fill(this.body, wrap);

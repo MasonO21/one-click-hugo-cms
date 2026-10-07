@@ -10,7 +10,7 @@ import { bagEntries } from '../core/bag';
 import { h, type Child } from './dom';
 import { rewardParts, RARITY_COLOR, type RewardPart } from './logic/rewards';
 import { portraitSvg } from './logic/colonist';
-import { iconEl, professionArt, professionIcon, resIcon } from './art';
+import { iconEl, itemIcon, professionArt, professionIcon, resIcon } from './art';
 
 export interface BtnOpts {
   label?: Child;
@@ -55,7 +55,7 @@ export function resChip(data: DataRegistry, id: string, amount: number, have?: n
 }
 
 /**
- * Item-ingredient chips ("🧩 ×2 Machine Parts"), red when the player holds fewer than needed. Appended to
+ * Item-ingredient chips (icon + "2× Machine Parts"), red when the player holds fewer than needed. Appended to
  * `into` (e.g. a costChips row) or returned in their own row. Recipes with `itemInputs` need these, or a
  * Craft button looks affordable while it isn't.
  */
@@ -65,7 +65,7 @@ export function itemChips(data: DataRegistry, items: Record<string, number> | nu
     if (!(n > 0)) continue;
     const d = data.item(id);
     const bad = (have[id] ?? 0) < n;
-    wrap.appendChild(h('span', { class: 'chip' + (bad ? ' bad' : ''), title: `${d?.name ?? id} (you have ${have[id] ?? 0})` }, h('i', { text: d?.icon ?? '🧩' }), `${n}× ${d?.name ?? id}`));
+    wrap.appendChild(h('span', { class: 'chip' + (bad ? ' bad' : ''), title: `${d?.name ?? id} (you have ${have[id] ?? 0})` }, itemIcon(id, d?.icon ?? '🧩'), `${n}× ${d?.name ?? id}`));
   }
   return wrap;
 }
@@ -95,7 +95,7 @@ export function rewardChips(data: DataRegistry, reward: Reward | null | undefine
   return wrap;
 }
 
-/** Icon of a reward part: the illustration for resources / Nova, the emoji for everything else. */
+/** Icon of a reward part: the illustration for resources / Nova / items, the emoji for everything else. */
 export function partIcon(p: Pick<RewardPart, 'art' | 'icon'>, cls = '', tag = 'i'): HTMLElement {
   return iconEl(p.art, p.icon, cls, tag);
 }

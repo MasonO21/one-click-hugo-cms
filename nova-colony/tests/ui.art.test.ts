@@ -7,10 +7,11 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createDataRegistry } from '../src/data';
-import { alienArt, biomeArt, eventArt, isArtSrc, keyArt, professionArt, resourceArt, rewardArt, shopArt, tierArt } from '../src/ui/art';
-import { rewardParts } from '../src/ui/logic/rewards';
+import { alienArt, biomeArt, eventArt, isArtSrc, itemArt, itemArtIds, keyArt, professionArt, resourceArt, rewardArt, shopArt, tierArt } from '../src/ui/art';
+import { itemToast, rewardParts } from '../src/ui/logic/rewards';
 import { buildingEffects } from '../src/ui/logic/describe';
 import { threatGroups } from '../src/ui/hud/Threats';
+import { makeGame } from './world.helpers';
 
 const data = createDataRegistry();
 const PUBLIC = path.resolve(__dirname, '..', 'public');
@@ -82,6 +83,23 @@ describe('ui art lookups', () => {
     }
   });
 
+  it('every item has an icon file', () => {
+    expect(data.items.length).toBeGreaterThan(0);
+    for (const it of data.items) {
+      const url = itemArt(it.id);
+      expect(url, `item ${it.id}`).not.toBeNull();
+      expect(url, `item ${it.id}`).toBe(`art/items/${it.id}.webp`);
+      expect(exists(url), `${it.id} -> ${url}`).toBe(true);
+    }
+  });
+
+  it('the item art ids match the item data exactly, and public/art/items has no orphans', () => {
+    expect([...itemArtIds()].sort()).toEqual(data.items.map((i) => i.id).sort());
+    const files = fs.readdirSync(path.join(PUBLIC, 'art', 'items'));
+    const wanted = data.items.map((i) => `${i.id}.webp`).sort();
+    expect(files.sort()).toEqual(wanted);
+  });
+
   it('reward and key art exist', () => {
     for (const id of ['victory_chest', 'supply_crate', 'daily_gift']) expect(exists(rewardArt(id)), id).toBe(true);
     expect(exists(keyArt(false))).toBe(true);
@@ -96,10 +114,12 @@ describe('ui art lookups', () => {
     expect(eventArt('parade')).toBeNull();
     expect(shopArt('nope')).toBeNull();
     expect(rewardArt('nope')).toBeNull();
+    expect(itemArt('unobtainium_axe')).toBeNull();
+    expect(itemArt('')).toBeNull();
   });
 
   it('URLs are relative (vite base "./", Capacitor) and recognised as art', () => {
-    for (const url of [resourceArt('wood'), professionArt('cook'), alienArt('crawler'), tierArt(0), shopArt('nova_starter_pack')]) {
+    for (const url of [resourceArt('wood'), professionArt('cook'), alienArt('crawler'), tierArt(0), shopArt('nova_starter_pack'), itemArt('medkit')]) {
       expect(url!.startsWith('/')).toBe(false);
       expect(url!.startsWith('art/')).toBe(true);
       expect(isArtSrc(url)).toBe(true);
@@ -120,6 +140,7 @@ describe('ui art lookups', () => {
     for (const e of data.worldEvents) add(eventArt(e.kind));
     for (const p of data.products) add(shopArt(p.id));
     for (const id of ['victory_chest', 'supply_crate', 'daily_gift']) add(rewardArt(id));
+    for (const it of data.items) add(itemArt(it.id));
     add(keyArt(false));
     add(keyArt(true));
     const root = path.join(PUBLIC, 'art');
@@ -131,13 +152,13 @@ describe('ui art lookups', () => {
       }
     };
     walk(root);
-    expect(files.length).toBeGreaterThanOrEqual(77);
+    expect(files.length).toBeGreaterThanOrEqual(77 + data.items.length);
     expect(files.filter((f) => !used.has(f))).toEqual([]);
   });
 });
 
 describe('ui art wiring helpers', () => {
-  it('reward parts carry resource / Nova art, other kinds keep their emoji', () => {
+  it('reward parts carry resource / Nova / item art, other kinds keep their emoji', () => {
     const parts = rewardParts({ resources: { wood: 20, titanium: 1 }, nova: 5, rp: 3, xp: 2, items: { bandage: 1 } }, data);
     expect(parts[0].art).toBe(resourceArt('wood'));
     expect(parts[1].art).toBe(resourceArt('titanium'));
@@ -145,7 +166,73 @@ describe('ui art wiring helpers', () => {
     expect(nova.art).toBe(resourceArt('nova'));
     expect(parts.find((p) => p.kind === 'rp')!.art).toBeNull();
     expect(parts.find((p) => p.kind === 'xp')!.art).toBeNull();
-    expect(parts.find((p) => p.kind === 'item')!.art).toBeNull();
+    const item = parts.find((p) => p.kind === 'item')!;
+    expect(item.art).toBe(itemArt('bandage'));
+    expect(item.icon).toBe(data.item('bandage')!.icon);
+    expect(item.amount).toBe('×1');
+  });
+
+  it('an item without art keeps its emoji in reward parts', () => {
+    const [p] = rewardParts({ items: { not_an_item: 2 } }, data);
+    expect(p.kind).toBe('item');
+    expect(p.art).toBeNull();
+    expect(p.icon).toBe('🎁');
+  });
+
+  it('every item in a real reward (missions, packs, season, daily, spin) resolves to art', () => {
+    const rewards = [
+      ...data.missions.map((m) => m.reward),
+      ...data.products.map((p) => p.grants),
+      ...data.spinSegments.map((s) => s.reward),
+      ...data.dailyRewards,
+      ...data.season.levels.flatMap((l) => [l.free, l.premium]),
+    ];
+    let items = 0;
+    for (const r of rewards) {
+      for (const part of rewardParts(r, data)) {
+        if (part.kind !== 'item') continue;
+        items++;
+        expect(part.art, part.label).not.toBeNull();
+      }
+    }
+    expect(items).toBeGreaterThan(10);
+  });
+
+  it('item toasts ("Crafted X!", "<icon> X opened!") get the item illustration', () => {
+    const med = itemToast('Crafted Medkit!', data)!;
+    expect(med).toEqual({ text: 'Crafted Medkit!', icon: itemArt('medkit') });
+    const crate = data.item('supply_crate')!;
+    expect(itemToast(`${crate.icon} ${crate.name} opened!`, data)).toEqual({ text: `${crate.name} opened!`, icon: itemArt('supply_crate') });
+    // every craftable item and every consumable / crate maps to its own illustration
+    for (const r of data.recipes) {
+      const id = r.outputs.items ? Object.keys(r.outputs.items)[0] : null;
+      if (id) expect(itemToast(`Crafted ${r.name}!`, data)?.icon, r.id).toBe(itemArt(id));
+    }
+    for (const d of data.items.filter((i) => i.use)) {
+      expect(itemToast(`${d.icon} ${d.name} opened!`, data)?.icon, d.id).toBe(itemArt(d.id));
+    }
+    // other text (and non-item crafts) is left alone
+    expect(itemToast('Crafted Nothing Special!', data)).toBeNull();
+    expect(itemToast('Researched Stone Tools!', data)).toBeNull();
+    expect(itemToast('🎁 Supply crate opened!', data)).toBeNull();
+    expect(itemToast('Backpack full!', data)).toBeNull();
+  });
+
+  it('the sim phrases its item toasts the way itemToast expects', () => {
+    const { game, step } = makeGame();
+    const seen: string[] = [];
+    game.bus.on('ui:toast', (e) => seen.push(e.text));
+    game.sys.economy.add('fiber', 100, 'gather');
+    expect(game.sys.crafting.craft('r_bandage')).not.toBeNull();
+    step(10);
+    game.sys.player.addItem('supply_crate');
+    expect(game.sys.player.useItem('supply_crate')).toBe(true);
+    const crafted = seen.find((t) => t.startsWith('Crafted'));
+    const opened = seen.find((t) => t.includes('opened!'));
+    expect(crafted, seen.join(' | ')).toBeDefined();
+    expect(opened, seen.join(' | ')).toBeDefined();
+    expect(itemToast(crafted!, data)?.icon).toBe(itemArt('bandage'));
+    expect(itemToast(opened!, data)?.icon).toBe(itemArt('supply_crate'));
   });
 
   it('building effect tags for production carry the resource icon', () => {

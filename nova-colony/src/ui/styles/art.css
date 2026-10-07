@@ -818,6 +818,40 @@
   font-size: 2em;
 }
 
+/* ---------- items: equipment slots, inventory / recipe rows (the illustration replaces the emoji) ---------- */
+.slot-card .si.aico {
+  width: 3.3em;
+  height: 3.3em;
+  margin: -0.1em 0 -0.05em;
+  font-size: 1em;
+}
+.slot-card .si.aico.emoji {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.9em;
+  line-height: 1.1;
+}
+.item-row .aico.bi,
+.recipe .aico.bi,
+.qrow .aico.bi {
+  width: 3em;
+  height: 3em;
+}
+/* the factory recipe picker: a tab's icon box stays text-sized so the pills keep their height */
+.recipe-list .tab .aico {
+  width: 1.5em;
+  height: 1.5em;
+  margin: -0.15em 0;
+}
+.recipe-list .tab .aico.emoji {
+  width: auto;
+  height: auto;
+  min-width: 1.25em;
+  margin: 0;
+}
+
 /* Titanium sparkles */
 .cb-spark {
   position: absolute;

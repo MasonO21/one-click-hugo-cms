@@ -39,7 +39,7 @@ import { ConsentPrompt } from './ConsentPrompt';
 import { Threats } from './hud/Threats';
 import { alienArt, biomeArt, eventArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
-import { RARITY_COLOR } from './logic/rewards';
+import { itemToast, RARITY_COLOR } from './logic/rewards';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -552,7 +552,7 @@ export class UI {
     return {};
   }
 
-  /** Toast text + icon with illustration: a colonist joining shows their portrait, world events their art. */
+  /** Toast text + icon with illustration: a colonist joining shows their portrait, world events and items their art. */
   private artToast(text: string, icon?: string): { text: string; icon?: string } {
     const g = this.game;
     const m = /^(.+?) joined (?:the|your) colony!$/.exec(text);
@@ -566,7 +566,7 @@ export class UI {
       const src = eventArt(d.kind);
       if (src && text.startsWith(lead)) return { text: text.slice(d.icon.length + 1), icon: src };
     }
-    return { text, icon };
+    return itemToast(text, g.data) ?? { text, icon };
   }
 
   private installGlobalHandlers(): void {
