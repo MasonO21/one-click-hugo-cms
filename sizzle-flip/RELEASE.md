@@ -11,14 +11,18 @@ Everything in the code is release-ready. What is left needs **your** accounts, k
 | Contact email for the privacy policy | `src/privacy.js` → `PRIVACY_CONTACT` |
 | If the game is aimed at children under 13 | `src/ads-config.js` → `childDirected: true` (and Play's Families policy applies) |
 
-**Shop (in-app purchases).** There are 131 one-time products:
+**Shop (in-app purchases).** Players buy **Hot Dogs**, the in-game currency, and spend them on characters (🌭100 each) and bundles. The store products are the six Hot Dog packs, all **consumable**:
 
-- the 130 characters, with ids `item_<name>` (for example `item_butter`) at $1.00 each;
-- the **Everything Bundle**, `bundle_all`, at $9.99. It unlocks every character, including ones you add in later updates.
+| Product id | Hot Dogs | US price |
+|---|---|---|
+| `hotdogs_100` | 100 | $0.99 |
+| `hotdogs_500` | 500 | $4.99 |
+| `hotdogs_1000` | 1,000 | $9.99 |
+| `hotdogs_2500` | 2,500 | $24.99 |
+| `hotdogs_5000` | 5,000 | $49.99 |
+| `hotdogs_10000` | 10,000 | $99.99 |
 
-The full list, with titles, descriptions, prices and shop tabs, is in `store/iap-products.csv`. The ids are fixed in code, so create them in the store consoles exactly as listed (sections 3 and 4). Prices are set only in the consoles: change them there and the game shows each store's localized price.
-
-Creating 131 products by hand takes a while. Both consoles also have APIs for this (Google Play Developer API → monetization.onetimeproducts, and the App Store Connect API → inAppPurchases) if you'd rather script it.
+They are defined in `src/shop-config.js` (with the character price and the 20% bundle discount) and listed in `store/iap-products.csv`. `tools/create-store-products.mjs` creates them in both stores for you (sections 3 and 4). The game shows each store's localized price.
 
 Test mode (test ads plus the **Settings → Ad testing** panel) switches off by itself once no Google test id is left.
 
@@ -56,12 +60,16 @@ keyPassword=…
 
 **Shop products in Google Play.**
 1. Set up a payments profile (Play Console → Setup → Payments profile).
-2. Upload a first build with the shop to a testing track. Play only lets you add products to an app that uses billing; the billing permission is already included through the purchases plugin.
-3. Go to **Monetize → Products → One-time products** and create the 131 products from `store/iap-products.csv`:
-   - same product id,
-   - the title and description from the file,
-   - price **US$1.00** (the bundle: US$9.99), with "convert" for other countries,
-   - then **Activate** each one.
+2. Upload a first build to a testing track (internal testing is enough). Play only accepts products for an app that uses billing; the billing permission is already included through the purchases plugin.
+3. Create the six Hot Dog packs with the script:
+   - In Google Cloud (any project): enable the **Google Play Android Developer API**, create a **service account** and download a **JSON key** for it.
+   - In Play Console → **Users and permissions**: invite the service account's email address and give it **Manage store presence** for Sizzle Flip.
+   - Run:
+     ```bash
+     PLAY_SERVICE_ACCOUNT=~/keys/play-service-account.json node tools/create-store-products.mjs --play
+     ```
+     Each pack is created with its US price, Play converts it for every other country, and the pack is activated. It's safe to run again (after changing a price in `src/shop-config.js`, for example).
+   - Or by hand: **Monetize with Play → Products → One-time products**, one product per row of `store/iap-products.csv` (same id, title and description, the US price with "convert" for other countries), then **Activate**.
 4. To make free test purchases, add your Google account under **Setup → License testing**.
 
 **Build the bundle:** run `cd android && ./gradlew bundleRelease`. The output is `android/app/build/outputs/bundle/release/app-release.aab`. Enrol in **Play App Signing** when you upload it.
@@ -72,7 +80,7 @@ keyPassword=…
 
 - **App category:** Game → Casual.
 - **Contains ads:** Yes.
-- **In-app purchases:** Yes, optional cosmetic characters. Payment data is handled by Google Play, so nothing extra goes in Data safety. In the IARC questionnaire, answer "yes" to digital purchases.
+- **In-app purchases:** Yes: Hot Dogs, an in-game currency for optional cosmetic characters. Payment data is handled by Google Play, so nothing extra goes in Data safety (purchase history stays on the device). In the IARC questionnaire, answer "yes" to digital purchases.
 - **Advertising ID:** Yes, used for Advertising or marketing. The permission is already in the manifest.
 - **Data safety:**
   - Data is collected and shared by the AdMob SDK:
@@ -83,7 +91,7 @@ keyPassword=…
   - Data is encrypted in transit: Yes.
   - Users can't request deletion of data held by Google (it is tied to the resettable advertising ID). Game progress never leaves the device.
 - **Target audience:** 13+ recommended (otherwise set `childDirected: true`, see section 1).
-- **Content rating (IARC):** cartoon slapstick with no violence, gambling, user content or purchases. Expect Everyone / PEGI 3.
+- **Content rating (IARC):** cartoon slapstick with no violence, gambling or user content; digital purchases: yes. Expect Everyone / PEGI 3, with an "In-app purchases" notice.
 - **Store listing:** use the text in `store/listing.md`, the screenshots in `store/play/` (1080×1920), the icon `icons/play-icon-512.png` and the feature graphic `icons/feature-1024x500.png`.
 - **Closed testing first:** a new *personal* developer account must run a closed test with at least 12 testers for 14 days before production access is granted.
 
@@ -99,6 +107,7 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 - `GADApplicationIdentifier`: your iOS AdMob app id.
 - `NSUserTrackingUsageDescription`: "Your data will be used to show you more relevant ads."
 - `SKAdNetworkItems`: Google's list from the AdMob iOS quick-start.
+- `SKIncludeConsumableInAppPurchaseHistory`: `YES` (Boolean). StoreKit then keeps finished Hot Dog purchases in the transaction history, so a purchase is still credited if it completes while the app is closed (iOS 18+). The game credits each transaction only once.
 
 **Then:**
 
@@ -109,10 +118,17 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 
 - **Shop products:**
   1. Sign the **Paid Apps** agreement and add your banking and tax details (Business section).
-  2. Under the app → **Monetization → In-App Purchases**, create the 131 products from `store/iap-products.csv` as **Non-Consumable**: same product id, display name and description, price **$0.99** (Apple's standard first tier; choose $1.00 instead if your price list offers it). Set the bundle to **$9.99**.
-  3. Each product needs a review screenshot. Use `store/iap-review.jpg` for all of them.
-  4. Submit the products together with the app version.
-  5. For testing, use Sandbox testers (Users and Access → Sandbox).
+  2. Create the app in App Store Connect (bundle id `com.sizzleflip.game`) if it doesn't exist yet.
+  3. Create an API key: **Users and Access → Integrations → App Store Connect API**, role **App Manager**. Note the key id and the issuer id, and download the `AuthKey_….p8` file (only possible once).
+  4. Create the six packs:
+     ```bash
+     ASC_KEY_ID=ABC123DEFG ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx ASC_KEY_FILE=~/keys/AuthKey_ABC123DEFG.p8 \
+       node tools/create-store-products.mjs --apple
+     ```
+     Each pack is created as a **Consumable** with its English name and description, the US price (Apple sets the other countries from it), availability in every country and the review screenshot (`store/iap-review.jpg`, the Get Hot Dogs window). It ends in *Ready to Submit*. Safe to run again.
+     Or by hand: **Monetization → In-App Purchases → +**, type **Consumable**, one per row of `store/iap-products.csv`, with `store/iap-review.jpg` as the review screenshot.
+  5. New in-app purchases are reviewed with an app version: on the version page, under **In-App Purchases and Subscriptions**, select the six packs before you submit.
+  6. For testing, use Sandbox testers (Users and Access → Sandbox).
 
 - **Icon:** `icons/ios-icon-1024.png` (opaque).
 - **Screenshots:** `store/ios/` (1290×2796).
@@ -129,7 +145,8 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 - [ ] Install the release build on a real phone:
   - The consent form appears (use a VPN to an EU country, or AdMob's test-device geography setting).
   - After level 5 and 5 minutes of play, a forced ad appears on NEXT.
-  - A test purchase works with a license tester (Android) or a Sandbox tester (iOS), and **Restore** brings items back after reinstalling.
+  - With a license tester (Android) or a Sandbox tester (iOS): buy a pack, check the Hot Dogs arrive once, buy a character and a bundle with them, and buy the same pack a second time (it must be allowed: that shows it was consumed).
+  - Force-quit the app right after paying for a pack, reopen it: the Hot Dogs arrive at launch, once.
   - Hints, skip and the long aim guide show reward ads.
   - Back works on every screen.
 - [ ] Test ads are gone (real ads may take a few hours to start serving after the app is linked in AdMob).
@@ -140,8 +157,9 @@ npx cap add ios && npx cap sync ios && npx cap open ios
 - **Every stored route** replays and wins under the game's launch rule (only from rest), and holds up under human-sized error: `tools/qa.mjs`.
 - **Shop:**
   - All 130 characters are drawn over the sausage's own physics body, so the hitbox, mass and bounce are identical. All 200 levels were played through the real game with a different character on each level, cycling through all 130: `tools/e2e-all.mjs --items`.
-  - Tabs, the Everything Bundle, buying, equipping, the Locker, reloads, "Reset progress" (which keeps purchases) and the test store are covered by `tools/e2e-shop.mjs`.
-  - Store billing (localized prices, pending payments, cancels, store errors, restore, refunds, the bundle) is covered with a mocked plugin in `tools/e2e-native.mjs`.
+  - Hot Dogs, the six packs, characters at 🌭100, every tab's bundle and the Everything Bundle priced in proportion to what they unlock (including partly owned tabs), the "not enough Hot Dogs" flow, equipping, the Locker, reloads, "Reset progress" (which keeps Hot Dogs and characters) and the test store are covered by `tools/e2e-shop.mjs` (56 checks).
+  - Store billing with Google Play and StoreKit behaviour mocked: localized prices, purchases credited once and only then consumed or finished, a purchase interrupted before it was credited, a consume that fails, pending payments, Ask to Buy, cancels, store errors, refunds, and the wallet coming back from native storage after the web view's storage is cleared: `tools/e2e-native.mjs`.
+  - The product-creation script against a mock of both store APIs (signed requests, bodies, pagination, the screenshot upload, nothing duplicated on a second run): `tools/test-store-products.mjs`.
 - **Ads:**
   - The pacing rules, reward ads, skip and the long aim guide in the browser: `tools/e2e-ads.mjs`, 42 checks.
   - The native AdMob event handling (an early close, failure to show, no-fill retries, consent and privacy options) and the Android back button on every screen, using mocked plugins: `tools/e2e-native.mjs`, 24 checks.

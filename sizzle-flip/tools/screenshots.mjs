@@ -34,10 +34,15 @@ for (const [lvl, name] of shots) {
   await snap(`screenshot-${n++}-${name}`);
   await page.mouse.up();
 }
-// the shop (also used as the App Store in-app purchase review screenshot)
+// the shop
 await page.evaluate(() => { const a = window.__app; a.toMenu('scr-title'); a.ui.show('scr-shop'); });
 await page.waitForTimeout(800);
 await snap(`screenshot-${n++}-shop`);
-if (profile === 'ios') await page.screenshot({ path: 'store/iap-review.jpg', type: 'jpeg', quality: 90 });
+// the Hot Dog packs (the in-app purchases): App Store review screenshot for every pack
+if (profile === 'ios') {
+  await page.evaluate(() => window.__app.ui.openPacks());
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: 'store/iap-review.jpg', type: 'jpeg', quality: 90 });
+}
 await browser.close();
 console.log('done');

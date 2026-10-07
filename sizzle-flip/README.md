@@ -10,7 +10,7 @@ Inspired by the one-button chaos of *a weird game about sausage*, rebuilt for ph
 |---|---|
 | **Platforms** | iOS & Android (installable PWA, works offline) · Capacitor native shell for the App Store / Play Store · any desktop browser |
 | **Controls** | Drag back anywhere, aim with the trajectory guide, release to flip. Land on things, flip again. |
-| **Content** | 10 worlds × 20 levels, 600 stars, 12 unlockable sausage skins, 17 trophies, route hints, per-level par & best scores |
+| **Content** | 10 worlds × 20 levels, 600 stars, 12 unlockable sausage skins, 130 shop characters, 17 trophies, route hints, per-level par & best scores |
 | **Tech** | Vanilla JS + Canvas 2D, custom deterministic soft-body physics, procedural vector art, synthesized audio — zero image/audio assets |
 
 ## The worlds
@@ -42,12 +42,12 @@ Dev URL flags: `?level=37` jump to a level · `?debug` collision overlay + all w
 
 ```bash
 npm run dev &               # serve on :8123, then:
-npm test                    # e2e-ads, e2e-native, e2e-shop, e2e-recover, e2e-all (plays all 200 levels)
+npm test                    # e2e-ads, e2e-native, e2e-shop, e2e-recover, store-products script, e2e-all (plays all 200 levels)
 node tools/qa.mjs           # every route replayed with human-sized error
 npm run release:check       # pre-publish gate (see RELEASE.md)
 ```
 
-`tools/e2e-all.mjs` plays every level through the real game: each stored route is fed through the game's own touch handlers at the exact physics step the solver used, then NEXT, the world-complete cards and forced ads are handled through the real UI. `tools/e2e-native.mjs` mocks the Capacitor plugins (AdMob event semantics, Android back button) to test the app-only code paths.
+`tools/e2e-all.mjs` plays every level through the real game: each stored route is fed through the game's own touch handlers at the exact physics step the solver used, then NEXT, the world-complete cards and forced ads are handled through the real UI. `tools/e2e-native.mjs` mocks the Capacitor plugins (AdMob event semantics, Android back button, Google Play and StoreKit billing) to test the app-only code paths.
 
 ## Native app store builds (Capacitor)
 
@@ -60,7 +60,7 @@ cd android && ./gradlew bundleRelease   # signed AAB (with android/keystore.prop
 npx cap add ios && npx cap open ios     # on macOS with Xcode → Archive → App Store Connect
 ```
 
-Native extras are wired in automatically when running inside Capacitor: real haptics (`@capacitor/haptics`), a hidden status bar (`@capacitor/status-bar`), the Android back button (`@capacitor/app`) and AdMob.
+Native extras are wired in automatically when running inside Capacitor: real haptics (`@capacitor/haptics`), a hidden status bar (`@capacitor/status-bar`), the Android back button (`@capacitor/app`), AdMob, store billing (`@capgo/native-purchases`) and native storage for the wallet (`@capacitor/preferences`).
 
 ## Ads
 
@@ -93,7 +93,22 @@ Google's public test ids are configured now, so a debug build shows real test ad
 
 ## Shop
 
-130 cosmetic characters, from a stick of butter to a dragon, sit in seven shop tabs: Food, Sweets, Stuff, Rides, Critters, Party and Colors, plus an Owned tab. Each costs $1 as a one-time in-app purchase (`src/shop.js`), and the **Everything Bundle** ($9.99) unlocks all of them, including future ones. The characters are defined in `src/art/items.js` (the first 30) and `src/art/items-more.js` (100 more), and drawn by `src/art/itemkit.js` over the sausage's own soft-body particle chain: a width profile along the same centreline, painted details, attachments (stems, sticks, wheels, fins, wings) and the same expressive face. The physics, and so every level, are unchanged. In the app, purchases go through Google Play Billing or StoreKit (`@capgo/native-purchases`), are acknowledged automatically, and are restored from the store at launch and with **Restore**. Test builds use a clearly labelled test store. The plain web build shows the items as "In the app". `tools/items-gallery.html` shows every item in three poses.
+130 cosmetic characters, from a stick of butter to a dragon, sit in seven shop tabs: Food, Sweets, Stuff, Rides, Critters, Party and Colors, plus Bundles and Owned. They're unlocked with **Hot Dogs** 🌭, the in-game currency:
+
+| | |
+|---|---|
+| Hot Dogs | Bought with real money in six packs: 100 ($0.99), 500, 1,000, 2,500, 5,000 and 10,000 ($99.99). **$1 = 100 Hot Dogs** |
+| A character | 🌭100, so still $1 |
+| A tab's bundle | Every character of that tab, 20% off, priced by how many of them the player is still missing: Food (27) 🌭2,160, Sweets (21) 🌭1,680, Stuff (31) 🌭2,480, Rides (9) 🌭720, Critters (17) 🌭1,360, Party (12) 🌭960, Colors (13) 🌭1,040. Offered while at least 2 are missing |
+| Everything Bundle | All 130 at the same rate: 🌭10,400 (less for each character already owned) |
+
+All of these numbers live in `src/shop-config.js`. Spending asks for confirmation; if the player is short, the Get Hot Dogs window opens with the smallest pack that covers it highlighted, and after buying it the item is offered right away.
+
+**Store billing** (`src/shop.js`, `@capgo/native-purchases`): the packs are consumable products. Each purchase is credited once, keyed by its store transaction id, and only then consumed (Android) or finished (iOS). A purchase interrupted at any point (app killed, connection lost, a pending payment that clears later, an Ask to Buy approval) is credited at the next launch, app resume or shop visit, never twice. iOS refunds take the Hot Dogs back. The wallet (balance, characters, credited purchases) lives on the device, in the save and in a native copy (`@capacitor/preferences`) that brings it back if the OS clears the web view's storage. Test builds use a clearly labelled test store; the plain web build shows the characters as "In the app".
+
+**Creating the store products:** `node tools/create-store-products.mjs --play --apple` creates or updates the six packs in Google Play and App Store Connect through their APIs (credentials and steps: [RELEASE.md](RELEASE.md)). `--dry-run` shows what it would do; `node tools/test-store-products.mjs` tests it against a mock of both APIs.
+
+**The characters** are defined in `src/art/items.js` (the first 30) and `src/art/items-more.js` (100 more), and drawn by `src/art/itemkit.js` over the sausage's own soft-body particle chain: a width profile along the same centreline, painted details, attachments (stems, sticks, wheels, fins, wings) and the same expressive face. The physics, and so every level, are unchanged. `tools/items-gallery.html` shows every character in three poses.
 
 ## How the levels are made (and why they're all beatable)
 
@@ -128,13 +143,14 @@ src/art/                    procedural vector art: sausage + face, props per wor
 src/audio.js                synthesized SFX + per-world procedural music
 src/ads.js                  ad pacing rules, AdMob + placeholder providers
 src/ads-config.js           AdMob ids (edit before release)
-src/shop.js                 shop: store billing / test store, ownership, equip
+src/shop.js                 shop: Hot Dogs wallet, store billing / test store, bundles, equip
+src/shop-config.js          shop prices: Hot Dog packs, character price, bundle discount
 src/art/itemkit.js          shop character renderer (art only — same physics body as the sausage)
 src/art/items.js            shop characters 1–30, tabs; items-more.js: 100 more
 src/privacy.js              privacy policy (in-app + dist/privacy.html)
 src/levels/data.js          the 200 generated & verified levels
 tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon & screenshot renderers
-store/                      listing.md (store text), ios/ (1290×2796) and play/ (1080×1920) screenshots; icons/ has store icons + feature graphic
+store/                      listing.md (store text), iap-products.csv (the packs), ios/ (1290×2796) and play/ (1080×1920) screenshots; icons/ has store icons + feature graphic
 android/                    Capacitor Android project
 ```
 

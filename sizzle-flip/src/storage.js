@@ -9,7 +9,10 @@ const defaults = () => ({
   unlocked: 1,      // number of unlocked levels (sequential)
   skin: 'classic',
   character: 'sausage', // equipped character: 'sausage' (with `skin`) or a shop item id
-  owned: {},        // shop item id -> { at, source } (purchases; restored from the store in the app)
+  owned: {},        // shop item id -> { at, source } (unlocked with Hot Dogs)
+  hotdogs: 0,       // Hot Dogs balance (shop currency, bought with real money in packs)
+  txSeen: {},       // store transaction id -> { p: product, n: Hot Dogs, f: finished, r: refunded } — credits each purchase once
+  walletRev: 0,     // bumped on every wallet change; the newer of this save and the app's backup copy wins
   sfx: true,
   music: true,
   haptics: true,
@@ -24,6 +27,8 @@ const defaults = () => ({
   adFast: false,
 });
 
+const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+
 export function loadSave() {
   try {
     const raw = localStorage.getItem(KEY);
@@ -31,7 +36,7 @@ export function loadSave() {
     const d = JSON.parse(raw);
     const base = defaults();
     delete d.longAim; // was a free toggle before it became a reward
-    return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, owned: d.owned && typeof d.owned === 'object' ? d.owned : {}, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
+    return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, owned: obj(d.owned), txSeen: obj(d.txSeen), hotdogs: Number.isFinite(d.hotdogs) && d.hotdogs > 0 ? Math.floor(d.hotdogs) : 0, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
   } catch (e) {
     return defaults();
   }

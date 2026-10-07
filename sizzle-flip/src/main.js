@@ -305,8 +305,8 @@ class App {
 
   resetProgress() {
     const keep = this.save;
-    // purchases (shop items, "remove ads"), ad pacing and the long aim timer survive a progress reset
-    this.save = { ...resetSave(), sfx: keep.sfx, music: keep.music, haptics: keep.haptics, adsRemoved: keep.adsRemoved, adFast: keep.adFast, longAimUntil: keep.longAimUntil, owned: keep.owned, character: keep.character, ads: keep.ads ? { ...keep.ads, freeHints: {} } : null };
+    // the wallet (Hot Dogs, characters, credited purchases), "remove ads", ad pacing and the long aim timer survive a progress reset
+    this.save = { ...resetSave(), sfx: keep.sfx, music: keep.music, haptics: keep.haptics, adsRemoved: keep.adsRemoved, adFast: keep.adFast, longAimUntil: keep.longAimUntil, owned: keep.owned, character: keep.character, hotdogs: keep.hotdogs, txSeen: keep.txSeen, walletRev: keep.walletRev, ads: keep.ads ? { ...keep.ads, freeHints: {} } : null };
     this.persist();
     this.ui._worldsBuilt = false;
     document.getElementById('world-list').innerHTML = '';

@@ -10,6 +10,7 @@ import { LEVELS } from '../src/levels/data.js';
 import { makeSim } from './solver.mjs';
 import { PHYS } from '../src/physics.js';
 import { ITEMS } from '../src/art/items.js';
+import { PACKS, SKIN_PRICE, HOTDOGS_PER_DOLLAR, bundlePrice } from '../src/shop-config.js';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (f) => { try { return fs.readFileSync(path.join(root, f), 'utf8'); } catch (e) { return null; } };
@@ -50,15 +51,18 @@ LEVELS.forEach((L, i) => {
 if (LEVELS.length !== 200) fail(`expected 200 levels, found ${LEVELS.length}`);
 if (bad.length) fail(`level routes: ${bad.join(', ')}`); else ok('all 200 level routes win under the game rules');
 
-// --- shop: one-time products (every character + the Everything Bundle), ids valid for both stores, and the
-// product list handed to the store consoles matches the code
-const pids = [...ITEMS.map(i => 'item_' + i.id), 'bundle_all'];
-const badPid = pids.filter(p => !/^[a-z0-9][a-z0-9_.]{0,99}$/.test(p));
+// --- shop: characters are bought with Hot Dogs; Hot Dogs are consumable store products (packs) — ids valid
+// for both stores, $1 = 100 Hot Dogs, and the list handed to the store consoles matches the code
+const packIds = PACKS.map(p => p.id);
+const badPid = packIds.filter(p => !/^[a-z0-9][a-z0-9_.]{0,99}$/.test(p));
 const noCat = ITEMS.filter(i => !i.cat).map(i => i.id);
-if (new Set(pids).size !== pids.length || badPid.length || noCat.length) fail(`shop products: ${pids.length} ids, ${new Set(pids).size} unique${badPid.length ? ', invalid: ' + badPid.join(' ') : ''}${noCat.length ? ', no tab: ' + noCat.join(' ') : ''}`);
-else ok(`${ITEMS.length} characters + bundle = ${pids.length} shop products with valid ids`);
-const csv = (read('store/iap-products.csv') || '').split('\n').slice(1).filter(Boolean).map(l => l.split(',')[1]);
-if (csv.join() !== pids.join()) fail('store/iap-products.csv is out of date with src/art/items.js'); else ok('store/iap-products.csv lists every product');
+const offRate = PACKS.filter(p => Math.abs(Math.round(+p.usd) * HOTDOGS_PER_DOLLAR - p.hotdogs) > 0 || p.title.length > 35 || p.description.length > 55).map(p => p.id);
+if (new Set(packIds).size !== packIds.length || badPid.length || noCat.length || offRate.length || SKIN_PRICE !== HOTDOGS_PER_DOLLAR)
+  fail(`shop: ${packIds.length} packs${badPid.length ? ', invalid ids: ' + badPid.join(' ') : ''}${noCat.length ? ', no tab: ' + noCat.join(' ') : ''}${offRate.length ? ', check price/rate/text: ' + offRate.join(' ') : ''}${SKIN_PRICE !== HOTDOGS_PER_DOLLAR ? `, a character costs ${SKIN_PRICE} but $1 buys ${HOTDOGS_PER_DOLLAR}` : ''}`);
+else ok(`${PACKS.length} Hot Dog packs ($1 = ${HOTDOGS_PER_DOLLAR}), ${ITEMS.length} characters at ${SKIN_PRICE} each, bundles from ${bundlePrice(2)} to ${bundlePrice(ITEMS.length)}`);
+const csv = (read('store/iap-products.csv') || '').split('\n').slice(1).filter(Boolean).map(l => l.split(',').slice(0, 4).join());
+if (csv.join('|') !== PACKS.map(p => [p.id, 'consumable', p.hotdogs, p.usd].join()).join('|')) fail('store/iap-products.csv is out of date with src/shop-config.js — run node tools/create-store-products.mjs --csv');
+else ok('store/iap-products.csv lists every pack');
 
 // --- android project
 const vars = read('android/variables.gradle') || '';
@@ -74,6 +78,9 @@ const h = (s) => s && crypto.createHash('sha1').update(s).digest('hex');
 if (!dist) fail('dist/ not built — run npm run build');
 else if (h(dist) !== h(shipped)) fail('android web assets differ from dist/ — run npm run cap:sync');
 else ok('android web assets match the current build');
+const plugins = read('android/capacitor.settings.gradle') || '';
+const missingPlugins = ['capgo-native-purchases', 'capacitor-preferences', 'capacitor-community-admob'].filter(n => !plugins.includes(`':${n}'`));
+if (missingPlugins.length) fail(`android is missing native plugins: ${missingPlugins.join(', ')} — run npm run cap:sync`); else ok('android has the store, storage and AdMob plugins');
 if (!fs.existsSync(path.join(root, 'android/keystore.properties'))) warn('android/keystore.properties not found — release builds will be unsigned (see RELEASE.md)');
 else ok('release signing configured (android/keystore.properties)');
 try {
@@ -84,7 +91,7 @@ try {
 // --- iOS (only once the Xcode project exists)
 const plist = read('ios/App/App/Info.plist');
 if (plist === null) warn('ios/ not created yet (npx cap add ios on a Mac) — see RELEASE.md');
-else for (const k of ['GADApplicationIdentifier', 'NSUserTrackingUsageDescription', 'SKAdNetworkItems']) {
+else for (const k of ['GADApplicationIdentifier', 'NSUserTrackingUsageDescription', 'SKAdNetworkItems', 'SKIncludeConsumableInAppPurchaseHistory']) {
   if (!plist.includes(k)) fail(`ios Info.plist is missing ${k}`); else ok(`ios Info.plist has ${k}`);
 }
 

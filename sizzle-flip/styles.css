@@ -33,6 +33,7 @@ html, body {
 canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 #ui > * { pointer-events: auto; }
+#ui > .toast, #ui > .trophy-toast { pointer-events: none; } /* never block taps on what's under them */
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
@@ -261,14 +262,44 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .shop-tab .ti { font-size: 16px; }
 .shop-tab small { font-family: 'Fredoka'; font-weight: 700; font-size: 11px; background: rgba(58,34,22,0.12); border-radius: 8px; padding: 1px 6px; }
 .shop-tab.on { background: var(--mustard); box-shadow: 0 3px 0 var(--mustard-d), 0 3px 0 2px var(--ink); }
+.shop-bundle-slot { width: 100%; max-width: 560px; flex: none; }
 .shop-bundle { width: 100%; max-width: 560px; display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 8px 10px 8px 12px; border: 3px solid var(--ink); border-radius: 18px; background: linear-gradient(135deg, #fff6c8, #ffc93c); box-shadow: 0 5px 0 var(--mustard-d), 0 5px 0 3px var(--ink); flex: none; }
 .shop-bundle .sb-ico { font-size: 32px; }
 .shop-bundle .sb-txt { flex: 1; min-width: 0; }
 .shop-bundle b { display: block; font-family: 'Lilita One'; font-weight: 400; font-size: 20px; }
 .shop-bundle small { display: block; font-size: 12px; font-weight: 700; color: #8a5a10; }
 .shop-bundle .shop-btn { min-height: 44px; font-size: 18px; padding: 6px 12px; flex: none; }
+.shop-bundle.all { background: linear-gradient(135deg, #ffe3f1, #ff9ccb); box-shadow: 0 5px 0 #c4517f, 0 5px 0 3px var(--ink); }
+.shop-bundle.all small { color: #9a2e5c; }
+.shop-bundle.done { background: #f3f9ff; box-shadow: 0 5px 0 #b7cbe0, 0 5px 0 3px var(--ink); }
+.shop-bundle.done small { color: var(--sky-d); }
+.shop-bundle .sb-done { font-family: 'Lilita One'; font-size: 26px; color: var(--sky-d); padding: 0 8px; }
+.shop-grid.bundle-list { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.shop-grid.bundle-list .shop-bundle { margin: 0 0 6px; max-width: none; }
 .shop-note { margin: 0 0 6px; max-width: 520px; text-align: center; color: #fff; font-size: 14px; text-shadow: 0 1px 0 var(--ink), 0 0 8px rgba(0,0,0,0.5); padding: 0 8px; }
-.restore-btn { min-height: 40px; font-size: 14px; padding: 6px 12px; }
+/* Hot Dogs: balance pill (shop header) and the packs window */
+.hd-pill { display: inline-flex; align-items: center; gap: 4px; min-height: 42px; padding: 4px 6px 4px 10px; border: 3px solid var(--ink); border-radius: 999px; background: #fff6c8; color: var(--ink); font-family: 'Lilita One'; font-size: 19px; cursor: pointer; box-shadow: 0 4px 0 var(--mustard-d), 0 4px 0 2px var(--ink); white-space: nowrap; }
+.hd-pill:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--mustard-d), 0 1px 0 2px var(--ink); }
+.hd-pill[hidden] { display: none; }
+.hd-pill b { font-weight: 400; }
+.hd-pill .hd-plus { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--relish); color: #fff; border: 2px solid var(--ink); font-size: 18px; line-height: 1; }
+.hd-card { gap: 10px; padding: 22px 16px 16px; width: min(94vw, 440px); }
+.hd-card h3 { margin: 0; text-align: center; font-family: 'Lilita One'; font-weight: 400; font-size: 28px; }
+.hd-have { margin: 0; text-align: center; font-size: 17px; }
+.hd-have b { font-family: 'Lilita One'; font-weight: 400; font-size: 20px; }
+.hd-need { margin: 0; text-align: center; font-weight: 700; color: var(--ketchup-d); }
+.hd-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hd-pack { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 4px 0; border: 3px solid var(--ink); border-radius: 16px; background: #fff; color: var(--ink); font-family: 'Fredoka'; cursor: pointer; overflow: hidden; box-shadow: 0 4px 0 rgba(0,0,0,0.25); }
+.hd-pack:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+.hd-pack:disabled { opacity: 0.75; cursor: default; }
+.hd-pack.fit { background: #fff6c8; box-shadow: 0 0 0 3px var(--mustard), 0 4px 0 rgba(0,0,0,0.25); }
+.hd-pack .hp-ico { font-size: 22px; line-height: 1.2; min-height: 28px; white-space: nowrap; letter-spacing: -4px; }
+.hd-pack b { font-family: 'Lilita One'; font-weight: 400; font-size: 21px; }
+.hd-pack small { font-size: 11px; font-weight: 700; color: #8a7262; }
+.hd-pack .hp-price { align-self: stretch; margin-top: 5px; padding: 5px 2px; background: var(--relish); color: #fff; font-family: 'Lilita One'; font-size: 16px; text-shadow: 0 2px 0 var(--relish-d); border-top: 3px solid var(--ink); }
+.hd-pack:disabled .hp-price { background: #b8aa9a; text-shadow: none; }
+.hd-note { margin: 0; text-align: center; font-size: 12px; color: #8a7262; }
+@media (max-width: 350px) { .hd-grid { grid-template-columns: repeat(2, 1fr); } }
 .shop-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; cursor: default; }
 .shop-card .ds { font-size: 12px; color: #8a7262; min-height: 2.4em; line-height: 1.2; }
 .shop-card .shop-btn { min-height: 40px; font-size: 18px; padding: 6px 10px; margin-top: 2px; }
@@ -347,3 +378,4 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
   .menu-buttons .btn-big { min-height: 64px; font-size: 32px; }
   #logo { width: min(70vw, 400px); }
 }
+.nw { white-space: nowrap; }

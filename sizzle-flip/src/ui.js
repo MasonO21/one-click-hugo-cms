@@ -6,7 +6,11 @@ import { renderLevelThumb } from './thumbs.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { PRIVACY_HTML } from './privacy.js';
 import { ITEMS, ITEM_BY_ID, CATEGORIES, drawItem } from './art/items.js';
-import { BUNDLE } from './shop.js';
+import { ALL, fmt } from './shop.js';
+import { SKIN_PRICE, HOTDOGS_PER_DOLLAR, PACKS } from './shop-config.js';
+
+const PACK_ICONS = ['🌭', '🌭🌭', '🌭🌭🌭', '📦', '🛒', '🚚'];
+const hd = (n) => `🌭\u2060${fmt(n)}`; // an amount of Hot Dogs; the word joiner keeps the icon and the number on one line
 
 const $ = (id) => document.getElementById(id);
 
@@ -43,7 +47,7 @@ export class UI {
     if (id === 'scr-worlds') this.renderWorlds();
     if (id === 'scr-levels') this.renderLevels();
     if (id === 'scr-skins') this.renderSkins();
-    if (id === 'scr-shop') this.renderShop();
+    if (id === 'scr-shop') { this.renderShop(); this.app.shop.refresh(); }
     if (id === 'scr-settings') { this.syncToggles(); this.renderAim(); this.renderAdTest(); $('privacy-choices').hidden = !this.app.ads.privacyOptionsAvailable; }
   }
 
@@ -70,6 +74,7 @@ export class UI {
     if (app.ads.showing || this._leaving) return true;
     if (!$('scr-confirm').hidden) { this.action('confirm-no'); return true; }
     if (!$('scr-privacy').hidden) { this.action('privacy-close'); return true; }
+    if (!$('scr-hotdogs').hidden) { this.action('hotdogs-close'); return true; }
     if (!$('scr-worlddone').hidden) { this.action('wd-continue'); return true; }
     if (!$('scr-win').hidden) { this.action('levels'); return true; }
     if (!$('scr-pause').hidden) { this.action('resume'); return true; }
@@ -92,7 +97,8 @@ export class UI {
         break;
       case 'skins': this.show('scr-skins'); break;
       case 'shop': this.show('scr-shop'); break;
-      case 'restore': this.restorePurchases(); break;
+      case 'hotdogs': this.openPacks(); break;
+      case 'hotdogs-close': this.closePacks(); break;
       case 'shop-reset-test': app.shop.resetTestPurchases(); this.toast('Test purchases cleared'); break;
       case 'settings': this.show('scr-settings'); break;
       case 'back': { const prev = this.stack.pop() || 'scr-title'; this.show(prev, false); break; }
@@ -362,37 +368,43 @@ export class UI {
     const app = this.app, shop = app.shop;
     const grid = $('shop-grid');
     grid.innerHTML = '';
-    $('shop-restore').hidden = !shop.available;
+    $('shop-wallet').hidden = !shop.available;
+    $('shop-balance').textContent = fmt(shop.balance);
     $('shop-note').textContent = shop.available
-      ? 'Same size and bounce as the sausage — every level plays exactly the same.'
-      : 'Characters can be bought in the Sizzle Flip app. Same size and bounce as the sausage — every level plays the same.';
-    // Everything Bundle
-    const left = ITEMS.length - shop.ownedCount();
-    $('shop-bundle').hidden = !shop.available || shop.hasBundle || left === 0;
-    $('shop-bundle-sub').textContent = `All ${ITEMS.length} characters, plus every future one`;
-    $('shop-bundle-buy').querySelector('span').textContent = shop.price(BUNDLE);
-    if (!this._bundleBound) { this._bundleBound = true; $('shop-bundle-buy').addEventListener('click', (e) => { e.stopPropagation(); app.audio.play('click'); this.shopAction(BUNDLE, 'buy'); }); }
-    // tabs
-    const tabs = [...CATEGORIES.map(c => ({ ...c, n: ITEMS.filter(i => i.cat === c.id).length })), { id: 'owned', name: 'Owned', icon: '✓', n: shop.ownedCount() + 1 }];
+      ? `Every character is ${hd(SKIN_PRICE)}. Same size and bounce as the sausage, so every level plays exactly the same.`
+      : 'Characters can be unlocked in the Sizzle Flip app. Same size and bounce as the sausage, so every level plays the same.';
+    // tabs: the seven categories, all bundles, and what the player owns
+    const offers = [ALL, ...CATEGORIES.map(c => c.id)].map(b => shop.bundleOffer(b));
+    const tabs = [...CATEGORIES.map(c => ({ ...c, n: ITEMS.filter(i => i.cat === c.id).length })),
+      { id: 'bundles', name: 'Bundles', icon: '🎁', n: offers.filter(o => o.open).length },
+      { id: 'owned', name: 'Owned', icon: '✓', n: shop.ownedCount() + 1 }];
     if (!this.shopTab || !tabs.some(t => t.id === this.shopTab)) this.shopTab = 'food';
     const bar = $('shop-tabs');
     bar.innerHTML = '';
     for (const t of tabs) {
       const b = document.createElement('button');
       b.className = 'shop-tab' + (t.id === this.shopTab ? ' on' : '');
+      b.dataset.tab = t.id;
       b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t.id === this.shopTab);
       b.innerHTML = `<span class="ti">${t.icon}</span>${t.name}<small>${t.n}</small>`;
       b.addEventListener('click', (e) => { e.stopPropagation(); app.audio.play('tap'); this.shopTab = t.id; $('shop-scroll').scrollTop = 0; this.renderShop(); });
       bar.appendChild(b);
     }
     requestAnimationFrame(() => { const on = bar.querySelector('.on'); if (on) bar.scrollLeft = on.offsetLeft - (bar.clientWidth - on.clientWidth) / 2; });
+    // this tab's bundle, while it still unlocks at least two characters
+    const slot = $('shop-bundle-slot');
+    slot.innerHTML = '';
+    const tabOffer = shop.available && offers.find(o => o.id === this.shopTab);
+    if (tabOffer && tabOffer.open) slot.appendChild(this.bundleEl(tabOffer));
+    grid.classList.toggle('bundle-list', this.shopTab === 'bundles');
+    if (this.shopTab === 'bundles') { for (const o of offers) grid.appendChild(this.bundleEl(o)); return; }
     // cards
     const current = shop.characterItem();
     const card = (id, name, desc, draw, state) => {
       const d = document.createElement('div');
       d.className = 'skin shop-card' + (state === 'equipped' ? ' on' : '') + (state === 'equip' ? ' owned' : '');
       d.dataset.item = id;
-      const label = state === 'equipped' ? '' : state === 'equip' ? 'EQUIP' : state === 'buy' ? shop.price(id) : 'IN THE APP';
+      const label = state === 'equipped' ? '' : state === 'equip' ? 'EQUIP' : state === 'buy' ? hd(SKIN_PRICE) : 'IN THE APP';
       d.innerHTML = `<canvas width="240" height="120"></canvas><div class="nm">${name}</div><div class="ds">${desc}</div>` +
         (label ? `<button class="btn ${state === 'buy' ? 'btn-relish' : state === 'equip' ? 'btn-sky' : 'btn-ghost'} shop-btn"${state === 'app' ? ' disabled' : ''}><span>${label}</span></button>` : '');
       draw(d.querySelector('canvas'));
@@ -412,35 +424,126 @@ export class UI {
     }
   }
 
-  async shopAction(id, state) {
+  // a bundle banner / row. o = shop.bundleOffer(id)
+  bundleEl(o) {
+    const shop = this.app.shop;
+    const cat = CATEGORIES.find(c => c.id === o.id);
+    const d = document.createElement('div');
+    d.className = 'shop-bundle' + (o.id === ALL ? ' all' : '') + (o.n ? '' : ' done');
+    d.dataset.bundle = o.id;
+    const sub = !o.n ? `All ${o.total} owned`
+      : !o.open ? `1 left: get it in the ${cat ? cat.name : 'shop'} tab`
+      : `${o.n === o.total ? `All ${o.total}` : `The ${o.n} missing`} characters · <span class="nw">save ${hd(o.full - o.cost)}</span>`;
+    const btn = !o.n ? '<span class="sb-done">✓</span>' : !o.open ? ''
+      : shop.available ? `<button class="btn btn-relish shop-btn"><span>${hd(o.cost)}</span></button>`
+      : '<button class="btn btn-ghost shop-btn" disabled><span>IN THE APP</span></button>';
+    d.innerHTML = `<span class="sb-ico">${cat ? cat.icon : '🎁'}</span><span class="sb-txt"><b>${o.name}</b><small>${sub}</small></span>${btn}`;
+    const b = d.querySelector('.shop-btn:not([disabled])');
+    if (b) b.addEventListener('click', (e) => { e.stopPropagation(); this.app.audio.play('click'); this.spendOn({ bundle: o.id }); });
+    return d;
+  }
+
+  shopAction(id, state) {
     const app = this.app;
     if (state === 'equip') { app.shop.equip(id); app.audio.play('unlock'); this.renderShop(); return; }
-    if (state !== 'buy' || this._buying) return;
+    if (state === 'buy') this.spendOn({ item: id });
+  }
+
+  // what a purchase target costs: { item: id } or { bundle: tab id | ALL }
+  describeTarget(t) {
+    const shop = this.app.shop;
+    if (t.item) { const it = ITEM_BY_ID[t.item]; return it && !shop.isOwned(t.item) ? { name: it.name, cost: SKIN_PRICE, ask: `Buy ${it.name} for ${hd(SKIN_PRICE)}?` } : null; }
+    const o = shop.bundleOffer(t.bundle);
+    if (!o.open) return null;
+    const cat = CATEGORIES.find(c => c.id === t.bundle);
+    return { name: `the ${o.name}`, cost: o.cost, n: o.n,
+      ask: `Buy the ${o.name} for ${hd(o.cost)}?\nIt unlocks ${o.n === o.total ? `all ${o.n}` : `the ${o.n} missing`} ${cat ? cat.name + ' ' : ''}characters and saves you ${hd(o.full - o.cost)}.` };
+  }
+
+  // spend Hot Dogs after a confirmation, or offer Hot Dog packs when there aren't enough
+  spendOn(target) {
+    const shop = this.app.shop;
+    const t = shop.available && this.describeTarget(target);
+    if (!t) return;
+    if (shop.balance < t.cost) { this.openPacks(target); return; }
+    this.confirm(`${t.ask}\nYou have ${hd(shop.balance)}.`, () => this.doSpend(target, t), { yes: 'Buy' });
+  }
+
+  async doSpend(target, t) {
+    const app = this.app;
+    const r = target.bundle ? await app.shop.unlockBundle(target.bundle) : await app.shop.unlock(target.item);
+    if (r === 'bought') {
+      app.audio.play('unlock'); app.haptic([10, 30, 10]);
+      this.toast(target.bundle ? `🎁 ${t.n} characters unlocked! Pick one in the Owned tab` : `🎉 ${t.name} unlocked and equipped!`, 2800);
+      if (target.bundle === ALL) this.shopTab = 'owned';
+    } else if (r === 'short') this.openPacks(target);
+    if (!$('scr-shop').hidden) this.renderShop();
+  }
+
+  // ------------------------------------------------------------ Hot Dog packs
+  openPacks(want = null) {
+    this._want = want;
+    this.renderPacks();
+    $('scr-hotdogs').hidden = false;
+    this.app.shop.refresh();
+  }
+
+  closePacks() { $('scr-hotdogs').hidden = true; this._want = null; }
+
+  renderPacks() {
+    const shop = this.app.shop;
+    const want = this._want && this.describeTarget(this._want);
+    $('hd-balance').textContent = fmt(shop.balance);
+    const short = want ? Math.max(0, want.cost - shop.balance) : 0;
+    const need = $('hd-need');
+    need.hidden = !short;
+    if (short) need.textContent = `You need ${hd(short)} more for ${want.name}.`;
+    const fit = short ? PACKS.find(p => p.hotdogs >= short) : null;
+    const grid = $('hd-grid');
+    grid.innerHTML = '';
+    PACKS.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.className = 'hd-pack' + (fit === p ? ' fit' : '');
+      b.dataset.pack = p.id;
+      b.disabled = !shop.available;
+      const chars = p.hotdogs / SKIN_PRICE;
+      b.innerHTML = `<span class="hp-ico">${PACK_ICONS[i] || '🌭'}</span><b>${fmt(p.hotdogs)}</b><small>${chars} character${chars === 1 ? '' : 's'}</small><span class="hp-price">${shop.available ? shop.packPrice(p.id) : 'In the app'}</span>`;
+      b.addEventListener('click', (e) => { e.stopPropagation(); this.app.audio.play('click'); this.buyPack(p.id); });
+      grid.appendChild(b);
+    });
+    $('hd-note').textContent = shop.available
+      ? `$1 = ${HOTDOGS_PER_DOLLAR} Hot Dogs · every character is ${hd(SKIN_PRICE)}. Hot Dogs and characters are kept on this device.`
+      : 'Hot Dogs can be bought in the Sizzle Flip app.';
+  }
+
+  async buyPack(pid) {
+    const app = this.app, shop = app.shop;
+    if (this._buying) return;
     this._buying = true;
-    const btn = id === BUNDLE ? $('shop-bundle-buy') : document.querySelector(`.shop-card[data-item="${id}"] .shop-btn`);
-    if (btn) { btn.disabled = true; btn.querySelector('span').textContent = '…'; }
-    const r = await app.shop.buy(id).finally(() => { this._buying = false; });
-    const name = id === BUNDLE ? `All ${ITEMS.length} characters` : ITEM_BY_ID[id].name;
-    if (r === 'bought') { app.audio.play('unlock'); app.haptic([10, 30, 10]); this.toast(id === BUNDLE ? `🎁 ${name} unlocked! Pick one in the Owned tab` : `🎉 ${name} unlocked and equipped!`, 2800); if (id === BUNDLE) this.shopTab = 'owned'; }
-    else if (r === 'pending') this.toast('Payment pending — it unlocks as soon as it completes', 3200);
-    else if (r === 'error') this.toast('Purchase didn\'t go through — please try again', 2600);
+    const btn = document.querySelector(`.hd-pack[data-pack="${pid}"] .hp-price`);
+    if (btn) btn.textContent = '…';
+    const { r, n } = await shop.buyPack(pid).finally(() => { this._buying = false; });
+    if (r === 'bought') {
+      app.audio.play('unlock'); app.haptic([10, 30, 10]);
+      this.toast(`🌭 +${fmt(n || 0)} Hot Dogs!`, 2400);
+      const want = this._want && this.describeTarget(this._want);
+      // the player opened this to afford something: offer it right away
+      if (want && shop.balance >= want.cost) { const t = this._want; this.closePacks(); this.spendOn(t); }
+    } else if (r === 'pending') this.toast('Payment pending: your Hot Dogs arrive as soon as it completes', 3400);
+    else if (r === 'error') this.toast('Purchase didn\'t go through. Please try again', 2600);
     else if (r === 'unavailable') this.toast('The store isn\'t available right now', 2400);
+    if (!$('scr-hotdogs').hidden) this.renderPacks();
     if (!$('scr-shop').hidden) this.renderShop();
   }
 
-  async restorePurchases() {
-    if (this._restoring) return;
-    this._restoring = true;
-    this.toast('Restoring purchases…', 1500);
-    const n = await this.app.shop.restore().finally(() => { this._restoring = false; });
-    this.toast(n > 0 ? `Restored ${n} item${n > 1 ? 's' : ''}` : n === 0 ? 'Your purchases are all here' : 'Couldn\'t reach the store — try again', 2400);
-    if (!$('scr-shop').hidden) this.renderShop();
-  }
+  // Hot Dogs arrived outside a tap (a pending payment cleared, a purchase interrupted earlier)
+  onCredited(n) { this.toast(`🌭 +${fmt(n)} Hot Dogs added`, 2600); }
 
-  // the store granted something outside a tap (pending payment cleared, restore on launch)
+  // the wallet changed (purchase, bundle, restored backup)
   onShopChanged() {
     if (!$('scr-shop').hidden) this.renderShop();
     if (!$('scr-skins').hidden) this.renderSkins();
+    if (!$('scr-hotdogs').hidden) this.renderPacks();
   }
 
   // ------------------------------------------------------------ HUD

@@ -143,7 +143,7 @@
         <div class="pill"><span class="star">★</span> <b id="skins-stars">0</b></div>
       </header>
       <div class="locker-scroll">
-        <button class="shop-banner" data-act="shop"><span class="sb-ico">🛒</span><span><b>Shop</b><small id="shop-banner-sub">130 more things to flip · $1 each</small></span><span class="sb-go">▶</span></button>
+        <button class="shop-banner" data-act="shop"><span class="sb-ico">🛒</span><span><b>Shop</b><small id="shop-banner-sub">130 more things to flip · 🌭100 each</small></span><span class="sb-go">▶</span></button>
         <div class="skin-grid" id="skin-grid"></div>
         <h3 class="section-title">Trophies <span id="trophy-count"></span></h3>
         <div class="trophy-list" id="trophy-list"></div>
@@ -155,14 +155,10 @@
       <header class="bar">
         <button class="btn btn-round" data-act="back" aria-label="Back">◀</button>
         <h2>Shop</h2>
-        <button class="btn btn-ghost restore-btn" data-act="restore" id="shop-restore"><span>Restore</span></button>
+        <button class="hd-pill" data-act="hotdogs" id="shop-wallet" aria-label="Your Hot Dogs. Tap to get more"><span class="hd-ico">🌭</span><b id="shop-balance">0</b><span class="hd-plus">+</span></button>
       </header>
-      <div class="shop-bundle" id="shop-bundle" hidden>
-        <span class="sb-ico">🎁</span>
-        <span class="sb-txt"><b>Everything Bundle</b><small id="shop-bundle-sub">All characters, plus every future one</small></span>
-        <button class="btn btn-relish shop-btn" id="shop-bundle-buy"><span>$9.99</span></button>
-      </div>
       <div class="shop-tabs" id="shop-tabs" role="tablist"></div>
+      <div class="shop-bundle-slot" id="shop-bundle-slot"></div>
       <div class="locker-scroll" id="shop-scroll">
         <p class="shop-note" id="shop-note">Same size and bounce as the sausage — every level plays exactly the same.</p>
         <div class="skin-grid shop-grid" id="shop-grid"></div>
@@ -198,7 +194,7 @@
             <button class="btn btn-ghost" data-act="ad-preview" data-kind="interstitial"><span>Forced ad</span></button>
             <button class="btn btn-ghost" data-act="ad-preview" data-kind="rewarded"><span>Reward ad</span></button>
           </div>
-          <button class="btn btn-ghost" data-act="shop-reset-test" id="shop-reset-test" hidden><span>Reset test purchases</span></button>
+          <button class="btn btn-ghost" data-act="shop-reset-test" id="shop-reset-test" hidden><span>Reset test Hot Dogs &amp; characters</span></button>
           <p class="ad-status" id="ad-status"></p>
         </div>
         <div class="credits">
@@ -214,6 +210,18 @@
       <div class="card privacy-card">
         <div class="privacy-text" id="privacy-text"></div>
         <button class="btn btn-relish" data-act="privacy-close"><span>Close</span></button>
+      </div>
+    </section>
+
+    <!-- Hot Dog packs (the shop currency, bought with real money) -->
+    <section class="modal" id="scr-hotdogs" hidden>
+      <div class="card hd-card">
+        <h3>Get Hot Dogs</h3>
+        <p class="hd-have">You have <b>🌭 <span id="hd-balance">0</span></b></p>
+        <p class="hd-need" id="hd-need" hidden></p>
+        <div class="hd-grid" id="hd-grid"></div>
+        <p class="hd-note" id="hd-note"></p>
+        <button class="btn btn-ghost" data-act="hotdogs-close"><span>Close</span></button>
       </div>
     </section>
 

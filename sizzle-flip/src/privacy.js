@@ -2,7 +2,7 @@
 // (host that page and use its URL in the Play Console / App Store Connect listings).
 // Before release: replace CONTACT_EMAIL (tools/release-check.mjs refuses to pass while it is present).
 export const PRIVACY_CONTACT = 'CONTACT_EMAIL';
-export const PRIVACY_UPDATED = '6 October 2026';
+export const PRIVACY_UPDATED = '7 October 2026';
 
 export const PRIVACY_HTML = `
 <h3>Privacy policy</h3>
@@ -19,7 +19,8 @@ export const PRIVACY_HTML = `
 </ul>
 <p>Optional "reward" ads unlock hints, level skips and the long aim guide. Watching them is never required to play.</p>
 <h4>Purchases</h4>
-<p>The Shop sells optional cosmetic characters as one-time in-app purchases. Payment is handled entirely by <b>Google Play</b> or the <b>App Store</b> under their terms; we never see your card or payment details. The app asks the store which items your account owns so it can restore them on a new device or after reinstalling, and keeps that list on your device.</p>
+<p>The Shop sells <b>Hot Dogs</b>, an in-game currency, as in-app purchases, and Hot Dogs unlock optional cosmetic characters. Payment is handled entirely by <b>Google Play</b> or the <b>App Store</b> under their terms; we never see your card or payment details. The app asks the store about purchases that haven't been delivered yet, so that every purchase is credited exactly once.</p>
+<p>Your Hot Dogs balance and your characters are stored only on your device, not on our servers. They are kept through updates and a progress reset, but deleting the app or its data removes them.</p>
 <h4>Children</h4>
 <p>Sizzle Flip is not directed at children under 13, and we do not knowingly collect information from them. Ads are limited to content rated suitable for general audiences with parental guidance.</p>
 <h4>Changes and contact</h4>
