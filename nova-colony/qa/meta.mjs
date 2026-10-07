@@ -50,9 +50,9 @@ if ((await openPanels(page)).includes('daily')) {
   if ((await openPanels(page)).length) { await page.keyboard.press('Escape'); await sleep(600); }
 }
 // ---- spin via the HUD pill
-const pills = await page.evaluate(() => [...document.querySelectorAll('.offer')].map((b) => b.innerText.replace(/\s+/g, ' ')));
+const pills = await page.evaluate(() => [...document.querySelectorAll('.offer')].map((b) => b.getAttribute('aria-label')));
 console.log('offer pills', pills);
-await page.evaluate(() => [...document.querySelectorAll('.offer')].find((b) => /spin/i.test(b.innerText))?.setAttribute('data-qa', 'spin'));
+await page.evaluate(() => [...document.querySelectorAll('.offer')].find((b) => /spin/i.test(b.getAttribute('aria-label')))?.setAttribute('data-qa', 'spin'));
 if (await page.locator('[data-qa="spin"]').count()) {
   await tap(page, '[data-qa="spin"]', { after: 1200 });
   console.log('spin buttons', await page.evaluate(() => [...document.querySelectorAll('[data-panel="spin"] button')].map((b) => b.innerText.replace(/\s+/g, ' '))));
@@ -67,7 +67,7 @@ if (await page.locator('[data-qa="spin"]').count()) {
   if ((await openPanels(page)).length) { await page.keyboard.press('Escape'); await sleep(600); }
 }
 // ---- free crate via the HUD pill
-await page.evaluate(() => [...document.querySelectorAll('.offer')].find((b) => /crate/i.test(b.innerText))?.setAttribute('data-qa', 'crate'));
+await page.evaluate(() => [...document.querySelectorAll('.offer')].find((b) => /crate/i.test(b.getAttribute('aria-label')))?.setAttribute('data-qa', 'crate'));
 if (await page.locator('[data-qa="crate"]').count()) {
   await tap(page, '[data-qa="crate"]', { after: 1300 });
   await shot(page, `${vp}-shop-crate`);

@@ -63,6 +63,7 @@ describe('tutorial: guide target resolution', () => {
   it('build_menu: highlights the Build button, then the build card once the panel is open', () => {
     const g = makeGame();
     advanceMainTo(g, 'm02_shelter');
+    g.game.state.resources.amounts.wood = 500; // affordable (otherwise the guide sends the player gathering)
     const t = g.game.sys.tutorial;
     expect(guideNow(g)).toMatchObject({ ui: '#btn-build', world: null });
     // build mode
@@ -97,9 +98,31 @@ describe('tutorial: guide target resolution', () => {
     expect(guide.ui).toBe('#btn-build-confirm');
   });
 
+  it('build_menu, unaffordable: points at the nearest node dropping what is missing, then at the Build button', () => {
+    const g = makeGame();
+    advanceMainTo(g, 'm02_shelter');
+    g.game.state.resources.amounts.wood = 0;
+    const need = g.game.sys.buildings.cost('shelter').wood!;
+    const guide = guideNow(g)!;
+    expect(guide.ui).toBeNull();
+    expect(guide.world).not.toBeNull();
+    expect(guide.text).toContain(`Need ${need} more Wood`);
+    const p = g.game.state.player;
+    const node = g.game.sys.world.gen.nodes.find((n) => n.x === guide.world!.x && n.z === guide.world!.z)!;
+    expect(g.game.data.node(node.def)!.drop.wood).toBeGreaterThan(0);
+    // nothing closer that drops wood
+    for (const n of g.game.sys.world.gen.nodes) {
+      if (!g.game.data.node(n.def)!.drop.wood || g.game.state.world.depleted[n.i] !== undefined || !g.game.sys.world.isUnlocked(n.region)) continue;
+      expect(Math.hypot(n.x - p.x, n.z - p.z)).toBeGreaterThanOrEqual(Math.hypot(node.x - p.x, node.z - p.z) - 1e-6);
+    }
+    g.game.state.resources.amounts.wood = need;
+    expect(guideNow(g)!.ui).toBe('#btn-build');
+  });
+
   it('build_menu after placing: points at the construction site instead of the Build button', () => {
     const g = makeGame();
     advanceMainTo(g, 'm02_shelter');
+    g.game.state.resources.amounts.wood = 500;
     expect(guideNow(g)!.ui).toBe('#btn-build');
     g.game.state.buildings.list.push(fakeBuilding('shelter', 50, { x: 130, z: 131, status: 'building', progress: 0.3 }));
     const guide = guideNow(g)!;
