@@ -1,7 +1,8 @@
 /**
  * Model library entry point. Importing this module registers every procedural building model.
  */
-import './facilities';
+import './homestead';
+import './industry';
 import './defense';
 import './commandCenter';
 
