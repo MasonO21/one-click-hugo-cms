@@ -1806,7 +1806,7 @@ check('back button and first-clear gems: no runtime errors', !errs.length, errs[
 //     offline wind-forward then a server correction re-grants nothing, and the latest day survives a reload.
 errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
-    const C = await import('/src/meta/clock.js'), eco = await import('/src/meta/economy.js');
+    const C = window.__soulswarm.clock, eco = await import('/src/meta/economy.js'); // the game's own clock instance
     const app = window.__soulswarm, p = app.profile, out = {}, realFetch = window.fetch;
     const T0 = new Date(2026, 9, 7, 12).getTime(), DAY = 864e5;
     const serve = (body, headers = {}) => { window.fetch = async () => new Response(body, { status: 200, headers }); };

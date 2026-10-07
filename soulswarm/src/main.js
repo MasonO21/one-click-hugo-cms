@@ -8,7 +8,7 @@ import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
 import { haptic, setHapticsEnabled, isNative } from './engine/platform.js';
 import { App as NativeApp } from '@capacitor/app';
 import { handleBack } from './ui/back.js';
-import { sync as syncClock } from './meta/clock.js';
+import * as clock from './meta/clock.js';
 import { Engine } from './engine/engine.js';
 import { Showcase } from './game/showcase.js';
 import { Run } from './game/run.js';
@@ -42,6 +42,7 @@ const app = {
   exitRun,
   applySettings,
   resetProgress,
+  clock, // QA: the clock instance the game uses (a dev server's HMR can serve a second copy to a fresh import)
 };
 window.__soulswarm = app; // handy for QA scripts
 
@@ -143,7 +144,7 @@ function boot() {
   // Periodic upkeep (energy regen, daily resets).
   setInterval(() => { upkeep(profile); if (!app.run) commit(profile); }, 15000);
   // Server time for daily resets and timers (meta/clock.js): at boot, on every resume and every few minutes
-  const timeSync = (resume) => syncClock({ resume }).then((ok) => { if (ok) { upkeep(profile); commit(profile); if (!app.run) app.meta.refresh(); } });
+  const timeSync = (resume) => clock.sync({ resume }).then((ok) => { if (ok) { upkeep(profile); commit(profile); if (!app.run) app.meta.refresh(); } });
   timeSync(false);
   setInterval(() => timeSync(false), CLOCK.resyncMin * 60000);
   document.addEventListener('visibilitychange', () => {
