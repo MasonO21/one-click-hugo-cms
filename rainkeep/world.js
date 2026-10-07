@@ -29,13 +29,8 @@
   const dist = (x, y) => Math.hypot(x - C, y - C);
   const sight = () => W.sight(S.lv.wyrm) + 0.5;
   const visible = (x, y) => dist(x, y) <= sight();
-  function base(x, y) {
-    const A2 = act2();
-    if (A2 !== cacheAct) { layoutCache = {}; cacheAct = A2; } // Act II reshapes the Dunes
-    const k = key(x, y);
-    if (layoutCache[k]) return layoutCache[k];
-    const r = seeded((S.map.seed ^ (x * 7919 + y * 104729)) >>> 0);
-    const d = dist(x, y);
+  // the Act I layout of one tile; r is the tile's own seeded stream
+  function layout1(x, y, r, d) {
     let t;
     if (d < 0.5) t = { kind: 'keep' };
     else if (d < 1.6) t = { kind: 'empty', decor: r() < 0.3 ? 'palm' : null };
@@ -58,6 +53,37 @@
         t = { kind: 'empty', decor: dv < 0.4 ? 'palm' : dv < 0.55 ? 'rock' : null };
       }
     }
+    return t;
+  }
+  const tileRng = (x, y) => seeded((S.map.seed ^ (x * 7919 + y * 104729)) >>> 0);
+  // The main quest asks for a Scorpion camp around Rainwyrm Lv 12. On the few maps with none in
+  // sight by then, one patch of bare sand 5 to 6.5 tiles out (sand in Act II too) holds a camp.
+  let anchorSeed = null, anchorK = null;
+  function anchorCamp() {
+    if (anchorSeed === S.map.seed) return anchorK;
+    anchorSeed = S.map.seed; anchorK = null;
+    const reach = W.sight(10) + 0.5, X = W.act2, ring = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const d = dist(x, y);
+      if (d > reach) continue;
+      const r = tileRng(x, y), t = layout1(x, y, r, d), v = r(), a2 = r();
+      if (t.kind === 'camp') return anchorK;
+      const sandInAct2 = a2 >= X.veinShare + (d >= X.hiveFrom ? X.hiveShare : 0);
+      if (t.kind === 'empty' && !t.decor && d >= 5 && d <= 6.5 && sandInAct2) ring.push([v, key(x, y)]);
+    }
+    ring.sort((a, b) => a[0] - b[0]);
+    anchorK = ring.length ? ring[0][1] : null;
+    return anchorK;
+  }
+  function base(x, y) {
+    const A2 = act2();
+    if (A2 !== cacheAct) { layoutCache = {}; cacheAct = A2; } // Act II reshapes the Dunes
+    const k = key(x, y);
+    if (layoutCache[k]) return layoutCache[k];
+    const r = tileRng(x, y);
+    const d = dist(x, y);
+    let t = layout1(x, y, r, d);
+    if (k === anchorCamp()) t = { kind: 'camp', lvl: clamp(Math.round(d * 0.7), 2, 10) };
     t.x = x; t.y = y; t.k = k;
     t.v = r(); // per-tile variation for drawing
     // Act II: drawn after the base layout so the Act I map never changes

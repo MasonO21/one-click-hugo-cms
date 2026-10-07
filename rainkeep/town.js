@@ -641,6 +641,8 @@
     const wxType = KH.curWx().type;
     ctx = townCtx;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // unhinted glyph advances, so small plate text keeps its spaces (a resize resets this)
+    if ('textRendering' in ctx) ctx.textRendering = 'geometricPrecision';
     if (KH.town3d && KH.town3d.active) {
       ctx.clearRect(0, 0, VW, VH);
       overlay3d(now, t, dt, R, wxType);
@@ -828,7 +830,8 @@
     ctx.fillText(text, x0 + bw + (w - bw) / 2, y + 0.5);
   }
   function lockIcon(x, y, s) {
-    ctx.fillStyle = 'rgba(30,16,8,.8)'; ell(x, y, 11 * s, 11 * s); ctx.fill();
+    ctx.fillStyle = 'rgba(22,15,36,.82)'; ell(x, y, 11 * s, 11 * s); ctx.fill();
+    ctx.strokeStyle = 'rgba(201,154,75,.6)'; ctx.lineWidth = 1; ell(x, y, 11 * s, 11 * s); ctx.stroke();
     ctx.strokeStyle = 'rgba(232,210,176,.9)'; ctx.lineWidth = 1.6 * s;
     ctx.beginPath(); ctx.arc(x, y - 2 * s, 3.4 * s, Math.PI, 0); ctx.stroke();
     ctx.fillStyle = 'rgba(232,210,176,.95)'; ctx.fillRect(x - 4.6 * s, y - 2 * s, 9.2 * s, 7 * s);
@@ -869,7 +872,7 @@
       const job = S.builds.find((b) => b.plot === pid);
       if (S.lv.wyrm < p.unlock) {
         lockIcon(a.mx, a.my - 6 * s, s);
-        plate(a.x, a.y, `Wyrm Lv ${p.unlock}`, s * 0.9, 'rgba(232,210,176,.85)');
+        plate(a.x, a.y, zoomed ? `Wyrm Lv ${p.unlock}` : `Lv ${p.unlock}`, s * 0.9, 'rgba(232,210,176,.85)');
         continue;
       }
       if (!L && !job) {
