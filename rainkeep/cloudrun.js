@@ -423,9 +423,9 @@
   }
 
   // entry points: a side button and the Rainwyrm's sheet
-  KH.side.push({ id: 'cloudrun', icon: 'i-storm', label: 'Cloud Run', act: 'cloudrun', show: () => unlocked(), dot: () => left() === CR.perDay || CR.gifts.some((d) => giftCost(d) != null && S.cloudGifts.pearls >= giftCost(d)), badge: () => `${left()}/${CR.perDay}` });
+  KH.side.push({ id: 'cloudrun', icon: 'i-raincloud', label: 'Cloud Run', act: 'cloudrun', show: () => unlocked(), dot: () => left() === CR.perDay || CR.gifts.some((d) => giftCost(d) != null && S.cloudGifts.pearls >= giftCost(d)), badge: () => `${left()}/${CR.perDay}` });
   const prevExtras = KH.wyrmExtras;
-  KH.wyrmExtras = () => `${prevExtras ? prevExtras() : ''}${unlocked() ? `<button class="btn wide gold" data-act="cloudrun">${icon('i-storm')}Cloud Run · ${left()}/${CR.perDay} flights today</button>` : ''}`;
+  KH.wyrmExtras = () => `${prevExtras ? prevExtras() : ''}${unlocked() ? `<button class="btn wide gold" data-act="cloudrun">${icon('i-raincloud')}Cloud Run · ${left()}/${CR.perDay} flights today</button>` : ''}`;
 
   // for tests and the balance bot: a flight flown well brings home its pearl too
   KH.cloudRun = {

@@ -828,3 +828,45 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .bloom-ms .n { width: 34px; height: 34px; flex: none; display: grid; place-items: center; font-weight: 800; color: #3a2404; background: var(--star) center / contain no-repeat; }
 .bloom-ms.done { border-color: #8cd06a88; background: #18301e; }
 .bloom-ms > .ic { width: 20px; height: 20px; color: var(--good); }
+
+/* ---------- Painted UI (html.pui, set by art2d.js when artmap.js has the plates) ----------
+   Buttons wear painted plates as border images: the top and bottom halves of the plate fill the
+   button, the painted end caps keep their shape at the ends and the plain middle stretches. The
+   plate images come from the injected art sheet, so this block never sets border-image-source. */
+.pui .btn:not(.choice) {
+  border-style: solid; border-width: 0; border-radius: 0;
+  border-image-slice: 50% 52 50% 52 fill; border-image-width: 50% 22px; border-image-repeat: stretch;
+  background: none; box-shadow: none;
+  padding-inline: 25px;
+  filter: drop-shadow(0 2px 2px #0009);
+  text-shadow: 0 1px 0 #ffe2b866;
+}
+.pui .btn.alt:not(.choice) { text-shadow: 0 1px 2px #000a; }
+.pui .btn.gold:not(.choice) { text-shadow: 0 1px 0 #fff4c888; }
+.pui .btn.small:not(.choice) { border-image-width: 50% 18px; padding-inline: 20px; }
+.pui .pass-cell .btn:not(.choice) { border-image-width: 50% 15px; padding-inline: 15px; }
+.pui .btn:not(.choice):active { box-shadow: none; filter: drop-shadow(0 1px 1px #0009) brightness(.94); }
+.pui .btn.off:not(.choice), .pui .btn[disabled]:not(.choice) { filter: grayscale(.85) brightness(.7) drop-shadow(0 2px 2px #0009); }
+.pui .btn .ic { width: 20px; height: 20px; margin-block: -3px; filter: drop-shadow(0 1px 1px #0007); }
+.pui .quest .btn:not(.choice) { min-height: 38px; }
+
+/* painted icons read best a touch larger than the line glyphs they replace */
+.pui .tab .ic { width: 31px; height: 31px; }
+.pui .tab:not(.on) .ic { filter: saturate(.55) brightness(.82); }
+.pui .tab.on .ic { transform: translateY(-4px) scale(1.08); filter: drop-shadow(0 0 7px #f0cf86aa); }
+.pui .side-btn .ic { padding: 6px; }
+.pui .hub-tile .ic { padding: 7px; }
+.pui .qchip .ic { padding: 1px; }
+.pui .res-strip .r .ic { width: 18px; height: 18px; }
+.pui .cur .ic { width: 20px; height: 20px; }
+.pui .stars .ic { width: 12px; height: 12px; }
+.pui .stars .off { filter: grayscale(1) brightness(.42); opacity: .75; }
+
+/* gold filigree in the top corners of every sheet, behind its contents */
+.pui #sheet::before, .pui #sheet::after {
+  content: ''; position: absolute; top: 3px; width: 62px; height: 62px; pointer-events: none; z-index: 0;
+  background-size: contain; background-repeat: no-repeat; background-position: left top; opacity: .9;
+}
+.pui #sheet::before { left: 3px; }
+.pui #sheet::after { right: 3px; transform: scaleX(-1); }
+.pui #sheet > * { position: relative; z-index: 1; }

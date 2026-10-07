@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.4.0',
+  version: '4.5.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1016,7 +1016,7 @@ const DATA = {
       { id: 'call', name: 'Cloud Call', icon: 'i-water', desc: 'Clouds, drops and pearls drift toward the wyrm', cost: [3, 6, 10] },
       { id: 'gold', name: 'Golden Eye', icon: 'i-gem', desc: 'Golden drops turn up more often', cost: [4, 9] },
       { id: 'song', name: 'Rain Song', icon: 'i-water', desc: '+10% water from every cloud', cost: [2, 4, 6, 8, 10] },
-      { id: 'storm', name: 'Storm Rider', icon: 'i-storm', desc: 'Storm clouds count four, and the first dust devil each flight glances off', cost: [12] },
+      { id: 'storm', name: 'Storm Rider', icon: 'i-raincloud', desc: 'Storm clouds count four, and the first dust devil each flight glances off', cost: [12] },
     ],
   },
 

@@ -130,7 +130,7 @@ Target: match the genre's spending ladder while putting more of the spend into b
 
 ## 6. From 4.3 to a live multiplayer game
 
-Version 4.4 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
+Version 4.5 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
 
 - **Real Caravans:** shared help requests, donations and Colossus raids backed by a server, plus chat with moderation.
 - **Shared Dunes:** one map per server, where caravans can meet rival keeps.
@@ -143,7 +143,7 @@ This folder is a **complete, playable single-player game** (HTML5 + WebGL, wrapp
 
 | Phase | Goal | Typical team / time |
 |---|---|---|
-| Version 4.4 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
+| Version 4.5 (this) | Full single-player game in 3D, store-ready shell, simulated multiplayer. Playtest with genre players and soft-launch small | Done; iterate with data.js |
 | Live multiplayer | Artist pass over the generated paintings, hero and wyrm animation, server-authoritative backend, real Caravans, shared Dunes, analytics | 6-12 people, 4-6 months |
 | Soft launch | 1-3 test markets (commonly Canada, Australia, Philippines). Hit retention and payer gates before scaling spend | 15-30 people, 3-6 months |
 | Global launch | Paid user acquisition at scale, live ops, alliances and PvP | 30-80+ people, ongoing |
@@ -216,6 +216,8 @@ The dolphin buys the Founder's Cache, the Growth Fund, the Oasis Stipend, the tw
 **Version 4.3 (the new Rainwyrm).** A redesign of the wyrm's model and images only; no rules or numbers changed, so the 4.1 pacing stands. Cloud Run draws the same dragon from above.
 
 **Version 4.4 (Cloud Run 2.0).** Cloud Run flies the 3D wyrm and adds rain rings, the cloud combo, Rain Pearls and Wyrm Gifts; the bot flies its three runs, banks a pearl each and buys the cheapest gift it can. The bot keeps the real clock, so its day never turns over and it flies only those three, as it has since 3.5; a real player who plays across many days earns more pearls and a little more water than the bot shows. Free pacing over two runs: Act II end at 9.8-10.5 h, Lv 20 at 22.1-23.5 h, Act III end at 22.9-24.5 h, no errors. A control run of the 4.3 build in the same environment reached Lv 20 and the Act III end at 22.4 h, so the hour or so against the 4.1 figures is run-to-run spread, not this update. Whale: 4.7 h / 13.1 h / 14.1 h.
+
+**Version 4.5 (painted UI kit).** Five icon sheets, three button plates and a corner ornament made with Higgsfield (GPT Image 2, background removed), cut into 45 icons. Each painted icon replaces the drawn symbol of the same id in the SVG sprite, so the header, tabs, hubs, chips, costs, buttons and sheets all use it with no change to the HTML the UI diffs; the map canvases keep the drawn symbol for tinted markers. Buttons wear the plates as border images: the halves of the plate fill the button and the painted end caps keep their shape at any width. The sandstorm glyph stays drawn, and Cloud Run takes a new painted rain cloud. No rules or numbers changed, so the 4.4 pacing stands.
 
 **Why Growth Packs exist.** Before them, the whale bot finished the story at the same time as the $80 dolphin (about 9 hours) and reached Lv 20 no sooner. A crate grows with the Rainwyrm's level more slowly than building costs do: a late Rainwyrm level (the wyrm plus the six buildings it needs) costs about 45,000 Starglass in crates, so $1,000 of Starglass bought about two levels, and the whale bot spent much of it on recruits instead. Growth Packs are sized to the next level, so money keeps buying progress all the way to Lv 20. That is the spend ladder a high-grossing game in this genre needs. They also give every level-up a buying moment.
 

@@ -15,7 +15,7 @@
  */
 'use strict';
 
-const VERSION = 'rainkeep-v4.4'; // bump on every web deploy
+const VERSION = 'rainkeep-v4.5'; // bump on every web deploy
 const SHELL_CACHE = `${VERSION}-shell`;
 const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
@@ -38,6 +38,7 @@ const SHELL = [
   ...'cart wagons observatory bunker chapel airship den pool forge shrine scouts mine'.split(' ').map((n) => `art/ruins/${n}.webp`),
   'art/endings/act1.webp', 'art/endings/act2.webp', 'art/endings/act3.webp',
   'art/wyrm/grotto.webp', 'art/wyrm/emblem.webp',
+  ...'anvil bag beacon book btn-ember btn-gold btn-indigo calendar caravan channel chest clock compass copper corner duel event flag food garden gem glory hammer heart heroes journal kite mail paw pearl people power recruit ruin scroll shop spire star stone storm sunsteel sword town trophy water world wyrm'.split(' ').map((n) => `art/ui/${n}.webp`),
 ];
 
 const SCOPE = new URL('./', self.location.href);

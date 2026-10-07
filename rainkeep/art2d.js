@@ -38,6 +38,12 @@
     for (const [k, v] of Object.entries(ART.ending || {})) css.push(`.art-n-${k}{background-image:${url(v)}}`);
     if (ART.title) css.push(`.intro-art.painted{background-image:linear-gradient(#120c1e00 40%,#120c1ee0),${url(ART.title)}}`);
     if (ART.wyrm && ART.wyrm.emblem) css.push(`.medal.painted{background-image:${url(ART.wyrm.emblem)}}`);
+    const U = ART.ui || {};
+    if (U.btn) css.push(`.pui .btn{border-image-source:${url(U.btn)}}`);
+    if (U.btnAlt) css.push(`.pui .btn.alt{border-image-source:${url(U.btnAlt)}}`);
+    if (U.btnGold) css.push(`.pui .btn.gold{border-image-source:${url(U.btnGold)}}`);
+    if (U.corner) css.push(`.pui #sheet::before,.pui #sheet::after{background-image:${url(U.corner)}}`);
+    if (U.btn) document.documentElement.classList.add('pui');
     const st = document.createElement('style');
     st.id = 'rk-art'; st.textContent = css.join('\n');
     document.head.appendChild(st);
@@ -45,6 +51,22 @@
     const medal = document.getElementById('hud-medal');
     if (medal && ART.wyrm && ART.wyrm.emblem) medal.classList.add('painted');
   })();
+
+  // Painted icons take the place of the drawn symbols in the sprite, so every <use href="#i-…"> in the
+  // game shows them with no change to the HTML. The canvases keep the drawn SVG for tinted markers
+  // (KH.iconSVG) and take the painting for plain ones (KH.iconArt).
+  KH.iconSVG = {};
+  KH.iconArt = (id) => (ART.icon && ART.icon[id]) || null;
+  for (const [id, src] of Object.entries(ART.icon || {})) {
+    const sym = document.getElementById(id);
+    if (!sym) continue;
+    KH.iconSVG[id] = sym.innerHTML;
+    const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    img.setAttribute('href', src); img.setAttribute('width', '100'); img.setAttribute('height', '100');
+    sym.replaceChildren(img);
+    sym.setAttribute('viewBox', '0 0 100 100');
+    sym.classList.add('painted');
+  }
 
   // ======================================================================
   // Hero portraits

@@ -1,7 +1,7 @@
 /*
  * Rainkeep painted art: hero and cast portraits, one painting per foe family, a backdrop per act, the
  * title painting, building headers, event banners, store art, the twelve Dunes ruins, the three endings,
- * the grotto behind the Rainwyrm's portraits and its emblem, all made with Higgsfield (GPT Image 2) and stored as WebP under art/. art2d.js turns this map
+ * the grotto behind the Rainwyrm's portraits and its emblem, the UI icons, button plates and sheet corners, all made with Higgsfield (GPT Image 2) and stored as WebP under art/. art2d.js turns this map
  * into one stylesheet; anything missing here keeps its drawn SVG art. The single-file build swaps each
  * path for an inline data URI.
  */
@@ -114,4 +114,60 @@ window.RK_ART = {
     emblem: 'art/wyrm/emblem.webp',
   },
   title: 'art/title.webp',
+  // painted UI icons: each replaces the drawn symbol of that id in index.html's sprite
+  icon: {
+    'i-stone': 'art/ui/stone.webp',
+    'i-food': 'art/ui/food.webp',
+    'i-water': 'art/ui/water.webp',
+    'i-copper': 'art/ui/copper.webp',
+    'i-gem': 'art/ui/gem.webp',
+    'i-beacon': 'art/ui/beacon.webp',
+    'i-journal': 'art/ui/journal.webp',
+    'i-sunsteel': 'art/ui/sunsteel.webp',
+    'i-pearl': 'art/ui/pearl.webp',
+    'i-town': 'art/ui/town.webp',
+    'i-world': 'art/ui/world.webp',
+    'i-map': 'art/ui/world.webp',
+    'i-heroes': 'art/ui/heroes.webp',
+    'i-caravan': 'art/ui/caravan.webp',
+    'i-shop': 'art/ui/shop.webp',
+    'i-wyrm': 'art/ui/wyrm.webp',
+    'i-event': 'art/ui/event.webp',
+    'i-mail': 'art/ui/mail.webp',
+    'i-bag': 'art/ui/bag.webp',
+    'i-trophy': 'art/ui/trophy.webp',
+    'i-spire': 'art/ui/spire.webp',
+    'i-duel': 'art/ui/duel.webp',
+    'i-anvil': 'art/ui/anvil.webp',
+    'i-raincloud': 'art/ui/storm.webp',
+    'i-channel': 'art/ui/channel.webp',
+    'i-garden': 'art/ui/garden.webp',
+    'i-sprout': 'art/ui/garden.webp',
+    'i-book': 'art/ui/book.webp',
+    'i-chest': 'art/ui/chest.webp',
+    'i-power': 'art/ui/power.webp',
+    'i-people': 'art/ui/people.webp',
+    'i-glory': 'art/ui/glory.webp',
+    'i-heart': 'art/ui/heart.webp',
+    'i-recruit': 'art/ui/recruit.webp',
+    'i-scroll': 'art/ui/scroll.webp',
+    'i-star': 'art/ui/star.webp',
+    'i-clock': 'art/ui/clock.webp',
+    'i-calendar': 'art/ui/calendar.webp',
+    'i-kite': 'art/ui/kite.webp',
+    'i-hammer': 'art/ui/hammer.webp',
+    'i-compass': 'art/ui/compass.webp',
+    'i-flag': 'art/ui/flag.webp',
+    'i-paw': 'art/ui/paw.webp',
+    'i-ruin': 'art/ui/ruin.webp',
+    'i-sword': 'art/ui/sword.webp',
+  },
+  // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
+  // that frames sheets
+  ui: {
+    btn: 'art/ui/btn-ember.webp',
+    btnAlt: 'art/ui/btn-indigo.webp',
+    btnGold: 'art/ui/btn-gold.webp',
+    corner: 'art/ui/corner.webp',
+  },
 };

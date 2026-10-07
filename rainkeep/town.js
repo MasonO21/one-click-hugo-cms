@@ -19,8 +19,9 @@
     for (const r of KH.RES) {
       const sym = document.getElementById(KH.ICON[r]);
       if (!sym) continue;
-      const img = new Image();
-      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">${sym.innerHTML}</svg>`)}`;
+      const img = new Image(), id = KH.ICON[r];
+      // the painted icon where there is one, else the drawn symbol
+      img.src = (KH.iconArt && KH.iconArt(id)) || `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">${(KH.iconSVG && KH.iconSVG[id]) || sym.innerHTML}</svg>`)}`;
       icons[r] = img;
     }
   }

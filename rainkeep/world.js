@@ -604,8 +604,10 @@
     const mk = (id, color) => {
       const sym = document.getElementById(id);
       if (!sym) return null;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" style="color:${color}">${sym.innerHTML.replace(/currentColor/g, color)}</svg>`;
-      const img = new Image();
+      const img = new Image(), art = !color && KH.iconArt && KH.iconArt(id);
+      // plain icons take the painting; tinted markers keep the drawn symbol
+      if (art) { img.src = art; return img; }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" style="color:${color}">${((KH.iconSVG && KH.iconSVG[id]) || sym.innerHTML).replace(/currentColor/g, color)}</svg>`;
       img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
       return img;
     };
