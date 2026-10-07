@@ -261,6 +261,11 @@ export class Store {
     }, 300);
   }
 
+  /** Writes any change still waiting to be saved and stops the save timer. */
+  close() {
+    if (this.timer) this.flush();
+  }
+
   flush() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;

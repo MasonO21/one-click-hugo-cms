@@ -41,6 +41,15 @@ export function cleanText(value: unknown, max: number, label: string, required =
   return text;
 }
 
+/** A person's name. Names go out in texts to other people, so they can't carry links. */
+export function cleanName(value: unknown, label = 'Name'): string {
+  const name = cleanText(value, 40, label, true);
+  if (/https?:|www\.|[\w-]\.(com|net|org|ly|io|co|me|app|link|xyz|info|biz|gl|gd|to|ru|cn|tk|us|site|online|click)\b|[<>@/\\]/i.test(name)) {
+    fail('invalid', `${label} can't contain links or symbols like @ and /.`);
+  }
+  return name;
+}
+
 /** Normalizes a phone number to E.164. Bare 10-digit numbers are treated as US numbers. */
 export function normalizePhone(value: unknown): string {
   if (typeof value !== 'string') fail('invalid', 'Phone number must be text.');

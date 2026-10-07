@@ -32,7 +32,7 @@ People in your circle don't need the app: anyone added by phone gets texts and c
 | 60 min | Sunup calls your circle; your packet is released to the people you chose |
 | 90 min | Your circle is told how to request an in-person wellness check |
 
-Checking in at any point stops everything and tells anyone already alerted that you're okay. A watcher can also tap "I reached them" to stand everyone down.
+Checking in at any point stops everything and tells anyone already alerted that you're okay. A watcher can also tap "I reached them" to stand everyone down. If the server was down when a check-in was due, the ladder starts from the first step when it comes back, instead of firing every step at once; a check-in that lands after the deadline but before the clock noticed counts as late, not missed.
 
 ## Run it
 
@@ -48,10 +48,10 @@ npm run check      # typecheck + tests
 
 ### Two modes
 
-- **Server mode** (when a Sunup server answers `/api/health`): real accounts, circles across phones, a server-side clock that runs the alert ladder, web push, and texts/calls through Twilio.
-- **Demo mode** (no server, e.g. a static host): the same engine runs in the browser over `localStorage`, with a sample circle of simulated people (Mom and Jordan) who check in on their own. The demo controls play an hour of escalation in about 90 seconds.
+- **Server mode**: real accounts, circles across phones, a server-side clock that runs the alert ladder, web push, and texts/calls through Twilio. `npm run build` (what the server, Docker and Render serve) is always server mode: if the server can't be reached, the app says so and offers to retry instead of switching to the demo.
+- **Demo mode**: the same engine runs in the browser over `localStorage`, with a sample circle of simulated people (Mom and Jordan) who check in on their own. The demo controls play an hour of escalation in about 90 seconds.
 
-`npm run build:demo` produces `dist-demo/sunup-demo.html`, a single self-contained file of the demo.
+`npm run build:static` builds the demo for a static host (`dist-static/`), and `npm run build:demo` produces `dist-demo/sunup-demo.html`, a single self-contained file of the demo. In development (`npm run dev:web`), the app uses the server if one answers and the demo otherwise, but never falls back to the demo on a device that has signed in.
 
 ## Deploy
 
@@ -68,7 +68,7 @@ Any Node host with a persistent disk works. Push notifications need HTTPS.
 | `DATA_DIR` | Where `sunup.json`, photos and the data key are stored (default `./data`) |
 | `SUNUP_DATA_KEY` | Encrypts "If I go dark" packets at rest. Create one with `openssl rand -base64 32` and keep a copy somewhere safe: without it the packets can't be read. If unset, a key is generated once and saved as `data.key` in `DATA_DIR`. |
 | `VAPID_SUBJECT` | Contact for web push, e.g. `mailto:you@yourdomain.com`. VAPID keys are generated on first run and saved in the data file. |
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Texts, calls and sign-in codes. Without them, texts and calls are logged to the console (and in development, sign-in codes are shown on screen). |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Texts, calls and sign-in codes. Without them, texts and calls are logged to the console (the "If I go dark" packet never is), and with `NODE_ENV=development` (as `npm run dev` sets) sign-in codes are shown on screen. A text or call that fails for a temporary reason is tried again after 30 seconds, 2 minutes and 10 minutes, unless the alert is over by then. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Paid subscriptions. Without them, Premium is a card-free 7-day trial. |
 | `FIREBASE_SERVICE_ACCOUNT` | Push to the Android app: the Firebase service-account JSON (raw or base64). |
 | `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_ENV` | Push to the iPhone app: the APNs `.p8` key (raw or base64), its key ID, your team ID, the app's bundle ID, and `development` for builds run from Xcode (default `production`). |
@@ -147,7 +147,9 @@ Every rule lives in `src/shared/service.ts`, so the demo and the server behave i
 ## Accounts and contacts
 
 - **Sign-in:** people sign up with their mobile number and a texted 6-digit code, and sign back in on any device the same way. A number can only be confirmed on one account. People can also skip the number, but then they can't sign back in.
-- **Contacts added by phone** get a consent text. YES confirms; STOP stops every text and call from Sunup (START turns them back on). The person who added them is told either way.
+- **Contacts added by phone** get a consent text. YES confirms; STOP stops every text and call from Sunup to that number, from every circle, including ones that add it later (START turns them back on). The person who added them is told either way. Contacts who haven't replied yet still get alerts, but the "If I go dark" packet only goes to contacts who replied YES, so a mistyped number never receives door codes. One person can text up to 10 new contacts a day, and names can't contain links.
+- **Your own number** gets alarm texts and the escalation call only once it's confirmed with a texted code.
+- **Invite links** can be replaced from the invite sheet ("Make a new link"); the old link stops working and the people already in the circle stay.
 
 ## Before a real launch
 

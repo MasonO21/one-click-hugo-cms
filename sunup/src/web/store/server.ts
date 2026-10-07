@@ -83,6 +83,11 @@ function base64ToBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+/** Whether this device has signed in to a Sunup server before. */
+export function hasSavedSession(): boolean {
+  return !!readToken();
+}
+
 export function createServerApi(features: { billing?: boolean } = {}): Api {
   let token = readToken();
   /** Remembers the session for the worker whenever we learn who is signed in. */
@@ -138,7 +143,8 @@ export function createServerApi(features: { billing?: boolean } = {}): Api {
     async load() {
       if (!token) return null;
       try {
-        return seen(await call<Snapshot>('/api/state'));
+        // Opening the app is a smart check-in signal too (Premium, if enabled), not only coming back to it.
+        return seen(await call<Snapshot>('/api/action', { method: 'POST', body: JSON.stringify({ type: 'activity' }) }));
       } catch (e) {
         if (e instanceof ApiError && e.code === 'unauthorized') {
           token = null;

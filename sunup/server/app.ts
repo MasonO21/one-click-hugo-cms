@@ -22,6 +22,8 @@ export interface AppOptions {
   vapidSubject?: string;
   /** Return sign-in codes in API responses when Twilio isn't set up (local development only). */
   devCodes?: boolean;
+  /** Waits before retrying failed texts and calls (tests shorten them). */
+  retryDelays?: number[];
   log?: (line: string) => void;
   /** Swappable for tests: used for Twilio and Stripe calls. */
   fetch?: typeof fetch;
@@ -39,7 +41,7 @@ export interface AppOptions {
 /** Where the Capacitor apps' web views run (iOS, Android, and older Android builds). */
 const APP_ORIGINS = ['capacitor://localhost', 'https://localhost', 'http://localhost'];
 
-const STATUS: Record<string, number> = { unauthorized: 401, forbidden: 403, not_found: 404, rate_limited: 429, billing: 502, sms_failed: 502 };
+const STATUS: Record<string, number> = { unauthorized: 401, forbidden: 403, not_found: 404, rate_limited: 429, subscribed: 409, billing: 502, sms_failed: 502 };
 
 /** A tiny fixed-window rate limiter keyed by IP or user. */
 function limiter(max: number, windowMs: number) {
@@ -72,6 +74,12 @@ export function createApp(options: AppOptions) {
     fetch: options.fetch,
     fcm: options.fcm,
     apns: options.apns,
+    retryDelays: options.retryDelays,
+    // A retry about an alert that has since been resolved would only alarm people.
+    stillWanted: (o) => {
+      const alert = o.alertId ? service.state.alerts[o.alertId] : undefined;
+      return !alert?.resolvedAt || o.at >= alert.resolvedAt;
+    },
   });
   const signupLimit = limiter(20, 60 * 60_000);
   const actionLimit = limiter(120, 60_000);
@@ -253,6 +261,10 @@ export function createApp(options: AppOptions) {
   app.post('/api/billing/checkout', auth, async (req, res) => {
     const cfg = requireStripe(options.stripe);
     const user = service.user(res.locals.userId);
+    // One subscription per account: a second checkout would charge twice.
+    if (user.billing?.subscriptionId && ['active', 'trialing', 'past_due', 'incomplete', 'unpaid'].includes(user.billing.status ?? '')) {
+      throw new SunupError('subscribed', 'You already have Premium. Change or cancel it from Manage subscription.');
+    }
     const interval = req.body?.interval === 'month' ? 'month' : 'year';
     try {
       res.json({ url: await createCheckout(cfg, http, user, interval, options.publicUrl) });
@@ -448,7 +460,7 @@ export function createApp(options: AppOptions) {
       clearInterval(timer);
       notifier.close();
       try {
-        store.flush();
+        store.close();
       } catch (e) {
         log(`[store] final save failed: ${String(e)}`);
       }

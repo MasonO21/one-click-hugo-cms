@@ -5,7 +5,8 @@ const procs = [
   ['server', 'npx', ['tsx', 'watch', 'server/index.ts']],
   ['web', 'npx', ['vite']],
 ].map(([name, cmd, args]) => {
-  const child = spawn(cmd, args, { stdio: ['inherit', 'pipe', 'pipe'] });
+  // Development shows sign-in codes on screen when Twilio isn't set up.
+  const child = spawn(cmd, args, { stdio: ['inherit', 'pipe', 'pipe'], env: { ...process.env, NODE_ENV: 'development' } });
   const prefix = (chunk) => chunk.toString().replace(/^(?=.)/gm, `[${name}] `);
   child.stdout.on('data', (c) => process.stdout.write(prefix(c)));
   child.stderr.on('data', (c) => process.stderr.write(prefix(c)));

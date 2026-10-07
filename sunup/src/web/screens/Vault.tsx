@@ -100,7 +100,15 @@ export function Vault() {
                 <Avatar name={w.name} color={w.color} size={36} />
                 <div className="people-text">
                   <strong>{w.name}</strong>
-                  <span>{w.kind === 'contact' ? 'By text message' : 'In the Sunup app'}</span>
+                  <span>
+                    {w.kind === 'user'
+                      ? 'In the Sunup app'
+                      : w.consent === 'stopped'
+                        ? 'Opted out of Sunup texts'
+                        : w.consent === 'confirmed'
+                          ? 'By text message'
+                          : 'By text, once they reply YES'}
+                  </span>
                 </div>
                 <Toggle
                   checked={w.receivesPacket}

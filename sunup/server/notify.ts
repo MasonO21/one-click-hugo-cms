@@ -16,6 +16,10 @@ export interface NotifierConfig {
   fetch?: typeof fetch;
   /** Android push (Firebase service account). */
   fcm?: FcmConfig;
+  /** Waits before retrying a text or call that failed for a temporary reason. */
+  retryDelays?: number[];
+  /** Whether a message is still worth sending on a retry (e.g. its alert hasn't been resolved). */
+  stillWanted?: (message: Outbound) => boolean;
   /** iPhone push (APNs .p8 key). */
   apns?: ApnsConfig;
 }
@@ -28,6 +32,8 @@ export interface Notifier {
   readonly native: { android: boolean; ios: boolean };
   close(): void;
 }
+
+type DeliveryError = Error & { retryable?: boolean };
 
 export function escapeXml(text: string): string {
   return text.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
@@ -50,7 +56,12 @@ export function createNotifier(store: Store, config: NotifierConfig): Notifier {
       },
       body: new URLSearchParams({ From: config.twilioFrom!, ...params }),
     });
-    if (!res.ok) throw new Error(`Twilio ${resource} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) {
+      const error = new Error(`Twilio ${resource} ${res.status}: ${(await res.text()).slice(0, 200)}`) as DeliveryError;
+      // A bad or opted-out number won't work on a second try; an outage or rate limit might.
+      error.retryable = res.status === 429 || res.status >= 500;
+      throw error;
+    }
   }
 
   async function push(o: Outbound) {
@@ -96,7 +107,7 @@ export function createNotifier(store: Store, config: NotifierConfig): Notifier {
     if (o.channel === 'push') return push(o);
     if (!o.to.phone) return;
     if (!twilio) {
-      log(`[${o.channel} -> ${o.to.name} ${o.to.phone}] ${o.body}`);
+      log(`[${o.channel} -> ${o.to.name} ${o.to.phone}] ${o.sensitive ? `${o.title} (${o.body.length} characters, not logged)` : o.body}`);
       return;
     }
     if (o.channel === 'sms') {
@@ -107,11 +118,35 @@ export function createNotifier(store: Store, config: NotifierConfig): Notifier {
     }
   }
 
+  const retryDelays = config.retryDelays ?? [30_000, 2 * 60_000, 10 * 60_000];
+  const retries = new Set<NodeJS.Timeout>();
+
+  /** Texts and calls that fail for a temporary reason are tried again, unless the alert is over. */
+  async function deliverWithRetry(o: Outbound, attempt: number): Promise<void> {
+    if (attempt > 0 && config.stillWanted && !config.stillWanted(o)) return;
+    try {
+      await deliverOne(o);
+    } catch (e) {
+      const wait = retryDelays[attempt];
+      const retry = wait !== undefined && (e as DeliveryError).retryable !== false;
+      log(`[deliver] ${o.channel} to ${o.to.name} failed${retry ? `, trying again in ${Math.round(wait / 1000)}s` : ''}: ${String(e)}`);
+      if (!retry) return;
+      const timer = setTimeout(() => {
+        retries.delete(timer);
+        void deliverWithRetry(o, attempt + 1);
+      }, wait);
+      timer.unref?.();
+      retries.add(timer);
+    }
+  }
+
   return {
     twilio,
     native: { android: !!fcm, ios: !!apns },
     close() {
       apns?.close();
+      for (const timer of retries) clearTimeout(timer);
+      retries.clear();
     },
     async text(phone, body) {
       if (!twilio) {
@@ -122,10 +157,7 @@ export function createNotifier(store: Store, config: NotifierConfig): Notifier {
     },
     async deliver(messages) {
       // Each message is independent: one failure must never block an alert to someone else.
-      const results = await Promise.allSettled(messages.map(deliverOne));
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') log(`[deliver] ${messages[i].channel} to ${messages[i].to.name} failed: ${String(r.reason)}`);
-      });
+      await Promise.all(messages.map((o) => deliverWithRetry(o, 0)));
     },
   };
 }

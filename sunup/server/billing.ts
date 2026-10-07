@@ -105,8 +105,14 @@ export function applyStripeEvent(service: Sunup, event: StripeEvent, now: number
     const isNew = user.billing?.subscriptionId !== subscriptionId;
     service.applyBilling(
       user.id,
-      // A new subscription starts fresh: an old one's "canceled" status must not carry over.
-      { customerId: obj.customer as string, subscriptionId, ...(isNew ? { status: undefined, cancelAtPeriodEnd: false, periodEnd: undefined } : {}), eventAt: created },
+      // A new subscription starts fresh: an old one's "canceled" status must not carry over. This
+      // event carries no status, so it doesn't count toward event order: Stripe usually creates the
+      // subscription's own events earlier, and they may arrive after this one.
+      {
+        customerId: obj.customer as string,
+        subscriptionId,
+        ...(isNew ? { status: undefined, cancelAtPeriodEnd: false, periodEnd: undefined, eventAt: undefined } : {}),
+      },
       now,
     );
     // The subscription events carry the exact status; until one arrives, a finished checkout means Premium.

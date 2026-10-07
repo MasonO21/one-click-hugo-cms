@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createApp } from '../server/app';
+import { createNotifier } from '../server/notify';
+import { Store } from '../server/store';
 import { twilioSignature } from '../server/twilio';
 import { createHmac, generateKeyPairSync } from 'node:crypto';
 import type { Snapshot } from '../src/shared/snapshot';
@@ -190,6 +192,109 @@ describe('Stripe event order', () => {
     // A late event about the old subscription changes nothing.
     await stripeEvent({ type: 'customer.subscription.deleted', created: 500, data: { object: { id: 'sub_a', customer: 'cus_o', status: 'canceled' } } });
     expect(await premium()).toBe(true);
+  });
+});
+
+describe('Stripe edge cases', () => {
+  it('applies a subscription event Stripe created before the checkout finished', async () => {
+    const user = await json<{ token: string; snapshot: Snapshot }>('/api/signup', { name: 'Ada', timezone: 'America/Chicago' });
+    const userId = user.body.snapshot.me.id;
+    await stripeEvent({ type: 'checkout.session.completed', created: 200, data: { object: { client_reference_id: userId, customer: 'cus_e', subscription: 'sub_e' } } });
+    // Stripe creates the subscription first, but its event can arrive second.
+    await stripeEvent({
+      type: 'customer.subscription.created',
+      created: 150,
+      data: { object: { id: 'sub_e', customer: 'cus_e', status: 'trialing', metadata: { userId }, items: { data: [{ current_period_end: 1_900_000_000 }] } } },
+    });
+    const state = await json('/api/state', undefined, user.body.token);
+    expect(state.body.me.billing).toMatchObject({ status: 'trialing', periodEnd: 1_900_000_000_000 });
+  });
+
+  it("won't start a second subscription for someone who already has one", async () => {
+    const user = await json<{ token: string; snapshot: Snapshot }>('/api/signup', { name: 'Ben', timezone: 'America/Chicago' });
+    const userId = user.body.snapshot.me.id;
+    await stripeEvent({ type: 'customer.subscription.created', data: { object: { id: 'sub_f', customer: 'cus_f', status: 'active', metadata: { userId } } } });
+    sent.length = 0;
+    const again = await json<{ code: string }>('/api/billing/checkout', { interval: 'month' }, user.body.token);
+    expect(again.status).toBe(409);
+    expect(again.body.code).toBe('subscribed');
+    expect(sent.some((s) => s.url.endsWith('/checkout/sessions'))).toBe(false);
+  });
+});
+
+describe('delivery retries', () => {
+  it('tries a text again after a temporary failure, but not a bad number or a resolved alert', async () => {
+    const retryDir = mkdtempSync(join(tmpdir(), 'sunup-retry-'));
+    const posts: string[] = [];
+    let failures: Record<string, number[]> = {};
+    const flaky = (async (_input: string | URL | Request, init?: RequestInit) => {
+      const to = new URLSearchParams(String(init?.body ?? '')).get('To') ?? '';
+      posts.push(to);
+      const status = failures[to]?.shift();
+      return new Response(JSON.stringify(status ? { message: 'nope' } : { sid: 'SM1' }), { status: status ?? 201 });
+    }) as typeof fetch;
+    const created = createApp({ dataDir: retryDir, publicUrl: PUBLIC, tickMs: 60_000, twilio: TWILIO, fetch: flaky, retryDelays: [40, 40], log: () => undefined });
+    const srv = created.app.listen(0);
+    await new Promise((r) => srv.once('listening', r));
+    const url = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
+    const call = async (path: string, body: unknown, token?: string) =>
+      (await fetch(url + path, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) })).json() as Promise<{ token: string }>;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    try {
+      const { token } = await call('/api/signup', { name: 'Rae', timezone: 'America/Chicago' });
+      // Twilio is down for the first try: the consent text goes out on the second.
+      failures = { '+15552017001': [503] };
+      await call('/api/action', { type: 'addContact', name: 'Kim', phone: '555-201-7001' }, token);
+      await wait(150);
+      expect(posts.filter((to) => to === '+15552017001')).toHaveLength(2);
+
+      // An invalid number is refused for good: no retry.
+      failures = { '+15552017002': [400] };
+      await call('/api/action', { type: 'addContact', name: 'Lou', phone: '555-201-7002' }, token);
+      await wait(150);
+      expect(posts.filter((to) => to === '+15552017002')).toHaveLength(1);
+
+      // The SOS text fails, then Rae checks in before the retry: nobody gets a stale alarm.
+      failures = { '+15552017001': [503] };
+      await call('/api/action', { type: 'sos' }, token);
+      await call('/api/action', { type: 'checkIn' }, token);
+      await wait(150);
+      const toKim = posts.filter((to) => to === '+15552017001');
+      // Two consent attempts, then one SOS attempt and the "Rae is okay" text: no SOS retries.
+      expect(toKim).toHaveLength(4);
+    } finally {
+      created.close();
+      srv.close();
+      rmSync(retryDir, { recursive: true, force: true });
+    }
+  });
+
+  it("logs that the packet was sent, but never what's in it", async () => {
+    const logDir = mkdtempSync(join(tmpdir(), 'sunup-log-'));
+    const lines: string[] = [];
+    try {
+      const store = new Store(logDir, PUBLIC);
+      const notifier = createNotifier(store, { vapidSubject: 'mailto:test@sunup.test', log: (l) => lines.push(l) });
+      await notifier.deliver([
+        {
+          id: 'o_1',
+          at: Date.now(),
+          to: { type: 'contact', id: 'c_1', name: 'Mom', phone: '+15552010003' },
+          channel: 'sms',
+          urgent: true,
+          title: "Maya's emergency info",
+          body: 'Home access: door code 4417',
+          aboutUserId: 'u_1',
+          sensitive: true,
+        },
+      ]);
+      expect(lines.join('\n')).toContain("Maya's emergency info");
+      expect(lines.join('\n')).not.toContain('4417');
+      notifier.close();
+      store.close();
+    } finally {
+      rmSync(logDir, { recursive: true, force: true });
+    }
   });
 });
 

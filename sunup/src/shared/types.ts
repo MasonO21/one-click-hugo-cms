@@ -44,9 +44,13 @@ export interface User {
   /** Minutes after a missed deadline before the circle is alerted. */
   graceMinutes: number;
   pause?: Pause;
+  /** Earlier pauses that ended in the last two days, so the windows they covered stay excused. */
+  pastPauses?: Pause[];
   inviteCode: string;
   /** Which reminders went out for the current window, so each is sent once. */
   reminded?: { key: string; open?: boolean; soon?: boolean };
+  /** The streak as of the end of `date`, kept so the streak outlives pruned check-ins. */
+  streakFloor?: { date: string; count: number };
 }
 
 export interface Billing {
@@ -117,6 +121,11 @@ export interface Alert {
   momentId?: Id;
   /** The missed deadline, the moment's end, or when SOS was pressed. */
   triggeredAt: number;
+  /**
+   * When the ladder started, if later than `triggeredAt`. An alert opened late (the server was
+   * down, or the demo was closed) starts from its first step instead of firing every step at once.
+   */
+  ladderFrom?: number;
   /** When each escalation step fired. */
   steps: Partial<Record<StepId, number>>;
   /** Ladder time multiplier, used by the demo to play an hour-long ladder in about a minute. */
@@ -179,6 +188,8 @@ export interface Outbound {
   kind?: 'reminder';
   /** A button on the notification: "checkin" checks you in without opening the app. */
   action?: 'checkin';
+  /** The body is private (the packet): deliver it, but never log it. */
+  sensitive?: boolean;
 }
 
 export interface State {
@@ -191,6 +202,8 @@ export interface State {
   moments: Record<Id, Moment>;
   packets: Record<Id, Packet>;
   outbox: Outbound[];
+  /** Numbers that replied STOP, and when. Sunup never texts or calls them until they reply START. */
+  optOuts?: Record<string, number>;
 }
 
 export function emptyState(): State {
@@ -204,5 +217,6 @@ export function emptyState(): State {
     moments: {},
     packets: {},
     outbox: [],
+    optOuts: {},
   };
 }

@@ -4,6 +4,7 @@ import type { Schedule, Slot } from '../../shared/types';
 import type { AlertView } from '../../shared/snapshot';
 import { GRACE_OPTIONS, ladderFor } from '../../shared/ladder';
 import { formatPhone } from '../../shared/util';
+import { minutesOf } from '../../shared/time';
 import { useNow, useStore } from '../store/StoreContext';
 import { Avatar, PremiumBadge, Sheet, Toggle } from '../components/ui';
 import { Ladder } from '../components/Ladder';
@@ -79,10 +80,16 @@ export function You() {
       openPaywall('Add an evening "home safe" check-in with Premium: up to 3 windows a day.');
       return;
     }
-    const last = me.schedule.slots.at(-1)!;
-    const [h] = last.deadline.split(':').map(Number);
-    const start = Math.min(h + 8, 21);
-    return setSchedule({ slots: [...me.schedule.slots, { start: `${String(start).padStart(2, '0')}:00`, deadline: `${String(start + 2).padStart(2, '0')}:00` }] });
+    // Suggest a two-hour window about eight hours after the last one, kept inside the day.
+    const lastEnd = minutesOf(me.schedule.slots.at(-1)!.deadline);
+    const start = Math.max(lastEnd, Math.min(lastEnd + 8 * 60, 21 * 60));
+    const end = Math.min(start + 120, 23 * 60 + 59);
+    if (end - start < 30) {
+      toast({ title: 'No room for another check-in today', body: 'Move your last check-in earlier first.', tone: 'info' });
+      return;
+    }
+    const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    return setSchedule({ slots: [...me.schedule.slots, { start: hm(start), deadline: hm(end) }] });
   }
 
   async function enableNotifications() {
@@ -468,7 +475,7 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
                 </span>
               ) : (
                 <>
-                  <span>{formatPhone(savedPhone)} isn't confirmed yet, so you can't sign in with it.</span>
+                  <span>{formatPhone(savedPhone)} isn't confirmed yet, so Sunup won't text or call it, and you can't sign in with it.</span>
                   <button type="button" className="btn sm" onClick={sendCode}>
                     Text me a code
                   </button>

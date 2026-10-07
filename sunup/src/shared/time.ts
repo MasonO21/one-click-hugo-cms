@@ -72,14 +72,24 @@ function offsetAt(ts: number, tz: string): number {
   return asUtc - Math.floor(ts / 1000) * 1000;
 }
 
-/** The instant a local wall-clock time happens in `tz`. Times skipped by DST resolve forward. */
+/**
+ * The instant a local wall-clock time happens in `tz`. A time that happens twice (clocks going
+ * back) resolves to the first; a time skipped by clocks going forward resolves forward.
+ */
 export function zonedToUtc(date: string, time: string, tz: string): number {
   const [y, m, d] = date.split('-').map(Number);
   const [h, mi] = time.split(':').map(Number);
   const guess = Date.UTC(y, m - 1, d, h, mi);
-  const first = guess - offsetAt(guess, tz);
-  const second = guess - offsetAt(first, tz);
-  return first === second ? first : Math.max(first, second);
+  // The zone's offsets a day either side are the ones in force before and after any change.
+  const before = offsetAt(guess - DAY, tz);
+  const after = offsetAt(guess + DAY, tz);
+  if (before === after) return guess - before;
+  const candidates = [guess - before, guess - after];
+  const exact = candidates.filter((ts) => {
+    const p = localParts(ts, tz);
+    return p.date === date && p.time === time;
+  });
+  return exact.length ? Math.min(...exact) : Math.max(...candidates);
 }
 
 export function addDays(date: string, n: number): string {

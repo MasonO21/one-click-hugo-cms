@@ -18,6 +18,6 @@ export function statusLine(w: WatchedView, now: number, alerting: boolean): { te
     case 'late':
       return { text: 'Checked in late', tone: 'ok' };
     default:
-      return { text: w.lastCheckIn ? `Last check-in ${when(w.lastCheckIn.at, now)}` : 'Waiting for first check-in', tone: 'muted' };
+      return { text: w.lastCheckIn ? `Last check-in ${when(w.lastCheckIn.at, now, w.timezone)}` : 'Waiting for first check-in', tone: 'muted' };
   }
 }

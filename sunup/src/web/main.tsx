@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import type { Api } from './store/api';
 import { createDemoApi } from './store/demo';
-import { createServerApi } from './store/server';
+import { createServerApi, hasSavedSession } from './store/server';
 import { API_BASE, CAN_PURCHASE, IS_NATIVE, apiUrl, initNative } from './native';
 import './styles.css';
 
@@ -13,16 +13,16 @@ const MODE = import.meta.env.VITE_SUNUP_MODE as 'demo' | 'server' | undefined;
 async function pickApi(): Promise<Api> {
   // An app build without a server address is the on-device demo.
   if (MODE === 'demo' || (IS_NATIVE && !API_BASE)) return createDemoApi();
-  if (MODE === 'server') {
-    const health = await fetch(apiUrl('/api/health')).then((r) => r.json()).catch(() => ({}));
-    return createServerApi({ billing: health.billing === true && CAN_PURCHASE });
-  }
+  // The server's own build, app builds with a server address, and devices already signed in
+  // never fall back to the demo: a slow network must not send real check-ins to this device.
+  // If the server can't be reached, loading fails and the app offers to try again.
+  const serverOnly = MODE === 'server' || IS_NATIVE || hasSavedSession();
   try {
-    const res = await fetch(apiUrl('/api/health'), { signal: AbortSignal.timeout(IS_NATIVE ? 6000 : 2500) });
+    const res = await fetch(apiUrl('/api/health'), { signal: AbortSignal.timeout(serverOnly ? 8000 : 2500) });
     const health = res.ok ? await res.json() : null;
-    if (health?.sunup) return createServerApi({ billing: health.billing === true && CAN_PURCHASE });
+    if (health?.sunup || serverOnly) return createServerApi({ billing: health?.billing === true && CAN_PURCHASE });
   } catch {
-    // No server: fall through to the demo.
+    if (serverOnly) return createServerApi({ billing: false });
   }
   return createDemoApi();
 }

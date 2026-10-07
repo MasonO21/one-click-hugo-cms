@@ -57,7 +57,8 @@ export function checkInFor(slot: SlotInstance, checkIns: CheckIn[]): CheckIn | u
 }
 
 export function isPaused(user: User, at: number): boolean {
-  return !!user.pause && user.pause.from <= at && at <= user.pause.until;
+  const within = (p: { from: number; until: number }) => p.from <= at && at <= p.until;
+  return (!!user.pause && within(user.pause)) || !!user.pastPauses?.some(within);
 }
 
 export function isEnforced(user: User, slot: SlotInstance): boolean {
@@ -80,14 +81,19 @@ export function slotStatus(
   return alert?.resolvedAt ? 'late' : 'missed';
 }
 
-/** Consecutive days the user checked in without a missed window. Today counts once done. */
+/**
+ * Consecutive days the user checked in without a missed window. Today counts once done.
+ * Days up to `user.streakFloor.date` come from the saved floor, since their check-ins get pruned.
+ */
 export function streak(user: User, checkIns: CheckIn[], alerts: Alert[], now: number): number {
   const today = localParts(now, user.timezone).date;
   const firstDay = localParts(user.createdAt, user.timezone).date;
+  const floor = user.streakFloor && user.streakFloor.date < today ? user.streakFloor : undefined;
   const mine = checkIns.filter((c) => c.userId === user.id);
   const daysWithCheckIn = new Set(mine.map((c) => localParts(c.at, user.timezone).date));
   let count = 0;
   for (let i = 0, date = today; i < 366 && date >= firstDay; i++, date = addDays(date, -1)) {
+    if (floor && date === floor.date) return count + floor.count;
     const slots = slotsBetween(user, date, date);
     if (slots.length === 0) continue;
     const statuses = slots.map((s) => slotStatus(user, s, mine, alerts, now));

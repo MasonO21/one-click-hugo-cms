@@ -14,13 +14,15 @@ const at = (date: string, time: string) => zonedToUtc(date, time, TZ);
 function setup() {
   const svc = new Sunup(emptyState(), { baseUrl: 'https://sunup.test' });
   const signupTime = T0 - 2 * DAY;
-  const maya = svc.createUser({ name: 'Maya Chen', phone: '555-201-0001', timezone: TZ }, signupTime);
-  const jordan = svc.createUser({ name: 'Jordan Lee', phone: '5552010002', timezone: TZ }, signupTime);
+  // Both signed up with a texted code, so their numbers are confirmed.
+  const maya = svc.createUser({ name: 'Maya Chen', phone: '555-201-0001', timezone: TZ, phoneVerified: true }, signupTime);
+  const jordan = svc.createUser({ name: 'Jordan Lee', phone: '5552010002', timezone: TZ, phoneVerified: true }, signupTime);
   const act = (u: User, action: Action, now: number) => svc.dispatch(u.id, action, now);
   act(maya, { type: 'completeOnboarding' }, signupTime);
   act(jordan, { type: 'completeOnboarding' }, signupTime);
   act(jordan, { type: 'acceptInvite', code: maya.inviteCode, watch: true, mutual: false }, signupTime);
   act(maya, { type: 'addContact', name: 'Mom', phone: '(555) 201-0003', receivesPacket: true }, signupTime);
+  svc.contactReply('+15552010003', 'Yes', signupTime);
   // Both kept their windows on the two days before the tests start.
   for (const date of ['2026-03-02', '2026-03-03']) {
     act(maya, { type: 'checkIn' }, at(date, '08:00'));
@@ -170,7 +172,7 @@ describe('circle', () => {
     const sam = svc.createUser({ name: 'Sam', timezone: TZ }, T0);
     expect(() => act(maya, { type: 'acceptInvite', code: maya.inviteCode, watch: true, mutual: false }, T0)).toThrow(/own invite/);
     // Maya's free circle (Jordan + Mom) is full.
-    expect(() => act(sam, { type: 'acceptInvite', code: maya.inviteCode, watch: true, mutual: true }, T0)).toThrow(/free plan/);
+    expect(() => act(sam, { type: 'acceptInvite', code: maya.inviteCode, watch: true, mutual: true }, T0)).toThrow(/Maya's circle is full/);
     act(maya, { type: 'startTrial' }, T0);
     act(sam, { type: 'acceptInvite', code: maya.inviteCode.toUpperCase(), watch: true, mutual: true }, T0);
     expect(svc.isWatching(sam.id, maya.id)).toBe(true);
@@ -378,5 +380,179 @@ describe('validation', () => {
     expect(() => act(maya, { type: 'checkIn', photo: 'javascript:alert(1)' }, T0)).toThrow(/image/);
     expect(() => act(maya, { type: 'setGrace', minutes: 5 }, T0)).toThrow();
     expect(() => act(maya, { type: 'nope' } as unknown as Action, T0)).toThrow(/Unknown/);
+  });
+});
+
+describe('bug check regressions', () => {
+  it('treats a check-in seconds after the deadline as late, not as an emergency', () => {
+    const { svc, maya, act } = setup();
+    svc.tick(at('2026-03-04', '09:59'));
+    svc.drain();
+    // The clock ticks every 15 seconds; Maya taps between ticks.
+    act(maya, { type: 'checkIn' }, at('2026-03-04', '10:00') + 5000);
+    svc.tick(at('2026-03-04', '10:00') + 15_000);
+    tickThrough(svc, at('2026-03-04', '10:01'), at('2026-03-04', '11:00'));
+    const [alert] = svc.alertsOf(maya.id);
+    expect(alert).toMatchObject({ resolution: 'checked_in', steps: {} });
+    expect(svc.drain()).toHaveLength(0);
+    expect(buildSnapshot(svc, maya.id, at('2026-03-04', '11:00')).slots[0].status).toBe('late');
+  });
+
+  it('starts the ladder from the first step when an alert is opened late', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    // The server was down from 09:50 until 11:30.
+    svc.tick(at('2026-03-04', '09:50'));
+    svc.drain();
+    svc.tick(at('2026-03-04', '11:30'));
+    const [alert] = svc.alertsOf(maya.id);
+    expect(alert.triggeredAt).toBe(at('2026-03-04', '10:00'));
+    expect(Object.keys(alert.steps)).toEqual(['nudge']);
+    expect(svc.drain().every((o) => o.to.id === maya.id)).toBe(true);
+    tickThrough(svc, at('2026-03-04', '11:31'), at('2026-03-04', '12:09'));
+    expect(alert.steps.circle).toBeUndefined();
+    svc.tick(at('2026-03-04', '12:10'));
+    expect(alert.steps.circle).toBe(at('2026-03-04', '12:10'));
+  });
+
+  it('keeps windows covered by an earlier pause excused when pausing again', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'pause', until: at('2026-03-04', '11:00') }, at('2026-03-03', '20:00'));
+    tickThrough(svc, at('2026-03-04', '09:00'), at('2026-03-04', '12:00'), 5 * MINUTE);
+    act(maya, { type: 'pause', until: at('2026-03-06', '12:00') }, at('2026-03-04', '12:00'));
+    tickThrough(svc, at('2026-03-04', '12:00'), at('2026-03-04', '13:00'), 5 * MINUTE);
+    expect(svc.alertsOf(maya.id)).toHaveLength(0);
+    expect(buildSnapshot(svc, maya.id, at('2026-03-04', '13:00')).slots[0].status).toBe('paused');
+  });
+
+  it('sends the packet only to contacts who replied YES', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    act(maya, { type: 'savePacket', packet: { home: 'Door code 4417' } }, T0);
+    act(maya, { type: 'addContact', name: 'Sam', phone: '555-201-0044', receivesPacket: true }, T0);
+    tickThrough(svc, at('2026-03-04', '10:00'), at('2026-03-04', '11:05'));
+    const sent = svc.drain();
+    expect(sent.some((o) => o.to.name === 'Mom' && o.body.includes('4417'))).toBe(true);
+    expect(sent.some((o) => o.to.name === 'Sam' && o.title === "Maya hasn't checked in")).toBe(true);
+    expect(sent.some((o) => o.to.name === 'Sam' && o.body.includes('4417'))).toBe(false);
+  });
+
+  it('never texts or calls a number the person has not confirmed', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    act(maya, { type: 'updateProfile', phone: '555-201-0099' }, T0);
+    expect(svc.user(maya.id).phoneVerified).toBe(false);
+    tickThrough(svc, at('2026-03-04', '10:00'), at('2026-03-04', '10:45'));
+    const toMaya = svc.drain().filter((o) => o.to.id === maya.id);
+    expect(toMaya.length).toBeGreaterThan(0);
+    expect(toMaya.every((o) => o.channel === 'push')).toBe(true);
+  });
+
+  it('remembers STOP for the number, across circles and re-adds', () => {
+    const { svc, maya, jordan, act } = setup();
+    svc.contactReply('+15552010003', 'STOP', T0);
+    act(jordan, { type: 'addContact', name: 'Linda', phone: '555-201-0003' }, T0);
+    const mom = Object.values(svc.state.contacts).find((c) => c.ownerId === maya.id)!;
+    act(maya, { type: 'removeContact', id: mom.id }, T0);
+    act(maya, { type: 'addContact', name: 'Mom', phone: '555-201-0003' }, T0);
+    expect(svc.drain().filter((o) => o.title === 'Circle invite')).toHaveLength(0);
+    expect(svc.watchersOf(jordan.id).find((w) => w.name === 'Linda')?.consent).toBe('stopped');
+    expect(svc.contactReply('+15552010003', 'yes', T0 + 1000)).toBeNull();
+
+    expect(svc.contactReply('+15552010003', 'START', T0 + 2000)).toContain('back on');
+    expect(svc.watchersOf(jordan.id).find((w) => w.name === 'Linda')?.consent).toBe('confirmed');
+    expect(svc.watchersOf(maya.id).find((w) => w.name === 'Mom')?.consent).toBe('confirmed');
+  });
+
+  it('caps consent texts at ten a day and keeps links out of names', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    for (let i = 0; i < 10; i++) act(maya, { type: 'addContact', name: `Friend ${i}`, phone: `555-301-00${10 + i}` }, T0);
+    expect(() => act(maya, { type: 'addContact', name: 'One more', phone: '555-301-0099' }, T0)).toThrow(/10 people by phone a day/);
+    act(maya, { type: 'addContact', name: 'One more', phone: '555-301-0099' }, T0 + DAY);
+
+    for (const name of ['Win at bit.ly/x', 'www.prize.example', 'Claim https://x.test', 'see scam.com', 'a@b']) {
+      expect(() => act(maya, { type: 'addContact', name, phone: '555-301-0098' }, T0 + DAY), name).toThrow(/links/);
+      expect(() => svc.createUser({ name, timezone: TZ }, T0), name).toThrow(/links/);
+    }
+    for (const name of ["Dr. Ann-Marie O'Neil", 'St. John', 'J.R. Smith', 'Zoë']) {
+      expect(svc.createUser({ name, timezone: TZ }, T0).name).toBe(name);
+    }
+  });
+
+  it('keeps a streak growing past the 60 days of kept check-ins', () => {
+    const svc = new Sunup(emptyState(), { baseUrl: 'https://sunup.test' });
+    const start = '2026-01-01';
+    const ana = svc.createUser({ name: 'Ana', timezone: TZ }, zonedToUtc(start, '06:00', TZ));
+    svc.dispatch(ana.id, { type: 'completeOnboarding' }, zonedToUtc(start, '06:00', TZ));
+    let date = start;
+    for (let i = 0; i < 90; i++, date = addDays(date, 1)) {
+      svc.dispatch(ana.id, { type: 'checkIn' }, zonedToUtc(date, '08:00', TZ));
+      for (const time of ['08:30', '12:00', '18:00']) svc.tick(zonedToUtc(date, time, TZ));
+    }
+    const now = zonedToUtc(addDays(date, -1), '20:00', TZ);
+    expect(svc.checkInsOf(ana.id).length).toBeLessThan(62);
+    expect(streak(ana, svc.checkInsOf(ana.id), svc.alertsOf(ana.id), now)).toBe(90);
+  });
+
+  it('only counts opening the app as a smart check-in once the window is open', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    act(maya, { type: 'setSchedule', schedule: { slots: [{ start: '07:00', deadline: '10:00' }], days: [0, 1, 2, 3, 4, 5, 6], smart: true } }, T0 - DAY);
+    act(maya, { type: 'activity' }, at('2026-03-04', '05:30'));
+    expect(svc.checkInsOf(maya.id).filter((c) => c.source === 'smart')).toHaveLength(0);
+    act(maya, { type: 'activity' }, at('2026-03-04', '07:05'));
+    expect(svc.checkInsOf(maya.id).filter((c) => c.source === 'smart')).toHaveLength(1);
+  });
+
+  it('ends the timer when a watcher marks that they reached the person', () => {
+    const { svc, maya, jordan, act } = setup();
+    act(maya, { type: 'startTrial' }, T0);
+    act(maya, { type: 'startMoment', kind: 'run', minutes: 30 }, at('2026-03-04', '18:00'));
+    tickThrough(svc, at('2026-03-04', '18:30'), at('2026-03-04', '18:41'));
+    const alert = svc.alertsOf(maya.id).find((a) => a.kind === 'moment')!;
+    act(jordan, { type: 'resolveAlert', id: alert.id }, at('2026-03-04', '18:42'));
+    expect(buildSnapshot(svc, maya.id, at('2026-03-04', '18:43')).moment).toBeUndefined();
+    act(maya, { type: 'startMoment', kind: 'night', minutes: 120 }, at('2026-03-04', '19:00'));
+  });
+
+  it('lets you clear a mood', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'checkIn', mood: 'meh' }, at('2026-03-04', '08:00'));
+    const id = svc.checkInsOf(maya.id).at(-1)!.id;
+    act(maya, { type: 'updateCheckIn', id, mood: null }, at('2026-03-04', '08:01'));
+    expect(svc.checkInsOf(maya.id).at(-1)!.mood).toBeUndefined();
+  });
+
+  it("doesn't send SOS when nobody in the circle can be reached", () => {
+    const svc = new Sunup(emptyState(), { baseUrl: 'https://sunup.test' });
+    const ana = svc.createUser({ name: 'Ana', timezone: TZ }, T0);
+    svc.dispatch(ana.id, { type: 'addContact', name: 'Lee', phone: '555-201-0077' }, T0);
+    svc.contactReply('+15552010077', 'STOP', T0);
+    expect(() => svc.dispatch(ana.id, { type: 'sos' }, T0)).toThrow(/Add someone/);
+  });
+
+  it('greets an evening window as evening', () => {
+    const { svc, maya, act } = setup();
+    act(maya, { type: 'setSchedule', schedule: { slots: [{ start: '19:00', deadline: '21:00' }], days: [0, 1, 2, 3, 4, 5, 6], smart: false } }, T0 - DAY);
+    svc.drain();
+    svc.tick(at('2026-03-04', '19:00'));
+    expect(svc.drain().filter((o) => o.kind === 'reminder').map((o) => o.title)).toEqual(['Good evening, Maya']);
+  });
+
+  it("won't drop a paying subscriber to free without the payment provider", () => {
+    const { svc, maya, act } = setup();
+    svc.applyBilling(maya.id, { customerId: 'cus_1', subscriptionId: 'sub_1', status: 'active' }, T0);
+    expect(() => act(maya, { type: 'cancelPremium' }, T0)).toThrow(/Manage subscription/);
+    expect(svc.user(maya.id).plan).toBe('premium');
+  });
+
+  it('gives you a new invite link and retires the old one', () => {
+    const { svc, maya, act } = setup();
+    const old = maya.inviteCode;
+    act(maya, { type: 'newInviteCode' }, T0);
+    expect(maya.inviteCode).not.toBe(old);
+    expect(svc.userByInviteCode(old)).toBeUndefined();
+    expect(svc.userByInviteCode(maya.inviteCode)?.id).toBe(maya.id);
   });
 });

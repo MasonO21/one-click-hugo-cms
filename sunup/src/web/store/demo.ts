@@ -169,6 +169,7 @@ export function createDemoApi(): Api {
       bot.schedule = { slots: [{ start: person.start, deadline: person.deadline }], days: [0, 1, 2, 3, 4, 5, 6], smart: false };
       bot.scheduleSince = t - 4 * DAY;
       bot.phone = `+1555201${String(1000 + (hash(person.name) % 9000)).slice(0, 4)}`;
+      bot.phoneVerified = true;
       file.bots[bot.id] = { notes: person.notes, moods: person.moods };
       // Demo shortcut: skip the invite flow and connect both ways.
       file.state.watches[`w_${bot.id}_me`] = { id: `w_${bot.id}_me`, watcherId: bot.id, watchedId: mine.id, receivesPacket: person.getsMyPacket, createdAt: t };
@@ -193,13 +194,15 @@ export function createDemoApi(): Api {
 
     async load() {
       if (!file.meId || !file.state.users[file.meId]) return null;
+      svc.dispatch(file.meId, { type: 'activity' }, now());
       tick();
       return snapshot();
     },
 
     async signup(input: SignupInput) {
       return guard(() => {
-        const user = svc.createUser(input, now());
+        // There are no texted codes in the demo, so numbers count as confirmed.
+        const user = svc.createUser({ ...input, phoneVerified: true }, now());
         file.meId = user.id;
         persist();
         return snapshot();
@@ -209,6 +212,8 @@ export function createDemoApi(): Api {
     async act(action: Action) {
       return guard(() => {
         svc.dispatch(file.meId!, action, now());
+        const me = file.state.users[file.meId!];
+        if (action.type === 'updateProfile' && me.phone) me.phoneVerified = true;
         // A resolved alert means a bot that was "quiet" can resume.
         if (action.type === 'resolveAlert') {
           const alert = file.state.alerts[action.id];

@@ -27,9 +27,10 @@ import type {
 } from './types';
 import { DEFAULT_GRACE, GRACE_OPTIONS, ladderFor, type LadderStep } from './ladder';
 import { TRIAL_MS, isPremium, limitsFor } from './plans';
-import { checkInFor, isEnforced, isPaused, scheduleProblem, slotsAround } from './schedule';
-import { DAY, HOUR, MINUTE, isTimeZone } from './time';
+import { checkInFor, isEnforced, isPaused, scheduleProblem, slotsAround, streak } from './schedule';
+import { DAY, HOUR, MINUTE, addDays, isTimeZone, localParts, zonedToUtc } from './time';
 import {
+  cleanName,
   cleanText,
   colorFor,
   fail,
@@ -52,6 +53,10 @@ export const MOMENT_TITLES: Record<MomentKind, string> = {
   custom: 'Timer',
 };
 const MAX_PHOTO_CHARS = 400_000;
+/** An alert opened this long after it was due starts its ladder from the first step. */
+const LATE_OPEN_MS = 5 * MINUTE;
+/** Consent texts one person can send in a day. */
+const INVITES_PER_DAY = 10;
 const PACKET_FIELDS = ['pets', 'home', 'health', 'people', 'notes'] as const;
 
 export const DEFAULT_SCHEDULE: Schedule = {
@@ -62,7 +67,7 @@ export const DEFAULT_SCHEDULE: Schedule = {
 
 export type Action =
   | { type: 'checkIn'; mood?: Mood; note?: string; photo?: string }
-  | { type: 'updateCheckIn'; id: Id; mood?: Mood; note?: string; photo?: string }
+  | { type: 'updateCheckIn'; id: Id; mood?: Mood | null; note?: string; photo?: string }
   | { type: 'activity' }
   | { type: 'updateProfile'; name?: string; phone?: string; timezone?: string }
   | { type: 'setSchedule'; schedule: Schedule }
@@ -81,7 +86,8 @@ export type Action =
   | { type: 'sos'; location?: GeoPoint }
   | { type: 'resolveAlert'; id: Id }
   | { type: 'startTrial' }
-  | { type: 'cancelPremium' };
+  | { type: 'cancelPremium' }
+  | { type: 'newInviteCode' };
 
 export interface Watcher {
   ref: RecipientRef;
@@ -148,13 +154,24 @@ export class Sunup {
       if (w.watchedId !== userId) continue;
       const u = this.state.users[w.watcherId];
       if (!u) continue;
-      out.push({ ref: { type: 'user', id: u.id }, name: u.name, phone: u.phone, color: u.color, receivesPacket: w.receivesPacket, watchId: w.id });
+      out.push({ ref: { type: 'user', id: u.id }, name: u.name, phone: verifiedPhone(u), color: u.color, receivesPacket: w.receivesPacket, watchId: w.id });
     }
     for (const c of Object.values(this.state.contacts)) {
       if (c.ownerId !== userId) continue;
-      out.push({ ref: { type: 'contact', id: c.id }, name: c.name, phone: c.phone, color: c.color, receivesPacket: c.receivesPacket, consent: c.consent ?? 'pending' });
+      out.push({ ref: { type: 'contact', id: c.id }, name: c.name, phone: c.phone, color: c.color, receivesPacket: c.receivesPacket, consent: this.consentOf(c) });
     }
     return out;
+  }
+
+  /** A contact's consent, where a STOP from their number counts for every circle they're in. */
+  consentOf(contact: Contact): Consent {
+    if (this.state.optOuts?.[contact.phone]) return 'stopped';
+    return contact.consent ?? 'pending';
+  }
+
+  /** People an alert can actually reach: not those who opted out of texts. */
+  reachableWatchersOf(userId: Id): Watcher[] {
+    return this.watchersOf(userId).filter((w) => w.consent !== 'stopped');
   }
 
   watchedBy(userId: Id): Watch[] {
@@ -168,13 +185,12 @@ export class Sunup {
   // ---------------------------------------------------------------- accounts
 
   createUser(input: { name: unknown; phone?: unknown; timezone: unknown; phoneVerified?: boolean }, now: number): User {
-    const name = cleanText(input.name, 40, 'Name', true);
+    const name = cleanName(input.name);
     const phone = input.phone ? normalizePhone(input.phone) : undefined;
     if (phone && input.phoneVerified && this.userByVerifiedPhone(phone)) fail('phone_taken', 'That number already has a Sunup account. Sign in instead.');
     const timezone = isTimeZone(input.timezone) ? input.timezone : 'America/New_York';
     const id = `u_${randomId()}`;
-    let inviteCode = randomId(8);
-    while (this.userByInviteCode(inviteCode)) inviteCode = randomId(8);
+    const inviteCode = this.newInviteCode();
     const user: User = {
       id,
       name,
@@ -192,6 +208,12 @@ export class Sunup {
     };
     this.state.users[id] = user;
     return user;
+  }
+
+  private newInviteCode(): string {
+    let code = randomId(8);
+    while (this.userByInviteCode(code)) code = randomId(8);
+    return code;
   }
 
   userByVerifiedPhone(phone: string): User | undefined {
@@ -296,8 +318,9 @@ export class Sunup {
         return;
       case 'pause': {
         // Windows that fell inside a pause stay excused: resuming ends the pause now instead of
-        // erasing it, and extending keeps the original start. Otherwise the clock would treat
-        // this morning's paused window as missed and fire every alarm at once.
+        // erasing it, extending keeps the original start, and a new pause keeps the last one in
+        // `pastPauses`. Otherwise the clock would treat a paused window from the last day as
+        // missed and fire every alarm at once.
         const active = user.pause && user.pause.from <= now && now <= user.pause.until ? user.pause : undefined;
         if (action.until === null) {
           if (active) user.pause = { from: active.from, until: now };
@@ -305,6 +328,11 @@ export class Sunup {
         }
         if (typeof action.until !== 'number' || action.until <= now || action.until > now + 60 * DAY) {
           fail('invalid', 'Pause for up to 60 days.');
+        }
+        if (user.pause && !active) {
+          const recent = (user.pastPauses ?? []).filter((p) => p.until > now - 2 * DAY);
+          if (user.pause.until > now - 2 * DAY) recent.push(user.pause);
+          user.pastPauses = recent.length ? recent : undefined;
         }
         user.pause = { from: active?.from ?? now, until: action.until };
         return;
@@ -357,8 +385,16 @@ export class Sunup {
         user.trialEndsAt = now + TRIAL_MS;
         return;
       case 'cancelPremium':
+        // A paid subscription is cancelled with the payment provider, which then sets the plan.
+        if (user.billing?.subscriptionId && ['active', 'trialing', 'past_due'].includes(user.billing.status ?? '')) {
+          fail('invalid', 'Cancel your subscription from Manage subscription.');
+        }
         user.plan = 'free';
         if (user.trialEndsAt && user.trialEndsAt > now) user.trialEndsAt = now;
+        return;
+      case 'newInviteCode':
+        // Old links stop working; people already in the circle stay.
+        user.inviteCode = this.newInviteCode();
         return;
       default:
         fail('invalid', 'Unknown action.');
@@ -391,7 +427,9 @@ export class Sunup {
 
   private checkInDetails(input: { mood?: unknown; note?: unknown; photo?: unknown }): Partial<CheckIn> {
     const out: Partial<CheckIn> = {};
-    if (input.mood !== undefined) {
+    if (input.mood === null || input.mood === '') {
+      out.mood = undefined;
+    } else if (input.mood !== undefined) {
       if (!MOODS.includes(input.mood as Mood)) fail('invalid', 'Unknown mood.');
       out.mood = input.mood as Mood;
     }
@@ -415,17 +453,17 @@ export class Sunup {
     Object.assign(checkIn, this.checkInDetails(input));
   }
 
-  /** Smart check-in: the app was opened during an open window. */
+  /** Smart check-in: the app was opened during an open window (not the early allowance before it). */
   private activity(user: User, now: number): void {
     if (!user.onboarded || !user.schedule.smart || !limitsFor(user, now).smartCheckIn) return;
     const mine = this.checkInsOf(user.id);
-    const open = slotsAround(user, now).find((s) => s.acceptFrom <= now && now <= s.deadlineAt);
+    const open = slotsAround(user, now).find((s) => s.openAt <= now && now <= s.deadlineAt);
     if (!open || checkInFor(open, mine)) return;
     this.state.checkIns.push({ id: `k_${randomId()}`, userId: user.id, at: now, source: 'smart' });
   }
 
   private updateProfile(user: User, input: { name?: unknown; phone?: unknown; timezone?: unknown }, now: number): void {
-    if (input.name !== undefined) user.name = cleanText(input.name, 40, 'Name', true);
+    if (input.name !== undefined) user.name = cleanName(input.name);
     if (input.phone !== undefined) {
       const phone = input.phone === '' ? undefined : normalizePhone(input.phone);
       if (phone !== user.phone) {
@@ -440,26 +478,31 @@ export class Sunup {
     }
   }
 
-  private assertRoom(user: User, now: number): void {
-    const max = limitsFor(user, now).maxWatchers;
-    if (this.watchersOf(user.id).length >= max) {
-      fail('premium', `The free plan covers ${max} people in your circle. Go Premium to add more.`);
-    }
+  /** Checks `user` has room for one more person in their circle. `actor` is who is asking. */
+  private assertRoom(user: User, now: number, actor: User = user): void {
+    const limits = limitsFor(user, now);
+    if (this.watchersOf(user.id).length < limits.maxWatchers) return;
+    if (actor.id !== user.id) fail('full', `${firstName(user.name)}'s circle is full. Ask ${firstName(user.name)} to make room first.`);
+    if (limits.premium) fail('full', `Your circle can have up to ${limits.maxWatchers} people.`);
+    fail('premium', `The free plan covers ${limits.maxWatchers} people in your circle. Go Premium to add more.`);
   }
 
   private addContact(user: User, input: { name: unknown; phone: unknown; receivesPacket?: unknown }, now: number): Contact {
-    const name = cleanText(input.name, 40, 'Name', true);
+    const name = cleanName(input.name);
     const phone = normalizePhone(input.phone);
     if (Object.values(this.state.contacts).some((c) => c.ownerId === user.id && c.phone === phone)) {
       fail('duplicate', `${formatPhone(phone)} is already in your circle.`);
     }
     this.assertRoom(user, now);
+    const invitesToday = this.state.outbox.filter((o) => o.aboutUserId === user.id && o.title === 'Circle invite' && o.at > now - DAY).length;
+    if (invitesToday >= INVITES_PER_DAY) fail('rate_limited', `You can add up to ${INVITES_PER_DAY} people by phone a day. Try again tomorrow.`);
     const id = `c_${randomId()}`;
     const contact: Contact = { id, ownerId: user.id, name, phone, color: colorFor(id), receivesPacket: input.receivesPacket === true, createdAt: now, consent: 'pending' };
     this.state.contacts[id] = contact;
     const owner = firstName(user.name);
+    // A number that replied STOP isn't texted again; the circle screen shows it as opted out.
     this.send(
-      { ref: { type: 'contact', id }, name, phone, color: contact.color, receivesPacket: false, consent: 'pending' },
+      { ref: { type: 'contact', id }, name, phone, color: contact.color, receivesPacket: false, consent: this.consentOf(contact) },
       'sms',
       {
         aboutUserId: user.id,
@@ -490,6 +533,8 @@ export class Sunup {
     };
 
     if (['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT', 'OPTOUT', 'REVOKE'].includes(word)) {
+      // The opt-out belongs to the number, so it also covers circles that add it later.
+      (this.state.optOuts ??= {})[phone] = now;
       const changed = contacts.filter((c) => c.consent !== 'stopped');
       changed.forEach((c) => (c.consent = 'stopped'));
       tellOwners(changed, (c) => `${firstName(c.name)} opted out`, (c) => `${firstName(c.name)} replied STOP, so Sunup won't text or call them. Add someone else to your circle.`);
@@ -497,12 +542,14 @@ export class Sunup {
       return null;
     }
     if (['START', 'UNSTOP'].includes(word)) {
-      const changed = contacts.filter((c) => c.consent === 'stopped');
+      if (this.state.optOuts) delete this.state.optOuts[phone];
+      const changed = contacts.filter((c) => c.consent === 'stopped' || c.consent === 'pending' || c.consent === undefined);
       changed.forEach((c) => (c.consent = 'confirmed'));
       tellOwners(changed, (c) => `${firstName(c.name)} is back in your circle`, (c) => `${firstName(c.name)} turned Sunup texts back on.`);
       return contacts.length ? 'Sunup: texts are back on. Reply STOP to opt out.' : null;
     }
     if (['YES', 'Y', 'YEP', 'YEAH', 'OK', 'OKAY', 'CONFIRM', 'SURE'].includes(word)) {
+      if (this.state.optOuts?.[phone]) return null;
       const changed = contacts.filter((c) => c.consent === 'pending' || c.consent === undefined);
       changed.forEach((c) => (c.consent = 'confirmed'));
       tellOwners(changed, (c) => `${firstName(c.name)} said yes`, (c) => `${firstName(c.name)} confirmed. They'll get texts and calls if you go quiet.`);
@@ -539,7 +586,7 @@ export class Sunup {
     const watch = input.watch === true && !this.isWatching(user.id, inviter.id);
     const mutual = input.mutual === true && !this.isWatching(inviter.id, user.id);
     if (input.watch !== true && input.mutual !== true) fail('invalid', 'Choose at least one way to connect.');
-    if (watch) this.assertRoom(inviter, now);
+    if (watch) this.assertRoom(inviter, now, user);
     if (mutual) this.assertRoom(user, now);
     if (watch) this.addWatch(user.id, inviter.id, now);
     if (mutual) this.addWatch(inviter.id, user.id, now);
@@ -634,7 +681,7 @@ export class Sunup {
       }
       point = { lat: l.lat, lng: l.lng, accuracy: typeof l.accuracy === 'number' ? Math.round(l.accuracy) : undefined };
     }
-    if (this.watchersOf(user.id).length === 0) fail('no_circle', 'Add someone to your circle first so SOS has someone to reach.');
+    if (this.reachableWatchersOf(user.id).length === 0) fail('no_circle', 'Add someone to your circle first so SOS has someone to reach.');
     const alert = this.openAlert(user, 'sos', now, { location: point });
     this.escalate(alert, now);
   }
@@ -648,6 +695,9 @@ export class Sunup {
       return;
     }
     if (!this.isWatching(actor.id, alert.userId)) fail('forbidden', 'You aren\'t watching over this person.');
+    // Someone reached them, so their timer is over too.
+    const moment = alert.momentId ? this.state.moments[alert.momentId] : undefined;
+    if (moment && !moment.endedAt) moment.endedAt = now;
     this.resolve(alert, actor.id, 'reached', now);
   }
 
@@ -669,7 +719,7 @@ export class Sunup {
 
   /** When a ladder step is (or was) due. */
   stepTime(alert: Alert, step: LadderStep): number {
-    return alert.triggeredAt + (step.offset * MINUTE) / (alert.speed ?? 1);
+    return (alert.ladderFrom ?? alert.triggeredAt) + (step.offset * MINUTE) / (alert.speed ?? 1);
   }
 
   /** Runs the clock: opens alerts for missed windows and expired timers, then escalates. Returns whether anything changed. */
@@ -692,7 +742,11 @@ export class Sunup {
         if (slot.deadlineAt > now || slot.deadlineAt < now - DAY) continue;
         if (!isEnforced(user, slot) || checkInFor(slot, mine)) continue;
         if (alerts.some((a) => a.kind === 'missed' && a.slotKey === slot.key)) continue;
-        alerts.push(this.openAlert(user, 'missed', slot.deadlineAt, { slotKey: slot.key }));
+        const alert = this.openAlert(user, 'missed', slot.deadlineAt, { slotKey: slot.key, ...lateStart(slot.deadlineAt, now) });
+        alerts.push(alert);
+        // Checked in after the deadline but before the clock noticed: a late check-in, not an emergency.
+        const late = mine.find((c) => c.at > slot.deadlineAt && c.at <= now);
+        if (late) Object.assign(alert, { resolvedAt: late.at, resolvedBy: user.id, resolution: 'checked_in' });
       }
       this.remind(user, mine, now);
     }
@@ -702,7 +756,7 @@ export class Sunup {
       if (!user) continue;
       const alerts = alertsFor(user.id);
       const exists = alerts.some((a) => a.momentId === moment.id && (!a.resolvedAt || a.triggeredAt === moment.endsAt));
-      if (!exists) alerts.push(this.openAlert(user, 'moment', moment.endsAt, { momentId: moment.id }));
+      if (!exists) alerts.push(this.openAlert(user, 'moment', moment.endsAt, { momentId: moment.id, ...lateStart(moment.endsAt, now) }));
     }
     for (const alert of Object.values(this.state.alerts)) {
       if (!alert.resolvedAt) this.escalate(alert, now);
@@ -737,7 +791,9 @@ export class Sunup {
     }
     if (!sent.open) {
       sent.open = true;
-      this.send(me, 'push', { ...base, title: `Good morning, ${firstName(user.name)}`, body: `Tap "I'm up" to check in. Your window closes at ${deadline}.` });
+      const hour = Number(slot.start.slice(0, 2));
+      const greeting = hour >= 4 && hour < 12 ? 'Good morning' : hour >= 12 && hour < 17 ? 'Good afternoon' : 'Good evening';
+      this.send(me, 'push', { ...base, title: `${greeting}, ${firstName(user.name)}`, body: `Tap "I'm up" to check in. Your window closes at ${deadline}.` });
     }
   }
 
@@ -767,7 +823,8 @@ export class Sunup {
   private fire(alert: Alert, user: User, step: StepId, now: number): void {
     const name = firstName(user.name);
     const reach = user.phone ? ` at ${formatPhone(user.phone)}` : '';
-    const me: Watcher = { ref: { type: 'user', id: user.id }, name: user.name, phone: user.phone, color: user.color, receivesPacket: false };
+    // Alarm texts and calls only go to a number the person confirmed is theirs.
+    const me: Watcher = { ref: { type: 'user', id: user.id }, name: user.name, phone: verifiedPhone(user), color: user.color, receivesPacket: false };
     const circle = this.circleFor(alert);
     const base = { aboutUserId: user.id, alertId: alert.id };
 
@@ -855,7 +912,8 @@ export class Sunup {
         const packet = this.state.packets[user.id];
         const sections = packet ? packetSections(packet) : [];
         if (sections.length === 0) break;
-        for (const w of circle.filter((r) => r.receivesPacket)) {
+        // Contacts get it only once they've replied YES: a mistyped number must never get door codes.
+        for (const w of circle.filter((r) => r.receivesPacket && (r.ref.type === 'user' || r.consent === 'confirmed'))) {
           if (w.ref.type === 'user') {
             this.notify(w, { ...base, urgent: true, link: '#circle', title: `${name}'s emergency info is unlocked`, body: `${name} chose you to receive pet care, home access and health details. Open Sunup to see them.` });
           } else {
@@ -946,7 +1004,7 @@ export class Sunup {
     },
   ): void {
     // People who replied STOP never get another text or call.
-    if (to.consent === 'stopped') return;
+    if (to.consent === 'stopped' || (channel !== 'push' && to.phone && this.state.optOuts?.[to.phone])) return;
     this.mutations++;
     const out: Outbound = {
       id: `o_${randomId()}`,
@@ -963,11 +1021,29 @@ export class Sunup {
       action: msg.action,
     };
     this.state.outbox.push(out);
-    this.pending.push(msg.deliverBody ? { ...out, body: msg.deliverBody } : out);
+    this.pending.push(msg.deliverBody ? { ...out, body: msg.deliverBody, sensitive: true } : out);
+  }
+
+  /**
+   * Check-ins are pruned after 60 days, so each person's streak as of 50 days ago is saved on
+   * their account (built on the previous floor) and the streak can keep growing past 60.
+   */
+  private saveStreakFloors(now: number): void {
+    const byUser = groupBy(this.state.checkIns, (c) => c.userId);
+    const alertsBy = groupBy(Object.values(this.state.alerts), (a) => a.userId);
+    for (const user of Object.values(this.state.users)) {
+      const date = localParts(now - 50 * DAY, user.timezone).date;
+      if (user.streakFloor?.date === date || user.createdAt > now - 50 * DAY) continue;
+      const endOfDay = zonedToUtc(addDays(date, 1), '00:00', user.timezone) - 1;
+      const count = streak(user, byUser.get(user.id) ?? [], alertsBy.get(user.id) ?? [], endOfDay);
+      user.streakFloor = { date, count };
+      this.mutations++;
+    }
   }
 
   private prune(now: number): void {
     const keep = now - 60 * DAY;
+    this.saveStreakFloors(now);
     const checkIns = this.state.checkIns.filter((c) => c.at >= keep);
     if (checkIns.length !== this.state.checkIns.length) {
       this.state.checkIns = checkIns;
@@ -992,6 +1068,15 @@ export class Sunup {
       this.mutations++;
     }
   }
+}
+
+/** Starts the ladder now for an alert the clock noticed late, so it doesn't fire every step at once. */
+function lateStart(dueAt: number, now: number): Partial<Alert> {
+  return now - dueAt > LATE_OPEN_MS ? { ladderFrom: now } : {};
+}
+
+function verifiedPhone(user: User): string | undefined {
+  return user.phoneVerified ? user.phone : undefined;
 }
 
 function groupBy<T>(items: T[], key: (item: T) => Id): Map<Id, T[]> {

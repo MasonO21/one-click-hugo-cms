@@ -11,7 +11,8 @@ const { app, close } = createApp({
   staticDir: fileURLToPath(new URL('../dist', import.meta.url)),
   twilio: { sid: process.env.TWILIO_ACCOUNT_SID, token: process.env.TWILIO_AUTH_TOKEN, from: process.env.TWILIO_FROM },
   vapidSubject: process.env.VAPID_SUBJECT,
-  devCodes: process.env.NODE_ENV !== 'production',
+  // Sign-in codes on screen are only for local development, never a deployed server.
+  devCodes: process.env.NODE_ENV === 'development',
   dataKey: process.env.SUNUP_DATA_KEY,
   fcm: parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT),
   apns:

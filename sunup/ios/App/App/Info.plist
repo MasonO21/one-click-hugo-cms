@@ -43,6 +43,12 @@
       </array>
     </dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Sunup uses the camera when you add a photo to your check-in postcard.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Sunup lets you pick a photo for your check-in postcard.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>When you send an SOS and choose to share your location, Sunup includes it in the alert to your circle.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

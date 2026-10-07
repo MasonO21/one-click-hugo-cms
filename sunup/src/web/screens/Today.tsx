@@ -4,6 +4,8 @@ import type { CheckIn, Mood } from '../../shared/types';
 import type { Postcard, SlotView, WatchedView } from '../../shared/snapshot';
 import { MOODS } from '../../shared/service';
 import { formatHM } from '../../shared/util';
+import { isPaused } from '../../shared/schedule';
+import { localParts } from '../../shared/time';
 import { useNow, useStore } from '../store/StoreContext';
 import { Avatar, Photo, Sheet } from '../components/ui';
 import { Ladder } from '../components/Ladder';
@@ -23,9 +25,10 @@ export function Today({ onSos }: { onSos: () => void }) {
   const reached = snap.myAlerts.find((a) => a.alert.resolution === 'reached' && now - a.alert.resolvedAt! < 60 * 60_000);
   const open = snap.slots.find((s) => s.status === 'open');
   const upcoming = snap.slots.find((s) => s.status === 'upcoming');
-  const paused = me.pause && me.pause.from <= now && now <= me.pause.until;
+  const paused = isPaused(me, now);
   const latest = snap.history[0];
-  const checkedToday = latest && new Date(latest.at).toDateString() === new Date(now).toDateString();
+  // "Today" in the zone the schedule runs in, which may not be this device's.
+  const checkedToday = latest && localParts(latest.at, me.timezone).date === localParts(now, me.timezone).date;
 
   async function checkIn() {
     if (await run({ type: 'checkIn' })) {
@@ -133,7 +136,7 @@ export function Today({ onSos }: { onSos: () => void }) {
         </section>
       )}
 
-      {snap.watchers.length === 0 && (
+      {!snap.watchers.some((w) => w.consent !== 'stopped') && (
         <a className="card warn-card" href="#circle">
           <Users size={20} />
           <div>
@@ -274,7 +277,7 @@ function CheckInSheet({ checkIn, onClose }: { checkIn: CheckIn | null; onClose: 
     if (!target) return onClose();
     setBusy(true);
     const photoChanged = photo !== checkIn?.photo;
-    const ok = await run({ type: 'updateCheckIn', id: target, mood, note, ...(photoChanged ? { photo: photo ?? '' } : {}) });
+    const ok = await run({ type: 'updateCheckIn', id: target, mood: mood ?? null, note, ...(photoChanged ? { photo: photo ?? '' } : {}) });
     setBusy(false);
     if (ok) onClose();
   }

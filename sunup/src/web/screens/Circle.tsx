@@ -314,7 +314,7 @@ function AddContactSheet({ open, onClose }: { open: boolean; onClose: () => void
 }
 
 function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { snap, api, toast } = useStore();
+  const { snap, api, toast, ask, run } = useStore();
   const url = api.inviteUrl(snap.me.inviteCode);
   const text = `I'm using Sunup: one tap each morning so the people I trust know I'm okay. Join my circle: ${url}`;
 
@@ -352,6 +352,16 @@ function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
         </div>
         <button className="btn primary block" onClick={share}>
           <Share2 size={18} /> Share invite
+        </button>
+        <button
+          className="btn ghost block"
+          onClick={async () =>
+            (await ask({ title: 'Make a new link?', body: 'Your current link stops working. People already in your circle stay.', confirm: 'Make a new link', cancel: 'Keep this link' })) &&
+            (await run({ type: 'newInviteCode' })) &&
+            toast({ title: 'New invite link ready', tone: 'ok' })
+          }
+        >
+          Make a new link
         </button>
         {api.mode === 'demo' && <p className="fine">In the demo, everything lives on this device, so links won't connect two phones. Try the sample circle instead.</p>}
       </div>

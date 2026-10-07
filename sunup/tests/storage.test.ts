@@ -76,6 +76,7 @@ describe('storage', () => {
       store.sweepPhotos();
       expect(readdirSync(join(dir, 'photos'))).toEqual([]);
       expect(store.readPhoto('../sunup', 'file:jpg')).toBeNull();
+      store.close();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -103,6 +104,7 @@ describe('storage', () => {
       store.addSubscription('u_b', sub);
       expect(store.subscriptions('u_a')).toHaveLength(0);
       expect(store.subscriptions('u_b')).toHaveLength(1);
+      store.close();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
