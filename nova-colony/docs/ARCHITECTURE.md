@@ -95,7 +95,7 @@ methods; do not rename/remove/change existing signatures.
 place build_complete upgrade remove deposit collect coin reward crate_open · craft_start craft_done research_done ·
 mission_done level_up tier_up celebrate · alarm attack_start victory · turret_bullet turret_flame turret_missile
 turret_laser turret_plasma turret_rail turret_cannon · alien_hit alien_die explosion shield_hit player_hurt ·
-spin_tick spin_win door vehicle_start teleport recruit`
+spin_tick spin_win door vehicle_start teleport recruit discover`
 
 ## Panels (UI opens on `bus.emit('ui:open', { panel, arg })`)
 
