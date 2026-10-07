@@ -109,7 +109,7 @@
       pos.set(g.attributes.position.array, o * 3);
       if (g.attributes.normal) nor.set(g.attributes.normal.array, o * 3);
       if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
-      if (col) col.set(g.attributes.color.array, o * 3);
+      if (col && g.attributes.color) col.set(g.attributes.color.array, o * 3);
       o += c;
       g.dispose();
     }
@@ -140,16 +140,17 @@
       if (!o.isMesh || o.userData.keep) return;
       for (let p = o; p && p !== group; p = p.parent) if (p.userData.dyn) return;
       const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
-      for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
+      const m = o.material, own = !!(m.vertexColors && g.attributes.color); // already vertex-coloured (villagers)
+      for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv' && !(own && k === 'color')) g.deleteAttribute(k);
       // materials from mat() that differ only in colour go into one vertex-coloured mesh
-      const m = o.material, vc = m.userData.vc;
+      const vc = m.userData.vc;
       const key = vc ? `vc${vc}|${m.userData.noShadow ? 1 : 0}` : m;
       if (vc) {
         const n = g.attributes.position.count, c = new Float32Array(n * 3);
         for (let i = 0; i < n; i++) { c[i * 3] = m.color.r; c[i * 3 + 1] = m.color.g; c[i * 3 + 2] = m.color.b; }
         g.setAttribute('color', new THREE.BufferAttribute(c, 3));
       }
-      if (!buckets.has(key)) buckets.set(key, { m: vc ? vcMat(key, m) : m, vc: !!vc, list: [] });
+      if (!buckets.has(key)) buckets.set(key, { m: vc ? vcMat(key, m) : m, vc: !!vc || own, list: [] });
       buckets.get(key).list.push(g);
       baked.push(o);
     });
