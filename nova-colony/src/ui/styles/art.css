@@ -421,6 +421,7 @@
 }
 .ladder-node.has-art.now .ln-art {
   transform: scale(1.1);
+  margin-bottom: 0.3em;
   box-shadow: 0 0 0 0.2em #fff, 0 0 0 0.42em var(--accent), 0 0.3em 1em rgba(255, 138, 61, 0.55);
 }
 .ladder-node.has-art.next .ln-art {
