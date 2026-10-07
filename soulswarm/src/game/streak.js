@@ -2,7 +2,7 @@
 // a window that tightens as the streak grows. Every tier crossed starts a Soul Frenzy: faster XP, faster-striking minions
 // and, at the top tiers, Soul Nova charge. onKill() is O(1) and allocation-free (a Nova can kill hundreds a second); the HUD
 // (ui/streakui.js) reads this state at its 20 Hz cadence, so no kill ever touches the DOM.
-import { STREAK } from './data.js';
+import { STREAK, VOICE } from './data.js';
 
 const T = STREAK.tiers;
 
@@ -55,6 +55,7 @@ export class Streak {
     // one stinger per burst, pitched by the highest tier reached; a later, higher tier waits out the gap (real time)
     if (this.sting && run.t - this.stingAt >= STREAK.stingGap) {
       run.audio.sfx('streak', { pitch: 2 ** (T[this.sting - 1].semis / 12) });
+      run.audio.voice(VOICE.streak[this.sting - 1]);
       run.app.haptic(this.sting >= 3 ? 'heavy' : 'medium');
       this.stingAt = run.t; this.sting = 0;
     }

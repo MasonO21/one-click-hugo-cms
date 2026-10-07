@@ -42,7 +42,7 @@ export function newProfile() {
     trial: { day: null, done: false, ads: 0, clears: 0 },
     weekly: { week: null, done: 0, claimed: false },
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0, bestStreak: 0 },
-    settings: { music: 0.5, sfx: 0.8, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
+    settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
     flags: { tutorialDone: false, hints: {} },
     freeChestDate: null,
   };

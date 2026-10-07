@@ -179,6 +179,7 @@ export class Rites {
     run.counters.rites++;
     this[this.hero](D, P);
     run.audio.sfx('rite_' + this.hero);
+    run.audio.voice(this.hero + '_rite');
     run.app.haptic(this.hero === 'nyx' ? 'medium' : 'heavy');
     if (run.ui && run.ui.rite) run.ui.rite.cast();
     return true;

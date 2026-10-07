@@ -138,6 +138,7 @@ export function createHeroes(ctx) {
     draw();
     const off = onChange(draw);
     const m = modal({ body, cls: 'mm-hero scroll', onClose: off });
+    app.audio.voice(id + '_greet');
     body.addEventListener('click', (e) => {
       const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
       const a = b.dataset.a;
@@ -150,6 +151,7 @@ export function createHeroes(ctx) {
         if (!res.ok) return;
         celebrate = true;
         app.audio.sfx('levelup'); app.haptic('success');
+        if (res.unlocked) app.audio.voice(id + '_greet');
         if (res.unlocked && app.showcase && p.selectedHero === id) app.showcase.setHero(id);
         commit(p);
         toast(res.unlocked ? `${hero.name} joins your legion!` : `${hero.name} reached ${res.stars} stars`);

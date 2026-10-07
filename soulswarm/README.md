@@ -73,7 +73,8 @@ See `docs/PRODUCTION_ROADMAP.md` for the full checklist, team plan and budget.
 | `src/game/*.js` | Enemies, legion, weapons, projectiles, pickups, gates, boss, world, effects |
 | `src/meta/` | Save, economy rules (gacha, pass, quests, rewards), store adapter |
 | `src/ui/` | Design system (`style.css`), HUD and run modals (`runui.js`), menus (`meta/`) |
-| `src/audio/audio.js` | Procedural Web Audio SFX and music, with no audio files |
+| `src/audio/audio.js` | Procedural Web Audio SFX and music, plus the voice-line player (priorities, cooldowns, ducking) |
+| `src/assets/voice/` | 32 recorded announcer and hero lines (Higgsfield; `scripts/voice-master.sh`) |
 | `resources/` | App icon and splash (built from the painted masters by `npm run art`) |
 | `store/` | Painted key art masters (`art/`), cinematic video ads (`ads/`), in-engine trailer and App Store screenshots; see `docs/ART_AND_ADS.md` |
 | `scripts/` | Playtest bot, trailer and screenshot renderers, painted-asset pipeline, web build |

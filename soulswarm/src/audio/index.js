@@ -1,13 +1,15 @@
-// Audio facade. Forwards to the procedural synth in audio.js once it has loaded,
+// Audio facade. Forwards to the synth (and voice lines) in audio.js once it has loaded,
 // so the rest of the game never has to care whether audio is available.
 const silent = {
-  init() {}, sfx() {}, playMusic() {}, stopMusic() {}, setVolumes() {}, setMuted() {}, muted: false,
+  init() {}, sfx() {}, voice: () => 'off', voiceState: () => null, playMusic() {}, stopMusic() {}, setVolumes() {}, setMuted() {}, muted: false,
 };
 let impl = silent;
 
 export const audio = {
   init: (...a) => impl.init(...a),
   sfx: (...a) => impl.sfx(...a),
+  voice: (...a) => impl.voice(...a),
+  voiceState: () => impl.voiceState(),
   playMusic: (...a) => impl.playMusic(...a),
   stopMusic: (...a) => impl.stopMusic(...a),
   setVolumes: (...a) => impl.setVolumes(...a),

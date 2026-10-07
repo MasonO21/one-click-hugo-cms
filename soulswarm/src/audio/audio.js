@@ -1,15 +1,19 @@
 /*
  * SOULSWARM — procedural audio (Web Audio API only, no files, no deps).
  *
- * Every sound effect and all three music tracks are synthesised at runtime.
+ * Every sound effect and all three music tracks are synthesised at runtime. The only recorded audio is the voice:
+ * short announcer and hero lines (src/assets/voice, VOICE in data.js), decoded once after the first gesture.
  *
  * Graph:
  *   sfx voices ──► sfxBus ─────────────┐
- *   music ──► track gain ──► musicBus ──► musicDuck ──► limiter ──► master(mute) ──► out
- *   big sounds / pads ──► sfxRev | musRev ──► shared convolver ──┘
+ *   music ──► track gain ──► musicBus ──► musicDuck ──► bed (ducked under a voice line) ──► limiter ──► master(mute) ──► out
+ *   big sounds / pads ──► sfxRev | musRev ──► shared convolver ──┘                            ▲
+ *   voice line ──► voiceBus ────────────────────────────────────────────────────────────────┘
  *
  * The rest of the game only talks to the exported `Audio` object.
  */
+
+import { VOICE } from '../game/data.js';
 
 // ---------------------------------------------------------------- utils --
 const noop = () => {};
@@ -32,10 +36,10 @@ const XFADE = 1.0;        // music crossfade length (s)
 const MAX_VOICES = 28;    // global cap for small sfx (big moments bypass it)
 
 let ctx = null;
-let master, limiter, sfxBus, musicBus, musicDuck, sfxRev, musRev;
+let master, limiter, bed, sfxBus, musicBus, musicDuck, sfxRev, musRev, voiceBus;
 let whiteBuf, brownBuf;    // cached noise buffers (2 s each)
 const curves = {};         // cached WaveShaper curves, keyed by drive
-const vol = { music: 0.45, sfx: 0.8 };
+const vol = { music: 0.45, sfx: 0.8, voice: 0.9 };
 let isMuted = false;
 let unlocked = false;
 let listening = false;
@@ -932,6 +936,7 @@ function startTrack(name) {
 // Lookahead scheduler: every ~25 ms, queue all steps that start within LOOKAHEAD.
 function tick() {
   if (!ctx || ctx.state !== 'running') return;
+  drainVoice();
   const now = ctx.currentTime, horizon = now + LOOKAHEAD;
   for (let k = players.length - 1; k >= 0; k--) {
     const p = players[k];
@@ -943,6 +948,109 @@ function tick() {
       p.next += p.stepDur;
     }
   }
+}
+
+// ---------------------------------------------------------------- voice --
+const VOICE_URL = {};      // line name -> asset url (a data: URI in the single-file build)
+for (const [path, url] of Object.entries(import.meta.glob('../assets/voice/*.mp3', { eager: true, query: '?url', import: 'default' }))) {
+  VOICE_URL[path.slice(path.lastIndexOf('/') + 1, -4)] = url;
+}
+const vbuf = {};           // decoded lines
+const vlast = {};          // ms each line last played
+const vgroup = {};         // group -> { at, rank } of its last line
+const vlog = [];           // QA: recent requests and what became of each
+let vnow = null;           // the line playing: { name, pri, src, g, end (ms) }
+let vqueue = null;         // one important line waiting for the voice to free up: { name, pri, until (ms) }
+let vloading = null;
+
+// 'vael_rite' -> lines.rite; announcer lines are listed by name
+const lineDef = (name) => VOICE.lines[name] || VOICE.lines[name.slice(name.indexOf('_') + 1)] || { pri: 2 };
+
+async function bytes(url) {
+  if (url.startsWith('data:')) { // inlined: decode here, so no fetch (and no connect-src) is involved
+    const b = atob(url.slice(url.indexOf(',') + 1)), a = new Uint8Array(b.length);
+    for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a.buffer;
+  }
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('voice ' + r.status);
+  return r.arrayBuffer();
+}
+// older Safari only takes callbacks
+const decodeBuf = (buf) => new Promise((res, rej) => { const p = ctx.decodeAudioData(buf, res, rej); if (p && p.then) p.then(res, rej); });
+
+function loadVoices() {
+  if (vloading || !ctx) return vloading;
+  vloading = (async () => {
+    for (const name of Object.keys(VOICE_URL)) { // one at a time, so there is no decode spike as a run starts
+      try { vbuf[name] = await decodeBuf(await bytes(VOICE_URL[name])); } catch (e) { /* this line stays silent */ }
+    }
+  })();
+  return vloading;
+}
+
+function stopLine() {
+  const v = vnow;
+  vnow = null;
+  if (!v) return;
+  try { v.g.gain.setTargetAtTime(0, ctx.currentTime, 0.02); v.src.stop(ctx.currentTime + 0.1); } catch (e) { /* ended */ }
+}
+
+function playLine(name, d) {
+  const buf = vbuf[name], t = ctx.currentTime, ms = nowMs(), src = ctx.createBufferSource(), g = gain(1, voiceBus);
+  src.buffer = buf;
+  src.connect(g);
+  src.start(t);
+  src.onended = () => { disc(src); disc(g); if (vnow && vnow.src === src) vnow = null; };
+  vnow = { name, pri: d.pri || 2, src, g, end: ms + buf.duration * 1000 };
+  vlast[name] = ms;
+  if (d.group) vgroup[d.group] = { at: ms, rank: d.rank || 0 };
+  const b = bed.gain; // music and sfx sit under the line, then swell back
+  b.cancelScheduledValues(t);
+  b.setValueAtTime(b.value, t);
+  b.linearRampToValueAtTime(VOICE.duck, t + 0.06);
+  b.setValueAtTime(VOICE.duck, t + buf.duration);
+  b.linearRampToValueAtTime(1, t + buf.duration + 0.45);
+}
+
+function trySay(name, queued) {
+  if (!ctx) return 'off';
+  if (!VOICE_URL[name]) return 'unknown';
+  if (isMuted || vol.voice <= 0) return 'muted';
+  if (!canPlay()) return 'asleep';
+  if (!vbuf[name]) { loadVoices(); return 'loading'; }
+  const d = lineDef(name), ms = nowMs(), pri = d.pri || 2;
+  if (d.cd && ms - (vlast[name] ?? -1e9) < d.cd * 1000) return 'cooldown';
+  const gl = d.group && vgroup[d.group];
+  if (gl && ms - gl.at < VOICE.groups[d.group] * 1000 && (d.rank || 0) <= gl.rank) return 'cooldown';
+  if (vnow && ms < vnow.end + VOICE.gap * 1000) {
+    if (pri <= vnow.pri) {
+      if (d.wait && !queued && (!vqueue || pri >= vqueue.pri)) { vqueue = { name, pri, until: ms + d.wait * 1000 }; return 'queued'; }
+      return 'busy';
+    }
+    stopLine(); // a more important line cuts in
+  }
+  playLine(name, d);
+  return 'play';
+}
+
+function say(name, queued = false) {
+  let r;
+  try { r = trySay(String(name), queued); } catch (e) { r = 'error'; }
+  vlog.push({ name, r, at: Math.round(nowMs()) });
+  if (vlog.length > 40) vlog.shift();
+  return r;
+}
+
+// Called from the scheduler tick: the queued line plays once the voice is free, or is dropped once stale.
+function drainVoice() {
+  if (!vqueue) return;
+  const ms = nowMs();
+  if (ms > vqueue.until) { vqueue = null; return; }
+  if (vnow && ms < vnow.end + VOICE.gap * 1000) return;
+  const q = vqueue;
+  vqueue = null;
+  say(q.name, true);
 }
 
 // -------------------------------------------------------------- startup --
@@ -978,12 +1086,14 @@ function build() {
   limiter.release.value = 0.2;
   master = gain(isMuted ? 0 : 1, ctx.destination);
   limiter.connect(master);
-  sfxBus = gain(vol.sfx, limiter);
-  musicDuck = gain(1, limiter);
+  bed = gain(1, limiter);
+  sfxBus = gain(vol.sfx, bed);
+  musicDuck = gain(1, bed);
   musicBus = gain(vol.music, musicDuck);
+  voiceBus = gain(vol.voice, limiter);
   const reverb = ctx.createConvolver();
   reverb.buffer = impulse(2.6, 3);
-  reverb.connect(filt(limiter, 'lowpass', 5500, 0));
+  reverb.connect(filt(bed, 'lowpass', 5500, 0));
   sfxRev = gain(vol.sfx, reverb);   // sends follow their bus volume
   musRev = gain(vol.music, reverb);
   whiteBuf = noiseBuf(false);
@@ -1040,6 +1150,7 @@ function init() {
       try { build(); } catch (e) { settle(() => ctx.close()); ctx = null; return Promise.resolve(); }
       timer = setInterval(tick, TICK_MS);
       listen();
+      loadVoices();
       if (wanted) startTrack(wanted);
     }
     unlock();
@@ -1072,12 +1183,21 @@ export const Audio = {
     } catch (e) { /* ignore */ }
   },
 
-  setVolumes({ music, sfx: fx } = {}) {
+  /** A recorded voice line by file name (src/assets/voice). Returns what became of it: 'play', 'queued', 'busy',
+   *  'cooldown', 'muted', 'loading', 'asleep' (no gesture yet / hidden), 'off' or 'unknown'. */
+  voice(name) { return say(name); },
+
+  /** QA: how many lines exist and are decoded, the one playing, and the recent request log. */
+  voiceState() { return { lines: Object.keys(VOICE_URL).length, loaded: Object.keys(vbuf).length, playing: vnow ? vnow.name : null, queued: vqueue ? vqueue.name : null, duck: bed ? bed.gain.value : 1, log: vlog.slice() }; },
+
+  setVolumes({ music, sfx: fx, voice } = {}) {
     try {
       if (typeof music === 'number' && isFinite(music)) vol.music = clamp(music, 0, 1);
       if (typeof fx === 'number' && isFinite(fx)) vol.sfx = clamp(fx, 0, 1);
+      if (typeof voice === 'number' && isFinite(voice)) vol.voice = clamp(voice, 0, 1);
       if (!ctx) return;
       const t = ctx.currentTime;
+      voiceBus.gain.setTargetAtTime(vol.voice, t, 0.03);
       musicBus.gain.setTargetAtTime(vol.music, t, 0.03);
       musRev.gain.setTargetAtTime(vol.music, t, 0.03);
       sfxBus.gain.setTargetAtTime(vol.sfx, t, 0.03);
@@ -1088,6 +1208,7 @@ export const Audio = {
   setMuted(m) {
     try {
       isMuted = !!m;
+      if (isMuted && ctx) { stopLine(); vqueue = null; }
       if (ctx) master.gain.setTargetAtTime(isMuted ? 0 : 1, ctx.currentTime, 0.03);
     } catch (e) { /* ignore */ }
   },

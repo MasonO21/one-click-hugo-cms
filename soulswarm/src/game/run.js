@@ -20,7 +20,7 @@ import { Events } from './events.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
 import { Streak } from './streak.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON } from './data.js';
-import { HITSTOP, NOVA, LEVEL_PULSE } from './data.js';
+import { HITSTOP, NOVA, LEVEL_PULSE, VOICE } from './data.js';
 import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
@@ -246,6 +246,7 @@ export class Run {
         if (this.trial) this.ui.banner('DAILY TRIAL', this.mut.ids.map((id) => MUTATORS[id].name).join('  ·  '), 'soul');
         else if (this.bloodMoon) this.ui.banner('BLOOD MOON', `Twice the elites · double gold and gems${this.diff.id !== 'normal' ? ' · ' + this.diff.name : ''}`, 'ember');
         else this.ui.banner(this.diff.name.toUpperCase(), `More elites, deadlier foes · ×${this.diff.gold} gold`, 'diff-' + this.diff.id);
+        this.audio.voice(this.trial ? 'a_trial' : this.bloodMoon ? 'a_bloodmoon' : 'a_' + this.diff.id);
       }
       if (this.time >= this.nextGate) { this.nextGate += this.gateEvery; this.gates.spawnPair(); }
       if (this.time >= this.nextSwarm) { this.nextSwarm += 60; this.swarmRing(); }
@@ -259,11 +260,13 @@ export class Run {
         const b = this.affixes.roll(this.spawnEnemy(t, { elite: true })); // e.g. "WARDED BRUTE"
         this.ui.banner(b.title, b.sub, 'gold');
         this.audio.sfx('warning', { volume: 0.5 });
+        this.audio.voice('a_elite');
       }
       if (!this.warned && this.time >= this.nextBossAt - 8) {
         this.warned = true;
         this.ui.banner(this.bossKills ? 'THE HOLLOW KING RETURNS' : 'THE HOLLOW KING APPROACHES', this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion', 'boss');
         this.audio.sfx('warning');
+        this.audio.voice(this.bossKills ? 'a_boss_return' : 'a_boss');
         this.app.haptic('warning');
       }
       this.events.director();
@@ -389,6 +392,7 @@ export class Run {
     });
     this.player.invuln = Math.max(this.player.invuln, 1.2);
     this.audio.sfx('legendary');
+    this.audio.voice('a_evolution');
     this.app.haptic('heavy');
     this.ui.banner(c.name.toUpperCase(), 'Weapon evolved', 'gold');
   }
@@ -451,6 +455,7 @@ export class Run {
     this.fx.slowMo(0.3, 0.55);
     this.fx.light(P.x, P.z, 14, 3, this.heroColorObj, 0.8);
     this.audio.sfx('nova');
+    if (size >= VOICE.novaSouls) this.audio.voice('a_nova');
     this.app.haptic('heavy');
     if (this.ui) this.ui.bigNumber(size ? `${size} SOULS` : 'NOVA', size ? 'DETONATED' : 'UNLEASHED', true);
   }
@@ -521,6 +526,7 @@ export class Run {
     this.fx.slowMo(0.2, 1.0);
     this.particles.burst(P.x, 1, P.z, 80, hdr(this.heroColor, 3), { speed: 6, life: 1, size: 0.5, up: 1 });
     this.audio.sfx('defeat');
+    this.audio.voice('a_defeat');
     this.app.haptic('heavy');
   }
 
@@ -538,6 +544,7 @@ export class Run {
     this.particles.ring(P.x, P.z, 8, 80, hdr(0xffd04a, 3), { life: 0.5, size: 0.8 });
     this.fx.flash(0.6);
     this.audio.sfx('heal');
+    this.audio.voice('a_revive');
     this.audio.playMusic(!this.bossSpawned ? 'battle' : this.boss.phase === 2 ? 'boss3' : 'boss');
   }
 
@@ -560,6 +567,8 @@ export class Run {
     this.projectiles.clearEnemyShots();
     this.pickups.magnetAll();
     this.ui.banner('CHAPTER CLEARED', `${this.chapter.name} is free`, 'gold');
+    this.audio.voice('a_boss_slain');
+    this.audio.voice('a_cleared'); // queues behind the first line
     this.audio.stopMusic();
     // the rest of the victory beat plays out in update() so it respects pause and ends cleanly
     this.victory = { t: 0, x, z, raised: false, jingle: false };
@@ -595,6 +604,8 @@ export class Run {
     for (let i = 0; i < 25; i++) this.legion.raise(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 4);
     this.ui.bossBar(false);
     this.ui.banner(`ABYSS DEPTH ${this.bossKills + 1}`, 'Gravemaw falls. The abyss grows hungrier.', 'gold');
+    this.audio.voice('a_boss_slain');
+    this.audio.voice('a_depth');
     this.audio.playMusic('battle');
   }
 

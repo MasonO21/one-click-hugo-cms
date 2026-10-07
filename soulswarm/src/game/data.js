@@ -426,6 +426,29 @@ export const GEM_SHOP = {
   energy:    { label: 'Refill Energy',   cost: 50,   rewards: { energy: 30 } },
 };
 
+// ---------------------------------------------------------------- Voice lines (audio/audio.js)
+// Recorded lines in src/assets/voice (mastered by scripts/voice-master.sh). One line plays at a time over a ducked mix.
+// pri: a line cuts in over a lower one and is dropped under an equal or higher one; cd: seconds before it can repeat;
+// wait: an important line queues this long for the voice to free up instead of being dropped; group: lines sharing a
+// cooldown, though a higher rank (a bigger streak) than the group's last line always gets through.
+export const VOICE = {
+  duck: 0.5, gap: 0.25, novaSouls: 40,
+  groups: { streak: 30 },
+  lines: {
+    a_carnage: { pri: 1, group: 'streak', rank: 1 }, a_massacre: { pri: 1.1, group: 'streak', rank: 2 },
+    a_annihilation: { pri: 1.2, group: 'streak', rank: 3 }, a_harvest: { pri: 1.3, group: 'streak', rank: 4 },
+    a_apocalypse: { pri: 1.4, group: 'streak', rank: 5 },
+    a_nova: { pri: 1, cd: 45 }, a_elite: { pri: 2, cd: 30 }, a_evolution: { pri: 2, wait: 1.5 },
+    a_thief: { pri: 2, wait: 1.5 }, a_shrine: { pri: 2, wait: 1.5 }, a_coffin: { pri: 2, wait: 1.5 },
+    a_revive: { pri: 3 }, a_depth: { pri: 3, wait: 3 },
+    a_nightmare: { pri: 3, wait: 2 }, a_torment: { pri: 3, wait: 2 }, a_bloodmoon: { pri: 3, wait: 2 }, a_trial: { pri: 3, wait: 2 },
+    a_boss: { pri: 4, wait: 2 }, a_boss_return: { pri: 4, wait: 2 }, a_boss_slain: { pri: 4, wait: 2 },
+    a_cleared: { pri: 4, wait: 4 }, a_defeat: { pri: 4, wait: 1 },
+    rite: { pri: 3, cd: 20 }, greet: { pri: 3, cd: 2 }, // {hero}_rite on a Rite cast, {hero}_greet on the hero screen
+  },
+  streak: ['a_carnage', 'a_massacre', 'a_annihilation', 'a_harvest', 'a_apocalypse'],
+};
+
 // ---------------------------------------------------------------- Trusted clock (meta/clock.js)
 // Daily resets, energy and timers run on server time when online. server: the game's own endpoint once the backend
 // exists (JSON { now } in ms, or any response with a Date header); until then two public sources that allow

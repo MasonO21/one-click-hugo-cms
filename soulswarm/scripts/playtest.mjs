@@ -1851,6 +1851,92 @@ errs = await session(async (page) => {
 });
 check('clock: no runtime errors', !errs.length, errs[0] || '');
 
+// 26. Voice lines (src/assets/voice, VOICE in data.js, played by audio.js). Static: every line the code asks for exists
+//     and every file has its rules. Engine: all lines decode, one plays at a time, priorities cut in, important lines
+//     queue, cooldowns hold, mute / volume 0 silence it, the mix ducks under a line. Hooks: the game asks for the right
+//     line at each moment (spied on the facade).
+{
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const root = new globalThis.URL('../', import.meta.url).pathname;
+  const files = readdirSync(root + 'src/assets/voice').filter((f) => f.endsWith('.mp3')).map((f) => f.slice(0, -4));
+  const src = ['src/game/run.js', 'src/game/streak.js', 'src/game/events.js', 'src/game/rites.js', 'src/ui/meta/heroes.js', 'src/ui/meta/panels.js']
+    .map((f) => readFileSync(root + f, 'utf8')).join('\n') + readFileSync(root + 'src/game/data.js', 'utf8');
+  const asked = new Set([...src.matchAll(/voice\('([a-z_]+)'\)/g), ...src.matchAll(/'(a_[a-z_]+)'/g)].map((m) => m[1]));
+  const heroes = ['vael', 'nyx', 'seraphine', 'liora', 'mordrake'];
+  for (const h of heroes) asked.add(h + '_rite').add(h + '_greet');
+  const missing = [...asked].filter((n) => !files.includes(n) && !/^a_(normal)$/.test(n));
+  check('voice: 32 lines, and every line the code asks for has a file', files.length === 32 && !missing.length, `files=${files.length} missing=${missing}`);
+}
+errs = await session(async (page) => {
+  await page.mouse.click(5, 420); // the audio context needs a gesture
+  await page.waitForFunction(() => { const s = window.__soulswarm.audio.voiceState(); return s && s.loaded === s.lines; }, null, { timeout: 30000 });
+  const s = await page.evaluate(async () => {
+    const A = window.__soulswarm.audio, { VOICE } = await import('/src/game/data.js'), out = {};
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 32;
+    out.rules = Object.keys(VOICE.lines).length > 20;
+    const r = [];
+    r.push(A.voice('a_carnage')); await sleep(120); out.duck = A.voiceState().duck;
+    r.push(A.voice('a_massacre'), A.voice('a_carnage'), A.voice('a_elite'), A.voice('a_thief'), A.voice('a_nova'), A.voice('a_boss'));
+    out.r = r.join(',');
+    out.mid = { p: A.voiceState().playing, q: A.voiceState().queued };
+    await sleep(3500);
+    out.after = { p: A.voiceState().playing, duck: A.voiceState().duck };
+    A.setMuted(true); out.muted = A.voice('a_trial'); A.setMuted(false);
+    A.setVolumes({ voice: 0 }); out.vol0 = A.voice('a_trial'); A.setVolumes({ voice: 0.9 });
+    out.cd = [A.voice('nyx_rite'), (await sleep(2400), A.voice('nyx_rite'))].join(',');
+    out.unknown = A.voice('a_nope');
+    return out;
+  });
+  check('voice: all 32 lines decode after the first tap', s.decoded && s.rules, JSON.stringify(s));
+  check('voice: one line at a time; a bigger streak or a more important line cuts in, an important line queues, the rest drop',
+    s.r === 'play,play,cooldown,play,queued,busy,play' && s.mid.p === 'a_boss' && s.mid.q === 'a_thief', JSON.stringify({ r: s.r, mid: s.mid }));
+  check('voice: music and sfx duck under a line and swell back', s.duck < 0.6 && s.after.duck > 0.99 && !s.after.p, JSON.stringify({ d: s.duck, a: s.after }));
+  check('voice: mute and a zero Voice volume silence it; cooldowns hold; unknown lines are ignored',
+    s.muted === 'muted' && s.vol0 === 'muted' && s.cd === 'play,cooldown' && s.unknown === 'unknown', JSON.stringify(s));
+  // hooks: spy on the facade and drive each moment directly
+  const h = await page.evaluate(async () => {
+    const app = window.__soulswarm, asked = [], real = app.audio.voice;
+    app.audio.voice = (n) => { asked.push(n); return real(n); };
+    const p = app.profile; p.heroes.liora.owned = true; p.selectedHero = 'liora';
+    app.startRun(1); app.engine.manual = true;
+    const run = app.run, step = (n = 1) => { for (let i = 0; i < n; i++) run.update(1 / 30); };
+    step(5);
+    const mark = (k) => { const out = asked.slice(); asked.length = 0; return [k, out]; }, got = [];
+    run.streak.tier = 0; run.streak.stingAt = -1e9; run.streak.tierUp(); run.streak.tierUp(); run.streak.update(1 / 30); got.push(mark('streak'));
+    run.time = run.eliteTimes[run.eliteIdx]; step(); got.push(mark('elite'));
+    run.events.start('thief'); got.push(mark('thief'));
+    run.events.cur = null; run.events.start('shrine'); got.push(mark('shrine'));
+    run.events.cur = null; run.events.start('coffin'); got.push(mark('coffin'));
+    run.rites.cd = 0; run.rites.trigger(); got.push(mark('rite'));
+    run.novaSize = 60; run.novaRelease(); got.push(mark('nova'));
+    run.celebrateEvolution({ name: 'Test Evolution' }); got.push(mark('evolution'));
+    run.time = run.nextBossAt - 7.9; step(); got.push(mark('boss'));
+    run.onPlayerDeath(); got.push(mark('defeat'));
+    run.revive(); got.push(mark('revive'));
+    run.onBossKilled(run.player.x, run.player.z); got.push(mark('slain'));
+    app.exitRun && app.exitRun();
+    p.chapter.unlocked = Math.max(p.chapter.unlocked, 2); // the Daily Trial opens after chapter 1
+    app.startRun(1, { trial: true }); app.engine.manual = true;
+    for (let i = 0; i < 130; i++) app.run.update(1 / 30);
+    got.push(mark('trial'));
+    app.exitRun && app.exitRun();
+    app.engine.manual = false;
+    app.meta.show('heroes'); await new Promise((r) => setTimeout(r, 200));
+    document.querySelector('.hcard[data-id="seraphine"]')?.click(); await new Promise((r) => setTimeout(r, 200));
+    got.push(mark('greet'));
+    app.audio.voice = real;
+    return Object.fromEntries(got);
+  });
+  const want = { streak: ['a_massacre'], elite: ['a_elite'], thief: ['a_thief'], shrine: ['a_shrine'], coffin: ['a_coffin'], rite: ['liora_rite'],
+    nova: ['a_nova'], evolution: ['a_evolution'], boss: ['a_boss'], defeat: ['a_defeat'], revive: ['a_revive'], slain: ['a_boss_slain', 'a_cleared'],
+    trial: ['a_trial'], greet: ['seraphine_greet'] };
+  const bad = Object.entries(want).filter(([k, v]) => !v.every((n) => (h[k] || []).includes(n)));
+  check('voice: each moment asks for its line (streak tier, elite, events, Rite, Nova, evolution, boss, defeat, revive, clear, trial, hero screen)',
+    !bad.length, JSON.stringify(bad.length ? Object.fromEntries(bad.map(([k]) => [k, h[k]])) : h));
+});
+check('voice: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

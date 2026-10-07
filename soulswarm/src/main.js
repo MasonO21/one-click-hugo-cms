@@ -56,7 +56,7 @@ function resetProgress() {
 
 function applySettings() {
   const s = profile.settings;
-  audio.setVolumes({ music: s.music, sfx: s.sfx });
+  audio.setVolumes({ music: s.music, sfx: s.sfx, voice: s.voice });
   audio.setMuted(!!s.muted);
   setHapticsEnabled(s.haptics);
   if (app.engine) { app.engine.setQuality(s.quality); app.engine.reduceFlash = !!s.reduceFlash; app.engine.fpsCap = s.fps30 ? 30 : 60; }

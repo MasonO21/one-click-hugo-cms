@@ -134,12 +134,15 @@ export class Events {
     if (kind === 'thief') {
       run.ui.banner('SOUL THIEF', 'It flees with stolen souls. Catch it for gold and XP!', 'gold');
       run.audio.sfx('thief_appear');
+      run.audio.voice('a_thief');
     } else if (kind === 'shrine') {
       run.ui.banner('SHRINE OF SOULS', `Stand in its circle to receive a blessing for ${SH.buff} s`, 'soul');
       run.audio.sfx('shrine_chime', { volume: 0.55 });
+      run.audio.voice('a_shrine');
     } else {
       run.ui.banner('CURSED COFFIN', 'Break it to unleash a horde. Survive it for a Relic Chest', 'ember');
       run.audio.sfx('warning', { volume: 0.35, pitch: 0.7 });
+      run.audio.voice('a_coffin');
     }
     run.fx.shockwave(p.x, p.z, 3, COLOR[kind], 0.6, 0.12);
     return true;

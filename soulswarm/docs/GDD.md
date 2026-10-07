@@ -758,10 +758,30 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 *Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). Elite affixes and run events add a glass ward shatter, the Splitter's pop, the Commander's rout horn, the Soul Thief's jingle-and-cackle and its escape whoosh, the shrine's bell chime and the coffin's wood-splitting boom. Rendered offline, they peak between −19 and −7 dBFS before the master limiter, the same range as the existing SFX, so none of them clips. Each Hero Rite has its own signature sound (a funeral bell and rising souls for Grave Call, a tearing whoosh and ringing blade for Shadow Step, a hymn and a cascade of chain strikes for Ashfall, a great bell for Death Knell, heaving earth and splintering bone for Ossuary Wall) plus a soft rising chime when a Rite is ready again (§11.1); rendered offline, all are clearly audible and none clips. The stem system below is Planned.*
 
+*The build is also **voiced**: an announcer and the five Shepherds, 32 recorded lines (cast and scripts in `ART_AND_ADS.md` §3). They are the only recorded audio; each is mastered to −16 LUFS, mono, and decoded once after the first tap. Tunables are in `VOICE` (`data.js`).*
+
+| Moment | Line |
+|---|---|
+| Kill-streak tiers (§4.7) | "Carnage!", "Massacre!", "Annihilation!", "Soul Harvest!", "Apocalypse!" |
+| A Nova of 40+ souls | "Soul Nova!" |
+| Elite spawn | "An elite has risen." |
+| Boss warning | "The Hollow King approaches." / "The Hollow King returns." (Endless) |
+| Boss killed | "The Hollow King has fallen.", then "Chapter cleared." (campaign) or "The abyss deepens." (Endless) |
+| Death / revive | "You have fallen." / "Rise again." |
+| Run events (§4.8) | "A Soul Thief! Catch it!", "A Shrine of Souls awakens.", "A cursed coffin! Break it... if you dare." |
+| Run start | "Nightmare.", "Torment.", "The Blood Moon rises.", "The Daily Trial begins." |
+| Weapon evolution | "Evolution!" |
+| Rite cast (§11.1) | Vael "Rise! All of you, rise!", Nyx "Into the hollow.", Seraphine "Let the ash fall!", Liora "Hear the bell.", Mordrake "None shall pass!" |
+| Hero screen, unlock, Starter Pack (Nyx) | Vael "They remember their names. So do I.", Nyx "The hollow between heartbeats is mine.", Seraphine "My hymn still burns.", Liora "Listen... the dead are answering.", Mordrake "I have died nine hundred times. Once more is nothing." |
+
+- **One line at a time.** Each line has a priority: a more important line cuts in (boss and outcome lines > Rites, revive and run start > elites, events and evolution > streak calls and Nova). An equal or lower one is dropped, except the important lines, which queue for 1.5–4 s and are dropped if still blocked.
+- **No chatter.** The streak calls share a 30 s window in which only a bigger tier gets through, so a chain still escalates "Carnage!" → "Massacre!" → "Annihilation!". "Soul Nova!" repeats at most every 45 s, the elite call every 30 s and a hero's Rite line every 20 s. In a bot-played Chapter 3 that is about one line every 15 s.
+- **Mix:** music and SFX duck to 50% under a line and swell back over 0.45 s. A **Voice** slider in Settings sits under Music and SFX; mute silences it too.
+
 - **Music:** dark synthwave with choir and pipe organ. **Stems are added as the legion grows** (25 / 100 / 200 / 300 minions): percussion, then bass, choir and lead. The player *hears* the army getting bigger. Boss tracks are separate, with a phase-3 key change.
 - **SFX priorities** (voice limit 32): 1) player hit and telegraphs, 2) Nova, 3) gates, 4) level-up, 5) raises (pooled into a shimmering chord, at most 10 voices), 6) weapons, 7) enemy deaths (heavily pooled).
 - **Signature sounds:** *Raise*, a rising glassy chime. *Gate*, a deep bell, pitched up for + and × and down for −. *Nova*, a 0.25 s inhale (the wind-up), then a sub-bass drop and a crackling chain that spreads in stereo with the ripple. *Gravemaw*, a low brass drone and a distinct slam warning cue 1.2 s before impact.
-- **Mix:** music ducks −6 dB during Nova and boss telegraphs. Full playability with sound off: every audio cue has a visual twin.
+- **Mix:** music ducks −6 dB during Nova and boss telegraphs, and music and SFX duck under a voice line. Full playability with sound off: every audio cue has a visual twin, and every voice line has an on-screen banner or effect of the same moment.
 
 ---
 
@@ -808,14 +828,14 @@ The scripted beats below are **Planned**. Times are session times from app open 
 
 ## 17. Accessibility
 
-*Status: the build has music and SFX volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%, which also scales hit-stop; 0% turns it off), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA and RITE buttons and the skill bar. Rite effects respect Reduce flashes and the shake slider, and their haptics follow the haptics toggle. Everything else in this table is Planned.*
+*Status: the build has music, SFX and voice volume, mute, a haptics toggle, a quality setting (auto / low / mid / high), a 30 FPS battery saver, and an Accessibility section in Settings: a screen-shake slider (0–100%, which also scales hit-stop; 0% turns it off), **Reduce flashes** (full-screen flashes capped at 20%, whiteouts at 15%, chromatic aberration at 25%), **Auto-Nova** (fires at 100% charge when the legion is 50 or more) and a **Left-handed** mode that mirrors the NOVA and RITE buttons and the skill bar. Rite effects respect Reduce flashes and the shake slider, and their haptics follow the haptics toggle. Everything else in this table is Planned.*
 
 | Area | Feature |
 |---|---|
 | Vision | Colourblind modes (protan / deutan / tritan) that remap enemy warm colours while keeping shape cues. Elites always carry a crown marker; Bloaters always show a pulsing ring. **High-contrast outlines** toggle. UI text scale 90–150%. |
 | Photosensitivity | **Reduce flashes**: Nova and boss flashes capped at 3 Hz with luminance limits, bloom reduced. Screen shake slider (0–100%). A separate hit-stop toggle (in the build, hit-stop follows the shake slider). |
 | Motor | One-thumb by design. Left-handed mode mirrors the NOVA button. Adjustable joystick size and dead zone. **Auto-Nova** option (fires at 100% when legion ≥ 50). Pause anywhere. No timing-critical taps outside movement. |
-| Hearing | Every audio cue has a visual twin. Subtitles for all VO. Separate volume sliders for music, SFX and UI. |
+| Hearing | Every audio cue has a visual twin. Every voice line plays with a banner or effect of the same moment (the streak tier, the elite's name, "SOUL THIEF", the boss warning, the Rite itself), so the build needs no separate subtitles. Separate volume sliders for music, SFX and voice (in the build). |
 | Cognitive | Gate maths preview toggle ("shows result: 37 → 74"). Telegraphs are never under 1.0 s (the build's Bloater fuse and enraged slam sit exactly at 1.0 s). A tutorial replay and a short skills glossary in pause. |
 | Performance comfort | 30 / 60 fps choice, battery saver mode, reduced-particles mode. |
 

@@ -94,3 +94,62 @@ To run it:
 Re-cutting the ads in the sandbox costs no credits.
 
 New clips for the creative-testing rotation (`MARKETING.md` §6) cost about 20 credits per 8 s shot.
+
+## 3. Voice lines (`src/assets/voice/`)
+
+Recorded on 2026-10-07 with Higgsfield text-to-speech (the ElevenLabs engine, `text2speech_v2`, 0.15 credits per line). Voices were cast by measured pitch and listening. Every take was checked with a speech-to-text pass, and the one mispronounced take ("cursed coffin") was re-recorded.
+
+`scripts/voice-master.sh` downloads the takes and masters them:
+- trims silence;
+- gives the announcer a low shelf and a short cathedral echo;
+- pitches Mordrake down 10%;
+- normalises to −16 LUFS (true peak −1.5 dB);
+- writes mono 64 kbps MP3.
+
+The 32 lines total 612 KB. When and how the game plays them is in `GDD.md` §15.
+
+| Speaker | Preset voice | Lines |
+|---|---|---|
+| Announcer | Gideon | 22 (streak tiers, Nova, elite, boss, outcomes, events, run start, evolution, revive) |
+| Vael | Alistair | Rite call and greeting |
+| Nyx | Onyx | Rite call and greeting |
+| Seraphine | Vesper | Rite call and greeting |
+| Liora | Imogen | Rite call and greeting |
+| Mordrake | Caspian (pitched down) | Rite call and greeting |
+
+| Line (file) | Script | Higgsfield job |
+|---|---|---|
+| `a_carnage` | Carnage! | `e2502239-bc3e-4500-bdde-79c1f3f1f5c7` |
+| `a_massacre` | Massacre! | `d982fa62-4097-44c8-8def-749cb79d60e9` |
+| `a_annihilation` | Annihilation! | `4e688124-8c0a-49d0-b716-88ad5d70bc89` |
+| `a_harvest` | Soul Harvest! | `4e809b80-1025-4ecf-b3f3-69bbf6d0b867` |
+| `a_apocalypse` | Apocalypse! | `b9eee622-b321-4d14-a3d1-0d3dee477f7d` |
+| `a_nova` | Soul Nova! | `b6d9f1b9-abac-4108-9a7b-72026e30c1af` |
+| `a_elite` | An elite has risen. | `1373aa80-a14b-4d92-9adc-aac86455bdde` |
+| `a_boss` | The Hollow King approaches. | `e58ab34b-605a-40c5-b51d-79b38d8f3a3c` |
+| `a_boss_return` | The Hollow King returns. | `8b03a93c-654b-4292-88c5-1cedf6c469ea` |
+| `a_boss_slain` | The Hollow King has fallen. | `aff8caba-23d1-4d3e-a97a-62f4a6dc9797` |
+| `a_cleared` | Chapter cleared. | `08886fb0-0903-42d8-be15-2d4e83760838` |
+| `a_defeat` | You have fallen. | `fff8e36b-7b7a-4f07-8411-bb89f248b270` |
+| `a_depth` | The abyss deepens. | `81deedd3-c20e-468e-a08f-6e2b7bc4ba6f` |
+| `a_thief` | A Soul Thief! Catch it! | `2dbc8e20-893d-45f4-9ec4-f1115b265d2f` |
+| `a_shrine` | A Shrine of Souls awakens. | `73baeabe-1e7f-49d9-9dce-bcd26992a36f` |
+| `a_coffin` | A cursed coffin! Break it... if you dare. | `da0c1965-6c39-4405-9c1f-bb2ce2c5f43e` |
+| `a_nightmare` | Nightmare. | `c9ca18be-cfee-4bd1-baeb-e51a3ee78a50` |
+| `a_torment` | Torment. | `5a9de5fa-3a9a-4a75-b08f-27687f56d7a6` |
+| `a_bloodmoon` | The Blood Moon rises. | `c9476bc4-ff80-4dac-81eb-4d9f089c1b07` |
+| `a_trial` | The Daily Trial begins. | `ffd41537-13b4-4a67-95a1-9d67f5566091` |
+| `a_evolution` | Evolution! | `70a52ef9-c6d5-41c0-a36f-46de8fa307bd` |
+| `a_revive` | Rise again. | `c1bcd7b4-03a8-4c99-a560-fd040ca9bd0c` |
+| `vael_rite` | Rise! All of you, rise! | `cd5589c9-6dda-4c05-8e2c-e707cc9c6322` |
+| `vael_greet` | They remember their names. So do I. | `4042051f-dd3a-4b65-8ba3-e329c075ab39` |
+| `nyx_rite` | Into the hollow. | `7edd975b-d89a-401d-9332-d2b9d4843acf` |
+| `nyx_greet` | The hollow between heartbeats is mine. | `ca21df9e-98cd-4df5-ba15-e6af14c57249` |
+| `seraphine_rite` | Let the ash fall! | `0851bf0a-28e2-4af8-8a30-44c4b122a5eb` |
+| `seraphine_greet` | My hymn still burns. | `328aa51b-2796-4fd0-aa88-52fcb9b9bcbd` |
+| `liora_rite` | Hear the bell. | `562c8f51-bb26-4c37-96a4-7e6a59cfb47f` |
+| `liora_greet` | Listen... the dead are answering. | `19fe0439-deca-41f6-84f8-e96a874a2c83` |
+| `mordrake_rite` | None shall pass! | `9b487dd2-b8db-4b74-b048-e180a049f2da` |
+| `mordrake_greet` | I have died nine hundred times. Once more is nothing. | `a9c1d7bf-535c-4dc7-93ab-1d068f9e813f` |
+
+**Cost:** about 5 credits in total (32 lines and 2 re-takes at 0.15 credits each, plus casting previews). Adding a line for a new hero or event costs 0.15 credits: record it in the same preset voice, add it to the list in `scripts/voice-master.sh`, then add its rules to `VOICE` in `data.js`.

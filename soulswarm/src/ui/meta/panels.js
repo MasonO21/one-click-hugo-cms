@@ -202,6 +202,7 @@ export function openSettings(ctx) {
   const body = h(`<div class="st">
     <div class="st-row"><span class="st-l">${icon('sound')} Music</span><input class="rng" type="range" min="0" max="1" step="0.05" data-k="music"><b class="st-v tnum"></b></div>
     <div class="st-row"><span class="st-l">${icon('sound')} Sound FX</span><input class="rng" type="range" min="0" max="1" step="0.05" data-k="sfx"><b class="st-v tnum"></b></div>
+    <div class="st-row"><span class="st-l">${icon('skull')} Voice</span><input class="rng" type="range" min="0" max="1" step="0.05" data-k="voice"><b class="st-v tnum"></b></div>
     <div class="st-row"><span class="st-l">${icon('mute')} Mute all</span><button class="tgl" role="switch" data-t="muted"><i></i></button></div>
     <div class="st-row"><span class="st-l">${icon('pulse')} Haptics</span><button class="tgl" role="switch" data-t="haptics"><i></i></button></div>
     <div class="st-row st-col"><span class="st-l">${icon('eye')} Graphics</span>
@@ -242,7 +243,7 @@ export function openSettings(ctx) {
 
   $$(body, '.rng').forEach((r) => {
     r.addEventListener('input', () => { st[r.dataset.k] = Number(r.value); sync(); app.applySettings(); });
-    r.addEventListener('change', () => { if (r.dataset.k === 'sfx') app.audio.sfx('click'); commit(p); });
+    r.addEventListener('change', () => { if (r.dataset.k === 'sfx') app.audio.sfx('click'); else if (r.dataset.k === 'voice') app.audio.voice(`${p.selectedHero}_greet`); commit(p); });
   });
   $$(body, '.tgl').forEach((t) => t.addEventListener('click', () => {
     st[t.dataset.t] = !st[t.dataset.t]; sync(); app.applySettings(); commit(p); tap(app);
@@ -270,6 +271,7 @@ export function openStarter(ctx) {
   const { app } = ctx; const p = app.profile; const sku = SKUS.starter_pack;
   if (!starterAvailable(p)) { toast('This offer has ended'); return; }
   const nyx = HEROES.nyx;
+  app.audio.voice('nyx_greet');
   const m = modal({
     cls: 'mm-starter',
     body: `<div class="sp">
