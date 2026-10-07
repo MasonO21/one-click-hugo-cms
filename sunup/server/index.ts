@@ -3,7 +3,12 @@ import { createApp } from './app';
 import { decodeSecret, parseServiceAccount } from './native-push';
 
 const port = Number(process.env.PORT ?? 8787);
-const publicUrl = (process.env.PUBLIC_URL ?? `http://localhost:${process.env.NODE_ENV === 'production' ? port : 5173}`).replace(/\/$/, '');
+// On Render, RENDER_EXTERNAL_URL is set automatically, so PUBLIC_URL is only needed for a custom domain.
+const publicUrl = (
+  process.env.PUBLIC_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  `http://localhost:${process.env.NODE_ENV === 'production' ? port : 5173}`
+).replace(/\/$/, '');
 
 const { app, close } = createApp({
   dataDir: process.env.DATA_DIR ?? fileURLToPath(new URL('../data', import.meta.url)),
