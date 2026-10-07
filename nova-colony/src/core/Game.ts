@@ -56,10 +56,12 @@ export interface GameOptions {
 export const WELCOME_BACK_MIN_AWAY = 300;
 
 /**
- * Day 1 runs this much slower while the tutorial is in progress, so the first ~13 minutes (crash landing to
- * the first tier-up) play in daylight and end in a golden-hour sunset instead of pitch-dark night.
+ * Day 1 runs this much slower while the tutorial is in progress, so the first ~14 minutes (crash landing to
+ * the first tier-up) play in daylight and end in a golden-hour sunset instead of pitch-dark night. Tuned on the
+ * QA bot's human-paced first session (first attack ~12.7 min, tier-up ~13.9 min → dayTime ≈ 0.67 / 0.70): the
+ * sun/moon light swap (0.7575) only comes at ~16 min, so slower players still get their sunset.
  */
-export const FIRST_DAY_STRETCH = 2.5;
+export const FIRST_DAY_STRETCH = 3.1;
 
 /** Order in which systems update each frame. */
 const UPDATE_ORDER: (keyof Systems)[] = [

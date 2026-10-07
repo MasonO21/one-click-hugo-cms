@@ -22,6 +22,13 @@ describe('first session: day/night', () => {
     // guided session: nightfall only after (0.78 - start) * len * stretch seconds
     const secondsToNight = (nightAt - t0) * len * FIRST_DAY_STRETCH;
     expect(secondsToNight / 60).toBeGreaterThan(12);
+    // a human-paced first session (QA bot: first attack 12.7 min, first tier-up 13.9 min) lands in golden hour,
+    // where shadows are long and warm, before the sun/moon light swap at 0.7575 — with ~2 min to spare
+    const at = (min: number) => t0 + (min * 60) / (len * FIRST_DAY_STRETCH);
+    expect(at(12.7)).toBeGreaterThan(0.64);
+    expect(at(13.9)).toBeGreaterThan(0.68);
+    expect(at(13.9)).toBeLessThan(0.73);
+    expect(at(15.5)).toBeLessThan(0.7575);
     for (let i = 0; i < 12 * 60 * 4; i++) game.update(0.25);
     expect(game.isNight()).toBe(false);
     // once the arc is done the clock runs at normal speed again
