@@ -11,7 +11,7 @@ import { Batch } from '../src/render/core/Batch';
 import { Materials, SHADOW_FADE_GAIN } from '../src/render/core/materials';
 import type { Env, RenderContext } from '../src/render/core/context';
 import { sightTargets } from '../src/render/core/context';
-import { Nature, chunkOf, lodRadii, lodClass, lodWindows, LOD_BAND, LOD_MARGIN, LOD_HYST, LOD_NEAR, LOD_BAND_CLASS, LOD_FAR, CHUNKS_PER_SIDE, CHUNK_CELLS } from '../src/render/actors/Nature';
+import { Nature, chunkOf, lodRadii, lodClass, lodWindows, lodShrink, LOD_BAND, LOD_MARGIN, LOD_HYST, LOD_NEAR, LOD_BAND_CLASS, LOD_FAR, CHUNKS_PER_SIDE, CHUNK_CELLS } from '../src/render/actors/Nature';
 import { Buildings } from '../src/render/actors/Buildings';
 import { Pois } from '../src/render/actors/Pois';
 import { ViewCull } from '../src/render/core/cull';
@@ -273,42 +273,80 @@ describe('render culling', () => {
     }
   });
 
-  it('LOD dither windows: near and far geometry cover every pixel exactly once across the band, far fades out at mid', () => {
+  it('LOD windows: near and far geometry cover every pixel exactly once across the band; far-only geometry and props shrink away at their cutoffs', () => {
     const near = 90;
     const mid = 140;
     const bayer = Array.from({ length: 16 }, (_, i) => (i + 0.5) / 16);
     const survives = ([lo, hi]: [number, number], b: number) => b >= lo && b < hi;
     const shadow = ([lo, hi]: [number, number]): [number, number] => [Math.min(1, lo * SHADOW_FADE_GAIN), Math.min(1, hi * SHADOW_FADE_GAIN)];
     let crossfadeSteps = 0;
+    let prevFar = 1;
+    let prevProp = 1;
     for (let d = 0; d <= mid + 10; d += 0.25) {
       const w = lodWindows(d, near, mid);
       let nearPx = 0;
       for (const b of bayer) {
         const n = survives(w.near, b);
         const f = survives(w.far, b);
-        if (d <= mid - LOD_BAND) expect(n !== f, `d=${d} b=${b}: exactly one LOD covers the pixel`).toBe(true);
-        else expect(n, `near geometry never shows past the near radius (d=${d})`).toBe(false);
-        if (d >= mid) expect(f, `far geometry is gone at the mid cutoff (d=${d})`).toBe(false);
+        expect(n !== f, `d=${d} b=${b}: exactly one LOD covers the pixel`).toBe(true);
+        if (d >= near) expect(n, `near geometry never shows past the near radius (d=${d})`).toBe(false);
         // the shadow pass keeps the complement too (the same gain on both edges)
-        if (d <= mid - LOD_BAND) expect(survives(shadow(w.near), b) !== survives(shadow(w.far), b)).toBe(true);
+        expect(survives(shadow(w.near), b) !== survives(shadow(w.far), b)).toBe(true);
         if (n) nearPx++;
       }
       if (nearPx > 0 && nearPx < 16) crossfadeSteps++;
+      // discard-free shrink: full size until the band, monotonically down to exactly 0 at the cutoff
+      expect(w.farScale).toBeLessThanOrEqual(prevFar);
+      expect(w.propScale).toBeLessThanOrEqual(prevProp);
+      if (d <= mid - LOD_BAND) expect(w.farScale).toBe(1);
+      if (d >= mid) expect(w.farScale).toBe(0);
+      if (d <= near - LOD_BAND) expect(w.propScale).toBe(1);
+      if (d >= near) expect(w.propScale).toBe(0);
+      prevFar = w.farScale;
+      prevProp = w.propScale;
     }
     expect(crossfadeSteps).toBeGreaterThan(20); // a real band, not a switch
     expect(lodWindows(near - LOD_BAND, near, mid).near).toEqual([0, 1]);
     expect(lodWindows(near - LOD_BAND / 2, near, mid).near[0]).toBeCloseTo(0.5);
     expect(lodWindows(near, near, mid).far).toEqual([0, 1]);
+    expect(lodWindows(mid - LOD_BAND / 2, near, mid).farScale).toBeCloseTo(0.5);
+    expect(lodShrink(0.25)).toBeGreaterThan(0.75); // eased: slow start, no kink entering the band
     // building fades: the shadow is fully gone before the surface reaches its faint ghost stipple
     expect(shadow([0.85, 1])[0]).toBe(1);
     expect(shadow([0.4, 1])[0]).toBeCloseTo(0.5);
   });
 
+  it('materials: only dither variants carry a discard, shrink variants scale the vertex toward the origin (lit and depth twins alike)', () => {
+    const mats = new Materials();
+    const compile = (m: THREE.Material) => {
+      const shader = { uniforms: {} as Record<string, THREE.IUniform>, vertexShader: '#include <common>\n#include <begin_vertex>\n#include <project_vertex>', fragmentShader: '#include <common>\n#include <clipping_planes_fragment>\n#include <opaque_fragment>' };
+      (m.onBeforeCompile as (s: typeof shader) => void)(shader);
+      return shader;
+    };
+    for (const m of [mats.lit, mats.lodShrinkMid, mats.lodShrinkNear, mats.lodShrinkMidDepth, mats.lodShrinkNearDepth]) {
+      expect(compile(m).fragmentShader, m.customProgramCacheKey()).not.toContain('discard');
+    }
+    for (const m of [mats.litFade, mats.lodNear, mats.lodFar, mats.litFadeDepth, mats.lodNearDepth, mats.lodFarDepth]) {
+      expect(compile(m).fragmentShader, m.customProgramCacheKey()).toContain('discard');
+    }
+    for (const m of [mats.lodShrinkMid, mats.lodShrinkMidDepth]) {
+      const s = compile(m);
+      expect(s.vertexShader).toContain('transformed *=');
+      expect(s.vertexShader).toContain('uLod.z'); // mid band
+      expect(s.uniforms.uLod).toBeDefined();
+    }
+    expect(compile(mats.lodShrinkNear).vertexShader).toContain('uLod.x'); // near band
+    expect(compile(mats.lodFar).vertexShader).toContain('vFade = vec2(0.0,'); // complement of lodNear
+    expect(compile(mats.lit).vertexShader).not.toContain('transformed *=');
+    mats.dispose();
+  });
+
   it('materials: every dither variant has a shadow-depth twin with its own program cache key', () => {
     const mats = new Materials();
     const keys = new Set<string>();
-    for (const m of [mats.lit, mats.litFade, mats.lodNear, mats.lodFar, mats.litFadeDepth, mats.lodNearDepth, mats.lodFarDepth]) keys.add(m.customProgramCacheKey());
-    expect(keys.size).toBe(7);
+    const all = [mats.lit, mats.litFade, mats.lodNear, mats.lodFar, mats.lodShrinkMid, mats.lodShrinkNear, mats.litFadeDepth, mats.lodNearDepth, mats.lodFarDepth, mats.lodShrinkMidDepth, mats.lodShrinkNearDepth];
+    for (const m of all) keys.add(m.customProgramCacheKey());
+    expect(keys.size).toBe(all.length);
     expect(mats.litFadeDepth).toBeInstanceOf(THREE.MeshDepthMaterial);
     expect(mats.lodNearDepth).toBeInstanceOf(THREE.MeshDepthMaterial);
     const fade = { value: 0 };
@@ -341,7 +379,7 @@ describe('render culling', () => {
     noShadow.dispose();
   });
 
-  it('Nature draws band nodes in both LOD batches with the dither materials, near nodes once without discard', () => {
+  it('Nature draws band nodes in both dither LOD batches, near and far-only nodes once on discard-free programs', () => {
     const game = new Game({ seed: 11, services: createMockServices() });
     game.start();
     const ctx = makeCtx(game);
@@ -375,37 +413,35 @@ describe('render culling', () => {
           expect(im.material, 'the discard-free shared material').toBe(mats.set);
           expect(im.customDepthMaterial).toBeUndefined();
           nearOnly++;
-        } else if (kind === 'tn') {
+        } else if (kind === 'tn' || kind === 'tf') {
           expect(d).toBeGreaterThan(inner);
           expect(d).toBeLessThanOrEqual(outer);
-          expect(im.material).toBe(mats.lodNear);
-          expect(im.customDepthMaterial).toBe(mats.lodNearDepth);
+          expect(im.material).toBe(kind === 'tn' ? mats.lodNear : mats.lodFar);
+          expect(im.customDepthMaterial).toBe(kind === 'tn' ? mats.lodNearDepth : mats.lodFarDepth);
           expect(im.castShadow).toBe(true);
         } else if (kind === 'f') {
-          expect(d).toBeGreaterThan(inner);
+          expect(d, 'far-only nodes start past the band margin').toBeGreaterThan(outer);
           expect(d).toBeLessThanOrEqual(mid + LOD_MARGIN);
-          expect(im.material).toBe(mats.lodFar);
-          expect(im.customDepthMaterial).toBe(mats.lodFarDepth);
-          if (d > outer) farOnly++;
+          expect(im.material, 'discard-free shrink toward the mid cutoff').toBe(mats.lodShrinkMid);
+          expect(im.customDepthMaterial).toBe(mats.lodShrinkMidDepth);
+          farOnly++;
         } else if (kind === 'p') {
           expect(d).toBeLessThanOrEqual(outer);
-          expect(im.material, 'props fade out at the near radius').toBe(mats.lodNear);
+          expect(im.material, 'props shrink away at the near radius').toBe(mats.lodShrinkNear);
         }
       }
     });
     expect(nearOnly).toBeGreaterThan(10);
     expect(farOnly).toBeGreaterThan(3);
-    // every band node has exactly its near + far pair at the same position, never two near copies
+    // every band node has exactly its near + far pair at the same position; near-only / far-only nodes are drawn once
     let pairs = 0;
     for (const kinds of at.values()) {
       const tn = kinds.filter((k) => k === 'tn').length;
-      const f = kinds.filter((k) => k === 'f').length;
-      const n = kinds.filter((k) => k === 'n').length;
-      expect(n + tn).toBeLessThanOrEqual(1);
-      if (tn) {
-        expect(f).toBe(1);
-        pairs++;
-      }
+      const tf = kinds.filter((k) => k === 'tf').length;
+      const single = kinds.filter((k) => k === 'n' || k === 'f').length;
+      expect(single + tn).toBeLessThanOrEqual(1);
+      expect(tf).toBe(tn);
+      if (tn) pairs++;
     }
     expect(pairs).toBe(nature.bandCount);
     // the LOD uniforms follow the live camera every frame

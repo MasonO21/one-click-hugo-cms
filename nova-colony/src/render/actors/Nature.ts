@@ -12,12 +12,14 @@
  *
  * Distance LOD per instance, without pops: inside `near - LOD_BAND` a node is drawn once from the
  * discard-free near batch ('n:'). Across the band it is drawn twice — near geometry in 'tn:' with the
- * `lodNear` material and far geometry in 'f:' with `lodFar` — and the two shaders dither the pixels
+ * `lodNear` material and far geometry in 'tf:' with `lodFar` — and the two shaders dither the pixels
  * between them with complementary Bayer windows from the instance's live distance to the focus, so
- * the cross-fade is continuous every frame while this actor only decides batch membership at rebuild
- * time (`lodClass`, with a margin covering the camera drift between rebuilds plus hysteresis). Far
- * geometry fades out the same way over the band below the mid cutoff; props (near only) fade out
- * over the band below the near radius.
+ * the cross-fade is continuous every frame (and invisible: the silhouettes overlap) while this actor
+ * only decides batch membership at rebuild time (`lodClass`, with a margin covering the camera drift
+ * between rebuilds plus hysteresis). Beyond the band a node is drawn once from the discard-free far
+ * batch ('f:', `lodShrinkMid`), whose vertex shader sinks it into the ground over the band below the
+ * mid cutoff instead of popping or stippling at the horizon; props (near only, `lodShrinkNear`)
+ * sink away the same way over the band below the near radius.
  *
  * Gather hits wobble the node and throw chips; depletion plays a shrink-pop before the node disappears.
  * Solid nodes standing between the camera and the player (or the build ghost) shrink out of the way
@@ -112,20 +114,26 @@ export function lodClass(d: number, near: number, prev: number): number {
   return d <= inner ? LOD_NEAR : d > outer ? LOD_FAR : LOD_BAND_CLASS;
 }
 
+/** Smoothstep shrink of the LOD shaders: 1 = full size at the start of a band .. 0 = sunk away at its cutoff. */
+export function lodShrink(k: number): number {
+  const c = clamp(k, 0, 1);
+  return 1 - c * c * (3 - 2 * c);
+}
+
 /**
- * CPU mirror of the dither windows the `lodNear` / `lodFar` shaders compute for an instance at
- * distance `d`: a fragment with Bayer value b survives when lo <= b < hi.
+ * CPU mirror of the LOD shaders for an instance at distance `d`: the complementary dither windows of
+ * the near / far geometry of a band node (a fragment with Bayer value b survives when lo <= b < hi),
+ * the discard-free scale of far-only geometry toward the mid cutoff and of props toward the near radius.
  */
-export function lodWindows(d: number, near: number, mid: number, band = LOD_BAND): { near: [number, number]; far: [number, number] } {
+export function lodWindows(d: number, near: number, mid: number, band = LOD_BAND): { near: [number, number]; far: [number, number]; farScale: number; propScale: number } {
   const t = clamp((d - (near - band)) / band, 0, 1);
-  const t2 = clamp((d - (mid - band)) / band, 0, 1);
-  return { near: [t, 1], far: [t2, t] };
+  return { near: [t, 1], far: [0, t], farScale: lodShrink((d - (mid - band)) / band), propScale: lodShrink((d - (near - band)) / band) };
 }
 
 export class Nature {
   private group = new THREE.Group();
   private chunks: Chunk[] = [];
-  /** key: 'n:<model>' near nodes, 'tn:<model>' near geometry in the band, 'f:<model>' far nodes, 'p:<model>' props. */
+  /** key: 'n:<model>' near nodes, 'tn:' / 'tf:' near and far geometry of band nodes, 'f:<model>' far-only nodes, 'p:<model>' props. */
   private batches = new Map<string, Batch>();
   /** node index -> instance index within its batch (-1 = not drawn); slot2/batch2 = far partner in the band. */
   private nodeSlot = new Int32Array(0);
@@ -151,12 +159,14 @@ export class Nature {
   private occAcc = 0;
   private readonly unsub: (() => void)[] = [];
   private readonly nearBandOpts: BatchOpts;
+  private readonly farBandOpts: BatchOpts;
   private readonly farOpts: BatchOpts;
 
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
     this.nearBandOpts = { ...NODE_OPTS, depthMaterial: ctx.mats.lodNearDepth };
-    this.farOpts = { ...NODE_OPTS, depthMaterial: ctx.mats.lodFarDepth };
+    this.farBandOpts = { ...NODE_OPTS, depthMaterial: ctx.mats.lodFarDepth };
+    this.farOpts = { ...NODE_OPTS, depthMaterial: ctx.mats.lodShrinkMidDepth };
     const bus = ctx.game.bus;
     this.unsub.push(
       bus.on('gather:hit', (e) => this.onHit(e.node, e.model, e.x, e.z)),
@@ -344,15 +354,15 @@ export class Nature {
             this.nodeBatch[i] = batch;
             batch.push(_m);
           }
-          if (cls !== LOD_NEAR) {
-            const far = this.batch('f:' + model, () => nodeGeometryFar(model), mats.lodFar, this.farOpts);
-            if (cls === LOD_FAR) {
-              this.nodeSlot[i] = far.count;
-              this.nodeBatch[i] = far;
-            } else {
-              this.nodeSlot2[i] = far.count;
-              this.nodeBatch2[i] = far;
-            }
+          if (cls === LOD_FAR) {
+            const far = this.batch('f:' + model, () => nodeGeometryFar(model), mats.lodShrinkMid, this.farOpts);
+            this.nodeSlot[i] = far.count;
+            this.nodeBatch[i] = far;
+            far.push(_m);
+          } else if (cls === LOD_BAND_CLASS) {
+            const far = this.batch('tf:' + model, () => nodeGeometryFar(model), mats.lodFar, this.farBandOpts);
+            this.nodeSlot2[i] = far.count;
+            this.nodeBatch2[i] = far;
             far.push(_m);
           }
           this.drawn.push(i);
@@ -367,7 +377,7 @@ export class Nature {
           const s = p.scale || 1;
           const y = ctx.heightAt(p.x, p.z);
           if (!cull.sphere(p.x, y + s, p.z, 1.8 * s)) continue;
-          const batch = this.batch('p:' + p.model, () => propGeometry(p.model), mats.lodNear, PROP_OPTS);
+          const batch = this.batch('p:' + p.model, () => propGeometry(p.model), mats.lodShrinkNear, PROP_OPTS);
           composeEuler(_m, p.x, y - 0.03, p.z, 0, p.rot || 0, 0, s, s, s);
           batch.push(_m);
         }

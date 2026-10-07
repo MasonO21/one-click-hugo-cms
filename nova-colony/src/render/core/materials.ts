@@ -3,23 +3,31 @@
  * vertex attribute selects lit (0), emissive glow (1) or window glass (2) per vertex, so any model
  * is a single draw call and day/night only touches two uniforms.
  *
- * Dither variants are the same shader plus a 4x4 Bayer screen-door `discard` driven by a per-fragment
- * window `vFade = (lo, hi)`: a fragment survives when lo <= bayer < hi. Opaque, sort-free and
- * instancing friendly. A `discard` costs early-Z on tile GPUs, so the shared material stays free of
- * it and only the few fading batches use a variant:
+ * Variants of that shader for the few batches that fade:
+ *
+ * Dither (screen-door) variants add a 4x4 Bayer `discard` driven by a per-fragment window
+ * `vFade = (lo, hi)`: a fragment survives when lo <= bayer < hi. Opaque, sort-free and instancing
+ * friendly; a `discard` costs early-Z on tile GPUs, so the shared material stays free of it:
  *  - `litFade`  window (aFade, 1): per-instance fade 0 solid .. 1 gone (buildings that stand between
  *               the camera and the player, see Batch `fade`);
  *  - `lodNear`  window (t, 1): near nature geometry fades out over the LOD band below the near
  *               radius (t = 0 inside the band .. 1 at the near radius), computed per instance in the
  *               vertex shader from the live focus / radii uniforms (`setLod`);
- *  - `lodFar`   window (t2, t): the far geometry of the same instance fades in over that band —
+ *  - `lodFar`   window (0, t): the far geometry of the same instance fades in over that band —
  *               exactly complementary to `lodNear`, so every pixel is covered by one of the two and
- *               nothing pops — and out again over the band below the mid cutoff (t2).
+ *               nothing pops (the two silhouettes overlap, so the stipple is invisible).
+ *
+ * Shrink variants are discard-free: the vertex shader scales the instance toward its origin (nature
+ * models stand on y = 0, so they sink into the ground) over the band below a cutoff, reaching 0 at
+ * the cutoff — a soft grow-in instead of a pop or a visible stipple on far silhouettes:
+ *  - `lodShrinkMid`  far-only nature geometry toward the mid cutoff;
+ *  - `lodShrinkNear` props (near only) toward the near radius.
+ *
  * Every variant has a MeshDepthMaterial twin for the shadow pass (`*Depth`, attach through Batch
- * `depthMaterial`) applying the same window in shadow-map space, so shadows fade with their caster
- * and the near/far shadow stipples stay complementary. The shadow window is pushed a little harder
- * (`SHADOW_FADE_GAIN`), so a shadow is completely gone before its building reaches the faint ghost
- * stipple it keeps (Buildings FADE_MAX) — no sparse crawling stipple shadow under an invisible wall.
+ * `depthMaterial`) applying the same window / shrink in shadow-map space, so shadows fade with their
+ * caster and the near/far shadow stipples stay complementary. The shadow window is pushed a little
+ * harder (`SHADOW_FADE_GAIN`), so a shadow is completely gone before its building reaches the faint
+ * ghost stipple it keeps (Buildings FADE_MAX) — no sparse crawling stipple shadow under an invisible wall.
  */
 import * as THREE from 'three';
 
@@ -28,6 +36,16 @@ const NIGHT_GLASS = new THREE.Color('#ffcf7a');
 
 /** How a dither variant obtains its (lo, hi) window. */
 export type DitherMode = 'attr' | 'uniform' | 'lodNear' | 'lodFar';
+/** Which LOD band a shrink variant sinks into: the near radius (props) or the mid cutoff (far geometry). */
+export type ShrinkBand = 'near' | 'mid';
+
+/** What a lit / depth variant adds to the shared shader. */
+export interface LitVariant {
+  dither?: DitherMode;
+  /** Fade uniform for `dither: 'uniform'`. */
+  uFade?: THREE.IUniform<number>;
+  shrink?: ShrinkBand;
+}
 
 /** Shadow windows are scaled by this: a caster's shadow vanishes at fade 0.8 instead of 1. */
 export const SHADOW_FADE_GAIN = 1.25;
@@ -41,38 +59,54 @@ float novaBayer(vec2 p) {
 }
 `;
 
-/** Per-instance distance to the focus -> LOD band parameter (vertex shader, instance origin). */
-const LOD_VERT = /* glsl */ `
+/** Per-instance distance from the instance origin to the focus (vertex shader). */
+const LOD_DIST_VERT = /* glsl */ `
 #ifdef USE_INSTANCING
 vec2 novaIp = (modelMatrix * instanceMatrix[3]).xz;
 #else
 vec2 novaIp = modelMatrix[3].xz;
 #endif
 float novaD = distance(novaIp, uLodFocus);
-float novaT = clamp((novaD - uLod.x) * uLod.y, 0.0, 1.0);
 `;
 
-function ditherVertexPars(mode: DitherMode): string {
-  switch (mode) {
-    case 'attr': return '\nattribute float aFade;\nvarying vec2 vFade;';
-    case 'uniform': return '\nuniform float uFade;\nvarying vec2 vFade;';
-    default: return '\nuniform vec2 uLodFocus;\nuniform vec4 uLod;\nvarying vec2 vFade;';
-  }
+function usesLod(v: LitVariant): boolean {
+  return v.dither === 'lodNear' || v.dither === 'lodFar' || !!v.shrink;
 }
 
-function ditherVertexMain(mode: DitherMode): string {
-  switch (mode) {
-    case 'attr': return '\nvFade = vec2(aFade, 1.0);';
-    case 'uniform': return '\nvFade = vec2(uFade, 1.0);';
-    case 'lodNear': return LOD_VERT + 'vFade = vec2(novaT, 1.0);';
-    case 'lodFar': return LOD_VERT + 'vFade = vec2(clamp((novaD - uLod.z) * uLod.w, 0.0, 1.0), novaT);';
+function variantVertexPars(v: LitVariant): string {
+  let s = '';
+  if (v.dither === 'attr') s += '\nattribute float aFade;';
+  else if (v.dither === 'uniform') s += '\nuniform float uFade;';
+  if (v.dither) s += '\nvarying vec2 vFade;';
+  if (usesLod(v)) s += '\nuniform vec2 uLodFocus;\nuniform vec4 uLod;';
+  return s;
+}
+
+function variantVertexMain(v: LitVariant): string {
+  let s = usesLod(v) ? LOD_DIST_VERT : '';
+  if (v.shrink) {
+    // smoothstep from full size at (cutoff - band) to nothing at the cutoff, about the instance origin
+    const lo = v.shrink === 'near' ? 'uLod.x' : 'uLod.z';
+    const inv = v.shrink === 'near' ? 'uLod.y' : 'uLod.w';
+    s += `float novaK = clamp((novaD - ${lo}) * ${inv}, 0.0, 1.0);\ntransformed *= 1.0 - novaK * novaK * (3.0 - 2.0 * novaK);\n`;
   }
+  switch (v.dither) {
+    case 'attr': s += 'vFade = vec2(aFade, 1.0);'; break;
+    case 'uniform': s += 'vFade = vec2(uFade, 1.0);'; break;
+    case 'lodNear': s += 'vFade = vec2(clamp((novaD - uLod.x) * uLod.y, 0.0, 1.0), 1.0);'; break;
+    case 'lodFar': s += 'vFade = vec2(0.0, clamp((novaD - uLod.x) * uLod.y, 0.0, 1.0));'; break;
+  }
+  return s;
 }
 
 function ditherFragmentMain(shadow: boolean): string {
   return shadow
     ? `\n{ float novaB = novaBayer(gl_FragCoord.xy); vec2 novaF = min(vFade * ${SHADOW_FADE_GAIN.toFixed(3)}, 1.0); if (novaB < novaF.x || novaB >= novaF.y) discard; }`
     : '\n{ float novaB = novaBayer(gl_FragCoord.xy); if (novaB < vFade.x || novaB >= vFade.y) discard; }';
+}
+
+function variantKey(v: LitVariant): string {
+  return (v.dither ? '-' + v.dither : '') + (v.shrink ? '-shrink-' + v.shrink : '');
 }
 
 export class Materials {
@@ -90,12 +124,18 @@ export class Materials {
   readonly litFade: THREE.MeshLambertMaterial;
   /** Shadow-pass twin of `litFade`. */
   readonly litFadeDepth: THREE.MeshDepthMaterial;
-  /** `lit` for near nature geometry inside the LOD band (fades out toward the near radius). */
+  /** `lit` for near nature geometry inside the LOD band (dithers out toward the near radius). */
   readonly lodNear: THREE.MeshLambertMaterial;
   readonly lodNearDepth: THREE.MeshDepthMaterial;
-  /** `lit` for far nature geometry (fades in over the LOD band, out below the mid cutoff). */
+  /** `lit` for the far geometry of the same band nodes (dithers in, complementary to `lodNear`). */
   readonly lodFar: THREE.MeshLambertMaterial;
   readonly lodFarDepth: THREE.MeshDepthMaterial;
+  /** Discard-free `lit` for far-only nature geometry: sinks into the ground over the band below mid. */
+  readonly lodShrinkMid: THREE.MeshLambertMaterial;
+  readonly lodShrinkMidDepth: THREE.MeshDepthMaterial;
+  /** Discard-free `lit` for props: sinks into the ground over the band below the near radius. */
+  readonly lodShrinkNear: THREE.MeshLambertMaterial;
+  readonly lodShrinkNearDepth: THREE.MeshDepthMaterial;
   /** Build-mode ghosts. */
   readonly ghostOk = new THREE.MeshBasicMaterial({ color: '#56ff9a', transparent: true, opacity: 0.55, depthWrite: false });
   readonly ghostBad = new THREE.MeshBasicMaterial({ color: '#ff5c6a', transparent: true, opacity: 0.55, depthWrite: false });
@@ -110,12 +150,16 @@ export class Materials {
   constructor() {
     this.lit = this.makeLit();
     this.set = this.lit;
-    this.litFade = this.makeLit({}, 'attr');
-    this.litFadeDepth = this.makeDepth('attr');
-    this.lodNear = this.makeLit({}, 'lodNear');
-    this.lodNearDepth = this.makeDepth('lodNear');
-    this.lodFar = this.makeLit({}, 'lodFar');
-    this.lodFarDepth = this.makeDepth('lodFar');
+    this.litFade = this.makeLit({}, { dither: 'attr' });
+    this.litFadeDepth = this.makeDepth({ dither: 'attr' });
+    this.lodNear = this.makeLit({}, { dither: 'lodNear' });
+    this.lodNearDepth = this.makeDepth({ dither: 'lodNear' });
+    this.lodFar = this.makeLit({}, { dither: 'lodFar' });
+    this.lodFarDepth = this.makeDepth({ dither: 'lodFar' });
+    this.lodShrinkMid = this.makeLit({}, { shrink: 'mid' });
+    this.lodShrinkMidDepth = this.makeDepth({ shrink: 'mid' });
+    this.lodShrinkNear = this.makeLit({}, { shrink: 'near' });
+    this.lodShrinkNearDepth = this.makeDepth({ shrink: 'near' });
   }
 
   /** Track a material for invalidate()/dispose(); forgets it when the owner disposes it. */
@@ -128,59 +172,65 @@ export class Materials {
     return mat;
   }
 
-  private ditherUniforms(shader: { uniforms: Record<string, THREE.IUniform> }, mode: DitherMode, uFade?: THREE.IUniform<number>): void {
-    if (mode === 'lodNear' || mode === 'lodFar') {
+  private variantUniforms(shader: { uniforms: Record<string, THREE.IUniform> }, v: LitVariant): void {
+    if (usesLod(v)) {
       shader.uniforms.uLodFocus = this.uLodFocus;
       shader.uniforms.uLod = this.uLod;
-    } else if (mode === 'uniform' && uFade) shader.uniforms.uFade = uFade;
+    }
+    if (v.dither === 'uniform' && v.uFade) shader.uniforms.uFade = v.uFade;
   }
 
   /**
-   * Create a slot-aware Lambert material (the shared material, per-room roofs, dither variants).
-   * `dither` adds the screen-door discard; 'uniform' reads the fade from `uFade`.
+   * Create a slot-aware Lambert material (the shared material, per-room roofs, fade variants).
+   * `variant` adds the screen-door discard and/or the vertex shrink described above.
    */
-  makeLit(opts: THREE.MeshLambertMaterialParameters = {}, dither: DitherMode | null = null, uFade?: THREE.IUniform<number>): THREE.MeshLambertMaterial {
+  makeLit(opts: THREE.MeshLambertMaterialParameters = {}, variant: LitVariant = {}): THREE.MeshLambertMaterial {
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true, ...opts });
     const uGlow = this.uGlow;
     const uGlass = this.uGlass;
+    const key = variantKey(variant);
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uGlow = uGlow;
       shader.uniforms.uGlass = uGlass;
-      if (dither) this.ditherUniforms(shader, dither, uFade);
+      this.variantUniforms(shader, variant);
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float aSlot;\nvarying float vSlot;' + (dither ? ditherVertexPars(dither) : ''))
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSlot = aSlot;' + (dither ? ditherVertexMain(dither) : ''));
+        .replace('#include <common>', '#include <common>\nattribute float aSlot;\nvarying float vSlot;' + variantVertexPars(variant))
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSlot = aSlot;\n' + variantVertexMain(variant));
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying float vSlot;\nuniform float uGlow;\nuniform vec3 uGlass;' + (dither ? BAYER_FRAG_PARS : ''))
+        .replace('#include <common>', '#include <common>\nvarying float vSlot;\nuniform float uGlow;\nuniform vec3 uGlass;' + (variant.dither ? BAYER_FRAG_PARS : ''))
         .replace(
           '#include <opaque_fragment>',
           'if (vSlot > 1.5) outgoingLight = uGlass; else if (vSlot > 0.5) outgoingLight = diffuseColor.rgb * uGlow;\n#include <opaque_fragment>',
         );
-      if (dither) {
+      if (variant.dither) {
         shader.fragmentShader = shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + ditherFragmentMain(false));
       }
     };
-    mat.customProgramCacheKey = () => (dither ? 'nova-slot-lit-' + dither : 'nova-slot-lit');
+    mat.customProgramCacheKey = () => 'nova-slot-lit' + key;
     return this.track(mat);
   }
 
   /**
-   * Shadow-pass material for a dither variant: the default depth shader plus the same window, so
-   * a dithered caster throws a dithered (PCF-softened, lighter) shadow instead of a solid one. Only
-   * fading batches pay for the discard; everything else keeps three's shared depth material.
+   * Shadow-pass material for a variant: the default depth shader plus the same window / shrink, so
+   * a dithered caster throws a dithered (PCF-softened, lighter) shadow instead of a solid one and a
+   * shrinking caster's shadow shrinks with it. Only fading batches pay for the discard; everything
+   * else keeps three's shared depth material.
    */
-  makeDepth(dither: DitherMode, uFade?: THREE.IUniform<number>): THREE.MeshDepthMaterial {
+  makeDepth(variant: LitVariant): THREE.MeshDepthMaterial {
     const mat = new THREE.MeshDepthMaterial();
+    const key = variantKey(variant);
     mat.onBeforeCompile = (shader) => {
-      this.ditherUniforms(shader, dither, uFade);
+      this.variantUniforms(shader, variant);
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>' + ditherVertexPars(dither))
-        .replace('#include <begin_vertex>', '#include <begin_vertex>' + ditherVertexMain(dither));
-      shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>' + BAYER_FRAG_PARS)
-        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + ditherFragmentMain(true));
+        .replace('#include <common>', '#include <common>' + variantVertexPars(variant))
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + variantVertexMain(variant));
+      if (variant.dither) {
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', '#include <common>' + BAYER_FRAG_PARS)
+          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + ditherFragmentMain(true));
+      }
     };
-    mat.customProgramCacheKey = () => 'nova-depth-' + dither;
+    mat.customProgramCacheKey = () => 'nova-depth' + key;
     return this.track(mat);
   }
 
@@ -191,13 +241,13 @@ export class Materials {
 
   /** Shadow-pass material for a roof: dithers the roof's shadow away as `fade` (1 - opacity) rises. */
   makeRoofDepth(fade: THREE.IUniform<number>): THREE.MeshDepthMaterial {
-    return this.makeDepth('uniform', fade);
+    return this.makeDepth({ dither: 'uniform', uFade: fade });
   }
 
   /**
-   * Live LOD band for the nature materials: `focus` is the culling center, near geometry fades out
-   * over [near - band, near] while far geometry fades in, and far geometry fades out over
-   * [mid - band, mid]. Called every frame (two uniform writes).
+   * Live LOD band for the nature materials: `focus` is the culling center; near geometry dithers out
+   * over [near - band, near] while far geometry dithers in, props shrink away over the same band,
+   * and far-only geometry shrinks away over [mid - band, mid]. Called every frame (two uniform writes).
    */
   setLod(cx: number, cz: number, near: number, band: number, mid: number): void {
     const b = Math.max(0.001, band);
