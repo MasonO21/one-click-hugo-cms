@@ -76,6 +76,7 @@ See `docs/PRODUCTION_ROADMAP.md` for the full checklist, team plan and budget.
 | `src/ui/` | Design system (`style.css`), HUD and run modals (`runui.js`), menus (`meta/`) |
 | `src/audio/audio.js` | Procedural Web Audio SFX and music, plus the voice-line player (priorities, cooldowns, ducking) |
 | `src/assets/voice/` | 32 recorded announcer and hero lines (Higgsfield; `scripts/voice-master.sh`) |
+| `src/assets/models/` | The heroes' 3D models (and Eclipse Vael's), built from their painted art (Higgsfield; `scripts/hero-models.sh`, loaded by `src/engine/heromodels.js`) |
 | `resources/` | App icon and splash (built from the painted masters by `npm run art`) |
 | `store/` | Painted key art masters (`art/`), cinematic video ads (`ads/`), in-engine trailer and App Store screenshots; see `docs/ART_AND_ADS.md` |
 | `scripts/` | Playtest bot, trailer and screenshot renderers, painted-asset pipeline, web build |

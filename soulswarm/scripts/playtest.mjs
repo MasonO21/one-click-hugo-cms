@@ -2128,6 +2128,45 @@ errs = await session(async (page) => {
 });
 check('NaN guard: no runtime errors', !errs.length, errs[0] || '');
 
+// 29. Painted 3D Shepherds (engine/heromodels.js; models built from Higgsfield turnaround sheets by scripts/hero-models.sh).
+//     Every hero and the Eclipse Vael skin loads a textured model of sane size, standing on the ground and facing +Z; a run
+//     and the home showcase swap it in for the procedural model; an unknown model resolves to null (the fallback stays).
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, H = app.heroModels, out = { models: {} }; // the game's own instance (see section 25)
+    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) {
+      const m = await H.loadHeroModel(id);
+      if (!m) { out.models[id] = null; continue; }
+      const g = m.geometry, b = g.boundingBox, tris = (g.index ? g.index.count : g.attributes.position.count) / 3;
+      out.models[id] = { tris: Math.round(tris), h: +(b.max.y - b.min.y).toFixed(2), floor: +b.min.y.toFixed(3), uv: !!g.attributes.uv, normal: !!g.attributes.normal,
+        tex: m.map && m.map.image ? m.map.image.width : 0, same: H.heroModel(id) === m };
+    }
+    out.none = await H.loadHeroModel('nobody');
+    // a run puts the painted model on the Shepherd (shared geometry, textured material)
+    const p = app.profile; p.heroes.seraphine.owned = true; p.selectedHero = 'seraphine'; p.flags.tutorialDone = true;
+    app.startRun(1); app.engine.manual = true;
+    await new Promise((r) => setTimeout(r, 50));
+    const pl = app.run.player;
+    out.run = { painted: !!pl.painted, shared: pl.mesh.geometry === H.heroModel('seraphine').geometry, textured: !!(pl.mat.defines && 'USE_HEROMAP' in pl.mat.defines) };
+    for (let i = 0; i < 30; i++) app.engine.step(1 / 30);
+    app.exitRun(); app.engine.manual = false;
+    // the home showcase follows the selected hero (and the skin)
+    app.showcase.setHero('mordrake', p);
+    await new Promise((r) => setTimeout(r, 50));
+    out.show = { mordrake: app.showcase.hero.geometry === H.heroModel('mordrake').geometry };
+    p.skins = { ...(p.skins || {}), eclipse_vael: true }; p.equippedSkin = 'eclipse_vael'; p.heroes.vael.owned = true;
+    app.showcase.setHero('vael', p);
+    await new Promise((r) => setTimeout(r, 50));
+    out.show.eclipse = app.showcase.hero.geometry === H.heroModel('eclipse_vael').geometry;
+    return out;
+  });
+  const bad = Object.entries(s.models).filter(([, m]) => !m || m.tris < 4000 || m.tris > 30000 || m.h < 1.8 || m.h > 2.9 || Math.abs(m.floor) > 0.01 || !m.uv || !m.normal || m.tex !== 1024 || !m.same);
+  check('3D heroes: all five heroes and the Eclipse Vael skin load a textured model (4k-30k triangles, on the ground, 1024 px paint)', !bad.length, JSON.stringify(bad.length ? bad : s.models));
+  check('3D heroes: a run swaps the painted model onto the Shepherd; the home showcase shows it (and the skin\'s); a missing model resolves to null',
+    s.run.painted && s.run.shared && s.run.textured && s.show.mordrake && s.show.eclipse && s.none === null, JSON.stringify({ run: s.run, show: s.show, none: s.none }));
+});
+check('3D heroes: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -9,6 +9,7 @@ import { haptic, setHapticsEnabled, isNative } from './engine/platform.js';
 import { App as NativeApp } from '@capacitor/app';
 import { handleBack } from './ui/back.js';
 import * as clock from './meta/clock.js';
+import * as heroModels from './engine/heromodels.js';
 import { Engine } from './engine/engine.js';
 import { Showcase } from './game/showcase.js';
 import { Run } from './game/run.js';
@@ -43,6 +44,7 @@ const app = {
   applySettings,
   resetProgress,
   clock, // QA: the clock instance the game uses (a dev server's HMR can serve a second copy to a fresh import)
+  heroModels, // QA: likewise, the painted-model cache
 };
 window.__soulswarm = app; // handy for QA scripts
 
