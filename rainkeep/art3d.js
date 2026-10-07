@@ -761,6 +761,158 @@
       L.armL.rotation.x = s * 0.06; L.armR.rotation.x = o.userData.jar ? -2.7 : -s * 0.06;
     }
   };
+  // ======================================================================
+  // Companions (companions.js): animals as single skinned, vertex-coloured meshes, like the villagers
+  // ======================================================================
+  const AG = {
+    sph: () => geo('a-sph', () => new THREE.SphereGeometry(1, 10, 8)),
+    cone: () => geo('a-cone', () => new THREE.ConeGeometry(1, 1, 8)),
+    cyl: () => geo('a-cyl', () => new THREE.CylinderGeometry(1, 1, 1, 7)),
+    leg: () => geo('a-leg', () => new THREE.CylinderGeometry(1, 0.75, 1, 6).translate(0, -0.5, 0)),
+    box: () => geo('a-box', () => new THREE.BoxGeometry(1, 1, 1)),
+  };
+  // sets[0] stays with the root; sets[i] is drawn around pivots[i - 1] and swings on its own bone
+  function rigMesh(sets, pivots) {
+    const bones = [new THREE.Bone()];
+    pivots.forEach((pv, i) => {
+      const b = new THREE.Bone();
+      b.position.copy(pv);
+      bones[0].add(b);
+      bones.push(b);
+      for (const g of sets[i + 1]) g.translate(pv.x, pv.y, pv.z);
+    });
+    const counts = sets.map((l) => l.reduce((n, g) => n + g.attributes.position.count, 0));
+    const geom = pMerge(sets.flat()), nv = geom.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4);
+    let v0 = 0;
+    counts.forEach((c, b) => { for (let i = v0; i < v0 + c; i++) { si[i * 4] = b; sw[i * 4] = 1; } v0 += c; });
+    geom.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+    geom.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    const mesh = new THREE.SkinnedMesh(geom, personMat);
+    mesh.castShadow = true;
+    mesh.add(bones[0]);
+    mesh.bind(new THREE.Skeleton(bones));
+    return { mesh, bones };
+  }
+  A.rigMesh = rigMesh;
+  // Four-legged companions, facing +z: L body length, H body height, W width, leg length, head radius
+  const BEASTS = {
+    fennec: { fur: '#e8c48a', belly: '#f6ead2', L: 0.4, H: 0.17, W: 0.15, leg: 0.15, hr: 0.085, neck: 0.06, snout: [0.08, 0.035], nose: '#2a1608',
+      ears: { h: 0.19, r: 0.055, tilt: 0.38, inner: '#f2b8a0' }, tail: { kind: 'bushy', len: 0.3, r: 0.055, col: '#dcb070', tip: '#f6ead2' } },
+    sandcat: { fur: '#d9b27a', belly: '#efe0c0', stripe: '#8a6a48', L: 0.38, H: 0.17, W: 0.15, leg: 0.15, hr: 0.09, neck: 0.04, snout: [0.035, 0.04], nose: '#c87a6a',
+      ears: { h: 0.07, r: 0.05, tilt: 0.75, inner: '#f2c8b0' }, tail: { kind: 'ringed', len: 0.28, r: 0.025, col: '#c9a070', tip: '#2a1608' } },
+    caracal: { fur: '#c07a44', belly: '#ecd6b8', L: 0.62, H: 0.27, W: 0.2, leg: 0.3, hr: 0.11, neck: 0.08, snout: [0.05, 0.05], nose: '#4a2a1e',
+      ears: { h: 0.17, r: 0.045, tilt: 0.12, inner: '#e8c8a8', tuft: '#1a1008' }, tail: { kind: 'thin', len: 0.22, r: 0.03, col: '#b06a38', tip: '#1a1008' } },
+    oryx: { fur: '#efe8dc', belly: '#f6f2ea', dark: '#2a2420', L: 0.9, H: 0.36, W: 0.26, leg: 0.5, hr: 0.1, neck: 0.24, snout: [0.12, 0.055], nose: '#2a2420',
+      ears: { h: 0.09, r: 0.035, tilt: 1.0, inner: '#d8c8b8' }, horns: { len: 0.55, col: '#2a2018' }, tail: { kind: 'tuft', len: 0.3, r: 0.02, col: '#efe8dc', tip: '#2a2420' } },
+  };
+  A.beast = (kind, o = {}) => {
+    const B = BEASTS[kind], { L, H, W, leg, hr } = B;
+    const dark = '#1a0e08', body = [];
+    const by = leg + H * 0.4;
+    body.push(pPart(AG.sph(), B.fur, 0, by, 0, 0, 0, 0, W / 2, H / 2, L / 2));
+    body.push(pPart(AG.sph(), B.belly, 0, by - H * 0.18, L * 0.05, 0, 0, 0, W * 0.42, H * 0.32, L * 0.38));
+    body.push(pPart(AG.sph(), B.fur, 0, by + H * 0.08, L * 0.3, 0, 0, 0, W * 0.48, H * 0.5, L * 0.22));
+    // neck and head
+    const hy = by + H * 0.45 + B.neck, hz = L * 0.5 + hr * 0.2;
+    body.push(pPart(AG.cyl(), B.fur, 0, (by + H * 0.3 + hy) / 2, L * 0.42, 0.35, 0, 0, hr * 0.7, hy - by - H * 0.1, hr * 0.7));
+    body.push(pPart(AG.sph(), B.fur, 0, hy, hz, 0, 0, 0, hr, hr * 0.9, hr * 1.05));
+    const [sl, sr] = B.snout;
+    if (kind === 'fennec') body.push(pPart(AG.cone(), B.belly, 0, hy - hr * 0.25, hz + hr * 0.8 + sl / 2, Math.PI / 2, 0, 0, sr, sl, sr * 0.85));
+    else body.push(pPart(AG.sph(), B.belly, 0, hy - hr * 0.3, hz + hr * 0.55 + sl / 2, 0.25, 0, 0, sr, sr * 0.8, sl / 2 + hr * 0.25));
+    body.push(pPart(AG.sph(), B.nose, 0, hy - hr * 0.22, hz + hr * 0.8 + sl, 0, 0, 0, 0.016, 0.013, 0.013));
+    for (const s of [-1, 1]) {
+      body.push(pPart(AG.sph(), dark, s * hr * 0.45, hy + hr * 0.15, hz + hr * 0.78, 0, 0, 0, hr * 0.17, hr * 0.17, hr * 0.12));
+      const e = B.ears, ex = s * hr * 0.55, ey = hy + hr * 0.7, ez = hz - hr * 0.15, rz = -s * e.tilt;
+      const dx = -Math.sin(rz) * e.h / 2, dy = Math.cos(rz) * e.h / 2;
+      body.push(pPart(AG.cone(), B.fur, ex + dx, ey + dy, ez, 0, 0, rz, e.r, e.h, e.r * 0.55));
+      body.push(pPart(AG.cone(), e.inner, ex + dx * 0.9, ey + dy * 0.9, ez + e.r * 0.32, 0, 0, rz, e.r * 0.6, e.h * 0.8, e.r * 0.2));
+      if (e.tuft) body.push(pPart(AG.cone(), e.tuft, ex + dx * 2.15, ey + dy * 2.15, ez, 0, 0, rz, 0.012, 0.07, 0.012));
+      if (B.horns) {
+        const hl = B.horns.len, ax = -0.85, tx = s * 0.1;
+        body.push(pPart(AG.cone(), B.horns.col, s * hr * 0.32 + Math.sin(tx) * hl / 2, hy + hr * 0.6 + Math.cos(ax) * hl / 2, hz - hr * 0.1 + Math.sin(ax) * hl / 2, ax, 0, -tx, 0.022, hl, 0.022));
+      }
+      if (B.dark) body.push(pPart(AG.sph(), B.dark, s * hr * 0.5, hy - hr * 0.05, hz + hr * 0.45, 0, 0, 0, hr * 0.3, hr * 0.55, hr * 0.5)); // the oryx's face marks
+    }
+    // the tail, on its own bone at the rump
+    const T = B.tail, tail = [];
+    if (T.kind === 'bushy') {
+      tail.push(pPart(AG.sph(), T.col, 0, -T.len * 0.25, -T.len * 0.5, -0.5, 0, 0, T.r, T.r, T.len * 0.5));
+      tail.push(pPart(AG.sph(), T.tip, 0, -T.len * 0.47, -T.len * 0.93, -0.5, 0, 0, T.r * 0.7, T.r * 0.7, T.len * 0.14));
+    } else {
+      const dy = -0.52, dz = -0.85; // down and back
+      tail.push(pPart(AG.leg(), T.col, 0, 0, 0, 1.02, 0, 0, T.r, T.len, T.r));
+      tail.push(pPart(AG.sph(), T.tip, 0, dy * T.len, dz * T.len, 1.02, 0, 0, T.r * (T.kind === 'tuft' ? 1.8 : 0.95), T.r * (T.kind === 'tuft' ? 3.2 : 2.2), T.r * (T.kind === 'tuft' ? 1.8 : 0.95)));
+      if (T.kind === 'ringed') for (let k = 1; k < 4; k++) tail.push(pPart(AG.cyl(), B.stripe, 0, dy * T.len * k * 0.24, dz * T.len * k * 0.24, 1.02, 0, 0, T.r * (1.15 - k * 0.06), 0.02, T.r * (1.15 - k * 0.06)));
+    }
+    // legs on bones at the shoulders and hips
+    const legs = [], pivots = [new V3(0, by + H * 0.1, -L * 0.47)];
+    const lr = W * 0.16;
+    for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      pivots.push(new V3(sx * W * 0.3, leg, sz * L * 0.3));
+      const parts = [pPart(AG.leg(), sz > 0 ? B.fur : B.fur, 0, 0.04, 0, 0, 0, 0, lr, leg + 0.04, lr), pPart(AG.sph(), B.dark || B.belly, 0, -leg + lr * 0.4, lr * 0.4, 0, 0, 0, lr * 1.15, lr * 0.6, lr * 1.5)];
+      if (B.dark) parts.push(pPart(AG.cyl(), B.dark, 0, -leg * 0.55, 0, 0, 0, 0, lr * 1.02, leg * 0.5, lr * 1.02));
+      if (B.stripe) for (let k = 0; k < 2; k++) parts.push(pPart(AG.cyl(), B.stripe, 0, -leg * (0.35 + k * 0.25), 0, 0, 0, 0, lr * 1.05, 0.015, lr * 1.05));
+      legs.push(parts);
+    }
+    const { mesh, bones } = rigMesh([body, tail, ...legs], pivots);
+    const g = new THREE.Group();
+    g.add(mesh);
+    g.scale.setScalar(o.scale || 1);
+    g.userData = { kind, four: true, tail: bones[1], legs: bones.slice(2), ph: Math.random() * 6 };
+    return g;
+  };
+  // Birds, facing +z, wings out along x on bones at the shoulders
+  const BIRDS = {
+    falcon: { body: '#7a5a3a', belly: '#e8dcc0', wing: '#6a4a2e', tip: '#3a2818', beak: '#3a3a40', cere: '#e8c84a', size: 1.0 },
+    hoopoe: { body: '#d68a5a', belly: '#e8b08a', wing: '#1a1410', bar: '#f4eee0', beak: '#2a2018', crest: '#e88a3a', size: 0.7 },
+  };
+  A.bird = (kind, o = {}) => {
+    const B = BIRDS[kind], dark = '#120a06', body = [];
+    body.push(pPart(AG.sph(), B.body, 0, 0, 0, 0, 0, 0, 0.085, 0.085, 0.17));
+    body.push(pPart(AG.sph(), B.belly, 0, -0.03, 0.04, 0, 0, 0, 0.07, 0.065, 0.12));
+    body.push(pPart(AG.sph(), B.body, 0, 0.04, 0.15, 0, 0, 0, 0.062, 0.06, 0.066));
+    for (const s of [-1, 1]) body.push(pPart(AG.sph(), dark, s * 0.036, 0.055, 0.19, 0, 0, 0, 0.012, 0.012, 0.01));
+    if (kind === 'falcon') {
+      body.push(pPart(AG.cone(), B.cere, 0, 0.035, 0.215, Math.PI / 2 + 0.35, 0, 0, 0.022, 0.04, 0.02));
+      body.push(pPart(AG.cone(), B.beak, 0, 0.022, 0.235, Math.PI / 2 + 0.9, 0, 0, 0.014, 0.035, 0.013));
+      body.push(pPart(AG.box(), B.wing, 0, 0, -0.22, 0, 0, 0, 0.11, 0.012, 0.15));
+      for (const s of [-1, 1]) body.push(pPart(AG.sph(), dark, s * 0.03, 0.02, 0.175, 0, 0, 0, 0.012, 0.03, 0.01)); // the moustache stripe
+    } else {
+      body.push(pPart(AG.cone(), B.beak, 0, 0.03, 0.27, Math.PI / 2 + 0.12, 0, 0, 0.008, 0.13, 0.008));
+      for (let k = 0; k < 6; k++) {
+        const a = -0.9 + k * 0.36;
+        body.push(pPart(AG.cone(), B.crest, 0, 0.09 + Math.cos(a) * 0.04, 0.13 + Math.sin(a) * 0.05, a, 0, 0, 0.02, 0.09, 0.008));
+        body.push(pPart(AG.sph(), dark, 0, 0.09 + Math.cos(a) * 0.088, 0.13 + Math.sin(a) * 0.09, 0, 0, 0, 0.012, 0.012, 0.006));
+      }
+      body.push(pPart(AG.box(), B.wing, 0, 0, -0.2, 0, 0, 0, 0.08, 0.012, 0.13), pPart(AG.box(), B.bar, 0, 0.004, -0.2, 0, 0, 0, 0.082, 0.012, 0.025));
+    }
+    const wings = [], pivots = [];
+    for (const s of [-1, 1]) {
+      pivots.push(new V3(s * 0.06, 0.03, 0.02));
+      const w = [pPart(AG.sph(), B.wing, s * 0.24, 0, -0.02, 0, 0, 0, 0.24, 0.016, 0.1), pPart(AG.sph(), B.tip || B.bar, s * 0.42, 0, -0.06, 0, -s * 0.3, 0, 0.1, 0.014, 0.06)];
+      if (B.bar) for (let k = 0; k < 3; k++) w.push(pPart(AG.box(), B.bar, s * (0.12 + k * 0.1), 0.012, -0.02, 0, 0, 0, 0.03, 0.006, 0.16));
+      wings.push(w);
+    }
+    const { mesh, bones } = rigMesh([body, ...wings], pivots);
+    const g = new THREE.Group();
+    g.add(mesh);
+    g.scale.setScalar((o.scale || 1) * B.size);
+    g.userData = { kind, bird: true, wings: bones.slice(1), ph: Math.random() * 6 };
+    return g;
+  };
+  // walk (trot with diagonal legs), sit (still, tail swaying), flap or glide
+  A.animAnimal = (o, t, mode = 'walk', speed = 1) => {
+    const U = o.userData, ph = U.ph || 0;
+    if (U.four) {
+      const s = Math.sin(t * 9 * speed + ph), a = mode === 'walk' ? 0.55 * Math.min(1.2, speed) : 0;
+      U.legs[0].rotation.x = s * a; U.legs[3].rotation.x = s * a; U.legs[1].rotation.x = -s * a; U.legs[2].rotation.x = -s * a;
+      U.tail.rotation.y = Math.sin(t * (mode === 'walk' ? 6 : 2) + ph) * 0.35;
+      U.tail.rotation.x = mode === 'walk' ? 0.25 : 0;
+    } else if (U.bird) {
+      const flap = mode === 'flap', s = Math.sin(t * (flap ? 16 : 2.2) + ph) * (flap ? 0.75 : 0.12);
+      U.wings[0].rotation.z = s; U.wings[1].rotation.z = -s;
+    }
+  };
   A.camel = (seed = 1, o = {}) => {
     const r = seeded(seed * 17 + 9);
     const fur = mat(o.fur || (r() < 0.5 ? P.fur : '#b8844e'), { flat: true }), furD = mat(P.furD, { flat: true });

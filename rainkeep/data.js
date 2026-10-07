@@ -763,6 +763,9 @@ const DATA = {
     { id: 'forgekit', name: 'Forge Kit', usd: 4.99, daily: true, tag: 'Daily', needs: 'forge',
       grants: { sunsteel: 600, crate_copper: 3, speed15: 2 },
       desc: "600 Sunsteel, three copper crates and two 15-minute speedups for the Warden's Gear. Once per day, after you build the Forge." },
+    { id: 'petkit', name: 'Companion Kit', usd: 2.99, daily: true, tag: 'Daily', needsWyrm: 7,
+      grants: { treats: 80, bells: 3, speed15: 1 },
+      desc: 'Eighty Honeyed Dates and three Camel Bells for your companions, and a 15-minute speedup. Once per day, from Rainwyrm Lv 7.' },
     { id: 'tidekit', name: 'Tideglass Kit', usd: 4.99, daily: true, tag: 'Daily', needsWyrm: 20,
       grants: { tideglass: 60, crate_copper: 3, speed60: 1 },
       desc: 'Sixty Tideglass for the Deepspring, three copper crates and a 60-minute speedup. Once per day, from Rainwyrm Lv 20.' },
@@ -906,6 +909,8 @@ const DATA = {
     sunsteel_cache: { name: 'Sunsteel Cache', kind: 'cache', grants: { sunsteel: 150 }, icon: 'i-sunsteel', desc: '150 Sunsteel for the Warden\'s Gear.' },
     shard_epic: { name: 'Epic Shard Pouch', kind: 'shards', rarity: 'epic', n: 10, icon: 'i-star', desc: 'Pick any Epic hero: recruit them, or add 10 shards if you have them.' },
     shard_legendary: { name: 'Legendary Shard Pouch', kind: 'shards', rarity: 'legendary', n: 10, icon: 'i-star', desc: 'Pick any Legendary hero: recruit them, or add 10 shards if you have them.' },
+    treats: { name: 'Honeyed Dates', kind: 'pet', icon: 'i-treat', desc: 'Treats for your companions: they level up on them.' },
+    bells: { name: 'Camel Bell', kind: 'pet', icon: 'i-bell', desc: 'Tames new companions and Advances them past Lv 10 and 20.' },
   },
 
   // ---------- Daily duties (reset at local midnight) ----------
@@ -931,12 +936,13 @@ const DATA = {
     // shown only once their mode is open
     { id: 'crossing', text: 'Cross 3 rows on the Crossing', n: 3, pts: 10, show: (S) => S.stage >= 36 },
     { id: 'refine', text: 'Refine Tideglass twice', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 20 },
+    { id: 'companion', text: "Use a companion's skill", n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1 }],
-    [40, { starglass: 40, crate_stone: 1 }],
+    [40, { starglass: 40, crate_stone: 1, treats: 5 }],
     [60, { beacons: 1, speed15: 1 }],
-    [80, { starglass: 60, crate_water: 1, journals: 30 }],
+    [80, { starglass: 60, crate_water: 1, journals: 30, treats: 10 }],
     [100, { beacons: 2, speed60: 1 }],
   ],
 
@@ -1131,6 +1137,44 @@ const DATA = {
     reserve: 8, // quarter-crates of water that refining and deepening always leave for the wyrm
   },
 
+  // ---------- Companions: desert animals that live in the keep (companions.js) ----------
+  // Tamed with Honeyed Dates (treats) and Camel Bells once their requirement is met. Each grows to Lv 30 on
+  // treats, with an Advance at Lv 10 and 20 that takes bells; every level adds to its keep bonus (`per`, on
+  // KH.bonus key `key`), and its skill (on a cooldown in keep time) gets stronger with it.
+  companions: {
+    unlock: 7, // Rainwyrm level: Sahra the fennec arrives in the mail
+    max: 30, tiers: [10, 20], // Advance needed to pass Lv 10 and Lv 20
+    treat: (L, r) => Math.round(4 * Math.pow(1.12, L - 2) * r), // treats from Lv L-1 to L (r: rarity factor)
+    bells: [5, 15], // Camel Bells for each Advance (times the rarity factor, rounded)
+    rarity: { common: 1, rare: 1.5, epic: 2 },
+    forage: { every: 1800, cap: 16 }, // a treat forages every 30 minutes of keep time, up to 16 waiting
+    welcome: { treats: 20, bells: 5 },
+    beast: (lvl) => 1 + Math.floor(lvl / 4), // treats from each beast slain on the Dunes
+    bossBells: 1, // bells from every tenth expedition stage (each boss) and every tenth Spire floor
+    crossBells: 2, // bells for reaching the Crossing's hidden oasis
+    power: 40, // keep power per companion level
+    list: [
+      { id: 'fennec', name: 'Sahra', kind: 'Fennec Fox', rarity: 'common', key: 'prod_food', per: 0.005, unit: 'food production',
+        req: null, tame: null, bio: 'A fennec kit who followed the first caravan in and never left. Her ears hear water moving under the sand.',
+        skill: { id: 'dig', name: 'Dig', cd: 4 * 3600, desc: 'Digs up a cache of food and water.', res: { food: [3, 0.2], water: [2, 0.15] } } },
+      { id: 'sandcat', name: 'Layl', kind: 'Sand Cat', rarity: 'common', key: 'prod_copper', per: 0.005, unit: 'copper production',
+        req: { wyrm: 9 }, tame: { treats: 30 }, bio: 'A night hunter with soft wide paws. He brings home whatever glints.',
+        skill: { id: 'prowl', name: 'Night Prowl', cd: 6 * 3600, desc: 'Brings home copper and a little Starglass.', res: { copper: [2, 0.15] }, starglass: [10, 1] } },
+      { id: 'hoopoe', name: 'Hudhud', kind: 'Hoopoe', rarity: 'rare', key: 'build', per: 0.0025, unit: 'building and research speed',
+        req: { stage: 45 }, tame: { treats: 60, bells: 2 }, bio: 'The messenger bird of the old tales, crest raised like a crown. Builders work faster when he watches.',
+        skill: { id: 'message', name: 'Urgent Message', cd: 8 * 3600, desc: 'Hurries every building, research and training under way.', mins: [10, 1] } },
+      { id: 'oryx', name: 'Rimaya', kind: 'Arabian Oryx', rarity: 'rare', key: 'prod_water', per: 0.005, unit: 'water from the wells',
+        req: { wyrm: 12 }, tame: { treats: 80, bells: 3 }, bio: 'She can smell rain a day away and walk to it without drinking.',
+        skill: { id: 'trek', name: 'Long Trek', cd: 8 * 3600, desc: 'Gathering marches bring home more for a while.', buff: { key: 'gather', v: [0.3, 0.01], secs: 7200 } } },
+      { id: 'falcon', name: 'Saqr', kind: 'Saker Falcon', rarity: 'epic', key: 'teamAtk', per: 0.003, unit: 'squad attack',
+        req: { stage: 80 }, tame: { treats: 120, bells: 5 }, bio: 'A hunting falcon who chose the keep over her falconer. Nothing on the Dunes moves without her seeing.',
+        skill: { id: 'eye', name: "Falcon's Eye", cd: 8 * 3600, desc: 'Squad attack rises for an hour.', buff: { key: 'teamAtk', v: [0.1, 0.005], secs: 3600 } } },
+      { id: 'caracal', name: 'Nimr', kind: 'Caracal', rarity: 'epic', key: 'troop', per: 0.003, unit: 'troop strength',
+        req: { stage: 110 }, tame: { treats: 160, bells: 8 }, bio: 'Tufted ears, a hunter\'s patience and a temper. The troops fight harder with him on the walls.',
+        skill: { id: 'pounce', name: 'Pounce', cd: 8 * 3600, desc: 'Troop strength rises for an hour.', buff: { key: 'troop', v: [0.1, 0.005], secs: 3600 } } },
+    ],
+  },
+
   cloudRun: {
     unlock: 5, // Rainwyrm level (a Drake can fly)
     perDay: 3, // flights a day
@@ -1232,6 +1276,11 @@ const DATA = {
     { id: 'deep30', text: 'Become Keeper of the Deepspring', stat: 'deepLv', n: 30, reward: { starglass: 3000 } },
     { id: 'refine100', text: 'Refine Tideglass 100 times', stat: 'refines', n: 100, reward: { beacons: 5 } },
     { id: 'far20', text: 'Push 20 stages into the Far South', stat: 'stages', n: 170, reward: { tideglass: 50 } },
+    { id: 'pal3', text: 'Tame 3 companions', stat: 'tamed', n: 3, reward: { bells: 5 } },
+    { id: 'pal6', text: 'Tame all six companions', stat: 'tamed', n: 6, reward: { shard_epic: 1 } },
+    { id: 'palLv', text: 'Raise your companions to 60 levels in all', stat: 'palLv', n: 60, reward: { starglass: 300 } },
+    { id: 'pal30', text: 'Raise a companion to Lv 30', stat: 'palTop', n: 30, reward: { starglass: 600 } },
+    { id: 'skill50', text: "Use companions' skills 50 times", stat: 'palSkills', n: 50, reward: { treats: 100 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

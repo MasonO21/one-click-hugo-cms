@@ -102,6 +102,7 @@
       if (it.kind === 'crate' || it.kind === 'cache') btn = `<button class="btn small" data-act="useitem" data-arg="${k}:1">Open</button>${S.items[k] > 1 ? `<button class="btn small alt" data-act="useitem" data-arg="${k}:all">All</button>` : ''}`;
       else if (it.kind === 'shards') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Choose hero</button>`;
       else if (it.kind === 'charm') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Call the Rain</button>`;
+      else if (it.kind === 'pet') btn = '<button class="btn small" data-act="pals">Companions</button>';
       const desc = it.kind === 'crate' ? `${fmt(DATA.crateSize(it.res, S.lv.wyrm))} ${KH.NAME[it.res].toLowerCase()} each` : it.kind === 'speed' ? 'Use from any building, research or training timer' : it.desc;
       return `<div class="card bag-row">${icon(it.icon)}<div class="grow"><b>${esc(it.name)} <span class="muted">×${S.items[k]}</span></b><div class="muted small">${esc(desc)}</div></div>${btn}</div>`;
     }).join('');

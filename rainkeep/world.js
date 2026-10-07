@@ -248,6 +248,7 @@
         if (t.lvl >= 9 && roll < 0.04) rewards.shard_legendary = 1;
         else if (t.lvl >= 5 && roll < 0.12) rewards.shard_epic = 1;
         else if (roll < 0.3) rewards.speed5 = 1;
+        if (KH.pals && KH.pals.open()) rewards.treats = DATA.companions.beast(t.lvl); // Honeyed Dates for the companions
         S.stats.beasts++;
         KH.addPassXp(DATA.passXp.beast);
         setTile(t.k, { until: S.time + W.beastRespawn, lvlUp: (t.st.lvlUp || 0) + (t.lvl < 14 && t.lvl <= L + 2 ? 1 : 0) });

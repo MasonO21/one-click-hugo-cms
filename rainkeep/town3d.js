@@ -1163,6 +1163,52 @@
   }
 
   // ======================================================================
+  // Companions (companions.js): the tamed animals live about the plaza; the hoopoe flits round it and the
+  // falcon circles high over the keep
+  // ======================================================================
+  const pals = {};
+  T3.pals = pals; // for tests
+  // ground animals trot round the plaza: ring radius, speed, direction
+  const PAL_RING = { fennec: [5.95, 0.6, 1], sandcat: [6.2, 0.5, -1], caracal: [6.35, 0.75, 1], oryx: [6.45, 0.4, -1] };
+  function syncPals() {
+    if (!KH.pals) return;
+    for (const id of KH.pals.owned()) {
+      if (pals[id]) continue;
+      const bird = id === 'falcon' || id === 'hoopoe';
+      const o = bird ? A.bird(id, { scale: id === 'falcon' ? 1.8 : 2.2 }) : A.beast(id, { scale: { oryx: 1.15, caracal: 1.5 }[id] || 1.8 });
+      o.rotation.order = 'YXZ';
+      scene.add(o);
+      pals[id] = { o, a: (Object.keys(pals).length * 2.3) % 6.28, ph: Object.keys(pals).length * 1.9 };
+    }
+  }
+  function animPals(t, dt) {
+    for (const [id, p] of Object.entries(pals)) {
+      const o = p.o;
+      if (id === 'falcon') {
+        // wide circles high over the keep, gliding, with a few wingbeats now and then
+        const a = t * 0.16 + p.ph, R = 11, x = Math.cos(a) * R, z = -2 + Math.sin(a) * R * 0.8;
+        o.position.set(x, 9 + Math.sin(t * 0.3) * 0.8, z);
+        o.rotation.set(0, Math.atan2(-Math.sin(a) * R, Math.cos(a) * R * 0.8), -0.35);
+        A.animAnimal(o, t, (t + p.ph) % 9 < 1.6 ? 'flap' : 'glide');
+      } else if (id === 'hoopoe') {
+        // round the plaza at roof height, rising and dipping between bursts of wingbeats
+        const a = -t * 0.32 + p.ph, R = 6.6, flap = Math.sin(t * 2.2 + p.ph) > -0.3;
+        o.position.set(SPRING.x + Math.cos(a) * R, 2.3 + Math.sin(t * 2.2 + p.ph) * 0.35, SPRING.z + Math.sin(a) * R);
+        o.rotation.set(-Math.cos(t * 2.2 + p.ph) * 0.25, Math.atan2(Math.sin(a), -Math.cos(a)), 0.25);
+        A.animAnimal(o, t * 1.4, flap ? 'flap' : 'glide');
+      } else {
+        // stop and go: a while trotting, a while sitting
+        const [R, v, dir] = PAL_RING[id] || [6.2, 0.5, 1];
+        const f = Math.max(0, Math.min(1, 0.4 + 1.4 * Math.sin(t * 0.09 + p.ph)));
+        p.a += (dir * v * f * dt) / R;
+        o.position.set(SPRING.x + Math.cos(p.a) * R, 0, SPRING.z + Math.sin(p.a) * R);
+        o.rotation.y = Math.atan2(-Math.sin(p.a) * dir, Math.cos(p.a) * dir);
+        A.animAnimal(o, t, f > 0.12 ? 'walk' : 'sit', 0.5 + 0.7 * f);
+      }
+    }
+  }
+
+  // ======================================================================
   // Sky, light and weather
   // ======================================================================
   const PAL = {
@@ -1572,7 +1618,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); syncPals(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);
@@ -1640,6 +1686,7 @@
     for (const b of banners) b.userData.update(t, T3.wind);
     animPeople(t, posts);
     sellers.forEach((p, i) => A.animPerson(p, t + i * 1.7, i % 2 ? 'work' : 'idle', 0.35));
+    animPals(t, dt);
     animCamels(t);
     animParticles(t, dt);
     animRain(rdt);

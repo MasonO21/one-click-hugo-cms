@@ -929,3 +929,12 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 /* a hinted painted button glows in its own shape instead of a box around it */
 @keyframes hint-plate { 0%, 100% { filter: drop-shadow(0 0 3px #ffd166cc) drop-shadow(0 2px 2px #0009); } 50% { filter: drop-shadow(0 0 9px #ffd166) drop-shadow(0 0 2px #fff4c8) brightness(1.1); } }
 .pui .btn.hint:not(.choice) { animation: hint-plate 1.4s ease-in-out infinite !important; box-shadow: none !important; outline: none; }
+
+/* Companions (companions.js) */
+.pal-card { position: relative; }
+.pal-card.common { border-color: #3f6f9f; }
+.pal-card.rare { border-color: #7a5ab0; }
+.pal-card.epic { border-color: #c99a2c; box-shadow: 0 0 14px #ffc24a2a, 0 3px 8px #0006; }
+.pal-card.pal-wild .portrait { filter: grayscale(.8) brightness(.62); }
+.pal-card > .dot { position: absolute; z-index: 2; top: 6px; right: 6px; width: 11px; height: 11px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px #110b1b; }
+.pal-have { flex-wrap: wrap; gap: 6px; }

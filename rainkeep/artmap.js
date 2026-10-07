@@ -8,6 +8,12 @@
 'use strict';
 window.RK_ART = {
   portrait: {
+    'pal-fennec': 'art/portraits/pal-fennec.webp',
+    'pal-sandcat': 'art/portraits/pal-sandcat.webp',
+    'pal-hoopoe': 'art/portraits/pal-hoopoe.webp',
+    'pal-oryx': 'art/portraits/pal-oryx.webp',
+    'pal-falcon': 'art/portraits/pal-falcon.webp',
+    'pal-caracal': 'art/portraits/pal-caracal.webp',
     zahra: 'art/portraits/zahra.webp',
     tariq: 'art/portraits/tariq.webp',
     leila: 'art/portraits/leila.webp',
@@ -68,6 +74,7 @@ window.RK_ART = {
     storehouse: 'art/buildings/storehouse.webp',
     forge: 'art/buildings/forge.webp',
     deepspring: 'art/buildings/deepspring.webp',
+    companions: 'art/buildings/companions.webp',
   },
   event: {
     crossing: 'art/events/crossing.webp',
@@ -87,6 +94,7 @@ window.RK_ART = {
     warchest: 'art/offers/warchest.webp',
     forgekit: 'art/offers/forgekit.webp',
     tidekit: 'art/offers/tidekit.webp',
+    petkit: 'art/buildings/companions.webp',
     lvpack: 'art/offers/lvpack.webp',
     lvpack2: 'art/offers/lvpack2.webp',
     sg1: 'art/offers/sg1.webp',
@@ -166,6 +174,9 @@ window.RK_ART = {
     'i-compass': 'art/ui/compass.webp',
     'i-flag': 'art/ui/flag.webp',
     'i-paw': 'art/ui/paw.webp',
+    'i-treat': 'art/ui/treat.webp',
+    'i-bell': 'art/ui/bell.webp',
+    'i-pals': 'art/ui/pals.webp',
     'i-ruin': 'art/ui/ruin.webp',
     'i-sword': 'art/ui/sword.webp',
   },
