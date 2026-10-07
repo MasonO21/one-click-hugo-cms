@@ -360,7 +360,8 @@ export class BuildController implements BuildApi {
         if (chk.ok) ok++;
         else firstReason ??= chk.reason ?? null;
       }
-      cost = scaleBag(bs.cost(def.id, b.tier), ok);
+      // nothing placeable: still show what one piece costs (not a misleading "Free")
+      cost = scaleBag(bs.cost(def.id, b.tier), Math.max(ok, 1));
       placeOk = ok > 0;
       if (ok === 0) reason = firstReason ?? "Can't build here";
       else if (ok < cells.length) reason = null;

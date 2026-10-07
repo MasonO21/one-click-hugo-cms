@@ -54,6 +54,7 @@ export class Guide {
   readonly layer: HTMLElement;
   private readonly arrow: HTMLElement;
   private readonly edge: HTMLElement;
+  private readonly edgeArrow: HTMLElement;
   private readonly edgeDist: HTMLElement;
   private readonly ring: HTMLElement;
   private readonly hand: HTMLElement;
@@ -72,7 +73,10 @@ export class Guide {
     const arrowSvg = s('svg', { viewBox: '0 0 64 72' }, s('path', { d: 'M20 4h24v28h14L32 66 6 32h14z', fill: '#ffcf4a', stroke: '#fff', 'stroke-width': 5, 'stroke-linejoin': 'round' }), s('path', { d: 'M24 8h16v26h8L32 56 16 34h8z', fill: '#ffb21a' }));
     this.arrow = h('div', { class: 'guide-arrow' }, h('div', { class: 'ga-in' }, arrowSvg as unknown as Node));
     this.edgeDist = h('small');
-    this.edge = h('div', { class: 'guide-edge' }, h('div', { class: 'ge-arrow' }), this.edgeDist);
+    // only the arrow rotates; the distance label stays upright and centred under it (a rotated label
+    // orbited the arrow and was clipped at the screen edge)
+    this.edgeArrow = h('div', { class: 'ge-rot' }, h('div', { class: 'ge-arrow' }));
+    this.edge = h('div', { class: 'guide-edge' }, this.edgeArrow, this.edgeDist);
     this.ring = h('div', { class: 'guide-ring' });
     this.hand = h('div', { class: 'guide-hand' }, h('span', { text: '👆' }));
     this.layer = h('div', { class: 'nv-world-guide' }, this.arrow, this.edge);
@@ -164,11 +168,12 @@ export class Guide {
       const vh = window.innerHeight;
       const e = edgePointRect(v.x, v.y, { l: 36, t: Math.max(128, vh * 0.2), r: vw - 104, b: vh - 96 });
       setClass(this.edge, 'on', true);
-      const tr = `translate3d(${e.x.toFixed(0)}px, ${e.y.toFixed(0)}px, 0) rotate(${e.angle.toFixed(3)}rad)`;
-      if (tr !== this.edgeTr) {
-        this.edgeTr = tr;
+      const tr = `translate3d(${e.x.toFixed(0)}px, ${e.y.toFixed(0)}px, 0)`;
+      const rot = `rotate(${e.angle.toFixed(3)}rad)`;
+      if (tr + rot !== this.edgeTr) {
+        this.edgeTr = tr + rot;
         this.edge.style.transform = tr;
-        this.edgeDist.style.transform = `rotate(${(-e.angle).toFixed(3)}rad)`;
+        this.edgeArrow.style.transform = rot;
       }
       const label = `${Math.round(Math.hypot(dx, dz))} m`;
       if (label !== this.edgeLabel) {

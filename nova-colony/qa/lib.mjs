@@ -20,6 +20,12 @@ export async function launch(vp = 'phone', { storage } = {}) {
     args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--autoplay-policy=no-user-gesture-required'],
   });
   const v = VIEWPORTS[vp];
+  // snapshots are portable between the dev server and preview builds: retarget the localStorage origin
+  if (typeof storage === 'string') {
+    const st = JSON.parse(fs.readFileSync(storage, 'utf8'));
+    for (const o of st.origins || []) o.origin = new globalThis.URL(URL).origin;
+    storage = st;
+  }
   const context = await browser.newContext({ viewport: { width: v.width, height: v.height }, hasTouch: v.hasTouch, isMobile: v.isMobile, deviceScaleFactor: v.deviceScaleFactor, storageState: storage });
   const page = await context.newPage();
   const logs = [];
@@ -161,4 +167,19 @@ export async function closeModals(page, max = 4) {
     await page.evaluate(() => document.querySelector('[data-qa="mclose"]')?.removeAttribute('data-qa'));
   }
   return closed;
+}
+
+/** Real touch drag via CDP (touchStart -> touchMove x steps -> touchEnd). */
+export async function touchDrag(page, x1, y1, x2, y2, { steps = 10, holdMs = 60, stepMs = 40 } = {}) {
+  const cdp = await page.context().newCDPSession(page);
+  const pt = (x, y) => [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(x1, y1) });
+  await page.waitForTimeout(holdMs);
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t) });
+    await page.waitForTimeout(stepMs);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
 }

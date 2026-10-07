@@ -5,7 +5,8 @@
 .nv-toasts {
   position: absolute;
   z-index: 8;
-  top: calc(var(--mt) + 7.4em);
+  /* below the hint bubble / attack banner (never covering the tutorial hint) */
+  top: calc(var(--mt) + 3.55em + var(--status-h, 2.4em) + 0.8em + var(--banner-h, 0px));
   left: 50%;
   transform: translateX(-50%);
   width: min(26em, calc(100vw - 2 * var(--ml) - 8em));
@@ -206,6 +207,10 @@
 }
 .guide-edge.on {
   opacity: 1;
+}
+.guide-edge .ge-rot {
+  position: absolute;
+  inset: 0;
 }
 .guide-edge .ge-arrow {
   position: absolute;

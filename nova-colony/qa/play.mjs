@@ -57,11 +57,12 @@ async function findSpot(def, cx, cz, minR = 3, prefer = null) {
 }
 
 async function placeViaUI(def, spot, tag) {
+  await ensureAfford(def);
   await tap(page, '#btn-build', { after: 900 });
-  await think(1.5);
+  await think(3); // browse the cards
   await shot(page, `${tag}-menu`);
   await tap(page, `[data-build="${def}"]`, { after: 900 });
-  await think(1);
+  await think(2.5); // look for a spot
   // tap the ground where we want it
   if (spot) {
     const p = await w2s(page, spot.x, spot.z, 0);
@@ -71,7 +72,7 @@ async function placeViaUI(def, spot, tag) {
   const b = await page.evaluate(() => ({ valid: window.game.view.build.valid, reason: window.game.view.build.reason, x: window.game.view.build.x, z: window.game.view.build.z }));
   console.log('  ghost', JSON.stringify(b), 'guide.ui', (await guide(page))?.ui);
   await shot(page, `${tag}-ghost`);
-  await think(1);
+  await think(1.5);
   await tap(page, '#btn-build-confirm', { after: 900 });
   await shot(page, `${tag}-placed`);
   // leave build mode
@@ -91,10 +92,25 @@ async function gatherNearest(nodeDef, resId, need) {
   return false;
 }
 
+/** Like a player reading the red cost chips: gather whatever the next build is missing. */
+async function ensureAfford(def) {
+  for (let i = 0; i < 6; i++) {
+    const miss = await page.evaluate((d) => { const g = window.game; return g.sys.economy.missing(g.sys.buildings.cost(d)); }, def);
+    const keys = Object.keys(miss);
+    if (!keys.length) return true;
+    console.log('  need', JSON.stringify(miss));
+    const r = keys[0];
+    const node = r === 'stone' ? 'rock' : r === 'fiber' ? 'fiber_grass' : 'tree_round';
+    const have = await page.evaluate((r) => window.game.state.resources.amounts[r] || 0, r);
+    await gatherNearest(node, r, have + miss[r]);
+  }
+  return false;
+}
+
 const stages = {};
 stages.wood = async () => {
   await shot(page, 'start');
-  await think(4); // look around, read the hint
+  await think(6); // look around, read the hint
   for (let i = 0; i < 10; i++) {
     const g = await guide(page); if (!g?.world || (await mission(page))?.id !== 'm01_wood') break;
     await walkTo(page, g.world.x, g.world.z, { tol: 2.6 });
@@ -116,8 +132,7 @@ stages.shelter = async () => {
 };
 stages.campfire = async () => {
   await think(2);
-  const cost = await page.evaluate(() => window.game.sys.buildings.cost('campfire'));
-  if (!(await gatherNearest('rock', 'stone', cost.stone || 0))) console.log('  !! could not gather stone');
+  await ensureAfford('campfire');
   await mark('stone ok');
   const core = await page.evaluate(() => window.game.sys.buildings.colonyCenter());
   await walkTo(page, core.x + 3, core.z + 5, { tol: 2 });
@@ -159,8 +174,7 @@ stages.logging = async () => {
   await think(2);
   const core = await page.evaluate(() => window.game.sys.buildings.colonyCenter());
   await walkTo(page, core.x, core.z + 4, { tol: 2, maxMs: 60000 });
-  const cost = await page.evaluate(() => window.game.sys.buildings.cost('logging_camp'));
-  if (cost.stone) await gatherNearest('rock', 'stone', cost.stone);
+  await ensureAfford('logging_camp');
   await walkTo(page, core.x, core.z + 4, { tol: 2, maxMs: 60000 });
   const spot = await findSpot('logging_camp', core.x, core.z, 4, 'trees');
   await placeViaUI('logging_camp', spot, 'logging');
@@ -173,9 +187,7 @@ stages.logging = async () => {
 };
 stages.turret = async () => {
   await think(2);
-  const cost = await page.evaluate(() => window.game.sys.buildings.cost('scrap_turret'));
-  if (cost.stone) await gatherNearest('rock', 'stone', cost.stone);
-  if (cost.wood) await gatherNearest('tree_round', 'wood', cost.wood);
+  await ensureAfford('scrap_turret');
   const core = await page.evaluate(() => window.game.sys.buildings.colonyCenter());
   await walkTo(page, core.x, core.z + 4, { tol: 2, maxMs: 60000 });
   const spot = await findSpot('scrap_turret', core.x, core.z, 5);
@@ -252,12 +264,13 @@ stages.tier = async () => {
   await mark('tier up');
 };
 
+const READ = { wood: 3, shelter: 3, campfire: 3, storage: 3, rescue: 3, logging: 6, turret: 3, defend: 0, victory: 4, research: 3, tier: 4 };
 const order = ['wood', 'shelter', 'campfire', 'storage', 'rescue', 'logging', 'turret', 'defend', 'victory', 'research', 'tier'];
 let started = !from;
 for (const s of order) {
   if (!started) { if (s === from) { started = true; } continue; }
   console.log('--- stage', s, 'mission', JSON.stringify(await mission(page)));
-  try { await stages[s](); } catch (e) { console.log('  !! stage failed', s, e.message); await shot(page, 'fail-' + s); break; }
+  try { await stages[s](); await think(READ[s] ?? 2); } catch (e) { console.log('  !! stage failed', s, e.message); await shot(page, 'fail-' + s); break; }
   await snapshot(page, context, `${SP}/snap-${s}.json`);
   if (s === until) break;
 }

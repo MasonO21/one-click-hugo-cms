@@ -6,12 +6,18 @@ import type { MissionDef } from '../src/data/schema';
 import { DAY, advanceMainTo, fakeBuilding, fakeColonist, fulfil, makeGame, tickMeta } from './meta.helpers';
 
 describe('missions: setup', () => {
-  it('activates the first main mission, every side mission and today\'s dailies on a fresh game', () => {
+  it('activates the first main mission, the head of every side chain and today\'s dailies on a fresh game', () => {
     const { game } = makeGame();
     const m = game.sys.missions;
     expect(m.current()?.id).toBe(game.data.firstMission);
-    const sideIds = game.data.missions.filter((d) => d.chain === 'side').map((d) => d.id);
-    for (const id of sideIds) expect(game.state.missions.active).toContain(id);
+    const side = game.data.missions.filter((d) => d.chain === 'side');
+    const followUps = new Set(side.flatMap((d) => d.next ?? []));
+    for (const d of side) {
+      if (followUps.has(d.id)) expect(game.state.missions.active).not.toContain(d.id);
+      else expect(game.state.missions.active).toContain(d.id);
+    }
+    expect(m.activeByChain('side').length).toBeGreaterThan(2);
+    expect(m.activeByChain('side').length).toBeLessThan(side.length);
     expect(m.activeByChain('daily')).toHaveLength(game.state.missions.daily.length);
     expect(game.state.missions.daily.length).toBeGreaterThan(0);
     expect(game.state.missions.dailyDate).toBe('2026-06-15');
@@ -328,6 +334,26 @@ describe('missions: persistence & repair', () => {
     expect(g2.game.state.missions.active).not.toContain('ghost_mission');
     expect(g2.game.state.missions.active).toContain('s_farm');
     expect(g2.game.sys.missions.current()?.id).toBe('m01_wood');
+  });
+
+  it('unlocks the next side mission of a chain when one is claimed; old saves drop unreachable ones', () => {
+    const g = makeGame();
+    const side = g.game.data.missions.filter((d) => d.chain === 'side');
+    const head = side.find((d) => d.next?.length && !side.some((o) => o.next?.includes(d.id)))!;
+    const follow = head.next![0];
+    expect(g.game.state.missions.active).not.toContain(follow);
+    g.game.state.missions.progress[head.id] = head.count;
+    (g.game.sys.missions as any).isDone = () => true;
+    expect(g.game.sys.missions.claim(head.id)).toBe(true);
+    expect(g.game.state.missions.active).toContain(follow);
+
+    // a save made when every side mission was active at once
+    const g2 = makeGame();
+    const state = JSON.parse(JSON.stringify(g2.game.state));
+    for (const d of side) if (!state.missions.active.includes(d.id)) state.missions.active.push(d.id);
+    const g3 = makeGame({ state, at: g2.clock.now });
+    expect(g3.game.state.missions.active).not.toContain(follow);
+    expect(g3.game.state.missions.active).toContain(head.id);
   });
 
   it('system-made progress can be muted (free wheel is not a player build)', () => {

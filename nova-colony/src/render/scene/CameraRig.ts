@@ -11,7 +11,7 @@ import type { RenderContext } from '../core/context';
 import { clamp, lerp } from '../../core/math';
 
 /** Aliens within this many world units of the player pull the follow camera toward the fight. */
-const COMBAT_FRAME_R = 34;
+const COMBAT_FRAME_R = 26;
 
 export class CameraRig {
   private tx = 0;
@@ -93,12 +93,13 @@ export class CameraRig {
           n++;
         }
         if (n > 0) {
-          let ox = (sx / n) * 0.45;
-          let oz = (sz / n) * 0.45;
+          // a gentle lean only: the player must stay comfortably on screen
+          let ox = (sx / n) * 0.4;
+          let oz = (sz / n) * 0.4;
           const l = Math.hypot(ox, oz);
-          if (l > 9) {
-            ox *= 9 / l;
-            oz *= 9 / l;
+          if (l > 5) {
+            ox *= 5 / l;
+            oz *= 5 / l;
           }
           gx += ox;
           gz += oz;

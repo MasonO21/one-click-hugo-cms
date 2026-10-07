@@ -246,10 +246,26 @@ export class MissionSystem extends System {
     return !!def && (this.game.state.missions.progress[id] ?? 0) >= def.count;
   }
 
-  /** Fresh colony: first main mission + every side mission. */
+  /** Fresh colony: first main mission + the head of every side chain (the rest unlock as each is claimed). */
   private seed(): void {
     this.activate(this.game.data.firstMission);
-    for (const d of this.game.data.missions) if (d.chain === 'side') this.activate(d.id);
+    for (const d of this.game.data.missions) if (d.chain === 'side' && this.sideUnlocked(d.id)) this.activate(d.id);
+  }
+
+  /**
+   * A side mission is offered once the side mission leading to it (via `next`) has been completed; chain
+   * heads always are. Keeps the Side tab to a handful of reachable goals instead of every chain at once
+   * (a new player was shown "Defeat 1,500 aliens" and "Build an Automated Farm" in minute one).
+   */
+  private sideUnlocked(id: string): boolean {
+    const m = this.game.state.missions;
+    let hasParent = false;
+    for (const d of this.game.data.missions) {
+      if (d.chain !== 'side' || !d.next?.includes(id)) continue;
+      hasParent = true;
+      if (m.completed.includes(d.id)) return true;
+    }
+    return !hasParent;
   }
 
   /** Make a loaded save consistent with current content (unknown ids dropped, new side missions added). */
@@ -258,7 +274,10 @@ export class MissionSystem extends System {
     const m = this.game.state.missions;
     m.active = m.active.filter((id) => !!data.mission(id));
     m.completed = m.completed.filter((id) => !!data.mission(id));
-    for (const d of data.missions) if (d.chain === 'side' && !m.completed.includes(d.id)) this.activate(d.id);
+    // older saves had every side mission active: keep only the reachable ones (progress is recomputed when a
+    // mission becomes active again, from the lifetime counters / current colony)
+    m.active = m.active.filter((id) => data.mission(id)?.chain !== 'side' || this.sideUnlocked(id));
+    for (const d of data.missions) if (d.chain === 'side' && !m.completed.includes(d.id) && this.sideUnlocked(d.id)) this.activate(d.id);
     const hasMain = m.active.some((id) => this.isMain(id));
     if (hasMain) return;
     let started = false;

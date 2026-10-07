@@ -59,6 +59,9 @@ import { MenuPanel } from './panels/MenuPanel';
 
 /** Minimum gap between production floats of the same resource. */
 const PROD_FLOAT_GAP_MS = 1200;
+const GATHER_FLOAT_GAP_MS = 300;
+/** Tier-up: how long the player watches the base transform before the celebration card opens. */
+const TIER_REVEAL_MS = 1800;
 
 export class UI {
   private root!: HTMLElement;
@@ -87,6 +90,8 @@ export class UI {
   private lastInsufficient = -1e9;
   private welcomeShown = false;
   private lastProdFloat = new Map<string, number>();
+  private lastGatherFloat = new Map<string, number>();
+  private toastQueue: { text: string; kind?: ToastKind; icon?: string }[] = [];
 
   constructor(
     private readonly game: Game,
@@ -291,12 +296,17 @@ export class UI {
   private subscribe(): void {
     const bus = this.game.bus;
     const g = this.game;
-    bus.on('ui:toast', (e) => this.toasts.show(e.text, e.kind, e.icon));
+    // game-event toasts wait while a modal (celebration, chest, welcome back) is up instead of covering
+    // its title; toasts from the player's own taps (ctx.toast) still show at once
+    bus.on('ui:toast', (e) => {
+      if (!this.panels.anyModal()) this.toasts.show(e.text, e.kind, e.icon);
+      else if (!this.toastQueue.some((q) => q.text === e.text) && this.toastQueue.push(e) > 6) this.toastQueue.shift();
+    });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     bus.on('ui:open', (e) => this.open(e.panel, e.arg));
     bus.on('ui:celebrate', (e) => {
       const now = performance.now();
-      if (now - this.lastTierCelebrate < 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
+      if (now - this.lastTierCelebrate < TIER_REVEAL_MS + 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
       this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon } satisfies CelebrateArg);
     });
     bus.on('colony:tierUp', (e) => {
@@ -304,14 +314,29 @@ export class UI {
       this.lastTierCelebrate = now;
       const t = g.data.tier(e.tier);
       const unlocks = g.data.buildings.filter((b) => b.unlockTier === e.tier && !b.research && !b.piece).map((b) => `${b.icon} ${b.name}`);
-      this.panels.open('celebrate', {
+      // let the player watch the base transform first: close the colony sheet, frame the core and show the
+      // colony boundary growing, then celebrate
+      this.panels.closeSheets();
+      const core = g.sys.buildings.core();
+      if (core) {
+        const c = g.sys.buildings.center(core);
+        this.renderer.focus(c.x, c.z);
+      }
+      const view = g.view;
+      if (view.mode !== 'build') {
+        view.showGrid = true;
+        window.setTimeout(() => {
+          if (view.mode !== 'build') view.showGrid = false;
+        }, TIER_REVEAL_MS + 1600);
+      }
+      window.setTimeout(() => this.panels.open('celebrate', {
         title: e.tier >= 6 ? 'TITANIUM COLONY!' : `${t.name} Tier Reached!`,
         text: e.tier >= 6 ? 'You built a gleaming super-colony. What an incredible journey!' : t.description,
         icon: e.tier >= 6 ? '🌟' : '🏰',
         tier: e.tier,
         unlocks,
         big: true,
-      } satisfies CelebrateArg);
+      } satisfies CelebrateArg), TIER_REVEAL_MS);
     });
 
     bus.on('game:ready', () => {
@@ -340,6 +365,14 @@ export class UI {
         return;
       }
       if (e.source === 'offline') return;
+      // "+3 🪵" pops where it was gathered (alien drops too), next to the icons flying to the HUD
+      if ((e.source === 'gather' || e.source === 'drop') && e.x != null && e.z != null) {
+        const now = performance.now();
+        if (now - (this.lastGatherFloat.get(e.id) ?? -1e9) >= GATHER_FLOAT_GAP_MS) {
+          this.lastGatherFloat.set(e.id, now);
+          this.floats.spawn(`+${fmt(e.amount)} ${g.data.resource(e.id)?.icon ?? ''}`, e.x, e.z, '#fff6d8');
+        }
+      }
       let origin: { x: number; y: number } | null = null;
       if (e.x != null && e.z != null) {
         const p = this.renderer.worldToScreen(e.x, 1.2, e.z);
@@ -552,6 +585,7 @@ export class UI {
       safe('ui slow', () => {
         this.refreshBadges();
         this.guide.poll();
+        if (this.toastQueue.length && !this.panels.anyModal()) for (const q of this.toastQueue.splice(0)) this.toasts.show(q.text, q.kind, q.icon);
       });
     }
     this.accFps += dt;

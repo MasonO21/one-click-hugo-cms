@@ -19,8 +19,8 @@ const R = (r: Reward): Reward => r;
 export const MISSIONS: MissionDef[] = [
   // ====================================================================== TIER 0 — the first 15 minutes
   {
-    id: 'm01_wood', chain: 'main', name: 'Timber!', description: 'Gather 60 Wood from the bubble trees near your pod.',
-    type: 'gather', target: 'wood', count: 60, reward: R({ resources: { wood: 10 }, xp: 10 }), next: ['m02_shelter'],
+    id: 'm01_wood', chain: 'main', name: 'Timber!', description: 'Gather 80 Wood from the bubble trees near your pod.',
+    type: 'gather', target: 'wood', count: 80, reward: R({ resources: { wood: 10 }, xp: 10 }), next: ['m02_shelter'],
     hint: 'Walk up to a tree — you will chop it automatically.', guide: { kind: 'node', ref: 'tree_round' },
   },
   {
@@ -52,14 +52,14 @@ export const MISSIONS: MissionDef[] = [
   },
   {
     id: 'm07_assign', chain: 'main', name: 'Put to Work', description: 'Have a colonist working a job.',
-    type: 'assign', target: '*', count: 1, reward: R({ resources: { wood: 30 }, xp: 15 }), next: ['m08_turret'],
+    type: 'assign', target: '*', count: 1, reward: R({ resources: { wood: 15 }, xp: 15 }), next: ['m08_turret'],
     hint: 'Colonists take free jobs automatically. Tap a building to manage workers.', guide: { kind: 'building', ref: 'logging_camp' },
   },
   {
     id: 'm08_turret', chain: 'main', name: 'Something Stirs', description: 'Strange noises at night... Build a Scrap Turret.',
     type: 'build', target: 'scrap_turret', count: 1, reward: R({ resources: { wood: 30, stone: 25 }, xp: 20 }), next: ['m09_defend'],
     hint: 'Place the turret between your camp and the wilds.', guide: { kind: 'build_menu', ref: 'scrap_turret' },
-    onComplete: { attack: { delay: 20, warning: 100 } },
+    onComplete: { attack: { delay: 20, warning: 120 } },
   },
   {
     id: 'm09_defend', chain: 'main', name: 'First Contact', description: 'Defend the colony from the alien attack.',
