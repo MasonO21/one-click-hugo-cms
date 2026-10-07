@@ -4,7 +4,8 @@
  * No dependencies. Run from anywhere: `npm run build` (or `node scripts/build-www.mjs`).
  *
  * Copied: top-level *.html, *.css, *.js, manifest.webmanifest, icon.svg, sw.js and the
- * icons/, fonts/ and vendor/ (three.js) folders. Not copied: docs, package files, scripts/, native projects, node_modules.
+ * icons/, fonts/, art/ (painted portraits, foes and backdrops) and vendor/ (three.js) folders.
+ * Not copied: docs, package files, scripts/, native projects, node_modules.
  * sw.js gets its cache VERSION stamped with a hash of the build, so a web deploy of www/
  * always ships a fresh offline cache.
  */
@@ -15,9 +16,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'www');
-const REQUIRED = ['index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js'];
+const REQUIRED = ['index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js'];
 const EXTRA_FILES = new Set(['manifest.webmanifest', 'icon.svg']);
-const DIRS = ['icons', 'fonts', 'vendor'];
+const DIRS = ['icons', 'fonts', 'vendor', 'art'];
 
 if (relative(ROOT, OUT) !== 'www') throw new Error(`Refusing to clean unexpected path ${OUT}`);
 
@@ -46,7 +47,12 @@ for (const dir of DIRS) {
   const src = join(ROOT, dir);
   if (!existsSync(src)) { console.warn(`build-www: ${dir}/ not found, skipped`); continue; }
   cpSync(src, join(OUT, dir), { recursive: true });
-  for (const f of readdirSync(src).sort()) { hash.update(`${dir}/${f}`).update(readFileSync(join(src, f))); dirCount++; }
+  for (const f of readdirSync(src, { recursive: true }).sort()) {
+    const p = join(src, f);
+    if (!statSync(p).isFile()) continue; // art/ has subfolders
+    hash.update(`${dir}/${f}`).update(readFileSync(p));
+    dirCount++;
+  }
 }
 
 // Stamp the service worker cache version so returning web players get the new build.

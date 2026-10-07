@@ -124,7 +124,7 @@
     el = document.createElement('div');
     el.id = 'scene';
     el.hidden = true;
-    el.innerHTML = `<div class="sc-sky"></div>
+    el.innerHTML = `<div class="sc-art"></div><div class="sc-sky"></div>
       <div class="sc-head"><span class="sc-ch"></span><button class="btn small alt sc-skip" type="button">Skip</button></div>
       <div class="sc-stage">
         <svg class="sc-land" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
@@ -152,7 +152,7 @@
     const el = overlay(), ch = KH.chapterOf(n);
     SC = { n, lines, i: -1, onDone, replay, timer: null, shown: 0, l: null, r: null };
     const act = Math.min(3, ch.act || 1), idx = DATA.chapters.indexOf(ch) + 1;
-    el.className = `act${act}`;
+    el.className = `act${act}${KH.art.painted('scene', `act${act}`) ? ' painted' : ''}`;
     el.querySelector('.sc-ch').textContent = `Stage ${n}${DATA.bosses[n] ? ' · Boss' : ''}`;
     el.querySelector('.sc-act').textContent = `${['Act I', 'Act II', 'Act III'][act - 1]} · Chapter ${idx}`;
     el.querySelector('.sc-chname').textContent = ch.name;

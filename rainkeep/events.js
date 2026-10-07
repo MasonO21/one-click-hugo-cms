@@ -404,7 +404,7 @@
     const upcoming = [1, 2, 3].map((d) => `<span class="chip muted small">${EV.defs[evKey(S.ev.idx + d)].name} in ${fmtTime(left + (d - 1) * EV.length)}</span>`).join('');
     return {
       title: def.name, lvl: fmtTime(left),
-      body: `<p class="muted">${esc(def.desc)}</p>
+      body: `${KH.art.banner('event', key, esc(def.desc))}
         <div class="row"><b class="grow">${fmt(S.ev.pts)} points</b></div><div class="bar"><i style="width:${Math.min(100, (S.ev.pts / max) * 100)}%"></i></div>
         <div class="stack">${tiers}</div>${board}
         <div class="section-label">Coming up</div><div class="row wrap">${upcoming}</div>`,

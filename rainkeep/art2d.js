@@ -1,8 +1,8 @@
 /*
- * Rainkeep 2D art: illustrated hero portraits and foe art as inline SVG.
- * Everything is generated from DATA (hero `look`, foe names and classes), so new
- * heroes and foes get art without new assets. Gradient ids are deterministic per
- * hero / foe so re-rendered HTML stays identical (ui.js diffs HTML strings).
+ * Rainkeep 2D art: hero portraits and foe art. Heroes, the story cast, the ten foe families, the act
+ * backdrops and the title have paintings (artmap.js); everything else, and any hero or foe added later,
+ * gets art drawn as inline SVG from DATA (hero `look`, foe names and classes). Gradient ids are
+ * deterministic per hero / foe so re-rendered HTML stays identical (ui.js diffs HTML strings).
  */
 'use strict';
 (function () {
@@ -19,6 +19,26 @@
   const hex = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
   // shade() returns rgb(); gradients and fills accept it fine.
   const mix = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; };
+
+  // ======================================================================
+  // Painted art (artmap.js): one stylesheet of background images, so the HTML that ui.js diffs stays
+  // small. Anything without a painting keeps the drawn SVG below.
+  // ======================================================================
+  const ART = window.RK_ART || {};
+  const painted = (kind, id) => !!(ART[kind] && (id == null ? Object.keys(ART[kind]).length : ART[kind][id]));
+  (function artSheet() {
+    const css = [], url = (v) => `url("${v}")`;
+    for (const [k, v] of Object.entries(ART.portrait || {})) css.push(`.art-p-${k}{background-image:${url(v)}}`);
+    for (const [k, v] of Object.entries(ART.foe || {})) css.push(`.art-f-${k}{background-image:${url(v)}}`);
+    for (const [k, v] of Object.entries(ART.scene || {})) css.push(`#scene.${k} .sc-art{background-image:${url(v)}}`);
+    for (const [k, v] of Object.entries(ART.building || {})) css.push(`.art-b-${k}{background-image:${url(v)}}`);
+    for (const [k, v] of Object.entries(ART.event || {})) css.push(`.art-e-${k}{background-image:${url(v)}}`);
+    for (const [k, v] of Object.entries(ART.offer || {})) css.push(`.art-o-${k}{background-image:${url(v)}}`);
+    if (ART.title) css.push(`.intro-art.painted{background-image:linear-gradient(#120c1e00 40%,#120c1ee0),${url(ART.title)}}`);
+    const st = document.createElement('style');
+    st.id = 'rk-art'; st.textContent = css.join('\n');
+    document.head.appendChild(st);
+  })();
 
   // ======================================================================
   // Hero portraits
@@ -119,6 +139,9 @@
     if (!d) return '';
     const L = d.look || {};
     const sc = SCENE[d.rarity] || SCENE.rare;
+    if (painted('portrait', d.id)) {
+      return `<svg class="portrait painted art-p-${d.id}" viewBox="0 0 100 110" aria-hidden="true"><rect x="1.2" y="1.2" width="97.6" height="107.6" rx="3" fill="none" stroke="${sc.frame}" stroke-width="1.2" opacity="${d.rarity === 'legendary' ? 0.85 : 0.45}"/></svg>`;
+    }
     const skin = SKIN[L.skin || 0];
     const pid = `pt-${d.id || id}`;
     const c = {
@@ -210,6 +233,10 @@
     const a = archetype(f.name || '');
     const [col, colD] = CLS_COL[f.cls] || CLS_COL.guard;
     const eye = f.boss ? '#ff5a2a' : '#ffe08a';
+    if (painted('foe', a)) {
+      const crown = f.boss && a !== 'sun' && a !== 'void' ? '<path d="M44 4 L49 13 L54 1 L60 11 L66 1 L71 13 L76 4 L74 17 L46 17 Z" fill="#ffcf6e" stroke="#a8641c" stroke-width="1"/><circle cx="60" cy="11.5" r="1.8" fill="#ff5a2a"/>' : '';
+      return `<svg class="${cls} painted art-f-${a}${f.boss ? ' boss' : ''}" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="${f.boss ? 57.5 : 58}" fill="none" stroke="${f.boss ? '#ffcf6e' : col}" stroke-width="${f.boss ? 3.5 : 2.5}"/>${crown}</svg>`;
+    }
     const fid = `fo-${a}-${f.cls}-${f.boss ? 'b' : 'n'}`;
     const defs = `<defs><radialGradient id="${fid}-g" cx=".5" cy=".55" r=".55"><stop offset="0" stop-color="${f.boss ? '#ff7a3c' : col}" stop-opacity=".45"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>
       <linearGradient id="${fid}-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${shade(col, 0.25)}"/><stop offset=".55" stop-color="${col}"/><stop offset="1" stop-color="${colD}"/></linearGradient></defs>`;
@@ -305,5 +332,8 @@
       <ellipse cx="60" cy="110" rx="40" ry="6" fill="#000" opacity=".25"/>${body}${crown}</svg>`;
   }
 
-  KH.art = { portrait, foe, archetype };
+  // a sheet's painted header with its blurb over the foot of the painting; plain text when there is no painting
+  const banner = (kind, id, text) => (painted(kind, id) ? `<div class="art-banner art-${kind[0]}-${id}"><p>${text}</p></div>` : `<p class="muted">${text}</p>`);
+
+  KH.art = { portrait, foe, archetype, painted, banner };
 })();

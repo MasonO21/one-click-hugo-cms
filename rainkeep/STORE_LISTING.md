@@ -14,12 +14,12 @@ Rainkeep: Desert Wyrm
 Raise a water dragon. Survive.
 ```
 
-## Promotional text (170 max) · 148 characters
+## Promotional text (170 max) · 152 characters
 
 Promotional text can be changed at any time without a new review, so use it for the current event or season.
 
 ```
-Act III, The Wyrmsong, is here. Past the Burning Line your wyrm's sleeping kin wait to be freed, and every hero now has a tale of their own to tell.
+Every hero, foe and story scene now has painted art. Past the Burning Line your wyrm's sleeping kin wait to be freed, and every hero has a tale to tell.
 ```
 
 ## Keywords (100 max) · 96 characters

@@ -15,19 +15,26 @@
  */
 'use strict';
 
-const VERSION = 'rainkeep-v4.1'; // bump on every web deploy
+const VERSION = 'rainkeep-v4.2'; // bump on every web deploy
 const SHELL_CACHE = `${VERSION}-shell`;
 const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
 
 const SHELL = [
-  'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'art2d.js', 'ui.js',
+  'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js',
   'vendor/three.min.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'world3d.js',
   'manifest.webmanifest', 'icon.svg',
   'fonts/el-messiri-latin-500-normal.woff2', 'fonts/el-messiri-latin-600-normal.woff2', 'fonts/el-messiri-latin-700-normal.woff2',
   'fonts/barlow-semi-condensed-latin-400-normal.woff2', 'fonts/barlow-semi-condensed-latin-500-normal.woff2',
   'fonts/barlow-semi-condensed-latin-600-normal.woff2', 'fonts/barlow-semi-condensed-latin-700-normal.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
+  // painted art (artmap.js)
+  ...'zahra tariq leila idris soraya nadia bashir amira kofi yara rashid samira omar nuri halima lio tamir mara imani kaveh tomas sefa maram hadi nima'.split(' ').map((n) => `art/portraits/${n}.webp`),
+  ...'raider beast scorpion serpent drake spirit construct crystal sun void'.split(' ').map((n) => `art/foes/${n}.webp`),
+  'art/scenes/act1.webp', 'art/scenes/act2.webp', 'art/scenes/act3.webp', 'art/title.webp',
+  ...'shelter quarry grove well mine infirmary barracks watchtower archive hall storehouse forge'.split(' ').map((n) => `art/buildings/${n}.webp`),
+  ...'rainfest hunt builder forgefest spirerush oasis'.split(' ').map((n) => `art/events/${n}.webp`),
+  ...'founder stipend ledger growth stormkit warchest forgekit lvpack lvpack2 sg1 sg2 sg3 sg4 sg5 sg6'.split(' ').map((n) => `art/offers/${n}.webp`),
 ];
 
 const SCOPE = new URL('./', self.location.href);

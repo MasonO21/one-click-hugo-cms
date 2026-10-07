@@ -335,10 +335,11 @@
     const packs = KH.levelPackOpen() ? DATA.shop.filter((x) => x.levelPack) : [];
     if (packs.length) S.lvPack.seen = true;
     const offers = [...packs, ...DATA.shop.filter((x) => !x.id.startsWith('sg') && !x.levelPack && (!x.needs || S.lv[x.needs]))];
+    const offerArt = (id) => (KH.art.painted('offer', id) ? `<div class="offer-art art-o-${id}"></div>` : '');
     const offer = (o) => {
       if (o.levelPack) {
         const got = S.lvPack.bought.includes(o.id);
-        return `<div class="card offer featured lvpack"><div class="grow"><h3>${esc(o.name)}<span class="tag">Rainwyrm Lv ${S.lvPack.lvl + 1}</span><span class="tag">Ends in ${fmtTime(S.lvPack.until - S.time)}</span></h3>
+        return `<div class="card offer featured lvpack">${offerArt(o.id)}<div class="grow"><h3>${esc(o.name)}<span class="tag">Rainwyrm Lv ${S.lvPack.lvl + 1}</span><span class="tag">Ends in ${fmtTime(S.lvPack.until - S.time)}</span></h3>
           <p class="muted small" style="margin:4px 0 6px">${esc(o.desc)}</p><div class="costs">${rewardHTML(KH.levelPackGrants(o.id))}</div></div>
           ${got ? '<span class="muted small">Bought</span>' : `<button class="btn small" data-act="buy" data-arg="${o.id}">${price(o.id, o.usd)}</button>`}</div>`;
       }
@@ -356,7 +357,7 @@
           return got ? `<span class="chip muted small">Lv ${l} ✓</span>` : `<button class="btn small ${ready ? 'gold' : 'off'}" data-act="growth" data-arg="${l}">Lv ${l}: ${fmt(sg)}</button>`;
         }).join('')}</div>`;
       }
-      return `<div class="card offer ${o.id === 'founder' && !done ? 'featured' : ''}"><div class="grow"><h3>${esc(o.name)}${o.tag ? `<span class="tag">${o.tag}</span>` : ''}</h3>
+      return `<div class="card offer ${o.id === 'founder' && !done ? 'featured' : ''}">${offerArt(o.id)}<div class="grow"><h3>${esc(o.name)}${o.tag ? `<span class="tag">${o.tag}</span>` : ''}</h3>
         <p class="muted small" style="margin:4px 0 6px">${esc(o.desc)}</p>${extra}</div>
         ${done ? '<span class="muted small">Owned</span>' : daily ? '<span class="muted small">Tomorrow</span>' : `<button class="btn small" data-act="buy" data-arg="${o.id}">${price(o.id, o.usd)}</button>`}</div>`;
     };
@@ -382,7 +383,7 @@
         <span class="swatch" style="background:radial-gradient(60% 80% at 30% 70%, ${sk.mist[1]}, transparent 60%), radial-gradient(40% 50% at 75% 30%, ${sk.fin}, transparent 70%), linear-gradient(120deg, ${sk.body[0]}, ${sk.body[1]})"></span>
         <b>${esc(sk.name)}</b><span class="muted small">${sk.note ? esc(sk.note) : own ? 'Owned' : 'Cosmetic only'}</span><span class="chip">${p}</span></button>`;
     }).join('');
-    const sg = DATA.shop.filter((x) => x.id.startsWith('sg')).map((o) => `<button class="card sg" data-act="buy" data-arg="${o.id}">${icon('i-gem')}<b>${fmt(o.grants.starglass)}</b><span class="muted small">${esc(o.name)}</span><span class="btn small">${price(o.id, o.usd)}</span></button>`).join('');
+    const sg = DATA.shop.filter((x) => x.id.startsWith('sg')).map((o) => `<button class="card sg" data-act="buy" data-arg="${o.id}">${KH.art.painted('offer', o.id) ? `<span class="sg-art art-o-${o.id}"></span>` : icon('i-gem')}<b>${fmt(o.grants.starglass)}</b><span class="muted small">${esc(o.name)}</span><span class="btn small">${price(o.id, o.usd)}</span></button>`).join('');
     const crates = RES.map((r) => `<button class="card sg" data-act="crate" data-arg="${r}">${icon(ICON[r])}<b>${fmt(DATA.crateSize(r, S.lv.wyrm))}</b><span class="muted small">${NAME[r]} crate</span><span class="chip">${icon('i-gem')}${DATA.crateCost}</span></button>`).join('');
     const native = window.KHNative && window.KHNative.purchasesAvailable;
     return `<div class="panel-head"><h2>Store</h2><p>${native ? '' : `Simulated spend so far: $${S.spentUsd.toFixed(2)}`}</p></div>
@@ -583,8 +584,8 @@
       if (KH.wyrmTop) body += KH.wyrmTop(R);
       body += wyrmControls(R) + effectRows(pid) + upgradeHTML(pid);
     } else {
+      body += KH.art.banner('building', type, esc(b.desc));
       if (locked) body += `<p class="notice heat">Unlocks when your Rainwyrm reaches Lv ${p.unlock}.</p>`;
-      body += `<p class="muted">${esc(b.desc)}</p>`;
       // raiders on the way: the defense card comes first
       const raidFirst = L && type === 'watchtower' && KH.raidNear && KH.raidNear();
       if (raidFirst) body += KH.raidInfo();
@@ -686,7 +687,7 @@
   function sheetIntro() {
     return {
       title: '', lvl: '', noClose: true,
-      body: `<div class="intro-art"><span>The year of the Long Noon</span><h1>Rainkeep</h1></div>
+      body: `<div class="intro-art${KH.art.painted('title') ? ' painted' : ''}"><span>The year of the Long Noon</span><h1>Rainkeep</h1></div>
         <p class="lore">The rain stopped a generation ago. At the bottom of a dry well you found a cracked egg, and inside it a creature made of water. You named it ${esc(S.wyrm.name)}.</p>
         <p class="lore">As long as it drinks, its mist keeps the heat off your people. <b>Dig the wells. Water the wyrm. Watch the horizon.</b></p>
         <button class="btn wide" data-act="close">Open the keep</button>`,
