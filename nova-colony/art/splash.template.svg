@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-600 -600 1200 1200" width="1200" height="1200">
+  <!--
+    Nova Colony splash lockup: the icon hero (planet, dome, crashed pod) over a path-drawn "Nova Colony"
+    wordmark (monoline strokes with round caps/joins, so it never depends on an installed font).
+    Template: art/generate.mjs splices the hero from icon.svg in here and writes art/splash.svg; for every
+    screen size it re-frames the viewBox so the lockup stays centred and the #bg rect fills the canvas.
+    Background = the same vertical gradient as #boot in index.html (#24476b -> #1b2a3a dusk blue).
+  -->
+  <defs>
+    <linearGradient id="gBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#24476b"/>
+      <stop offset="1" stop-color="#1b2a3a"/>
+    </linearGradient>
+    <radialGradient id="gGlowBack" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#35d8ff" stop-opacity="0.30"/>
+      <stop offset="0.55" stop-color="#35d8ff" stop-opacity="0.09"/>
+      <stop offset="1" stop-color="#35d8ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gWord" x1="0" y1="-13" x2="0" y2="153" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffbef"/>
+      <stop offset="0.55" stop-color="#ffe7b4"/>
+      <stop offset="1" stop-color="#ffbf70"/>
+    </linearGradient>
+    <path id="spark" d="M0,-100 Q18,-18 100,0 Q18,18 0,100 Q-18,18 -100,0 Q-18,-18 0,-100Z"/>
+    <!-- wordmark centre-lines; stroked three times (shadow, outline, fill) -->
+    <g id="wm" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path transform="translate(0 0)" d="M0,100 L0,0 L74,100 L74,0"/>
+      <path transform="translate(112 0)" d="M0,67 A34,33 0 1 1 68,67 A34,33 0 1 1 0,67 Z"/>
+      <path transform="translate(218 0)" d="M0,36 L34,100 L68,36"/>
+      <path transform="translate(324 0)" d="M0,67 A34,33 0 1 1 68,67 A34,33 0 1 1 0,67 Z M68,36 L68,100"/>
+      <path transform="translate(490 0)" d="M90.6,15.2 A52,52 0 1 0 90.6,84.8"/>
+      <path transform="translate(618.644 0)" d="M0,67 A34,33 0 1 1 68,67 A34,33 0 1 1 0,67 Z"/>
+      <path transform="translate(724.644 0)" d="M0,0 L0,100"/>
+      <path transform="translate(762.644 0)" d="M0,67 A34,33 0 1 1 68,67 A34,33 0 1 1 0,67 Z"/>
+      <path transform="translate(868.644 0)" d="M0,36 L0,100 M0,64 C0,44 14,36 34,36 C54,36 64,46 64,64 L64,100"/>
+      <path transform="translate(970.644 0)" d="M0,36 L45.3,98 M68,36 L30,140"/>
+    </g>
+    <!--HERO_DEFS-->
+  </defs>
+
+  <rect id="bg" x="-600" y="-600" width="1200" height="1200" fill="url(#gBg)"/>
+
+  <g id="lockup">
+    <circle cx="0" cy="-92" r="520" fill="url(#gGlowBack)"/>
+
+    <g fill="#fff6d6" opacity="0.8">
+      <use href="#spark" transform="translate(-400 -330) scale(0.34)"/>
+      <use href="#spark" transform="translate(398 -262) scale(0.24)"/>
+      <use href="#spark" transform="translate(-486 -90) scale(0.15)"/>
+      <use href="#spark" transform="translate(478 20) scale(0.17)"/>
+      <circle cx="-250" cy="-440" r="6"/>
+      <circle cx="300" cy="-420" r="5"/>
+      <circle cx="-440" cy="110" r="5"/>
+      <circle cx="446" cy="-130" r="5"/>
+    </g>
+
+    <g id="hero-mark" transform="translate(0 -92) scale(@HERO_K@) translate(-@HERO_CX@ -@HERO_CY@)">
+      <!--HERO-->
+    </g>
+
+    <g id="wordmark" transform="translate(-450 262) scale(0.8459)">
+      <g transform="translate(13 13)">
+        <use href="#wm" stroke="#050b12" stroke-opacity="0.5" stroke-width="42" transform="translate(0 12)"/>
+        <use href="#wm" stroke="#122437" stroke-width="42"/>
+        <use href="#wm" stroke="url(#gWord)" stroke-width="26"/>
+      </g>
+    </g>
+  </g>
+</svg>
