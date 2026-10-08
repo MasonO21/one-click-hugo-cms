@@ -1283,13 +1283,15 @@ const DATA = {
     // reeling, per second: progress while holding (less for strong fish), what a fish takes back while you let go,
     // tension while holding (more for strong fish, far more when it runs) and how fast it falls when you let go
     reel: { gain: 30, slip: 9, up: 34, down: 80, runUp: 3.2, runEvery: [0.9, 2.2], runFor: [0.5, 1.1], time: 24 },
+    // pull sets how hard a fish fights. Past about 1.6 no one can land it, so the strong fish sit just under:
+    // a steady hand lands an Old Whiskers nine times in ten and a Rain Koi three in four, a hasty one rarely.
     fish: [
       { id: 'minnow', name: 'Spring Minnow', w: 40, pull: 0.6, cm: [5, 12], give: { food: 0.5 }, color: '#9fc8d8', text: 'Silver and quick. The children catch them by the bucket.' },
       { id: 'carp', name: 'Sand Carp', w: 28, pull: 1.0, cm: [20, 45], give: { food: 1.2 }, color: '#c9a06a', text: 'Sleeps in the sand at the bottom and wakes up hungry.' },
       { id: 'barb', name: 'Golden Barb', w: 14, pull: 1.3, cm: [15, 30], starglass: 15, color: '#e8b54a', text: 'Scales like coins. The old wells were named for them.' },
-      { id: 'eel', name: 'Glass Eel', w: 10, pull: 1.6, cm: [40, 90], journals: 2, color: '#bfe8f0', text: 'You can see its heart beating. The archivists want every one.' },
-      { id: 'whiskers', name: 'Old Whiskers', w: 6, pull: 2.0, cm: [60, 120], whetstone: 2, starglass: 20, color: '#7a6a4a', text: 'A catfish older than the keep. It has swallowed more than one whetstone.' },
-      { id: 'koi', name: 'Rain Koi', w: 2, pull: 2.4, cm: [50, 80], starglass: 80, beacons: 1, color: '#ff8a5a', text: 'Red and gold, and only ever seen after rain. Luck for a year.' },
+      { id: 'eel', name: 'Glass Eel', w: 10, pull: 1.48, cm: [40, 90], journals: 2, color: '#bfe8f0', text: 'You can see its heart beating. The archivists want every one.' },
+      { id: 'whiskers', name: 'Old Whiskers', w: 6, pull: 1.52, cm: [60, 120], whetstone: 2, starglass: 20, color: '#7a6a4a', text: 'A catfish older than the keep. It has swallowed more than one whetstone.' },
+      { id: 'koi', name: 'Rain Koi', w: 2, pull: 1.55, cm: [50, 80], starglass: 80, beacons: 1, color: '#ff8a5a', text: 'Red and gold, and only ever seen after rain. Luck for a year.' },
     ],
     firstCatch: 2, // the first of each kind pays double
     warPts: 8, // Oasis Wars points a fish
