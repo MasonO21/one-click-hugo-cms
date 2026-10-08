@@ -344,14 +344,25 @@
     if (DATA.counters[e] === c) return 0.9;
     return 1;
   }
-  function capTroops(pool, cap) {
+  // lead (a troop class) fills DATA.formation.lead of the march first when there are enough of it; the rest
+  // come in proportion (and more of the lead if the others run short)
+  function capTroops(pool, cap, lead) {
     const total = sum(pool);
-    if (total <= cap) return { ...pool };
-    const f = cap / total, out = {};
-    for (const k in pool) out[k] = Math.floor(pool[k] * f);
+    if (!lead || !(lead in pool)) {
+      if (total <= cap) return { ...pool };
+      const f = cap / total, out = {};
+      for (const k in pool) out[k] = Math.floor(pool[k] * f);
+      return out;
+    }
+    const n = Math.min(cap, total), out = {}, others = Object.keys(pool).filter((k) => k !== lead);
+    out[lead] = Math.min(pool[lead], Math.floor(n * DATA.formation.lead));
+    const rest = others.reduce((a, k) => a + pool[k], 0), room = n - out[lead];
+    const f = rest > 0 ? Math.min(1, room / rest) : 0;
+    for (const k of others) out[k] = Math.floor(pool[k] * f);
+    out[lead] = Math.min(pool[lead], n - others.reduce((a, k) => a + out[k], 0));
     return out;
   }
-  const marchTroops = () => capTroops(S.troops, marchCap());
+  const marchTroops = () => capTroops(S.troops, marchCap(), S.formation);
   // Squad heroes can be away leading a march on the Dunes.
   const squadHome = () => S.squad.filter((id) => S.heroes[id] && !(KH.heroBusy && KH.heroBusy(id)));
   function teamStats(enemyCls, opts = {}) {

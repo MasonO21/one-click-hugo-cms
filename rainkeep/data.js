@@ -277,6 +277,9 @@ const DATA = {
   marchCap: (L) => (L ? 30 + 25 * L : 0),
   // key beats value
   counters: { guard: 'lancer', lancer: 'bow', bow: 'guard' },
+  // formations: which class leads a march (expedition battles and marches on the Dunes). A lead class makes up
+  // this share of the march when you have enough of it; the rest come in proportion.
+  formation: { lead: 0.7 },
   classes: {
     guard: { name: 'Shieldbearer', icon: 'i-guard' },
     bow: { name: 'Dune Archer', icon: 'i-bow' },
@@ -1298,6 +1301,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.14', items: [
+      { icon: 'i-guard', name: 'Formations', text: 'Choose which troop class leads your marches and expedition battles. The picker fights each fight out in advance and marks the formation that fares best.', act: 'tab:expedition', open: (S) => S.lv.barracks > 0, needs: 'the Barracks' },
       { icon: 'i-heirloom', name: 'Heirlooms', text: "Every hero carries one thing from before the keep. It wakes at 3 stars; temper it with Desert Whetstones for more stats and a stronger skill.", act: 'heirlooms', open: (S) => Object.values(S.heroes).some((h) => h.stars >= 3), needs: 'a hero at 3 stars' },
     ] },
     { v: '4.13', items: [

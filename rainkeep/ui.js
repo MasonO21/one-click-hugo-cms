@@ -325,6 +325,7 @@
         <div class="vs"><div class="side"><span class="muted small">Your squad</span><b>${fmt(ours)}</b></div><span class="odds" style="color:${odds[1]}">${odds[0]}</span><div class="side right"><span class="muted small">Enemy</span><b>${fmt(theirs)}</b></div></div>
         <div class="row wrap"><div class="squad">${home.map((id) => `<button class="slot" data-act="hero" data-arg="${id}">${portrait(id)}</button>`).join('') || '<div class="slot">—</div>'}</div>
           <div class="grow costs">${S.lv.barracks ? `<span class="cost" title="Troops marching (cap ${KH.marchCap()})">${icon('i-people')}${fmt(sum(team.troops))}</span>` : '<span class="muted small">Build Barracks to add troops</span>'}${breath ? `<span class="cost" title="${esc(S.wyrm.name)}'s torrent opens the fight">${icon('i-water')}${Math.round(breath * 100)}%</span>` : S.dormant ? '<span class="cost short">Wyrm dormant</span>' : ''}</div></div>
+        ${KH.formationRow ? KH.formationRow(foe) : ''}
         <div style="margin-top:12px"><div class="costs" style="margin-bottom:8px" title="First clear">${rewardHTML(KH.stageRewards(n))}</div><button class="btn wide ${home.length ? '' : 'off'}" data-act="fight" data-primary>${home.length ? 'Fight' : 'Squad is away on the Dunes'}</button></div>
       </div>
       <div class="section-label">${esc(ch.name)}</div><div class="stage-list">${cells}</div>

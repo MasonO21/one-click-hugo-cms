@@ -203,7 +203,7 @@
       fight = `<div class="row">${KH.foeArt(foe, 'mini-foe')}<div class="grow"><div class="muted small">${icon(DATA.classes[foe.cls].icon)} ${esc(foe.name)} fight${r.kind === 'rescue' ? '' : 's'} like ${DATA.classes[foe.cls].name}s. Weak to ${DATA.classes[counter].name}s.</div>
         <div class="vs"><div class="side"><span class="muted small">Your march</span><b>${fmt(ours)}</b></div><span class="x">vs</span><div class="side right"><span class="muted small">${r.kind === 'hunt' ? 'Beast' : 'Raiders'}</span><b>${fmt(theirs)}</b></div></div>
         <b style="color:${odds[1]}">${odds[0]}</b></div></div>
-        ${ui.busyMsg}${ui.slotLine}<div class="seg">${ui.fracs}</div>`;
+        ${ui.busyMsg}${ui.slotLine}<div class="seg">${ui.fracs}</div>${KH.formationRow ? KH.formationRow(foe, UI.wsend) : ''}`;
     }
     const sendWhy = ui.why || (K.hero && r.hero && KH.heroBusy(r.hero) ? `${heroName(r.hero)} is out on another march.` : null);
     const who = K.hero ? `<div class="row iv-hero">${KH.portrait(r.hero)}<div class="grow"><b>${esc(heroName(r.hero))}</b><div class="muted small">Goes alone with a small escort, and comes home with ${shardsOf(r)} of ${esc(heroName(r.hero))}'s shards.</div></div></div>${ui.busyMsg}${ui.slotLine}` : !foe ? `${ui.busyMsg}${ui.slotLine}<p class="muted small">A few scouts are enough: ${Math.round(I.scouts * 100)}% of the march.</p>` : '';

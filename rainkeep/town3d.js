@@ -627,7 +627,14 @@
     list.push({ o: flag, sx: 0.4, sz: 1.2, ph: 0, flag: true });
     g.visible = false;
     scene.add(g);
-    raiders = { g, list, flame: flameM };
+    // the Scorpion host's camp (siege.js), pitched behind the band while it waits for your horn
+    const camp = new THREE.Group(), hide = A.mat('#6a4a32', { flat: true }), hideD = A.mat('#4a3020', { flat: true }), wood = A.mat(A.P.woodD);
+    [[-2.2, 0.6, 1.5, hide], [2.4, 0.2, 1.3, hideD], [0.3, 2.4, 1.7, hide]].forEach(([x, z, h, m]) => camp.add(A.cone(1.1 * h / 1.5, h, m, x, 0, z, 6)));
+    for (let i = 0; i < 3; i++) { const lg = A.cyl(0.06, 0.06, 0.7, wood, 0, 0.06, 0, 5); lg.rotation.set(Math.PI / 2, (i * Math.PI) / 3, 0); lg.position.set(0, 0.06, -1.2); camp.add(lg); }
+    camp.add(A.sph(0.22, flameM, 0, 0.22, -1.2, 6));
+    camp.visible = false;
+    scene.add(camp);
+    raiders = { g, list, flame: flameM, camp };
   }
   const RAID_FROM = new V3(-12, 0, 36), RAID_TO = new V3(0, 0, 19.2);
   // the Scorpion Siege's host (siege.js) uses the same band: camped in the dunes while it waits, at the gate once the horn sounds
@@ -635,6 +642,7 @@
     const raid = KH.raidProgress ? KH.raidProgress() : null;
     const k = raid != null ? raid : KH.siege ? KH.siege.view() : null;
     raiders.g.visible = k != null;
+    raiders.camp.visible = false;
     if (k == null) return;
     const marching = raid != null || !!KH.siege.run();
     const e = smooth(0, 1, k);
@@ -642,6 +650,12 @@
     const fx = hx / hl, fz = hz / hl, ry = Math.atan2(fx, fz);
     // a little curve through the dunes
     const cx = lerp(RAID_FROM.x, RAID_TO.x, e) + Math.sin(e * Math.PI) * 4, cz = lerp(RAID_FROM.z, RAID_TO.z, e);
+    if (!marching) {
+      const bx = cx - fx * 5.5, bz = cz - fz * 5.5;
+      raiders.camp.visible = true;
+      raiders.camp.position.set(bx, landH(bx, bz), bz);
+      raiders.camp.rotation.y = ry;
+    }
     for (const r of raiders.list) {
       const x = cx + -fz * r.sx - fx * r.sz, z = cz + fx * r.sx - fz * r.sz;
       const walking = marching && k < 0.995;

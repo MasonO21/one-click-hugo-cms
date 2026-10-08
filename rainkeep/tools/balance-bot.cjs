@@ -274,7 +274,7 @@ const HOURS = Number(process.argv[3] || 8);
         const foe = KH.enemyFor(S.stage);
         const team = KH.teamStats(foe.cls);
         const br = S.dormant ? 0 : D.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath'));
-        if (KH.squadHome().length && (KH.statPower(team) * (1 + br) >= KH.statPower(foe) * 0.95 || S.time - lastFightTry > 60)) { lastFightTry = S.time; const st0 = S.stage; A.fight(); A.bclose(); if (S.stage > st0) lastWin = S.time; }
+        if (KH.squadHome().length && (KH.statPower(team) * (1 + br) >= KH.statPower(foe) * 0.95 || S.time - lastFightTry > 60)) { lastFightTry = S.time; const st0 = S.stage; if (KH.formation && !NO.includes('formation')) A.formation(KH.formation.best(foe) || ''); A.fight(); A.bclose(); if (S.stage > st0) lastWin = S.time; }
         // snowfield
         if (S.lv.barracks) {
           const free = () => S.map.marches.length < W.slots();
@@ -288,7 +288,7 @@ const HOURS = Number(process.argv[3] || 8);
             // for the camp quest, the weakest Scorpion camp in sight (hives don't count for it)
             const pool = campQuest ? tiles.filter((t) => t.kind === 'camp' && !t.salt).sort((a, b) => a.lvl - b.lvl) : tiles;
             const tgt = pool.find((t) => (campQuest ? true : t.kind === 'beast' || t.kind === 'camp') && !t.gone && !t.busy && (() => { UI.wsend = 1; const s = KH.statPower; const foeP = s({ ...KH.foeStats(D.world.beastStage(t.lvl) + (t.kind === 'camp' ? D.world.campStageBonus : 0), t.kind === 'camp' ? D.world.campScale : D.world.beastScale) }); return s(KH.teamStats(t.cls || 'guard', { troops: KH.marchTroops() })) > foeP * 1.1; })());
-            if (tgt) { UI.wsend = 0.5; A.wattack(tgt.k); }
+            if (tgt) { UI.wsend = 0.5; if (KH.formation && !NO.includes('formation')) A.formation(KH.formation.best({ cls: tgt.cls || 'guard', ...KH.foeStats(D.world.beastStage(tgt.lvl) + (tgt.kind === 'camp' ? D.world.campStageBonus : 0), tgt.kind === 'camp' ? D.world.campScale : D.world.beastScale) }, 0.5) || ''); A.wattack(tgt.k); }
           }
           // watchtower intel: scouts and errands whenever a slot is free, the squad on fights it clearly outmatches (most stars first)
           if (KH.intel && !NO.includes('intel') && KH.intel.unlocked() && !KH.raidNear()) {
@@ -298,6 +298,7 @@ const HOURS = Number(process.argv[3] || 8);
               const K = IV.kinds[r.kind], foe = IV.foeOf(r);
               if (K.hero) { if (!S.heroes[r.hero] || KH.heroBusy(r.hero)) continue; }
               else if (foe) { if (!KH.squadHome().length || s(KH.teamStats(foe.cls, { troops: KH.capTroops(S.troops, KH.marchCap()) })) < s(foe) * 1.15) continue; UI.wsend = 1; }
+              if (foe && KH.formation && !NO.includes('formation')) A.formation(KH.formation.best(foe) || '');
               const n = S.map.marches.length; A.intelgo(r.k); if (S.map.marches.length > n) iv.sent++;
               UI.sheet = null;
             }
@@ -309,7 +310,7 @@ const HOURS = Number(process.argv[3] || 8);
             const loot = (r) => Object.values(RV.stashOf(r)).reduce((a, b) => a + b, 0);
             const ok = RV.list().filter((r) => !RV.shielded(r) && !W.tile(r.x, r.y).busy && odds(r) > 1.25);
             const tgt = ok.find((r) => RV.revenge(r)) || ok.sort((a, b) => loot(b) - loot(a))[0];
-            if (tgt) { if (!RV.scouted(tgt)) A.rivalscout(tgt.k); UI.wsend = 0.75; A.wattack(tgt.k); UI.sheet = null; }
+            if (tgt) { if (!RV.scouted(tgt)) A.rivalscout(tgt.k); UI.wsend = 0.75; if (KH.formation && !NO.includes('formation')) A.formation(KH.formation.best(RV.foeOf(tgt), 0.75) || ''); A.wattack(tgt.k); UI.sheet = null; }
           }
           if (free()) { const r = tiles.find((t) => t.kind === 'ruin' && !t.gone && !t.busy); if (r) { UI.wsend = 0.25; A.wexplore(r.k); } }
           // a player keeps a slot free while a watchtower report waits

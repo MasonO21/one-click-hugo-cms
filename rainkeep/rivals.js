@@ -186,7 +186,7 @@
         <b style="color:${odds[1]}">${sc ? odds[0] : `${odds[0]}?`}</b></div></div>
         <div class="card stack"><b>Storehouse ${sc ? '' : '(scout to see)'}</b>${sc ? `<div class="costs">${KH.rewardHTML(stash)}</div><div class="muted small">A win carries home ${Math.round(R.plunder * 100)}% of it, ${fill(r) < 1 ? `and it is ${Math.round(fill(r) * 100)}% full` : 'and it is full'}.</div>` : '<div class="muted small">Stores fill back up within an hour and a half of a raid.</div>'}
           <button class="btn small alt" data-act="rivalscout" data-arg="${t.k}">${icon('i-scout')}Scout · ${KH.costHTML(scoutCost)}</button></div>
-        ${ui.busyMsg}${ui.slotLine}<div class="seg">${ui.fracs}</div>
+        ${ui.busyMsg}${ui.slotLine}<div class="seg">${ui.fracs}</div>${KH.formationRow ? KH.formationRow(sc ? foe : null, UI.wsend) : ''}
         <p class="muted small">Your squad leads the march. A win also brings Starglass and journals, and ${esc(r.name)} raises a Peace Shield for ${fmtTime(R.shield)}. A lost attack costs ${Math.round(R.loss * 100)}% of the troops sent. ${peace() ? '<b>Attacking drops your own Peace Shield.</b>' : `A keep you raid may strike back at your gate within ${Math.round(R.strike.after[1] / 60)} minutes.`}</p>
         ${why ? `<p class="notice heat">${esc(why)}</p>` : ''}
         <button class="btn wide ${why || t.busy ? 'off' : ''}" data-act="wattack" data-arg="${t.k}" data-primary>${icon('i-sword')}${rev ? 'Take revenge' : 'Attack'}</button>

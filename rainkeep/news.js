@@ -14,7 +14,8 @@
   KH.hooks.defaults.push((s) => { s.newsSeen = ''; });
 
   ACT.news = () => { UI.sheet = { kind: 'news' }; };
-  ACT.newsgo = (act) => { S.newsSeen = DATA.version; UI.sheet = null; if (ACT[act]) ACT[act](); };
+  // an item's act may carry an argument after a colon (tab:expedition)
+  ACT.newsgo = (v) => { const [act, arg] = String(v).split(':'); S.newsSeen = DATA.version; UI.sheet = null; if (ACT[act]) ACT[act](arg); };
   KH.on('booted', () => {
     if (!S) return;
     // a keep still on its intro has nothing to catch up on

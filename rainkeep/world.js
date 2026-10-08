@@ -151,7 +151,7 @@
   KH.troopsAway = () => (S ? S.map.marches.reduce((a, m) => a + sum(m.troops), 0) : 0);
   KH.heroBusy = (id) => !!S && S.map.marches.some((m) => m.heroes.includes(id));
   function pickTroops(frac) {
-    const pool = KH.capTroops(S.troops, KH.marchCap());
+    const pool = KH.capTroops(S.troops, KH.marchCap(), S.formation);
     const out = {};
     for (const k in pool) out[k] = Math.floor(pool[k] * frac);
     return out;
@@ -553,7 +553,7 @@
     if (t.kind === 'keep') return { title: 'Your keep', lvl: `Lv ${S.lv.wyrm}`, body: `<p class="muted">${esc(S.wyrm.name)}'s mist keeps the air clear for ${fmt(Math.round(sight() - 0.5))} tiles around the keep. Grow it to push the dust haze back.</p><button class="btn wide" data-act="tab" data-arg="town">Enter the keep</button>` };
     if (!visible(x, y)) return { title: 'Dust Haze', lvl: '', body: `<p class="muted">This ground is hidden in the dust haze. ${esc(S.wyrm.name)}'s mist clears a little more of the Dunes every time it grows.</p>` };
     const busyMsg = t.busy ? '<p class="notice">One of your marches is already here.</p>' : '';
-    const pool = KH.capTroops(S.troops, KH.marchCap());
+    const pool = KH.capTroops(S.troops, KH.marchCap(), S.formation);
     const avail = sum(pool);
     const fracs = [[0.25, '¼'], [0.5, '½'], [1, 'All']].map(([f, l]) => `<button class="${UI.wsend === f ? 'on' : ''}" data-act="wfrac" data-arg="${f}">${l}<small>${fmt(Math.floor(avail * f))}</small></button>`).join('');
     const why = canSend(t.kind === 'beast' || t.kind === 'camp' || t.kind === 'rival');
@@ -590,7 +590,7 @@
           <div class="row">${KH.foeArt(foe, 'mini-foe')}<div class="grow"><div class="muted small">${icon(DATA.classes[foe.cls].icon)} Fights like ${DATA.classes[foe.cls].name}s. Weak to ${DATA.classes[counter].name}s.</div>
           <div class="vs"><div class="side"><span class="muted small">Your march</span><b>${fmt(ours)}</b></div><span class="x">vs</span><div class="side right"><span class="muted small">${t.salt ? 'Hive' : t.kind === 'camp' ? 'Camp' : 'Beast'}</span><b>${fmt(theirs)}</b></div></div>
           <b style="color:${odds[1]}">${odds[0]}</b></div></div>
-          ${busyMsg}${slotLine}<div class="seg">${fracs}</div>
+          ${busyMsg}${slotLine}<div class="seg">${fracs}</div>${KH.formationRow ? KH.formationRow({ ...foe, n: t.lvl }, UI.wsend) : ''}
           <p class="muted small">Your squad leads the march and is away until it returns. ${t.salt ? 'Hives pay out Sunsteel, Starglass, journals and sometimes an Epic Shard Pouch.' : t.kind === 'camp' ? 'Camps pay out Starglass, a Beacon Token and supplies.' : 'Beasts drop journals, food and sometimes hero shards.'} A lost fight costs 15% of the troops sent.</p>
           ${why ? `<p class="notice heat">${esc(why)}</p>` : ''}
           <button class="btn wide ${why || t.gone || t.busy ? 'off' : ''}" data-act="wattack" data-arg="${t.k}" data-primary>${icon('i-sword')}Attack</button>`,
