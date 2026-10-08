@@ -40,7 +40,7 @@ export class CraftPanel extends Panel {
 
   /** A station tab: the building that provides it (its thumbnail, emoji fallback). */
   private stationInfo(id: string): { icon: string; art: string | null; label: string } {
-    if (id === 'hand') return { icon: '✋', art: null, label: 'By hand' };
+    if (id === 'hand') return { icon: '✋', art: itemArt('survival_tool'), label: 'By hand' };
     const d = this.data.buildings.find((b) => b.station === id || b.factory === id);
     return { icon: d?.icon ?? '🛠️', art: d ? buildingArt(d.id) : null, label: d?.name ?? id };
   }
