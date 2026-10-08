@@ -580,7 +580,7 @@ export class PlayerSystem extends System {
       this.hit(node, true);
     } else {
       const hard = world.nearestNode(p.x, p.z, bal.interactRange);
-      if (hard) this.warnTool();
+      if (hard) this.warnTool(world.nodeDef(hard.i).toolTier);
     }
   }
 
@@ -591,11 +591,28 @@ export class PlayerSystem extends System {
     return false;
   }
 
-  private warnTool(): void {
+  private warnTool(need: number): void {
     const now = this.game.state.playTime;
     if (now - this.toolToastAt < COOLDOWN_TOAST) return;
     this.toolToastAt = now;
-    this.game.toast('🔧 Needs a better tool', 'warning');
+    // a good-enough tool already in the backpack (the Iron Pickaxe just crafted for the crystal step, never put on):
+    // name it, and the toast opens the Inventory
+    const owned = this.ownedTool(need);
+    if (owned) this.game.toast(`Equip your ${owned.name} to harvest this`, 'warning', '🔧', 'inventory');
+    else this.game.toast('🔧 Needs a better tool', 'warning');
+  }
+
+  /** The best owned (not equipped) tool reaching tool tier `need`, if any. */
+  private ownedTool(need: number): { id: string; name: string } | null {
+    const items = this.game.state.player.items;
+    let best: { id: string; name: string; tier: number } | null = null;
+    for (const id in items) {
+      if ((items[id] ?? 0) <= 0) continue;
+      const def = this.game.data.item(id);
+      const tier = def?.slot === 'tool' ? (def.stats?.toolTier ?? 0) : -1;
+      if (def && tier >= need && (!best || tier > best.tier)) best = { id, name: def.name, tier };
+    }
+    return best;
   }
 
   /** One gather hit on a node. `face` turns the player toward it and starts the hit cooldown. */
@@ -605,7 +622,7 @@ export class PlayerSystem extends System {
     const world = g.sys.world;
     const def = world.nodeDef(node.i);
     if (def.toolTier > this.toolTier()) {
-      this.warnTool();
+      this.warnTool(def.toolTier);
       return false;
     }
     const mult = g.sys.economy.modifier('gatherYield') * g.sys.worldEvents.gatherBonus();

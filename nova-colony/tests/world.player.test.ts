@@ -390,9 +390,18 @@ describe('gathering, backpack and colony deposit', () => {
     const hits = collectEvents(game, 'gather:hit');
     game.sys.player.teleport(ore.x + 2.2, ore.z);
     game.sys.player.unequip('tool'); // bare hands: tier 0
+    const owned = { ...game.state.player.items };
+    for (const id of Object.keys(game.state.player.items)) if (game.data.item(id)?.slot === 'tool') delete game.state.player.items[id];
     step(3);
     expect(hits).toHaveLength(0);
     expect(toasts.filter((t) => /better tool/.test(t.text))).toHaveLength(1); // not spammed
+    // a good-enough tool in the backpack, not put on: the toast names it and opens the Inventory
+    Object.assign(game.state.player.items, owned);
+    step(6);
+    const named = toasts.filter((t) => /^Equip your Survival Multitool/.test(t.text));
+    expect(named.length).toBeGreaterThan(0);
+    expect(named[0].open).toBe('inventory');
+    expect(toasts.filter((t) => /better tool/.test(t.text))).toHaveLength(1); // the generic one is not repeated
     expect(game.sys.player.equip('survival_tool')).toBe(true);
     step(1.2);
     expect(hits.length).toBeGreaterThan(0);
