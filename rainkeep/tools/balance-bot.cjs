@@ -345,7 +345,7 @@ const HOURS = Number(process.argv[3] || 8);
               (S.trade.board[m.id] || []).forEach((o, n) => {
                 if (o.taken || KH.trade.trips().length >= KH.trade.slots()) return;
                 if (!Object.entries(KH.trade.want(m, o)).every(([k, v]) => S.res[k] >= v * 3)) return;
-                UI.tradeEscort = pool >= KH.trade.escortNeed(m) * 3 ? 1 : 0;
+                UI.tradeEscort = NO.includes('escort') ? 0 : Object.entries(KH.trade.guardFee(m, 1)).every(([k, v]) => S.res[k] >= v * 5) ? 1 : 0;
                 A.tradego(`${m.id}:${n}`); tr.sent++;
               });
             }

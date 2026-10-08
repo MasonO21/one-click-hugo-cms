@@ -3,8 +3,8 @@
  * (Saltmarch Bazaar, the Southern Wells, the Copper Coast and the Glass Cities) with goods each market asks for,
  * and come home with what the keep can't make: journals, whetstones, Sunsteel, speedups, companion treats and
  * bells, Road Dice, Starglass. Each market posts two orders at a time (new ones every 6 hours of keep time) and its
- * prices move from day to day. The longer roads pay better but cross worse bandit country: troops sent as escort
- * cut the risk, and an ambushed caravan loses half its payment and a fifth of its escort. world3d.js draws the
+ * prices move from day to day. The longer roads pay better but cross worse bandit country: hired guards (copper
+ * and food) cut the risk, and an ambushed caravan loses half its payment. world3d.js draws the
  * camel trains heading off the edge of the map.
  */
 'use strict';
@@ -48,18 +48,15 @@
     return out;
   }
   const hours = (m) => m.hours * 3600;
-  const escortNeed = (m) => Math.ceil(KH.marchCap() * m.escort);
-  const risk = (m, escort) => Math.max(0, m.risk * (1 - Math.min(1, escort / escortNeed(m))));
-  // an escort of frac of the safe escort, drawn from the march's mix and topped up so rounding never leaves it short
-  function escortOf(m, frac) {
-    const n = Math.ceil(escortNeed(m) * frac), pool = KH.capTroops(S.troops, KH.marchCap(), S.formation), all = sum(pool);
-    if (!all) return {};
-    const out = {};
-    for (const k in pool) out[k] = Math.min(pool[k], Math.floor((pool[k] * Math.min(n, all)) / all));
-    let short = Math.min(n, all) - sum(out);
-    for (const k of Object.keys(pool).sort((a, b) => pool[b] - pool[a])) { const add = Math.min(short, pool[k] - out[k]); out[k] += add; short -= add; }
-    return out;
+  // hired guards: frac of the guard full guards cost (none, half, full), and the risk they leave
+  function guardFee(m, frac) {
+    if (!frac) return {};
+    const c = KH.scaleReward(m.guards);
+    for (const k in c) c[k] = Math.round(c[k] * frac);
+    return c;
   }
+  const risk = (m, frac) => Math.max(0, m.risk * (1 - clamp(frac || 0, 0, 1)));
+  const add = (a, b) => { const o = { ...a }; for (const k in b) o[k] = (o[k] || 0) + b[k]; return o; };
 
   ACT.trade = () => {
     if (!unlocked()) return KH.toast(`Trade caravans set out from Rainwyrm Lv ${T.unlock}.`, 'warn');
@@ -74,16 +71,14 @@
     const o = S.trade.board[id] && S.trade.board[id][Number(n)];
     if (!o || o.taken) return KH.toast('That order has been filled.', 'warn');
     if (trips().length >= slots()) return KH.toast(`All ${slots()} of your caravans are on the road.`, 'warn');
-    const w = want(m, o);
+    const w = want(m, o), g = UI.tradeEscort || 0, fee = guardFee(m, g);
     if (!KH.canAfford(w)) return KH.toast(`${m.name} wants more than the storehouse holds.`, 'warn');
-    // the escort: a share of the escort that makes the road safe (none, half, all of it)
-    const troops = UI.tradeEscort ? escortOf(m, UI.tradeEscort) : {};
-    KH.pay(w);
-    for (const k in troops) S.troops[k] -= troops[k];
+    if (!KH.canAfford(add(w, fee))) return KH.toast('Not enough copper and food to hire the guards.', 'warn');
+    KH.pay(add(w, fee));
     o.taken = true;
     const X = S.trade;
     X.seq++;
-    X.trips.push({ id: X.seq, m: id, i: o.i, pay: pay(m, o), escort: troops, depart: S.time, at: S.time + hours(m) / 2, back: S.time + hours(m), risk: risk(m, sum(troops)), ambushed: null });
+    X.trips.push({ id: X.seq, m: id, i: o.i, pay: pay(m, o), guard: g, escort: {}, depart: S.time, at: S.time + hours(m) / 2, back: S.time + hours(m), risk: risk(m, g), ambushed: null });
     if (KH.duty) KH.duty('trade');
     KH.emit('tradeOut', { m: id });
     KH.sfx('build');
@@ -100,12 +95,11 @@
         t.ambushed = Math.random() < t.risk;
         if (t.ambushed) {
           for (const k in t.pay) t.pay[k] = Math.floor(t.pay[k] * (1 - T.ambush.lose));
-          for (const k in t.escort) t.escort[k] -= Math.round(t.escort[k] * T.ambush.escortLoss);
         }
       }
       if (S.time >= t.back) {
         S.trade.trips = trips().filter((x) => x !== t);
-        for (const k in t.escort) S.troops[k] += t.escort[k];
+        for (const k in t.escort || {}) S.troops[k] += t.escort[k]; // caravans from before guards were hired
         const g = Object.fromEntries(Object.entries(t.pay).filter(([, v]) => v > 0));
         KH.grant(g);
         S.stats.tradeTrips++;
@@ -131,21 +125,21 @@
     const cards = T.markets.map((m) => {
       const k = mood(m), orders = (X.board[m.id] || []).map((o, n) => {
         if (o.taken) return '<div class="tr-order taken muted small">Filled. New orders in ' + fmtTime(X.refreshAt - S.time) + '.</div>';
-        const w = want(m, o), p = pay(m, o), ok = KH.canAfford(w) && !full;
+        const w = want(m, o), p = pay(m, o), ok = KH.canAfford(add(w, guardFee(m, UI.tradeEscort))) && !full;
         return `<div class="tr-order"><div class="tr-swap"><div class="costs">${KH.costHTML(w)}</div><span class="tr-arrow">→</span><div class="costs">${KH.rewardHTML(p)}</div></div>
           <button class="btn small ${ok ? 'gold' : 'off'}" data-act="tradego" data-arg="${m.id}:${n}">Send</button></div>`;
       }).join('');
-      const pct = Math.round(risk(m, UI.tradeEscort ? escortNeed(m) * UI.tradeEscort : 0) * 100);
+      const pct = Math.round(risk(m, UI.tradeEscort) * 100), fee = guardFee(m, UI.tradeEscort);
       return `<div class="card stack tr-market" style="--mk:${m.color}"><div class="row">${icon(m.icon, 'tr-ic')}<div class="grow"><b>${esc(m.name)}</b><div class="muted small">${esc(m.text)}</div></div></div>
         <div class="row small tr-meta"><span class="chip">${icon('i-clock')}${m.hours} h there and back</span><span class="chip ${k >= 1.15 ? 'r-epic' : k <= 0.9 ? 'muted' : ''}">Prices ×${k.toFixed(2)}</span><span class="chip ${pct >= 20 ? 'r-legendary' : ''}">${icon('i-bandit')}${pct}% bandits</span></div>
-        ${UI.tradeEscort ? `<div class="muted small">Escort: ${fmt(Math.ceil(escortNeed(m) * UI.tradeEscort))} troops, home with the caravan.</div>` : ''}
+        ${UI.tradeEscort ? `<div class="row small tr-guards"><span class="muted">Guards</span>${KH.costHTML(fee)}</div>` : ''}
         <div class="stack">${orders}</div></div>`;
     }).join('');
     return {
       title: 'Trade Routes', lvl: `${onRoad}/${slots()}`,
-      body: `<p class="muted small">Caravans carry what a market asks for and come home with what it pays. New orders every 6 hours; prices change daily. The far roads pay best and have the most bandits: an escort cuts the risk (troops come home with the caravan), and a caravan caught on the road loses half its payment.</p>
+      body: `<p class="muted small">Caravans carry what a market asks for and come home with what it pays. New orders every 6 hours; prices change daily. The far roads pay best and have the most bandits: hired guards cut the risk, and a caravan caught on the road loses half its payment.</p>
         ${road ? `<div class="card stack">${road}</div>` : ''}
-        <div class="row"><span class="grow section-label">Escort</span></div><div class="seg">${esc3}</div>
+        <div class="row"><span class="grow section-label">Hired guards</span></div><div class="seg">${esc3}</div>
         <div class="stack">${cards}</div>`,
     };
   };
@@ -166,5 +160,5 @@
   // troops out with caravans, for housing, ranks and the Hall (world.js, ranks.js, hall.js)
   const escorted = () => trips().reduce((a, t) => a + sum(t.escort), 0);
   const escortOfClass = (c) => trips().reduce((a, t) => a + (t.escort[c] || 0), 0);
-  KH.trade = { unlocked, slots, trips, mood, refresh, want, pay, risk, escortNeed, roads, escorted, escortOfClass, markets: T.markets };
+  KH.trade = { unlocked, slots, trips, mood, refresh, want, pay, risk, guardFee, roads, escorted, escortOfClass, markets: T.markets };
 })();

@@ -1295,31 +1295,32 @@ const DATA = {
   // ---------- Trade Routes ----------
   // Trade caravans leave the keep for four markets beyond the Dunes with goods each market asks for, and come home
   // with what the keep can't make. Each market posts two orders at a time (new ones every 6 hours of keep time),
-  // its prices move from day to day, and the longer roads pay better but cross worse bandit country: troops sent
-  // as escort cut the risk, and an ambushed caravan loses half its payment and a fifth of its escort.
+  // its prices move from day to day, and the longer roads pay better but cross worse bandit country: hired guards
+  // (paid in copper and food, half or full) cut the risk, and an ambushed caravan loses half its payment.
+  // Guards are hired rather than drawn from the army because troops away for hours left the expedition short.
   trade: {
     unlock: 10, // Rainwyrm level
     slots: [[10, 2], [15, 3]], // [Rainwyrm level, caravans on the road at once]
     refresh: 21600, day: 86400, // new orders every 6 hours; prices change daily
     mood: [0.8, 1.4], // a market's prices for the day, as a multiple
-    // each market: hours on the road (there and back), the bandit risk with no escort, the escort that cuts it to
-    // nothing (a share of your march cap), where it lies (degrees, 0 = east), and its orders: what it wants
+    // each market: hours on the road (there and back), the bandit risk with no guards, what full guards cost
+    // (quarter-crates; they make the road safe), where it lies (degrees, 0 = east), and its orders: what it wants
     // (quarter-crates, scaled to the keep) and what it pays (items as they are; journals scaled to the keep)
     markets: [
-      { id: 'saltmarch', name: 'Saltmarch Bazaar', hours: 2, risk: 0.15, escort: 0.08, dir: 180, icon: 'i-market', color: '#e0b04a',
+      { id: 'saltmarch', name: 'Saltmarch Bazaar', hours: 2, risk: 0.15, guards: { copper: 0.3, food: 0.6 }, dir: 180, icon: 'i-market', color: '#e0b04a',
         text: 'A salt town on the western flats, where every caravan in the desert stops sooner or later.',
         orders: [{ want: { food: 6 }, pay: { journals: 2, treats: 3 } }, { want: { water: 5 }, pay: { journals: 2, dice: 2 } }, { want: { food: 4, water: 3 }, pay: { speed15: 3, treats: 2 } }] },
-      { id: 'wells', name: 'the Southern Wells', hours: 3, risk: 0.25, escort: 0.12, dir: 90, icon: 'i-well', color: '#4fa8c8',
+      { id: 'wells', name: 'the Southern Wells', hours: 3, risk: 0.25, guards: { copper: 0.5, food: 1 }, dir: 90, icon: 'i-well', color: '#4fa8c8',
         text: 'Deep wells in the southern rocks, and the herders who water there.',
         orders: [{ want: { stone: 8 }, pay: { speed60: 1, whetstone: 2 } }, { want: { copper: 4 }, pay: { whetstone: 3, bells: 1 } }, { want: { stone: 5, copper: 2 }, pay: { speed60: 1, dice: 3 } }] },
-      { id: 'copper', name: 'the Copper Coast', hours: 4, risk: 0.3, escort: 0.16, dir: 0, icon: 'i-copper', color: '#c97a3a',
+      { id: 'copper', name: 'the Copper Coast', hours: 4, risk: 0.3, guards: { copper: 0.7, food: 1.4 }, dir: 0, icon: 'i-copper', color: '#c97a3a',
         text: 'Smelting towns along the eastern salt lakes, short of everything but metal.',
         orders: [{ want: { food: 10 }, pay: { sunsteel_cache: 1, copper: 4 } }, { want: { water: 8 }, pay: { sunsteel_cache: 1, whetstone: 2 } }, { want: { food: 6, stone: 6 }, pay: { copper: 6, journals: 2 } }] },
-      { id: 'glass', name: 'the Glass Cities', hours: 6, risk: 0.4, escort: 0.22, dir: 270, icon: 'i-gem', color: '#8fd8e8',
+      { id: 'glass', name: 'the Glass Cities', hours: 6, risk: 0.4, guards: { copper: 1, food: 2 }, dir: 270, icon: 'i-gem', color: '#8fd8e8',
         text: 'The old cities under the northern glass, where the rich still pay anything for water.',
         orders: [{ want: { water: 14 }, pay: { starglass: 80, whetstone: 4 } }, { want: { food: 10, water: 8 }, pay: { shard_epic: 1, journals: 3 } }, { want: { copper: 8, water: 6 }, pay: { starglass: 60, bells: 2 } }] },
     ],
-    ambush: { lose: 0.5, escortLoss: 0.2 }, // an ambushed caravan loses this much of its payment and its escort
+    ambush: { lose: 0.5 }, // an ambushed caravan loses this much of its payment
     warPts: 20, // Oasis Wars points per caravan home
   },
 
