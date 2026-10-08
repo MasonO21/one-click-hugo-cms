@@ -7,7 +7,7 @@ import { footprintCells, missingText, pointInRect, rectFrom, refundEstimate, rot
 import { easeOutQuart, segmentAtRotation, spinTarget } from '../src/ui/logic/spin';
 import { clockText, dayPhase, fmtHMS, fmtLong, msUntilLocalMidnight, offlineWorkedText } from '../src/ui/logic/time';
 import { buildingEffects, levelMult, lockInfo, modifierText } from '../src/ui/logic/describe';
-import { autoDailyStep } from '../src/ui/logic/autoDaily';
+import { AUTO_DAILY_QUIET_MS, autoDailyStep } from '../src/ui/logic/autoDaily';
 import { RARITY_COLOR, rewardParts } from '../src/ui/logic/rewards';
 import { MAP_MAX_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, placeLabel, regionCentroids, worldToMap, type MapMarker } from '../src/ui/logic/map';
 import { BUILD_CATEGORIES, NODE_H, NODE_W, layoutTree } from '../src/ui/logic/categories';
@@ -351,6 +351,12 @@ describe('automatic daily-gift popup', () => {
     expect(autoDailyStep({ ...base, busy: true })).toBe('wait');
     expect(autoDailyStep({ ...base, available: false })).toBe('skip');
     expect(autoDailyStep({ ...base, open: true })).toBe('skip');
+  });
+  it('waits for a quiet moment: not right after a panel closed, under the finger reaching for the next button', () => {
+    expect(autoDailyStep({ ...base, quietMs: 300 })).toBe('wait');
+    expect(autoDailyStep({ ...base, quietMs: AUTO_DAILY_QUIET_MS - 1 })).toBe('wait');
+    expect(autoDailyStep({ ...base, quietMs: AUTO_DAILY_QUIET_MS })).toBe('open');
+    expect(autoDailyStep({ ...base, quietMs: 100, shownDay: '2026-10-09' })).toBe('skip');
   });
   it('a tapped gift reminder and the launch popup open it once a day: closed is closed', () => {
     expect(autoDailyStep({ ...base, shownDay: '2026-10-09' })).toBe('skip');

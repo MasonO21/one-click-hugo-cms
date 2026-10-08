@@ -16,9 +16,18 @@ export interface AutoDailyState {
   shownDay: string;
   /** Today's local day (dateKey). */
   today: string;
+  /** Milliseconds the screen has been free (nothing open) — omitted: long enough. */
+  quietMs?: number;
 }
+
+/**
+ * The screen must have been free this long: a player who just closed the Build drawer is already reaching for the
+ * next button, and a popup landing under that finger eats the tap (QA6: it opened between closing Build and tapping
+ * Tech).
+ */
+export const AUTO_DAILY_QUIET_MS = 2000;
 
 export function autoDailyStep(s: AutoDailyState): AutoDailyStep {
   if (!s.available || s.open || s.shownDay === s.today) return 'skip';
-  return s.busy ? 'wait' : 'open';
+  return s.busy || (s.quietMs ?? Infinity) < AUTO_DAILY_QUIET_MS ? 'wait' : 'open';
 }

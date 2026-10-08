@@ -409,7 +409,14 @@ export class UI {
    */
   private autoDaily(tries: number): void {
     const today = dateKey(this.game.now());
-    const step = autoDailyStep({ available: this.game.sys.liveops.dailyAvailable(), open: this.panels.isOpen('daily'), busy: this.screenBusy(), shownDay: this.autoDailyDay, today });
+    const step = autoDailyStep({
+      available: this.game.sys.liveops.dailyAvailable(),
+      open: this.panels.isOpen('daily'),
+      busy: this.screenBusy(),
+      shownDay: this.autoDailyDay,
+      today,
+      quietMs: performance.now() - this.busyAt,
+    });
     if (step === 'skip') return;
     if (step === 'wait') {
       if (tries < 20) window.setTimeout(() => this.autoDaily(tries + 1), 3000);
@@ -418,6 +425,9 @@ export class UI {
     this.autoDailyDay = today; // once a day: the launch popup and a tapped gift reminder must not both open it
     this.open('daily');
   }
+
+  /** performance.now() of the last frame the screen was busy (see autoDaily: popups wait for a quiet moment). */
+  private busyAt = 0;
 
   /** The player has something open (any panel or drawer, a placement, build mode, Photo Mode): popups should wait. */
   private screenBusy(): boolean {
@@ -951,6 +961,7 @@ export class UI {
 
   update(dt: number): void {
     if (!this.root) return;
+    if (this.screenBusy()) this.busyAt = performance.now();
     if (this.photo.active) safe('ui photo', () => this.photo.update(dt));
     else safe('ui input', () => this.input.update(dt));
     safe('ui consent', () => this.consent.update(dt));
