@@ -15,7 +15,7 @@ import type { Reward } from '../../data/schema';
 import { fmt } from '../../core/format';
 import { describeReward } from '../../sim/meta/util';
 import { findLabel, nextFrontierFind, type HaulPlan, type TripSpec } from '../../sim/expedition/rules';
-import { chanceText, chartLayout, destinationGroups, durationLabel, squadRows, tripProgress, vehicleLine, type RegionGroup } from '../logic/expeditions';
+import { chanceText, chartLayout, destinationGroups, durationLabel, pickStar, squadRows, tripProgress, vehicleLine, type RegionGroup } from '../logic/expeditions';
 import { jobOf, stars } from '../logic/colonist';
 import { fmtHMS } from '../logic/time';
 import { bar, btn, emptyState, portrait, rewardChips, section, tabs } from '../widgets';
@@ -642,13 +642,21 @@ export class ExpeditionsPanel extends Panel {
       const color = this.data.biome(site.biome)?.ground[1] ?? '#fff';
       const last = i === pts.length - 1;
       const g = s('g', { class: 'site' + (last ? ' last' : '') + (i === this.picked ? ' picked' : ''), 'data-site': i });
-      g.appendChild(s('circle', { cx: (p.x * 100).toFixed(1), cy: (p.y * 100).toFixed(1), r: 6.5, class: 'hit' })); // ≥ 44 px to tap
+      g.appendChild(s('circle', { cx: (p.x * 100).toFixed(1), cy: (p.y * 100).toFixed(1), r: 6.5, class: 'hit' }));
       g.appendChild(s('circle', { cx: (p.x * 100).toFixed(1), cy: (p.y * 100).toFixed(1), r: site.find ? 1.9 : 1.4, fill: color, class: 'star' }));
-      g.addEventListener('click', () => {
-        this.picked = this.picked === i ? -1 : i;
-        this.rerender();
-      });
       svg.appendChild(g);
+    });
+    // a tap picks the nearest star within ~26 px (at least the drawn circle): the chart is small on a landscape phone
+    svg.addEventListener('click', (ev) => {
+      const r = svg.getBoundingClientRect();
+      const side = Math.min(r.width, r.height); // viewBox 100×100, centred (xMidYMid meet)
+      if (!(side > 0)) return;
+      const x = (ev.clientX - r.left - (r.width - side) / 2) / side;
+      const y = (ev.clientY - r.top - (r.height - side) / 2) / side;
+      const i = pickStar(pts, x, y, Math.max(0.065, 26 / side));
+      if (i < 0) return;
+      this.picked = this.picked === i ? -1 : i;
+      this.rerender();
     });
     const box = h('div', { class: 'exp-sky-box' });
     box.appendChild(svg);

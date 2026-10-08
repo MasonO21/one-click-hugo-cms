@@ -3,7 +3,7 @@
  * line, the HUD chip state, badges and the Star Chart layout.
  */
 import { describe, expect, it } from 'vitest';
-import { chanceText, chartLayout, destinationGroups, durationLabel, expeditionBadge, hudExpedition, squadRows, vehicleLine } from '../src/ui/logic/expeditions';
+import { chanceText, chartLayout, destinationGroups, durationLabel, expeditionBadge, hudExpedition, pickStar, squadRows, vehicleLine } from '../src/ui/logic/expeditions';
 import { computeBadges, idleWithJobs } from '../src/ui/logic/badges';
 import { regionalSpec } from '../src/sim/expedition/rules';
 import { HOUR, MIN, crew, makeColony } from './expeditions.helpers';
@@ -104,5 +104,20 @@ describe('ui.expeditions', () => {
     const b = chartLayout(11);
     const ratio = (p: { x: number; y: number }[], i: number, j: number) => Math.hypot(p[i].x - 0.5, p[i].y - 0.5) / Math.hypot(p[j].x - 0.5, p[j].y - 0.5);
     expect(ratio(a, 3, 7)).toBeCloseTo(ratio(b, 3, 7), 5);
+  });
+
+  it('a tap on the Star Chart picks the nearest star within reach (stars are small on a landscape phone)', () => {
+    const pts = chartLayout(12);
+    // right on a star
+    expect(pickStar(pts, pts[5].x, pts[5].y, 0.05)).toBe(5);
+    // between two stars: the nearer one
+    const mid = { x: pts[3].x * 0.7 + pts[4].x * 0.3, y: pts[3].y * 0.7 + pts[4].y * 0.3 };
+    expect(pickStar(pts, mid.x, mid.y, 0.5)).toBe(3);
+    // empty sky far from every star
+    expect(pickStar(pts, 0.02, 0.98, 0.05)).toBe(-1);
+    expect(pickStar([], 0.5, 0.5, 1)).toBe(-1);
+    // on a 220px-tall landscape chart, 26px of reach is 0.118 of the box: more than the drawn 6.5% circle
+    const reach = Math.max(0.065, 26 / 220);
+    expect(pickStar(pts, pts[0].x + 0.1, pts[0].y, reach)).not.toBe(-1);
   });
 });

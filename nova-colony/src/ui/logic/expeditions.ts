@@ -121,6 +121,23 @@ export function chartLayout(count: number): { x: number; y: number }[] {
   return raw.map((p) => ({ x: 0.5 + p.x * k, y: 0.5 + p.y * k }));
 }
 
+/**
+ * The star a tap on the Star Chart picks: the nearest one within `reach` (chart units, the 0..1 box), else -1. On a
+ * landscape phone the chart is drawn small (a star's own circle is under 30px there), so a tap near a star counts.
+ */
+export function pickStar(pts: readonly { x: number; y: number }[], x: number, y: number, reach: number): number {
+  let best = -1;
+  let bd = reach * reach;
+  pts.forEach((p, i) => {
+    const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d <= bd) {
+      bd = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
 /** Percent text for a chance ("35%", "<1%"). */
 export function chanceText(p: number): string {
   if (p > 0 && p < 0.01) return '<1%';
