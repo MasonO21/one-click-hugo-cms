@@ -42,6 +42,7 @@ export interface GameState {
   tutorial: TutorialState;
   liveops: LiveOpsState;
   expeditions: ExpeditionState;
+  achievements: AchievementState;
   stats: StatsState;
   settings: SettingsState;
 }
@@ -431,6 +432,14 @@ export interface ExpeditionState {
   };
 }
 
+// owner: achievements (meta agent)
+export interface AchievementState {
+  /** AchievementDef id -> epoch ms when it was earned (claimable from then on; never taken back). */
+  unlocked: Record<string, number>;
+  /** AchievementDef id -> epoch ms when its reward was claimed. */
+  claimed: Record<string, number>;
+}
+
 export interface StatsState {
   sessions: number;
   /** Total online seconds (mirrors playTime but never reset). */
@@ -544,6 +553,7 @@ export function createInitialState(seed: number, now: number): GameState {
       offersSeen: [],
     },
     expeditions: { list: [], nextId: 1, launched: 0, collected: 0, frontier: { charted: [], signal: 0, claimed: [], announced: false } },
+    achievements: { unlocked: {}, claimed: {} },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
     settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false, notifications: false, notifyAsked: false },
   };

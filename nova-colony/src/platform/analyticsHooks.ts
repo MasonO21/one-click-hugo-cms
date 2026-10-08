@@ -11,6 +11,7 @@
  *   purchase funnel       shop_opened -> iap_purchased / iap_failed
  *   quit points           quit_point                               (current main mission when the app is paused)
  *   slow progression      progression_stall                        (no mission completed for 10 min of play)
+ *   achievements          achievement_unlocked                     (id + medal tier)
  *   expeditions           expedition_launched / _returned / _collected, frontier_charted / frontier_milestone
  *
  * Events carry game facts only (no PII). Consent is opt-in: `settings.analytics` must be true AND the player
@@ -189,6 +190,10 @@ export function installAnalyticsHooks(game: Game): () => void {
   );
   on('expedition:charted', ({ count }) => a.track('frontier_charted', { count, play_time_s: Math.round(st().playTime) }));
   on('expedition:milestone', ({ count }) => a.track('frontier_milestone', { count }));
+
+  // ---- achievements (a loaded save's catch-up is one aggregate event, not one per achievement)
+  on('achievement:unlocked', ({ id, medal }) => a.track('achievement_unlocked', { id, tier: medal, play_time_s: Math.round(st().playTime) }));
+  on('achievement:retro', ({ count }) => a.track('achievements_retro', { count }));
 
   // ---- ads
   on('ad:started', ({ placement }) => a.track('ad_started', { placement }));

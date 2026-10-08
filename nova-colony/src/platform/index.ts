@@ -12,6 +12,7 @@ import { AnalyticsClient } from './analytics';
 import { CapacitorHaptics, NoopHaptics } from './haptics';
 import { HttpCloudSave } from './cloud';
 import { CapacitorNotifications, NoopNotifications } from './notifications';
+import { NoopAchievements } from './achievements';
 
 export interface PlatformOptions {
   /** Force the web adapters even inside Capacitor (debugging). */
@@ -36,6 +37,8 @@ export async function createPlatformServices(opts: PlatformOptions = {}): Promis
     haptics: native ? new CapacitorHaptics() : new NoopHaptics(),
     cloud,
     notifications: native ? new CapacitorNotifications(platform as 'ios' | 'android') : new NoopNotifications(),
+    // Game Center / Play Games plug in here later (docs/MOBILE.md); today unlocks are only kept in the save
+    achievements: new NoopAchievements(),
   };
 }
 

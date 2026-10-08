@@ -115,7 +115,8 @@ export interface GameEvents {
   'iap:failed': { product: string; reason: string };
 
   // presentation requests (any system may emit; UI/render/audio handle)
-  'ui:toast': { text: string; kind?: 'info' | 'success' | 'warning' | 'reward' | 'danger'; icon?: string };
+  /** `open`: a panel the toast opens when tapped (the Journal for an achievement). */
+  'ui:toast': { text: string; kind?: 'info' | 'success' | 'warning' | 'reward' | 'danger'; icon?: string; open?: string };
   /** Floating world-space text such as "+25 Wood" or "Production +20%". */
   'ui:float': { text: string; x: number; z: number; color?: string; big?: boolean };
   'ui:open': { panel: string; arg?: unknown };

@@ -93,6 +93,15 @@ export interface NotificationsService {
   onTap(cb: (tap: NotifyTap) => void): () => void;
 }
 
+/**
+ * Game Center / Google Play Games achievements (src/platform/achievements.ts). `id` is an AchievementDef id
+ * (`ach_*`); reporting an unlock twice is harmless. Implementations never throw.
+ */
+export interface AchievementsService {
+  readonly name: string;
+  report(id: string): void;
+}
+
 export interface PlatformServices {
   platform: 'web' | 'ios' | 'android';
   store: KeyValueStore;
@@ -103,4 +112,6 @@ export interface PlatformServices {
   cloud: CloudSaveService;
   /** Local notifications (optional: mocks and older call sites leave it out = no notifications). */
   notifications?: NotificationsService;
+  /** Game Center / Play Games achievements (optional: mocks leave it out = nothing is reported). */
+  achievements?: AchievementsService;
 }

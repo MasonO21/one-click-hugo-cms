@@ -763,6 +763,54 @@ export interface ExpeditionRules {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Achievements & the Colony Journal (src/data/achievements.ts, sim/achievements.ts)
+// ---------------------------------------------------------------------------------------------
+
+export type AchievementCategory = 'builder' | 'explorer' | 'defender' | 'scientist' | 'community' | 'crafter' | 'expeditions' | 'collector' | 'veteran';
+
+/** Tiered lines earn bronze, silver and gold; a one-off earns the single 'special' medal. */
+export type AchievementMedal = 'bronze' | 'silver' | 'gold' | 'special';
+
+/** Progress read from live state (see sim/meta/achievementRules.ts for how each one is computed). */
+export type AchievementMetric =
+  | 'playHours' // state.playTime in hours
+  | 'colonyTier' // state.colony.tier
+  | 'colonists' // colonists living in the colony
+  | 'legendary' // legendary colonists in the colony
+  | 'regions' // regions discovered
+  | 'research' // research projects completed
+  | 'loginDays' // days the daily gift was collected (the streak never resets)
+  | 'charted' // Frontier sites on the Star Chart
+  | 'buildingTypes' // different building types ever built
+  | 'alienTypes'; // different alien types ever defeated
+
+/** Where an achievement's progress comes from: a mission lifetime counter ("type:target") or a state metric. */
+export type AchievementSource = { kind: 'counter'; type: MissionType; target: string } | { kind: 'metric'; metric: AchievementMetric };
+
+export interface AchievementDef {
+  /** Stable platform-facing id: `ach_<line>_<bronze|silver|gold>` or `ach_<name>` for a one-off. Never rename. */
+  id: string;
+  /** Tiered line id ("lumberjack"); a one-off is its own line. */
+  line: string;
+  category: AchievementCategory;
+  /** The line's name (shared by its three medals). */
+  name: string;
+  /** One line, e.g. "Gather 5,000 wood". */
+  description: string;
+  medal: AchievementMedal;
+  /** Emoji fallback. */
+  icon: string;
+  /** Painted icon as "<kind>:<id>" (resource, building, hud, alien, tier, poi, reward) — see ui/logic/achievements.ts. */
+  art?: string;
+  source: AchievementSource;
+  /** Progress needed. */
+  target: number;
+  reward: Reward;
+  /** How the UI writes the numbers: plain count (default), hours played, or colony tier. */
+  unit?: 'hours' | 'tier';
+}
+
+// ---------------------------------------------------------------------------------------------
 // Monetization & live-ops
 // ---------------------------------------------------------------------------------------------
 

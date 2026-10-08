@@ -2,6 +2,7 @@
  * DataRegistry — indexes all content definitions by id. Systems access content only through this.
  */
 import type {
+  AchievementDef,
   AdPlacementDef,
   AlienDef,
   BalanceDef,
@@ -47,6 +48,7 @@ import { MISSIONS, FIRST_MISSION, DAILY_MISSION_POOL } from './missions';
 import { AD_PLACEMENTS, PRODUCTS, COSMETICS, VIP, SEASON, DAILY_REWARDS, SPIN_SEGMENTS, STARTER_KIT } from './monetization';
 import { BALANCE } from './balance';
 import { EXPEDITIONS, EXPEDITION_RULES } from './expeditions';
+import { ACHIEVEMENTS } from './achievements';
 
 export interface GameData {
   resources: ResourceDef[];
@@ -80,6 +82,7 @@ export interface GameData {
   balance: BalanceDef;
   expeditions: ExpeditionDef[];
   expeditionRules: ExpeditionRules;
+  achievements: AchievementDef[];
 }
 
 function index<T extends { id: string }>(list: T[], kind: string): Map<string, T> {
@@ -122,6 +125,7 @@ export class DataRegistry implements GameData {
   balance!: BalanceDef;
   expeditions!: ExpeditionDef[];
   expeditionRules!: ExpeditionRules;
+  achievements!: AchievementDef[];
 
   private maps: Record<string, Map<string, any>> = {};
 
@@ -145,6 +149,7 @@ export class DataRegistry implements GameData {
     this.maps.product = index(data.products, 'product');
     this.maps.cosmetic = index(data.cosmetics, 'cosmetic');
     this.maps.expedition = index(data.expeditions ?? [], 'expedition');
+    this.maps.achievement = index(data.achievements ?? [], 'achievement');
   }
 
   resource(id: string): ResourceDef | undefined { return this.maps.resource.get(id); }
@@ -165,6 +170,7 @@ export class DataRegistry implements GameData {
   product(id: string): ProductDef | undefined { return this.maps.product.get(id); }
   cosmetic(id: string): CosmeticDef | undefined { return this.maps.cosmetic.get(id); }
   expedition(id: string): ExpeditionDef | undefined { return this.maps.expedition.get(id); }
+  achievement(id: string): AchievementDef | undefined { return this.maps.achievement.get(id); }
   tier(index: number): TierDef { return this.tiers[Math.max(0, Math.min(this.tiers.length - 1, index))]; }
   invasion(tier: number): InvasionDef {
     let best = this.invasions[0];
@@ -205,6 +211,7 @@ export function defaultData(): GameData {
     balance: BALANCE,
     expeditions: EXPEDITIONS,
     expeditionRules: EXPEDITION_RULES,
+    achievements: ACHIEVEMENTS,
   };
 }
 
