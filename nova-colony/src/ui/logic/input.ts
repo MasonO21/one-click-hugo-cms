@@ -118,6 +118,92 @@ export function edgePointRect(vx: number, vy: number, rect: SafeRect): { x: numb
   return { x: cx + vx * t, y: cy + vy * t, angle: Math.atan2(vy, vx) };
 }
 
+/** Off-screen threat markers: half their size plus the count badge that sticks out (styles/fx.css `.threat-edge`). */
+export const THREAT_MARKER_PAD = 26;
+
+/**
+ * The rectangle threat markers run along: clear of the right-hand rail and context button, the dock below and the
+ * banners above (`top`). Mirrored for left-handed play, where the rail and the buttons move to the left.
+ */
+export function threatSafeRect(vw: number, vh: number, top: number, leftHanded: boolean): SafeRect {
+  return leftHanded ? { l: 108, t: top, r: vw - 40, b: vh - 100 } : { l: 40, t: top, r: vw - 108, b: vh - 100 };
+}
+
+/**
+ * Where a thumb lands to walk: the joystick's side of the screen (`inStickZone`: 40% of the width, and at least the
+ * whole hint ring) from a little above the ring down to the bottom edge. `ring` is the hint ring's screen rect (null:
+ * not laid out, assume the lower 38% of the screen).
+ */
+export function joystickZone(vw: number, vh: number, ring: SafeRect | null, leftHanded: boolean): SafeRect {
+  const top = ring ? ring.t - (ring.b - ring.t) * 0.25 : vh * 0.62;
+  if (leftHanded) return { l: Math.min(vw * 0.6, ring ? ring.l : vw), t: top, r: vw, b: vh };
+  return { l: 0, t: top, r: Math.max(vw * 0.4, ring ? ring.r : 0), b: vh };
+}
+
+/**
+ * Slide a point on the edge of `rect` along that edge until a marker of half-size `pad` centred there overlaps none
+ * of the `avoid` rectangles (the joystick's thumb zone, the HUD column), the shorter way round. The point comes back
+ * unchanged when it is already clear, or when the avoid zones cover the whole edge. Pure: see tests/ui.input.test.ts.
+ */
+export function slideAlongRect(x: number, y: number, rect: SafeRect, avoid: readonly SafeRect[], pad: number): { x: number; y: number; moved: boolean } {
+  const { l, t, r, b } = rect;
+  const W = Math.max(0, r - l);
+  const H = Math.max(0, b - t);
+  const P = 2 * (W + H);
+  if (P <= 0 || !avoid.length) return { x, y, moved: false };
+  // perimeter position, clockwise from the top-left corner: top, right, bottom, left edge
+  const dist = [Math.abs(y - t), Math.abs(x - r), Math.abs(y - b), Math.abs(x - l)];
+  const edge = dist.indexOf(Math.min(...dist));
+  const s0 = edge === 0 ? clamp(x - l, 0, W) : edge === 1 ? W + clamp(y - t, 0, H) : edge === 2 ? W + H + clamp(r - x, 0, W) : 2 * W + H + clamp(b - y, 0, H);
+  // the stretches of the perimeter a marker centre must not be on (inside a zone grown by `pad`)
+  const iv: [number, number][] = [];
+  const span = (lo: number, hi: number, base: number, flip: number): void => {
+    if (hi <= lo) return;
+    iv.push(flip ? [base + flip - hi, base + flip - lo] : [base + lo, base + hi]);
+  };
+  for (const a of avoid) {
+    const e = { l: a.l - pad, t: a.t - pad, r: a.r + pad, b: a.b + pad };
+    if (e.t < t && t < e.b) span(Math.max(l, e.l) - l, Math.min(r, e.r) - l, 0, 0);
+    if (e.l < r && r < e.r) span(Math.max(t, e.t) - t, Math.min(b, e.b) - t, W, 0);
+    if (e.t < b && b < e.b) span(Math.max(l, e.l) - l, Math.min(r, e.r) - l, W + H, W);
+    if (e.l < l && l < e.r) span(Math.max(t, e.t) - t, Math.min(b, e.b) - t, 2 * W + H, H);
+  }
+  if (!iv.length) return { x, y, moved: false };
+  iv.sort((p, q) => p[0] - q[0]);
+  const merged: [number, number][] = [];
+  for (const [lo, hi] of iv) {
+    const last = merged[merged.length - 1];
+    if (last && lo <= last[1] + 1e-6) last[1] = Math.max(last[1], hi);
+    else merged.push([lo, hi]);
+  }
+  // a stretch through the top-left corner (the end of the left edge meets the start of the top edge)
+  if (merged.length > 1 && merged[0][0] <= 1e-6 && merged[merged.length - 1][1] >= P - 1e-6) {
+    const first = merged.shift()!;
+    merged[merged.length - 1][1] = P + first[1];
+  } else if (merged.length === 1 && merged[0][0] <= 1e-6 && merged[0][1] >= P - 1e-6) {
+    return { x, y, moved: false }; // nowhere to go
+  }
+  const hit = merged.find(([lo, hi]) => (s0 > lo + 1e-6 && s0 < hi - 1e-6) || (s0 + P > lo + 1e-6 && s0 + P < hi - 1e-6));
+  if (!hit) return { x, y, moved: false };
+  const s = s0 > hit[0] && s0 < hit[1] ? s0 : s0 + P;
+  const to = hit[1] - s <= s - hit[0] ? hit[1] : hit[0];
+  let u = ((to % P) + P) % P;
+  let px: number;
+  let py: number;
+  if (u <= W) [px, py] = [l + u, t];
+  else if ((u -= W) <= H) [px, py] = [r, t + u];
+  else if ((u -= H) <= W) [px, py] = [r - u, b];
+  else [px, py] = [l, b - (u - W)];
+  return { x: px, y: py, moved: true };
+}
+
+/** `edgePointRect`, then slid clear of the `avoid` zones (`slideAlongRect`). The angle still points at the target. */
+export function edgePointAvoiding(vx: number, vy: number, rect: SafeRect, avoid: readonly SafeRect[], pad: number): { x: number; y: number; angle: number; moved: boolean } {
+  const e = edgePointRect(vx, vy, rect);
+  const p = slideAlongRect(e.x, e.y, rect, avoid, pad);
+  return { x: p.x, y: p.y, angle: e.angle, moved: p.moved };
+}
+
 /** Is a pointer gesture short & still enough to count as a tap? */
 export function isTap(dist: number, ms: number): boolean {
   return dist < 12 && ms < 320;

@@ -2,10 +2,12 @@
  * Threats — off-screen invasion indicators. A big late-game colony fights at its walls, far from the
  * camera: red edge markers point at each attacking group ("👾 12", "💀" when a boss is in it) and at
  * where the next spawns will appear, so the player always knows where the action is. Tapping one
- * swings the camera over for a look.
+ * swings the camera over for a look. A marker never sits where a thumb lands to walk (the joystick's corner) nor
+ * under the mission card: it slides along the screen edge around them (logic/input.ts `edgePointAvoiding`), its
+ * arrow still pointing at the attackers.
  */
 import type { UiCtx } from '../ctx';
-import { edgePointRect, relativeScreenDir } from '../logic/input';
+import { edgePointAvoiding, joystickZone, relativeScreenDir, THREAT_MARKER_PAD, threatSafeRect, type SafeRect } from '../logic/input';
 import { h, setClass } from '../dom';
 import { CELL } from '../../core/constants';
 import { alienArt } from '../art';
@@ -111,13 +113,27 @@ export class Threats {
     }
     const center = game.sys.buildings.colonyCenter();
     this.groups = this.pts.length ? threatGroups(this.pts, center.x, center.z).slice(0, MAX_MARKERS) : [];
+    if (!this.groups.length) return;
     // keep the markers below the attack banner / hint bubble column
-    const banners = this.groups.length ? this.ctx.root.querySelector('.hud-banners') : null;
+    const root = this.ctx.root;
+    const banners = root.querySelector('.hud-banners');
     const bottom = banners ? banners.getBoundingClientRect().bottom : 0;
     this.top = Math.max(130, window.innerHeight * 0.22, bottom + 30);
+    // ...and out of the joystick's thumb zone (a marker is a button: it would take the touch meant for walking) and
+    // from under the mission card column
+    const rect = (el: Element | null): SafeRect | null => {
+      const b = el?.getBoundingClientRect();
+      return b && b.width > 0 && b.height > 0 ? { l: b.left, t: b.top, r: b.right, b: b.bottom } : null;
+    };
+    const left = game.state.settings.leftHanded;
+    this.avoid = [joystickZone(window.innerWidth, window.innerHeight, rect(root.querySelector('.stick-hint')), left)];
+    const column = rect(root.querySelector('.hud-left'));
+    if (column) this.avoid.push(column);
   }
 
   private top = 130;
+  /** Screen rects the markers stay out of (refreshed with the groups, ≈4 Hz). */
+  private avoid: SafeRect[] = [];
 
   /** Every frame: place the markers on the screen edge (hidden while the group is in view). */
   frame(): void {
@@ -144,7 +160,7 @@ export class Threats {
       m.x = g.x;
       m.z = g.z;
       const v = relativeScreenDir(g.x - ox, g.z - oz, cam.yaw);
-      const e = edgePointRect(v.x, v.y, { l: 40, t: top, r: vw - 108, b: vh - 100 });
+      const e = edgePointAvoiding(v.x, v.y, threatSafeRect(vw, vh, top, game.state.settings.leftHanded), this.avoid, THREAT_MARKER_PAD);
       // neighbouring sectors can land on the same edge spot: show only the bigger group there
       if (placed.some((q) => Math.abs(q.x - e.x) < 52 && Math.abs(q.y - e.y) < 52)) {
         setClass(m.el, 'on', false);
