@@ -407,6 +407,27 @@ describe('missions: persistence & repair', () => {
     const g2 = makeGame({ state: JSON.parse(JSON.stringify(game.state)), at: g.clock.now });
     expect(g2.game.state.missions.active).toContain('s_grid_geo');
     expect(g2.game.state.missions.active).not.toContain('s_grid_solar');
+
+    // a step already on the board stays there however far the colony moves on
+    tierUp(6);
+    expect(st.active).toContain('s_grid_geo');
+    claimNow('s_grid_geo');
+    expect(st.active).toContain('s_grid_mega');
+  });
+
+  it('a colony far past a chain picks it up at the first step that still fits its tier', () => {
+    const { game } = makeGame();
+    const st = game.state.missions;
+    game.state.colony.tier = 6;
+    game.bus.emit('colony:tierUp', { tier: 6 });
+    const late = game.sys.missions.activeByChain('side').filter((d) => d.minTier).map((d) => d.id).sort();
+    expect(late).toEqual(['s_fort_veteran', 's_grid_mega', 's_home_nano', 's_ind_matter', 's_sci_ten', 's_veh_rover']);
+    // skipped steps are not marked completed (no reward was paid for them)
+    expect(st.completed).not.toContain('s_grid_solar');
+    // finales are never skipped, and the chain carries on normally from where it was picked up
+    st.progress.s_grid_mega = game.data.mission('s_grid_mega')!.count;
+    expect(game.sys.missions.claim('s_grid_mega')).toBe(true);
+    expect(st.active).toContain('s_grid_core');
   });
 
   it('a gated mission gets credit for what the colony already has when it opens', () => {

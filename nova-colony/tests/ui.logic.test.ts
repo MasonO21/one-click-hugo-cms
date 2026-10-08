@@ -12,7 +12,8 @@ import { MAP_MAX_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, regio
 import { BUILD_CATEGORIES, NODE_H, NODE_W, layoutTree } from '../src/ui/logic/categories';
 import { claimableMissions, claimableSeason, computeBadges, idleWithJobs } from '../src/ui/logic/badges';
 import { happinessFace, portraitSvg, stars } from '../src/ui/logic/colonist';
-import type { ResearchDef } from '../src/data/schema';
+import type { MissionDef, ResearchDef } from '../src/data/schema';
+import { sideOrder } from '../src/ui/logic/missionOrder';
 
 function mkGame(): Game {
   let now = 1_700_000_000_000;
@@ -330,5 +331,14 @@ describe('Welcome Back worked-time line (QA3: "kept busy for 3h 37m" after a 4h 
   it('an absence past the cap names the capped wall-clock time', () => {
     const cap = 8 * 3600;
     expect(offlineWorkedText(20 * 3600, cap * 0.8, 0.8, fmt)).toBe(`Your colony kept busy for ${cap / 60}m while you were gone:`);
+  });
+});
+
+describe('ui.logic — side mission order', () => {
+  const m = (id: string, minTier?: number) => ({ id, minTier }) as unknown as MissionDef;
+  it('claimable first, then the newest tier, then board order', () => {
+    const list = [m('a'), m('b'), m('c', 3), m('d', 5), m('e', 3)];
+    expect(sideOrder(list, new Set(['b'])).map((x) => x.id)).toEqual(['b', 'd', 'c', 'e', 'a']);
+    expect(sideOrder(list, new Set()).map((x) => x.id)).toEqual(['d', 'c', 'e', 'a', 'b']);
   });
 });

@@ -183,7 +183,8 @@ export class MissionSystem extends System {
       console.error('[missions] reward grant failed', id, e);
     }
     this.game.bus.emit('mission:claimed', { id });
-    for (const next of def.next ?? []) if (def.chain !== 'side' || this.sideUnlocked(next)) this.activate(next);
+    if (def.chain === 'side') this.offerSide();
+    else for (const next of def.next ?? []) this.activate(next);
     this.rebuildIndex();
     return true;
   }
@@ -255,12 +256,23 @@ export class MissionSystem extends System {
     this.offerSide();
   }
 
-  /** Activate every side mission that is reachable now and not yet done (fresh game, load, tier-up). */
+  /** Activate every side mission that is reachable now and not yet done (fresh game, load, tier-up, side claim). */
   private offerSide(): void {
     const m = this.game.state.missions;
     for (const d of this.game.data.missions) {
-      if (d.chain === 'side' && !m.completed.includes(d.id) && this.sideUnlocked(d.id)) this.activate(d.id);
+      if (d.chain === 'side' && !m.completed.includes(d.id) && !this.outgrown(d) && this.sideUnlocked(d.id)) this.activate(d.id);
     }
+  }
+
+  /**
+   * A tier-gated chain step the colony has left two or more tiers behind, never started and not the chain's
+   * finale: it is skipped (the chain carries on from the next step), so a Titanium colony picking a chain up late
+   * is not sent back to build six Steel-tier Solar Panels. Steps already on the board are never taken away.
+   */
+  private outgrown(d: MissionDef): boolean {
+    if (d.minTier == null || !d.next?.length || this.game.state.colony.tier < d.minTier + 2) return false;
+    const m = this.game.state.missions;
+    return !m.active.includes(d.id) && !m.completed.includes(d.id);
   }
 
   /**
@@ -276,7 +288,7 @@ export class MissionSystem extends System {
     for (const d of this.game.data.missions) {
       if (d.chain !== 'side' || !d.next?.includes(id)) continue;
       hasParent = true;
-      if (m.completed.includes(d.id)) return true;
+      if (m.completed.includes(d.id) || this.outgrown(d)) return true;
     }
     return !hasParent;
   }

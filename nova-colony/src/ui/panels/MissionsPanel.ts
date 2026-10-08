@@ -6,6 +6,7 @@ import type { MissionDef } from '../../data/schema';
 import { fmt } from '../../core/format';
 import { fmtLong, msUntilLocalMidnight } from '../logic/time';
 import { claimableMissions } from '../logic/badges';
+import { sideOrder } from '../logic/missionOrder';
 import { bar, btn, emptyState, rewardChips, tabs } from '../widgets';
 import { fill, h } from '../dom';
 import { hudArt } from '../art';
@@ -43,7 +44,8 @@ export class MissionsPanel extends Panel {
     const g = this.game;
     const ms = g.sys.missions;
     if (tab === 'daily') return g.state.missions.daily.map((id) => this.data.mission(id)).filter((m): m is MissionDef => !!m);
-    return ms.active().filter((m) => m.chain === tab);
+    const list = ms.active().filter((m) => m.chain === tab);
+    return tab === 'side' ? sideOrder(list, new Set(claimableMissions(g))) : list;
   }
 
   render(): void {
