@@ -350,7 +350,7 @@ const HOURS = Number(process.argv[3] || 8);
               const n = tiles.filter((t) => t.kind === 'node' && !t.gone && !t.busy).sort((a, b) => b.lvl - a.lvl)[0];
               const pool = Object.values(KH.capTroops(S.troops, KH.marchCap(), S.formation)).reduce((a, b) => a + b, 0);
               if (n && pool > 0 && Object.entries(OP.costOf()).every(([k, v]) => S.res[k] >= v * 2)) {
-                UI.wsend = Math.min(1, ((OD.raid.base + OD.raid.perLvl * n.lvl + 0.08) * KH.marchCap()) / pool);
+                UI.wsend = Math.min(1, (Math.max(OD.garrison, (OD.raid.base + OD.raid.perLvl * n.lvl) * 1.3) * KH.marchCap()) / pool);
                 const before = OP.list().length + S.map.marches.length;
                 A.outpost(n.k); UI.sheet = null;
                 if (OP.list().length + S.map.marches.length > before) { op.raised++; if (!ms.outpost1) ms.outpost1 = Math.round(S.time / 60); }

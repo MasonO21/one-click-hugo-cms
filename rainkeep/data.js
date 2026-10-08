@@ -1307,8 +1307,9 @@ const DATA = {
     flooded: 1.5, // a flooded oasis yields this much more
     hold: 8, // hours of yield an outpost keeps before it stops
     garrison: 0.1, // the least of your march cap a garrison may be
-    raid: { every: [14400, 25200], warn: 600, base: 0.18, perLvl: 0.02, wall: 0.08, lossWin: 0.08, lossFall: 0.5 },
-    // a raider band is as strong as (base + perLvl x node level) of your march cap would be; each outpost level
+    raid: { every: [14400, 25200], warn: 600, base: 0.06, perLvl: 0.012, wall: 0.08, lossWin: 0.08, lossFall: 0.5 },
+    // a raider band is as strong as (base + perLvl x node level) of your march cap would be (a tenth to a fifth, so
+    // four garrisons that hold still leave a full march at home, troop housing being twice the march cap); each outpost level
     // gives the garrison +8% defense; a won defence costs 8% of the garrison, a lost one half of it
     win: { starglass: 8, journals: 0.5 }, // per defence, times the node level's share
     warPts: 25, // Oasis Wars points per raid held
