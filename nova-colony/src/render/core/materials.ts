@@ -70,14 +70,24 @@ void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometr
 
 /**
  * Rim: sky light on grazing faces, half tinted by the surface so dark paint does not go chalky.
- * Added to the direct term so the night grade below leaves its blue alone.
+ * Added to the direct term so the night grade below leaves its blue alone. `uRimK` scales it per
+ * material (1 for buildings; foliage keeps a softer glow, see FOLIAGE_RIM) without a second program.
  */
 const RIM_FRAG = /* glsl */ `
 {
   float novaNV = 1.0 - saturate( dot( normal, geometryViewDir ) );
-  reflectedLight.directDiffuse += uRim * ( novaNV * novaNV * novaNV ) * ( 0.4 + 0.6 * diffuseColor.rgb );
+  reflectedLight.directDiffuse += uRim * uRimK * ( novaNV * novaNV * novaNV ) * ( 0.4 + 0.6 * diffuseColor.rgb );
 }
 `;
+
+/**
+ * Rim scale of the nature materials (trees, bushes, rocks, props): the full sky rim turned pine and
+ * canopy silhouettes pale and frosted in close-ups (QA3 #14a); at this fraction foliage keeps a soft
+ * glow on the shadow side without the frost. Buildings and characters keep the full rim.
+ */
+export const FOLIAGE_RIM = 0.45;
+/** Default rim scale (buildings, characters, everything that is not nature). */
+const UNIT_RIM: THREE.IUniform<number> = { value: 1 };
 
 /**
  * three's lit-sum line in meshlambert.glsl, replaced by the grade: the indirect (sky / ambient) light
@@ -105,10 +115,11 @@ export interface LambertUniforms {
 /**
  * Apply the shared shading model to a MeshLambertMaterial's compiled shader: wrapped N·L, the night
  * desaturation grade on the indirect light (sky / ambient — lamp pools, the campfire and the moon
- * keep their colour) and, with `rim`, the sky rim term. Terrain and the slot-aware materials both go
- * through here so the ground and what stands on it are lit and graded the same way.
+ * keep their colour) and, with `rim`, the sky rim term — `true` at full strength, or a per-material
+ * scale uniform (the same program either way). Terrain and the slot-aware materials both go through
+ * here so the ground and what stands on it are lit and graded the same way.
  */
-export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>; fragmentShader: string }, u: LambertUniforms, rim = true): void {
+export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>; fragmentShader: string }, u: LambertUniforms, rim: boolean | THREE.IUniform<number> = true): void {
   shader.uniforms.uDesat = u.desat;
   shader.uniforms.uSat = u.sat;
   shader.fragmentShader = shader.fragmentShader
@@ -117,8 +128,9 @@ export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>;
     .replace(OUTGOING_LINE, OUTGOING_GRADED);
   if (rim) {
     shader.uniforms.uRim = u.rim;
+    shader.uniforms.uRimK = rim === true ? UNIT_RIM : rim;
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
+      .replace('#include <common>', '#include <common>\nuniform vec3 uRim;\nuniform float uRimK;')
       .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>' + RIM_FRAG);
   }
 }
@@ -134,6 +146,8 @@ export interface LitVariant {
   /** Fade uniform for `dither: 'uniform'`. */
   uFade?: THREE.IUniform<number>;
   shrink?: ShrinkBand;
+  /** Rim scale uniform (lit variants; default full strength). Does not change the program. */
+  rim?: THREE.IUniform<number>;
 }
 
 /** Shadow windows are scaled by this: a caster's shadow vanishes at fade 0.8 instead of 1. */
@@ -221,10 +235,14 @@ export class Materials {
   private readonly uLod = { value: new THREE.Vector4(1e9, 1, 1e9, 1) };
   /** Cloud shadow (1 / cloud radius, core density); see setCloudShadow. */
   private readonly uCloudShadow = { value: new THREE.Vector2(1 / 8, CLOUD_SHADOW_DENSITY) };
+  /** Rim scale shared by the nature materials (see FOLIAGE_RIM). */
+  private readonly uRimNature: THREE.IUniform<number> = { value: FOLIAGE_RIM };
   /** Opaque, lit, vertex-colored, slot-aware. */
   readonly lit: THREE.MeshLambertMaterial;
   /** Alias kept for callers that think in "material sets" — it is the same single material. */
   readonly set: THREE.Material;
+  /** `lit` with the softer foliage rim: near nature nodes (the LOD variants below carry it too). Same program as `lit`. */
+  readonly nature: THREE.MeshLambertMaterial;
   /** `lit` + per-instance dither fade (buildings that occlude the player). */
   readonly litFade: THREE.MeshLambertMaterial;
   /** Shadow-pass twin of `litFade`. */
@@ -260,15 +278,17 @@ export class Materials {
   constructor() {
     this.lit = this.makeLit();
     this.set = this.lit;
+    const rim = this.uRimNature;
+    this.nature = this.makeLit({}, { rim });
     this.litFade = this.makeLit({}, { dither: 'attr' });
     this.litFadeDepth = this.makeDepth({ dither: 'attr' });
-    this.lodNear = this.makeLit({}, { dither: 'lodNear' });
+    this.lodNear = this.makeLit({}, { dither: 'lodNear', rim });
     this.lodNearDepth = this.makeDepth({ dither: 'lodNear' });
-    this.lodFar = this.makeLit({}, { dither: 'lodFar' });
+    this.lodFar = this.makeLit({}, { dither: 'lodFar', rim });
     this.lodFarDepth = this.makeDepth({ dither: 'lodFar' });
-    this.lodShrinkMid = this.makeLit({}, { shrink: 'mid' });
+    this.lodShrinkMid = this.makeLit({}, { shrink: 'mid', rim });
     this.lodShrinkMidDepth = this.makeDepth({ shrink: 'mid' });
-    this.lodShrinkNear = this.makeLit({}, { shrink: 'near' });
+    this.lodShrinkNear = this.makeLit({}, { shrink: 'near', rim });
     this.lodShrinkNearDepth = this.makeDepth({ shrink: 'near' });
     this.cloudDepth = this.makeDepth({ dither: 'cloud' });
   }
@@ -305,7 +325,7 @@ export class Materials {
       shader.uniforms.uGlow = uGlow;
       shader.uniforms.uGlass = uGlass;
       this.variantUniforms(shader, variant);
-      patchLambert(shader, this.lambert);
+      patchLambert(shader, this.lambert, variant.rim ?? true);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nattribute float aSlot;\nvarying float vSlot;' + variantVertexPars(variant))
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSlot = aSlot;\n' + variantVertexMain(variant));

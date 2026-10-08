@@ -21,6 +21,9 @@
  * mid cutoff instead of popping or stippling at the horizon; props (near only, `lodShrinkNear`)
  * sink away the same way over the band below the near radius.
  *
+ * All nature batches use the materials with the softer foliage rim (`mats.nature` and the LOD
+ * variants, see materials FOLIAGE_RIM): the same programs as the buildings, one uniform apart.
+ *
  * Gather hits wobble the node and throw chips; depletion plays a shrink-pop before the node disappears.
  * Solid nodes standing between the camera and the player (or the build ghost) shrink out of the way
  * and grow back so trees and boulders never hide what matters.
@@ -364,7 +367,7 @@ export class Nature {
           this.nodeMatrix(n, _m, w, this.fades.get(i) ?? 0);
           const tint = natureTint(i);
           if (cls !== LOD_FAR) {
-            const batch = cls === LOD_NEAR ? this.batch('n:' + model, () => nodeGeometry(model), mats.set, NODE_OPTS) : this.batch('tn:' + model, () => nodeGeometry(model), mats.lodNear, this.nearBandOpts);
+            const batch = cls === LOD_NEAR ? this.batch('n:' + model, () => nodeGeometry(model), mats.nature, NODE_OPTS) : this.batch('tn:' + model, () => nodeGeometry(model), mats.lodNear, this.nearBandOpts);
             this.nodeSlot[i] = batch.count;
             this.nodeBatch[i] = batch;
             batch.push(_m, tint);

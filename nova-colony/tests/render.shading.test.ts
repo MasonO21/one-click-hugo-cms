@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { Materials, patchLambert, LAMBERT_WRAP, NIGHT_DESAT, CLOUD_SHADOW_DENSITY, CLOUD_SHADOW_CORE, SHADOW_FADE_GAIN } from '../src/render/core/materials';
+import { Materials, patchLambert, LAMBERT_WRAP, NIGHT_DESAT, CLOUD_SHADOW_DENSITY, CLOUD_SHADOW_CORE, SHADOW_FADE_GAIN, FOLIAGE_RIM } from '../src/render/core/materials';
 import { wornColor, wearSignature } from '../src/render/scene/Terrain';
 import { Atmosphere, KEY_SWAP_E } from '../src/render/scene/Atmosphere';
 import type { Env, RenderContext } from '../src/render/core/context';
@@ -167,6 +167,37 @@ describe('key light at dusk / dawn (QA3: every shadow flipped 180° in one frame
     expect(key(0.5).i).toBeCloseTo(2.2, 1);
     expect(key(0).i).toBeCloseTo(0.46, 2);
     atmo.dispose();
+  });
+});
+
+describe('foliage rim (QA3 #14a: canopies frosted in close-ups)', () => {
+  const VERT = '#include <common>\n#include <begin_vertex>';
+  const compile = (m: THREE.MeshLambertMaterial) => {
+    const shader = { uniforms: {} as Record<string, THREE.IUniform>, vertexShader: VERT, fragmentShader: FRAG + '\n#include <clipping_planes_fragment>' };
+    m.onBeforeCompile!(shader as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
+    return shader;
+  };
+  it('patchLambert scales the rim by a per-material uniform: full for buildings, FOLIAGE_RIM for every nature material', () => {
+    const mats = new Materials();
+    const k: THREE.IUniform<number> = { value: 0.3 };
+    const scaled = { uniforms: {} as Record<string, THREE.IUniform>, fragmentShader: FRAG };
+    patchLambert(scaled, mats.lambert, k);
+    expect(scaled.uniforms.uRimK).toBe(k);
+    expect(scaled.fragmentShader).toContain('uniform float uRimK');
+    expect(scaled.fragmentShader).toContain('uRim * uRimK *');
+    const full = { uniforms: {} as Record<string, THREE.IUniform>, fragmentShader: FRAG };
+    patchLambert(full, mats.lambert);
+    expect(full.uniforms.uRimK.value).toBe(1);
+    expect(full.fragmentShader).toBe(scaled.fragmentShader); // identical code: one program, the scale is a uniform
+
+    expect(FOLIAGE_RIM).toBeGreaterThan(0.3);
+    expect(FOLIAGE_RIM).toBeLessThan(0.7);
+    expect(compile(mats.lit).uniforms.uRimK.value).toBe(1);
+    expect(compile(mats.litFade).uniforms.uRimK.value).toBe(1);
+    for (const m of [mats.nature, mats.lodNear, mats.lodFar, mats.lodShrinkMid, mats.lodShrinkNear]) expect(compile(m).uniforms.uRimK.value).toBe(FOLIAGE_RIM);
+    // the nature material is the building material one uniform apart: same program cache key
+    expect(mats.nature.customProgramCacheKey()).toBe(mats.lit.customProgramCacheKey());
+    expect(compile(mats.nature).fragmentShader).toBe(compile(mats.lit).fragmentShader);
   });
 });
 
