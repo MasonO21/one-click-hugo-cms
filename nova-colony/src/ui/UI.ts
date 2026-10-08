@@ -14,6 +14,7 @@ import './styles/build.css';
 import './styles/screens.css';
 import './styles/modals.css';
 import './styles/art.css';
+import './styles/expeditions.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -64,6 +65,7 @@ import { VictoryPanel } from './panels/VictoryPanel';
 import { MerchantPanel } from './panels/MerchantPanel';
 import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
+import { ExpeditionsPanel } from './panels/ExpeditionsPanel';
 import { backAction } from './logic/back';
 import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
@@ -94,7 +96,7 @@ export class UI {
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
 
-  private badgesCache: Badges = { missions: 0, research: 0, daily: false, spin: false, crate: false, season: 0, colonists: 0 };
+  private badgesCache: Badges = { missions: 0, research: 0, daily: false, spin: false, crate: false, season: 0, colonists: 0, expeditions: 0 };
   private accSlow = 0;
   private accFps = 0;
   private lastClick = { x: 0, y: 0, t: -1e9 };
@@ -269,6 +271,7 @@ export class UI {
     reg('celebrate', (c) => new CelebratePanel(c));
     reg('reward', (c) => new RewardPanel(c));
     reg('menu', (c) => new MenuPanel(c));
+    reg('expeditions', (c) => new ExpeditionsPanel(c));
   }
 
   // ================================================================== services
@@ -612,6 +615,13 @@ export class UI {
       const lead = `${d.icon} ${d.name}`;
       const src = eventArt(d.kind);
       if (src && text.startsWith(lead)) return { text: text.slice(d.icon.length + 1), icon: src };
+    }
+    // "🧭 Your squad is back from Wreck Salvage! …": the destination's painted icon
+    const back = /back from (.+?)! Collect/.exec(text);
+    if (back) {
+      const def = g.data.expeditions.find((d) => d.name === back[1]);
+      const src = def ? poiArt(def.poi) : null;
+      if (src) return { text: text.replace(/^🧭 /, ''), icon: src };
     }
     for (const d of g.data.pois) {
       const lead = `${d.icon} ${d.name}`;

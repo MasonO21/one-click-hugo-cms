@@ -8,9 +8,10 @@ import { RARITY_COLOR, cap } from '../logic/rewards';
 import { happinessFace, jobOf, stars } from '../logic/colonist';
 import { bar, btn, emptyState, portrait, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
+import { fmtLong } from '../logic/time';
 import { buildingIcon, hudArt, professionArt } from '../art';
 
-type Filter = 'all' | 'idle' | 'working';
+type Filter = 'all' | 'idle' | 'working' | 'away';
 
 export class ColonistsPanel extends Panel {
   readonly name = 'colonists';
@@ -56,7 +57,7 @@ export class ColonistsPanel extends Panel {
 
   override signature(): string {
     const list = this.game.state.colonists.list;
-    const sum = list.reduce((a, c) => a + Math.round(c.happiness) + c.skill * 3 + (c.workplace ?? 0) * 7, 0);
+    const sum = list.reduce((a, c) => a + Math.round(c.happiness) + c.skill * 3 + (c.workplace ?? 0) * 7 + (c.away ? 11 : 0), 0);
     return `${list.length}|${sum}|${this.detail}|${this.filter}|${Math.round(this.game.derived.happiness.average)}`;
   }
 
@@ -75,6 +76,10 @@ export class ColonistsPanel extends Panel {
   // ---------------------------------------------------------------- list
 
   private jobText(c: Colonist): string {
+    if (c.away) {
+      const trip = this.game.sys.expeditions.tripOf(c.id);
+      return trip ? `🧭 On an expedition · ${this.game.sys.expeditions.nameOf(trip)}` : '🧭 On an expedition';
+    }
     if (c.workplace == null) return 'Idle — tap to assign a job';
     const b = this.game.sys.buildings.get(c.workplace);
     const d = b ? this.data.building(b.def) : undefined;
@@ -102,13 +107,15 @@ export class ColonistsPanel extends Panel {
       wrap.appendChild(emptyState('🏕️', 'No colonists yet', 'Rescue a survivor or recruit one from the board — they will work and keep you company!'));
       return wrap;
     }
-    const idle = all.filter((c) => c.workplace == null).length;
+    const away = all.filter((c) => c.away).length;
+    const idle = all.filter((c) => c.workplace == null && !c.away).length;
     wrap.appendChild(
       tabs(
         [
           { id: 'all', label: `All ${all.length}` },
           { id: 'idle', label: `Idle ${idle}` },
-          { id: 'working', label: `Working ${all.length - idle}` },
+          { id: 'working', label: `Working ${all.length - idle - away}` },
+          ...(away ? [{ id: 'away', label: `🧭 Away ${away}` }] : []),
         ],
         this.filter,
         (id) => {
@@ -117,7 +124,8 @@ export class ColonistsPanel extends Panel {
         },
       ),
     );
-    const list = all.filter((c) => (this.filter === 'idle' ? c.workplace == null : this.filter === 'working' ? c.workplace != null : true));
+    if (this.filter === 'away' && !away) this.filter = 'all';
+    const list = all.filter((c) => (this.filter === 'idle' ? c.workplace == null && !c.away : this.filter === 'working' ? c.workplace != null : this.filter === 'away' ? !!c.away : true));
     const grid = h('div', { class: 'grid col-list' });
     for (const c of list) grid.appendChild(this.row(c));
     wrap.appendChild(grid);
@@ -136,7 +144,7 @@ export class ColonistsPanel extends Panel {
         { class: 'grow ct' },
         h('div', { class: 'cn' }, c.name, c.rarity !== 'common' ? h('span', { class: 'pill', style: { background: RARITY_COLOR[c.rarity] }, text: c.rarity }) : null),
         h('div', { class: 'cs' }, h('span', { class: 'stars', text: stars(c.skill) }), ` ${prof?.icon ?? ''} ${prof?.name ?? c.specialty}`),
-        h('div', { class: 'cj ' + (c.workplace == null ? 'idle' : ''), text: this.jobText(c) }),
+        h('div', { class: 'cj ' + (c.away ? 'away' : c.workplace == null ? 'idle' : ''), text: this.jobText(c) }),
         h('div', { class: 'ch' }, h('span', { text: face.icon }), bar(c.happiness / 100, 'thin ' + (c.happiness >= 60 ? 'good' : c.happiness >= 40 ? 'orange' : 'red'))),
       ),
     );
@@ -186,7 +194,22 @@ export class ColonistsPanel extends Panel {
       wrap.appendChild(list);
     }
 
-    // job
+    // job (or the trip they are on)
+    if (c.away) {
+      const ex = g.sys.expeditions;
+      const trip = ex.tripOf(c.id);
+      wrap.appendChild(section('Expedition'));
+      wrap.appendChild(
+        h(
+          'div',
+          { class: 'card tint' },
+          h('div', { class: 'h3', text: trip ? `🧭 Exploring ${ex.nameOf(trip)}` : '🧭 Out exploring' }),
+          h('div', { class: 'mute small', text: trip ? `Back in ${fmtLong(ex.secondsLeft(trip))}. Their bed is kept warm and their job is waiting for them.` : 'Back soon.' }),
+          btn({ label: '🧭 Open Expeditions', cls: 'info small', onClick: () => this.ctx.open('expeditions') }),
+        ),
+      );
+      return wrap;
+    }
     wrap.appendChild(section('Job'));
     const jobCard = h('div', { class: 'card' });
     jobCard.appendChild(h('div', { class: 'h3', text: this.jobText(c) }));

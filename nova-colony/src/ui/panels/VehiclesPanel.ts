@@ -21,7 +21,8 @@ export class VehiclesPanel extends Panel {
       const r = this.recipeFor(v);
       return r ? `${cr.canCraft(r.id).ok ? 1 : 0}${this.queued(r.id) ? 'q' : ''}` : '-';
     });
-    return `${p.vehicles.join(',')}|${p.vehicle}|${this.st.colony.tier}|${this.st.research.completed.length}|${craftable.join('')}`;
+    const away = p.vehicles.filter((v) => this.game.sys.expeditions.vehicleAway(v)).join(',');
+    return `${p.vehicles.join(',')}|${p.vehicle}|${this.st.colony.tier}|${this.st.research.completed.length}|${craftable.join('')}|${away}`;
   }
 
   private recipeFor(v: VehicleDef) {
@@ -72,7 +73,9 @@ export class VehiclesPanel extends Panel {
         h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'h3', text: v.name }), h('div', { class: 'chips' }, h('span', { class: 'chip good', text: `⚡ ${v.speed.toFixed(1)}× speed` }), h('span', { class: 'chip info', text: `🎒 +${v.storage}` })))),
         h('div', { class: 'mute small', text: v.description }),
       );
-      if (owned) {
+      if (owned && g.sys.expeditions.vehicleAway(v.id)) {
+        card.appendChild(btn({ label: '🧭 On an expedition', cls: 'ghost block', disabled: 'It is out with a squad: it will be back with them', onClick: () => this.ctx.open('expeditions') }));
+      } else if (owned) {
         card.appendChild(
           btn({
             label: riding ? 'Get off' : 'Ride',

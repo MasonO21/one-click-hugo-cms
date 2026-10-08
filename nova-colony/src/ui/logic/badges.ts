@@ -1,5 +1,6 @@
 /** Notification badge computation for the HUD rail (claimable missions, free spin, research...). */
 import type { Game } from '../../core/Game';
+import { expeditionBadge } from './expeditions';
 
 export interface Badges {
   missions: number;
@@ -10,6 +11,8 @@ export interface Badges {
   season: number;
   /** Idle colonists that could take an open job. */
   colonists: number;
+  /** Expedition hauls waiting to be collected + Star Chart milestones to claim. */
+  expeditions: number;
 }
 
 export function claimableMissions(game: Game): string[] {
@@ -32,7 +35,7 @@ export function claimableSeason(game: Game): number {
 
 /** Idle colonists that could be put to work in a building with a free slot. */
 export function idleWithJobs(game: Game): number {
-  const idle = game.state.colonists.list.filter((c) => c.workplace == null).length;
+  const idle = game.state.colonists.list.filter((c) => c.workplace == null && !c.away).length;
   if (!idle) return 0;
   let slots = 0;
   for (const b of game.state.buildings.list) {
@@ -55,5 +58,6 @@ export function computeBadges(game: Game): Badges {
     crate: lo.freeCrateReady() && lo.offersUnlocked(),
     season: claimableSeason(game),
     colonists: idleWithJobs(game),
+    expeditions: expeditionBadge(game),
   };
 }

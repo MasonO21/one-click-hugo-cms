@@ -9,7 +9,8 @@ import { fmt, fmtSigned } from '../../core/format';
 import { clockText, dayPhase, fmtHMS } from '../logic/time';
 import { happinessFace } from '../logic/colonist';
 import { bigNum } from '../widgets';
-import { artOrEmoji, hudIcon, phaseArt, iconEl, preloadResourceArt, resIcon, tierArt } from '../art';
+import { artOrEmoji, buildingArt, hudIcon, phaseArt, iconEl, preloadResourceArt, resIcon, tierArt } from '../art';
+import { hudExpedition } from '../logic/expeditions';
 import { fill, h, replay, setClass, setHidden, setText, setVar, safe } from '../dom';
 import { ResourceBar } from './ResourceBar';
 import { InteractButton } from './Interact';
@@ -91,6 +92,9 @@ export class Hud {
   private readonly chipPack: HTMLElement;
   private readonly chipPackV: HTMLElement;
   private readonly chipHp: HTMLElement;
+  /** Expeditions: "Haul ready!" when a squad is back, else the countdown to the next one (hidden with none out). */
+  private readonly chipExp: HTMLElement;
+  private readonly chipExpV: HTMLElement;
   private readonly hpFill: HTMLElement;
   private readonly boostWrap: HTMLElement;
   private readonly statusEl: HTMLElement;
@@ -159,8 +163,12 @@ export class Hud {
 
     this.hpFill = h('i');
     this.chipHp = h('div', { class: 'schip hp static', hidden: true }, hudIcon('health', '❤️', 'ic', 'span'), h('div', { class: 'bar red' }, this.hpFill));
+    this.chipExpV = h('span', { class: 'v' });
+    this.chipExp = h('button', { class: 'schip exp tap', type: 'button', hidden: true, id: 'chip-expedition', 'aria-label': 'Expeditions', data: { sfx: 'ui_click' } }, iconEl(buildingArt('radio_tower'), '🧭', 'ic', 'span'), this.chipExpV);
+    this.chipExp.addEventListener('click', () => ctx.open('expeditions'));
+
     this.boostWrap = h('div', { class: 'row', style: 'display:contents' });
-    const status = h('div', { class: 'hud-status' }, this.chipPop, this.chipPower, chipClock, this.chipDef, this.chipPack, this.chipHp, this.boostWrap);
+    const status = h('div', { class: 'hud-status' }, this.chipPop, this.chipPower, chipClock, this.chipExp, this.chipDef, this.chipPack, this.chipHp, this.boostWrap);
     this.statusEl = status;
 
     // --- rail + dock
@@ -292,6 +300,13 @@ export class Hud {
     setText(this.chipPackV, `${Math.floor(carried)}/${game.sys.player.capacity()}`);
     setClass(this.chipPack, 'warn', carried >= game.sys.player.capacity() * 0.95);
 
+    // expeditions
+    const ex = hudExpedition(game);
+    setHidden(this.chipExp, ex.state === null);
+    setClass(this.chipExp, 'ready', ex.state === 'ready');
+    if (ex.state === 'ready') setText(this.chipExpV, ex.ready > 1 ? `${ex.ready} squads home!` : 'Haul ready!');
+    else if (ex.state === 'out') setText(this.chipExpV, fmtHMS(ex.seconds));
+
     // player hp
     const hp = st.player.hp;
     const maxHp = Math.max(data.balance.playerHp, hp);
@@ -333,7 +348,7 @@ export class Hud {
     };
     set('btn-missions', b.missions);
     set('btn-research', b.research, true);
-    set('btn-menu', (b.daily ? 1 : 0) + (b.spin ? 1 : 0) + b.season);
+    set('btn-menu', (b.daily ? 1 : 0) + (b.spin ? 1 : 0) + b.season + b.expeditions);
     set('btn-shop', b.crate ? 1 : 0, true);
     set('btn-colonists', b.colonists);
   }

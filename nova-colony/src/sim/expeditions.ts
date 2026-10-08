@@ -476,7 +476,7 @@ export class ExpeditionSystem extends System {
     fr.charted.push(charted);
     g.bus.emit('expedition:charted', { site: charted, count: fr.charted.length });
     const m = this.milestones().find((x) => x.count === fr.charted.length);
-    if (m) g.toast(`🌌 Star Chart milestone: ${m.title}! Claim it on the Star Chart.`, 'reward', '🌌');
+    if (m) g.toast(`🏅 Star Chart milestone: ${m.title}! Claim it on the Frontier tab.`, 'reward', '🏅');
     return charted;
   }
 

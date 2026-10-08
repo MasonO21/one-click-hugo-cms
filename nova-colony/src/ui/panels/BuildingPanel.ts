@@ -74,7 +74,7 @@ export class BuildingPanel extends Panel {
     const b = this.inst();
     if (!b) return 'gone';
     const g = this.game;
-    const idle = g.state.colonists.list.filter((c) => c.workplace == null).length;
+    const idle = g.state.colonists.list.filter((c) => c.workplace == null && !c.away).length;
     const afford = this.upgradeCosts(b)
       .map((c) => (c && bagCovers(g.state.resources.amounts, c) ? 1 : 0))
       .join('');
@@ -293,7 +293,8 @@ export class BuildingPanel extends Panel {
   private picker(b: BuildingInstance, d: BuildingDef): HTMLElement {
     const all = this.game.sys.colonists.all();
     const job = d.workers!.job;
-    const sorted = [...all].filter((c) => !b.workers.includes(c.id)).sort((a, z) => Number(z.specialty === job) - Number(a.specialty === job) || Number(a.workplace != null) - Number(z.workplace != null) || z.skill - a.skill);
+    // colonists out on an expedition can't take a job until they are back
+    const sorted = [...all].filter((c) => !b.workers.includes(c.id) && !c.away).sort((a, z) => Number(z.specialty === job) - Number(a.specialty === job) || Number(a.workplace != null) - Number(z.workplace != null) || z.skill - a.skill);
     const box = h('div', { class: 'picker' });
     if (!sorted.length) {
       box.appendChild(emptyState('🧑‍🚀', 'No colonists available', 'Recruit survivors to staff your buildings.'));
@@ -389,6 +390,7 @@ export class BuildingPanel extends Panel {
       n++;
       row.appendChild(btn({ label, cls: cls + ' block', onClick: fn }));
     };
+    if (d.expeditions && b.status !== 'building') add('🧭 Expeditions', 'good', () => this.ctx.open('expeditions'));
     if (d.recruit) add('🧑‍🤝‍🧑 Open recruitment board', 'info', () => this.ctx.open('recruit'));
     if (d.station) add('🛠️ Craft here', 'info', () => this.ctx.open('craft', { station: d.station }));
     if (d.garage) add('🚙 Open garage', 'info', () => this.ctx.open('vehicles'));
