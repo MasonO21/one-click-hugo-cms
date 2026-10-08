@@ -413,9 +413,9 @@ export class WishSystem extends System {
     if (hearts > before && hearts === r.perks.bestFriendsHearts) {
       g.bus.emit('ui:celebrate', { title: 'Best friends!', text: `You and ${name} are best friends now. They will always be a little happier around you.`, icon: '💛' });
     } else if (hearts > before && hearts === r.perks.productivityHearts) {
-      g.toast(`💛 ${name} trusts you completely and works ${Math.round(r.perks.productivity * 100)}% harder!`, 'reward', '💛');
+      g.toast(`${name} trusts you completely and works ${Math.round(r.perks.productivity * 100)}% harder!`, 'reward', '💛');
     } else {
-      g.toast(`💛 ${name} is so happy! Friendship ${hearts}/${r.hearts}`, 'reward', '💛');
+      g.toast(`${name} is so happy! Friendship ${hearts}/${r.hearts}`, 'reward', '💛');
     }
     if (hearts >= r.perks.productivityHearts) g.sys.economy.markDirty(); // productivity perk
   }

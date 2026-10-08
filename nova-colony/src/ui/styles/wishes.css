@@ -81,7 +81,8 @@
 }
 .nv-root .wish-actions .btn {
   flex: 1 1 auto;
-  min-height: 44px;
+  /* never below a 44 px touch target, never smaller than a regular button either */
+  min-height: max(44px, 3.4em);
   min-width: 0;
 }
 

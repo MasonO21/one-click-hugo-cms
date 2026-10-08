@@ -18,7 +18,7 @@ const POOL = 4;
 /** Painted bubble (the UI's `hudArt('wish')`): optional, the canvas bubble stands in until / unless it loads. */
 const BUBBLE_ART = 'art/hud/wish.webp';
 /** World units: bubble size up close, the distance from which it starts to grow, and the fade-out band. */
-const BASE_SIZE = 1.25;
+const BASE_SIZE = 1.45;
 const GROW_FROM = 18;
 const GROW_MAX = 2.4;
 const FADE_FROM = 95;

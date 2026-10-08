@@ -19,6 +19,9 @@ export class ColonistsPanel extends Panel {
   readonly name = 'colonists';
   private detail: number | null = null;
   private filter: Filter = 'all';
+  /** Wishes tab: "12 m away" labels, refreshed in place by live() (a re-render would swallow taps). */
+  private whereEls = new Map<number, HTMLElement>();
+  private whereAcc = 0;
 
   title(): PanelTitle {
     if (this.detail != null) {
@@ -67,11 +70,22 @@ export class ColonistsPanel extends Panel {
     let wish = '';
     for (const w of ws?.open ?? []) wish += `${w.id}.${w.done}.${this.game.sys.wishes.refusal(w) ? 0 : 1},`;
     const hearts = Object.values(ws?.bonds ?? {}).reduce((a, n) => a + n, 0);
-    const near = this.filter === 'wishes' && this.detail == null ? wishRows(this.game).map((r) => r.where).join(',') : '';
-    return `${list.length}|${sum}|${this.detail}|${this.filter}|${Math.round(this.game.derived.happiness.average)}|${wish}|${hearts}|${near}`;
+    return `${list.length}|${sum}|${this.detail}|${this.filter}|${Math.round(this.game.derived.happiness.average)}|${wish}|${hearts}`;
+  }
+
+  /** Distances on the Wishes tab follow the colonists without rebuilding the list. */
+  override live(dt: number): void {
+    this.whereAcc += dt;
+    if (this.whereAcc < 0.5 || !this.whereEls.size) return;
+    this.whereAcc = 0;
+    for (const r of wishRows(this.game)) {
+      const el = this.whereEls.get(r.card.id);
+      if (el && el.textContent !== r.where) el.textContent = r.where;
+    }
   }
 
   render(): void {
+    this.whereEls.clear();
     if (this.detail != null) {
       const c = this.game.sys.colonists.get(this.detail);
       if (c) {
@@ -273,12 +287,13 @@ export class ColonistsPanel extends Panel {
   private heartsRow(id: number): HTMLElement {
     const r = this.data.wishRules;
     const v = heartsView(this.game.sys.wishes.hearts(id), r.hearts, r.perks);
+    const harder = `works ${Math.round(r.perks.productivity * 100)}% harder`;
     const next =
       v.full < r.perks.productivityHearts
-        ? `${r.perks.productivityHearts} hearts: works ${Math.round(r.perks.productivity * 100)}% harder`
+        ? `${r.perks.productivityHearts} hearts: ${harder}`
         : v.full < r.perks.bestFriendsHearts
-          ? `${r.perks.bestFriendsHearts} hearts: best friends, happier for good`
-          : `Works ${Math.round(r.perks.productivity * 100)}% harder · +${r.perks.bestFriendsHappiness} happiness`;
+          ? `Now ${harder} · ${r.perks.bestFriendsHearts} hearts: best friends`
+          : `${harder.charAt(0).toUpperCase()}${harder.slice(1)} · +${r.perks.bestFriendsHappiness} happiness for good`;
     return h(
       'div',
       { class: 'hearts-row', title: `Friendship ${v.full}/${v.max}` },
@@ -331,7 +346,7 @@ export class ColonistsPanel extends Panel {
         'button',
         { class: 'wish-who', type: 'button', data: { colonist: c.id, sfx: 'ui_click' } },
         portrait(c, false, jobOf(g, c)),
-        h('span', { class: 'grow' }, h('b', { text: c.name }), h('small', { text: r.where })),
+        h('span', { class: 'grow' }, h('b', { text: c.name }), this.whereEl(r.card.id, r.where)),
         this.heartsMini(c.id),
       );
       who.addEventListener('click', () => {
@@ -346,6 +361,12 @@ export class ColonistsPanel extends Panel {
     return wrap;
   }
 
+  private whereEl(id: number, text: string): HTMLElement {
+    const el = h('small', { text });
+    this.whereEls.set(id, el);
+    return el;
+  }
+
   /** "Show me": open the right menu at the right card, or swing the camera over and let the arrow point the way. */
   private showMe(id: number): void {
     const g = this.game;
@@ -356,7 +377,7 @@ export class ColonistsPanel extends Panel {
       return;
     }
     this.ctx.close(this.name);
-    if (plan.world && plan.focus) this.ctx.renderer.focus(plan.world.x, plan.world.z);
+    if (plan.focus) this.ctx.renderer.focus(plan.focus.x, plan.focus.z);
     if (plan.panel) this.ctx.open(plan.panel.name, plan.panel.arg);
     g.bus.emit('ui:wishGuide', { id });
   }

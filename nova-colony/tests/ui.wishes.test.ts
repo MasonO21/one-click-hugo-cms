@@ -71,10 +71,15 @@ describe('ui.wishes — the wish card', () => {
     expect(showMePlan(g, force(rig, 'craft_roast', ids[1]))).toEqual({ panel: { name: 'craft', arg: { station: 'campfire' } }, ui: '[data-recipe="r_roast_berries"]' });
     const chat = force(rig, 'chat_story', ids[2]);
     const c = g.sys.colonists.get(chat.colonist)!;
-    expect(showMePlan(g, chat)).toEqual({ world: { x: c.x, z: c.z }, focus: true });
+    const plan = showMePlan(g, chat)!;
+    expect(plan.world).toEqual({ x: c.x, z: c.z });
+    // the camera aims 4 units past them (away from the camera), so they land below the mission card
+    const yaw = g.view.camera.yaw;
+    expect(plan.focus!.x).toBeCloseTo(c.x - Math.sin(yaw) * 4, 6);
+    expect(plan.focus!.z).toBeCloseTo(c.z - Math.cos(yaw) * 4, 6);
     const ex = showMePlan(g, force(rig, 'explore_surprise', ids[3]))!;
     expect(ex.world).toBeTruthy();
-    expect(ex.focus).toBe(true);
+    expect(ex.focus).toBeTruthy();
     expect(showMePlan(g, force(rig, 'give_tea', ids[4]))).toBeNull();
   });
 
@@ -130,7 +135,8 @@ describe('ui.wishes — touch targets', () => {
     const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const m = new RegExp(`(?:^|\\})\\s*${esc}\\s*\\{([^}]*)\\}`, 'm').exec(css);
     if (!m) throw new Error(`no rule for ${selector}`);
-    return Number(/min-height:\s*(\d+)px/.exec(m[1])?.[1] ?? 0);
+    // `min-height: 44px` or `min-height: max(44px, 3.4em)`
+    return Number(/min-height:\s*(?:max\()?(\d+)px/.exec(m[1])?.[1] ?? 0);
   };
 
   it('wish buttons and list rows are at least 44 px tall and wrap instead of scrolling sideways', () => {

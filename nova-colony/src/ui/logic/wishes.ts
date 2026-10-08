@@ -160,8 +160,20 @@ export interface ShowMePlan {
   ui?: string;
   /** World spot the guide arrow points at (live: the colonist walks around). */
   world?: { x: number; z: number };
-  /** Swing the camera over to `world` for a look. */
-  focus?: boolean;
+  /**
+   * Swing the camera over for a look, aimed a little beyond `world` so the spot lands below the screen centre (the
+   * mission card and hints sit just above the middle of a portrait screen).
+   */
+  focus?: { x: number; z: number };
+}
+
+/** World units the "Show me" camera aims past the spot. */
+const FOCUS_AHEAD = 4;
+
+function focusPast(game: Game, x: number, z: number): { x: number; z: number } {
+  const yaw = game.view.camera.yaw;
+  // camera forward on the ground is (-sin yaw, -cos yaw) (docs/ARCHITECTURE.md)
+  return { x: x - Math.sin(yaw) * FOCUS_AHEAD, z: z - Math.cos(yaw) * FOCUS_AHEAD };
 }
 
 export function showMePlan(game: Game, w: Wish): ShowMePlan | null {
@@ -176,12 +188,12 @@ export function showMePlan(game: Game, w: Wish): ShowMePlan | null {
     }
     case 'chat': {
       const c = game.sys.colonists.get(w.colonist);
-      return c ? { world: { x: c.x, z: c.z }, focus: true } : null;
+      return c ? { world: { x: c.x, z: c.z }, focus: focusPast(game, c.x, c.z) } : null;
     }
     case 'explore': {
       const p = game.state.player;
       const spot = game.sys.wishes.exploreSpots(p.x, p.z)[0];
-      return spot ? { world: { x: spot.x, z: spot.z }, focus: true } : null;
+      return spot ? { world: { x: spot.x, z: spot.z }, focus: focusPast(game, spot.x, spot.z) } : null;
     }
     default:
       return null;
