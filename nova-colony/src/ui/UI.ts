@@ -919,6 +919,7 @@ export class UI {
         for (const r of [this.ui, this.root]) if (r.scrollTop || r.scrollLeft) r.scrollTop = r.scrollLeft = 0;
         this.refreshBadges();
         if (!this.tierRevealPending) this.seenTier = this.game.state.colony.tier; // a tier set without the event (load)
+        this.flushToasts(); // held toasts also follow when no panel change comes along (waits while a modal is up)
         this.guide.poll();
         this.threats.poll();
         this.syncToastInset();
