@@ -42,6 +42,8 @@ export abstract class Panel {
   protected rev = 0;
   private sig: string | null = null;
   private lastTitle = '';
+  /** The tab that was active at the last render (see revealActiveTab). */
+  private lastTabOn: string | null = null;
   private sinceRefresh = 0;
 
   constructor(protected readonly ctx: UiCtx) {}
@@ -154,6 +156,24 @@ export abstract class Panel {
     });
     if (!ok) this.renderError();
     this.restoreScroll(scrolls);
+    this.revealActiveTab();
+  }
+
+  /**
+   * A tab chosen for the player (the Research panel opening on the guided node's category, a remembered tab) can sit
+   * off the end of a scrolling tab strip, leaving no sign of where they are: scroll it into view when the active tab
+   * first shows or changes. Never on other re-renders, so a strip the player is scrolling by hand stays put.
+   */
+  private revealActiveTab(): void {
+    const on = this.body?.querySelector<HTMLElement>('[data-scroll="tabs"] .tab.on');
+    const key = on?.getAttribute('data-tab') ?? '';
+    if (key === this.lastTabOn) return;
+    this.lastTabOn = key;
+    const strip = on?.parentElement;
+    if (!on || !strip || strip.scrollWidth <= strip.clientWidth) return;
+    const r = on.getBoundingClientRect();
+    const pr = strip.getBoundingClientRect();
+    if (r.left < pr.left || r.right > pr.right) strip.scrollLeft += r.left - pr.left - (pr.width - r.width) / 2;
   }
 
   private renderError(): void {
