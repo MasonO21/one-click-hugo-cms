@@ -10,8 +10,10 @@
  *  - Light chips: Now / Golden hour / Midday / Night lights. They only change what is drawn (renderer.photo
  *    .setLighting), easing the sun across the sky; the sim's clock never moves, and leaving restores the real light.
  *  - Shutter: haptic + flash, the still is rendered at up to 2048 px on the long side (captureSize), framed on a 2D
- *    canvas (compose.ts) and encoded as JPEG. The preview sheet offers Share (native share sheet, or the browser's),
- *    Download (web only) and Retake. Sharing goes through `game.services.share` (platform/share.ts).
+ *    canvas (compose.ts) in the equipped photo frame (Wardrobe › Frames; classic paper without one) and encoded as
+ *    JPEG. The preview sheet offers Share (native share sheet, or the browser's), Download (web only) and Retake,
+ *    and, for a player who owns frames, a chip row to switch frames before sharing (the choice is equipped).
+ *    Sharing goes through `game.services.share` (platform/share.ts).
  *  - Back (Android) / Escape: closes the preview first, then leaves the mode (logic/photo.ts `photoBack`).
  *
  * Pure parts (phases, presets, camera math, sizes, caption): logic/photo.ts. Styles: styles/photo.css.
@@ -21,7 +23,7 @@ import type { RendererApi } from '../../render/api';
 import type { HapticKind } from '../ctx';
 import { HALF_WORLD } from '../../core/constants';
 import { h, replay, safe, setHidden, setText } from '../dom';
-import { hudArt, iconEl, phaseArt } from '../art';
+import { cosmeticArt, hudArt, iconEl, phaseArt } from '../art';
 import { dayPhase, fmtHMS } from '../logic/time';
 import {
   PHOTO_PRESETS,
@@ -47,6 +49,7 @@ import {
   type PhotoPresetId,
 } from '../logic/photo';
 import { canvasBlob, composePhoto, frameAssets } from './compose';
+import { ownedFrames } from '../logic/wardrobe';
 import type { ShareImage, ShareResult } from '../../platform/types';
 
 export interface PhotoHost {
@@ -70,6 +73,10 @@ interface Shot {
   url: string;
   fileName: string;
   caption: PhotoCaption;
+  /** The unframed still, kept so the frame can be switched in the preview. */
+  raw: HTMLCanvasElement;
+  /** Frame it is drawn in (null: classic). */
+  frame: string | null;
 }
 
 interface Ptr {
@@ -102,7 +109,9 @@ export class PhotoMode {
   private readonly shareBtn: HTMLButtonElement;
   private readonly downloadBtn: HTMLButtonElement;
   private readonly status: HTMLElement;
+  private readonly frameRow: HTMLElement;
   private nowPhase = '';
+  private reframing = 0;
 
   constructor(private readonly host: PhotoHost) {
     this.surface = h('div', { class: 'ph-surface' });
@@ -133,12 +142,13 @@ export class PhotoMode {
     this.shareBtn = h<HTMLButtonElement>('button', { class: 'btn good ph-share', type: 'button' }, h('span', { class: 'ph-bi', text: '↗' }), 'Share');
     this.shareBtn.addEventListener('click', () => this.share());
     this.status = h('div', { class: 'ph-status', role: 'status' });
+    this.frameRow = h('div', { class: 'ph-frames', role: 'radiogroup', 'aria-label': 'Frame', hidden: true });
     this.sheet = h(
       'div',
       { class: 'ph-sheet', hidden: true },
       h('div', { class: 'ph-backdrop' }),
       h('div', { class: 'ph-print' }, this.img),
-      h('div', { class: 'ph-side' }, h('div', { class: 'ph-actions' }, retake, this.downloadBtn, this.shareBtn), this.status),
+      h('div', { class: 'ph-side' }, this.frameRow, h('div', { class: 'ph-actions' }, retake, this.downloadBtn, this.shareBtn), this.status),
     );
 
     this.el = h(
@@ -389,12 +399,13 @@ export class PhotoMode {
     try {
       const tier = g.data.tier(g.state.colony.tier);
       const caption = photoCaption(g.state.colony.name, tier?.name ?? '', g.state.time.day);
-      const framed = composePhoto(shot, caption, await frameAssets());
+      const frame = this.equippedFrame();
+      const framed = composePhoto(shot, caption, await frameAssets(), frame);
       const blob = await canvasBlob(framed);
       if (this.phase !== 'capturing') return; // left meanwhile
       if (!blob) return this.failed('The photo could not be saved. Try again!');
       const stamp = Date.now().toString(36).slice(-6);
-      this.shot = { blob, url: URL.createObjectURL(blob), fileName: photoFileName(g.state.colony.name, g.state.time.day, this.host.game.services.share?.native ? stamp : ''), caption };
+      this.shot = { blob, url: URL.createObjectURL(blob), fileName: photoFileName(g.state.colony.name, g.state.time.day, this.host.game.services.share?.native ? stamp : ''), caption, raw: shot, frame };
       g.bus.emit('photo:taken', { preset: this.preset, width: framed.width, height: framed.height });
       this.go('captured');
       this.showPreview();
@@ -413,11 +424,66 @@ export class PhotoMode {
 
   // ================================================================== preview sheet
 
+  /** The photo_frame cosmetic the player wears (null: the classic paper frame). */
+  private equippedFrame(): string | null {
+    const lo = this.game.state.liveops.cosmetics;
+    const id = lo.equipped.photo_frame;
+    return id && lo.owned.includes(id) ? id : null;
+  }
+
+  /** Chips to switch frames (only for a player who owns at least one): Classic + every owned frame. */
+  private renderFrames(): void {
+    const s = this.shot;
+    const lo = this.game.state.liveops.cosmetics;
+    const frames = ownedFrames(this.game.data.cosmetics, lo.owned);
+    setHidden(this.frameRow, !s || frames.length === 0);
+    if (!s || !frames.length) return;
+    const chip = (id: string | null, name: string, icon: string, art: string | null) => {
+      const on = (s.frame ?? null) === id;
+      const b = h<HTMLButtonElement>('button', { class: 'ph-fchip' + (on ? ' on' : ''), type: 'button', role: 'radio', 'aria-checked': on ? 'true' : 'false', data: { frame: id ?? 'classic', sfx: 'ui_tab' } }, iconEl(art, icon, 'ic', 'span'), h('span', { class: 'lb', text: name }));
+      b.addEventListener('click', () => void this.reframe(id));
+      return b;
+    };
+    this.frameRow.replaceChildren(chip(null, 'Classic', '🖼️', null), ...frames.map((f) => chip(f.id, f.name.replace(/ Frame$/, ''), f.icon, cosmeticArt(f.id))));
+    // the chosen frame in view (the row scrolls sideways when the player owns many)
+    const on = this.frameRow.querySelector<HTMLElement>('.ph-fchip.on');
+    const row = this.frameRow;
+    if (on && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2);
+  }
+
+  /** Redraw the shot in another frame (and wear it from now on). */
+  private async reframe(id: string | null): Promise<void> {
+    const s = this.shot;
+    if (!s || this.phase !== 'preview' || (s.frame ?? null) === id) return;
+    const lo = this.game.sys.liveops;
+    if (id) lo.equipCosmetic(id);
+    else lo.unequipCosmetic('photo_frame');
+    const seq = ++this.reframing;
+    s.frame = id;
+    this.renderFrames();
+    this.setBusy(true);
+    try {
+      const framed = composePhoto(s.raw, s.caption, await frameAssets(), id);
+      const blob = await canvasBlob(framed);
+      if (seq !== this.reframing || this.shot !== s || !blob) return;
+      URL.revokeObjectURL(s.url);
+      s.blob = blob;
+      s.url = URL.createObjectURL(blob);
+      this.img.src = s.url;
+      this.host.haptic('tap');
+    } catch (e) {
+      console.warn('[photo] reframing failed', e);
+    } finally {
+      if (seq === this.reframing) this.setBusy(false);
+    }
+  }
+
   private showPreview(): void {
     const s = this.shot;
     if (!s) return;
     const svc = this.game.services.share;
     this.img.src = s.url;
+    this.renderFrames();
     setHidden(this.shareBtn, !svc || !(svc.native || svc.canShareFiles()));
     setHidden(this.downloadBtn, !svc || svc.native);
     this.setStatus('');

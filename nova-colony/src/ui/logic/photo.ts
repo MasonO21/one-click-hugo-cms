@@ -323,6 +323,11 @@ export interface FrameLayout {
   /** Caption strip (below the photo). */
   stripY: number;
   stripH: number;
+  /**
+   * Decorated frames (a Wardrobe photo frame): the caption sits on a plate inside the strip, with a little border
+   * below it. Null for the classic paper frame.
+   */
+  plate: { x: number; y: number; w: number; h: number } | null;
   /** Font sizes in px. */
   titlePx: number;
   linePx: number;
@@ -331,21 +336,29 @@ export interface FrameLayout {
   iconPx: number;
 }
 
-export function frameLayout(pw: number, ph: number): FrameLayout {
+/**
+ * `deco`: a decorated frame (knit, sakura, starry night…) gets a border about twice as wide for its pattern, and the
+ * caption on a plate with a strip of border below it.
+ */
+export function frameLayout(pw: number, ph: number, deco = false): FrameLayout {
   const w0 = Math.max(1, Math.round(pw));
   const h0 = Math.max(1, Math.round(ph));
   const short = Math.min(w0, h0);
-  const pad = Math.max(8, Math.round(short * 0.036));
+  const base = Math.max(8, Math.round(short * 0.036));
+  const pad = deco ? Math.max(14, Math.round(short * 0.085)) : base;
   const stripH = Math.max(40, Math.round(short * 0.14));
+  const below = deco ? Math.round(pad * 0.7) : 0;
+  const gap = deco ? Math.round(pad * 0.35) : 0;
   return {
     w: w0 + pad * 2,
-    h: h0 + pad + stripH,
+    h: h0 + pad + stripH + below,
+    plate: deco ? { x: pad, y: pad + h0 + gap, w: w0, h: stripH - gap } : null,
     px: pad,
     py: pad,
     pw: w0,
     ph: h0,
-    radius: Math.max(4, Math.round(pad * 0.45)),
-    rim: Math.max(2, Math.round(pad * 0.12)),
+    radius: Math.max(4, Math.round(base * (deco ? 0.7 : 0.45))),
+    rim: Math.max(2, Math.round(base * 0.12)),
     stripY: pad + h0,
     stripH,
     titlePx: Math.max(14, Math.round(stripH * 0.34)),

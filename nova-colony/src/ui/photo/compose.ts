@@ -4,9 +4,13 @@
  * Cream paper all round (the menus' paper texture, faintly), the photo with softly rounded corners, a thin gold rim
  * and a soft inner shadow, and a caption strip under it: the colony's name, "✦ Titanium tier · Day 42", and on the
  * right the app icon with a small "Nova Colony" wordmark. Layout numbers come from `frameLayout` (logic/photo.ts).
+ *
+ * With a photo frame from the Wardrobe (`frame`: a photo_frame cosmetic id) the border is that frame's own pattern
+ * and decorations (frames.ts), and the caption sits on a plate in its colours. No frame: the classic paper print.
  */
 import { frameLayout, type PhotoCaption } from '../logic/photo';
 import paperUrl from '../styles/tex/paper.webp';
+import { drawFrameBack, drawFrameFront, drawPlate, framePlate, isDrawnFrame } from './frames';
 
 const FONT = 'ui-rounded, "SF Pro Rounded", Nunito, "Baloo 2", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const PAPER = '#fbf0d9';
@@ -72,9 +76,13 @@ function fitText(c: CanvasRenderingContext2D, text: string, weight: number, px: 
   return t.trimEnd() + '…';
 }
 
-/** Draw the framed photo. `shot` is the renderer's still (its pixel size sets the frame's). */
-export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: FrameAssets): HTMLCanvasElement {
-  const L = frameLayout(shot.width, shot.height);
+/**
+ * Draw the framed photo. `shot` is the renderer's still (its pixel size sets the frame's); `frame` the equipped
+ * photo_frame cosmetic (null / unknown: the classic paper frame).
+ */
+export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: FrameAssets, frame: string | null = null): HTMLCanvasElement {
+  const deco = isDrawnFrame(frame) ? frame : null;
+  const L = frameLayout(shot.width, shot.height, !!deco);
   const out = document.createElement('canvas');
   out.width = L.w;
   out.height = L.h;
@@ -82,10 +90,11 @@ export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: Fram
   if (!c) return shot;
   c.imageSmoothingQuality = 'high';
 
-  // ---- paper
+  // ---- paper (or the frame's own border)
   c.fillStyle = PAPER;
   c.fillRect(0, 0, L.w, L.h);
-  if (a.paper) {
+  if (deco) drawFrameBack(c, L, deco);
+  else if (a.paper) {
     const pat = c.createPattern(a.paper, 'repeat');
     if (pat) {
       // the texture at roughly the size the menus show it on a phone, whatever the photo's resolution
@@ -98,11 +107,13 @@ export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: Fram
     }
   }
   // warm vignette toward the edges, like an old print
-  const vg = c.createRadialGradient(L.w / 2, L.h / 2, Math.min(L.w, L.h) * 0.35, L.w / 2, L.h / 2, Math.hypot(L.w, L.h) * 0.6);
-  vg.addColorStop(0, 'rgba(200,150,80,0)');
-  vg.addColorStop(1, 'rgba(170,110,40,0.16)');
-  c.fillStyle = vg;
-  c.fillRect(0, 0, L.w, L.h);
+  if (!deco) {
+    const vg = c.createRadialGradient(L.w / 2, L.h / 2, Math.min(L.w, L.h) * 0.35, L.w / 2, L.h / 2, Math.hypot(L.w, L.h) * 0.6);
+    vg.addColorStop(0, 'rgba(200,150,80,0)');
+    vg.addColorStop(1, 'rgba(170,110,40,0.16)');
+    c.fillStyle = vg;
+    c.fillRect(0, 0, L.w, L.h);
+  }
 
   // ---- photo: a soft drop shadow, the picture, a gold rim and an inner hairline
   c.save();
@@ -125,6 +136,24 @@ export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: Fram
   c.fillStyle = ig;
   c.fillRect(L.px, L.py, L.pw, edge);
   c.restore();
+  if (deco) {
+    // the plate first: the frame's corner decorations may sit on it like stickers
+    drawPlate(c, L, deco);
+    drawFrameFront(c, L, deco);
+  } else drawGoldRim(c, L);
+
+  // ---- caption strip (on the frame's plate when there is one)
+  const ink = deco ? framePlate(deco) : null;
+  const plate = L.plate;
+  const midY = plate ? plate.y + plate.h / 2 : L.stripY + L.stripH / 2;
+  const left = plate ? plate.x + plate.h * 0.32 : L.px + L.rim;
+  const right = plate ? plate.x + plate.w - plate.h * 0.3 : L.px + L.pw - L.rim;
+  drawCaption(c, L, cap, a, { midY, left, right, title: ink?.title ?? INK, line: ink?.line ?? INK_WARM, star: ink?.star ?? GOLD_D, mark: ink?.mark ?? INK_WARM });
+  return out;
+}
+
+/** The classic frame's gold rim and inner hairline round the photo. */
+function drawGoldRim(c: CanvasRenderingContext2D, L: ReturnType<typeof frameLayout>): void {
   const rimG = c.createLinearGradient(0, L.py, 0, L.py + L.ph);
   rimG.addColorStop(0, GOLD);
   rimG.addColorStop(1, GOLD_D);
@@ -136,11 +165,21 @@ export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: Fram
   c.strokeStyle = 'rgba(255,255,255,0.55)';
   roundRect(c, L.px + L.rim * 0.2, L.py + L.rim * 0.2, L.pw - L.rim * 0.4, L.ph - L.rim * 0.4, Math.max(1, L.radius - L.rim * 0.2));
   c.stroke();
+}
 
-  // ---- caption strip
-  const midY = L.stripY + L.stripH / 2;
-  const left = L.px + L.rim;
-  const right = L.px + L.pw - L.rim;
+interface CaptionPlace {
+  midY: number;
+  left: number;
+  right: number;
+  title: string;
+  line: string;
+  star: string;
+  mark: string;
+}
+
+/** Colony name and "✦ tier · day" on the left, the app icon and wordmark on the right. */
+function drawCaption(c: CanvasRenderingContext2D, L: ReturnType<typeof frameLayout>, cap: PhotoCaption, a: FrameAssets, p: CaptionPlace): void {
+  const { midY, left, right } = p;
 
   // wordmark: app icon + "Nova Colony", right-aligned
   c.font = `800 ${L.markPx}px ${FONT}`;
@@ -173,7 +212,7 @@ export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: Fram
   c.textBaseline = 'middle';
   c.textAlign = 'left';
   c.font = `800 ${L.markPx}px ${FONT}`;
-  c.fillStyle = INK_WARM;
+  c.fillStyle = p.mark;
   c.globalAlpha = 0.85;
   c.fillText(cap.mark, mx, midY + L.markPx * 0.04);
   c.globalAlpha = 1;
@@ -182,19 +221,18 @@ export function composePhoto(shot: HTMLCanvasElement, cap: PhotoCaption, a: Fram
   const textMax = Math.max(40, right - markBlock - gap * 2 - left);
   const title = fitText(c, cap.title, 900, L.titlePx, textMax, Math.round(L.titlePx * 0.7));
   const titleY = midY - L.linePx * 0.62;
-  c.fillStyle = INK;
+  c.fillStyle = p.title;
   c.textBaseline = 'middle';
   c.fillText(title, left, titleY);
   const star = '✦ ';
   c.font = `800 ${L.linePx}px ${FONT}`;
   const starW = c.measureText(star).width;
   const lineY = midY + L.titlePx * 0.62;
-  c.fillStyle = GOLD_D;
+  c.fillStyle = p.star;
   c.fillText(star, left, lineY);
   const line = fitText(c, cap.line, 800, L.linePx, textMax - starW, Math.round(L.linePx * 0.8));
-  c.fillStyle = INK_WARM;
+  c.fillStyle = p.line;
   c.fillText(line, left + starW, lineY);
-  return out;
 }
 
 /** JPEG of the canvas (null if the browser cannot encode it). */
