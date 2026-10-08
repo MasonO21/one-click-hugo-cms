@@ -16,6 +16,7 @@ import './styles/modals.css';
 import './styles/art.css';
 import './styles/expeditions.css';
 import './styles/journal.css';
+import './styles/wishes.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -72,6 +73,7 @@ import { JournalPanel } from './panels/JournalPanel';
 import { backAction } from './logic/back';
 import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
+import { SHOW_ME_SECONDS, wishGuideTarget } from './logic/wishes';
 
 /** Minimum gap between production floats of the same resource. */
 const PROD_FLOAT_GAP_MS = 1200;
@@ -124,6 +126,8 @@ export class UI {
   private deferredToasts: { text: string; kind: ToastKind; icon?: string; open?: string; at: number }[] = [];
   /** Tappable toasts shown a moment ago (a modal opening clears the toast layer: they are re-queued, see onPanelsChanged). */
   private openToasts: { text: string; kind: ToastKind; icon?: string; open: string; at: number }[] = [];
+  /** A wish's "Show me" the guide arrow follows (seconds on performance.now()). */
+  private wishPin: { id: number; until: number } | null = null;
 
   constructor(
     private readonly game: Game,
@@ -171,6 +175,11 @@ export class UI {
     this.floats = new FloatText(world, this.renderer);
     this.tip = new SelectionTip(this.renderer);
     this.guide = new Guide(ctx);
+    this.guide.override = () => {
+      const t = wishGuideTarget(this.game, this.wishPin, performance.now() / 1000);
+      if (!t && this.wishPin) this.wishPin = null; // done, lapsed or timed out: back to the tutorial's guidance
+      return t;
+    };
     this.threats = new Threats(ctx);
     world.append(this.tip.el, this.guide.layer, this.threats.layer);
 
@@ -476,6 +485,18 @@ export class UI {
     bus.on('colonist:recruited', (e) => {
       this.lastJoined = { id: e.id, t: performance.now() };
     });
+    // colonist wishes (sim/wishes.ts): "Show me" pins the guide arrow; a granted wish buzzes happily
+    bus.on('ui:wishGuide', (e) => {
+      this.wishPin = { id: e.id, until: performance.now() / 1000 + SHOW_ME_SECONDS };
+      this.guide.poll();
+    });
+    bus.on('wish:granted', (e) => {
+      this.haptic('success');
+      if (this.wishPin?.id === e.id) this.wishPin = null;
+    });
+    bus.on('wish:expired', (e) => {
+      if (this.wishPin?.id === e.id) this.wishPin = null;
+    });
     bus.on('colony:tierUp', (e) => {
       const now = performance.now();
       this.lastTierCelebrate = now;
@@ -646,6 +667,13 @@ export class UI {
       const lead = `${d.icon} ${d.name}`;
       const src = eventArt(d.kind);
       if (src && text.startsWith(lead)) return { text: text.slice(d.icon.length + 1), icon: src };
+    }
+    // "Mira has a wish: Berry pie day": her portrait
+    const wish = /^(.+?) has a wish: /.exec(text);
+    if (wish) {
+      const c = g.state.colonists.list.find((x) => x.name.split(' ')[0] === wish[1] && g.sys.wishes.of(x.id));
+      const src = c ? professionArt(jobOf(g, c)) : null;
+      if (src) return { text, icon: src };
     }
     // "🧭 Your squad is back from Wreck Salvage! …": the destination's painted icon
     const back = /back from (.+?)! Collect/.exec(text);

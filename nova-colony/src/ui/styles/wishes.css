@@ -1,0 +1,193 @@
+/* ==========================================================================
+   Colonist wishes & friendship (ui/panels/ColonistsPanel.ts, ui/logic/wishes.ts)
+   Warm paper card with a pink edge, hearts in gold. Every button is a full-size touch target (>= 44 px)
+   and the actions wrap instead of scrolling sideways on a 375 px phone.
+   ========================================================================== */
+
+.nv-root .card.wish-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+  background: linear-gradient(180deg, #fffaf3, #fff0f4);
+  border-color: #ffc4d2;
+  box-shadow: 0 0.2em 0 #ffc4d2, 0 0.4em 1em rgba(255, 111, 145, 0.12);
+}
+.wish-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65em;
+}
+.wish-ic {
+  position: relative;
+  flex: 0 0 auto;
+  width: 3.1em;
+  height: 3.1em;
+  display: grid;
+  place-items: center;
+}
+.nv-root .wish-ic .wish-art {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.nv-root .wish-ic .wish-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.nv-root .wish-ic .wish-art.emoji {
+  font-size: 2.3em;
+  line-height: 1;
+}
+.wish-ic .wish-kind {
+  position: absolute;
+  right: -0.35em;
+  bottom: -0.25em;
+  width: 1.7em;
+  height: 1.7em;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 0.95em;
+  line-height: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0.13em #ffc4d2, 0 0.1em 0.3em rgba(0, 0, 0, 0.18);
+}
+.wish-title {
+  font-weight: 900;
+  font-size: 1.02em;
+  color: var(--ink);
+}
+.wish-quote {
+  margin-top: 0.15em;
+  font-weight: 700;
+  font-size: 0.95em;
+  color: #5c4a72;
+  overflow-wrap: anywhere;
+}
+.wish-hint {
+  font-size: 0.82em;
+}
+.wish-hint .wish-prog {
+  color: var(--pink);
+  font-weight: 900;
+}
+.wish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+.nv-root .wish-actions .btn {
+  flex: 1 1 auto;
+  min-height: 44px;
+  min-width: 0;
+}
+
+/* --- the Wishes tab: who + where, then the card */
+.nv-root .wish-who {
+  appearance: none;
+  border: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.1em 0;
+  margin-bottom: 0.1em;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.nv-root .wish-who .portrait {
+  width: 2.6em;
+  height: 2.6em;
+  border-width: 0.14em;
+}
+.wish-who .grow {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.wish-who .grow b {
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wish-who .grow small {
+  font-size: 0.8em;
+  font-weight: 800;
+  color: var(--info-d);
+}
+.wish-foot {
+  text-align: center;
+  padding: 0 0.5em 0.4em;
+}
+
+/* --- friendship */
+.hearts-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15em 0.55em;
+  margin-top: 0.35em;
+}
+.hearts-row .hearts {
+  font-size: 1.05em;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.hearts-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+.hearts-label b {
+  font-size: 0.85em;
+  color: var(--pink);
+}
+.hearts-label small {
+  font-size: 0.72em;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.nv-root .hearts-mini {
+  flex: 0 0 auto;
+  padding: 0.05em 0.4em;
+  border-radius: 99px;
+  font-size: 0.72em;
+  font-weight: 900;
+  color: #b23a5d;
+  background: #ffe3ea;
+}
+.nv-root .wish-dot {
+  flex: 0 0 auto;
+  font-size: 0.9em;
+  animation: nv-wish-bob 1.8s ease-in-out infinite;
+}
+@keyframes nv-wish-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.12em); }
+}
+
+/* --- HUD: the Crew badge turns pink while someone has a wish; Chat on the context button */
+.dock-btn .badge.wish {
+  background: var(--pink);
+}
+.interact.k-chat {
+  background: radial-gradient(circle at 35% 28%, #ffb3c6, var(--pink) 62%, #e0456e);
+  box-shadow: 0 0.3em 0 #c23a60, 0 0.7em 1.2em rgba(24, 12, 44, 0.38), inset 0 0 0 0.16em rgba(255, 255, 255, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-root .wish-dot {
+    animation: none;
+  }
+}

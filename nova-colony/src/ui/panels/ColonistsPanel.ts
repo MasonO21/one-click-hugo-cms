@@ -1,6 +1,7 @@
 /**
- * ColonistsPanel — everyone in the colony: portrait, specialty, stars, happiness, job. Tap one for
- * the detail view (bio, trait, happiness factors, job assignment, "show me").
+ * ColonistsPanel — everyone in the colony: portrait, specialty, stars, happiness, job, friendship hearts. Tap one for
+ * the detail view (their wish, bio, trait, happiness factors, job assignment, "show me"). The Wishes tab lists every
+ * open wish, nearest first, with Give / Show me right there (sim/wishes.ts).
  */
 import { Panel, type PanelTitle } from './Panel';
 import type { Colonist } from '../../core/state';
@@ -9,9 +10,10 @@ import { happinessFace, jobOf, stars } from '../logic/colonist';
 import { bar, btn, emptyState, portrait, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
 import { fmtLong } from '../logic/time';
-import { buildingIcon, hudArt, professionArt } from '../art';
+import { buildingIcon, hudArt, iconEl, professionArt } from '../art';
+import { heartsView, showMePlan, wishCard, wishRows, type WishCardView } from '../logic/wishes';
 
-type Filter = 'all' | 'idle' | 'working' | 'away';
+type Filter = 'all' | 'wishes' | 'idle' | 'working' | 'away';
 
 export class ColonistsPanel extends Panel {
   readonly name = 'colonists';
@@ -29,6 +31,8 @@ export class ColonistsPanel extends Panel {
   override onOpen(arg: unknown): void {
     const id = this.pick<number>(arg, 'id');
     if (id != null) this.detail = Number(id);
+    // with wishes waiting (the Crew button wears a pink badge) the list opens on them
+    else if (this.pick<string>(arg, 'tab') === 'wishes' || wishRows(this.game).length) this.filter = 'wishes';
   }
 
   override onArg(arg: unknown): void {
@@ -58,7 +62,13 @@ export class ColonistsPanel extends Panel {
   override signature(): string {
     const list = this.game.state.colonists.list;
     const sum = list.reduce((a, c) => a + Math.round(c.happiness) + c.skill * 3 + (c.workplace ?? 0) * 7 + (c.away ? 11 : 0), 0);
-    return `${list.length}|${sum}|${this.detail}|${this.filter}|${Math.round(this.game.derived.happiness.average)}`;
+    // wishes: which are open, their progress, whether Give is possible, hearts, and (on the Wishes tab) who is near
+    const ws = this.game.state.wishes;
+    let wish = '';
+    for (const w of ws?.open ?? []) wish += `${w.id}.${w.done}.${this.game.sys.wishes.refusal(w) ? 0 : 1},`;
+    const hearts = Object.values(ws?.bonds ?? {}).reduce((a, n) => a + n, 0);
+    const near = this.filter === 'wishes' && this.detail == null ? wishRows(this.game).map((r) => r.where).join(',') : '';
+    return `${list.length}|${sum}|${this.detail}|${this.filter}|${Math.round(this.game.derived.happiness.average)}|${wish}|${hearts}|${near}`;
   }
 
   render(): void {
@@ -109,10 +119,13 @@ export class ColonistsPanel extends Panel {
     }
     const away = all.filter((c) => c.away).length;
     const idle = all.filter((c) => c.workplace == null && !c.away).length;
+    const rows = wishRows(g);
+    if (this.filter === 'wishes' && !rows.length) this.filter = 'all';
     wrap.appendChild(
       tabs(
         [
           { id: 'all', label: `All ${all.length}` },
+          ...(rows.length ? [{ id: 'wishes', label: `💭 Wishes ${rows.length}` }] : []),
           { id: 'idle', label: `Idle ${idle}` },
           { id: 'working', label: `Working ${all.length - idle - away}` },
           ...(away ? [{ id: 'away', label: `🧭 Away ${away}` }] : []),
@@ -125,6 +138,10 @@ export class ColonistsPanel extends Panel {
       ),
     );
     if (this.filter === 'away' && !away) this.filter = 'all';
+    if (this.filter === 'wishes') {
+      wrap.appendChild(this.renderWishes());
+      return wrap;
+    }
     const list = all.filter((c) => (this.filter === 'idle' ? c.workplace == null && !c.away : this.filter === 'working' ? c.workplace != null : this.filter === 'away' ? !!c.away : true));
     const grid = h('div', { class: 'grid col-list' });
     for (const c of list) grid.appendChild(this.row(c));
@@ -142,7 +159,14 @@ export class ColonistsPanel extends Panel {
       h(
         'div',
         { class: 'grow ct' },
-        h('div', { class: 'cn' }, c.name, c.rarity !== 'common' ? h('span', { class: 'pill', style: { background: RARITY_COLOR[c.rarity] }, text: c.rarity }) : null),
+        h(
+          'div',
+          { class: 'cn' },
+          c.name,
+          c.rarity !== 'common' ? h('span', { class: 'pill', style: { background: RARITY_COLOR[c.rarity] }, text: c.rarity }) : null,
+          this.heartsMini(c.id),
+          !c.away && this.game.sys.wishes.of(c.id) ? h('span', { class: 'wish-dot', title: 'Has a wish', text: '💭' }) : null,
+        ),
         h('div', { class: 'cs' }, h('span', { class: 'stars', text: stars(c.skill) }), ` ${prof?.icon ?? ''} ${prof?.name ?? c.specialty}`),
         h('div', { class: 'cj ' + (c.away ? 'away' : c.workplace == null ? 'idle' : ''), text: this.jobText(c) }),
         h('div', { class: 'ch' }, h('span', { text: face.icon }), bar(c.happiness / 100, 'thin ' + (c.happiness >= 60 ? 'good' : c.happiness >= 40 ? 'orange' : 'red'))),
@@ -176,9 +200,13 @@ export class ColonistsPanel extends Panel {
           h('div', { class: 'stars big', text: stars(c.skill) }),
           bar(Math.min(1, c.xp > 1 ? c.xp / 100 : c.xp), 'purple thin', ''),
           h('div', { class: 'mute small', text: 'Skill progress' }),
+          this.heartsRow(c.id),
         ),
       ),
     );
+    const wish = c.away ? undefined : g.sys.wishes.of(c.id);
+    const card = wish ? wishCard(g, wish) : null;
+    if (card) wrap.appendChild(this.wishCardEl(card, true));
     wrap.appendChild(h('div', { class: 'card tint small', text: c.bio }));
     if (trait) wrap.appendChild(h('div', { class: 'row' }, h('span', { class: 'chip info', text: `✨ ${trait.name}` }), h('span', { class: 'mute small grow', text: trait.description })));
 
@@ -231,6 +259,106 @@ export class ColonistsPanel extends Panel {
       }),
     );
     return wrap;
+  }
+
+  // ---------------------------------------------------------------- wishes & friendship
+
+  /** Tiny "💛 3" next to a name (nothing before the first heart). */
+  private heartsMini(id: number): HTMLElement | null {
+    const n = this.game.sys.wishes.hearts(id);
+    return n > 0 ? h('span', { class: 'hearts-mini', title: `Friendship ${n}/${this.game.sys.wishes.maxHearts()}`, text: `💛${n}` }) : null;
+  }
+
+  /** Friendship hearts with what they unlock. */
+  private heartsRow(id: number): HTMLElement {
+    const r = this.data.wishRules;
+    const v = heartsView(this.game.sys.wishes.hearts(id), r.hearts, r.perks);
+    const next =
+      v.full < r.perks.productivityHearts
+        ? `${r.perks.productivityHearts} hearts: works ${Math.round(r.perks.productivity * 100)}% harder`
+        : v.full < r.perks.bestFriendsHearts
+          ? `${r.perks.bestFriendsHearts} hearts: best friends, happier for good`
+          : `Works ${Math.round(r.perks.productivity * 100)}% harder · +${r.perks.bestFriendsHappiness} happiness`;
+    return h(
+      'div',
+      { class: 'hearts-row', title: `Friendship ${v.full}/${v.max}` },
+      h('span', { class: 'hearts', text: v.text, 'aria-label': `Friendship ${v.full} of ${v.max}` }),
+      h('span', { class: 'hearts-label' }, h('b', { text: v.label }), h('small', { text: next })),
+    );
+  }
+
+  /** The wish card: what they would love, how, and the buttons (Give / Show me / Not now). */
+  private wishCardEl(card: WishCardView, detail: boolean): HTMLElement {
+    const g = this.game;
+    const actions = h('div', { class: 'wish-actions' });
+    if (card.give) {
+      actions.appendChild(
+        btn({
+          label: card.give.label,
+          cls: 'good',
+          disabled: card.give.why ?? undefined,
+          data: { 'wish-give': card.id, sfx: 'none' },
+          onClick: () => {
+            if (g.sys.wishes.give(card.id)) this.rerender();
+          },
+        }),
+      );
+    }
+    if (card.showMe) actions.appendChild(btn({ label: '📍 Show me', cls: 'info', data: { 'wish-show': card.id }, onClick: () => this.showMe(card.id) }));
+    if (detail) actions.appendChild(btn({ label: 'Not now', cls: 'ghost', onClick: () => this.ctx.close(this.name) }));
+    return h(
+      'div',
+      { class: 'card wish-card', data: { wish: card.id } },
+      h(
+        'div',
+        { class: 'wish-head' },
+        h('span', { class: 'wish-ic' }, iconEl(hudArt('wish'), '💭', 'wish-art', 'span'), h('i', { class: 'wish-kind', text: card.icon })),
+        h('div', { class: 'grow' }, h('div', { class: 'wish-title', text: detail ? `${card.name}'s wish: ${card.title}` : card.title }), h('div', { class: 'wish-quote', text: `“${card.text}”` })),
+      ),
+      h('div', { class: 'wish-hint mute small' }, card.hint, card.progress ? h('b', { class: 'wish-prog', text: ` ${card.progress}` }) : null),
+      actions,
+    );
+  }
+
+  /** The Wishes tab: every open wish, nearest first. */
+  private renderWishes(): HTMLElement {
+    const g = this.game;
+    const wrap = h('div', { class: 'stack-v wish-list' });
+    for (const r of wishRows(g)) {
+      const c = g.sys.colonists.get(r.card.colonist);
+      if (!c) continue;
+      const who = h(
+        'button',
+        { class: 'wish-who', type: 'button', data: { colonist: c.id, sfx: 'ui_click' } },
+        portrait(c, false, jobOf(g, c)),
+        h('span', { class: 'grow' }, h('b', { text: c.name }), h('small', { text: r.where })),
+        this.heartsMini(c.id),
+      );
+      who.addEventListener('click', () => {
+        this.detail = c.id;
+        this.rerender();
+      });
+      const card = this.wishCardEl(r.card, false);
+      card.prepend(who);
+      wrap.appendChild(card);
+    }
+    wrap.appendChild(h('div', { class: 'mute small wish-foot', text: 'Granting a wish makes them happy and adds a friendship heart. Wishes never pressure you: they fade after a while if you are busy.' }));
+    return wrap;
+  }
+
+  /** "Show me": open the right menu at the right card, or swing the camera over and let the arrow point the way. */
+  private showMe(id: number): void {
+    const g = this.game;
+    const w = g.sys.wishes.get(id);
+    const plan = w ? showMePlan(g, w) : null;
+    if (!w || !plan) {
+      this.ctx.toast('Nothing to point at right now: try again in a moment', 'info', '💭');
+      return;
+    }
+    this.ctx.close(this.name);
+    if (plan.world && plan.focus) this.ctx.renderer.focus(plan.world.x, plan.world.z);
+    if (plan.panel) this.ctx.open(plan.panel.name, plan.panel.arg);
+    g.bus.emit('ui:wishGuide', { id });
   }
 
   private openJobs(c: Colonist): HTMLElement {

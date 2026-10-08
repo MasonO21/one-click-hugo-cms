@@ -4,7 +4,8 @@
  */
 import type { UiCtx } from '../ctx';
 import { h, setClass, setText } from '../dom';
-import { buildingArt, iconEl, poiArt } from '../art';
+import { buildingArt, iconEl, poiArt, professionArt } from '../art';
+import { jobOf } from '../logic/colonist';
 
 export class InteractButton {
   readonly el: HTMLButtonElement;
@@ -82,6 +83,11 @@ export class InteractButton {
       case 'beacon': {
         const p = g.sys.world.gen?.pois.find((q) => q.id === target);
         return p ? poiArt(p.def) : null;
+      }
+      case 'chat': {
+        // a colonist with a Chat wish: their portrait
+        const c = g.sys.colonists.get(Number(target));
+        return c ? professionArt(jobOf(g, c)) : null;
       }
       case 'event': {
         const ev = g.state.world.events.find((e) => e.id === target);

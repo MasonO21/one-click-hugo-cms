@@ -117,9 +117,15 @@ export class Guide {
   /** Overlay layer for UI highlights (must sit above panels). */
   readonly ringLayer: HTMLElement;
 
+  /**
+   * A target the player asked for that wins over the tutorial's while it lasts (a wish's "Show me",
+   * ui/logic/wishes.ts). Returns null when there is none.
+   */
+  override: (() => { world: { x: number; z: number } | null; ui: string | null } | null) | null = null;
+
   /** ≈5 Hz: re-read the tutorial target. */
   poll(): void {
-    const g = this.ctx.game.sys.tutorial.guide();
+    const g = safe('guide override', () => this.override?.()) ?? this.ctx.game.sys.tutorial.guide();
     this.world = g?.world ?? null;
     this.uiSel = g?.ui ?? null;
     if (this.uiSel !== this.lastSel) {

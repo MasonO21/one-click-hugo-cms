@@ -350,7 +350,11 @@ export class Hud {
     set('btn-research', b.research, true);
     set('btn-menu', (b.daily ? 1 : 0) + (b.spin ? 1 : 0) + b.season + b.expeditions + (b.journal ? 1 : 0));
     set('btn-shop', b.crate ? 1 : 0, true);
-    set('btn-colonists', b.colonists);
+    // colonists with a wish count too, and turn the Crew badge pink (ui/logic/wishes.ts)
+    const wishes = b.wishes ?? 0;
+    set('btn-colonists', b.colonists + wishes);
+    const crew = this.navBadges.get('btn-colonists');
+    if (crew) setClass(crew, 'wish', wishes > 0);
   }
 
   // ---------------------------------------------------------------- popover

@@ -1,6 +1,7 @@
 /** Notification badge computation for the HUD rail (claimable missions, free spin, research...). */
 import type { Game } from '../../core/Game';
 import { expeditionBadge } from './expeditions';
+import { wishBadge } from './wishes';
 
 export interface Badges {
   missions: number;
@@ -15,6 +16,8 @@ export interface Badges {
   expeditions: number;
   /** Journal medals earned and waiting for Claim. */
   journal: number;
+  /** Colonists with an open wish (the Crew button's badge turns pink). */
+  wishes?: number;
 }
 
 export function claimableMissions(game: Game): string[] {
@@ -63,5 +66,6 @@ export function computeBadges(game: Game): Badges {
     expeditions: expeditionBadge(game),
     // like the other meta offers: quiet during the guided first session
     journal: lo.offersUnlocked() ? game.sys.achievements.claimableCount() : 0,
+    wishes: wishBadge(game),
   };
 }
