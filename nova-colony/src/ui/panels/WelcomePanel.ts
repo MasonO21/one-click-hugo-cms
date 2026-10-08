@@ -9,7 +9,7 @@ import { fmtDuration } from '../../core/format';
 import { btn } from '../widgets';
 import { confetti } from '../fx/Confetti';
 import { countUp, fill, h } from '../dom';
-import { iconEl, resourceArt } from '../art';
+import { hudArt, iconEl, resourceArt } from '../art';
 import { offlineWorkedText } from '../logic/time';
 
 export interface WelcomeArg {
@@ -28,7 +28,7 @@ export class WelcomePanel extends Panel {
   private animated = false;
 
   title(): PanelTitle {
-    return { icon: '☀️', text: 'Welcome back' };
+    return { icon: '☀️', art: hudArt('day'), text: 'Welcome back' };
   }
 
   private summary(): WelcomeArg {
@@ -55,7 +55,7 @@ export class WelcomePanel extends Panel {
     const right = h('div', { class: 'm-right' });
     const foot = h('div', { class: 'm-foot' });
     wrap.append(left, right, foot);
-    left.appendChild(h('div', { class: 'wb-sun' }, h('div', { class: 'wb-rays' }), h('div', { class: 'wb-ic', text: '🌅' })));
+    left.appendChild(h('div', { class: 'wb-sun' }, h('div', { class: 'wb-rays' }), iconEl(hudArt('sunrise'), '🌅', 'wb-ic', 'div')));
     left.appendChild(h('h2', { class: 'wb-title', text: 'Welcome Back!' }));
     left.appendChild(h('div', { class: 'wb-away', text: `Away for ${fmtDuration(away)}` }));
     right.appendChild(h('div', { class: 'mute small center', text: offlineWorkedText(away, s.seconds, this.game.data.balance.offlineEfficiency, fmtDuration) }));

@@ -1262,3 +1262,13 @@
   width: auto;
   height: auto;
 }
+
+/* Welcome Back: the painted sunrise in the emoji's slot (the box keeps the bounce + shadow of .wb-ic) */
+.wb-ic.aico {
+  width: 1.35em;
+  height: 1.35em;
+}
+.wb-ic.aico.emoji {
+  width: auto;
+  height: auto;
+}
