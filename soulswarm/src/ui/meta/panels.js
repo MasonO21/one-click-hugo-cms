@@ -16,7 +16,7 @@ const ENERGY_ADS_PER_DAY = 3;
 const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords', chest: 'chest', elite: 'crown', legion: 'helm', evolve: 'star', boss: 'trophy', trial: 'star' };
 
 /** Open a modal whose body re-renders whenever the profile changes. */
-function liveModal(opts, render) {
+export function liveModal(opts, render) {
   const body = h('<div class="lm"></div>');
   const draw = () => render(body);
   draw();

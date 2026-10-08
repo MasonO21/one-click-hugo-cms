@@ -2,7 +2,7 @@
 
 **Status:** v1.0 · **Owner:** Live Ops Producer + Lead Game Designer · **Source of truth:** `DESIGN_BRIEF.md`
 **Assumed global launch:** Monday 14 June 2027 (see `PRODUCTION_ROADMAP.md`). If launch moves, the calendar shifts with it. Seasons are always 28 days and always start on a Monday at 00:00 UTC.
-**Implementation status:** mostly **Planned**. The prototype build has the daily layer (6 rotating daily quests, the 7-day login, the Daily Trial, energy, rewarded-ad placements), the weekend **Blood Moon** and the **weekly quest chest**, the **Nightmare** and **Torment** difficulties (pulled forward from S4 and S12, GDD §8.2), one Soul Pass season ("Season I: The Waking Legion" in `data.js`) and the Soul Pact. Boss Rush, Endless leaderboards, holiday events, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
+**Implementation status:** mostly **Planned**. The prototype build has the daily layer (6 rotating daily quests, the 7-day login, the Daily Trial, energy, rewarded-ad placements), the weekend **Blood Moon** and the **weekly quest chest**, the **Nightmare** and **Torment** difficulties (pulled forward from S4 and S12, GDD §8.2), one Soul Pass season ("Season I: The Waking Legion" in `data.js`) and the Soul Pact. The **Boss Rush** ("The Hollow Court", GDD §8.3) is in the build too: it runs every week, Tue–Thu UTC, so it can be played and tuned (live it runs once per season, as below), with daily tries and milestones but no leaderboard yet. Endless leaderboards, holiday events, Covens and Legion Raids do not exist yet. Gameplay numbers below follow the build (`GDD.md`).
 
 ---
 
@@ -80,7 +80,7 @@
 ### 3.2 Boss Rush (monthly, limited)
 
 - **When:** week 3 of each season, Tue 00:00 – Thu 23:59 UTC (72 h).
-- **Format:** the five chapter bosses in a row (Gravemaw → Vesperine) at Ch1→Ch5 scaling with the season's modifier. The player starts at Lv10 with 30 minions and gets one card pick between bosses. 3 free attempts per day, no energy cost.
+- **Format:** the five chapter bosses in a row (Gravemaw → Vesperine) at Ch1→Ch5 scaling with the season's modifier. The player starts as a campaign player stands at a boss (Lv20, a veteran build, a legion of 70) and picks 4 powers at a War Council, then gets one Relic Chest pick between bosses. 3 free attempts per day (one more by ad), no energy cost. *(Build: GDD §8.3; the first design's Lv10 and 30 minions let a Chapter 5 player beat one boss of five.)*
 - **Leaderboard:** fastest total clear time, in groups of 100 players matched by power.
 - **Rewards:** milestone track (bosses beaten) gives sigils, gems and featured-hero shards. Rank rewards give an exclusive **legion banner** cosmetic (top 10%) and gems. Cosmetic only, never power-exclusive.
 

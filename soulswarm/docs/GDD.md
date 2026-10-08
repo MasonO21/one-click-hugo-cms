@@ -16,7 +16,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters, each with its own boss (§6), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, new heroes (`LIVEOPS.md`) |
 | Meta and economy | **The Bestiary** (§5.2: 11 painted entries, kills per foe and boss, 33 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
-| Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
+| Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
 
 Everything below describes the build unless it is marked **Planned**.
 
@@ -633,6 +633,22 @@ Every campaign chapter can be replayed on two harder difficulties for long-term 
 - **Torment's Gravemaw** at chapter progression runs past the 1.6× target (about 2×), and fights are bimodal (a build that snowballs kills him as fast as on Normal). At Chapter 5 progression on Chapter 2 he falls as fast as on Normal. A Torment player is expected to arrive above the typical progression the bot can model.
 
 ---
+
+### 8.3 Boss Rush: The Hollow Court (in the build)
+
+A limited event: the five chapter bosses back to back in one run. Numbers live in `BOSS_RUSH` (`data.js`), the state and rewards in `economy.js` (`rushState`, `applyRushResult`), the run mode in `run.js` (`rush`), the panel in `ui/meta/rush.js`. LIVEOPS.md §3.2 is the live plan.
+
+- **When.** In the build it runs every week, Tuesday 00:00 – Thursday 23:59 UTC; live it runs once per season (week 3) through remote config. `profile.flags.bossRush` ('on' / 'off') overrides the calendar for QA.
+- **Who.** Unlocked by a first Chapter 1 clear. The home screen's **Rush** button glows crimson while the Court is open and carries a dot while a free try is left.
+- **Cost.** Free: **3 tries a day** (no energy), one more by rewarded ad. Entering uses a try; abandoning or falling ends it.
+- **The run.** The Abyss map, titled "Boss Rush · The Hollow Court · Five bosses. One legion. No rest." The Shepherd starts where a campaign player stands at a boss:
+  - level 20, a veteran build (the first card of 14 draws, applied at once), legion cap +40 and a legion of 70;
+  - then the **War Council**: 4 picks of the player's own, while the clock waits.
+- **The bosses.** Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine, each in its full three-phase fight with its own twist and signature (§6). The run scales as each boss's chapter (horde HP and damage, the Shepherd's and legion's chapter scaling), and each boss has its campaign HP × 1 / 0.85 / 0.7 / 0.6 / 0.55 (no horde phase levels the Shepherd between them). The warning comes 3 s before each, the first 3 s after the War Council.
+- **Between bosses.** A Relic Chest (the pick between bosses), 20 souls rise, the Shepherd heals 40% of max HP, the leftover adds burn away, and the next boss rises 6 s later. The HUD reads "Boss *n* of 5" under the clock, and the clock is the score.
+- **Results.** "COURT CLEARED" or "FALLEN · Boss Rush · *n* of 5 bosses": the run's kill and time gold, pass XP, quests (kills, bosses and the rest), Bestiary kills (each boss counts for itself) and account XP. No chapter records, no Boss Hoard relic, no ad doubling.
+- **Event rewards.** Milestones by bosses beaten in one attempt, each paid once per event: 1 boss 1,000 gold · 2 bosses 20 gems · 3 bosses 1,500 gold · 4 bosses 30 gems · the Court cleared 1 Altar Sigil + 40 gems. The panel shows the five bosses (ticked when beaten this event), the track, the event's best clear and the all-time best. *(Planned: the power-matched leaderboard and the cosmetic legion banner, LIVEOPS.md §3.2.)*
+- **Balance (2026-10-08, `RUSH=1 scripts/balance.mjs`, Vael, `GOD=1`).** Fights last about as long as the campaign's at matching progression, so how far a player gets tracks their campaign: Chapter 5 progression clears in about 3:00 (each boss 25–48 s), Chapter 3 in about 4:15, a fresh Chapter 1 clear in about 7:00 with the later bosses 70–130 s each. Mortal, the bot (which does not dodge) cleared it once in two at Chapter 5 progression and fell to the first boss at Chapter 1–2.
 
 ## 9. In-run XP curve
 

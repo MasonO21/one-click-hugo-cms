@@ -2524,6 +2524,87 @@ errs = await session(async (page) => {
 });
 check('tutorial skip and replay: no runtime errors', !errs.length, errs[0] || '');
 
+// 35. Boss Rush ("The Hollow Court", BOSS_RUSH in data.js, run.js rush, ui/meta/rush.js): a limited weekly event (Tue–Thu
+//     UTC in the build) after a first Chapter 1 clear. The five chapter bosses back to back, each at its chapter's
+//     scaling, from a seasoned start (level, veteran build, deep legion) and a four-pick War Council; each boss drops a
+//     Relic Chest, raises souls and heals. Free tries a day (one more by ad), milestones once per event, the best clear.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, D = await import('/src/game/data.js'), Ec = await import('/src/meta/economy.js'), out = {};
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    Object.assign(p.flags, { tutorialDone: true, tutorialPaid: true, hints: { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 } });
+    // the calendar: open Tue–Thu UTC, closed Fri–Mon; the event key is its Tuesday; QA can force it
+    const at = (iso) => Date.parse(iso);
+    out.cal = ['2026-10-06T00:00:00Z', '2026-10-08T23:59:00Z', '2026-10-09T00:00:00Z', '2026-10-12T12:00:00Z'].map((t) => Ec.rushOpen({ flags: {} }, at(t)));
+    const T = Ec.rushTimes(at('2026-10-07T12:00:00Z')), T2 = Ec.rushTimes(at('2026-10-10T12:00:00Z'));
+    out.times = { key: T.key, ends: new Date(T.ends).toISOString(), next: new Date(T2.starts).toISOString(), key2: T2.key };
+    out.force = [Ec.rushOpen({ flags: { bossRush: 'on' } }, at('2026-10-10T00:00:00Z')), Ec.rushOpen({ flags: { bossRush: 'off' } }, at('2026-10-07T00:00:00Z'))];
+    // locked before a Chapter 1 clear; open, it shows on the home screen
+    p.flags.bossRush = 'on'; p.chapter.unlocked = 1; app.meta.show('battle'); app.meta.refresh(); await wait(100);
+    out.lockedFab = !!document.querySelector('[data-act="rush"]');
+    p.chapter.unlocked = 2; app.meta.refresh(); await wait(100);
+    out.fab = !!document.querySelector('[data-act="rush"]');
+    document.querySelector('[data-act="rush"]').click(); await wait(300);
+    out.panel = { bosses: document.querySelectorAll('.br-boss').length, ms: document.querySelectorAll('.br-ms').length, go: document.querySelector('.br-go')?.textContent.replace(/\s+/g, ' ').trim() };
+    const e0 = p.energy;
+    document.querySelector('.br-go').click(); await wait(300);
+    const r = app.run; app.engine.manual = true;
+    out.start = { rush: !!(r && r.rush), spent: e0 - p.energy, tries: p.rush.tries, level: r.level, legion: r.legion.count, picks: Object.values(r.skillLv).reduce((a, b) => a + b, 0) };
+    // the War Council: four picks before the first boss, titled, while the clock waits
+    const titles = new Set(); let t0 = -1, t1 = -1;
+    const go = (sec) => { for (let i = 0; i < Math.round(sec * 30) && !r.ended; i++) {
+      if (r.levelPending) { const ti = document.querySelector('.lvl-title b')?.textContent; if (ti) titles.add(ti); const c = document.querySelector('.lvl-back .card'); if (c && r.t - (r._pk || 0) > 0.35) { r._pk = r.t; if (ti === 'WAR COUNCIL') { if (t0 < 0) t0 = r.time; t1 = r.time; } c.click(); } }
+      if (!r.levelPending && (r.levelQueue > 0 || r.chestQueue > 0)) r.showLevelUp();
+      r.update(1 / 30);
+    } };
+    r.player.hurt = () => {};
+    go(4); out.draft = { titles: [...titles], clock: +(t1 - t0).toFixed(2), picks: Object.values(r.skillLv).reduce((a, b) => a + b, 0) - out.start.picks };
+    // the five bosses in turn, each at its chapter's scaling; between them a chest, souls and a heal
+    out.bosses = []; out.hud = [];
+    for (let k = 0; k < 5; k++) {
+      for (let i = 0; i < 30 * 12 && !(r.bossEnemy && r.boss.state !== 'enter'); i++) go(1 / 30);
+      const e = r.bossEnemy; if (!e) break;
+      const C = D.CHAPTERS[k], want = D.BOSS.hp * C.hpMul * (1 + D.BOSS.chHp * k) * (D.BOSS.tune[k] || 1) * D.BOSS_RUSH.hp[k];
+      out.bosses.push({ id: r.boss.id, hp: Math.abs(e.maxHp - want) < 2 });
+      out.hud.push(document.querySelector('.hud-timer small')?.textContent);
+      if (k === 1) { r.player.hp = 10; }
+      e.hp = 1; r.enemies.damage(e, 50); go(0.5);
+      if (k === 1) out.between = { chest: r.pickups.special.some((x) => x.kind === 'chest'), hp: Math.round(r.player.hp), legion: r.legion.count, ch: r.chapter.id, next: r.bossSpawned };
+      go(1.5);
+    }
+    go(3); out.ended = r.ended; out.kills = r.bossKills;
+    await wait(900);
+    out.res = { head: document.querySelector('.res-head b')?.textContent, sub: document.querySelector('.res-head span')?.textContent, ad: !!document.querySelector('.modal .btn-ad'), best: /New best/.test(document.querySelector('.res-badges')?.textContent || ''), rush: { ...p.rush } };
+    app.exitRun();
+    // a second attempt that falls to the second boss pays no milestone again; the third try uses up the day, then an ad try
+    const o = Ec.applyRunResult(p, { rush: true, victory: false, bossKills: 1, kills: 50, time: 90, byType: {} });
+    out.again = { milestones: o.milestones.length, gems: o.rewards.gems || 0, sigils: o.rewards.sigils || 0, claimed: p.rush.claimed };
+    p.rush.tries = 3; out.day = Ec.rushState(p); app.meta.refresh(); document.querySelector('[data-act="rush"]').click(); await wait(300);
+    out.retryBtn = !!document.querySelector('.mm-rush [data-act="retry"]');
+    out.ad = Ec.grantRushTry(p) && Ec.rushState(p).available; out.ad2 = Ec.grantRushTry(p);
+    // a new day resets the tries; a new event resets the milestones and the event best (the all-time best stays)
+    p.rush.day = '2000-01-01'; out.newDay = Ec.rushState(p).triesLeft;
+    p.rush.event = '2000-01-04'; const ns = Ec.rushState(p); out.newEvent = { claimed: ns.claimed, best: ns.best, allBest: ns.allBest > 0 };
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    return out;
+  });
+  check('boss rush: open Tue–Thu UTC, keyed by its Tuesday, closing Friday; QA can force it either way',
+    s.cal.join() === 'true,true,false,false' && s.times.key === '2026-10-06' && s.times.ends === '2026-10-09T00:00:00.000Z' && s.times.next === '2026-10-13T00:00:00.000Z' && s.force.join() === 'true,false', JSON.stringify({ cal: s.cal, t: s.times, f: s.force }));
+  check('boss rush: unlocked by a Chapter 1 clear; the panel shows the five bosses, five milestones and the free tries; entering spends a try, no energy',
+    !s.lockedFab && s.fab && s.panel.bosses === 5 && s.panel.ms === 5 && /3 free tries/.test(s.panel.go) && s.start.rush && s.start.spent === 0 && s.start.tries === 1, JSON.stringify({ l: s.lockedFab, f: s.fab, p: s.panel, st: s.start }));
+  check('boss rush: a seasoned start (level 20, a deep legion, a veteran build) and a four-pick War Council while the clock waits',
+    s.start.level === 20 && s.start.legion >= 60 && s.start.picks >= 14 && s.draft.titles.includes('WAR COUNCIL') && s.draft.picks >= 4 && s.draft.clock < 0.1, JSON.stringify({ st: s.start, d: s.draft }));
+  check('boss rush: the five bosses in turn at their chapters\' scaling; between them a chest, souls, a heal and the next chapter; the HUD counts them',
+    s.bosses.map((b) => b.id).join() === 'gravemaw,pyrexa,vaulkar,azrathel,vesperine' && s.bosses.every((b) => b.hp) && s.between.chest && s.between.hp > 10 && s.between.ch === 3 && !s.between.next
+    && s.hud[0] === 'Boss 1 of 5' && s.hud[4] === 'Boss 5 of 5', JSON.stringify({ b: s.bosses, bt: s.between, hud: s.hud }));
+  check('boss rush: clearing it reads "COURT CLEARED", pays every milestone once, records the best, and offers no ad doubling',
+    s.ended && s.kills === 5 && s.res.head === 'COURT CLEARED' && s.res.best && !s.res.ad && s.res.rush.claimed === 5 && s.res.rush.best > 0 && s.res.rush.bestKills === 5 && s.res.rush.clears === 1, JSON.stringify(s.res));
+  check('boss rush: milestones pay once per event; three tries a day, then one by ad; a new day and a new event reset',
+    s.again.milestones === 0 && s.again.gems === 0 && s.again.sigils === 0 && s.again.claimed === 5 && !s.day.available && s.day.retry && s.retryBtn && s.ad && !s.ad2 && s.newDay === 3
+    && s.newEvent.claimed === 0 && s.newEvent.best === 0 && s.newEvent.allBest, JSON.stringify({ a: s.again, d: { av: s.day.available, re: s.day.retry }, rb: s.retryBtn, ad: s.ad, ad2: s.ad2, nd: s.newDay, ne: s.newEvent }));
+});
+check('boss rush: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

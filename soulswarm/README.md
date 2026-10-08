@@ -20,6 +20,7 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 ## What's in the game
 
 - **A beginner tutorial, "The Waking":** a new player's first Battle is a free, guided run with a coach that teaches one thing at a time (move, fight, raise the legion, a ×2 Soul Gate, the Rite, Soul Nova, an elite and its Relic Chest) and ends with a weakened Hollow King. It cannot be lost, pays 500 gold and 30 gems once, then points the way to Talents and Chapter 1. Skip it from the coach, or replay it any time from Settings.
+- **Boss Rush, "The Hollow Court":** a limited weekly event (Tue–Thu UTC) after the first Chapter 1 clear: all five chapter bosses back to back from a seasoned start and a four-pick War Council, with a Relic Chest between bosses. Three free tries a day, event rewards for each boss beaten, and a best clear time.
 - **5 campaign chapters** (6:00 survival, then the chapter's boss), plus **Endless Abyss**, unlocked by clearing Chapter 5. In Endless there is no time limit, a boss rises every 5:00 (the five in turn) and grows stronger, and your deepest run is recorded. Every chapter has its own painted key art: it fills the chapter card on the home screen (cross-fading as you swipe) and opens each run on a cinematic intro card with the chapter's name, its twist and your difficulty.
 - **Nightmare and Torment:** clear a chapter on Normal to replay it on Nightmare, then clear Nightmare for Torment. Tougher, deadlier hordes, more elites with extra affixes and a darker world pay ×1.75 / ×2.5 gold, ×1.5 / ×2 pass XP, one-time first-clear gems and a richer Gravemaw's Hoard (Torment can drop a Legendary relic). Pick the difficulty on the chapter card; Endless and the Daily Trial stay Normal.
 - **5 heroes** with signature weapons (Vael, Nyx, Seraphine, Liora, Mordrake), plus **6 weapons, 8 passives and 6 evolutions** (one per weapon) drafted on level-up cards.
@@ -36,7 +37,7 @@ Desktop controls are WASD/arrows to move, Space for Soul Nova and Shift or E for
 ## Test and marketing tools
 
 ```bash
-npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy, bug-test regressions, the Bestiary and chapter art, the painted heroes, maps and foes, the five chapter bosses and the beginner tutorial (260 checks)
+npm run playtest      # headless bot: every hero, a full Chapter 1 clear, boss phases, Endless, hero passives, kill streaks and game feel, elite affixes, run events, Hero Rites, Nightmare and Torment, meta and economy, bug-test regressions, the Bestiary and chapter art, the painted heroes, maps and foes, the five chapter bosses, the beginner tutorial and the Boss Rush (267 checks)
 node scripts/ui-sweep.mjs http://localhost:5173/   # menus sweep: every screen × 5 phones × 3 profiles (layout audit + screenshots), tap fuzzing, economy and gacha fuzzing, broken saves, lifecycle
 npm run balance       # bot plays chapters 1–5 with typical progression; reports clears, deaths, boss time-to-kill (needs dev server; DIFF=nightmare|torment, PROG=5, GOD=1, RITE=0)
 node scripts/soak.mjs http://localhost:5173/ 60 1   # seeded soak/fuzz: whole runs with chaos inputs and invariant checks (RUN=n replays one; LEAK=30, PERF=1)

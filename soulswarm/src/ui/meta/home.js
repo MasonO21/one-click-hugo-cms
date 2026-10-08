@@ -6,11 +6,12 @@ import { CHAPTERS, ENERGY_COST, SKUS, HEROES, DIFFICULTY, DIFFICULTY_ORDER, BOSS
 import { difficultyUnlocked, selectedDifficulty, selectDifficulty, difficultyRecord, clearedOn } from '../../meta/difficulty.js';
 import {
   commit, computeLoadout, notifications, starterAvailable, pactActive, pactDailyAvailable,
-  freeChestAvailable, claimFreeChest, canPlay, trialState, bloodMoon, bloodMoonTimes,
+  freeChestAvailable, claimFreeChest, canPlay, trialState, bloodMoon, bloodMoonTimes, rushState,
 } from '../../meta/economy.js';
 import { hex, cd, nextMidnight, popRewards, tap, delegate } from './util.js';
 import { now as clockNow } from '../../meta/clock.js';
 import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
+import { openRush } from './rush.js';
 import { CHAPTER_ART } from '../art.js';
 
 const warmed = new Set();
@@ -78,7 +79,7 @@ export function createHome(ctx) {
     const train = !p.flags.tutorialDone, coach = train ? '' : p.flags.coach;
     const ftue = (train || coach === 'battle') && !locked;
     const lowEnergy = !canPlay(p);
-    const trial = trialState(p);
+    const trial = trialState(p), rush = rushState(p); // Boss Rush: the weekly Hollow Court (ui/meta/rush.js)
 
     root.innerHTML = `
       <div class="hm-head">
@@ -93,6 +94,7 @@ export function createHome(ctx) {
         ${fab('quests', icon('quest'), 'Quests', n.quests ? `<i class="badge-dot"></i>` : '')}
         ${fab('login', icon('calendar'), 'Login', n.login ? '<i class="badge-dot"></i>' : '')}
         ${trial.unlocked ? fab('trial', icon('star'), 'Trial', trial.available ? '<i class="badge-dot"></i>' : '', trial.available ? 'fab-gold fab-offer' : '') : ''}
+        ${rush.unlocked ? fab('rush', icon('crown'), 'Rush', rush.available ? '<i class="badge-dot"></i>' : '', rush.open ? 'fab-rush fab-offer' : '') : ''}
         ${fab('settings', icon('gear'), 'Settings')}
       </div>
       <div class="hm-side hm-right">${right.join('')}</div>
@@ -137,6 +139,7 @@ export function createHome(ctx) {
     quests: () => { tap(app); openQuests(ctx); },
     login: () => { tap(app); openLogin(ctx); },
     trial: () => { tap(app); openTrial(ctx); },
+    rush: () => { tap(app); openRush(ctx); },
     settings: () => { tap(app); openSettings(ctx); },
     coachTalent: () => { tap(app); ctx.go('heroes', 'talents'); },
     starter: () => { tap(app, 'medium'); openStarter(ctx); },

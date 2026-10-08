@@ -130,6 +130,20 @@ export const TUTORIAL = {
   done: 1.3,            // seconds a finished step shows its tick before the next
   reward: { gold: 500, gems: 30 }, // for finishing, on top of the run's kill and time gold
 };
+// ---------------------------------------------------------------- Boss Rush ("The Hollow Court", run.js rush, ui/meta/rush.js)
+// The five chapter bosses back to back in the Abyss, each at its own chapter's scaling (× hp[k] for HP). The Shepherd
+// starts where a campaign player stands at a boss: Lv `level`, a veteran build (the first card of `auto` draws), legion
+// cap +`cap` and a legion of `legion`, then picks `draft` powers; each boss drops a Relic Chest, raises `souls` souls and
+// heals `heal` of max HP, and the next rises `gap` s later. A limited event: in the build it
+// runs every week on `days` (UTC; Tue–Thu); live, once per season through remote config (LIVEOPS.md §3.2). Free:
+// `tries` a day, `adTries` more by rewarded ad. Milestones (bosses beaten in one attempt) pay once per event.
+export const BOSS_RUSH = {
+  name: 'The Hollow Court', unlockAt: 2, // chapter.unlocked: a first Chapter 1 clear
+  days: [2, 3, 4], tries: 3, adTries: 1,
+  level: 20, auto: 14, cap: 40, legion: 70, draft: 4, first: 3, warn: 3, gap: 6, souls: 20, heal: 0.4,
+  hp: [1, 0.85, 0.7, 0.6, 0.55],
+  milestones: [{ gold: 1000 }, { gems: 20 }, { gold: 1500 }, { gems: 30 }, { sigils: 1, gems: 40 }],
+};
 // ---------------------------------------------------------------- Chapter bosses (boss.js)
 // Each campaign chapter ends with its own boss; the Endless Abyss brings them back in turn (BOSS_ORDER, by depth). They
 // share the stats above and the three-phase frame below, and differ in look, names, a twist on the shared attacks and a

@@ -9,7 +9,7 @@ import {
 import { saveProfile, todayKey } from './save.js';
 import { now, today, dayTime } from './clock.js';
 import { resultDifficulty, clearedOn, recordDifficulty, rollHoard } from './difficulty.js';
-import { BESTIARY, TUTORIAL } from '../game/data.js';
+import { BESTIARY, TUTORIAL, BOSS_RUSH } from '../game/data.js';
 import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
 
 // ---------------------------------------------------------------- change notification
@@ -394,11 +394,73 @@ export function beginTrial(p) { const t = trialToday(p); if (t.done || p.chapter
 /** A rewarded ad buys one more attempt per day. */
 export function grantTrialRetry(p) { const t = trialToday(p); if (!t.done || t.ads >= TRIAL.adRetries) return false; t.ads++; t.done = false; return true; }
 
+// ---------------------------------------------------------------- Boss Rush (BOSS_RUSH in data.js, run.js rush)
+const DAY = 864e5;
+const utcDay0 = (t) => { const d = new Date(t); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); };
+/** Is the Court open? (profile.flags.bossRush 'on' | 'off' overrides the calendar, for QA and live config.) */
+export function rushOpen(p, t = now()) {
+  const o = p.flags && p.flags.bossRush;
+  if (o === 'on' || o === 'off') return o === 'on';
+  return BOSS_RUSH.days.includes(new Date(t).getUTCDay());
+}
+/** The current event's key (the UTC date it opened), when it closes, and when the next opens. */
+export function rushTimes(t = now()) {
+  const D = BOSS_RUSH.days, day = new Date(t).getUTCDay(), base = utcDay0(t), first = D[0];
+  const into = (day - first + 7) % 7, open = into < D.length;
+  const start = base - into * DAY;
+  return { key: new Date(start).toISOString().slice(0, 10), ends: start + D.length * DAY, starts: open ? start + 7 * DAY : base + ((first - day + 7) % 7 || 7) * DAY };
+}
+/** The profile's Boss Rush block, rolled to this event (milestones and event best) and this day (tries). */
+function rushNow(p) {
+  const R = p.rush, k = rushTimes().key, d = todayKey();
+  if (R.event !== k) Object.assign(R, { event: k, claimed: 0, best: 0, bestKills: 0 });
+  if (R.day !== d) Object.assign(R, { day: d, tries: 0, ads: 0 });
+  return R;
+}
+export function rushState(p) {
+  const R = rushNow(p), unlocked = p.chapter.unlocked >= BOSS_RUSH.unlockAt, open = rushOpen(p), T = rushTimes();
+  const left = Math.max(0, BOSS_RUSH.tries + R.ads - R.tries);
+  return { unlocked, open, ends: T.ends, starts: T.starts, triesLeft: left, available: unlocked && open && left > 0,
+    retry: unlocked && open && left === 0 && R.ads < BOSS_RUSH.adTries, claimed: R.claimed, best: R.best, bestKills: R.bestKills, allBest: R.allBest, clears: R.clears };
+}
+/** Uses one of today's tries. */
+export function beginRush(p) { const s = rushState(p); if (!s.available) return false; p.rush.tries++; return true; }
+/** A rewarded ad buys one more try a day. */
+export function grantRushTry(p) { const s = rushState(p); if (!s.retry) return false; p.rush.ads++; return true; }
+/** A Boss Rush attempt: the run's gold and pass XP, quests, Bestiary kills (each boss counts for itself), the milestones
+ *  newly reached this event (bosses beaten in one attempt) and the fastest full clear. No chapter records. */
+function applyRushResult(p, result) {
+  const R = rushNow(p), L = computeLoadout(p), n = Math.min(BOSS_RUSH.milestones.length, result.bossKills || 0);
+  const rewards = { gold: Math.round((result.kills * 0.9 + result.time * 2.2) * L.goldMul + (result.bonusGold || 0)), passXp: Math.round(20 + result.time / 6 + result.kills / 40 + n * 15) };
+  const milestones = [];
+  for (let i = R.claimed; i < n; i++) {
+    milestones.push(i);
+    for (const [k, v] of Object.entries(BOSS_RUSH.milestones[i])) rewards[k] = (rewards[k] || 0) + v;
+  }
+  R.claimed = Math.max(R.claimed, n);
+  const items = grant(p, rewards);
+  const cleared = n >= BOSS_RUSH.milestones.length;
+  const newBest = cleared && (!R.best || result.time < R.best);
+  if (newBest) R.best = Math.round(result.time);
+  if (cleared) { R.clears = (R.clears || 0) + 1; if (!R.allBest || result.time < R.allBest) R.allBest = Math.round(result.time); }
+  R.bestKills = Math.max(R.bestKills, n);
+  const s = p.stats;
+  s.runs += 1; s.kills += result.kills; s.raised += result.raised; s.bestLegion = Math.max(s.bestLegion, result.bestLegion);
+  s.bestStreak = Math.max(s.bestStreak || 0, result.bestStreak || 0);
+  addBestiaryKills(p, result.byType);
+  for (const [k, v, m] of [['kills', result.kills], ['raised', result.raised], ['novas', result.novas], ['runs', 1], ['chests', result.chests || 0], ['peak', result.bestLegion || 0, 'max'], ['evolve', result.evolutions || 0], ['bosses', n], ['survive', Math.floor(result.time), 'max']]) questProgress(p, k, v, m);
+  let levelUps = 0;
+  p.xp += rewards.passXp;
+  while (p.xp >= accountXpFor(p.level)) { p.xp -= accountXpFor(p.level); p.level += 1; levelUps += 1; p.gems += 20; }
+  return { rewards, items, firstClear: false, newBest, levelUps, streakRecord: false, difficulty: 'normal', rush: true, milestones, cleared };
+}
+
 export function applyRunResult(p, result) {
   // a partial or malformed result must not write NaN into the profile (NaN currencies and XP are saved as null)
   result = { ...result, chapter: Math.min(CHAPTERS.length, Math.max(1, Math.floor(result.chapter) || 1)) };
   for (const k of ['time', 'kills', 'raised', 'bestLegion', 'novas', 'gates', 'bonusGold', 'bossKills', 'chests', 'elites', 'evolutions', 'bestStreak']) result[k] = Math.max(0, +result[k] || 0);
   if (result.tutorial) return applyTutorialResult(p, result);
+  if (result.rush) return applyRushResult(p, result);
   const L = computeLoadout(p);
   const ch = result.chapter;
   const trial = !!result.trial;

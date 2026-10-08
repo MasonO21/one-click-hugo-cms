@@ -21,7 +21,7 @@ import { computeStats, rollChoices, applyChoice } from './skills.js';
 import { Streak } from './streak.js';
 import { Tutorial } from './tutorial.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
-import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL } from './data.js';
+import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH } from './data.js';
 import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
@@ -32,7 +32,7 @@ const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
 export class Run {
-  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal', tutorial = false }) {
+  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal', tutorial = false, rush = false }) {
     this.isRun = true;
     this.engine = engine;
     this.app = app;
@@ -47,7 +47,8 @@ export class Run {
     this.bloodMoon = !!bloodMoon; // weekend event: 8 elites, double rewards, a blood-red sky
     // Nightmare / Torment: always defined, Normal is the identity. Endless and the Daily Trial play Normal.
     this.diff = { ...(!chapter.endless && !(mutators && mutators.length) && DIFFICULTY[difficulty]) || DIFFICULTY.normal };
-    let look = this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim, recolor: 0.6 } : chapter;
+    this.rush = !!rush; // Boss Rush: the five chapter bosses back to back in the Abyss (BOSS_RUSH)
+    let look = this.rush ? CHAPTERS[CHAPTERS.length - 1] : this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim, recolor: 0.6 } : chapter;
     if (this.diff.tint) look = difficultyLook(look, this.diff.tint); // over the Blood Moon sky too
     this.scene.background = new THREE.Color(look.fog);
     this.camera = new THREE.PerspectiveCamera(45, 0.5, 0.5, 220);
@@ -126,6 +127,17 @@ export class Run {
     // the beginner tutorial (tutorial.js): its steps direct the run until the King rises, who comes when they say
     this.guide = tutorial ? new Tutorial(this) : null;
     if (this.guide) { this.tutorial = true; this.nextBossAt = Infinity; }
+    // Boss Rush: a seasoned start, as a campaign player stands at the boss: the level, a veteran build (the first card of
+    // `auto` draws), a deep legion, then the player's own opening draft; the first boss a moment after it
+    if (this.rush) {
+      const R = BOSS_RUSH;
+      this.mut.stats.cap = (this.mut.stats.cap || 0) + R.cap;
+      this.level = R.level; this.xpNeed = xpForLevel(this.level);
+      for (let i = 0; i < R.auto; i++) applyChoice(this, rollChoices(this, 3)[0]);
+      this.recomputeStats();
+      this.legion.addMany(R.legion, this.player.x, this.player.z);
+      this.draftLeft = R.draft; this.draftPicks = 0; this.nextBossAt = Infinity; // set once the draft is done
+    }
   }
 
   // ---------------------------------------------------------------- scaling helpers
@@ -221,6 +233,7 @@ export class Run {
   director(dt) {
     const m = this.minute;
     if (this.guide && !this.bossSpawned) { this.guide.director(dt); return; }
+    if (this.rush && !this.bossSpawned) { this.rushDirector(); return; }
     if (!this.bossSpawned) {
       // Endless: each depth (boss kill) rotates the chapter modifiers; announce once the depth banner has played
       if (this.endless && this.modDepth !== this.bossKills) {
@@ -274,12 +287,24 @@ export class Run {
     } else if (!this.bossDead) this.boss.director(dt); // boss-time adds come from the arena edge (boss.js)
   }
 
+  /** Boss Rush between bosses: the opening draft, then each boss a few seconds after the last fell. */
+  rushDirector() {
+    if (this.draftLeft > 0) { // the War Council: picks before the first boss, once the title card has had a moment (the clock waits for them)
+      if (!this.levelPending && this.time >= 1.2) { this.chestQueue += this.draftLeft; this.draftPicks = this.draftLeft; this.draftLeft = 0; this.showLevelUp(); }
+      return;
+    }
+    if (this.nextBossAt === Infinity) { if (this.draftPicks > 0 || this.levelPending) return; this.nextBossAt = this.time + BOSS_RUSH.first; }
+    if (!this.warned && this.time >= this.nextBossAt - BOSS_RUSH.warn) this.warnBoss();
+    if (this.time >= this.nextBossAt) this.spawnBoss();
+  }
+
   /** The boss warning: the chapter's boss; in the Endless Abyss the next in turn, each one "returns" once all five have fallen. */
   warnBoss() {
     this.warned = true;
-    const B = BOSSES[this.bossId], back = this.bossKills >= BOSS_ORDER.length;
+    const B = BOSSES[this.bossId], back = !this.rush && this.bossKills >= BOSS_ORDER.length;
+    const sub = this.rush ? `Boss ${this.bossKills + 1} of ${BOSS_ORDER.length}` : this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion';
     this.ui.bossColor(B.color);
-    this.ui.banner(`${B.title.toUpperCase()} ${back ? 'RETURNS' : 'APPROACHES'}`, this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion', 'boss');
+    this.ui.banner(`${B.title.toUpperCase()} ${back ? 'RETURNS' : 'APPROACHES'}`, sub, 'boss');
     this.audio.sfx('warning');
     this.audio.voice(back ? `${B.voice}_return` : B.voice);
     this.app.haptic('warning');
@@ -288,7 +313,7 @@ export class Run {
   spawnBoss() {
     this.bossSpawned = true;
     this.gates.despawn();
-    this.boss.spawn(1 + 0.6 * this.bossKills);
+    this.boss.spawn(this.rush ? BOSS_RUSH.hp[this.bossKills] : 1 + 0.6 * this.bossKills);
   }
 
   swarmRing() {
@@ -381,14 +406,15 @@ export class Run {
     }
     this.input.reset();
     const choices = rollChoices(this, 3);
+    const draft = chest && this.draftPicks > 0 ? [BOSS_RUSH.draft - this.draftPicks + 1, BOSS_RUSH.draft] : null; // Boss Rush: the opening picks
     this.ui.showLevelUp(choices, this.level, (c) => {
       applyChoice(this, c);
       if (c.kind === 'evolution') this.celebrateEvolution(c); else this.audio.sfx('select');
-      if (chest) this.chestQueue--; else this.levelQueue--;
+      if (chest) { this.chestQueue--; if (draft) this.draftPicks--; } else this.levelQueue--;
       this.levelPending = false;
       this.player.invuln = Math.max(this.player.invuln, 0.6);
       if (this.levelQueue > 0 || this.chestQueue > 0) setTimeout(() => { if (!this.ended && !this.levelPending) this.showLevelUp(); }, 120);
-    }, { chest });
+    }, { chest, draft });
   }
 
   /** An evolution is the build's payoff: slow-mo, a gold shockwave that hurls the horde back, the legendary fanfare. */
@@ -572,6 +598,8 @@ export class Run {
     this.counters.byType[id]++; // Bestiary: campaign victories and every Endless kill
     this.slainVoice = `${K.voice}_slain`;
     if (this.endless) return this.onEndlessBossKilled(x, z, K);
+    if (this.rush && this.bossKills + 1 < BOSS_ORDER.length) return this.onRushBossKilled(x, z, K);
+    if (this.rush) this.bossKills++; // the fifth: the Court is cleared
     this.bossDead = true;
     this.bossEnemy = null;
     this.fx.slowMo(0.15, 1.6);
@@ -588,9 +616,10 @@ export class Run {
     this.enemies.clearAll(true);
     this.projectiles.clearEnemyShots();
     this.pickups.magnetAll();
-    this.ui.banner('CHAPTER CLEARED', `${this.chapter.name} is free`, 'gold');
+    if (this.rush) this.ui.banner('THE COURT FALLS', `All five bosses slain in ${Math.floor(this.time / 60)}:${String(Math.floor(this.time % 60)).padStart(2, '0')}`, 'gold');
+    else this.ui.banner('CHAPTER CLEARED', `${this.chapter.name} is free`, 'gold');
     this.audio.voice(this.slainVoice);
-    this.audio.voice('a_cleared'); // queues behind the first line
+    if (!this.rush) this.audio.voice('a_cleared'); // queues behind the first line
     this.audio.stopMusic();
     // the rest of the victory beat plays out in update() so it respects pause and ends cleanly
     this.victory = { t: 0, x, z, raised: false, jingle: false };
@@ -603,6 +632,33 @@ export class Run {
     if (!v.raised && v.t > 0.6) { v.raised = true; for (let i = 0; i < 30; i++) this.legion.raise(v.x + (Math.random() - 0.5) * 4, v.z + (Math.random() - 0.5) * 4); }
     if (!v.jingle && v.t > 0.9) { v.jingle = true; this.audio.sfx('victory'); }
     if (v.t > 3.2) this.end(true);
+  }
+
+  /** Boss Rush: a boss falls and the next is coming. A Relic Chest (the pick between bosses), souls and a heal; the
+   *  run now scales as the next boss's chapter (the Abyss look stays). */
+  onRushBossKilled(x, z, K) {
+    const R = BOSS_RUSH, P = this.player;
+    this.bossKills++;
+    this.bossSpawned = false; this.warned = false; this.bossEnemy = null;
+    this.nextBossAt = this.time + R.gap;
+    this.chapter = CHAPTERS[this.bossKills]; this.recomputeStats();
+    this.fx.slowMo(0.25, 0.9);
+    this.fx.flash(0.7); this.fx.shake(0.8); this.fx.aberration(0.8);
+    const hex = K.color;
+    this.particles.burst(x, 2, z, 200, hdr(hex, 4), { speed: 12, life: 1.2, size: 0.7, up: 1.5 });
+    this.fx.shockwave(x, z, 14, hex, 0.9, 0.06);
+    this.fx.light(x, z, 16, 3.5, new THREE.Color(hex), 1.2);
+    this.audio.sfx('boss_slam'); this.app.haptic('heavy');
+    this.enemies.clearAll(true);
+    this.projectiles.clearEnemyShots();
+    this.pickups.magnetAll();
+    this.pickups.dropSpecial('chest', x, z);
+    for (let i = 0; i < R.souls; i++) this.legion.raise(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 4);
+    P.heal(P.maxHp * R.heal);
+    this.ui.bossBar(false);
+    this.ui.banner(`${K.name.toUpperCase()} FALLS`, `${this.bossKills} of ${BOSS_ORDER.length} · ${BOSSES[this.bossId].name} rises next`, 'gold');
+    this.audio.voice(this.slainVoice);
+    this.audio.playMusic('battle');
   }
 
   /** Endless Abyss: the boss falls, the abyss deepens, the run continues (the next boss is the next in turn). */
@@ -637,7 +693,7 @@ export class Run {
     this.input.reset();
     this.profile.flags.tutorialDone = true;
     const result = {
-      chapter: this.chapter.id, time: this.endless ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
+      chapter: this.chapter.id, time: this.endless || this.rush ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
       trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
@@ -645,6 +701,7 @@ export class Run {
       bestStreak: this.counters.bestStreak,
       byType: { ...this.counters.byType }, // Bestiary kills per foe
       tutorial: !!this.guide, // the beginner tutorial: its own reward, no chapter records (economy.applyRunResult)
+      rush: this.rush, // Boss Rush: milestones by bosses beaten, the fastest clear
     };
     if (this.onEnd) this.onEnd(result);
   }

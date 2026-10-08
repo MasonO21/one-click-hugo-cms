@@ -10,6 +10,9 @@
 //          constructor-time fields such as extraElites and tint are not covered)
 //        RITE=0 ... the bot never casts the hero's Rite (a before/after comparison on the same build)
 //        RTUNE='{"nyx":{"dmg":80}}' ... trial Rite tunables (RITES in data.js)
+//        RUSH=1 ... plays the Boss Rush (the five bosses back to back) instead; the chapters list picks the progression
+//          (e.g. 2,5 = a player who just cleared Chapter 1 and one at Chapter 5) and the table reports bosses beaten
+//        BRTUNE='{"hp":[1,0.8,0.6,0.5,0.45]}' ... trial BOSS_RUSH tunables
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 
@@ -23,6 +26,7 @@ const HERO = process.env.HERO || 'vael';
 const DIFF = process.env.DIFF || 'normal';
 const PROG = process.env.PROG ? +process.env.PROG : 0;
 const RITE = process.env.RITE !== '0';
+const RUSH = process.env.RUSH === '1';
 
 // What a player typically owns when they reach chapter c (talent levels are spread over Might, Vitality, Necromancy, Dominion, Swiftness).
 const PROGRESSION = {
@@ -38,7 +42,7 @@ const PROGRESSION = {
 // within 6 m, or when a Witch's fire circle is about to land on her (the Knell clears it); Nyx the same, dashing straight
 // away from the crowd (or out of the circle); Vael at 12+ foes within 12 m; Seraphine at 14+ within 12 m, an elite or 2+
 // Witches in sight. Gravemaw in reach (8 m) always counts.
-const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune) => {
+const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune, rush) => {
   const app = window.__soulswarm, p = app.profile, E = app.engine;
   E.manual = true;
   const keys = ['might', 'vitality', 'raise', 'cap', 'swift'];
@@ -50,8 +54,9 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune) => {
   p.chapter.unlocked = Math.max(p.chapter.unlocked, ch); p.energy = 30;
   p.chapter.best[ch] = { time: 420, cleared: true, kills: 0 }; p.diff.best[ch] = { nightmare: { time: 420, legion: 0, kills: 0, cleared: true } }; // open every difficulty
   p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; p.flags.tutorialDone = true;
-  app.startRun(ch, { difficulty: diff });
+  if (rush) { p.flags.bossRush = 'on'; p.rush.tries = 0; p.chapter.unlocked = Math.max(p.chapter.unlocked, 2); app.startRun(1, { rush: true }); } else app.startRun(ch, { difficulty: diff });
   const r = app.run; if (dtune) Object.assign(r.diff, dtune);
+  const splits = []; let kills0 = 0;
   let hurt = 0; const h0 = r.player.hurt.bind(r.player);
   r.player.hurt = (d) => { const before = r.player.hp; h0(god ? Math.min(d, r.player.hp - 1) : d); // god: no hit can kill (Torment one-shots fragile builds)
     hurt += Math.max(0, before - r.player.hp); if (god) r.player.hp = r.player.maxHp; };
@@ -89,9 +94,10 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune) => {
     }
     peakEnemies = Math.max(peakEnemies, r.enemies.count);
     r.update(1 / 30);
+    if (r.bossKills > kills0) { kills0 = r.bossKills; splits.push(Math.round(r.time)); } // Boss Rush: when each boss fell
   }
   const out = { ch, diff: r.diff.id, cleared: !!r.bossDead, died: !!r.player.dead, t: Math.round(r.time), bossTTK: r.bossDead && bossAt >= 0 ? Math.round(r.time - bossAt) : null,
-    hurt: Math.round(hurt), maxHp: r.player.maxHp, level: r.level, kills: r.counters.kills, peakLegion: r.legion.peak, peakEnemies, novas: r.counters.novas, rites: r.counters.rites };
+    hurt: Math.round(hurt), maxHp: r.player.maxHp, level: r.level, kills: r.counters.kills, peakLegion: r.legion.peak, peakEnemies, novas: r.counters.novas, rites: r.counters.rites, bossKills: r.bossKills, splits };
   app.exitRun();
   return out;
 };`;
@@ -106,9 +112,10 @@ for (const ch of CHAPTERS) {
     await page.goto(URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2500);
     await page.evaluate(BOT);
+    if (process.env.BRTUNE) await page.evaluate(async (tune) => { const { BOSS_RUSH } = await import('/src/game/data.js'); Object.assign(BOSS_RUSH, tune); }, JSON.parse(process.env.BRTUNE));
     if (process.env.RTUNE) await page.evaluate(async (tune) => { const { RITES } = await import('/src/game/data.js'); for (const [id, o] of Object.entries(tune)) Object.assign(RITES[id], o); }, JSON.parse(process.env.RTUNE));
     if (process.env.TUNE) await page.evaluate(async (tune) => { const { HEROES } = await import('/src/game/data.js'); for (const [id, o] of Object.entries(tune)) { const { passive, ...rest } = o; Object.assign(HEROES[id], rest); if (passive) Object.assign(HEROES[id].passive, passive); } }, JSON.parse(process.env.TUNE));
-    const res = await page.evaluate(([c, p, g, h, rt, d, dt]) => window.__balance(c, p, g, h, rt, d, dt), [ch, PROGRESSION[PROG || ch], GOD, HERO, RITE, DIFF, process.env.DTUNE ? JSON.parse(process.env.DTUNE) : null]);
+    const res = await page.evaluate(([c, p, g, h, rt, d, dt, ru]) => window.__balance(c, p, g, h, rt, d, dt, ru), [ch, PROGRESSION[PROG || ch], GOD, HERO, RITE, DIFF, process.env.DTUNE ? JSON.parse(process.env.DTUNE) : null, RUSH]);
     res.errors = errors.length;
     rows.push(res);
     console.log(JSON.stringify(res));
@@ -116,6 +123,14 @@ for (const ch of CHAPTERS) {
   }
 }
 await browser.close();
+if (RUSH) { // Boss Rush: per progression, how many bosses fall and how fast
+  console.log(`\nBoss Rush · ${HERO}${GOD ? ' (god mode)' : ''}\nprog | clears | bosses beaten (each run) | clear time avg | when each boss fell (first run)`);
+  for (const ch of CHAPTERS) {
+    const R = rows.filter((r) => r.ch === ch), C = R.filter((r) => r.bossKills >= 5);
+    console.log(`${ch}    | ${C.length}/${R.length} | ${R.map((r) => r.bossKills).join(' ')} | ${C.length ? Math.round(C.reduce((a, r) => a + r.t, 0) / C.length) + 's' : '-'} | ${R[0] ? R[0].splits.join(' ') : ''}`);
+  }
+  process.exit(0);
+}
 console.log(`\n${HERO} · ${DIFF}${PROG ? ` · chapter ${PROG} progression` : ''}${GOD ? ' (god mode)' : ''}${RITE ? '' : ' (no Rite)'}\nch | clears | deaths (avg time) | survival avg | boss TTK avg | dmg taken avg | peak legion avg | Rites per run`);
 for (const ch of CHAPTERS) {
   const R = rows.filter((r) => r.ch === ch), avg = (f) => { const v = R.map(f).filter((x) => x != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : '-'; };

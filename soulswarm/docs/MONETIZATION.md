@@ -83,7 +83,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Rewarded daily free chest (10 gems × 28) | 280 | — | +2 |
 | **Total** | | | **≈ 105 pulls ≈ 3.0 Legendaries per season** (≈ 2.1 without ads) |
 
-One-time sources are not included: chapter first clears (550 gems + 5 sigils), Nightmare and Torment first clears (900 gems, spread over months of endgame play, see §2.5), Bestiary milestones (550 gems + 11 sigils + 22,000 gold, see §2.6), the beginner tutorial (its run's gold plus 500 gold and 30 gems, once; GDD §16) and the new-account balance (150 gems + 1 sigil).
+Event sources are not included: the Boss Rush milestones (GDD §8.3) pay at most 2,500 gold, 90 gems and 1 sigil per event (≈ 270 gem-equivalent, and only for a full clear; a fresh Chapter 1 player earns the first, 1,000 gold). The build runs the event weekly so it can be played, which would add about 10% to a full-clearing player's season; live, it runs once a season (about 2.5%). One-time sources are not included either: chapter first clears (550 gems + 5 sigils), Nightmare and Torment first clears (900 gems, spread over months of endgame play, see §2.5), Bestiary milestones (550 gems + 11 sigils + 22,000 gold, see §2.6), the beginner tutorial (its run's gold plus 500 gold and 30 gems, once; GDD §16) and the new-account balance (150 gems + 1 sigil).
 
 ### 2.5 Nightmare and Torment (endgame difficulty)
 
