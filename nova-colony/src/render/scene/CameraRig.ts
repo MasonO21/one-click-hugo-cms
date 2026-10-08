@@ -14,6 +14,13 @@ import { clamp, lerp } from '../../core/math';
 const COMBAT_FRAME_R = 26;
 /** During an attack the follow camera looks this fraction of its distance ahead of the player. */
 const COMBAT_LOOK_AHEAD = 0.14;
+/**
+ * Portrait phones: share of the screen height the view is shifted down, so the player stands a little below the
+ * middle. The HUD stacks down the top of a portrait screen (status rows, the mission card, offer chips) and used to
+ * cover what stands just above the player: a colonist's wish bubble, the building next door. Picking and screen
+ * projections go through the same projection matrix, so they follow.
+ */
+const PORTRAIT_VIEW_SHIFT = 0.09;
 
 export class CameraRig {
   private tx = 0;
@@ -32,6 +39,8 @@ export class CameraRig {
   private readonly look = new THREE.Vector3();
   private readonly up = new THREE.Vector3(0, 1, 0);
   private lastMode = '';
+  /** View shift currently applied to the camera (see PORTRAIT_VIEW_SHIFT). */
+  private viewShift = 0;
 
   constructor(private readonly ctx: RenderContext) {}
 
@@ -180,6 +189,14 @@ export class CameraRig {
     if (Math.abs(cam.fov - wantFov) > 0.1) {
       cam.fov = wantFov;
       cam.updateProjectionMatrix();
+    }
+    const shift = cam.aspect < 1 ? PORTRAIT_VIEW_SHIFT : 0;
+    if (shift !== this.viewShift) {
+      this.viewShift = shift;
+      // a virtual view of the camera's own aspect (setViewOffset also sets the aspect from it); the projection only
+      // uses the ratios, so the shift holds across later resizes
+      if (shift > 0) cam.setViewOffset(1000 * cam.aspect, 1000, 0, -1000 * shift, 1000 * cam.aspect, 1000);
+      else cam.clearViewOffset();
     }
 
     env.cx = this.tx;
