@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.24.0',
+  version: '4.25.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -957,6 +957,7 @@ const DATA = {
     { id: 'drill', text: 'Drill troops to a new rank', n: 1, pts: 10, show: (S) => S.lv.barracks >= 10 },
     { id: 'clash', text: 'Fight a Wadi Clash', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 9 },
     { id: 'trade', text: 'Send a trade caravan', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 10 },
+    { id: 'derby', text: 'Run a Camel Derby race', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 8 },
     { id: 'decree', text: 'Give a Warden\'s Decree', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'outpost', text: 'Collect from an outpost', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
@@ -1299,6 +1300,51 @@ const DATA = {
   // its prices move from day to day, and the longer roads pay better but cross worse bandit country: hired guards
   // (paid in copper and food, half or full) cut the risk, and an ambushed caravan loses half its payment.
   // Guards are hired rather than drawn from the army because troops away for hours left the expedition short.
+  // ---------- The Camel Derby ----------
+  // From Rainwyrm Lv 8 the keep keeps a racing camel. Train its Speed, Stamina and Spirit (Lv 1-20, one session at a
+  // time, food and water and keep time), and race it on the salt pan against five rivals in three cups, each opening
+  // when you win the one before. In a race you hold to urge your camel: an urged camel runs faster and keeps its pace
+  // over the dunes, but burns energy, and a camel that runs dry is spent for a few seconds. The rules were tuned in a
+  // simulation of the race: a camel at the top of a cup's range wins about four races in five ridden well, one in the
+  // middle about one in six, and riding matters as much as a few levels.
+  derby: {
+    unlock: 8, // Rainwyrm level
+    entries: { cap: 3, every: 4 * 3600 }, // a race entry every 4 hours of keep time, 3 at most
+    maxLv: 20,
+    train: { time: 900, perLv: 240, cost: { food: 0.3, water: 0.2 }, growth: 0.15 }, // seconds and quarter-crates, growing per level
+    stats: [
+      { id: 'spd', name: 'Speed', icon: 'i-dy-speed', text: 'How fast it runs' },
+      { id: 'sta', name: 'Stamina', icon: 'i-dy-stamina', text: 'Urging tires it less, and it gets its breath back sooner' },
+      { id: 'spi', name: 'Spirit', icon: 'i-dy-spirit', text: 'How much faster it runs when urged' },
+    ],
+    // rivals' levels for each stat; the first win of a cup brings its piece of tack
+    cups: [
+      { id: 'village', name: 'Village Cup', lv: [1, 6], tack: 'pads', color: '#c9a777',
+        rewards: [{ starglass: 40, food: 1, water: 1 }, { food: 1, water: 0.5 }, { water: 0.6 }, { food: 0.3 }] },
+      { id: 'oasis', name: 'Oasis Stakes', lv: [6, 12], tack: 'bridle', color: '#3fc8c0',
+        rewards: [{ starglass: 80, whetstone: 1, journals: 1.5 }, { starglass: 30, journals: 1 }, { journals: 0.6 }, { food: 0.5 }] },
+      { id: 'crown', name: 'Desert Crown', lv: [12, 20], tack: 'saddle', color: '#e0b04a',
+        rewards: [{ starglass: 150, whetstone: 2, speed60: 1 }, { starglass: 60, whetstone: 1 }, { starglass: 25, journals: 1 }, { food: 0.8 }] },
+    ],
+    tack: {
+      pads: { name: 'Sand Pads', icon: 'i-dy-pads', fx: { spd: 1 }, text: 'Speed +1' },
+      bridle: { name: 'Braided Bridle', icon: 'i-dy-bridle', fx: { spi: 2 }, text: 'Spirit +2' },
+      saddle: { name: 'Racing Saddle', icon: 'i-dy-saddle', fx: { sta: 3 }, text: 'Stamina +3' },
+    },
+    rules: {
+      length: 650,
+      track: [[0, 90, 'flat'], [90, 210, 'dune'], [210, 350, 'pan'], [350, 460, 'dune'], [460, 650, 'flat']],
+      ground: { flat: 1, pan: 1.08, dune: 0.76 }, duneUrged: 0.97,
+      base: 15, perSpeed: 0.012, urge: 1.22, perSpirit: 0.005,
+      drain: 0.3, perStamDrain: 0.012, regen: 0.05, perStamRegen: 0.03,
+      tired: { secs: 2.5, pace: 0.72, back: 0.2 }, accel: 2.2, form: [0.97, 1.03],
+    },
+    rivals: [['Sandpiper', 'Palmhold'], ['Old Thunder', 'Saltmarch'], ['Mirage', 'Copper Coast'], ['Date Honey', 'the Southern Wells'], ['Red Wind', 'Glassfort'],
+      ['Silk Road', 'Ambergate'], ['Dune Racer', 'Highwell'], ['Night Star', 'Cinder Rock'], ['Little Storm', 'Bluefort'], ['Amber Flash', 'Reedwater']],
+    colors: ['#d8402a', '#2f6fb0', '#9a48b0', '#3f9a4a', '#e8892a'],
+    warPts: 12, // Oasis Wars points a race
+  },
+
   // ---------- Hero Talents ----------
   // From Rainwyrm Lv 6 a hero chooses one of two talents at levels 10, 30, 50, 70 and 90. Each tier sets something for
   // the hero alone against something for the whole fight: atk/def/hp raise the hero's own stats, lead the troops of
@@ -1547,6 +1593,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.25', items: [
+      { icon: 'i-derby', name: 'The Camel Derby', text: 'Raise Saffron, a racing camel, and race her on the salt pan against five rivals for the Village Cup, the Oasis Stakes and the Desert Crown. Hold to urge her on, but let her breathe, or she runs dry.', act: 'derby', open: (S) => S.lv.wyrm >= 8, needs: 'Rainwyrm Lv 8' },
+    ] },
     { v: '4.24', items: [
       { icon: 'i-star', name: 'Hero Talents', text: 'At levels 10, 30, 50, 70 and 90 every hero chooses one of two talents: their own strength, or something for the whole fight, from leading their troops to a faster skill or a stronger Torrent.', act: 'tab:roster', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
     ] },
@@ -1843,6 +1892,10 @@ const DATA = {
     { id: 'talent1', text: 'Choose a hero talent', stat: 'talents', n: 1, reward: { journals: 20 } },
     { id: 'talent25', text: 'Choose 25 hero talents', stat: 'talents', n: 25, reward: { starglass: 200 } },
     { id: 'talentFull', text: 'Give a hero all five talents', stat: 'talentFull', n: 1, reward: { shard_epic: 1 } },
+    { id: 'derby1', text: 'Win a Camel Derby race', stat: 'derbyWins', n: 1, reward: { starglass: 60 } },
+    { id: 'derby25', text: 'Run 25 Camel Derby races', stat: 'derbyRaces', n: 25, reward: { treats: 20, starglass: 100 } },
+    { id: 'derbyCrown', text: 'Win the Desert Crown', stat: 'derbyCrown', n: 1, reward: { shard_legendary: 1 } },
+    { id: 'derbyMax', text: 'Train a racing camel stat to Lv 20', stat: 'derbyTop', n: 20, reward: { beacons: 2 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },

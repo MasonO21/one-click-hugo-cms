@@ -78,6 +78,7 @@ window.RK_ART = {
   },
   event: {
     crossing: 'art/events/crossing.webp',
+    derby: 'art/events/derby.webp',
     rainfest: 'art/events/rainfest.webp',
     hunt: 'art/events/hunt.webp',
     builder: 'art/events/builder.webp',
@@ -236,6 +237,15 @@ window.RK_ART = {
     'i-fish-koi': 'art/ui/fish-koi.webp',
     'i-fish-rod': 'art/ui/fish-rod.webp',
     'i-fish-float': 'art/ui/fish-float.webp',
+    'i-derby': 'art/ui/derby.webp',
+    'i-dy-ribbon': 'art/ui/dy-ribbon.webp',
+    'i-dy-cup': 'art/ui/dy-cup.webp',
+    'i-dy-speed': 'art/ui/dy-speed.webp',
+    'i-dy-stamina': 'art/ui/dy-stamina.webp',
+    'i-dy-spirit': 'art/ui/dy-spirit.webp',
+    'i-dy-saddle': 'art/ui/dy-saddle.webp',
+    'i-dy-bridle': 'art/ui/dy-bridle.webp',
+    'i-dy-pads': 'art/ui/dy-pads.webp',
     'i-decree': 'art/ui/decree.webp',
     'i-dc-harvest': 'art/ui/dc-harvest.webp',
     'i-dc-rush': 'art/ui/dc-rush.webp',
@@ -307,6 +317,11 @@ window.RK_ART = {
     'a-camel': 'models/animals/camel.glb',
     'r-raider': 'models/foes/raider.glb',
     's-fort': 'models/foes/fort.glb',
+  },
+  // the Camel Derby's race (derby.js): the running camel and the salt-pan course behind it
+  derby: {
+    camel: 'art/derby/camel.webp',
+    track: 'art/derby/track.webp',
   },
   ui: {
     btn: 'art/ui/btn-ember.webp',
