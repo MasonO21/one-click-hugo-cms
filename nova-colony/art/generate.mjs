@@ -7,9 +7,11 @@
 //   art/source/app-icon/     optional painted hero (hero-body.webp + hero-smoke.webp, 1024² RGBA, Higgsfield): when
 //                            present it replaces the vector hero everywhere (icons + splash); the composed master is
 //                            written to art/icon-painted.svg and icon.svg keeps the vector art untouched
-//   art/source/app-icon/monochrome.png  optional flat white glyph (alpha only) -> Android 13+ themed-icon layer
+//   art/source/app-icon/monochrome.png  optional flat white glyph (alpha only) -> Android 13+ themed-icon layer and
+//                                       the Android notification (status-bar) icon
 //
-// Outputs: Android launcher + adaptive icons + splash, iOS app icon + splash, web/PWA icons + manifest.
+// Outputs: Android launcher + adaptive icons + notification icon + splash, iOS app icon + splash, web/PWA icons +
+// manifest.
 // Rasterised with headless Chromium at the exact pixel size (deviceScaleFactor 1).
 //
 //   node art/generate.mjs                  # from nova-colony/
@@ -36,6 +38,7 @@ const MASTER_DX = 26; // optical nudge: the pod pulls the enclosing circle to th
 const MASTER_DY = 8; // ...and the planet is bottom-heavy, so the circle centre sits a touch low
 const FG_R = 304; // adaptive foreground: 66dp safe circle = radius 313 of a 1024 canvas
 const MONO_R = 262; // themed-icon glyph: a little smaller than the foreground, as system symbols are
+const STAT_R = 456; // notification icon glyph: inside the 22dp live area of the 24dp status-bar icon
 const BG_STARS_SCALE = 0.74; // adaptive background: pull the stars into the always-visible 72dp window
 const SPLASH_HERO_R = 300; // hero enclosing radius, splash design units
 const SPLASH_LOCKUP_W = 900; // lockup width in splash design units (the wordmark)
@@ -198,6 +201,13 @@ try {
     const monoT = heroTransform(c, MONO_R);
     for (const [d, k] of Object.entries(DENSITY)) {
       write(path.join(RES, `mipmap-${d}`, 'ic_launcher_monochrome.png'), alpha(await render(monoSvg(monoT), 108 * k, 108 * k)));
+    }
+    // Android notification small icon (local notifications, src/platform/notifications.ts): the same glyph, white on
+    // transparency (the system only uses the alpha), 24dp
+    console.log('Android notification icon');
+    const statT = heroTransform(c, STAT_R);
+    for (const [d, k] of Object.entries(DENSITY)) {
+      write(path.join(RES, `drawable-${d}`, 'ic_stat_nova.png'), alpha(await render(monoSvg(statT), 24 * k, 24 * k)));
     }
     // iOS 18 home-screen appearances: dark = the hero on transparency (the system draws the dark backdrop),
     // tinted = the flat glyph, white on black (the system tints it)

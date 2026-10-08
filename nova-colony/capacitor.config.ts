@@ -45,6 +45,15 @@ const config: CapacitorConfig = {
       backgroundColor: BACKGROUND,
       overlaysWebView: true,
     },
+    // gentle reminders while away (src/platform/notifications.ts sets the same icon/colour on each notification)
+    LocalNotifications: {
+      // Android status-bar icon: res/drawable-*/ic_stat_nova.png (white glyph on transparency, art/generate.mjs)
+      smallIcon: 'ic_stat_nova',
+      // the UI's warm orange accent (--accent)
+      iconColor: '#ff8a3d',
+      // iOS: nothing pops up while the player is in the game (the app cancels pending reminders when it opens)
+      presentationOptions: [],
+    },
   },
 };
 

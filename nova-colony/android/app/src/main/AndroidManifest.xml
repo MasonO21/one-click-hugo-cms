@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Permissions -->
 
@@ -11,6 +12,13 @@
     <uses-permission android:name="com.android.vending.BILLING" />
     <!-- Advertising id for AdMob on Android 13+ (declare it in the Play Console data-safety form) -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+    <!-- Local notifications (@capacitor/local-notifications, src/platform/notifications.ts): the Android 13+ runtime
+         permission, asked in-game only after the player says yes on the notifications card (never at launch) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The plugin also declares SCHEDULE_EXACT_ALARM. Our reminders are inexact on purpose (isExactNotification:
+         false; a few minutes of slack is fine for "your storehouses are full"), so the "Alarms & reminders" special
+         permission is removed from the merged manifest. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
 
     <application
         android:allowBackup="true"
