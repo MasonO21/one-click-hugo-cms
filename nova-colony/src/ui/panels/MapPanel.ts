@@ -265,7 +265,9 @@ export class MapPanel extends Panel {
       const disc = g.state.world.regionsDiscovered.includes(b.id);
       const sw = h('i', { class: 'sw' });
       sw.style.background = `linear-gradient(135deg, ${b.ground[0]}, ${b.ground[1]})`;
-      const row = h('div', { class: 'row region' + (unlocked ? '' : ' locked') + (this.selectedRegion === b.id ? ' picked' : ''), data: { region: b.id } }, sw, h('div', { class: 'grow' }, h('div', { class: 'h3', text: unlocked || disc ? b.name : '???' }), h('div', { class: 'mute small', text: unlocked ? (disc ? 'Explored' : 'Unlocked — go explore!') : `🔒 ${reason ?? 'Locked'}` })));
+      // named like on the map above it, the Expeditions board and the missions ("Discover the Toxic Marsh"): a "???"
+      // here next to "🔒 Toxic Marsh" on the map read as two different places
+      const row = h('div', { class: 'row region' + (unlocked ? '' : ' locked') + (this.selectedRegion === b.id ? ' picked' : ''), data: { region: b.id } }, sw, h('div', { class: 'grow' }, h('div', { class: 'h3', text: b.name }), h('div', { class: 'mute small', text: unlocked ? (disc ? 'Explored' : 'Unlocked — go explore!') : `🔒 ${reason ?? 'Locked'}` })));
       row.addEventListener('click', () => this.selectRegion(b.id));
       list.appendChild(row);
     }
