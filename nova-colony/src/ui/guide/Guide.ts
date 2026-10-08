@@ -9,6 +9,7 @@
 import type { UiCtx } from '../ctx';
 import { edgePointRect, relativeScreenDir } from '../logic/input';
 import { h, s, safe, setClass } from '../dom';
+import { showGuideNow } from '../logic/raid';
 
 /** Map a selector to something visible: `[data-build=..]` closed -> `#btn-build`, etc. */
 export function resolveGuideSelector(sel: string, query: (s: string) => Element | null): Element | null {
@@ -123,9 +124,16 @@ export class Guide {
    */
   override: (() => { world: { x: number; z: number } | null; ui: string | null } | null) | null = null;
 
+  /** The tutorial's target; it waits out a raid (see showGuideNow). */
+  private tutorialGuide(): ReturnType<UiCtx['game']['sys']['tutorial']['guide']> {
+    const game = this.ctx.game;
+    const g = game.sys.tutorial.guide();
+    return g && showGuideNow(game.state.combat.phase, game.data.mission(g.mission ?? '')?.type) ? g : null;
+  }
+
   /** ≈5 Hz: re-read the tutorial target. */
   poll(): void {
-    const g = safe('guide override', () => this.override?.()) ?? this.ctx.game.sys.tutorial.guide();
+    const g = safe('guide override', () => this.override?.()) ?? this.tutorialGuide();
     this.world = g?.world ?? null;
     this.uiSel = g?.ui ?? null;
     if (this.uiSel !== this.lastSel) {

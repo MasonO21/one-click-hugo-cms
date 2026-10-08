@@ -8,6 +8,7 @@ import { easeOutQuart, segmentAtRotation, spinTarget } from '../src/ui/logic/spi
 import { clockText, dayPhase, fmtHMS, fmtLong, msUntilLocalMidnight, offlineWorkedText } from '../src/ui/logic/time';
 import { buildingEffects, levelMult, lockInfo, modifierText } from '../src/ui/logic/describe';
 import { AUTO_DAILY_QUIET_MS, autoDailyStep } from '../src/ui/logic/autoDaily';
+import { showGuideNow } from '../src/ui/logic/raid';
 import { RARITY_COLOR, rewardParts } from '../src/ui/logic/rewards';
 import { MAP_MAX_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, placeLabel, regionCentroids, worldToMap, type MapMarker } from '../src/ui/logic/map';
 import { BUILD_CATEGORIES, NODE_H, NODE_W, layoutTree } from '../src/ui/logic/categories';
@@ -384,5 +385,16 @@ describe('ui.logic — map label placement', () => {
     const p = placeLabel(290, 250, 70, 16, map, [], [zoom]);
     expect(p.x + 35).toBeLessThanOrEqual(270);
     expect(p.y).toBe(250);
+  });
+});
+
+describe('tutorial guidance during a raid', () => {
+  it('steps aside while aliens attack, except for the defence step itself', () => {
+    expect(showGuideNow('peace', 'build')).toBe(true);
+    expect(showGuideNow('warning', 'research')).toBe(true); // the countdown leaves time to read
+    expect(showGuideNow('attack', 'build')).toBe(false);
+    expect(showGuideNow('attack', undefined)).toBe(false);
+    expect(showGuideNow('attack', 'defend')).toBe(true); // "Stand near your turret" in the first raid
+    expect(showGuideNow('victory', 'build')).toBe(true);
   });
 });

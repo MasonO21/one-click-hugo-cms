@@ -8,6 +8,7 @@ import { fmtClock } from '../../core/format';
 import { btn } from '../widgets';
 import { h, setClass, setHidden, setText } from '../dom';
 import { alienArt, artOrEmoji, rewardArt } from '../art';
+import { showGuideNow } from '../logic/raid';
 
 export class Banners {
   readonly el: HTMLElement;
@@ -87,9 +88,9 @@ export class Banners {
       setText(this.abMain, left > 0 ? `${left} alien${left === 1 ? '' : 's'} remaining` : 'Almost done!');
     }
 
-    // tutorial hint
+    // tutorial hint (steps aside during a raid, see showGuideNow)
     const guide = game.sys.tutorial.guide();
-    const text = guide?.text ?? '';
+    const text = guide && showGuideNow(c.phase, game.data.mission(guide.mission ?? '')?.type) ? guide.text : '';
     setHidden(this.hint, !text);
     if (text) setText(this.hintTxt, text);
 
