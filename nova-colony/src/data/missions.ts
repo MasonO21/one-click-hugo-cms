@@ -143,12 +143,17 @@ export const MISSIONS: MissionDef[] = [
   },
   {
     id: 'm23_tier2', chain: 'main', name: 'Solid Ground', description: 'Upgrade your colony to the Stone tier.',
-    type: 'tier', target: '*', count: 2, reward: R({ nova: 25, xp: 100, resources: { stone: 250, wood: 200, iron: 60 }, items: { supply_crate: 2 } }), next: ['m24_forge'],
+    type: 'tier', target: '*', count: 2, reward: R({ nova: 25, xp: 100, resources: { stone: 250, wood: 200, iron: 60 }, items: { supply_crate: 2 } }), next: ['m23b_expedition'],
     hint: 'Gather the materials and upgrade your Command Center. Your storage has to hold the whole bill, so build a few Storage Sheds!', guide: { kind: 'building', ref: 'command_center' },
     onComplete: { celebrate: 'Stone tier reached! The colony looks permanent now.' },
   },
 
   // ====================================================================== TIER 2 — Stone (~1 h → ~3 h)
+  {
+    id: 'm23b_expedition', chain: 'main', name: 'Away Team', description: 'Send a squad of colonists on an expedition from the Radio Tower.',
+    type: 'expedition', target: 'launch', count: 1, reward: R({ items: { supply_crate: 1 }, xp: 40 }), next: ['m24_forge'],
+    hint: 'Tap the Radio Tower and open Expeditions. Pick a destination, up to three colonists, and wave them off!', guide: { kind: 'building', ref: 'radio_tower' },
+  },
   {
     id: 'm24_forge', chain: 'main', name: 'Fire & Anvil', description: 'Build a Forge.',
     type: 'build', target: 'forge', count: 1, reward: R({ resources: { stone: 120, iron: 40, wood: 60 }, xp: 50 }), next: ['m25_mine'],
@@ -457,6 +462,10 @@ export const MISSIONS: MissionDef[] = [
   { id: 's_veh_loot', chain: 'side', minTier: 4, name: 'Road Trip', description: 'Loot 15 points of interest.', type: 'loot', target: '*', count: 15, reward: R({ resources: { alloy: 60, crystal: 60 }, items: { alloy_crate: 1 }, xp: 160 }), next: ['s_veh_rover'], hint: 'Far regions hide richer caches, and they refill over time.', guide: { kind: 'ui', ref: 'map' } },
   { id: 's_veh_rover', chain: 'side', minTier: 5, name: 'Tank Mode', description: 'Craft an Armored Rover.', type: 'craft', target: 'r_vehicle_armored_rover', count: 1, reward: R({ resources: { alloy: 150, nano: 25 }, nova: 10, xp: 280 }), next: ['s_veh_explorer'], hint: 'Craft it at the Hangar.', guide: { kind: 'building', ref: 'hangar' } },
   { id: 's_veh_explorer', chain: 'side', minTier: 6, name: 'Seen It All', description: 'Loot 30 points of interest.', type: 'loot', target: '*', count: 30, reward: R({ resources: { titanium: 120 }, items: { titan_crate: 2 }, nova: 15, xp: 380 }), guide: { kind: 'ui', ref: 'map' } },
+  // ---- expedition chain (offered once expeditions open: Stone tier + a Radio Tower)
+  { id: 's_exp_home', chain: 'side', name: 'Welcome Home', description: 'Collect the haul of an expedition.', type: 'expedition', target: 'collect', count: 1, reward: R({ resources: { food: 120, water: 80 }, xp: 40 }), next: ['s_exp_veteran'], hint: 'When a squad is back, open Expeditions and tap Collect.' },
+  { id: 's_exp_veteran', chain: 'side', name: 'Seasoned Explorers', description: 'Collect the hauls of 10 expeditions.', type: 'expedition', target: 'collect', count: 10, reward: R({ items: { mystery_crate: 1 }, nova: 5, xp: 120 }), next: ['s_exp_frontier'] },
+  { id: 's_exp_frontier', chain: 'side', name: 'Beyond the Map', description: 'Chart 3 Frontier sites on your Star Chart.', type: 'expedition', target: 'frontier', count: 3, reward: R({ items: { titan_crate: 1 }, nova: 10, xp: 300 }), hint: 'After Titanium, the Radio Tower hears signals from uncharted sites. Send squads to chart them!' },
 
   // ====================================================================== DAILY POOL
   { id: 'd_gather_wood', chain: 'daily', name: 'Daily: Lumberjack', description: 'Gather 200 Wood.', type: 'gather', target: 'wood', count: 200, reward: R({ nova: 3, xp: 40 }) },

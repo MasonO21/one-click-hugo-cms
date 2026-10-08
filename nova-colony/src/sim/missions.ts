@@ -44,6 +44,8 @@ export class MissionSystem extends System {
   private lastShown = new Map<string, number>();
   private survivorTries = 0;
   private survivorSpawned = false;
+  /** onLoad has run (events fired while other systems load must not activate missions early). */
+  private loaded = false;
 
   // ---------------------------------------------------------------- lifecycle
 
@@ -82,6 +84,17 @@ export class MissionSystem extends System {
       this.recheckLive();
       if (opened > 0) bus.emit('ui:toast', { text: opened === 1 ? 'A new side mission is ready' : `${opened} new side missions are ready`, kind: 'info', icon: '🧩' });
     });
+    bus.on('expedition:launched', () => {
+      this.bump('expedition', ['launch'], 1);
+      this.offerSide();
+    });
+    bus.on('expedition:collected', (e) => {
+      const keys = ['collect', e.dest];
+      if (e.region) keys.push(e.region);
+      if (e.frontier) keys.push('frontier');
+      this.bump('expedition', keys, 1);
+    });
+    bus.on('building:completed', () => this.offerSide());
   }
 
   override onLoad(fresh: boolean): void {
@@ -94,6 +107,7 @@ export class MissionSystem extends System {
     this.recheckLive();
     // anything finished-but-unclaimed in a loaded save resumes its auto-claim countdown
     for (const id of m.active) if (this.isMain(id) && this.isDone(id)) this.autoClaim.set(id, AUTO_CLAIM_DELAY);
+    this.loaded = true;
   }
 
   override update(dt: number): void {
@@ -254,11 +268,19 @@ export class MissionSystem extends System {
   /** Fresh colony: first main mission + the head of every side chain (the rest unlock as each is claimed). */
   private seed(): void {
     this.activate(this.game.data.firstMission);
-    this.offerSide();
+    this.openSide();
   }
 
-  /** Activate every side mission that is reachable now and not yet done (fresh game, load, tier-up, side claim); returns how many opened. */
+  /**
+   * Event-driven offer (tier-up, side claim, a feature opening up); returns how many opened. A no-op until onLoad
+   * has run: events fired while other systems load must not activate missions early.
+   */
   private offerSide(): number {
+    return this.loaded ? this.openSide() : 0;
+  }
+
+  /** Activate every side mission that is reachable and feasible now and not yet done; returns how many opened. */
+  private openSide(): number {
     const m = this.game.state.missions;
     let n = 0;
     for (const d of this.game.data.missions) {
@@ -296,6 +318,18 @@ export class MissionSystem extends System {
     return !hasParent;
   }
 
+  /**
+   * Some side chains only make sense once their feature exists (expeditions open at the Stone tier with a Radio
+   * Tower, the Frontier at Titanium): they are offered when it does instead of sitting in the Side tab from minute
+   * one. Anything already started (a counter above zero) is always feasible.
+   */
+  private sideFeasible(def: MissionDef): boolean {
+    if (def.type !== 'expedition') return true;
+    const ex = this.game.sys.expeditions;
+    if (def.target === 'frontier') return ex.frontierUnlocked();
+    return ex.unlocked() || this.counter('expedition', 'launch') > 0;
+  }
+
   /** Make a loaded save consistent with current content (unknown ids dropped, new side missions added). */
   private repairChain(): void {
     const { data } = this.game;
@@ -305,7 +339,7 @@ export class MissionSystem extends System {
     // older saves had every side mission active: keep only the reachable ones (progress is recomputed when a
     // mission becomes active again, from the lifetime counters / current colony)
     m.active = m.active.filter((id) => data.mission(id)?.chain !== 'side' || this.sideUnlocked(id));
-    this.offerSide();
+    this.openSide();
     const hasMain = m.active.some((id) => this.isMain(id));
     if (hasMain) return;
     let started = false;
@@ -334,6 +368,7 @@ export class MissionSystem extends System {
     const def = this.game.data.mission(id);
     if (!def || m.active.includes(id) || (m.completed.includes(id) && def.chain !== 'daily')) return false;
     if (def.chain === 'daily' && this.isClaimed(id)) return false;
+    if (def.chain === 'side' && !this.sideFeasible(def)) return false; // offered later by offerSide()
     m.active.push(id);
     m.progress[id] = 0;
     this.lastShown.set(id, 0);

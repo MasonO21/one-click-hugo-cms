@@ -13,7 +13,8 @@ describe('missions: setup', () => {
     const side = game.data.missions.filter((d) => d.chain === 'side');
     const followUps = new Set(side.flatMap((d) => d.next ?? []));
     for (const d of side) {
-      if (followUps.has(d.id) || d.minTier) expect(game.state.missions.active).not.toContain(d.id);
+      // late chains wait for their tier; expedition chains until expeditions open (Stone tier + Radio Tower)
+      if (followUps.has(d.id) || d.minTier || d.type === 'expedition') expect(game.state.missions.active).not.toContain(d.id);
       else expect(game.state.missions.active).toContain(d.id);
     }
     expect(m.activeByChain('side').length).toBeGreaterThan(2);

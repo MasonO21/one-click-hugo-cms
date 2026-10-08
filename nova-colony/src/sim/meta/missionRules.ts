@@ -83,6 +83,9 @@ export function retroValue(game: Game, def: MissionDef): number {
       for (const b of s.buildings.list) if (buildingMatches(game, b, def.target)) n += Math.max(0, b.level - 1);
       return n;
     }
+    case 'expedition':
+      // expeditions are counted by the lifetime counters (launch / collect / frontier / region / destination)
+      return s.missions.counters[`expedition:${def.target}`] ?? 0;
     default:
       return 0;
   }
