@@ -196,6 +196,12 @@ span.exp-banner-img.emoji {
 .exp-meta .chip {
   font-size: 0.8em;
 }
+/* a long lock reason ("🔒 Discover Titanium Highlands first") wraps inside its row instead of running under the crew */
+.nv-root .exp-meta .chip.warn {
+  max-width: 100%;
+  white-space: normal;
+  border-radius: 0.8em;
+}
 .exp-yields {
   display: inline-flex;
   align-items: center;
