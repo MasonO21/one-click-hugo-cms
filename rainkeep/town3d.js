@@ -1167,6 +1167,40 @@
     });
   }
   T3.rankFlags = rankFlags; // for tests
+  // Warden's Decrees (decrees.js): a Harvest Rite or a Feast of Rain strings bunting from lamp to lamp round the
+  // spring's plaza; a Call to Arms raises red war banners on the wall towers
+  const decreeDeco = { key: '', model: null };
+  function syncDecrees() {
+    if (!KH.decrees || !KH.decrees.unlocked()) return;
+    const fest = KH.decrees.active('harvest') || KH.decrees.active('feast'), arms = KH.decrees.active('arms'), key = `${fest}:${arms}`;
+    if (decreeDeco.key === key) return;
+    decreeDeco.key = key;
+    if (decreeDeco.model) { scene.remove(decreeDeco.model); decreeDeco.model = null; }
+    if (!fest && !arms) return;
+    const g = new THREE.Group();
+    if (fest) {
+      // big festival pennants, readable from the keep camera, strung lamp to lamp
+      const lamp = (i) => { const a = (i / 10) * Math.PI * 2 + 0.31; return new V3(SPRING.x + Math.cos(a) * 6.75, 1.7, SPRING.z + Math.sin(a) * 6.75); };
+      const rope = A.mat(A.P.rope), cols = ['#d8402a', '#f0c040', '#2f9fb0', '#9a48b0', '#f4e6c0', '#3f9a4a'].map((c) => A.mat(c, { ds: true, flat: true }));
+      const flag = A.geo('festflag', () => new THREE.ShapeGeometry(new THREE.Shape([new V2(-0.22, 0), new V2(0.22, 0), new V2(0, -0.5)])));
+      for (let i = 0; i < 10; i++) {
+        const a = lamp(i), b = lamp(i + 1), at = (t) => new V3(a.x + (b.x - a.x) * t, a.y - 0.35 * 4 * t * (1 - t), a.z + (b.z - a.z) * t), ry = -Math.atan2(b.z - a.z, b.x - a.x);
+        for (let k = 0; k < 8; k++) g.add(A.rod(at(k / 8), at((k + 1) / 8), 0.012, rope));
+        for (let k = 1; k <= 7; k++) { const q = at(k / 8), f = A.mesh(flag, cols[(i * 7 + k) % cols.length], q.x, q.y, q.z); f.rotation.y = ry; g.add(f); }
+      }
+    }
+    if (arms) {
+      const red = A.mat('#a8281e', { flat: true, ds: true }), brass = A.mat(A.P.gold, { m: 0.6, r: 0.35 }), pole = A.mat(A.P.woodD);
+      for (const x of [-12.4, -6.6, 6.6, 12.4]) {
+        const b = A.grp(A.cyl(0.04, 0.05, 1.9, pole, 0, 0, 0, 6), A.sph(0.08, brass, 0, 1.94, 0, 8), A.box(0.6, 0.9, 0.03, red, 0.32, 0.98, 0), A.box(0.64, 0.07, 0.04, brass, 0.32, 1.84, 0));
+        g.add(A.at(b, x, 2.6, K.gate.z, x < 0 ? Math.PI : 0));
+      }
+    }
+    A.bake(g);
+    scene.add(g);
+    decreeDeco.model = g;
+  }
+  T3.decreeDeco = decreeDeco; // for tests
   function syncDecor() {
     if (!KH.decorItems) return;
     const open = S.lv.wyrm >= DATA.decor.unlock;
@@ -1856,7 +1890,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncRanks(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncRanks(); syncDecrees(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);
