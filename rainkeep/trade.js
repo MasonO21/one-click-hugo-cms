@@ -50,7 +50,16 @@
   const hours = (m) => m.hours * 3600;
   const escortNeed = (m) => Math.ceil(KH.marchCap() * m.escort);
   const risk = (m, escort) => Math.max(0, m.risk * (1 - Math.min(1, escort / escortNeed(m))));
-  const escortOf = (m, frac) => KH.world.march.pickTroops(Math.min(1, (frac * KH.marchCap()) / Math.max(1, sum(KH.capTroops(S.troops, KH.marchCap(), S.formation)))));
+  // an escort of frac of the safe escort, drawn from the march's mix and topped up so rounding never leaves it short
+  function escortOf(m, frac) {
+    const n = Math.ceil(escortNeed(m) * frac), pool = KH.capTroops(S.troops, KH.marchCap(), S.formation), all = sum(pool);
+    if (!all) return {};
+    const out = {};
+    for (const k in pool) out[k] = Math.min(pool[k], Math.floor((pool[k] * Math.min(n, all)) / all));
+    let short = Math.min(n, all) - sum(out);
+    for (const k of Object.keys(pool).sort((a, b) => pool[b] - pool[a])) { const add = Math.min(short, pool[k] - out[k]); out[k] += add; short -= add; }
+    return out;
+  }
 
   ACT.trade = () => {
     if (!unlocked()) return KH.toast(`Trade caravans set out from Rainwyrm Lv ${T.unlock}.`, 'warn');
@@ -68,7 +77,7 @@
     const w = want(m, o);
     if (!KH.canAfford(w)) return KH.toast(`${m.name} wants more than the storehouse holds.`, 'warn');
     // the escort: a share of the escort that makes the road safe (none, half, all of it)
-    const troops = UI.tradeEscort ? escortOf(m, m.escort * UI.tradeEscort) : {};
+    const troops = UI.tradeEscort ? escortOf(m, UI.tradeEscort) : {};
     KH.pay(w);
     for (const k in troops) S.troops[k] -= troops[k];
     o.taken = true;
