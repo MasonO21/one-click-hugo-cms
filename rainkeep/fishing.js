@@ -118,10 +118,17 @@
       el.innerHTML = '<canvas class="fs-cv"></canvas><div class="fs-hud"></div><div class="fs-tip"></div><div class="fs-card"></div><button class="icon-btn fs-x" data-act="fishclose" aria-label="Close">✕</button>';
       $('#battle').parentNode.appendChild(el);
       const cv = el.querySelector('.fs-cv');
-      cv.addEventListener('pointerdown', (e) => { if (!G) return; e.preventDefault(); if (G.phase === 'reel') G.holding = true; else if (tap(G)) { if (G.phase === 'wait') KH.sfx('tap'); else if (G.phase === 'reel') KH.sfx('hit'); } });
+      // a tap strikes or scatters while a line is out, holds while reeling, and otherwise casts (as the Cast button does)
+      const press = () => {
+        if (!G) return;
+        if (G.phase === 'reel') G.holding = true;
+        else if (G.phase === 'wait' || G.phase === 'bite') { if (tap(G) && G.phase === 'reel') KH.sfx('hit'); }
+        else ACT.fishgo();
+      };
+      cv.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
       const up = () => { if (G) G.holding = false; };
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('pointerleave', up);
-      window.addEventListener('keydown', (e) => { if (!G || el.hidden || e.key !== ' ') return; e.preventDefault(); if (G.phase === 'reel') G.holding = true; else if (!e.repeat) tap(G); });
+      window.addEventListener('keydown', (e) => { if (!G || el.hidden || e.key !== ' ') return; e.preventDefault(); if (G.phase === 'reel' || !e.repeat) press(); });
       window.addEventListener('keyup', (e) => { if (G && e.key === ' ') G.holding = false; });
     }
     return el;
