@@ -3,7 +3,7 @@
  * them saves time on something the colony gets for free anyway (boosts and spins from ads and the wheel, recruits
  * from the board, merchants on their own, season levels from play). Logic: sim/novaShop.ts.
  *
- * PRICING. The yardsticks are the Crystal Pouch ($4.99 = 500 Nova, so 1 Nova ≈ 1 cent) and the Acorn chest
+ * PRICING. The yardsticks are the Crystal Pouch ($4.99 = 500 Nova, so 1 Nova ≈ 1 cent) and the Supply Cache
  * (60 Nova). A rewarded ad gives 10 minutes of 2× production for free, six times a day, so an hour of a boost is
  * a snack-sized 60–80 Nova and the 4-hour one is cheaper per hour. A single season level costs a little more than
  * a tenth of the Season Boost ($4.99 for ten levels). Supply caches are priced per free crate (about 20 Nova each)

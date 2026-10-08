@@ -1,6 +1,6 @@
 /**
  * Season pass bonus levels: once the 50 levels are done, the premium track keeps paying. Every further
- * `season.bonus.xp` season XP earns `season.bonus.reward` (a Moonlit chest), as often as the player keeps playing.
+ * `season.bonus.xp` season XP earns `season.bonus.reward` (an Explorer’s Case), as often as the player keeps playing.
  *
  * State: `liveops.seasonBonus = { id, claimed }`, keyed by the season id, so a new season starts the count again
  * without any reset code. Older saves have no `seasonBonus` at all and simply read as "none claimed yet".

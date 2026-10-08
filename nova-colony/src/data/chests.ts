@@ -1,15 +1,15 @@
 import type { ChestDef } from './schema';
 
 /**
- * Nova chests: five tiers, each with its own painted chest (art/chests/<id>-closed.webp / -open.webp), its own
+ * Nova chests: five tiers of frontier caches, each with its own painted cache (art/chests/<id>-closed.webp / -open.webp), its own
  * opening-screen background (art/chests/bg/<id>.webp) and its own opening animation. Loot is purely acceleration
  * (resources, boosts, crates, colonists) plus cosmetics up to the chest's rarity; odds are always shown in-game.
  * Also earned from the season pass, daily login and events. Each chest is an inventory item with `use.chest`.
  */
 export const CHESTS: ChestDef[] = [
-  { id: 'chest_acorn', name: 'Acorn Chest', rarity: 'common', nova: 60, cards: 3, icon: '🌰', color: '#c48a4a', accent: '#9ad86b', description: 'A little wooden chest carved with acorns and leaves.' },
-  { id: 'chest_moonlit', name: 'Moonlit Chest', rarity: 'rare', nova: 180, cards: 4, icon: '🌙', color: '#7a9cff', accent: '#e8f0ff', description: 'Silver and midnight blue, it hums a lullaby.' },
-  { id: 'chest_sunny', name: 'Sunflower Chest', rarity: 'epic', nova: 450, cards: 5, icon: '🌻', color: '#ffc83a', accent: '#ff8a3a', description: 'Warm gold with a sunflower lock. Smells like summer.' },
-  { id: 'chest_crystal', name: 'Crystal Bloom Chest', rarity: 'legendary', nova: 1000, cards: 6, icon: '💎', color: '#c88aff', accent: '#9ae6ff', description: 'Pastel crystals bloom across its lid.' },
-  { id: 'chest_cosmic', name: 'Cosmic Wish Chest', rarity: 'mythic', nova: 2200, cards: 7, icon: '🌠', color: '#8a7aff', accent: '#ffd8f8', description: 'A tiny galaxy swirls inside. Make a wish!' },
+  { id: 'chest_supply', name: 'Supply Cache', rarity: 'common', nova: 60, cards: 3, icon: '📦', color: '#b8894f', accent: '#e8c47a', description: 'A sturdy field crate from the drop ship. Useful odds and ends.' },
+  { id: 'chest_explorer', name: "Explorer's Case", rarity: 'rare', nova: 180, cards: 4, icon: '🧳', color: '#5a8ab8', accent: '#c8dcec', description: 'A weathered expedition case. At least one rare find inside.' },
+  { id: 'chest_prospector', name: "Prospector's Vault", rarity: 'epic', nova: 450, cards: 5, icon: '🔒', color: '#d8a83a', accent: '#e8843a', description: 'A brass strongbox from a lucky claim. At least one epic find.' },
+  { id: 'chest_relic', name: 'Ancient Relic', rarity: 'legendary', nova: 1000, cards: 6, icon: '🗿', color: '#8a62c8', accent: '#7ad8d8', description: 'A carved reliquary from the alien ruins. At least one legendary find.' },
+  { id: 'chest_nova', name: 'Nova Core', rarity: 'mythic', nova: 2200, cards: 7, icon: '🌟', color: '#6a5ad8', accent: '#f0d8a8', description: 'A titanium capsule around a captured star. Holds a mythic treasure.' },
 ];

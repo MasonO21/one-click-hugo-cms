@@ -168,9 +168,9 @@ store's price tier — the game never hard-codes them.
 | `nova_ultimate_pack` | Consumable | $99.99 | 14,000 Nova | — |
 | `colony_pass_monthly` | Auto-renewing subscription (1 month) | $7.99 / mo | VIP "Colony Pass" 30 days | — |
 | `season_pass_premium` | Non-consumable | $9.99 | Premium track of the current season | 1 per season |
-| `bundle_cozy_wardrobe` | Non-consumable | $4.99 | Cozy Knit Sweater, Pom-Pom Beanie, Cozy Scarves (colonists) + 200 Nova | 1 per account |
-| `bundle_chest_lover` | Consumable | $9.99 | 3 Acorn + 2 Moonlit + 1 Sunflower chest + 300 Nova | — |
-| `bundle_photo_frames` | Non-consumable | $1.99 | Cozy Knit, Sakura and Starry Night photo frames + 50 Nova | 1 per account |
+| `bundle_frontier_wardrobe` | Non-consumable | $4.99 | Frontier Knit Sweater, Knit Watch Cap, Expedition Parkas (colonists) + 200 Nova | 1 per account |
+| `bundle_cache_hunter` | Consumable | $9.99 | 3 Supply Caches + 2 Explorer’s Cases + 1 Prospector’s Vault + 300 Nova | — |
+| `bundle_photo_frames` | Non-consumable | $1.99 | Field Journal, Blossom Branch and Star Chart photo frames + 50 Nova | 1 per account |
 
 Bundles (`section: 'bundles'`) open the Shop's Packs tab; their card art is drawn from what is inside (the cosmetics'
 icons, the chests' paintings), so they need no `art/shop/` picture. A non-consumable bundle's cosmetics come back on

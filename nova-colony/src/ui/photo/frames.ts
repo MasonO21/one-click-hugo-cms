@@ -2,12 +2,12 @@
  * Photo frames (Wardrobe › Frames), drawn procedurally on the photo's 2D canvas by compose.ts. Each one is clearly
  * its own thing:
  *
- *  - frame_cozy_knit   a hand-knitted border: rows of V stitches in rust and cream bands, a running stitch round
+ *  - frame_journal   a hand-knitted border: rows of V stitches in rust and cream bands, a running stitch round
  *                      the photo, wooden buttons and a ball of yarn
- *  - frame_sakura      blush paper with blossom branches reaching round the photo's corners, petals drifting
- *  - frame_starry      a night sky: stars, glowing twinkles, a crescent moon, a shooting star and a constellation
- *  - frame_honey_gold  golden honeycomb with honey dripping over the top of the photo and two busy bees
- *  - frame_crystal     pastel shimmer with crystal clusters and gem-petal flowers blooming in the corners
+ *  - frame_blossom      blush paper with blossom branches reaching round the photo's corners, petals drifting
+ *  - frame_star_chart      a night sky: stars, glowing twinkles, a crescent moon, a shooting star and a constellation
+ *  - frame_brass  golden honeycomb with honey dripping over the top of the photo and two busy bees
+ *  - frame_geode     pastel shimmer with crystal clusters and gem-petal flowers blooming in the corners
  *
  * `drawFrameBack` paints the border (before the photo), `drawFrameFront` the rim and whatever reaches over the photo's
  * edges (after it); `framePlate` styles the caption plate. Everything scales with the border width, and the
@@ -16,7 +16,7 @@
 import type { FrameLayout } from '../logic/photo';
 
 /** The frames this module can draw (the photo_frame cosmetics). */
-export const DRAWN_FRAMES = ['frame_cozy_knit', 'frame_sakura', 'frame_starry', 'frame_honey_gold', 'frame_crystal'] as const;
+export const DRAWN_FRAMES = ['frame_journal', 'frame_blossom', 'frame_star_chart', 'frame_brass', 'frame_geode'] as const;
 export type DrawnFrame = (typeof DRAWN_FRAMES)[number];
 
 export function isDrawnFrame(id: string | null | undefined): id is DrawnFrame {
@@ -35,11 +35,11 @@ export interface FramePlate {
 }
 
 const PLATES: Record<DrawnFrame, FramePlate> = {
-  frame_cozy_knit: { fill: '#fbf0d9', stroke: '#b35a4a', dash: true, title: '#3a2350', line: '#8a5a2b', star: '#c46a5a', mark: '#8a5a2b' },
-  frame_sakura: { fill: '#fff8fa', stroke: '#ff9fb6', dash: false, title: '#5a2a48', line: '#b0577a', star: '#ff6f91', mark: '#b0577a' },
-  frame_starry: { fill: 'rgba(24,27,74,0.92)', stroke: '#ffe08a', dash: false, title: '#fff3c8', line: '#ffd98a', star: '#ffe08a', mark: '#ffe9b0' },
-  frame_honey_gold: { fill: '#fff6d6', stroke: '#c48a3a', dash: false, title: '#5a3a10', line: '#9a6418', star: '#e0a020', mark: '#9a6418' },
-  frame_crystal: { fill: '#fbf7ff', stroke: '#b49cff', dash: false, title: '#3d2a6a', line: '#6a5aa8', star: '#6ac8ff', mark: '#6a5aa8' },
+  frame_journal: { fill: '#fbf0d9', stroke: '#b35a4a', dash: true, title: '#3a2350', line: '#8a5a2b', star: '#c46a5a', mark: '#8a5a2b' },
+  frame_blossom: { fill: '#fff8fa', stroke: '#ff9fb6', dash: false, title: '#5a2a48', line: '#b0577a', star: '#ff6f91', mark: '#b0577a' },
+  frame_star_chart: { fill: 'rgba(24,27,74,0.92)', stroke: '#ffe08a', dash: false, title: '#fff3c8', line: '#ffd98a', star: '#ffe08a', mark: '#ffe9b0' },
+  frame_brass: { fill: '#fff6d6', stroke: '#c48a3a', dash: false, title: '#5a3a10', line: '#9a6418', star: '#e0a020', mark: '#9a6418' },
+  frame_geode: { fill: '#fbf7ff', stroke: '#b49cff', dash: false, title: '#3d2a6a', line: '#6a5aa8', star: '#6ac8ff', mark: '#6a5aa8' },
 };
 
 export function framePlate(id: DrawnFrame): FramePlate {
@@ -892,18 +892,18 @@ function crystalFront(c: C, L: FrameLayout): void {
 // ================================================================================== entry points
 
 const BACK: Record<DrawnFrame, (c: C, L: FrameLayout) => void> = {
-  frame_cozy_knit: knitBack,
-  frame_sakura: sakuraBack,
-  frame_starry: starryBack,
-  frame_honey_gold: honeyBack,
-  frame_crystal: crystalBack,
+  frame_journal: knitBack,
+  frame_blossom: sakuraBack,
+  frame_star_chart: starryBack,
+  frame_brass: honeyBack,
+  frame_geode: crystalBack,
 };
 const FRONT: Record<DrawnFrame, (c: C, L: FrameLayout) => void> = {
-  frame_cozy_knit: knitFront,
-  frame_sakura: sakuraFront,
-  frame_starry: starryFront,
-  frame_honey_gold: honeyFront,
-  frame_crystal: crystalFront,
+  frame_journal: knitFront,
+  frame_blossom: sakuraFront,
+  frame_star_chart: starryFront,
+  frame_brass: honeyFront,
+  frame_geode: crystalFront,
 };
 
 /** Paint the frame's border (call before drawing the photo). */

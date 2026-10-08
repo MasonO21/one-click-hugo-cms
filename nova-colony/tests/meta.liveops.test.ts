@@ -861,15 +861,15 @@ describe('liveops: shop & IAP', () => {
   it('cosmetics: buy with Nova, then equip one per kind', () => {
     const g = makeGame();
     const lo = g.game.sys.liveops;
-    expect(lo.buyCosmetic('theme_sakura')).toBe(false); // not enough Nova
+    expect(lo.buyCosmetic('theme_blossom')).toBe(false); // not enough Nova
     expect(lo.buyCosmetic('outfit_pioneer')).toBe(false); // Nova price 0: pack/reward only
     lo.addNova(650, 'test');
-    expect(lo.buyCosmetic('theme_sakura')).toBe(true);
+    expect(lo.buyCosmetic('theme_blossom')).toBe(true);
     expect(lo.nova()).toBe(50);
-    expect(lo.buyCosmetic('theme_sakura')).toBe(false); // already owned
+    expect(lo.buyCosmetic('theme_blossom')).toBe(false); // already owned
     expect(lo.equipCosmetic('outfit_pioneer')).toBe(false); // not owned
-    expect(lo.equipCosmetic('theme_sakura')).toBe(true);
-    expect(g.game.state.liveops.cosmetics.equipped.base_theme).toBe('theme_sakura');
+    expect(lo.equipCosmetic('theme_blossom')).toBe(true);
+    expect(g.game.state.liveops.cosmetics.equipped.base_theme).toBe('theme_blossom');
     lo.unequipCosmetic('base_theme');
     expect(g.game.state.liveops.cosmetics.equipped.base_theme).toBeUndefined();
   });

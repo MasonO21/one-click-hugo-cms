@@ -87,10 +87,10 @@ export const ITEMS: ItemDef[] = [
   { id: 'nano_crate', name: 'Nano Crate', icon: '📦', category: 'crate', tier: 5, description: 'A vial of swirling nano-material and spare energy cells.', use: { reward: { resources: { nano: 25, energy_cell: 40, alloy: 60 } } } },
   { id: 'titan_crate', name: 'Titanium Crate', icon: '📦', category: 'crate', tier: 6, description: 'Gleaming titanium ingots and nano-material.', use: { reward: { resources: { titanium: 40, nano: 20, energy_cell: 30 } } } },
   { id: 'mystery_crate', name: 'Mystery Crate', icon: '❓', category: 'crate', tier: 0, description: 'Rattle it. Shake it. Open it. You never know!', use: { reward: { resources: { wood: 100, stone: 80, fiber: 60, iron: 30 }, nova: 5, xp: 25 } } },
-  // ------------------------------------------------------------------ Nova chests (data/chests.ts: tiers, art, odds)
-  { id: 'chest_acorn', name: 'Acorn Chest', icon: '🌰', category: 'crate', tier: 0, description: 'A little wooden chest carved with acorns. 3 surprises inside.', use: { chest: 'chest_acorn' } },
-  { id: 'chest_moonlit', name: 'Moonlit Chest', icon: '🌙', category: 'crate', tier: 0, description: 'Silver and midnight blue. 4 surprises, at least one rare.', use: { chest: 'chest_moonlit' } },
-  { id: 'chest_sunny', name: 'Sunflower Chest', icon: '🌻', category: 'crate', tier: 0, description: 'Warm gold with a sunflower lock. 5 surprises, at least one epic.', use: { chest: 'chest_sunny' } },
-  { id: 'chest_crystal', name: 'Crystal Bloom Chest', icon: '💎', category: 'crate', tier: 0, description: 'Pastel crystals bloom on its lid. 6 surprises, at least one legendary.', use: { chest: 'chest_crystal' } },
-  { id: 'chest_cosmic', name: 'Cosmic Wish Chest', icon: '🌠', category: 'crate', tier: 0, description: 'A tiny galaxy swirls inside. 7 surprises, including a mythic treasure.', use: { chest: 'chest_cosmic' } },
+  // ------------------------------------------------------------------ Nova caches (data/chests.ts: tiers, art, odds)
+  { id: 'chest_supply', name: 'Supply Cache', icon: '📦', category: 'crate', tier: 0, description: 'A sturdy field crate from the drop ship. 3 finds inside.', use: { chest: 'chest_supply' } },
+  { id: 'chest_explorer', name: 'Explorer\'s Case', icon: '🧳', category: 'crate', tier: 0, description: 'A weathered expedition case. 4 finds, at least one rare.', use: { chest: 'chest_explorer' } },
+  { id: 'chest_prospector', name: 'Prospector\'s Vault', icon: '🔒', category: 'crate', tier: 0, description: 'A brass strongbox from a lucky claim. 5 finds, at least one epic.', use: { chest: 'chest_prospector' } },
+  { id: 'chest_relic', name: 'Ancient Relic', icon: '🗿', category: 'crate', tier: 0, description: 'A carved reliquary from the alien ruins. 6 finds, at least one legendary.', use: { chest: 'chest_relic' } },
+  { id: 'chest_nova', name: 'Nova Core', icon: '🌟', category: 'crate', tier: 0, description: 'A titanium capsule around a captured star. 7 finds, including a mythic treasure.', use: { chest: 'chest_nova' } },
 ];

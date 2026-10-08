@@ -37,8 +37,8 @@ describe('photo frames', () => {
   it('every photo_frame cosmetic has a drawn frame (and nothing else does)', () => {
     const ids = data.cosmetics.filter((c) => c.kind === 'photo_frame').map((c) => c.id).sort();
     expect([...DRAWN_FRAMES].sort()).toEqual(ids);
-    expect(isDrawnFrame('frame_sakura')).toBe(true);
-    expect(isDrawnFrame('hat_beanie')).toBe(false);
+    expect(isDrawnFrame('frame_blossom')).toBe(true);
+    expect(isDrawnFrame('hat_watch_cap')).toBe(false);
     expect(isDrawnFrame(null)).toBe(false);
   });
 
@@ -62,11 +62,11 @@ describe('photo frames', () => {
   it('draws the same way every time (seeded scatter), at any resolution', () => {
     const a = recorder();
     const b = recorder();
-    drawFrameBack(a.c, frameLayout(900, 1600, true), 'frame_starry');
-    drawFrameBack(b.c, frameLayout(900, 1600, true), 'frame_starry');
+    drawFrameBack(a.c, frameLayout(900, 1600, true), 'frame_star_chart');
+    drawFrameBack(b.c, frameLayout(900, 1600, true), 'frame_star_chart');
     expect(a.calls).toEqual(b.calls);
     const small = recorder();
-    expect(() => drawFrameFront(small.c, frameLayout(120, 80, true), 'frame_honey_gold')).not.toThrow();
+    expect(() => drawFrameFront(small.c, frameLayout(120, 80, true), 'frame_brass')).not.toThrow();
   });
 
   it('a decorated frame gets a wider border and a caption plate; the classic one is unchanged', () => {

@@ -16,7 +16,7 @@ const rich = (g: { game: { state: { liveops: { nova: number } } } }, n = 100_000
 };
 
 describe('nova shop — catalogue', () => {
-  it('ids are unique, prices sane and tuned against the packs ($4.99 = 500 Nova, Acorn chest 60)', () => {
+  it('ids are unique, prices sane and tuned against the packs ($4.99 = 500 Nova, Supply Cache 60)', () => {
     const ids = NOVA_SHOP.map((d) => d.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const d of NOVA_SHOP) {
@@ -225,11 +225,11 @@ describe('nova shop — analytics and saves', () => {
     installAnalyticsHooks(g.game);
     g.game.state.liveops.nova = 500;
     buyNovaItem(g.game, 'nova_gather_1h');
-    g.game.sys.liveops.buyCosmetic('hat_straw');
+    g.game.sys.liveops.buyCosmetic('hat_ranger');
     const ev = calls.filter((c) => c.name === 'nova_spent').map((c) => c.props);
     expect(ev).toEqual([
       expect.objectContaining({ amount: 60, sink: 'nova_shop', item: 'nova_gather_1h', balance: 440 }),
-      expect.objectContaining({ amount: 150, sink: 'cosmetic', item: 'hat_straw', balance: 290 }),
+      expect.objectContaining({ amount: 150, sink: 'cosmetic', item: 'hat_ranger', balance: 290 }),
     ]);
   });
 

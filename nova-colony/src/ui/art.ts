@@ -75,7 +75,7 @@ const ITEMS = new Set([
   'supply_crate', 'rations_crate', 'timber_bundle', 'stone_bundle', 'ore_bundle', 'steel_bundle', 'colonist_crate',
   'defense_crate', 'tech_crate', 'alloy_crate', 'nano_crate', 'titan_crate', 'mystery_crate',
   // Nova chests (their big closed / open art and opening backgrounds: chestArt / chestBgArt)
-  'chest_acorn', 'chest_moonlit', 'chest_sunny', 'chest_crystal', 'chest_cosmic',
+  'chest_supply', 'chest_explorer', 'chest_prospector', 'chest_relic', 'chest_nova',
 ]);
 
 /** Every BuildingDef.id (tests keep this equal to the data and to the files in public/art/buildings). */
@@ -178,7 +178,7 @@ export function itemArtIds(): string[] {
 }
 
 /** Nova chests (data/chests.ts). Each has closed + open art (512 px, transparent) and a portrait opening background. */
-const CHESTS = new Set(['chest_acorn', 'chest_moonlit', 'chest_sunny', 'chest_crystal', 'chest_cosmic']);
+const CHESTS = new Set(['chest_supply', 'chest_explorer', 'chest_prospector', 'chest_relic', 'chest_nova']);
 /** Big painted chest for the opening screen and the Shop, closed or with its lid open. */
 export function chestArt(id: string, open = false): string | null {
   return CHESTS.has(id) ? `${ROOT}chests/${id}-${open ? 'open' : 'closed'}.webp` : null;
@@ -197,18 +197,18 @@ export function chestArtIds(): string[] {
  * Cosmetics without a painting yet fall back to their emoji (CosmeticDef.icon).
  */
 const COSMETIC_ART = new Set<string>([
-  'atv_flame', 'buggy_candy', 'colonist_cozy_scarves', 'colonist_farmhand', 'colonist_guard_plate',
-  'colonist_labcoat', 'colonist_overalls', 'colonist_pastel', 'deco_gnome_garden', 'deco_holo_trees',
-  'deco_lantern_festival', 'deco_pumpkin_patch', 'deco_star_fountain', 'deco_teddy_picnic', 'frame_cozy_knit',
-  'frame_crystal', 'frame_honey_gold', 'frame_sakura', 'frame_starry', 'hat_antennae', 'hat_beanie', 'hat_cat_ears',
-  'hat_comet_halo', 'hat_flower_crown', 'hat_frog', 'hat_mushroom', 'hat_space_bubble', 'hat_star_crown',
-  'hat_straw', 'hover_aurora', 'hovercraft_chrome', 'outfit_astro', 'outfit_cosmic', 'outfit_cozy_knit',
-  'outfit_engineer', 'outfit_founder', 'outfit_frog_raincoat', 'outfit_honeybee', 'outfit_neon_runner',
-  'outfit_pioneer', 'outfit_starry_pj', 'outfit_strawberry', 'pet_baby_blob', 'pet_buddy_drone', 'pet_ember_fox',
-  'pet_moon_bunny', 'pet_robo_pup', 'pet_space_kitty', 'pet_star_whale', 'rover_camo', 'theme_aurora',
-  'theme_autumn', 'theme_candy', 'theme_desert_dusk', 'theme_frostbite', 'theme_golden_hour', 'theme_neon_night',
-  'theme_sakura', 'theme_starlight', 'theme_titanium_dawn', 'turret_bronze', 'turret_gold', 'turret_ice',
-  'turret_neon', 'turret_sakura', 'vehicle_ladybug',
+  'ride_rally', 'ride_sunset', 'colonist_parkas', 'colonist_harvest', 'colonist_security',
+  'colonist_labcoat', 'colonist_overalls', 'colonist_dress_uniform', 'deco_zen_garden', 'deco_holo_trees',
+  'deco_lantern_festival', 'deco_harvest', 'deco_meteor_fountain', 'deco_campfire_lounge', 'frame_journal',
+  'frame_geode', 'frame_brass', 'frame_blossom', 'frame_star_chart', 'hat_sensor_visor', 'hat_watch_cap', 'hat_headset',
+  'hat_drone_halo', 'hat_bandana', 'hat_pith_helmet', 'hat_aviator', 'hat_space_bubble', 'hat_commander',
+  'hat_ranger', 'ride_aurora', 'ride_chrome', 'outfit_astro', 'outfit_nebula', 'outfit_frontier_knit',
+  'outfit_engineer', 'outfit_founder', 'outfit_storm_slicker', 'outfit_nomad', 'outfit_neon_runner',
+  'outfit_pioneer', 'outfit_observatory', 'outfit_botanist', 'pet_lumen_moth', 'pet_survey_drone', 'pet_ember_fox',
+  'pet_lunar_hare', 'pet_robo_hound', 'pet_ships_cat', 'pet_sky_whale', 'ride_camo', 'theme_aurora',
+  'theme_autumn', 'theme_biolume', 'theme_desert_dusk', 'theme_winter', 'theme_golden_hour', 'theme_neon_night',
+  'theme_blossom', 'theme_starfall', 'theme_titanium_dawn', 'turret_bronze', 'turret_gold', 'turret_ice',
+  'turret_neon', 'turret_patina', 'ride_carbon_gold',
 ]);
 export function cosmeticArt(id: string): string | null {
   return COSMETIC_ART.has(id) ? `${ROOT}cosmetics/${id}.webp` : null;

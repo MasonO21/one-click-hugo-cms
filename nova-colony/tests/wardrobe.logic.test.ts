@@ -64,19 +64,19 @@ describe('wardrobe — tabs', () => {
 
 describe('wardrobe — where a cosmetic comes from', () => {
   it('a Nova price comes first', () => {
-    const s = cosmeticSources(data, cos('hat_straw'));
+    const s = cosmeticSources(data, cos('hat_ranger'));
     expect(s[0]).toMatchObject({ kind: 'nova', nova: 150 });
     expect(primarySource(s)?.kind).toBe('nova');
     // also in chests, as a second way
-    expect(s.find((x) => x.kind === 'chest')?.label).toBe('Nova chests: Acorn chest or better');
+    expect(s.find((x) => x.kind === 'chest')?.label).toBe('Nova chests: Supply Cache or better');
   });
 
   it('chest-only cosmetics name the cheapest chest that drops them', () => {
-    expect(primarySource(cosmeticSources(data, cos('hat_star_crown')))?.label).toBe('Chest exclusive: Crystal Bloom chest or better');
-    expect(primarySource(cosmeticSources(data, cos('outfit_honeybee')))?.label).toBe('Chest exclusive: Sunflower chest or better');
+    expect(primarySource(cosmeticSources(data, cos('hat_commander')))?.label).toBe('Chest exclusive: Ancient Relic or better');
+    expect(primarySource(cosmeticSources(data, cos('outfit_nomad')))?.label).toBe("Chest exclusive: Prospector's Vault or better");
     // the top chest has nothing "better"
-    expect(primarySource(cosmeticSources(data, cos('pet_star_whale')))?.label).toBe('Chest exclusive: Cosmic Wish chest');
-    expect(primarySource(cosmeticSources(data, cos('hat_star_crown')))?.chest).toBe('chest_crystal');
+    expect(primarySource(cosmeticSources(data, cos('pet_sky_whale')))?.label).toBe('Chest exclusive: Nova Core');
+    expect(primarySource(cosmeticSources(data, cos('hat_commander')))?.chest).toBe('chest_relic');
   });
 
   it('season, pack and mission rewards', () => {
@@ -88,7 +88,7 @@ describe('wardrobe — where a cosmetic comes from', () => {
     // a chest drop the season also hands out: the season is the sure way, the chest a second one
     const fox = cosmeticSources(data, cos('pet_ember_fox'));
     expect(fox[0]).toMatchObject({ kind: 'season', level: 45 });
-    expect(fox[1].label).toBe('Nova chests: Crystal Bloom chest or better');
+    expect(fox[1].label).toBe('Nova chests: Ancient Relic or better');
   });
 
   it('every cosmetic has at least one source (nothing in the wardrobe is unobtainable)', () => {
@@ -97,20 +97,20 @@ describe('wardrobe — where a cosmetic comes from', () => {
 });
 
 describe('wardrobe — state, sorting and filtering', () => {
-  const own = { owned: ['hat_beanie', 'hat_frog', 'hat_straw'], equipped: { hat: 'hat_frog' } as Record<string, string> };
+  const own = { owned: ['hat_watch_cap', 'hat_pith_helmet', 'hat_ranger'], equipped: { hat: 'hat_pith_helmet' } as Record<string, string> };
 
   it('equipped / owned / locked', () => {
-    expect(cosmeticState(cos('hat_frog'), own)).toBe('equipped');
-    expect(cosmeticState(cos('hat_beanie'), own)).toBe('owned');
-    expect(cosmeticState(cos('hat_cat_ears'), own)).toBe('locked');
+    expect(cosmeticState(cos('hat_pith_helmet'), own)).toBe('equipped');
+    expect(cosmeticState(cos('hat_watch_cap'), own)).toBe('owned');
+    expect(cosmeticState(cos('hat_headset'), own)).toBe('locked');
     // "equipped" needs ownership too (a stale save)
-    expect(cosmeticState(cos('hat_frog'), { owned: [], equipped: { hat: 'hat_frog' } })).toBe('locked');
+    expect(cosmeticState(cos('hat_pith_helmet'), { owned: [], equipped: { hat: 'hat_pith_helmet' } })).toBe('locked');
   });
 
   it('sorts what you wear, then what you own, then Nova buys (cheapest first), then the rest', () => {
     const list = sortCosmetics(filterCosmetics(data.cosmetics, 'hats', own), own, 'hats');
-    expect(list[0].id).toBe('hat_frog');
-    expect(list.slice(1, 3).map((c) => c.id).sort()).toEqual(['hat_beanie', 'hat_straw']);
+    expect(list[0].id).toBe('hat_pith_helmet');
+    expect(list.slice(1, 3).map((c) => c.id).sort()).toEqual(['hat_ranger', 'hat_watch_cap']);
     const buyable = list.slice(3).filter((c) => c.nova > 0);
     expect(buyable.map((c) => c.nova)).toEqual([...buyable.map((c) => c.nova)].sort((a, b) => a - b));
     const firstLocked = list.findIndex((c) => c.nova === 0 && !own.owned.includes(c.id));
@@ -134,7 +134,7 @@ describe('wardrobe — state, sorting and filtering', () => {
   });
 
   it('the frame picker lists owned frames only', () => {
-    expect(ownedFrames(data.cosmetics, ['frame_sakura', 'hat_beanie', 'frame_crystal']).map((c) => c.id)).toEqual(['frame_sakura', 'frame_crystal']);
+    expect(ownedFrames(data.cosmetics, ['frame_blossom', 'hat_watch_cap', 'frame_geode']).map((c) => c.id)).toEqual(['frame_blossom', 'frame_geode']);
     expect(ownedFrames(data.cosmetics, [])).toEqual([]);
   });
 });
@@ -142,9 +142,9 @@ describe('wardrobe — state, sorting and filtering', () => {
 describe('wardrobe — detail text and confirmation', () => {
   it('says what each kind changes; decorations point to Build › Decor, frames to Photo Mode', () => {
     for (const c of data.cosmetics) expect(cosmeticEffect(c).length, c.id).toBeGreaterThan(0);
-    expect(cosmeticEffect(cos('deco_gnome_garden')).join(' ')).toContain('Build › Decor');
-    expect(cosmeticEffect(cos('frame_sakura')).join(' ')).toContain('Photo Mode');
-    expect(cosmeticEffect(cos('theme_frostbite')).join(' ')).toContain('snowfall');
+    expect(cosmeticEffect(cos('deco_zen_garden')).join(' ')).toContain('Build › Decor');
+    expect(cosmeticEffect(cos('frame_blossom')).join(' ')).toContain('Photo Mode');
+    expect(cosmeticEffect(cos('theme_winter')).join(' ')).toContain('snowfall');
   });
 
   it('asks before spending 300 Nova or more', () => {

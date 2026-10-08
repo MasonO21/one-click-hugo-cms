@@ -796,36 +796,38 @@ describe('data.integrity — monetization & live-ops', () => {
     const premCos = data.season.levels.map((l, i) => [i + 1, l.premium.cosmetic] as const).filter(([, c]) => c);
     expect(premCos.map(([l]) => l)).toEqual([5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
     expect(new Set(premCos.map(([, c]) => c)).size).toBe(10);
-    for (const id of ['hat_space_bubble', 'pet_moon_bunny', 'frame_honey_gold', 'outfit_astro', 'outfit_neon_runner', 'hover_aurora', 'theme_aurora', 'turret_neon']) {
+    for (const id of ['hat_space_bubble', 'pet_lunar_hare', 'frame_brass', 'outfit_astro', 'outfit_neon_runner', 'ride_aurora', 'theme_aurora', 'turret_neon']) {
       expect(premCos.some(([, c]) => c === id), `season keeps ${id}`).toBe(true);
     }
     for (const v of Object.values(data.season.xp)) expect(v).toBeGreaterThan(0);
-    // free players earn a healthy slice of Nova over the season; premium a lot more
+    // free players earn a healthy slice of Nova over the season; premium pays back about the pass's price in Nova
+    // ($9.99 ~ 1,100): its cosmetics, chests and colonists are the draw, so it never undercuts the Nova packs
     const freeNova = data.season.levels.reduce((s, l) => s + (l.free.nova ?? 0), 0);
     const premNova = data.season.levels.reduce((s, l) => s + (l.premium.nova ?? 0), 0);
     expect(freeNova).toBeGreaterThanOrEqual(250);
-    expect(premNova).toBeGreaterThanOrEqual(2500);
-    expect(premNova).toBeGreaterThan(freeNova * 5);
+    expect(premNova).toBeGreaterThanOrEqual(900);
+    expect(premNova).toBeLessThanOrEqual(1400);
+    expect(premNova).toBeGreaterThan(freeNova * 2.5);
   });
 
-  it('season: Nova chests on both tracks (Acorn early, Crystal Bloom near the end, Cosmic Wish at 50) and bonus chests past 50', () => {
+  it('season: Nova chests on both tracks (Supply early, an Ancient Relic near the end, a Nova Core at 50) and bonus chests past 50', () => {
     const chestsAt = (track: 'free' | 'premium') =>
       data.season.levels.flatMap((l, i) => Object.entries(l[track].items ?? {}).filter(([id]) => data.chest(id)).flatMap(([id, n]) => Array.from({ length: n }, () => ({ level: i + 1, id }))));
     const prem = chestsAt('premium');
     expect(prem.length).toBeGreaterThanOrEqual(6);
     const first = (id: string) => prem.find((c) => c.id === id)?.level ?? 0;
-    expect(first('chest_acorn')).toBeGreaterThan(0);
-    expect(first('chest_acorn')).toBeLessThanOrEqual(10);
-    expect(first('chest_moonlit')).toBeGreaterThan(first('chest_acorn'));
-    expect(first('chest_sunny')).toBeGreaterThan(first('chest_moonlit'));
-    expect(first('chest_crystal')).toBeGreaterThanOrEqual(40);
-    expect(data.season.levels[49].premium.items?.chest_cosmic).toBe(1);
-    // a few Acorn chests for free players too (and nothing grander)
+    expect(first('chest_supply')).toBeGreaterThan(0);
+    expect(first('chest_supply')).toBeLessThanOrEqual(10);
+    expect(first('chest_explorer')).toBeGreaterThan(first('chest_supply'));
+    expect(first('chest_prospector')).toBeGreaterThan(first('chest_explorer'));
+    expect(first('chest_relic')).toBeGreaterThanOrEqual(40);
+    expect(data.season.levels[49].premium.items?.chest_nova).toBe(1);
+    // a few Supply Caches for free players too (and nothing grander)
     const free = chestsAt('free');
     expect(free.length).toBeGreaterThanOrEqual(2);
-    expect(free.every((c) => c.id === 'chest_acorn')).toBe(true);
-    // bonus levels: a repeatable Moonlit chest every 400 XP after the last level
-    expect(data.season.bonus).toEqual({ xp: 400, reward: { items: { chest_moonlit: 1 } } });
+    expect(free.every((c) => c.id === 'chest_supply')).toBe(true);
+    // bonus levels: a repeatable Explorer’s Case every 400 XP after the last level
+    expect(data.season.bonus).toEqual({ xp: 400, reward: { items: { chest_explorer: 1 } } });
   });
 
   it('daily login is 7 days (resources, mats, Nova, colonist, defense crate, Nova, legendary) and the spin wheel is sane', () => {

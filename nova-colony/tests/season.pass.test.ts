@@ -31,7 +31,7 @@ describe('season bonus chests (past level 50, premium)', () => {
     expect(seasonBonusEarned({ ...s, bonus: undefined }, end + 4000)).toBe(0);
   });
 
-  it('only the premium track gets them; claiming grants Moonlit chests, once each, and badges count them', async () => {
+  it('only the premium track gets them; claiming grants Explorer’s Cases, once each, and badges count them', async () => {
     const g = makeGame();
     const { game } = g;
     const lo = game.sys.liveops;
@@ -45,9 +45,9 @@ describe('season bonus chests (past level 50, premium)', () => {
     const badge = claimableSeason(game);
     expect(badge).toBe(50 * 2 + 2);
     expect(lo.seasonClaimable()).toBe(badge);
-    const before = game.state.player.items.chest_moonlit ?? 0;
+    const before = game.state.player.items.chest_explorer ?? 0;
     expect(claimSeasonBonus(game)).toBe(2);
-    expect(game.state.player.items.chest_moonlit ?? 0).toBe(before + 2);
+    expect(game.state.player.items.chest_explorer ?? 0).toBe(before + 2);
     expect(seasonBonusReady(game)).toBe(0);
     expect(claimSeasonBonus(game)).toBe(0);
     // more play, another chest (and a toast pointing at the season pass)
@@ -78,22 +78,22 @@ describe('season bonus chests (past level 50, premium)', () => {
 });
 
 describe('season premium highlights (computed, never typed in)', () => {
-  it('counts the premium track: 10 cosmetics, 8 chests, 3,000 Nova', () => {
+  it('counts the premium track: 10 cosmetics, 8 chests, about the pass price back in Nova', () => {
     const h = seasonHighlights(data);
     expect(h.cosmetics).toHaveLength(10);
     expect(h.chests).toHaveLength(8);
-    expect(h.chests[h.chests.length - 1]).toBe('chest_cosmic');
+    expect(h.chests[h.chests.length - 1]).toBe('chest_nova');
     const nova = data.season.levels.reduce((s, l) => s + (l.premium.nova ?? 0), 0);
     expect(h.nova).toBe(nova);
-    expect(h.exclusive).toBe(3); // bubble helmet, moon bunny, honey frame: only from the season
-    expect(h.bonus).toEqual({ xp: 400, chest: 'chest_moonlit' });
+    expect(h.exclusive).toBe(3); // bubble helmet, lunar hare, brass frame: only from the season
+    expect(h.bonus).toEqual({ xp: 400, chest: 'chest_explorer' });
     expect(highlightChips(h)).toEqual([`10 cosmetics`, `8 chests`, `${friendlyAmount(nova)} Nova`, `${h.colonists} colonists`]);
   });
 
   it('follows the data when it changes', () => {
     const season = { ...data.season, levels: data.season.levels.slice(0, 10) };
     const h = seasonHighlights(data, season);
-    expect(h.cosmetics).toEqual(['hat_cat_ears', 'outfit_astro']);
+    expect(h.cosmetics).toEqual(['hat_headset', 'outfit_astro']);
     expect(highlightChips(h)[0]).toBe('2 cosmetics');
   });
 
@@ -110,14 +110,14 @@ describe('season premium highlights (computed, never typed in)', () => {
     const h = rewardHero(data, lv50)!;
     expect(h.kind).toBe('cosmetic');
     expect(h.id).toBe('outfit_neon_runner');
-    expect(h.chest).toBe('chest_cosmic');
+    expect(h.chest).toBe('chest_nova');
     expect(h.rest.cosmetic).toBeUndefined();
-    expect(h.rest.items?.chest_cosmic).toBeUndefined();
+    expect(h.rest.items?.chest_nova).toBeUndefined();
     expect(h.rest.items?.titan_crate).toBe(1);
-    expect(rewardHero(data, data.season.levels[4].premium)).toMatchObject({ kind: 'cosmetic', id: 'hat_cat_ears', chest: null });
-    const c = rewardHero(data, { nova: 5, items: { chest_acorn: 2, chest_sunny: 1, bandage: 1 } })!;
-    expect(c).toMatchObject({ kind: 'chest', id: 'chest_sunny' });
-    expect(c.rest.items).toEqual({ chest_acorn: 2, bandage: 1 });
+    expect(rewardHero(data, data.season.levels[4].premium)).toMatchObject({ kind: 'cosmetic', id: 'hat_headset', chest: null });
+    const c = rewardHero(data, { nova: 5, items: { chest_supply: 2, chest_prospector: 1, bandage: 1 } })!;
+    expect(c).toMatchObject({ kind: 'chest', id: 'chest_prospector' });
+    expect(c.rest.items).toEqual({ chest_supply: 2, bandage: 1 });
     expect(rewardHero(data, { nova: 5 })).toBeNull();
   });
 });
@@ -126,7 +126,7 @@ describe('bundles', () => {
   it('a bundle grants several cosmetics; reward cards show each with its icon', async () => {
     const g = makeGame();
     const { game } = g;
-    const p = game.data.product('bundle_cozy_wardrobe')!;
+    const p = game.data.product('bundle_frontier_wardrobe')!;
     expect(p.section).toBe('bundles');
     expect(p.grants.cosmetics).toHaveLength(3);
     expect(await game.sys.liveops.buy(p.id)).toBe(true);
@@ -143,11 +143,11 @@ describe('bundles', () => {
   it('a restore re-grants the cosmetics of a non-consumable bundle (never its Nova)', async () => {
     const g = makeGame();
     const { game, services } = g;
-    vi.spyOn(services.iap, 'restore').mockResolvedValue(['bundle_photo_frames', 'bundle_chest_lover']);
+    vi.spyOn(services.iap, 'restore').mockResolvedValue(['bundle_photo_frames', 'bundle_cache_hunter']);
     await game.sys.liveops.restorePurchases();
-    expect(game.state.liveops.cosmetics.owned).toEqual(expect.arrayContaining(['frame_cozy_knit', 'frame_sakura', 'frame_starry']));
+    expect(game.state.liveops.cosmetics.owned).toEqual(expect.arrayContaining(['frame_journal', 'frame_blossom', 'frame_star_chart']));
     expect(game.state.liveops.nova).toBe(0);
-    expect(game.state.player.items.chest_moonlit ?? 0).toBe(0); // consumable: nothing to restore
+    expect(game.state.player.items.chest_explorer ?? 0).toBe(0); // consumable: nothing to restore
   });
 
   it('every bundle is worth more than its price in Nova, and is listed in docs/MOBILE.md', () => {

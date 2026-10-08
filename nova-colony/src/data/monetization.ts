@@ -41,15 +41,15 @@ export const PRODUCTS: ProductDef[] = [
   { id: 'season_xp_boost', section: 'season', type: 'consumable', name: 'Season Boost', description: 'Skip ahead ten levels on the season track (4,000 season XP).', fallbackPrice: '$4.99', limit: 0, grants: { xp: 4000 } },
 
   // ---------------------------------------------------------------- cosmetic bundles (also buyable with Nova)
-  { id: 'cosmetic_sakura_theme', section: 'cosmetics', type: 'non_consumable', name: 'Sakura Colony Theme', description: 'Pink blossoms and soft lantern light across your whole colony.', fallbackPrice: '$2.99', limit: 1, grants: { cosmetic: 'theme_sakura' } },
+  { id: 'cosmetic_sakura_theme', section: 'cosmetics', type: 'non_consumable', name: 'Sakura Colony Theme', description: 'Pink blossoms and soft lantern light across your whole colony.', fallbackPrice: '$2.99', limit: 1, grants: { cosmetic: 'theme_blossom' } },
   { id: 'cosmetic_neon_theme', section: 'cosmetics', type: 'non_consumable', name: 'Neon Night Theme', description: 'A synth-wave glow for your colony after dark.', fallbackPrice: '$2.99', limit: 1, tag: 'new', grants: { cosmetic: 'theme_neon_night' } },
   { id: 'cosmetic_turret_neon', section: 'cosmetics', type: 'non_consumable', name: 'Neon Turret Skin', description: 'Make every turret glow electric blue.', fallbackPrice: '$1.99', limit: 1, grants: { cosmetic: 'turret_neon' } },
 
   // ---------------------------------------------------------------- bundles (cosmetics / chests + Nova; top of the Packs tab)
   // Each is worth clearly more than its price in Nova: the wardrobe bundle's three cosmetics cost 900 Nova on their own.
-  { id: 'bundle_cozy_wardrobe', section: 'bundles', type: 'non_consumable', name: 'Cozy Wardrobe Bundle', description: 'The Cozy Knit Sweater, a Pom-Pom Beanie and knitted scarves for the whole crew, plus 200 Nova.', fallbackPrice: '$4.99', limit: 1, tag: 'new', grants: { nova: 200, cosmetics: ['outfit_cozy_knit', 'hat_beanie', 'colonist_cozy_scarves'], bundleTag: 'cozy_wardrobe' } },
-  { id: 'bundle_chest_lover', section: 'bundles', type: 'consumable', name: 'Chest Lover Bundle', description: 'Three Acorn chests, two Moonlit chests and a Sunflower chest to open, plus 300 Nova.', fallbackPrice: '$9.99', limit: 0, tag: 'popular', grants: { nova: 300, items: { chest_acorn: 3, chest_moonlit: 2, chest_sunny: 1 }, bundleTag: 'chest_lover' } },
-  { id: 'bundle_photo_frames', section: 'bundles', type: 'non_consumable', name: 'Photo Frame Bundle', description: 'Three Photo Mode frames: cozy knit, sakura petals and a starry night, plus 50 Nova.', fallbackPrice: '$1.99', limit: 1, grants: { nova: 50, cosmetics: ['frame_cozy_knit', 'frame_sakura', 'frame_starry'], bundleTag: 'photo_frames' } },
+  { id: 'bundle_frontier_wardrobe', section: 'bundles', type: 'non_consumable', name: 'Frontier Wardrobe Bundle', description: 'The Frontier Knit Sweater, a Knit Watch Cap and Expedition Parkas for the whole crew, plus 200 Nova.', fallbackPrice: '$4.99', limit: 1, tag: 'new', grants: { nova: 200, cosmetics: ['outfit_frontier_knit', 'hat_watch_cap', 'colonist_parkas'], bundleTag: 'frontier_wardrobe' } },
+  { id: 'bundle_cache_hunter', section: 'bundles', type: 'consumable', name: 'Cache Hunter Bundle', description: 'Three Supply Caches, two Explorer’s Cases and a Prospector’s Vault to open, plus 300 Nova.', fallbackPrice: '$9.99', limit: 0, tag: 'popular', grants: { nova: 300, items: { chest_supply: 3, chest_explorer: 2, chest_prospector: 1 }, bundleTag: 'cache_hunter' } },
+  { id: 'bundle_photo_frames', section: 'bundles', type: 'non_consumable', name: 'Photo Frame Bundle', description: 'Three Photo Mode frames: Field Journal, Blossom Branch and Star Chart, plus 50 Nova.', fallbackPrice: '$1.99', limit: 1, grants: { nova: 50, cosmetics: ['frame_journal', 'frame_blossom', 'frame_star_chart'], bundleTag: 'photo_frames' } },
 ];
 
 /**
@@ -59,80 +59,80 @@ export const PRODUCTS: ProductDef[] = [
  */
 export const COSMETICS: CosmeticDef[] = [
   // ---- colony themes (palette accents across the colony + ambient particles)
-  { id: 'theme_sakura', name: 'Sakura Colony Theme', kind: 'base_theme', color: '#ffb7c5', accent: '#ff6f91', nova: 600, rarity: 'rare', icon: '🌸', fx: 'petals', chest: true, description: 'Pink blossoms drift over soft rosy roofs.' },
-  { id: 'theme_aurora', name: 'Aurora Colony Theme', kind: 'base_theme', color: '#7be0c8', accent: '#9a7bff', nova: 900, rarity: 'epic', icon: '🌌', fx: 'aurora', chest: true, description: 'Ribbons of green and violet light dance overhead.' },
-  { id: 'theme_desert_dusk', name: 'Desert Dusk Theme', kind: 'base_theme', color: '#e0956a', accent: '#ffcf6a', nova: 700, rarity: 'rare', icon: '🏜️', fx: 'embers', chest: true, description: 'Warm terracotta trims and glowing dust motes.' },
-  { id: 'theme_frostbite', name: 'Frostbite Theme', kind: 'base_theme', color: '#cfe8ff', accent: '#6ac8ff', nova: 700, rarity: 'rare', icon: '❄️', fx: 'snow', chest: true, description: 'Frosty blue roofs and gentle, never-ending snowfall.' },
-  { id: 'theme_neon_night', name: 'Neon Night Theme', kind: 'base_theme', color: '#3a2a6a', accent: '#ff4fd8', nova: 1000, rarity: 'epic', icon: '🌃', fx: 'fireflies', chest: true, description: 'Synth-wave pinks glowing in the dark.' },
-  { id: 'theme_golden_hour', name: 'Golden Hour Theme', kind: 'base_theme', color: '#ffd89a', accent: '#ff9a4a', nova: 800, rarity: 'epic', icon: '🌅', fx: 'fireflies', chest: true, description: 'Honey-gold trims and lazy summer fireflies.' },
-  { id: 'theme_autumn', name: 'Autumn Harvest Theme', kind: 'base_theme', color: '#e08a4a', accent: '#c4503a', nova: 800, rarity: 'epic', icon: '🍂', fx: 'leaves', chest: true, description: 'Pumpkin-orange roofs and tumbling maple leaves.' },
-  { id: 'theme_candy', name: 'Candy Pastel Theme', kind: 'base_theme', color: '#ffc6e8', accent: '#9ae6ff', nova: 0, rarity: 'legendary', icon: '🍬', fx: 'petals', chest: true, description: 'Bubblegum pinks and minty blues, sweet as can be.' },
-  { id: 'theme_starlight', name: 'Starlight Theme', kind: 'base_theme', color: '#b8a8ff', accent: '#fff2a8', nova: 0, rarity: 'mythic', icon: '🌠', fx: 'stars', chest: true, description: 'Twinkling stardust settles on every rooftop.' },
-  { id: 'theme_titanium_dawn', name: 'Titanium Dawn Theme', kind: 'base_theme', color: '#dfe6ee', accent: '#45f0ff', nova: 0, rarity: 'legendary', icon: '🏙️', fx: 'stars', description: 'Earned by reaching Titanium: gleaming silver and cyan.' },
-  // ---- player outfits
-  { id: 'outfit_pioneer', name: 'Pioneer Outfit', kind: 'outfit', color: '#d98c3f', accent: '#ffe08a', nova: 0, rarity: 'rare', icon: '🤠', description: 'A trusty jacket for the very first settlers.' },
-  { id: 'outfit_engineer', name: 'Engineer Overalls', kind: 'outfit', color: '#f0a64b', accent: '#5a4a3a', nova: 300, rarity: 'common', icon: '🔧', chest: true, description: 'Pockets for every spanner you own.' },
-  { id: 'outfit_cozy_knit', name: 'Cozy Knit Sweater', kind: 'outfit', color: '#c46a5a', accent: '#f6e2c0', nova: 350, rarity: 'rare', icon: '🧶', chest: true, description: 'Hand-knitted, extra snuggly.' },
-  { id: 'outfit_strawberry', name: 'Strawberry Overalls', kind: 'outfit', color: '#ff6b7a', accent: '#fff4f0', nova: 400, rarity: 'rare', icon: '🍓', chest: true, description: 'Berry-red with little cream seeds.' },
-  { id: 'outfit_frog_raincoat', name: 'Froggy Raincoat', kind: 'outfit', color: '#7cc36b', accent: '#ffe08a', nova: 400, rarity: 'rare', icon: '🐸', chest: true, description: 'For splashing through alien puddles.' },
-  { id: 'outfit_astro', name: 'Astronaut Suit', kind: 'outfit', color: '#f4f6fa', accent: '#ff7a3a', nova: 500, rarity: 'epic', icon: '🧑‍🚀', description: 'Classic white-and-orange space suit.' },
-  { id: 'outfit_neon_runner', name: 'Neon Runner', kind: 'outfit', color: '#2a2a4a', accent: '#5ef2ff', nova: 600, rarity: 'epic', icon: '⚡', description: 'Glowing stripes for night-time explorers.' },
-  { id: 'outfit_honeybee', name: 'Honeybee Hoodie', kind: 'outfit', color: '#ffcf3a', accent: '#4a3a2a', nova: 0, rarity: 'epic', icon: '🐝', chest: true, description: 'Fuzzy stripes and tiny wings on the back.' },
-  { id: 'outfit_starry_pj', name: 'Starry Pajamas', kind: 'outfit', color: '#3a3f8a', accent: '#ffe08a', nova: 0, rarity: 'legendary', icon: '🌙', chest: true, description: 'Sleepy-time blues sprinkled with gold stars.' },
-  { id: 'outfit_founder', name: 'Titanium Founder Suit', kind: 'outfit', color: '#dfe6ee', accent: '#ffd84a', nova: 0, rarity: 'legendary', icon: '🏅', description: 'Only for founders of the Titanium age.' },
-  { id: 'outfit_cosmic', name: 'Stardust Suit', kind: 'outfit', color: '#8a7aff', accent: '#ffd8f8', nova: 0, rarity: 'mythic', icon: '🌌', chest: true, description: 'Woven from a pastel nebula. It shimmers.' },
-  // ---- hats
-  { id: 'hat_straw', name: 'Straw Sun Hat', kind: 'hat', color: '#e8c87a', accent: '#e05a5a', nova: 150, rarity: 'common', icon: '👒', chest: true, description: 'Shady, breezy and very farmy.' },
-  { id: 'hat_beanie', name: 'Pom-Pom Beanie', kind: 'hat', color: '#e86f8a', accent: '#fff4f0', nova: 150, rarity: 'common', icon: '🧶', chest: true, description: 'Warm ears, bouncy pom-pom.' },
-  { id: 'hat_flower_crown', name: 'Flower Crown', kind: 'hat', color: '#7cc36b', accent: '#ffb7c5', nova: 300, rarity: 'rare', icon: '🌸', chest: true, description: 'Picked fresh from the meadow this morning.' },
-  { id: 'hat_cat_ears', name: 'Kitty Ears', kind: 'hat', color: '#f4a46a', accent: '#ffd8e0', nova: 300, rarity: 'rare', icon: '🐱', chest: true, description: 'Mrow. They even twitch a little.' },
-  { id: 'hat_mushroom', name: 'Mushroom Cap', kind: 'hat', color: '#e0503a', accent: '#fff4e8', nova: 550, rarity: 'epic', icon: '🍄', chest: true, description: 'A spotty toadstool, just your size.' },
-  { id: 'hat_frog', name: 'Froggy Hat', kind: 'hat', color: '#7cc36b', accent: '#ffffff', nova: 0, rarity: 'epic', icon: '🐸', chest: true, description: 'Big googly eyes on top. Ribbit!' },
-  { id: 'hat_space_bubble', name: 'Bubble Helmet', kind: 'hat', color: '#cfeeff', accent: '#ff7a3a', nova: 0, rarity: 'epic', icon: '🫧', description: 'A retro glass dome. Season reward.' },
-  { id: 'hat_star_crown', name: 'Little Star Crown', kind: 'hat', color: '#ffd84a', accent: '#ff9ad8', nova: 0, rarity: 'legendary', icon: '👑', chest: true, description: 'For the true ruler of the colony.' },
-  { id: 'hat_antennae', name: 'Alien Antennae', kind: 'hat', color: '#9ae66b', accent: '#ff9ad8', nova: 0, rarity: 'legendary', icon: '👽', chest: true, description: 'Boop boop. Picks up cosmic radio.' },
-  { id: 'hat_comet_halo', name: 'Comet Halo', kind: 'hat', color: '#fff2a8', accent: '#9ae6ff', nova: 0, rarity: 'mythic', icon: '💫', chest: true, description: 'A tiny comet circles your head forever.' },
-  // ---- pets (follow the player around)
-  { id: 'pet_robo_pup', name: 'Robo Pup', kind: 'pet', color: '#cfd8e8', accent: '#45c8ff', nova: 600, rarity: 'rare', icon: '🐶', chest: true, description: 'Wags its little antenna when you come home.' },
-  { id: 'pet_buddy_drone', name: 'Buddy Drone', kind: 'pet', color: '#ffb347', accent: '#5ef2ff', nova: 600, rarity: 'rare', icon: '🛸', chest: true, description: 'Hovers at your shoulder and beeps happily.' },
-  { id: 'pet_space_kitty', name: 'Space Kitty', kind: 'pet', color: '#9a8aff', accent: '#ffd8f8', nova: 900, rarity: 'epic', icon: '🐱', chest: true, description: 'Naps in sunbeams. Purrs in zero-g.' },
-  { id: 'pet_moon_bunny', name: 'Moon Bunny', kind: 'pet', color: '#f4f0ff', accent: '#ffb7c5', nova: 0, rarity: 'epic', icon: '🐰', description: 'Hops in slow motion. Season reward.' },
-  { id: 'pet_ember_fox', name: 'Ember Fox', kind: 'pet', color: '#ff8a3a', accent: '#fff2a8', nova: 0, rarity: 'legendary', icon: '🦊', chest: true, description: 'Its tail glows like a cozy campfire.' },
-  { id: 'pet_baby_blob', name: 'Baby Blob', kind: 'pet', color: '#9ae66b', accent: '#ff9ad8', nova: 0, rarity: 'legendary', icon: '🫧', chest: true, description: 'A friendly little alien who decided you are family.' },
-  { id: 'pet_star_whale', name: 'Star Whale', kind: 'pet', color: '#7ab8ff', accent: '#fff2a8', nova: 0, rarity: 'mythic', icon: '🐋', chest: true, description: 'A pocket-sized whale that swims through the air.' },
-  // ---- colonist outfits
-  { id: 'colonist_overalls', name: 'Colonist Overalls', kind: 'colonist_outfit', color: '#5a8ac4', accent: '#ffe08a', nova: 250, rarity: 'common', icon: '👖', chest: true, description: 'Matching denim for the whole crew.' },
-  { id: 'colonist_farmhand', name: 'Farmhand Straw Hats', kind: 'colonist_outfit', color: '#d8b46a', accent: '#7cc36b', nova: 250, rarity: 'common', icon: '🌾', chest: true, description: 'Sunny straw hats for everyone.' },
-  { id: 'colonist_labcoat', name: 'Lab Coat Deluxe', kind: 'colonist_outfit', color: '#f4f6fa', accent: '#6ac8ff', nova: 300, rarity: 'rare', icon: '🥼', chest: true, description: 'Crisp white coats with blue piping.' },
-  { id: 'colonist_guard_plate', name: 'Guard Plate Armor', kind: 'colonist_outfit', color: '#8a96a8', accent: '#e05a5a', nova: 350, rarity: 'rare', icon: '🛡️', chest: true, description: 'Shiny plates and red plumes.' },
-  { id: 'colonist_cozy_scarves', name: 'Cozy Scarves', kind: 'colonist_outfit', color: '#c4503a', accent: '#ffe08a', nova: 400, rarity: 'rare', icon: '🧣', chest: true, description: 'Everyone gets a long knitted scarf.' },
-  { id: 'colonist_pastel', name: 'Pastel Uniforms', kind: 'colonist_outfit', color: '#b8e6d8', accent: '#ffc6e8', nova: 0, rarity: 'epic', icon: '🎀', chest: true, description: 'Mint and pink, soft as a marshmallow.' },
-  // ---- vehicle skins (the player's ride)
-  { id: 'atv_flame', name: 'Flame Paint', kind: 'vehicle_skin', color: '#e8503a', accent: '#ffcf4a', nova: 300, rarity: 'rare', icon: '🔥', chest: true, description: 'Hot-rod flames on any ride.' },
-  { id: 'buggy_candy', name: 'Candy Paint', kind: 'vehicle_skin', color: '#ff8ac8', accent: '#ffffff', nova: 300, rarity: 'rare', icon: '🍭', chest: true, description: 'Sticky-sweet pink and white.' },
-  { id: 'rover_camo', name: 'Jungle Camo', kind: 'vehicle_skin', color: '#4a6a3a', accent: '#a8c46a', nova: 450, rarity: 'rare', icon: '🌿', chest: true, description: 'Blend right into the bubble trees.' },
-  { id: 'hover_aurora', name: 'Aurora Paint', kind: 'vehicle_skin', color: '#7be0c8', accent: '#9a7bff', nova: 500, rarity: 'epic', icon: '🌈', description: 'Shimmering northern-lights colours.' },
-  { id: 'hovercraft_chrome', name: 'Chrome Paint', kind: 'vehicle_skin', color: '#e8eef6', accent: '#45f0ff', nova: 700, rarity: 'epic', icon: '✨', chest: true, description: 'So shiny you can see your face.' },
-  { id: 'vehicle_ladybug', name: 'Ladybug Paint', kind: 'vehicle_skin', color: '#e8403a', accent: '#2a2a2a', nova: 0, rarity: 'legendary', icon: '🐞', chest: true, description: 'Red with black spots. Lucky!' },
-  // ---- turret skins
-  { id: 'turret_bronze', name: 'Bronze Turrets', kind: 'turret_skin', color: '#c48a4a', accent: '#ffe08a', nova: 350, rarity: 'rare', icon: '🥉', chest: true, description: 'Polished bronze with brass rivets.' },
-  { id: 'turret_sakura', name: 'Sakura Turrets', kind: 'turret_skin', color: '#ffb7c5', accent: '#ff6f91', nova: 400, rarity: 'rare', icon: '🌸', chest: true, description: 'Pretty in pink, still very pointy.' },
-  { id: 'turret_ice', name: 'Ice Crystal Turrets', kind: 'turret_skin', color: '#cfe8ff', accent: '#6ac8ff', nova: 400, rarity: 'rare', icon: '🧊', chest: true, description: 'Frosty blue with icicle trims.' },
-  { id: 'turret_neon', name: 'Neon Turrets', kind: 'turret_skin', color: '#2a3a6a', accent: '#4fd8ff', nova: 500, rarity: 'epic', icon: '💡', description: 'Every turret glows electric blue.' },
-  { id: 'turret_gold', name: 'Golden Turrets', kind: 'turret_skin', color: '#ffd84a', accent: '#fff8d8', nova: 0, rarity: 'legendary', icon: '🏆', chest: true, description: 'Solid gold defenses. Aliens are impressed.' },
-  // ---- decorations (unlock exclusive decor in Build › Decor)
-  { id: 'deco_gnome_garden', name: 'Gnome Garden', kind: 'decoration', color: '#e05a5a', accent: '#7cc36b', nova: 300, rarity: 'common', icon: '🧙', chest: true, description: 'Unlocks garden gnomes and toadstool rings.' },
-  { id: 'deco_pumpkin_patch', name: 'Pumpkin Patch', kind: 'decoration', color: '#f08a3a', accent: '#6a8a3a', nova: 300, rarity: 'common', icon: '🎃', chest: true, description: 'Unlocks plump pumpkins and a cozy hay bale.' },
-  { id: 'deco_lantern_festival', name: 'Lantern Festival', kind: 'decoration', color: '#ff9a4a', accent: '#ffe08a', nova: 400, rarity: 'rare', icon: '🏮', description: 'Unlocks a glowing lantern arch and lantern strings.' },
-  { id: 'deco_holo_trees', name: 'Holo Trees', kind: 'decoration', color: '#5ef2ff', accent: '#9a7bff', nova: 600, rarity: 'epic', icon: '🌳', chest: true, description: 'Unlocks shimmering hologram trees.' },
-  { id: 'deco_teddy_picnic', name: 'Teddy Picnic', kind: 'decoration', color: '#c48a5a', accent: '#ff6b7a', nova: 0, rarity: 'epic', icon: '🧸', chest: true, description: 'Unlocks a picnic blanket with a giant teddy bear.' },
-  { id: 'deco_star_fountain', name: 'Wishing Star Fountain', kind: 'decoration', color: '#9ae6ff', accent: '#ffd84a', nova: 0, rarity: 'legendary', icon: '⛲', chest: true, description: 'Unlocks a sparkling fountain topped with a star.' },
+  { id: 'theme_blossom', name: 'Blossom Season', kind: 'base_theme', color: '#e8a8b4', accent: '#b8576a', nova: 600, rarity: 'rare', icon: '🌸', fx: 'petals', chest: true, description: 'Dusky blossom-pink roofs and a slow drift of petals.' },
+  { id: 'theme_aurora', name: 'Aurora Skies', kind: 'base_theme', color: '#6ec8b4', accent: '#8a72d8', nova: 900, rarity: 'epic', icon: '🌌', fx: 'aurora', chest: true, description: 'Green and violet light ripples over the colony at night.' },
+  { id: 'theme_desert_dusk', name: 'Desert Dusk', kind: 'base_theme', color: '#c98a62', accent: '#e8b45a', nova: 700, rarity: 'rare', icon: '🏜️', fx: 'embers', chest: true, description: 'Terracotta trims and warm dust hanging in the evening air.' },
+  { id: 'theme_winter', name: 'Winter Outpost', kind: 'base_theme', color: '#c4d6e6', accent: '#5a8fb8', nova: 700, rarity: 'rare', icon: '❄️', fx: 'snow', chest: true, description: 'Frosted roofs, steel-blue trims and quiet snowfall.' },
+  { id: 'theme_neon_night', name: 'Neon Night', kind: 'base_theme', color: '#3a2f5c', accent: '#d84fb8', nova: 1000, rarity: 'epic', icon: '🌃', fx: 'fireflies', chest: true, description: 'Magenta signage glow and drifting neon motes after dark.' },
+  { id: 'theme_golden_hour', name: 'Golden Hour', kind: 'base_theme', color: '#e8c98a', accent: '#d8843f', nova: 800, rarity: 'epic', icon: '🌅', fx: 'fireflies', chest: true, description: 'Honey-gold trims and fireflies in the long evening light.' },
+  { id: 'theme_autumn', name: 'Autumn Harvest', kind: 'base_theme', color: '#c97a45', accent: '#9c3f2e', nova: 800, rarity: 'epic', icon: '🍂', fx: 'leaves', chest: true, description: 'Rust and amber roofs, maple leaves tumbling past.' },
+  { id: 'theme_biolume', name: 'Bioluminescent Night', kind: 'base_theme', color: '#2f6f6a', accent: '#8a6ad8', nova: 0, rarity: 'legendary', icon: '🪼', fx: 'fireflies', chest: true, description: 'Teal and violet glow, like the planet’s own night life.' },
+  { id: 'theme_starfall', name: 'Starfall', kind: 'base_theme', color: '#7a6fb8', accent: '#f0dc96', nova: 0, rarity: 'mythic', icon: '🌠', fx: 'stars', chest: true, description: 'Pale starlight settles over every rooftop.' },
+  { id: 'theme_titanium_dawn', name: 'Titanium Dawn', kind: 'base_theme', color: '#d6dde6', accent: '#3fc8d8', nova: 0, rarity: 'legendary', icon: '🏙️', fx: 'stars', description: 'Earned by reaching Titanium: brushed silver and cyan.' },
+  // ---- explorer outfits
+  { id: 'outfit_pioneer', name: 'Pioneer Outfit', kind: 'outfit', color: '#b9783a', accent: '#e8c47a', nova: 0, rarity: 'rare', icon: '🧥', description: 'A trusty field jacket for the very first settlers.' },
+  { id: 'outfit_engineer', name: 'Engineer Overalls', kind: 'outfit', color: '#d68a3f', accent: '#4a3f35', nova: 300, rarity: 'common', icon: '🔧', chest: true, description: 'Heavy canvas with a pocket for every spanner.' },
+  { id: 'outfit_frontier_knit', name: 'Frontier Knit Sweater', kind: 'outfit', color: '#a8553f', accent: '#e8d8b8', nova: 350, rarity: 'rare', icon: '🧶', chest: true, description: 'A chunky cable-knit for cold mornings at camp.' },
+  { id: 'outfit_botanist', name: "Botanist's Coveralls", kind: 'outfit', color: '#7f9a72', accent: '#c4a072', nova: 400, rarity: 'rare', icon: '🌿', chest: true, description: 'Sage coveralls with a canvas apron for seed packets.' },
+  { id: 'outfit_storm_slicker', name: 'Storm Slicker', kind: 'outfit', color: '#d8a83a', accent: '#3a3a3f', nova: 400, rarity: 'rare', icon: '🧥', chest: true, description: 'A mustard rain slicker for monsoon season.' },
+  { id: 'outfit_astro', name: 'Astronaut Suit', kind: 'outfit', color: '#eef0f4', accent: '#e06a35', nova: 500, rarity: 'epic', icon: '🧑‍🚀', description: 'Classic white-and-orange EVA suit.' },
+  { id: 'outfit_neon_runner', name: 'Neon Runner', kind: 'outfit', color: '#26283f', accent: '#4fd8e8', nova: 600, rarity: 'epic', icon: '⚡', description: 'A dark runner’s jacket with lit seams for night patrols.' },
+  { id: 'outfit_nomad', name: 'Desert Nomad Wraps', kind: 'outfit', color: '#c8a87a', accent: '#a8553a', nova: 0, rarity: 'epic', icon: '🏜️', chest: true, description: 'Layered sand-coloured wraps and a terracotta scarf.' },
+  { id: 'outfit_observatory', name: 'Observatory Longcoat', kind: 'outfit', color: '#2f3866', accent: '#d8b45a', nova: 0, rarity: 'legendary', icon: '🔭', chest: true, description: 'Midnight blue, brass buttons, constellations stitched in gold.' },
+  { id: 'outfit_founder', name: 'Titanium Founder Suit', kind: 'outfit', color: '#d6dde6', accent: '#e8c43a', nova: 0, rarity: 'legendary', icon: '🏅', description: 'Only for founders of the Titanium age.' },
+  { id: 'outfit_nebula', name: 'Nebula Flight Suit', kind: 'outfit', color: '#4f3f8a', accent: '#c8a8f0', nova: 0, rarity: 'mythic', icon: '🌌', chest: true, description: 'Deep violet flight suit with softly glowing seams.' },
+  // ---- headwear
+  { id: 'hat_ranger', name: 'Ranger Hat', kind: 'hat', color: '#8a6a45', accent: '#4a3527', nova: 150, rarity: 'common', icon: '🤠', chest: true, description: 'Wide-brim felt with a worn leather band.' },
+  { id: 'hat_watch_cap', name: 'Knit Watch Cap', kind: 'hat', color: '#5a6a7a', accent: '#c8c0b0', nova: 150, rarity: 'common', icon: '🧶', chest: true, description: 'A rolled-cuff wool cap for the night watch.' },
+  { id: 'hat_bandana', name: 'Field Bandana', kind: 'hat', color: '#a8453a', accent: '#e8d8c0', nova: 300, rarity: 'rare', icon: '🧣', chest: true, description: 'A cotton bandana, knotted at the back.' },
+  { id: 'hat_headset', name: 'Comms Headset', kind: 'hat', color: '#3a3f47', accent: '#e8843a', nova: 300, rarity: 'rare', icon: '🎧', chest: true, description: 'Over-ear comms with a mic boom. Base, do you copy?' },
+  { id: 'hat_aviator', name: 'Aviator Cap', kind: 'hat', color: '#7a4a2f', accent: '#b8c8d0', nova: 550, rarity: 'epic', icon: '🥽', chest: true, description: 'Leather flight cap with brass-rimmed goggles.' },
+  { id: 'hat_pith_helmet', name: 'Expedition Pith Helmet', kind: 'hat', color: '#c8b48a', accent: '#6a5a45', nova: 0, rarity: 'epic', icon: '⛑️', chest: true, description: 'The classic khaki helmet of the old explorers.' },
+  { id: 'hat_space_bubble', name: 'Bubble Helmet', kind: 'hat', color: '#c8e0ea', accent: '#e06a35', nova: 0, rarity: 'epic', icon: '🫧', description: 'A retro-futurist glass dome. Season reward.' },
+  { id: 'hat_commander', name: "Commander's Beret", kind: 'hat', color: '#2a3557', accent: '#e8c43a', nova: 0, rarity: 'legendary', icon: '🎖️', chest: true, description: 'Navy wool with the colony’s gold insignia.' },
+  { id: 'hat_sensor_visor', name: 'Sensor Visor', kind: 'hat', color: '#2f343c', accent: '#4fd8c8', nova: 0, rarity: 'legendary', icon: '🕶️', chest: true, description: 'A sleek visor with a glowing heads-up strip.' },
+  { id: 'hat_drone_halo', name: 'Drone Halo', kind: 'hat', color: '#d6dde6', accent: '#7ac8f0', nova: 0, rarity: 'mythic', icon: '🛰️', chest: true, description: 'Three tiny drones orbit your head on light trails.' },
+  // ---- companions (follow the explorer around)
+  { id: 'pet_robo_hound', name: 'Robo Hound', kind: 'pet', color: '#b8c0cc', accent: '#3fa8d8', nova: 600, rarity: 'rare', icon: '🐕', chest: true, description: 'A sleek four-legged scout bot that never leaves your side.' },
+  { id: 'pet_survey_drone', name: 'Survey Drone', kind: 'pet', color: '#d8843f', accent: '#4fd8e8', nova: 600, rarity: 'rare', icon: '🛸', chest: true, description: 'Hovers at your shoulder, quietly mapping the terrain.' },
+  { id: 'pet_ships_cat', name: "Ship's Cat", kind: 'pet', color: '#c8843f', accent: '#5a4a3a', nova: 900, rarity: 'epic', icon: '🐈', chest: true, description: 'A tabby in a little harness. Every good crew has one.' },
+  { id: 'pet_lunar_hare', name: 'Lunar Hare', kind: 'pet', color: '#d8dce6', accent: '#8a92b8', nova: 0, rarity: 'epic', icon: '🐇', description: 'A silvery long-eared native that took a liking to you. Season reward.' },
+  { id: 'pet_ember_fox', name: 'Ember Fox', kind: 'pet', color: '#d8703a', accent: '#f0c86a', nova: 0, rarity: 'legendary', icon: '🦊', chest: true, description: 'An alien fox whose tail glows like banked embers.' },
+  { id: 'pet_lumen_moth', name: 'Lumen Moth', kind: 'pet', color: '#8ab8a8', accent: '#e8e0a8', nova: 0, rarity: 'legendary', icon: '🦋', chest: true, description: 'A large, gentle moth with softly glowing wings.' },
+  { id: 'pet_sky_whale', name: 'Sky Whale', kind: 'pet', color: '#5a7ab8', accent: '#d8e8f0', nova: 0, rarity: 'mythic', icon: '🐋', chest: true, description: 'A small, majestic whale that swims through the air.' },
+  // ---- crew outfits (every colonist)
+  { id: 'colonist_overalls', name: 'Colonist Overalls', kind: 'colonist_outfit', color: '#4f78a8', accent: '#e8c47a', nova: 250, rarity: 'common', icon: '👖', chest: true, description: 'Matching denim work wear for the whole crew.' },
+  { id: 'colonist_harvest', name: 'Harvest Crew Gear', kind: 'colonist_outfit', color: '#b89a62', accent: '#6a8a4a', nova: 250, rarity: 'common', icon: '🌾', chest: true, description: 'Canvas work shirts and wide hats for the fields.' },
+  { id: 'colonist_labcoat', name: 'Lab Coat Deluxe', kind: 'colonist_outfit', color: '#eef0f4', accent: '#4f8ac8', nova: 300, rarity: 'rare', icon: '🥼', chest: true, description: 'Crisp white coats with steel-blue piping.' },
+  { id: 'colonist_security', name: 'Security Armor', kind: 'colonist_outfit', color: '#7a8494', accent: '#b8453a', nova: 350, rarity: 'rare', icon: '🛡️', chest: true, description: 'Grey plate with red trim for the watch.' },
+  { id: 'colonist_parkas', name: 'Expedition Parkas', kind: 'colonist_outfit', color: '#a8553a', accent: '#d8ccb8', nova: 400, rarity: 'rare', icon: '🧥', chest: true, description: 'Rust parkas with fur-lined hoods for everyone.' },
+  { id: 'colonist_dress_uniform', name: "Founders' Dress Uniform", kind: 'colonist_outfit', color: '#2a3557', accent: '#e8d8b0', nova: 0, rarity: 'epic', icon: '🎖️', chest: true, description: 'Navy and cream with gold piping, for the big days.' },
+  // ---- ride paint (the player's vehicle)
+  { id: 'ride_rally', name: 'Rally Stripes', kind: 'vehicle_skin', color: '#b8352f', accent: '#f0ece4', nova: 300, rarity: 'rare', icon: '🏁', chest: true, description: 'Red paint with white racing stripes.' },
+  { id: 'ride_sunset', name: 'Sunset Livery', kind: 'vehicle_skin', color: '#d8703a', accent: '#a83f6a', nova: 300, rarity: 'rare', icon: '🌇', chest: true, description: 'An orange-to-magenta fade, like dusk on the dunes.' },
+  { id: 'ride_camo', name: 'Jungle Camo', kind: 'vehicle_skin', color: '#4a6a3a', accent: '#a8b46a', nova: 450, rarity: 'rare', icon: '🌿', chest: true, description: 'Blend right into the bubble trees.' },
+  { id: 'ride_aurora', name: 'Aurora Livery', kind: 'vehicle_skin', color: '#6ec8b4', accent: '#8a72d8', nova: 500, rarity: 'epic', icon: '🌈', description: 'A shifting green-to-violet pearl finish.' },
+  { id: 'ride_chrome', name: 'Chrome Finish', kind: 'vehicle_skin', color: '#dde4ec', accent: '#3fc8d8', nova: 700, rarity: 'epic', icon: '✨', chest: true, description: 'Polished to a mirror shine.' },
+  { id: 'ride_carbon_gold', name: 'Carbon & Gold', kind: 'vehicle_skin', color: '#26282c', accent: '#d8b45a', nova: 0, rarity: 'legendary', icon: '🏎️', chest: true, description: 'Carbon black with fine gold pinstripes.' },
+  // ---- turret finishes
+  { id: 'turret_bronze', name: 'Bronze Turrets', kind: 'turret_skin', color: '#a8743f', accent: '#e8c47a', nova: 350, rarity: 'rare', icon: '🥉', chest: true, description: 'Polished bronze with brass rivets.' },
+  { id: 'turret_patina', name: 'Copper Patina', kind: 'turret_skin', color: '#4f9a8a', accent: '#b8743f', nova: 400, rarity: 'rare', icon: '🗿', chest: true, description: 'Weathered copper gone green with verdigris.' },
+  { id: 'turret_ice', name: 'Ice Crystal Turrets', kind: 'turret_skin', color: '#c4dcec', accent: '#4f9ad8', nova: 400, rarity: 'rare', icon: '🧊', chest: true, description: 'Frosted blue with crystalline trims.' },
+  { id: 'turret_neon', name: 'Neon Turrets', kind: 'turret_skin', color: '#26304f', accent: '#3fc8e8', nova: 500, rarity: 'epic', icon: '💡', description: 'Every turret glows electric blue.' },
+  { id: 'turret_gold', name: 'Golden Turrets', kind: 'turret_skin', color: '#d8b43a', accent: '#f0e8c8', nova: 0, rarity: 'legendary', icon: '🏆', chest: true, description: 'Gilded defenses. The aliens take notice.' },
+  // ---- decor sets (unlock exclusive decor in Build › Decor)
+  { id: 'deco_zen_garden', name: 'Zen Rock Garden', kind: 'decoration', color: '#c8c0b0', accent: '#5a7a4a', nova: 300, rarity: 'common', icon: '🪨', chest: true, description: 'Unlocks raked gravel beds, standing stones and a bonsai.' },
+  { id: 'deco_harvest', name: 'Harvest Festival', kind: 'decoration', color: '#d8843a', accent: '#6a7a3a', nova: 300, rarity: 'common', icon: '🎃', chest: true, description: 'Unlocks pumpkins, hay bales and crates of produce.' },
+  { id: 'deco_lantern_festival', name: 'Lantern Festival', kind: 'decoration', color: '#d8843a', accent: '#f0d08a', nova: 400, rarity: 'rare', icon: '🏮', description: 'Unlocks a glowing lantern arch and lantern strings.' },
+  { id: 'deco_holo_trees', name: 'Holo Trees', kind: 'decoration', color: '#4fc8d8', accent: '#8a72d8', nova: 600, rarity: 'epic', icon: '🌳', chest: true, description: 'Unlocks shimmering hologram trees.' },
+  { id: 'deco_campfire_lounge', name: 'Campfire Lounge', kind: 'decoration', color: '#8a5a3a', accent: '#f0b45a', nova: 0, rarity: 'epic', icon: '🔥', chest: true, description: 'Unlocks a stone fire pit, log benches and string lights.' },
+  { id: 'deco_meteor_fountain', name: 'Meteorite Fountain', kind: 'decoration', color: '#5a8ab8', accent: '#f0c86a', nova: 0, rarity: 'legendary', icon: '☄️', chest: true, description: 'Unlocks a fountain built around a softly glowing meteorite.' },
   // ---- photo frames (Photo Mode)
-  { id: 'frame_cozy_knit', name: 'Cozy Knit Frame', kind: 'photo_frame', color: '#c46a5a', accent: '#f6e2c0', nova: 120, rarity: 'common', icon: '🧶', chest: true, description: 'A woolly frame for snug snapshots.' },
-  { id: 'frame_sakura', name: 'Sakura Frame', kind: 'photo_frame', color: '#ffb7c5', accent: '#ff6f91', nova: 200, rarity: 'rare', icon: '🌸', chest: true, description: 'Cherry blossoms in every corner.' },
-  { id: 'frame_starry', name: 'Starry Night Frame', kind: 'photo_frame', color: '#3a3f8a', accent: '#ffe08a', nova: 200, rarity: 'rare', icon: '✨', chest: true, description: 'Deep blue with twinkling stars.' },
-  { id: 'frame_honey_gold', name: 'Honey Gold Frame', kind: 'photo_frame', color: '#ffcf3a', accent: '#c48a3a', nova: 0, rarity: 'epic', icon: '🍯', description: 'Dripping with golden honey. Season reward.' },
-  { id: 'frame_crystal', name: 'Crystal Bloom Frame', kind: 'photo_frame', color: '#c8a8ff', accent: '#9ae6ff', nova: 0, rarity: 'legendary', icon: '💎', chest: true, description: 'Crystal flowers bloom around your photo.' },
+  { id: 'frame_journal', name: 'Field Journal', kind: 'photo_frame', color: '#8a5f3f', accent: '#e8dcc0', nova: 120, rarity: 'common', icon: '📔', chest: true, description: 'Stitched leather and paper, taped in like a field note.' },
+  { id: 'frame_blossom', name: 'Blossom Branch', kind: 'photo_frame', color: '#e8d8d0', accent: '#b8576a', nova: 200, rarity: 'rare', icon: '🌸', chest: true, description: 'Blossom branches reaching across two corners.' },
+  { id: 'frame_star_chart', name: 'Star Chart', kind: 'photo_frame', color: '#26305a', accent: '#d8b45a', nova: 200, rarity: 'rare', icon: '🧭', chest: true, description: 'Navy chart paper with constellation lines and a compass rose.' },
+  { id: 'frame_brass', name: 'Brass & Glass', kind: 'photo_frame', color: '#b8893f', accent: '#5a4a35', nova: 0, rarity: 'epic', icon: '⚙️', description: 'A riveted brass frame with little gauges. Season reward.' },
+  { id: 'frame_geode', name: 'Crystal Geode', kind: 'photo_frame', color: '#7a5ab8', accent: '#c8b8f0', nova: 0, rarity: 'legendary', icon: '💎', chest: true, description: 'Your photo set inside a split amethyst geode.' },
 ];
 
 export const VIP: VipDef = {
@@ -149,21 +149,21 @@ export const VIP: VipDef = {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * Premium cosmetics, one every 5 levels (10 in all). The season exclusives (space bubble, moon bunny, honey frame…)
- * live here; the bookends (Kitty Ears early, the legendary Ember Fox near the end) are chest drops a pass holder gets
+ * Premium cosmetics, one every 5 levels (10 in all). The season exclusives (bubble helmet, lunar hare, brass frame…)
+ * live here; the bookends (the Comms Headset early, the legendary Ember Fox near the end) are chest drops a pass holder gets
  * for sure.
  */
 const SEASON_PREMIUM_COSMETICS: Record<number, string> = {
-  5: 'hat_cat_ears', 10: 'outfit_astro', 15: 'hat_space_bubble', 20: 'theme_aurora', 25: 'pet_moon_bunny',
-  30: 'hover_aurora', 35: 'frame_honey_gold', 40: 'turret_neon', 45: 'pet_ember_fox', 50: 'outfit_neon_runner',
+  5: 'hat_headset', 10: 'outfit_astro', 15: 'hat_space_bubble', 20: 'theme_aurora', 25: 'pet_lunar_hare',
+  30: 'ride_aurora', 35: 'frame_brass', 40: 'turret_neon', 45: 'pet_ember_fox', 50: 'outfit_neon_runner',
 };
-/** Premium Nova chests: Acorn early, Moonlit and Sunflower mid-season, Crystal Bloom near the end, Cosmic Wish at 50. */
+/** Premium Nova caches: Supply early, Explorer and Prospector mid-season, an Ancient Relic near the end, a Nova Core at 50. */
 const SEASON_PREMIUM_CHESTS: Record<number, string> = {
-  3: 'chest_acorn', 8: 'chest_acorn', 13: 'chest_moonlit', 22: 'chest_moonlit', 27: 'chest_sunny', 38: 'chest_sunny',
-  47: 'chest_crystal', 50: 'chest_cosmic',
+  3: 'chest_supply', 8: 'chest_supply', 13: 'chest_explorer', 22: 'chest_explorer', 27: 'chest_prospector', 38: 'chest_prospector',
+  47: 'chest_relic', 50: 'chest_nova',
 };
-/** A few Acorn chests on the free track too. */
-const SEASON_FREE_CHESTS: Record<number, string> = { 4: 'chest_acorn', 18: 'chest_acorn', 33: 'chest_acorn' };
+/** A few Supply Caches on the free track too. */
+const SEASON_FREE_CHESTS: Record<number, string> = { 4: 'chest_supply', 18: 'chest_supply', 33: 'chest_supply' };
 /** Milestone rewards on the free track (every 10 levels). */
 const SEASON_FREE_MILESTONES: Record<number, Reward> = {
   10: { nova: 25, items: { supply_crate: 2 } },
@@ -186,13 +186,13 @@ function seasonLevels(): SeasonDef['levels'] {
     if (i % 10 === 0) {
       free = SEASON_FREE_MILESTONES[i];
       premium = {
-        nova: 160 + i * 5,
+        nova: 50 + i * 2,
         colonist: i >= 50 ? 'legendary' : i >= 20 ? 'epic' : 'rare',
         items: i >= 40 ? { titan_crate: 1 } : i >= 30 ? { nano_crate: 1 } : { supply_crate: 3 },
       };
     } else if (i % 5 === 0) {
       free = { nova: 10 + i / 5 * 2 };
-      premium = { nova: 60 + i * 2, items: { mystery_crate: 1 } };
+      premium = { nova: 25 + i, items: { mystery_crate: 1 } };
     } else if (i <= 15) {
       // early levels: basic resources
       free = { resources: { wood: 40 + 20 * i, stone: 30 + 15 * i, fiber: 20 + 10 * i } };
@@ -206,8 +206,10 @@ function seasonLevels(): SeasonDef['levels'] {
       free = { resources: { steel: 40 + 4 * i, electronics: 10 + 2 * i, crystal: 4 + i } };
       premium = { resources: { alloy: 5 + 2 * i, energy_cell: 3 + i, nano: Math.floor(i / 5) }, rp: 30 * i, items: { research_chip: 2 } };
     }
-    // a handful of Nova on the even premium levels in between (level 1 stays a pure welcome gift of supplies)
-    if (i % 5 !== 0 && i % 2 === 0) premium = { ...premium, nova: 20 + i };
+    // a handful of Nova on the even premium levels in between (level 1 stays a pure welcome gift of supplies).
+    // The whole premium track pays back about the pass's price in Nova (~1,100, like the $9.99 Builder Pack):
+    // its cosmetics, chests and colonists are the reason to buy it, so it never undercuts the Nova packs.
+    if (i % 5 !== 0 && i % 2 === 0) premium = { ...premium, nova: 10 + Math.floor(i / 4) };
     if (SEASON_PREMIUM_COSMETICS[i]) premium = { ...premium, cosmetic: SEASON_PREMIUM_COSMETICS[i] };
     premium = withItem(premium, SEASON_PREMIUM_CHESTS[i]);
     free = withItem(free, SEASON_FREE_CHESTS[i]);
@@ -221,8 +223,8 @@ export const SEASON: SeasonDef = {
   name: 'Season 1: First Light',
   xpPerLevel: 400,
   levels: seasonLevels(),
-  // after level 50 the premium track keeps paying: a Moonlit chest for every further 400 XP (repeatable)
-  bonus: { xp: 400, reward: { items: { chest_moonlit: 1 } } },
+  // after level 50 the premium track keeps paying: an Explorer’s Case for every further 400 XP (repeatable)
+  bonus: { xp: 400, reward: { items: { chest_explorer: 1 } } },
   // Note: 'gather' is XP per gather hit (fractions accumulate); tuned so an engaged player finishes ~20 days.
   xp: { gather: 0.25, build: 6, craft: 5, kill: 1, defend: 50, mission: 30, discover: 60, research: 20 },
 };
