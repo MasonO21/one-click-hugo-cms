@@ -79,6 +79,7 @@ import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
 import { SHOW_ME_SECONDS, wishGuideTarget } from './logic/wishes';
 import { PhotoMode } from './photo/PhotoMode';
+import { planFlush, toastRoute, type HeldToast } from './logic/toasts';
 
 /** Minimum gap between production floats of the same resource. */
 const PROD_FLOAT_GAP_MS = 1200;
@@ -130,10 +131,12 @@ export class UI {
   private lastProdFloat = new Map<string, number>();
   private lastGatherFloat = new Map<string, number>();
   private modalWasOpen = false;
+  private panelWasOpen = false;
   private toastInset = '';
-  /** `keep`: raised by a tier-up during the base reveal; shown once its card closes however long it was read. */
-  private deferredToasts: { text: string; kind: ToastKind; icon?: string; open?: string; at: number; keep?: boolean }[] = [];
-  /** Tappable toasts shown a moment ago (a modal opening clears the toast layer: they are re-queued, see onPanelsChanged). */
+  private toastCardTop = '';
+  /** Toasts held while a modal / the tier reveal is up, and tappable ones while any panel is open (logic/toasts.ts). */
+  private deferredToasts: HeldToast[] = [];
+  /** Tappable toasts shown a moment ago (a panel opening clears them: they are re-queued, see onPanelsChanged). */
   private openToasts: { text: string; kind: ToastKind; icon?: string; open: string; at: number }[] = [];
   /** A wish's "Show me" the guide arrow follows (seconds on performance.now()). */
   private wishPin: { id: number; until: number } | null = null;
@@ -391,15 +394,29 @@ export class UI {
   }
 
   private showToast(text: string, kind: ToastKind | undefined, icon: string | undefined, open: string | undefined): void {
-    if (open) {
-      this.openToasts = [...this.openToasts.filter((t) => t.text !== text), { text, kind: kind ?? 'info', icon, open, at: performance.now() }].slice(-3);
+    // a toast that opens a panel when tapped never sits over an open panel's buttons: it waits for the screen to be
+    // free (or shows without its tap target when that panel is the one open)
+    const panels = this.panels;
+    const route = toastRoute(kind ?? 'info', open, { anyOpen: !!panels?.anyOpen(), isOpen: (p) => !!panels?.isOpen(p) });
+    if (route === 'defer') {
+      this.deferredToasts = [...this.deferredToasts.filter((d) => d.text !== text), { text, kind: kind ?? 'info', icon, open, at: performance.now() }].slice(-6);
+      return;
     }
-    this.toasts.show(text, kind, icon, this.tapOpen(open));
+    const target = route === 'tap' ? open : undefined;
+    if (target) {
+      this.openToasts = [...this.openToasts.filter((t) => t.text !== text), { text, kind: kind ?? 'info', icon, open: target, at: performance.now() }].slice(-3);
+    }
+    this.toasts.show(text, kind, icon, this.tapOpen(target, text));
   }
 
   /** A toast that opens a panel when tapped (the Journal for an achievement), or nothing. */
-  private tapOpen(panel: string | undefined): (() => void) | undefined {
-    return panel ? () => this.open(panel) : undefined;
+  private tapOpen(panel: string | undefined, text: string): (() => void) | undefined {
+    if (!panel) return undefined;
+    return () => {
+      // tapped: it did its job, the panel it opens must not bring it back
+      this.openToasts = this.openToasts.filter((t) => t.text !== text);
+      this.open(panel);
+    };
   }
 
   /**
@@ -458,12 +475,28 @@ export class UI {
   }
 
   private flushToasts(): void {
-    if (!this.deferredToasts.length || this.panels.anyModal() || this.revealing()) return;
+    if (!this.deferredToasts.length) return;
+    // a toast that opens a panel ("12 achievements already earned!") is worth waiting for through a stack of cards,
+    // and keeps waiting while a sheet is open (it would sit over the sheet's buttons)
+    const panels = this.panels;
+    const plan = planFlush(this.deferredToasts, performance.now(), {
+      modal: panels.anyModal(),
+      revealing: this.revealing(),
+      anyOpen: panels.anyOpen(),
+      isOpen: (p) => panels.isOpen(p),
+    });
+    this.deferredToasts = plan.keep;
+    plan.show.forEach((d, i) => window.setTimeout(() => this.simToast(d.text, d.kind, d.icon, d.open), 300 + i * 200));
+  }
+
+  /** Tappable toasts that a panel just covered come back once the screen is free (unless it is their own panel). */
+  private requeueOpenToasts(texts: readonly string[] | null): void {
     const now = performance.now();
-    // a toast that opens a panel ("12 achievements already earned!") is worth waiting for through a stack of cards
-    const list = this.deferredToasts.filter((d) => d.keep || now - d.at < (d.open ? 90000 : 12000)).slice(-3);
-    this.deferredToasts = [];
-    list.forEach((d, i) => window.setTimeout(() => this.simToast(d.text, d.kind, d.icon, d.open), 300 + i * 200));
+    for (const t of this.openToasts) {
+      const seen = texts ? texts.includes(t.text) : now - t.at < OPEN_TOAST_SEEN_MS;
+      if (seen && !this.panels.isOpen(t.open)) this.deferredToasts.push({ ...t, at: now });
+    }
+    this.openToasts = [];
   }
 
   private onPanelsChanged(): void {
@@ -472,15 +505,21 @@ export class UI {
     this.game.view.panelOpen = covering;
     // a modal (reward card, celebration, chest) opening replaces whatever toasts were saying a moment ago
     const modal = this.panels.anyModal();
+    const anyOpen = this.panels.anyOpen();
     if (modal && !this.modalWasOpen) {
       this.toasts.clear();
       // ...but a toast that opens the Journal ("12 achievements already earned!") that was cleared before it could be
       // read comes back once the card closes
-      const now = performance.now();
-      for (const t of this.openToasts) if (now - t.at < OPEN_TOAST_SEEN_MS) this.deferredToasts.push({ ...t, at: now });
-      this.openToasts = [];
+      this.requeueOpenToasts(null);
+    } else if (anyOpen && !this.panelWasOpen) {
+      // a sheet, drawer or inspector opened: a toast that opens something when tapped must not sit over its buttons
+      // (plain toasts stay: they never catch a touch); it comes back once the panel closes
+      const gone = this.toasts.clearTappable();
+      if (gone.length) this.requeueOpenToasts(gone);
     }
     this.modalWasOpen = modal;
+    this.panelWasOpen = anyOpen;
+    this.root.dataset.anyPanel = anyOpen ? '1' : '0';
     // the tutorial points at the build card (not the Build button) while the build drawer is open
     const tut = this.game.sys.tutorial;
     const buildOpen = this.panels.isOpen('build');
@@ -493,15 +532,30 @@ export class UI {
 
   /**
    * Publish where the open sheet's header ends (`--panel-head-b`) so toasts sit just below it rather than over the
-   * title (CSS: `.nv-root[data-panel-open] .nv-toasts`). Re-checked a few times a second: a header can grow a row.
+   * title (CSS: `.nv-root[data-panel-open] .nv-toasts`), and where an open drawer / inspector card starts
+   * (`--panel-card-t`, `data-card-up`) so on a portrait phone they wait above it rather than over its buttons.
+   * Re-checked a few times a second: a header can grow a row.
    */
   private syncToastInset(): void {
     const b = this.panels?.headerBottom() ?? null;
     const v = b == null ? '' : `${Math.round(b)}px`;
-    if (v === this.toastInset) return;
-    this.toastInset = v;
-    if (v) this.root.style.setProperty('--panel-head-b', v);
-    else this.root.style.removeProperty('--panel-head-b');
+    if (v !== this.toastInset) {
+      this.toastInset = v;
+      if (v) this.root.style.setProperty('--panel-head-b', v);
+      else this.root.style.removeProperty('--panel-head-b');
+    }
+    const c = this.panels?.bottomCardTop() ?? null;
+    const cv = c == null ? '' : `${Math.round(c)}px`;
+    if (cv !== this.toastCardTop) {
+      this.toastCardTop = cv;
+      if (cv) {
+        this.root.style.setProperty('--panel-card-t', cv);
+        this.root.dataset.cardUp = '1';
+      } else {
+        this.root.style.removeProperty('--panel-card-t');
+        delete this.root.dataset.cardUp;
+      }
+    }
   }
 
   /**

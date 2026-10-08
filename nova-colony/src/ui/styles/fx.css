@@ -32,6 +32,13 @@
   bottom: auto;
   flex-direction: column;
 }
+/* a portrait phone with a drawer (Build, Menu) or the inspector up: those cards rise from the bottom, where the stack
+   sits, so it waits just above the card (--panel-card-t, published by the UI) rather than over its buttons */
+@media (orientation: portrait) {
+  .nv-root[data-card-up='1']:not([data-panel-open='1']) .nv-toasts {
+    bottom: calc(100% - var(--panel-card-t) + 0.5em);
+  }
+}
 .toast {
   display: flex;
   align-items: center;
@@ -53,6 +60,12 @@
 .toast.in {
   opacity: 1;
   transform: none;
+}
+/* a tappable toast on its way out, or any tappable toast while a panel is open, never catches a touch meant for what is
+   under it (UI.showToast holds tappable toasts while a panel is open: this guards the frames in between) */
+.nv-root .toast.tappable.out,
+.nv-root[data-any-panel='1'] .toast.tappable {
+  pointer-events: none;
 }
 .toast.out {
   opacity: 0;

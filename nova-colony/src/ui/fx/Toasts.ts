@@ -70,6 +70,13 @@ export class Toasts {
     for (const a of [...this.active]) this.dismiss(a);
   }
 
+  /** Dismiss the toasts that open something when tapped (a panel just opened under them). Returns their texts. */
+  clearTappable(): string[] {
+    const list = this.active.filter((a) => a.onTap);
+    for (const a of list) this.dismiss(a);
+    return list.map((a) => a.text);
+  }
+
   private make(): HTMLElement {
     const el = h('div', { class: 'toast', role: 'status' }, h('span', { class: 't-ic' }), h('span', { class: 't-tx' }), h('span', { class: 't-x', hidden: true }));
     el.addEventListener('click', () => {

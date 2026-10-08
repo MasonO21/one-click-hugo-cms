@@ -63,6 +63,20 @@ export class PanelManager {
     return null;
   }
 
+  /**
+   * Where the top-most open drawer / inspector card starts, in px from the top of the screen (null: none is open, or a
+   * sheet / modal is above it). On a portrait phone these cards rise from the bottom, where the toast stack sits: the
+   * stack waits just above the card instead. Layout offsets, so the slide-in transform does not matter.
+   */
+  bottomCardTop(): number | null {
+    for (let i = this.open_.length - 1; i >= 0; i--) {
+      const o = this.open_[i];
+      if (o.closing) continue;
+      return o.panel.kind === 'drawer' || o.panel.kind === 'side' ? o.panel.card.offsetTop : null;
+    }
+    return null;
+  }
+
   /** A modal (celebration, reward, victory, welcome back…) is showing or waiting in the queue. */
   anyModal(): boolean {
     return this.modalQueue.length > 0 || this.open_.some((o) => !o.closing && o.panel.kind === 'modal');

@@ -71,6 +71,21 @@ describe('toasts and open panels', () => {
     // a celebration card has no header to protect: the toasts fall back to the top edge
     expect(manager([panel('sheet', { h: 91 }, 20), panel('modal', null, 70)]).headerBottom()).toBeNull();
   });
+
+  it('bottomCardTop is where an open drawer / inspector card starts, unless a sheet or modal is above it', () => {
+    expect(manager([]).bottomCardTop()).toBeNull();
+    expect(manager([panel('drawer', { h: 40 }, 494)]).bottomCardTop()).toBe(494);
+    expect(manager([panel('side', null, 300)]).bottomCardTop()).toBe(300);
+    expect(manager([panel('side', null, 300), panel('drawer', null, 494, true)]).bottomCardTop()).toBe(300);
+    expect(manager([panel('drawer', null, 494), panel('modal', null, 70)]).bottomCardTop()).toBeNull();
+    expect(manager([panel('sheet', { h: 91 }, 20)]).bottomCardTop()).toBeNull();
+  });
+
+  it('on a portrait phone the toast stack waits above an open drawer / inspector card (QA6: it sat over the build cards)', () => {
+    const fx = css('fx.css');
+    const portrait = fx.slice(fx.indexOf("@media (orientation: portrait) {\n  .nv-root[data-card-up='1']"));
+    expect(rule(portrait, ".nv-root[data-card-up='1']:not([data-panel-open='1']) .nv-toasts")).toMatch(/bottom:\s*calc\(100% - var\(--panel-card-t\)/);
+  });
 });
 
 describe('portrait HUD height (QA6: from Steel on the top HUD covered ~47% of a 393x852 phone)', () => {
