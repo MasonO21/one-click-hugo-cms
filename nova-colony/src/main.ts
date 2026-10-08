@@ -11,6 +11,7 @@ import { AutoQuality } from './platform/autoQuality';
 import { guarded } from './core/guard';
 import { FramePacer, fpsCap } from './core/framePacer';
 import { onBackButton } from './platform/lifecycle';
+import { ReviewPrompt } from './platform/review';
 
 async function boot() {
   const services = await createPlatformServices();
@@ -31,6 +32,8 @@ async function boot() {
   ui.init(document.getElementById('ui')!);
   // Android back: close the top panel / leave build mode / clear the selection, else background the app
   onBackButton(() => ui.back());
+  // native store-rating sheet, rarely, right after a tier-up or a won raid (no-op on the web)
+  new ReviewPrompt(game, services.store).wire();
   const audio = new AudioManager(game);
   audio.init();
 
