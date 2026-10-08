@@ -490,8 +490,9 @@ export class EconomySystem extends System {
     this.rpPerSec = rpPerMin / 60;
     d.research.perMin = rpPerMin;
 
-    // ---- colonist upkeep
-    const colonists = st.colonists.list.length;
+    // ---- colonist upkeep (a squad away on an expedition eats on the trail)
+    let colonists = 0;
+    for (const c of st.colonists.list) if (!c.away) colonists++;
     this.upkeepPerMin.clear();
     const bal = data.balance;
     if (colonists > 0) {

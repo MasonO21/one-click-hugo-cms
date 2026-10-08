@@ -230,6 +230,11 @@ export class ColonistAI {
     for (const b of this.brains.values()) b.nextThink = now + this.game.rng.next() * spread;
   }
 
+  /** Drop a colonist's runtime brain (left on an expedition): they start a fresh routine when they are back. */
+  forget(id: Id): void {
+    this.brains.delete(id);
+  }
+
   /** Make one colonist re-decide on the next frame (assigned a new job, ...). */
   poke(id: Id): void {
     const b = this.brains.get(id);
@@ -273,6 +278,7 @@ export class ColonistAI {
 
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
+      if (c.away) continue; // out on an expedition: no routine, no walking (forget() dropped the brain)
       let br = this.brains.get(c.id);
       if (!br) br = this.make(c, now);
       if (now >= br.nextThink) {

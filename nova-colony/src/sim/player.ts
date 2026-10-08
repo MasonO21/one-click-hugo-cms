@@ -1016,6 +1016,7 @@ export class PlayerSystem extends System {
     const p = g.state.player;
     if (!p.vehicles.includes(vehicleId) || !g.data.vehicle(vehicleId) || this.isDown()) return false;
     if (p.vehicle === vehicleId) return true;
+    if (g.sys.expeditions?.vehicleAway(vehicleId)) return false; // out on an expedition with a squad
     // switching vehicles swaps directly (no stop in between), so cargo is not trimmed to on-foot capacity
     const previous = p.vehicle;
     p.vehicle = vehicleId;

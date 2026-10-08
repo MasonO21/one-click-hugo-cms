@@ -12,6 +12,13 @@ declare module '../../core/state' {
      * render a progress bar without knowing the level thresholds.
      */
     manual?: boolean;
+    /**
+     * Out on an expedition (sim/expeditions.ts owns this flag): no job, no meals, no bed time and no AI; hidden in
+     * the world. They keep their bed, and their old job is offered back to them when they return.
+     */
+    away?: boolean;
+    /** Mood from the last trip ("Great adventure!" / "Travel-weary"), until epoch ms `until`. */
+    trip?: { mood: number; until: number };
   }
   interface ColonistState {
     /** Number of candidate slots last generated for the recruitment board (detects 'recruitSlots' growth). */

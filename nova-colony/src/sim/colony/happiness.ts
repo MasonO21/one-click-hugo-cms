@@ -75,6 +75,8 @@ export function happinessFactors(game: Game, layout: Layout, mood: Mood, c: Colo
   add('Medical care', mood.medical);
   const trait = game.data.trait(c.trait);
   if (trait?.happiness) add(trait.name, trait.happiness, trait.happiness > 0);
+  const trip = tripMood(game, c);
+  if (trip) add(trip > 0 ? 'Great adventure!' : 'Travel-weary', trip, trip > 0);
   if (mood.mult > 1.001) {
     const sum = out.reduce((s, f) => s + f.value, 0);
     add('Colony bonus', sum * (mood.mult - 1));
@@ -98,8 +100,15 @@ export function happinessTarget(game: Game, layout: Layout, mood: Mood, c: Colon
     mood.entertainment +
     (mood.safety ? h.safety : 0) +
     mood.medical +
-    (trait?.happiness ?? 0);
+    (trait?.happiness ?? 0) +
+    tripMood(game, c);
   return clamp(sum * mood.mult, 0, 100);
+}
+
+/** Mood a colonist brought home from an expedition (0 once it has worn off). */
+export function tripMood(game: Game, c: Colonist): number {
+  const t = c.trip;
+  return t && Number.isFinite(t.mood) && game.now() < t.until ? t.mood : 0;
 }
 
 /**

@@ -296,7 +296,7 @@ export class Characters {
     const list = st.colonists.list;
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
-      if (c.activity === 'sheltering') continue;
+      if (c.activity === 'sheltering' || c.away) continue; // indoors, or out on an expedition
       if (!inView(env, c.x, c.z, -20)) continue;
       // rough frustum: skip things behind the camera
       if ((c.x - env.camX) * env.fwdX + (c.z - env.camZ) * env.fwdZ < -6) continue;
@@ -339,7 +339,7 @@ export class Characters {
     let best = -1;
     let bestT = maxT;
     for (const c of this.ctx.game.state.colonists.list) {
-      if (c.activity === 'sheltering') continue;
+      if (c.activity === 'sheltering' || c.away) continue;
       const t = raySphere(ray.origin, ray.direction, c.x, this.ctx.heightAt(c.x, c.z) + 1.0, c.z, 0.95);
       if (t >= 0 && t < bestT) {
         bestT = t;

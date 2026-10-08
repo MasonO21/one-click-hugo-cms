@@ -23,6 +23,7 @@ import { WorldEventSystem } from '../sim/worldEvents';
 import { MissionSystem } from '../sim/missions';
 import { TutorialSystem } from '../sim/tutorial';
 import { LiveOpsSystem } from '../sim/liveops';
+import { ExpeditionSystem } from '../sim/expeditions';
 import { createMockServices } from '../platform/mock';
 import { reportLoopError } from './guard';
 
@@ -40,6 +41,7 @@ export interface Systems {
   missions: MissionSystem;
   tutorial: TutorialSystem;
   liveops: LiveOpsSystem;
+  expeditions: ExpeditionSystem;
 }
 
 export interface GameOptions {
@@ -69,6 +71,7 @@ const UPDATE_ORDER: (keyof Systems)[] = [
   'player',
   'buildings',
   'colonists',
+  'expeditions',
   'economy',
   'crafting',
   'research',
@@ -121,6 +124,7 @@ export class Game {
       missions: new MissionSystem(this),
       tutorial: new TutorialSystem(this),
       liveops: new LiveOpsSystem(this),
+      expeditions: new ExpeditionSystem(this),
     };
   }
 

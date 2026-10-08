@@ -102,6 +102,68 @@ export class ColonistSystem extends System {
     return this.game.state.colonists.list;
   }
 
+  /** Colonists in the colony right now (not away on an expedition). */
+  present(): Colonist[] {
+    return this.game.state.colonists.list.filter((c) => !c.away);
+  }
+
+  /**
+   * Send colonists away on an expedition (sim/expeditions.ts): they drop their jobs (the automation refills the
+   * slots), stop their routine and vanish from the world. They keep their beds.
+   */
+  sendAway(ids: readonly Id[]): void {
+    let changed = false;
+    for (const id of ids) {
+      const c = this.get(id);
+      if (!c || c.away) continue;
+      c.away = true;
+      c.activity = 'idle';
+      this.ai.forget(c.id);
+      changed = true;
+    }
+    if (changed) {
+      this.refresh(); // vacated jobs go to whoever is idle
+      this.game.sys.economy.markDirty(); // fewer mouths to feed
+    }
+  }
+
+  /**
+   * Welcome a colonist home at a world position. `work` is the job they left: they take it back when it still
+   * exists (bumping an automatic stand-in if the slots filled up meanwhile), else the automation finds them one.
+   */
+  welcomeHome(id: Id, x: number, z: number, work: { building: Id | null; manual: boolean } = { building: null, manual: false }): void {
+    const c = this.get(id);
+    if (!c) return;
+    c.away = false;
+    c.x = c.tx = x;
+    c.z = c.tz = z;
+    c.activity = 'idle';
+    const g = this.game;
+    this.layout.rebuild(g);
+    const p = work.building != null ? this.layout.byId.get(work.building) : undefined;
+    if (p && p.usable && p.def.workers) {
+      const list = g.state.colonists.list;
+      const here = list.filter((o) => o.workplace === p.id && o !== c);
+      let ok = here.length < p.def.workers.slots;
+      if (!ok) {
+        const bump = here.find((o) => !o.manual);
+        if (bump) {
+          bump.workplace = null;
+          g.bus.emit('colonist:assigned', { id: bump.id, workplace: null });
+          ok = true;
+        }
+      }
+      if (ok) {
+        c.workplace = p.id;
+        c.manual = work.manual;
+        g.bus.emit('colonist:assigned', { id: c.id, workplace: p.id });
+      }
+    }
+    this.refresh(); // sync worker lists, re-home anyone bumped
+    this.ai.poke(c.id);
+    g.sys.economy.markDirty();
+  }
+
   /** Profession of the colonist's current workplace, or null when unemployed. */
   jobOf(c: Colonist): ProfessionId | null {
     this.syncLayout();
@@ -377,13 +439,17 @@ export class ColonistSystem extends System {
     this.ai.speedMod = g.sys.economy.modifier('colonistSpeed');
 
     let sum = 0;
+    let n = 0;
     for (const c of list) {
+      if (c.away) continue; // mood is frozen while out exploring (and the colony average is about who is here)
+      if (c.trip && g.now() >= c.trip.until) delete c.trip;
       const target = happinessTarget(g, this.layout, mood, c);
       const diff = target - c.happiness;
       c.happiness = Math.abs(diff) < 0.05 ? target : c.happiness + diff * HAPPINESS_RATE;
       sum += c.happiness;
+      n++;
     }
-    const avg = list.length ? sum / list.length : 50;
+    const avg = n ? sum / n : 50;
     g.derived.happiness.average = avg;
     g.derived.happiness.productivity = 1 + Math.max(0, avg - 50) / 100;
 

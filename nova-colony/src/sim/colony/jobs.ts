@@ -51,8 +51,15 @@ export function autoAssign(game: Game, layout: Layout, colonists: Colonist[]): n
   const occ = new Map<Id, number>();
   const pool: Colonist[] = [];
 
-  // 1. validate; manual colonists reserve their slots
+  // 1. validate; manual colonists reserve their slots; colonists away on an expedition hold no job at all
   for (const c of colonists) {
+    if (c.away) {
+      if (c.workplace != null) {
+        c.workplace = null;
+        changedList.push(c);
+      }
+      continue;
+    }
     if (c.workplace != null) {
       const p = layout.byId.get(c.workplace);
       if (!p || !p.usable || !p.def.workers) {
@@ -118,6 +125,10 @@ export function autoAssign(game: Game, layout: Layout, colonists: Colonist[]): n
  * the request fails.
  */
 export function assignManual(game: Game, layout: Layout, colonists: Colonist[], c: Colonist, buildingId: Id | null): boolean {
+  if (c.away && buildingId !== null) {
+    fail(game, `${c.name.split(' ')[0]} is away on an expedition`);
+    return false;
+  }
   if (buildingId === null) {
     const had = c.workplace;
     c.workplace = null;
