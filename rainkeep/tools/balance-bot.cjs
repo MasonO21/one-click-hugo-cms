@@ -398,7 +398,7 @@ const HOURS = Number(process.argv[3] || 8);
     const hl = { woken: S.stats.heirWoken, tempers: S.stats.tempers, top: S.stats.heirTop, whet: KH.have('whetstone'), lv: Object.entries(S.heirlooms || {}).map(([k, v]) => k.slice(0, 3) + v).join(','), squad: S.squad.map((id) => `${id.slice(0, 3)}${S.heroes[id].stars}*`).join(','), got: hlGot };
     fs.koi = S.stats.koi; fs.kinds = S.stats.fishKinds;
     const df = S.defense ? { ...S.defense } : {};
-    cl.best = S.clash ? S.clash.best : 0;
+    cl.best = S.clash ? S.clash.best : 0; cl.lp = S.clash ? S.clash.lp : 0; cl.tier = KH.clash ? KH.clash.tier() : 0; cl.top = S.stats.clashTop; cl.season = S.clash ? S.clash.season : 0;
     Object.assign(op, { held: S.stats.outpostsHeld, defs: S.stats.outpostDefs, falls: S.stats.outpostFalls, now: (S.outposts || []).map((o) => `${o.res}${o.lvl}`).join(',') });
     Object.assign(tr, { home: S.stats.tradeTrips, glass: S.stats.tradeGlass, ambush: S.stats.tradeAmbush });
     const hl2 = S.hall ? { rank: KH.hall.rank(), best: S.hall.best, days: S.stats.hallDays } : {};

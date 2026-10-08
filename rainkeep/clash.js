@@ -17,10 +17,14 @@
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
   KH.hooks.defaults.push((s) => {
-    s.clash = { open: false, banners: 0, acc: 0, best: 0, last: null };
-    s.stats.clashes = 0; s.stats.clashWins = 0; s.stats.clashSweep = 0;
+    s.clash = { open: false, banners: 0, acc: 0, best: 0, last: null, lp: 0, season: 1, seasonEnd: 0, peak: 0 };
+    s.stats.clashes = 0; s.stats.clashWins = 0; s.stats.clashSweep = 0; s.stats.clashTop = 0;
   });
   const unlocked = () => !!S && S.lv.wyrm >= C.unlock;
+  // the Clash League: which tier league points put you in
+  const LG = C.league, TIERS = LG.tiers;
+  const tierOf = (lp) => TIERS.reduce((a, t, i) => (lp >= t.lp ? i : a), 0);
+  const tier = () => (S ? tierOf(S.clash.lp || 0) : 0);
   const rand = (a, b) => a + Math.random() * (b - a);
 
   // banners come back with keep time
@@ -28,9 +32,17 @@
     if (!unlocked() || !dt) return;
     const X = S.clash;
     if (!X.open) {
-      X.open = true; X.banners = C.banners.cap; X.acc = 0;
+      X.open = true; X.banners = C.banners.cap; X.acc = 0; X.seasonEnd = S.time + LG.season;
       KH.mail('The Wadi Clash', `Two rival caravans have staked their banners in the dry canyon south of the keep. Whoever holds its wells, towers, the Rain Shrine and the Old Cistern longest takes the water rights until the next moon. Send three squads in: tap a squad, then a point. Hold a point to score its value every second. A new Clash Banner comes every ${C.banners.every / 3600} hours.`);
       return;
+    }
+    if (!X.seasonEnd) X.seasonEnd = S.time + LG.season; // saves from before the league
+    // a new season: pay by the highest tier reached, then start two tiers lower
+    if (S.time >= X.seasonEnd) {
+      const top = Math.max(X.peak || 0, tier()), g = LG.seasonRewards[top];
+      KH.mail(`Clash League: season ${X.season || 1} is over`, `You reached the ${TIERS[top].name} league this season. A new season starts${top >= LG.drop ? ` in the ${TIERS[top - LG.drop].name} league` : ''}.`, g);
+      X.lp = TIERS[Math.max(0, top - LG.drop)].lp; X.peak = tier(); X.season = (X.season || 1) + 1;
+      X.seasonEnd += LG.season * Math.max(1, Math.ceil((S.time - X.seasonEnd + 1) / LG.season));
     }
     if (X.banners >= C.banners.cap) { X.acc = 0; return; }
     X.acc += dt;
@@ -58,7 +70,8 @@
   function newGame(opts = {}) {
     const mine = yourSquads(), avg = mine.reduce((a, q) => a + q.M, 0) / mine.length;
     const names = C.rivals.slice().sort(() => Math.random() - 0.5);
-    const sides = [0, 1, 2].map((s) => ({ name: s ? names[s - 1] : 'Your caravan', color: C.colors[s], score: 0, ai: s > 0 || !!opts.auto, think: rand(0.2, 1.2), str: s ? rand(...C.rivalStr[s - 1]) : 1 }));
+    const hard = 1 + LG.harder * tier(); // the higher the league, the stronger the rivals
+    const sides = [0, 1, 2].map((s) => ({ name: s ? names[s - 1] : 'Your caravan', color: C.colors[s], score: 0, ai: s > 0 || !!opts.auto, think: rand(0.2, 1.2), str: s ? rand(...C.rivalStr[s - 1]) * hard : 1 }));
     const squads = [];
     for (let s = 0; s < 3; s++) for (let i = 0; i < 3; i++) {
       const base = s ? { name: ['Vanguard', 'Riders', 'Spears'][i], cls: ['guard', 'lancer', 'bow'][(i + s) % 3], hero: null, M: avg * sides[s].str * rand(0.9, 1.1) } : mine[i];
@@ -167,12 +180,21 @@
   function settle(G) {
     if (G.paid) return G.rewards;
     G.paid = true;
+    const X = S.clash, t0 = tier(), rich = 1 + LG.richer * t0;
     const r = C.rewards[G.place - 1], g = {};
-    for (const [k, v] of Object.entries(r)) if (k in S.res || k === 'journals') g[k] = v;
+    for (const [k, v] of Object.entries(r)) if (k in S.res || k === 'journals') g[k] = v * rich;
     const out = KH.scaleReward(g);
-    for (const k of ['starglass', 'whetstone']) if (r[k]) out[k] = r[k];
+    for (const k of ['starglass', 'whetstone']) if (r[k]) out[k] = Math.round(r[k] * rich);
     KH.grant(out);
-    const X = S.clash, score = Math.round(G.sides[0].score);
+    // league points: never below the floor of the tier you are in
+    const lp0 = X.lp || 0;
+    X.lp = Math.max(TIERS[t0].lp, lp0 + LG.gain[G.place - 1]);
+    const t1 = tier();
+    G.lp = X.lp - lp0; G.promoted = t1 > t0 ? TIERS[t1].name : null;
+    X.peak = Math.max(X.peak || 0, t1);
+    S.stats.clashTop = Math.max(S.stats.clashTop || 0, t1);
+    if (G.promoted) KH.emit('clashPromoted', { tier: t1 });
+    const score = Math.round(G.sides[0].score);
     S.stats.clashes++;
     if (G.place === 1) S.stats.clashWins++;
     if (G.swept) S.stats.clashSweep = (S.stats.clashSweep || 0) + 1;
@@ -270,7 +292,9 @@
     settle(G);
     const rows = G.ranking.map((s, i) => `<div class="row cl-res"><b class="cl-place">${i + 1}</b><i class="cl-dot" style="background:${G.sides[s].color}"></i><span class="grow">${esc(G.sides[s].name)}</span><b>${fmt(Math.round(G.sides[s].score))}</b></div>`).join('');
     card(`<h2>${G.place === 1 ? 'The wadi is yours' : G.place === 2 ? 'Second place' : 'Third place'}</h2><div class="stack cl-ranks">${rows}</div>
-      ${G.swept ? '<p class="small good">You held all seven points at once.</p>' : ''}<div class="costs">${KH.rewardHTML(G.rewards)}</div>
+      ${G.swept ? '<p class="small good">You held all seven points at once.</p>' : ''}
+      <p class="cl-lp ${G.lp > 0 ? 'up' : G.lp < 0 ? 'down' : ''}">${G.promoted ? `${icon('i-trophy')}Promoted to the ${esc(G.promoted)} league! ` : ''}${G.lp > 0 ? '+' : ''}${G.lp} league points · ${esc(TIERS[tier()].name)} ${fmt(S.clash.lp)}</p>
+      <div class="costs">${KH.rewardHTML(G.rewards)}</div>
       <div class="row" style="justify-content:center;gap:8px">${S.clash.banners ? '<button class="btn gold" data-act="clashgo">Clash again</button>' : '<span class="chip">No banners left</span>'}<button class="btn alt" data-act="clashclose">Leave</button></div>
       <p class="muted small">${bannersLine()}</p>`);
     KH.sfx(G.place === 1 ? 'victory' : 'claim');
@@ -383,6 +407,18 @@
   // ======================================================================
   // The sheet
   // ======================================================================
+  // time left in the season, in days and hours once it is more than a day
+  const left = (s) => (s > 86400 ? `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h` : fmtTime(Math.max(0, s)));
+  function leagueCard() {
+    const X = S.clash, t = tier(), next = TIERS[t + 1], lp = X.lp || 0;
+    const p = next ? (lp - TIERS[t].lp) / (next.lp - TIERS[t].lp) : 1;
+    const ladder = TIERS.map((T, i) => `<div class="row cl-tier ${i === t ? 'on' : ''}"><i class="cl-dot" style="background:${T.color}"></i><b class="grow">${esc(T.name)}</b><span class="muted small">${fmt(T.lp)} LP</span><div class="costs">${KH.rewardHTML(LG.seasonRewards[i])}</div></div>`).join('');
+    return `<div class="card stack cl-league" style="--tc:${TIERS[t].color}"><div class="row">${icon('i-trophy', 'cl-ic')}<div class="grow"><b>${esc(TIERS[t].name)} league · ${fmt(lp)} LP</b>
+        <div class="muted small">${next ? `${fmt(next.lp - lp)} to ${esc(next.name)}` : 'The top league'} · season ${X.season || 1} ends in ${left((X.seasonEnd || 0) - S.time)}</div></div></div>
+      <div class="bar xp"><i style="width:${Math.round(p * 100)}%;background:${TIERS[t].color}"></i></div>
+      <div class="muted small">A win ${LG.gain[0] > 0 ? '+' : ''}${LG.gain[0]}, second ${LG.gain[1] > 0 ? '+' : ''}${LG.gain[1]}, third ${LG.gain[2]} league points; you never drop below your tier. Each tier brings rivals ${Math.round(LG.harder * 100)}% stronger and rewards ${Math.round(LG.richer * 100)}% richer. At the season's end the highest tier you reached pays out, and the new season starts ${LG.drop} tiers lower.</div>
+      <details class="cl-ladder"><summary class="small">Season rewards by tier</summary><div class="stack">${ladder}</div></details></div>`;
+  }
   KH.sheets.clash = () => {
     const X = S.clash, L = X.last;
     const last = L ? `<div class="card stack"><div class="section-label">Last clash</div><div class="row"><b class="grow">${['1st', '2nd', '3rd'][L.place - 1]} place · ${fmt(L.score)}</b></div>
@@ -391,12 +427,12 @@
     return {
       title: 'Wadi Clash', lvl: `${X.banners}/${C.banners.cap}`,
       body: `${KH.art && KH.art.banner ? KH.art.banner('event', 'clash', 'Water rights to the dry canyon go to whoever holds its wells, towers, shrine and cistern longest.') : ''}<p class="muted small">Two rival caravans fight you for the dry canyon's water rights. Each side has three squads: yours are your squad heroes, each leading a third of your march. Tap a squad, then a point. Holding a point scores its value every second; the first to ${fmt(C.goal)}, or the leader after ${C.length / 60} minutes, wins. Squads that meet fight at once, the stronger winning, and a point stays yours until someone takes it.</p>
-        <div class="row wrap cl-pts">${pts}</div>${last}
+        <div class="row wrap cl-pts">${pts}</div>${leagueCard()}${last}
         <div class="card row">${icon('i-clashbanner', 'cl-ic')}<div class="grow"><b>${bannersLine()}</b><div class="muted small">${fmt(S.stats.clashes)} fought · ${fmt(S.stats.clashWins)} won · best ${fmt(X.best || 0)}</div></div></div>
         <button class="btn wide ${X.banners ? 'gold' : 'off'}" data-act="clashgo">${icon('i-clash')}Enter the wadi</button>`,
     };
   };
   KH.side.push({ id: 'clash', icon: 'i-clash', label: 'Wadi Clash', act: 'clash', show: unlocked, dot: () => S.clash.banners >= C.banners.cap, badge: () => `${S.clash.banners}` });
 
-  KH.clash = { unlocked, newGame, step, order, think, auto, autoMatch, settle, start, banners: () => (S ? S.clash.banners : 0), live: () => G, view: () => view };
+  KH.clash = { unlocked, newGame, step, order, think, auto, autoMatch, settle, start, tier, tierOf, banners: () => (S ? S.clash.banners : 0), live: () => G, view: () => view };
 })();

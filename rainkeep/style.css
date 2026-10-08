@@ -1190,3 +1190,14 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .tr-arrow { color: var(--gold); font-weight: 800; }
 .tr-trip { display: grid; gap: 4px; }
 .tr-trip .ic { width: 18px; height: 18px; }
+
+/* Clash League (clash.js) */
+.cl-league { border-color: color-mix(in srgb, var(--tc) 60%, transparent); }
+.cl-tier { gap: 8px; padding: 4px 6px; border-radius: 8px; }
+.cl-tier.on { background: #ffffff12; }
+.cl-tier .costs { margin: 0; }
+.cl-ladder summary { cursor: pointer; color: var(--dim); }
+.cl-lp { text-align: center; font-weight: 700; margin: 6px 0; display: flex; justify-content: center; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cl-lp.up { color: var(--good, #5fd08a); }
+.cl-lp.down { color: #e08a6a; }
+.cl-lp .ic { width: 18px; height: 18px; }

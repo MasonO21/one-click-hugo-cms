@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.21.0',
+  version: '4.22.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1415,6 +1415,18 @@ const DATA = {
     // by place: resources in quarter-crates, journals scaled to the keep
     rewards: [{ starglass: 120, whetstone: 3, journals: 2 }, { starglass: 70, whetstone: 2, journals: 1 }, { starglass: 30, whetstone: 1, journals: 0.5 }],
     warPts: [90, 55, 25],
+    // the Clash League: league points by place, six tiers, harder rivals and richer rewards a tier, and a season
+    // every week of keep time that pays by the highest tier reached and starts you two tiers lower
+    league: {
+      tiers: [
+        { name: 'Sand', lp: 0, color: '#c9a777' }, { name: 'Copper', lp: 100, color: '#c97a3a' }, { name: 'Silver', lp: 250, color: '#c8d0d8' },
+        { name: 'Gold', lp: 450, color: '#e0b04a' }, { name: 'Sunsteel', lp: 700, color: '#ff9a4a' }, { name: 'Rainwyrm', lp: 1000, color: '#3fd0c0' },
+      ],
+      gain: [40, 10, -20], // by place; you never drop below the tier you are in
+      harder: 0.05, richer: 0.15, // per tier
+      season: 604800, drop: 2,
+      seasonRewards: [{ starglass: 100 }, { starglass: 200, whetstone: 3 }, { starglass: 300, whetstone: 5 }, { starglass: 450, shard_epic: 1 }, { starglass: 600, shard_epic: 2 }, { starglass: 800, shard_legendary: 1 }],
+    },
   },
 
   // ---------- Spring Fishing ----------
@@ -1487,6 +1499,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.22', items: [
+      { icon: 'i-trophy', name: 'The Clash League', text: 'Wadi Clash matches now climb a league, from Sand to Rainwyrm: each tier brings stronger rivals and richer rewards, and every week the season pays out by the highest tier you reached.', act: 'clash', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
+    ] },
     { v: '4.21', items: [
       { icon: 'i-caravan', name: 'Trade Routes', text: 'Send trade caravans to four markets beyond the Dunes with the goods they ask for, and bring home journals, whetstones, Sunsteel, speedups and more. Prices change daily; the far roads pay best but need an escort.', act: 'trade', open: (S) => S.lv.wyrm >= 10, needs: 'Rainwyrm Lv 10' },
     ] },
@@ -1782,6 +1797,8 @@ const DATA = {
     { id: 'awaken15', text: 'Awaken heroes 15 times', stat: 'awakened', n: 15, reward: { beacons: 3 } },
     { id: 'clash1', text: 'Win a Wadi Clash', stat: 'clashWins', n: 1, reward: { starglass: 100 } },
     { id: 'clash25', text: 'Win 25 Wadi Clashes', stat: 'clashWins', n: 25, reward: { shard_legendary: 1 } },
+    { id: 'clashGold', text: 'Reach the Gold league in the Wadi Clash', stat: 'clashTop', n: 3, reward: { beacons: 2 } },
+    { id: 'clashTop', text: 'Reach the Rainwyrm league in the Wadi Clash', stat: 'clashTop', n: 5, reward: { shard_legendary: 1 } },
     { id: 'clashSweep', text: 'Hold all seven points of the wadi at once', stat: 'clashSweep', n: 1, reward: { beacons: 2 } },
   ],
 
