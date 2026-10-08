@@ -248,6 +248,8 @@ export interface BuildingDef {
   core?: boolean;
   /** Food/water reserve that feeds colonists (otherwise drawn from global storage). Informational. */
   feeds?: boolean;
+  /** Expedition headquarters: squads set out from here (its inspector opens the Expeditions panel). */
+  expeditions?: boolean;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -613,7 +615,8 @@ export type MissionType =
   | 'loot' // loot POIs
   | 'equip' // equip item target
   | 'spin' // use the spin wheel
-  | 'rescue'; // rescue survivors from camps
+  | 'rescue' // rescue survivors from camps
+  | 'expedition'; // target = 'launch' | 'collect' | 'frontier' | region id | expedition id (see sim/expeditions.ts)
 
 export interface MissionDef {
   id: string;
@@ -641,6 +644,122 @@ export interface MissionDef {
     /** Show a celebratory popup with this text. */
     celebrate?: string;
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Expeditions (src/data/expeditions.ts, sim/expeditions.ts)
+// ---------------------------------------------------------------------------------------------
+
+/** What a haul is made of: a resource id or 'rp' (research points). */
+export type YieldKey = ResourceId | 'rp';
+
+/** A rare find rolled once per trip (chance before the squad's profession bonus). */
+export interface ExpeditionFind {
+  chance: number;
+  reward: Reward;
+}
+
+export interface ExpeditionDef {
+  id: string;
+  /** BiomeDef id: the region must be discovered. */
+  region: string;
+  name: string;
+  description: string;
+  /** PoiDef id whose painted icon stands for the destination. */
+  poi: string;
+  icon: string;
+  /** Seconds on foot: one rung of ExpeditionRules.durations. */
+  duration: number;
+  /** Colony tier required; also the tier the haul is valued at. */
+  tier: number;
+  /** Professions that know the terrain: each one in the squad raises the haul and the find chances. */
+  match: ProfessionId[];
+  /** Value shares of the haul (sum 1). */
+  yields: Partial<Record<YieldKey, number>>;
+  finds?: ExpeditionFind[];
+}
+
+/** Post-Titanium Frontier: one flavour per biome lends uncharted sites their look, crew and haul. */
+export interface FrontierFlavour {
+  biome: string;
+  /** Place words for generated site names ("Amber Dunes"). */
+  nouns: string[];
+  match: ProfessionId[];
+  yields: Partial<Record<YieldKey, number>>;
+}
+
+/** A Frontier find that appears from site `from` on and grows `perSite` per charted site (up to `max`). */
+export interface FrontierFind extends ExpeditionFind {
+  from: number;
+  perSite?: number;
+  max?: number;
+  /** Shown on the Star Chart's "next discovery" line. */
+  label: string;
+}
+
+export interface FrontierMilestone {
+  /** Charted sites needed. */
+  count: number;
+  title: string;
+  reward: Reward;
+}
+
+export interface FrontierRules {
+  unlockTier: number;
+  /** Signal board: one site per duration rung. */
+  durations: number[];
+  adjectives: string[];
+  flavours: FrontierFlavour[];
+  finds: FrontierFind[];
+  milestones: FrontierMilestone[];
+  /** After the last milestone: another one every `every` sites. */
+  repeat: { every: number; title: string; reward: Reward };
+  /** Haul bonus per charted site and its cap (the journey gets richer, gently). */
+  depthBonus: number;
+  depthBonusMax: number;
+}
+
+export interface ExpeditionRules {
+  /** Colony tier that opens expeditions (an `expeditions` building is needed too). */
+  unlockTier: number;
+  /** The fixed duration ladder (seconds on foot) and the per-hour efficiency of each rung. */
+  durations: number[];
+  durationEfficiency: number[];
+  /** Concurrent trips by colony tier (highest entry whose tier is reached). */
+  slots: { tier: number; slots: number }[];
+  squadMax: number;
+  /** Haul factor by squad size (index = colonists sent). */
+  squadSize: number[];
+  /** Share of the reference colony's hourly value a no-match, one-star full squad brings home per hour (15 min rung). */
+  baseFraction: number;
+  /** Per member, averaged over the squad: profession match and each skill star above the first. */
+  matchBonus: number;
+  skillBonus: number;
+  /** Find chances × (1 + this × matched members / squadMax). */
+  findMatchBonus: number;
+  /** Vehicles: speed shortens the trip, cargo space raises the haul. */
+  vehicle: { speedPer: number; speedMax: number; haulPer: number; haulMax: number };
+  /** ± spread of each rolled resource amount. */
+  variance: number;
+  /** Mood after the trip (cozy: a boost; only a long trip on foot leaves them a little tired). */
+  mood: { adventure: number; adventureHours: number; weary: number; wearyHours: number; wearyFrom: number };
+  /** Work experience (seconds of work) per trip hour and its cap. */
+  xpPerHour: number;
+  xpMax: number;
+  /** Worth of one unit in wood-equivalents (balance yardstick; 'rp' = a research point). */
+  value: Record<string, number>;
+  /**
+   * Tier a good becomes part of everyday colony life. It keeps its full worth for `relevance.keep` tiers after that,
+   * then halves each tier (down to `relevance.floor`): a Titanium colony does not care about another pile of wood.
+   * Research points never fade.
+   */
+  intro: Record<string, number>;
+  relevance: { keep: number; decay: number; floor: number };
+  /** Reference colony output per MINUTE by tier (resources + 'rp'); the balance band is measured against it. */
+  reference: Record<string, number>[];
+  /** Storage of the reference colony at the end of each tier (hauls are sized to fit it). */
+  referenceStorage: Record<string, number>[];
+  frontier: FrontierRules;
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -41,6 +41,7 @@ export interface GameState {
   missions: MissionState;
   tutorial: TutorialState;
   liveops: LiveOpsState;
+  expeditions: ExpeditionState;
   stats: StatsState;
   settings: SettingsState;
 }
@@ -360,6 +361,76 @@ export interface LiveOpsState {
   offersSeen: string[];
 }
 
+/** A generated Frontier site (post-Titanium): where a frontier squad is heading or has been. */
+export interface FrontierSite {
+  /** Stable id "f<signal>-<rung>". */
+  id: string;
+  name: string;
+  /** BiomeDef id lending the site its look, crew and haul (a FrontierFlavour). */
+  biome: string;
+  /** Seconds on foot. */
+  duration: number;
+  /** Charted sites + 1 when it was spotted (how deep into the Frontier it lies). */
+  depth: number;
+}
+
+/** A charted Frontier site on the Star Chart. */
+export interface ChartedSite {
+  id: string;
+  name: string;
+  biome: string;
+  depth: number;
+  /** Epoch ms when it was charted. */
+  at: number;
+  /** Short note of the best find ("Quantum Chip"), if any. */
+  find?: string;
+}
+
+/** One trip: out (timer running) or back (haul waiting at the headquarters). */
+export interface Expedition {
+  id: Id;
+  /** ExpeditionDef id, or 'frontier' (then `site` is set). */
+  dest: string;
+  site?: FrontierSite;
+  /** Colonist ids (1..squadMax). */
+  squad: Id[];
+  /** Workplace and manual flag of each squad member before leaving (they go back to it). */
+  prevWork: (Id | null)[];
+  prevManual: boolean[];
+  vehicle: string | null;
+  /** Epoch ms. */
+  startedAt: number;
+  endsAt: number;
+  /** Colony tier at launch. */
+  tier: number;
+  /** Seed of the haul roll (deterministic). */
+  seed: number;
+  status: 'out' | 'back';
+  /** Rolled when the squad gets back. */
+  haul: import('../data/schema').Reward | null;
+  /** Mood the squad came home with (+ adventure / − travel-weary). */
+  mood?: number;
+}
+
+// owner: expeditions
+export interface ExpeditionState {
+  list: Expedition[];
+  nextId: Id;
+  /** Lifetime counters. */
+  launched: number;
+  collected: number;
+  frontier: {
+    /** The Star Chart, oldest first. */
+    charted: ChartedSite[];
+    /** Signal board generation: bumps whenever a frontier trip leaves (fresh sites appear). */
+    signal: number;
+    /** Milestone counts already claimed. */
+    claimed: number[];
+    /** The "Frontier is open" card was shown. */
+    announced: boolean;
+  };
+}
+
 export interface StatsState {
   sessions: number;
   /** Total online seconds (mirrors playTime but never reset). */
@@ -472,6 +543,7 @@ export function createInitialState(seed: number, now: number): GameState {
       freeCrateAt: 0,
       offersSeen: [],
     },
+    expeditions: { list: [], nextId: 1, launched: 0, collected: 0, frontier: { charted: [], signal: 0, claimed: [], announced: false } },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
     settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false, notifications: false, notifyAsked: false },
   };

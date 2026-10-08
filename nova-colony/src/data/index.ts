@@ -8,6 +8,8 @@ import type {
   BiomeDef,
   BuildingDef,
   CosmeticDef,
+  ExpeditionDef,
+  ExpeditionRules,
   InvasionDef,
   ItemDef,
   MissionDef,
@@ -44,6 +46,7 @@ import { WORLD_EVENTS } from './events';
 import { MISSIONS, FIRST_MISSION, DAILY_MISSION_POOL } from './missions';
 import { AD_PLACEMENTS, PRODUCTS, COSMETICS, VIP, SEASON, DAILY_REWARDS, SPIN_SEGMENTS, STARTER_KIT } from './monetization';
 import { BALANCE } from './balance';
+import { EXPEDITIONS, EXPEDITION_RULES } from './expeditions';
 
 export interface GameData {
   resources: ResourceDef[];
@@ -75,6 +78,8 @@ export interface GameData {
   /** What a brand-new colony starts with. */
   starterKit: { resources: Record<string, number>; items: Record<string, number>; equip: Record<string, string> };
   balance: BalanceDef;
+  expeditions: ExpeditionDef[];
+  expeditionRules: ExpeditionRules;
 }
 
 function index<T extends { id: string }>(list: T[], kind: string): Map<string, T> {
@@ -115,6 +120,8 @@ export class DataRegistry implements GameData {
   spinSegments!: SpinSegment[];
   starterKit!: GameData['starterKit'];
   balance!: BalanceDef;
+  expeditions!: ExpeditionDef[];
+  expeditionRules!: ExpeditionRules;
 
   private maps: Record<string, Map<string, any>> = {};
 
@@ -137,6 +144,7 @@ export class DataRegistry implements GameData {
     this.maps.ad = index(data.adPlacements, 'ad');
     this.maps.product = index(data.products, 'product');
     this.maps.cosmetic = index(data.cosmetics, 'cosmetic');
+    this.maps.expedition = index(data.expeditions ?? [], 'expedition');
   }
 
   resource(id: string): ResourceDef | undefined { return this.maps.resource.get(id); }
@@ -156,6 +164,7 @@ export class DataRegistry implements GameData {
   ad(id: string): AdPlacementDef | undefined { return this.maps.ad.get(id); }
   product(id: string): ProductDef | undefined { return this.maps.product.get(id); }
   cosmetic(id: string): CosmeticDef | undefined { return this.maps.cosmetic.get(id); }
+  expedition(id: string): ExpeditionDef | undefined { return this.maps.expedition.get(id); }
   tier(index: number): TierDef { return this.tiers[Math.max(0, Math.min(this.tiers.length - 1, index))]; }
   invasion(tier: number): InvasionDef {
     let best = this.invasions[0];
@@ -194,6 +203,8 @@ export function defaultData(): GameData {
     spinSegments: SPIN_SEGMENTS,
     starterKit: STARTER_KIT,
     balance: BALANCE,
+    expeditions: EXPEDITIONS,
+    expeditionRules: EXPEDITION_RULES,
   };
 }
 

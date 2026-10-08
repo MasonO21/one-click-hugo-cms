@@ -152,9 +152,9 @@ export const BUILDINGS: BuildingDef[] = [
     station: 'garage', garage: true, maxCount: 2, workers: { slots: 1, job: 'mechanic', required: false },
   }),
   d({
-    id: 'radio_tower', name: 'Radio Tower', icon: '📻', category: 'utility', description: 'Broadcasts a friendly hello across the stars. Opens the recruitment board.',
+    id: 'radio_tower', name: 'Radio Tower', icon: '📻', category: 'utility', description: 'Broadcasts a friendly hello across the stars. Opens the recruitment board and, from the Stone tier, sends expeditions out.',
     size: [2, 2], unlockTier: 1, research: 'radio_comms', cost: { wood: 80, stone: 40, fiber: 30 }, buildTime: 6, hp: 260, model: 'radio_tower',
-    recruit: true, maxCount: 1, comfort: 1,
+    recruit: true, expeditions: true, maxCount: 1, comfort: 1,
   }),
   d({
     id: 'guard_tower', name: 'Guard Tower', icon: '🗼', category: 'defense', description: 'A lookout with a bow and a view. Station a guard for +50% damage.',
