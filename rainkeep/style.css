@@ -1212,3 +1212,19 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .dc-on { color: #ffe3a0; border-color: var(--gold); }
 .dc-ready { color: var(--good, #5fd08a); border-color: #5fd08a88; }
 .qchip.dc { color: #ffe3a0; border-color: #b8893a; }
+
+/* Hero Talents (talents.js) */
+.tl-tier { display: grid; grid-template-columns: 38px 1fr; gap: 6px; align-items: center; }
+.tl-tier.locked { opacity: 0.55; }
+.tl-lv { font-size: 11.5px; font-weight: 700; color: var(--dim); text-align: center; }
+.tl-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tl-opt { display: grid; grid-template-columns: 22px 1fr; grid-template-rows: auto auto; column-gap: 6px; text-align: left; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: #ffffff08; color: inherit; font: inherit; cursor: pointer; }
+.tl-opt .ic { grid-row: span 2; width: 22px; height: 22px; align-self: center; }
+.tl-opt b { font-size: 12.5px; line-height: 1.15; }
+.tl-opt small { font-size: 11px; color: var(--dim); line-height: 1.2; }
+.tl-opt.on { border-color: var(--gold); background: #e0b04a1f; box-shadow: 0 0 0 1px #e0b04a44 inset; }
+.tl-opt.other { opacity: 0.55; }
+.tl-opt.off { cursor: default; }
+.tl-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); vertical-align: middle; }
+.tl-tier.choose .tl-opt { border-color: #5fd08a99; animation: breathe 2.2s ease-in-out infinite; }
+.tl-tier.choose .tl-lv { color: var(--good, #5fd08a); }

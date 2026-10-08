@@ -227,7 +227,7 @@
   function renderDots() {
     const dots = {
       world: KH.worldDot ? KH.worldDot() : false,
-      heroes: S.beacons >= 1,
+      heroes: S.beacons >= 1 || !!(KH.talents && KH.talents.anyReady()),
       caravan: KH.caravanDot ? KH.caravanDot() : false,
       shop: shopDot(),
     };
@@ -247,7 +247,7 @@
   // Panels
   // ======================================================================
   function panelHeroes() {
-    const tabs = subtabs('heroes', [['roster', 'Roster', KH.taleAny && KH.taleAny()], ['beacon', 'The Beacon', S.beacons >= 1], ...(KH.panelGear ? [['gear', 'Gear', KH.gearDot && KH.gearDot()]] : [])]);
+    const tabs = subtabs('heroes', [['roster', 'Roster', (KH.taleAny && KH.taleAny()) || (KH.talents && KH.talents.anyReady())], ['beacon', 'The Beacon', S.beacons >= 1], ...(KH.panelGear ? [['gear', 'Gear', KH.gearDot && KH.gearDot()]] : [])]);
     if (UI.sub.heroes === 'beacon') return tabs + panelRecruit();
     if (UI.sub.heroes === 'gear' && KH.panelGear) return tabs + KH.panelGear();
     const owned = Object.keys(S.heroes).sort((a, b) => KH.heroPower(b) - KH.heroPower(a));
@@ -260,7 +260,7 @@
       const canStar = h.stars < DATA.heroMaxStars && h.shards >= 10 * h.stars;
       return `<button class="hcard ${d.rarity}" data-act="hero" data-arg="${id}">${portrait(id)}
         <span class="badges"><span class="cls-badge">${icon(DATA.classes[d.cls].icon)}</span><span style="display:grid;gap:3px;justify-items:end">${away ? '<span class="away-badge">AWAY</span>' : inSquad ? '<span class="squad-badge">SQUAD</span>' : ''}${steward ? '<span class="steward-badge">STEWARD</span>' : ''}${canStar ? '<span class="steward-badge" style="background:var(--gold)">★ UP</span>' : ''}</span></span>
-        <span class="meta"><span class="nm">${esc(d.name.split(' ')[0])}${KH.awakenBadge ? KH.awakenBadge(id) : ''}${canLevel && inSquad ? ' <span class="up-dot"></span>' : ''}${KH.taleReady && KH.taleReady(id) ? ' <span class="tale-dot" title="A tale chapter is ready"></span>' : ''}</span><span class="sub"><span>Lv ${h.lvl}</span>${starsHTML(h.stars)}</span></span></button>`;
+        <span class="meta"><span class="nm">${esc(d.name.split(' ')[0])}${KH.awakenBadge ? KH.awakenBadge(id) : ''}${canLevel && inSquad ? ' <span class="up-dot"></span>' : ''}${KH.taleReady && KH.taleReady(id) ? ' <span class="tale-dot" title="A tale chapter is ready"></span>' : ''}${KH.talents && KH.talents.ready(id) ? ' <span class="tl-dot" title="A talent to choose"></span>' : ''}</span><span class="sub"><span>Lv ${h.lvl}</span>${starsHTML(h.stars)}</span></span></button>`;
     };
     return `${tabs}<div class="panel-head"><h2>Heroes</h2><p>Squad power ${fmt(KH.statPower(team))}</p></div>
       <div class="card stack"><div class="row"><div class="grow"><b>Expedition squad</b><div class="muted small">Up to 3 heroes march with your troops and defend the keep. Tap a hero to swap.</div></div></div>
@@ -644,6 +644,7 @@
           ${h.stars < DATA.heroMaxStars ? `<button class="btn small ${h.shards < needShards ? 'off' : 'gold'}" data-act="star" data-arg="${id}">Add star</button>` : ''}</div>
           ${h.stars < DATA.heroMaxStars ? `<div class="bar xp"><i style="width:${Math.min(100, (h.shards / needShards) * 100)}%"></i></div>` : ''}</div>
         ${KH.heroAwaken ? KH.heroAwaken(id) : ''}
+        ${KH.heroTalents ? KH.heroTalents(id) : ''}
         <div class="card stack"><div class="row"><div class="grow"><b>Steward of the ${plotName(post.plot)}</b><div class="muted small">${post.label(Math.round(KH.stewardOf(id) * 10) / 10)} while stationed${other ? `. Replaces ${esc(other)}.` : '.'} Stewards still fight.</div></div>
           <button class="btn small ${isSteward ? 'gold' : 'alt'}" data-act="station" data-arg="${id}">${isSteward ? 'Stationed' : 'Station'}</button></div></div>
         <button class="btn wide ${inSquad ? 'alt' : ''}" data-act="squad" data-arg="${id}">${inSquad ? 'Remove from squad' : 'Add to squad'}</button>`,

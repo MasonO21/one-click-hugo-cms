@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.23.0',
+  version: '4.24.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1299,6 +1299,30 @@ const DATA = {
   // its prices move from day to day, and the longer roads pay better but cross worse bandit country: hired guards
   // (paid in copper and food, half or full) cut the risk, and an ambushed caravan loses half its payment.
   // Guards are hired rather than drawn from the army because troops away for hours left the expedition short.
+  // ---------- Hero Talents ----------
+  // From Rainwyrm Lv 6 a hero chooses one of two talents at levels 10, 30, 50, 70 and 90. Each tier sets something for
+  // the hero alone against something for the whole fight: atk/def/hp raise the hero's own stats, lead the troops of
+  // the hero's class, skill the skill's strength, charge has the skill ready a round sooner, counter adds to the
+  // edge the hero and their class's troops have over the class they beat, torrent adds to the Rainwyrm's Torrent.
+  // Changing a talent once chosen costs Starglass.
+  talents: {
+    unlock: 6, // Rainwyrm level
+    levels: [10, 30, 50, 70, 90],
+    change: 50, // Starglass
+    tiers: [
+      [{ fx: { atk: 0.08 } }, { fx: { hp: 0.1 } }],
+      [{ fx: { lead: 0.05 } }, { fx: { skill: 0.15 } }],
+      [{ fx: { def: 0.12 } }, { fx: { charge: 1 } }],
+      [{ fx: { atk: 0.12 } }, { fx: { counter: 0.1 } }],
+      [{ fx: { lead: 0.08 } }, { fx: { torrent: 0.1 } }],
+    ],
+    names: {
+      guard: [['Iron Hide', 'Deep Lungs'], ['Shield Captain', 'Rallying Cry'], ['Bulwark', 'Quick Hands'], ['Hammer of the Keep', 'Breaker'], ['Wall of the Rain', 'Wyrmguard']],
+      bow: [['Keen Eye', 'Desert Hardy'], ['Volley Captain', 'Steady Draw'], ['Dune Cover', 'Quick Nock'], ['Heavy Shafts', 'Weak Points'], ['Rain of Arrows', 'Wyrm Spotter']],
+      lancer: [['Long Reach', 'Saddle Hardened'], ['Charge Captain', 'Battle Song'], ['Scale Mail', 'First to Ride'], ['Lance of Sunsteel', 'Flank Rider'], ['Thunder of Hooves', 'Wyrm Rider']],
+    },
+  },
+
   // ---------- Warden's Decrees ----------
   // Orders the Warden gives the whole keep. Each one lasts a while (or acts at once) and then needs time before it
   // can be given again; they open one by one as the Rainwyrm grows. A decree can be given again early for Starglass.
@@ -1523,6 +1547,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.24', items: [
+      { icon: 'i-star', name: 'Hero Talents', text: 'At levels 10, 30, 50, 70 and 90 every hero chooses one of two talents: their own strength, or something for the whole fight, from leading their troops to a faster skill or a stronger Torrent.', act: 'tab:roster', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
+    ] },
     { v: '4.23', items: [
       { icon: 'i-decree', name: "Warden's Decrees", text: 'Give orders to the whole keep: a Harvest Rite for production, a Rush Order to cut every timer, a Call to Arms before a battle, and more as the Rainwyrm grows. Each rests before it can be given again, so choose your moment.', act: 'decrees', open: (S) => S.lv.wyrm >= 5, needs: 'Rainwyrm Lv 5' },
     ] },
@@ -1813,6 +1840,9 @@ const DATA = {
     { id: 'trade1', text: 'Bring a trade caravan home', stat: 'tradeTrips', n: 1, reward: { starglass: 100 } },
     { id: 'trade50', text: 'Bring 50 trade caravans home', stat: 'tradeTrips', n: 50, reward: { shard_legendary: 1 } },
     { id: 'tradeGlass', text: 'Trade with the Glass Cities 10 times', stat: 'tradeGlass', n: 10, reward: { beacons: 3 } },
+    { id: 'talent1', text: 'Choose a hero talent', stat: 'talents', n: 1, reward: { journals: 20 } },
+    { id: 'talent25', text: 'Choose 25 hero talents', stat: 'talents', n: 25, reward: { starglass: 200 } },
+    { id: 'talentFull', text: 'Give a hero all five talents', stat: 'talentFull', n: 1, reward: { shard_epic: 1 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },

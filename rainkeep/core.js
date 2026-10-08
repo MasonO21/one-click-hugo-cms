@@ -323,9 +323,10 @@
   function heroStats(id) {
     const h = S.heroes[id], r = DATA.rarities[HERO[id].rarity];
     const m = (1 + 0.09 * (h.lvl - 1)) * (1 + 0.15 * (h.stars - 1)) * (1 + 0.05 * (S.tech.tactics || 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'stat') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'stat') : 0));
-    return { atk: r.atk * m, def: r.def * m, hp: r.hp * m };
+    const tl = (k) => 1 + (KH.talentBoost ? KH.talentBoost(id, k) : 0); // hero talents (talents.js)
+    return { atk: r.atk * m * tl('atk'), def: r.def * m * tl('def'), hp: r.hp * m * tl('hp') };
   }
-  const skillScale = (id) => (1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'skill') : 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'skill') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'skill') : 0));
+  const skillScale = (id) => (1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'skill') : 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'skill') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'skill') : 0)) * (1 + (KH.talentBoost ? KH.talentBoost(id, 'skill') : 0));
   function skillText(id) {
     const d = HERO[id], k = skillScale(id);
     return d.skill.desc.replace(/\{(\w+)\}/g, (_, key) => `${Math.round(d.skill.fx[key] * k * 100)}%`);
@@ -369,10 +370,13 @@
     let atk = 0, def = 0, hp = 0;
     const fx = { atk: 0, dr: 0, burst: 0, heal: 0, pierce: 0 };
     const heroes = opts.heroes || squadHome();
+    // hero talents (talents.js): leading a troop class, a bigger counter edge, a stronger Torrent
+    const tt = KH.talentTeam ? KH.talentTeam(heroes) : { lead: {}, counter: {}, torrent: 0 };
+    const edge = (c) => counterMult(c, enemyCls) + (enemyCls && DATA.counters[c] === enemyCls ? tt.counter[c] || 0 : 0);
     for (const id of heroes) {
       if (!S.heroes[id]) continue;
       const s = heroStats(id);
-      atk += s.atk * counterMult(HERO[id].cls, enemyCls);
+      atk += s.atk * edge(HERO[id].cls);
       def += s.def; hp += s.hp;
       const k = skillScale(id);
       for (const [key, v] of Object.entries(HERO[id].skill.fx)) fx[key] += v * k;
@@ -382,8 +386,8 @@
     const gb = !opts.noGear && KH.gearBonus ? KH.gearBonus() : null;
     for (const type in m) {
       // troop ranks (ranks.js): the class's average over recruits, Veterans, Elites and Champions
-      const t = DATA.troops[type], tb = (gb ? 1 + (gb.troop[type] || 0) : 1) * (KH.rankMult ? KH.rankMult(type) : 1);
-      atk += m[type] * t.atk * um * tb * counterMult(type, enemyCls);
+      const t = DATA.troops[type], tb = (gb ? 1 + (gb.troop[type] || 0) : 1) * (KH.rankMult ? KH.rankMult(type) : 1) * (1 + (tt.lead[type] || 0));
+      atk += m[type] * t.atk * um * tb * edge(type);
       def += m[type] * t.def * um * tb; hp += m[type] * t.hp * um * tb;
     }
     atk *= 1 + fx.atk + KH.bonus('teamAtk') + (opts.atkBonus || 0) + (gb ? gb.atk : 0);
@@ -391,6 +395,7 @@
     hp *= 1 + (gb ? gb.hp : 0);
     fx.dr = Math.min(fx.dr, 0.4);
     fx.pierce = Math.min(fx.pierce, 0.5);
+    fx.torrent = tt.torrent;
     return { atk, def, hp, fx, troops: m, heroes };
   }
   const chapterOf = (n) => DATA.chapters.filter((c) => n >= c.from).pop();
@@ -454,9 +459,9 @@
       // opts.startHp: a squad already worn down (the Crossing carries its losses from fight to fight)
       team, foe, opts, th: opts.startHp != null ? clamp(opts.startHp, 1, team.hp) : team.hp, eh: foe.hp, r: 0, rounds: [], over: false, win: false, timeout: false,
       fdef: foe.def * (1 - team.fx.pierce),
-      breath: !S.dormant && !opts.noBreath ? foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0)) : 0,
+      breath: !S.dormant && !opts.noBreath ? foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0) + (team.fx.torrent || 0)) : 0,
       breathUsed: false,
-      skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge, k: 0.85 + 0.15 * skillScale(id) })),
+      skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge + (KH.talentBoost ? KH.talentBoost(id, 'charge') : 0), k: 0.85 + 0.15 * skillScale(id) })),
       guard: 0, sunder: 0,
       windup: (foe.boss ? BT.boss.first : BT.windupFirst) === 1, // the coming round's blow is a wind-up
     };
