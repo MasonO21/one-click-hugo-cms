@@ -13,16 +13,35 @@
  * OWNER: meta agent.
  */
 import { SAVE_VERSION } from '../core/constants';
-import { createInitialState, type GameState } from '../core/state';
+import { QUALITY_LEVELS, createInitialState, type GameState } from '../core/state';
 
 /** Upgrades a raw save of version `from` to version `from + 1` (may mutate and return the same object). */
 export type Migration = (raw: any) => any;
 
-/** Registered migrations keyed by the version they upgrade FROM. (None yet: v1 is the first format.) */
-export const MIGRATIONS: Record<number, Migration> = {};
-
 const isObj = (v: unknown): v is Record<string, any> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/**
+ * v1 -> v2: automatic graphics quality (`settings.qualityMode` / `qualityDevice`).
+ * Every v1 save started on 'medium' and only the Settings panel ever changed it, so 'medium' (or anything
+ * unreadable) is an untouched default and becomes 'auto' — the device check then picks a level on the next
+ * boot. 'low' / 'high' were picked by the player and stay theirs ('manual').
+ * Runs before deepFill, which would otherwise default every old save to 'auto'.
+ */
+export function migrateV1QualityMode(raw: any): any {
+  const s = raw.settings;
+  if (!isObj(s)) return raw; // deepFill restores default settings (auto)
+  if (s.qualityMode !== 'auto' && s.qualityMode !== 'manual') {
+    s.qualityMode = s.quality === 'low' || s.quality === 'high' ? 'manual' : 'auto';
+  }
+  if (typeof s.qualityDevice !== 'string') s.qualityDevice = '';
+  return raw;
+}
+
+/** Registered migrations keyed by the version they upgrade FROM. */
+export const MIGRATIONS: Record<number, Migration> = {
+  1: migrateV1QualityMode,
+};
 
 /** Cheap structural check that this is a recognisable save. Returns an error message or null. */
 export function validateMarkers(raw: unknown): string | null {
@@ -97,6 +116,17 @@ export function repairState(s: GameState): void {
   fixDict(s.missions.counters);
   fixDict(s.missions.progress);
   if (!isNum(s.liveops.nova) || s.liveops.nova < 0) s.liveops.nova = 0;
+  // graphics settings the renderer and the auto-quality controller switch on: unknown values fall back to auto
+  const set = s.settings;
+  if (!QUALITY_LEVELS.includes(set.quality)) {
+    set.quality = 'medium';
+    set.qualityMode = 'auto';
+    set.qualityDevice = '';
+  }
+  if (set.qualityMode !== 'auto' && set.qualityMode !== 'manual') {
+    set.qualityMode = 'auto';
+    set.qualityDevice = '';
+  }
   if (!isNum(s.lastTickAt)) s.lastTickAt = s.createdAt;
   if (s.playTime < 0) s.playTime = 0;
   s.buildings.nextId = Math.max(isNum(s.buildings.nextId) ? s.buildings.nextId : 1, 1 + s.buildings.list.reduce((m, b) => Math.max(m, isNum(b.id) ? b.id : 0), 0));

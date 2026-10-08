@@ -374,10 +374,28 @@ export interface StatsState {
   purchases: number;
 }
 
+/** Graphics level the renderer draws at (pixel ratio, shadows, LOD radii, particles, light pool). */
+export type QualityLevel = 'low' | 'medium' | 'high';
+export const QUALITY_LEVELS: readonly QualityLevel[] = ['low', 'medium', 'high'];
+/** Who picks the graphics level: the game ('auto') or the player in Settings ('manual'). */
+export type QualityMode = 'auto' | 'manual';
+
 export interface SettingsState {
   music: number;
   sfx: number;
-  quality: 'low' | 'medium' | 'high';
+  /** The level in use — the only quality field the renderer reads. In 'auto' mode the game writes it. */
+  quality: QualityLevel;
+  /**
+   * 'auto' (new installs): the game picks `quality` from the device on first launch and steps it down by itself
+   * when the frame rate can't keep up — never up. 'manual': the player picked a level in Settings; nothing else
+   * touches it. See platform/autoQuality.ts.
+   */
+  qualityMode: QualityMode;
+  /**
+   * Auto mode: the device (GPU + memory) the current level was picked for. '' = not picked yet, so the next boot
+   * runs the device check once; a save restored on another device (cloud / recovery code) gets a fresh pick too.
+   */
+  qualityDevice: string;
   haptics: boolean;
   autoGather: boolean;
   /** Share anonymous gameplay analytics. Off until the player opts in. */
@@ -445,7 +463,7 @@ export function createInitialState(seed: number, now: number): GameState {
       offersSeen: [],
     },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
-    settings: { music: 0.6, sfx: 0.8, quality: 'medium', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false },
+    settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false },
   };
 }
 

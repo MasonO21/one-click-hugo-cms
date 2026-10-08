@@ -13,7 +13,8 @@ export const WORLD_SIZE = CELL * WORLD_CELLS; // 512 world units
 export const HALF_WORLD = WORLD_SIZE / 2;
 export const CENTER_CELL = WORLD_CELLS / 2; // 128
 
-export const SAVE_VERSION = 1;
+/** v2: settings.qualityMode / qualityDevice (automatic graphics quality). */
+export const SAVE_VERSION = 2;
 export const MAX_TIER = 6;
 export const TIER_IDS = ['wood', 'reinforced', 'stone', 'steel', 'alloy', 'nano', 'titanium'] as const;
 export type TierId = (typeof TIER_IDS)[number];

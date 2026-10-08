@@ -288,7 +288,7 @@ describe('save: migrations and repair', () => {
     expect((out.stats as unknown as { legacy: number }).legacy).toBe(5);
   });
 
-  it('ships an (empty) migration table for the current format', () => {
+  it('ships the migration table for the current format', () => {
     expect(MIGRATIONS).toBeTypeOf('object');
     expect(migrateState(base()).version).toBeGreaterThanOrEqual(1);
   });
