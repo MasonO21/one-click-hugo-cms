@@ -63,7 +63,7 @@
     for (let s = 0; s < 3; s++) for (let i = 0; i < 3; i++) {
       const base = s ? { name: ['Vanguard', 'Riders', 'Spears'][i], cls: ['guard', 'lancer', 'bow'][(i + s) % 3], hero: null, M: avg * sides[s].str * rand(0.9, 1.1) } : mine[i];
       const c = camp(s);
-      squads.push({ ...base, side: s, i, hp: 1, x: c.x + (i - 1) * 0.05, y: c.y, state: 'camp', to: -1, at: -1 });
+      squads.push({ ...base, side: s, i, hp: 1, x: c.x + (i - 1) * 0.07, y: c.y, state: 'camp', to: -1, at: -1 });
     }
     return { t: 0, over: false, sides, squads, points: P.map((p) => ({ ...p, owner: -1, cap: -1, prog: 0 })), fx: [], log: [], sel: -1, place: 0, peak: 0, swept: false };
   }
@@ -96,7 +96,7 @@
         const tg = targetOf(G, q), d = dist(q, tg), v = C.speed * (q.state === 'rout' ? 0.7 : 1) * dt;
         if (d <= v) {
           q.x = tg.x; q.y = tg.y;
-          if (q.to < 0) { q.state = 'camp'; q.at = -1; q.x += (q.i - 1) * 0.05; } else { q.state = 'hold'; q.at = q.to; }
+          if (q.to < 0) { q.state = 'camp'; q.at = -1; q.x += (q.i - 1) * 0.07; } else { q.state = 'hold'; q.at = q.to; }
         } else { q.x += ((tg.x - q.x) / d) * v; q.y += ((tg.y - q.y) / d) * v; }
       } else if (q.state === 'camp') q.hp = Math.min(1, q.hp + C.heal * dt);
     }
@@ -223,7 +223,8 @@
         const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left - view.ox) / view.k, my = (e.clientY - r.top - view.oy) / view.k;
         const hit = (o, rad) => Math.hypot(o.x - mx, o.y - my) < rad;
         // your own squad first, then a point, then your camp
-        const own = G.squads.filter((q) => q.side === 0 && q.state !== 'rout').find((q) => hit(q, 0.06));
+        const near = (o) => Math.hypot(o.x - mx, o.y - my);
+        const own = G.squads.filter((q) => q.side === 0 && q.state !== 'rout' && hit(q, 0.06)).sort((a, b) => near(a) - near(b))[0];
         if (own && (G.sel < 0 || G.squads[G.sel] !== own || own.state === 'camp')) { G.sel = G.squads.indexOf(own); KH.sfx('tap'); return; }
         const pi = G.points.findIndex((p) => hit(p, 0.08)), home = hit(camp(0), 0.09) ? -1 : null;
         const to = pi >= 0 ? pi : home;
@@ -279,9 +280,10 @@
     let last = performance.now(), shown = false;
     const frame = (now) => {
       if (!G || host().hidden) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      // fixed sub-steps, so the clock keeps real time even when frames come slowly
+      let left = Math.min(0.5, (now - last) / 1000); last = now;
       const nfx = G.fx.length;
-      step(G, dt);
+      while (left > 1e-6 && !G.over) { const d = Math.min(0.05, left); step(G, d); left -= d; }
       if (G.fx.length > nfx) { const f = G.fx[G.fx.length - 1]; KH.sfx(f.kind === 'fight' ? 'hit' : 'chime'); }
       if (G.over && !shown) { shown = true; resultCard(); }
       draw(now / 1000);
