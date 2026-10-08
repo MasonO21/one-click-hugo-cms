@@ -45,7 +45,8 @@ export class ErrorReporter {
   report(where: string, e: unknown): boolean {
     if (this.sent >= MAX_REPORTS) return false;
     const s = errorSignature(where, e);
-    const key = `${s.where}|${s.msg}`;
+    // numbers (ids, indices, coordinates) don't make a new failure: "no building 41" and "no building 97" share a slot
+    const key = `${s.where}|${s.msg.replace(/\d+(\.\d+)?/g, '#')}`;
     if (this.seen.has(key)) return false;
     this.seen.add(key);
     this.sent++;

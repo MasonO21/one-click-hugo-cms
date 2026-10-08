@@ -28,9 +28,17 @@ describe('ErrorReporter', () => {
     expect(r.report('sim a', new Error('boom'))).toBe(true);
     expect(r.report('sim a', new Error('boom'))).toBe(false);
     expect(r.report('sim b', new Error('boom'))).toBe(true);
-    for (let i = 0; i < 100; i++) r.report('ui', new Error(`e${i}`));
+    for (let i = 0; i < 100; i++) r.report(`ui ${String.fromCharCode(97 + (i % 26))}${Math.floor(i / 26)}`, new Error('e'));
     expect(sent.length).toBe(MAX_REPORTS);
     expect(sent[0]).toEqual(['error', { where: 'sim a', msg: 'boom', at: expect.any(String), n: 1 }]);
+  });
+
+  it('messages that differ only by numbers share one slot (a noisy error cannot use up the budget)', () => {
+    const sent: any[] = [];
+    const r = new ErrorReporter((ev, p) => sent.push([ev, p]));
+    for (let i = 0; i < 30; i++) r.report('uncaught', new Error(`boom ${i} at 1.${i}`));
+    r.report('sim crafting', new Error('recipe missing'));
+    expect(sent.map((s) => s[1].msg)).toEqual(['boom 0 at 1.0', 'recipe missing']);
   });
 
   it('a throwing tracker never escapes', () => {
