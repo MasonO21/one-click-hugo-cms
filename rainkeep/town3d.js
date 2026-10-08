@@ -1081,6 +1081,64 @@
     const g = A.grp(A.cyl(0.55, 0.62, 0.25, A.mat('#d9b98a', { flat: true }), 0, 0, 0, 8), A.cyl(0.3, 0.3, 0.06, A.mat('#c9a070', { flat: true }), 0, 0.25, 0, 8));
     return A.bake(g);
   }
+  // Gate defenses (defense.js): ballistas on the wall towers, oil cauldrons on the wall top by the gate and rows
+  // of stakes on the sand outside, more of each as they rise
+  const defense = {};
+  let defFlame = null;
+  function defenseModel(id, L) {
+    const g = new THREE.Group(), WZ = K.gate.z, wood = A.mat(A.P.woodD), woodL = A.mat(A.P.wood || '#a8743a'), iron = A.mat(A.P.dark), brass = A.mat(A.P.gold, { m: 0.6, r: 0.35 });
+    defFlame = defFlame || new THREE.MeshStandardMaterial({ color: '#ffb040', emissive: '#ff7a20', emissiveIntensity: 2 });
+    if (id === 'ballista') {
+      const spots = [[-6.6, 2.62], [6.6, 2.62], [-12.4, 2.62], [12.4, 2.62]].slice(0, L >= 7 ? 4 : L >= 4 ? 2 : 1);
+      for (const [x, y] of spots) {
+        const b = A.grp(A.box(0.5, 0.18, 0.7, wood, 0, 0, 0), A.box(0.1, 0.1, 1.1, woodL, 0, 0.22, 0.15), A.box(1.1, 0.07, 0.07, wood, 0, 0.24, 0.45), A.cyl(0.025, 0.025, 1.0, L >= 10 ? brass : iron, 0, 0.3, 0.2, 4));
+        b.children[b.children.length - 1].rotation.x = Math.PI / 2;
+        g.add(A.at(b, x, y, WZ));
+      }
+    } else if (id === 'cauldrons') {
+      const xs = [-3.4, 3.4, -4.6, 4.6].slice(0, L >= 9 ? 4 : L >= 6 ? 3 : L >= 3 ? 2 : 1);
+      for (const x of xs) {
+        g.add(A.cyl(0.26, 0.2, 0.32, iron, x, 1.92, WZ - 0.05, 10), A.cyl(0.28, 0.28, 0.05, L >= 10 ? brass : iron, x, 2.22, WZ - 0.05, 10), A.sph(0.11, defFlame, x, 1.86, WZ - 0.05, 6));
+        g.add(A.box(0.04, 0.5, 0.04, iron, x - 0.3, 1.9, WZ - 0.05), A.box(0.04, 0.5, 0.04, iron, x + 0.3, 1.9, WZ - 0.05), A.box(0.64, 0.04, 0.04, iron, x, 2.38, WZ - 0.05));
+      }
+    } else {
+      const rows = L >= 7 ? 3 : L >= 4 ? 2 : 1, step = L >= 10 ? 0.7 : 0.95;
+      for (let rI = 0; rI < rows; rI++) {
+        const z = WZ + 1.7 + rI * 0.75;
+        for (const side of [-1, 1]) for (let x = 2.8 + (rI % 2) * step * 0.5; x < 10.5; x += step) {
+          const st = A.cone(0.07, 0.9, L >= 10 ? brass : woodL, 0, 0, 0, 5);
+          st.position.set(side * x, 0.1, z); st.rotation.x = 0.55;
+          g.add(st);
+        }
+        for (const side of [-1, 1]) g.add(A.box(7.8, 0.06, 0.06, wood, side * 6.6, 0.25, z - 0.1));
+      }
+    }
+    g.traverse((o) => { if (o.material === defFlame) o.userData.dyn = true; });
+    A.bake(g);
+    // a tap anywhere near the works opens the Gate defenses
+    const proxy = new THREE.Mesh(new THREE.BoxGeometry(id === 'stakes' ? 16 : 3, 1.6, id === 'stakes' ? 2.6 : 1.2), new THREE.MeshBasicMaterial());
+    proxy.position.set(id === 'ballista' ? -6.6 : 0, id === 'stakes' ? 0.6 : id === 'ballista' ? 3 : 2, id === 'stakes' ? K.gate.z + 2.4 : K.gate.z);
+    if (id === 'cauldrons') proxy.scale.x = 3.4;
+    proxy.visible = false; proxy.userData.pid = 'defenses';
+    g.add(proxy);
+    g.userData.proxy = proxy;
+    return g;
+  }
+  function syncDefenses() {
+    if (!KH.defense) return;
+    for (const d of DATA.defense.items) {
+      const L = KH.defense.lvl(d.id), key = `${L}`;
+      const rec = defense[d.id] || (defense[d.id] = { key: '', model: null });
+      if (rec.key === key) continue;
+      rec.key = key;
+      if (rec.model) { scene.remove(rec.model); const k = hit.indexOf(rec.model.userData.proxy); if (k >= 0) hit.splice(k, 1); rec.model = null; }
+      if (!L) continue;
+      rec.model = defenseModel(d.id, L);
+      scene.add(rec.model);
+      hit.push(rec.model.userData.proxy);
+    }
+  }
+  T3.defense = defense; // for tests
   function syncDecor() {
     if (!KH.decorItems) return;
     const open = S.lv.wyrm >= DATA.decor.unlock;
@@ -1107,6 +1165,7 @@
     }
   }
   function animDecor(t) {
+    if (defFlame) defFlame.emissiveIntensity = 1.6 + 0.6 * Math.sin(t * 11) * Math.sin(t * 6.1);
     for (const id in decor) {
       const m = decor[id].model;
       if (!m) continue;
@@ -1768,7 +1827,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);

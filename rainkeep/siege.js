@@ -126,7 +126,7 @@
     if (S.siege.hosts < 1) return KH.toast(`No host is camped outside. The next gathers in ${fmtTime(G.every - S.siege.acc)}.`, 'warn');
     S.siege.hosts--;
     S.siege.run = { wave: 1, hp: 1, walls: G.walls, held: 0, king: false, kinds: makeWaves(), pick: null, cauldrons: false, bought: 0,
-      stock: Object.fromEntries(Object.keys(TAC).map((t) => [t, G.stock])), results: [], note: '', quit: false, base: onWalls(), troops: { ...S.troops }, heroes: KH.squadHome() };
+      stock: Object.fromEntries(Object.keys(TAC).map((t) => [t, G.stock + (KH.defense ? KH.defense.tactic(t) : 0)])), results: [], note: '', quit: false, base: onWalls(), troops: { ...S.troops }, heroes: KH.squadHome() };
     S.siege.last = null;
     UI.siegeAt = performance.now();
     KH.sfx('raid');
@@ -259,7 +259,7 @@
         title: 'Scorpion Siege', lvl: `Best: ${x.best ? `${x.best} wave${x.best === 1 ? '' : 's'}` : '—'}`,
         body: `${intro}${last}
           <div class="card stack"><div class="row"><div class="grow"><b>${x.hosts ? 'A Scorpion host is camped outside the walls' : 'No host in sight'}</b><div class="muted small">${x.hosts >= G.cap ? 'It waits for your horn.' : `A new host gathers every 6 hours. Next in ${fmtTime(G.every - x.acc)}.`}</div></div>${icon('i-horn', 'sg-horn')}</div>
-            <p class="muted small">Ten waves, each called by the scouts before it comes. Pick a tactic for each: ${Object.values(TAC).map((T) => `<b>${esc(T.name)}</b> against ${esc(kindName(T.vs).toLowerCase())}s`).join(', ')}. You have ${G.stock} of each. Your defenders' health carries from wave to wave, and three lost waves breach the gate. Hold all ten for the whole siege chest:</p>
+            <p class="muted small">Ten waves, each called by the scouts before it comes. Pick a tactic for each: ${Object.values(TAC).map((T) => `<b>${esc(T.name)}</b> against ${esc(kindName(T.vs).toLowerCase())}s`).join(', ')}. You have ${Object.keys(TAC).map((t) => `${G.stock + (KH.defense ? KH.defense.tactic(t) : 0)} ${TAC[t].name}`).join(', ')} (the gate defenses add more). Your defenders' health carries from wave to wave, and three lost waves breach the gate. Hold all ten for the whole siege chest:</p>
             <div class="row sg-chest">${icon('i-siegechest')}<div class="costs grow">${KH.rewardHTML(chest)}</div></div>
             ${away ? `<p class="notice heat small">${icon('i-flag')} Only the troops at home and the heroes in the keep man the walls. Troops out on the Dunes miss the siege.</p>` : ''}
             <button class="btn wide ${x.hosts >= 1 ? 'gold' : 'off'}" data-act="siegestart" data-primary>${icon('i-horn')}Sound the horn</button></div>

@@ -387,6 +387,7 @@
   KH.on('intelDone', (e) => addPts('oasis', DATA.intel.warPts * e.stars));
   KH.on('temper', (e) => addPts('oasis', 15 * e.lv));
   KH.on('fish', () => addPts('oasis', DATA.fishing.warPts));
+  KH.on('defense', (e) => addPts('oasis', 10 * e.to));
   ACT.evclaim = (i) => {
     i = Number(i);
     const def = EV.defs[curKey()];

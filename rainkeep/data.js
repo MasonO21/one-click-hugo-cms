@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.15.0',
+  version: '4.16.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -953,6 +953,7 @@ const DATA = {
     { id: 'rival', text: 'March on a rival keep', n: 1, pts: 15, show: (S) => S.lv.wyrm >= 8 },
     { id: 'siege', text: 'Hold 3 waves of a Scorpion Siege', n: 3, pts: 15, show: (S) => S.lv.wyrm >= 10 },
     { id: 'intel', text: 'Complete 2 watchtower reports', n: 2, pts: 15, show: (S) => S.lv.wyrm >= 4 },
+    { id: 'defense', text: 'Raise a gate defense', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
     { id: 'temper', text: 'Temper a heirloom', n: 1, pts: 10, show: (S) => Object.values(S.heroes).some((h) => h.stars >= 3) },
   ],
@@ -1256,6 +1257,21 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- Gate Defenses ----------
+  // Works at the front gate, raised with resources (scaled to the keep) up to Lv 10. Each helps the defenders
+  // against raids and warbands every level, and at Lv 5 and Lv 10 brings one more of its tactic to every
+  // Scorpion Siege. They stand on the walls in 3D and grow with their level.
+  defense: {
+    unlock: 5, // Rainwyrm level (when raiders start testing the walls)
+    max: 10, growth: 1.32, // cost growth per level
+    tacticAt: [5, 10], // levels that add one more of the work's tactic to every siege
+    items: [
+      { id: 'ballista', name: 'Ballista Towers', icon: 'i-ballista', tactic: 'ballista', cost: { stone: 3, copper: 1.5 }, raidAtk: 0.02, unit: 'defenders’ attack against raids', desc: 'Ballistas on the wall towers. Your defenders hit raiders harder, and every siege brings more Ballista bolts.' },
+      { id: 'cauldrons', name: 'Oil Cauldrons', icon: 'i-firepot', tactic: 'pots', cost: { stone: 2, food: 2, water: 1 }, raidDef: 0.02, unit: 'defenders’ defense against raids', desc: 'Cauldrons of oil along the wall by the gate. Your defenders hold better, and every siege brings more Fire Pots.' },
+      { id: 'stakes', name: 'Stake Yard', icon: 'i-stakes', tactic: 'stakes', cost: { stone: 2.5, food: 1.5 }, raidWeaken: 0.015, unit: 'weaker raiders at the gate', desc: 'Rows of sharpened stakes before the gate. Raiders arrive weaker, and every siege brings more Stakes.' },
+    ],
+  },
+
   // ---------- Spring Fishing ----------
   // Since the rains came back the spring has fish in it. Cast, tap when the float dips, then hold to reel and
   // let go when the fish runs; too much tension and the line snaps.
@@ -1274,6 +1290,8 @@ const DATA = {
       { id: 'eel', name: 'Glass Eel', w: 10, pull: 1.6, cm: [40, 90], journals: 2, color: '#bfe8f0', text: 'You can see its heart beating. The archivists want every one.' },
       { id: 'whiskers', name: 'Old Whiskers', w: 6, pull: 2.0, cm: [60, 120], whetstone: 2, starglass: 20, color: '#7a6a4a', text: 'A catfish older than the keep. It has swallowed more than one whetstone.' },
       { id: 'koi', name: 'Rain Koi', w: 2, pull: 2.4, cm: [50, 80], starglass: 80, beacons: 1, color: '#ff8a5a', text: 'Red and gold, and only ever seen after rain. Luck for a year.' },
+    { id: 'def10', text: 'Raise gate defenses 10 times', stat: 'defense', n: 10, reward: { starglass: 150 } },
+    { id: 'def30', text: 'Raise every gate defense to Lv 10', stat: 'defense', n: 30, reward: { shard_legendary: 1 } },
     ],
     firstCatch: 2, // the first of each kind pays double
     warPts: 8, // Oasis Wars points a fish
@@ -1324,6 +1342,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.16', items: [
+      { icon: 'i-ballista', name: 'Gate Defenses', text: 'Ballista towers, oil cauldrons and a stake yard at the gate: raise them for stronger defenders against raids and more tactics in every Scorpion Siege. They stand on the walls and grow as you raise them.', act: 'defenses', open: (S) => S.lv.wyrm >= 5, needs: 'Rainwyrm Lv 5' },
+    ] },
     { v: '4.15', items: [
       { icon: 'i-fish', name: 'Spring Fishing', text: 'Fish have come back to the spring with the rains. Cast, strike when the float dips, and reel without snapping the line. Six kinds to catch, from minnows to the Rain Koi.', act: 'fishing', open: (S) => S.lv.wyrm >= 3, needs: 'Rainwyrm Lv 3' },
     ] },
