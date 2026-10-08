@@ -273,13 +273,17 @@ describe('expeditions: events', () => {
     const launched = collect<{ dest: string; squad: number[]; seconds: number }>(g, 'expedition:launched');
     const returned = collect<{ dest: string }>(g, 'expedition:returned');
     const collected = collect<{ dest: string; region: string; reward: unknown }>(g, 'expedition:collected');
-    const toasts = collect<{ text: string }>(g, 'ui:toast');
+    const toasts = collect<{ text: string; icon?: string }>(g, 'ui:toast');
     const ids = crew(g).slice(0, 2).map((c) => c.id);
     const e = g.sys.expeditions.launch('pf_berries', ids)!;
     expect(launched).toEqual([expect.objectContaining({ dest: 'pf_berries', squad: ids, seconds: 900 })]);
     rig.wait(15 * MIN);
     expect(returned).toEqual([expect.objectContaining({ dest: 'pf_berries' })]);
-    expect(toasts.some((t) => /back from Glowberry Picking/.test(t.text))).toBe(true);
+    const back = toasts.find((t) => /back from Glowberry Picking/.test(t.text))!;
+    expect(back).toBeTruthy();
+    // the icon is shown next to the text: "🧭 🧭 Your squad…" for a Frontier site, which has no painting to swap in
+    expect(back.icon).toBe('🧭');
+    expect(back.text.startsWith('🧭')).toBe(false);
     g.sys.expeditions.collect(e.id);
     expect(collected).toEqual([expect.objectContaining({ dest: 'pf_berries', region: 'pinewood_forest' })]);
   });

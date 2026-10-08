@@ -391,7 +391,8 @@ export class ExpeditionSystem extends System {
     const name = this.nameOf(e);
     g.bus.emit('expedition:returned', { id: e.id, dest: e.dest, region: this.regionOf(e), name });
     const who = e.squad.length === 1 ? (g.sys.colonists.get(e.squad[0])?.name.split(' ')[0] ?? 'Your explorer') + ' is' : 'Your squad is';
-    g.toast(`🧭 ${who} back from ${name}! Collect the haul at the ${this.hqDef()?.name ?? 'Radio Tower'}.`, 'success', '🧭');
+    // the icon carries the 🧭 (the UI swaps in the destination's painting when it has one)
+    g.toast(`${who} back from ${name}! Collect the haul at the ${this.hqDef()?.name ?? 'Radio Tower'}.`, 'success', '🧭');
   }
 
   /** Unpack a returned squad's haul. Returns what was granted (null if there is nothing to collect). */
@@ -476,7 +477,7 @@ export class ExpeditionSystem extends System {
     fr.charted.push(charted);
     g.bus.emit('expedition:charted', { site: charted, count: fr.charted.length });
     const m = this.milestones().find((x) => x.count === fr.charted.length);
-    if (m) g.toast(`🏅 Star Chart milestone: ${m.title}! Claim it on the Frontier tab.`, 'reward', '🏅');
+    if (m) g.toast(`Star Chart milestone: ${m.title}! Claim it on the Frontier tab.`, 'reward', '🏅');
     return charted;
   }
 
