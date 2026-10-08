@@ -1,6 +1,6 @@
 /*
  * Rainkeep: Pacts & Feuds. Every rival keep (rivals.js) holds you in some regard, from -100 to 100: gifts raise it,
- * raids lower it, and it drifts back toward indifference over the days. A rival that trusts you (60 and up) will
+ * raids lower it, and it drifts back toward indifference over the days. A rival that trusts you (50 and up) will
  * sign a pact: it sends tribute every 8 hours and warriors to stand on your walls when raiders come (more for each
  * pact, up to three), and it can't be raided while the pact holds. Breaking one turns the keep into an enemy. A
  * keep in a feud (-50 and below) sends its warband against your gate on its own every so often, so the choice is

@@ -1265,16 +1265,16 @@ const DATA = {
 
   // ---------- Pacts & Feuds ----------
   // Each rival keep holds you in some regard, from -100 (a feud) to 100. Gifts raise it, raids lower it, and it drifts
-  // back toward indifference over the days. A rival that trusts you (60 and up) will sign a pact: it sends tribute
+  // back toward indifference over the days. A rival that trusts you (50 and up) will sign a pact: it sends tribute
   // every 8 hours and warriors to stand on your walls when raiders come, and it can't be raided while the pact
   // holds. Breaking a pact turns it into a feud. A rival in a feud (-50 and below) sends its warband against you
   // on its own every so often.
   pacts: {
-    bands: [[-100, 'Feud', '#d0503a'], [-50, 'Hostile', '#e0904a'], [-10, 'Wary', '#c9a777'], [20, 'Friendly', '#8ac86a'], [60, 'Trusted', '#3fc8c0']],
-    gift: { cost: { food: 1, water: 1, stone: 0.5 }, gain: 15, every: 8 * 3600 }, // quarter-crates; once every 8 hours a keep
+    bands: [[-100, 'Feud', '#d0503a'], [-50, 'Hostile', '#e0904a'], [-10, 'Wary', '#c9a777'], [20, 'Friendly', '#8ac86a'], [50, 'Trusted', '#3fc8c0']],
+    gift: { cost: { food: 1, water: 1, stone: 0.5 }, gain: 20, every: 6 * 3600 }, // quarter-crates; once every 6 hours a keep
     raid: -35, // standing lost when you raid a keep, won or lost
     drift: 4, // standing a day back toward 0 (not while a pact holds)
-    pact: { need: 60, slots: [[8, 1], [12, 2], [16, 3]], tribute: { food: 0.6, water: 0.6, stone: 0.4 }, every: 8 * 3600, gate: 0.1, broken: -100 },
+    pact: { need: 50, slots: [[8, 1], [12, 2], [16, 3]], tribute: { food: 0.6, water: 0.6, stone: 0.4 }, every: 8 * 3600, gate: 0.1, broken: -100 },
     feud: { at: -50, every: [6 * 3600, 10 * 3600] }, // a feuding keep strikes on its own about this often
     warPts: 10, // Oasis Wars points for a gift
   },
