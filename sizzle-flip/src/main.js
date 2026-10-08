@@ -70,9 +70,11 @@ class App {
     if (this.game) this.game.bgDirty = true;
     const landscapePhone = cw > ch && ch < 500 && ('ontouchstart' in window);
     document.getElementById('rotate').hidden = !landscapePhone;
+    if (this.ui) this.ui.fitTitle();
   }
 
-  baseScale() { return Math.min(this.cw / PHYS.W, this.ch / 1100); }
+  // the playfield plus a sliver beyond each side wall, so a sausage lying against a wall shows its whole tip
+  baseScale() { return Math.min(this.cw / (PHYS.W + 20), this.ch / 1100); }
   maxDrag() { return Math.max(120, Math.min(260, 0.42 * Math.min(this.cw, this.ch))); }
 
   // ---------------------------------------------------------------- input

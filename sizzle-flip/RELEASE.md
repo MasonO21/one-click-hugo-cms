@@ -8,6 +8,7 @@ Everything in the code is release-ready. What is left needs **your** accounts, k
 |---|---|
 | AdMob ad unit ids (Interstitial + Rewarded, Android and iOS) | `src/ads-config.js` → `ADMOB_UNITS` |
 | AdMob **app** id for Android | `android/app/src/main/res/values/strings.xml` → `admob_app_id` |
+| AdMob **app** id for iOS | `ios/App/App/Info.plist` → `GADApplicationIdentifier` |
 | Contact email for the privacy policy | `src/privacy.js` → `PRIVACY_CONTACT` |
 | If the game is aimed at children under 13 | `src/ads-config.js` → `childDirected: true` (and Play's Families policy applies) |
 
@@ -26,9 +27,9 @@ They are defined in `src/shop-config.js` (with the character price and the 20% b
 
 Test mode (test ads plus the **Settings → Ad testing** panel) switches off by itself once no Google test id is left.
 
-## 2. Host two small files
+## 2. Host three small files
 
-1. **Privacy policy.** `npm run build` writes `dist/privacy.html`. Host it anywhere public, for example GitHub Pages or Netlify, then use its URL in both store listings. The same text is in the app under **Options → Privacy policy**.
+1. **Privacy policy and support page.** `npm run build` writes `dist/privacy.html` and `dist/support.html`. Host them anywhere public, for example GitHub Pages or Netlify, then use their URLs in both store listings (the App Store requires a Support URL). The privacy text is also in the app under **Options → Privacy policy**.
 2. **app-ads.txt.** On your developer website (the one you enter in the store listing), serve `https://<your-site>/app-ads.txt` containing the line AdMob shows you, which looks like:
    `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`
 3. In AdMob → **Privacy & messaging**, create a **GDPR consent message** and a **US states message**, and publish them. The app already shows them at launch and offers **Options → Privacy choices** where required.
@@ -98,25 +99,30 @@ keyPassword=…
 
 ## 4. iOS (App Store) — needs a Mac with Xcode
 
+The Xcode project is part of the repository (`ios/`) and is already set up for the App Store:
+
+- the game's app icon and launch screen;
+- `Info.plist` with the AdMob app id (Google's test id until you set yours), the tracking-prompt text, Google's 50 SKAdNetwork ids, "no non-exempt encryption" (so App Store Connect stops asking about export compliance), iPhone portrait only and every iPad orientation (iPad multitasking requires all four);
+- a privacy manifest, `ios/App/App/PrivacyInfo.xcprivacy`, which declares that the Preferences plugin uses UserDefaults (reason CA92.1). Apple rejects uploads without one. The Google Mobile Ads, consent and Capacitor SDKs ship their own manifests.
+
+`npm run release:check` checks all of this. The GitHub workflow also builds the iPhone app and checks the finished app bundle (`tools/ci/ios-bundle-check.sh`).
+
 ```bash
-npm run cap:sync
-npx cap add ios && npx cap sync ios && npx cap open ios
+npm ci
+npm run cap:sync            # builds the game and copies it into android/ and ios/
+npx cap open ios
 ```
 
-**In `ios/App/App/Info.plist`, add:**
+**In Xcode:**
 
-- `GADApplicationIdentifier`: your iOS AdMob app id.
-- `NSUserTrackingUsageDescription`: "Your data will be used to show you more relevant ads."
-- `SKAdNetworkItems`: Google's list from the AdMob iOS quick-start.
+1. In `ios/App/App/Info.plist`, set `GADApplicationIdentifier` to your **iOS** AdMob app id (AdMob → Apps → App settings). Until you do, `release:check` fails.
+2. **Signing & Capabilities:** choose your team (the bundle id is `com.sizzleflip.game`) and add the **In-App Purchase** capability.
+3. **General → Identity:** raise the **Build** number for every upload. The version is 1.0.
+4. **Product → Archive**, then **Distribute App → App Store Connect**.
 
 Don't add `SKIncludeConsumableInAppPurchaseHistory`: it would make every finished Hot Dog purchase come back after a reinstall.
 
 The purchases plugin is patched (`patches/@capgo+native-purchases+8.8.1.patch`, applied by `npm ci` / `npm install` through `postinstall`) so that it leaves each purchase unfinished until the game has credited it. `npm run release:check` verifies the patch is in place.
-
-**Then:**
-
-1. Set the bundle id `com.sizzleflip.game`, your team, the version and the build number, and add the **In-App Purchase** capability (Signing & Capabilities).
-2. Choose **Product → Archive**, then upload it to App Store Connect.
 
 **App Store Connect:**
 
@@ -143,6 +149,9 @@ The purchases plugin is patched (`patches/@capgo+native-purchases+8.8.1.patch`, 
   - Usage data: product interaction, for advertising and analytics.
   - Diagnostics: for analytics.
 - **Privacy policy URL:** the hosted `privacy.html`.
+- **Support URL** (required): the hosted `support.html` (`npm run build` writes it next to `privacy.html`; it has help for players and your contact email).
+- **Age rating:** no violence, gambling or user content; "In-app purchases" and "Advertising": yes. Expect 4+.
+- **App Review notes:** "No account or sign-in. The six Hot Dog packs are consumable in-app purchases; Hot Dogs unlock cosmetic characters in Shop (title screen → SHOP). Ads are AdMob; the tracking prompt appears at first launch." 
 
 ## 5. Final check before you press publish
 
@@ -169,5 +178,21 @@ The purchases plugin is patched (`patches/@capgo+native-purchases+8.8.1.patch`, 
 - **Ads:**
   - The pacing rules, reward ads, skip and the long aim guide in the browser: `tools/e2e-ads.mjs`, 42 checks.
   - The native AdMob event handling (an early close, failure to show, no-fill retries, consent and privacy options) and the Android back button on every screen, using mocked plugins: `tools/e2e-native.mjs`, 24 checks.
-- **Robustness:** the game recovers from a zero-size view, a jumping frame clock and a broken camera: `tools/e2e-recover.mjs`, 20 checks. Saves survive corrupt data and storage that throws.
-- **Layouts:** 320×568 up to 430×932 phones, plus tablets in both orientations. Android 16 ignores the portrait lock on large screens.
+- **Every mechanic:** all 125 object types, each as configured in the levels (size, flip, motion, timers, launch, belt speed, wind), alone in a test level with the sausage dropped on it and thrown at it: platforms hold it, bouncers bounce, toasters and jack-in-the-boxes pop it, fans and lifts blow it, belts carry it, moving platforms carry it along, every hazard fails it with its own reason (and timed ones only while on), the bun wins, every world's floor fails; nothing passes through a surface or leaves the world: `tools/test-mechanics.mjs`, 11,230 checks.
+- **Random play on every level:** more than 57,000 random and sloppy-route flips with the game's own respawn rules: no soft-locks, no respawn loops, no traps, nothing passing through objects: `tools/soak-levels.mjs`. In the real game with rendering, effects and sound, random flips, pauses, restarts and look-arounds on all 200 levels, with no page errors: `tools/e2e-chaos.mjs`.
+- **Fixed in this round:**
+  - The sausage could be held still at the end of a conveyor belt or slip endlessly on a fast cart or between a pan handle and the wall, and couldn't be flipped until the 12-second "stuck" rule ended the attempt. Steady contact now counts as resting after 1.5 s. The 23 stored routes this affects were re-timed so every flip happens at exactly the same moment (`tools/retime-routes.mjs`).
+  - A checkpoint could be saved on a spot the sausage was slowly creeping off (a pan handle, a fence post, a stump), so every respawn fell straight off again. Spots are now tried out before they become checkpoints, and a respawn that fails at once falls back to the previous one (`src/checkpoint.js`).
+  - The *Top Dog* trophy unlocked after level 200 even with skipped levels left.
+  - Small screens: long titles shrink to fit, the level tip makes room for the hint and skip buttons, trophy banners no longer cover the level-complete card or another message, and NEXT stays on one line at 320 px.
+  - The in-app privacy policy names only the store of the device it runs on.
+  - From the visual review of every level:
+    - Labels on props that a level places mirrored ("TOYS", "SNACKS", "FROZEN", "CRUNCH O'S", "Hi ☺") were backwards; they now read correctly.
+    - 78 level names were matched to what the level contains: "Piano Man" is now the level with the piano.
+    - The off-screen bun marker sits below the top HUD row instead of on the level title.
+    - Win and fail words stay below the HUD and inside the screen, and bounce words no longer pile up.
+    - After a win at par the HUD shows the three stars earned.
+    - The 👁 overview fits the level between the HUD rows and fills an iPad's width.
+    - A sausage lying against a side wall is no longer cut by the screen edge.
+    - Two rocking horses (levels 106 and 120) stood with their rockers through their shelf; they now stand on it, and both levels' routes still win.
+- **Layouts:** every screen and dialog tapped through on 9 sizes, from 320×568 phones to iPad landscape and iPad Split View, with simulated notches, and audited automatically (`tools/visual-screens.mjs`). Every level screenshotted at its start, whole-level overview, mid-flight and win on iPhone Pro Max, iPhone SE and iPad, and reviewed (`tools/visual-levels.mjs`). Android 16 ignores the portrait lock on large screens.

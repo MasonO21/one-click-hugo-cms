@@ -9,9 +9,11 @@
     "levels": "node tools/generate.mjs --workers 4",
     "cap:sync": "node tools/build.mjs && npx cap sync",
     "release:check": "node tools/release-check.mjs",
-    "test": "node tools/e2e-ads.mjs && node tools/e2e-native.mjs && node tools/e2e-shop.mjs && node tools/e2e-recover.mjs && node tools/test-store-products.mjs && node tools/e2e-all.mjs && node tools/e2e-all.mjs --items",
+    "test": "node tools/test-mechanics.mjs && node tools/soak-levels.mjs --jobs 4 && node tools/e2e-ads.mjs && node tools/e2e-native.mjs && node tools/e2e-shop.mjs && node tools/e2e-recover.mjs && node tools/test-store-products.mjs && node tools/e2e-all.mjs && node tools/e2e-all.mjs --items",
     "store:products": "node tools/create-store-products.mjs",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "test:chaos": "node tools/e2e-chaos.mjs",
+    "test:screens": "node tools/visual-screens.mjs && node tools/visual-levels.mjs --device max"
   },
   "keywords": [],
   "author": "",

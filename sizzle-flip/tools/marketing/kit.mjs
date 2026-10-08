@@ -47,17 +47,21 @@ const PAGE_KIT = () => {
       let n = 0, wait = -1, t0 = 0;
       mk.due = null; mk.frozen = false; mk.shots = sol.length; mk.fired = 0;
       const s = game.sim, step = s.step.bind(s);
-      s.step = () => {
-        if (mk.frozen) return;
-        step();
-        if (free) return;
-        if (game.phase !== 'play' || n >= sol.length || mk.due) return;
+      // exactly as tools/solver.mjs replays a route: the readiness check also runs once before the first step
+      const tick = () => {
+        if (free || game.phase !== 'play' || n >= sol.length || mk.due) return;
         if (wait < 0) {
           if (!(n === 0 ? s.canLaunch() : s.t - t0 > 0.15 && s.canLaunch())) return;
           wait = Math.round((sol[n][2] || 0) / (window.__PHYS_DT || PHYS_DT));
         } else wait--;
         if (wait <= 0) { mk.due = { a: sol[n][0], p: sol[n][1] }; mk.frozen = true; t0 = s.t; n++; wait = -1; }
       };
+      s.step = () => {
+        if (mk.frozen) return;
+        step();
+        tick();
+      };
+      tick();
     },
     // the drag for the due shot: k = 0..1 along the pull. Returns the screen points.
     aim(k) {

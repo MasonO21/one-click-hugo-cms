@@ -4,7 +4,8 @@ import { totalStars } from './storage.js';
 import { SKINS, drawSausage, makeFaceState } from './art/sausage.js';
 import { renderLevelThumb } from './thumbs.js';
 import { ACHIEVEMENTS } from './achievements.js';
-import { PRIVACY_HTML } from './privacy.js';
+import { privacyHtml } from './privacy.js';
+import { PLATFORM } from './native.js';
 import { ITEMS, ITEM_BY_ID, CATEGORIES, drawItem } from './art/items.js';
 import { ALL, fmt } from './shop.js';
 import { SKIN_PRICE, HOTDOGS_PER_DOLLAR, PACKS } from './shop-config.js';
@@ -49,6 +50,16 @@ export class UI {
     if (id === 'scr-skins') this.renderSkins();
     if (id === 'scr-shop') { this.renderShop(); this.app.shop.refresh(); }
     if (id === 'scr-settings') { this.syncToggles(); this.renderAim(); this.renderAdTest(); $('privacy-choices').hidden = !this.app.ads.privacyOptionsAvailable; }
+    this.fitTitle(id);
+  }
+
+  // A long title on a narrow phone ("Backyard BBQ" next to the stars): shrink it until it fits, down to 17 px.
+  fitTitle(id = this.current) {
+    const h = id && document.querySelector(`#${id} header.bar h2`);
+    if (!h) return;
+    h.style.fontSize = '';
+    let fs = parseFloat(getComputedStyle(h).fontSize);
+    while (h.scrollWidth > h.clientWidth && fs > 17) { fs -= 1; h.style.fontSize = `${fs}px`; }
   }
 
   hideScreens() {
@@ -105,7 +116,7 @@ export class UI {
       case 'pause': app.pause(true); this.syncToggles(); this.renderAim(); $('scr-pause').hidden = false; break;
       case 'resume': $('scr-pause').hidden = true; app.pause(false); break;
       case 'restart': $('scr-pause').hidden = true; $('scr-win').hidden = true; app.restartLevel(); break;
-      case 'overview': app.game && app.game.toggleOverview(); break;
+      case 'overview': app.game && app.game.toggleOverview(); if (app.game && app.game.overview) $('hud-tip').hidden = true; break;
       case 'hint': this.hint(); break;
       case 'skip': this.offerSkip(); break;
       case 'long-aim': this.longAim(); break;
@@ -119,7 +130,7 @@ export class UI {
       case 'reset': this.confirm('Erase all stars and progress?', () => { app.resetProgress(); this.toast('Progress reset'); }); break;
       case 'confirm-yes': $('scr-confirm').hidden = true; this._confirmCb && this._confirmCb(); break;
       case 'confirm-no': $('scr-confirm').hidden = true; this._confirmNo && this._confirmNo(); break;
-      case 'privacy': $('privacy-text').innerHTML = PRIVACY_HTML; $('scr-privacy').hidden = false; $('privacy-text').scrollTop = 0; break;
+      case 'privacy': $('privacy-text').innerHTML = privacyHtml(PLATFORM); $('scr-privacy').hidden = false; $('privacy-text').scrollTop = 0; break;
       case 'privacy-close': $('scr-privacy').hidden = true; break;
       case 'privacy-choices': app.ads.showPrivacyOptions(); break;
       case 'ad-preview': app.ads.preview(el.dataset.kind).then(() => this.renderAdTest()); break;
@@ -228,7 +239,22 @@ export class UI {
   trophyToast(a) {
     const t = document.getElementById('trophy');
     t.innerHTML = `<span class="ti">${a.icon}</span><span><small>TROPHY UNLOCKED</small><b>${a.name}</b></span>`;
+    t.style.top = ''; t.style.scale = '';
     t.hidden = false;
+    // Over an open card (the level-complete card on a short phone): above the card's title ribbon if there is
+    // room, else under the card, else a little smaller at the very top — never on top of the title.
+    const card = [...document.querySelectorAll('.modal:not([hidden]) > .card')].pop();
+    const msg = $('toast');
+    if (!msg.hidden) t.style.top = `${msg.getBoundingClientRect().bottom + 8}px`; // under a message that is showing
+    else if (card) {
+      const r = card.getBoundingClientRect(), h = t.offsetHeight, base = parseFloat(getComputedStyle(t).top), sat = base - 86;
+      const ceil = r.top - 30; // the ribbon sticks out above the card
+      if (base + h > ceil - 6) {
+        if (ceil - 6 - h >= sat + 4) t.style.top = `${ceil - 6 - h}px`;
+        else if (r.bottom + 10 + h <= innerHeight - 8) t.style.top = `${r.bottom + 10}px`;
+        else { t.style.top = `${sat + 2}px`; t.style.scale = '0.8'; }
+      }
+    }
     t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
     clearTimeout(this._trT);
     this._trT = setTimeout(() => { t.hidden = true; }, 3200);
@@ -559,7 +585,7 @@ export class UI {
     const tip = game.level.tip;
     const tipEl = $('hud-tip');
     clearTimeout(this._tipT);
-    if (tip) {
+    if (tip && !this.tipCrowded()) {
       tipEl.innerHTML = tip;
       tipEl.hidden = false;
       this._tipT = setTimeout(() => { tipEl.hidden = true; }, 6500);
@@ -568,6 +594,8 @@ export class UI {
 
   hideHud() { $('hud').hidden = true; }
 
+  tipCrowded() { return innerWidth < 400 && (!$('hud-hint').hidden || !$('hud-skip').hidden); }
+
   updateHud(game) {
     const el = $('hud-flips');
     if (el.textContent !== String(game.flips)) {
@@ -575,7 +603,8 @@ export class UI {
       el.parentElement.classList.remove('bump'); void el.parentElement.offsetWidth; el.parentElement.classList.add('bump');
     }
     const stars = this.app.starsFor(Math.max(game.flips, 1), game.info.par);
-    const projected = game.flips < game.info.par ? 3 : this.app.starsFor(game.flips + 1, game.info.par);
+    // while playing: the stars still possible (another flip is needed); once won: the stars earned
+    const projected = game.phase === 'win' ? this.app.starsFor(game.flips, game.info.par) : game.flips < game.info.par ? 3 : this.app.starsFor(game.flips + 1, game.info.par);
     $('hud-stars').innerHTML = [0, 1, 2].map(j => j < projected ? '★' : '<span class="off">★</span>').join('');
     const ads = this.app.ads;
     const hint = $('hud-hint');
@@ -593,6 +622,8 @@ export class UI {
     $('skip-ad').hidden = !ads.enabled;
     if (canSkip && skip.hidden) { skip.hidden = false; this.toast('Still stuck? Tap ⏭ to skip this level', 2600); }
     else if (!canSkip) skip.hidden = true;
+    // on a narrow phone the level tip and the hint / skip buttons don't fit side by side: the buttons win
+    if (this.tipCrowded()) $('hud-tip').hidden = true;
   }
 
   // ------------------------------------------------------------ win

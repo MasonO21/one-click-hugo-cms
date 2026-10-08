@@ -92,11 +92,9 @@ jobs:
           cache-dependency-path: sizzle-flip/package-lock.json
       - run: xcodebuild -version && xcrun simctl list runtimes | grep -i ios
       - run: npm ci
-      - name: Create the Xcode project (npx cap add ios) with the self-test app
+      - name: Put the self-test app into the Xcode project (ios/, as committed)
         run: |
           node tools/build.mjs --smoke
-          npx cap add ios
-          bash tools/ci/ios-plist.sh
           npx cap sync ios
       - name: Build for the Simulator (Debug)
         run: |
@@ -116,6 +114,8 @@ jobs:
             > "$RUNNER_TEMP/device.log" 2>&1 \
             || { grep -E "error:" -A4 "$RUNNER_TEMP/device.log" | head -120; tail -40 "$RUNNER_TEMP/device.log"; exit 1; }
           echo "iPhone build OK."
+      - name: Check the iPhone app bundle for what App Store Connect requires
+        run: bash tools/ci/ios-bundle-check.sh build-device/Build/Products/Release-iphoneos/App.app
       - uses: actions/upload-artifact@v4
         if: always()
         with:

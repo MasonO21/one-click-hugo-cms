@@ -8,7 +8,13 @@
 
 **Category:** Games → Casual (Play) · Games / Casual (App Store)
 
-**App Store keywords** (≤ 100, comma-separated): sausage,hot dog,flip,physics,puzzle,casual,one touch,bun,kitchen,jump
+**App Store keywords** (≤ 100, comma-separated): sausage,hot dog,flip,physics,puzzle,casual,one touch,bun,kitchen,jump,bounce,food,arcade,trampoline
+
+**Support URL** (App Store, required): `https://<your-site>/support.html` — `npm run build` writes it to `dist/support.html` (help and your contact email).
+
+**Privacy policy URL** (both stores, required): `https://<your-site>/privacy.html` (`dist/privacy.html`).
+
+**Copyright** (App Store): `2026 <your name or company>`
 
 **Promotional text** (App Store, ≤ 170): Drag, aim, flip! Bounce a squishy sausage off toasters, trampolines and rubber ducks across 10 wacky worlds until it lands in the bun.
 

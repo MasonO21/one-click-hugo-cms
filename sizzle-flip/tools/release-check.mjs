@@ -94,14 +94,39 @@ try {
   if (tracked.length) fail(`signing key files are committed to git: ${tracked.join(', ')}`); else ok('no signing keys in git');
 } catch (e) { /* not a git checkout */ }
 
-// --- iOS (only once the Xcode project exists)
+// --- iOS project (ios/, committed; RELEASE.md section 4)
 const plist = read('ios/App/App/Info.plist');
-if (plist === null) warn('ios/ not created yet (npx cap add ios on a Mac) — see RELEASE.md');
+if (plist === null) fail('ios/ is missing — the Xcode project is part of the repository (git checkout ios/)');
 else {
-  for (const k of ['GADApplicationIdentifier', 'NSUserTrackingUsageDescription', 'SKAdNetworkItems']) {
-    if (!plist.includes(k)) fail(`ios Info.plist is missing ${k}`); else ok(`ios Info.plist has ${k}`);
-  }
+  const val = (k) => { const m = plist.match(new RegExp(`<key>${k}</key>\\s*<(string|true|false)\\s*/?>([^<]*)`)); return m ? (m[1] === 'string' ? m[2] : m[1]) : null; };
+  const arr = (k) => { const m = plist.match(new RegExp(`<key>${k.replace('~', '~')}</key>\\s*<array>([\\s\\S]*?)</array>`)); return m ? [...m[1].matchAll(/<string>([^<]+)<\/string>/g)].map(x => x[1]) : []; };
+  const gad = val('GADApplicationIdentifier') || '';
+  if (!gad || gad.startsWith(GOOGLE_TEST_PUB)) fail('iOS AdMob app id is the test id — set GADApplicationIdentifier in ios/App/App/Info.plist');
+  else ok(`iOS AdMob app id ${gad}`);
+  if (!val('NSUserTrackingUsageDescription')) fail('ios Info.plist is missing NSUserTrackingUsageDescription (the tracking prompt text)'); else ok('iOS tracking prompt text set');
+  const skan = (plist.match(/\.skadnetwork</g) || []).length;
+  if (skan < 40) fail(`ios Info.plist lists ${skan} SKAdNetwork ids — use Google's full list (AdMob iOS quick-start)`); else ok(`iOS lists ${skan} SKAdNetwork ids`);
+  if (val('ITSAppUsesNonExemptEncryption') !== 'false') warn('ios Info.plist: ITSAppUsesNonExemptEncryption not set — App Store Connect will ask about export compliance on every upload');
+  else ok('iOS export compliance answered (no non-exempt encryption)');
+  const phone = arr('UISupportedInterfaceOrientations'), pad = arr('UISupportedInterfaceOrientations~ipad');
+  if (phone.join() !== 'UIInterfaceOrientationPortrait') fail(`iPhone orientations ${phone.join(', ')} — the game is portrait only (landscape shows "rotate your phone")`);
+  else if (pad.length !== 4) fail('iPad must allow all four orientations (iPad multitasking), or App Store Connect rejects the upload');
+  else ok('iPhone portrait only, iPad all orientations');
   if (plist.includes('SKIncludeConsumableInAppPurchaseHistory')) fail('ios Info.plist sets SKIncludeConsumableInAppPurchaseHistory — remove it (finished Hot Dog purchases would come back after a reinstall)');
+  const manifest = read('ios/App/App/PrivacyInfo.xcprivacy') || '', pbx = read('ios/App/App.xcodeproj/project.pbxproj') || '';
+  if (!manifest.includes('NSPrivacyAccessedAPICategoryUserDefaults') || !/PrivacyInfo\.xcprivacy in Resources \*\/,/.test(pbx)) fail('iOS privacy manifest missing or not in the app target (ios/App/App/PrivacyInfo.xcprivacy) — uploads without it are rejected');
+  else ok('iOS privacy manifest in the app target (UserDefaults declared for the Preferences plugin)');
+  const icon = (f) => { try { return crypto.createHash('sha1').update(fs.readFileSync(path.join(root, f))).digest('hex'); } catch (e) { return null; } };
+  if (icon('ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png') !== icon('icons/ios-icon-1024.png')) fail('the iOS app icon is not the game icon — run node tools/render-icons.mjs');
+  else ok('iOS app icon is the game icon');
+  const mv = (pbx.match(/MARKETING_VERSION = ([^;]+);/) || [])[1], cv = (pbx.match(/CURRENT_PROJECT_VERSION = ([^;]+);/) || [])[1];
+  warn(`iOS version ${mv} (build ${cv}) — every App Store Connect upload needs a higher build number`);
+  const shippedIos = read('ios/App/App/public/index.html');
+  if (dist && h(dist) !== h(shippedIos)) fail('iOS web assets differ from dist/ — run npm run cap:sync');
+  else if (dist) ok('iOS web assets match the current build');
+  const spm = read('ios/App/CapApp-SPM/Package.swift') || '';
+  const missingIos = ['CapgoNativePurchases', 'CapacitorPreferences', 'CapacitorCommunityAdmob'].filter(n => !spm.includes(`"${n}"`));
+  if (missingIos.length) fail(`iOS is missing native plugins: ${missingIos.join(', ')} — run npm run cap:sync`); else ok('iOS has the store, storage and AdMob plugins');
 }
 
 for (const [s, m] of results) console.log(`${s === 'PASS' ? '✔' : s === 'WARN' ? '•' : '✘'} ${s.padEnd(4)} ${m}`);

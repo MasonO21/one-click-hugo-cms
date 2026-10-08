@@ -2,6 +2,7 @@
 import {
   INK, rgba, lighten, darken, rrPath, rrc, fillStroke, strokeOnly, ellipsePath, circlePath,
   polyPath, smoothPath, vgrad, hgrad, toonBox, toonCircle, rod, gloss, rng, text,
+  mirrored,
 } from '../common.js';
 
 const PORCELAIN = '#f8f6f1';
@@ -727,6 +728,7 @@ export const BATHROOM_ART = {
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       smoothPath(ctx, [[-56, 86], [-60, 48], [-34, 30], [0, 34], [30, 24], [60, 40], [62, 86]]); ctx.fill();
       ctx.strokeStyle = 'rgba(140,200,228,0.95)'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+      if (mirrored(ctx)) { ctx.translate(-5, 0); ctx.scale(-1, 1); ctx.translate(5, 0); } // a mirrored cabinet still says "Hi"
       circlePath(ctx, 14, 60, 16); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(8, 55); ctx.lineTo(8, 57); ctx.moveTo(20, 55); ctx.lineTo(20, 57); ctx.stroke();
       ctx.beginPath(); ctx.arc(14, 62, 8, 0.3, Math.PI - 0.3); ctx.stroke();

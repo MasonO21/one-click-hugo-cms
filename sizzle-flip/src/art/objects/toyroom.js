@@ -2,7 +2,7 @@
 // balloon gondola, pinwheel, toy chest, rocking horse.
 import {
   INK, LW, rgba, lighten, darken, mix, rrPath, rrc, fillStroke, strokeOnly, ellipsePath, circlePath,
-  polyPath, vgrad, hgrad, rgrad, toonBox, toonCircle, rod, gloss, text,
+  polyPath, vgrad, hgrad, rgrad, toonBox, toonCircle, rod, gloss, text, mirrored,
 } from '../common.js';
 import { woodGrain } from './shared.js';
 import { motionAt } from '../../physics.js';
@@ -649,9 +649,11 @@ export const TOYROOM_ART = {
       }
       // T O Y S
       const L = 'TOYS', lc = [RED, YEL, GRN, BLUE].map(c => c === body ? '#ffffff' : c);
+      const rev = mirrored(ctx); // a mirrored box still spells TOYS left to right
       for (let i = 0; i < 4; i++) {
+        const j = rev ? 3 - i : i;
         ctx.save(); ctx.translate(-48 + i * 32, 18 + (i % 2 ? 2 : -2)); ctx.rotate((i % 2 ? 1 : -1) * 0.1);
-        text(ctx, L[i], 0, 0, 34, lc[i], { stroke: 7 });
+        text(ctx, L[j], 0, 0, 34, lc[j], { stroke: 7 });
         ctx.restore();
       }
       star(ctx, -70, -18, 8, 3.6); fillStroke(ctx, '#fff6d0', 2);

@@ -21,6 +21,8 @@ export const PHYS = {
   SPIN_MAX: 7,
   SETTLE_V: 34,
   SETTLE_T: 0.22,
+  GROUND_T: 1.5, // steady contact this long also counts as resting (see the end of step())
+  GROUND_V: 260,
   WIN_T: 0.3,
   LAUNCH_MIN_ANGLE: -0.26, // radians below horizontal allowed (each side)
 };
@@ -137,6 +139,7 @@ export class Sim {
     this.cAge = new Float64Array(N).fill(99);
     this.cNx = new Float64Array(N); this.cNy = new Float64Array(N);
     this.restTimer = 0;
+    this.groundTimer = 0;
     this.goalTimer = 0;
     this.launchTimer = 0;
     this.launchCooldown = 0;
@@ -260,7 +263,7 @@ export class Sim {
       this.px[i] = x + d * ca; this.py[i] = y + d * sa;
       this.vx[i] = 0; this.vy[i] = 0;
     }
-    this.restTimer = 0; this.goalTimer = 0; this.status = 'play'; this.failReason = null;
+    this.restTimer = 0; this.groundTimer = 0; this.goalTimer = 0; this.status = 'play'; this.failReason = null;
     this.cBody.fill(-1); this.cAge.fill(99);
   }
 
@@ -270,7 +273,7 @@ export class Sim {
       px: Float64Array.from(this.px), py: Float64Array.from(this.py), vx: Float64Array.from(this.vx), vy: Float64Array.from(this.vy),
       cBody: Int32Array.from(this.cBody), cAge: Float64Array.from(this.cAge), cNx: Float64Array.from(this.cNx), cNy: Float64Array.from(this.cNy),
       last: this._lastShape.map(sh => (sh ? this.shapes.indexOf(sh) : -1)),
-      t: this.t, restTimer: this.restTimer, goalTimer: this.goalTimer, launchTimer: this.launchTimer, launchCooldown: this.launchCooldown,
+      t: this.t, restTimer: this.restTimer, groundTimer: this.groundTimer, goalTimer: this.goalTimer, launchTimer: this.launchTimer, launchCooldown: this.launchCooldown,
       launchersUsed: [...this.launchersUsed], boostUsed: [...this.boostUsed], status: this.status, failReason: this.failReason, airTime: this.airTime,
       sinceLaunch: this.sinceLaunch, maxSpeed: this.maxSpeed, supportBody: this.supportBody,
     };
@@ -281,7 +284,7 @@ export class Sim {
     this.cBody.set(st.cBody); this.cAge.set(st.cAge); this.cNx.set(st.cNx); this.cNy.set(st.cNy);
     this._lastShape = st.last.map(i => (i >= 0 ? this.shapes[i] : null));
     this._pending.fill(null);
-    this.t = st.t; this.restTimer = st.restTimer; this.goalTimer = st.goalTimer; this.launchTimer = st.launchTimer;
+    this.t = st.t; this.restTimer = st.restTimer; this.groundTimer = st.groundTimer || 0; this.goalTimer = st.goalTimer; this.launchTimer = st.launchTimer;
     this.launchCooldown = st.launchCooldown; this.launchersUsed = new Set(st.launchersUsed); this.boostUsed = new Set(st.boostUsed); this.status = st.status;
     this.failReason = st.failReason; this.airTime = st.airTime; this.sinceLaunch = st.sinceLaunch; this.maxSpeed = st.maxSpeed;
     this.supportBody = st.supportBody;
@@ -294,7 +297,7 @@ export class Sim {
 
   loadPose(p) {
     for (let i = 0; i < PHYS.N; i++) { this.px[i] = p.px[i]; this.py[i] = p.py[i]; this.vx[i] = 0; this.vy[i] = 0; }
-    this.restTimer = 0; this.goalTimer = 0; this.status = 'play'; this.failReason = null;
+    this.restTimer = 0; this.groundTimer = 0; this.goalTimer = 0; this.status = 'play'; this.failReason = null;
     this.cBody.fill(-1); this.cAge.fill(99); this.launchTimer = 0;
     this.launchersUsed.clear();
     this.boostUsed.clear();
@@ -314,7 +317,7 @@ export class Sim {
   }
 
   canLaunch() {
-    return this.status === 'play' && this.restTimer >= PHYS.SETTLE_T;
+    return this.status === 'play' && (this.restTimer >= PHYS.SETTLE_T || this.groundTimer >= PHYS.GROUND_T);
   }
 
   // Velocity of the surface supporting the sausage (moving platforms carry momentum into launches).
@@ -335,7 +338,7 @@ export class Sim {
       this.vx[i] = vx + sx - w * ry;
       this.vy[i] = vy + sy + w * rx;
     }
-    this.restTimer = 0; this.goalTimer = 0; this.airTime = 0;
+    this.restTimer = 0; this.groundTimer = 0; this.goalTimer = 0; this.airTime = 0;
     this.launchCooldown = 0.5;
     this.launchersUsed.clear();
     this.boostUsed.clear();
@@ -611,7 +614,12 @@ export class Sim {
     // flipped mid-fall (which also saved a mid-air checkpoint and could loop respawns forever).
     if (contacts >= 2 && maxRel < PHYS.SETTLE_V && !(launchZone && launchCount >= 5) && goalCount < 6) this.restTimer += PHYS.DT;
     else if (maxRel > PHYS.SETTLE_V * 2.2 || contacts < 2) this.restTimer = 0;
-    if (this.restTimer >= PHYS.SETTLE_T) this.sinceLaunch = 0;
+    // Lying on something but never quite still (slipping on a fast cart, rocking between a pan handle and the
+    // wall, held against a wall by a conveyor): after a moment of steady contact that counts as resting too, so
+    // the player can always flip out instead of sitting through the 12-second stuck rule.
+    if (contacts >= 2 && maxRel < PHYS.GROUND_V && !(launchZone && launchCount >= 5) && goalCount < 6) this.groundTimer += PHYS.DT;
+    else this.groundTimer = 0;
+    if (this.restTimer >= PHYS.SETTLE_T || this.groundTimer >= PHYS.GROUND_T) this.sinceLaunch = 0;
   }
 
   _contact(i, sh, nx, ny, depth) {

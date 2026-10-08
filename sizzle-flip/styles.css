@@ -94,6 +94,10 @@ header.bar h2 { margin: 0; text-align: center; font-family: 'Lilita One'; font-w
 .menu-buttons .row { flex-wrap: nowrap; gap: 10px; width: min(94vw, 470px); }
 .menu-buttons .row .btn { flex: 1 1 0; min-width: 0; padding: 12px 8px; font-size: 18px; gap: 6px; }
 @media (max-width: 400px) { .menu-buttons .row .btn .ico { display: none; } }
+/* the narrowest phones (320 px): NEXT stays on one line */
+@media (max-width: 350px) {
+  .win-card .row .btn-big { font-size: 21px; padding: 10px 8px; }
+}
 .star-total { font-family: 'Lilita One'; font-size: 20px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
 .install-hint { position: absolute; bottom: calc(var(--sab) + 6px); left: 0; right: 0; text-align: center; color: #ffe9c2; font-size: 13px; text-shadow: 0 1px 0 var(--ink); }
 

@@ -42,10 +42,18 @@ Dev URL flags: `?level=37` jump to a level · `?debug` collision overlay + all w
 
 ```bash
 npm run dev &               # serve on :8123, then:
-npm test                    # e2e-ads, e2e-native, e2e-shop, e2e-recover, store-products script, e2e-all (plays all 200 levels)
+npm test                    # mechanics, soak, e2e-ads, e2e-native, e2e-shop, e2e-recover, store-products script, e2e-all (plays all 200 levels)
 node tools/qa.mjs           # every route replayed with human-sized error
+npm run test:chaos          # random play through the real game on every level (about an hour)
+npm run test:screens        # screenshots of every screen on 9 phone/tablet sizes and of every level, with a layout audit
 npm run release:check       # pre-publish gate (see RELEASE.md)
 ```
+
+- `tools/test-mechanics.mjs` puts every object type (as configured in the levels) alone in a test level and drops and throws the sausage at it: each kind must do its job (land, bounce, pop, blow, carry, convey, catch, fail with the right reason, win), and nothing may pass through a surface, leave the world, turn into NaN or stay unresolved.
+- `tools/soak-levels.mjs` plays every level with three kinds of random player, using the game's own respawn rules (`src/checkpoint.js`): no soft-locks, respawn loops, traps that only the 12-second stuck rule ends, tunnelling or escapes.
+- `tools/e2e-chaos.mjs` does random flips, pauses, restarts and look-arounds in the real game (rendering, effects, sound, HUD) on every level and fails on any page error.
+- `tools/visual-screens.mjs` taps through every screen and dialog with real taps on 9 screen sizes (320 px phones to iPad landscape and Split View, with simulated notches) and audits each layout: buttons cut off or under the notch, covered or overlapping buttons, small tap targets, clipped text. `tools/visual-levels.mjs` screenshots every level (opening view, overview, mid-flight, win) for review. `tools/check-layout.mjs` lints level layouts.
+- `tools/retime-routes.mjs` keeps the stored routes exact after a change to when the sausage counts as ready to flip.
 
 **On Android and iPhone without owning either:** every push that touches `sizzle-flip/` runs the GitHub workflow *Sizzle Flip devices* (`.github/workflows/sizzle-flip-devices.yml`). It builds the real app with an on-device self-test (`node tools/build.mjs --smoke`, `tools/device-smoke.js`) and runs it on Android 13 and Android 16 emulators and an iPhone Simulator (Xcode on a GitHub Mac). The self-test checks that the AdMob, store-billing and storage plugins load, plays level 1 through the game's touch handlers, plays a level as a shop character, opens the shop and the Hot Dog packs, and checks that a purchase the store can't complete fails cleanly. It also compiles the unsigned store builds (Android release APK/AAB, iPhone release). Screenshots and device logs are on the run page under Artifacts. A self-test build can't be shipped by accident: `npm run release:check` fails on one.
 
@@ -53,13 +61,13 @@ npm run release:check       # pre-publish gate (see RELEASE.md)
 
 ## Native app store builds (Capacitor)
 
-The repo contains a configured Android project (`android/`): Capacitor 8, **targets Android 16 (API 36)** as Google Play requires, portrait (Android 16 ignores the lock on tablets, and the game also plays in landscape there), adaptive icon and splash generated from the game's own art, and an optional release signing config. iOS is one command on a Mac. **Step-by-step publishing guide: [RELEASE.md](RELEASE.md).**
+The repo contains both native projects, set up for the stores. **Android** (`android/`): Capacitor 8, **targets Android 16 (API 36)** as Google Play requires, portrait (Android 16 ignores the lock on tablets, and the game also plays in landscape there), adaptive icon and splash generated from the game's own art, and an optional release signing config. **iOS** (`ios/`): the game's icon and launch screen, iPhone portrait and every iPad orientation (iPad multitasking), the AdMob / tracking / SKAdNetwork keys, the export-compliance answer and a privacy manifest; archive it in Xcode on a Mac. **Step-by-step publishing guide: [RELEASE.md](RELEASE.md).**
 
 ```bash
 npm run cap:sync                        # build the web game and copy it into the native projects
 npm run release:check                   # pre-publish gate
 cd android && ./gradlew bundleRelease   # signed AAB (with android/keystore.properties), or use Android Studio
-npx cap add ios && npx cap open ios     # on macOS with Xcode → Archive → App Store Connect
+npx cap open ios                        # on macOS with Xcode → Archive → App Store Connect
 ```
 
 Native extras are wired in automatically when running inside Capacitor: real haptics (`@capacitor/haptics`), a hidden status bar (`@capacitor/status-bar`), the Android back button (`@capacitor/app`), AdMob, store billing (`@capgo/native-purchases`) and native storage for the wallet (`@capacitor/preferences`).
@@ -149,6 +157,7 @@ QA pages (serve the folder, then open):
 index.html, styles.css      app shell + menus (DOM) and the game canvas
 src/main.js                 boot, loop, input routing, progression, save data
 src/game.js                 one level session: sim, aiming, camera, effects, rendering
+src/checkpoint.js           respawn points: only spots the sausage really stays on, with fallback
 src/physics.js              deterministic position-based soft-body physics (shared with the solver)
 src/objects.js              prop library: collision shapes, materials, roles (10 worlds, 100+ props)
 src/art/                    procedural vector art: sausage + face, props per world, backgrounds, logo
@@ -159,11 +168,12 @@ src/shop.js                 shop: Hot Dogs wallet, store billing / test store, b
 src/shop-config.js          shop prices: Hot Dog packs, character price, bundle discount
 src/art/itemkit.js          shop character renderer (art only — same physics body as the sausage)
 src/art/items.js            shop characters 1–30, tabs; items-more.js: 100 more
-src/privacy.js              privacy policy (in-app + dist/privacy.html)
+src/privacy.js              privacy policy (in-app + dist/privacy.html) and the support page (dist/support.html)
 src/levels/data.js          the 200 generated & verified levels
-tools/                      generator, solver, par tuning, QA (e2e, perturbation), build, icon renderer; marketing/: store screenshots + video ad
+tools/                      generator, solver, par tuning, tests (mechanics, soak, e2e, chaos, screens), build, icon renderer; marketing/: store screenshots + video ad; ci/: device runs
 store/                      listing.md (store text), iap-products.csv (the packs), captioned screenshots: ios/ (1290×2796), ipad/ (2064×2752), play/ (1080×1920); video/ (ad + App Store preview); icons/ has store icons + feature graphic
 android/                    Capacitor Android project
+ios/                        Capacitor iOS project (Xcode)
 ```
 
 ## Credits

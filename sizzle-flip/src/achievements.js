@@ -69,6 +69,7 @@ export class Trophies {
     if (stars >= 100) this.unlock('stars_100');
     if (stars >= 300) this.unlock('stars_300');
     if (stars >= 600) this.unlock('perfect');
-    if (this.save.unlocked >= 200 && this.save.stars[199]) this.unlock('top_dog');
+    // every level won (a skipped level doesn't count until it is beaten)
+    if (this.app.levels.every((_, i) => this.save.stars[i] > 0)) this.unlock('top_dog');
   }
 }

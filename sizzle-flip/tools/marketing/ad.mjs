@@ -124,9 +124,10 @@ async function make(browser, name) {
   page = await level(190, { character: 'dragon' });
   await scene(page, async () => {
     await skip(page, 3);
-    await shot(page, { aim: 8, hold: 2, win: 24 });
+    await shot(page, { aim: 8, hold: 2, win: 0 });
+    // the caption changes the moment it lands, before the level-complete card comes up under it
     setCap('600 stars<br>to <span style="color:#ffc93c">earn</span>', '6%');
-    await rec(page, 84);
+    await rec(page, 24 + 84);
   }, { hideWin: false, label: 'dragon + stars' });
   // 6. end card: the title screen
   page = await openGame(browser, { ...V.game, save: {} });

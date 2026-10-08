@@ -1,7 +1,7 @@
 // Living room props — cozy chunky-cartoon furniture & critters.
 import {
   INK, LW, rgba, lighten, darken, mix, rrPath, rrc, fillStroke, strokeOnly, ellipsePath, circlePath,
-  polyPath, smoothPath, vgrad, hgrad, rgrad, toonBox, toonCircle, rod, gloss, rng, text,
+  polyPath, smoothPath, vgrad, hgrad, rgrad, toonBox, toonCircle, rod, gloss, rng, text, mirrored,
 } from '../common.js';
 import { woodGrain } from './shared.js';
 import { motionAt } from '../../physics.js';
@@ -699,7 +699,9 @@ export const LIVING_ART = {
         ctx.beginPath(); ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
         ctx.lineWidth = big ? 3.4 : 1.4; ctx.strokeStyle = big ? INK : rgba(INK, 0.5); ctx.stroke();
       }
-      for (const [n, a] of [['12', -Math.PI / 2], ['3', 0], ['6', Math.PI / 2], ['9', Math.PI]]) {
+      const rev = mirrored(ctx); // a mirrored clock keeps 3 on the right
+      for (const [n, a0] of [['12', -Math.PI / 2], ['3', 0], ['6', Math.PI / 2], ['9', Math.PI]]) {
+        const a = rev ? Math.PI - a0 : a0;
         text(ctx, n, Math.cos(a) * (R - 40), Math.sin(a) * (R - 40) + 1, 18, '#3a2216');
       }
       text(ctx, 'TICK·TOCK', 0, 26, 8, rgba(INK, 0.55), { font: 'Fredoka, sans-serif', weight: 700 });

@@ -190,10 +190,23 @@ export function rod(ctx, x1, y1, x2, y2, w, color, ink = INK) {
   ctx.beginPath(); ctx.moveTo(x1 - ox, y1 - oy); ctx.lineTo(x2 - ox, y2 - oy); ctx.stroke();
 }
 
+// Is the canvas currently mirrored (a prop placed flipped in a level)?
+export function mirrored(ctx) {
+  const m = ctx.getTransform ? ctx.getTransform() : null;
+  return !!m && m.a * m.d - m.b * m.c < 0;
+}
+
 export function text(ctx, str, x, y, size, color, opts = {}) {
   ctx.save();
   ctx.font = `${opts.weight || ''} ${size}px ${opts.font || '"Lilita One", "Fredoka", system-ui, sans-serif'}`;
-  ctx.textAlign = opts.align || 'center';
+  let align = opts.align || 'center';
+  // A prop placed mirrored in a level (inst.flip) mirrors its art; its labels ("TOYS", "SNACKS") must still read
+  // the right way round: un-mirror the letters around their anchor (left/right alignment swaps to keep the spot).
+  if (mirrored(ctx)) {
+    ctx.translate(x, y); ctx.scale(-1, 1); x = 0; y = 0;
+    align = align === 'left' ? 'right' : align === 'right' ? 'left' : align === 'start' ? 'end' : align === 'end' ? 'start' : align;
+  }
+  ctx.textAlign = align;
   ctx.textBaseline = opts.baseline || 'middle';
   if (opts.stroke) { ctx.lineWidth = opts.stroke; ctx.strokeStyle = opts.ink || INK; ctx.lineJoin = 'round'; ctx.strokeText(str, x, y); }
   ctx.fillStyle = color; ctx.fillText(str, x, y);

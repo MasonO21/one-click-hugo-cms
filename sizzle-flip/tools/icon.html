@@ -55,7 +55,7 @@ if (splash) {
   g.addColorStop(0, '#5a2d4a'); g.addColorStop(1, '#2a1a2e');
   ctx.fillStyle = g; ctx.fillRect(0, 0, sw, sh);
   const lc = document.createElement('canvas'); lc.width = 720; lc.height = 420; drawLogo(lc);
-  const lw = Math.min(sw, sh) * 0.8, lh = lw * 420 / 720;
+  const lw = Math.min(sw, sh) * (+p.get('logo') || 0.8), lh = lw * 420 / 720; // logo=0.4 for the iOS launch image, which phones crop to its middle
   ctx.drawImage(lc, (sw - lw) / 2, (sh - lh) / 2 - sh * 0.04, lw, lh);
 } else if (fg) {
   ctx.clearRect(0, 0, size, size);

@@ -1,5 +1,6 @@
 // One play session of a level: simulation, input, camera, effects, rendering.
 import { Sim, PHYS, motionAt, timerOn, previewArc } from './physics.js';
+import { Checkpoints } from './checkpoint.js';
 import { OBJECTS, FAIL_TEXT, WORLDS } from './objects.js';
 import { FX } from './fx.js';
 import { drawObject, hasFront, drawCollisionDebug } from './art/objects/index.js';
@@ -59,7 +60,7 @@ export class Game {
     this.sim.t = 0; this.sim.events.length = 0;
     for (const b of this.sim.bodies) this.sim.updateBody(b, 0, true);
     this.prevX = Float64Array.from(this.sim.px); this.prevY = Float64Array.from(this.sim.py);
-    this.checkpoint = this.makeCheckpoint();
+    this.cps = new Checkpoints(this.sim); // respawn points (src/checkpoint.js)
     this.flips = 0;
     this.showHint = !!this.hintUnlocked; // a hint, once taken, stays up through restarts of this level
     this.fx.clear();
@@ -93,45 +94,12 @@ export class Game {
   hud() { if (!this.attract && this.app.ui) this.app.ui.updateHud(this); }
   hap(p) { if (!this.silent) this.app.haptic(p); }
 
-  makeCheckpoint() {
-    const s = this.sim;
-    const b = s.bodies[s.supportBody];
-    return { pose: s.savePose(), body: s.supportBody, pwx: b ? b.pwx : 0, pwy: b ? b.pwy : 0, ang: b ? b.ang : 0 };
-  }
-
-  // Is it safe to respawn now? Not while a timed hazard touching the checkpoint is on, or will switch on
-  // before the player has had a fair chance to flip away (about 1.3 s, or most of its off-window).
-  respawnClear() {
-    const s = this.sim, cp = this.checkpoint;
-    if (this._respawnFor !== cp) {
-      this._respawnFor = cp;
-      const pad = PHYS.R + 4;
-      this._respawnHazards = s.shapes.filter(sh => sh.timed && sh.hazard && cp.pose.px.some((x, i) => s.pointInShape(sh, x, cp.pose.py[i], pad)));
-    }
-    for (const sh of this._respawnHazards) {
-      const tm = s.bodies[sh.body].timer;
-      if (!tm) continue;
-      const need = Math.min(1.3, 0.8 * tm.period * (1 - tm.on));
-      for (let dt = 0; dt <= need; dt += 0.05) if (timerOn(tm, s.t + dt)) return false;
-    }
-    return true;
-  }
+  // Is it safe to respawn now? (a grill or laser at the checkpoint may be about to switch on)
+  respawnClear() { return this.cps.clear(); }
 
   restoreCheckpoint() {
-    const cp = this.checkpoint;
     const s = this.sim;
-    const b = s.bodies[cp.body];
-    const pose = { px: cp.pose.px.slice(), py: cp.pose.py.slice() };
-    if (b && b.kinematic) {
-      // re-attach relative to the platform's current transform
-      const da = b.ang - cp.ang, ca = Math.cos(da), sa = Math.sin(da);
-      for (let i = 0; i < pose.px.length; i++) {
-        const lx = pose.px[i] - cp.pwx, ly = pose.py[i] - cp.pwy;
-        pose.px[i] = b.pwx + lx * ca - ly * sa;
-        pose.py[i] = b.pwy + lx * sa + ly * ca - 2;
-      }
-    }
-    s.loadPose(pose);
+    this.cps.respawn();
     this.prevX = Float64Array.from(s.px); this.prevY = Float64Array.from(s.py);
     const [cx, cy] = s.com();
     this.fx.dust(cx, cy, 14, 1.2, '#ffffff');
@@ -163,7 +131,7 @@ export class Game {
     // a drag released after the pause menu opened must not launch
     if (!a || this.paused || this.phase !== 'play') return;
     if (!a.valid) return;
-    if (!this.sim.canLaunch()) { this.fx.text('WAIT!', ...this.sim.com().map((v, i) => i ? v - 50 : v), { size: 30, color: '#ffffff', life: 0.6 }); return; }
+    if (!this.sim.canLaunch()) { const [wx, wy] = this.sim.com(); this.fx.text('WAIT!', this.fitX(wx, 'WAIT!', 30), wy - 50, { size: 30, color: '#ffffff', life: 0.6 }); return; }
     this.launch(a.vx, a.vy, a.power);
   }
 
@@ -181,7 +149,7 @@ export class Game {
 
   launch(vx, vy, power) {
     const s = this.sim;
-    this.checkpoint = this.makeCheckpoint();
+    this.cps.save();
     const inPan = s.supportBody === this.panBody;
     s.launch(vx, vy);
     this.flips++;
@@ -306,6 +274,7 @@ export class Game {
     }
     if (steps === 5) this.acc = 0;
     this.alpha = this.acc / PHYS.DT;
+    this.cps.work(5); // trying out a new respawn point, a few physics steps per frame (about half a second)
 
     // body animation state
     for (let i = 0; i < s.bodies.length; i++) {
@@ -353,7 +322,8 @@ export class Game {
     const ready = s.canLaunch();
     if (ready && !this.lastSettled && this.phase === 'play') {
       this.lastSettled = true;
-      this.checkpoint = this.makeCheckpoint();
+      this.cps.ready();
+      this.cps.save();
       if (this.flips > 0) { this.face.expr = 'happy'; this.face.exprT = 0.9; }
     }
     if (!ready && s.restTimer === 0) this.lastSettled = false;
@@ -433,13 +403,17 @@ export class Game {
         if (e.speed > 900) { this.fx.shake(4 + k * 8); this.hap(8); }
         if (e.boost || e.bounce > 0.6) {
           if (e.speed > 300 && !this.attract) this.app.trophies.onBounce();
-          if (e.speed > 300) { this.fx.text(pick(['BOING!', 'BOINK!', 'SPROING!']), e.x, e.y - 60, { size: 34, color: '#7be0ff', life: 0.8 }); this.fx.ring(e.x, e.y, 10, 70, 0.35, '#ffffff'); }
+          if (e.speed > 300) {
+            // one word at a time (several bounces in a row would pile up), never past the screen edge
+            if (this.t - (this._boingT ?? -9) > 0.4) { this._boingT = this.t; const w = pick(['BOING!', 'BOINK!', 'SPROING!']); this.fx.text(w, this.fitX(e.x, w, 34), e.y - 60, { size: 34, color: '#7be0ff', life: 0.8 }); }
+            this.fx.ring(e.x, e.y, 10, 70, 0.35, '#ffffff');
+          }
         }
-        if (e.sticky && e.speed > 200) this.fx.text('SPLAT!', e.x, e.y - 50, { size: 30, color: '#ff8fc7', life: 0.7 });
+        if (e.sticky && e.speed > 200) this.fx.text('SPLAT!', this.fitX(e.x, 'SPLAT!', 30), e.y - 50, { size: 30, color: '#ff8fc7', life: 0.7 });
       } else if (e.type === 'launcher') {
         const st = this.bodyState[e.body];
         if (st) st.pop = 1;
-        this.fx.text('POP!', e.x, e.y - 70, { size: 46, color: '#ffd23f' });
+        this.fx.text('POP!', this.fitX(e.x, 'POP!', 46), e.y - 70, { size: 46, color: '#ffd23f' });
         if (!this.attract) this.app.trophies.onLauncher(s.bodies[e.body] && s.bodies[e.body].type && s.bodies[e.body].type.id);
         this.fx.sparks(e.x, e.y, 10, '#ffd23f');
         this.fx.shake(8);
@@ -458,6 +432,7 @@ export class Game {
     if (this.phase === 'intro') this.skipIntro(); // never drop a fail (it would leave the level unplayable)
     if (this.phase !== 'play') return;
     this.fails = (this.fails || 0) + 1;
+    this.cps.failed();
     this.hud();
     if (!this.attract) this.app.trophies.onFail(reason);
     this.phase = 'fail';
@@ -465,7 +440,7 @@ export class Game {
     const msgs = FAIL_TEXT[reason] || FAIL_TEXT.floor;
     const msg = msgs[Math.floor(Math.random() * msgs.length)];
     const yy = Math.min(y, this.level.h - 80);
-    this.fx.text(msg, Math.max(140, Math.min(W - 140, x)), yy - 70, { size: 44, color: '#ff6b5a', life: 1.2, vy: -30 });
+    this.fx.text(msg, this.fitX(x, msg, 44), Math.max(yy - 70, this.belowHud(50)), { size: 44, color: '#ff6b5a', life: 1.2, vy: -30 });
     if (reason === 'water' || reason === 'flush') this.fx.splash(x, yy, 24);
     else if (reason === 'burn' || reason === 'fry' || reason === 'boil') { this.fx.smoke(x, yy, 14, '#5a4a44'); this.fx.sparks(x, yy, 8, '#ff9a3c'); }
     else if (reason === 'zap') { this.fx.sparks(x, yy, 18, '#7be0ff'); this.fx.flash = 0.6; }
@@ -491,7 +466,7 @@ export class Game {
     this.fx.ring(gx, gy - 20, 20, 220, 0.6, '#ffd23f');
     const stars = this.app.starsFor(this.flips, this.info.par);
     const word = stars === 3 ? pick(['PERFECT!', 'DELICIOUS!', 'TOP DOG!']) : stars === 2 ? pick(['NICE!', 'TASTY!', 'GREAT!']) : pick(['DONE!', 'PHEW!', 'NAILED IT…ISH']);
-    this.fx.text(word, Math.max(160, Math.min(W - 160, gx)), gy - 120, { size: 60, color: '#ffd23f', life: 1.8, vy: -20, rot: -0.06 });
+    this.fx.text(word, this.fitX(gx, word, 60), Math.max(gy - 120, this.belowHud(60)), { size: 60, color: '#ffd23f', life: 1.8, vy: -20, rot: -0.06 });
     this.fx.shake(6);
     this.mustardT = 0;
     this.au.play('win', { stars });
@@ -520,12 +495,40 @@ export class Game {
     return this._top;
   }
 
+  // Screen pixels taken by the HUD rows at the top and bottom (the overview fits the level between them).
+  // (measured at most every 0.25 s)
+  hudInsets() {
+    if (this._ins && this.t - this._insT < 0.25 && this._insCh === this.app.ch) return this._ins;
+    const hud = typeof document !== 'undefined' && document.getElementById('hud');
+    let r = [0, 0];
+    if (hud && !hud.hidden && !this.attract) {
+      const ch = this.app.ch, top = hud.querySelector('.hud-top'), bot = hud.querySelector('.hud-bottom .btn-round');
+      const t = top ? top.getBoundingClientRect().bottom + 6 : 0, b = bot ? ch - bot.getBoundingClientRect().top + 6 : 0;
+      r = [Math.max(0, Math.min(t, ch * 0.25)), Math.max(0, Math.min(b, ch * 0.25))];
+    }
+    this._ins = r; this._insT = this.t; this._insCh = this.app.ch;
+    return r;
+  }
+
+  // Effect words: an x that keeps the whole word on screen (the playfield is the screen width on a phone)…
+  fitX(x, str, size) {
+    const half = Math.min(W / 2, str.length * size * 0.3 + 16);
+    return Math.max(half, Math.min(W - half, x));
+  }
+
+  // …and the highest world y whose word (drifting up a little) stays below the top HUD row.
+  belowHud(size) {
+    const [it] = this.hudInsets(), [, , scale] = this.viewSize();
+    return this.cameraTarget() + (it + size * 0.6 * scale - this.app.ch / 2) / scale + 40;
+  }
+
   cameraTarget() {
     const [vw, vh] = this.viewSize();
     const s = this.sim;
     let ty;
     if (this.overview) {
-      ty = (this.levelTop() + this.level.h + FLOOR_SHOW) / 2;
+      const [it, ib] = this.hudInsets();
+      ty = (this.levelTop() + this.level.h + FLOOR_SHOW) / 2 - (it - ib) / 2 / (this.app.baseScale() * this.zoom);
       return ty;
     }
     const [cx, cy] = s.com();
@@ -556,8 +559,8 @@ export class Game {
     // zoom for overview
     if (this.overview) {
       const span = this.level.h + FLOOR_SHOW - this.levelTop();
-      const base = this.app.baseScale();
-      this.zoomTarget = Math.min(1, this.app.ch / base / span);
+      const base = this.app.baseScale(), [it, ib] = this.hudInsets();
+      this.zoomTarget = Math.min(1, (this.app.ch - it - ib) / base / span);
     } else this.zoomTarget = 1;
     this.zoom += (this.zoomTarget - this.zoom) * (1 - Math.exp(-dt * 7));
     if (!Number.isFinite(this.zoom)) this.zoom = 1;
@@ -599,8 +602,11 @@ export class Game {
     const L = this.level;
     const base = app.baseScale();
     // wide enough for the screen's aspect (landscape tablets show far more than the 640-wide playfield)
-    const side = Math.min(1400, Math.max(420, (app.cw / base - W) / 2 + 80));
-    const box = { x0: -side, x1: W + side, y0: Math.min(this.levelTop() - 400, L.h + FLOOR_SHOW - 1700), y1: L.h + (this.attract ? 900 : 300) };
+    // (and for the 👁 overview, which zooms out until the whole level fits the height: on an iPad that shows far
+    // more width than the playfield)
+    const zMin = Math.min(1, app.ch * 0.7 / base / (L.h + FLOOR_SHOW - this.levelTop()));
+    const side = Math.min(2400, Math.max(420, (app.cw / (base * zMin) - W) / 2 + 80));
+    const box = { x0: -side, x1: W + side, y0: Math.min(this.levelTop() - 600, L.h + FLOOR_SHOW - 1700), y1: L.h + (this.attract ? 900 : 600) };
     const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
     let cs = Math.min(base * app.dpr, 2.2);
     const maxPx = 14e6;
@@ -863,8 +869,10 @@ export class Game {
     const { cw, ch } = this.app;
     const sy = (gb.cy - camY) * scale + ch / 2;
     const sx = (gb.cx - camX) * scale + cw / 2;
-    if (sy > 40) return;
-    const y = 96, x = Math.max(36, Math.min(cw - 36, sx));
+    // shown while the bun is above the screen or hidden behind the top HUD row, and drawn just below that row
+    const [it] = this.hudInsets();
+    if (sy > Math.max(40, it - 10)) return;
+    const y = Math.max(96, it + 34), x = Math.max(36, Math.min(cw - 36, sx));
     const bob = Math.sin(this.t * 5) * 4;
     ctx.save();
     ctx.translate(x, y + bob);
