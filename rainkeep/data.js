@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.14.0',
+  version: '4.15.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -953,6 +953,7 @@ const DATA = {
     { id: 'rival', text: 'March on a rival keep', n: 1, pts: 15, show: (S) => S.lv.wyrm >= 8 },
     { id: 'siege', text: 'Hold 3 waves of a Scorpion Siege', n: 3, pts: 15, show: (S) => S.lv.wyrm >= 10 },
     { id: 'intel', text: 'Complete 2 watchtower reports', n: 2, pts: 15, show: (S) => S.lv.wyrm >= 4 },
+    { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
     { id: 'temper', text: 'Temper a heirloom', n: 1, pts: 10, show: (S) => Object.values(S.heroes).some((h) => h.stars >= 3) },
   ],
   dutyChests: [
@@ -1255,6 +1256,29 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- Spring Fishing ----------
+  // Since the rains came back the spring has fish in it. Cast, tap when the float dips, then hold to reel and
+  // let go when the fish runs; too much tension and the line snaps.
+  fishing: {
+    unlock: 3, // Rainwyrm level
+    casts: { cap: 6, every: 3600, rain: 2 }, // a cast back every hour of keep time (6 at most); calling the rain brings 2 more
+    bite: [1.6, 4.8], // seconds before a fish bites
+    strike: 0.8, // seconds to strike once the float dips
+    // reeling, per second: progress while holding (less for strong fish), what a fish takes back while you let go,
+    // tension while holding (more for strong fish, far more when it runs) and how fast it falls when you let go
+    reel: { gain: 30, slip: 9, up: 34, down: 80, runUp: 3.2, runEvery: [0.9, 2.2], runFor: [0.5, 1.1], time: 24 },
+    fish: [
+      { id: 'minnow', name: 'Spring Minnow', w: 40, pull: 0.6, cm: [5, 12], give: { food: 0.5 }, color: '#9fc8d8', text: 'Silver and quick. The children catch them by the bucket.' },
+      { id: 'carp', name: 'Sand Carp', w: 28, pull: 1.0, cm: [20, 45], give: { food: 1.2 }, color: '#c9a06a', text: 'Sleeps in the sand at the bottom and wakes up hungry.' },
+      { id: 'barb', name: 'Golden Barb', w: 14, pull: 1.3, cm: [15, 30], starglass: 15, color: '#e8b54a', text: 'Scales like coins. The old wells were named for them.' },
+      { id: 'eel', name: 'Glass Eel', w: 10, pull: 1.6, cm: [40, 90], journals: 2, color: '#bfe8f0', text: 'You can see its heart beating. The archivists want every one.' },
+      { id: 'whiskers', name: 'Old Whiskers', w: 6, pull: 2.0, cm: [60, 120], whetstone: 2, starglass: 20, color: '#7a6a4a', text: 'A catfish older than the keep. It has swallowed more than one whetstone.' },
+      { id: 'koi', name: 'Rain Koi', w: 2, pull: 2.4, cm: [50, 80], starglass: 80, beacons: 1, color: '#ff8a5a', text: 'Red and gold, and only ever seen after rain. Luck for a year.' },
+    ],
+    firstCatch: 2, // the first of each kind pays double
+    warPts: 8, // Oasis Wars points a fish
+  },
+
   // ---------- Heirlooms ----------
   // Every hero carries one thing from before the keep. It wakes when the hero reaches 3 stars and is tempered
   // with Desert Whetstones up to Lv 10: each level adds to the hero's attack, defense and health and to the
@@ -1300,6 +1324,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.15', items: [
+      { icon: 'i-fish', name: 'Spring Fishing', text: 'Fish have come back to the spring with the rains. Cast, strike when the float dips, and reel without snapping the line. Six kinds to catch, from minnows to the Rain Koi.', act: 'fishing', open: (S) => S.lv.wyrm >= 3, needs: 'Rainwyrm Lv 3' },
+    ] },
     { v: '4.14', items: [
       { icon: 'i-guard', name: 'Formations', text: 'Choose which troop class leads your marches and expedition battles. The picker fights each fight out in advance and marks the formation that fares best.', act: 'tab:expedition', open: (S) => S.lv.barracks > 0, needs: 'the Barracks' },
       { icon: 'i-heirloom', name: 'Heirlooms', text: "Every hero carries one thing from before the keep. It wakes at 3 stars; temper it with Desert Whetstones for more stats and a stronger skill.", act: 'heirlooms', open: (S) => Object.values(S.heroes).some((h) => h.stars >= 3), needs: 'a hero at 3 stars' },
@@ -1548,6 +1575,9 @@ const DATA = {
     { id: 'heir1', text: 'Wake a heirloom', stat: 'heirWoken', n: 1, reward: { whetstone: 10 } },
     { id: 'heir10', text: 'Temper a heirloom to Lv 10', stat: 'heirTop', n: 10, reward: { shard_legendary: 1 } },
     { id: 'heir30', text: 'Temper heirlooms 30 times', stat: 'tempers', n: 30, reward: { starglass: 300 } },
+    { id: 'fish25', text: 'Catch 25 fish in the spring', stat: 'fish', n: 25, reward: { starglass: 100 } },
+    { id: 'fishAll', text: 'Catch every kind of fish in the spring', stat: 'fishKinds', n: 6, reward: { beacons: 3 } },
+    { id: 'koi', text: 'Catch a Rain Koi', stat: 'koi', n: 1, reward: { shard_epic: 1 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -54,7 +54,7 @@ const HOURS = Number(process.argv[3] || 8);
     const qLog = []; { const f = A.claimquest; A.claimquest = () => { const q0 = S.quest; f(); if (S.quest > q0) qLog.push(`${q0}@${Math.round(S.time)}s`); }; }
     const COLLECT = NO.includes('surplus') ? 0 : Number(new URLSearchParams(location.search).get('collect') || 5); let lastCollect = -999; const incPicks = [];
     let idleSecs = 0; const idleLog = []; let lastSpire = -999, lastSpireTry = -999;
-    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0;
+    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0; const fs = { casts: 0, caught: 0 };
     const team_log = []; let sickSecs = 0, popSecs = 0, thirstSecs = 0, dormSecs = 0, lastFightTry = -999, ttype = 0, lastWin = 0; const thaw = [];
     const W = KH.world;
     const steps = Math.round(HOURS * 3600 / 5);
@@ -177,6 +177,10 @@ const HOURS = Number(process.argv[3] || 8);
         if (KH.crossing && !NO.includes('crossing') && KH.crossing.unlocked() && !KH.crossing.run() && KH.squadHome().length === S.squad.length) {
           while (KH.crossing.maps() >= 1) { const r = KH.crossing.auto(); if (r) { cx.runs++; cx.depth += r.d; if (r.won) cx.wins++; } else break; }
           UI.sheet = null;
+        }
+        // Spring Fishing: every cast, played the way a fairly quick player would
+        if (KH.fishing && !NO.includes('fishing') && KH.fishing.unlocked() && KH.fishing.casts() >= 1) {
+          const r = KH.fishing.auto(0.85); fs.casts += r.length; fs.caught += r.filter((x) => !['spooked', 'missed', 'snapped', 'escaped'].includes(x)).length;
         }
         // heirlooms: temper the squad's
         if (KH.heirloom && !NO.includes('heirloom')) {
@@ -338,7 +342,8 @@ const HOURS = Number(process.argv[3] || 8);
     iv.done = S.stats.intel; iv.five = S.stats.intel5;
     hlGot = KH.have('whetstone') + Object.values(S.heirlooms || {}).reduce((a, lv) => a + D.heirloom.cost.slice(0, lv).reduce((x, y) => x + y, 0), 0);
     const hl = { woken: S.stats.heirWoken, tempers: S.stats.tempers, top: S.stats.heirTop, whet: KH.have('whetstone'), lv: Object.entries(S.heirlooms || {}).map(([k, v]) => k.slice(0, 3) + v).join(','), squad: S.squad.map((id) => `${id.slice(0, 3)}${S.heroes[id].stars}*`).join(','), got: hlGot };
-    return { cx, sg, iv, hl, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
+    fs.koi = S.stats.koi; fs.kinds = S.stats.fishKinds;
+    return { cx, sg, iv, hl, fs, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
   }, { MODE, HOURS });
   console.log('SRC', JSON.stringify(out.SRC));
   console.log('builder idle % per 30 min', out.idleLog.join(' '));
@@ -353,6 +358,7 @@ const HOURS = Number(process.argv[3] || 8);
   console.log('siege:', JSON.stringify(out.sg));
   console.log('intel:', JSON.stringify(out.iv));
   console.log('heirlooms:', JSON.stringify(out.hl));
+  console.log('fishing:', JSON.stringify(out.fs));
   console.log('final lv', JSON.stringify(out.lv), 'tech', JSON.stringify(out.tech), 'ending', out.end, 'element', out.element, 'quest', out.quest);
   console.log('stats', JSON.stringify(out.stats));
   console.log('TEAM', JSON.stringify(out.team_log));

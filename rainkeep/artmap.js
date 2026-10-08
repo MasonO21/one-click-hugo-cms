@@ -226,6 +226,15 @@ window.RK_ART = {
     'i-hl-conch': 'art/ui/hl-conch.webp',
     'i-hl-bell': 'art/ui/hl-bell.webp',
     'i-hl-pick': 'art/ui/hl-pick.webp',
+    'i-fish': 'art/ui/fish.webp',
+    'i-fish-minnow': 'art/ui/fish-minnow.webp',
+    'i-fish-carp': 'art/ui/fish-carp.webp',
+    'i-fish-barb': 'art/ui/fish-barb.webp',
+    'i-fish-eel': 'art/ui/fish-eel.webp',
+    'i-fish-whiskers': 'art/ui/fish-whiskers.webp',
+    'i-fish-koi': 'art/ui/fish-koi.webp',
+    'i-fish-rod': 'art/ui/fish-rod.webp',
+    'i-fish-float': 'art/ui/fish-float.webp',
   },
   // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
   // that frames sheets
