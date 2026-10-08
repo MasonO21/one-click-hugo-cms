@@ -408,7 +408,11 @@ describe('missions: persistence & repair', () => {
       expect(game.sys.missions.claim(id)).toBe(true);
     };
     const toasts: string[] = [];
-    game.bus.on('ui:toast', (e) => toasts.push(e.text));
+    const opens: (string | undefined)[] = [];
+    game.bus.on('ui:toast', (e) => {
+      toasts.push(e.text);
+      opens.push(e.open);
+    });
     expect(st.active).not.toContain('s_grid_solar');
     tierUp(2);
     expect(st.active).not.toContain('s_grid_solar');
@@ -418,6 +422,7 @@ describe('missions: persistence & repair', () => {
     tierUp(3);
     expect(st.active).toContain('s_grid_solar');
     expect(toasts).toContain('6 new side missions are ready');
+    expect(opens.at(-1)).toBe('missions');
     expect(st.active).toContain('s_fort_mg');
     expect(st.active).not.toContain('s_grid_battery');
     claimNow('s_grid_solar');
@@ -437,6 +442,34 @@ describe('missions: persistence & repair', () => {
     expect(st.active).toContain('s_grid_geo');
     claimNow('s_grid_geo');
     expect(st.active).toContain('s_grid_mega');
+  });
+
+  it('remembers which side missions were offered this session (the Side tab marks them NEW); nothing from launch, nothing saved', () => {
+    const g = makeGame();
+    const { game } = g;
+    const st = game.state.missions;
+    const ms = game.sys.missions;
+    const tierUp = (t: number) => {
+      game.state.colony.tier = t;
+      game.bus.emit('colony:tierUp', { tier: t });
+    };
+    // the side missions seeded at launch are on the board, but not "offered this session"
+    expect(st.active.some((id) => game.data.mission(id)?.chain === 'side')).toBe(true);
+    expect(ms.offeredThisSession().size).toBe(0);
+    tierUp(2);
+    tierUp(3);
+    expect([...ms.offeredThisSession()]).toEqual(expect.arrayContaining(['s_toolup', 's_grid_solar', 's_fort_mg']));
+    expect([...ms.offeredThisSession()].every((id) => game.data.mission(id)?.chain === 'side')).toBe(true);
+    // the next step of a claimed chain counts too
+    st.progress.s_grid_solar = game.data.mission('s_grid_solar')!.count;
+    expect(ms.claim('s_grid_solar')).toBe(true);
+    expect(ms.offeredThisSession().has('s_grid_battery')).toBe(true);
+    // a new session from that save starts with nothing NEW, and nothing of it went into the save
+    const saved = JSON.stringify(game.state);
+    expect(saved).not.toContain('offeredThisSession');
+    const g2 = makeGame({ state: JSON.parse(saved), at: g.clock.now });
+    expect(g2.game.state.missions.active).toContain('s_grid_battery');
+    expect(g2.game.sys.missions.offeredThisSession().size).toBe(0);
   });
 
   it('a side step whose building or recipe unlocks at a later tier waits for that tier (no dead goals in the Side tab)', () => {

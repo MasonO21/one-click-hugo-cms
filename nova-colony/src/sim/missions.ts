@@ -47,11 +47,18 @@ export class MissionSystem extends System {
   private survivorSpawned = false;
   /** onLoad has run (events fired while other systems load must not activate missions early). */
   private loaded = false;
+  /** `game:ready` has fired: launch is over (load repairs, the side missions a save picks up, quiet offline credit). */
+  private live = false;
+  /** Side missions offered since the session went live; not saved (the Side tab marks the unseen ones NEW). */
+  private sessionSide = new Set<string>();
 
   // ---------------------------------------------------------------- lifecycle
 
   override init(): void {
     const bus = this.game.bus;
+    bus.on('game:ready', () => {
+      this.live = true;
+    });
     bus.on('resource:gained', (e) => {
       if (GATHER_SOURCES.has(e.source)) this.bump('gather', [e.id], e.amount);
     });
@@ -84,7 +91,8 @@ export class MissionSystem extends System {
     bus.on('colony:tierUp', () => {
       const opened = this.offerSide();
       this.recheckLive();
-      if (opened > 0) bus.emit('ui:toast', { text: opened === 1 ? 'A new side mission is ready' : `${opened} new side missions are ready`, kind: 'info', icon: '🧩' });
+      // tapping it opens the Missions panel, which lands on the Side tab while it has NEW cards
+      if (opened > 0) bus.emit('ui:toast', { text: opened === 1 ? 'A new side mission is ready' : `${opened} new side missions are ready`, kind: 'info', icon: '🧩', open: 'missions' });
     });
     bus.on('expedition:launched', () => {
       this.bump('expedition', ['launch'], 1);
@@ -174,6 +182,14 @@ export class MissionSystem extends System {
     if (m.completed.includes(id) && !m.active.includes(id)) return { value: def.count, target: def.count, done: true };
     const v = m.progress[id] ?? 0;
     return { value: Math.min(v, def.count), target: def.count, done: v >= def.count };
+  }
+
+  /**
+   * Side missions offered during this session (after `game:ready`): a tier-up's new chains, the next step of a
+   * claimed chain… Everything already on the board at launch is left out. Not saved.
+   */
+  offeredThisSession(): ReadonlySet<string> {
+    return this.sessionSide;
   }
 
   /** Completed and waiting for the player to tap Claim. */
@@ -410,6 +426,7 @@ export class MissionSystem extends System {
     m.active.push(id);
     m.progress[id] = 0;
     this.lastShown.set(id, 0);
+    if (def.chain === 'side' && this.live) this.sessionSide.add(id);
     this.rebuildIndex();
     this.game.bus.emit('mission:progress', { id, value: 0, target: def.count });
     this.setProgress(id, def, isLiveType(def.type) ? liveValue(this.game, def) : retroValue(this.game, def));

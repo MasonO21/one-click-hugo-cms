@@ -15,7 +15,7 @@ import { BUILD_CATEGORIES, NODE_H, NODE_W, layoutTree } from '../src/ui/logic/ca
 import { claimableMissions, claimableSeason, computeBadges, idleWithJobs } from '../src/ui/logic/badges';
 import { happinessFace, portraitSvg, stars } from '../src/ui/logic/colonist';
 import type { MissionDef, ResearchDef } from '../src/data/schema';
-import { SIDE_CAP, sideOrder, sideVisible } from '../src/ui/logic/missionOrder';
+import { SIDE_CAP, SideSeen, sideOrder, sideVisible } from '../src/ui/logic/missionOrder';
 import { buildCardOrder, type BuildOrderDef } from '../src/ui/logic/buildOrder';
 import { createDataRegistry } from '../src/data';
 
@@ -353,6 +353,12 @@ describe('ui.logic — side mission order', () => {
     // a broken progress value reads as "not started" instead of scrambling the board
     expect(sideOrder([m('a'), m('b')], new Set(), (x) => (x.id === 'a' ? NaN : 0.2)).map((x) => x.id)).toEqual(['b', 'a']);
   });
+  it('NEW cards (offered this session, unseen) come right after the claimable ones, before progress', () => {
+    const list = [m('a'), m('b'), m('c', 3), m('d', 5), m('e', 3), m('f'), m('g', 4)];
+    const fr: Record<string, number> = { a: 0.5, b: 1, c: 0, d: 0, e: 0.5, f: 0.9, g: 0 };
+    const order = sideOrder(list, new Set(['b']), (x) => fr[x.id], new Set(['c', 'g']));
+    expect(order.map((x) => x.id)).toEqual(['b', 'g', 'c', 'f', 'e', 'a', 'd']);
+  });
 });
 
 describe('ui.logic — collapsed side list', () => {
@@ -380,6 +386,19 @@ describe('ui.logic — collapsed side list', () => {
     expect(ids(sideVisible(board(8), new Set(['s7']), false).shown)).toEqual(['s0', 's1', 's2', 's3', 's7']);
   });
 
+  it('NEW cards always show like claimable ones: a tier-up\'s six fresh chains are not hidden behind Show all', () => {
+    const list = board(16);
+    const claim = new Set(['s14']);
+    const fresh = new Set(['s10', 's11', 's12', 's13', 's15']);
+    const r = sideVisible(sideOrder(list, claim, () => 0, fresh), new Set([...claim, ...fresh]), false);
+    expect(ids(r.shown)).toEqual(['s14', 's10', 's11', 's12', 's13', 's15']);
+    expect(r.hidden).toBe(10);
+    // two NEW cards: they show, and the cap fills up with the best of the rest
+    const two = new Set(['s8', 's9']);
+    const r2 = sideVisible(sideOrder(list, new Set(), () => 0, two), two, false);
+    expect(ids(r2.shown)).toEqual(['s8', 's9', 's0', 's1', 's2']);
+  });
+
   it('expanded shows everything in the same order; a short board has nothing to hide', () => {
     const list = board(9);
     const r = sideVisible(list, new Set(), true);
@@ -387,6 +406,32 @@ describe('ui.logic — collapsed side list', () => {
     expect(r.hidden).toBe(4);
     expect(sideVisible(board(5), new Set(), false)).toEqual({ shown: board(5), hidden: 0 });
     expect(sideVisible([], new Set(), false)).toEqual({ shown: [], hidden: 0 });
+  });
+});
+
+describe('ui.logic — NEW side cards (session only)', () => {
+  it('nothing on the board at launch is NEW; a card offered later is, until a visit that showed it ends', () => {
+    const seen = new SideSeen();
+    const offered = new Set<string>();
+    expect([...seen.fresh(['a', 'b'], offered)]).toEqual([]);
+    offered.add('c').add('d');
+    expect([...seen.fresh(['a', 'b', 'c', 'd'], offered)]).toEqual(['c', 'd']);
+    // the Side tab shows them: still NEW for the rest of this visit (re-renders included)
+    seen.showing(['c', 'd']);
+    seen.showing(['c', 'd']);
+    expect([...seen.fresh(['a', 'b', 'c', 'd'], offered)]).toEqual(['c', 'd']);
+    // the player leaves the tab / closes the panel
+    seen.endVisit();
+    expect([...seen.fresh(['a', 'b', 'c', 'd'], offered)]).toEqual([]);
+  });
+  it('a visit only marks what it showed; ending a visit that showed nothing changes nothing', () => {
+    const seen = new SideSeen();
+    const offered = new Set(['x', 'y']);
+    seen.endVisit();
+    expect([...seen.fresh(['x', 'y'], offered)]).toEqual(['x', 'y']);
+    seen.showing(['x']);
+    seen.endVisit();
+    expect([...seen.fresh(['x', 'y'], offered)]).toEqual(['y']);
   });
 });
 

@@ -6,7 +6,7 @@ import type { MissionDef } from '../../data/schema';
 import { fmt } from '../../core/format';
 import { fmtLong, msUntilLocalMidnight } from '../logic/time';
 import { claimableMissions } from '../logic/badges';
-import { sideOrder, sideVisible } from '../logic/missionOrder';
+import { SideSeen, sideOrder, sideVisible } from '../logic/missionOrder';
 import { bar, btn, emptyState, rewardChips, tabs } from '../widgets';
 import { fill, h } from '../dom';
 import { hudArt } from '../art';
@@ -17,6 +17,8 @@ export class MissionsPanel extends Panel {
   readonly name = 'missions';
   /** The Side tab shows every card ("Show all side missions"); remembered for the session only, never saved. */
   private static sideExpanded = false;
+  /** Which side cards read NEW (offered this session, not seen yet); session only, never saved. */
+  private static readonly sideSeen = new SideSeen();
   private tab: Tab = 'main';
 
   title(): PanelTitle {
@@ -26,6 +28,9 @@ export class MissionsPanel extends Panel {
   override onOpen(arg: unknown): void {
     const want = this.pick<Tab>(arg, 'tab');
     if (want) this.tab = want;
+    // side missions offered since the player last looked ("3 new side missions are ready" after a tier-up, whose
+    // toast opens this panel): show them first
+    else if (this.freshSide().size) this.tab = 'side';
     else {
       // jump to a tab with something to claim
       const ms = this.game.sys.missions;
@@ -39,7 +44,21 @@ export class MissionsPanel extends Panel {
   override signature(): string {
     const ms = this.game.sys.missions;
     const act = ms.active().map((m) => `${m.id}:${Math.floor(ms.progress(m.id).value)}`);
-    return `${this.tab}|${act.join(',')}|${this.game.state.missions.completed.length}|${this.game.state.missions.dailyDate}|${MissionsPanel.sideExpanded}`;
+    return `${this.tab}|${act.join(',')}|${this.game.state.missions.completed.length}|${this.game.state.missions.dailyDate}|${MissionsPanel.sideExpanded}|${this.freshSide().size}`;
+  }
+
+  /** The visit to the Side tab ends: the NEW cards it showed are seen from now on. */
+  override onClose(): void {
+    MissionsPanel.sideSeen.endVisit();
+  }
+
+  /** Active side missions that read NEW. */
+  private freshSide(): Set<string> {
+    const ms = this.game.sys.missions;
+    return MissionsPanel.sideSeen.fresh(
+      ms.activeByChain('side').map((m) => m.id),
+      ms.offeredThisSession(),
+    );
   }
 
   private list(tab: Tab): MissionDef[] {
@@ -52,7 +71,7 @@ export class MissionsPanel extends Panel {
       const p = ms.progress(m.id);
       return p.target > 0 ? p.value / p.target : 0;
     };
-    return sideOrder(list, new Set(claimableMissions(g)), frac);
+    return sideOrder(list, new Set(claimableMissions(g)), frac, this.freshSide());
   }
 
   render(): void {
@@ -70,6 +89,7 @@ export class MissionsPanel extends Panel {
         ],
         this.tab,
         (id) => {
+          if (this.tab === 'side' && id !== 'side') MissionsPanel.sideSeen.endVisit();
           this.tab = id as Tab;
           this.rerender();
         },
@@ -95,11 +115,13 @@ export class MissionsPanel extends Panel {
       );
     }
     if (!list.length) wrap.appendChild(emptyState(this.tab === 'daily' ? '📅' : '🧭', this.tab === 'daily' ? 'No daily missions yet' : 'All caught up!', 'New missions appear as your colony grows.'));
-    // Side: a calm board. Every claimable card, then the goals closest to done, up to SIDE_CAP; the rest behind
-    // "Show all side missions". Claim all and the tab badges still count the whole list.
-    const side = this.tab === 'side' ? sideVisible(list, claimable, MissionsPanel.sideExpanded) : null;
+    // Side: a calm board. Every claimable and NEW card, then the goals closest to done, up to SIDE_CAP; the rest
+    // behind "Show all side missions". Claim all and the tab badges still count the whole list.
+    const fresh = this.tab === 'side' ? this.freshSide() : new Set<string>();
+    const side = this.tab === 'side' ? sideVisible(list, new Set([...claimable, ...fresh]), MissionsPanel.sideExpanded) : null;
+    if (side) MissionsPanel.sideSeen.showing(fresh);
     const grid = h('div', { class: 'stack-v tight' });
-    for (const m of side?.shown ?? list) grid.appendChild(this.missionCard(m, claimable.has(m.id)));
+    for (const m of side?.shown ?? list) grid.appendChild(this.missionCard(m, claimable.has(m.id), fresh.has(m.id)));
     wrap.appendChild(grid);
     if (side?.hidden) {
       const open = MissionsPanel.sideExpanded;
@@ -121,14 +143,19 @@ export class MissionsPanel extends Panel {
     fill(this.body, wrap);
   }
 
-  private missionCard(m: MissionDef, ready: boolean): HTMLElement {
+  private missionCard(m: MissionDef, ready: boolean, fresh = false): HTMLElement {
     const g = this.game;
     const p = g.sys.missions.progress(m.id);
     const claimed = this.game.state.missions.completed.includes(m.id) && !g.state.missions.active.includes(m.id);
     const frac = p.target > 0 ? Math.min(1, p.value / p.target) : 0;
     const el = h('div', { class: 'card mcard' + (ready ? ' ready' : '') + (claimed ? ' claimed' : ''), data: { mission: m.id } });
     el.append(
-      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.name }), h('div', { class: 'mute small', text: m.description })), claimed ? h('span', { class: 'chip good', text: '✔ Claimed' }) : null),
+      h(
+        'div',
+        { class: 'row' },
+        h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.name }), h('div', { class: 'mute small', text: m.description })),
+        claimed ? h('span', { class: 'chip good', text: '✔ Claimed' }) : fresh ? h('span', { class: 'chip new', text: 'NEW' }) : null,
+      ),
       bar(claimed ? 1 : frac, ready || claimed ? 'good' : 'orange', claimed ? 'Done' : `${fmt(Math.floor(p.value))} / ${fmt(p.target)}`),
       h(
         'div',
