@@ -5,7 +5,8 @@
  * when that file exists, else a bubble drawn on the canvas with the icon inside.
  *
  * Readability on a phone: drawn over the scene (no depth test, like a marker), it grows a little with camera
- * distance so it never shrinks to a speck, and fades out far away. Hidden in build mode and on the map. Low quality
+ * distance so it never shrinks to a speck, and fades out far away (and softens right next to the player, so it
+ * never hides the player in the middle of the screen). Hidden in build mode and on the map. Low quality
  * uses smaller textures and skips the bobbing. Tapping a bubble selects its colonist (Renderer.pick).
  */
 import * as THREE from 'three';
@@ -24,6 +25,9 @@ const GROW_MAX = 2.4;
 const FADE_FROM = 95;
 const FADE_TO = 140;
 const POP_SECONDS = 0.35;
+/** World units: a bubble this close to the player softens so it never hides the player in the middle of the screen. */
+const NEAR_PLAYER = 2.6;
+const NEAR_ALPHA = 0.45;
 const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif';
 
 interface Slot {
@@ -96,6 +100,7 @@ export class WishBubbles {
       const cam = ctx.camera.position;
       const list = g.state.colonists.list;
       const bob = env.quality !== 'low';
+      const pl = g.state.player;
       for (let i = 0; i < open.length && used < POOL; i++) {
         const w = open[i];
         let c: Colonist | null = null;
@@ -123,7 +128,8 @@ export class WishBubbles {
         const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
         const pop = Math.min(1, (env.t - slot.born) / POP_SECONDS);
         const s = BASE_SIZE * Math.min(GROW_MAX, Math.max(1, d / GROW_FROM)) * (pop < 1 ? Math.max(0.05, easeOutBack(pop)) : 1);
-        const alpha = 1 - smoothstep(FADE_FROM, FADE_TO, d);
+        const nearPlayer = Math.hypot(c.x - pl.x, c.z - pl.z) < NEAR_PLAYER;
+        const alpha = (1 - smoothstep(FADE_FROM, FADE_TO, d)) * (nearPlayer ? NEAR_ALPHA : 1);
         const sp = slot.sprite;
         sp.position.set(c.x, y, c.z);
         sp.scale.set(s, s, 1);
