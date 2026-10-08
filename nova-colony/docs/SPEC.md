@@ -117,6 +117,18 @@ medal was claimed, and the Colony Records (lifetime wood, aliens, raids, buildin
 Unlock toasts open it when tapped. The guided first session stays quiet. Unlocks are mirrored to Game Center / Play
 Games through a no-op platform hook (docs/MOBILE.md §6c).
 
+## 20d. Colonist wishes & friendship (short, cozy goals between bigger ones)
+Once the opening tutorial is over, a colonist voices a small wish about every 8–12 minutes of online play (at most two
+open, one per colonist; never during an alien attack, never from someone away, asleep or indoors): hand over a couple
+of minutes' worth of a resource with one tap, place one more lantern / flower bed / bench / fountain…, hand-craft a quick
+recipe, walk up and Chat, or open any cache out there. Each is doable in 1–10 minutes at its tier; a bubble over their
+head, a pink badge on the Crew button and a Wishes tab show what is waiting, and "Show me" opens the right menu or
+points the guide arrow. Granting one: "Wish granted!" +8 happiness for 4 hours, a friendship heart (0–5; three hearts
++5% productivity, five = Best friends +3 happiness for good) and a small thank-you gift (~3 minutes of colony output,
+sometimes 1–2 Nova). Who and what are rolled from the save seed and a counter (no save-scumming); nothing moves offline
+and an open wish simply fades after 45 minutes of play: no penalty, ever. A "Good Neighbour" side chain (1 → 10 → 30
+wishes) opens with the first wish.
+
 ## 21. Juice
 Resources fly to storage, buildings construct piece by piece, upgrade transformation animations,
 resource pops, machines visibly operate, conveyors move items, colonists visibly work, turrets track

@@ -39,6 +39,7 @@ Render and UI read `game.state` directly every frame (cheap, no copying).
 | Combat & invasions | `src/sim/combat.ts` (+ `src/sim/combat/*`) | combat agent |
 | World, player, exploration, vehicles, world events | `src/sim/world.ts`, `player.ts`, `worldEvents.ts` (+ `src/sim/world/*`) | world agent |
 | Expeditions & the Frontier (squads, hauls, Star Chart) | `src/sim/expeditions.ts` (+ `src/sim/expedition/*`), content in `src/data/expeditions.ts` | expeditions |
+| Colonist wishes & friendship (wishes, hearts, gifts) | `src/sim/wishes.ts` (+ `src/sim/wish/*`), content in `src/data/wishes.ts`, bubbles in `src/render/actors/WishBubbles.ts` | wishes |
 | Missions, tutorial, live-ops, monetization, save, platform adapters, Capacitor | `src/sim/missions.ts`, `tutorial.ts`, `liveops.ts`, `src/platform/*` (except types/mock), `capacitor.config.ts`, native project files | meta agent |
 | Achievements & the Colony Journal | `src/sim/achievements.ts` (+ `src/sim/meta/achievementRules.ts`), content in `src/data/achievements.ts`, `src/platform/achievements.ts`, UI `src/ui/panels/JournalPanel.ts` + `src/ui/logic/achievements.ts` | achievements |
 | Rendering | `src/render/*` (except api.ts) | render agent |
@@ -107,10 +108,12 @@ spin_tick spin_win door vehicle_start teleport recruit discover`
 
 ## Panels (UI opens on `bus.emit('ui:open', { panel, arg })`)
 
-`build colonists recruit research craft inventory map missions shop season daily spin settings welcome victory
-building(arg=id) colony merchant(arg=eventId) vehicles expeditions(arg={ dest?, tab? }) journal(arg={ tab?: 'medals' | 'records' })`. UI element hooks for tutorial highlighting:
+`build(arg={ def?, tab? }) colonists(arg={ id?, tab?: 'wishes' }) recruit research craft(arg={ station? }) inventory map missions shop
+season daily spin settings welcome victory building(arg=id) colony merchant(arg=eventId) vehicles expeditions(arg={ dest?, tab? })
+journal(arg={ tab?: 'medals' | 'records' })`. UI element hooks for tutorial highlighting:
 `#btn-build #btn-colonists #btn-research #btn-craft #btn-map #btn-missions #btn-shop #btn-menu #btn-interact`,
-panels `[data-panel="<name>"]`, build cards `[data-build="<defId>"]`, research nodes `[data-research="<id>"]`.
+panels `[data-panel="<name>"]`, build cards `[data-build="<defId>"]`, research nodes `[data-research="<id>"]`, recipe rows
+`[data-recipe="<id>"]`. Besides the tutorial, a wish's "Show me" can pin the guide (`Guide.override`, `ui:wishGuide`).
 
 ## Cozy design rules (every system)
 
