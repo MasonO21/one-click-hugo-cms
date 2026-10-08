@@ -11,6 +11,7 @@ import { RevenueCatIap, WebMockIap } from './iap';
 import { AnalyticsClient } from './analytics';
 import { CapacitorHaptics, NoopHaptics } from './haptics';
 import { HttpCloudSave } from './cloud';
+import { CapacitorNotifications, NoopNotifications } from './notifications';
 
 export interface PlatformOptions {
   /** Force the web adapters even inside Capacitor (debugging). */
@@ -34,6 +35,7 @@ export async function createPlatformServices(opts: PlatformOptions = {}): Promis
     analytics,
     haptics: native ? new CapacitorHaptics() : new NoopHaptics(),
     cloud,
+    notifications: native ? new CapacitorNotifications(platform as 'ios' | 'android') : new NoopNotifications(),
   };
 }
 

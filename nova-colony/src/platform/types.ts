@@ -65,6 +65,34 @@ export interface CloudSaveService {
   download(): Promise<string | null>;
 }
 
+/** OS permission for local notifications as the game sees it ('unavailable': web, or the plugin failed). */
+export type NotifyPermission = 'granted' | 'denied' | 'prompt' | 'unavailable';
+
+/** What a tapped notification asks the game to do. */
+export interface NotifyTap {
+  kind?: import('./notifyPlan').NotifyKind;
+  /** Panel to open ('daily' for the gift reminder). */
+  panel?: 'daily';
+}
+
+/**
+ * Local notifications (src/platform/notifications.ts). Implementations never throw and never show the OS prompt
+ * except from `request()`.
+ */
+export interface NotificationsService {
+  /** True on iOS / Android; false on the web (everything is a no-op there). */
+  readonly available: boolean;
+  check(): Promise<NotifyPermission>;
+  /** Ask the OS (shows its prompt while it still asks). */
+  request(): Promise<NotifyPermission>;
+  /** Cancel every pending colony notification, then schedule `list` (only with permission). True when done. */
+  replace(list: readonly import('./notifyPlan').PlannedNotification[]): Promise<boolean>;
+  /** Cancel pending colony notifications and clear delivered ones from the notification shade. */
+  clear(): Promise<void>;
+  /** A delivered notification was tapped. Returns an unsubscribe. */
+  onTap(cb: (tap: NotifyTap) => void): () => void;
+}
+
 export interface PlatformServices {
   platform: 'web' | 'ios' | 'android';
   store: KeyValueStore;
@@ -73,4 +101,6 @@ export interface PlatformServices {
   analytics: AnalyticsService;
   haptics: HapticsService;
   cloud: CloudSaveService;
+  /** Local notifications (optional: mocks and older call sites leave it out = no notifications). */
+  notifications?: NotificationsService;
 }

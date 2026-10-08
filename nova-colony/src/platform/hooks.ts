@@ -1,6 +1,7 @@
 /**
  * Platform hooks wired to a running game: analytics subscriptions, haptic feedback that respects
- * `settings.haptics`, and native app chrome (hide splash, immersive status bar).
+ * `settings.haptics`, local notifications (game.notifications) and native app chrome (hide splash, immersive
+ * status bar).
  * `SaveManager.attach(game)` installs these, so main.ts needs no extra call.
  * OWNER: meta agent.
  */
@@ -8,6 +9,7 @@ import type { Game } from '../core/Game';
 import { installAnalyticsHooks } from './analyticsHooks';
 import { isNative } from './env';
 import type { ToggleableHaptics } from './haptics';
+import { installNotifications } from './notifications';
 
 /** Hide the native splash and go immersive (no status bar). Safe no-op on the web. */
 async function setupNativeChrome(): Promise<void> {
@@ -40,6 +42,8 @@ export function installPlatformHooks(game: Game): () => void {
   offs.push(game.bus.on('season:levelUp', () => haptics.success()));
   offs.push(game.bus.on('colony:tierUp', () => haptics.heavy()));
   offs.push(game.bus.on('combat:warning', () => haptics.warning()));
+  // gentle reminders while away (no-op on the web; nothing is scheduled until the player opts in)
+  offs.push(installNotifications(game));
 
   if (isNative()) void setupNativeChrome();
   return () => offs.forEach((f) => f());
