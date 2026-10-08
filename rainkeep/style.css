@@ -1028,3 +1028,22 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .sg-chest { align-items: center; gap: 8px; }
 .sg-chest > .ic { width: 44px; height: 44px; flex: none; }
 .sg-wave.king .sg-crown .ic { width: 16px; height: 16px; }
+
+/* ---------- Watchtower Intel (intel.js): star ratings, the ledger and the report sheet ---------- */
+.iv-stars { color: var(--gold); font-size: 14px; letter-spacing: 1px; white-space: nowrap; }
+.iv-stars i { color: #ffffff22; font-style: normal; }
+.iv-head { align-items: flex-start; gap: 10px; }
+.iv-head .lore { margin: 4px 0 0; }
+.ic.iv-kind { width: 56px; height: 56px; flex: none; }
+.ic.iv-kind.small { width: 34px; height: 34px; }
+.iv-hero { align-items: center; gap: 10px; }
+.iv-hero .portrait { width: 56px; height: 62px; border-radius: 10px; flex: none; }
+.iv-list { gap: 6px; }
+.iv-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 12px; background: #1b1329; border: 1px solid #3d2e52; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.iv-row .grow { display: grid; gap: 1px; min-width: 0; }
+.iv-row b { font-size: 14px; }
+.iv-row:hover, .iv-row:focus-visible { border-color: var(--line-2); }
+.iv-last { border-color: #c99a4b88; }
+.iv-last.lost { border-color: #d0503a88; }
+.iv-last .row { align-items: center; gap: 8px; }
+.chip.glow { box-shadow: 0 0 0 1px #7ff0e0aa, 0 0 12px #4fd8c866; }

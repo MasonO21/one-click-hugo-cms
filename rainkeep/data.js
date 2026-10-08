@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.12.0',
+  version: '4.13.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -945,6 +945,7 @@ const DATA = {
     { id: 'road', text: 'Roll the Road Dice 5 times', n: 5, pts: 10, show: (S) => S.lv.hall > 0 },
     { id: 'rival', text: 'March on a rival keep', n: 1, pts: 15, show: (S) => S.lv.wyrm >= 8 },
     { id: 'siege', text: 'Hold 3 waves of a Scorpion Siege', n: 3, pts: 15, show: (S) => S.lv.wyrm >= 10 },
+    { id: 'intel', text: 'Complete 2 watchtower reports', n: 2, pts: 15, show: (S) => S.lv.wyrm >= 4 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1, dice: 1 }],
@@ -1246,6 +1247,64 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- Watchtower Intel ----------
+  // Reports from the watchtower's scouts: a job on open sand within sight, rated one to five stars. Rescues,
+  // hunts and bounties are fights for the squad; a lost caravan or a relic needs only a few scouts; an errand
+  // sends one hero alone (a benched one if you have one) and pays that hero's shards.
+  intel: {
+    unlock: 4, // Rainwyrm level (and the Barracks built, to send marches)
+    every: 75 * 60, cap: 3, capAt: [10, 15], // a report every 75 minutes of keep time; one more held from Watchtower Lv 10 and 15
+    ring: [2, 7.5], // how far out, in tiles (and always within sight)
+    stars: [30, 30, 22, 12, 6], starTower: 0.05, // weights for one to five stars; each Watchtower level tilts them up
+    // a fight is as strong as expedition stage (yours - 6 + 2 x stars), a bounty a little stronger
+    foe: { offset: -6, perStar: 2, bounty: 1.1 },
+    loss: 0.15, // troops lost when a fight goes badly (the report stays)
+    scouts: 0.25, escort: 0.1, // the share of the march sent with scouts, and with a hero on an errand
+    starMult: (s) => 0.6 + 0.2 * s, // rewards by stars
+    kinds: {
+      rescue: { name: 'Rescue', icon: 'i-rescue', fight: true, w: 3, give: { food: 2, water: 1.5 }, journals: 1, survivors: 1 },
+      hunt: { name: 'Hunt', icon: 'i-hunt', fight: true, w: 3, give: { food: 2.5, stone: 1.5 }, journals: 1.5, treats: 5 },
+      caravan: { name: 'Lost caravan', icon: 'i-lostcaravan', fight: false, w: 2, give: { stone: 2, copper: 1.5 }, starglass: 8 },
+      relic: { name: 'Relic', icon: 'i-relic', fight: false, w: 2, give: { water: 1 }, journals: 2, starglass: 12 },
+      bounty: { name: 'Bounty', icon: 'i-bounty', fight: true, w: 2, give: { copper: 2 }, starglass: 20, beacon: 0.08 },
+      errand: { name: "Hero's errand", icon: 'i-errand', fight: false, hero: true, w: 2, give: { food: 1 }, journals: 2, shards: 2 },
+    },
+    // the story on each report: a title and a line, then what the march found ({hero} is the hero on an errand)
+    tales: {
+      rescue: [
+        ['Smoke at the dry well', 'Raiders have a family pinned down at the old well, and the water is nearly gone.', 'The raiders scatter. The family walks home between your troops, holding hands.'],
+        ['A wagon on its side', 'A trader\'s wagon lies overturned in a gully. Scorpion riders circle it like vultures.', 'The riders flee into the dunes, and the trader\'s children climb out from under the wagon.'],
+        ['Shepherds in a cave', 'Goatherds hide in a cave mouth while a raiding party waits them out.', 'The siege is lifted. The shepherds bring their goats and their thanks to the keep.'],
+      ],
+      hunt: [
+        ['Old One-Ear', 'A sand lion with a torn ear has taken three camels from the caravan road.', 'Old One-Ear will take no more camels. The caravan masters send dried meat and thanks.'],
+        ['Tracks by the cistern', 'Something big drinks at the cistern at night and leaves claw marks on the stone.', 'A great jackal, grey at the muzzle. The cistern is safe again.'],
+        ['The man-eater of the salt flats', 'Travellers will not cross the flats while the beast hunts there.', 'The beast is down. Travellers already cross the flats again.'],
+      ],
+      caravan: [
+        ['Bells in the dunes', 'Scouts hear camel bells in the dunes but see no riders. A caravan has lost its way.', 'Five camels, still loaded, and no sign of their drivers. Their cargo comes home.'],
+        ['A trader out of water', 'A lone trader, three days lost, waves a red cloth from a dune top.', 'The trader drinks, weeps, and insists on paying for the rescue in goods.'],
+        ['Tracks that circle', 'A caravan trail circles the same dune twice. Someone is lost in the haze.', 'The caravan follows your scouts to the road and leaves a share of its load as thanks.'],
+      ],
+      relic: [
+        ['Something glints', 'A scout saw a glint on a dune crest where the wind has stripped the sand.', 'A bronze lamp, older than the keep, with writing no one can read yet.'],
+        ['An old milestone', 'The wind has uncovered a carved milestone from a road no map remembers.', 'Under the stone, a sealed jar of maps and a few coins from a forgotten kingdom.'],
+        ['A buried cistern', 'A ring of cut stones shows where an old cistern lies under the sand.', 'Dry, but its walls are carved with the old rain songs. The archivists are delighted.'],
+      ],
+      bounty: [
+        ['Lieutenant Varr', 'A Scorpion lieutenant has camped close enough to see the keep\'s lamps. There is a price on his head.', 'Varr\'s banner comes down. The bounty is paid in Starglass.'],
+        ['The Red Sash', 'A raider captain in a red sash has been robbing pilgrims on the shrine road.', 'The Red Sash is taken. The pilgrims\' road is open, and the bounty is yours.'],
+        ['Scorpion paymaster', 'The host\'s paymaster travels with a strongbox and a small guard.', 'The strongbox is heavier than it looked.'],
+      ],
+      errand: [
+        ['A letter from home', '{hero} has a letter from a cousin camped at the far well, and asks leave to take them water.', '{hero} comes back with the cousin\'s thanks and a bundle of old family things.'],
+        ['An old teacher\'s grave', '{hero} wants to visit the grave of an old teacher out on the sand.', '{hero} returns quiet, and trains harder than ever after.'],
+        ['A blade in the dunes', '{hero} has heard a rumour of a lost blade from long ago, buried by a dune.', '{hero} found it, rusted but whole, and will not say whose it was.'],
+      ],
+    },
+    warPts: 10, // Oasis Wars points per star
+  },
+
   // ---------- The Scorpion Siege ----------
   // Ten waves of the Scorpion host against the gate. The scouts call each wave's kind before it comes;
   // one tactic a wave counters it, and each siege brings only so many of each.
@@ -1407,6 +1466,9 @@ const DATA = {
     { id: 'siege1', text: 'Hold all ten waves of a Scorpion Siege', stat: 'siegeWins', n: 1, reward: { beacons: 3 } },
     { id: 'siege50', text: 'Hold 50 siege waves', stat: 'siegeWaves', n: 50, reward: { starglass: 300 } },
     { id: 'king5', text: 'Slay the Scorpion King 5 times', stat: 'kings', n: 5, reward: { shard_epic: 1 } },
+    { id: 'intel10', text: 'Complete 10 watchtower reports', stat: 'intel', n: 10, reward: { starglass: 150 } },
+    { id: 'intel60', text: 'Complete 60 watchtower reports', stat: 'intel', n: 60, reward: { shard_epic: 1 } },
+    { id: 'intel5', text: 'Complete 10 five-star reports', stat: 'intel5', n: 10, reward: { beacons: 3 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

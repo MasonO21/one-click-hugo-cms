@@ -88,6 +88,7 @@ window.RK_ART = {
     roadboard: 'art/events/road-board.webp',
     rivals: 'art/events/rivals.webp',
     siege: 'art/events/siege.webp',
+    intel: 'art/events/intel.webp',
   },
   offer: {
     roadkit: 'art/events/road.webp',
@@ -208,6 +209,13 @@ window.RK_ART = {
     'i-walls': 'art/ui/walls.webp',
     'i-scorpking': 'art/ui/scorpking.webp',
     'i-siegechest': 'art/ui/siegechest.webp',
+    'i-intel': 'art/ui/intel.webp',
+    'i-rescue': 'art/ui/rescue.webp',
+    'i-hunt': 'art/ui/hunt.webp',
+    'i-lostcaravan': 'art/ui/lostcaravan.webp',
+    'i-relic': 'art/ui/relic.webp',
+    'i-bounty': 'art/ui/bounty.webp',
+    'i-errand': 'art/ui/errand.webp',
   },
   // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
   // that frames sheets

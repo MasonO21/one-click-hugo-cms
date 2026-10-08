@@ -383,6 +383,7 @@
   KH.on('roadLap', () => addPts('oasis', DATA.road.warLap));
   KH.on('rivalWin', () => addPts('oasis', DATA.rivals.warPts));
   KH.on('siegeWave', () => addPts('oasis', DATA.siege.warPts));
+  KH.on('intelDone', (e) => addPts('oasis', DATA.intel.warPts * e.stars));
   ACT.evclaim = (i) => {
     i = Number(i);
     const def = EV.defs[curKey()];

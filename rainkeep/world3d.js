@@ -147,6 +147,38 @@
     }
     return g;
   }
+  // a watchtower report (intel.js): a signpost with a turquoise pennant in a ring of gold light, and a sign of the job
+  function intelModel(r) {
+    const g = new THREE.Group(), wood = A.mat(A.P.woodD), gold = A.mat('#e8b54a', { m: 0.6, r: 0.35 }), cloth = A.mat('#2fb8a8', { flat: true });
+    g.add(blob(1.2));
+    g.add(A.cyl(0.06, 0.08, 2.4, wood, -0.6, 0, -0.3, 6), A.box(0.7, 0.4, 0.04, cloth, -0.22, 1.9, -0.3));
+    const ring = new THREE.Mesh(A.geo('ivring', () => new THREE.TorusGeometry(1.15, 0.07, 6, 28).rotateX(Math.PI / 2)), new THREE.MeshBasicMaterial({ color: '#ffcf6e', transparent: true, opacity: 0.8 }));
+    ring.position.y = 0.08; ring.userData.dyn = true; g.add(ring);
+    g.userData.ring = ring;
+    const k = r.kind;
+    if (k === 'rescue') {
+      const tent = A.cone(0.7, 0.9, A.mat('#c9b48a', { flat: true }), 0.35, 0, 0.2, 6); g.add(tent);
+      for (let i = 0; i < 2; i++) { const p = A.person(500 + r.id * 3 + i, { robe: ['#6a8fb8', '#b86a5a'][i], wrap: '#e8dcc0', kind: 'villager' }); p.scale.setScalar(0.9); p.position.set(-0.1 + i * 0.6, 0, 0.6); p.rotation.y = 0.4; p.userData.dyn = true; g.add(p); }
+    } else if (k === 'hunt') {
+      g.add(A.rock(0.55, 3, '#a87a4e'));
+      for (let i = 0; i < 4; i++) g.add(A.cyl(0.05, 0.04, 0.6, A.mat('#eae0c8', { flat: true }), 0.3 + i * 0.16, 0.05, 0.5 - i * 0.1, 5));
+      g.add(A.sph(0.2, A.mat('#eae0c8', { flat: true }), 0.1, 0.12, 0.7, 6));
+    } else if (k === 'caravan') {
+      const c = A.camel(600 + r.id, { cloth: '#2f6f9a', load: true }); c.scale.setScalar(0.8); c.position.set(0.3, 0, 0.3); c.rotation.y = 1.1; c.userData.dyn = true; g.add(c);
+      g.add(A.box(0.4, 0.3, 0.3, A.mat('#8a5a2a', { flat: true }), -0.2, 0, 0.7), A.box(0.3, 0.25, 0.3, A.mat('#a8743a', { flat: true }), 0.25, 0, 0.9));
+    } else if (k === 'relic') {
+      g.add(A.cyl(0.3, 0.2, 0.55, gold, 0.3, 0, 0.3, 10), A.sph(0.22, gold, 0.3, 0.55, 0.3, 10));
+      const glint = new THREE.Mesh(A.geo('ivglint', () => new THREE.CylinderGeometry(0.15, 0.45, 4.5, 10, 1, true)), new THREE.MeshBasicMaterial({ color: '#ffe08a', transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      glint.position.set(0.3, 2.4, 0.3); glint.userData.dyn = true; g.add(glint);
+    } else if (k === 'bounty') {
+      g.add(A.cone(0.8, 1.1, A.mat('#7a2a1a', { flat: true }), 0.35, 0, 0.2, 6));
+      const flag = A.banner('#b8331c', 1.6, 0.5, 0.32); flag.position.set(0.9, 0.1, -0.2); g.add(flag); g.userData.banner = flag;
+    } else {
+      const p = A.palm(2.0, r.id * 7); p.position.set(0.4, 0, 0.2); g.add(p);
+      g.add(A.box(0.5, 0.45, 0.5, A.mat('#d8c4a0', { flat: true }), -0.1, 0, 0.6), A.sph(0.28, A.mat('#2fb8a8', { flat: true }), -0.1, 0.45, 0.6, 8));
+    }
+    return g;
+  }
   // a Saltborn Hive (Act II): white crystal spires around a dark mouth
   function hiveModel(t) {
     const g = new THREE.Group();
@@ -359,7 +391,7 @@
       return img;
     };
     icons.stone = mk('i-stone'); icons.food = mk('i-food'); icons.water = mk('i-water'); icons.copper = mk('i-copper'); icons.sunsteel = mk('i-sunsteel');
-    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.hive = mk('i-spire', '#eaf6ff'); icons.fort = mk('i-fort', '#ffd27a');
+    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.hive = mk('i-spire', '#eaf6ff'); icons.fort = mk('i-fort', '#ffd27a'); icons.intel = mk('i-intel', '#7ff0e0');
   }
 
   // ======================================================================
@@ -368,9 +400,9 @@
   function syncTiles() {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const b = KH.world.base(x, y);
-      if (b.kind === 'empty' || b.kind === 'keep') continue;
+      if (b.kind === 'empty' || b.kind === 'keep') { if (tiles[b.k]) { scene.remove(tiles[b.k].g); delete tiles[b.k]; } continue; }
       const t = KH.world.tile(x, y);
-      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}${glbReady(b) ? 'm' : ''}${t.shield ? 'S' : ''}${b.kind === 'rival' && A.models && A.models.want(['s-fort']) ? 'F' : ''}`;
+      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}${glbReady(b) ? 'm' : ''}${t.shield ? 'S' : ''}${b.kind === 'intel' ? `${t.report.kind}${t.report.id}` : ''}${b.kind === 'rival' && A.models && A.models.want(['s-fort']) ? 'F' : ''}`;
       let e = tiles[b.k];
       if (e && e.key === key) continue;
       if (e) scene.remove(e.g);
@@ -378,6 +410,7 @@
       if (b.kind === 'node') g = nodeModel(b);
       else if (b.kind === 'beast') g = beastModel(b);
       else if (b.kind === 'rival') g = rivalModel(b, t);
+      else if (b.kind === 'intel') g = intelModel(t.report);
       else if (b.kind === 'camp') g = b.salt ? hiveModel(b) : campModel();
       else g = ruinModel(b);
       if (t.gone) {
@@ -553,12 +586,13 @@
       const b = KH.world.base(x, y);
       if (b.kind === 'empty' || b.kind === 'keep' || !KH.world.visible(x, y)) continue;
       const tt = KH.world.tile(x, y);
-      const [sx, sy, sz] = screen(wx(x), hAt(wx(x), wz(y)) + (b.kind === 'rival' ? 3.8 : b.kind === 'ruin' ? 2.9 : b.kind === 'node' && b.res === 'food' ? 3.2 : 2.3), wz(y));
+      const [sx, sy, sz] = screen(wx(x), hAt(wx(x), wz(y)) + (b.kind === 'rival' ? 3.8 : b.kind === 'intel' ? 2.9 : b.kind === 'ruin' ? 2.9 : b.kind === 'node' && b.res === 'food' ? 3.2 : 2.3), wz(y));
       if (sz > 1 || sx < -30 || sy < -30 || sx > VW + 30 || sy > VH + 30) continue;
       if (b.kind === 'node') badge(sx, sy, icons[b.res], tt.lvl, '#ffcf6e', tt.gone);
       else if (b.kind === 'beast') badge(sx, sy, icons.paw, tt.lvl, '#ff8a7a', tt.gone);
       else if (b.kind === 'camp') badge(sx, sy, b.salt ? icons.hive : icons.flag, tt.lvl, b.salt ? '#9fd8ff' : '#ff5e4e', tt.gone);
       else if (b.kind === 'rival') badge(sx, sy, icons.fort, tt.lvl, tt.shield ? '#7ff0e0' : '#ff9a3c', false);
+      else if (b.kind === 'intel') badge(sx, sy, icons.intel, tt.lvl, '#ffcf6e', false);
       else badge(sx, sy, icons.ruin, null, '#8fe4ff', tt.gone);
       if (busy.has(b.k)) { g.strokeStyle = 'rgba(255,207,110,.95)'; g.lineWidth = 2; g.setLineDash([3, 3]); ell(sx, sy, 17, 17); g.stroke(); g.setLineDash([]); }
     }
