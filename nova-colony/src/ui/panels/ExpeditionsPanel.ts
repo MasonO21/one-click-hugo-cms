@@ -79,6 +79,15 @@ export class ExpeditionsPanel extends Panel {
     this.rerender();
   }
 
+  /** Android back in the planner goes to the list, like the header's "← Back". */
+  override nestedView(): boolean {
+    return this.view === 'plan' && this.target != null;
+  }
+
+  override leaveNested(): void {
+    this.back();
+  }
+
   private plan(target: string): void {
     this.view = 'plan';
     if (this.target !== target) {

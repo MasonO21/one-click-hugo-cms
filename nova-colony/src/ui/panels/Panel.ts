@@ -73,6 +73,14 @@ export abstract class Panel {
   /** Called when `open()` is invoked again while the panel is already open. */
   onArg(_arg: unknown): void {}
   onClose(): void {}
+  /**
+   * The panel shows a view the player stepped into from its own list (with a "← Back" in the header): Android back
+   * calls `leaveNested()` instead of closing the panel.
+   */
+  nestedView(): boolean {
+    return false;
+  }
+  leaveNested(): void {}
   /** Per-frame hook for live bits (progress bars, countdowns) — keep it light. */
   live(_dt: number): void {}
 

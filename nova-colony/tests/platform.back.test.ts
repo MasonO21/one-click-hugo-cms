@@ -3,7 +3,7 @@
  * (never finish the activity, which is what Capacitor does when no listener is registered).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { backAction, backTarget } from '../src/ui/logic/back';
+import { backAction, backStep, backTarget } from '../src/ui/logic/back';
 
 const h = vi.hoisted(() => ({
   platform: 'android' as 'android' | 'ios' | 'web',
@@ -61,6 +61,17 @@ describe('back target (which panel closes)', () => {
   it('a modal is on top of every sheet, even one opened after it', () => {
     expect(backTarget([sheet(), modal(true)])).toBe(1);
     expect(backTarget([modal(true), sheet()])).toBe(0);
+  });
+
+  it('a nested view (Expeditions planner, a colonist page from the list) steps back inside the panel first', () => {
+    const nested = { kind: 'sheet' as const, dismissable: true, closing: false, nested: true };
+    expect(backStep([nested])).toEqual({ index: 0, inner: true });
+    expect(backStep([sheet()])).toEqual({ index: 0, inner: false });
+    // a reward card over the planner closes first; the planner is next
+    expect(backStep([nested, modal(true)])).toEqual({ index: 1, inner: false });
+    // Welcome Back over it keeps the press
+    expect(backStep([nested, modal(false)])).toEqual({ index: -1, inner: false });
+    expect(backStep([])).toEqual({ index: -1, inner: false });
   });
 
   it('Welcome Back / a raid chest keep the press: the sheet hidden under them does not close unseen', () => {

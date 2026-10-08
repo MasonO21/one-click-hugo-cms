@@ -33,6 +33,22 @@ export interface BackStackEntry {
   kind: 'sheet' | 'drawer' | 'side' | 'modal';
   dismissable: boolean;
   closing: boolean;
+  /**
+   * Shows a view the player stepped into inside the panel (the Expeditions planner from its list, a colonist's page
+   * from the crew list), with its own "← Back": the back press steps out of it before it closes the panel.
+   */
+  nested?: boolean;
+}
+
+/** What a back press does to the open panels: `index` as `backTarget`; `inner` = step out of its nested view. */
+export interface BackStep {
+  index: number;
+  inner: boolean;
+}
+
+export function backStep(stack: readonly BackStackEntry[]): BackStep {
+  const index = backTarget(stack);
+  return { index, inner: index >= 0 && !!stack[index].nested };
 }
 
 /**

@@ -18,6 +18,8 @@ type Filter = 'all' | 'wishes' | 'idle' | 'working' | 'away';
 export class ColonistsPanel extends Panel {
   readonly name = 'colonists';
   private detail: number | null = null;
+  /** The detail page was opened from the list (not straight from the world): Android back returns to the list. */
+  private fromList = false;
   private filter: Filter = 'all';
   /** Wishes tab: "12 m away" labels, refreshed in place by live() (a re-render would swallow taps). */
   private whereEls = new Map<number, HTMLElement>();
@@ -36,12 +38,22 @@ export class ColonistsPanel extends Panel {
     if (id != null) this.detail = Number(id);
     // with wishes waiting (the Crew button wears a pink badge) the list opens on them
     else if (this.pick<string>(arg, 'tab') === 'wishes' || wishRows(this.game).length) this.filter = 'wishes';
+    this.fromList = false;
   }
 
   override onArg(arg: unknown): void {
     const id = this.pick<number>(arg, 'id');
     this.detail = id != null ? Number(id) : null;
+    this.fromList = false;
     this.rev++;
+  }
+
+  override nestedView(): boolean {
+    return this.detail != null && this.fromList;
+  }
+
+  override leaveNested(): void {
+    this.back();
   }
 
   override extras() {
@@ -188,6 +200,7 @@ export class ColonistsPanel extends Panel {
     );
     el.addEventListener('click', () => {
       this.detail = c.id;
+      this.fromList = true;
       this.rerender();
     });
     return el;
@@ -351,6 +364,7 @@ export class ColonistsPanel extends Panel {
       );
       who.addEventListener('click', () => {
         this.detail = c.id;
+        this.fromList = true; // Android back returns to the Wishes list
         this.rerender();
       });
       const card = this.wishCardEl(r.card, false);

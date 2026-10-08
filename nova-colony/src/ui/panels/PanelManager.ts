@@ -5,7 +5,7 @@
 import type { UiCtx } from '../ctx';
 import { Panel } from './Panel';
 import { safe } from '../dom';
-import { backTarget } from '../logic/back';
+import { backStep } from '../logic/back';
 
 type Factory = (ctx: UiCtx) => Panel;
 
@@ -141,8 +141,11 @@ export class PanelManager {
       else this.modalQueue = this.modalQueue.filter((q) => q.name !== name);
       return;
     }
-    const i = backTarget(this.open_.map((o) => ({ kind: o.panel.kind, dismissable: o.panel.dismissable, closing: o.closing })));
-    if (i >= 0) this.closePanel(this.open_[i]);
+    const { index, inner } = backStep(this.open_.map((o) => ({ kind: o.panel.kind, dismissable: o.panel.dismissable, closing: o.closing, nested: !!safe(`panel ${o.panel.name} nestedView`, () => o.panel.nestedView()) })));
+    if (index < 0) return;
+    const o = this.open_[index];
+    if (inner) safe(`panel ${o.panel.name} leaveNested`, () => o.panel.leaveNested());
+    else this.closePanel(o);
   }
 
   closeAll(): void {
