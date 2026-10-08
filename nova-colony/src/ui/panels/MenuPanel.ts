@@ -16,7 +16,7 @@ export class MenuPanel extends Panel {
 
   override signature(): string {
     const b = this.ctx.badges();
-    return `${+b.daily}${+b.spin}${b.season}${+b.crate}${b.expeditions}|${this.game.sys.expeditions.unlocked() ? 1 : 0}`;
+    return `${+b.daily}${+b.spin}${b.season}${+b.crate}${b.expeditions}.${b.journal}|${this.game.sys.expeditions.unlocked() ? 1 : 0}`;
   }
 
   render(): void {
@@ -25,6 +25,7 @@ export class MenuPanel extends Panel {
       { icon: '🎁', art: rewardArt('daily_gift'), label: 'Daily gift', panel: 'daily', badge: b.daily ? 1 : 0 },
       { icon: '🎡', art: hudArt('spin'), label: 'Lucky wheel', panel: 'spin', badge: b.spin ? 1 : 0 },
       { icon: '🏆', art: hudArt('season'), label: 'Season pass', panel: 'season', badge: b.season },
+      { icon: '📔', art: hudArt('journal'), label: 'Journal', panel: 'journal', badge: b.journal },
       { icon: '🎒', art: hudArt('backpack'), label: 'Inventory', panel: 'inventory' },
       { icon: '🧭', art: hudArt('expeditions'), label: 'Expeditions', panel: 'expeditions', badge: b.expeditions },
       { icon: '🚙', art: vehicleArt('buggy'), label: 'Vehicles', panel: 'vehicles' },

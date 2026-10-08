@@ -1,0 +1,387 @@
+/* ==========================================================================
+   Colony Journal: summary, sections, achievement cards, medals, records.
+   Mobile first: every tap target is >= 44px, nothing is wider than the sheet (375px phones, landscape too).
+   ========================================================================== */
+
+/* a toast that opens the Journal when tapped */
+.nv-root .toast.tappable {
+  pointer-events: auto;
+  cursor: pointer;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.nv-root .toast.tappable:active {
+  filter: brightness(0.95);
+}
+
+.jr {
+  min-width: 0;
+}
+
+/* ---------- summary ---------- */
+.jr-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+}
+.jr-book {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 3.2em;
+  height: 3.2em;
+  border-radius: 1em;
+  background: linear-gradient(180deg, #fff3cf, #ffe29a);
+  box-shadow: inset 0 0 0 0.12em #fff6dc, 0 0.15em 0 var(--gold-d);
+}
+.jr-book .aico {
+  width: 2.5em;
+  height: 2.5em;
+}
+.jr-book .aico.emoji {
+  width: auto;
+  font-size: 1.9em;
+}
+.jr-medals-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+.jr-medal-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.15em 0.7em 0.15em 0.25em;
+  border-radius: 99px;
+  background: rgba(42, 33, 64, 0.08);
+  font-size: 0.95em;
+  font-weight: 900;
+}
+.jr-medal-count .aico {
+  width: 1.7em;
+  height: 1.7em;
+}
+.jr-medal-count .aico.emoji {
+  width: auto;
+  font-size: 1.25em;
+}
+
+/* ---------- tabs & claim all ---------- */
+.jr-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+.jr-tabs .tab {
+  min-height: max(44px, 3em);
+}
+.jr-claimall {
+  min-height: 44px;
+}
+
+/* ---------- sections ---------- */
+.jr-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+.jr-cat-head {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5em 0.8em;
+  border: 0.12em solid var(--line);
+  border-radius: 1em;
+  background: var(--paper-2);
+  box-shadow: 0 0.15em 0 var(--line);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.jr-cat-head:active {
+  transform: translateY(0.12em);
+  box-shadow: 0 0.03em 0 var(--line);
+}
+.jr-cat-head.has-claim {
+  border-color: var(--gold);
+  box-shadow: 0 0.15em 0 var(--gold-d);
+}
+.jr-cat-ic {
+  flex: 0 0 auto;
+  font-size: 1.5em;
+  line-height: 1;
+}
+.jr-cat-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.jr-cat-name {
+  font-size: 1.05em;
+}
+.jr-cat-blurb {
+  font-size: 0.78em;
+  font-weight: 700;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.jr-cat-count {
+  flex: 0 0 auto;
+  font-size: 0.9em;
+  color: var(--ink-soft);
+}
+.jr-chev {
+  flex: 0 0 auto;
+  width: 1em;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.jr-list {
+  min-width: 0;
+}
+
+/* ---------- achievement cards ---------- */
+.jr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  padding: 0.7em 0.8em;
+  min-width: 0;
+}
+.jr-card.claim {
+  background: #fff8e0;
+  border-color: var(--gold);
+  box-shadow: 0 0.2em 0 var(--gold-d);
+}
+.jr-card.done {
+  background: #f6f0df;
+}
+.jr-top {
+  align-items: flex-start;
+  gap: 0.65em;
+}
+.jr-ico {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 3.1em;
+  height: 3.1em;
+  border-radius: 0.9em;
+  background: var(--paper-2);
+  box-shadow: inset 0 0 0 0.1em var(--line);
+  overflow: hidden;
+}
+.jr-ico .aico {
+  width: 2.3em;
+  height: 2.3em;
+}
+.jr-ico.art .aico img {
+  filter: drop-shadow(0 0.05em 0.05em rgba(0, 0, 0, 0.25));
+}
+.jr-ico .aico.emoji {
+  width: auto;
+  font-size: 1.7em;
+}
+.jr-card.done .jr-ico {
+  background: #fdeeb4;
+}
+.jr-txt {
+  min-width: 0;
+}
+.jr-name {
+  font-size: 1.05em;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.jr-desc {
+  margin-top: 0.15em;
+  font-size: 0.86em;
+  font-weight: 700;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.jr-pips {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.15em;
+}
+.jr-pip {
+  display: grid;
+  place-items: center;
+  width: 1.75em;
+  height: 1.75em;
+  border-radius: 50%;
+  filter: grayscale(1) opacity(0.38);
+}
+.jr-pip .aico {
+  width: 1.55em;
+  height: 1.55em;
+}
+.jr-pip .aico.emoji {
+  width: auto;
+  font-size: 1.15em;
+}
+.jr-pip.on {
+  filter: none;
+}
+.jr-pip.ready {
+  background: radial-gradient(circle, #fff3b8 0%, rgba(255, 243, 184, 0) 70%);
+  animation: jr-pip 1.4s ease-in-out infinite;
+}
+@keyframes jr-pip {
+  50% {
+    transform: scale(1.15);
+  }
+}
+.jr-hint {
+  padding-left: 0.1em;
+}
+.jr-reward {
+  align-items: flex-start;
+  gap: 0.5em;
+}
+.jr-rlabel {
+  flex: 0 0 auto;
+  padding-top: 0.25em;
+}
+.jr-claim {
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.55em 0.6em;
+  border-radius: 0.9em;
+  background: rgba(255, 207, 74, 0.28);
+}
+.jr-claim-t {
+  margin-bottom: 0.25em;
+  font-size: 0.92em;
+  font-weight: 900;
+}
+.jr-claimbtn {
+  flex: 0 0 auto;
+  min-width: 5.2em;
+  min-height: 44px;
+}
+.jr-dates {
+  line-height: 1.35;
+}
+
+/* ---------- records ---------- */
+.jr-rec-head {
+  padding: 0 0.1em;
+}
+.jr-rec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5em;
+}
+.jr-rec {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  min-width: 0;
+  padding: 0.55em 0.65em;
+  border: 0.12em solid var(--line);
+  border-radius: 1em;
+  background: #fffdf6;
+  box-shadow: 0 0.15em 0 var(--line);
+}
+.jr-rec-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2.3em;
+  height: 2.3em;
+}
+.jr-rec-ic .aico {
+  width: 2.1em;
+  height: 2.1em;
+}
+.jr-rec-ic .aico.emoji {
+  width: auto;
+  font-size: 1.6em;
+}
+.jr-rec-txt {
+  min-width: 0;
+}
+.jr-rec-v {
+  font-size: 1.2em;
+  font-weight: 900;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.jr-rec-l {
+  margin-top: 0.1em;
+  font-size: 0.78em;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--ink-soft);
+}
+
+/* ---------- phones on their side: short and wide ----------
+   the summary shrinks to one line, tabs and Claim all share a row, cards and records go two/three across */
+@media (orientation: landscape) and (max-height: 560px) {
+  .jr-summary {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.8em;
+    padding: 0.5em 0.8em;
+  }
+  .jr-summary > .row {
+    flex: 0 0 auto;
+  }
+  .jr-summary > .row .mute {
+    display: none;
+  }
+  .jr-summary .bar {
+    flex: 1 1 6em;
+    min-width: 5em;
+  }
+  .jr-book {
+    width: 2.6em;
+    height: 2.6em;
+  }
+  .jr-book .aico {
+    width: 2em;
+    height: 2em;
+  }
+  .jr-controls {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.8em;
+  }
+  .jr-controls .jr-tabs {
+    flex: 0 0 auto;
+  }
+  .jr-controls .jr-tabs .tabs {
+    padding-bottom: 0.15em;
+  }
+  .jr-controls .jr-claimall {
+    flex: 1 1 auto;
+    width: auto;
+  }
+}
+@media (orientation: landscape) and (min-width: 640px) {
+  .nv-root .jr-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6em;
+    align-items: start;
+  }
+  .jr-rec-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (orientation: landscape) and (min-width: 800px) {
+  .jr-rec-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

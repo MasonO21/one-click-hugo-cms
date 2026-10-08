@@ -348,7 +348,7 @@ export class Hud {
     };
     set('btn-missions', b.missions);
     set('btn-research', b.research, true);
-    set('btn-menu', (b.daily ? 1 : 0) + (b.spin ? 1 : 0) + b.season + b.expeditions);
+    set('btn-menu', (b.daily ? 1 : 0) + (b.spin ? 1 : 0) + b.season + b.expeditions + (b.journal ? 1 : 0));
     set('btn-shop', b.crate ? 1 : 0, true);
     set('btn-colonists', b.colonists);
   }

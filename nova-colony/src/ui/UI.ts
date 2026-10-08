@@ -15,6 +15,7 @@ import './styles/screens.css';
 import './styles/modals.css';
 import './styles/art.css';
 import './styles/expeditions.css';
+import './styles/journal.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -42,6 +43,7 @@ import { Threats } from './hud/Threats';
 import { alienArt, biomeArt, eventArt, itemArt, poiArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
 import { itemToast, RARITY_COLOR } from './logic/rewards';
+import { toastIconArt } from './logic/achievements';
 import { tierUnlockGroups } from './logic/describe';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
@@ -66,6 +68,7 @@ import { MerchantPanel } from './panels/MerchantPanel';
 import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
 import { ExpeditionsPanel } from './panels/ExpeditionsPanel';
+import { JournalPanel } from './panels/JournalPanel';
 import { backAction } from './logic/back';
 import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
@@ -96,7 +99,7 @@ export class UI {
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
 
-  private badgesCache: Badges = { missions: 0, research: 0, daily: false, spin: false, crate: false, season: 0, colonists: 0, expeditions: 0 };
+  private badgesCache: Badges = { missions: 0, research: 0, daily: false, spin: false, crate: false, season: 0, colonists: 0, expeditions: 0, journal: 0 };
   private accSlow = 0;
   private accFps = 0;
   private lastClick = { x: 0, y: 0, t: -1e9 };
@@ -116,7 +119,7 @@ export class UI {
   private lastGatherFloat = new Map<string, number>();
   private modalWasOpen = false;
   private toastInset = '';
-  private deferredToasts: { text: string; kind: ToastKind; icon?: string; at: number }[] = [];
+  private deferredToasts: { text: string; kind: ToastKind; icon?: string; open?: string; at: number }[] = [];
 
   constructor(
     private readonly game: Game,
@@ -272,6 +275,7 @@ export class UI {
     reg('reward', (c) => new RewardPanel(c));
     reg('menu', (c) => new MenuPanel(c));
     reg('expeditions', (c) => new ExpeditionsPanel(c));
+    reg('journal', (c) => new JournalPanel(c));
   }
 
   // ================================================================== services
@@ -330,14 +334,19 @@ export class UI {
    * Toasts from the simulation wait while a modal (celebration, reward, victory…) is up so they never
    * cover it; they follow once it closes. Warnings and errors always show at once.
    */
-  private simToast(text: string, kind: ToastKind, icon?: string): void {
+  private simToast(text: string, kind: ToastKind, icon?: string, open?: string): void {
     if ((kind === 'info' || kind === 'success' || kind === 'reward') && this.panels?.anyModal()) {
       this.deferredToasts = this.deferredToasts.filter((d) => d.text !== text);
-      this.deferredToasts.push({ text, kind, icon, at: performance.now() });
+      this.deferredToasts.push({ text, kind, icon, open, at: performance.now() });
       if (this.deferredToasts.length > 6) this.deferredToasts.shift();
       return;
     }
-    this.toasts.show(text, kind, icon);
+    this.toasts.show(text, kind, icon, this.tapOpen(open));
+  }
+
+  /** A toast that opens a panel when tapped (the Journal for an achievement), or nothing. */
+  private tapOpen(panel: string | undefined): (() => void) | undefined {
+    return panel ? () => this.open(panel) : undefined;
   }
 
   /**
@@ -365,9 +374,10 @@ export class UI {
   private flushToasts(): void {
     if (!this.deferredToasts.length || this.panels.anyModal()) return;
     const now = performance.now();
-    const list = this.deferredToasts.filter((d) => now - d.at < 12000).slice(-3);
+    // a toast that opens a panel ("12 achievements already earned!") is worth waiting for through a stack of cards
+    const list = this.deferredToasts.filter((d) => now - d.at < (d.open ? 90000 : 12000)).slice(-3);
     this.deferredToasts = [];
-    list.forEach((d, i) => window.setTimeout(() => this.simToast(d.text, d.kind, d.icon), 300 + i * 200));
+    list.forEach((d, i) => window.setTimeout(() => this.simToast(d.text, d.kind, d.icon, d.open), 300 + i * 200));
   }
 
   private onPanelsChanged(): void {
@@ -407,9 +417,9 @@ export class UI {
    * that is showing and are dropped. Toasts right after a tap still show at once (e.g. "no video").
    */
   /** Game-event toast: shown at once right after the player's own tap, otherwise held while a modal is up. */
-  private eventToast(text: string, kind?: ToastKind, icon?: string): void {
-    if (performance.now() - this.lastClick.t < 1500) this.toasts.show(text, kind, icon);
-    else this.simToast(text, kind ?? 'info', icon);
+  private eventToast(text: string, kind?: ToastKind, icon?: string, open?: string): void {
+    if (performance.now() - this.lastClick.t < 1500) this.toasts.show(text, kind, icon, this.tapOpen(open));
+    else this.simToast(text, kind ?? 'info', icon, open);
   }
 
   private showWelcome(): void {
@@ -431,7 +441,7 @@ export class UI {
       // matching 👾 toasts would only cover the player and the turret
       if (e.icon === '👾' && g.state.combat.phase !== 'peace') return;
       const rich = this.artToast(e.text, e.icon);
-      this.eventToast(rich.text, e.kind, rich.icon);
+      this.eventToast(rich.text, e.kind, rich.icon, e.open);
     });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
     wireHapticFx(bus, (k) => this.haptic(k));
@@ -605,6 +615,9 @@ export class UI {
   /** Toast text + icon with illustration: a colonist joining shows their portrait, world events and items their art. */
   private artToast(text: string, icon?: string): { text: string; icon?: string } {
     const g = this.game;
+    // achievement toasts: the painted medal / journal instead of the emoji
+    const medal = toastIconArt(icon);
+    if (medal) return { text, icon: medal };
     const m = /^(.+?) joined (?:the|your) colony!$/.exec(text);
     if (m) {
       const c = g.state.colonists.list.find((x) => x.name === m[1]);

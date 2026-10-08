@@ -13,6 +13,8 @@ export interface Badges {
   colonists: number;
   /** Expedition hauls waiting to be collected + Star Chart milestones to claim. */
   expeditions: number;
+  /** Journal medals earned and waiting for Claim. */
+  journal: number;
 }
 
 export function claimableMissions(game: Game): string[] {
@@ -59,5 +61,7 @@ export function computeBadges(game: Game): Badges {
     season: claimableSeason(game),
     colonists: idleWithJobs(game),
     expeditions: expeditionBadge(game),
+    // like the other meta offers: quiet during the guided first session
+    journal: lo.offersUnlocked() ? game.sys.achievements.claimableCount() : 0,
   };
 }

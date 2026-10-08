@@ -12,6 +12,8 @@ interface Active {
   count: number;
   counter: HTMLElement;
   timer: number;
+  /** Tapping the toast does this (and dismisses it): e.g. open the Journal. */
+  onTap?: () => void;
 }
 
 const DEFAULT_ICON: Record<ToastKind, string> = { info: '💬', success: '✅', warning: '⚠️', reward: '🎁', danger: '❗' };
@@ -26,9 +28,10 @@ export class Toasts {
     this.el = h('div', { class: 'nv-toasts', 'aria-live': 'polite' });
   }
 
-  show(text: string, kind: ToastKind = 'info', icon?: string): void {
+  show(text: string, kind: ToastKind = 'info', icon?: string, onTap?: () => void): void {
     const dup = this.active.find((a) => a.text === text);
     if (dup) {
+      if (onTap) this.setTap(dup, onTap);
       dup.count++;
       dup.counter.textContent = `×${dup.count}`;
       dup.counter.hidden = false;
@@ -55,6 +58,7 @@ export class Toasts {
     tx.textContent = text;
     counter.hidden = true;
     const a: Active = { el, text, count: 1, counter, timer: 0 };
+    this.setTap(a, onTap);
     this.active.push(a);
     this.el.appendChild(el);
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
@@ -67,7 +71,23 @@ export class Toasts {
   }
 
   private make(): HTMLElement {
-    return h('div', { class: 'toast', role: 'status' }, h('span', { class: 't-ic' }), h('span', { class: 't-tx' }), h('span', { class: 't-x', hidden: true }));
+    const el = h('div', { class: 'toast', role: 'status' }, h('span', { class: 't-ic' }), h('span', { class: 't-tx' }), h('span', { class: 't-x', hidden: true }));
+    el.addEventListener('click', () => {
+      const a = this.active.find((x) => x.el === el);
+      if (!a?.onTap) return;
+      const tap = a.onTap;
+      this.dismiss(a);
+      tap();
+    });
+    return el;
+  }
+
+  /** Make a toast tappable (or not): the `tappable` class turns its pointer events on. */
+  private setTap(a: Active, onTap?: () => void): void {
+    a.onTap = onTap;
+    a.el.classList.toggle('tappable', !!onTap);
+    if (onTap) a.el.setAttribute('role', 'button');
+    else a.el.setAttribute('role', 'status');
   }
 
   private arm(a: Active, kind: ToastKind): void {
