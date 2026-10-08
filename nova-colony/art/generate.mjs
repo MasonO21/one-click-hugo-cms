@@ -7,6 +7,7 @@
 //   art/source/app-icon/     optional painted hero (hero-body.webp + hero-smoke.webp, 1024² RGBA, Higgsfield): when
 //                            present it replaces the vector hero everywhere (icons + splash); the composed master is
 //                            written to art/icon-painted.svg and icon.svg keeps the vector art untouched
+//   art/source/app-icon/monochrome.png  optional flat white glyph (alpha only) -> Android 13+ themed-icon layer
 //
 // Outputs: Android launcher + adaptive icons + splash, iOS app icon + splash, web/PWA icons + manifest.
 // Rasterised with headless Chromium at the exact pixel size (deviceScaleFactor 1).
@@ -34,6 +35,7 @@ const MASTER_R = 384; // hero enclosing radius in the 1024 master (+ nudge below
 const MASTER_DX = 26; // optical nudge: the pod pulls the enclosing circle to the right of the planet
 const MASTER_DY = 8; // ...and the planet is bottom-heavy, so the circle centre sits a touch low
 const FG_R = 304; // adaptive foreground: 66dp safe circle = radius 313 of a 1024 canvas
+const MONO_R = 262; // themed-icon glyph: a little smaller than the foreground, as system symbols are
 const BG_STARS_SCALE = 0.74; // adaptive background: pull the stars into the always-visible 72dp window
 const SPLASH_HERO_R = 300; // hero enclosing radius, splash design units
 const SPLASH_LOCKUP_W = 900; // lockup width in splash design units (the wordmark)
@@ -186,10 +188,22 @@ try {
       opaque(await master(full, { prep: { hide: ['hero'], transforms: { stars: starsT } } })),
     );
   }
+  // Android 13+ themed icons: the system tints the alpha of this layer (needs a flat glyph, not the painted art)
+  const monoSrc = path.join(PAINTED, 'monochrome.png');
+  const hasMono = fs.existsSync(monoSrc);
+  if (hasMono) {
+    const img = `<image href="data:image/png;base64,${fs.readFileSync(monoSrc).toString('base64')}" x="0" y="0" width="1024" height="1024"/>`;
+    const monoSvg = (t) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><g transform="${t}">${img}</g></svg>`;
+    const c = enclosingCircle(decodePng(await render(monoSvg('translate(0 0)'), 1024, 1024)));
+    const monoT = heroTransform(c, MONO_R);
+    for (const [d, k] of Object.entries(DENSITY)) {
+      write(path.join(RES, `mipmap-${d}`, 'ic_launcher_monochrome.png'), alpha(await render(monoSvg(monoT), 108 * k, 108 * k)));
+    }
+  }
   const adaptive = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
-    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>${hasMono ? '\n    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>' : ''}
 </adaptive-icon>
 `;
   write(path.join(RES, 'mipmap-anydpi-v26/ic_launcher.xml'), adaptive);
