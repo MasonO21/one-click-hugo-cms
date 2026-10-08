@@ -11,6 +11,8 @@ const ICONS = {
   seraphine: '<path d="M7 2.5v4M12 1.5v5M17 2.5v4"/><path d="M12 22c-3 0-5.2-2-5.2-4.6 0-2.6 2-3.6 2.6-6.1 1.4 1.3 2.4 2.5 2.6 4 .2-1.4 1.1-2.6 2.1-3.6.6 2 3.1 3 3.1 5.7S15 22 12 22z"/>', // chains fall into fire
   liora: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l2 2H4z"/><path d="M10 21.5h4M12 3v2"/><path d="M2.5 9.5A10 10 0 0 1 4.6 5M21.5 9.5A10 10 0 0 0 19.4 5"/>', // the bell tolls
   mordrake: '<path d="M2.5 21 5 11l2.5 10M8.5 21 12 5l3.5 16M16.5 21 19 11l2.5 10"/><path d="M1.5 21.5h21"/>', // bone spikes
+  grimsby: '<path d="M9 2.5h6M12 2.5v2"/><path d="M8 6.5h8l-1 8H9z"/><path d="M12 9c-1.2 1.4-1 2.6 0 3.5 1-.9 1.2-2.1 0-3.5z"/><path d="M3 21.5c2-2.5 4-2.5 6 0s4 2.5 6 0 4-2.5 6 0"/>', // a lantern over a river of fire
+  osric: '<circle cx="12" cy="9" r="4"/><path d="M10.5 9.5h.01M13.5 9.5h.01M10.5 12h3"/><ellipse cx="12" cy="4.5" rx="7" ry="2"/><path d="M5 21.5c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/>', // a skull crowned by its halo
 };
 export const riteIcon = (id, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[id] || ICONS.vael}</svg>`;
 

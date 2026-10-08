@@ -42,8 +42,22 @@ export const HEROES = {
     hp: 105, speed: 6.3,
     lore: 'She tolled the funeral bell for forty years. Then, one night, the dead began to answer.',
   },
+  grimsby: {
+    id: 'grimsby', name: 'Grimsby', title: 'Lanternjaw', rarity: 'epic', weapon: 'witchfire',
+    color: 0xc6ff3d, css: '#c6ff3d', body: 0x1e2a14, legion: 0xc6ff3d,
+    passive: { gateAdd: 0.25, witchRaise: 1.5 }, passiveText: 'Soul Gates give 25% more, witchfire kills rise ×1.5',
+    hp: 105, speed: 6.4,
+    lore: 'He lit the graveyard lamps for a hundred Hallows Eves. On the last one, he swallowed the flame to keep it.',
+  },
+  osric: {
+    id: 'osric', name: 'Osric', title: 'the Bone Abbot', rarity: 'legendary', weapon: 'skullHalo',
+    color: 0xe2b65a, css: '#f0d494', body: 0x3a3222, legion: 0xf5c35c, // antique gold: his ivory robes bloom to white on their own
+    passive: { startLegion: 20, tithe: true }, passiveText: 'Starts with 20 minions; his legion\'s slain send him their souls',
+    hp: 135, speed: 6.0,
+    lore: 'His abbey emptied the night the plague came. He kept saying Mass anyway, and in time the pews filled again.',
+  },
 };
-export const HERO_ORDER = ['vael', 'nyx', 'seraphine', 'liora', 'mordrake'];
+export const HERO_ORDER = ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric'];
 export const HERO_UNLOCK_SHARDS = 10;
 export const HERO_STAR_COST = [0, 10, 20, 40, 80]; // shards to go from star i to i+1 (index = current stars)
 export const HERO_MAX_STARS = 5;
@@ -79,6 +93,14 @@ export const RITES = {
   // max HP over the duration; a boss is only shoved at bossPush m/s; the ring moves with him
   mordrake: { name: 'Ossuary Wall', short: 'WALL', cd: 18, r: 5, dur: 5, dmg: 60, hitCd: 0.5, knock: 9, heal: 0.5, bossPush: 1.2, spikes: 44,
     desc: 'A ring of bone spikes rises around you for 5 s. Foes are hurled out and cut on every crossing, Witch fire shatters on it, and your legion inside heals 50%.' },
+  // his jaw blazes: foes within `r` m take dmg, flee in terror for `fear` s and stand in witchfire; for `dur` s he runs
+  // +haste and his trail of witchfire is `trailR` m wide, dps per second while they stand in it
+  grimsby: { name: 'Hallowfire', short: 'BLAZE', cd: 16, r: 6, fear: 2, dmg: 40, dur: 6, haste: 0.3, trailR: 1.7, dps: 45,
+    desc: 'Your jaw blazes: foes within 6 m are scorched and flee in terror for 2 s. For 6 s you run 30% faster and leave a wide river of witchfire.' },
+  // `monks` bone monks rise around him (past the cap: they fade like any overflow) and for `dur` s the legion deals
+  // +fury damage, the Skull Halo turns `spin` × as fast and the hymn wards him (damage taken × (1 − ward))
+  osric: { name: 'Bone Mass', short: 'MASS', cd: 18, monks: 12, dur: 6, fury: 0.5, spin: 2, ward: 0.4,
+    desc: 'Twelve bone monks rise to join your legion. For 6 s your whole legion deals +50% damage, your Skull Halo spins twice as fast and you take 40% less damage.' },
 };
 
 // ---------------------------------------------------------------- Enemies
@@ -342,6 +364,16 @@ export const SKILLS = {
     dmg: L([12, 16, 20, 25, 33]), radius: L([3.6, 4.0, 4.5, 5.0, 6.0]), cd: L([3.0, 2.8, 2.5, 2.2, 1.8]),
     desc: (lv) => [`Release a shockwave that hurls foes back.`, `+Damage, +radius`, `+Radius, faster`, `+Damage, faster`, `Massive cataclysm wave`][lv - 1],
   },
+  // the Shepherd leaves witchfire where he walks (a patch every `gap` m, or at his feet every `idle` s standing still):
+  // r m wide, burning `life` s for dps a second to foes inside (one tick every 0.25 s, the hottest patch only);
+  // from Lv3 he also hurls `toss` lanterns every cd s at the nearest foe: tossDmg on the shatter and a poolR m pool.
+  // The souls of foes witchfire kills fly to the Shepherd (they die behind him, on the path he has already walked)
+  witchfire: {
+    type: 'weapon', name: 'Witchfire Lantern', icon: 'lantern', max: 5, gap: 1.1, idle: 0.6,
+    dps: L([14, 18, 24, 28, 37]), r: L([0.95, 1.05, 1.15, 1.3, 1.45]), life: L([2.2, 2.4, 2.6, 2.8, 3.2]),
+    toss: L([0, 0, 1, 1, 2]), tossDmg: L([0, 0, 30, 38, 48]), poolR: L([0, 0, 2.2, 2.5, 2.8]), cd: L([2.8, 2.6, 2.4, 2.2, 2.0]),
+    desc: (lv) => [`Your lantern drips witchfire where you walk. Foes burn in it.`, `+Damage, wider flames`, `Hurl a lantern that bursts into a burning pool`, `+Damage, bigger pools, faster`, `Two lanterns, blazing`][lv - 1],
+  },
   // Passives
   raiseDead: { type: 'passive', name: 'Raise Dead', icon: 'raise', max: 5, desc: () => `+6% chance slain foes rise as minions` },
   legionCap: { type: 'passive', name: 'Legion Cap', icon: 'banner', max: 5, desc: () => `+10 maximum legion size` },
@@ -376,6 +408,12 @@ export const EVOLUTIONS = {
     past: 3.5, minReach: 5, maxReach: 16,    // flight ends 3.5 m past the target (5-16 m; 16 with no target), then bursts
     stagger: 1.2,                            // odd spears fly 1.2 m further, so the bursts land in two rows
     shrapnel: 0.55, shrapnelR: 2, shards: 12, // burst = 55% of the spear's damage in 2 m; bone shard meshes per burst
+  },
+  hallowPyre: {
+    name: 'Hallow Pyre', from: 'witchfire', needs: 'raiseDead', icon: 'lantern', desc: 'EVOLVED: A river of witchfire and three lanterns at once. Foes slain in it burst, setting their neighbours alight.',
+    dps: 52, r: 1.75, life: 3.6,                     // the trail
+    toss: 3, tossDmg: 62, poolR: 3.0, cd: 1.8,       // the lanterns
+    burst: 1.6, burstLife: 1.4, burstMax: 8,         // a witchfire kill leaves a burst pool this wide; at most burstMax a second
   },
   requiem: {
     name: 'Requiem', from: 'gravePulse', needs: 'soulMagnet', icon: 'pulse', desc: 'EVOLVED: Drags the horde in, then detonates. Draws in soul shards.',
@@ -544,7 +582,7 @@ export const CLOCK = {
 export const ALTAR = {
   odds: { common: 0.60, rare: 0.28, epic: 0.10, legendary: 0.02 },
   cost1: 150, cost10: 1350, pityLegendary: 60,
-  shardDrops: { epic: { seraphine: 4, nyx: 6, liora: 5 }, legendary: { mordrake: 5, seraphine: 6 } },
+  shardDrops: { epic: { seraphine: 4, nyx: 6, liora: 5, grimsby: 5 }, legendary: { mordrake: 5, seraphine: 6, osric: 5 } },
 };
 
 // ---------------------------------------------------------------- Soul Pass

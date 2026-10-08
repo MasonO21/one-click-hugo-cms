@@ -54,14 +54,14 @@
 | Hero | Rarity | Signature weapon | Passive | How to get |
 |---|---|---|---|---|
 | Liora Bellwraith | Epic | Grave Pulse | Pulse-struck foes stay close and rise at ×2 Raise Chance for 3 s | **In the build** (pulled forward from S2): Epic Altar rolls. Planned for S2: featured banner + S2 premium pass (10 shards) |
-| Osric the Bone Abbot | Legendary | Skull Halo | Start each run with 20 minions | Featured banner shards (Legendary rolls) |
-| Grimsby Lanternjaw | Epic | **Witchfire Lantern** (new: a lantern that leaves burning trails) | Gate + values are 25% higher | Halloween event track (10 shards free) + banner |
+| Osric the Bone Abbot | Legendary | Skull Halo | Starts each run with 20 minions; Skull Halo kills rise ×2. Rite: **Bone Mass** | **In the build** (pulled forward from S4, 2026-10-08): Legendary Altar rolls (5 shards). Planned for S4: featured banner |
+| Grimsby Lanternjaw | Epic | **Witchfire Lantern** (a lantern that leaves burning trails; evolves into Hallow Pyre) | +N gates give 25% more; witchfire kills rise ×1.5. Rite: **Hallowfire** | **In the build** (pulled forward from S5, 2026-10-08): Epic Altar rolls (5 shards). Planned for S5: Halloween event track (10 shards free) + banner |
 | Isolde Frostveil | Epic | **Rime Shards** (new: freezing shards that shatter) | Frozen enemies have +15 pp Raise Chance | S7 premium pass + banner |
 | Kaida Emberfang | Legendary | **Fox-Fire Fans** (new: boomerang fans) | Minions leave fox-fire trails (10 DPS) | Featured banner shards |
 | Thessaly of the Thorn | Rare | **Thorn Whip** (new: long line attack) | +15% max HP; reflects 10% of contact damage | Free via S11 event track; banner |
 | Malachar, the First Shepherd | Legendary | **Shepherd's Crook** (new: pull-and-slam) | Soul Gates' × values +0.5 | Featured banner shards |
 
-**Banner rule:** when a featured hero is live, their shards replace the standard hero shards on Legendary rolls (Mordrake/Seraphine) or Epic rolls (Nyx/Seraphine) for that banner only. The banner screen shows exactly which shards each rarity gives. Odds (60 / 28 / 10 / 2), the 10-pull guarantee and the 60-pull pity are identical on every banner. Pity carries over between banners.
+**Banner rule:** when a featured hero is live, their shards replace the standard hero shards on Legendary rolls (Mordrake/Seraphine/Osric) or Epic rolls (Nyx/Seraphine/Liora/Grimsby) for that banner only. The banner screen shows exactly which shards each rarity gives. Odds (60 / 28 / 10 / 2), the 10-pull guarantee and the 60-pull pity are identical on every banner. Pity carries over between banners.
 
 **Power-creep rule:** a new hero may be best in one niche but must not beat the launch Legendary (Mordrake) on overall power by more than 5% at equal stars. Balance sims must pass before content lock.
 

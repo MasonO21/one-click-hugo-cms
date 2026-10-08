@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 A=store/art W=src/assets/art
 mkdir -p "$W"
 
-for h in vael nyx seraphine mordrake liora; do
+for h in vael nyx seraphine mordrake liora osric grimsby; do
   convert "$A/hero-$h.jpg" -resize 540x720 -quality 80 -define webp:method=6 "$W/hero-$h.webp"
 done
 for i in 1 2 3 4 5 6; do # chapter key art (home chapter card, run intro)

@@ -96,6 +96,38 @@ export function heroGeometry(id, body = 0x1b2a44) {
       P(Tor(0.24, 0.035, 4, 12), 0, { p: [0.62, 0.61, 0.2], r: [Math.PI / 2, 0, 0], e: 1 }),   // glowing lip
       ...[-0.22, 0, 0.22].map((z) => P(Sph(0.055, 5, 3), 0xd8d0b0, { p: [0.3 * Math.cos(z * 4), 0.86, 0.26 + z * 0.4] })), // belt bells
     );
+  } else if (id === 'grimsby') {
+    const coat = 0x2c4a22, hat = 0x15190f, skin = 0xa8b49a, iron = 0x3a3a34;
+    parts.push(
+      P(Cone(0.5, 1.15, 8), coat, { p: [0, 0.72, 0] }),                                       // frock coat
+      ...mirror((x) => P(Cyl(0.08, 0.1, 0.42, 5), 0x3a2a1a, { p: [0.15 * x, 0.21, 0] })),    // boots
+      P(Sph(0.3, 7, 5), coat, { p: [0, 1.28, 0], s: [1.15, 0.8, 1] }),                         // shoulders
+      P(Sph(0.2, 7, 5), skin, { p: [0, 1.6, 0.02] }),                                          // skull
+      P(Box(0.22, 0.12, 0.12), iron, { p: [0, 1.48, 0.12] }),                                  // the lantern jaw
+      P(Box(0.16, 0.07, 0.08), 0, { p: [0, 1.48, 0.15], e: 1 }),                               // its witchfire
+      ...mirror((x) => P(Sph(0.04, 5, 3), 0, { p: [0.07 * x, 1.63, 0.18], e: 1 })),
+      P(Cyl(0.46, 0.46, 0.04, 10), hat, { p: [0, 1.76, 0] }),                                  // brim
+      P(Cone(0.24, 0.6, 7), hat, { p: [0, 2.05, -0.04], r: [-0.2, 0, 0.1] }),                  // witch hat
+      P(Cyl(0.03, 0.035, 2.3, 5), wood, { p: [-0.45, 1.15, 0.12], r: [0, 0, 0.05] }),         // the crooked pole
+      P(Box(0.2, 0.28, 0.2), iron, { p: [-0.62, 1.95, 0.12] }),                                // lantern
+      P(Box(0.13, 0.2, 0.13), 0, { p: [-0.62, 1.95, 0.12], e: 1 }),
+      ...mirror((x) => P(Box(0.13, 0.5, 0.13), coat, { p: [0.42 * x, 1.0, 0.06], r: [0.12, 0, 0.18 * x] })),
+    );
+  } else if (id === 'osric') {
+    const robe = 0xe8dcc0, gold = 0xc9a24a, bone = 0xe8e0c8;
+    parts.push(
+      P(Cone(0.6, 1.4, 9), robe, { p: [0, 0.7, 0] }),                                         // vestments
+      P(Box(0.18, 1.1, 0.04), gold, { p: [0, 0.75, 0.32], r: [-0.22, 0, 0] }),                 // the stole
+      P(Cyl(0.55, 0.62, 0.08, 9), 0, { p: [0, 0.05, 0], e: 1 }),
+      P(Sph(0.34, 7, 5), robe, { p: [0, 1.3, 0], s: [1.25, 0.8, 1] }),                         // cope over the shoulders
+      P(Sph(0.2, 7, 5), bone, { p: [0, 1.62, 0.02] }),                                         // skull
+      ...mirror((x) => P(Sph(0.045, 5, 3), 0, { p: [0.07 * x, 1.64, 0.18], e: 1 })),
+      P(Cone(0.17, 0.48, 4), gold, { p: [0, 1.98, 0], r: [0, Math.PI / 4, 0], s: [1, 1, 0.55] }), // the mitre
+      P(Cyl(0.035, 0.035, 2.4, 5), bone, { p: [-0.5, 1.2, 0.1] }),                             // the bone crozier
+      P(Tor(0.14, 0.035, 4, 10, Math.PI * 1.3), bone, { p: [-0.42, 2.45, 0.1], r: [0, 0, 0.6] }),
+      P(Ico(0.06), 0, { p: [-0.36, 2.38, 0.1], e: 1 }),
+      ...mirror((x) => P(Cone(0.2, 0.6, 6), robe, { p: [0.4 * x, 1.05, 0.08], r: [0.1, 0, 0.35 * x] })), // bell sleeves
+    );
   } else { // mordrake
     const bone = 0xcfc6a8;
     parts.push(

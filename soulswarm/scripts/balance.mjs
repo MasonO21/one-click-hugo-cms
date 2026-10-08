@@ -41,7 +41,8 @@ const PROGRESSION = {
 // Casts the Rite on a simple rule per hero: Mordrake at 2+ foes within 3 m or 5+ within 6 m; Liora at 3+ within 3 m, 8+
 // within 6 m, or when a Witch's fire circle is about to land on her (the Knell clears it); Nyx the same, dashing straight
 // away from the crowd (or out of the circle); Vael at 12+ foes within 12 m; Seraphine at 14+ within 12 m, an elite or 2+
-// Witches in sight. Gravemaw in reach (8 m) always counts.
+// Witches in sight; Grimsby at 3+ within 3 m or 8+ within 6 m (the blaze sends them running); Osric at 10+ within 12 m
+// (the legion has work to do). Gravemaw in reach (8 m) always counts.
 const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune, rush) => {
   const app = window.__soulswarm, p = app.profile, E = app.engine;
   E.manual = true;
@@ -82,6 +83,8 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune, rush) =
         : hero === 'nyx' ? !!lob || close >= 3 || near >= 8                               // Shadow Step: dodge the fire, slip out as they close in
         : hero === 'seraphine' ? wide >= 14 || elite || witches >= 2 || boss               // Ashfall: a field of targets, an elite, or the casters
         : hero === 'liora' ? !!lob || close >= 3 || near >= 8 || boss                      // Death Knell: silence the falling fire, or ring as they close in
+        : hero === 'grimsby' ? close >= 3 || near >= 8 || boss                             // Hallowfire: scatter them as they close in
+        : hero === 'osric' ? wide >= 10 || boss                                            // Bone Mass: the legion fights harder where there is a fight
         : close >= 2 || near >= 5 || boss;                                                 // Ossuary Wall: as soon as they gather round
       if (go) {
         if (hero === 'nyx') { // straight away from the crowd, or out of the fire circle

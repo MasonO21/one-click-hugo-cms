@@ -1,14 +1,14 @@
 // Ground hazards and chapter identity: telegraph circles and cones, burning ground, ice patches,
-// ember vents and abyssal hands. Every decal draws through one pooled instanced mesh with a small shader.
+// ember vents and abyssal hands (and the Witchfire Lantern's friendly flames, simulated in weapons.js). Every decal draws through one pooled instanced mesh with a small shader.
 // Enemies drive update()/render() each frame; the Shepherd asks iceAt() and gets burned or rooted from here.
 import * as THREE from 'three';
 import { HAZARDS } from './data.js';
 import { hash2 } from './world.js';
 import { hdr } from '../engine/particles.js';
 
-const MAX = 160;           // decal instances drawn per frame
+const MAX = 256;           // decal instances drawn per frame (room for every kind at its cap, the Witchfire Lantern included)
 const VIEW2 = 26 * 26;     // decals farther than this from the Shepherd are skipped
-const K_CIRCLE = 0, K_CONE = 1, K_BURN = 2, K_ICE = 3, K_VENT = 4, K_HANDS = 5;
+const K_CIRCLE = 0, K_CONE = 1, K_BURN = 2, K_ICE = 3, K_VENT = 4, K_HANDS = 5, K_WITCH = 6;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const _ice = { x: 0, z: 0, rx: 1, rz: 1, rot: 0, seed: 0 };
 const _vent = { x: 0, z: 0 };
@@ -95,13 +95,22 @@ void main() {
     float core = smoothstep(0.42, 0.0, r) * (0.55 + 0.45 * noise(vW * 5.0 + uTime * 2.0));
     col = vec3(0.03, 0.012, 0.006) + vec3(2.2, 0.7, 0.15) * (core * (0.3 + 1.3 * p + 2.2 * vData.z) + lip * (0.3 + 0.6 * p));
     a = crater * 0.9 + lip * 0.6;
-  } else {                           // abyssal hands: a pool that darkens while it charges (p), claws rise when it grabs (z)
+  } else if (k < 5.5) {              // abyssal hands: a pool that darkens while it charges (p), claws rise when it grabs (z)
     float ang = atan(vUv.y, vUv.x);
     float pool = smoothstep(1.0, 0.5, r) * (0.3 + 0.55 * p);
     float claws = smoothstep(0.55, 1.0, sin(ang * 5.0 + r * 4.0)) * smoothstep(0.95, 0.3, r) * smoothstep(0.06, 0.28, r) * vData.z;
     float swirl = noise(vec2(ang * 3.0 + uTime * 2.0, r * 4.0 - uTime * 3.0));
     col = vec3(0.03, 0.0, 0.07) + vCol * (claws * 2.6 + swirl * 0.4 * p);
     a = max(pool, claws);
+  } else {                           // witchfire (the Shepherd's own): flickering tongues of the lantern's colour, a scorched rim
+    vec2 q = vW * 1.6 + vec2(vData.z * 13.0, -uTime * 1.8);
+    q += 0.8 * vec2(noise(q * 0.9 + 3.1), noise(q * 0.9 - 5.7)); // warped, so the flames curl instead of tiling
+    float n = noise(q), n2 = noise(q * 2.3 - vec2(uTime * 1.3, 0.0)) * 0.6 + noise(q * 4.1 + uTime) * 0.4;
+    float mask = smoothstep(1.0, 0.6, r + (n - 0.5) * 0.45);
+    float tongues = smoothstep(0.38, 0.85, n2 * (1.15 - r * 0.7));
+    float heat = clamp(tongues + smoothstep(0.75, 0.0, r) * 0.3 * n, 0.0, 1.0);
+    col = mix(vCol * 0.08, vCol * 1.8 + vec3(0.18), heat);
+    a = mask * (0.35 + 0.6 * heat);
   }
   gl_FragColor = vec4(col, clamp(a, 0.0, 1.0) * vData.y);
 }`;
@@ -127,7 +136,7 @@ export class Hazards {
     for (let i = 0; i < 25; i++) this.vents.push({ x: 0, z: 0, warn: 0, flare: 0 });
     this.grab = { on: false, x: 0, z: 0, t: 0, hit: false };
     this.handT = 0;
-    this.col = { white: new THREE.Color(1, 1, 1), vent: new THREE.Color(0xff8a2a), hand: new THREE.Color(0xb35bff) };
+    this.col = { white: new THREE.Color(1, 1, 1), vent: new THREE.Color(0xff8a2a), hand: new THREE.Color(0xb35bff), witch: new THREE.Color(0xc6ff3d) };
     this.fire = hdr(0xff8a2a, 3.4); this.ember = hdr(0xff6a1a, 3); this.violet = hdr(0xb35bff, 3);
     this.post = run.engine.post;
     if (this.post.uVignette.base === undefined) this.post.uVignette.base = this.post.uVignette.value;
@@ -361,6 +370,11 @@ export class Hazards {
       const H = HAZARDS.hands, p = Math.min(1, g.t / H.warn), up = g.hit ? Math.min(1, (g.t - H.warn) * 6) : 0;
       const fade = g.hit ? 1 - Math.max(0, (g.t - H.warn - H.grab * 0.6) / (H.grab * 0.4)) : 1;
       this.put(K_HANDS, g.x, g.z, H.radius * 1.05, H.radius * 1.05, 0, p, fade, up, this.col.hand);
+    }
+    const F = this.run.weapons.flames, wc = this.col.witch;
+    for (let i = 0; i < F.length; i++) {
+      const f = F[i], fade = Math.min(1, f.t * 6) * Math.min(1, (f.life - f.t) * 2);
+      this.put(K_WITCH, f.x, f.z, f.r * 1.1, f.r * 1.1, f.seed * 6.283, 0, fade, f.seed, wc);
     }
     for (const b of this.burns) {
       const fade = Math.min(1, b.t * 6) * Math.min(1, (b.life - b.t) * 2);

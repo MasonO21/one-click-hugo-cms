@@ -5,6 +5,8 @@ import nyx from '../assets/art/hero-nyx.webp';
 import seraphine from '../assets/art/hero-seraphine.webp';
 import mordrake from '../assets/art/hero-mordrake.webp';
 import liora from '../assets/art/hero-liora.webp';
+import grimsby from '../assets/art/hero-grimsby.webp';
+import osric from '../assets/art/hero-osric.webp';
 import ch1 from '../assets/art/chapter-1.webp';
 import ch2 from '../assets/art/chapter-2.webp';
 import ch3 from '../assets/art/chapter-3.webp';
@@ -39,7 +41,7 @@ import { icon, RELIC_ICON } from './icons.js';
 export const SKIN_ART = { eclipse_vael: eclipseVael };
 
 /** Painted hero splashes by hero id. */
-export const HERO_ART = { vael, nyx, seraphine, mordrake, liora };
+export const HERO_ART = { vael, nyx, seraphine, mordrake, liora, grimsby, osric };
 
 /** Painted relic icons by relic type. */
 export const RELIC_ART = { lantern: rLantern, crown: rCrown, idol: rIdol, heart: rHeart, boots: rBoots, coin: rCoin, hourglass: rHourglass, eye: rEye };

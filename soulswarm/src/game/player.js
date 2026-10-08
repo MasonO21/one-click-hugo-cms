@@ -92,6 +92,7 @@ export class Player {
   hurt(dmg, dot = false) {
     if (this.invuln > 0 || this.dead || this.run.ended || this.run.bossDead) return; // the chapter is won: no vent or burn tick may fell him in the victory beat
     const run = this.run;
+    if (run.rites) dmg *= run.rites.guard; // Osric's Bone Mass wards him
     this.hp -= dmg;
     if (dot) {
       this.flash = Math.max(this.flash, 0.45);

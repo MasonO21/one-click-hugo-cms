@@ -127,6 +127,10 @@ export class Run {
     // the beginner tutorial (tutorial.js): its steps direct the run until the King rises, who comes when they say
     this.guide = tutorial ? new Tutorial(this) : null;
     if (this.guide) { this.tutorial = true; this.nextBossAt = Infinity; }
+    // Osric's congregation: the run opens with a legion already at his back (not in the tutorial, which teaches growing one,
+    // nor in Boss Rush, which starts every Shepherd with a deep legion)
+    const start = loadout.hero.passive.startLegion;
+    if (start && !this.guide && !this.rush) this.legion.addMany(Math.min(start, this.stats.cap), this.player.x, this.player.z);
     // Boss Rush: a seasoned start, as a campaign player stands at the boss: the level, a veteran build (the first card of
     // `auto` draws), a deep legion, then the player's own opening draft; the first boss a moment after it
     if (this.rush) {
@@ -346,19 +350,23 @@ export class Run {
     if (e.elite) { this.counters.elites++; this.fx.hitStop(HITSTOP.elite); }
     this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
-    this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1) * this.diff.xp); // harder foes, richer souls
+    const gem = this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1) * this.diff.xp); // harder foes, richer souls
+    // the lantern's dead burn behind the Shepherd (their souls follow its light); Osric's legion tithes him what it slays
+    if (gem && (source === 'witchfire' || (source === 'minion' && this.loadout.hero.passive.tithe))) gem.pulled = true;
     if (e.elite) { if (!(e.aff && e.aff.noChest)) this.pickups.dropSpecial('chest', e.x, e.z); } // a coffin's mini-elite carries none
     else {
       const r = Math.random();
       if (r < 0.006) this.pickups.dropSpecial('heart', e.x, e.z);
       else if (r < 0.009) this.pickups.dropSpecial('magnet', e.x, e.z);
     }
+    if (source === 'witchfire' && this.evolved.hallowPyre) this.weapons.pyreBurst(e.x, e.z); // Hallow Pyre: the slain burst into flame
     if (!noRaise) {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
       if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
       if (source === 'skull' && this.evolved.boneCrown) chance = 1;
       const HP = this.loadout.hero.passive;
       if (HP.pulseRaise && (source === 'pulse' || (e.tollUid === e.uid && e.tollT > this.time))) chance = Math.min(0.85, chance * HP.pulseRaise); // Liora: the bell marks the dead
+      if (HP.witchRaise && source === 'witchfire') chance = Math.min(0.85, chance * HP.witchRaise); // Grimsby: what his fire takes, rises
       if (HP.novaRaise && source === 'nova') chance = Math.min(0.85, Math.max(chance, this.stats.raise * HP.novaRaise)); // Seraphine: what her Nova burns rises (never halved)
       if (this.tutorial && this.counters.raised < 5) chance = 1; // first run: the first five kills always rise
       if (this.guide) chance = Math.max(chance, TUTORIAL.raise); // the tutorial's legion grows fast enough to teach it

@@ -64,7 +64,7 @@ let errs = await session(async (page) => {
 check('no errors on boot', !errs.length, errs[0] || '');
 
 // 2. Every hero survives a minute and grows a legion
-for (const hero of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake']) {
+for (const hero of ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric']) {
   errs = await session(async (page) => {
     const s = await page.evaluate((h) => {
       const p = window.__soulswarm.profile; p.heroes[h].owned = true; p.heroes[h].stars = 1; p.selectedHero = h;
@@ -1863,10 +1863,10 @@ check('clock: no runtime errors', !errs.length, errs[0] || '');
   const src = ['src/game/run.js', 'src/game/streak.js', 'src/game/events.js', 'src/game/rites.js', 'src/ui/meta/heroes.js', 'src/ui/meta/panels.js']
     .map((f) => readFileSync(root + f, 'utf8')).join('\n') + readFileSync(root + 'src/game/data.js', 'utf8');
   const asked = new Set([...src.matchAll(/voice\('([a-z_]+)'\)/g), ...src.matchAll(/'(a_[a-z_]+)'/g)].map((m) => m[1]));
-  const heroes = ['vael', 'nyx', 'seraphine', 'liora', 'mordrake'];
+  const heroes = ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric'];
   for (const h of heroes) asked.add(h + '_rite').add(h + '_greet');
   const missing = [...asked].filter((n) => !files.includes(n) && !/^a_(normal)$/.test(n));
-  check('voice: 44 lines, and every line the code asks for has a file', files.length === 44 && !missing.length, `files=${files.length} missing=${missing}`);
+  check('voice: 48 lines, and every line the code asks for has a file', files.length === 48 && !missing.length, `files=${files.length} missing=${missing}`);
 }
 errs = await session(async (page) => {
   await page.mouse.click(5, 420); // the audio context needs a gesture
@@ -1874,7 +1874,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const A = window.__soulswarm.audio, { VOICE } = await import('/src/game/data.js'), out = {};
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 44;
+    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 48;
     out.rules = Object.keys(VOICE.lines).length > 20;
     const r = [];
     r.push(A.voice('a_carnage')); await sleep(120); out.duck = A.voiceState().duck;
@@ -1889,7 +1889,7 @@ errs = await session(async (page) => {
     out.unknown = A.voice('a_nope');
     return out;
   });
-  check('voice: all 44 lines decode after the first tap', s.decoded && s.rules, JSON.stringify(s));
+  check('voice: all 48 lines decode after the first tap', s.decoded && s.rules, JSON.stringify(s));
   check('voice: one line at a time; a bigger streak or a more important line cuts in, an important line queues, the rest drop',
     s.r === 'play,play,cooldown,play,queued,busy,play' && s.mid.p === 'a_boss' && s.mid.q === 'a_thief', JSON.stringify({ r: s.r, mid: s.mid }));
   check('voice: music and sfx duck under a line and swell back', s.duck < 0.6 && s.after.duck > 0.99 && !s.after.p, JSON.stringify({ d: s.duck, a: s.after }));
@@ -2135,7 +2135,7 @@ check('NaN guard: no runtime errors', !errs.length, errs[0] || '');
 errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const app = window.__soulswarm, H = app.heroModels, out = { models: {} }; // the game's own instance (see section 25)
-    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) {
+    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'eclipse_vael']) {
       const m = await H.loadHeroModel(id);
       if (!m) { out.models[id] = null; continue; }
       const g = m.geometry, b = g.boundingBox, tris = (g.index ? g.index.count : g.attributes.position.count) / 3;
@@ -2162,7 +2162,7 @@ errs = await session(async (page) => {
     return out;
   });
   const bad = Object.entries(s.models).filter(([, m]) => !m || m.tris < 4000 || m.tris > 30000 || m.h < 1.8 || m.h > 2.9 || Math.abs(m.floor) > 0.01 || !m.uv || !m.normal || m.tex !== 1024 || !m.same);
-  check('3D heroes: all five heroes and the Eclipse Vael skin load a textured model (4k-30k triangles, on the ground, 1024 px paint)', !bad.length, JSON.stringify(bad.length ? bad : s.models));
+  check('3D heroes: all seven heroes and the Eclipse Vael skin load a textured model (4k-30k triangles, on the ground, 1024 px paint)', !bad.length, JSON.stringify(bad.length ? bad : s.models));
   check('3D heroes: a run swaps the painted model onto the Shepherd; the home showcase shows it (and the skin\'s); a missing model resolves to null',
     s.run.painted && s.run.shared && s.run.textured && s.show.mordrake && s.show.eclipse && s.none === null, JSON.stringify({ run: s.run, show: s.show, none: s.none }));
 });
@@ -2176,7 +2176,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const app = window.__soulswarm, H = app.heroModels, E = app.engine, out = { rigs: {} };
     const V = (o) => o.getWorldPosition(new (o.position.constructor)());
-    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) {
+    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'eclipse_vael']) {
       const m = await H.loadHeroModel(id), r = m && m.rig;
       if (!r) { out.rigs[id] = null; continue; }
       let mesh = null; r.scene.traverse((o) => { if (o.isSkinnedMesh) mesh = o; });
@@ -2648,6 +2648,118 @@ errs = await session(async (page) => {
     JSON.stringify({ b: s.btn, i: s.img, sv: s.save, c: s.colors, k: s.resultsKept, t: s.tutBtn }));
 });
 check('share card: no runtime errors', !errs.length, errs[0] || '');
+
+// 37. The new heroes: Grimsby Lanternjaw (Epic, Witchfire Lantern, Hallowfire) and Osric the Bone Abbot (Legendary,
+//     Skull Halo, Bone Mass). A quiet arena frame-stepped at 30 fps (as section 18); rolls pinned with Math.random.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random;
+    const D = await import('/src/game/data.js'), A = await import('/src/ui/art.js');
+    app.engine.manual = true;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    const start = (hero) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.heroes[hero].owned = true; p.heroes[hero].stars = Math.max(1, p.heroes[hero].stars); p.selectedHero = hero; p.energy = 30; app.startRun(1);
+      const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0;
+      r.addXp = () => {}; r.player.hurt = () => {}; r.input.tx = r.input.tz = 0; r.pickups.dropSpecial = () => {}; r.stats.crit = 0;
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const foe = (r, dx, dz, o = {}) => { const e = r.enemies.spawn(o.type || 'husk', r.player.x + dx, r.player.z + dz, { hpMul: o.hp ?? 50 }); e.spawnT = 1; if (o.still) e.speed = 0; return e; };
+    const dist = (a, b) => +Math.hypot(a.x - b.x, a.z - b.z).toFixed(2);
+    const out = {};
+
+    // roster: seven heroes in order, the new Altar shard drops, painted splashes and ability icons
+    out.roster = { order: D.HERO_ORDER.join(), epic: D.ALTAR.shardDrops.epic.grimsby, legendary: D.ALTAR.shardDrops.legendary.osric,
+      art: !!(A.HERO_ART.grimsby && A.HERO_ART.osric), icons: !!(A.SKILL_ART.witchfire && A.SKILL_ART.hallowPyre),
+      evo: D.EVOLUTIONS.hallowPyre.from === 'witchfire' && D.EVOLUTIONS.hallowPyre.needs === 'raiseDead', rites: !!(D.RITES.grimsby && D.RITES.osric) };
+
+    // Witchfire Lantern: walking lays patches (one per 1.1 m), standing still keeps one at his feet; a foe takes the hottest
+    // patch it stands in once per tick (two overlapping patches burn no harder than one; a hotter one burns harder)
+    let r = start('grimsby'), P = r.player, W = r.weapons;
+    out.start = { lv: r.skillLv.witchfire, weapon: Object.keys(r.skillLv).join() };
+    let laid = 0; const lay = W.flame.bind(W); W.flame = (...a) => { laid++; return lay(...a); }; // counts patches laid (they also expire)
+    step(r, 0.2); laid = 0;
+    r.input.tx = 1; r.input.moved = true; step(r, 1); r.input.tx = 0;
+    const walked = laid; step(r, 0.3); laid = 0; step(r, 1.3);
+    out.trail = { walked, idle: laid, r: +W.flames[0].r.toFixed(2) };
+    W.flame = lay;
+    W.flames.length = 0;
+    const a = foe(r, 6, 6, { still: true }), b = foe(r, -6, 6, { still: true }), c = foe(r, 0, -7, { still: true });
+    W.flame(a.x, a.z, 1.2, 5, 20); W.flame(b.x, b.z, 1.2, 5, 20); W.flame(b.x + 0.3, b.z, 1.2, 5, 20); W.flame(c.x, c.z, 1.2, 5, 20); W.flame(c.x, c.z + 0.3, 1.2, 5, 40);
+    r.input.moved = false; W.update = function (dt) { this.updateWitchfire(dt, 0); }; // no trail of his own while measuring
+    step(r, 1.0);
+    const da = a.maxHp - a.hp, db = b.maxHp - b.hp, dc = c.maxHp - c.hp;
+    out.ticks = { da: Math.round(da), overlap: +(db / da).toFixed(2), hotter: +(dc / da).toFixed(2) };
+
+    // lanterns (Lv3): one is hurled at the nearest foe, shatters on it and leaves a 2.2 m pool
+    r = start('grimsby'); W = r.weapons; P = r.player;
+    r.skillLv.witchfire = 3; W.timers.witchfire = 0;
+    const t = foe(r, 6, 0, { still: true }); step(r, 0.8);
+    const pool = W.flames.find((f) => Math.hypot(f.x - t.x, f.z - t.z) < 1.5 && f.r > 2);
+    out.toss = { pool: pool ? +pool.r.toFixed(2) : 0, hit: t.hp < t.maxHp };
+    // Hallow Pyre: a witchfire kill bursts into a new patch where it fell
+    r.evolved.hallowPyre = true; r.skillLv.witchfire = 5;
+    const v = foe(r, -5, 3, { still: true }), n0 = W.flames.length;
+    r.enemies.damage(v, 1e9, { source: 'witchfire', silent: true });
+    out.pyre = { burst: W.flames.length - n0, at: W.flames.some((f) => Math.hypot(f.x - v.x, f.z - v.z) < 0.01 && Math.abs(f.r - D.EVOLUTIONS.hallowPyre.burst * r.stats.area) < 0.01) };
+
+    // Grimsby's passive: +n Soul Gates give 25% more (+15 becomes +20), and witchfire kills rise ×1.5
+    const gates = (hero) => { const rr = start(hero); Math.random = () => 0.3; rr.gates.spawnPair(); Math.random = rnd; const ops = rr.gates.pair.gates.map((g) => g.op.n); rr.gates.despawn(); return ops.join(); };
+    out.gates = { vael: gates('vael'), grimsby: gates('grimsby') };
+    r = start('grimsby'); r.stats.raise = 0.4; r.stats.cap = 400;
+    const rise = (rr, src) => { const e = foe(rr, 4, 0); Math.random = () => 0.5; const n = rr.counters.raised; rr.enemies.damage(e, 1e9, { source: src, silent: true }); Math.random = rnd; return rr.counters.raised - n; };
+    out.witchRaise = { fire: rise(r, 'witchfire'), minion: rise(r, 'minion') };
+
+    // Hallowfire: foes within 6 m are scorched and flee for 2 s (one 9 m out is spared); he runs 30% faster for 6 s and
+    // his trail runs 1.7 m wide meanwhile
+    r = start('grimsby'); P = r.player; W = r.weapons;
+    const near = foe(r, 3, 0), far = foe(r, 9, 0); step(r, 0.1);
+    const sp0 = r.stats.speed, d0 = dist(near, P);
+    r.rites.trigger();
+    const H = out.hallow = { fear: +near.fearT.toFixed(1), farFear: far.fearT, scorched: near.hp < near.maxHp, haste: 0 };
+    step(r, 0.1); H.haste = +(r.stats.speed / sp0).toFixed(2);
+    step(r, 0.9); H.fled = +(dist(near, P) - d0).toFixed(1);
+    r.input.tx = -1; r.input.moved = true; step(r, 1); r.input.tx = 0;
+    H.wide = W.flames.filter((f) => Math.abs(f.r - D.RITES.grimsby.trailR * r.stats.area) < 0.01).length;
+    step(r, 5.5); H.after = +(r.stats.speed / sp0).toFixed(2); H.trailOff = W.riteTrail === null;
+
+    // Osric: the run opens with 20 minions; Skull Halo kills rise ×2; Bone Mass raises 12 monks, the legion deals +50% for
+    // 6 s (kept through a stats rebuild) while the halo spins twice as fast, then all is as before
+    { const v = start('vael'), e = foe(v, 8, 0); v.enemies.damage(e, 1e9, { source: 'minion', silent: true }); out.vaelTithe = v.pickups.gems[v.pickups.gems.length - 1].pulled; }
+    r = start('osric');
+    const O = out.osric = { start: r.legion.count, weapon: Object.keys(r.skillLv).join() };
+    r.stats.raise = 0.3; r.stats.cap = 400;
+    const tithe = (rr, src) => { const e = foe(rr, 8, 0); rr.enemies.damage(e, 1e9, { source: src, silent: true }); return rr.pickups.gems[rr.pickups.gems.length - 1].pulled; };
+    O.tithe = tithe(r, 'minion'); O.skullGem = tithe(r, 'skull');
+    const n1 = r.legion.count, md0 = r.stats.minionDmg;
+    r.rites.trigger(); step(r, 0.1);
+    O.monks = r.legion.count - n1; O.fury = +(r.stats.minionDmg / md0).toFixed(2); O.spin = r.weapons.skullSpin; O.pillars = r.rites.pN > 0;
+    const hurt = (rr) => { const P2 = rr.player, h0 = P2.hp; P2.invuln = 0; Object.getPrototypeOf(P2).hurt.call(P2, 20); const d = h0 - P2.hp; P2.hp = h0; return d; };
+    O.ward = +hurt(r).toFixed(1);
+    r.recomputeStats(); r.stats.raise = 0.3; const base = r.stats.minionDmg; step(r, 0.1); O.kept = +(r.stats.minionDmg / base).toFixed(2);
+    step(r, 6.5); O.after = +(r.stats.minionDmg / base).toFixed(2); O.spinAfter = r.weapons.skullSpin; O.wardAfter = +hurt(r).toFixed(1);
+    app.exitRun(); app.engine.manual = false;
+    return out;
+  });
+  check('new heroes: seven heroes (Grimsby Epic, Osric Legendary) with Altar shards, painted splashes, Witchfire icons, Hallow Pyre and both Rites',
+    s.roster.order === 'vael,nyx,seraphine,liora,grimsby,mordrake,osric' && s.roster.epic > 0 && s.roster.legendary > 0 && s.roster.art && s.roster.icons && s.roster.evo && s.roster.rites
+    && s.start.weapon === 'witchfire' && s.osric.weapon === 'skullHalo', JSON.stringify({ r: s.roster, w: s.start.weapon, o: s.osric.weapon }));
+  check('witchfire: walking lays a patch every 1.1 m, standing still one at his feet; a foe burns from the hottest patch only, once a tick',
+    s.trail.walked >= 3 && s.trail.walked <= 7 && s.trail.idle >= 1 && s.trail.idle <= 3 && s.ticks.da > 0 && Math.abs(s.ticks.overlap - 1) < 0.15 && Math.abs(s.ticks.hotter - 2) < 0.2, JSON.stringify({ t: s.trail, k: s.ticks }));
+  check('witchfire: Lv3 hurls a lantern that shatters into a 2.2 m pool; Hallow Pyre bursts a witchfire kill into a new patch',
+    s.toss.pool >= 2.2 && s.toss.hit && s.pyre.burst === 1 && s.pyre.at, JSON.stringify({ t: s.toss, p: s.pyre }));
+  check('Grimsby: +n gates give 25% more (+15 → +20), witchfire kills rise ×1.5 (a 0.5 roll against 40%), other kills do not',
+    s.gates.vael === '5,15' && s.gates.grimsby === '5,20' && s.witchRaise.fire === 1 && s.witchRaise.minion === 0, JSON.stringify({ g: s.gates, w: s.witchRaise }));
+  check('Hallowfire: foes within 6 m are scorched and flee 2 s (9 m out spared); +30% speed for 6 s with a 1.7 m river of witchfire, then normal',
+    s.hallow.fear >= 1.9 && s.hallow.farFear === 0 && s.hallow.scorched && s.hallow.fled > 2 && s.hallow.haste === 1.3 && s.hallow.wide >= 3 && s.hallow.after === 1 && s.hallow.trailOff, JSON.stringify(s.hallow));
+  check('Osric: starts with 20 minions, his legion\'s kills send him their souls; Bone Mass: +12 monks, legion +50% (kept through a rebuild), halo ×2 spin, 40% ward, then normal',
+    s.osric.start === 20 && s.osric.tithe === true && s.osric.skullGem === false && s.vaelTithe === false && s.osric.monks === 12 && s.osric.fury === 1.5 && s.osric.spin === 2 && s.osric.pillars
+    && s.osric.kept === 1.5 && s.osric.ward === 12 && s.osric.after === 1 && s.osric.spinAfter === 1 && s.osric.wardAfter === 20, JSON.stringify(s.osric));
+});
+check('new heroes: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

@@ -27,16 +27,19 @@ export class Pickups {
     this.combo = 0; this.comboT = 0;
   }
 
+  /** Returns the gem (or the one it merged into). */
   dropGem(x, z, value) {
     if (this.gems.length >= MAX_GEMS - 4) {
       // merge into the nearest gem so the field never overflows
       let best = null, bd = 9;
       for (const g of this.gems) { const d = (g.x - x) ** 2 + (g.z - z) ** 2; if (d < bd) { bd = d; best = g; } }
-      if (best) { best.value += value; best.tier = best.value >= 10 ? 2 : best.value >= 3 ? 1 : 0; return; }
+      if (best) { best.value += value; best.tier = best.value >= 10 ? 2 : best.value >= 3 ? 1 : 0; return best; }
       this.gems.shift();
     }
     const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 2;
-    this.gems.push({ x, z, y: 0.6, vx: Math.cos(a) * s, vz: Math.sin(a) * s, vy: 4, value, tier: value >= 10 ? 2 : value >= 3 ? 1 : 0, pulled: false, ph: Math.random() * 6 });
+    const g = { x, z, y: 0.6, vx: Math.cos(a) * s, vz: Math.sin(a) * s, vy: 4, value, tier: value >= 10 ? 2 : value >= 3 ? 1 : 0, pulled: false, ph: Math.random() * 6 };
+    this.gems.push(g);
+    return g;
   }
 
   dropSpecial(kind, x, z) {

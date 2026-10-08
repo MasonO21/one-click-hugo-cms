@@ -123,6 +123,7 @@ export class Enemies {
     e.lastHitBy = null;
     e.aff = null; e.ev = null; // elite affixes (affixes.js) and run-event ownership (events.js)
     e.stunT = 0; e.riteId = 0; e.riteT = 0; // Hero Rites: stun timer, per-cast hit mark, per-foe hit cooldown
+    e.fearT = 0; // Grimsby's Hallowfire: seconds left fleeing
     this.active.push(e);
     this.counts[type]++;
     return e;
@@ -194,6 +195,7 @@ export class Enemies {
       if (e.type === 'boss') { run.boss.update(e, dt); continue; }
       if (e.ev) { run.events.drive(e, dt); continue; } // the Soul Thief and the Cursed Coffin move on their own
       if (e.stunT > 0) { e.stunT -= dt; this.drift(e, dt); continue; } // stunned: no steering and no attacks
+      if (e.fearT > 0) { e.fearT -= dt; this.flee(e, dt, P); continue; } // terrified: runs from the Shepherd, no attacks
       const pdist = Math.hypot(P.x - e.x, P.z - e.z) || 0.001;
       // taunt: the nearest taunter within range replaces the Shepherd as the target
       let tm = null;
@@ -377,6 +379,28 @@ export class Enemies {
       e.state = 0; e.stateT = 0;
     }
     e.stunT = Math.max(e.stunT, t);
+  }
+
+  /** Fear (Grimsby's Hallowfire): t s running from the Shepherd, never attacking; a wind-up or fuse is called off as by a
+   *  stun. A boss is never frightened (its next attack slips back, as for a stun). */
+  fear(e, t) {
+    if (!e.active || !(t > 0) || e.ev) return;
+    if (e.type === 'boss') { this.stun(e, t); return; }
+    if (e.state && e.type !== 'witch') { const s0 = e.stunT; this.stun(e, 0.01); e.stunT = s0; } // calls the wind-up off (stun's own rules)
+    e.fearT = Math.max(e.fearT, t);
+  }
+
+  /** A frightened enemy bolts straight away from the Shepherd (knockback still carries it). */
+  flee(e, dt, P) {
+    let dx = e.x - P.x, dz = e.z - P.z;
+    const d = Math.hypot(dx, dz) || 0.001, sp = e.speed * 1.1;
+    dx /= d; dz /= d;
+    const k = Math.exp(-8 * dt);
+    e.kx *= k; e.kz *= k;
+    e.vx = dx * sp + e.kx; e.vz = dz * sp + e.kz;
+    e.x += e.vx * dt; e.z += e.vz * dt;
+    let dr = Math.atan2(dx, dz) - e.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr));
+    e.rot += dr * Math.min(1, dt * 14);
   }
 
   /** A stunned enemy only drifts on its knockback, which fades as usual. */

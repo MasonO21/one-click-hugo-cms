@@ -66,7 +66,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 |---|---|---|---|
 | **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10, 3/day), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run, on every difficulty (Nightmare and Torment cost the same: a harder run is not a reason to spend more of the session pacer). Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
 | **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), each Bestiary entry's second milestone (1, 11 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
-| **Hero Shards** | Epic rolls (4 Seraphine, 6 Nyx or 5 Liora, equal chance), Legendary rolls (5 Mordrake or 6 Seraphine, 50/50), premium pass S1 (25 Seraphine), duplicate hero grants (20). Planned: Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week). | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
+| **Hero Shards** | Epic rolls (4 Seraphine, 6 Nyx, 5 Liora or 5 Grimsby, equal chance), Legendary rolls (5 Mordrake, 6 Seraphine or 5 Osric, equal chance), premium pass S1 (25 Seraphine), duplicate hero grants (20). Planned: Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week). | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
 
 ### 2.4 What a free player earns per 28-day season (daily active, all quests, ~3 runs a day)
 
@@ -95,12 +95,12 @@ Each campaign chapter can be replayed on Nightmare (after a Normal clear) and To
 | Pass XP | ×1 | ×1.5 | ×2 | Pass XP is capped at 15,000 a season, so it only moves *when* an endgame player finishes the pass. Account XP stays at the Normal amount, so the 20-gem account level-ups keep their pace |
 | Run gems | 12–20 per clear | same | same | No per-run gem multiplier: repeat farming never prints premium currency |
 | First clear (one-time per chapter) | 70–150 gems + 1 sigil | +60 gems | +120 gems | 900 gems in total, about 7 pulls, earned over months. Flat: Blood Moon and the rewarded-ad double skip it |
-| Boss Hoard relic | Ch1–2 Common/Rare, Ch3–5 up to Epic 35% | Rare 60% / Epic 40% | Epic 98% / Legendary 2% | Relics only, never hero shards, so Mordrake and Seraphine still come from the Altar |
+| Boss Hoard relic | Ch1–2 Common/Rare, Ch3–5 up to Epic 35% | Rare 60% / Epic 40% | Epic 98% / Legendary 2% | Relics only, never hero shards, so Mordrake, Osric and Seraphine still come from the Altar |
 | Energy | 5 | 5 | 5 | |
 
 **Legendary relics from Torment.** Campaign runs never dropped Legendaries before (the Endless Abyss Epic+ relic at depth 4+ already could, at 20%). Torment's Hoard has a 2% Legendary chance, the same as one Altar pull. An endgame player clearing Torment 2–3 times a day finds roughly 1–2 Legendary relics a season this way, against ≈ 3 from a free player's pulls. That deepens relic collection (§6.5: a specific Legendary at Lv10 needs ~80 copies) without competing with the Altar's hero shards. Watch the share of Legendary relics that come from Torment; if it passes ~35% of all Legendaries for D90+ players, lower it to 1%.
 
-That is generous by design. A free player unlocks Mordrake (10 shards = two Mordrake drops, ≈ 4 Legendary rolls, because half of Legendary rolls give Seraphine shards instead) in about 5–8 weeks, and the whole story is clearable with Vael. Spending buys *speed* (more pulls now), *depth* (stars and relic levels) and *cosmetics*.
+That is generous by design. A free player unlocks a first Legendary hero (10 shards = two drops of Mordrake or of Osric, ≈ 3.8 Legendary rolls, because a third of Legendary rolls give Seraphine shards instead) in about 5–8 weeks; Mordrake in particular takes ≈ 6 Legendary rolls (8–12 weeks) since Osric joined the pool on 2026-10-08. The whole story is clearable with Vael. Spending buys *speed* (more pulls now), *depth* (stars and relic levels) and *cosmetics*.
 
 ### 2.6 The Bestiary (collection milestones)
 
@@ -128,7 +128,7 @@ The Bestiary (GDD §5.2) has a painted entry for each of 11 foes (the horde's fi
 | **Free** | $0 | Rewarded ads | Full story, ~3 Legendaries per season with ads | 95–97% |
 | **Minnow** | $0.99–$9.99 lifetime | `starter_pack` $1.99, first-purchase `gems_80` (160 gems), one `gems_500` | Nyx early; 1 extra 10-pull | ~2–3% |
 | **Dolphin** | ~$15–$60 per month | `soul_pact` $4.99 + `soul_pass` $9.99 (= $14.98), occasional `gems_1200`/`gems_2600` | ~43 extra pulls per season + guaranteed Legendary relic + Eclipse Vael skin. About 1.4× the pull rate of a free player who watches every ad (≈ 2× one who watches none). | ~0.8–1.5% |
-| **Whale** | $100–$500+ per month | `gems_7000`, `gems_15000` | $100 ≈ 111 pulls ≈ 3.2 Legendaries · $500 ≈ 16 Legendaries. Chasing Mordrake 5★ and Legendary relic levels. | ~0.1–0.3% |
+| **Whale** | $100–$500+ per month | `gems_7000`, `gems_15000` | $100 ≈ 111 pulls ≈ 3.2 Legendaries · $500 ≈ 16 Legendaries. Chasing Mordrake and Osric 5★ and Legendary relic levels. | ~0.1–0.3% |
 
 In midcore gacha games a small share of payers usually produces most IAP revenue. Industry write-ups often cite 50–70% from the top 10% of payers. We design for depth, but we cap harm with the spending limits in §10. **Dolphins are the health metric:** a game that only works with whales is fragile and attracts regulatory and press risk.
 
@@ -219,8 +219,9 @@ P(no Epic+ in 10 natural rolls) = 0.88^10 = 27.9%. Expected Epics per 10-pull = 
 
 | Chase | Legendaries needed | Expected pulls | Gems (at 135) | ≈ USD (150 gems/$) |
 |---|---|---|---|---|
-| Unlock Mordrake (10 shards; a Legendary gives 5 Mordrake shards 50% of the time) | 4 | 140 | 18,966 | $126 |
-| Mordrake first shard → 5★ (160 shards) | 64 | 2,248 | 303,457 | $2,023 |
+| Unlock Mordrake (10 shards; a Legendary gives 5 Mordrake shards a third of the time) | 6 | 211 | 28,580 | $191 |
+| Mordrake first shard → 5★ (160 shards) | 96 | 3,372 | 456,800 | $3,045 |
+| Osric, the same chase (5 shards a third of the time) | 6 / 96 | 211 / 3,372 | 28,580 / 456,800 | $191 / $3,045 |
 | One of each of the 8 Legendary relic types (coupon collector, 8 × H₈) | 21.7 | 764 | 103,094 | $687 |
 | One *specific* Legendary relic at Lv10 (10 copies, 1/8 chance each) | 80 | 2,810 | 379,321 | $2,529 |
 

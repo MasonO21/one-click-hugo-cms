@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Rebuilds the voice lines in src/assets/voice from their Higgsfield takes (ElevenLabs engine via Higgsfield
 # text2speech_v2; scripts, voices and job ids below and in docs/ART_AND_ADS.md §3): trims silence, adds a low shelf and a
-# short cathedral echo to the announcer, pitches Mordrake down 10%, normalises to -16 LUFS, mono 64 kbps MP3.
+# short cathedral echo to the announcer, pitches Mordrake down 10% and the Bone Abbot down 7% (with a nave echo), normalises to -16 LUFS, mono 64 kbps MP3.
 # usage: bash scripts/voice-master.sh   (needs curl and ffmpeg)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,6 +15,7 @@ while read -r key file; do
   case $key in
     a_*) FX="highpass=f=60,bass=g=3:f=110,aecho=0.85:0.9:55|110:0.22|0.12,apad=pad_dur=0.25" ;;
     mordrake_*) FX="highpass=f=60,asetrate=44100*0.9,aresample=44100,atempo=1.1111,bass=g=2:f=100,apad=pad_dur=0.1" ;;
+    osric_*) FX="highpass=f=60,asetrate=44100*0.93,aresample=44100,atempo=1.0753,bass=g=2:f=110,aecho=0.85:0.85:70|140:0.18|0.09,apad=pad_dur=0.2" ;;
     *) FX="highpass=f=80,apad=pad_dur=0.1" ;;
   esac
   ffmpeg -v error -y -i "$TMP/$key.mp3" -af "aresample=44100,$TRIM,$FX,loudnorm=I=-16:TP=-1.5:LRA=7,aresample=44100" -ac 1 -c:a libmp3lame -b:a 64k "$OUT/$key.mp3"
@@ -63,6 +64,10 @@ liora_rite hf_20261007_164206_562c8f51-bb26-4c37-96a4-7e6a59cfb47f.mp3
 liora_greet hf_20261007_164206_19fe0439-deca-41f6-84f8-e96a874a2c83.mp3
 mordrake_rite hf_20261007_164206_9b487dd2-b8db-4b74-b048-e180a049f2da.mp3
 mordrake_greet hf_20261007_164207_a9c1d7bf-535c-4dc7-93ab-1d068f9e813f.mp3
+osric_rite hf_20261008_173645_c0ef5dcd-ac20-4501-a3ac-6018101d4fb7.mp3
+osric_greet hf_20261008_173645_a54a6036-6b4b-467a-b7aa-14c3f75f0c6d.mp3
+grimsby_rite hf_20261008_173645_26691c49-99ec-4ad3-b9db-c6bc6511d855.mp3
+grimsby_greet hf_20261008_173645_66000d56-8c12-446d-b248-b9261549113f.mp3
 LIST
 rm -rf "$TMP"
 echo "wrote $(ls "$OUT" | wc -l) lines to $OUT"

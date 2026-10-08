@@ -655,6 +655,22 @@ const SFX = {
     for (const n of [38, 45, 50]) brass(o, t + 0.05, n + semis(p), 0.6, 0.045);
     return 1.6;
   } },
+  rite_grimsby: { gap: 400, max: 1, vol: 0.9, rev: 0.35, big: true, duck: [0.5, 0.8], play(o, t, p) { // Hallowfire: a lantern bursts, witchfire roars up, a cackle
+    noise(o, t, { type: 'bandpass', f: 300 * p, to: 4200 * p, q: 0.9, a: 0.02, d: 0.55, v: 0.6 }); // the whoosh
+    noise(o, t + 0.05, { buf: brownBuf, type: 'lowpass', f: 1400, to: 300, a: 0.05, h: 0.4, d: 0.7, v: 0.45 }); // the roar
+    for (let k = 0; k < 16; k++) noise(o, t + 0.08 + k * 0.045 + rand(0, 0.02), { type: 'highpass', f: rand(3000, 7000), d: 0.02, v: 0.12 }); // crackle
+    tone(o, t, { f: 120 * p, to: 45, glide: 0.4, d: 0.5, v: 0.5 });
+    [0, 1, 2, 3].forEach((k) => tone(distort(o, 3, 2600, 0.1), t + 0.18 + k * 0.11, { type: 'sawtooth', f: (330 - k * 25) * p, to: (250 - k * 25) * p, a: 0.01, d: 0.09, v: 0.12 })); // heh-heh-heh
+    return 1.2;
+  } },
+  rite_osric: { gap: 500, max: 1, vol: 0.9, rev: 0.7, big: true, duck: [0.4, 1.4], play(o, t, p) { // Bone Mass: an organ chord, a choir of monks, bones rattling up
+    for (const n of [36, 43, 48, 55]) brass(o, t, n + semis(p), 1.4, 0.05); // the organ
+    choir(o, [48, 55, 60, 64], t + 0.06, 1.3, { vowel: 'ah', v: 0.16, a: 0.25, r: 1.2 });
+    bell(o, t, mtof(48) * p, 0.12, 2.8);
+    for (let k = 0; k < 18; k++) { const s = t + 0.1 + k * 0.03 + rand(0, 0.02); noise(o, s, { type: 'bandpass', f: rand(1800, 3600) * p, q: 5, d: 0.03, v: 0.18 }); } // bones
+    tone(o, t, { f: 80 * p, to: 40, glide: 0.8, d: 1.0, v: 0.45 });
+    return 2.8;
+  } },
   rite_ready: { gap: 800, max: 1, vol: 0.75, rev: 0.4, play(o, t, p) { // the Rite is ready again: a soft rising chime
     [69, 76, 81].forEach((n, k) => tone(o, t + k * 0.07, { type: 'triangle', f: mtof(n) * p, a: 0.01, h: 0.04, d: 0.35, v: 0.12 }));
     bell(o, t + 0.14, mtof(88) * p, 0.04, 0.9);

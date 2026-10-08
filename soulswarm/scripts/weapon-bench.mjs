@@ -13,6 +13,7 @@ const W = {
   soulBolt: [{ soulBolt: 5, might: 1 }, 'soulStorm'], skullHalo: [{ skullHalo: 5, minionFury: 1 }, 'boneCrown'],
   scythe: [{ scythe: 5, haste: 1 }, 'harvestMoon'], chains: [{ chains: 5, frenzy: 1 }, 'chainsOfPerdition'],
   spears: [{ spears: 5, vitality: 1 }, 'ossuaryBarrage'], gravePulse: [{ gravePulse: 5, soulMagnet: 1 }, 'requiem'],
+  witchfire: [{ witchfire: 5, raiseDead: 1 }, 'hallowPyre'],
 };
 const b = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();

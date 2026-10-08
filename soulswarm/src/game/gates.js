@@ -48,6 +48,8 @@ export class Gates {
     if (lesson) this.lessonShown = true;
     let ops = forcedOps || (lesson ? (Math.random() < 0.5 ? [{ type: 'add', n: 5 }, { type: 'mul', n: 2 }] : [{ type: 'mul', n: 2 }, { type: 'add', n: 5 }]) : makeOps(run.legion.count, run.time / 60));
     if (run.mut.noBadGates && !forcedOps) ops = ops.map((op) => (isGood(op) ? op : { type: 'add', n: Math.max(5, Math.round((12 + run.time / 60 * 7 + run.legion.count * 0.2) / 5) * 5) })); // Gilded Gates
+    const more = run.loadout.hero.passive.gateAdd; // Grimsby: his lamps light the gates brighter (+n gates only)
+    if (more && !forcedOps && !lesson) ops = ops.map((op) => (op.type === 'add' ? { type: 'add', n: Math.round(op.n * (1 + more) / 5) * 5 } : op));
     const gates = ops.map((op, i) => {
       const side = i === 0 ? -1 : 1;
       const g = makeGate(label(op), isGood(op), WIDTH);

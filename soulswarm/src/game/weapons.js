@@ -9,12 +9,14 @@ import { hdr } from '../engine/particles.js';
 
 const TAU = Math.PI * 2;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1), _e = new THREE.Euler();
-const WEAPONS = ['soulBolt', 'scythe', 'chains', 'spears', 'skullHalo', 'gravePulse'];
-const HM = EVOLUTIONS.harvestMoon, CP = EVOLUTIONS.chainsOfPerdition, OB = EVOLUTIONS.ossuaryBarrage, RQ = EVOLUTIONS.requiem;
+const WEAPONS = ['soulBolt', 'scythe', 'chains', 'spears', 'skullHalo', 'gravePulse', 'witchfire'];
+const HM = EVOLUTIONS.harvestMoon, CP = EVOLUTIONS.chainsOfPerdition, OB = EVOLUTIONS.ossuaryBarrage, RQ = EVOLUTIONS.requiem, HP = EVOLUTIONS.hallowPyre;
+const WF = SKILLS.witchfire;
 const EVO_OF = {}; // weapon id -> the evolution that upgrades it
 for (const [id, ev] of Object.entries(EVOLUTIONS)) EVO_OF[ev.from] = id;
 
 const MAX_SHARDS = 120;
+const MAX_FLAMES = 64, WF_TICK = 0.25, TOSS_FLIGHT = 0.45; // witchfire patches alive at once, damage tick (s), lantern flight (s)
 
 // Crescent blade: a unit disc minus a disc centred at (CR_C, 0) that passes through the tips at ±CR_A rad.
 const CR_A = 0.9, CR_C = 0.22, CR_RHO = Math.hypot(Math.cos(CR_A) - CR_C, Math.sin(CR_A));
@@ -114,6 +116,18 @@ export class Weapons {
     this.rune.visible = false;
     this.rune.material.uniforms.uColor.value.copy(run.weaponColorObj);
     run.scene.add(this.rune);
+    // Witchfire Lantern: burning patches (drawn by hazards.js as ground decals), lanterns in flight, the per-tick hit list
+    this.flames = []; this.flamePool = [];
+    this.lanterns = [];
+    this.wfT = WF_TICK; this.wfId = 0; this.wfHit = [];
+    this.trailX = 0; this.trailZ = 0; this.trailD = 0; this.trailIdle = 0; this.trailOn = false;
+    this.riteTrail = null; // Hallowfire: { until, r, base, k } (rites.js)
+    this.burstBank = HP.burstMax;
+    this.cols.witch = hdr(0xc6ff3d, 3); this.cols.witchCore = hdr(0xeaffb0, 2.6);
+    this.witchColor = new THREE.Color(0xc6ff3d);
+    this.skullSpin = 1; // Osric's Bone Mass turns the halo faster (rites.js)
+    this._wfHit = (e) => this.wfTouch(e);
+    this._tossHit = (e) => this.tossHit(e);
   }
 
   roll(base) {
@@ -140,6 +154,7 @@ export class Weapons {
     const run = this.run, lv = run.skillLv, S = run.stats;
     for (const w of WEAPONS) {
       if (!lv[w] || w === 'skullHalo') continue;
+      if (w === 'witchfire' && !run.evolved.hallowPyre && WF.toss(lv[w]) <= 0) continue; // lanterns are thrown from Lv3
       this.timers[w] -= dt;
       if (this.timers[w] <= 0) {
         const evo = run.evolved[EVO_OF[w]] ? EVOLUTIONS[EVO_OF[w]] : null;
@@ -157,6 +172,7 @@ export class Weapons {
     if (this.shardN) this.updateShards(dt);
     this.boomT -= dt;
     this.updateRequiem(dt);
+    this.updateWitchfire(dt, lv.witchfire);
   }
 
   // ---------------------------------------------------------------- firing
@@ -249,6 +265,7 @@ export class Weapons {
       run.audio.sfx('shoot', { volume: 0.55, pitch: ob ? 0.65 : 0.8 });
       return true;
     }
+    if (w === 'witchfire') return this.tossLanterns(level);
     if (w === 'gravePulse') {
       if (run.evolved.requiem) { this.startRequiem(); return true; }
       const R = SKILLS.gravePulse.radius(level) * run.stats.area;
@@ -432,6 +449,7 @@ export class Weapons {
   touch(e) {
     if (e.burnUid !== undefined) return;
     e.burnUid = 0; e.burnT = 0; e.burnPool = 0; e.burnTick = 0; e.burnRaise = 0; e.burnListed = false; e.reapUid = 0; e.reapT = 0;
+    e.wfId = 0; e.wfDmg = 0;
   }
 
   // ---------------------------------------------------------------- Chains of Perdition (burning)
@@ -589,6 +607,137 @@ export class Weapons {
     this.run.enemies.damage(e, this._bd, this.opts(e.x - P.x, e.z - P.z, 8 * (this.run.loadout.hero.passive.pulseKnock ?? 1), this._bc, 'pulse', this._shown++ >= 6)); // 6 numbers per blast
   }
 
+  // ---------------------------------------------------------------- Witchfire Lantern
+  /** A burning patch of witchfire. base = damage a second before Might and crits; k = extra scale (a Rite's chapter
+   *  scaling). Returns false when every slot burns (the oldest lantern pool or rite patch gives way to a big one). */
+  flame(x, z, r, life, base, k = 1, big = false) {
+    let f;
+    if (this.flames.length < MAX_FLAMES) { f = this.flamePool.pop() || {}; this.flames.push(f); }
+    else if (big) { f = this.flames[0]; for (const o of this.flames) if (o.t / o.life > f.t / f.life) f = o; } // the most spent patch
+    else return false;
+    f.x = x; f.z = z; f.r = r; f.t = 0; f.life = life; f.base = base; f.k = k; f.seed = Math.random();
+    return true;
+  }
+
+  updateWitchfire(dt, level) {
+    const run = this.run, P = run.player, S = run.stats, pyre = !!(level && run.evolved.hallowPyre), RT = this.riteTrail;
+    this.burstBank = Math.min(HP.burstMax, this.burstBank + HP.burstMax * dt);
+    if (RT && run.time >= RT.until) this.riteTrail = null;
+    // the trail: a patch every `gap` metres walked, or at his feet every `idle` seconds standing still
+    if ((level || this.riteTrail) && !P.dead) {
+      if (!this.trailOn) { this.trailOn = true; this.trailX = P.x; this.trailZ = P.z; this.trailD = 0; this.trailIdle = 0; }
+      const d = Math.hypot(P.x - this.trailX, P.z - this.trailZ);
+      this.trailD += d; this.trailX = P.x; this.trailZ = P.z;
+      this.trailIdle = d > 0.01 ? 0 : this.trailIdle + dt;
+      const R = this.riteTrail;
+      if (this.trailD >= (R ? 0.9 : WF.gap) || this.trailIdle >= WF.idle) {
+        this.trailD = 0; this.trailIdle = 0;
+        if (R) this.flame(P.x, P.z, R.r * S.area, 2.6, R.base, R.k, true);
+        else if (pyre) this.flame(P.x, P.z, HP.r * S.area, HP.life, HP.dps);
+        else this.flame(P.x, P.z, WF.r(level) * S.area, WF.life(level), WF.dps(level));
+      }
+    } else this.trailOn = false;
+    // lanterns in flight shatter where they land
+    for (let i = this.lanterns.length - 1; i >= 0; i--) {
+      const L = this.lanterns[i];
+      L.t += dt;
+      if (L.t < TOSS_FLIGHT) continue;
+      this.lanterns[i] = this.lanterns[this.lanterns.length - 1]; this.lanterns.pop();
+      this.shatter(L);
+    }
+    // patches age; embers rise from them
+    const F = this.flames, c = this.cols.witch, emb = dt * 5 * run.particles.budget;
+    for (let i = F.length - 1; i >= 0; i--) {
+      const f = F[i];
+      f.t += dt;
+      if (f.t >= f.life) { F[i] = F[F.length - 1]; F.pop(); this.flamePool.push(f); continue; }
+      if (Math.random() < emb * f.r) {
+        const a = Math.random() * TAU, rr = Math.random() * f.r * 0.8;
+        run.particles.emit(f.x + Math.cos(a) * rr, 0.15, f.z + Math.sin(a) * rr, 0, 1.8 + Math.random() * 1.4, 0, 0.55, 0.38, 0.05, c[0], c[1], c[2], 0.9, 1.5, 0);
+      }
+    }
+    // damage ticks: each foe burns from the hottest patch it stands in (patches never stack)
+    this.wfT -= dt;
+    if (this.wfT > 0 || !F.length) { if (this.wfT <= 0) this.wfT = WF_TICK; return; }
+    this.wfT += WF_TICK;
+    this.wfId++;
+    const H = this.wfHit; H.length = 0;
+    for (let i = 0; i < F.length; i++) { const f = F[i]; this._wf = f.base * f.k; run.enemies.query(f.x, f.z, f.r, this._wfHit); }
+    let shown = 0;
+    for (let i = 0; i < H.length; i++) {
+      const e = H[i];
+      if (!e.active) continue;
+      const dmg = this.hit(e.wfDmg * WF_TICK), f0 = e.flash;
+      const killed = run.enemies.damage(e, dmg, this.opts(0, 0, 0, this.crit, 'witchfire', !this.crit && shown++ >= 3)); // a few numbers a tick
+      if (!killed) e.flash = Math.max(f0, 0.35); // a flicker, not a full hit-flash every tick
+    }
+    H.length = 0;
+  }
+
+  wfTouch(e) {
+    this.touch(e);
+    if (e.wfId !== this.wfId) { e.wfId = this.wfId; e.wfDmg = this._wf; this.wfHit.push(e); }
+    else if (this._wf > e.wfDmg) e.wfDmg = this._wf;
+  }
+
+  /** Hurl lanterns at the nearest foes (Lv3+, Hallow Pyre throws three). */
+  tossLanterns(level) {
+    const run = this.run, P = run.player, pyre = !!run.evolved.hallowPyre;
+    const n = pyre ? HP.toss : WF.toss(level);
+    if (n <= 0) return true;
+    const targets = this.nearestN(P.x, P.z, 11, n * 3);
+    if (!targets.length) return false;
+    for (let i = 0; i < n; i++) {
+      const t = targets[Math.min(targets.length - 1, i * 3)]; // spread them over the nearest few, not one heap
+      this.lanterns.push({ sx: P.x, sz: P.z, tx: t.x + t.vx * TOSS_FLIGHT, tz: t.z + t.vz * TOSS_FLIGHT, t: -i * 0.08,
+        dmg: pyre ? HP.tossDmg : WF.tossDmg(level), r: (pyre ? HP.poolR : WF.poolR(level)) * run.stats.area,
+        dps: pyre ? HP.dps : WF.dps(level), life: pyre ? HP.life : WF.life(level) + 0.6 });
+    }
+    run.audio.sfx('shoot', { volume: 0.45, pitch: 0.6 });
+    return true;
+  }
+
+  shatter(L) {
+    const run = this.run, P = run.player;
+    this.flame(L.tx, L.tz, L.r, L.life, L.dps, 1, true);
+    this._td = this.hit(L.dmg); this._tc = this.crit; this._tx = L.tx; this._tz = L.tz; this._shown = 0;
+    run.enemies.query(L.tx, L.tz, L.r, this._tossHit);
+    run.particles.burst(L.tx, 0.6, L.tz, 16, this.cols.witch, { speed: 5, life: 0.45, size: 0.45, up: 2 });
+    run.particles.burst(L.tx, 0.5, L.tz, 6, this.cols.witchCore, { speed: 2.5, life: 0.3, size: 0.6 });
+    run.fx.shockwave(L.tx, L.tz, L.r, 0xc6ff3d, 0.3, 0.12);
+    run.fx.light(L.tx, L.tz, L.r + 2.5, 1.4, this.witchColor, 0.35);
+    if (this.boomT <= 0 && (L.tx - P.x) ** 2 + (L.tz - P.z) ** 2 < 300) { this.boomT = 0.25; run.audio.sfx('explosion', { volume: 0.28, pitch: 1.5 }); }
+  }
+
+  tossHit(e) {
+    this.run.enemies.damage(e, this._td, this.opts(e.x - this._tx, e.z - this._tz, 3, this._tc, 'witchfire', this._shown++ >= 3));
+  }
+
+  /** Hallow Pyre: a foe slain in witchfire bursts, setting its neighbours alight (a bank caps the chain per second). */
+  pyreBurst(x, z) {
+    if (this.burstBank < 1) return;
+    this.burstBank -= 1;
+    this.flame(x, z, HP.burst * this.run.stats.area, HP.burstLife, HP.dps);
+    this.run.particles.burst(x, 0.7, z, 8, this.cols.witch, { speed: 4, life: 0.35, size: 0.4, up: 2.5 });
+  }
+
+  renderWitchfire(g) {
+    const F = this.flames, c = this.cols.witch, t = this.run.t;
+    for (let i = 0; i < F.length; i++) { // a low bloom over each patch, so the fire reads at a glance
+      const f = F[i], a = Math.min(1, f.t * 6) * Math.min(1, (f.life - f.t) * 2), fl = 0.85 + 0.15 * Math.sin(t * 13 + f.seed * 40);
+      g.add(f.x, 0.35, f.z, f.r * 1.5 * fl, c[0] * 0.1, c[1] * 0.1, c[2] * 0.1, a * 0.8);
+    }
+    const L = this.lanterns, w = this.cols.witchCore;
+    for (let i = 0; i < L.length; i++) { // the lantern on its arc, trailing sparks
+      const l = L[i];
+      if (l.t < 0) continue;
+      const k = l.t / TOSS_FLIGHT, x = l.sx + (l.tx - l.sx) * k, z = l.sz + (l.tz - l.sz) * k, y = 1.4 + 3.2 * k * (1 - k) * 2;
+      g.add(x, y, z, 1.3, c[0] * 0.35, c[1] * 0.35, c[2] * 0.35, 1);
+      g.add(x, y, z, 0.5, w[0], w[1], w[2], 1);
+      if (Math.random() < 0.5) this.run.particles.emit(x, y, z, 0, 0.6, 0, 0.35, 0.32, 0.05, c[0], c[1], c[2], 0.9, 1, 0);
+    }
+  }
+
   // ---------------------------------------------------------------- skull halo
   updateSkulls(dt, level) {
     const run = this.run, P = run.player, E = run.enemies;
@@ -596,7 +745,7 @@ export class Weapons {
     const n = crown ? 8 : SKILLS.skullHalo.count(level);
     const R = (crown ? 3.2 : SKILLS.skullHalo.radius(level)) * run.stats.area;
     const base = crown ? 26 : SKILLS.skullHalo.dmg(level);
-    this.skullAngle += dt * 2.7;
+    this.skullAngle += dt * 2.7 * this.skullSpin;
     const sc = crown ? 1.4 : 1.1;
     _s.set(sc, sc, sc);
     for (let i = 0; i < n; i++) {
@@ -630,6 +779,7 @@ export class Weapons {
     const sk = this.cols.skull;
     for (let i = 0; i < this.skullN; i++) g.add(this.skullXZ[i * 2], 1.0, this.skullXZ[i * 2 + 1], 1.1, sk[0] * 0.35, sk[1] * 0.35, sk[2] * 0.35, 0.8);
     this.renderChains(g);
+    this.renderWitchfire(g);
     if (this.moons.count) {
       const c = this.cols.soul, R = this.moonR;
       for (let i = 0; i < HM.blades; i++) {

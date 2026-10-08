@@ -16,6 +16,7 @@ const FIT = {
   vael: { h: 2.3, glow: 2.2 }, eclipse_vael: { h: 2.3, glow: 2.6 },
   nyx: { h: 2.6, glow: 1.6 }, seraphine: { h: 2.25, glow: 0.9 },
   liora: { h: 2.0, glow: 0.6 }, mordrake: { h: 2.7, glow: 2.0 },
+  grimsby: { h: 2.45, glow: 1.6 }, osric: { h: 2.6, glow: 0.4 },
 };
 
 const cache = new Map();

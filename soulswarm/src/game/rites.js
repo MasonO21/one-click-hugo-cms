@@ -4,6 +4,8 @@
 //   Seraphine Ashfall       burning chains fall on the field (elites first), ignite, and feed her Nova
 //   Liora     Death Knell   a spectral bell tolls: stun, her toll mark, enemy shots silenced
 //   Mordrake  Ossuary Wall  a ring of bone spikes hurls the horde out and mends the legion inside
+//   Grimsby   Hallowfire    his jaw blazes: the horde nearby flees in terror; he runs faster, trailing a river of witchfire
+//   Osric     Bone Mass     twelve bone monks rise; the legion fights harder and the Skull Halo spins faster
 // Run.update calls poll() (input), update(dt) right after the Shepherd moves, and render() inside the glow pass.
 import * as THREE from 'three';
 import { RITES, EVOLUTIONS } from './data.js';
@@ -20,6 +22,7 @@ const SPARK = { speed: 2.2, life: 0.7, size: 0.4, up: 3.2, drag: 1.5 }, DUST = {
 const IMPACT = { speed: 5, life: 0.45, size: 0.45, up: 1.2 }, IMPACT_RING = { life: 0.3, size: 0.4, y: 0.3 };
 const BONE = { speed: 6, life: 0.4, size: 0.3, up: 1.6, grav: 14, drag: 1 }, HEAL = { speed: 1.4, life: 0.6, size: 0.35, up: 2.2 };
 const WHITE = [3, 3, 3.2], ASH = [1.4, 0.75, 0.4], FLAME = hdr(0xffa040, 3.4), EMBER = hdr(0xff6a1e, 3), MARROW = hdr(0x6dff9a, 2.6), BONE_HDR = hdr(0xfff0d2, 1.8);
+const WITCH = hdr(0xc6ff3d, 3), GOLD = hdr(0xf5c35c, 2.2);
 
 const additive = (uniforms, vert, frag, side = THREE.FrontSide) => new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side });
 
@@ -98,11 +101,14 @@ export class Rites {
     this.strikeN = 0; this.strikeT = 0;                                            // Seraphine
     this.bellT = -1; this.waves = 0;                                               // Liora
     this.wallT = 0; this.wallAge = -1;                                             // Mordrake
+    this.blazeT = 0; this.blazeB = { S: null, base: 0 };                           // Grimsby
+    this.massT = 0; this.massB = { S: null, base: 0 };                             // Osric
     this.runeT = -1; this.runeLife = 1; this.runeR = 1; this.runeFollow = false;
     // pre-bound query callbacks: the per-frame loops create no closures
     this._cut = (e) => this.cutHit(e);
     this._wall = (e) => this.wallHit(e);
     this._knell = (e) => this.knellHit(e);
+    this._blaze = (e) => this.blazeHit(e);
     this._silence = (e) => { if (e.type === 'witch' && e.stunT <= 0) { this.run.enemies.stun(e, this.def.stun); this.run.particles.burst(e.x, 2.2, e.z, 4, this.hc, IMPACT); } };
     this._seen = (e) => { if (e.riteId === this.castId) return; if (this.onScreen(e)) { this.cand.push(e); } };
     this._struck = (e) => e.riteId === this.castId;
@@ -116,8 +122,8 @@ export class Rites {
     this.rune.visible = false;
     this.rune.material.uniforms.uColor.value.copy(this.color);
     sc.add(this.rune);
-    if (id === 'vael') {
-      const P = pillarMesh(this.color.clone().multiplyScalar(1.3));
+    if (id === 'vael' || id === 'osric') { // soul pillars: Vael's risen, Osric's monks
+      const P = pillarMesh(this.color.clone().multiplyScalar(id === 'osric' ? 1.1 : 1.3));
       this.pillarMesh = P.mesh; this.pillarAttr = P.attr; sc.add(P.mesh);
       this.pillars = Array.from({ length: MAX_PILLARS }, () => ({ x: 0, z: 0, t: 0, seed: 0 }));
       this.pN = 0;
@@ -147,10 +153,12 @@ export class Rites {
   }
 
   get ready() { return !!this.def && this.cd <= 0; }
+  /** Damage the Shepherd takes is multiplied by this (Player.hurt): Osric is warded while his Bone Mass lasts. */
+  get guard() { return this.massT > 0 ? 1 - this.def.ward : 1; }
   /** Grave Call is up: every kill rises (run.onEnemyKilled reads it). */
   get graveCall() { return this.graveT > 0; }
   /** A lasting effect is running (the HUD button glows). */
-  get active() { return this.graveT > 0 || this.dashLeft > 0 || this.wallT > 0 || this.bellT >= 0 && this.bellT < 0.6 || this.strikeN > 0; }
+  get active() { return this.graveT > 0 || this.dashLeft > 0 || this.wallT > 0 || this.bellT >= 0 && this.bellT < 0.6 || this.strikeN > 0 || this.blazeT > 0 || this.massT > 0; }
 
   /** Rite damage: base × the run's damage multiplier × chapter scaling (as Soul Nova); rolls crits like a weapon. */
   dmg(base, crit = true) {
@@ -234,11 +242,23 @@ export class Rites {
         run.particles.emit(P.x + ca * r, 0.3 + Math.random() * 0.6, P.z + sa * r, -ca * v, 0.5, -sa * v, life, 0.5, 0.1, c[0], c[1], c[2], 0.9, 0, 0);
       }
     }
+  }
+
+  updatePillars(dt) {
     for (let i = this.pN - 1; i >= 0; i--) {
       const p = this.pillars[i];
       p.t += dt;
       if (p.t >= 0.8) { this.pillars[i] = this.pillars[this.pN - 1]; this.pillars[this.pN - 1] = p; this.pN--; }
     }
+  }
+
+  /** A timed multiplier on a run stat. A level-up rebuilds run.stats, so the multiplier is re-applied to the new object. */
+  holdStat(b, key, on, mul) {
+    const S = this.run.stats;
+    if (!on && !b.S) return;
+    if (S !== b.S) { b.S = S; b.base = S[key]; }
+    if (on) S[key] = b.base * mul;
+    else { S[key] = b.base; b.S = null; }
   }
 
   // ---------------------------------------------------------------- Nyx: Shadow Step
@@ -509,6 +529,60 @@ export class Rites {
     if (this.sfxT <= 0) { this.sfxT = 0.12; run.audio.sfx('hit', { volume: 0.45, pitch: 0.55 }); }
   }
 
+  // ---------------------------------------------------------------- Grimsby: Hallowfire
+  grimsby(D, P) {
+    const run = this.run, k = 1 + RITES.ch * (run.chapter.id - 1);
+    this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0;
+    run.enemies.query(P.x, P.z, D.r, this._blaze);
+    this.blazeT = D.dur;
+    run.weapons.riteTrail = { until: run.time + D.dur, r: D.trailR, base: D.dps, k }; // weapons.js lays the river
+    run.weapons.flame(P.x, P.z, D.r * 0.5, 2.6, D.dps, k, true); // a pyre where he stood
+    run.fx.shockwave(P.x, P.z, D.r, 0xc6ff3d, 0.45, 0.08);
+    run.fx.shockwave(P.x, P.z, D.r * 0.5, 0xeaffb0, 0.3, 0.16);
+    run.fx.light(P.x, P.z, D.r + 3, 2, this.color, 0.7);
+    run.fx.flash(0.15); run.fx.shake(0.3); run.fx.aberration(0.3);
+    run.particles.ring(P.x, P.z, D.r, 60, WITCH, { life: 0.45, size: 0.6, speed: 2 });
+    run.particles.burst(P.x, 1.9, P.z, 24, WITCH, { speed: 6, life: 0.5, size: 0.5, up: 3 });
+    this.showRune(P.x, P.z, D.r, 1.1, false);
+  }
+
+  blazeHit(e) {
+    const run = this.run, D = this.def;
+    run.enemies.damage(e, this._kd, this.opts(e.x - this._kx, e.z - this._kz, 3, this._shown++ >= 8));
+    if (e.active) { run.enemies.fear(e, D.fear); run.particles.burst(e.x, 1.2, e.z, 3, WITCH, IMPACT); }
+  }
+
+  updateGrimsby(dt, D) {
+    if (this.blazeT > 0) this.blazeT -= dt;
+    this.holdStat(this.blazeB, 'speed', this.blazeT > 0, 1 + D.haste);
+  }
+
+  // ---------------------------------------------------------------- Osric: Bone Mass
+  osric(D, P) {
+    const run = this.run;
+    run.legion.addMany(D.monks, P.x, P.z);
+    this.massT = D.dur;
+    run.weapons.skullSpin = D.spin;
+    for (let i = 0; i < D.monks && this.pN < MAX_PILLARS; i++) { // a pillar of gold where each monk rises
+      const a = (i / D.monks) * TAU, r = 2.2 + (i & 1) * 0.8, p = this.pillars[this.pN++];
+      p.x = P.x + Math.cos(a) * r; p.z = P.z + Math.sin(a) * r; p.t = -i * 0.03; p.seed = Math.random();
+    }
+    run.fx.shockwave(P.x, P.z, 7, 0xf5c35c, 0.5, 0.06);
+    run.fx.light(P.x, P.z, 10, 1.8, this.color, 0.9);
+    run.fx.flash(0.18); run.fx.shake(0.25); run.fx.slowMo(0.6, 0.2);
+    run.particles.ring(P.x, P.z, 3, 48, GOLD, { life: 0.6, size: 0.6, speed: 1.2 });
+    run.particles.burst(P.x, 2.4, P.z, 20, BONE_HDR, { speed: 5, life: 0.5, size: 0.4, up: 2.5 });
+    this.showRune(P.x, P.z, 3.4, 1.4, false); // the cast only: the halos over the legion mark the Mass while it lasts
+  }
+
+  updateOsric(dt, D) {
+    if (this.massT > 0) {
+      this.massT -= dt;
+      if (this.massT <= 0) this.run.weapons.skullSpin = 1;
+    }
+    this.holdStat(this.massB, 'minionDmg', this.massT > 0, 1 + D.fury);
+  }
+
   // ---------------------------------------------------------------- frame
   update(dt) {
     const D = this.def;
@@ -528,6 +602,9 @@ export class Rites {
     else if (this.hero === 'seraphine') this.updateSeraphine(dt, D);
     else if (this.hero === 'liora') this.updateLiora(dt, D);
     else if (this.hero === 'mordrake') this.updateMordrake(dt, D);
+    else if (this.hero === 'grimsby') this.updateGrimsby(dt, D);
+    else if (this.hero === 'osric') this.updateOsric(dt, D);
+    if (this.pillars) this.updatePillars(dt);
   }
 
   /** Glow sprites and mesh transforms (inside Run.render's glow pass). */
@@ -548,21 +625,28 @@ export class Rites {
     else if (this.hero === 'seraphine') this.renderSeraphine(g);
     else if (this.hero === 'liora') this.renderLiora(g, c);
     else if (this.hero === 'mordrake') this.renderMordrake(g, t);
+    else if (this.hero === 'grimsby') this.renderGrimsby(g, P, t);
+    else if (this.hero === 'osric') this.renderOsric(g, t);
+    if (this.pillars) this.renderPillars(g, c, t);
   }
 
-  renderVael(g, c, t) {
+  renderPillars(g, c, t) {
     const n = this.pN, A = this.pillarAttr.array;
     for (let i = 0; i < n; i++) {
-      const p = this.pillars[i], k = p.t / 0.8, grow = Math.min(1, p.t / 0.12), w = 0.45 * (1 - k * 0.6);
+      const p = this.pillars[i], k = Math.max(0, p.t) / 0.8, grow = Math.min(1, Math.max(0, p.t) / 0.12), w = 0.45 * (1 - k * 0.6);
       _p.set(p.x, 0, p.z); _q.identity(); _s.set(w, 6.5 * (0.35 + 0.65 * grow), w);
       _m.compose(_p, _q, _s);
       this.pillarMesh.setMatrixAt(i, _m);
-      A[i * 2] = (1 - k) * (1 - k) * (0.6 + 0.4 * grow); A[i * 2 + 1] = p.seed;
-      g.add(p.x, 0.3, p.z, 2 * (1 - k), c[0] * 0.3, c[1] * 0.3, c[2] * 0.3, 1 - k);
+      const on = p.t >= 0 ? 1 : 0; // a staggered pillar waits unseen for its turn
+      A[i * 2] = (1 - k) * (1 - k) * (0.6 + 0.4 * grow) * on; A[i * 2 + 1] = p.seed;
+      if (on) g.add(p.x, 0.3, p.z, 2 * (1 - k), c[0] * 0.3, c[1] * 0.3, c[2] * 0.3, 1 - k);
     }
     this.pillarMesh.count = n;
     if (n) { this.pillarMesh.instanceMatrix.needsUpdate = true; this.pillarAttr.needsUpdate = true; }
     this.pillarMesh.material.uniforms.uTime.value = t;
+  }
+
+  renderVael(g, c, t) {
     if (this.graveT > 0) { const P = this.run.player, f = 0.7 + 0.3 * Math.sin(t * 9); g.add(P.x, 1.4, P.z, 3 * f, c[0] * 0.18, c[1] * 0.18, c[2] * 0.18, 0.9); }
   }
 
@@ -618,6 +702,20 @@ export class Rites {
     u.uRing.value = 1.9 - ((T * 3) % 1.2) * 1.6;
     const a = u.uAlpha.value;
     g.add(this.bellX, 2.7 + T * 0.4, this.bellZ, 5 * a, c[0] * 0.12, c[1] * 0.12, c[2] * 0.12, a);
+  }
+
+  renderGrimsby(g, P, t) {
+    if (this.blazeT <= 0) return;
+    const c = WITCH, f = 0.75 + 0.25 * Math.sin(t * 17), a = Math.min(1, this.blazeT * 2); // the jaw blazes
+    g.add(P.x, 2.0, P.z, 2.2 * f, c[0] * 0.25, c[1] * 0.25, c[2] * 0.25, a);
+    if (Math.random() < 0.6) this.run.particles.emit(P.x + (Math.random() - 0.5) * 0.3, 2.0, P.z + (Math.random() - 0.5) * 0.3, 0, 2.2, 0, 0.4, 0.45, 0.05, c[0], c[1], c[2], 0.9, 1.5, 0);
+  }
+
+  renderOsric(g, t) {
+    if (this.massT <= 0) return;
+    const L = this.run.legion.list, n = Math.min(60, L.length), c = GOLD, a = Math.min(1, this.massT * 2), P = this.run.player;
+    g.add(P.x, 1.3, P.z, 2.4 * (0.9 + 0.1 * Math.sin(t * 5)), c[0] * 0.12, c[1] * 0.12, c[2] * 0.12, a); // his ward
+    for (let i = 0; i < n; i++) { const m = L[i], f = 0.8 + 0.2 * Math.sin(t * 8 + i); g.add(m.x, m.y + 0.9, m.z, 0.55 * f, c[0] * 0.2, c[1] * 0.2, c[2] * 0.2, a); } // a halo over each of the faithful
   }
 
   renderMordrake(g, t) {

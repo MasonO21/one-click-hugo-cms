@@ -11,7 +11,8 @@
 #  1. gives it both clips with glb-retarget.py: every bone moves around the clip's average pose, so the hero keeps
 #     the stance it was sculpted in (knees only bend, the lower foot meets the ground, the run leans 8 degrees); the
 #     arms add only the clip's swing (gains: left,right; a weapon arm swings less); staffs and spears are pinned to
-#     the hand that holds them (the rigger weighted their ends to a leg or the head);
+#     the hand that holds them (the rigger weighted their ends to a leg or the head; Grimsby's lantern hangs from his pole,
+#     so it is pinned with it);
 #  2. simplifies the mesh to about a quarter (7.6k–10.7k triangles), shrinks its painted texture to a 1024 px WebP and moves it beside
 #     the model (so the web build never needs blob: URLs to decode it), and quantizes the geometry
 #     (KHR_mesh_quantization, which three.js reads without a decoder; skins and clips survive every step).
@@ -30,6 +31,8 @@ seraphine hf_20261007_200313_e0f7a16b-8831-4c8d-985a-d4ad8355eafe.glb 0.5
 liora hf_20261007_200315_bdf65170-6d69-458c-afb5-5aac3202a50b.glb 0.5
 mordrake hf_20261007_200316_a677c6d2-ae41-49a4-9313-c0b95aa5e608.glb 0.5,0.2 RightHand:-0.404,0.35,0.062,-0.508,1.25,0.212,0.05 RightHand:-0.508,1.25,0.212,-0.597,2.02,0.339,0.11
 eclipse_vael hf_20261007_200318_59e99133-fac7-404c-baec-bbcade22336d.glb 0.5,0.2 RightHand:-0.265,0,0.230,-0.397,1.55,0.283,0.045,0.45 RightHand:-0.75,-0.29,1.5,2.05,0.19,0.45
+grimsby hf_20261008_175558_d6918eb4-8ac3-4e6b-a32f-614ee02ef0e8.glb 0.2,0.5 LeftHand:0.317,0,-0.02,0.48,1.62,-0.29,0.05 LeftHand:0.45,0.75,1.2,1.95,-0.55,-0.2
+osric hf_20261008_175359_220f55c9-c6b3-42a4-bc97-bfe4426c1a4b.glb 0.2,0.5 LeftHand:0.206,0,0.338,0.432,1.75,0.144,0.06,0.45 LeftHand:0.36,0.58,1.72,2.0,0.04,0.24
 '
 # every rig first: the run and idle sources must be the untouched downloads
 while read -r id file _; do
