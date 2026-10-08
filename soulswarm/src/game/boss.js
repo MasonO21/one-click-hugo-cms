@@ -63,7 +63,7 @@ export class Boss {
     const pm = foeModel('gravemaw');
     if (!pm) loadFoeModel('gravemaw');
     this.mat = pm
-      ? makeCharMaterial({ map: pm.map, glow: pm.glow, glowTint: 0.6, rim: ch.boss, rimK: 0.6, emit: 3, anim: 1, gait: true, ambient: 0xa49eb4, key: 0xc0b8d0, plColor: ch.boss, plRadius: 6 })
+      ? makeCharMaterial({ map: pm.map, glow: pm.glow, glowTint: 0.6, rim: ch.boss, rimK: 0.6, emit: 3, anim: 1, gait: true, ambient: 0x6e6878, key: 0x8e86a0, plColor: ch.boss, plRadius: 6 })
       : makeCharMaterial({ rim: ch.boss, emit: 3, anim: 0.3, ambient: 0x3a3048, key: 0x9a8ab8, plColor: ch.boss, plRadius: 6 });
     if (pm) setGait(this.mat, pm);
     this.glow0 = pm ? pm.glow : 0;
