@@ -4,12 +4,20 @@
  * restore purchases and credits.
  */
 import { Panel, type PanelTitle } from './Panel';
-import type { SettingsState } from '../../core/state';
+import { QUALITY_LEVELS, type QualityLevel, type SettingsState } from '../../core/state';
 import { btn, section } from '../widgets';
 import { fill, h } from '../dom';
 import { hudArt } from '../art';
 
 type Hooked = Record<string, (...a: unknown[]) => unknown>;
+
+const QUALITY_NAME: Record<QualityLevel, string> = { low: 'Low', medium: 'Medium', high: 'High' };
+
+/** "Auto · Medium" in auto mode (so the player sees what Auto chose), else the picked level. */
+export function qualitySummary(s: Pick<SettingsState, 'quality' | 'qualityMode'>): string {
+  const name = QUALITY_NAME[s.quality] ?? s.quality;
+  return s.qualityMode === 'auto' ? `Auto · ${name}` : name;
+}
 
 /** The meta agent's SaveManager may be exposed on window under a few names. */
 function saveHook(): Hooked | null {
@@ -37,7 +45,7 @@ export class SettingsPanel extends Panel {
 
   override signature(): string {
     const s = this.st.settings;
-    return `${s.quality}|${s.haptics}|${s.autoGather}|${s.analytics}|${s.showFps}|${s.leftHanded}|${this.code.length}`;
+    return `${s.quality}|${s.qualityMode}|${s.haptics}|${s.autoGather}|${s.analytics}|${s.showFps}|${s.leftHanded}|${this.code.length}`;
   }
 
   private slider(label: string, icon: string, key: 'music' | 'sfx'): HTMLElement {
@@ -78,16 +86,7 @@ export class SettingsPanel extends Panel {
     wrap.appendChild(h('div', { class: 'card' }, this.slider('Music', '🎵', 'music'), this.slider('Sound effects', '🔊', 'sfx')));
 
     wrap.appendChild(section('Graphics'));
-    const seg = h('div', { class: 'segmented' });
-    for (const q of ['low', 'medium', 'high'] as const) {
-      const b = h('button', { class: 'seg' + (s.quality === q ? ' on' : ''), type: 'button', text: q[0].toUpperCase() + q.slice(1), data: { quality: q, sfx: 'ui_tab' } });
-      b.addEventListener('click', () => {
-        s.quality = q;
-        this.rerender();
-      });
-      seg.appendChild(b);
-    }
-    wrap.appendChild(h('div', { class: 'card' }, h('div', { class: 'set-row' }, h('div', { class: 'row' }, h('span', { class: 'si', text: '✨' }), h('div', { class: 'grow', text: 'Quality' })), seg, h('div', { class: 'mute small', text: 'Lower it if your phone gets warm or the game stutters.' })), this.toggle('Show FPS', 'Performance counter on screen', '📈', 'showFps')));
+    wrap.appendChild(h('div', { class: 'card' }, this.qualityRow(), this.toggle('Show FPS', 'Performance counter on screen', '📈', 'showFps')));
 
     wrap.appendChild(section('Controls'));
     wrap.appendChild(
@@ -127,6 +126,58 @@ export class SettingsPanel extends Panel {
       ),
     );
     fill(this.body, wrap);
+  }
+
+  /**
+   * Auto | Low | Medium | High. A level makes the choice the player's (manual); Auto hands it back to the game,
+   * which re-checks the device (platform/autoQuality.ts). In auto mode the level in use is outlined and named in
+   * the row header ("Auto · Medium").
+   */
+  private qualityRow(): HTMLElement {
+    const g = this.game;
+    const s = g.state.settings;
+    const auto = s.qualityMode === 'auto';
+    const seg = h('div', { class: 'segmented quality', role: 'radiogroup', 'aria-label': 'Graphics quality' });
+    const add = (key: string, label: string, on: boolean, inUse: boolean, pick: () => void) => {
+      const b = h('button', {
+        class: 'seg' + (on ? ' on' : '') + (inUse ? ' in-use' : ''),
+        type: 'button',
+        role: 'radio',
+        'aria-checked': String(on),
+        text: label,
+        title: inUse ? `Auto is using ${label}` : undefined,
+        data: { quality: key, sfx: 'ui_tab' },
+      });
+      b.addEventListener('click', () => {
+        pick();
+        this.rerender();
+      });
+      seg.appendChild(b);
+    };
+    add('auto', 'Auto', auto, false, () => {
+      if (g.autoQuality) g.autoQuality.enableAuto();
+      else {
+        s.qualityMode = 'auto';
+        s.qualityDevice = ''; // re-check the device on the next launch
+      }
+    });
+    for (const q of QUALITY_LEVELS) {
+      add(q, QUALITY_NAME[q], !auto && s.quality === q, auto && s.quality === q, () => {
+        if (g.autoQuality) g.autoQuality.setManual(q);
+        else {
+          s.qualityMode = 'manual';
+          s.quality = q;
+        }
+      });
+    }
+    const hint = auto ? 'Auto picks a level for this device and switches lower by itself if the game stutters.' : 'Lower it if your phone gets warm or the game stutters.';
+    return h(
+      'div',
+      { class: 'set-row' },
+      h('div', { class: 'row' }, h('span', { class: 'si', text: '✨' }), h('div', { class: 'grow', text: 'Quality' }), h('b', { class: 'quality-now', text: qualitySummary(s) })),
+      seg,
+      h('div', { class: 'mute small', text: hint }),
+    );
   }
 
   private dataCard(): HTMLElement {
