@@ -26,6 +26,18 @@ describe('touch targets', () => {
   });
 });
 
+describe('panel header buttons', () => {
+  it('"← Back" / "← All" / "Auto-assign" in a panel header are at least 44px tall (QA5: 33px on a 375px phone)', () => {
+    const decl = rule(css('panels.css'), '.nv-root .pm-extra .btn');
+    const h = /min-height:\s*(\d+(?:\.\d+)?)px/.exec(decl);
+    expect(h).not.toBeNull();
+    expect(Number(h![1])).toBeGreaterThanOrEqual(44);
+    // it must outrank `.nv-root .btn.small` (same specificity): panels.css loads after base.css
+    const ui = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'ui', 'UI.ts'), 'utf8');
+    expect(ui.indexOf("styles/panels.css")).toBeGreaterThan(ui.indexOf("styles/base.css"));
+  });
+});
+
 describe('toasts and open panels', () => {
   it('with a sheet open the toast stack starts below the sheet header (QA #15b: "Nothing to restore" covered the Shop title)', () => {
     const decl = rule(css('fx.css'), ".nv-root[data-panel-open='1'] .nv-toasts");

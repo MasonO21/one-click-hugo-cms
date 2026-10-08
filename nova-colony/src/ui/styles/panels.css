@@ -104,6 +104,10 @@
   align-items: center;
   gap: 0.5em;
 }
+/* header buttons ("← Back" in the Expeditions planner, "← All", "Auto-assign") are thumb targets: they were 33px on a 375px phone */
+.nv-root .pm-extra .btn {
+  min-height: 44px;
+}
 .pm-close {
   width: 2.9em;
   height: 2.9em;
