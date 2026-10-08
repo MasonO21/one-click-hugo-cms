@@ -26,7 +26,7 @@ export class MenuPanel extends Panel {
       { icon: '🎡', art: hudArt('spin'), label: 'Lucky wheel', panel: 'spin', badge: b.spin ? 1 : 0 },
       { icon: '🏆', art: hudArt('season'), label: 'Season pass', panel: 'season', badge: b.season },
       { icon: '🎒', art: hudArt('backpack'), label: 'Inventory', panel: 'inventory' },
-      { icon: '🧭', art: buildingArt('radio_tower'), label: 'Expeditions', panel: 'expeditions', badge: b.expeditions },
+      { icon: '🧭', art: hudArt('expeditions'), label: 'Expeditions', panel: 'expeditions', badge: b.expeditions },
       { icon: '🚙', art: vehicleArt('buggy'), label: 'Vehicles', panel: 'vehicles' },
       { icon: '🛰️', art: buildingArt('command_center'), label: 'My colony', panel: 'colony' },
       { icon: '🧑‍🤝‍🧑', art: hudArt('population'), label: 'Recruit', panel: 'recruit' },

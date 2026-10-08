@@ -142,7 +142,7 @@ describe('ui art lookups', () => {
   });
 
   it('every HUD icon has a file and public/art/hud has no orphans', () => {
-    expect(hudArtIds().length).toBe(22);
+    expect(hudArtIds().length).toBe(26);
     for (const id of hudArtIds()) expect(exists(hudArt(id)), id).toBe(true);
     const files = fs.readdirSync(path.join(PUBLIC, 'art', 'hud'));
     expect(files.sort()).toEqual(hudArtIds().map((id) => `${id}.webp`).sort());
@@ -221,7 +221,7 @@ describe('ui art lookups', () => {
     for (let i = 0; i <= 6; i++) add(tierArt(i));
     for (const e of data.worldEvents) add(eventArt(e.kind));
     for (const p of data.products) add(shopArt(p.id));
-    for (const id of ['victory_chest', 'supply_crate', 'daily_gift']) add(rewardArt(id));
+    for (const id of ['victory_chest', 'supply_crate', 'daily_gift', 'medal_bronze', 'medal_silver', 'medal_gold']) add(rewardArt(id));
     for (const it of data.items) add(itemArt(it.id));
     for (const b of data.buildings) add(buildingArt(b.id));
     for (const v of data.vehicles) add(vehicleArt(v.id));

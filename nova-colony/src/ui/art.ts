@@ -53,7 +53,7 @@ const SHOP = new Set([
   'nova_builder_pack', 'nova_colonist_pack', 'nova_defense_pack', 'nova_automation_pack', 'nova_titanium_founder',
   'colony_pass_monthly', 'season_pass_premium',
 ]);
-const REWARDS = new Set(['victory_chest', 'supply_crate', 'daily_gift']);
+const REWARDS = new Set(['victory_chest', 'supply_crate', 'daily_gift', 'medal_bronze', 'medal_silver', 'medal_gold']);
 /** Every ItemDef.id (tests keep this equal to the data and to the files in public/art/items). */
 const ITEMS = new Set([
   // tools
@@ -142,6 +142,7 @@ const HUD = new Set([
   'map', 'quests', 'shop', 'menu', 'crew', 'tech', 'craft', 'build', 'settings', 'season', 'spin',
   'population', 'power', 'defense', 'backpack', 'health',
   'night', 'sunrise', 'day', 'sunset', 'home', 'teleporter',
+  'expeditions', 'starchart', 'journal', 'wish',
 ]);
 /** Every PoiDef.id (tests keep this equal to the data and to the files in public/art/pois). */
 const POIS = new Set([
@@ -160,7 +161,7 @@ export function shopArt(productId: string): string | null {
   const id = SHOP_ALIAS[productId] ?? productId;
   return SHOP.has(id) ? `${ROOT}shop/${id}.webp` : null;
 }
-/** Reward art ('victory_chest' | 'supply_crate' | 'daily_gift'), 256 px with transparency. */
+/** Reward art ('victory_chest' | 'supply_crate' | 'daily_gift' | 'medal_bronze' | 'medal_silver' | 'medal_gold'), 256 px with transparency. */
 export function rewardArt(id: string): string | null {
   return REWARDS.has(id) ? `${ROOT}rewards/${id}.webp` : null;
 }

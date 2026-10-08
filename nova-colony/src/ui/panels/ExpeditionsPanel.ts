@@ -20,7 +20,7 @@ import { jobOf, stars } from '../logic/colonist';
 import { fmtHMS } from '../logic/time';
 import { bar, btn, emptyState, portrait, rewardChips, section, tabs } from '../widgets';
 import { fill, h, s, setVar } from '../dom';
-import { artOrEmoji, biomeArt, buildingArt, iconEl, itemArt, poiArt, professionArt, resIcon, vehicleIcon } from '../art';
+import { artOrEmoji, biomeArt, buildingArt, hudArt, iconEl, itemArt, poiArt, professionArt, resIcon, vehicleIcon } from '../art';
 
 type View = 'list' | 'plan';
 type Tab = 'trips' | 'frontier';
@@ -49,7 +49,7 @@ export class ExpeditionsPanel extends Panel {
       const spec = this.game.sys.expeditions.spec(this.target);
       if (spec) return { icon: spec.icon, art: spec.poi ? poiArt(spec.poi) : null, text: spec.name };
     }
-    return { icon: '🧭', art: buildingArt('radio_tower'), text: 'Expeditions' };
+    return { icon: '🧭', art: hudArt('expeditions'), text: 'Expeditions' };
   }
 
   override onOpen(arg: unknown): void {
@@ -189,8 +189,8 @@ export class ExpeditionsPanel extends Panel {
       wrap.appendChild(
         tabs(
           [
-            { id: 'trips', icon: '🗺️', label: 'Destinations' },
-            { id: 'frontier', icon: FRONTIER_ICON, label: 'Frontier', badge: claim },
+            { id: 'trips', icon: '🗺️', art: hudArt('map'), label: 'Destinations' },
+            { id: 'frontier', icon: FRONTIER_ICON, art: hudArt('starchart'), label: 'Frontier', badge: claim },
           ],
           this.tab,
           (id) => {

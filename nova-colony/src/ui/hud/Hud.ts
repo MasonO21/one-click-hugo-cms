@@ -9,7 +9,7 @@ import { fmt, fmtSigned } from '../../core/format';
 import { clockText, dayPhase, fmtHMS } from '../logic/time';
 import { happinessFace } from '../logic/colonist';
 import { bigNum } from '../widgets';
-import { artOrEmoji, buildingArt, hudIcon, phaseArt, iconEl, preloadResourceArt, resIcon, tierArt } from '../art';
+import { artOrEmoji, hudArt, hudIcon, phaseArt, iconEl, preloadResourceArt, resIcon, tierArt } from '../art';
 import { hudExpedition } from '../logic/expeditions';
 import { fill, h, replay, setClass, setHidden, setText, setVar, safe } from '../dom';
 import { ResourceBar } from './ResourceBar';
@@ -164,7 +164,7 @@ export class Hud {
     this.hpFill = h('i');
     this.chipHp = h('div', { class: 'schip hp static', hidden: true }, hudIcon('health', '❤️', 'ic', 'span'), h('div', { class: 'bar red' }, this.hpFill));
     this.chipExpV = h('span', { class: 'v' });
-    this.chipExp = h('button', { class: 'schip exp tap', type: 'button', hidden: true, id: 'chip-expedition', 'aria-label': 'Expeditions', data: { sfx: 'ui_click' } }, iconEl(buildingArt('radio_tower'), '🧭', 'ic', 'span'), this.chipExpV);
+    this.chipExp = h('button', { class: 'schip exp tap', type: 'button', hidden: true, id: 'chip-expedition', 'aria-label': 'Expeditions', data: { sfx: 'ui_click' } }, iconEl(hudArt('expeditions'), '🧭', 'ic', 'span'), this.chipExpV);
     this.chipExp.addEventListener('click', () => ctx.open('expeditions'));
 
     this.boostWrap = h('div', { class: 'row', style: 'display:contents' });
