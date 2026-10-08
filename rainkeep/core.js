@@ -335,7 +335,7 @@
   const statPower = (s) => Math.round(s.atk * 2 + s.def * 2 + s.hp / 5);
   const heroPower = (id) => statPower(heroStats(id));
   function unitPower(type) {
-    const t = DATA.troops[type], m = troopMult();
+    const t = DATA.troops[type], m = troopMult() * (KH.rankMult ? KH.rankMult(type) : 1);
     return statPower({ atk: t.atk * m, def: t.def * m, hp: t.hp * m });
   }
   function counterMult(c, e) {
@@ -381,7 +381,8 @@
     // Warden's Gear (forge.js): squad-wide bonuses plus a bonus per troop class
     const gb = !opts.noGear && KH.gearBonus ? KH.gearBonus() : null;
     for (const type in m) {
-      const t = DATA.troops[type], tb = gb ? 1 + (gb.troop[type] || 0) : 1;
+      // troop ranks (ranks.js): the class's average over recruits, Veterans, Elites and Champions
+      const t = DATA.troops[type], tb = (gb ? 1 + (gb.troop[type] || 0) : 1) * (KH.rankMult ? KH.rankMult(type) : 1);
       atk += m[type] * t.atk * um * tb * counterMult(type, enemyCls);
       def += m[type] * t.def * um * tb; hp += m[type] * t.hp * um * tb;
     }
@@ -856,6 +857,7 @@
   }
   function finishTraining(offline, log) {
     const tr = S.training;
+    if (tr.rank != null) { S.training = null; return KH.ranks.finish(tr, offline, log); } // a drill (ranks.js)
     S.troops[tr.type] += tr.n;
     S.stats.trained += tr.n;
     addPassXp(Math.floor(tr.n / 10) * DATA.passXp.train10);

@@ -1142,6 +1142,31 @@
     }
   }
   T3.defense = defense; // for tests
+  // troop ranks (ranks.js): a banner before the Barracks for each rank that has opened, flying high once any
+  // troops hold it
+  const rankFlags = {};
+  function syncRanks() {
+    if (!KH.ranks || !S.lv.barracks) return;
+    const P = K.plots.barracks, c = Math.cos(P.ry || 0), s = Math.sin(P.ry || 0);
+    DATA.ranks.list.forEach((rk, i) => {
+      const open = KH.ranks.open(i), has = open && Object.keys(DATA.troops).some((k) => ((S.ranks || {})[k] || [])[i] > 0), key = `${open}:${has}`;
+      const rec = rankFlags[rk.id] || (rankFlags[rk.id] = { key: '', model: null });
+      if (rec.key === key) return;
+      rec.key = key;
+      if (rec.model) { scene.remove(rec.model); rec.model = null; }
+      if (!open) return;
+      const cloth = A.mat(rk.color, { flat: true }), brass = A.mat(A.P.gold, { m: 0.6, r: 0.35 });
+      const g = A.grp(A.cyl(0.05, 0.06, 2.6, A.mat(A.P.woodD), 0, 0, 0, 6), A.sph(0.1, brass, 0, 2.66, 0, 8),
+        has ? A.box(0.04, 0.95, 0.66, cloth, 0, 1.55, 0.35) : A.box(0.04, 0.4, 0.32, cloth, 0, 0.75, 0.18),
+        has && i ? A.box(0.05, 0.12, 0.66, brass, 0, 1.55 + 0.1, 0.35) : null);
+      const lx = -1.2 + i * 1.2, lz = 2.6;
+      A.at(g, P.x + lx * c + lz * s, P.y, P.z - lx * s + lz * c, P.ry || 0);
+      A.bake(g);
+      scene.add(g);
+      rec.model = g;
+    });
+  }
+  T3.rankFlags = rankFlags; // for tests
   function syncDecor() {
     if (!KH.decorItems) return;
     const open = S.lv.wyrm >= DATA.decor.unlock;
@@ -1831,7 +1856,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncRanks(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);

@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.16.0',
+  version: '4.17.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -954,6 +954,7 @@ const DATA = {
     { id: 'siege', text: 'Hold 3 waves of a Scorpion Siege', n: 3, pts: 15, show: (S) => S.lv.wyrm >= 10 },
     { id: 'intel', text: 'Complete 2 watchtower reports', n: 2, pts: 15, show: (S) => S.lv.wyrm >= 4 },
     { id: 'defense', text: 'Raise a gate defense', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
+    { id: 'drill', text: 'Drill troops to a new rank', n: 1, pts: 10, show: (S) => S.lv.barracks >= 10 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
     { id: 'temper', text: 'Temper a heirloom', n: 1, pts: 10, show: (S) => Object.values(S.heroes).some((h) => h.stars >= 3) },
   ],
@@ -1272,6 +1273,22 @@ const DATA = {
     ],
   },
 
+  // ---------- Troop Ranks ----------
+  // Troops drilled at the Barracks rise through three ranks, each opening at a Barracks level. Drilling takes the
+  // Barracks (no training meanwhile). A class fights at the average strength of all its troops, and in a fight the
+  // recruits fall first, so losses come out of the unranked troops before any rank.
+  ranks: {
+    list: [
+      { id: 'vet', name: 'Veteran', short: 'Vet', barracks: 10, mult: 1.2, cost: 0.03, secs: 6, color: '#8fb3c9' },
+      { id: 'elite', name: 'Elite', short: 'Elite', barracks: 14, mult: 1.45, cost: 0.07, secs: 12, color: '#e0b04a' },
+      { id: 'champ', name: 'Champion', short: 'Champ', barracks: 18, mult: 1.75, cost: 0.12, secs: 20, color: '#d0583a' },
+    ],
+    // a troop's drill costs its training cost times the rank's cost in quarter-crates (so it grows with the keep),
+    // and takes the rank's seconds (the Barracks level and the training steward speed it up like training)
+    batch: 20, // troops a drill can take, per Barracks level
+    warPts: 0.2, // Oasis Wars points per troop drilled
+  },
+
   // ---------- Spring Fishing ----------
   // Since the rains came back the spring has fish in it. Cast, tap when the float dips, then hold to reel and
   // let go when the fish runs; too much tension and the line snaps.
@@ -1342,6 +1359,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.17', items: [
+      { icon: 'i-flag', name: 'Troop Ranks', text: 'Drill your troops at the Barracks into Veterans, Elites and Champions. Every ranked troop lifts the strength of its whole class, and in a fight the recruits fall first.', act: 'plot:barracks', open: (S) => S.lv.barracks >= 10, needs: 'Barracks Lv 10' },
+    ] },
     { v: '4.16', items: [
       { icon: 'i-ballista', name: 'Gate Defenses', text: 'Ballista towers, oil cauldrons and a stake yard at the gate: raise them for stronger defenders against raids and more tactics in every Scorpion Siege. They stand on the walls and grow as you raise them.', act: 'defenses', open: (S) => S.lv.wyrm >= 5, needs: 'Rainwyrm Lv 5' },
     ] },
@@ -1601,6 +1621,9 @@ const DATA = {
     { id: 'koi', text: 'Catch a Rain Koi', stat: 'koi', n: 1, reward: { shard_epic: 1 } },
     { id: 'def10', text: 'Raise gate defenses 10 times', stat: 'defense', n: 10, reward: { starglass: 150 } },
     { id: 'def30', text: 'Raise every gate defense to Lv 10', stat: 'defense', n: 30, reward: { shard_legendary: 1 } },
+    { id: 'drill100', text: 'Drill 100 troops to a new rank', stat: 'drilled', n: 100, reward: { starglass: 150 } },
+    { id: 'drill1000', text: 'Drill 1,000 troops to a new rank', stat: 'drilled', n: 1000, reward: { beacons: 2 } },
+    { id: 'champ300', text: 'Command 300 Champions', stat: 'champs', n: 300, reward: { shard_legendary: 1 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

@@ -1106,3 +1106,16 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .fb-row { align-items: center; gap: 10px; }
 .ic.fb-ic { width: 52px; height: 52px; flex: none; }
 .fb-row.unknown .ic.fb-ic { filter: brightness(0) opacity(.45); }
+
+/* Troop ranks (ranks.js) */
+.rk-list { gap: 8px; }
+.rk-row { padding: 9px 11px; border-radius: 10px; background: #1a1228; border: 1px solid var(--line); display: grid; gap: 5px; }
+.rk-row .ic { width: 20px; height: 20px; }
+.rk-str { color: var(--gold); font-size: 15px; }
+.rk-bar { display: flex; height: 9px; border-radius: 5px; overflow: hidden; background: #2a1e1a; box-shadow: inset 0 1px 2px #000a; }
+.rk-bar i { display: block; min-width: 3px; background: #5a4a3e; }
+.rk-seg { margin-top: 6px; }
+.rk-seg button { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 12.5px; }
+.rk-seg button .ic { width: 16px; height: 16px; }
+.rk-seg button.off { opacity: .45; }
+.rk-ic { width: 34px; height: 34px; flex: none; }

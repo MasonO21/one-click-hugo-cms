@@ -144,7 +144,7 @@
       const t = DATA.techs.find((x) => x.id === S.research.tech);
       q += `<button class="qchip" data-act="plot" data-arg="archive">${icon('i-journal')}${esc(t.name)} <time>${fmtTime(S.research.end - S.time)}</time></button>`;
     }
-    if (S.training) q += `<button class="qchip" data-act="plot" data-arg="barracks">${icon(DATA.classes[S.training.type].icon)}${S.training.n} ${DATA.troops[S.training.type].name} <time>${fmtTime(S.training.end - S.time)}</time></button>`;
+    if (S.training) q += `<button class="qchip" data-act="plot" data-arg="barracks">${icon(DATA.classes[S.training.type].icon)}${S.training.rank != null && KH.ranks ? KH.ranks.label(S.training) : `${S.training.n} ${DATA.troops[S.training.type].name}`} <time>${fmtTime(S.training.end - S.time)}</time></button>`;
     for (const f of KH.chips) q += f() || '';
     // urgent chips first, and no more than four at a time
     const chips = q.split(/(?=<(?:button|span) class="qchip)/).filter(Boolean);
@@ -449,6 +449,7 @@
       rows.push(['Training batch', `${KH.batchMax()}`, up(10 * N)]);
       rows.push(['Dunes marches', `${DATA.world.marchSlots(L)}`, up(DATA.world.marchSlots(N))]);
       rows.push(['Troop strength', `+${Math.round((KH.troopMult() - 1) * 100)}%`, '']);
+      if (DATA.ranks) { const top = (lv) => DATA.ranks.list.filter((r) => lv >= r.barracks).map((r) => r.name).pop() || 'None yet'; rows.push(['Highest troop rank', top(L), top(N) !== top(L) ? up(top(N)) : '']); }
     } else if (type === 'watchtower') {
       rows.push(['Forecast range', fmtTime(KH.forecastRange()), up(fmtTime(KH.forecastRange() + 45))]);
       rows.push(['Defenders steadied', `+${3 * L}%`, up(`+${3 * N}%`)]);
@@ -533,7 +534,7 @@
   }
 
   function trainingHTML() {
-    if (S.training) return jobProgress('training', S.training, `Training ${S.training.n} ${DATA.troops[S.training.type].name}`);
+    if (S.training) return jobProgress('training', S.training, S.training.rank != null && KH.ranks ? `Drilling ${KH.ranks.label(S.training)}` : `Training ${S.training.n} ${DATA.troops[S.training.type].name}`);
     const room = Math.max(0, KH.troopCap() - KH.troopsAll());
     UI.trainN = clamp(UI.trainN, 1, Math.max(1, Math.min(KH.batchMax(), room)));
     const t = DATA.troops[UI.trainType];
@@ -1367,7 +1368,7 @@
     const at = (end) => Date.now() + (end - S.time) * 1000;
     for (const b of S.builds) { const id = `build-${b.plot}`; N.notify(id, 'Construction finished', `${plotName(b.plot)} reached Lv ${b.to}.`, at(b.end)); scheduled.add(id); }
     if (S.research) { N.notify('research', 'Research finished', 'Your scholars have news. Come see.', at(S.research.end)); scheduled.add('research'); }
-    if (S.training) { N.notify('training', 'Troops ready', `${S.training.n} ${DATA.troops[S.training.type].name} are ready.`, at(S.training.end)); scheduled.add('training'); }
+    if (S.training) { N.notify('training', S.training.rank != null ? 'Drill finished' : 'Troops ready', S.training.rank != null && KH.ranks ? `${KH.ranks.label(S.training)}: the drill is done.` : `${S.training.n} ${DATA.troops[S.training.type].name} are ready.`, at(S.training.end)); scheduled.add('training'); }
     if (KH.notifyHooks) for (const f of KH.notifyHooks) for (const n of f() || []) { N.notify(n.id, n.title, n.body, at(n.end)); scheduled.add(n.id); }
   });
   KH.on('visible', () => {
