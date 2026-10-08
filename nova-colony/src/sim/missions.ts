@@ -18,7 +18,7 @@ import { System } from './System';
 import type { MissionDef, MissionType } from '../data/schema';
 import type { GainSource } from '../core/events';
 import { dateKey } from '../core/format';
-import { DAILY_COUNT, isLiveType, lesserBosses, liveValue, pickDailies, retroValue } from './meta/missionRules';
+import { DAILY_COUNT, goalTier, isLiveType, lesserBosses, liveValue, pickDailies, retroValue } from './meta/missionRules';
 
 /** Seconds between a main mission completing and it being claimed automatically. */
 export const AUTO_CLAIM_DELAY = 1.2;
@@ -343,11 +343,25 @@ export class MissionSystem extends System {
    * one. Anything already started (a counter above zero) is always feasible.
    */
   private sideFeasible(def: MissionDef): boolean {
+    if (this.tierLocked(def)) return false;
     if (def.type === 'wish') return !!this.game.sys.wishes?.started() || this.counter('wish') > 0;
     if (def.type !== 'expedition') return true;
     const ex = this.game.sys.expeditions;
     if (def.target === 'frontier') return ex.frontierUnlocked();
     return ex.unlocked() || this.counter('expedition', 'launch') > 0;
+  }
+
+  /**
+   * A side step whose building / recipe only unlocks at a later colony tier waits for that tier (the tier-up offers it)
+   * instead of sitting in the Side tab as a goal nobody can work on: the water chain asked a Steel colony for a
+   * Nano-tier Atmospheric Water Generator, and "Equip an Iron Pickaxe" showed from minute one for a Stone-tier recipe.
+   * A step already under way (counter above zero, or the item already owned) is never held back.
+   */
+  private tierLocked(def: MissionDef): boolean {
+    const st = this.game.state;
+    if (goalTier(this.game.data, def) <= st.colony.tier) return false;
+    if (def.type === 'equip' && (st.player.items[def.target] ?? 0) > 0) return false;
+    return this.counter(def.type, def.target) === 0;
   }
 
   /** Make a loaded save consistent with current content (unknown ids dropped, new side missions added). */
@@ -358,7 +372,11 @@ export class MissionSystem extends System {
     m.completed = m.completed.filter((id) => !!data.mission(id));
     // older saves had every side mission active: keep only the reachable ones (progress is recomputed when a
     // mission becomes active again, from the lifetime counters / current colony)
-    m.active = m.active.filter((id) => data.mission(id)?.chain !== 'side' || this.sideUnlocked(id));
+    // and steps offered before their tier by older builds go back to waiting for it (re-offered by the tier-up)
+    m.active = m.active.filter((id) => {
+      const d = data.mission(id);
+      return d?.chain !== 'side' || (this.sideUnlocked(id) && !this.tierLocked(d));
+    });
     this.openSide();
     const hasMain = m.active.some((id) => this.isMain(id));
     if (hasMain) return;

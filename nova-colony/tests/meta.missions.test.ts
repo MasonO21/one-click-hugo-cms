@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AUTO_CLAIM_DELAY } from '../src/sim/missions';
-import { pickDailies } from '../src/sim/meta/missionRules';
+import { goalTier, pickDailies } from '../src/sim/meta/missionRules';
 import { createDataRegistry, defaultData } from '../src/data';
 import type { MissionDef } from '../src/data/schema';
 import { DAY, T0, advanceMainTo, fakeBuilding, fakeColonist, fulfil, makeGame, tickMeta } from './meta.helpers';
@@ -14,8 +14,8 @@ describe('missions: setup', () => {
     const followUps = new Set(side.flatMap((d) => d.next ?? []));
     for (const d of side) {
       // late chains wait for their tier; expedition chains until expeditions open (Stone tier + Radio Tower); the
-      // wishes chain until the first colonist wish (after the tutorial)
-      if (followUps.has(d.id) || d.minTier || d.type === 'expedition' || d.type === 'wish') expect(game.state.missions.active).not.toContain(d.id);
+      // wishes chain until the first colonist wish (after the tutorial); a goal that unlocks later waits for its tier
+      if (followUps.has(d.id) || d.minTier || d.type === 'expedition' || d.type === 'wish' || goalTier(game.data, d) > 0) expect(game.state.missions.active).not.toContain(d.id);
       else expect(game.state.missions.active).toContain(d.id);
     }
     expect(m.activeByChain('side').length).toBeGreaterThan(2);
@@ -377,7 +377,8 @@ describe('missions: persistence & repair', () => {
   it('unlocks the next side mission of a chain when one is claimed; old saves drop unreachable ones', () => {
     const g = makeGame();
     const side = g.game.data.missions.filter((d) => d.chain === 'side');
-    const head = side.find((d) => d.next?.length && !side.some((o) => o.next?.includes(d.id)))!;
+    // a chain whose next step is doable on a fresh colony (one that unlocks later waits for its tier: see below)
+    const head = side.find((d) => d.next?.length && !side.some((o) => o.next?.includes(d.id)) && goalTier(g.game.data, g.game.data.mission(d.next[0])!) === 0)!;
     const follow = head.next![0];
     expect(g.game.state.missions.active).not.toContain(follow);
     g.game.state.missions.progress[head.id] = head.count;
@@ -411,7 +412,9 @@ describe('missions: persistence & repair', () => {
     expect(st.active).not.toContain('s_grid_solar');
     tierUp(2);
     expect(st.active).not.toContain('s_grid_solar');
-    expect(toasts.filter((t) => t.includes('side mission'))).toEqual([]);
+    // only the Stone-tier tool step ("Equip an Iron Pickaxe") opens here, no late chain
+    expect(toasts.filter((t) => t.includes('side mission'))).toEqual(['A new side mission is ready']);
+    expect(st.active).toContain('s_toolup');
     tierUp(3);
     expect(st.active).toContain('s_grid_solar');
     expect(toasts).toContain('6 new side missions are ready');
@@ -434,6 +437,59 @@ describe('missions: persistence & repair', () => {
     expect(st.active).toContain('s_grid_geo');
     claimNow('s_grid_geo');
     expect(st.active).toContain('s_grid_mega');
+  });
+
+  it('a side step whose building or recipe unlocks at a later tier waits for that tier (no dead goals in the Side tab)', () => {
+    const g = makeGame();
+    const { game } = g;
+    const st = game.state.missions;
+    const tierUp = (t: number) => {
+      game.state.colony.tier = t;
+      game.bus.emit('colony:tierUp', { tier: t });
+    };
+    const claimNow = (id: string) => {
+      st.progress[id] = game.data.mission(id)!.count;
+      expect(game.sys.missions.claim(id)).toBe(true);
+    };
+    expect(goalTier(game.data, game.data.mission('s_atmo')!)).toBe(5);
+    expect(goalTier(game.data, game.data.mission('s_toolup')!)).toBe(2);
+    expect(goalTier(game.data, game.data.mission('s_cozy')!)).toBe(0); // a category: anything decorative
+    // "Equip an Iron Pickaxe" (a Stone-tier recipe) is not on the board of a fresh colony
+    expect(st.active).not.toContain('s_toolup');
+    tierUp(1);
+    expect(st.active).not.toContain('s_toolup');
+    tierUp(2);
+    expect(st.active).toContain('s_toolup');
+    // the water chain: the purifier (Steel) claimed at Steel does not hand over the Nano-tier generator yet
+    tierUp(3);
+    st.completed.push('s_water', 's_tank', 's_pump');
+    game.sys.missions.onLoad(false);
+    expect(st.active).toContain('s_purifier');
+    claimNow('s_purifier');
+    expect(st.active).not.toContain('s_atmo');
+    tierUp(4);
+    expect(st.active).not.toContain('s_atmo');
+    tierUp(5);
+    expect(st.active).toContain('s_atmo');
+  });
+
+  it('an old save holding a side step above its tier puts it back to wait; one already under way stays', () => {
+    const g = makeGame();
+    const state = JSON.parse(JSON.stringify(g.game.state));
+    state.colony.tier = 3;
+    state.missions.completed.push('s_water', 's_tank', 's_pump', 's_purifier');
+    state.missions.active.push('s_atmo');
+    const g2 = makeGame({ state, at: g.clock.now });
+    expect(g2.game.state.missions.active).not.toContain('s_atmo');
+    g2.game.state.colony.tier = 5;
+    g2.game.bus.emit('colony:tierUp', { tier: 5 });
+    expect(g2.game.state.missions.active).toContain('s_atmo');
+
+    // a pickaxe already in the backpack (a crate, the shop) makes "Equip an Iron Pickaxe" doable at any tier
+    const g3 = makeGame();
+    g3.game.state.player.items.iron_pickaxe = 1;
+    g3.game.bus.emit('building:completed', { id: 1, def: 'shelter' }); // any trigger that offers side missions
+    expect(g3.game.state.missions.active).toContain('s_toolup');
   });
 
   it('a colony far past a chain picks it up at the first step that still fits its tier', () => {

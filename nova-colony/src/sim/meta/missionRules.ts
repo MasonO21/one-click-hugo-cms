@@ -95,6 +95,34 @@ export function retroValue(game: Game, def: MissionDef): number {
 }
 
 /**
+ * The colony tier a mission's goal first becomes doable at: the unlock tier of the building to build / have / upgrade,
+ * of the recipe to craft, or of the recipe that makes the item to equip (a research gate counts with its own tier).
+ * 0 when nothing gates it (a category, `*`, an unknown id, kills, loot...).
+ */
+export function goalTier(data: DataRegistry, def: MissionDef): number {
+  const researchTier = (id?: string): number => (id ? (data.researchDef(id)?.tier ?? 0) : 0);
+  switch (def.type) {
+    case 'build':
+    case 'have_building':
+    case 'upgrade': {
+      const b = data.building(def.target);
+      return b ? Math.max(b.unlockTier, researchTier(b.research)) : 0;
+    }
+    case 'craft': {
+      const r = data.recipe(def.target);
+      return r ? Math.max(r.unlockTier, researchTier(r.research)) : 0;
+    }
+    case 'equip': {
+      let t = Infinity;
+      for (const r of data.recipes) if (r.outputs.items?.[def.target]) t = Math.min(t, Math.max(r.unlockTier, researchTier(r.research)));
+      return Number.isFinite(t) ? t : 0;
+    }
+    default:
+      return 0;
+  }
+}
+
+/**
  * Bosses a defeated boss also counts for: every boss that first leads an invasion at a lower tier ("Defeat an Elder
  * Brute" is done by beating the Hive Mother that leads the raids once the colony has moved on). Elder Brutes only
  * come up to Steel and Hive Mothers up to Nano, so a colony that tiers up first could otherwise never finish the
