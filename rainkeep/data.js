@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.13.0',
+  version: '4.14.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -769,6 +769,9 @@ const DATA = {
     { id: 'roadkit', name: 'Road Dice', usd: 1.99, daily: true, tag: 'Daily', needs: 'hall',
       grants: { dice: 20, lucky: 1 },
       desc: 'Twenty Road Dice and a Lucky Die for the Spice Road. Once per day, after you build the Caravan Hall.' },
+    { id: 'heirloomkit', name: 'Heirloom Kit', usd: 4.99, daily: true, tag: 'Daily', needsWyrm: 6,
+      grants: { whetstone: 40, journals: 400, speed60: 1 },
+      desc: "Forty Desert Whetstones for your heroes' heirlooms, 400 Field Journals and a 1-hour speedup. Once per day, from Rainwyrm Lv 6." },
     { id: 'tidekit', name: 'Tideglass Kit', usd: 4.99, daily: true, tag: 'Daily', needsWyrm: 20,
       grants: { tideglass: 60, crate_copper: 3, speed60: 1 },
       desc: 'Sixty Tideglass for the Deepspring, three copper crates and a 60-minute speedup. Once per day, from Rainwyrm Lv 20.' },
@@ -916,6 +919,7 @@ const DATA = {
     bells: { name: 'Camel Bell', kind: 'pet', icon: 'i-bell', desc: 'Tames new companions and Advances them past Lv 10 and 20.' },
     dice: { name: 'Road Die', kind: 'road', icon: 'i-die', desc: 'Rolls the caravan forward on the Spice Road.' },
     lucky: { name: 'Lucky Die', kind: 'road', icon: 'i-luckydie', desc: 'Rolls whatever number you choose on the Spice Road.' },
+    whetstone: { name: 'Desert Whetstone', kind: 'heirloom', icon: 'i-whetstone', desc: "Wakes and tempers a hero's heirloom." },
   },
 
   // ---------- Daily duties (reset at local midnight) ----------
@@ -946,6 +950,7 @@ const DATA = {
     { id: 'rival', text: 'March on a rival keep', n: 1, pts: 15, show: (S) => S.lv.wyrm >= 8 },
     { id: 'siege', text: 'Hold 3 waves of a Scorpion Siege', n: 3, pts: 15, show: (S) => S.lv.wyrm >= 10 },
     { id: 'intel', text: 'Complete 2 watchtower reports', n: 2, pts: 15, show: (S) => S.lv.wyrm >= 4 },
+    { id: 'temper', text: 'Temper a heirloom', n: 1, pts: 10, show: (S) => Object.values(S.heroes).some((h) => h.stars >= 3) },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1, dice: 1 }],
@@ -1104,7 +1109,7 @@ const DATA = {
     ],
     // the chest at the end, by rows cleared (`won`: the Warden fell); journals scale with the keep
     rewards: (d, won) => {
-      const r = { starglass: 10 * d, journals: 2 * d };
+      const r = { starglass: 10 * d, journals: 2 * d, whetstone: Math.floor(d / 2) };
       if (d >= 4) r.sunsteel = 30 * d;
       if (d >= 7) r.beacons = 1;
       if (won) { r.starglass += 80; r.beacons = 2; }
@@ -1212,7 +1217,7 @@ const DATA = {
     // the Buried Cache: [weight, reward]
     cache: [[30, { speed15: 1 }], [24, { journals: 1.5 }], [14, { treats: 15 }], [12, { rainCharm: 1 }], [10, { beacons: 1 }], [6, { dice: 2 }], [4, { lucky: 1 }], [3, { shard_epic: 1 }]],
     // the Bazaar's wares, three offered at a time
-    wares: [{ crate_water: 1 }, { crate_food: 1 }, { crate_stone: 1 }, { crate_copper: 1 }, { speed15: 2 }, { starglass: 40 }, { beacons: 1 }, { treats: 25 }, { dice: 2 }, { journals: 3 }],
+    wares: [{ crate_water: 1 }, { crate_food: 1 }, { crate_stone: 1 }, { crate_copper: 1 }, { speed15: 2 }, { starglass: 40 }, { beacons: 1 }, { treats: 25 }, { dice: 2 }, { journals: 3 }, { whetstone: 3 }],
     // bandits are as strong as this share of your expedition stage (at least stage 2, at most 3 per wyrm level)
     bandits: { stage: 0.85, win: { starglass: 15, journals: 1 } },
     lapGive: { journals: 1.5 }, // every lap round the road
@@ -1247,10 +1252,54 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- Heirlooms ----------
+  // Every hero carries one thing from before the keep. It wakes when the hero reaches 3 stars and is tempered
+  // with Desert Whetstones up to Lv 10: each level adds to the hero's attack, defense and health and to the
+  // strength of their skill. Whetstones come from watchtower errands and bounties, the Crossing and siege
+  // chests, the Bazaar, now and then a beast, and the Heirloom Kit.
+  heirloom: {
+    stars: 3, // hero stars to wake it
+    cost: [10, 12, 15, 18, 22, 26, 30, 35, 40, 46], // whetstones to reach Lv 1 (waking it) to Lv 10
+    stat: 0.025, skill: 0.04, // per level: hero attack, defense and health, and skill strength
+    beast: 0.05, // the chance a beast drops one
+    // its picture: a hero's own where one was painted, else one for the class
+    icons: { zahra: 'i-hl-lantern', tamir: 'i-hl-ladle', yusra: 'i-hl-conch', idris: 'i-hl-bell', sefa: 'i-hl-bell', omar: 'i-hl-pick', guard: 'i-hl-lantern', bow: 'i-hl-quiver', lancer: 'i-hl-bridle' },
+    list: {
+      zahra: ["The Last Caravan's Lantern", 'The lantern she carried out of the Glass Cities. It has never gone out.'],
+      tariq: ["Windrider's Bridle", 'Braided from the manes of every camel that ever outran a storm with him.'],
+      leila: ['The Farsight Eyepatch', 'Stitched with silver thread. She swears it lets her blind eye see the wind.'],
+      idris: ["Wyrmkeeper's Bell", 'A clay bell the old keepers rang to call the wyrms to water.'],
+      soraya: ["Dawnbringer's Banner", 'Blue as the morning she saw it rain.'],
+      nadia: ['Glass Sea Quiver', 'Oryx hide, and arrowheads knapped from the floor of the old sea.'],
+      bashir: ['The Deepwell Rope', 'Thirty years of well rope, knotted at every depth he ever reached.'],
+      amira: ['The First Shade Sail', 'The first sail she ever wove, patched a hundred times and still keeping off the sun.'],
+      kofi: ['The Saltroad Ledger', 'Every load he ever hauled, and every raider he ever turned back.'],
+      yara: ['Hare-Bone Charm', 'From her first night hunt, and her luck ever since.'],
+      rashid: ['The East Gate Bar', 'The iron bar from the gate he held alone. He carries it everywhere.'],
+      samira: ["Courier's Seal Ring", 'The seal of a keep nobody has heard of. She will not say whose.'],
+      omar: ['The Emergency Pick', 'Nobody has seen him use it. Everybody has seen him polish it.'],
+      nuri: ['Snare-Wire Bracelet', 'Copper snare wire twisted into a bracelet, and still able to catch a hare.'],
+      halima: ['The Aloe Flask', 'A tonic so strong it is kept in brass, for the worst nights only.'],
+      lio: ['The Ridge Whistle', 'A bone whistle only the scouts of the ridge can hear.'],
+      tamir: ['The Seasoned Ladle', 'Blackened brass, older than the keep, and still his best weapon.'],
+      mara: ['The Windcatcher Vane', 'A brass vane from her first windcatcher, still turning to the breeze.'],
+      imani: ['The Wadi Gate Shield', 'Dented by the first flood, and never hammered straight.'],
+      kaveh: ['The Stormglass Kite', 'The kite that went into the storm cloud and came back crackling.'],
+      tomas: ['The Reed Oar', 'Twenty years on a dry marsh, and wet at last.'],
+      sefa: ['The Cinder Choir Bell', 'She rang it once, the night she stopped singing to the embers.'],
+      yusra: ["Grandmother's Conch", 'A shell from the Bone Coast that still holds the sound of the old sea.'],
+      haroun: ['The Black Glass Mask', 'Blown from the melted desert. The only mask that does not crack in the heat.'],
+      noor: ['The Wyrmbone Charm', "The one charm she never sold, carved from a wyrm's knuckle."],
+    },
+  },
+
   // ---------- What's new ----------
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.14', items: [
+      { icon: 'i-heirloom', name: 'Heirlooms', text: "Every hero carries one thing from before the keep. It wakes at 3 stars; temper it with Desert Whetstones for more stats and a stronger skill.", act: 'heirlooms', open: (S) => Object.values(S.heroes).some((h) => h.stars >= 3), needs: 'a hero at 3 stars' },
+    ] },
     { v: '4.13', items: [
       { icon: 'i-intel', name: 'Watchtower Intel', text: 'Star-rated reports on the Dunes: rescues, hunts, lost caravans, relics, bounties and hero errands, each with its own story.', act: 'intel', open: (S) => S.lv.wyrm >= 4 && S.lv.barracks > 0, needs: 'Rainwyrm Lv 4 and the Barracks' },
     ] },
@@ -1289,8 +1338,8 @@ const DATA = {
       hunt: { name: 'Hunt', icon: 'i-hunt', fight: true, w: 3, give: { food: 2.5, stone: 1.5 }, journals: 1.5, treats: 5 },
       caravan: { name: 'Lost caravan', icon: 'i-lostcaravan', fight: false, w: 2, give: { stone: 2, copper: 1.5 }, starglass: 8 },
       relic: { name: 'Relic', icon: 'i-relic', fight: false, w: 2, give: { water: 1 }, journals: 2, starglass: 12 },
-      bounty: { name: 'Bounty', icon: 'i-bounty', fight: true, w: 2, give: { copper: 2 }, starglass: 20, beacon: 0.08 },
-      errand: { name: "Hero's errand", icon: 'i-errand', fight: false, hero: true, w: 2, give: { food: 1 }, journals: 2, shards: 2 },
+      bounty: { name: 'Bounty', icon: 'i-bounty', fight: true, w: 2, give: { copper: 2 }, starglass: 20, beacon: 0.08, whet: 1 },
+      errand: { name: "Hero's errand", icon: 'i-errand', fight: false, hero: true, w: 2, give: { food: 1 }, journals: 2, shards: 2, whet: 1 },
     },
     // the story on each report: a title and a line, then what the march found ({hero} is the hero on an errand)
     tales: {
@@ -1365,7 +1414,7 @@ const DATA = {
     captainGift: { starglass: 25, journals: 1 }, // for beating the Captain
     // the siege chest, by waves held (the King's head is worth a Beacon on top)
     chest: (d, king) => {
-      const r = { starglass: 6 * d, journals: 0.5 * d };
+      const r = { starglass: 6 * d, journals: 0.5 * d, whetstone: Math.floor(d / 2) };
       if (d >= 4) r.speed15 = 1;
       if (d >= 8) r.speed60 = 1;
       if (king) { r.starglass += 60; r.beacons = 1; }
@@ -1492,6 +1541,9 @@ const DATA = {
     { id: 'intel10', text: 'Complete 10 watchtower reports', stat: 'intel', n: 10, reward: { starglass: 150 } },
     { id: 'intel60', text: 'Complete 60 watchtower reports', stat: 'intel', n: 60, reward: { shard_epic: 1 } },
     { id: 'intel5', text: 'Complete 10 five-star reports', stat: 'intel5', n: 10, reward: { beacons: 3 } },
+    { id: 'heir1', text: 'Wake a heirloom', stat: 'heirWoken', n: 1, reward: { whetstone: 10 } },
+    { id: 'heir10', text: 'Temper a heirloom to Lv 10', stat: 'heirTop', n: 10, reward: { shard_legendary: 1 } },
+    { id: 'heir30', text: 'Temper heirlooms 30 times', stat: 'tempers', n: 30, reward: { starglass: 300 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

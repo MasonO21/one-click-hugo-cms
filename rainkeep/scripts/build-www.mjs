@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'www');
-const REQUIRED = ['index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'siege.js', 'intel.js', 'news.js', 'models3d.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js', 'vendor/three-gltf.js'];
+const REQUIRED = ['index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js', 'art3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'siege.js', 'intel.js', 'heirloom.js', 'news.js', 'models3d.js', 'world3d.js', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'vendor/three.min.js', 'vendor/three-gltf.js'];
 const EXTRA_FILES = new Set(['manifest.webmanifest', 'icon.svg']);
 const DIRS = ['icons', 'fonts', 'vendor', 'art', 'models'];
 

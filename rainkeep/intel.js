@@ -119,6 +119,7 @@
     if (r.kind === 'relic' && r.stars >= 4) out.rainCharm = 1;
     if (r.kind === 'caravan' && r.stars >= 3 && KH.road && KH.road.open()) out.dice = r.stars - 2;
     if (r.kind === 'bounty' && r.stars >= 5) out.beacons = 1;
+    if (K.whet) out.whetstone = K.whet * r.stars;
     for (const k of Object.keys(out)) if (!out[k]) delete out[k];
     return out;
   }

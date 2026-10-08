@@ -92,6 +92,7 @@ window.RK_ART = {
   },
   offer: {
     roadkit: 'art/events/road.webp',
+    heirloomkit: 'art/offers/heirloomkit.webp',
     founder: 'art/offers/founder.webp',
     stipend: 'art/offers/stipend.webp',
     ledger: 'art/offers/ledger.webp',
@@ -216,6 +217,15 @@ window.RK_ART = {
     'i-relic': 'art/ui/relic.webp',
     'i-bounty': 'art/ui/bounty.webp',
     'i-errand': 'art/ui/errand.webp',
+    'i-whetstone': 'art/ui/whetstone.webp',
+    'i-heirloom': 'art/ui/heirloom.webp',
+    'i-hl-lantern': 'art/ui/hl-lantern.webp',
+    'i-hl-quiver': 'art/ui/hl-quiver.webp',
+    'i-hl-bridle': 'art/ui/hl-bridle.webp',
+    'i-hl-ladle': 'art/ui/hl-ladle.webp',
+    'i-hl-conch': 'art/ui/hl-conch.webp',
+    'i-hl-bell': 'art/ui/hl-bell.webp',
+    'i-hl-pick': 'art/ui/hl-pick.webp',
   },
   // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
   // that frames sheets

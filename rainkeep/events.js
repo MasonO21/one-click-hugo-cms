@@ -104,6 +104,7 @@
       else if (it.kind === 'charm') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Call the Rain</button>`;
       else if (it.kind === 'pet') btn = '<button class="btn small" data-act="pals">Companions</button>';
       else if (it.kind === 'road') btn = '<button class="btn small" data-act="road">Spice Road</button>';
+      else if (it.kind === 'heirloom') btn = '<button class="btn small" data-act="heirlooms">Heirlooms</button>';
       const desc = it.kind === 'crate' ? `${fmt(DATA.crateSize(it.res, S.lv.wyrm))} ${KH.NAME[it.res].toLowerCase()} each` : it.kind === 'speed' ? 'Use from any building, research or training timer' : it.desc;
       return `<div class="card bag-row">${icon(it.icon)}<div class="grow"><b>${esc(it.name)} <span class="muted">×${S.items[k]}</span></b><div class="muted small">${esc(desc)}</div></div>${btn}</div>`;
     }).join('');
@@ -384,6 +385,7 @@
   KH.on('rivalWin', () => addPts('oasis', DATA.rivals.warPts));
   KH.on('siegeWave', () => addPts('oasis', DATA.siege.warPts));
   KH.on('intelDone', (e) => addPts('oasis', DATA.intel.warPts * e.stars));
+  KH.on('temper', (e) => addPts('oasis', 15 * e.lv));
   ACT.evclaim = (i) => {
     i = Number(i);
     const def = EV.defs[curKey()];
