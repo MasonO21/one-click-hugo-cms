@@ -1299,7 +1299,7 @@ const DATA = {
   clash: {
     unlock: 9, // Rainwyrm level
     banners: { cap: 2, every: 28800 }, // a Clash Banner every 8 hours of keep time, two at most; a match takes one
-    length: 180, goal: 1000, // seconds of a match, and the score that wins it outright
+    length: 180, goal: 700, // seconds of a match, and the score that wins it outright
     speed: 0.11, // map widths a squad marches per second (routed squads limp at 70%)
     capture: 3, // seconds to raise a flag on a point no one is holding
     hold: 0.15, // squads fighting on a point their side holds fight this much harder
@@ -1318,7 +1318,8 @@ const DATA = {
     ],
     // the two rival caravans of a match, each a share of your average squad's strength
     rivals: ['Saltmarch Riders', 'Duskmoor Company', 'Red Sash Band', 'Sunwell Lancers', 'Ravensgate Guard', 'Palmhold Free Company'],
-    rivalStr: [[0.8, 0.95], [0.95, 1.12]],
+    rivalStr: [[1, 1.12], [1.12, 1.3]], // stronger than your squads: you have the camp nearest your own tower, they have each other
+    hunt: 1.6, // the other two go after the leader's points this much harder
     colors: ['#3fd0c0', '#d0583a', '#6a7ae0'],
     // by place: resources in quarter-crates, journals scaled to the keep
     rewards: [{ starglass: 120, whetstone: 3, journals: 2 }, { starglass: 70, whetstone: 2, journals: 1 }, { starglass: 30, whetstone: 1, journals: 0.5 }],

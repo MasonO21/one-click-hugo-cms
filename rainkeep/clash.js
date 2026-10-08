@@ -133,12 +133,14 @@
     const mine = G.squads.filter((q) => q.side === s);
     const enemyAt = (pi) => G.squads.filter((q) => q.side !== s && ((q.state === 'hold' && q.at === pi) || (q.state === 'march' && q.to === pi && dist(q, G.points[pi]) < 0.25))).reduce((a, q) => a + q.M * q.hp, 0);
     const friendsTo = (pi, me) => mine.filter((q) => q !== me && (q.at === pi || (q.state === 'march' && q.to === pi)));
+    // everyone goes after the leader: points held by the side in front are worth more to the others
+    const lead = [0, 1, 2].reduce((a, b) => (G.sides[b].score > G.sides[a].score ? b : a), 0), ahead = G.sides[lead].score > 30;
     const value = (q, pi) => {
-      const p = G.points[pi], own = p.owner === s, guards = friendsTo(pi, q);
+      const p = G.points[pi], own = p.owner === s, guards = friendsTo(pi, q), hunt = ahead && p.owner === lead && lead !== s ? C.hunt : 1;
       if (own && guards.length) return 0;
       const enemy = enemyAt(pi), ours = q.M * q.hp + guards.reduce((a, g) => a + g.M * g.hp, 0);
       if (enemy > ours * (p.owner === s ? 1.1 : 0.95)) return 0.04 * p.pts;
-      return (p.pts * (own ? (enemy ? 1.4 : 0.3) : enemy ? 1.15 : 1) * rand(0.85, 1.15)) / (0.5 + dist(q, p));
+      return (p.pts * hunt * (own ? (enemy ? 1.4 : 0.3) : enemy ? 1.15 : 1) * rand(0.85, 1.15)) / (0.5 + dist(q, p));
     };
     for (const q of mine) {
       if (q.state === 'march' || q.state === 'rout') continue;
