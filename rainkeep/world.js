@@ -84,6 +84,8 @@
     const d = dist(x, y);
     let t = layout1(x, y, r, d);
     if (k === anchorCamp()) t = { kind: 'camp', lvl: clamp(Math.round(d * 0.7), 2, 10) };
+    // a rival keep (rivals.js) stands on its own patch of open sand
+    if (KH.rivals) { const ri = KH.rivals.byKey(k); if (ri >= 0) t = { kind: 'rival', id: ri }; }
     t.x = x; t.y = y; t.k = k;
     t.v = r(); // per-tile variation for drawing
     // Act II: drawn after the base layout so the Act I map never changes
@@ -111,6 +113,10 @@
       t.lvl = Math.min(b.kind === 'beast' ? 14 : 12, b.lvl + (st.lvlUp || 0));
       t.gone = !!(st.until && S.time < st.until);
       t.busy = st.busy && S.map.marches.some((m) => m.id === st.busy) ? st.busy : null;
+    } else if (b.kind === 'rival') {
+      const r = KH.rivals.list()[b.id];
+      t.name = r.name; t.lvl = KH.rivals.lvlOf(r); t.shield = KH.rivals.shielded(r); t.gone = false;
+      t.busy = st.busy && S.map.marches.some((m) => m.id === st.busy) ? st.busy : null;
     } else if (b.kind === 'ruin') {
       t.gone = !!st.done;
       t.busy = st.busy && S.map.marches.some((m) => m.id === st.busy) ? st.busy : null;
@@ -127,7 +133,7 @@
     }
     return { name: t.name, cls: t.cls, boss: false, ...KH.foeStats(W.beastStage(t.lvl), W.beastScale) };
   }
-  const tileName = (t) => (t.kind === 'node' ? (t.flooded ? 'Flooded Oasis' : W.nodes[t.res].name) : t.kind === 'beast' ? t.name : t.kind === 'camp' ? (t.salt ? 'Saltborn Hive' : 'Scorpion Camp') : t.kind === 'ruin' ? DATA.ruins.find((r) => r.id === t.ruin).name : t.kind === 'keep' ? 'Your keep' : 'Open sand');
+  const tileName = (t) => (t.kind === 'node' ? (t.flooded ? 'Flooded Oasis' : W.nodes[t.res].name) : t.kind === 'beast' ? t.name : t.kind === 'rival' ? KH.rivals.list()[t.id].name : t.kind === 'camp' ? (t.salt ? 'Saltborn Hive' : 'Scorpion Camp') : t.kind === 'ruin' ? DATA.ruins.find((r) => r.id === t.ruin).name : t.kind === 'keep' ? 'Your keep' : 'Open sand');
 
   // ======================================================================
   // Marches
@@ -189,10 +195,12 @@
   };
   ACT.wattack = (k) => {
     const [x, y] = k.split(',').map(Number), t = tile(x, y);
-    if ((t.kind !== 'beast' && t.kind !== 'camp') || t.gone || t.busy || !visible(x, y)) return;
+    if ((t.kind !== 'beast' && t.kind !== 'camp' && t.kind !== 'rival') || t.gone || t.busy || !visible(x, y)) return;
+    if (t.kind === 'rival' && t.shield) return KH.toast(`${t.name} is under a Peace Shield.`, 'warn');
     const why = canSend(true);
     if (why) return KH.toast(why, 'warn');
     const troops = pickTroops(UI.wsend);
+    if (t.kind === 'rival') KH.rivals.marching();
     newMarch(t.kind, t, troops, KH.squadHome());
     UI.sheet = null;
     KH.toast(`Your squad marches on the ${tileName(t)}.`, 'good');
@@ -233,8 +241,20 @@
     setTile(k, { left: (st.left || 0) + n });
   }
 
+  // a march on a rival keep: rivals.js fights it out and tallies the plunder
+  function resolveRival(m, offline) {
+    const o = KH.rivals.resolve(m);
+    if (!o) { m.report = { win: false, lossFrac: 0 }; return; }
+    m.report = { win: o.result.win, foe: o.foe.name, lvl: o.lvl, rewards: o.rewards, lossFrac: o.lossFrac };
+    KH.emit('battle', { kind: 'rival', win: o.result.win, foe: o.foe });
+    if (offline) return;
+    if (UI.tab === 'world' && !UI.sheet && !UI.battle) {
+      KH.startBattle({ title: `The Dunes · ${o.foe.name}`, foe: o.foe, team: o.team, result: o.result, rewards: o.rewards, sideLabel: 'Your march', intro: `Your march reaches the walls of ${o.foe.name}…`, loseLine: 'The walls hold. Your march falls back with losses.' });
+    } else KH.toast(o.result.win ? `Your march carried off ${o.foe.name}'s stores.` : `${o.foe.name}'s walls held. Some troops fell.`, o.result.win ? 'good' : 'warn');
+  }
   function resolveFight(m, offline) {
     const t = tile(m.x, m.y);
+    if (t.kind === 'rival') return resolveRival(m, offline);
     const foe = { ...beastFoe(t), n: t.lvl };
     const team = KH.teamStats(foe.cls, { troops: m.troops, heroes: m.heroes });
     const result = KH.simulateBattle(team, foe);
@@ -355,6 +375,7 @@
   // how far the sighted raiders have come (0 just sighted, 1 at the gate), for the 3D keep
   KH.raidProgress = () => (KH.raidNear() ? clamp(1 - (S.map.raid.next - S.time) / warnTime(), 0, 1) : null);
   function raidFoe() {
+    if (S.map.raid.from != null && KH.rivals) { const wb = KH.rivals.warband(S.map.raid.from); if (wb) return wb; }
     const st = Math.max(2, Math.min(S.stage * 0.9, S.lv.wyrm * 3));
     return { n: Math.round(st), name: 'Scorpion Raiders', cls: pick(['guard', 'bow', 'lancer']), boss: false, chapter: 'Raid', ...KH.foeStats(st, 1.1) };
   }
@@ -371,7 +392,8 @@
     KH.toast('Cauldrons of boiling water stand ready on the walls.', 'good');
   };
   function resolveRaid() {
-    const foe = raidFoe();
+    const foe = raidFoe(), from = S.map.raid.from != null && KH.rivals && KH.rivals.list()[S.map.raid.from] ? S.map.raid.from : null;
+    S.map.raid.from = null;
     const wet = rainingNow(), pour = !!S.map.raid.pour;
     if (wet) for (const k of ['atk', 'def', 'hp']) foe[k] *= 1 - RD.rainWeaken;
     S.map.raid.pour = false;
@@ -393,12 +415,13 @@
       for (const k in S.troops) { const l = Math.round(S.troops[k] * 0.1); S.troops[k] -= l; lost += l; }
       S.map.raid.last = { win: false, t: S.time, stolen, lost };
       extra = `${extra ? `${extra} ` : ''}They made off with ${Object.entries(stolen).map(([k, v]) => `${fmt(v)} ${k}`).join(', ') || 'nothing'}${lost ? ` and ${lost} troops fell` : ''}. A bigger Storehouse protects more.`;
-      KH.mail('Raiders broke into the keep', extra);
+      if (from == null) KH.mail('Raiders broke into the keep', extra);
     }
     KH.emit('battle', { kind: 'raid', win: result.win, foe });
+    if (from != null) KH.emit('rivalStrike', { id: from, win: result.win });
     const team2 = { ...team, heroes: team.heroes };
     if (!UI.battle) {
-      KH.startBattle({ title: 'Raid on the keep', foe, team: team2, result, rewards, sideLabel: 'Your defenders', intro: 'Raiders storm the walls!', extra, noTips: false, loseLine: 'The raiders break through the gate.' });
+      KH.startBattle({ title: from != null ? `${foe.name} at the gate` : 'Raid on the keep', foe, team: team2, result, rewards, sideLabel: 'Your defenders', intro: from != null ? `${foe.name} storms the walls!` : 'Raiders storm the walls!', extra, noTips: false, loseLine: 'The raiders break through the gate.' });
     }
   }
   KH.raidInfo = () => {
@@ -467,7 +490,8 @@
       } else {
         if (!raid.warned && raid.next - S.time <= warnTime()) {
           raid.warned = true;
-          KH.toast(`Raiders sighted! They reach the keep in ${fmtTime(raid.next - S.time)}. Bring your troops home.`, 'warn');
+          const who = raid.from != null && KH.rivals && KH.rivals.list()[raid.from] ? `${KH.rivals.list()[raid.from].name}'s warband` : 'Raiders';
+          KH.toast(`${who} sighted! They reach the keep in ${fmtTime(raid.next - S.time)}. Bring your troops home.`, 'warn');
           KH.sfx('raid');
           KH.emit('raidSighted');
         }
@@ -513,7 +537,7 @@
     const pool = KH.capTroops(S.troops, KH.marchCap());
     const avail = sum(pool);
     const fracs = [[0.25, '¼'], [0.5, '½'], [1, 'All']].map(([f, l]) => `<button class="${UI.wsend === f ? 'on' : ''}" data-act="wfrac" data-arg="${f}">${l}<small>${fmt(Math.floor(avail * f))}</small></button>`).join('');
-    const why = canSend(t.kind === 'beast' || t.kind === 'camp');
+    const why = canSend(t.kind === 'beast' || t.kind === 'camp' || t.kind === 'rival');
     const slotLine = `<p class="muted small">${S.map.marches.length}/${slots()} marches out · ${fmt(avail)} troops ready (march cap ${KH.marchCap()}) · ${fmtTime(tr)} away</p>`;
     if (t.kind === 'empty') {
       const grove = KH.bloom && KH.bloom.groves()[t.k];
@@ -553,6 +577,7 @@
           <button class="btn wide ${why || t.gone || t.busy ? 'off' : ''}" data-act="wattack" data-arg="${t.k}" data-primary>${icon('i-sword')}Attack</button>`,
       };
     }
+    if (t.kind === 'rival') return KH.rivals.sheet(t, { troops: KH.capTroops(pool, Math.floor(avail * UI.wsend)), why, busyMsg, slotLine, fracs });
     if (t.kind === 'ruin') {
       const ruin = DATA.ruins.find((r) => r.id === t.ruin);
       return {
@@ -585,12 +610,12 @@
     if (!(UI.tab === 'world' && UI.sub.world === 'map')) return;
     const marches = S.map.marches.map((m) => {
       const t = m.state === 'out' ? m.arrive : m.state === 'work' ? m.workEnd : m.back;
-      const lbl = m.kind === 'gather' ? `Gathering ${m.res}` : m.kind === 'ruin' ? 'Scouting a ruin' : m.kind === 'camp' ? 'Raiding a camp' : 'Hunting';
+      const lbl = m.kind === 'gather' ? `Gathering ${m.res}` : m.kind === 'ruin' ? 'Scouting a ruin' : m.kind === 'camp' ? 'Raiding a camp' : m.kind === 'rival' ? 'Raiding a keep' : 'Hunting';
       const st = m.state === 'out' ? 'marching' : m.state === 'work' ? (m.kind === 'gather' ? 'working' : 'waiting for you') : 'returning';
       return `<div class="march"><span class="grow"><b>${lbl}</b><br><span class="muted small">${sum(m.troops)} troops · ${st}</span></span><time>${t === Infinity ? '' : fmtTime(t - S.time)}</time>${m.state !== 'back' && m.kind !== 'ruin' ? `<button class="btn small alt" data-act="recall" data-arg="${m.id}">Recall</button>` : m.kind === 'ruin' && m.state === 'work' ? '<button class="btn small gold" data-act="sheet" data-arg="ruin">Open</button>' : ''}</div>`;
     }).join('');
     const html = `<div class="world-top">${KH.subtabs('world', [['map', 'Dunes'], ['expedition', 'Expedition'], ...KH.worldTabs.map((w) => [w.id, w.label, w.dot && w.dot()])])}</div>
-      <div class="world-tools"><span class="chip" title="Marches out, and troops at home">${icon('i-flag')}${S.map.marches.length}/${slots()}<i class="sep"></i>${icon('i-people')}${fmt(sum(S.troops))}</span><button class="btn small alt" data-act="wcenter" aria-label="Back to the keep" title="Back to the keep">${icon('i-compass')}</button>${KH.bloom && KH.bloom.unlocked() ? `<button class="chip bloom-chip" data-act="bloom" title="Bloom">${icon('i-sprout')}${KH.bloom.oases()}/${KH.bloom.max}</button>` : ''}<button class="btn small gold" data-act="wnearest" data-primary>Find resources</button></div>
+      <div class="world-tools"><span class="chip" title="Marches out, and troops at home">${icon('i-flag')}${S.map.marches.length}/${slots()}<i class="sep"></i>${icon('i-people')}${fmt(sum(S.troops))}</span><button class="btn small alt" data-act="wcenter" aria-label="Back to the keep" title="Back to the keep">${icon('i-compass')}</button>${KH.bloom && KH.bloom.unlocked() ? `<button class="chip bloom-chip" data-act="bloom" title="Bloom">${icon('i-sprout')}${KH.bloom.oases()}/${KH.bloom.max}</button>` : ''}${KH.rivals && KH.rivals.open() ? `<button class="chip" data-act="rivals" title="Rival Keeps">${icon('i-fort')}Rivals</button>` : ''}<button class="btn small gold" data-act="wnearest" data-primary>Find resources</button></div>
       ${marches ? `<div class="marches">${marches}</div>` : !S.lv.barracks ? '<div class="marches"><p class="muted small">Build the Barracks to send marches onto the Dunes.</p></div>' : S.stats.gathers < 3 ? '<div class="marches"><p class="muted small">Tap a resource, beast, ruin or camp to send a march. Drag to look around.</p></div>' : ''}`;
     KH.setHTML($('#world-ui'), html, force);
   }
@@ -617,7 +642,7 @@
       return img;
     };
     icons.stone = mk('i-stone'); icons.food = mk('i-food'); icons.water = mk('i-water'); icons.copper = mk('i-copper'); icons.sunsteel = mk('i-sunsteel');
-    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.lock = mk('i-lock', '#e8d2b0'); icons.hive = mk('i-spire', '#eaf6ff');
+    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.lock = mk('i-lock', '#e8d2b0'); icons.hive = mk('i-spire', '#eaf6ff'); icons.fort = mk('i-fort', '#ffd27a');
   }
   function resize() {
     const r = cv.getBoundingClientRect();
@@ -723,6 +748,11 @@
       } else if (tt.kind === 'camp') {
         ctx.fillStyle = '#7a3a2a'; ctx.beginPath(); ctx.moveTo(sx - 16, sy + 14); ctx.lineTo(sx - 8, sy + 2); ctx.lineTo(sx, sy + 14); ctx.fill();
         ctx.beginPath(); ctx.moveTo(sx + 2, sy + 15); ctx.lineTo(sx + 10, sy + 4); ctx.lineTo(sx + 18, sy + 15); ctx.fill();
+      } else if (tt.kind === 'rival') {
+        const r = KH.rivals.list()[tt.id];
+        ctx.fillStyle = '#c9a06a'; ctx.fillRect(sx - 14, sy + 2, 28, 12); ctx.fillRect(sx - 16, sy - 2, 6, 16); ctx.fillRect(sx + 10, sy - 2, 6, 16);
+        ctx.fillStyle = r ? r.color : '#b5452a'; ctx.fillRect(sx - 1, sy - 12, 8, 5); ctx.fillStyle = '#5a3a1a'; ctx.fillRect(sx - 2, sy - 12, 2, 14);
+        if (tt.shield) { ctx.strokeStyle = 'rgba(127,240,224,.7)'; ctx.lineWidth = 2; ell(sx, sy + 4, 22, 16); ctx.stroke(); }
       } else if (tt.kind === 'ruin') {
         ctx.fillStyle = '#b8936a'; ctx.fillRect(sx - 12, sy + 2, 5, 12); ctx.fillRect(sx + 7, sy, 5, 14); ctx.fillRect(sx - 12, sy, 24, 4);
       }
@@ -731,6 +761,7 @@
       if (tt.kind === 'node') badge(sx, sy - 8, icons[tt.res], tt.lvl, '#ffcf6e', tt.gone);
       else if (tt.kind === 'beast') badge(sx, sy - 8, icons.paw, tt.lvl, '#ff8a7a', tt.gone);
       else if (tt.kind === 'camp') badge(sx, sy - 8, tt.salt ? icons.hive : icons.flag, tt.lvl, tt.salt ? '#9fd8ff' : '#ff5e4e', tt.gone);
+      else if (tt.kind === 'rival') badge(sx, sy - 14, icons.fort, tt.lvl, tt.shield ? '#7ff0e0' : '#ff9a3c', false);
       else if (tt.kind === 'ruin') {
         if (!tt.gone) {
           const a = 0.35 + 0.25 * Math.sin(t * 2.5 + tt.v * 6);
@@ -825,5 +856,16 @@
   if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);
 
   KH.hooks.power.push(() => 0);
-  KH.world = { tile, visible, travel, slots, base, sight, dist, key, N, C, view, tileName };
+  // open sand that something can stand on: no palms or rocks, still sand in Act II, no grove, not the anchor camp
+  function openSand(x, y) {
+    const d = dist(x, y), k = key(x, y);
+    if (d < 1.6 || k === anchorCamp()) return false;
+    const r = tileRng(x, y), t = layout1(x, y, r, d);
+    r(); const a2 = r(), X = W.act2;
+    if (t.kind !== 'empty' || t.decor || a2 < X.veinShare + (d >= X.hiveFrom ? X.hiveShare : 0)) return false;
+    return !(KH.bloom && KH.bloom.groves && KH.bloom.groves()[k]);
+  }
+  const reset = () => { layoutCache = {}; };
+  const focus = (x, y) => { view.ox = -(x - C) * TS; view.oy = -(y - C) * TS; if (KH.world3d && KH.world3d.focus) KH.world3d.focus(x, y); };
+  KH.world = { tile, visible, travel, slots, base, sight, dist, key, N, C, view, tileName, openSand, reset, focus };
 })();

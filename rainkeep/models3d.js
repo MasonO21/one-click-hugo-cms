@@ -41,7 +41,8 @@
       .then((buf) => new Promise((res, rej) => loader.parse(buf, '', res, rej)))
       .then((gltf) => {
         // companions (p-), Dunes beasts (b-) and the camel (a-) are animals; heroes, villagers and raiders people
-        MOD[id] = /^[pba]-/.test(id) ? rigAnimal(gltf, BIRDS.has(id), id) : prepPerson(gltf);
+        // still models (s-, a rival's fort) keep their mesh as it is
+        MOD[id] = /^s-/.test(id) ? prepStill(gltf) : /^[pba]-/.test(id) ? rigAnimal(gltf, BIRDS.has(id), id) : prepPerson(gltf);
         MOD[id].ok = true;
         epoch++;
       })
@@ -62,6 +63,14 @@
     });
     const clip = gltf.animations.find((a) => /walk/i.test(a.name)) || gltf.animations[0] || null;
     return { kind: 'person', scene: gltf.scene, clip, h: box.max.y - box.min.y, y0: box.min.y, cx: (box.min.x + box.max.x) / 2, cz: (box.min.z + box.max.z) / 2 };
+  }
+
+  // a still model (a building): measured once, so every copy stands on the ground at the size asked for
+  function prepStill(gltf) {
+    gltf.scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(gltf.scene);
+    gltf.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; tidy(o.material); } });
+    return { kind: 'still', scene: gltf.scene, w: Math.max(box.max.x - box.min.x, box.max.z - box.min.z), y0: box.min.y, cx: (box.min.x + box.max.x) / 2, cz: (box.min.z + box.max.z) / 2 };
   }
 
   // ---- the animals: one mesh, turned to face +z, with bones for legs and tail, or wings ----
@@ -163,7 +172,8 @@
     return { kind: bird ? 'bird' : 'beast', scene, H, L, Wd, names };
   }
 
-  // a fresh copy of a model: people `height` tall, beasts `height` long, birds `height` across the wings
+  // a fresh copy of a model: people `height` tall, beasts `height` long, birds `height` across the wings, a still
+  // model `height` across
   function instance(id, height) {
     const m = MOD[id];
     if (!m || !m.ok) return null;
@@ -171,7 +181,11 @@
     const g = new THREE.Group();
     g.add(root);
     g.userData.glb = id;
-    if (m.kind === 'person') {
+    if (m.kind === 'still') {
+      const k = height / m.w;
+      root.scale.setScalar(k);
+      root.position.set(-m.cx * k, -m.y0 * k, -m.cz * k);
+    } else if (m.kind === 'person') {
       const k = height / m.h;
       root.scale.setScalar(k);
       root.position.set(-m.cx * k, -m.y0 * k, -m.cz * k);

@@ -86,6 +86,7 @@ window.RK_ART = {
     oasis: 'art/events/oasis.webp',
     road: 'art/events/road.webp',
     roadboard: 'art/events/road-board.webp',
+    rivals: 'art/events/rivals.webp',
   },
   offer: {
     roadkit: 'art/events/road.webp',
@@ -191,11 +192,17 @@ window.RK_ART = {
     'i-well': 'art/ui/well.webp',
     'i-dustdevil': 'art/ui/dustdevil.webp',
     'i-shrine': 'art/ui/shrine.webp',
+    'i-fort': 'art/ui/fort.webp',
+    'i-peace': 'art/ui/peace.webp',
+    'i-plunder': 'art/ui/plunder.webp',
+    'i-scout': 'art/ui/scout.webp',
+    'i-revenge': 'art/ui/revenge.webp',
+    'i-horn': 'art/ui/horn.webp',
   },
   // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
   // that frames sheets
   // 3D models (models3d.js), made with Higgsfield from each painting: heroes (h-), companions (p-), sand dwellers (v-),
-  // the beasts of the Dunes (b-), the camel (a-) and the Scorpion raiders (r-)
+  // the beasts of the Dunes (b-), the camel (a-), the Scorpion raiders (r-) and the rival keeps' fort (s-)
   model: {
     'h-zahra': 'models/heroes/zahra.glb',
     'h-tariq': 'models/heroes/tariq.glb',
@@ -245,6 +252,7 @@ window.RK_ART = {
     'b-vulture': 'models/animals/vulture.glb',
     'a-camel': 'models/animals/camel.glb',
     'r-raider': 'models/foes/raider.glb',
+    's-fort': 'models/foes/fort.glb',
   },
   ui: {
     btn: 'art/ui/btn-ember.webp',

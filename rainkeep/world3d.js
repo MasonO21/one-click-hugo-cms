@@ -122,6 +122,31 @@
     g.rotation.y = 0.6;
     return g;
   }
+  // a rival keep (rivals.js): the painted fort once it has loaded, a drawn one until then; its banner in the
+  // rival's colour, and a turquoise dome while it holds a Peace Shield
+  function rivalModel(b, t) {
+    const r = KH.rivals.list()[b.id], col = r ? r.color : '#b5452a';
+    const g = new THREE.Group();
+    g.add(blob(1.8));
+    const fort = A.models && A.models.ready('s-fort') ? A.models.instance('s-fort', 3.2) : null;
+    if (fort) { fort.rotation.y = -0.5; fort.userData.dyn = true; g.add(fort); } else {
+      const wall = A.mat('#c9a06a', { flat: true }), cap = A.mat('#e0bd86', { flat: true }), dome = A.mat('#2fb8a8', { flat: true, r: 0.4 });
+      g.add(A.box(2.4, 0.7, 0.25, wall, 0, 0, 1.1), A.box(2.4, 0.7, 0.25, wall, 0, 0, -1.1), A.box(0.25, 0.7, 2.4, wall, 1.1, 0, 0), A.box(0.25, 0.7, 2.4, wall, -1.1, 0, 0));
+      for (const [x, z] of [[1.1, 1.1], [-1.1, 1.1], [1.1, -1.1], [-1.1, -1.1]]) { g.add(A.cyl(0.26, 0.3, 1.1, cap, x, 0, z, 8)); g.add(A.cone(0.32, 0.45, dome, x, 1.1, z, 8)); }
+      g.add(A.box(1.0, 0.8, 1.0, cap, 0, 0, 0), A.sph(0.45, dome, 0, 0.8, 0, 10));
+    }
+    const flag = A.banner(col, 1.9, 0.6, 0.38);
+    flag.position.set(0.7, 0.2, -0.7);
+    g.add(flag);
+    g.userData.banner = flag;
+    if (t.shield) {
+      const sh = new THREE.Mesh(new THREE.SphereGeometry(2.1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#46d6d0', emissive: '#1f9a8e', emissiveIntensity: 0.6, transparent: true, opacity: 0.28, depthWrite: false }));
+      sh.userData.dyn = true;
+      g.add(sh);
+      g.userData.glow = sh.material;
+    }
+    return g;
+  }
   // a Saltborn Hive (Act II): white crystal spires around a dark mouth
   function hiveModel(t) {
     const g = new THREE.Group();
@@ -334,7 +359,7 @@
       return img;
     };
     icons.stone = mk('i-stone'); icons.food = mk('i-food'); icons.water = mk('i-water'); icons.copper = mk('i-copper'); icons.sunsteel = mk('i-sunsteel');
-    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.hive = mk('i-spire', '#eaf6ff');
+    icons.paw = mk('i-paw', '#ffd7c8'); icons.ruin = mk('i-ruin', '#e7f6ff'); icons.flag = mk('i-flag', '#ffb3a1'); icons.hive = mk('i-spire', '#eaf6ff'); icons.fort = mk('i-fort', '#ffd27a');
   }
 
   // ======================================================================
@@ -345,13 +370,14 @@
       const b = KH.world.base(x, y);
       if (b.kind === 'empty' || b.kind === 'keep') continue;
       const t = KH.world.tile(x, y);
-      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}${glbReady(b) ? 'm' : ''}`;
+      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}${glbReady(b) ? 'm' : ''}${t.shield ? 'S' : ''}${b.kind === 'rival' && A.models && A.models.want(['s-fort']) ? 'F' : ''}`;
       let e = tiles[b.k];
       if (e && e.key === key) continue;
       if (e) scene.remove(e.g);
       let g;
       if (b.kind === 'node') g = nodeModel(b);
       else if (b.kind === 'beast') g = beastModel(b);
+      else if (b.kind === 'rival') g = rivalModel(b, t);
       else if (b.kind === 'camp') g = b.salt ? hiveModel(b) : campModel();
       else g = ruinModel(b);
       if (t.gone) {
@@ -527,11 +553,12 @@
       const b = KH.world.base(x, y);
       if (b.kind === 'empty' || b.kind === 'keep' || !KH.world.visible(x, y)) continue;
       const tt = KH.world.tile(x, y);
-      const [sx, sy, sz] = screen(wx(x), hAt(wx(x), wz(y)) + (b.kind === 'ruin' ? 2.9 : b.kind === 'node' && b.res === 'food' ? 3.2 : 2.3), wz(y));
+      const [sx, sy, sz] = screen(wx(x), hAt(wx(x), wz(y)) + (b.kind === 'rival' ? 3.8 : b.kind === 'ruin' ? 2.9 : b.kind === 'node' && b.res === 'food' ? 3.2 : 2.3), wz(y));
       if (sz > 1 || sx < -30 || sy < -30 || sx > VW + 30 || sy > VH + 30) continue;
       if (b.kind === 'node') badge(sx, sy, icons[b.res], tt.lvl, '#ffcf6e', tt.gone);
       else if (b.kind === 'beast') badge(sx, sy, icons.paw, tt.lvl, '#ff8a7a', tt.gone);
       else if (b.kind === 'camp') badge(sx, sy, b.salt ? icons.hive : icons.flag, tt.lvl, b.salt ? '#9fd8ff' : '#ff5e4e', tt.gone);
+      else if (b.kind === 'rival') badge(sx, sy, icons.fort, tt.lvl, tt.shield ? '#7ff0e0' : '#ff9a3c', false);
       else badge(sx, sy, icons.ruin, null, '#8fe4ff', tt.gone);
       if (busy.has(b.k)) { g.strokeStyle = 'rgba(255,207,110,.95)'; g.lineWidth = 2; g.setLineDash([3, 3]); ell(sx, sy, 17, 17); g.stroke(); g.setLineDash([]); }
     }

@@ -975,3 +975,15 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .road-wares { border-color: var(--brass); }
 .road-ware { flex: 1 1 30%; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { .road-token.hop, .road-die.rolling { animation: none; } }
+
+/* ---------- Rival Keeps (rivals.js) ---------- */
+.rival-head { align-items: center; gap: 10px; }
+.rival-flag { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px; box-shadow: inset 0 0 0 2px #0004, 0 2px 6px #0007; }
+.rival-flag .ic { width: 34px; height: 34px; }
+.rival-board .rival-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; width: 100%; padding: 6px 10px; border: 1px solid transparent; border-radius: 8px; background: #150f22; color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.rival-board .rival-row > span:first-child { color: var(--rime); font-weight: 700; }
+.rival-board .rival-row:hover, .rival-board .rival-row:focus-visible { border-color: var(--line-2); }
+.rival-board .rival-row b { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rival-board .rival-row .ic { width: 16px; height: 16px; }
+.rival-board .rival-row.hazed { opacity: .55; cursor: default; }
+.rival-dot { display: inline-block; width: 10px; height: 10px; flex: none; border-radius: 50%; box-shadow: 0 0 0 1px #0006; }

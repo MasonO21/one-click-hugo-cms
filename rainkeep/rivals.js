@@ -200,7 +200,9 @@
     const P = S.rivals;
     const mine = KH.statPower(KH.teamStats(null));
     const rows = P.list.map((r, i) => ({ r, i, p: KH.statPower(foeOf(r)) })).concat([{ me: true, p: mine }]).sort((a, b) => b.p - a.p);
+    // keeps still out in the dust haze are known only by name until the Rainwyrm's mist reaches them
     const board = rows.map((x, n) => x.me ? `<div class="you"><span>${n + 1}</span><b>Your keep</b><span>${fmt(x.p)}</span></div>`
+      : !KH.world.visible(x.r.x, x.r.y) ? `<div class="rival-row hazed"><span>${n + 1}</span><b><i class="rival-dot" style="background:${x.r.color}"></i>${esc(x.r.name)}</b><span class="muted small">in the haze</span></div>`
       : `<button class="rival-row" data-act="rivalgo" data-arg="${x.r.k}"><span>${n + 1}</span><b><i class="rival-dot" style="background:${x.r.color}"></i>${esc(x.r.name)}${shielded(x.r) ? ` ${icon('i-peace')}` : ''}${revenge(x.r) ? ` ${icon('i-revenge')}` : ''}</b><span>${scouted(x.r) ? fmt(x.p) : '?'}</span></button>`).join('');
     const myRank = rows.findIndex((x) => x.me) + 1;
     S.stats.rivalRank = Math.min(S.stats.rivalRank || 99, myRank);
@@ -211,7 +213,7 @@
     return {
       title: 'Rival Keeps', lvl: `Rank ${myRank}`,
       body: `${intro}${strike}<div class="section-label">Standings on the Dunes · by strength</div><div class="board rival-board">${board}</div>
-        <p class="muted small">Tap a keep to find it on the Dunes. Scout a keep to see its exact strength.</p>${peaceCard}
+        <p class="muted small">Tap a keep to find it on the Dunes, and scout it to see its exact strength. Keeps in the dust haze come into reach as your Rainwyrm grows.</p>${peaceCard}
         <div class="muted small">Raids won ${S.stats.rivalWins} · lost ${S.stats.rivalLosses} · revenge taken ${S.stats.revenges} · warbands at your gate ${S.stats.struck}</div>`,
     };
   };

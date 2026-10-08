@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.10.0',
+  version: '4.11.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -943,6 +943,7 @@ const DATA = {
     { id: 'refine', text: 'Refine Tideglass twice', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 20 },
     { id: 'companion', text: "Use a companion's skill", n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'road', text: 'Roll the Road Dice 5 times', n: 5, pts: 10, show: (S) => S.lv.hall > 0 },
+    { id: 'rival', text: 'March on a rival keep', n: 1, pts: 15, show: (S) => S.lv.wyrm >= 8 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1, dice: 1 }],
@@ -1221,6 +1222,29 @@ const DATA = {
     bossDice: 2, beastDice: 0.05, warLap: 50,
   },
 
+  // ---------- Rival Keeps (rivals.js): other keeps on the Dunes to scout, raid, and fear ----------
+  rivals: {
+    unlock: 8, // Rainwyrm level: your scouts find them
+    count: 8,
+    ring: [3.6, 9.4], // how far out they stand, in tiles
+    // each rival's strength as a share of your expedition stage, weakest (nearest) first
+    ranks: [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.35, 1.5],
+    wall: 1.15, // they fight from behind walls
+    stash: 4, // quarter-crates of each resource in a full storehouse, times the rival's strength
+    refill: 5400, // a raided storehouse fills back up over 90 minutes of keep time
+    plunder: 0.35, // the share of its storehouse a win carries home
+    shield: 5400, // a rival you beat raises a Peace Shield for 90 minutes
+    scout: { food: 0.25 }, scoutFor: 1800, // what a scouting report costs, and how long it holds
+    loss: 0.2, lossWin: 0.04, // troops lost in a failed attack, and in a won one
+    strike: { chance: 0.5, after: [900, 2100] }, // the chance a raided rival strikes back, and when
+    strikeMult: 0.95, // its warband against your gate, as a share of its keep's strength
+    revenge: { secs: 3600, atk: 0.2 }, // strike back within the hour for +20% attack
+    peace: { secs: 7200, starglass: 150 }, // your own Peace Shield: no warband strikes while it holds
+    win: { starglass: 20, journals: 1.5 }, // on top of the plunder (times the rival's strength)
+    warPts: 60, // Oasis Wars points per win
+    colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
+  },
+
   cloudRun: {
     unlock: 5, // Rainwyrm level (a Drake can fly)
     perDay: 3, // flights a day
@@ -1330,6 +1354,9 @@ const DATA = {
     { id: 'lap5', text: 'Travel 5 laps of the Spice Road', stat: 'laps', n: 5, reward: { lucky: 1 } },
     { id: 'lap30', text: 'Travel 30 laps of the Spice Road', stat: 'laps', n: 30, reward: { lucky: 3, starglass: 300 } },
     { id: 'bandit25', text: 'Drive off 25 bandit bands on the Spice Road', stat: 'bandits', n: 25, reward: { beacons: 3 } },
+    { id: 'rival10', text: 'Win 10 raids on rival keeps', stat: 'rivalWins', n: 10, reward: { starglass: 200 } },
+    { id: 'rivalAll', text: 'Beat every rival keep at least once', stat: 'rivalsBeaten', n: 8, reward: { shard_epic: 1 } },
+    { id: 'revenge3', text: 'Take revenge on a rival 3 times', stat: 'revenges', n: 3, reward: { beacons: 3 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------
