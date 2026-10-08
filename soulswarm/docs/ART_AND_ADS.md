@@ -320,3 +320,48 @@ It is one draw call, with every flake moved in the vertex shader and wrapped aro
 1. Paint its floor with the same prompt and add a line to `floors.sh`.
 2. Make three or four props (concept, then 3D) and add them to `props.sh`.
 3. Add its `FLOORS`, `PROPS` and `WEATHER` entries.
+
+## 6. Painted 3D foes (`src/assets/foes/`)
+
+The five horde foes, the Soul Thief and the Hollow King are textured 3D models made from their Bestiary paintings on 2026-10-08. Before, every foe was a low-poly procedural model in flat colours. The legion's risen ghosts take the same shapes. The procedural models still stand in while the art loads, and for the horde and ghosts on the Low quality setting.
+
+**How they were made:**
+1. **Concept.** Nano Banana Pro repainted each foe from its Bestiary painting as a single full-body figure on plain grey, without smoke, sparks or glow (2 variants each, 2 credits apiece). It stands in a neutral, walk-ready stance with its limbs apart, so the shader can swing them. The Brute was repainted with his fists down rather than raised, and the Witch's robe falls to the ground.
+2. **Clean-up.** The Ghoul, Thief and Brute concepts kept some background (ice, smoke, dust), so Higgsfield's background remover cut them out first. The Hollow King's storm took his crown with it in the cutout, so he was repainted on plain grey instead, with his concept as the reference.
+3. **3D.** Tripo H3.1 image-to-3D turned each one into a model of about 4,000 faces (the King 10,000) with a detailed texture, at 12 credits each.
+4. **Optimise.** `scripts/enemies.sh` processes each model:
+   - simplifies it to its budget: Husk 1,576 triangles, Ghoul 1,784, Bloater 1,882, Witch 2,176, Brute 2,398, Thief 2,994, the King 6,668;
+   - shrinks the texture to a 512 px WebP beside the model (the King's to 1,024);
+   - quantizes the geometry.
+
+   The seven come to 0.78 MB.
+
+**In game** (`engine/foemodels.js`):
+- **Loading.** The models load behind the home screen at boot, so the first run's horde is painted from its first frame. Each is turned from the generator's +X to the game's +Z, centred, stood on the ground and scaled to about the procedural foe's height. The game keeps the procedural foe's hit radius.
+- **Walk.** The models are static, so a horde of hundreds stays one instanced draw call per type, and the character shader walks them (`USE_GAIT`):
+  - each leg swings about its hip, and each arm about its shoulder opposite to the leg on its side;
+  - the body dips as the feet pass and sways over the planted foot;
+  - a robe's hem flutters, and floaters (the Witch, the King) rise and fall.
+
+  `FOES` sets each foe's hip and shoulder heights and its pace: the Ghoul and the Thief scurry, the Brute plods. The pivots' depth is found from the mesh, so a hunched Ghoul swings about its own hips. Stunned foes stand still. A Ghoul's crouch and lunge and a Brute's rear-back still squash and tilt the whole model.
+- **Look.** The foes are dark painted shapes lit by the Shepherd's lantern, with a faint rim in the chapter's foe colour. Bright saturated paint glows (eyes, ember cracks, the Witch's fireball, the Bloater's belly), tinted toward the chapter's foe colour, or gold on an elite.
+- **Ghosts.** The legion's Runner, Bulwark, Soul Witch and Soul Bomb are spectral ghosts of the painted Ghoul, Brute, Witch and Bloater. The paint's light and dark carry through the ghost's body, and its glowing paint burns white-hot.
+- **The Hollow King and the Soul Thief** are painted too. The King's crown, eyes and heart flare as his phases advance.
+- **GPU cost.** A late-game screen of 300 foes and 100 ghosts draws about 0.75 million triangles, about four times the procedural horde, in the same number of draw calls. On the Low quality setting the horde and ghosts stay procedural. So do they on Auto, from the next run, once a device can't hold 45 fps.
+
+| Foe | Concept job | 3D job |
+|---|---|---|
+| `husk` | `db081956-dc2e-40cd-ac43-2d70d7652e78` | `4f01dd92-d720-4eb4-8186-fc3cfc3bf199` |
+| `ghoul` | `66a188e3-5809-430e-ae96-1dfc979de304` (cut out: `d7767e67-3da6-49d0-8733-60bebe4c08f4`) | `1eef240b-3ee5-48c8-852d-bbc4a430acab` |
+| `brute` | `97d0ec49-cdef-4f27-98eb-befb5acc4770` (cut out: `e4c0dfd5-d8c8-4abe-a4a1-62e5924be964`) | `07008630-f83a-4afd-9c43-bdf0cc98a5c5` |
+| `witch` | `8745a95c-dfd4-44d3-b314-baea4bf6b31b` | `ec3bee03-3c4a-4c11-99d5-d5d9d333cf8e` |
+| `bloater` | `61676030-d027-40b7-9dd6-7e559667e0a5` | `94db1130-c28e-4009-8e51-7e0f7c5246cd` |
+| `thief` | `faa52b73-552e-4de4-89b6-41343d4cbf53` (cut out: `05f1c7e7-d67c-438e-9a4d-3f6b5914f859`) | `4b81a3bb-47f0-49a4-a2c7-66ef8720c14c` |
+| `gravemaw` | `eff3c61d-ed13-42f9-9482-549a3b327833`, repainted on grey: `22767f31-f876-4e4f-8029-a49c8e660a30` | `5d899069-cf86-45e5-a6fd-7143287ef14c` |
+
+**Cost:** 121 credits: 15 concepts (30), 4 background cutouts (7) and 7 models (84).
+
+**A new foe:**
+1. Paint the concept from its Bestiary painting with the same prompt, and cut out any background.
+2. Run it through image-to-3D and add a line to `enemies.sh` with its budget.
+3. Add a `FOES` entry (height, glow, gait). Render a stride with the side and front views to tune the hip and shoulder heights and the swings.

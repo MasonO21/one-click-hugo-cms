@@ -722,8 +722,7 @@ export class Run {
 
     // shared lighting for characters
     const plx = P.x, plz = P.z;
-    this.enemies.mat.uniforms.uPLPos.value.set(plx, 1.6, plz);
-    this.enemies.mat.uniforms.uPLColor.value.copy(this.heroColorObj).multiplyScalar(0.45);
+    this.enemies.setLight(plx, plz, this.heroColorObj);
     this.world.propMat.uniforms.uPLPos.value.set(plx, 1.6, plz);
     this.world.propMat.uniforms.uPLColor.value.copy(this.heroColorObj);
     this.world.propMat.uniforms.uPLRadius.value = 7;

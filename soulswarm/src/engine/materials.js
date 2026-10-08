@@ -23,6 +23,20 @@ uniform float uFlash;
 uniform vec2 uAnim;
 #endif
 uniform float uTime;
+#ifdef USE_GAIT
+// a painted foe's walk (foemodels.js FOES): A = (hip height, hip z, leg swing, strides per beat),
+// B = (shoulder height, shoulder z, arm swing, |x| where the arms begin), C = (bob, sway, hover, hem flutter)
+uniform vec4 uGaitA;
+uniform vec4 uGaitB;
+uniform vec4 uGaitC;
+/** Turns the point (and its normal) about the axis through (y, z) = pivot along X by angle a. */
+void swingX(inout vec3 p, inout vec3 n, vec2 pivot, float a) {
+  float c = cos(a), s = sin(a);
+  vec2 d = p.yz - pivot;
+  p.yz = pivot + vec2(d.x * c - d.y * s, d.x * s + d.y * c);
+  n.yz = vec2(n.y * c - n.z * s, n.y * s + n.z * c);
+}
+#endif
 varying vec3 vN;
 varying vec3 vCol;
 varying float vEmit;
@@ -46,12 +60,29 @@ void main() {
   #else
   vec3 tint = uTint; float flash = uFlash; vec2 anim = uAnim;
   #endif
+  #ifdef USE_GAIT
+  // a painted foe stands in a neutral pose: each leg swings about its hip and each arm about its shoulder, opposite
+  // to the leg on its side; the body dips as the feet pass, sways over the planted foot, and a robe's hem flutters.
+  // anim.x = the foe's own phase, anim.y = how hard it walks (0 when stunned)
+  float st = uTime * 6.0 * uGaitA.w + anim.x, sw = sin(st), g = anim.y;
+  float side = clamp(p.x / 0.08, -1.0, 1.0); // left -1 .. right +1, blended across the crotch so nothing tears
+  if (p.y < uGaitA.x) swingX(p, objectNormal, uGaitA.xy, sw * side * uGaitA.z * g);
+  else {
+    float arm = smoothstep(uGaitB.w, uGaitB.w + 0.12, abs(p.x));
+    if (arm > 0.0) swingX(p, objectNormal, uGaitB.xy, -sw * sign(p.x) * uGaitB.z * g * arm);
+  }
+  float hgt = clamp(p.y, 0.0, 4.0);
+  float hem = 1.0 - smoothstep(0.0, uGaitA.x, p.y);
+  p.y += ((1.0 - abs(sw)) * uGaitC.x + uGaitC.z * (0.5 + 0.5 * sin(st * 0.5))) * g;
+  p.x += sw * uGaitC.y * hgt * g + sin(st * 1.7 + p.y * 5.0 + p.z * 3.0) * uGaitC.w * hem * g;
+  #else
   // procedural waddle: bob + sway, stronger toward the top of the model
   float t = uTime * 8.0 + anim.x;
   float hgt = clamp(p.y, 0.0, 3.0);
   p.y += abs(sin(t)) * 0.07 * anim.y;
   p.x += sin(t) * 0.07 * hgt * anim.y;
   p.z += cos(t * 0.5) * 0.03 * hgt * anim.y;
+  #endif
   #ifdef USE_INSTANCING
   mat4 m = modelMatrix * instanceMatrix;
   #else
@@ -87,6 +118,8 @@ varying vec3 vWorld;
 #ifdef USE_HEROMAP
 uniform sampler2D uMap;
 uniform float uGlow;
+uniform float uGlowTint; // a foe's glowing paint takes its instance tint (the chapter's foe colour, gold for elites)
+uniform float uRimK;
 varying vec2 vUv;
 #endif
 #ifdef USE_SIGHT
@@ -115,7 +148,7 @@ void main() {
   #ifdef USE_HEROMAP
   // the painted colours lead: the hero's light and rim only accent them
   lit += base * uPLColor * att * att * (0.35 + max(dot(N, Lp / dp), 0.0)) * 0.9;
-  lit += uRim * rim * 0.3;
+  lit += uRim * rim * uRimK;
   #else
   lit += base * uPLColor * att * att * (0.35 + max(dot(N, Lp / dp), 0.0)) * 2.2;
   lit += uRim * rim * 0.85;
@@ -127,7 +160,8 @@ void main() {
   #ifdef USE_HEROMAP
   // bright, saturated paint (eyes, flames, glowing blades) glows into the bloom
   float mx = max(base.r, max(base.g, base.b)), mn = min(base.r, min(base.g, base.b));
-  col += base * smoothstep(0.3, 0.75, mx) * smoothstep(0.45, 0.8, (mx - mn) / max(mx, 0.001)) * uGlow;
+  float gm = smoothstep(0.3, 0.75, mx) * smoothstep(0.45, 0.8, (mx - mn) / max(mx, 0.001));
+  col += mix(base, vTint * mx, uGlowTint) * gm * uGlow;
   #endif
   col += vFlash * vec3(2.2, 2.1, 2.0);
   #ifdef USE_SIGHT
@@ -153,11 +187,16 @@ export function makeCharMaterial(opts = {}) {
       uAnim: { value: new THREE.Vector2(0, opts.anim ?? 0) },
       uMap: { value: opts.map || null },
       uGlow: { value: opts.glow ?? 2 },
+      uGlowTint: { value: opts.glowTint ?? 0 },
+      uRimK: { value: opts.rimK ?? 0.3 },
+      uGaitA: { value: new THREE.Vector4() },
+      uGaitB: { value: new THREE.Vector4() },
+      uGaitC: { value: new THREE.Vector4() },
       uSightFog: { value: new THREE.Color(0) },
       uSightCenter: { value: new THREE.Vector3() },
       uSightR: { value: 26 },
     },
-    defines: { ...(opts.map ? { USE_HEROMAP: '' } : {}), ...(opts.sight ? { USE_SIGHT: '' } : {}) },
+    defines: { ...(opts.map ? { USE_HEROMAP: '' } : {}), ...(opts.sight ? { USE_SIGHT: '' } : {}), ...(opts.gait ? { USE_GAIT: '' } : {}) },
     vertexShader: charVert,
     fragmentShader: charFrag,
   });
@@ -181,8 +220,12 @@ export function addInstanceAttrs(mesh, max) {
 // the body and a lower body that narrows into a tail and dissolves (dithered) toward the ground.
 // Opaque on purpose: additive ghosts wash out to white where the model's parts overlap. iAnim.x = sway phase.
 const spectralVert = /* glsl */`
+#ifdef USE_HEROMAP
+varying vec2 vUv;
+#else
 attribute vec3 aCol;
 attribute float aEmit;
+#endif
 #ifdef USE_INSTANCING
 attribute vec3 iTint;
 attribute float iFlash;
@@ -221,12 +264,23 @@ void main() {
   vec4 wp = m * vec4(p, 1.0);
   vN = normalize(mat3(m) * normal);
   vV = cameraPosition - wp.xyz;
-  vCol = aCol; vEmit = aEmit; vTint = tint; vFlash = flash; vH = position.y; vGold = anim.y;
+  #ifdef USE_HEROMAP
+  vUv = uv; vCol = vec3(1.0); vEmit = 0.0;
+  #else
+  vCol = aCol; vEmit = aEmit;
+  #endif
+  vTint = tint; vFlash = flash; vH = position.y; vGold = anim.y;
   vWave = position.y * 5.0 - uTime * 4.0 + anim.x;
   gl_Position = projectionMatrix * viewMatrix * wp;
 }`;
 
 const spectralFrag = /* glsl */`
+#ifdef USE_HEROMAP
+// a painted foe's ghost: the paint's light and dark carry its detail through the body, and its glowing paint (eyes,
+// cracks, a fireball) burns white-hot
+uniform sampler2D uMap;
+varying vec2 vUv;
+#endif
 uniform float uBody;
 uniform float uRim;
 uniform float uEmit;
@@ -251,14 +305,22 @@ void main() {
   float rim = pow(fr, 2.5);
   // a hint of the source model's shading keeps heads, limbs and weapons readable
   float shade = 0.5 + 0.5 * (N.y * 0.5 + 0.5);
+  #ifdef USE_HEROMAP
+  vec3 paint = texture2D(uMap, vUv).rgb;
+  float mx = max(paint.r, max(paint.g, paint.b)), mn = min(paint.r, min(paint.g, paint.b));
+  float alb = clamp(dot(paint, vec3(0.3, 0.55, 0.15)) * 2.6, 0.3, 1.0);
+  float emit = smoothstep(0.3, 0.75, mx) * smoothstep(0.45, 0.8, (mx - mn) / max(mx, 0.001));
+  #else
   float alb = clamp(dot(vCol, vec3(0.3, 0.55, 0.15)) * 8.0, 0.45, 1.0);
+  float emit = vEmit;
+  #endif
   float wave = 0.82 + 0.18 * sin(vWave);
   // a deeper, more saturated body under a hot rim reads as neon at phone size; champions get a gold-tinged rim
   vec3 deep = pow(max(vTint, vec3(0.0)), vec3(1.6));
   vec3 rimCol = mix(vTint, uGold, vGold * 0.45);
   vec3 body = deep * uBody * shade * alb * wave + rimCol * rim * uRim + vec3(pow(fr, 8.0) * 0.15);
   vec3 hot = mix(vTint * 0.6 + vec3(0.55), uGold * 1.25, vGold) * uEmit;
-  vec3 col = mix(body, hot, min(vEmit, 1.0));
+  vec3 col = mix(body, hot, min(emit, 1.0));
   col += vFlash * vec3(1.6, 1.7, 1.9);
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -274,7 +336,9 @@ export function makeSpectralMaterial(opts = {}) {
       uTint: { value: new THREE.Color(opts.tint ?? 0x4ef2ff) },
       uFlash: { value: 0 },
       uAnim: { value: new THREE.Vector2(0, 0) },
+      uMap: { value: opts.map || null },
     },
+    defines: opts.map ? { USE_HEROMAP: '' } : {},
     vertexShader: spectralVert,
     fragmentShader: spectralFrag,
   });

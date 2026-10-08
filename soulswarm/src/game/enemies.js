@@ -6,6 +6,7 @@ import * as DATA from './data.js';
 import { ENEMIES, ELITE, BOSS } from './data.js';
 import { makeCharMaterial, addInstanceAttrs } from '../engine/materials.js';
 import { enemyGeometry } from '../engine/models.js';
+import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
 import { hdr } from '../engine/particles.js';
 
 const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
@@ -42,7 +43,10 @@ export class Enemies {
     this.pool = [];
     this.head = new Int32Array(GRID * GRID).fill(-1); // -1 = empty cell (0 would be a valid index)
     this.next = new Int32Array(2048);
-    this.mat = makeCharMaterial({ rim: new THREE.Color(run.chapter.enemy).multiplyScalar(0.55).getHex(), emit: 2.8, anim: 1, ambient: 0x3a3236, key: 0x9a9098, plRadius: 6 });
+    this.time = 0;
+    this.rim = new THREE.Color(run.chapter.enemy).multiplyScalar(0.55).getHex();
+    this.mat = makeCharMaterial({ rim: this.rim, emit: 2.8, anim: 1, ambient: 0x3a3236, key: 0x9a9098, plRadius: 6 });
+    this.mats = [this.mat];
     this.meshes = {};
     for (const t of TYPES) {
       const mesh = new THREE.InstancedMesh(enemyGeometry(t), this.mat, MAX_PER[t]);
@@ -50,14 +54,19 @@ export class Enemies {
       mesh.frustumCulled = false;
       const attrs = addInstanceAttrs(mesh, MAX_PER[t]);
       run.scene.add(mesh);
-      this.meshes[t] = { mesh, attrs, n: 0 };
+      this.meshes[t] = { mesh, attrs, n: 0, head: HEAD[t], painted: false };
+      // the painted model replaces the procedural one as soon as it is ready (at once when it was preloaded); the Low
+      // quality setting keeps the light procedural horde (a painted foe is ~1,600-2,400 triangles, hundreds at once)
+      if (run.engine.qName === 'low') continue;
+      const m = foeModel(t);
+      if (m) this.usePainted(t, m);
+      else loadFoeModel(t).then((pm) => { if (pm && !this.disposed) this.usePainted(t, pm); });
     }
     this.color = new THREE.Color(run.chapter.enemy);
     this.eliteColor = new THREE.Color(0xffd04a);
     this.burstCol = hdr(run.chapter.enemy, 3.2);
     this.eliteBurst = hdr(0xffd04a, 3.5);
     this.counts = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, boss: 0 };
-    this.time = 0;
     this.uidSeq = 0;
     this.crowns = new THREE.InstancedMesh(crownGeometry(), new THREE.MeshBasicMaterial({ color: new THREE.Color(ELITE.crown).multiplyScalar(2.6) }), MAX_CROWNS);
     this.crowns.count = 0; this.crowns.frustumCulled = false;
@@ -69,6 +78,28 @@ export class Enemies {
   }
 
   get count() { return this.active.length; }
+
+  /** The Shepherd's lantern lights every foe near it (procedural and painted materials alike). */
+  setLight(x, z, color) {
+    for (const m of this.mats) { m.uniforms.uPLPos.value.set(x, 1.6, z); m.uniforms.uPLColor.value.copy(color).multiplyScalar(0.45); }
+  }
+
+  /** Swaps a type's procedural mesh for its painted model: dark painted shapes rim-lit in the chapter's foe colour,
+   *  whose glowing paint (eyes, ember cracks) burns in that colour too (gold on elites), walked by the shader. */
+  usePainted(t, m) {
+    const M = this.meshes[t];
+    const mat = makeCharMaterial({ map: m.map, glow: m.glow, glowTint: 0.65, rim: this.rim, rimK: 0.12, emit: 2.8, anim: 1, gait: true,
+      ambient: 0x9a96a4, key: 0xb4b0bc, plRadius: 6 });
+    setGait(mat, m);
+    mat.uniforms.uTime.value = this.time;
+    M.mesh.geometry.dispose();
+    M.mesh.geometry = m.geometry.clone();
+    M.mesh.material = mat;
+    M.attrs = addInstanceAttrs(M.mesh, MAX_PER[t]);
+    M.head = m.h * 0.92;
+    M.painted = true;
+    this.mats.push(mat);
+  }
 
   spawn(type, x, z, { elite = false, hpMul = 1, dmgMul = 1 } = {}) {
     if (type !== 'boss' && this.counts[type] >= MAX_PER[type]) return null;
@@ -468,12 +499,12 @@ export class Enemies {
       M.attrs.flash.setX(i, e.state === 1 && (e.type === 'brute' || e.type === 'ghoul') ? Math.min(e.flash, 0.5) : e.flash);
       M.attrs.anim.setXY(i, e.phase, e.stunT > 0 ? 0 : e.type === 'brute' ? 0.6 : 1); // stunned: the waddle stops
       if (e.stunT > 0) { // and three daze motes circle its head
-        const y = HEAD[e.type] * sy + 0.3, a = this.time * 7 + e.phase, rr = 0.34 * e.scale;
+        const y = M.head * sy + 0.3, a = this.time * 7 + e.phase, rr = 0.34 * e.scale;
         for (let k = 0; k < 3; k++) { const b = a + k * 2.094; g.add(e.x + Math.cos(b) * rr, y + Math.sin(b * 2) * 0.06, e.z + Math.sin(b) * rr, 0.42, 1.5, 1.35, 2.3, 0.9); }
       }
       // elite crown: floats over the head, tilted toward the camera so the spikes read in silhouette
       if (e.elite && nc < MAX_CROWNS) {
-        const y = HEAD[e.type] * sy + 0.55 + Math.sin(this.time * 3 + e.phase) * 0.07, cs = 1.3 * pop;
+        const y = M.head * sy + 0.55 + Math.sin(this.time * 3 + e.phase) * 0.07, cs = 1.3 * pop;
         _p.set(e.x, y, e.z);
         _q.setFromAxisAngle(_xAxis, -0.75).multiply(_q2.setFromAxisAngle(_up, this.time * 1.6 + e.phase));
         _s.set(cs, cs, cs);
@@ -492,14 +523,15 @@ export class Enemies {
     }
     this.crowns.count = nc;
     if (nc) this.crowns.instanceMatrix.needsUpdate = true;
-    this.mat.uniforms.uTime.value = this.time;
+    for (const m of this.mats) m.uniforms.uTime.value = this.time;
     this.run.projectiles.renderLobs();
     this.run.hazards.render();
   }
 
   dispose() {
+    this.disposed = true;
     for (const t of TYPES) this.meshes[t].mesh.geometry.dispose();
-    this.mat.dispose();
+    for (const m of this.mats) m.dispose();
     this.crowns.geometry.dispose(); this.crowns.material.dispose();
   }
 }

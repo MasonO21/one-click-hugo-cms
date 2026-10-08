@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { BASE, MINIONS, ENEMIES, OVERFLOW } from './data.js';
 import { wispGeometry, enemyGeometry } from '../engine/models.js';
+import { foeModel, loadFoeModel } from '../engine/foemodels.js';
 import { makeSpectralMaterial, addInstanceAttrs } from '../engine/materials.js';
 
 const TAU = Math.PI * 2;
@@ -49,7 +50,9 @@ export class Legion {
     this.mesh.setColorAt(0, new THREE.Color());
     this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     run.scene.add(this.mesh);
+    this.t = 0;
     this.ghostMat = makeSpectralMaterial();
+    this.ghostMats = [this.ghostMat];
     this.ghosts = {};
     for (const k of GHOST_KINDS) {
       const G = GHOSTS[k], mesh = new THREE.InstancedMesh(enemyGeometry(G.model), this.ghostMat, G.max);
@@ -57,10 +60,14 @@ export class Legion {
       const attrs = addInstanceAttrs(mesh, G.max);
       this.ghosts[k] = { mesh, attrs, tint: attrs.tint.array, flash: attrs.flash.array, anim: attrs.anim.array, n: 0, max: G.max };
       run.scene.add(mesh);
+      // a ghost of the painted foe once its model is ready (not on Low quality, like the horde)
+      if (run.engine.qName === 'low') continue;
+      const m = foeModel(G.model);
+      if (m) this.usePainted(k, m);
+      else loadFoeModel(G.model).then((pm) => { if (pm && !this.disposed) this.usePainted(k, pm); });
     }
     this.core = new THREE.Color(0x4ef2ff);
     this.setColor(0x4ef2ff);
-    this.t = 0;
     this.slotSeq = 0;
     this.uidSeq = 0;
     this.raiseSfxT = 0; this.orbSfxT = 0; this.blastSfxT = 0;
@@ -89,6 +96,18 @@ export class Legion {
       HIT.kx = e.x - this._bx; HIT.kz = e.z - this._bz;
       this.run.enemies.damage(e, this._bdmg, HIT);
     };
+  }
+
+  /** A variant's ghost takes the painted foe's shape, and its paint shows through the spectral body. */
+  usePainted(k, m) {
+    const V = this.ghosts[k], mat = makeSpectralMaterial({ map: m.map });
+    mat.uniforms.uTime.value = this.t;
+    V.mesh.geometry.dispose();
+    V.mesh.geometry = m.geometry.clone();
+    V.mesh.material = mat;
+    V.attrs = addInstanceAttrs(V.mesh, V.max);
+    V.tint = V.attrs.tint.array; V.flash = V.attrs.flash.array; V.anim = V.attrs.anim.array;
+    this.ghostMats.push(mat);
   }
 
   setColor(hex) {
@@ -545,7 +564,7 @@ export class Legion {
       V.mesh.visible = V.n > 0;
       if (V.n) { V.mesh.instanceMatrix.needsUpdate = true; V.attrs.tint.needsUpdate = true; V.attrs.flash.needsUpdate = true; V.attrs.anim.needsUpdate = true; }
     }
-    this.ghostMat.uniforms.uTime.value = t;
+    for (const m of this.ghostMats) m.uniforms.uTime.value = t;
     // Soul Witch orbs: hot core inside a legion-coloured halo
     for (let k = 0; k < this.orbs.length; k++) {
       const o = this.orbs[k];
@@ -557,7 +576,8 @@ export class Legion {
 
   dispose() {
     this.mesh.geometry.dispose(); this.mesh.material.dispose();
+    this.disposed = true;
     for (const k of GHOST_KINDS) this.ghosts[k].mesh.geometry.dispose();
-    this.ghostMat.dispose();
+    for (const m of this.ghostMats) m.dispose();
   }
 }

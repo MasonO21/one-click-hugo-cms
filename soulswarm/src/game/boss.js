@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { BOSS, BOSS_PHASES as BP, HITSTOP } from './data.js';
 import { bossGeometry } from '../engine/models.js';
 import { makeCharMaterial } from '../engine/materials.js';
+import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
 import { hdr } from '../engine/particles.js';
 import { makeArenaRing, makeArenaWall, makeSlamRings, makeGapFan, makeSpiralSigil, makeShards } from './fxmeshes.js';
 
@@ -57,9 +58,17 @@ export class Boss {
     this.e = e;
     run.bossEnemy = e;
     this.color = new THREE.Color(ch.boss);
-    this.mat = makeCharMaterial({ rim: ch.boss, emit: 3, anim: 0.3, ambient: 0x3a3048, key: 0x9a8ab8, plColor: ch.boss, plRadius: 6 });
+    // the painted King (loaded at boot; the procedural one if it is not ready): his crown, eyes and heart burn in the
+    // chapter's boss colour, his robe stirs and his arms sway
+    const pm = foeModel('gravemaw');
+    if (!pm) loadFoeModel('gravemaw');
+    this.mat = pm
+      ? makeCharMaterial({ map: pm.map, glow: pm.glow, glowTint: 0.6, rim: ch.boss, rimK: 0.6, emit: 3, anim: 1, gait: true, ambient: 0xa49eb4, key: 0xc0b8d0, plColor: ch.boss, plRadius: 6 })
+      : makeCharMaterial({ rim: ch.boss, emit: 3, anim: 0.3, ambient: 0x3a3048, key: 0x9a8ab8, plColor: ch.boss, plRadius: 6 });
+    if (pm) setGait(this.mat, pm);
+    this.glow0 = pm ? pm.glow : 0;
     this.mat.uniforms.uTint.value.copy(this.color);
-    this.mesh = new THREE.Mesh(bossGeometry(), this.mat);
+    this.mesh = new THREE.Mesh(pm ? pm.geometry.clone() : bossGeometry(), this.mat);
     run.scene.add(this.mesh);
     this.col = hdr(ch.boss, 3.5);
     this.hot = hdr(new THREE.Color(ch.boss).lerp(WHITE, 0.5).getHex(), 4);
@@ -605,6 +614,7 @@ export class Boss {
     this.mat.uniforms.uFlash.value = Math.max(e.flash * 0.15, windup, shield); // capped: he is hit constantly and must stay magenta
     this.mat.uniforms.uTime.value += dt;
     this.mat.uniforms.uEmit.value = 3 + this.phase * 0.7 + (this.dirge ? 0.6 : 0);
+    if (this.glow0) this.mat.uniforms.uGlow.value = this.glow0 * (1 + this.phase * 0.25 + (this.dirge ? 0.2 : 0)); // painted: the crown and heart flare
     const g = run.glow, k = 1 + this.phase * 0.25;
     g.add(e.x, 2.3 + this.y, e.z + 0.9, 2.2 * k, this.col[0] * 0.5, this.col[1] * 0.5, this.col[2] * 0.5, 0.9);
     g.add(e.x, 4.1 + this.y, e.z + 0.3, 3.0 * k, this.col[0] * 0.25, this.col[1] * 0.25, this.col[2] * 0.25, 0.8);

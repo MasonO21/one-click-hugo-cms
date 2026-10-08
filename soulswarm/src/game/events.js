@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { RUN_EVENTS, BLESSINGS } from './data.js';
 import { makeCharMaterial } from '../engine/materials.js';
 import { eventGeometry } from '../engine/models.js';
+import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
 import { hdr } from '../engine/particles.js';
 
 const R = RUN_EVENTS, TH = R.thief, SH = R.shrine, CF = R.coffin;
@@ -51,6 +52,10 @@ export class Events {
     this.thiefMat = makeCharMaterial({ ...charOpts, rim: 0xffd27a, anim: 1 });
     this.thiefMat.uniforms.uTint.value.set(0xffcf4a);
     this.thief = new THREE.Mesh(eventGeometry('thief'), this.thiefMat);
+    this.sackZ = -0.5; // the sack's glint: on the procedural imp's back
+    const tm = foeModel('thief');
+    if (tm) this.usePaintedThief(tm);
+    else loadFoeModel('thief').then((m) => { if (m && !this.disposed) this.usePaintedThief(m); });
     this.coffinMat = makeCharMaterial({ ...charOpts, rim: 0xff7a9a, anim: 0 });
     this.coffinMat.uniforms.uTint.value.set(0xff2e6a);
     this.coffin = new THREE.Mesh(eventGeometry('coffin'), this.coffinMat);
@@ -397,7 +402,7 @@ export class Events {
       U.uFlash.value = e.flash; U.uTime.value = time; U.uAnim.value.set(ev.seed, ev.awake ? 1.4 : 0.4);
       U.uPLPos.value.set(P.x, 1.6, P.z); U.uPLColor.value.copy(run.heroColorObj).multiplyScalar(0.45);
       const c = this.col.gold, tw = 0.75 + 0.25 * Math.sin(time * 9);
-      g.add(e.x - Math.sin(e.rot) * 0.5, 1.2, e.z - Math.cos(e.rot) * 0.5, 1.5 * tw, c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 0.9); // the sack glints
+      g.add(e.x + Math.sin(e.rot) * this.sackZ, 1.2, e.z + Math.cos(e.rot) * this.sackZ, 1.5 * tw, c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 0.9); // the sack glints
     }
     if (this.coffin.visible) {
       const e = ev.e, hit = e && e.active ? e.flash : 0, U = this.coffinMat.uniforms;
@@ -478,7 +483,19 @@ export class Events {
     ctx.restore();
   }
 
+  /** The painted Soul Thief: a grinning goblin hugging his sack of gold and souls, sprinting on the walk shader. */
+  usePaintedThief(m) {
+    const mat = makeCharMaterial({ map: m.map, glow: m.glow, rim: 0xffd27a, rimK: 0.6, emit: 2.8, anim: 1, gait: true, ambient: 0xa8a4b0, key: 0xc4c0cc, plRadius: 6 });
+    setGait(mat, m);
+    mat.uniforms.uTint.value.set(0xffcf4a);
+    this.thief.geometry.dispose(); this.thief.material.dispose();
+    this.thief.geometry = m.geometry.clone(); this.thief.material = mat;
+    this.thiefMat = mat;
+    this.sackZ = 0.3; // he hugs it in front of him
+  }
+
   dispose() {
+    this.disposed = true;
     for (const m of this.meshes) { m.geometry.dispose(); m.material.dispose(); }
   }
 }

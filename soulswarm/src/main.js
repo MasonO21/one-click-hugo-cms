@@ -10,6 +10,7 @@ import { App as NativeApp } from '@capacitor/app';
 import { handleBack } from './ui/back.js';
 import * as clock from './meta/clock.js';
 import * as heroModels from './engine/heromodels.js';
+import * as foeModels from './engine/foemodels.js';
 import { Engine } from './engine/engine.js';
 import { Showcase } from './game/showcase.js';
 import { Run } from './game/run.js';
@@ -45,6 +46,7 @@ const app = {
   resetProgress,
   clock, // QA: the clock instance the game uses (a dev server's HMR can serve a second copy to a fresh import)
   heroModels, // QA: likewise, the painted-model cache
+  foeModels, // QA: the painted foes' cache
 };
 window.__soulswarm = app; // handy for QA scripts
 
@@ -120,6 +122,8 @@ function boot() {
   app.meta = createMeta(app);
   document.getElementById('ui').appendChild(app.meta.el);
   app.meta.show('battle');
+  // the painted foes load behind the home screen, so the first run's horde is painted from its first frame
+  setTimeout(() => foeModels.loadFoeModels(), 600);
 
   // Audio needs a user gesture on mobile.
   let audioLoaded = false, gestured = false;

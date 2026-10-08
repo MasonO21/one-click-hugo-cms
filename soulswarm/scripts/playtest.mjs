@@ -2280,6 +2280,63 @@ errs = await session(async (page) => {
 });
 check('maps: no runtime errors', !errs.length, errs[0] || '');
 
+// 32. Painted foes (engine/foemodels.js; scripts/enemies.sh). Every foe, the Soul Thief and the Hollow King load as
+//     painted models standing on the ground, facing +Z, within their triangle budgets; in a run the horde, the
+//     legion's ghosts, the Thief and the King use them, walked by the shader (USE_GAIT); the Low quality setting keeps
+//     the light procedural horde and ghosts.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, E = app.engine, p = app.profile, F = app.foeModels, out = {};
+    p.chapter.unlocked = 6; p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    const models = await F.loadFoeModels();
+    out.models = Object.fromEntries(F.FOE_IDS.map((id, i) => {
+      const m = models[i]; if (!m) return [id, null];
+      const g = m.geometry; g.computeBoundingBox(); const b = g.boundingBox;
+      return [id, { tris: (g.index ? g.index.count : g.attributes.position.count) / 3, h: +(b.max.y - b.min.y).toFixed(2), want: F.FOES[id].h, floor: +b.min.y.toFixed(3),
+        cx: +((b.min.x + b.max.x) / 2).toFixed(3), wide: b.max.x - b.min.x > b.max.z - b.min.z, map: !!(m.map && m.map.image), hip: +m.gait.a.x.toFixed(2) }];
+    }));
+    const start = (q) => {
+      E.setQuality(q); p.energy = 30; app.startRun(1); E.manual = true;
+      const r = app.run; r.player.hurt = () => {}; r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {};
+      const P = r.player;
+      for (const t of ['husk', 'ghoul', 'brute', 'witch', 'bloater']) r.enemies.spawn(t, P.x + 6, P.z);
+      r.enemies.spawn('brute', P.x - 6, P.z, { elite: true });
+      for (const kind of ['ghoul', 'brute', 'witch', 'bloater']) r.legion.raise(P.x + 1, P.z + 1, { kind, fx: false });
+      r.events.start('thief', { x: P.x + 4, z: P.z + 4 });
+      const t0 = r.enemies.mats.map((m) => m.uniforms.uTime.value);
+      for (let i = 0; i < 30; i++) E.step(1 / 30);
+      const ticks = r.enemies.mats.every((m, i) => m.uniforms.uTime.value > t0[i]);
+      r.boss.spawn(); r.bossSpawned = true; // (its entrance holds the horde)
+      for (let i = 0; i < 3; i++) E.step(1 / 30);
+      const M = r.enemies.meshes, L = r.legion.ghosts;
+      const res = {
+        horde: Object.fromEntries(Object.entries(M).map(([t, x]) => [t, { painted: x.painted, gait: 'USE_GAIT' in x.mesh.material.defines, map: !!x.mesh.material.uniforms.uMap.value, n: x.mesh.count, head: +x.head.toFixed(2) }])),
+        ghosts: Object.fromEntries(Object.entries(L).map(([k, V]) => [k, !!V.mesh.material.uniforms.uMap.value])),
+        thief: !!r.events.thief.material.uniforms.uMap.value && 'USE_GAIT' in r.events.thief.material.defines,
+        boss: !!r.boss.mat.uniforms.uMap.value, crowns: r.enemies.crowns.count,
+        ticks,
+        lit: r.enemies.mats.every((m) => m.uniforms.uPLPos.value.lengthSq() > 0 || (r.player.x === 0 && r.player.z === 0)),
+      };
+      app.exitRun(); E.manual = false;
+      return res;
+    };
+    out.medium = start('medium');
+    out.low = start('low');
+    E.setQuality('medium'); E.qualitySetting = p.settings.quality; // back to the boot state ('auto' starts at medium)
+    return out;
+  });
+  const M = s.models, bad = Object.entries(M).filter(([id, m]) => !m || !m.map || Math.abs(m.h - m.want) > 0.02 || Math.abs(m.floor) > 0.01 || Math.abs(m.cx) > 0.01 || !m.wide || m.hip <= 0
+    || m.tris < 1000 || m.tris > (id === 'gravemaw' ? 8000 : 3200));
+  check('painted foes: all seven load standing on the ground, centred, facing +Z, at their heights and within budget', !bad.length, JSON.stringify(bad.length ? bad : M));
+  const md = s.medium, hordeOk = Object.values(md.horde).every((h) => h.painted && h.gait && h.map);
+  check('painted foes: in a run the horde, the legion\'s ghosts, the Soul Thief and the Hollow King are painted and walked by the shader',
+    hordeOk && Object.values(md.ghosts).every(Boolean) && md.thief && md.boss && md.ticks && md.crowns === 1, JSON.stringify(md));
+  const lo = s.low;
+  check('painted foes: Low quality keeps the procedural horde and ghosts (the King and the Thief stay painted)',
+    Object.values(lo.horde).every((h) => !h.painted && !h.map) && Object.values(lo.ghosts).every((g) => !g) && lo.boss && lo.thief, JSON.stringify(lo));
+});
+check('painted foes: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

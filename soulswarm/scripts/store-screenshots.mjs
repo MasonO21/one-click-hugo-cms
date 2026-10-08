@@ -94,9 +94,10 @@ for (const shot of SHOTS.filter((x) => !ONLY || x.name.startsWith(ONLY))) {
   const page = await ctx.newPage();
   await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3500);
-  // the heroes' animated models, the painted floors and the props load asynchronously; the staging below steps the game synchronously
+  // the heroes' animated models, the painted foes, floors and props load asynchronously; the staging below steps the game synchronously
   await page.evaluate(async () => {
     const H = window.__soulswarm.heroModels; for (const k of ['vael', 'nyx', 'seraphine', 'liora', 'mordrake', 'eclipse_vael']) await H.loadHeroModel(k);
+    await window.__soulswarm.foeModels.loadFoeModels();
     const W = await import('/src/game/world.js');
     await Promise.all([...Object.values(W.FLOORS).map((f) => W.floorTexture(f.tex)), ...Object.values(W.PROPS).flat().map(W.propModel)]);
   });
