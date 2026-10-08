@@ -140,22 +140,28 @@ export class Game {
     for (const s of list) s.onLoad(this.fresh);
     this.state.stats.sessions++;
 
-    if (!this.fresh) {
-      const away = Math.max(0, (this.now() - this.state.lastTickAt) / 1000);
-      if (away >= 60) {
-        const summary = this.sys.economy.computeOffline(away);
-        const hasGains = Object.values(summary.gains).some((v) => (v ?? 0) > 0) || summary.rp > 0;
-        if (hasGains && away < WELCOME_BACK_MIN_AWAY) {
-          // a short break (app switch, quick reload): credit it quietly instead of a Welcome Back modal for "+1"
-          this.sys.economy.applyOffline(summary);
-        } else if (hasGains) {
-          this.pendingOffline = summary;
-          this.bus.emit('offline:ready', { seconds: summary.seconds, gains: summary.gains, rp: summary.rp });
-        }
-      }
-    }
+    if (!this.fresh) this.creditAbsence((this.now() - this.state.lastTickAt) / 1000);
     this.state.lastTickAt = this.now();
     this.bus.emit('game:ready', { fresh: this.fresh });
+  }
+
+  /**
+   * Offline progress for real time the simulation did not run: at launch (since the save) and when the app comes back
+   * from the background without having been closed (platform/hooks.ts `installResumeCredit`). Under a minute counts
+   * for nothing; a short break is credited quietly; a longer one waits on the Welcome Back card (`offline:ready`).
+   */
+  creditAbsence(awaySeconds: number): void {
+    const away = Math.max(0, awaySeconds);
+    if (!(away >= 60)) return;
+    const summary = this.sys.economy.computeOffline(away);
+    const hasGains = Object.values(summary.gains).some((v) => (v ?? 0) > 0) || summary.rp > 0;
+    if (hasGains && away < WELCOME_BACK_MIN_AWAY) {
+      // a short break (app switch, quick reload): credit it quietly instead of a Welcome Back modal for "+1"
+      this.sys.economy.applyOffline(summary);
+    } else if (hasGains) {
+      this.pendingOffline = summary;
+      this.bus.emit('offline:ready', { seconds: summary.seconds, gains: summary.gains, rp: summary.rp });
+    }
   }
 
   /** Advance the simulation. dt in seconds. */
