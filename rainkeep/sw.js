@@ -15,14 +15,14 @@
  */
 'use strict';
 
-const VERSION = 'rainkeep-v4.26'; // bump on every web deploy
+const VERSION = 'rainkeep-v4.27'; // bump on every web deploy
 const SHELL_CACHE = `${VERSION}-shell`;
 const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
 
 const SHELL = [
   'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js',
-  'vendor/three.min.js', 'vendor/three-gltf.js', 'art3d.js', 'models3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'pacts.js', 'siege.js', 'intel.js', 'formation.js', 'heirloom.js', 'awaken.js', 'talents.js', 'hall.js', 'outposts.js', 'trade.js', 'decrees.js', 'defense.js', 'ranks.js', 'clash.js', 'fishing.js', 'derby.js', 'news.js', 'world3d.js',
+  'vendor/three.min.js', 'vendor/three-gltf.js', 'art3d.js', 'models3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'dryseason.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'pacts.js', 'siege.js', 'intel.js', 'formation.js', 'heirloom.js', 'awaken.js', 'talents.js', 'hall.js', 'outposts.js', 'trade.js', 'decrees.js', 'defense.js', 'ranks.js', 'clash.js', 'fishing.js', 'derby.js', 'news.js', 'world3d.js',
   'manifest.webmanifest', 'icon.svg',
   'fonts/el-messiri-latin-500-normal.woff2', 'fonts/el-messiri-latin-600-normal.woff2', 'fonts/el-messiri-latin-700-normal.woff2',
   'fonts/barlow-semi-condensed-latin-400-normal.woff2', 'fonts/barlow-semi-condensed-latin-500-normal.woff2',
@@ -33,13 +33,13 @@ const SHELL = [
   ...'raider beast scorpion serpent drake spirit construct crystal sun void'.split(' ').map((n) => `art/foes/${n}.webp`),
   'art/scenes/act1.webp', 'art/scenes/act2.webp', 'art/scenes/act3.webp', 'art/title.webp',
   ...'shelter quarry grove well mine infirmary barracks watchtower archive hall storehouse forge deepspring companions'.split(' ').map((n) => `art/buildings/${n}.webp`),
-  ...'rainfest hunt builder forgefest spirerush oasis crossing road road-board rivals siege intel clash derby'.split(' ').map((n) => `art/events/${n}.webp`),
+  ...'rainfest hunt builder forgefest spirerush oasis crossing road road-board rivals siege intel clash derby dry'.split(' ').map((n) => `art/events/${n}.webp`),
   'art/derby/camel.webp', 'art/derby/track.webp',
   ...'founder stipend ledger growth stormkit warchest forgekit tidekit lvpack lvpack2 sg1 sg2 sg3 sg4 sg5 sg6'.split(' ').map((n) => `art/offers/${n}.webp`),
   ...'cart wagons observatory bunker chapel airship den pool forge shrine scouts mine'.split(' ').map((n) => `art/ruins/${n}.webp`),
   'art/endings/act1.webp', 'art/endings/act2.webp', 'art/endings/act3.webp',
   'art/wyrm/grotto.webp', 'art/wyrm/emblem.webp',
-  ...'anvil bag ballista bandit beacon bell book bounty btn-ember btn-gold btn-indigo calendar caravan channel chest cistern clash clashbanner clashmap clock compass copper corner dc-arms dc-feast dc-harvest dc-roads dc-rush dc-vigil decree derby die drill duel dustdevil dy-bridle dy-cup dy-pads dy-ribbon dy-saddle dy-speed dy-spirit dy-stamina errand event firepot fish fish-barb fish-carp fish-eel fish-float fish-koi fish-minnow fish-rod fish-whiskers flag food fort garden gem glory hammer heart heirloom heroes hl-bell hl-bridle hl-conch hl-ladle hl-lantern hl-pick hl-quiver horn hunt intel journal kite lostcaravan luckydie mail market mirage pals paw peace pearl people plunder power rank-champ rank-elite rank-vet recruit relic rescue revenge riders road ruin scorpking scout scroll shieldwall shop shrine siegechest spire stakes star stone storm sunsteel swarm sword tideglass town treat trophy walls water waterrights well whetstone world wyrm'.split(' ').map((n) => `art/ui/${n}.webp`),
+  ...'anvil bag ballista bandit beacon bell book bounty btn-ember btn-gold btn-indigo calendar caravan channel chest cistern clash clashbanner clashmap clock compass copper corner dc-arms dc-feast dc-harvest dc-roads dc-rush dc-vigil decree derby die drill dry dry-chest dry-cistern dry-medal dry-ration dry-watch duel dustdevil dy-bridle dy-cup dy-pads dy-ribbon dy-saddle dy-speed dy-spirit dy-stamina errand event firepot fish fish-barb fish-carp fish-eel fish-float fish-koi fish-minnow fish-rod fish-whiskers flag food fort garden gem glory hammer heart heirloom heroes hl-bell hl-bridle hl-conch hl-ladle hl-lantern hl-pick hl-quiver horn hunt intel journal kite lostcaravan luckydie mail market mirage pals paw peace pearl people plunder power rank-champ rank-elite rank-vet recruit relic rescue revenge riders road ruin scorpking scout scroll shieldwall shop shrine siegechest spire stakes star stone storm sunsteel swarm sword tideglass town treat trophy walls water waterrights well whetstone world wyrm'.split(' ').map((n) => `art/ui/${n}.webp`),
 ];
 
 const SCOPE = new URL('./', self.location.href);

@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.26.0',
+  version: '4.27.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1263,6 +1263,33 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- The Dry Season ----------
+  // From Rainwyrm Lv 6 a Dry Season comes every three days of keep time and lasts twelve hours, with two hours'
+  // warning from the watchtower: the wells give less, the keep drinks more and the air is hotter (fx, as KH.bonus
+  // keys). The Warden answers it with one edict, each with a cost: rationing (less drinking, slower work), digging
+  // a deep cistern (stone and copper; the wells hold up, and every cistern adds a little water for good) or keeping
+  // the rain watch (Call the Rain comes back sooner and lasts longer, but the Torrent tires). When it ends the keep
+  // is graded on thirst and sickness, and a chest pays by the grade.
+  dry: {
+    unlock: 6, // Rainwyrm level
+    every: 3 * 86400, length: 12 * 3600, warn: 2 * 3600, first: 6 * 3600, // the first comes 6 hours after it opens
+    fx: { mult_water: -0.2, drinkCut: -0.1, cool: -2 },
+    edicts: [
+      { id: 'ration', name: 'Ration the Water', icon: 'i-dry-ration', fx: { drinkCut: 0.3, prod: -0.1 },
+        text: 'Everyone drinks a third less, but the work goes slower on short rations (production -10%).' },
+      { id: 'dig', name: 'Dig a Deep Cistern', icon: 'i-dry-cistern', fx: { mult_water: 0.2 }, cost: { stone: 3, copper: 1 }, keep: 0.01, max: 10,
+        text: 'The wells hold up through the season, and every cistern dug adds 1% to water for good (up to 10%).' },
+      { id: 'watch', name: 'Keep the Rain Watch', icon: 'i-dry-watch', fx: { rainCd: 0.5, rainDur: 30, breath: -0.2 },
+        text: 'Call the Rain comes back twice as fast and lasts 30 seconds longer, but the tired Rainwyrm breathes 20% weaker in battle.' },
+    ],
+    // graded on thirst (minutes the keep went thirsty) and sickness (new sick as a share of the people)
+    grades: [
+      { g: 'A', thirst: 0, sick: 0.03, chest: { starglass: 120, water: 3, journals: 2 } },
+      { g: 'B', thirst: 20, sick: 0.1, chest: { starglass: 60, water: 2 } },
+      { g: 'C', thirst: 1e9, sick: 9, chest: { water: 1 } },
+    ],
+  },
+
   // ---------- Pacts & Feuds ----------
   // Each rival keep holds you in some regard, from -100 (a feud) to 100. Gifts raise it, raids lower it, and it drifts
   // back toward indifference over the days. A rival that trusts you (50 and up) will sign a pact: it sends tribute
@@ -1609,6 +1636,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.27', items: [
+      { icon: 'i-dry', name: 'The Dry Season', text: 'Every three days a drought comes for half a day: the wells sink and the air burns. Answer it with an edict (ration the water, dig a deep cistern, or keep the rain watch) and earn the Warden\'s chest by how well the keep comes through.', act: 'dry', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
+    ] },
     { v: '4.26', items: [
       { icon: 'i-peace', name: 'Pacts & Feuds', text: 'Every rival keep now remembers how you treat it. Send gifts and sign pacts for tribute and warriors on your walls, or raid them and risk a feud: a keep in a feud sends its warband on its own.', act: 'rivals', open: (S) => S.lv.wyrm >= 8, needs: 'Rainwyrm Lv 8' },
     ] },
@@ -1919,6 +1949,9 @@ const DATA = {
     { id: 'pact1', text: 'Sign a pact with a rival keep', stat: 'pacts', n: 1, reward: { starglass: 150 } },
     { id: 'pact3', text: 'Hold three pacts at once', stat: 'pactMost', n: 3, reward: { beacons: 3 } },
     { id: 'feud1', text: 'Win a raid against a keep in a feud with you', stat: 'feudWins', n: 1, reward: { whetstone: 2 } },
+    { id: 'dry1', text: 'Come through a Dry Season', stat: 'drySeasons', n: 1, reward: { starglass: 50 } },
+    { id: 'dryA', text: 'Earn an A in three Dry Seasons', stat: 'dryA', n: 3, reward: { beacons: 2 } },
+    { id: 'cistern5', text: 'Dig five deep cisterns', stat: 'cisterns', n: 5, reward: { starglass: 150 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },

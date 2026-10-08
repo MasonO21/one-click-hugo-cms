@@ -1898,7 +1898,7 @@
     wyrm.set({ level: S.lv.wyrm, skin: S.skins.on, element: S.wyrm.element });
     const petAge = UI.petT ? (performance.now() - UI.petT) / 1000 : 9, roarAge = (performance.now() - roarT) / 1000;
     wyrm.pose({ t, dormant: S.dormant, pet: petAge < 1.6 ? 1 - petAge / 1.6 : 0, roar: roarAge < 0.4 ? roarAge / 0.4 : Math.max(0, 1 - (roarAge - 0.4) / 2.2) });
-    T3.water.position.y = SPRING.y - (S.dormant ? 0.12 : 0);
+    T3.water.position.y = SPRING.y - (S.dormant ? 0.12 : 0) - (KH.dry && KH.dry.active() ? 0.22 : 0); // a Dry Season sinks the spring (dryseason.js)
     // element aura and the Primordial rain cloud
     aura.visible = !!wyrm.elem && !S.dormant;
     if (aura.visible) { aura.material.color.set(wyrm.elem.color); aura.material.opacity = 0.45 + 0.3 * Math.sin(t * 2); aura.scale.setScalar(1 + 0.02 * Math.sin(t * 1.3)); }
