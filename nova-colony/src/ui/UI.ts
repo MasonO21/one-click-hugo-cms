@@ -125,11 +125,17 @@ export class UI {
   private lastGatherFloat = new Map<string, number>();
   private modalWasOpen = false;
   private toastInset = '';
-  private deferredToasts: { text: string; kind: ToastKind; icon?: string; open?: string; at: number }[] = [];
+  /** `keep`: raised by a tier-up during the base reveal; shown once its card closes however long it was read. */
+  private deferredToasts: { text: string; kind: ToastKind; icon?: string; open?: string; at: number; keep?: boolean }[] = [];
   /** Tappable toasts shown a moment ago (a modal opening clears the toast layer: they are re-queued, see onPanelsChanged). */
   private openToasts: { text: string; kind: ToastKind; icon?: string; open: string; at: number }[] = [];
   /** A wish's "Show me" the guide arrow follows (seconds on performance.now()). */
   private wishPin: { id: number; until: number } | null = null;
+  /**
+   * Colony tier the UI has announced (or loaded at). The sim's own tier-up listeners (new side missions, regions,
+   * research) run before the UI's, so a higher tier in the state means a tier-up is being announced right now.
+   */
+  private seenTier = 0;
 
   constructor(
     private readonly game: Game,
@@ -217,6 +223,7 @@ export class UI {
     // notifications card (iOS / Android): after the first tier-up or Welcome Back, never over the consent card
     this.notifyPrompt = new NotifyPrompt(ctx, el, () => this.screenBusy() || this.consent.shown);
 
+    this.seenTier = this.game.state.colony.tier;
     this.installGlobalHandlers();
     this.subscribe();
     this.game.sys.tutorial.setFlag('buildPanelOpen', false); // a save made with the drawer open
@@ -350,9 +357,10 @@ export class UI {
    * cover it; they follow once it closes. Warnings and errors always show at once.
    */
   private simToast(text: string, kind: ToastKind, icon?: string, open?: string): void {
-    if ((kind === 'info' || kind === 'success' || kind === 'reward') && this.panels?.anyModal()) {
+    const reveal = this.revealing();
+    if ((kind === 'info' || kind === 'success' || kind === 'reward') && (reveal || this.panels?.anyModal())) {
       this.deferredToasts = this.deferredToasts.filter((d) => d.text !== text);
-      this.deferredToasts.push({ text, kind, icon, open, at: performance.now() });
+      this.deferredToasts.push({ text, kind, icon, open, at: performance.now(), keep: reveal });
       if (this.deferredToasts.length > 6) this.deferredToasts.shift();
       return;
     }
@@ -394,10 +402,10 @@ export class UI {
   }
 
   private flushToasts(): void {
-    if (!this.deferredToasts.length || this.panels.anyModal()) return;
+    if (!this.deferredToasts.length || this.panels.anyModal() || this.revealing()) return;
     const now = performance.now();
     // a toast that opens a panel ("12 achievements already earned!") is worth waiting for through a stack of cards
-    const list = this.deferredToasts.filter((d) => now - d.at < (d.open ? 90000 : 12000)).slice(-3);
+    const list = this.deferredToasts.filter((d) => d.keep || now - d.at < (d.open ? 90000 : 12000)).slice(-3);
     this.deferredToasts = [];
     list.forEach((d, i) => window.setTimeout(() => this.simToast(d.text, d.kind, d.icon, d.open), 300 + i * 200));
   }
@@ -447,8 +455,16 @@ export class UI {
    */
   /** Game-event toast: shown at once right after the player's own tap, otherwise held while a modal is up. */
   private eventToast(text: string, kind?: ToastKind, icon?: string, open?: string): void {
-    if (performance.now() - this.lastClick.t < 1500) this.showToast(text, kind, icon, open);
+    if (performance.now() - this.lastClick.t < 1500 && !this.revealing()) this.showToast(text, kind, icon, open);
     else this.simToast(text, kind ?? 'info', icon, open);
+  }
+
+  /**
+   * A tier-up is being shown: the base transforms, then its card opens. What it unlocked ("3 new side missions are
+   * ready", a region opening) waits for the card to close instead of flashing for a second and being wiped by it.
+   */
+  private revealing(): boolean {
+    return this.tierRevealPending || this.game.state.colony.tier > this.seenTier;
   }
 
   private showWelcome(): void {
@@ -505,6 +521,7 @@ export class UI {
     bus.on('colony:tierUp', (e) => {
       const now = performance.now();
       this.lastTierCelebrate = now;
+      this.seenTier = Math.max(this.seenTier, e.tier);
       const t = g.data.tier(e.tier);
       // everything the tier opens: what can be built at once first, then what still needs research
       const { ready, research } = tierUnlockGroups(g.data, e.tier, g.state.research.completed);
@@ -901,6 +918,7 @@ export class UI {
         // keyboard) that would shift the whole HUD
         for (const r of [this.ui, this.root]) if (r.scrollTop || r.scrollLeft) r.scrollTop = r.scrollLeft = 0;
         this.refreshBadges();
+        if (!this.tierRevealPending) this.seenTier = this.game.state.colony.tier; // a tier set without the event (load)
         this.guide.poll();
         this.threats.poll();
         this.syncToastInset();
