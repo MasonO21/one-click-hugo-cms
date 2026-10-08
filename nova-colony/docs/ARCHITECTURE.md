@@ -38,6 +38,7 @@ Render and UI read `game.state` directly every frame (cheap, no copying).
 | Colonists | `src/sim/colonists.ts` (+ `src/sim/colony/*`) | colonists agent |
 | Combat & invasions | `src/sim/combat.ts` (+ `src/sim/combat/*`) | combat agent |
 | World, player, exploration, vehicles, world events | `src/sim/world.ts`, `player.ts`, `worldEvents.ts` (+ `src/sim/world/*`) | world agent |
+| Expeditions & the Frontier (squads, hauls, Star Chart) | `src/sim/expeditions.ts` (+ `src/sim/expedition/*`), content in `src/data/expeditions.ts` | expeditions |
 | Missions, tutorial, live-ops, monetization, save, platform adapters, Capacitor | `src/sim/missions.ts`, `tutorial.ts`, `liveops.ts`, `src/platform/*` (except types/mock), `capacitor.config.ts`, native project files | meta agent |
 | Rendering | `src/render/*` (except api.ts) | render agent |
 | UI | `src/ui/*`, `src/ui/styles/*` | ui agent |
@@ -106,7 +107,7 @@ spin_tick spin_win door vehicle_start teleport recruit discover`
 ## Panels (UI opens on `bus.emit('ui:open', { panel, arg })`)
 
 `build colonists recruit research craft inventory map missions shop season daily spin settings welcome victory
-building(arg=id) colony merchant(arg=eventId) vehicles`. UI element hooks for tutorial highlighting:
+building(arg=id) colony merchant(arg=eventId) vehicles expeditions(arg={ dest?, tab? })`. UI element hooks for tutorial highlighting:
 `#btn-build #btn-colonists #btn-research #btn-craft #btn-map #btn-missions #btn-shop #btn-menu #btn-interact`,
 panels `[data-panel="<name>"]`, build cards `[data-build="<defId>"]`, research nodes `[data-research="<id>"]`.
 

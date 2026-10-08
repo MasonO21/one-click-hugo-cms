@@ -94,6 +94,16 @@ ATV, buggy, mining truck, hover bike, armored rover, titanium hovercraft (speed 
 Optional events: meteor crash, abandoned spacecraft, survivor rescue, alien nest, supply drop, rare
 merchant, crystal storm, ancient structure activates — all with valuable rewards.
 
+## 20b. Expeditions & the Frontier (meta-loop for colonists and vehicles)
+From the Stone tier the Radio Tower sends squads of 1–3 colonists (plus an optional vehicle: shorter trip, bigger
+haul) to 24 destinations, three per discovered region, on a 15 min / 1 h / 4 h / 8 h ladder. Squad members are away
+(no job, upkeep or AI; beds and jobs kept for them). Hauls are themed by biome, valued at the destination's tier
+(a standard squad brings home 25–40% of a reference colony's hourly value per trip hour, sized to fit storage),
+raised by profession match and skill; rare finds roll crates, drones, chips and survivors. Timers are absolute (they
+finish offline) and a local notification says when the squad is home. After Titanium the Frontier opens: generated
+uncharted sites, finds that escalate with depth, and a Star Chart with milestone rewards every 5–10 sites, forever.
+Cozy: nobody is ever hurt; a long walk without a vehicle only leaves the squad a little tired.
+
 ## 21. Juice
 Resources fly to storage, buildings construct piece by piece, upgrade transformation animations,
 resource pops, machines visibly operate, conveyors move items, colonists visibly work, turrets track
