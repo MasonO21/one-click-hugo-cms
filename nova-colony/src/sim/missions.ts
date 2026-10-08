@@ -98,6 +98,8 @@ export class MissionSystem extends System {
     // colonist wishes (sim/wishes.ts): counted by kind; their side chain opens with the first wish
     bus.on('wish:granted', (e) => this.bump('wish', [e.kind], 1));
     bus.on('wish:offered', () => this.offerSide());
+    // Photo Mode: every still taken counts (the Journal's "Say Cheese!")
+    bus.on('photo:taken', () => this.bump('photo', [], 1));
   }
 
   override onLoad(fresh: boolean): void {

@@ -102,6 +102,39 @@ export interface AchievementsService {
   report(id: string): void;
 }
 
+/** A finished picture to hand to the share sheet (Photo Mode). */
+export interface ShareImage {
+  blob: Blob;
+  /** "nova-colony-new-hope-day-42.jpg" */
+  fileName: string;
+  title: string;
+  text: string;
+  /** Android chooser title. */
+  dialogTitle?: string;
+}
+
+/**
+ * shared: the sheet closed with a target picked (the web only knows "not cancelled") · cancelled: the player closed
+ * it · downloaded: saved through a download link (web) · unavailable: this platform cannot do it · failed: it broke.
+ */
+export type ShareResult = 'shared' | 'cancelled' | 'downloaded' | 'unavailable' | 'failed';
+
+/**
+ * Sharing a picture (src/platform/share.ts): the native share sheet on iOS / Android (@capacitor/share, the file
+ * written to the app's cache with @capacitor/filesystem), the Web Share API or a download link on the web.
+ * Implementations never throw.
+ */
+export interface ShareService {
+  /** The OS share sheet (iOS / Android). */
+  readonly native: boolean;
+  /** Can `shareImage` open a share sheet for an image file here? (Synchronous: the web must call share in the tap.) */
+  canShareFiles(): boolean;
+  /** Open the share sheet with the picture. On the web call it straight from the tap (user activation). */
+  shareImage(img: ShareImage): Promise<ShareResult>;
+  /** Save the picture through a download (web only; 'unavailable' elsewhere). */
+  download(img: ShareImage): Promise<ShareResult>;
+}
+
 export interface PlatformServices {
   platform: 'web' | 'ios' | 'android';
   store: KeyValueStore;
@@ -114,4 +147,6 @@ export interface PlatformServices {
   notifications?: NotificationsService;
   /** Game Center / Play Games achievements (optional: mocks leave it out = nothing is reported). */
   achievements?: AchievementsService;
+  /** Share sheet / download for Photo Mode (optional: without it the preview offers no Share or Download). */
+  share?: ShareService;
 }

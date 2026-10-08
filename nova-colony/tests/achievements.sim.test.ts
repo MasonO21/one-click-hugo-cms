@@ -82,6 +82,9 @@ function produce(game: Game, src: Counter, n: number): void {
     case 'wish':
       for (let i = 0; i < n; i++) bus.emit('wish:granted', { id: i + 1, colonist: 1, def: 'w', kind: t === '*' ? 'give' : (t as WishKind), tier: 1, hearts: 1, reward: {} });
       break;
+    case 'photo':
+      for (let i = 0; i < n; i++) bus.emit('photo:taken', { preset: 'now', width: 1011, height: 2232 });
+      break;
     default:
       throw new Error(`produce: unsupported counter ${src.type}`);
   }

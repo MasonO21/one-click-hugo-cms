@@ -72,6 +72,10 @@
 	<!-- Shown by the App Tracking Transparency prompt (requested lazily before the first rewarded ad). -->
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Nova Colony uses this to show you ads that are more relevant to you. Ads are always optional, and the game is fully playable without them.</string>
+	<!-- Photo Mode: the share sheet's "Save Image" writes the photo to the library (iOS asks only then, add-only; without
+	     this key that choice would crash the app). The game itself never reads the library. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save your colony photos from Photo Mode to your photo library.</string>
 	<!-- Google's complete AdMob SKAdNetwork list (50 ids; Google first). Source: https://developers.google.com/admob/ios/3p-skadnetworks
 	     (page 'Last updated: January 30, 2026', fetched 2026-10-07). Re-check that page before every release: docs/MOBILE.md. -->
 	<key>SKAdNetworkItems</key>

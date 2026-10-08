@@ -3,7 +3,7 @@
 The game is a TypeScript/Vite web app packaged for iOS and Android with **Capacitor 8**
 (`appId com.novacolony.game`, `appName Nova Colony`, `webDir dist`). Native plugins are used for
 storage (Preferences), rewarded ads (AdMob), purchases (RevenueCat), haptics, local notifications,
-splash/status bar and app lifecycle. **Every plugin is loaded lazily and only inside the native shell**, so the plain web
+sharing Photo Mode pictures (Share + Filesystem), splash/status bar and app lifecycle. **Every plugin is loaded lazily and only inside the native shell**, so the plain web
 build (`npm run dev` / `npm run build`) never needs them.
 
 | Concern | Web / dev | iOS / Android (Capacitor) |
@@ -14,6 +14,7 @@ build (`npm run dev` / `npm run build`) never needs them.
 | Analytics | console sink (dev) / HTTP sink if configured | same |
 | Haptics | no-op | `@capacitor/haptics` |
 | Local notifications | none (no card, no Settings row) | `@capacitor/local-notifications` (see §6b) |
+| Photo Mode sharing | Web Share API with the file when the browser can share files, plus a Download link | `@capacitor/filesystem` (JPEG into the app cache) + `@capacitor/share` (OS share sheet) |
 | Cloud save | optional HTTP backend | same |
 
 Code lives in `src/platform/*` (adapters, `SaveManager`, analytics hooks) and `src/sim/liveops.ts`
@@ -208,7 +209,8 @@ While an ad is showing the game is paused; if the ad service never answers, the 
 - **Android manifest** permissions declared by us: `INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE` (haptics), `com.android.vending.BILLING`, `com.google.android.gms.permission.AD_ID` (declare advertising-id use in the Play *Data safety* form). The merged release manifest adds, from libraries only: `ACCESS_ADSERVICES_AD_ID` / `_ATTRIBUTION` / `_TOPICS` (AdMob / Privacy Sandbox), `WAKE_LOCK` (Google Mobile Ads measurement), `FOREGROUND_SERVICE` (WorkManager, pulled in by the ads SDK) and a signature-level `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (androidx.core). All are install-time/normal permissions with no runtime prompt; nothing location/contacts/storage/camera related. `allowBackup="true"`: Android Auto Backup restores the Preferences-stored save when the player moves to a new phone.
 - **WebView / hardening** (checked in the merged manifest + `capacitor.config.ts`): `android:hardwareAccelerated="true"` on the activity (WebGL needs it), no `usesCleartextTraffic` (so HTTPS-only at targetSdk 36), `allowMixedContent: false`, `androidScheme: https`, our own `android:exported` is limited to the launcher activity (the few exported library receivers/services, e.g. WorkManager's and the Amazon IAP receiver that RevenueCat bundles, are permission-protected), no `debuggable` in release. Background colour `#1b2a3a` is the same everywhere: `capacitor.config.ts` (`BACKGROUND`, SplashScreen/StatusBar/ios/android), `res/values/colors.xml` → Android 12+ system splash (`windowSplashScreenBackground` in `styles.xml`), the splash art's bottom colour, `index.html` / `manifest.webmanifest`.
 - **Notifications (Android)**: `POST_NOTIFICATIONS` is declared by us (the Android 13+ runtime permission; the game only asks after the player says yes on its own card, §6b). The plugin's manifest adds `RECEIVE_BOOT_COMPLETED` (re-arms pending reminders after a reboot) and `WAKE_LOCK`; its `SCHEDULE_EXACT_ALARM` is **removed** (`tools:node="remove"`): reminders are inexact on purpose, so there is no "Alarms & reminders" special access to declare or justify on Play. The status-bar icon is `res/drawable-*/ic_stat_nova.png` (the themed-icon glyph, white on transparency, written by `art/generate.mjs`), tinted `#ff8a3d`; it is only referenced by name at runtime, so `res/raw/keep.xml` keeps it (lint, and any future `shrinkResources`).
-- **iOS** `Info.plist`: `GADApplicationIdentifier`, `NSUserTrackingUsageDescription`, `SKAdNetworkItems`, `ITSAppUsesNonExemptEncryption=false`, `UIRequiredDeviceCapabilities=arm64`. Local notifications need nothing extra (no entitlement, no usage string: the OS prompt is the system's own).
+- **iOS** `Info.plist`: `GADApplicationIdentifier`, `NSUserTrackingUsageDescription`, `NSPhotoLibraryAddUsageDescription` (Photo Mode, see below), `SKAdNetworkItems`, `ITSAppUsesNonExemptEncryption=false`, `UIRequiredDeviceCapabilities=arm64`. Local notifications need nothing extra (no entitlement, no usage string: the OS prompt is the system's own).
+- **Photo Mode sharing** (Menu › Photo, `src/platform/share.ts`): the framed JPEG (long side ≤ 2048 px) is written to `Directory.Cache/photos/` with `@capacitor/filesystem` (the previous shot is deleted first) and handed to the OS share sheet with `@capacitor/share` (`files: [file://…]`). **No permission is requested on either platform** and neither plugin adds one to the merged Android manifest. Android shares the cache file through the app's existing FileProvider (`${applicationId}.fileprovider` in the manifest; the Share plugin builds the same authority from the package name) and `res/xml/file_paths.xml` already has `<cache-path path=".">`, which covers `getCacheDir()/photos/`; keep that entry if the file is ever regenerated. iOS: the share sheet's own "Save Image" needs `NSPhotoLibraryAddUsageDescription` (add-only; iOS asks at that moment, and without the key that choice crashes the app). A closed sheet is not an error. `npx cap sync` registers both plugins (Android `capacitor.settings.gradle` / `capacitor.build.gradle`, iOS `CapApp-SPM/Package.swift`).
 - **Store rating prompt**: `src/platform/review.ts` asks the OS for its native review sheet (`@capacitor-community/in-app-review`) only after a tier-up or a won raid's chest, once the celebration has closed, for invested players (Stone tier, 2+ sessions, 30+ min), at most 3 times, 120 days apart (recorded under `nova_review_v1` in the platform store). Never in the same moment as the notifications card (§6b: the card goes first, a later moment may ask) and never while the app is in the background. Apple and Google apply their own quotas and may show nothing; there is no in-game "rate us" dialog and nothing depends on it.
 - **System font size (Android)**: `MainActivity` pins the WebView's `textZoom` to 100. The game scales its whole UI to the screen; Android would otherwise also zoom every label by the accessibility font scale and the HUD/panels overflow at large font settings.
 - **Splash & status bar**: the splash hides as soon as the game is ready (`src/platform/hooks.ts`; `capacitor.config.ts` keeps a 2.5 s auto-hide as a safety net). The status bar is hidden for an immersive full-screen game.
@@ -261,7 +263,7 @@ Settings › Apps › Nova Colony › Notifications).
 
 ## 6c. Achievements (Game Center / Google Play Games)
 
-The Colony Journal (Menu › Journal) has 62 achievements today: 17 tiered lines (bronze / silver / gold) and 11 one-offs.
+The Colony Journal (Menu › Journal) has 63 achievements today: 17 tiered lines (bronze / silver / gold) and 12 one-offs.
 The game itself never needs a console: progress is read from state the game already keeps and unlocks live in the save
 (`state.achievements`), so a player with no Game Center / Play Games account loses nothing. The platform hook only
 *mirrors* unlocks, so the stores' own achievement screens, friends' comparisons and the Play Games / Game Center
@@ -324,6 +326,7 @@ Catalogue (the id stems; `{bronze,silver,gold}` = three ids):
 | community | `ach_good_neighbour_{bronze,silver,gold}` | Good Neighbour | 3 / 25 / 100 (Grant N colonists’ wishes) |
 | community | `ach_best_friends` | Best Friends | Fill all five friendship hearts with a colonist |
 | community | `ach_legend` | Living Legend | Welcome a legendary colonist |
+| community | `ach_say_cheese` | Say Cheese! | Take your first photo in Photo Mode |
 | crafter | `ach_maker_{bronze,silver,gold}` | Maker | 5 / 50 / 400 (Craft N items) |
 | expeditions | `ach_trailblazers_{bronze,silver,gold}` | Trailblazers | 1 / 15 / 75 (Bring home an expedition haul) |
 | expeditions | `ach_star_charter_{bronze,silver,gold}` | Star Charter | 1 / 10 / 30 (Chart your first Frontier site) |
@@ -366,7 +369,7 @@ Privacy-conscious by construction (`src/platform/analytics.ts`, `analyticsHooks.
 - **Batched** in memory (20 events / 30 s / on pause), failed sends are retried with a bounded queue.
 - **Sink**: `VITE_ANALYTICS_URL` receives `POST` JSON:
   `{ v: 1, installId, session, platform, appVersion, events: [{ name, props, ts }] }` (`keepalive` on pause). Without a URL, events are dropped (dev: printed to the console).
-- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `daily_claimed`, `season_level`, `achievement_unlocked` / `achievements_retro` (§6c), `progression_stall` (10 minutes of play without completing a mission), `notify_answer` (card / Settings, on or off, OS permission), `notify_opened` (which reminder brought the player back).
+- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `daily_claimed`, `season_level`, `achievement_unlocked` / `achievements_retro` (§6c), `progression_stall` (10 minutes of play without completing a mission), `notify_answer` (card / Settings, on or off, OS permission), `notify_opened` (which reminder brought the player back), `photo_taken` (lighting preset, picture size, tier) / `photo_shared` (`native` / `web` / `download`; nothing about the picture itself).
 - Declare accordingly in the **Apple privacy labels** ("Data not linked to you": usage data) and the **Play Data safety** form, plus advertising-id use for AdMob. Consider defaulting `settings.analytics` to off in the EEA.
 
 ## 9. Release checklist
@@ -413,4 +416,5 @@ src/sim/liveops.ts           Nova, boosts, VIP, daily, spin, season, ads, shop, 
 src/sim/missions.ts, tutorial.ts   missions + first-15-minutes guidance
 src/sim/achievements.ts, src/data/achievements.ts   Colony Journal: progress, unlocks, claims, content
 src/platform/achievements.ts   Game Center / Play Games adapter hook (no-op today, §6c)
+src/platform/share.ts        Photo Mode sharing: cache file + native share sheet / Web Share API / download (§6)
 ```

@@ -110,7 +110,8 @@ spin_tick spin_win door vehicle_start teleport recruit discover`
 
 `build(arg={ def?, tab? }) colonists(arg={ id?, tab?: 'wishes' }) recruit research craft(arg={ station? }) inventory map missions shop
 season daily spin settings welcome victory building(arg=id) colony merchant(arg=eventId) vehicles expeditions(arg={ dest?, tab? })
-journal(arg={ tab?: 'medals' | 'records' })`. UI element hooks for tutorial highlighting:
+journal(arg={ tab?: 'medals' | 'records' })`; `photo` is not a panel but Photo Mode (ui/photo/PhotoMode.ts: full-screen camera,
+HUD hidden, back closes its preview then the mode). UI element hooks for tutorial highlighting:
 `#btn-build #btn-colonists #btn-research #btn-craft #btn-map #btn-missions #btn-shop #btn-menu #btn-interact`,
 panels `[data-panel="<name>"]`, build cards `[data-build="<defId>"]`, research nodes `[data-research="<id>"]`, recipe rows
 `[data-recipe="<id>"]`. Besides the tutorial, a wish's "Show me" can pin the guide (`Guide.override`, `ui:wishGuide`).

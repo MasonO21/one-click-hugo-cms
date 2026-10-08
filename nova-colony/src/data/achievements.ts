@@ -304,6 +304,11 @@ const ONE_OFFS: AchievementDef[] = [
     description: 'Welcome a legendary colonist',
     reward: { xp: 400, nova: 12, items: { colonist_crate: 1 } },
   }),
+  one({
+    id: 'say_cheese', category: 'community', name: 'Say Cheese!', icon: '📸', art: 'hud:photo', source: counter('photo'), target: 1,
+    description: 'Take your first photo in Photo Mode',
+    reward: { xp: 40, nova: 2, resources: { food: 40, water: 40 } },
+  }),
   ...TIER_REWARDS.map(([name, icon, reward], i) =>
     one({
       id: `tier_${i + 1}`, category: 'scientist', name, icon, art: `tier:${i + 1}`, source: metric('colonyTier'), target: i + 1, unit: 'tier',

@@ -20,6 +20,7 @@ import './styles/art.css';
 import './styles/expeditions.css';
 import './styles/journal.css';
 import './styles/wishes.css';
+import './styles/photo.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -77,6 +78,7 @@ import { backAction } from './logic/back';
 import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
 import { SHOW_ME_SECONDS, wishGuideTarget } from './logic/wishes';
+import { PhotoMode } from './photo/PhotoMode';
 
 /** Minimum gap between production floats of the same resource. */
 const PROD_FLOAT_GAP_MS = 1200;
@@ -103,6 +105,7 @@ export class UI {
   private consent!: ConsentPrompt;
   private notifyPrompt!: NotifyPrompt;
   private threats!: Threats;
+  private photo!: PhotoMode;
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
 
@@ -213,7 +216,19 @@ export class UI {
     this.panels = new PanelManager(ctx, panelLayer, modalLayer, () => this.onPanelsChanged());
     this.registerPanels();
 
-    el.append(inputLayer, stick, this.stickHint, world, this.hud.el, this.bar.el, this.bar.canvas, this.toasts.el, panelLayer, modalLayer, this.fly.el, this.guide.ringLayer);
+    // Photo Mode (Menu › Photo): its own full-screen layer over everything; the rest is hidden while it is up
+    this.photo = new PhotoMode({
+      game: this.game,
+      renderer: this.renderer,
+      haptic: (k) => this.haptic(k),
+      sfx: (id) => this.sfx(id),
+      onActive: (on) => this.onPhotoMode(on),
+      onCovering: (on) => {
+        this.game.view.panelOpen = on || this.panels.anyCovering();
+      },
+    });
+
+    el.append(inputLayer, stick, this.stickHint, world, this.hud.el, this.bar.el, this.bar.canvas, this.toasts.el, panelLayer, modalLayer, this.fly.el, this.guide.ringLayer, this.photo.el);
 
     this.input = new InputController(this.game, inputLayer, stick, stick.firstElementChild as HTMLElement, {
       onTap: (x, y) => this.onWorldTap(x, y),
@@ -341,6 +356,11 @@ export class UI {
   }
 
   private open(panel: string, arg?: unknown): void {
+    // not a panel: a full-screen mode of its own
+    if (panel === 'photo') {
+      this.startPhoto();
+      return;
+    }
     if (panel === 'building') {
       const id = Number(arg);
       const b = this.game.sys.buildings.get(id);
@@ -399,9 +419,32 @@ export class UI {
     this.open('daily');
   }
 
-  /** The player has something open (any panel or drawer, a placement, build mode): popups should wait. */
+  /** The player has something open (any panel or drawer, a placement, build mode, Photo Mode): popups should wait. */
   private screenBusy(): boolean {
-    return this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play';
+    return this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play' || this.photo.active;
+  }
+
+  /** Menu › Photo: leave whatever was open (menu drawer, build mode, a selection) and take the camera. */
+  private startPhoto(): void {
+    if (this.photo.active || !this.photo.available) return;
+    this.panels.closeSheets();
+    if (this.build.active) this.build.cancel();
+    const sel = this.game.view.selection;
+    sel.kind = null;
+    sel.id = null;
+    this.tip.hide();
+    this.photo.enter();
+  }
+
+  /**
+   * Photo Mode started / ended: everything but its layer is hidden (styles/photo.css, `data-photo`), the joystick and
+   * any held keys are released. Panels or cards that open meanwhile (a tier-up, Welcome Back) wait underneath.
+   */
+  private onPhotoMode(on: boolean): void {
+    if (on) this.root.dataset.photo = '1';
+    else delete this.root.dataset.photo;
+    this.input.reset();
+    if (!on) this.onPanelsChanged();
   }
 
   private flushToasts(): void {
@@ -572,7 +615,12 @@ export class UI {
       this.panels.close('welcome');
       this.welcomeShown = false; // a later summary (new session) may show it again
     });
-    bus.on('combat:started', () => this.waveKills.clear());
+    bus.on('combat:started', () => {
+      this.waveKills.clear();
+      // a raid begins while the player is framing a photo: back to the game (the HUD's attack banner takes over);
+      // a photo already in the preview stays until the player is done with it
+      if (this.photo.currentPhase === 'framing') this.photo.exit();
+    });
     bus.on('alien:killed', (e) => {
       const d = g.data.alien(e.def);
       const k = d?.model ?? e.def;
@@ -811,6 +859,11 @@ export class UI {
 
   private shortcut(e: KeyboardEvent): boolean {
     if (e.ctrlKey || e.metaKey || e.altKey) return false;
+    // Photo Mode keeps every key (no panel may open under it, nobody walks off); Escape steps back
+    if (this.photo.active) {
+      if (e.code === 'Escape') this.back();
+      return true;
+    }
     const toggle = (p: string) => (this.panels.isOpen(p) ? this.panels.close(p) : this.open(p));
     switch (e.code) {
       case 'KeyB':
@@ -864,6 +917,7 @@ export class UI {
   back(): boolean {
     const sel = this.game.view.selection;
     const action = backAction({
+      photoMode: this.photo.active,
       panelOpen: this.panels.anyOpen(),
       // a queued card about to follow the one closing, or the tier-up card after the reveal: stay in the game
       modalPending: this.panels.anyModal() || this.tierRevealPending,
@@ -872,6 +926,8 @@ export class UI {
       hasSelection: sel.kind !== null,
     });
     switch (action) {
+      case 'photo':
+        return this.photo.back(); // the preview closes first, then Photo Mode ends
       case 'panel':
         this.panels.close(); // a modal that can't be dismissed stays (with what is under it), but swallows the press
         return true;
@@ -895,7 +951,8 @@ export class UI {
 
   update(dt: number): void {
     if (!this.root) return;
-    safe('ui input', () => this.input.update(dt));
+    if (this.photo.active) safe('ui photo', () => this.photo.update(dt));
+    else safe('ui input', () => this.input.update(dt));
     safe('ui consent', () => this.consent.update(dt));
     safe('ui notify', () => this.notifyPrompt.update(dt));
     safe('ui sync', () => this.syncSettings());

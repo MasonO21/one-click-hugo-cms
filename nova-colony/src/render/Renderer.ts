@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { Selection } from '../core/view';
-import type { RendererApi, ScreenPoint } from './api';
+import type { PhotoCamera, PhotoRenderApi, RendererApi, ScreenPoint } from './api';
 import { Materials } from './core/materials';
 import type { Env, Quality, RenderContext } from './core/context';
 import { Particles } from './fx/Particles';
@@ -67,6 +67,37 @@ export class Renderer implements RendererApi {
   private lastBiome = '';
   private ready = false;
   private onResize = () => this.resize();
+  /** Photo Mode's lighting (a day time 0..1), or null for the sim's clock. Visual only. */
+  private photoDayTime: number | null = null;
+
+  /** Photo Mode's hold on the camera and the light (see PhotoRenderApi). */
+  readonly photo: PhotoRenderApi = {
+    begin: () => {
+      const c = this.rig.snapshot();
+      this.rig.setPhoto(c);
+      return c;
+    },
+    end: () => {
+      this.rig?.setPhoto(null);
+      this.photoDayTime = null;
+    },
+    setCamera: (c: PhotoCamera) => this.rig?.setPhoto(c),
+    setLighting: (t: number | null) => {
+      this.photoDayTime = t == null || !Number.isFinite(t) ? null : ((t % 1) + 1) % 1;
+    },
+    capture: (w: number, h: number) => this.captureStill(w, h),
+    limits: () => {
+      const gl = this.renderer.getContext();
+      const vp = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as ArrayLike<number> | null;
+      return {
+        maxTexture: this.renderer.capabilities.maxTextureSize,
+        maxRenderbuffer: Number(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)) || 4096,
+        maxViewport: [Number(vp?.[0]) || 4096, Number(vp?.[1]) || 4096],
+      };
+    },
+    viewSize: () => ({ w: this.width, h: this.height }),
+    fov: () => this.camera.fov,
+  };
 
   constructor(private readonly game: Game) {}
 
@@ -204,7 +235,8 @@ export class Renderer implements RendererApi {
       this.lastBiome = region;
       this.atmosphere.setBiomeTint(game.data.biome(region)?.tint);
     }
-    this.atmosphere.update(st.time.dayTime, this.rig.distance);
+    // Photo Mode's lighting presets only change what is drawn: the sim keeps its own clock
+    this.atmosphere.update(this.photoDayTime ?? st.time.dayTime, this.rig.distance);
     this.terrain.update();
     this.buildings.update(dt);
     this.nature.update(dt);
@@ -218,6 +250,49 @@ export class Renderer implements RendererApi {
     this.overlay.update();
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * Photo Mode's still: draw the current view once at w×h device px (pixel ratio 1, the canvas buffer resized) and
+   * copy the drawing buffer into a 2D canvas in the same task, before the browser presents and clears it (the
+   * context has preserveDrawingBuffer: false). Same tone mapping and colour as the screen, no extra render target.
+   * The screen size is restored and redrawn straight after, so the next presented frame is a normal one.
+   */
+  private captureStill(w: number, h: number): HTMLCanvasElement | null {
+    if (!this.ready || this.contextLost) return null;
+    const r = this.renderer;
+    const ratio = r.getPixelRatio();
+    try {
+      r.setPixelRatio(1);
+      r.setSize(Math.max(1, Math.floor(w)), Math.max(1, Math.floor(h)), false);
+      this.camera.aspect = w / h;
+      this.camera.updateProjectionMatrix();
+      r.render(this.scene, this.camera);
+      const gl = r.getContext();
+      // the browser may give a smaller buffer than asked for (memory): copy what was really drawn
+      const bw = gl.drawingBufferWidth;
+      const bh = gl.drawingBufferHeight;
+      const out = document.createElement('canvas');
+      out.width = bw;
+      out.height = bh;
+      const c2d = out.getContext('2d');
+      if (!c2d || bw < 2 || bh < 2) return null;
+      c2d.drawImage(r.domElement, 0, 0, bw, bh, 0, 0, bw, bh);
+      return out;
+    } catch (e) {
+      console.warn('[render] photo capture failed', e);
+      return null;
+    } finally {
+      // back to the screen size first: setPixelRatio re-applies the last size, which must not be the still's
+      r.setSize(this.width, this.height, false);
+      r.setPixelRatio(ratio);
+      this.resize();
+      try {
+        r.render(this.scene, this.camera);
+      } catch {
+        /* the next frame draws it */
+      }
+    }
   }
 
   private selectionInfo(sel: Selection): SelectionInfo | null {

@@ -2,9 +2,14 @@
  * What "back" does (Android back button / gesture, and Escape): undo the most specific thing on screen first.
  * 'none' means the game is at rest, so the platform may send the app to the background.
  */
-export type BackAction = 'panel' | 'card' | 'build' | 'selection' | 'none';
+export type BackAction = 'photo' | 'panel' | 'card' | 'build' | 'selection' | 'none';
 
 export interface BackState {
+  /**
+   * Photo Mode is up: it covers everything (panels that opened meanwhile wait hidden under it), so the press is
+   * its own: the preview closes first, then the mode ends (logic/photo.ts `photoBack`).
+   */
+  photoMode?: boolean;
   /** Any panel, sheet or modal is open (a modal that can't be dismissed still swallows the press). */
   panelOpen: boolean;
   /**
@@ -21,6 +26,7 @@ export interface BackState {
 }
 
 export function backAction(s: BackState): BackAction {
+  if (s.photoMode) return 'photo';
   if (s.panelOpen || s.modalPending) return 'panel';
   if (s.cardShown) return 'card';
   if (s.buildActive) return 'build';

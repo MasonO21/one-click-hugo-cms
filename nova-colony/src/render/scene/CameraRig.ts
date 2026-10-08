@@ -2,12 +2,14 @@
  * CameraRig — third-person orbit camera following the player (view.camera.yaw / zoom), an
  * 'overview' mode targeting (tx, tz) for map/build, smooth damping, gentle tilt that flattens when
  * zooming in, terrain clearance, a transient focus() framing, combat framing (leans toward nearby
- * attacking aliens) and camera shake.
+ * attacking aliens), camera shake, and Photo Mode's free camera (`setPhoto`: the UI steers target, yaw, distance and
+ * pitch; no follow, focus or combat framing, and no portrait HUD shift so the frame is centred).
  *
  * Convention (ARCHITECTURE.md): camera = target + (sin(yaw)·d, h, cos(yaw)·d), looking at target.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
+import type { PhotoCamera } from '../api';
 import { clamp, lerp } from '../../core/math';
 
 /** Aliens within this many world units of the player pull the follow camera toward the fight. */
@@ -41,6 +43,8 @@ export class CameraRig {
   private lastMode = '';
   /** View shift currently applied to the camera (see PORTRAIT_VIEW_SHIFT). */
   private viewShift = 0;
+  /** Photo Mode's free camera (null: the game's own camera). */
+  private photo: PhotoCamera | null = null;
 
   constructor(private readonly ctx: RenderContext) {}
 
@@ -58,6 +62,21 @@ export class CameraRig {
     this.fx = x;
     this.fz = z;
     this.focusUntil = this.ctx.env.t + seconds;
+  }
+
+  /** Photo Mode: steer the camera to `c` (eased like the game camera); null hands it back to follow / overview. */
+  setPhoto(c: PhotoCamera | null): void {
+    if (!c) {
+      this.photo = null;
+      return;
+    }
+    this.photo ??= { tx: 0, tz: 0, yaw: 0, dist: 30, pitch: 0.75 };
+    Object.assign(this.photo, c);
+  }
+
+  /** The camera as it is now (eased values), as a Photo Mode camera: where the photo framing starts. */
+  snapshot(): PhotoCamera {
+    return { tx: this.tx, tz: this.tz, yaw: this.yaw, dist: this.dist, pitch: this.pitch };
   }
 
   addShake(strength: number): void {
@@ -78,7 +97,11 @@ export class CameraRig {
     let distMul = 1;
     let pitchAdd = 0;
     const mode = view.mode === 'map' ? 'map' : vc.mode;
-    if (env.t < this.focusUntil) {
+    const photo = this.photo;
+    if (photo) {
+      gx = photo.tx;
+      gz = photo.tz;
+    } else if (env.t < this.focusUntil) {
       gx = this.fx;
       gz = this.fz;
     } else if (mode === 'overview' || mode === 'map') {
@@ -131,9 +154,10 @@ export class CameraRig {
       pitchAdd = 0.4;
     }
     const zoom = clamp(vc.zoom, 0, 1);
-    const wantDist = lerp(9, 46, Math.pow(zoom, 1.15)) * distMul;
-    const wantPitch = clamp(lerp(0.52, 0.95, zoom) + pitchAdd + this.pitchBias, 0.12, 1.4);
-    const gy = ctx.heightAt(gx, gz) + (mode === 'follow' ? 1.1 : 0.4);
+    const wantDist = photo ? photo.dist : lerp(9, 46, Math.pow(zoom, 1.15)) * distMul;
+    const wantPitch = photo ? photo.pitch : clamp(lerp(0.52, 0.95, zoom) + pitchAdd + this.pitchBias, 0.12, 1.4);
+    const wantYaw = photo ? photo.yaw : vc.yaw;
+    const gy = ctx.heightAt(gx, gz) + (photo ? 0.8 : mode === 'follow' ? 1.1 : 0.4);
 
     const far = (gx - this.tx) * (gx - this.tx) + (gz - this.tz) * (gz - this.tz) > 90 * 90;
     if (this.snap || far || this.lastMode !== mode && mode === 'map') {
@@ -142,12 +166,12 @@ export class CameraRig {
       this.tz = gz;
       this.dist = wantDist;
       this.pitch = wantPitch;
-      this.yaw = vc.yaw;
+      this.yaw = wantYaw;
       this.snap = false;
     }
     this.lastMode = mode;
 
-    const kT = 1 - Math.exp(-dt * (mode === 'follow' ? 7 : 11));
+    const kT = 1 - Math.exp(-dt * (photo ? 12 : mode === 'follow' ? 7 : 11));
     const kD = 1 - Math.exp(-dt * 6);
     const kY = 1 - Math.exp(-dt * 18);
     this.tx += (gx - this.tx) * kT;
@@ -156,7 +180,7 @@ export class CameraRig {
     this.dist += (wantDist - this.dist) * kD;
     this.pitch += (wantPitch - this.pitch) * kD;
     // shortest-path yaw damping
-    let dy = vc.yaw - this.yaw;
+    let dy = wantYaw - this.yaw;
     dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     this.yaw += dy * kY;
 
@@ -190,7 +214,8 @@ export class CameraRig {
       cam.fov = wantFov;
       cam.updateProjectionMatrix();
     }
-    const shift = cam.aspect < 1 ? PORTRAIT_VIEW_SHIFT : 0;
+    // Photo Mode hides the HUD: the frame is centred (the shift comes back when the mode ends)
+    const shift = cam.aspect < 1 && !photo ? PORTRAIT_VIEW_SHIFT : 0;
     if (shift !== this.viewShift) {
       this.viewShift = shift;
       // a virtual view of the camera's own aspect (setViewOffset also sets the aspect from it); the projection only

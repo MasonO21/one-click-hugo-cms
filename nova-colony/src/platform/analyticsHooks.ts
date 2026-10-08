@@ -14,6 +14,7 @@
  *   achievements          achievement_unlocked                     (id + medal tier)
  *   expeditions           expedition_launched / _returned / _collected, frontier_charted / frontier_milestone
  *   colonist wishes       wish_offered / wish_granted / wish_expired  (kind and tier only)
+ *   photo mode            photo_taken (lighting preset, size) / photo_shared (how it left the game)
  *
  * Events carry game facts only (no PII). Consent is opt-in: `settings.analytics` must be true AND the player
  * must have answered (`settings.analyticsAsked`, set by the first-launch prompt or the Settings toggle). It
@@ -199,6 +200,9 @@ export function installAnalyticsHooks(game: Game): () => void {
   on('wish:offered', ({ kind, tier }) => a.track('wish_offered', { kind, tier }));
   on('wish:granted', ({ kind, tier }) => a.track('wish_granted', { kind, tier }));
   on('wish:expired', ({ kind, tier }) => a.track('wish_expired', { kind, tier }));
+  // ---- photo mode (the preset and the size, never anything about the picture)
+  on('photo:taken', ({ preset, width, height }) => a.track('photo_taken', { preset, width, height, tier: st().colony.tier }));
+  on('photo:shared', ({ method }) => a.track('photo_shared', { method }));
 
   // ---- ads
   on('ad:started', ({ placement }) => a.track('ad_started', { placement }));

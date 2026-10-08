@@ -1,0 +1,405 @@
+/* ==========================================================================
+   Photo Mode (ui/photo/PhotoMode.ts): a full-screen camera over everything.
+   While it is up the rest of the UI is hidden (`.nv-root[data-photo]`); its own controls use the painted skin's
+   language: a cream medallion close button with a gold rim, light chips in a night-glass track with the selected one
+   a raised candy pill (like the tabs), a big round shutter in a gold ring, and a preview that lies on the table
+   like a print. Every control is at least 44px and keeps clear of the safe areas.
+   ========================================================================== */
+
+/* everything else (HUD, toasts, mission card, joystick, panels that open meanwhile) waits hidden underneath */
+.nv-root[data-photo='1'] > :not(.nv-photo) {
+  visibility: hidden;
+  pointer-events: none !important;
+}
+
+.nv-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: auto;
+  touch-action: none;
+  --ph-shutter: 78px;
+  --ph-gap: 1.1em;
+}
+
+.nv-photo .ph-surface {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.nv-photo .ph-surface:active {
+  cursor: grabbing;
+}
+
+/* the controls fade while the shutter works and while the preview is up */
+.nv-photo .ph-top,
+.nv-photo .ph-dock {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+}
+.nv-photo:not([data-phase='framing']) .ph-top,
+.nv-photo:not([data-phase='framing']) .ph-dock {
+  opacity: 0;
+}
+.nv-photo:not([data-phase='framing']) .ph-top *,
+.nv-photo:not([data-phase='framing']) .ph-dock * {
+  pointer-events: none !important;
+}
+
+/* ---------- top: close, gesture hint, raid pill ---------------------------------- */
+
+.nv-photo .ph-close {
+  appearance: none;
+  border: 0;
+  position: absolute;
+  top: calc(var(--safe-t) + 0.8em);
+  left: calc(var(--safe-l) + 0.85em);
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  font: inherit;
+  font-size: 1.2em;
+  font-weight: 900;
+  color: #8a4a2a;
+  background: radial-gradient(circle at 50% 34%, #fffdf6, #ffe4b5);
+  box-shadow: 0 0 0 0.12em #fff6e3, 0 0 0 0.24em var(--frame-d), 0 0.3em 0.55em rgba(20, 8, 40, 0.45);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.08s ease-out;
+}
+.nv-photo .ph-close:active {
+  transform: scale(0.92);
+}
+
+.nv-photo .ph-hint,
+.nv-photo .ph-raid {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 2 * (var(--safe-l) + var(--safe-r)) - 140px);
+  padding: 0.5em 1em;
+  border-radius: 1.2em;
+  text-align: center;
+  font-size: 0.9em;
+  line-height: 1.25;
+  pointer-events: none;
+}
+.nv-photo .ph-hint {
+  top: calc(var(--safe-t) + 0.95em);
+  width: max-content;
+  color: var(--on-hud);
+  background: rgba(38, 29, 66, 0.74);
+  box-shadow: inset 0 0 0 0.12em rgba(243, 205, 132, 0.5), 0 0.35em 0.8em rgba(20, 8, 40, 0.3);
+  text-shadow: 0 0.08em 0 rgba(10, 4, 30, 0.5);
+  transition: opacity 0.6s ease-out;
+}
+.nv-photo .ph-hint.gone {
+  opacity: 0;
+}
+.nv-photo .ph-raid {
+  top: calc(var(--safe-t) + 4.6em);
+  white-space: nowrap;
+  color: #fff;
+  background: linear-gradient(180deg, #ff8585, var(--bad));
+  box-shadow: 0 0.2em 0 var(--bad-d), 0 0.45em 0.8em rgba(30, 10, 50, 0.3), inset 0 0 0 0.1em rgba(255, 255, 255, 0.25);
+  text-shadow: 0 0.08em 0 rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- bottom: light chips over the shutter ---------------------------------- */
+
+.nv-photo .ph-shutter {
+  appearance: none;
+  border: 0;
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 1.3em);
+  width: var(--ph-shutter);
+  height: var(--ph-shutter);
+  margin-left: calc(var(--ph-shutter) / -2);
+  padding: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #fffdf6 0%, #ffecc4 58%, #f5d290 100%);
+  box-shadow:
+    0 0 0 4px #fff6e3,
+    0 0 0 8px var(--frame-d),
+    0 0 0 10px var(--frame-dd),
+    0 10px 20px rgba(20, 8, 40, 0.5);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.08s ease-out;
+}
+.nv-photo .ph-shutter:active {
+  transform: scale(0.92);
+}
+.nv-photo .ph-shutter-in {
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--accent-l), var(--accent));
+  box-shadow: inset 0 -5px 0 var(--accent-d), inset 0 3px 0 rgba(255, 255, 255, 0.45), 0 2px 4px rgba(120, 60, 10, 0.3);
+}
+/* the gloss */
+.nv-photo .ph-shutter-in::after {
+  content: '';
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: 9%;
+  height: 36%;
+  border-radius: 50% 50% 40% 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0));
+}
+
+.nv-photo .ph-chips {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 1.3em + var(--ph-shutter) + var(--ph-gap) + 6px);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.3em;
+  padding: 0.3em;
+  border-radius: 1.35em;
+  background: rgba(38, 29, 66, 0.62);
+  box-shadow: inset 0 0 0 0.12em rgba(243, 205, 132, 0.5), inset 0 0.14em 0.3em rgba(10, 4, 30, 0.35), 0 0.4em 1em rgba(20, 8, 40, 0.3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+.nv-photo .ph-chip {
+  appearance: none;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2em;
+  min-width: 5.2em;
+  min-height: 44px;
+  padding: 0.4em 0.4em 0.35em;
+  border-radius: 1.05em;
+  background: transparent;
+  color: var(--on-hud);
+  font: inherit;
+  font-size: 0.8em;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-shadow: 0 0.08em 0 rgba(10, 4, 30, 0.55);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, transform 0.08s ease-out;
+}
+.nv-photo .ph-chip:active {
+  transform: translateY(0.1em);
+}
+.nv-photo .ph-chip .ic {
+  display: grid;
+  place-items: center;
+  width: 2.2em;
+  height: 2.2em;
+  margin: 0;
+  border-radius: 50%;
+  font-size: 1.05em;
+  background: radial-gradient(circle at 50% 38%, #ffffff 0%, #ffeccb 62%, #f6d394 100%);
+  box-shadow: inset 0 -0.08em 0 rgba(170, 115, 40, 0.25), 0 0.08em 0.16em rgba(10, 4, 30, 0.3);
+}
+.nv-photo .ph-chip .ic img,
+.nv-photo .ph-chip .ic .ic-in,
+.nv-photo .ph-chip .ic .ic-in img {
+  display: block;
+  width: 1.6em;
+  height: 1.6em;
+}
+.nv-photo .ph-chip .ic.emoji,
+.nv-photo .ph-chip .ic .ic-in.emoji {
+  width: 2.2em;
+  height: 2.2em;
+  display: grid;
+  place-items: center;
+  font-size: 1em;
+}
+.nv-photo .ph-chip.on {
+  color: #fff;
+  background: linear-gradient(180deg, #ffc283, var(--accent));
+  box-shadow: 0 0.2em 0 var(--accent-d), 0 0.35em 0.5em rgba(150, 70, 10, 0.3), inset 0 0.1em 0 rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0.08em 0 rgba(120, 50, 0, 0.35);
+}
+
+/* landscape phones: the shutter moves to the right edge like a camera app, the chips stay along the bottom */
+@media (orientation: landscape) and (max-height: 600px) {
+  .nv-photo .ph-shutter {
+    left: auto;
+    right: calc(var(--safe-r) + 1.5em);
+    bottom: 50%;
+    margin: 0 0 calc(var(--ph-shutter) / -2) 0;
+  }
+  .nv-photo .ph-chips {
+    bottom: calc(var(--safe-b) + 0.8em);
+  }
+  .nv-photo .ph-hint {
+    max-width: calc(100% - 2 * (var(--safe-l) + var(--safe-r)) - 220px);
+  }
+  .nv-photo .ph-raid {
+    top: calc(var(--safe-t) + 4.2em);
+  }
+}
+
+/* ---------- shutter flash -------------------------------------------------- */
+
+.nv-photo .ph-flash {
+  position: absolute;
+  inset: 0;
+  background: #fffaf0;
+  opacity: 0;
+  pointer-events: none;
+}
+.nv-photo .ph-flash.go {
+  animation: ph-flash 0.5s ease-out;
+}
+@keyframes ph-flash {
+  0% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- preview: the framed photo like a print on the table ------------------ */
+
+.nv-photo .ph-sheet {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 1.1em;
+  padding: calc(var(--safe-t) + 1.4em) calc(var(--safe-r) + 1.1em) calc(var(--safe-b) + 1.2em) calc(var(--safe-l) + 1.1em);
+  pointer-events: auto;
+}
+.nv-photo .ph-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 40%, rgba(60, 40, 100, 0.35), rgba(0, 0, 0, 0) 70%),
+    rgba(22, 12, 42, 0.82);
+}
+.nv-photo .ph-sheet.in .ph-backdrop {
+  animation: ph-fade 0.3s ease-out both;
+}
+.nv-photo .ph-print {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nv-photo .ph-img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0.3em;
+  transform: rotate(-1.5deg);
+  box-shadow: 0 1.1em 2.4em rgba(8, 2, 24, 0.6), 0 0.2em 0.5em rgba(8, 2, 24, 0.4);
+  -webkit-user-drag: none;
+}
+.nv-photo .ph-sheet.in .ph-img {
+  animation: ph-print 0.55s cubic-bezier(0.2, 1.25, 0.4, 1) both;
+}
+@keyframes ph-print {
+  from {
+    opacity: 0;
+    transform: rotate(3deg) scale(1.14);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-1.5deg) scale(1);
+  }
+}
+@keyframes ph-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.nv-photo .ph-side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55em;
+}
+.nv-photo .ph-sheet.in .ph-side {
+  animation: ph-fade 0.35s 0.15s ease-out both;
+}
+.nv-photo .ph-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65em;
+}
+.nv-photo .ph-actions .btn {
+  min-height: 48px;
+  min-width: 0;
+  padding-left: 0.95em;
+  padding-right: 0.95em;
+}
+/* the main action is a little wider (Retake · Download · Share fit one row on a 360 px phone) */
+.nv-photo .ph-actions .ph-share {
+  min-width: 6.6em;
+}
+.nv-photo .ph-bi {
+  font-size: 1.15em;
+  line-height: 1;
+}
+.nv-photo .ph-sheet.busy .ph-actions .btn {
+  filter: saturate(0.6) brightness(0.92);
+  pointer-events: none;
+}
+.nv-photo .ph-status {
+  min-height: 1.3em;
+  color: var(--on-hud);
+  font-size: 0.95em;
+  text-align: center;
+  text-shadow: 0 0.1em 0.25em rgba(10, 4, 30, 0.7);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.nv-photo .ph-status.on {
+  opacity: 1;
+}
+
+/* landscape phones: the print on the left, the buttons in a column on the right */
+@media (orientation: landscape) and (max-height: 600px) {
+  .nv-photo .ph-sheet {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 1.4em;
+    padding-top: calc(var(--safe-t) + 1em);
+    padding-bottom: calc(var(--safe-b) + 1em);
+  }
+  .nv-photo .ph-actions {
+    flex-direction: column-reverse;
+    flex-wrap: nowrap;
+  }
+  .nv-photo .ph-actions .btn,
+  .nv-photo .ph-actions .ph-share {
+    min-width: 9em;
+  }
+  .nv-photo .ph-status {
+    max-width: 10em;
+  }
+}

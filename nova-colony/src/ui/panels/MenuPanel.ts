@@ -1,6 +1,6 @@
 /**
  * MenuPanel — the #btn-menu grid: everything that doesn't have its own button (daily gift, lucky
- * spin, season pass, inventory, vehicles, colony, recruitment, settings), with notification badges.
+ * spin, season pass, journal, Photo Mode, inventory, vehicles, colony, recruitment, settings), with notification badges.
  */
 import { Panel, type PanelTitle } from './Panel';
 import { fill, h } from '../dom';
@@ -26,6 +26,8 @@ export class MenuPanel extends Panel {
       { icon: '🎡', art: hudArt('spin'), label: 'Lucky wheel', panel: 'spin', badge: b.spin ? 1 : 0 },
       { icon: '🏆', art: hudArt('season'), label: 'Season pass', panel: 'season', badge: b.season },
       { icon: '📔', art: hudArt('journal'), label: 'Journal', panel: 'journal', badge: b.journal },
+      // Photo Mode is not a panel: UI.open('photo') hides the HUD and hands over the camera (ui/photo/PhotoMode.ts)
+      ...(this.ctx.renderer.photo ? [{ icon: '📷', art: hudArt('photo'), label: 'Photo', panel: 'photo' }] : []),
       { icon: '🎒', art: hudArt('backpack'), label: 'Inventory', panel: 'inventory' },
       { icon: '🧭', art: hudArt('expeditions'), label: 'Expeditions', panel: 'expeditions', badge: b.expeditions },
       { icon: '🚙', art: vehicleArt('buggy'), label: 'Vehicles', panel: 'vehicles' },

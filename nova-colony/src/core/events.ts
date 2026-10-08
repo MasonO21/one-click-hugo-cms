@@ -113,6 +113,9 @@ export interface GameEvents {
   'ad:failed': { placement: string };
   'iap:purchased': { product: string };
   'iap:failed': { product: string; reason: string };
+  /** Photo Mode (ui/photo): a still was taken (`preset` = lighting chip) / sent to a share sheet or saved. */
+  'photo:taken': { preset: string; width: number; height: number };
+  'photo:shared': { method: 'native' | 'web' | 'download' };
 
   // presentation requests (any system may emit; UI/render/audio handle)
   /** `open`: a panel the toast opens when tapped (the Journal for an achievement). */

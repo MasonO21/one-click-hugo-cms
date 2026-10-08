@@ -617,7 +617,8 @@ export type MissionType =
   | 'spin' // use the spin wheel
   | 'rescue' // rescue survivors from camps
   | 'expedition' // target = 'launch' | 'collect' | 'frontier' | region id | expedition id (see sim/expeditions.ts)
-  | 'wish'; // grant colonists' wishes; target = WishKind or '*' (see sim/wishes.ts)
+  | 'wish' // grant colonists' wishes; target = WishKind or '*' (see sim/wishes.ts)
+  | 'photo'; // take photos in Photo Mode (target '*')
 
 export interface MissionDef {
   id: string;

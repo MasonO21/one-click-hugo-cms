@@ -50,5 +50,12 @@ export function createMockServices(opts: { adResult?: 'rewarded' | 'skipped' | '
       upload: async () => false,
       download: async () => null,
     },
+    // nothing to share to in tests (Photo Mode's preview then offers no Share / Download)
+    share: {
+      native: false,
+      canShareFiles: () => false,
+      shareImage: async () => 'unavailable',
+      download: async () => 'unavailable',
+    },
   };
 }
