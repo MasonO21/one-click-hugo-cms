@@ -4,12 +4,28 @@
  * the whole game for good.
  */
 const failures = new Map<string, number>();
+const listeners = new Set<(label: string, e: unknown) => void>();
+
+/** Be told about the first failure of each step (field error reporting). Returns an unsubscribe. */
+export function onLoopError(fn: (label: string, e: unknown) => void): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
 
 /** Record a failed loop step; logs the first failure of each label (later ones are only counted). */
 export function reportLoopError(label: string, e: unknown): void {
   const n = failures.get(label) ?? 0;
   failures.set(label, n + 1);
-  if (n === 0) console.error(`[loop] ${label} failed (later failures of this step are counted, not logged)`, e);
+  if (n === 0) {
+    console.error(`[loop] ${label} failed (later failures of this step are counted, not logged)`, e);
+    for (const fn of listeners) {
+      try {
+        fn(label, e);
+      } catch {
+        /* a listener must never break the loop */
+      }
+    }
+  }
 }
 
 /** Run one step of the frame; true when it completed without throwing. */

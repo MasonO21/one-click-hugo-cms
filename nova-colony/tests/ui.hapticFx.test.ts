@@ -17,11 +17,11 @@ describe('world haptics', () => {
     const r = rig();
     r.at(0); r.bus.emit('gather:hit', { node: 1, model: 'tree', x: 0, z: 0, drop: {} });
     r.at(1); r.bus.emit('player:damaged', { amount: 5 });
-    r.at(3); r.bus.emit('combat:warning', { wave: 1, seconds: 30 });
+    r.at(3); r.bus.emit('combat:warning', { wave: 1, seconds: 30 }); // buzzes from platform/hooks.ts, not here
     r.at(6); r.bus.emit('combat:started', { wave: 1, aliens: 6 });
     r.at(8); r.bus.emit('building:completed', { id: 1, def: 'shelter' });
     r.at(10); r.bus.emit('player:downed', {});
-    expect(r.buzz).toEqual(['tap', 'warning', 'warning', 'heavy', 'success', 'heavy']);
+    expect(r.buzz).toEqual(['tap', 'warning', 'heavy', 'success', 'heavy']);
   });
 
   it('auto-gathering taps at most every 0.3 s', () => {

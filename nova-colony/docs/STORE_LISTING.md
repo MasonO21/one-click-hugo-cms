@@ -260,7 +260,7 @@ under 8 MB). The older captures in `docs/screenshots/` predate the lighting pass
 |----------|-----------|---|---------|
 | **Gameplay Events** | Mission IDs, building types, tier, event counts, timestamps | No | Product analytics & retention measurement |
 | **Install ID** | Random 128-bit identifier | No | Batching events; deleted on consent withdrawal |
-| **Crashes & Errors** | (None explicitly collected) | — | — |
+| **Diagnostics (Crash Data / Other Diagnostic Data)** | Error events for failures the game recovered from: a code-location label, the first line of the error message (≤64 chars) and the top bundle stack frame; at most 25 per session (`src/platform/errorReport.ts`). Only with analytics consent | No | App functionality (finding and fixing bugs) |
 | **Ads** | Ad placement ID, result (watched/failed) | No | Ad effectiveness & limit enforcement |
 | **Purchases** | Product ID, purchase count | No | Purchase funnel analysis |
 | **Location** | (None) | — | — |
@@ -290,6 +290,7 @@ under 8 MB). The older captures in `docs/screenshots/` predate the lighting pass
 - **Contacts:** No.
 - **Search/browsing history:** No.
 - **App activity:** Yes — opt-in analytics (gameplay events, install ID, ad engagement). Declared as "not linked to you" and tied to random install ID.
+- **App info and performance → Crash logs / Diagnostics:** Yes — opt-in only (same analytics consent): error events for failures the game recovered from (location label, first line of the message, top stack frame), max 25 per session, tied to the random install ID. Purpose: app functionality / analytics.
 
 **Third-Party Sharing:**
 - ✓ Ads (AdMob): ad placement ID, gameplay session flags.

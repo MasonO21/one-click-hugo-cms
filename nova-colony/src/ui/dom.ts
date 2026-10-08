@@ -117,6 +117,23 @@ export function replay(el: Element, cls: string): void {
 }
 
 const warned = new Set<string>();
+const uiErrorListeners = new Set<(label: string, e: unknown) => void>();
+
+/** Be told about the first failure of each `safe()` / `tryRun()` label (field error reporting). */
+export function onUiError(fn: (label: string, e: unknown) => void): () => void {
+  uiErrorListeners.add(fn);
+  return () => uiErrorListeners.delete(fn);
+}
+
+function notifyUiError(label: string, e: unknown): void {
+  for (const fn of uiErrorListeners) {
+    try {
+      fn(label, e);
+    } catch {
+      /* never let reporting break the UI */
+    }
+  }
+}
 /** Run `fn`, logging each distinct failure once. Returns undefined on failure. */
 export function safe<T>(label: string, fn: () => T): T | undefined {
   try {
@@ -125,6 +142,7 @@ export function safe<T>(label: string, fn: () => T): T | undefined {
     if (!warned.has(label)) {
       warned.add(label);
       console.error(`[ui] ${label} failed`, e);
+      notifyUiError(label, e);
     }
     return undefined;
   }
@@ -139,6 +157,7 @@ export function tryRun(label: string, fn: () => void): boolean {
     if (!warned.has(label)) {
       warned.add(label);
       console.error(`[ui] ${label} failed`, e);
+      notifyUiError(label, e);
     }
     return false;
   }

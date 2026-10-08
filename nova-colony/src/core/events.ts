@@ -7,6 +7,7 @@
  */
 import type { Id } from './state';
 import type { ResourceBag, Reward } from '../data/schema';
+import { reportLoopError } from './guard';
 
 export type GainSource = 'gather' | 'production' | 'reward' | 'offline' | 'purchase' | 'refund' | 'loot' | 'drop' | 'craft' | 'trade';
 
@@ -163,7 +164,7 @@ export class EventBus {
       try {
         fn(payload);
       } catch (e) {
-        console.error(`[bus] handler for ${String(type)} failed`, e);
+        reportLoopError(`bus ${String(type)}`, e); // logged once per event type, counted after
       }
     }
     const any = this.handlers.get('*');

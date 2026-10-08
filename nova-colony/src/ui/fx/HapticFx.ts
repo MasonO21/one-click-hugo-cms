@@ -1,7 +1,7 @@
 /**
  * Haptics for what happens in the world (panels and buttons buzz on their own): a light tap per chop or swing, a
- * warning when you get hurt or a raid is announced, a heavy thud when it starts or you go down, a little success
- * when construction finishes. Each kind has a cooldown and any two buzzes are spaced out, so auto-gathering or
+ * warning when you get hurt, a heavy thud when a raid starts or you go down, a little success when construction
+ * finishes. (The raid warning, tier-ups and missions already buzz from platform/hooks.ts.) Each kind has a cooldown and any two buzzes are spaced out, so auto-gathering or
  * a big fight never turns into a constant rattle. The Vibration setting is honoured by `haptic` itself.
  */
 import type { EventBus } from '../../core/events';
@@ -43,7 +43,6 @@ export function wireHapticFx(bus: EventBus, haptic: (k: HapticKind) => void, now
     bus.on('gather:hit', () => fire('gather', 'tap')),
     bus.on('player:damaged', () => fire('hurt', 'warning')),
     bus.on('player:downed', () => fire('hurt', 'heavy')),
-    bus.on('combat:warning', () => fire('raid', 'warning')),
     bus.on('combat:started', () => fire('raid', 'heavy')),
     bus.on('building:completed', () => fire('built', 'success')),
   ];

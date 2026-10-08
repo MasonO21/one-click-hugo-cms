@@ -11,6 +11,7 @@ import { isNative } from './env';
 import { onBackground, onForeground } from './lifecycle';
 import type { ToggleableHaptics } from './haptics';
 import { installNotifications } from './notifications';
+import { installErrorReporting } from './errorReport';
 
 /** Hide the native splash and go immersive (no status bar). Safe no-op on the web. */
 async function setupNativeChrome(): Promise<void> {
@@ -67,6 +68,8 @@ export function installResumeCredit(game: Game, life: LifecycleHooks = { onBackg
 export function installPlatformHooks(game: Game): () => void {
   const offs: Array<() => void> = [];
   offs.push(installAnalyticsHooks(game));
+  // failures the game survives reach us as consent-gated analytics events (nothing without consent)
+  offs.push(installErrorReporting((ev, props) => game.services.analytics.track(ev, props)));
 
   const haptics = game.services.haptics as Partial<ToggleableHaptics> & typeof game.services.haptics;
   const syncHaptics = () => haptics.setEnabled?.(!!game.state.settings.haptics);
