@@ -260,6 +260,7 @@ class App {
     const after = totalStars(this.save);
     const newSkin = SKINS.find(s => s.stars > before && s.stars <= after);
     delete this.save.skipped[i];
+    delete this.save.missed[i];
     this.persist();
     // first clear of a world (kept if they replayed the boss level from its own win card)
     this.pendingWorldDone = i % 20 === 19 && (wasLocked || this.pendingWorldDone === Math.floor(i / 20)) ? Math.floor(i / 20) : undefined;
@@ -270,12 +271,20 @@ class App {
     setTimeout(() => this.trophies.onWin(game), 1400);
   }
 
+  // A flip on level i that came to rest or failed without winning; enough of them on an unbeaten level offer a skip.
+  noteMissedFlip(i) {
+    if (this.save.stars[i]) return;
+    this.save.missed[i] = (this.save.missed[i] || 0) + 1;
+    this.persist();
+  }
+
   // Reward for watching an ad when stuck: open the next level without stars for this one.
   skipLevel() {
     const g = this.game;
     if (!g || g.attract) return;
     const i = g.info.index;
     this.save.skipped[i] = true;
+    delete this.save.missed[i];
     this.save.unlocked = Math.max(this.save.unlocked, Math.min(this.levels.length, i + 2));
     this.persist();
     const next = i + 1;

@@ -176,7 +176,7 @@ export class UI {
     this.toast(msg || (timed ? 'Follow the route — and time it with the moving parts!' : 'Follow the dotted route!'), 2600);
   }
 
-  // After many fails on an unbeaten level: watch a reward ad to move on (no stars, come back anytime).
+  // After 10 flips that didn't win an unbeaten level: watch a reward ad to move on (no stars, come back anytime).
   offerSkip() {
     const app = this.app, g = app.game;
     if (!g || g.attract || this._adBusy || !app.ads.canOfferSkip(g)) return;

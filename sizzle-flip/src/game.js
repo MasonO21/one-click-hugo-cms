@@ -51,6 +51,7 @@ export class Game {
   }
 
   reset(first = false) {
+    if (this.flipOpen) this.missFlip(); // restarted while a flip was still going
     const L = this.level;
     this.sim = new Sim({ ...L, gravity: L.gravity ?? this.world.gravity, floor: L.floor ?? this.world.floor });
     const st = L.start;
@@ -153,6 +154,7 @@ export class Game {
     const inPan = s.supportBody === this.panBody;
     s.launch(vx, vy);
     this.flips++;
+    this.flipOpen = true;
     this.hud();
     const [cx, cy] = s.com();
     this.fx.dust(cx, cy + 12, 8, 0.8);
@@ -325,6 +327,7 @@ export class Game {
       this.cps.ready();
       this.cps.save();
       if (this.flips > 0) { this.face.expr = 'happy'; this.face.exprT = 0.9; }
+      if (this.flipOpen) { this.missFlip(); this.hud(); } // landed, but not in the bun
     }
     if (!ready && s.restTimer === 0) this.lastSettled = false;
 
@@ -428,10 +431,17 @@ export class Game {
     s.events.length = 0;
   }
 
+  // A flip that ended (came to rest, failed or was restarted) without winning: counts toward the skip offer.
+  missFlip() {
+    this.flipOpen = false;
+    if (!this.attract) this.app.noteMissedFlip(this.info.index);
+  }
+
   onFail(reason, x, y) {
     if (this.phase === 'intro') this.skipIntro(); // never drop a fail (it would leave the level unplayable)
     if (this.phase !== 'play') return;
     this.fails = (this.fails || 0) + 1;
+    this.missFlip();
     this.cps.failed();
     this.hud();
     if (!this.attract) this.app.trophies.onFail(reason);
@@ -453,6 +463,7 @@ export class Game {
   }
 
   onWinEvent(x, y) {
+    this.flipOpen = false;
     this.phase = 'win';
     this.phaseT = 0;
     this.winT = 0;

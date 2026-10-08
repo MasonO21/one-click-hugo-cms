@@ -6,6 +6,7 @@ const defaults = () => ({
   stars: {},        // levelIndex -> best stars (1..3)
   best: {},         // levelIndex -> fewest flips
   skipped: {},      // levelIndex -> true when skipped with a reward ad (no stars until beaten)
+  missed: {},       // levelIndex -> flips that didn't win it, while unbeaten (restarts and earlier visits count): the skip offer
   unlocked: 1,      // number of unlocked levels (sequential)
   skin: 'classic',
   character: 'sausage', // equipped character: 'sausage' (with `skin`) or a shop item id
@@ -37,7 +38,7 @@ export function loadSave() {
     const d = JSON.parse(raw);
     const base = defaults();
     delete d.longAim; // was a free toggle before it became a reward
-    return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, owned: obj(d.owned), txSeen: obj(d.txSeen), hotdogs: Number.isFinite(d.hotdogs) && d.hotdogs > 0 ? Math.floor(d.hotdogs) : 0, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
+    return { ...base, ...d, stars: d.stars || {}, best: d.best || {}, skipped: d.skipped || {}, missed: obj(d.missed), owned: obj(d.owned), txSeen: obj(d.txSeen), hotdogs: Number.isFinite(d.hotdogs) && d.hotdogs > 0 ? Math.floor(d.hotdogs) : 0, seenTips: d.seenTips || {}, seenSkins: d.seenSkins || {}, ach: d.ach || {}, counters: d.counters || {} };
   } catch (e) {
     return defaults();
   }

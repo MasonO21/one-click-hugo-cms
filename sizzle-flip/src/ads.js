@@ -19,12 +19,12 @@ export const AD_RULES = {
   secondsBetween: 180,      // …and at least 3 minutes since the previous ad
   graceFails: 10,           // no forced ad right after a level that took 10+ fails
   freeHintsPerWorld: 1,     // the first hint in each world is free; later ones cost an opt-in ad
-  skipAfterFails: 8,        // offer "watch an ad to skip" after 8 fails on an unbeaten level
+  skipAfterMissedFlips: 10, // offer "watch an ad to skip" after 10 flips that didn't win an unbeaten level
   longAimMinutes: 10,       // one reward ad = 10 minutes (real time) of the long aim guide
 };
 
 // Fast pacing for trying the flow (Settings → Ad testing, or ?adtest in the URL).
-const FAST_RULES = { firstAdAfterWins: 1, firstAdAfterSeconds: 0, levelsBetween: 1, secondsBetween: 20, graceFails: 10, freeHintsPerWorld: 1, skipAfterFails: 2, longAimMinutes: 1 };
+const FAST_RULES = { firstAdAfterWins: 1, firstAdAfterSeconds: 0, levelsBetween: 1, secondsBetween: 20, graceFails: 10, freeHintsPerWorld: 1, skipAfterMissedFlips: 3, longAimMinutes: 1 };
 
 const AD_TEST_URL = /(^|[?&#])adtest\b/.test(location.search + location.hash);
 const WEB_TEST_CONTEXT = !!window.__ARTIFACT || AD_TEST_URL || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
@@ -106,11 +106,15 @@ export class AdManager {
     this.app.persist();
   }
 
+  // Counted in the save per level (App.noteMissedFlip): every flip that came to rest or failed without winning,
+  // across restarts and earlier visits, so leaving the level doesn't start the count over.
+  missedFlips(i) { return (this.app.save.missed && this.app.save.missed[i]) || 0; }
+
   canOfferSkip(game) {
     const i = game.info.index;
     const s = this.app.save;
     // never the final level — that flip has to be earned
-    return i < this.app.levels.length - 1 && game.phase !== 'win' && (game.fails || 0) >= this.rules.skipAfterFails && !s.stars[i] && !(s.skipped && s.skipped[i]);
+    return i < this.app.levels.length - 1 && game.phase !== 'win' && this.missedFlips(i) >= this.rules.skipAfterMissedFlips && !s.stars[i] && !(s.skipped && s.skipped[i]);
   }
 
   // Long aim guide: a timed booster. The expiry is a timestamp in the save, so it survives reloads.

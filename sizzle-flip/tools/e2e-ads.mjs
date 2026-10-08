@@ -125,11 +125,34 @@ await page.click('.ad-collect');
 await page.waitForTimeout(500);
 check(await ev(() => window.__app.game.showHint && !window.__app.game.paused), 'watching the reward ad unlocks the hint and resumes');
 
-// ---- 5. skip after 8 fails
-check(await hidden('hud-skip'), 'no skip button before 8 fails');
-await ev(() => { const g = window.__app.game; g.fails = 8; g.hud(); });
+// ---- 5. skip after 10 flips that didn't win (real flips through the touch handlers: small hops that land back in the pan)
+const hop = () => ev(() => new Promise((resolve) => {
+  const app = window.__app, g = app.game, i = g.info.index, t0 = performance.now();
+  const missed = () => app.save.missed[i] || 0;
+  const go = () => {
+    if (performance.now() - t0 > 15000) return resolve(false);
+    if (g.phase !== 'play' || g.paused || !g.sim.canLaunch()) return setTimeout(go, 40);
+    const n = missed(), len = 14 + 0.12 * (app.maxDrag() - 14), sx = 195, sy = 420;
+    g.pointerDown(sx, sy); g.pointerMove(sx, sy + len); g.pointerUp(); // drag down = flip straight up
+    const landed = () => (missed() > n ? resolve(true) : performance.now() - t0 > 15000 ? resolve(false) : setTimeout(landed, 40));
+    landed();
+  };
+  go();
+}));
+check(await hidden('hud-skip'), 'no skip button on a fresh level');
+let hops = 0;
+for (let k = 0; k < 9; k++) if (await hop()) hops++;
+const after9 = await ev(() => ({ missed: window.__app.save.missed[7], fails: window.__app.game.fails || 0 }));
+check(hops === 9 && after9.missed === 9, `9 flips that landed without winning are counted (${hops} hops, ${after9.missed} missed, ${after9.fails} falls)`);
+check(await hidden('hud-skip'), 'no skip button after 9 missed flips');
+check(await hop(), '10th missed flip');
 await page.waitForTimeout(200);
-check(!(await hidden('hud-skip')), 'skip button appears after 8 fails');
+check(!(await hidden('hud-skip')), 'skip button appears after 10 missed flips');
+await ev(() => window.__app.toMenu('scr-levels'));
+await page.waitForTimeout(500);
+await ev(() => window.__app.startLevel(7));
+await page.waitForTimeout(800);
+check(!(await hidden('hud-skip')), 'the count is kept: leaving and coming back still offers the skip');
 await shot('5-hud-skip');
 await page.click('#hud-skip', { force: true });
 await page.waitForTimeout(300);
