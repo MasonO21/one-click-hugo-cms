@@ -428,7 +428,8 @@ export interface ItemDef {
     moveSpeed?: number;
   };
   /** Consumables. */
-  use?: { heal?: number; reward?: Reward };
+  /** heal: HP; reward: a fixed reward (crates); chest: a Nova chest id (rolls its loot, see data/chests.ts). */
+  use?: { heal?: number; reward?: Reward; chest?: string };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -930,15 +931,60 @@ export interface ProductDef {
   section: 'crystals' | 'packs' | 'cosmetics' | 'vip' | 'season';
 }
 
+/** What a cosmetic changes (one of each kind can be equipped; see LiveOps.equipCosmetic). */
+export type CosmeticKind =
+  | 'base_theme' // colony palette accents + ambient particles (render: Buildings / Atmosphere)
+  | 'outfit' // the player's clothes
+  | 'hat' // worn by the player
+  | 'pet' // a little companion that follows the player
+  | 'colonist_outfit' // every colonist's clothes
+  | 'vehicle_skin' // the player's vehicle
+  | 'turret_skin' // every defense turret
+  | 'decoration' // unlocks exclusive decor buildings (Build › Decor)
+  | 'photo_frame'; // the frame around Photo Mode pictures
+
+/** Cosmetic rarity, also the Nova-chest drop tier (mythic only drops from the top chests). */
+export type CosmeticRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
+
+/** Ambient particles a colony theme adds (render: Atmosphere). */
+export type ThemeFx = 'petals' | 'snow' | 'leaves' | 'fireflies' | 'stars' | 'aurora' | 'embers';
+
 export interface CosmeticDef {
   id: string;
   name: string;
-  kind: 'base_theme' | 'outfit' | 'vehicle_skin' | 'turret_skin' | 'decoration' | 'colonist_outfit';
-  /** Color/params used by render. */
+  kind: CosmeticKind;
+  /** Main colour used by render (outfit body, vehicle/turret paint, theme accent wash). */
   color: string;
+  /** Secondary colour (trim, glow, pattern). */
   accent?: string;
-  /** Nova price if buyable with premium currency (0 = only from packs/rewards). */
+  /** Nova price if buyable with premium currency (0 = only from chests, packs or rewards). */
   nova: number;
+  rarity: CosmeticRarity;
+  /** Emoji fallback for the painted icon at art/cosmetics/<id>.webp. */
+  icon: string;
+  /** One cozy line for the wardrobe / reward card. */
+  description: string;
+  /** Can drop from Nova chests (data/chests.ts); with nova 0 and no other grant it is chest-exclusive. */
+  chest?: boolean;
+  /** base_theme only: the ambient particles it adds. */
+  fx?: ThemeFx;
+}
+
+/** A tiered Nova chest (data/chests.ts). Opened from the inventory or the Shop's Chests tab. */
+export interface ChestDef {
+  id: string;
+  name: string;
+  /** Drop tier: the best cosmetic rarity it can roll, and its look. */
+  rarity: CosmeticRarity;
+  /** Nova price in the Shop (0 = not sold, only earned). */
+  nova: number;
+  /** Reward cards revealed when it opens. */
+  cards: number;
+  icon: string;
+  description: string;
+  /** Opening-screen palette: glow / particles / rarity ring. */
+  color: string;
+  accent: string;
 }
 
 export interface SpinSegment {

@@ -191,7 +191,7 @@ describe('data.integrity — ids & references', () => {
     // every craftable item has a recipe and every equipable (non-starter) has a recipe
     const crafted = new Set(data.recipes.flatMap((r) => Object.keys(r.outputs.items ?? {})));
     for (const i of data.items) {
-      if (['small_backpack', 'survival_tool', 'flare_pistol', 'supply_crate', 'mystery_crate', 'colonist_crate', 'defense_crate', 'tech_crate', 'alloy_crate', 'nano_crate', 'titan_crate'].includes(i.id)) continue;
+      if (['small_backpack', 'survival_tool', 'flare_pistol', 'supply_crate', 'mystery_crate', 'colonist_crate', 'defense_crate', 'tech_crate', 'alloy_crate', 'nano_crate', 'titan_crate'].includes(i.id) || i.use?.chest) continue;
       expect(crafted.has(i.id), `item ${i.id} cannot be crafted`).toBe(true);
     }
     const starter = data.starterKit;
@@ -750,7 +750,13 @@ describe('data.integrity — monetization & live-ops', () => {
   it('cosmetics: 20+ across every kind; purchasable ones have a Nova price; every referenced cosmetic exists', () => {
     expect(data.cosmetics.length).toBeGreaterThanOrEqual(20);
     const kinds = new Set(data.cosmetics.map((c) => c.kind));
-    for (const k of ['base_theme', 'outfit', 'vehicle_skin', 'turret_skin', 'decoration', 'colonist_outfit']) expect(kinds.has(k as never), `cosmetic kind ${k}`).toBe(true);
+    for (const k of ['base_theme', 'outfit', 'hat', 'pet', 'vehicle_skin', 'turret_skin', 'decoration', 'colonist_outfit', 'photo_frame']) expect(kinds.has(k as never), `cosmetic kind ${k}`).toBe(true);
+    for (const c of data.cosmetics) {
+      expect(['common', 'rare', 'epic', 'legendary', 'mythic'], `${c.id} rarity`).toContain(c.rarity);
+      expect(c.icon.length, `${c.id} icon`).toBeGreaterThan(0);
+      expect(c.description.length, `${c.id} description`).toBeGreaterThan(8);
+      if (c.fx) expect(c.kind, `${c.id}: fx is for themes`).toBe('base_theme');
+    }
     for (const c of data.cosmetics) { expect(c.color).toMatch(/^#[0-9a-f]{6}$/i); expect(c.nova).toBeGreaterThanOrEqual(0); }
     // exclusive (nova 0) cosmetics must be granted by something
     const granted = new Set<string>();
@@ -760,7 +766,21 @@ describe('data.integrity — monetization & live-ops', () => {
     data.season.levels.forEach((l) => { note(l.free); note(l.premium); });
     data.dailyRewards.forEach(note);
     data.spinSegments.forEach((s) => note(s.reward));
-    for (const c of data.cosmetics) if (c.nova === 0) expect(granted.has(c.id), `exclusive cosmetic ${c.id} is never granted`).toBe(true);
+    for (const c of data.cosmetics) if (c.nova === 0 && !c.chest) expect(granted.has(c.id), `exclusive cosmetic ${c.id} is never granted`).toBe(true);
+  });
+
+  it('chests: five tiers, each an inventory item; prices and card counts climb; every rarity has chest cosmetics', () => {
+    expect(data.chests.length).toBe(5);
+    const order = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+    data.chests.forEach((c, i) => {
+      expect(c.rarity).toBe(order[i]);
+      expect(data.item(c.id)?.use?.chest, `${c.id} item`).toBe(c.id);
+      if (i > 0) { expect(c.nova).toBeGreaterThan(data.chests[i - 1].nova); expect(c.cards).toBeGreaterThan(data.chests[i - 1].cards); }
+      expect(c.color).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(c.accent).toMatch(/^#[0-9a-f]{6}$/i);
+    });
+    for (const it of data.items) if (it.use?.chest) expect(data.chest(it.use.chest), `${it.id} opens an unknown chest`).toBeTruthy();
+    for (const r of order) expect(data.cosmetics.filter((c) => c.chest && c.rarity === r).length, `chest cosmetics of rarity ${r}`).toBeGreaterThanOrEqual(r === 'mythic' ? 4 : 5);
   });
 
   it('season: 50 levels, valid rewards, premium richer than free, milestone cosmetics every 10 levels', () => {

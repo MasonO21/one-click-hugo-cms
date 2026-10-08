@@ -74,6 +74,8 @@ const ITEMS = new Set([
   // crates
   'supply_crate', 'rations_crate', 'timber_bundle', 'stone_bundle', 'ore_bundle', 'steel_bundle', 'colonist_crate',
   'defense_crate', 'tech_crate', 'alloy_crate', 'nano_crate', 'titan_crate', 'mystery_crate',
+  // Nova chests (their big closed / open art and opening backgrounds: chestArt / chestBgArt)
+  'chest_acorn', 'chest_moonlit', 'chest_sunny', 'chest_crystal', 'chest_cosmic',
 ]);
 
 /** Every BuildingDef.id (tests keep this equal to the data and to the files in public/art/buildings). */
@@ -173,6 +175,34 @@ export function itemArt(id: string): string | null {
 /** Every id `itemArt` knows (for tests). */
 export function itemArtIds(): string[] {
   return [...ITEMS];
+}
+
+/** Nova chests (data/chests.ts). Each has closed + open art (512 px, transparent) and a portrait opening background. */
+const CHESTS = new Set(['chest_acorn', 'chest_moonlit', 'chest_sunny', 'chest_crystal', 'chest_cosmic']);
+/** Big painted chest for the opening screen and the Shop, closed or with its lid open. */
+export function chestArt(id: string, open = false): string | null {
+  return CHESTS.has(id) ? `${ROOT}chests/${id}-${open ? 'open' : 'closed'}.webp` : null;
+}
+/** The chest's own opening-screen backdrop (portrait painting, centre left clear for the chest). */
+export function chestBgArt(id: string): string | null {
+  return CHESTS.has(id) ? `${ROOT}chests/bg/${id}.webp` : null;
+}
+/** Every id `chestArt` knows (for tests). */
+export function chestArtIds(): string[] {
+  return [...CHESTS];
+}
+
+/**
+ * Painted cosmetic icon by CosmeticDef.id, 128 px with transparency (wardrobe, shop, chest reward cards).
+ * Cosmetics without a painting yet fall back to their emoji (CosmeticDef.icon).
+ */
+const COSMETIC_ART = new Set<string>([]);
+export function cosmeticArt(id: string): string | null {
+  return COSMETIC_ART.has(id) ? `${ROOT}cosmetics/${id}.webp` : null;
+}
+/** Every id `cosmeticArt` knows (for tests). */
+export function cosmeticArtIds(): string[] {
+  return [...COSMETIC_ART];
 }
 
 /**

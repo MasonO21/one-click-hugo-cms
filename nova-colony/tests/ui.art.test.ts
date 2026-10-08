@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createDataRegistry } from '../src/data';
-import { alienArt, biomeArt, buildingArt, buildingArtIds, eventArt, hudArt, hudArtIds, isArtSrc, itemArt, itemArtIds, keyArt, phaseArt, poiArt, poiArtIds, professionArt, researchArt, researchArtIds, resourceArt, rewardArt, shopArt, tierArt, vehicleArt, vehicleArtIds } from '../src/ui/art';
+import { alienArt, biomeArt, buildingArt, buildingArtIds, chestArt, chestBgArt, cosmeticArt, eventArt, hudArt, hudArtIds, isArtSrc, itemArt, itemArtIds, keyArt, phaseArt, poiArt, poiArtIds, professionArt, researchArt, researchArtIds, resourceArt, rewardArt, shopArt, tierArt, vehicleArt, vehicleArtIds } from '../src/ui/art';
 import { dayPhase } from '../src/ui/logic/time';
 import { itemToast, rewardParts } from '../src/ui/logic/rewards';
 import { buildingEffects, buildingUnlock, tierUnlockGroups, tierUnlocks, vehicleUnlock } from '../src/ui/logic/describe';
@@ -228,6 +228,8 @@ describe('ui art lookups', () => {
     for (const r of data.research) add(researchArt(r.id));
     for (const id of hudArtIds()) add(hudArt(id));
     for (const p of data.pois) add(poiArt(p.id));
+    for (const c of data.chests) { add(chestArt(c.id)); add(chestArt(c.id, true)); add(chestBgArt(c.id)); }
+    for (const c of data.cosmetics) add(cosmeticArt(c.id));
     add(keyArt(false));
     add(keyArt(true));
     const root = path.join(PUBLIC, 'art');

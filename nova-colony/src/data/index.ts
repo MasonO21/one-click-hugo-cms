@@ -9,6 +9,7 @@ import type {
   BiomeDef,
   BuildingDef,
   CosmeticDef,
+  ChestDef,
   ExpeditionDef,
   ExpeditionRules,
   InvasionDef,
@@ -52,6 +53,7 @@ import { BALANCE } from './balance';
 import { EXPEDITIONS, EXPEDITION_RULES } from './expeditions';
 import { ACHIEVEMENTS } from './achievements';
 import { WISHES, WISH_RULES } from './wishes';
+import { CHESTS } from './chests';
 
 export interface GameData {
   resources: ResourceDef[];
@@ -76,6 +78,7 @@ export interface GameData {
   adPlacements: AdPlacementDef[];
   products: ProductDef[];
   cosmetics: CosmeticDef[];
+  chests: ChestDef[];
   vip: VipDef;
   season: SeasonDef;
   dailyRewards: Reward[];
@@ -123,6 +126,7 @@ export class DataRegistry implements GameData {
   adPlacements!: AdPlacementDef[];
   products!: ProductDef[];
   cosmetics!: CosmeticDef[];
+  chests!: ChestDef[];
   vip!: VipDef;
   season!: SeasonDef;
   dailyRewards!: Reward[];
@@ -156,6 +160,7 @@ export class DataRegistry implements GameData {
     this.maps.ad = index(data.adPlacements, 'ad');
     this.maps.product = index(data.products, 'product');
     this.maps.cosmetic = index(data.cosmetics, 'cosmetic');
+    this.maps.chest = index(data.chests, 'chest');
     this.maps.expedition = index(data.expeditions ?? [], 'expedition');
     this.maps.achievement = index(data.achievements ?? [], 'achievement');
     this.maps.wish = index(data.wishes ?? [], 'wish');
@@ -178,6 +183,7 @@ export class DataRegistry implements GameData {
   ad(id: string): AdPlacementDef | undefined { return this.maps.ad.get(id); }
   product(id: string): ProductDef | undefined { return this.maps.product.get(id); }
   cosmetic(id: string): CosmeticDef | undefined { return this.maps.cosmetic.get(id); }
+  chest(id: string): ChestDef | undefined { return this.maps.chest.get(id); }
   expedition(id: string): ExpeditionDef | undefined { return this.maps.expedition.get(id); }
   achievement(id: string): AchievementDef | undefined { return this.maps.achievement.get(id); }
   wish(id: string): WishDef | undefined { return this.maps.wish.get(id); }
@@ -213,6 +219,7 @@ export function defaultData(): GameData {
     adPlacements: AD_PLACEMENTS,
     products: PRODUCTS,
     cosmetics: COSMETICS,
+    chests: CHESTS,
     vip: VIP,
     season: SEASON,
     dailyRewards: DAILY_REWARDS,

@@ -34,6 +34,7 @@ function itemSources(): Map<string, string[]> {
   for (const f of fr.finds) add(f.reward, `frontier find ${f.label}`);
   for (const m of fr.milestones) add(m.reward, `star chart ${m.count}`);
   add(fr.repeat.reward, 'star chart (repeat)');
+  for (const c of data.chests) if (c.nova > 0) out.set(c.id, [...(out.get(c.id) ?? []), 'shop (Nova)']);
   return out;
 }
 
