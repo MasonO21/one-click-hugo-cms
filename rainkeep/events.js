@@ -382,6 +382,7 @@
   KH.on('campDestroyed', (e) => addPts('oasis', 40 * e.lvl));
   KH.on('roadLap', () => addPts('oasis', DATA.road.warLap));
   KH.on('rivalWin', () => addPts('oasis', DATA.rivals.warPts));
+  KH.on('siegeWave', () => addPts('oasis', DATA.siege.warPts));
   ACT.evclaim = (i) => {
     i = Number(i);
     const def = EV.defs[curKey()];

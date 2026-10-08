@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.11.0',
+  version: '4.12.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -944,6 +944,7 @@ const DATA = {
     { id: 'companion', text: "Use a companion's skill", n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'road', text: 'Roll the Road Dice 5 times', n: 5, pts: 10, show: (S) => S.lv.hall > 0 },
     { id: 'rival', text: 'March on a rival keep', n: 1, pts: 15, show: (S) => S.lv.wyrm >= 8 },
+    { id: 'siege', text: 'Hold 3 waves of a Scorpion Siege', n: 3, pts: 15, show: (S) => S.lv.wyrm >= 10 },
   ],
   dutyChests: [
     [20, { journals: 20, speed5: 1, dice: 1 }],
@@ -1245,6 +1246,52 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- The Scorpion Siege ----------
+  // Ten waves of the Scorpion host against the gate. The scouts call each wave's kind before it comes;
+  // one tactic a wave counters it, and each siege brings only so many of each.
+  siege: {
+    unlock: 10, // Rainwyrm level
+    every: 6 * 3600, cap: 1, // a host gathers every 6 hours of keep time; one waits outside the walls at most
+    waves: 10, captainAt: 5, // wave 5 brings a Scorpion Captain, wave 10 the Scorpion King
+    // waves measure themselves against the defenders on the walls when the horn sounds (troops at home and the
+    // squad heroes in the keep): wave w comes at start + per x (w - 1) of their strength, the Captain and the King
+    // stronger still; never weaker than a foe of floor x your expedition stage, so an empty wall is no shortcut
+    foe: { start: 0.7, per: 0.07, captain: 1.2, king: 1.2 },
+    floor: 0.7,
+    kinds: {
+      swarm: { name: 'Sand-rat swarm', cls: 'bow', icon: 'i-swarm', atk: 0.9, def: 0.8, hp: 1.3, desc: 'Slingers in their hundreds, light and quick and always more of them.' },
+      shield: { name: 'Shieldwall', cls: 'guard', icon: 'i-shieldwall', atk: 0.9, def: 1.8, hp: 1, desc: 'Scorpion guards locked behind tall hide shields.' },
+      riders: { name: 'Camel riders', cls: 'lancer', icon: 'i-riders', atk: 1.35, def: 1, hp: 0.85, desc: 'Lances and war camels: they hit the gate hard.' },
+    },
+    odds: { swarm: 1, shield: 1, riders: 1 },
+    // one tactic a wave: each counters one kind of wave (and still helps a little against the others)
+    tactics: {
+      pots: { name: 'Fire Pots', icon: 'i-firepot', vs: 'swarm', desc: 'Burning oil over the swarm: +60% attack against it.', atk: 0.6 },
+      ballista: { name: 'Ballista', icon: 'i-ballista', vs: 'shield', desc: 'Bolts through the hide: the shieldwall loses half its defense.', def: 0.5 },
+      stakes: { name: 'Stakes', icon: 'i-stakes', vs: 'riders', desc: 'Sharpened stakes before the gate: the riders hit 40% softer.', foeAtk: 0.6 },
+    },
+    offAtk: 0.1, // a tactic used against the wrong kind of wave still gives +10% attack
+    stock: 3, // of each tactic, every siege
+    extra: { starglass: 40, max: 3 }, // one more of a tactic mid-siege, up to 3 a siege
+    rest: 0.12, restPer: 0.003, // health back after a wave held (+0.3% per Healer's House level)
+    rally: 0.5, // after a lost wave the defenders regroup to at least half health
+    walls: 3, // lost waves before the walls are breached and the siege ends
+    wall: 0.01, // attack and defense per Watchtower level
+    cauldrons: { water: 4 }, cauldronBonus: 0.15, // boiling water readied for the whole siege (quarter-crates, scaled)
+    farSight: 12, // from Watchtower Lv 12 the scouts see two waves ahead
+    wave: { stone: 0.5, food: 0.5 }, // quarter-crates for every wave held
+    captainGift: { starglass: 25, journals: 1 }, // for beating the Captain
+    // the siege chest, by waves held (the King's head is worth a Beacon on top)
+    chest: (d, king) => {
+      const r = { starglass: 6 * d, journals: 0.5 * d };
+      if (d >= 4) r.speed15 = 1;
+      if (d >= 8) r.speed60 = 1;
+      if (king) { r.starglass += 60; r.beacons = 1; }
+      return r;
+    },
+    warPts: 15, // Oasis Wars points a wave held
+  },
+
   cloudRun: {
     unlock: 5, // Rainwyrm level (a Drake can fly)
     perDay: 3, // flights a day
@@ -1357,6 +1404,9 @@ const DATA = {
     { id: 'rival10', text: 'Win 10 raids on rival keeps', stat: 'rivalWins', n: 10, reward: { starglass: 200 } },
     { id: 'rivalAll', text: 'Beat every rival keep at least once', stat: 'rivalsBeaten', n: 8, reward: { shard_epic: 1 } },
     { id: 'revenge3', text: 'Take revenge on a rival 3 times', stat: 'revenges', n: 3, reward: { beacons: 3 } },
+    { id: 'siege1', text: 'Hold all ten waves of a Scorpion Siege', stat: 'siegeWins', n: 1, reward: { beacons: 3 } },
+    { id: 'siege50', text: 'Hold 50 siege waves', stat: 'siegeWaves', n: 50, reward: { starglass: 300 } },
+    { id: 'king5', text: 'Slay the Scorpion King 5 times', stat: 'kings', n: 5, reward: { shard_epic: 1 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

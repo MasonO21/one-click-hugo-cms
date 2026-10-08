@@ -630,10 +630,13 @@
     raiders = { g, list, flame: flameM };
   }
   const RAID_FROM = new V3(-12, 0, 36), RAID_TO = new V3(0, 0, 19.2);
+  // the Scorpion Siege's host (siege.js) uses the same band: camped in the dunes while it waits, at the gate once the horn sounds
   function animRaiders(t) {
-    const k = KH.raidProgress ? KH.raidProgress() : null;
+    const raid = KH.raidProgress ? KH.raidProgress() : null;
+    const k = raid != null ? raid : KH.siege ? KH.siege.view() : null;
     raiders.g.visible = k != null;
     if (k == null) return;
+    const marching = raid != null || !!KH.siege.run();
     const e = smooth(0, 1, k);
     const hx = RAID_TO.x - RAID_FROM.x, hz = RAID_TO.z - RAID_FROM.z, hl = Math.hypot(hx, hz);
     const fx = hx / hl, fz = hz / hl, ry = Math.atan2(fx, fz);
@@ -641,7 +644,7 @@
     const cx = lerp(RAID_FROM.x, RAID_TO.x, e) + Math.sin(e * Math.PI) * 4, cz = lerp(RAID_FROM.z, RAID_TO.z, e);
     for (const r of raiders.list) {
       const x = cx + -fz * r.sx - fx * r.sz, z = cz + fx * r.sx - fz * r.sz;
-      const walking = k < 0.995;
+      const walking = marching && k < 0.995;
       r.o.position.set(x, landH(x, z) + (walking && !r.camel && !r.flag ? Math.abs(Math.sin(t * 6 + r.ph)) * 0.06 : 0), z);
       r.o.rotation.y = r.flag ? ry - Math.PI / 2 : ry;
       if (r.camel && walking) A.walkCamel(r.o, t + r.ph, 0.8);
