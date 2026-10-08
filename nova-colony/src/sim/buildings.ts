@@ -236,13 +236,20 @@ export class BuildingSystem extends System {
     if (!d) return false;
     if (d.unlockTier > this.game.state.colony.tier) return false;
     if (d.research && !this.game.state.research.completed.includes(d.research)) return false;
+    if (d.cosmetic && !this.ownsCosmetic(d.cosmetic)) return false;
     return true;
+  }
+
+  /** Exclusive decor (BuildingDef.cosmetic): does the colony own the decoration cosmetic that unlocks it? */
+  private ownsCosmetic(id: string): boolean {
+    return !!this.game.state.liveops?.cosmetics?.owned?.includes(id);
   }
 
   /** Human-readable reason a def is locked, or null when unlocked. */
   lockReason(defId: string): string | null {
     const d = this.game.data.building(defId);
     if (!d) return 'Unknown building';
+    if (d.cosmetic && !this.ownsCosmetic(d.cosmetic)) return `Unlock ${this.game.data.cosmetic(d.cosmetic)?.name ?? 'it'} in the Wardrobe`;
     if (d.unlockTier > this.game.state.colony.tier) return `Unlocks at ${this.game.data.tier(d.unlockTier).name} tier`;
     if (d.research && !this.game.state.research.completed.includes(d.research)) {
       return `Research ${this.game.data.researchDef(d.research)?.name ?? d.research} to unlock`;

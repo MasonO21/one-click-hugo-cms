@@ -114,6 +114,8 @@ export type ModelKey =
   | 'radio_tower' | 'garage' | 'hangar' | 'teleporter' | 'spin_wheel' | 'beacon' | 'repair_bay' | 'shield_generator'
   // decor
   | 'lamp' | 'plant' | 'bench' | 'fountain' | 'banner' | 'statue' | 'arcade' | 'garden'
+  // cosmetic decor (decoration cosmetics)
+  | 'gnome' | 'toadstool_ring' | 'pumpkin_patch' | 'hay_bale' | 'lantern_arch' | 'lantern_string' | 'holo_tree' | 'teddy_picnic' | 'star_fountain'
   // defense
   | 'barricade' | 'spikes' | 'guard_tower' | 'turret_basic' | 'turret_mg' | 'turret_flame' | 'turret_missile'
   | 'turret_heavy' | 'turret_laser' | 'turret_plasma' | 'turret_rail' | 'turret_cannon' | 'turret_aa'
@@ -188,6 +190,11 @@ export interface BuildingDef {
   unlockTier: number;
   /** Research required to build (in addition to unlockTier). */
   research?: string;
+  /**
+   * Exclusive decor: buildable only while the colony owns this `decoration` cosmetic (CosmeticDef.id).
+   * The Build menu still lists it, locked, with a Wardrobe hint (data/decorCosmetic.ts).
+   */
+  cosmetic?: string;
   /** Build cost. Pieces: multiplier applied to TierDef.pieceCost of the chosen material instead (costMult). */
   cost: ResourceBag;
   /** Pieces only: multiplier on TierDef.pieceCost (floor 0.5, wall 1, door 1.2, ...). */

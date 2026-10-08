@@ -23,6 +23,12 @@ export interface PrimOpts {
   sx?: number;
   sy?: number;
   sz?: number;
+  /**
+   * Vertical colour gradient (painted look): the primitive's lowest vertex gets `color`, its highest
+   * `grad`, linearly in between (model-space y after the transform). Sunlit canopy tops, mossy rock
+   * caps, darker undersides — baked into the vertex colours, so the shader cost is nil.
+   */
+  grad?: THREE.ColorRepresentation;
 }
 
 const _m = new THREE.Matrix4();
@@ -33,6 +39,7 @@ const _s = new THREE.Vector3();
 const _c = new THREE.Color();
 const _n = new THREE.Matrix3();
 const _v = new THREE.Vector3();
+const _g = new THREE.Color();
 
 export class GeoBuilder {
   private pos: number[][] = [[], [], []];
@@ -72,14 +79,34 @@ export class GeoBuilder {
     const norArr = this.nor[slot];
     const colArr = this.col[slot];
     const shade = opts.shade ?? 0;
+    const start = posArr.length;
     let f = 1;
+    let y0 = Infinity;
+    let y1 = -Infinity;
     for (let i = 0; i < n; i++) {
       _v.set(P.getX(i), P.getY(i), P.getZ(i)).applyMatrix4(_m);
       posArr.push(_v.x, _v.y, _v.z);
+      if (_v.y < y0) y0 = _v.y;
+      if (_v.y > y1) y1 = _v.y;
       _v.set(N.getX(i), N.getY(i), N.getZ(i)).applyMatrix3(_n).normalize();
       norArr.push(_v.x, _v.y, _v.z);
       if (shade && i % 6 === 0) f = 1 + (this.rnd() * 2 - 1) * shade;
       colArr.push(_c.r * f, _c.g * f, _c.b * f);
+    }
+    if (opts.grad !== undefined && y1 > y0) {
+      // second pass: lerp each vertex toward the top colour by its height in the primitive (keeps the face jitter)
+      _g.set(opts.grad);
+      const inv = 1 / (y1 - y0);
+      for (let k = start; k < posArr.length; k += 3) {
+        const t = (posArr[k + 1] - y0) * inv;
+        const jr = colArr[k] / Math.max(1e-6, _c.r);
+        const jg = colArr[k + 1] / Math.max(1e-6, _c.g);
+        const jb = colArr[k + 2] / Math.max(1e-6, _c.b);
+        const j = _c.r > 1e-6 ? jr : _c.g > 1e-6 ? jg : jb;
+        colArr[k] = (_c.r + (_g.r - _c.r) * t) * j;
+        colArr[k + 1] = (_c.g + (_g.g - _c.g) * t) * j;
+        colArr[k + 2] = (_c.b + (_g.b - _c.b) * t) * j;
+      }
     }
     if (g !== geo) g.dispose();
     geo.dispose();
@@ -101,6 +128,50 @@ export class GeoBuilder {
 
   sphere(r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, seg = 7, opts?: PrimOpts): this {
     return this.add(new THREE.SphereGeometry(r, seg, Math.max(4, seg - 2)), color, x, y, z, opts);
+  }
+
+  /**
+   * Round, smooth-shaded blob (icosphere, `detail` 1 = 80 tris, 0 = 20): the building block of the
+   * puffy canopies, bushes and pebbles. Normals point out of the centre, so it reads soft and round
+   * even at low detail; `shade` still breaks it into gently painted facets.
+   */
+  puff(r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, detail = 1, opts?: PrimOpts): this {
+    const geo = new THREE.IcosahedronGeometry(r, detail);
+    if (detail === 0) {
+      // three gives the bare icosahedron flat normals: round them so even a 20-triangle blob shades soft
+      const p = geo.attributes.position as THREE.BufferAttribute;
+      const n = geo.attributes.normal as THREE.BufferAttribute;
+      for (let i = 0; i < p.count; i++) {
+        _v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
+        n.setXYZ(i, _v.x, _v.y, _v.z);
+      }
+    }
+    return this.add(geo, color, x, y, z, opts);
+  }
+
+  /**
+   * Cheaper round blob (dodecahedron, 36 tris) with the same soft radial normals as `puff`: side
+   * lobes of a canopy, berries on a big bush — shapes half hidden behind a full `puff`.
+   */
+  puffLo(r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, opts?: PrimOpts): this {
+    const geo = new THREE.DodecahedronGeometry(r, 0);
+    const p = geo.attributes.position as THREE.BufferAttribute;
+    const n = geo.attributes.normal as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) {
+      _v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
+      n.setXYZ(i, _v.x, _v.y, _v.z);
+    }
+    return this.add(geo, color, x, y, z, opts);
+  }
+
+  /**
+   * Surface of revolution about Y from a profile of (radius, height) pairs, bottom to top, with
+   * smooth normals: rounded pine tiers, bellied pots, toadstool caps. `seg` sides; base at (x,y,z).
+   */
+  lathe(profile: readonly number[], x: number, y: number, z: number, color: THREE.ColorRepresentation, seg = 8, opts?: PrimOpts): this {
+    const pts: THREE.Vector2[] = [];
+    for (let i = 0; i < profile.length; i += 2) pts.push(new THREE.Vector2(Math.max(0, profile[i]), profile[i + 1]));
+    return this.add(new THREE.LatheGeometry(pts, seg), color, x, y, z, opts);
   }
 
   /** Square pyramid with base w x d (approx) and height h, base centred at (x,y,z). */

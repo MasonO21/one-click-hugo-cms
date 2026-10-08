@@ -21,7 +21,7 @@ import type { RenderContext } from '../core/context';
 import { inView, sightTargets } from '../core/context';
 import { Batch, composeYaw, composeEuler, type BatchOpts } from '../core/Batch';
 import { mergeCopies } from '../core/GeoBuilder';
-import { tierStyle, type TierStyle } from '../core/palette';
+import { tierStyle, themedStyle, skinnedStyle, type LookTint, type TierStyle } from '../core/palette';
 import { buildModel, modelCached, retainModel, releaseModel, pruneModels, type ModelSpec } from '../models/spec';
 import { pieceGeometry, pieceFullKey, WALL_H, ROOF_Y, type PieceGeoKey } from '../models/pieces';
 import type { BuildingInstance, Id } from '../../core/state';
@@ -193,6 +193,12 @@ export class Buildings {
   private lastTerrain = -1;
   private lastRoofVersion = -1;
   private lastRoofSize = -1;
+  /** Equipped colony theme / turret skin ids the instance buffers were built with ('|'-joined). */
+  private lastLook = '';
+  private lookKey = '';
+  private readonly rawLook: [string, string] = ['', ''];
+  private theme: LookTint | null = null;
+  private skin: LookTint | null = null;
   /** Facility look (tier * 64 + level) each building was last drawn with: its fallback while a new model waits. */
   private shown = new Map<Id, number>();
   /** Some facilities still show an older look: rebuild again next frame. */
@@ -347,7 +353,7 @@ export class Buildings {
     for (const b of list) {
       const def = game.data.building(b.def);
       let tier = clamp(b.tier | 0, 0, game.data.tiers.length - 1);
-      let style = tierStyle(game.data.tier(tier));
+      let style = this.lookStyle(tierStyle(game.data.tier(tier)), def);
       let level = Math.max(1, b.level | 0);
       if (!def?.piece) {
         // a new look that still needs building: past the frame budget keep the previous one for now
@@ -357,7 +363,7 @@ export class Buildings {
           if (prev !== undefined && prev !== tier * 64 + level && built > 0 && performance.now() - t0 > this.modelBudgetMs) {
             tier = Math.floor(prev / 64);
             level = prev % 64;
-            style = tierStyle(game.data.tier(tier));
+            style = this.lookStyle(tierStyle(game.data.tier(tier)), def);
             this.modelsPending = true;
           } else built++;
         }
@@ -398,7 +404,7 @@ export class Buildings {
         const spec = buildModel(key, style, level, def);
         entry.spec = spec;
         entry.height = spec.height;
-        const fb = this.facilityBatch(`${key}|${tier}|${level}|${size[0]}x${size[1]}`, spec);
+        const fb = this.facilityBatch(`${key}|${tier}|${level}|${size[0]}x${size[1]}${style.look ? '|' + style.look : ''}`, spec);
         composeYaw(_m, c.x, y, c.z, yaw);
         this.pushSlot(entry, fb.body, c.x, y, c.z, yaw, color);
         fb.entries.push(entry);
@@ -456,8 +462,38 @@ export class Buildings {
     entry.slots.push({ batch, index, x, y, z, yaw });
   }
 
+  /**
+   * The look a building is drawn with: its tier style, repainted by the equipped turret skin (turrets)
+   * or gently tinted by the equipped colony theme (everything else). Stock when nothing is equipped.
+   */
+  private lookStyle(base: TierStyle, def: BuildingDef | undefined): TierStyle {
+    if (def?.turret && this.skin) return skinnedStyle(base, this.skin);
+    return this.theme ? themedStyle(base, this.theme) : base;
+  }
+
+  /** Read the equipped theme / skin; returns their key (changes trigger a rebuild). */
+  private readLook(): string {
+    const game = this.ctx.game;
+    const eq = game.state.liveops?.cosmetics?.equipped;
+    const themeId = eq?.base_theme ?? '';
+    const skinId = eq?.turret_skin ?? '';
+    // no allocation unless something was (un)equipped
+    if (this.rawLook[0] !== themeId || this.rawLook[1] !== skinId) {
+      this.rawLook[0] = themeId;
+      this.rawLook[1] = skinId;
+      const tint = (id: string): LookTint | null => {
+        const d = id ? game.data.cosmetic(id) : undefined;
+        return d ? { id: d.id, color: d.color, accent: d.accent } : null;
+      };
+      this.theme = tint(themeId);
+      this.skin = tint(skinId);
+      this.lookKey = `${this.theme?.id ?? ''}|${this.skin?.id ?? ''}`;
+    }
+    return this.lookKey;
+  }
+
   private pieceBatch(key: PieceGeoKey, style: TierStyle): Batch {
-    const k = `${key}|${style.index}`;
+    const k = `${key}|${style.index}${style.look ? '|' + style.look : ''}`;
     let pb = this.pieceBatches.get(k);
     if (!pb) {
       pb = { batch: new Batch(this.group, pieceGeometry(key, style), this.ctx.mats.litFade, 32, this.pieceOpts), lastUsed: this.ctx.env.t };
@@ -612,7 +648,7 @@ export class Buildings {
         }
         tier = tierOf(ids);
       }
-      const style = tierStyle(ctx.game.data.tier(clamp(tier, 0, ctx.game.data.tiers.length - 1)));
+      const style = this.lookStyle(tierStyle(ctx.game.data.tier(clamp(tier, 0, ctx.game.data.tiers.length - 1))), undefined);
       const tile = pieceGeometry('roof_tile', style);
       const offsets = new Float32Array(cells.size * 2);
       let k = 0;
@@ -701,8 +737,10 @@ export class Buildings {
     const list = game.state.buildings.list;
     const version = game.derived.buildingsVersion;
     const h = this.hash(list);
-    const changed = version !== this.lastVersion || h !== this.lastHash || env.terrainVersion !== this.lastTerrain;
+    const look = this.readLook();
+    const changed = version !== this.lastVersion || h !== this.lastHash || env.terrainVersion !== this.lastTerrain || look !== this.lastLook;
     if (changed || this.modelsPending) {
+      this.lastLook = look;
       this.lastVersion = version;
       this.lastHash = h;
       this.lastTerrain = env.terrainVersion;

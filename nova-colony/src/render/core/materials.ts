@@ -46,8 +46,11 @@ import * as THREE from 'three';
 const DAY_GLASS = new THREE.Color('#9fd8ff');
 const NIGHT_GLASS = new THREE.Color('#ffcf7a');
 
-/** Wrap-diffuse amount: a face edge-on to the sun still gets WRAP / (1 + WRAP) of its light. */
-export const LAMBERT_WRAP = 0.22;
+/**
+ * Wrap-diffuse amount: a face edge-on to the sun still gets WRAP / (1 + WRAP) of its light. Generous on
+ * purpose (cozy-world grade): light bleeds softly round puffy canopies and rounded rocks like a painting.
+ */
+export const LAMBERT_WRAP = 0.42;
 
 /** three's lights_lambert_pars_fragment with the wrapped N·L (kept verbatim otherwise). */
 const LAMBERT_WRAP_PARS = /* glsl */ `

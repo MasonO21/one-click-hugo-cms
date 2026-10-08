@@ -33,7 +33,7 @@ import type { RenderContext } from '../core/context';
 import { sightTargets } from '../core/context';
 import { Batch, composeEuler, type BatchOpts } from '../core/Batch';
 import { ViewCull } from '../core/cull';
-import { nodeGeometry, nodeGeometryFar, propGeometry, nodeHeight, nodeChipColor } from '../models/nature';
+import { nodeGeometry, nodeGeometryFar, propGeometry, nodeHeight, nodeChipColor, nodeVariant } from '../models/nature';
 import type { WorldGen, WorldNode } from '../../sim/world';
 import { CELL, HALF_WORLD, WORLD_CELLS } from '../../core/constants';
 import { clamp } from '../../core/math';
@@ -106,9 +106,13 @@ export function chunkOf(x: number, z: number): number {
   return cz * CHUNKS_PER_SIDE + cx;
 }
 
-/** LOD radii for the current view (near = nodes + props with full geometry, mid = nodes only). */
+/**
+ * LOD radii for the current view (near = nodes + props with full geometry, mid = nodes only). The
+ * puffy cozy-world canopies cost more triangles than the old lollipops, so lower quality levels
+ * hand trees over to their far LOD sooner (low pulls in the most).
+ */
 export function lodRadii(viewRadius: number, quality: string): { near: number; mid: number } {
-  const near = quality === 'low' ? Math.min(70, viewRadius * 0.7) : Math.min(110, viewRadius * 0.85);
+  const near = quality === 'low' ? Math.min(56, viewRadius * 0.56) : quality === 'medium' ? Math.min(96, viewRadius * 0.75) : Math.min(110, viewRadius * 0.85);
   const mid = Math.min(190, viewRadius + 30);
   return { near, mid };
 }
@@ -223,7 +227,7 @@ export class Nature {
     const n = g?.nodes[node];
     const y = this.ctx.heightAt(x, z);
     const h = nodeHeight(model) * (n?.scale ?? 1) * 0.5;
-    this.ctx.particles.chips(x, y + h, z, nodeChipColor(model), 6);
+    this.ctx.particles.chips(x, y + h, z, nodeChipColor(this.nodeModel[node] ?? model), 6);
   }
 
   private onDepleted(node: number): void {
@@ -231,8 +235,7 @@ export class Nature {
     const g = this.gen;
     const n = g?.nodes[node];
     if (n) {
-      const def = this.ctx.game.data.node(n.def);
-      const model = def?.model ?? n.def;
+      const model = this.nodeModel[node] ?? this.ctx.game.data.node(n.def)?.model ?? n.def;
       this.ctx.particles.chips(n.x, this.ctx.heightAt(n.x, n.z) + 0.6, n.z, nodeChipColor(model), 10);
       this.ctx.particles.dust(n.x, this.ctx.heightAt(n.x, n.z), n.z, 6, 0.8);
     }
@@ -263,7 +266,8 @@ export class Nature {
     const data = this.ctx.game.data;
     for (let i = 0; i < n; i++) {
       const node = gen!.nodes[i];
-      this.nodeModel[i] = data.node(node.def)?.model ?? node.def;
+      // the look key: the def's model or one of its variants (fruit / tall trees, slim pines, biome boulders)
+      this.nodeModel[i] = nodeVariant(data.node(node.def)?.model ?? node.def, node.def, node.region, i);
       this.chunks[chunkOf(node.x, node.z)].nodes.push(i);
     }
     const props = gen?.props ?? [];

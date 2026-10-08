@@ -108,6 +108,8 @@ const BUILDINGS = new Set([
   // decor
   'lamp_post', 'flower_bed', 'log_bench', 'herb_garden', 'banner', 'fountain', 'stone_statue', 'arcade',
   'cinema_pod', 'sculpture_garden', 'holo_theater', 'neon_park', 'titan_monument', 'sky_garden', 'zero_g_arena',
+  // cosmetic decor (decoration cosmetics; rendered thumbnails)
+  'garden_gnome', 'toadstool_ring', 'pumpkin_patch', 'hay_bale', 'lantern_arch', 'lantern_string', 'holo_tree', 'teddy_picnic', 'star_fountain',
   // defense
   'barricade', 'spike_trap', 'scrap_turret', 'guard_tower', 'log_trap', 'stone_barricade', 'crossfire_tower',
   'sentry_gun', 'mg_turret', 'electric_fence', 'flamethrower', 'missile_turret', 'heavy_sentry', 'cannon_turret',

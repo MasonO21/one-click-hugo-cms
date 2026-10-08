@@ -1,4 +1,5 @@
 import type { BuildingDef } from './schema';
+import { COSMETIC_DECOR } from './decorCosmetic';
 
 /**
  * Building catalogue for the full Wood -> Titanium journey (~150 defs).
@@ -682,4 +683,6 @@ export const BUILDINGS: BuildingDef[] = [
     size: [3, 3], unlockTier: 6, research: 'titan_shielding', cost: { titanium: 80, nano: 30, energy_cell: 80, electronics: 100 }, buildTime: 14, hp: 3600, ...GEN, model: 'shield_generator',
     shield: { radius: 18, capacity: 11000, regen: 240 }, power: -140,
   }),
+  // ================================================================== cosmetic decor (unlocked by decoration cosmetics)
+  ...COSMETIC_DECOR,
 ];

@@ -1,8 +1,15 @@
 /**
- * Terrain — chunked height-field mesh from WorldGen (vertex colors from BiomeDef.ground, blended at
- * region borders, sandy shores, locked regions desaturated), stylized animated water and the
- * shimmering energy-storm wall along the border of locked regions. Falls back to a flat coloured
- * ground when the world system has not generated anything.
+ * Terrain — chunked height-field mesh from WorldGen (vertex colors from a painted per-biome palette,
+ * blended at region borders, sandy shores, warm dirt paths around buildings, locked regions
+ * desaturated), stylized animated water and the shimmering energy-storm wall along the border of
+ * locked regions. Falls back to a flat coloured ground when the world system has not generated anything.
+ *
+ * The cozy look (the painted world map): smooth normals from the whole height field (soft rolling
+ * hills, no seams between chunks), broad warm / cool painted patches, and a sprinkle of flower
+ * specks drawn by the fragment shader from a world-space hash grid — no geometry, no texture: the
+ * per-vertex `aBloom` weight says how flowery the meadow is (biome, paths, shores and locked land
+ * have none) and the specks fade out with distance so they never shimmer. Water gets turquoise
+ * shallows, a breathing foam line along the shore (per-vertex distance to land) and sun glints.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
@@ -14,8 +21,31 @@ import { dimColor } from '../core/palette';
 import { patchLambert } from '../core/materials';
 
 const VERTS = WORLD_CELLS + 1;
-const SHORE = new THREE.Color('#d9c98f');
+const SHORE = new THREE.Color('#e6d49a');
 const FALLBACK_GROUND: [string, string] = ['#6fbf5a', '#9bd66b'];
+
+/**
+ * Painted ground per biome (the data colours were picked as UI chips): valley `low` -> hill `high`
+ * by height, then broad sunny `warm` and shady `cool` patches, and how flowery the meadow is
+ * (`bloom`, the density of the shader's flower specks). Unknown biomes use their data colours.
+ */
+interface GroundPaint {
+  low: string;
+  high: string;
+  warm: string;
+  cool: string;
+  bloom: number;
+}
+export const GROUND_PAINT: Record<string, GroundPaint> = {
+  crash_valley: { low: '#56b04a', high: '#8ccc52', warm: '#b6d862', cool: '#3a9a58', bloom: 1 },
+  pinewood_forest: { low: '#3d8c46', high: '#6cae50', warm: '#a0bc58', cool: '#2c7650', bloom: 0.4 },
+  crystal_canyon: { low: '#8c79c6', high: '#bfaeea', warm: '#d6bfe8', cool: '#776fc0', bloom: 0.3 },
+  red_desert: { low: '#d98048', high: '#f2b276', warm: '#f8c88c', cool: '#c46c4a', bloom: 0.05 },
+  toxic_marsh: { low: '#5a8a3a', high: '#8db24a', warm: '#adc458', cool: '#447a4a', bloom: 0.3 },
+  frozen_ridge: { low: '#d2e0f0', high: '#f6f9fd', warm: '#fffbf2', cool: '#bfd2ea', bloom: 0 },
+  alien_ruins: { low: '#6a9468', high: '#9ebc7a', warm: '#b4c888', cool: '#7c84ac', bloom: 0.55 },
+  titanium_highlands: { low: '#8eaa84', high: '#c6d2bc', warm: '#d8dcb4', cool: '#94a8b8', bloom: 0.35 },
+};
 /**
  * Worn ground around buildings: the biome colour is pulled this far toward its trampled version
  * (darker, warmer, less saturated) right at a footprint, fading out over WEAR_REACH world units
@@ -31,21 +61,27 @@ const WEAR_REACH_PIECE = 1.0;
  * darkening right at the footprint grounds buildings that would otherwise float on the grass.
  */
 const CONTACT_SHADE = 0.2;
-/** Ground grade on top of the biome data: a touch less saturated and warmer (the sun does the rest). */
-const GROUND_DESAT = 0.05;
-const GROUND_TINT = new THREE.Color(1.03, 1.01, 0.92);
+/** Ground grade on top of the palette: a touch warmer (the sun does the rest). */
+const GROUND_DESAT = 0.0;
+const GROUND_TINT = new THREE.Color(1.03, 1.01, 0.94);
 const GROUND_VALUE = 1.0;
+/** Flower specks fade out between these view distances (world units) so they never shimmer far away. */
+export const BLOOM_NEAR = 26;
+export const BLOOM_FAR = 46;
 
 const WATER_VERT = /* glsl */ `
   #include <fog_pars_vertex>
   uniform float uTime;
+  attribute float aShore;
   varying vec3 vWorld;
   varying float vWave;
+  varying float vShore;
   void main() {
     vec3 p = position;
     float w = sin(p.x * 0.55 + uTime * 1.3) * 0.5 + sin(p.z * 0.7 - uTime * 1.1) * 0.5;
-    p.y += w * 0.06;
+    p.y += w * 0.05;
     vWave = w;
+    vShore = aShore;
     vec4 wp = modelMatrix * vec4(p, 1.0);
     vWorld = wp.xyz;
     vec4 mvPosition = viewMatrix * wp;
@@ -53,19 +89,36 @@ const WATER_VERT = /* glsl */ `
     #include <fog_vertex>
   }
 `;
+/**
+ * Painted water: turquoise shallows -> blue depths by the depth below the surface (vShore, world
+ * units, from the height field), a soft foam line that breathes along the shore contour, crossing ripple highlights and a few twinkling sun glints
+ * (a hash grid, day only). Night darkens it to a moonlit blue.
+ */
 const WATER_FRAG = /* glsl */ `
   #include <fog_pars_fragment>
   uniform vec3 uDeep; uniform vec3 uShallow; uniform vec3 uFoam; uniform float uTime; uniform float uNight;
   varying vec3 vWorld;
   varying float vWave;
+  varying float vShore;
+  float novaHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   void main() {
+    float depth = vShore;
+    vec3 c = mix(uShallow, uDeep, smoothstep(0.08, 1.1, depth));
+    c = mix(c, c * 1.08, 0.5 + 0.5 * vWave);
     float r1 = sin(vWorld.x * 1.9 + vWorld.z * 1.3 + uTime * 1.7);
     float r2 = sin(vWorld.x * 1.1 - vWorld.z * 2.3 - uTime * 1.2);
-    float ripple = smoothstep(0.78, 0.95, r1 * r2);
-    vec3 c = mix(uDeep, uShallow, 0.5 + 0.5 * vWave);
-    c = mix(c, uFoam, ripple * 0.55);
-    c *= 1.0 - uNight * 0.55;
-    gl_FragColor = vec4(c, 0.88);
+    float ripple = smoothstep(0.8, 0.96, r1 * r2);
+    c = mix(c, uFoam, ripple * 0.35);
+    float edge = depth + 0.035 * sin(uTime * 1.4 + vWorld.x * 0.9 + vWorld.z * 0.7);
+    float foam = 1.0 - smoothstep(0.02, 0.14, edge);
+    c = mix(c, uFoam, foam * 0.8);
+    vec2 g = floor(vWorld.xz * 2.2);
+    float tw = novaHash(g + floor(uTime * 1.5));
+    float glint = step(0.986, tw) * (1.0 - uNight) * (1.0 - foam);
+    c += vec3(glint * 0.9);
+    c *= 1.0 - uNight * 0.5;
+    c += vec3(0.02, 0.04, 0.08) * uNight;
+    gl_FragColor = vec4(c, 0.86 + foam * 0.12);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
     #include <fog_fragment>
@@ -103,8 +156,8 @@ const _worn = new THREE.Color();
 /** Pull a ground colour toward its trampled version in place: darker, warmer, less saturated (any biome). */
 export function wornColor(c: THREE.Color, amount: number): THREE.Color {
   const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11;
-  // desaturate toward luminance, then tint toward dry earth (more red, less blue) and darken
-  _worn.setRGB(l * 1.12 + 0.01, l * 0.98, l * 0.64).multiplyScalar(0.8);
+  // toward a warm tan dirt path: desaturate to luminance, tint to dry earth (more red, less blue), a little darker
+  _worn.setRGB(l * 1.3 + 0.02, l * 1.0, l * 0.58).multiplyScalar(0.82);
   c.lerp(_worn, clamp(amount, 0, 1));
   return c;
 }
@@ -125,6 +178,42 @@ export function wearSignature(list: readonly { def: string; x: number; z: number
   return h;
 }
 
+/**
+ * Flower specks on the meadow: one candidate per world-space grid cell (~0.6 units) at a hashed spot,
+ * kept when its hash clears the vertex's bloom weight, coloured from a small cozy palette (daisy
+ * white, buttercup yellow, blossom pink, lilac) with a sunny centre. A dozen ALU ops, no texture;
+ * faded out by view distance (BLOOM_NEAR..BLOOM_FAR) so far meadows never sparkle.
+ */
+export function patchBloom(shader: { uniforms: Record<string, THREE.IUniform>; vertexShader: string; fragmentShader: string }, uBloom: THREE.IUniform<number>): void {
+  shader.uniforms.uBloom = uBloom;
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\nattribute float aBloom;\nvarying float vBloom;\nvarying vec2 vNovaXZ;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBloom = aBloom;\nvNovaXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', '#include <common>\nuniform float uBloom;\nvarying float vBloom;\nvarying vec2 vNovaXZ;')
+    .replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+{
+  float novaFade = uBloom * vBloom * (1.0 - smoothstep(${BLOOM_NEAR.toFixed(1)}, ${BLOOM_FAR.toFixed(1)}, length(vViewPosition)));
+  if (novaFade > 0.01) {
+    vec2 novaP = vNovaXZ * 1.7;
+    vec2 novaCell = floor(novaP);
+    vec2 novaF = fract(novaP);
+    float novaH1 = fract(sin(dot(novaCell, vec2(127.1, 311.7))) * 43758.5453);
+    float novaH2 = fract(sin(dot(novaCell, vec2(269.5, 183.3))) * 43758.5453);
+    float novaKeep = step(1.0 - vBloom * 0.5, fract(novaH1 * 7.13 + novaH2 * 3.71));
+    float novaD = length(novaF - vec2(0.2 + 0.6 * novaH1, 0.2 + 0.6 * novaH2));
+    float novaR = 0.12 + 0.07 * novaH2;
+    float novaM = novaKeep * (1.0 - smoothstep(novaR * 0.55, novaR, novaD)) * novaFade;
+    vec3 novaC = novaH1 < 0.4 ? vec3(1.0, 0.98, 0.94) : novaH1 < 0.62 ? vec3(1.0, 0.8, 0.12) : novaH1 < 0.82 ? vec3(1.0, 0.5, 0.7) : vec3(0.72, 0.56, 1.0);
+    novaC = mix(novaC, vec3(1.0, 0.75, 0.15), (1.0 - smoothstep(0.0, novaR * 0.45, novaD)) * step(novaH1, 0.4));
+    diffuseColor.rgb = mix(diffuseColor.rgb, novaC, novaM);
+  }
+}`,
+    );
+}
+
 interface Chunk {
   mesh: THREE.Mesh;
   /** Vertex grid indices (vx0, vz0, count per side). */
@@ -133,12 +222,16 @@ interface Chunk {
   n: number;
   step: number;
   baseColors: Float32Array;
+  /** Flower-speck weight per vertex before paths / locked land take theirs away. */
+  baseBloom: Float32Array;
 }
 
 export class Terrain {
   private group = new THREE.Group();
   private chunks: Chunk[] = [];
-  private material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  private material = new THREE.MeshLambertMaterial({ vertexColors: true });
+  /** Flower speck strength: 1 = on, 0 = off (low quality skips the specks). */
+  private readonly uBloom: THREE.IUniform<number> = { value: 1 };
   /** Per-vertex wear 0..1 for the whole height field (worn ground around buildings). */
   private wear = new Float32Array(VERTS * VERTS);
   private wearKey = NaN;
@@ -151,7 +244,7 @@ export class Terrain {
   private unlockedKey = '';
   /** Per-cell locked flag (1 = locked) for the current unlock set. */
   private locked: Uint8Array = new Uint8Array(WORLD_CELLS * WORLD_CELLS);
-  private biomeCache = new Map<string, { low: THREE.Color; high: THREE.Color; relief: number }>();
+  private biomeCache = new Map<string, { low: THREE.Color; high: THREE.Color; warm: THREE.Color; cool: THREE.Color; bloom: number; relief: number }>();
   private tmp = new THREE.Color();
   private tmp2 = new THREE.Color();
   private tmp3 = new THREE.Color();
@@ -159,17 +252,20 @@ export class Terrain {
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
     // the ground is lit like everything standing on it (wrapped Lambert, no rim: it has no silhouette)
-    this.material.onBeforeCompile = (shader) => patchLambert(shader, ctx.mats.lambert, false);
-    this.material.customProgramCacheKey = () => 'nova-terrain';
+    this.material.onBeforeCompile = (shader) => {
+      patchLambert(shader, ctx.mats.lambert, false);
+      patchBloom(shader, this.uBloom);
+    };
+    this.material.customProgramCacheKey = () => 'nova-terrain-bloom';
     this.waterMat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([
         THREE.UniformsLib.fog,
         {
           uTime: { value: 0 },
           uNight: { value: 0 },
-          uDeep: { value: new THREE.Color('#2a7fc9') },
-          uShallow: { value: new THREE.Color('#5ec8ea') },
-          uFoam: { value: new THREE.Color('#dff7ff') },
+          uDeep: { value: new THREE.Color('#2a8fd4') },
+          uShallow: { value: new THREE.Color('#62dce0') },
+          uFoam: { value: new THREE.Color('#f2fcff') },
         },
       ]),
       vertexShader: WATER_VERT,
@@ -251,7 +347,17 @@ export class Terrain {
     if (!b) {
       const def = this.ctx.game.data.biome(regionId);
       const g = def?.ground ?? FALLBACK_GROUND;
-      b = { low: new THREE.Color(g[0]), high: new THREE.Color(g[1]), relief: Math.max(0.5, def?.relief ?? 1.5) };
+      const paint = GROUND_PAINT[regionId];
+      const low = new THREE.Color(paint?.low ?? g[0]);
+      const high = new THREE.Color(paint?.high ?? g[1]);
+      b = {
+        low,
+        high,
+        warm: paint ? new THREE.Color(paint.warm) : high.clone(),
+        cool: paint ? new THREE.Color(paint.cool) : low.clone(),
+        bloom: paint?.bloom ?? 0,
+        relief: Math.max(0.5, def?.relief ?? 1.5),
+      };
       this.biomeCache.set(regionId, b);
     }
     return b;
@@ -277,38 +383,45 @@ export class Terrain {
     return g.water[cellIndex(cx, cz)] !== 0;
   }
 
-  /** Compute the lit (unlocked) color of a terrain vertex. */
-  private vertexColor(vx: number, vz: number, out: THREE.Color): void {
+  /** Compute the lit (unlocked) color of a terrain vertex; returns its flower-speck weight (0..1). */
+  private vertexColor(vx: number, vz: number, out: THREE.Color): number {
     const h = this.heightOfVertex(vx, vz);
+    // broad painted patches (sunny yellow-green / shady blue-green) and mid-size clumps, shared by the 4 cells
+    // (two scales: hill-sized drifts and smaller sunlit / shady pools that show within one screen)
+    const patch = (fbm(vx * 0.045, vz * 0.045, 123, 2) - 0.5) * 0.6 + (fbm(vx * 0.16, vz * 0.16, 211, 2) - 0.5) * 0.8;
+    const clump = fbm(vx * 0.14, vz * 0.14, 91, 2) - 0.5;
+    const grain = fbm(vx * 0.37, vz * 0.37, 77, 2) - 0.5;
+    const n = fbm(vx * 0.07, vz * 0.07, 31, 3);
     // blend the biomes of the 4 cells around the vertex
     out.setRGB(0, 0, 0);
     let shore = 0;
+    let bloom = 0;
     for (let dz = -1; dz <= 0; dz++) {
       for (let dx = -1; dx <= 0; dx++) {
         const cx = vx + dx;
         const cz = vz + dz;
         const b = this.biome(this.regionOfCell(cx, cz));
-        const n = fbm(vx * 0.07, vz * 0.07, 31, 3);
         const t = clamp(h / b.relief + (n - 0.5) * 0.9 + 0.15, 0, 1);
         this.tmp2.lerpColors(b.low, b.high, t);
+        if (patch > 0) this.tmp2.lerp(b.warm, Math.min(1, patch * 2.6) * 0.7);
+        else this.tmp2.lerp(b.cool, Math.min(1, -patch * 2.6) * 0.55);
         out.add(this.tmp2);
+        bloom += b.bloom;
         if (this.isWaterCell(cx, cz)) shore++;
       }
     }
     out.multiplyScalar(0.25);
-    if (shore > 0) out.lerp(SHORE, shore >= 4 ? 0.85 : 0.55);
-    // hand-painted meadow: broad warm (yellow-green) and cool (blue-green) patches, mid-size clumps
-    // of brighter / darker grass and fine per-vertex grain, so the ground never reads as one flat tone
-    const patch = fbm(vx * 0.05, vz * 0.05, 123, 2) - 0.5;
-    const clump = fbm(vx * 0.14, vz * 0.14, 91, 2) - 0.5;
-    const grain = fbm(vx * 0.37, vz * 0.37, 77, 2) - 0.5;
-    out.r *= 1 + patch * 0.42 + clump * 0.1;
-    out.g *= 1 + patch * 0.08;
-    out.b *= 1 - patch * 0.5 - clump * 0.1;
-    out.multiplyScalar(1 + clump * 0.28 + grain * 0.2);
-    // grade: the data colours were picked as UI chips; the meadow reads better a little less acid
+    bloom *= 0.25;
+    if (shore > 0) {
+      out.lerp(SHORE, shore >= 4 ? 0.85 : 0.55);
+      bloom = 0;
+    }
+    // mid-size clumps of brighter / darker grass and a fine grain: the ground never reads as one flat tone
+    out.multiplyScalar(1 + clump * 0.22 + grain * 0.14);
     const l = out.r * 0.3 + out.g * 0.59 + out.b * 0.11;
     out.lerp(this.tmp2.setRGB(l, l, l), GROUND_DESAT).multiply(GROUND_TINT).multiplyScalar(GROUND_VALUE);
+    // flowers gather in drifts: denser in the sunny patches, sparse in the shade
+    return clamp(bloom * (0.55 + patch * 1.4 + clump * 0.6), 0, 1);
   }
 
   /**
@@ -361,7 +474,9 @@ export class Terrain {
         const vz0 = cj * cellsPerChunk;
         const n = cellsPerChunk / step + 1; // vertices per side
         const pos = new Float32Array(n * n * 3);
+        const nor = new Float32Array(n * n * 3);
         const col = new Float32Array(n * n * 3);
+        const bloom = new Float32Array(n * n);
         for (let j = 0; j < n; j++) {
           for (let i = 0; i < n; i++) {
             const vx = vx0 + i * step;
@@ -370,7 +485,15 @@ export class Terrain {
             pos[o] = vx * CELL - HALF_WORLD;
             pos[o + 1] = this.heightOfVertex(vx, vz);
             pos[o + 2] = vz * CELL - HALF_WORLD;
-            this.vertexColor(vx, vz, this.tmp);
+            // smooth normal from the whole height field (central differences): soft hills, no seams at chunk edges
+            const nx = this.heightOfVertex(vx - step, vz) - this.heightOfVertex(vx + step, vz);
+            const nz = this.heightOfVertex(vx, vz - step) - this.heightOfVertex(vx, vz + step);
+            const ny = 2 * CELL * step;
+            const inv = 1 / Math.hypot(nx, ny, nz);
+            nor[o] = nx * inv;
+            nor[o + 1] = ny * inv;
+            nor[o + 2] = nz * inv;
+            bloom[j * n + i] = this.vertexColor(vx, vz, this.tmp);
             col[o] = this.tmp.r;
             col[o + 1] = this.tmp.g;
             col[o + 2] = this.tmp.b;
@@ -396,15 +519,16 @@ export class Terrain {
         }
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
         geo.setAttribute('color', new THREE.BufferAttribute(col.slice(), 3));
+        geo.setAttribute('aBloom', new THREE.BufferAttribute(bloom.slice(), 1));
         geo.setIndex(new THREE.BufferAttribute(idx, 1));
-        geo.computeVertexNormals();
         geo.computeBoundingSphere();
         const mesh = new THREE.Mesh(geo, this.material);
         mesh.receiveShadow = true;
         mesh.matrixAutoUpdate = false;
         this.group.add(mesh);
-        this.chunks.push({ mesh, vx0, vz0, n, step, baseColors: col });
+        this.chunks.push({ mesh, vx0, vz0, n, step, baseColors: col, baseBloom: bloom });
       }
     }
   }
@@ -452,18 +576,48 @@ export class Terrain {
       levels.push(n ? sum / n + 0.04 : -0.3);
     }
     if (count === 0) return;
-    const pos = new Float32Array(count * 4 * 3);
-    const idx = new Uint32Array(count * 6);
-    let v = 0;
-    let k = 0;
+    // Draw every water cell plus the ring of land cells around it at the lake's level: the terrain
+    // hides the water wherever the ground rises above it, so the visible shoreline follows the smooth
+    // terrain contour instead of the cell grid. Each corner carries its depth below the surface
+    // (aShore, world units; negative under dry land): the shader puts the foam line and the turquoise
+    // shallows on that contour.
+    const level = new Float32Array(W * W).fill(NaN);
+    for (let i = 0; i < W * W; i++) if (g.water[i]) level[i] = levels[comp[i]];
     for (let i = 0; i < W * W; i++) {
       if (!g.water[i]) continue;
       const cx = i % W;
       const cz = (i / W) | 0;
-      const y = levels[comp[i]];
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = cx + dx;
+          const nz = cz + dz;
+          if (nx < 0 || nz < 0 || nx >= W || nz >= W) continue;
+          const ni = nz * W + nx;
+          if (g.water[ni]) continue;
+          const l = levels[comp[i]];
+          if (Number.isNaN(level[ni]) || l > level[ni]) level[ni] = l;
+        }
+      }
+    }
+    let quads = 0;
+    for (let i = 0; i < W * W; i++) if (!Number.isNaN(level[i])) quads++;
+    const pos = new Float32Array(quads * 4 * 3);
+    const shoreAttr = new Float32Array(quads * 4);
+    const idx = new Uint32Array(quads * 6);
+    let v = 0;
+    let k = 0;
+    for (let i = 0; i < W * W; i++) {
+      const y = level[i];
+      if (Number.isNaN(y)) continue;
+      const cx = i % W;
+      const cz = (i / W) | 0;
       const x0 = cx * CELL - HALF_WORLD;
       const z0 = cz * CELL - HALF_WORLD;
       const base = v / 3;
+      shoreAttr[base] = y - this.heightOfVertex(cx, cz);
+      shoreAttr[base + 1] = y - this.heightOfVertex(cx + 1, cz);
+      shoreAttr[base + 2] = y - this.heightOfVertex(cx, cz + 1);
+      shoreAttr[base + 3] = y - this.heightOfVertex(cx + 1, cz + 1);
       pos[v++] = x0; pos[v++] = y; pos[v++] = z0;
       pos[v++] = x0 + CELL; pos[v++] = y; pos[v++] = z0;
       pos[v++] = x0; pos[v++] = y; pos[v++] = z0 + CELL;
@@ -473,6 +627,7 @@ export class Terrain {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('aShore', new THREE.BufferAttribute(shoreAttr, 1));
     geo.setIndex(new THREE.BufferAttribute(idx, 1));
     geo.computeBoundingSphere();
     this.water = new THREE.Mesh(geo, this.waterMat);
@@ -516,6 +671,8 @@ export class Terrain {
     for (const c of this.chunks) {
       const attr = c.mesh.geometry.getAttribute('color') as THREE.BufferAttribute;
       const arr = attr.array as Float32Array;
+      const battr = c.mesh.geometry.getAttribute('aBloom') as THREE.BufferAttribute;
+      const barr = battr.array as Float32Array;
       const n = c.n;
       for (let j = 0; j < n; j++) {
         for (let i = 0; i < n; i++) {
@@ -539,9 +696,12 @@ export class Terrain {
           arr[o] = this.tmp3.r;
           arr[o + 1] = this.tmp3.g;
           arr[o + 2] = this.tmp3.b;
+          // paths and locked land have no flowers
+          barr[j * n + i] = lockedCount ? 0 : c.baseBloom[j * n + i] * (1 - Math.min(1, w * 1.6));
         }
       }
       attr.needsUpdate = true;
+      battr.needsUpdate = true;
     }
     if (wallDirty) this.buildWall(anyLocked);
   }
@@ -608,6 +768,7 @@ export class Terrain {
     this.waterMat.uniforms.uTime.value = env.t;
     this.waterMat.uniforms.uNight.value = env.night;
     this.wallMat.uniforms.uTime.value = env.t;
+    this.uBloom.value = env.quality === 'low' ? 0 : 1;
     this.refreshLocked();
   }
 

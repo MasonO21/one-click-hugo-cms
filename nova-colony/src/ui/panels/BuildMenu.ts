@@ -74,7 +74,11 @@ export class BuildMenuPanel extends Panel {
   private defsOf(cat: string, pinned = this.guidedBuild()): BuildingDef[] {
     const bs = this.game.sys.buildings;
     const list = this.data.buildings.filter((b) => b.category === cat && !b.core);
-    return buildCardOrder(list, this.game.state.colony.tier, (d) => bs.isUnlocked(d.id), pinned);
+    const ordered = buildCardOrder(list, this.game.state.colony.tier, (d) => bs.isUnlocked(d.id), pinned);
+    // exclusive decor: the owned ones lead the tab (right after a pinned card), the locked ones close it
+    const owned = (d: BuildingDef) => !!d.cosmetic && bs.isUnlocked(d.id);
+    const pin = ordered.filter((d) => d.id === pinned);
+    return [...pin, ...ordered.filter((d) => owned(d) && d.id !== pinned), ...ordered.filter((d) => !d.cosmetic && d.id !== pinned), ...ordered.filter((d) => !!d.cosmetic && !owned(d) && d.id !== pinned)];
   }
 
   override signature(): string {
@@ -88,7 +92,7 @@ export class BuildMenuPanel extends Panel {
         if (d.maxCount) mask += bs.countOf(d.id) >= d.maxCount ? 'm' : '-';
       }
     } else mask = String(game.state.buildings.blueprints.length);
-    return `${this.tab}|${game.state.colony.tier}|${game.state.research.completed.length}|${mask}|${this.ctx.build.pieceTier}|${pinned ?? ''}`;
+    return `${this.tab}|${game.state.colony.tier}|${game.state.research.completed.length}|${game.state.liveops.cosmetics.owned.length}|${mask}|${this.ctx.build.pieceTier}|${pinned ?? ''}`;
   }
 
   private costOf(d: BuildingDef) {
@@ -154,18 +158,18 @@ export class BuildMenuPanel extends Panel {
   private buildCard(d: BuildingDef): HTMLElement {
     const { game, data } = this;
     const bs = game.sys.buildings;
-    const lock = lockInfo(d, data, game.state.colony.tier, game.state.research.completed);
+    const lock = lockInfo(d, data, game.state.colony.tier, game.state.research.completed, game.state.liveops.cosmetics.owned);
     const maxed = !!d.maxCount && bs.countOf(d.id) >= d.maxCount;
     const cost = this.costOf(d);
     const tags = buildingEffects(d, data).slice(0, 2);
     const reason = lock.locked ? lock.text! : maxed ? 'Already built' : '';
     const el = h(
       'button',
-      { class: 'bcard' + (lock.locked ? ' locked' : '') + (maxed ? ' maxed' : ''), type: 'button', title: d.description, data: { build: d.id, sfx: 'ui_click' } },
-      this.hero(d, lock.locked, maxed),
+      { class: 'bcard' + (lock.locked ? ' locked' : '') + (maxed ? ' maxed' : '') + (d.cosmetic ? ' cosmetic' : ''), type: 'button', title: d.description, data: { build: d.id, sfx: 'ui_click' } },
+      this.hero(d, lock.locked, maxed, lock.kind === 'cosmetic'),
       h('span', { class: 'bn', text: d.name }),
       tags.length ? tagChips(tags, 2) : h('div', { class: 'bdesc', text: d.description }),
-      lock.locked ? h('div', { class: 'lock' }, '🔒 ', lock.text) : maxed ? h('div', { class: 'lock ok' }, '✔ Already built') : costChips(data, cost, game.state.resources.amounts),
+      lock.locked ? h('div', { class: 'lock' }, lock.kind === 'cosmetic' ? '🎀 ' : '🔒 ', lock.text) : maxed ? h('div', { class: 'lock ok' }, '✔ Already built') : costChips(data, cost, game.state.resources.amounts),
     );
     el.addEventListener('click', (e) => {
       if (reason) {
@@ -174,6 +178,12 @@ export class BuildMenuPanel extends Panel {
         const step = lock.kind === 'research' && d.research ? game.sys.research.nextStep(d.research) : null;
         if (step) {
           this.ctx.open('research', { id: step });
+          return;
+        }
+        // exclusive decor: show where its decoration cosmetic lives
+        if (lock.kind === 'cosmetic') {
+          this.ctx.toast(`${data.cosmetic(d.cosmetic!)?.name ?? 'This decoration'} unlocks it: find it in the Wardrobe`, 'info', '🎀');
+          this.ctx.open('shop', { tab: 'cosmetics' });
           return;
         }
         this.ctx.toast(reason, 'info', lock.locked ? '🔒' : '✔');
@@ -187,8 +197,8 @@ export class BuildMenuPanel extends Panel {
   }
 
   /** The card's picture: the building's rendered thumbnail (emoji when there is none), with a lock / check badge. */
-  private hero(d: BuildingDef, locked: boolean, maxed: boolean): HTMLElement {
-    return h('div', { class: 'bhero' }, buildingIcon(d.id, d.icon, 'bpic', 'div'), locked ? h('span', { class: 'bbadge', text: '🔒' }) : maxed ? h('span', { class: 'bbadge ok', text: '✔' }) : null);
+  private hero(d: BuildingDef, locked: boolean, maxed: boolean, wardrobe = false): HTMLElement {
+    return h('div', { class: 'bhero' }, buildingIcon(d.id, d.icon, 'bpic', 'div'), locked ? h('span', { class: 'bbadge', text: wardrobe ? '🎀' : '🔒' }) : maxed ? h('span', { class: 'bbadge ok', text: '✔' }) : null);
   }
 
   private renderBlueprints(): HTMLElement {

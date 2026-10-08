@@ -263,7 +263,7 @@ export const MODEL_CACHE_SPARE = 16;
 
 function specKey(key: string, s: TierStyle, level: number, def: BuildingDef | undefined): string {
   const sz = def?.size ?? [1, 1];
-  return `${key}|${s.index}|${level}|${sz[0]}x${sz[1]}`;
+  return `${key}|${s.index}${s.look ? '|' + s.look : ''}|${level}|${sz[0]}x${sz[1]}`;
 }
 
 /** Is this model already built (buildModel returns at once), or would it cost a build + AO bake? */

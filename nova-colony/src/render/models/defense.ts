@@ -46,9 +46,10 @@ function pedestal(c: ModelCtx, r = 0.6, h = 0.9): number {
     // sandbag ring, timber plinth with a rope-lashed cap, ammo crate
     b.sandbags(Math.min(r + 0.3, 0.82), 6, 0, 0, 0, SANDBAG, Math.PI * 1.55, 1);
     if (t === 1) for (const a of [1.1, Math.PI / 2, 2.05]) b.box(0.5, 0.24, 0.3, Math.cos(a) * Math.min(r + 0.3, 0.82), 0.34, Math.sin(a) * Math.min(r + 0.3, 0.82), SANDBAG, { ry: -a + 0.1, shade: 0.08 });
-    b.box(r * 1.3, 0.22, r * 1.3, 0, 0.11, 0, WOOD_DARK, { shade: 0.05 });
-    b.box(r * 1.0, h - 0.3, r * 0.5, 0, (h - 0.3) / 2 + 0.2, 0, WOOD, { shade: 0.05 });
-    b.box(r * 0.5, h - 0.3, r * 1.0, 0, (h - 0.3) / 2 + 0.2, 0, WOOD, { shade: 0.05 });
+    // a turret skin repaints the timber plinth too
+    b.box(r * 1.3, 0.22, r * 1.3, 0, 0.11, 0, s.skinned ? s.machineDark : WOOD_DARK, { shade: 0.05 });
+    b.box(r * 1.0, h - 0.3, r * 0.5, 0, (h - 0.3) / 2 + 0.2, 0, s.skinned ? s.machine : WOOD, { shade: 0.05 });
+    b.box(r * 0.5, h - 0.3, r * 1.0, 0, (h - 0.3) / 2 + 0.2, 0, s.skinned ? s.machine : WOOD, { shade: 0.05 });
     b.cyl(r * 0.62, r * 0.62, 0.14, 0, h - 0.04, 0, s.trim, 7, { shade: 0.04 });
     b.box(r * 0.9, 0.08, r * 0.9, 0, h - 0.15, 0, s.stripe, { ry: 0.4 });
     ammoBox(b, pr * 0.95, 0, -pr * 0.8, 0.5);
@@ -201,7 +202,7 @@ registerModel('guard_tower', (c) => {
 registerModel('turret_basic', (c) => {
   const { b, s } = c;
   const y = pedestal(c, 0.6, 0.9);
-  const body = s.index <= 1 ? WOOD : s.index === 2 ? '#8a7a66' : s.machine;
+  const body = s.skinned ? s.machine : s.index <= 1 ? WOOD : s.index === 2 ? '#8a7a66' : s.machine;
   c.part('turret', 0, y, 0, (pb) => {
     pb.bevelBox(0.64, 0.46, 0.76, 0, 0.26, -0.05, body, 0.07, { shade: 0.05 });
     pb.box(0.66, 0.08, 0.78, 0, 0.5, -0.05, s.metal);

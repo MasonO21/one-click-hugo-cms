@@ -45,6 +45,20 @@ export interface TierStyle {
   stripe: THREE.Color;
   /** Window / lantern light color (SLOT_GLOW): warm for the low tiers, cool for the high ones. */
   lamp: THREE.Color;
+  /**
+   * Cosmetic look on top of the tier ('' = the stock tier look): a colony theme ('theme:<id>') or a
+   * turret skin ('skin:<id>'). Part of every model / piece cache key, so themed and stock models never mix.
+   */
+  look: string;
+  /** A turret skin repaints the body: models that would use bare timber / stone use `base` / `machine` instead. */
+  skinned?: boolean;
+}
+
+/** The colours a cosmetic look leans toward (CosmeticDef.color / accent). */
+export interface LookTint {
+  id: string;
+  color: string;
+  accent?: string;
 }
 
 interface TierColors {
@@ -110,8 +124,77 @@ export function tierStyle(def: TierDef): TierStyle {
     machineDark: new THREE.Color(ex.machineDark),
     stripe: new THREE.Color(ex.stripe),
     lamp: new THREE.Color(ex.lamp),
+    look: '',
   };
   styleCache.set(idx, s);
+  return s;
+}
+
+const lookCache = new Map<string, TierStyle>();
+
+function cloneStyle(base: TierStyle, look: string): TierStyle {
+  const s: TierStyle = { ...base, look };
+  for (const k of Object.keys(s) as (keyof TierStyle)[]) {
+    const v = s[k];
+    if (v instanceof THREE.Color) (s as unknown as Record<string, unknown>)[k] = v.clone();
+  }
+  return s;
+}
+
+/** THREE.Color from an sRGB hex. */
+const col = (hex: string | undefined, fallback: string): THREE.Color => new THREE.Color(hex ?? fallback);
+
+/**
+ * A colony theme's gentle tint of a tier look: roofs and roof edges lean toward the theme colour,
+ * trims, banners and painted stripes toward its accent, the neon glow halfway — walls, floors and
+ * window light stay as built, so the tier still reads at a glance. Cached per tier and theme.
+ */
+export function themedStyle(base: TierStyle, theme: LookTint | null | undefined): TierStyle {
+  if (!theme) return base;
+  const look = `theme:${theme.id}`;
+  const key = `${base.index}|${look}`;
+  let s = lookCache.get(key);
+  if (s) return s;
+  s = cloneStyle(base, look);
+  const c = col(theme.color, '#ffffff');
+  const a = col(theme.accent, theme.color);
+  s.roof.lerp(c, 0.58);
+  s.roofEdge.lerp(a, 0.5);
+  s.stripe.lerp(a, 0.65);
+  s.trim.lerp(a, 0.28);
+  s.accent.lerp(a, 0.45);
+  s.floorAlt.lerp(c, 0.12);
+  lookCache.set(key, s);
+  return s;
+}
+
+/**
+ * A turret skin: the body takes the skin colour (machine, panels, timber), trims, stripes and the
+ * glow take its accent. Cached per tier and skin.
+ */
+export function skinnedStyle(base: TierStyle, skin: LookTint | null | undefined): TierStyle {
+  if (!skin) return base;
+  const look = `skin:${skin.id}`;
+  const key = `${base.index}|${look}`;
+  let s = lookCache.get(key);
+  if (s) return s;
+  s = cloneStyle(base, look);
+  s.skinned = true;
+  const c = col(skin.color, '#ffffff');
+  const a = col(skin.accent, skin.color);
+  const dark = c.clone().multiplyScalar(0.62);
+  s.machine.copy(c);
+  s.machineDark.copy(dark);
+  s.base.lerp(c, 0.75);
+  s.light.lerp(c, 0.55).lerp(new THREE.Color(1, 1, 1), 0.12);
+  s.dark.lerp(dark, 0.75);
+  s.trim.lerp(a, 0.8);
+  s.stripe.copy(a);
+  s.accent.copy(a);
+  s.metal.lerp(dark, 0.5);
+  s.roof.lerp(c, 0.6);
+  s.roofEdge.lerp(a, 0.6);
+  lookCache.set(key, s);
   return s;
 }
 

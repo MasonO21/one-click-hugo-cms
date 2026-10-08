@@ -27,12 +27,14 @@ import { Characters } from './actors/Characters';
 import { Aliens } from './actors/Aliens';
 import { Projectiles } from './actors/Projectiles';
 import { WishBubbles } from './actors/WishBubbles';
+import { ThemeFx } from './fx/ThemeFx';
 import './models'; // registers all procedural building models
 import type { WorldGen } from '../sim/world';
 
 const _ndc = new THREE.Vector2();
 const _v3 = new THREE.Vector3();
 const _ray = new THREE.Raycaster();
+const _buf = new THREE.Vector2();
 
 export class Renderer implements RendererApi {
   private renderer!: THREE.WebGLRenderer;
@@ -54,6 +56,7 @@ export class Renderer implements RendererApi {
   private aliens!: Aliens;
   private projectiles!: Projectiles;
   private wishBubbles!: WishBubbles;
+  private themeFx!: ThemeFx;
   private container!: HTMLElement;
   private width = 1;
   private height = 1;
@@ -157,6 +160,7 @@ export class Renderer implements RendererApi {
     this.aliens = new Aliens(this.ctx);
     this.projectiles = new Projectiles(this.ctx);
     this.wishBubbles = new WishBubbles(this.ctx);
+    this.themeFx = new ThemeFx(this.ctx);
     this.overlay = new BuildOverlay(this.ctx);
     this.effects = new Effects(this.ctx, this.rig);
     this.applyQuality(this.quality, true);
@@ -246,6 +250,7 @@ export class Renderer implements RendererApi {
     this.aliens.update(dt);
     this.projectiles.update(dt);
     this.particles.update(dt);
+    this.themeFx.update(dt, this.renderer.getDrawingBufferSize(_buf).y);
     this.overlay.setSelection(this.selectionInfo(game.view.selection));
     this.overlay.update();
 
@@ -430,6 +435,7 @@ export class Renderer implements RendererApi {
     this.overlay?.dispose();
     this.projectiles?.dispose();
     this.wishBubbles?.dispose();
+    this.themeFx?.dispose();
     this.aliens?.dispose();
     this.characters?.dispose();
     this.pois?.dispose();

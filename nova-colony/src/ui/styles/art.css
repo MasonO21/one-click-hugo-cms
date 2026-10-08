@@ -984,6 +984,13 @@
 .veh.locked .vpic.aico.emoji {
   filter: grayscale(1) opacity(0.6);
 }
+.bcard.cosmetic.locked .bpic.aico img {
+  filter: saturate(0.85);
+  opacity: 0.9;
+}
+.bcard.cosmetic.locked .bpic.aico.emoji {
+  filter: none;
+}
 /* landscape phones: the drawer is short, so the picture boxes shrink and the cards stay compact */
 @media (orientation: landscape) and (max-height: 480px) {
   .bcard {

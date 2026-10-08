@@ -512,9 +512,10 @@ describe('data.integrity — world', () => {
 describe('data.integrity — buildings per tier & design rules', () => {
   const tierCount = (t: number) => data.buildings.filter((b) => b.unlockTier === t).length;
 
-  it('has 110-150 buildings and every tier 1-6 unlocks at least 8 new ones', () => {
-    expect(data.buildings.length).toBeGreaterThanOrEqual(110);
-    expect(data.buildings.length).toBeLessThanOrEqual(150);
+  it('has 110-150 buildings (plus the cosmetic decor) and every tier 1-6 unlocks at least 8 new ones', () => {
+    const core = data.buildings.filter((b) => !b.cosmetic);
+    expect(core.length).toBeGreaterThanOrEqual(110);
+    expect(core.length).toBeLessThanOrEqual(150);
     for (let t = 1; t <= 6; t++) expect(tierCount(t), `buildings unlocked at tier ${t}`).toBeGreaterThanOrEqual(8);
   });
 
@@ -589,6 +590,7 @@ describe('data.integrity — presentation', () => {
     'research_desk', 'research_lab', 'advanced_lab', 'med_bay', 'medical_center',
     'radio_tower', 'garage', 'hangar', 'teleporter', 'spin_wheel', 'beacon', 'repair_bay', 'shield_generator',
     'lamp', 'plant', 'bench', 'fountain', 'banner', 'statue', 'arcade', 'garden',
+    'gnome', 'toadstool_ring', 'pumpkin_patch', 'hay_bale', 'lantern_arch', 'lantern_string', 'holo_tree', 'teddy_picnic', 'star_fountain',
     'barricade', 'spikes', 'guard_tower', 'turret_basic', 'turret_mg', 'turret_flame', 'turret_missile', 'turret_heavy', 'turret_laser', 'turret_plasma', 'turret_rail', 'turret_cannon', 'turret_aa', 'electric_fence', 'drone_pad',
   ]);
 

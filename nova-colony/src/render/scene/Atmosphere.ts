@@ -24,7 +24,9 @@ interface Key {
 }
 
 /**
- * Lighting keyframes by sun elevation (-1 midnight .. 1 noon). The look is "warm key, cool fill":
+ * Lighting keyframes by sun elevation (-1 midnight .. 1 noon). Cozy-world grade (the painted world
+ * map): a warm golden sun, a generous soft sky fill (shadows stay airy, never inky), pastel haze
+ * on the horizon and indigo-violet nights where the warm lamps and windows glow. The look is "warm key, cool fill":
  * a strong warm sun against a bluish hemisphere and very little flat ambient, so every box reads
  * as a box (sunlit top, half-lit front, cool shadow side); golden sunrise / sunset keys with a
  * low orange sun and blue sky fill; nights deep blue (not green) so warm window glow pops. The
@@ -32,35 +34,35 @@ interface Key {
  * figures on it still read (QA3 #14b) — the sky dome, stars and the desaturation keep it night.
  */
 const KEYS: Key[] = [
-  { e: -1.0, top: '#040816', hor: '#101a38', bot: '#070b18', fog: '#0e1630', sun: '#8aa4ea', sunI: 0.7, hemiSky: '#4a66b8', hemiGround: '#141c38', hemiI: 0.88, night: 1 },
-  { e: -0.3, top: '#0a1336', hor: '#283868', bot: '#0c1224', fog: '#1a2648', sun: '#92acee', sunI: 0.72, hemiSky: '#4f6cbc', hemiGround: '#161f3a', hemiI: 0.9, night: 1 },
-  { e: -0.08, top: '#1c2d6a', hor: '#d0705c', bot: '#1a1f33', fog: '#5a4c70', sun: '#ff9c6b', sunI: 0.7, hemiSky: '#5868aa', hemiGround: '#3a3230', hemiI: 0.62, night: 0.78 },
-  { e: 0.05, top: '#355ca6', hor: '#ffa860', bot: '#4a4a5a', fog: '#d9a386', sun: '#ffa45e', sunI: 1.7, hemiSky: '#8aa4dc', hemiGround: '#6a5a46', hemiI: 0.66, night: 0.32 },
-  { e: 0.25, top: '#3a84dc', hor: '#ffd4a0', bot: '#7a8a9a', fog: '#dcc4ac', sun: '#ffd8a4', sunI: 2.1, hemiSky: '#b8d2f6', hemiGround: '#7e9a54', hemiI: 0.7, night: 0.05 },
-  { e: 1.0, top: '#2a76dc', hor: '#bfe4ff', bot: '#8fa3b8', fog: '#c6e2ff', sun: '#fff2d2', sunI: 2.2, hemiSky: '#cfe4ff', hemiGround: '#8cab58', hemiI: 0.74, night: 0 },
+  { e: -1.0, top: '#070a24', hor: '#222a5c', bot: '#0b0f26', fog: '#1a1f4a', sun: '#9aaef0', sunI: 0.7, hemiSky: '#5664bc', hemiGround: '#221d3a', hemiI: 0.92, night: 1 },
+  { e: -0.3, top: '#0d1240', hor: '#343a78', bot: '#0e1228', fog: '#232a5a', sun: '#9cb0f0', sunI: 0.74, hemiSky: '#5a6ac0', hemiGround: '#251f3c', hemiI: 0.94, night: 1 },
+  { e: -0.08, top: '#262a70', hor: '#e2826a', bot: '#1c1a36', fog: '#6a5280', sun: '#ff9c6b', sunI: 0.7, hemiSky: '#6a68b0', hemiGround: '#46323a', hemiI: 0.66, night: 0.78 },
+  { e: 0.05, top: '#4664b4', hor: '#ffb070', bot: '#5a4a5a', fog: '#eab496', sun: '#ffaa5c', sunI: 1.8, hemiSky: '#a2a8dc', hemiGround: '#7a6044', hemiI: 0.74, night: 0.32 },
+  { e: 0.25, top: '#4a8ce0', hor: '#ffd29a', bot: '#8a94a0', fog: '#f0c8a6', sun: '#ffcc84', sunI: 2.05, hemiSky: '#c4d2f2', hemiGround: '#a0985a', hemiI: 0.8, night: 0.05 },
+  { e: 1.0, top: '#3a88e2', hor: '#cfeaff', bot: '#98acc0', fog: '#a9d2f2', sun: '#ffefcc', sunI: 2.2, hemiSky: '#d2e6ff', hemiGround: '#a4b25c', hemiI: 0.84, night: 0 },
 ];
 /**
  * Sunny-day grade: lit surfaces gain this much saturation under a high sun (full above sun
  * elevation DAY_SAT_FULL, nothing below DAY_SAT_FROM — the golden-hour keys keep their own look).
  */
-const DAY_SAT = 0.16;
+const DAY_SAT = 0.2;
 const DAY_SAT_FROM = 0.12;
 const DAY_SAT_FULL = 0.4;
 
 /** Flat ambient on top of the hemisphere (day / deep night). */
-const AMBIENT_DAY = 0.1;
+const AMBIENT_DAY = 0.13;
 const AMBIENT_NIGHT = 0.09;
 /** Sky rim strength (fraction of the hemisphere sky colour) by day and by night. */
 const RIM_DAY = 0.42;
 const RIM_NIGHT = 0.3;
 /** Shadowed ground still gets this much of the sun (a hair of bounce keeps shadows soft, not black). */
-const SHADOW_INTENSITY = 0.9;
+const SHADOW_INTENSITY = 0.72;
 /**
  * PCF kernel half-width in shadow texels. 2 (a 5-texel kernel, ~0.15 world units) gives every shadow a
  * hair of penumbra and, above all, averages the cloud shadow stipple into a smooth density; three's
  * default 3-texel kernel leaves it as a visible halftone.
  */
-const SHADOW_RADIUS = 2;
+const SHADOW_RADIUS = 3;
 /**
  * The key light is the sun above this elevation and the moon (opposite direction) below it. Its
  * intensity dips smoothly to 0 within ±KEY_SWAP_BAND of the swap, so the light direction — and every
@@ -279,10 +281,11 @@ export class Atmosphere {
     u.uSunGlow.value = e > -0.25 ? 1 : 0;
 
     // fog
-    this.fog.color.lerpColors(ca.fog, cb.fog, f).lerp(this.biomeTint, 0.4 * day);
+    this.fog.color.lerpColors(ca.fog, cb.fog, f).lerp(this.biomeTint, 0.25 * day);
     (u.uBot.value as THREE.Color).copy(this.fog.color);
-    this.fog.near = camDist * 1.6 + 30;
-    this.fog.far = camDist * 4.2 + 240;
+    // a painted aerial haze: distant hills melt into the pastel sky
+    this.fog.near = camDist * 1.4 + 24;
+    this.fog.far = camDist * 3.6 + 190;
 
     // lights
     const sunUp = e > KEY_SWAP_E;
@@ -300,7 +303,7 @@ export class Atmosphere {
     this.hemi.groundColor.lerpColors(ca.hemiGround, cb.hemiGround, f);
     this.hemi.intensity = lerp(a.hemiI, b.hemiI, f);
     this.amb.intensity = lerp(AMBIENT_DAY, AMBIENT_NIGHT, night);
-    this.amb.color.set(night > 0.5 ? '#92a4dc' : '#ffffff');
+    this.amb.color.set(night > 0.5 ? '#9a9ce0' : '#fff6ea');
     // sky rim on grazing faces follows the hemisphere sky (blue by day, deep blue at night)
     ctx.mats.setRim(this.hemi.color, lerp(RIM_DAY, RIM_NIGHT, night) * this.hemi.intensity);
     // a high sun makes the meadow and foliage a touch more vivid (toy-bright noon, untouched dawn / dusk)

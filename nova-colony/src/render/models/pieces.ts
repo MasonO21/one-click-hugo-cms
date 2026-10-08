@@ -40,7 +40,7 @@ export type PieceGeoKey =
 const cache = new Map<string, THREE.BufferGeometry>();
 
 export function pieceGeometry(key: PieceGeoKey, s: TierStyle): THREE.BufferGeometry {
-  const ck = `${key}|${s.index}`;
+  const ck = `${key}|${s.index}${s.look ? '|' + s.look : ''}`;
   let g = cache.get(ck);
   if (g) return g;
   const b = new GeoBuilder(s.index * 31 + key.length);

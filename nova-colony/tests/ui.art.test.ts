@@ -376,13 +376,13 @@ describe('ui art wiring helpers', () => {
     }
   });
 
-  it('tier unlock lists: pieces and the core are left out, ungated ones come first, freeOnly drops the research-gated', () => {
+  it('tier unlock lists: pieces, the core and cosmetic decor are left out, ungated ones come first, freeOnly drops the research-gated', () => {
     let sawGated = 0;
     let sawFree = 0;
     for (let t = 0; t < data.tiers.length; t++) {
       const all = tierUnlocks(data, t);
       const free = tierUnlocks(data, t, true);
-      const wantB = data.buildings.filter((b) => b.unlockTier === t && !b.piece && !b.core).map((b) => b.id).sort();
+      const wantB = data.buildings.filter((b) => b.unlockTier === t && !b.piece && !b.core && !b.cosmetic).map((b) => b.id).sort();
       expect(all.filter((u) => u.kind === 'building').map((u) => u.id).sort(), `tier ${t}`).toEqual(wantB);
       expect(all.filter((u) => u.kind === 'vehicle').map((u) => u.id).sort(), `tier ${t} vehicles`).toEqual(data.vehicles.filter((v) => v.unlockTier === t).map((v) => v.id).sort());
       // the free list is the research-free subset of the full one, in the same order

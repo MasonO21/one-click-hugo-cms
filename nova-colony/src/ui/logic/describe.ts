@@ -64,12 +64,18 @@ export function buildingEffects(def: BuildingDef, data: DataRegistry, level = 1)
 
 export interface LockInfo {
   locked: boolean;
-  kind: 'tier' | 'research' | null;
+  kind: 'tier' | 'research' | 'cosmetic' | null;
   text: string | null;
 }
 
-/** Why a building cannot be built yet ("Requires Stone tier"). */
-export function lockInfo(def: BuildingDef, data: DataRegistry, colonyTier: number, completedResearch: readonly string[]): LockInfo {
+/**
+ * Why a building cannot be built yet ("Requires Stone tier"). Exclusive decor (BuildingDef.cosmetic)
+ * needs its decoration cosmetic in `ownedCosmetics` and points the player to the Wardrobe.
+ */
+export function lockInfo(def: BuildingDef, data: DataRegistry, colonyTier: number, completedResearch: readonly string[], ownedCosmetics: readonly string[] = []): LockInfo {
+  if (def.cosmetic && !ownedCosmetics.includes(def.cosmetic)) {
+    return { locked: true, kind: 'cosmetic', text: `${data.cosmetic(def.cosmetic)?.name ?? 'Decoration'} · Wardrobe` };
+  }
   if (def.unlockTier > colonyTier) {
     return { locked: true, kind: 'tier', text: `Requires ${data.tier(def.unlockTier).name} tier` };
   }
@@ -142,7 +148,7 @@ export function vehicleUnlock(data: DataRegistry, id: string): UnlockEntry {
 
 /** A tier's building / vehicle with the id of the research gating it (null = none), in display order. */
 function tierUnlockPairs(data: DataRegistry, tier: number): { entry: UnlockEntry; research: string | null }[] {
-  const bs = data.buildings.filter((b) => b.unlockTier === tier && !b.piece && !b.core);
+  const bs = data.buildings.filter((b) => b.unlockTier === tier && !b.piece && !b.core && !b.cosmetic);
   const vs = data.vehicles.filter((v) => v.unlockTier === tier);
   const gated = (n: string | undefined): number => (n ? 1 : 0);
   return [
