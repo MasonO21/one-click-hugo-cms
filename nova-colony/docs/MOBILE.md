@@ -2,8 +2,8 @@
 
 The game is a TypeScript/Vite web app packaged for iOS and Android with **Capacitor 8**
 (`appId com.novacolony.game`, `appName Nova Colony`, `webDir dist`). Native plugins are used for
-storage (Preferences), rewarded ads (AdMob), purchases (RevenueCat), haptics, splash/status bar and
-app lifecycle. **Every plugin is loaded lazily and only inside the native shell**, so the plain web
+storage (Preferences), rewarded ads (AdMob), purchases (RevenueCat), haptics, local notifications,
+splash/status bar and app lifecycle. **Every plugin is loaded lazily and only inside the native shell**, so the plain web
 build (`npm run dev` / `npm run build`) never needs them.
 
 | Concern | Web / dev | iOS / Android (Capacitor) |
@@ -13,6 +13,7 @@ build (`npm run dev` / `npm run build`) never needs them.
 | Purchases | `confirm()` "DEV STORE" mock | `@revenuecat/purchases-capacitor` |
 | Analytics | console sink (dev) / HTTP sink if configured | same |
 | Haptics | no-op | `@capacitor/haptics` |
+| Local notifications | none (no card, no Settings row) | `@capacitor/local-notifications` (see §6b) |
 | Cloud save | optional HTTP backend | same |
 
 Code lives in `src/platform/*` (adapters, `SaveManager`, analytics hooks) and `src/sim/liveops.ts`
@@ -206,7 +207,8 @@ While an ad is showing the game is paused; if the ad service never answers, the 
 - **Orientation**: portrait + landscape. iOS `UISupportedInterfaceOrientations` has Portrait + both Landscapes (iPad: all four); Android `screenOrientation="fullUser"` (follows the user's rotation lock).
 - **Android manifest** permissions declared by us: `INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE` (haptics), `com.android.vending.BILLING`, `com.google.android.gms.permission.AD_ID` (declare advertising-id use in the Play *Data safety* form). The merged release manifest adds, from libraries only: `ACCESS_ADSERVICES_AD_ID` / `_ATTRIBUTION` / `_TOPICS` (AdMob / Privacy Sandbox), `WAKE_LOCK` (Google Mobile Ads measurement), `FOREGROUND_SERVICE` (WorkManager, pulled in by the ads SDK) and a signature-level `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (androidx.core). All are install-time/normal permissions with no runtime prompt; nothing location/contacts/storage/camera related. `allowBackup="true"`: Android Auto Backup restores the Preferences-stored save when the player moves to a new phone.
 - **WebView / hardening** (checked in the merged manifest + `capacitor.config.ts`): `android:hardwareAccelerated="true"` on the activity (WebGL needs it), no `usesCleartextTraffic` (so HTTPS-only at targetSdk 36), `allowMixedContent: false`, `androidScheme: https`, our own `android:exported` is limited to the launcher activity (the few exported library receivers/services, e.g. WorkManager's and the Amazon IAP receiver that RevenueCat bundles, are permission-protected), no `debuggable` in release. Background colour `#1b2a3a` is the same everywhere: `capacitor.config.ts` (`BACKGROUND`, SplashScreen/StatusBar/ios/android), `res/values/colors.xml` → Android 12+ system splash (`windowSplashScreenBackground` in `styles.xml`), the splash art's bottom colour, `index.html` / `manifest.webmanifest`.
-- **iOS** `Info.plist`: `GADApplicationIdentifier`, `NSUserTrackingUsageDescription`, `SKAdNetworkItems`, `ITSAppUsesNonExemptEncryption=false`, `UIRequiredDeviceCapabilities=arm64`.
+- **Notifications (Android)**: `POST_NOTIFICATIONS` is declared by us (the Android 13+ runtime permission; the game only asks after the player says yes on its own card, §6b). The plugin's manifest adds `RECEIVE_BOOT_COMPLETED` (re-arms pending reminders after a reboot) and `WAKE_LOCK`; its `SCHEDULE_EXACT_ALARM` is **removed** (`tools:node="remove"`): reminders are inexact on purpose, so there is no "Alarms & reminders" special access to declare or justify on Play. The status-bar icon is `res/drawable-*/ic_stat_nova.png` (the themed-icon glyph, white on transparency, written by `art/generate.mjs`), tinted `#ff8a3d`; it is only referenced by name at runtime, so `res/raw/keep.xml` keeps it (lint, and any future `shrinkResources`).
+- **iOS** `Info.plist`: `GADApplicationIdentifier`, `NSUserTrackingUsageDescription`, `SKAdNetworkItems`, `ITSAppUsesNonExemptEncryption=false`, `UIRequiredDeviceCapabilities=arm64`. Local notifications need nothing extra (no entitlement, no usage string: the OS prompt is the system's own).
 - **Store rating prompt**: `src/platform/review.ts` asks the OS for its native review sheet (`@capacitor-community/in-app-review`) only after a tier-up or a won raid's chest, once the celebration has closed, for invested players (Stone tier, 2+ sessions, 30+ min), at most 3 times, 120 days apart (recorded under `nova_review_v1` in the platform store). Apple and Google apply their own quotas and may show nothing; there is no in-game "rate us" dialog and nothing depends on it.
 - **System font size (Android)**: `MainActivity` pins the WebView's `textZoom` to 100. The game scales its whole UI to the screen; Android would otherwise also zoom every label by the accessibility font scale and the HUD/panels overflow at large font settings.
 - **Splash & status bar**: the splash hides as soon as the game is ready (`src/platform/hooks.ts`; `capacitor.config.ts` keeps a 2.5 s auto-hide as a safety net). The status bar is hidden for an immersive full-screen game.
@@ -221,6 +223,40 @@ While an ad is showing the game is paused; if the ad service never answers, the 
   4. Enrol in **Play App Signing** on the first upload; Google then re-signs with the real app key and your upload key only authenticates uploads.
 - **Signing (iOS)**: set the Team in Xcode and *Product → Archive* (macOS only).
 
+## 6b. Local notifications (gentle reminders)
+
+A few useful reminders while the player is away, never spam. Code: `src/platform/notifyPlan.ts` (pure planner, tests in
+`tests/notify.plan.test.ts`), `src/platform/notifications.ts` (plugin adapter + `game.notifications` controller,
+`tests/notify.native.test.ts`), `src/ui/NotifyPrompt.ts` (the card) and the Settings row.
+
+| Reminder | When | Copy |
+|---|---|---|
+| Storage full | the first resource stops filling while away, i.e. reaches what Welcome Back credits up to (capacity × `offlineStorageMult`), timed with the economy's own offline model (80% efficiency, converters, upkeep). Only if ≥ 30 min away and before the offline cap | "Your storehouses are bursting! 📦" / "Come spend your wood and stone. There's no room left for more!" |
+| Offline cap | `offlineHours` (8 h, + research / Colony Pass) after leaving: production stops. Only while something is still being made then | "Time to collect! 🧺" / "Your colonists have been busy for 8 hours. Come collect!" |
+| Daily gift | the next local midnight, only when today's gift is already claimed and gifts are offered. Tapping it opens the gift panel | "Your daily gift is ready! 🎁" / "Your day 4 gift is waiting in New Hope. Come and unwrap it!" |
+| We miss you | once, 24 h after leaving; nothing after it | "New Hope misses you 💛" / "Your colonists keep looking up at the sky, hoping you'll visit. Pop in and say hello!" |
+
+Rules: nothing within 30 min of leaving; nothing 22:00–08:00 local time (moved to 08:00, body starts "Good morning!");
+reminders under an hour apart become one notification (the evening case: storage + offline cap + gift → one 08:00
+"Time to collect! … Your daily gift is ready too. 🎁"); at most 3; stable ids 41001–41004 (one per kind), all
+cancelled before a fresh plan is scheduled, so nothing duplicates.
+
+Lifecycle: app to the background → cancel ours and schedule a fresh plan (only with `settings.notifications` on and
+the OS permission granted); back to the foreground (or launch) → cancel everything pending, clear the shade, re-read
+the permission. Android: our own `colony` channel ("Colony updates", default importance, no vibration) and
+`isExactNotification: false` on every reminder. Without the latter the plugin (8.3+) would open the system
+"Alarms & reminders" screen on each schedule. The plugin's `schedule()` would also show the OS prompt by itself, so it
+is only called after `checkPermissions()` says granted. iOS: `presentationOptions: []` (capacitor.config.ts): nothing
+pops up while the game is open.
+
+Permission UX: never at launch. The in-game card ("Want a little heads-up? … We'll let you know when your storehouses
+fill up or your daily gift is ready") appears after the first tier-up celebration closes or the first Welcome Back is
+collected, once the screen is free (and never over the analytics card). Only "Yes, please!" shows the OS prompt.
+Asked once (`settings.notifyAsked`; "Not now" is remembered). **Settings › Reminders › Notifications** turns it on
+(re-asking the OS while it still asks: Android after a single "Don't allow"), off (cancels pending at once), or, when
+the OS has blocked the app, explains where to allow it (iOS: Settings › Nova Colony › Notifications; Android:
+Settings › Apps › Nova Colony › Notifications).
+
 ## 7. Saves, backups & recovery (never lose progress)
 
 `SaveManager` (`src/platform/save.ts`, attached by `main.ts` after `game.start()`):
@@ -231,6 +267,9 @@ While an ad is showing the game is paused; if the ad service never answers, the 
 - A structurally broken in-memory state is **never written over a good save**.
 - **Versioned migrations**: bump `SAVE_VERSION` (`src/core/constants.ts`) and register `MIGRATIONS[oldVersion]` in `src/platform/saveMigrate.ts`. New fields are filled with defaults automatically.
 - **Recovery codes**: `game.saves.exportRecoveryCode()` → text the player can store anywhere; `game.saves.importRecoveryCode(code)` validates (checksum, structure), backs up the current save, writes the import, suspends saving (so the running game cannot overwrite it) and **reloads the app ~1.5 s later** so the restored colony loads (`new SaveManager(services, { autoRestart: false })` to do it yourself with `restart()`). Failures return `false` and set `game.saves.lastError` (readable text). `listBackups()` / `restoreBackup(slot)` power a "Restore from backup" list. The attached manager is available as `game.saves`, `window.saves` (used by the Settings panel) and `activeSaveManager()`.
+- **A background stay counts like a closed app**: when the phone kept the game in memory, coming back credits the time
+  away exactly like a launch does (`Game.creditAbsence`, wired by `installResumeCredit` in `src/platform/hooks.ts`):
+  quietly under 5 minutes, the Welcome Back card after that, 80% efficiency and the 8 h cap included.
 - **Unclaimed "Welcome back" earnings** are kept in the save until claimed (`liveops.pendingOffline`), because `Game.start()` resets the offline clock: quitting at that screen never loses them, and leftovers are merged into the next summary.
 - **Cloud save** (optional): set `VITE_CLOUD_SAVE_URL`. The device gets a random **recovery id** (`NOVA-XXXX-XXXX-XXXX`, shown via `game.saves.cloudRecoveryId()`; enter it on another device with `setCloudRecoveryId`). Protocol:
   - `GET  {base}/{id}` → `200` + body (a recovery code) or `404`
@@ -247,7 +286,7 @@ Privacy-conscious by construction (`src/platform/analytics.ts`, `analyticsHooks.
 - **Batched** in memory (20 events / 30 s / on pause), failed sends are retried with a bounded queue.
 - **Sink**: `VITE_ANALYTICS_URL` receives `POST` JSON:
   `{ v: 1, installId, session, platform, appVersion, events: [{ name, props, ts }] }` (`keepalive` on pause). Without a URL, events are dropped (dev: printed to the console).
-- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `daily_claimed`, `season_level`, `progression_stall` (10 minutes of play without completing a mission).
+- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `daily_claimed`, `season_level`, `progression_stall` (10 minutes of play without completing a mission), `notify_answer` (card / Settings, on or off, OS permission), `notify_opened` (which reminder brought the player back).
 - Declare accordingly in the **Apple privacy labels** ("Data not linked to you": usage data) and the **Play Data safety** form, plus advertising-id use for AdMob. Consider defaulting `settings.analytics` to off in the EEA.
 
 ## 9. Release checklist
@@ -259,6 +298,7 @@ Privacy-conscious by construction (`src/platform/analytics.ts`, `analyticsHooks.
 - [ ] Offline-double ad, spin extra ad, instant-craft ad and free-crate ad each pay out and respect limits on device.
 - [ ] Save safety: kill the app mid-session → relaunch restores; airplane-mode launch works; export a recovery code and import it on a second device/profile.
 - [ ] Haptics toggle, music/sfx, portrait and landscape layouts, notch/safe-area, status bar hidden, splash hides promptly.
+- [ ] Notifications on a real iPhone and an Android 13+ phone (§6b): no prompt at launch; the card after the first tier-up / Welcome Back; "Yes" shows the OS prompt once; background the app and check pending reminders fire at the planned time (Android: inexact, allow some minutes; Doze), with the status-bar icon and accent; opening the app clears them; the gift reminder opens the gift panel; Settings toggle off/on; blocked-in-system-settings text.
 - [ ] App icon + splash look right on real devices (final art is in the repo; check the Android 12+ system splash and the iOS launch screen).
 - [ ] Version/build numbers bumped; Android signed AAB (§6 *Signing*) and iOS archive built from a clean `npm run build && npx cap sync`.
 - [ ] Store listings: privacy policy URL, data-safety / privacy labels (§8), age rating (cartoon violence vs aliens only), `app-ads.txt` hosted, subscription terms shown near the Colony Pass button.
@@ -286,6 +326,7 @@ capacitor.config.ts          appId/appName/webDir, splash + status bar config
 android/  ios/               native projects (generated by `cap add`, then configured)
 src/platform/index.ts        createPlatformServices(): native vs web adapters
 src/platform/{store,ads,iap,analytics,haptics,cloud}.ts   adapters
+src/platform/notifications.ts, notifyPlan.ts   local notifications: adapter + controller, pure reminder planner
 src/platform/save*.ts        SaveManager, recovery-code codec, migrations/validation
 src/platform/analyticsHooks.ts, hooks.ts, lifecycle.ts, env.ts
 src/sim/liveops.ts           Nova, boosts, VIP, daily, spin, season, ads, shop, free crate, offline
