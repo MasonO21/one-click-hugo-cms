@@ -388,6 +388,7 @@
   KH.on('temper', (e) => addPts('oasis', 15 * e.lv));
   KH.on('fish', () => addPts('oasis', DATA.fishing.warPts));
   KH.on('defense', (e) => addPts('oasis', 10 * e.to));
+  KH.on('tradeHome', () => addPts('oasis', DATA.trade.warPts));
   KH.on('outpostHeld', () => addPts('oasis', DATA.outposts.warPts));
   KH.on('awaken', () => addPts('oasis', DATA.awaken.warPts));
   KH.on('clash', (e) => addPts('oasis', DATA.clash.warPts[e.place - 1] || 0));

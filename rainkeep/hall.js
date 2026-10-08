@@ -49,7 +49,7 @@
   const powerOf = (w, h = S.time / 3600) => Math.round(ref(h * w.pace) * w.f);
   // your power, counting troops out marching and holding outposts (so they don't drop you down the ledger)
   const out = (troops) => Object.entries(troops || {}).reduce((x, [k, n]) => x + n * KH.unitPower(k), 0);
-  const mine = () => Math.round(KH.power() + (S.map && S.map.marches ? S.map.marches.reduce((a, m) => a + out(m.troops), 0) : 0) + (KH.outposts ? KH.outposts.list().reduce((a, o) => a + out(o.troops), 0) : 0));
+  const mine = () => Math.round(KH.power() + (S.map && S.map.marches ? S.map.marches.reduce((a, m) => a + out(m.troops), 0) : 0) + (KH.outposts ? KH.outposts.list().reduce((a, o) => a + out(o.troops), 0) : 0) + (KH.trade ? KH.trade.trips().reduce((a, t) => a + out(t.escort), 0) : 0));
   // everyone, strongest first; you are the entry with you: true
   function table() {
     const h = S.time / 3600;

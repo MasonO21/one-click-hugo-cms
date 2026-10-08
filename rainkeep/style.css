@@ -1177,3 +1177,16 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .op-ic { width: 34px; height: 34px; flex: none; }
 .op-claim { border-color: #3fd0c088; }
 .op-row .chip { vertical-align: 1px; }
+
+/* Trade Routes (trade.js) */
+.tr-market { border-color: color-mix(in srgb, var(--mk) 55%, transparent); }
+.tr-ic { width: 40px; height: 40px; flex: none; }
+.tr-meta { gap: 6px; flex-wrap: wrap; }
+.tr-meta .chip .ic { width: 14px; height: 14px; }
+.tr-order { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #ffffff0a; }
+.tr-order.taken { justify-content: center; }
+.tr-swap { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tr-swap .costs { margin: 0; }
+.tr-arrow { color: var(--gold); font-weight: 800; }
+.tr-trip { display: grid; gap: 4px; }
+.tr-trip .ic { width: 18px; height: 18px; }

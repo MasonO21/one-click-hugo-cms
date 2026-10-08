@@ -151,8 +151,8 @@
   const gatherMult = () => 1 + 0.1 * (S.tech.camels || 0) + KH.stewardVal('gather') / 100 + KH.bonus('gather');
   const loadMult = () => 1 + 0.1 * (S.tech.camels || 0);
   const travel = (x, y) => Math.max(4, Math.round(dist(x, y) * W.travelPerTile));
-  // troops out on marches and holding outposts (outposts.js)
-  KH.troopsAway = () => (S ? S.map.marches.reduce((a, m) => a + sum(m.troops), 0) + (KH.outposts ? KH.outposts.garrisoned() : 0) : 0);
+  // troops out on marches, holding outposts (outposts.js) and escorting trade caravans (trade.js)
+  KH.troopsAway = () => (S ? S.map.marches.reduce((a, m) => a + sum(m.troops), 0) + (KH.outposts ? KH.outposts.garrisoned() : 0) + (KH.trade ? KH.trade.escorted() : 0) : 0);
   KH.heroBusy = (id) => !!S && S.map.marches.some((m) => m.heroes.includes(id));
   function pickTroops(frac) {
     const pool = KH.capTroops(S.troops, KH.marchCap(), S.formation);

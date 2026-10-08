@@ -552,6 +552,34 @@
     }
   }
 
+  // trade caravans (trade.js): a string of three camels heading for the edge of the map and back
+  const traders = {};
+  function syncTrade(t) {
+    const live = new Set(), R = (C + 0.6) * TS;
+    for (const r of KH.trade ? KH.trade.roads() : []) {
+      live.add(r.id);
+      let e = traders[r.id];
+      if (!e) {
+        const g = new THREE.Group(), cs = [];
+        for (let i = 0; i < 3; i++) {
+          const c = A.camel(r.id * 7 + i, { cloth: i ? '#e8dcc4' : r.color, load: true });
+          c.scale.setScalar(0.7);
+          c.position.x = -i * 1.1;
+          if (!i) { const rider = A.person(r.id * 5, { robe: '#e8dcc4' }); rider.position.set(-0.05, 1.05, 0); c.add(rider); }
+          g.add(c); cs.push(c);
+        }
+        scene.add(g);
+        e = traders[r.id] = { g, cs };
+      }
+      const x = Math.cos(r.dir) * R * r.p, z = Math.sin(r.dir) * R * r.p;
+      e.g.position.set(x, hAt(x, z), z);
+      e.g.rotation.y = -r.dir + (r.back ? Math.PI : 0);
+      e.g.visible = r.p > 0.04;
+      for (const c of e.cs) A.walkCamel(c, t, 0.9);
+    }
+    for (const id of Object.keys(traders)) if (!live.has(Number(id))) { scene.remove(traders[id].g); delete traders[id]; }
+  }
+
   // ======================================================================
   // Camera, panning, picking
   // ======================================================================
@@ -707,7 +735,7 @@
       if (ud.glow) ud.glow.emissiveIntensity = 0.45 + 0.3 * Math.sin(t * 2.4 + e.t.v * 6);
       if (ud.hive && ud.hive.visible) { ud.hive.material.opacity = 0.6 + 0.35 * Math.sin(t * 3 + e.t.v * 5); ud.hive.scale.setScalar(0.9 + 0.15 * Math.sin(t * 3 + e.t.v * 5)); }
     }
-    syncMarches(t);
+    syncMarches(t); syncTrade(t);
     const sk = UI.sheet && UI.sheet.kind === 'tile' ? UI.sheet.tile : null;
     sel.visible = !!sk;
     if (sk) { const [x, y] = sk.split(',').map(Number); sel.position.set(wx(x), hAt(wx(x), wz(y)) + 0.15, wz(y)); sel.material.opacity = 0.6 + 0.3 * Math.sin(t * 4); }

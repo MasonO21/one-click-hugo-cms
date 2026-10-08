@@ -22,7 +22,7 @@
   UI.drillType = 'guard'; UI.drillRank = 0; UI.drillN = 10;
 
   const sumOf = (a) => a.reduce((x, y) => x + y, 0);
-  const away = (c) => (S.map && S.map.marches ? S.map.marches.reduce((a, m) => a + ((m.troops && m.troops[c]) || 0), 0) : 0) + (KH.outposts ? KH.outposts.garrisonOf(c) : 0);
+  const away = (c) => (S.map && S.map.marches ? S.map.marches.reduce((a, m) => a + ((m.troops && m.troops[c]) || 0), 0) : 0) + (KH.outposts ? KH.outposts.garrisonOf(c) : 0) + (KH.trade ? KH.trade.escortOfClass(c) : 0);
   // every troop of a class (home and out marching), split into recruits and each rank; trims the ranks when the
   // class has lost more than its recruits
   function split(c) {
