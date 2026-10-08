@@ -1296,9 +1296,10 @@ const DATA = {
   // A3 and A5 also strengthen its skill.
   awaken: {
     unlock: 12, // Rainwyrm level
-    dupes: [2, 3, 4, 5, 6], // duplicates' worth of shards for A1 to A5
-    stat: 0.06, cap: 10, // per awakening
-    skill: { 3: 0.15, 5: 0.3 }, // skill strength from A3, and from A5 (in place of the A3 bonus)
+    wyrm: [12, 14, 16, 18, 20], // the Rainwyrm level each step opens at
+    dupes: [3, 5, 7, 9, 12], // duplicates' worth of shards for A1 to A5
+    stat: 0.04, cap: 10, // per awakening
+    skill: { 3: 0.1, 5: 0.2 }, // skill strength from A3, and from A5 (in place of the A3 bonus)
     warPts: 40, // Oasis Wars points per awakening
   },
 
@@ -1409,7 +1410,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.19', items: [
-      { icon: 'i-star', name: 'Hero Awakening', text: 'Fully starred heroes can now be awakened five times with their own shards: more attack, defense and health, 10 more levels each time, and a stronger skill at A3 and A5.', act: 'tab:heroes', open: (S) => S.lv.wyrm >= 12, needs: 'Rainwyrm Lv 12' },
+      { icon: 'i-star', name: 'Hero Awakening', text: 'Fully starred heroes can now be awakened five times with their own shards, one more step at every second Rainwyrm level from Lv 12: more attack, defense and health, 10 more levels each time, and a stronger skill at A3 and A5.', act: 'tab:heroes', open: (S) => S.lv.wyrm >= 12, needs: 'Rainwyrm Lv 12' },
     ] },
     { v: '4.18', items: [
       { icon: 'i-clash', name: 'Wadi Clash', text: 'A live three-way battle for a dry canyon. Send your three squads to take its wells, towers, the Rain Shrine and the Old Cistern, and hold them against two rival caravans. A Clash Banner every 4 hours.', act: 'clash', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },

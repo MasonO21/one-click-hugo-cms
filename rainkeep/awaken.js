@@ -1,6 +1,7 @@
 /*
  * Rainkeep: Hero Awakening. Past 5 stars a hero can be awakened, A1 to A5, with its own shards (each step costs
- * a number of duplicates' worth for its rarity), so recruits keep counting once a hero is fully starred. Every
+ * a number of duplicates' worth for its rarity, each step opening at a Rainwyrm level), so recruits keep counting
+ * once a hero is fully starred. Every
  * awakening adds to the hero's attack, defense and health and 10 levels to its cap; A3 and A5 also strengthen
  * its skill. Plugs into core through KH.awakenBoost (heroStats, skillScale, heroCap), the hero sheet
  * (KH.heroAwaken) and the roster card (KH.awakenBadge).
@@ -36,6 +37,7 @@
     if (!ready(id)) return KH.toast(`${d.name.split(' ')[0]} needs ${DATA.heroMaxStars} stars first.`, 'warn');
     const L = lvOf(id);
     if (L >= MAX) return;
+    if (S.lv.wyrm < W.wyrm[L]) return KH.toast(`A${L + 1} opens at Rainwyrm Lv ${W.wyrm[L]}.`, 'warn');
     const c = costOf(id), h = S.heroes[id];
     if (h.shards < c) return KH.toast(`That takes ${c} shards of ${d.name.split(' ')[0]}. You have ${h.shards}.`, 'warn');
     h.shards -= c;
@@ -57,10 +59,10 @@
     if (!unlocked()) return `<div class="card row aw-card">${icon('i-star', 'aw-ic')}<div class="grow"><b>Awakening</b><div class="muted small">Opens at Rainwyrm Lv ${W.unlock}. A fully starred hero can be awakened five times with its own shards.</div></div></div>`;
     const now = `+${pct(L * W.stat)} stats, +${L * W.cap} levels${skillAt(L) ? `, skill +${pct(skillAt(L))}` : ''}`;
     if (L >= MAX) return `<div class="card stack aw-card on"><div class="row">${icon('i-star', 'aw-ic')}<div class="grow"><b>Awakened · A${MAX}</b> <span class="decor-pips aw-pips">${pips}</span><div class="muted small">${now}. ${esc(first)} is fully awakened.</div></div></div></div>`;
-    const c = costOf(id), next = L + 1, gain = `+${pct(W.stat)} stats, +${W.cap} levels${next === 3 || next === 5 ? `, skill +${pct(skillAt(next))}` : ''}`;
+    const c = costOf(id), next = L + 1, gate = S.lv.wyrm < W.wyrm[L] ? W.wyrm[L] : 0, gain = `+${pct(W.stat)} stats, +${W.cap} levels${next === 3 || next === 5 ? `, skill +${pct(skillAt(next))}` : ''}`;
     return `<div class="card stack aw-card${L ? ' on' : ''}"><div class="row">${icon('i-star', 'aw-ic')}<div class="grow"><b>Awakening${L ? ` · A${L}` : ''}</b> <span class="decor-pips aw-pips">${pips}</span>
         <div class="muted small">${L ? `${now}. ` : ''}A${next}: ${gain}.</div></div></div>
-      <div class="row"><div class="grow muted small">${fmt(h.shards)}/${fmt(c)} shards</div><button class="btn small ${h.shards >= c ? 'gold' : 'off'}" data-act="awaken" data-arg="${id}">Awaken A${next}</button></div>
+      <div class="row"><div class="grow muted small">${fmt(h.shards)}/${fmt(c)} shards${gate ? ` · opens at Rainwyrm Lv ${gate}` : ''}</div><button class="btn small ${h.shards >= c && !gate ? 'gold' : 'off'}" data-act="awaken" data-arg="${id}">Awaken A${next}</button></div>
       <div class="bar xp"><i style="width:${Math.min(100, (h.shards / c) * 100)}%"></i></div></div>`;
   };
   // a small badge on the roster card
