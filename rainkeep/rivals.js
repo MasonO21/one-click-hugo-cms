@@ -46,6 +46,7 @@
     for (let y = 0; y < W.N; y++) for (let x = 0; x < W.N; x++) {
       const d = W.dist(x, y);
       if (d < R.ring[0] || d > R.ring[1] || !W.openSand(x, y)) continue;
+      if (KH.intel && KH.intel.byKey(W.key(x, y)) >= 0) continue; // not under a watchtower report
       cands.push({ x, y, d, a: Math.atan2(y - W.C, x - W.C), k: W.key(x, y) });
     }
     // one per sector round the keep, nearer ones for the weaker rivals
