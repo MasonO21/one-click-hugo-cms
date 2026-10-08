@@ -54,6 +54,12 @@ const RIM_NIGHT = 0.3;
 /** Shadowed ground still gets this much of the sun (a hair of bounce keeps shadows soft, not black). */
 const SHADOW_INTENSITY = 0.9;
 /**
+ * PCF kernel half-width in shadow texels. 2 (a 5-texel kernel, ~0.15 world units) gives every shadow a
+ * hair of penumbra and, above all, averages the cloud shadow stipple into a smooth density; three's
+ * default 3-texel kernel leaves it as a visible halftone.
+ */
+const SHADOW_RADIUS = 2;
+/**
  * The key light is the sun above this elevation and the moon (opposite direction) below it. Its
  * intensity dips smoothly to 0 within ±KEY_SWAP_BAND of the swap, so the light direction — and every
  * shadow — turns over while the light is off instead of jumping 180° at dusk and dawn.
@@ -179,7 +185,10 @@ export class Atmosphere {
     cb.sphere(2.4, -1.8, 1.2, 2.4, '#ffffff', 6, { sy: 0.7 });
     const cloudGeo = cb.build();
     const CLOUDS = 24;
-    this.clouds = new Batch(scene, cloudGeo, ctx.mats.makeLit({ fog: false }), CLOUDS, { castShadow: true });
+    // clouds throw a light, feathered stipple instead of a solid polygon (materials `cloudDepth`)
+    const bb = cloudGeo.boundingBox!;
+    ctx.mats.setCloudShadow(Math.max(-bb.min.x, bb.max.x, -bb.min.z, bb.max.z));
+    this.clouds = new Batch(scene, cloudGeo, ctx.mats.makeLit({ fog: false }), CLOUDS, { castShadow: true, depthMaterial: ctx.mats.cloudDepth });
     this.cloudPos = new Float32Array(CLOUDS * 4);
     for (let i = 0; i < CLOUDS; i++) {
       this.cloudPos[i * 4] = (rnd() - 0.5) * 520;
@@ -219,6 +228,7 @@ export class Atmosphere {
       this.sun.shadow.bias = -0.0006;
       this.sun.shadow.normalBias = 0.6;
       this.sun.shadow.intensity = SHADOW_INTENSITY;
+      this.sun.shadow.radius = SHADOW_RADIUS;
       c.updateProjectionMatrix();
     }
     this.clouds.setVisible(q !== 'low');

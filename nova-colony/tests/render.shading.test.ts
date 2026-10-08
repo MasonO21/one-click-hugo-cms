@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { Materials, patchLambert, LAMBERT_WRAP, NIGHT_DESAT } from '../src/render/core/materials';
+import { Materials, patchLambert, LAMBERT_WRAP, NIGHT_DESAT, CLOUD_SHADOW_DENSITY, CLOUD_SHADOW_CORE, SHADOW_FADE_GAIN } from '../src/render/core/materials';
 import { wornColor, wearSignature } from '../src/render/scene/Terrain';
 import { Atmosphere, KEY_SWAP_E } from '../src/render/scene/Atmosphere';
 import type { Env, RenderContext } from '../src/render/core/context';
@@ -167,6 +167,34 @@ describe('key light at dusk / dawn (QA3: every shadow flipped 180° in one frame
     expect(key(0.5).i).toBeCloseTo(2.2, 1);
     expect(key(0).i).toBeCloseTo(0.46, 2);
     atmo.dispose();
+  });
+});
+
+describe('cloud shadows (QA3 #13: hard-edged dark polygons at noon)', () => {
+  it('the cloud depth variant stipples by the object-space radius, without the fade gain, and the density is clamped', () => {
+    const mats = new Materials();
+    expect(mats.cloudDepth.customProgramCacheKey()).toBe('nova-depth-cloud');
+    expect(mats.cloudDepth).not.toBe(mats.lodNearDepth);
+    const shader = { uniforms: {} as Record<string, THREE.IUniform>, vertexShader: '#include <common>\n#include <begin_vertex>', fragmentShader: '#include <common>\n#include <clipping_planes_fragment>' };
+    mats.cloudDepth.onBeforeCompile!(shader as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
+    expect(shader.vertexShader).toContain('uniform vec2 uCloudShadow');
+    expect(shader.vertexShader).toContain('length(position.xz) * uCloudShadow.x');
+    expect(shader.vertexShader).toContain(`smoothstep(${CLOUD_SHADOW_CORE.toFixed(3)}, 1.0`);
+    expect(shader.fragmentShader).toContain('novaBayer(gl_FragCoord.xy) < vFade.x');
+    expect(shader.fragmentShader).not.toContain(SHADOW_FADE_GAIN.toFixed(3)); // the density is absolute, not a pushed fade window
+    const u = shader.uniforms.uCloudShadow.value as THREE.Vector2;
+    expect(u.y).toBeCloseTo(CLOUD_SHADOW_DENSITY);
+    expect(CLOUD_SHADOW_DENSITY).toBeLessThan(0.5); // lighter than half a building shadow at the core
+    mats.setCloudShadow(8, 2);
+    expect(u.x).toBeCloseTo(1 / 8);
+    expect(u.y).toBe(1);
+    mats.setCloudShadow(0, -1);
+    expect(u.y).toBe(0);
+    expect(Number.isFinite(u.x)).toBe(true);
+    // the other shadow variants keep the pushed window
+    const lod = { uniforms: {} as Record<string, THREE.IUniform>, vertexShader: '#include <common>\n#include <begin_vertex>', fragmentShader: '#include <common>\n#include <clipping_planes_fragment>' };
+    mats.lodNearDepth.onBeforeCompile!(lod as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
+    expect(lod.fragmentShader).toContain(SHADOW_FADE_GAIN.toFixed(3));
   });
 });
 

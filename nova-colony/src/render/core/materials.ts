@@ -29,6 +29,12 @@
  * harder (`SHADOW_FADE_GAIN`), so a shadow is completely gone before its building reaches the faint
  * ghost stipple it keeps (Buildings FADE_MAX) — no sparse crawling stipple shadow under an invisible wall.
  *
+ * `cloudDepth` is a shadow-only variant for the clouds: the window opens with the distance from the
+ * cloud's centre (object space, so it scales with the instance), so a cloud throws a stipple whose
+ * density falls off toward its edge — the 5-texel PCF kernel (Atmosphere SHADOW_RADIUS) averages it
+ * into a light, feathered blotch instead of the solid hard-edged polygon a shadow map would otherwise
+ * draw for a cloud (QA3 #13). The clouds themselves are unchanged; only their shadow pass differs.
+ *
  * Shading model (`patchLambert`, shared with the terrain): Lambert with a soft wrap so the sun bleeds
  * a little past the terminator (chunky toy look, no pitch-black side faces), plus a sky-coloured
  * fresnel rim (`uRim`, set per frame by Atmosphere from the sky) that lifts grazing faces on the
@@ -118,7 +124,7 @@ export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>;
 }
 
 /** How a dither variant obtains its (lo, hi) window. */
-export type DitherMode = 'attr' | 'uniform' | 'lodNear' | 'lodFar';
+export type DitherMode = 'attr' | 'uniform' | 'lodNear' | 'lodFar' | 'cloud';
 /** Which LOD band a shrink variant sinks into: the near radius (props) or the mid cutoff (far geometry). */
 export type ShrinkBand = 'near' | 'mid';
 
@@ -132,6 +138,13 @@ export interface LitVariant {
 
 /** Shadow windows are scaled by this: a caster's shadow vanishes at fade 0.8 instead of 1. */
 export const SHADOW_FADE_GAIN = 1.25;
+/**
+ * Cloud shadow: at most this fraction of the shadow-map texels under a cloud's core are written
+ * (0 = no shadow, 1 = as solid as a building), and the density starts falling off at this fraction
+ * of the cloud's radius, reaching 0 at the silhouette.
+ */
+export const CLOUD_SHADOW_DENSITY = 0.42;
+export const CLOUD_SHADOW_CORE = 0.3;
 
 const BAYER_FRAG_PARS = /* glsl */ `
 varying vec2 vFade;
@@ -160,6 +173,7 @@ function variantVertexPars(v: LitVariant): string {
   let s = '';
   if (v.dither === 'attr') s += '\nattribute float aFade;';
   else if (v.dither === 'uniform') s += '\nuniform float uFade;';
+  else if (v.dither === 'cloud') s += '\nuniform vec2 uCloudShadow;';
   if (v.dither) s += '\nvarying vec2 vFade;';
   if (usesLod(v)) s += '\nuniform vec2 uLodFocus;\nuniform vec4 uLod;';
   return s;
@@ -178,11 +192,15 @@ function variantVertexMain(v: LitVariant): string {
     case 'uniform': s += 'vFade = vec2(uFade, 1.0);'; break;
     case 'lodNear': s += 'vFade = vec2(clamp((novaD - uLod.x) * uLod.y, 0.0, 1.0), 1.0);'; break;
     case 'lodFar': s += 'vFade = vec2(0.0, clamp((novaD - uLod.x) * uLod.y, 0.0, 1.0));'; break;
+    // density (x = 1 / radius, y = core density) from the object-space distance to the cloud's axis
+    case 'cloud': s += `vFade = vec2(1.0 - uCloudShadow.y * (1.0 - smoothstep(${CLOUD_SHADOW_CORE.toFixed(3)}, 1.0, length(position.xz) * uCloudShadow.x)), 1.0);`; break;
   }
   return s;
 }
 
-function ditherFragmentMain(shadow: boolean): string {
+/** The screen-door discard; the shadow pass pushes fade windows by SHADOW_FADE_GAIN (the cloud density is absolute). */
+function ditherFragmentMain(shadow: boolean, mode: DitherMode): string {
+  if (mode === 'cloud') return '\n{ if (novaBayer(gl_FragCoord.xy) < vFade.x) discard; }';
   return shadow
     ? `\n{ float novaB = novaBayer(gl_FragCoord.xy); vec2 novaF = min(vFade * ${SHADOW_FADE_GAIN.toFixed(3)}, 1.0); if (novaB < novaF.x || novaB >= novaF.y) discard; }`
     : '\n{ float novaB = novaBayer(gl_FragCoord.xy); if (novaB < vFade.x || novaB >= vFade.y) discard; }';
@@ -201,6 +219,8 @@ export class Materials {
   /** LOD band uniforms: focus (x, z) and (near - band, 1 / band, mid - band, 1 / band). */
   private readonly uLodFocus = { value: new THREE.Vector2() };
   private readonly uLod = { value: new THREE.Vector4(1e9, 1, 1e9, 1) };
+  /** Cloud shadow (1 / cloud radius, core density); see setCloudShadow. */
+  private readonly uCloudShadow = { value: new THREE.Vector2(1 / 8, CLOUD_SHADOW_DENSITY) };
   /** Opaque, lit, vertex-colored, slot-aware. */
   readonly lit: THREE.MeshLambertMaterial;
   /** Alias kept for callers that think in "material sets" — it is the same single material. */
@@ -221,6 +241,8 @@ export class Materials {
   /** Discard-free `lit` for props: sinks into the ground over the band below the near radius. */
   readonly lodShrinkNear: THREE.MeshLambertMaterial;
   readonly lodShrinkNearDepth: THREE.MeshDepthMaterial;
+  /** Shadow-pass material of the clouds: a light stipple that feathers out toward the cloud's edge. */
+  readonly cloudDepth: THREE.MeshDepthMaterial;
   /**
    * Build-mode ghosts. UI affordances, not lit scene content: they skip tone mapping so the ACES grade
    * cannot wash the valid-green out to pale mint (it did; they were picked under Neutral).
@@ -248,6 +270,7 @@ export class Materials {
     this.lodShrinkMidDepth = this.makeDepth({ shrink: 'mid' });
     this.lodShrinkNear = this.makeLit({}, { shrink: 'near' });
     this.lodShrinkNearDepth = this.makeDepth({ shrink: 'near' });
+    this.cloudDepth = this.makeDepth({ dither: 'cloud' });
   }
 
   /** Track a material for invalidate()/dispose(); forgets it when the owner disposes it. */
@@ -266,6 +289,7 @@ export class Materials {
       shader.uniforms.uLod = this.uLod;
     }
     if (v.dither === 'uniform' && v.uFade) shader.uniforms.uFade = v.uFade;
+    if (v.dither === 'cloud') shader.uniforms.uCloudShadow = this.uCloudShadow;
   }
 
   /**
@@ -292,7 +316,7 @@ export class Materials {
           'if (vSlot > 1.5) outgoingLight = uGlass; else if (vSlot > 0.5) outgoingLight = diffuseColor.rgb * uGlow;\n#include <opaque_fragment>',
         );
       if (variant.dither) {
-        shader.fragmentShader = shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + ditherFragmentMain(false));
+        shader.fragmentShader = shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + ditherFragmentMain(false, variant.dither));
       }
     };
     mat.customProgramCacheKey = () => 'nova-slot-lit' + key;
@@ -316,11 +340,19 @@ export class Materials {
       if (variant.dither) {
         shader.fragmentShader = shader.fragmentShader
           .replace('#include <common>', '#include <common>' + BAYER_FRAG_PARS)
-          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + ditherFragmentMain(true));
+          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + ditherFragmentMain(true, variant.dither));
       }
     };
     mat.customProgramCacheKey = () => 'nova-depth' + key;
     return this.track(mat);
+  }
+
+  /**
+   * Cloud shadow shape: `radius` is the cloud model's half extent in object space (the stipple
+   * reaches zero density at the silhouette), `density` the texel fraction written under its core.
+   */
+  setCloudShadow(radius: number, density = CLOUD_SHADOW_DENSITY): void {
+    this.uCloudShadow.value.set(1 / Math.max(0.001, radius), Math.max(0, Math.min(1, density)));
   }
 
   /** Per-room roof material (fades independently through opacity). */
