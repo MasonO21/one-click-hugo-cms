@@ -395,7 +395,8 @@ export class ExpeditionSystem extends System {
     g.bus.emit('expedition:returned', { id: e.id, dest: e.dest, region: this.regionOf(e), name });
     const who = e.squad.length === 1 ? (g.sys.colonists.get(e.squad[0])?.name.split(' ')[0] ?? 'Your explorer') + ' is' : 'Your squad is';
     // the icon carries the 🧭 (the UI swaps in the destination's painting when it has one)
-    g.toast(`${who} back from ${name}! Collect the haul at the ${this.hqDef()?.name ?? 'Radio Tower'}.`, 'success', '🧭');
+    // tappable: it opens Expeditions, and waits behind Welcome Back however long that is read
+    g.toast(`${who} back from ${name}! Collect the haul at the ${this.hqDef()?.name ?? 'Radio Tower'}.`, 'success', '🧭', 'expeditions');
   }
 
   /** Unpack a returned squad's haul. Returns what was granted (null if there is nothing to collect). */

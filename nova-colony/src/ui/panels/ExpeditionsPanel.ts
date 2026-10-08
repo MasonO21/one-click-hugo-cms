@@ -331,17 +331,20 @@ export class ExpeditionsPanel extends Panel {
     let n = 0;
     const left: Record<string, number> = {};
     let charted: string | undefined;
+    let survivors = 0;
     for (const e of ex.ready()) {
       const res = ex.collect(e.id);
       if (!res) continue;
       n++;
+      if (res.reward.colonist) survivors++;
       mergeReward(total, res.reward);
       for (const [k, v] of Object.entries(res.leftBehind)) left[k] = (left[k] ?? 0) + v;
       charted = res.charted?.name ?? charted;
     }
     if (!n) return;
     this.ctx.haptic('success');
-    this.ctx.showReward(`${n} squads home!`, total, '🧭');
+    // the card shows one colonist chip (the rarest); every survivor found has joined, so the title counts them
+    this.ctx.showReward(survivors > 1 ? `${n} squads home! · ${survivors} new colonists` : `${n} squads home!`, total, '🧭');
     this.afterCollect(left, charted);
     this.rerender();
   }
@@ -686,6 +689,10 @@ function mergeReward(into: Reward, r: Reward): void {
     into.items[k] = (into.items[k] ?? 0) + v;
   }
   if (r.rp) into.rp = (into.rp ?? 0) + r.rp;
+  if (r.xp) into.xp = (into.xp ?? 0) + r.xp;
   if (r.nova) into.nova = (into.nova ?? 0) + r.nova;
-  if (r.colonist) into.colonist = r.colonist;
+  // one colonist chip on the card: the rarest found
+  if (r.colonist && (!into.colonist || RARITY_ORDER.indexOf(r.colonist) > RARITY_ORDER.indexOf(into.colonist))) into.colonist = r.colonist;
 }
+
+const RARITY_ORDER: readonly string[] = ['common', 'rare', 'epic', 'legendary'];

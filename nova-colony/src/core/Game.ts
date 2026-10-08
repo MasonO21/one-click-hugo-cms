@@ -253,8 +253,9 @@ export class Game {
     this.bus.emit('reward:granted', { reward, source, item });
   }
 
-  toast(text: string, kind: 'info' | 'success' | 'warning' | 'reward' | 'danger' = 'info', icon?: string): void {
-    this.bus.emit('ui:toast', { text, kind, icon });
+  /** `open`: a panel the toast opens when tapped (such toasts also wait longer behind a card). */
+  toast(text: string, kind: 'info' | 'success' | 'warning' | 'reward' | 'danger' = 'info', icon?: string, open?: string): void {
+    this.bus.emit('ui:toast', open ? { text, kind, icon, open } : { text, kind, icon });
   }
 
   /** Release listeners (tests / hot reload). */
