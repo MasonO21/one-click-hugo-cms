@@ -28,7 +28,12 @@ export class ColonistsPanel extends Panel {
   title(): PanelTitle {
     if (this.detail != null) {
       const c = this.game.sys.colonists.get(this.detail);
-      if (c) return { icon: this.data.profession(c.specialty)?.icon ?? '🧑‍🚀', art: professionArt(c.specialty), text: c.name };
+      // the same face as the portrait below it (portrait(): the job they do, else their specialty)
+      if (c) {
+        const job = jobOf(this.game, c);
+        const prof = job && professionArt(job) ? job : c.specialty;
+        return { icon: this.data.profession(prof)?.icon ?? '🧑‍🚀', art: professionArt(prof), text: c.name };
+      }
     }
     return { icon: '🧑‍🚀', art: hudArt('crew'), text: 'Colonists' };
   }
