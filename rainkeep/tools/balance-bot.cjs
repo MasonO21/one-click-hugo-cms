@@ -54,7 +54,7 @@ const HOURS = Number(process.argv[3] || 8);
     const qLog = []; { const f = A.claimquest; A.claimquest = () => { const q0 = S.quest; f(); if (S.quest > q0) qLog.push(`${q0}@${Math.round(S.time)}s`); }; }
     const COLLECT = NO.includes('surplus') ? 0 : Number(new URLSearchParams(location.search).get('collect') || 5); let lastCollect = -999; const incPicks = [];
     let idleSecs = 0; const idleLog = []; let lastSpire = -999, lastSpireTry = -999;
-    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 };
+    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0;
     const team_log = []; let sickSecs = 0, popSecs = 0, thirstSecs = 0, dormSecs = 0, lastFightTry = -999, ttype = 0, lastWin = 0; const thaw = [];
     const W = KH.world;
     const steps = Math.round(HOURS * 3600 / 5);
@@ -178,9 +178,9 @@ const HOURS = Number(process.argv[3] || 8);
           while (KH.crossing.maps() >= 1) { const r = KH.crossing.auto(); if (r) { cx.runs++; cx.depth += r.d; if (r.won) cx.wins++; } else break; }
           UI.sheet = null;
         }
-        // heirlooms: temper the squad's first, then the stewards' and the rest
+        // heirlooms: temper the squad's
         if (KH.heirloom && !NO.includes('heirloom')) {
-          const order = [...S.squad, ...Object.values(S.stewards || {}), ...Object.keys(S.heroes)].filter((id, i, a) => a.indexOf(id) === i);
+          const order = S.squad.slice(); // only the squad fights, so only the squad's heirlooms are worth the whetstones
           for (const id of order) { for (let k = 0; k < 10 && KH.heirloom.awake(id) && KH.heirloom.lvOf(id) < KH.heirloom.max && KH.have('whetstone') >= KH.heirloom.costOf(id); k++) A.heirloom(id); }
         }
         // the Scorpion Siege: sound the horn once a host is camped outside and the squad is home, countering every
@@ -336,7 +336,8 @@ const HOURS = Number(process.argv[3] || 8);
       if (step % 360 === 0) log.push(`t=${Math.round(S.time / 60)}m H${S.lv.wyrm} st${S.stage} sp${S.spire.floor - 1} du${S.duels.rank} gear${Object.values(S.gear).reduce((a, b) => a + b, 0)} ss${S.sunsteel} forge${S.lv.forge} pop${S.pop} heroes${Object.keys(S.heroes).length} stars${Object.values(S.heroes).reduce((a, h) => a + h.stars, 0)} lvls[${S.squad.map((id) => S.heroes[id].lvl).join(',')}] troops${KH.troopsAll()} pop${S.pop}/${KH.housing()} wnet${Math.round(KH.rates(false).net.water*60)} res=${['stone', 'food', 'water', 'copper'].map((r) => Math.round(S.res[r])).join('/')} sg${S.starglass} bc${S.beacons} jr${S.journals} q${S.quest} pass${KH.passTier()} ktech${Object.values(S.caravan.tech).reduce((a, b) => a + b, 0)} kpts${S.caravan.points} ev${Math.round(S.ev.pts)} ach${S.ach.claimed.length} gath${S.stats.gathers} beasts${S.stats.beasts} ruins${S.stats.ruins} camps${S.stats.camps} raids${S.stats.raidsRepelled}/${S.stats.raidKills} war${S.stats.warWins} ds${S.deep ? S.deep.lv : 0}/tg${S.tideglass || 0} pals[${S.pals ? Object.entries(S.pals.own).map(([k, o]) => k.slice(0, 2) + o.lv).join(',') : ''}]tr${(S.items && S.items.treats) || 0}/bl${(S.items && S.items.bells) || 0} road${S.stats.laps || 0}L/${S.stats.rolls || 0}r riv${S.stats.rivalWins || 0}w/${S.stats.rivalLosses || 0}l/${S.stats.struck || 0}s next=${(() => { if (S.lv.wyrm >= D.wyrm.maxLevel) return 'max'; const blk = KH.upgradeBlock('wyrm'); if (blk) return blk.replace(/ /g, '_'); const c = KH.buildCost('wyrm', S.lv.wyrm + 1); const short = Object.entries(c).filter(([k, v]) => (S.res[k] ?? 0) < v).map(([k, v]) => k + Math.round(100 * (S.res[k] ?? 0) / v) + '%'); return S.builds.some((b) => b.plot === 'wyrm') ? 'building' : short.length ? 'short:' + short.join(',') : 'affordable'; })()}`);
     }
     iv.done = S.stats.intel; iv.five = S.stats.intel5;
-    const hl = { woken: S.stats.heirWoken, tempers: S.stats.tempers, top: S.stats.heirTop, whet: KH.have('whetstone'), lv: Object.entries(S.heirlooms || {}).map(([k, v]) => k.slice(0, 3) + v).join(',') };
+    hlGot = KH.have('whetstone') + Object.values(S.heirlooms || {}).reduce((a, lv) => a + D.heirloom.cost.slice(0, lv).reduce((x, y) => x + y, 0), 0);
+    const hl = { woken: S.stats.heirWoken, tempers: S.stats.tempers, top: S.stats.heirTop, whet: KH.have('whetstone'), lv: Object.entries(S.heirlooms || {}).map(([k, v]) => k.slice(0, 3) + v).join(','), squad: S.squad.map((id) => `${id.slice(0, 3)}${S.heroes[id].stars}*`).join(','), got: hlGot };
     return { cx, sg, iv, hl, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
   }, { MODE, HOURS });
   console.log('SRC', JSON.stringify(out.SRC));
