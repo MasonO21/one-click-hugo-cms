@@ -471,6 +471,44 @@
     }
   }
   KH.on('plant', () => { if (W3.active) syncGroves(); });
+  // Outposts (outposts.js): a palisade round the node, a tent, a lookout from Lv 3, and your banner
+  const outs = {};
+  function outpostModel(o) {
+    const g = new THREE.Group(), wood = A.mat('#8a5a2e', { flat: true }), dark = A.mat('#5a3a1c', { flat: true });
+    const R = 1.5, n = 22;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      if (Math.abs(Math.sin(a)) < 0.12 && Math.cos(a) > 0) continue; // the gate, facing the keep side
+      const h = 0.55 + (i % 3) * 0.08 + o.lvl * 0.06;
+      g.add(A.cyl(0.07, 0.08, h, i % 2 ? wood : dark, Math.cos(a) * R, 0, Math.sin(a) * R, 5));
+    }
+    const cloth = A.mat('#e8dcc0', { flat: true }), stripe = A.mat('#2fa8a0', { flat: true });
+    g.add(A.cone(0.5, 0.75, cloth, -0.85, 0, 0.55, 6), A.cone(0.18, 0.2, stripe, -0.85, 0.68, 0.55, 6));
+    if (o.lvl >= 3) {
+      for (const [x, z] of [[0.9, -0.9], [1.25, -0.55], [0.55, -1.25]]) g.add(A.cyl(0.05, 0.05, 1.2, dark, x, 0, z, 4));
+      g.add(A.box(0.75, 0.08, 0.75, wood, 0.9, 1.2, -0.9), A.box(0.75, 0.25, 0.06, wood, 0.9, 1.28, -0.55));
+    }
+    if (o.lvl >= 5) g.add(A.box(0.9, 0.5, 0.9, A.mat('#c9a06a', { flat: true }), -0.95, 0, -0.85), A.cyl(0.3, 0.34, 0.25, A.mat('#2fb8a8', { flat: true }), -0.95, 0.5, -0.85, 8));
+    const flag = A.banner('#2fb8a8', 2.2 + o.lvl * 0.12, 0.6, 0.4);
+    flag.position.set(-1.25, 0, -0.25);
+    g.add(flag);
+    return g;
+  }
+  function syncOutposts() {
+    const all = KH.outposts ? KH.outposts.list() : [], live = new Set();
+    for (const o of all) {
+      live.add(o.k);
+      if (outs[o.k] && outs[o.k].lvl === o.lvl) continue;
+      if (outs[o.k]) scene.remove(outs[o.k].g);
+      const g = outpostModel(o);
+      g.position.set(wx(o.x), hAt(wx(o.x), wz(o.y)), wz(o.y));
+      A.bake(g);
+      scene.add(g);
+      outs[o.k] = { g, lvl: o.lvl };
+    }
+    for (const k in outs) if (!live.has(k)) { scene.remove(outs[k].g); delete outs[k]; }
+  }
+  W3.outposts = outs; // for tests
 
   function syncMarches(t) {
     const live = new Set();
@@ -594,6 +632,11 @@
       else if (b.kind === 'rival') badge(sx, sy, icons.fort, tt.lvl, tt.shield ? '#7ff0e0' : '#ff9a3c', false);
       else if (b.kind === 'intel') badge(sx, sy, icons.intel, tt.lvl, '#ffcf6e', false);
       else badge(sx, sy, icons.ruin, null, '#8fe4ff', tt.gone);
+      // your outpost: a turquoise fort badge beside the node's, ringed red while raiders are on their way
+      if (tt.outpost) {
+        badge(sx + 24, sy + 4, icons.fort, tt.outpost.lvl, '#3fd0c0', false);
+        if (tt.outpost.warned) { g.strokeStyle = `rgba(255,70,50,${0.8 + 0.2 * Math.sin(t * 6)})`; g.lineWidth = 4; ell(sx + 24, sy + 4, 20, 20); g.stroke(); }
+      }
       if (busy.has(b.k)) { g.strokeStyle = 'rgba(255,207,110,.95)'; g.lineWidth = 2; g.setLineDash([3, 3]); ell(sx, sy, 17, 17); g.stroke(); g.setLineDash([]); }
     }
     // a label over the keep
@@ -634,7 +677,7 @@
     if (KH.covered && KH.covered()) return; // nothing to draw under a full-screen overlay
     const t = now / 1000, dt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
-    if (now >= nextSync) { nextSync = now + 400; syncTiles(); syncGroves(); }
+    if (now >= nextSync) { nextSync = now + 400; syncTiles(); syncGroves(); syncOutposts(); }
     // lighting follows the keep's day and night
     const T3 = KH.town3d;
     const p = T3 && T3.palAt ? T3.palAt(T3.phase()) : null;

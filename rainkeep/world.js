@@ -111,6 +111,9 @@
       t.left = st.until && S.time >= st.until ? t.cap : st.left == null ? t.cap : st.left;
       t.gone = !!(st.until && S.time < st.until);
       t.busy = st.busy && S.map.marches.some((m) => m.id === st.busy) ? st.busy : null;
+      // your outpost stands here (outposts.js): it can't be gathered from or picked clean
+      const op = KH.outposts && KH.outposts.at(b.k);
+      if (op) { t.outpost = op; t.busy = t.busy || 'outpost'; t.gone = false; }
     } else if (b.kind === 'beast' || b.kind === 'camp') {
       t.lvl = Math.min(b.kind === 'beast' ? 14 : 12, b.lvl + (st.lvlUp || 0));
       t.gone = !!(st.until && S.time < st.until);
@@ -148,7 +151,8 @@
   const gatherMult = () => 1 + 0.1 * (S.tech.camels || 0) + KH.stewardVal('gather') / 100 + KH.bonus('gather');
   const loadMult = () => 1 + 0.1 * (S.tech.camels || 0);
   const travel = (x, y) => Math.max(4, Math.round(dist(x, y) * W.travelPerTile));
-  KH.troopsAway = () => (S ? S.map.marches.reduce((a, m) => a + sum(m.troops), 0) : 0);
+  // troops out on marches and holding outposts (outposts.js)
+  KH.troopsAway = () => (S ? S.map.marches.reduce((a, m) => a + sum(m.troops), 0) + (KH.outposts ? KH.outposts.garrisoned() : 0) : 0);
   KH.heroBusy = (id) => !!S && S.map.marches.some((m) => m.heroes.includes(id));
   function pickTroops(frac) {
     const pool = KH.capTroops(S.troops, KH.marchCap(), S.formation);
@@ -466,6 +470,14 @@
     if (!S) return;
     for (const m of S.map.marches.slice()) {
       if (m.state === 'out' && S.time >= m.arrive) {
+        if (m.kind === 'outpost') {
+          // builders and a garrison (or reinforcements) reach a node: outposts.js takes the troops, the march ends
+          KH.outposts.arrive(m, offline);
+          S.map.marches = S.map.marches.filter((x) => x !== m);
+          const k = key(m.x, m.y);
+          if (S.map.tiles[k] && S.map.tiles[k].busy === m.id) setTile(k, { busy: null });
+          continue;
+        }
         if (m.kind === 'gather') {
           m.state = 'work';
           m.workEnd = m.arrive + m.amount / Math.max(0.01, sum(m.troops) * W.nodes[m.res].rate * gatherMult());
@@ -565,6 +577,7 @@
       const grove = KH.bloom && KH.bloom.groves()[t.k];
       return { title: grove ? 'Grove' : 'Open sand', lvl: '', body: `${grove ? '' : `<p class="muted">${t.decor === 'palm' ? 'A few dry palms around a dead well. Nothing to take here.' : t.decor === 'rock' ? 'Wind-carved rocks.' : 'Empty, rippling sand.'}</p>`}${KH.bloomTile ? KH.bloomTile(t) : ''}` };
     }
+    if (t.kind === 'node' && t.outpost && KH.outposts) return KH.outposts.tileSheet(t);
     if (t.kind === 'node') {
       const node = W.nodes[t.res];
       const n = Math.floor(avail * UI.wsend);
@@ -577,7 +590,8 @@
           ${busyMsg}${slotLine}<div class="seg">${fracs}</div>
           ${n && !t.gone ? `<p class="small">Brings home <b>${fmt(amount)}</b> ${KH.NAME[t.res].toLowerCase()} in about ${fmtTime(secs)}.</p>` : ''}
           ${why ? `<p class="notice heat">${esc(why)}</p>` : ''}
-          <button class="btn wide ${why || t.gone || t.busy || !n ? 'off' : ''}" data-act="gather" data-arg="${t.k}" data-primary>Send gatherers</button>`,
+          <button class="btn wide ${why || t.gone || t.busy || !n ? 'off' : ''}" data-act="gather" data-arg="${t.k}" data-primary>Send gatherers</button>
+          ${KH.outposts ? KH.outposts.claimHTML(t) : ''}`,
       };
     }
     if (t.kind === 'beast' || t.kind === 'camp') {

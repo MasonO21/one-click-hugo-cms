@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken, outposts
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -54,7 +54,7 @@ const HOURS = Number(process.argv[3] || 8);
     const qLog = []; { const f = A.claimquest; A.claimquest = () => { const q0 = S.quest; f(); if (S.quest > q0) qLog.push(`${q0}@${Math.round(S.time)}s`); }; }
     const COLLECT = NO.includes('surplus') ? 0 : Number(new URLSearchParams(location.search).get('collect') || 5); let lastCollect = -999; const incPicks = [];
     let idleSecs = 0; const idleLog = []; let lastSpire = -999, lastSpireTry = -999;
-    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0; const fs = { casts: 0, caught: 0 }; const cl = { n: 0, places: [0, 0, 0], swept: 0 };
+    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0; const fs = { casts: 0, caught: 0 }; const cl = { n: 0, places: [0, 0, 0], swept: 0 }; const op = { raised: 0, reinf: 0 };
     const team_log = []; let sickSecs = 0, popSecs = 0, thirstSecs = 0, dormSecs = 0, lastFightTry = -999, ttype = 0, lastWin = 0; const thaw = [];
     const W = KH.world;
     const steps = Math.round(HOURS * 3600 / 5);
@@ -336,6 +336,27 @@ const HOURS = Number(process.argv[3] || 8);
             if (tgt) { if (!RV.scouted(tgt)) A.rivalscout(tgt.k); UI.wsend = 0.75; if (KH.formation && !NO.includes('formation')) A.formation(KH.formation.best(RV.foeOf(tgt), 0.75) || ''); A.wattack(tgt.k); UI.sheet = null; }
           }
           if (free()) { const r = tiles.find((t) => t.kind === 'ruin' && !t.gone && !t.busy); if (r) { UI.wsend = 0.25; A.wexplore(r.k); } }
+          // outposts: collect when half full, raise walls with three times the cost in hand, reinforce a thin
+          // garrison, and claim the best node in sight with a garrison a little above the raiders it will draw
+          if (KH.outposts && !NO.includes('outposts') && KH.outposts.unlocked()) {
+            const OP = KH.outposts, OD = D.outposts;
+            for (const o of OP.list().slice()) {
+              if (o.stored >= OP.capOf(o) * 0.5) OP.collect(o, true);
+              const c = OP.upCost(o);
+              if (o.lvl < OD.max && Object.entries(c).every(([k, v]) => S.res[k] >= v * 3)) A.outup(o.k);
+              if (OP.odds(o)[0] === 'Too thin' && free() && !KH.raidNear()) { UI.wsend = 0.25; A.outreinforce(o.k); UI.sheet = null; op.reinf++; }
+            }
+            if (OP.free() > 0 && free() && !KH.raidNear()) {
+              const n = tiles.filter((t) => t.kind === 'node' && !t.gone && !t.busy).sort((a, b) => b.lvl - a.lvl)[0];
+              const pool = Object.values(KH.capTroops(S.troops, KH.marchCap(), S.formation)).reduce((a, b) => a + b, 0);
+              if (n && pool > 0 && Object.entries(OP.costOf()).every(([k, v]) => S.res[k] >= v * 2)) {
+                UI.wsend = Math.min(1, ((OD.raid.base + OD.raid.perLvl * n.lvl + 0.08) * KH.marchCap()) / pool);
+                const before = OP.list().length + S.map.marches.length;
+                A.outpost(n.k); UI.sheet = null;
+                if (OP.list().length + S.map.marches.length > before) { op.raised++; if (!ms.outpost1) ms.outpost1 = Math.round(S.time / 60); }
+              }
+            }
+          }
           // a player keeps a slot free while a watchtower report waits
           const ivWait = KH.intel && !NO.includes('intel') && KH.intel.unlocked() && KH.intel.list().some((r) => !W.tile(r.x, r.y).busy);
           if (free() && !(ivWait && S.map.marches.length >= W.slots() - 1)) { const n = tiles.filter((t) => t.kind === 'node' && !t.gone && !t.busy).sort((a, b) => b.lvl - a.lvl)[0]; if (n) { UI.wsend = 0.5; A.gather(n.k); } }
@@ -364,10 +385,11 @@ const HOURS = Number(process.argv[3] || 8);
     fs.koi = S.stats.koi; fs.kinds = S.stats.fishKinds;
     const df = S.defense ? { ...S.defense } : {};
     cl.best = S.clash ? S.clash.best : 0;
+    Object.assign(op, { held: S.stats.outpostsHeld, defs: S.stats.outpostDefs, falls: S.stats.outpostFalls, now: (S.outposts || []).map((o) => `${o.res}${o.lvl}`).join(',') });
     const hl2 = S.hall ? { rank: KH.hall.rank(), best: S.hall.best, days: S.stats.hallDays } : {};
     const aw = S.awaken ? { n: S.stats.awakened, top: S.stats.awakenTop, heroes: Object.entries(S.awaken).map(([k, v]) => `${k.slice(0, 3)}${v}`).join(','), squad: S.squad.map((id) => `${id.slice(0, 3)}${S.awaken[id] || 0}`).join(',') } : {};
     const rk = S.ranks ? { drilled: S.stats.drilled, champs: S.stats.champs, ranks: Object.entries(S.ranks).map(([c, r]) => `${c}:${r.join('/')}`).join(' '), mult: Object.keys(S.ranks).map((c) => KH.rankMult(c).toFixed(2)).join(',') } : {};
-    return { cx, sg, iv, hl, fs, df, rk, cl, aw, hl2, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
+    return { cx, sg, iv, hl, fs, df, rk, cl, aw, hl2, op, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
   }, { MODE, HOURS });
   console.log('SRC', JSON.stringify(out.SRC));
   console.log('builder idle % per 30 min', out.idleLog.join(' '));
@@ -388,6 +410,7 @@ const HOURS = Number(process.argv[3] || 8);
   console.log('clash:', JSON.stringify(out.cl));
   console.log('awaken:', JSON.stringify(out.aw));
   console.log('hall:', JSON.stringify(out.hl2));
+  console.log('outposts:', JSON.stringify(out.op));
   console.log('final lv', JSON.stringify(out.lv), 'tech', JSON.stringify(out.tech), 'ending', out.end, 'element', out.element, 'quest', out.quest);
   console.log('stats', JSON.stringify(out.stats));
   console.log('TEAM', JSON.stringify(out.team_log));

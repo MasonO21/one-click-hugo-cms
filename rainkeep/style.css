@@ -1172,3 +1172,8 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .hl-crest { width: 12px; height: 16px; border-radius: 3px 3px 7px 7px; flex: none; }
 .hl-pw { display: inline-flex; align-items: center; gap: 3px; }
 .hl-pw .ic { width: 14px; height: 14px; }
+
+/* Oasis Outposts (outposts.js) */
+.op-ic { width: 34px; height: 34px; flex: none; }
+.op-claim { border-color: #3fd0c088; }
+.op-row .chip { vertical-align: 1px; }

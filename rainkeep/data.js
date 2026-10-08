@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.19.1',
+  version: '4.20.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -956,6 +956,7 @@ const DATA = {
     { id: 'defense', text: 'Raise a gate defense', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'drill', text: 'Drill troops to a new rank', n: 1, pts: 10, show: (S) => S.lv.barracks >= 10 },
     { id: 'clash', text: 'Fight a Wadi Clash', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 9 },
+    { id: 'outpost', text: 'Collect from an outpost', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
     { id: 'temper', text: 'Temper a heirloom', n: 1, pts: 10, show: (S) => Object.values(S.heroes).some((h) => h.stars >= 3) },
   ],
@@ -1290,6 +1291,29 @@ const DATA = {
     warPts: 0.2, // Oasis Wars points per troop drilled
   },
 
+  // ---------- Oasis Outposts ----------
+  // Claim a resource node on the Dunes as an outpost: a garrison marches out with the builders and stays. The
+  // outpost yields the node's resource every hour and stores up to a few hours of it, and raiders come for it
+  // every few hours. They are as strong as a share of your own march (so better troops matter only through the
+  // garrison you leave); a garrison that loses is routed and the outpost falls.
+  outposts: {
+    unlock: 7, // Rainwyrm level
+    slots: [[7, 1], [11, 2], [15, 3], [19, 4]], // [Rainwyrm level, outposts you can hold]
+    cost: { stone: 6, food: 4 }, // quarter-crates to raise one
+    up: { stone: 5, copper: 2 }, growth: 1.5, max: 5, // raising it a level, and how that grows
+    // quarter-crates of the node's resource an hour, by outpost level; Sunsteel veins yield Sunsteel per hour
+    yield: [1.5, 2, 2.5, 3, 3.6], sunsteel: [10, 14, 18, 23, 28],
+    nodeLvl: 0.05, // each node level adds this much to the yield
+    flooded: 1.5, // a flooded oasis yields this much more
+    hold: 8, // hours of yield an outpost keeps before it stops
+    garrison: 0.1, // the least of your march cap a garrison may be
+    raid: { every: [14400, 25200], warn: 600, base: 0.18, perLvl: 0.02, wall: 0.08, lossWin: 0.08, lossFall: 0.5 },
+    // a raider band is as strong as (base + perLvl x node level) of your march cap would be; each outpost level
+    // gives the garrison +8% defense; a won defence costs 8% of the garrison, a lost one half of it
+    win: { starglass: 8, journals: 0.5 }, // per defence, times the node level's share
+    warPts: 25, // Oasis Wars points per raid held
+  },
+
   // ---------- The Hall of Wardens ----------
   // Fifty wardens of the Dunes ranked by power, you among them. The others follow a typical free player's power
   // curve (from the balance bot), each at its own share of it and its own pace. The Hall pays out daily by rank.
@@ -1429,6 +1453,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.20', items: [
+      { icon: 'i-fort', name: 'Oasis Outposts', text: 'Claim resource nodes on the Dunes as outposts. Leave a garrison and they yield every hour, but raiders come for them: hold them with enough troops and higher walls.', act: 'outposts', open: (S) => S.lv.wyrm >= 7, needs: 'Rainwyrm Lv 7' },
+    ] },
     { v: '4.19.1', items: [
       { icon: 'i-compass', name: 'A steadier camera', text: 'The keep\'s camera now keeps one fixed angle, so the keep always faces you the same way. Drag to move around, and pinch or scroll to zoom.' },
     ] },
@@ -1704,6 +1731,9 @@ const DATA = {
     { id: 'drill100', text: 'Drill 100 troops to a new rank', stat: 'drilled', n: 100, reward: { starglass: 150 } },
     { id: 'drill1000', text: 'Drill 1,000 troops to a new rank', stat: 'drilled', n: 1000, reward: { beacons: 2 } },
     { id: 'champ300', text: 'Command 300 Champions', stat: 'champs', n: 300, reward: { shard_legendary: 1 } },
+    { id: 'outpost1', text: 'Raise an outpost on the Dunes', stat: 'outposts', n: 1, reward: { starglass: 100 } },
+    { id: 'outpost4', text: 'Hold four outposts at once', stat: 'outpostsHeld', n: 4, reward: { beacons: 2 } },
+    { id: 'outpostDef', text: 'Beat off 25 raids on your outposts', stat: 'outpostDefs', n: 25, reward: { shard_legendary: 1 } },
     { id: 'hall25', text: 'Reach the top 25 of the Hall of Wardens', stat: 'hallClimb', n: 26, reward: { starglass: 100 } },
     { id: 'hall10', text: 'Reach the top 10 of the Hall of Wardens', stat: 'hallClimb', n: 41, reward: { beacons: 2 } },
     { id: 'hall1', text: 'Stand first in the Hall of Wardens', stat: 'hallClimb', n: 50, reward: { shard_legendary: 1 } },
