@@ -9,7 +9,7 @@ import { AchievementSystem, EVAL_IDLE_GAP, RETRO_TOAST_DELAY } from '../src/sim/
 import { RecordingAchievements } from '../src/platform/achievements';
 import { migrateState } from '../src/platform/saveMigrate';
 import { installAnalyticsHooks } from '../src/platform/analyticsHooks';
-import type { AchievementDef } from '../src/data/schema';
+import type { AchievementDef, WishKind } from '../src/data/schema';
 import { fakeBuilding, fakeColonist, makeGame, makeServices, type TestGame } from './meta.helpers';
 
 type Counter = Extract<AchievementDef['source'], { kind: 'counter' }>;
@@ -79,6 +79,9 @@ function produce(game: Game, src: Counter, n: number): void {
         else bus.emit('expedition:collected', { id: i, dest: t === 'frontier' ? 'frontier' : 'cv_debris', region: 'crash_valley', name: 'x', reward: {}, frontier: t === 'frontier', leftBehind: {} });
       }
       break;
+    case 'wish':
+      for (let i = 0; i < n; i++) bus.emit('wish:granted', { id: i + 1, colonist: 1, def: 'w', kind: t === '*' ? 'give' : (t as WishKind), tier: 1, hearts: 1, reward: {} });
+      break;
     default:
       throw new Error(`produce: unsupported counter ${src.type}`);
   }
@@ -103,6 +106,13 @@ function setMetric(game: Game, metric: string, n: number): void {
       break;
     case 'buildingTypes': game.data.buildings.slice(0, n).forEach((b) => (s.missions.counters[`build:${b.id}`] = 1)); break;
     case 'alienTypes': game.data.aliens.slice(0, n).forEach((a) => (s.missions.counters[`kill:${a.id}`] = 1)); break;
+    case 'bestFriends':
+      for (let i = 0; i < n; i++) {
+        const c = fakeColonist(s.colonists.nextId++);
+        s.colonists.list.push(c);
+        s.wishes.bonds[String(c.id)] = game.data.wishRules.perks.bestFriendsHearts;
+      }
+      break;
     default: throw new Error(`setMetric: ${metric}`);
   }
 }

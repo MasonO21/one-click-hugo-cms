@@ -181,6 +181,16 @@ const LINES: AchievementDef[] = [
     ],
   }),
 
+  ...line({
+    id: 'good_neighbour', category: 'community', name: 'Good Neighbour', icon: '💗', art: 'hud:wish', source: counter('wish'),
+    desc: (n, raw) => (raw === 1 ? 'Grant a colonist’s wish' : `Grant ${n} colonists’ wishes`),
+    steps: [
+      [3, { xp: 40, resources: { food: 80, water: 60 } }],
+      [25, { xp: 220, nova: 4, items: { rations_crate: 2 } }],
+      [100, { xp: 520, nova: 10, items: { colonist_crate: 1, nano_crate: 1 } }],
+    ],
+  }),
+
   // ---- Crafter
   ...line({
     id: 'maker', category: 'crafter', name: 'Maker', icon: '🛠️', art: 'hud:craft', source: counter('craft'),
@@ -283,6 +293,11 @@ const ONE_OFFS: AchievementDef[] = [
     id: 'boss_titan_prime', category: 'defender', name: 'Titanic Victory', icon: '🗿', art: 'alien:titan', source: counter('kill', 'titan_prime'), target: 1,
     description: 'Defeat Titan Prime',
     reward: { xp: 600, nova: 18, items: { titan_crate: 2 } },
+  }),
+  one({
+    id: 'best_friends', category: 'community', name: 'Best Friends', icon: '💛', art: 'hud:wish', source: metric('bestFriends'), target: 1,
+    description: 'Fill all five friendship hearts with a colonist',
+    reward: { xp: 300, nova: 8, items: { rations_crate: 1 } },
   }),
   one({
     id: 'legend', category: 'community', name: 'Living Legend', icon: '🌟', art: 'hud:crew', source: metric('legendary'), target: 1,

@@ -95,6 +95,7 @@ export class AchievementSystem extends System {
     bus.on('expedition:collected', mark);
     bus.on('expedition:charted', mark);
     bus.on('daily:claimed', mark);
+    bus.on('wish:granted', mark);
   }
 
   override onLoad(fresh: boolean): void {

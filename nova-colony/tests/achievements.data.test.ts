@@ -30,9 +30,9 @@ const lines = (): Map<string, AchievementDef[]> => {
 };
 
 describe('achievements.data — shape', () => {
-  it('has ~50-60 achievements', () => {
+  it('has ~50-65 achievements', () => {
     expect(ALL.length).toBeGreaterThanOrEqual(50);
-    expect(ALL.length).toBeLessThanOrEqual(60);
+    expect(ALL.length).toBeLessThanOrEqual(65);
   });
 
   it('ids are unique, stable-looking `ach_*` and derived from the line and medal', () => {

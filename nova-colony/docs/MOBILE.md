@@ -261,7 +261,7 @@ Settings › Apps › Nova Colony › Notifications).
 
 ## 6c. Achievements (Game Center / Google Play Games)
 
-The Colony Journal (Menu › Journal) has 58 achievements today: 16 tiered lines (bronze / silver / gold) and 10 one-offs.
+The Colony Journal (Menu › Journal) has 62 achievements today: 17 tiered lines (bronze / silver / gold) and 11 one-offs.
 The game itself never needs a console: progress is read from state the game already keeps and unlocks live in the save
 (`state.achievements`), so a player with no Game Center / Play Games account loses nothing. The platform hook only
 *mirrors* unlocks, so the stores' own achievement screens, friends' comparisons and the Play Games / Game Center
@@ -321,6 +321,8 @@ Catalogue (the id stems; `{bronze,silver,gold}` = three ids):
 | scientist | `ach_tier_5` | Small Wonders | Reach the Nano-Tech tier |
 | scientist | `ach_tier_6` | Titanium Dreams | Reach the Titanium tier |
 | community | `ach_welcome_home_{bronze,silver,gold}` | Welcome Home | 3 / 15 / 40 (Have N colonists living in your colony) |
+| community | `ach_good_neighbour_{bronze,silver,gold}` | Good Neighbour | 3 / 25 / 100 (Grant N colonists’ wishes) |
+| community | `ach_best_friends` | Best Friends | Fill all five friendship hearts with a colonist |
 | community | `ach_legend` | Living Legend | Welcome a legendary colonist |
 | crafter | `ach_maker_{bronze,silver,gold}` | Maker | 5 / 50 / 400 (Craft N items) |
 | expeditions | `ach_trailblazers_{bronze,silver,gold}` | Trailblazers | 1 / 15 / 75 (Bring home an expedition haul) |

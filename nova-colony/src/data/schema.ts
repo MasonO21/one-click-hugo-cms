@@ -783,7 +783,8 @@ export type AchievementMetric =
   | 'loginDays' // days the daily gift was collected (the streak never resets)
   | 'charted' // Frontier sites on the Star Chart
   | 'buildingTypes' // different building types ever built
-  | 'alienTypes'; // different alien types ever defeated
+  | 'alienTypes' // different alien types ever defeated
+  | 'bestFriends'; // colonists at full friendship (wishes)
 
 /** Where an achievement's progress comes from: a mission lifetime counter ("type:target") or a state metric. */
 export type AchievementSource = { kind: 'counter'; type: MissionType; target: string } | { kind: 'metric'; metric: AchievementMetric };

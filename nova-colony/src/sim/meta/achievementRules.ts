@@ -9,12 +9,13 @@ import type { AchievementDef, AchievementMetric, AchievementSource, MissionType 
 
 /** Mission types MissionSystem keeps lifetime counters for (the counters an achievement may read). */
 export const COUNTED_TYPES: ReadonlySet<MissionType> = new Set<MissionType>([
-  'gather', 'build', 'upgrade', 'recruit', 'rescue', 'discover', 'kill', 'defend', 'craft', 'research', 'loot', 'equip', 'spin', 'expedition',
+  'gather', 'build', 'upgrade', 'recruit', 'rescue', 'discover', 'kill', 'defend', 'craft', 'research', 'loot', 'equip', 'spin', 'expedition', 'wish',
 ]);
 
 /** Every metric the reader below knows. */
 export const METRICS: readonly AchievementMetric[] = [
   'playHours', 'colonyTier', 'colonists', 'legendary', 'regions', 'research', 'loginDays', 'charted', 'buildingTypes', 'alienTypes',
+  'bestFriends',
 ];
 
 /** Lifetime mission counter, e.g. counter(game, 'gather', 'wood'). */
@@ -63,6 +64,11 @@ export function metricValue(game: Game, m: AchievementMetric): number {
       return buildingTypes(game);
     case 'alienTypes':
       return alienTypes(game);
+    case 'bestFriends': {
+      let n = 0;
+      for (const c of s.colonists.list) if (game.sys.wishes.bestFriends(c.id)) n++;
+      return n;
+    }
     default:
       return 0;
   }
