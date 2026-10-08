@@ -31,11 +31,12 @@ export class WelcomePanel extends Panel {
     return { icon: '☀️', art: hudArt('day'), text: 'Welcome back' };
   }
 
+  /** The live pending summary first: leaving again before collecting merges more into it while the card is up. */
   private summary(): WelcomeArg {
-    const a = this.arg as WelcomeArg | undefined;
-    if (a && a.gains) return a;
     const p = this.game.pendingOffline;
-    return p ? { seconds: p.seconds, gains: p.gains, rp: p.rp } : { seconds: 0, gains: {}, rp: 0 };
+    if (p) return { seconds: p.seconds, gains: p.gains, rp: p.rp };
+    const a = this.arg as WelcomeArg | undefined;
+    return a && a.gains ? a : { seconds: 0, gains: {}, rp: 0 };
   }
 
   override onOpen(): void {
@@ -44,7 +45,8 @@ export class WelcomePanel extends Panel {
   }
 
   override signature(): string {
-    return `${this.busy}|${this.game.sys.liveops.canWatchAd('offline_double') ? 1 : 0}`;
+    const p = this.game.pendingOffline;
+    return `${this.busy}|${this.game.sys.liveops.canWatchAd('offline_double') ? 1 : 0}|${p ? Math.round(p.seconds) : -1}`;
   }
 
   render(): void {
