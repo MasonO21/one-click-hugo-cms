@@ -19,7 +19,7 @@ import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
 import type { Reward } from '../data/schema';
 import type { Selection } from '../core/view';
-import { fmt } from '../core/format';
+import { dateKey, fmt } from '../core/format';
 import { clamp } from '../core/math';
 import { bagEntries } from '../core/bag';
 import type { BuildApi, HapticKind, ToastKind, UiCtx } from './ctx';
@@ -65,6 +65,7 @@ import { MerchantPanel } from './panels/MerchantPanel';
 import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
 import { backAction } from './logic/back';
+import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
 
 /** Minimum gap between production floats of the same resource. */
@@ -107,6 +108,8 @@ export class UI {
   private lastAdFail = -1e9;
   private lastInsufficient = -1e9;
   private welcomeShown = false;
+  /** Local day the automatic gift popup last opened (autoDaily). */
+  private autoDailyDay = '';
   private lastProdFloat = new Map<string, number>();
   private lastGatherFloat = new Map<string, number>();
   private modalWasOpen = false;
@@ -340,11 +343,14 @@ export class UI {
    * (the HUD's Daily chip stays).
    */
   private autoDaily(tries: number): void {
-    if (!this.game.sys.liveops.dailyAvailable() || this.panels.isOpen('daily')) return;
-    if (this.screenBusy()) {
+    const today = dateKey(this.game.now());
+    const step = autoDailyStep({ available: this.game.sys.liveops.dailyAvailable(), open: this.panels.isOpen('daily'), busy: this.screenBusy(), shownDay: this.autoDailyDay, today });
+    if (step === 'skip') return;
+    if (step === 'wait') {
       if (tries < 20) window.setTimeout(() => this.autoDaily(tries + 1), 3000);
       return;
     }
+    this.autoDailyDay = today; // once a day: the launch popup and a tapped gift reminder must not both open it
     this.open('daily');
   }
 

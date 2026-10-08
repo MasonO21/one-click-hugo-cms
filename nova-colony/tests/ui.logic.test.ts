@@ -7,6 +7,7 @@ import { footprintCells, missingText, pointInRect, rectFrom, refundEstimate, rot
 import { easeOutQuart, segmentAtRotation, spinTarget } from '../src/ui/logic/spin';
 import { clockText, dayPhase, fmtHMS, fmtLong, msUntilLocalMidnight, offlineWorkedText } from '../src/ui/logic/time';
 import { buildingEffects, levelMult, lockInfo, modifierText } from '../src/ui/logic/describe';
+import { autoDailyStep } from '../src/ui/logic/autoDaily';
 import { RARITY_COLOR, rewardParts } from '../src/ui/logic/rewards';
 import { MAP_MAX_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, regionCentroids, worldToMap, type MapMarker } from '../src/ui/logic/map';
 import { BUILD_CATEGORIES, NODE_H, NODE_W, layoutTree } from '../src/ui/logic/categories';
@@ -340,5 +341,20 @@ describe('ui.logic — side mission order', () => {
     const list = [m('a'), m('b'), m('c', 3), m('d', 5), m('e', 3)];
     expect(sideOrder(list, new Set(['b'])).map((x) => x.id)).toEqual(['b', 'd', 'c', 'e', 'a']);
     expect(sideOrder(list, new Set()).map((x) => x.id)).toEqual(['d', 'c', 'e', 'a', 'b']);
+  });
+});
+
+describe('automatic daily-gift popup', () => {
+  const base = { available: true, open: false, busy: false, shownDay: '', today: '2026-10-09' };
+  it('opens once the screen is free, waits while it is busy', () => {
+    expect(autoDailyStep(base)).toBe('open');
+    expect(autoDailyStep({ ...base, busy: true })).toBe('wait');
+    expect(autoDailyStep({ ...base, available: false })).toBe('skip');
+    expect(autoDailyStep({ ...base, open: true })).toBe('skip');
+  });
+  it('a tapped gift reminder and the launch popup open it once a day: closed is closed', () => {
+    expect(autoDailyStep({ ...base, shownDay: '2026-10-09' })).toBe('skip');
+    expect(autoDailyStep({ ...base, shownDay: '2026-10-09', busy: true })).toBe('skip');
+    expect(autoDailyStep({ ...base, shownDay: '2026-10-08' })).toBe('open'); // a new day (warm resume after midnight)
   });
 });
