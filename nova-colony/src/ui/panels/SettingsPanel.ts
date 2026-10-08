@@ -1,6 +1,6 @@
 /**
- * SettingsPanel — audio sliders, quality, haptics, auto-gather, analytics consent, left-handed
- * layout, FPS counter, recovery code export/import (through optional SaveManager hooks on `window`),
+ * SettingsPanel — audio sliders, quality, haptics, auto-gather, notifications (iOS / Android), analytics consent,
+ * left-handed layout, FPS counter, recovery code export/import (through optional SaveManager hooks on `window`),
  * restore purchases and credits.
  */
 import { Panel, type PanelTitle } from './Panel';
@@ -8,6 +8,7 @@ import { QUALITY_LEVELS, type QualityLevel, type SettingsState } from '../../cor
 import { btn, section } from '../widgets';
 import { fill, h } from '../dom';
 import { hudArt } from '../art';
+import { NOTIFY_GRANTED_TOAST } from '../NotifyPrompt';
 
 type Hooked = Record<string, (...a: unknown[]) => unknown>;
 
@@ -35,9 +36,17 @@ async function callHook(names: string[], ...args: unknown[]): Promise<{ found: b
   return { found: false };
 }
 
+/** Where to switch notifications back on once the OS has blocked them (the game cannot open that screen). */
+export function notifyBlockedHint(platform: 'web' | 'ios' | 'android'): string {
+  return platform === 'android'
+    ? 'Turned off in your phone settings. To get them, open Settings › Apps › Nova Colony › Notifications.'
+    : 'Turned off in your device settings. To get them, open Settings › Nova Colony › Notifications.';
+}
+
 export class SettingsPanel extends Panel {
   readonly name = 'settings';
   private code = '';
+  private notifyBusy = false;
 
   title(): PanelTitle {
     return { icon: '⚙️', art: hudArt('settings'), text: 'Settings' };
@@ -45,7 +54,14 @@ export class SettingsPanel extends Panel {
 
   override signature(): string {
     const s = this.st.settings;
-    return `${s.quality}|${s.qualityMode}|${s.haptics}|${s.autoGather}|${s.analytics}|${s.showFps}|${s.leftHanded}|${s.batterySaver}|${this.code.length}`;
+    const n = this.game.notifications;
+    const notify = n?.available ? `${n.permission}|${n.enabled}|${this.notifyBusy}` : '-';
+    return `${s.quality}|${s.qualityMode}|${s.haptics}|${s.autoGather}|${s.analytics}|${s.showFps}|${s.leftHanded}|${s.batterySaver}|${notify}|${this.code.length}`;
+  }
+
+  override onOpen(): void {
+    // the player may have changed it in the system settings since
+    void this.game.notifications?.refresh();
   }
 
   private slider(label: string, icon: string, key: 'music' | 'sfx'): HTMLElement {
@@ -99,6 +115,12 @@ export class SettingsPanel extends Panel {
       ),
     );
 
+    const notify = this.notifyRow();
+    if (notify) {
+      wrap.appendChild(section('Reminders'));
+      wrap.appendChild(h('div', { class: 'card' }, notify));
+    }
+
     wrap.appendChild(section('Privacy'));
     wrap.appendChild(
       h(
@@ -126,6 +148,48 @@ export class SettingsPanel extends Panel {
       ),
     );
     fill(this.body, wrap);
+  }
+
+  /**
+   * Notifications (iOS / Android only): on = the player's yes AND the OS permission. Turning it on asks the OS while
+   * it still asks; once the OS has blocked the app the row explains where to allow them instead.
+   */
+  private notifyRow(): HTMLElement | null {
+    const n = this.game.notifications;
+    if (!n?.available) return null;
+    const on = n.enabled;
+    const sw = h('div', {
+      class: 'switch' + (on ? ' on' : ''),
+      role: 'switch',
+      'aria-checked': String(on),
+      'aria-label': 'Notifications',
+      tabindex: '0',
+      data: { notify: 'toggle' },
+    });
+    sw.addEventListener('click', () => void this.flipNotify(!on));
+    const sub = n.blocked && !on ? notifyBlockedHint(this.game.services.platform) : 'Storehouses full, daily gift ready. Never at night.';
+    return h(
+      'div',
+      { class: 'set-row row' },
+      h('span', { class: 'si', text: '🔔' }),
+      h('div', { class: 'grow' }, h('div', { text: 'Notifications' }), h('div', { class: 'mute small', data: { notify: 'hint' }, text: sub })),
+      sw,
+    );
+  }
+
+  private async flipNotify(on: boolean): Promise<void> {
+    const n = this.game.notifications;
+    if (!n || this.notifyBusy) return;
+    this.notifyBusy = true;
+    this.ctx.sfx('ui_tab');
+    try {
+      const p = await n.setEnabled(on);
+      if (on && p === 'granted') this.ctx.toast(NOTIFY_GRANTED_TOAST, 'success', '🔔');
+      else if (on && p === 'denied') this.ctx.toast('Notifications are switched off for Nova Colony in your settings.', 'info', '🔔');
+    } finally {
+      this.notifyBusy = false;
+      this.rerender();
+    }
   }
 
   /**

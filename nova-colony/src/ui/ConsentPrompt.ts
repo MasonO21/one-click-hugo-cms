@@ -45,6 +45,11 @@ export class ConsentPrompt {
   /** `busy`: a panel, the build drawer or build mode is up — the card must not cover it. */
   constructor(private readonly ctx: UiCtx, private readonly parent: HTMLElement, private readonly busy: () => boolean) {}
 
+  /** The card is on screen (or stepped aside, waiting to come back). */
+  get shown(): boolean {
+    return this.el !== null;
+  }
+
   /** Call every frame. Shows the card once, until the player answers. */
   update(dt: number): void {
     const s = this.ctx.game.state.settings;

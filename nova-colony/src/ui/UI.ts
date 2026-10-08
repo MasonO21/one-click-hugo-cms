@@ -36,6 +36,7 @@ import { FlyToHud } from './fx/FlyToHud';
 import { SelectionTip } from './fx/SelectionTip';
 import { Guide } from './guide/Guide';
 import { ConsentPrompt } from './ConsentPrompt';
+import { NotifyPrompt } from './NotifyPrompt';
 import { Threats } from './hud/Threats';
 import { alienArt, biomeArt, eventArt, itemArt, poiArt, preloadArt, professionArt, resourceArt, rewardArt, tierArt } from './art';
 import { jobOf } from './logic/colonist';
@@ -87,6 +88,7 @@ export class UI {
   private tip!: SelectionTip;
   private guide!: Guide;
   private consent!: ConsentPrompt;
+  private notifyPrompt!: NotifyPrompt;
   private threats!: Threats;
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
@@ -187,6 +189,8 @@ export class UI {
     });
 
     this.consent = new ConsentPrompt(ctx, el, () => this.screenBusy());
+    // notifications card (iOS / Android): after the first tier-up or Welcome Back, never over the consent card
+    this.notifyPrompt = new NotifyPrompt(ctx, el, () => this.screenBusy() || this.consent.shown);
 
     this.installGlobalHandlers();
     this.subscribe();
@@ -776,6 +780,7 @@ export class UI {
     if (!this.root) return;
     safe('ui input', () => this.input.update(dt));
     safe('ui consent', () => this.consent.update(dt));
+    safe('ui notify', () => this.notifyPrompt.update(dt));
     safe('ui sync', () => this.syncSettings());
     safe('ui build', () => {
       this.build.update(dt);
