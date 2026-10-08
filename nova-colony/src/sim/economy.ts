@@ -748,8 +748,12 @@ export class EconomySystem extends System {
     this.powerShort = short;
   }
 
-  /** Flow model for offline progress: current efficiencies, modifiers without temporary boosts. */
-  private offlineModel(): OfflineModel {
+  /**
+   * Flow model for offline progress: current efficiencies, modifiers without temporary boosts. Reflects the last
+   * `recompute()`. Public so the notification planner (platform/notifyPlan.ts) can forecast with the very model
+   * Welcome Back will credit.
+   */
+  offlineModel(): OfflineModel {
     const mods = this.offlineMods;
     mods.rebuild(this.game, { boosts: false });
     const prodMod = mods.get('production');

@@ -407,6 +407,14 @@ export interface SettingsState {
   leftHanded: boolean;
   /** Battery saver: cap the frame rate at 30 instead of 60 (longer sessions, cooler phone). */
   batterySaver: boolean;
+  /**
+   * Gentle local notifications (storehouses full, offline shift over, daily gift ready). Off until the player says
+   * yes, either on the in-game card or with the Settings toggle; the OS permission is checked live on top of this.
+   * See platform/notifications.ts.
+   */
+  notifications: boolean;
+  /** The player has answered the in-game notifications card (yes or "not now"): it never shows again. */
+  notifyAsked: boolean;
 }
 
 export function createInitialState(seed: number, now: number): GameState {
@@ -465,7 +473,7 @@ export function createInitialState(seed: number, now: number): GameState {
       offersSeen: [],
     },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
-    settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false },
+    settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false, notifications: false, notifyAsked: false },
   };
 }
 
