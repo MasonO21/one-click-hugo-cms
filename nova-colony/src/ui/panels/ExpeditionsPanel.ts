@@ -132,7 +132,8 @@ export class ExpeditionsPanel extends Panel {
   render(): void {
     const ex = this.game.sys.expeditions;
     const lock = ex.lockReason();
-    if (lock) {
+    // squads still out or home with a haul stay reachable when the Radio Tower is gone (moved or removed)
+    if (lock && !ex.list().length) {
       fill(this.body, this.lockedView(lock));
       return;
     }
@@ -170,6 +171,8 @@ export class ExpeditionsPanel extends Panel {
     const g = this.game;
     const ex = g.sys.expeditions;
     const wrap = h('div', { class: 'stack-v exp-list' });
+    const lock = ex.lockReason();
+    if (lock) wrap.appendChild(h('div', { class: 'card warn-card', text: `🔒 ${lock}` }));
     const next = ex.nextSlotTier();
     wrap.appendChild(
       h(
