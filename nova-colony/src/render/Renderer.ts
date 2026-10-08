@@ -26,6 +26,7 @@ import { Pois } from './actors/Pois';
 import { Characters } from './actors/Characters';
 import { Aliens } from './actors/Aliens';
 import { Projectiles } from './actors/Projectiles';
+import { WishBubbles } from './actors/WishBubbles';
 import './models'; // registers all procedural building models
 import type { WorldGen } from '../sim/world';
 
@@ -52,6 +53,7 @@ export class Renderer implements RendererApi {
   private characters!: Characters;
   private aliens!: Aliens;
   private projectiles!: Projectiles;
+  private wishBubbles!: WishBubbles;
   private container!: HTMLElement;
   private width = 1;
   private height = 1;
@@ -123,6 +125,7 @@ export class Renderer implements RendererApi {
     this.characters = new Characters(this.ctx);
     this.aliens = new Aliens(this.ctx);
     this.projectiles = new Projectiles(this.ctx);
+    this.wishBubbles = new WishBubbles(this.ctx);
     this.overlay = new BuildOverlay(this.ctx);
     this.effects = new Effects(this.ctx, this.rig);
     this.applyQuality(this.quality, true);
@@ -207,6 +210,7 @@ export class Renderer implements RendererApi {
     this.nature.update(dt);
     this.pois.update(dt);
     this.characters.update(dt);
+    this.wishBubbles.update(dt);
     this.aliens.update(dt);
     this.projectiles.update(dt);
     this.particles.update(dt);
@@ -276,6 +280,12 @@ export class Renderer implements RendererApi {
       bestT = co.t * 0.85;
       best = { kind: 'colonist', id: co.id };
     }
+    // a wish bubble over a colonist's head selects that colonist
+    const wb = this.wishBubbles.pick(ray, maxT);
+    if (wb && wb.t * 0.8 < bestT) {
+      bestT = wb.t * 0.8;
+      best = { kind: 'colonist', id: wb.id };
+    }
     const pe = this.pois.pick(ray, maxT);
     if (pe && pe.t * 0.95 < bestT) {
       bestT = pe.t * 0.95;
@@ -344,6 +354,7 @@ export class Renderer implements RendererApi {
     this.effects?.dispose();
     this.overlay?.dispose();
     this.projectiles?.dispose();
+    this.wishBubbles?.dispose();
     this.aliens?.dispose();
     this.characters?.dispose();
     this.pois?.dispose();
