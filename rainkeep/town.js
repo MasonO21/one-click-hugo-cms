@@ -650,7 +650,7 @@
       overlay3d(now, t, dt, R, wxType);
       if (!S.settings.camHint && S.seenIntro && !UI.sheet && S.quest >= 2) {
         S.settings.camHint = true;
-        KH.toast('Drag to move around the keep, pinch or scroll to zoom, and twist with two fingers to turn.', '', 'camhint', 6);
+        KH.toast('Drag to move around the keep, and pinch or scroll to zoom.', '', 'camhint', 6);
       }
       return;
     }
@@ -939,9 +939,9 @@
     return best;
   }
 
-  // Taps open buildings. In 3D one finger (or the left mouse button) drags the view around, two fingers
-  // pinch to zoom, twist to turn and slide to pan, the wheel zooms toward the cursor, the right button
-  // (or Shift-drag) turns and tilts, and a double tap or the compass button flies back home.
+  // Taps open buildings. In 3D the view keeps one fixed angle: one finger (or any mouse button) drags it
+  // around, two fingers pinch to zoom and slide to pan, the wheel zooms toward the cursor, and a double tap or
+  // the compass button flies back home. Nothing turns or tilts the camera.
   const touches = new Map();
   let gest = null, lastTap = null;
   const T3on = () => (KH.town3d && KH.town3d.active ? KH.town3d : null);
@@ -954,7 +954,7 @@
     touches.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
     const T3 = T3on();
     if (touches.size === 1) {
-      gest = { x0: e.offsetX, y0: e.offsetY, lx: e.offsetX, ly: e.offsetY, moved: false, two: null, turn: e.button === 2 || e.shiftKey || e.altKey, vx: 0, vy: 0, lt: performance.now() };
+      gest = { x0: e.offsetX, y0: e.offsetY, lx: e.offsetX, ly: e.offsetY, moved: false, two: null, vx: 0, vy: 0, lt: performance.now() };
       if (T3) T3.hold(true);
     } else if (touches.size === 2 && gest) { gest.moved = true; gest.two = pair(); }
     if (cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -967,10 +967,6 @@
       const p = pair(), q = gest.two;
       if (T3 && q) {
         if (q.d > 0) T3.zoomAt(p.d / q.d, p.mx, p.my);
-        let da = p.ang - q.ang;
-        if (da > Math.PI) da -= Math.PI * 2;
-        if (da < -Math.PI) da += Math.PI * 2;
-        T3.rotate(da);
         T3.pan(p.mx - q.mx, p.my - q.my);
       }
       gest.two = p;
@@ -979,12 +975,9 @@
     if (Math.hypot(e.offsetX - gest.x0, e.offsetY - gest.y0) > 10) gest.moved = true;
     if (gest.moved && T3) {
       const dx = e.offsetX - gest.lx, dy = e.offsetY - gest.ly;
-      if (gest.turn) T3.rotate(-dx * 0.008, dy * 0.004);
-      else {
-        T3.pan(dx, dy);
-        const now = performance.now(), dts = Math.max(8, now - gest.lt) / 1000;
-        gest.vx = gest.vx * 0.5 + (dx / dts) * 0.5; gest.vy = gest.vy * 0.5 + (dy / dts) * 0.5; gest.lt = now;
-      }
+      T3.pan(dx, dy);
+      const now = performance.now(), dts = Math.max(8, now - gest.lt) / 1000;
+      gest.vx = gest.vx * 0.5 + (dx / dts) * 0.5; gest.vy = gest.vy * 0.5 + (dy / dts) * 0.5; gest.lt = now;
     }
     gest.lx = e.offsetX; gest.ly = e.offsetY;
   });
@@ -1047,7 +1040,7 @@
     T3.zoomAt(Math.exp(-e.deltaY * k), e.offsetX, e.offsetY);
   }, { passive: false });
   cv.addEventListener('dblclick', () => { const T3 = T3on(); if (T3) T3.reset(); });
-  // keyboard: arrows or WASD move, + and - zoom, Q and E turn, Home recenters
+  // keyboard: arrows or WASD move, + and - zoom, Home recenters
   window.addEventListener('keydown', (e) => {
     const T3 = T3on();
     const tag = (document.activeElement && document.activeElement.tagName) || '';
@@ -1057,8 +1050,6 @@
     if (moves[k]) T3.pan(...moves[k]);
     else if (k === '+' || k === '=') T3.zoom(1.2);
     else if (k === '-' || k === '_') T3.zoom(1 / 1.2);
-    else if (k === 'q') T3.rotate(-0.2);
-    else if (k === 'e') T3.rotate(0.2);
     else if (k === 'Home') T3.reset();
     else return;
     e.preventDefault();

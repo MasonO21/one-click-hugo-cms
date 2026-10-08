@@ -1244,12 +1244,12 @@
   T3.zoomLevel = () => view.zoom; // town.js shows building names only when the camera is close
   // for tuning the resting spots: T3.kinAt.nadaa = [x, z, null]; T3.kinReset()
   T3.kinAt = KIN_AT;
-  // how the camera frames each of them (story.js "Show me"): looking out at their wall, aimed up
+  // how the camera frames each of them (story.js "Show me"), from the keep's one fixed angle, aimed up
   const KIN_VIEW = {
-    nadaa: { az: 1.3, el: 0.42, zoom: 1.5, tx: -14, tz: -8, lift: 7 },
-    seyl: { az: -1.3, el: 0.42, zoom: 1.5, tx: 14, tz: 1, lift: 7 },
-    barq: { az: -0.2, el: 0.42, zoom: 1.6, tx: 11, tz: -16.5, lift: 10 },
-    sahab: { az: 0.15, el: 0.4, zoom: 1.4, tx: -7, tz: -12, lift: 13 },
+    nadaa: { az: 0, el: 0.55, zoom: 1.2, tx: -21, tz: -3, lift: 9 },
+    seyl: { az: 0, el: 0.55, zoom: 1.2, tx: 21, tz: 6, lift: 9 },
+    barq: { az: 0, el: 0.42, zoom: 1.6, tx: 11, tz: -16.5, lift: 10 },
+    sahab: { az: 0, el: 0.4, zoom: 1.4, tx: -7, tz: -12, lift: 13 },
     ghaitha: { az: 0, el: 0.42, zoom: 1.4, tx: 0, tz: -16.5, lift: 10 },
   };
   T3.kinView = (id) => KIN_VIEW[id];
@@ -1606,7 +1606,7 @@
 
   // ======================================================================
   // Camera: starts framed on every plot between the HUD strip and the quest card,
-  // then pans (drag), zooms toward the finger (pinch or wheel) and turns (twist or right-drag)
+  // then pans (drag) and zooms toward the finger (pinch or wheel), always from one fixed angle
   // ======================================================================
   const HOME = { az: 0, el: 0.8, zoom: 1, tx: 0, tz: -0.2, lift: 0 };
   const ZMIN = 0.55, ZMAX = 4.2;

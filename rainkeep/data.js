@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.19.0',
+  version: '4.19.1',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1429,6 +1429,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.19.1', items: [
+      { icon: 'i-compass', name: 'A steadier camera', text: 'The keep\'s camera now keeps one fixed angle, so the keep always faces you the same way. Drag to move around, and pinch or scroll to zoom.' },
+    ] },
     { v: '4.19', items: [
       { icon: 'i-trophy', name: 'Hall of Wardens', text: 'A ranking of fifty wardens of the Dunes by power, you among them. Climb it, and collect a payout by rank every day.', act: 'hall', open: (S) => S.lv.wyrm >= 4, needs: 'Rainwyrm Lv 4' },
       { icon: 'i-star', name: 'Hero Awakening', text: 'Fully starred heroes can now be awakened five times with their own shards, one more step at every second Rainwyrm level from Lv 12: more attack, defense and health, 10 more levels each time, and a stronger skill at A3 and A5.', act: 'tab:heroes', open: (S) => S.lv.wyrm >= 12, needs: 'Rainwyrm Lv 12' },

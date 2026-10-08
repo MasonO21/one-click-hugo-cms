@@ -15,7 +15,7 @@
  */
 'use strict';
 
-const VERSION = 'rainkeep-v4.16'; // bump on every web deploy
+const VERSION = 'rainkeep-v4.19.1'; // bump on every web deploy
 const SHELL_CACHE = `${VERSION}-shell`;
 const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
