@@ -34,21 +34,26 @@
   function list() {
     if (wardens) return wardens;
     const rnd = seeded(S.hall.seed || 1), n = H.size - 1, [lo, hi] = H.spread;
-    const pick = (arr) => arr.splice(Math.floor(rnd() * arr.length), 1)[0];
-    const names = DATA.names.slice(), keeps = DATA.keeps.slice();
+    const one = (arr) => arr[Math.floor(rnd() * arr.length)], used = new Set(), seen = new Set();
+    const fresh = (make) => { for (let k = 0; k < 200; k++) { const v = make(); if (!used.has(v)) { used.add(v); return v; } } return make(); };
     wardens = Array.from({ length: n }, (_, i) => {
       const u = Math.pow(i / (n - 1), H.skew), f = lo * Math.pow(hi / lo, u) * (0.94 + rnd() * 0.12);
-      const name = names.length ? pick(names) : `Warden ${i + 1}`, keep = keeps.length ? pick(keeps) : 'the Dunes';
+      const name = fresh(() => `${one(DATA.names)} ${one(H.epithets)}`);
+      let keep = '';
+      for (let k = 0; k < 200 && (!keep || seen.has(keep)); k++) keep = `${one(H.keepA)}${one(H.keepB)}`;
+      seen.add(keep);
       return { i, name, keep, f, pace: H.pace[0] + rnd() * (H.pace[1] - H.pace[0]), color: H.colors[Math.floor(rnd() * H.colors.length)] };
     });
     return wardens;
   }
   const powerOf = (w, h = S.time / 3600) => Math.round(ref(h * w.pace) * w.f);
+  // your power, counting troops out marching (so a march leaving doesn't drop you down the ledger)
+  const mine = () => Math.round(KH.power() + (S.map && S.map.marches ? S.map.marches.reduce((a, m) => a + Object.entries(m.troops || {}).reduce((x, [k, n]) => x + n * KH.unitPower(k), 0), 0) : 0));
   // everyone, strongest first; you are the entry with you: true
   function table() {
-    const h = S.time / 3600, mine = Math.round(KH.power());
+    const h = S.time / 3600;
     const rows = list().map((w) => ({ w, name: w.name, keep: w.keep, power: powerOf(w, h), color: w.color }));
-    rows.push({ you: true, name: S.wardenName || 'You', keep: S.keepName || 'Rainkeep', power: mine, color: '#3fd0c0' });
+    rows.push({ you: true, name: 'You', keep: 'Rainkeep', power: mine(), color: '#3fd0c0' });
     rows.sort((a, b) => b.power - a.power || (a.you ? -1 : 1));
     return rows;
   }
@@ -60,7 +65,7 @@
     const X = S.hall;
     if (!X.open) {
       X.open = true; X.seed = X.seed || Math.floor(Math.random() * 1e9) + 1; wardens = null;
-      X.day = Math.floor(S.time / H.daily); X.last = rank();
+      X.day = Math.floor(S.time / H.daily); X.last = X.best = rank();
       S.stats.hallClimb = Math.max(S.stats.hallClimb || 0, H.size + 1 - X.last);
       KH.mail('The Hall of Wardens', `The wardens of the Dunes keep a ledger of their strength, read out in the old Hall of Wardens at every new day. Your keep has been entered at rank ${X.last} of ${H.size}. Every day the Hall pays out by rank, the most to the strongest.`);
       return;
@@ -71,7 +76,7 @@
       X.day = day;
       const r = rank(), g = rewardFor(r);
       S.stats.hallDays = (S.stats.hallDays || 0) + 1;
-      KH.mail(`Hall of Wardens: rank ${r}`, `The Hall read out the day's ledger. ${S.keepName || 'Your keep'} stands at rank ${r} of ${H.size}.`, g);
+      KH.mail(`Hall of Wardens: rank ${r}`, `The Hall read out the day's ledger. Your keep stands at rank ${r} of ${H.size}.`, g);
       KH.emit('hallDay', { rank: r });
     }
     // passing a warden, checked now and then
@@ -79,12 +84,13 @@
     if (X.acc < H.check) return;
     X.acc = 0;
     const t = table(), r = t.findIndex((x) => x.you) + 1;
-    if (r < X.last && !offline) {
+    // a new best only, so troops coming and going can't make it say so twice
+    if (r < X.last && r < (X.best || 99) && !offline) {
       const passed = t[r]; // the warden now just below you
       KH.toast(`You passed ${passed.name} of ${passed.keep}: rank ${r} in the Hall of Wardens.`, 'good');
       KH.emit('hallRank', { rank: r });
     }
-    X.last = r;
+    X.last = r; X.best = Math.min(X.best || 99, r);
     S.stats.hallClimb = Math.max(S.stats.hallClimb || 0, H.size + 1 - r);
   });
 

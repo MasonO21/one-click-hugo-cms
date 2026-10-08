@@ -1296,13 +1296,18 @@ const DATA = {
   hall: {
     unlock: 4, size: 50, // Rainwyrm level; wardens in the Hall, you included
     // [hours of keep time, power] for a typical free player (balance bot, free runs)
-    curve: [[0, 400], [30, 400000]], // calibrated below from the bot
+    curve: [[0, 2300], [0.5, 18000], [1, 26800], [2, 34700], [3, 41000], [4, 55000], [6, 85000], [8, 100000], [10, 113000], [12, 128000], [15, 142000], [18, 186000], [21, 218000], [24, 228000], [27, 256000], [30, 287000]],
     tail: 0.004, // past the curve, power still grows this much an hour
-    spread: [0.3, 2.6], skew: 1.5, // the weakest and strongest warden as a share of the curve; skew packs them low
+    spread: [0.3, 2.2], skew: 1.5, // the weakest and strongest warden as a share of the curve; skew packs them low
+    // (a free player who plays well sits near rank 15; the spending bot, at about 1.6 times the curve, near 6)
     pace: [0.8, 1.25], // how fast each warden runs along the curve
     daily: 86400, check: 30, // a payout every day of keep time; rank checked every 30 seconds
     rewards: [[1, { starglass: 400, beacons: 2 }], [3, { starglass: 300, beacons: 1 }], [10, { starglass: 200 }], [25, { starglass: 120 }], [50, { starglass: 60 }]],
     colors: ['#d0583a', '#6a7ae0', '#e0b04a', '#8a5ad0', '#4fa86a', '#c94a8a', '#4a9ad0', '#b8862a'],
+    // wardens are a name from DATA.names with one of these, and keeps a first half and a second
+    epithets: ['the Patient', 'Sandwalker', 'the Red', 'Wellfinder', 'the Old', 'Stormborn', 'the Quiet', 'Longspear', 'the Bold', 'Saltbeard', 'the Younger', 'Duneborn', 'the Wise', 'Brightshield', 'the Lame', 'Cloudwatcher'],
+    keepA: ['Amber', 'Ash', 'Copper', 'Cedar', 'Dawn', 'Dusk', 'Ember', 'Falcon', 'Gold', 'Iron', 'Jasper', 'Lantern', 'Lion', 'Moon', 'Oasis', 'Red', 'Salt', 'Star', 'Thorn', 'Wind'],
+    keepB: ['crest', 'ford', 'garth', 'haven', 'hollow', 'keep', 'mere', 'reach', 'rock', 'spire', 'spring', 'stead', 'tower', 'vale', 'wall', 'well'],
   },
 
   // ---------- Hero Awakening ----------
