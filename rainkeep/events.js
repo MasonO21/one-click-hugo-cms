@@ -388,6 +388,7 @@
   KH.on('temper', (e) => addPts('oasis', 15 * e.lv));
   KH.on('fish', () => addPts('oasis', DATA.fishing.warPts));
   KH.on('defense', (e) => addPts('oasis', 10 * e.to));
+  KH.on('awaken', () => addPts('oasis', DATA.awaken.warPts));
   KH.on('clash', (e) => addPts('oasis', DATA.clash.warPts[e.place - 1] || 0));
   KH.on('drill', (e) => { addPts('builder', e.n / 10); addPts('oasis', DATA.ranks.warPts * e.n * (e.rank + 1)); });
   ACT.evclaim = (i) => {

@@ -322,16 +322,16 @@
   // ======================================================================
   function heroStats(id) {
     const h = S.heroes[id], r = DATA.rarities[HERO[id].rarity];
-    const m = (1 + 0.09 * (h.lvl - 1)) * (1 + 0.15 * (h.stars - 1)) * (1 + 0.05 * (S.tech.tactics || 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'stat') : 0));
+    const m = (1 + 0.09 * (h.lvl - 1)) * (1 + 0.15 * (h.stars - 1)) * (1 + 0.05 * (S.tech.tactics || 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'stat') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'stat') : 0));
     return { atk: r.atk * m, def: r.def * m, hp: r.hp * m };
   }
-  const skillScale = (id) => (1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'skill') : 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'skill') : 0));
+  const skillScale = (id) => (1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'skill') : 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'skill') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'skill') : 0));
   function skillText(id) {
     const d = HERO[id], k = skillScale(id);
     return d.skill.desc.replace(/\{(\w+)\}/g, (_, key) => `${Math.round(d.skill.fx[key] * k * 100)}%`);
   }
   // stars, Rainwyrm levels past 9 and the Deepspring's Springsong ranks (deepspring.js) each raise it
-  const heroCap = (id) => DATA.heroLevelCapPerStar * S.heroes[id].stars + DATA.heroCapPerWyrm * Math.max(0, S.lv.wyrm - 9) + KH.bonus('heroCap');
+  const heroCap = (id) => DATA.heroLevelCapPerStar * S.heroes[id].stars + DATA.heroCapPerWyrm * Math.max(0, S.lv.wyrm - 9) + KH.bonus('heroCap') + (KH.awakenBoost ? KH.awakenBoost(id, 'cap') : 0);
   const statPower = (s) => Math.round(s.atk * 2 + s.def * 2 + s.hp / 5);
   const heroPower = (id) => statPower(heroStats(id));
   function unitPower(type) {

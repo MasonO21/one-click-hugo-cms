@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.18.0',
+  version: '4.19.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1290,6 +1290,18 @@ const DATA = {
     warPts: 0.2, // Oasis Wars points per troop drilled
   },
 
+  // ---------- Hero Awakening ----------
+  // Past 5 stars a hero can be awakened up to A5 with its own shards: each step costs a number of duplicates'
+  // worth for its rarity. Every awakening adds to the hero's attack, defense and health and 10 levels to its cap;
+  // A3 and A5 also strengthen its skill.
+  awaken: {
+    unlock: 12, // Rainwyrm level
+    dupes: [2, 3, 4, 5, 6], // duplicates' worth of shards for A1 to A5
+    stat: 0.06, cap: 10, // per awakening
+    skill: { 3: 0.15, 5: 0.3 }, // skill strength from A3, and from A5 (in place of the A3 bonus)
+    warPts: 40, // Oasis Wars points per awakening
+  },
+
   // ---------- Wadi Clash ----------
   // A short live battle in a dry canyon against two rival caravans. Each side has three squads (yours are your
   // squad heroes, each with a third of the march). Holding a point scores its value every second; the first side
@@ -1396,6 +1408,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.19', items: [
+      { icon: 'i-star', name: 'Hero Awakening', text: 'Fully starred heroes can now be awakened five times with their own shards: more attack, defense and health, 10 more levels each time, and a stronger skill at A3 and A5.', act: 'tab:heroes', open: (S) => S.lv.wyrm >= 12, needs: 'Rainwyrm Lv 12' },
+    ] },
     { v: '4.18', items: [
       { icon: 'i-clash', name: 'Wadi Clash', text: 'A live three-way battle for a dry canyon. Send your three squads to take its wells, towers, the Rain Shrine and the Old Cistern, and hold them against two rival caravans. A Clash Banner every 4 hours.', act: 'clash', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
     ] },
@@ -1664,6 +1679,9 @@ const DATA = {
     { id: 'drill100', text: 'Drill 100 troops to a new rank', stat: 'drilled', n: 100, reward: { starglass: 150 } },
     { id: 'drill1000', text: 'Drill 1,000 troops to a new rank', stat: 'drilled', n: 1000, reward: { beacons: 2 } },
     { id: 'champ300', text: 'Command 300 Champions', stat: 'champs', n: 300, reward: { shard_legendary: 1 } },
+    { id: 'awaken1', text: 'Awaken a hero', stat: 'awakened', n: 1, reward: { starglass: 150 } },
+    { id: 'awaken5', text: 'Awaken a hero to A5', stat: 'awakenTop', n: 5, reward: { shard_legendary: 1 } },
+    { id: 'awaken15', text: 'Awaken heroes 15 times', stat: 'awakened', n: 15, reward: { beacons: 3 } },
     { id: 'clash1', text: 'Win a Wadi Clash', stat: 'clashWins', n: 1, reward: { starglass: 100 } },
     { id: 'clash25', text: 'Win 25 Wadi Clashes', stat: 'clashWins', n: 25, reward: { shard_legendary: 1 } },
     { id: 'clashSweep', text: 'Hold all seven points of the wadi at once', stat: 'clashSweep', n: 1, reward: { beacons: 2 } },
