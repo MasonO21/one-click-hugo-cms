@@ -89,10 +89,8 @@ export class MissionSystem extends System {
       this.offerSide();
     });
     bus.on('expedition:collected', (e) => {
-      const keys = ['collect', e.dest];
-      if (e.region) keys.push(e.region);
-      if (e.frontier) keys.push('frontier');
-      this.bump('expedition', keys, 1);
+      // a Frontier site only borrows its biome's look: it counts as 'frontier', not as a trip to that region
+      this.bump('expedition', e.frontier ? ['collect', 'frontier'] : ['collect', e.dest, e.region], 1);
     });
     bus.on('building:completed', () => this.offerSide());
   }

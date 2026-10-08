@@ -11,6 +11,7 @@
  *   purchase funnel       shop_opened -> iap_purchased / iap_failed
  *   quit points           quit_point                               (current main mission when the app is paused)
  *   slow progression      progression_stall                        (no mission completed for 10 min of play)
+ *   expeditions           expedition_launched / _returned / _collected, frontier_charted / frontier_milestone
  *
  * Events carry game facts only (no PII). Consent is opt-in: `settings.analytics` must be true AND the player
  * must have answered (`settings.analyticsAsked`, set by the first-launch prompt or the Settings toggle). It
@@ -177,6 +178,17 @@ export function installAnalyticsHooks(game: Game): () => void {
   // ---- exploration & combat milestones
   on('world:regionDiscovered', ({ id }) => a.track('region_discovered', { id, play_time_s: Math.round(st().playTime) }));
   on('combat:ended', ({ wave, kills }) => a.track('wave_won', { wave, kills, tier: st().colony.tier }));
+
+  // ---- expeditions & the Frontier (game facts only: where, how many, how long)
+  on('expedition:launched', ({ dest, region, squad, vehicle, seconds, frontier }) =>
+    a.track('expedition_launched', { dest, region, squad: squad.length, vehicle: vehicle ?? 'none', minutes: Math.round(seconds / 60), frontier, tier: st().colony.tier }),
+  );
+  on('expedition:returned', ({ dest, region }) => a.track('expedition_returned', { dest, region }));
+  on('expedition:collected', ({ dest, region, reward, frontier, leftBehind }) =>
+    a.track('expedition_collected', { dest, region, frontier, survivor: !!reward.colonist, finds: Object.keys(reward.items ?? {}).length, overflow: Object.keys(leftBehind).length > 0 }),
+  );
+  on('expedition:charted', ({ count }) => a.track('frontier_charted', { count, play_time_s: Math.round(st().playTime) }));
+  on('expedition:milestone', ({ count }) => a.track('frontier_milestone', { count }));
 
   // ---- ads
   on('ad:started', ({ placement }) => a.track('ad_started', { placement }));
