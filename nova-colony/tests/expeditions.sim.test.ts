@@ -3,6 +3,7 @@
  * survivors, collecting (with the storage allowance) and the post-Titanium Frontier / Star Chart.
  */
 import { describe, expect, it } from 'vitest';
+import { isTierCelebration } from '../src/ui/logic/describe';
 import { createDataRegistry, defaultData } from '../src/data';
 import type { ExpeditionDef } from '../src/data/schema';
 import { planHaul, regionalSpec, rollHaul } from '../src/sim/expedition/rules';
@@ -348,5 +349,25 @@ describe('expeditions: the Frontier and the Star Chart', () => {
     rig.step(2);
     expect(cards.filter((c) => /Frontier is open/.test(c.title))).toHaveLength(1);
     expect(rig.game.state.expeditions.frontier.announced).toBe(true);
+  });
+
+  it('the Frontier card is news, not a repeat of the Titanium tier card (the UI drops repeats right after a tier-up)', () => {
+    // the Titanium tier-up and the Frontier opening land in the same second on a phone (the UI opens the tier card
+    // 1.8 s in): only the tier repeats may be dropped
+    const rig = makeColony({ tier: 5 });
+    const g = rig.game;
+    rig.step(2);
+    const cards = collect<{ title: string; text?: string }>(g, 'ui:celebrate');
+    for (const r of g.data.resources) g.state.resources.amounts[r.id] = 1e7;
+    expect(g.sys.progression.tierUp()).toBe(true);
+    rig.step(1.5, 0.05);
+    const frontier = cards.find((c) => /Frontier is open/.test(c.title))!;
+    expect(frontier).toBeTruthy();
+    expect(isTierCelebration(frontier.title, frontier.text)).toBe(false);
+    const repeats = cards.filter((c) => c !== frontier);
+    expect(repeats.length).toBeGreaterThan(0); // progression's own "TITANIUM TIER REACHED!"
+    for (const c of repeats) expect(isTierCelebration(c.title, c.text), c.title).toBe(true);
+    // the story steps that close a tier say so too
+    for (const m of g.data.missions) if (m.type === 'tier' && m.onComplete?.celebrate) expect(isTierCelebration(m.onComplete.celebrate, m.name), m.id).toBe(true);
   });
 });

@@ -183,3 +183,11 @@ export function tierUnlockGroups(data: DataRegistry, tier: number, done: readonl
   }
   return { ready, research };
 }
+
+/**
+ * A celebration that only repeats the tier-up card (the story step's "Stone tier reached!", the progression's own
+ * "Steel Tier Reached!"): the UI drops it right after a tier-up. Whole words only: "The Frontier is open!" is news.
+ */
+export function isTierCelebration(title: string, text = ''): boolean {
+  return /\btier\b/i.test(`${title} ${text}`);
+}

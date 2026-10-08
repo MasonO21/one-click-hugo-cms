@@ -45,7 +45,7 @@ import { alienArt, biomeArt, eventArt, itemArt, poiArt, preloadArt, professionAr
 import { jobOf } from './logic/colonist';
 import { itemToast, RARITY_COLOR } from './logic/rewards';
 import { toastIconArt } from './logic/achievements';
-import { tierUnlockGroups } from './logic/describe';
+import { isTierCelebration, tierUnlockGroups } from './logic/describe';
 
 import { BuildMenuPanel } from './panels/BuildMenu';
 import { BuildingPanel } from './panels/BuildingPanel';
@@ -111,6 +111,8 @@ export class UI {
   private lastTierCelebrate = -1e9;
   /** The tier-up card is on its way (the base transforms for TIER_REVEAL_MS first). */
   private tierRevealPending = false;
+  /** Celebrations that arrived during the reveal: they open right after the tier card (behind it in the queue). */
+  private afterReveal: (() => void)[] = [];
   private lastJoined: { id: number; t: number } = { id: -1, t: -1e9 };
   /** Aliens defeated in the current invasion by AlienDef.model (shown small on the victory card). */
   private waveKills = new Map<string, { n: number; boss: boolean }>();
@@ -478,9 +480,12 @@ export class UI {
     });
     bus.on('ui:celebrate', (e) => {
       const now = performance.now();
-      if (now - this.lastTierCelebrate < TIER_REVEAL_MS + 2500 && /tier/i.test(e.title + (e.text ?? ''))) return; // tier-up already celebrated
+      if (now - this.lastTierCelebrate < TIER_REVEAL_MS + 2500 && isTierCelebration(e.title, e.text)) return; // tier-up already celebrated
       if (e.title === 'Thank you!' && this.panels.isOpen('shop')) return; // the shop shows its own "what you got" reward
-      this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon, ...this.celebrateArt(e.title) } satisfies CelebrateArg);
+      const open = () => this.panels.open('celebrate', { title: e.title, text: e.text, icon: e.icon, ...this.celebrateArt(e.title) } satisfies CelebrateArg);
+      // news that arrives while the base transforms ("The Frontier is open!" at Titanium) follows the tier card
+      if (this.tierRevealPending) this.afterReveal.push(open);
+      else open();
     });
     bus.on('colonist:recruited', (e) => {
       this.lastJoined = { id: e.id, t: performance.now() };
@@ -534,6 +539,7 @@ export class UI {
           art: tierArt(e.tier),
           artKind: 'tier',
         } satisfies CelebrateArg);
+        for (const open of this.afterReveal.splice(0)) open(); // queued behind the tier card
       }, TIER_REVEAL_MS);
     });
 
