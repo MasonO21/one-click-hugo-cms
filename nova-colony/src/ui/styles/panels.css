@@ -107,6 +107,9 @@
 .pm-close {
   width: 2.9em;
   height: 2.9em;
+  /* a full 44px touch target even where the em sizes come out smaller (43px on a 375px phone) */
+  min-width: 44px;
+  min-height: 44px;
   font-size: 1em;
   color: var(--ink-soft);
 }
