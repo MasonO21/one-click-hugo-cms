@@ -277,4 +277,20 @@ describe('PreferencesStore & CapacitorHaptics (faked plugins)', () => {
     hp.heavy();
     await vi.waitFor(() => expect(Haptics.impact).toHaveBeenCalledWith({ style: 'HEAVY' }));
   });
+
+  it("a button's own success / heavy is not swallowed by the press tap just before it; repeats still are", async () => {
+    const hp = new CapacitorHaptics();
+    // tapping "Collect" / "Upgrade to Stone": the UI's press tap, then the button's own feedback, then a sim listener
+    hp.tap();
+    hp.success();
+    hp.heavy();
+    // the same moment reported again inside the gap (two listeners, a burst of events)
+    hp.heavy();
+    hp.success();
+    hp.warning();
+    hp.tap();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(vi.mocked(Haptics.impact).mock.calls.map((c) => c[0])).toEqual([{ style: 'LIGHT' }, { style: 'HEAVY' }]);
+    expect(vi.mocked(Haptics.notification).mock.calls.map((c) => c[0])).toEqual([{ type: 'SUCCESS' }]);
+  });
 });
