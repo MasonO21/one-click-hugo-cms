@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.9.0',
+  version: '4.10.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -766,6 +766,9 @@ const DATA = {
     { id: 'petkit', name: 'Companion Kit', usd: 2.99, daily: true, tag: 'Daily', needsWyrm: 7,
       grants: { treats: 150, bells: 5, speed15: 1 },
       desc: '150 Honeyed Dates and five Camel Bells for your companions, and a 15-minute speedup. Once per day, from Rainwyrm Lv 7.' },
+    { id: 'roadkit', name: 'Road Dice', usd: 1.99, daily: true, tag: 'Daily', needs: 'hall',
+      grants: { dice: 20, lucky: 1 },
+      desc: 'Twenty Road Dice and a Lucky Die for the Spice Road. Once per day, after you build the Caravan Hall.' },
     { id: 'tidekit', name: 'Tideglass Kit', usd: 4.99, daily: true, tag: 'Daily', needsWyrm: 20,
       grants: { tideglass: 60, crate_copper: 3, speed60: 1 },
       desc: 'Sixty Tideglass for the Deepspring, three copper crates and a 60-minute speedup. Once per day, from Rainwyrm Lv 20.' },
@@ -911,6 +914,8 @@ const DATA = {
     shard_legendary: { name: 'Legendary Shard Pouch', kind: 'shards', rarity: 'legendary', n: 10, icon: 'i-star', desc: 'Pick any Legendary hero: recruit them, or add 10 shards if you have them.' },
     treats: { name: 'Honeyed Dates', kind: 'pet', icon: 'i-treat', desc: 'Treats for your companions: they level up on them.' },
     bells: { name: 'Camel Bell', kind: 'pet', icon: 'i-bell', desc: 'Tames new companions and Advances them past Lv 10 and 20.' },
+    dice: { name: 'Road Die', kind: 'road', icon: 'i-die', desc: 'Rolls the caravan forward on the Spice Road.' },
+    lucky: { name: 'Lucky Die', kind: 'road', icon: 'i-luckydie', desc: 'Rolls whatever number you choose on the Spice Road.' },
   },
 
   // ---------- Daily duties (reset at local midnight) ----------
@@ -937,13 +942,14 @@ const DATA = {
     { id: 'crossing', text: 'Cross 3 rows on the Crossing', n: 3, pts: 10, show: (S) => S.stage >= 36 },
     { id: 'refine', text: 'Refine Tideglass twice', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 20 },
     { id: 'companion', text: "Use a companion's skill", n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
+    { id: 'road', text: 'Roll the Road Dice 5 times', n: 5, pts: 10, show: (S) => S.lv.hall > 0 },
   ],
   dutyChests: [
-    [20, { journals: 20, speed5: 1 }],
-    [40, { starglass: 40, crate_stone: 1, treats: 5 }],
-    [60, { beacons: 1, speed15: 1 }],
-    [80, { starglass: 60, crate_water: 1, journals: 30, treats: 10 }],
-    [100, { beacons: 2, speed60: 1, bells: 2 }],
+    [20, { journals: 20, speed5: 1, dice: 1 }],
+    [40, { starglass: 40, crate_stone: 1, treats: 5, dice: 1 }],
+    [60, { beacons: 1, speed15: 1, dice: 2 }],
+    [80, { starglass: 60, crate_water: 1, journals: 30, treats: 10, dice: 2 }],
+    [100, { beacons: 2, speed60: 1, bells: 2, dice: 3 }],
   ],
 
   // ---------- Login calendar (one claim per day, cycles every 7 claims) ----------
@@ -1175,6 +1181,46 @@ const DATA = {
     ],
   },
 
+  // ---------- The Spice Road (road.js): a dice board the Caravan Hall's traders run ----------
+  road: {
+    unlockPlot: 'hall', // opens once the Caravan Hall is built
+    season: 8 * 3600, // a Road season: laps and their prizes start over every 8 hours of keep time
+    free: { every: 1200, cap: 10 }, // a free Road Die every 20 minutes of keep time, while fewer than 10 are in hand
+    welcome: { dice: 10, lucky: 1 },
+    // the 24 stops, starting at Home Oasis and running clockwise round the board
+    board: ['home', 'water', 'chest', 'food', 'bandits', 'stone', 'market', 'water', 'mirage', 'copper', 'well', 'starglass',
+      'shrine', 'food', 'bandits', 'chest', 'dustdevil', 'stone', 'market', 'copper', 'chest', 'bandits', 'starglass', 'water'],
+    // what each stop gives (resources in quarter-crates, scaled like every other reward)
+    stops: {
+      home: { name: 'Home Oasis', icon: 'i-flag', desc: 'Every lap past it pays out; land on it exactly for a free Road Die.' },
+      water: { name: 'Hidden Spring', icon: 'i-water', give: { water: 1 } },
+      food: { name: 'Date Palms', icon: 'i-food', give: { food: 1 } },
+      stone: { name: 'Salt Pan', icon: 'i-stone', give: { stone: 1 } },
+      copper: { name: 'Copper Hills', icon: 'i-copper', give: { copper: 0.75 } },
+      starglass: { name: 'Glass Flats', icon: 'i-gem', give: { starglass: 15 } },
+      chest: { name: 'Buried Cache', icon: 'i-chest', desc: 'Dig up something from the cache table.' },
+      bandits: { name: 'Bandit Gulch', icon: 'i-bandit', desc: 'Your squad fights a bandit band for its loot.' },
+      market: { name: 'Bazaar', icon: 'i-market', desc: 'A trader lets you pick one of three wares, free.' },
+      mirage: { name: 'Mirage', icon: 'i-mirage', desc: 'The caravan follows a mirage 2 to 7 stops ahead.' },
+      well: { name: 'Sweet Well', icon: 'i-well', desc: 'The next stop that pays out pays double.' },
+      dustdevil: { name: 'Dust Devil', icon: 'i-dustdevil', desc: 'The wind carries the caravan 3 stops on.' },
+      shrine: { name: 'Shrine of Rain', icon: 'i-shrine', desc: 'A free Road Die, and the Rainwyrm feels the prayer.' },
+    },
+    // the Buried Cache: [weight, reward]
+    cache: [[30, { speed15: 1 }], [24, { journals: 1.5 }], [14, { treats: 15 }], [12, { rainCharm: 1 }], [10, { beacons: 1 }], [6, { dice: 2 }], [4, { lucky: 1 }], [3, { shard_epic: 1 }]],
+    // the Bazaar's wares, three offered at a time
+    wares: [{ crate_water: 1 }, { crate_food: 1 }, { crate_stone: 1 }, { crate_copper: 1 }, { speed15: 2 }, { starglass: 40 }, { beacons: 1 }, { treats: 25 }, { dice: 2 }, { journals: 3 }],
+    // bandits are as strong as this share of your expedition stage (at least stage 2, at most 3 per wyrm level)
+    bandits: { stage: 0.85, win: { starglass: 15, journals: 1 } },
+    lapGive: { journals: 1.5 }, // every lap round the road
+    homeDice: 1, shrineDice: 1, shrineBond: 15,
+    // lap prizes for the season: [laps, reward]
+    laps: [[1, { starglass: 80 }], [2, { lucky: 1, speed15: 2 }], [3, { dice: 5 }], [5, { shard_epic: 1 }], [7, { beacons: 3, lucky: 1 }],
+      [10, { starglass: 400 }], [13, { dice: 10, speed60: 2 }], [16, { lucky: 2, beacons: 3 }], [20, { shard_legendary: 1 }]],
+    // Road Dice from the rest of the game
+    bossDice: 2, beastDice: 0.05, warLap: 50,
+  },
+
   cloudRun: {
     unlock: 5, // Rainwyrm level (a Drake can fly)
     perDay: 3, // flights a day
@@ -1281,6 +1327,9 @@ const DATA = {
     { id: 'palLv', text: 'Raise your companions to 60 levels in all', stat: 'palLv', n: 60, reward: { starglass: 300 } },
     { id: 'pal30', text: 'Raise a companion to Lv 30', stat: 'palTop', n: 30, reward: { starglass: 600 } },
     { id: 'skill50', text: "Use companions' skills 50 times", stat: 'palSkills', n: 50, reward: { treats: 100 } },
+    { id: 'lap5', text: 'Travel 5 laps of the Spice Road', stat: 'laps', n: 5, reward: { lucky: 1 } },
+    { id: 'lap30', text: 'Travel 30 laps of the Spice Road', stat: 'laps', n: 30, reward: { lucky: 3, starglass: 300 } },
+    { id: 'bandit25', text: 'Drive off 25 bandit bands on the Spice Road', stat: 'bandits', n: 25, reward: { beacons: 3 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

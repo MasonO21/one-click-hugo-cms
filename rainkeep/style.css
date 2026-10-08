@@ -938,3 +938,40 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .pal-card.pal-wild .portrait { filter: grayscale(.8) brightness(.62); }
 .pal-card > .dot { position: absolute; z-index: 2; top: 6px; right: 6px; width: 11px; height: 11px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px #110b1b; }
 .pal-have { flex-wrap: wrap; gap: 6px; }
+
+/* ---------- The Spice Road (road.js): a 7 x 7 ring of stops over the painted map, the die in the middle ---------- */
+.road-board { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 3px; aspect-ratio: 1; width: 100%; max-width: 440px; margin: 4px auto 8px; padding: 6px; border-radius: 16px; background-color: #6a4a22; background-size: cover; background-position: center; border: 1px solid var(--brass-d); box-shadow: 0 6px 18px #0008, inset 0 0 30px #0006; }
+.road-stop { display: grid; place-items: center; min-width: 0; border-radius: 10px; background: #1b132999; border: 1px solid #f0cf8655; box-shadow: 0 2px 4px #0006; }
+.road-stop .ic { width: 72%; height: 72%; }
+.road-stop.corner { background: #251a35d8; border-color: var(--brass-2); }
+.road-stop.here { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 14px #ffcf6ecc; }
+.road-stop.bandits { border-color: #ff6b5e88; }
+.road-center { grid-row: 2 / 7; grid-column: 2 / 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 0; overflow: hidden; padding: 8px; border-radius: 14px; background: radial-gradient(closest-side, #120c1ed0, #120c1e80); border: 1px solid #f0cf8640; }
+.road-center .row { width: 100%; justify-content: center; gap: 5px; }
+.road-center .btn { min-width: 0; }
+.road-center .btn.wide { padding-block: 7px; }
+.road-here { font-weight: 700; font-size: 13px; line-height: 1.2; text-align: center; color: var(--frost); }
+.road-here .good { color: var(--good); }
+.road-have .chip { font-size: 12px; padding: 2px 8px; }
+.road-pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%; }
+.road-pick .btn { min-width: 0; padding-block: 5px; font-size: 16px; }
+.road-pick-label { color: var(--rime); }
+.road-token { position: absolute; width: 13%; height: 13%; transform: translate(-50%, -62%); pointer-events: none; filter: drop-shadow(0 3px 3px #000a); z-index: 2; }
+.road-token .ic { width: 100%; height: 100%; }
+.road-token.hop { animation: road-hop .15s ease-out; }
+@keyframes road-hop { 0% { transform: translate(-50%, -62%) scale(.92); } 50% { transform: translate(-50%, -88%) scale(1.06); } 100% { transform: translate(-50%, -62%); } }
+.road-die { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 2px; width: 46px; height: 46px; padding: 7px; flex: none; border-radius: 12px; background: linear-gradient(#fff8e8, #e6d2a6); box-shadow: inset 0 -3px 0 #0000002e, 0 4px 10px #0008; }
+.road-die i { border-radius: 50%; }
+.road-die i.on { background: #1f8a8a; box-shadow: inset 0 1px 2px #0007; }
+.road-die.rolling { animation: road-roll .45s linear infinite; }
+@keyframes road-roll { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(.86); } 100% { transform: rotate(360deg) scale(1); } }
+.road-die.idle { opacity: .6; }
+.road-die.lucky { background: linear-gradient(#ffeaa8, #d9a441); }
+.road-die.tiny { width: 26px; height: 26px; padding: 4px; gap: 1px; border-radius: 6px; box-shadow: 0 2px 4px #0006; }
+.road-log .row { align-items: flex-start; gap: 8px; }
+.road-log .small div { display: flex; gap: 4px; align-items: center; }
+.road-log .ic, .road-key .ic { width: 18px; height: 18px; flex: none; }
+.road-key .row { gap: 8px; align-items: center; }
+.road-wares { border-color: var(--brass); }
+.road-ware { flex: 1 1 30%; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { .road-token.hop, .road-die.rolling { animation: none; } }

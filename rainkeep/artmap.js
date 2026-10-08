@@ -84,8 +84,11 @@ window.RK_ART = {
     forgefest: 'art/events/forgefest.webp',
     spirerush: 'art/events/spirerush.webp',
     oasis: 'art/events/oasis.webp',
+    road: 'art/events/road.webp',
+    roadboard: 'art/events/road-board.webp',
   },
   offer: {
+    roadkit: 'art/events/road.webp',
     founder: 'art/offers/founder.webp',
     stipend: 'art/offers/stipend.webp',
     ledger: 'art/offers/ledger.webp',
@@ -179,6 +182,15 @@ window.RK_ART = {
     'i-pals': 'art/ui/pals.webp',
     'i-ruin': 'art/ui/ruin.webp',
     'i-sword': 'art/ui/sword.webp',
+    'i-die': 'art/ui/die.webp',
+    'i-luckydie': 'art/ui/luckydie.webp',
+    'i-road': 'art/ui/road.webp',
+    'i-market': 'art/ui/market.webp',
+    'i-bandit': 'art/ui/bandit.webp',
+    'i-mirage': 'art/ui/mirage.webp',
+    'i-well': 'art/ui/well.webp',
+    'i-dustdevil': 'art/ui/dustdevil.webp',
+    'i-shrine': 'art/ui/shrine.webp',
   },
   // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
   // that frames sheets

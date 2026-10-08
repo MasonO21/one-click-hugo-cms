@@ -103,6 +103,7 @@
       else if (it.kind === 'shards') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Choose hero</button>`;
       else if (it.kind === 'charm') btn = `<button class="btn small gold" data-act="useitem" data-arg="${k}">Call the Rain</button>`;
       else if (it.kind === 'pet') btn = '<button class="btn small" data-act="pals">Companions</button>';
+      else if (it.kind === 'road') btn = '<button class="btn small" data-act="road">Spice Road</button>';
       const desc = it.kind === 'crate' ? `${fmt(DATA.crateSize(it.res, S.lv.wyrm))} ${KH.NAME[it.res].toLowerCase()} each` : it.kind === 'speed' ? 'Use from any building, research or training timer' : it.desc;
       return `<div class="card bag-row">${icon(it.icon)}<div class="grow"><b>${esc(it.name)} <span class="muted">×${S.items[k]}</span></b><div class="muted small">${esc(desc)}</div></div>${btn}</div>`;
     }).join('');
@@ -379,6 +380,7 @@
   KH.on('gatherDone', (e) => { addPts('oasis', (TP.gather * e.amount) / 100); if (e.res === 'sunsteel') addPts('forgefest', e.amount / 2); });
   KH.on('raidRepelled', () => addPts('oasis', TP.raid));
   KH.on('campDestroyed', (e) => addPts('oasis', 40 * e.lvl));
+  KH.on('roadLap', () => addPts('oasis', DATA.road.warLap));
   ACT.evclaim = (i) => {
     i = Number(i);
     const def = EV.defs[curKey()];
