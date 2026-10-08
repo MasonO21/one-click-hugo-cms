@@ -9,6 +9,7 @@ import { createPlatformServices } from './platform';
 import { SaveManager } from './platform/save';
 import { AutoQuality } from './platform/autoQuality';
 import { guarded } from './core/guard';
+import { onBackButton } from './platform/lifecycle';
 
 async function boot() {
   const services = await createPlatformServices();
@@ -27,6 +28,8 @@ async function boot() {
   renderer.init(document.getElementById('game')!, (gl) => autoQuality.decide(gl));
   const ui = new UI(game, renderer);
   ui.init(document.getElementById('ui')!);
+  // Android back: close the top panel / leave build mode / clear the selection, else background the app
+  onBackButton(() => ui.back());
   const audio = new AudioManager(game);
   audio.init();
 

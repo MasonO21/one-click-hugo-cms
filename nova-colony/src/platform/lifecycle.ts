@@ -5,7 +5,7 @@
  * consumers should be idempotent.
  * OWNER: meta agent.
  */
-import { isNative } from './env';
+import { isNative, platformName } from './env';
 
 type Cb = () => void;
 
@@ -50,6 +50,40 @@ function subscribe(kind: 'background' | 'foreground', cb: Cb): Cb {
 /** The app is being hidden / paused / closed: flush anything important. Returns an unsubscribe. */
 export function onBackground(cb: Cb): Cb {
   return subscribe('background', cb);
+}
+
+/**
+ * Android back button (hardware key or back gesture). `handler` returns true when it used the press (closed a
+ * panel, left build mode, cleared a selection); otherwise the app goes to the background like a Home press, so
+ * the colony is saved and kept rather than the activity being finished mid-session. Registering a listener
+ * replaces Capacitor's default (WebView history back, then exit). No-op on web and iOS. Returns an unsubscribe.
+ */
+export function onBackButton(handler: () => boolean): Cb {
+  if (platformName() !== 'android') return () => {};
+  let off: Cb | null = null;
+  let disposed = false;
+  void import('@capacitor/app')
+    .then(async ({ App }) => {
+      const h = await App.addListener('backButton', () => {
+        let used = false;
+        try {
+          used = handler();
+        } catch (e) {
+          console.error('[back] handler failed', e);
+          used = true; // never leave the app because of a UI error
+        }
+        if (!used) void App.minimizeApp().catch(() => undefined);
+      });
+      if (disposed) void h.remove();
+      else off = () => void h.remove();
+    })
+    .catch(() => {
+      /* App plugin unavailable */
+    });
+  return () => {
+    disposed = true;
+    off?.();
+  };
 }
 
 /** The app is visible and active again. Returns an unsubscribe. */

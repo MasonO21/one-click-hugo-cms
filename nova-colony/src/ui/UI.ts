@@ -63,6 +63,7 @@ import { VictoryPanel } from './panels/VictoryPanel';
 import { MerchantPanel } from './panels/MerchantPanel';
 import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
+import { backAction } from './logic/back';
 
 /** Minimum gap between production floats of the same resource. */
 const PROD_FLOAT_GAP_MS = 1200;
@@ -723,13 +724,7 @@ export class UI {
         toggle('shop');
         return true;
       case 'Escape':
-        if (this.panels.anyOpen()) this.panels.close();
-        else if (this.build.active) this.build.cancel();
-        else {
-          this.game.view.selection.kind = null;
-          this.game.view.selection.id = null;
-          this.tip.hide();
-        }
+        this.back();
         return true;
       case 'Enter':
         if (this.build.active && this.build.mode === 'place') {
@@ -744,6 +739,31 @@ export class UI {
         }
         return false;
       default:
+        return false;
+    }
+  }
+
+  /**
+   * Back (Android back button / gesture, Escape): close the top panel, else leave build mode, else clear the
+   * selection. Returns false when there was nothing to undo, so the platform can send the app to the background.
+   */
+  back(): boolean {
+    const sel = this.game.view.selection;
+    const action = backAction({ panelOpen: this.panels.anyOpen(), buildActive: this.build.active, hasSelection: sel.kind !== null });
+    switch (action) {
+      case 'panel':
+        this.panels.close(); // a modal that can't be dismissed stays, but still swallows the press
+        return true;
+      case 'build':
+        this.build.cancel();
+        return true;
+      case 'selection':
+        sel.kind = null;
+        sel.id = null;
+        this.tip.hide();
+        return true;
+      default:
+        this.tip.hide();
         return false;
     }
   }
