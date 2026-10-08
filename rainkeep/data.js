@@ -1290,6 +1290,21 @@ const DATA = {
     warPts: 0.2, // Oasis Wars points per troop drilled
   },
 
+  // ---------- The Hall of Wardens ----------
+  // Fifty wardens of the Dunes ranked by power, you among them. The others follow a typical free player's power
+  // curve (from the balance bot), each at its own share of it and its own pace. The Hall pays out daily by rank.
+  hall: {
+    unlock: 4, size: 50, // Rainwyrm level; wardens in the Hall, you included
+    // [hours of keep time, power] for a typical free player (balance bot, free runs)
+    curve: [[0, 400], [30, 400000]], // calibrated below from the bot
+    tail: 0.004, // past the curve, power still grows this much an hour
+    spread: [0.3, 2.6], skew: 1.5, // the weakest and strongest warden as a share of the curve; skew packs them low
+    pace: [0.8, 1.25], // how fast each warden runs along the curve
+    daily: 86400, check: 30, // a payout every day of keep time; rank checked every 30 seconds
+    rewards: [[1, { starglass: 400, beacons: 2 }], [3, { starglass: 300, beacons: 1 }], [10, { starglass: 200 }], [25, { starglass: 120 }], [50, { starglass: 60 }]],
+    colors: ['#d0583a', '#6a7ae0', '#e0b04a', '#8a5ad0', '#4fa86a', '#c94a8a', '#4a9ad0', '#b8862a'],
+  },
+
   // ---------- Hero Awakening ----------
   // Past 5 stars a hero can be awakened up to A5 with its own shards: each step costs a number of duplicates'
   // worth for its rarity. Every awakening adds to the hero's attack, defense and health and 10 levels to its cap;
@@ -1410,6 +1425,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.19', items: [
+      { icon: 'i-trophy', name: 'Hall of Wardens', text: 'A ranking of fifty wardens of the Dunes by power, you among them. Climb it, and collect a payout by rank every day.', act: 'hall', open: (S) => S.lv.wyrm >= 4, needs: 'Rainwyrm Lv 4' },
       { icon: 'i-star', name: 'Hero Awakening', text: 'Fully starred heroes can now be awakened five times with their own shards, one more step at every second Rainwyrm level from Lv 12: more attack, defense and health, 10 more levels each time, and a stronger skill at A3 and A5.', act: 'tab:heroes', open: (S) => S.lv.wyrm >= 12, needs: 'Rainwyrm Lv 12' },
     ] },
     { v: '4.18', items: [
@@ -1680,6 +1696,9 @@ const DATA = {
     { id: 'drill100', text: 'Drill 100 troops to a new rank', stat: 'drilled', n: 100, reward: { starglass: 150 } },
     { id: 'drill1000', text: 'Drill 1,000 troops to a new rank', stat: 'drilled', n: 1000, reward: { beacons: 2 } },
     { id: 'champ300', text: 'Command 300 Champions', stat: 'champs', n: 300, reward: { shard_legendary: 1 } },
+    { id: 'hall25', text: 'Reach the top 25 of the Hall of Wardens', stat: 'hallClimb', n: 26, reward: { starglass: 100 } },
+    { id: 'hall10', text: 'Reach the top 10 of the Hall of Wardens', stat: 'hallClimb', n: 41, reward: { beacons: 2 } },
+    { id: 'hall1', text: 'Stand first in the Hall of Wardens', stat: 'hallClimb', n: 50, reward: { shard_legendary: 1 } },
     { id: 'awaken1', text: 'Awaken a hero', stat: 'awakened', n: 1, reward: { starglass: 150 } },
     { id: 'awaken5', text: 'Awaken a hero to A5', stat: 'awakenTop', n: 5, reward: { shard_legendary: 1 } },
     { id: 'awaken15', text: 'Awaken heroes 15 times', stat: 'awakened', n: 15, reward: { beacons: 3 } },

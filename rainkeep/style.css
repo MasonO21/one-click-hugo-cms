@@ -1157,3 +1157,18 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .aw-ic { width: 34px; height: 34px; flex: none; }
 .aw-pips i.star { border-color: #ffcf6e; }
 .aw-badge { display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 6px; background: linear-gradient(#ffe08a, #c9902a); color: #2a1608; font-size: 10px; font-weight: 800; line-height: 15px; vertical-align: 1px; }
+
+/* Hall of Wardens (hall.js) */
+.hl-ic { width: 40px; height: 40px; flex: none; }
+.hl-me { border-color: #3fd0c0; }
+.hl-brs { gap: 4px; }
+.hl-br { padding: 4px 8px; border-radius: 8px; gap: 8px; }
+.hl-br b { min-width: 46px; }
+.hl-br.on { background: #3fd0c022; box-shadow: inset 0 0 0 1px #3fd0c088; }
+.hl-list { gap: 3px; }
+.hl-row { gap: 8px; padding: 6px 10px; border-radius: 9px; background: #ffffff08; font-size: 13.5px; }
+.hl-row.you { background: linear-gradient(90deg, #3fd0c033, #3fd0c011); box-shadow: inset 0 0 0 1px #3fd0c0aa; }
+.hl-rank { width: 22px; color: var(--gold); text-align: right; }
+.hl-crest { width: 12px; height: 16px; border-radius: 3px 3px 7px 7px; flex: none; }
+.hl-pw { display: inline-flex; align-items: center; gap: 3px; }
+.hl-pw .ic { width: 14px; height: 14px; }
