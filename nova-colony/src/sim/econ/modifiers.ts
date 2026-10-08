@@ -43,12 +43,15 @@ export class ModifierTable {
     this.boostMax.clear();
     const { state, data } = game;
 
-    // research effects
+    // research effects ('offlineHours' adds are hours, shown as "Offline hours +2": a share of the base, like VIP's)
+    const baseHours = data.balance.offlineHours;
     for (const id of state.research.completed) {
       const effects = data.researchDef(id)?.effects;
       if (!effects) continue;
       for (const m of effects) {
-        if (m.add) this.add(m.stat, m.add);
+        if (m.add && m.stat === 'offlineHours') {
+          if (baseHours > 0) this.add(m.stat, m.add / baseHours);
+        } else if (m.add) this.add(m.stat, m.add);
         if (m.mult !== undefined && m.mult !== 1) this.mult(m.stat, m.mult);
       }
     }

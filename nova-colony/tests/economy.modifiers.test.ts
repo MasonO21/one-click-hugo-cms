@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addBuilding, makeGame, stepEconomy } from './economy.helpers';
+import { Game } from '../src/core/Game';
 
 describe('economy: modifiers', () => {
   it('combines research adds, VIP and boosts as (1 + Σadd) × Πmult', () => {
@@ -71,6 +72,30 @@ describe('economy: modifiers', () => {
     eco.markDirty();
     expect(eco.modifier('offlineHours')).toBeCloseTo(1.5); // 8h + 4h
     expect(eco.modifier('turretDamage')).toBe(1);
+  });
+
+  it('research "Offline hours +N" adds N hours to the offline cap (not N × the base)', () => {
+    const now = Date.UTC(2026, 9, 8, 12);
+    const game = new Game({ seed: 7, clock: () => now });
+    game.start();
+    const eco = game.sys.economy;
+    const base = game.data.balance.offlineHours;
+    const hours = (id: string) => game.data.researchDef(id)!.effects!.filter((e) => e.stat === 'offlineHours').reduce((a, e) => a + (e.add ?? 0), 0);
+    const ids = ['automated_logistics', 'quantum_storage_tech', 'colony_mastery'];
+    expect(ids.map(hours).every((h) => h > 0)).toBe(true);
+    game.state.research.completed.push(ids[0]);
+    eco.markDirty();
+    expect(base * eco.modifier('offlineHours')).toBeCloseTo(base + hours(ids[0]));
+    game.state.research.completed.push(ids[1], ids[2]);
+    eco.markDirty();
+    const total = base + ids.reduce((a, id) => a + hours(id), 0);
+    expect(base * eco.modifier('offlineHours')).toBeCloseTo(total);
+    // and the Welcome Back credit stops there
+    expect(eco.computeOffline(100 * 3600).seconds).toBeCloseTo(total * 3600 * game.data.balance.offlineEfficiency);
+    // the Colony Pass still adds its hours on top
+    game.state.liveops.vip.until = now + 86_400_000;
+    eco.markDirty();
+    expect(base * eco.modifier('offlineHours')).toBeCloseTo(total + game.data.vip.offlineHoursBonus);
   });
 
   it('research completion marks derived data dirty', () => {
