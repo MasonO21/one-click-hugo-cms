@@ -15,7 +15,7 @@ import { BUILD_CATEGORIES, NODE_H, NODE_W, layoutTree } from '../src/ui/logic/ca
 import { claimableMissions, claimableSeason, computeBadges, idleWithJobs } from '../src/ui/logic/badges';
 import { happinessFace, portraitSvg, stars } from '../src/ui/logic/colonist';
 import type { MissionDef, ResearchDef } from '../src/data/schema';
-import { sideOrder } from '../src/ui/logic/missionOrder';
+import { SIDE_CAP, sideOrder, sideVisible } from '../src/ui/logic/missionOrder';
 import { buildCardOrder, type BuildOrderDef } from '../src/ui/logic/buildOrder';
 import { createDataRegistry } from '../src/data';
 
@@ -344,6 +344,49 @@ describe('ui.logic — side mission order', () => {
     const list = [m('a'), m('b'), m('c', 3), m('d', 5), m('e', 3)];
     expect(sideOrder(list, new Set(['b'])).map((x) => x.id)).toEqual(['b', 'd', 'c', 'e', 'a']);
     expect(sideOrder(list, new Set()).map((x) => x.id)).toEqual(['d', 'c', 'e', 'a', 'b']);
+  });
+  it('with progress: claimable first, then closest to done, then the newest tier, then board order', () => {
+    const list = [m('a'), m('b'), m('c', 3), m('d', 5), m('e', 3), m('f')];
+    const fr: Record<string, number> = { a: 0.5, b: 1, c: 0, d: 0, e: 0.5, f: 0.9 };
+    const order = sideOrder(list, new Set(['b']), (x) => fr[x.id]);
+    expect(order.map((x) => x.id)).toEqual(['b', 'f', 'e', 'a', 'd', 'c']);
+    // a broken progress value reads as "not started" instead of scrambling the board
+    expect(sideOrder([m('a'), m('b')], new Set(), (x) => (x.id === 'a' ? NaN : 0.2)).map((x) => x.id)).toEqual(['b', 'a']);
+  });
+});
+
+describe('ui.logic — collapsed side list', () => {
+  const m = (id: string) => ({ id }) as unknown as MissionDef;
+  const board = (n: number) => Array.from({ length: n }, (_, i) => m('s' + i));
+  const ids = (l: readonly MissionDef[]) => l.map((x) => x.id);
+
+  it('shows at most SIDE_CAP cards, the top of the ordered list, and counts the rest', () => {
+    expect(SIDE_CAP).toBe(5);
+    const r = sideVisible(board(16), new Set(), false);
+    expect(ids(r.shown)).toEqual(['s0', 's1', 's2', 's3', 's4']);
+    expect(r.hidden).toBe(11);
+  });
+
+  it('every claimable card shows; the cap grows to fit them instead of hiding one', () => {
+    const list = sideOrder(board(16), new Set(['s9', 's12']));
+    const two = sideVisible(list, new Set(['s9', 's12']), false);
+    expect(ids(two.shown)).toEqual(['s9', 's12', 's0', 's1', 's2']);
+    expect(two.hidden).toBe(11);
+    const many = new Set(['s1', 's3', 's5', 's7', 's9', 's11', 's13']);
+    const seven = sideVisible(sideOrder(board(16), many), many, false);
+    expect(ids(seven.shown)).toEqual(['s1', 's3', 's5', 's7', 's9', 's11', 's13']);
+    expect(seven.hidden).toBe(9);
+    // claimable cards show even when the list hands them over out of order
+    expect(ids(sideVisible(board(8), new Set(['s7']), false).shown)).toEqual(['s0', 's1', 's2', 's3', 's7']);
+  });
+
+  it('expanded shows everything in the same order; a short board has nothing to hide', () => {
+    const list = board(9);
+    const r = sideVisible(list, new Set(), true);
+    expect(ids(r.shown)).toEqual(ids(list));
+    expect(r.hidden).toBe(4);
+    expect(sideVisible(board(5), new Set(), false)).toEqual({ shown: board(5), hidden: 0 });
+    expect(sideVisible([], new Set(), false)).toEqual({ shown: [], hidden: 0 });
   });
 });
 
