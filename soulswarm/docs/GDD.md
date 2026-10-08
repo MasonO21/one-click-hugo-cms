@@ -708,7 +708,7 @@ Every results screen except the tutorial's has a **Share** button beside Double 
 - **The hook:** peak legion, huge, in the legion's colour: "214 SOULS IN MY LEGION".
 - **The boss:** the slain boss's portrait framed in its colour with "SLEW PYREXA, the Cinder Matron"; the Boss Rush shows each boss beaten, the Abyss each boss slain.
 - **Then:** the hero's name and title, time / kills / raised / level, the build's painted weapon icons (evolved ones shown evolved) and "CAN YOUR LEGION BEAT MINE?".
-- **The sheet:** the card with **Share** (the Web Share sheet with the image, where the device offers it), **Save image** (a download) and a long-press / right-click hint for the rest. The results stay open behind it. *(Planned: a store link and QR code on the card once the store pages exist; native share through the Capacitor Share plugin where the web sheet is missing, as in Android's WebView.)*
+- **The sheet:** the card with **Share** (the Web Share sheet with the image, where the device offers it), **Save image** (a download; inside the claude.ai artifact viewer, which blocks plain downloads, the viewer's own save prompt through its `downloads` capability) and a long-press / right-click hint for the rest. The results stay open behind it. *(Planned: a store link and QR code on the card once the store pages exist; native share through the Capacitor Share plugin where the web sheet is missing, as in Android's WebView.)*
 
 ---
 

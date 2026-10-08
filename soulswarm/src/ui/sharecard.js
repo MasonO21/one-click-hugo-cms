@@ -1,8 +1,9 @@
 // The share card: a 1080×1350 image of a finished run, made on a 2D canvas from the painted art. The hero's splash (or
 // skin) over the chapter's painting, the headline (VICTORY, COURT CLEARED, ABYSS DEPTH n…), the hook (peak legion), the
 // boss slain, time / kills / raised / level, the build's painted icons and the call to play. The results screen's Share
-// button opens it: Web Share with the image where the device offers it, otherwise Save (a download) or a long-press on
-// the image. Nothing leaves the device unless the player shares it.
+// button opens it: Web Share with the image where the device offers it, otherwise Save (a download; inside a claude.ai
+// artifact viewer, which blocks plain downloads, the viewer's own save prompt) or a long-press on the image. Nothing
+// leaves the device unless the player shares or saves it.
 import { h, $, modal, fmt, fmtTime, toast } from './dom.js';
 import { icon } from './icons.js';
 import { HEROES, BOSSES, BOSS_ORDER, CHAPTERS, SKILLS, EVOLUTIONS, DIFFICULTY } from '../game/data.js';
@@ -138,14 +139,16 @@ export async function renderShareCard(app, run, result) {
 
 /** The share sheet: the card, then Share (Web Share with the image), Save (a download) or a long-press on the image. */
 export async function openShare(app, run, result) {
-  let url = '', file = null;
+  let url = '', file = null, blob = null;
+  // a claude.ai artifact viewer offers saves through its downloads capability (null anywhere else, never blocking)
+  const dlP = window.claude && typeof window.claude.use === 'function' ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
   const body = h(`<div class="share"><div class="share-frame"><div class="share-wait">${icon('star')} Painting your card…</div></div>
     <small class="share-hint t-dim">Long-press or right-click the image to save it.</small></div>`);
   const actions = [];
   const m = modal({ title: 'Share your run', body, cls: 'mm-share', actions, onClose: () => { if (url) URL.revokeObjectURL(url); } });
   try {
     const canvas = await renderShareCard(app, run, result);
-    const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+    blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
     if (!blob) throw new Error('no image');
     url = URL.createObjectURL(blob);
     file = new File([blob], 'soulswarm-run.png', { type: 'image/png' });
@@ -156,6 +159,17 @@ export async function openShare(app, run, result) {
     if (canShare) row.appendChild(h(`<button class="btn btn-primary" data-act="share">${icon('share')} Share</button>`));
     row.appendChild(h(`<a class="btn ${canShare ? 'btn-ghost' : 'btn-primary'}" data-act="save" href="${url}" download="soulswarm-run.png">${icon('down')} Save image</a>`));
     body.appendChild(row);
+    dlP.then((dl) => { // the viewer's save prompt replaces the plain download link it would block
+      const a = $(row, '[data-act="save"]');
+      if (!dl || !a) return;
+      const b = h(`<button class="${a.className}" data-act="save">${icon('down')} Save image</button>`);
+      a.replaceWith(b);
+      b.addEventListener('click', async () => {
+        app.audio.sfx('click');
+        try { await dl.save({ filename: 'soulswarm-run.png', data: blob }); }
+        catch (e) { if (e && e.code !== 'declined') toast(e.code === 'rate_limited' ? 'One moment, then try again.' : 'Saving is not available here. Long-press the image instead.'); }
+      });
+    });
     $(row, '[data-act="share"]')?.addEventListener('click', async () => {
       app.audio.sfx('click');
       try { await navigator.share({ files: [file], title: 'SOULSWARM', text: `${result.bestLegion} souls in my legion. Can yours beat it? #SOULSWARM` }); }
