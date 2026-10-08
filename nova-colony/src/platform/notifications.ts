@@ -6,7 +6,8 @@
  *  - ColonyNotifier         : wired to a running game (`installNotifications`, called from installPlatformHooks).
  *      background -> cancel what was pending and schedule a fresh plan (notifyPlan.ts), if the player opted in
  *      foreground -> cancel everything pending and clear the notification shade: the player is here
- *      tap        -> opens the game (the plugin does that); the daily-gift reminder also opens the gift panel
+ *      tap        -> opens the game (the plugin does that); the daily-gift reminder also opens the gift panel, an
+ *                    expedition reminder the Expeditions panel
  *
  * Permission UX (never at launch): the game asks with its own card at a moment the value is obvious (ui/NotifyPrompt:
  * after the first tier-up celebration or the first Welcome Back) and only a "Yes" shows the OS prompt. The card is
@@ -43,7 +44,7 @@ export const ANDROID_ICON_COLOR = '#ff8a3d';
 export const ANDROID_CHANNEL = {
   id: 'colony',
   name: 'Colony updates',
-  description: 'Full storehouses, a finished offline shift and your daily gift',
+  description: 'Full storehouses, a finished offline shift, squads back from expeditions and your daily gift',
   importance: 3 as const,
   visibility: 1 as const,
   vibration: false,
@@ -63,7 +64,7 @@ export function readTap(extra: unknown): NotifyTap {
   const e = (extra && typeof extra === 'object' ? extra : {}) as Record<string, unknown>;
   const tap: NotifyTap = {};
   if (typeof e.kind === 'string' && (KINDS as string[]).includes(e.kind)) tap.kind = e.kind as NotifyKind;
-  if (e.panel === 'daily') tap.panel = 'daily';
+  if (e.panel === 'daily' || e.panel === 'expeditions') tap.panel = e.panel;
   return tap;
 }
 
@@ -388,6 +389,7 @@ export class ColonyNotifier {
     try {
       this.game.services.analytics.track('notify_opened', { kind: t.kind ?? 'unknown' });
       if (t.panel === 'daily') this.game.bus.emit('ui:open', { panel: 'daily', arg: { auto: true } });
+      else if (t.panel === 'expeditions') this.game.bus.emit('ui:open', { panel: 'expeditions' });
     } catch (e) {
       console.warn('[notify] tap failed', e);
     }

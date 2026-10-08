@@ -71,8 +71,8 @@ export type NotifyPermission = 'granted' | 'denied' | 'prompt' | 'unavailable';
 /** What a tapped notification asks the game to do. */
 export interface NotifyTap {
   kind?: import('./notifyPlan').NotifyKind;
-  /** Panel to open ('daily' for the gift reminder). */
-  panel?: 'daily';
+  /** Panel to open ('daily' for the gift reminder, 'expeditions' for a squad that is back). */
+  panel?: import('./notifyPlan').NotifyPanel;
 }
 
 /**

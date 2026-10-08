@@ -16,6 +16,9 @@
  *               Only when something is still being made at that point.
  *  - daily    — the daily gift resets at local midnight: only when today's gift is already claimed (a gift waiting
  *               right now needs no reminder) and gifts are offered (not during the guided first session).
+ *  - expedition — the first squad still out walks back in (sim/expeditions.ts timers are absolute, so it is exact).
+ *               Squads back within an hour after it are told in the same notification, sent once they all are; a
+ *               haul already waiting when the player leaves needs no reminder.
  *  - miss     — one "we miss you" a day later. Nothing after that: no nagging chains.
  *
  * Cozy rules: nothing within 30 minutes of leaving, nothing between 22:00 and 08:00 local time (moved to 08:00 with
@@ -27,10 +30,10 @@
 import type { Game } from '../core/Game';
 import { simulateOffline, type OfflineModel } from '../sim/econ/offline';
 
-export type NotifyKind = 'storage' | 'offline' | 'daily' | 'miss';
+export type NotifyKind = 'storage' | 'offline' | 'daily' | 'miss' | 'expedition';
 
 /** Stable OS notification ids (Android needs 32-bit ints). A merged notification keeps its lead kind's id. */
-export const NOTIFY_IDS: Readonly<Record<NotifyKind, number>> = { storage: 41_001, offline: 41_002, daily: 41_003, miss: 41_004 };
+export const NOTIFY_IDS: Readonly<Record<NotifyKind, number>> = { storage: 41_001, offline: 41_002, daily: 41_003, miss: 41_004, expedition: 41_005 };
 export const ALL_NOTIFY_IDS: readonly number[] = Object.values(NOTIFY_IDS);
 
 /** Nothing fires sooner than this after leaving (an app switch is not an absence). */
@@ -63,8 +66,11 @@ export interface PlannedNotification {
   title: string;
   body: string;
   /** Panel to open when the notification is tapped. */
-  panel?: 'daily';
+  panel?: NotifyPanel;
 }
+
+/** Panels a notification can open. */
+export type NotifyPanel = 'daily' | 'expeditions';
 
 export interface NotifySnapshot {
   /** Epoch ms: the moment the player leaves. */
@@ -94,6 +100,8 @@ export interface NotifySnapshot {
     /** The day (1..7) the next claim pays out. */
     nextDay: number;
   };
+  /** Squads still out: when each one is back (epoch ms) and where from. */
+  expeditions?: { at: number; name: string }[];
 }
 
 /** Minutes east of UTC at an instant (DST aware). */
@@ -243,15 +251,31 @@ function resourceList(ids: string[], names: Readonly<Record<string, string>>): s
 }
 
 const DAILY_TOO = 'Your daily gift is ready too. 🎁';
+const SQUAD_TOO = 'Your expedition squad is home too. 🧭';
+
+/** The squads back by the expedition reminder's time (at least the first one), earliest first. */
+function squadsBack(snap: NotifySnapshot, by: number): { at: number; name: string }[] {
+  const list = [...(snap.expeditions ?? [])].filter((e) => Number.isFinite(e.at) && e.at > snap.now).sort((a, b) => a.at - b.at);
+  if (!list.length) return [];
+  return list.filter((e, i) => i === 0 || e.at <= by);
+}
 
 interface Copy {
   title: string;
   body: string;
 }
 
-function copyFor(kind: NotifyKind, snap: NotifySnapshot, storage: StorageForecast): Copy {
+function copyFor(kind: NotifyKind, snap: NotifySnapshot, storage: StorageForecast, at = snap.now): Copy {
   const colony = colonyLabel(snap.colonyName);
   switch (kind) {
+    case 'expedition': {
+      const back = squadsBack(snap, at);
+      const body =
+        back.length > 1
+          ? `${back.length} squads are back with their hauls. Come and collect them!`
+          : `Your squad is back from ${back[0]?.name ?? 'their expedition'} with a haul. Come and collect it!`;
+      return { title: 'Your explorers are home! 🧭', body };
+    }
     case 'storage': {
       const what = resourceList(storage.resources, snap.names);
       return { title: 'Your storehouses are bursting! 📦', body: `Come spend your ${what}. There's no room left for more!` };
@@ -274,7 +298,7 @@ function copyFor(kind: NotifyKind, snap: NotifySnapshot, storage: StorageForecas
 // ---------------------------------------------------------------------------------------------- plan
 
 /** Which reminder leads a merged notification (and survives the cap): lower = more important. */
-const PRIORITY: Readonly<Record<NotifyKind, number>> = { offline: 0, storage: 1, daily: 2, miss: 3 };
+const PRIORITY: Readonly<Record<NotifyKind, number>> = { offline: 0, expedition: 1, storage: 2, daily: 3, miss: 4 };
 
 interface Timed {
   kind: NotifyKind;
@@ -305,6 +329,12 @@ export function planNotifications(snap: NotifySnapshot, opts: PlanOptions = {}):
   }
   if (capMs >= MIN_LEAD_MS && storage.producingAtCap) raw.push({ kind: 'offline', at: now + capMs });
   if (!snap.daily.claimable && snap.daily.offered) raw.push({ kind: 'daily', at: Math.max(nextLocalMidnight(now, tz), now + MIN_LEAD_MS) });
+  // the first squad still out, told together with any squad back within the hour after it (once all of them are)
+  const firstSquad = squadsBack(snap, now)[0];
+  if (firstSquad) {
+    const group = squadsBack(snap, firstSquad.at + MERGE_WINDOW_MS);
+    raw.push({ kind: 'expedition', at: Math.max(group[group.length - 1].at, now + MIN_LEAD_MS) });
+  }
   raw.push({ kind: 'miss', at: now + MISS_YOU_AFTER_MS });
 
   // 2. quiet hours -> the next morning
@@ -332,14 +362,18 @@ export function planNotifications(snap: NotifySnapshot, opts: PlanOptions = {}):
     .map((slot) => {
       const kind = leadOf(slot);
       const withDaily = slot.some((m) => m.kind === 'daily');
-      const voiced = slot.filter((m) => m.kind === kind || (m.kind === 'daily' && kind !== 'miss'));
+      const withSquad = slot.some((m) => m.kind === 'expedition');
+      const voiced = slot.filter((m) => m.kind === kind || (m.kind === 'daily' && kind !== 'miss') || (m.kind === 'expedition' && kind !== 'miss'));
       const last = voiced.reduce((a, b) => (b.at > a.at ? b : a));
-      const c = copyFor(kind, snap, storage);
+      const c = copyFor(kind, snap, storage, last.at);
       let body = c.body;
+      if (withSquad && kind !== 'expedition' && kind !== 'miss') body = `${body} ${SQUAD_TOO}`;
       if (withDaily && kind !== 'daily' && kind !== 'miss') body = `${body} ${DAILY_TOO}`;
       if (last.morning) body = `Good morning! ${body}`;
       const n: PlannedNotification = { id: NOTIFY_IDS[kind], kind, kinds: slot.map((m) => m.kind), at: last.at, title: c.title, body };
-      if (withDaily || (kind === 'miss' && snap.daily.offered)) n.panel = 'daily';
+      // a waiting haul is the most useful place to land; else the gift panel
+      if (withSquad && kind !== 'miss') n.panel = 'expeditions';
+      else if (withDaily || (kind === 'miss' && snap.daily.offered)) n.panel = 'daily';
       return n;
     })
     .sort((a, b) => a.at - b.at);
@@ -373,5 +407,6 @@ export function notifySnapshot(game: Game): NotifySnapshot {
       offered: lo.offersUnlocked() && game.data.dailyRewards.length > 0,
       nextDay: lo.dailyDay(),
     },
+    expeditions: game.sys.expeditions.out().map((e) => ({ at: e.endsAt, name: game.sys.expeditions.nameOf(e) })),
   };
 }

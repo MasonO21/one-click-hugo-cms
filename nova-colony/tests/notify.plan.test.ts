@@ -313,7 +313,7 @@ describe('notify plan: quiet hours, merging, cap, ids', () => {
     const a = planNotifications(s, { utcOffset: UTC });
     const b = planNotifications({ ...s, now: s.now + 7 * MIN }, { utcOffset: UTC });
     expect(a.map((n) => n.id)).toEqual(b.map((n) => n.id));
-    expect(new Set(ALL_NOTIFY_IDS).size).toBe(4);
+    expect(new Set(ALL_NOTIFY_IDS).size).toBe(Object.keys(NOTIFY_IDS).length);
     for (const n of a) {
       expect(ALL_NOTIFY_IDS).toContain(n.id);
       expect(n.id).toBe(NOTIFY_IDS[n.kind]);
