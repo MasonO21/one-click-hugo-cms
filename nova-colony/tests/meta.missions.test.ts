@@ -389,11 +389,15 @@ describe('missions: persistence & repair', () => {
       st.progress[id] = game.data.mission(id)!.count;
       expect(game.sys.missions.claim(id)).toBe(true);
     };
+    const toasts: string[] = [];
+    game.bus.on('ui:toast', (e) => toasts.push(e.text));
     expect(st.active).not.toContain('s_grid_solar');
     tierUp(2);
     expect(st.active).not.toContain('s_grid_solar');
+    expect(toasts.filter((t) => t.includes('side mission'))).toEqual([]);
     tierUp(3);
     expect(st.active).toContain('s_grid_solar');
+    expect(toasts).toContain('6 new side missions are ready');
     expect(st.active).toContain('s_fort_mg');
     expect(st.active).not.toContain('s_grid_battery');
     claimNow('s_grid_solar');

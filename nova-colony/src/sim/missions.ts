@@ -78,8 +78,9 @@ export class MissionSystem extends System {
     bus.on('player:equipped', (e) => this.bump('equip', [e.item], 1));
     bus.on('spin:result', () => this.bump('spin', [], 1));
     bus.on('colony:tierUp', () => {
-      this.offerSide();
+      const opened = this.offerSide();
       this.recheckLive();
+      if (opened > 0) bus.emit('ui:toast', { text: opened === 1 ? 'A new side mission is ready' : `${opened} new side missions are ready`, kind: 'info', icon: '🧩' });
     });
   }
 
@@ -256,12 +257,14 @@ export class MissionSystem extends System {
     this.offerSide();
   }
 
-  /** Activate every side mission that is reachable now and not yet done (fresh game, load, tier-up, side claim). */
-  private offerSide(): void {
+  /** Activate every side mission that is reachable now and not yet done (fresh game, load, tier-up, side claim); returns how many opened. */
+  private offerSide(): number {
     const m = this.game.state.missions;
+    let n = 0;
     for (const d of this.game.data.missions) {
-      if (d.chain === 'side' && !m.completed.includes(d.id) && !this.outgrown(d) && this.sideUnlocked(d.id)) this.activate(d.id);
+      if (d.chain === 'side' && !m.completed.includes(d.id) && !this.outgrown(d) && this.sideUnlocked(d.id) && this.activate(d.id)) n++;
     }
+    return n;
   }
 
   /**
