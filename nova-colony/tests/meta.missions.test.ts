@@ -13,7 +13,7 @@ describe('missions: setup', () => {
     const side = game.data.missions.filter((d) => d.chain === 'side');
     const followUps = new Set(side.flatMap((d) => d.next ?? []));
     for (const d of side) {
-      if (followUps.has(d.id)) expect(game.state.missions.active).not.toContain(d.id);
+      if (followUps.has(d.id) || d.minTier) expect(game.state.missions.active).not.toContain(d.id);
       else expect(game.state.missions.active).toContain(d.id);
     }
     expect(m.activeByChain('side').length).toBeGreaterThan(2);
@@ -375,6 +375,46 @@ describe('missions: persistence & repair', () => {
     const g3 = makeGame({ state, at: g2.clock.now });
     expect(g3.game.state.missions.active).not.toContain(follow);
     expect(g3.game.state.missions.active).toContain(head.id);
+  });
+
+  it('late side chains wait for their tier: heads open on tier-up, follow-ups wait for their own tier', () => {
+    const g = makeGame();
+    const { game } = g;
+    const st = game.state.missions;
+    const tierUp = (t: number) => {
+      game.state.colony.tier = t;
+      game.bus.emit('colony:tierUp', { tier: t });
+    };
+    const claimNow = (id: string) => {
+      st.progress[id] = game.data.mission(id)!.count;
+      expect(game.sys.missions.claim(id)).toBe(true);
+    };
+    expect(st.active).not.toContain('s_grid_solar');
+    tierUp(2);
+    expect(st.active).not.toContain('s_grid_solar');
+    tierUp(3);
+    expect(st.active).toContain('s_grid_solar');
+    expect(st.active).toContain('s_fort_mg');
+    expect(st.active).not.toContain('s_grid_battery');
+    claimNow('s_grid_solar');
+    expect(st.active).toContain('s_grid_battery'); // same tier: follows at once
+    claimNow('s_grid_battery');
+    expect(st.active).not.toContain('s_grid_geo'); // Alloy-tier step waits
+    tierUp(4);
+    expect(st.active).toContain('s_grid_geo');
+
+    // a save made at tier 4 picks the waiting step up on load, and never re-offers claimed ones
+    const g2 = makeGame({ state: JSON.parse(JSON.stringify(game.state)), at: g.clock.now });
+    expect(g2.game.state.missions.active).toContain('s_grid_geo');
+    expect(g2.game.state.missions.active).not.toContain('s_grid_solar');
+  });
+
+  it('a gated mission gets credit for what the colony already has when it opens', () => {
+    const { game } = makeGame();
+    for (let i = 0; i < 6; i++) game.state.buildings.list.push(fakeBuilding('solar_panel', 900 + i));
+    game.state.colony.tier = 3;
+    game.bus.emit('colony:tierUp', { tier: 3 });
+    expect(game.sys.missions.progress('s_grid_solar').done).toBe(true);
   });
 
   it('system-made progress can be muted (free wheel is not a player build)', () => {

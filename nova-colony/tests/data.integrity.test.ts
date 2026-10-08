@@ -306,9 +306,36 @@ describe('data.integrity — missions', () => {
       expect(data.mission(n)!.chain, `${m.id}.next must stay in its chain`).toBe(m.chain);
     }
     const heads = side.filter((m) => !referenced.has(m.id));
-    expect(heads.length).toBeGreaterThanOrEqual(5);
-    expect(heads.length).toBeLessThanOrEqual(10);
+    // day-one heads stay a handful; tier-gated heads arrive a few at a time as the colony grows
+    const dayOne = heads.filter((m) => !m.minTier);
+    expect(dayOne.length).toBeGreaterThanOrEqual(5);
+    expect(dayOne.length).toBeLessThanOrEqual(10);
+    for (let t = 1; t <= 6; t++) expect(heads.filter((m) => m.minTier === t).length, `heads opening at tier ${t}`).toBeLessThanOrEqual(6);
     for (const m of daily) expect(referenced.has(m.id)).toBe(false);
+  });
+
+  it('tier-gated side missions are doable at their tier and never gate below their parent', () => {
+    const gated = data.missions.filter((m) => m.minTier != null);
+    expect(gated.length).toBeGreaterThanOrEqual(20);
+    // every late tier gets fresh side goals
+    for (let t = 3; t <= 6; t++) expect(gated.filter((m) => m.minTier === t).length, `side goals opening at tier ${t}`).toBeGreaterThanOrEqual(4);
+    for (const m of gated) {
+      const tier = m.minTier!;
+      expect(m.chain, `${m.id}: minTier is for side missions`).toBe('side');
+      expect(Number.isInteger(tier) && tier >= 1 && tier <= 6, `${m.id} minTier ${tier}`).toBe(true);
+      for (const n of m.next ?? []) expect(data.mission(n)!.minTier ?? 0, `${m.id}.next ${n} gates below its parent`).toBeGreaterThanOrEqual(tier);
+      if (['build', 'have_building'].includes(m.type) && buildingIds.has(m.target)) {
+        expect(data.building(m.target)!.unlockTier, `${m.id}: ${m.target} unlocks after tier ${tier}`).toBeLessThanOrEqual(tier);
+      }
+      if (m.type === 'craft' && recipeIds.has(m.target)) {
+        expect(data.recipes.find((r) => r.id === m.target)!.unlockTier, `${m.id}: ${m.target} unlocks after tier ${tier}`).toBeLessThanOrEqual(tier);
+      }
+      if (m.type === 'kill' && m.target !== '*') {
+        const inv = data.invasion(tier);
+        const shows = inv.boss?.alien === m.target || inv.groups.some((g) => g.alien === m.target);
+        expect(shows, `${m.id}: ${m.target} does not attack at tier ${tier}`).toBe(true);
+      }
+    }
   });
 
   it('every mission target, hint and guide points at something real', () => {

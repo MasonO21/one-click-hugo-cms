@@ -624,6 +624,8 @@ export interface MissionDef {
   count: number;
   reward: Reward;
   chain: 'main' | 'side' | 'daily';
+  /** Side missions only: not offered before the colony reaches this tier (late-game chains). */
+  minTier?: number;
   /** Missions that become active when this one is claimed. */
   next?: string[];
   /** Tutorial guidance shown while active. */

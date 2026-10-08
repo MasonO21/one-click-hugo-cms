@@ -77,7 +77,10 @@ export class MissionSystem extends System {
     bus.on('world:poiLooted', (e) => this.bump('loot', [e.poi], 1));
     bus.on('player:equipped', (e) => this.bump('equip', [e.item], 1));
     bus.on('spin:result', () => this.bump('spin', [], 1));
-    bus.on('colony:tierUp', () => this.recheckLive());
+    bus.on('colony:tierUp', () => {
+      this.offerSide();
+      this.recheckLive();
+    });
   }
 
   override onLoad(fresh: boolean): void {
@@ -180,7 +183,7 @@ export class MissionSystem extends System {
       console.error('[missions] reward grant failed', id, e);
     }
     this.game.bus.emit('mission:claimed', { id });
-    for (const next of def.next ?? []) this.activate(next);
+    for (const next of def.next ?? []) if (def.chain !== 'side' || this.sideUnlocked(next)) this.activate(next);
     this.rebuildIndex();
     return true;
   }
@@ -249,16 +252,26 @@ export class MissionSystem extends System {
   /** Fresh colony: first main mission + the head of every side chain (the rest unlock as each is claimed). */
   private seed(): void {
     this.activate(this.game.data.firstMission);
-    for (const d of this.game.data.missions) if (d.chain === 'side' && this.sideUnlocked(d.id)) this.activate(d.id);
+    this.offerSide();
+  }
+
+  /** Activate every side mission that is reachable now and not yet done (fresh game, load, tier-up). */
+  private offerSide(): void {
+    const m = this.game.state.missions;
+    for (const d of this.game.data.missions) {
+      if (d.chain === 'side' && !m.completed.includes(d.id) && this.sideUnlocked(d.id)) this.activate(d.id);
+    }
   }
 
   /**
    * A side mission is offered once the side mission leading to it (via `next`) has been completed; chain
    * heads always are. Keeps the Side tab to a handful of reachable goals instead of every chain at once
-   * (a new player was shown "Defeat 1,500 aliens" and "Build an Automated Farm" in minute one).
+   * (a new player was shown "Defeat 1,500 aliens" and "Build an Automated Farm" in minute one). Late-game
+   * chains also wait for their `minTier`, so Steel-to-Titanium goals arrive with the tier that makes them doable.
    */
   private sideUnlocked(id: string): boolean {
     const m = this.game.state.missions;
+    if (this.game.state.colony.tier < (this.game.data.mission(id)?.minTier ?? 0)) return false;
     let hasParent = false;
     for (const d of this.game.data.missions) {
       if (d.chain !== 'side' || !d.next?.includes(id)) continue;
@@ -277,7 +290,7 @@ export class MissionSystem extends System {
     // older saves had every side mission active: keep only the reachable ones (progress is recomputed when a
     // mission becomes active again, from the lifetime counters / current colony)
     m.active = m.active.filter((id) => data.mission(id)?.chain !== 'side' || this.sideUnlocked(id));
-    for (const d of data.missions) if (d.chain === 'side' && !m.completed.includes(d.id) && this.sideUnlocked(d.id)) this.activate(d.id);
+    this.offerSide();
     const hasMain = m.active.some((id) => this.isMain(id));
     if (hasMain) return;
     let started = false;
