@@ -614,7 +614,7 @@
         o.add(torch);
       }
       g.add(o);
-      list.push({ o, sx, sz, ph: i * 1.7 });
+      list.push({ o, sx, sz, ph: i * 1.7, i });
     });
     for (let i = 0; i < 2; i++) {
       const c = A.camel(320 + i, { cloth: '#5a1a1a', load: false });
@@ -632,6 +632,7 @@
     [[-2.2, 0.6, 1.5, hide], [2.4, 0.2, 1.3, hideD], [0.3, 2.4, 1.7, hide]].forEach(([x, z, h, m]) => camp.add(A.cone(1.1 * h / 1.5, h, m, x, 0, z, 6)));
     for (let i = 0; i < 3; i++) { const lg = A.cyl(0.06, 0.06, 0.7, wood, 0, 0.06, 0, 5); lg.rotation.set(Math.PI / 2, (i * Math.PI) / 3, 0); lg.position.set(0, 0.06, -1.2); camp.add(lg); }
     camp.add(A.sph(0.22, flameM, 0, 0.22, -1.2, 6));
+    A.bake(camp);
     camp.visible = false;
     scene.add(camp);
     raiders = { g, list, flame: flameM, camp };
@@ -657,6 +658,9 @@
       raiders.camp.rotation.y = ry;
     }
     for (const r of raiders.list) {
+      // while the host waits in camp only a few stand guard (the rest are in the tents): half the models to draw
+      r.o.visible = marching || r.flag || (r.camel ? r.sx < 0 : r.i < 5);
+      if (!r.o.visible) continue;
       const x = cx + -fz * r.sx - fx * r.sz, z = cz + fx * r.sx - fz * r.sz;
       const walking = marching && k < 0.995;
       r.o.position.set(x, landH(x, z) + (walking && !r.camel && !r.flag ? Math.abs(Math.sin(t * 6 + r.ph)) * 0.06 : 0), z);
