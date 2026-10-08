@@ -136,6 +136,30 @@ describe('expeditions: away colonists', () => {
     expect(crew(g).filter((c) => c.workplace === camp)).toHaveLength(2);
   });
 
+  it('two squad mates from the same workshop both get it back (the second does not bump the first)', () => {
+    for (const offline of [false, true]) {
+      const rig = makeColony({ tier: 2, crew: ['gatherer', 'gatherer', 'gatherer', 'gatherer'] });
+      const g = rig.game;
+      const camp = placeNear(g, 'logging_camp');
+      g.sys.colonists.refresh();
+      const pair = crew(g).filter((c) => c.workplace === camp);
+      expect(pair).toHaveLength(2);
+      g.sys.expeditions.launch('cv_debris', pair.map((c) => c.id));
+      // the two who stayed home stand in at the camp
+      expect(crew(g).filter((c) => c.workplace === camp && !pair.includes(c))).toHaveLength(2);
+      if (offline) {
+        // back while the app was closed: the return is handled on load, hours after the timer ran out
+        rig.clock.now += 6 * HOUR;
+        const back = reload(rig);
+        const camp2 = back.game.state.colonists.list.filter((c) => c.workplace === camp).map((c) => c.id).sort();
+        expect(camp2, 'after a reload').toEqual(pair.map((c) => c.id).sort());
+      } else {
+        rig.wait(15 * MIN);
+        expect(pair.map((c) => c.workplace), 'while playing').toEqual([camp, camp]);
+      }
+    }
+  });
+
   it('a long trip on foot leaves the squad a little tired; a vehicle keeps it an adventure', () => {
     const rig = makeColony({ tier: 6 });
     const g = rig.game;

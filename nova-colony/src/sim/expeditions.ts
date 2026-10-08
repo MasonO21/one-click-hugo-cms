@@ -328,9 +328,11 @@ export class ExpeditionSystem extends System {
   checkReturns(): number {
     const now = this.game.now();
     let n = 0;
+    // everyone welcomed home in this pass: they are not stand-ins, so a squad mate from the same workshop can't bump them
+    const home = new Set<Id>();
     for (const e of this.list()) {
       if (e.status === 'out' && now >= e.endsAt) {
-        this.returnHome(e);
+        this.returnHome(e, home);
         n++;
       }
     }
@@ -362,7 +364,7 @@ export class ExpeditionSystem extends System {
     return { x: c.x + (i - 1) * 1.1, z: c.z + 2.6 };
   }
 
-  private returnHome(e: Expedition): void {
+  private returnHome(e: Expedition, home: Set<Id> = new Set()): void {
     const g = this.game;
     const spec = this.specOf(e);
     const vehicle = e.vehicle ? g.data.vehicle(e.vehicle) : null;
@@ -384,7 +386,8 @@ export class ExpeditionSystem extends System {
       const c = g.sys.colonists.get(id);
       if (!c) return;
       const at = this.homeSpot(i);
-      g.sys.colonists.welcomeHome(id, at.x, at.z, { building: e.prevWork[i] ?? null, manual: !!e.prevManual[i] });
+      g.sys.colonists.welcomeHome(id, at.x, at.z, { building: e.prevWork[i] ?? null, manual: !!e.prevManual[i], keep: home });
+      home.add(id);
       if (e.mood) c.trip = { mood: e.mood, until: e.endsAt + moodHours * 3_600_000 };
       if (xp > 0) gainWorkXp(g, c, xp);
     });

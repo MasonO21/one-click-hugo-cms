@@ -130,8 +130,10 @@ export class ColonistSystem extends System {
   /**
    * Welcome a colonist home at a world position. `work` is the job they left: they take it back when it still
    * exists (bumping an automatic stand-in if the slots filled up meanwhile), else the automation finds them one.
+   * `work.keep`: colonists who are not stand-ins (squad mates back in the same moment who already took their own
+   * jobs back) and are never bumped.
    */
-  welcomeHome(id: Id, x: number, z: number, work: { building: Id | null; manual: boolean } = { building: null, manual: false }): void {
+  welcomeHome(id: Id, x: number, z: number, work: { building: Id | null; manual: boolean; keep?: ReadonlySet<Id> } = { building: null, manual: false }): void {
     const c = this.get(id);
     if (!c) return;
     c.away = false;
@@ -146,7 +148,7 @@ export class ColonistSystem extends System {
       const here = list.filter((o) => o.workplace === p.id && o !== c);
       let ok = here.length < p.def.workers.slots;
       if (!ok) {
-        const bump = here.find((o) => !o.manual);
+        const bump = here.find((o) => !o.manual && !work.keep?.has(o.id));
         if (bump) {
           bump.workplace = null;
           g.bus.emit('colonist:assigned', { id: bump.id, workplace: null });
