@@ -204,6 +204,20 @@ export function edgePointAvoiding(vx: number, vy: number, rect: SafeRect, avoid:
   return { x: p.x, y: p.y, angle: e.angle, moved: p.moved };
 }
 
+/** A touch on a tappable overlay (a toast) that moves further than this is a drag the world takes over... */
+export const OVERLAY_DRAG_PX = 10;
+/** ...and one held longer than this is a thumb put down to walk, not a tap. */
+export const OVERLAY_HOLD_MS = 350;
+
+/**
+ * A touch on a tappable overlay that may sit over the joystick (a toast in portrait): still a possible tap, or a drag /
+ * hold the world takes over (InputController.adopt) as if it had started on the world. Only a short, still touch
+ * opens the toast.
+ */
+export function overlayGesture(moved: number, ms: number): 'tap' | 'world' {
+  return moved > OVERLAY_DRAG_PX || ms > OVERLAY_HOLD_MS ? 'world' : 'tap';
+}
+
 /** Is a pointer gesture short & still enough to count as a tap? */
 export function isTap(dist: number, ms: number): boolean {
   return dist < 12 && ms < 320;

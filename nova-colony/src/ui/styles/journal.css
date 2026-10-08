@@ -3,12 +3,13 @@
    Mobile first: every tap target is >= 44px, nothing is wider than the sheet (375px phones, landscape too).
    ========================================================================== */
 
-/* a toast that opens the Journal when tapped */
+/* a toast that opens a panel (the Journal, Expeditions) when tapped. No browser panning on it: a drag that starts on it
+   is handed to the joystick / camera (fx/Toasts.ts), and a pan would cancel that touch instead. */
 .nv-root .toast.tappable {
   pointer-events: auto;
   cursor: pointer;
   min-height: 44px;
-  touch-action: manipulation;
+  touch-action: none;
 }
 .nv-root .toast.tappable:active {
   filter: brightness(0.95);

@@ -90,4 +90,8 @@ describe('toast styles', () => {
     const guard = /\.nv-root \.toast\.tappable\.out,\s*\.nv-root\[data-any-panel='1'\] \.toast\.tappable\s*\{[^}]*pointer-events:\s*none/;
     expect(sheet('fx.css')).toMatch(guard);
   });
+
+  it('a tappable toast lets no browser pan start on it (a drag on it is handed to the joystick, a pan would cancel it)', () => {
+    expect(sheet('journal.css')).toMatch(/\.nv-root \.toast\.tappable\s*\{[^}]*touch-action:\s*none/);
+  });
 });

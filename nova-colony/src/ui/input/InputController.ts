@@ -7,6 +7,8 @@
  *  - Mouse wheel zooms; WASD/arrows move, Q/E rotate, Space interacts (desktop testing)
  *  - Quick taps pick things in the world (renderer.pick) — or, in build mode, are forwarded to the
  *    build controller (ghost placement / drag-to-draw lines).
+ *  - A touch that began on a tappable overlay (a toast over the joystick) and turned out to be a drag or a hold is
+ *    handed over (`adopt`): the world takes it as if it had started here, so a thumb put down to walk always walks.
  */
 import type { Game } from '../../core/Game';
 import { clamp } from '../../core/math';
@@ -43,6 +45,8 @@ interface Ptr {
   role: Role;
   moved: number;
   type: string;
+  /** Handed over from an overlay (`adopt`): it was never a tap, so its release never picks in the world. */
+  noTap?: boolean;
 }
 
 export class InputController {
@@ -109,22 +113,44 @@ export class InputController {
     } catch {
       /* synthetic events */
     }
-    const p: Ptr = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t0: performance.now(), role: 'look', moved: 0, type: e.pointerType };
-    const rightMouse = e.pointerType === 'mouse' && e.button === 2;
+    this.start(e.pointerId, e.pointerType, e.button, e.clientX, e.clientY, performance.now());
+  }
+
+  /**
+   * Take over a touch that began on an overlay and turned out not to be a tap (a drag or a hold on a toast that sits
+   * over the joystick): the world handles it as if it had started on this layer at (x0, y0) at `t0` — the joystick in
+   * its zone, the camera elsewhere — and follows the finger, now at (x, y), from here on (pointer capture moves to this
+   * layer). False when the pointer is no longer active.
+   */
+  adopt(id: number, type: string, x0: number, y0: number, t0: number, x: number, y: number): boolean {
+    if (this.pointers.has(id)) return true;
+    try {
+      this.layer.setPointerCapture(id);
+    } catch {
+      return false; // lifted already
+    }
+    this.start(id, type, 0, x0, y0, t0).noTap = true;
+    this.move(id, x, y);
+    return true;
+  }
+
+  private start(id: number, type: string, button: number, x: number, y: number, t0: number): Ptr {
+    const p: Ptr = { id, x, y, sx: x, sy: y, t0, role: 'look', moved: 0, type };
+    const rightMouse = type === 'mouse' && button === 2;
 
     if (rightMouse) {
       p.role = 'right';
     } else if (
       this.stickId == null &&
-      e.pointerType !== 'mouse' &&
-      inStickZone(e.clientX, window.innerWidth, this.leftHanded) &&
+      type !== 'mouse' &&
+      inStickZone(x, window.innerWidth, this.leftHanded) &&
       // in build mode only the lower corner is the joystick: a drag anywhere else moves the ghost / draws walls
-      (!this.hooks.build.active() || e.clientY > window.innerHeight * BUILD_STICK_TOP)
+      (!this.hooks.build.active() || y > window.innerHeight * BUILD_STICK_TOP)
     ) {
       // (a mouse always orbits the camera — desktop players have WASD)
       p.role = 'stick';
       this.stickId = p.id;
-      this.origin = { x: e.clientX, y: e.clientY };
+      this.origin = { x, y };
     } else {
       // a second free finger turns the pair into a pinch gesture
       const other = [...this.pointers.values()].find((o) => (o.role === 'look' || o.role === 'place') && o.id !== p.id);
@@ -141,16 +167,21 @@ export class InputController {
       }
     }
     this.pointers.set(p.id, p);
+    return p;
   }
 
   private onMove(e: PointerEvent): void {
-    const p = this.pointers.get(e.pointerId);
+    this.move(e.pointerId, e.clientX, e.clientY);
+  }
+
+  private move(id: number, x: number, y: number): void {
+    const p = this.pointers.get(id);
     if (!p) return;
-    const dx = e.clientX - p.x;
-    const dy = e.clientY - p.y;
+    const dx = x - p.x;
+    const dy = y - p.y;
     p.moved += Math.hypot(dx, dy);
-    p.x = e.clientX;
-    p.y = e.clientY;
+    p.x = x;
+    p.y = y;
     const cam = this.game.view.camera;
 
     switch (p.role) {
@@ -192,7 +223,7 @@ export class InputController {
     const p = this.pointers.get(e.pointerId);
     if (!p) return;
     this.pointers.delete(p.id);
-    const tap = !cancelled && isTap(p.moved, performance.now() - p.t0);
+    const tap = !cancelled && !p.noTap && isTap(p.moved, performance.now() - p.t0);
     switch (p.role) {
       case 'stick':
         this.stickId = null;

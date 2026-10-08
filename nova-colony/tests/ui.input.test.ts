@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { InputController, type InputHooks } from '../src/ui/input/InputController';
 import type { Game } from '../src/core/Game';
-import { edgePointAvoiding, edgePointRect, joystickZone, slideAlongRect, THREAT_MARKER_PAD, threatSafeRect, type SafeRect } from '../src/ui/logic/input';
+import { edgePointAvoiding, edgePointRect, joystickZone, OVERLAY_DRAG_PX, OVERLAY_HOLD_MS, overlayGesture, slideAlongRect, THREAT_MARKER_PAD, threatSafeRect, type SafeRect } from '../src/ui/logic/input';
 
 type Listener = { type: string; fn: (e: unknown) => void; opts?: AddEventListenerOptions | boolean };
 
@@ -148,5 +148,102 @@ describe('threat markers stay out of the joystick zone', () => {
   it('when the zones cover the whole edge the marker stays where it was rather than jumping around', () => {
     const all = { l: -100, t: -100, r: 1000, b: 1000 };
     expect(slideAlongRect(40, 500, safe, [all], PAD)).toEqual({ x: 40, y: 500, moved: false });
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
+// A touch that starts on a tappable toast over the joystick (QA6 follow-up: held toasts flush when a panel closes,
+// just as the thumb goes back down to walk, and the portrait toast stack covers the joystick ring)
+// ------------------------------------------------------------------------------------------------
+describe('a touch on a tappable toast: tap or the world', () => {
+  it('only a short, still touch is a tap; a drag past ~10 px or a hold past ~350 ms goes to the world', () => {
+    expect(OVERLAY_DRAG_PX).toBe(10);
+    expect(OVERLAY_HOLD_MS).toBe(350);
+    expect(overlayGesture(0, 0)).toBe('tap');
+    expect(overlayGesture(9, 200)).toBe('tap');
+    expect(overlayGesture(10, 350)).toBe('tap');
+    expect(overlayGesture(10.5, 50)).toBe('world');
+    expect(overlayGesture(0, 351)).toBe('world');
+    expect(overlayGesture(40, 900)).toBe('world');
+  });
+});
+
+describe('InputController.adopt: the world takes over a touch that began on an overlay', () => {
+  type Fn = (e: unknown) => void;
+  const rig = (opts: { leftHanded?: boolean; captureThrows?: boolean } = {}) => {
+    g.window = { ...fakeTarget(), innerWidth: 393, innerHeight: 852 };
+    g.document = { ...fakeTarget(), hidden: false };
+    const layer = { ...fakeTarget(), captured: [] as number[], setPointerCapture(id: number) {
+      if (opts.captureThrows) throw new Error('NotFoundError');
+      this.captured.push(id);
+    } };
+    const taps: [number, number][] = [];
+    const game = { state: { settings: { leftHanded: !!opts.leftHanded } }, input: { moveX: 0, moveY: 0 }, view: { camera: { yaw: 0, zoom: 0.5 } } };
+    const el = { classList: { add() {}, remove() {} }, style: {} as Record<string, string> };
+    const hooks = {
+      onTap: (x: number, y: number) => taps.push([x, y]),
+      build: { active: () => false, down() {}, move() {}, up() {} },
+      shortcut: () => false,
+      moved() {},
+    } as unknown as InputHooks;
+    const ic = new InputController(game as unknown as Game, layer as unknown as HTMLElement, el as unknown as HTMLElement, el as unknown as HTMLElement, hooks);
+    const on = (type: string): Fn => layer.listeners.find((l) => l.type === type)!.fn as Fn;
+    const ev = (id: number, x: number, y: number) => ({ pointerId: id, clientX: x, clientY: y, pointerType: 'touch', button: 0 });
+    return { ic, game, layer, taps, on, ev };
+  };
+
+  it('a drag that began on a toast in the joystick zone drives the joystick from where the finger first touched', () => {
+    const r = rig();
+    // the finger came down at (80, 700) on the toast and has moved 60 px up since
+    expect(r.ic.adopt(7, 'touch', 80, 700, performance.now() - 120, 80, 640)).toBe(true);
+    expect(r.layer.captured).toEqual([7]); // the stick layer now gets the rest of the touch
+    expect(r.game.input.moveY).toBeGreaterThan(0.5); // walking up the screen
+    expect(Math.abs(r.game.input.moveX)).toBeLessThan(0.05);
+    // the finger keeps going: the same pointer, now on the stick layer
+    r.on('pointermove')(r.ev(7, 30, 640));
+    expect(r.game.input.moveX).toBeLessThan(-0.3);
+    // lifting it stops the walk and is never a tap in the world (it was a drag, not a pick)
+    r.on('pointerup')(r.ev(7, 30, 640));
+    expect(r.game.input.moveX).toBe(0);
+    expect(r.game.input.moveY).toBe(0);
+    expect(r.taps).toEqual([]);
+  });
+
+  it('a hold handed over without moving never becomes a world tap either', () => {
+    const r = rig();
+    expect(r.ic.adopt(3, 'touch', 80, 700, performance.now() - 10, 80, 700)).toBe(true);
+    r.on('pointerup')(r.ev(3, 80, 700));
+    expect(r.taps).toEqual([]);
+  });
+
+  it('outside the joystick zone the handed-over drag turns the camera, as a drag on the world does', () => {
+    const r = rig();
+    r.ic.adopt(4, 'touch', 300, 700, performance.now() - 50, 312, 700);
+    r.on('pointermove')(r.ev(4, 360, 700));
+    expect(r.game.view.camera.yaw).toBeGreaterThan(0);
+    expect(r.game.input.moveX).toBe(0);
+  });
+
+  it('left-handed: the joystick is on the right, mirrored', () => {
+    const r = rig({ leftHanded: true });
+    r.ic.adopt(5, 'touch', 330, 700, performance.now() - 50, 330, 640);
+    expect(r.game.input.moveY).toBeGreaterThan(0.5);
+    const l = rig({ leftHanded: true });
+    l.ic.adopt(6, 'touch', 60, 700, performance.now() - 50, 60, 640);
+    expect(l.game.input.moveY).toBe(0); // the left side turns the camera there
+  });
+
+  it('a pointer already lifted cannot be taken over', () => {
+    const r = rig({ captureThrows: true });
+    expect(r.ic.adopt(8, 'touch', 80, 700, performance.now(), 80, 640)).toBe(false);
+    r.on('pointermove')(r.ev(8, 80, 600));
+    expect(r.game.input.moveY).toBe(0);
+  });
+
+  it('a quick touch that starts on the world layer is still a tap there (the shared start path)', () => {
+    const r = rig();
+    r.on('pointerdown')(r.ev(9, 300, 400));
+    r.on('pointerup')(r.ev(9, 300, 400));
+    expect(r.taps).toEqual([[300, 400]]);
   });
 });

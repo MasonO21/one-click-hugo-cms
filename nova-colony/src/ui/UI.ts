@@ -239,6 +239,9 @@ export class UI {
       shortcut: (e) => this.shortcut(e),
       moved: () => this.stickHint.classList.add('gone'),
     });
+    // a touch that starts on a tappable toast but drags or rests (a thumb put down to walk where the portrait toast
+    // stack covers the joystick) is the world's, as if it had started there; only a quick, still tap opens the toast
+    this.toasts.handoff = (id, type, x0, y0, t0, x, y) => this.input.adopt(id, type, x0, y0, t0, x, y);
 
     this.consent = new ConsentPrompt(ctx, el, () => this.screenBusy());
     // notifications card (iOS / Android): after the first tier-up or Welcome Back, never over the consent card
