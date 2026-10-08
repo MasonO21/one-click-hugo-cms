@@ -438,22 +438,61 @@
   position: sticky;
   top: 0;
 }
+/* prerequisites: the unmet-tier line is plain text, each prerequisite tech is a button that jumps to that node.
+   The buttons are pill rows at least 44px tall (a comfortable thumb target) that wrap two to a line, so a long
+   list stays compact. */
+.req-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
 .req-line {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  padding: 0.1em 0;
   text-align: left;
   font: inherit;
   font-size: 0.88em;
   font-weight: 800;
+}
+div.req-line {
+  flex: 1 1 100%;
+  padding: 0.1em 0;
+}
+button.req-line {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0.25em 0.9em 0.25em 1em;
+  border: 0;
+  border-radius: 99px;
+  line-height: 1.15;
   cursor: pointer;
+  transition: transform 0.08s, filter 0.08s;
+}
+button.req-line::after {
+  content: '›';
+  flex: 0 0 auto;
+  font-size: 1.3em;
+  line-height: 1;
+  transform: translateY(-0.07em);
+  opacity: 0.55;
+}
+button.req-line:active {
+  transform: scale(0.97);
+  filter: brightness(0.95);
 }
 .req-line.ok {
   color: var(--good-d);
 }
 .req-line.no {
   color: var(--bad-d);
+}
+button.req-line.ok {
+  background: #dcf6e8;
+}
+button.req-line.no {
+  background: #ffe6e2;
 }
 @media (orientation: portrait) {
   .research-layout {

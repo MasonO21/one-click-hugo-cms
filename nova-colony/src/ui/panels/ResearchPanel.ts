@@ -153,7 +153,7 @@ export class ResearchPanel extends Panel {
     }
     // prerequisites
     if (d.requires.length || d.tier > g.state.colony.tier) {
-      const req = h('div', { class: 'stack-v tight', style: 'margin-top:.5em' });
+      const req = h('div', { class: 'req-lines', style: 'margin-top:.5em' });
       if (d.tier > g.state.colony.tier) req.appendChild(h('div', { class: 'req-line no', text: `✖ Requires ${this.data.tier(d.tier).name} tier` }));
       for (const r of d.requires) {
         const rd = this.data.researchDef(r);
