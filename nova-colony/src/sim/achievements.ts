@@ -199,30 +199,36 @@ export class AchievementSystem extends System {
   /** Claim one earned achievement: grant its reward (once). */
   claim(id: string): boolean {
     const d = this.game.data.achievement(id);
-    const a = this.game.state.achievements;
-    if (!d || a.unlocked[id] == null || a.claimed[id] != null) return false;
-    a.claimed[id] = this.game.now();
-    try {
-      this.game.grant(d.reward, 'achievement');
-    } catch (e) {
-      console.error('[achievements] reward grant failed', id, e);
-    }
-    this.game.bus.emit('achievement:claimed', { id, line: d.line, medal: d.medal, name: d.name });
-    return true;
+    return !!d && this.claimMany([d]) > 0;
   }
 
   /** Claim every earned medal of one line (the card's Claim button). Returns how many were claimed. */
   claimLine(line: string): number {
-    let n = 0;
-    for (const d of this.claimable()) if (d.line === line && this.claim(d.id)) n++;
-    return n;
+    return this.claimMany(this.claimable().filter((d) => d.line === line));
   }
 
   /** Claim everything waiting (the Journal's "Claim all"). Returns how many were claimed. */
   claimAll(): number {
-    let n = 0;
-    for (const d of this.claimable()) if (this.claim(d.id)) n++;
-    return n;
+    return this.claimMany(this.claimable());
+  }
+
+  /**
+   * Claim each of `defs` that is earned and not yet claimed. The rewards are granted as ONE sum, so a batch is one
+   * "Season level N!" toast and one crate card rather than a pile of them. Returns how many were claimed.
+   */
+  private claimMany(defs: readonly AchievementDef[]): number {
+    const a = this.game.state.achievements;
+    const now = this.game.now();
+    const taken = defs.filter((d) => a.unlocked[d.id] != null && a.claimed[d.id] == null);
+    if (taken.length === 0) return 0;
+    for (const d of taken) a.claimed[d.id] = now;
+    try {
+      this.game.grant(taken.length === 1 ? taken[0].reward : AchievementSystem.sumRewards(taken), 'achievement');
+    } catch (e) {
+      console.error('[achievements] reward grant failed', taken.map((d) => d.id), e);
+    }
+    for (const d of taken) this.game.bus.emit('achievement:claimed', { id: d.id, line: d.line, medal: d.medal, name: d.name });
+    return taken.length;
   }
 
   /** What claiming these would hand out, summed (reward chips for a card with several medals waiting). */

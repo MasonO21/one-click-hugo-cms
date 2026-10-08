@@ -314,6 +314,27 @@ describe('achievements — claiming', () => {
     expect(a.claimableCount()).toBe(0);
   });
 
+  it('a batch is granted as one sum: one reward event and one level-up announcement, not a pile', () => {
+    const { g } = withRecorder();
+    const a = g.game.sys.achievements;
+    const st = g.game.state;
+    setMetric(g.game, 'colonists', 15);
+    setMetric(g.game, 'colonyTier', 3);
+    tick(g);
+    const waiting = a.claimable();
+    const grants: { source: string; xp?: number }[] = [];
+    const levelToasts: string[] = [];
+    g.game.bus.on('reward:granted', (e) => grants.push({ source: e.source, xp: e.reward.xp }));
+    g.game.bus.on('ui:toast', (e) => {
+      if (e.text.includes('Season level')) levelToasts.push(e.text);
+    });
+    const xp0 = st.liveops.season.xp;
+    expect(a.claimAll()).toBe(waiting.length);
+    expect(grants.filter((x) => x.source === 'achievement')).toHaveLength(1);
+    expect(st.liveops.season.xp - xp0).toBe(waiting.reduce((n, d) => n + (d.reward.xp ?? 0), 0));
+    expect(levelToasts.length).toBeLessThanOrEqual(1);
+  });
+
   it('a failing reward never blocks the claim flow', () => {
     const { g } = withRecorder();
     const a = g.game.sys.achievements;
