@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.25.0',
+  version: '4.26.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1263,6 +1263,22 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- Pacts & Feuds ----------
+  // Each rival keep holds you in some regard, from -100 (a feud) to 100. Gifts raise it, raids lower it, and it drifts
+  // back toward indifference over the days. A rival that trusts you (60 and up) will sign a pact: it sends tribute
+  // every 8 hours and warriors to stand on your walls when raiders come, and it can't be raided while the pact
+  // holds. Breaking a pact turns it into a feud. A rival in a feud (-50 and below) sends its warband against you
+  // on its own every so often.
+  pacts: {
+    bands: [[-100, 'Feud', '#d0503a'], [-50, 'Hostile', '#e0904a'], [-10, 'Wary', '#c9a777'], [20, 'Friendly', '#8ac86a'], [60, 'Trusted', '#3fc8c0']],
+    gift: { cost: { food: 1, water: 1, stone: 0.5 }, gain: 15, every: 8 * 3600 }, // quarter-crates; once every 8 hours a keep
+    raid: -35, // standing lost when you raid a keep, won or lost
+    drift: 4, // standing a day back toward 0 (not while a pact holds)
+    pact: { need: 60, slots: [[8, 1], [12, 2], [16, 3]], tribute: { food: 0.6, water: 0.6, stone: 0.4 }, every: 8 * 3600, gate: 0.1, broken: -100 },
+    feud: { at: -50, every: [6 * 3600, 10 * 3600] }, // a feuding keep strikes on its own about this often
+    warPts: 10, // Oasis Wars points for a gift
+  },
+
   // ---------- Gate Defenses ----------
   // Works at the front gate, raised with resources (scaled to the keep) up to Lv 10. Each helps the defenders
   // against raids and warbands every level, and at Lv 5 and Lv 10 brings one more of its tactic to every
@@ -1302,7 +1318,7 @@ const DATA = {
   // Guards are hired rather than drawn from the army because troops away for hours left the expedition short.
   // ---------- The Camel Derby ----------
   // From Rainwyrm Lv 8 the keep keeps a racing camel. Train its Speed, Stamina and Spirit (Lv 1-20, one session at a
-  // time, food and water and keep time), and race it on the salt pan against five rivals in three cups, each opening
+  // time, food and keep time), and race it on the salt pan against five rivals in three cups, each opening
   // when you win the one before. In a race you hold to urge your camel: an urged camel runs faster and keeps its pace
   // over the dunes, but burns energy, and a camel that runs dry is spent for a few seconds. The rules were tuned in a
   // simulation of the race: a camel at the top of a cup's range wins about four races in five ridden well, one in the
@@ -1311,7 +1327,7 @@ const DATA = {
     unlock: 8, // Rainwyrm level
     entries: { cap: 3, every: 4 * 3600 }, // a race entry every 4 hours of keep time, 3 at most
     maxLv: 20,
-    train: { time: 900, perLv: 240, cost: { food: 0.3, water: 0.2 }, growth: 0.15 }, // seconds and quarter-crates, growing per level
+    train: { time: 900, perLv: 240, cost: { food: 0.5 }, growth: 0.15 }, // seconds and quarter-crates of food (dates and oats), growing per level
     stats: [
       { id: 'spd', name: 'Speed', icon: 'i-dy-speed', text: 'How fast it runs' },
       { id: 'sta', name: 'Stamina', icon: 'i-dy-stamina', text: 'Urging tires it less, and it gets its breath back sooner' },
@@ -1593,6 +1609,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.26', items: [
+      { icon: 'i-peace', name: 'Pacts & Feuds', text: 'Every rival keep now remembers how you treat it. Send gifts and sign pacts for tribute and warriors on your walls, or raid them and risk a feud: a keep in a feud sends its warband on its own.', act: 'rivals', open: (S) => S.lv.wyrm >= 8, needs: 'Rainwyrm Lv 8' },
+    ] },
     { v: '4.25', items: [
       { icon: 'i-derby', name: 'The Camel Derby', text: 'Raise Saffron, a racing camel, and race her on the salt pan against five rivals for the Village Cup, the Oasis Stakes and the Desert Crown. Hold to urge her on, but let her breathe, or she runs dry.', act: 'derby', open: (S) => S.lv.wyrm >= 8, needs: 'Rainwyrm Lv 8' },
     ] },
@@ -1896,6 +1915,10 @@ const DATA = {
     { id: 'derby25', text: 'Run 25 Camel Derby races', stat: 'derbyRaces', n: 25, reward: { treats: 20, starglass: 100 } },
     { id: 'derbyCrown', text: 'Win the Desert Crown', stat: 'derbyCrown', n: 1, reward: { shard_legendary: 1 } },
     { id: 'derbyMax', text: 'Train a racing camel stat to Lv 20', stat: 'derbyTop', n: 20, reward: { beacons: 2 } },
+    { id: 'gift1', text: 'Send a gift to a rival keep', stat: 'gifts', n: 1, reward: { starglass: 30 } },
+    { id: 'pact1', text: 'Sign a pact with a rival keep', stat: 'pacts', n: 1, reward: { starglass: 150 } },
+    { id: 'pact3', text: 'Hold three pacts at once', stat: 'pactMost', n: 3, reward: { beacons: 3 } },
+    { id: 'feud1', text: 'Win a raid against a keep in a feud with you', stat: 'feudWins', n: 1, reward: { whetstone: 2 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },

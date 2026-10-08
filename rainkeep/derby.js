@@ -1,6 +1,6 @@
 /*
  * Rainkeep: the Camel Derby. From Rainwyrm Lv 8 the keep keeps a racing camel, Saffron. Train her Speed, Stamina
- * and Spirit (one session at a time, food, water and keep time) and race her on the salt pan below the keep
+ * and Spirit (one session at a time, food and keep time) and race her on the salt pan below the keep
  * against five rival camels in three cups (the Village Cup, the Oasis Stakes and the Desert Crown), each opening
  * when you win the one before and bringing a piece of tack the first time you win it. In a race you hold to urge:
  * an urged camel runs faster and holds its pace over the dunes but burns energy, and one that runs dry is spent for
@@ -63,7 +63,7 @@
     if (X.train) return KH.toast(`${name()} is already training.`, 'warn');
     if (lv >= D.maxLv) return KH.toast(`${STAT[st].name} is as high as it goes.`, 'warn');
     const cost = trainCost(lv);
-    if (!KH.canAfford(cost)) return KH.toast('Not enough food and water for the training.', 'warn');
+    if (!KH.canAfford(cost)) return KH.toast('Not enough food for the training.', 'warn');
     KH.pay(cost);
     X.train = { stat: st, start: S.time, end: S.time + trainTime(lv) };
     KH.sfx('build');

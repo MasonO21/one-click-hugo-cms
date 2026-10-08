@@ -1254,3 +1254,10 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .dy-ic.dy-big { width: 52px; height: 52px; }
 .dy-cupcard { border-color: color-mix(in srgb, var(--cc) 55%, transparent); }
 .dy-cupcard.locked { opacity: 0.6; }
+
+/* Pacts & Feuds (pacts.js) */
+.pc-bar { position: relative; height: 10px; border-radius: 5px; background: linear-gradient(90deg, #d0503a, #e0904a 25%, #c9a777 45%, #8ac86a 60%, #3fc8c0 80%); opacity: .85; }
+.pc-bar .pc-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: #fff6; }
+.pc-bar .pc-pin { position: absolute; top: -4px; width: 14px; height: 18px; margin-left: -7px; border-radius: 7px; border: 2px solid #fff; box-shadow: 0 1px 4px #0008; }
+.pc-ally { color: #3fc8c0; border-color: #3fc8c088; }
+.pc-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }

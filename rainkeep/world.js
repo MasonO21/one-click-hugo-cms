@@ -207,6 +207,7 @@
     const [x, y] = k.split(',').map(Number), t = tile(x, y);
     if ((t.kind !== 'beast' && t.kind !== 'camp' && t.kind !== 'rival') || t.gone || t.busy || !visible(x, y)) return;
     if (t.kind === 'rival' && t.shield) return KH.toast(`${t.name} is under a Peace Shield.`, 'warn');
+    if (t.kind === 'rival' && KH.pacts && KH.pacts.allied(t.k)) return KH.toast(`You have a pact with ${t.name}.`, 'warn');
     const why = canSend(true);
     if (why) return KH.toast(why, 'warn');
     const troops = pickTroops(UI.wsend);
@@ -424,9 +425,11 @@
     const gd = KH.defense ? KH.defense.raid() : { atk: 0, def: 0, weaken: 0 };
     if (gd.weaken) for (const k of ['atk', 'def', 'hp']) foe[k] *= 1 - gd.weaken;
     const wt = 0.03 * S.lv.watchtower + (pour ? RD.pourBonus : 0);
-    const team = KH.teamStats(foe.cls, { troops: { ...S.troops }, atkBonus: wt + gd.atk, defBonus: wt + gd.def });
+    // warriors from keeps you hold a pact with (pacts.js)
+    const ally = KH.pacts ? KH.pacts.gate() : 0;
+    const team = KH.teamStats(foe.cls, { troops: { ...S.troops }, atkBonus: wt + gd.atk, defBonus: wt + gd.def + ally });
     const result = KH.simulateBattle(team, foe);
-    let rewards = null, extra = [wet ? 'The rain turned the dunes to mud under their feet.' : '', pour ? 'Boiling water poured from the walls.' : ''].filter(Boolean).join(' ');
+    let rewards = null, extra = [wet ? 'The rain turned the dunes to mud under their feet.' : '', pour ? 'Boiling water poured from the walls.' : '', ally ? `Warriors from ${KH.pacts.allies().map((r) => r.name).join(' and ')} stood on the walls with yours.` : ''].filter(Boolean).join(' ');
     if (result.win) {
       rewards = KH.scaleReward({ stone: 2, food: 2, copper: 1 });
       KH.grant(rewards);

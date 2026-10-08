@@ -123,6 +123,7 @@
       if (rev) { S.stats.revenges++; r.raidedYou = 0; }
       KH.emit('rivalWin', { id, revenge: rev });
     } else { r.losses++; S.stats.rivalLosses++; }
+    if (KH.pacts) KH.pacts.raided(id, result.win); // it remembers (pacts.js)
     // it may send its warband back at your gate: the next raid on the keep is theirs, sighted from the
     // watchtower like any other
     if (S.map.raid.from == null && !peace() && Math.random() < R.strike.chance) {
@@ -174,12 +175,13 @@
     const odds = ours >= theirs * 1.15 ? ['Favored', 'var(--good)'] : ours >= theirs * 0.9 ? ['Even fight', 'var(--gold)'] : ['Risky', 'var(--bad)'];
     const stash = stashOf(r);
     const counter = Object.keys(DATA.counters).find((c) => DATA.counters[c] === foe.cls);
-    const why = ui.why || (shielded(r) ? `${r.name} is under a Peace Shield for ${fmtTime(r.shieldUntil - S.time)}.` : null);
+    const why = ui.why || (shielded(r) ? `${r.name} is under a Peace Shield for ${fmtTime(r.shieldUntil - S.time)}.` : null) || (r.pact ? `You hold a pact with ${r.name}. Break it before you march on them.` : null);
     const scoutCost = KH.scaleReward(R.scout);
     return {
       title: r.name, lvl: `Lv ${lvlOf(r)}`,
       body: `<div class="row rival-head"><span class="rival-flag" style="background:${r.color}">${icon('i-fort')}</span><div class="grow"><b>${esc(r.warden)}, Warden of ${esc(r.name)}</b>
           <div class="muted small">${shielded(r) ? `${icon('i-peace')} Peace Shield for ${fmtTime(r.shieldUntil - S.time)}` : `Raided ${r.hits} time${r.hits === 1 ? '' : 's'}${r.losses ? `, held you off ${r.losses}` : ''}`}</div></div></div>
+        ${KH.pacts ? KH.pacts.card(r) : ''}
         ${rev ? `<p class="notice">${icon('i-revenge')} ${esc(r.name)} raided your gate. Strike back in the next ${fmtTime(R.revenge.secs - (S.time - r.raidedYou))} for +${Math.round(R.revenge.atk * 100)}% attack.</p>` : ''}
         <div class="row">${KH.foeArt(foe, 'mini-foe')}<div class="grow"><div class="muted small">${sc ? `${icon(DATA.classes[foe.cls].icon)} Defenders fight like ${DATA.classes[foe.cls].name}s. Weak to ${DATA.classes[counter].name}s.` : 'Scout it to learn how its defenders fight.'}</div>
         <div class="vs"><div class="side"><span class="muted small">Your march</span><b>${fmt(ours)}</b></div><span class="x">vs</span><div class="side right"><span class="muted small">Defenders</span><b>${range(theirs, sc)}</b></div></div>
@@ -204,7 +206,7 @@
     // keeps still out in the dust haze are known only by name until the Rainwyrm's mist reaches them
     const board = rows.map((x, n) => x.me ? `<div class="you"><span>${n + 1}</span><b>Your keep</b><span>${fmt(x.p)}</span></div>`
       : !KH.world.visible(x.r.x, x.r.y) ? `<div class="rival-row hazed"><span>${n + 1}</span><b><i class="rival-dot" style="background:${x.r.color}"></i>${esc(x.r.name)}</b><span class="muted small">in the haze</span></div>`
-      : `<button class="rival-row" data-act="rivalgo" data-arg="${x.r.k}"><span>${n + 1}</span><b><i class="rival-dot" style="background:${x.r.color}"></i>${esc(x.r.name)}${shielded(x.r) ? ` ${icon('i-peace')}` : ''}${revenge(x.r) ? ` ${icon('i-revenge')}` : ''}</b><span>${scouted(x.r) ? fmt(x.p) : '?'}</span></button>`).join('');
+      : `<button class="rival-row" data-act="rivalgo" data-arg="${x.r.k}"><span>${n + 1}</span><b><i class="rival-dot" style="background:${x.r.color}"></i>${esc(x.r.name)}${KH.pacts ? KH.pacts.tag(x.r) : ''}${shielded(x.r) ? ` ${icon('i-peace')}` : ''}${revenge(x.r) ? ` ${icon('i-revenge')}` : ''}</b><span>${scouted(x.r) ? fmt(x.p) : '?'}</span></button>`).join('');
     const myRank = rows.findIndex((x) => x.me) + 1;
     S.stats.rivalRank = Math.min(S.stats.rivalRank || 99, myRank);
     const peaceCard = peace() ? `<div class="card"><b>${icon('i-peace')} Peace Shield up</b><div class="muted small">No rival will strike for ${fmtTime(P.peaceUntil - S.time)}. Attacking anyone drops it.</div></div>`

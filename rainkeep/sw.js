@@ -15,14 +15,14 @@
  */
 'use strict';
 
-const VERSION = 'rainkeep-v4.25'; // bump on every web deploy
+const VERSION = 'rainkeep-v4.26'; // bump on every web deploy
 const SHELL_CACHE = `${VERSION}-shell`;
 const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
 
 const SHELL = [
   'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js',
-  'vendor/three.min.js', 'vendor/three-gltf.js', 'art3d.js', 'models3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'siege.js', 'intel.js', 'formation.js', 'heirloom.js', 'awaken.js', 'talents.js', 'hall.js', 'outposts.js', 'trade.js', 'decrees.js', 'defense.js', 'ranks.js', 'clash.js', 'fishing.js', 'derby.js', 'news.js', 'world3d.js',
+  'vendor/three.min.js', 'vendor/three-gltf.js', 'art3d.js', 'models3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'pacts.js', 'siege.js', 'intel.js', 'formation.js', 'heirloom.js', 'awaken.js', 'talents.js', 'hall.js', 'outposts.js', 'trade.js', 'decrees.js', 'defense.js', 'ranks.js', 'clash.js', 'fishing.js', 'derby.js', 'news.js', 'world3d.js',
   'manifest.webmanifest', 'icon.svg',
   'fonts/el-messiri-latin-500-normal.woff2', 'fonts/el-messiri-latin-600-normal.woff2', 'fonts/el-messiri-latin-700-normal.woff2',
   'fonts/barlow-semi-condensed-latin-400-normal.woff2', 'fonts/barlow-semi-condensed-latin-500-normal.woff2',
