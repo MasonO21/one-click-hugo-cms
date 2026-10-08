@@ -10,6 +10,7 @@ import { ANCHOR_IDS } from '../../data/schema';
 import { clamp } from '../../core/math';
 import type { Layout } from './layout';
 import type { HappinessFactor } from './types';
+import { friendHappiness, friendProductivity, wishMood } from '../wish/rules';
 
 /** Extra happiness for sleeping in an enclosed, roofed room (not part of BalanceDef). */
 export const ROOF_BONUS = 4;
@@ -77,6 +78,10 @@ export function happinessFactors(game: Game, layout: Layout, mood: Mood, c: Colo
   if (trait?.happiness) add(trait.name, trait.happiness, trait.happiness > 0);
   const trip = tripMood(game, c);
   if (trip) add(trip > 0 ? 'Great adventure!' : 'Travel-weary', trip, trip > 0);
+  const wish = wishMood(game, c);
+  if (wish) add('Wish granted!', wish, true);
+  const friend = friendHappiness(game, c);
+  if (friend) add('Best friends', friend, true);
   if (mood.mult > 1.001) {
     const sum = out.reduce((s, f) => s + f.value, 0);
     add('Colony bonus', sum * (mood.mult - 1));
@@ -101,7 +106,9 @@ export function happinessTarget(game: Game, layout: Layout, mood: Mood, c: Colon
     (mood.safety ? h.safety : 0) +
     mood.medical +
     (trait?.happiness ?? 0) +
-    tripMood(game, c);
+    tripMood(game, c) +
+    wishMood(game, c) +
+    friendHappiness(game, c);
   return clamp(sum * mood.mult, 0, 100);
 }
 
@@ -120,5 +127,6 @@ export function productivityOf(game: Game, layout: Layout, c: Colonist): number 
   const job = c.workplace != null ? layout.byId.get(c.workplace)?.def.workers?.job : undefined;
   const trait = game.data.trait(c.trait);
   const skill = 1 + (job && job === c.specialty ? b.specialtyBonus : 0) + (c.skill - 1) * b.skillBonusPerLevel + (trait?.productivity ?? 0);
-  return Math.max(1, skill * (1 + Math.max(0, c.happiness - 50) / 100));
+  // friendship: from three hearts the colonist works a little harder (sim/wishes.ts)
+  return Math.max(1, skill * (1 + Math.max(0, c.happiness - 50) / 100) * (1 + friendProductivity(game, c)));
 }

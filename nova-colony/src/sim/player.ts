@@ -19,7 +19,7 @@ import { approachAngle } from '../core/math';
 import type { WorldNode } from './world';
 
 export interface Interaction {
-  kind: 'gather' | 'loot' | 'rescue' | 'building' | 'vehicle' | 'event' | 'deposit' | 'beacon' | 'attack';
+  kind: 'gather' | 'loot' | 'rescue' | 'building' | 'vehicle' | 'event' | 'deposit' | 'beacon' | 'attack' | 'chat';
   /** Button label, e.g. "Chop", "Mine", "Open", "Rescue". */
   label: string;
   icon: string;
@@ -705,6 +705,10 @@ export class PlayerSystem extends System {
     }
     if (found) return found;
 
+    // 1b. a colonist with a Chat wish close by (sim/wishes.ts): "Chat" with them
+    const chat = g.sys.wishes?.chatTarget(p.x, p.z);
+    if (chat) return { kind: 'chat', label: 'Chat', icon: '💬', target: chat.colonist.id, x: chat.colonist.x, z: chat.colonist.z };
+
     // 2. points of interest
     bestD = Infinity;
     for (const poi of world.gen.pois) {
@@ -827,6 +831,9 @@ export class PlayerSystem extends System {
         else g.sys.world.lootPoi(id);
         return true;
       }
+      case 'chat':
+        g.sys.wishes.chat(it.target as number);
+        return true;
       case 'loot':
       case 'rescue': {
         const id = it.target as string;
