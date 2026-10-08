@@ -17,6 +17,7 @@ import './styles/art.css';
 import './styles/expeditions.css';
 import './styles/journal.css';
 import './styles/wishes.css';
+import './styles/skin.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';

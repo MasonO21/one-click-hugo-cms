@@ -59,6 +59,18 @@ Toasts and the world tooltip accept an art URL (anything starting with `art/`) i
 **Deliberately still emoji:** floating "+3 🪵" numbers over the world, the live "Now: +3 🪵/min" line in the building
 inspector, the "Built X!" floating text, navigation glyphs (dock/rail/menu, the build-category tabs, the 🚙 "Open garage" button), empty equipment-slot glyphs and RP / XP / boost icons.
 
+## Menu skin (panel textures and header scenes)
+
+`src/ui/styles/skin.css` gives every menu its painted look; its textures live next to it in `src/ui/styles/tex/` and are
+bundled by Vite (hashed, relative to the CSS), not served from `public/art`:
+
+| File | What | Notes |
+|---|---|---|
+| `paper.webp` | warm cream paper, 384 px seamless tile | Higgsfield gpt_image_2_5, mirror-tiled, contrast lifted around #fff6e4 |
+| `doodles.webp` | faint brown line doodles (stars, planets, leaves, rockets…), 520 px seamless tile with alpha | ink keyed to alpha at 11 %, mirror-tiled |
+| `head-day.webp` | dusk sky over green hills with a tiny colony dome, 1200×360 | the header scene of most panels |
+| `head-night.webp` | starry nebula sky, ringed planet, lit colony, 1200×360 | Expeditions, Research, Season, Map, Journal, Lucky Wheel |
+
 ## Painted building & vehicle icons
 The build-menu icons in `public/art/buildings` (150) + `public/art/vehicles` (6) are **painted** versions of the in-game
 models: `npm run bake:thumbs` renders every model from the game's own code into `art/source/renders/` (`--size 512` for

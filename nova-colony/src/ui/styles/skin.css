@@ -1,0 +1,319 @@
+/* ==========================================================================
+   Skin: the painted look of the menus — warm paper panels with faint doodles and a gold rim, a painted
+   header scene with an outlined title and an icon medallion, glossy candy buttons, tabs in a recessed
+   track, ornamental section labels, softer cards, icon wells on the menu tiles, inset progress bars.
+   Loaded after every other sheet and only changes looks (layout and sizes stay where they are).
+   Textures in ./tex (painted with Higgsfield, see docs/ART.md): paper.webp and doodles.webp tile;
+   head-day.webp / head-night.webp are the header scenes.
+   ========================================================================== */
+
+.nv-root {
+  --frame: #f3cd84;
+  --frame-d: #c99a4e;
+  --frame-dd: rgba(120, 72, 20, 0.38);
+  --card-line: #ecd3a3;
+  --card-edge: #dfc08a;
+  --ink-warm: #7a4f22;
+  --title-ink: #3a2350;
+}
+
+/* ---------- panel frame ---------------------------------------------------- */
+
+.nv-root .pm-card {
+  background-color: #fff5e2;
+  background-image: url('./tex/doodles.webp'), url('./tex/paper.webp');
+  background-size: 260px 260px, 384px 384px;
+  box-shadow:
+    0 1em 3em rgba(10, 4, 30, 0.55),
+    0 0 0 0.2em var(--frame),
+    0 0 0 0.34em var(--frame-dd),
+    inset 0 0 0 0.16em rgba(255, 255, 255, 0.7),
+    inset 0 0 2.4em rgba(214, 160, 80, 0.2);
+}
+
+/* ---------- painted header ------------------------------------------------- */
+
+.nv-root .pm-head {
+  padding: 0.55em 0.8em 0.7em 0.85em;
+  border-bottom: 0;
+  background:
+    linear-gradient(180deg, rgba(30, 16, 60, 0.02) 0%, rgba(30, 16, 60, 0.22) 100%),
+    url('./tex/head-day.webp') center 58% / cover no-repeat,
+    #f4b089;
+  box-shadow: inset 0 -0.24em 0 var(--frame), inset 0 -0.36em 0 var(--frame-dd), 0 0.18em 0.4em rgba(90, 50, 10, 0.18);
+}
+/* a little more room for the painted scene where the screen is tall enough (not on a landscape phone) */
+@media (min-height: 520px) {
+  .nv-root .pm-head {
+    min-height: 4.4em;
+    padding-top: 0.65em;
+    padding-bottom: 0.75em;
+  }
+}
+/* the space-flavoured panels get the night sky */
+.nv-root .pm-card:is([data-panel='expeditions'], [data-panel='research'], [data-panel='season'], [data-panel='map'], [data-panel='journal'], [data-panel='spin']) .pm-head {
+  background:
+    linear-gradient(180deg, rgba(10, 6, 30, 0.05) 0%, rgba(10, 6, 30, 0.25) 100%),
+    url('./tex/head-night.webp') center 62% / cover no-repeat,
+    #3b2f7a;
+}
+
+.nv-root .pm-title {
+  color: #fff;
+  gap: 0.5em;
+}
+.nv-root .pm-title .tt {
+  font-size: 1.05em;
+  letter-spacing: 0.015em;
+  text-shadow:
+    0 0.07em 0 var(--title-ink), 0.07em 0 0 var(--title-ink), -0.07em 0 0 var(--title-ink), 0 -0.07em 0 var(--title-ink),
+    0.05em 0.05em 0 var(--title-ink), -0.05em 0.05em 0 var(--title-ink), 0.05em -0.05em 0 var(--title-ink), -0.05em -0.05em 0 var(--title-ink),
+    0 0.17em 0.12em rgba(30, 10, 50, 0.45);
+}
+/* the panel's painted icon in a cream medallion */
+.nv-root .pm-title .ti {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2.15em;
+  height: 2.15em;
+  font-size: 1em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 36%, #fffdf6 0%, #ffecc4 64%, #f5d290 100%);
+  box-shadow: 0 0 0 0.12em #fff6e3, 0 0 0 0.22em var(--frame-d), 0 0.28em 0.45em rgba(30, 10, 50, 0.35);
+}
+.nv-root .pm-title .ti:empty {
+  display: none;
+}
+.nv-root .pm-title .ti .aico {
+  width: 1.55em;
+  height: 1.55em;
+  margin: 0;
+}
+.nv-root .pm-title .ti .aico.emoji {
+  width: auto;
+  height: auto;
+}
+.nv-root .pm-head .pm-close {
+  color: #8a4a2a;
+  font-size: 1.05em;
+  background: radial-gradient(circle at 50% 34%, #fffdf6, #ffe4b5);
+  box-shadow: 0 0 0 0.12em #fff6e3, 0 0 0 0.22em var(--frame-d), 0 0.26em 0.42em rgba(30, 10, 50, 0.35);
+}
+
+.nv-root .pm-foot {
+  background: rgba(251, 236, 206, 0.92);
+  border-top: 0;
+  box-shadow: inset 0 0.2em 0 var(--frame), inset 0 0.32em 0 var(--frame-dd);
+}
+
+/* the build drawer's sticky tab row sits on the same paper */
+.nv-root .drawer-top {
+  background-color: #fff5e2;
+  background-image: url('./tex/paper.webp');
+  background-size: 384px 384px;
+}
+
+/* ---------- section labels: a little star and a fading gold rule ---------------- */
+
+.nv-root .sec {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  color: var(--ink-warm);
+  letter-spacing: 0.1em;
+}
+.nv-root .sec::before {
+  content: '✦';
+  flex: 0 0 auto;
+  color: var(--gold-d);
+  letter-spacing: 0;
+  font-size: 1.15em;
+  line-height: 1;
+}
+.nv-root .sec::after {
+  content: '';
+  flex: 1 1 auto;
+  min-width: 1.5em;
+  height: 0.16em;
+  border-radius: 1em;
+  background: linear-gradient(90deg, rgba(201, 154, 78, 0.65), rgba(201, 154, 78, 0));
+}
+
+/* ---------- cards ----------------------------------------------------------- */
+
+.nv-root .card {
+  background: linear-gradient(180deg, #fffefa 0%, #fff7e6 100%);
+  border: 0.13em solid var(--card-line);
+  box-shadow: 0 0.24em 0 var(--card-edge), 0 0.6em 1.1em rgba(120, 80, 30, 0.1), inset 0 0.12em 0 #fff;
+}
+.nv-root .card.tint {
+  background: linear-gradient(180deg, #fff3d6 0%, #fde6bb 100%);
+}
+
+/* ---------- tabs: raised pills in a recessed track ---------------------------- */
+
+.nv-root .tabs {
+  width: fit-content;
+  max-width: 100%;
+  gap: 0.25em;
+  padding: 0.28em;
+  border-radius: 99px;
+  background: rgba(150, 100, 40, 0.13);
+  box-shadow: inset 0 0.14em 0.3em rgba(110, 70, 20, 0.22), 0 0.08em 0 rgba(255, 255, 255, 0.75);
+}
+.nv-root .drawer-top .tabs {
+  width: auto;
+}
+.nv-root .tab {
+  background: transparent;
+  color: #7d6a8a;
+}
+.nv-root .tab.on {
+  background: linear-gradient(180deg, #ffc283, var(--accent));
+  box-shadow: 0 0.2em 0 var(--accent-d), 0 0.35em 0.5em rgba(150, 70, 10, 0.25), inset 0 0.1em 0 rgba(255, 255, 255, 0.5);
+}
+
+/* ---------- buttons: candy gloss, a deeper edge, a soft inner rim -------------- */
+
+.nv-root .btn {
+  --edge: var(--accent-d);
+  text-shadow: 0 0.1em 0 rgba(0, 0, 0, 0.22);
+  box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
+}
+.nv-root .btn.good {
+  --edge: var(--good-d);
+  box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
+}
+.nv-root .btn.bad {
+  --edge: var(--bad-d);
+  box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
+}
+.nv-root .btn.info {
+  --edge: var(--info-d);
+  box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
+}
+.nv-root .btn.nova {
+  --edge: var(--nova-d);
+  box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
+}
+.nv-root .btn.ad {
+  --edge: #7a3fc4;
+  box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
+}
+.nv-root .btn.ghost {
+  --edge: var(--card-edge);
+  background: linear-gradient(180deg, #fffefa, #fff1d6);
+  border-color: var(--card-line);
+  box-shadow: 0 0.24em 0 var(--edge), 0 0.45em 0.8em rgba(90, 60, 20, 0.12);
+}
+.nv-root .btn:active:not([aria-disabled='true']),
+.nv-root .btn.good:active:not([aria-disabled='true']) {
+  box-shadow: 0 0.05em 0 var(--edge), 0 0.2em 0.45em rgba(30, 10, 50, 0.2), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
+}
+/* the gloss: a soft white sheen over the top half (buttons that already run the moving shine keep it) */
+.nv-root .btn:not(.shine)::after {
+  content: '';
+  position: absolute;
+  left: 0.42em;
+  right: 0.42em;
+  top: 0.16em;
+  height: 44%;
+  border-radius: 0.7em 0.7em 0.4em 0.4em;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.05));
+  pointer-events: none;
+}
+.nv-root .btn.ghost:not(.shine)::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
+  opacity: 0.55;
+}
+.nv-root .btn.small:not(.shine)::after {
+  left: 0.32em;
+  right: 0.32em;
+  top: 0.12em;
+}
+.nv-root .btn[aria-disabled='true']::after {
+  opacity: 0.4;
+}
+
+/* round icon buttons (close, zoom…) on paper */
+.nv-root .icon-btn {
+  background: radial-gradient(circle at 50% 34%, #fffdf6, #ffeccb);
+  box-shadow: 0 0.2em 0 var(--card-edge), 0 0.4em 0.7em rgba(30, 10, 50, 0.16), inset 0 0 0 0.1em rgba(255, 255, 255, 0.8);
+}
+
+/* ---------- menu tiles: the painted icon sits in a cream well ------------------ */
+
+.nv-root .menu-tile {
+  border-radius: 1.2em;
+  border-color: var(--card-line);
+  background: linear-gradient(180deg, #fffefa 0%, #fff1d6 100%);
+  box-shadow: 0 0.26em 0 var(--card-edge), 0 0.6em 1em rgba(120, 80, 30, 0.12), inset 0 0.12em 0 #fff;
+}
+.nv-root .menu-tile:active {
+  box-shadow: 0 0.06em 0 var(--card-edge), 0 0.3em 0.6em rgba(120, 80, 30, 0.1), inset 0 0.12em 0 #fff;
+}
+.nv-root .menu-tile .ic {
+  display: grid;
+  place-items: center;
+  box-sizing: content-box;
+  width: 1.15em;
+  height: 1.15em;
+  padding: 0.22em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #ffffff 0%, #ffeccb 62%, #f6d394 100%);
+  box-shadow: inset 0 -0.08em 0 rgba(170, 115, 40, 0.22), 0 0.06em 0.12em rgba(120, 80, 30, 0.18);
+}
+.nv-root .menu-tile .ic img {
+  width: 100%;
+  height: 100%;
+}
+.nv-root .menu-tile .lb {
+  color: var(--ink);
+}
+
+/* ---------- progress bars: an inset track, a glossy fill ------------------------ */
+
+.nv-root .bar {
+  background: rgba(110, 76, 40, 0.16);
+  box-shadow: inset 0 0.1em 0.18em rgba(80, 50, 20, 0.25);
+}
+.nv-root .bar > i {
+  box-shadow: inset 0 0.16em 0 rgba(255, 255, 255, 0.4), inset 0 -0.1em 0 rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- HUD buttons: the same candy family in night-glass colours, with a thin gold rim ---------- */
+
+.nv-root .rail-btn:not(.primary),
+.nv-root .dock-btn:not(.primary) {
+  background: linear-gradient(180deg, rgba(78, 62, 134, 0.93) 0%, rgba(38, 29, 66, 0.9) 100%);
+  box-shadow:
+    0 0.25em 0 rgba(20, 12, 40, 0.6),
+    0 0.5em 0.9em rgba(24, 12, 44, 0.28),
+    inset 0 0 0 0.12em rgba(243, 205, 132, 0.5),
+    inset 0 0.16em 0 rgba(255, 255, 255, 0.16);
+}
+.nv-root .rail-btn:not(.primary):active,
+.nv-root .dock-btn:not(.primary):active {
+  box-shadow: 0 0.05em 0 rgba(20, 12, 40, 0.6), inset 0 0 0 0.12em rgba(243, 205, 132, 0.5);
+}
+.nv-root .rail-btn::after,
+.nv-root .dock-btn::after {
+  content: '';
+  position: absolute;
+  left: 0.3em;
+  right: 0.3em;
+  top: 0.18em;
+  height: 40%;
+  border-radius: 0.85em 0.85em 0.45em 0.45em;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+.nv-root .dock-btn.primary::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.04));
+}
+.nv-root .rail-btn .lb,
+.nv-root .dock-btn .lb {
+  opacity: 1;
+  text-shadow: 0 0.1em 0 rgba(10, 4, 30, 0.6);
+}
