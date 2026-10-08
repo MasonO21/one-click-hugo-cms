@@ -436,6 +436,40 @@ describe('missions: persistence & repair', () => {
     expect(st.active).toContain('s_grid_core');
   });
 
+  it('a boss goal the colony has outgrown is finished by the bigger boss that leads its raids now', () => {
+    const { game } = makeGame();
+    const st = game.state.missions;
+    const tierUp = (t: number) => {
+      game.state.colony.tier = t;
+      game.bus.emit('colony:tierUp', { tier: t });
+    };
+    const kill = (def: string) => game.bus.emit('alien:killed', { id: 1, def, x: 0, z: 0, by: 'turret' } as never);
+    // Elder Brutes only lead raids up to Steel: "Bullet Storm" claimed at Alloy hands over "Defeat an Elder Brute"
+    expect(game.data.invasion(4).boss?.alien).toBe('hive_mother');
+    tierUp(3);
+    tierUp(4);
+    st.progress.s_fort_mg = game.data.mission('s_fort_mg')!.count;
+    expect(game.sys.missions.claim('s_fort_mg')).toBe(true);
+    expect(st.active).toContain('s_fort_brute');
+    kill('brute'); // an ordinary brute is not a boss
+    expect(game.sys.missions.progress('s_fort_brute').done).toBe(false);
+    kill('hive_mother');
+    expect(game.sys.missions.progress('s_fort_brute').done).toBe(true);
+    // the lifetime counters stay exact (no Elder Brute was beaten)
+    expect(game.sys.missions.counter('kill', 'elder_brute')).toBe(0);
+    expect(game.sys.missions.counter('kill', 'hive_mother')).toBe(1);
+    // the same for "Defeat a Hive Mother" carried into Titanium, where Titan Prime leads the raids; never downwards
+    expect(game.sys.missions.claim('s_fort_brute')).toBe(true);
+    st.progress.s_fort_missile = game.data.mission('s_fort_missile')!.count;
+    expect(game.sys.missions.claim('s_fort_missile')).toBe(true);
+    expect(st.active).toContain('s_fort_queen');
+    tierUp(6);
+    kill('elder_brute');
+    expect(game.sys.missions.progress('s_fort_queen').done).toBe(false);
+    kill('titan_prime');
+    expect(game.sys.missions.progress('s_fort_queen').done).toBe(true);
+  });
+
   it('a gated mission gets credit for what the colony already has when it opens', () => {
     const { game } = makeGame();
     for (let i = 0; i < 6; i++) game.state.buildings.list.push(fakeBuilding('solar_panel', 900 + i));

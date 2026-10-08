@@ -18,7 +18,7 @@ import { System } from './System';
 import type { MissionDef, MissionType } from '../data/schema';
 import type { GainSource } from '../core/events';
 import { dateKey } from '../core/format';
-import { DAILY_COUNT, isLiveType, liveValue, pickDailies, retroValue } from './meta/missionRules';
+import { DAILY_COUNT, isLiveType, lesserBosses, liveValue, pickDailies, retroValue } from './meta/missionRules';
 
 /** Seconds between a main mission completing and it being claimed automatically. */
 export const AUTO_CLAIM_DELAY = 1.2;
@@ -43,6 +43,7 @@ export class MissionSystem extends System {
   private dayAcc = 0;
   private lastShown = new Map<string, number>();
   private survivorTries = 0;
+  private bossCache = new Map<string, readonly string[]>();
   private survivorSpawned = false;
   /** onLoad has run (events fired while other systems load must not activate missions early). */
   private loaded = false;
@@ -72,7 +73,8 @@ export class MissionSystem extends System {
       this.recheckLive();
     });
     bus.on('world:regionDiscovered', (e) => this.bump('discover', [e.id], 1));
-    bus.on('alien:killed', (e) => this.bump('kill', [e.def], 1));
+    // a boss also counts for "defeat a smaller boss" goals (mission progress only; the counters stay exact)
+    bus.on('alien:killed', (e) => this.bump('kill', [e.def], 1, this.bossCredit(e.def)));
     bus.on('combat:ended', () => this.bump('defend', [], 1));
     bus.on('craft:completed', (e) => this.bump('craft', [e.recipe], 1));
     bus.on('research:completed', (e) => this.bump('research', [e.id], 1));
@@ -398,8 +400,18 @@ export class MissionSystem extends System {
     this.liveIds = live;
   }
 
-  /** Credit an event to the counters and to every active mission it matches. */
-  private bump(type: MissionType, targets: readonly string[], amount: number): void {
+  /** Smaller bosses a kill of `alien` also counts for (cached per alien; empty for anything but a boss). */
+  private bossCredit(alien: string): readonly string[] {
+    let list = this.bossCache.get(alien);
+    if (!list) this.bossCache.set(alien, (list = lesserBosses(this.game.data, alien)));
+    return list;
+  }
+
+  /**
+   * Credit an event to the counters and to every active mission it matches. `also`: further targets that advance
+   * missions without counting in the lifetime counters.
+   */
+  private bump(type: MissionType, targets: readonly string[], amount: number, also: readonly string[] = []): void {
     if (this.muted > 0 || !(amount > 0)) return;
     const c = this.game.state.missions.counters;
     for (const t of targets) {
@@ -413,7 +425,7 @@ export class MissionSystem extends System {
     for (const id of ids) {
       const def = this.game.data.mission(id);
       if (!def) continue;
-      if (def.target === '*' || targets.includes(def.target)) {
+      if (def.target === '*' || targets.includes(def.target) || also.includes(def.target)) {
         this.setProgress(id, def, (this.game.state.missions.progress[id] ?? 0) + amount);
       }
     }

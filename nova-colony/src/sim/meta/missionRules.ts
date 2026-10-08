@@ -6,6 +6,7 @@
 import type { Game } from '../../core/Game';
 import type { MissionDef, MissionType } from '../../data/schema';
 import type { BuildingInstance } from '../../core/state';
+import type { DataRegistry } from '../../data';
 import { Rng } from '../../core/rng';
 import { hashString } from './util';
 
@@ -91,6 +92,28 @@ export function retroValue(game: Game, def: MissionDef): number {
     default:
       return 0;
   }
+}
+
+/**
+ * Bosses a defeated boss also counts for: every boss that first leads an invasion at a lower tier ("Defeat an Elder
+ * Brute" is done by beating the Hive Mother that leads the raids once the colony has moved on). Elder Brutes only
+ * come up to Steel and Hive Mothers up to Nano, so a colony that tiers up first could otherwise never finish the
+ * step, nor the side chain behind it.
+ */
+export function lesserBosses(data: DataRegistry, alien: string): string[] {
+  const firstTier = (id: string): number => {
+    let t = Infinity;
+    for (const inv of data.invasions) if (inv.boss?.alien === id) t = Math.min(t, inv.tier);
+    return t;
+  };
+  const mine = firstTier(alien);
+  if (!data.alien(alien)?.boss || !Number.isFinite(mine)) return [];
+  const out: string[] = [];
+  for (const inv of data.invasions) {
+    const b = inv.boss?.alien;
+    if (b && b !== alien && !out.includes(b) && firstTier(b) < mine) out.push(b);
+  }
+  return out;
 }
 
 /** Deterministic daily selection: same date => same missions for every player. */
