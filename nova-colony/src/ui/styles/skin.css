@@ -385,6 +385,13 @@
 .nv-root .bar > i {
   box-shadow: inset 0 0.16em 0 rgba(255, 255, 255, 0.4), inset 0 -0.1em 0 rgba(0, 0, 0, 0.08);
 }
+/* the count ("0 / 8") is white: on the pale track of a goal barely started it all but vanished, so it gets a dark
+   warm outline that reads on the track and on every fill colour alike */
+.nv-root .bar .lbl {
+  text-shadow:
+    0 0 0.16em rgba(74, 44, 16, 0.95), 0.06em 0 0 rgba(74, 44, 16, 0.75), -0.06em 0 0 rgba(74, 44, 16, 0.75),
+    0 0.06em 0 rgba(74, 44, 16, 0.75), 0 -0.06em 0 rgba(74, 44, 16, 0.75);
+}
 
 /* ---------- HUD buttons: the same candy family in night-glass colours, with a thin gold rim ---------- */
 

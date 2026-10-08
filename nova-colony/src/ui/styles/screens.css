@@ -675,6 +675,11 @@ button.req-line.no {
 }
 
 /* ---------- missions ---------- */
+/* a little air between the description and the bar, and a bar tall enough for its count */
+.nv-root .mcard .bar {
+  margin-top: 0.4em;
+  height: 1em;
+}
 .mcard.ready {
   background: #fff8e0;
   border-color: var(--gold);
