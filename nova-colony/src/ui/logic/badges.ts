@@ -2,6 +2,7 @@
 import type { Game } from '../../core/Game';
 import { expeditionBadge } from './expeditions';
 import { wishBadge } from './wishes';
+import { seasonBonusReady } from '../../sim/seasonBonus';
 
 export interface Badges {
   missions: number;
@@ -25,12 +26,12 @@ export function claimableMissions(game: Game): string[] {
   return ms.active().filter((m) => ms.progress(m.id).done).map((m) => m.id);
 }
 
-/** Season rewards that can be claimed right now. */
+/** Season rewards that can be claimed right now (bonus chests past level 50 included). */
 export function claimableSeason(game: Game): number {
   const lo = game.state.liveops;
   const lvl = game.sys.liveops.seasonLevel();
   const levels = game.data.season.levels;
-  let n = 0;
+  let n = seasonBonusReady(game);
   for (let l = 1; l <= Math.min(lvl, levels.length); l++) {
     if (!lo.season.claimedFree.includes(l)) n++;
     if (lo.season.premium && !lo.season.claimedPremium.includes(l)) n++;

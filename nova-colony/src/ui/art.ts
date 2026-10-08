@@ -144,7 +144,7 @@ const HUD = new Set([
   'map', 'quests', 'shop', 'menu', 'crew', 'tech', 'craft', 'build', 'settings', 'season', 'spin',
   'population', 'power', 'defense', 'backpack', 'health',
   'night', 'sunrise', 'day', 'sunset', 'home', 'teleporter',
-  'expeditions', 'starchart', 'journal', 'wish', 'photo',
+  'expeditions', 'starchart', 'journal', 'wish', 'photo', 'wardrobe',
 ]);
 /** Every PoiDef.id (tests keep this equal to the data and to the files in public/art/pois). */
 const POIS = new Set([

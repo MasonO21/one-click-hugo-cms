@@ -3,12 +3,12 @@ import type { Reward } from '../../data/schema';
 import type { DataRegistry } from '../../data';
 import { fmt } from '../../core/format';
 import { bagEntries } from '../../core/bag';
-import { itemArt, resourceArt, vehicleArt } from '../art';
+import { cosmeticArt, itemArt, resourceArt, vehicleArt } from '../art';
 
 export interface RewardPart {
   kind: 'resource' | 'nova' | 'rp' | 'xp' | 'item' | 'colonist' | 'boost' | 'cosmetic' | 'vehicle';
   icon: string;
-  /** Illustration URL (resources, Nova, items and vehicles) — null means show `icon`. */
+  /** Illustration URL (resources, Nova, items, cosmetics and vehicles) — null means show `icon`. */
   art: string | null;
   /** Short amount text: "+120", "×2", "30m". */
   amount: string;
@@ -42,7 +42,10 @@ export function rewardParts(r: Reward | null | undefined, data: DataRegistry): R
   }
   if (r.colonist) out.push({ kind: 'colonist', icon: '🧑‍🚀', art: null, amount: '+1', label: `${cap(r.colonist)} colonist`, color: RARITY_COLOR[r.colonist] ?? '#9aa7b4' });
   if (r.boost) out.push({ kind: 'boost', icon: '⚡', art: null, amount: `${r.boost.minutes}m`, label: `${fmt(r.boost.mult)}× ${r.boost.kind}`, color: '#ffd84a' });
-  if (r.cosmetic) out.push({ kind: 'cosmetic', icon: '👕', art: null, amount: 'NEW', label: data.cosmetic(r.cosmetic)?.name ?? r.cosmetic, color: '#ff6f91' });
+  for (const id of r.cosmetic ? [r.cosmetic, ...(r.cosmetics ?? [])] : (r.cosmetics ?? [])) {
+    const c = data.cosmetic(id);
+    out.push({ kind: 'cosmetic', icon: c?.icon ?? '👕', art: cosmeticArt(id), amount: 'NEW', label: c?.name ?? id, color: '#ff6f91' });
+  }
   if (r.vehicle) out.push({ kind: 'vehicle', icon: data.vehicle(r.vehicle)?.icon ?? '🚙', art: vehicleArt(r.vehicle), amount: 'NEW', label: data.vehicle(r.vehicle)?.name ?? r.vehicle, color: '#5ef2ff' });
   return out;
 }

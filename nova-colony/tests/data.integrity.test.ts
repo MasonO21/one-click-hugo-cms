@@ -35,6 +35,7 @@ function rewardOk(r: Reward | undefined, where: string): void {
   }
   if (r.colonist) expect(rarities.has(r.colonist), `${where}: bad rarity`).toBe(true);
   if (r.cosmetic) expect(cosmeticIds.has(r.cosmetic), `${where}: unknown cosmetic "${r.cosmetic}"`).toBe(true);
+  for (const c of r.cosmetics ?? []) expect(cosmeticIds.has(c), `${where}: unknown cosmetic "${c}"`).toBe(true);
   if (r.vehicle) expect(vehicleIds.has(r.vehicle), `${where}: unknown vehicle`).toBe(true);
   if (r.boost) {
     expect(['production', 'research', 'gather']).toContain(r.boost.kind);
@@ -713,7 +714,7 @@ describe('data.integrity — monetization & live-ops', () => {
       rewardOk(p.grants, `product ${p.id}`);
       expect(p.fallbackPrice).toMatch(/^\$\d+\.\d\d(\/mo)?$/);
       expect(['consumable', 'non_consumable', 'subscription']).toContain(p.type);
-      expect(['crystals', 'packs', 'cosmetics', 'vip', 'season']).toContain(p.section);
+      expect(['crystals', 'packs', 'bundles', 'cosmetics', 'vip', 'season']).toContain(p.section);
       if (p.type === 'subscription') expect(p.grants.vipDays).toBeGreaterThan(0);
     }
     const prices = Object.fromEntries(data.products.map((p) => [p.id, p.fallbackPrice]));
@@ -760,7 +761,7 @@ describe('data.integrity — monetization & live-ops', () => {
     for (const c of data.cosmetics) { expect(c.color).toMatch(/^#[0-9a-f]{6}$/i); expect(c.nova).toBeGreaterThanOrEqual(0); }
     // exclusive (nova 0) cosmetics must be granted by something
     const granted = new Set<string>();
-    const note = (r?: Reward) => { if (r?.cosmetic) granted.add(r.cosmetic); };
+    const note = (r?: Reward) => { if (r?.cosmetic) granted.add(r.cosmetic); r?.cosmetics?.forEach((c) => granted.add(c)); };
     data.products.forEach((p) => note(p.grants));
     data.missions.forEach((m) => note(m.reward));
     data.season.levels.forEach((l) => { note(l.free); note(l.premium); });
@@ -783,7 +784,7 @@ describe('data.integrity — monetization & live-ops', () => {
     for (const r of order) expect(data.cosmetics.filter((c) => c.chest && c.rarity === r).length, `chest cosmetics of rarity ${r}`).toBeGreaterThanOrEqual(r === 'mythic' ? 4 : 5);
   });
 
-  it('season: 50 levels, valid rewards, premium richer than free, milestone cosmetics every 10 levels', () => {
+  it('season: 50 levels, valid rewards, premium richer than free, a premium cosmetic every 5 levels', () => {
     expect(data.season.levels.length).toBe(50);
     expect(data.season.xpPerLevel).toBeGreaterThan(0);
     data.season.levels.forEach((l, i) => { rewardOk(l.free, `season free ${i + 1}`); rewardOk(l.premium, `season premium ${i + 1}`); });
@@ -791,11 +792,40 @@ describe('data.integrity — monetization & live-ops', () => {
     const free = data.season.levels.reduce((s, l) => s + value(l.free), 0);
     const prem = data.season.levels.reduce((s, l) => s + value(l.premium), 0);
     expect(prem).toBeGreaterThan(free);
-    for (const lvl of [10, 20, 30, 40, 50]) expect(data.season.levels[lvl - 1].premium.cosmetic, `premium cosmetic at ${lvl}`).toBeTruthy();
+    // a premium cosmetic every 5 levels, 10 in all, all different
+    const premCos = data.season.levels.map((l, i) => [i + 1, l.premium.cosmetic] as const).filter(([, c]) => c);
+    expect(premCos.map(([l]) => l)).toEqual([5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
+    expect(new Set(premCos.map(([, c]) => c)).size).toBe(10);
+    for (const id of ['hat_space_bubble', 'pet_moon_bunny', 'frame_honey_gold', 'outfit_astro', 'outfit_neon_runner', 'hover_aurora', 'theme_aurora', 'turret_neon']) {
+      expect(premCos.some(([, c]) => c === id), `season keeps ${id}`).toBe(true);
+    }
     for (const v of Object.values(data.season.xp)) expect(v).toBeGreaterThan(0);
-    // free players earn a healthy slice of Nova over the season
+    // free players earn a healthy slice of Nova over the season; premium a lot more
     const freeNova = data.season.levels.reduce((s, l) => s + (l.free.nova ?? 0), 0);
+    const premNova = data.season.levels.reduce((s, l) => s + (l.premium.nova ?? 0), 0);
     expect(freeNova).toBeGreaterThanOrEqual(250);
+    expect(premNova).toBeGreaterThanOrEqual(2500);
+    expect(premNova).toBeGreaterThan(freeNova * 5);
+  });
+
+  it('season: Nova chests on both tracks (Acorn early, Crystal Bloom near the end, Cosmic Wish at 50) and bonus chests past 50', () => {
+    const chestsAt = (track: 'free' | 'premium') =>
+      data.season.levels.flatMap((l, i) => Object.entries(l[track].items ?? {}).filter(([id]) => data.chest(id)).flatMap(([id, n]) => Array.from({ length: n }, () => ({ level: i + 1, id }))));
+    const prem = chestsAt('premium');
+    expect(prem.length).toBeGreaterThanOrEqual(6);
+    const first = (id: string) => prem.find((c) => c.id === id)?.level ?? 0;
+    expect(first('chest_acorn')).toBeGreaterThan(0);
+    expect(first('chest_acorn')).toBeLessThanOrEqual(10);
+    expect(first('chest_moonlit')).toBeGreaterThan(first('chest_acorn'));
+    expect(first('chest_sunny')).toBeGreaterThan(first('chest_moonlit'));
+    expect(first('chest_crystal')).toBeGreaterThanOrEqual(40);
+    expect(data.season.levels[49].premium.items?.chest_cosmic).toBe(1);
+    // a few Acorn chests for free players too (and nothing grander)
+    const free = chestsAt('free');
+    expect(free.length).toBeGreaterThanOrEqual(2);
+    expect(free.every((c) => c.id === 'chest_acorn')).toBe(true);
+    // bonus levels: a repeatable Moonlit chest every 400 XP after the last level
+    expect(data.season.bonus).toEqual({ xp: 400, reward: { items: { chest_moonlit: 1 } } });
   });
 
   it('daily login is 7 days (resources, mats, Nova, colonist, defense crate, Nova, legendary) and the spin wheel is sane', () => {

@@ -594,6 +594,8 @@ export interface Reward {
   colonist?: Rarity;
   boost?: { kind: 'production' | 'research' | 'gather'; mult: number; minutes: number };
   cosmetic?: string;
+  /** Several cosmetics at once (bundles). */
+  cosmetics?: string[];
   /** Unlock a vehicle for free. */
   vehicle?: string;
 }
@@ -928,7 +930,8 @@ export interface ProductDef {
   tag?: 'best_value' | 'popular' | 'limited' | 'new';
   /** Max purchases per account (0 = unlimited). */
   limit: number;
-  section: 'crystals' | 'packs' | 'cosmetics' | 'vip' | 'season';
+  /** 'bundles': cosmetic / chest bundles (shown at the top of the Shop's Packs tab, with art drawn from their contents). */
+  section: 'crystals' | 'packs' | 'bundles' | 'cosmetics' | 'vip' | 'season';
 }
 
 /** What a cosmetic changes (one of each kind can be equipped; see LiveOps.equipCosmetic). */
@@ -1000,6 +1003,11 @@ export interface SeasonDef {
   /** XP needed per level (flat). */
   xpPerLevel: number;
   levels: { free: Reward; premium: Reward }[];
+  /**
+   * Bonus levels past the end of the track (premium only): every further `xp` season XP earns `reward` again
+   * (repeatable). See sim/seasonBonus.ts.
+   */
+  bonus?: { xp: number; reward: Reward };
   /** XP granted per tracked action. */
   xp: {
     gather: number; // per gather hit

@@ -1,0 +1,905 @@
+/* ==========================================================================
+   Wardrobe (panels/WardrobePanel.ts, panels/wardrobe/cards.ts), the Nova purchase confirmation, the Shop's
+   Nova Shop and bundle cards, and the season pass's premium header and reward art.
+   Painted-skin language: paper cards with a soft gold edge, round icon wells, candy pills. Rarity colours:
+   common cream, rare blue, epic purple, legendary gold, mythic rainbow (logic/wardrobe.ts RARITY_STYLE).
+   ========================================================================== */
+
+/* ---------- summary row: "3 of 11 collected" + All / Owned ----------------------- */
+
+.wd-sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  margin-top: -0.1em;
+}
+.wd-count {
+  color: var(--ink-warm, #7a4f22);
+  font-weight: 800;
+  font-size: 0.92em;
+}
+.wd-count b {
+  font-size: 1.15em;
+  color: var(--ink);
+}
+.wd-seg {
+  display: flex;
+  gap: 0.2em;
+  padding: 0.22em;
+  border-radius: 99px;
+  background: rgba(150, 100, 40, 0.13);
+  box-shadow: inset 0 0.12em 0.25em rgba(110, 70, 20, 0.2);
+}
+.wd-seg-b {
+  appearance: none;
+  border: 0;
+  min-height: 34px;
+  padding: 0.25em 0.95em;
+  border-radius: 99px;
+  background: transparent;
+  color: #7d6a8a;
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.wd-seg-b.on {
+  color: #fff;
+  background: linear-gradient(180deg, #ffc283, var(--accent));
+  box-shadow: 0 0.16em 0 var(--accent-d), inset 0 0.08em 0 rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0.08em 0 rgba(120, 50, 0, 0.3);
+}
+
+/* ---------- the card grid --------------------------------------------------------- */
+
+.wd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.9em, 1fr));
+  gap: 0.6em;
+}
+.nv-root .card.wd-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35em;
+  padding: 1.15em 0.4em 0.55em;
+  overflow: hidden;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-color: color-mix(in srgb, var(--rar) 55%, #e3c58e);
+  transition: transform 0.08s ease-out;
+}
+.nv-root .card.wd-card:active {
+  transform: translateY(0.12em) scale(0.98);
+}
+.nv-root .card.wd-card.s-equipped {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, #fffbe9 0%, #fff0c6 100%);
+  box-shadow: 0 0.26em 0 var(--gold-d), 0 0 0 0.16em rgba(255, 207, 74, 0.55), 0 0.6em 1.1em rgba(110, 70, 20, 0.16), inset 0 0 0 0.12em rgba(255, 255, 255, 0.85);
+}
+.nv-root .card.wd-card.s-locked .wd-ic-in > img,
+.nv-root .card.wd-card.s-locked .wd-ic-in.emoji {
+  filter: saturate(0.85);
+}
+.wd-ribbon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.22em 0.75em 0.22em 0.6em;
+  border-radius: 0 0 0.9em 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rar) 80%, #fff), var(--rar));
+  color: #fff;
+  font-size: 0.56em;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0.08em 0 var(--rar-d);
+  box-shadow: 0 0.1em 0.25em rgba(60, 30, 10, 0.18);
+}
+.wd-card.r-common .wd-ribbon {
+  color: #8a6a3a;
+  text-shadow: 0 0.08em 0 rgba(255, 255, 255, 0.7);
+}
+.wd-card.r-mythic .wd-ribbon {
+  background: linear-gradient(90deg, #ff8a8a, #ffd36a, #a6f08a, #7ad8ff, #b48cff, #ff8ad8);
+  text-shadow: 0 0.08em 0 rgba(120, 40, 140, 0.7);
+}
+.wd-badge {
+  position: absolute;
+  top: 0.32em;
+  right: 0.32em;
+  padding: 0.12em 0.5em;
+  border-radius: 99px;
+  font-size: 0.56em;
+  font-weight: 900;
+  color: var(--good-d);
+  background: #dff6e9;
+}
+.wd-badge.on {
+  color: #8a5a00;
+  background: #ffe9a8;
+}
+.wd-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.3em;
+  font-size: 0.82em;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.nv-root .wd-card .btn {
+  margin-top: auto;
+  min-height: 36px;
+  font-size: 0.8em;
+  padding-left: 0.4em;
+  padding-right: 0.4em;
+}
+.wd-src {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.25em;
+  min-height: 36px;
+  padding: 0.25em 0.3em;
+  border-radius: 0.8em;
+  background: rgba(150, 100, 40, 0.09);
+  color: var(--ink-soft);
+  font-size: 0.66em;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: left;
+}
+.wd-src.k-chest {
+  color: #7a4fd6;
+  background: #f1e8ff;
+}
+.wd-src.k-season {
+  color: #a2561c;
+  background: #ffefd4;
+}
+.wd-src-ic {
+  flex: 0 0 auto;
+}
+.wd-nova {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1em;
+  font-weight: 900;
+}
+.wd-nova .aico {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+/* ---------- the icon in its rarity ring ------------------------------------------- */
+
+.wd-ic {
+  --ring: #f4e4c1;
+  --tint: #ffe9c0;
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 3.9em;
+  height: 3.9em;
+  padding: 0.22em;
+  border-radius: 50%;
+  background: var(--ring);
+  box-shadow: 0 0.2em 0.4em rgba(90, 50, 10, 0.2), inset 0 0.08em 0 rgba(255, 255, 255, 0.6);
+}
+.wd-ic.r-common {
+  background: linear-gradient(180deg, #fff6e2, #e8d2a4);
+}
+.wd-ic.r-mythic {
+  background: none;
+}
+.wd-ic.r-mythic::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--ring);
+  animation: wd-turn 7s linear infinite;
+}
+@keyframes wd-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+.nv-root .wd-ic > .wd-ic-in.aico {
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 36%, #ffffff 0%, #fff6e4 55%, #ffe6bf 100%);
+  background: radial-gradient(circle at 50% 36%, #ffffff 0%, #fff6e4 50%, color-mix(in srgb, var(--tint) 30%, #ffe6bf) 100%);
+  box-shadow: inset 0 -0.12em 0.2em rgba(150, 100, 40, 0.18), 0 0 0 0.08em rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.nv-root .wd-ic > .wd-ic-in.aico > img {
+  display: block;
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.12em 0.12em rgba(60, 30, 10, 0.25));
+}
+.nv-root .wd-ic > .wd-ic-in.aico.emoji {
+  font-size: 1.75em;
+  line-height: 1;
+}
+.wd-ic.big {
+  width: 5em;
+  height: 5em;
+  padding: 0.26em;
+}
+.nv-root .wd-ic.big > .wd-ic-in.aico.emoji {
+  font-size: 2.3em;
+}
+.wd-ic.huge {
+  width: 7.6em;
+  height: 7.6em;
+  padding: 0.34em;
+}
+.nv-root .wd-ic.huge > .wd-ic-in.aico.emoji {
+  font-size: 3.6em;
+}
+.wd-ic.mini {
+  width: 2.3em;
+  height: 2.3em;
+  padding: 0.14em;
+}
+.nv-root .wd-ic.mini > .wd-ic-in.aico.emoji {
+  font-size: 1.05em;
+}
+
+/* ---------- detail sheet ----------------------------------------------------------- */
+
+.wd-sheet-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.wd-sheet-bd {
+  position: absolute;
+  inset: 0;
+  background: rgba(42, 24, 64, 0.42);
+}
+.wd-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: 90%;
+  border-radius: 1.5em 1.5em 0 0;
+  background-color: #f7e6c4;
+  background-image: url('./tex/paper.webp');
+  background-size: 384px 384px;
+  box-shadow: 0 -0.6em 1.8em rgba(20, 8, 40, 0.35), inset 0 0.2em 0 var(--frame, #f3cd84), inset 0 0.34em 0 rgba(120, 72, 20, 0.25);
+}
+.wd-sheet-wrap.in .wd-sheet-bd {
+  animation: wd-fade 0.22s ease-out both;
+}
+.wd-sheet-wrap.in .wd-sheet {
+  animation: wd-up 0.34s cubic-bezier(0.2, 1.1, 0.35, 1) both;
+}
+.wd-sheet-wrap.out {
+  pointer-events: none;
+}
+.wd-sheet-wrap.out .wd-sheet-bd {
+  animation: wd-fade 0.2s ease-in reverse both;
+}
+.wd-sheet-wrap.out .wd-sheet {
+  animation: wd-down 0.2s ease-in both;
+}
+@keyframes wd-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes wd-up {
+  from {
+    transform: translateY(70%);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes wd-down {
+  to {
+    transform: translateY(60%);
+    opacity: 0;
+  }
+}
+.nv-root .wd-sheet-x {
+  position: absolute;
+  top: 0.75em;
+  right: 0.75em;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  color: #8a4a2a;
+  font-weight: 900;
+}
+.wd-sheet-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+  padding: 1.1em 1.1em calc(1.1em + var(--safe-b));
+}
+.wd-hero {
+  display: grid;
+  place-items: center;
+  margin: -0.2em -1.1em 0.1em;
+  padding: 0.8em 0 0.6em;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 45%, transparent), transparent);
+}
+.wd-hero .wd-ic.huge {
+  animation: wd-bob 3.2s ease-in-out infinite;
+}
+@keyframes wd-bob {
+  50% {
+    transform: translateY(-0.18em) rotate(-2deg);
+  }
+}
+.wd-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35em;
+}
+.wd-rpill,
+.wd-kpill {
+  padding: 0.15em 0.7em;
+  border-radius: 99px;
+  font-size: 0.74em;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.wd-rpill {
+  color: #fff;
+  text-shadow: 0 0.08em 0 rgba(0, 0, 0, 0.2);
+}
+.wd-rpill.r-common {
+  color: #8a6a3a;
+  background: #f4e4c1;
+  text-shadow: none;
+}
+.wd-rpill.r-rare {
+  background: #4f9fe8;
+}
+.wd-rpill.r-epic {
+  background: #9a6bf0;
+}
+.wd-rpill.r-legendary {
+  background: #e6a91c;
+}
+.wd-rpill.r-mythic {
+  background: linear-gradient(90deg, #ff8a8a, #ffc04a, #6fd56a, #4fc0ff, #a06bff, #ff6fc8);
+}
+.wd-kpill {
+  color: var(--ink-soft);
+  background: rgba(150, 100, 40, 0.12);
+}
+.wd-kpill.on {
+  color: #8a5a00;
+  background: #ffe9a8;
+}
+.wd-kpill.own {
+  color: var(--good-d);
+  background: #dff6e9;
+}
+.wd-title {
+  text-align: center;
+  font-size: 1.35em;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.15;
+}
+.wd-desc {
+  text-align: center;
+  color: var(--ink-soft);
+  font-style: italic;
+  font-weight: 700;
+}
+.wd-effects {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3em;
+}
+.wd-effects li {
+  position: relative;
+  padding-left: 1.3em;
+  font-weight: 800;
+  font-size: 0.95em;
+}
+.wd-effects li::before {
+  content: '✿';
+  position: absolute;
+  left: 0;
+  color: var(--pink);
+}
+.wd-colors {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.wd-sw {
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.14em rgba(255, 255, 255, 0.75), 0 0.1em 0.25em rgba(60, 30, 10, 0.25);
+}
+.wd-sources {
+  display: grid;
+  gap: 0.4em;
+}
+.wd-srow {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  min-height: 44px;
+  padding: 0.35em 0.45em 0.35em 0.6em;
+  border-radius: 0.9em;
+  background: rgba(255, 255, 255, 0.7);
+  border: 0.12em solid #ecd3a3;
+  font-weight: 800;
+  font-size: 0.92em;
+}
+.wd-srow .grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.wd-srow-ic {
+  flex: 0 0 auto;
+  font-size: 1.2em;
+}
+.nv-root .wd-srow .btn.small {
+  flex: 0 0 auto;
+  min-height: 40px;
+}
+.wd-sheet-actions {
+  display: grid;
+  gap: 0.55em;
+  margin-top: 0.3em;
+}
+.nv-root .wd-sheet-actions .btn {
+  min-height: 48px;
+}
+
+/* landscape phones: the sheet is a centred card, not a full-width drawer */
+@media (orientation: landscape) and (max-height: 600px) {
+  .wd-sheet-wrap {
+    align-items: center;
+    justify-content: center;
+  }
+  .wd-sheet {
+    width: min(30em, 92%);
+    max-height: 92%;
+    border-radius: 1.5em;
+  }
+  .wd-sheet-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 1em;
+    align-items: start;
+  }
+  .wd-sheet-body > * {
+    grid-column: 2;
+  }
+  .wd-sheet-body > .wd-hero {
+    grid-column: 1;
+    grid-row: 1 / span 6;
+    margin: 0;
+    padding: 0.4em;
+  }
+  .wd-hero .wd-ic.huge {
+    width: 6.4em;
+    height: 6.4em;
+  }
+  .wd-pills,
+  .wd-title,
+  .wd-desc {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+.wd-foot {
+  margin-top: 0.4em;
+}
+
+/* ---------- Nova purchase confirmation ---------------------------------------------- */
+
+.nv-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  padding: 1em;
+}
+.nv-confirm-bd {
+  position: absolute;
+  inset: 0;
+  background: rgba(42, 24, 64, 0.5);
+}
+.nv-confirm-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5em;
+  width: min(21em, 100%);
+  padding: 1.2em 1.1em 1.1em;
+  border-radius: 1.4em;
+  background-color: #f7e6c4;
+  background-image: url('./tex/paper.webp');
+  background-size: 384px 384px;
+  box-shadow: 0 1em 2.4em rgba(20, 8, 40, 0.45), 0 0 0 0.2em var(--frame, #f3cd84), 0 0 0 0.34em rgba(120, 72, 20, 0.35), inset 0 0 0 0.14em rgba(255, 255, 255, 0.7);
+}
+.nv-confirm.in .nv-confirm-bd {
+  animation: wd-fade 0.2s ease-out both;
+}
+.nv-confirm.in .nv-confirm-card {
+  animation: wd-pop 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+.nv-confirm.out {
+  pointer-events: none;
+  animation: wd-fade 0.18s ease-in reverse both;
+}
+@keyframes wd-pop {
+  from {
+    transform: scale(0.82);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.nv-confirm-ic {
+  display: grid;
+  place-items: center;
+  min-height: 5em;
+}
+.nv-confirm-ic .ns-art {
+  width: 5em;
+  height: 5em;
+}
+.nv-confirm-price {
+  font-weight: 900;
+  color: var(--nova-d);
+  font-size: 1.1em;
+}
+.nv-confirm-btns {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 0.6em;
+  width: 100%;
+  margin-top: 0.4em;
+}
+.nv-root .nv-confirm-btns .btn {
+  min-height: 48px;
+}
+
+/* ---------- Shop › Nova Shop -------------------------------------------------------- */
+
+.ns-intro {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  background: linear-gradient(180deg, #f6edff, #ebe0ff);
+  border-color: #cbb4f5;
+}
+.nv-root .card.ns-intro {
+  box-shadow: 0 0.26em 0 #b89be8, 0 0.6em 1.1em rgba(90, 50, 140, 0.14), inset 0 0 0 0.12em rgba(255, 255, 255, 0.85);
+}
+.ns-intro .big-ico {
+  font-size: 2.2em;
+}
+.ns-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17em, 1fr));
+  gap: 0.55em;
+}
+.nv-root .card.ns-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65em;
+  padding: 0.6em 0.6em 0.6em 0.65em;
+}
+.ns-art {
+  display: grid;
+  place-items: center;
+  width: 3.2em;
+  height: 3.2em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #ffffff 0%, #ffeccb 62%, #f6d394 100%);
+  box-shadow: inset 0 -0.1em 0 rgba(170, 115, 40, 0.25), 0 0.12em 0.25em rgba(120, 80, 30, 0.2);
+  font-size: 1em;
+}
+.ns-art > img,
+.ns-art .aico {
+  width: 74%;
+  height: 74%;
+}
+.ns-art.emoji,
+.ns-art .aico.emoji {
+  font-size: 1.5em;
+}
+.ns-txt {
+  min-width: 0;
+}
+.ns-name {
+  font-weight: 900;
+  line-height: 1.15;
+}
+.ns-desc {
+  color: var(--ink-soft);
+  font-size: 0.78em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.ns-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+  margin-top: 0.25em;
+}
+.ns-meta .chip {
+  font-size: 0.7em;
+  padding: 0.1em 0.5em;
+}
+.nv-root .ns-item .btn {
+  min-width: 5.4em;
+  min-height: 44px;
+  padding-left: 0.6em;
+  padding-right: 0.6em;
+}
+.ns-sec {
+  margin-top: 0.3em;
+}
+
+/* ---------- Shop › bundle cards: their contents make the picture --------------------- */
+
+.bundle-art {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 7.4em;
+  border-radius: 1em;
+  background: radial-gradient(70% 90% at 50% 100%, rgba(255, 214, 140, 0.7), rgba(255, 214, 140, 0) 70%);
+}
+.bundle-art > * {
+  margin: 0 -0.55em;
+}
+.bundle-art .wd-ic {
+  width: 4.2em;
+  height: 4.2em;
+}
+.bundle-art .wd-ic:nth-child(2) {
+  z-index: 1;
+  width: 5em;
+  height: 5em;
+  margin-bottom: 0.7em;
+}
+.bundle-art .bundle-chest {
+  width: 5.2em;
+  height: 5.2em;
+  object-fit: contain;
+  filter: drop-shadow(0 0.25em 0.3em rgba(40, 20, 60, 0.3));
+}
+.bundle-art .bundle-chest:nth-child(2) {
+  z-index: 1;
+  width: 6.4em;
+  height: 6.4em;
+}
+.bundle-art .bundle-chest.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 3em;
+}
+.bundle-art .bundle-nova {
+  position: absolute;
+  right: 0.4em;
+  top: 0.3em;
+  margin: 0;
+  padding: 0.15em 0.55em;
+  border-radius: 99px;
+  color: #fff;
+  background: linear-gradient(180deg, #a77ff0, var(--nova-d));
+  font-weight: 900;
+  font-size: 0.8em;
+  box-shadow: 0 0.12em 0 #5b3aa8;
+}
+.bundle-art .bundle-nova .aico {
+  width: 1.1em;
+  height: 1.1em;
+}
+.wd-shop-cta {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+
+/* ---------- season pass: premium header, reward art, bonus chests ------------------- */
+
+.sp-premium {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.2em 0.8em;
+  background: linear-gradient(160deg, #fff1c9 0%, #ffe0f0 55%, #e9dcff 100%);
+  border-color: #e9b9e8;
+}
+.nv-root .card.sp-premium {
+  box-shadow: 0 0.26em 0 #d49ad8, 0 0.6em 1.1em rgba(120, 60, 140, 0.16), inset 0 0 0 0.12em rgba(255, 255, 255, 0.85);
+}
+.sp-premium .sp-crown {
+  grid-row: span 2;
+  width: 4.6em;
+  height: 4.6em;
+  object-fit: contain;
+  filter: drop-shadow(0 0.2em 0.25em rgba(80, 30, 90, 0.3));
+}
+.sp-premium .sp-crown.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 2.8em;
+}
+.sp-premium .h3 {
+  color: #6a2f7a;
+}
+.sp-hl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+}
+.sp-hl .chip {
+  font-size: 0.78em;
+  background: rgba(255, 255, 255, 0.75);
+  color: #6a2f7a;
+  box-shadow: 0 0.08em 0 rgba(160, 90, 170, 0.25);
+}
+.sp-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.35em;
+  overflow-x: auto;
+  padding: 0.35em 0.1em 0.2em;
+  scrollbar-width: none;
+}
+.sp-strip::-webkit-scrollbar {
+  display: none;
+}
+.sp-strip > * {
+  flex: 0 0 auto;
+}
+.sp-strip .wd-ic.mini {
+  width: 2.6em;
+  height: 2.6em;
+}
+.sp-strip .sp-chest {
+  width: 2.7em;
+  height: 2.7em;
+  object-fit: contain;
+}
+.sp-strip .sp-chest.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 1.6em;
+}
+.sp-premium .btn {
+  grid-column: 1 / -1;
+}
+.sp-premium.owned {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+/* a reward's star in its cell: a big chest / cosmetic picture above the chips */
+.scell .sc-hero {
+  display: grid;
+  place-items: center;
+  width: 3.4em;
+  height: 3.4em;
+  margin-bottom: 0.1em;
+}
+.scell .sc-hero > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.15em 0.18em rgba(60, 30, 80, 0.3));
+}
+.scell .sc-hero.emoji {
+  font-size: 2em;
+}
+.scell .sc-hero .wd-ic {
+  width: 3.2em;
+  height: 3.2em;
+}
+.scell.hero-cos,
+.scell.hero-chest {
+  min-height: 7.6em;
+}
+.scell.premium.hero-cos {
+  background: linear-gradient(180deg, #fbf3ff, #efe2ff);
+}
+
+.sp-bonus {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  background: linear-gradient(180deg, #eef3ff, #e2e9ff);
+  border-color: #b9c7f2;
+}
+.sp-bonus .sp-bchest {
+  width: 4.2em;
+  height: 4.2em;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.sp-bonus .sp-bchest.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 2.4em;
+}
+.sp-bonus .grow {
+  min-width: 0;
+}
+.scell.ghost-cell {
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
+.scol.bonus .sl {
+  color: var(--nova-d);
+}
+
+.scell .sc-heroes {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.scell .sc-heroes > .sc-hero {
+  width: 2.9em;
+  height: 2.9em;
+}
+.scell .sc-heroes > .sc-hero + .sc-hero {
+  margin-left: -0.5em;
+}
+.scell .sc-heroes .wd-ic {
+  width: 2.8em;
+  height: 2.8em;
+}

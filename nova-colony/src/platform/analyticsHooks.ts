@@ -8,7 +8,7 @@
  *   tech progression      tier_up (+ time-to-tier), research_done
  *   building usage        building_usage                           (aggregated, flushed every 5 min / on pause)
  *   ad engagement         ad_started / ad_rewarded / ad_failed
- *   purchase funnel       shop_opened -> iap_purchased / iap_failed
+ *   purchase funnel       shop_opened -> iap_purchased / iap_failed, nova_spent (sink, item, amount, balance)
  *   quit points           quit_point                               (current main mission when the app is paused)
  *   slow progression      progression_stall                        (no mission completed for 10 min of play)
  *   achievements          achievement_unlocked                     (id + medal tier)
@@ -216,6 +216,11 @@ export function installAnalyticsHooks(game: Game): () => void {
   });
   on('iap:purchased', ({ product }) => a.track('iap_purchased', { product, purchases: st().stats.purchases }));
   on('iap:failed', ({ product, reason }) => a.track('iap_failed', { product, reason: reason.slice(0, 40) }));
+  // Nova sinks: what for ('cosmetic', 'nova_shop', 'chest'…), which one, how much, what is left
+  on('nova:spent', ({ amount, reason, balance }) => {
+    const i = reason.indexOf(':');
+    a.track('nova_spent', { amount, sink: (i >= 0 ? reason.slice(0, i) : reason).slice(0, 24), item: (i >= 0 ? reason.slice(i + 1) : '').slice(0, 40), balance, tier: st().colony.tier });
+  });
 
   // ---- retention features
   on('daily:claimed', ({ day: d }) => a.track('daily_claimed', { day: d, streak: st().liveops.daily.streak }));

@@ -48,6 +48,7 @@ export function describeReward(r: Reward, data: DataRegistry): string {
   if (r.colonist) parts.push(`${r.colonist} colonist`);
   if (r.boost) parts.push(`${r.boost.mult}× ${r.boost.kind} boost`);
   if (r.cosmetic) parts.push(data.cosmetic(r.cosmetic)?.name ?? r.cosmetic);
+  for (const c of r.cosmetics ?? []) parts.push(data.cosmetic(c)?.name ?? c);
   if (r.vehicle) parts.push(data.vehicle(r.vehicle)?.name ?? r.vehicle);
   return parts.join(', ');
 }

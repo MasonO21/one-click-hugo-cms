@@ -20,6 +20,14 @@ import type { AdResult, PurchaseResult } from '../platform/types';
 import { CENTER_CELL } from '../core/constants';
 import { dateKey } from '../core/format';
 import { crateReward, researchGrantRp, scaleReward } from './meta/util';
+import { seasonBonusEarned, seasonBonusReady } from './seasonBonus';
+
+declare module '../core/events' {
+  interface GameEvents {
+    /** Nova was spent (`reason`: 'cosmetic:<id>', 'nova_shop:<id>', 'chest:<id>'…): analytics `nova_spent`. */
+    'nova:spent': { amount: number; reason: string; balance: number };
+  }
+}
 
 declare module '../core/state' {
   interface LiveOpsState {
@@ -170,11 +178,12 @@ export class LiveOpsSystem extends System {
     this.game.bus.emit('nova:changed', { amount: this.game.state.liveops.nova, delta: n });
   }
 
-  spendNova(n: number, _reason: string): boolean {
+  spendNova(n: number, reason: string): boolean {
     n = Math.floor(n);
     if (!(n > 0) || this.game.state.liveops.nova < n) return false;
     this.game.state.liveops.nova -= n;
     this.game.bus.emit('nova:changed', { amount: this.game.state.liveops.nova, delta: -n });
+    this.game.bus.emit('nova:spent', { amount: n, reason, balance: this.game.state.liveops.nova });
     return true;
   }
 
@@ -263,6 +272,9 @@ export class LiveOpsSystem extends System {
       for (let l = before + 1; l <= after; l++) bus.emit('season:levelUp', { level: l });
       bus.emit('sfx', { id: 'level_up' });
       this.game.toast(`🏅 Season level ${after}! New rewards are waiting`, 'success');
+    } else if (s.premium && seasonBonusEarned(this.game.data.season, s.xp) > seasonBonusEarned(this.game.data.season, s.xp - xp)) {
+      bus.emit('sfx', { id: 'level_up' });
+      this.game.toast('🎁 Season bonus chest! Claim it on the season pass', 'success', undefined, 'season');
     }
   }
 
@@ -306,9 +318,9 @@ export class LiveOpsSystem extends System {
     return true;
   }
 
-  /** Number of season rewards ready to claim (badge). */
+  /** Number of season rewards ready to claim (badge), bonus chests included. */
   seasonClaimable(): number {
-    let n = 0;
+    let n = seasonBonusReady(this.game);
     for (let l = 1; l <= this.seasonLevel(); l++) {
       if (this.canClaimSeason(l, false)) n++;
       if (this.canClaimSeason(l, true)) n++;
@@ -416,14 +428,24 @@ export class LiveOpsSystem extends System {
     return rewarded ? index : null;
   }
 
+  /**
+   * A spin outside the daily free / ad allowance (bought in the Nova Shop: sim/novaShop.ts charges and caps it).
+   * Same flow as any spin: `spin:result` now, the reward after SPIN_GRANT_DELAY.
+   */
+  bonusSpin(): number | null {
+    return this.performSpin('bonus');
+  }
+
   /** The spin itself (after any ad). Sync so the result is recorded in the same tick the ad rewards. */
-  private performSpin(viaAd: boolean): number | null {
+  private performSpin(viaAd: boolean | 'bonus'): number | null {
     const g = this.game;
     const segs = g.data.spinSegments;
     const spin = g.state.liveops.spin;
     const today = dateKey(g.now());
     if (segs.length === 0) return null;
-    if (viaAd) {
+    if (viaAd === 'bonus') {
+      // paid for elsewhere: no daily bookkeeping
+    } else if (viaAd) {
       if (spin.adDate !== today) {
         spin.adDate = today;
         spin.adSpins = 0;
@@ -746,7 +768,7 @@ export class LiveOpsSystem extends System {
     const grants = def.grants;
     if (entitlementsOnly) {
       const owned = g.state.liveops.cosmetics.owned;
-      if (grants.cosmetic && !owned.includes(grants.cosmetic)) owned.push(grants.cosmetic);
+      for (const c of grants.cosmetic ? [grants.cosmetic, ...(grants.cosmetics ?? [])] : (grants.cosmetics ?? [])) if (!owned.includes(c)) owned.push(c);
     } else {
       g.grant(grants, 'purchase');
     }

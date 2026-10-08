@@ -44,6 +44,12 @@ export const PRODUCTS: ProductDef[] = [
   { id: 'cosmetic_sakura_theme', section: 'cosmetics', type: 'non_consumable', name: 'Sakura Colony Theme', description: 'Pink blossoms and soft lantern light across your whole colony.', fallbackPrice: '$2.99', limit: 1, grants: { cosmetic: 'theme_sakura' } },
   { id: 'cosmetic_neon_theme', section: 'cosmetics', type: 'non_consumable', name: 'Neon Night Theme', description: 'A synth-wave glow for your colony after dark.', fallbackPrice: '$2.99', limit: 1, tag: 'new', grants: { cosmetic: 'theme_neon_night' } },
   { id: 'cosmetic_turret_neon', section: 'cosmetics', type: 'non_consumable', name: 'Neon Turret Skin', description: 'Make every turret glow electric blue.', fallbackPrice: '$1.99', limit: 1, grants: { cosmetic: 'turret_neon' } },
+
+  // ---------------------------------------------------------------- bundles (cosmetics / chests + Nova; top of the Packs tab)
+  // Each is worth clearly more than its price in Nova: the wardrobe bundle's three cosmetics cost 900 Nova on their own.
+  { id: 'bundle_cozy_wardrobe', section: 'bundles', type: 'non_consumable', name: 'Cozy Wardrobe Bundle', description: 'The Cozy Knit Sweater, a Pom-Pom Beanie and knitted scarves for the whole crew, plus 200 Nova.', fallbackPrice: '$4.99', limit: 1, tag: 'new', grants: { nova: 200, cosmetics: ['outfit_cozy_knit', 'hat_beanie', 'colonist_cozy_scarves'], bundleTag: 'cozy_wardrobe' } },
+  { id: 'bundle_chest_lover', section: 'bundles', type: 'consumable', name: 'Chest Lover Bundle', description: 'Three Acorn chests, two Moonlit chests and a Sunflower chest to open, plus 300 Nova.', fallbackPrice: '$9.99', limit: 0, tag: 'popular', grants: { nova: 300, items: { chest_acorn: 3, chest_moonlit: 2, chest_sunny: 1 }, bundleTag: 'chest_lover' } },
+  { id: 'bundle_photo_frames', section: 'bundles', type: 'non_consumable', name: 'Photo Frame Bundle', description: 'Three Photo Mode frames: cozy knit, sakura petals and a starry night, plus 50 Nova.', fallbackPrice: '$1.99', limit: 1, grants: { nova: 50, cosmetics: ['frame_cozy_knit', 'frame_sakura', 'frame_starry'], bundleTag: 'photo_frames' } },
 ];
 
 /**
@@ -142,12 +148,22 @@ export const VIP: VipDef = {
 // Season pass — 50 levels, free + premium tracks. XP comes from normal play.
 // ---------------------------------------------------------------------------------------------
 
-/** Milestone cosmetics on the premium track (every 10 levels). */
+/**
+ * Premium cosmetics, one every 5 levels (10 in all). The season exclusives (space bubble, moon bunny, honey frame…)
+ * live here; the bookends (Kitty Ears early, the legendary Ember Fox near the end) are chest drops a pass holder gets
+ * for sure.
+ */
 const SEASON_PREMIUM_COSMETICS: Record<number, string> = {
-  10: 'outfit_astro', 20: 'theme_aurora', 30: 'hover_aurora', 40: 'turret_neon', 50: 'outfit_neon_runner',
+  5: 'hat_cat_ears', 10: 'outfit_astro', 15: 'hat_space_bubble', 20: 'theme_aurora', 25: 'pet_moon_bunny',
+  30: 'hover_aurora', 35: 'frame_honey_gold', 40: 'turret_neon', 45: 'pet_ember_fox', 50: 'outfit_neon_runner',
 };
-/** Season-exclusive cosmetics on the half-way premium levels. */
-const SEASON_PREMIUM_HALF: Record<number, string> = { 15: 'hat_space_bubble', 25: 'pet_moon_bunny', 35: 'frame_honey_gold' };
+/** Premium Nova chests: Acorn early, Moonlit and Sunflower mid-season, Crystal Bloom near the end, Cosmic Wish at 50. */
+const SEASON_PREMIUM_CHESTS: Record<number, string> = {
+  3: 'chest_acorn', 8: 'chest_acorn', 13: 'chest_moonlit', 22: 'chest_moonlit', 27: 'chest_sunny', 38: 'chest_sunny',
+  47: 'chest_crystal', 50: 'chest_cosmic',
+};
+/** A few Acorn chests on the free track too. */
+const SEASON_FREE_CHESTS: Record<number, string> = { 4: 'chest_acorn', 18: 'chest_acorn', 33: 'chest_acorn' };
 /** Milestone rewards on the free track (every 10 levels). */
 const SEASON_FREE_MILESTONES: Record<number, Reward> = {
   10: { nova: 25, items: { supply_crate: 2 } },
@@ -157,6 +173,11 @@ const SEASON_FREE_MILESTONES: Record<number, Reward> = {
   50: { nova: 120, cosmetic: 'deco_lantern_festival', items: { mystery_crate: 2 } },
 };
 
+/** Add one of an item to a reward (merging with items already there). */
+function withItem(r: Reward, id: string | undefined): Reward {
+  return id ? { ...r, items: { ...(r.items ?? {}), [id]: (r.items?.[id] ?? 0) + 1 } } : r;
+}
+
 function seasonLevels(): SeasonDef['levels'] {
   const levels: SeasonDef['levels'] = [];
   for (let i = 1; i <= 50; i++) {
@@ -165,14 +186,13 @@ function seasonLevels(): SeasonDef['levels'] {
     if (i % 10 === 0) {
       free = SEASON_FREE_MILESTONES[i];
       premium = {
-        nova: 60 + i * 2,
-        cosmetic: SEASON_PREMIUM_COSMETICS[i],
+        nova: 160 + i * 5,
         colonist: i >= 50 ? 'legendary' : i >= 20 ? 'epic' : 'rare',
         items: i >= 40 ? { titan_crate: 1 } : i >= 30 ? { nano_crate: 1 } : { supply_crate: 3 },
       };
     } else if (i % 5 === 0) {
       free = { nova: 10 + i / 5 * 2 };
-      premium = { nova: 30 + i, items: { mystery_crate: 1 }, ...(SEASON_PREMIUM_HALF[i] ? { cosmetic: SEASON_PREMIUM_HALF[i] } : {}) };
+      premium = { nova: 60 + i * 2, items: { mystery_crate: 1 } };
     } else if (i <= 15) {
       // early levels: basic resources
       free = { resources: { wood: 40 + 20 * i, stone: 30 + 15 * i, fiber: 20 + 10 * i } };
@@ -186,6 +206,11 @@ function seasonLevels(): SeasonDef['levels'] {
       free = { resources: { steel: 40 + 4 * i, electronics: 10 + 2 * i, crystal: 4 + i } };
       premium = { resources: { alloy: 5 + 2 * i, energy_cell: 3 + i, nano: Math.floor(i / 5) }, rp: 30 * i, items: { research_chip: 2 } };
     }
+    // a handful of Nova on the even premium levels in between (level 1 stays a pure welcome gift of supplies)
+    if (i % 5 !== 0 && i % 2 === 0) premium = { ...premium, nova: 20 + i };
+    if (SEASON_PREMIUM_COSMETICS[i]) premium = { ...premium, cosmetic: SEASON_PREMIUM_COSMETICS[i] };
+    premium = withItem(premium, SEASON_PREMIUM_CHESTS[i]);
+    free = withItem(free, SEASON_FREE_CHESTS[i]);
     levels.push({ free, premium });
   }
   return levels;
@@ -196,6 +221,8 @@ export const SEASON: SeasonDef = {
   name: 'Season 1: First Light',
   xpPerLevel: 400,
   levels: seasonLevels(),
+  // after level 50 the premium track keeps paying: a Moonlit chest for every further 400 XP (repeatable)
+  bonus: { xp: 400, reward: { items: { chest_moonlit: 1 } } },
   // Note: 'gather' is XP per gather hit (fractions accumulate); tuned so an engaged player finishes ~20 days.
   xp: { gather: 0.25, build: 6, craft: 5, kill: 1, defend: 50, mission: 30, discover: 60, research: 20 },
 };

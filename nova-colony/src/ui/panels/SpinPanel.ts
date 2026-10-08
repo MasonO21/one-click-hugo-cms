@@ -9,6 +9,8 @@ import { adButton, btn, partIcon, rewardChips } from '../widgets';
 import { hudArt, iconEl } from '../art';
 import { confetti } from '../fx/Confetti';
 import { fill, h } from '../dom';
+import { buyNovaItem, novaOffer } from '../../sim/novaShop';
+import { novaLabel } from './wardrobe/cards';
 
 export class SpinPanel extends Panel {
   readonly name = 'spin';
@@ -26,9 +28,28 @@ export class SpinPanel extends Panel {
     cancelAnimationFrame(this.raf);
   }
 
+  /** `{ animate: index }`: a spin bought elsewhere (Shop › Nova Shop) has its result: turn the wheel onto it. */
+  override onOpen(arg: unknown): void {
+    this.animateArg(arg);
+  }
+
+  override onArg(arg: unknown): void {
+    this.animateArg(arg);
+  }
+
+  private animateArg(arg: unknown): void {
+    const idx = this.pick<number>(arg, 'animate');
+    if (typeof idx !== 'number' || this.spinning || idx < 0 || idx >= this.data.spinSegments.length) return;
+    this.spinning = true;
+    this.result = -1;
+    // after the first render: the wheel canvas exists
+    requestAnimationFrame(() => this.animateTo(idx));
+  }
+
   override signature(): string {
     const lo = this.game.sys.liveops;
-    return `${lo.canSpinFree() ? 1 : 0}|${lo.canWatchAd('extra_spin') ? 1 : 0}|${this.spinning}|${this.result}|${this.st.liveops.spin.adSpins}`;
+    const nova = novaOffer(this.game, 'nova_spin');
+    return `${lo.canSpinFree() ? 1 : 0}|${lo.canWatchAd('extra_spin') ? 1 : 0}|${this.spinning}|${this.result}|${this.st.liveops.spin.adSpins}|${nova ? `${nova.ok}${nova.left}` : ''}`;
   }
 
   render(): void {
@@ -68,6 +89,20 @@ export class SpinPanel extends Panel {
       }),
     );
 
+    // one more go for Nova (Nova Shop item: capped per day, never needed)
+    const nova = free ? null : novaOffer(g, 'nova_spin');
+    if (nova && nova.left > 0) {
+      side.appendChild(
+        btn({
+          label: h('span', null, 'Spin again · ', novaLabel(nova.price)),
+          cls: 'nova block',
+          id: 'btn-spin-nova',
+          disabled: this.spinning ? true : nova.ok ? false : (nova.reason ?? true),
+          onClick: () => this.novaSpin(),
+        }),
+      );
+    }
+
     const prizes = h('div', { class: 'chips prize-chips' });
     for (const s of segs) {
       const p = rewardParts(s.reward, this.data)[0];
@@ -100,6 +135,20 @@ export class SpinPanel extends Panel {
       return;
     }
     this.animateTo(idx);
+  }
+
+  private novaSpin(): void {
+    if (this.spinning) return;
+    const res = buyNovaItem(this.game, 'nova_spin');
+    if (!res.ok || res.spin == null) {
+      this.ctx.toast(res.reason ?? 'The wheel is stuck — try again in a moment', 'info', '🎡');
+      this.rerender();
+      return;
+    }
+    this.spinning = true;
+    this.result = -1;
+    this.rerender();
+    this.animateTo(res.spin);
   }
 
   private animateTo(idx: number): void {

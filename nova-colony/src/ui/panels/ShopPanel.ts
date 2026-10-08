@@ -4,22 +4,30 @@
  * gameplay — everything is optional.
  */
 import { Panel, type PanelTitle } from './Panel';
-import type { CosmeticDef, ProductDef } from '../../data/schema';
+import type { ProductDef } from '../../data/schema';
 import { fmtHMS } from '../logic/time';
 import { adButton, bigNum, btn, emptyState, rewardChips, tabs } from '../widgets';
 import { fill, h } from '../dom';
 import { artOrEmoji, hudArt, resIcon, rewardArt, shopArt } from '../art';
+import { bundleArt, novaShopSignature, novaShopTab, wardrobeCta } from './shop/novaShopTab';
+import { closeConfirm, confirmOpen, cosmeticCard, type CardHandlers } from './wardrobe/cards';
+import { sortCosmetics } from '../logic/wardrobe';
 
-type Tab = 'crystals' | 'packs' | 'vip' | 'season' | 'cosmetics';
+type Tab = 'crystals' | 'packs' | 'nova' | 'vip' | 'season' | 'cosmetics';
 
 const TAG_TEXT: Record<string, string> = { best_value: 'BEST VALUE', popular: 'POPULAR', limited: 'LIMITED', new: 'NEW' };
-const SECTION_ICON: Record<string, string> = { crystals: '💎', packs: '🎁', vip: '👑', season: '🏆', cosmetics: '👕' };
+const SECTION_ICON: Record<string, string> = { crystals: '💎', packs: '🎁', bundles: '🎀', nova: '✨', vip: '👑', season: '🏆', cosmetics: '👕' };
 
 export class ShopPanel extends Panel {
   readonly name = 'shop';
   private tab: Tab = 'crystals';
   private busy = '';
   private acc = 0;
+  private readonly cosHandlers: CardHandlers = {
+    open: (def) => this.ctx.open('wardrobe', { id: def.id }),
+    changed: () => this.rerender(),
+    host: () => this.card,
+  };
 
   title(): PanelTitle {
     return { icon: '💎', art: hudArt('shop'), text: 'Shop' };
@@ -45,7 +53,20 @@ export class ShopPanel extends Panel {
   override signature(): string {
     const lo = this.st.liveops;
     const crate = this.game.sys.liveops.freeCrateReady() ? 1 : 0;
-    return `${this.tab}|${lo.nova}|${lo.purchases.length}|${lo.vip.until}|${lo.cosmetics.owned.length}|${Object.values(lo.cosmetics.equipped).join(',')}|${crate}|${this.busy}|${lo.season.premium}`;
+    return `${this.tab}|${lo.nova}|${lo.purchases.length}|${lo.vip.until}|${lo.cosmetics.owned.length}|${Object.values(lo.cosmetics.equipped).join(',')}|${crate}|${this.busy}|${lo.season.premium}${this.tab === 'nova' ? '|' + novaShopSignature(this.ctx) : ''}`;
+  }
+
+  /** A Nova purchase confirmation is up: Android back closes it first. */
+  override nestedView(): boolean {
+    return confirmOpen(this.card);
+  }
+
+  override leaveNested(): void {
+    closeConfirm(this.card);
+  }
+
+  override onClose(): void {
+    closeConfirm(this.card);
   }
 
   override live(dt: number): void {
@@ -69,7 +90,7 @@ export class ShopPanel extends Panel {
     const wrap = h('div', { class: 'stack-v' });
     wrap.appendChild(
       tabs(
-        (['crystals', 'packs', 'vip', 'season', 'cosmetics'] as Tab[]).map((id) => ({ id, icon: SECTION_ICON[id], label: id === 'vip' ? 'Colony Pass' : id === 'season' ? 'Season' : id[0].toUpperCase() + id.slice(1) })),
+        (['crystals', 'packs', 'nova', 'vip', 'season', 'cosmetics'] as Tab[]).map((id) => ({ id, icon: SECTION_ICON[id], label: id === 'vip' ? 'Colony Pass' : id === 'season' ? 'Season' : id === 'nova' ? 'Nova Shop' : id[0].toUpperCase() + id.slice(1) })),
         this.tab,
         (id) => {
           this.tab = id as Tab;
@@ -78,11 +99,13 @@ export class ShopPanel extends Panel {
       ),
     );
     if (this.tab === 'crystals') wrap.appendChild(this.freeCrate());
-    if (this.tab === 'vip') wrap.appendChild(this.vip());
+    if (this.tab === 'nova') wrap.appendChild(novaShopTab(this.ctx, () => this.card, () => this.rerender()));
+    else if (this.tab === 'vip') wrap.appendChild(this.vip());
     else if (this.tab === 'season') wrap.appendChild(this.season());
     else if (this.tab === 'cosmetics') wrap.appendChild(this.cosmetics());
     else {
-      const prods = this.data.products.filter((p) => p.section === this.tab);
+      // the Packs tab opens with the bundles (cosmetics / chests + Nova)
+      const prods = this.data.products.filter((p) => p.section === this.tab || (this.tab === 'packs' && p.section === 'bundles')).sort((a, b) => +(b.section === 'bundles') - +(a.section === 'bundles'));
       if (!prods.length) wrap.appendChild(emptyState('🛍️', 'Nothing here right now', 'Check back soon for new goodies!'));
       const grid = h('div', { class: 'grid shop-grid' });
       for (const p of prods) grid.appendChild(this.productCard(p));
@@ -113,8 +136,9 @@ export class ShopPanel extends Panel {
     const card = h('div', { class: 'card pcard' + (p.tag ? ' tagged' : ''), data: { product: p.id } });
     if (p.tag) card.appendChild(h('div', { class: 'ribbon', text: TAG_TEXT[p.tag] ?? p.tag.toUpperCase() }));
     const art = shopArt(p.id);
+    const drawn = art ? null : bundleArt(this.ctx, p);
     card.append(
-      art ? h('div', { class: 'pi art' }, artOrEmoji(art, SECTION_ICON[p.section] ?? '🎁', 'pi-img', p.name, true)) : h('div', { class: 'pi', text: SECTION_ICON[p.section] ?? '🎁' }),
+      art ? h('div', { class: 'pi art' }, artOrEmoji(art, SECTION_ICON[p.section] ?? '🎁', 'pi-img', p.name, true)) : drawn ?? h('div', { class: 'pi', text: SECTION_ICON[p.section] ?? '🎁' }),
       h('div', { class: 'h3', text: p.name }),
       h('div', { class: 'mute small', text: p.description }),
       rewardChips(this.data, p.grants, 'center'),
@@ -220,53 +244,13 @@ export class ShopPanel extends Panel {
     );
   }
 
+  /** Cosmetics: a way into the Wardrobe, then everything Nova can buy (the Wardrobe has the rest). */
   private cosmetics(): HTMLElement {
-    const g = this.game;
-    const lo = g.state.liveops;
-    const wrap = h('div', { class: 'grid shop-grid' });
-    for (const c of this.data.cosmetics) wrap.appendChild(this.cosmeticCard(c));
+    const lo = this.game.state.liveops;
     if (!this.data.cosmetics.length) return emptyState('👕', 'Cosmetics coming soon') as HTMLElement;
-    return wrap;
-  }
-
-  private cosmeticCard(c: CosmeticDef): HTMLElement {
-    const g = this.game;
-    const lo = g.state.liveops;
-    const owned = lo.cosmetics.owned.includes(c.id);
-    const equipped = lo.cosmetics.equipped[c.kind] === c.id;
-    const card = h('div', { class: 'card pcard', data: { cosmetic: c.id } });
-    const sw = h('div', { class: 'cos-sw' });
-    sw.style.background = `linear-gradient(135deg, ${c.color}, ${c.accent ?? c.color})`;
-    card.append(sw, h('div', { class: 'h3', text: c.name }), h('div', { class: 'mute small', text: c.kind.replace(/_/g, ' ') }));
-    if (owned) {
-      card.appendChild(
-        btn({
-          label: equipped ? '✔ Equipped' : 'Equip',
-          cls: equipped ? 'ghost block' : 'info block',
-          disabled: equipped ? 'Already equipped' : false,
-          onClick: () => {
-            g.sys.liveops.equipCosmetic(c.id);
-            this.ctx.haptic('tap');
-            this.rerender();
-          },
-        }),
-      );
-    } else if (c.nova > 0) {
-      card.appendChild(
-        btn({
-          label: h('span', null, resIcon('nova', '💎'), ` ${bigNum(c.nova)}`),
-          cls: 'nova block',
-          disabled: lo.nova >= c.nova ? false : 'Not enough Nova Crystals',
-          onClick: () => {
-            if (g.sys.liveops.buyCosmetic(c.id)) {
-              g.sys.liveops.equipCosmetic(c.id);
-              this.ctx.haptic('success');
-            }
-            this.rerender();
-          },
-        }),
-      );
-    } else card.appendChild(h('div', { class: 'chip', text: 'Special pack reward' }));
-    return card;
+    const forSale = sortCosmetics(this.data.cosmetics.filter((c) => c.nova > 0 && !lo.cosmetics.owned.includes(c.id)), lo.cosmetics);
+    const grid = h('div', { class: 'wd-grid' });
+    for (const c of forSale) grid.appendChild(cosmeticCard(this.ctx, c, this.cosHandlers));
+    return h('div', { class: 'stack-v' }, wardrobeCta(this.ctx), forSale.length ? grid : emptyState('🎀', 'You own every cosmetic Nova can buy!', 'Chests and the season pass have the rest.'));
   }
 }

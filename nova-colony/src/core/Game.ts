@@ -246,6 +246,7 @@ export class Game {
     if (reward.cosmetic && !this.state.liveops.cosmetics.owned.includes(reward.cosmetic)) {
       this.state.liveops.cosmetics.owned.push(reward.cosmetic);
     }
+    if (reward.cosmetics) for (const c of reward.cosmetics) if (!this.state.liveops.cosmetics.owned.includes(c)) this.state.liveops.cosmetics.owned.push(c);
     if (reward.vehicle && !this.state.player.vehicles.includes(reward.vehicle)) {
       this.state.player.vehicles.push(reward.vehicle);
       this.bus.emit('vehicle:unlocked', { vehicle: reward.vehicle });

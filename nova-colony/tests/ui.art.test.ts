@@ -142,7 +142,7 @@ describe('ui art lookups', () => {
   });
 
   it('every HUD icon has a file and public/art/hud has no orphans', () => {
-    expect(hudArtIds().length).toBe(27);
+    expect(hudArtIds().length).toBe(28);
     for (const id of hudArtIds()) expect(exists(hudArt(id)), id).toBe(true);
     const files = fs.readdirSync(path.join(PUBLIC, 'art', 'hud'));
     expect(files.sort()).toEqual(hudArtIds().map((id) => `${id}.webp`).sort());

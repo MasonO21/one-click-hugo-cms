@@ -168,6 +168,13 @@ store's price tier — the game never hard-codes them.
 | `nova_ultimate_pack` | Consumable | $99.99 | 14,000 Nova | — |
 | `colony_pass_monthly` | Auto-renewing subscription (1 month) | $7.99 / mo | VIP "Colony Pass" 30 days | — |
 | `season_pass_premium` | Non-consumable | $9.99 | Premium track of the current season | 1 per season |
+| `bundle_cozy_wardrobe` | Non-consumable | $4.99 | Cozy Knit Sweater, Pom-Pom Beanie, Cozy Scarves (colonists) + 200 Nova | 1 per account |
+| `bundle_chest_lover` | Consumable | $9.99 | 3 Acorn + 2 Moonlit + 1 Sunflower chest + 300 Nova | — |
+| `bundle_photo_frames` | Non-consumable | $1.99 | Cozy Knit, Sakura and Starry Night photo frames + 50 Nova | 1 per account |
+
+Bundles (`section: 'bundles'`) open the Shop's Packs tab; their card art is drawn from what is inside (the cosmetics'
+icons, the chests' paintings), so they need no `art/shop/` picture. A non-consumable bundle's cosmetics come back on
+*Restore purchases*; its Nova does not.
 
 If you edit `PRODUCTS`, mirror the change in both stores and in RevenueCat, then re-test.
 
@@ -369,7 +376,7 @@ Privacy-conscious by construction (`src/platform/analytics.ts`, `analyticsHooks.
 - **Batched** in memory (20 events / 30 s / on pause), failed sends are retried with a bounded queue.
 - **Sink**: `VITE_ANALYTICS_URL` receives `POST` JSON:
   `{ v: 1, installId, session, platform, appVersion, events: [{ name, props, ts }] }` (`keepalive` on pause). Without a URL, events are dropped (dev: printed to the console).
-- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `daily_claimed`, `season_level`, `achievement_unlocked` / `achievements_retro` (§6c), `progression_stall` (10 minutes of play without completing a mission), `notify_answer` (card / Settings, on or off, OS permission), `notify_opened` (which reminder brought the player back), `photo_taken` (lighting preset, picture size, tier) / `photo_shared` (`native` / `web` / `download`; nothing about the picture itself).
+- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `nova_spent` (sink such as `cosmetic` / `nova_shop`, the item id, the amount, the balance left, tier), `daily_claimed`, `season_level`, `achievement_unlocked` / `achievements_retro` (§6c), `progression_stall` (10 minutes of play without completing a mission), `notify_answer` (card / Settings, on or off, OS permission), `notify_opened` (which reminder brought the player back), `photo_taken` (lighting preset, picture size, tier) / `photo_shared` (`native` / `web` / `download`; nothing about the picture itself).
 - Declare accordingly in the **Apple privacy labels** ("Data not linked to you": usage data) and the **Play Data safety** form, plus advertising-id use for AdMob. Consider defaulting `settings.analytics` to off in the EEA.
 
 ## 9. Release checklist

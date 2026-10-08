@@ -21,6 +21,7 @@ import './styles/expeditions.css';
 import './styles/journal.css';
 import './styles/wishes.css';
 import './styles/photo.css';
+import './styles/wardrobe.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -74,6 +75,7 @@ import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, CelebratePanel, RewardPane
 import { MenuPanel } from './panels/MenuPanel';
 import { ExpeditionsPanel } from './panels/ExpeditionsPanel';
 import { JournalPanel } from './panels/JournalPanel';
+import { WardrobePanel } from './panels/WardrobePanel';
 import { backAction } from './logic/back';
 import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
@@ -322,6 +324,7 @@ export class UI {
     reg('menu', (c) => new MenuPanel(c));
     reg('expeditions', (c) => new ExpeditionsPanel(c));
     reg('journal', (c) => new JournalPanel(c));
+    reg('wardrobe', (c) => new WardrobePanel(c));
   }
 
   // ================================================================== services
