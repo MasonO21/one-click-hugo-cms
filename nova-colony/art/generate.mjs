@@ -199,7 +199,32 @@ try {
     for (const [d, k] of Object.entries(DENSITY)) {
       write(path.join(RES, `mipmap-${d}`, 'ic_launcher_monochrome.png'), alpha(await render(monoSvg(monoT), 108 * k, 108 * k)));
     }
+    // iOS 18 home-screen appearances: dark = the hero on transparency (the system draws the dark backdrop),
+    // tinted = the flat glyph, white on black (the system tints it)
+    console.log('iOS dark / tinted icons');
+    write(path.join(IOS, 'AppIcon.appiconset/AppIcon-dark.png'), alpha(await master(1024, { prep: { hide: ['sky', 'stars'], transforms: {} } })));
+    const tintT = heroTransform(c, MASTER_R * 0.92, 512, 512 + MASTER_DY);
+    const tinted = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><g transform="${tintT}">${img}</g></svg>`;
+    write(path.join(IOS, 'AppIcon.appiconset/AppIcon-tinted.png'), opaque(await render(tinted, 1024, 1024)));
   }
+  const iosIcon = (filename, appearance) => ({
+    ...(appearance ? { appearances: [{ appearance: 'luminosity', value: appearance }] } : {}),
+    filename,
+    idiom: 'universal',
+    platform: 'ios',
+    size: '1024x1024',
+  });
+  write(
+    path.join(IOS, 'AppIcon.appiconset/Contents.json'),
+    JSON.stringify(
+      {
+        images: [iosIcon('AppIcon-512@2x.png'), ...(hasMono ? [iosIcon('AppIcon-dark.png', 'dark'), iosIcon('AppIcon-tinted.png', 'tinted')] : [])],
+        info: { author: 'xcode', version: 1 },
+      },
+      null,
+      2,
+    ) + '\n',
+  );
   const adaptive = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
