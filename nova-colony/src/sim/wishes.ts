@@ -223,6 +223,19 @@ export class WishSystem extends System {
     return true;
   }
 
+  /**
+   * The player lets a wish go ("Let it go"): it lapses like an old one, with no penalty (hearts and mood stay), and
+   * frees its slot for another wish. Returns true when there was one.
+   */
+  letGo(id: Id): boolean {
+    const w = this.get(id);
+    if (!w) return false;
+    const name = this.game.sys.colonists.get(w.colonist)?.name.split(' ')[0];
+    this.lapse(w);
+    this.game.toast(name ? `No worries! ${name} will think of something else.` : 'No worries!', 'info', '💭');
+    return true;
+  }
+
   /** The player chatted with a colonist (context button). Returns true when it granted their Chat wish. */
   chat(colonistId: Id): boolean {
     const w = this.of(colonistId);

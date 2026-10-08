@@ -315,7 +315,7 @@ export class ColonistsPanel extends Panel {
     );
   }
 
-  /** The wish card: what they would love, how, and the buttons (Give / Show me / Not now). */
+  /** The wish card: what they would love, how, and the buttons (Give / Show me / Not now / Let it go). */
   private wishCardEl(card: WishCardView, detail: boolean): HTMLElement {
     const g = this.game;
     const actions = h('div', { class: 'wish-actions' });
@@ -334,6 +334,17 @@ export class ColonistsPanel extends Panel {
     }
     if (card.showMe) actions.appendChild(btn({ label: '📍 Show me', cls: 'info', data: { 'wish-show': card.id }, onClick: () => this.showMe(card.id) }));
     if (detail) actions.appendChild(btn({ label: 'Not now', cls: 'ghost', onClick: () => this.ctx.close(this.name) }));
+    // a wish the player doesn't fancy can be let go at once (no penalty) instead of holding its slot until it fades
+    actions.appendChild(
+      btn({
+        label: 'Let it go',
+        cls: 'ghost small',
+        data: { 'wish-letgo': card.id },
+        onClick: () => {
+          if (g.sys.wishes.letGo(card.id)) this.rerender();
+        },
+      }),
+    );
     return h(
       'div',
       { class: 'card wish-card', data: { wish: card.id } },

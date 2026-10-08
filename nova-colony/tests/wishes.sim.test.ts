@@ -308,6 +308,25 @@ describe('wishes — coming true', () => {
     expect(g.state.wishes.expired).toBe(1);
   });
 
+  it('a wish can be let go at once: no penalty, the slot frees up, a friendly word', () => {
+    const rig = wishColony();
+    const g = rig.game;
+    setAmount(rig, 'food', 500);
+    const w = force(rig, 'give_berry_pie');
+    const before = { ...g.state.resources.amounts };
+    const expired = collect(g, 'wish:expired');
+    const toasts = collect<{ text: string }>(g, 'ui:toast');
+    expect(g.sys.wishes.letGo(w.id)).toBe(true);
+    expect(g.sys.wishes.get(w.id)).toBeUndefined();
+    expect(g.sys.wishes.of(w.colonist)).toBeUndefined();
+    expect(expired.length).toBe(1);
+    expect(toasts.some((t) => t.text.startsWith('No worries!'))).toBe(true);
+    expect(g.state.resources.amounts).toEqual(before);
+    expect(g.sys.wishes.hearts(w.colonist)).toBe(0);
+    expect(g.state.wishes.moods[w.colonist]).toBeUndefined();
+    expect(g.sys.wishes.letGo(w.id)).toBe(false);
+  });
+
   it('wishes never move while the app is closed', () => {
     const rig = wishColony();
     const w = force(rig, 'chat_story');
