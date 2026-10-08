@@ -1,8 +1,9 @@
 /**
  * Hud — composes the always-on overlay: tier badge, resource bar, Nova Crystals, status chips
- * (colonists/happiness, power, clock, defense, backpack, boosts), mission tracker, banners, the right
+ * (colonists/happiness, power, day + clock, expeditions, defense, backpack, boosts), mission tracker, banners, the right
  * side button rail and the bottom-right dock + context button. Text is diffed and refreshed ~5x/s;
- * only rolling numbers touch the DOM every frame.
+ * only rolling numbers touch the DOM every frame. On a portrait phone the day chip moves up beside the tier badge
+ * (its clock goes into a tap popover) and the chips use short texts, so the status row fits one line.
  */
 import type { UiCtx } from '../ctx';
 import { fmt, fmtSigned } from '../../core/format';
@@ -10,7 +11,7 @@ import { clockText, dayPhase, fmtHMS } from '../logic/time';
 import { happinessFace } from '../logic/colonist';
 import { bigNum } from '../widgets';
 import { artOrEmoji, hudArt, hudIcon, phaseArt, iconEl, preloadResourceArt, resIcon, tierArt } from '../art';
-import { hudExpedition } from '../logic/expeditions';
+import { expeditionChipText, hudExpedition } from '../logic/expeditions';
 import { fill, h, replay, setClass, setHidden, setText, setVar, safe } from '../dom';
 import { ResourceBar } from './ResourceBar';
 import { InteractButton } from './Interact';
@@ -58,6 +59,22 @@ class Roller {
 }
 
 const BOOST_LABEL: Record<string, string> = { production: 'Production', research: 'Research', gather: 'Gathering', drone: 'Drone helper' };
+/** Boost chips name their kind with an icon: a portrait phone drops the word (styles/hud.css), the popover keeps it. */
+const BOOST_ICON: Record<string, string> = { production: '🏭', research: '🔬', gather: '🪓', drone: '🤖' };
+const PHASE_LABEL: Record<string, string> = { Night: 'Night', Sunrise: 'Sunrise', Day: 'Daytime', Sunset: 'Sunset' };
+
+/**
+ * A day counter chip (day-phase icon + "Day 12"); the status-row one also shows the clock. The top-row one holds the
+ * number and the word apart, so a tight top row can drop the word (styles/hud.css) instead of cutting the number.
+ */
+interface DayChip {
+  el: HTMLElement;
+  ic: HTMLElement;
+  /** "Day 12" (status row) or just "12" (top row, the word is its own span). */
+  v: HTMLElement;
+  clock: HTMLElement | null;
+  phase: string;
+}
 
 export class Hud {
   readonly el: HTMLElement;
@@ -83,10 +100,8 @@ export class Hud {
   private readonly chipPower: HTMLElement;
   private readonly chipPowerIc: HTMLElement;
   private readonly chipPowerV: HTMLElement;
-  private readonly chipClockIc: HTMLElement;
-  private clockPhase = '';
-  private readonly chipClockV: HTMLElement;
-  private readonly chipClockS: HTMLElement;
+  /** The day chip lives in the status row, or beside the tier badge on a portrait phone (CSS shows one of the two). */
+  private readonly days: DayChip[];
   private readonly chipDef: HTMLElement;
   private readonly chipDefV: HTMLElement;
   private readonly chipPack: HTMLElement;
@@ -100,13 +115,16 @@ export class Hud {
   private readonly statusEl: HTMLElement;
   private statusH = '';
   private boostKey = '';
-  private boostEls: { until: number; el: HTMLElement }[] = [];
+  private boostEls: { id: string; until: number; el: HTMLElement }[] = [];
   private powerExpanded = 0;
+  /** Portrait phones get the short chip texts (one status row on a 360-430 px wide screen). */
+  private readonly portraitMq: MediaQueryList | null = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
 
   // popover
   private readonly pop: HTMLElement;
   private popSrc: { anchor: HTMLElement; build: () => Node } | null = null;
   private popTimer = 0;
+  private popPhase: { phase: string; el: HTMLElement } | null = null;
 
   private readonly navBtns = new Map<string, HTMLElement>();
   private readonly navBadges = new Map<string, HTMLElement>();
@@ -132,7 +150,12 @@ export class Hud {
     this.novaAmt = h('span', { class: 'num', text: '0' });
     this.novaBtn = h('button', { class: 'nova-chip tap', type: 'button', id: 'nova-chip', data: { sfx: 'ui_click' } }, resIcon('nova', '💎', 'ic', 'span'), this.novaAmt, h('span', { class: 'plus', text: '+' }));
     this.novaBtn.addEventListener('click', () => ctx.open('shop', { tab: 'crystals' }));
-    const top = h('div', { class: 'hud-top' }, this.tierBtn, this.resources.el, this.novaBtn);
+    // the day chip sits beside the tier badge on a portrait phone (the status row then fits one line); the clock moves
+    // into its popover there
+    const dayTop = this.dayChip(false);
+    const dayRow = this.dayChip(true);
+    this.days = [dayTop, dayRow];
+    const top = h('div', { class: 'hud-top' }, this.tierBtn, dayTop.el, this.resources.el, this.novaBtn);
 
     // --- status row
     this.chipPopV = h('span', { class: 'v' });
@@ -147,11 +170,6 @@ export class Hud {
       this.powerExpanded = this.powerExpanded > 0 ? 0 : 7;
       this.pollStatus();
     });
-
-    this.chipClockIc = h('span', { class: 'clock-ic' });
-    this.chipClockV = h('span', { class: 'v' });
-    this.chipClockS = h('small');
-    const chipClock = h('div', { class: 'schip static' }, this.chipClockIc, this.chipClockV, this.chipClockS);
 
     this.chipDefV = h('span', { class: 'v' });
     this.chipDef = h('button', { class: 'schip tap', type: 'button', hidden: true, data: { sfx: 'ui_click' } }, hudIcon('defense', '🛡️', 'ic', 'span'), this.chipDefV);
@@ -168,7 +186,7 @@ export class Hud {
     this.chipExp.addEventListener('click', () => ctx.open('expeditions'));
 
     this.boostWrap = h('div', { class: 'row', style: 'display:contents' });
-    const status = h('div', { class: 'hud-status' }, this.chipPop, this.chipPower, chipClock, this.chipExp, this.chipDef, this.chipPack, this.chipHp, this.boostWrap);
+    const status = h('div', { class: 'hud-status' }, this.chipPop, this.chipPower, dayRow.el, this.chipExp, this.chipDef, this.chipPack, this.chipHp, this.boostWrap);
     this.statusEl = status;
 
     // --- rail + dock
@@ -186,6 +204,21 @@ export class Hud {
     this.nova.init(g.state.liveops.nova);
     setText(this.novaAmt, bigNum(this.nova.shown));
     this.poll();
+  }
+
+  private dayChip(inRow: boolean): DayChip {
+    const ic = h('span', { class: 'clock-ic' });
+    const v = h('span', { class: inRow ? 'v' : 'dn' });
+    const clock = inRow ? h('small', { class: 'clock' }) : null;
+    // top row: [number][word], laid out right-to-left so the word is the one that wraps away (hud.css)
+    const text = inRow ? v : h('span', { class: 'v' }, v, h('span', { class: 'dw', text: 'Day' }));
+    const el = h('button', { class: 'schip day tap', type: 'button', 'aria-label': 'Day and time', data: { sfx: 'ui_click' } }, ic, text, clock);
+    el.addEventListener('click', () => this.showPop(el, () => this.dayPop()));
+    return { el, ic, v, clock, phase: '' };
+  }
+
+  private portrait(): boolean {
+    return !!this.portraitMq?.matches;
   }
 
   private navButton(n: NavDef, cls: string): HTMLElement {
@@ -280,14 +313,18 @@ export class Hud {
       if (this.powerExpanded > 0) this.powerExpanded -= 0.2;
     }
 
-    // clock
+    // day + clock
     const ph = dayPhase(st.time.dayTime);
-    if (ph.name !== this.clockPhase) {
-      this.clockPhase = ph.name;
-      this.chipClockIc.replaceChildren(iconEl(phaseArt(ph.name), ph.icon, 'ic', 'span'));
+    const clock = clockText(st.time.dayTime);
+    for (const c of this.days) {
+      if (ph.name !== c.phase) {
+        c.phase = ph.name;
+        c.ic.replaceChildren(iconEl(phaseArt(ph.name), ph.icon, 'ic', 'span'));
+      }
+      setText(c.v, c.clock ? `Day ${st.time.day}` : String(st.time.day));
+      if (c.clock) setText(c.clock, clock);
     }
-    setText(this.chipClockV, `Day ${st.time.day}`);
-    setText(this.chipClockS, clockText(st.time.dayTime));
+    const narrow = this.portrait();
 
     // defense
     const rating = d.defense.rating || game.sys.combat.defenseRating();
@@ -304,7 +341,7 @@ export class Hud {
     const ex = hudExpedition(game);
     setHidden(this.chipExp, ex.state === null);
     setClass(this.chipExp, 'ready', ex.state === 'ready');
-    if (ex.state === 'ready') setText(this.chipExpV, ex.ready > 1 ? `${ex.ready} squads home!` : 'Haul ready!');
+    if (ex.state === 'ready') setText(this.chipExpV, expeditionChipText(ex.ready, narrow));
     else if (ex.state === 'out') setText(this.chipExpV, fmtHMS(ex.seconds));
 
     // player hp
@@ -319,13 +356,27 @@ export class Hud {
     if (key !== this.boostKey) {
       this.boostKey = key;
       this.boostEls = boosts.map((b) => {
-        const el = h('div', { class: 'schip boost static' }, h('span', { class: 'ic', text: '⚡' }), h('span', null, `${fmt(b.mult)}× ${BOOST_LABEL[b.kind] ?? b.kind}`), h('small', { text: '' }));
-        return { until: b.until, el };
+        const label = BOOST_LABEL[b.kind] ?? b.kind;
+        const el = h(
+          'button',
+          { class: 'schip boost tap', type: 'button', 'aria-label': `${fmt(b.mult)}× ${label} boost`, data: { sfx: 'ui_click' } },
+          h('span', { class: 'ic', text: BOOST_ICON[b.kind] ?? '⚡' }),
+          h('span', { class: 'v', text: `${fmt(b.mult)}×` }),
+          h('span', { class: 'lb', text: label }),
+          h('small', { text: '' }),
+        );
+        const rec = { id: b.id, until: b.until, el };
+        el.addEventListener('click', () => this.showPop(el, () => this.boostPop(b.kind, b.mult, rec.until)));
+        return rec;
       });
       fill(this.boostWrap, this.boostEls.map((b) => b.el));
     }
     const now = game.now();
-    for (const b of this.boostEls) setText(b.el.lastChild as HTMLElement, fmtHMS((b.until - now) / 1000));
+    for (const b of this.boostEls) {
+      // a repeat of the same boost extends it in place (LiveOps.activateBoost): follow the live end time
+      b.until = boosts.find((x) => x.id === b.id)?.until ?? b.until;
+      setText(b.el.lastChild as HTMLElement, fmtHMS((b.until - now) / 1000));
+    }
 
     // the status row can wrap onto two lines: let the banners / mission card / rail sit below it
     const sh = `${this.statusEl.offsetHeight}px`;
@@ -395,6 +446,29 @@ export class Hud {
       null,
       h('h4', null, resIcon(id, def?.icon ?? ''), ` ${def?.name ?? id}`),
       ...d.rows.map((r) => h('div', { class: 'kv' }, h('span', { text: r.k }), h('span', { class: r.cls ?? '', text: r.v }))),
+    );
+  }
+
+  private dayPop(): Node {
+    const t = this.ctx.game.state.time;
+    const ph = dayPhase(t.dayTime);
+    // the popover is rebuilt a few times a second: keep one icon element per phase (a fresh <img> would blink)
+    if (this.popPhase?.phase !== ph.name) this.popPhase = { phase: ph.name, el: iconEl(phaseArt(ph.name), ph.icon, 'ic', 'span') };
+    return h(
+      'div',
+      null,
+      h('h4', null, this.popPhase.el, ` Day ${t.day}`),
+      h('div', { class: 'kv' }, h('span', { text: 'Time' }), h('span', { text: clockText(t.dayTime) })),
+      h('div', { class: 'kv' }, h('span', { text: 'Now' }), h('span', { text: PHASE_LABEL[ph.name] ?? ph.name })),
+    );
+  }
+
+  private boostPop(kind: string, mult: number, until: number): Node {
+    return h(
+      'div',
+      null,
+      h('h4', { text: `${BOOST_ICON[kind] ?? '⚡'} ${fmt(mult)}× ${BOOST_LABEL[kind] ?? kind}` }),
+      h('div', { class: 'kv' }, h('span', { text: 'Time left' }), h('span', { class: 'pos', text: fmtHMS((until - this.ctx.game.now()) / 1000) })),
     );
   }
 

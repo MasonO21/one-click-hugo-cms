@@ -3,7 +3,7 @@
  * line, the HUD chip state, badges and the Star Chart layout.
  */
 import { describe, expect, it } from 'vitest';
-import { chanceText, chartLayout, destinationGroups, durationLabel, expeditionBadge, hudExpedition, pickStar, squadRows, vehicleLine } from '../src/ui/logic/expeditions';
+import { chanceText, chartLayout, destinationGroups, durationLabel, expeditionBadge, expeditionChipText, hudExpedition, pickStar, squadRows, vehicleLine } from '../src/ui/logic/expeditions';
 import { computeBadges, idleWithJobs } from '../src/ui/logic/badges';
 import { regionalSpec } from '../src/sim/expedition/rules';
 import { HOUR, MIN, crew, makeColony } from './expeditions.helpers';
@@ -15,6 +15,15 @@ describe('ui.expeditions', () => {
     expect(durationLabel(4 * 3600 + 1800)).toBe('4 h 30 min');
     expect(chanceText(0.42)).toBe('42%');
     expect(chanceText(0.004)).toBe('<1%');
+  });
+
+  it('the HUD chip says a haul is ready, shorter on a portrait phone where the status row must fit one line', () => {
+    expect(expeditionChipText(1, false)).toBe('Haul ready!');
+    expect(expeditionChipText(3, false)).toBe('3 squads home!');
+    expect(expeditionChipText(1, true)).toBe('Ready!');
+    expect(expeditionChipText(2, true)).toBe('2 ready!');
+    // the short texts are what keeps four chips on one 360 px row
+    expect(expeditionChipText(9, true).length).toBeLessThanOrEqual(8);
   });
 
   it('describes what a vehicle does for a trip', () => {

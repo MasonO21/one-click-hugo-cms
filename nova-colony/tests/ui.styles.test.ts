@@ -72,3 +72,37 @@ describe('toasts and open panels', () => {
     expect(manager([panel('sheet', { h: 91 }, 20), panel('modal', null, 70)]).headerBottom()).toBeNull();
   });
 });
+
+describe('portrait HUD height (QA6: from Steel on the top HUD covered ~47% of a 393x852 phone)', () => {
+  const hud = css('hud.css');
+  // the last portrait block of hud.css ("portrait tweaks")
+  const portrait = hud.slice(hud.lastIndexOf('@media (orientation: portrait)'));
+
+  it('the day chip moves up beside the tier badge, shrinking instead of wrapping the top row', () => {
+    expect(rule(hud, '.hud-top .schip.day')).toMatch(/display:\s*none/);
+    const decl = rule(portrait, '.hud-top .schip.day');
+    expect(decl).toMatch(/display:\s*inline-flex/);
+    // a zero flex basis never breaks the line; it grows into the free space up to its own width
+    expect(decl).toMatch(/flex:\s*1 1 0;/);
+    expect(decl).toMatch(/max-width:\s*max-content/);
+    expect(decl).toMatch(/min-width:\s*0/);
+    expect(rule(portrait, '.hud-status .schip.day')).toMatch(/display:\s*none/);
+  });
+
+  it('a boost chip drops its word on a portrait phone (its icon names the kind)', () => {
+    expect(rule(portrait, '.schip.boost .lb')).toMatch(/display:\s*none/);
+  });
+
+  it("the mission card's progress pill shares the eyebrow row", () => {
+    expect(rule(hud, '.mission-card')).toMatch(/display:\s*grid/);
+    const bar = rule(hud, '.mission-card .bar');
+    expect(bar).toMatch(/grid-row:\s*1/);
+    expect(bar).toMatch(/grid-column:\s*2/);
+    expect(bar).not.toMatch(/margin-top/);
+  });
+
+  it('the resource row keeps scrolling past the five basic chips, with only a narrow fade at the edge', () => {
+    expect(rule(hud, '.res-scroll')).toMatch(/overflow-x:\s*auto/);
+    expect(rule(portrait, '.res-scroll')).toMatch(/calc\(100% - 0\.9em\)/);
+  });
+});

@@ -88,6 +88,15 @@ export function hudExpedition(game: Game): HudExpedition {
   return { state: 'out', ready: 0, seconds: Math.min(...out.map((e) => ex.secondsLeft(e))) };
 }
 
+/**
+ * The HUD chip's text for squads waiting to be collected. `compact`: a portrait phone, where the status row must fit
+ * one line (the green chip and its compass already say what is ready).
+ */
+export function expeditionChipText(ready: number, compact: boolean): string {
+  if (ready > 1) return compact ? `${ready} ready!` : `${ready} squads home!`;
+  return compact ? 'Ready!' : 'Haul ready!';
+}
+
 /** Badge count: hauls waiting plus Star Chart milestones to claim. */
 export function expeditionBadge(game: Game): number {
   const ex = game.sys.expeditions;

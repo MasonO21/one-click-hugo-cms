@@ -281,7 +281,10 @@
 .schip.boost {
   background: linear-gradient(180deg, rgba(255, 190, 70, 0.95), rgba(240, 130, 40, 0.95));
   color: #3a1d00;
-  cursor: default;
+}
+.schip.boost .v,
+.schip.boost small {
+  font-variant-numeric: tabular-nums;
 }
 .schip.hp .bar {
   width: 3.6em;
@@ -289,6 +292,10 @@
 }
 .schip.static {
   cursor: default;
+}
+/* the day chip sits in the status row with its clock; a portrait phone moves it up beside the tier badge (below) */
+.hud-top .schip.day {
+  display: none;
 }
 
 /* shared popover (resource rates, power breakdown) */
@@ -355,7 +362,11 @@
   appearance: none;
   border: 0;
   position: relative;
-  display: block;
+  /* eyebrow and progress pill share the first row; the title, description and Claim row span the card */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.6em;
+  align-items: center;
   width: 100%;
   padding: 0.55em 0.75em 0.65em;
   border-radius: 1em;
@@ -395,9 +406,15 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.mission-card > :not(.mt, .bar) {
+  grid-column: 1 / -1;
+}
+/* the progress pill rides on the eyebrow's row ("🎯 MAIN MISSION ··· 2 / 4"): the card is a whole row shorter */
 .mission-card .bar {
-  margin-top: 0.45em;
-  height: 0.95em;
+  grid-row: 1;
+  grid-column: 2;
+  width: 5.8em;
+  height: 1.05em;
   background: rgba(255, 255, 255, 0.16);
 }
 .mission-card .bar .lbl {
@@ -414,9 +431,6 @@
 @media (orientation: landscape) and (max-height: 480px) {
   .mission-card:not(.done) .md {
     display: none;
-  }
-  .mission-card:not(.done) .bar {
-    margin-top: 0.3em;
   }
   .hud-left {
     width: min(16em, 44vw);
@@ -528,7 +542,8 @@
     gap: 0.3em;
   }
   .schip {
-    padding: 0 0.5em;
+    padding: 0 0.45em;
+    gap: 0.28em;
   }
   .hud-left .offers:is([data-n='3'], [data-n='4'], [data-n='5']) {
     flex-wrap: nowrap;
@@ -960,18 +975,69 @@
     order: 3;
     flex: 1 1 100%;
   }
-  /* five basic resources must fit a 390 px wide phone without the last chip being cut off */
+  /* the five basic resources fit a 360-430 px wide phone without the last chip being cut off, at every tier ("23.5K",
+     "126K"); the rest of the row scrolls, and the narrow fade at the right edge says so */
   .res-scroll {
     gap: 0.25em;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 0.9em), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 0.9em), transparent);
   }
   .rchip {
     flex: 1 0 auto;
     min-width: 4.2em;
-    padding: 0 0.45em 0.2em 0.4em;
-    gap: 0.25em;
+    padding: 0 0.4em 0.2em 0.3em;
+    gap: 0.2em;
+  }
+  .rchip .amt {
+    font-size: 0.96em;
+    letter-spacing: 0;
+  }
+  .res-scroll .rchip .ic.aico {
+    width: 1.55em;
+    height: 1.55em;
+    margin: -0.2em -0.1em;
   }
   .nova-chip {
     margin-left: auto;
+  }
+  /* the day chip moves up beside the tier badge, so the status row (colonists, power, expeditions, defense) fits one
+     line at every tier. It takes what the tier badge and the Nova chip leave, up to its own width: the top row never
+     wraps. The clock is in its popover. */
+  .hud-top .schip.day {
+    display: inline-flex;
+    flex: 1 1 0;
+    max-width: max-content;
+    min-width: 0;
+    align-self: center;
+  }
+  /* "Day 12" as [12][Day] laid out right to left on a one-line-high, wrapping row: when the top row is tight (a long
+     tier name beside a five-digit Nova count) the word wraps out of sight and the number stays */
+  .hud-top .schip.day .v {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    column-gap: 0.25em;
+    min-width: 0;
+    height: 1.25em;
+    overflow: hidden;
+  }
+  .hud-status .schip.day {
+    display: none;
+  }
+  /* a boost names its kind by icon (the popover spells it out): extra chips share the second row */
+  .schip.boost .lb {
+    display: none;
+  }
+  /* a long tutorial hint takes two lines instead of three */
+  .hint-bubble {
+    gap: 0.45em;
+    padding: 0.45em 0.8em 0.45em 0.65em;
+    font-size: 0.9em;
+    line-height: 1.2;
+  }
+  .hint-bubble .ic {
+    font-size: 1.3em;
   }
   .hud-status {
     top: calc(var(--mt) + 6.6em);
