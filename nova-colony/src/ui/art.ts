@@ -196,7 +196,20 @@ export function chestArtIds(): string[] {
  * Painted cosmetic icon by CosmeticDef.id, 128 px with transparency (wardrobe, shop, chest reward cards).
  * Cosmetics without a painting yet fall back to their emoji (CosmeticDef.icon).
  */
-const COSMETIC_ART = new Set<string>([]);
+const COSMETIC_ART = new Set<string>([
+  'atv_flame', 'buggy_candy', 'colonist_cozy_scarves', 'colonist_farmhand', 'colonist_guard_plate',
+  'colonist_labcoat', 'colonist_overalls', 'colonist_pastel', 'deco_gnome_garden', 'deco_holo_trees',
+  'deco_lantern_festival', 'deco_pumpkin_patch', 'deco_star_fountain', 'deco_teddy_picnic', 'frame_cozy_knit',
+  'frame_crystal', 'frame_honey_gold', 'frame_sakura', 'frame_starry', 'hat_antennae', 'hat_beanie', 'hat_cat_ears',
+  'hat_comet_halo', 'hat_flower_crown', 'hat_frog', 'hat_mushroom', 'hat_space_bubble', 'hat_star_crown',
+  'hat_straw', 'hover_aurora', 'hovercraft_chrome', 'outfit_astro', 'outfit_cosmic', 'outfit_cozy_knit',
+  'outfit_engineer', 'outfit_founder', 'outfit_frog_raincoat', 'outfit_honeybee', 'outfit_neon_runner',
+  'outfit_pioneer', 'outfit_starry_pj', 'outfit_strawberry', 'pet_baby_blob', 'pet_buddy_drone', 'pet_ember_fox',
+  'pet_moon_bunny', 'pet_robo_pup', 'pet_space_kitty', 'pet_star_whale', 'rover_camo', 'theme_aurora',
+  'theme_autumn', 'theme_candy', 'theme_desert_dusk', 'theme_frostbite', 'theme_golden_hour', 'theme_neon_night',
+  'theme_sakura', 'theme_starlight', 'theme_titanium_dawn', 'turret_bronze', 'turret_gold', 'turret_ice',
+  'turret_neon', 'turret_sakura', 'vehicle_ladybug',
+]);
 export function cosmeticArt(id: string): string | null {
   return COSMETIC_ART.has(id) ? `${ROOT}cosmetics/${id}.webp` : null;
 }

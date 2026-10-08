@@ -210,6 +210,15 @@ describe('ui art lookups', () => {
     expect(isArtSrc(null)).toBe(false);
   });
 
+  it('every cosmetic has a painted icon and every chest its closed / open art and backdrop', () => {
+    for (const c of data.cosmetics) {
+      const url = cosmeticArt(c.id);
+      expect(url, `cosmetic ${c.id}`).toBe(`art/cosmetics/${c.id}.webp`);
+      expect(exists(url), `${c.id} -> ${url}`).toBe(true);
+    }
+    for (const c of data.chests) for (const url of [chestArt(c.id), chestArt(c.id, true), chestBgArt(c.id)]) expect(exists(url), `${c.id} -> ${url}`).toBe(true);
+  });
+
   it('no art file is orphaned (every webp is reachable from a lookup)', () => {
     const used = new Set<string>();
     const add = (u: string | null) => u && used.add(u);
