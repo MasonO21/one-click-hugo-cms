@@ -15,14 +15,14 @@
  */
 'use strict';
 
-const VERSION = 'rainkeep-v4.22'; // bump on every web deploy
+const VERSION = 'rainkeep-v4.23'; // bump on every web deploy
 const SHELL_CACHE = `${VERSION}-shell`;
 const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
 
 const SHELL = [
   'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js',
-  'vendor/three.min.js', 'vendor/three-gltf.js', 'art3d.js', 'models3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'siege.js', 'intel.js', 'formation.js', 'heirloom.js', 'awaken.js', 'hall.js', 'outposts.js', 'trade.js', 'defense.js', 'ranks.js', 'clash.js', 'fishing.js', 'news.js', 'world3d.js',
+  'vendor/three.min.js', 'vendor/three-gltf.js', 'art3d.js', 'models3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'siege.js', 'intel.js', 'formation.js', 'heirloom.js', 'awaken.js', 'hall.js', 'outposts.js', 'trade.js', 'decrees.js', 'defense.js', 'ranks.js', 'clash.js', 'fishing.js', 'news.js', 'world3d.js',
   'manifest.webmanifest', 'icon.svg',
   'fonts/el-messiri-latin-500-normal.woff2', 'fonts/el-messiri-latin-600-normal.woff2', 'fonts/el-messiri-latin-700-normal.woff2',
   'fonts/barlow-semi-condensed-latin-400-normal.woff2', 'fonts/barlow-semi-condensed-latin-500-normal.woff2',
@@ -38,7 +38,7 @@ const SHELL = [
   ...'cart wagons observatory bunker chapel airship den pool forge shrine scouts mine'.split(' ').map((n) => `art/ruins/${n}.webp`),
   'art/endings/act1.webp', 'art/endings/act2.webp', 'art/endings/act3.webp',
   'art/wyrm/grotto.webp', 'art/wyrm/emblem.webp',
-  ...'anvil bag ballista bandit beacon bell book bounty btn-ember btn-gold btn-indigo calendar caravan channel chest cistern clash clashbanner clashmap clock compass copper corner die drill duel dustdevil errand event firepot fish fish-barb fish-carp fish-eel fish-float fish-koi fish-minnow fish-rod fish-whiskers flag food fort garden gem glory hammer heart heirloom heroes hl-bell hl-bridle hl-conch hl-ladle hl-lantern hl-pick hl-quiver horn hunt intel journal kite lostcaravan luckydie mail market mirage pals paw peace pearl people plunder power rank-champ rank-elite rank-vet recruit relic rescue revenge riders road ruin scorpking scout scroll shieldwall shop shrine siegechest spire stakes star stone storm sunsteel swarm sword tideglass town treat trophy walls water waterrights well whetstone world wyrm'.split(' ').map((n) => `art/ui/${n}.webp`),
+  ...'anvil bag ballista bandit beacon bell book bounty btn-ember btn-gold btn-indigo calendar caravan channel chest cistern clash clashbanner clashmap clock compass copper corner dc-arms dc-feast dc-harvest dc-roads dc-rush dc-vigil decree die drill duel dustdevil errand event firepot fish fish-barb fish-carp fish-eel fish-float fish-koi fish-minnow fish-rod fish-whiskers flag food fort garden gem glory hammer heart heirloom heroes hl-bell hl-bridle hl-conch hl-ladle hl-lantern hl-pick hl-quiver horn hunt intel journal kite lostcaravan luckydie mail market mirage pals paw peace pearl people plunder power rank-champ rank-elite rank-vet recruit relic rescue revenge riders road ruin scorpking scout scroll shieldwall shop shrine siegechest spire stakes star stone storm sunsteel swarm sword tideglass town treat trophy walls water waterrights well whetstone world wyrm'.split(' ').map((n) => `art/ui/${n}.webp`),
 ];
 
 const SCOPE = new URL('./', self.location.href);

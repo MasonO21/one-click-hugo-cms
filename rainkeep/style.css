@@ -1201,3 +1201,14 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .cl-lp.up { color: var(--good, #5fd08a); }
 .cl-lp.down { color: #e08a6a; }
 .cl-lp .ic { width: 18px; height: 18px; }
+
+/* Warden's Decrees (decrees.js) */
+.dc-card { gap: 10px; align-items: center; }
+.dc-card .dc-ic { width: 46px; height: 46px; flex: none; filter: drop-shadow(0 2px 4px #0008); }
+.dc-card.on { border-color: var(--gold); box-shadow: 0 0 0 1px #e0b04a55 inset, 0 0 18px #e0b04a2a; }
+.dc-card.locked { opacity: 0.6; }
+.dc-card.locked .dc-ic { filter: grayscale(0.8) brightness(0.8); }
+.dc-state { margin-top: 4px; gap: 6px; }
+.dc-on { color: #ffe3a0; border-color: var(--gold); }
+.dc-ready { color: var(--good, #5fd08a); border-color: #5fd08a88; }
+.qchip.dc { color: #ffe3a0; border-color: #b8893a; }

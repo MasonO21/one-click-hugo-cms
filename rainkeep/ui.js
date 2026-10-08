@@ -124,13 +124,14 @@
       return `<button class="side-btn ${ctx ? 'ctx' : ''}" data-act="${b.act}" data-arg="${b.arg || ''}" aria-label="${esc(b.label)}">${icon(b.icon)}${b.dot && b.dot() ? '<i class="dot"></i>' : ''}<span>${esc(b.label)}</span>${badge ? `<small>${esc(badge)}</small>` : ''}</button>`;
     };
     for (const b of vis) if (b.id === 'events') side += one(b);
+    for (const b of vis) if (b.pin) side += one(b); // standing entries (the Warden's Decrees)
     for (const [id, h] of Object.entries(HUBS)) {
       const members = vis.filter((b) => h.ids.includes(b.id));
       if (!members.length) continue;
       const dot = members.some((b) => b.dot && b.dot());
       side += `<button class="side-btn" data-act="hub" data-arg="${id}" data-members="${members.map((b) => b.arg || b.act).join(' ')}" aria-label="${h.label}">${icon(h.icon)}${dot ? '<i class="dot"></i>' : ''}<span>${h.label}</span></button>`;
     }
-    for (const b of vis) if (b.id !== 'events' && !inHub.has(b.id)) side += one(b, true);
+    for (const b of vis) if (b.id !== 'events' && !b.pin && !inHub.has(b.id)) side += one(b, true);
     setHTML($('#side'), side);
 
     let q = '';

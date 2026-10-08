@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.22.0',
+  version: '4.23.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -957,6 +957,7 @@ const DATA = {
     { id: 'drill', text: 'Drill troops to a new rank', n: 1, pts: 10, show: (S) => S.lv.barracks >= 10 },
     { id: 'clash', text: 'Fight a Wadi Clash', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 9 },
     { id: 'trade', text: 'Send a trade caravan', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 10 },
+    { id: 'decree', text: 'Give a Warden\'s Decree', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'outpost', text: 'Collect from an outpost', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
     { id: 'temper', text: 'Temper a heirloom', n: 1, pts: 10, show: (S) => Object.values(S.heroes).some((h) => h.stars >= 3) },
@@ -1298,6 +1299,29 @@ const DATA = {
   // its prices move from day to day, and the longer roads pay better but cross worse bandit country: hired guards
   // (paid in copper and food, half or full) cut the risk, and an ambushed caravan loses half its payment.
   // Guards are hired rather than drawn from the army because troops away for hours left the expedition short.
+  // ---------- Warden's Decrees ----------
+  // Orders the Warden gives the whole keep. Each one lasts a while (or acts at once) and then needs time before it
+  // can be given again; they open one by one as the Rainwyrm grows. A decree can be given again early for Starglass.
+  // fx are KH.bonus keys while the decree lasts.
+  decrees: {
+    unlock: 5, // Rainwyrm level
+    reissue: { perHour: 30, min: 40 }, // Starglass to give a decree again early, by the hours of rest it has left
+    list: [
+      { id: 'harvest', name: 'Harvest Rite', lv: 5, icon: 'i-dc-harvest', dur: 7200, cd: 43200, fx: { prod: 0.3 },
+        text: 'Wells, fields, quarries and mines work at festival pace: production +30%.', line: 'Drums in the fields. The keep works at festival pace.' },
+      { id: 'rush', name: 'Rush Order', lv: 7, icon: 'i-dc-rush', dur: 0, cd: 43200, cut: 0.2, max: 3600,
+        text: 'Every build, research and training under way finishes a fifth sooner (up to an hour each).', line: 'The builders work through the night.' },
+      { id: 'arms', name: 'Call to Arms', lv: 9, icon: 'i-dc-arms', dur: 3600, cd: 28800, fx: { teamAtk: 0.12 },
+        text: 'Every squad and march fights 12% harder.', line: 'The horn sounds from the walls. Every blade is sharpened.' },
+      { id: 'roads', name: 'Open Roads', lv: 11, icon: 'i-dc-roads', dur: 7200, cd: 43200, fx: { gather: 0.4 },
+        text: 'Marches that reach a node on the Dunes while it is in force gather 40% faster.', line: 'The gates stand open and the camel lines head for the nodes.' },
+      { id: 'feast', name: 'Feast of Rain', lv: 13, icon: 'i-dc-feast', dur: 14400, cd: 86400, fx: { heal: 0.5 }, cure: true,
+        text: 'The sick are cured at once, and healing is 50% faster.', line: 'Long tables in the plaza. The sick get up to eat.' },
+      { id: 'vigil', name: "Wyrm's Vigil", lv: 15, icon: 'i-dc-vigil', dur: 3600, cd: 28800, fx: { breath: 0.3 },
+        text: "The Rainwyrm's Torrent strikes 30% harder in every battle.", line: 'The Rainwyrm keeps watch over the keep, eyes bright.' },
+    ],
+  },
+
   trade: {
     unlock: 10, // Rainwyrm level
     slots: [[10, 2], [15, 3]], // [Rainwyrm level, caravans on the road at once]
@@ -1499,6 +1523,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.23', items: [
+      { icon: 'i-decree', name: "Warden's Decrees", text: 'Give orders to the whole keep: a Harvest Rite for production, a Rush Order to cut every timer, a Call to Arms before a battle, and more as the Rainwyrm grows. Each rests before it can be given again, so choose your moment.', act: 'decrees', open: (S) => S.lv.wyrm >= 5, needs: 'Rainwyrm Lv 5' },
+    ] },
     { v: '4.22', items: [
       { icon: 'i-trophy', name: 'The Clash League', text: 'Wadi Clash matches now climb a league, from Sand to Rainwyrm: each tier brings stronger rivals and richer rewards, and every week the season pays out by the highest tier you reached.', act: 'clash', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
     ] },
@@ -1786,6 +1813,9 @@ const DATA = {
     { id: 'trade1', text: 'Bring a trade caravan home', stat: 'tradeTrips', n: 1, reward: { starglass: 100 } },
     { id: 'trade50', text: 'Bring 50 trade caravans home', stat: 'tradeTrips', n: 50, reward: { shard_legendary: 1 } },
     { id: 'tradeGlass', text: 'Trade with the Glass Cities 10 times', stat: 'tradeGlass', n: 10, reward: { beacons: 3 } },
+    { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
+    { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
+    { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },
     { id: 'outpost1', text: 'Raise an outpost on the Dunes', stat: 'outposts', n: 1, reward: { starglass: 100 } },
     { id: 'outpost4', text: 'Hold four outposts at once', stat: 'outpostsHeld', n: 4, reward: { beacons: 2 } },
     { id: 'outpostDef', text: 'Beat off 25 raids on your outposts', stat: 'outpostDefs', n: 25, reward: { shard_legendary: 1 } },
