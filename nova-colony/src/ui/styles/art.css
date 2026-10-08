@@ -1272,3 +1272,13 @@
   width: auto;
   height: auto;
 }
+
+/* colony stat tiles: painted icon in the emoji's slot */
+.stat-tile .si.aico {
+  width: 1.3em;
+  height: 1.3em;
+}
+.stat-tile .si.aico.emoji {
+  width: auto;
+  height: auto;
+}

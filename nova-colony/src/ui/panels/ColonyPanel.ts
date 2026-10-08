@@ -7,9 +7,9 @@ import type { TierUpRequirements } from '../../sim/progression';
 import { fmt, fmtDuration } from '../../core/format';
 import { bagCovers } from '../../core/bag';
 import { btn, costChips, section, unlockChip } from '../widgets';
-import { tierUnlocks } from '../logic/describe';
+import { tierUnlockGroups } from '../logic/describe';
 import { fill, h, setVar } from '../dom';
-import { artOrEmoji, buildingArt, tierArt } from '../art';
+import { alienArt, artOrEmoji, buildingArt, hudArt, iconEl, resourceArt, tierArt } from '../art';
 
 export class ColonyPanel extends Panel {
   readonly name = 'colony';
@@ -77,8 +77,10 @@ export class ColonyPanel extends Panel {
     } else {
       const nt = this.data.tier(req.tier);
       const card = h('div', { class: 'card next-tier' }, h('div', { class: 'h3', text: `Next: ${nt.name}` }), h('div', { class: 'mute small', text: nt.description }));
-      // what the next tier hands out: the buildings and vehicles' thumbnails
-      const news = tierUnlocks(this.data, req.tier);
+      // what the next tier hands out: the buildings and vehicles' thumbnails, ready ones first and the research-gated
+      // ones marked with 🔬 (same grouping as the tier-up card)
+      const groups = tierUnlockGroups(this.data, req.tier, this.st.research.completed);
+      const news = [...groups.ready, ...groups.research];
       if (news.length) {
         const chips = h('div', { class: 'chips unlocks' }, news.slice(0, 8).map(unlockChip));
         if (news.length > 8) chips.appendChild(h('span', { class: 'chip', text: `+${news.length - 8} more` }));
@@ -123,20 +125,20 @@ export class ColonyPanel extends Panel {
 
     // stats
     const s = g.state.stats;
-    const stat = (icon: string, k: string, v: string) => h('div', { class: 'stat-tile' }, h('div', { class: 'si', text: icon }), h('b', { text: v }), h('small', { text: k }));
+    const stat = (icon: string, k: string, v: string, art: string | null = null) => h('div', { class: 'stat-tile' }, iconEl(art, icon, 'si', 'div'), h('b', { text: v }), h('small', { text: k }));
     wrap.appendChild(section('Colony stats'));
     wrap.appendChild(
       h(
         'div',
         { class: 'stat-grid' },
-        stat('📅', 'Day', String(g.state.time.day)),
-        stat('🏠', 'Buildings', String(g.state.buildings.list.length)),
-        stat('🧑‍🚀', 'Colonists', String(g.state.colonists.list.length)),
-        stat('🛏️', 'Beds', `${g.derived.housing.used}/${g.derived.housing.beds}`),
-        stat('📏', 'Build radius', `${g.state.colony.radius} cells`),
-        stat('👾', 'Aliens defeated', fmt(s.kills)),
-        stat('🛡️', 'Waves won', String(s.wavesWon)),
-        stat('🧺', 'Gathered', fmt(s.gathered)),
+        stat('📅', 'Day', String(g.state.time.day), hudArt('day')),
+        stat('🏠', 'Buildings', String(g.state.buildings.list.length), hudArt('home')),
+        stat('🧑‍🚀', 'Colonists', String(g.state.colonists.list.length), hudArt('crew')),
+        stat('🛏️', 'Beds', `${g.derived.housing.used}/${g.derived.housing.beds}`, buildingArt('shelter')),
+        stat('📏', 'Build radius', `${g.state.colony.radius} cells`, hudArt('map')),
+        stat('👾', 'Aliens defeated', fmt(s.kills), alienArt('crawler')),
+        stat('🛡️', 'Waves won', String(s.wavesWon), hudArt('defense')),
+        stat('🧺', 'Gathered', fmt(s.gathered), resourceArt('wood')),
         stat('⏱️', 'Time played', fmtDuration(s.online)),
       ),
     );
