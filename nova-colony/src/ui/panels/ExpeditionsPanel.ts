@@ -417,7 +417,7 @@ export class ExpeditionsPanel extends Panel {
     const max = g.data.expeditionRules.squadMax;
     const rows = squadRows(g, spec);
     const wrap = h('div', { class: 'stack-v tight' });
-    wrap.appendChild(h('div', { class: 'sec exp-sec' }, `Squad ${this.squad.length}/${max}`, h('span', { class: 'mute', text: ' · ⭐ knows the terrain: bigger haul, better finds' })));
+    wrap.appendChild(h('div', { class: 'sec exp-sec squad' }, `Squad ${this.squad.length}/${max}`, h('span', { class: 'mute', text: ' · ⭐ knows the terrain: bigger haul, better finds' })));
     if (!rows.length) {
       wrap.appendChild(emptyState('🧑‍🚀', 'Everyone is out exploring', 'Recruit more colonists, or wait for a squad to come home.'));
       return wrap;

@@ -295,6 +295,29 @@ span.exp-banner-img.emoji {
 .nv-root .sec.exp-sec .mute {
   font-weight: 700;
 }
+/* "Squad 0/3" keeps one line; the terrain note goes under it on a phone instead of squeezing both into a column */
+.nv-root .sec.exp-sec.squad {
+  flex-wrap: wrap;
+  row-gap: 0.1em;
+}
+.nv-root .sec.exp-sec.squad::after {
+  display: none;
+}
+/* on a portrait phone the planner is a long scroll (one colonist per row, the vehicles, the forecast): Launch stays in
+   reach at the bottom. Not on a landscape phone: three picks a row keep it short, and the big button would cover a
+   fifth of the sheet. */
+@media (min-height: 520px) {
+  .nv-root .exp-plan > .exp-launch {
+    position: sticky;
+    bottom: 0.5em;
+    z-index: 2;
+  }
+  /* floating over the list it must stay opaque: greyed out, not see-through ("Pick your squad", a full squad slot) */
+  .nv-root .exp-plan > .exp-launch[aria-disabled='true'] {
+    opacity: 1;
+    filter: grayscale(0.85) brightness(1.06);
+  }
+}
 .exp-picks {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15.5em, 1fr));
