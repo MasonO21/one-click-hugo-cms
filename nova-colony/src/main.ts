@@ -7,6 +7,7 @@ import { UI } from './ui/UI';
 import { AudioManager } from './audio/Audio';
 import { createPlatformServices } from './platform';
 import { SaveManager } from './platform/save';
+import { AutoQuality } from './platform/autoQuality';
 import { guarded } from './core/guard';
 
 async function boot() {
@@ -20,8 +21,10 @@ async function boot() {
   }
 
   const game = new Game({ services, state: loaded ?? undefined });
+  // automatic graphics quality: a one-time device pick before the scene is built, then a frame-rate governor
+  const autoQuality = new AutoQuality(game);
   const renderer = new Renderer(game);
-  renderer.init(document.getElementById('game')!);
+  renderer.init(document.getElementById('game')!, (gl) => autoQuality.decide(gl));
   const ui = new UI(game, renderer);
   ui.init(document.getElementById('ui')!);
   const audio = new AudioManager(game);
@@ -29,11 +32,13 @@ async function boot() {
 
   game.start();
   saves.attach(game);
+  autoQuality.attach();
 
   // expose for debugging / automated playtests (dev server, or production with ?debug)
   if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
     (window as any).game = game;
     (window as any).renderer = renderer;
+    (window as any).autoQuality = autoQuality;
   }
 
   const boot = document.getElementById('boot');
@@ -52,6 +57,7 @@ async function boot() {
     guarded('render', () => renderer.render(dt));
     guarded('ui', () => ui.update(dt));
     guarded('audio', () => audio.update(dt));
+    autoQuality.update(dt); // guards itself (no closure per frame)
   };
   requestAnimationFrame(frame);
 }

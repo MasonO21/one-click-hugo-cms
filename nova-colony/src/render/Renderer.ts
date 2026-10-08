@@ -66,7 +66,13 @@ export class Renderer implements RendererApi {
 
   constructor(private readonly game: Game) {}
 
-  init(container: HTMLElement): void {
+  /**
+   * Create the WebGL renderer and build the scene at `settings.quality`.
+   * `onContext` runs once the WebGL context exists and before anything is built: the boot-time auto-quality check
+   * (platform/autoQuality.ts, wired in main.ts) reads the GPU name there and may set the level first. Its errors are
+   * logged, never fatal.
+   */
+  init(container: HTMLElement, onContext?: (gl: WebGLRenderingContext | WebGL2RenderingContext) => void): void {
     this.container = container;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', alpha: false, stencil: false });
     // ACES: deeper shadows and richer mid-tones than Neutral for the toy look (the palette and the
@@ -91,6 +97,13 @@ export class Renderer implements RendererApi {
       console.warn('[render] WebGL context restored');
     });
     container.appendChild(canvas);
+    if (onContext) {
+      try {
+        onContext(this.renderer.getContext());
+      } catch (e) {
+        console.warn('[render] onContext failed', e);
+      }
+    }
 
     this.quality = this.game.state.settings.quality;
     this.env.quality = this.quality;
