@@ -76,6 +76,8 @@ import { wireHapticFx } from './fx/HapticFx';
 /** Minimum gap between production floats of the same resource. */
 const PROD_FLOAT_GAP_MS = 1200;
 const GATHER_FLOAT_GAP_MS = 300;
+/** A tappable toast cleared by a modal within this long of showing comes back after it. */
+const OPEN_TOAST_SEEN_MS = 4500;
 /** Tier-up: how long the player watches the base transform before the celebration card opens. */
 const TIER_REVEAL_MS = 1800;
 
@@ -120,6 +122,8 @@ export class UI {
   private modalWasOpen = false;
   private toastInset = '';
   private deferredToasts: { text: string; kind: ToastKind; icon?: string; open?: string; at: number }[] = [];
+  /** Tappable toasts shown a moment ago (a modal opening clears the toast layer: they are re-queued, see onPanelsChanged). */
+  private openToasts: { text: string; kind: ToastKind; icon?: string; open: string; at: number }[] = [];
 
   constructor(
     private readonly game: Game,
@@ -341,6 +345,13 @@ export class UI {
       if (this.deferredToasts.length > 6) this.deferredToasts.shift();
       return;
     }
+    this.showToast(text, kind, icon, open);
+  }
+
+  private showToast(text: string, kind: ToastKind | undefined, icon: string | undefined, open: string | undefined): void {
+    if (open) {
+      this.openToasts = [...this.openToasts.filter((t) => t.text !== text), { text, kind: kind ?? 'info', icon, open, at: performance.now() }].slice(-3);
+    }
     this.toasts.show(text, kind, icon, this.tapOpen(open));
   }
 
@@ -386,7 +397,14 @@ export class UI {
     this.game.view.panelOpen = covering;
     // a modal (reward card, celebration, chest) opening replaces whatever toasts were saying a moment ago
     const modal = this.panels.anyModal();
-    if (modal && !this.modalWasOpen) this.toasts.clear();
+    if (modal && !this.modalWasOpen) {
+      this.toasts.clear();
+      // ...but a toast that opens the Journal ("12 achievements already earned!") that was cleared before it could be
+      // read comes back once the card closes
+      const now = performance.now();
+      for (const t of this.openToasts) if (now - t.at < OPEN_TOAST_SEEN_MS) this.deferredToasts.push({ ...t, at: now });
+      this.openToasts = [];
+    }
     this.modalWasOpen = modal;
     // the tutorial points at the build card (not the Build button) while the build drawer is open
     const tut = this.game.sys.tutorial;
@@ -418,7 +436,7 @@ export class UI {
    */
   /** Game-event toast: shown at once right after the player's own tap, otherwise held while a modal is up. */
   private eventToast(text: string, kind?: ToastKind, icon?: string, open?: string): void {
-    if (performance.now() - this.lastClick.t < 1500) this.toasts.show(text, kind, icon, this.tapOpen(open));
+    if (performance.now() - this.lastClick.t < 1500) this.showToast(text, kind, icon, open);
     else this.simToast(text, kind ?? 'info', icon, open);
   }
 

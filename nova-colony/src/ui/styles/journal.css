@@ -14,6 +14,12 @@
   filter: brightness(0.95);
 }
 
+/* the shared close button is 3.2em (43px on a 375px phone): make it a full 44px here */
+.nv-root .pm-card[data-panel='journal'] .pm-close {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .jr {
   min-width: 0;
 }
