@@ -89,6 +89,7 @@ window.RK_ART = {
     rivals: 'art/events/rivals.webp',
     siege: 'art/events/siege.webp',
     intel: 'art/events/intel.webp',
+    clash: 'art/events/clash.webp',
   },
   offer: {
     roadkit: 'art/events/road.webp',
@@ -235,6 +236,15 @@ window.RK_ART = {
     'i-fish-koi': 'art/ui/fish-koi.webp',
     'i-fish-rod': 'art/ui/fish-rod.webp',
     'i-fish-float': 'art/ui/fish-float.webp',
+    'i-rank-vet': 'art/ui/rank-vet.webp',
+    'i-rank-elite': 'art/ui/rank-elite.webp',
+    'i-rank-champ': 'art/ui/rank-champ.webp',
+    'i-drill': 'art/ui/drill.webp',
+    'i-clash': 'art/ui/clash.webp',
+    'i-clashbanner': 'art/ui/clashbanner.webp',
+    'i-cistern': 'art/ui/cistern.webp',
+    'i-clashmap': 'art/ui/clashmap.webp',
+    'i-waterrights': 'art/ui/waterrights.webp',
   },
   // button plates (sliced as border images: painted end caps, a stretchable middle) and the gold corner
   // that frames sheets

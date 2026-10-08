@@ -170,7 +170,7 @@
   // the side rail's hubs: tiles that open each member's own sheet (with a way back)
   const HUBS = {
     rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
-    play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'fishing', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
+    play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'clash', 'fishing', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
   };
   const MENU_IDS = ['bag', 'news'];
   KH.HUBS = HUBS;
@@ -957,7 +957,7 @@
   }
   KH.startBattle = startBattle;
   // a full-screen overlay (a battle, Cloud Run, the fishing pond) hides the keep, which then skips drawing
-  const COVERS = ['#battle', '#cloudrun', '#fishing'];
+  const COVERS = ['#battle', '#cloudrun', '#fishing', '#clash'];
   KH.covered = () => COVERS.some((sel) => { const e = $(sel); return !!e && !e.hidden; });
 
   // ======================================================================

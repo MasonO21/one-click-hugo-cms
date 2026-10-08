@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.17.0',
+  version: '4.18.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -955,6 +955,7 @@ const DATA = {
     { id: 'intel', text: 'Complete 2 watchtower reports', n: 2, pts: 15, show: (S) => S.lv.wyrm >= 4 },
     { id: 'defense', text: 'Raise a gate defense', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'drill', text: 'Drill troops to a new rank', n: 1, pts: 10, show: (S) => S.lv.barracks >= 10 },
+    { id: 'clash', text: 'Fight a Wadi Clash', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 9 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
     { id: 'temper', text: 'Temper a heirloom', n: 1, pts: 10, show: (S) => Object.values(S.heroes).some((h) => h.stars >= 3) },
   ],
@@ -1279,14 +1280,49 @@ const DATA = {
   // recruits fall first, so losses come out of the unranked troops before any rank.
   ranks: {
     list: [
-      { id: 'vet', name: 'Veteran', short: 'Vet', barracks: 10, mult: 1.1, cost: 0.03, secs: 6, color: '#8fb3c9' },
-      { id: 'elite', name: 'Elite', short: 'Elite', barracks: 14, mult: 1.2, cost: 0.07, secs: 12, color: '#e0b04a' },
-      { id: 'champ', name: 'Champion', short: 'Champ', barracks: 18, mult: 1.32, cost: 0.12, secs: 20, color: '#d0583a' },
+      { id: 'vet', name: 'Veteran', short: 'Vet', icon: 'i-rank-vet', barracks: 10, mult: 1.1, cost: 0.03, secs: 6, color: '#8fb3c9' },
+      { id: 'elite', name: 'Elite', short: 'Elite', icon: 'i-rank-elite', barracks: 14, mult: 1.2, cost: 0.07, secs: 12, color: '#e0b04a' },
+      { id: 'champ', name: 'Champion', short: 'Champ', icon: 'i-rank-champ', barracks: 18, mult: 1.32, cost: 0.12, secs: 20, color: '#d0583a' },
     ],
     // a troop's drill costs its training cost times the rank's cost in quarter-crates (so it grows with the keep),
     // and takes the rank's seconds (the Barracks level and the training steward speed it up like training)
     batch: 20, // troops a drill can take, per Barracks level
     warPts: 0.2, // Oasis Wars points per troop drilled
+  },
+
+  // ---------- Wadi Clash ----------
+  // A short live battle in a dry canyon against two rival caravans. Each side has three squads (yours are your
+  // squad heroes, each with a third of the march). Holding a point scores its value every second; the first side
+  // to the goal, or the leader when time runs out, wins. Squads that meet fight at once (the stronger side wins
+  // and keeps the square root of the difference of the squares of the two strengths, Lanchester's law); the
+  // losers limp back to camp to recover.
+  clash: {
+    unlock: 9, // Rainwyrm level
+    banners: { cap: 2, every: 28800 }, // a Clash Banner every 8 hours of keep time, two at most; a match takes one
+    length: 180, goal: 1000, // seconds of a match, and the score that wins it outright
+    speed: 0.11, // map widths a squad marches per second (routed squads limp at 70%)
+    capture: 3, // seconds to raise a flag on a point no one is holding
+    hold: 0.15, // squads fighting on a point their side holds fight this much harder
+    heal: 0.06, // strength a squad gets back per second in its camp
+    ready: 0.35, // a squad back in camp can march again once it is above this
+    // the map is 1 wide and 1.5 tall: your camp at the bottom, the rivals' in the top corners
+    camps: [[0.5, 1.4], [0.1, 0.12], [0.9, 0.12]],
+    points: [
+      { id: 'towerS', name: 'South Tower', x: 0.5, y: 1.12, pts: 1, icon: 'i-fort' },
+      { id: 'towerW', name: 'West Tower', x: 0.22, y: 0.36, pts: 1, icon: 'i-fort' },
+      { id: 'towerE', name: 'East Tower', x: 0.78, y: 0.36, pts: 1, icon: 'i-fort' },
+      { id: 'wellW', name: 'West Well', x: 0.18, y: 0.8, pts: 2, icon: 'i-well' },
+      { id: 'wellE', name: 'East Well', x: 0.82, y: 0.8, pts: 2, icon: 'i-well' },
+      { id: 'shrine', name: 'Rain Shrine', x: 0.5, y: 0.14, pts: 2, icon: 'i-shrine' },
+      { id: 'cistern', name: 'Old Cistern', x: 0.5, y: 0.7, pts: 4, icon: 'i-cistern' },
+    ],
+    // the two rival caravans of a match, each a share of your average squad's strength
+    rivals: ['Saltmarch Riders', 'Duskmoor Company', 'Red Sash Band', 'Sunwell Lancers', 'Ravensgate Guard', 'Palmhold Free Company'],
+    rivalStr: [[0.8, 0.95], [0.95, 1.12]],
+    colors: ['#3fd0c0', '#d0583a', '#6a7ae0'],
+    // by place: resources in quarter-crates, journals scaled to the keep
+    rewards: [{ starglass: 120, whetstone: 3, journals: 2 }, { starglass: 70, whetstone: 2, journals: 1 }, { starglass: 30, whetstone: 1, journals: 0.5 }],
+    warPts: [90, 55, 25],
   },
 
   // ---------- Spring Fishing ----------
@@ -1359,8 +1395,11 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.18', items: [
+      { icon: 'i-clash', name: 'Wadi Clash', text: 'A live three-way battle for a dry canyon. Send your three squads to take its wells, towers, the Rain Shrine and the Old Cistern, and hold them against two rival caravans. A Clash Banner every 8 hours.', act: 'clash', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
+    ] },
     { v: '4.17', items: [
-      { icon: 'i-flag', name: 'Troop Ranks', text: 'Drill your troops at the Barracks into Veterans, Elites and Champions. Every ranked troop lifts the strength of its whole class, and in a fight the recruits fall first.', act: 'plot:barracks', open: (S) => S.lv.barracks >= 10, needs: 'Barracks Lv 10' },
+      { icon: 'i-rank-champ', name: 'Troop Ranks', text: 'Drill your troops at the Barracks into Veterans, Elites and Champions. Every ranked troop lifts the strength of its whole class, and in a fight the recruits fall first.', act: 'plot:barracks', open: (S) => S.lv.barracks >= 10, needs: 'Barracks Lv 10' },
     ] },
     { v: '4.16', items: [
       { icon: 'i-ballista', name: 'Gate Defenses', text: 'Ballista towers, oil cauldrons and a stake yard at the gate: raise them for stronger defenders against raids and more tactics in every Scorpion Siege. They stand on the walls and grow as you raise them.', act: 'defenses', open: (S) => S.lv.wyrm >= 5, needs: 'Rainwyrm Lv 5' },
@@ -1624,6 +1663,9 @@ const DATA = {
     { id: 'drill100', text: 'Drill 100 troops to a new rank', stat: 'drilled', n: 100, reward: { starglass: 150 } },
     { id: 'drill1000', text: 'Drill 1,000 troops to a new rank', stat: 'drilled', n: 1000, reward: { beacons: 2 } },
     { id: 'champ300', text: 'Command 300 Champions', stat: 'champs', n: 300, reward: { shard_legendary: 1 } },
+    { id: 'clash1', text: 'Win a Wadi Clash', stat: 'clashWins', n: 1, reward: { starglass: 100 } },
+    { id: 'clash25', text: 'Win 25 Wadi Clashes', stat: 'clashWins', n: 25, reward: { shard_legendary: 1 } },
+    { id: 'clashSweep', text: 'Hold all seven points of the wadi at once', stat: 'clashSweep', n: 1, reward: { beacons: 2 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

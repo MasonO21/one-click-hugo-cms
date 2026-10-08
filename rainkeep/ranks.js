@@ -104,7 +104,7 @@
   const pct = (m) => `+${Math.round((m - 1) * 100)}%`;
   function section() {
     if (!unlocked()) {
-      return `<div class="section-label">Troop ranks</div><div class="card stack rk-teaser"><div class="row">${icon('i-flag', 'rk-ic')}<div class="grow"><b>Opens at Barracks Lv ${LIST[0].barracks}</b>
+      return `<div class="section-label">Troop ranks</div><div class="card stack rk-teaser"><div class="row">${icon('i-drill', 'rk-ic')}<div class="grow"><b>Opens at Barracks Lv ${LIST[0].barracks}</b>
         <div class="muted small">Drill your troops into ${LIST.map((rk) => `${rk.name}s (${pct(rk.mult)})`).join(', ')}. Every rank makes the whole class fight harder.</div></div></div></div>`;
     }
     const rows = CLS.map((c) => {
@@ -119,14 +119,14 @@
       UI.drillN = clamp(UI.drillN, 1, Math.max(1, have));
       const n = UI.drillN, cost = costOf(c, i, n), from = i ? `${LIST[i - 1].name}s` : 'recruits';
       const types = CLS.map((k) => `<button class="${k === c ? 'on' : ''}" data-act="dtype" data-arg="${k}">${icon(DATA.classes[k].icon)}${esc(DATA.classes[k].name.split(' ').pop())}</button>`).join('');
-      const ranks = LIST.map((r, j) => `<button class="${j === i ? 'on' : ''}${open(j) ? '' : ' off'}" data-act="drank" data-arg="${j}">${esc(r.name)}<small>${open(j) ? pct(r.mult) : `Barracks ${r.barracks}`}</small></button>`).join('');
+      const ranks = LIST.map((r, j) => `<button class="${j === i ? 'on' : ''}${open(j) ? '' : ' off'}" data-act="drank" data-arg="${j}">${icon(r.icon)}${esc(r.name)}<small>${open(j) ? pct(r.mult) : `Barracks ${r.barracks}`}</small></button>`).join('');
       drill = `<div class="section-label">Drill</div><div class="seg rk-seg">${types}</div><div class="seg rk-seg">${ranks}</div>
         <p class="muted small">${have ? `Drills ${from} into ${rk.name}s, who fight at ${pct(rk.mult)}. ${fmt(pool(c, i))} ${from} ready.` : `No ${from} among your ${esc(DATA.troops[c].name)} to drill${i ? ` yet. Drill them to ${LIST[i - 1].name} first.` : '.'}`}</p>
         ${have ? `<div class="row"><span class="grow muted small">Troops (max ${fmt(have)})</span>
           <div class="stepper"><button data-act="dn" data-arg="-10" aria-label="Fewer">−</button><b>${fmt(n)}</b><button data-act="dn" data-arg="10" aria-label="More">+</button></div>
           <button class="btn small alt" data-act="dn" data-arg="max">Max</button></div>
           ${KH.costHTML(cost)}<div class="chip muted">${icon('i-clock')}${fmtTime(timeOf(i, n))}</div>
-          <button class="btn wide ${KH.canAfford(cost) ? 'gold' : 'off'}" data-act="drill">Drill ${fmt(n)} to ${esc(rk.name)}</button>` : ''}`;
+          <button class="btn wide ${KH.canAfford(cost) ? 'gold' : 'off'}" data-act="drill">${icon(rk.icon)}Drill ${fmt(n)} to ${esc(rk.name)}</button>` : ''}`;
     }
     return `<div class="section-label">Troop ranks</div><p class="muted small">Each class fights at the average strength of all its troops. In a fight the recruits fall first.</p>
       <div class="stack rk-list">${rows}</div>${drill}`;
