@@ -44,6 +44,8 @@ const S = {
   chest: '<path d="M3 11h18v9H3z"/><path d="M3 11a9 6 0 0 1 18 0"/><path d="M10.5 13h3v3.5h-3z"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   check: '<path d="M4 12.5l5 5L20 6.5"/>',
+  share: '<path d="M4 13v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M12 3v12M7 8l5-5 5 5"/>',
+  down: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/>',
   ad: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9v6l5-3z" fill="currentColor"/>',
   nova: '<path d="M12 1.5v6M12 16.5v6M1.5 12h6M16.5 12h6M4.6 4.6l4.2 4.2M15.2 15.2l4.2 4.2M4.6 19.4l4.2-4.2M15.2 8.8l4.2-4.2"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',

@@ -9,6 +9,7 @@ import { RiteButton } from './riteui.js';
 import { StreakHUD, streakRow } from './streakui.js';
 import { showRunIntro } from './runintro.js';
 import { CoachUI } from './coachui.js';
+import { openShare } from './sharecard.js';
 
 /** Nightmare / Torment pill with its gold multiplier (empty on Normal). */
 const diffPill = (id) => { const D = DIFFICULTY[id]; return D && id !== 'normal' ? `<span class="pill pill-diff" style="--dc:${D.css}">${D.name} · ×${D.gold} gold</span>` : ''; };
@@ -355,6 +356,7 @@ export class RunUI {
         return false;
       } });
     }
+    if (!tut) actions.push({ label: `${icon('share')} Share`, cls: 'btn-ghost btn-share', onClick: () => { app.audio.sfx('click'); openShare(app, this.run, result); return false; } }); // the share card (sharecard.js)
     actions.push({ label: 'Continue', cls: 'btn-primary btn-lg', onClick: () => { app.audio.sfx('click'); app.exitRun(); } });
     setTimeout(() => {
       if (!this.el.isConnected) return; // exited before it showed: no results over the menu

@@ -243,7 +243,7 @@ Each week: 6–10 new variants (new hooks on proven bodies) → $300–$600 per 
 
 **Program:** 30–50 nano and micro creators (5k–100k followers) in CA/AU during soft launch Phase C, then 150+ at global launch. Creators get early-access builds, a creator code that grants a cosmetic legion tint (no power), and a flat fee or CPI-based deal. Every paid post uses the platform's branded-content tag and #ad (FTC endorsement guides and ASA/CAP rules). The brief to creators forbids showing or implying guaranteed summon results and any targeting of under-13 audiences.
 
-**Built-in sharing:** at launch, a share card (peak legion, kills, chapter, hero) with a watermark and store link. In Season 3, a 10-second auto-captured replay clip of the last Nova or the boss kill (`LIVEOPS.md`).
+**Built-in sharing:** the share card is in the build (GDD §10.1): a painted 1080×1350 card of the run (headline, peak legion, the boss slain, stats, build, hero) with the logo and "Can your legion beat mine?"; the store link joins it at launch. In Season 3, a 10-second auto-captured replay clip of the last Nova or the boss kill (`LIVEOPS.md`).
 
 **Hashtags:** #SOULSWARM #RaiseTheLegion #SoulNova #PickTheGate.
 

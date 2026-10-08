@@ -175,3 +175,21 @@
 .res-sub { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-dim); text-align: center; margin-top: 4px; }
 .res-tip { font-size: 12px; color: var(--ink-dim); text-align: center; padding: 8px; background: rgba(78,242,255,.06); clip-path: var(--bevel-sm); }
 .res-badges { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+/* results actions: Share and Double rewards share a row, Continue spans the next */
+#ui .modal-results .modal-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#ui .modal-results .modal-actions .btn-share { flex: 1 1 30%; }
+#ui .modal-results .modal-actions .btn-ad { flex: 2 1 55%; }
+#ui .modal-results .modal-actions .btn-primary.btn-lg { flex: 1 1 100%; }
+
+/* the share sheet (sharecard.js) */
+#ui .mm-share { max-width: 400px; }
+.share { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.share-frame { width: min(100%, calc((100dvh - 250px) * 0.8)); aspect-ratio: 1080 / 1350; display: grid; place-items: center; background: #05060b;
+  clip-path: var(--bevel-sm); box-shadow: inset 0 0 0 1px var(--edge); }
+.share-img { width: 100%; height: 100%; display: block; object-fit: contain; -webkit-touch-callout: default; user-select: auto; }
+.share-wait { display: flex; align-items: center; gap: 8px; color: var(--ink-dim); font-weight: 700; animation: blink 1.2s ease-in-out infinite; }
+.share-hint { font-size: 11.5px; text-align: center; }
+.share-acts { display: flex; gap: 8px; width: 100%; }
+.share-acts .btn { flex: 1; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.share-acts .btn svg { width: 18px; height: 18px; }

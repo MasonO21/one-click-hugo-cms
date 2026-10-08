@@ -2605,6 +2605,50 @@ errs = await session(async (page) => {
 });
 check('boss rush: no runtime errors', !errs.length, errs[0] || '');
 
+// 36. The share card (ui/sharecard.js): every run's results but the tutorial's have a Share button that paints a
+//     1080×1350 card from the painted art (headline, peak legion, the boss slain, time / kills / raised / level, the
+//     build) and offers it to share, to save, or to long-press.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, S = await import('/src/ui/sharecard.js'), out = {}, wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    Object.assign(p.flags, { tutorialDone: true, tutorialPaid: true, hints: { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 } }); p.chapter.unlocked = 6; p.energy = 99;
+    // the headlines
+    const fake = { bossDead: true, boss: { id: 'pyrexa' } };
+    out.copy = [S.cardCopy({ chapter: 2, victory: true, difficulty: 'nightmare' }, fake), S.cardCopy({ chapter: 4, victory: false, difficulty: 'normal' }, {}),
+      S.cardCopy({ rush: true, victory: true, bossKills: 5 }, {}), S.cardCopy({ endless: true, bossKills: 3 }, {})].map((c) => [c.head, c.sub, c.bosses.join('+'), c.slew || '']);
+    // a finished Chapter 2 run: Share opens the sheet with the card
+    app.startRun(2); const r = app.run; app.engine.manual = true;
+    r.counters.kills = 2400; r.legion.peak = 180; r.time = 300; r.end(false);
+    await wait(900);
+    out.btn = !!document.querySelector('.modal-results .btn-share');
+    document.querySelector('.modal-results .btn-share').click();
+    for (let i = 0; i < 60 && !document.querySelector('.share-img'); i++) await wait(100);
+    const img = document.querySelector('.share-img');
+    if (img) { await img.decode().catch(() => {}); }
+    out.img = img ? { w: img.naturalWidth, h: img.naturalHeight, alt: img.alt } : null;
+    out.save = document.querySelector('.share-acts [data-act="save"]')?.getAttribute('download');
+    if (img) { // painted, not blank: many distinct colours across the card
+      const c = document.createElement('canvas'); c.width = 54; c.height = 68; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 54, 68);
+      const d = x.getImageData(0, 0, 54, 68).data, set = new Set(); for (let i = 0; i < d.length; i += 4) set.add((d[i] >> 4) << 8 | (d[i + 1] >> 4) << 4 | (d[i + 2] >> 4)); out.colors = set.size;
+    }
+    out.resultsKept = !!document.querySelector('.modal-results');
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    app.exitRun();
+    // the tutorial's results have none
+    p.flags.tutorialPaid = true; app.startRun(1, { tutorial: true }); app.run.end(true); await wait(900);
+    out.tutBtn = !!document.querySelector('.modal-results .btn-share');
+    app.exitRun();
+    return out;
+  });
+  check('share card: the headline fits the run (victory and the boss slain, a fall, the Court, the Abyss)',
+    s.copy[0][0] === 'VICTORY' && /Ember Wastes · Nightmare/.test(s.copy[0][1]) && s.copy[0][2] === 'pyrexa' && /Cinder Matron/.test(s.copy[0][3])
+    && s.copy[1][0] === 'FALLEN' && s.copy[2][0] === 'COURT CLEARED' && s.copy[2][2].split('+').length === 5 && s.copy[3][0] === 'ABYSS DEPTH 4', JSON.stringify(s.copy));
+  check('share card: Share on the results paints a 1080×1350 card and offers to save it; the results stay open; the tutorial has none',
+    s.btn && s.img && s.img.w === 1080 && s.img.h === 1350 && /180 souls/.test(s.img.alt) && s.save === 'soulswarm-run.png' && s.colors > 150 && s.resultsKept && !s.tutBtn,
+    JSON.stringify({ b: s.btn, i: s.img, sv: s.save, c: s.colors, k: s.resultsKept, t: s.tutBtn }));
+});
+check('share card: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -16,7 +16,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters, each with its own boss (§6), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, new heroes (`LIVEOPS.md`) |
 | Meta and economy | **The Bestiary** (§5.2: 11 painted entries, kills per foe and boss, 33 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
-| Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
+| Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3), the **share card** (§10.1) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, replay clips, a store link on the share card |
 
 Everything below describes the build unless it is marked **Planned**.
 
@@ -698,6 +698,17 @@ Campaign runs never dropped Legendaries before Torment (the Endless Epic+ relic 
 | Hoard floor | Common | Rare | Epic |
 | Energy | 5 | 5 | 5 |
 | Example: Ch5 clear, G = 0 | 5,714 gold · ~210 XP | 10,000 gold · ~310 XP | 14,285 gold · ~415 XP |
+
+### 10.1 The share card (in the build)
+
+Every results screen except the tutorial's has a **Share** button beside Double rewards (`ui/sharecard.js`). It paints a 1080×1350 card (the 4:5 portrait that Instagram, TikTok and messengers show whole) on a 2D canvas from the painted art, with nothing sent anywhere until the player shares it:
+
+- **Background:** the chapter's painting (the Abyss for Endless and the Boss Rush), dimmed, with the hero's splash (or the equipped skin's) on the right, feathered into it.
+- **Headline:** VICTORY, FALLEN, COURT CLEARED / FELL IN THE COURT, or ABYSS DEPTH *n*, over the chapter, difficulty or mode.
+- **The hook:** peak legion, huge, in the legion's colour: "214 SOULS IN MY LEGION".
+- **The boss:** the slain boss's portrait framed in its colour with "SLEW PYREXA, the Cinder Matron"; the Boss Rush shows each boss beaten, the Abyss each boss slain.
+- **Then:** the hero's name and title, time / kills / raised / level, the build's painted weapon icons (evolved ones shown evolved) and "CAN YOUR LEGION BEAT MINE?".
+- **The sheet:** the card with **Share** (the Web Share sheet with the image, where the device offers it), **Save image** (a download) and a long-press / right-click hint for the rest. The results stay open behind it. *(Planned: a store link and QR code on the card once the store pages exist; native share through the Capacitor Share plugin where the web sheet is missing, as in Android's WebView.)*
 
 ---
 
