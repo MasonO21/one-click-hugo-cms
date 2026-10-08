@@ -70,7 +70,7 @@ export class BuildMenuPanel extends Panel {
     return BUILD_CATEGORIES.filter((c) => present.has(c.id as never)).map((c) => c.id);
   }
 
-  /** The tab's cards: newest tier first, the guided card pinned in front (tier 0 keeps the old order); see buildCardOrder. */
+  /** The tab's cards: the guided one, then buildable (newest tier first), then locked; tier 0 keeps the old order. See buildCardOrder. */
   private defsOf(cat: string, pinned = this.guidedBuild()): BuildingDef[] {
     const bs = this.game.sys.buildings;
     const list = this.data.buildings.filter((b) => b.category === cat && !b.core);

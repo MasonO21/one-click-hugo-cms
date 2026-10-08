@@ -398,9 +398,12 @@ describe('ui.logic — build drawer card order', () => {
   const defs = [b('barricade', 0), b('spike', 0), b('tower', 1, 'r1'), b('mg', 3, 'r3'), b('fence', 3, 'r3b'), b('missile', 4, 'r4'), b('aa', 4, 'r4b'), b('laser', 5, 'r5'), b('pad', 5, 'r5b'), b('plasma', 6, 'r6')];
   const opener = (tier: number, done: string[]) => (d: D) => d.unlockTier <= tier && (!d.research || done.includes(d.research));
 
-  it('lists the newest tier first, buildable before research-locked within a tier, future tiers last (nearest first)', () => {
+  it('lists every buildable card first (newest tier first), then research-locked ones (newest first), then future tiers (nearest first)', () => {
     const open = opener(5, ['r1', 'r3', 'r3b', 'r4', 'r5b']);
-    expect(ids(buildCardOrder(defs, 5, open))).toEqual(['pad', 'laser', 'missile', 'aa', 'mg', 'fence', 'tower', 'barricade', 'spike', 'plasma']);
+    expect(ids(buildCardOrder(defs, 5, open))).toEqual(['pad', 'missile', 'mg', 'fence', 'tower', 'barricade', 'spike', 'laser', 'aa', 'plasma']);
+    // nothing of the newest tier researched yet: the buildable cards of older tiers still lead
+    const none = opener(5, ['r1', 'r3', 'r3b', 'r4', 'r4b']);
+    expect(ids(buildCardOrder(defs, 5, none)).slice(0, 3)).toEqual(['missile', 'aa', 'mg']);
     const fut = [b('a', 0), b('t6', 6, 'x'), b('t4', 4, 'y'), b('t4b', 4)];
     expect(ids(buildCardOrder(fut, 2, opener(2, [])))).toEqual(['a', 't4', 't4b', 't6']);
   });
@@ -412,8 +415,9 @@ describe('ui.logic — build drawer card order', () => {
 
   it('pins the guided card to the front of its tab, locked or not; a pin from another tab changes nothing', () => {
     const open = opener(5, ['r1', 'r3', 'r3b', 'r4', 'r5b']);
-    expect(ids(buildCardOrder(defs, 5, open, 'laser'))[0]).toBe('laser');
-    expect(ids(buildCardOrder(defs, 5, open, 'tower')).slice(0, 3)).toEqual(['tower', 'pad', 'laser']);
+    expect(ids(buildCardOrder(defs, 5, open, 'laser')).slice(0, 3)).toEqual(['laser', 'pad', 'missile']);
+    expect(ids(buildCardOrder(defs, 5, open, 'tower')).slice(0, 3)).toEqual(['tower', 'pad', 'missile']);
+    expect(ids(buildCardOrder(defs, 5, open, 'plasma')).slice(0, 2)).toEqual(['plasma', 'pad']);
     expect(buildCardOrder(defs, 5, open, 'not_here')).toEqual(buildCardOrder(defs, 5, open));
   });
 
@@ -436,16 +440,20 @@ describe('ui.logic — build drawer card order', () => {
     }
   });
 
-  it('real data: a Nano colony opens Defense on Nano cards and ends with the Titanium preview', () => {
+  it('real data (the Nano playtest save): the guided Laser Turret, then the buildable Alloy turrets, padlocks after', () => {
     const data = createDataRegistry();
     const list = data.buildings.filter((d) => d.category === 'defense' && !d.core);
-    const out = buildCardOrder(list, 5, (d) => d.unlockTier <= 5, null);
-    const tiers = out.map((d) => d.unlockTier);
-    const reached = tiers.filter((t) => t <= 5);
-    expect(tiers[0]).toBe(5);
-    expect(reached).toEqual([...reached].sort((x, y) => y - x));
-    expect(tiers.slice(reached.length).every((t) => t === 6)).toBe(true);
-    expect(out.slice(0, 3).map((d) => d.id)).toEqual(['laser_turret', 'drone_pad', 'arc_barrier']);
+    // every Nano-tier defense still behind research, everything older researched
+    const open = (d: BuildOrderDef) => d.unlockTier <= 4;
+    const out = buildCardOrder(list, 5, open, 'laser_turret');
+    expect(out.slice(0, 4).map((d) => d.id)).toEqual(['laser_turret', 'missile_turret', 'heavy_sentry', 'cannon_turret']);
+    const rest = out.slice(1);
+    const nBuild = rest.filter(open).length;
+    expect(rest.slice(0, nBuild).every(open)).toBe(true);
+    const buildTiers = rest.slice(0, nBuild).map((d) => d.unlockTier);
+    expect(buildTiers).toEqual([...buildTiers].sort((x, y) => y - x));
+    expect(rest.slice(nBuild).map((d) => d.unlockTier)).toEqual([5, 5, 5, 5, 6, 6, 6, 6, 6, 6]);
+    expect(rest.slice(nBuild - 3, nBuild).map((d) => d.id)).toEqual(['barricade', 'spike_trap', 'scrap_turret']);
   });
 });
 
