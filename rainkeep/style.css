@@ -1047,3 +1047,9 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .iv-last.lost { border-color: #d0503a88; }
 .iv-last .row { align-items: center; gap: 8px; }
 .chip.glow { box-shadow: 0 0 0 1px #7ff0e0aa, 0 0 12px #4fd8c866; }
+
+/* ---------- What's new (news.js) ---------- */
+.news-item { align-items: center; gap: 10px; }
+.ic.news-ic { width: 44px; height: 44px; flex: none; }
+.news-need { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--gold); }
+.news-need .ic { width: 14px; height: 14px; }

@@ -172,7 +172,7 @@
     rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
     play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
   };
-  const MENU_IDS = ['bag'];
+  const MENU_IDS = ['bag', 'news'];
   KH.HUBS = HUBS;
   const tile = (b, back) => {
     const badge = b.badge ? b.badge() : '';

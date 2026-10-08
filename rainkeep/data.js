@@ -1247,6 +1247,27 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- What's new ----------
+  // Shown once to a returning player after an update (news.js): the newest features first, each with a way
+  // to it, or what opens it.
+  news: [
+    { v: '4.13', items: [
+      { icon: 'i-intel', name: 'Watchtower Intel', text: 'Star-rated reports on the Dunes: rescues, hunts, lost caravans, relics, bounties and hero errands, each with its own story.', act: 'intel', open: (S) => S.lv.wyrm >= 4 && S.lv.barracks > 0, needs: 'Rainwyrm Lv 4 and the Barracks' },
+    ] },
+    { v: '4.12', items: [
+      { icon: 'i-horn', name: 'The Scorpion Siege', text: 'Ten waves against the gate. The scouts call each wave; counter it with Fire Pots, the Ballista or Stakes, and hold for the Scorpion King.', act: 'siege', open: (S) => S.lv.wyrm >= 10, needs: 'Rainwyrm Lv 10' },
+    ] },
+    { v: '4.11', items: [
+      { icon: 'i-fort', name: 'Rival Keeps', text: 'Eight keeps on the Dunes to scout and raid for their stores. Their warbands strike back.', act: 'rivals', open: (S) => S.lv.wyrm >= 8, needs: 'Rainwyrm Lv 8' },
+    ] },
+    { v: '4.10', items: [
+      { icon: 'i-road', name: 'The Spice Road', text: 'A dice board round an old trade loop: roll Road Dice for resources, Starglass and lap prizes.', act: 'road', open: (S) => S.lv.hall > 0, needs: 'the Caravan Hall' },
+    ] },
+    { v: '4.9', items: [
+      { icon: 'i-pals', name: 'Companions and the painted cast', text: 'Desert animals to tame and raise, and every hero, villager, beast and camel now a painted 3D model.', act: 'pals', open: (S) => S.lv.wyrm >= 7, needs: 'Rainwyrm Lv 7' },
+    ] },
+  ],
+
   // ---------- Watchtower Intel ----------
   // Reports from the watchtower's scouts: a job on open sand within sight, rated one to five stars. Rescues,
   // hunts and bounties are fights for the squad; a lost caravan or a relic needs only a few scouts; an errand
