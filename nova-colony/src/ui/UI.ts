@@ -64,6 +64,7 @@ import { MerchantPanel } from './panels/MerchantPanel';
 import { CELEBRATE_READY_MAX, CELEBRATE_RESEARCH_MAX, CelebratePanel, RewardPanel, type CelebrateArg } from './panels/CelebratePanel';
 import { MenuPanel } from './panels/MenuPanel';
 import { backAction } from './logic/back';
+import { wireHapticFx } from './fx/HapticFx';
 
 /** Minimum gap between production floats of the same resource. */
 const PROD_FLOAT_GAP_MS = 1200;
@@ -418,6 +419,7 @@ export class UI {
       this.eventToast(rich.text, e.kind, rich.icon);
     });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
+    wireHapticFx(bus, (k) => this.haptic(k));
     bus.on('ui:open', (e) => {
       if (e.panel === 'daily' && (e.arg as { auto?: boolean } | undefined)?.auto) this.autoDaily(0);
       else this.open(e.panel, e.arg);
