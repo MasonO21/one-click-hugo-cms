@@ -59,6 +59,8 @@ export class Renderer implements RendererApi {
   private quality: Quality = 'medium';
   private contextLost = false;
   private frame = 0;
+  /** Time of frames skipped behind an open panel, still owed to the animations. */
+  private heldDt = 0;
   private lastGen: WorldGen | undefined | null = null;
   private lastBiome = '';
   private ready = false;
@@ -181,8 +183,17 @@ export class Renderer implements RendererApi {
       env.terrainVersion++;
     }
 
-    // panels open: halve the frame rate (still advance animation clocks)
-    if (game.view.panelOpen && this.frame % 2 === 1) return;
+    // panels open: halve the frame rate; the skipped frame's time is carried into the next drawn one so particles,
+    // characters and buildings behind the sheet keep their real speed instead of moving at half speed
+    if (game.view.panelOpen && this.frame % 2 === 1) {
+      this.heldDt += dt;
+      return;
+    }
+    if (this.heldDt > 0) {
+      dt = Math.min(dt + this.heldDt, 0.2);
+      env.dt = dt;
+      this.heldDt = 0;
+    }
 
     this.rig.update(dt);
     const region = this.terrain.regionAt(st.player.x, st.player.z);
