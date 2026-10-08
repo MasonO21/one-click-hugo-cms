@@ -5,7 +5,7 @@
  * Cistern); holding one scores its value every second, and the first side to the goal, or the leader when time
  * runs out, wins. Squads that meet on a point fight at once by Lanchester's law, the losers limp home to heal,
  * and a point stays yours after your squad leaves until someone takes it. Tap a squad, then a point. A Clash
- * Banner comes every 8 hours of keep time (two at most). The rules live in step(), shared by the live canvas,
+ * Banner comes every 4 hours of keep time (three at most). The rules live in step(), shared by the live canvas,
  * the auto-player for squads you hand over, and the balance bot.
  */
 'use strict';
@@ -29,7 +29,7 @@
     const X = S.clash;
     if (!X.open) {
       X.open = true; X.banners = C.banners.cap; X.acc = 0;
-      KH.mail('The Wadi Clash', 'Two rival caravans have staked their banners in the dry canyon south of the keep. Whoever holds its wells, towers, the Rain Shrine and the Old Cistern longest takes the water rights until the next moon. Send three squads in: tap a squad, then a point. Hold a point to score its value every second. A new Clash Banner comes every 8 hours.');
+      KH.mail('The Wadi Clash', `Two rival caravans have staked their banners in the dry canyon south of the keep. Whoever holds its wells, towers, the Rain Shrine and the Old Cistern longest takes the water rights until the next moon. Send three squads in: tap a squad, then a point. Hold a point to score its value every second. A new Clash Banner comes every ${C.banners.every / 3600} hours.`);
       return;
     }
     if (X.banners >= C.banners.cap) { X.acc = 0; return; }
@@ -248,7 +248,7 @@
   };
   ACT.clashgo = () => {
     if (!unlocked()) return;
-    if (S.clash.banners < 1) return KH.toast('No Clash Banners left. A new one comes every 8 hours.', 'warn');
+    if (S.clash.banners < 1) return KH.toast(`No Clash Banners left. A new one comes every ${C.banners.every / 3600} hours.`, 'warn');
     UI.sheet = null;
     G = start();
     const el = host();

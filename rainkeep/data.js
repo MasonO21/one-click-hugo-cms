@@ -1298,7 +1298,7 @@ const DATA = {
   // losers limp back to camp to recover.
   clash: {
     unlock: 9, // Rainwyrm level
-    banners: { cap: 2, every: 28800 }, // a Clash Banner every 8 hours of keep time, two at most; a match takes one
+    banners: { cap: 3, every: 14400 }, // a Clash Banner every 4 hours of keep time, three at most; a match takes one
     length: 180, goal: 700, // seconds of a match, and the score that wins it outright
     speed: 0.11, // map widths a squad marches per second (routed squads limp at 70%)
     capture: 3, // seconds to raise a flag on a point no one is holding
@@ -1397,7 +1397,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.18', items: [
-      { icon: 'i-clash', name: 'Wadi Clash', text: 'A live three-way battle for a dry canyon. Send your three squads to take its wells, towers, the Rain Shrine and the Old Cistern, and hold them against two rival caravans. A Clash Banner every 8 hours.', act: 'clash', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
+      { icon: 'i-clash', name: 'Wadi Clash', text: 'A live three-way battle for a dry canyon. Send your three squads to take its wells, towers, the Rain Shrine and the Old Cistern, and hold them against two rival caravans. A Clash Banner every 4 hours.', act: 'clash', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
     ] },
     { v: '4.17', items: [
       { icon: 'i-rank-champ', name: 'Troop Ranks', text: 'Drill your troops at the Barracks into Veterans, Elites and Champions. Every ranked troop lifts the strength of its whole class, and in a fight the recruits fall first.', act: 'plot:barracks', open: (S) => S.lv.barracks >= 10, needs: 'Barracks Lv 10' },
