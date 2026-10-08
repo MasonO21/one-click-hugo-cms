@@ -234,12 +234,14 @@ A few useful reminders while the player is away, never spam. Code: `src/platform
 | Storage full | the first resource stops filling while away, i.e. reaches what Welcome Back credits up to (capacity × `offlineStorageMult`), timed with the economy's own offline model (80% efficiency, converters, upkeep). Only if ≥ 30 min away and before the offline cap | "Your storehouses are bursting! 📦" / "Come spend your wood and stone. There's no room left for more!" |
 | Offline cap | `offlineHours` (8 h, + research / Colony Pass) after leaving: production stops. Only while something is still being made then | "Time to collect! 🧺" / "Your colonists have been busy for 8 hours. Come collect!" |
 | Daily gift | the next local midnight, only when today's gift is already claimed and gifts are offered. Tapping it opens the gift panel | "Your daily gift is ready! 🎁" / "Your day 4 gift is waiting in New Hope. Come and unwrap it!" |
+| Explorers home | when the first expedition squad still out is back (any squad back within the hour after it is told in the same one). Tapping it opens Expeditions | "Your explorers are home! 🧭" / "Your squad is back from Hidden Stash Hunt with a haul. Come and collect it!" (2+: "2 squads are back with their hauls…") |
 | We miss you | once, 24 h after leaving; nothing after it | "New Hope misses you 💛" / "Your colonists keep looking up at the sky, hoping you'll visit. Pop in and say hello!" |
 
 Rules: nothing within 30 min of leaving; nothing 22:00–08:00 local time (moved to 08:00, body starts "Good morning!");
 reminders under an hour apart become one notification (the evening case: storage + offline cap + gift → one 08:00
-"Time to collect! … Your daily gift is ready too. 🎁"); at most 3; stable ids 41001–41004 (one per kind), all
-cancelled before a fresh plan is scheduled, so nothing duplicates.
+"Time to collect! … Your daily gift is ready too. 🎁"; a squad folded into another reminder adds "Your expedition squad
+is home too. 🧭" and the tap opens Expeditions); at most 3; stable ids 41001–41005 (one per kind: storage, offline cap,
+daily, we miss you, explorers home), all cancelled before a fresh plan is scheduled, so nothing duplicates.
 
 Lifecycle: app to the background → cancel ours and schedule a fresh plan (only with `settings.notifications` on and
 the OS permission granted); back to the foreground (or launch) → cancel everything pending, clear the shade, re-read
