@@ -47,6 +47,21 @@ export class PanelManager {
     return this.open_.some((o) => !o.closing && (o.panel.kind === 'sheet' || o.panel.kind === 'modal'));
   }
 
+  /**
+   * Where the top-most open sheet / modal's header ends, in px from the top of the screen (null: nothing covering is
+   * open, or the top one has no header). Toasts hang just below it instead of on top of the title. Layout offsets, so
+   * the card's slide-in transform does not matter.
+   */
+  headerBottom(): number | null {
+    for (let i = this.open_.length - 1; i >= 0; i--) {
+      const o = this.open_[i];
+      const p = o.panel;
+      if (o.closing || (p.kind !== 'sheet' && p.kind !== 'modal')) continue;
+      return p.hasHeader && p.head?.isConnected ? p.card.offsetTop + p.head.offsetHeight : null;
+    }
+    return null;
+  }
+
   /** A modal (celebration, reward, victory, welcome back…) is showing or waiting in the queue. */
   anyModal(): boolean {
     return this.modalQueue.length > 0 || this.open_.some((o) => !o.closing && o.panel.kind === 'modal');

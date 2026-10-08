@@ -104,6 +104,7 @@ export class UI {
   private lastProdFloat = new Map<string, number>();
   private lastGatherFloat = new Map<string, number>();
   private modalWasOpen = false;
+  private toastInset = '';
   private deferredToasts: { text: string; kind: ToastKind; icon?: string; at: number }[] = [];
 
   constructor(
@@ -366,7 +367,21 @@ export class UI {
     if (tut.flag('buildPanelOpen') !== buildOpen) tut.setFlag('buildPanelOpen', buildOpen);
     tut.notifyPanel(this.panels.topName());
     this.root.dataset.panelOpen = covering ? '1' : '0';
+    this.syncToastInset();
     if (covering || this.panels.anyOpen()) this.input.reset();
+  }
+
+  /**
+   * Publish where the open sheet's header ends (`--panel-head-b`) so toasts sit just below it rather than over the
+   * title (CSS: `.nv-root[data-panel-open] .nv-toasts`). Re-checked a few times a second: a header can grow a row.
+   */
+  private syncToastInset(): void {
+    const b = this.panels?.headerBottom() ?? null;
+    const v = b == null ? '' : `${Math.round(b)}px`;
+    if (v === this.toastInset) return;
+    this.toastInset = v;
+    if (v) this.root.style.setProperty('--panel-head-b', v);
+    else this.root.style.removeProperty('--panel-head-b');
   }
 
   /**
@@ -764,6 +779,7 @@ export class UI {
         this.refreshBadges();
         this.guide.poll();
         this.threats.poll();
+        this.syncToastInset();
       });
     }
     this.accFps += dt;

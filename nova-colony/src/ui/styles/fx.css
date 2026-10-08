@@ -24,9 +24,11 @@
     flex-direction: column-reverse;
   }
 }
-/* a sheet is open: keep toasts on its title row instead of over its content */
+/* a sheet is open: hang the toasts just below its header (--panel-head-b, published by the UI from the header's real
+   height) so they never cover the title, the extras or the close button. Without a header to measure (a modal card),
+   they keep to the top edge as before. */
 .nv-root[data-panel-open='1'] .nv-toasts {
-  top: calc(var(--mt) + 0.2em);
+  top: calc(var(--panel-head-b, var(--mt) - 0.3em) + 0.5em);
   bottom: auto;
   flex-direction: column;
 }
