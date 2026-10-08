@@ -7,7 +7,7 @@ import { createInitialState, deserializeState, serializeState } from '../src/cor
 import { SAVE_VERSION } from '../src/core/constants';
 import { migrateState } from '../src/platform/saveMigrate';
 import { installAnalyticsHooks } from '../src/platform/analyticsHooks';
-import { HOUR, MIN, crew, makeColony, placeNear, reload } from './expeditions.helpers';
+import { HOUR, MIN, T0, crew, makeColony, placeNear, reload } from './expeditions.helpers';
 import { makeGame as makeWorldGame } from './world.helpers';
 
 const tapClaim = (rig: ReturnType<typeof makeColony>, id: string) => {
@@ -111,6 +111,22 @@ describe('expeditions: saves', () => {
     expect(s.version).toBe(SAVE_VERSION);
     expect(s.expeditions).toEqual({ list: [], nextId: 1, launched: 0, collected: 0, frontier: { charted: [], signal: 0, claimed: [], announced: false } });
     expect(s.settings.qualityMode).toBe('auto');
+  });
+
+  it('a trip launched while the device clock ran ahead does not keep its squad away for days once the clock is fixed', () => {
+    const ahead = makeColony({ tier: 3, at: T0 + 3 * 24 * HOUR });
+    const g = ahead.game;
+    const [a] = crew(g);
+    g.sys.expeditions.launch('cv_debris', [a.id]); // 15 min, by the wrong clock
+    const back = makeColony({ state: migrateState(JSON.parse(serializeState(g.state))), at: T0 + MIN });
+    const ex = back.game.sys.expeditions;
+    const e = ex.list()[0];
+    expect(e.status).toBe('out');
+    expect(ex.secondsLeft(e)).toBeLessThanOrEqual(15 * 60);
+    expect(back.game.sys.colonists.get(a.id)!.away).toBe(true);
+    back.wait(16 * MIN);
+    expect(ex.list()[0].status).toBe('back');
+    expect(back.game.sys.colonists.get(a.id)!.away).toBe(false);
   });
 
   it('repairs junk and stale flags on load: unknown trips come home, nobody stays lost', () => {

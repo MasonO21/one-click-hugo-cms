@@ -552,6 +552,10 @@ export class ExpeditionSystem extends System {
       (e) => !!e && typeof e === 'object' && isNum(e.id) && typeof e.dest === 'string' && Array.isArray(e.squad) && isNum(e.startedAt) && isNum(e.endsAt),
     );
     const known = new Set(this.game.state.colonists.list.map((c) => c.id));
+    // no trip lasts longer than the longest destination: one ending further ahead left while the device clock was
+    // set forward (the squad would be "back in 2,000 h"). It keeps its own length, counted from now.
+    const longest = 1000 * Math.max(0, ...this.game.data.expeditions.map((d) => d.duration), ...this.rules.frontier.durations);
+    const now = this.game.now();
     for (const e of st.list) {
       e.squad = e.squad.filter((id) => isNum(id) && known.has(id));
       e.prevWork = Array.isArray(e.prevWork) ? e.prevWork : e.squad.map(() => null);
@@ -561,6 +565,11 @@ export class ExpeditionSystem extends System {
       if (!isNum(e.seed)) e.seed = e.id * 7919;
       if (!isNum(e.tier)) e.tier = this.game.state.colony.tier;
       if (e.haul === undefined) e.haul = null;
+      if (e.status === 'out' && longest > 0 && e.endsAt - now > longest) {
+        const len = Math.min(Math.max(0, e.endsAt - e.startedAt), longest);
+        e.startedAt = now;
+        e.endsAt = now + len;
+      }
       if (e.status === 'out' && (!this.specOf(e) || !e.squad.length)) {
         // the destination vanished from the content (or the squad did): come home now with whatever was found
         e.endsAt = Math.min(e.endsAt, this.game.now());
