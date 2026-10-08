@@ -9,6 +9,9 @@
 import './styles/base.css';
 import './styles/hud.css';
 import './styles/panels.css';
+// the painted skin restyles the shared components; the feature sheets after it keep their variants (a mission
+// ready to claim, a selected slot…) on top of it
+import './styles/skin.css';
 import './styles/fx.css';
 import './styles/build.css';
 import './styles/screens.css';
@@ -17,7 +20,6 @@ import './styles/art.css';
 import './styles/expeditions.css';
 import './styles/journal.css';
 import './styles/wishes.css';
-import './styles/skin.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';

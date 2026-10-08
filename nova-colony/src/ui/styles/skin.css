@@ -2,7 +2,8 @@
    Skin: the painted look of the menus — warm paper panels with faint doodles and a gold rim, a painted
    header scene with an outlined title and an icon medallion, glossy candy buttons, tabs in a recessed
    track, ornamental section labels, softer cards, icon wells on the menu tiles, inset progress bars.
-   Loaded after every other sheet and only changes looks (layout and sizes stay where they are).
+   Loaded right after base.css and panels.css (it restyles their shared components), before the feature sheets,
+   so their variants (a mission ready to claim, a selected slot…) still win. It only changes looks.
    Textures in ./tex (painted with Higgsfield, see docs/ART.md): paper.webp and doodles.webp tile;
    head-day.webp / head-night.webp are the header scenes.
    ========================================================================== */
@@ -20,7 +21,7 @@
 /* ---------- panel frame ---------------------------------------------------- */
 
 .nv-root .pm-card {
-  background-color: #fff5e2;
+  background-color: #f7e6c4;
   background-image: url('./tex/doodles.webp'), url('./tex/paper.webp');
   background-size: 260px 260px, 384px 384px;
   box-shadow:
@@ -109,7 +110,7 @@
 
 /* the build drawer's sticky tab row sits on the same paper */
 .nv-root .drawer-top {
-  background-color: #fff5e2;
+  background-color: #f7e6c4;
   background-image: url('./tex/paper.webp');
   background-size: 384px 384px;
 }
@@ -143,9 +144,9 @@
 /* ---------- cards ----------------------------------------------------------- */
 
 .nv-root .card {
-  background: linear-gradient(180deg, #fffefa 0%, #fff7e6 100%);
-  border: 0.13em solid var(--card-line);
-  box-shadow: 0 0.24em 0 var(--card-edge), 0 0.6em 1.1em rgba(120, 80, 30, 0.1), inset 0 0.12em 0 #fff;
+  background: linear-gradient(180deg, #fffefb 0%, #fff8ea 100%);
+  border: 0.13em solid #e3c58e;
+  box-shadow: 0 0.26em 0 #d6b276, 0 0.6em 1.1em rgba(110, 70, 20, 0.14), inset 0 0 0 0.12em rgba(255, 255, 255, 0.85);
 }
 .nv-root .card.tint {
   background: linear-gradient(180deg, #fff3d6 0%, #fde6bb 100%);
@@ -246,7 +247,7 @@
 
 .nv-root .menu-tile {
   border-radius: 1.2em;
-  border-color: var(--card-line);
+  border-color: #e3c58e;
   background: linear-gradient(180deg, #fffefa 0%, #fff1d6 100%);
   box-shadow: 0 0.26em 0 var(--card-edge), 0 0.6em 1em rgba(120, 80, 30, 0.12), inset 0 0.12em 0 #fff;
 }
