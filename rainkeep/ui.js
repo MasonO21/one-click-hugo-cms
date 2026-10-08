@@ -955,6 +955,9 @@
     UI.battle.timer = setTimeout(step, 600);
   }
   KH.startBattle = startBattle;
+  // a full-screen overlay (a battle, Cloud Run, the fishing pond) hides the keep, which then skips drawing
+  const COVERS = ['#battle', '#cloudrun', '#fishing'];
+  KH.covered = () => COVERS.some((sel) => { const e = $(sel); return !!e && !e.hidden; });
 
   // ======================================================================
   // Live battles: the same engine stepped round by round. Tap a hero when its skill is charged,

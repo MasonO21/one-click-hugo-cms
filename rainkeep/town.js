@@ -635,6 +635,7 @@
     requestAnimationFrame(frame);
     camHome();
     if (!S || UI.tab !== 'town' || document.hidden || !VW) return;
+    if (KH.covered && KH.covered()) { lastNow = now; return; }
     const t = now / 1000;
     const dt = Math.min(0.05, (now - (lastNow || now)) / 1000);
     lastNow = now;

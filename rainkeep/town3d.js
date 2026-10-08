@@ -1091,26 +1091,29 @@
     if (id === 'ballista') {
       const spots = [[-6.6, 2.62], [6.6, 2.62], [-12.4, 2.62], [12.4, 2.62]].slice(0, L >= 7 ? 4 : L >= 4 ? 2 : 1);
       for (const [x, y] of spots) {
-        const b = A.grp(A.box(0.5, 0.18, 0.7, wood, 0, 0, 0), A.box(0.1, 0.1, 1.1, woodL, 0, 0.22, 0.15), A.box(1.1, 0.07, 0.07, wood, 0, 0.24, 0.45), A.cyl(0.025, 0.025, 1.0, L >= 10 ? brass : iron, 0, 0.3, 0.2, 4));
-        b.children[b.children.length - 1].rotation.x = Math.PI / 2;
-        g.add(A.at(b, x, y, WZ));
+        const bolt = A.cyl(0.03, 0.03, 1.2, L >= 10 ? brass : iron, 0, 0.32, 0.25, 4);
+        bolt.rotation.x = Math.PI / 2;
+        const b = A.grp(A.box(0.5, 0.18, 0.7, wood, 0, 0, 0), A.box(0.12, 0.12, 1.2, woodL, 0, 0.22, 0.15), A.box(1.4, 0.09, 0.09, wood, 0, 0.26, 0.5), bolt,
+          A.box(0.03, 0.6, 0.03, wood, 0.25, 0.1, -0.3), A.box(0.3, 0.2, 0.02, A.mat('#b8331c', { flat: true }), 0.4, 0.55, -0.3));
+        b.scale.setScalar(1.7);
+        g.add(A.at(b, x, y, WZ + 0.35));
       }
     } else if (id === 'cauldrons') {
       const xs = [-3.4, 3.4, -4.6, 4.6].slice(0, L >= 9 ? 4 : L >= 6 ? 3 : L >= 3 ? 2 : 1);
       for (const x of xs) {
-        g.add(A.cyl(0.26, 0.2, 0.32, iron, x, 1.92, WZ - 0.05, 10), A.cyl(0.28, 0.28, 0.05, L >= 10 ? brass : iron, x, 2.22, WZ - 0.05, 10), A.sph(0.11, defFlame, x, 1.86, WZ - 0.05, 6));
-        g.add(A.box(0.04, 0.5, 0.04, iron, x - 0.3, 1.9, WZ - 0.05), A.box(0.04, 0.5, 0.04, iron, x + 0.3, 1.9, WZ - 0.05), A.box(0.64, 0.04, 0.04, iron, x, 2.38, WZ - 0.05));
+        g.add(A.cyl(0.4, 0.3, 0.45, iron, x, 1.95, WZ - 0.05, 10), A.cyl(0.43, 0.43, 0.06, L >= 10 ? brass : iron, x, 2.38, WZ - 0.05, 10), A.sph(0.16, defFlame, x, 1.86, WZ - 0.05, 6));
+        g.add(A.box(0.06, 0.75, 0.06, iron, x - 0.46, 1.9, WZ - 0.05), A.box(0.06, 0.75, 0.06, iron, x + 0.46, 1.9, WZ - 0.05), A.box(0.98, 0.06, 0.06, iron, x, 2.62, WZ - 0.05));
       }
     } else {
       const rows = L >= 7 ? 3 : L >= 4 ? 2 : 1, step = L >= 10 ? 0.7 : 0.95;
       for (let rI = 0; rI < rows; rI++) {
         const z = WZ + 1.7 + rI * 0.75;
         for (const side of [-1, 1]) for (let x = 2.8 + (rI % 2) * step * 0.5; x < 10.5; x += step) {
-          const st = A.cone(0.07, 0.9, L >= 10 ? brass : woodL, 0, 0, 0, 5);
-          st.position.set(side * x, 0.1, z); st.rotation.x = 0.55;
+          const st = A.cone(0.13, 1.25, L >= 10 ? brass : wood, 0, 0, 0, 5);
+          st.position.set(side * x, 0.45, z); st.rotation.x = 0.55;
           g.add(st);
         }
-        for (const side of [-1, 1]) g.add(A.box(7.8, 0.06, 0.06, wood, side * 6.6, 0.25, z - 0.1));
+        for (const side of [-1, 1]) g.add(A.box(7.8, 0.09, 0.09, wood, side * 6.6, 0.42, z - 0.15));
       }
     }
     g.traverse((o) => { if (o.material === defFlame) o.userData.dyn = true; });
@@ -1823,6 +1826,7 @@
       if (on) { resize(); view.flyStart = now; }
     }
     if (!on || !VW) { if (on && !VW) resize(); return; }
+    if (KH.covered && KH.covered()) { last = now; return; } // nothing to draw under a full-screen overlay
     const t = now / 1000;
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;

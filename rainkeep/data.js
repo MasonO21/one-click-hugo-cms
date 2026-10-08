@@ -1290,8 +1290,6 @@ const DATA = {
       { id: 'eel', name: 'Glass Eel', w: 10, pull: 1.6, cm: [40, 90], journals: 2, color: '#bfe8f0', text: 'You can see its heart beating. The archivists want every one.' },
       { id: 'whiskers', name: 'Old Whiskers', w: 6, pull: 2.0, cm: [60, 120], whetstone: 2, starglass: 20, color: '#7a6a4a', text: 'A catfish older than the keep. It has swallowed more than one whetstone.' },
       { id: 'koi', name: 'Rain Koi', w: 2, pull: 2.4, cm: [50, 80], starglass: 80, beacons: 1, color: '#ff8a5a', text: 'Red and gold, and only ever seen after rain. Luck for a year.' },
-    { id: 'def10', text: 'Raise gate defenses 10 times', stat: 'defense', n: 10, reward: { starglass: 150 } },
-    { id: 'def30', text: 'Raise every gate defense to Lv 10', stat: 'defense', n: 30, reward: { shard_legendary: 1 } },
     ],
     firstCatch: 2, // the first of each kind pays double
     warPts: 8, // Oasis Wars points a fish
@@ -1599,6 +1597,8 @@ const DATA = {
     { id: 'fish25', text: 'Catch 25 fish in the spring', stat: 'fish', n: 25, reward: { starglass: 100 } },
     { id: 'fishAll', text: 'Catch every kind of fish in the spring', stat: 'fishKinds', n: 6, reward: { beacons: 3 } },
     { id: 'koi', text: 'Catch a Rain Koi', stat: 'koi', n: 1, reward: { shard_epic: 1 } },
+    { id: 'def10', text: 'Raise gate defenses 10 times', stat: 'defense', n: 10, reward: { starglass: 150 } },
+    { id: 'def30', text: 'Raise every gate defense to Lv 10', stat: 'defense', n: 30, reward: { shard_legendary: 1 } },
   ],
 
   // ---------- Timed events (rotate in game time) ----------

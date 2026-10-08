@@ -631,6 +631,7 @@
     }
     if (!on) return;
     if (!VW) { resize(); if (!VW) return; }
+    if (KH.covered && KH.covered()) return; // nothing to draw under a full-screen overlay
     const t = now / 1000, dt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     if (now >= nextSync) { nextSync = now + 400; syncTiles(); syncGroves(); }

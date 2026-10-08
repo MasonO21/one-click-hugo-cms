@@ -455,7 +455,6 @@
         ${rainingNow() ? '<span class="chip r-epic">Raining: raiders 20% weaker</span>' : KH.keep && S.lv.wyrm >= DATA.rain.unlock ? (rainLeft > 0 ? `<span class="chip">Rain in ${fmtTime(rainLeft)}</span>` : '<button class="btn small" data-act="rain">Call the Rain on them</button>') : ''}</div>
         <div class="muted small">If it is raining when they arrive, the raiders fight 20% weaker. Boiling water from the wells gives your defenders +20% attack and defense for this raid.</div>` : '';
     return `<div class="card stack"><b>${near ? `Raiders arrive in ${fmtTime(S.map.raid.next - S.time)}` : 'No raiders sighted'}</b>${prep}
-      ${KH.defense && KH.defense.unlocked() ? `<button class="btn small alt" data-act="defenses">${icon('i-ballista')}Gate defenses</button>` : ''}
       <div class="muted small">Your defenders are every troop at home plus your squad. Each Watchtower level steadies them by 3% and spots raiders 10s sooner, and the gate defenses help too. Troops out gathering can't defend. The Storehouse protects ${fmt(KH.protectOf())} of each resource.</div>
       ${last ? `<div class="small ${last.win ? 'r-epic' : ''}">Last raid: ${last.win ? 'repelled' : 'they broke through'}.</div>` : ''}</div>`;
   };

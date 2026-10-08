@@ -191,12 +191,23 @@
     c.setTransform(DPR, 0, 0, DPR, 0, 0);
     // the stone rim and the water
     c.fillStyle = '#d9b98a'; c.fillRect(0, 0, W, H);
-    const rx = W * 0.47, ry = H * 0.36, cx = W / 2, cy = H * 0.44;
+    const rx = W * 0.46, ry = Math.min(H * 0.34, rx * 1.12), cx = W / 2, cy = H * 0.42;
     c.fillStyle = '#b8955f'; c.beginPath(); c.ellipse(cx, cy + 6, rx + 18, ry + 18, 0, 0, Math.PI * 2); c.fill();
+    // stones round the rim
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2, sx = cx + Math.cos(a) * (rx + 10), sy = cy + 4 + Math.sin(a) * (ry + 10);
+      c.fillStyle = i % 3 ? '#cdb084' : '#a88a5c'; c.beginPath(); c.ellipse(sx, sy, 11 + (i % 4) * 2, 7 + (i % 3), a, 0, Math.PI * 2); c.fill();
+    }
     const wg = c.createRadialGradient(cx, cy - ry * 0.3, 10, cx, cy, rx * 1.1);
     wg.addColorStop(0, raining() ? '#4fb8c8' : '#3fc8c0'); wg.addColorStop(0.6, '#1f8a96'); wg.addColorStop(1, '#0f4a5a');
     c.fillStyle = wg; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill();
     c.save(); c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.clip();
+    // lily pads, drifting a little
+    for (let i = 0; i < 6; i++) {
+      const lx = cx + Math.cos(i * 2.4 + 0.5) * rx * 0.72 + Math.sin(t * 0.2 + i) * 3, ly = cy + Math.sin(i * 2.4 + 0.5) * ry * 0.75;
+      c.fillStyle = i % 2 ? '#4f8f4a' : '#5fa04f'; c.beginPath(); c.moveTo(lx, ly); c.arc(lx, ly, 13 + (i % 3) * 3, 0.3 + i, Math.PI * 1.85 + i); c.closePath(); c.fill();
+      if (i % 3 === 0) { c.fillStyle = '#f2b8c8'; c.beginPath(); c.arc(lx + 4, ly - 3, 4, 0, Math.PI * 2); c.fill(); }
+    }
     // glints and rings
     for (let i = 0; i < 9; i++) {
       const gx = cx + Math.sin(i * 7.3 + t * 0.3) * rx * 0.8, gy = cy + Math.cos(i * 3.1 + t * 0.21) * ry * 0.7;
@@ -226,6 +237,12 @@
     // splash when it bites
     if (G && G.phase === 'bite') for (let i = 0; i < 3; i++) { const k = ((t * 3 + i / 3) % 1); c.strokeStyle = `rgba(255,255,255,${0.8 * (1 - k)})`; c.lineWidth = 2; c.beginPath(); c.ellipse(fx, fy, 8 + 30 * k, 3 + 10 * k, 0, 0, Math.PI * 2); c.stroke(); }
     c.restore();
+    // reeds at the water's edge
+    c.strokeStyle = '#5f8a3a'; c.lineWidth = 2.2; c.lineCap = 'round';
+    for (const [ax, n] of [[-0.82, 7], [0.78, 6], [0.15, 4]]) for (let i = 0; i < n; i++) {
+      const bx = cx + ax * rx + (i - n / 2) * 5, by = cy + (ax === 0.15 ? -ry - 2 : ry * 0.55) + Math.abs(i - n / 2) * 2, sw = Math.sin(t * 1.3 + i) * 3;
+      c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(bx + sw * 0.5, by - 22, bx + sw, by - 40 - (i % 3) * 8); c.stroke();
+    }
     // the line from the rod tip
     if (G && G.phase !== 'idle' && !(G.phase === 'done' && G.result !== 'caught')) {
       c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 1.2;
