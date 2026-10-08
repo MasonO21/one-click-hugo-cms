@@ -115,7 +115,7 @@
   }
 
   function renderStageOverlays() {
-    // side rail: the event, two hubs (Rewards, Play) and whatever is visiting the keep right now
+    // side rail: the event, the hubs (Rewards, Play, Ventures) and whatever is visiting the keep right now
     const vis = KH.side.filter((b) => !b.show || b.show());
     const inHub = new Set(Object.values(HUBS).flatMap((h) => h.ids).concat(MENU_IDS));
     let side = '';
@@ -171,6 +171,7 @@
   const HUBS = {
     rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'hall', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
     play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'clash', 'fishing', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
+    ventures: { icon: 'i-caravan', label: 'Ventures', ids: ['outposts', 'trade'], blurb: "The keep's business out on the sand: outposts on the Dunes and trade caravans to the markets beyond." },
   };
   const MENU_IDS = ['bag', 'news'];
   KH.HUBS = HUBS;
