@@ -29,10 +29,30 @@ REC_START=$(python3 -c 'import time; print(time.time())')
 : > "$OUT/console.txt"
 SIMCTL_CHILD_NSUnbufferedIO=YES xcrun simctl launch --console-pty --terminate-running-process "$UDID" "$BUNDLE" > "$OUT/console.txt" 2>&1 &
 LAUNCH=$!
-end=$((SECONDS + 600))
+# Is the app still running? `simctl launch --console-pty` stays attached until the app exits, and launchd lists it.
+# On a busy CI Mac a single launchd query can fail or come back without the app for a moment, so only three misses
+# in a row count (and a failed query is not a miss): one bad answer used to end the run, and stopping the run kills
+# the app it was watching.
+alive() {
+  kill -0 "$LAUNCH" 2>/dev/null || return 1
+  local list
+  list=$(xcrun simctl spawn "$UDID" launchctl list 2>/dev/null) || return 0
+  echo "$list" | grep -q "UIKitApplication:$BUNDLE"
+}
+end=$((SECONDS + 600)); misses=0
 while [ $SECONDS -lt $end ]; do
   grep -q 'SMOKE DONE' "$OUT/console.txt" && break
-  if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "UIKitApplication:$BUNDLE"; then echo "::error::the app is not running any more"; break; fi
+  if alive; then misses=0; else misses=$((misses + 1)); fi
+  if [ $misses -ge 3 ]; then
+    echo "::error::the app is not running any more"
+    kill -0 "$LAUNCH" 2>/dev/null && echo "(simctl launch is still attached)" || echo "(simctl launch has exited)"
+    xcrun simctl spawn "$UDID" launchctl list 2>&1 | grep -iE "sizzle|UIKitApplication" | head -5
+    # why iOS ended it (watchdog, memory, crash), from the simulator's own log
+    xcrun simctl spawn "$UDID" log show --last 2m --style compact \
+      --predicate 'eventMessage CONTAINS[c] "sizzleflip" AND (process == "runningboardd" OR process == "SpringBoard" OR process == "launchd")' 2>/dev/null \
+      | grep -iE "terminat|kill|exit|watchdog|jetsam|crash|reason" | tail -25
+    break
+  fi
   sleep 2
 done
 sleep 1
