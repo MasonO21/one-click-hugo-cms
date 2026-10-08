@@ -7,7 +7,7 @@
 import { Panel, type PanelTitle } from './Panel';
 import { CELL, HALF_WORLD, WORLD_CELLS, cellCenter } from '../../core/constants';
 import { clamp } from '../../core/math';
-import { MAP_MAX_ZOOM, MAP_MIN_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, regionCentroids, worldToMap, type MapMarker, type MapViewport } from '../logic/map';
+import { MAP_MAX_ZOOM, MAP_MIN_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, placeLabel, regionCentroids, worldToMap, type LabelRect, type MapMarker, type MapViewport } from '../logic/map';
 import { btn, section } from '../widgets';
 import { fill, h } from '../dom';
 import { artOrEmoji, biomeArt, eventArt, hudArt, iconEl, poiArt } from '../art';
@@ -58,6 +58,7 @@ export class MapPanel extends Panel {
   private prevMode: 'play' | 'build' | 'map' = 'play';
   private info!: HTMLElement;
   private dpr = 1;
+  private zoomBox: HTMLElement | null = null;
 
   title(): PanelTitle {
     return { icon: '🗺️', art: hudArt('map'), text: 'World map' };
@@ -93,7 +94,7 @@ export class MapPanel extends Panel {
       this.g2 = ctx2d;
       this.bindCanvas();
     }
-    const zoomBox = h(
+    const zoomBox = (this.zoomBox = h(
       'div',
       { class: 'map-zoom' },
       btn({ label: '＋', cls: 'ghost small', onClick: () => this.zoomBy(1.4) }),
@@ -109,7 +110,7 @@ export class MapPanel extends Panel {
           this.dirty = true;
         },
       }),
-    );
+    ));
     const stage = h('div', { class: 'map-stage' }, this.canvas, zoomBox);
 
     // side column
@@ -492,6 +493,14 @@ export class MapPanel extends Panel {
     c.textBaseline = 'middle';
     const ids = g.sys.world.gen?.regionIds ?? [];
     const fs = clamp(12 * Math.sqrt(vp.zoom), 11, 18);
+    // labels stay inside the map, out from under the zoom buttons and off the beacons drawn on top of them
+    const avoid = this.markers
+      .filter((m) => m.kind !== 'player')
+      .map((m) => ({ ...worldToMap(vp, m.x, m.z), r: m.travel ? 15 : 12 }));
+    const blocked: LabelRect[] = [];
+    const zr = this.zoomBox?.getBoundingClientRect();
+    const cr = this.canvas?.getBoundingClientRect();
+    if (zr && cr && zr.width > 0) blocked.push({ x: zr.left - cr.left, y: zr.top - cr.top, w: zr.width, h: zr.height });
     for (const id of ids) {
       const cen = this.centroids[id];
       if (!cen) continue;
@@ -505,16 +514,25 @@ export class MapPanel extends Panel {
       c.strokeStyle = 'rgba(30,18,60,0.85)';
       c.fillStyle = '#fff';
       const label = lockedR ? `🔒 ${b?.name ?? id}` : disc || g.sys.world.isUnlocked(id) ? (b?.name ?? id) : '???';
-      c.strokeText(label, p.x, p.y);
-      c.fillText(label, p.x, p.y);
-      if (lockedR) {
-        const reason = g.sys.world.lockReason(id);
-        if (reason) {
-          c.font = `800 ${Math.max(9, fs - 3)}px ui-rounded, system-ui, sans-serif`;
-          c.strokeText(reason, p.x, p.y + fs + 2);
-          c.fillStyle = '#ffd9a0';
-          c.fillText(reason, p.x, p.y + fs + 2);
-        }
+      const reason = lockedR ? g.sys.world.lockReason(id) : null;
+      const small = `800 ${Math.max(9, fs - 3)}px ui-rounded, system-ui, sans-serif`;
+      let w = c.measureText(label).width;
+      if (reason) {
+        c.font = small;
+        w = Math.max(w, c.measureText(reason).width);
+        c.font = `900 ${fs}px ui-rounded, system-ui, sans-serif`;
+      }
+      const hh = reason ? fs * 2 + 2 : fs;
+      // the box is placed by its centre; the name sits on its first line
+      const at = placeLabel(p.x, p.y + (hh - fs) / 2, w + 4, hh + 4, vp, avoid, blocked);
+      const ly = at.y - (hh - fs) / 2;
+      c.strokeText(label, at.x, ly);
+      c.fillText(label, at.x, ly);
+      if (reason) {
+        c.font = small;
+        c.strokeText(reason, at.x, ly + fs + 2);
+        c.fillStyle = '#ffd9a0';
+        c.fillText(reason, at.x, ly + fs + 2);
       }
     }
 

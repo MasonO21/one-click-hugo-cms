@@ -9,7 +9,7 @@ import { clockText, dayPhase, fmtHMS, fmtLong, msUntilLocalMidnight, offlineWork
 import { buildingEffects, levelMult, lockInfo, modifierText } from '../src/ui/logic/describe';
 import { autoDailyStep } from '../src/ui/logic/autoDaily';
 import { RARITY_COLOR, rewardParts } from '../src/ui/logic/rewards';
-import { MAP_MAX_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, regionCentroids, worldToMap, type MapMarker } from '../src/ui/logic/map';
+import { MAP_MAX_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, placeLabel, regionCentroids, worldToMap, type MapMarker } from '../src/ui/logic/map';
 import { BUILD_CATEGORIES, NODE_H, NODE_W, layoutTree } from '../src/ui/logic/categories';
 import { claimableMissions, claimableSeason, computeBadges, idleWithJobs } from '../src/ui/logic/badges';
 import { happinessFace, portraitSvg, stars } from '../src/ui/logic/colonist';
@@ -356,5 +356,27 @@ describe('automatic daily-gift popup', () => {
     expect(autoDailyStep({ ...base, shownDay: '2026-10-09' })).toBe('skip');
     expect(autoDailyStep({ ...base, shownDay: '2026-10-09', busy: true })).toBe('skip');
     expect(autoDailyStep({ ...base, shownDay: '2026-10-08' })).toBe('open'); // a new day (warm resume after midnight)
+  });
+});
+
+describe('ui.logic — map label placement', () => {
+  const map = { w: 320, h: 320 };
+  it('keeps a label wholly inside the map (no "Crystal Canyo")', () => {
+    const p = placeLabel(310, 100, 120, 16, map);
+    expect(p.x + 60).toBeLessThanOrEqual(316);
+    expect(placeLabel(2, 100, 120, 16, map).x - 60).toBeGreaterThanOrEqual(4);
+    expect(placeLabel(160, 318, 80, 16, map).y + 8).toBeLessThanOrEqual(316);
+    expect(placeLabel(160, 160, 80, 16, map)).toEqual({ x: 160, y: 160 }); // a label with room stays put
+  });
+  it('moves off a beacon it would hide, to just below it', () => {
+    const p = placeLabel(160, 160, 90, 16, map, [{ x: 165, y: 158, r: 15 }]);
+    expect(p.x).toBe(160);
+    expect(p.y - 8).toBeGreaterThanOrEqual(158 + 15);
+  });
+  it('steps out from under the zoom buttons', () => {
+    const zoom = { x: 270, y: 200, w: 44, h: 110 };
+    const p = placeLabel(290, 250, 70, 16, map, [], [zoom]);
+    expect(p.x + 35).toBeLessThanOrEqual(270);
+    expect(p.y).toBe(250);
   });
 });

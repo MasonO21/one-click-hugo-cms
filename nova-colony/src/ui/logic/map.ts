@@ -89,3 +89,46 @@ export function regionCentroids(regionMap: Uint8Array, ids: string[]): Record<st
   });
   return out;
 }
+
+export interface LabelRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Where to draw a centred region label of size w x h wanted at (x, y) on a map of size `bounds`: off the markers
+ * it would hide (moved just below them), out of the blocked rects (the zoom buttons) and fully inside the map, so a
+ * name is never cut at the edge ("Crystal Canyo") or drawn under a beacon.
+ */
+export function placeLabel(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  bounds: { w: number; h: number },
+  markers: readonly { x: number; y: number; r: number }[] = [],
+  blocked: readonly LabelRect[] = [],
+  pad = 4,
+): { x: number; y: number } {
+  const hits = (cx: number, cy: number, m: { x: number; y: number; r: number }) =>
+    Math.abs(m.x - cx) < w / 2 + m.r && Math.abs(m.y - cy) < h / 2 + m.r;
+  for (let i = 0; i < 3; i++) {
+    const m = markers.find((k) => hits(x, y, k));
+    if (!m) break;
+    y = m.y + m.r + h / 2 + 2;
+  }
+  const clampX = (v: number) => (w + 2 * pad >= bounds.w ? bounds.w / 2 : Math.min(bounds.w - pad - w / 2, Math.max(pad + w / 2, v)));
+  const clampY = (v: number) => (h + 2 * pad >= bounds.h ? bounds.h / 2 : Math.min(bounds.h - pad - h / 2, Math.max(pad + h / 2, v)));
+  x = clampX(x);
+  y = clampY(y);
+  for (const b of blocked) {
+    const overlaps = x + w / 2 > b.x - pad && x - w / 2 < b.x + b.w + pad && y + h / 2 > b.y - pad && y - h / 2 < b.y + b.h + pad;
+    if (!overlaps) continue;
+    const left = b.x - pad - w / 2;
+    if (left - w / 2 >= pad) x = left;
+    else y = clampY(b.y - pad - h / 2);
+  }
+  return { x, y };
+}
