@@ -1279,9 +1279,9 @@ const DATA = {
   // recruits fall first, so losses come out of the unranked troops before any rank.
   ranks: {
     list: [
-      { id: 'vet', name: 'Veteran', short: 'Vet', barracks: 10, mult: 1.2, cost: 0.03, secs: 6, color: '#8fb3c9' },
-      { id: 'elite', name: 'Elite', short: 'Elite', barracks: 14, mult: 1.45, cost: 0.07, secs: 12, color: '#e0b04a' },
-      { id: 'champ', name: 'Champion', short: 'Champ', barracks: 18, mult: 1.75, cost: 0.12, secs: 20, color: '#d0583a' },
+      { id: 'vet', name: 'Veteran', short: 'Vet', barracks: 10, mult: 1.1, cost: 0.04, secs: 6, color: '#8fb3c9' },
+      { id: 'elite', name: 'Elite', short: 'Elite', barracks: 14, mult: 1.2, cost: 0.09, secs: 12, color: '#e0b04a' },
+      { id: 'champ', name: 'Champion', short: 'Champ', barracks: 18, mult: 1.32, cost: 0.16, secs: 20, color: '#d0583a' },
     ],
     // a troop's drill costs its training cost times the rank's cost in quarter-crates (so it grows with the keep),
     // and takes the rank's seconds (the Barracks level and the training steward speed it up like training)
