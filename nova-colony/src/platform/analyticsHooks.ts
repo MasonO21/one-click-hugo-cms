@@ -13,6 +13,7 @@
  *   slow progression      progression_stall                        (no mission completed for 10 min of play)
  *   achievements          achievement_unlocked                     (id + medal tier)
  *   expeditions           expedition_launched / _returned / _collected, frontier_charted / frontier_milestone
+ *   colonist wishes       wish_offered / wish_granted / wish_expired  (kind and tier only)
  *
  * Events carry game facts only (no PII). Consent is opt-in: `settings.analytics` must be true AND the player
  * must have answered (`settings.analyticsAsked`, set by the first-launch prompt or the Settings toggle). It
@@ -194,6 +195,10 @@ export function installAnalyticsHooks(game: Game): () => void {
   // ---- achievements (a loaded save's catch-up is one aggregate event, not one per achievement)
   on('achievement:unlocked', ({ id, medal }) => a.track('achievement_unlocked', { id, tier: medal, play_time_s: Math.round(st().playTime) }));
   on('achievement:retro', ({ count }) => a.track('achievements_retro', { count }));
+  // ---- colonist wishes (kind and tier only: nothing about who or what)
+  on('wish:offered', ({ kind, tier }) => a.track('wish_offered', { kind, tier }));
+  on('wish:granted', ({ kind, tier }) => a.track('wish_granted', { kind, tier }));
+  on('wish:expired', ({ kind, tier }) => a.track('wish_expired', { kind, tier }));
 
   // ---- ads
   on('ad:started', ({ placement }) => a.track('ad_started', { placement }));

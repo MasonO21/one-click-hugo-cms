@@ -93,6 +93,9 @@ export class MissionSystem extends System {
       this.bump('expedition', e.frontier ? ['collect', 'frontier'] : ['collect', e.dest, e.region], 1);
     });
     bus.on('building:completed', () => this.offerSide());
+    // colonist wishes (sim/wishes.ts): counted by kind; their side chain opens with the first wish
+    bus.on('wish:granted', (e) => this.bump('wish', [e.kind], 1));
+    bus.on('wish:offered', () => this.offerSide());
   }
 
   override onLoad(fresh: boolean): void {
@@ -322,6 +325,7 @@ export class MissionSystem extends System {
    * one. Anything already started (a counter above zero) is always feasible.
    */
   private sideFeasible(def: MissionDef): boolean {
+    if (def.type === 'wish') return !!this.game.sys.wishes?.started() || this.counter('wish') > 0;
     if (def.type !== 'expedition') return true;
     const ex = this.game.sys.expeditions;
     if (def.target === 'frontier') return ex.frontierUnlocked();
