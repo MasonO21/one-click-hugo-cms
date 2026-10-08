@@ -1,54 +1,57 @@
 /** Category metadata (icons + labels) for build, research and craft tabs. */
 import type { BuildingCategory, CraftCategory, ResearchCategory, ResearchDef } from '../../data/schema';
+import { buildingArt, hudArt, itemArt, resourceArt, vehicleArt } from '../art';
 
 export interface CatMeta {
   id: string;
   icon: string;
+  /** Painted tab icon (existing art that stands for the category); `icon` is the fallback. */
+  art?: string | null;
   label: string;
 }
 
 export const BUILD_CATEGORIES: CatMeta[] = [
-  { id: 'structure', icon: '🧱', label: 'Structure' },
-  { id: 'housing', icon: '🏠', label: 'Housing' },
-  { id: 'food', icon: '🍎', label: 'Food' },
-  { id: 'water', icon: '💧', label: 'Water' },
-  { id: 'power', icon: '⚡', label: 'Power' },
-  { id: 'production', icon: '⛏️', label: 'Production' },
-  { id: 'crafting', icon: '🛠️', label: 'Crafting' },
-  { id: 'research', icon: '🔬', label: 'Research' },
-  { id: 'defense', icon: '🛡️', label: 'Defense' },
-  { id: 'storage', icon: '📦', label: 'Storage' },
-  { id: 'utility', icon: '🔧', label: 'Utility' },
-  { id: 'decor', icon: '🌼', label: 'Decor' },
+  { id: 'structure', icon: '🧱', label: 'Structure', art: buildingArt('wall') },
+  { id: 'housing', icon: '🏠', label: 'Housing', art: hudArt('home') },
+  { id: 'food', icon: '🍎', label: 'Food', art: resourceArt('food') },
+  { id: 'water', icon: '💧', label: 'Water', art: resourceArt('water') },
+  { id: 'power', icon: '⚡', label: 'Power', art: hudArt('power') },
+  { id: 'production', icon: '⛏️', label: 'Production', art: itemArt('iron_pickaxe') },
+  { id: 'crafting', icon: '🛠️', label: 'Crafting', art: hudArt('craft') },
+  { id: 'research', icon: '🔬', label: 'Research', art: hudArt('tech') },
+  { id: 'defense', icon: '🛡️', label: 'Defense', art: hudArt('defense') },
+  { id: 'storage', icon: '📦', label: 'Storage', art: buildingArt('storage_crate') },
+  { id: 'utility', icon: '🔧', label: 'Utility', art: buildingArt('radio_tower') },
+  { id: 'decor', icon: '🌼', label: 'Decor', art: buildingArt('flower_bed') },
 ] satisfies (CatMeta & { id: BuildingCategory })[];
 
 export const RESEARCH_CATEGORIES: CatMeta[] = [
-  { id: 'construction', icon: '🏗️', label: 'Build' },
-  { id: 'power', icon: '⚡', label: 'Power' },
-  { id: 'food', icon: '🍎', label: 'Food' },
-  { id: 'water', icon: '💧', label: 'Water' },
-  { id: 'defense', icon: '🛡️', label: 'Defense' },
-  { id: 'weapons', icon: '🔫', label: 'Weapons' },
-  { id: 'automation', icon: '⚙️', label: 'Automation' },
-  { id: 'robotics', icon: '🤖', label: 'Robotics' },
-  { id: 'exploration', icon: '🧭', label: 'Explore' },
-  { id: 'colonists', icon: '🧑‍🤝‍🧑', label: 'Colonists' },
-  { id: 'titanium', icon: '🌟', label: 'Titanium' },
+  { id: 'construction', icon: '🏗️', label: 'Build', art: hudArt('build') },
+  { id: 'power', icon: '⚡', label: 'Power', art: hudArt('power') },
+  { id: 'food', icon: '🍎', label: 'Food', art: resourceArt('food') },
+  { id: 'water', icon: '💧', label: 'Water', art: resourceArt('water') },
+  { id: 'defense', icon: '🛡️', label: 'Defense', art: hudArt('defense') },
+  { id: 'weapons', icon: '🔫', label: 'Weapons', art: itemArt('energy_rifle') },
+  { id: 'automation', icon: '⚙️', label: 'Automation', art: itemArt('machine_parts') },
+  { id: 'robotics', icon: '🤖', label: 'Robotics', art: itemArt('robotic_core') },
+  { id: 'exploration', icon: '🧭', label: 'Explore', art: hudArt('map') },
+  { id: 'colonists', icon: '🧑‍🤝‍🧑', label: 'Colonists', art: hudArt('population') },
+  { id: 'titanium', icon: '🌟', label: 'Titanium', art: resourceArt('titanium') },
 ] satisfies (CatMeta & { id: ResearchCategory })[];
 
 export const CRAFT_CATEGORIES: CatMeta[] = [
-  { id: 'tools', icon: '🪓', label: 'Tools' },
-  { id: 'weapons', icon: '🔫', label: 'Weapons' },
-  { id: 'armor', icon: '🦺', label: 'Armor' },
-  { id: 'materials', icon: '🧱', label: 'Materials' },
-  { id: 'food', icon: '🍳', label: 'Food' },
-  { id: 'medical', icon: '🩹', label: 'Medical' },
-  { id: 'technology', icon: '💾', label: 'Tech' },
-  { id: 'defense', icon: '🛡️', label: 'Defense' },
-  { id: 'machines', icon: '⚙️', label: 'Machines' },
-  { id: 'drones', icon: '🛸', label: 'Drones' },
-  { id: 'vehicles', icon: '🚙', label: 'Vehicles' },
-  { id: 'utility', icon: '🔧', label: 'Utility' },
+  { id: 'tools', icon: '🪓', label: 'Tools', art: itemArt('stone_axe') },
+  { id: 'weapons', icon: '🔫', label: 'Weapons', art: itemArt('makeshift_rifle') },
+  { id: 'armor', icon: '🦺', label: 'Armor', art: itemArt('plated_vest') },
+  { id: 'materials', icon: '🧱', label: 'Materials', art: resourceArt('steel') },
+  { id: 'food', icon: '🍳', label: 'Food', art: resourceArt('food') },
+  { id: 'medical', icon: '🩹', label: 'Medical', art: itemArt('medkit') },
+  { id: 'technology', icon: '💾', label: 'Tech', art: itemArt('research_chip') },
+  { id: 'defense', icon: '🛡️', label: 'Defense', art: hudArt('defense') },
+  { id: 'machines', icon: '⚙️', label: 'Machines', art: itemArt('machine_parts') },
+  { id: 'drones', icon: '🛸', label: 'Drones', art: itemArt('helper_drone') },
+  { id: 'vehicles', icon: '🚙', label: 'Vehicles', art: vehicleArt('buggy') },
+  { id: 'utility', icon: '🔧', label: 'Utility', art: itemArt('jet_boots') },
 ] satisfies (CatMeta & { id: CraftCategory })[];
 
 export function metaOf(list: CatMeta[], id: string): CatMeta {

@@ -102,7 +102,7 @@ export class CraftPanel extends Panel {
     if (cats.length > 1) {
       wrap.appendChild(
         tabs(
-          [{ id: 'all', label: 'All' }, ...cats.map((c) => ({ id: c, icon: metaOf(CRAFT_CATEGORIES, c).icon, label: metaOf(CRAFT_CATEGORIES, c).label }))],
+          [{ id: 'all', label: 'All' }, ...cats.map((c) => ({ id: c, icon: metaOf(CRAFT_CATEGORIES, c).icon, art: metaOf(CRAFT_CATEGORIES, c).art, label: metaOf(CRAFT_CATEGORIES, c).label }))],
           this.cat,
           (id) => {
             this.cat = id;

@@ -480,3 +480,15 @@ describe('ui art wiring helpers', () => {
     expect(west.boss).toBe(true);
   });
 });
+
+describe('category tab art', () => {
+  it('every build / research / craft category has a painted tab icon that exists', async () => {
+    const { BUILD_CATEGORIES, RESEARCH_CATEGORIES, CRAFT_CATEGORIES } = await import('../src/ui/logic/categories');
+    for (const [name, list] of [['build', BUILD_CATEGORIES], ['research', RESEARCH_CATEGORIES], ['craft', CRAFT_CATEGORIES]] as const) {
+      for (const c of list) expect(exists(c.art ?? null), `${name}/${c.id} -> ${c.art}`).toBe(true);
+    }
+    // every category the data actually uses has an entry (otherwise metaOf falls back to a bullet)
+    for (const b of data.buildings) expect(BUILD_CATEGORIES.some((c) => c.id === b.category), `building category ${b.category}`).toBe(true);
+    for (const r of data.research) expect(RESEARCH_CATEGORIES.some((c) => c.id === r.category), `research category ${r.category}`).toBe(true);
+  });
+});

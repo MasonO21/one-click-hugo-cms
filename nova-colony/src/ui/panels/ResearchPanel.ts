@@ -91,6 +91,7 @@ export class ResearchPanel extends Panel {
     const items = RESEARCH_CATEGORIES.filter((c) => cats.includes(c.id)).map((c) => ({
       id: c.id,
       icon: c.icon,
+      art: c.art,
       label: c.label,
       badge: this.data.research.filter((r) => r.category === c.id && rs.canResearch(r.id)).length || undefined,
     }));

@@ -86,8 +86,8 @@ export class BuildMenuPanel extends Panel {
 
   render(): void {
     const cats = this.categories();
-    const items = BUILD_CATEGORIES.filter((c) => cats.includes(c.id)).map((c) => ({ id: c.id, icon: c.icon, label: c.label }));
-    items.push({ id: 'blueprints', icon: '📐', label: 'Blueprints' });
+    const items = BUILD_CATEGORIES.filter((c) => cats.includes(c.id)).map((c) => ({ id: c.id, icon: c.icon, art: c.art, label: c.label }));
+    items.push({ id: 'blueprints', icon: '📐', art: null, label: 'Blueprints' });
     BuildMenuPanel.lastTab = this.tab;
     const tabBar = tabs(items, this.tab, (id) => {
       this.tab = id;
