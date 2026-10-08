@@ -88,6 +88,63 @@ describe('Buildings: tier-up model builds are spread over frames', () => {
   });
 });
 
+describe('Buildings: the player lantern (QA3 #14b: the player is hard to spot in a forest at night)', () => {
+  it('at night the first pooled light follows the player; by day it goes back to the buildings', () => {
+    const game = new Game({ seed: 7, services: createMockServices() });
+    game.start();
+    colony(game, 3);
+    game.update(0.1);
+    const ctx = makeCtx(game); // medium quality: 3 pooled lights
+    const buildings = new Buildings(ctx);
+    const p = game.state.player;
+    p.x = 12;
+    p.z = -7;
+    p.rot = Math.PI / 2;
+    ctx.env.night = 1;
+    for (let i = 0; i < 120; i++) {
+      ctx.env.t += 1 / 60;
+      buildings.update(1 / 60);
+    }
+    const lights = (buildings as unknown as { lights: THREE.PointLight[] }).lights;
+    expect(lights.length).toBe(3);
+    const lantern = lights[0];
+    expect(lantern.intensity).toBeGreaterThan(5);
+    expect(lantern.position.x).toBeCloseTo(p.x - Math.sin(p.rot) * 0.7, 2); // hangs behind the player
+    expect(lantern.position.z).toBeCloseTo(p.z - Math.cos(p.rot) * 0.7, 2);
+    expect(lantern.position.y).toBeGreaterThan(1);
+    expect(lantern.color.r).toBeGreaterThan(lantern.color.b); // warm
+    // it moves with the player every frame
+    p.x = 20;
+    buildings.update(1 / 60);
+    expect(lantern.position.x).toBeCloseTo(20 - Math.sin(p.rot) * 0.7, 2);
+    // the other lights are still handed to buildings (or idle), never the player
+    const entries = (buildings as unknown as { lightEntries: (unknown | null)[] }).lightEntries;
+    expect(entries[0]).toBeNull();
+    // day: the lantern fades out and the slot returns to the building pool
+    ctx.env.night = 0;
+    for (let i = 0; i < 120; i++) {
+      ctx.env.t += 1 / 60;
+      buildings.update(1 / 60);
+    }
+    expect(lantern.intensity).toBeLessThan(0.05);
+    buildings.dispose();
+  });
+
+  it('low quality has no point lights, so no lantern either', () => {
+    const game = new Game({ seed: 8, services: createMockServices() });
+    game.start();
+    colony(game, 2);
+    game.update(0.1);
+    const ctx = makeCtx(game);
+    ctx.env.quality = 'low';
+    ctx.env.night = 1;
+    const buildings = new Buildings(ctx);
+    buildings.update(1 / 60);
+    expect((buildings as unknown as { lights: THREE.PointLight[] }).lights.length).toBe(0);
+    buildings.dispose();
+  });
+});
+
 describe('Buildings: flashes survive the rebuild their event triggers', () => {
   it('an upgrade flash is still on the building after the level change rebuilds the batches', () => {
     const game = new Game({ seed: 6, services: createMockServices() });

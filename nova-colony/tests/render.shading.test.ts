@@ -11,6 +11,7 @@ import { Atmosphere, KEY_SWAP_E } from '../src/render/scene/Atmosphere';
 import type { Env, RenderContext } from '../src/render/core/context';
 import { buildingTint } from '../src/render/actors/Buildings';
 import { natureTint } from '../src/render/actors/Nature';
+import { playerNightLift, PLAYER_NIGHT_LIFT } from '../src/render/actors/Characters';
 
 /** A stand-in for three's compiled Lambert fragment source: the includes the patch hooks into. */
 const FRAG = ['#include <common>', '#include <lights_lambert_pars_fragment>', 'void main() {', '#include <lights_fragment_end>', 'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;', '#include <envmap_fragment>', '#include <opaque_fragment>', '}'].join('\n');
@@ -165,7 +166,7 @@ describe('key light at dusk / dawn (QA3: every shadow flipped 180° in one frame
     expect(worst).toBeLessThan(0.1);
     // the look away from the swap is untouched: bright noon sun, a soft moon at midnight
     expect(key(0.5).i).toBeCloseTo(2.2, 1);
-    expect(key(0).i).toBeCloseTo(0.46, 2);
+    expect(key(0).i).toBeCloseTo(0.7, 2);
     atmo.dispose();
   });
 });
@@ -226,6 +227,22 @@ describe('cloud shadows (QA3 #13: hard-edged dark polygons at noon)', () => {
     const lod = { uniforms: {} as Record<string, THREE.IUniform>, vertexShader: '#include <common>\n#include <begin_vertex>', fragmentShader: '#include <common>\n#include <clipping_planes_fragment>' };
     mats.lodNearDepth.onBeforeCompile!(lod as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
     expect(lod.fragmentShader).toContain(SHADOW_FADE_GAIN.toFixed(3));
+  });
+});
+
+describe('player night lift (QA3 #14b)', () => {
+  it('is identity by day, ramps smoothly, and tops out at PLAYER_NIGHT_LIFT at deep night', () => {
+    expect(playerNightLift(0)).toBe(1);
+    expect(playerNightLift(0.3)).toBe(1);
+    expect(playerNightLift(1)).toBeCloseTo(1 + PLAYER_NIGHT_LIFT);
+    expect(PLAYER_NIGHT_LIFT).toBeGreaterThan(0.3);
+    expect(PLAYER_NIGHT_LIFT).toBeLessThan(1); // a lift, not a glow stick
+    let prev = 1;
+    for (let n = 0; n <= 1; n += 0.05) {
+      const k = playerNightLift(n);
+      expect(k).toBeGreaterThanOrEqual(prev);
+      prev = k;
+    }
   });
 });
 

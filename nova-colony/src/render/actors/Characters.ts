@@ -36,6 +36,22 @@ const _root = new THREE.Matrix4();
 const _part = new THREE.Matrix4();
 const _c = new THREE.Color();
 const _c2 = new THREE.Color();
+/** The player's colours with the night lift applied (scratch, no per-frame allocation). */
+const _pSkin = new THREE.Color();
+const _pHair = new THREE.Color();
+const _pOutfit = new THREE.Color();
+/**
+ * At night the player's colours are lifted by up to this fraction (QA3 #14b): the figure reads
+ * against a dark forest floor at every quality, including low where the lantern light is off. Lamp
+ * and campfire pools still land on top; ACES keeps the lifted paint from clipping.
+ */
+export const PLAYER_NIGHT_LIFT = 0.6;
+/** Night lift ramp: nothing until env.night passes the start, full by the end. */
+const PLAYER_NIGHT_FROM = 0.3;
+const PLAYER_NIGHT_FULL = 0.85;
+export function playerNightLift(night: number): number {
+  return 1 + PLAYER_NIGHT_LIFT * clamp((night - PLAYER_NIGHT_FROM) / (PLAYER_NIGHT_FULL - PLAYER_NIGHT_FROM), 0, 1);
+}
 const _pose: Pose = { walk: 0, phase: 0, work: 0, sleep: false, sit: false, eat: false, ride: false, aim: false, chop: 0 };
 
 /** Fill the shared pose scratch without allocating. */
@@ -215,9 +231,10 @@ export class Characters {
     const down = st.playTime < p.downUntil;
     const outfitId = st.liveops.cosmetics.equipped.outfit;
     const outfitDef = outfitId ? ctx.game.data.cosmetic(outfitId) : undefined;
-    const outfit = this.color(outfitDef?.color ?? '#e86f4d');
-    const skin = this.color(SKIN_TONES[1]);
-    const hairC = this.color(HAIR_COLORS[1]);
+    const lift = playerNightLift(env.night);
+    const outfit = _pOutfit.copy(this.color(outfitDef?.color ?? '#e86f4d')).multiplyScalar(lift);
+    const skin = _pSkin.copy(this.color(SKIN_TONES[1])).multiplyScalar(lift);
+    const hairC = _pHair.copy(this.color(HAIR_COLORS[1])).multiplyScalar(lift);
     const vehicleDef = p.vehicle ? ctx.game.data.vehicle(p.vehicle) : undefined;
     const vehModel = vehicleDef?.model ?? p.vehicle ?? '';
     let aliensNear = false;

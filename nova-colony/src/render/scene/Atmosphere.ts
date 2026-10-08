@@ -27,11 +27,13 @@ interface Key {
  * Lighting keyframes by sun elevation (-1 midnight .. 1 noon). The look is "warm key, cool fill":
  * a strong warm sun against a bluish hemisphere and very little flat ambient, so every box reads
  * as a box (sunlit top, half-lit front, cool shadow side); golden sunrise / sunset keys with a
- * low orange sun and blue sky fill; nights deep blue (not green) so warm window glow pops.
+ * low orange sun and blue sky fill; nights deep blue (not green) so warm window glow pops. The
+ * night keys carry a touch more moon and sky fill than the first grade so a forest floor and the
+ * figures on it still read (QA3 #14b) — the sky dome, stars and the desaturation keep it night.
  */
 const KEYS: Key[] = [
-  { e: -1.0, top: '#040816', hor: '#101a38', bot: '#070b18', fog: '#0e1630', sun: '#8aa4ea', sunI: 0.46, hemiSky: '#4a66b8', hemiGround: '#141c38', hemiI: 0.66, night: 1 },
-  { e: -0.3, top: '#0a1336', hor: '#283868', bot: '#0c1224', fog: '#1a2648', sun: '#92acee', sunI: 0.48, hemiSky: '#4f6cbc', hemiGround: '#161f3a', hemiI: 0.68, night: 1 },
+  { e: -1.0, top: '#040816', hor: '#101a38', bot: '#070b18', fog: '#0e1630', sun: '#8aa4ea', sunI: 0.7, hemiSky: '#4a66b8', hemiGround: '#141c38', hemiI: 0.88, night: 1 },
+  { e: -0.3, top: '#0a1336', hor: '#283868', bot: '#0c1224', fog: '#1a2648', sun: '#92acee', sunI: 0.72, hemiSky: '#4f6cbc', hemiGround: '#161f3a', hemiI: 0.9, night: 1 },
   { e: -0.08, top: '#1c2d6a', hor: '#d0705c', bot: '#1a1f33', fog: '#5a4c70', sun: '#ff9c6b', sunI: 0.7, hemiSky: '#5868aa', hemiGround: '#3a3230', hemiI: 0.62, night: 0.78 },
   { e: 0.05, top: '#355ca6', hor: '#ffa860', bot: '#4a4a5a', fog: '#d9a386', sun: '#ffa45e', sunI: 1.7, hemiSky: '#8aa4dc', hemiGround: '#6a5a46', hemiI: 0.66, night: 0.32 },
   { e: 0.25, top: '#3a84dc', hor: '#ffd4a0', bot: '#7a8a9a', fog: '#dcc4ac', sun: '#ffd8a4', sunI: 2.1, hemiSky: '#b8d2f6', hemiGround: '#7e9a54', hemiI: 0.7, night: 0.05 },
@@ -47,7 +49,7 @@ const DAY_SAT_FULL = 0.4;
 
 /** Flat ambient on top of the hemisphere (day / deep night). */
 const AMBIENT_DAY = 0.1;
-const AMBIENT_NIGHT = 0.06;
+const AMBIENT_NIGHT = 0.09;
 /** Sky rim strength (fraction of the hemisphere sky colour) by day and by night. */
 const RIM_DAY = 0.42;
 const RIM_NIGHT = 0.3;

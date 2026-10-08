@@ -123,6 +123,17 @@ const _targets = new Float64Array(6);
 const FADE_MAX = 0.85;
 /** Sight-line margin (world units) around a building's footprint. */
 const OCCLUDE_MARGIN = 0.6;
+/**
+ * The player's lantern (QA3 #14b): at night the first pooled point light follows the player, a
+ * warm pool like the lamp posts but smaller, so the figure and the ground around it read in a dark
+ * forest without lifting the whole night. The buildings share the remaining lights of the pool.
+ */
+const LANTERN_COLOR = new THREE.Color('#ffd49a');
+const LANTERN_RANGE = 8;
+const LANTERN_INTENSITY = 9;
+const LANTERN_Y = 1.5;
+/** The lantern hangs this far behind the player (the follow camera looks at the player's back). */
+const LANTERN_BACK = 0.7;
 /** Shadow casters get the fade-aware depth material in the constructor (needs the shared materials). */
 const PIECE_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
 const BODY_OPTS: BatchOpts = { color: true, castShadow: true, receiveShadow: true, cull: true, fade: true };
@@ -906,16 +917,26 @@ export class Buildings {
     if (!want) return;
     this.lightTimer -= dt;
     const night = clamp((env.night - 0.1) / 0.6, 0, 1);
+    // the first light is the player's lantern while it is dark (see LANTERN_*)
+    const lantern = night > 0.001 ? 1 : 0;
     if (this.lightTimer <= 0) {
       this.lightTimer = 0.5;
       // choose the nearest light-bearing active buildings to the focus point
       const cands: Entry[] = [];
       for (const en of this.entries) if (en.spec?.light && en.b.status === 'active') cands.push(en);
       cands.sort((a, b) => (a.x - env.cx) ** 2 + (a.z - env.cz) ** 2 - ((b.x - env.cx) ** 2 + (b.z - env.cz) ** 2));
-      for (let i = 0; i < this.lights.length; i++) this.lightEntries[i] = cands[i] ?? null;
+      for (let i = 0; i < this.lights.length; i++) this.lightEntries[i] = i < lantern ? null : cands[i - lantern] ?? null;
     }
     for (let i = 0; i < this.lights.length; i++) {
       const l = this.lights[i];
+      if (i < lantern) {
+        const p = ctx.game.state.player;
+        l.position.set(p.x - Math.sin(p.rot) * LANTERN_BACK, ctx.heightAt(p.x, p.z) + LANTERN_Y, p.z - Math.cos(p.rot) * LANTERN_BACK);
+        l.color.copy(LANTERN_COLOR);
+        l.distance = LANTERN_RANGE;
+        l.intensity += (LANTERN_INTENSITY * night - l.intensity) * (1 - Math.exp(-dt * 6));
+        continue;
+      }
       const en = this.lightEntries[i];
       if (!en || !en.spec?.light || night <= 0.001) {
         l.intensity += (0 - l.intensity) * (1 - Math.exp(-dt * 6));
