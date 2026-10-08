@@ -72,6 +72,38 @@ describe('ReviewPrompt', () => {
     expect(fresh.request).not.toHaveBeenCalled();
   });
 
+  it('never in the same moment as the notifications card: the card goes first, the next moment may ask', async () => {
+    const r = rig();
+    let cardCanAsk = true;
+    r.game.notifications = { canAsk: () => cardCanAsk };
+    r.game.view.panelOpen = false;
+    r.bus.emit('colony:tierUp', { tier: 2 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(r.request).not.toHaveBeenCalled();
+    expect(r.kv.get(REVIEW_KEY)).toBeUndefined(); // not spent
+    cardCanAsk = false; // answered
+    r.bus.emit('combat:rewardClaimed', { doubled: false });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(r.request).toHaveBeenCalledTimes(1);
+  });
+
+  it('time in the background does not count as the screen being free (the ask would be spent unseen)', async () => {
+    const doc = { visibilityState: 'hidden' };
+    (globalThis as { document?: unknown }).document = doc;
+    try {
+      const r = rig();
+      r.game.view.panelOpen = false;
+      r.bus.emit('colony:tierUp', { tier: 2 });
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(r.request).not.toHaveBeenCalled();
+      doc.visibilityState = 'visible';
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(r.request).toHaveBeenCalledTimes(1);
+    } finally {
+      delete (globalThis as { document?: unknown }).document;
+    }
+  });
+
   it('does nothing on the web', async () => {
     const r = rig({}, false);
     r.game.view.panelOpen = false;

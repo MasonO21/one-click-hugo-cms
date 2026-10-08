@@ -65,7 +65,13 @@ async function nativeRequest(): Promise<void> {
   await InAppReview.requestReview();
 }
 
-type ReviewGame = Pick<Game, 'bus' | 'state' | 'view' | 'now'>;
+/** The notifications controller (platform/notifications.ts): its card goes first when it can still ask. */
+type ReviewGame = Pick<Game, 'bus' | 'state' | 'view' | 'now'> & { notifications?: { canAsk(): boolean } };
+
+/** The app is in the background (the OS shows no review sheet then, but the ask would still be spent). */
+function appHidden(): boolean {
+  return typeof document !== 'undefined' && document.visibilityState === 'hidden';
+}
 
 export class ReviewPrompt {
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -95,7 +101,7 @@ export class ReviewPrompt {
     let waited = 0;
     this.timer = setInterval(() => {
       waited += 1;
-      clearFor = this.game.view.panelOpen ? 0 : clearFor + 1;
+      clearFor = this.game.view.panelOpen || appHidden() ? 0 : clearFor + 1;
       if (clearFor >= REVIEW_RULES.delayS) {
         this.stop();
         void this.ask();
@@ -113,6 +119,8 @@ export class ReviewPrompt {
     if (this.busy) return false;
     this.busy = true;
     try {
+      // the same moment arms the in-game notifications card (ui/NotifyPrompt): one ask per happy moment, the card first
+      if (this.game.notifications?.canAsk()) return false;
       const st = this.game.state;
       const record = parseReviewRecord(await this.store.get(REVIEW_KEY).catch(() => null));
       const now = this.game.now();
