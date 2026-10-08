@@ -69,7 +69,7 @@ bundled by Vite (hashed, relative to the CSS), not served from `public/art`:
 | `paper.webp` | warm cream paper, 384 px seamless tile | Higgsfield gpt_image_2_5, mirror-tiled, contrast lifted around #fff6e4 |
 | `doodles.webp` | faint brown line doodles (stars, planets, leaves, rockets…), 520 px seamless tile with alpha | ink keyed to alpha at 11 %, mirror-tiled |
 | `head-day.webp` | dusk sky over green hills with a tiny colony dome, 1200×360 | the header scene of most panels |
-| `head-night.webp` | starry nebula sky, ringed planet, lit colony, 1200×360 | Expeditions, Research, Season, Map, Journal, Lucky Wheel |
+| `head/<panel>.webp` | one painted scene per panel, 1200×400 (a 3:1 band centred on the subject): menu (colony square), research (lab at night), colonists (cabin street), recruit (crash-pod welcome camp), craft (workshop & forge), inventory (supply room), vehicles (garage), map (explorer's map table), missions (quest board), shop (crystal market stall), settings (control room), daily (gift pile at sunrise), season (festival), spin (carnival wheel), merchant (caravan), expeditions (rover on a crystal-canyon road), journal (study desk with medals), colony (skyline) | 21:9 Higgsfield gpt_image_2_5 (high), each prompt asking for a calm left third behind the title |
 
 ## Painted building & vehicle icons
 The build-menu icons in `public/art/buildings` (150) + `public/art/vehicles` (6) are **painted** versions of the in-game

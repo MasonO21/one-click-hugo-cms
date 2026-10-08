@@ -5,7 +5,7 @@
    Loaded right after base.css and panels.css (it restyles their shared components), before the feature sheets,
    so their variants (a mission ready to claim, a selected slot…) still win. It only changes looks.
    Textures in ./tex (painted with Higgsfield, see docs/ART.md): paper.webp and doodles.webp tile;
-   head-day.webp / head-night.webp are the header scenes.
+   head-day.webp is the default header scene, head/<panel>.webp each panel's own.
    ========================================================================== */
 
 .nv-root {
@@ -51,12 +51,115 @@
     padding-bottom: 0.75em;
   }
 }
-/* the space-flavoured panels get the night sky */
-.nv-root .pm-card:is([data-panel='expeditions'], [data-panel='research'], [data-panel='season'], [data-panel='map'], [data-panel='journal'], [data-panel='spin']) .pm-head {
+/* each panel has its own painted scene (tex/head/<panel>.webp, a 3:1 strip centred on its subject); the colour behind
+   it is the scene's average, shown for the moment before the picture loads. Panels without one keep the dusk hills. */
+.nv-root .pm-card[data-panel='colonists'] .pm-head {
   background:
-    linear-gradient(180deg, rgba(10, 6, 30, 0.05) 0%, rgba(10, 6, 30, 0.25) 100%),
-    url('./tex/head-night.webp') center 62% / cover no-repeat,
-    #3b2f7a;
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/colonists.webp') center / cover no-repeat,
+    #a66f59;
+}
+.nv-root .pm-card[data-panel='colony'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/colony.webp') center / cover no-repeat,
+    #a78c6c;
+}
+.nv-root .pm-card[data-panel='craft'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/craft.webp') center / cover no-repeat,
+    #8c563d;
+}
+.nv-root .pm-card[data-panel='daily'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/daily.webp') center / cover no-repeat,
+    #bfa281;
+}
+.nv-root .pm-card[data-panel='expeditions'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/expeditions.webp') center / cover no-repeat,
+    #404a84;
+}
+.nv-root .pm-card[data-panel='inventory'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/inventory.webp') center / cover no-repeat,
+    #8b5d3a;
+}
+.nv-root .pm-card[data-panel='journal'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/journal.webp') center / cover no-repeat,
+    #68412e;
+}
+.nv-root .pm-card[data-panel='map'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/map.webp') center / cover no-repeat,
+    #9b7847;
+}
+.nv-root .pm-card[data-panel='menu'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/menu.webp') center / cover no-repeat,
+    #a47752;
+}
+.nv-root .pm-card[data-panel='merchant'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/merchant.webp') center / cover no-repeat,
+    #bd7161;
+}
+.nv-root .pm-card[data-panel='missions'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/missions.webp') center / cover no-repeat,
+    #ac9a82;
+}
+.nv-root .pm-card[data-panel='recruit'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/recruit.webp') center / cover no-repeat,
+    #9b9578;
+}
+.nv-root .pm-card[data-panel='research'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/research.webp') center / cover no-repeat,
+    #544352;
+}
+.nv-root .pm-card[data-panel='season'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/season.webp') center / cover no-repeat,
+    #865758;
+}
+.nv-root .pm-card[data-panel='settings'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/settings.webp') center / cover no-repeat,
+    #655e4f;
+}
+.nv-root .pm-card[data-panel='shop'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/shop.webp') center / cover no-repeat,
+    #9b5f4d;
+}
+.nv-root .pm-card[data-panel='spin'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/spin.webp') center / cover no-repeat,
+    #654e5e;
+}
+.nv-root .pm-card[data-panel='vehicles'] .pm-head {
+  background:
+    linear-gradient(180deg, rgba(20, 10, 44, 0.04) 0%, rgba(20, 10, 44, 0.28) 100%),
+    url('./tex/head/vehicles.webp') center / cover no-repeat,
+    #977c6a;
 }
 
 .nv-root .pm-title {
