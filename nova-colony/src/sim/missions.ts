@@ -209,8 +209,22 @@ export class MissionSystem extends System {
 
   /** Claim every finished mission (Missions panel "Claim all"). Returns how many were claimed. */
   claimAll(): number {
+    return this.claimAllIn(null);
+  }
+
+  /**
+   * Claim every finished mission of one chain (the Missions panel tab), or of all chains. A claimed step can open a
+   * follow-up the colony has already finished (a late colony catching up on a chain): keep going so one tap clears
+   * them all.
+   */
+  claimAllIn(chain: MissionDef['chain'] | null): number {
     let n = 0;
-    for (const d of this.claimable()) if (this.claim(d.id)) n++;
+    for (let pass = 0; pass < 12; pass++) {
+      let got = 0;
+      for (const d of this.claimable()) if ((chain == null || d.chain === chain) && this.claim(d.id)) got++;
+      n += got;
+      if (got === 0) break;
+    }
     return n;
   }
 

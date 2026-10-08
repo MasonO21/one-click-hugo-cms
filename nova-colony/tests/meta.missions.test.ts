@@ -172,6 +172,21 @@ describe('missions: the first 15 minutes', () => {
     expect(game.sys.missions.claimAll()).toBe(2);
     expect(game.sys.missions.claimable()).toHaveLength(0);
   });
+
+  it('one Claim all also collects follow-ups a claim opens that the colony has already finished', () => {
+    const { game } = makeGame();
+    // a late colony: the Steel chain heads open with their goals already met
+    for (let i = 0; i < 6; i++) game.state.buildings.list.push(fakeBuilding('solar_panel', 900 + i));
+    for (let i = 0; i < 2; i++) game.state.buildings.list.push(fakeBuilding('battery_bank', 910 + i));
+    game.state.colony.tier = 3;
+    game.bus.emit('colony:tierUp', { tier: 3 });
+    expect(game.sys.missions.progress('s_grid_solar').done).toBe(true);
+    // claiming the head opens s_grid_battery, already done: the same call claims it too (main chain untouched)
+    const n = game.sys.missions.claimAllIn('side');
+    expect(n).toBeGreaterThanOrEqual(2);
+    expect(game.state.missions.completed).toEqual(expect.arrayContaining(['s_grid_solar', 's_grid_battery']));
+    expect(game.sys.missions.claimable().filter((d) => d.chain === 'side')).toHaveLength(0);
+  });
 });
 
 describe('missions: out-of-order play never strands the player', () => {

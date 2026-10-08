@@ -152,7 +152,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm23b_expedition', chain: 'main', name: 'Away Team', description: 'Send a squad of colonists on an expedition from the Radio Tower.',
     type: 'expedition', target: 'launch', count: 1, reward: R({ items: { supply_crate: 1 }, xp: 40 }), next: ['m24_forge'],
-    hint: 'Tap the Radio Tower and open Expeditions. Pick a destination, up to three colonists, and wave them off!', guide: { kind: 'building', ref: 'radio_tower' },
+    hint: 'Tap the Radio Tower (or Menu › Expeditions). Pick a destination, up to three colonists, and wave them off!', guide: { kind: 'building', ref: 'radio_tower' },
   },
   {
     id: 'm24_forge', chain: 'main', name: 'Fire & Anvil', description: 'Build a Forge.',

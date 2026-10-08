@@ -80,8 +80,7 @@ export class MissionsPanel extends Panel {
           label: `🎁 Claim all (${ready.length})`,
           cls: 'good block',
           onClick: () => {
-            let n = 0;
-            for (const m of ready) if (ms.claim(m.id)) n++;
+            const n = ms.claimAllIn(this.tab);
             if (n) this.ctx.toast(`${n} rewards claimed!`, 'reward', '🎁');
             this.rerender();
           },
