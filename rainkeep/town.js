@@ -786,7 +786,8 @@
       vg.addColorStop(0, 'rgba(255,120,40,0)'); vg.addColorStop(1, `rgba(255,110,40,${heatA})`);
       ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
     }
-    if (KH.raidNear && KH.raidNear()) {
+    // raiders sighted, or the Scorpion host at the gate (siege.js)
+    if ((KH.raidNear && KH.raidNear()) || (KH.siege && KH.siege.run())) {
       const a = 0.12 + 0.08 * Math.sin(t * 4);
       const rg = ctx.createLinearGradient(0, 0, 0, VH);
       rg.addColorStop(0, `rgba(200,40,30,${a})`); rg.addColorStop(0.25, 'rgba(200,40,30,0)');
