@@ -30,6 +30,8 @@ import type {
   VipDef,
   WorldEventDef,
   Reward,
+  WishDef,
+  WishRules,
 } from './schema';
 
 import { RESOURCES } from './resources';
@@ -49,6 +51,7 @@ import { AD_PLACEMENTS, PRODUCTS, COSMETICS, VIP, SEASON, DAILY_REWARDS, SPIN_SE
 import { BALANCE } from './balance';
 import { EXPEDITIONS, EXPEDITION_RULES } from './expeditions';
 import { ACHIEVEMENTS } from './achievements';
+import { WISHES, WISH_RULES } from './wishes';
 
 export interface GameData {
   resources: ResourceDef[];
@@ -83,6 +86,9 @@ export interface GameData {
   expeditions: ExpeditionDef[];
   expeditionRules: ExpeditionRules;
   achievements: AchievementDef[];
+  /** Colonist wishes (sim/wishes.ts). */
+  wishes: WishDef[];
+  wishRules: WishRules;
 }
 
 function index<T extends { id: string }>(list: T[], kind: string): Map<string, T> {
@@ -126,6 +132,8 @@ export class DataRegistry implements GameData {
   expeditions!: ExpeditionDef[];
   expeditionRules!: ExpeditionRules;
   achievements!: AchievementDef[];
+  wishes!: WishDef[];
+  wishRules!: WishRules;
 
   private maps: Record<string, Map<string, any>> = {};
 
@@ -150,6 +158,7 @@ export class DataRegistry implements GameData {
     this.maps.cosmetic = index(data.cosmetics, 'cosmetic');
     this.maps.expedition = index(data.expeditions ?? [], 'expedition');
     this.maps.achievement = index(data.achievements ?? [], 'achievement');
+    this.maps.wish = index(data.wishes ?? [], 'wish');
   }
 
   resource(id: string): ResourceDef | undefined { return this.maps.resource.get(id); }
@@ -171,6 +180,7 @@ export class DataRegistry implements GameData {
   cosmetic(id: string): CosmeticDef | undefined { return this.maps.cosmetic.get(id); }
   expedition(id: string): ExpeditionDef | undefined { return this.maps.expedition.get(id); }
   achievement(id: string): AchievementDef | undefined { return this.maps.achievement.get(id); }
+  wish(id: string): WishDef | undefined { return this.maps.wish.get(id); }
   tier(index: number): TierDef { return this.tiers[Math.max(0, Math.min(this.tiers.length - 1, index))]; }
   invasion(tier: number): InvasionDef {
     let best = this.invasions[0];
@@ -212,6 +222,8 @@ export function defaultData(): GameData {
     expeditions: EXPEDITIONS,
     expeditionRules: EXPEDITION_RULES,
     achievements: ACHIEVEMENTS,
+    wishes: WISHES,
+    wishRules: WISH_RULES,
   };
 }
 

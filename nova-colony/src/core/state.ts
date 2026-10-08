@@ -43,6 +43,7 @@ export interface GameState {
   liveops: LiveOpsState;
   expeditions: ExpeditionState;
   achievements: AchievementState;
+  wishes: WishState;
   stats: StatsState;
   settings: SettingsState;
 }
@@ -440,6 +441,43 @@ export interface AchievementState {
   claimed: Record<string, number>;
 }
 
+/** One open colonist wish (sim/wishes.ts). Times are `playTime` seconds: wishes never move while the app is closed. */
+export interface Wish {
+  id: Id;
+  /** WishDef id. */
+  def: string;
+  colonist: Id;
+  /** Colony tier when it was voiced (sizes the ask and the thank-you gift). */
+  tier: number;
+  /** give: amount asked · build / craft / explore: how many are needed. */
+  need: number;
+  /** build / craft / explore: progress made since it was voiced. */
+  done: number;
+  at: number;
+  /** When it quietly lapses (no penalty). */
+  expiresAt: number;
+  /** Seed of the thank-you gift (deterministic). */
+  seed: number;
+}
+
+// owner: wishes
+export interface WishState {
+  open: Wish[];
+  nextId: Id;
+  /** playTime of the next wish; -1 until wishes open (the tutorial is over). */
+  nextAt: number;
+  /** Lifetime counters (`offered` also numbers the deterministic rolls). */
+  offered: number;
+  granted: number;
+  expired: number;
+  /** Friendship hearts by colonist id (0..WishRules.hearts). */
+  bonds: Record<string, number>;
+  /** "Wish granted!" mood by colonist id: epoch ms when it wears off. */
+  moods: Record<string, number>;
+  /** WishDef ids voiced lately (not repeated right away). */
+  recent: string[];
+}
+
 export interface StatsState {
   sessions: number;
   /** Total online seconds (mirrors playTime but never reset). */
@@ -554,6 +592,7 @@ export function createInitialState(seed: number, now: number): GameState {
     },
     expeditions: { list: [], nextId: 1, launched: 0, collected: 0, frontier: { charted: [], signal: 0, claimed: [], announced: false } },
     achievements: { unlocked: {}, claimed: {} },
+    wishes: { open: [], nextId: 1, nextAt: -1, offered: 0, granted: 0, expired: 0, bonds: {}, moods: {}, recent: [] },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
     settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false, notifications: false, notifyAsked: false },
   };

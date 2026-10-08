@@ -616,7 +616,8 @@ export type MissionType =
   | 'equip' // equip item target
   | 'spin' // use the spin wheel
   | 'rescue' // rescue survivors from camps
-  | 'expedition'; // target = 'launch' | 'collect' | 'frontier' | region id | expedition id (see sim/expeditions.ts)
+  | 'expedition' // target = 'launch' | 'collect' | 'frontier' | region id | expedition id (see sim/expeditions.ts)
+  | 'wish'; // grant colonists' wishes; target = WishKind or '*' (see sim/wishes.ts)
 
 export interface MissionDef {
   id: string;
@@ -808,6 +809,84 @@ export interface AchievementDef {
   reward: Reward;
   /** How the UI writes the numbers: plain count (default), hours played, or colony tier. */
   unit?: 'hours' | 'tier';
+}
+
+// ---------------------------------------------------------------------------------------------
+// Colonist wishes & friendship (src/data/wishes.ts, sim/wishes.ts)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * give: hand over resources from storage · build: place one more of a (small) building · craft: craft a recipe by
+ * hand · chat: walk up and tap Chat · explore: loot any point of interest.
+ */
+export type WishKind = 'give' | 'build' | 'craft' | 'chat' | 'explore';
+
+export interface WishDef {
+  id: string;
+  kind: WishKind;
+  /** give: ResourceDef id · build: BuildingDef id · craft: RecipeDef id · chat / explore: ''. */
+  target: string;
+  icon: string;
+  /** Short label for lists ("Berry pie day"). */
+  title: string;
+  /** What the colonist says, in their own voice. `{n}` = how many (give). */
+  text: string;
+  /** Colony tier the wish can first be voiced at (its target must be reachable there). */
+  minTier: number;
+  /** Not voiced past this tier (the colony has outgrown it). */
+  maxTier?: number;
+  /** Relative weight in the pool (> 0). */
+  weight: number;
+  /** give: minutes of a reference colony's output of `target` asked for (default WishRules.giveMinutes). */
+  minutes?: number;
+  /** build: only voiced while the colony has fewer than this many (default WishRules.buildUpTo). */
+  upTo?: number;
+  /** Who wishes for it more often: specialty / current job, and traits. */
+  likes?: { professions?: ProfessionId[]; traits?: string[] };
+}
+
+export interface WishRules {
+  /** Seconds of online play from wishes opening (tutorial over) to the first wish [min, max]. */
+  firstDelay: [number, number];
+  /** Seconds of online play between wishes [min, max]. */
+  interval: [number, number];
+  /** Seconds before trying again when nobody can wish right now (raid, everyone asleep, all slots full). */
+  retry: number;
+  /** Open wishes at once. */
+  maxOpen: number;
+  /** Seconds of online play an open wish waits before it quietly lapses (no penalty). */
+  expire: number;
+  /** give: default minutes of reference output asked; never more than `giveCapShare` of storage, never below `giveMin`. */
+  giveMinutes: number;
+  giveMin: number;
+  giveCapShare: number;
+  /** build: default `upTo`. */
+  buildUpTo: number;
+  /** Weight multiplier when the colonist's specialty / job, or trait, likes the wish. */
+  likeBonus: { profession: number; trait: number };
+  /** "Wish granted!" happiness and how long it lasts (real hours). */
+  mood: { value: number; hours: number };
+  /** Friendship hearts per colonist (0..max) and their perks. */
+  hearts: number;
+  perks: {
+    /** From this many hearts: +productivity at their job. */
+    productivityHearts: number;
+    productivity: number;
+    /** From this many hearts: "Best friends", a permanent happiness bonus. */
+    bestFriendsHearts: number;
+    bestFriendsHappiness: number;
+  };
+  /**
+   * Thank-you gift: two resources from the tier's pool, together worth `minutes` of the reference colony's output,
+   * season XP, and a small chance of a little Nova.
+   */
+  reward: { minutes: number; pool: string[][]; xp: number; novaChance: number; nova: [number, number] };
+  /** World units: how close the player must be to Chat. */
+  chatRange: number;
+  /** explore: a lootable point of interest must lie within this many world units of the colony. */
+  exploreRange: number;
+  /** Wish ids remembered so the same wish is not voiced again right away. */
+  recent: number;
 }
 
 // ---------------------------------------------------------------------------------------------
