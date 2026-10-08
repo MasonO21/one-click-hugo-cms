@@ -31,6 +31,7 @@
   const heroName = (id) => (id && DATA.heroes.find((h) => h.id === id) ? DATA.heroes.find((h) => h.id === id).name : 'A hero');
   const fill = (s, r) => s.replace(/\{hero\}/g, heroName(r.hero));
   const title = (r) => fill(tale(r)[0], r);
+  const fades = (r) => Math.max(0, r.t + I.life - S.time);
   const starsHTML = (n) => `<span class="iv-stars" aria-label="${n} stars">${'★'.repeat(n)}<i>${'★'.repeat(5 - n)}</i></span>`;
 
   // ======================================================================
@@ -86,6 +87,9 @@
       KH.emit('intelOpen', {});
       return;
     }
+    // old reports fade (never one a march is on its way to)
+    const stale = X.list.filter((r) => S.time - r.t > I.life && !KH.world.tile(r.x, r.y).busy);
+    if (stale.length) X.list = X.list.filter((r) => !stale.includes(r));
     if (X.list.length >= cap()) { X.acc = 0; return; }
     X.acc += dt;
     while (X.acc >= I.every && X.list.length < cap()) { X.acc -= I.every; if (!add()) { X.acc = 0; break; } }
@@ -206,7 +210,7 @@
     const sv = survivorsOf(r);
     return {
       title: fill(tl[0], r), lvl: `${r.stars}★ ${K.name}`,
-      body: `<div class="row iv-head">${icon(K.icon, 'iv-kind')}<div class="grow">${starsHTML(r.stars)}<p class="lore">${esc(fill(tl[1], r))}</p></div></div>
+      body: `<div class="row iv-head">${icon(K.icon, 'iv-kind')}<div class="grow">${starsHTML(r.stars)}<p class="lore">${esc(fill(tl[1], r))}</p>${t.busy ? '' : `<div class="muted small">The trail goes cold in ${fmtTime(fades(r))}.</div>`}</div></div>
         ${fight}${who}
         <div class="card stack"><b>Reward</b><div class="costs">${KH.rewardHTML(rw)}</div>${sv ? `<div class="muted small">and ${sv} survivors, if the houses have room</div>` : ''}${r.kind === 'bounty' ? `<div class="muted small">A ${Math.round(K.beacon * r.stars * 100)}% chance of a Beacon Token${r.stars >= 5 ? ' (certain at five stars)' : ''}</div>` : ''}</div>
         ${foe ? `<p class="muted small">Your squad leads the march and is away until it returns. A lost fight costs ${Math.round(I.loss * 100)}% of the troops sent, and the report stays.</p>` : ''}
@@ -222,9 +226,9 @@
     const last = L ? `<div class="card stack iv-last ${L.win ? '' : 'lost'}"><div class="row">${icon(KINDS[L.kind].icon, 'iv-kind small')}<b class="grow">${esc(L.title)}</b>${starsHTML(L.stars)}</div><p class="small">${esc(L.text)}</p>${Object.keys(L.rewards).length ? `<div class="costs">${KH.rewardHTML(L.rewards)}</div>` : ''}<button class="btn small alt" data-act="inteldone">Done</button></div>` : '';
     const rows = X.list.slice().sort((a, b) => b.stars - a.stars).map((r) => {
       const K = KINDS[r.kind], t = KH.world.tile(r.x, r.y);
-      return `<button class="iv-row" data-act="intelfind" data-arg="${r.k}">${icon(K.icon, 'iv-kind small')}<span class="grow"><b>${esc(title(r))}</b><span class="muted small">${esc(K.name)}${K.hero ? ` · ${esc(heroName(r.hero))}` : ''} · ${fmtTime(KH.world.travel(r.x, r.y))} away${t.busy ? ' · <b>march on the way</b>' : ''}</span></span>${starsHTML(r.stars)}</button>`;
+      return `<button class="iv-row" data-act="intelfind" data-arg="${r.k}">${icon(K.icon, 'iv-kind small')}<span class="grow"><b>${esc(title(r))}</b><span class="muted small">${esc(K.name)}${K.hero ? ` · ${esc(heroName(r.hero))}` : ''} · ${fmtTime(KH.world.travel(r.x, r.y))} away${t.busy ? ' · <b>march on the way</b>' : ` · fades in ${fmtTime(fades(r))}`}</span></span>${starsHTML(r.stars)}</button>`;
     }).join('');
-    const next = X.list.length >= cap() ? `The ledger is full (${cap()} reports). Clear one to make room.` : `Next report in ${fmtTime(I.every - X.acc)}.`;
+    const next = X.list.length >= cap() ? `The ledger is full (${cap()} reports). Answer one, or wait for one to fade, to make room.` : `Next report in ${fmtTime(I.every - X.acc)}.`;
     return {
       title: 'Watchtower Intel', lvl: `${X.list.length}/${cap()}`,
       body: `${intro}${last}<div class="stack iv-list">${rows || '<p class="muted">No reports right now.</p>'}</div>

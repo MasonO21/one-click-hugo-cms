@@ -1256,8 +1256,10 @@ const DATA = {
     every: 75 * 60, cap: 3, capAt: [10, 15], // a report every 75 minutes of keep time; one more held from Watchtower Lv 10 and 15
     ring: [2, 7.5], // how far out, in tiles (and always within sight)
     stars: [30, 30, 22, 12, 6], starTower: 0.05, // weights for one to five stars; each Watchtower level tilts them up
-    // a fight is as strong as expedition stage (yours - 6 + 2 x stars), a bounty a little stronger
-    foe: { offset: -6, perStar: 2, bounty: 1.1 },
+    // a fight is as strong as expedition stage (yours - 8 + 1.5 x stars, so even five stars is just short of where
+    // your expedition stands), a bounty a little stronger
+    foe: { offset: -8, perStar: 1.5, bounty: 1.1 },
+    life: 6 * 3600, // a report nobody answers fades from the ledger after 6 hours of keep time
     loss: 0.15, // troops lost when a fight goes badly (the report stays)
     scouts: 0.25, escort: 0.1, // the share of the march sent with scouts, and with a hero on an errand
     starMult: (s) => 0.6 + 0.2 * s, // rewards by stars

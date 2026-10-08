@@ -292,7 +292,7 @@ const HOURS = Number(process.argv[3] || 8);
               if (!free() || W.tile(r.x, r.y).busy) continue;
               const K = IV.kinds[r.kind], foe = IV.foeOf(r);
               if (K.hero) { if (!S.heroes[r.hero] || KH.heroBusy(r.hero)) continue; }
-              else if (foe) { if (!KH.squadHome().length || s(KH.teamStats(foe.cls, { troops: KH.capTroops(S.troops, Math.floor(KH.marchCap() * 0.75)) })) < s(foe) * 1.15) continue; UI.wsend = 0.75; }
+              else if (foe) { if (!KH.squadHome().length || s(KH.teamStats(foe.cls, { troops: KH.capTroops(S.troops, KH.marchCap()) })) < s(foe) * 1.15) continue; UI.wsend = 1; }
               const n = S.map.marches.length; A.intelgo(r.k); if (S.map.marches.length > n) iv.sent++;
               UI.sheet = null;
             }
@@ -307,7 +307,9 @@ const HOURS = Number(process.argv[3] || 8);
             if (tgt) { if (!RV.scouted(tgt)) A.rivalscout(tgt.k); UI.wsend = 0.75; A.wattack(tgt.k); UI.sheet = null; }
           }
           if (free()) { const r = tiles.find((t) => t.kind === 'ruin' && !t.gone && !t.busy); if (r) { UI.wsend = 0.25; A.wexplore(r.k); } }
-          if (free()) { const n = tiles.filter((t) => t.kind === 'node' && !t.gone && !t.busy).sort((a, b) => b.lvl - a.lvl)[0]; if (n) { UI.wsend = 0.5; A.gather(n.k); } }
+          // a player keeps a slot free while a watchtower report waits
+          const ivWait = KH.intel && !NO.includes('intel') && KH.intel.unlocked() && KH.intel.list().some((r) => !W.tile(r.x, r.y).busy);
+          if (free() && !(ivWait && S.map.marches.length >= W.slots() - 1)) { const n = tiles.filter((t) => t.kind === 'node' && !t.gone && !t.busy).sort((a, b) => b.lvl - a.lvl)[0]; if (n) { UI.wsend = 0.5; A.gather(n.k); } }
         }
         const pp = KH.patrolPreview(); if (pp && pp.mins >= 30) A.patrol();
       });
