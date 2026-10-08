@@ -2,7 +2,7 @@
 // The middle of the screen stays empty so the 3D hero showcase reads through.
 import { h, $, fmt, fmtTime, toast, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
-import { CHAPTERS, ENERGY_COST, SKUS, HEROES, DIFFICULTY, DIFFICULTY_ORDER } from '../../game/data.js';
+import { CHAPTERS, ENERGY_COST, SKUS, HEROES, DIFFICULTY, DIFFICULTY_ORDER, BOSSES, bossFor } from '../../game/data.js';
 import { difficultyUnlocked, selectedDifficulty, selectDifficulty, difficultyRecord, clearedOn } from '../../meta/difficulty.js';
 import {
   commit, computeLoadout, notifications, starterAvailable, pactActive, pactDailyAvailable,
@@ -54,10 +54,10 @@ export function createHome(ctx) {
     // Chapter status line
     let status;
     if (locked) status = `<span class="chap-lock">${icon('lock')} Clear Chapter ${sel - 1}</span>`;
-    else if (ch.endless) status = best ? `<span class="chap-best">${icon('trophy')} Deepest run ${fmtTime(best.time)}${best.depth ? ` · depth ${best.depth}` : ''}</span>` : '<span class="chap-best t-dim">No time limit. Gravemaw returns every 5:00.</span>';
+    else if (ch.endless) status = best ? `<span class="chap-best">${icon('trophy')} Deepest run ${fmtTime(best.time)}${best.depth ? ` · depth ${best.depth}` : ''}</span>` : '<span class="chap-best t-dim">No time limit. A boss rises every 5:00, the five in turn.</span>';
     else if (best?.cleared) status = `<span class="pill pill-soul">${icon('check')} Cleared</span><span class="chap-best t-dim">Best ${fmtTime(best.time)}</span>`;
     else if (best) status = `<span class="chap-best">${icon('hourglass')} Best ${fmtTime(best.time)} <span class="t-dim">/ 06:00</span></span>`;
-    else status = '<span class="chap-best t-dim">Survive 6:00 and slay Gravemaw</span>';
+    else status = `<span class="chap-best t-dim">Survive 6:00 and slay ${BOSSES[bossFor(ch)].name}</span>`;
 
     // Nightmare / Torment selector (campaign chapters only): records, first-clear bonus and locks for the chosen tier
     const dsel = locked || ch.endless ? 'normal' : selectedDifficulty(p, sel), D = DIFFICULTY[dsel];

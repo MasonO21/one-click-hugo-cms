@@ -169,8 +169,8 @@ export function makeGate(text, good, width = 3.6) {
   return group;
 }
 
-// ---------------------------------------------------------------- Gravemaw: sealed arena, attack decals, frost shards
-// Angles are measured in the mesh's local xz plane; seal sweeps grow from the King's side (-z) round to the Shepherd's (+z).
+// ---------------------------------------------------------------- chapter bosses: sealed arena, attack decals, frost shards
+// Angles are measured in the mesh's local xz plane; seal sweeps grow from the boss's side (-z) round to the Shepherd's (+z).
 const sealGlsl = /* glsl */`
   float sealMask(vec2 p, float seal) { float u = abs(atan(p.x, -p.y)) / 3.14159; return smoothstep(seal + 0.004, seal - 0.004, u) + smoothstep(0.035, 0.0, abs(u - seal)) * step(seal, 0.999) * 2.5; }
   float hash1(float n) { return fract(sin(n) * 43758.5453); }`;
@@ -292,7 +292,7 @@ export function makeSlamRings() {
   return m;
 }
 
-/** Bullet-ring telegraph around the King: danger fan with two clear gaps per wave (later waves ghosted). */
+/** Bullet-ring telegraph around the boss: danger fan with two clear gaps per wave (later waves ghosted). */
 export function makeGapFan() {
   const mat = new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(0xff3df0) }, uTime: { value: 0 }, uP: { value: 0 }, uA: { value: new THREE.Vector4() }, uN: { value: 1 }, uGw: { value: 0.4 }, uAlpha: { value: 1 }, uFill: { value: 1 } },

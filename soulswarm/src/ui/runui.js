@@ -123,7 +123,7 @@ export class RunUI {
   // ---------------------------------------------------------------- transient messages
   banner(title, sub = '', kind = 'soul') {
     if (this.bannerEl) this.bannerEl.remove();
-    const art = kind === 'boss' ? `<i class="banner-art" style="background-image:url(${BOSS_ART})"></i>` : '';
+    const art = kind === 'boss' ? `<i class="banner-art" style="background-image:url(${BOSS_ART[this.run.bossId] || BOSS_ART.gravemaw})"></i>` : '';
     const el = h(`<div class="banner ${kind}">${art}<b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</div>`);
     this.el.appendChild(el);
     this.bannerEl = el;
@@ -157,8 +157,14 @@ export class RunUI {
     if (ticks) this.q.bossTicks.innerHTML = ticks.map((f) => `<b style="left:${f * 100}%"></b>`).join('');
   }
   bossHp(f) { this.q.bossHp.style.transform = `scaleX(${f})`; }
+  /** The boss bar and boss banners take the boss's colour (BOSSES[id].color). */
+  bossColor(hex) {
+    const c = (k, w) => { const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255, m = (v) => Math.round(Math.min(255, v * k + 255 * w)); return `rgb(${m(r)},${m(g)},${m(b)})`; };
+    const st = this.el.style;
+    st.setProperty('--bc', c(1, 0)); st.setProperty('--bc-lt', c(0.35, 0.65)); st.setProperty('--bc-dk', c(0.55, 0)); st.setProperty('--bc-xdk', c(0.22, 0));
+  }
   bossImmune(on) { this.q.boss.classList.toggle('immune', !!on); }
-  /** Seconds left on the King's phase ward (0 hides it). */
+  /** Seconds left on the boss's phase ward (0 hides it). */
   bossWard(sec) {
     const s = sec > 0 ? Math.ceil(sec) : 0;
     if (s === this.wardS) return;
@@ -251,7 +257,7 @@ export class RunUI {
           if (b) b.textContent = s.muted ? 'Sound: Off' : 'Sound: On';
           return false;
         } },
-        { label: 'Abandon run', cls: 'btn-danger', onClick: () => { run.paused = false; run.end(run.bossDead && !run.endless); } }, // Gravemaw already fell: leaving during the victory beat still wins the chapter
+        { label: 'Abandon run', cls: 'btn-danger', onClick: () => { run.paused = false; run.end(run.bossDead && !run.endless); } }, // the boss already fell: leaving during the victory beat still wins the chapter
       ],
     });
   }
@@ -301,7 +307,7 @@ export class RunUI {
     let doubled = false, adOpen = false;
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
-      <div class="res-head has-art ${win || result.endless ? 'win' : 'lose'}" style="--art:url(${CHAPTER_ART[this.run.chapter.id]})"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} Gravemaw slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
+      <div class="res-head has-art ${win || result.endless ? 'win' : 'lose'}" style="--art:url(${CHAPTER_ART[this.run.chapter.id]})"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
       <div class="res-badges">${diffPill(result.difficulty)}${result.bloodMoon ? '<span class="pill pill-hot">Blood Moon ×2</span>' : ''}${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
       <div class="res-stats">
         <div><b>${fmtTime(result.time)}</b><small>Survived</small></div>
@@ -315,7 +321,7 @@ export class RunUI {
       <div class="res-build">${this.buildTiles()}</div>
       <div class="res-sub">Rewards</div>
       <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>
-      ${result.endless ? '<div class="res-tip">Gravemaw returns every 5:00, stronger each time. How deep can your legion go?</div>' : !win ? '<div class="res-tip">Tip: Talents and Relics make every run stronger. Gravemaw waits at 6:00.</div>' : ''}
+      ${result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, the five in turn, stronger each time. How deep can your legion go?</div>' : !win ? '<div class="res-tip">Tip: Talents and Relics make every run stronger. Gravemaw waits at 6:00.</div>' : ''}
     </div>`);
     const actions = [];
     if (outcome.rewards.gold > 0) {

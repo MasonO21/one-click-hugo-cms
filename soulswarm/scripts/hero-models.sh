@@ -12,7 +12,7 @@
 #     the stance it was sculpted in (knees only bend, the lower foot meets the ground, the run leans 8 degrees); the
 #     arms add only the clip's swing (gains: left,right; a weapon arm swings less); staffs and spears are pinned to
 #     the hand that holds them (the rigger weighted their ends to a leg or the head);
-#  2. simplifies the mesh by half (~14k triangles), shrinks its painted texture to a 1024 px WebP and moves it beside
+#  2. simplifies the mesh to about a quarter (7.6k–10.7k triangles), shrinks its painted texture to a 1024 px WebP and moves it beside
 #     the model (so the web build never needs blob: URLs to decode it), and quantizes the geometry
 #     (KHR_mesh_quantization, which three.js reads without a decoder; skins and clips survive every step).
 # usage: bash scripts/hero-models.sh   (needs curl, python3 and npx access to @gltf-transform/cli)
@@ -41,7 +41,7 @@ while read -r id file gains pins; do
   for p in $pins; do args+=(--pin "$p"); done
   python3 -I scripts/glb-retarget.py "$TMP/$id.glb" "$TMP/$id-0.glb" ${args[@]+"${args[@]}"} \
     --clip "run=$TMP/nyx.glb@$gains~8" --clip "idle=$TMP/vael.glb" --drop-native
-  $GT optimize "$TMP/$id-0.glb" "$TMP/$id-1.glb" --compress false --texture-compress webp --texture-size 1024 --simplify-ratio 0.5 --simplify-error 0.0015 > /dev/null
+  $GT optimize "$TMP/$id-0.glb" "$TMP/$id-1.glb" --compress false --texture-compress webp --texture-size 1024 --simplify-ratio 0.27 --simplify-error 0.003 > /dev/null
   python3 -I scripts/glb-split-texture.py "$TMP/$id-1.glb" "$TMP/$id-2.glb" "$OUT/$id.webp"
   $GT quantize "$TMP/$id-2.glb" "$OUT/$id.glb" > /dev/null
 done <<< "$LIST"

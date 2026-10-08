@@ -178,7 +178,7 @@ export class Hazards {
     this.burns.push(b);
   }
 
-  /** Drop the transient hazards (telegraphs, burning ground, a pending grab), e.g. when Gravemaw falls. */
+  /** Drop the transient hazards (telegraphs, burning ground, a pending grab), e.g. when the boss falls. */
   clear() {
     for (const t of this.teles) { t.owner = null; this.telePool.push(t); }
     for (const b of this.burns) this.burnPool.push(b);

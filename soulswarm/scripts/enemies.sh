@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Rebuilds the painted 3D foes in src/assets/foes (docs/ART_AND_ADS.md §6) from their Higgsfield models: concept art
 # (Nano Banana Pro, from each foe's Bestiary painting) turned to 3D by Tripo H3.1 image-to-3D at ~4,000 faces
-# (the Hollow King at ~10,000) with a detailed texture.
+# (the chapter bosses at ~10,000) with a detailed texture.
 # Simplifies each mesh to its in-game budget (a horde of hundreds draws the common foes), shrinks the texture to a
-# WebP beside the model (scripts/glb-split-texture.py) and quantizes the geometry (KHR_mesh_quantization).
+# WebP beside the model (scripts/glb-split-texture.py; 512 px, the newer bosses 768, Gravemaw 1024) and quantizes the
+# geometry (KHR_mesh_quantization).
 # Heights, facing and gaits are in src/engine/foemodels.js FOES.
-# usage: bash scripts/enemies.sh   (needs curl, python3 and npx access to @gltf-transform/cli)
+# usage: bash scripts/enemies.sh [id ...]   (only the named foes when given; needs curl, python3 and npx access to
+#        @gltf-transform/cli)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 B=https://d8j0ntlcm91z4.cloudfront.net/user_3JNt8sa075rFfx7BmFXIV25jSbi
@@ -15,6 +17,7 @@ mkdir -p "$OUT"
 # id, vertex ratio kept, texture size, file
 while read -r id ratio tex file; do
   [ -z "$id" ] && continue
+  if [ $# -gt 0 ] && [[ " $* " != *" $id "* ]]; then continue; fi
   curl -sSf --retry 3 -o "$TMP/$id.glb" "$B/$file" < /dev/null
   $GT optimize "$TMP/$id.glb" "$TMP/$id-1.glb" --compress false --texture-compress webp --texture-size "$tex" \
     --simplify true --simplify-ratio "$ratio" --simplify-error 0.01 < /dev/null > /dev/null
@@ -28,6 +31,10 @@ witch 0.55 512 hf_20261008_024836_ec3bee03-3c4a-4c11-99d5-d5d9d333cf8e.glb
 bloater 0.5 512 hf_20261008_024839_94db1130-c28e-4009-8e51-7e0f7c5246cd.glb
 thief 0.8 512 hf_20261008_024906_4b81a3bb-47f0-49a4-a2c7-66ef8720c14c.glb
 gravemaw 0.7 1024 hf_20261008_025038_5d899069-cf86-45e5-a6fd-7143287ef14c.glb
+vaulkar 0.55 768 hf_20261008_042221_10d0547e-b530-4d4e-931e-7d802f0edd90.glb
+vesperine 0.55 768 hf_20261008_042223_edbeab09-6c2f-4528-9d8e-e23c1b0402e0.glb
+pyrexa 0.55 768 hf_20261008_042657_3370cedf-bd5b-4efe-baf4-a9b442c84507.glb
+azrathel 0.55 768 hf_20261008_042836_d0f241ff-4865-47f2-b834-244ea5caec2c.glb
 LIST
 rm -rf "$TMP"
 ls -l "$OUT"

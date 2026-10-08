@@ -367,7 +367,7 @@ export class Enemies {
   }
 
   /** Stun (Hero Rites): t s without steering or attacking; knockback still carries it. A wind-up or fuse in progress is
-   *  called off (a Brute's cone follows its state; a Bloater's fuse circle is put out). Gravemaw is never stunned: his
+   *  called off (a Brute's cone follows its state; a Bloater's fuse circle is put out). a boss is never stunned: its
    *  next attack only slips back by RITES.bossStagger. */
   stun(e, t) {
     if (!e.active || !(t > 0) || e.ev) return; // event entities (Soul Thief, Cursed Coffin) keep their own script
@@ -425,7 +425,7 @@ export class Enemies {
       e.kx += (o.kx / l) * k; e.kz += (o.kz / l) * k;
     }
     const run = this.run;
-    // the King filters his own damage (Nova at 50% and capped, immunity): show what actually landed
+    // the boss filters its own damage (Nova at 50% and capped, immunity): show what actually landed
     let shown = amount;
     if (e.type === 'boss') { const before = e.hp + amount; run.boss.onHit(e); shown = before - e.hp; }
     if (!o.silent && shown >= 0.5) {

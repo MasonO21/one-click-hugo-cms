@@ -5,7 +5,7 @@ import { hdr } from '../engine/particles.js';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
 const _fwd = new THREE.Vector3(0, 0, 1), _dir = new THREE.Vector3(), _sc = new THREE.Vector3();
-const ORB_MAX = 320; // ember orb instances (witch shots + Gravemaw's patterns)
+const ORB_MAX = 320; // ember orb instances (witch shots + the bosses' patterns)
 
 function instanced(geo, max, color) {
   const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color }), max);
@@ -150,14 +150,14 @@ export class Projectiles {
     this.bolts.instanceMatrix.needsUpdate = true; this.spears.instanceMatrix.needsUpdate = true; this.orbs.instanceMatrix.needsUpdate = true; this.orbs.instanceColor.needsUpdate = true;
   }
 
-  /** Clears enemy fire in flight. spareBoss keeps Gravemaw's ring and spiral orbs (only the Nova wipes those). */
+  /** Clears enemy fire in flight. spareBoss keeps the boss's ring, spiral and fan orbs (only the Nova wipes those). */
   clearEnemyShots(spareBoss = false) {
     if (spareBoss) { const E = this.embers; let n = 0; for (let i = 0; i < E.length; i++) if (E[i].boss) E[n++] = E[i]; E.length = n; }
     else this.embers.length = 0;
     this.clearLobs();
   }
 
-  // ---------------------------------------------------------------- Gravemaw bullet patterns (boss.js)
+  // ---------------------------------------------------------------- boss bullet patterns (boss.js)
   // Boss orbs ride the ember pool (same update, collision and instancing) with their own colour, size and hitbox.
   /** One boss orb leaving (x, z) along angle a. o: { col: THREE.Color, glow: [r,g,b], sc, hr, life, r0 } */
   bossOrb(x, z, a, speed, dmg, o) {

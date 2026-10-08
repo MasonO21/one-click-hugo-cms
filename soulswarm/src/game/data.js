@@ -56,7 +56,7 @@ export const heroStarBonus = (stars) => ({ dmg: 0.12 * Math.max(0, stars - 1), h
 export const RITES = {
   ch: 0.45,
   hintAt: 8,          // the one-time Rite hint shows once this many seconds have passed (it is ready from the start)
-  bossStagger: 0.25,  // a stun never stops Gravemaw: it only pushes his next attack back by this much
+  bossStagger: 0.25,  // a stun never stops a boss: it only pushes its next attack back by this much
   // every kill rises (Raise Chance 100%; the legion cap and overflow rules still hold); shards within `pull` m fly in
   vael: { name: 'Grave Call', short: 'CALL', cd: 20, dur: 4, pull: 12,
     desc: 'For 4 s every foe you slay rises, and soul shards within 12 m fly to you.' },
@@ -64,7 +64,7 @@ export const RITES = {
   // dmg and are knocked aside; the legion moves +haste for hasteT s to catch up
   nyx: { name: 'Shadow Step', short: 'STEP', cd: 8, dist: 7, time: 0.18, invuln: 0.4, width: 1.5, dmg: 90, knock: 12, haste: 0.6, hasteT: 3,
     desc: 'Dash 7 m through the horde, untouchable, slashing all in your path. Your legion surges after you.' },
-  // ash chains strike up to n foes on screen (Gravemaw and elites first, then Cinder Witches, then the nearest), `span` s
+  // ash chains strike up to n foes on screen (the boss and elites first, then Cinder Witches, then the nearest), `span` s
 // from first to last;
   // each hit pins the foe (a stun) for `pin` s and ignites it (burn = share of the hit over 2 s; burning kills get +burnRaise
 // Raise Chance); +nova charge
@@ -76,7 +76,7 @@ export const RITES = {
     desc: 'A great bell tolls: foes within 5 m are stunned and marked by the toll for 5 s. Enemy fire is silenced, and Witches within 10 m with it.' },
   // a ring of bone spikes (`r` m) for `dur` s at the cast point: foes inside are thrown out and every crossing
   // hurts (once per hitCd per foe); Witch fire falling inside shatters on the bone; minions inside heal `heal` of their
-  // max HP over the duration; Gravemaw is only shoved at bossPush m/s; the ring moves with him
+  // max HP over the duration; a boss is only shoved at bossPush m/s; the ring moves with him
   mordrake: { name: 'Ossuary Wall', short: 'WALL', cd: 18, r: 5, dur: 5, dmg: 60, hitCd: 0.5, knock: 9, heal: 0.5, bossPush: 1.2, spikes: 44,
     desc: 'A ring of bone spikes rises around you for 5 s. Foes are hurled out and cut on every crossing, Witch fire shatters on it, and your legion inside heals 50%.' },
 };
@@ -101,10 +101,42 @@ export const ENEMIES = {
 };
 // HP = hp × chapter hpMul × (1 + chHp × (c − 1)) × tune[c − 1] × Endless scale; damage = dmg × (1 + chDmg × (c − 1)) × √scale
 // tune evens the fight out at about a minute for a player with that chapter's typical progression (scripts/balance.mjs, GOD=1)
-export const BOSS = { name: 'Gravemaw', title: 'the Hollow King', hp: 12500, speed: 2.3, dmg: 22, radius: 1.9, mass: 999, chHp: 0.05, chDmg: 0.3,
+// Every chapter boss (BOSSES below) shares these stats.
+export const BOSS = { hp: 12500, speed: 2.3, dmg: 22, radius: 1.9, mass: 999, chHp: 0.05, chDmg: 0.3,
   tune: [1, 0.8, 0.75, 1.15, 1.2, 1],
-  firstRun: 0.6 }; // a player's very first run: 60% HP and no Crown of Cinders (phase III)
-// Gravemaw's three-phase fight (boss.js). Seconds, metres, radians; dmg values are × the King's touch damage.
+  firstRun: 0.6 }; // a player's very first run: 60% HP and no phase III
+// ---------------------------------------------------------------- Chapter bosses (boss.js)
+// Each campaign chapter ends with its own boss; the Endless Abyss brings them back in turn (BOSS_ORDER, by depth). They
+// share the stats above and the three-phase frame below, and differ in look, names, a twist on the shared attacks and a
+// signature attack of their own (BOSS_PHASES.rain / lances / smite / fan), weighed into each phase's pick by sigW:
+//   twist: 1 none · 2 the slam bands burn · 3 frost shards erupt along the slam rings · 4 one extra ring per gap volley ·
+//          5 phase III from 50% HP
+//   sig: summon (Husks and Ghouls rise around him) · rain (Cinder Rain: fire lobbed onto marked circles, leaving burning
+//        ground) · lances (Glacier Lances: lanes of frost shards rippling out toward the Shepherd) · smite (pillars of
+//        light fall where the Shepherd is, one after another) · fan (Blood Lances: aimed fans of blood orbs)
+// phases: [title, how to survive it] per phase · dirge: the soft enrage's banner · roar: his roar's pitch ·
+// voice: announcer lines `${voice}`, `${voice}_return` and `${voice}_slain` (src/assets/voice)
+export const BOSSES = {
+  gravemaw: { name: 'Gravemaw', title: 'the Hollow King', color: 0xff3df0, twist: 1, sig: 'summon', sigW: [0.25, 0, 0], roar: 1, voice: 'a_boss',
+    phases: [['HOLLOW TREAD', 'Step between the slam rings'], ['EMBER LITURGY', 'Follow the gaps as the rings turn'], ['CROWN OF CINDERS', 'Circle with the spiral']],
+    dirge: ['HOLLOW DIRGE', 'He keens for the dead: +50% damage and attack speed'] },
+  pyrexa: { name: 'Pyrexa', title: 'the Cinder Matron', color: 0xff7a1a, twist: 2, sig: 'rain', sigW: [0.25, 0.25, 0.2], roar: 1.3, voice: 'a_pyrexa',
+    phases: [['SMOULDER', 'Her slam rings burn: wait for the fire to die down'], ['FIRESTORM', 'Weave between the falling cinders'], ['PYRE ETERNAL', 'Circle with the flame spiral']],
+    dirge: ['INFERNO', 'The pyre roars: +50% damage and attack speed'] },
+  vaulkar: { name: 'Vaulkar', title: 'the Ossuary Colossus', color: 0x8f9cff, twist: 3, sig: 'lances', sigW: [0.25, 0.25, 0.2], roar: 0.7, voice: 'a_vaulkar',
+    phases: [['BONE TREMOR', 'Frost shards rise where his rings land'], ['WHITE SILENCE', 'Step out of the glacier lances'], ['ABSOLUTE ZERO', 'Circle with the spiral']],
+    dirge: ['DEEP FREEZE', 'The cold takes hold: +50% damage and attack speed'] },
+  azrathel: { name: 'Azrathel', title: 'the Fallen Seraph', color: 0xb070ff, twist: 4, sig: 'smite', sigW: [0.25, 0.25, 0.2], roar: 0.9, voice: 'a_azrathel',
+    phases: [['FALLEN GRACE', 'Keep moving: the light falls where you stand'], ['UNHOLY HYMN', 'One more ring in every volley'], ['LAST JUDGEMENT', 'Circle with the spiral']],
+    dirge: ['DIVINE WRATH', 'Heaven burns: +50% damage and attack speed'] },
+  vesperine: { name: 'Vesperine', title: 'the Crimson Queen', color: 0xff2e55, twist: 5, sig: 'fan', sigW: [0.25, 0.25, 0.2], roar: 1.15, voice: 'a_vesperine',
+    phases: [['COURT OF BLOOD', 'Slip between the blood lances'], ['CRIMSON WALTZ', 'Follow the gaps as the rings turn'], ['BLOOD ECLIPSE', 'Her eclipse comes early: circle with the spiral']],
+    dirge: ['BLOODLUST', 'She thirsts: +50% damage and attack speed'] },
+};
+export const BOSS_ORDER = ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine']; // chapters 1-5; Endless cycles from the first
+/** The boss a run faces next: its chapter's, or in the Endless Abyss the next in turn by depth. */
+export const bossFor = (ch, depth = 0) => (ch.endless ? BOSS_ORDER[depth % BOSS_ORDER.length] : ch.bossId || 'gravemaw');
+// The chapter bosses' three-phase fight (boss.js). Seconds, metres, radians; dmg values are × the boss's touch damage.
 // Every damaging telegraph is >= minTele (accessibility floor) in every chapter, phase and enrage state.
 export const BOSS_PHASES = {
   minTele: 1.0,
@@ -113,13 +145,11 @@ export const BOSS_PHASES = {
   wardBreak: 0.05,                // damage poured into the ward shortens it: 1 s per this share of his max HP
   arena: { radius: 18, closeTo: 12, closeTime: 4, seal: 1.2, soft: 1.1, push: 14, hard: 0.35 }, // soft: push-back zone, hard: closest approach to the wall
   // from = HP fraction where the phase begins. speed = chase speed ×, rate = attack rate × (recoveries ÷ rate).
+  // weights: the shared attacks; each boss adds its signature attack (sig) at its sigW for the phase. Names: BOSSES.phases.
   phases: [
-    { name: 'HOLLOW TREAD', sub: 'Phase I · Step between the slam rings', from: 1, speed: 1, rate: 1, slamTele: 1.2, orb: 1,
-      weights: { slam: 0.42, ring: 0.33, summon: 0.25 } },
-    { name: 'EMBER LITURGY', sub: 'Phase II · Follow the gaps as the rings turn', from: 0.66, speed: 1.15, rate: 1.25, slamTele: 1.1, orb: 1.1,
-      weights: { slam: 0.4, rings: 0.6 } },
-    { name: 'CROWN OF CINDERS', sub: 'Phase III · Circle with the spiral', from: 0.33, speed: 1.35, rate: 1.35, slamTele: 1.0, orb: 1.2,
-      weights: { slam: 0.3, rings: 0.3, spiral: 0.4 } },
+    { from: 1, speed: 1, rate: 1, slamTele: 1.2, orb: 1, weights: { slam: 0.42, ring: 0.33 } },
+    { from: 0.66, speed: 1.15, rate: 1.25, slamTele: 1.1, orb: 1.1, weights: { slam: 0.4, rings: 0.6 } },
+    { from: 0.33, speed: 1.35, rate: 1.35, slamTele: 1.0, orb: 1.2, weights: { slam: 0.3, rings: 0.3, spiral: 0.4 } },
   ],
   transition: { dur: 2, slow: 0.3, slowDur: 0.45, flash: 0.55, push: 7, pushR: 9, knockR: 9, knock: 9 }, // push: Shepherd m/s, knock: horde impulse
   slam: { radii: [3, 6, 9], halfW: 0.65, every: 0.3, dmg: 1.4, minionDmg: 0.7, range: 13, recover: 1.9 },
@@ -129,11 +159,16 @@ export const BOSS_PHASES = {
   // Hollow aura: he sears a swarm of minions this close (× his damage per second): none below `from` in reach, full at `full`
   aura: { r: 3.2, dps: [0, 0, 1.5], from: 12, full: 32 },
   summon: { n: 6, r: 3.2, tele: 1.0, recover: 1.4 },
+  // signature attacks; [a, b, c] = by phase
+  rain: { n: [5, 7, 9], first: 0.35, spread: [1.6, 5.5], every: 0.16, flight: 1.1, radius: 1.45, height: 4, dmg: 0.6, recover: 1.5 }, // first: lead (s) on the Shepherd's path
+  lances: { lanes: [3, 4, 5], arc: 0.42, shards: 6, from: 2.2, step: 1.25, tele: 1.0, every: 0.12, r: 0.7, life: 2.0, dmg: 0.5, recover: 1.4 },
+  smite: { n: [3, 4, 5], every: 0.6, tele: 1.1, r: 2.1, lead: 0.45, dmg: 1.1, minionDmg: 0.6, recover: 1.5 },
+  fan: { volleys: [2, 3, 3], n: 7, arc: 0.95, windup: 1.0, every: 0.45, speed: 8, dmg: 0.55, recover: 1.4 },
   waves: { first: 4, every: [12, 15], size: [12, 16], arc: 2.4, tele: 1.0, minDist: 7 }, // edge waves from phase II
   trickle: { rate: 1.2, max: [70, 45, 45], minDist: 9 }, // the whole fight, from the arena edge; max alive per phase
   dirge: { at: 180, dmg: 1.5, rate: 1.5 }, // "Hollow Dirge" soft enrage, seconds after he rises
   nova: { mul: 0.5, cap: 0.25 }, // Soul Nova (and soul bursts) hurt him at 50%, at most 25% of his max HP per Nova
-  // chapter twists: 2 fire rings, 3 frost shards, 4 one extra ring per volley, 5 phase III at 50%
+  // twists (BOSSES.twist): 2 fire rings, 3 frost shards, 4 one extra ring per volley, 5 phase III at 50%
   fire: { life: 3, dmg: 0.35 },
   frost: { life: 3.5, n: [4, 7, 10], r: 0.75, dmg: 0.35 },
   extraRing: 1,
@@ -162,7 +197,7 @@ export const AFFIXES = {
 export const AFFIX_IDS = ['warded', 'splitter', 'vampiric', 'hasted', 'commander'];
 // Mid-run events: one at a time, the first at `first` [min, max] s, then every `every` [min, max] s, inside [from, to]
 // (Endless keeps rolling: no `to`). Never within `clear` s of a gate pair or an elite, `swarm` s of a swarm ring, or
-// `bossGap` s before Gravemaw; a first run waits until `tutorialFrom`. Each appears `dist` m from the Shepherd, clear
+// `bossGap` s before the boss; a first run waits until `tutorialFrom`. Each appears `dist` m from the Shepherd, clear
 // of hazards and gates, and simply lapses if ignored.
 //   thief: flees for `life` s at `speed` m/s (idle `wake` s unless the Shepherd comes within `alert` m; beyond `far` m
 //     it dawdles at `dawdle` ×); hp × husk-scaled HP; the kill pays gold[0] + gold[1] × chapter and `xp` × a level of XP
@@ -186,7 +221,8 @@ export const BLESSINGS = {
 };
 
 // ---------------------------------------------------------------- Chapters
-// Each chapter re-tints the world. Colors are hex ints for three.js.
+// Each chapter re-tints the world. Colors are hex ints for three.js. boss / bossId: its boss's colour and id (BOSSES);
+// Endless Abyss bosses take their own colours (bossFor).
 // mods = the chapter's identity, read by the director (run.js), enemies.js, hazards.js and player.js:
 //   tag: run-start banner line · weights: spawn-weight multiplier per enemy type · pack: Ghoul pack size [min, max]
 //   burn: Witch lobs leave burning ground · vents / ice / hands: ground hazards (tuning in HAZARDS below)
@@ -194,15 +230,15 @@ export const BLESSINGS = {
 //   elites: elite spawn times in seconds
 //   rotate (Endless): the chapter mods used at abyss depth 1, 2, 3… (cycles)
 export const CHAPTERS = [
-  { id: 1, name: 'Ashen Necropolis', ground: 0x3a4658, groundB: 0x1c2330, rune: 0x2ad8ff, fog: 0x04070c, rim: 0x6fd8ff, enemy: 0xff5a2e, boss: 0xff3df0, hpMul: 1.0,  rate: 1.0,
+  { id: 1, name: 'Ashen Necropolis', ground: 0x3a4658, groundB: 0x1c2330, rune: 0x2ad8ff, fog: 0x04070c, rim: 0x6fd8ff, enemy: 0xff5a2e, boss: 0xff3df0, bossId: 'gravemaw', hpMul: 1.0,  rate: 1.0,
     mods: {} },
-  { id: 2, name: 'Ember Wastes',     ground: 0x4a3226, groundB: 0x241510, rune: 0xff8a2a, fog: 0x0b0503, rim: 0xffb37a, enemy: 0xff3a3a, boss: 0xff3df0, hpMul: 1.9,  rate: 1.15,
+  { id: 2, name: 'Ember Wastes',     ground: 0x4a3226, groundB: 0x241510, rune: 0xff8a2a, fog: 0x0b0503, rim: 0xffb37a, enemy: 0xff3a3a, boss: 0xff7a1a, bossId: 'pyrexa', hpMul: 1.9,  rate: 1.15,
     mods: { tag: 'The witches’ fire lingers', weights: { witch: 1.8 }, burn: true, vents: true } },
-  { id: 3, name: 'Frozen Ossuary',   ground: 0x51637c, groundB: 0x26324a, rune: 0x9fe4ff, fog: 0x060b14, rim: 0xbfeaff, enemy: 0xff4f6a, boss: 0xb46bff, hpMul: 3.2,  rate: 1.3,
+  { id: 3, name: 'Frozen Ossuary',   ground: 0x51637c, groundB: 0x26324a, rune: 0x9fe4ff, fog: 0x060b14, rim: 0xbfeaff, enemy: 0xff4f6a, boss: 0x8f9cff, bossId: 'vaulkar', hpMul: 3.2,  rate: 1.3,
     mods: { tag: 'Ghoul packs hunt on treacherous ice', weights: { ghoul: 1.5 }, pack: [6, 8], ice: true } },
-  { id: 4, name: 'Abyssal Cathedral',ground: 0x3a2e4e, groundB: 0x1a1226, rune: 0xa35bff, fog: 0x06030c, rim: 0xd2a8ff, enemy: 0xff5a2e, boss: 0xff3df0, hpMul: 5.0,  rate: 1.45,
+  { id: 4, name: 'Abyssal Cathedral',ground: 0x3a2e4e, groundB: 0x1a1226, rune: 0xa35bff, fog: 0x06030c, rim: 0xd2a8ff, enemy: 0xff5a2e, boss: 0xb070ff, bossId: 'azrathel', hpMul: 5.0,  rate: 1.45,
     mods: { tag: 'Bloaters swarm and the abyss reaches up', weights: { bloater: 2 }, vignette: 1.25, sight: 17, hands: true } },
-  { id: 5, name: 'Crimson Throne',   ground: 0x4a2228, groundB: 0x220e12, rune: 0xff2e55, fog: 0x0a0204, rim: 0xff9aaa, enemy: 0xffb02e, boss: 0xff3df0, hpMul: 7.5,  rate: 1.6,
+  { id: 5, name: 'Crimson Throne',   ground: 0x4a2228, groundB: 0x220e12, rune: 0xff2e55, fog: 0x0a0204, rim: 0xff9aaa, enemy: 0xffb02e, boss: 0xff2e55, bossId: 'vesperine', hpMul: 7.5,  rate: 1.6,
     mods: { tag: 'The gilded court rises: twice the elites', weights: { brute: 1.6 }, elites: [45, 75, 110, 150, 185, 225, 255, 290] } },
   // Unlocked by clearing Chapter 5. No time limit; the run ends when you fall.
   { id: 6, name: 'Endless Abyss', endless: true, ground: 0x2c2848, groundB: 0x120e22, rune: 0x6b7bff, fog: 0x05040c, rim: 0xa8b4ff, enemy: 0xff4a6a, boss: 0xff3df0, hpMul: 4.0, rate: 1.4,
@@ -226,7 +262,7 @@ export const HAZARDS = {
   hands: { every: [6, 9], lead: 0.6, radius: 1.3, warn: 1.0, root: 0.6, grab: 0.7 },
 };
 export const RUN_LENGTH = 360; // seconds until the boss arrives
-export const ENDLESS_BOSS_EVERY = 300; // Endless Abyss: Gravemaw returns every 5:00, stronger each time
+export const ENDLESS_BOSS_EVERY = 300; // Endless Abyss: a boss every 5:00 (the five in turn), stronger each time
 export const ENERGY_COST = 5;
 export const ENERGY_MAX = 30;
 export const ENERGY_REGEN_SEC = 360;
@@ -322,7 +358,7 @@ export const xpForLevel = (lv) => Math.floor(4 + 3.2 * lv + 0.38 * lv * lv);
 // minion stats (stats.minionHp / minionDmg / minionSpeed), so chapter, level, Nyx and Minion Fury scaling apply.
 // interval = seconds between attacks · seek = target search radius (m) · leash = metres added to (or taken from)
 // BASE.minionLeash · contact = melee reach beyond the target's radius · scale = ghost model scale (Shades stay wisps).
-// Tuned with bot sims so the Ch1 Gravemaw time-to-kill stays within ±25% of the all-Shade legion (see the GDD).
+// Tuned with bot sims so the Ch1 boss time-to-kill stays within ±25% of the all-Shade legion (see the GDD).
 export const MINIONS = {
   shade:     { from: 'husk',    hp: 1,    dmg: 1,    interval: 0.5,  speed: 1,    seek: 6.5, contact: 0.4 },
   runner:    { from: 'ghoul',   hp: 0.55, dmg: 0.75, interval: 0.32, speed: 1.3,  seek: 6.5, contact: 0.4, leash: 3, scale: 1.15 },
@@ -337,7 +373,7 @@ export const MINIONS = {
                minCluster: 3, patience: 5, searchEvery: 0.6, eliteWeight: 2, bossWeight: 2, scale: 0.75 },
   champion:  { scale: 1.35, hp: 3, dmg: 2 }, // a raised elite: multiplies its variant
   recoil: 0.3, bossRecoil: 0.5, // a melee hit costs the minion this share of its target's contact damage
-  bossEngage: 24, // at most this many minions fight Gravemaw at once; the rest fight adds or orbit
+  bossEngage: 24, // at most this many minions fight the boss at once; the rest fight adds or orbit
   capHeal: 0.5, // a raise roll at the legion cap heals the weakest minion by this share of its max HP
 };
 
@@ -442,7 +478,11 @@ export const VOICE = {
     a_thief: { pri: 2, wait: 1.5 }, a_shrine: { pri: 2, wait: 1.5 }, a_coffin: { pri: 2, wait: 1.5 },
     a_revive: { pri: 3 }, a_depth: { pri: 3, wait: 3 },
     a_nightmare: { pri: 3, wait: 2 }, a_torment: { pri: 3, wait: 2 }, a_bloodmoon: { pri: 3, wait: 2 }, a_trial: { pri: 3, wait: 2 },
-    a_boss: { pri: 4, wait: 2 }, a_boss_return: { pri: 4, wait: 2 }, a_boss_slain: { pri: 4, wait: 2 },
+    a_boss: { pri: 4, wait: 2 }, a_boss_return: { pri: 4, wait: 2 }, a_boss_slain: { pri: 4, wait: 2 }, // Gravemaw; the other bosses:
+    a_pyrexa: { pri: 4, wait: 2 }, a_pyrexa_return: { pri: 4, wait: 2 }, a_pyrexa_slain: { pri: 4, wait: 2 },
+    a_vaulkar: { pri: 4, wait: 2 }, a_vaulkar_return: { pri: 4, wait: 2 }, a_vaulkar_slain: { pri: 4, wait: 2 },
+    a_azrathel: { pri: 4, wait: 2 }, a_azrathel_return: { pri: 4, wait: 2 }, a_azrathel_slain: { pri: 4, wait: 2 },
+    a_vesperine: { pri: 4, wait: 2 }, a_vesperine_return: { pri: 4, wait: 2 }, a_vesperine_slain: { pri: 4, wait: 2 },
     a_cleared: { pri: 4, wait: 4 }, a_defeat: { pri: 4, wait: 1 },
     rite: { pri: 3, cd: 20 }, greet: { pri: 3, cd: 2 }, // {hero}_rite on a Rite cast, {hero}_greet on the hero screen
   },
@@ -505,7 +545,7 @@ export const QUEST_POOL = [
   { id: 'elite',  text: 'Slay 3 elites',           key: 'elites',  goal: 3 },
   { id: 'legion', text: 'Lead a legion of 100',    key: 'peak',    goal: 100 },
   { id: 'evolve', text: 'Evolve a weapon',         key: 'evolve',  goal: 1, late: true },
-  { id: 'boss',   text: 'Defeat Gravemaw',         key: 'bosses',  goal: 1, late: true },
+  { id: 'boss',   text: 'Defeat a chapter boss',   key: 'bosses',  goal: 1, late: true },
   { id: 'trial',  text: 'Clear the Daily Trial',   key: 'trial',   goal: 1, late: true },
   // Nightmare unlocks with the first Chapter 1 clear, the same gate as `late`; Torment counts too
   { id: 'nmClear', text: 'Clear a chapter on Nightmare', key: 'hardClears', goal: 1, late: true },
@@ -523,13 +563,14 @@ export const BLOOD_MOON = { days: [5, 6, 0], elites: [45, 75, 110, 150, 185, 225
 export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 100 } };
 
 // ---------------------------------------------------------------- Bestiary (meta/bestiary.js, ui/meta/bestiary.js)
-// A painted entry per foe. Kills add up over every run (gilded elites count as their base type; the Soul Thief and Gravemaw
-// count too). An entry unlocks with its first kill. Its three milestones are claimed in order, each once: goals = kill counts
-// (`rare` foes use rareGoals), rewards[i] = tier i + 1's bundle. In all: 14,000 gold, 7 sigils and 350 gems (MONETIZATION §2).
+// A painted entry per foe. Kills add up over every run (gilded elites count as their base type; the Soul Thief and the five
+// chapter bosses count too). An entry unlocks with its first kill. Its three milestones are claimed in order, each once:
+// goals = kill counts (`rare` foes use rareGoals), rewards[i] = tier i + 1's bundle. In all: 22,000 gold, 11 sigils and
+// 550 gems (MONETIZATION §2).
 export const BESTIARY = {
   goals: [100, 1000, 10000], rareGoals: [1, 10, 50],
   rewards: [{ gold: 2000 }, { sigils: 1 }, { gems: 50 }],
-  order: ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'thief', 'gravemaw'],
+  order: ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'thief', 'gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'],
   foes: {
     husk: { name: 'Husk', role: 'Chaser', color: '#ff8a3d',
       lore: 'Once they were mourners. Now they remember only the long walk to the grave, and they walk it toward you.',
@@ -549,25 +590,37 @@ export const BESTIARY = {
     thief: { name: 'Soul Thief', role: 'Run event', color: '#ffcf4a', rare: true,
       lore: 'It picks the pockets of the dying, coins and souls alike, and it has never once stood and fought.',
       fights: 'Never attacks. Flees with its sack for 18 s, faster than the horde but slower than you. Run it down for gold.' },
-    gravemaw: { name: 'Gravemaw', role: 'The Hollow King', color: '#ff3df0', rare: true,
+    gravemaw: { name: 'Gravemaw', role: 'The Hollow King · Ashen Necropolis', color: '#ff3df0', rare: true, boss: true,
       lore: 'The Hollow King wears a crown of cinders over a ribcage full of stolen souls, and he wants yours.',
-      fights: 'Three phases in a sealed arena: slam rings, turning gap rings, then a spiral. Step between them.' },
+      fights: 'Three phases in a sealed arena: slam rings, turning gap rings, then a spiral. Raises the dead around him.' },
+    pyrexa: { name: 'Pyrexa', role: 'The Cinder Matron · Ember Wastes', color: '#ff7a1a', rare: true, boss: true,
+      lore: 'Every Cinder Witch was once a girl on a pyre. Pyrexa was the first, and she taught the others to keep the fire.',
+      fights: 'Her slam rings burn after they land. Cinder Rain lobs fire onto marked circles that leave the ground burning.' },
+    vaulkar: { name: 'Vaulkar', role: 'The Ossuary Colossus · Frozen Ossuary', color: '#8f9cff', rare: true, boss: true,
+      lore: 'The monks of the ossuary stacked their dead into a guardian. The cold kept it, and it kept walking.',
+      fights: 'Frost shards erupt along his slam rings. Glacier Lances ripple out toward you in lanes: step between them.' },
+    azrathel: { name: 'Azrathel', role: 'The Fallen Seraph · Abyssal Cathedral', color: '#b070ff', rare: true, boss: true,
+      lore: 'He sang the cathedral\u2019s last hymn as the abyss came up through its floor, and he never stopped singing.',
+      fights: 'An extra ring in every gap volley. Smite drops pillars of light on your path, one after another: keep moving.' },
+    vesperine: { name: 'Vesperine', role: 'The Crimson Queen · Crimson Throne', color: '#ff2e55', rare: true, boss: true,
+      lore: 'She bought her crown with her kingdom\u2019s blood, and she has been thirsty ever since.',
+      fights: 'Blood Lances: aimed fans of blood orbs, a beat apart. Her eclipse (the spiral) comes at half her health.' },
   },
 };
 
 // ---------------------------------------------------------------- Difficulty (Nightmare, Torment)
 // Per chapter: a Normal clear unlocks Nightmare, a Nightmare clear unlocks Torment. Campaign chapters only: Endless Abyss
 // and the Daily Trial always play Normal. Blood Moon stacks on top of any difficulty. Normal is the identity.
-//   hp / dmg / spawn: × enemy HP, enemy and hazard damage, director spawn rate (once Gravemaw rises his arena adds are plain
+//   hp / dmg / spawn: × enemy HP, enemy and hazard damage, director spawn rate (once the boss rises its arena adds are plain
 //   Normal adds: he alone carries the difficulty)
 //   ramp: minutes for the extra HP to build up from ×1 to ×hp, so the opening still lets you level (damage and spawns apply at once)
-//   xp: × soul-shard XP, so the build keeps pace with a horde that dies more slowly (Gravemaw arrives at 6:00 either way)
-//   bossHp / bossDmg: × Gravemaw's HP and damage; below the horde's so his fight stays within ~1.6× its Normal length
+//   xp: × soul-shard XP, so the build keeps pace with a horde that dies more slowly (the boss arrives at 6:00 either way)
+//   bossHp / bossDmg: × the boss's HP and damage; below the horde's so its fight stays within ~1.6× its Normal length
 //   (scripts/balance.mjs GOD=1: harder hits mostly shred the legion that fights him)
 //   extraElites: the first n of DIFFICULTY_ELITES join the elite schedule · eliteAffixes: affixes per elite (elite-affix system)
 //   gold / passXp: × run gold and pass XP (account XP stays at the Normal amount, so account-level gems don't speed up)
 //   firstClearGems: one-time gems for the first clear of each chapter at this difficulty (never doubled by Blood Moon or ads)
-//   hoard: Gravemaw's Hoard relic odds by rarity (null: the chapter's Normal odds) · tint: the world palette is mixed toward
+//   hoard: the boss's hoard relic odds by rarity (null: the chapter's Normal odds) · tint: the world palette is mixed toward
 //   these colours by `mix` (the Blood Moon look swap, blended) · css: UI colour
 export const DIFFICULTY_ORDER = ['normal', 'nightmare', 'torment'];
 export const DIFFICULTY = {

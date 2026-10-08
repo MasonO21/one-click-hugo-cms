@@ -35,7 +35,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Rewarded "daily free chest" | 800–1,499 (plus 10 gems and a relic) | | |
 | Soul Pact | +20% run gold | | |
 | New account | 1,500 (one-time) | | |
-| Bestiary milestones (GDD §5.2) | 2,000 per entry's first milestone, 14,000 in all (one-time) | | |
+| Bestiary milestones (GDD §5.2) | 2,000 per entry's first milestone, 22,000 in all (one-time) | | |
 
 **Risk:** an engaged player (4–6 runs a day) maxes all talents in roughly 2–3 months, after which gold has no sink. Nightmare and Torment (GDD §8.2) pay ×1.75 / ×2.5 run gold, and that stacks with Blood Moon (×2) and the rewarded-ad double, so a Torment Blood Moon clear with the ad pays ×10 the Normal base. That is acceptable only because Torment players are endgame players whose talents are mostly bought already; it makes the Season 4 gold sink more urgent, not less. Post-launch sinks (Relic Ascension, legion cosmetics bought with gold) are on the live-ops roadmap for Season 4 (see `LIVEOPS.md`). Watch the median gold balance of D60+ players. If it climbs without stopping, the sink is late.
 
@@ -57,7 +57,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Daily Trial clear (once a day; a rewarded ad buys one retry) | 40 / day, plus 1 Sigil every 3rd clear | | |
 | New account | 150 (one-time) | | |
 | Weekly quest chest (25 daily quests) | 50 / week, plus 1 Sigil | | |
-| Bestiary milestones (GDD §5.2) | 50 per entry's third milestone (10,000 kills, or 50 Soul Thieves / Gravemaws), 350 in all (one-time, over about a month) | | |
+| Bestiary milestones (GDD §5.2) | 50 per entry's third milestone (10,000 kills, or 50 Soul Thieves / kills of a chapter boss), 550 in all (one-time, over months) | | |
 | Events and leaderboards (Planned) | 50–500 per event | | |
 
 ### 2.3 Energy, Altar Sigils, Hero Shards
@@ -65,7 +65,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Currency | Sources | Sinks | Design intent |
 |---|---|---|---|
 | **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10, 3/day), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run, on every difficulty (Nightmare and Torment cost the same: a harder run is not a reason to spend more of the session pacer). Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
-| **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), each Bestiary entry's second milestone (1, 7 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
+| **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), each Bestiary entry's second milestone (1, 11 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
 | **Hero Shards** | Epic rolls (4 Seraphine, 6 Nyx or 5 Liora, equal chance), Legendary rolls (5 Mordrake or 6 Seraphine, 50/50), premium pass S1 (25 Seraphine), duplicate hero grants (20). Planned: Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week). | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
 
 ### 2.4 What a free player earns per 28-day season (daily active, all quests, ~3 runs a day)
@@ -83,7 +83,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Rewarded daily free chest (10 gems × 28) | 280 | — | +2 |
 | **Total** | | | **≈ 105 pulls ≈ 3.0 Legendaries per season** (≈ 2.1 without ads) |
 
-One-time sources are not included: chapter first clears (550 gems + 5 sigils), Nightmare and Torment first clears (900 gems, spread over months of endgame play, see §2.5), Bestiary milestones (350 gems + 7 sigils + 14,000 gold, see §2.6) and the new-account balance (150 gems + 1 sigil).
+One-time sources are not included: chapter first clears (550 gems + 5 sigils), Nightmare and Torment first clears (900 gems, spread over months of endgame play, see §2.5), Bestiary milestones (550 gems + 11 sigils + 22,000 gold, see §2.6) and the new-account balance (150 gems + 1 sigil).
 
 ### 2.5 Nightmare and Torment (endgame difficulty)
 
@@ -95,7 +95,7 @@ Each campaign chapter can be replayed on Nightmare (after a Normal clear) and To
 | Pass XP | ×1 | ×1.5 | ×2 | Pass XP is capped at 15,000 a season, so it only moves *when* an endgame player finishes the pass. Account XP stays at the Normal amount, so the 20-gem account level-ups keep their pace |
 | Run gems | 12–20 per clear | same | same | No per-run gem multiplier: repeat farming never prints premium currency |
 | First clear (one-time per chapter) | 70–150 gems + 1 sigil | +60 gems | +120 gems | 900 gems in total, about 7 pulls, earned over months. Flat: Blood Moon and the rewarded-ad double skip it |
-| Gravemaw's Hoard relic | Ch1–2 Common/Rare, Ch3–5 up to Epic 35% | Rare 60% / Epic 40% | Epic 98% / Legendary 2% | Relics only, never hero shards, so Mordrake and Seraphine still come from the Altar |
+| Boss Hoard relic | Ch1–2 Common/Rare, Ch3–5 up to Epic 35% | Rare 60% / Epic 40% | Epic 98% / Legendary 2% | Relics only, never hero shards, so Mordrake and Seraphine still come from the Altar |
 | Energy | 5 | 5 | 5 | |
 
 **Legendary relics from Torment.** Campaign runs never dropped Legendaries before (the Endless Abyss Epic+ relic at depth 4+ already could, at 20%). Torment's Hoard has a 2% Legendary chance, the same as one Altar pull. An endgame player clearing Torment 2–3 times a day finds roughly 1–2 Legendary relics a season this way, against ≈ 3 from a free player's pulls. That deepens relic collection (§6.5: a specific Legendary at Lv10 needs ~80 copies) without competing with the Altar's hero shards. Watch the share of Legendary relics that come from Torment; if it passes ~35% of all Legendaries for D90+ players, lower it to 1%.
@@ -104,18 +104,18 @@ That is generous by design. A free player unlocks Mordrake (10 shards = two Mord
 
 ### 2.6 The Bestiary (collection milestones)
 
-The Bestiary (GDD §5.2) has a painted entry for each of 7 foes, and each entry has three milestones that pay once per account, 21 in all (`BESTIARY` in `data.js`):
+The Bestiary (GDD §5.2) has a painted entry for each of 11 foes (the horde's five, the Soul Thief and the five chapter bosses), and each entry has three milestones that pay once per account, 33 in all (`BESTIARY` in `data.js`):
 
-| Milestone | Goal: Husk, Ghoul, Brute, Cinder Witch, Bloater | Goal: Soul Thief, Gravemaw | Reward | All 7 entries |
+| Milestone | Goal: Husk, Ghoul, Brute, Cinder Witch, Bloater | Goal: Soul Thief, each chapter boss | Reward | All 11 entries |
 |---|---|---|---|---|
-| I | 100 kills | 1 | 2,000 gold | 14,000 gold |
-| II | 1,000 | 10 | 1 Altar Sigil | 7 sigils |
-| III | 10,000 | 50 | 50 gems | 350 gems |
+| I | 100 kills | 1 | 2,000 gold | 22,000 gold |
+| II | 1,000 | 10 | 1 Altar Sigil | 11 sigils |
+| III | 10,000 | 50 | 50 gems | 550 gems |
 
-**Budget check.** The whole Bestiary is worth about 1,570 gem-equivalent: 350 gems, 7 sigils (1,050 at the gem-shop price) and 14,000 gold (≈ 170 gems at the 5,000-for-60 rate). That is about 11–12 pulls, once.
-- **Against a season:** a daily free player earns ≈ 3,900 gems and 46 sigils per season (§2.4). The Bestiary adds about +9% gems and +15% sigils in the first season only, and nothing after.
-- **Against the other one-time sources:** it is smaller than the chapter first clears (550 gems + 5 sigils) and the Nightmare / Torment first clears (900 gems).
-- **Pacing:** tiers I and II land in the first days; the gems of tier III arrive over about a month (4 days for Husks, 3–4 weeks for Brutes, Witches and Bloaters, about a month of Soul Thieves, 50 Gravemaw clears). That is a trickle of about 12 gems a day in the first month, not a lump that floods the Altar.
+**Budget check.** The whole Bestiary is worth about 2,460 gem-equivalent: 550 gems, 11 sigils (1,650 at the gem-shop price) and 22,000 gold (≈ 260 gems at the 5,000-for-60 rate). That is about 16 pulls, once. The four newer chapter bosses (2026-10-08) added a third of it, and they pay the slowest.
+- **Against a season:** a daily free player earns ≈ 3,900 gems and 46 sigils per season (§2.4). The Bestiary's horde and Soul Thief entries add about +9% gems and +15% sigils in the first season only. The boss entries spread over the campaign: each pays 2,000 gold with its chapter's first clear, a sigil after ten kills (ten clears of its chapter on any difficulty, or every fifth Endless boss) and 50 gems after fifty, so most of their 200 gems and 4 sigils land in the second season or later.
+- **Against the other one-time sources:** its gems match the chapter first clears (550 gems + 5 sigils) and stay under the Nightmare / Torment first clears (900 gems); its sigils, about two a season after the first, are the larger share.
+- **Pacing:** the horde entries' tiers I and II land in the first days, the bosses' as the campaign goes; the gems of tier III arrive over about a month (4 days for Husks, 3–4 weeks for Brutes, Witches and Bloaters, about a month of Soul Thieves, and 50 kills of each chapter boss). That is a trickle of about 12 gems a day in the first month, not a lump that floods the Altar.
 - **Fairness:** nothing in it is sold and money cannot speed it up: kills come only from playing.
 - **Verdict:** the suggested rewards stand as designed. If D30+ gem balances run high (§12), the tier III gems (50 → 30) are the lever to pull.
 

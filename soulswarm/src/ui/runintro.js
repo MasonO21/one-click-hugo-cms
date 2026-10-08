@@ -3,7 +3,7 @@
 // place of the old chapter banner (run.modBannerAt). Non-interactive; Reduce flashes drops the light flare and the glint.
 import './runintro.css';
 import { h } from './dom.js';
-import { CHAPTERS } from '../game/data.js';
+import { CHAPTERS, BOSSES, bossFor } from '../game/data.js';
 import { CHAPTER_ART } from './art.js';
 
 const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
@@ -14,7 +14,7 @@ export const INTRO_MS = 6000; // fallback removal; the CSS animation itself is 0
 export function showRunIntro(hud, run, reduceFlash) {
   const ch = run.chapter, D = run.diff;
   const src = ch.endless ? CHAPTERS[ch.mods.rotate[0] - 1] : null; // Endless opens on the first rotation's twist
-  const tag = run.mods.tag ? (src ? `${src.name}: ${run.mods.tag}` : run.mods.tag) : 'Survive 6:00, then slay the Hollow King';
+  const tag = run.mods.tag ? (src ? `${src.name}: ${run.mods.tag}` : run.mods.tag) : `Survive 6:00, then slay ${BOSSES[bossFor(ch)].title}`;
   const kick = ch.endless ? 'Endless' : `${run.trial ? 'Daily Trial · ' : ''}Chapter ${ROMAN[ch.id] || ch.id}`;
   const pills = (D.id !== 'normal' ? `<em class="ri-pill" style="--dc:${D.css}">${D.name}</em>` : '') + (run.bloodMoon ? '<em class="ri-pill ri-bm">Blood Moon</em>' : '');
   const el = h(`<div class="run-intro${reduceFlash ? ' rf' : ''}" aria-hidden="true" data-ch="${ch.id}" style="--rc:${hex(ch.rune)}">

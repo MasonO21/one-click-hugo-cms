@@ -574,7 +574,7 @@ const SFX = {
     return 1.4;
   } },
 
-  // ---- Gravemaw's arena ----
+  // ---- the bosses' arena ----
   arena: { gap: 1000, max: 1, vol: 0.85, rev: 0.6, big: true, play(o, t) { // the rune seal closes: drone swells under a ring of bells
     const f = filt(o, 'lowpass', 200, 3);
     f.frequency.setValueAtTime(200, t); f.frequency.exponentialRampToValueAtTime(2400, t + 1.2);
@@ -594,7 +594,7 @@ const SFX = {
     noise(o, t, { type: 'lowpass', f: 6000, to: 250, d: 1.0, v: 0.35 });
     return 2.2;
   } },
-  ward: { gap: 160, max: 2, vary: 0.05, vol: 0.4, rev: 0.3, play(o, t, p) { // hits ring off the King's ward
+  ward: { gap: 160, max: 2, vary: 0.05, vol: 0.4, rev: 0.3, play(o, t, p) { // hits ring off the boss's ward
     bell(o, t, mtof(93) * p, 0.06, 0.6);
     tone(o, t, { f: 2400 * p, d: 0.08, v: 0.05 });
     return 0.6;
@@ -855,7 +855,7 @@ const TRACKS = {
     },
   },
 
-  // Gravemaw's last phase (Crown of Cinders): faster, double-time kicks, harsher bass, the arp an octave up, brass stabs
+  // a boss's last phase: faster, double-time kicks, harsher bass, the arp an octave up, brass stabs
   boss3: {
     bpm: 156,
     level: 0.72,

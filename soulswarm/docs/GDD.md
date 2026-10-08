@@ -13,7 +13,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, Gravemaw (sealed arena, three phases, ring slams, gap rings, spiral, Hollow Dirge; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), five first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with 1 ad reroll, 6 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), five first-run hints and two scripted first-run beats (§16), accessibility settings (§17) | Full scripted tutorial run, adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 6 weapons, 8 passives, 6 evolutions, 5 heroes (1★–5★) each with a Rite, 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, new heroes (`LIVEOPS.md`) |
 | Meta and economy | **The Bestiary** (§5.2: 7 painted entries, kills per foe, 21 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest | Boss Rush, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, share card and replay clips |
@@ -45,7 +45,7 @@ Everything below describes the build unless it is marked **Planned**.
 | Loop | Length | Player goal | Key systems | Reward |
 |---|---|---|---|---|
 | Moment-to-moment | 1–10 s | Survive, kill, collect | Floating joystick, auto-attack, raises, pickups | Soul shards (XP), new minions |
-| Run | 6–9 min | Clear the chapter (survive 6:00, kill Gravemaw) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
+| Run | 6–9 min | Clear the chapter (survive 6:00, slay the chapter's boss) | Level-up cards, Soul Gates, elites, Nova, boss | Gold, gems, pass XP, quest progress, first-clear bonus |
 | Meta | Days to months | Get strong enough for the next chapter, then for Nightmare and Torment | Talents, relics, heroes and stars, Soul Altar, the Bestiary (§5.2) | Power, new chapters, Nightmare and Torment clears (§8.2), Endless Abyss depth record |
 | Daily | 15–40 min/day | Finish quests, spend energy, beat the Daily Trial | 6 daily quests, 7-day login calendar, the Daily Trial (§8.1), rewarded ads, energy | Gems, gold, sigils, pass XP |
 | Weekly | 7 days | Farm Blood Moon, fill the weekly chest (Planned: climb the leaderboard) | Blood Moon weekend, weekly quest chest (Planned: Endless Abyss weekly board) | Sigils, gems (Planned: league rewards) |
@@ -53,9 +53,9 @@ Everything below describes the build unless it is marked **Planned**.
 
 **Moment-to-moment.** Move → weapons fire automatically at the nearest threat → an enemy dies → it drops a soul shard and has a *Raise Chance* to rise as a cyan minion → minions orbit you and hunt nearby enemies → more kills → more shards and more minions. The player's only job is positioning: kite, collect, pick gates, avoid telegraphs.
 
-**Run.** 0:00–6:00 survival with rising density, 9 Soul Gate pairs (0:28, then every 40 s), 6 swarm rings, 4 elites (1:15, 2:30, 3:45, 4:50) each with an affix (§5.1), about 3 optional mid-run events (§4.8) and roughly 21 level-ups (about Lv22, §9), then Gravemaw at 6:00. A full clear is 6:00 plus the boss fight. A failed run usually ends between 2:30 and 5:00.
+**Run.** 0:00–6:00 survival with rising density, 9 Soul Gate pairs (0:28, then every 40 s), 6 swarm rings, 4 elites (1:15, 2:30, 3:45, 4:50) each with an affix (§5.1), about 3 optional mid-run events (§4.8) and roughly 21 level-ups (about Lv22, §9), then the chapter's boss at 6:00 (§6). A full clear is 6:00 plus the boss fight. A failed run usually ends between 2:30 and 5:00.
 
-**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quests rotate: "Finish 2 runs" every day plus 5 drawn by date from a pool of 13: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Open 2 Relic Chests · Slay 3 elites · Lead a legion of 100, and after the first Chapter 1 clear (which also opens Nightmare on Chapter 1) also Evolve a weapon · Defeat Gravemaw · Clear the Daily Trial · Clear a chapter on Nightmare · Slay 5 elites on Nightmare (Torment counts for both). Rewards belong to the 5 slots (in order: 20 gems · 1,500 gold · 15 gems · 1,200 gold · 1 sigil, each with pass XP), so the daily value never changes.
+**Daily.** Energy regenerates (+1 every 6 min, 30 max = 6 runs per full bar, 3 hours from empty to full). Quests are designed to be finished in 2–3 runs and reset at local midnight. Daily quests rotate: "Finish 2 runs" every day plus 5 drawn by date from a pool of 13: Slay 500 enemies · Raise 150 souls · Survive 4 minutes (in one run) · Unleash Soul Nova 3× · Pass 3 Soul Gates · Open 2 Relic Chests · Slay 3 elites · Lead a legion of 100, and after the first Chapter 1 clear (which also opens Nightmare on Chapter 1) also Evolve a weapon · Defeat a chapter boss · Clear the Daily Trial · Clear a chapter on Nightmare · Slay 5 elites on Nightmare (Torment counts for both). Rewards belong to the 5 slots (in order: 20 gems · 1,500 gold · 15 gems · 1,200 gold · 1 sigil, each with pass XP), so the daily value never changes.
 
 | Daily quest reward | Gems | Gold | Sigils | Pass XP |
 |---|---|---|---|---|
@@ -86,7 +86,7 @@ Everything below describes the build unless it is marked **Planned**.
 | **Auto-attack** | All weapons fire on their own cooldowns. | Soul Bolt targets the nearest enemies within 11.5 m, Ashen Chains the nearest within 7.5 m, Bone Spears aim at the nearest within 13 m (or straight ahead). The Scythe sweeps a full circle starting from the facing direction; Grave Pulse and Skull Halo hit around the player. A weapon with no target retries after 0.12 s. *(Planned: elites and Bloaters within 3 m get priority.)* |
 | **NOVA button** | 88 px circle in the bottom-right (Space on desktop). Works at 100% charge with any legion size. | Pulses when ready. A tap commits at once (invulnerability, enemy shots cleared), then a 0.25 s wind-up before the blast, which lands with a hit-stop and 0.55 s of slow motion (§4.4). A touch on the button never starts the joystick. *(Planned: disabled below 10 minions, left-handed mirror.)* |
 | **RITE button** | 64 px circle above-left of NOVA, in the hero's colour, with the Rite's icon and short name (Shift or E on desktop). Mirrored with NOVA in left-handed mode. | The hero's signature active ability (§11.1). Ready from the start of every run. A radial ring refills over the cooldown with a seconds counter; the button pulses and chimes when ready and glows while the Rite is working. Like NOVA, it fires on touch-down and never starts the joystick. |
-| **Pause** | Top-left, 36 px. Also auto-pauses when the app goes to the background. | The pause screen shows time, kills, legion size and the current build, plus a sound toggle and "Abandon run" (a defeat, except during the victory beat after Gravemaw falls, which still wins the chapter). *(Planned: Nova charge on the pause screen.)* |
+| **Pause** | Top-left, 36 px. Also auto-pauses when the app goes to the background. | The pause screen shows time, kills, legion size and the current build, plus a sound toggle and "Abandon run" (a defeat, except during the victory beat after the boss falls, which still wins the chapter). *(Planned: Nova charge on the pause screen.)* |
 | **Back (Android) / Esc** | The hardware back button (Escape on desktop) acts on the top layer: it closes a dialog, skips or closes the Soul Altar reveal, pauses a run and resumes it, continues from the results, and steps the menu back to BATTLE. | From BATTLE it sends the app to the background (state kept). It never skips a level-up or shrine card, the revive prompt or an ad (`src/ui/back.js`). |
 | **Level-up / chest cards** | 3 large cards. Tap to pick. Gameplay is paused. | Taps in the first 0.3 s are ignored (no accidental picks from a swipe). After a pick the Shepherd gets 0.6 s of invulnerability. A Relic Chest uses the same three cards under a gold "Relic Chest" header; chests are offered before queued level-ups. |
 | **Haptics** | Success on level-up, Relic Chest and a good gate; warning on a bad gate and the boss warning; medium when hit, on the Nova tap and on a CARNAGE or MASSACRE streak tier; heavy on the Nova blast, ANNIHILATION and higher tiers, boss slam, death and boss kill. | Toggle in settings. *(Planned: a light tick on raise, throttled to 10/s.)* |
@@ -105,18 +105,18 @@ There are no other in-run buttons beyond NOVA and RITE. The reroll (1 per run, t
 | 1:00–2:00 | Husks 75%, Ghouls 25% | Gate 1:08. **Elite Husk** at 1:15. Gate 1:48. Swarm ring 1:50 (27) |
 | 2:00–3:00 | Husks 55%, Ghouls 25%, Cinder Witches 10%, Bloaters 10% | Gate 2:28. **Elite Brute** at 2:30. Swarm ring 2:50 (32; from here every 3rd is a Ghoul) |
 | 3:00–4:00 | Husks 45%, Ghouls 20%, Brutes 13%, Cinder Witches 12%, Bloaters 10% | Gate 3:08. **Elite Cinder Witch** at 3:45. Gate 3:48. Swarm ring 3:50 (37) |
-| 4:00–6:00 | Husks 40%, Ghouls 20%, Brutes 17%, Cinder Witches 13%, Bloaters 10%; density peak | Gate 4:28. **Elite Brute** and swarm ring (40) at 4:50. Gates 5:08, 5:48. Swarm ring 5:50 (40). Warning banner "THE HOLLOW KING APPROACHES" at 5:52 |
-| 6:00 | Normal spawns stop; a trickle of Husks and Ghouls continues (§6) | **Gravemaw, the Hollow King**. Open gates vanish |
+| 4:00–6:00 | Husks 40%, Ghouls 20%, Brutes 17%, Cinder Witches 13%, Bloaters 10%; density peak | Gate 4:28. **Elite Brute** and swarm ring (40) at 4:50. Gates 5:08, 5:48. Swarm ring 5:50 (40). Warning banner "THE HOLLOW KING APPROACHES" at 5:52 (each chapter names its own boss) |
+| 6:00 | Normal spawns stop; a trickle of Husks and Ghouls continues (§6) | **The chapter boss** (Chapter 1: Gravemaw, the Hollow King; §6). Open gates vanish |
 
 Normal spawns appear just off-screen; 45% of them are biased toward the player's movement direction.
 
 ### 4.2 The Legion (Raise Chance and minions)
 
 - **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating, except for kills by Seraphine's own Nova (×2 instead). During Vael's **Grave Call** (§11.1) every kill rises (100%).
-- Every kill rolls Raise Chance, whether the Shepherd, a minion, the Nova or a Bloater blast made the kill. Elites can be raised. The Bloater that explodes does not rise, and Gravemaw cannot be raised (killing him adds 30 minions instead).
+- Every kill rolls Raise Chance, whether the Shepherd, a minion, the Nova or a Bloater blast made the kill. Elites can be raised. The Bloater that explodes does not rise, and a chapter boss cannot be raised (killing one adds 30 minions instead).
 - **Legion cap:** base 30. Flat bonuses: the Legion Cap skill (+10 per level, +50 at Lv5), the Dominion talent (+2 per level, +40 at L20), the Bone Idol relic (+3 to +18, up to +42 at Legendary Lv10). Mordrake multiplies the total by 1.25, then it is rounded. **Technical hard ceiling: 400 minions** on every device, for performance and leaderboard fairness.
 - Kills only roll while the legion is below the cap. A successful roll **at** the cap heals the weakest minion by 50% of its max HP instead.
-- **Overflow:** gates (and Gravemaw's death) can push the legion above the cap, up to 400. The excess does not stay forever: after a grace period it dissolves gently (§4.3), so a big gate is something to spend, ideally on a Nova.
+- **Overflow:** gates (and a boss's death) can push the legion above the cap, up to 400. The excess does not stay forever: after a grace period it dissolves gently (§4.3), so a big gate is something to spend, ideally on a Nova.
 - **Soul Frenzy** (§4.7) shortens every minion's attack interval while it runs (+10% to +50% attack speed by tier).
 - **Minion variants:** every kill rises as **its own kind**, recoloured in the hero's legion colour. Base stats (Level = the Shepherd's in-run level, c = chapter):
 
@@ -125,7 +125,7 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 | HP | 34 × (1 + 0.08(level − 1)) × (1 + 0.4(c − 1)) |
 | Damage per hit | 7 × hero damage multiplier (stars, Might talent, Crown of Thorns) × Nyx 1.2 × (1 + 0.2 × Minion Fury level) × (1 + 0.04(level − 1)) × (1 + 0.45(c − 1)), ±15% per hit. The in-run Might skill does not apply. No crits. |
 | Speed | 9.5 m/s (Nyx +20%); 15% faster while returning to formation |
-| Damage taken | Each melee hit costs the minion 30% of its target's contact damage (50% against Gravemaw). Boss slams kill every minion in the slam radius. Bloater blasts deal 60. |
+| Damage taken | Each melee hit costs the minion 30% of its target's contact damage (50% against a chapter boss). Boss slams kill every minion in the slam radius. Bloater blasts deal 60. |
 
 | Raised from | Minion | HP | Damage | Attack | Speed | Special |
 |---|---|---|---|---|---|---|
@@ -133,10 +133,10 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 | Ghoul | **Wisp Runner** | ×0.55 | ×0.75 | 0.32 s | ×1.3 | Hunts 3 m farther out |
 | Brute | **Bulwark** | ×3 | ×1.0 | 1.1 s | ×0.7 | **Taunts**: enemies within 3 m attack it instead of the Shepherd (Bloaters ignore taunts). A bodyguard: it guards a 2.3 m ring and only fights foes within 5 m of the Shepherd |
 | Cinder Witch | **Soul Witch** | ×0.8 | ×1.1 per orb | 1.1 s | ×0.9 | Ranged: a homing soul orb (12 m/s) at targets within 6 m, holding 4 m away |
-| Bloater | **Soul Bomb** | ×0.7 | 6 × minion damage in 2.4 m, once | — | ×1.15 | Dives into the densest cluster within 8 m (3+ foes; any after 5 s idle; elites and Gravemaw weigh double), flashes 0.25 s, detonates and leaves the legion. Its kills roll raises |
+| Bloater | **Soul Bomb** | ×0.7 | 6 × minion damage in 2.4 m, once | — | ×1.15 | Dives into the densest cluster within 8 m (3+ foes; any after 5 s idle; elites and bosses weigh double), flashes 0.25 s, detonates and leaves the legion. Its kills roll raises |
 | Any elite | **Champion** of its kind | ×3 more | ×2 more | — | — | ×1.35 size, gold rim and crown spark |
 
-- **AI:** idle minions orbit the player in up to 5 rings of 12 (radii 1.7 / 2.45 / 3.2 / 3.95 / 4.7 m, alternating direction). Every 0.25–0.45 s an idle minion looks for the nearest enemy within 6.5 m of itself that is inside the 9 m leash around the player. It drops the target when it dies or moves more than 12 m from the player. At most 24 minions engage Gravemaw at once; the rest fight adds or orbit.
+- **AI:** idle minions orbit the player in up to 5 rings of 12 (radii 1.7 / 2.45 / 3.2 / 3.95 / 4.7 m, alternating direction). Every 0.25–0.45 s an idle minion looks for the nearest enemy within 6.5 m of itself that is inside the 9 m leash around the player. It drops the target when it dies or moves more than 12 m from the player. At most 24 minions engage the boss at once; the rest fight adds or orbit.
 
 ### 4.3 Soul Gates
 
@@ -196,7 +196,7 @@ Pickup radius is 2.8 m (Soul Magnet +30% per level). Hearts, magnets and chests 
 - When nothing is left to upgrade, the cards are "Second Wind" (heal 50% HP) and "Grave Gold" (+150 gold this run).
 - 1 reroll per run, through an optional rewarded ad. No other ads inside a run except the revive offer on death.
 - **Revive:** one paid revive per run (rewarded ad or 60 gems), offered for 10 s on the death screen. It restores full HP, gives 2.5 s of invulnerability and blasts every enemy within 8 m for 50% of its max HP. Mordrake's free revive triggers automatically on his first death and does not use up the paid one.
-- **Gravemaw falls while the Shepherd is down** (the legion finishes him in the 1.1 s before the death screen): there is no revive prompt; the victory beat plays out and the chapter is won. Once he has fallen, nothing can hurt the Shepherd.
+- **The boss falls while the Shepherd is down** (the legion finishes it in the 1.1 s before the death screen): there is no revive prompt; the victory beat plays out and the chapter is won. Once it has fallen, nothing can hurt the Shepherd.
 
 ### 4.7 Kill streaks and Soul Frenzy
 
@@ -246,7 +246,7 @@ The spread between runs is large (±60 s), so each average is good to about ±5%
 - **Overflow fade:** costs about 3%.
 - **Level-up shard vacuum:** most of the rest. It helps the fleeing bot more than a player who walks over shards. If human playtests find the chapters easier, `LEVEL_PULSE.vacuum` is the first lever to pull.
 
-**Hit-stop.** A brief freeze sells the big hits: 75 ms on an elite kill, 90 ms on a Gravemaw phase change, 65 ms on a ×2 or ×3 gate, and 80 ms when the Nova blast fires.
+**Hit-stop.** A brief freeze sells the big hits: 75 ms on an elite kill, 90 ms on a boss phase change, 65 ms on a ×2 or ×3 gate, and 80 ms when the Nova blast fires.
 - The game slows to 4% speed, easing back over the last third.
 - It multiplies any slow motion that is running instead of replacing it.
 - Real-time timers keep running: the HUD, banners, the death and victory beats, and the streak's fade-out.
@@ -256,8 +256,8 @@ The spread between runs is large (±60 s), so each average is good to about ±5%
 
 Optional side objectives that add a decision between the scripted beats. Numbers live in `RUN_EVENTS` and `BLESSINGS` (`data.js`); the logic is in `events.js`.
 
-- **Schedule:** one event at a time. The first comes at 1:02–1:20, then one every 80–110 s, only between 1:00 and 5:20, so a campaign run sees about 3 (measured: 1:23, 2:55 and 4:16 in one Chapter 1 run). Endless keeps rolling them, waiting 25 s after each Gravemaw kill.
-- **Spacing:** never within 8 s of a gate pair or an elite, 5 s of a swarm ring, or 40 s of Gravemaw's arrival, and never during his fight. If Gravemaw arrives anyway, the event lapses quietly (a pending coffin reward pays out at once). A first run gets none before 2:30.
+- **Schedule:** one event at a time. The first comes at 1:02–1:20, then one every 80–110 s, only between 1:00 and 5:20, so a campaign run sees about 3 (measured: 1:23, 2:55 and 4:16 in one Chapter 1 run). Endless keeps rolling them, waiting 25 s after each boss kill.
+- **Spacing:** never within 8 s of a gate pair or an elite, 5 s of a swarm ring, or 40 s of the boss's arrival, and never during its fight. If the boss arrives anyway, the event lapses quietly (a pending coffin reward pays out at once). A first run gets none before 2:30.
 - **Placement:** 12 m from the Shepherd, ahead of him when possible. The spot must be at least 2.6 m clear of ember vents, ice patches, burning ground, a pending abyssal grab and a standing gate pair. With no clear spot, it retries 2 s later.
 - **Presentation:** a banner announces each event. While it is off screen, an arrow on the screen edge (kept clear of the HUD) points at it, with its distance. Each event is optional: ignored, it lapses.
 - **Counters:** `counters.events` counts events completed (thief slain, blessing taken, coffin cleared), and the run result carries it as `events`. A slain Soul Thief also counts in the Bestiary (`counters.byType.thief`, §5.2).
@@ -282,9 +282,9 @@ Base values are for Chapter 1 at minute 0. Scaling is in §8. Each enemy deals i
 | **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and **lobs** an ember orb about every 3.0 s (±15%) at the Shepherd's position 0.3 s ahead. The orb arcs for 1.0 s onto a 1.1 m telegraph circle (with a closing outer ring) and hits the Shepherd and minions inside. From Chapter 2 the landing leaves **burning ground** for 3 s (25% of the orb damage per second, ticks every 0.3 s, patches don't stack). | Ashen Chains and homing Soul Bolts reach her. Keep moving when a circle appears. |
 | **Bloater** | Bomber | 28 | 2.0 | 26 AoE (2.6 m) | 2 | Within 2.4 m of the player it slows to 25%, flashes and shows a 2.6 m telegraph, then explodes after 1.0 s. The blast also deals 60 to minions and 1.2× its max HP to other *enemies*. Killed early, it just dies (and can rise). | Kill it early, or let it detonate inside a crowd. Never let it reach you. |
 | **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass, and a floating gold **crown** marker. Rolls 1–2 affixes (§5.1). Can be raised. | Drops a **Relic Chest**. |
-| **Gravemaw, the Hollow King** | Boss | 12,500 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing him clears the chapter. | See §6. |
+| **The chapter boss** (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine) | Boss | 12,500 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing it clears the chapter. | See §6. |
 
-Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a), boss magenta/violet (#ff3df0). Every enemy has an emissive core so it reads against the dark ground.
+Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a), each boss in its own colour (Gravemaw magenta #ff3df0, Pyrexa ember #ff7a1a, Vaulkar ice #8f9cff, Azrathel violet #b070ff, Vesperine crimson #ff2e55), which its bar, banner and telegraphs share. Every enemy has an emissive core so it reads against the dark ground.
 
 ### 5.1 Elite affixes
 
@@ -292,7 +292,7 @@ Every elite the director raises rolls **1 affix**, or **2 from Chapter 4 and in 
 - **Announcement:** the ELITE banner names them (e.g. "WARDED BRUTE", "VAMPIRIC HASTED CINDER WITCH") and says what each does. A small tag in each affix's colour floats over the elite, with a thin gauge under it while a ward holds.
 - **Rewards:** affixed elites still drop their Relic Chest, plus **+40 bonus gold per affix**.
 - **Champions:** an elite raised as a Champion carries no affix.
-- **Boss fight:** boss-time adds never roll affixes. An affixed elite that is still alive when Gravemaw arrives keeps its affixes.
+- **Boss fight:** boss-time adds never roll affixes. An affixed elite that is still alive when the boss arrives keeps its affixes.
 
 Numbers live in `AFFIXES` (`data.js`), the logic in `affixes.js`.
 
@@ -318,33 +318,44 @@ Runs spread by about ±60 s (standard error about 15 s). The one drop is Ch5 wit
 
 A collection screen that turns the horde into long-term goals with painted rewards: the **BESTIARY** sub-tab of the Heroes screen, beside Heroes, Relics and Talents. Numbers live in `BESTIARY` (`data.js`), the rules in `src/meta/bestiary.js` (claims in `economy.claimBestiary`), the screen in `src/ui/meta/bestiary.js`.
 
-- **Entries:** Husk, Ghoul, Brute, Cinder Witch, Bloater, the Soul Thief (§4.8) and Gravemaw (a wide card across the row). Each has its painting (3:4, `src/assets/art/foe-*.webp`), its name and role, a line of lore, a "How it fights" line and its kill count. A summary panel counts entries discovered, milestones claimed and foes slain.
+- **Entries:** Husk, Ghoul, Brute, Cinder Witch, Bloater, the Soul Thief (§4.8) and the five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine; wide cards across the row). Each has its painting (3:4, `src/assets/art/foe-*.webp`), its name and role, a line of lore, a "How it fights" line and its kill count. A summary panel counts entries discovered, milestones claimed and foes slain.
 - **Locked:** until its first kill an entry shows a dark, cold silhouette of its painting under a "?", named "???" and "Undiscovered". Its milestones are already listed, so the goal is visible.
-- **What counts:** every kill of a type, whoever lands it (the Shepherd, the legion, the Nova, gate bursts, Bloater blasts). Gilded elites count as their base type, and so do Splitter copies, gate guards, coffin waves and Gravemaw's arena adds. A slain Soul Thief counts as a Soul Thief; a broken Cursed Coffin never counts. Gravemaw counts once per campaign victory (also when the legion fells him while the Shepherd is down) and once per Endless kill. Daily Trial runs count too.
-- **How it is tracked:** the run keeps `run.counters.byType` (one integer increment per kill, no allocation; the Soul Thief in `events.js`, Gravemaw in `Run.onBossKilled`). The run result carries a copy as `byType`, and `applyRunResult` adds it to `profile.bestiary.kills`, ignoring unknown ids and junk values.
+- **What counts:** every kill of a type, whoever lands it (the Shepherd, the legion, the Nova, gate bursts, Bloater blasts). Gilded elites count as their base type, and so do Splitter copies, gate guards, coffin waves and the bosses' arena adds. A slain Soul Thief counts as a Soul Thief; a broken Cursed Coffin never counts. Each boss counts for itself, once per campaign victory over it (also when the legion fells it while the Shepherd is down) and once per Endless kill. Daily Trial runs count too.
+- **How it is tracked:** the run keeps `run.counters.byType` (one integer increment per kill, no allocation; the Soul Thief in `events.js`, the bosses in `Run.onBossKilled`). The run result carries a copy as `byType`, and `applyRunResult` adds it to `profile.bestiary.kills`, ignoring unknown ids and junk values.
 - **Milestones:** three per entry, claimed in order with a button on the entry's sheet, each once. The Heroes tab, the BESTIARY sub-tab and the card show a red dot while one waits.
 
 | Milestone | I | II | III |
 |---|---|---|---|
 | Husk, Ghoul, Brute, Cinder Witch, Bloater | 100 kills | 1,000 | 10,000 |
-| Soul Thief, Gravemaw | 1 | 10 | 50 |
+| Soul Thief, the five chapter bosses | 1 | 10 | 50 |
 | Reward | 2,000 gold | 1 Altar Sigil | 50 gems |
 
-All 21 milestones pay 14,000 gold, 7 sigils and 350 gems, once per account (budget check in `MONETIZATION.md` §2.6).
+All 33 milestones pay 22,000 gold, 11 sigils and 550 gems, once per account (budget check in `MONETIZATION.md` §2.6).
 
 - **Pacing:** a bot's Chapter 1 clear (2,511 kills) slew 1,335 Husks, 526 Ghouls, 252 Brutes, 207 Cinder Witches and 191 Bloaters (53 / 21 / 10 / 8 / 8%). Later chapters spawn more and tilt the mix (Ember Wastes ×1.8 Witches, Abyssal Cathedral ×2 Bloaters, Crimson Throne ×1.6 Brutes). For a daily player (about 3 runs, ~1,800 kills a run):
   - for the five horde foes, tier I lands in the first run or two (Witches and Bloaters join the horde at 2:00, Brutes at 3:00) and tier II within one to three days;
   - tier III takes about 4 days for Husks, about 10 for Ghouls and 3–4 weeks for Brutes, Witches and Bloaters;
-  - about one Soul Thief shows up per run (one event in three), so if most are caught its 50 take about a month; Gravemaw's 50 are 50 clears.
+  - about one Soul Thief shows up per run (one event in three), so if most are caught its 50 take about a month; each boss's 50 are 50 kills of it: clears of its chapter (on any difficulty) or, every fifth boss, in the Endless Abyss. The bosses therefore pay out last: tier I with each chapter's first clear, tier II after ten clears, tier III over months.
   The last gems therefore arrive about a month in, and the Bestiary keeps paying out across the first season instead of in one day.
-- **Old saves:** the block is added with zeros. Gravemaw starts at the save's clear count, since every clear slew him, so a veteran opens the Bestiary with the Hollow King unlocked and his first milestones waiting. Wrong types and out-of-range values are coerced (`save.js`).
+- **Old saves:** the block is added with zeros (and saves from before the chapter bosses gain their four entries at zero). Gravemaw starts at the save's clear count, since before the chapter bosses every clear slew him, so a veteran opens the Bestiary with the Hollow King unlocked and his first milestones waiting. Wrong types and out-of-range values are coerced (`save.js`).
 - **Quests:** no Bestiary line joins the daily or weekly pool. "Slay 500 enemies" already rewards the same play, and a per-type quest ("Slay 50 Bloaters") would push players to farm one foe instead of playing the run.
 
 ---
 
-## 6. Boss: Gravemaw, the Hollow King
+## 6. The chapter bosses
 
-A three-phase fight in a sealed arena. All numbers live in `BOSS` and `BOSS_PHASES` (`data.js`). Damage values are × his touch damage.
+Each chapter ends with its own boss. All five fight the same three-phase fight in a sealed arena, with the same stats and the same shared attacks, and each adds a **twist** on those attacks and a **signature attack** of its own. All numbers live in `BOSS`, `BOSSES` and `BOSS_PHASES` (`data.js`), the fight in `boss.js`. Damage values are × the boss's touch damage. Below, "he" is any boss.
+
+| Ch | Boss | Colour | Twist on the shared attacks | Signature attack (phase weights I / II / III) | Phases |
+|---|---|---|---|---|---|
+| 1 | **Gravemaw, the Hollow King** | magenta | — | Summon (0.25 / – / –) | Hollow Tread · Ember Liturgy · Crown of Cinders |
+| 2 | **Pyrexa, the Cinder Matron** | ember | Each slam ring leaves a burning band for 3 s | Cinder Rain (0.25 / 0.25 / 0.2) | Smoulder · Firestorm · Pyre Eternal |
+| 3 | **Vaulkar, the Ossuary Colossus** | ice blue | Each slam ring leaves 4 / 7 / 10 frost shards (0.75 m, 3.5 s) | Glacier Lances (0.25 / 0.25 / 0.2) | Bone Tremor · White Silence · Absolute Zero |
+| 4 | **Azrathel, the Fallen Seraph** | violet | One extra wave in every ring volley | Smite (0.25 / 0.25 / 0.2) | Fallen Grace · Unholy Hymn · Last Judgement |
+| 5 | **Vesperine, the Crimson Queen** | crimson | Phase III starts at 50% | Blood Lances (0.25 / 0.25 / 0.2) | Court of Blood · Crimson Waltz · Blood Eclipse |
+
+- **Look and voice:** each has a painted 3D model (`ART_AND_ADS.md` §6), a painted portrait on its phase banners and Bestiary card, its colour on the boss bar, banners and telegraphs (danger marks lean toward crimson so they read against its own glow), its name and title on the bar ("Pyrexa, the Cinder Matron"), its own warning ("THE CINDER MATRON APPROACHES"), a roar pitched to its size, its own enrage name (Hollow Dirge, Inferno, Deep Freeze, Divine Wrath, Bloodlust) and three announcer lines (arrival, Endless return, death).
+- **Why one frame:** the stats and the phase frame are balanced and tested; five separate fights would split that tuning five ways. The twist changes how the shared attacks are dodged and the signature adds a new problem, so each chapter's finale reads differently while the fight length stays on target.
 
 **HP and damage.** HP = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × Endless scale × difficulty boss HP (§8.2). The tune factors (1, 0.8, 0.75, 1.15, 1.2) even the fight out at about a minute for a player with that chapter's typical progression. That gives **Ch1 12,500 · Ch2 19,950 · Ch3 33,000 · Ch4 82,656 · Ch5 135,000**; the first Endless King has 62,500. Damage = 22 × (1 + 0.3(c−1)) × √scale × difficulty boss damage (§8.2). Measured with typical progression (`scripts/balance.mjs`, `GOD=1`): Ch1 ≈ 54 s · Ch2 ≈ 51–60 s · Ch3 ≈ 70–76 s · Ch4 ≈ 64 s · Ch5 ≈ 68 s.
 
@@ -364,11 +375,13 @@ A three-phase fight in a sealed arena. All numbers live in `BOSS` and `BOSS_PHAS
 
 | Phase | HP | Moves |
 |---|---|---|
-| **I: Hollow Tread** | 100–66% | Chase 2.3 m/s. Picks: slam 0.42 (within 13 m), ring 0.33, summon 0.25; no attack repeats except the slam. |
-| **II: Ember Liturgy** | 66–33% | Chase ×1.15, attack rate ×1.25, slam telegraph 1.1 s, orbs ×1.1 speed. Picks: slam 0.4, rotating gap rings 0.6. |
-| **III: Crown of Cinders** | 33–0% | Enraged: chase ×1.35, attack rate ×1.35, slam telegraph 1.0 s, orbs ×1.2. Picks: slam 0.3, rings 0.3, spiral 0.4. The arena closes from 18 m to 12 m over 4 s. |
+| **I** | 100–66% | Chase 2.3 m/s. Picks: slam 0.42 (within 13 m), ring 0.33, signature (table above); no attack repeats except the slam. |
+| **II** | 66–33% | Chase ×1.15, attack rate ×1.25, slam telegraph 1.1 s, orbs ×1.1 speed. Picks: slam 0.4, rotating gap rings 0.6, signature. |
+| **III** | 33–0% (Vesperine 50–0%) | Enraged: chase ×1.35, attack rate ×1.35, slam telegraph 1.0 s, orbs ×1.2. Picks: slam 0.3, rings 0.3, spiral 0.4, signature. The arena closes from 18 m to 12 m over 4 s. |
 
-**His moves**
+Each phase opens with a banner naming it, with a one-line hint (Pyrexa's second: "FIRESTORM", "Phase II · Weave between the falling cinders").
+
+**Shared moves**
 - **Grave Slam:** he leaps onto the Shepherd's spot after a 1.2 s telegraph (1.1 s in phase II, 1.0 s in III). Three concentric rings follow 0.3 s apart:
   - ring 1, on landing, is a disc out to 3.65 m;
   - the 6 m and 9 m rings are ±0.65 m bands, with dashed white guides marking the safe lanes between them;
@@ -377,9 +390,16 @@ A three-phase fight in a sealed arena. All numbers live in `BOSS` and `BOSS_PHAS
   - recovery 1.9 s.
 - **Ember Ring:** a 1.0 s fan telegraph, then 24 orbs with 2 opposite gaps (about 48° each) at 6 m/s, 0.6× each. Recovery 1.6 s.
 - **Rotating gap rings (phase II and later):** 3 waves 0.5 s apart, each gap turned ±0.35 rad. The fan shows the next gap solid and later ones dashed.
-- **Summon:** rune circles for 1.0 s, then 6 adds around him at 3.2 m (every 3rd a Ghoul). Recovery 1.4 s.
 - **Spiral (phase III):** a 1.0 s sigil shows the curl and spin direction. Then 4 arms for 2.5 s (one orb per arm every 0.09 s, 0.75 rad/s, 5.5 m/s, 0.55× each). The Shepherd starts between two arms.
 - **Crown aura (phase III):** minions within 3.2 m take 1.5× damage per second, scaling from 12 crowding minions to full strength at 32, so a banked legion can't delete the last phase.
+
+**Signature attacks** (counts are by phase I / II / III)
+- **Summon (Gravemaw):** rune circles for 1.0 s, then 6 adds around him at 3.2 m (every 3rd a Ghoul). Recovery 1.4 s.
+- **Cinder Rain (Pyrexa):** 5 / 7 / 9 fireballs lobbed 0.16 s apart onto marked circles (1.45 m): the first where the Shepherd will be in 0.35 s, the rest 1.6–5.5 m around him. Each lands 1.1 s after it leaves her hand, deals 0.6× and leaves the ground burning. Liora's Death Knell clears them in flight. Recovery 1.5 s.
+- **Glacier Lances (Vaulkar):** 3 / 4 / 5 lanes fanned 0.42 rad apart, aimed at the Shepherd, each 6 frost shards from 2.2 m out, 1.25 m apart. Every spot is marked for 1.0 s plus 0.12 s per step outward (a ripple), then erupts into a 0.7 m shard that stands 2 s (0.5×). Recovery 1.4 s after the last.
+- **Smite (Azrathel):** 3 / 4 / 5 pillars of light, 0.6 s apart, each aimed where the Shepherd will be in 0.45 s and marked for 1.1 s. A 2.1 m strike (+0.2 m grace) deals 1.1× to the Shepherd and 0.6 × 1.1× to minions inside. Recovery 1.5 s.
+- **Blood Lances (Vesperine):** she raises her scepter over a cone toward the Shepherd for 1.0 s, then 2 / 3 / 3 fans of 7 blood orbs (0.95 rad, 8 m/s, 0.55×) fly down it 0.45 s apart; each fan fills the gaps of the last. Recovery 1.4 s.
+- Every mark is withdrawn if a phase roar interrupts the attack, and every signature telegraph is at least 1.0 s.
 
 **Fight rules**
 - **Phase transitions:** a 2 s immune roar.
@@ -389,15 +409,21 @@ A three-phase fight in a sealed arena. All numbers live in `BOSS` and `BOSS_PHAS
   - Minions that hit him while he's immune take no recoil.
 - **Phase floor:** phase I lasts at least 18 s and phase II at least 14 s. Reach the tick sooner and he is held there (IMMUNE, white bar with a "WARD n" countdown) until the phase has played out, so a huge legion can't skip phases. Damage poured into the ward shortens it by 1 s per 5% of his max HP, so strong builds shatter it faster.
 - **Soul Nova** and gate soul bursts hurt him at **50%, capped at 25% of max HP per Nova**. Damage numbers show what actually landed.
-- **Hollow Dirge (soft enrage):** 180 s after he spawns he gains +50% damage and attack rate, with a banner. Telegraphs never shorten.
-- **Chapter twists:**
-  - Ch2: each slam ring leaves a burning band for 3 s.
-  - Ch3: each ring leaves 4 / 7 / 10 frost shards (0.75 m, 3.5 s).
-  - Ch4: one extra wave per ring volley.
-  - Ch5: phase III starts at 50%.
-  - Endless follows the modifier rotation by depth.
+- **Soft enrage** (Hollow Dirge, Inferno, Deep Freeze, Divine Wrath, Bloodlust): 180 s after he spawns he gains +50% damage and attack rate, with a banner. Telegraphs never shorten.
+- **Twists:** each boss brings its own (table above), in its chapter and in the Endless Abyss alike.
 - **Accessibility floor:** no damaging telegraph is under 1.0 s in any chapter, phase or enrage state.
 - **On his death:** every enemy is cleared, all shards fly to the player and 30 souls join the legion. In the campaign the chapter is cleared.
+
+**Balance check (2026-10-08, `scripts/balance.mjs`, Vael, Normal, typical progression).** The bosses of Chapters 2–5 against the build before them, in which every chapter fought Gravemaw with its twist. The twists are the old chapter twists, so only the signature attacks are new, and they replace Gravemaw's summon in phase I and join phases II and III at about a fifth of the picks.
+
+| Ch | Boss | Fight, before → after (`GOD=1`, s) | Damage taken in the run, before → after (`GOD=1`) |
+|---|---|---|---|
+| 2 | Pyrexa | 29 → 35 | 626 → 1,087 |
+| 3 | Vaulkar | 36 → 29 | 1,441 → 854 |
+| 4 | Azrathel | 44 → 32 | 1,203 → 718 |
+| 5 | Vesperine | 38 → 34 | 1,505 → 764 |
+
+Three runs per cell, so the spread is wide (one Ch2 run took 209 damage, another 1,126, on the same build). Fight length stays inside the old band and nothing points to a harder finale; the signatures trade the summon's adds (which fed the legion) for dodging, and the bot does not dodge. Without `GOD=1` (4 runs per chapter, 16 a side) the same 3 runs died in the boss fight on both builds, and the bot won 4 of the 7 fights it reached before and 5 of 8 after; most of its deaths come earlier, in the horde.
 
 ---
 
@@ -503,14 +529,14 @@ Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s,
 | 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul weight ×1.5, packs of 6–8; **ice patches** (12 m grid, 50% of cells, radius 2.6–4.4 m): on ice the Shepherd accelerates at 30% of normal, stops with 20% of normal friction and gets +8% top speed | ~25 |
 | 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | Bloater weight ×2; vignette 1.25 and ground fog pulled in from 26 to 17 m; **abyssal hands** every 6–9 s aimed 0.6 s ahead (1.3 m, 1.0 s telegraph, 0.6 s root) | ~60 |
 | 5 | Crimson Throne | Blood red | 7.50 | 1.60 | **8 elites** (45, 75, 110, 150, 185, 225, 255, 290 s); Brute weight ×1.6 | ~110 |
-| ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; Gravemaw returns every 5:00, +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
+| ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; a boss rises every 5:00 (the five in turn, from Gravemaw), +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
 
-Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with the intro card naming the chapter and its twist (below). Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Gravemaw dies in Chapter N (on Normal). Endless Abyss unlocks after the first Chapter 5 clear. Every campaign chapter can then be replayed on **Nightmare** and **Torment** (§8.2).
+Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with the intro card naming the chapter and its twist (below). Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Chapter N's boss dies (on Normal). Endless Abyss unlocks after the first Chapter 5 clear. Every campaign chapter can then be replayed on **Nightmare** and **Torment** (§8.2).
 
 **Chapter art.** Each chapter has a painted 16:9 key art (`src/assets/art/chapter-N.webp`; Endless Abyss is chapter 6; style and jobs in `ART_AND_ADS.md`).
 - **Home chapter card:** the selected chapter's painting fills the card behind its content. Gradients darken the edges (behind the arrows), the centre (behind the name) and the bottom (behind the difficulty selector), with the chapter's rune colour glowing at the top, so the name, record line, selector and arrows stay readable. A new chapter's painting fades in over the last one in 0.45 s, and the neighbouring paintings are decoded ahead of a swipe. A locked chapter's painting is greyed. The card keeps its size and layout on every phone; the layers are absolutely positioned behind the content.
 - **Run intro card** (`src/ui/runintro.js`), replacing the old chapter banner at 0:00.6:
-  - **What it shows:** for about 2.4 s, the chapter's painting as a wide strip feathered at the edges, the chapter number (or "Endless", or "Daily Trial · Chapter N"), the chapter name in Cinzel under a glowing rule, and its twist (the modifier tagline; Chapter 1: "Survive 6:00, then slay the Hollow King"; Endless: the first rotation's twist, e.g. "Ember Wastes: The witches' fire lingers"). Nightmare or Torment and Blood Moon show as tags beside the chapter number.
+  - **What it shows:** for about 2.4 s, the chapter's painting as a wide strip feathered at the edges, the chapter number (or "Endless", or "Daily Trial · Chapter N"), the chapter name in Cinzel under a glowing rule, and its twist (the modifier tagline; campaign chapters without a modifier tag: "Survive 6:00, then slay the Hollow King", naming that chapter's boss; Endless: the first rotation's twist, e.g. "Ember Wastes: The witches' fire lingers"). Nightmare or Torment and Blood Moon show as tags beside the chapter number.
   - **Where:** in the top third, just under the timer (100 px from the top, 100–130 px tall), well clear of the Shepherd at screen centre. The legion counter, still 0, steps aside while it shows.
   - **Input and timing:** it takes no input (pointer-events off, so the joystick starts anywhere, on it too). It fades in over 0.35 s and out over 0.4 s, and goes when its own fade ends, so a first-frame hitch never cuts it short. The Daily Trial, Blood Moon and Nightmare / Torment banners still open at 0:03.6, after it has gone. Endless depth changes keep their "THE ABYSS SHIFTS" banner.
   - **Reduce flashes** (§17) drops its light flare and the glow on the rule.
@@ -518,8 +544,8 @@ Chapters differ in palette, HP mult, spawn mult, the modifiers above and the cha
 
 **Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
 
-- **Enemy HP** = BaseHP × chapter HP mult × (1 + 0.28m + 0.04m²) × difficulty HP (§8.2; 1 on Normal, ramping in from 1 over the first minutes, and 1 for Gravemaw's arena adds)
-- **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)) × difficulty damage (1 for Gravemaw's arena adds). Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84 (on Normal).
+- **Enemy HP** = BaseHP × chapter HP mult × (1 + 0.28m + 0.04m²) × difficulty HP (§8.2; 1 on Normal, ramping in from 1 over the first minutes, and 1 for the boss's arena adds)
+- **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)) × difficulty damage (1 for the boss's arena adds). Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84 (on Normal).
 - **Spawn rate (enemies/s)** = (1.1 + 0.85m + 0.22m²) × chapter spawn mult × difficulty spawn, with a limit of 200 / 280 / 340 enemies alive at once (low / mid / high quality tier). Swarm rings and elites come on top and are not scaled by chapter.
 - **Elite HP** = 6 × Enemy HP · **Boss HP** = 12,500 × chapter HP mult × (1 + 0.05(c−1)) × chapter tune × difficulty boss HP (§6, §8.2)
 - **The Shepherd's side:** minion damage ×(1 + 0.45(c−1)), minion HP ×(1 + 0.4(c−1)) and Nova damage ×(1 + 0.45(c−1)).
@@ -540,7 +566,7 @@ Chapters differ in palette, HP mult, spawn mult, the modifiers above and the cha
 
 These are upper bounds: when the alive limit is reached, the director skips spawns.
 
-**Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). Gravemaw returns every 5:00 with HP `12,500 × 4.0 × 1.25 × (1 + 0.6k)` (62,500 for the first, k = kills so far), and every return replays all three phases and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per Gravemaw plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. Endless is **Normal only**: it already escalates without end, so the chapter card hides the difficulty selector there (§8.2). *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
+**Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). A boss rises every 5:00, the five chapter bosses in turn (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine, then Gravemaw again, each with its own twist and signature; the warning reads "… RETURNS" from the sixth), with HP `12,500 × 4.0 × 1.25 × (1 + 0.6k)` (62,500 for the first, k = kills so far), and every return replays all three phases and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per boss plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. Endless is **Normal only**: it already escalates without end, so the chapter card hides the difficulty selector there (§8.2). *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
 
 ### 8.1 Daily Trial
 
@@ -579,16 +605,16 @@ Every campaign chapter can be replayed on two harder difficulties for long-term 
 | Elites | 4 (8 in Ch5) | +2, at 3:10 and 5:20 | +4, also at 1:55 and 4:20 |
 | Affixes per elite (§5.1; `run.diff.eliteAffixes` is the extra) | 1 (2 from Ch4) | +1: 2 (3 from Ch4) | +2: 3 (4 from Ch4) |
 | Soul shard XP | ×1 | ×2 | ×2.8 |
-| Gravemaw HP · damage (his arena adds are plain Normal adds) | ×1 · ×1 | ×1.4 · ×1.4 | ×1.5 · ×1.6 |
+| Boss HP · damage (its arena adds are plain Normal adds) | ×1 · ×1 | ×1.4 · ×1.4 | ×1.5 · ×1.6 |
 | Run gold · pass XP | ×1 · ×1 | ×1.75 · ×1.5 | ×2.5 · ×2 |
 | First clear (once per chapter) | 70–150 gems + 1 sigil | +60 gems | +120 gems |
-| Gravemaw's Hoard | §10 | Rare 60% / Epic 40% | Epic 98% / Legendary 2% |
+| Boss Hoard | §10 | Rare 60% / Epic 40% | Epic 98% / Legendary 2% |
 | World palette | the chapter's | mixed 70% toward violet | mixed 85% toward blood red on black |
 
 - **Three rules keep the harder tiers fair rather than grindy.** Each came from the balance bot:
   - **HP ramp:** the extra HP builds up from ×1 at 0:00 to its full value over the ramp. Damage, spawns and elites apply at once. With a flat ×3.5–4.5, Chapter 5 Torment Husks had ~470 HP at 0:00, and the bot died at level 2 with ~100 kills: a wall, not a challenge.
-  - **Richer souls:** shard XP is multiplied. A tougher horde dies more slowly, and without this the Shepherd met Gravemaw ~10 levels behind a Normal run.
-  - **Gravemaw scales less than the horde, and once he rises his arena adds are plain Normal adds (HP and damage).** Tough adds piled up at the arena's alive cap and soaked the Shepherd's weapons, and harder hits (his and theirs) shredded the legion that fights him, stretching Nightmare fights past 8 minutes. He alone carries the difficulty in his arena. The target is a fight no more than about 1.6× its Normal length.
+  - **Richer souls:** shard XP is multiplied. A tougher horde dies more slowly, and without this the Shepherd met the boss ~10 levels behind a Normal run.
+  - **The boss scales less than the horde, and once it rises its arena adds are plain Normal adds (HP and damage).** Tough adds piled up at the arena's alive cap and soaked the Shepherd's weapons, and harder hits (the boss's and theirs) shredded the legion that fights it, stretching Nightmare fights past 8 minutes. The boss alone carries the difficulty in its arena. The target is a fight no more than about 1.6× its Normal length.
 - **Look and feedback:** the ground, runes, rim light and fog are pulled toward the difficulty's palette, the same swap as the Blood Moon look and applied over it on Blood Moon weekends. Allies and enemies keep their colours (§14). The HUD shows a NIGHTMARE or TORMENT tag under the chapter name. The run intro card tags it, and a banner at 0:03.6 names it (the Blood Moon banner names it instead on weekends). The pause and results screens show a difficulty pill with its gold multiplier.
 - **Records:** best time, best legion, best kills, best kill streak (§4.7) and a cleared flag are kept per chapter per difficulty (`profile.diff.best`). Normal's clear flag stays in the chapter record. Old saves migrate safely: the block is added, Normal records are seeded from the chapter records, and Nightmare opens on every chapter already cleared.
 - **Quests:** "Clear a chapter on Nightmare" and "Slay 5 elites on Nightmare" join the late daily-quest pool (Torment counts for both, §2).
@@ -625,7 +651,7 @@ A Chapter 1 clear produces about 2,000 kills at about 1 XP each, plus 132 XP fro
 
 **Gold** = round( (0.9 × K + 2.2 × T + 400 × c × B) × (1 + G) × P × D + bonus )
 
-K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if Gravemaw was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, D = the difficulty's gold multiplier (Normal 1, Nightmare 1.75, Torment 2.5; §8.2; the flat bonus is not multiplied), bonus = 150 per "Grave Gold" card + 40 per affix on each slain elite (§5.1) + 100 + 40c per slain Soul Thief (§4.8). Blood Moon doubles the run's gold and gems, and the rewarded-ad "double rewards" then grants the (doubled) gold and gems a second time, so the two stack to ×4 (×10 the Normal base on a Torment Blood Moon run).
+K = total kills (player and minions), T = seconds survived including the boss fight (max 960), B = 1 if the boss was killed, c = chapter, G = gold bonus (Greed talent + Grave Coin relic), P = 1.2 with an active Soul Pact, D = the difficulty's gold multiplier (Normal 1, Nightmare 1.75, Torment 2.5; §8.2; the flat bonus is not multiplied), bonus = 150 per "Grave Gold" card + 40 per affix on each slain elite (§5.1) + 100 + 40c per slain Soul Thief (§4.8). Blood Moon doubles the run's gold and gems, and the rewarded-ad "double rewards" then grants the (doubled) gold and gems a second time, so the two stack to ×4 (×10 the Normal base on a Torment Blood Moon run).
 
 | Example (G = 0) | Full clear (T = 7:00) | Death at 4:00 (no boss) |
 |---|---|---|
@@ -636,7 +662,7 @@ K = total kills (player and minions), T = seconds survived including the boss fi
 - **Gems per run:** a clear gives 10 + 2c (12–20). A defeat gives 2 gems per full 2 minutes survived (4 at 4:00). The same on every difficulty.
 - **Pass XP per run** = round( round(20 + T/6 + K/40 + 40 × B) × X ), where X = 1 / 1.5 / 2 on Normal / Nightmare / Torment: about 180 for a Ch1 clear and 82 for a death at 4:00 on Normal. Account XP gets the Normal amount (without X). Account level n → n+1 needs 80 + 40n XP, and every account level-up gives 20 gems.
 - **First-clear bonus:** 50 + 20c gems in all (Ch1 70 · Ch2 90 · Ch3 110 · Ch4 130 · Ch5 150), that is the usual 10 + 2c clear gems plus a one-time 40 + 18c, and 1 Altar Sigil. The first **Nightmare** clear of a chapter adds **+60 gems** and the first **Torment** clear **+120 gems** on top of the 12–20 clear gems, once per chapter per difficulty (900 gems in total). Every first-clear bonus is flat: Blood Moon and the rewarded-ad double apply only to the clear gems.
-- **Gravemaw's Hoard** (every boss kill): one relic of a random type. Odds by difficulty:
+- **Boss Hoard** (every boss kill): one relic of a random type. Odds by difficulty:
 
 | Hoard rarity | Common | Rare | Epic | Legendary |
 |---|---|---|---|---|
@@ -666,7 +692,7 @@ Campaign runs never dropped Legendaries before Torment (the Endless Epic+ relic 
 | Vael, the Gravecaller | Common | 100 | 6.2 | Soul Bolt | +10% Raise Chance (pp) | **Grave Call** (20 s): for 4 s every kill rises; shards within 12 m fly in | Free (starter) |
 | Nyx Hollowborn | Rare | 110 | 6.5 | Spectral Scythe | Minions +20% speed and damage | **Shadow Step** (8 s): an invulnerable 7 m dash that cuts its path; the legion surges +60% for 3 s | Starter Pack / Epic summon shards |
 | Seraphine Ashveil | Epic | 105 | 6.4 | Ashen Chains | Soul Nova charges 30% faster, and foes her Nova kills rise at ×2 Raise Chance (not halved) | **Ashfall** (18 s): burning chains strike and pin 20 foes on screen (elites, then Witches, first); +15% Nova charge | Epic and Legendary summon shards, Soul Pass S1 premium |
-| Liora Bellwraith | Epic | 105 | 6.3 | Grave Pulse | Her pulses mark foes for 3 s; marked foes rise at ×2 Raise Chance whoever kills them (85% cap). Her pulses push foes 75% less, so they stay inside her legion's reach | **Death Knell** (15 s): a bell toll stuns foes within 5 m for 1.5 s and marks them for 5 s; it clears enemy fire (not Gravemaw's patterns) and silences Witches within 10 m | Epic summon shards |
+| Liora Bellwraith | Epic | 105 | 6.3 | Grave Pulse | Her pulses mark foes for 3 s; marked foes rise at ×2 Raise Chance whoever kills them (85% cap). Her pulses push foes 75% less, so they stay inside her legion's reach | **Death Knell** (15 s): a bell toll stuns foes within 5 m for 1.5 s and marks them for 5 s; it clears enemy fire (not a boss's patterns) and silences Witches within 10 m | Epic summon shards |
 | Mordrake the Undying | Legendary | 130 | 6.0 | Bone Spears | Legion cap +25%; revive once per run at full HP | **Ossuary Wall** (18 s): a 5 m ring of bone spikes for 5 s that throws foes out, shatters Witch fire and heals the legion inside | Legendary summon shards |
 
 **Balance check (2026-10-06, before Hero Rites).** The balance bot (`HERO=<id> npm run balance`) played every hero at equal progression on Chapters 2 and 4, 6 to 10 runs each. Average survival (§11.1 has the numbers with Rites):
@@ -699,13 +725,13 @@ Each hero has a signature active ability, a **Rite**, on its own RITE button (§
 |---|---|---|---|
 | Vael | **Grave Call** | 20 s | For 4 s every kill rises (Raise Chance 100%). The legion cap and its overflow rules still hold: a roll at the cap mends the weakest minion instead. Soul shards within 12 m fly to Vael for the whole call. |
 | Nyx | **Shadow Step** | 8 s | Dashes 7 m in 0.18 s along the stick (her facing when idle), invulnerable for 0.4 s. It slips abyssal hands and slam shoves. Foes within 1.5 m of the path take 90 and are knocked aside. The legion moves +60% faster for 3 s to catch up. |
-| Seraphine | **Ashfall** | 18 s | Burning chains fall on up to 20 foes on screen over 0.5 s: Gravemaw and elites first, then Cinder Witches, then the nearest. Each takes 120, is pinned (stunned) for 0.8 s and burns for 60% of the hit over 2 s; a kill while burning gets +15 pp Raise Chance (85% cap). If a struck foe dies first, its chain finds the nearest unstruck foe within 3 m. Adds +15% Soul Nova charge (not mid-detonation). |
-| Liora | **Death Knell** | 15 s | A great bell tolls around her. Every foe within 5 m is stunned for 1.5 s, takes 60 and carries her toll for 5 s (her passive's ×2 Raise Chance, whoever lands the kill; the passive's own mark lasts 3 s). Every enemy shot and Witch fire orb in flight is cleared (Gravemaw's ring and spiral orbs fly on), and Cinder Witches out to 10 m are stunned too, so their next fire waits. |
+| Seraphine | **Ashfall** | 18 s | Burning chains fall on up to 20 foes on screen over 0.5 s: the boss and elites first, then Cinder Witches, then the nearest. Each takes 120, is pinned (stunned) for 0.8 s and burns for 60% of the hit over 2 s; a kill while burning gets +15 pp Raise Chance (85% cap). If a struck foe dies first, its chain finds the nearest unstruck foe within 3 m. Adds +15% Soul Nova charge (not mid-detonation). |
+| Liora | **Death Knell** | 15 s | A great bell tolls around her. Every foe within 5 m is stunned for 1.5 s, takes 60 and carries her toll for 5 s (her passive's ×2 Raise Chance, whoever lands the kill; the passive's own mark lasts 3 s). Every enemy shot and Witch fire orb in flight is cleared (a boss's ring, spiral and fan orbs fly on; Pyrexa's lobbed cinders are cleared), and Cinder Witches out to 10 m are stunned too, so their next fire waits. |
 | Mordrake | **Ossuary Wall** | 18 s | A ring of bone spikes (5 m) erupts around him for 5 s and moves with him. Foes inside are thrown out; every crossing cuts for 60 with knockback (at most once per 0.5 s per foe). Witch fire that would land inside shatters on the bone. Minions inside heal 50% of their max HP over the 5 s. |
 
 **Stun** (`Enemies.stun`): a stunned foe neither steers nor attacks, and only drifts on its knockback. A Brute wind-up, a Ghoul crouch or lunge and a Bloater fuse in progress are called off, and the Bloater's fuse circle goes out with it. Stunned foes stop waddling and three pale daze motes circle their heads.
 
-**Gravemaw keeps his rules.** Rite damage goes through his own filter (immune while rising, roaring or warded; phase floors). A stun never stops him: it only pushes his next attack back by 0.25 s while he is chasing. The Ossuary Wall only leans on him (1.2 m/s outward) instead of throwing him out, and neither it nor the Death Knell clears his ring and spiral orbs. Ashfall strikes him first. Grave Call cannot raise him.
+**Bosses keep their rules.** Rite damage goes through the boss's own filter (immune while rising, roaring or warded; phase floors). A stun never stops a boss: it only pushes its next attack back by 0.25 s while it is chasing. The Ossuary Wall only leans on him (1.2 m/s outward) instead of throwing him out, and neither it nor the Death Knell clears his ring and spiral orbs. Ashfall strikes him first. Grave Call cannot raise him.
 
 **Look and feel.** Each Rite is meant to sell the hero in the Soul Altar:
 - *Grave Call:* a 12 m rune ring around Vael, a heartbeat pulse ring every second, souls streaming in from the rim, and a cyan soul pillar (in the legion colour) wherever a foe rises. Slow motion 0.25 s.
@@ -785,13 +811,13 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 | Nightmare (any chapter) | The chapter's colours mixed 70% toward #3a1f62 / #140830 | Violet runes #b04bff, near-black fog #080312 | Same swap as the Blood Moon look (§2), blended so each chapter stays recognisable; allies and enemies keep their colours |
 | Torment (any chapter) | Mixed 85% toward #2c0a0e / #0b0204 | Blood-red runes #ff1a2e, black fog #040001 | Darker than Blood Moon; enemies' emissive cores and gold elites still read against it |
 
-- **Readability:** strong silhouettes, an emissive core on every unit, additive particles, screen shake (scalable), 65–90 ms hit-stop on elite kills, Gravemaw's phase changes, ×2/×3 gates and the Nova blast (§4.7). Enemy telegraphs are ground decals that fill from the edge inward.
+- **Readability:** strong silhouettes, an emissive core on every unit, additive particles, screen shake (scalable), 65–90 ms hit-stop on elite kills, boss phase changes, ×2/×3 gates and the Nova blast (§4.7). Enemy telegraphs are ground decals that fill from the edge inward.
 - **Minions:** Shades are instanced soul wisps with particle trails. Every other variant is a **spectral ghost of its source enemy's silhouette** in the legion colour: an opaque emissive body with a hot rim, a ripple running up the body and a tail that dissolves into the ground, plus a halo glow sprite and a trail (one instanced mesh per variant). Champions add a gold rim, eyes and halo. *(Planned: at 300+ minions, trails switch to a shared ribbon per ring for performance.)*
 - **UI:** obsidian panels with cyan rune trim. Premium currency and offers use gold. Display font is a gothic serif (e.g. Cinzel); body font is a clean sans (e.g. Inter). Numbers on gates and legion count are huge and outlined. Painted art (heroes, chapters, Bestiary foes, the Hollow King) carries the menus; chapter paintings sit behind the chapter card, the run intro card and the results header, always darkened behind text (§8, §5.2). Every item the player collects or picks is painted too, in one shared style (an object glowing on a dark ground that fades into its frame): the 8 relics, the 20 abilities (6 weapons, 8 passives, 6 evolutions, also used by the talents with the same stat), the 6 gem packs and the Eclipse Vael skin. The HUD's 30 px skill slots keep line icons, which read better at that size (`ART_AND_ADS.md` §1). **The heroes themselves are 3D models built from their painted art**: a turnaround sheet of each splash, turned into a textured model, then rigged (`ART_AND_ADS.md` §4). They run when the hero moves and idle when it stands, on the home screen and in every run, keeping the weapon stance of their art; Eclipse Vael has its own. **So are the foes**: the horde, the legion's ghosts, the Soul Thief and the Hollow King are painted 3D models from their Bestiary art. A vertex shader walks them, so hundreds stay one draw call per type, and their eyes and ember cracks burn in the chapter's foe colour (gold on elites) (`ART_AND_ADS.md` §6). **Every chapter is a painted place, kept dark**: the painted floor and props surface only in the lantern's and the legion's light, under a cold moon with creeping shadows. Each chapter has its own painted floor (lava veins glowing in the Ember Wastes, frozen bones in the Ossuary, gold-inlaid marble in the Throne), its own painted 3D props (graves and soul lamps, braziers, ice, gargoyles, gilded knights, void crystals) whose flames light the floor, and its own weather (ash, embers, snow, motes, dust, starlight) (`ART_AND_ADS.md` §5). The painted texture leads the shading, the hero's rim light only accents it, and glowing paint (eyes, flames, blades) blooms.
 
 ## 15. Audio direction
 
-*Status: the build has menu, battle and boss music tracks plus a faster, harsher **Crown of Cinders** track for Gravemaw's last phase, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). Elite affixes and run events add a glass ward shatter, the Splitter's pop, the Commander's rout horn, the Soul Thief's jingle-and-cackle and its escape whoosh, the shrine's bell chime and the coffin's wood-splitting boom. Rendered offline, they peak between −19 and −7 dBFS before the master limiter, the same range as the existing SFX, so none of them clips. Each Hero Rite has its own signature sound (a funeral bell and rising souls for Grave Call, a tearing whoosh and ringing blade for Shadow Step, a hymn and a cascade of chain strikes for Ashfall, a great bell for Death Knell, heaving earth and splintering bone for Ossuary Wall) plus a soft rising chime when a Rite is ready again (§11.1); rendered offline, all are clearly audible and none clips. The stem system below is Planned.*
+*Status: the build has menu, battle and boss music tracks plus a faster, harsher last-phase track for every boss's phase III, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). Elite affixes and run events add a glass ward shatter, the Splitter's pop, the Commander's rout horn, the Soul Thief's jingle-and-cackle and its escape whoosh, the shrine's bell chime and the coffin's wood-splitting boom. Rendered offline, they peak between −19 and −7 dBFS before the master limiter, the same range as the existing SFX, so none of them clips. Each Hero Rite has its own signature sound (a funeral bell and rising souls for Grave Call, a tearing whoosh and ringing blade for Shadow Step, a hymn and a cascade of chain strikes for Ashfall, a great bell for Death Knell, heaving earth and splintering bone for Ossuary Wall) plus a soft rising chime when a Rite is ready again (§11.1); rendered offline, all are clearly audible and none clips. The stem system below is Planned.*
 
 *The build is also **voiced**: an announcer and the five Shepherds, 32 recorded lines (cast and scripts in `ART_AND_ADS.md` §3). They are the only recorded audio; each is mastered to −16 LUFS, mono, and decoded once after the first tap. Tunables are in `VOICE` (`data.js`).*
 

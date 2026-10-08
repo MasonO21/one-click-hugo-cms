@@ -1,8 +1,10 @@
-// Gravemaw, the Hollow King: a three-phase fight inside a sealed rune arena (tunables: BOSS_PHASES in data.js).
-// I Hollow Tread: ring slams, a gap ring, summons. II Ember Liturgy: faster, rotating gap rings, waves from the edge.
-// III Crown of Cinders: spiral stream, the arena closes, Brutes join the waves, enraged. Immune 2 s roars between phases.
+// The chapter bosses (BOSSES in data.js): Gravemaw, Pyrexa, Vaulkar, Azrathel and Vesperine share a three-phase fight
+// inside a sealed rune arena (tunables: BOSS_PHASES). I: ring slams, a gap ring and the boss's signature attack.
+// II: faster, rotating gap rings, waves from the edge. III: a spiral stream, the arena closes, Brutes join the waves.
+// Immune 2 s roars between phases. Each boss adds a twist to the shared attacks and a signature of its own:
+// Gravemaw raises the dead, Pyrexa's Cinder Rain, Vaulkar's Glacier Lances, Azrathel's Smite, Vesperine's Blood Lances.
 import * as THREE from 'three';
-import { BOSS, BOSS_PHASES as BP, HITSTOP } from './data.js';
+import { BOSS, BOSSES, bossFor, BOSS_PHASES as BP, HITSTOP } from './data.js';
 import { bossGeometry } from '../engine/models.js';
 import { makeCharMaterial } from '../engine/materials.js';
 import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
@@ -11,7 +13,8 @@ import { makeArenaRing, makeArenaWall, makeSlamRings, makeGapFan, makeSpiralSigi
 
 const TAU = Math.PI * 2;
 const WALL_H = 2.4, SLAM_S = BP.slam.radii[2] + BP.slam.halfW + 0.35, FAN_S = 9.5, SIGIL_S = 10, GAP_HALF = 0.32;
-const MAX_SHARDS = 40;
+const MAX_SHARDS = 96;
+const ROMAN = ['I', 'II', 'III'];
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const WHITE = new THREE.Color(0xffffff);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -24,7 +27,9 @@ export class Boss {
     this.mesh = null;
     this.state = 'none';
     this.phase = 0;
-    this.zones = [];   // lingering slam hazards (Ch2 fire bands, Ch3 frost shards)
+    this.zones = [];   // lingering hazards: fire bands, frost shards (t < 0: erupting later, marked meanwhile)
+    this.strikes = []; // Azrathel's Smite: pillars of light still to fall
+    this.rainQ = [];   // Pyrexa's Cinder Rain: lobs still to throw
     this.pending = []; // telegraphed spawns at the arena edge
     this.slams = [];   // pooled ring-slam decals
     this.arena = { x: 0, z: 0, r: 0, from: 0, to: 0, closeT: 0, seal: 0, on: false, purged: false, drop: 0, hitA: 0, hitK: 0, sparkT: 0, hapT: 0 };
@@ -48,43 +53,46 @@ export class Boss {
     sc.add(this.ring, this.wall, this.fan, this.sigil, this.shards);
   }
 
-  /** scale > 1 makes a stronger King (Endless Abyss returns). */
+  /** The chapter's boss (in the Endless Abyss the next in turn); scale > 1 makes it stronger (each abyss depth). */
   spawn(scale = 1) {
     const run = this.run, P = run.player, ch = run.chapter;
     if (this.mesh) { run.scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mat.dispose(); this.mesh = null; }
     this.build();
+    this.id = bossFor(ch, run.bossKills);
+    const K = this.kit = BOSSES[this.id], hex = K.color;
     const x = P.x, z = P.z - 11;
     const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * (run.tutorial ? BOSS.firstRun : 1) * scale * run.diff.bossHp, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) * run.diff.bossDmg });
     this.e = e;
     run.bossEnemy = e;
-    this.color = new THREE.Color(ch.boss);
-    // the painted King (loaded at boot; the procedural one if it is not ready): his crown, eyes and heart burn in the
-    // chapter's boss colour, his robe stirs and his arms sway
-    const pm = foeModel('gravemaw');
-    if (!pm) loadFoeModel('gravemaw');
+    this.color = new THREE.Color(hex);
+    this.danger = this.color.clone().lerp(new THREE.Color(0xff2e55), 0.35); // telegraphs: the boss's colour, warmed toward danger
+    // the painted boss (loaded at boot; the procedural King's shape if it is not ready): crown, eyes and glowing paint burn
+    // in the boss's colour, robes stir and arms sway
+    const pm = foeModel(this.id);
+    if (!pm) loadFoeModel(this.id);
     this.mat = pm
-      ? makeCharMaterial({ map: pm.map, glow: pm.glow, glowTint: 0.6, rim: ch.boss, rimK: 0.6, emit: 3, anim: 1, gait: true, ambient: 0x6e6878, key: 0x8e86a0, plColor: ch.boss, plRadius: 6 })
-      : makeCharMaterial({ rim: ch.boss, emit: 3, anim: 0.3, ambient: 0x3a3048, key: 0x9a8ab8, plColor: ch.boss, plRadius: 6 });
-    if (pm) setGait(this.mat, pm);
+      ? makeCharMaterial({ map: pm.map, glow: pm.glow, glowTint: 0.6, rim: hex, rimK: 0.6, emit: 3, anim: 1, gait: true, ambient: 0x6e6878, key: 0x8e86a0, plColor: hex, plRadius: 6 })
+      : makeCharMaterial({ rim: hex, emit: 3, anim: 0.3, ambient: 0x3a3048, key: 0x9a8ab8, plColor: hex, plRadius: 6 });
+    if (pm) { setGait(this.mat, pm); this.mat.uniforms.uAmbient.value.multiplyScalar(pm.lit); this.mat.uniforms.uKey.value.multiplyScalar(pm.lit); }
     this.glow0 = pm ? pm.glow : 0;
+    this.h = pm ? pm.h : 4.6;
     this.mat.uniforms.uTint.value.copy(this.color);
     this.mesh = new THREE.Mesh(pm ? pm.geometry.clone() : bossGeometry(), this.mat);
     run.scene.add(this.mesh);
-    this.col = hdr(ch.boss, 3.5);
-    this.hot = hdr(new THREE.Color(ch.boss).lerp(WHITE, 0.5).getHex(), 4);
-    this.orb = { col: this.color.clone().lerp(WHITE, 0.3).multiplyScalar(3.4), glow: hdr(ch.boss, 3.2), sc: 1.35, hr: 0.22, life: 4 };
+    this.col = hdr(hex, 3.5);
+    this.hot = hdr(new THREE.Color(hex).lerp(WHITE, 0.5).getHex(), 4);
+    this.orb = { col: this.color.clone().lerp(WHITE, 0.3).multiplyScalar(3.4), glow: hdr(hex, 3.2), sc: 1.35, hr: 0.22, life: 4 };
     // fight state
     this.state = 'enter'; this.t = 0; this.cd = 2.5; this.y = -5;
     this.phase = 0; this.pendingPhase = 0; this.immune = BP.rise; this.lockHp = this.lastHp = e.maxHp;
     this.novaId = -1; this.novaDealt = 0;
     this.fightT = 0; this.phaseT = 0; this.held = false; this.dirge = false; this.baseDmg = this.dmg = e.dmg; this.rate = 1; this.last = '';
-    // chapter twist: 2 fire rings, 3 frost shards, 4 extra ring, 5 early Crown; Endless follows its modifier rotation by depth
-    const rot = ch.mods && ch.mods.rotate;
-    this.twist = ch.endless ? (rot ? rot[run.bossKills % rot.length] : 0) : ch.id;
+    // the boss's twist on the shared attacks: 2 fire rings, 3 frost shards, 4 extra ring, 5 early phase III
+    this.twist = K.twist;
     this.thresholds = [BP.phases[1].from, this.run.tutorial ? -1 : this.twist === 5 ? BP.ch5Crown : BP.phases[2].from]; // first run: no phase III
-    this.nextWave = Infinity; this.zones.length = 0; this.pending.length = 0; this.shards.count = 0;
+    this.nextWave = Infinity; this.zones.length = 0; this.pending.length = 0; this.shards.count = 0; this.strikes.length = 0; this.rainQ.length = 0;
     for (const S of this.slams) { S.on = false; S.mesh.visible = false; }
-    for (const m of [this.slams[0].mesh, this.slams[1].mesh, this.slams[2].mesh, this.fan, this.sigil]) m.material.uniforms.uColor.value.copy(this.color).lerp(new THREE.Color(0xff2e55), 0.35);
+    for (const m of [this.slams[0].mesh, this.slams[1].mesh, this.slams[2].mesh, this.fan, this.sigil]) m.material.uniforms.uColor.value.copy(this.danger);
     this.fan.visible = this.sigil.visible = false;
     // seal the arena around the Shepherd
     const A = this.arena;
@@ -93,12 +101,13 @@ export class Boss {
     this.ring.position.set(A.x, 0.05, A.z); this.wall.position.set(A.x, 0, A.z);
     for (const m of [this.ring, this.wall]) { const u = m.material.uniforms; u.uColor.value.copy(this.color); u.uAlpha.value = 1; u.uSeal.value = 0; }
     run.fx.shake(0.6);
-    run.audio.sfx('boss_roar');
+    run.audio.sfx('boss_roar', { pitch: K.roar });
     run.audio.sfx('arena');
     run.audio.playMusic('boss');
-    run.ui.bossBar(true, `${BOSS.name}, ${BOSS.title}`, this.thresholds.filter((f) => f > 0));
+    run.ui.bossColor(hex);
+    run.ui.bossBar(true, `${K.name}, ${K.title}`, this.thresholds.filter((f) => f > 0));
     run.ui.bossImmune(true);
-    run.fx.telegraph(x, z, 3.2, 1.4, ch.boss);
+    run.fx.telegraph(x, z, 3.2, 1.4, hex);
     run.particles.burst(x, 0.5, z, 120, this.col, { speed: 10, life: 1.2, size: 0.7, up: 1.5 });
   }
 
@@ -115,6 +124,7 @@ export class Boss {
     if (this.pendingPhase > this.phase && this.state !== 'enter') this.startRoar(e);
     this.updateSlams(dt);
     this.updateZones(dt);
+    this.updateStrikes(dt);
     this.act(e, dt);
     this.updateArena(dt);
   }
@@ -125,8 +135,8 @@ export class Boss {
     if (this.state === 'enter') {
       this.y = Math.min(0, -5 + this.t * 4);
       if (this.t > BP.rise) {
-        this.toChase(this.cd); this.phaseT = 0; run.audio.sfx('boss_roar'); run.fx.shake(0.5);
-        run.ui.banner(ph.name, ph.sub, 'boss'); run.ui.bossImmune(false);
+        this.toChase(this.cd); this.phaseT = 0; run.audio.sfx('boss_roar', { pitch: this.kit.roar }); run.fx.shake(0.5);
+        this.phaseBanner(0); run.ui.bossImmune(false);
       }
       return;
     }
@@ -140,6 +150,10 @@ export class Boss {
     else if (st === 'ring') this.ringStep(e, ph);
     else if (st === 'spiral') this.spiralStep(e);
     else if (st === 'summon') this.summonStep(e);
+    else if (st === 'rain') this.rainStep(e);
+    else if (st === 'lances') { if (this.t >= this.lanceEnd) this.recover(BP.lances.recover); }
+    else if (st === 'smite') this.smiteStep(e);
+    else if (st === 'fan') this.fanStep(e);
     else if (st === 'roar') this.roarStep(e, dt, dx, dz, dist);
     // contact damage (never mid-air or mid-roar)
     if (dist < e.radius + P.radius && e.atkCd <= 0 && this.y < 0.5 && st !== 'roar') { e.atkCd = 1.0; P.hurt(this.dmg); }
@@ -149,7 +163,7 @@ export class Boss {
   /** Hollow aura: he sears minions that swarm him (not while immune); in phase III the Crown of Cinders also sheds embers. */
   aura(e, dt) {
     const run = this.run, c = this.col, C = BP.aura;
-    if (this.phase === 2 && Math.random() < dt * 30) run.particles.emit(e.x + (Math.random() - 0.5) * 1.2, 4.2 + this.y, e.z + 0.3, (Math.random() - 0.5) * 1.2, 2 + Math.random() * 2, (Math.random() - 0.5) * 1.2, 0.7, 0.4, 0.05, c[0], c[1], c[2], 0.9, 1, -1);
+    if (this.phase === 2 && Math.random() < dt * 30) run.particles.emit(e.x + (Math.random() - 0.5) * 1.2, 0.91 * this.h + this.y, e.z + 0.3, (Math.random() - 0.5) * 1.2, 2 + Math.random() * 2, (Math.random() - 0.5) * 1.2, 0.7, 0.4, 0.05, c[0], c[1], c[2], 0.9, 1, -1);
     if (this.immune > 0 || !C.dps[this.phase]) return;
     // it only bites a swarm: none below `from` minions in reach, full strength at `full`
     const L = run.legion.list, r2 = C.r * C.r;
@@ -169,8 +183,14 @@ export class Boss {
   toChase(cd) { this.state = 'chase'; this.t = 0; this.cd = cd; }
   recover(base) { this.toChase(base / (BP.phases[this.phase].rate * this.rate)); }
 
+  /** The phase banner: the boss's own name for it and how to survive it. */
+  phaseBanner(i) { const [name, sub] = this.kit.phases[i]; this.run.ui.banner(name, `Phase ${ROMAN[i]} · ${sub}`, 'boss'); }
+
   pickAttack(dist) {
-    const w = BP.phases[this.phase].weights;
+    const w = this.weights || (this.weights = {});
+    for (const k in w) delete w[k];
+    Object.assign(w, BP.phases[this.phase].weights);
+    if (this.kit.sigW[this.phase]) w.sig = this.kit.sigW[this.phase]; // the boss's signature attack
     let total = 0;
     for (const k in w) if (this.can(k, dist)) total += w[k];
     let r = Math.random() * total, pick = this.phase ? 'rings' : 'ring';
@@ -179,7 +199,8 @@ export class Boss {
   }
   can(k, dist) { return k === 'slam' ? dist < BP.slam.range : k !== this.last; }
 
-  /** QA / profiling hook: force an attack ('slam' | 'ring' | 'rings' | 'spiral' | 'summon') or an edge 'wave'. */
+  /** QA / profiling hook: force an attack ('slam' | 'ring' | 'rings' | 'spiral' | 'sig' | 'summon' | 'rain' | 'lances' |
+   *  'smite' | 'fan') or an edge 'wave'. */
   force(k) {
     if (k === 'wave') return this.edgeWave();
     if (this.state !== 'enter' && this.state !== 'roar' && this.state !== 'dead') this.start(k);
@@ -188,6 +209,7 @@ export class Boss {
   start(kind) {
     const run = this.run, P = run.player, e = this.e, ph = BP.phases[this.phase], A = this.arena;
     this.last = kind; this.t = 0;
+    if (kind === 'sig') kind = this.kit.sig;
     if (kind === 'slam') {
       // Grave Slam: he leaps onto the Shepherd's spot; rings at 3 / 6 / 9 m go off one after another
       const S = this.slams.find((o) => !o.on) || this.slams[0];
@@ -240,7 +262,107 @@ export class Boss {
         run.fx.telegraph(p.x, p.z, 0.9, this.tele, this.color.getHex());
       }
       this.state = 'summon';
+    } else if (kind === 'rain') {
+      // Pyrexa's Cinder Rain: fire lobbed onto marked circles, the first on the Shepherd's path, the rest around him;
+      // each leaves the ground burning (the Witches' lob, from her)
+      const R = BP.rain, n = R.n[this.phase], Q = this.rainQ;
+      Q.length = 0;
+      for (let i = 0; i < n; i++) {
+        const p = { x: 0, z: 0, at: i * R.every };
+        if (i === 0) { p.x = P.x + P.vx * R.first; p.z = P.z + P.vz * R.first; }
+        else { const a = Math.random() * TAU, d = rnd(R.spread[0], R.spread[1]); p.x = P.x + Math.cos(a) * d; p.z = P.z + Math.sin(a) * d; }
+        this.clampIn(p, R.radius + 0.4);
+        Q.push(p);
+      }
+      this.rainI = 0;
+      this.state = 'rain';
+      run.audio.sfx('summon', { volume: 0.45, pitch: 1.5 });
+    } else if (kind === 'lances') {
+      // Vaulkar's Glacier Lances: lanes of frost shards ripple out from him toward the Shepherd, every spot marked
+      // until it erupts; the shards stand for a moment (the frost zones of his slam twist)
+      const L = BP.lances, n = L.lanes[this.phase], base = Math.atan2(P.z - e.z, P.x - e.x), lim2 = (A.r - 0.6) ** 2;
+      for (let j = 0; j < n; j++) {
+        const a = base + (j - (n - 1) / 2) * L.arc;
+        for (let k = 0; k < L.shards; k++) {
+          const d = L.from + k * L.step, x = e.x + Math.cos(a) * d, z = e.z + Math.sin(a) * d;
+          if ((x - A.x) ** 2 + (z - A.z) ** 2 > lim2) break;
+          const delay = L.tele + k * L.every;
+          const tele = run.hazards.circle(x, z, L.r, delay, this.danger);
+          this.zones.push({ kind: 'frost', x, z, r0: 0, r1: 0, r: L.r, t: -delay, life: L.life, dmg: this.dmg * L.dmg, a: Math.random() * TAU, tele });
+        }
+      }
+      this.lanceEnd = L.tele + L.shards * L.every;
+      this.state = 'lances';
+      run.audio.sfx('summon', { volume: 0.5, pitch: 0.6 });
+    } else if (kind === 'smite') {
+      // Azrathel's Smite: pillars of light fall where the Shepherd is about to be, one after another
+      this.smiteN = BP.smite.n[this.phase]; this.smiteI = 0;
+      this.state = 'smite';
+    } else if (kind === 'fan') {
+      // Vesperine's Blood Lances: she raises her scepter over a cone toward the Shepherd, then fans of blood orbs fly
+      // down it a beat apart, each fan offset by half a gap from the last
+      const F = BP.fan;
+      this.fanA = Math.atan2(P.z - e.z, P.x - e.x); this.fanN = F.volleys[this.phase]; this.fanI = 0;
+      e.rot = Math.atan2(P.x - e.x, P.z - e.z);
+      run.hazards.cone(e, e.state, P.x - e.x, P.z - e.z, 11, F.arc / 2 + 0.06, F.windup, this.danger);
+      this.state = 'fan';
+      run.audio.sfx('summon', { volume: 0.45, pitch: 1.2 });
     }
+  }
+
+  rainStep(e) {
+    const R = BP.rain, Q = this.rainQ;
+    while (this.rainI < Q.length && this.t >= Q[this.rainI].at) {
+      const p = Q[this.rainI++];
+      this.run.projectiles.lob(e.x, e.z, p.x, p.z, this.dmg * R.dmg, R, true);
+    }
+    if (this.rainI >= Q.length && this.t >= (Q.length ? Q[Q.length - 1].at : 0) + R.flight) this.recover(R.recover);
+  }
+
+  smiteStep(e) {
+    const S = BP.smite, run = this.run, P = run.player;
+    while (this.smiteI < this.smiteN && this.t >= this.smiteI * S.every) {
+      const p = { x: P.x + P.vx * S.lead, z: P.z + P.vz * S.lead };
+      this.clampIn(p, 0.8);
+      this.strikes.push({ x: p.x, z: p.z, t: S.tele, tele: run.hazards.circle(p.x, p.z, S.r, S.tele, this.danger, 1.6) });
+      this.smiteI++;
+      run.audio.sfx('summon', { volume: 0.3, pitch: 1.9 });
+    }
+    if (this.smiteI >= this.smiteN && this.t >= (this.smiteN - 1) * S.every + S.tele) this.recover(S.recover);
+  }
+
+  /** Pillars of light land: the Shepherd inside is struck (+0.2 m grace), minions inside are hurt. */
+  updateStrikes(dt) {
+    const S = BP.smite, run = this.run, P = run.player, Q = this.strikes;
+    let w = 0;
+    for (let i = 0; i < Q.length; i++) {
+      const s = Q[i];
+      s.t -= dt;
+      if (s.t > 0) { Q[w++] = s; continue; }
+      if (Math.hypot(P.x - s.x, P.z - s.z) < S.r + 0.2 && !P.dead) P.hurt(this.dmg * S.dmg);
+      const L = run.legion.list, md = this.dmg * S.dmg * S.minionDmg, r2 = S.r * S.r;
+      for (let j = 0; j < L.length; j++) { const m = L[j]; if (!m.gone && m.hp > 0 && (m.x - s.x) ** 2 + (m.z - s.z) ** 2 < r2) { m.hp -= md; m.flash = 1; } }
+      const c = this.hot, n = Math.round(36 * run.particles.budget);
+      for (let k = 0; k < n; k++) run.particles.emit(s.x + (Math.random() - 0.5) * 0.7, Math.random() * 7, s.z + (Math.random() - 0.5) * 0.7, 0, 2 + Math.random() * 3, 0, 0.5, 0.55, 0.06, c[0], c[1], c[2], 1);
+      run.particles.burst(s.x, 0.3, s.z, 30, this.col, { speed: 7, life: 0.5, size: 0.55, up: 0.6 });
+      run.fx.shockwave(s.x, s.z, S.r * 1.3, this.color.getHex(), 0.35, 0.12);
+      run.fx.light(s.x, s.z, 7, 2.2, this.color, 0.35);
+      run.fx.shake(0.3);
+      run.audio.sfx('boss_slam', { volume: 0.5, pitch: 1.5 });
+    }
+    Q.length = w;
+  }
+
+  fanStep(e) {
+    const F = BP.fan, run = this.run, step = F.arc / (F.n - 1);
+    while (this.fanI < this.fanN && this.t >= F.windup + this.fanI * F.every) {
+      const odd = this.fanI % 2; // odd fans fill the gaps of the last one
+      for (let k = 0; k < F.n - odd; k++) run.projectiles.bossOrb(e.x, e.z, this.fanA - F.arc / 2 + (k + odd * 0.5) * step, F.speed, this.dmg * F.dmg, this.orb);
+      this.fanI++;
+      run.audio.sfx('shoot', { volume: 0.5, pitch: 0.7 });
+      run.particles.burst(e.x, 2.6, e.z, 16, this.col, { speed: 5, life: 0.4, size: 0.5 });
+    }
+    if (this.fanI >= this.fanN && this.t >= F.windup + (this.fanN - 1) * F.every + 0.2) this.recover(F.recover);
   }
 
   slamStep(e) {
@@ -346,8 +468,8 @@ export class Boss {
     run.fx.light(e.x, e.z, 14, 3.5, this.color, 1.2);
     run.particles.burst(e.x, 3, e.z, 160, this.col, { speed: 9, life: 1.1, size: 0.7, up: 1.6 });
     run.particles.burst(e.x, 1, e.z, 60, this.hot, { speed: 3, life: 1.4, size: 0.5, up: 4 });
-    run.audio.sfx('boss_roar'); run.audio.sfx('phase'); run.app.haptic('heavy');
-    run.ui.banner(ph.name, ph.sub, 'boss');
+    run.audio.sfx('boss_roar', { pitch: this.kit.roar }); run.audio.sfx('phase'); run.app.haptic('heavy');
+    this.phaseBanner(this.phase);
     run.ui.bossImmune(true);
     // knock the nearby horde back (no damage)
     run.enemies.query(e.x, e.z, T.knockR, (o) => { if (o === e) return; const dx = o.x - e.x, dz = o.z - e.z, l = Math.hypot(dx, dz) || 1; o.kx += (dx / l) * T.knock; o.kz += (dz / l) * T.knock; });
@@ -366,13 +488,22 @@ export class Boss {
   cancelAttacks() {
     this.fan.visible = false; this.sigil.visible = false;
     for (const S of this.slams) if (S.on && S.fired < 3) { S.cancel = true; S.mesh.material.uniforms.uState.value.set(1, 1, 1); }
+    // marked spots that have not gone off yet are withdrawn with their marks (Glacier Lances, Smite)
+    const Z = this.zones;
+    let w = 0;
+    for (let i = 0; i < Z.length; i++) { const z = Z[i]; if (z.t < 0) { this.unmark(z.tele, z.x, z.z); continue; } Z[w++] = z; }
+    Z.length = w;
+    for (const s of this.strikes) this.unmark(s.tele, s.x, s.z);
+    this.strikes.length = 0; this.rainQ.length = 0;
   }
+  /** Ends a mark still showing (telegraphs are pooled: only if it is still the one placed at x, z). */
+  unmark(t, x, z) { if (t && t.x === x && t.z === z && t.t < t.dur) t.t = t.dur; }
 
   hollowDirge() {
     const run = this.run, e = this.e;
     this.dirge = true;
     this.dmg = this.baseDmg * BP.dirge.dmg; this.rate = BP.dirge.rate;
-    run.ui.banner('HOLLOW DIRGE', 'He keens for the dead: +50% damage and attack speed', 'boss');
+    run.ui.banner(this.kit.dirge[0], this.kit.dirge[1], 'boss');
     run.audio.sfx('warning'); run.app.haptic('warning');
     run.fx.hurt(0.35); run.fx.shake(0.4);
     run.particles.burst(e.x, 3.5, e.z, 90, this.col, { speed: 6, life: 1, size: 0.6, up: 2 });
@@ -449,14 +580,22 @@ export class Boss {
     let w = 0;
     for (let i = 0; i < Z.length; i++) {
       const z = Z[i];
+      const was = z.t;
       z.t += dt;
       if (z.t >= z.life) continue;
       Z[w++] = z;
+      if (was < 0 && z.t >= 0) this.erupt(z); // a marked Glacier Lance spot goes off
       if (z.t < 0.2 || z.t > z.life - 0.3 || P.dead) continue; // brief grace while it ignites and as it fades
       const d = Math.hypot(P.x - z.x, P.z - z.z);
       if (z.kind === 'fire' ? d > z.r0 - 0.15 && d < z.r1 + 0.15 : d < z.r + P.radius * 0.6) P.hurt(z.dmg);
     }
     Z.length = w;
+  }
+
+  erupt(z) {
+    const run = this.run, c = this.hot;
+    run.particles.burst(z.x, 0.4, z.z, 10, c, { speed: 4, life: 0.4, size: 0.45, up: 1.6 });
+    if (run.t - (this.eruptSfx || -1) > 0.09) { this.eruptSfx = run.t; run.audio.sfx('explosion', { volume: 0.3, pitch: 1.7 }); }
   }
 
   // ---------------------------------------------------------------- the sealed arena
@@ -488,7 +627,7 @@ export class Boss {
         if (A.hapT <= 0) { A.hapT = 0.6; run.app.haptic('light'); }
       }
     }
-    // the King stays inside as well
+    // the boss stays inside as well
     const bx = e.x - A.x, bz = e.z - A.z, bd = Math.hypot(bx, bz), lim = A.r - e.radius - 0.3;
     if (bd > lim && this.state !== 'enter') { e.x = A.x + (bx / bd) * lim; e.z = A.z + (bz / bd) * lim; }
     run.projectiles.cullBossOrbs(A.x, A.z, A.r, this._spark);
@@ -609,15 +748,19 @@ export class Boss {
     this.mesh.position.set(e.x, this.y + (roar ? Math.abs(Math.sin(this.t * 18)) * 0.12 : 0), e.z);
     this.mesh.rotation.y = e.rot;
     this.mesh.scale.setScalar(roar ? 1 + 0.1 * Math.sin(Math.min(1, this.t * 2) * Math.PI) : 1);
-    const windup = this.state === 'ring' || this.state === 'summon' || (this.state === 'spiral' && this.t < this.tele) ? 0.08 + 0.06 * Math.sin(this.t * 25) : 0;
+    const st = this.state, windup = st === 'ring' || st === 'summon' || st === 'lances' || (st === 'spiral' && this.t < this.tele)
+      || (st === 'fan' && this.t < BP.fan.windup) || (st === 'rain' && this.rainI < this.rainQ.length) || (st === 'smite' && this.smiteI < this.smiteN) ? 0.08 + 0.06 * Math.sin(this.t * 25) : 0;
     const shield = (this.immune > 0 && this.state !== 'enter') || this.held ? 0.25 + 0.15 * Math.sin(this.t * 30) : 0;
-    this.mat.uniforms.uFlash.value = Math.max(e.flash * 0.15, windup, shield); // capped: he is hit constantly and must stay magenta
+    // capped: hit constantly, the boss must keep its colour. A painted boss winds up by flaring its glowing paint (a white
+    // flash would bleach the paint); the ward still flashes it, more softly
+    const paint = this.glow0 > 0;
+    this.mat.uniforms.uFlash.value = Math.max(e.flash * 0.15, paint ? 0 : windup, paint ? shield * 0.6 : shield);
     this.mat.uniforms.uTime.value += dt;
     this.mat.uniforms.uEmit.value = 3 + this.phase * 0.7 + (this.dirge ? 0.6 : 0);
-    if (this.glow0) this.mat.uniforms.uGlow.value = this.glow0 * (1 + this.phase * 0.25 + (this.dirge ? 0.2 : 0)); // painted: the crown and heart flare
-    const g = run.glow, k = 1 + this.phase * 0.25;
-    g.add(e.x, 2.3 + this.y, e.z + 0.9, 2.2 * k, this.col[0] * 0.5, this.col[1] * 0.5, this.col[2] * 0.5, 0.9);
-    g.add(e.x, 4.1 + this.y, e.z + 0.3, 3.0 * k, this.col[0] * 0.25, this.col[1] * 0.25, this.col[2] * 0.25, 0.8);
+    if (paint) this.mat.uniforms.uGlow.value = this.glow0 * (1 + this.phase * 0.25 + (this.dirge ? 0.2 : 0) + windup * 6); // crown, eyes and heart flare
+    const g = run.glow, k = 1 + this.phase * 0.25, h = this.h; // a glow at the chest and one at the crown, in the boss's colour
+    g.add(e.x, 0.5 * h + this.y, e.z + 0.9, 2.2 * k, this.col[0] * 0.5, this.col[1] * 0.5, this.col[2] * 0.5, 0.9);
+    g.add(e.x, 0.89 * h + this.y, e.z + 0.3, 3.0 * k, this.col[0] * 0.25, this.col[1] * 0.25, this.col[2] * 0.25, 0.8);
     if (shield) g.add(e.x, 2.4, e.z, 7.5, this.col[0] * 0.18, this.col[1] * 0.18, this.col[2] * 0.18, 0.8);
   }
 
@@ -644,10 +787,10 @@ export class Boss {
     }
     if (this.fan.visible) this.fan.material.uniforms.uTime.value += dt;
     if (this.sigil.visible) this.sigil.material.uniforms.uTime.value += dt;
-    // Chapter 3 frost shards
+    // frost shards (Vaulkar's slam twist and Glacier Lances; still-marked spots are not up yet)
     let n = 0;
     for (const z of this.zones) {
-      if (z.kind !== 'frost' || n >= MAX_SHARDS) continue;
+      if (z.kind !== 'frost' || z.t < 0 || n >= MAX_SHARDS) continue;
       const grow = Math.min(1, z.t / 0.2) * Math.min(1, (z.life - z.t) / 0.3);
       _q.setFromAxisAngle(_up, z.a); _p.set(z.x, 0, z.z); _s.set(grow, grow * (0.85 + 0.15 * Math.sin(z.a * 7)), grow);
       _m.compose(_p, _q, _s);

@@ -33,11 +33,15 @@ const SHOTS = [
   { name: '05-heroes', caption: 'COLLECT <em>LEGENDARY SHEPHERDS</em>', menu: 'heroes', stage: `
     const p = app.profile; for (const id of ['nyx', 'seraphine', 'liora', 'mordrake']) { p.heroes[id].owned = true; p.heroes[id].stars = 1 + (id === 'mordrake' ? 2 : 1); }
     p.heroes.vael.stars = 3; p.gold = 48200; p.gems = 2350; E.manual = false; app.meta.show('heroes'); app.meta.refresh();` },
-  { name: '06-chapters', caption: 'FIVE CURSED <em>CHAPTERS</em>', stage: `
-    app.profile.chapter.unlocked = 5; start(2, 200); give({ soulBolt: 3, chains: 3, gravePulse: 1 });
-    legion([['husk', 24], ['brute', 8], ['witch', 8]], 2); ring(36, 10);
-    const P = r.player; for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; r.enemies.spawn('witch', P.x + Math.cos(a) * 8, P.z + Math.sin(a) * 8, { hpMul: 6 }); }
-    sim(3.2);` },
+  // Chapter 2's own boss: Pyrexa, the Cinder Matron, her Cinder Rain marked on the ground and in the air, the first already burning
+  { name: '06-chapters', caption: 'FIVE CHAPTERS, <em>FIVE BOSSES</em>', stage: `
+    hero('vael'); start(2, 340); give({ soulBolt: 2, skullHalo: 2 }); legion([['husk', 14], ['ghoul', 6], ['witch', 4]]); r.time = 359.9; sim(1.0, 0, 0);
+    r.boss.cd = 99; sim(2.4, 0, 0); // risen, holding her first attack
+    const b = r.bossEnemy; b.x = r.player.x + 0.9; b.z = r.player.z - 5.2; b.rot = 0;
+    const d0 = r.enemies.damage.bind(r.enemies); r.enemies.damage = (e, a, o) => d0(e, a, e === b ? { ...o, silent: true } : o); // no numbers over her face
+    r.boss.force('rain'); sim(1.5, 0, 0); r.boss.update = () => {};
+    const rb = r.boss.render.bind(r.boss); r.boss.render = (dt) => { rb(dt); r.boss.mat.uniforms.uFlash.value = 0; };
+    r.camPos.copy(r.desiredCam()); sim(0.05, 0, 0);` },
 ];
 
 SHOTS.push(
@@ -52,7 +56,7 @@ SHOTS.push(
     ring(44, 10.5); ring(30, 13.5); sim(1.2);` },
   { name: '09-bestiary', caption: 'HUNT <em>EVERY HORROR</em>', menu: 'heroes', stage: `
     const p = app.profile; p.chapter.unlocked = 4; p.gold = 48200; p.gems = 2350;
-    p.bestiary = { kills: { husk: 12840, ghoul: 3420, brute: 1260, witch: 860, bloater: 410, thief: 6, gravemaw: 0 }, claimed: { husk: 2, ghoul: 2, brute: 1, witch: 0, bloater: 0, thief: 1, gravemaw: 0 } };
+    p.bestiary = { kills: { husk: 12840, ghoul: 3420, brute: 1260, witch: 860, bloater: 410, thief: 6, gravemaw: 11, pyrexa: 4, vaulkar: 2, azrathel: 0, vesperine: 0 }, claimed: { husk: 2, ghoul: 2, brute: 1, witch: 0, bloater: 0, thief: 1, gravemaw: 1, pyrexa: 1, vaulkar: 0, azrathel: 0, vesperine: 0 } };
     E.manual = false; app.meta.show('heroes'); document.querySelector('[data-sub="bestiary"]').click(); app.meta.refresh();` },
   // the level-up cards over a live fight, with a gold evolution on offer (Soul Bolt 5 + Might)
   { name: '10-powers', caption: 'FORGE <em>YOUR BUILD</em>', cards: true, stage: `
@@ -105,7 +109,11 @@ for (const shot of SHOTS.filter((x) => !ONLY || x.name.startsWith(ONLY))) {
   // the world puts the (now cached) floor and props in once their promises resolve, after the staging: draw one more frame
   await page.evaluate(async () => { await new Promise((r) => setTimeout(r, 100)); window.__soulswarm.engine.step(1 / 1000); });
   console.log(shot.name, 'staged', Date.now() - t0, 'ms');
-  if (shot.menu) await page.waitForTimeout(1500);
+  if (shot.menu) { // menu art loads lazily: wait for every image on screen (cold dev-server loads take a few seconds)
+    await page.waitForFunction(() => [...document.images].filter((i) => { const b = i.getBoundingClientRect(); return b.height > 0 && b.bottom > 0 && b.top < innerHeight; })
+      .every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 30000 }).catch(() => console.log(shot.name, 'some art still loading'));
+    await page.waitForTimeout(1500);
+  }
   else await page.evaluate(() => { for (const a of document.getAnimations()) { try { if (a.effect.getComputedTiming().iterations !== Infinity) a.finish(); } catch (e) { /* ignore */ } } });
   await page.evaluate(caption(shot.caption, shot.cards));
   await page.waitForTimeout(300);

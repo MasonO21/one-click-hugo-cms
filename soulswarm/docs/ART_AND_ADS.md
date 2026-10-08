@@ -49,7 +49,11 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `gems-4.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 2,600: an overflowing chalice | `5163d878-1a48-42c0-863a-8830d30c95cb` |
 | `gems-5.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 7,000: a treasure chest | `fbd605a9-80bb-48d6-85bc-6ac4a9c0e3fb` |
 | `gems-6.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gem pack art in the shop, 15,000: a reliquary hoard | `91561947-00f1-45f5-bb27-6ef7d1215aa5` |
-| `boss-gravemaw.jpg` | 1792×2400 | Nano Banana Pro | "The Hollow King approaches" boss warning, boss reveal ad clip, and Gravemaw's Bestiary portrait (`foe-gravemaw.webp`, 540×720) | `6899f0c9-8b53-4ca4-b052-df4279d237bb` |
+| `boss-gravemaw.jpg` | 1792×2400 | Nano Banana Pro | Chapter 1's boss: "The Hollow King approaches" boss warning (`boss-band-gravemaw.webp`), boss reveal ad clip, and Gravemaw's Bestiary portrait (`foe-gravemaw.webp`, 540×720) | `6899f0c9-8b53-4ca4-b052-df4279d237bb` |
+| `boss-pyrexa.jpg` | 1792×2400 | Nano Banana Pro (Gravemaw's painting as the reference) | Chapter 2's boss, Pyrexa, the Cinder Matron: boss warning (`boss-band-pyrexa.webp`, 900 px) and Bestiary portrait (`foe-pyrexa.webp`) | `d8e6d5b7-2e21-4ad3-9560-a9e41fc8f7be` |
+| `boss-vaulkar.jpg` | 1792×2400 | Nano Banana Pro (the same reference) | Chapter 3's boss, Vaulkar, the Ossuary Colossus: the same two places | `464f82a7-3201-4d28-822e-e67b8c70ab73` |
+| `boss-azrathel.jpg` | 1792×2400 | Nano Banana Pro (the same reference) | Chapter 4's boss, Azrathel, the Fallen Seraph: the same two places | `8123fc3a-0e5d-46b4-8478-403ed9bac029` |
+| `boss-vesperine.jpg` | 1792×2400 | Nano Banana Pro (the same reference) | Chapter 5's boss, Vesperine, the Crimson Queen: the same two places | `9734bec5-26c0-445a-b473-784909904275` |
 | `chapter-1.jpg` | 2752×1536 | Nano Banana Pro | Ashen Necropolis: home chapter card, run intro card, results header | `cc31413d-f7d8-4325-81c1-7178eba2bed0` |
 | `chapter-2.jpg` | 2752×1536 | Nano Banana Pro | Ember Wastes: the same three places | `58d39cf1-1b16-4ff1-99e7-68adc2c4f904` |
 | `chapter-3.jpg` | 2752×1536 | Nano Banana Pro | Frozen Ossuary: the same three places | `d60d3dfe-9e0a-4d3c-8cf1-b1ac7d733494` |
@@ -160,7 +164,7 @@ Recorded on 2026-10-07 with Higgsfield text-to-speech (the ElevenLabs engine, `t
 - normalises to −16 LUFS (true peak −1.5 dB);
 - writes mono 64 kbps MP3.
 
-The 32 lines total 612 KB. When and how the game plays them is in `GDD.md` §15.
+The 44 lines total 788 KB (the twelve for the four newer chapter bosses were recorded on 2026-10-08 in the same announcer voice). When and how the game plays them is in `GDD.md` §15.
 
 | Speaker | Preset voice | Lines |
 |---|---|---|
@@ -183,6 +187,18 @@ The 32 lines total 612 KB. When and how the game plays them is in `GDD.md` §15.
 | `a_boss` | The Hollow King approaches. | `e58ab34b-605a-40c5-b51d-79b38d8f3a3c` |
 | `a_boss_return` | The Hollow King returns. | `8b03a93c-654b-4292-88c5-1cedf6c469ea` |
 | `a_boss_slain` | The Hollow King has fallen. | `aff8caba-23d1-4d3e-a97a-62f4a6dc9797` |
+| `a_pyrexa` | The Cinder Matron approaches. | `28d49395-7627-4fe0-8126-53fe4029fbc1` |
+| `a_pyrexa_return` | The Cinder Matron returns. | `cecb8b15-1dd4-4477-80ad-c391ebfe4b59` |
+| `a_pyrexa_slain` | The Cinder Matron has fallen. | `fefbb6a9-9241-4386-a499-01725909d80f` |
+| `a_vaulkar` | The Ossuary Colossus approaches. | `553b873f-f710-4a4e-ab8d-fc9455235a38` |
+| `a_vaulkar_return` | The Ossuary Colossus returns. | `a7cb6ec8-28e5-49c4-b571-4ea513a9a7c1` |
+| `a_vaulkar_slain` | The Ossuary Colossus has fallen. | `c91a85e6-904d-4bdc-98f0-4cc912ee6b1e` |
+| `a_azrathel` | The Fallen Seraph approaches. | `44329dc6-59db-4491-b1ff-e288f221718a` |
+| `a_azrathel_return` | The Fallen Seraph returns. | `cfd4d03d-1a9e-4478-b608-ba828996c766` |
+| `a_azrathel_slain` | The Fallen Seraph has fallen. | `3bf8b3ee-0660-4cb7-803d-219db9584a8d` |
+| `a_vesperine` | The Crimson Queen approaches. | `f7f54f0b-b8a6-49a7-a66d-5db7a586087a` |
+| `a_vesperine_return` | The Crimson Queen returns. | `b56f7fa9-e399-4a73-91bf-95a0453d4074` |
+| `a_vesperine_slain` | The Crimson Queen has fallen. | `9089b895-9f1c-4113-8f9e-95dcde86bc3f` |
 | `a_cleared` | Chapter cleared. | `08886fb0-0903-42d8-be15-2d4e83760838` |
 | `a_defeat` | You have fallen. | `fff8e36b-7b7a-4f07-8411-bb89f248b270` |
 | `a_depth` | The abyss deepens. | `81deedd3-c20e-468e-a08f-6e2b7bc4ba6f` |
@@ -206,7 +222,7 @@ The 32 lines total 612 KB. When and how the game plays them is in `GDD.md` §15.
 | `mordrake_rite` | None shall pass! | `9b487dd2-b8db-4b74-b048-e180a049f2da` |
 | `mordrake_greet` | I have died nine hundred times. Once more is nothing. | `a9c1d7bf-535c-4dc7-93ab-1d068f9e813f` |
 
-**Cost:** about 5 credits in total (32 lines and 2 re-takes at 0.15 credits each, plus casting previews). Adding a line for a new hero or event costs 0.15 credits: record it in the same preset voice, add it to the list in `scripts/voice-master.sh`, then add its rules to `VOICE` in `data.js`.
+**Cost:** about 7 credits in total (44 lines and 3 re-takes at 0.15 credits each, plus casting previews). Adding a line for a new hero or event costs 0.15 credits: record it in the same preset voice, add it to the list in `scripts/voice-master.sh`, then add its rules to `VOICE` in `data.js`.
 
 ## 4. 3D hero models (`src/assets/models/`)
 
@@ -229,11 +245,11 @@ The five Shepherds and the Eclipse Vael skin are textured, rigged and animated 3
    - the hands stay as sculpted on the forearm;
    - staffs and spears are pinned to the hand that holds them. The rigger had weighted a staff's foot to a leg and its head to the head bone, so it whipped about. A capsule along each shaft rebinds it, fading out where a staff's foot is fused with a robe's hem so the hem bends instead of tearing.
 6. **Optimise.** `scripts/hero-models.sh` downloads the six rigs, gives each its clips and processes it:
-   - simplifies the mesh by half, to 14k–18k triangles from about 29k;
+   - simplifies the mesh to about a quarter, 7.6k–10.7k triangles from about 29k (on 2026-10-08, from half: at the game's camera distance the extra detail did not show, and it saved 1 MB in the single-file web build);
    - shrinks the 4096 px texture to a 1024 px WebP and moves it beside the model (`scripts/glb-split-texture.py`), so the web build never needs `blob:` URLs;
    - quantizes the geometry (KHR_mesh_quantization, which three.js reads without a decoder). Skins and clips survive every step.
 
-   The six heroes come to 3.8 MB in all, textures included.
+   The six heroes come to 2.8 MB in all, textures included.
 7. **In game.** `engine/heromodels.js` handles the model:
    - loads it once, and keeps its bind pose as a plain mesh standing on the ground at a height close to the procedural model's (Nyx's dash afterimages copy it);
    - gives every user (the hero in a run, the home showcase) its own skeleton and mixer (`HeroRig`), sharing the geometry, texture and clips;
@@ -323,18 +339,18 @@ It is one draw call, with every flake moved in the vertex shader and wrapped aro
 
 ## 6. Painted 3D foes (`src/assets/foes/`)
 
-The five horde foes, the Soul Thief and the Hollow King are textured 3D models made from their Bestiary paintings on 2026-10-08. Before, every foe was a low-poly procedural model in flat colours. The legion's risen ghosts take the same shapes. The procedural models still stand in while the art loads, and for the horde and ghosts on the Low quality setting.
+The five horde foes, the Soul Thief and the five chapter bosses are textured 3D models made from their Bestiary paintings on 2026-10-08. Before, every foe was a low-poly procedural model in flat colours. The legion's risen ghosts take the same shapes. The procedural models still stand in while the art loads, and for the horde and ghosts on the Low quality setting.
 
 **How they were made:**
 1. **Concept.** Nano Banana Pro repainted each foe from its Bestiary painting as a single full-body figure on plain grey, without smoke, sparks or glow (2 variants each, 2 credits apiece). It stands in a neutral, walk-ready stance with its limbs apart, so the shader can swing them. The Brute was repainted with his fists down rather than raised, and the Witch's robe falls to the ground.
 2. **Clean-up.** The Ghoul, Thief and Brute concepts kept some background (ice, smoke, dust), so Higgsfield's background remover cut them out first. The Hollow King's storm took his crown with it in the cutout, so he was repainted on plain grey instead, with his concept as the reference.
 3. **3D.** Tripo H3.1 image-to-3D turned each one into a model of about 4,000 faces (the King 10,000) with a detailed texture, at 12 credits each.
 4. **Optimise.** `scripts/enemies.sh` processes each model:
-   - simplifies it to its budget: Husk 1,576 triangles, Ghoul 1,784, Bloater 1,882, Witch 2,176, Brute 2,398, Thief 2,994, the King 6,668;
-   - shrinks the texture to a 512 px WebP beside the model (the King's to 1,024);
+   - simplifies it to its budget: Husk 1,576 triangles, Ghoul 1,784, Bloater 1,882, Witch 2,176, Brute 2,398, Thief 2,994, the King 6,668, the four newer bosses 5,160–5,457;
+   - shrinks the texture to a 512 px WebP beside the model (the newer bosses' to 768, the King's to 1,024);
    - quantizes the geometry.
 
-   The seven come to 0.78 MB.
+   The eleven come to 1.6 MB.
 
 **In game** (`engine/foemodels.js`):
 - **Loading.** The models load behind the home screen at boot, so the first run's horde is painted from its first frame. Each is turned from the generator's +X to the game's +Z, centred, stood on the ground and scaled to about the procedural foe's height. The game keeps the procedural foe's hit radius.
@@ -346,7 +362,7 @@ The five horde foes, the Soul Thief and the Hollow King are textured 3D models m
   `FOES` sets each foe's hip and shoulder heights and its pace: the Ghoul and the Thief scurry, the Brute plods. The pivots' depth is found from the mesh, so a hunched Ghoul swings about its own hips. Stunned foes stand still. A Ghoul's crouch and lunge and a Brute's rear-back still squash and tilt the whole model.
 - **Look.** The foes are dark painted shapes lit by the Shepherd's lantern, with a faint rim in the chapter's foe colour. Bright saturated paint glows (eyes, ember cracks, the Witch's fireball, the Bloater's belly), tinted toward the chapter's foe colour, or gold on an elite.
 - **Ghosts.** The legion's Runner, Bulwark, Soul Witch and Soul Bomb are spectral ghosts of the painted Ghoul, Brute, Witch and Bloater. The paint's light and dark carry through the ghost's body, and its glowing paint burns white-hot.
-- **The Hollow King and the Soul Thief** are painted too. The King's crown, eyes and heart flare as his phases advance.
+- **The chapter bosses and the Soul Thief** are painted too. A boss's glowing paint (crown, eyes, heart, fire, halo) flares as its phases advance, during its soft enrage and through each wind-up, instead of the old white flash, which bleached the paint. Each boss has its own light level (`lit`), so dark paint still reads on its chapter's floor.
 - **GPU cost.** A late-game screen of 300 foes and 100 ghosts draws about 0.75 million triangles, about four times the procedural horde, in the same number of draw calls. On the Low quality setting the horde and ghosts stay procedural. So do they on Auto, from the next run, once a device can't hold 45 fps.
 
 | Foe | Concept job | 3D job |
@@ -358,8 +374,21 @@ The five horde foes, the Soul Thief and the Hollow King are textured 3D models m
 | `bloater` | `61676030-d027-40b7-9dd6-7e559667e0a5` | `94db1130-c28e-4009-8e51-7e0f7c5246cd` |
 | `thief` | `faa52b73-552e-4de4-89b6-41343d4cbf53` (cut out: `05f1c7e7-d67c-438e-9a4d-3f6b5914f859`) | `4b81a3bb-47f0-49a4-a2c7-66ef8720c14c` |
 | `gravemaw` | `eff3c61d-ed13-42f9-9482-549a3b327833`, repainted on grey: `22767f31-f876-4e4f-8029-a49c8e660a30` | `5d899069-cf86-45e5-a6fd-7143287ef14c` |
+| `pyrexa` | `fbdce537-b55d-40a9-928e-397a69a5f2a4` (cut out: `f3f9fcc4-5d41-447b-b5f4-2e968a60fe55`) | `3370cedf-bd5b-4efe-baf4-a9b442c84507` |
+| `vaulkar` | `f8276593-c081-4217-b6e7-26cef12c4e77` | `10d0547e-b530-4d4e-931e-7d802f0edd90` |
+| `azrathel` | `791fabcc-7da8-4380-a450-d47ccc3d62bf` (see below) | `d0f241ff-4865-47f2-b834-244ea5caec2c` |
+| `vesperine` | `70bb9fb3-9b02-4fee-8ab7-1276b5ceeb32` | `edbeab09-6c2f-4528-9d8e-e23c1b0402e0` |
 
-**Cost:** 121 credits: 15 concepts (30), 4 background cutouts (7) and 7 models (84).
+**Cost:** 121 credits for the first seven: 15 concepts (30), 4 background cutouts (7) and 7 models (84).
+
+**The four newer chapter bosses** (2026-10-08): Pyrexa, Vaulkar, Azrathel and Vesperine (`GDD.md` §6).
+1. **Splash.** Nano Banana Pro painted each one's 3:4 splash with Gravemaw's painting as the style reference (2 variants each). It becomes the boss-warning band and the Bestiary portrait (§1).
+2. **Concept.** The same concept prompt as the horde, from the splash (2 variants each). Pyrexa's kept her embers and was cut out. Azrathel's kept his cathedral, and the cutout took his halo while keeping a Shepherd in the window, so he was repainted with two references: Vesperine's grey concept for the layout and his splash for the design.
+3. **3D.** Tripo H3.1 at 10,000 faces, as for the King; simplified to 55% with a 768 px texture to keep the single-file web build under its size limit.
+4. **Gaits and light.** Pyrexa and Vesperine float under their robes, Vaulkar plods, Azrathel walks with his wings still. Azrathel's black armour needed 1.7× the light on the Cathedral floor (Pyrexa 1.25, Vesperine 1.15).
+
+**Cost:** about 93 credits: 8 splashes (16), 12 concepts and repaints (24), 2 cutouts (3.5), 4 models (48) and 12 voice lines (1.8).
+
 
 **A new foe:**
 1. Paint the concept from its Bestiary painting with the same prompt, and cut out any background.

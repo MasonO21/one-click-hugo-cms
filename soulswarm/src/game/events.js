@@ -1,5 +1,5 @@
 // Mid-run events (GDD §4.7): the Soul Thief, the Shrine of Souls and the Cursed Coffin. One at a time, roughly every
-// 80–110 s from 1:00 to 5:20 (Endless keeps rolling), never near a gate pair, an elite, a swarm ring or Gravemaw.
+// 80–110 s from 1:00 to 5:20 (Endless keeps rolling), never near a gate pair, an elite, a swarm ring or the chapter boss.
 // Every event is optional: ignored, it lapses. While it is off screen an edge arrow points the way.
 // The thief and the coffin are pooled enemies tagged e.ev (so weapons and minions hit them like anything else) that
 // draw with their own meshes; Enemies.update hands them to drive() instead of the horde AI.
@@ -87,7 +87,7 @@ export class Events {
     this.nextAt = this.start(this.pick()) ? t + rnd(R.every) : t + 2; // no clear spot right now: try again shortly
   }
 
-  /** Nothing else is happening: no gate pair, elite or swarm ring close in time, and Gravemaw is not near. */
+  /** Nothing else is happening: no gate pair, elite or swarm ring close in time, and the boss is not near. */
   clear(t) {
     const run = this.run, c = R.clear;
     if (run.nextBossAt - t < R.bossGap || run.player.dead || run.victory) return false;
@@ -159,7 +159,7 @@ export class Events {
     const ev = this.cur, run = this.run;
     if (!ev) return;
     ev.t += dt;
-    if (run.bossSpawned && !run.bossDead && !ev.closed) this.close(ev); // Gravemaw seals the arena: what is left lapses
+    if (run.bossSpawned && !run.bossDead && !ev.closed) this.close(ev); // the boss seals the arena: what is left lapses
     if (ev.state === 'gone') { ev.fade += dt; if (ev.fade >= FADE) this.cur = null; return; }
     if (ev.kind === 'thief') this.updateThief(ev, dt);
     else if (ev.kind === 'shrine') this.updateShrine(ev, dt);

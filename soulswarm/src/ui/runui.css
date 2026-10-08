@@ -34,11 +34,11 @@
 @keyframes numpop { 0% { transform: scale(1.6); } 100% { transform: scale(1); } }
 
 .bossbar { margin: 4px 6px 0; display: flex; flex-direction: column; gap: 3px; animation: popin .4s ease; }
-.bossbar .nm { font-family: var(--f-display); font-weight: 900; font-size: 13px; letter-spacing: .12em; text-align: center; color: #ffc8fa; text-shadow: 0 0 10px #ff3df0; }
+.bossbar .nm { font-family: var(--f-display); font-weight: 900; font-size: 13px; letter-spacing: .12em; text-align: center; color: var(--bc-lt, #ffc8fa); text-shadow: 0 0 10px var(--bc, #ff3df0); }
 .bossbar .bar { height: 12px; background: rgba(0,0,0,.7); clip-path: var(--bevel-sm); overflow: hidden; position: relative; }
-.bossbar .bar i { position: absolute; inset: 0; transform-origin: 0 50%; background: linear-gradient(90deg, #8a0f7a, #ff3df0, #ffb0f8); box-shadow: 0 0 14px #ff3df0; transition: transform .12s linear; }
-.bossbar .ticks b { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 4px #000, 0 0 6px #ff3df0; opacity: .85; }
-.bossbar .ward { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 9px; font-weight: 900; letter-spacing: .2em; color: #4a0d44; text-shadow: 0 0 4px #fff; pointer-events: none; }
+.bossbar .bar i { position: absolute; inset: 0; transform-origin: 0 50%; background: linear-gradient(90deg, var(--bc-dk, #8a0f7a), var(--bc, #ff3df0), var(--bc-lt, #ffb0f8)); box-shadow: 0 0 14px var(--bc, #ff3df0); transition: transform .12s linear; }
+.bossbar .ticks b { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 4px #000, 0 0 6px var(--bc, #ff3df0); opacity: .85; }
+.bossbar .ward { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 9px; font-weight: 900; letter-spacing: .2em; color: var(--bc-xdk, #4a0d44); text-shadow: 0 0 4px #fff; pointer-events: none; }
 .bossbar.immune .bar i { background: linear-gradient(90deg, #c9b8d6, #fff, #ffe6fd); box-shadow: 0 0 16px #fff; }
 
 .hud-skills { position: absolute; left: 10px; bottom: calc(var(--safe-b) + 14px); display: flex; gap: 4px; pointer-events: none; }
@@ -68,9 +68,9 @@
 .banner.out { animation: banout .5s ease forwards; }
 .banner.soul b { color: #dffcff; text-shadow: 0 0 18px var(--soul), 0 2px 0 #00303a; }
 .banner.gold b { color: #fff3c8; text-shadow: 0 0 18px var(--gold), 0 2px 0 #4a2a00; }
-.banner.boss b { color: #ffd6fb; text-shadow: 0 0 22px #ff3df0, 0 2px 0 #3a0034; }
+.banner.boss b { color: var(--bc-lt, #ffd6fb); text-shadow: 0 0 22px var(--bc, #ff3df0), 0 2px 0 var(--bc-xdk, #3a0034); }
 .banner.ember b { color: #ffe0cc; text-shadow: 0 0 18px var(--ember), 0 2px 0 #3a1000; }
-/* boss warning: the painted Hollow King looms above the title, clear of the player at screen centre */
+/* boss warning: the painted boss looms above the title, clear of the player at screen centre */
 .banner.boss { top: 9%; }
 .banner-art { width: min(100%, 400px); aspect-ratio: 9 / 5; margin-bottom: -44px; background: 50% 30% / cover no-repeat;
   -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 48%, transparent); mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 48%, transparent);

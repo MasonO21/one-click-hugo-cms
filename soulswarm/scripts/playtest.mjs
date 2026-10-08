@@ -662,7 +662,8 @@ errs = await session(async (page) => {
   check('boss: a Nova deals at most 25% of his max HP, nothing mid-roar', n.novaShare > 0.05 && n.novaShare <= 0.26 && n.roarNova.state === 'roar' && n.roarNova.lost === 0, JSON.stringify(n));
   const t = await page.evaluate(async () => {
     const { BOSS_PHASES: B } = await import('/src/game/data.js');
-    const teles = [B.ring.tele, B.spiral.tele, B.summon.tele, B.waves.tele, ...B.phases.map((p) => p.slamTele)].map((x) => Math.max(B.minTele, x));
+    const teles = [B.ring.tele, B.spiral.tele, B.summon.tele, B.waves.tele, ...B.phases.map((p) => p.slamTele),
+      B.rain.flight, B.lances.tele, B.smite.tele, B.fan.windup].map((x) => Math.max(B.minTele, x));
     const out = { minTele: Math.min(...teles) };
     let r = window.__bossRun(5), b = r.boss, e = r.bossEnemy;
     out.ticks5 = [...document.querySelectorAll('.bossbar .ticks b')].map((x) => x.style.left).join(',');
@@ -1520,7 +1521,7 @@ errs = await session(async (page) => {
 });
 check('bug-test regressions: no runtime errors', !errs.length, errs[0] || '');
 
-// 21b. Abandoning from the pause menu during the victory beat (Gravemaw already fell) still wins the chapter;
+// 21b. Abandoning from the pause menu during the victory beat (the boss already fell) still wins the chapter;
 //      abandoning a run in progress is still a defeat.
 errs = await session(async (page) => {
   const s = await page.evaluate(() => {
@@ -1865,7 +1866,7 @@ check('clock: no runtime errors', !errs.length, errs[0] || '');
   const heroes = ['vael', 'nyx', 'seraphine', 'liora', 'mordrake'];
   for (const h of heroes) asked.add(h + '_rite').add(h + '_greet');
   const missing = [...asked].filter((n) => !files.includes(n) && !/^a_(normal)$/.test(n));
-  check('voice: 32 lines, and every line the code asks for has a file', files.length === 32 && !missing.length, `files=${files.length} missing=${missing}`);
+  check('voice: 44 lines, and every line the code asks for has a file', files.length === 44 && !missing.length, `files=${files.length} missing=${missing}`);
 }
 errs = await session(async (page) => {
   await page.mouse.click(5, 420); // the audio context needs a gesture
@@ -1873,7 +1874,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const A = window.__soulswarm.audio, { VOICE } = await import('/src/game/data.js'), out = {};
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 32;
+    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 44;
     out.rules = Object.keys(VOICE.lines).length > 20;
     const r = [];
     r.push(A.voice('a_carnage')); await sleep(120); out.duck = A.voiceState().duck;
@@ -1888,7 +1889,7 @@ errs = await session(async (page) => {
     out.unknown = A.voice('a_nope');
     return out;
   });
-  check('voice: all 32 lines decode after the first tap', s.decoded && s.rules, JSON.stringify(s));
+  check('voice: all 44 lines decode after the first tap', s.decoded && s.rules, JSON.stringify(s));
   check('voice: one line at a time; a bigger streak or a more important line cuts in, an important line queues, the rest drop',
     s.r === 'play,play,cooldown,play,queued,busy,play' && s.mid.p === 'a_boss' && s.mid.q === 'a_thief', JSON.stringify({ r: s.r, mid: s.mid }));
   check('voice: music and sfx duck under a line and swell back', s.duck < 0.6 && s.after.duck > 0.99 && !s.after.p, JSON.stringify({ d: s.duck, a: s.after }));
@@ -2016,7 +2017,7 @@ errs = await session(async (page) => {
   check('bestiary: the run result carries the tally and applyRunResult adds it to the profile (junk ignored)',
     JSON.stringify(s.result) === JSON.stringify(R.end) && JSON.stringify(s.added) === JSON.stringify(R.end)
     && s.acc.husk === 60 && s.acc.ghoul === 7 && s.acc.brute === 0 && s.acc.witch === 0 && s.acc.bloater === 0 && s.acc.thief === 1 && s.acc.gravemaw === 0 && !s.acc.junk, JSON.stringify({ result: s.result, added: s.added, acc: s.acc }));
-  check('bestiary: 7 painted entries; silhouette and "???" until the first kill, then the name', s.cards.n === 7 && s.cards.husk.join() === 'false,Husk'
+  check('bestiary: 11 painted entries (6 foes, 5 bosses); silhouette and "???" until the first kill, then the name', s.cards.n === 11 && s.cards.husk.join() === 'false,Husk'
     && s.cards.ghoul.join() === 'true,???,true' && s.cards.img && s.unlock.join() === 'false,Ghoul', JSON.stringify({ c: s.cards, u: s.unlock }));
   check('bestiary: milestones claim in order and once each (double taps too) for 2,000 gold, 1 sigil and 50 gems',
     s.claims.claims.join() === '1,2,3' && s.claims.gained.gold === 2000 && s.claims.gained.sigils === 1 && s.claims.gained.gems === 50
@@ -2280,7 +2281,7 @@ errs = await session(async (page) => {
 });
 check('maps: no runtime errors', !errs.length, errs[0] || '');
 
-// 32. Painted foes (engine/foemodels.js; scripts/enemies.sh). Every foe, the Soul Thief and the Hollow King load as
+// 32. Painted foes (engine/foemodels.js; scripts/enemies.sh). Every foe, the Soul Thief and the five bosses load as
 //     painted models standing on the ground, facing +Z, within their triangle budgets; in a run the horde, the
 //     legion's ghosts, the Thief and the King use them, walked by the shader (USE_GAIT); the Low quality setting keeps
 //     the light procedural horde and ghosts.
@@ -2326,8 +2327,8 @@ errs = await session(async (page) => {
     return out;
   });
   const M = s.models, bad = Object.entries(M).filter(([id, m]) => !m || !m.map || Math.abs(m.h - m.want) > 0.02 || Math.abs(m.floor) > 0.01 || Math.abs(m.cx) > 0.01 || !m.wide || m.hip <= 0
-    || m.tris < 1000 || m.tris > (id === 'gravemaw' ? 8000 : 3200));
-  check('painted foes: all seven load standing on the ground, centred, facing +Z, at their heights and within budget', !bad.length, JSON.stringify(bad.length ? bad : M));
+    || m.tris < 1000 || m.tris > (m.want > 4 ? 8000 : 3200)); // the five bosses are the tall ones
+  check('painted foes: all eleven load standing on the ground, centred, facing +Z, at their heights and within budget', !bad.length && Object.keys(M).length === 11, JSON.stringify(bad.length ? bad : M));
   const md = s.medium, hordeOk = Object.values(md.horde).every((h) => h.painted && h.gait && h.map);
   check('painted foes: in a run the horde, the legion\'s ghosts, the Soul Thief and the Hollow King are painted and walked by the shader',
     hordeOk && Object.values(md.ghosts).every(Boolean) && md.thief && md.boss && md.ticks && md.crowns === 1, JSON.stringify(md));
@@ -2336,6 +2337,76 @@ errs = await session(async (page) => {
     Object.values(lo.horde).every((h) => !h.painted && !h.map) && Object.values(lo.ghosts).every((g) => !g) && lo.boss && lo.thief, JSON.stringify(lo));
 });
 check('painted foes: no runtime errors', !errs.length, errs[0] || '');
+
+// 33. Chapter bosses (BOSSES in data.js, boss.js): each chapter ends with its own boss (Gravemaw, Pyrexa, Vaulkar,
+//     Azrathel, Vesperine), painted, in its colour, named on the bar and the warning banner, with its own phase names and
+//     announcer lines; the Endless Abyss brings them back in turn. Each signature attack goes off: Cinder Rain lobs
+//     burning fire, Glacier Lances mark lanes that erupt into frost shards, Smite drops pillars of light where the
+//     Shepherd is, Blood Lances fan orbs down a marked cone. A phase roar withdraws marks that have not gone off.
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), app = window.__soulswarm, out = { ch: {} };
+    await app.foeModels.loadFoeModels();
+    const sigOf = { pyrexa: 'rain', vaulkar: 'lances', azrathel: 'smite', vesperine: 'fan' };
+    for (const ch of [1, 2, 3, 4, 5]) {
+      const r = window.__bossRun(ch), b = r.boss, P = r.player;
+      r.weapons.update = () => {};
+      const c = out.ch[ch] = { id: b.id, bar: document.querySelector('.bossbar .nm').textContent, painted: !!b.mat.uniforms.uMap.value,
+        color: b.color.getHex() === D.BOSSES[b.id].color, bc: getComputedStyle(document.querySelector('.bossbar .bar i')).boxShadow.includes(
+          `${(D.BOSSES[b.id].color >> 16) & 255}, ${(D.BOSSES[b.id].color >> 8) & 255}, ${D.BOSSES[b.id].color & 255}`) };
+      if (!sigOf[b.id]) continue;
+      b.cd = 99; b.force('sig'); c.state = b.state;
+      // the Shepherd stands still: every signature must be able to reach him
+      let hurt = 0; P.hurt = () => { hurt++; };
+      if (b.id === 'pyrexa') { window.__step(r, 0.3); c.lobs = r.projectiles.lobs.length; window.__step(r, 2); c.burns = r.hazards.burns.length; }
+      if (b.id === 'vaulkar') { const z0 = b.zones.filter((z) => z.t < 0).length; c.marked = z0; c.teles = r.hazards.teles.length; P.x = b.zones[0].x; P.z = b.zones[0].z; window.__step(r, 1.6); c.up = b.zones.filter((z) => z.t >= 0).length; }
+      if (b.id === 'azrathel') { window.__step(r, 0.1); c.marks = b.strikes.length; window.__step(r, 2.5); c.fell = b.strikes.length === 0; }
+      if (b.id === 'vesperine') { window.__step(r, 0.3); c.cone = r.hazards.teles.some((t) => t.kind === 1); const o0 = r.projectiles.embers.filter((o) => o.boss).length; window.__step(r, 1.5); c.orbs = r.projectiles.embers.filter((o) => o.boss).length - o0; }
+      c.hurt = hurt; c.recovered = b.state === 'chase';
+    }
+    // a phase roar withdraws Glacier Lances still marked (their shards never rise)
+    let r = window.__bossRun(3), b = r.boss; r.weapons.update = () => {}; b.cd = 99; b.force('lances');
+    const marks = r.hazards.teles.length; b.phaseT = 99; window.__hit(r, 0.6); window.__step(r, 1 / 30);
+    out.withdraw = { marks, roar: b.state, pending: b.zones.filter((z) => z.t < 0).length, teles: r.hazards.teles.filter((t) => t.t < t.dur).length };
+    // the Endless Abyss brings the five back in turn: the warning banner names each; the sixth "returns"
+    // (a level-up or the relic chest each boss drops would pause the clock: take the first card)
+    r = window.__bossRun(6); const order = [];
+    const go = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) { if (r.levelPending) document.querySelector('.lvl-back .card')?.click(); r.update(1 / 30); } };
+    for (let k = 0; k < 6; k++) {
+      order.push(r.boss.id);
+      const e = r.bossEnemy; if (!e) break;
+      e.hp = 1; r.enemies.damage(e, 50); go(1.5);
+      if (k < 5) { r.time = r.nextBossAt - 8.5; go(0.6); }
+      const t = document.querySelector('.banner.boss b')?.textContent || '';
+      if (k === 4) out.returns = t;
+      r.time = r.nextBossAt - 0.05; go(3);
+    }
+    out.order = order;
+    out.byType = { ...r.counters.byType };
+    app.exitRun();
+    // every boss has its art, announcer lines, model and Bestiary entry
+    const art = await import('/src/ui/art.js');
+    out.assets = D.BOSS_ORDER.map((id) => [id, !!art.FOE_ART[id], !!art.BOSS_ART[id], !!app.foeModels.foeModel(id), !!D.BESTIARY.foes[id]?.boss,
+      ['', '_return', '_slain'].every((x) => !!D.VOICE.lines[D.BOSSES[id].voice + x])]);
+    out.home = D.CHAPTERS.slice(0, 5).map((ch) => D.BOSSES[D.bossFor(ch)].name);
+    return out;
+  });
+  const C = s.ch, ids = [1, 2, 3, 4, 5].map((c) => C[c].id);
+  check('chapter bosses: each chapter fights its own painted boss, named on the bar in its colour',
+    ids.join() === 'gravemaw,pyrexa,vaulkar,azrathel,vesperine' && Object.values(C).every((c) => c.painted && c.color && c.bc) && C[2].bar === 'PYREXA, THE CINDER MATRON', JSON.stringify(C));
+  check('chapter bosses: Cinder Rain lobs fire that burns the ground; Glacier Lances mark lanes that rise into frost shards',
+    C[2].lobs >= 2 && C[2].burns >= 3 && C[2].hurt > 0 && C[3].marked >= 15 && C[3].teles >= 15 && C[3].up >= 15 && C[3].hurt > 0, JSON.stringify({ p: C[2], v: C[3] }));
+  check('chapter bosses: Smite drops pillars where the Shepherd stands; Blood Lances fan orbs down a marked cone',
+    C[4].marks >= 1 && C[4].fell && C[4].hurt > 0 && C[5].cone && C[5].orbs >= 13 && C[5].recovered, JSON.stringify({ a: C[4], v: C[5] }));
+  check('chapter bosses: a phase roar withdraws marks that have not gone off', s.withdraw.marks >= 15 && s.withdraw.roar === 'roar' && s.withdraw.pending === 0 && s.withdraw.teles === 0, JSON.stringify(s.withdraw));
+  check('chapter bosses: the Endless Abyss brings the five back in turn, and they return', s.order.join() === 'gravemaw,pyrexa,vaulkar,azrathel,vesperine,gravemaw'
+    && s.returns === 'THE HOLLOW KING RETURNS' && s.byType.vesperine === 1 && s.byType.gravemaw === 2, // each kill counts for its own boss
+    JSON.stringify({ order: s.order, ret: s.returns, by: s.byType }));
+  check('chapter bosses: every boss has its portrait, warning art, model, Bestiary entry and announcer lines; the home card names it',
+    s.assets.every((a) => a.slice(1).every(Boolean)) && s.home.join() === 'Gravemaw,Pyrexa,Vaulkar,Azrathel,Vesperine', JSON.stringify({ a: s.assets, h: s.home }));
+});
+check('chapter bosses: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

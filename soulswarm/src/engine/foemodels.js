@@ -1,5 +1,5 @@
 // Painted 3D foes: Higgsfield image-to-3D models built from each foe's Bestiary painting (scripts/enemies.sh,
-// docs/ART_AND_ADS.md §6). Loaded once and shared; the horde, the legion's ghosts, the Hollow King and the Soul Thief
+// docs/ART_AND_ADS.md §6). Loaded once and shared; the horde, the legion's ghosts, the five chapter bosses and the Soul Thief
 // clone the geometry for their own instance attributes. The models are static: the character shader walks them
 // (USE_GAIT, swinging each leg about its hip and each arm about its shoulder), so a horde of hundreds stays one draw
 // call per type. Until a model is ready (or if one fails) the procedural one from models.js stands in.
@@ -14,7 +14,8 @@ const TEX = assetFiles(import.meta.glob('../assets/foes/*.webp', { eager: true, 
 // the game keeps), how much bright saturated paint glows, and the walk. Gait heights and widths are fractions of the
 // height: hip / sh = the hip and shoulder pivots, armX = |x| where the arms begin (the torso stays put), leg / arm =
 // swing in radians, rate = strides per 6 rad/s, bob = the dip as the feet pass, sway = side roll per metre of height,
-// hover = a float's rise and fall, hem = a robe's flutter below the hips. The models face +X; they are turned to +Z.
+// hover = a float's rise and fall, hem = a robe's flutter below the hips. lit = a boss's light level (dark paint on a
+// dark floor needs more). The models face +X; they are turned to +Z.
 export const FOES = {
   husk:     { h: 1.5,  glow: 1.3, gait: { hip: 0.46, sh: 0.78, armX: 0.12, leg: 0.42, arm: 0.3,  rate: 1.5, bob: 0.025, sway: 0.03,  hover: 0,     hem: 0 } },
   ghoul:    { h: 1.05, glow: 1.6, gait: { hip: 0.42, sh: 0.8,  armX: 0.1,  leg: 0.45, arm: 0.4,  rate: 2.2, bob: 0.03,  sway: 0.02,  hover: 0,     hem: 0.02 } },
@@ -23,6 +24,10 @@ export const FOES = {
   bloater:  { h: 1.6,  glow: 1.3, gait: { hip: 0.26, sh: 0.74, armX: 0.32, leg: 0.3,  arm: 0.14, rate: 1.3, bob: 0.02,  sway: 0.05,  hover: 0,     hem: 0 } },
   thief:    { h: 1.3,  glow: 1.6, gait: { hip: 0.4,  sh: 0.7,  armX: 0.2,  leg: 0.4,  arm: 0.1,  rate: 2.4, bob: 0.04,  sway: 0.02,  hover: 0,     hem: 0.02 } },
   gravemaw: { h: 4.6,  glow: 2.0, gait: { hip: 0.42, sh: 0.72, armX: 0.17, leg: 0,    arm: 0.1,  rate: 0.5, bob: 0,     sway: 0.008, hover: 0.012, hem: 0.025 } },
+  pyrexa:   { h: 4.6,  glow: 1.8, lit: 1.25, gait: { hip: 0.45, sh: 0.74, armX: 0.14, leg: 0,    arm: 0.08, rate: 0.5, bob: 0,     sway: 0.01,  hover: 0.015, hem: 0.03 } },
+  vaulkar:  { h: 4.6,  glow: 2.0, gait: { hip: 0.36, sh: 0.76, armX: 0.24, leg: 0.22, arm: 0.14, rate: 0.55, bob: 0.02, sway: 0.02,  hover: 0,     hem: 0 } },
+  azrathel: { h: 4.8,  glow: 1.8, lit: 1.7, gait: { hip: 0.42, sh: 0.76, armX: 0.2,  leg: 0.16, arm: 0.06, rate: 0.5, bob: 0.012, sway: 0.008, hover: 0,    hem: 0.015 } },
+  vesperine:{ h: 4.5,  glow: 1.6, lit: 1.15, gait: { hip: 0.45, sh: 0.76, armX: 0.14, leg: 0,    arm: 0.08, rate: 0.45, bob: 0,    sway: 0.008, hover: 0.012, hem: 0.025 } },
 };
 export const FOE_IDS = Object.keys(FOES);
 
@@ -77,7 +82,7 @@ export function loadFoeModel(id) {
         b: new THREE.Vector4(G.sh * h, bodyZ(g, G.sh * h, armX, 0.05 * h), G.arm, armX),
         c: new THREE.Vector4(G.bob * h, G.sway, G.hover * h, G.hem * h),
       };
-      c.ready = { geometry: g, map, h, glow: F.glow, gait };
+      c.ready = { geometry: g, map, h, glow: F.glow, lit: F.lit || 1, gait };
       return c.ready;
     } catch (e) {
       console.warn('foe model', id, e);

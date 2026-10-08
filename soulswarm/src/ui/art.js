@@ -18,9 +18,12 @@ import witch from '../assets/art/foe-witch.webp';
 import bloater from '../assets/art/foe-bloater.webp';
 import thief from '../assets/art/foe-thief.webp';
 import gravemaw from '../assets/art/foe-gravemaw.webp';
+import pyrexa from '../assets/art/foe-pyrexa.webp';
+import vaulkar from '../assets/art/foe-vaulkar.webp';
+import azrathel from '../assets/art/foe-azrathel.webp';
+import vesperine from '../assets/art/foe-vesperine.webp';
 
 export { default as LOGO_ART } from '../assets/art/logo.webp';
-export { default as BOSS_ART } from '../assets/art/boss-band.webp';
 import eclipseVael from '../assets/art/skin-eclipse-vael.webp';
 import rLantern from '../assets/art/relic-lantern.webp';
 import rCrown from '../assets/art/relic-crown.webp';
@@ -62,4 +65,10 @@ export const talentArt = (id, fallback) => (id === 'greed' ? relicArt('coin') : 
 export const CHAPTER_ART = { 1: ch1, 2: ch2, 3: ch3, 4: ch4, 5: ch5, 6: ch6 };
 
 /** Painted Bestiary portraits (3:4) by entry id (BESTIARY.order). */
-export const FOE_ART = { husk, ghoul, brute, witch, bloater, thief, gravemaw };
+export const FOE_ART = { husk, ghoul, brute, witch, bloater, thief, gravemaw, pyrexa, vaulkar, azrathel, vesperine };
+
+/** Each chapter boss's painted band (the boss-warning banner) by boss id (BOSSES in data.js). */
+export const BOSS_ART = {};
+for (const [path, url] of Object.entries(import.meta.glob('../assets/art/boss-band-*.webp', { eager: true, import: 'default' }))) {
+  BOSS_ART[path.slice(path.lastIndexOf('/boss-band-') + 11, -5)] = url;
+}

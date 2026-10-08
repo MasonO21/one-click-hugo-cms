@@ -331,7 +331,7 @@ export class Rites {
     C.length = 0;
     run.camera.updateMatrixWorld(); // the camera may not have rendered since it last moved (headless QA steps)
     E.query(P.x, P.z, D.range, this._seen);
-    // Gravemaw and elites first, then Cinder Witches (the horde's casters), then the nearest; a short selection keeps the
+    // the boss and elites first, then Cinder Witches (the horde's casters), then the nearest; a short selection keeps the
     // order (no sort, no allocation)
     const m = Math.min(C.length, sc.length);
     for (let i = 0; i < m; i++) { const e = C[i]; sc[i] = (e.x - P.x) ** 2 + (e.z - P.z) ** 2 - (e.type === 'boss' ? 3e6 : e.elite ? 2e6 : e.type === 'witch' ? 1e6 : 0); }
@@ -404,7 +404,7 @@ export class Rites {
   // ---------------------------------------------------------------- Liora: Death Knell
   liora(D, P) {
     const run = this.run;
-    run.projectiles.clearEnemyShots(true); // Gravemaw keeps his rules: his ring and spiral orbs fly on, as through the wall
+    run.projectiles.clearEnemyShots(true); // the boss keeps its rules: its ring, spiral and fan orbs fly on, as through the wall
     this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0;
     run.enemies.query(P.x, P.z, D.r, this._knell);
     run.enemies.query(P.x, P.z, D.silence, this._silence); // the toll carries: Witches farther out lose their fire too
@@ -465,11 +465,11 @@ export class Rites {
     const cx = this.wallX = P.x, cz = this.wallZ = P.z; // the ring marches with him
     if (this.wallT <= 0) { if (this.wallAge > D.dur + 0.4) { this.wallAge = -1; this.spikes.count = 0; } return; }
     this.wallT -= dt;
-    // the wall: nothing stays inside; every crossing is cut (once per hitCd per foe); Gravemaw is only shoved
+    // the wall: nothing stays inside; every crossing is cut (once per hitCd per foe); the boss is only shoved
     this._dt = dt; this._shown = 0;
     run.enemies.query(cx, cz, R + 1, this._wall);
     const r2 = R * R;
-    // Witch fire falling inside the ring shatters on the bone just before it lands (the horde's fire only: Gravemaw's
+    // Witch fire falling inside the ring shatters on the bone just before it lands (the horde's fire only: the boss's
     // orbs keep his rules)
     const lobs = run.projectiles.lobs;
     if (lobs) for (let i = lobs.length - 1; i >= 0; i--) {

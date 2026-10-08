@@ -33,7 +33,7 @@
 
 | Season | Dates (2027–28) | Theme | New hero | Boss Rush variant (week 3) | Holiday / special event | Feature drop |
 |---|---|---|---|---|---|---|
-| **S1** | 14 Jun – 11 Jul | **The Waking Legion** (launch) | — (launch roster: Vael, Nyx, Seraphine, Mordrake) | *Hollow Court*: Gravemaw Ch1→Ch5 back-to-back | Launch week: 2× login rewards for 7 days | Global launch. Premium pass skin: **Eclipse Vael** |
+| **S1** | 14 Jun – 11 Jul | **The Waking Legion** (launch) | — (launch roster: Vael, Nyx, Seraphine, Mordrake) | *Hollow Court*: the five chapter bosses back-to-back | Launch week: 2× login rewards for 7 days | Global launch. Premium pass skin: **Eclipse Vael** |
 | **S2** | 12 Jul – 8 Aug | Embers of Midsummer | **Liora Bellwraith** (Epic) | *Ember Gauntlet*: burning ground in every chapter | Summer weekend: Blood Moon extended to 4 days | Endless Abyss leagues v2 (6 leagues) |
 | **S3** | 9 Aug – 5 Sep | The Drowned Choir | — | *Tidal Gravemaw*: slams leave water that slows | — | Hero loadout presets; replay sharing (10 s clip) |
 | **S4** | 6 Sep – 3 Oct | Bone Abbey | **Osric the Bone Abbot** (Legendary) | *Ossuary Rush*: Skull Halo pre-equipped for all | — | **Nightmare difficulty** (Ch1–5 remix; already in the prototype build, so S4 is its launch announcement). **Relic Ascension** (gold sink) |
@@ -80,7 +80,7 @@
 ### 3.2 Boss Rush (monthly, limited)
 
 - **When:** week 3 of each season, Tue 00:00 – Thu 23:59 UTC (72 h).
-- **Format:** five Gravemaw fights in a row at Ch1→Ch5 scaling with the season's modifier. The player starts at Lv10 with 30 minions and gets one card pick between bosses. 3 free attempts per day, no energy cost.
+- **Format:** the five chapter bosses in a row (Gravemaw → Vesperine) at Ch1→Ch5 scaling with the season's modifier. The player starts at Lv10 with 30 minions and gets one card pick between bosses. 3 free attempts per day, no energy cost.
 - **Leaderboard:** fastest total clear time, in groups of 100 players matched by power.
 - **Rewards:** milestone track (bosses beaten) gives sigils, gems and featured-hero shards. Rank rewards give an exclusive **legion banner** cosmetic (top 10%) and gems. Cosmetic only, never power-exclusive.
 
@@ -166,7 +166,7 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | | First real run started | Share reaching `run_start` (Ch1) | ≥ 80% | < 75% |
 | Engagement | DAU / MAU | Stickiness | ≥ 20% | < 15% |
 | | Runs per DAU · minutes per DAU | | 4.0 · 32 min | −15% week-on-week |
-| | Chapter clear rates | Share of attempts that kill Gravemaw, per chapter | Ch1 70%, Ch2 55%, Ch3 45%, Ch4 35%, Ch5 25% | ±10 pp from target |
+| | Chapter clear rates | Share of attempts that kill the chapter's boss, per chapter | Ch1 70%, Ch2 55%, Ch3 45%, Ch4 35%, Ch5 25% | ±10 pp from target |
 | | Death-minute heatmap | Distribution of death time per chapter | Peak at 4:30–6:00 | Peak before 2:30 (unfair spike) |
 | | Nightmare / Torment uptake | Share of D30+ players with a Nightmare clear · Torment clear; share of their runs on each tier | 40% · 15%; 50%+ of D30+ runs above Normal | < 20% Nightmare (too hard or unseen) |
 | Gameplay | Skill pick rates | Share of offers taken, per card | No card < 10% or > 60% | Outside the band |

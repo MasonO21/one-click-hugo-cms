@@ -1,4 +1,4 @@
-// Nightmare and Torment (GDD §8.2): per-chapter unlocks, the remembered choice, records and Gravemaw's Hoard odds.
+// Nightmare and Torment (GDD §8.2): per-chapter unlocks, the remembered choice, records and the boss's hoard (relic) odds.
 // Profile block: p.diff = { sel: { [chapter]: id }, best: { [chapter]: { [id]: { time, legion, kills, streak, cleared } } } }.
 // Normal's clear flag stays in p.chapter.best (it drives chapter unlocks and the Daily Trial).
 import { CHAPTERS, DIFFICULTY, DIFFICULTY_ORDER, RARITIES } from '../game/data.js';

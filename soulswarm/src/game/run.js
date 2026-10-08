@@ -19,7 +19,7 @@ import { Affixes } from './affixes.js';
 import { Events } from './events.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
 import { Streak } from './streak.js';
-import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON } from './data.js';
+import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
 import { HITSTOP, NOVA, LEVEL_PULSE, VOICE } from './data.js';
 import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook } from './data.js';
 
@@ -90,7 +90,7 @@ export class Run {
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
     this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, bestStreak: 0, events: 0, rites: 0 };
-    this.counters.byType = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, thief: 0, gravemaw: 0 }; // Bestiary kills per foe (meta/bestiary.js)
+    this.counters.byType = Object.fromEntries(BESTIARY.order.map((id) => [id, 0])); // Bestiary kills per foe and boss (meta/bestiary.js)
     this.streak = new Streak(this);
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0; this.novaSize = 0;
     this.burstQueue = []; this.burstT = 0; this.burstDmg = 0;
@@ -129,12 +129,12 @@ export class Run {
   hpMul() {
     const m = this.minute;
     // Endless Abyss runs far past 6:00, so it uses a flatter curve than the campaign.
-    // Nightmare / Torment: the extra toughness ramps in over diff.ramp minutes (the opening stays winnable), and Gravemaw's
+    // Nightmare / Torment: the extra toughness ramps in over diff.ramp minutes (the opening stays winnable), and the boss's
     // arena adds have Normal HP, or they pile up at the alive cap and soak his fight (scripts/balance.mjs GOD=1)
     const D = this.diff, dh = this.bossSpawned ? 1 : 1 + (D.hp - 1) * Math.min(1, D.ramp ? m / D.ramp : 1);
     return this.chapter.hpMul * (this.endless ? 1 + 0.32 * m + 0.025 * m * m : 1 + 0.28 * m + 0.04 * m * m) * dh;
   }
-  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)) * (this.bossSpawned ? 1 : this.diff.dmg); } // arena adds are plain adds: Gravemaw carries the difficulty
+  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)) * (this.bossSpawned ? 1 : this.diff.dmg); } // arena adds are plain adds: the boss carries the difficulty
   recomputeStats() {
     this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
     const ms = this.mut.stats, S = this.stats;
@@ -217,7 +217,7 @@ export class Run {
   director(dt) {
     const m = this.minute;
     if (!this.bossSpawned) {
-      // Endless: each depth (Gravemaw kill) rotates the chapter modifiers; announce once the depth banner has played
+      // Endless: each depth (boss kill) rotates the chapter modifiers; announce once the depth banner has played
       if (this.endless && this.modDepth !== this.bossKills) {
         this.modDepth = this.bossKills;
         this.mods = chapterMods(this.chapter, this.modDepth);
@@ -265,9 +265,12 @@ export class Run {
       }
       if (!this.warned && this.time >= this.nextBossAt - 8) {
         this.warned = true;
-        this.ui.banner(this.bossKills ? 'THE HOLLOW KING RETURNS' : 'THE HOLLOW KING APPROACHES', this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion', 'boss');
+        // the chapter's boss; in the Endless Abyss the next in turn, each one "returns" once all five have fallen
+        const B = BOSSES[this.bossId], back = this.bossKills >= BOSS_ORDER.length;
+        this.ui.bossColor(B.color);
+        this.ui.banner(`${B.title.toUpperCase()} ${back ? 'RETURNS' : 'APPROACHES'}`, this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion', 'boss');
         this.audio.sfx('warning');
-        this.audio.voice(this.bossKills ? 'a_boss_return' : 'a_boss');
+        this.audio.voice(back ? `${B.voice}_return` : B.voice);
         this.app.haptic('warning');
       }
       this.events.director();
@@ -550,27 +553,32 @@ export class Run {
     this.audio.playMusic(!this.bossSpawned ? 'battle' : this.boss.phase === 2 ? 'boss3' : 'boss');
   }
 
+  /** The boss this run faces next (or is fighting): its chapter's, or in the Endless Abyss the next in turn. */
+  get bossId() { return bossFor(this.chapter, this.bossKills); }
+
   onBossKilled(x, z) {
-    this.counters.byType.gravemaw++; // Bestiary: campaign victories and every Endless kill
-    if (this.endless) return this.onEndlessBossKilled(x, z);
+    const id = this.bossSpawned && this.boss.id ? this.boss.id : this.bossId, K = BOSSES[id]; // the one that fell (QA may call this with none up)
+    this.counters.byType[id]++; // Bestiary: campaign victories and every Endless kill
+    this.slainVoice = `${K.voice}_slain`;
+    if (this.endless) return this.onEndlessBossKilled(x, z, K);
     this.bossDead = true;
     this.bossEnemy = null;
     this.fx.slowMo(0.15, 1.6);
     this.fx.flash(1);
     this.fx.shake(1);
     this.fx.aberration(1);
-    const col = hdr(this.chapter.boss, 4);
+    const hex = K.color, col = hdr(hex, 4);
     this.particles.burst(x, 2, z, 250, col, { speed: 14, life: 1.4, size: 0.8, up: 1.5 });
     this.particles.burst(x, 2, z, 120, [3, 3, 3], { speed: 8, life: 1, size: 1, up: 2 });
-    this.fx.shockwave(x, z, 16, this.chapter.boss, 1.0, 0.06);
-    this.fx.light(x, z, 18, 4, new THREE.Color(this.chapter.boss), 1.5);
+    this.fx.shockwave(x, z, 16, hex, 1.0, 0.06);
+    this.fx.light(x, z, 18, 4, new THREE.Color(hex), 1.5);
     this.audio.sfx('boss_slam');
     this.app.haptic('heavy');
     this.enemies.clearAll(true);
     this.projectiles.clearEnemyShots();
     this.pickups.magnetAll();
     this.ui.banner('CHAPTER CLEARED', `${this.chapter.name} is free`, 'gold');
-    this.audio.voice('a_boss_slain');
+    this.audio.voice(this.slainVoice);
     this.audio.voice('a_cleared'); // queues behind the first line
     this.audio.stopMusic();
     // the rest of the victory beat plays out in update() so it respects pause and ends cleanly
@@ -586,8 +594,8 @@ export class Run {
     if (v.t > 3.2) this.end(true);
   }
 
-  /** Endless Abyss: the King falls, the abyss deepens, the run continues. */
-  onEndlessBossKilled(x, z) {
+  /** Endless Abyss: the boss falls, the abyss deepens, the run continues (the next boss is the next in turn). */
+  onEndlessBossKilled(x, z, K) {
     this.bossKills++;
     this.bossSpawned = false; this.warned = false;
     this.nextBossAt = this.time + ENDLESS_BOSS_EVERY;
@@ -597,17 +605,17 @@ export class Run {
     this.nextSwarm = this.time + 30;
     this.fx.slowMo(0.25, 0.9);
     this.fx.flash(0.7); this.fx.shake(0.8); this.fx.aberration(0.8);
-    const col = hdr(this.chapter.boss, 4);
+    const hex = K.color, col = hdr(hex, 4);
     this.particles.burst(x, 2, z, 200, col, { speed: 12, life: 1.2, size: 0.7, up: 1.5 });
-    this.fx.shockwave(x, z, 14, this.chapter.boss, 0.9, 0.06);
-    this.fx.light(x, z, 16, 3.5, new THREE.Color(this.chapter.boss), 1.2);
+    this.fx.shockwave(x, z, 14, hex, 0.9, 0.06);
+    this.fx.light(x, z, 16, 3.5, new THREE.Color(hex), 1.2);
     this.audio.sfx('boss_slam'); this.app.haptic('heavy');
     this.pickups.magnetAll();
     this.pickups.dropSpecial('chest', x, z);
     for (let i = 0; i < 25; i++) this.legion.raise(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 4);
     this.ui.bossBar(false);
-    this.ui.banner(`ABYSS DEPTH ${this.bossKills + 1}`, 'Gravemaw falls. The abyss grows hungrier.', 'gold');
-    this.audio.voice('a_boss_slain');
+    this.ui.banner(`ABYSS DEPTH ${this.bossKills + 1}`, `${K.name} falls. The abyss grows hungrier.`, 'gold');
+    this.audio.voice(this.slainVoice);
     this.audio.voice('a_depth');
     this.audio.playMusic('battle');
   }
@@ -683,7 +691,7 @@ export class Run {
     this.updateVictory(realDt);
     if (this.deathT >= 0) {
       this.deathT += realDt;
-      // the legion slew Gravemaw while the Shepherd was down: the chapter is won, so no revive prompt; the beat plays out
+      // the legion slew the boss while the Shepherd was down: the chapter is won, so no revive prompt; the beat plays out
       if (this.deathT > 1.1 && !this.paused && !(this.bossDead && !this.endless)) {
         this.paused = true;
         this.ui.showRevive({ canRevive: this.revivesUsed < 1, gemCost: 60 }, (choice) => {

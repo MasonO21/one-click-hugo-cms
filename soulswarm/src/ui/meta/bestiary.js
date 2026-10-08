@@ -24,7 +24,7 @@ export function renderBestiary(p) {
     </div>
     <div class="bst-grid">${list.map((e) => {
       const t = next(e), done = e.claimed >= e.tiers.length;
-      return `<button class="bcard ${e.unlocked ? '' : 'is-locked'} ${e.ready ? 'is-ready' : ''} ${e.id === 'gravemaw' ? 'is-boss' : ''}" data-act="foe" data-id="${e.id}" style="--fc:${e.color}" aria-label="${e.unlocked ? e.name : 'Undiscovered foe'}">
+      return `<button class="bcard ${e.unlocked ? '' : 'is-locked'} ${e.ready ? 'is-ready' : ''} ${BESTIARY.foes[e.id].boss ? 'is-boss' : ''}" data-act="foe" data-id="${e.id}" style="--fc:${e.color}" aria-label="${e.unlocked ? e.name : 'Undiscovered foe'}">
         <span class="bcard-frame">
           <span class="bcard-art"><img src="${FOE_ART[e.id]}" alt="" draggable="false" loading="lazy"></span>
           ${e.unlocked ? '' : '<span class="bcard-q">?</span>'}

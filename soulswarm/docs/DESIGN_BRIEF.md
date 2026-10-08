@@ -37,7 +37,7 @@ Heroes rank up 1★ to 5★ using shards. Each star adds +12% damage and +8% HP.
 | Cinder Witch | ranged | keeps distance and lobs ember orbs |
 | Bloater | bomber | explodes near the player (telegraphed) |
 | Elite (any type) | gold variant | ×6 HP, larger, drops a **Relic Chest** (free skill pick) |
-| **Gravemaw, the Hollow King** | boss | slam AoE (telegraphed rings), ember bullet rings, summons husks. Appears at 6:00 in each chapter; killing it clears the chapter |
+| **The chapter bosses**: Gravemaw, the Hollow King (Ch1) · Pyrexa, the Cinder Matron (Ch2) · Vaulkar, the Ossuary Colossus (Ch3) · Azrathel, the Fallen Seraph (Ch4) · Vesperine, the Crimson Queen (Ch5) | boss | shared: slam AoE (telegraphed rings), ember bullet rings, spiral; each adds a twist and a signature (summoned husks, cinder rain, glacier lances, smiting light, blood-lance fans). Appears at 6:00; killing it clears the chapter |
 
 ## In-run skills (level-up cards, choose 1 of 3, max Lv5)
 **Weapons:** Soul Bolt, Spectral Scythe, Ashen Chains, Bone Spears, Skull Halo (orbiting skulls), Grave Pulse (AoE pulse).
@@ -46,7 +46,7 @@ Heroes rank up 1★ to 5★ using shards. Each star adds +12% damage and +8% HP.
 Pickups: soul shards (XP), heart (heal), magnet, relic chest (from elites).
 
 ## Chapters
-1 Ashen Necropolis, 2 Ember Wastes, 3 Frozen Ossuary, 4 Abyssal Cathedral, 5 Crimson Throne. Each lasts 6:00 and ends in a boss fight; enemy HP and density scale per chapter. Chapter 5 is followed by "Endless Abyss": no time limit, Gravemaw returns every 5:00 and grows stronger, and your deepest run is recorded (weekly leaderboards are planned for live ops).
+1 Ashen Necropolis, 2 Ember Wastes, 3 Frozen Ossuary, 4 Abyssal Cathedral, 5 Crimson Throne. Each lasts 6:00 and ends in a boss fight; enemy HP and density scale per chapter. Chapter 5 is followed by "Endless Abyss": no time limit, a boss rises every 5:00 (the five in turn) and grows stronger, and your deepest run is recorded (weekly leaderboards are planned for live ops).
 
 ## Meta & economy
 **Currencies:** Gold (soft), Soul Gems (premium), Energy (30 max, a run costs 5, +1 every 6 min), Altar Sigils (summon keys), Hero Shards.

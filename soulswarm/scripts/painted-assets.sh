@@ -26,8 +26,10 @@ for i in 1 2 3 4 5 6; do # gem packs, smallest to largest (shop)
   convert "$A/gems-$i.jpg" -resize 288x288 -quality 82 -define webp:method=6 "$W/gems-$i.webp"
 done
 convert "$A/skin-eclipse-vael.jpg" -resize 540x720 -quality 80 -define webp:method=6 "$W/skin-eclipse-vael.webp" # Soul Pass skin
-convert "$A/boss-gravemaw.jpg" -resize 540x720 -quality 78 -define webp:method=6 "$W/foe-gravemaw.webp" # Gravemaw's Bestiary portrait
-convert "$A/boss-gravemaw.jpg" -crop 1792x1000+0+60 +repage -resize 900x -quality 78 -define webp:method=6 "$W/boss-band.webp"
+for b in gravemaw pyrexa vaulkar azrathel vesperine; do # the chapter bosses: Bestiary portrait and boss-warning band
+  convert "$A/boss-$b.jpg" -resize 540x720 -quality 78 -define webp:method=6 "$W/foe-$b.webp"
+  convert "$A/boss-$b.jpg" -crop 1792x1000+0+60 +repage -resize 900x -quality 78 -define webp:method=6 "$W/boss-band-$b.webp"
+done
 convert "$A/logo-transparent.png" -resize 900x -quality 86 -define webp:method=6 -define webp:alpha-quality=90 "$W/logo.webp"
 convert "$A/keyart-vertical.jpg" -resize 720x -quality 70 -define webp:method=6 "$W/boot.webp"
 
