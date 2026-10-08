@@ -81,6 +81,10 @@ methods; do not rename/remove/change existing signatures.
   projectiles, particles; instanced meshes for repeated geometry; simulation shortcuts for
   off-screen colonists/factories. Target 60 fps on mid-range phones with 300+ buildings, 50 colonists,
   100 aliens.
+- Graphics quality: the renderer reads only `settings.quality`. With `settings.qualityMode = 'auto'` (new
+  installs) `src/platform/autoQuality.ts` owns it: a once-per-device pick at boot (`deviceQuality.ts`, from
+  `Renderer.init`'s `onContext` hook) and a frame-rate governor (`qualityGovernor.ts`) that only ever steps
+  down. The Settings panel switches modes through `game.autoQuality` (`setManual` / `enableAuto`).
 
 ## Camera & movement convention (render ⇄ player ⇄ UI)
 
