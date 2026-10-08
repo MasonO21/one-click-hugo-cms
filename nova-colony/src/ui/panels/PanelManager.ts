@@ -5,6 +5,7 @@
 import type { UiCtx } from '../ctx';
 import { Panel } from './Panel';
 import { safe } from '../dom';
+import { backTarget } from '../logic/back';
 
 type Factory = (ctx: UiCtx) => Panel;
 
@@ -132,7 +133,7 @@ export class PanelManager {
     this.onChange();
   }
 
-  /** Close a panel by name, or the top-most dismissable one. */
+  /** Close a panel by name, or the top-most one (back): a modal that can't be dismissed keeps everything under it. */
   close(name?: string): void {
     if (name) {
       const o = this.open_.find((x) => x.panel.name === name && !x.closing);
@@ -140,13 +141,8 @@ export class PanelManager {
       else this.modalQueue = this.modalQueue.filter((q) => q.name !== name);
       return;
     }
-    for (let i = this.open_.length - 1; i >= 0; i--) {
-      const o = this.open_[i];
-      if (!o.closing && o.panel.dismissable) {
-        this.closePanel(o);
-        return;
-      }
-    }
+    const i = backTarget(this.open_.map((o) => ({ kind: o.panel.kind, dismissable: o.panel.dismissable, closing: o.closing })));
+    if (i >= 0) this.closePanel(this.open_[i]);
   }
 
   closeAll(): void {

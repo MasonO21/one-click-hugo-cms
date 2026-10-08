@@ -3,7 +3,7 @@
  * (never finish the activity, which is what Capacitor does when no listener is registered).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { backAction } from '../src/ui/logic/back';
+import { backAction, backTarget } from '../src/ui/logic/back';
 
 const h = vi.hoisted(() => ({
   platform: 'android' as 'android' | 'ios' | 'web',
@@ -35,6 +35,36 @@ describe('back cascade', () => {
     expect(backAction({ panelOpen: false, buildActive: true, hasSelection: true })).toBe('build');
     expect(backAction({ panelOpen: false, buildActive: false, hasSelection: true })).toBe('selection');
     expect(backAction({ panelOpen: false, buildActive: false, hasSelection: false })).toBe('none');
+  });
+
+  it('a modal about to appear keeps the press (impatient double back, the tier-up reveal) instead of leaving the game', () => {
+    expect(backAction({ panelOpen: false, modalPending: true, buildActive: false, hasSelection: false })).toBe('panel');
+    expect(backAction({ panelOpen: false, modalPending: true, buildActive: true, hasSelection: true })).toBe('panel');
+    expect(backAction({ panelOpen: false, modalPending: false, buildActive: false, hasSelection: false })).toBe('none');
+  });
+});
+
+describe('back target (which panel closes)', () => {
+  const sheet = (closing = false) => ({ kind: 'sheet' as const, dismissable: true, closing });
+  const modal = (dismissable: boolean, closing = false) => ({ kind: 'modal' as const, dismissable, closing });
+
+  it('closes the newest panel; nothing open -> -1', () => {
+    expect(backTarget([])).toBe(-1);
+    expect(backTarget([sheet()])).toBe(0);
+    expect(backTarget([{ kind: 'drawer', dismissable: true, closing: false }, { kind: 'side', dismissable: true, closing: false }])).toBe(1);
+    expect(backTarget([sheet(), sheet(true)])).toBe(0);
+  });
+
+  it('a modal is on top of every sheet, even one opened after it', () => {
+    expect(backTarget([sheet(), modal(true)])).toBe(1);
+    expect(backTarget([modal(true), sheet()])).toBe(0);
+  });
+
+  it('Welcome Back / a raid chest keep the press: the sheet hidden under them does not close unseen', () => {
+    expect(backTarget([sheet(), modal(false)])).toBe(-1);
+    expect(backTarget([modal(false), sheet()])).toBe(-1);
+    // once it is closing, back works on what is left
+    expect(backTarget([sheet(), modal(false, true)])).toBe(0);
   });
 });
 

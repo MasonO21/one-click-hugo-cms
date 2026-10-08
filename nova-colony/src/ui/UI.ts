@@ -99,6 +99,8 @@ export class UI {
   private lastClick = { x: 0, y: 0, t: -1e9 };
   private lastPanelSfx = 0;
   private lastTierCelebrate = -1e9;
+  /** The tier-up card is on its way (the base transforms for TIER_REVEAL_MS first). */
+  private tierRevealPending = false;
   private lastJoined: { id: number; t: number } = { id: -1, t: -1e9 };
   /** Aliens defeated in the current invasion by AlienDef.model (shown small on the victory card). */
   private waveKills = new Map<string, { n: number; boss: boolean }>();
@@ -460,17 +462,21 @@ export class UI {
           if (view.mode !== 'build') view.showGrid = false;
         }, TIER_REVEAL_MS + 1600);
       }
-      window.setTimeout(() => this.panels.open('celebrate', {
-        title: e.tier >= 6 ? 'TITANIUM COLONY!' : `${t.name} Tier Reached!`,
-        text: e.tier >= 6 ? 'You built a gleaming super-colony. What an incredible journey!' : t.description,
-        icon: e.tier >= 6 ? '🌟' : '🏰',
-        tier: e.tier,
-        unlocks: ready,
-        researchUnlocks: research,
-        big: true,
-        art: tierArt(e.tier),
-        artKind: 'tier',
-      } satisfies CelebrateArg), TIER_REVEAL_MS);
+      this.tierRevealPending = true;
+      window.setTimeout(() => {
+        this.tierRevealPending = false;
+        this.panels.open('celebrate', {
+          title: e.tier >= 6 ? 'TITANIUM COLONY!' : `${t.name} Tier Reached!`,
+          text: e.tier >= 6 ? 'You built a gleaming super-colony. What an incredible journey!' : t.description,
+          icon: e.tier >= 6 ? '🌟' : '🏰',
+          tier: e.tier,
+          unlocks: ready,
+          researchUnlocks: research,
+          big: true,
+          art: tierArt(e.tier),
+          artKind: 'tier',
+        } satisfies CelebrateArg);
+      }, TIER_REVEAL_MS);
     });
 
     bus.on('game:ready', () => {
@@ -755,10 +761,16 @@ export class UI {
    */
   back(): boolean {
     const sel = this.game.view.selection;
-    const action = backAction({ panelOpen: this.panels.anyOpen(), buildActive: this.build.active, hasSelection: sel.kind !== null });
+    const action = backAction({
+      panelOpen: this.panels.anyOpen(),
+      // a queued card about to follow the one closing, or the tier-up card after the reveal: stay in the game
+      modalPending: this.panels.anyModal() || this.tierRevealPending,
+      buildActive: this.build.active,
+      hasSelection: sel.kind !== null,
+    });
     switch (action) {
       case 'panel':
-        this.panels.close(); // a modal that can't be dismissed stays, but still swallows the press
+        this.panels.close(); // a modal that can't be dismissed stays (with what is under it), but swallows the press
         return true;
       case 'build':
         this.build.cancel();
