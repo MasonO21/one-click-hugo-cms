@@ -104,6 +104,19 @@ finish offline) and a local notification says when the squad is home. After Tita
 uncharted sites, finds that escalate with depth, and a Star Chart with milestone rewards every 5–10 sites, forever.
 Cozy: nobody is ever hurt; a long walk without a vehicle only leaves the squad a little tired.
 
+## 20c. Achievements & the Colony Journal
+58 cozy achievements in nine sections (Builder, Explorer, Defender, Scientist, Community, Crafter, Expeditions,
+Collector, Veteran): 16 tiered lines with bronze / silver / gold (Lumberjack 500 / 5,000 / 50,000 wood …: bronze in the
+first hour or two, silver mid-game, gold a long-term goal across the ~45 h to Titanium) and 10 one-offs (each boss, each
+colony tier, a legendary colonist). Progress is never double-counted: it reads the lifetime mission counters and plain
+state. Rewards are season XP plus modest resources / crates of the stage they are earned in; Nova (~290 in total) only
+with silver, gold and the one-offs. Earned medals wait for a tap on Claim (Claim all too). A save from before the
+Journal earns everything it already earned at once, with a single "N achievements already earned!" toast. The Journal
+(Menu tile, badge for unclaimed medals) shows every achievement with its medal, progress bar and reward, the date each
+medal was claimed, and the Colony Records (lifetime wood, aliens, raids, buildings, research, expeditions, hours …).
+Unlock toasts open it when tapped. The guided first session stays quiet. Unlocks are mirrored to Game Center / Play
+Games through a no-op platform hook (docs/MOBILE.md §6c).
+
 ## 21. Juice
 Resources fly to storage, buildings construct piece by piece, upgrade transformation animations,
 resource pops, machines visibly operate, conveyors move items, colonists visibly work, turrets track

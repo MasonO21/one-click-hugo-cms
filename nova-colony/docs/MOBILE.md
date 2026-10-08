@@ -257,6 +257,82 @@ Asked once (`settings.notifyAsked`; "Not now" is remembered). **Settings › Rem
 the OS has blocked the app, explains where to allow it (iOS: Settings › Nova Colony › Notifications; Android:
 Settings › Apps › Nova Colony › Notifications).
 
+## 6c. Achievements (Game Center / Google Play Games)
+
+The Colony Journal (Menu › Journal) has 58 achievements today: 16 tiered lines (bronze / silver / gold) and 10 one-offs.
+The game itself never needs a console: progress is read from state the game already keeps and unlocks live in the save
+(`state.achievements`), so a player with no Game Center / Play Games account loses nothing. The platform hook only
+*mirrors* unlocks, so the stores' own achievement screens, friends' comparisons and the Play Games / Game Center
+overlays can show them.
+
+**Ids.** Every achievement has a stable id, `ach_*` (`src/data/achievements.ts`; `tests/achievements.data.test.ts`
+keeps them unique and well-formed). A tiered line is three ids, `ach_<line>_bronze` / `_silver` / `_gold`; a one-off is
+`ach_<name>`. **Never rename or reuse an id**: the store mapping is keyed on it. New achievements just add ids.
+
+**Hook.** `PlatformServices.achievements?: AchievementsService` (`src/platform/types.ts`): `report(id)`, idempotent,
+never throws. `AchievementSystem` (`src/sim/achievements.ts`) calls it for every unlock, including the silent catch-up of
+an existing save on load (so a freshly connected account fills up). Today `createPlatformServices` returns
+`NoopAchievements` (`src/platform/achievements.ts`); `RecordingAchievements` is the test double.
+
+**Mapping.** A real adapter keeps one table from our id to the store's, e.g.
+`{ ach_lumberjack_bronze: 'CgkI…' /* Play Games */, … }` and `{ ach_lumberjack_bronze: 'nova.ach.lumberjack.bronze' }` for
+Game Center, then calls the native plugin from `report`. Generate the tables from `data.achievements` rather than by hand
+(name = `AchievementDef.name` + medal, description = `description`, medal icon = bronze / silver / gold / trophy art).
+
+**What the consoles need** (a one-time setup per store, before the adapter ships):
+
+| | Game Center (App Store Connect › Services › Game Center) | Google Play Games Services (Play Console › Grow › Play Games Services) |
+|---|---|---|
+| Identity | achievement id string per achievement (any unique text, e.g. `nova.ach.maker.silver`) | the console issues the id (`CgkI…`); copy it into the table |
+| Points | 1–100 each, **1,000 total** for the app | multiples of 5, up to 200 each, **1,000 total** for the game |
+| Suggested points | bronze 5 · silver 10 · gold 25 · one-offs 15 (≈ 790 in all) | same |
+| Art | 512×512 or 1024×1024 PNG (no alpha), one per achievement | 512×512 PNG, one per achievement |
+| Text | title + before / after-earned description (we have one description: use it for both) | name + description |
+| Type | standard (we only report unlocks; no incremental progress) | **standard**, not incremental |
+| Hidden | no | no (the Journal shows every achievement from day one) |
+| Native plugin | e.g. a Capacitor Game Center / Play Games plugin: sign in once at launch, then `report` unlocks | |
+
+Needs on the console side before real accounts work: Game Center enabled for the app id (and added to the entitlement)
+and the achievements in at least a *draft* state; on Android the Play Games project linked to the app, the OAuth client
+for the signing key (debug **and** release SHA-1) and the testers added while it is unpublished. Remember the privacy
+labels / Data safety form if the sign-in shares a player id.
+
+Catalogue (the id stems; `{bronze,silver,gold}` = three ids):
+
+| Section | Id | Name | Thresholds / goal |
+|---|---|---|---|
+| builder | `ach_handy_hands_{bronze,silver,gold}` | Handy Hands | 25 / 250 / 1,500 (Finish N buildings and pieces) |
+| builder | `ach_lumberjack_{bronze,silver,gold}` | Lumberjack | 500 / 5,000 / 50,000 (Gather N wood) |
+| builder | `ach_upgrade_fan_{bronze,silver,gold}` | Upgrade Fan | 5 / 50 / 300 (Upgrade buildings N times) |
+| explorer | `ach_treasure_hunter_{bronze,silver,gold}` | Treasure Hunter | 5 / 25 / 60 (Loot N points of interest) |
+| explorer | `ach_cartographer_{bronze,silver,gold}` | Cartographer | 3 / 5 / 8 (Discover N regions of the planet) |
+| defender | `ach_raid_survivor_{bronze,silver,gold}` | Raid Survivor | 1 / 15 / 75 (Survive an alien raid) |
+| defender | `ach_alien_hunter_{bronze,silver,gold}` | Alien Hunter | 25 / 250 / 2,500 (Defeat N aliens) |
+| defender | `ach_boss_elder_brute` | Brute Force | Defeat an Elder Brute |
+| defender | `ach_boss_hive_mother` | Queen's Gambit | Defeat a Hive Mother |
+| defender | `ach_boss_titan_prime` | Titanic Victory | Defeat Titan Prime |
+| scientist | `ach_researcher_{bronze,silver,gold}` | Researcher | 5 / 35 / 90 (Complete N research projects) |
+| scientist | `ach_tier_1` | Solid Start | Reach the Reinforced Wood tier |
+| scientist | `ach_tier_2` | Rock Solid | Reach the Stone tier |
+| scientist | `ach_tier_3` | Steady as Steel | Reach the Steel tier |
+| scientist | `ach_tier_4` | Alloy Allies | Reach the Advanced Alloy tier |
+| scientist | `ach_tier_5` | Small Wonders | Reach the Nano-Tech tier |
+| scientist | `ach_tier_6` | Titanium Dreams | Reach the Titanium tier |
+| community | `ach_welcome_home_{bronze,silver,gold}` | Welcome Home | 3 / 15 / 40 (Have N colonists living in your colony) |
+| community | `ach_legend` | Living Legend | Welcome a legendary colonist |
+| crafter | `ach_maker_{bronze,silver,gold}` | Maker | 5 / 50 / 400 (Craft N items) |
+| expeditions | `ach_trailblazers_{bronze,silver,gold}` | Trailblazers | 1 / 15 / 75 (Bring home an expedition haul) |
+| expeditions | `ach_star_charter_{bronze,silver,gold}` | Star Charter | 1 / 10 / 30 (Chart your first Frontier site) |
+| collector | `ach_town_planner_{bronze,silver,gold}` | Town Planner | 10 / 50 / 120 (Build N different kinds of building) |
+| collector | `ach_bestiary_{bronze,silver,gold}` | Bestiary | 4 / 9 / 14 (Defeat N different kinds of alien) |
+| veteran | `ach_time_well_spent_{bronze,silver,gold}` | Time Well Spent | 1 / 10 / 50 (Spend an hour in your colony) |
+| veteran | `ach_regular_visitor_{bronze,silver,gold}` | Regular Visitor | 3 / 7 / 30 (Collect the daily gift on N different days) |
+
+Other notes: unlock toasts open the Journal when tapped; the guided first session stays quiet (toasts and the menu badge
+wait until the tutorial is done or the first raid is won); Nova from achievements totals ≈ 290 (test cap 400) and only
+comes with silver, gold and the one-offs. Analytics: `achievement_unlocked` (`id`, `tier` = bronze / silver / gold /
+special, `play_time_s`) and one aggregate `achievements_retro` (`count`) when a loaded save catches up.
+
 ## 7. Saves, backups & recovery (never lose progress)
 
 `SaveManager` (`src/platform/save.ts`, attached by `main.ts` after `game.start()`):
@@ -286,7 +362,7 @@ Privacy-conscious by construction (`src/platform/analytics.ts`, `analyticsHooks.
 - **Batched** in memory (20 events / 30 s / on pause), failed sends are retried with a bounded queue.
 - **Sink**: `VITE_ANALYTICS_URL` receives `POST` JSON:
   `{ v: 1, installId, session, platform, appVersion, events: [{ name, props, ts }] }` (`keepalive` on pause). Without a URL, events are dropped (dev: printed to the console).
-- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `daily_claimed`, `season_level`, `progression_stall` (10 minutes of play without completing a mission), `notify_answer` (card / Settings, on or off, OS permission), `notify_opened` (which reminder brought the player back).
+- **Events**: `session_start`, `session_end`, `quit_point` (current main mission + % when the app is paused), `retention_day`, `tutorial_step` / `tutorial_complete`, `tier_up` (with time-to-tier), `research_done`, `building_usage` (aggregated), `region_discovered`, `wave_won`, `ad_started` / `ad_rewarded` / `ad_failed`, `offline_claimed`, `shop_opened`, `iap_purchased` / `iap_failed`, `daily_claimed`, `season_level`, `achievement_unlocked` / `achievements_retro` (§6c), `progression_stall` (10 minutes of play without completing a mission), `notify_answer` (card / Settings, on or off, OS permission), `notify_opened` (which reminder brought the player back).
 - Declare accordingly in the **Apple privacy labels** ("Data not linked to you": usage data) and the **Play Data safety** form, plus advertising-id use for AdMob. Consider defaulting `settings.analytics` to off in the EEA.
 
 ## 9. Release checklist
@@ -331,4 +407,6 @@ src/platform/save*.ts        SaveManager, recovery-code codec, migrations/valida
 src/platform/analyticsHooks.ts, hooks.ts, lifecycle.ts, env.ts
 src/sim/liveops.ts           Nova, boosts, VIP, daily, spin, season, ads, shop, free crate, offline
 src/sim/missions.ts, tutorial.ts   missions + first-15-minutes guidance
+src/sim/achievements.ts, src/data/achievements.ts   Colony Journal: progress, unlocks, claims, content
+src/platform/achievements.ts   Game Center / Play Games adapter hook (no-op today, §6c)
 ```
