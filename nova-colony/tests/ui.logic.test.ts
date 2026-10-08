@@ -16,6 +16,8 @@ import { claimableMissions, claimableSeason, computeBadges, idleWithJobs } from 
 import { happinessFace, portraitSvg, stars } from '../src/ui/logic/colonist';
 import type { MissionDef, ResearchDef } from '../src/data/schema';
 import { sideOrder } from '../src/ui/logic/missionOrder';
+import { buildCardOrder, type BuildOrderDef } from '../src/ui/logic/buildOrder';
+import { createDataRegistry } from '../src/data';
 
 function mkGame(): Game {
   let now = 1_700_000_000_000;
@@ -342,6 +344,65 @@ describe('ui.logic — side mission order', () => {
     const list = [m('a'), m('b'), m('c', 3), m('d', 5), m('e', 3)];
     expect(sideOrder(list, new Set(['b'])).map((x) => x.id)).toEqual(['b', 'd', 'c', 'e', 'a']);
     expect(sideOrder(list, new Set()).map((x) => x.id)).toEqual(['d', 'c', 'e', 'a', 'b']);
+  });
+});
+
+describe('ui.logic — build drawer card order', () => {
+  type D = BuildOrderDef & { research?: string };
+  const b = (id: string, unlockTier: number, research?: string, piece?: boolean): D => ({ id, unlockTier, research, piece: piece ? 'wall' : undefined });
+  const ids = (l: readonly D[]) => l.map((d) => d.id);
+  // a Defense-like tab, oldest first as the data lists it
+  const defs = [b('barricade', 0), b('spike', 0), b('tower', 1, 'r1'), b('mg', 3, 'r3'), b('fence', 3, 'r3b'), b('missile', 4, 'r4'), b('aa', 4, 'r4b'), b('laser', 5, 'r5'), b('pad', 5, 'r5b'), b('plasma', 6, 'r6')];
+  const opener = (tier: number, done: string[]) => (d: D) => d.unlockTier <= tier && (!d.research || done.includes(d.research));
+
+  it('lists the newest tier first, buildable before research-locked within a tier, future tiers last (nearest first)', () => {
+    const open = opener(5, ['r1', 'r3', 'r3b', 'r4', 'r5b']);
+    expect(ids(buildCardOrder(defs, 5, open))).toEqual(['pad', 'laser', 'missile', 'aa', 'mg', 'fence', 'tower', 'barricade', 'spike', 'plasma']);
+    const fut = [b('a', 0), b('t6', 6, 'x'), b('t4', 4, 'y'), b('t4b', 4)];
+    expect(ids(buildCardOrder(fut, 2, opener(2, [])))).toEqual(['a', 't4', 't4b', 't6']);
+  });
+
+  it('keeps definition order inside a tier', () => {
+    const same = [b('c', 2), b('a', 2), b('b', 2)];
+    expect(ids(buildCardOrder(same, 3, () => true))).toEqual(['c', 'a', 'b']);
+  });
+
+  it('pins the guided card to the front of its tab, locked or not; a pin from another tab changes nothing', () => {
+    const open = opener(5, ['r1', 'r3', 'r3b', 'r4', 'r5b']);
+    expect(ids(buildCardOrder(defs, 5, open, 'laser'))[0]).toBe('laser');
+    expect(ids(buildCardOrder(defs, 5, open, 'tower')).slice(0, 3)).toEqual(['tower', 'pad', 'laser']);
+    expect(buildCardOrder(defs, 5, open, 'not_here')).toEqual(buildCardOrder(defs, 5, open));
+  });
+
+  it('keeps structure pieces in definition order (the material picker tiers them)', () => {
+    const pieces = [b('floor', 0, undefined, true), b('wall', 0, undefined, true), b('gate', 1, undefined, true), b('stairs', 1, 's', true), b('e_door', 3, 'f', true), b('glass', 4, 'g', true)];
+    expect(ids(buildCardOrder(pieces, 3, opener(3, ['f'])))).toEqual(['floor', 'wall', 'gate', 'e_door', 'stairs', 'glass']);
+  });
+
+  it('at tier 0 (one tier unlocked) every real tab keeps the old order: buildable, then locked, in data order; nothing pinned', () => {
+    const data = createDataRegistry();
+    const open = (d: BuildOrderDef) => {
+      const def = data.building(d.id)!;
+      return def.unlockTier <= 0 && !def.research;
+    };
+    for (const cat of new Set(data.buildings.map((d) => d.category))) {
+      const list = data.buildings.filter((d) => d.category === cat && !d.core);
+      const old = [...list.filter(open), ...list.filter((d) => !open(d))];
+      const pin = list[list.length - 1].id;
+      expect(buildCardOrder(list, 0, open, pin).map((d) => d.id), cat).toEqual(old.map((d) => d.id));
+    }
+  });
+
+  it('real data: a Nano colony opens Defense on Nano cards and ends with the Titanium preview', () => {
+    const data = createDataRegistry();
+    const list = data.buildings.filter((d) => d.category === 'defense' && !d.core);
+    const out = buildCardOrder(list, 5, (d) => d.unlockTier <= 5, null);
+    const tiers = out.map((d) => d.unlockTier);
+    const reached = tiers.filter((t) => t <= 5);
+    expect(tiers[0]).toBe(5);
+    expect(reached).toEqual([...reached].sort((x, y) => y - x));
+    expect(tiers.slice(reached.length).every((t) => t === 6)).toBe(true);
+    expect(out.slice(0, 3).map((d) => d.id)).toEqual(['laser_turret', 'drone_pad', 'arc_barrier']);
   });
 });
 

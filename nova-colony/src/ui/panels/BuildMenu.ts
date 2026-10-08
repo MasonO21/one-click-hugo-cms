@@ -7,6 +7,7 @@ import { Panel, type PanelTitle } from './Panel';
 import type { BuildingDef } from '../../data/schema';
 import { bagCovers } from '../../core/bag';
 import { BUILD_CATEGORIES } from '../logic/categories';
+import { buildCardOrder } from '../logic/buildOrder';
 import { buildingEffects, lockInfo } from '../logic/describe';
 import { blueprintThumb, btn, costChips, emptyState, tabs, tagChips } from '../widgets';
 import { fill, h, setVar } from '../dom';
@@ -38,12 +39,22 @@ export class BuildMenuPanel extends Panel {
 
   /** When the tutorial points at a build card, open its category so the highlight is visible. */
   private guideTab(): string | undefined {
+    const id = this.guidedBuild();
+    return id ? this.data.building(id)?.category : undefined;
+  }
+
+  /**
+   * The building the guide hand / main mission is steering the player to build (its card opens the drawer's tab and
+   * is pinned to the front of it), or undefined.
+   */
+  private guidedBuild(): string | undefined {
     const m = /data-build="([^"]+)"/.exec(this.game.sys.tutorial.guide()?.ui ?? '');
-    if (m) return this.data.building(m[1])?.category;
-    // the guide still points at #btn-build while the drawer is opening: use the mission's target directly
+    if (m) return this.data.building(m[1]) ? m[1] : undefined;
+    // the guide still points at #btn-build while the drawer is opening (or at the research a locked goal needs):
+    // use the mission's target directly
     const cur = this.game.sys.missions.current();
     if (cur?.guide?.kind !== 'build_menu' || !cur.guide.ref || this.game.sys.missions.progress(cur.id).done) return undefined;
-    return this.data.building(cur.guide.ref)?.category;
+    return this.data.building(cur.guide.ref) ? cur.guide.ref : undefined;
   }
 
   override onArg(arg: unknown): void {
@@ -59,25 +70,25 @@ export class BuildMenuPanel extends Panel {
     return BUILD_CATEGORIES.filter((c) => present.has(c.id as never)).map((c) => c.id);
   }
 
-  private defsOf(cat: string): BuildingDef[] {
+  /** The tab's cards: newest tier first, the guided card pinned in front (tier 0 keeps the old order); see buildCardOrder. */
+  private defsOf(cat: string, pinned = this.guidedBuild()): BuildingDef[] {
     const bs = this.game.sys.buildings;
     const list = this.data.buildings.filter((b) => b.category === cat && !b.core);
-    const open = list.filter((d) => bs.isUnlocked(d.id));
-    const locked = list.filter((d) => !bs.isUnlocked(d.id));
-    return [...open, ...locked];
+    return buildCardOrder(list, this.game.state.colony.tier, (d) => bs.isUnlocked(d.id), pinned);
   }
 
   override signature(): string {
     const { game } = this;
     const bs = game.sys.buildings;
     let mask = '';
+    const pinned = this.guidedBuild();
     if (this.tab !== 'blueprints') {
-      for (const d of this.defsOf(this.tab)) {
+      for (const d of this.defsOf(this.tab, pinned)) {
         mask += bagCovers(game.state.resources.amounts, this.costOf(d)) ? '1' : '0';
         if (d.maxCount) mask += bs.countOf(d.id) >= d.maxCount ? 'm' : '-';
       }
     } else mask = String(game.state.buildings.blueprints.length);
-    return `${this.tab}|${game.state.colony.tier}|${game.state.research.completed.length}|${mask}|${this.ctx.build.pieceTier}`;
+    return `${this.tab}|${game.state.colony.tier}|${game.state.research.completed.length}|${mask}|${this.ctx.build.pieceTier}|${pinned ?? ''}`;
   }
 
   private costOf(d: BuildingDef) {
