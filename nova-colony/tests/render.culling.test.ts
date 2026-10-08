@@ -410,7 +410,8 @@ describe('render culling', () => {
         at.set(key, list);
         if (kind === 'n') {
           expect(d, 'near-only nodes stay inside the band margin').toBeLessThanOrEqual(inner);
-          expect(im.material, 'the discard-free shared material').toBe(mats.set);
+          expect(im.material, 'the discard-free nature material (the shared material with the softer foliage rim)').toBe(mats.nature);
+          expect(mats.nature.customProgramCacheKey()).toBe(mats.lit.customProgramCacheKey());
           expect(im.customDepthMaterial).toBeUndefined();
           nearOnly++;
         } else if (kind === 'tn' || kind === 'tf') {
