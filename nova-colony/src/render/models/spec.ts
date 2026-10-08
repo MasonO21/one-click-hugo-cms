@@ -67,6 +67,8 @@ export interface ModelSpec {
   d: number;
   /** Muzzle offset in the turret part's local frame (barrel points +Z). */
   muzzle: { x: number; y: number; z: number } | null;
+  /** Cache key (model | tier | level | footprint); what retainModel / releaseModel count against. */
+  key: string;
 }
 
 /** Builder context: geometry builder + tier style + footprint, with helpers to add parts/emitters. */
@@ -236,7 +238,28 @@ export function fallbackModel(c: ModelCtx): void {
   c.levelPips();
 }
 
-const specCache = new Map<string, ModelSpec>();
+/**
+ * Model cache. A colony sees every model × tier × level it ever drew: unbounded, that kept ~500
+ * geometries alive after a few tier-ups (QA3 #17). Entries are reference counted by their users
+ * (Buildings holds one ref per facility batch, BuildOverlay one for the ghost it shows) and
+ * `pruneModels` disposes spare (unreferenced) ones — those idle for longer than MODEL_CACHE_IDLE_MS,
+ * and any beyond the MODEL_CACHE_SPARE most recently used, which stay for a cheap comeback (a level
+ * that is placed again, a tier-up wave's previous look). A referenced model is never disposed.
+ */
+interface CacheEntry {
+  spec: ModelSpec;
+  /** Live users; 0 = spare. */
+  refs: number;
+  /** performance.now() of the last build, hit or release. */
+  lastUse: number;
+}
+
+const specCache = new Map<string, CacheEntry>();
+
+/** Spare models are disposed after this long unused (ms) ... */
+export const MODEL_CACHE_IDLE_MS = 20_000;
+/** ... and at most this many spare models are kept regardless (most recently used first). */
+export const MODEL_CACHE_SPARE = 16;
 
 function specKey(key: string, s: TierStyle, level: number, def: BuildingDef | undefined): string {
   const sz = def?.size ?? [1, 1];
@@ -248,12 +271,63 @@ export function modelCached(key: string, s: TierStyle, level: number, def: Build
   return specCache.has(specKey(key, s, level, def));
 }
 
+/** Count a live user of a model (a batch drawing it, a ghost showing it): it is never pruned while held. */
+export function retainModel(spec: ModelSpec): void {
+  const e = specCache.get(spec.key);
+  if (e && e.spec === spec) e.refs++;
+}
+
+/** Drop a live user; the model becomes spare and is pruned once idle or crowded out. */
+export function releaseModel(spec: ModelSpec): void {
+  const e = specCache.get(spec.key);
+  if (e && e.spec === spec && e.refs > 0) {
+    e.refs--;
+    e.lastUse = performance.now();
+  }
+}
+
+function disposeSpec(spec: ModelSpec): void {
+  spec.geometry.dispose();
+  for (const p of spec.parts) p.geometry.dispose();
+}
+
+/**
+ * Dispose spare models that are idle for `idleMs` or beyond the `spare` most recently used ones;
+ * returns how many went. Referenced models are untouched. Cheap (sorts the spares), call it when
+ * references were dropped, not per frame.
+ */
+export function pruneModels(now = performance.now(), idleMs = MODEL_CACHE_IDLE_MS, spare = MODEL_CACHE_SPARE): number {
+  const spares: CacheEntry[] = [];
+  for (const e of specCache.values()) if (e.refs === 0) spares.push(e);
+  if (spares.length === 0) return 0;
+  spares.sort((a, b) => b.lastUse - a.lastUse);
+  let n = 0;
+  for (let i = 0; i < spares.length; i++) {
+    const e = spares[i];
+    if (i < spare && now - e.lastUse < idleMs) continue;
+    specCache.delete(e.spec.key);
+    disposeSpec(e.spec);
+    n++;
+  }
+  return n;
+}
+
+/** Cache occupancy (dev stats / tests). */
+export function modelCacheStats(): { size: number; referenced: number; spare: number } {
+  let referenced = 0;
+  for (const e of specCache.values()) if (e.refs > 0) referenced++;
+  return { size: specCache.size, referenced, spare: specCache.size - referenced };
+}
+
 /** Build (cached) the model for a key at a tier/level. Footprint from the def (default 1x1). */
 export function buildModel(key: string, s: TierStyle, level: number, def: BuildingDef | undefined): ModelSpec {
   const sz = def?.size ?? [1, 1];
   const ck = specKey(key, s, level, def);
-  let spec = specCache.get(ck);
-  if (spec) return spec;
+  const hit = specCache.get(ck);
+  if (hit) {
+    hit.lastUse = performance.now();
+    return hit.spec;
+  }
   const w = sz[0] * CELL;
   const d = sz[1] * CELL;
   const seed = key.length * 131 + s.index * 7 + level;
@@ -273,8 +347,8 @@ export function buildModel(key: string, s: TierStyle, level: number, def: Buildi
     p.geometry.computeBoundingBox();
     height = Math.max(height, p.y + (p.geometry.boundingBox?.max.y ?? 0));
   }
-  spec = { geometry, parts: c.parts, emitters: c.emitters, light: c.light, height: Math.max(0.5, height), w, d, muzzle: c.muzzleAt };
-  specCache.set(ck, spec);
+  const spec: ModelSpec = { geometry, parts: c.parts, emitters: c.emitters, light: c.light, height: Math.max(0.5, height), w, d, muzzle: c.muzzleAt, key: ck };
+  specCache.set(ck, { spec, refs: 0, lastUse: performance.now() });
   return spec;
 }
 

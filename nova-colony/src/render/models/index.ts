@@ -6,7 +6,7 @@ import './industry';
 import './defense';
 import './commandCenter';
 
-export { buildModel, registeredModelKeys, hasModel, type ModelSpec, type PartSpec, type PartAnim, type EmitterSpec } from './spec';
+export { buildModel, retainModel, releaseModel, pruneModels, modelCacheStats, registeredModelKeys, hasModel, type ModelSpec, type PartSpec, type PartAnim, type EmitterSpec } from './spec';
 export { pieceGeometry, pieceFullKey, WALL_H, FLOOR_TOP, ROOF_Y, type PieceGeoKey } from './pieces';
 export { nodeGeometry, nodeGeometryFar, propGeometry, nodeHeight, nodeChipColor, KNOWN_NODE_MODELS, KNOWN_PROP_MODELS, NODE_FAR_MODELS } from './nature';
 export { poiGeometry, poiHeight, markerGeometry, eventMarkerGeometry, KNOWN_POI_MODELS } from './pois';

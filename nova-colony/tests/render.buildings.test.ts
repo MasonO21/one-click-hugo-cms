@@ -10,9 +10,11 @@ import { Game } from '../src/core/Game';
 import { createMockServices } from '../src/platform/mock';
 import { Materials } from '../src/render/core/materials';
 import type { Env, RenderContext } from '../src/render/core/context';
-import { Buildings } from '../src/render/actors/Buildings';
+import { Buildings, BATCH_IDLE_S } from '../src/render/actors/Buildings';
 import { CENTER_CELL } from '../src/core/constants';
 import type { Batch } from '../src/render/core/Batch';
+import { buildModel, modelCacheStats, pruneModels } from '../src/render/models/spec';
+import { tierStyle } from '../src/render/core/palette';
 
 function makeCtx(game: Game): RenderContext {
   const scene = new THREE.Scene();
@@ -84,6 +86,124 @@ describe('Buildings: tier-up model builds are spread over frames', () => {
     const extra = colony(game, 1);
     buildings.update(1 / 60);
     expect(buildings.shownTier(extra[0])).toBe(game.sys.buildings.get(extra[0])!.tier);
+    buildings.dispose();
+  });
+});
+
+describe('Buildings: idle looks are evicted and their models released (QA3 #17)', () => {
+  it('after a tier-up the old facility and piece batches go once idle; live ones and their models stay', () => {
+    pruneModels(Infinity, 0, 0);
+    const game = new Game({ seed: 9, services: createMockServices() });
+    game.start();
+    const ids = colony(game, 6);
+    // a structure piece too (piece batches are keyed by tier as well)
+    const pieceDef = game.data.buildings.find((d) => d.piece && d.unlockTier === 0 && game.sys.buildings.isUnlocked(d.id))!;
+    expect(pieceDef).toBeDefined();
+    let wall: number | null = null;
+    for (let k = 0; k < 200 && wall == null; k++) wall = game.sys.buildings.place(pieceDef.id, CENTER_CELL - 8 + (k % 16), CENTER_CELL - 4 - Math.floor(k / 16), 0, { free: true, instant: true, quiet: true });
+    expect(wall).not.toBeNull();
+    game.update(0.1);
+    const ctx = makeCtx(game);
+    const buildings = new Buildings(ctx);
+    buildings.update(1 / 60);
+    /** Distinct facility looks (model | shown tier | level | footprint) among the live buildings — what should be resident. */
+    const liveLooks = () => new Set(game.state.buildings.list.filter((b) => !game.data.building(b.def)?.piece).map((b) => {
+      const d = game.data.building(b.def)!;
+      return `${d.model ?? d.id}|${buildings.shownTier(b.id)}|${b.level}|${d.size[0]}x${d.size[1]}`;
+    })).size;
+    const before = buildings.batchStats;
+    expect(before.facilities).toBe(liveLooks());
+    expect(before.facilities).toBeGreaterThanOrEqual(5);
+    expect(before.pieces).toBeGreaterThanOrEqual(1);
+    expect(modelCacheStats().referenced).toBe(before.facilities);
+    const tier0 = ids.map((id) => {
+      const b = game.sys.buildings.get(id)!;
+      const def = game.data.building(b.def)!;
+      return buildModel(def.model ?? def.id, tierStyle(game.data.tier(0)), b.level, def);
+    });
+    const tier0Gone = tier0.map((s) => {
+      let n = 0;
+      s.geometry.addEventListener('dispose', () => n++);
+      return () => n > 0;
+    });
+
+    for (const d of game.data.research) if (d.tier === 0 && game.sys.research.status(d.id) === 'available') { rich(game); game.sys.research.research(d.id); }
+    rich(game);
+    expect(game.sys.progression.tierUp()).toBe(true);
+    for (const id of ids) game.sys.buildings.get(id)!.tier = 1;
+    game.sys.buildings.get(wall!)!.tier = 1;
+    game.derived.buildingsVersion++;
+    for (let f = 0; f < 50 && ids.some((id) => buildings.shownTier(id) !== 1); f++) buildings.update(1 / 60); // the tier-up wave
+    for (const id of ids) expect(buildings.shownTier(id)).toBe(1);
+    // the old looks are still resident (grace) but hidden
+    const live = liveLooks();
+    expect(live).toBeGreaterThanOrEqual(before.facilities);
+    expect(buildings.batchStats.facilities).toBeGreaterThan(live);
+    expect(buildings.batchStats.pieces).toBeGreaterThan(before.pieces);
+    const scene = ctx.scene;
+    let hidden = 0;
+    scene.traverse((o) => { if ((o as THREE.InstancedMesh).isInstancedMesh && !o.visible) hidden++; });
+    expect(hidden).toBeGreaterThanOrEqual(buildings.batchStats.facilities - live);
+
+    // just inside the grace: nothing evicted yet
+    const resident = buildings.batchStats.facilities;
+    ctx.env.t += BATCH_IDLE_S - 0.5;
+    buildings.update(1.1);
+    expect(buildings.batchStats.facilities).toBe(resident);
+    // past it: the tier-0 looks are gone, their models released (and, as spares beyond the idle time, pruned)
+    ctx.env.t += 1;
+    buildings.update(1.1);
+    expect(buildings.batchStats.facilities).toBe(live);
+    expect(buildings.batchStats.pieces).toBe(before.pieces);
+    expect(modelCacheStats().referenced).toBe(live);
+    pruneModels(performance.now() + 1e6);
+    expect(tier0Gone.every((g) => g())).toBe(true);
+    // every live building still has its batch in the scene, with its geometry intact
+    for (const id of ids) {
+      const entry = (buildings as unknown as { byId: Map<number, { slots: { batch: Batch; index: number }[] }> }).byId.get(id)!;
+      for (const s of entry.slots) {
+        const mesh = (s.batch as unknown as { mesh: THREE.InstancedMesh }).mesh;
+        expect(mesh.parent).not.toBeNull();
+        expect(mesh.visible).toBe(true);
+        expect(mesh.geometry.attributes.position.count).toBeGreaterThan(0);
+      }
+    }
+    // a model cache hit for a current look: nothing rebuilt, nothing disposed
+    const spareBefore = modelCacheStats().size;
+    buildings.update(1 / 60);
+    expect(modelCacheStats().size).toBe(spareBefore);
+    buildings.dispose();
+    expect(modelCacheStats().referenced).toBe(0);
+  });
+
+  it('a removed building frees its look, but a look placed again within the grace reuses the batch', () => {
+    const game = new Game({ seed: 10, services: createMockServices() });
+    game.start();
+    const [id] = colony(game, 1);
+    game.update(0.1);
+    const ctx = makeCtx(game);
+    const buildings = new Buildings(ctx);
+    buildings.update(1 / 60);
+    const fbs = (buildings as unknown as { facilityBatches: Map<string, { body: Batch }> }).facilityBatches;
+    const def = game.sys.buildings.get(id)!.def;
+    const model = game.data.building(def)!.model ?? def;
+    const [key, fb] = [...fbs.entries()].find(([k]) => k.startsWith(model + '|'))!; // not the Command Center's batch
+    expect(fb).toBeDefined();
+    expect(game.sys.buildings.remove(id)).toBeTruthy();
+    game.update(0.1);
+    ctx.env.t += 1;
+    buildings.update(1 / 60);
+    expect(fbs.get(key)).toBe(fb); // within the grace: still resident
+    const again = game.sys.buildings.place(def, CENTER_CELL + 6, CENTER_CELL + 6, 0, { free: true, instant: true, quiet: true });
+    expect(again).not.toBeNull();
+    game.update(0.1);
+    buildings.update(1 / 60);
+    expect(fbs.get(key)).toBe(fb); // reused, not rebuilt
+    expect(game.sys.buildings.remove(again!)).toBeTruthy();
+    game.update(0.1);
+    ctx.env.t += BATCH_IDLE_S + 1;
+    buildings.update(1.1);
+    expect(fbs.has(key)).toBe(false);
     buildings.dispose();
   });
 });

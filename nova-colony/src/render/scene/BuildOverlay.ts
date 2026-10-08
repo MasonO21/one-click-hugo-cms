@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import { Batch, composeYaw } from '../core/Batch';
-import { buildModel } from '../models/spec';
+import { buildModel, retainModel, releaseModel, type ModelSpec } from '../models/spec';
 import { pieceGeometry, pieceFullKey } from '../models/pieces';
 import { tierStyle } from '../core/palette';
 import { CELL, cellCenter, cellMin, CENTER_CELL, footprintCenter, WORLD_CELLS } from '../../core/constants';
@@ -67,6 +67,9 @@ export class BuildOverlay {
   private cellsOk: Batch;
   private cellsBad: Batch;
   private ghostKey = '';
+  /** The model the ghost shows (held in the model cache while shown); null for pieces and out of build mode. */
+  private ghostSpec: ModelSpec | null = null;
+  private readonly empty: THREE.BufferGeometry;
   private ring: THREE.Mesh;
   private ringMat: THREE.MeshBasicMaterial;
   private selection: SelectionInfo | null = null;
@@ -94,6 +97,7 @@ export class BuildOverlay {
     });
     const quad = new THREE.PlaneGeometry(CELL * 0.94, CELL * 0.94).rotateX(-Math.PI / 2);
     const empty = new THREE.BufferGeometry();
+    this.empty = empty;
     this.ghostOk = new Batch(this.group, empty, ctx.mats.ghostOk, 16, { renderOrder: 20 });
     this.ghostBad = new Batch(this.group, empty, ctx.mats.ghostBad, 16, { renderOrder: 20 });
     const xray = (m: THREE.MeshBasicMaterial) => {
@@ -116,6 +120,18 @@ export class BuildOverlay {
 
   setSelection(info: SelectionInfo | null): void {
     this.selection = info;
+  }
+
+  /** Bind one geometry to the four ghost batches and hold its model (if any) in the cache instead of the previous one. */
+  private setGhost(geo: THREE.BufferGeometry, spec: ModelSpec | null): void {
+    this.ghostOk.setGeometry(geo);
+    this.ghostBad.setGeometry(geo);
+    this.xrayOk.setGeometry(geo);
+    this.xrayBad.setGeometry(geo);
+    // retain before release: the same model stays held across a tier change that keeps its key
+    if (spec) retainModel(spec);
+    if (this.ghostSpec) releaseModel(this.ghostSpec);
+    this.ghostSpec = spec;
   }
 
   private rebuildGrid(radiusCells: number): void {
@@ -191,11 +207,11 @@ export class BuildOverlay {
       const key = `${b.def}|${tier}`;
       if (key !== this.ghostKey) {
         this.ghostKey = key;
-        const geo = def?.piece ? pieceGeometry(pieceFullKey(def.piece), style) : buildModel(def?.model ?? b.def, style, 1, def).geometry;
-        this.ghostOk.setGeometry(geo);
-        this.ghostBad.setGeometry(geo);
-        this.xrayOk.setGeometry(geo);
-        this.xrayBad.setGeometry(geo);
+        if (def?.piece) this.setGhost(pieceGeometry(pieceFullKey(def.piece), style), null);
+        else {
+          const spec = buildModel(def?.model ?? b.def, style, 1, def);
+          this.setGhost(spec.geometry, spec);
+        }
       }
       const ghost = b.valid ? this.ghostOk : this.ghostBad;
       const xray = b.valid ? this.xrayOk : this.xrayBad;
@@ -227,6 +243,10 @@ export class BuildOverlay {
           cells.push(m);
         }
       }
+    } else if (this.ghostKey) {
+      // out of build mode: unbind the model so the cache may prune it (a bound geometry would be re-uploaded)
+      this.ghostKey = '';
+      this.setGhost(this.empty, null);
     }
     this.ghostOk.end();
     this.ghostBad.end();
@@ -249,6 +269,9 @@ export class BuildOverlay {
   dispose(): void {
     this.gridMat.dispose();
     this.grid?.geometry.dispose();
+    if (this.ghostSpec) releaseModel(this.ghostSpec);
+    this.ghostSpec = null;
+    this.empty.dispose();
     this.ghostOk.dispose();
     this.ghostBad.dispose();
     this.xrayOk.dispose();

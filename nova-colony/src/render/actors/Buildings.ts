@@ -12,7 +12,9 @@
  *    hides the player in the follow camera; their shadows dither away with them (Batch `depthMaterial`,
  *    roofs through a per-room depth material), so no solid shadow of an invisible wall lingers.
  * Instance buffers are only rebuilt when derived.buildingsVersion or a cheap state hash changes; static
- * batches carry a bounding sphere so three.js frustum-culls whole batches off screen.
+ * batches carry a bounding sphere so three.js frustum-culls whole batches off screen. Batches of looks
+ * no building shows any more are hidden at once and evicted after BATCH_IDLE_S (their models go back
+ * to the bounded model cache), so a colony's GPU footprint follows what it draws, not its history.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
@@ -20,7 +22,7 @@ import { inView, sightTargets } from '../core/context';
 import { Batch, composeYaw, composeEuler, type BatchOpts } from '../core/Batch';
 import { mergeCopies } from '../core/GeoBuilder';
 import { tierStyle, type TierStyle } from '../core/palette';
-import { buildModel, modelCached, type ModelSpec } from '../models/spec';
+import { buildModel, modelCached, retainModel, releaseModel, pruneModels, type ModelSpec } from '../models/spec';
 import { pieceGeometry, pieceFullKey, WALL_H, ROOF_Y, type PieceGeoKey } from '../models/pieces';
 import type { BuildingInstance, Id } from '../../core/state';
 import type { BuildingDef } from '../../data/schema';
@@ -68,6 +70,13 @@ interface FacilityBatch {
   body: Batch;
   parts: Batch[];
   entries: Entry[];
+  /** Render clock (env.t) when a building last drew this look; see BATCH_IDLE_S. */
+  lastUsed: number;
+}
+
+interface PieceBatch {
+  batch: Batch;
+  lastUsed: number;
 }
 
 interface Roof {
@@ -145,11 +154,23 @@ const PART_OPTS: BatchOpts = { color: true, castShadow: false, fade: true };
  * the next frames (at least one per frame), so the tier-up is a short wave instead of a long freeze.
  */
 export const MODEL_BUDGET_MS = 6;
+/**
+ * A facility or piece look (model × tier × level batch) that no live building has drawn for this long
+ * (render seconds) is evicted: its instanced meshes are disposed and its model released to the cache,
+ * which prunes spare models (QA3 #17: every look ever seen stayed resident — 524 geometries after a
+ * run through the tiers — and every empty batch still cost a per-frame object pass). Looks a building
+ * still shows, including the previous look a tier-up wave falls back to, always have entries and are
+ * never evicted. The grace keeps churn (a level-up and back, a placed-and-cancelled piece) cheap.
+ */
+export const BATCH_IDLE_S = 6;
+/** How often idle batches are swept between rebuilds (render seconds). */
+const EVICT_INTERVAL_S = 1;
 
 export class Buildings {
   private group = new THREE.Group();
-  private pieceBatches = new Map<string, Batch>();
+  private pieceBatches = new Map<string, PieceBatch>();
   private facilityBatches = new Map<string, FacilityBatch>();
+  private evictAcc = 0;
   private entries: Entry[] = [];
   private byId = new Map<Id, Entry>();
   private constructing: Entry[] = [];
@@ -306,7 +327,7 @@ export class Buildings {
       fb.body.begin();
       fb.entries.length = 0;
     }
-    for (const pb of this.pieceBatches.values()) pb.begin();
+    for (const pb of this.pieceBatches.values()) pb.batch.begin();
     this.entries = [];
     this.byId.clear();
     this.constructing = [];
@@ -389,14 +410,23 @@ export class Buildings {
       this.byId.set(b.id, entry);
     }
     this.shown = shown;
+    // empty batches are hidden (no per-frame object pass) and, once idle, evicted
+    const now = ctx.env.t;
     for (const fb of this.facilityBatches.values()) {
       fb.body.end();
       fb.body.freeze();
+      const used = fb.entries.length > 0;
+      if (used) fb.lastUsed = now;
+      fb.body.setVisible(used);
     }
     for (const pb of this.pieceBatches.values()) {
-      pb.end();
-      pb.freeze();
+      pb.batch.end();
+      pb.batch.freeze();
+      const used = pb.batch.count > 0;
+      if (used) pb.lastUsed = now;
+      pb.batch.setVisible(used);
     }
+    this.evictIdle();
     // flashes outlive the rebuild that their own event triggers (completed / upgraded / tier-up change the
     // status, level or tier): re-apply them to the new slots instead of dropping them before they are drawn
     for (const [id, f] of this.flashes) {
@@ -428,12 +458,12 @@ export class Buildings {
 
   private pieceBatch(key: PieceGeoKey, style: TierStyle): Batch {
     const k = `${key}|${style.index}`;
-    let b = this.pieceBatches.get(k);
-    if (!b) {
-      b = new Batch(this.group, pieceGeometry(key, style), this.ctx.mats.litFade, 32, this.pieceOpts);
-      this.pieceBatches.set(k, b);
+    let pb = this.pieceBatches.get(k);
+    if (!pb) {
+      pb = { batch: new Batch(this.group, pieceGeometry(key, style), this.ctx.mats.litFade, 32, this.pieceOpts), lastUsed: this.ctx.env.t };
+      this.pieceBatches.set(k, pb);
     }
-    return b;
+    return pb.batch;
   }
 
   private facilityBatch(key: string, spec: ModelSpec): FacilityBatch {
@@ -441,10 +471,40 @@ export class Buildings {
     if (!fb) {
       const body = new Batch(this.group, spec.geometry, this.ctx.mats.litFade, 8, this.bodyOpts);
       const parts = spec.parts.map((p) => new Batch(this.group, p.geometry, this.ctx.mats.litFade, 8, PART_OPTS));
-      fb = { spec, body, parts, entries: [] };
+      fb = { spec, body, parts, entries: [], lastUsed: this.ctx.env.t };
+      retainModel(spec); // the batch is a live user of the model until it is evicted
       this.facilityBatches.set(key, fb);
     }
     return fb;
+  }
+
+  /**
+   * Drop facility and piece batches no building has used for BATCH_IDLE_S: their meshes (and the
+   * fade wrappers that own the GPU buffers) are disposed and their models released; the model cache
+   * then prunes what nothing holds any more. Batches with entries / instances are never touched.
+   */
+  private evictIdle(): void {
+    const now = this.ctx.env.t;
+    let released = false;
+    for (const [key, fb] of this.facilityBatches) {
+      if (fb.entries.length > 0 || now - fb.lastUsed < BATCH_IDLE_S) continue;
+      fb.body.dispose();
+      for (const p of fb.parts) p.dispose();
+      releaseModel(fb.spec);
+      this.facilityBatches.delete(key);
+      released = true;
+    }
+    for (const [key, pb] of this.pieceBatches) {
+      if (pb.batch.count > 0 || now - pb.lastUsed < BATCH_IDLE_S) continue;
+      pb.batch.dispose();
+      this.pieceBatches.delete(key);
+    }
+    if (released) pruneModels();
+  }
+
+  /** Resident instanced batches (dev stats / tests): every facility look and piece style drawn or not yet evicted. */
+  get batchStats(): { facilities: number; pieces: number } {
+    return { facilities: this.facilityBatches.size, pieces: this.pieceBatches.size };
   }
 
   private neighbourKind(cx: number, cz: number): string | undefined {
@@ -654,6 +714,11 @@ export class Buildings {
       this.lastRoofVersion = version;
       this.rebuildRoofs();
     }
+    this.evictAcc += dt;
+    if (this.evictAcc >= EVICT_INTERVAL_S) {
+      this.evictAcc = 0;
+      this.evictIdle();
+    }
 
     this.updateConstruction(dt);
     this.updateFlashes();
@@ -835,7 +900,10 @@ export class Buildings {
         // damaged buildings smoulder
         if (b.status === 'damaged' && visible && Math.random() < dt * 2.5) ctx.particles.smoke(en.x + (Math.random() - 0.5) * 1.2, en.y + 0.8, en.z + (Math.random() - 0.5) * 1.2, 0.45, '#3f3a40', 1.6);
       }
-      for (const pb of fb.parts) pb.end();
+      for (const pb of fb.parts) {
+        pb.end();
+        pb.setVisible(pb.count > 0);
+      }
     }
   }
 
@@ -1052,11 +1120,15 @@ export class Buildings {
 
   dispose(): void {
     for (const u of this.unsub) u();
-    for (const b of this.pieceBatches.values()) b.dispose();
+    for (const pb of this.pieceBatches.values()) pb.batch.dispose();
     for (const fb of this.facilityBatches.values()) {
       fb.body.dispose();
       for (const p of fb.parts) p.dispose();
+      releaseModel(fb.spec);
     }
+    this.pieceBatches.clear();
+    this.facilityBatches.clear();
+    pruneModels();
     for (const r of this.roofs) {
       r.mesh.geometry.dispose();
       r.mat.dispose();
