@@ -63,6 +63,18 @@ export class NotifyPrompt {
     if (this.wait <= 0) this.show();
   }
 
+  /** On screen right now (not stepped aside for a panel or build mode). */
+  get visible(): boolean {
+    return this.el !== null && !this.el.classList.contains('away');
+  }
+
+  /** Back pressed while the card is up: same as "Not now". False when it isn't visible. */
+  dismiss(): boolean {
+    if (!this.visible) return false;
+    void this.answer(false);
+    return true;
+  }
+
   private show(): void {
     this.el = h(
       'div',

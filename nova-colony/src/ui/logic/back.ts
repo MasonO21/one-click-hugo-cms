@@ -2,7 +2,7 @@
  * What "back" does (Android back button / gesture, and Escape): undo the most specific thing on screen first.
  * 'none' means the game is at rest, so the platform may send the app to the background.
  */
-export type BackAction = 'panel' | 'build' | 'selection' | 'none';
+export type BackAction = 'panel' | 'card' | 'build' | 'selection' | 'none';
 
 export interface BackState {
   /** Any panel, sheet or modal is open (a modal that can't be dismissed still swallows the press). */
@@ -12,6 +12,8 @@ export interface BackState {
    * base's reveal. The press is swallowed rather than sending the app away a moment before it shows.
    */
   modalPending?: boolean;
+  /** A question card (analytics consent, notifications) is up over the game: back answers it the polite way. */
+  cardShown?: boolean;
   /** Build mode (placing, walls, moving, demolish). */
   buildActive: boolean;
   /** A world object is selected or its tooltip is up. */
@@ -20,6 +22,7 @@ export interface BackState {
 
 export function backAction(s: BackState): BackAction {
   if (s.panelOpen || s.modalPending) return 'panel';
+  if (s.cardShown) return 'card';
   if (s.buildActive) return 'build';
   if (s.hasSelection) return 'selection';
   return 'none';

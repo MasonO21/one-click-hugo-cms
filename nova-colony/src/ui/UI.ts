@@ -644,7 +644,8 @@ export class UI {
           this.lastClick = { x: r.left + r.width / 2, y: r.top + r.height / 2, t: performance.now() };
           const sfx = b.getAttribute('data-sfx') ?? 'ui_click';
           const stamp = this.lastPanelSfx;
-          this.haptic('tap');
+          // data-haptic="none": the control buzzes itself (the action button already did on touch-down)
+          if (b.getAttribute('data-haptic') !== 'none') this.haptic('tap');
           if (sfx !== 'none') {
             // panels play their own open/close sound — only add a click if none played
             window.setTimeout(() => {
@@ -771,6 +772,7 @@ export class UI {
       panelOpen: this.panels.anyOpen(),
       // a queued card about to follow the one closing, or the tier-up card after the reveal: stay in the game
       modalPending: this.panels.anyModal() || this.tierRevealPending,
+      cardShown: this.consent.visible || this.notifyPrompt.visible,
       buildActive: this.build.active,
       hasSelection: sel.kind !== null,
     });
@@ -781,6 +783,8 @@ export class UI {
       case 'build':
         this.build.cancel();
         return true;
+      case 'card':
+        return this.consent.dismiss() || this.notifyPrompt.dismiss();
       case 'selection':
         sel.kind = null;
         sel.id = null;

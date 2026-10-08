@@ -63,6 +63,18 @@ export class ConsentPrompt {
     this.el?.classList.toggle('away', this.timer.away);
   }
 
+  /** On screen right now (not stepped aside for a panel or build mode). */
+  get visible(): boolean {
+    return this.el !== null && !this.timer.away;
+  }
+
+  /** Back pressed while the card is up: same as "No thanks". False when it isn't visible. */
+  dismiss(): boolean {
+    if (!this.visible) return false;
+    this.answer(false);
+    return true;
+  }
+
   private show(): void {
     const details = h('div', {
       class: 'consent-details',

@@ -16,7 +16,7 @@ export class InteractButton {
   constructor(private readonly ctx: UiCtx) {
     this.ic = h('span', { class: 'ic' });
     this.lb = h('span', { class: 'lb' });
-    this.el = h<HTMLButtonElement>('button', { id: 'btn-interact', class: 'interact', type: 'button', hidden: true, 'aria-label': 'Interact' }, this.ic, this.lb);
+    this.el = h<HTMLButtonElement>('button', { id: 'btn-interact', class: 'interact', type: 'button', hidden: true, 'aria-label': 'Interact', 'data-haptic': 'none' }, this.ic, this.lb);
     const input = ctx.game.input;
     const down = (e: PointerEvent) => {
       e.preventDefault();

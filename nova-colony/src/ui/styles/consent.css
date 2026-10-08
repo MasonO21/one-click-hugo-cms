@@ -67,3 +67,40 @@
   justify-content: flex-end;
   gap: 0.5em;
 }
+
+/*
+ * Keep the cards off the play area. Portrait: up in the hint / mission band under the status chips, clear of the
+ * joystick (left 40 % of the screen, thumb-low) and the dock. Landscape: beside the right rail, clear of the
+ * player in the middle of the screen and the joystick on the left.
+ */
+@media (orientation: portrait) {
+  .nv-root .consent-card {
+    bottom: auto;
+    top: calc(var(--mt) + 6.6em + var(--status-h, 2.4em) + 0.4em);
+    transform: translate(-50%, -1.5em);
+  }
+  .nv-root .consent-card.in {
+    transform: translate(-50%, 0);
+  }
+  .nv-root .consent-card.in.away {
+    transform: translate(-50%, -1.5em);
+  }
+}
+@media (orientation: landscape) {
+  .nv-root .consent-card {
+    left: auto;
+    right: calc(var(--mr) + 4.8em);
+    width: min(22em, 40%);
+    transform: translate(0, 1.5em);
+  }
+  .nv-root .consent-card.in {
+    transform: translate(0, 0);
+  }
+  .nv-root .consent-card.in.away {
+    transform: translate(0, 1.5em);
+  }
+  .nv-root[data-hand='left'] .consent-card {
+    right: auto;
+    left: calc(var(--ml) + 4.8em);
+  }
+}

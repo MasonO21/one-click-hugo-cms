@@ -35,6 +35,9 @@ describe('back cascade', () => {
     expect(backAction({ panelOpen: false, buildActive: true, hasSelection: true })).toBe('build');
     expect(backAction({ panelOpen: false, buildActive: false, hasSelection: true })).toBe('selection');
     expect(backAction({ panelOpen: false, buildActive: false, hasSelection: false })).toBe('none');
+    // a question card on screen is answered the polite way (No thanks / Not now) instead of leaving the app
+    expect(backAction({ panelOpen: false, cardShown: true, buildActive: false, hasSelection: true })).toBe('card');
+    expect(backAction({ panelOpen: true, cardShown: true, buildActive: false, hasSelection: false })).toBe('panel');
   });
 
   it('a modal about to appear keeps the press (impatient double back, the tier-up reveal) instead of leaving the game', () => {
