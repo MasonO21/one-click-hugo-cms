@@ -159,6 +159,12 @@ export class BuildMenuPanel extends Panel {
     el.addEventListener('click', (e) => {
       if (reason) {
         e.stopPropagation();
+        // behind research the player can start now: take them to it instead of only saying so
+        const step = lock.kind === 'research' && d.research ? game.sys.research.nextStep(d.research) : null;
+        if (step) {
+          this.ctx.open('research', { id: step });
+          return;
+        }
         this.ctx.toast(reason, 'info', lock.locked ? '🔒' : '✔');
         this.ctx.sfx('ui_error');
         return;

@@ -10,6 +10,8 @@
  *   build_menu -> `[data-build="<def>"]` while the build panel is open, else `#btn-build`; while placing
  *                 that building: `#btn-build-confirm` once the ghost sits on a valid spot; unaffordable:
  *                 the nearest node dropping the missing resource ("Need 20 more Stone — mine a Boulder")
+ *   (build_menu / building, goal still behind research the player can start now: `[data-research="<id>"]`,
+ *    i.e. the Tech button, then that node — not the Build button and a locked card)
  *   ui         -> `#btn-<ref>`
  *   poi        -> nearest un-looted POI of that def (includes the spawned survivor camp)
  *   region     -> centre of the biome
@@ -100,6 +102,31 @@ export class TutorialSystem extends System {
     return this.cache;
   }
 
+  /**
+   * The research the current main mission still needs that the player can start now (its own research goal, or the
+   * gate of the building / recipe it asks for, or the first open step towards it). The Research panel opens on it.
+   */
+  researchFocus(): string | null {
+    const cur = this.game.sys.missions.current();
+    if (!cur || this.game.sys.missions.progress(cur.id).done) return null;
+    if (cur.type === 'research') return this.game.sys.research.nextStep(cur.target);
+    return this.researchFor(cur);
+  }
+
+  /** The research a build / craft goal is locked behind and that can be started now (see researchFocus), or null. */
+  private researchFor(def: MissionDef): string | null {
+    const { data } = this.game;
+    const gates: (string | undefined)[] = [];
+    if (def.type === 'build' || def.type === 'have_building') gates.push(data.building(def.target)?.research);
+    if (def.type === 'craft') gates.push(data.recipe(def.target)?.research);
+    if (def.guide?.kind === 'build_menu') gates.push(data.building(def.guide.ref ?? '')?.research);
+    for (const id of gates) {
+      const step = id ? this.game.sys.research.nextStep(id) : null;
+      if (step) return step;
+    }
+    return null;
+  }
+
   /** Free-form one-time flags (popups already shown, etc.). */
   flag(name: string): boolean {
     return !!this.game.state.tutorial.flags[name];
@@ -145,6 +172,17 @@ export class TutorialSystem extends System {
     const g = def.guide;
     if (!g) return base;
     const ref = g.ref ?? '';
+    // the goal is still behind research the player can start now: point at the Tech button (then the node, the
+    // Research panel opens on it) instead of the Build button and a locked card that only says "Requires research"
+    if (g.kind === 'build_menu' || g.kind === 'building') {
+      const need = this.researchFor(def);
+      if (need) {
+        const name = this.game.data.researchDef(need)?.name ?? need;
+        if (!text.includes(name)) base.text = `Research ${name} first. ${text}`;
+        base.ui = `[data-research="${need}"]`;
+        return base;
+      }
+    }
     switch (g.kind) {
       case 'ui':
         base.ui = `#btn-${ref}`;

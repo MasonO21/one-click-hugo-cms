@@ -32,8 +32,13 @@ export class ResearchPanel extends Panel {
   override onOpen(arg: unknown): void {
     const id = this.pick<string>(arg, 'id');
     const cats = this.categories();
-    this.cat = cats.includes(ResearchPanel.lastCat) ? ResearchPanel.lastCat : cats[0] ?? '';
-    if (id) this.focusNode(id);
+    // first visit: the first tab with something to research (an Alloy colony opened on Reinforced Wood, done long ago)
+    const rs = this.game.sys.research;
+    const open = cats.find((c) => this.data.research.some((r) => r.category === c && rs.status(r.id) === 'available'));
+    this.cat = cats.includes(ResearchPanel.lastCat) ? ResearchPanel.lastCat : (open ?? cats[0] ?? '');
+    // no node asked for: the research the main mission is waiting on (the guide points here for it)
+    const focus = id ?? this.game.sys.tutorial.researchFocus();
+    if (focus) this.focusNode(focus);
     else this.sel = this.defaultSel();
   }
 

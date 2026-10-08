@@ -145,6 +145,42 @@ describe('tutorial: guide target resolution', () => {
     expect(guideNow(g)).toMatchObject({ ui: '#btn-research', world: null });
   });
 
+  it('build_menu behind research the player can start: points at that research (Tech button, then the node), then at Build', () => {
+    const g0 = makeGame();
+    const state = JSON.parse(JSON.stringify(g0.game.state));
+    const main: string[] = [];
+    for (let m: string | undefined = g0.game.data.firstMission; m && m !== 'm56_laser'; m = g0.game.data.mission(m)!.next?.[0]) main.push(m);
+    state.missions.completed = main;
+    state.missions.active = ['m56_laser'];
+    state.missions.progress = {};
+    state.colony.tier = 5;
+    state.tutorial.done = true;
+    // everything below the Nano tier researched except the turret line Energy Weapons needs (Heavy Ordnance)
+    const data = g0.game.data;
+    state.research.completed = data.research.filter((r) => r.tier <= 5 && r.id !== 'heavy_ordnance' && r.id !== 'energy_weapons').map((r) => r.id);
+    const g = makeGame({ state, at: g0.clock.now });
+    for (const r of data.resources) g.game.state.resources.amounts[r.id] = 1e5;
+    const rs = g.game.sys.research;
+    expect(rs.status('energy_weapons')).toBe('locked_prereq');
+    expect(rs.nextStep('energy_weapons')).toBe('heavy_ordnance'); // the open step on the way
+    let guide = guideNow(g)!;
+    expect(guide.mission).toBe('m56_laser');
+    expect(guide.ui).toBe('[data-research="heavy_ordnance"]'); // closed panel: the Guide falls back to #btn-research
+    expect(guide.text).toMatch(/^Research Heavy Ordnance first\. /); // the hint only names Energy Weapons
+    expect(g.game.sys.tutorial.researchFocus()).toBe('heavy_ordnance');
+    g.game.state.research.completed.push('heavy_ordnance');
+    guide = guideNow(g)!;
+    expect(guide.ui).toBe('[data-research="energy_weapons"]');
+    expect(guide.text).toBe(data.mission('m56_laser')!.hint); // it names this one already
+    g.game.state.research.completed.push('energy_weapons');
+    guide = guideNow(g)!;
+    expect(guide.ui).toBe('#btn-build');
+    expect(g.game.sys.tutorial.researchFocus()).toBeNull();
+    // a research goal focuses its own node; one above the colony tier focuses nothing
+    expect(rs.nextStep('railgun_tech')).toBeNull();
+    expect(rs.nextStep('energy_weapons')).toBeNull(); // done
+  });
+
   it('poi guide: nearest un-looted survivor camp', () => {
     const g = makeGame();
     fakeWorld(g);

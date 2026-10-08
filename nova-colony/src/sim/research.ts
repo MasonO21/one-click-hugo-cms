@@ -70,6 +70,27 @@ export class ResearchSystem extends System {
     return 'available';
   }
 
+  /**
+   * The research to start now on the way to `id`: `id` itself when it is available, else the first open prerequisite
+   * on its path. Null when it is done, or nothing on the path can be started at this colony tier.
+   */
+  nextStep(id: string): string | null {
+    const seen = new Set<string>();
+    const walk = (r: string): string | null => {
+      if (seen.has(r)) return null;
+      seen.add(r);
+      const st = this.status(r);
+      if (st === 'available') return r;
+      if (st !== 'locked_prereq') return null;
+      for (const p of this.def(r)?.requires ?? []) {
+        const step = walk(p);
+        if (step) return step;
+      }
+      return null;
+    };
+    return walk(id);
+  }
+
   /** All research whose prerequisites are met and is not done. */
   available(): ResearchDef[] {
     return this.game.data.research.filter((d) => this.status(d.id) === 'available');
