@@ -14,12 +14,13 @@ export const INTRO_MS = 6000; // fallback removal; the CSS animation itself is 0
 export function showRunIntro(hud, run, reduceFlash) {
   const ch = run.chapter, D = run.diff;
   const src = ch.endless ? CHAPTERS[ch.mods.rotate[0] - 1] : null; // Endless opens on the first rotation's twist
-  const tag = run.mods.tag ? (src ? `${src.name}: ${run.mods.tag}` : run.mods.tag) : `Survive 6:00, then slay ${BOSSES[bossFor(ch)].title}`;
-  const kick = ch.endless ? 'Endless' : `${run.trial ? 'Daily Trial · ' : ''}Chapter ${ROMAN[ch.id] || ch.id}`;
+  const tag = run.guide ? 'Raise the dead. Lead the legion.' // the beginner tutorial (game/tutorial.js)
+    : run.mods.tag ? (src ? `${src.name}: ${run.mods.tag}` : run.mods.tag) : `Survive 6:00, then slay ${BOSSES[bossFor(ch)].title}`;
+  const kick = run.guide ? 'Tutorial' : ch.endless ? 'Endless' : `${run.trial ? 'Daily Trial · ' : ''}Chapter ${ROMAN[ch.id] || ch.id}`;
   const pills = (D.id !== 'normal' ? `<em class="ri-pill" style="--dc:${D.css}">${D.name}</em>` : '') + (run.bloodMoon ? '<em class="ri-pill ri-bm">Blood Moon</em>' : '');
   const el = h(`<div class="run-intro${reduceFlash ? ' rf' : ''}" aria-hidden="true" data-ch="${ch.id}" style="--rc:${hex(ch.rune)}">
     <i class="ri-art" style="background-image:url(${CHAPTER_ART[ch.id]})"></i>
-    <div class="ri-text"><span class="ri-kick">${kick}${pills}</span><b class="ri-name">${ch.name}</b><i class="ri-line"></i><span class="ri-tag">${tag}</span></div>
+    <div class="ri-text"><span class="ri-kick">${kick}${pills}</span><b class="ri-name">${run.guide ? 'The Waking' : ch.name}</b><i class="ri-line"></i><span class="ri-tag">${tag}</span></div>
   </div>`);
   hud.appendChild(el);
   hud.classList.add('intro-on'); // the legion counter (still 0) steps aside under the card

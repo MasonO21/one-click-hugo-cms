@@ -9,7 +9,7 @@ import {
 import { saveProfile, todayKey } from './save.js';
 import { now, today, dayTime } from './clock.js';
 import { resultDifficulty, clearedOn, recordDifficulty, rollHoard } from './difficulty.js';
-import { BESTIARY } from '../game/data.js';
+import { BESTIARY, TUTORIAL } from '../game/data.js';
 import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
 
 // ---------------------------------------------------------------- change notification
@@ -398,6 +398,7 @@ export function applyRunResult(p, result) {
   // a partial or malformed result must not write NaN into the profile (NaN currencies and XP are saved as null)
   result = { ...result, chapter: Math.min(CHAPTERS.length, Math.max(1, Math.floor(result.chapter) || 1)) };
   for (const k of ['time', 'kills', 'raised', 'bestLegion', 'novas', 'gates', 'bonusGold', 'bossKills', 'chests', 'elites', 'evolutions', 'bestStreak']) result[k] = Math.max(0, +result[k] || 0);
+  if (result.tutorial) return applyTutorialResult(p, result);
   const L = computeLoadout(p);
   const ch = result.chapter;
   const trial = !!result.trial;
@@ -458,6 +459,26 @@ export function applyRunResult(p, result) {
 
   return { rewards, items, firstClear, newBest, levelUps, streakRecord, difficulty: D.id };
 }
+/** The beginner tutorial (game/tutorial.js): finishing it pays the run's kill and time gold, a fixed bonus, Bestiary kills
+ *  and lifetime stats, once per account. It is no chapter attempt: no records, unlocks, first clear, quests, pass XP or
+ *  Boss Hoard. Abandoning it pays nothing (like Skip), and a replay from Settings is practice that pays nothing either
+ *  (the tutorial costs no energy, so it must not be farmable). */
+function applyTutorialResult(p, result) {
+  p.flags.tutorialDone = true;
+  const none = { rewards: {}, items: [], firstClear: false, newBest: false, levelUps: 0, streakRecord: false, difficulty: 'normal', tutorial: true };
+  if (!result.victory) { if (!p.flags.tutorialPaid && !p.flags.coach) p.flags.coach = 'battle'; return { ...none, ended: true }; }
+  if (p.flags.tutorialPaid) return { ...none, practice: true };
+  p.flags.tutorialPaid = true;
+  const L = computeLoadout(p), R = TUTORIAL.reward;
+  const rewards = { gold: Math.round((result.kills * 0.9 + result.time * 2.2) * L.goldMul) + R.gold, gems: R.gems };
+  const items = grant(p, rewards);
+  const s = p.stats;
+  s.kills += result.kills; s.raised += result.raised; s.bestLegion = Math.max(s.bestLegion, result.bestLegion);
+  addBestiaryKills(p, result.byType);
+  if (!p.flags.coach) p.flags.coach = Object.values(p.talents).every((v) => !v) ? 'talent' : 'battle'; // home: the way on (ui/meta)
+  return { ...none, rewards, items };
+}
+
 /** Rewarded-ad "double rewards": repeat the gold and gems only. */
 export function doubleRunRewards(p, rewards) {
   return grant(p, { gold: rewards.gold, gems: rewards.gems - (rewards.firstClearGems || 0) });

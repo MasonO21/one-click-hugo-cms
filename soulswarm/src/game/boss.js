@@ -4,7 +4,7 @@
 // Immune 2 s roars between phases. Each boss adds a twist to the shared attacks and a signature of its own:
 // Gravemaw raises the dead, Pyrexa's Cinder Rain, Vaulkar's Glacier Lances, Azrathel's Smite, Vesperine's Blood Lances.
 import * as THREE from 'three';
-import { BOSS, BOSSES, bossFor, BOSS_PHASES as BP, HITSTOP } from './data.js';
+import { BOSS, BOSSES, bossFor, BOSS_PHASES as BP, HITSTOP, TUTORIAL } from './data.js';
 import { bossGeometry } from '../engine/models.js';
 import { makeCharMaterial } from '../engine/materials.js';
 import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
@@ -61,7 +61,7 @@ export class Boss {
     this.id = bossFor(ch, run.bossKills);
     const K = this.kit = BOSSES[this.id], hex = K.color;
     const x = P.x, z = P.z - 11;
-    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * (run.tutorial ? BOSS.firstRun : 1) * scale * run.diff.bossHp, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) * run.diff.bossDmg });
+    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * (run.guide ? TUTORIAL.bossHp : run.tutorial ? BOSS.firstRun : 1) * scale * run.diff.bossHp, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) * run.diff.bossDmg });
     this.e = e;
     run.bossEnemy = e;
     this.color = new THREE.Color(hex);
@@ -89,7 +89,8 @@ export class Boss {
     this.fightT = 0; this.phaseT = 0; this.held = false; this.dirge = false; this.baseDmg = this.dmg = e.dmg; this.rate = 1; this.last = '';
     // the boss's twist on the shared attacks: 2 fire rings, 3 frost shards, 4 extra ring, 5 early phase III
     this.twist = K.twist;
-    this.thresholds = [BP.phases[1].from, this.run.tutorial ? -1 : this.twist === 5 ? BP.ch5Crown : BP.phases[2].from]; // first run: no phase III
+    this.thresholds = this.run.guide ? [-1, -1] // the tutorial's King: phase I only
+      : [BP.phases[1].from, this.run.tutorial ? -1 : this.twist === 5 ? BP.ch5Crown : BP.phases[2].from]; // first run: no phase III
     this.nextWave = Infinity; this.zones.length = 0; this.pending.length = 0; this.shards.count = 0; this.strikes.length = 0; this.rainQ.length = 0;
     for (const S of this.slams) { S.on = false; S.mesh.visible = false; }
     for (const m of [this.slams[0].mesh, this.slams[1].mesh, this.slams[2].mesh, this.fan, this.sigil]) m.material.uniforms.uColor.value.copy(this.danger);

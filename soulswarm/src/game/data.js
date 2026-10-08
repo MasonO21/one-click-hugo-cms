@@ -104,7 +104,32 @@ export const ENEMIES = {
 // Every chapter boss (BOSSES below) shares these stats.
 export const BOSS = { hp: 12500, speed: 2.3, dmg: 22, radius: 1.9, mass: 999, chHp: 0.05, chDmg: 0.3,
   tune: [1, 0.8, 0.75, 1.15, 1.2, 1],
-  firstRun: 0.6 }; // a player's very first run: 60% HP and no phase III
+  firstRun: 0.6 }; // a first Chapter 1 run without the tutorial: 60% HP and no phase III
+// ---------------------------------------------------------------- Beginner tutorial ("The Waking", tutorial.js, ui/coachui.js)
+// A free, guided first run on Chapter 1 that teaches one thing per step. The horde comes only as each step needs it, the
+// Shepherd cannot fall (hits stop at 1 HP) and the Hollow King at the end is a quarter as strong, phase I only.
+// Seconds, metres; trickle = [Husks per second, most alive at once].
+export const TUTORIAL = {
+  moveDist: 6,          // metres walked to pass the first step
+  slay: 5,              // Husks to slay; the first five always rise
+  legion: 12,           // legion size before the first Soul Gate
+  raise: 0.5,           // Raise Chance floor for the whole tutorial
+  legionHelp: 45,       // seconds before the legion step tops the legion up itself (no dead end)
+  pack: [8, 4],         // the legion step's Ghoul pack: [seconds in, size]
+  trickle: { slay: [0.8, 10], legion: [1.6, 22], gate: [0.7, 10], rite: [1.2, 26], elite: [1.5, 22], nova: [1.4, 40] }, // the elite step also regrows the legion the Nova spent
+  arc: 6,               // Husks waiting ahead when the slaying starts
+  riteRing: [18, 9],    // [Husks, radius] around the Shepherd for the Rite to hit
+  regrow: [15, 20],     // after the Nova: the elite comes once the legion is back to this, or after this many seconds
+  eliteHp: 0.6,         // the elite Brute's HP ×
+  novaRing: [30, 11],   // the SURROUNDED ring of the Nova step
+  novaPre: 0.5,         // Nova charge × before the Nova step (so the meter fills when it is taught)
+  novaBoost: 5,         // and × during it
+  novaFill: 10,         // seconds into the Nova step before the meter tops itself up
+  bossWarn: 4,          // seconds from the warning to the King's rise
+  bossHp: 0.25,         // the King's HP × (12,500 → 3,125)
+  done: 1.3,            // seconds a finished step shows its tick before the next
+  reward: { gold: 500, gems: 30 }, // for finishing, on top of the run's kill and time gold
+};
 // ---------------------------------------------------------------- Chapter bosses (boss.js)
 // Each campaign chapter ends with its own boss; the Endless Abyss brings them back in turn (BOSS_ORDER, by depth). They
 // share the stats above and the three-phase frame below, and differ in look, names, a twist on the shared attacks and a

@@ -71,7 +71,7 @@ export function createMeta(app) {
     const showCd = p.energy < ENERGY_MAX;
     if (showCd !== ecdShown) { ecdShown = showCd; top.ecd.innerHTML = showCd ? `+1 ${cd('energy', energyNextIn(p))}` : ''; }
     const n = notifications(p);
-    const counts = { shop: n.shop, heroes: n.heroes + n.bestiary, battle: n.quests + n.login, altar: n.altar, pass: n.pass };
+    const counts = { shop: n.shop, heroes: n.heroes + n.bestiary + (p.flags.coach === 'talent' ? 1 : 0), battle: n.quests + n.login, altar: n.altar, pass: n.pass }; // coach: Talents after the tutorial
     for (const t of TABS) $(el, `[data-nav="${t}"] .badge-dot`).hidden = !counts[t];
   }
 

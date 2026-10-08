@@ -46,7 +46,7 @@ export function newProfile() {
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0, bestStreak: 0 },
     bestiary: { kills: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])), claimed: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])) }, // meta/bestiary.js
     settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
-    flags: { tutorialDone: false, hints: {} },
+    flags: { tutorialDone: false, tutorialPaid: false, hints: {}, coach: '' }, // tutorialPaid: its reward paid once; coach: the post-tutorial pointer ('talent' → 'battle' → '')
     freeChestDate: null,
   };
 }
@@ -87,6 +87,7 @@ function migrate(p) {
   migrateDifficulty(out);
   for (const id of BESTIARY.order) { const b = out.bestiary; b.kills[id] = int(b.kills[id], 0); b.claimed[id] = int(b.claimed[id], 0, 0, bestiaryGoals(id).length); }
   if (!(p && p.bestiary)) out.bestiary.kills.gravemaw = int(out.stats.clears, 0); // saves from before the Bestiary: every clear slew Gravemaw
+  if (!(p && p.flags && 'tutorialPaid' in p.flags)) out.flags.tutorialPaid = !!out.flags.tutorialDone; // saves from before the tutorial: their first run was it
   return out;
 }
 

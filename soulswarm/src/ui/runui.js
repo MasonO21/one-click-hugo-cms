@@ -2,12 +2,13 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART, CHAPTER_ART, skillArt } from './art.js';
 import { RiteButton } from './riteui.js';
 import { StreakHUD, streakRow } from './streakui.js';
 import { showRunIntro } from './runintro.js';
+import { CoachUI } from './coachui.js';
 
 /** Nightmare / Torment pill with its gold multiplier (empty on Normal). */
 const diffPill = (id) => { const D = DIFFICULTY[id]; return D && id !== 'normal' ? `<span class="pill pill-diff" style="--dc:${D.css}">${D.name} · ×${D.gold} gold</span>` : ''; };
@@ -54,6 +55,7 @@ export class RunUI {
     this.q.nova.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.wantsNova = true; });
     this.wantsRite = false;
     this.rite = new RiteButton(this, run); // the hero's Rite, above-left of NOVA
+    this.coach = run.guide ? new CoachUI(this, run) : null; // the beginner tutorial's coach
     this.last = {};
     this.acc = 0;
     this.skillKey = '';
@@ -63,8 +65,11 @@ export class RunUI {
 
   update(run, dt) {
     this.acc += dt;
+    if (this.coach) this.coach.frame(run);
     if (this.acc < 1 / 20) return;
+    const step = this.acc;
     this.acc = 0;
+    if (this.coach) this.coach.update(run, step);
     const q = this.q;
     this.set('xp', Math.round((run.xp / run.xpNeed) * 200), (v) => { q.xp.style.transform = `scaleX(${v / 200})`; });
     this.set('lv', run.level, (v) => { q.lv.textContent = 'LV ' + v; });
@@ -77,7 +82,7 @@ export class RunUI {
       else {
         const left = Math.max(0, run.nextBossAt - run.time);
         q.timer.textContent = fmtTime(run.time);
-        q.timerSub.textContent = left < 60 ? `Boss in ${Math.ceil(left)}s` : run.chapter.name;
+        q.timerSub.textContent = run.guide ? 'Training' : left < 60 ? `Boss in ${Math.ceil(left)}s` : run.chapter.name;
       }
     });
     const n = run.legion.count;
@@ -141,6 +146,7 @@ export class RunUI {
   }
 
   hint(text) {
+    if (this.coach) { this.coach.note(text); return; } // the tutorial: one place to read
     if (this.hintEl) this.hintEl.remove();
     const el = h(`<div class="hint">${text}</div>`);
     this.el.appendChild(el);
@@ -177,6 +183,7 @@ export class RunUI {
   showLevelUp(choices, level, onPick, { chest = false, shrine = false } = {}) {
     const back = h(`<div class="lvl-back ${chest ? 'chest' : ''} ${shrine ? 'shrine' : ''}">
       <div class="lvl-title">${shrine ? '<b>SHRINE OF SOULS</b><span>Accept one blessing</span>' : chest ? '<b>RELIC CHEST</b><span>Claim one treasure</span>' : `<b>LEVEL ${level}</b><span>Choose a power</span>`}</div>
+      ${this.coach && !shrine ? ((t) => (t ? `<div class="co-card">${t}</div>` : ''))(this.coach.cardLine(chest)) : ''}
       <div class="cards"></div>
       <div class="lvl-actions"></div>
     </div>`);
@@ -303,11 +310,11 @@ export class RunUI {
   // ---------------------------------------------------------------- results
   showResults(result, outcome) {
     const app = this.app, p = app.profile;
-    const win = result.victory;
+    const win = result.victory, tut = !!result.tutorial;
     let doubled = false, adOpen = false;
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
-      <div class="res-head has-art ${win || result.endless ? 'win' : 'lose'}" style="--art:url(${CHAPTER_ART[this.run.chapter.id]})"><b>${result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${result.endless ? `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
+      <div class="res-head has-art ${win || result.endless ? 'win' : 'lose'}" style="--art:url(${CHAPTER_ART[this.run.chapter.id]})"><b>${tut ? (win ? 'TRAINING COMPLETE' : 'TRAINING ENDED') : result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${tut ? 'The Waking · Tutorial' : result.endless ? `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
       <div class="res-badges">${diffPill(result.difficulty)}${result.bloodMoon ? '<span class="pill pill-hot">Blood Moon ×2</span>' : ''}${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
       <div class="res-stats">
         <div><b>${fmtTime(result.time)}</b><small>Survived</small></div>
@@ -319,12 +326,15 @@ export class RunUI {
       </div>
       ${streakRow(result, outcome, p)}
       <div class="res-build">${this.buildTiles()}</div>
-      <div class="res-sub">Rewards</div>
-      <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>
-      ${result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, the five in turn, stronger each time. How deep can your legion go?</div>' : !win ? '<div class="res-tip">Tip: Talents and Relics make every run stronger. Gravemaw waits at 6:00.</div>' : ''}
+      ${outcome.practice ? '<div class="res-tip">Practice run: training pays its rewards only the first time.</div>'
+        : outcome.ended ? '<div class="res-tip">Training ended. Replay it any time from Settings; finishing it pays 500 gold and 30 gems.</div>' : `<div class="res-sub">Rewards</div>
+      <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>`}
+      ${tut ? `<div class="res-tip">You are ready, Shepherd. Spend your gold on <b>Talents</b>, then take on Chapter 1: survive 6:00 and slay ${BOSSES[bossFor(CHAPTERS[0])].name}.</div>`
+        : result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, the five in turn, stronger each time. How deep can your legion go?</div>'
+        : !win ? `<div class="res-tip">Tip: Talents and Relics make every run stronger. ${BOSSES[bossFor(this.run.chapter)].name} waits at 6:00.</div>` : ''}
     </div>`);
     const actions = [];
-    if (outcome.rewards.gold > 0) {
+    if (outcome.rewards.gold > 0 && !tut) { // rewarded ads start after the tutorial (GDD §16)
       actions.push({ label: `${icon('ad')} Double rewards`, cls: 'btn-ad btn-lg', onClick: () => {
         if (doubled || adOpen) return false;
         adOpen = true; // a second tap while the ad loads must not pay twice

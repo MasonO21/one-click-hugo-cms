@@ -46,7 +46,7 @@ export function createHeroes(ctx) {
     const p = app.profile;
     const n = notifications(p);
     tabsEl.innerHTML = ['heroes', 'relics', 'talents', 'bestiary'].map((k) =>
-      `<button class="subtab ${sub === k ? 'on' : ''}" data-sub="${k}">${{ heroes: 'Heroes', relics: 'Relics', talents: 'Talents', bestiary: 'Bestiary' }[k]}${(k === 'heroes' && n.heroes) || (k === 'bestiary' && n.bestiary) ? '<i class="badge-dot"></i>' : ''}</button>`).join('');
+      `<button class="subtab ${sub === k ? 'on' : ''}" data-sub="${k}">${{ heroes: 'Heroes', relics: 'Relics', talents: 'Talents', bestiary: 'Bestiary' }[k]}${(k === 'heroes' && n.heroes) || (k === 'bestiary' && n.bestiary) || (k === 'talents' && p.flags.coach === 'talent') ? '<i class="badge-dot"></i>' : ''}</button>`).join('');
     keepScroll(el, () => {
       root.className = 'hz hz-' + sub;
       root.innerHTML = sub === 'heroes' ? renderRoster(p) : sub === 'relics' ? renderRelics(p) : sub === 'talents' ? renderTalents(p) : renderBestiary(p);
@@ -230,12 +230,15 @@ export function createHeroes(ctx) {
   // ---------------------------------------------------------------- talents
   function renderTalents(p) {
     const L = computeLoadout(p);
+    // after the tutorial (profile.flags.coach): point at the first talent to buy, Might when it is affordable
+    const coachTal = p.flags.coach === 'talent' ? ['might', ...Object.keys(TALENTS)].find((k) => (p.talents[k] || 0) < TALENTS[k].max && p.gold >= talentCost(p.talents[k] || 0)) : null;
     return `<div class="tal-head panel"><div><div class="t-label">Power</div><b class="glow-gold tnum">${fmt(L.power)}</b></div>
         <div><div class="t-label">Gold</div><b class="tnum">${icon('gold')} ${fmt(p.gold)}</b></div></div>
+      ${coachTal ? `<div class="tal-coach">${icon('info')} Talents make every run stronger, for every hero. Upgrade ${TALENTS[coachTal].name}!</div>` : ''}
       <div class="tals">${Object.entries(TALENTS).map(([k, t]) => {
         const lv = p.talents[k] || 0; const max = lv >= t.max; const cost = talentCost(lv);
         const poor = p.gold < cost;
-        return `<div class="tal ${max ? 'is-max' : ''}" data-tal="${k}">
+        return `<div class="tal ${max ? 'is-max' : ''} ${k === coachTal ? 'coach' : ''}" data-tal="${k}">
           <span class="tal-ic">${talentArt(k, t.icon)}</span>
           <div class="tal-main">
             <div class="tal-top"><b>${t.name}</b><span class="tal-lv tnum">Lv ${lv}/${t.max}</span></div>
@@ -264,9 +267,10 @@ export function createHeroes(ctx) {
       if (!upgradeTalent(app.profile, k)) { toast('Not enough gold'); return; }
       app.audio.sfx('coin'); app.haptic('light');
       flash = k;
+      if (app.profile.flags.coach === 'talent') { app.profile.flags.coach = 'battle'; toast('Stronger! Now take on Chapter 1.'); } // the post-tutorial pointer moves on
       commit(app.profile);
     },
   });
 
-  return { el, render, setSub: (s) => { sub = s; } };
+  return { el, render, setSub: (s) => { sub = s; }, onShow: (arg) => { if (arg && arg !== sub) { sub = arg; render(); } } };
 }

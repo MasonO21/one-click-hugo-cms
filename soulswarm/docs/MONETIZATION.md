@@ -83,7 +83,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Rewarded daily free chest (10 gems × 28) | 280 | — | +2 |
 | **Total** | | | **≈ 105 pulls ≈ 3.0 Legendaries per season** (≈ 2.1 without ads) |
 
-One-time sources are not included: chapter first clears (550 gems + 5 sigils), Nightmare and Torment first clears (900 gems, spread over months of endgame play, see §2.5), Bestiary milestones (550 gems + 11 sigils + 22,000 gold, see §2.6) and the new-account balance (150 gems + 1 sigil).
+One-time sources are not included: chapter first clears (550 gems + 5 sigils), Nightmare and Torment first clears (900 gems, spread over months of endgame play, see §2.5), Bestiary milestones (550 gems + 11 sigils + 22,000 gold, see §2.6), the beginner tutorial (its run's gold plus 500 gold and 30 gems, once; GDD §16) and the new-account balance (150 gems + 1 sigil).
 
 ### 2.5 Nightmare and Torment (endgame difficulty)
 

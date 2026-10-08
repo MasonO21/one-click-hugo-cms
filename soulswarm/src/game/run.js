@@ -19,8 +19,9 @@ import { Affixes } from './affixes.js';
 import { Events } from './events.js';
 import { computeStats, rollChoices, applyChoice } from './skills.js';
 import { Streak } from './streak.js';
+import { Tutorial } from './tutorial.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
-import { HITSTOP, NOVA, LEVEL_PULSE, VOICE } from './data.js';
+import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL } from './data.js';
 import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
@@ -31,7 +32,7 @@ const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
 export class Run {
-  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal' }) {
+  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal', tutorial = false }) {
     this.isRun = true;
     this.engine = engine;
     this.app = app;
@@ -122,6 +123,9 @@ export class Run {
     this.projectiles.initLobs();
     this.resize(engine.w, engine.h);
     this.camPos.copy(this.desiredCam());
+    // the beginner tutorial (tutorial.js): its steps direct the run until the King rises, who comes when they say
+    this.guide = tutorial ? new Tutorial(this) : null;
+    if (this.guide) { this.tutorial = true; this.nextBossAt = Infinity; }
   }
 
   // ---------------------------------------------------------------- scaling helpers
@@ -160,7 +164,7 @@ export class Run {
     if (this.hintsShown[key] || this.profile.flags.hints[key]) return;
     this.hintsShown[key] = true;
     this.profile.flags.hints[key] = true;
-    if (this.ui) this.ui.hint(text);
+    if (this.ui && !this.guide) this.ui.hint(text); // the tutorial's coach teaches these itself
   }
 
   // ---------------------------------------------------------------- director
@@ -216,6 +220,7 @@ export class Run {
 
   director(dt) {
     const m = this.minute;
+    if (this.guide && !this.bossSpawned) { this.guide.director(dt); return; }
     if (!this.bossSpawned) {
       // Endless: each depth (boss kill) rotates the chapter modifiers; announce once the depth banner has played
       if (this.endless && this.modDepth !== this.bossKills) {
@@ -263,23 +268,27 @@ export class Run {
         this.audio.sfx('warning', { volume: 0.5 });
         this.audio.voice('a_elite');
       }
-      if (!this.warned && this.time >= this.nextBossAt - 8) {
-        this.warned = true;
-        // the chapter's boss; in the Endless Abyss the next in turn, each one "returns" once all five have fallen
-        const B = BOSSES[this.bossId], back = this.bossKills >= BOSS_ORDER.length;
-        this.ui.bossColor(B.color);
-        this.ui.banner(`${B.title.toUpperCase()} ${back ? 'RETURNS' : 'APPROACHES'}`, this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion', 'boss');
-        this.audio.sfx('warning');
-        this.audio.voice(back ? `${B.voice}_return` : B.voice);
-        this.app.haptic('warning');
-      }
+      if (!this.warned && this.time >= this.nextBossAt - 8) this.warnBoss();
       this.events.director();
-      if (this.time >= this.nextBossAt) {
-        this.bossSpawned = true;
-        this.gates.despawn();
-        this.boss.spawn(1 + 0.6 * this.bossKills);
-      }
+      if (this.time >= this.nextBossAt) this.spawnBoss();
     } else if (!this.bossDead) this.boss.director(dt); // boss-time adds come from the arena edge (boss.js)
+  }
+
+  /** The boss warning: the chapter's boss; in the Endless Abyss the next in turn, each one "returns" once all five have fallen. */
+  warnBoss() {
+    this.warned = true;
+    const B = BOSSES[this.bossId], back = this.bossKills >= BOSS_ORDER.length;
+    this.ui.bossColor(B.color);
+    this.ui.banner(`${B.title.toUpperCase()} ${back ? 'RETURNS' : 'APPROACHES'}`, this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion', 'boss');
+    this.audio.sfx('warning');
+    this.audio.voice(back ? `${B.voice}_return` : B.voice);
+    this.app.haptic('warning');
+  }
+
+  spawnBoss() {
+    this.bossSpawned = true;
+    this.gates.despawn();
+    this.boss.spawn(1 + 0.6 * this.bossKills);
   }
 
   swarmRing() {
@@ -298,6 +307,7 @@ export class Run {
   /** Soul Nova charge in kill-equivalents (an elite is worth 6 kills, a gate 3). Nothing charges mid-detonation. */
   addNovaCharge(kills) {
     if (this.tutorial && this.counters.novas === 0) kills *= 2.5; // first run: the first Nova comes early so it gets taught
+    if (this.guide) kills *= this.guide.novaMul(); // ...exactly when the tutorial teaches it
     if (this.novaQueue.length === 0) this.nova = Math.min(1, this.nova + kills * this.stats.novaMul / BASE.novaKills);
     if (this.nova >= 1 && !this.hintsShown.nova) this.hint('nova', 'Soul Nova is ready! Tap NOVA to detonate your legion.');
   }
@@ -326,6 +336,7 @@ export class Run {
       if (HP.pulseRaise && (source === 'pulse' || (e.tollUid === e.uid && e.tollT > this.time))) chance = Math.min(0.85, chance * HP.pulseRaise); // Liora: the bell marks the dead
       if (HP.novaRaise && source === 'nova') chance = Math.min(0.85, Math.max(chance, this.stats.raise * HP.novaRaise)); // Seraphine: what her Nova burns rises (never halved)
       if (this.tutorial && this.counters.raised < 5) chance = 1; // first run: the first five kills always rise
+      if (this.guide) chance = Math.max(chance, TUTORIAL.raise); // the tutorial's legion grows fast enough to teach it
       if (this.rites.graveCall) chance = 1; // Vael's Grave Call: every kill rises (the cap still holds)
       if (Math.random() < chance) {
         if (this.legion.count < this.stats.cap) {
@@ -633,6 +644,7 @@ export class Run {
       chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events, rites: this.counters.rites,
       bestStreak: this.counters.bestStreak,
       byType: { ...this.counters.byType }, // Bestiary kills per foe
+      tutorial: !!this.guide, // the beginner tutorial: its own reward, no chapter records (economy.applyRunResult)
     };
     if (this.onEnd) this.onEnd(result);
   }

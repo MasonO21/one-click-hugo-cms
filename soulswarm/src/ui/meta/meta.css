@@ -284,6 +284,17 @@
 .ftue-arrow { display: inline-flex; color: var(--gold); transform: rotate(90deg); animation: m-ftueBob .9s ease-in-out infinite; }
 .ftue-arrow svg { width: 18px; height: 18px; stroke-width: 3; filter: drop-shadow(0 0 6px var(--gold)); }
 @keyframes m-ftueBob { 50% { transform: rotate(90deg) translateX(5px); } }
+/* after the tutorial: the strip itself is the way to Talents */
+.ftue-go { border: 0; cursor: pointer; align-self: center; }
+.ftue-go b { color: var(--gold); }
+.ftue-side { transform: none; animation-name: m-ftueSide; }
+@keyframes m-ftueSide { 50% { transform: translateX(5px); } }
+.bb-free { font-family: var(--f-ui); font-weight: 800; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; padding: 5px 10px; color: #c9ffe3; background: rgba(4,40,24,.85); }
+/* the talent the post-tutorial coach points at */
+.tal.coach { box-shadow: inset 0 0 0 2px var(--gold), inset 0 0 22px rgba(255,207,74,.35); animation: m-talCoach 1.2s ease-in-out infinite; } /* inset: .tal is clipped */
+.tal.coach .tal-btn { animation: m-bbPulse 1.2s ease-in-out infinite; }
+@keyframes m-talCoach { 50% { box-shadow: inset 0 0 0 2px #fff4cc, inset 0 0 32px rgba(255,207,74,.55); } }
+.tal-coach { margin: 10px 0 0; padding: 8px 12px; text-align: center; font-weight: 700; color: #fff4cc; background: rgba(60,36,4,.8); clip-path: var(--bevel-sm); box-shadow: inset 0 0 0 1px rgba(255,207,74,.45); }
 
 /* difficulty selector on the chapter card (Normal / Nightmare / Torment); --dc = DIFFICULTY[].css */
 .chap { flex-wrap: wrap; }

@@ -73,7 +73,10 @@ export function createHome(ctx) {
       return `<button class="dsel-b${id === dsel ? ' on' : ''}${open ? '' : ' lk'}" data-act="diff" data-d="${id}" style="--dc:${d.css}" aria-pressed="${id === dsel}"${open ? '' : ' aria-disabled="true"'}><b>${d.name}${won ? icon('check') : ''}</b><small>${sub}</small></button>`;
     }).join('')}</div>`;
 
-    const ftue = !p.flags.tutorialDone && !locked;
+    // first steps: a new Shepherd's Battle opens the free tutorial (game/tutorial.js); after it, the strip points the way
+    // to Talents, then back to Chapter 1 (profile.flags.coach, cleared by the first real run)
+    const train = !p.flags.tutorialDone, coach = train ? '' : p.flags.coach;
+    const ftue = (train || coach === 'battle') && !locked;
     const lowEnergy = !canPlay(p);
     const trial = trialState(p);
 
@@ -106,12 +109,13 @@ export function createHome(ctx) {
           ${dselHtml}
         </div>
         ${bloodMoon(p) ? `<div class="bm"><i class="bm-moon"></i><div><b>BLOOD MOON</b><span>2× elites · 2× gold and gems</span></div>${cd(bloodMoonTimes().ends, 0, 'bm-cd')}</div>` : ''}
-        ${ftue ? `<div class="ftue"><span>Your legion awaits, Shepherd.</span><i class="ftue-arrow">${icon('right')}</i></div>` : ''}
+        ${coach === 'talent' ? `<button class="ftue ftue-go" data-act="coachTalent"><span>Spend your gold on <b>Talents</b></span><i class="ftue-arrow ftue-side">${icon('right')}</i></button>`
+          : ftue ? `<div class="ftue"><span>${train ? 'Begin your training, Shepherd.' : 'Chapter 1 awaits. Your legion is ready.'}</span><i class="ftue-arrow">${icon('right')}</i></div>` : ''}
         <div class="battle-wrap ${ftue ? 'is-ftue' : ''} d-${dsel}">
           <button class="btn btn-primary btn-battle ${locked ? 'is-locked' : ''} d-${dsel}" data-act="battle">
             <span class="bb-shine"></span>
             <span class="bb-label t-display">${locked ? `${icon('lock')} Locked` : 'Battle'}</span>
-            ${locked ? '' : `<span class="bb-cost ${lowEnergy ? 'is-low' : ''}">${icon('energy')}<b class="tnum">${ENERGY_COST}</b></span>`}
+            ${locked ? '' : train ? '<span class="bb-cost bb-free">Free</span>' : `<span class="bb-cost ${lowEnergy ? 'is-low' : ''}">${icon('energy')}<b class="tnum">${ENERGY_COST}</b></span>`}
           </button>
           ${ftue ? '<span class="ftue-ring"></span><span class="ftue-ring r2"></span>' : ''}
         </div>
@@ -134,6 +138,7 @@ export function createHome(ctx) {
     login: () => { tap(app); openLogin(ctx); },
     trial: () => { tap(app); openTrial(ctx); },
     settings: () => { tap(app); openSettings(ctx); },
+    coachTalent: () => { tap(app); ctx.go('heroes', 'talents'); },
     starter: () => { tap(app, 'medium'); openStarter(ctx); },
     pact: () => { tap(app); openPact(ctx); },
     pactClaim: () => { tap(app, 'medium', null); claimPact(ctx); },
@@ -161,6 +166,7 @@ export function createHome(ctx) {
     battle: () => {
       if (downAt > (app.exitedAt || 0) && downAt - app.exitedAt < 400) return; // the second tap of a double tap on the results' Continue lands here
       const p = app.profile; const sel = p.chapter.selected || 1;
+      if (!p.flags.tutorialDone) { tap(app, 'medium', 'select'); app.startRun(1, { tutorial: true }); return; } // the free tutorial comes first
       if (sel > p.chapter.unlocked) { tap(app, 'warning', null); toast(`Clear Chapter ${sel - 1} to unlock`); return; }
       tap(app, 'medium', 'select');
       if (!canPlay(p)) { openEnergy(ctx); return; }

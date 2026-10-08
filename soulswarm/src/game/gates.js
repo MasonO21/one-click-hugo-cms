@@ -34,8 +34,8 @@ export class Gates {
     this.passed = 0;
   }
 
-  /** forcedOps lets scripted moments (tutorials, trailers) choose the two gates. */
-  spawnPair(forcedOps = null) {
+  /** forcedOps lets scripted moments (tutorials, trailers) choose the two gates; opts.lesson explains a ×N pass. */
+  spawnPair(forcedOps = null, opts = {}) {
     if (this.pair) this.despawn(false);
     const run = this.run, P = run.player;
     let dx = P.vx, dz = P.vz;
@@ -44,7 +44,7 @@ export class Gates {
     const rx = -dz, rz = dx; // right vector
     const cx = P.x + dx * 10.5, cz = P.z + dz * 10.5;
     // first run: once the legion reaches 10, the next pair is a scripted maths lesson (+5 vs ×2, sides random)
-    const lesson = !forcedOps && run.tutorial && !this.lessonShown && run.legion.count >= 10;
+    const lesson = !!opts.lesson || (!forcedOps && run.tutorial && !this.lessonShown && run.legion.count >= 10);
     if (lesson) this.lessonShown = true;
     let ops = forcedOps || (lesson ? (Math.random() < 0.5 ? [{ type: 'add', n: 5 }, { type: 'mul', n: 2 }] : [{ type: 'mul', n: 2 }, { type: 'add', n: 5 }]) : makeOps(run.legion.count, run.time / 60));
     if (run.mut.noBadGates && !forcedOps) ops = ops.map((op) => (isGood(op) ? op : { type: 'add', n: Math.max(5, Math.round((12 + run.time / 60 * 7 + run.legion.count * 0.2) / 5) * 5) })); // Gilded Gates

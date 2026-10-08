@@ -26,7 +26,7 @@ const profile = loadProfile();
  *   app.profile, app.audio, app.store, app.haptic(kind), app.engine
  *   app.heroPortrait(heroId) -> dataURL of a rendered 3D portrait
  *   app.showcase.setHero(heroId)  (the 3D hero standing behind the home screen)
- *   app.startRun(chapterId, { trial, difficulty }) -> boolean (false when out of energy, the trial is spent or the difficulty is locked)
+ *   app.startRun(chapterId, { trial, difficulty, tutorial }) -> boolean (false when out of energy, the trial is spent or the difficulty is locked)
  *   app.applySettings()     (after changing profile.settings)
  */
 const app = {
@@ -70,8 +70,10 @@ function applySettings() {
 }
 
 /** opts.trial: today's Daily Trial (free; its chapter and mutators come from the date).
- *  opts.difficulty: 'normal' (default) | 'nightmare' | 'torment'; must be unlocked for the chapter. The trial always plays Normal. */
+ *  opts.difficulty: 'normal' (default) | 'nightmare' | 'torment'; must be unlocked for the chapter. The trial always plays Normal.
+ *  opts.tutorial: the beginner tutorial (game/tutorial.js): free, Chapter 1 on Normal, never under the Blood Moon. */
 function startRun(chapterId, opts = {}) {
+  if (opts.tutorial) return beginRun(CHAPTERS[0], { tutorial: true });
   let mutators = null;
   if (opts.trial) { const t = dailyTrial(profile); chapterId = t.chapter; mutators = [t.boon, t.bane]; }
   const chapter = CHAPTERS[chapterId - 1];
@@ -80,10 +82,15 @@ function startRun(chapterId, opts = {}) {
   if (!difficultyUnlocked(profile, chapterId, difficulty)) return false;
   if (opts.trial ? !beginTrial(profile) : !spendEnergy(profile)) return false;
   if (!opts.trial) { profile.chapter.selected = chapterId; selectDifficulty(profile, chapterId, difficulty); }
+  return beginRun(chapter, { mutators, bloodMoon: !opts.trial && bloodMoon(profile), difficulty });
+}
+
+function beginRun(chapter, opts) {
+  if (profile.flags.coach && !opts.tutorial) profile.flags.coach = ''; // the post-tutorial pointers (ui/meta) end with the first real run
   commit(profile);
   app.meta.hide();
   const loadout = computeLoadout(profile);
-  const run = new Run(app.engine, { app, loadout, chapter, mutators, bloodMoon: !opts.trial && bloodMoon(profile), difficulty });
+  const run = new Run(app.engine, { app, loadout, chapter, ...opts });
   const runUI = new RunUI(app, run);
   app.run = run; app.runUI = runUI;
   app.engine.setController(run);

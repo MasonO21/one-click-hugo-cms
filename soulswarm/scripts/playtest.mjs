@@ -2372,14 +2372,15 @@ errs = await session(async (page) => {
     // the Endless Abyss brings the five back in turn: the warning banner names each; the sixth "returns"
     // (a level-up or the relic chest each boss drops would pause the clock: take the first card)
     r = window.__bossRun(6); const order = [];
+    // the boss warnings as shown (a jumped clock can bring an elite or event banner over one before it is read)
+    const warned = []; { const b0 = r.ui.banner.bind(r.ui); r.ui.banner = (t, sub, kind) => { if (kind === 'boss') warned.push(t); return b0(t, sub, kind); }; }
     const go = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) { if (r.levelPending) document.querySelector('.lvl-back .card')?.click(); r.update(1 / 30); } };
     for (let k = 0; k < 6; k++) {
       order.push(r.boss.id);
       const e = r.bossEnemy; if (!e) break;
       e.hp = 1; r.enemies.damage(e, 50); go(1.5);
       if (k < 5) { r.time = r.nextBossAt - 8.5; go(0.6); }
-      const t = document.querySelector('.banner.boss b')?.textContent || '';
-      if (k === 4) out.returns = t;
+      if (k === 4) out.returns = warned[warned.length - 1] || '';
       r.time = r.nextBossAt - 0.05; go(3);
     }
     out.order = order;
@@ -2407,6 +2408,121 @@ errs = await session(async (page) => {
     s.assets.every((a) => a.slice(1).every(Boolean)) && s.home.join() === 'Gravemaw,Pyrexa,Vaulkar,Azrathel,Vesperine', JSON.stringify({ a: s.assets, h: s.home }));
 });
 check('chapter bosses: no runtime errors', !errs.length, errs[0] || '');
+
+// 34. Beginner tutorial ("The Waking", game/tutorial.js, ui/coachui.js): a new Shepherd's Battle opens a free, guided
+//     run that teaches one thing per step (move, slay, raise the legion, a ×2 Soul Gate, the Rite, Soul Nova, an elite
+//     and its Relic Chest, a quarter-strength Hollow King), with the coach pointing at each control. It cannot be
+//     lost, pays once, unlocks nothing, and hands the home screen a pointer to Talents, then to Chapter 1. Skip and the
+//     Settings replay (practice, no rewards) work, and older saves count their first run as their training.
+errs = await session(async (page) => {
+  const home = await page.evaluate(() => ({ strip: document.querySelector('.ftue')?.textContent.trim(), cost: document.querySelector('.bb-cost')?.textContent.trim(), done: window.__soulswarm.profile.flags.tutorialDone }));
+  await page.evaluate(() => document.querySelector('[data-act="battle"]').click());
+  await page.waitForTimeout(300);
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, r = app.run, g = r && r.guide, D = await import('/src/game/data.js');
+    const out = { guided: !!g, energy: p.energy, intro: document.querySelector('.run-intro .ri-name')?.textContent, steps: [], points: {}, marks: {}, hints: 0 };
+    if (!g) return out;
+    app.engine.manual = true;
+    const P = r.player; P.invuln = 0; P.hurt(1e6); out.floor = { hp: P.hp, dead: P.dead }; P.hp = P.maxHp; P.invuln = 0; // the tutorial cannot be lost
+    let last = '';
+    for (let f = 0; f < 30 * 420 && !r.ended; f++) {
+      if (r.levelPending) { const c = document.querySelector('.lvl-back .card'); if (c && r.t - (r._pk || 0) > 0.35) { r._pk = r.t; out.cardLine = out.cardLine || document.querySelector('.co-card')?.textContent; c.click(); } }
+      const v = g.view();
+      if (v && v.id !== last) { last = v.id; out.steps.push(v.id); if (v.id === 'gate') out.ops = r.gates.pair && r.gates.pair.gates.map((G) => G.op.type + G.op.n).sort().join(); }
+      if (v) { if (v.point) out.points[v.id] = v.point; if (v.mark) out.marks[v.id] = true; if (v.goal && v.id === 'slay') out.slayGoal = v.goal[1]; }
+      if (f === 60) out.panel = { step: document.querySelector('.co-step')?.textContent, text: document.querySelector('.co-text')?.textContent, thumb: !document.querySelector('.co-thumb').hidden };
+      if (v && v.id === 'rite' && !out.ring) { const pt = document.querySelector('.co-point'); out.ring = !pt.hidden && Math.abs(pt.getBoundingClientRect().x - (document.querySelector('.rite').getBoundingClientRect().x + 32)) < 6; }
+      let tx = Math.cos(r.t * 0.7), tz = Math.sin(r.t * 0.7);
+      const m = v && v.mark; if (m) { const dx = m.x - P.x, dz = m.z - P.z, l = Math.hypot(dx, dz) || 1; tx = dx / l; tz = dz / l; }
+      if (v && v.id === 'move' && r.time < 2.5) tx = tz = 0;
+      r.input.tx = tx; r.input.tz = tz; r.input.moved = true;
+      if (v && v.id === 'rite' && g.t > 1) r.ui.wantsRite = true;
+      if (v && v.id === 'nova' && r.nova >= 1 && g.t > 1) r.ui.wantsNova = true;
+      if (document.querySelector('.hint')) out.hints++;
+      if (r.bossSpawned && !out.boss) out.boss = { hp: r.bossEnemy.maxHp, want: D.BOSS.hp * D.TUTORIAL.bossHp * D.CHAPTERS[0].hpMul, ticks: document.querySelectorAll('.bossbar .ticks b').length, warned: r.warned };
+      out.dead = out.dead || P.dead;
+      r.update(1 / 30);
+    }
+    out.time = Math.round(r.time); out.ended = r.ended; out.won = r.bossDead;
+    await new Promise((res) => setTimeout(res, 900));
+    const tiles = [...document.querySelectorAll('.res-rw > *')].map((n) => n.textContent.replace(/\s+/g, ' ').trim());
+    out.res = { head: document.querySelector('.res-head b')?.textContent, ad: !!document.querySelector('.modal .btn-ad'), tiles, unlocked: p.chapter.unlocked, best: !!p.chapter.best[1], flags: { ...p.flags, hints: undefined }, gems: p.gems };
+    // home: the strip leads to Talents, Might is coached; buying it moves the pointer on to Chapter 1
+    [...document.querySelectorAll('.modal .btn')].find((b) => /Continue/.test(b.textContent))?.click();
+    await new Promise((res) => setTimeout(res, 300));
+    out.home = { strip: document.querySelector('.ftue')?.textContent.trim(), dot: !document.querySelector('[data-nav="heroes"] .badge-dot').hidden };
+    document.querySelector('[data-act="coachTalent"]')?.click();
+    await new Promise((res) => setTimeout(res, 300));
+    const tal = document.querySelector('.tal.coach');
+    out.tal = { coached: tal?.dataset.tal, tab: document.querySelector('.subtab.on')?.dataset.sub };
+    tal?.querySelector('.tal-btn')?.click();
+    await new Promise((res) => setTimeout(res, 300));
+    out.tal.after = p.flags.coach; out.tal.might = p.talents.might;
+    app.meta.show('battle'); app.meta.refresh();
+    await new Promise((res) => setTimeout(res, 300));
+    out.home2 = { strip: document.querySelector('.ftue')?.textContent.trim(), cost: document.querySelector('.bb-cost')?.textContent.trim() };
+    const e0 = p.energy; document.querySelector('[data-act="battle"]').click();
+    out.real = { run: !!app.run, guided: !!(app.run && app.run.guide), spent: e0 - p.energy, coach: p.flags.coach };
+    app.exitRun();
+    return out;
+  });
+  check('tutorial: a new Shepherd is offered free training; Battle opens it without spending energy, titled "The Waking"',
+    home.done === false && /training/i.test(home.strip) && /free/i.test(home.cost) && s.guided && s.energy === 30 && s.intro === 'The Waking', JSON.stringify({ home, g: s.guided, e: s.energy, i: s.intro }));
+  check('tutorial: the coach shows the step, its instruction and the drag demo; game hints stay quiet',
+    /1\/8/.test(s.panel?.step || '') && /move/i.test(s.panel?.text || '') && s.panel?.thumb && s.hints === 0, JSON.stringify({ p: s.panel, h: s.hints }));
+  check('tutorial: every step in order (move, slay, legion, gate, rite, nova, elite, boss), and the King falls',
+    s.steps.join() === 'move,slay,legion,gate,rite,nova,elite,boss' && s.ended && s.won && s.time < 330, JSON.stringify({ steps: s.steps, t: s.time, won: s.won }));
+  check('tutorial: the coach rings the legion, the RITE button and NOVA, and marks the ×2 gate and the elite; the gates are +5 / ×2',
+    s.points.legion === 'legion' && s.points.rite === 'rite' && s.points.nova === 'nova' && s.ring && s.marks.gate && s.marks.elite && s.ops === 'add5,mul2', JSON.stringify({ pt: s.points, mk: s.marks, ring: s.ring, ops: s.ops }));
+  check('tutorial: it cannot be lost, the first level-up gets the coach\'s line, and the King is a quarter strength with phase I only',
+    s.floor.hp === 1 && !s.floor.dead && !s.dead && /LEVEL UP/.test(s.cardLine || '') && s.boss && Math.abs(s.boss.hp - s.boss.want) < 1 && s.boss.ticks === 0 && s.boss.warned, JSON.stringify({ f: s.floor, c: s.cardLine, b: s.boss }));
+  check('tutorial: "TRAINING COMPLETE" pays its bonus once, with no ad doubling, records or unlocks',
+    s.res.head === 'TRAINING COMPLETE' && !s.res.ad && s.res.tiles.some((t) => /×30/.test(t)) && s.res.unlocked === 1 && !s.res.best && s.res.flags.tutorialDone && s.res.flags.tutorialPaid && s.res.flags.coach === 'talent', JSON.stringify(s.res));
+  check('tutorial: home then points to Talents (Might coached); buying it points to Chapter 1, whose run costs energy and ends the pointers',
+    /Talents/.test(s.home.strip || '') && s.home.dot && s.tal.tab === 'talents' && s.tal.coached === 'might' && s.tal.might === 1 && s.tal.after === 'battle'
+    && /Chapter 1/.test(s.home2.strip || '') && !/free/i.test(s.home2.cost || '') && s.real.run && !s.real.guided && s.real.spent === 5 && s.real.coach === '', JSON.stringify({ h: s.home, t: s.tal, h2: s.home2, r: s.real }));
+});
+check('tutorial run: no runtime errors', !errs.length, errs[0] || '');
+
+errs = await session(async (page) => {
+  await page.evaluate(() => document.querySelector('[data-act="battle"]').click());
+  await page.waitForTimeout(300);
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, out = {}, wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    app.engine.manual = true;
+    for (let i = 0; i < 120; i++) app.run.update(1 / 30); // past the intro card
+    document.querySelector('.co-skip').click();
+    out.paused = app.run.paused;
+    [...document.querySelectorAll('.modal .btn')].find((b) => b.textContent === 'Skip').click();
+    await wait(200);
+    out.skip = { run: !!app.run, done: p.flags.tutorialDone, paid: p.flags.tutorialPaid, coach: p.flags.coach, energy: p.energy, gold: p.gold, strip: document.querySelector('.ftue')?.textContent.trim() };
+    // replay from Settings: practice, no rewards
+    document.querySelector('[data-act="settings"]').click(); await wait(200);
+    document.querySelector('[data-act="tutorial"]').click(); await wait(200);
+    out.replay = { guided: !!(app.run && app.run.guide), energy: p.energy };
+    { const g0 = p.gold; app.run.counters.kills = 300; app.run.end(false); await wait(900); // abandoned: nothing paid, the reward still waits
+      out.abandon = { paid: p.gold - g0, flag: p.flags.tutorialPaid, head: document.querySelector('.res-head b')?.textContent };
+      app.exitRun(); document.querySelector('[data-act="settings"]').click(); await wait(200); document.querySelector('[data-act="tutorial"]').click(); await wait(200); }
+    p.flags.tutorialPaid = true; // as after a finished first training
+    const g0 = p.gold, m0 = p.gems;
+    app.run.counters.kills = 300; app.run.end(true); await wait(900);
+    out.replay.paid = p.gold - g0 + p.gems - m0; out.replay.tip = document.querySelector('.res-tip')?.textContent || '';
+    app.exitRun();
+    // older saves: the first run they played was their training
+    const S = await import('/src/meta/save.js'), key = Object.keys(localStorage).find((k) => /soul/i.test(k) && !/corrupt/.test(k));
+    const raw = localStorage.getItem(key), j = JSON.parse(raw);
+    j.flags = { tutorialDone: true, hints: {} }; localStorage.setItem(key, JSON.stringify(j)); out.vet = S.loadProfile().flags.tutorialPaid;
+    j.flags = { tutorialDone: false, hints: {} }; localStorage.setItem(key, JSON.stringify(j)); out.fresh = S.loadProfile().flags.tutorialPaid;
+    localStorage.setItem(key, raw);
+    return out;
+  });
+  check('tutorial: Skip asks first (pausing), then counts training as done at no cost and points home to Chapter 1',
+    s.paused && !s.skip.run && s.skip.done && !s.skip.paid && s.skip.coach === 'battle' && s.skip.energy === 30 && s.skip.gold === 1500 && /Chapter 1/.test(s.skip.strip || ''), JSON.stringify(s.skip));
+  check('tutorial: Settings replays it; abandoning pays nothing (the reward waits), practice after a finish pays nothing; older saves count as trained',
+    s.replay.guided && s.replay.energy === 30 && s.abandon.paid === 0 && !s.abandon.flag && s.abandon.head === 'TRAINING ENDED' && s.replay.paid === 0 && /Practice/.test(s.replay.tip)
+    && s.vet === true && s.fresh === false, JSON.stringify({ r: s.replay, a: s.abandon, vet: s.vet, fresh: s.fresh }));
+});
+check('tutorial skip and replay: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

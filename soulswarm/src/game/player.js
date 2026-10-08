@@ -107,7 +107,10 @@ export class Player {
       run.app.haptic('medium');
       run.stats_hits = (run.stats_hits || 0) + 1;
     }
-    if (this.hp <= 0) { this.hp = 0; run.onPlayerDeath(); }
+    if (this.hp <= 0) {
+      if (run.guide) this.hp = 1; // the tutorial cannot be lost
+      else { this.hp = 0; run.onPlayerDeath(); }
+    }
   }
 
   /** Burning ground: accumulates dps and lands it in quiet 0.3 s ticks. */

@@ -215,6 +215,7 @@ export function openSettings(ctx) {
     <div class="st-row"><span class="st-l">${icon('nova')} Auto-Nova</span><button class="tgl" role="switch" data-t="autoNova"><i></i></button><small class="t-dim">at 100%, legion 50+</small></div>
     <div class="st-row"><span class="st-l">${icon('left')} Left-handed</span><button class="tgl" role="switch" data-t="lefty"><i></i></button><small class="t-dim">NOVA on the left</small></div>
     <div class="st-sep"></div>
+    <button class="btn btn-ghost btn-block" data-act="tutorial">Replay the tutorial</button>
     <button class="btn btn-ghost btn-block" data-act="restore">Restore purchases</button>
     <div class="st-danger">
       <button class="btn btn-ghost btn-block st-reset" data-act="reset">Reset progress</button>
@@ -252,6 +253,11 @@ export function openSettings(ctx) {
     st.quality = b.dataset.q; sync(); app.applySettings(); commit(p); tap(app);
   }));
   delegate(body, {
+    tutorial: () => { // the free beginner tutorial (game/tutorial.js), from the home screen only
+      if (app.run) return;
+      tap(app); document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+      app.startRun(1, { tutorial: true });
+    },
     restore: async (b) => {
       b.disabled = true; b.textContent = 'Restoring…';
       try { await app.store.restore(); toast('Purchases restored'); } catch (e) { toast('Restore failed. Try again later.'); }
