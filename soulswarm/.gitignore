@@ -2,3 +2,4 @@ dist-single/
 ios/App/App/public/
 android/app/src/main/assets/public/
 node_modules
+__pycache__/
