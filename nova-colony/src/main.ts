@@ -9,6 +9,7 @@ import { createPlatformServices } from './platform';
 import { SaveManager } from './platform/save';
 import { AutoQuality } from './platform/autoQuality';
 import { guarded } from './core/guard';
+import { FramePacer, fpsCap } from './core/framePacer';
 import { onBackButton } from './platform/lifecycle';
 
 async function boot() {
@@ -51,9 +52,12 @@ async function boot() {
   }
 
   let last = performance.now();
+  const pacer = new FramePacer();
   // the next frame is booked first and every step is guarded, so one exception can never stop the loop
   const frame = (t: number) => {
     requestAnimationFrame(frame);
+    // at most 60 fps on 90/120 Hz screens, 30 in Battery saver
+    if (!pacer.due(t, fpsCap(game.state.settings.batterySaver))) return;
     const dt = Math.min(0.1, (t - last) / 1000);
     last = t;
     guarded('game', () => game.update(dt));

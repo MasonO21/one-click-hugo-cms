@@ -45,7 +45,7 @@ export class SettingsPanel extends Panel {
 
   override signature(): string {
     const s = this.st.settings;
-    return `${s.quality}|${s.qualityMode}|${s.haptics}|${s.autoGather}|${s.analytics}|${s.showFps}|${s.leftHanded}|${this.code.length}`;
+    return `${s.quality}|${s.qualityMode}|${s.haptics}|${s.autoGather}|${s.analytics}|${s.showFps}|${s.leftHanded}|${s.batterySaver}|${this.code.length}`;
   }
 
   private slider(label: string, icon: string, key: 'music' | 'sfx'): HTMLElement {
@@ -63,7 +63,7 @@ export class SettingsPanel extends Panel {
     return h('div', { class: 'set-row' }, h('div', { class: 'row' }, h('span', { class: 'si', text: icon }), h('div', { class: 'grow', text: label }), val), input);
   }
 
-  private toggle(label: string, sub: string, icon: string, key: keyof Pick<SettingsState, 'haptics' | 'autoGather' | 'analytics' | 'showFps' | 'leftHanded'>, after?: (on: boolean) => void): HTMLElement {
+  private toggle(label: string, sub: string, icon: string, key: keyof Pick<SettingsState, 'haptics' | 'autoGather' | 'analytics' | 'showFps' | 'leftHanded' | 'batterySaver'>, after?: (on: boolean) => void): HTMLElement {
     const s = this.st.settings;
     const sw = h('div', { class: 'switch' + (s[key] ? ' on' : ''), role: 'switch', 'aria-checked': String(s[key]), tabindex: '0' });
     const flip = () => {
@@ -86,7 +86,7 @@ export class SettingsPanel extends Panel {
     wrap.appendChild(h('div', { class: 'card' }, this.slider('Music', '🎵', 'music'), this.slider('Sound effects', '🔊', 'sfx')));
 
     wrap.appendChild(section('Graphics'));
-    wrap.appendChild(h('div', { class: 'card' }, this.qualityRow(), this.toggle('Show FPS', 'Performance counter on screen', '📈', 'showFps')));
+    wrap.appendChild(h('div', { class: 'card' }, this.qualityRow(), this.toggle('Battery saver', '30 fps: longer play, cooler phone', '🔋', 'batterySaver'), this.toggle('Show FPS', 'Performance counter on screen', '📈', 'showFps')));
 
     wrap.appendChild(section('Controls'));
     wrap.appendChild(

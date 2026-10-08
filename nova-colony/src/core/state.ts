@@ -405,6 +405,8 @@ export interface SettingsState {
   showFps: boolean;
   /** Left-handed layout swaps joystick/buttons. */
   leftHanded: boolean;
+  /** Battery saver: cap the frame rate at 30 instead of 60 (longer sessions, cooler phone). */
+  batterySaver: boolean;
 }
 
 export function createInitialState(seed: number, now: number): GameState {
@@ -463,7 +465,7 @@ export function createInitialState(seed: number, now: number): GameState {
       offersSeen: [],
     },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
-    settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false },
+    settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false },
   };
 }
 
