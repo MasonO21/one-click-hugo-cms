@@ -9,6 +9,7 @@ import { fmt } from '../../core/format';
 import { claimableMissions } from '../logic/badges';
 import { btn, rewardChips } from '../widgets';
 import { fill, h, replay, setClass, setHidden, setText } from '../dom';
+import { hudArt, iconEl, rewardArt } from '../art';
 
 export class MissionTracker {
   readonly el: HTMLElement;
@@ -32,7 +33,7 @@ export class MissionTracker {
     this.barFill = h('i');
     this.barLbl = h('span', { class: 'lbl' });
     const bar = h('div', { class: 'bar orange' }, this.barFill, this.barLbl);
-    this.claimWrap = h('div');
+    this.claimWrap = h('div', { class: 'mc-claim' });
     this.card = h('div', { class: 'mission-card tap', role: 'button', tabindex: '0', data: { sfx: 'ui_click' } }, this.kind, this.name, this.desc, bar, this.claimWrap);
     this.card.addEventListener('click', () => ctx.open('missions'));
     this.offers = h('div', { class: 'offers' });
@@ -73,7 +74,7 @@ export class MissionTracker {
       fill(this.claimWrap);
       if (done) {
         const b = btn({
-          label: 'Claim reward',
+          label: 'Claim',
           cls: 'good claim small',
           onClick: (e) => {
             e.stopPropagation();
@@ -94,19 +95,24 @@ export class MissionTracker {
     if (key === this.offerKey) return;
     this.offerKey = key;
     fill(this.offers);
-    const mk = (icon: string, label: string, panel: string) =>
-      h('button', { class: 'offer tap', type: 'button', 'aria-label': label, onclick: () => this.ctx.open(panel) }, h('span', { class: 'ic', text: icon }), h('span', { class: 'lb', text: label }));
+    // painted icon + label; `count` rides as a badge once CSS folds the pills into round icons
+    const mk = (art: string | null, icon: string, label: string, open: () => void, count = 0) =>
+      h(
+        'button',
+        { class: 'offer tap', type: 'button', 'aria-label': label, onclick: open },
+        iconEl(art, icon, 'ic', 'span'),
+        h('span', { class: 'lb', text: label }),
+        count > 0 ? h('span', { class: 'badge cnt', text: String(count) }) : null,
+      );
     const extra = this.extraClaims;
     if (extra.length) {
       const chain = this.ctx.data.mission(extra[0])?.chain ?? 'side';
-      this.offers.append(
-        h('button', { class: 'offer tap', type: 'button', 'aria-label': `Claim ${extra.length}`, onclick: () => this.ctx.open('missions', { tab: chain }) }, h('span', { class: 'ic', text: '🎯' }), h('span', { class: 'lb', text: `Claim ${extra.length}` })),
-      );
+      this.offers.append(mk(hudArt('quests'), '🎯', `Claim ${extra.length}`, () => this.ctx.open('missions', { tab: chain }), extra.length));
     }
-    if (b.daily) this.offers.append(mk('🎁', 'Daily', 'daily'));
-    if (b.spin) this.offers.append(mk('🎡', 'Spin', 'spin'));
-    if (b.crate) this.offers.append(mk('📦', 'Crate', 'shop'));
-    // CSS turns 3+ pills into a compact icon row on short landscape phones (they wrapped into the joystick)
+    if (b.daily) this.offers.append(mk(rewardArt('daily_gift'), '🎁', 'Daily', () => this.ctx.open('daily')));
+    if (b.spin) this.offers.append(mk(hudArt('spin'), '🎡', 'Spin', () => this.ctx.open('spin')));
+    if (b.crate) this.offers.append(mk(rewardArt('supply_crate'), '📦', 'Crate', () => this.ctx.open('shop')));
+    // CSS turns 3+ pills into one row of round icons on phones (two rows of pills pushed the stack over the colony)
     this.offers.dataset.n = String(this.offers.childElementCount);
   }
 }

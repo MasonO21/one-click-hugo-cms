@@ -435,7 +435,17 @@
   .hud-left .offers[data-n='3'] .offer,
   .hud-left .offers[data-n='4'] .offer,
   .hud-left .offers[data-n='5'] .offer {
+    position: relative;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0 0.55em;
+    justify-content: center;
+  }
+  .hud-left .offers:is([data-n='3'], [data-n='4'], [data-n='5']) .offer .cnt {
+    display: grid;
+    position: absolute;
+    top: -0.45em;
+    right: -0.45em;
   }
 }
 .mission-card.done {
@@ -473,6 +483,80 @@
 }
 .offer .ic {
   font-size: 1.2em;
+}
+.offer .ic.aico {
+  width: 1.45em;
+  height: 1.45em;
+  font-size: 1em;
+  filter: drop-shadow(0 0.06em 0.06em rgba(60, 30, 0, 0.3));
+}
+.offer .cnt {
+  display: none;
+}
+
+/* a finished mission: its reward chips and a compact Claim share one row (the "Complete!" bar and the description
+   go), so the card stops growing into the colony */
+.mission-card.done .md,
+.mission-card.done .bar {
+  display: none;
+}
+.mission-card .mc-claim {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 0.4em;
+}
+.mission-card .mc-claim:empty {
+  display: none;
+}
+.mission-card .mc-claim .chips {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mission-card .mc-claim .claim {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  min-height: 2.7em;
+  padding: 0.35em 1.05em;
+}
+
+/* phones in portrait: three or more offers fold into one row of round painted icons (two rows of pills pushed the
+   whole left stack down over the colony); slimmer status chips keep the defense chip on the status row */
+@media (orientation: portrait) {
+  .hud-status {
+    gap: 0.3em;
+  }
+  .schip {
+    padding: 0 0.5em;
+  }
+  .hud-left .offers:is([data-n='3'], [data-n='4'], [data-n='5']) {
+    flex-wrap: nowrap;
+    gap: 0.5em;
+  }
+  .hud-left .offers:is([data-n='3'], [data-n='4'], [data-n='5']) .offer {
+    position: relative;
+    width: 3.25em;
+    height: 3.25em;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  .hud-left .offers:is([data-n='3'], [data-n='4'], [data-n='5']) .offer .lb {
+    display: none;
+  }
+  .hud-left .offers:is([data-n='3'], [data-n='4'], [data-n='5']) .offer .ic.aico {
+    width: 2em;
+    height: 2em;
+  }
+  .hud-left .offers:is([data-n='3'], [data-n='4'], [data-n='5']) .offer .cnt {
+    display: grid;
+    position: absolute;
+    top: -0.4em;
+    right: -0.45em;
+  }
 }
 
 /* ---------- banners ------------------------------------------------------ */
