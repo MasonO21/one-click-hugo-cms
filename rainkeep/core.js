@@ -224,7 +224,7 @@
   // now=false gives the weather's own temperature (used for the forecast list)
   const outsideTemp = (wx, now = true) => wx.temp + wx.scorch * (S.lv.wyrm - 1) + (now ? dayNight().shift : 0);
   const troopMult = () => Math.pow(1 + DATA.troopLevelBonus, Math.max(0, S.lv.barracks - 1)) * (1 + 0.06 * (S.tech.drills || 0) + KH.bonus('troop'));
-  const protectOf = () => (S.lv.storehouse ? DATA.buildings.storehouse.protect(S.lv.storehouse) : 0);
+  const protectOf = () => (S.lv.storehouse ? Math.round(DATA.buildings.storehouse.protect(S.lv.storehouse) * (1 + KH.bonus('protect'))) : 0);
 
   function stewardVal(kind) {
     const id = S.stewards[kind];

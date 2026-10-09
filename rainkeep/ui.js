@@ -609,6 +609,7 @@
       if (L && type === 'barracks') body += trainingHTML();
       if (L && type === 'archive') body += researchHTML();
       if (L && KH.plotExtras[type]) body += KH.plotExtras[type](pid, R);
+      if (L && KH.charterCard) body += KH.charterCard(pid); // Building Charters (charters.js)
       if (L && type === 'watchtower') body += `${KH.raidInfo && !raidFirst ? KH.raidInfo() : ''}<div class="section-label">What the lookouts see</div>${forecastHTML()}`;
     }
     return { title: plotName(pid), lvl: L ? `Lv ${L}` : locked ? 'Locked' : 'Not built', body };

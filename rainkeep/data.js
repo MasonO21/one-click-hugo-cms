@@ -1264,6 +1264,27 @@ const DATA = {
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
   },
 
+  // ---------- Building Charters ----------
+  // At Lv 10 every kind of building takes one of two charters, a lasting specialization: more of what it makes, or
+  // something else the keep needs. fx are KH.bonus keys. The first charter is free; changing it costs Starglass.
+  charters: {
+    level: 10, change: 100,
+    types: {
+      well: [{ id: 'artesian', name: 'Artesian Bore', fx: { mult_water: 0.12 }, text: 'Water +12%' }, { id: 'covered', name: 'Covered Cisterns', fx: { drinkCut: 0.1 }, text: 'The keep drinks 10% less' }],
+      quarry: [{ id: 'deepcut', name: 'Deep Cut', fx: { mult_stone: 0.12 }, text: 'Stone +12%' }, { id: 'masons', name: "Masons' Guild", fx: { build: 0.06 }, text: 'Building and research 6% faster' }],
+      grove: [{ id: 'irrigated', name: 'Irrigated Rows', fx: { mult_food: 0.12 }, text: 'Food +12%' }, { id: 'canopies', name: 'Shade Canopies', fx: { outdoor: 0.15 }, text: 'Quarry and grove crews lose 15% less to heat and storms' }],
+      mine: [{ id: 'richseam', name: 'Rich Seam', fx: { mult_copper: 0.12 }, text: 'Copper +12%' }, { id: 'bellows', name: 'Bellows Works', fx: { smelt: 0.15 }, text: 'The Forge smelts 15% more Sunsteel' }],
+      shelter: [{ id: 'courtyards', name: 'Cool Courtyards', fx: { cool: 1 }, text: 'The keep 1°C cooler' }, { id: 'nightwatch', name: 'Night Watch', fx: { offlineCap: 7200 }, text: 'The keep keeps working 2 hours longer while you are away' }],
+      infirmary: [{ id: 'herbalists', name: 'Herbalists', fx: { heal: 0.3 }, text: 'Healing +30%' }, { id: 'surgeons', name: 'Field Surgeons', fx: { troop: 0.02 }, text: 'Every troop 2% stronger' }],
+      barracks: [{ id: 'drillyard', name: 'Drill Yard', fx: { troop: 0.03 }, text: 'Every troop 3% stronger' }, { id: 'quartermaster', name: 'Quartermaster', fx: { gather: 0.15 }, text: 'Marches gather 15% faster' }],
+      watchtower: [{ id: 'farsight', name: 'Far Sight', fx: { forecast: 120 }, text: 'Weather and raiders seen further ahead' }, { id: 'signalfires', name: 'Signal Fires', fx: { rainCd: 0.15 }, text: 'Call the Rain comes back 15% sooner' }],
+      archive: [{ id: 'oldrecords', name: 'Old Records', fx: { heroCap: 3 }, text: 'Every hero\'s level cap +3' }, { id: 'raincharts', name: 'Rain Charts', fx: { rainDur: 20 }, text: 'Rain lasts 20 seconds longer' }],
+      hall: [{ id: 'hostelry', name: 'Hostelry', fx: { freeFinish: 120 }, text: 'Jobs with 2 more minutes left finish free' }, { id: 'arena', name: 'Duelling Ring', fx: { tickets: 1 }, text: 'One more Dune Duel ticket' }],
+      storehouse: [{ id: 'vaults', name: 'Sealed Vaults', fx: { protect: 0.3 }, text: 'Raiders can never take 30% more' }, { id: 'clerks', name: 'Tally Clerks', fx: { prod: 0.03 }, text: 'All production +3%' }],
+      forge: [{ id: 'blastfurnace', name: 'Blast Furnace', fx: { smelt: 0.2 }, text: 'Smelting +20%' }, { id: 'armorers', name: 'Armorers', fx: { teamAtk: 0.03 }, text: 'Squads fight 3% harder' }],
+    },
+  },
+
   // ---------- Far Journeys ----------
   // From Rainwyrm Lv 5 a board of journeys beyond the Dunes, each a party of up to three heroes away for a few hours.
   // A journey has one to three requirements the party must meet together (a class, stars between them, a rarity, a
@@ -1984,6 +2005,8 @@ const DATA = {
     { id: 'journey1', text: 'Send heroes on a Far Journey', stat: 'journeys', n: 1, reward: { journals: 20 } },
     { id: 'journey50', text: 'Bring 50 Far Journeys home', stat: 'journeysHome', n: 50, reward: { starglass: 300, shard_epic: 1 } },
     { id: 'journey4', text: 'Bring a four-star Far Journey home', stat: 'journey4', n: 1, reward: { beacons: 2 } },
+    { id: 'charter1', text: 'Grant a building its charter', stat: 'charters', n: 1, reward: { starglass: 50 } },
+    { id: 'charter8', text: 'Grant charters to eight kinds of building', stat: 'chartered', n: 8, reward: { beacons: 2 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },
