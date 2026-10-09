@@ -35,6 +35,25 @@ function vnoise(x: number, y: number): number {
   return a * (1 - v) + b * v;
 }
 
+/**
+ * The map's terrain texture: two octaves of value noise per cell. It never changes, so it is computed once and
+ * cached (it was most of the first open's cost); `warmMapNoise` precomputes it while the game is idle.
+ */
+let mapNoiseCache: Float32Array | null = null;
+function mapNoise(N: number): Float32Array {
+  if (mapNoiseCache && mapNoiseCache.length === N * N) return mapNoiseCache;
+  const out = new Float32Array(N * N);
+  for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) out[z * N + x] = vnoise(x * 0.07, z * 0.07) * 0.6 + vnoise(x * 0.28, z * 0.28) * 0.4;
+  mapNoiseCache = out;
+  return out;
+}
+/** Precompute the map texture noise in idle time after boot, so the first Map open is quick. */
+export function warmMapNoise(): void {
+  const w = globalThis as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(() => mapNoise(WORLD_CELLS), { timeout: 10000 });
+  else setTimeout(() => mapNoise(WORLD_CELLS), 4000);
+}
+
 export class MapPanel extends Panel {
   readonly name = 'map';
   override readonly flush = true;
@@ -412,13 +431,14 @@ export class MapPanel extends Panel {
     const fog = new Uint8Array(B * B);
     for (let bz = 0; bz < B; bz++) for (let bx = 0; bx < B; bx++) fog[bz * B + bx] = world.revealed(cellCenter(bx * 4 + 2), cellCenter(bz * 4 + 2)) ? 0 : 1;
     const d = img.data;
+    const noise = mapNoise(N);
     for (let z = 0; z < N; z++) {
       for (let x = 0; x < N; x++) {
         const i = z * N + x;
         const ri = gen.regionMap[i];
         const c0 = cols[ri]?.[0] ?? [90, 120, 90];
         const c1 = cols[ri]?.[1] ?? [120, 150, 110];
-        const n = vnoise(x * 0.07, z * 0.07) * 0.6 + vnoise(x * 0.28, z * 0.28) * 0.4;
+        const n = noise[i];
         let r = c0[0] + (c1[0] - c0[0]) * n;
         let g = c0[1] + (c1[1] - c0[1]) * n;
         let b = c0[2] + (c1[2] - c0[2]) * n;
@@ -593,3 +613,6 @@ export class MapPanel extends Panel {
     c.restore();
   }
 }
+
+// warm the map's terrain noise once the game is up (browser only; panels are built lazily on first open)
+if (typeof document !== 'undefined') warmMapNoise();

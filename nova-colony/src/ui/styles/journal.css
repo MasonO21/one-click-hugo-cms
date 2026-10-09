@@ -386,3 +386,9 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* 60+ achievement cards: the ones below the fold skip layout and paint until scrolled near (faster first open) */
+.nv-root .jr-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 7.5em;
+}
