@@ -1273,11 +1273,11 @@ const DATA = {
   dry: {
     unlock: 6, // Rainwyrm level
     every: 3 * 86400, length: 12 * 3600, warn: 2 * 3600, first: 6 * 3600, // the first comes 6 hours after it opens
-    fx: { mult_water: -0.2, drinkCut: -0.1, cool: -2 },
+    fx: { mult_water: -0.25, drinkCut: -0.15, cool: -3 },
     edicts: [
       { id: 'ration', name: 'Ration the Water', icon: 'i-dry-ration', fx: { drinkCut: 0.3, prod: -0.1 },
         text: 'Everyone drinks a third less, but the work goes slower on short rations (production -10%).' },
-      { id: 'dig', name: 'Dig a Deep Cistern', icon: 'i-dry-cistern', fx: { mult_water: 0.2 }, cost: { stone: 3, copper: 1 }, keep: 0.01, max: 10,
+      { id: 'dig', name: 'Dig a Deep Cistern', icon: 'i-dry-cistern', fx: { mult_water: 0.25 }, cost: { stone: 3, copper: 1 }, keep: 0.01, max: 10,
         text: 'The wells hold up through the season, and every cistern dug adds 1% to water for good (up to 10%).' },
       { id: 'watch', name: 'Keep the Rain Watch', icon: 'i-dry-watch', fx: { rainCd: 0.5, rainDur: 30, breath: -0.2 },
         text: 'Call the Rain comes back twice as fast and lasts 30 seconds longer, but the tired Rainwyrm breathes 20% weaker in battle.' },
