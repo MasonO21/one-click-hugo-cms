@@ -2302,9 +2302,9 @@ errs = await session(async (page) => {
       E.setQuality(q); p.energy = 30; app.startRun(1); E.manual = true;
       const r = app.run; r.player.hurt = () => {}; r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {};
       const P = r.player;
-      for (const t of ['husk', 'ghoul', 'brute', 'witch', 'bloater']) r.enemies.spawn(t, P.x + 6, P.z);
+      for (const t of ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest']) r.enemies.spawn(t, P.x + 6, P.z);
       r.enemies.spawn('brute', P.x - 6, P.z, { elite: true });
-      for (const kind of ['ghoul', 'brute', 'witch', 'bloater']) r.legion.raise(P.x + 1, P.z + 1, { kind, fx: false });
+      for (const kind of ['ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest']) r.legion.raise(P.x + 1, P.z + 1, { kind, fx: false });
       r.events.start('thief', { x: P.x + 4, z: P.z + 4 });
       const t0 = r.enemies.mats.map((m) => m.uniforms.uTime.value);
       for (let i = 0; i < 30; i++) E.step(1 / 30);
@@ -2330,7 +2330,7 @@ errs = await session(async (page) => {
   });
   const M = s.models, bad = Object.entries(M).filter(([id, m]) => !m || !m.map || Math.abs(m.h - m.want) > 0.02 || Math.abs(m.floor) > 0.01 || Math.abs(m.cx) > 0.01 || !m.wide || m.hip <= 0
     || m.tris < 1000 || m.tris > (m.want > 4 ? 8000 : 3200)); // the five bosses are the tall ones
-  check('painted foes: all eleven load standing on the ground, centred, facing +Z, at their heights and within budget', !bad.length && Object.keys(M).length === 11, JSON.stringify(bad.length ? bad : M));
+  check('painted foes: all thirteen load standing on the ground, centred, facing +Z, at their heights and within budget', !bad.length && Object.keys(M).length === 13, JSON.stringify(bad.length ? bad : M));
   const md = s.medium, hordeOk = Object.values(md.horde).every((h) => h.painted && h.gait && h.map);
   check('painted foes: in a run the horde, the legion\'s ghosts, the Soul Thief and the Hollow King are painted and walked by the shader',
     hordeOk && Object.values(md.ghosts).every(Boolean) && md.thief && md.boss && md.ticks && md.crowns === 1, JSON.stringify(md));
