@@ -70,10 +70,11 @@
   // The board: drawn so the keep's own heroes can meet every journey on it
   // ======================================================================
   const rnd = Math.random;
-  function make() {
+  function make(used = new Set()) {
     let u = rnd(), st = J.odds.length;
     for (let i = 0; i < J.odds.length; i++) { if (u < J.odds[i]) { st = i + 1; break; } u -= J.odds[i]; }
-    const [place, what] = J.places[Math.floor(rnd() * J.places.length)];
+    const free = J.places.filter(([pl]) => !used.has(pl)), [place, what] = (free.length ? free : J.places)[Math.floor(rnd() * (free.length || J.places.length))];
+    used.add(place);
     const nc = st === 1 ? 1 : st === 4 ? 3 : 2, ros = roster(), top = Math.max(1, ...ros.map((id) => S.heroes[id].lvl));
     for (let tries = 0; tries < 40; tries++) {
       const conds = [], types = ['cls', 'stars', 'rar', 'lvl', 'size'].sort(() => rnd() - 0.5);
@@ -94,7 +95,8 @@
     const X = S.journeys;
     if (!force && S.time < X.refreshAt) return;
     X.refreshAt = (Math.floor(S.time / J.refresh) + 1) * J.refresh;
-    X.board = Array.from({ length: J.board }, make).sort((a, b) => b.st - a.st);
+    const used = new Set(X.trips.map((t) => t.place)); // never the same place twice on the board
+    X.board = Array.from({ length: J.board }, () => make(used)).sort((a, b) => b.st - a.st);
   }
   const reward = (st) => {
     const r = J.rewards[st - 1], g = {};
@@ -186,6 +188,7 @@
   // ======================================================================
   // The board
   // ======================================================================
+  const title = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   const stars = (n) => `<span class="jr-stars">${'★'.repeat(n)}<i>${'★'.repeat(4 - n)}</i></span>`;
   const face = (id, cls = '') => `<span class="jr-face ${cls}">${KH.art.portrait(id)}</span>`;
   function pickView(j, sel) {
@@ -195,7 +198,7 @@
       const h = S.heroes[id], on = sel.party.includes(id);
       return `<button class="jr-hero ${on ? 'on' : ''}" data-act="jhero" data-arg="${id}">${face(id)}<b>${esc(HERO[id].name.split(' ')[0])}</b><small>${icon(DATA.classes[HERO[id].cls].icon)}${'★'.repeat(h.stars)} · Lv ${h.lvl}${sq.has(id) ? ' · squad' : ''}</small></button>`;
     }).join('');
-    return `<div class="card stack jr-card"><div class="row"><div class="grow"><b>${esc(j.place)}</b><div class="muted small">${esc(j.what)} · ${fmtTime(j.hours * 3600)}</div></div>${stars(j.st)}</div>
+    return `<div class="card stack jr-card"><div class="row"><div class="grow"><b>${esc(title(j.place))}</b><div class="muted small">${esc(j.what)} · ${fmtTime(j.hours * 3600)}</div></div>${stars(j.st)}</div>
         <div class="row wrap jr-conds">${conds || '<span class="muted small">Any party will do.</span>'}</div>
         <div class="row jr-party">${sel.party.length ? sel.party.map((id) => face(id, 'big')).join('') : '<span class="muted small">Choose up to three heroes below.</span>'}</div>
         <div class="row" style="gap:8px"><button class="btn small alt" data-act="jback">Back</button><button class="btn small alt" data-act="jauto">Best party</button><span class="grow"></span><button class="btn ${ok && free ? 'gold' : 'off'}" data-act="jsend">Send</button></div></div>
@@ -206,12 +209,12 @@
     const X = S.journeys, sel = UI.jSel, j = sel && X.board.find((x) => x.id === sel.id);
     const out = trips().map((t) => {
       const p = Math.min(1, (S.time - t.start) / (t.end - t.start));
-      return `<div class="jr-trip"><div class="row">${t.party.map((id) => face(id)).join('')}<div class="grow"><b>${esc(t.place)}</b> ${stars(t.st)}<div class="muted small">home in ${fmtTime(t.end - S.time)}</div></div></div><div class="bar xp"><i style="width:${p * 100}%"></i></div></div>`;
+      return `<div class="jr-trip"><div class="row">${t.party.map((id) => face(id)).join('')}<div class="grow"><b>${esc(title(t.place))}</b> ${stars(t.st)}<div class="muted small">home in ${fmtTime(t.end - S.time)}</div></div></div><div class="bar xp"><i style="width:${p * 100}%"></i></div></div>`;
     }).join('');
     const body = j ? pickView(j, sel) : `${KH.art && KH.art.banner ? KH.art.banner('event', 'journeys', 'Places beyond the Dunes where a few heroes could do some good.') : ''}
       <p class="muted small">Each journey takes a party of up to three heroes who meet its requirements together. Heroes away can't fight, and every one of them comes home with shards of their own.</p>
       ${out ? `<div class="card stack">${out}</div>` : ''}
-      <div class="stack">${X.board.map((b) => `<div class="card stack jr-card"><div class="row"><div class="grow"><b>${esc(b.place)}</b><div class="muted small">${esc(b.what)} · ${fmtTime(b.hours * 3600)}</div></div>${stars(b.st)}</div>
+      <div class="stack">${X.board.map((b) => `<div class="card stack jr-card"><div class="row"><div class="grow"><b>${esc(title(b.place))}</b><div class="muted small">${esc(b.what)} · ${fmtTime(b.hours * 3600)}</div></div>${stars(b.st)}</div>
         <div class="row wrap jr-conds">${b.conds.map((c) => `<span class="chip jr-cond">${icon(condIcon(c))}${esc(condText(c))}</span>`).join('') || '<span class="muted small">Any party will do.</span>'}</div>
         <div class="row"><div class="costs grow">${KH.rewardHTML(reward(b.st))}<span class="chip">${icon('i-star')}+${J.shards[b.st - 1]} shards each</span></div><button class="btn small ${trips().length < slots() ? 'gold' : 'off'}" data-act="jpick" data-arg="${b.id}">Choose party</button></div></div>`).join('') || '<p class="muted">Every journey on the board has been taken.</p>'}</div>
       <div class="card row"><div class="grow"><b>A new board in ${fmtTime(X.refreshAt - S.time)}</b><div class="muted small">${fmt(S.stats.journeysHome)} journeys home</div></div><button class="btn small ${S.starglass >= J.reroll ? 'alt' : 'off'}" data-act="jreroll">${icon('i-gem')}${J.reroll} · New board</button></div>`;

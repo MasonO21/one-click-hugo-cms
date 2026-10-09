@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.28.0',
+  version: '4.29.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1683,6 +1683,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.29', items: [
+      { icon: 'i-scroll', name: 'Building Charters', text: 'At Lv 10 every building takes one of two charters for good: more of what it makes, or something else the keep needs, from Covered Cisterns to a Drill Yard. Open a building to choose.', act: 'tab:town', open: (S) => Object.values(S.lv).some((v) => v >= 10), needs: 'a building at Lv 10' },
+    ] },
     { v: '4.28', items: [
       { icon: 'i-journey', name: 'Far Journeys', text: 'Send parties of up to three heroes on journeys beyond the Dunes. Each asks for something (a class, stars between them, a Legendary), and every hero comes home with shards of their own, so your benched heroes grow too.', act: 'journeys', open: (S) => S.lv.wyrm >= 5, needs: 'Rainwyrm Lv 5' },
     ] },
