@@ -657,3 +657,15 @@ span.exp-banner-img.emoji {
     max-height: 15em;
   }
 }
+
+/* every squad slot is taken: a squad back home can be collected right from the planner */
+.nv-root .exp-slotblock {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.55em 0.7em;
+}
+.nv-root .exp-slotblock .btn {
+  flex: none;
+  min-height: 44px;
+}

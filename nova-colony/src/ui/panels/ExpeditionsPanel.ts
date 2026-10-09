@@ -371,6 +371,9 @@ export class ExpeditionsPanel extends Panel {
     const plan = ex.preview(target, this.squad, this.vehicle)!;
     const wrap = h('div', { class: 'stack-v exp-plan' });
     wrap.appendChild(this.hero(spec));
+    // every slot taken: say so first (the planner is a long scroll and Launch waits at its bottom)
+    const slot = this.slotBlock();
+    if (slot) wrap.appendChild(slot);
     wrap.appendChild(this.squadPicker(spec));
     const veh = this.vehiclePicker();
     if (veh) wrap.appendChild(veh);
@@ -386,6 +389,29 @@ export class ExpeditionsPanel extends Panel {
       }),
     );
     return wrap;
+  }
+
+  /**
+   * Every squad slot is taken: say why Launch is waiting, right above it. A squad that is back home can be
+   * collected from here (the planner stays open, so the trip can leave straight after); otherwise show when the
+   * next one returns.
+   */
+  private slotBlock(): HTMLElement | null {
+    const ex = this.game.sys.expeditions;
+    if (ex.freeSlots() > 0) return null;
+    const ready = ex.ready();
+    if (ready.length) {
+      const text = ready.length > 1 ? `${ready.length} squads are back home. Collect them to free a slot.` : `Your squad from ${ex.nameOf(ready[0])} is back home. Collect it to free a slot.`;
+      return h(
+        'div',
+        { class: 'card exp-slotblock' },
+        h('div', { class: 'grow small', text }),
+        btn({ label: ready.length > 1 ? 'Collect all' : 'Collect', cls: 'good', id: 'btn-exp-slot-collect', onClick: () => (ready.length > 1 ? this.collectAll() : this.collect(ready[0].id)) }),
+      );
+    }
+    const next = Math.min(...ex.out().map((e) => ex.secondsLeft(e)));
+    const when = Number.isFinite(next) ? ` The next one is back in ${durationLabel(Math.max(1, next))}.` : '';
+    return h('div', { class: 'mute small center exp-slotblock-wait', text: `Every squad is out.${when}` });
   }
 
   private hero(spec: TripSpec): HTMLElement {
