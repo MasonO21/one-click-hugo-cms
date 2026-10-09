@@ -313,7 +313,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(() => {
     const app = window.__soulswarm, prof = app.profile, post = app.engine.post;
     app.engine.manual = true;
-    prof.flags.tutorialDone = true; prof.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
+    prof.flags.tutorialDone = true; prof.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; prof.flags.bloodMoon = 'off'; // a weekend Blood Moon would double the elites
     // a quiet arena: no director spawns, gates, swarms, elites, weapons or level-ups; the Shepherd stands still
     const start = (ch) => {
       if (app.run) app.exitRun();
