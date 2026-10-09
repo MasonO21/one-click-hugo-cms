@@ -169,7 +169,7 @@ export class BuildMenuPanel extends Panel {
       this.hero(d, lock.locked, maxed, lock.kind === 'cosmetic'),
       h('span', { class: 'bn', text: d.name }),
       tags.length ? tagChips(tags, 2) : h('div', { class: 'bdesc', text: d.description }),
-      lock.locked ? h('div', { class: 'lock' }, lock.kind === 'cosmetic' ? '🎀 ' : '🔒 ', lock.text) : maxed ? h('div', { class: 'lock ok' }, '✔ Already built') : costChips(data, cost, game.state.resources.amounts),
+      lock.locked ? h('div', { class: 'lock' }, lock.kind === 'cosmetic' ? '🧳 ' : '🔒 ', lock.text) : maxed ? h('div', { class: 'lock ok' }, '✔ Already built') : costChips(data, cost, game.state.resources.amounts),
     );
     el.addEventListener('click', (e) => {
       if (reason) {
@@ -182,8 +182,8 @@ export class BuildMenuPanel extends Panel {
         }
         // exclusive decor: show where its decoration cosmetic lives
         if (lock.kind === 'cosmetic') {
-          this.ctx.toast(`${data.cosmetic(d.cosmetic!)?.name ?? 'This decoration'} unlocks it: find it in the Wardrobe`, 'info', '🎀');
-          this.ctx.open('shop', { tab: 'cosmetics' });
+          this.ctx.toast(`${data.cosmetic(d.cosmetic!)?.name ?? 'This decoration'} unlocks it: find it in the Wardrobe`, 'info', '🧳');
+          this.ctx.open('wardrobe', { id: d.cosmetic });
           return;
         }
         this.ctx.toast(reason, 'info', lock.locked ? '🔒' : '✔');
@@ -198,7 +198,7 @@ export class BuildMenuPanel extends Panel {
 
   /** The card's picture: the building's rendered thumbnail (emoji when there is none), with a lock / check badge. */
   private hero(d: BuildingDef, locked: boolean, maxed: boolean, wardrobe = false): HTMLElement {
-    return h('div', { class: 'bhero' }, buildingIcon(d.id, d.icon, 'bpic', 'div'), locked ? h('span', { class: 'bbadge', text: wardrobe ? '🎀' : '🔒' }) : maxed ? h('span', { class: 'bbadge ok', text: '✔' }) : null);
+    return h('div', { class: 'bhero' }, buildingIcon(d.id, d.icon, 'bpic', 'div'), locked ? h('span', { class: 'bbadge', text: wardrobe ? '🧳' : '🔒' }) : maxed ? h('span', { class: 'bbadge ok', text: '✔' }) : null);
   }
 
   private renderBlueprints(): HTMLElement {

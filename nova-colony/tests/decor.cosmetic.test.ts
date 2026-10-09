@@ -53,31 +53,31 @@ describe('cosmetic decor unlock', () => {
     game.start();
     const B = game.sys.buildings;
     for (const r of game.data.resources) game.state.resources.amounts[r.id] = 1e5;
-    expect(B.isUnlocked('garden_gnome')).toBe(false);
-    expect(B.lockReason('garden_gnome')).toMatch(/Wardrobe/);
-    const lock = lockInfo(data.building('garden_gnome')!, data, 0, [], game.state.liveops.cosmetics.owned);
+    expect(B.isUnlocked('bonsai_stand')).toBe(false);
+    expect(B.lockReason('bonsai_stand')).toMatch(/Wardrobe/);
+    const lock = lockInfo(data.building('bonsai_stand')!, data, 0, [], game.state.liveops.cosmetics.owned);
     expect(lock).toMatchObject({ locked: true, kind: 'cosmetic' });
     expect(lock.text).toMatch(/Wardrobe/);
     const spot = () => {
       for (let k = 0; k < 400; k++) {
         const x = CENTER_CELL - 10 + (k % 20) * 2;
         const z = CENTER_CELL + 6 + Math.floor(k / 20) * 2;
-        const chk = B.canPlace('garden_gnome', x, z, 0);
+        const chk = B.canPlace('bonsai_stand', x, z, 0);
         if (chk.ok || chk.code === 'locked') return { x, z, chk };
       }
       throw new Error('no spot');
     };
     const s = spot();
     expect(s.chk).toMatchObject({ ok: false, code: 'locked' });
-    expect(B.place('garden_gnome', s.x, s.z, 0)).toBeNull();
+    expect(B.place('bonsai_stand', s.x, s.z, 0)).toBeNull();
 
-    game.state.liveops.cosmetics.owned.push('deco_gnome_garden');
-    expect(B.isUnlocked('garden_gnome')).toBe(true);
-    expect(B.isUnlocked('toadstool_ring')).toBe(true);
-    expect(B.isUnlocked('pumpkin_patch')).toBe(false);
-    expect(lockInfo(data.building('garden_gnome')!, data, 0, [], game.state.liveops.cosmetics.owned).locked).toBe(false);
-    expect(B.canPlace('garden_gnome', s.x, s.z, 0).ok).toBe(true);
-    expect(B.place('garden_gnome', s.x, s.z, 0)).not.toBeNull();
+    game.state.liveops.cosmetics.owned.push('deco_zen_garden');
+    expect(B.isUnlocked('bonsai_stand')).toBe(true);
+    expect(B.isUnlocked('zen_garden')).toBe(true);
+    expect(B.isUnlocked('harvest_display')).toBe(false);
+    expect(lockInfo(data.building('bonsai_stand')!, data, 0, [], game.state.liveops.cosmetics.owned).locked).toBe(false);
+    expect(B.canPlace('bonsai_stand', s.x, s.z, 0).ok).toBe(true);
+    expect(B.place('bonsai_stand', s.x, s.z, 0)).not.toBeNull();
   });
 
   it('is not announced as a tier unlock (it is not earned by tiers)', () => {

@@ -25,8 +25,9 @@ interface Key {
 
 /**
  * Lighting keyframes by sun elevation (-1 midnight .. 1 noon). Cozy-world grade (the painted world
- * map): a warm golden sun, a generous soft sky fill (shadows stay airy, never inky), pastel haze
- * on the horizon and indigo-violet nights where the warm lamps and windows glow. The look is "warm key, cool fill":
+ * map): a honey-gold sun even at noon against a cool blue sky fill (lit tops glow warm, shadow sides
+ * stay airy blue-green, never inky), a blue aerial haze on the distant hills, a clearly golden low
+ * sun at golden hour and indigo-violet nights where the warm lamps and windows glow. The look is "warm key, cool fill":
  * a strong warm sun against a bluish hemisphere and very little flat ambient, so every box reads
  * as a box (sunlit top, half-lit front, cool shadow side); golden sunrise / sunset keys with a
  * low orange sun and blue sky fill; nights deep blue (not green) so warm window glow pops. The
@@ -36,10 +37,10 @@ interface Key {
 const KEYS: Key[] = [
   { e: -1.0, top: '#070a24', hor: '#222a5c', bot: '#0b0f26', fog: '#1a1f4a', sun: '#9aaef0', sunI: 0.7, hemiSky: '#5664bc', hemiGround: '#221d3a', hemiI: 0.92, night: 1 },
   { e: -0.3, top: '#0d1240', hor: '#343a78', bot: '#0e1228', fog: '#232a5a', sun: '#9cb0f0', sunI: 0.74, hemiSky: '#5a6ac0', hemiGround: '#251f3c', hemiI: 0.94, night: 1 },
-  { e: -0.08, top: '#262a70', hor: '#e2826a', bot: '#1c1a36', fog: '#6a5280', sun: '#ff9c6b', sunI: 0.7, hemiSky: '#6a68b0', hemiGround: '#46323a', hemiI: 0.66, night: 0.78 },
-  { e: 0.05, top: '#4664b4', hor: '#ffb070', bot: '#5a4a5a', fog: '#eab496', sun: '#ffaa5c', sunI: 1.8, hemiSky: '#a2a8dc', hemiGround: '#7a6044', hemiI: 0.74, night: 0.32 },
-  { e: 0.25, top: '#4a8ce0', hor: '#ffd29a', bot: '#8a94a0', fog: '#f0c8a6', sun: '#ffcc84', sunI: 2.05, hemiSky: '#c4d2f2', hemiGround: '#a0985a', hemiI: 0.8, night: 0.05 },
-  { e: 1.0, top: '#3a88e2', hor: '#cfeaff', bot: '#98acc0', fog: '#a9d2f2', sun: '#ffefcc', sunI: 2.2, hemiSky: '#d2e6ff', hemiGround: '#a4b25c', hemiI: 0.84, night: 0 },
+  { e: -0.08, top: '#2a2a74', hor: '#ea7c62', bot: '#1c1a36', fog: '#6e5282', sun: '#ff9466', sunI: 0.72, hemiSky: '#6a68b0', hemiGround: '#46323a', hemiI: 0.66, night: 0.78 },
+  { e: 0.05, top: '#4a62b6', hor: '#ffa862', bot: '#5a4a5a', fog: '#eeac86', sun: '#ff9a4e', sunI: 2.0, hemiSky: '#9aa2dc', hemiGround: '#6e5440', hemiI: 0.7, night: 0.32 },
+  { e: 0.25, top: '#4688de', hor: '#ffcc8a', bot: '#8a94a0', fog: '#eec6a0', sun: '#ffc070', sunI: 2.15, hemiSky: '#b2c4ee', hemiGround: '#8e8452', hemiI: 0.76, night: 0.05 },
+  { e: 1.0, top: '#3a86e0', hor: '#c2e2fa', bot: '#98acc0', fog: '#a2cdf0', sun: '#ffe4b4', sunI: 2.2, hemiSky: '#c0d6f6', hemiGround: '#90a656', hemiI: 0.8, night: 0 },
 ];
 /**
  * Sunny-day grade: lit surfaces gain this much saturation under a high sun (full above sun
@@ -48,6 +49,31 @@ const KEYS: Key[] = [
 const DAY_SAT = 0.2;
 const DAY_SAT_FROM = 0.12;
 const DAY_SAT_FULL = 0.4;
+
+/**
+ * Painted horizon haze per biome (the skies of public/art/biomes): the horizon band and the aerial
+ * haze on distant hills lean toward it by day. Saturated on purpose — the ACES tone curve turns pale
+ * pastels into flat grey, so the clear blue of the valley or the golden dust of the desert has to be
+ * asked for in strong colour. Biomes not listed use their data tint (BiomeDef.tint).
+ */
+export const SKY_TINT: Record<string, string> = {
+  crash_valley: '#7cbcf2',
+  pinewood_forest: '#f0a47e',
+  crystal_canyon: '#e494c0',
+  red_desert: '#f29a52',
+  toxic_marsh: '#a07cc4',
+  frozen_ridge: '#7cb8f0',
+  alien_ruins: '#ac86dc',
+  titanium_highlands: '#84bcf2',
+};
+/**
+ * How far the horizon band / the distance fog lean toward the biome haze by day. Past halfway on
+ * purpose: a desert's orange haze mixed evenly with the blue key fog averages out to flat grey.
+ */
+const SKY_TINT_HOR = 0.6;
+const SKY_TINT_FOG = 0.55;
+/** The haze eases to a new biome's colour at this rate (1/s) instead of cutting at the border. */
+const SKY_TINT_RATE = 1.2;
 
 /** Flat ambient on top of the hemisphere (day / deep night). */
 const AMBIENT_DAY = 0.13;
@@ -119,7 +145,9 @@ export class Atmosphere {
   private amb: THREE.AmbientLight;
   private fog: THREE.Fog;
   private sunDir = new THREE.Vector3(0, 1, 0);
-  private biomeTint = new THREE.Color('#bfe8ff');
+  private biomeTint = new THREE.Color(SKY_TINT.crash_valley);
+  private biomeTarget = new THREE.Color(SKY_TINT.crash_valley);
+  private tintSnap = true;
   private tmpC = new THREE.Color();
   private tmpC2 = new THREE.Color();
   private m = new THREE.Matrix4();
@@ -238,9 +266,20 @@ export class Atmosphere {
     this.clouds.setVisible(q !== 'low');
   }
 
-  /** Current biome fog/sky tint (sRGB hex from BiomeDef.tint). */
-  setBiomeTint(hex: string | undefined): void {
-    if (hex) this.biomeTint.set(hex);
+  /** The biome the player stands in: its painted horizon haze (SKY_TINT, else the data tint hex) eases in. */
+  setBiomeTint(hex: string | undefined, region?: string): void {
+    const c = (region && SKY_TINT[region]) || hex;
+    if (!c) return;
+    this.biomeTarget.set(c);
+    if (this.tintSnap) {
+      this.biomeTint.copy(this.biomeTarget);
+      this.tintSnap = false;
+    }
+  }
+
+  /** The horizon haze drawn right now (tests / dev). */
+  get skyTint(): THREE.Color {
+    return this.biomeTint;
   }
 
   /** Advance sky and lights. camDist = current camera orbit distance (fog scales with it). */
@@ -271,8 +310,9 @@ export class Atmosphere {
     const sunsetBias = t > 0.5 ? 1 : 0;
 
     const u = this.skyMat.uniforms;
+    this.biomeTint.lerp(this.biomeTarget, 1 - Math.exp(-Math.max(0, env.dt) * SKY_TINT_RATE));
     (u.uTop.value as THREE.Color).lerpColors(ca.top, cb.top, f);
-    this.tmpC.lerpColors(ca.hor, cb.hor, f).lerp(this.biomeTint, 0.28 * day);
+    this.tmpC.lerpColors(ca.hor, cb.hor, f).lerp(this.biomeTint, SKY_TINT_HOR * day);
     if (sunsetBias && e < 0.3 && e > -0.2) this.tmpC.lerp(this.tmpC2.set('#ff7eb0'), 0.18 * (1 - Math.abs(e) / 0.3));
     (u.uHor.value as THREE.Color).copy(this.tmpC);
     // the dome below the horizon matches the fog so the finite terrain fades out seamlessly
@@ -281,7 +321,7 @@ export class Atmosphere {
     u.uSunGlow.value = e > -0.25 ? 1 : 0;
 
     // fog
-    this.fog.color.lerpColors(ca.fog, cb.fog, f).lerp(this.biomeTint, 0.25 * day);
+    this.fog.color.lerpColors(ca.fog, cb.fog, f).lerp(this.biomeTint, SKY_TINT_FOG * day);
     (u.uBot.value as THREE.Color).copy(this.fog.color);
     // a painted aerial haze: distant hills melt into the pastel sky
     this.fog.near = camDist * 1.4 + 24;

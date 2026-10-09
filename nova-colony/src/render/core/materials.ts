@@ -47,10 +47,11 @@ const DAY_GLASS = new THREE.Color('#9fd8ff');
 const NIGHT_GLASS = new THREE.Color('#ffcf7a');
 
 /**
- * Wrap-diffuse amount: a face edge-on to the sun still gets WRAP / (1 + WRAP) of its light. Generous on
- * purpose (cozy-world grade): light bleeds softly round puffy canopies and rounded rocks like a painting.
+ * Wrap-diffuse amount: a face edge-on to the sun still gets WRAP / (1 + WRAP) of its light. Soft on
+ * purpose (cozy-world grade: light bleeds round canopies and boulders like a painting) but not so
+ * soft that the cut facets of the nature kit stop reading.
  */
-export const LAMBERT_WRAP = 0.42;
+export const LAMBERT_WRAP = 0.34;
 
 /** three's lights_lambert_pars_fragment with the wrapped N·L (kept verbatim otherwise). */
 const LAMBERT_WRAP_PARS = /* glsl */ `

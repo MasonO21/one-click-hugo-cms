@@ -115,7 +115,7 @@ export type ModelKey =
   // decor
   | 'lamp' | 'plant' | 'bench' | 'fountain' | 'banner' | 'statue' | 'arcade' | 'garden'
   // cosmetic decor (decoration cosmetics)
-  | 'gnome' | 'toadstool_ring' | 'pumpkin_patch' | 'hay_bale' | 'lantern_arch' | 'lantern_string' | 'holo_tree' | 'teddy_picnic' | 'star_fountain'
+  | 'zen_garden' | 'bonsai_stand' | 'harvest_display' | 'hay_bales' | 'lantern_arch' | 'lantern_string' | 'holo_tree' | 'campfire_lounge' | 'meteor_fountain'
   // defense
   | 'barricade' | 'spikes' | 'guard_tower' | 'turret_basic' | 'turret_mg' | 'turret_flame' | 'turret_missile'
   | 'turret_heavy' | 'turret_laser' | 'turret_plasma' | 'turret_rail' | 'turret_cannon' | 'turret_aa'

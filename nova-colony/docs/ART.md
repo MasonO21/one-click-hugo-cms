@@ -95,8 +95,8 @@ The wardrobe follows the game's theme: **cozy but grown-up frontier gear** (fiel
 - **Backdrops keep their centre clear** for the cache and the reward cards: meadow (Supply), moonlit pond (Explorer), lantern hill (Prospector), crystal canyon (Relic), galaxy (Nova Core).
 - **Tests:** `tests/ui.art.test.ts` requires an icon for every cosmetic and the closed, open and backdrop art for every cache, and allows no orphan files.
 
-The 9 **cosmetic decor** icons (`garden_gnome`, `toadstool_ring`, `pumpkin_patch`, `hay_bale`, `lantern_arch`,
-`lantern_string`, `holo_tree`, `teddy_picnic`, `star_fountain`; unlocked by `decoration` cosmetics, data/decorCosmetic.ts)
+The 9 **cosmetic decor** icons (`zen_garden`, `bonsai_stand`, `harvest_display`, `hay_bales`, `lantern_arch`,
+`lantern_string`, `holo_tree`, `campfire_lounge`, `meteor_fountain`; unlocked by `decoration` cosmetics, data/decorCosmetic.ts)
 ship as **plain renders** for now: `npm run bake:thumbs -- --only <ids> --size 256 --out public/art`. Repaint them like the
 rest when convenient (same prompt template).
 

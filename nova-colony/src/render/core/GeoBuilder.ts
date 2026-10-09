@@ -29,6 +29,11 @@ export interface PrimOpts {
    * caps, darker undersides — baked into the vertex colours, so the shader cost is nil.
    */
   grad?: THREE.ColorRepresentation;
+  /**
+   * Faceted: recompute flat per-face normals (and jitter `shade` per triangle instead of per quad), so
+   * a lathe or a smooth primitive reads as cut low-poly facets, like the painted world map.
+   */
+  flat?: boolean;
 }
 
 const _m = new THREE.Matrix4();
@@ -64,6 +69,7 @@ export class GeoBuilder {
   /** Append any geometry (made non-indexed = flat shaded) with a uniform color. The geometry is consumed. */
   add(geo: THREE.BufferGeometry, color: THREE.ColorRepresentation, x = 0, y = 0, z = 0, opts: PrimOpts = {}): this {
     const g = geo.index ? geo.toNonIndexed() : geo;
+    if (opts.flat) g.computeVertexNormals();
     _e.set(opts.rx ?? 0, opts.ry ?? 0, opts.rz ?? 0);
     _q.setFromEuler(_e);
     _p.set(x, y, z);
@@ -90,7 +96,7 @@ export class GeoBuilder {
       if (_v.y > y1) y1 = _v.y;
       _v.set(N.getX(i), N.getY(i), N.getZ(i)).applyMatrix3(_n).normalize();
       norArr.push(_v.x, _v.y, _v.z);
-      if (shade && i % 6 === 0) f = 1 + (this.rnd() * 2 - 1) * shade;
+      if (shade && i % (opts.flat ? 3 : 6) === 0) f = 1 + (this.rnd() * 2 - 1) * shade;
       colArr.push(_c.r * f, _c.g * f, _c.b * f);
     }
     if (opts.grad !== undefined && y1 > y0) {
@@ -145,6 +151,46 @@ export class GeoBuilder {
         _v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
         n.setXYZ(i, _v.x, _v.y, _v.z);
       }
+    }
+    return this.add(geo, color, x, y, z, opts);
+  }
+
+  /**
+   * Faceted low-poly blob (icosphere, `detail` 1 = 80 tris, 0 = 20) with flat per-face normals, the
+   * painted map's cut-gem look: canopies, bushes, boulders. `jitter` (fraction of r) pushes every
+   * corner in or out by a hash of its direction, consistently across the faces that share it, so the
+   * blob turns into an irregular rock or a lumpy canopy without cracks. `shade` jitters each facet.
+   */
+  gem(r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, detail = 1, jitter = 0, opts: PrimOpts = {}): this {
+    const geo = new THREE.IcosahedronGeometry(r, detail);
+    if (jitter > 0) {
+      const p = geo.attributes.position as THREE.BufferAttribute;
+      const k = (this.rnd() * 0x7fffffff) | 0;
+      for (let i = 0; i < p.count; i++) {
+        _v.set(p.getX(i), p.getY(i), p.getZ(i));
+        // hash the corner's quantised direction (shared corners of neighbouring faces agree exactly)
+        const len = _v.length() || 1;
+        let h = Math.imul(Math.round((_v.x / len) * 256) + 1031, 73856093) ^ Math.imul(Math.round((_v.y / len) * 256) + 2053, 19349663) ^ Math.imul(Math.round((_v.z / len) * 256) + 4099, 83492791) ^ k;
+        h = Math.imul(h ^ (h >>> 15), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        const d = 1 + (((h ^ (h >>> 16)) >>> 0) / 4294967296 - 0.5) * 2 * jitter;
+        p.setXYZ(i, _v.x * d, _v.y * d, _v.z * d);
+      }
+    }
+    return this.add(geo, color, x, y, z, { ...opts, flat: true });
+  }
+
+  /**
+   * Tiny round bead (octahedron, 8 tris) with soft radial normals: berries, fruit, dots — things too
+   * small for a 20-triangle blob to show its extra faces.
+   */
+  bead(r: number, x: number, y: number, z: number, color: THREE.ColorRepresentation, opts?: PrimOpts): this {
+    const geo = new THREE.OctahedronGeometry(r, 0);
+    const p = geo.attributes.position as THREE.BufferAttribute;
+    const n = geo.attributes.normal as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) {
+      _v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
+      n.setXYZ(i, _v.x, _v.y, _v.z);
     }
     return this.add(geo, color, x, y, z, opts);
   }

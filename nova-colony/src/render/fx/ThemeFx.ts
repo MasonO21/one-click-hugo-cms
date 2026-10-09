@@ -1,7 +1,8 @@
 /**
- * ThemeFx — the ambient particles of the equipped colony theme (CosmeticDef.fx): drifting sakura
- * petals, gentle snow, tumbling autumn leaves, lazy fireflies, twinkling stardust, rising embers,
- * and for the aurora theme a soft green-violet ribbon in the sky plus a few glowing motes.
+ * ThemeFx — the ambient particles of the equipped colony theme (CosmeticDef.fx): drifting blossom
+ * petals, quiet snowfall, tumbling autumn leaves, lazy fireflies (warm gold for Golden Hour, teal and
+ * violet for the Bioluminescent Night, magenta and cyan motes for Neon Night), twinkling starlight,
+ * warm dusk embers, and for the aurora theme a soft green-violet ribbon in the sky plus a few motes.
  *
  * Cost: ONE THREE.Points draw (a few hundred points, fewer on lower quality; see THEME_FX_COUNT)
  * and, for the aurora only, one ribbon mesh. Every particle's motion is computed in the vertex
@@ -39,13 +40,25 @@ interface FxStyle {
 }
 
 export const FX_STYLES: Record<FxKind, FxStyle> = {
-  petals: { shape: 0, colA: '#ffc2d4', colB: '#ff8fb4', fall: 0.9, sway: 0.9, drift: 0.5, size: 0.32, additive: false, nightBoost: 0 },
-  snow: { shape: 1, colA: '#ffffff', colB: '#dcefff', fall: 1.1, sway: 0.5, drift: 0.2, size: 0.26, additive: false, nightBoost: 0 },
-  leaves: { shape: 2, colA: '#f0a040', colB: '#d4502e', fall: 1.0, sway: 1.2, drift: 0.7, size: 0.38, additive: false, nightBoost: 0 },
-  fireflies: { shape: 3, colA: '#fff2a0', colB: '#c8ff7a', fall: -0.05, sway: 1.1, drift: 0, size: 0.34, additive: true, nightBoost: 1 },
-  stars: { shape: 4, colA: '#fff6c8', colB: '#c8b8ff', fall: 0.35, sway: 0.3, drift: 0, size: 0.42, additive: true, nightBoost: 0.8 },
-  embers: { shape: 5, colA: '#ffb24a', colB: '#ff6a2e', fall: -0.8, sway: 0.6, drift: 0.2, size: 0.2, additive: true, nightBoost: 0.6 },
+  petals: { shape: 0, colA: '#f2c8cf', colB: '#d4909e', fall: 0.75, sway: 0.9, drift: 0.45, size: 0.3, additive: false, nightBoost: 0 },
+  snow: { shape: 1, colA: '#ffffff', colB: '#dcebf6', fall: 1.0, sway: 0.5, drift: 0.2, size: 0.24, additive: false, nightBoost: 0 },
+  leaves: { shape: 2, colA: '#d8903e', colB: '#a8442c', fall: 0.95, sway: 1.2, drift: 0.7, size: 0.36, additive: false, nightBoost: 0 },
+  fireflies: { shape: 3, colA: '#ffe7a0', colB: '#d8f08a', fall: -0.05, sway: 1.1, drift: 0, size: 0.32, additive: true, nightBoost: 1 },
+  stars: { shape: 4, colA: '#fff2cc', colB: '#c8bce8', fall: 0.3, sway: 0.3, drift: 0, size: 0.4, additive: true, nightBoost: 0.8 },
+  embers: { shape: 5, colA: '#ffbe6a', colB: '#e8763a', fall: -0.55, sway: 0.7, drift: 0.25, size: 0.18, additive: true, nightBoost: 0.6 },
   aurora: { shape: 6, colA: '#7be0c8', colB: '#b49aff', fall: -0.12, sway: 0.8, drift: 0, size: 0.3, additive: true, nightBoost: 0.8 },
+};
+
+/**
+ * Per-theme particle colours where a theme shares an fx kind with another but should not look alike
+ * (sprite A / B, lerped per point). Themes not listed use their fx style's own colours.
+ */
+export const THEME_FX_COLORS: Record<string, readonly [string, string]> = {
+  theme_golden_hour: ['#ffd27a', '#ffb05a'],
+  theme_biolume: ['#6af0d8', '#b08cff'],
+  theme_neon_night: ['#ff6ad0', '#5ad8ff'],
+  theme_starfall: ['#fff0c0', '#d8ccff'],
+  theme_titanium_dawn: ['#e8f4ff', '#7fe6f0'],
 };
 
 const PT_VERT = /* glsl */ `
@@ -229,16 +242,17 @@ export class ThemeFx {
     this.themeId = id;
     const def = id ? game.data.cosmetic(id) : undefined;
     const fx = def?.kind === 'base_theme' ? def.fx ?? null : null;
-    if (fx === this.fx) return;
+    // a different theme with the same fx kind keeps the fade level but takes its own colours
+    if (fx !== this.fx) this.level = 0;
     this.fx = fx;
-    this.level = 0;
     this.style = fx ? FX_STYLES[fx] ?? null : null;
     const st = this.style;
     if (!st) return;
     const u = this.mat.uniforms;
+    const cols = THEME_FX_COLORS[id];
     u.uShape.value = st.shape;
-    (u.uColA.value as THREE.Color).set(st.colA);
-    (u.uColB.value as THREE.Color).set(st.colB);
+    (u.uColA.value as THREE.Color).set(cols?.[0] ?? st.colA);
+    (u.uColB.value as THREE.Color).set(cols?.[1] ?? st.colB);
     u.uFall.value = st.fall;
     u.uSway.value = st.sway;
     u.uDrift.value = st.drift;

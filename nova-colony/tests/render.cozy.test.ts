@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { Game } from '../src/core/Game';
 import { createMockServices } from '../src/platform/mock';
 import { Materials } from '../src/render/core/materials';
+import { GeoBuilder } from '../src/render/core/GeoBuilder';
 import type { Env, RenderContext } from '../src/render/core/context';
 import { Buildings } from '../src/render/actors/Buildings';
 import { CENTER_CELL } from '../src/core/constants';
@@ -14,7 +15,7 @@ import { buildModel } from '../src/render/models/spec';
 import { tierStyle, themedStyle, skinnedStyle } from '../src/render/core/palette';
 import { nodeVariant, baseModel, nodeGeometry, nodeGeometryFar, nodeHeight, nodeChipColor, KNOWN_NODE_MODELS, NODE_FAR_MODELS, KNOWN_PROP_MODELS } from '../src/render/models/nature';
 import { GROUND_PAINT, patchBloom, BLOOM_NEAR, BLOOM_FAR } from '../src/render/scene/Terrain';
-import { ThemeFx, THEME_FX_COUNT, FX_STYLES } from '../src/render/fx/ThemeFx';
+import { ThemeFx, THEME_FX_COUNT, FX_STYLES, THEME_FX_COLORS } from '../src/render/fx/ThemeFx';
 import { createDataRegistry } from '../src/data';
 import { COSMETICS } from '../src/data/monetization';
 
@@ -123,13 +124,13 @@ describe('painted ground', () => {
 });
 
 describe('colony theme and turret skin looks', () => {
-  const theme = { id: 'theme_sakura', color: '#ffb7c5', accent: '#ff6f91' };
+  const theme = { id: 'theme_blossom', color: '#ffb7c5', accent: '#ff6f91' };
   it('themedStyle leans roofs and trims toward the theme, keeps walls and window light, never touches the stock style', () => {
     const base = tierStyle(data.tier(3));
     const before = base.roof.getHex();
     const t = themedStyle(base, theme);
     expect(t).not.toBe(base);
-    expect(t.look).toBe('theme:theme_sakura');
+    expect(t.look).toBe('theme:theme_blossom');
     expect(base.look).toBe('');
     expect(base.roof.getHex()).toBe(before);
     const pink = new THREE.Color(theme.color);
@@ -209,7 +210,7 @@ describe('theme ambient particles', () => {
     expect(fx.current).toBeNull();
     expect(fx.count).toBe(0);
 
-    own(game, 'theme_sakura');
+    own(game, 'theme_blossom');
     fx.update(1 / 60, 852 * 3);
     expect(fx.current).toBe('petals');
     expect(fx.count).toBe(THEME_FX_COUNT.high);
@@ -231,5 +232,80 @@ describe('theme ambient particles', () => {
     expect(fx.count).toBe(0);
     expect(ribbon?.visible).toBe(false);
     fx.dispose();
+  });
+});
+
+describe('theme particle colours', () => {
+  it('per-theme colours only for real themes; themes sharing an fx kind do not look alike', () => {
+    for (const [id, cols] of Object.entries(THEME_FX_COLORS)) {
+      expect(data.cosmetic(id)?.kind, id).toBe('base_theme');
+      for (const c of cols) expect(c).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+    // three themes drift fireflies: warm gold, teal / violet, magenta / cyan
+    const fly = COSMETICS.filter((c) => c.kind === 'base_theme' && c.fx === 'fireflies').map((c) => (THEME_FX_COLORS[c.id] ?? [FX_STYLES.fireflies.colA, FX_STYLES.fireflies.colB]).join());
+    expect(fly.length).toBeGreaterThanOrEqual(3);
+    expect(new Set(fly).size).toBe(fly.length);
+  });
+
+  it('switching between two themes with the same fx kind recolours the particles', () => {
+    const game = new Game({ seed: 4, services: createMockServices() });
+    game.start();
+    const ctx = makeCtx(game, 'medium');
+    const fx = new ThemeFx(ctx);
+    own(game, 'theme_golden_hour');
+    fx.update(1 / 60, 852);
+    const mat = (fx as unknown as { mat: THREE.ShaderMaterial }).mat;
+    const a = (mat.uniforms.uColA.value as THREE.Color).getHexString();
+    own(game, 'theme_biolume');
+    fx.update(1 / 60, 852);
+    expect(fx.current).toBe('fireflies');
+    expect((mat.uniforms.uColA.value as THREE.Color).getHexString()).not.toBe(a);
+    expect('#' + (mat.uniforms.uColA.value as THREE.Color).getHexString()).toBe(new THREE.Color(THEME_FX_COLORS.theme_biolume[0]).getHexString().replace(/^/, '#'));
+    fx.dispose();
+  });
+});
+
+describe('faceted nature primitives', () => {
+  it('gem: flat per-face normals, and a jittered gem stays watertight (shared corners move together)', () => {
+    const b = new GeoBuilder(5);
+    b.gem(1, 0, 0, 0, '#808080', 1, 0.25);
+    const g = b.build();
+    const p = g.attributes.position as THREE.BufferAttribute;
+    const n = g.attributes.normal as THREE.BufferAttribute;
+    expect(p.count).toBe(80 * 3);
+    // flat: the three corners of every triangle share one normal
+    for (let t = 0; t < p.count; t += 3) {
+      for (let k = 1; k < 3; k++) {
+        expect(Math.abs(n.getX(t) - n.getX(t + k)) + Math.abs(n.getY(t) - n.getY(t + k)) + Math.abs(n.getZ(t) - n.getZ(t + k))).toBeLessThan(1e-5);
+      }
+    }
+    // watertight: corners that share a direction share a position, and the jitter really moved them
+    const byDir = new Map<string, string>();
+    const radii = new Set<string>();
+    const v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.set(p.getX(i), p.getY(i), p.getZ(i));
+      const r = v.length();
+      radii.add(r.toFixed(3));
+      v.divideScalar(r);
+      const key = `${Math.round(v.x * 256)},${Math.round(v.y * 256)},${Math.round(v.z * 256)}`;
+      const pos = `${p.getX(i).toFixed(4)},${p.getY(i).toFixed(4)},${p.getZ(i).toFixed(4)}`;
+      if (byDir.has(key)) expect(byDir.get(key), key).toBe(pos);
+      else byDir.set(key, pos);
+    }
+    expect(byDir.size).toBe(42); // an icosphere of detail 1 has 42 corners
+    expect(radii.size).toBeGreaterThan(10);
+  });
+
+  it('bead is an 8-triangle round dot; nature models stay cheaper than the first cozy pass', () => {
+    const b = new GeoBuilder(1);
+    b.bead(0.1, 0, 0, 0, '#ff0000');
+    expect(b.build().attributes.position.count).toBe(8 * 3);
+    const tris = (m: string) => nodeGeometry(m).attributes.position.count / 3;
+    // a forest draws hundreds of these: keep the common looks lean
+    expect(tris('tree_round')).toBeLessThanOrEqual(200);
+    expect(tris('tree_pine')).toBeLessThanOrEqual(280);
+    expect(tris('rock')).toBeLessThanOrEqual(180);
+    expect(tris('bush')).toBeLessThanOrEqual(240);
   });
 });

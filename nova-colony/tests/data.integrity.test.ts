@@ -590,7 +590,7 @@ describe('data.integrity — presentation', () => {
     'research_desk', 'research_lab', 'advanced_lab', 'med_bay', 'medical_center',
     'radio_tower', 'garage', 'hangar', 'teleporter', 'spin_wheel', 'beacon', 'repair_bay', 'shield_generator',
     'lamp', 'plant', 'bench', 'fountain', 'banner', 'statue', 'arcade', 'garden',
-    'gnome', 'toadstool_ring', 'pumpkin_patch', 'hay_bale', 'lantern_arch', 'lantern_string', 'holo_tree', 'teddy_picnic', 'star_fountain',
+    'zen_garden', 'bonsai_stand', 'harvest_display', 'hay_bales', 'lantern_arch', 'lantern_string', 'holo_tree', 'campfire_lounge', 'meteor_fountain',
     'barricade', 'spikes', 'guard_tower', 'turret_basic', 'turret_mg', 'turret_flame', 'turret_missile', 'turret_heavy', 'turret_laser', 'turret_plasma', 'turret_rail', 'turret_cannon', 'turret_aa', 'electric_fence', 'drone_pad',
   ]);
 

@@ -237,7 +237,7 @@ export class Renderer implements RendererApi {
     const region = this.terrain.regionAt(st.player.x, st.player.z);
     if (region !== this.lastBiome) {
       this.lastBiome = region;
-      this.atmosphere.setBiomeTint(game.data.biome(region)?.tint);
+      this.atmosphere.setBiomeTint(game.data.biome(region)?.tint, region);
     }
     // Photo Mode's lighting presets only change what is drawn: the sim keeps its own clock
     this.atmosphere.update(this.photoDayTime ?? st.time.dayTime, this.rig.distance);

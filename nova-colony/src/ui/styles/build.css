@@ -60,16 +60,16 @@
 .bcard.maxed {
   background: #eaf6ee;
 }
-/* exclusive decor (decoration cosmetics): a soft rosy card; locked ones keep their colours as a teaser */
+/* exclusive decor (decoration cosmetics): a warm parchment card with a brass edge; locked ones keep their colours as a teaser */
 .bcard.cosmetic {
-  background: #fdf0f4;
-  border-color: #f2b8cc;
+  background: #fbf4e6;
+  border-color: #d6b47a;
 }
 .bcard.cosmetic.locked {
-  background: #f8eaf0;
+  background: #f6eedd;
 }
 .bcard.cosmetic.locked .lock {
-  color: #b0507a;
+  color: #8a5a2a;
 }
 .bcard .chips.tags .chip {
   font-size: 0.8em;

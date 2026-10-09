@@ -37,23 +37,28 @@ interface GroundPaint {
   bloom: number;
 }
 export const GROUND_PAINT: Record<string, GroundPaint> = {
-  crash_valley: { low: '#56b04a', high: '#8ccc52', warm: '#b6d862', cool: '#3a9a58', bloom: 1 },
-  pinewood_forest: { low: '#3d8c46', high: '#6cae50', warm: '#a0bc58', cool: '#2c7650', bloom: 0.4 },
-  crystal_canyon: { low: '#8c79c6', high: '#bfaeea', warm: '#d6bfe8', cool: '#776fc0', bloom: 0.3 },
-  red_desert: { low: '#d98048', high: '#f2b276', warm: '#f8c88c', cool: '#c46c4a', bloom: 0.05 },
-  toxic_marsh: { low: '#5a8a3a', high: '#8db24a', warm: '#adc458', cool: '#447a4a', bloom: 0.3 },
-  frozen_ridge: { low: '#d2e0f0', high: '#f6f9fd', warm: '#fffbf2', cool: '#bfd2ea', bloom: 0 },
-  alien_ruins: { low: '#6a9468', high: '#9ebc7a', warm: '#b4c888', cool: '#7c84ac', bloom: 0.55 },
-  titanium_highlands: { low: '#8eaa84', high: '#c6d2bc', warm: '#d8dcb4', cool: '#94a8b8', bloom: 0.35 },
+  crash_valley: { low: '#4fa646', high: '#8cc84c', warm: '#b8d254', cool: '#38925a', bloom: 1 },
+  pinewood_forest: { low: '#356f38', high: '#5e9040', warm: '#98a446', cool: '#285e44', bloom: 0.4 },
+  crystal_canyon: { low: '#b088c4', high: '#8eaa62', warm: '#aec06c', cool: '#9884d4', bloom: 0.35 },
+  red_desert: { low: '#d27844', high: '#eeaa6c', warm: '#f6c086', cool: '#be6446', bloom: 0.05 },
+  toxic_marsh: { low: '#557e38', high: '#86a848', warm: '#a8be56', cool: '#40704a', bloom: 0.3 },
+  frozen_ridge: { low: '#cddcee', high: '#f4f8fd', warm: '#fffaf0', cool: '#b8cce6', bloom: 0 },
+  alien_ruins: { low: '#5e8c5e', high: '#94b672', warm: '#acc27e', cool: '#76809e', bloom: 0.55 },
+  titanium_highlands: { low: '#869e7c', high: '#c0ccb6', warm: '#d2d6ac', cool: '#8ea2b4', bloom: 0.35 },
 };
 /**
- * Worn ground around buildings: the biome colour is pulled this far toward its trampled version
- * (darker, warmer, less saturated) right at a footprint, fading out over WEAR_REACH world units
- * (per footprint side, so a shed wears a smaller ring than a warehouse) with a ragged noisy edge.
+ * Worn ground around buildings: the biome colour is pulled this far toward its trodden version
+ * (sun-dried golden grass, a shade darker) right at a footprint, fading out over WEAR_REACH world
+ * units (per footprint side, so a shed wears a smaller ring than a warehouse) with a ragged noisy
+ * edge. Kept narrow and light on purpose: the painted map is lush, and a dense Titanium colony must
+ * not turn into one big dirt floor. The fade goes through a contrast curve (WEAR_EDGE) so the ring
+ * has a crisp ragged edge instead of a muddy halfway tone.
  */
-const WEAR_MAX = 0.5;
-const WEAR_REACH = 1.9;
-const WEAR_REACH_PER_CELL = 0.35;
+const WEAR_MAX = 0.42;
+const WEAR_REACH = 1.3;
+const WEAR_REACH_PER_CELL = 0.3;
+/** The wear weight maps to the path blend through smoothstep(WEAR_EDGE[0], WEAR_EDGE[1], w). */
+const WEAR_EDGE: readonly [number, number] = [0.12, 0.6];
 /** Structure pieces (walls, fences, floors) wear a narrower ring than facilities. */
 const WEAR_REACH_PIECE = 1.0;
 /**
@@ -153,13 +158,23 @@ const WALL_FRAG = /* glsl */ `
 `;
 
 const _worn = new THREE.Color();
-/** Pull a ground colour toward its trampled version in place: darker, warmer, less saturated (any biome). */
+const _wornGrey = new THREE.Color();
+/** Trodden-ground tone (the painted map's sunny dry grass and warm earth); only its hue is used, scaled to the ground's value. */
+const PATH_TONE = new THREE.Color('#b8964a');
+const PATH_LUM = PATH_TONE.r * 0.3 + PATH_TONE.g * 0.59 + PATH_TONE.b * 0.11;
+/** Pull a ground colour toward its trodden version in place: warm dry grass / earth a shade darker (any biome). */
 export function wornColor(c: THREE.Color, amount: number): THREE.Color {
   const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11;
-  // toward a warm tan dirt path: desaturate to luminance, tint to dry earth (more red, less blue), a little darker
-  _worn.setRGB(l * 1.3 + 0.02, l * 1.0, l * 0.58).multiplyScalar(0.82);
+  // the trodden hue at 88 % of the ground's value, with a little of the ground's own grey so snow and sand stay in family
+  _worn.copy(PATH_TONE).multiplyScalar((l * 0.88) / PATH_LUM).lerp(_wornGrey.setRGB(l * 0.95, l * 0.85, l * 0.7), 0.25);
   c.lerp(_worn, clamp(amount, 0, 1));
   return c;
+}
+
+/** Contrast curve of the wear weight (0..1 -> 0..1): ragged, decisive path edges. */
+export function wearBlend(w: number): number {
+  const t = clamp((w - WEAR_EDGE[0]) / (WEAR_EDGE[1] - WEAR_EDGE[0]), 0, 1);
+  return t * t * (3 - 2 * t);
 }
 
 /**
@@ -691,7 +706,7 @@ export class Terrain {
           }
           this.tmp3.setRGB(c.baseColors[o], c.baseColors[o + 1], c.baseColors[o + 2]);
           const w = this.wear[vz * VERTS + vx];
-          if (w > 0) wornColor(this.tmp3, w * WEAR_MAX).multiplyScalar(1 - w * w * contact);
+          if (w > 0) wornColor(this.tmp3, wearBlend(w) * WEAR_MAX).multiplyScalar(1 - w * w * contact);
           if (lockedCount) dimColor(this.tmp3, 0.2 * lockedCount);
           arr[o] = this.tmp3.r;
           arr[o + 1] = this.tmp3.g;
