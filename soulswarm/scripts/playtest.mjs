@@ -51,6 +51,8 @@ async function session(fn) {
   await page.goto(URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
   await page.evaluate(BOT);
+  // the suite runs on any day: a weekend Blood Moon (8 elites, a darker blood-red world) only where a test turns it on
+  await page.evaluate(() => { const p = window.__soulswarm && window.__soulswarm.profile; if (p) p.flags.bloodMoon = 'off'; });
   try { await fn(page, errors); } catch (e) { errors.push('harness: ' + e.message); }
   await ctx.close();
   return errors;
@@ -2105,7 +2107,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const T = await import('/node_modules/.vite/deps/three.js');
     const app = window.__soulswarm, E = app.engine;
-    app.profile.flags.tutorialDone = true; app.startRun(1); E.manual = true;
+    app.profile.flags.tutorialDone = true; app.profile.flags.bloodMoon = 'off'; app.startRun(1); E.manual = true; // (a weekend's darker blood-red ground reads as black)
     const run = app.run; run.player.hurt = () => {};
     for (let i = 0; i < 20; i++) E.step(1 / 30);
     const gl = E.renderer.getContext(), out = {};
