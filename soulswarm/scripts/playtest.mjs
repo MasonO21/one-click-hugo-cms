@@ -857,7 +857,7 @@ window.__aq = (ch) => {
   if (app.run) app.exitRun();
   document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
   app.engine.manual = true;
-  prof.flags.tutorialDone = true; prof.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; prof.energy = 30; prof.chapter.unlocked = 6;
+  prof.flags.tutorialDone = true; prof.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 }; prof.energy = 30; prof.chapter.unlocked = 6; prof.flags.bloodMoon = 'off'; // (a weekend Blood Moon halves the Endless elite gap)
   app.startRun(ch);
   const r = app.run;
   r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0;
