@@ -15,6 +15,7 @@
  *   expeditions           expedition_launched / _returned / _collected, frontier_charted / frontier_milestone
  *   colonist wishes       wish_offered / wish_granted / wish_expired  (kind and tier only)
  *   photo mode            photo_taken (lighting preset, size) / photo_shared (how it left the game)
+ *   Nova chests           chest_bought / chest_opened              (chest, cards, best rarity, new cosmetics)
  *
  * Events carry game facts only (no PII). Consent is opt-in: `settings.analytics` must be true AND the player
  * must have answered (`settings.analyticsAsked`, set by the first-launch prompt or the Settings toggle). It
@@ -24,6 +25,8 @@ import type { Game } from '../core/Game';
 import type { GameEvents } from '../core/events';
 import { dateKey } from '../core/format';
 import { onBackground, onForeground } from './lifecycle';
+
+const CHEST_RARITY_RANK: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
 
 /** Seconds of play without a completed mission before `progression_stall` fires. */
 export const STALL_SECONDS = 600;
@@ -221,6 +224,20 @@ export function installAnalyticsHooks(game: Game): () => void {
     const i = reason.indexOf(':');
     a.track('nova_spent', { amount, sink: (i >= 0 ? reason.slice(0, i) : reason).slice(0, 24), item: (i >= 0 ? reason.slice(i + 1) : '').slice(0, 40), balance, tier: st().colony.tier });
   });
+  // ---- Nova chests (what came out in aggregate: how many cards, the best rarity, new cosmetics / duplicates)
+  on('chest:bought', ({ chest, nova, open }) => a.track('chest_bought', { chest, nova, open, tier: st().colony.tier }));
+  on('chest:opened', ({ chest, variant, via, cards }) =>
+    a.track('chest_opened', {
+      chest,
+      variant,
+      via,
+      cards: cards.length,
+      best: cards.reduce((b, c) => (CHEST_RARITY_RANK[c.rarity] > CHEST_RARITY_RANK[b] ? c.rarity : b), 'common' as string),
+      cosmetics: cards.filter((c) => c.kind === 'cosmetic' && !c.dupe).length,
+      dupes: cards.filter((c) => c.dupe).length,
+      tier: st().colony.tier,
+    }),
+  );
 
   // ---- retention features
   on('daily:claimed', ({ day: d }) => a.track('daily_claimed', { day: d, streak: st().liveops.daily.streak }));

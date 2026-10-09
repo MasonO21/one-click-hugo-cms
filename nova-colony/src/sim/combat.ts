@@ -516,6 +516,7 @@ export class CombatSystem extends System {
     const c = st.combat;
     const kills = c.killsThisWave;
     const reward = victoryReward(this.game, kills, c.bonus ?? 0, reason === 'breach');
+    if (reason !== 'breach') this.game.sys.chests?.firstDefense(reward); // the first win at each tier: a Supply Cache in the spoils
     c.wave++;
     c.waveAtTier++;
     st.stats.wavesWon++;

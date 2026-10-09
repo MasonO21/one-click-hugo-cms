@@ -26,6 +26,7 @@ import { LiveOpsSystem } from '../sim/liveops';
 import { ExpeditionSystem } from '../sim/expeditions';
 import { AchievementSystem } from '../sim/achievements';
 import { WishSystem } from '../sim/wishes';
+import { ChestSystem } from '../sim/chests';
 import { createMockServices } from '../platform/mock';
 import { reportLoopError } from './guard';
 
@@ -46,6 +47,7 @@ export interface Systems {
   expeditions: ExpeditionSystem;
   achievements: AchievementSystem;
   wishes: WishSystem;
+  chests: ChestSystem;
 }
 
 export interface GameOptions {
@@ -87,6 +89,7 @@ const UPDATE_ORDER: (keyof Systems)[] = [
   'liveops',
   'wishes',
   'achievements',
+  'chests',
 ];
 
 export class Game {
@@ -133,6 +136,7 @@ export class Game {
       expeditions: new ExpeditionSystem(this),
       achievements: new AchievementSystem(this),
       wishes: new WishSystem(this),
+      chests: new ChestSystem(this),
     };
   }
 

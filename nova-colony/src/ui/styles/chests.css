@@ -1,0 +1,1803 @@
+/* ==========================================================================
+   Nova caches: the opening scene (ui/chest/ChestScene.ts), the Shop's Chests tab (ui/shop/ChestsTab.ts) and the odds
+   sheet (ui/shop/ChestOddsPanel.ts).
+   Look: a well-kept field camp at dusk. Muted, rich colours; brass, steel, wood and crystal; light that feels warm
+   rather than sugary. The scene animates transforms and opacity only (the particles live on one canvas), so it stays
+   smooth on mid-range phones; reduced motion (`.calm` + base.css) keeps it still.
+   ========================================================================== */
+
+/* ---------- the stage ------------------------------------------------------ */
+
+/* everything else (HUD, toasts, panels, the joystick) waits hidden underneath */
+.nv-root[data-chest='1'] > :not(.nv-chest) {
+  visibility: hidden;
+  pointer-events: none !important;
+}
+
+.nv-chest {
+  --ped: 60%;
+  /* the tier's light: glow (colour), glow2 (its hot centre), rays */
+  --glow: #ffcf8a;
+  --glow2: #fff0d6;
+  --ray: rgba(255, 214, 150, 0.42);
+  /* the card backs */
+  --b1: #7a5434;
+  --b2: #3a2616;
+  --seam: 45%;
+  --charge: 0;
+  --shift: 0px;
+  --settle: 1;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  color: #fff8ec;
+  background: radial-gradient(ellipse at 50% var(--ped), #3a3442 0%, #15131b 75%);
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.nv-chest.on {
+  opacity: 1;
+}
+.nv-chest[data-theme='crate'] {
+  --seam: 42%;
+}
+.nv-chest[data-theme='explorer'] {
+  --glow: #9cccff;
+  --glow2: #e6f3ff;
+  --ray: rgba(170, 208, 255, 0.4);
+  --b1: #43627f;
+  --b2: #1b2939;
+  --seam: 47%;
+}
+.nv-chest[data-theme='prospector'] {
+  --glow: #ffc964;
+  --glow2: #fff1c8;
+  --ray: rgba(255, 204, 110, 0.44);
+  --b1: #8b6331;
+  --b2: #3f270e;
+  --seam: 46%;
+}
+.nv-chest[data-theme='relic'] {
+  --glow: #c3a2ff;
+  --glow2: #f1e8ff;
+  --ray: rgba(200, 176, 255, 0.42);
+  --b1: #56477c;
+  --b2: #211836;
+  --seam: 48%;
+}
+.nv-chest[data-theme='nova'] {
+  --glow: #ffdcaa;
+  --glow2: #fff8ec;
+  --ray: rgba(255, 234, 200, 0.4);
+  --b1: #3e4466;
+  --b2: #121526;
+  --seam: 48%;
+}
+
+.nv-chest .cs-probe {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* the backdrop, the cache and its light: one layer that takes the landing's thud */
+.nv-chest .cs-stage {
+  position: absolute;
+  inset: 0;
+}
+.nv-chest .cs-stage.thud {
+  animation: cs-thud 0.42s ease-out;
+}
+@keyframes cs-thud {
+  0% {
+    transform: none;
+  }
+  18% {
+    transform: translate3d(0, 5px, 0);
+  }
+  40% {
+    transform: translate3d(0, -2px, 0);
+  }
+  62% {
+    transform: translate3d(0, 1px, 0);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* the cache's own painting, drifting slowly around its pedestal; graded a touch quieter so the cache is the light */
+.nv-chest .cs-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform-origin: 50% var(--ped);
+  transition: opacity 0.5s ease-out;
+  will-change: transform;
+  animation: cs-drift 40s ease-in-out infinite alternate;
+}
+.nv-chest.ready .cs-bg {
+  opacity: 1;
+}
+.nv-chest .cs-bgimg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% var(--ped);
+  filter: saturate(0.82) brightness(0.86) contrast(1.05);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+@keyframes cs-drift {
+  from {
+    transform: scale(1.025) translate3d(0.5%, 0.3%, 0);
+  }
+  to {
+    transform: scale(1.085) translate3d(-0.7%, -0.5%, 0);
+  }
+}
+.nv-chest .cs-vig {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 96% 70% at 50% var(--ped), rgba(10, 8, 14, 0) 38%, rgba(10, 8, 14, 0.34) 72%, rgba(8, 6, 12, 0.74) 100%),
+    linear-gradient(180deg, rgba(10, 8, 14, 0.5) 0%, rgba(10, 8, 14, 0) 20%);
+}
+/* once the cards are out: a soft shade behind them (top) and the buttons (bottom) */
+.nv-chest .cs-dim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.7s ease-out;
+  background:
+    linear-gradient(180deg, rgba(10, 8, 14, 0.66) 0%, rgba(10, 8, 14, 0.4) 40%, rgba(10, 8, 14, 0) 60%),
+    linear-gradient(0deg, rgba(10, 8, 14, 0.62) 0%, rgba(10, 8, 14, 0) 22%);
+}
+.nv-chest[data-phase='cards'] .cs-dim,
+.nv-chest[data-phase='done'] .cs-dim {
+  opacity: 1;
+}
+.nv-chest[data-orient='land'] .cs-dim {
+  background:
+    linear-gradient(90deg, rgba(10, 8, 14, 0.6) 0%, rgba(10, 8, 14, 0) 34%, rgba(10, 8, 14, 0) 66%, rgba(10, 8, 14, 0.6) 100%),
+    linear-gradient(0deg, rgba(10, 8, 14, 0.55) 0%, rgba(10, 8, 14, 0) 26%);
+}
+
+/* ---------- title, skip, hint, actions ---------------------------------- */
+
+.nv-chest .cs-top {
+  position: absolute;
+  z-index: 6;
+  top: calc(var(--safe-t) + 0.85em);
+  left: 4.8em;
+  right: 4.8em;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, -0.5em, 0);
+  transition: opacity 0.5s ease-out 0.2s, transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) 0.2s;
+}
+.nv-chest.ready .cs-top {
+  opacity: 1;
+  transform: none;
+}
+.nv-chest .cs-sub {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.55em;
+  margin-bottom: 0.35em;
+}
+.nv-chest .cs-ribbon {
+  --rc: #f0dfbc;
+  --rcb: rgba(240, 223, 188, 0.55);
+  padding: 0.24em 0.8em 0.26em;
+  border-radius: 99px;
+  font-size: 0.66em;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rc);
+  background: rgba(14, 12, 18, 0.5);
+  box-shadow: inset 0 0 0 1px var(--rcb);
+}
+.nv-chest .cs-ribbon.r-rare {
+  --rc: #bcdcff;
+  --rcb: rgba(140, 192, 238, 0.7);
+}
+.nv-chest .cs-ribbon.r-epic {
+  --rc: #dacbff;
+  --rcb: rgba(186, 160, 240, 0.7);
+}
+.nv-chest .cs-ribbon.r-legendary {
+  --rc: #ffe2a0;
+  --rcb: rgba(236, 196, 110, 0.8);
+}
+.nv-chest .cs-ribbon.r-mythic {
+  --rc: #f3eaff;
+  --rcb: rgba(220, 205, 255, 0.85);
+  background: linear-gradient(100deg, rgba(120, 90, 170, 0.6), rgba(60, 110, 140, 0.6) 50%, rgba(150, 110, 60, 0.6));
+}
+.nv-chest .cs-count {
+  font-size: 0.7em;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 246, 230, 0.78);
+  text-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.6);
+}
+.nv-chest .cs-title {
+  margin: 0;
+  color: #fff8ec;
+  font-size: 1.62em;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0.05em 0 rgba(0, 0, 0, 0.3), 0 0.1em 0.7em rgba(0, 0, 0, 0.55);
+}
+
+.nv-chest .cs-skip {
+  appearance: none;
+  border: 0;
+  position: absolute;
+  z-index: 7;
+  top: calc(var(--safe-t) + 0.75em);
+  right: calc(var(--safe-r) + 0.75em);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 1em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  border-radius: 99px;
+  font: inherit;
+  font-size: 0.88em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff6e6;
+  background: rgba(14, 12, 18, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 240, 214, 0.3);
+}
+.nv-chest .cs-skip-i {
+  font-size: 1.25em;
+  line-height: 1;
+  opacity: 0.8;
+}
+.nv-chest[data-phase='done'] .cs-skip,
+.nv-chest[data-phase='closing'] .cs-skip {
+  display: none;
+}
+
+.nv-chest .cs-hint {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.5em 1.1em 0.52em 0.85em;
+  border-radius: 99px;
+  font-size: 0.98em;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fff6e6;
+  background: rgba(14, 12, 18, 0.52);
+  box-shadow: inset 0 0 0 1px rgba(255, 236, 200, 0.26), 0 0.4em 1.2em rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 0.4em, 0);
+  transition: opacity 0.35s ease-out, transform 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.nv-chest:not([data-phase='idle']) .cs-hint {
+  transition-duration: 0.14s;
+}
+.nv-chest[data-phase='idle'] .cs-hint {
+  opacity: 1;
+  transform: none;
+}
+.nv-chest .cs-hint.bump {
+  animation: cs-hint-bump 0.32s ease-out;
+}
+@keyframes cs-hint-bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* a small ring that pings outwards: "touch here" without a cartoon hand */
+.nv-chest .cs-tapring {
+  position: relative;
+  flex: 0 0 auto;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.16em var(--glow);
+}
+.nv-chest .cs-tapring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.12em var(--glow);
+  animation: cs-ping 1.8s ease-out infinite;
+}
+@keyframes cs-ping {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.nv-chest .cs-actions {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  gap: 0.7em;
+  align-items: stretch;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 1em, 0);
+  transition: opacity 0.35s ease-out, transform 0.5s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.nv-chest[data-phase='done'] .cs-actions {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.nv-chest .cs-actions .btn {
+  min-height: 52px;
+  flex: 1 1 0;
+  white-space: nowrap;
+}
+.nv-chest .cs-actions .cs-collect {
+  font-size: 1.12em;
+}
+/* the scene's own buttons: brass to collect, deep violet (Nova) to open another */
+.nv-chest .cs-actions .btn.cs-collect {
+  --edge: #8a6424;
+  color: #2d2210;
+  text-shadow: 0 0.06em 0 rgba(255, 246, 220, 0.5);
+  background: linear-gradient(180deg, #f3dba2 0%, #c99a48 100%);
+  box-shadow: 0 0.24em 0 var(--edge), 0 0.6em 1.2em rgba(0, 0, 0, 0.35), inset 0 0 0 0.08em rgba(255, 250, 230, 0.45);
+}
+.nv-chest .cs-actions .btn.cs-another {
+  --edge: #241d40;
+  color: #f6ecd8;
+  background: linear-gradient(180deg, #6c5ca0 0%, #41366c 100%);
+  box-shadow: 0 0.24em 0 var(--edge), 0 0.6em 1.2em rgba(0, 0, 0, 0.35), inset 0 0 0 0.08em rgba(220, 205, 255, 0.28);
+}
+.nv-chest .cs-actions .btn:active:not([aria-disabled='true']) {
+  box-shadow: 0 0.05em 0 var(--edge), 0 0.2em 0.45em rgba(0, 0, 0, 0.3);
+}
+.nv-chest .cs-actions .cs-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+}
+.nv-chest .cs-actions .cs-price .aico {
+  width: 1.2em;
+  height: 1.2em;
+}
+
+.nv-chest .cs-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% calc(var(--ped) - 9%), #ffffff 0%, var(--glow2) 24%, rgba(255, 255, 255, 0) 70%);
+}
+.nv-chest .cs-flash.go {
+  animation: cs-flash 0.6s ease-out;
+}
+.nv-chest .cs-flash.soft {
+  animation: cs-flash-soft 0.7s ease-out;
+}
+@keyframes cs-flash {
+  0% {
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes cs-flash-soft {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.32;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.nv-chest .cs-fx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* ---------- the cache -------------------------------------------------- */
+
+.nv-chest .cs-chest {
+  position: absolute;
+  z-index: 3;
+  transform-origin: 50% 94%;
+  transform: translate3d(0, var(--shift), 0) scale(var(--settle, 1));
+  transition: transform 0.8s cubic-bezier(0.25, 0.9, 0.3, 1);
+}
+.nv-chest .cs-drop,
+.nv-chest .cs-kick,
+.nv-chest .cs-knock,
+.nv-chest .cs-art {
+  position: absolute;
+  inset: 0;
+}
+.nv-chest .cs-drop {
+  opacity: 0;
+  transform-origin: 50% 94%;
+}
+/* the drop: a short accelerating fall (52%: impact, ChestScene IMPACT_MS), a small compression and a settle */
+.nv-chest .cs-drop.go {
+  opacity: 1;
+  animation: cs-drop 0.74s linear both;
+}
+.nv-chest.instant .cs-drop {
+  animation: none;
+  opacity: 1;
+}
+@keyframes cs-drop {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -92vh, 0);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45);
+  }
+  10% {
+    opacity: 1;
+  }
+  52% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  63% {
+    transform: translate3d(0, 0.5%, 0) scale(1.035, 0.958);
+    animation-timing-function: ease-in-out;
+  }
+  80% {
+    transform: translate3d(0, -0.6%, 0) scale(0.993, 1.008);
+    animation-timing-function: ease-in-out;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* idle: now and then something stirs inside: a hair of lift, a settle */
+.nv-chest .cs-knock {
+  transform-origin: 50% 94%;
+}
+.nv-chest[data-phase='idle'] .cs-knock {
+  animation: cs-stir 4.4s ease-in-out 1.4s infinite;
+}
+@keyframes cs-stir {
+  0%,
+  74%,
+  100% {
+    transform: none;
+  }
+  79% {
+    transform: translate3d(0, -1.3%, 0);
+  }
+  84% {
+    transform: translate3d(0, 0.3%, 0) scale(1.012, 0.988);
+  }
+  89% {
+    transform: translate3d(0, -0.25%, 0);
+  }
+  94% {
+    transform: none;
+  }
+}
+/* the taps: a firm knock, a rattle, then the strain before it gives */
+.nv-chest .cs-knock.knock-1 {
+  animation: cs-knock-1 0.38s ease-out;
+}
+.nv-chest .cs-knock.knock-2 {
+  animation: cs-knock-2 0.5s ease-out;
+}
+.nv-chest .cs-knock.knock-3 {
+  animation: cs-knock-3 0.3s ease-in forwards;
+}
+@keyframes cs-knock-1 {
+  0% {
+    transform: none;
+  }
+  18% {
+    transform: translate3d(0, 1.1%, 0) scale(1.025, 0.97);
+  }
+  42% {
+    transform: translate3d(0, -1.8%, 0) rotate(-1.2deg);
+  }
+  66% {
+    transform: translate3d(0, 0.3%, 0) rotate(0.6deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes cs-knock-2 {
+  0% {
+    transform: none;
+  }
+  12% {
+    transform: translate3d(0, 1.4%, 0) scale(1.035, 0.96);
+  }
+  28% {
+    transform: translate3d(-1.2%, -2.6%, 0) rotate(-2.4deg);
+  }
+  44% {
+    transform: translate3d(1.2%, -1%, 0) rotate(2deg);
+  }
+  60% {
+    transform: translate3d(-0.8%, 0, 0) rotate(-1.2deg);
+  }
+  78% {
+    transform: translate3d(0.4%, 0, 0) rotate(0.5deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes cs-knock-3 {
+  0% {
+    transform: none;
+  }
+  25% {
+    transform: translate3d(-1%, -0.6%, 0) rotate(-1.6deg);
+  }
+  50% {
+    transform: translate3d(1%, -0.6%, 0) rotate(1.6deg);
+  }
+  75% {
+    transform: translate3d(-0.5%, 0.6%, 0) scale(1.03, 0.965);
+  }
+  100% {
+    transform: translate3d(0, 1%, 0) scale(1.045, 0.95);
+  }
+}
+
+/* it opens: the lid's kick lifts it a little, then it settles; a crate pops and makes way for its cards */
+.nv-chest .cs-kick {
+  transform-origin: 50% 94%;
+}
+.nv-chest .cs-kick.kick {
+  animation: cs-kick 0.62s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.nv-chest .cs-kick.pop {
+  animation: cs-pop 0.42s cubic-bezier(0.3, 0.6, 0.4, 1) forwards;
+}
+@keyframes cs-kick {
+  0% {
+    transform: translate3d(0, 1%, 0) scale(1.045, 0.95);
+  }
+  20% {
+    transform: translate3d(0, -3.4%, 0) scale(0.985, 1.025);
+  }
+  46% {
+    transform: translate3d(0, 0.4%, 0) scale(1.018, 0.982);
+  }
+  72% {
+    transform: translate3d(0, -0.5%, 0);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes cs-pop {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.1, 1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+}
+.nv-chest.instant .cs-kick.pop {
+  animation: none;
+  opacity: 0;
+}
+
+.nv-chest .cs-art .cs-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  /* no filter here: a drop-shadow under the knocks re-rasterises the cache every frame (.cs-shadow is its shadow) */
+}
+.nv-chest .cs-art .cs-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 5em;
+}
+.nv-chest .cs-art .cs-img.open {
+  opacity: 0;
+}
+.nv-chest.opened .cs-art .cs-img.open {
+  opacity: 1;
+}
+.nv-chest.opened .cs-art .cs-img.closed {
+  opacity: 0;
+}
+/* a crate keeps its picture: it pops instead */
+.nv-chest[data-variant='crate'].opened .cs-art .cs-img.closed {
+  opacity: 1;
+}
+
+/* a sheen passing over the closed cache, cut to its silhouette */
+.nv-chest .cs-sheen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+  -webkit-mask: var(--art) center / contain no-repeat;
+  mask: var(--art) center / contain no-repeat;
+}
+.nv-chest.landed:not(.opened) .cs-sheen {
+  opacity: 1;
+}
+.nv-chest .cs-sheen i {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: -55%;
+  width: 42%;
+  background: linear-gradient(100deg, rgba(255, 250, 236, 0) 0%, rgba(255, 250, 236, 0.4) 50%, rgba(255, 250, 236, 0) 100%);
+  transform: translate3d(0, 0, 0) skewX(-14deg);
+  animation: cs-sheen 4.4s ease-in-out 0.9s infinite;
+}
+@keyframes cs-sheen {
+  0% {
+    transform: translate3d(0, 0, 0) skewX(-14deg);
+  }
+  36%,
+  100% {
+    transform: translate3d(400%, 0, 0) skewX(-14deg);
+  }
+}
+
+/* light seeping from the seam under the lid: faint while it waits, brighter with each tap; thin beams fan out */
+.nv-chest .cs-seam {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: calc(var(--seam) - 6%);
+  height: 12%;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleX(calc(0.5 + var(--charge) * 0.55));
+  transition: opacity 0.25s ease-out, transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.nv-chest.landed .cs-seam {
+  opacity: calc(0.4 + var(--charge) * 0.7);
+}
+.nv-chest .cs-seam::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #ffffff 0%, var(--glow2) 26%, var(--glow) 48%, rgba(255, 255, 255, 0) 100%);
+}
+.nv-chest[data-phase='idle'] .cs-seam::before {
+  animation: cs-seep 2.8s ease-in-out infinite;
+}
+@keyframes cs-seep {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.nv-chest .cs-leak {
+  position: absolute;
+  left: -25%;
+  right: -25%;
+  bottom: calc(100% - var(--seam));
+  height: 75%;
+  pointer-events: none;
+  background: repeating-conic-gradient(from -84deg at 50% 100%, rgba(255, 248, 230, 0) 0deg, rgba(255, 248, 230, 0.7) 1.4deg, rgba(255, 248, 230, 0) 2.8deg, rgba(255, 248, 230, 0) 13deg);
+  -webkit-mask: radial-gradient(ellipse 50% 100% at 50% 100%, #000 6%, rgba(0, 0, 0, 0.45) 36%, transparent 70%);
+  mask: radial-gradient(ellipse 50% 100% at 50% 100%, #000 6%, rgba(0, 0, 0, 0.45) 36%, transparent 70%);
+  opacity: calc((var(--charge) - 0.2) * 1.15);
+  transform: scaleY(calc(0.4 + var(--charge) * 0.7));
+  transform-origin: 50% 100%;
+  transition: opacity 0.25s ease-out, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.nv-chest.opened .cs-seam,
+.nv-chest.opened .cs-leak,
+.nv-chest.opened .cs-sheen {
+  opacity: 0;
+}
+
+/* the glow behind the cache: a low ember while it waits, brighter as it charges, a lantern once it opens */
+.nv-chest .cs-glow {
+  position: absolute;
+  left: -55%;
+  right: -55%;
+  top: -55%;
+  bottom: -15%;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--glow2) 0%, var(--glow) 30%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.6s ease-out, transform 0.7s ease-out;
+}
+.nv-chest.landed .cs-glow {
+  opacity: calc(0.26 + var(--charge) * 0.34);
+  animation: cs-breathe 3.6s ease-in-out infinite;
+}
+.nv-chest.opened .cs-glow {
+  opacity: 0.66;
+}
+@keyframes cs-breathe {
+  0%,
+  100% {
+    transform: scale(0.88);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+/* its light on the ground, and a contact shadow under its feet */
+.nv-chest .cs-ground {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  bottom: -9%;
+  height: 26%;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--glow) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+}
+.nv-chest.landed .cs-ground {
+  opacity: calc(0.18 + var(--charge) * 0.2);
+}
+.nv-chest.opened .cs-ground {
+  opacity: 0.5;
+}
+.nv-chest .cs-shadow {
+  position: absolute;
+  left: 13%;
+  right: 13%;
+  bottom: 0;
+  height: 11%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(6, 4, 10, 0.62), rgba(6, 4, 10, 0));
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.2s ease-out, transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.nv-chest.landed .cs-shadow {
+  opacity: 1;
+  transform: none;
+}
+.nv-chest[data-variant='crate'].opened .cs-shadow {
+  opacity: 0;
+}
+
+/* the shockwave when it opens */
+.nv-chest .cs-wave {
+  position: absolute;
+  left: 50%;
+  top: var(--seam);
+  width: 130%;
+  aspect-ratio: 1;
+  margin-left: -65%;
+  margin-top: -65%;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0) 72%, var(--glow) 86%, var(--glow2) 92%, rgba(255, 255, 255, 0) 100%);
+}
+.nv-chest .cs-wave.go {
+  animation: cs-wave 0.85s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+@keyframes cs-wave {
+  0% {
+    transform: scale(0.15);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* a column of light rising from the open cache, settling to a soft glow */
+.nv-chest .cs-beam {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: calc(100% - var(--seam));
+  height: 240%;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  transform: scale(0.5, 0.3);
+  background: radial-gradient(ellipse 34% 100% at 50% 100%, var(--glow2) 0%, var(--glow) 22%, rgba(255, 255, 255, 0) 70%);
+}
+.nv-chest.opened .cs-beam {
+  animation: cs-beam 1.8s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+.nv-chest.instant .cs-beam {
+  animation-duration: 0.01s;
+}
+@keyframes cs-beam {
+  0% {
+    opacity: 0;
+    transform: scale(0.5, 0.3);
+  }
+  14% {
+    opacity: 0.8;
+    transform: scale(1, 1);
+  }
+  100% {
+    opacity: 0.22;
+    transform: scale(0.85, 0.92);
+  }
+}
+
+/* slow rays turning behind the open cache (round fade: each layer rasterises once and only rotates) */
+.nv-chest .cs-rays {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--seam) - 4%);
+  width: 330%;
+  aspect-ratio: 1;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(-50%, -50%, 0) scale(0.4);
+  transition: opacity 0.9s ease-out, transform 1.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.nv-chest.opened .cs-rays {
+  opacity: 1;
+  transform: translate3d(-50%, -50%, 0) scale(1);
+}
+.nv-chest .cs-rays i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0) 0deg, var(--ray) 2.2deg, rgba(255, 255, 255, 0) 4.4deg, rgba(255, 255, 255, 0) 22.5deg);
+  -webkit-mask: radial-gradient(closest-side, #000 8%, rgba(0, 0, 0, 0.45) 36%, transparent 68%);
+  mask: radial-gradient(closest-side, #000 8%, rgba(0, 0, 0, 0.45) 36%, transparent 68%);
+  will-change: transform;
+  animation: cs-spin 70s linear infinite;
+}
+.nv-chest .cs-rays i + i {
+  background: repeating-conic-gradient(from 11deg, rgba(255, 255, 255, 0) 0deg, rgba(255, 250, 240, 0.14) 1deg, rgba(255, 255, 255, 0) 2deg, rgba(255, 255, 255, 0) 30deg);
+  animation-duration: 100s;
+  animation-direction: reverse;
+}
+@keyframes cs-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ---------- reward cards ---------------------------------------------------- */
+
+.nv-chest .cs-cards {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+/* common: parchment in a brass frame */
+.nv-chest .cs-card {
+  --rim: #dcc79a;
+  --rim2: #9a7e52;
+  --paper: #f8f1e2;
+  --paper2: #ece0c5;
+  --halo: rgba(255, 226, 170, 0.5);
+  --lbl: #8a6e44;
+  --ink: #2d2822;
+  --sub: #6d6355;
+  position: absolute;
+  perspective: 800px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(var(--fx), var(--fy), 0) scale(0.18);
+  transition:
+    transform 0.56s cubic-bezier(0.2, 0.85, 0.25, 1.04),
+    opacity 0.2s ease-out;
+}
+.nv-chest .cs-card.out {
+  opacity: 1;
+  transform: rotate(calc(var(--tilt, 0deg) * 0.35));
+}
+.nv-chest .cs-card.shown {
+  pointer-events: auto;
+}
+/* rare: blued steel */
+.nv-chest .cs-card.r-rare {
+  --rim: #a6cdee;
+  --rim2: #3c6fa4;
+  --paper: #f3f5f6;
+  --paper2: #dfe7ee;
+  --halo: rgba(110, 170, 235, 0.72);
+  --lbl: #3b6a9e;
+}
+/* epic: deep violet */
+.nv-chest .cs-card.r-epic {
+  --rim: #c6b0ee;
+  --rim2: #654aa8;
+  --paper: #f5f1f8;
+  --paper2: #e5dcef;
+  --halo: rgba(160, 126, 232, 0.78);
+  --lbl: #654aa8;
+}
+/* legendary: polished gold */
+.nv-chest .cs-card.r-legendary {
+  --rim: #f6e0a0;
+  --rim2: #ac7522;
+  --paper: #fbf5e6;
+  --paper2: #f0dfb6;
+  --halo: rgba(242, 190, 84, 0.88);
+  --lbl: #94621a;
+}
+/* mythic: mother-of-pearl */
+.nv-chest .cs-card.r-mythic {
+  --rim: #e8dcf4;
+  --rim2: #8ea6d8;
+  --paper: #f8f5fb;
+  --paper2: #e8e2f2;
+  --halo: rgba(196, 178, 255, 0.9);
+  --lbl: #6655a4;
+}
+/* the light behind a card */
+.nv-chest .cs-card::before {
+  content: '';
+  position: absolute;
+  inset: -16%;
+  border-radius: 34%;
+  background: radial-gradient(closest-side, var(--halo) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.45s ease-out, transform 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.nv-chest .cs-card.shown::before {
+  opacity: 0.7;
+  transform: none;
+}
+.nv-chest .cs-card.r-common.shown::before {
+  opacity: 0.28;
+}
+.nv-chest .cs-card.r-legendary.shown::before,
+.nv-chest .cs-card.r-mythic.shown::before {
+  animation: cs-halo 3.2s ease-in-out infinite;
+}
+.nv-chest .cs-card.r-mythic::before {
+  background: radial-gradient(closest-side, rgba(255, 236, 214, 0.9) 0%, rgba(196, 178, 255, 0.75) 40%, rgba(150, 210, 230, 0.4) 70%, rgba(255, 255, 255, 0) 100%);
+}
+@keyframes cs-halo {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
+/* a breath of suspense before a legendary or mythic card turns: it lifts, its light already showing */
+.nv-chest .cs-card.tease {
+  animation: cs-tease 0.9s ease-in-out infinite;
+}
+.nv-chest .cs-card.tease::before {
+  opacity: 0.85;
+  transform: scale(1.04);
+}
+@keyframes cs-tease {
+  0%,
+  100% {
+    transform: rotate(calc(var(--tilt, 0deg) * 0.35)) scale(1.02);
+  }
+  50% {
+    transform: rotate(calc(var(--tilt, 0deg) * 0.35)) translate3d(0, -3%, 0) scale(1.06);
+  }
+}
+
+.nv-chest .cs-flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(180deg);
+  transition: transform 0.5s cubic-bezier(0.25, 1.1, 0.4, 1);
+}
+.nv-chest .cs-card.flip .cs-flip {
+  transform: rotateY(0deg);
+}
+.nv-chest .cs-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.72em;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* the back: the cache's own material, a brass edge and its emblem in a medallion */
+.nv-chest .cs-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, var(--b1) 0%, var(--b2) 100%);
+  box-shadow: inset 0 0 0 0.16em rgba(214, 178, 112, 0.78), inset 0 0 0 0.28em rgba(0, 0, 0, 0.28), 0 0.35em 0.9em rgba(0, 0, 0, 0.45);
+}
+.nv-chest .cs-back::before {
+  content: '';
+  position: absolute;
+  inset: 0.28em;
+  border-radius: 0.5em;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 236, 200, 0.16) 0%, rgba(255, 236, 200, 0) 60%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0 0.3em, rgba(255, 255, 255, 0) 0.3em 0.6em);
+  box-shadow: inset 0 0 0 1px rgba(214, 178, 112, 0.3);
+}
+.nv-chest .cs-back-in {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.nv-chest .cs-medal {
+  width: 66%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 38%, rgba(255, 240, 210, 0.2), rgba(0, 0, 0, 0.22));
+  box-shadow: inset 0 0 0 0.12em rgba(214, 178, 112, 0.7), inset 0 0.2em 0.5em rgba(0, 0, 0, 0.3);
+}
+.nv-chest .cs-back-img {
+  width: 80%;
+  height: auto;
+}
+.nv-chest .cs-back-img.emoji {
+  font-size: 2.2em;
+}
+
+/* the front: the rarity's frame around a paper card */
+.nv-chest .cs-front {
+  background: var(--rim2);
+  box-shadow: 0 0.35em 0.9em rgba(0, 0, 0, 0.45);
+}
+.nv-chest .cs-rim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(155deg, var(--rim) 0%, var(--rim2) 100%);
+}
+.nv-chest .cs-card.r-legendary .cs-rim {
+  inset: -40%;
+  background: conic-gradient(#f6e2a4, #c08a30, #fbefc8, #a8721f, #f0d48c, #f6e2a4);
+  animation: cs-spin 8s linear infinite;
+}
+.nv-chest .cs-card.r-mythic .cs-rim {
+  inset: -40%;
+  background: conic-gradient(#dcb0cc, #aaa4e6, #8ccad8, #bcd8a6, #ead09a, #dcb0cc);
+  animation: cs-spin 7s linear infinite;
+}
+.nv-chest .cs-in {
+  position: absolute;
+  inset: 0.2em;
+  border-radius: 0.56em;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper2) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.08em;
+  padding: 0.5em 0.32em 0.45em;
+  text-align: center;
+  overflow: hidden;
+  color: var(--ink);
+}
+.nv-chest .cs-rar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.56em;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lbl);
+  white-space: nowrap;
+}
+.nv-chest .cs-rar::before,
+.nv-chest .cs-rar::after {
+  content: '';
+  flex: 1 1 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.4;
+}
+.nv-chest .cs-card.r-mythic .cs-rar span {
+  background: linear-gradient(90deg, #8a5a9a, #4f6fb8 50%, #3f8c96);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.nv-chest .cs-ics {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25em;
+  min-height: 3.6em;
+  width: 100%;
+  margin: 0.1em 0 0.15em;
+}
+/* a little light behind the picture, in the rarity's colour */
+.nv-chest .cs-ics::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4.6em;
+  height: 4.6em;
+  margin: -2.3em 0 0 -2.3em;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--halo) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0.5;
+}
+.nv-chest .cs-ic {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.nv-chest .cs-ic-img {
+  width: 4em;
+  height: 4em;
+  object-fit: contain;
+}
+.nv-chest .cs-ic-img.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 2.4em;
+  width: auto;
+  height: auto;
+  line-height: 1.25;
+}
+.nv-chest .cs-ics.multi .cs-ic-img {
+  width: 2.6em;
+  height: 2.6em;
+}
+.nv-chest .cs-ics.multi .cs-ic b {
+  font-size: 0.86em;
+  color: var(--ink);
+}
+.nv-chest .cs-was {
+  position: absolute;
+  right: 0.15em;
+  top: 0;
+  width: 1.85em;
+  height: 1.85em;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 0 0 0.09em var(--rim2), 0 0.1em 0.2em rgba(0, 0, 0, 0.2);
+}
+.nv-chest .cs-was-img {
+  width: 1.4em;
+  height: 1.4em;
+  object-fit: contain;
+}
+.nv-chest .cs-was-img.emoji {
+  font-size: 1em;
+  width: auto;
+  height: auto;
+}
+.nv-chest .cs-amt {
+  font-size: 1.32em;
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.nv-chest .cs-nm {
+  font-size: 0.8em;
+  font-weight: 800;
+  line-height: 1.14;
+  color: var(--ink);
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nv-chest .cs-sb {
+  font-size: 0.66em;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--sub);
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nv-chest .cs-eq {
+  appearance: none;
+  border: 0;
+  margin-top: 0.2em;
+  min-height: 2.15em;
+  padding: 0 1em;
+  border-radius: 99px;
+  font: inherit;
+  font-size: 0.72em;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #f6ecd8;
+  background: #2f3540;
+  box-shadow: 0 0.14em 0 rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+}
+.nv-chest .cs-eq.on {
+  background: #4b7653;
+}
+/* NEW: a small brass tag on the frame's edge */
+.nv-chest .cs-new {
+  position: absolute;
+  z-index: 2;
+  top: 2.75em;
+  right: 0;
+  padding: 0.16em 0.55em 0.16em 0.7em;
+  font-size: 0.54em;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #3a2608;
+  background: linear-gradient(180deg, #f2d690, #c8953c);
+  clip-path: polygon(0.5em 0, 100% 0, 100% 100%, 0.5em 100%, 0 50%);
+}
+/* a sheen crosses a rare-or-better card as it turns over */
+.nv-chest .cs-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 62%);
+  transform: translate3d(-120%, 0, 0);
+}
+.nv-chest .cs-card.shown:not(.r-common) .cs-shine {
+  animation: cs-shine 1s ease-out 0.15s;
+}
+.nv-chest .cs-card.shown.r-legendary .cs-shine,
+.nv-chest .cs-card.shown.r-mythic .cs-shine {
+  animation: cs-shine 3.6s ease-in-out 0.15s infinite;
+}
+@keyframes cs-shine {
+  0% {
+    transform: translate3d(-120%, 0, 0);
+  }
+  40%,
+  100% {
+    transform: translate3d(120%, 0, 0);
+  }
+}
+.nv-chest .cs-card.dupe .cs-nm {
+  color: var(--lbl);
+}
+
+/* landscape: a smaller title */
+.nv-chest[data-orient='land'] .cs-top {
+  top: calc(var(--safe-t) + 0.5em);
+}
+.nv-chest[data-orient='land'] .cs-title {
+  font-size: 1.32em;
+}
+
+/* reduced motion (Settings › Reduce motion or the phone's preference, ChestScene `calm`): no drop, knocks, drift,
+   spinning or flying cards. The cache fades in, the light fades up, each card fades in face up. */
+.nv-chest.calm .cs-stage,
+.nv-chest.calm .cs-bg,
+.nv-chest.calm .cs-knock,
+.nv-chest.calm .cs-kick,
+.nv-chest.calm .cs-sheen i,
+.nv-chest.calm .cs-seam::before,
+.nv-chest.calm .cs-rays i,
+.nv-chest.calm .cs-rim,
+.nv-chest.calm .cs-tapring::after,
+.nv-chest.calm .cs-hint,
+.nv-chest.calm .cs-card::before,
+.nv-chest.calm .cs-glow,
+.nv-chest.calm .cs-shine,
+.nv-chest.calm .cs-wave,
+.nv-chest.calm .cs-card.tease {
+  animation: none !important;
+}
+.nv-chest.calm .cs-drop.go {
+  animation: cs-fade-in 0.25s ease-out both !important;
+}
+@keyframes cs-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.nv-chest.calm .cs-sheen,
+.nv-chest.calm .cs-leak {
+  display: none;
+}
+.nv-chest.calm .cs-flash.go,
+.nv-chest.calm .cs-flash.soft {
+  animation: cs-flash-soft 0.4s ease-out !important;
+}
+.nv-chest.calm .cs-chest,
+.nv-chest.calm .cs-seam,
+.nv-chest.calm .cs-hint,
+.nv-chest.calm .cs-top,
+.nv-chest.calm .cs-actions,
+.nv-chest.calm .cs-glow,
+.nv-chest.calm .cs-card::before {
+  transition-property: opacity;
+  transform: none;
+}
+.nv-chest.calm .cs-chest {
+  transform: translate3d(0, var(--shift), 0) scale(var(--settle, 1));
+  transition: none;
+}
+.nv-chest.calm .cs-rays,
+.nv-chest.calm.opened .cs-rays {
+  transform: translate3d(-50%, -50%, 0);
+  transition: opacity 0.4s ease-out;
+}
+.nv-chest.calm.opened .cs-beam {
+  animation: none;
+  opacity: 0.22;
+  transform: none;
+  transition: opacity 0.4s ease-out;
+}
+.nv-chest.calm[data-variant='crate'].opened .cs-kick {
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+.nv-chest.calm .cs-card,
+.nv-chest.calm .cs-card.out {
+  transform: none;
+  transition: opacity 0.25s ease-out;
+}
+.nv-chest.calm .cs-card:not(.flip) {
+  opacity: 0;
+}
+.nv-chest.calm .cs-flip,
+.nv-chest.calm .cs-card.flip .cs-flip {
+  transform: none;
+  transition: none;
+}
+.nv-chest.calm .cs-back {
+  display: none;
+}
+
+/* ---------- Shop › Chests ----------------------------------------------------- */
+
+.nv-root .chest-intro {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.7em 0.85em;
+}
+.nv-root .chest-intro .ci-art {
+  flex: 0 0 auto;
+  width: 3.4em;
+  height: 3.4em;
+  object-fit: contain;
+}
+.nv-root .chest-intro .ci-art.emoji {
+  font-size: 2.4em;
+  width: auto;
+  height: auto;
+}
+.nv-root .chest-intro .ci-text {
+  font-size: 0.86em;
+  line-height: 1.32;
+}
+.nv-root .chest-intro .ci-pity {
+  margin-top: 0.45em;
+  font-size: 0.8em;
+  color: #5c4a2a;
+}
+.nv-root .chest-intro .ci-pity-m {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 0.2em;
+  font-size: 0.92em;
+}
+.nv-root .chest-intro .ci-pips {
+  display: inline-flex;
+  gap: 0.18em;
+  flex: 0 0 auto;
+}
+.nv-root .chest-intro .ci-pips i {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: rgba(120, 90, 50, 0.2);
+}
+.nv-root .chest-intro .ci-pips i.on {
+  background: #b0832e;
+  box-shadow: 0 0 0 0.08em rgba(176, 131, 46, 0.3);
+}
+.nv-root .chest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+}
+.nv-root .chest-card {
+  --rc: #9a7e52;
+  position: relative;
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+  min-height: 11.5em;
+}
+.nv-root .chest-card.r-rare {
+  --rc: #3c6fa4;
+}
+.nv-root .chest-card.r-epic {
+  --rc: #654aa8;
+}
+.nv-root .chest-card.r-legendary {
+  --rc: #ac7522;
+}
+.nv-root .chest-card.r-mythic {
+  --rc: #5a5ea8;
+}
+.nv-root .chest-card .cc-stage {
+  position: relative;
+  flex: 0 0 41%;
+  overflow: hidden;
+  background-color: #2a2632;
+  background-size: cover;
+  background-position: 50% var(--ped, 60%);
+  box-shadow: inset -0.12em 0 0 rgba(0, 0, 0, 0.12);
+}
+/* the painting, quieted, with a pool of the tier's light on the pedestal */
+.nv-root .chest-card .cc-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 90% 70% at 50% 62%, rgba(10, 8, 14, 0) 30%, rgba(10, 8, 14, 0.5) 100%), rgba(10, 8, 14, 0.12);
+  pointer-events: none;
+}
+.nv-root .chest-card .cc-glow {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: 115%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, var(--cg, #fff2c8) 0%, rgba(255, 255, 255, 0) 70%);
+  opacity: 0.42;
+}
+.nv-root .chest-card .cc-art {
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  width: 86%;
+  max-width: 9em;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  object-fit: contain;
+  filter: drop-shadow(0 0.35em 0.35em rgba(0, 0, 0, 0.45));
+  z-index: 1;
+}
+.nv-root .chest-card .cc-art.emoji {
+  display: grid;
+  place-items: center;
+  font-size: 3.5em;
+}
+.nv-root .chest-card .cc-ribbon,
+.nv-root .co-ribbon {
+  display: inline-block;
+  padding: 0.16em 0.65em 0.18em;
+  border-radius: 99px;
+  font-size: 0.62em;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f6ecd8;
+  background: #8a7350;
+}
+.nv-root .chest-card .cc-ribbon.r-rare,
+.nv-root .co-ribbon.r-rare {
+  background: #3c6fa4;
+}
+.nv-root .chest-card .cc-ribbon.r-epic,
+.nv-root .co-ribbon.r-epic {
+  background: #654aa8;
+}
+.nv-root .chest-card .cc-ribbon.r-legendary,
+.nv-root .co-ribbon.r-legendary {
+  color: #3a2608;
+  background: linear-gradient(180deg, #f2d690, #c8953c);
+}
+.nv-root .chest-card .cc-ribbon.r-mythic,
+.nv-root .co-ribbon.r-mythic {
+  background: linear-gradient(100deg, #7d62b4, #4f86aa 50%, #a88446);
+}
+.nv-root .chest-card .cc-ribbon {
+  position: absolute;
+  z-index: 2;
+  top: 0.6em;
+  left: 0.6em;
+  box-shadow: 0 0.12em 0.3em rgba(0, 0, 0, 0.3);
+}
+.nv-root .chest-card .cc-own {
+  position: absolute;
+  z-index: 2;
+  top: 0.55em;
+  right: 0.5em;
+  padding: 0.1em 0.5em;
+  border-radius: 99px;
+  font-size: 0.78em;
+  font-weight: 900;
+  color: #2d2822;
+  background: #f6ecd8;
+  box-shadow: 0 0.12em 0.3em rgba(0, 0, 0, 0.3);
+}
+.nv-root .chest-card .cc-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.32em;
+  padding: 0.7em 0.75em 0.75em;
+}
+.nv-root .chest-card .cc-info .h3 {
+  margin: 0;
+}
+.nv-root .chest-card .cc-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+}
+.nv-root .chest-card .cc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.14em 0.55em;
+  border-radius: 99px;
+  font-size: 0.74em;
+  color: #5a4a36;
+  background: rgba(150, 110, 60, 0.1);
+  box-shadow: inset 0 0 0 0.08em rgba(150, 110, 60, 0.22);
+}
+.nv-root .chest-card .cc-tag.guar {
+  color: var(--rc);
+  background: color-mix(in srgb, var(--rc) 10%, transparent);
+  box-shadow: inset 0 0 0 0.08em color-mix(in srgb, var(--rc) 35%, transparent);
+}
+.nv-root .chest-card .cc-desc {
+  font-size: 0.78em;
+  line-height: 1.28;
+}
+.nv-root .chest-card .cc-buttons {
+  margin-top: auto;
+  display: flex;
+  gap: 0.45em;
+  align-items: stretch;
+}
+.nv-root .chest-card .cc-buttons .btn {
+  min-height: 44px;
+}
+.nv-root .chest-card .cc-buy {
+  flex: 1 1 auto;
+}
+.nv-root .chest-card .cc-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  white-space: nowrap;
+}
+.nv-root .chest-card .cc-price .aico {
+  width: 1.15em;
+  height: 1.15em;
+}
+.nv-root .chest-card .cc-odds {
+  flex: 0 0 auto;
+  padding-left: 0.85em;
+  padding-right: 0.85em;
+}
+.nv-root .chest-card .cc-keep {
+  display: block;
+  margin: 0.1em auto 0;
+  padding: 0.3em 0.4em;
+  min-height: 32px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.76em;
+  color: #7a6448;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.nv-root .chest-earn {
+  padding: 0.65em 0.85em;
+  font-size: 0.8em;
+  line-height: 1.38;
+}
+.nv-root .chest-earn b {
+  color: var(--ink);
+}
+
+/* landscape phone: two caches side by side */
+@media (orientation: landscape) and (max-height: 520px) {
+  .nv-root .chest-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .nv-root .chest-card {
+    min-height: 10.5em;
+  }
+}
+
+/* ---------- odds sheet --------------------------------------------------------- */
+
+.nv-root .chest-odds .co-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+.nv-root .chest-odds .co-art {
+  width: 4.6em;
+  height: 4.6em;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.nv-root .chest-odds .co-art.emoji {
+  font-size: 3em;
+  width: auto;
+  height: auto;
+}
+.nv-root .chest-odds .co-name {
+  font-size: 1.2em;
+  font-weight: 900;
+  color: var(--ink);
+  margin-bottom: 0.2em;
+}
+.nv-root .chest-odds .co-guar {
+  margin-top: 0.7em;
+  padding: 0.6em 0.8em;
+  border-radius: 0.8em;
+  background: rgba(200, 149, 60, 0.12);
+  box-shadow: inset 0 0 0 0.09em rgba(176, 131, 46, 0.32);
+  font-size: 0.88em;
+  line-height: 1.38;
+}
+.nv-root .chest-odds .co-guar b {
+  display: block;
+  margin-bottom: 0.15em;
+  color: #6a4a14;
+}
+.nv-root .chest-odds .co-sec {
+  margin: 0.95em 0 0.4em;
+  font-size: 0.78em;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7a6448;
+}
+.nv-root .chest-odds .co-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+.nv-root .chest-odds .co-row {
+  display: grid;
+  grid-template-columns: 1.6em minmax(0, 1fr) 4.2em;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.9em;
+}
+.nv-root .chest-odds .co-row .co-ic {
+  display: grid;
+  place-items: center;
+}
+.nv-root .chest-odds .co-row .co-ic .aico {
+  width: 1.4em;
+  height: 1.4em;
+}
+.nv-root .chest-odds .co-dot {
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.1em rgba(255, 255, 255, 0.45);
+}
+.nv-root .chest-odds .co-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  min-width: 0;
+}
+.nv-root .chest-odds .co-bar {
+  height: 0.4em;
+  border-radius: 99px;
+  background: rgba(120, 90, 60, 0.13);
+  overflow: hidden;
+}
+.nv-root .chest-odds .co-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--c, #8a7350);
+}
+.nv-root .chest-odds .co-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  color: var(--ink);
+}
+.nv-root .chest-odds .co-fine {
+  margin-top: 0.9em;
+  font-size: 0.78em;
+  line-height: 1.42;
+  color: var(--ink-soft);
+}
+.nv-root .chest-odds .co-fine p {
+  margin: 0.32em 0;
+}
+.nv-root .chest-odds .co-buy {
+  margin-top: 0.8em;
+}

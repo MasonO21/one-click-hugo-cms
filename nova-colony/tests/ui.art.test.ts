@@ -323,14 +323,15 @@ describe('ui art wiring helpers', () => {
     game.sys.economy.add('fiber', 100, 'gather');
     expect(game.sys.crafting.craft('r_bandage')).not.toBeNull();
     step(10);
-    game.sys.player.addItem('supply_crate');
-    expect(game.sys.player.useItem('supply_crate')).toBe(true);
+    // (crates open in the chest scene instead of a toast; consumables such as a research chip keep theirs)
+    game.sys.player.addItem('research_chip');
+    expect(game.sys.player.useItem('research_chip')).toBe(true);
     const crafted = seen.find((t) => t.startsWith('Crafted'));
     const opened = seen.find((t) => t.includes('opened!'));
     expect(crafted, seen.join(' | ')).toBeDefined();
     expect(opened, seen.join(' | ')).toBeDefined();
     expect(itemToast(crafted!, data)?.icon).toBe(itemArt('bandage'));
-    expect(itemToast(opened!, data)?.icon).toBe(itemArt('supply_crate'));
+    expect(itemToast(opened!, data)?.icon).toBe(itemArt('research_chip'));
   });
 
   it('a vehicle reward carries the vehicle thumbnail, an unknown one keeps its emoji', () => {

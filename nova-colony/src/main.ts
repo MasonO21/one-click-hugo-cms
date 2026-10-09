@@ -64,7 +64,8 @@ async function boot() {
     const dt = Math.min(0.1, (t - last) / 1000);
     last = t;
     guarded('game', () => game.update(dt));
-    guarded('render', () => renderer.render(dt));
+    // a full-screen scene (the chest opening) hides the world: no need to draw it underneath
+    if (!ui.coversWorld()) guarded('render', () => renderer.render(dt));
     guarded('ui', () => ui.update(dt));
     guarded('audio', () => audio.update(dt));
     autoQuality.update(dt); // guards itself (no closure per frame)

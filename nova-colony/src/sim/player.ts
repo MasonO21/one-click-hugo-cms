@@ -1012,6 +1012,8 @@ export class PlayerSystem extends System {
     const def = g.data.item(itemId);
     if (!def?.use || (p.items[itemId] ?? 0) <= 0 || this.isDown()) return false;
     const use = def.use;
+    // a Nova chest: rolled, granted and shown in the opening scene by sim/chests.ts
+    if (use.chest) return g.sys.chests.open(itemId) != null;
     if (use.heal && !use.reward && p.hp >= this.maxHp() - 1e-6) {
       g.toast('❤️ Already at full health', 'info');
       return false;
@@ -1021,7 +1023,10 @@ export class PlayerSystem extends System {
       const healed = this.heal(use.heal);
       g.bus.emit('ui:float', { text: `+${Math.round(healed || use.heal)} HP`, x: p.x, z: p.z, color: '#6be37a' });
     }
-    if (use.reward) {
+    if (use.reward && def.category === 'crate') {
+      // granted here, exactly once; the chest scene's crate variant shows what came out ('chest:opened')
+      g.sys.chests.openCrate(def.id, use.reward);
+    } else if (use.reward) {
       g.bus.emit('sfx', { id: 'crate_open' });
       g.toast(`${def.icon} ${def.name} opened!`, 'reward');
       g.grant(use.reward, 'crate', p.x, p.z, def.id);

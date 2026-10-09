@@ -8,19 +8,20 @@ import type { ProductDef } from '../../data/schema';
 import { fmtHMS } from '../logic/time';
 import { adButton, bigNum, btn, emptyState, rewardChips, tabs } from '../widgets';
 import { fill, h } from '../dom';
-import { artOrEmoji, hudArt, resIcon, rewardArt, shopArt } from '../art';
+import { artOrEmoji, hudArt, itemArt, resIcon, rewardArt, shopArt } from '../art';
 import { bundleArt, novaShopSignature, novaShopTab, wardrobeCta } from './shop/novaShopTab';
 import { closeConfirm, confirmOpen, cosmeticCard, type CardHandlers } from './wardrobe/cards';
 import { sortCosmetics } from '../logic/wardrobe';
+import { chestsBadge, chestsSignature, chestsTab } from '../shop/ChestsTab';
 
-type Tab = 'crystals' | 'packs' | 'nova' | 'vip' | 'season' | 'cosmetics';
+type Tab = 'chests' | 'crystals' | 'packs' | 'nova' | 'vip' | 'season' | 'cosmetics';
 
 const TAG_TEXT: Record<string, string> = { best_value: 'BEST VALUE', popular: 'POPULAR', limited: 'LIMITED', new: 'NEW' };
-const SECTION_ICON: Record<string, string> = { crystals: '💎', packs: '🎁', bundles: '📦', nova: '✨', vip: '👑', season: '🏆', cosmetics: '👕' };
+const SECTION_ICON: Record<string, string> = { chests: '🧰', crystals: '💎', packs: '🎁', bundles: '📦', nova: '✨', vip: '👑', season: '🏆', cosmetics: '👕' };
 
 export class ShopPanel extends Panel {
   readonly name = 'shop';
-  private tab: Tab = 'crystals';
+  private tab: Tab = 'chests';
   private busy = '';
   private acc = 0;
   private readonly cosHandlers: CardHandlers = {
@@ -53,7 +54,7 @@ export class ShopPanel extends Panel {
   override signature(): string {
     const lo = this.st.liveops;
     const crate = this.game.sys.liveops.freeCrateReady() ? 1 : 0;
-    return `${this.tab}|${lo.nova}|${lo.purchases.length}|${lo.vip.until}|${lo.cosmetics.owned.length}|${Object.values(lo.cosmetics.equipped).join(',')}|${crate}|${this.busy}|${lo.season.premium}${this.tab === 'nova' ? '|' + novaShopSignature(this.ctx) : ''}`;
+    return `${this.tab}|${this.tab === 'chests' ? chestsSignature(this.ctx) : ''}|${lo.nova}|${lo.purchases.length}|${lo.vip.until}|${lo.cosmetics.owned.length}|${Object.values(lo.cosmetics.equipped).join(',')}|${crate}|${this.busy}|${lo.season.premium}${this.tab === 'nova' ? '|' + novaShopSignature(this.ctx) : ''}`;
   }
 
   /** A Nova purchase confirmation is up: Android back closes it first. */
@@ -90,7 +91,13 @@ export class ShopPanel extends Panel {
     const wrap = h('div', { class: 'stack-v' });
     wrap.appendChild(
       tabs(
-        (['crystals', 'packs', 'nova', 'vip', 'season', 'cosmetics'] as Tab[]).map((id) => ({ id, icon: SECTION_ICON[id], label: id === 'vip' ? 'Colony Pass' : id === 'season' ? 'Season' : id === 'nova' ? 'Nova Shop' : id[0].toUpperCase() + id.slice(1) })),
+        (['chests', 'crystals', 'packs', 'nova', 'vip', 'season', 'cosmetics'] as Tab[]).map((id) => ({
+          id,
+          icon: SECTION_ICON[id],
+          art: id === 'chests' ? itemArt('chest_prospector') : undefined,
+          badge: id === 'chests' ? chestsBadge(this.ctx) : undefined,
+          label: id === 'vip' ? 'Colony Pass' : id === 'season' ? 'Season' : id === 'nova' ? 'Nova Shop' : id === 'chests' ? 'Caches' : id[0].toUpperCase() + id.slice(1),
+        })),
         this.tab,
         (id) => {
           this.tab = id as Tab;
@@ -99,7 +106,17 @@ export class ShopPanel extends Panel {
       ),
     );
     if (this.tab === 'crystals') wrap.appendChild(this.freeCrate());
-    if (this.tab === 'nova') wrap.appendChild(novaShopTab(this.ctx, () => this.card, () => this.rerender()));
+    if (this.tab === 'chests') {
+      wrap.appendChild(
+        chestsTab(this.ctx, {
+          goCrystals: () => {
+            this.tab = 'crystals';
+            this.rerender();
+          },
+          rerender: () => this.rerender(),
+        }),
+      );
+    } else if (this.tab === 'nova') wrap.appendChild(novaShopTab(this.ctx, () => this.card, () => this.rerender()));
     else if (this.tab === 'vip') wrap.appendChild(this.vip());
     else if (this.tab === 'season') wrap.appendChild(this.season());
     else if (this.tab === 'cosmetics') wrap.appendChild(this.cosmetics());

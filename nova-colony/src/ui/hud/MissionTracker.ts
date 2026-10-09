@@ -111,7 +111,7 @@ export class MissionTracker {
     }
     if (b.daily) this.offers.append(mk(rewardArt('daily_gift'), '🎁', 'Daily', () => this.ctx.open('daily')));
     if (b.spin) this.offers.append(mk(hudArt('spin'), '🎡', 'Spin', () => this.ctx.open('spin')));
-    if (b.crate) this.offers.append(mk(rewardArt('supply_crate'), '📦', 'Crate', () => this.ctx.open('shop')));
+    if (b.crate) this.offers.append(mk(rewardArt('supply_crate'), '📦', 'Crate', () => this.ctx.open('shop', { tab: 'crystals' })));
     // CSS turns 3+ pills into one row of round icons on phones (two rows of pills pushed the stack over the colony)
     this.offers.dataset.n = String(this.offers.childElementCount);
   }

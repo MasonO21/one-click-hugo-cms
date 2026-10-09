@@ -22,6 +22,7 @@ import './styles/journal.css';
 import './styles/wishes.css';
 import './styles/photo.css';
 import './styles/wardrobe.css';
+import './styles/chests.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -83,6 +84,8 @@ import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
 import { SHOW_ME_SECONDS, wishGuideTarget } from './logic/wishes';
 import { PhotoMode } from './photo/PhotoMode';
+import { ChestScene } from './chest/ChestScene';
+import { ChestOddsPanel } from './shop/ChestOddsPanel';
 import { planFlush, toastRoute, type HeldToast } from './logic/toasts';
 
 /** Minimum gap between production floats of the same resource. */
@@ -111,6 +114,8 @@ export class UI {
   private notifyPrompt!: NotifyPrompt;
   private threats!: Threats;
   private photo!: PhotoMode;
+  /** The Nova chest / crate opening scene (ui/chest): full screen, above everything. */
+  private chestScene!: ChestScene;
   private fpsBox: HTMLElement | null = null;
   private stickHint!: HTMLElement;
 
@@ -235,7 +240,10 @@ export class UI {
       },
     });
 
-    el.append(inputLayer, stick, this.stickHint, world, this.hud.el, this.bar.el, this.bar.canvas, this.toasts.el, panelLayer, modalLayer, this.fly.el, this.guide.ringLayer, this.photo.el);
+    // the chest opening scene: its own full-screen layer over everything (panels and the HUD wait hidden under it)
+    this.chestScene = new ChestScene({ game: this.game, ctx, onActive: (on) => this.onChestScene(on) });
+
+    el.append(inputLayer, stick, this.stickHint, world, this.hud.el, this.bar.el, this.bar.canvas, this.toasts.el, panelLayer, modalLayer, this.fly.el, this.guide.ringLayer, this.photo.el, this.chestScene.el);
 
     this.input = new InputController(this.game, inputLayer, stick, stick.firstElementChild as HTMLElement, {
       onTap: (x, y) => this.onWorldTap(x, y),
@@ -327,6 +335,7 @@ export class UI {
     reg('expeditions', (c) => new ExpeditionsPanel(c));
     reg('journal', (c) => new JournalPanel(c));
     reg('wardrobe', (c) => new WardrobePanel(c));
+    reg('chest_odds', (c) => new ChestOddsPanel(c));
   }
 
   // ================================================================== services
@@ -392,7 +401,7 @@ export class UI {
    */
   private simToast(text: string, kind: ToastKind, icon?: string, open?: string): void {
     const reveal = this.revealing();
-    if ((kind === 'info' || kind === 'success' || kind === 'reward') && (reveal || this.panels?.anyModal())) {
+    if ((kind === 'info' || kind === 'success' || kind === 'reward') && (reveal || this.panels?.anyModal() || this.chestScene?.active)) {
       this.deferredToasts = this.deferredToasts.filter((d) => d.text !== text);
       this.deferredToasts.push({ text, kind, icon, open, at: performance.now(), keep: reveal });
       if (this.deferredToasts.length > 6) this.deferredToasts.shift();
@@ -475,7 +484,7 @@ export class UI {
 
   /** The player has something open (any panel or drawer, a placement, build mode, Photo Mode): popups should wait. */
   private screenBusy(): boolean {
-    return this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play' || this.photo.active;
+    return this.panels.anyOpen() || this.build.active || this.game.view.mode !== 'play' || this.photo.active || !!this.chestScene?.active;
   }
 
   /** Menu › Photo: leave whatever was open (menu drawer, build mode, a selection) and take the camera. */
@@ -501,13 +510,27 @@ export class UI {
     if (!on) this.onPanelsChanged();
   }
 
+  /**
+   * The chest scene starts / ends: the rest of the UI hides under it (styles/chests.css `data-chest`), the joystick lets
+   * go, the colony pauses (no raid starts behind a full-screen overlay) and the 3D view drops its frame rate. The
+   * toasts and cards its rewards raised wait and follow when it closes.
+   */
+  private onChestScene(on: boolean): void {
+    if (on) this.root.dataset.chest = '1';
+    else delete this.root.dataset.chest;
+    this.input.reset();
+    this.game.setPaused(on);
+    this.game.view.panelOpen = on || this.panels.anyCovering();
+    if (!on) this.onPanelsChanged();
+  }
+
   private flushToasts(): void {
     if (!this.deferredToasts.length) return;
     // a toast that opens a panel ("12 achievements already earned!") is worth waiting for through a stack of cards,
     // and keeps waiting while a sheet is open (it would sit over the sheet's buttons)
     const panels = this.panels;
     const plan = planFlush(this.deferredToasts, performance.now(), {
-      modal: panels.anyModal(),
+      modal: panels.anyModal() || !!this.chestScene?.active,
       revealing: this.revealing(),
       anyOpen: panels.anyOpen(),
       isOpen: (p) => panels.isOpen(p),
@@ -592,7 +615,7 @@ export class UI {
    */
   /** Game-event toast: shown at once right after the player's own tap, otherwise held while a modal is up. */
   private eventToast(text: string, kind?: ToastKind, icon?: string, open?: string): void {
-    if (performance.now() - this.lastClick.t < 1500 && !this.revealing()) this.showToast(text, kind, icon, open);
+    if (performance.now() - this.lastClick.t < 1500 && !this.revealing() && !this.chestScene?.active) this.showToast(text, kind, icon, open);
     else this.simToast(text, kind ?? 'info', icon, open);
   }
 
@@ -626,6 +649,9 @@ export class UI {
       this.eventToast(rich.text, e.kind, rich.icon, e.open);
     });
     bus.on('ui:float', (e) => this.floats.spawn(e.text, e.x, e.z, e.color, e.big));
+    // Nova chests and inventory crates: the opening scene (raised before the grants, filled once they are in)
+    bus.on('chest:opening', () => this.chestScene.prepare());
+    bus.on('chest:opened', (e) => this.chestScene.show(e));
     wireHapticFx(bus, (k) => this.haptic(k));
     bus.on('ui:open', (e) => {
       if (e.panel === 'daily' && (e.arg as { auto?: boolean } | undefined)?.auto) this.autoDaily(0);
@@ -766,6 +792,7 @@ export class UI {
     // every crate (free, ad, inventory) opens a "what you got" reward card; inventory crates show their own art
     bus.on('reward:granted', (e) => {
       if (e.source !== 'crate') return;
+      if (e.item && g.data.item(e.item)?.category === 'crate') return; // the chest scene shows what came out
       const d = e.item && e.item !== 'supply_crate' ? g.data.item(e.item) : undefined;
       if (d) this.open('reward', { title: `${d.name}!`, reward: e.reward, icon: itemArt(d.id) ?? d.icon });
       else this.open('reward', { title: 'Supply crate!', reward: e.reward, icon: rewardArt('supply_crate') ?? '📦' });
@@ -950,7 +977,11 @@ export class UI {
 
   private shortcut(e: KeyboardEvent): boolean {
     if (e.ctrlKey || e.metaKey || e.altKey) return false;
-    // Photo Mode keeps every key (no panel may open under it, nobody walks off); Escape steps back
+    // the chest scene and Photo Mode keep every key (no panel may open under them, nobody walks off); Escape steps back
+    if (this.chestScene.active) {
+      if (e.code === 'Escape') this.back();
+      return true;
+    }
     if (this.photo.active) {
       if (e.code === 'Escape') this.back();
       return true;
@@ -1008,6 +1039,7 @@ export class UI {
   back(): boolean {
     const sel = this.game.view.selection;
     const action = backAction({
+      chestScene: this.chestScene.active,
       photoMode: this.photo.active,
       panelOpen: this.panels.anyOpen(),
       // a queued card about to follow the one closing, or the tier-up card after the reveal: stay in the game
@@ -1017,6 +1049,9 @@ export class UI {
       hasSelection: sel.kind !== null,
     });
     switch (action) {
+      case 'chest':
+        this.chestScene.back(); // skip to everything revealed, then close
+        return true;
       case 'photo':
         return this.photo.back(); // the preview closes first, then Photo Mode ends
       case 'panel':
@@ -1117,6 +1152,11 @@ export class UI {
     const st = this.renderer.stats();
     const g = this.game;
     this.fpsBox.textContent = `${st.fps} fps · ${st.drawCalls} calls · ${(st.triangles / 1000).toFixed(0)}k tris\n${g.state.buildings.list.length} buildings · ${g.state.colonists.list.length} colonists · ${g.state.combat.aliens.length} aliens`;
+  }
+
+  /** A full-screen scene (the chest opening) hides the 3D world: main.ts skips drawing it meanwhile. */
+  coversWorld(): boolean {
+    return !!this.chestScene?.covering();
   }
 
   /** Expose a reward popup (used by tests / dev tools). */

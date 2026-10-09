@@ -230,7 +230,8 @@ export const SEASON: SeasonDef = {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Daily login (7 days, matches the brief: resources → crafting mats → Nova → colonist → defense crate → Nova → legendary)
+// Daily login (7 days, matches the brief: resources → crafting mats → Nova → colonist → defense crate → Nova → legendary,
+// with an Explorer's Case on day 7 so free players open caches too)
 // ---------------------------------------------------------------------------------------------
 
 export const DAILY_REWARDS: Reward[] = [
@@ -240,7 +241,7 @@ export const DAILY_REWARDS: Reward[] = [
   { colonist: 'rare', resources: { food: 100 } },
   { items: { defense_crate: 2 }, resources: { stone: 200 } },
   { nova: 40 },
-  { nova: 60, colonist: 'legendary', boost: { kind: 'production', mult: 2, minutes: 30 }, items: { mystery_crate: 2 } },
+  { nova: 60, colonist: 'legendary', boost: { kind: 'production', mult: 2, minutes: 30 }, items: { mystery_crate: 2, chest_explorer: 1 } },
 ];
 
 export const SPIN_SEGMENTS: SpinSegment[] = [

@@ -148,7 +148,8 @@ export const EVENT_SOUNDS: EventSoundTable = {
   'iap:purchased': () => plain('reward'),
 
   // rewards
-  'reward:granted': () => plain('reward'),
+  // chests and inventory crates open in the chest scene, which plays its own drop / open / reveal sounds
+  'reward:granted': (p) => (p.source === 'chest' || (p.source === 'crate' && p.item) ? null : plain('reward')),
   'daily:claimed': () => plain('reward'),
   'offline:claimed': () => plain('reward'),
   'vehicle:unlocked': () => plain('reward'),

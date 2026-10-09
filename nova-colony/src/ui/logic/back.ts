@@ -2,9 +2,14 @@
  * What "back" does (Android back button / gesture, and Escape): undo the most specific thing on screen first.
  * 'none' means the game is at rest, so the platform may send the app to the background.
  */
-export type BackAction = 'photo' | 'panel' | 'card' | 'build' | 'selection' | 'none';
+export type BackAction = 'chest' | 'photo' | 'panel' | 'card' | 'build' | 'selection' | 'none';
 
 export interface BackState {
+  /**
+   * The chest opening scene is up: it covers everything, so the press is its own: the reveal skips to the end first,
+   * then the scene closes (ui/chest/logic.ts `chestBack`).
+   */
+  chestScene?: boolean;
   /**
    * Photo Mode is up: it covers everything (panels that opened meanwhile wait hidden under it), so the press is
    * its own: the preview closes first, then the mode ends (logic/photo.ts `photoBack`).
@@ -26,6 +31,7 @@ export interface BackState {
 }
 
 export function backAction(s: BackState): BackAction {
+  if (s.chestScene) return 'chest';
   if (s.photoMode) return 'photo';
   if (s.panelOpen || s.modalPending) return 'panel';
   if (s.cardShown) return 'card';
