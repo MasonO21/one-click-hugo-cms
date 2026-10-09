@@ -361,6 +361,8 @@ export interface LiveOpsState {
   freeCrateAt: number;
   /** Rare merchant / limited offers seen. */
   offersSeen: string[];
+  /** Id of the last "What's new" card shown (data/news.ts); '' = none yet. */
+  newsSeen: string;
 }
 
 /** A generated Frontier site (post-Titanium): where a frontier squad is heading or has been. */
@@ -593,6 +595,7 @@ export function createInitialState(seed: number, now: number): GameState {
       cosmetics: { owned: [], equipped: {} },
       freeCrateAt: 0,
       offersSeen: [],
+      newsSeen: '',
     },
     expeditions: { list: [], nextId: 1, launched: 0, collected: 0, frontier: { charted: [], signal: 0, claimed: [], announced: false } },
     achievements: { unlocked: {}, claimed: {} },

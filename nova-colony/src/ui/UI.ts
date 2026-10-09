@@ -26,6 +26,7 @@ import './styles/wardrobe.css';
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
 import type { Reward } from '../data/schema';
+import { NEWS } from '../data/news';
 import type { Selection } from '../core/view';
 import { dateKey, fmt } from '../core/format';
 import { reducedMotion } from '../core/motion';
@@ -452,6 +453,25 @@ export class UI {
 
   /** performance.now() of the last frame the screen was busy (see autoDaily: popups wait for a quiet moment). */
   private busyAt = 0;
+
+  private newsChecked = false;
+  /**
+   * One "What's new" card per update (data/news.ts) for players who updated: at a quiet moment, never mid-raid.
+   * Colonies in their first ten minutes just mark it seen; they discover everything as they go.
+   */
+  private maybeShowNews(): void {
+    const g = this.game;
+    const lo = g.state.liveops;
+    if (lo.newsSeen === NEWS.id || g.fresh || g.state.playTime < 600) {
+      lo.newsSeen = NEWS.id;
+      this.newsChecked = true;
+      return;
+    }
+    if (this.screenBusy() || performance.now() - this.busyAt < 4000 || g.state.combat.phase === 'attack') return;
+    this.newsChecked = true;
+    lo.newsSeen = NEWS.id;
+    this.panels.open('celebrate', { title: NEWS.title, icon: '✨', text: NEWS.text, notes: NEWS.items.map((i) => ({ icon: i.icon, text: i.text })), ok: 'Take a look', quiet: true });
+  }
 
   /** The player has something open (any panel or drawer, a placement, build mode, Photo Mode): popups should wait. */
   private screenBusy(): boolean {
@@ -1023,6 +1043,7 @@ export class UI {
   update(dt: number): void {
     if (!this.root) return;
     if (this.screenBusy()) this.busyAt = performance.now();
+    if (!this.newsChecked) safe('ui news', () => this.maybeShowNews());
     if (this.photo.active) safe('ui photo', () => this.photo.update(dt));
     else safe('ui input', () => this.input.update(dt));
     safe('ui consent', () => this.consent.update(dt));

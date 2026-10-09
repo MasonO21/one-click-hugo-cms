@@ -27,6 +27,8 @@ export interface CelebrateArg {
   tier?: number;
   /** "Newly available" list: plain text, or a building / vehicle with its thumbnail. */
   unlocks?: (string | UnlockEntry)[];
+  /** A short wrapped list of notes (icon + sentence), e.g. the "What's new" card. */
+  notes?: { icon: string; text: string }[];
   /** Tier celebration: what the tier also opens up but only after research (shown muted under "Research to unlock"). */
   researchUnlocks?: UnlockEntry[];
   big?: boolean;
@@ -98,6 +100,7 @@ export class CelebratePanel extends Panel {
     else main.appendChild(h('div', { class: 'cb-burst' }, h('div', { class: 'cb-rays' }), h('div', { class: 'cb-ic', text: a.icon ?? (tier ? '🏰' : '🎉') })));
     main.appendChild(h('h2', { class: 'cb-title', text: a.title }));
     if (a.text) main.appendChild(h('div', { class: 'cb-text', text: a.text }));
+    if (a.notes?.length) main.appendChild(h('ul', { class: 'cb-notes' }, ...a.notes.map((n) => h('li', null, h('span', { class: 'cb-note-ic', text: n.icon }), h('span', { class: 'cb-note-tx', text: n.text })))));
     if (a.unlocks?.length) {
       main.appendChild(h('div', { class: 'mute small center', text: 'Newly available:' }));
       const chips = h('div', { class: 'chips center-chips unlocks' });
