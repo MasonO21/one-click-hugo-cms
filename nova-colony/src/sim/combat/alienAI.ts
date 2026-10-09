@@ -21,6 +21,8 @@ import type { TurretEntry } from './buildingIndex';
 export class AlienAI {
   /** Reused neighbour buffer for separation queries. */
   private readonly near: Alien[] = [];
+  /** Invasion queens that already announced their summons (the wave counter rises when they do). */
+  private readonly summoned = new Set<number>();
 
   constructor(private readonly ctx: CombatContext) {}
 
@@ -101,6 +103,11 @@ export class AlienAI {
         hpScale: a.wild ? 1 : ctx.hpScale,
       });
       if (m && !a.wild) c.waveTotal = (c.waveTotal ?? 0) + 1;
+    }
+    // the first summons of an invasion queen explains why "aliens remaining" just went up
+    if (!a.wild && !this.summoned.has(a.id)) {
+      this.summoned.add(a.id);
+      ctx.game.toast(`The ${def.name} is summoning ${minion.name.toLowerCase()}s. Take her down first!`, 'warning', '👑');
     }
   }
 

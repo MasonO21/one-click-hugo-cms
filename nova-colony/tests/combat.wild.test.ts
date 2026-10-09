@@ -81,6 +81,19 @@ describe('wild aliens', () => {
     expect(game.sys.combat.wildNear(HX, HZ, 20)).toBe(0);
   });
 
+  it('an invasion queen announces her first summons once (that is why the wave count rises); wild queens stay quiet', () => {
+    const { game, step } = makeGame();
+    const toasts: string[] = [];
+    const orig = game.toast.bind(game);
+    game.toast = ((text: string, ...rest: unknown[]) => { toasts.push(text); return (orig as (...a: unknown[]) => unknown)(text, ...rest); }) as typeof game.toast;
+    game.sys.combat.spawnWild('t_queen', 1, HX, HZ);
+    game.sys.combat.spawnInvader('t_queen', HX + 30, HZ + 30);
+    step(6.5); // three summons each
+    const told = toasts.filter((t) => t.includes('summoning'));
+    expect(told).toHaveLength(1);
+    expect(told[0]).toContain('Test Queen');
+  });
+
   it('wild swarm queens spawn wild minions that share their home', () => {
     const t = makeGame();
     const { game, step } = t;
