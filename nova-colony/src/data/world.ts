@@ -10,13 +10,13 @@ export const BIOMES: BiomeDef[] = [
     id: 'crash_valley', name: 'Crash Valley', description: 'Peaceful grasslands where your pod came down. Gentle hills, bubble trees and a scattering of supply drops.', ground: ['#6fbf5a', '#9bd66b'], tint: '#bfe8ff',
     unlock: {}, center: { angle: 0, dist: 0 }, size: 1.6, relief: 1.5, mood: 'calm',
     nodes: [{ node: 'tree_round', density: 0.05 }, { node: 'rock', density: 0.025 }, { node: 'bush_berry', density: 0.02 }, { node: 'fiber_grass', density: 0.03 }, { node: 'boulder_big', density: 0.004 }],
-    props: ['grass', 'flower', 'pebble', 'meadow_tuft', 'bush_small', 'meadow_tuft', 'flower'], pois: [{ poi: 'supply_cache', count: 4 }, { poi: 'hidden_stash', count: 2 }, { poi: 'abandoned_cabin', count: 1 }, { poi: 'beacon', count: 1 }],
+    props: ['grass', 'flower', 'pebble', 'meadow_tuft', 'bush_small', 'meadow_tuft', 'flower', 'crystal_shard'], pois: [{ poi: 'supply_cache', count: 4 }, { poi: 'hidden_stash', count: 2 }, { poi: 'abandoned_cabin', count: 1 }, { poi: 'beacon', count: 1 }],
   },
   {
     id: 'pinewood_forest', name: 'Pinewood Forest', description: 'Towering alien pines, glowing berries, abandoned cabins and the odd survivor camp.', ground: ['#3f8a4a', '#5aa35a'], tint: '#cde8c8',
     unlock: {}, center: { angle: 135, dist: 0.62 }, size: 1, relief: 4, mood: 'warm',
     nodes: [{ node: 'tree_pine', density: 0.12 }, { node: 'tree_ancient', density: 0.006 }, { node: 'bush_berry', density: 0.03 }, { node: 'bush_glow', density: 0.012 }, { node: 'rock', density: 0.02 }, { node: 'fiber_grass', density: 0.015 }],
-    props: ['fern', 'mushroom', 'log', 'fern', 'bush_small', 'mushroom', 'grass'], pois: [{ poi: 'survivor_camp', count: 2 }, { poi: 'supply_cache', count: 3 }, { poi: 'abandoned_cabin', count: 3 }, { poi: 'hidden_stash', count: 2 }, { poi: 'beacon', count: 1 }],
+    props: ['fern', 'mushroom', 'log', 'fern', 'bush_small', 'mushroom', 'grass', 'crystal_shard'], pois: [{ poi: 'survivor_camp', count: 2 }, { poi: 'supply_cache', count: 3 }, { poi: 'abandoned_cabin', count: 3 }, { poi: 'hidden_stash', count: 2 }, { poi: 'beacon', count: 1 }],
   },
   {
     id: 'crystal_canyon', name: 'Crystal Canyon', description: 'Glittering canyons humming with alien crystals. The walls sing when the wind blows.', ground: ['#8a7bc4', '#b6a8e8'], tint: '#e3d8ff',

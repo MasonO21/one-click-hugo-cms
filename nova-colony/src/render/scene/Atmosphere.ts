@@ -70,8 +70,8 @@ export const SKY_TINT: Record<string, string> = {
  * How far the horizon band / the distance fog lean toward the biome haze by day. Past halfway on
  * purpose: a desert's orange haze mixed evenly with the blue key fog averages out to flat grey.
  */
-const SKY_TINT_HOR = 0.6;
-const SKY_TINT_FOG = 0.55;
+const SKY_TINT_HOR = 0.72;
+const SKY_TINT_FOG = 0.58;
 /** The haze eases to a new biome's colour at this rate (1/s) instead of cutting at the border. */
 const SKY_TINT_RATE = 1.2;
 

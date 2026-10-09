@@ -90,13 +90,20 @@ function trunk(b: GeoBuilder, r: number, h: number, seg = 6, col = TRUNK, top = 
   b.cone(r * 1.6, r * 2.2, 0, r * 1.1, 0, col, seg, P({ shade: 0.05, flat: true }));
 }
 
-/** Glossy round fruit / berries scattered over a canopy (with a pale highlight). */
-function fruit(b: GeoBuilder, n: number, cx: number, cy: number, cz: number, rad: number, size: number, col: string, hi: string, seed = 0): void {
+/**
+ * Glossy round fruit / berries scattered over a canopy (with a pale highlight). `round` fruit (tree
+ * fruit, big enough to show its outline up close) are 20-tri blobs; small berries are 8-tri beads.
+ */
+function fruit(b: GeoBuilder, n: number, cx: number, cy: number, cz: number, rad: number, size: number, col: string, hi: string, seed = 0, round = true): void {
   for (let i = 0; i < n; i++) {
     const a = seed + i * 2.399;
     const h = ((i * 0.618 + seed * 0.37) % 1) * 1.3 - 0.55;
     const rr = rad * Math.sqrt(Math.max(0.15, 1 - h * h));
-    b.bead(size, cx + Math.cos(a) * rr, cy + h * rad, cz + Math.sin(a) * rr, col, P({ grad: hi }));
+    const x = cx + Math.cos(a) * rr;
+    const y = cy + h * rad;
+    const z = cz + Math.sin(a) * rr;
+    if (round) b.puff(size, x, y, z, col, 0, P({ grad: hi }));
+    else b.bead(size, x, y, z, col, P({ grad: hi }));
   }
 }
 
@@ -119,7 +126,7 @@ function berryBush(b: GeoBuilder, s: number, lo: string, hi: string, berries: nu
   leaf(b, 0.52 * s, 0.56 * s, 0.42 * s, 0.3 * s, lo, hi, 0, 0.9);
   leaf(b, 0.5 * s, -0.52 * s, 0.44 * s, -0.24 * s, lo, hi, 0, 0.9);
   if (near) leaf(b, 0.42 * s, -0.12 * s, 0.4 * s, 0.6 * s, lo, hi, 0, 0.9);
-  fruit(b, berries, 0, 0.6 * s, 0, 0.72 * s, 0.13 * s, berry, berryHi, 1.1);
+  fruit(b, berries, 0, 0.6 * s, 0, 0.72 * s, 0.13 * s, berry, berryHi, 1.1, false);
 }
 
 /** Node builders at unit scale. */
@@ -221,7 +228,11 @@ const NODES: Record<string, (b: GeoBuilder) => void> = {
     crystal(b, 0.14, 0.55, 0.42, 0.95, 0.12, CRYSTAL_PINK, 0.1, -0.45);
     crystal(b, 0.1, 0.4, 0.3, 0.8, -0.3, CRYSTAL, -0.2, -0.3);
   },
-  'rock~high': (b) => boulder(b, 0.92, ROCK_TITAN, 'moss'),
+  'rock~high': (b) => {
+    // windswept highland stone: no moss cushion, a tuft of hardy grass at its foot
+    boulder(b, 0.92, ROCK_TITAN, null);
+    for (let i = 0; i < 4; i++) b.cone(0.06, 0.45, 0.82 + (i % 2) * 0.12, 0.2, 0.3 - i * 0.14, '#6e8e48', 3, P({ rz: -0.3 + i * 0.12, grad: '#b8c870' }));
+  },
   ore_iron: (b) => {
     // silver-blue ore breaking through a grey stone (the Red Desert painting's glinting ore)
     boulder(b, 0.9, ['#6e6870', '#aaa2a4', '#78706e', '#b2a8a4'], null);
@@ -339,7 +350,7 @@ const PROPS: Record<string, (b: GeoBuilder) => void> = {
     b.gem(0.42, 0, 0.34, 0, '#245f30', 1, 0.08, P({ grad: '#6aa848', shade: 0.06, sy: 0.9 }));
     b.gem(0.3, 0.32, 0.26, 0.16, '#245f30', 0, 0.1, P({ grad: '#76b04e' }));
     b.gem(0.28, -0.3, 0.26, -0.12, '#245f30', 0, 0.1, P({ grad: '#76b04e' }));
-    fruit(b, 5, 0, 0.38, 0, 0.42, 0.08, BERRY, BERRY_HI, 0.7);
+    fruit(b, 5, 0, 0.38, 0, 0.42, 0.08, BERRY, BERRY_HI, 0.7, false);
   },
   pebble: (b) => {
     b.gem(0.17, 0, 0.1, 0, ROCK_LO, 0, 0.2, P({ sy: 0.65, grad: ROCK_HI }));
@@ -458,7 +469,11 @@ const PROPS: Record<string, (b: GeoBuilder) => void> = {
     b.lathe([0.24, 0, 0.2, 0.5, 0.1, 1.1, 0, 1.4], 0.4, 0, 0.2, '#96a2b0', 5, P({ grad: '#e6ecf4', shade: 0.06, flat: true }));
     b.box(0.05, 1.2, 0.05, 0, 1.0, 0.3, TITAN_GLOW, { slot: SLOT_GLOW });
   },
-  boulder: (b) => boulder(b, 1.3, ROCK_TITAN, 'moss'),
+  boulder: (b) => {
+    // a highland boulder with a weathered lichen patch (muted, not lime)
+    boulder(b, 1.3, ROCK_TITAN, null);
+    b.gem(0.7, -0.1, 1.6, 0.05, '#7c8a5e', 0, 0.12, P({ sy: 0.28, grad: '#a6b07a', shade: 0.06 }));
+  },
 };
 
 /**
@@ -474,7 +489,7 @@ const NODES_FAR: Record<string, (b: GeoBuilder) => void> = {
   'tree_round~fruit': (b) => {
     b.cyl(0.2, 0.28, 2.0, 0, 1.0, 0, TRUNK, 5, P({ grad: TRUNK_TOP }));
     leaf(b, 1.5, 0, 2.85, 0, '#33823a', '#bede52', 0);
-    fruit(b, 4, 0, 2.95, 0, 1.45, 0.16, BERRY, BERRY_HI, 0.4);
+    fruit(b, 4, 0, 2.95, 0, 1.45, 0.16, BERRY, BERRY_HI, 0.4, false);
   },
   'tree_round~tall': (b) => {
     b.cyl(0.16, 0.22, 1.3, 0, 0.65, 0, TRUNK_DARK, 5);
@@ -519,7 +534,7 @@ const NODES_FAR: Record<string, (b: GeoBuilder) => void> = {
     boulder(b, 0.92, ROCK_CRYSTAL, 'moss', 0);
     crystal(b, 0.14, 0.55, 0.42, 0.95, 0.12, CRYSTAL_PINK, 0.1, -0.45);
   },
-  'rock~high': (b) => boulder(b, 0.92, ROCK_TITAN, 'moss', 0),
+  'rock~high': (b) => boulder(b, 0.92, ROCK_TITAN, null, 0),
   ore_iron: (b) => {
     boulder(b, 0.9, ['#6e6870', '#aaa2a4', '#78706e', '#b2a8a4'], null, 0);
     for (let i = 0; i < 3; i++) b.gem(0.24, Math.cos(i * 2.1) * 0.6, 0.64, Math.sin(i * 2.1) * 0.6, i === 0 ? '#9a5a40' : '#7088b0', 0, 0.15, P({ grad: '#d6e4f6' }));
@@ -597,6 +612,25 @@ export function nodeVariant(model: string, def: string, region: string | undefin
         case 'titanium_highlands': return 'rock~high';
         default: return 'rock';
       }
+    default:
+      return model;
+  }
+}
+
+/**
+ * The look drawn at a quality level. Low quality folds the shape variants that grow side by side
+ * (fruit / tall bubble trees, slim pines) back into their base look, so the variety costs no extra
+ * instanced batches (draw calls) there; biome looks (desert / snow boulders, marsh trees, ancient
+ * pines, glowberries) never share a screen with their base, so they stay.
+ */
+export function nodeLookAt(model: string, quality: string): string {
+  if (quality !== 'low') return model;
+  switch (model) {
+    case 'tree_round~fruit':
+    case 'tree_round~tall':
+      return 'tree_round';
+    case 'tree_pine~slim':
+      return 'tree_pine';
     default:
       return model;
   }

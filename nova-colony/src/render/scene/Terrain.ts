@@ -39,12 +39,12 @@ interface GroundPaint {
 export const GROUND_PAINT: Record<string, GroundPaint> = {
   crash_valley: { low: '#4fa646', high: '#8cc84c', warm: '#b8d254', cool: '#38925a', bloom: 1 },
   pinewood_forest: { low: '#356f38', high: '#5e9040', warm: '#98a446', cool: '#285e44', bloom: 0.4 },
-  crystal_canyon: { low: '#b088c4', high: '#8eaa62', warm: '#aec06c', cool: '#9884d4', bloom: 0.35 },
+  crystal_canyon: { low: '#aa8cbe', high: '#8eaa62', warm: '#94b45c', cool: '#9884d4', bloom: 0.35 },
   red_desert: { low: '#d27844', high: '#eeaa6c', warm: '#f6c086', cool: '#be6446', bloom: 0.05 },
   toxic_marsh: { low: '#557e38', high: '#86a848', warm: '#a8be56', cool: '#40704a', bloom: 0.3 },
   frozen_ridge: { low: '#cddcee', high: '#f4f8fd', warm: '#fffaf0', cool: '#b8cce6', bloom: 0 },
   alien_ruins: { low: '#5e8c5e', high: '#94b672', warm: '#acc27e', cool: '#76809e', bloom: 0.55 },
-  titanium_highlands: { low: '#869e7c', high: '#c0ccb6', warm: '#d2d6ac', cool: '#8ea2b4', bloom: 0.35 },
+  titanium_highlands: { low: '#7e9a70', high: '#b6c4ac', warm: '#a8be78', cool: '#8ea2b4', bloom: 0.35 },
 };
 /**
  * Worn ground around buildings: the biome colour is pulled this far toward its trodden version
@@ -70,6 +70,8 @@ const CONTACT_SHADE = 0.2;
 const GROUND_DESAT = 0.0;
 const GROUND_TINT = new THREE.Color(1.03, 1.01, 0.94);
 const GROUND_VALUE = 1.0;
+/** Regions whose pools are the painting's glowing lime-green toxic water. */
+export const TOXIC_WATER: ReadonlySet<string> = new Set(['toxic_marsh']);
 /** Flower specks fade out between these view distances (world units) so they never shimmer far away. */
 export const BLOOM_NEAR = 26;
 export const BLOOM_FAR = 46;
@@ -78,15 +80,18 @@ const WATER_VERT = /* glsl */ `
   #include <fog_pars_vertex>
   uniform float uTime;
   attribute float aShore;
+  attribute float aToxic;
   varying vec3 vWorld;
   varying float vWave;
   varying float vShore;
+  varying float vToxic;
   void main() {
     vec3 p = position;
     float w = sin(p.x * 0.55 + uTime * 1.3) * 0.5 + sin(p.z * 0.7 - uTime * 1.1) * 0.5;
     p.y += w * 0.05;
     vWave = w;
     vShore = aShore;
+    vToxic = aToxic;
     vec4 wp = modelMatrix * vec4(p, 1.0);
     vWorld = wp.xyz;
     vec4 mvPosition = viewMatrix * wp;
@@ -96,8 +101,10 @@ const WATER_VERT = /* glsl */ `
 `;
 /**
  * Painted water: turquoise shallows -> blue depths by the depth below the surface (vShore, world
- * units, from the height field), a soft foam line that breathes along the shore contour, crossing ripple highlights and a few twinkling sun glints
- * (a hash grid, day only). Night darkens it to a moonlit blue.
+ * units, from the height field), a thin foam line that breathes along the shore contour (thin enough
+ * that a shallow marsh pool is water, not one sheet of foam), crossing ripple highlights and a few
+ * twinkling sun glints (a hash grid, day only). Night darkens it to a moonlit blue. Toxic Marsh
+ * pools (vToxic, per vertex) glow lime green like the painting and keep some of that glow at night.
  */
 const WATER_FRAG = /* glsl */ `
   #include <fog_pars_fragment>
@@ -105,24 +112,26 @@ const WATER_FRAG = /* glsl */ `
   varying vec3 vWorld;
   varying float vWave;
   varying float vShore;
+  varying float vToxic;
   float novaHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   void main() {
     float depth = vShore;
     vec3 c = mix(uShallow, uDeep, smoothstep(0.08, 1.1, depth));
+    c = mix(c, mix(vec3(0.62, 0.95, 0.18), vec3(0.26, 0.62, 0.12), smoothstep(0.05, 0.9, depth)), vToxic);
     c = mix(c, c * 1.08, 0.5 + 0.5 * vWave);
     float r1 = sin(vWorld.x * 1.9 + vWorld.z * 1.3 + uTime * 1.7);
     float r2 = sin(vWorld.x * 1.1 - vWorld.z * 2.3 - uTime * 1.2);
     float ripple = smoothstep(0.8, 0.96, r1 * r2);
     c = mix(c, uFoam, ripple * 0.35);
     float edge = depth + 0.035 * sin(uTime * 1.4 + vWorld.x * 0.9 + vWorld.z * 0.7);
-    float foam = 1.0 - smoothstep(0.02, 0.14, edge);
-    c = mix(c, uFoam, foam * 0.8);
+    float foam = 1.0 - smoothstep(0.012, 0.06, edge);
+    c = mix(c, mix(uFoam, vec3(0.86, 1.0, 0.6), vToxic), foam * 0.75);
     vec2 g = floor(vWorld.xz * 2.2);
     float tw = novaHash(g + floor(uTime * 1.5));
     float glint = step(0.986, tw) * (1.0 - uNight) * (1.0 - foam);
     c += vec3(glint * 0.9);
-    c *= 1.0 - uNight * 0.5;
-    c += vec3(0.02, 0.04, 0.08) * uNight;
+    c *= 1.0 - uNight * 0.5 * (1.0 - vToxic * 0.5);
+    c += vec3(0.02, 0.04, 0.08) * uNight * (1.0 - vToxic) + vec3(0.04, 0.1, 0.0) * uNight * vToxic;
     gl_FragColor = vec4(c, 0.86 + foam * 0.12);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -618,6 +627,7 @@ export class Terrain {
     for (let i = 0; i < W * W; i++) if (!Number.isNaN(level[i])) quads++;
     const pos = new Float32Array(quads * 4 * 3);
     const shoreAttr = new Float32Array(quads * 4);
+    const toxicAttr = new Float32Array(quads * 4);
     const idx = new Uint32Array(quads * 6);
     let v = 0;
     let k = 0;
@@ -633,6 +643,8 @@ export class Terrain {
       shoreAttr[base + 1] = y - this.heightOfVertex(cx + 1, cz);
       shoreAttr[base + 2] = y - this.heightOfVertex(cx, cz + 1);
       shoreAttr[base + 3] = y - this.heightOfVertex(cx + 1, cz + 1);
+      const toxic = TOXIC_WATER.has(g.regionIds[g.regionMap[i]] ?? '') ? 1 : 0;
+      toxicAttr[base] = toxicAttr[base + 1] = toxicAttr[base + 2] = toxicAttr[base + 3] = toxic;
       pos[v++] = x0; pos[v++] = y; pos[v++] = z0;
       pos[v++] = x0 + CELL; pos[v++] = y; pos[v++] = z0;
       pos[v++] = x0; pos[v++] = y; pos[v++] = z0 + CELL;
@@ -643,6 +655,7 @@ export class Terrain {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('aShore', new THREE.BufferAttribute(shoreAttr, 1));
+    geo.setAttribute('aToxic', new THREE.BufferAttribute(toxicAttr, 1));
     geo.setIndex(new THREE.BufferAttribute(idx, 1));
     geo.computeBoundingSphere();
     this.water = new THREE.Mesh(geo, this.waterMat);

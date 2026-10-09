@@ -33,7 +33,7 @@ import type { RenderContext } from '../core/context';
 import { sightTargets } from '../core/context';
 import { Batch, composeEuler, type BatchOpts } from '../core/Batch';
 import { ViewCull } from '../core/cull';
-import { nodeGeometry, nodeGeometryFar, propGeometry, nodeHeight, nodeChipColor, nodeVariant } from '../models/nature';
+import { nodeGeometry, nodeGeometryFar, propGeometry, nodeHeight, nodeChipColor, nodeVariant, nodeLookAt } from '../models/nature';
 import type { WorldGen, WorldNode } from '../../sim/world';
 import { CELL, HALF_WORLD, WORLD_CELLS } from '../../core/constants';
 import { clamp } from '../../core/math';
@@ -170,6 +170,8 @@ export class Nature {
   private dirty = true;
   private depletedCount = -1;
   private lastTerrain = -1;
+  /** Quality the batches were built at: LOD radii and low-quality look folding depend on it. */
+  private lastQuality = '';
   private readonly cull = new ViewCull(FRUSTUM_MARGIN, REBUILD_MOVE, REBUILD_TURN, REBUILD_RADIUS);
   private wobbles = new Map<number, Wobble>();
   /** Node indices drawn by the last rebuild (occlusion scan). */
@@ -362,7 +364,7 @@ export class Nature {
           if (d2 > drawR2) continue;
           const w = this.wobbles.get(i);
           if (depleted[i] !== undefined && !(w && w.pop)) continue;
-          const model = this.nodeModel[i];
+          const model = nodeLookAt(this.nodeModel[i], env.quality);
           const s = (n.scale || 1) * (data.node(n.def)?.scale ?? 1);
           const h = nodeHeight(model) * s;
           if (!cull.sphere(n.x, ctx.heightAt(n.x, n.z) + h * 0.5, n.z, Math.max(h * 0.6, 1.4 * s))) continue;
@@ -420,6 +422,11 @@ export class Nature {
     const env = ctx.env;
     if (env.terrainVersion !== this.lastTerrain) {
       this.lastTerrain = env.terrainVersion;
+      this.dirty = true;
+    }
+    // a quality switch (settings or the auto governor) refreshes the batches right away, not at the next 4 s refresh
+    if (env.quality !== this.lastQuality) {
+      this.lastQuality = env.quality;
       this.dirty = true;
     }
     this.timer += dt;

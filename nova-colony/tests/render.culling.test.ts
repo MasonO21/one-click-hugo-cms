@@ -151,6 +151,31 @@ describe('render culling', () => {
     expect(sightTargets(ctx, out)).toBe(0);
   });
 
+  it('Nature refreshes its batches as soon as the quality changes (low folds the side-by-side tree looks)', () => {
+    const game = new Game({ seed: 11, services: createMockServices() });
+    game.start();
+    const ctx = makeCtx(game);
+    ctx.env.quality = 'high';
+    const nature = new Nature(ctx);
+    aim(ctx, 0, 0, 0);
+    nature.update(1 / 60);
+    const variants = () => {
+      let n = 0;
+      ctx.scene.traverse((o) => {
+        const m = o as THREE.InstancedMesh;
+        if (m.isInstancedMesh && m.visible && m.count > 0) n++;
+      });
+      return n;
+    };
+    const high = variants();
+    // no camera move, no 4 s refresh: only the quality switch
+    ctx.env.quality = 'low';
+    nature.update(1 / 60);
+    const low = variants();
+    expect(low).toBeLessThan(high);
+    nature.dispose();
+  });
+
   it('Nature draws only nodes inside the camera frustum and re-culls when the camera turns', () => {
     const game = new Game({ seed: 11, services: createMockServices() });
     game.start();

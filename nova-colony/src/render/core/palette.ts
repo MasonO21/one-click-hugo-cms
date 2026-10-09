@@ -132,6 +132,19 @@ export function tierStyle(def: TierDef): TierStyle {
 
 const lookCache = new Map<string, TierStyle>();
 
+/**
+ * Themes whose point is the light after dark: their glow strips (TierStyle.accent, drawn in the glow
+ * slot from Steel up) take this colour almost fully instead of the gentle accent lean, so the
+ * Bioluminescent Night really glows teal, Neon Night magenta, and so on.
+ */
+export const THEME_GLOW: Record<string, string> = {
+  theme_biolume: '#3ee8c8',
+  theme_neon_night: '#ff5ad0',
+  theme_aurora: '#7be0c8',
+  theme_starfall: '#f2dc9a',
+  theme_titanium_dawn: '#46d8e8',
+};
+
 function cloneStyle(base: TierStyle, look: string): TierStyle {
   const s: TierStyle = { ...base, look };
   for (const k of Object.keys(s) as (keyof TierStyle)[]) {
@@ -162,7 +175,9 @@ export function themedStyle(base: TierStyle, theme: LookTint | null | undefined)
   s.roofEdge.lerp(a, 0.5);
   s.stripe.lerp(a, 0.65);
   s.trim.lerp(a, 0.28);
-  s.accent.lerp(a, 0.45);
+  const glow = THEME_GLOW[theme.id];
+  if (glow) s.accent.lerp(col(glow, glow), 0.85);
+  else s.accent.lerp(a, 0.45);
   s.floorAlt.lerp(c, 0.12);
   lookCache.set(key, s);
   return s;

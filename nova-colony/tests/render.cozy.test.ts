@@ -12,8 +12,8 @@ import type { Env, RenderContext } from '../src/render/core/context';
 import { Buildings } from '../src/render/actors/Buildings';
 import { CENTER_CELL } from '../src/core/constants';
 import { buildModel } from '../src/render/models/spec';
-import { tierStyle, themedStyle, skinnedStyle } from '../src/render/core/palette';
-import { nodeVariant, baseModel, nodeGeometry, nodeGeometryFar, nodeHeight, nodeChipColor, KNOWN_NODE_MODELS, NODE_FAR_MODELS, KNOWN_PROP_MODELS } from '../src/render/models/nature';
+import { tierStyle, themedStyle, skinnedStyle, THEME_GLOW } from '../src/render/core/palette';
+import { nodeVariant, nodeLookAt, baseModel, nodeGeometry, nodeGeometryFar, nodeHeight, nodeChipColor, KNOWN_NODE_MODELS, NODE_FAR_MODELS, KNOWN_PROP_MODELS } from '../src/render/models/nature';
 import { GROUND_PAINT, patchBloom, BLOOM_NEAR, BLOOM_FAR } from '../src/render/scene/Terrain';
 import { ThemeFx, THEME_FX_COUNT, FX_STYLES, THEME_FX_COLORS } from '../src/render/fx/ThemeFx';
 import { createDataRegistry } from '../src/data';
@@ -307,5 +307,34 @@ describe('faceted nature primitives', () => {
     expect(tris('tree_pine')).toBeLessThanOrEqual(280);
     expect(tris('rock')).toBeLessThanOrEqual(180);
     expect(tris('bush')).toBeLessThanOrEqual(240);
+  });
+});
+
+describe('night-glow themes', () => {
+  it('glow themes push the glow strips to their own colour; other themes only lean', () => {
+    const base = tierStyle(data.tier(5));
+    for (const [id, hex] of Object.entries(THEME_GLOW)) {
+      const def = data.cosmetic(id)!;
+      expect(def.kind, id).toBe('base_theme');
+      const t = themedStyle(base, { id, color: def.color, accent: def.accent });
+      const want = new THREE.Color(hex);
+      const d = (a: THREE.Color, b: THREE.Color) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+      expect(d(t.accent, want), id).toBeLessThan(d(base.accent, want) * 0.3);
+    }
+    const autumn = data.cosmetic('theme_autumn')!;
+    const t = themedStyle(base, { id: autumn.id, color: autumn.color, accent: autumn.accent });
+    expect(t.accent.getHex()).not.toBe(new THREE.Color(autumn.accent!).getHex());
+  });
+});
+
+describe('quality tiers and nature looks', () => {
+  it('low quality folds side-by-side shape variants into their base look; biome looks stay', () => {
+    const looks = (q: string) => new Set(Array.from({ length: 300 }, (_, i) => nodeLookAt(nodeVariant('tree_round', 'tree_round', 'crash_valley', i), q)));
+    expect(looks('high').size).toBeGreaterThanOrEqual(3);
+    expect(looks('medium').size).toBe(looks('high').size);
+    expect([...looks('low')]).toEqual(['tree_round']);
+    expect(nodeLookAt('tree_pine~slim', 'low')).toBe('tree_pine');
+    for (const keep of ['tree_pine~ancient', 'tree_round~marsh', 'bush~glow', 'rock~desert', 'rock~snow']) expect(nodeLookAt(keep, 'low')).toBe(keep);
+    for (const m of KNOWN_NODE_MODELS) expect(KNOWN_NODE_MODELS).toContain(nodeLookAt(m, 'low'));
   });
 });
