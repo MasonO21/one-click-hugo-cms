@@ -763,6 +763,8 @@ export class PlayerSystem extends System {
     const node = world.nearestNode(p.x, p.z, range);
     if (node) {
       const def = world.nodeDef(node.i);
+      // a node the equipped tool can't break says so on the button (tapping it still names the tool to equip)
+      if (def.toolTier > this.toolTier()) return { kind: 'gather', label: 'Tool needed', icon: '🔧', target: node.i, x: node.x, z: node.z };
       return { kind: 'gather', label: gatherLabel(def.model), icon: this.dropIcon(def.drop), target: node.i, x: node.x, z: node.z };
     }
     return null;

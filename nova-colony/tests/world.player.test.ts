@@ -528,6 +528,10 @@ describe('interaction', () => {
     expect(label('rock')).toMatchObject({ label: 'Mine', icon: '🪨' });
     expect(label('bush_berry')).toMatchObject({ label: 'Pick', icon: '🍎' });
     expect(label('fiber_grass')).toMatchObject({ label: 'Harvest' });
+    // a node the equipped tool can't break says so instead of offering to mine it
+    const hard = game.data.nodes.find((d) => d.toolTier > game.sys.player.toolTier() && w.gen.nodes.some((q) => q.def === d.id));
+    expect(hard, 'a node that needs a better tool').toBeTruthy();
+    expect(label(hard!.id)).toMatchObject({ kind: 'gather', label: 'Tool needed', icon: '🔧' });
   });
 
   it('performs POI interactions through the context button', () => {
