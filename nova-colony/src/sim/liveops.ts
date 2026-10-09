@@ -21,6 +21,7 @@ import { CENTER_CELL } from '../core/constants';
 import { dateKey } from '../core/format';
 import { crateReward, researchGrantRp, scaleReward } from './meta/util';
 import { seasonBonusEarned, seasonBonusReady } from './seasonBonus';
+import { productHasRandomItems, regionRestrictsPaidRandom, withoutRandomItems } from './meta/lootRegion';
 
 declare module '../core/events' {
   interface GameEvents {
@@ -314,7 +315,9 @@ export class LiveOpsSystem extends System {
     const s = this.game.state.liveops.season;
     (premium ? s.claimedPremium : s.claimedFree).push(level);
     const entry = this.game.data.season.levels[level - 1];
-    this.game.grant(premium ? entry.premium : entry.free, 'season');
+    // the paid track gives a cache's Nova value instead of the cache where paid random items are restricted
+    const reward = premium && !this.paidRandomAllowed() ? withoutRandomItems(this.game.data, entry.premium) : premium ? entry.premium : entry.free;
+    this.game.grant(reward, 'season');
     this.game.bus.emit('sfx', { id: 'reward' });
     return true;
   }
@@ -719,7 +722,17 @@ export class LiveOpsSystem extends System {
 
   canBuy(productId: string): boolean {
     const def = this.game.data.product(productId);
-    return !!def && !this.limitReached(def);
+    return !!def && !this.limitReached(def) && this.offered(def);
+  }
+
+  /** Paid random items (loot caches) can be sold in the store's country (sim/meta/lootRegion.ts). */
+  paidRandomAllowed(): boolean {
+    return !regionRestrictsPaidRandom(this.game.services.iap.storefrontCountry?.() ?? null);
+  }
+
+  /** Is this product offered here at all (bundles holding caches are not, where paid random items are restricted)? */
+  offered(def: ProductDef): boolean {
+    return this.paidRandomAllowed() || !productHasRandomItems(this.game.data, def);
   }
 
   /** Purchase a product through the store and grant it. Resolves true when the player now owns it. */
@@ -732,6 +745,11 @@ export class LiveOpsSystem extends System {
       return false;
     }
     if (this.buyBusy) return false;
+    if (!this.offered(def)) {
+      bus.emit('iap:failed', { product: productId, reason: 'region' });
+      g.toast('This pack is not available in your region', 'info');
+      return false;
+    }
     if (this.limitReached(def)) {
       bus.emit('iap:failed', { product: productId, reason: 'limit' });
       g.toast('You already own this', 'info');

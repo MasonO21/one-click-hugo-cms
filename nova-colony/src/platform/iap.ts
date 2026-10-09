@@ -25,6 +25,7 @@ export class RevenueCatIap implements IapService {
   private readonly found = new Map<string, RcStoreProduct>();
   private configured = false;
   private info: RcCustomerInfo | null = null;
+  private country: string | null = null;
 
   constructor(
     private readonly platform: 'ios' | 'android',
@@ -61,9 +62,18 @@ export class RevenueCatIap implements IapService {
         }
       }
       this.info = (await Purchases.getCustomerInfo()).customerInfo;
+      try {
+        this.country = (await Purchases.getStorefront()).countryCode || null;
+      } catch {
+        /* unknown storefront: no regional rules apply */
+      }
     } catch (e) {
       console.warn('[iap] RevenueCat init failed', e);
     }
+  }
+
+  storefrontCountry(): string | null {
+    return this.country;
   }
 
   products(): StoreProduct[] {
@@ -159,5 +169,14 @@ export class WebMockIap implements IapService {
 
   async subscriptionExpiry(_productId: string): Promise<number | null> {
     return null;
+  }
+
+  /** Web: VITE_STOREFRONT if set (testing), else the region of the browser language ("nl-BE" -> "BE"). */
+  storefrontCountry(): string | null {
+    const forced = env('VITE_STOREFRONT');
+    if (forced) return forced;
+    const lang = (globalThis as { navigator?: { language?: string } }).navigator?.language ?? '';
+    const m = /^[a-z]{2,3}[-_]([A-Za-z]{2})\b/.exec(lang);
+    return m ? m[1].toUpperCase() : null;
   }
 }

@@ -105,7 +105,7 @@ export class ShopPanel extends Panel {
     else if (this.tab === 'cosmetics') wrap.appendChild(this.cosmetics());
     else {
       // the Packs tab opens with the bundles (cosmetics / chests + Nova)
-      const prods = this.data.products.filter((p) => p.section === this.tab || (this.tab === 'packs' && p.section === 'bundles')).sort((a, b) => +(b.section === 'bundles') - +(a.section === 'bundles'));
+      const prods = this.data.products.filter((p) => (p.section === this.tab || (this.tab === 'packs' && p.section === 'bundles')) && this.game.sys.liveops.offered(p)).sort((a, b) => +(b.section === 'bundles') - +(a.section === 'bundles'));
       if (!prods.length) wrap.appendChild(emptyState('🛍️', 'Nothing here right now', 'Check back soon for new goodies!'));
       const grid = h('div', { class: 'grid shop-grid' });
       for (const p of prods) grid.appendChild(this.productCard(p));

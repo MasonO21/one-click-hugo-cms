@@ -43,6 +43,8 @@ export interface IapService {
   restore(): Promise<string[]>;
   /** Active subscription expiry (epoch ms) if known. */
   subscriptionExpiry?(productId: string): Promise<number | null>;
+  /** The store account's country (ISO alpha-2 or alpha-3) once known, else null (see sim/meta/lootRegion.ts). */
+  storefrontCountry?(): string | null;
 }
 
 export interface AnalyticsService {

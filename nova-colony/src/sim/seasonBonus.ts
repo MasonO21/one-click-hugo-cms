@@ -8,6 +8,7 @@
  */
 import type { Game } from '../core/Game';
 import type { SeasonDef } from '../data/schema';
+import { withoutRandomItems } from './meta/lootRegion';
 
 declare module '../core/state' {
   interface LiveOpsState {
@@ -82,7 +83,9 @@ export function claimSeasonBonus(game: Game): number {
   if (n <= 0 || !reward) return 0;
   const lo = game.state.liveops;
   lo.seasonBonus = { id: game.data.season.id, claimed: seasonBonusClaimed(game) + n };
-  for (let i = 0; i < n; i++) game.grant(reward, 'season');
+  // bonus chests come from the paid track: their Nova value instead where paid random items are restricted
+  const given = game.sys.liveops.paidRandomAllowed() ? reward : withoutRandomItems(game.data, reward);
+  for (let i = 0; i < n; i++) game.grant(given, 'season');
   game.bus.emit('sfx', { id: 'reward' });
   return n;
 }
