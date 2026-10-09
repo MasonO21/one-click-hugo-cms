@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.29.0',
+  version: '4.30.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -959,6 +959,7 @@ const DATA = {
     { id: 'trade', text: 'Send a trade caravan', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 10 },
     { id: 'derby', text: 'Run a Camel Derby race', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 8 },
     { id: 'journey', text: 'Send heroes on a Far Journey', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
+    { id: 'cook', text: 'Cook a dish at the Cookfire', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 4 },
     { id: 'decree', text: 'Give a Warden\'s Decree', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'outpost', text: 'Collect from an outpost', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
@@ -1262,6 +1263,23 @@ const DATA = {
     win: { starglass: 20, journals: 1.5 }, // on top of the plunder (times the rival's strength)
     warPts: 60, // Oasis Wars points per win
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
+  },
+
+  // ---------- The Cookfire ----------
+  // From Rainwyrm Lv 4 every fish you land also goes into the larder, and the cookfire in the courtyard turns them
+  // (with food from the stores) into dishes that serve the keep for a few hours: fx are KH.bonus keys. Two dishes can
+  // be on the table at once, and never the same one twice; the rarest fish make the best dishes.
+  cook: {
+    unlock: 4, table: 2,
+    recipes: [
+      { id: 'skewers', name: 'Minnow Skewers', icon: 'i-ck-skewers', fish: { minnow: 4 }, food: 0.5, hours: 2, fx: { gather: 0.2 }, text: 'Marches gather 20% faster' },
+      { id: 'stew', name: 'Sand Carp Stew', icon: 'i-ck-stew', fish: { carp: 3 }, food: 1, hours: 2, fx: { prod: 0.08 }, text: 'All production +8%' },
+      { id: 'pilaf', name: 'Golden Barb Pilaf', icon: 'i-ck-pilaf', fish: { barb: 2 }, food: 1, hours: 2, fx: { teamAtk: 0.06 }, text: 'Squads fight 6% harder' },
+      { id: 'broth', name: 'Glass Eel Broth', icon: 'i-ck-broth', fish: { eel: 2 }, food: 0.5, hours: 3, fx: { heal: 0.5 }, cure: 0.5, text: 'Half the sick back on their feet, healing +50%' },
+      { id: 'roast', name: 'Whiskers Roast', icon: 'i-ck-roast', fish: { whiskers: 1, carp: 2 }, food: 1, hours: 3, fx: { troop: 0.03 }, text: 'Every troop 3% stronger' },
+      { id: 'banquet', name: 'Rain Koi Banquet', icon: 'i-ck-banquet', fish: { koi: 1, barb: 2 }, food: 2, hours: 4, fx: { prod: 0.1, teamAtk: 0.08, breath: 0.1 }, text: 'Production +10%, squads 8% harder, the Torrent +10%' },
+    ],
+    warPts: 10,
   },
 
   // ---------- Building Charters ----------
@@ -1683,6 +1701,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.30', items: [
+      { icon: 'i-ck-fire', name: 'The Cookfire', text: 'Every fish you land now goes into the larder too. Cook them into dishes that serve the whole keep for a few hours: skewers for gathering, stew for production, pilaf for battle, and a Rain Koi Banquet for everything.', act: 'cookfire', open: (S) => S.lv.wyrm >= 4, needs: 'Rainwyrm Lv 4' },
+    ] },
     { v: '4.29', items: [
       { icon: 'i-scroll', name: 'Building Charters', text: 'At Lv 10 every building takes one of two charters for good: more of what it makes, or something else the keep needs, from Covered Cisterns to a Drill Yard. Open a building to choose.', act: 'tab:town', open: (S) => Object.values(S.lv).some((v) => v >= 10), needs: 'a building at Lv 10' },
     ] },
@@ -2010,6 +2031,9 @@ const DATA = {
     { id: 'journey4', text: 'Bring a four-star Far Journey home', stat: 'journey4', n: 1, reward: { beacons: 2 } },
     { id: 'charter1', text: 'Grant a building its charter', stat: 'charters', n: 1, reward: { starglass: 50 } },
     { id: 'charter8', text: 'Grant charters to eight kinds of building', stat: 'chartered', n: 8, reward: { beacons: 2 } },
+    { id: 'cook1', text: 'Cook a dish at the Cookfire', stat: 'cooked', n: 1, reward: { food: 2 } },
+    { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
+    { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },

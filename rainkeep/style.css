@@ -1291,3 +1291,15 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .jr-hero small .ic { width: 12px; height: 12px; }
 .jr-hero .jr-face { width: 44px; height: 48px; }
 .jr-hero.on { border-color: var(--gold); background: #e0b04a1f; box-shadow: 0 0 0 1px #e0b04a44 inset; }
+
+/* The Cookfire (cookfire.js) */
+.ck-ic { width: 44px; height: 44px; flex: none; }
+.ck-shelf { gap: 8px; }
+.ck-fish { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 12px; background: #ffffff0d; }
+.ck-fish .ic { width: 24px; height: 24px; }
+.ck-fish.none { opacity: 0.4; }
+.ck-need { gap: 4px; margin-top: 4px; }
+.ck-need .ic { width: 16px; height: 16px; }
+.ck-card { gap: 10px; align-items: center; }
+.ck-card.on { border-color: var(--gold); }
+.ck-served { gap: 8px; align-items: center; }
