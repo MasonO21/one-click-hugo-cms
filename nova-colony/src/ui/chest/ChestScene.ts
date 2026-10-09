@@ -76,6 +76,9 @@ export class ChestScene {
   private readonly hint: HTMLElement;
   private readonly hintText: HTMLElement;
   private readonly cardLayer: HTMLElement;
+  /** The light behind each card, in its own layer under all of them (so it never tints a neighbour). */
+  private readonly glowLayer: HTMLElement;
+  private glows: HTMLElement[] = [];
   private readonly actions: HTMLElement;
   private readonly flash: HTMLElement;
   private readonly skipBtn: HTMLButtonElement;
@@ -107,6 +110,7 @@ export class ChestScene {
     this.hintText = h('span', { class: 'cs-hint-t' });
     this.hint = h('div', { class: 'cs-hint' }, h('span', { class: 'cs-tapring', 'aria-hidden': 'true' }), this.hintText);
     this.cardLayer = h('div', { class: 'cs-cards' });
+    this.glowLayer = h('div', { class: 'cs-glows' });
     this.actions = h('div', { class: 'cs-actions' });
     this.flash = h('div', { class: 'cs-flash' });
     this.skipBtn = h<HTMLButtonElement>('button', { class: 'cs-skip', type: 'button', 'aria-label': 'Skip to the rewards', data: { sfx: 'ui_tab' } }, 'Skip', h('span', { class: 'cs-skip-i', text: '»' }));
@@ -116,6 +120,7 @@ export class ChestScene {
       'div',
       { class: 'nv-chest', hidden: true, role: 'dialog', 'aria-label': 'Cache opening', data: { phase: 'off' } },
       this.stage,
+      this.glowLayer,
       this.cardLayer,
       this.fx.canvas,
       h('div', { class: 'cs-top' }, h('div', { class: 'cs-sub' }, this.ribbon, this.count), this.title),
@@ -228,7 +233,8 @@ export class ChestScene {
     this.el.style.setProperty('--ped', `${(this.pedestal * 100).toFixed(1)}%`);
 
     // particles for this quality / motion setting
-    const fx = fxBudget(g.state.settings.quality, this.calm);
+    const st = g.state.settings;
+    const fx = fxBudget(st.batterySaver ? 'low' : st.quality, this.calm);
     this.fx.configure(fx.amount, fx.ambient, fx.dpr);
     this.fx.setTheme(theme);
     this.fx.clear();
@@ -264,6 +270,8 @@ export class ChestScene {
       this.cur = null;
       this.fx.stop();
       this.cardLayer.replaceChildren();
+      this.glowLayer.replaceChildren();
+      this.glows = [];
       this.cards = [];
       window.removeEventListener('resize', this.onResize);
       this.host.onActive(false);
@@ -389,7 +397,7 @@ export class ChestScene {
     this.sfx('ui_open');
     const rise = this.calm ? 0 : 480;
     const tease = crate || this.calm ? 0 : teaseMs(card.rarity);
-    if (tease) this.after(rise, () => el.classList.add('tease'));
+    if (tease) this.after(rise, () => this.mark(i, 'tease', true));
     this.after(rise + tease, () => this.flip(i));
     this.after(rise + tease + Math.max(120, revealGap(card.rarity, crate) - 180), () => this.revealNext(i + 1));
   }
@@ -399,12 +407,12 @@ export class ChestScene {
     const el = this.cards[i];
     if (!cur || !el) return;
     const card = cur.cards[i];
-    el.classList.remove('tease');
+    this.mark(i, 'tease', false);
     el.classList.add('out', 'flip');
     this.flipped = Math.max(this.flipped, i + 1);
     const rank = rarityRank(card.rarity);
     this.after(quiet ? 0 : 190, () => {
-      el.classList.add('shown');
+      this.mark(i, 'shown', true);
       const b = this.layout?.cards[i];
       if (b && !this.calm) this.fx.card(b.x + b.w / 2, b.y + b.h * 0.42, card.rarity, quiet ? 0.35 : 1);
       if (quiet) return;
@@ -434,7 +442,7 @@ export class ChestScene {
     let k = 0;
     for (let i = from; i < cur.cards.length; i++, k++) {
       const el = this.cards[i];
-      el.classList.remove('tease');
+      this.mark(i, 'tease', false);
       el.style.transitionDelay = `${k * 55}ms`;
       (el.firstElementChild as HTMLElement | null)?.style.setProperty('transition-delay', `${k * 55 + 120}ms`);
       const idx = i;
@@ -450,10 +458,11 @@ export class ChestScene {
 
   private finish(): void {
     if (!this.cur || this.phase === 'done' || this.phase === 'closing' || this.phase === 'off') return;
-    for (const el of this.cards) {
-      el.classList.remove('tease');
-      el.classList.add('out', 'flip', 'shown');
-    }
+    this.cards.forEach((el, i) => {
+      this.mark(i, 'tease', false);
+      this.mark(i, 'shown', true);
+      el.classList.add('out', 'flip');
+    });
     this.flipped = this.cards.length;
     this.setPhase('done');
     this.skipBtn.hidden = true;
@@ -519,6 +528,14 @@ export class ChestScene {
       return el;
     });
     this.cardLayer.replaceChildren(...this.cards);
+    this.glows = cards.map((card) => h('div', { class: `cs-cglow r-${card.rarity}` }));
+    this.glowLayer.replaceChildren(...this.glows);
+  }
+
+  /** A card's state class, on the card and on its light. */
+  private mark(i: number, cls: 'tease' | 'shown', on: boolean): void {
+    this.cards[i]?.classList.toggle(cls, on);
+    this.glows[i]?.classList.toggle(cls, on);
   }
 
   private equipButton(id: string): HTMLElement {
@@ -582,6 +599,12 @@ export class ChestScene {
       el.style.fontSize = `${Math.max(10, Math.round(r.w * 0.122))}px`;
       el.style.setProperty('--fx', `${Math.round(mx - (r.x + r.w / 2))}px`);
       el.style.setProperty('--fy', `${Math.round(my - (r.y + r.h / 2))}px`);
+      const g = this.glows[i];
+      if (g) {
+        // the light reaches about a third of the card's width beyond it on every side
+        const m = Math.round(r.w * 0.32);
+        Object.assign(g.style, { left: `${r.x - m}px`, top: `${r.y - m}px`, width: `${r.w + 2 * m}px`, height: `${r.h + 2 * m}px` });
+      }
     });
     this.fx.resize(w, hgt);
   }

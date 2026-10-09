@@ -999,30 +999,50 @@
   --halo: rgba(196, 178, 255, 0.9);
   --lbl: #6655a4;
 }
-/* the light behind a card */
-.nv-chest .cs-card::before {
-  content: '';
+/* the light behind each card: its own layer under all the cards (ChestScene glowLayer), so it never tints a neighbour */
+.nv-chest .cs-glows {
   position: absolute;
-  inset: -16%;
-  border-radius: 34%;
-  background: radial-gradient(closest-side, var(--halo) 0%, rgba(255, 255, 255, 0) 100%);
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.nv-chest .cs-cglow {
+  --halo: rgba(255, 226, 170, 0.5);
+  position: absolute;
+  border-radius: 40%;
+  /* an ellipse fitted to the box: full strength up to the card's edge, then fading out */
+  background: radial-gradient(farthest-side, var(--halo) 0%, var(--halo) 58%, rgba(255, 255, 255, 0) 100%);
   opacity: 0;
   transform: scale(0.6);
   transition: opacity 0.45s ease-out, transform 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
-.nv-chest .cs-card.shown::before {
+.nv-chest .cs-cglow.r-rare {
+  --halo: rgba(110, 170, 235, 0.72);
+}
+.nv-chest .cs-cglow.r-epic {
+  --halo: rgba(160, 126, 232, 0.78);
+}
+.nv-chest .cs-cglow.r-legendary {
+  --halo: rgba(242, 190, 84, 0.88);
+}
+.nv-chest .cs-cglow.r-mythic {
+  background: radial-gradient(farthest-side, rgba(255, 236, 214, 0.95) 0%, rgba(206, 186, 255, 0.9) 56%, rgba(150, 214, 232, 0.5) 76%, rgba(255, 255, 255, 0) 100%);
+}
+.nv-chest .cs-cglow.shown {
   opacity: 0.7;
   transform: none;
 }
-.nv-chest .cs-card.r-common.shown::before {
-  opacity: 0.28;
+.nv-chest .cs-cglow.r-common.shown {
+  opacity: 0.3;
 }
-.nv-chest .cs-card.r-legendary.shown::before,
-.nv-chest .cs-card.r-mythic.shown::before {
+/* a breath of suspense before a legendary or mythic card turns: its light already shows */
+.nv-chest .cs-cglow.tease {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+.nv-chest .cs-cglow.r-legendary.shown,
+.nv-chest .cs-cglow.r-mythic.shown {
   animation: cs-halo 3.2s ease-in-out infinite;
-}
-.nv-chest .cs-card.r-mythic::before {
-  background: radial-gradient(closest-side, rgba(255, 236, 214, 0.9) 0%, rgba(196, 178, 255, 0.75) 40%, rgba(150, 210, 230, 0.4) 70%, rgba(255, 255, 255, 0) 100%);
 }
 @keyframes cs-halo {
   0%,
@@ -1032,16 +1052,11 @@
   }
   50% {
     opacity: 0.95;
-    transform: scale(1.06);
+    transform: scale(1.05);
   }
 }
-/* a breath of suspense before a legendary or mythic card turns: it lifts, its light already showing */
 .nv-chest .cs-card.tease {
   animation: cs-tease 0.9s ease-in-out infinite;
-}
-.nv-chest .cs-card.tease::before {
-  opacity: 0.85;
-  transform: scale(1.04);
 }
 @keyframes cs-tease {
   0%,
@@ -1051,6 +1066,12 @@
   50% {
     transform: rotate(calc(var(--tilt, 0deg) * 0.35)) translate3d(0, -3%, 0) scale(1.06);
   }
+}
+
+/* face down, a legendary or mythic find already shows its light at the edges */
+.nv-chest .cs-card.r-legendary.tease .cs-back,
+.nv-chest .cs-card.r-mythic.tease .cs-back {
+  box-shadow: inset 0 0 0 0.16em var(--rim), inset 0 0 0 0.28em rgba(0, 0, 0, 0.28), inset 0 0 1.4em rgba(255, 236, 190, 0.35), 0 0.35em 0.9em rgba(0, 0, 0, 0.45);
 }
 
 .nv-chest .cs-flip {
@@ -1120,6 +1141,16 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(155deg, var(--rim) 0%, var(--rim2) 100%);
+}
+.nv-chest .cs-card.r-legendary .cs-in,
+.nv-chest .cs-card.r-mythic .cs-in {
+  inset: 0.27em;
+}
+/* mother-of-pearl: a faint play of colour over the mythic paper */
+.nv-chest .cs-card.r-mythic .cs-in {
+  background:
+    linear-gradient(135deg, rgba(255, 214, 236, 0.55) 0%, rgba(214, 230, 255, 0.5) 34%, rgba(222, 250, 230, 0.45) 62%, rgba(255, 238, 204, 0.55) 100%),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper2) 100%);
 }
 .nv-chest .cs-card.r-legendary .cs-rim {
   inset: -40%;
@@ -1356,7 +1387,7 @@
 .nv-chest.calm .cs-rim,
 .nv-chest.calm .cs-tapring::after,
 .nv-chest.calm .cs-hint,
-.nv-chest.calm .cs-card::before,
+.nv-chest.calm .cs-cglow,
 .nv-chest.calm .cs-glow,
 .nv-chest.calm .cs-shine,
 .nv-chest.calm .cs-wave,
@@ -1388,7 +1419,7 @@
 .nv-chest.calm .cs-top,
 .nv-chest.calm .cs-actions,
 .nv-chest.calm .cs-glow,
-.nv-chest.calm .cs-card::before {
+.nv-chest.calm .cs-cglow {
   transition-property: opacity;
   transform: none;
 }
