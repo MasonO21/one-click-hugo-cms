@@ -59,6 +59,29 @@ describe('photo frames', () => {
     expect(new Set(prints.values()).size).toBe(DRAWN_FRAMES.length);
   });
 
+  it('each frame has its signature details (text, gauges, compass, tape, crystals) and nothing childish', () => {
+    const L = frameLayout(900, 1600, true);
+    const draw = (id: (typeof DRAWN_FRAMES)[number]) => {
+      const { c, calls } = recorder();
+      drawFrameBack(c, L, id);
+      drawFrameFront(c, L, id);
+      drawPlate(c, L, id);
+      return calls;
+    };
+    // Field Journal: coordinates pressed into the leather, stitched with a dashed thread
+    const journal = draw('frame_journal');
+    expect(journal.filter((x) => x === 'fillText(3)').length).toBeGreaterThanOrEqual(3);
+    expect(journal).toContain('setLineDash(1)');
+    // Star Chart: degree labels and the compass rose's N
+    expect(draw('frame_star_chart').filter((x) => x === 'fillText(3)').length).toBeGreaterThanOrEqual(5);
+    // Brass & Glass: a metal nameplate, and its two gauges are labelled
+    expect(framePlate('frame_brass').metal).toBe(true);
+    expect(draw('frame_brass').filter((x) => x === 'fillText(3)')).toHaveLength(2);
+    // the old cutesy pieces are gone
+    const src = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'ui', 'photo', 'frames.ts'), 'utf8');
+    for (const word of ['bee(', 'honey', 'yarn', 'sleepy', 'heart', 'knit']) expect(src.toLowerCase(), word).not.toContain(word);
+  });
+
   it('draws the same way every time (seeded scatter), at any resolution', () => {
     const a = recorder();
     const b = recorder();
@@ -85,10 +108,10 @@ describe('photo frames', () => {
     expect(deco.rim).toBe(classic.rim);
   });
 
-  it('plates keep the caption readable (dark ink on a light plate, light ink on the night sky)', () => {
+  it('plates keep the caption readable (dark ink on a light plate, light ink on the navy chart)', () => {
     const lum = (hex: string) => {
       const m = /^#([0-9a-f]{6})$/i.exec(hex);
-      if (!m) return 0.1; // the starry plate's rgba navy
+      if (!m) return 0.1; // the star chart plate's rgba navy
       const n = parseInt(m[1], 16);
       return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
     };
