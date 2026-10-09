@@ -22,6 +22,11 @@ import { patchLambert } from '../core/materials';
 
 const VERTS = WORLD_CELLS + 1;
 const SHORE = new THREE.Color('#e6d49a');
+/** Shores that are not sand: the marsh's mossy mud, the ridge's packed snow. */
+const SHORE_BY_BIOME: Record<string, THREE.Color> = {
+  toxic_marsh: new THREE.Color('#7c8a44'),
+  frozen_ridge: new THREE.Color('#dde7f2'),
+};
 const FALLBACK_GROUND: [string, string] = ['#6fbf5a', '#9bd66b'];
 
 /**
@@ -70,6 +75,9 @@ const CONTACT_SHADE = 0.2;
 const GROUND_DESAT = 0.0;
 const GROUND_TINT = new THREE.Color(1.03, 1.01, 0.94);
 const GROUND_VALUE = 1.0;
+/** Water colour depth (world units) of a water cell's corners at least, and of dry ring corners at most (negative). */
+const WET_DEPTH = 0.16;
+const DRY_DEPTH = 0.1;
 /** Regions whose pools are the painting's glowing lime-green toxic water. */
 export const TOXIC_WATER: ReadonlySet<string> = new Set(['toxic_marsh']);
 /** Flower specks fade out between these view distances (world units) so they never shimmer far away. */
@@ -126,13 +134,16 @@ const WATER_FRAG = /* glsl */ `
     float edge = depth + 0.035 * sin(uTime * 1.4 + vWorld.x * 0.9 + vWorld.z * 0.7);
     float foam = 1.0 - smoothstep(0.012, 0.06, edge);
     c = mix(c, mix(uFoam, vec3(0.86, 1.0, 0.6), vToxic), foam * 0.75);
-    vec2 g = floor(vWorld.xz * 2.2);
+    vec2 gp = vWorld.xz * 2.2;
+    vec2 g = floor(gp);
     float tw = novaHash(g + floor(uTime * 1.5));
-    float glint = step(0.986, tw) * (1.0 - uNight) * (1.0 - foam);
+    // a round sparkle in the middle of its grid cell, not a square flake
+    float glint = step(0.992, tw) * (1.0 - smoothstep(0.06, 0.18, length(fract(gp) - 0.5))) * (1.0 - uNight) * (1.0 - foam);
     c += vec3(glint * 0.9);
     c *= 1.0 - uNight * 0.5 * (1.0 - vToxic * 0.5);
     c += vec3(0.02, 0.04, 0.08) * uNight * (1.0 - vToxic) + vec3(0.04, 0.1, 0.0) * uNight * vToxic;
-    gl_FragColor = vec4(c, 0.86 + foam * 0.12);
+    // past the shoreline (negative depth) the water fades out: flat ground no longer shows the ring cells' edges
+    gl_FragColor = vec4(c, (0.86 + foam * 0.12) * smoothstep(-0.04, 0.0, edge));
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
     #include <fog_fragment>
@@ -287,8 +298,8 @@ export class Terrain {
         {
           uTime: { value: 0 },
           uNight: { value: 0 },
-          uDeep: { value: new THREE.Color('#2a8fd4') },
-          uShallow: { value: new THREE.Color('#62dce0') },
+          uDeep: { value: new THREE.Color('#1f6ccc') },
+          uShallow: { value: new THREE.Color('#3aa6e6') },
           uFoam: { value: new THREE.Color('#f2fcff') },
         },
       ]),
@@ -419,25 +430,30 @@ export class Terrain {
     // blend the biomes of the 4 cells around the vertex
     out.setRGB(0, 0, 0);
     let shore = 0;
+    let shoreCol = SHORE;
     let bloom = 0;
     for (let dz = -1; dz <= 0; dz++) {
       for (let dx = -1; dx <= 0; dx++) {
         const cx = vx + dx;
         const cz = vz + dz;
-        const b = this.biome(this.regionOfCell(cx, cz));
+        const region = this.regionOfCell(cx, cz);
+        const b = this.biome(region);
         const t = clamp(h / b.relief + (n - 0.5) * 0.9 + 0.15, 0, 1);
         this.tmp2.lerpColors(b.low, b.high, t);
         if (patch > 0) this.tmp2.lerp(b.warm, Math.min(1, patch * 2.6) * 0.7);
         else this.tmp2.lerp(b.cool, Math.min(1, -patch * 2.6) * 0.55);
         out.add(this.tmp2);
         bloom += b.bloom;
-        if (this.isWaterCell(cx, cz)) shore++;
+        if (this.isWaterCell(cx, cz)) {
+          shore++;
+          shoreCol = SHORE_BY_BIOME[region] ?? shoreCol;
+        }
       }
     }
     out.multiplyScalar(0.25);
     bloom *= 0.25;
     if (shore > 0) {
-      out.lerp(SHORE, shore >= 4 ? 0.85 : 0.55);
+      out.lerp(shoreCol, shore >= 4 ? 0.85 : 0.55);
       bloom = 0;
     }
     // mid-size clumps of brighter / darker grass and a fine grain: the ground never reads as one flat tone
@@ -623,6 +639,22 @@ export class Terrain {
         }
       }
     }
+    // corners of water cells are "wet": they always read as water (at least WET_DEPTH deep for the colour and
+    // foam), while ring corners that touch no water cell read as dry shore (at most -DRY_DEPTH). On dead-flat
+    // ground (a marsh) the pool would otherwise be ~0.04 deep everywhere — one sheet of foam with the ring
+    // cells' square edges showing; this way the foam line and the fade-out fall inside the ring cells.
+    const C = W + 1;
+    const wet = new Uint8Array(C * C);
+    for (let i = 0; i < W * W; i++) {
+      if (!g.water[i]) continue;
+      const cx = i % W;
+      const cz = (i / W) | 0;
+      wet[cz * C + cx] = wet[cz * C + cx + 1] = wet[(cz + 1) * C + cx] = wet[(cz + 1) * C + cx + 1] = 1;
+    }
+    const depthAt = (y: number, vx: number, vz: number): number => {
+      const d = y - this.heightOfVertex(vx, vz);
+      return wet[vz * C + vx] ? Math.max(d, WET_DEPTH) : Math.min(d, -DRY_DEPTH);
+    };
     let quads = 0;
     for (let i = 0; i < W * W; i++) if (!Number.isNaN(level[i])) quads++;
     const pos = new Float32Array(quads * 4 * 3);
@@ -639,10 +671,10 @@ export class Terrain {
       const x0 = cx * CELL - HALF_WORLD;
       const z0 = cz * CELL - HALF_WORLD;
       const base = v / 3;
-      shoreAttr[base] = y - this.heightOfVertex(cx, cz);
-      shoreAttr[base + 1] = y - this.heightOfVertex(cx + 1, cz);
-      shoreAttr[base + 2] = y - this.heightOfVertex(cx, cz + 1);
-      shoreAttr[base + 3] = y - this.heightOfVertex(cx + 1, cz + 1);
+      shoreAttr[base] = depthAt(y, cx, cz);
+      shoreAttr[base + 1] = depthAt(y, cx + 1, cz);
+      shoreAttr[base + 2] = depthAt(y, cx, cz + 1);
+      shoreAttr[base + 3] = depthAt(y, cx + 1, cz + 1);
       const toxic = TOXIC_WATER.has(g.regionIds[g.regionMap[i]] ?? '') ? 1 : 0;
       toxicAttr[base] = toxicAttr[base + 1] = toxicAttr[base + 2] = toxicAttr[base + 3] = toxic;
       pos[v++] = x0; pos[v++] = y; pos[v++] = z0;

@@ -387,8 +387,8 @@ registerModel('campfire_lounge', (c) => {
     pb.cone(0.2, 0.55, 0, 0.3, 0, '#ff9a3a', 6, { slot: SLOT_GLOW });
     pb.cone(0.12, 0.38, 0.04, 0.42, 0.03, '#ffd27a', 5, { slot: SLOT_GLOW });
   }, 5, 0.06);
+  // flames and sparks only: the game's smoke puffs are dark blocks, too heavy over a lounge
   c.emit('fire', 0, 0.45, 0.1, 6, '#ffa040');
-  c.emit('smoke', 0, 1.1, 0.1, 1.2);
   // log benches on three sides, a wool blanket over one
   logBench(b, 1.5, 0, -1.25, 0);
   logBench(b, 1.3, -1.3, 0.35, Math.PI / 2 - 0.25);
