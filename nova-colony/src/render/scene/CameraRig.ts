@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import type { PhotoCamera } from '../api';
 import { clamp, lerp } from '../../core/math';
+import { reducedMotion } from '../../core/motion';
 
 /** Aliens within this many world units of the player pull the follow camera toward the fight. */
 const COMBAT_FRAME_R = 26;
@@ -80,6 +81,7 @@ export class CameraRig {
   }
 
   addShake(strength: number): void {
+    if (reducedMotion(this.ctx.game.state.settings)) return; // accessibility: no camera shake
     this.shake = Math.min(1.5, this.shake + strength);
   }
 

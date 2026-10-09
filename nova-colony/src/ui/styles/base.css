@@ -650,3 +650,21 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------- accessibility (Settings › Accessibility) */
+/* Larger text: menus, sheets and messages grow; the HUD keeps the size it was fitted to on small phones. */
+.nv-root[data-text='large'] .pm-card,
+.nv-root[data-text='large'] .toast {
+  font-size: 1.14em;
+}
+/* Reduce motion: animations and transitions finish at once (end events still fire), nothing loops. */
+.nv-root.reduce-motion *,
+.nv-root.reduce-motion *::before,
+.nv-root.reduce-motion *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0s !important;
+  transition-duration: 0.001s !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}

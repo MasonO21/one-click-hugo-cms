@@ -525,6 +525,10 @@ export interface SettingsState {
   leftHanded: boolean;
   /** Battery saver: cap the frame rate at 30 instead of 60 (longer sessions, cooler phone). */
   batterySaver: boolean;
+  /** Accessibility: larger text in panels, sheets and messages (the HUD keeps its fitted size). */
+  largeText: boolean;
+  /** Accessibility: no camera shake and calmer UI animation (the phone's own reduce-motion setting also counts). */
+  reduceMotion: boolean;
   /**
    * Gentle local notifications (storehouses full, offline shift over, daily gift ready). Off until the player says
    * yes, either on the in-game card or with the Settings toggle; the OS permission is checked live on top of this.
@@ -594,7 +598,7 @@ export function createInitialState(seed: number, now: number): GameState {
     achievements: { unlocked: {}, claimed: {} },
     wishes: { open: [], nextId: 1, nextAt: -1, offered: 0, granted: 0, expired: 0, bonds: {}, moods: {}, recent: [] },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
-    settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false, notifications: false, notifyAsked: false },
+    settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false, largeText: false, reduceMotion: false, notifications: false, notifyAsked: false },
   };
 }
 

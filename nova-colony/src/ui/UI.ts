@@ -28,6 +28,7 @@ import type { RendererApi } from '../render/api';
 import type { Reward } from '../data/schema';
 import type { Selection } from '../core/view';
 import { dateKey, fmt } from '../core/format';
+import { reducedMotion } from '../core/motion';
 import { clamp } from '../core/math';
 import { bagEntries } from '../core/bag';
 import type { BuildApi, HapticKind, ToastKind, UiCtx } from './ctx';
@@ -1072,6 +1073,9 @@ export class UI {
     const s = this.game.state.settings;
     const hand = s.leftHanded ? 'left' : 'right';
     if (this.root.dataset.hand !== hand) this.root.dataset.hand = hand;
+    const text = s.largeText ? 'large' : 'normal';
+    if (this.root.dataset.text !== text) this.root.dataset.text = text;
+    setClass(this.root, 'reduce-motion', reducedMotion(s));
     // blueprint capture uses the build layout too (no dock / rail in the way)
     const mode = this.build.mode === 'select' ? 'build' : this.game.view.mode;
     if (this.root.dataset.mode !== mode) this.root.dataset.mode = mode;

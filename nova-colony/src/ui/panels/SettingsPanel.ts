@@ -79,7 +79,7 @@ export class SettingsPanel extends Panel {
     return h('div', { class: 'set-row' }, h('div', { class: 'row' }, h('span', { class: 'si', text: icon }), h('div', { class: 'grow', text: label }), val), input);
   }
 
-  private toggle(label: string, sub: string, icon: string, key: keyof Pick<SettingsState, 'haptics' | 'autoGather' | 'analytics' | 'showFps' | 'leftHanded' | 'batterySaver'>, after?: (on: boolean) => void): HTMLElement {
+  private toggle(label: string, sub: string, icon: string, key: keyof Pick<SettingsState, 'haptics' | 'autoGather' | 'analytics' | 'showFps' | 'leftHanded' | 'batterySaver' | 'largeText' | 'reduceMotion'>, after?: (on: boolean) => void): HTMLElement {
     const s = this.st.settings;
     const sw = h('div', { class: 'switch' + (s[key] ? ' on' : ''), role: 'switch', 'aria-checked': String(s[key]), tabindex: '0' });
     const flip = () => {
@@ -112,6 +112,16 @@ export class SettingsPanel extends Panel {
         this.toggle('Left-handed layout', 'Swap the joystick and buttons', '🤚', 'leftHanded'),
         this.toggle('Auto-gather', 'Chop and mine automatically when you stand near a node', '🪓', 'autoGather'),
         this.toggle('Vibration', 'Gentle haptic feedback', '📳', 'haptics'),
+      ),
+    );
+
+    wrap.appendChild(section('Accessibility'));
+    wrap.appendChild(
+      h(
+        'div',
+        { class: 'card' },
+        this.toggle('Larger text', 'Bigger text in menus, sheets and messages', '🔎', 'largeText'),
+        this.toggle('Reduce motion', 'No camera shake and calmer animations (your phone setting counts too)', '🌿', 'reduceMotion'),
       ),
     );
 
