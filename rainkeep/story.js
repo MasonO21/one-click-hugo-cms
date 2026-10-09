@@ -353,7 +353,7 @@
     if (!T[id] || p >= 3 || !needMet(id, p)) return;
     const home = KH.squadHome();
     if (!home.length) return KH.toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
-    if (KH.heroBusy && KH.heroBusy(id)) return KH.toast(`${first(id)} is out leading a march.`, 'warn');
+    if (KH.heroBusy && KH.heroBusy(id)) return KH.toast(`${first(id)} ${KH.heroAwayWhy ? KH.heroAwayWhy(id) : 'is out leading a march'}.`, 'warn');
     const foe = foeFor(id, p);
     const heroes = [id, ...home.filter((x) => x !== id)].slice(0, 3);
     const team = KH.teamStats(foe.cls, { heroes });

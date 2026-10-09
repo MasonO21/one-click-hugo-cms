@@ -1271,3 +1271,23 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .dry-g.g-A { background: #3fc8c033; color: #6fe8d8; }
 .dry-g.g-B { background: #e0b04a33; color: #f0d070; }
 .dry-g.g-C { background: #d0503a33; color: #f0907a; }
+
+/* Far Journeys (journeys.js) */
+.jr-stars { color: var(--gold); letter-spacing: 1px; font-size: 15px; white-space: nowrap; }
+.jr-stars i { font-style: normal; color: #ffffff22; }
+.jr-conds { gap: 6px; }
+.jr-cond .ic { width: 16px; height: 16px; }
+.jr-cond.met { color: var(--good, #5fd08a); border-color: #5fd08a88; }
+.jr-face { display: inline-block; width: 30px; height: 33px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); flex: none; }
+.jr-face.big { width: 48px; height: 53px; }
+.jr-face .portrait { width: 100%; height: 100%; display: block; }
+.jr-party { gap: 6px; min-height: 54px; align-items: center; }
+.jr-trip { display: grid; gap: 4px; }
+.jr-trip .row { gap: 4px; }
+.jr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.jr-hero { display: grid; justify-items: center; gap: 2px; padding: 6px 4px; border-radius: 10px; border: 1px solid var(--line); background: #ffffff08; color: inherit; font: inherit; cursor: pointer; }
+.jr-hero b { font-size: 12.5px; }
+.jr-hero small { font-size: 10.5px; color: var(--dim); display: flex; align-items: center; gap: 2px; }
+.jr-hero small .ic { width: 12px; height: 12px; }
+.jr-hero .jr-face { width: 44px; height: 48px; }
+.jr-hero.on { border-color: var(--gold); background: #e0b04a1f; box-shadow: 0 0 0 1px #e0b04a44 inset; }

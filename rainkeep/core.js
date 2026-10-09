@@ -1026,7 +1026,7 @@
   };
   ACT.squad = (id) => {
     const i = S.squad.indexOf(id);
-    if (KH.heroBusy && KH.heroBusy(id)) return toast(`${HERO[id].name.split(' ')[0]} is out leading a march.`, 'warn');
+    if (KH.heroBusy && KH.heroBusy(id)) return toast(`${HERO[id].name.split(' ')[0]} ${KH.heroAwayWhy ? KH.heroAwayWhy(id) : 'is out leading a march'}.`, 'warn');
     if (i >= 0) {
       if (S.squad.length === 1) return toast('The squad needs at least one hero.', 'warn');
       S.squad.splice(i, 1);

@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.27.0',
+  version: '4.28.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -958,6 +958,7 @@ const DATA = {
     { id: 'clash', text: 'Fight a Wadi Clash', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 9 },
     { id: 'trade', text: 'Send a trade caravan', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 10 },
     { id: 'derby', text: 'Run a Camel Derby race', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 8 },
+    { id: 'journey', text: 'Send heroes on a Far Journey', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'decree', text: 'Give a Warden\'s Decree', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'outpost', text: 'Collect from an outpost', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
@@ -1261,6 +1262,31 @@ const DATA = {
     win: { starglass: 20, journals: 1.5 }, // on top of the plunder (times the rival's strength)
     warPts: 60, // Oasis Wars points per win
     colors: ['#b5452a', '#2f6f9a', '#7a3f8a', '#3f8a4a', '#c99a2c', '#9a2f5a', '#2f8a8a', '#5a4a3a'],
+  },
+
+  // ---------- Far Journeys ----------
+  // From Rainwyrm Lv 5 a board of journeys beyond the Dunes, each a party of up to three heroes away for a few hours.
+  // A journey has one to three requirements the party must meet together (a class, stars between them, a rarity, a
+  // hero's level, a full party), more for the longer and richer ones, and the board is drawn so that the keep's own
+  // heroes can meet each one. Heroes away can't fight, so the question is who to spare. Every hero in the party
+  // comes home with shards of their own, so benched heroes grow too.
+  journeys: {
+    unlock: 5, // Rainwyrm level
+    slots: [[5, 2], [10, 3], [15, 4]],
+    board: 5, refresh: 8 * 3600, reroll: 60, // a new board every 8 hours; Starglass for a new one early
+    odds: [0.4, 0.3, 0.2, 0.1], // of a journey of 1 to 4 stars
+    hours: [2, 4, 6, 8],
+    rewards: [
+      { journals: 1, food: 1.5 },
+      { journals: 2, treats: 10, whetstone: 1 },
+      { starglass: 50, journals: 3, whetstone: 2, dice: 2 },
+      { starglass: 120, beacons: 1, whetstone: 3, speed60: 1 },
+    ],
+    shards: [1, 2, 3, 4], // for each hero in the party
+    places: [['the Salt Wells', 'a herdsman\'s lost camels'], ['the Copper Hills', 'a seam the miners lost'], ['the Singing Dunes', 'the bells under the sand'],
+      ['the Glass Sea', 'a ship half out of the glass'], ['Colossus Road', 'a footprint full of rainwater'], ['the Buried Spires', 'the noon bell-ringer'],
+      ['the Red Mesas', 'a hermit who reads the wind'], ['the Ember Flats', 'a caravan that never arrived'], ['Saltmarch', 'a debt owed to the keep'],
+      ['the Southern Wells', 'a wedding that needs guests'], ['the Oasis of Reeds', 'a heron the size of a man'], ['the Old Cistern Road', 'a map drawn on a jar']],
   },
 
   // ---------- The Dry Season ----------
@@ -1636,6 +1662,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.28', items: [
+      { icon: 'i-journey', name: 'Far Journeys', text: 'Send parties of up to three heroes on journeys beyond the Dunes. Each asks for something (a class, stars between them, a Legendary), and every hero comes home with shards of their own, so your benched heroes grow too.', act: 'journeys', open: (S) => S.lv.wyrm >= 5, needs: 'Rainwyrm Lv 5' },
+    ] },
     { v: '4.27', items: [
       { icon: 'i-dry', name: 'The Dry Season', text: 'Every three days a drought comes for half a day: the wells sink and the air burns. Answer it with an edict (ration the water, dig a deep cistern, or keep the rain watch) and earn the Warden\'s chest by how well the keep comes through.', act: 'dry', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
     ] },
@@ -1952,6 +1981,9 @@ const DATA = {
     { id: 'dry1', text: 'Come through a Dry Season', stat: 'drySeasons', n: 1, reward: { starglass: 50 } },
     { id: 'dryA', text: 'Earn an A in three Dry Seasons', stat: 'dryA', n: 3, reward: { beacons: 2 } },
     { id: 'cistern5', text: 'Dig five deep cisterns', stat: 'cisterns', n: 5, reward: { starglass: 150 } },
+    { id: 'journey1', text: 'Send heroes on a Far Journey', stat: 'journeys', n: 1, reward: { journals: 20 } },
+    { id: 'journey50', text: 'Bring 50 Far Journeys home', stat: 'journeysHome', n: 50, reward: { starglass: 300, shard_epic: 1 } },
+    { id: 'journey4', text: 'Bring a four-star Far Journey home', stat: 'journey4', n: 1, reward: { beacons: 2 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },

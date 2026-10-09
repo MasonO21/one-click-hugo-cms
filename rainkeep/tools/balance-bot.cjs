@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken, outposts, trade, decrees, talents, derby, pacts, dry
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken, outposts, trade, decrees, talents, derby, pacts, dry, journeys
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -54,7 +54,7 @@ const HOURS = Number(process.argv[3] || 8);
     const qLog = []; { const f = A.claimquest; A.claimquest = () => { const q0 = S.quest; f(); if (S.quest > q0) qLog.push(`${q0}@${Math.round(S.time)}s`); }; }
     const COLLECT = NO.includes('surplus') ? 0 : Number(new URLSearchParams(location.search).get('collect') || 5); let lastCollect = -999; const incPicks = [];
     let idleSecs = 0; const idleLog = []; let lastSpire = -999, lastSpireTry = -999;
-    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0; const fs = { casts: 0, caught: 0 }; const cl = { n: 0, places: [0, 0, 0], swept: 0 }; const op = { raised: 0, reinf: 0 }; const tr = { sent: 0 }; const dc = {}; const dy = { n: 0 }; const pc = { gifts: 0, pacts: 0 }; const dr = {};
+    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0; const fs = { casts: 0, caught: 0 }; const cl = { n: 0, places: [0, 0, 0], swept: 0 }; const op = { raised: 0, reinf: 0 }; const tr = { sent: 0 }; const dc = {}; const dy = { n: 0 }; const pc = { gifts: 0, pacts: 0 }; const dr = {}; const jr = { sent: 0 };
     const team_log = []; let sickSecs = 0, popSecs = 0, thirstSecs = 0, dormSecs = 0, lastFightTry = -999, ttype = 0, lastWin = 0; const thaw = [];
     const W = KH.world;
     const steps = Math.round(HOURS * 3600 / 5);
@@ -267,6 +267,17 @@ const HOURS = Number(process.argv[3] || 8);
             A.decree(d.id); dc[d.id] = (dc[d.id] || 0) + 1;
           }
         }
+        // Far Journeys: the richest journeys first, with a party of heroes off the squad only
+        if (KH.journeys && KH.journeys.unlocked() && !NO.includes('journeys')) {
+          KH.journeys.refresh();
+          for (const j of KH.journeys.board().slice().sort((a, b) => b.st - a.st)) {
+            if (KH.journeys.trips().length >= KH.journeys.slots()) break;
+            const pool = Object.keys(S.heroes).filter((id) => !S.squad.includes(id) && !KH.heroBusy(id));
+            const party = KH.journeys.bestParty(j, pool);
+            if (!party) continue;
+            UI.jSel = { id: j.id, party }; A.jsend(); jr.sent++; jr['s' + j.st] = (jr['s' + j.st] || 0) + 1;
+          }
+        }
         // the Dry Season: dig a cistern when four times its cost is in hand, ration the water otherwise
         if (KH.dry && KH.dry.unlocked() && !NO.includes('dry') && (KH.dry.active() || KH.dry.warning()) && !S.dry.edict) {
           const dig = D.dry.edicts.find((e) => e.id === 'dig'), c = KH.scaleReward(dig.cost);
@@ -449,12 +460,13 @@ const HOURS = Number(process.argv[3] || 8);
     if (S.derby) Object.assign(dy, { camel: S.derby.camel, tack: S.derby.tack.join(','), wins: S.derby.wins });
     if (S.rivals && S.rivals.list) Object.assign(pc, { st: S.rivals.list.map((r) => `${r.mult}:${Math.round(r.st || 0)}${r.pact ? 'P' : ''}`).join(' '), feudWins: S.stats.feudWins, struck: S.stats.struck });
     if (S.dry) Object.assign(dr, { seasons: S.stats.drySeasons, A: S.stats.dryA, cisterns: S.dry.cisterns, last: S.dry.last ? S.dry.last.grade : '' });
+    if (S.journeys) Object.assign(jr, { home: S.stats.journeysHome, four: S.stats.journey4 });
     dc.n = S.stats.decrees; dc.most = S.stats.decreeMost;
     Object.assign(tr, { home: S.stats.tradeTrips, glass: S.stats.tradeGlass, ambush: S.stats.tradeAmbush });
     const hl2 = S.hall ? { rank: KH.hall.rank(), best: S.hall.best, days: S.stats.hallDays } : {};
     const aw = S.awaken ? { n: S.stats.awakened, top: S.stats.awakenTop, heroes: Object.entries(S.awaken).map(([k, v]) => `${k.slice(0, 3)}${v}`).join(','), squad: S.squad.map((id) => `${id.slice(0, 3)}${S.awaken[id] || 0}`).join(',') } : {};
     const rk = S.ranks ? { drilled: S.stats.drilled, champs: S.stats.champs, ranks: Object.entries(S.ranks).map(([c, r]) => `${c}:${r.join('/')}`).join(' '), mult: Object.keys(S.ranks).map((c) => KH.rankMult(c).toFixed(2)).join(',') } : {};
-    return { cx, sg, iv, hl, fs, df, rk, cl, aw, hl2, op, tr, dc, tl, dy, pc, dr, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
+    return { cx, sg, iv, hl, fs, df, rk, cl, aw, hl2, op, tr, dc, tl, dy, pc, dr, jr, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
   }, { MODE, HOURS });
   console.log('SRC', JSON.stringify(out.SRC));
   console.log('builder idle % per 30 min', out.idleLog.join(' '));
@@ -482,6 +494,7 @@ const HOURS = Number(process.argv[3] || 8);
   console.log('derby:', JSON.stringify(out.dy));
   console.log('pacts:', JSON.stringify(out.pc));
   console.log('dry:', JSON.stringify(out.dr));
+  console.log('journeys:', JSON.stringify(out.jr));
   console.log('final lv', JSON.stringify(out.lv), 'tech', JSON.stringify(out.tech), 'ending', out.end, 'element', out.element, 'quest', out.quest);
   console.log('stats', JSON.stringify(out.stats));
   console.log('TEAM', JSON.stringify(out.team_log));

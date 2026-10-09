@@ -172,7 +172,7 @@
   const HUBS = {
     rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'hall', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
     play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'clash', 'derby', 'fishing', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
-    ventures: { icon: 'i-caravan', label: 'Ventures', ids: ['outposts', 'trade'], blurb: "The keep's business out on the sand: outposts on the Dunes and trade caravans to the markets beyond." },
+    ventures: { icon: 'i-caravan', label: 'Ventures', ids: ['outposts', 'trade', 'journeys'], blurb: "The keep's business out on the sand: outposts on the Dunes, trade caravans to the markets beyond, and heroes on far journeys." },
   };
   const MENU_IDS = ['bag', 'news'];
   KH.HUBS = HUBS;
@@ -633,7 +633,7 @@
     return {
       title: d.name, lvl: `Lv ${h.lvl}`,
       body: `${head}
-        ${away ? '<p class="notice">Out leading a march on the Dunes.</p>' : ''}
+        ${away ? `<p class="notice">${KH.journeys && KH.journeys.away(id) ? 'Away on a far journey.' : 'Out leading a march on the Dunes.'}</p>` : ''}
         <div class="stats"><div class="stat"><span>Attack</span><b>${fmt(s.atk)}</b></div><div class="stat"><span>Defense</span><b>${fmt(s.def)}</b></div><div class="stat"><span>Health</span><b>${fmt(s.hp)}</b></div></div>
         ${skill}
         ${KH.heroHeirloom ? KH.heroHeirloom(id) : ''}
