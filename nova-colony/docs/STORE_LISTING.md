@@ -350,6 +350,7 @@ under 8 MB). The older captures in `docs/screenshots/` predate the lighting pass
   - Renewal terms displayed in store listing as required (iOS & Android).
   - Restore purchases tested: tapping "Restore" re-grants subscription benefits if license is active.
 
+- [ ] **Loot caches:** odds shown in-game before purchase; rating questionnaire answers "in-game purchases including random items"; caches not sold for Nova where paid loot boxes are restricted (Belgium); see `docs/MOBILE.md` §9.
 - [ ] **Privacy & Legal:**
   - [ ] **Privacy Policy URL:** Live HTTPS page that covers:
     - Analytics opt-in/out, data retention, install ID, AdMob, RevenueCat, cloud saves (if enabled).

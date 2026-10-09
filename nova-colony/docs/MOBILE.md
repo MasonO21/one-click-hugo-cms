@@ -393,6 +393,7 @@ Privacy-conscious by construction (`src/platform/analytics.ts`, `analyticsHooks.
 - [ ] Version/build numbers bumped; Android signed AAB (§6 *Signing*) and iOS archive built from a clean `npm run build && npx cap sync`.
 - [ ] Store listings: privacy policy URL, data-safety / privacy labels (§8), age rating (cartoon violence vs aliens only), `app-ads.txt` hosted, subscription terms shown near the Colony Pass button.
 - [ ] Analytics endpoint reachable (or intentionally unset) and cloud-save backend load-tested if enabled.
+- [ ] **Loot caches (paid random items).** The Shop › Chests odds sheet is reachable from every cache before purchase (App Store guideline 3.1.1, Google Play payments policy) and its numbers match the roller (unit-tested). The age-rating questionnaires answer "in-game purchases **including random items**" (IARC / ESRB label). Belgium treats paid loot boxes as gambling: disable Nova purchases of caches for the BE storefront, or leave Belgium out of the release, and re-check the Netherlands and any new regions with counsel before launch. Earned caches (season pass, daily login) are unaffected.
 
 ## 10. Troubleshooting
 
