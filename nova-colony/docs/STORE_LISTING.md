@@ -51,19 +51,22 @@ You emerge from your damaged escape pod with nothing but a basic tool, a small b
 - **Live-Ops & Rewards:**
   - 7-day login rewards (resources → crafting mats → Nova Crystals → colonist → defense gear → more crystals → legendary reward)
   - Daily spin wheel with chances for resources, Nova, boosts, and rare crates
-  - 50-level season pass (free + premium tracks; XP from normal play)
+  - 50-level season pass (free + premium tracks; XP from normal play): the premium track adds 10 exclusive cosmetics and 8 loot caches
+  - Loot caches in five tiers, from the Supply Cache to the Nova Core: resources, boosts, colonists and cosmetics, with the odds shown in-game before every purchase
   - Optional **Colony Pass** subscription ($7.99/mo): daily Nova Crystals, +10% production, extra offline storage, double daily rewards, exclusive cosmetics
 
 - **Optional Rewarded Ads:** Watch short videos to double offline earnings, boost production for 10 minutes, instantly finish crafting, open free resource crates, refresh recruits, or gain research bonuses. Ads are *always* rewarded and *never* forced—you choose when to watch.
 
-- **Cosmetics & Customization:** Base themes (Sakura, Aurora, Neon, etc.), player outfits, colonist outfits, vehicle and turret skins, and decorations let you make your colony uniquely yours.
+- **Wardrobe & Customization:** 66 cosmetics: explorer outfits and headwear, companions that follow you around (a Robo Hound, a Ship's Cat, an Ember Fox, a Sky Whale…), colony themes with their own ambient effects, crew uniforms, ride paints, turret finishes, exclusive decor sets and Photo Mode frames. Purely visual; they never change how the game plays.
+
+- **Photo Mode:** Hide the HUD, frame your colony with a free camera and golden-hour or night lighting, then share a framed picture straight from the game.
 
 - **No Gameplay Paywalls:** Everything playable in the free game. Purchases grant Nova Crystals, cosmetics, convenience boosts, and premium season rewards only—never lock story, Titanium, biomes, or any core system behind payment.
 
 **Why Play?**
 Every few minutes brings a new accomplishment: discovering a biome, upgrading a tier, recruiting a colonist, unlocking powerful tech, defending against aliens, or watching automated machines turn raw materials into finished products. The game constantly makes you feel progress and growth—exactly what makes base-building games so satisfying.
 
-**Tech:** Built with TypeScript, three.js, and Capacitor. No heavy graphics files—everything from low-poly architecture to procedural audio is generated at runtime for instant load times and a small install size.
+**Tech:** Built with TypeScript, three.js, and Capacitor. The low-poly 3D world and the music are generated at runtime and the painted art is compact WebP, so loading is quick and the install stays small (about 30 MB).
 
 ---
 
@@ -144,6 +147,7 @@ under 8 MB). The older captures in `docs/screenshots/` predate the lighting pass
   - Optional cosmetics (themes, outfits, skins) purchasable with currency.
   - Optional Colony Pass subscription ($7.99/month).
   - Season Pass premium track ($9.99/season).
+  - **Includes random items:** loot caches (bought with Nova Crystals, or inside the Cache Hunter bundle) roll random rewards. Answer "in-game purchases (includes random items)"; odds are shown in-game before purchase. Not sold where paid loot boxes are restricted (Belgium).
   - **None of these unlock core gameplay.**
 
 - **Advertising:**
@@ -164,6 +168,7 @@ under 8 MB). The older captures in `docs/screenshots/` predate the lighting pass
   
 - **Purchases:** Yes
   - IAP for cosmetics, convenience, season premium, subscription.
+  - **Random items:** Yes (loot caches; odds disclosed in-game before purchase).
   
 - **Advertising:** Yes, Rewarded only
   - Optional video ads for in-game bonuses.
