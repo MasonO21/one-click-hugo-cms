@@ -11,6 +11,7 @@ import { cardFace, chestBack, findsLabel, fxBudget, revealGap, revealSound, tapH
 import { backAction } from '../src/ui/logic/back';
 import { resolveSoundId } from '../src/audio/ids';
 import { pctText } from '../src/ui/shop/ChestOddsPanel';
+import { pityText } from '../src/ui/shop/ChestsTab';
 
 const data = createDataRegistry();
 const overlap = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -67,6 +68,14 @@ describe('chest scene layout', () => {
         // the reveal hops left, right, left…
         if (n >= 2) expect(L.cards[0].x < L.chest.x && L.cards[1].x > L.chest.x).toBe(true);
       }
+    }
+  });
+
+  it('landscape: a high pedestal (Nova Core) never pushes the cache up under the title', () => {
+    for (const s of [{ w: 852, h: 393 }, { w: 740, h: 360 }]) {
+      const L = sceneLayout({ w: s.w, h: s.h, safe: { t: 0, r: 47, b: 21, l: 47 }, cards: 7, pedestal: PEDESTAL.chest_nova, scale: 0.92 });
+      expect(L.chest.y).toBeGreaterThanOrEqual(52);
+      expect(L.chest.y + L.chest.h).toBeLessThanOrEqual(L.actions.y + 8);
     }
   });
 
@@ -157,6 +166,11 @@ describe('chest scene: pacing, sound, particles, back', () => {
     expect(chestBack('off')).toBe('none');
     expect(backAction({ chestScene: true, photoMode: true, panelOpen: true, buildActive: true, hasSelection: true })).toBe('chest');
     expect(backAction({ chestScene: false, panelOpen: true, buildActive: false, hasSelection: false })).toBe('panel');
+  });
+
+  it('the Shop tells how close the guaranteed cosmetic is', () => {
+    expect(pityText(10)).toBe('A new cosmetic within 10 caches, guaranteed');
+    expect(pityText(1)).toBe('Your next cache brings a new cosmetic');
   });
 
   it('the odds sheet rounds kindly', () => {

@@ -613,7 +613,7 @@ export class ChestSystem extends System {
     items[FIRST_DEFENSE_CHEST] = (items[FIRST_DEFENSE_CHEST] ?? 0) + 1;
     reward.items = items;
     const def = this.def(FIRST_DEFENSE_CHEST)!;
-    g.toast(`${def.icon} ${def.name} in the spoils! Open it from your Inventory`, 'reward', undefined, 'inventory');
+    g.toast(`${def.icon} A ${def.name} in the spoils. Open it from your Inventory`, 'reward', undefined, 'inventory');
     return true;
   }
 }

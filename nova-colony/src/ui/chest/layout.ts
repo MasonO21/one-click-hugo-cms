@@ -142,7 +142,8 @@ export function sceneLayout(o: LayoutInput): SceneLayout {
 
   // landscape: the chest on its pedestal in the middle, the cards in two wings
   const size = Math.round(Math.min(h * 0.46, w * 0.24, 220) * scale);
-  const chest: Rect = { x: Math.round(w / 2 - size / 2), y: Math.round(Math.min(ground + size * 0.06, h - safe.b - 76) - size), w: size, h: size };
+  // on its pedestal, but never up under the title
+  const chest: Rect = { x: Math.round(w / 2 - size / 2), y: Math.round(Math.max(safe.t + 52, Math.min(ground + size * 0.06, h - safe.b - 76) - size)), w: size, h: size };
   const actionsH = 56;
   const aw = Math.min(w - 32, Math.max(size + 100, 300));
   const actions: Rect = { x: Math.round(w / 2 - aw / 2), y: h - safe.b - actionsH - 8, w: aw, h: actionsH };

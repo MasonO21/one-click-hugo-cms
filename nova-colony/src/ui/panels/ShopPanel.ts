@@ -37,6 +37,8 @@ export class ShopPanel extends Panel {
   override onOpen(arg: unknown): void {
     const t = this.pick<Tab>(arg, 'tab');
     if (t) this.tab = t;
+    // the Shop button's badge is the free crate (Crystals tab): a plain open goes where the badge points
+    else if (this.game.sys.liveops.freeCrateReady() && this.game.sys.liveops.offersUnlocked()) this.tab = 'crystals';
   }
 
   override onArg(arg: unknown): void {
