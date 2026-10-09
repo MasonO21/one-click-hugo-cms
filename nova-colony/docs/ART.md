@@ -79,6 +79,22 @@ image reference and a "keep its exact design, upgrade only the rendering" prompt
 builds. Prompt template, reference URLs, per-icon result URLs and the redo notes are in
 `art/source/painted-building-icons.json`. When a model changes: re-bake, re-paint that id, clean / trim / pad, resize to 256² (vehicles 384²), WebP q82.
 
+## Cosmetics, loot caches and their backdrops
+
+The wardrobe follows the game's theme: **cozy but grown-up frontier gear** (field and expedition kit, brass and steel, alien relics, naturalistic companions), in rich muted colours. No cartoon faces, oversized eyes, hearts, bows or candy colours. All of it was painted with Higgsfield (`gpt_image_2_5`, the HUD style reference) and cleaned with the same halo/fit step as the other icons.
+
+| Art | Size | Path | Lookup |
+|---|---|---|---|
+| Cosmetic icons (66) | 128 px, transparent | `public/art/cosmetics/<cosmetic id>.webp` | `cosmeticArt(id)` (emoji fallback: `CosmeticDef.icon`) |
+| Loot caches, closed and open (5 × 2) | 512 px, transparent | `public/art/chests/<chest id>-closed.webp` / `-open.webp` | `chestArt(id, open)` |
+| Cache item icons (5) | 192 px, transparent | `public/art/items/<chest id>.webp` | `itemArt(id)` |
+| Cache opening backdrops (5) | 752 × 1344, opaque | `public/art/chests/bg/<chest id>.webp` | `chestBgArt(id)` |
+| Wardrobe menu tile | 128 px | `public/art/hud/wardrobe.webp` | `hudArt('wardrobe')` |
+
+- **Closed and open caches share one frame.** The open painting is generated with the closed one as its only reference. Then both are cropped to the union of their bounding boxes, so the cache body keeps its size and position when the lid swaps open.
+- **Backdrops keep their centre clear** for the cache and the reward cards: meadow (Supply), moonlit pond (Explorer), lantern hill (Prospector), crystal canyon (Relic), galaxy (Nova Core).
+- **Tests:** `tests/ui.art.test.ts` requires an icon for every cosmetic and the closed, open and backdrop art for every cache, and allows no orphan files.
+
 ## Style guide (for new art)
 Stylized low-poly 3D, flat-shaded chunky shapes, soft warm lighting, bright saturated but cozy palette,
 chibi characters with big friendly eyes; aliens are cute-creepy, never gory. Icons/portraits: three-quarter
