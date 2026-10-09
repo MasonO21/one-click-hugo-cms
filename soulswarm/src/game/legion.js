@@ -1,9 +1,11 @@
 // The Legion: risen soul minions that orbit the Shepherd and hunt the horde.
 // A minion keeps the identity of what it was (MINIONS in data.js): Shades (soul wisps), Wisp Runners,
-// taunting Bulwarks, ranged Soul Witches and Soul Bombs. Raised elites become Champions of their variant.
+// taunting Bulwarks, ranged Soul Witches, Soul Bombs, Phantoms (risen Grave Wraiths) and Soul Priests (risen Corpse
+// Priests, who mend the minions around them). Raised elites become Champions of their variant.
+// Grave Wraiths pass through the legion: minions never target them (and enemies.damage refuses minion damage to them).
 // Every variant except the Shade renders as a spectral ghost of its source enemy, one InstancedMesh each.
 import * as THREE from 'three';
-import { BASE, MINIONS, ENEMIES, OVERFLOW } from './data.js';
+import { BASE, MINIONS, ENEMIES, OVERFLOW, EVOLUTIONS } from './data.js';
 import { wispGeometry, enemyGeometry } from '../engine/models.js';
 import { foeModel, loadFoeModel } from '../engine/foemodels.js';
 import { makeSpectralMaterial, addInstanceAttrs } from '../engine/materials.js';
@@ -14,10 +16,11 @@ const TAU = Math.PI * 2;
 const VARIANT_OF = {};
 for (const k in MINIONS) if (MINIONS[k].from) VARIANT_OF[MINIONS[k].from] = k;
 // spectral variants: source model and instance capacity (when a mesh is full, extras draw as wisps)
-const GHOSTS = { runner: { model: 'ghoul', max: 160 }, bulwark: { model: 'brute', max: 96 }, soulWitch: { model: 'witch', max: 96 }, soulBomb: { model: 'bloater', max: 64 } };
+const GHOSTS = { runner: { model: 'ghoul', max: 160 }, bulwark: { model: 'brute', max: 96 }, soulWitch: { model: 'witch', max: 96 }, soulBomb: { model: 'bloater', max: 64 },
+  phantom: { model: 'wraith', max: 64 }, soulPriest: { model: 'priest', max: 24 } };
 const GHOST_KINDS = Object.keys(GHOSTS);
 // hover height of each variant's soul core; ghosts float with their feet LIFT metres above the ground
-const HOVER = { shade: 0.95, runner: 0.8, bulwark: 1.2, soulWitch: 1.05, soulBomb: 0.9 };
+const HOVER = { shade: 0.95, runner: 0.8, bulwark: 1.2, soulWitch: 1.05, soulBomb: 0.9, phantom: 1.05, soulPriest: 1.15 };
 const LIFT = 0.3;
 // body radius (enemies hit a taunter on contact at e.radius + m.radius): the source enemy's, scaled to the ghost
 const RADIUS = { shade: 0.35 };
@@ -78,7 +81,7 @@ export class Legion {
     this._bx = 0; this._bz = 0; this._bdmg = 0;
     this._cx = new Float32Array(MAX_CAND); this._cz = new Float32Array(MAX_CAND); this._cw = new Float32Array(MAX_CAND);
     this._ce = new Array(MAX_CAND).fill(null);
-    this._skip = (e) => (e.x - this._px) ** 2 + (e.z - this._pz) ** 2 > this._leash2 || (this._bossFull && e.type === 'boss');
+    this._skip = (e) => e.type === 'wraith' || (e.x - this._px) ** 2 + (e.z - this._pz) ** 2 > this._leash2 || (this._bossFull && e.type === 'boss');
     // nearest enemy that passes _skip (enemies.nearest without allocating a closure per search)
     this._best = null; this._bestD2 = 0;
     this._nearest = (e, d2) => { if (d2 < this._bestD2 && !this._skip(e)) { this._bestD2 = d2; this._best = e; } };
@@ -127,7 +130,7 @@ export class Legion {
     const run = this.run;
     const key = VARIANT_OF[kind] || 'shade', v = MINIONS[key], C = MINIONS.champion;
     const m = this.pool.pop() || {};
-    m.uid = ++this.uidSeq; m.kind = key; m.v = v; m.champ = !!elite; m.hover = HOVER[key];
+    m.uid = ++this.uidSeq; m.kind = key; m.v = v; m.champ = !!elite; m.hover = HOVER[key]; m.healT = v.pulse || 0;
     m.x = x; m.z = z; m.y = burstY; m.vx = 0; m.vz = 0; m.vy = 0;
     m.maxHp = m.hp = run.stats.minionHp * v.hp * (elite ? C.hp : 1);
     m.scale = (v.scale || 1) * (elite ? C.scale : 1);
@@ -246,6 +249,7 @@ export class Legion {
     this.t += dt;
     this.raiseSfxT -= dt; this.orbSfxT -= dt; this.blastSfxT -= dt;
     const run = this.run, P = run.player, S = run.stats, E = run.enemies, M = MINIONS;
+    const BC = EVOLUTIONS.boneCrown, crownR2 = run.evolved.boneCrown ? BC.auraR * BC.auraR : -1; // Bone Crown: minions near the Shepherd hit harder
     const boss = run.bossEnemy && run.bossEnemy.active ? run.bossEnemy : null;
     const list = this.list;
     const n = list.length;
@@ -331,7 +335,7 @@ export class Legion {
           const ox = tg.x - m.x, oz = tg.z - m.z;
           if (m.atkCd <= 0 && ox * ox + oz * oz <= (v.range + tg.radius) ** 2) {
             m.atkCd = v.interval;
-            this.fireOrb(m, tg, S.minionDmg * v.dmg * (m.champ ? M.champion.dmg : 1) * (0.9 + Math.random() * 0.2));
+            this.fireOrb(m, tg, S.minionDmg * v.dmg * (m.champ ? M.champion.dmg : 1) * (0.9 + Math.random() * 0.2) * ((m.x - P.x) ** 2 + (m.z - P.z) ** 2 < crownR2 ? 1 + BC.auraDmg : 1));
             m.hp -= (tg.dmg || 8) * (tg === boss ? M.bossRecoil : M.recoil) * v.recoilMul;
           }
         } else if (kind === 'soulBomb') {
@@ -339,10 +343,10 @@ export class Legion {
         } else if (d < tg.radius + v.contact && m.atkCd <= 0) {
           // strike on contact
           m.atkCd = v.interval;
-          const dmg = S.minionDmg * v.dmg * (m.champ ? M.champion.dmg : 1) * (0.85 + Math.random() * 0.3);
+          const dmg = S.minionDmg * v.dmg * (m.champ ? M.champion.dmg : 1) * (0.85 + Math.random() * 0.3) * ((m.x - P.x) ** 2 + (m.z - P.z) ** 2 < crownR2 ? 1 + BC.auraDmg : 1);
           HIT.kx = m.vx; HIT.kz = m.vz; HIT.knock = v.knock || 1.2; HIT.source = 'minion'; HIT.silent = false;
           E.damage(tg, dmg, HIT);
-          m.hp -= (tg.dmg || 8) * (tg === boss ? M.bossRecoil : M.recoil);
+          m.hp -= (tg.dmg || 8) * (tg === boss ? M.bossRecoil : M.recoil) * (v.recoilMul ?? 1); // a Phantom takes none
           const b = kind === 'bulwark' ? -0.25 : -0.6; // heavy Bulwarks barely bounce off
           m.vx *= b; m.vz *= b;
           run.particles.burst(m.x, m.y, m.z, kind === 'bulwark' ? 4 : 2, c, FX_HIT);
@@ -369,6 +373,7 @@ export class Legion {
         run.particles.emit(m.x + (Math.random() - 0.5) * 0.5, m.y + 0.2, m.z + (Math.random() - 0.5) * 0.5, 0, 0.9, 0, 0.6, 0.3, 0.02, GOLD_HDR[0], GOLD_HDR[1], GOLD_HDR[2], 0.9, 0, 0);
       }
       if (kind === 'bulwark') T[tn++] = m;
+      if (kind === 'soulPriest' && (m.healT -= dt) <= 0) { m.healT = v.pulse; this.mend(m, v); }
     }
     // minions raised by kills during this loop were appended past n; keep them (and list new Bulwarks)
     for (let j = n; j < list.length; j++) { const m = list[j]; list[alive++] = m; if (m.kind === 'bulwark') T[tn++] = m; }
@@ -376,6 +381,26 @@ export class Legion {
     T.length = tn;
     this.fadeOverflow(dt, fading);
     this.updateOrbs(dt);
+  }
+
+  /** A Soul Priest's pulse: every minion within healR m mends heal × its max HP. */
+  mend(p, v) {
+    const n = this.heal(p.x, p.z, v.healR, v.heal * (p.champ ? 1.5 : 1)), P = this.run.particles;
+    P.ring(p.x, p.z, v.healR, 18, HEAL_HDR, { life: 0.4, size: 0.35, y: 0.4 });
+    if (n) P.burst(p.x, p.y + 0.3, p.z, 6, HEAL_HDR, FX_HEAL);
+  }
+
+  /** Heals every living minion within r m of (x, z) by k × its max HP; returns how many were hurt. */
+  heal(x, z, r, k) {
+    const L = this.list, r2 = r * r;
+    let n = 0;
+    for (let i = 0; i < L.length; i++) {
+      const m = L[i];
+      if (!(m.hp > 0) || m.hp >= m.maxHp || m.fade > 0 || (m.x - x) ** 2 + (m.z - z) ** 2 > r2) continue;
+      m.hp = Math.min(m.maxHp, m.hp + m.maxHp * k); n++;
+      if (n <= 24) this.run.particles.burst(m.x, m.y + 0.2, m.z, 2, HEAL_HDR, FX_HEAL);
+    }
+    return n;
   }
 
   /** Overflow fade: once the legion has been over the cap for OVERFLOW.grace s, the excess dissolves, newest souls first

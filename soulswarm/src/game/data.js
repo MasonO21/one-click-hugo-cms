@@ -111,6 +111,12 @@ export const RITES = {
 //     locked direction; then `recover` s at `crawl` × speed; then `cd` s of normal chasing (contact still hurts) before the next
 //   brute.slam: wind up at `range`, then a cone (`reach`, ±`arc`) for dmgMul × damage with knockback; `cd` before the next one
 //   witch.lob: arcing orb at the target's position `lead` s ahead, landing after `flight` s on a `radius` circle (area damage)
+//   from: { ch, minute } = the first chapter and minute it joins the horde · cap = most alive at once
+//   wraith: the legion can neither target, taunt nor harm it; dive = within `range` m it speeds up ×speedMul on a ±weave
+//     rad swing (a slower ±0.35 rad drift outside)
+//   priest: holds `keep` m from the Shepherd and backs off inside `flee`; raise = every cd s (±20%) it channels `channel` s
+//     over up to `n` corpses within `reach` m (a foe that did not rise stays a corpse for `corpse` s), which then rise as
+//     hollow Husks (no soul shard, no corpse); a stun, a fear or its death breaks the channel
 export const ENEMIES = {
   husk:    { name: 'Husk',         hp: 14,  speed: 2.4, dmg: 6,  radius: 0.45, xp: 1, mass: 1.0, scale: 1.0 },
   ghoul:   { name: 'Ghoul',        hp: 8,   speed: 4.4, dmg: 5,  radius: 0.38, xp: 1, mass: 0.7, scale: 0.9,
@@ -120,6 +126,10 @@ export const ENEMIES = {
   witch:   { name: 'Cinder Witch', hp: 22,  speed: 2.3, dmg: 10, radius: 0.45, xp: 2, mass: 1.0, scale: 1.0, ranged: { range: 8.5, cooldown: 3.0, speed: 6.5 },
              lob: { flight: 1.0, lead: 0.3, radius: 1.1, height: 3.2 } }, // gentler lead: slow movers were hit far more (+76% Ch1)
   bloater: { name: 'Bloater',      hp: 28,  speed: 2.0, dmg: 26, radius: 0.62, xp: 2, mass: 2.0, scale: 1.0, explode: { radius: 2.6, fuse: 1.0 } },
+  wraith:  { name: 'Grave Wraith', hp: 16,  speed: 3.2, dmg: 7,  radius: 0.42, xp: 2, mass: 0.6, scale: 1.0, from: { ch: 2, minute: 2.5 }, cap: 14,
+             dive: { range: 5, speedMul: 1.55, weave: 0.6 } },
+  priest:  { name: 'Corpse Priest', hp: 45, speed: 2.1, dmg: 8,  radius: 0.5,  xp: 4, mass: 1.4, scale: 1.0, from: { ch: 3, minute: 3 }, cap: 3,
+             keep: 10, flee: 7, raise: { cd: 6, channel: 1.2, n: 3, reach: 7, corpse: 10 } },
 };
 // HP = hp × chapter hpMul × (1 + chHp × (c − 1)) × tune[c − 1] × Endless scale; damage = dmg × (1 + chDmg × (c − 1)) × √scale
 // tune evens the fight out at about a minute for a player with that chapter's typical progression (scripts/balance.mjs, GOD=1)
@@ -296,9 +306,9 @@ export const CHAPTERS = [
   { id: 2, name: 'Ember Wastes',     ground: 0x4a3226, groundB: 0x241510, rune: 0xff8a2a, fog: 0x0b0503, rim: 0xffb37a, enemy: 0xff3a3a, boss: 0xff7a1a, bossId: 'pyrexa', hpMul: 1.9,  rate: 1.15,
     mods: { tag: 'The witches’ fire lingers', weights: { witch: 1.8 }, burn: true, vents: true } },
   { id: 3, name: 'Frozen Ossuary',   ground: 0x51637c, groundB: 0x26324a, rune: 0x9fe4ff, fog: 0x060b14, rim: 0xbfeaff, enemy: 0xff4f6a, boss: 0x8f9cff, bossId: 'vaulkar', hpMul: 3.2,  rate: 1.3,
-    mods: { tag: 'Ghoul packs hunt on treacherous ice', weights: { ghoul: 1.5 }, pack: [6, 8], ice: true } },
+    mods: { tag: 'Ghoul packs hunt on treacherous ice, and the Corpse Priests tend the dead', weights: { ghoul: 1.5, priest: 1.6 }, pack: [6, 8], ice: true } },
   { id: 4, name: 'Abyssal Cathedral',ground: 0x3a2e4e, groundB: 0x1a1226, rune: 0xa35bff, fog: 0x06030c, rim: 0xd2a8ff, enemy: 0xff5a2e, boss: 0xb070ff, bossId: 'azrathel', hpMul: 5.0,  rate: 1.45,
-    mods: { tag: 'Bloaters swarm and the abyss reaches up', weights: { bloater: 2 }, vignette: 1.25, sight: 17, hands: true } },
+    mods: { tag: 'Bloaters swarm, Wraiths drift in and the abyss reaches up', weights: { bloater: 2, wraith: 1.6 }, vignette: 1.25, sight: 17, hands: true } },
   { id: 5, name: 'Crimson Throne',   ground: 0x4a2228, groundB: 0x220e12, rune: 0xff2e55, fog: 0x0a0204, rim: 0xff9aaa, enemy: 0xffb02e, boss: 0xff2e55, bossId: 'vesperine', hpMul: 7.5,  rate: 1.6,
     mods: { tag: 'The gilded court rises: twice the elites', weights: { brute: 1.6 }, elites: [45, 75, 110, 150, 185, 225, 255, 290] } },
   // Unlocked by clearing Chapter 5. No time limit; the run ends when you fall.
@@ -343,11 +353,14 @@ export const SKILLS = {
     dmg: L([16, 20, 26, 32, 42]), radius: L([2.6, 2.8, 3.0, 3.3, 3.7]), cd: L([1.6, 1.5, 1.35, 1.2, 1.0]), arcs: L([1, 1, 2, 2, 3]),
     desc: (lv) => [`A ghostly blade sweeps around you.`, `+Damage, +reach`, `Sweeps twice`, `+Damage, faster`, `Triple sweep, huge reach`][lv - 1],
   },
+  // `chains` per cast (each from its own first foe, never sharing a link); from Lv4 each chain's first foe is pinned `stun` s,
+  // a foe at most once per pinCd s (so the nearest Brute or Bloater can't be held off its slam or fuse forever)
   chains: {
     type: 'weapon', name: 'Ashen Chains', icon: 'chain', max: 5,
-    dmg: L([18, 23, 29, 37, 48]), jumps: L([3, 4, 5, 6, 8]), cd: L([1.5, 1.4, 1.25, 1.1, 0.95]), range: 7.5,
+    dmg: L([18, 23, 29, 37, 44]), jumps: L([3, 4, 5, 6, 5]), chains: L([1, 1, 1, 1, 2]), stun: L([0, 0, 0, 0.25, 0.25]), pinCd: 2,
+    cd: L([1.5, 1.4, 1.25, 1.1, 0.95]), range: 7.5,
     splash: 1.4, splashDmg: 0.5, // each link also scorches foes within 1.4 m of its target for 50%
-    desc: (lv) => [`Burning chains leap between foes, scorching those beside them.`, `+1 jump`, `+1 jump, +damage`, `+1 jump, faster`, `+2 jumps, searing damage`][lv - 1],
+    desc: (lv) => [`Burning chains leap between foes, scorching those beside them.`, `+1 jump`, `+1 jump, +damage`, `+1 jump, faster. The first foe is pinned`, `A second chain, searing damage`][lv - 1],
   },
   spears: {
     type: 'weapon', name: 'Bone Spears', icon: 'spear', max: 5,
@@ -359,10 +372,12 @@ export const SKILLS = {
     dmg: L([9, 11, 13, 16, 20]), count: L([2, 3, 4, 5, 6]), radius: L([2.3, 2.4, 2.6, 2.8, 3.0]),
     desc: (lv) => [`Burning skulls orbit you.`, `+1 skull`, `+1 skull, wider orbit`, `+1 skull, +damage`, `+1 skull, blazing`][lv - 1],
   },
+  // from Lv3 the wave chills what it strikes: × (1 - slow) speed for slowDur s (never the boss)
   gravePulse: {
     type: 'weapon', name: 'Grave Pulse', icon: 'pulse', max: 5,
     dmg: L([12, 16, 20, 25, 33]), radius: L([3.6, 4.0, 4.5, 5.0, 6.0]), cd: L([3.0, 2.8, 2.5, 2.2, 1.8]),
-    desc: (lv) => [`Release a shockwave that hurls foes back.`, `+Damage, +radius`, `+Radius, faster`, `+Damage, faster`, `Massive cataclysm wave`][lv - 1],
+    slow: L([0, 0, 0.25, 0.25, 0.3]), slowDur: 1.5,
+    desc: (lv) => [`Release a shockwave that hurls foes back.`, `+Damage, +radius`, `+Radius, faster. The wave chills foes, -25% speed`, `+Damage, faster`, `Massive cataclysm wave, -30% speed`][lv - 1],
   },
   // the Shepherd leaves witchfire where he walks (a patch every `gap` m, or at his feet every `idle` s standing still):
   // r m wide, burning `life` s for dps a second to foes inside (one tick every 0.25 s, the hottest patch only);
@@ -386,9 +401,16 @@ export const SKILLS = {
 };
 
 export const EVOLUTIONS = {
-  soulStorm: { name: 'Soul Storm', from: 'soulBolt', needs: 'might', icon: 'bolt', desc: 'EVOLVED: 6 bolts that detonate on impact.' },
-  boneCrown: { name: 'Bone Crown', from: 'skullHalo', needs: 'minionFury', icon: 'skull', desc: 'EVOLVED: 8 skulls. Skull kills always raise a soul.' },
-  // Tunables below are read by weapons.js. Radii are in metres, times in seconds, dmg before Might/crits.
+  // Tunables are read by weapons.js (and projectiles.js, legion.js). Radii are in metres, times in seconds, dmg before Might/crits.
+  soulStorm: {
+    name: 'Soul Storm', from: 'soulBolt', needs: 'might', icon: 'bolt', desc: 'EVOLVED: 6 bolts that detonate on impact. A kill splits the bolt in two.',
+    split: 2, splitDmg: 0.5, splitR: 8,      // a bolt that kills splits into 2 mini-bolts (50% damage, no blast, no split) at foes within 8 m
+  },
+  boneCrown: {
+    name: 'Bone Crown', from: 'skullHalo', needs: 'minionFury', icon: 'skull', desc: 'EVOLVED: 8 skulls. Skull kills always raise a soul. Minions near you strike harder and mend.',
+    auraR: 6, auraDmg: 0.3,                  // minions within 6 m of the Shepherd deal +30%
+    mend: 0.2, mendEvery: 4,                 // and every 4 s heal 20% of their max HP
+  },
   harvestMoon: {
     name: 'Harvest Moon', from: 'scythe', needs: 'haste', icon: 'scythe', desc: 'EVOLVED: Twin moon blades orbit you. Scythe kills heal.',
     dmg: 46, arcs: 3, cd: 0.9,                                   // the periodic sweep (reach = scythe Lv5 radius)
@@ -396,8 +418,9 @@ export const EVOLUTIONS = {
     heal: 1, healPerSec: 6,                                      // HP per scythe kill, capped by a bank that refills at healPerSec
   },
   chainsOfPerdition: {
-    name: 'Chains of Perdition', from: 'chains', needs: 'frenzy', icon: 'chain', desc: 'EVOLVED: 12-jump chains set foes ablaze. The burning rise more often.',
-    dmg: 54, jumps: 12, minHop: 1.6,        // links prefer targets at least 1.6 m apart (max jump 4.5 m, as Lv5)
+    name: 'Chains of Perdition', from: 'chains', needs: 'frenzy', icon: 'chain', desc: 'EVOLVED: Twin 7-jump chains set foes ablaze. The burning rise more often.',
+    dmg: 50, jumps: 7, chains: 2, stun: 0.25, // two 7-link chains; links prefer targets at least 1.6 m apart (max jump 4.5 m, as Lv5)
+    minHop: 1.6,
     splash: 1.7,                            // scorch radius around each link (50% damage, as the base chains)
     burn: 0.4, burnTime: 2, burnTick: 0.25, // burn deals 40% of each hit over 2 s (re-hits add to the pool and refresh the timer)
     raise: 0.25,                            // +25 pp Raise Chance for kills while burning (still capped at 85%)
@@ -417,8 +440,9 @@ export const EVOLUTIONS = {
   },
   requiem: {
     name: 'Requiem', from: 'gravePulse', needs: 'soulMagnet', icon: 'pulse', desc: 'EVOLVED: Drags the horde in, then detonates. Draws in soul shards.',
-    dmg: 46, radius: 6.5, cd: 1.4,
+    dmg: 48, radius: 6.5, cd: 1.4,
     pull: 0.3, pullForce: 70, swirl: 0.35,   // 0.3 s inward drag (accel m/s², tangential share) before the blast
+    slow: 0.3, slowDur: 1.5,                 // the blast chills, as the Lv5 pulse
     shardR: 12,                              // soul shards within 12 m fly to the Shepherd on each blast
   },
 };
@@ -448,6 +472,11 @@ export const MINIONS = {
   // flashes for `fuse` s on contact, then blasts `blast` × minionDmg in `radius` m and leaves the legion
   soulBomb:  { from: 'bloater', hp: 0.7,  speed: 1.15, seek: 8,   radius: 2.4, blast: 6, fuse: 0.25, knock: 9,
                minCluster: 3, patience: 5, searchEvery: 0.6, eliteWeight: 2, bossWeight: 2, scale: 0.75 },
+  // a risen Grave Wraith: a quick striker that passes through blows (its strikes cost it no recoil)
+  phantom:   { from: 'wraith',  hp: 0.5,  dmg: 1.05, interval: 0.42, speed: 1.35, seek: 7.5, contact: 0.4, leash: 2, recoilMul: 0, scale: 0.9 },
+  // a risen Corpse Priest: a weak striker that stays near the Shepherd and mends the minions within healR m by
+  // heal × their max HP every `pulse` s
+  soulPriest:{ from: 'priest',  hp: 1.2,  dmg: 0.5,  interval: 1.0,  speed: 0.8,  seek: 5,   contact: 0.45, leash: -2, pulse: 3, healR: 4, heal: 0.12, scale: 0.8 },
   champion:  { scale: 1.35, hp: 3, dmg: 2 }, // a raised elite: multiplies its variant
   recoil: 0.3, bossRecoil: 0.5, // a melee hit costs the minion this share of its target's contact damage
   bossEngage: 24, // at most this many minions fight the boss at once; the rest fight adds or orbit
@@ -642,12 +671,12 @@ export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 
 // ---------------------------------------------------------------- Bestiary (meta/bestiary.js, ui/meta/bestiary.js)
 // A painted entry per foe. Kills add up over every run (gilded elites count as their base type; the Soul Thief and the five
 // chapter bosses count too). An entry unlocks with its first kill. Its three milestones are claimed in order, each once:
-// goals = kill counts (`rare` foes use rareGoals), rewards[i] = tier i + 1's bundle. In all: 22,000 gold, 11 sigils and
-// 550 gems (MONETIZATION §2).
+// goals = kill counts (`rare` foes use rareGoals), rewards[i] = tier i + 1's bundle. In all: 26,000 gold, 13 sigils and
+// 650 gems (MONETIZATION §2).
 export const BESTIARY = {
-  goals: [100, 1000, 10000], rareGoals: [1, 10, 50],
+  goals: [100, 1000, 10000], rareGoals: [1, 10, 50], // a foe's own `goals` override both (the Corpse Priest: at most 3 alive)
   rewards: [{ gold: 2000 }, { sigils: 1 }, { gems: 50 }],
-  order: ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'thief', 'gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'],
+  order: ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest', 'thief', 'gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'],
   foes: {
     husk: { name: 'Husk', role: 'Chaser', color: '#ff8a3d',
       lore: 'Once they were mourners. Now they remember only the long walk to the grave, and they walk it toward you.',
@@ -664,6 +693,12 @@ export const BESTIARY = {
     bloater: { name: 'Bloater', role: 'Bomber', color: '#c35cff',
       lore: 'The plague pits fed it until it could hold no more. Now it waits for someone to come close.',
       fights: 'Flashes when it reaches you, then bursts a second later. Kill it early, or let it pop inside the horde.' },
+    wraith: { name: 'Grave Wraith', role: 'Phantom', color: '#c8b6ff',
+      lore: 'Some of the dead were buried without a name. They never learned to walk again, so they drift, and they hate whoever still has one.',
+      fights: 'Passes straight through your legion: minions cannot hold or harm it. Dives at you on a weave. Only your own weapons stop it.' },
+    priest: { name: 'Corpse Priest', role: 'Necromancer', color: '#ff2e4a', goals: [50, 500, 3000],
+      lore: 'The plague priests buried the dead by the cartload. When the graves overflowed, one of them learned to empty them again.',
+      fights: 'Keeps its distance and chants over the fallen, raising them as hollow Husks. Kill it first, or raise the dead before it can.' },
     thief: { name: 'Soul Thief', role: 'Run event', color: '#ffcf4a', rare: true,
       lore: 'It picks the pockets of the dying, coins and souls alike, and it has never once stood and fought.',
       fights: 'Never attacks. Flees with its sack for 18 s, faster than the horde but slower than you. Run it down for gold.' },

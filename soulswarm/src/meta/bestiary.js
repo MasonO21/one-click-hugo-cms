@@ -3,7 +3,7 @@
 // Claiming pays through economy.claimBestiary (it owns grant()).
 import { BESTIARY } from '../game/data.js';
 
-export const bestiaryGoals = (id) => (BESTIARY.foes[id].rare ? BESTIARY.rareGoals : BESTIARY.goals);
+export const bestiaryGoals = (id) => BESTIARY.foes[id].goals || (BESTIARY.foes[id].rare ? BESTIARY.rareGoals : BESTIARY.goals);
 
 /** One entry for the UI: kills, unlocked, tiers claimed, and each tier's goal, reward and state (claimed / ready). */
 export function bestiaryEntry(p, id) {

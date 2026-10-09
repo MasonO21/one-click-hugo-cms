@@ -13,7 +13,7 @@ done
 for i in 1 2 3 4 5 6; do # chapter key art (home chapter card, run intro)
   convert "$A/chapter-$i.jpg" -resize 960x -quality 72 -define webp:method=6 "$W/chapter-$i.webp"
 done
-for f in husk ghoul brute witch bloater thief; do # Bestiary portraits
+for f in husk ghoul brute witch bloater wraith priest thief; do # Bestiary portraits
   convert "$A/foe-$f.jpg" -resize 540x720 -quality 78 -define webp:method=6 "$W/foe-$f.webp"
 done
 for r in lantern crown idol heart boots coin hourglass eye; do # relic icons (tiles, detail, Altar reveal, reward chips)

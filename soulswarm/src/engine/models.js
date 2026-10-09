@@ -209,6 +209,29 @@ export function enemyGeometry(type) {
       ...[[0.4, 0.95, 0.25], [-0.35, 0.6, 0.38], [0.15, 0.45, 0.48], [-0.45, 1.0, -0.1], [0.42, 0.55, -0.3], [-0.1, 1.15, -0.4], [0.05, 0.85, 0.52]]
         .map((p, i) => P(Sph(0.09 + (i % 3) * 0.03, 5, 4), 0, { p, e: 1 })),
     );
+  } else if (type === 'wraith') {
+    const c = 0x5a5070, c2 = 0x3a3248, bone = 0xc8c0b0;
+    parts.push(
+      P(Cone(0.42, 1.25, 7), c, { p: [0, 0.95, 0], r: [Math.PI, 0, 0] }),           // the shroud, tapering to a point below
+      P(Sph(0.32, 7, 5), c, { p: [0, 1.5, 0], s: [1.2, 0.8, 1] }),
+      P(Cone(0.26, 0.5, 6), c2, { p: [0, 1.78, -0.06], r: [-0.3, 0, 0] }),           // hood
+      P(Sph(0.15, 6, 4), bone, { p: [0, 1.62, 0.12] }),                               // skull
+      ...mirror((x) => P(Sph(0.04, 4, 3), 0, { p: [0.055 * x, 1.65, 0.25], e: 1 })),
+      ...mirror((x) => P(Box(0.07, 0.07, 0.7), bone, { p: [0.36 * x, 1.4, 0.32], r: [0.3, 0.25 * x, 0] })), // reaching arms
+    );
+  } else if (type === 'priest') {
+    const c = 0x2a2226, c2 = 0x4a3c30, bone = 0xd8ccb4;
+    parts.push(
+      P(Cone(0.5, 1.5, 8), c, { p: [0, 0.75, 0] }),                                   // robe
+      P(Sph(0.3, 7, 5), c2, { p: [0, 1.45, -0.05], s: [1.15, 0.85, 1] }),             // hunched shoulders
+      P(Sph(0.16, 6, 4), bone, { p: [0, 1.72, 0.08] }),                               // the bird-skull mask
+      P(Cone(0.06, 0.42, 5), bone, { p: [0, 1.66, 0.36], r: [Math.PI / 2 + 0.35, 0, 0] }), // its beak
+      ...mirror((x) => P(Sph(0.035, 4, 3), 0, { p: [0.06 * x, 1.76, 0.2], e: 1 })),
+      P(Cyl(0.015, 0.015, 0.45, 3), 0x5a4a30, { p: [0.42, 1.0, 0.15] }),             // the censer's chain
+      P(Sph(0.11, 6, 4), 0x8a5a2a, { p: [0.42, 0.74, 0.15] }),
+      P(Sph(0.07, 5, 3), 0, { p: [0.42, 0.8, 0.15], e: 1 }),                          // its crimson coals
+      ...mirror((x) => P(Box(0.11, 0.48, 0.11), c2, { p: [0.36 * x, 1.18, 0.08], r: [0.15, 0, 0.18 * x] })),
+    );
   }
   return merge(parts);
 }

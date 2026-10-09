@@ -18,6 +18,8 @@ import ghoul from '../assets/art/foe-ghoul.webp';
 import brute from '../assets/art/foe-brute.webp';
 import witch from '../assets/art/foe-witch.webp';
 import bloater from '../assets/art/foe-bloater.webp';
+import wraith from '../assets/art/foe-wraith.webp';
+import priest from '../assets/art/foe-priest.webp';
 import thief from '../assets/art/foe-thief.webp';
 import gravemaw from '../assets/art/foe-gravemaw.webp';
 import pyrexa from '../assets/art/foe-pyrexa.webp';
@@ -67,7 +69,7 @@ export const talentArt = (id, fallback) => (id === 'greed' ? relicArt('coin') : 
 export const CHAPTER_ART = { 1: ch1, 2: ch2, 3: ch3, 4: ch4, 5: ch5, 6: ch6 };
 
 /** Painted Bestiary portraits (3:4) by entry id (BESTIARY.order). */
-export const FOE_ART = { husk, ghoul, brute, witch, bloater, thief, gravemaw, pyrexa, vaulkar, azrathel, vesperine };
+export const FOE_ART = { husk, ghoul, brute, witch, bloater, wraith, priest, thief, gravemaw, pyrexa, vaulkar, azrathel, vesperine };
 
 /** Each chapter boss's painted band (the boss-warning banner) by boss id (BOSSES in data.js). */
 export const BOSS_ART = {};

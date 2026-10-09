@@ -22,6 +22,8 @@ export const FOES = {
   brute:    { h: 2.3,  glow: 1.1, gait: { hip: 0.4,  sh: 0.78, armX: 0.2,  leg: 0.36, arm: 0.22, rate: 1.0, bob: 0.02,  sway: 0.035, hover: 0,     hem: 0 } },
   witch:    { h: 2.15, glow: 1.4, gait: { hip: 0.5,  sh: 0.74, armX: 0.11, leg: 0,    arm: 0.12, rate: 0.8, bob: 0,     sway: 0.015, hover: 0.035, hem: 0.03 } },
   bloater:  { h: 1.6,  glow: 1.3, gait: { hip: 0.26, sh: 0.74, armX: 0.32, leg: 0.3,  arm: 0.14, rate: 1.3, bob: 0.02,  sway: 0.05,  hover: 0,     hem: 0 } },
+  wraith:   { h: 1.85, glow: 1.5, gait: { hip: 0.5,  sh: 0.72, armX: 0.14, leg: 0,    arm: 0.14, rate: 0.9, bob: 0,     sway: 0.02,  hover: 0.04,  hem: 0.045 } },
+  priest:   { h: 2.1,  glow: 1.4, gait: { hip: 0.42, sh: 0.74, armX: 0.14, leg: 0.18, arm: 0.12, rate: 1.0, bob: 0.015, sway: 0.025, hover: 0,     hem: 0.03 } },
   thief:    { h: 1.3,  glow: 1.6, gait: { hip: 0.4,  sh: 0.7,  armX: 0.2,  leg: 0.4,  arm: 0.1,  rate: 2.4, bob: 0.04,  sway: 0.02,  hover: 0,     hem: 0.02 } },
   gravemaw: { h: 4.6,  glow: 2.0, gait: { hip: 0.42, sh: 0.72, armX: 0.17, leg: 0,    arm: 0.1,  rate: 0.5, bob: 0,     sway: 0.008, hover: 0.012, hem: 0.025 } },
   pyrexa:   { h: 4.6,  glow: 1.8, lit: 1.25, gait: { hip: 0.45, sh: 0.74, armX: 0.14, leg: 0,    arm: 0.08, rate: 0.5, bob: 0,     sway: 0.01,  hover: 0.015, hem: 0.03 } },

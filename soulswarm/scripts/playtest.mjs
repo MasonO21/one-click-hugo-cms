@@ -2017,7 +2017,7 @@ errs = await session(async (page) => {
   check('bestiary: the run result carries the tally and applyRunResult adds it to the profile (junk ignored)',
     JSON.stringify(s.result) === JSON.stringify(R.end) && JSON.stringify(s.added) === JSON.stringify(R.end)
     && s.acc.husk === 60 && s.acc.ghoul === 7 && s.acc.brute === 0 && s.acc.witch === 0 && s.acc.bloater === 0 && s.acc.thief === 1 && s.acc.gravemaw === 0 && !s.acc.junk, JSON.stringify({ result: s.result, added: s.added, acc: s.acc }));
-  check('bestiary: 11 painted entries (6 foes, 5 bosses); silhouette and "???" until the first kill, then the name', s.cards.n === 11 && s.cards.husk.join() === 'false,Husk'
+  check('bestiary: 13 painted entries (8 foes, 5 bosses); silhouette and "???" until the first kill, then the name', s.cards.n === 13 && s.cards.husk.join() === 'false,Husk'
     && s.cards.ghoul.join() === 'true,???,true' && s.cards.img && s.unlock.join() === 'false,Ghoul', JSON.stringify({ c: s.cards, u: s.unlock }));
   check('bestiary: milestones claim in order and once each (double taps too) for 2,000 gold, 1 sigil and 50 gems',
     s.claims.claims.join() === '1,2,3' && s.claims.gained.gold === 2000 && s.claims.gained.sigils === 1 && s.claims.gained.gems === 50
@@ -2760,6 +2760,196 @@ errs = await session(async (page) => {
     && s.osric.kept === 1.5 && s.osric.ward === 12 && s.osric.after === 1 && s.osric.spinAfter === 1 && s.osric.wardAfter === 20, JSON.stringify(s.osric));
 });
 check('new heroes: no runtime errors', !errs.length, errs[0] || '');
+
+// 38. Update 5, the Deepening Horde: the Grave Wraith (passes through the legion, which can neither target nor harm it,
+//     and dives on a weave), the Corpse Priest (keeps its distance and raises the horde's un-risen dead as hollow Husks),
+//     their risen forms (the Phantom takes no recoil, the Soul Priest mends), when they join the horde, and the weapon
+//     upgrades (Ashen Chains' pin and twin chains, Grave Pulse's chill, Soul Storm's split, the Bone Crown's aura).
+//     A quiet arena frame-stepped at 30 fps, as section 37.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random;
+    const D = await import('/src/game/data.js'), A = await import('/src/ui/art.js');
+    app.engine.manual = true;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.chapter.unlocked = 6; p.flags.bloodMoon = 'off';
+    const start = (ch = 1) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.selectedHero = 'vael'; p.energy = 30; app.startRun(ch);
+      const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0; r.events.director = () => {};
+      r.addXp = () => {}; r.player.hurt = () => {}; r.input.tx = r.input.tz = 0; r.pickups.dropSpecial = () => {}; r.stats.crit = 0;
+      r.weapons.update = () => {}; r.hazards.update = () => {}; // no weapons and no chapter hazards unless a test asks
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const foe = (r, dx, dz, o = {}) => { const e = r.enemies.spawn(o.type || 'husk', r.player.x + dx, r.player.z + dz, { hpMul: o.hp ?? 50 }); e.spawnT = 2; if (o.still) e.speed = 0; return e; };
+    const dist = (a, b) => +Math.hypot(a.x - b.x, a.z - b.z).toFixed(2);
+    const weaponsOn = (r) => { delete r.weapons.update; };
+    const out = {};
+
+    // the Bestiary: thirteen entries, the two new foes after the Bloater, painted and modelled
+    await app.foeModels.loadFoeModels();
+    const { bestiaryGoals } = await import('/src/meta/bestiary.js');
+    out.bestiary = { order: D.BESTIARY.order.join(), art: !!(A.FOE_ART.wraith && A.FOE_ART.priest), models: !!(app.foeModels.foeModel('wraith') && app.foeModels.foeModel('priest')),
+      variants: [D.MINIONS.phantom.from, D.MINIONS.soulPriest.from].join(), goals: [bestiaryGoals('wraith').join('/'), bestiaryGoals('priest').join('/'), bestiaryGoals('thief').join('/')].join() };
+
+    // when they join: never in Chapter 1; Wraiths from Chapter 2 at 2:30, Priests from Chapter 3 at 3:00; each under its alive cap
+    const mix = (ch, minute, set = {}) => {
+      const r = start(ch); r.time = minute * 60; Object.assign(r.enemies.counts, set);
+      const n = {}; for (let i = 0; i < 6000; i++) { const t = r.pickType(); n[t] = (n[t] || 0) + 1; }
+      return { wraith: n.wraith || 0, priest: n.priest || 0 };
+    };
+    out.mix = { ch1: mix(1, 5), ch2early: mix(2, 2.3), ch2: mix(2, 4), ch3early: mix(3, 2.8), ch3: mix(3, 4), ch4: mix(4, 4.5), capped: mix(4, 4.5, { wraith: 14, priest: 3 }) };
+
+    // the Grave Wraith: drifts in, then dives ×1.55 within 5 m on a weave (path length per second, alone)
+    let r = start(2), P = r.player, E = r.enemies;
+    let w = foe(r, 0, 14, { type: 'wraith', hp: 50 }); step(r, 0.1);
+    const pace = (e, sec) => { let L = 0, x = e.x, z = e.z; for (let i = 0; i < Math.round(sec * 30); i++) { r.update(1 / 30); L += Math.hypot(e.x - x, e.z - z); x = e.x; z = e.z; } return L / sec; };
+    const far = pace(w, 0.8); w.x = P.x; w.z = P.z + 3.5; const near = pace(w, 0.3);
+    out.dive = { far: +far.toFixed(2), near: +near.toFixed(2), ratio: +(near / far).toFixed(2) };
+    // through the legion: twelve minions guard the Shepherd; none ever targets the Wraith, whose hp minions cannot touch
+    r = start(2); P = r.player; E = r.enemies;
+    for (let i = 0; i < 12; i++) r.legion.raise(P.x + Math.cos(i) * 1.8, P.z + Math.sin(i) * 1.8, { fx: false });
+    w = foe(r, 0, 6, { type: 'wraith', hp: 50 }); const h = foe(r, -4, -3, { hp: 50, still: true });
+    let targeted = 0; for (let i = 0; i < 60; i++) { r.update(1 / 30); for (const m of r.legion.list) if (m.target === w) targeted++; }
+    out.wraith = { targeted, hp: w.hp === w.maxHp, husk: h.hp < h.maxHp, reached: dist(w, P) < 1.6,
+      minion: E.damage(w, 50, { source: 'minion' }), bomb: E.damage(w, 50, { source: 'soulbomb' }), still: w.hp === w.maxHp };
+    E.damage(w, 5, { source: 'bolt' }); out.wraith.bolt = w.hp < w.maxHp;
+
+    // the Corpse Priest: settles about 10 m off, backs away inside 7 m
+    r = start(3); P = r.player; E = r.enemies;
+    let pr = foe(r, 0, 16, { type: 'priest', hp: 50 }); pr.shootCd = 1e9; step(r, 3);
+    const settled = dist(pr, P); pr.x = P.x; pr.z = P.z + 5; step(r, 0.6);
+    out.keep = { settled, backed: dist(pr, P) > 5.3 };
+    // the dead that do not rise are left as corpses; the Priest claims the newest 3 within 7 m, chants 1.2 s, and they rise as
+    // hollow Husks (no soul shard, no corpse of their own); a Priest, its Husks and event foes leave none
+    r = start(3); P = r.player; E = r.enemies; r.stats.raise = 0;
+    pr = foe(r, 0, 10, { type: 'priest', hp: 50, still: true }); pr.shootCd = 1e9;
+    for (let i = 0; i < 4; i++) E.kill(foe(r, -1.5 + i, 7), 'bolt');
+    E.kill(foe(r, 0, -12), 'bolt'); // too far from the Priest
+    out.corpses = r.corpses.length;
+    pr.shootCd = 0; step(r, 0.1);
+    const chant = { state: pr.state, n: pr.chant ? pr.chant.length : 0, claimed: r.corpses.filter((k) => k.claim === pr.uid).length };
+    const h0 = E.counts.husk; step(r, 1.25);
+    const risen = E.active.filter((e) => e.reborn);
+    out.raise = { ...chant, risen: risen.length, husks: E.counts.husk - h0, stateAfter: pr.state, consumed: r.corpses.filter((k) => k.claim === -1).length };
+    const g0 = r.pickups.gems.length, c0 = r.corpses.length; E.kill(risen[0], 'bolt');
+    out.reborn = { gem: r.pickups.gems.length - g0, corpse: r.corpses.length - c0 };
+    // a stun breaks the chant and frees the graves; so does the Priest's death; corpses older than 10 s are past raising
+    for (let i = 0; i < 3; i++) E.kill(foe(r, 2 + i * 0.5, 8), 'bolt');
+    pr.shootCd = 0; step(r, 0.1); const mid = pr.state === 1;
+    E.stun(pr, 0.5); out.broken = { mid, state: pr.state, chant: pr.chant, free: r.corpses.filter((k) => k.claim === pr.uid).length };
+    step(r, 0.6); pr.shootCd = 0; step(r, 0.1); const again = pr.state === 1;
+    E.kill(pr, 'bolt'); out.broken.again = again; out.broken.freedOnDeath = r.corpses.filter((k) => k.claim > 0).length;
+    out.broken.priestCorpse = r.corpses.length;
+    const pr2 = foe(r, 0, 10, { type: 'priest', hp: 50, still: true }); for (const k of r.corpses) k.t = r.time - 11;
+    out.broken.stale = r.claimCorpses(pr2, 30, 3);
+
+    // the risen forms: a Wraith rises as a Phantom (no recoil), a Priest as a Soul Priest (mends minions within 4 m)
+    r = start(1); P = r.player; E = r.enemies;
+    const tg = foe(r, 3, 0, { hp: 200, still: true });
+    r.legion.raise(P.x + 2.5, P.z, { kind: 'wraith', fx: false }); r.legion.raise(P.x + 2.5, P.z + 0.3, { kind: 'husk', fx: false });
+    const [ph, sh] = r.legion.list; step(r, 1.5);
+    out.forms = { phantom: ph.kind, shade: sh.kind, phantomHp: +(ph.hp / ph.maxHp).toFixed(2), shadeHp: +(sh.hp / sh.maxHp).toFixed(2), hit: tg.hp < tg.maxHp };
+    r = start(1); P = r.player;
+    r.legion.raise(P.x, P.z + 1, { kind: 'priest', fx: false }); r.legion.raise(P.x + 1, P.z, { fx: false }); r.legion.raise(P.x - 7, P.z, { fx: false });
+    const [sp, near1, far1] = r.legion.list; step(r, 0.2);
+    out.forms.priest = sp.kind;
+    for (const m of [sp, near1, far1]) m.hp = m.maxHp * 0.5;
+    near1.x = sp.x + 1; near1.z = sp.z; far1.x = sp.x + 7; far1.z = sp.z; sp.healT = 0.01;
+    r.legion.update(1 / 30);
+    out.forms.mend = { near: +(near1.hp / near1.maxHp).toFixed(2), far: +(far1.hp / far1.maxHp).toFixed(2), self: +(sp.hp / sp.maxHp).toFixed(2) };
+
+    // Ashen Chains: from Lv4 the first foe is pinned 0.25 s; Lv5 casts two chains (never sharing a link); Perdition two of 7
+    const grid = (r) => { const L = []; for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) L.push(foe(r, -4.4 + i * 2.2, 1.5 + j * 2.2, { hp: 500, still: true })); return L; };
+    const lash = (lv, hell) => {
+      const r = start(1), W = r.weapons; r.evolved.chainsOfPerdition = !!hell; const L = grid(r);
+      r.update(1 / 30); const fx0 = W.chainFx.length; W.fire('chains', lv); // (one frame files the foes in the spatial grid)
+      const res = { chains: W.chainFx.length - fx0, links: L.filter((e) => e.chainMark === W.sweepSeq).length, pinned: L.filter((e) => e.stunT > 0).length };
+      if (lv === 5 && !hell) { // the same first foes again: not re-pinned within 2 s, pinned again after
+        const again = () => { for (const e of L) e.stunT = 0; W.fire('chains', lv); return L.filter((e) => e.stunT > 0).length; };
+        res.soon = again(); r.enemies.time += 2.1; res.later = again();
+      }
+      return res;
+    };
+    out.chains = { lv3: lash(3), lv4: lash(4), lv5: lash(5), hell: lash(5, true) };
+
+    // Grave Pulse: from Lv3 the wave chills (×0.75 for 1.5 s; ×0.7 at Lv5 and in Requiem); a stronger running slow is kept
+    const pulse = (lv, pre) => {
+      const r = start(1), E = r.enemies, e = foe(r, 2, 0, { hp: 500, still: true });
+      r.update(1 / 30); if (pre) r.affixes.slow(e, 0, 3);
+      r.weapons.fire('gravePulse', lv);
+      return e.slowUid === e.uid && e.slowT > E.time ? [e.slowMul, +(e.slowT - E.time).toFixed(2)] : null;
+    };
+    out.pulse = { lv2: pulse(2), lv3: pulse(3), lv5: pulse(5), kept: pulse(3, true) };
+    r = start(1); weaponsOn(r); r.skillLv.soulBolt = 0; r.skillLv.gravePulse = 5; r.evolved.requiem = true; r.weapons.timers.gravePulse = 0;
+    const rq = foe(r, 2.5, 0, { hp: 500 }); step(r, 0.5);
+    out.pulse.requiem = rq.slowUid === rq.uid && rq.slowT > r.enemies.time ? rq.slowMul : null;
+
+    // Soul Storm: a bolt that kills splits into 2 mini-bolts of half its damage that never split again; a plain bolt does not
+    r = start(1); P = r.player; E = r.enemies;
+    const weak = foe(r, 3, 0, { hp: 0.01, still: true }); foe(r, 6, 2, { hp: 500, still: true }); foe(r, 6, -2, { hp: 500, still: true });
+    r.projectiles.bolt(P.x, P.z, weak, 40, 0, { split: true });
+    let minis = []; for (let i = 0; i < 20 && !minis.length; i++) { r.update(1 / 30); minis = r.projectiles.shots.filter((x) => x.mini); }
+    out.storm = { minis: minis.length, dmg: minis.map((x) => x.dmg).join(), split: minis.some((x) => x.split) };
+    step(r, 1); // the mini-bolts land or fade
+    const weak2 = foe(r, -3, 0, { hp: 0.01, still: true }); r.projectiles.bolt(P.x, P.z, weak2, 40, 0, {});
+    let plain = 0; for (let i = 0; i < 20; i++) { r.update(1 / 30); plain = Math.max(plain, r.projectiles.shots.filter((x) => x.mini).length); }
+    out.storm.plain = plain; out.storm.weak2 = !weak2.active;
+
+    // Bone Crown: minions within 6 m of the Shepherd strike +30%; every 4 s the Crown mends those within 6 m by 20%
+    const strike = (crown, at) => {
+      const r = start(1), P = r.player, E = r.enemies; r.evolved.boneCrown = crown;
+      const e = foe(r, at, 0, { hp: 500, still: true }); r.legion.raise(P.x + at - 0.6, P.z, { fx: false });
+      const hits = [], dmg = E.damage.bind(E); E.damage = (x, a, o) => { if (o && o.source === 'minion') hits.push(a); return dmg(x, a, o); };
+      Math.random = () => 0.5; try { step(r, 1.5); } finally { Math.random = rnd; }
+      return hits.length ? hits[0] : 0;
+    };
+    const base = strike(false, 3);
+    out.crown = { near: +(strike(true, 3) / base).toFixed(2), far: +(strike(true, 8) / strike(false, 8)).toFixed(2) };
+    r = start(1); P = r.player; r.evolved.boneCrown = true; r.skillLv.skullHalo = 5;
+    r.legion.raise(P.x + 1.5, P.z, { fx: false }); r.legion.raise(P.x + 8, P.z, { fx: false });
+    const [cn, cf] = r.legion.list; step(r, 0.1);
+    cn.hp = cn.maxHp * 0.5; cf.hp = cf.maxHp * 0.5; cn.x = P.x + 1.5; cn.z = P.z; cf.x = P.x + 8; cf.z = P.z;
+    r.weapons.crownT = 0.01; r.weapons.updateSkulls(0.02, 5);
+    out.crown.mend = { near: +(cn.hp / cn.maxHp).toFixed(2), far: +(cf.hp / cf.maxHp).toFixed(2), next: +r.weapons.crownT.toFixed(2) };
+
+    app.exitRun(); app.engine.manual = false;
+    return out;
+  });
+  const B = s.bestiary, M = s.mix;
+  check('update 5: the Grave Wraith and the Corpse Priest join the Bestiary after the Bloater, painted and modelled (the Priest\'s goals 50 / 500 / 3,000); they rise as the Phantom and the Soul Priest',
+    B.order === 'husk,ghoul,brute,witch,bloater,wraith,priest,thief,gravemaw,pyrexa,vaulkar,azrathel,vesperine' && B.art && B.models && B.variants === 'wraith,priest'
+    && B.goals === '100/1000/10000,50/500/3000,1/10/50', JSON.stringify(B));
+  check('update 5: never in Chapter 1; Wraiths from Chapter 2 at 2:30, Priests from Chapter 3 at 3:00, each under its alive cap',
+    M.ch1.wraith === 0 && M.ch1.priest === 0 && M.ch2early.wraith === 0 && M.ch2.wraith > 100 && M.ch2.priest === 0 && M.ch3early.priest === 0 && M.ch3.priest > 50
+    && M.ch4.wraith > M.ch2.wraith && M.capped.wraith === 0 && M.capped.priest === 0, JSON.stringify(M));
+  check('Grave Wraith: it dives ×1.55 within 5 m; twelve minions never target it, cannot harm it (blows or Soul Bombs), and it reaches the Shepherd; bolts can',
+    s.dive.ratio > 1.4 && s.dive.ratio < 1.7 && s.wraith.targeted === 0 && s.wraith.hp && s.wraith.husk && s.wraith.reached && s.wraith.minion === false && s.wraith.bomb === false
+    && s.wraith.still && s.wraith.bolt, JSON.stringify({ d: s.dive, w: s.wraith }));
+  check('Corpse Priest: it settles about 10 m off and backs away inside 7 m', s.keep.settled > 9 && s.keep.settled < 11 && s.keep.backed, JSON.stringify(s.keep));
+  check('Corpse Priest: un-risen dead stay as corpses; it claims the 3 newest within 7 m, chants 1.2 s and they rise as hollow Husks with no soul shard or corpse',
+    s.corpses === 5 && s.raise.state === 1 && s.raise.n === 3 && s.raise.claimed === 3 && s.raise.risen === 3 && s.raise.husks === 3 && s.raise.stateAfter === 0 && s.raise.consumed === 3
+    && s.reborn.gem === 0 && s.reborn.corpse === 0, JSON.stringify({ c: s.corpses, r: s.raise, b: s.reborn }));
+  check('Corpse Priest: a stun breaks the chant and frees its graves, as its death does; it leaves no corpse; graves older than 10 s stay down',
+    s.broken.mid && s.broken.state === 0 && s.broken.chant === null && s.broken.free === 0 && s.broken.again && s.broken.freedOnDeath === 0 && s.broken.stale === null, JSON.stringify(s.broken));
+  check('risen forms: the Phantom takes no recoil (a Shade does); the Soul Priest mends minions within 4 m by 12% (and itself), not those 7 m away',
+    s.forms.phantom === 'phantom' && s.forms.shade === 'shade' && s.forms.phantomHp === 1 && s.forms.shadeHp < 1 && s.forms.hit && s.forms.priest === 'soulPriest'
+    && s.forms.mend.near === 0.62 && s.forms.mend.self === 0.62 && s.forms.mend.far === 0.5, JSON.stringify(s.forms));
+  const C = s.chains;
+  check('Ashen Chains: Lv3 one chain of 5, no pin; Lv4 pins its first foe; Lv5 two chains of 5 with no shared link (a foe pinned at most once per 2 s); Perdition two of 7, both pinned',
+    C.lv3.chains === 1 && C.lv3.links === 5 && C.lv3.pinned === 0 && C.lv4.chains === 1 && C.lv4.links === 6 && C.lv4.pinned === 1
+    && C.lv5.chains === 2 && C.lv5.links === 10 && C.lv5.pinned === 2 && C.lv5.soon === 0 && C.lv5.later === 2 && C.hell.chains === 2 && C.hell.links === 14 && C.hell.pinned === 2, JSON.stringify(C));
+  const U = s.pulse;
+  check('Grave Pulse: no chill at Lv2; from Lv3 ×0.75 for 1.5 s, ×0.7 at Lv5 and in Requiem; a stronger running slow is kept',
+    U.lv2 === null && U.lv3 && U.lv3[0] === 0.75 && Math.abs(U.lv3[1] - 1.5) < 0.05 && U.lv5[0] === 0.7 && U.requiem === 0.7 && U.kept && U.kept[0] === 0, JSON.stringify(U));
+  check('Soul Storm: a killing bolt splits into 2 mini-bolts of half damage that never split; a plain bolt does not split',
+    s.storm.minis === 2 && s.storm.dmg === '20,20' && !s.storm.split && s.storm.plain === 0 && s.storm.weak2, JSON.stringify(s.storm));
+  check('Bone Crown: minions within 6 m strike ×1.3 (8 m out ×1); every 4 s it mends those within 6 m by 20%',
+    s.crown.near === 1.3 && s.crown.far === 1 && s.crown.mend.near === 0.7 && s.crown.mend.far === 0.5 && s.crown.mend.next === 4, JSON.stringify(s.crown));
+});
+check('update 5: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

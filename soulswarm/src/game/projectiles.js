@@ -2,10 +2,12 @@
 import * as THREE from 'three';
 import { boltGeometry, spearGeometry, orbGeometry } from '../engine/models.js';
 import { hdr } from '../engine/particles.js';
+import { EVOLUTIONS } from './data.js';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
 const _fwd = new THREE.Vector3(0, 0, 1), _dir = new THREE.Vector3(), _sc = new THREE.Vector3();
 const ORB_MAX = 320; // ember orb instances (witch shots + the bosses' patterns)
+const SS = EVOLUTIONS.soulStorm, MINI = 0.6; // a Soul Storm mini-bolt is drawn at 60% size
 
 function instanced(geo, max, color) {
   const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color }), max);
@@ -42,7 +44,17 @@ export class Projectiles {
     const spread = o.spread || 0;
     if (spread) { const a = Math.atan2(dz, dx) + spread; dx = Math.cos(a); dz = Math.sin(a); }
     const speed = o.speed || 17;
-    this.shots.push({ kind: 'bolt', x, z, y: 1.1, vx: dx * speed, vz: dz * speed, speed, target, tuid: target ? target.uid : 0, dmg, pierce, life: 1.4, hit: new Set(), explode: o.explode || 0, crit: o.crit });
+    this.shots.push({ kind: 'bolt', x, z, y: 1.1, vx: dx * speed, vz: dz * speed, speed, target, tuid: target ? target.uid : 0, dmg, pierce, life: o.life || 1.4, hit: new Set(), explode: o.explode || 0, crit: o.crit, split: !!o.split, mini: !!o.mini });
+  }
+
+  /** Soul Storm: a bolt that kills splits into mini-bolts at the nearest other foes (no blast, and they never split again). */
+  splitBolt(s, dead) {
+    const T = this.run.weapons.nearestN(s.x, s.z, SS.splitR, SS.split);
+    for (let i = 0; i < SS.split; i++) {
+      const t = T.length ? T[i % T.length] : null;
+      if (t === dead) continue;
+      this.bolt(s.x, s.z, t, s.dmg * SS.splitDmg, 0, { spread: (i - 0.5) * 0.9, speed: 19, life: 0.8, crit: s.crit, mini: true });
+    }
   }
 
   spear(x, z, dx, dz, dmg, pierce, crit) {
@@ -92,7 +104,8 @@ export class Projectiles {
         E.query(s.x, s.z, s.kind === 'spear' ? 0.45 : 0.3, (e) => {
           if (s.hit.has(e.uid)) return;
           s.hit.add(e.uid);
-          const killed = E.damage(e, s.dmg, { kx: s.vx, kz: s.vz, knock: s.kind === 'spear' ? 5 : 2.2, crit: s.crit, source: s.kind });
+          const killed = E.damage(e, s.dmg, { kx: s.vx, kz: s.vz, knock: s.kind === 'spear' ? 5 : 2.2, crit: s.crit, source: s.kind, silent: s.mini && Math.random() < 0.5 });
+          if (killed && s.split) this.splitBolt(s, e);
           parts.burst(s.x, s.y, s.z, 5, s.kind === 'spear' ? this.spearCol : this.boltCol, { speed: 4, life: 0.25, size: 0.3 });
           if (!killed) run.audio.sfx('hit', { volume: 0.4 });
           if (s.explode) {
@@ -134,8 +147,12 @@ export class Projectiles {
       _q.setFromUnitVectors(_fwd, _dir);
       _p.set(s.x, s.y, s.z);
       _m.compose(_p, _q, _s);
-      if (s.kind === 'bolt') { if (nb < 240) this.bolts.setMatrixAt(nb++, _m); g.add(s.x, s.y, s.z, 0.9, this.boltCol[0] * 0.5, this.boltCol[1] * 0.5, this.boltCol[2] * 0.5, 0.8); }
-      else { if (ns < 90) this.spears.setMatrixAt(ns++, _m); g.add(s.x, s.y, s.z, 0.8, this.spearCol[0] * 0.4, this.spearCol[1] * 0.4, this.spearCol[2] * 0.4, 0.7); }
+      if (s.kind === 'bolt') {
+        const k = s.mini ? MINI : 1;
+        if (s.mini) _m.compose(_p, _q, _sc.setScalar(MINI));
+        if (nb < 240) this.bolts.setMatrixAt(nb++, _m);
+        g.add(s.x, s.y, s.z, 0.9 * k, this.boltCol[0] * 0.5, this.boltCol[1] * 0.5, this.boltCol[2] * 0.5, 0.8);
+      } else { if (ns < 90) this.spears.setMatrixAt(ns++, _m); g.add(s.x, s.y, s.z, 0.8, this.spearCol[0] * 0.4, this.spearCol[1] * 0.4, this.spearCol[2] * 0.4, 0.7); }
     }
     let no = 0;
     _q.identity();

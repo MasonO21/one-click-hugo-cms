@@ -11,6 +11,7 @@ const TAU = Math.PI * 2;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1), _e = new THREE.Euler();
 const WEAPONS = ['soulBolt', 'scythe', 'chains', 'spears', 'skullHalo', 'gravePulse', 'witchfire'];
 const HM = EVOLUTIONS.harvestMoon, CP = EVOLUTIONS.chainsOfPerdition, OB = EVOLUTIONS.ossuaryBarrage, RQ = EVOLUTIONS.requiem, HP = EVOLUTIONS.hallowPyre;
+const BC = EVOLUTIONS.boneCrown;
 const WF = SKILLS.witchfire;
 const EVO_OF = {}; // weapon id -> the evolution that upgrades it
 for (const [id, ev] of Object.entries(EVOLUTIONS)) EVO_OF[ev.from] = id;
@@ -61,7 +62,7 @@ export class Weapons {
     addInstanceAttrs(this.skulls, 10);
     this.skulls.count = 0; this.skulls.frustumCulled = false;
     run.scene.add(this.skulls);
-    this.skullAngle = 0;
+    this.skullAngle = 0; this.crownT = BC.mendEvery;
     this.skullN = 0; this.skullXZ = new Float32Array(20);
     this.cols = {
       bolt: hdr(0x4ef2ff, 3), scythe: hdr(0xb36bff, 3), chain: hdr(0xffb347, 3.4), spear: hdr(0x9dffb8, 2.6),
@@ -70,7 +71,7 @@ export class Weapons {
       hell: hdr(0xff5a14, 3.4), hellCore: hdr(0xffb040, 3.4), flame: hdr(0xffc040, 3.6),
       bone: hdr(0xfff0d2, 1.8), marrow: hdr(0x9dffb8, 2.6),
     };
-    this.hellColor = new THREE.Color(0xff6a1e); this.boneColor = new THREE.Color(0xd8ffe4);
+    this.hellColor = new THREE.Color(0xff6a1e); this.boneColor = new THREE.Color(0xd8ffe4); this.chainLight = new THREE.Color(0xffb347);
     this._list = [];
     // shared, allocation-free hit plumbing for the per-frame loops
     this.crit = false;
@@ -186,7 +187,7 @@ export class Weapons {
       for (let i = 0; i < count; i++) {
         const t = targets[i % targets.length];
         const [dmg, crit] = this.roll(evolved ? 44 : SKILLS.soulBolt.dmg(level));
-        run.projectiles.bolt(P.x, P.z, t, dmg, SKILLS.soulBolt.pierce(level) + (evolved ? 1 : 0), { spread: (i - (count - 1) / 2) * 0.22, explode: evolved ? 1.5 : 0, crit });
+        run.projectiles.bolt(P.x, P.z, t, dmg, SKILLS.soulBolt.pierce(level) + (evolved ? 1 : 0), { spread: (i - (count - 1) / 2) * 0.22, explode: evolved ? 1.5 : 0, crit, split: evolved });
       }
       run.audio.sfx('shoot', { volume: 0.55 });
       return true;
@@ -201,48 +202,20 @@ export class Weapons {
       return true;
     }
     if (w === 'chains') {
-      const first = E.nearest(P.x, P.z, SKILLS.chains.range);
+      const C = SKILLS.chains, first = E.nearest(P.x, P.z, C.range);
       if (!first) return false;
       const hell = !!run.evolved.chainsOfPerdition;
-      const jumps = hell ? CP.jumps : SKILLS.chains.jumps(level);
-      const base = hell ? CP.dmg : SKILLS.chains.dmg(level);
-      const pts = [{ x: P.x, z: P.z }];
-      const mark = ++this.sweepSeq;
-      const marked = (e) => e.chainMark === mark;
-      // Perdition lashes outward: links prefer targets at least minHop away and no closer to the Shepherd,
-      // so the chain whips through the horde instead of knotting around her (falls back to the nearest)
-      let cx = 0, cz = 0, cd2 = 0;
-      const hop2 = CP.minHop * CP.minHop;
-      const tooNear = (e) => e.chainMark === mark || (e.x - cx) ** 2 + (e.z - cz) ** 2 < hop2 || (e.x - P.x) ** 2 + (e.z - P.z) ** 2 < cd2;
-      let cur = first;
-      for (let j = 0; j < jumps && cur; j++) {
-        cur.chainMark = mark;
-        pts.push({ x: cur.x, z: cur.z });
-        const dmg = this.hit(base);
-        const from = pts[pts.length - 2];
-        const killed = E.damage(cur, dmg, this.opts(cur.x - from.x, cur.z - from.z, 2, this.crit, 'chain', hell && j >= 4)); // Perdition: numbers on the first 4 links only
-        const hx = cur.x, hz = cur.z, sd = dmg * SKILLS.chains.splashDmg; // scorch the foes packed around the struck one
-        E.query(hx, hz, hell ? CP.splash : SKILLS.chains.splash, (o) => { if (o !== cur && o.active) E.damage(o, sd, { kx: o.x - hx, kz: o.z - hz, knock: 1, source: 'chain', silent: true }); });
-        if (hell) {
-          if (!killed) this.ignite(cur, dmg);
-          run.particles.burst(cur.x, 1.2, cur.z, 6, this.cols.flame, { speed: 4, life: 0.4, size: 0.4, up: 1.5 });
-        } else run.particles.burst(cur.x, 1, cur.z, 8, this.cols.chain, { speed: 5, life: 0.3, size: 0.35 });
-        cx = cur.x; cz = cur.z;
-        const cd = Math.hypot(cx - P.x, cz - P.z) - 0.5;
-        cd2 = cd > 0 ? cd * cd : 0;
-        cur = (hell && E.nearest(cx, cz, 4.5, tooNear)) || E.nearest(cx, cz, 4.5, marked);
+      const jumps = hell ? CP.jumps : C.jumps(level), base = hell ? CP.dmg : C.dmg(level), stun = hell ? CP.stun : C.stun(level);
+      const mark = ++this.sweepSeq, marked = (e) => e.chainMark === mark;
+      this.lash(first, jumps, base, hell, stun, mark, marked);
+      // a second chain (Lv5, Perdition) starts from the nearest foe the first never touched
+      for (let k = 1, n = hell ? CP.chains : C.chains(level); k < n; k++) {
+        const f = E.nearest(P.x, P.z, C.range, marked);
+        if (!f) break;
+        this.lash(f, jumps, base, hell, stun, mark, marked);
       }
-      // Perdition draws a second ember strand twisted around the first
-      this.chainFx.push({ pts: this.jag(pts), pts2: hell ? this.jag(pts) : null, t: 0, life: hell ? 0.34 : 0.22 });
-      if (hell) {
-        const last = pts[pts.length - 1];
-        run.fx.light(first.x, first.z, 4, 1.2, this.hellColor, 0.25);
-        run.fx.light(last.x, last.z, 4, 1.0, this.hellColor, 0.25);
-        run.audio.sfx('shoot', { volume: 0.55, pitch: 1.25 });
-      } else {
-        run.fx.light(first.x, first.z, 4, 1.2, new THREE.Color(0xffb347), 0.2);
-        run.audio.sfx('shoot', { volume: 0.5, pitch: 1.7 });
-      }
+      if (hell) run.audio.sfx('shoot', { volume: 0.55, pitch: 1.25 });
+      else run.audio.sfx('shoot', { volume: 0.5, pitch: 1.7 });
       return true;
     }
     if (w === 'spears') {
@@ -274,12 +247,50 @@ export class Weapons {
       run.particles.ring(P.x, P.z, R, 48, this.cols.pulse, { life: 0.4, size: 0.5 });
       run.fx.light(P.x, P.z, R + 2, 1.4, run.heroColorObj, 0.35);
       const knock = 10 * (run.loadout.hero.passive.pulseKnock ?? 1); // Liora's toll staggers foes instead of flinging them out of her legion's reach
-      E.query(P.x, P.z, R, (e) => { E.damage(e, dmg, { kx: e.x - P.x, kz: e.z - P.z, knock, crit, source: 'pulse' }); });
+      const slow = SKILLS.gravePulse.slow(level), dur = SKILLS.gravePulse.slowDur;
+      E.query(P.x, P.z, R, (e) => { if (!E.damage(e, dmg, { kx: e.x - P.x, kz: e.z - P.z, knock, crit, source: 'pulse' }) && slow) this.chill(e, slow, dur); });
       run.audio.sfx('explosion', { volume: 0.4, pitch: 1.4 });
       run.fx.shake(0.08);
       return true;
     }
     return false;
+  }
+
+  /** One chain from `first`: up to `jumps` links of `base` damage, each scorching the foes beside it; the first foe is pinned
+   *  `stun` s. Links already struck this cast (`mark`) are skipped, so twin chains never share a foe. */
+  lash(first, jumps, base, hell, stun, mark, marked) {
+    const run = this.run, P = run.player, E = run.enemies, pts = [{ x: P.x, z: P.z }];
+    // Perdition lashes outward: links prefer targets at least minHop away and no closer to the Shepherd,
+    // so the chain whips through the horde instead of knotting around her (falls back to the nearest)
+    let cx = 0, cz = 0, cd2 = 0;
+    const hop2 = CP.minHop * CP.minHop;
+    const tooNear = (e) => e.chainMark === mark || (e.x - cx) ** 2 + (e.z - cz) ** 2 < hop2 || (e.x - P.x) ** 2 + (e.z - P.z) ** 2 < cd2;
+    let cur = first;
+    for (let j = 0; j < jumps && cur; j++) {
+      cur.chainMark = mark;
+      pts.push({ x: cur.x, z: cur.z });
+      const dmg = this.hit(base);
+      const from = pts[pts.length - 2];
+      const killed = E.damage(cur, dmg, this.opts(cur.x - from.x, cur.z - from.z, 2, this.crit, 'chain', hell && j >= 3)); // Perdition: numbers on the first 3 links only
+      if (!j && stun && !killed && cur.type !== 'boss') this.pin(cur, stun); // never the boss: its next attack would keep slipping back
+      const hx = cur.x, hz = cur.z, sd = dmg * SKILLS.chains.splashDmg; // scorch the foes packed around the struck one
+      E.query(hx, hz, hell ? CP.splash : SKILLS.chains.splash, (o) => { if (o !== cur && o.active) E.damage(o, sd, { kx: o.x - hx, kz: o.z - hz, knock: 1, source: 'chain', silent: true }); });
+      if (hell) {
+        if (!killed) this.ignite(cur, dmg);
+        run.particles.burst(cur.x, 1.2, cur.z, 6, this.cols.flame, { speed: 4, life: 0.4, size: 0.4, up: 1.5 });
+      } else run.particles.burst(cur.x, 1, cur.z, 8, this.cols.chain, { speed: 5, life: 0.3, size: 0.35 });
+      cx = cur.x; cz = cur.z;
+      const cd = Math.hypot(cx - P.x, cz - P.z) - 0.5;
+      cd2 = cd > 0 ? cd * cd : 0;
+      cur = (hell && E.nearest(cx, cz, 4.5, tooNear)) || E.nearest(cx, cz, 4.5, marked);
+    }
+    // Perdition draws a second ember strand twisted around the first
+    this.chainFx.push({ pts: this.jag(pts), pts2: hell ? this.jag(pts) : null, t: 0, life: hell ? 0.34 : 0.22 });
+    if (hell) {
+      const last = pts[pts.length - 1];
+      run.fx.light(first.x, first.z, 4, 1.2, this.hellColor, 0.25);
+      run.fx.light(last.x, last.z, 4, 1.0, this.hellColor, 0.25);
+    } else run.fx.light(first.x, first.z, 4, 1.2, this.chainLight, 0.2);
   }
 
   nearestN(x, z, r, n) {
@@ -449,7 +460,7 @@ export class Weapons {
   touch(e) {
     if (e.burnUid !== undefined) return;
     e.burnUid = 0; e.burnT = 0; e.burnPool = 0; e.burnTick = 0; e.burnRaise = 0; e.burnListed = false; e.reapUid = 0; e.reapT = 0;
-    e.wfId = 0; e.wfDmg = 0;
+    e.wfId = 0; e.wfDmg = 0; e.pinUid = 0; e.pinAt = 0;
   }
 
   // ---------------------------------------------------------------- Chains of Perdition (burning)
@@ -604,7 +615,25 @@ export class Weapons {
 
   blastHit(e) {
     const P = this.run.player;
-    this.run.enemies.damage(e, this._bd, this.opts(e.x - P.x, e.z - P.z, 8 * (this.run.loadout.hero.passive.pulseKnock ?? 1), this._bc, 'pulse', this._shown++ >= 6)); // 6 numbers per blast
+    if (!this.run.enemies.damage(e, this._bd, this.opts(e.x - P.x, e.z - P.z, 8 * (this.run.loadout.hero.passive.pulseKnock ?? 1), this._bc, 'pulse', this._shown++ >= 6))) this.chill(e, RQ.slow, RQ.slowDur); // 6 numbers per blast
+  }
+
+  /** Ashen Chains' pin: a stun (a wind-up is called off), each foe at most once per pinCd s. */
+  pin(e, t) {
+    this.touch(e);
+    const E = this.run.enemies;
+    if (e.pinUid === e.uid && E.time - e.pinAt < SKILLS.chains.pinCd) return;
+    e.pinUid = e.uid; e.pinAt = E.time;
+    E.stun(e, t);
+  }
+
+  /** Grave Pulse's chill: × (1 - slow) speed for dur s, through the elites' shared slow (affixes.js). A stronger slow
+   *  still running (a broken ward's stagger, a Commander's rout) is kept. Never the boss or an event entity. */
+  chill(e, slow, dur) {
+    const mul = 1 - slow, E = this.run.enemies;
+    if (e.ev || !e.active || (e.slowUid === e.uid && e.slowT > E.time && e.slowMul < mul)) return;
+    this.run.affixes.slow(e, mul, dur);
+    if (Math.random() < 0.5) { const c = this.cols.pulse; this.run.particles.emit(e.x, 0.4, e.z, 0, 0.7, 0, 0.9, 0.4, 0.05, c[0], c[1], c[2], 0.7); }
   }
 
   // ---------------------------------------------------------------- Witchfire Lantern
@@ -766,6 +795,14 @@ export class Weapons {
       });
     }
     _s.set(1, 1, 1);
+    // the Crown's mending toll: every mendEvery s the minions within auraR m heal (their +damage is applied in legion.js)
+    if (crown && (this.crownT -= dt) <= 0) {
+      this.crownT = BC.mendEvery;
+      const R2 = BC.auraR, c = this.cols.skull;
+      run.legion.heal(P.x, P.z, R2, BC.mend);
+      run.particles.ring(P.x, P.z, R2, 40, c, { life: 0.5, size: 0.45, y: 0.3 });
+      run.fx.shockwave(P.x, P.z, R2, 0xff8a3d, 0.35, 0.05);
+    }
     this.skullN = n;
     this.skulls.count = n;
     this.skulls.instanceMatrix.needsUpdate = true;

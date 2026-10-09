@@ -13,9 +13,9 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 5 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with 1 ad reroll, 7 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
-| Content | 5 chapters, each with its own boss (§6), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 5 enemy types plus elites, 7 weapons, 8 passives, 7 evolutions, 7 heroes (1★–5★) each with a Rite (Grimsby Lanternjaw and Osric the Bone Abbot joined on 2026-10-08, §11), 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, further heroes (`LIVEOPS.md`) |
-| Meta and economy | **The Bestiary** (§5.2: 11 painted entries, kills per foe and boss, 33 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 7 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, Grave Wraith dives and Corpse Priest raisings, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with 1 ad reroll, 7 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
+| Content | 5 chapters, each with its own boss (§6), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 7 enemy types plus elites (the Grave Wraith and the Corpse Priest joined on 2026-10-09, §5), 7 weapons, 8 passives, 7 evolutions, 7 heroes (1★–5★) each with a Rite (Grimsby Lanternjaw and Osric the Bone Abbot joined on 2026-10-08, §11), 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, further heroes (`LIVEOPS.md`) |
+| Meta and economy | **The Bestiary** (§5.2: 13 painted entries, kills per foe and boss, 39 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3), the **share card** (§10.1) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, replay clips, a store link on the share card |
 
 Everything below describes the build unless it is marked **Planned**.
@@ -110,6 +110,8 @@ There are no other in-run buttons beyond NOVA and RITE. The reroll (1 per run, t
 
 Normal spawns appear just off-screen; 45% of them are biased toward the player's movement direction.
 
+From Chapter 2 the **Grave Wraith** joins the mix at 2:30 (weight 5% of the 2:00 row, 6% from 3:00, 7% from 4:00), and from Chapter 3 the **Corpse Priest** at 3:00 (3%). Each also has an alive cap (14 Wraiths, 3 Priests); at the cap, or before its chapter and minute, its weight is zero and the others share the picks. Chapter 1 is unchanged.
+
 ### 4.2 The Legion (Raise Chance and minions)
 
 - **Raise Chance** is in percentage points (pp). Base 25%. Sources: Vael +10 pp, the Raise Dead skill (+6 pp per level), the Necromancy talent (+1 pp per level), the Lantern of the Lost relic (+3 to +18 pp, more with relic levels). **Hard cap 85%.** Raise Chance is halved while a Soul Nova is detonating, except for kills by Seraphine's own Nova (×2 instead). During Vael's **Grave Call** (§11.1) every kill rises (100%).
@@ -131,12 +133,14 @@ Normal spawns appear just off-screen; 45% of them are biased toward the player's
 |---|---|---|---|---|---|---|
 | Husk (and gate / boss souls) | **Shade** (the soul wisp) | ×1 | ×1 | 0.5 s | ×1 | — |
 | Ghoul | **Wisp Runner** | ×0.55 | ×0.75 | 0.32 s | ×1.3 | Hunts 3 m farther out |
-| Brute | **Bulwark** | ×3 | ×1.0 | 1.1 s | ×0.7 | **Taunts**: enemies within 3 m attack it instead of the Shepherd (Bloaters ignore taunts). A bodyguard: it guards a 2.3 m ring and only fights foes within 5 m of the Shepherd |
+| Brute | **Bulwark** | ×3 | ×1.0 | 1.1 s | ×0.7 | **Taunts**: enemies within 3 m attack it instead of the Shepherd (Bloaters, Grave Wraiths and Corpse Priests ignore taunts). A bodyguard: it guards a 2.3 m ring and only fights foes within 5 m of the Shepherd |
 | Cinder Witch | **Soul Witch** | ×0.8 | ×1.1 per orb | 1.1 s | ×0.9 | Ranged: a homing soul orb (12 m/s) at targets within 6 m, holding 4 m away |
 | Bloater | **Soul Bomb** | ×0.7 | 6 × minion damage in 2.4 m, once | — | ×1.15 | Dives into the densest cluster within 8 m (3+ foes; any after 5 s idle; elites and bosses weigh double), flashes 0.25 s, detonates and leaves the legion. Its kills roll raises |
+| Grave Wraith | **Phantom** | ×0.5 | ×1.05 | 0.42 s | ×1.35 | Takes **no recoil** from its own blows; hunts 1 m farther out and roams 2 m farther from the Shepherd |
+| Corpse Priest | **Soul Priest** | ×1.2 | ×0.5 | 1.0 s | ×0.8 | Every 3 s it **mends** every minion within 4 m (itself included) by 12% of max HP (18% as a Champion); stays 2 m nearer the Shepherd |
 | Any elite | **Champion** of its kind | ×3 more | ×2 more | — | — | ×1.35 size, gold rim and crown spark |
 
-- **AI:** idle minions orbit the player in up to 5 rings of 12 (radii 1.7 / 2.45 / 3.2 / 3.95 / 4.7 m, alternating direction). Every 0.25–0.45 s an idle minion looks for the nearest enemy within 6.5 m of itself that is inside the 9 m leash around the player. It drops the target when it dies or moves more than 12 m from the player. At most 24 minions engage the boss at once; the rest fight adds or orbit.
+- **AI:** idle minions orbit the player in up to 5 rings of 12 (radii 1.7 / 2.45 / 3.2 / 3.95 / 4.7 m, alternating direction). Every 0.25–0.45 s an idle minion looks for the nearest enemy within 6.5 m of itself that is inside the 9 m leash around the player. It drops the target when it dies or moves more than 12 m from the player. At most 24 minions engage the boss at once; the rest fight adds or orbit. Minions never target a Grave Wraith (§5).
 
 ### 4.3 Soul Gates
 
@@ -281,10 +285,16 @@ Base values are for Chapter 1 at minute 0. Scaling is in §8. Each enemy deals i
 | **Brute** | Tank | 75 | 1.7 | 18 per touch | 4 | Mass 5: shrugs off most knockback and shoves smaller enemies aside. Within 2.2 m it rears back for **1.0 s** with a ground cone telegraph (2.4 m, ±40°; both × elite scale), then **slams** for 1.4× damage to the Shepherd and every minion in the cone, with 9 m/s knockback. 0.8 s recovery, 2.4 s between slams. | Step out of the cone. Bone Spears pierce. |
 | **Cinder Witch** | Ranged | 22 | 2.3 | 10 per orb | 2 | Stops at 8.5 m, backs away inside 5.1 m, and **lobs** an ember orb about every 3.0 s (±15%) at the Shepherd's position 0.3 s ahead. The orb arcs for 1.0 s onto a 1.1 m telegraph circle (with a closing outer ring) and hits the Shepherd and minions inside. From Chapter 2 the landing leaves **burning ground** for 3 s (25% of the orb damage per second, ticks every 0.3 s, patches don't stack). | Ashen Chains and homing Soul Bolts reach her. Keep moving when a circle appears. |
 | **Bloater** | Bomber | 28 | 2.0 | 26 AoE (2.6 m) | 2 | Within 2.4 m of the player it slows to 25%, flashes and shows a 2.6 m telegraph, then explodes after 1.0 s. The blast also deals 60 to minions and 1.2× its max HP to other *enemies*. Killed early, it just dies (and can rise). | Kill it early, or let it detonate inside a crowd. Never let it reach you. |
+| **Grave Wraith** | Phantom | 16 | 3.2 | 7 per touch | 2 | From Chapter 2 at 2:30, at most 14 alive. **Passes through the legion**: minions never target it, their blows and Soul Bombs pass through it, and it ignores taunts, so it never fights the legion either. Drifts in on a slow weave, then within 5 m **dives** at ×1.55 speed (about 5 m/s), swinging from side to side. | Only the Shepherd's own damage harms it: weapons, the Nova, Rites, gate bursts and Bloater blasts. Skull Halo, the Scythe and Grave Pulse meet the dive; Soul Bolts and Ashen Chains home in. |
+| **Corpse Priest** | Necromancer | 45 | 2.1 | 8 per touch | 4 | From Chapter 3 at 3:00, at most 3 alive. Holds 10 m off, backs away inside 7 m and ignores taunts. Every 6 s (±20%) it claims up to 3 of the horde's dead within 7 m (the newest first; below), marks each grave with a crimson circle and **chants** for 1.2 s: soul threads stream to it and it glows. Then the dead rise as **hollow Husks**, which drop no soul shard and leave no corpse. A stun, a fear or its death breaks the chant and frees the graves. | Kill it first: Bone Spears, Soul Bolts and Ashen Chains reach it, and the Lv4 chain's pin breaks a chant. A higher Raise Chance leaves it fewer dead to raise. |
 | **Elite** (any type) | Gold variant | ×6 | ×0.9 | ×1.5 | ×12 | Gold #ffd04a glow, ×1.35 scale, ×3 mass, and a floating gold **crown** marker. Rolls 1–2 affixes (§5.1). Can be raised. | Drops a **Relic Chest**. |
 | **The chapter boss** (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine) | Boss | 12,500 | 2.3 | 22 per touch, see §6 | — | Appears at 6:00. Killing it clears the chapter. | See §6. |
 
-Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), elites gold (#ffd04a), each boss in its own colour (Gravemaw magenta #ff3df0, Pyrexa ember #ff7a1a, Vaulkar ice #8f9cff, Azrathel violet #b070ff, Vesperine crimson #ff2e55), which its bar, banner and telegraphs share. Every enemy has an emissive core so it reads against the dark ground.
+**The dead.** Every kill that does not rise as a minion leaves a corpse for the Corpse Priests: kept 10 s, the newest 48 at most (`run.corpses`). A Priest, the Husks it raised and event foes leave none, and a raised corpse is used up.
+
+**Balance check (Update 5, 2026-10-09).** The balance bot played five heroes 4 times each on Chapters 2 and 4 (average survival, before → after): Vael 331 → 336 s, Mordrake 347 → 373, Osric 321 → 360, Liora 278 → 297, Grimsby 308 → 283. The new foes take a share of the mix from Brutes and Witches rather than adding to it, so the horde is no harder overall. Grimsby's drop is on Chapter 2 only; an A/B with the Wraiths switched off measured 262 s against 271 s with them (8 runs each way), so it is run-to-run spread (about ±60 s a run), not the Wraiths.
+
+Enemy colour code: warm ember/crimson (#ff4a2a, #ff8a3d), the Grave Wraith pale violet (#c8b6ff), the Corpse Priest's necromancy crimson (#ff2e4a), elites gold (#ffd04a), each boss in its own colour (Gravemaw magenta #ff3df0, Pyrexa ember #ff7a1a, Vaulkar ice #8f9cff, Azrathel violet #b070ff, Vesperine crimson #ff2e55), which its bar, banner and telegraphs share. Every enemy has an emissive core so it reads against the dark ground.
 
 ### 5.1 Elite affixes
 
@@ -318,7 +328,7 @@ Runs spread by about ±60 s (standard error about 15 s). The one drop is Ch5 wit
 
 A collection screen that turns the horde into long-term goals with painted rewards: the **BESTIARY** sub-tab of the Heroes screen, beside Heroes, Relics and Talents. Numbers live in `BESTIARY` (`data.js`), the rules in `src/meta/bestiary.js` (claims in `economy.claimBestiary`), the screen in `src/ui/meta/bestiary.js`.
 
-- **Entries:** Husk, Ghoul, Brute, Cinder Witch, Bloater, the Soul Thief (§4.8) and the five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine; wide cards across the row). Each has its painting (3:4, `src/assets/art/foe-*.webp`), its name and role, a line of lore, a "How it fights" line and its kill count. A summary panel counts entries discovered, milestones claimed and foes slain.
+- **Entries:** Husk, Ghoul, Brute, Cinder Witch, Bloater, Grave Wraith, Corpse Priest, the Soul Thief (§4.8) and the five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine; wide cards across the row). Each has its painting (3:4, `src/assets/art/foe-*.webp`), its name and role, a line of lore, a "How it fights" line and its kill count. A summary panel counts entries discovered, milestones claimed and foes slain.
 - **Locked:** until its first kill an entry shows a dark, cold silhouette of its painting under a "?", named "???" and "Undiscovered". Its milestones are already listed, so the goal is visible.
 - **What counts:** every kill of a type, whoever lands it (the Shepherd, the legion, the Nova, gate bursts, Bloater blasts). Gilded elites count as their base type, and so do Splitter copies, gate guards, coffin waves and the bosses' arena adds. A slain Soul Thief counts as a Soul Thief; a broken Cursed Coffin never counts. Each boss counts for itself, once per campaign victory over it (also when the legion fells it while the Shepherd is down) and once per Endless kill. Daily Trial runs count too.
 - **How it is tracked:** the run keeps `run.counters.byType` (one integer increment per kill, no allocation; the Soul Thief in `events.js`, the bosses in `Run.onBossKilled`). The run result carries a copy as `byType`, and `applyRunResult` adds it to `profile.bestiary.kills`, ignoring unknown ids and junk values.
@@ -326,18 +336,20 @@ A collection screen that turns the horde into long-term goals with painted rewar
 
 | Milestone | I | II | III |
 |---|---|---|---|
-| Husk, Ghoul, Brute, Cinder Witch, Bloater | 100 kills | 1,000 | 10,000 |
+| Husk, Ghoul, Brute, Cinder Witch, Bloater, Grave Wraith | 100 kills | 1,000 | 10,000 |
+| Corpse Priest | 50 | 500 | 3,000 |
 | Soul Thief, the five chapter bosses | 1 | 10 | 50 |
 | Reward | 2,000 gold | 1 Altar Sigil | 50 gems |
 
-All 33 milestones pay 22,000 gold, 11 sigils and 550 gems, once per account (budget check in `MONETIZATION.md` §2.6).
+All 39 milestones pay 26,000 gold, 13 sigils and 650 gems, once per account (budget check in `MONETIZATION.md` §2.6).
 
 - **Pacing:** a bot's Chapter 1 clear (2,511 kills) slew 1,335 Husks, 526 Ghouls, 252 Brutes, 207 Cinder Witches and 191 Bloaters (53 / 21 / 10 / 8 / 8%). Later chapters spawn more and tilt the mix (Ember Wastes ×1.8 Witches, Abyssal Cathedral ×2 Bloaters, Crimson Throne ×1.6 Brutes). For a daily player (about 3 runs, ~1,800 kills a run):
   - for the five horde foes, tier I lands in the first run or two (Witches and Bloaters join the horde at 2:00, Brutes at 3:00) and tier II within one to three days;
   - tier III takes about 4 days for Husks, about 10 for Ghouls and 3–4 weeks for Brutes, Witches and Bloaters;
+  - the Grave Wraith (Chapter 2 on, about 5–7% of the horde after 2:30) and the Corpse Priest (Chapter 3 on, at most 3 alive, so it has its own lower goals) start once those chapters open, and their tier III takes a month or more of daily play;
   - about one Soul Thief shows up per run (one event in three), so if most are caught its 50 take about a month; each boss's 50 are 50 kills of it: clears of its chapter (on any difficulty) or, every fifth boss, in the Endless Abyss. The bosses therefore pay out last: tier I with each chapter's first clear, tier II after ten clears, tier III over months.
   The last gems therefore arrive about a month in, and the Bestiary keeps paying out across the first season instead of in one day.
-- **Old saves:** the block is added with zeros (and saves from before the chapter bosses gain their four entries at zero). Gravemaw starts at the save's clear count, since before the chapter bosses every clear slew him, so a veteran opens the Bestiary with the Hollow King unlocked and his first milestones waiting. Wrong types and out-of-range values are coerced (`save.js`).
+- **Old saves:** the block is added with zeros (and saves from before the chapter bosses gain their four entries at zero, from before Update 5 the Grave Wraith and the Corpse Priest). Gravemaw starts at the save's clear count, since before the chapter bosses every clear slew him, so a veteran opens the Bestiary with the Hollow King unlocked and his first milestones waiting. Wrong types and out-of-range values are coerced (`save.js`).
 - **Quests:** no Bestiary line joins the daily or weekly pool. "Slay 500 enemies" already rewards the same play, and a per-type quest ("Slay 50 Bloaters") would push players to farm one foe instead of playing the run.
 
 ---
@@ -451,15 +463,15 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 | Radius (m) | 2.6 | 2.8 | 3.0 | 3.3 | 3.7 |
 | Cooldown (s) | 1.60 | 1.50 | 1.35 | 1.20 | 1.00 |
 
-**Ashen Chains** (chain lightning: first target within 7.5 m, then jumps to the nearest new enemy within 4.5 m). Each link also **scorches** every other enemy within 1.4 m of its target for 50% damage. Seraphine's signature weapon.
+**Ashen Chains** (chain lightning: first target within 7.5 m, then jumps to the nearest new enemy within 4.5 m). Each link also **scorches** every other enemy within 1.4 m of its target for 50% damage. From Lv4 each chain **pins** its first foe for 0.25 s (a stun: no steering, no attack; a wind-up or a Corpse Priest's chant is broken; never the boss). A foe can be pinned at most once every 2 s, so the nearest Brute or Bloater is not held off its slam or fuse forever by a chain that fires every second. At Lv5 a second chain starts from the nearest foe the first did not strike, and the two never share a link. Seraphine's signature weapon.
 
 | Stat | Lv1 | Lv2 | Lv3 | Lv4 | Lv5 |
 |---|---|---|---|---|---|
-| Damage per hit | 18 | 23 | 29 | 37 | 48 |
-| Targets hit | 3 | 4 | 5 | 6 | 8 |
+| Damage per hit | 18 | 23 | 29 | 37 | 44 |
+| Chains per cast | 1 | 1 | 1 | 1 | 2 |
+| Targets per chain | 3 | 4 | 5 | 6 | 5 |
+| Pin on the first foe (s) | – | – | – | 0.25 | 0.25 |
 | Cooldown (s) | 1.50 | 1.40 | 1.25 | 1.10 | 0.95 |
-
-*(Planned: 2 chains per cast and a 0.25 s stun on the first target at higher levels.)*
 
 **Bone Spears** (piercing lances aimed at the nearest enemy within 13 m, in a fan 0.2 rad ≈ 11° apart; 21 m/s, about 20 m reach). Mordrake's signature weapon.
 
@@ -485,8 +497,9 @@ Damage values are base values before Might, talents, relics and stars. Every wea
 | Damage | 12 | 16 | 20 | 25 | 33 |
 | Radius (m) | 3.6 | 4.0 | 4.5 | 5.0 | 6.0 |
 | Cooldown (s) | 3.0 | 2.8 | 2.5 | 2.2 | 1.8 |
+| Chill (speed, 1.5 s) | – | – | −25% | −25% | −30% |
 
-*(Planned: a 20–30% slow from Lv3.)*
+The **chill** goes through the elites' shared slow (`affixes.js`): a stronger slow that is still running (a broken ward's stagger, a Commander's rout) is kept, and the boss and event creatures are never chilled. A chilled foe sheds a cold mote.
 
 **Witchfire Lantern** (the Shepherd's lantern drips witchfire where he walks: a burning patch every 1.1 m walked, or one at his feet every 0.6 s standing still). A foe inside takes the patch's damage per second in ticks of 0.25 s, from the hottest patch it stands in only (overlapping patches never stack). From Lv3 he also hurls lanterns at the nearest foes (spread over the nearest few): each shatters after a 0.45 s arc, hits everything in its pool's radius once and leaves a burning pool that lasts 0.6 s longer than the trail. The souls of foes that witchfire kills fly to the Shepherd, because they die behind him, on the path he has already walked (without that, a kiting Grimsby left his XP behind and reached the boss several levels short). Grimsby's signature weapon; the patches are ground decals in the lantern's lime (`hazards.js`), simulated in `weapons.js`.
 
@@ -518,17 +531,17 @@ All seven evolutions are in the build, one per weapon. An evolution card enters 
 
 | Evolution | Recipe | Effect |
 |---|---|---|
-| **Soul Storm** | Soul Bolt Lv5 + Might | 6 bolts per volley (Lv5 cooldown), 44 damage, pierce 4. Each hit explodes for 60% damage in a 1.5 m radius. |
-| **Bone Crown** | Skull Halo Lv5 + Minion Fury | 8 skulls, 26 damage, 3.2 m radius, always on. Every skull kill raises a soul (while below the cap). |
+| **Soul Storm** | Soul Bolt Lv5 + Might | 6 bolts per volley (Lv5 cooldown), 44 damage, pierce 4. Each hit explodes for 60% damage in a 1.5 m radius. A bolt that kills **splits** into 2 mini-bolts (50% of its damage, no blast, drawn at 60% size) that home on the nearest foes within 8 m; they never split again. |
+| **Bone Crown** | Skull Halo Lv5 + Minion Fury | 8 skulls, 26 damage, 3.2 m radius, always on. Every skull kill raises a soul (while below the cap). Its **aura**: minions within 6 m of the Shepherd strike +30% (blows and Soul Witch orbs), and every 4 s a ring of skull-fire mends every minion within 6 m by 20% of max HP. |
 | **Harvest Moon** | Spectral Scythe Lv5 + Haste | The sweep becomes 3 sweeps of 46 damage every 0.9 s at the Lv5 reach (3.7 m). Two crescent blades also orbit at that reach (5.2 rad/s), dealing 58 per hit in a 1.3 m radius, each enemy at most once per 0.3 s, knocking foes along the spin. Every scythe kill heals 1 HP from a bank that refills at 6 HP/s (cap 6). |
-| **Chains of Perdition** | Ashen Chains Lv5 + Frenzy | 12 links of 54 damage; links prefer targets at least 1.6 m apart and no closer to the Shepherd, so the chain lashes outward. Each link scorches within 1.7 m for 50%. Targets burn for 40% of the hit over 2 s (ticks every 0.25 s; re-hits add to the pool and refresh the timer). Kills while burning get **+25 pp Raise Chance** (still capped at 85%). |
+| **Chains of Perdition** | Ashen Chains Lv5 + Frenzy | Two chains of 7 links of 50 damage, each pinning its first foe 0.25 s; links prefer targets at least 1.6 m apart and no closer to the Shepherd, so the chain lashes outward. Each link scorches within 1.7 m for 50%. Targets burn for 40% of the hit over 2 s (ticks every 0.25 s; re-hits add to the pool and refresh the timer). Kills while burning get **+25 pp Raise Chance** (still capped at 85%). |
 | **Ossuary Barrage** | Bone Spears Lv5 + Vitality | A fan of 5 spears (0.2 rad apart), 56 damage, unlimited pierce. Each flies 3.5 m past its target (5–16 m; odd spears 1.2 m further) and bursts into bone shrapnel: 55% damage in 2 m with knockback. |
 | **Hallow Pyre** | Witchfire Lantern Lv5 + Raise Dead | A river of witchfire: trail patches 1.75 m wide that burn 52 a second for 3.6 s, and 3 lanterns every 1.8 s (62 on the shatter, 3 m pools). A foe slain by witchfire bursts into a new 1.6 m patch that burns for 1.4 s, so the fire spreads through a packed horde (at most 8 bursts a second). |
-| **Requiem** | Grave Pulse Lv5 + Soul Magnet | Every 1.4 s: a 0.3 s drag pulls enemies inward (70 m/s², with a swirl; never the boss), then a 46-damage blast in 6.5 m with strong knockback. Each blast also pulls every soul shard within 12 m to the Shepherd. |
+| **Requiem** | Grave Pulse Lv5 + Soul Magnet | Every 1.4 s: a 0.3 s drag pulls enemies inward (70 m/s², with a swirl; never the boss), then a 48-damage blast in 6.5 m with strong knockback that chills (−30% speed for 1.5 s). Each blast also pulls every soul shard within 12 m to the Shepherd. |
 
-Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s, the Shepherd kiting, no legion), effective DPS at Lv5 → evolved: Soul Bolt 1,730 → 4,350 · Skull Halo 2,100 → 2,560 (its payoff is the raises) · Scythe 3,130 → 4,020 · Chains 2,590 → 3,590 · Spears 2,680 → 3,360 · Grave Pulse 2,010 → 2,840.
+Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s, the Shepherd kiting, no legion), effective DPS at Lv5 → evolved: Soul Bolt 1,780 → 4,390 · Skull Halo 2,100 → 2,560 (its payoff is the raises) · Scythe 3,130 → 4,020 · Chains 2,640 → 3,700 · Spears 2,680 → 3,360 · Grave Pulse 1,840–2,030 → 2,610–2,660 (bench-to-bench spread is about ±5%).
 
-*(Planned extras: Soul Storm kills split the bolt into 2 mini-bolts; Bone Crown gives minions within 6 m +30% damage and heals them 20% every 4 s.)*
+Update 5 (2026-10-09) added the Lv4 pin and the Lv5 twin chain, the pulse's chill, Soul Storm's split and the Bone Crown's aura. On the same bench, before → after: Ashen Chains Lv5 2,590 → 2,640 (Perdition 3,590 → 3,700), Soul Bolt 1,730 → 1,780 (Soul Storm 4,350 → 4,390; in a horde this dense the volley already kills everything in reach, so the split shows most in thinner crowds), Grave Pulse 2,010 → 2,030. The chill pushed Requiem's DPS down (2,840 → 2,660; chilled foes reach the blast more slowly), so its blast went from 46 to 48 damage; it stays ×1.3–1.4 the Lv5 pulse, and the chill is the payoff. The Bone Crown's aura works on the legion, which this bench leaves out.
 
 ---
 
@@ -538,8 +551,8 @@ Measured in a dense, continuous horde (Ch1 minute-4 mix at ×8 HP, 22 enemies/s,
 |---|---|---|---|---|---|---|
 | 1 | Ashen Necropolis | Teal / ember | 1.00 | 1.00 | None (teaching chapter) | 0 |
 | 2 | Ember Wastes | Orange | 1.90 | 1.15 | Cinder Witch weight ×1.8; lobs leave burning ground; **ember vents** (15 m grid, 32% of cells, 1.6 m radius, a puff every 6.5–9 s after a 1.2 s telegraph, 12 base damage scaled like enemy damage) | ~8 levels total |
-| 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul weight ×1.5, packs of 6–8; **ice patches** (12 m grid, 50% of cells, radius 2.6–4.4 m): on ice the Shepherd accelerates at 30% of normal, stops with 20% of normal friction and gets +8% top speed | ~25 |
-| 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | Bloater weight ×2; vignette 1.25 and ground fog pulled in from 26 to 17 m; **abyssal hands** every 6–9 s aimed 0.6 s ahead (1.3 m, 1.0 s telegraph, 0.6 s root) | ~60 |
+| 3 | Frozen Ossuary | Ice blue | 3.20 | 1.30 | Ghoul weight ×1.5, packs of 6–8; Corpse Priest weight ×1.6 (it joins here); **ice patches** (12 m grid, 50% of cells, radius 2.6–4.4 m): on ice the Shepherd accelerates at 30% of normal, stops with 20% of normal friction and gets +8% top speed | ~25 |
+| 4 | Abyssal Cathedral | Violet | 5.00 | 1.45 | Bloater weight ×2; Grave Wraith weight ×1.6; vignette 1.25 and ground fog pulled in from 26 to 17 m; **abyssal hands** every 6–9 s aimed 0.6 s ahead (1.3 m, 1.0 s telegraph, 0.6 s root) | ~60 |
 | 5 | Crimson Throne | Blood red | 7.50 | 1.60 | **8 elites** (45, 75, 110, 150, 185, 225, 255, 290 s); Brute weight ×1.6 | ~110 |
 | ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; a boss rises every 5:00 (the five in turn, from Gravemaw), +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
 

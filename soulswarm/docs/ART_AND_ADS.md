@@ -70,6 +70,8 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `foe-witch.jpg` | 1792×2400 | Nano Banana Pro | Cinder Witch's Bestiary entry | `d97e345a-c712-4240-a044-5828c9317e22` |
 | `foe-bloater.jpg` | 1792×2400 | Nano Banana Pro | Bloater's Bestiary entry | `d5266c5f-7e42-4fb0-a746-57b21637bbbb` |
 | `foe-thief.jpg` | 1792×2400 | Nano Banana Pro | Soul Thief's Bestiary entry (the run event) | `53d3197b-9ed3-4ecc-98cc-c0b7f982d57f` |
+| `foe-wraith.jpg` | 1792×2400 | Nano Banana Pro (poster reference) | Grave Wraith's Bestiary entry (Update 5, 2026-10-09) | `d08dc00a-16e1-4c4b-950b-873659cd3228` |
+| `foe-priest.jpg` | 1792×2400 | Nano Banana Pro (poster reference) | Corpse Priest's Bestiary entry (Update 5, 2026-10-09) | `95309e67-92ca-4995-ba19-692edcb7eaa2` |
 | `logo-transparent.png` | 2048×1360, alpha | GPT Image 2.5 | Boot screen, settings credits, ad end cards, store listing | `3cf6edf7-20d5-4d80-ac09-fd57074e79a9` |
 
 The hero and boss splashes were generated with the vertical poster as an image reference, which keeps the painterly style consistent across the set. So were the 12 chapter and Bestiary paintings (2K, poster job `5d35e791…` as the style reference): chapters as 16:9 landscapes, foes at 3:4 as full-body portraits on a dark vignette, like the hero cards.
@@ -82,7 +84,7 @@ The voice lines in `src/assets/voice/` are documented separately, with the voice
 - **Altar reveal:** a card that grants hero shards shows that hero's painting behind the card face.
 - **Chapter card (home):** the selected chapter's painting fills the card behind its name, record line, difficulty selector and arrows, darkened by gradients so they stay readable, and cross-fades when the chapter changes (GDD §8).
 - **Run intro card:** for about 2.4 s at the start of a run, the chapter's painting as a wide strip in the top third with the chapter name, its twist and the difficulty / Blood Moon tags (GDD §8). A faint strip of it also sits behind the results header.
-- **Bestiary:** each foe's portrait on its card and entry sheet; until the first kill it shows as a dark, cold silhouette (a CSS filter on the same image, so no extra files) (GDD §5.2).
+- **Bestiary:** each foe's portrait on its card and entry sheet; until the first kill it shows as a dark, cold silhouette (a CSS filter on the same image, so no extra files) (GDD §5.2). Update 5's two portraits (the Grave Wraith and the Corpse Priest) add about 75 KB.
 
 ### Style guide for new art (heroes, skins, chapters)
 
@@ -151,7 +153,7 @@ To run it:
 - 9 Nano Banana Pro 2K images at 2 credits each, including Liora's splash;
 - 1 GPT Image 2.5 high image at 2.75 credits.
 
-The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing.
+The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing. Update 5's two Bestiary paintings (2026-10-09) add 4 more.
 
 Re-cutting the ads in the sandbox costs no credits.
 
@@ -353,7 +355,7 @@ It is one draw call, with every flake moved in the vertex shader and wrapped aro
 
 ## 6. Painted 3D foes (`src/assets/foes/`)
 
-The five horde foes, the Soul Thief and the five chapter bosses are textured 3D models made from their Bestiary paintings on 2026-10-08. Before, every foe was a low-poly procedural model in flat colours. The legion's risen ghosts take the same shapes. The procedural models still stand in while the art loads, and for the horde and ghosts on the Low quality setting.
+The seven horde foes, the Soul Thief and the five chapter bosses are textured 3D models made from their Bestiary paintings (on 2026-10-08; the Grave Wraith and the Corpse Priest on 2026-10-09). Before, every foe was a low-poly procedural model in flat colours. The legion's risen ghosts take the same shapes. The procedural models still stand in while the art loads, and for the horde and ghosts on the Low quality setting.
 
 **How they were made:**
 1. **Concept.** Nano Banana Pro repainted each foe from its Bestiary painting as a single full-body figure on plain grey, without smoke, sparks or glow (2 variants each, 2 credits apiece). It stands in a neutral, walk-ready stance with its limbs apart, so the shader can swing them. The Brute was repainted with his fists down rather than raised, and the Witch's robe falls to the ground.
@@ -375,7 +377,7 @@ The five horde foes, the Soul Thief and the five chapter bosses are textured 3D 
 
   `FOES` sets each foe's hip and shoulder heights and its pace: the Ghoul and the Thief scurry, the Brute plods. The pivots' depth is found from the mesh, so a hunched Ghoul swings about its own hips. Stunned foes stand still. A Ghoul's crouch and lunge and a Brute's rear-back still squash and tilt the whole model.
 - **Look.** The foes are dark painted shapes lit by the Shepherd's lantern, with a faint rim in the chapter's foe colour. Bright saturated paint glows (eyes, ember cracks, the Witch's fireball, the Bloater's belly), tinted toward the chapter's foe colour, or gold on an elite.
-- **Ghosts.** The legion's Runner, Bulwark, Soul Witch and Soul Bomb are spectral ghosts of the painted Ghoul, Brute, Witch and Bloater. The paint's light and dark carry through the ghost's body, and its glowing paint burns white-hot.
+- **Ghosts.** The legion's Runner, Bulwark, Soul Witch, Soul Bomb, Phantom and Soul Priest are spectral ghosts of the painted Ghoul, Brute, Witch, Bloater, Grave Wraith and Corpse Priest. The paint's light and dark carry through the ghost's body, and its glowing paint burns white-hot.
 - **The chapter bosses and the Soul Thief** are painted too. A boss's glowing paint (crown, eyes, heart, fire, halo) flares as its phases advance, during its soft enrage and through each wind-up, instead of the old white flash, which bleached the paint. Each boss has its own light level (`lit`), so dark paint still reads on its chapter's floor.
 - **GPU cost.** A late-game screen of 300 foes and 100 ghosts draws about 0.75 million triangles, about four times the procedural horde, in the same number of draw calls. On the Low quality setting the horde and ghosts stay procedural. So do they on Auto, from the next run, once a device can't hold 45 fps.
 
@@ -403,6 +405,19 @@ The five horde foes, the Soul Thief and the five chapter bosses are textured 3D 
 
 **Cost:** about 93 credits: 8 splashes (16), 12 concepts and repaints (24), 2 cutouts (3.5), 4 models (48) and 12 voice lines (1.8).
 
+
+**Update 5's foes** (2026-10-09): the Grave Wraith and the Corpse Priest (`GDD.md` §5).
+1. **Painting.** Nano Banana Pro painted each 3:4 Bestiary portrait with the poster as the style reference (§1).
+2. **Concept.** The horde's concept prompt from each painting: the Wraith floats with no legs, its shroud tapering to a ragged hem above the ground; the Priest stands hunched in a long robe with its beaked bird-skull mask and censer. Both came back on clean grey, so no cutout.
+3. **3D.** Tripo H3.1 at 4,000 faces with a detailed texture, simplified to 50% (Wraith 1,920 triangles, Priest 1,865) with a 512 px texture; the two come to about 165 KB.
+4. **Gaits.** The Wraith hovers with no legs (it rises and falls, its hem flutters, its claws sway); the Priest shuffles under its robe with a short stride. Their risen forms, the Phantom and the Soul Priest, are spectral ghosts of the same models.
+
+| Foe | Painting | Concept job | 3D job |
+|---|---|---|---|
+| `wraith` | `d08dc00a-16e1-4c4b-950b-873659cd3228` | `4a33310c-2209-42d3-bb7e-259167064d86` | `0d099cfd-bb91-4e2d-9815-e451138b49dc` |
+| `priest` | `95309e67-92ca-4995-ba19-692edcb7eaa2` | `ff654f02-ec1f-4949-8669-0a6c1268cc78` | `3865634a-dcc0-44b8-8eb3-54d7a43df8db` |
+
+**Cost:** 34 credits: 2 paintings (4), 3 concepts (6; a fourth request failed and was not charged) and 2 models (24).
 
 **A new foe:**
 1. Paint the concept from its Bestiary painting with the same prompt, and cut out any background.

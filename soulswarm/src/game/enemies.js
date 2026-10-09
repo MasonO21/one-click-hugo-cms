@@ -1,5 +1,6 @@
 // The horde: pooled enemies, instanced rendering, spatial hash, AI and damage.
-// Signature moves: Ghoul packs flank and lunge, Brutes slam a cone, Cinder Witches lob onto telegraphed circles.
+// Signature moves: Ghoul packs flank and lunge, Brutes slam a cone, Cinder Witches lob onto telegraphed circles, Grave
+// Wraiths pass through the legion and dive, Corpse Priests raise the horde's dead (run.corpses) as hollow Husks.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as DATA from './data.js';
@@ -9,14 +10,15 @@ import { enemyGeometry } from '../engine/models.js';
 import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
 import { hdr } from '../engine/particles.js';
 
-const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
-const MAX_PER = { husk: 320, ghoul: 160, brute: 70, witch: 70, bloater: 60 };
+const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest'];
+const MAX_PER = { husk: 320, ghoul: 160, brute: 70, witch: 70, bloater: 60, wraith: 40, priest: 12 };
 const CELL = 2.0, GRID = 64, GRID_MASK = 63;
 // Taunt (contract with the Legion): enemies steer to the nearest run.legion.taunters minion within this radius.
 // Read MINIONS off the namespace so it is just undefined (radius 3) until the Legion branch adds that export.
 const MINIONS = Reflect.get(DATA, 'MINIONS');
 const TAUNT_R = (MINIONS && MINIONS.bulwark && MINIONS.bulwark.taunt) || 3;
-const HEAD = { husk: 1.4, ghoul: 0.85, brute: 2.25, witch: 2.35, bloater: 1.5 }; // crown height above the model origin
+const HEAD = { husk: 1.4, ghoul: 0.85, brute: 2.25, witch: 2.35, bloater: 1.5, wraith: 1.75, priest: 2.15 }; // crown height above the model origin
+const RAISE_COL = 0xff2e4a; // a Corpse Priest's necromancy (its threads, sigils and the risen Husks' burst)
 const MAX_CROWNS = 24;
 const CONE_COL = 0xff4a2a;
 
@@ -66,7 +68,8 @@ export class Enemies {
     this.eliteColor = new THREE.Color(0xffd04a);
     this.burstCol = hdr(run.chapter.enemy, 3.2);
     this.eliteBurst = hdr(0xffd04a, 3.5);
-    this.counts = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, boss: 0 };
+    this.counts = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, wraith: 0, priest: 0, boss: 0 };
+    this.raiseHdr = hdr(RAISE_COL, 3); this.raiseColor = new THREE.Color(RAISE_COL);
     this.uidSeq = 0;
     this.crowns = new THREE.InstancedMesh(crownGeometry(), new THREE.MeshBasicMaterial({ color: new THREE.Color(ELITE.crown).multiplyScalar(2.6) }), MAX_CROWNS);
     this.crowns.count = 0; this.crowns.frustumCulled = false;
@@ -124,6 +127,8 @@ export class Enemies {
     e.aff = null; e.ev = null; // elite affixes (affixes.js) and run-event ownership (events.js)
     e.stunT = 0; e.riteId = 0; e.riteT = 0; // Hero Rites: stun timer, per-cast hit mark, per-foe hit cooldown
     e.fearT = 0; // Grimsby's Hallowfire: seconds left fleeing
+    e.reborn = false; // raised by a Corpse Priest: drops no soul shard and leaves no corpse
+    if (type === 'priest') { e.shootCd = d.raise.cd * (0.4 + Math.random() * 0.4); e.chant = null; }
     this.active.push(e);
     this.counts[type]++;
     return e;
@@ -199,7 +204,7 @@ export class Enemies {
       const pdist = Math.hypot(P.x - e.x, P.z - e.z) || 0.001;
       // taunt: the nearest taunter within range replaces the Shepherd as the target
       let tm = null;
-      if (pdist < tReach && e.type !== 'bloater') { // Bloaters ignore taunts: they only ever want the Shepherd
+      if (pdist < tReach && e.type !== 'bloater' && e.type !== 'wraith' && e.type !== 'priest') { // Bloaters, Wraiths and Priests ignore taunts
         let bd = TAUNT_R * TAUNT_R;
         for (let k = 0; k < nT; k++) {
           const m = T[k];
@@ -282,6 +287,38 @@ export class Enemies {
           e.stateT += dt;
           e.flash = 0.5 + 0.5 * Math.sin(e.stateT * 30);
           if (e.stateT >= d.explode.fuse - 1e-6) { this.explodeBloater(e); continue; }
+        }
+      } else if (e.type === 'wraith') {
+        // drifts in on a slow weave, then dives: faster, swinging side to side so straight shots slip past it
+        const D = d.dive, near = dist < D.range;
+        if (near) speed = e.speed * D.speedMul;
+        const wv = Math.sin(this.time * (near ? 6 : 2.2) + e.phase) * (near ? D.weave : 0.35);
+        const c = Math.cos(wv), sn = Math.sin(wv);
+        sx = dx * c - dz * sn; sz = dx * sn + dz * c; wobble = false;
+      } else if (e.type === 'priest') {
+        // holds `keep` metres off, backs away inside `flee`, and every so often raises the corpses around it
+        const R = d.raise;
+        speed = dist < d.flee ? -e.speed * 0.8 : dist < d.keep ? 0 : e.speed;
+        if (e.state === 0) {
+          e.shootCd -= dt;
+          if (e.shootCd <= 0 && e.spawnT > 1) {
+            e.shootCd = 1; // nothing to raise: look again in a second
+            const picked = run.claimCorpses(e, R.reach, R.n);
+            if (picked) {
+              e.state = 1; e.stateT = -dt; e.chant = picked;
+              for (const k of picked) run.hazards.circle(k.x, k.z, 0.9, R.channel, RAISE_COL, 1.6);
+              if (pdist < 16) run.audio.sfx('growl', { volume: 0.4, pitch: 0.6 });
+            }
+          }
+        } else {
+          e.stateT += dt; speed = 0; wobble = false;
+          e.flash = Math.max(e.flash, 0.35 + 0.25 * Math.sin(e.stateT * 24));
+          const ch = this.raiseHdr;
+          if (Math.random() < dt * 30) { // soul threads stream from each grave to the priest
+            const k = e.chant[(Math.random() * e.chant.length) | 0], u = Math.random();
+            run.particles.emit(k.x + (e.x - k.x) * u, 0.4 + 1.4 * u, k.z + (e.z - k.z) * u, (e.x - k.x) * 0.8, 1, (e.z - k.z) * 0.8, 0.3, 0.3, 0.05, ch[0], ch[1], ch[2], 0.9, 0, 0);
+          }
+          if (e.stateT >= R.channel - 1e-6) { this.raiseCorpses(e); e.state = 0; e.shootCd = R.cd * (0.8 + Math.random() * 0.4); }
         }
       }
 
@@ -375,6 +412,7 @@ export class Enemies {
     if (!e.active || !(t > 0) || e.ev) return; // event entities (Soul Thief, Cursed Coffin) keep their own script
     if (e.type === 'boss') { const B = this.run.boss; if (B.state === 'chase') B.cd += DATA.RITES.bossStagger; return; }
     if (e.state && e.type !== 'witch') {
+      if (e.type === 'priest') this.breakChant(e);
       if (e.type === 'bloater') for (const T of this.run.fx.teles) if (T.active && !T.onDone && (T.mesh.position.x - e.x) ** 2 + (T.mesh.position.z - e.z) ** 2 < 1.5) { T.active = false; T.mesh.visible = false; }
       e.state = 0; e.stateT = 0;
     }
@@ -438,6 +476,7 @@ export class Enemies {
   /** opts: {kx,kz,knock,crit,source,silent} */
   damage(e, amount, o = {}) {
     if (!e.active || amount <= 0) return false;
+    if (e.type === 'wraith' && (o.source === 'minion' || o.source === 'soulbomb')) return false; // it passes through the legion: only the Shepherd can harm it
     if (e.aff && e.aff.ward > 0) amount = this.run.affixes.absorb(e, amount); // a Warded elite's soul ward soaks most of it
     e.hp -= amount;
     e.flash = 1;
@@ -467,8 +506,31 @@ export class Enemies {
     if (e.type === 'boss') { e.hp = 0; run.boss.onDeath(e); this.remove(e); return; }
     run.particles.burst(e.x, 0.7 * e.scale, e.z, e.elite ? 50 : 12, e.elite ? this.eliteBurst : this.burstCol, { speed: e.elite ? 8 : 5, life: 0.5, size: 0.42 * e.scale, up: 0.8 });
     if (Math.random() < 0.35) run.fx.light(e.x, e.z, 2.5, 0.8, this.color, 0.25);
+    if (e.type === 'priest' && e.state) this.breakChant(e);
     run.onEnemyKilled(e, source, noRaise);
     this.remove(e);
+  }
+
+  /** A Corpse Priest's chant is broken (stun, fear or death): its corpses are free again. */
+  breakChant(e) {
+    if (e.chant) for (const k of e.chant) if (k.claim === e.uid) k.claim = 0;
+    e.chant = null;
+  }
+
+  /** The chant completes: each claimed corpse rises as a hollow Husk (no soul shard, no corpse of its own). */
+  raiseCorpses(e) {
+    const run = this.run, P = run.player;
+    for (const k of e.chant) {
+      if (k.claim !== e.uid) continue;
+      k.claim = -1; // consumed
+      const h = run.spawnEnemy('husk', { at: { x: k.x, z: k.z } });
+      if (!h) continue;
+      h.reborn = true; h.spawnT = 0;
+      run.particles.burst(k.x, 0.4, k.z, 10, this.raiseHdr, { speed: 3, life: 0.5, size: 0.4, up: 2.5 });
+    }
+    e.chant = null;
+    run.fx.light(e.x, e.z, 4, 1.2, this.raiseColor, 0.3);
+    if ((e.x - P.x) ** 2 + (e.z - P.z) ** 2 < 260) run.audio.sfx('raise', { volume: 0.5, pitch: 0.55 });
   }
 
   remove(e) {
@@ -522,6 +584,11 @@ export class Enemies {
       // during a crouch or wind-up, cap hit flashes so the squash / rear-back silhouette stays readable
       M.attrs.flash.setX(i, e.state === 1 && (e.type === 'brute' || e.type === 'ghoul') ? Math.min(e.flash, 0.5) : e.flash);
       M.attrs.anim.setXY(i, e.phase, e.stunT > 0 ? 0 : e.type === 'brute' ? 0.6 : 1); // stunned: the waddle stops
+      if (e.type === 'priest' && e.state === 1 && e.chant) { // the chant: a crimson glow on the priest and on each grave
+        const rh = this.raiseHdr, f = 0.7 + 0.3 * Math.sin(this.time * 18 + e.phase);
+        g.add(e.x, M.head * sy * 0.8, e.z, 1.6 * f, rh[0] * 0.25, rh[1] * 0.25, rh[2] * 0.25, 0.9);
+        for (const k of e.chant) if (k.claim === e.uid) g.add(k.x, 0.3, k.z, 1.2 * f, rh[0] * 0.3, rh[1] * 0.3, rh[2] * 0.3, 0.9);
+      }
       if (e.stunT > 0) { // and three daze motes circle its head
         const y = M.head * sy + 0.3, a = this.time * 7 + e.phase, rr = 0.34 * e.scale;
         for (let k = 0; k < 3; k++) { const b = a + k * 2.094; g.add(e.x + Math.cos(b) * rr, y + Math.sin(b * 2) * 0.06, e.z + Math.sin(b) * rr, 0.42, 1.5, 1.35, 2.3, 0.9); }

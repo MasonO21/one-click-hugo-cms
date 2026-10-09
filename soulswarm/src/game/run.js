@@ -26,7 +26,15 @@ import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
-const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater'];
+const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest'];
+// the horde's mix by minute (TYPES order); Wraiths and Priests also wait for their chapter and minute (ENEMIES[t].from)
+// and their alive cap (ENEMIES[t].cap)
+const MIX = [[1, 0, 0, 0, 0, 0, 0], [0.75, 0.25, 0, 0, 0, 0, 0], [0.55, 0.25, 0, 0.1, 0.1, 0.05, 0], [0.45, 0.2, 0.13, 0.12, 0.1, 0.06, 0.03], [0.4, 0.2, 0.17, 0.13, 0.1, 0.07, 0.03]];
+const CORPSES = 48; // the horde's fallen kept for the Corpse Priests (oldest dropped first)
+const NEW_FOE = { // a one-time tip when each Update 5 foe first appears
+  wraith: 'A Grave Wraith drifts through your legion. Only YOU can strike it!',
+  priest: 'A Corpse Priest raises the fallen. Hunt it down before it chants!',
+};
 const CHAPTER_NAMES = CHAPTERS.map((c) => c.name);
 const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
@@ -118,6 +126,7 @@ export class Run {
     if (this.diff.extraElites) this.eliteTimes = this.eliteTimes.concat(DIFFICULTY_ELITES.slice(0, this.diff.extraElites)).sort((a, b) => a - b);
     this.trialBannerAt = this.trial || this.bloodMoon || this.diff.id !== 'normal' ? 3.6 : 0;
     this.packAcc = 0; this.packN = 0;
+    this.corpses = []; // the horde's fallen that did not rise: { x, z, t, claim } (claim: a priest's uid, -1 once raised)
     this.hazards = new Hazards(this);
     this.affixes = new Affixes(this); // elite affixes (affixes.js)
     this.events = new Events(this);   // mid-run events and shrine blessings (events.js)
@@ -185,19 +194,36 @@ export class Run {
 
   // ---------------------------------------------------------------- director
   pickType() {
-    const m = this.minute;
-    const w = m < 1 ? [1, 0, 0, 0, 0]
-      : m < 2 ? [0.75, 0.25, 0, 0, 0]
-      : m < 3 ? [0.55, 0.25, 0, 0.1, 0.1]
-      : m < 4 ? [0.45, 0.2, 0.13, 0.12, 0.1]
-      : [0.4, 0.2, 0.17, 0.13, 0.1];
-    // chapter modifiers re-weight the mix (e.g. Ember Wastes ×1.8 Witches)
-    const mul = this.mods.weights, mw = this.mut.weights; // Daily Trial banes can re-weight it too (Witching Hour)
+    const m = this.minute, w = this._mix || (this._mix = new Array(TYPES.length));
+    const row = MIX[Math.min(MIX.length - 1, Math.floor(m))], ch = this.chapter.id;
+    // chapter modifiers re-weight the mix (e.g. Ember Wastes ×1.8 Witches); Daily Trial banes can too (Witching Hour)
+    const mul = this.mods.weights, mw = this.mut.weights;
     let total = 0;
-    if (mul || mw) for (let i = 0; i < 5; i++) { w[i] *= ((mul && mul[TYPES[i]]) || 1) * ((mw && mw[TYPES[i]]) || 1); total += w[i]; }
-    let r = Math.random() * (mul || mw ? total : 1);
-    for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return TYPES[i]; }
+    for (let i = 0; i < TYPES.length; i++) {
+      const t = TYPES[i], d = ENEMIES[t];
+      w[i] = row[i] * ((mul && mul[t]) || 1) * ((mw && mw[t]) || 1);
+      if (d.from && (ch < d.from.ch || m < d.from.minute || this.enemies.counts[t] >= d.cap)) w[i] = 0;
+      total += w[i];
+    }
+    let r = Math.random() * total;
+    for (let i = 0; i < TYPES.length; i++) { r -= w[i]; if (r <= 0 && w[i] > 0) return TYPES[i]; }
     return 'husk';
+  }
+
+  /** A Corpse Priest claims up to n unclaimed corpses within reach (the newest first); null when there are none. */
+  claimCorpses(e, reach, n) {
+    const L = this.corpses, life = ENEMIES.priest.raise.corpse, now = this.time;
+    let w = 0;
+    for (let i = 0; i < L.length; i++) { const k = L[i]; if (k.claim !== -1 && now - k.t < life) L[w++] = k; }
+    L.length = w;
+    let out = null;
+    for (let i = L.length - 1; i >= 0; i--) {
+      const k = L[i];
+      if (k.claim || (k.x - e.x) ** 2 + (k.z - e.z) ** 2 > reach * reach) continue;
+      k.claim = e.uid; (out || (out = [])).push(k);
+      if (out.length >= n) break;
+    }
+    return out;
   }
 
   /** Ghouls arrive in packs from one direction (almost always ahead), each member flanking at its own angle across ±flank. */
@@ -231,6 +257,7 @@ export class Run {
     const p = opts.at || this.spawnPoint();
     const e = this.enemies.spawn(type, p.x, p.z, { hpMul: this.hpMul() * this.mut.hp, dmgMul: this.dmgMul(), elite: !!opts.elite });
     if (e && this.mut.speed !== 1) e.speed *= this.mut.speed;
+    if (e && NEW_FOE[type]) this.hint(type, NEW_FOE[type]);
     return e;
   }
 
@@ -350,7 +377,7 @@ export class Run {
     if (e.elite) { this.counters.elites++; this.fx.hitStop(HITSTOP.elite); }
     this.addNovaCharge(e.elite ? 6 : 1);
     const d = ENEMIES[e.type];
-    const gem = this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1) * this.diff.xp); // harder foes, richer souls
+    const gem = e.reborn ? null : this.pickups.dropGem(e.x, e.z, (d ? d.xp : 1) * (e.elite ? 12 : 1) * this.diff.xp); // harder foes, richer souls; a Priest's hollow Husks hold none
     // the lantern's dead burn behind the Shepherd (their souls follow its light); Osric's legion tithes him what it slays
     if (gem && (source === 'witchfire' || (source === 'minion' && this.loadout.hero.passive.tithe))) gem.pulled = true;
     if (e.elite) { if (!(e.aff && e.aff.noChest)) this.pickups.dropSpecial('chest', e.x, e.z); } // a coffin's mini-elite carries none
@@ -360,6 +387,7 @@ export class Run {
       else if (r < 0.009) this.pickups.dropSpecial('magnet', e.x, e.z);
     }
     if (source === 'witchfire' && this.evolved.hallowPyre) this.weapons.pyreBurst(e.x, e.z); // Hallow Pyre: the slain burst into flame
+    let rose = false;
     if (!noRaise) {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
       if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
@@ -375,11 +403,17 @@ export class Run {
         if (this.legion.count < this.stats.cap) {
           // the minion keeps the identity of what it was (variant by type; elites rise as Champions)
           this.legion.raise(e.x, e.z, { kind: e.type, elite: e.elite });
-          this.counters.raised++;
+          this.counters.raised++; rose = true;
           if (this.rites.graveCall) this.rites.pillar(e.x, e.z);
           if (this.counters.raised === 1) this.hint('raise', 'Slain foes rise to fight for you. This is your LEGION!');
         } else this.legion.healWeakest(); // at the cap the roll mends the weakest minion instead
       }
+    }
+    // what did not rise is left for the Corpse Priests (never a Priest itself, nor a Husk one of them raised)
+    if (!rose && !e.reborn && !e.ev && e.type !== 'priest') {
+      const L = this.corpses;
+      if (L.length >= CORPSES) L.shift();
+      L.push({ x: e.x, z: e.z, t: this.time, claim: 0 });
     }
     this.audio.sfx('kill', { volume: 0.35 });
   }

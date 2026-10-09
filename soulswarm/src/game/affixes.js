@@ -10,7 +10,7 @@ import { AFFIXES, AFFIX_IDS, ENEMIES } from './data.js';
 import { hdr } from '../engine/particles.js';
 
 const MAX = 16;                                                            // affixed elites tracked and drawn at once
-const HEAD = { husk: 1.4, ghoul: 0.85, brute: 2.25, witch: 2.35, bloater: 1.5 }; // model height (as enemies.js)
+const HEAD = { husk: 1.4, ghoul: 0.85, brute: 2.25, witch: 2.35, bloater: 1.5, wraith: 1.75, priest: 2.15 }; // model height (as enemies.js)
 const W = AFFIXES.warded, SP = AFFIXES.splitter, VA = AFFIXES.vampiric, CO = AFFIXES.commander;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _v = new THREE.Vector3();
 const _sp = { x: 0, y: 0 };
