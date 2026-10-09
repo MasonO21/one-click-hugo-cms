@@ -55,7 +55,7 @@ describe('season bonus chests (past level 50, premium)', () => {
     game.bus.on('ui:toast', (e) => toasts.push(e.text));
     lo.addXp(250);
     expect(seasonBonusReady(game)).toBe(1);
-    expect(toasts.some((t) => /bonus chest/i.test(t))).toBe(true);
+    expect(toasts.some((t) => /^🎁 Bonus Explorer's Case earned/.test(t))).toBe(true);
   });
 
   it('is kept per season and survives a save; an old save without it loads with none claimed', async () => {

@@ -42,16 +42,16 @@ export const NOVA_SHOP: NovaShopItemDef[] = [
   // ---- boosts (same kind and strength extend the running one)
   { id: 'nova_production_1h', name: '2× Production · 1 h', icon: '⚡', art: 'hud:power', kind: 'boost', nova: 80, dailyCap: 3, boost: { kind: 'production', mult: 2, minutes: 60 }, description: 'Every building makes twice as much for an hour.' },
   { id: 'nova_production_4h', name: '2× Production · 4 h', icon: '⚡', art: 'hud:power', kind: 'boost', nova: 250, dailyCap: 2, boost: { kind: 'production', mult: 2, minutes: 240 }, description: 'Twice the production for four hours (and while you are away).' },
-  { id: 'nova_research_1h', name: '2× Research · 1 h', icon: '🔬', art: 'hud:tech', kind: 'boost', nova: 80, dailyCap: 3, boost: { kind: 'research', mult: 2, minutes: 60 }, description: 'Your labs think twice as fast for an hour.' },
-  { id: 'nova_gather_1h', name: '2× Gathering · 1 h', icon: '🪓', art: 'res:wood', kind: 'boost', nova: 60, dailyCap: 3, boost: { kind: 'gather', mult: 2, minutes: 60 }, description: 'Every tree, rock and bush gives you double for an hour.' },
+  { id: 'nova_research_1h', name: '2× Research · 1 h', icon: '🔬', art: 'hud:tech', kind: 'boost', nova: 80, dailyCap: 3, boost: { kind: 'research', mult: 2, minutes: 60 }, description: 'Research runs at double speed for an hour.' },
+  { id: 'nova_gather_1h', name: '2× Gathering · 1 h', icon: '🪓', art: 'res:wood', kind: 'boost', nova: 60, dailyCap: 3, boost: { kind: 'gather', mult: 2, minutes: 60 }, description: 'Hand gathering yields double for an hour.' },
   // ---- time savers
-  { id: 'nova_expedition_rush', name: 'Welcome the squad home', icon: '🧭', art: 'hud:expeditions', kind: 'expedition', nova: EXPEDITION_RUSH.base, dailyCap: 5, description: 'The squad due home next is back right now with its haul. The price follows the time left.' },
+  { id: 'nova_expedition_rush', name: 'Recall an expedition', icon: '🧭', art: 'hud:expeditions', kind: 'expedition', nova: EXPEDITION_RUSH.base, dailyCap: 5, description: 'The squad due home next is back right now with its haul. The price follows the time left.' },
   { id: 'nova_recruit_refresh', name: 'New recruits', icon: '📋', art: 'hud:population', kind: 'recruit_refresh', nova: 20, dailyCap: 10, description: 'A fresh set of survivors at the recruitment board.' },
   { id: 'nova_merchant', name: 'Call a merchant', icon: '🛒', art: 'poi:merchant_caravan', kind: 'merchant', nova: 80, dailyCap: 2, description: 'A wandering merchant parks their cart near your colony for a while.' },
-  { id: 'nova_spin', name: 'Extra lucky spin', icon: '🎡', art: 'hud:spin', kind: 'spin', nova: 40, dailyCap: 5, description: 'One more turn of the Lucky Wheel today.' },
+  { id: 'nova_spin', name: 'Extra wheel spin', icon: '🎡', art: 'hud:spin', kind: 'spin', nova: 40, dailyCap: 5, description: 'One more turn of the Lucky Wheel today.' },
   { id: 'nova_season_level', name: 'Skip a season level', icon: '🏅', art: 'hud:season', kind: 'season_level', nova: 60, dailyCap: 5, description: 'Jump straight to the next level of the season pass.' },
-  // ---- goodies
-  { id: 'nova_cache_small', name: 'Small supply cache', icon: '📦', art: 'item:supply_crate', kind: 'cache', nova: 20, dailyCap: 3, crates: 1, description: 'A free crate’s worth of supplies for your colony’s tier, right now.' },
-  { id: 'nova_cache_large', name: 'Large supply cache', icon: '🎁', art: 'item:mystery_crate', kind: 'cache', nova: 55, dailyCap: 2, crates: 3, description: 'Three crates’ worth of supplies for your colony’s tier.' },
-  { id: 'nova_recruit_epic', name: 'Epic recruit', icon: '🧑‍🚀', art: 'item:colonist_crate', kind: 'recruit', nova: 300, dailyCap: 1, rarity: 'epic', description: 'A skilled epic colonist moves in today.' },
+  // ---- supplies and crew
+  { id: 'nova_cache_small', name: 'Small resource drop', icon: '📦', art: 'item:supply_crate', kind: 'cache', nova: 20, dailyCap: 3, crates: 1, description: 'One free crate’s worth of resources for your colony’s tier, delivered now.' },
+  { id: 'nova_cache_large', name: 'Large resource drop', icon: '📦', art: 'item:mystery_crate', kind: 'cache', nova: 55, dailyCap: 2, crates: 3, description: 'Three crates’ worth of resources for your colony’s tier.' },
+  { id: 'nova_recruit_epic', name: 'Epic recruit', icon: '🧑‍🚀', art: 'item:colonist_crate', kind: 'recruit', nova: 300, dailyCap: 1, rarity: 'epic', description: 'A skilled epic colonist joins the colony.' },
 ];

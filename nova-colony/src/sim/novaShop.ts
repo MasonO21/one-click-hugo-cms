@@ -224,7 +224,7 @@ export function buyNovaItem(game: Game, id: string, opts: { expedition?: number 
     }
     case 'recruit':
       g.sys.colonists.grant(def.rarity ?? 'epic');
-      g.toast(`🧑‍🚀 An ${def.rarity ?? 'epic'} colonist has joined your colony!`, 'reward');
+      g.toast(`🧑‍🚀 An ${def.rarity ?? 'epic'} colonist has joined the colony`, 'reward');
       done = true;
       break;
     case 'recruit_refresh':
@@ -236,7 +236,7 @@ export function buyNovaItem(game: Game, id: string, opts: { expedition?: number 
       const m = merchantDef(g);
       const ev = m ? g.sys.worldEvents.spawn(m.id) : null;
       if (ev) {
-        g.toast(`🛒 ${m!.name} is on the way. Look for the cart on your map!`, 'reward');
+        g.toast(`🛒 ${m!.name} is on the way: look for the cart on your map`, 'reward');
         done = true;
       } else result.reason = 'The merchant could not find a spot. Try again in a moment';
       break;

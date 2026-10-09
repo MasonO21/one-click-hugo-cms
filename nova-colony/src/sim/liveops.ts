@@ -274,7 +274,8 @@ export class LiveOpsSystem extends System {
       this.game.toast(`🏅 Season level ${after}! New rewards are waiting`, 'success');
     } else if (s.premium && seasonBonusEarned(this.game.data.season, s.xp) > seasonBonusEarned(this.game.data.season, s.xp - xp)) {
       bus.emit('sfx', { id: 'level_up' });
-      this.game.toast('🎁 Season bonus chest! Claim it on the season pass', 'success', undefined, 'season');
+      const bonus = Object.keys(this.game.data.season.bonus?.reward.items ?? {})[0];
+      this.game.toast(`🎁 Bonus ${this.game.data.chest(bonus ?? '')?.name ?? 'chest'} earned: claim it on the season pass`, 'success', undefined, 'season');
     }
   }
 

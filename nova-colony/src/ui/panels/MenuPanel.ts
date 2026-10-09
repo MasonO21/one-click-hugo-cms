@@ -26,7 +26,7 @@ export class MenuPanel extends Panel {
       { icon: '🎡', art: hudArt('spin'), label: 'Lucky wheel', panel: 'spin', badge: b.spin ? 1 : 0 },
       { icon: '🏆', art: hudArt('season'), label: 'Season pass', panel: 'season', badge: b.season },
       { icon: '📔', art: hudArt('journal'), label: 'Journal', panel: 'journal', badge: b.journal },
-      { icon: '👗', art: hudArt('wardrobe'), label: 'Wardrobe', panel: 'wardrobe' },
+      { icon: '🧥', art: hudArt('wardrobe'), label: 'Wardrobe', panel: 'wardrobe' },
       // Photo Mode is not a panel: UI.open('photo') hides the HUD and hands over the camera (ui/photo/PhotoMode.ts)
       ...(this.ctx.renderer.photo ? [{ icon: '📷', art: hudArt('photo'), label: 'Photo', panel: 'photo' }] : []),
       { icon: '🎒', art: hudArt('backpack'), label: 'Inventory', panel: 'inventory' },

@@ -18,8 +18,8 @@ export interface WardrobeTab {
 }
 
 export const WARDROBE_TABS: WardrobeTab[] = [
-  { id: 'outfits', label: 'Outfits', icon: '👗', kinds: ['outfit'] },
-  { id: 'hats', label: 'Hats', icon: '👒', kinds: ['hat'] },
+  { id: 'outfits', label: 'Outfits', icon: '🧥', kinds: ['outfit'] },
+  { id: 'hats', label: 'Hats', icon: '🧢', kinds: ['hat'] },
   { id: 'pets', label: 'Pets', icon: '🐾', kinds: ['pet'] },
   { id: 'colony', label: 'Colony', icon: '🏡', kinds: ['base_theme', 'colonist_outfit', 'decoration'] },
   { id: 'rides', label: 'Rides & Turrets', icon: '🛞', kinds: ['vehicle_skin', 'turret_skin'] },
@@ -61,7 +61,7 @@ export const KIND_LABEL: Record<CosmeticKind, string> = {
   hat: 'Hat',
   pet: 'Pet',
   colonist_outfit: 'Colonist outfit',
-  vehicle_skin: 'Ride paint',
+  vehicle_skin: 'Vehicle finish',
   turret_skin: 'Turret skin',
   decoration: 'Decorations',
   photo_frame: 'Photo frame',
@@ -81,21 +81,21 @@ const FX_TEXT: Record<ThemeFx, string> = {
 export function cosmeticEffect(def: CosmeticDef): string[] {
   switch (def.kind) {
     case 'base_theme':
-      return ["Recolours your colony's roofs and trims.", def.fx ? `Adds ${FX_TEXT[def.fx]} over the colony.` : 'A whole new mood for your colony.'];
+      return ["Recolours the roofs and trims across your colony.", def.fx ? `Adds ${FX_TEXT[def.fx]} over the colony.` : 'A new look for the whole colony.'];
     case 'outfit':
-      return ["Dresses your explorer. Everyone will see it!"];
+      return ['Changes what your explorer wears.'];
     case 'hat':
-      return ['Sits on top of your explorer, with any outfit.'];
+      return ['Worn by your explorer, with any outfit.'];
     case 'pet':
-      return ['A little friend who follows you everywhere.'];
+      return ['A companion that follows you around the colony.'];
     case 'colonist_outfit':
-      return ['Every colonist in your colony wears it.'];
+      return ['Every colonist in the colony wears it.'];
     case 'vehicle_skin':
-      return ['A fresh coat of paint for the rides you drive.'];
+      return ['A new finish for the vehicles you drive.'];
     case 'turret_skin':
-      return ['Repaints every defense turret. Same aim, more style.'];
+      return ['A new finish for every defense turret. Looks only.'];
     case 'decoration':
-      return ['Unlocks in Build › Decor: place as many as you like.'];
+      return ['Unlocks new pieces in Build › Decor.'];
     case 'photo_frame':
       return ['Frames your pictures in Photo Mode (Menu › Photo).', 'Switch frames on the photo before you share it.'];
   }

@@ -158,12 +158,12 @@ describe('wardrobe — detail text and confirmation', () => {
 describe('wardrobe — wiring', () => {
   const src = (f: string) => fs.readFileSync(path.resolve(__dirname, '..', 'src', f), 'utf8');
 
-  it('has a painted Wardrobe tile in the Menu (dress emoji fallback) and a registered panel', () => {
+  it('has a painted Wardrobe tile in the Menu (coat emoji fallback) and a registered panel', () => {
     expect(hudArt('wardrobe')).toBe('art/hud/wardrobe.webp');
     const menu = src('ui/panels/MenuPanel.ts');
     expect(menu).toMatch(/hudArt\('wardrobe'\)/);
     expect(menu).toContain("panel: 'wardrobe'");
-    expect(menu).toContain('👗');
+    expect(menu).toContain('🧥');
     expect(src('ui/UI.ts')).toMatch(/reg\('wardrobe'/);
   });
 

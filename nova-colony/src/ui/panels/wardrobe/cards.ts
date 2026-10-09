@@ -53,7 +53,7 @@ export function cosmeticAction(ctx: UiCtx, def: CosmeticDef, on: CardHandlers, b
   const size = big ? 'block' : 'small block';
   if (state === 'equipped') {
     return btn({
-      label: big ? 'Take it off' : 'Unequip',
+      label: 'Unequip',
       cls: `ghost ${size}`,
       data: { act: 'unequip' },
       onClick: (e) => {
@@ -66,7 +66,7 @@ export function cosmeticAction(ctx: UiCtx, def: CosmeticDef, on: CardHandlers, b
   }
   if (state === 'owned') {
     return btn({
-      label: big ? '✨ Wear it' : 'Equip',
+      label: 'Equip',
       cls: `info ${size}`,
       data: { act: 'equip' },
       onClick: (e) => {
@@ -109,7 +109,7 @@ export function buyCosmetic(ctx: UiCtx, def: CosmeticDef, on: CardHandlers): voi
     confetti(host, { count: 40, y: host.clientHeight * 0.4 });
     on.changed();
   };
-  if (needsNovaConfirm(def.nova)) novaConfirm(on.host(), { title: def.name, icon: cosmeticIcon(def, 'big'), price: def.nova, text: 'It goes straight into your wardrobe, ready to wear.', onConfirm: go });
+  if (needsNovaConfirm(def.nova)) novaConfirm(on.host(), { title: def.name, icon: cosmeticIcon(def, 'big'), price: def.nova, text: 'It goes straight into your wardrobe.', onConfirm: go });
   else go();
 }
 

@@ -95,7 +95,7 @@ export class SeasonPanel extends Panel {
         { class: 'stack-v tight' },
         h('div', { class: 'sp-hl' }, ...chips.map((t) => h('span', { class: 'chip', text: t }))),
         hl.exclusive > 0 || hl.bonus
-          ? h('div', { class: 'mute small', text: [hl.exclusive > 0 ? `${hl.exclusive} cosmetics you can only get here` : '', hl.bonus ? `a ${this.data.chest(hl.bonus.chest ?? '')?.name ?? 'bonus chest'} every ${fmt(hl.bonus.xp)} XP after level ${this.data.season.levels.length}` : ''].filter(Boolean).join(' · ').replace(/^./, (c) => c.toUpperCase()) })
+          ? h('div', { class: 'mute small', text: [hl.exclusive > 0 ? `${hl.exclusive} cosmetics you can only get here` : '', hl.bonus ? `${article(this.data.chest(hl.bonus.chest ?? '')?.name ?? 'bonus chest')} every ${fmt(hl.bonus.xp)} XP after level ${this.data.season.levels.length}` : ''].filter(Boolean).join(' · ').replace(/^./, (c) => c.toUpperCase()) })
           : null,
       ),
       strip,
@@ -186,7 +186,7 @@ export class SeasonPanel extends Panel {
         { class: 'grow stack-v tight' },
         h('div', { class: 'h3', text: b.premium ? `Bonus ${chest?.name ?? 'chests'}` : 'Bonus chests (premium)' }),
         bar(b.xpPer > 0 ? b.xpInto / b.xpPer : 0, 'purple', `${fmt(b.xpInto)} / ${fmt(b.xpPer)} XP`),
-        h('div', { class: 'mute small', text: b.premium ? `Keep playing: one more every ${fmt(b.xpPer)} XP, as many as you like.${b.claimed ? ` ${b.claimed} opened so far.` : ''}` : `Premium keeps paying after level ${this.data.season.levels.length}: a chest every ${fmt(b.xpPer)} XP.` }),
+        h('div', { class: 'mute small', text: b.premium ? `One more every ${fmt(b.xpPer)} XP of play, with no limit.${b.claimed ? ` ${b.claimed} claimed so far.` : ''}` : `The premium track keeps paying after level ${this.data.season.levels.length}: a chest every ${fmt(b.xpPer)} XP.` }),
       ),
       b.ready > 0 ? btn({ label: `Claim ×${b.ready}`, cls: 'good small', id: 'btn-season-bonus', onClick: () => this.claimBonus() }) : null,
     );
@@ -232,4 +232,9 @@ function scaleItems(r: Reward, n: number): Reward {
   const items: Record<string, number> = {};
   for (const [k, v] of Object.entries(r.items ?? {})) items[k] = v * n;
   return { ...r, items };
+}
+
+/** "an Explorer's Case", "a Supply Cache". */
+function article(name: string): string {
+  return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
 }

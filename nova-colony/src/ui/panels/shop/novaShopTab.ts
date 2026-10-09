@@ -23,7 +23,7 @@ export function novaItemArt(def: NovaShopItemDef): string | null {
 const GROUPS: { title: string; kinds: NovaShopItemDef['kind'][] }[] = [
   { title: 'Boosts', kinds: ['boost'] },
   { title: 'Time savers', kinds: ['expedition', 'recruit_refresh', 'merchant', 'spin', 'season_level'] },
-  { title: 'Goodies', kinds: ['cache', 'recruit'] },
+  { title: 'Supplies & crew', kinds: ['cache', 'recruit'] },
 ];
 
 /** Signature bits that change what the tab shows (daily counts, running boosts, trips out). */
@@ -41,7 +41,7 @@ export function novaShopTab(ctx: UiCtx, host: () => HTMLElement, changed: () => 
       'div',
       { class: 'card ns-intro' },
       h('span', { class: 'big-ico', text: '✨' }),
-      h('div', { class: 'grow' }, h('div', { class: 'h3', text: 'Little shortcuts' }), h('div', { class: 'mute small', text: 'Spend Nova to speed things up. Everything here also comes free with play: it only saves you time.' })),
+      h('div', { class: 'grow' }, h('div', { class: 'h3', text: 'Shortcuts' }), h('div', { class: 'mute small', text: 'Spend Nova to save time. Everything here also comes with ordinary play.' })),
     ),
   );
   const offers = novaOffers(ctx.game);
@@ -132,8 +132,8 @@ export function wardrobeCta(ctx: UiCtx): HTMLElement {
   return h(
     'div',
     { class: 'card tint wd-shop-cta' },
-    iconEl(hudArt('wardrobe'), '👗', 'big-ico', 'span'),
-    h('div', { class: 'grow' }, h('div', { class: 'h3', text: 'Your Wardrobe' }), h('div', { class: 'mute small', text: `${own} of ${ctx.data.cosmetics.length} collected. Try things on, see where to find the rest.` })),
+    iconEl(hudArt('wardrobe'), '🧥', 'big-ico', 'span'),
+    h('div', { class: 'grow' }, h('div', { class: 'h3', text: 'Your Wardrobe' }), h('div', { class: 'mute small', text: `${own} of ${ctx.data.cosmetics.length} collected. Equip what you own and see where to find the rest.` })),
     btn({ label: 'Open', cls: 'info small', id: 'btn-open-wardrobe', onClick: () => ctx.open('wardrobe') }),
   );
 }

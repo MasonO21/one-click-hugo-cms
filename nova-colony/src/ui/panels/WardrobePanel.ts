@@ -47,7 +47,7 @@ export class WardrobePanel extends Panel {
   };
 
   title(): PanelTitle {
-    return { icon: '👗', art: hudArt('wardrobe'), text: 'Wardrobe' };
+    return { icon: '🧥', art: hudArt('wardrobe'), text: 'Wardrobe' };
   }
 
   /** `arg`: a tab id, `{ tab }`, or `{ id }` (a cosmetic: opens its tab and its sheet). */
@@ -148,13 +148,13 @@ export class WardrobePanel extends Panel {
 
     const list = sortCosmetics(filterCosmetics(all, this.tab, own, this.filter), own, this.tab);
     if (!list.length) {
-      wrap.appendChild(emptyState('🧺', 'Nothing here yet', 'Tap "All" to see what you can collect: Nova, chests and the season pass all have goodies.'));
+      wrap.appendChild(emptyState('🧳', 'Nothing here yet', 'Switch to All to see what you can collect from Nova, chests and the season pass.'));
     } else {
       const grid = h('div', { class: 'wd-grid' });
       for (const c of list) grid.appendChild(cosmeticCard(this.ctx, c, this.handlers));
       wrap.appendChild(grid);
     }
-    wrap.appendChild(h('div', { class: 'mute small center wd-foot', text: 'Cosmetics are just for looks: they never change how the game plays.' }));
+    wrap.appendChild(h('div', { class: 'mute small center wd-foot', text: 'Cosmetics change how things look, never how the game plays.' }));
     fill(this.body, wrap);
     this.renderSheet();
   }

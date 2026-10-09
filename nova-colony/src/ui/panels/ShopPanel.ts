@@ -16,7 +16,7 @@ import { sortCosmetics } from '../logic/wardrobe';
 type Tab = 'crystals' | 'packs' | 'nova' | 'vip' | 'season' | 'cosmetics';
 
 const TAG_TEXT: Record<string, string> = { best_value: 'BEST VALUE', popular: 'POPULAR', limited: 'LIMITED', new: 'NEW' };
-const SECTION_ICON: Record<string, string> = { crystals: '💎', packs: '🎁', bundles: '🎀', nova: '✨', vip: '👑', season: '🏆', cosmetics: '👕' };
+const SECTION_ICON: Record<string, string> = { crystals: '💎', packs: '🎁', bundles: '📦', nova: '✨', vip: '👑', season: '🏆', cosmetics: '👕' };
 
 export class ShopPanel extends Panel {
   readonly name = 'shop';
@@ -251,6 +251,6 @@ export class ShopPanel extends Panel {
     const forSale = sortCosmetics(this.data.cosmetics.filter((c) => c.nova > 0 && !lo.cosmetics.owned.includes(c.id)), lo.cosmetics);
     const grid = h('div', { class: 'wd-grid' });
     for (const c of forSale) grid.appendChild(cosmeticCard(this.ctx, c, this.cosHandlers));
-    return h('div', { class: 'stack-v' }, wardrobeCta(this.ctx), forSale.length ? grid : emptyState('🎀', 'You own every cosmetic Nova can buy!', 'Chests and the season pass have the rest.'));
+    return h('div', { class: 'stack-v' }, wardrobeCta(this.ctx), forSale.length ? grid : emptyState('🧥', 'You own every cosmetic Nova can buy', 'Chests and the season pass have the rest.'));
   }
 }
