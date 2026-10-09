@@ -1,16 +1,28 @@
 /**
- * Alien models (AlienDef.model). Each model has a `body` geometry built in white/grey so the
- * instance color (AlienDef.color) tints it, and a `detail` geometry with fixed colors (eyes, teeth,
- * glowing spots). Cute-creepy, not horror. Ground at y = 0, facing +Z, unit scale ~ a crawler.
+ * Alien models (AlienDef.model). Each model has a `body` geometry built in white / greys so the
+ * instance colour (AlienDef.color) tints it — lighter bellies and sacs, darker spikes, spots and plates
+ * are vertex shades of that one tint — and a `detail` geometry in fixed colours (eyes, claws, teeth,
+ * drool, glowing spots, dirt). Ground at y = 0, facing +Z, unit scale ~ a crawler.
+ *
+ * Look: rounded, organic creatures after the painted portraits (public/art/aliens) — mischievous
+ * rather than menacing: smooth bodies, sly half-lidded eyes, little fangs, no baby faces. Every type
+ * keeps its own silhouette (round spider, toad with a throat sac, knuckle-walking rock brute, drill
+ * worm in its mound, manta flyer, crowned insect queen, glowing rock titan); bosses (`boss`) get
+ * extra regalia on top: a bolt necklace, a grander crown, a crystal crown.
  */
 import * as THREE from 'three';
 import { GeoBuilder, SLOT_GLOW } from '../core/GeoBuilder';
+import { ellipsoid, sweep, mirror, shell, gradeY } from './soft';
 
 const W = '#ffffff';
-const SHADE = '#cfcfcf';
-const EYE_W = '#ffffff';
-const PUPIL = '#141418';
-const TOOTH = '#fff6e6';
+/** Body shades (multiplied by the alien's tint). */
+const LIGHT = '#fff4ee';
+const MID = '#c9c9c9';
+const DARK = '#9a9a9a';
+const DEEP = '#747474';
+const EYE_DARK = '#16181c';
+const TOOTH = '#f6efe2';
+const CLAW = '#2e2a26';
 
 export interface AlienGeo {
   body: THREE.BufferGeometry;
@@ -19,174 +31,304 @@ export interface AlienGeo {
   height: number;
 }
 
-function eye(d: GeoBuilder, x: number, y: number, z: number, r = 0.14): void {
-  d.sphere(r, x, y, z, EYE_W, 6);
-  d.sphere(r * 0.5, x, y, z + r * 0.72, PUPIL, 4);
+/**
+ * A sly eye: dark glossy ball with two catch-lights (detail) under a lid tilted toward the nose
+ * (body), so the creature looks mischievous rather than wide-eyed. `side` = -1 left, +1 right.
+ */
+function slyEye(b: GeoBuilder, d: GeoBuilder, x: number, y: number, z: number, r: number, side: number, opts: { iris?: string; lid?: number; look?: number } = {}): void {
+  const iris = opts.iris;
+  if (iris) {
+    ellipsoid(d, r, r * 1.05, r * 0.8, x, y, z, iris, 12);
+    ellipsoid(d, r * 0.32, r * 0.75, r * 0.3, x, y, z + r * 0.62, EYE_DARK, 8);
+  } else ellipsoid(d, r, r * 1.08, r * 0.82, x, y, z, EYE_DARK, 12);
+  d.sphere(r * 0.24, x - side * r * 0.3, y + r * 0.38, z + r * 0.62, '#ffffff', 6);
+  d.sphere(r * 0.1, x + side * r * 0.25, y - r * 0.3, z + r * 0.7, '#ffffff', 4);
+  // upper lid: a shell over the top of the eye, tipped toward the middle
+  const lid = opts.lid ?? 1.15;
+  shell(b, r * 1.12, x, y, z, MID, 12, 0, Math.PI * 2, 0, lid, { rz: side * 0.42, rx: -0.15 + (opts.look ?? 0) });
 }
 
-const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder) => void; height: number }> = {
+/** Tapered spike (a smooth horn) from (x,y,z) along (dx,dy,dz) with base radius r. */
+function spike(b: GeoBuilder, x: number, y: number, z: number, dx: number, dy: number, dz: number, r: number, color: string, seg = 6): void {
+  sweep(b, [x, y, z, r, x + dx * 0.55, y + dy * 0.55, z + dz * 0.55, r * 0.6, x + dx, y + dy, z + dz, 0], seg, color);
+}
+
+const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boolean) => void; height: number }> = {
+  // round, big-eyed spider-crab on six jointed legs, spiky back, two little fangs
   crawler: {
-    height: 0.9,
+    height: 0.95,
     build: (b, d) => {
-      b.sphere(0.55, 0, 0.5, 0, W, 8, { sy: 0.7, sz: 1.15, shade: 0.04 });
-      b.sphere(0.32, 0, 0.6, 0.55, W, 7, { shade: 0.04 });
+      ellipsoid(b, 0.5, 0.4, 0.52, 0, 0.56, -0.04, W, 16);
+      ellipsoid(b, 0.42, 0.24, 0.44, 0, 0.42, 0.02, LIGHT, 14); // pale belly
+      for (let i = 0; i < 5; i++) {
+        const a = (i - 2) * 0.42;
+        spike(b, Math.sin(a) * 0.22, 0.86 - Math.abs(i - 2) * 0.04, -0.18 + Math.cos(a) * 0.05, Math.sin(a) * 0.12, 0.26, -0.16, 0.075, DARK);
+      }
       for (let i = 0; i < 3; i++) {
-        for (const sx of [-1, 1]) {
-          b.box(0.1, 0.5, 0.1, sx * 0.55, 0.3, -0.35 + i * 0.35, SHADE, { rz: sx * 0.9, rx: (i - 1) * 0.3 });
-          b.box(0.1, 0.4, 0.1, sx * 0.82, 0.15, -0.35 + i * 0.35, SHADE, { rz: -sx * 0.6 });
-        }
+        const z = 0.22 - i * 0.26;
+        mirror((s) => {
+          const fz = z * 1.4 + (i - 1) * 0.04;
+          sweep(b, [s * 0.36, 0.5, z, 0.075, s * 0.62, 0.74, z * 1.2, 0.06, s * 0.8, 0.5, fz, 0.045, s * 0.86, 0.12, fz + 0.02, 0.03], 7, MID);
+          sweep(d, [s * 0.86, 0.14, fz + 0.02, 0.03, s * 0.87, 0.0, fz + 0.03, 0.0], 5, CLAW);
+        });
       }
-      b.sphere(0.12, 0, 0.75, -0.7, SHADE, 5);
-      eye(d, -0.15, 0.72, 0.78, 0.12);
-      eye(d, 0.15, 0.72, 0.78, 0.12);
-      d.cone(0.05, 0.16, -0.12, 0.45, 0.78, TOOTH, 4, { rx: Math.PI });
-      d.cone(0.05, 0.16, 0.12, 0.45, 0.78, TOOTH, 4, { rx: Math.PI });
+      mirror((s) => slyEye(b, d, s * 0.17, 0.66, 0.4, 0.13, s));
+      mirror((s) => sweep(d, [s * 0.08, 0.42, 0.47, 0.028, s * 0.085, 0.33, 0.49, 0.016, s * 0.07, 0.27, 0.46, 0.0], 5, TOOTH));
+      sweep(d, [-0.07, 0.45, 0.49, 0.009, 0, 0.43, 0.505, 0.01, 0.07, 0.45, 0.49, 0.009], 5, '#2a1a1a'); // smirk
     },
   },
+
+  // plump toad with a glowing throat sac, sly yellow eyes, spotted back, drool
   spitter: {
-    height: 1.5,
+    height: 1.45,
     build: (b, d) => {
-      b.sphere(0.5, 0, 0.8, 0, W, 8, { sy: 0.8, shade: 0.04 });
-      b.sphere(0.6, 0, 0.9, -0.55, W, 8, { sy: 0.9, shade: 0.04 }); // sac
-      b.sphere(0.3, 0, 1.1, 0.5, W, 7, { shade: 0.04 });
-      b.cyl(0.08, 0.14, 0.4, 0, 1.0, 0.8, W, 6, { rx: Math.PI / 2 }); // spout
-      for (let i = 0; i < 2; i++) {
-        for (const sx of [-1, 1]) {
-          b.box(0.1, 0.8, 0.1, sx * 0.5, 0.45, -0.3 + i * 0.5, SHADE, { rz: sx * 0.7 });
-          b.box(0.1, 0.5, 0.1, sx * 0.85, 0.2, -0.3 + i * 0.5, SHADE, { rz: -sx * 0.5 });
-        }
+      ellipsoid(b, 0.55, 0.48, 0.66, 0, 0.66, -0.12, MID, 16);
+      ellipsoid(b, 0.44, 0.33, 0.38, 0, 0.96, 0.36, MID, 16); // head
+      ellipsoid(b, 0.4, 0.34, 0.32, 0, 0.6, 0.48, W, 16); // throat sac
+      sweep(b, [-0.36, 0.86, 0.5, 0.045, -0.2, 0.8, 0.68, 0.055, 0, 0.79, 0.73, 0.06, 0.2, 0.8, 0.68, 0.055, 0.36, 0.86, 0.5, 0.045], 8, LIGHT); // pouty lip
+      for (let i = 0; i < 9; i++) {
+        const a = i * 2.39;
+        const r = 0.15 + (i % 3) * 0.12;
+        ellipsoid(b, 0.08, 0.03, 0.07, Math.cos(a) * r, 1.06 - r * 0.25, -0.25 + Math.sin(a) * r * 1.2, DEEP, 8, { rz: Math.cos(a) * 0.5 });
       }
-      eye(d, -0.14, 1.25, 0.72, 0.1);
-      eye(d, 0.14, 1.25, 0.72, 0.1);
-      eye(d, 0, 1.4, 0.68, 0.08);
-      d.sphere(0.22, 0, 1.0, -0.6, '#d9a6ff', 6, { slot: SLOT_GLOW });
-      d.sphere(0.1, 0.3, 1.2, -0.7, '#d9a6ff', 4, { slot: SLOT_GLOW });
-      d.cyl(0.07, 0.07, 0.1, 0, 1.0, 1.0, '#9be36b', 6, { rx: Math.PI / 2, slot: SLOT_GLOW });
+      for (let i = 0; i < 5; i++) spike(b, 0, 1.12 - i * 0.07, 0.12 - i * 0.2, 0, 0.2, -0.1, 0.07, DARK);
+      // stubby legs: front, then thick haunches
+      mirror((s) => {
+        sweep(b, [s * 0.32, 0.6, 0.25, 0.13, s * 0.4, 0.3, 0.32, 0.1, s * 0.42, 0.08, 0.36, 0.09], 8, MID);
+        ellipsoid(b, 0.13, 0.06, 0.16, s * 0.43, 0.05, 0.42, MID, 10);
+        ellipsoid(b, 0.24, 0.3, 0.32, s * 0.42, 0.45, -0.42, MID, 12);
+        ellipsoid(b, 0.15, 0.07, 0.2, s * 0.5, 0.06, -0.22, MID, 10);
+        for (let k = -1; k <= 1; k++) d.sphere(0.03, s * 0.43 + k * 0.06, 0.04, 0.57, CLAW, 4);
+        slyEye(b, d, s * 0.21, 1.2, 0.36, 0.11, s, { iris: '#f2cf4a' });
+      });
+      // drool from the lip
+      sweep(d, [0.1, 0.78, 0.71, 0.03, 0.12, 0.62, 0.72, 0.022, 0.13, 0.48, 0.7, 0.012], 6, '#a8f04a', { slot: SLOT_GLOW });
+      d.sphere(0.04, 0.13, 0.45, 0.7, '#a8f04a', 6, { slot: SLOT_GLOW });
+      d.sphere(0.025, -0.14, 0.72, 0.7, '#a8f04a', 5, { slot: SLOT_GLOW });
     },
   },
+
+  // knuckle-walking rock brute: rounded orange plates over a darker hide, small grumpy face
   brute: {
     height: 2.1,
-    build: (b, d) => {
-      b.sphere(0.75, 0, 1.2, 0, W, 8, { sy: 0.9, sz: 0.9, shade: 0.04 });
-      b.sphere(0.4, 0, 1.55, 0.55, W, 7, { shade: 0.04 });
-      for (const sx of [-1, 1]) {
-        b.box(0.32, 0.9, 0.32, sx * 0.85, 0.85, 0.15, SHADE, { rz: sx * 0.25 });
-        b.sphere(0.26, sx * 0.98, 0.35, 0.22, SHADE, 6);
-        b.box(0.3, 0.6, 0.3, sx * 0.4, 0.35, -0.2, SHADE);
-        b.box(0.36, 0.14, 0.44, sx * 0.4, 0.07, -0.15, SHADE);
+    build: (b, d, boss) => {
+      ellipsoid(b, 0.62, 0.66, 0.52, 0, 1.2, -0.05, DEEP, 14); // hide
+      ellipsoid(b, 0.52, 0.5, 0.3, 0, 1.28, 0.24, W, 14, { rx: -0.2 }); // chest plate
+      ellipsoid(b, 0.5, 0.42, 0.34, 0, 1.55, -0.32, W, 12, { rx: 0.4 }); // back plate
+      ellipsoid(b, 0.44, 0.28, 0.36, 0, 0.82, 0.05, MID, 12); // belly
+      mirror((s) => {
+        // arms: shoulder boulder, long arm, big rounded fist on the ground
+        ellipsoid(b, 0.34, 0.3, 0.34, s * 0.6, 1.62, 0.06, W, 12, { rz: -s * 0.3 });
+        sweep(b, [s * 0.62, 1.5, 0.1, 0.2, s * 0.86, 1.0, 0.24, 0.19, s * 0.84, 0.45, 0.36, 0.17], 10, DEEP);
+        ellipsoid(b, 0.2, 0.26, 0.2, s * 0.86, 0.85, 0.3, W, 10, { rz: s * 0.1 }); // forearm plate
+        ellipsoid(b, 0.27, 0.23, 0.28, s * 0.84, 0.24, 0.42, MID, 12);
+        for (let k = -1; k <= 1; k++) ellipsoid(b, 0.07, 0.06, 0.06, s * 0.84 + k * 0.1, 0.36, 0.66, W, 6);
+        // short thick legs
+        sweep(b, [s * 0.3, 0.8, -0.2, 0.2, s * 0.36, 0.45, -0.12, 0.19, s * 0.38, 0.16, -0.08, 0.17], 10, DEEP);
+        ellipsoid(b, 0.2, 0.1, 0.26, s * 0.38, 0.08, 0.0, MID, 10);
+        ellipsoid(b, 0.18, 0.16, 0.12, s * 0.36, 0.5, -0.02, W, 8); // knee plate
+        // little eyes under a heavy brow
+        slyEye(b, d, s * 0.12, 1.68, 0.64, 0.065, s, { iris: '#ffcf5a', lid: 1.3 });
+      });
+      // head: low between the shoulders, heavy brow, jutting jaw, two little tusks
+      ellipsoid(b, 0.3, 0.26, 0.28, 0, 1.62, 0.44, MID, 14);
+      ellipsoid(b, 0.33, 0.1, 0.18, 0, 1.79, 0.56, W, 12, { rx: 0.25 }); // brow
+      ellipsoid(b, 0.24, 0.13, 0.2, 0, 1.47, 0.6, MID, 12); // jaw
+      mirror((s) => spike(d, s * 0.12, 1.53, 0.74, s * 0.02, 0.15, 0.02, 0.035, TOOTH));
+      for (let i = 0; i < 3; i++) ellipsoid(b, 0.12, 0.08, 0.16, 0, 1.95 - i * 0.05, 0.24 - i * 0.24, W, 8, { rx: -0.4 }); // crest
+      if (boss) {
+        // a necklace of old turret bolts and a mossy fringe
+        for (let i = 0; i < 9; i++) {
+          const a = -1.2 + (i / 8) * 2.4;
+          const x = Math.sin(a) * 0.42;
+          const z = 0.3 + Math.cos(a) * 0.22;
+          d.cyl(0.055, 0.055, 0.05, x, 1.46 - Math.cos(a) * 0.08, z, '#8a929c', 6, { rx: Math.PI / 2 - 0.3, ry: a });
+          d.sphere(0.022, x, 1.46 - Math.cos(a) * 0.08, z + 0.03, '#c9a24e', 4);
+        }
+        sweep(d, [-0.4, 1.56, 0.2, 0.02, 0, 1.4, 0.48, 0.022, 0.4, 1.56, 0.2, 0.02], 5, '#4a3a2e');
+        for (let i = 0; i < 6; i++) ellipsoid(d, 0.09, 0.05, 0.08, (i - 2.5) * 0.14, 2.0 - Math.abs(i - 2.5) * 0.04, -0.1, '#6a8a4a', 6);
       }
-      for (let i = 0; i < 3; i++) b.cone(0.12, 0.45, 0, 1.9 - i * 0.1, -0.2 - i * 0.3, SHADE, 4, { rx: -0.5 });
-      eye(d, -0.16, 1.62, 0.9, 0.1);
-      eye(d, 0.16, 1.62, 0.9, 0.1);
-      d.box(0.5, 0.06, 0.05, 0, 1.78, 0.92, PUPIL, { rz: 0.0 });
-      d.cone(0.07, 0.25, -0.22, 1.3, 0.85, TOOTH, 4);
-      d.cone(0.07, 0.25, 0.22, 1.3, 0.85, TOOTH, 4);
     },
   },
+
+  // segmented drill-worm rising out of its dirt mound, little claws, curious eyes
   burrower: {
-    height: 1.3,
+    height: 1.55,
     build: (b, d) => {
-      b.sphere(0.5, 0, 0.6, 0.2, W, 8, { shade: 0.04 });
-      b.sphere(0.42, 0, 0.5, -0.5, W, 7, { shade: 0.04 });
-      b.sphere(0.32, 0, 0.4, -1.0, SHADE, 6, { shade: 0.04 });
-      b.cone(0.3, 0.6, 0, 0.65, 0.8, SHADE, 6, { rx: Math.PI / 2 });
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        b.cone(0.05, 0.22, Math.cos(a) * 0.4, 0.65 + Math.sin(a) * 0.4, 0.55, TOOTH, 4, { rx: Math.PI / 2 });
+      // mound + pebbles (fixed earth colours)
+      ellipsoid(d, 0.78, 0.24, 0.78, 0, 0.04, 0, '#6e5a44', 14);
+      for (let i = 0; i < 9; i++) {
+        const a = i * 0.7 + 0.3;
+        const r = 0.55 + (i % 3) * 0.12;
+        ellipsoid(d, 0.09, 0.06, 0.08, Math.cos(a) * r, 0.1, Math.sin(a) * r, i % 2 ? '#8a7a68' : '#5a4a3a', 6);
       }
+      // body segments curving up and forward
+      const seg: [number, number, number, number][] = [
+        [0, 0.24, 0, 0.44],
+        [0, 0.58, 0.04, 0.41],
+        [0, 0.9, 0.11, 0.37],
+        [0, 1.17, 0.22, 0.33],
+      ];
+      seg.forEach(([x, y, z, r], i) => ellipsoid(b, r, r * 0.82, r, x, y, z, i % 2 ? MID : W, 14, { rx: -0.15 * i }));
       for (let i = 0; i < 3; i++) {
-        const a = (i / 3) * Math.PI * 2 + 0.4;
-        eye(d, Math.cos(a) * 0.25, 0.75 + Math.sin(a) * 0.2, 0.62, 0.08);
+        const [, y0, z0, r0] = seg[i];
+        const [, y1, z1] = seg[i + 1];
+        b.add(new THREE.TorusGeometry(r0 * 0.86, 0.035, 6, 16), DARK, 0, (y0 + y1) / 2, (z0 + z1) / 2, { rx: Math.PI / 2 - 0.15 * (i + 0.5) });
       }
-      d.sphere(0.08, 0, 0.9, -0.5, '#ffd84a', 4, { slot: SLOT_GLOW });
-      d.sphere(0.07, 0.2, 0.75, -1.0, '#ffd84a', 4, { slot: SLOT_GLOW });
+      // ribbed drill nose
+      const n0 = [0, 1.3, 0.38];
+      const dir = [0, 0.22, 0.95];
+      sweep(b, [n0[0], n0[1], n0[2], 0.27, n0[0] + dir[0] * 0.25, n0[1] + dir[1] * 0.25, n0[2] + dir[2] * 0.25, 0.2, n0[0] + dir[0] * 0.5, n0[1] + dir[1] * 0.5, n0[2] + dir[2] * 0.5, 0.1, n0[0] + dir[0] * 0.66, n0[1] + dir[1] * 0.66, n0[2] + dir[2] * 0.66, 0], 12, LIGHT);
+      for (let k = 1; k <= 3; k++) {
+        const u = k * 0.14;
+        b.add(new THREE.TorusGeometry(0.27 - u * 0.55, 0.022, 5, 14), MID, 0, n0[1] + dir[1] * u, n0[2] + dir[2] * u, { rx: Math.PI / 2 - 0.22 });
+      }
+      mirror((s) => {
+        slyEye(b, d, s * 0.19, 1.34, 0.42, 0.085, s, { lid: 1.0 });
+        // little digging claws
+        sweep(b, [s * 0.3, 0.86, 0.36, 0.06, s * 0.38, 0.72, 0.52, 0.05], 6, MID);
+        for (let k = -1; k <= 1; k++) spike(d, s * (0.38 + k * 0.04), 0.7, 0.54, s * 0.02, -0.1, 0.1, 0.022, TOOTH, 4);
+      });
     },
   },
+
+  // manta-like flyer: broad soft wings with glowing veins, trailing tentacles, big sly eyes
   flyer: {
     height: 1.6,
     build: (b, d) => {
-      b.sphere(0.35, 0, 1.2, 0, W, 7, { sz: 1.3, shade: 0.04 });
-      b.sphere(0.24, 0, 1.3, 0.45, W, 6, { shade: 0.04 });
-      b.cone(0.08, 0.6, 0, 1.15, -0.65, SHADE, 4, { rx: -Math.PI / 2 });
-      for (const sx of [-1, 1]) {
-        b.box(1.3, 0.05, 0.6, sx * 0.85, 1.45, -0.05, W, { rz: sx * 0.35, shade: 0.03 });
-        b.box(0.7, 0.05, 0.4, sx * 1.5, 1.7, 0.1, SHADE, { rz: sx * 0.5 });
-        b.box(0.1, 0.5, 0.1, sx * 0.2, 0.9, 0.1, SHADE, { rz: sx * 0.3 });
+      ellipsoid(b, 0.38, 0.17, 0.5, 0, 1.2, 0, W, 16);
+      ellipsoid(b, 0.28, 0.18, 0.24, 0, 1.25, 0.38, W, 14); // head
+      ellipsoid(b, 0.3, 0.1, 0.4, 0, 1.1, 0.05, LIGHT, 12); // belly
+      mirror((s) => {
+        ellipsoid(b, 0.86, 0.045, 0.42, s * 0.72, 1.24, -0.06, W, 18, { rz: s * 0.14, ry: s * 0.18 });
+        ellipsoid(b, 0.3, 0.04, 0.2, s * 1.42, 1.38, -0.2, MID, 12, { rz: s * 0.5, ry: s * 0.4 }); // curled tips
+        for (let k = 0; k < 4; k++) {
+          const u = 0.3 + k * 0.28;
+          d.sphere(0.04 - k * 0.004, s * u, 1.28 + u * 0.11, 0.05 - u * 0.1, '#bff6ff', 5, { slot: SLOT_GLOW });
+          d.sphere(0.03, s * (u + 0.1), 1.27 + u * 0.11, -0.18 - u * 0.05, '#bff6ff', 4, { slot: SLOT_GLOW });
+        }
+        slyEye(b, d, s * 0.14, 1.31, 0.52, 0.085, s);
+      });
+      for (let i = 0; i < 4; i++) {
+        const x = (i - 1.5) * 0.11;
+        sweep(b, [x, 1.1, -0.22, 0.05, x * 1.3, 0.85, -0.42, 0.04, x * 1.1, 0.55, -0.48, 0.028, x * 0.8, 0.32, -0.42, 0.0], 6, MID);
       }
-      eye(d, -0.11, 1.38, 0.6, 0.09);
-      eye(d, 0.11, 1.38, 0.6, 0.09);
-      d.sphere(0.07, -1.55, 1.75, 0.1, '#5ef2ff', 4, { slot: SLOT_GLOW });
-      d.sphere(0.07, 1.55, 1.75, 0.1, '#5ef2ff', 4, { slot: SLOT_GLOW });
+      sweep(b, [0, 1.2, -0.45, 0.06, 0, 1.18, -0.8, 0.03, 0, 1.22, -1.05, 0.0], 6, MID); // tail
     },
   },
+
+  // elegant insect queen: glowing egg sac, upright body, slender limbs, a crown
   queen: {
-    height: 3.0,
-    build: (b, d) => {
-      b.sphere(1.0, 0, 1.3, -0.3, W, 9, { sy: 0.85, sz: 1.2, shade: 0.04 });
-      b.sphere(1.1, 0, 1.2, -1.5, W, 9, { sy: 0.8, shade: 0.04 }); // abdomen
-      b.sphere(0.5, 0, 1.9, 0.8, W, 7, { shade: 0.04 });
-      for (let i = 0; i < 5; i++) {
-        const a = -0.6 + i * 0.3;
-        b.cone(0.12, 0.6, Math.sin(a) * 0.5, 2.4 + Math.cos(a) * 0.1, 0.7, SHADE, 4, { rz: -a });
+    height: 3.1,
+    build: (b, d, boss) => {
+      ellipsoid(b, 0.82, 0.7, 0.98, 0, 1.18, -1.05, LIGHT, 18); // egg sac
+      for (let i = 0; i < 4; i++) b.add(new THREE.TorusGeometry(0.74 - Math.abs(i - 1.5) * 0.12, 0.04, 6, 20), MID, 0, 1.18, -0.55 - i * 0.32, { sy: 0.92 });
+      ellipsoid(b, 0.4, 0.42, 0.48, 0, 1.4, 0.02, W, 16); // thorax
+      ellipsoid(b, 0.28, 0.52, 0.27, 0, 2.02, 0.34, W, 16, { rx: 0.25 }); // upright body
+      // ruff of petal plates
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        ellipsoid(b, 0.16, 0.05, 0.1, Math.sin(a) * 0.22, 2.42, 0.45 + Math.cos(a) * 0.2, MID, 8, { ry: a, rx: 0.5 });
       }
-      for (let i = 0; i < 3; i++) {
-        for (const sx of [-1, 1]) {
-          b.box(0.14, 1.3, 0.14, sx * 1.0, 1.0, -0.6 + i * 0.5, SHADE, { rz: sx * 0.8 });
-          b.box(0.12, 0.9, 0.12, sx * 1.55, 0.45, -0.6 + i * 0.5, SHADE, { rz: -sx * 0.5 });
+      ellipsoid(b, 0.24, 0.3, 0.27, 0, 2.66, 0.55, W, 16); // head
+      ellipsoid(b, 0.12, 0.1, 0.12, 0, 2.5, 0.75, MID, 10); // muzzle
+      mirror((s) => {
+        slyEye(b, d, s * 0.11, 2.72, 0.73, 0.08, s, { lid: 1.25 });
+        spike(d, s * 0.06, 2.44, 0.84, s * 0.03, -0.1, 0.05, 0.025, TOOTH, 4); // mandibles
+        // slender raised forelimbs
+        sweep(b, [s * 0.24, 2.2, 0.42, 0.06, s * 0.42, 1.9, 0.75, 0.05, s * 0.3, 2.12, 1.05, 0.035, s * 0.22, 2.3, 1.1, 0.0], 6, MID);
+        // two pairs of long arched legs
+        for (let k = 0; k < 2; k++) {
+          const z = 0.2 - k * 0.45;
+          sweep(b, [s * 0.3, 1.35, z, 0.07, s * 0.85, 1.85, z + 0.15, 0.06, s * 1.25, 1.1, z + 0.25, 0.045, s * 1.4, 0.15, z + 0.3, 0.03], 7, MID);
+          spike(d, s * 1.4, 0.17, z + 0.3, s * 0.02, -0.17, 0.0, 0.03, CLAW, 4);
+        }
+      });
+      // crown
+      const tips = boss ? 7 : 5;
+      for (let i = 0; i < tips; i++) {
+        const a = (i - (tips - 1) / 2) * (boss ? 0.32 : 0.38);
+        const h = (boss ? 0.62 : 0.5) - Math.abs(a) * 0.35;
+        spike(b, Math.sin(a) * 0.14, 2.88, 0.5 - Math.abs(a) * 0.05, Math.sin(a) * 0.22, h, -0.08, 0.05, W, 6);
+        if (boss) d.sphere(0.04, Math.sin(a) * 0.36, 2.88 + h, 0.42, '#ffd0f0', 6, { slot: SLOT_GLOW });
+      }
+      d.add(new THREE.OctahedronGeometry(boss ? 0.11 : 0.08, 0), '#ff6ad8', 0, 3.0, 0.72, { slot: SLOT_GLOW, sy: 1.4 });
+      // glowing eggs in the sac
+      for (let i = 0; i < 14; i++) {
+        const a = i * 2.39996;
+        const y = 1.18 + Math.sin(i * 1.3) * 0.45;
+        const ring = Math.sqrt(Math.max(0.05, 1 - ((y - 1.18) / 0.7) ** 2));
+        d.sphere(0.09 + (i % 3) * 0.02, Math.cos(a) * 0.8 * ring, y, -1.05 + Math.sin(a) * 0.96 * ring, '#ffd6ec', 8, { slot: SLOT_GLOW });
+      }
+    },
+  },
+
+  // upright rock titan with glowing lava seams, ember eyes and a rock crest
+  titan: {
+    height: 4.7,
+    build: (b, d, boss) => {
+      ellipsoid(b, 1.12, 1.25, 0.88, 0, 2.6, 0, DEEP, 16); // hide
+      ellipsoid(b, 1.0, 0.9, 0.5, 0, 2.75, 0.42, W, 16, { rx: -0.1 }); // chest plate
+      ellipsoid(b, 0.9, 0.8, 0.5, 0, 2.95, -0.45, W, 14, { rx: 0.2 }); // back plate
+      ellipsoid(b, 0.8, 0.5, 0.6, 0, 1.7, 0.05, MID, 14); // belly / hips
+      mirror((s) => {
+        ellipsoid(b, 0.62, 0.52, 0.58, s * 1.1, 3.35, 0.0, W, 14, { rz: -s * 0.35 }); // shoulder boulders
+        sweep(b, [s * 1.2, 3.1, 0.05, 0.36, s * 1.45, 2.2, 0.22, 0.32, s * 1.42, 1.35, 0.3, 0.3], 12, DEEP);
+        ellipsoid(b, 0.38, 0.5, 0.38, s * 1.45, 2.05, 0.24, W, 12); // forearm plate
+        ellipsoid(b, 0.46, 0.42, 0.46, s * 1.42, 1.05, 0.34, MID, 14); // fist
+        for (let k = -1; k <= 1; k++) ellipsoid(b, 0.11, 0.1, 0.1, s * 1.42 + k * 0.17, 1.2, 0.76, W, 6);
+        sweep(b, [s * 0.5, 1.6, -0.1, 0.38, s * 0.58, 0.9, -0.02, 0.36, s * 0.6, 0.3, 0.0, 0.34], 12, DEEP);
+        ellipsoid(b, 0.4, 0.18, 0.5, s * 0.6, 0.12, 0.12, MID, 12); // foot
+        ellipsoid(b, 0.32, 0.28, 0.22, s * 0.58, 0.95, 0.16, W, 10); // knee plate
+        // ember eyes under the brow
+        ellipsoid(d, 0.1, 0.06, 0.05, s * 0.2, 3.98, 0.78, '#ffcf5a', 10, { rz: s * 0.25, slot: SLOT_GLOW });
+        d.sphere(0.035, s * 0.2, 3.98, 0.82, '#fff2c0', 6, { slot: SLOT_GLOW });
+        // lava seams over the chest and shoulders
+        sweep(d, [s * 0.15, 3.3, 0.9, 0.035, s * 0.35, 3.0, 0.92, 0.04, s * 0.25, 2.65, 0.93, 0.035, s * 0.45, 2.35, 0.86, 0.03], 5, '#ff7a3d', { slot: SLOT_GLOW });
+        sweep(d, [s * 0.9, 3.7, 0.25, 0.03, s * 1.1, 3.45, 0.5, 0.035, s * 1.35, 3.4, 0.45, 0.025], 5, '#ff7a3d', { slot: SLOT_GLOW });
+      });
+      // head: brow, jaw, crest
+      ellipsoid(b, 0.5, 0.45, 0.46, 0, 3.92, 0.42, MID, 16);
+      ellipsoid(b, 0.52, 0.14, 0.28, 0, 4.12, 0.66, W, 14, { rx: 0.3 }); // brow
+      ellipsoid(b, 0.4, 0.2, 0.32, 0, 3.66, 0.62, MID, 12); // jaw
+      for (let i = 0; i < 4; i++) ellipsoid(b, 0.2, 0.14, 0.26, 0, 4.36 - i * 0.12, 0.3 - i * 0.32, W, 10, { rx: -0.5 }); // crest
+      // glowing core showing through the chest
+      d.sphere(0.22, 0, 2.55, 0.86, '#ffb04a', 12, { slot: SLOT_GLOW, sz: 0.5 });
+      sweep(d, [-0.3, 2.2, 0.86, 0.03, 0, 2.05, 0.9, 0.035, 0.3, 2.2, 0.86, 0.03], 5, '#ff7a3d', { slot: SLOT_GLOW });
+      if (boss) {
+        // a crown of glowing crystal shards
+        for (let i = 0; i < 7; i++) {
+          const a = (i - 3) * 0.42;
+          d.add(new THREE.OctahedronGeometry(0.16, 0), '#c88cff', Math.sin(a) * 0.42, 4.42 - Math.abs(a) * 0.15, 0.32 + Math.cos(a) * 0.2 - 0.2, { slot: SLOT_GLOW, sy: 2.6 - Math.abs(i - 3) * 0.4, rz: -a * 0.5 });
         }
       }
-      eye(d, -0.22, 2.05, 1.2, 0.12);
-      eye(d, 0.22, 2.05, 1.2, 0.12);
-      eye(d, -0.4, 1.9, 1.05, 0.07);
-      eye(d, 0.4, 1.9, 1.05, 0.07);
-      for (let i = 0; i < 5; i++) {
-        const a = i * 1.26;
-        d.sphere(0.16, Math.cos(a) * 0.8, 1.2 + Math.sin(a) * 0.6, -1.5, '#c56cf0', 5, { slot: SLOT_GLOW });
-      }
-      d.cone(0.08, 0.3, -0.25, 1.6, 1.2, TOOTH, 4);
-      d.cone(0.08, 0.3, 0.25, 1.6, 1.2, TOOTH, 4);
-    },
-  },
-  titan: {
-    height: 4.6,
-    build: (b, d) => {
-      b.sphere(1.5, 0, 2.6, 0, W, 9, { sy: 0.95, shade: 0.04 });
-      b.sphere(0.7, 0, 3.4, 1.1, W, 7, { shade: 0.04 });
-      for (const sx of [-1, 1]) {
-        b.box(0.6, 2.2, 0.6, sx * 1.6, 1.6, 0.2, SHADE, { rz: sx * 0.15 });
-        b.sphere(0.5, sx * 1.8, 0.5, 0.4, SHADE, 6);
-        b.box(0.6, 1.4, 0.6, sx * 0.7, 0.7, -0.4, SHADE);
-        b.box(0.7, 0.3, 0.9, sx * 0.7, 0.15, -0.3, SHADE);
-        b.cone(0.2, 1.0, sx * 0.6, 4.2, 0.9, SHADE, 5, { rz: -sx * 0.6 });
-      }
-      for (let i = 0; i < 4; i++) b.cone(0.22, 0.8, (i - 1.5) * 0.5, 3.9, -0.6, SHADE, 4, { rx: -0.6 });
-      eye(d, -0.26, 3.5, 1.7, 0.13);
-      eye(d, 0.26, 3.5, 1.7, 0.13);
-      d.box(0.8, 0.08, 0.06, 0, 3.75, 1.72, PUPIL);
-      for (let i = 0; i < 3; i++) d.box(0.12, 0.6, 0.1, (i - 1) * 0.5, 2.3, 1.42, '#ff6a3d', { slot: SLOT_GLOW });
-      d.cone(0.1, 0.4, -0.35, 3.05, 1.6, TOOTH, 4);
-      d.cone(0.1, 0.4, 0.35, 3.05, 1.6, TOOTH, 4);
     },
   },
 };
 
 const cache = new Map<string, AlienGeo>();
 
-export function alienGeometry(model: string): AlienGeo {
-  let g = cache.get(model);
+/** Geometry of an alien model; `boss` adds that model's boss regalia (necklace / grand crown / crystals). */
+export function alienGeometry(model: string, boss = false): AlienGeo {
+  const key = boss ? `${model}:boss` : model;
+  let g = cache.get(key);
   if (g) return g;
   const spec = MODELS[model];
   const b = new GeoBuilder(model.length * 41 + 7);
   const d = new GeoBuilder(model.length * 43 + 9);
-  if (spec) spec.build(b, d);
+  if (spec) spec.build(b, d, boss);
   else {
-    b.sphere(0.6, 0, 0.6, 0, W, 8, { sy: 0.9, shade: 0.04 });
-    for (const sx of [-1, 1]) b.box(0.12, 0.5, 0.12, sx * 0.5, 0.25, 0, SHADE, { rz: sx * 0.5 });
-    eye(d, -0.18, 0.75, 0.5, 0.12);
-    eye(d, 0.18, 0.75, 0.5, 0.12);
+    ellipsoid(b, 0.6, 0.54, 0.6, 0, 0.6, 0, W, 14);
+    mirror((s) => {
+      sweep(b, [s * 0.4, 0.4, 0, 0.1, s * 0.55, 0.12, 0, 0.08], 6, MID);
+      slyEye(b, d, s * 0.18, 0.78, 0.48, 0.11, s);
+    });
   }
-  g = { body: b.build(), detail: d.build(), height: spec?.height ?? 1.2 };
-  cache.set(model, g);
+  const height = spec?.height ?? 1.2;
+  // soft painted shading: a touch darker toward the feet
+  const body = gradeY(b.build(), 0, height * 0.6, 0.78, 1);
+  g = { body, detail: d.build(), height };
+  cache.set(key, g);
   return g;
 }
 

@@ -1,8 +1,9 @@
 /**
  * Aliens actor — state.combat.aliens drawn through two instanced batches per model (body tinted
- * by AlienDef.color, fixed-color detail). Procedural animation from the alien state: bouncy walk,
- * lunging attacks, burrowers emerging from the ground with dirt, flyers bobbing, hit flashes,
- * squash-pop deaths with goo.
+ * by AlienDef.color, fixed-color detail; bosses get their own pair with the boss regalia).
+ * Procedural animation from the alien state: a bouncy, waddling walk, lunging attacks, burrowers
+ * emerging from the ground with dirt and swaying in their mound, flyers gliding with a lazy bank,
+ * hit flashes, squash-pop deaths with goo.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
@@ -69,16 +70,17 @@ export class Aliens {
     return this.ctx.game.state.combat.aliens.find((a) => a.id === id);
   }
 
-  private batch(model: string): AlienBatch {
-    let b = this.batches.get(model);
+  private batch(model: string, boss: boolean): AlienBatch {
+    const key = boss ? `${model}:boss` : model;
+    let b = this.batches.get(key);
     if (!b) {
-      const geo = alienGeometry(model);
+      const geo = alienGeometry(model, boss);
       b = {
         geo,
         body: new Batch(this.group, geo.body, this.ctx.mats.set, 16, { color: true, castShadow: true }),
         detail: new Batch(this.group, geo.detail, this.ctx.mats.set, 16, { color: true }),
       };
-      this.batches.set(model, b);
+      this.batches.set(key, b);
     }
     return b;
   }
@@ -106,7 +108,7 @@ export class Aliens {
       const def = ctx.game.data.alien(a.def);
       const model = def?.model ?? a.def;
       if (!inView(env, a.x, a.z, 15)) continue;
-      const b = this.batch(model);
+      const b = this.batch(model, !!def?.boss);
       const scale = def?.scale ?? 1;
       const ground = ctx.heightAt(a.x, a.z);
       const phase = a.id * 0.77;
@@ -115,6 +117,7 @@ export class Aliens {
       let sz = 1;
       let y = ground + (a.y || 0);
       let rx = 0;
+      let rz = 0;
       let fwd = 0;
       const speed = def?.speed ?? 1.5;
       switch (a.state) {
@@ -136,6 +139,8 @@ export class Aliens {
           sy = 1 + w * 0.06;
           sx = sz = 1 - w * 0.04;
           rx = def?.flying ? Math.sin(t * 3 + phase) * 0.06 : 0.08;
+          // waddle (walkers), sway (burrowers in their mound), lazy bank (flyers)
+          rz = def?.flying ? Math.sin(t * 1.3 + phase) * 0.12 : def?.burrow ? Math.sin(t * speed * 2.5 + phase) * 0.1 : Math.cos(t * speed * 5 + phase) * 0.07;
           break;
         }
         case 'attacking': {
@@ -163,7 +168,7 @@ export class Aliens {
       if (flash) _c.copy(FLASH);
       else if (a.slowT > 0) _c.copy(base).lerp(this.color('#6fd8ff'), 0.4);
       else _c.copy(base);
-      composeEuler(_m, px, y, pz, rx, yaw, 0, sx * scale, sy * scale, sz * scale);
+      composeEuler(_m, px, y, pz, rx, yaw, rz, sx * scale, sy * scale, sz * scale);
       b.body.push(_m, _c);
       b.detail.push(_m, flash ? FLASH : WHITE);
       // first sight of a burrower underground: dirt mound
@@ -185,7 +190,7 @@ export class Aliens {
     if (!a) return null;
     const def = this.ctx.game.data.alien(a.def);
     const s = def?.scale ?? 1;
-    const geo = alienGeometry(def?.model ?? a.def);
+    const geo = alienGeometry(def?.model ?? a.def, !!def?.boss);
     return { x: a.x, y: this.ctx.heightAt(a.x, a.z) + (a.y || 0), z: a.z, radius: 0.8 * s, height: geo.height * s };
   }
 
@@ -198,7 +203,7 @@ export class Aliens {
       if (a.state === 'dying') continue;
       const def = this.ctx.game.data.alien(a.def);
       const s = def?.scale ?? 1;
-      const geo = alienGeometry(def?.model ?? a.def);
+      const geo = alienGeometry(def?.model ?? a.def, !!def?.boss);
       const t = raySphere(o, d, a.x, this.ctx.heightAt(a.x, a.z) + (a.y || 0) + geo.height * s * 0.5, a.z, Math.max(0.7, geo.height * s * 0.55));
       if (t >= 0 && t < bestT) {
         bestT = t;

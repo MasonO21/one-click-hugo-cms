@@ -214,10 +214,18 @@ export function skinnedStyle(base: TierStyle, skin: LookTint | null | undefined)
 }
 
 /** Colonist appearance palettes. ColonistAppearance indices wrap around these. */
-export const SKIN_TONES = ['#f6d3b3', '#e8b98f', '#d19a6b', '#a86f45', '#7d4b2a', '#f0c8a8'];
-export const HAIR_COLORS = ['#2b1d12', '#5a3a1e', '#a86a2f', '#e0b457', '#c74d2b', '#d9d9e3', '#6b4ec9', '#3cb5a3'];
-export const OUTFIT_COLORS = ['#e86f4d', '#4fa3e0', '#7cc36b', '#f0b24b', '#b26ad8', '#5ed6c8', '#e0588c', '#8a9aa8'];
-export const HAIR_STYLES = 4;
+export const SKIN_TONES = ['#f2cfae', '#e3b48a', '#cc956a', '#a46c46', '#7a4a2e', '#ecc4a2'];
+/** Natural hair (black, browns, auburn, ash blond, copper, silver) plus two muted dyes (plum, deep teal). */
+export const HAIR_COLORS = ['#2b1d12', '#5a3a1e', '#8a5a2e', '#c8a060', '#a8482a', '#c8c8cc', '#5a4a7a', '#2f6a64'];
+/** Work-wear tops: rust, denim, sage, mustard, plum, teal, brick, slate (muted, rich; no candy colours). */
+export const OUTFIT_COLORS = ['#c8643a', '#3f74a8', '#6f9452', '#d39a36', '#7f5a8e', '#3a8a82', '#a8484e', '#66788a'];
+/** Collar / belt / pocket trims (cream, tan, leather, brass, charcoal...), picked per colonist. */
+export const ACCENT_COLORS = ['#e8d6b0', '#d0b48a', '#6a4a32', '#cfa860', '#3f3c3a', '#e6dcc8'];
+/** Trousers for colonists in their own clothes (denim, khaki, charcoal, tan, olive). */
+export const TROUSER_COLORS = ['#465466', '#6e5e48', '#3e4046', '#7c6c54', '#4a5a46'];
+/** Boot leathers. */
+export const BOOT_COLORS = ['#4a3a2e', '#3a302a', '#5a4230'];
+export const HAIR_STYLES = 8;
 
 export const pick = <T>(arr: T[], i: number): T => arr[((i | 0) % arr.length + arr.length) % arr.length];
 

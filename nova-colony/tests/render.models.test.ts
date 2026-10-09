@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { createDataRegistry } from '../src/data';
 import { tierStyle, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS, pick } from '../src/render/core/palette';
 import { GeoBuilder, SLOT_GLOW, mergeCopies } from '../src/render/core/GeoBuilder';
-import { buildModel, registeredModelKeys, pieceGeometry, nodeGeometry, propGeometry, poiGeometry, alienGeometry, vehicleGeometry, partGeometry, KNOWN_NODE_MODELS, KNOWN_PROP_MODELS, KNOWN_POI_MODELS, KNOWN_ALIEN_MODELS, KNOWN_VEHICLE_MODELS } from '../src/render/models';
+import { buildModel, registeredModelKeys, pieceGeometry, nodeGeometry, propGeometry, poiGeometry, alienGeometry, vehicleGeometry, partGeometry, KNOWN_NODE_MODELS, KNOWN_PROP_MODELS, KNOWN_POI_MODELS, KNOWN_ALIEN_MODELS, KNOWN_VEHICLE_MODELS, PART_KEYS } from '../src/render/models';
 import type { PieceGeoKey } from '../src/render/models';
 
 const data = createDataRegistry();
@@ -139,7 +139,7 @@ describe('render models', () => {
       expect(g.detail.attributes.position.count).toBeGreaterThan(0);
     }
     for (const m of [...KNOWN_VEHICLE_MODELS, 'mystery_vehicle']) expect(vehicleGeometry(m).attributes.position.count).toBeGreaterThan(0);
-    for (const k of ['body', 'head', 'face', 'arm', 'leg', 'hair0', 'hair1', 'hair2', 'hair3'] as const) expect(partGeometry(k).attributes.position.count).toBeGreaterThan(0);
+    for (const k of PART_KEYS) expect(partGeometry(k).attributes.position.count, k).toBeGreaterThan(0);
     // every data node/poi/alien model is covered
     for (const n of data.nodes) expect(KNOWN_NODE_MODELS).toContain(n.model);
     for (const p of data.pois) expect(KNOWN_POI_MODELS).toContain(p.model);
